@@ -20,8 +20,9 @@ use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
 use futures::{
-    compat::Future01CompatExt,
+    compat::{Future01CompatExt, Stream01CompatExt},
     future::{ready, try_join, FutureExt, TryFutureExt},
+    StreamExt, TryStreamExt,
 };
 use futures_ext::{
     bounded_traversal::{bounded_traversal_dag, Iter},
@@ -30,8 +31,8 @@ use futures_ext::{
 use futures_old::{future, Future, IntoFuture};
 use manifest::ManifestOps;
 use mononoke_types::{
-    blame::{Blame, BlameRejected},
-    ChangesetId, FileUnodeId, MPath,
+    blame::{Blame, BlameMaybeRejected, BlameRejected},
+    BlameId, ChangesetId, FileUnodeId, MPath,
 };
 use slog::Logger;
 use std::collections::HashMap;
@@ -42,9 +43,11 @@ pub const BLAME: &str = "blame";
 const COMMAND_DERIVE: &str = "derive";
 const COMMAND_COMPUTE: &str = "compute";
 const COMMAND_DIFF: &str = "diff";
+const COMMAND_FIND_REJECTED: &str = "find-rejected";
 
 const ARG_CSID: &str = "csid";
 const ARG_PATH: &str = "path";
+const ARG_PRINT_ERRORS: &str = "print-errors";
 const ARG_LINE: &str = "line";
 
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
@@ -82,6 +85,17 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
                 .arg(csid_arg.clone())
                 .arg(path_arg.clone()),
         )
+        .subcommand(
+            SubCommand::with_name(COMMAND_FIND_REJECTED)
+                .arg(csid_arg.clone())
+                .arg(
+                    Arg::with_name(ARG_PRINT_ERRORS)
+                        .help("print why the file is rejected")
+                        .long(ARG_PRINT_ERRORS)
+                        .takes_value(false)
+                        .required(false),
+                ),
+        )
 }
 
 pub async fn subcommand_blame<'a>(
@@ -110,6 +124,48 @@ pub async fn subcommand_blame<'a>(
             with_changeset_and_path(ctx, repo, matches, move |ctx, repo, csid, path| {
                 subcommand_compute_blame(ctx, repo, csid, path, line_number)
             })
+        }
+        (COMMAND_FIND_REJECTED, Some(matches)) => {
+            let print_errors = matches.is_present(ARG_PRINT_ERRORS);
+            let hash_or_bookmark = String::from(matches.value_of(ARG_CSID).unwrap());
+            let repo = repo.compat().await?;
+            let cs_id = helpers::csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
+                .compat()
+                .await?;
+
+            let derived_unode = RootUnodeManifestId::derive(ctx.clone(), repo.clone(), cs_id)
+                .compat()
+                .map_err(Error::from)
+                .await?;
+
+            let mut paths = derived_unode
+                .manifest_unode_id()
+                .list_leaf_entries(ctx.clone(), repo.get_blobstore())
+                .compat()
+                .map_ok(|(path, file_unode_id)| (path, BlameId::from(file_unode_id)))
+                .map_ok(|(path, blame_id)| {
+                    blame_id
+                        .load(ctx.clone(), repo.blobstore())
+                        .map_ok(move |blame_maybe_rejected| (path, blame_maybe_rejected))
+                        .map_err(Error::from)
+                })
+                .try_buffer_unordered(100)
+                .try_filter_map(|(path, blame_maybe_rejected)| async move {
+                    match blame_maybe_rejected {
+                        BlameMaybeRejected::Rejected(rejected) => Ok(Some((path, rejected))),
+                        BlameMaybeRejected::Blame(_) => Ok(None),
+                    }
+                })
+                .boxed();
+
+            while let Some((p, rejected)) = paths.try_next().await? {
+                if print_errors {
+                    println!("{} {}", p, rejected);
+                } else {
+                    println!("{}", p);
+                }
+            }
+            return Result::<_, SubcommandError>::Ok(());
         }
         _ => future::err(SubcommandError::InvalidArgs).boxify(),
     }
