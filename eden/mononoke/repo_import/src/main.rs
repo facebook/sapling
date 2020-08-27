@@ -15,7 +15,7 @@ use cached_config::ConfigStore;
 use cmdlib::args;
 use cmdlib::helpers::block_execute;
 use context::CoreContext;
-use cross_repo_sync::rewrite_commit;
+use cross_repo_sync::{create_commit_syncers, rewrite_commit, CommitSyncer};
 use derived_data_utils::derived_data_utils;
 use fbinit::FacebookInit;
 use futures::{
@@ -40,6 +40,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::convert::TryInto;
 use std::num::NonZeroUsize;
 use std::path::Path;
+use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
 use tokio::{fs, io::AsyncWriteExt, process, time};
 use topo_sort::sort_topological;
 use unbundle::get_pushrebase_hooks;
@@ -89,12 +90,18 @@ struct ChangesetArgs {
     pub message: String,
     pub datetime: DateTime,
 }
+#[derive(Clone, Debug, PartialEq)]
+struct RepoImportSetting {
+    importing_bookmark: BookmarkName,
+    dest_bookmark: BookmarkName,
+    dest_path_prefix: MPath,
+}
 
 async fn rewrite_file_paths(
     ctx: &CoreContext,
     repo: &BlobRepo,
     path: &Path,
-    prefix: &str,
+    dest_path_prefix: MPath,
     backup_hashes_path: &str,
 ) -> Result<Vec<BonsaiChangeset>, Error> {
     let prefs = GitimportPreferences::default();
@@ -105,7 +112,7 @@ async fn rewrite_file_paths(
     let mut remapped_parents: HashMap<ChangesetId, ChangesetId> = HashMap::new();
     let mover = movers::mover_factory(
         HashMap::new(),
-        DefaultAction::PrependPrefix(MPath::new(prefix).unwrap()),
+        DefaultAction::PrependPrefix(dest_path_prefix),
     )?;
     let mut bonsai_changesets = vec![];
     let mut index = 1;
@@ -184,7 +191,7 @@ async fn move_bookmark(
     repo: &BlobRepo,
     shifted_bcs: &[BonsaiChangeset],
     batch_size: usize,
-    bookmark_suffix: &str,
+    bookmark: &BookmarkName,
     checker_flags: &CheckerFlags,
     sleep_time: u64,
     mutable_counters: &SqlMutableCounters,
@@ -194,7 +201,6 @@ async fn move_bookmark(
         return Err(format_err!("There is no bonsai changeset present"));
     }
 
-    let bookmark = BookmarkName::new(format!("repo_import_{}", bookmark_suffix))?;
     let first_bcs = match shifted_bcs.first() {
         Some(first) => first,
         None => {
@@ -534,12 +540,12 @@ fn sort_bcs(shifted_bcs: &[BonsaiChangeset]) -> Result<Vec<BonsaiChangeset>, Err
 }
 
 // Note: pushredirection only works from small repo to large repo.
-async fn check_repo_not_pushredirected<'a>(
+async fn get_large_repo_config_if_pushredirected<'a>(
     ctx: &CoreContext,
     repo: &BlobRepo,
     maybe_config_store: &Option<ConfigStore>,
     repos: &HashMap<String, RepoConfig>,
-) -> Result<(), Error> {
+) -> Result<Option<RepoConfig>, Error> {
     let repo_id = repo.get_repoid();
     let config_store = maybe_config_store
         .as_ref()
@@ -554,7 +560,7 @@ async fn check_repo_not_pushredirected<'a>(
                 Err(e) => return Err(format_err!("Failed to fetch commit sync config: {}", e)),
             };
         let large_repo_id = commit_sync_config.large_repo_id;
-        let (large_repo_name, _) = match repos
+        let (_, large_repo_config) = match repos
             .iter()
             .find(|(_, repo_config)| repo_config.repoid == large_repo_id)
         {
@@ -565,13 +571,74 @@ async fn check_repo_not_pushredirected<'a>(
                 ))
             }
         };
-
-        return Err(format_err!(
-            "The destination repo pushredirects to repo {}, and we can't import into a repo that push-redirects.",
-            large_repo_name
-        ));
+        return Ok(Some(large_repo_config.clone()));
     }
-    Ok(())
+    Ok(None)
+}
+
+async fn get_large_repo_setting<M>(
+    ctx: &CoreContext,
+    small_repo_setting: &RepoImportSetting,
+    commit_syncer: &CommitSyncer<M>,
+) -> Result<RepoImportSetting, Error>
+where
+    M: SyncedCommitMapping + Clone + 'static,
+{
+    info!(
+        ctx.logger(),
+        "Generating variables to import into large repo"
+    );
+
+    let RepoImportSetting {
+        importing_bookmark,
+        dest_bookmark,
+        dest_path_prefix,
+    } = small_repo_setting;
+
+    let large_importing_bookmark =
+        commit_syncer
+            .rename_bookmark(&importing_bookmark)
+            .ok_or_else(|| format_err!(
+        "Bookmark {:?} unexpectedly dropped in {:?} when trying to generate large_importing_bookmark",
+        importing_bookmark,
+        commit_syncer
+    ))?;
+    info!(
+        ctx.logger(),
+        "Set large repo's importing bookmark to {}", large_importing_bookmark
+    );
+    let large_dest_bookmark = commit_syncer
+        .rename_bookmark(&dest_bookmark)
+        .ok_or_else(|| {
+            format_err!(
+        "Bookmark {:?} unexpectedly dropped in {:?} when trying to generate large_dest_bookmark",
+        dest_bookmark,
+        commit_syncer
+    )
+        })?;
+    info!(
+        ctx.logger(),
+        "Set large repo's destination bookmark to {}", large_dest_bookmark
+    );
+    let large_dest_path_prefix =
+        commit_syncer.get_mover()(&dest_path_prefix)?.ok_or_else(|| {
+            format_err!(
+                "Couldn't not generate large dest pass prefix from {:?} using syncer {:?}",
+                dest_path_prefix,
+                commit_syncer
+            )
+        })?;
+    info!(
+        ctx.logger(),
+        "In large repo we import into {}", large_dest_path_prefix
+    );
+    let large_repo_setting = RepoImportSetting {
+        importing_bookmark: large_importing_bookmark,
+        dest_bookmark: large_dest_bookmark,
+        dest_path_prefix: large_dest_path_prefix,
+    };
+    info!(ctx.logger(), "Finished generating the variables");
+    Ok(large_repo_setting)
 }
 
 #[fbinit::main]
@@ -581,7 +648,9 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let path = Path::new(matches.value_of(ARG_GIT_REPOSITORY_PATH).unwrap());
     let prefix = matches.value_of(ARG_DEST_PATH).unwrap();
+    let dest_path_prefix = MPath::new(prefix)?;
     let bookmark_suffix = matches.value_of(ARG_BOOKMARK_SUFFIX).unwrap();
+    let importing_bookmark = BookmarkName::new(format!("repo_import_{}", bookmark_suffix))?;
     let batch_size = matches.value_of(ARG_BATCH_SIZE).unwrap();
     let batch_size = batch_size.parse::<NonZeroUsize>()?.get();
     if !is_valid_bookmark_suffix(&bookmark_suffix) {
@@ -598,6 +667,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let sleep_time = sleep_time.parse::<u64>()?;
     let backup_hashes_path = matches.value_of(ARG_BACKUP_HASHES_FILE_PATH).unwrap();
     let dest_bookmark_name = matches.value_of(ARG_DEST_BOOKMARK).unwrap();
+    let dest_bookmark = BookmarkName::new(dest_bookmark_name)?;
     let commit_author = matches.value_of(ARG_COMMIT_AUTHOR).unwrap();
     let commit_message = matches.value_of(ARG_COMMIT_MESSAGE).unwrap();
     let datetime = match matches.value_of(ARG_COMMIT_DATE_RFC3339) {
@@ -609,6 +679,11 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         message: commit_message.to_string(),
         datetime,
     };
+    let mut repo_import_setting = RepoImportSetting {
+        importing_bookmark,
+        dest_bookmark,
+        dest_path_prefix,
+    };
     args::init_cachelib(fb, &matches, None);
 
     let logger = args::init_logging(fb, &matches);
@@ -616,13 +691,14 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let repo = args::create_repo(fb, &logger, &matches);
     block_execute(
         async {
-            let repo = repo.compat().await?;
-            let (_, repo_config) = args::get_config_by_repoid(ctx.fb, &matches, repo.get_repoid())?;
+            let mut repo = repo.compat().await?;
+            let (_, mut repo_config) =
+                args::get_config_by_repoid(ctx.fb, &matches, repo.get_repoid())?;
             let call_sign = repo_config.phabricator_callsign.clone();
             if !phab_check_disabled && call_sign.is_none() {
                 return Err(format_err!(
-                    "The repo we import to doesn't have a callsign.
-                     Make sure the callsign for the repo is set in configerator:
+                    "The repo we import to doesn't have a callsign. \
+                     Make sure the callsign for the repo is set in configerator: \
                      e.g CF/../source/scm/mononoke/repos/repos/hg.cinc"
                 ));
             }
@@ -634,13 +710,56 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             };
             let maybe_config_store = args::maybe_init_config_store(fb, &logger, &matches);
             let configs = args::load_repo_configs(fb, &matches)?;
+            let maybe_large_repo_config = get_large_repo_config_if_pushredirected(
+                &ctx,
+                &repo,
+                &maybe_config_store,
+                &configs.repos,
+            )
+            .await?;
+
+            if let Some(large_repo_config) = maybe_large_repo_config {
+                let large_repo_id = large_repo_config.repoid;
+                let large_repo = args::open_repo_with_repo_id(fb, &logger, large_repo_id, &matches)
+                    .compat()
+                    .await?;
+                let commit_sync_config = large_repo_config.commit_sync_config.clone().unwrap();
+                if commit_sync_config.small_repos.len() > 1 {
+                    return Err(
+                        format_err!(
+                            "Currently repo_import tool doesn't support backsyncing into multiple small repos for large repo {:?}, name: {}",
+                            large_repo_id,
+                            large_repo.name()
+                        ));
+                }
+                let mapping = args::open_source_sql::<SqlSyncedCommitMapping>(fb, &matches)
+                    .compat()
+                    .await?;
+                let syncers = create_commit_syncers(
+                    repo.clone(),
+                    large_repo.clone(),
+                    &commit_sync_config,
+                    mapping.clone(),
+                )?;
+                repo_import_setting =
+                    get_large_repo_setting(&ctx, &repo_import_setting, &syncers.small_to_large)
+                        .await?;
+                repo = large_repo;
+                repo_config = large_repo_config;
+            }
+
             let mutable_counters = args::open_sql::<SqlMutableCounters>(ctx.fb, &matches)
                 .compat()
                 .await?;
 
-            check_repo_not_pushredirected(&ctx, &repo, &maybe_config_store, &configs.repos).await?;
-            let mut shifted_bcs =
-                rewrite_file_paths(&ctx, &repo, &path, &prefix, &backup_hashes_path).await?;
+            let mut shifted_bcs = rewrite_file_paths(
+                &ctx,
+                &repo,
+                &path,
+                repo_import_setting.dest_path_prefix,
+                &backup_hashes_path,
+            )
+            .await?;
             shifted_bcs = sort_bcs(&shifted_bcs)?;
             info!(ctx.logger(), "Start deriving data types");
             derive_bonsais(&ctx, &repo, &shifted_bcs).await?;
@@ -650,17 +769,28 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 &repo,
                 &shifted_bcs,
                 batch_size,
-                &bookmark_suffix,
+                &repo_import_setting.importing_bookmark,
                 &checker_flags,
                 sleep_time,
                 &mutable_counters,
             )
             .await?;
-            let dest_bookmark = BookmarkName::new(dest_bookmark_name)?;
-            let merged_cs_id =
-                merge_imported_commit(&ctx, &repo, &shifted_bcs, &dest_bookmark, changeset_args)
-                    .await?;
-            push_merge_commit(&ctx, &repo, merged_cs_id, &dest_bookmark, &repo_config).await?;
+            let merged_cs_id = merge_imported_commit(
+                &ctx,
+                &repo,
+                &shifted_bcs,
+                &repo_import_setting.dest_bookmark,
+                changeset_args,
+            )
+            .await?;
+            push_merge_commit(
+                &ctx,
+                &repo,
+                merged_cs_id,
+                &repo_import_setting.dest_bookmark,
+                &repo_config,
+            )
+            .await?;
             Ok(())
         },
         fb,
