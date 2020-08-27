@@ -1536,7 +1536,7 @@ impl LocalStore for LfsFallbackRemoteStore {
 mod tests {
     use super::*;
 
-    use std::{env::set_var, str::FromStr};
+    use std::str::FromStr;
 
     use quickcheck::quickcheck;
     use tempfile::TempDir;
@@ -2088,6 +2088,7 @@ mod tests {
     #[cfg(feature = "fb")]
     mod fb_test {
         use super::*;
+        use std::env::set_var;
 
         #[test]
         fn test_lfs_non_present() -> Result<()> {
@@ -2436,7 +2437,7 @@ mod tests {
             .iter()
             .cloned()
             .collect::<HashSet<_>>();
-        remote.batch_upload(&objs, { move |sha256| local_lfs.blobs.get(&sha256) })?;
+        remote.batch_upload(&objs, move |sha256| local_lfs.blobs.get(&sha256))?;
 
         assert_eq!(remote_lfs_file_store.get(&blob1.0)?, Some(blob1.2));
         assert_eq!(remote_lfs_file_store.get(&blob2.0)?, Some(blob2.2));

@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#![deny(warnings)]
-
 //! revisionstore_types - Data types used by the revisionstore crate
 
 mod datastore;
