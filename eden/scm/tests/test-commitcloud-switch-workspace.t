@@ -292,7 +292,7 @@ Make the third clone of the server
   $ clone server client3
   $ cd client3
   $ hg cloud leave
-  commitcloud: this repository is now disconnected from Commit Cloud Sync
+  commitcloud: this repository is now disconnected from the 'user/test/default' workspace
 
 Try to switch without joining to any workspace first
   $ hg cloud join -w w1 --switch

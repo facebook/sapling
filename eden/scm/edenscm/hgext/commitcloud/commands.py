@@ -339,22 +339,61 @@ def cloudrejoin(ui, repo, **opts):
 def cloudleave(ui, repo, **opts):
     """disconnect the local repository from commit cloud
 
-    Commits and bookmarks will no longer be synchronized with other
-    repositories.
+    Commits and bookmarks will no longer be synchronized with your Commit Cloud Workspace.
     """
     oldworkspacename = workspace.currentworkspace(repo)
+
+    if not oldworkspacename:
+        ui.status(
+            _("this repository is not connected to any Commit Cloud Workspace\n"),
+            component="commitcloud",
+        )
+        return
+
+    confirmed = True
+
+    if ui.interactive():
+        ui.status(
+            _(
+                "you are about to leave Commit Cloud Sync, our infrastructure for backing up your draft commits and bookmarks\n"
+                "this will make it harder to recover your work if you need to restore your commits on a new machine\n"
+            ),
+            component="commitcloud",
+        )
+        ownerteam = ui.config("commitcloud", "owner_team")
+        if ownerteam:
+            ui.status(
+                _(
+                    "help us to make your experience better by sharing your feedback with %s\n"
+                )
+                % ownerteam,
+                component="commitcloud",
+            )
+        educationpage = ui.config("commitcloud", "education_page")
+        if educationpage:
+            ui.status(
+                _(
+                    "learn more about Commit Cloud Sync and Commit Cloud Workspaces at %s\n"
+                )
+                % educationpage,
+                component="commitcloud",
+            )
+        prompt = _(
+            "are you sure you want to disconnect the repo '%s' from the '%s' workspace [yn]:\n"
+        ) % (ccutil.getreponame(repo), oldworkspacename)
+        ui.write(ui.label(prompt, "ui.prompt"))
+        confirmed = ui.prompt("", default="").strip().lower().startswith("y")
+
+    if not confirmed:
+        return
+
     subscription.remove(repo)
     workspace.clearworkspace(repo)
-    if oldworkspacename:
-        ui.status(
-            _("this repository is now disconnected from Commit Cloud Sync\n"),
-            component="commitcloud",
-        )
-    else:
-        ui.status(
-            _("this repository is not connected to Commit Cloud Sync\n"),
-            component="commitcloud",
-        )
+    ui.status(
+        _("this repository is now disconnected from the '%s' workspace\n")
+        % oldworkspacename,
+        component="commitcloud",
+    )
 
 
 @subcmd("authenticate|auth", [("t", "token", "", _("set or update token"))])

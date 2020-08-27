@@ -115,7 +115,7 @@ Run cloud status after setting a workspace
   Last Sync Status: Success
 
   $ hg cloud leave
-  commitcloud: this repository is now disconnected from Commit Cloud Sync
+  commitcloud: this repository is now disconnected from the 'user/test/feature' workspace
   $ hg cloud join
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/default'
@@ -1201,7 +1201,7 @@ Check subscription when join/leave and also scm service health check
   repo_name=server
   repo_root=$TESTTMP/client1/.hg
   $ hg cloud leave
-  commitcloud: this repository is now disconnected from Commit Cloud Sync
+  commitcloud: this repository is now disconnected from the 'user/test/default' workspace
   $ ls $TESTTMP/.commitcloud/joined/
   $ hg cloud join -q
   $ cat $TESTTMP/.commitcloud/joined/*
@@ -1241,7 +1241,7 @@ Reconnect to a service where the workspace is brand new.  This should work.
   finished in * (glob)
 
   $ hg cloud disconnect
-  commitcloud: this repository is now disconnected from Commit Cloud Sync
+  commitcloud: this repository is now disconnected from the 'user/test/default' workspace
 
 Reconnect to the default repository.  This should work and pull in the commits.
   $ hg cloud reconnect
@@ -1281,7 +1281,7 @@ Reconnecting while already connected does nothing.
   $ hg cloud reconnect
 
   $ hg cloud disconnect
-  commitcloud: this repository is now disconnected from Commit Cloud Sync
+  commitcloud: this repository is now disconnected from the 'user/test/default' workspace
 
 Completely remove commit cloud config and then pull with automigrate enabled.
 This should also reconnect.
@@ -1304,7 +1304,7 @@ But not if already connected.
   no changes found
 
   $ hg cloud disconnect
-  commitcloud: this repository is now disconnected from Commit Cloud Sync
+  commitcloud: this repository is now disconnected from the 'user/test/default' workspace
 
 And not if explicitly disconnected.
   $ hg pull --config commitcloud.automigrate=true
@@ -1327,7 +1327,7 @@ Pull with automigrate enabled and host-specific workspaces
 
 Host-specific workspace now exists, so it should be chosen as the one to connect to
   $ hg cloud leave
-  commitcloud: this repository is now disconnected from Commit Cloud Sync
+  commitcloud: this repository is now disconnected from the 'user/test/testhost' workspace
   $ hg cloud reconnect
   commitcloud: attempting to connect to the 'user/test/testhost' workspace for the 'server' repo
   commitcloud: this repository is now connected to the 'user/test/testhost' workspace for the 'server' repo
