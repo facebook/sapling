@@ -65,6 +65,7 @@ void Dispatcher::initConnection(const fuse_init_out& out) {
 void Dispatcher::destroy() {}
 
 folly::Future<fuse_entry_out> Dispatcher::lookup(
+    uint64_t /*requestID*/,
     InodeNumber /*parent*/,
     PathComponentPiece /*name*/,
     ObjectFetchContext& /*context*/) {

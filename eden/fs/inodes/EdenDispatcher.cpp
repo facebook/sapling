@@ -100,6 +100,7 @@ folly::Future<folly::Unit> EdenDispatcher::releasedir(
 }
 
 folly::Future<fuse_entry_out> EdenDispatcher::lookup(
+    uint64_t /*requestID*/,
     InodeNumber parent,
     PathComponentPiece namepiece,
     ObjectFetchContext& context) {

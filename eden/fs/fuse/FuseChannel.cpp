@@ -9,7 +9,6 @@
 
 #include <boost/cast.hpp>
 #include <folly/futures/Future.h>
-#include <folly/io/async/Request.h>
 #include <folly/logging/xlog.h>
 #include <folly/system/ThreadName.h>
 #include <signal.h>
@@ -33,8 +32,10 @@ namespace {
 // This is the minimum size used by libfuse so we use it too!
 constexpr size_t MIN_BUFSIZE = 0x21000;
 
-using Handler = folly::Future<folly::Unit> (
-    FuseChannel::*)(const fuse_in_header* header, const uint8_t* arg);
+using Handler = folly::Future<folly::Unit> (FuseChannel::*)(
+    RequestData& request,
+    const fuse_in_header* header,
+    const uint8_t* arg);
 
 using AccessType = ProcessAccessLog::AccessType;
 
@@ -1272,13 +1273,11 @@ void FuseChannel::processSession() {
 
       default: {
         if (handlerEntry && handlerEntry->handler) {
-          // Start a new request and associate it with the current thread.
-          // It will be disassociated when we leave this scope, but will
-          // propagate across any futures that are spawned as part of this
-          // request.
-          RequestContextScopeGuard requestContextGuard;
-
-          auto& request = RequestData::create(this, *header, dispatcher_);
+          // This is a shared_ptr because, due to timeouts, the internal request
+          // lifetime may not match the FUSE request lifetime, so we capture it
+          // in both. I'm sure this could be improved with some cleverness.
+          auto request =
+              std::make_shared<RequestData>(this, *header, dispatcher_);
           uint64_t requestId;
           {
             // Save a weak reference to this new request context.
@@ -1293,18 +1292,19 @@ void FuseChannel::processSession() {
           }
 
           request
-              .catchErrors(
+              ->catchErrors(
                   folly::makeFutureWith([&] {
-                    request.startRequest(
+                    request->startRequest(
                         dispatcher_->getStats(),
                         handlerEntry->histogram,
                         *(liveRequestWatches_.get()));
                     return (this->*handlerEntry->handler)(
-                        &request.getReq(), arg);
+                        *request, &request->getReq(), arg);
                   })
+                      .ensure([request] {})
                       .within(requestTimeout_),
                   notifications_)
-              .ensure([this, requestId] {
+              .ensure([this, requestId, request] {
                 auto state = state_.wlock();
 
                 // Remove the request from the map
@@ -1380,6 +1380,7 @@ void FuseChannel::sessionComplete(folly::Synchronized<State>::LockedPtr state) {
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseRead(
+    RequestData& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto read = reinterpret_cast<const fuse_read_in*>(arg);
@@ -1387,11 +1388,12 @@ folly::Future<folly::Unit> FuseChannel::fuseRead(
   XLOG(DBG7) << "FUSE_READ";
 
   auto ino = InodeNumber{header->nodeid};
-  return dispatcher_->read(ino, read->size, read->offset, RequestData::get())
-      .thenValue([](BufVec&& buf) { RequestData::get().sendReply(*buf); });
+  return dispatcher_->read(ino, read->size, read->offset, request)
+      .thenValue([&request](BufVec&& buf) { request.sendReply(*buf); });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseWrite(
+    RequestData& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto write = reinterpret_cast<const fuse_write_in*>(arg);
@@ -1404,14 +1406,15 @@ folly::Future<folly::Unit> FuseChannel::fuseWrite(
   auto ino = InodeNumber{header->nodeid};
   return dispatcher_
       ->write(ino, folly::StringPiece{bufPtr, write->size}, write->offset)
-      .thenValue([](size_t written) {
+      .thenValue([&request](size_t written) {
         fuse_write_out out = {};
         out.size = written;
-        RequestData::get().sendReply(out);
+        request.sendReply(out);
       });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseLookup(
+    RequestData& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   PathComponentPiece name{reinterpret_cast<const char*>(arg)};
@@ -1419,44 +1422,48 @@ folly::Future<folly::Unit> FuseChannel::fuseLookup(
 
   XLOG(DBG7) << "FUSE_LOOKUP parent=" << parent << " name=" << name;
 
-  return dispatcher_->lookup(parent, name, RequestData::get())
+  return dispatcher_->lookup(header->unique, parent, name, request)
       .thenValue(
-          [](fuse_entry_out param) { RequestData::get().sendReply(param); });
+          [&request](fuse_entry_out param) { request.sendReply(param); });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseForget(
+    RequestData& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   auto forget = reinterpret_cast<const fuse_forget_in*>(arg);
   XLOG(DBG7) << "FUSE_FORGET inode=" << header->nodeid
              << " nlookup=" << forget->nlookup;
   dispatcher_->forget(InodeNumber{header->nodeid}, forget->nlookup);
-  RequestData::get().replyNone();
+  request.replyNone();
   return folly::unit;
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseGetAttr(
+    RequestData& request,
     const fuse_in_header* header,
     const uint8_t* /*arg*/) {
   XLOG(DBG7) << "FUSE_GETATTR inode=" << header->nodeid;
-  return dispatcher_->getattr(InodeNumber{header->nodeid}, RequestData::get())
-      .thenValue([](Dispatcher::Attr attr) {
-        RequestData::get().sendReply(attr.asFuseAttr());
+  return dispatcher_->getattr(InodeNumber{header->nodeid}, request)
+      .thenValue([&request](Dispatcher::Attr attr) {
+        request.sendReply(attr.asFuseAttr());
       });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseSetAttr(
+    RequestData& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto setattr = reinterpret_cast<const fuse_setattr_in*>(arg);
   XLOG(DBG7) << "FUSE_SETATTR inode=" << header->nodeid;
   return dispatcher_->setattr(InodeNumber{header->nodeid}, *setattr)
-      .thenValue([](Dispatcher::Attr attr) {
-        RequestData::get().sendReply(attr.asFuseAttr());
+      .thenValue([&request](Dispatcher::Attr attr) {
+        request.sendReply(attr.asFuseAttr());
       });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseReadLink(
+    RequestData& request,
     const fuse_in_header* header,
     const uint8_t* /*arg*/) {
   XLOG(DBG7) << "FUSE_READLINK inode=" << header->nodeid;
@@ -1466,12 +1473,13 @@ folly::Future<folly::Unit> FuseChannel::fuseReadLink(
 #endif
   return dispatcher_
       ->readlink(InodeNumber{header->nodeid}, kernelCachesReadlink)
-      .thenValue([](std::string&& str) {
-        RequestData::get().sendReply(folly::StringPiece(str));
+      .thenValue([&request](std::string&& str) {
+        request.sendReply(folly::StringPiece(str));
       });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseSymlink(
+    RequestData& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto nameStr = reinterpret_cast<const char*>(arg);
@@ -1481,10 +1489,11 @@ folly::Future<folly::Unit> FuseChannel::fuseSymlink(
 
   return dispatcher_->symlink(InodeNumber{header->nodeid}, name, link)
       .thenValue(
-          [](fuse_entry_out param) { RequestData::get().sendReply(param); });
+          [&request](fuse_entry_out param) { request.sendReply(param); });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseMknod(
+    RequestData& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto nod = reinterpret_cast<const fuse_mknod_in*>(arg);
@@ -1505,10 +1514,11 @@ folly::Future<folly::Unit> FuseChannel::fuseMknod(
   return dispatcher_
       ->mknod(InodeNumber{header->nodeid}, name, nod->mode, nod->rdev)
       .thenValue(
-          [](fuse_entry_out entry) { RequestData::get().sendReply(entry); });
+          [&request](fuse_entry_out entry) { request.sendReply(entry); });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseMkdir(
+    RequestData& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto dir = reinterpret_cast<const fuse_mkdir_in*>(arg);
@@ -1526,10 +1536,11 @@ folly::Future<folly::Unit> FuseChannel::fuseMkdir(
   return dispatcher_
       ->mkdir(InodeNumber{header->nodeid}, name, dir->mode & ~dir->umask)
       .thenValue(
-          [](fuse_entry_out entry) { RequestData::get().sendReply(entry); });
+          [&request](fuse_entry_out entry) { request.sendReply(entry); });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseUnlink(
+    RequestData& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto nameStr = reinterpret_cast<const char*>(arg);
@@ -1538,10 +1549,11 @@ folly::Future<folly::Unit> FuseChannel::fuseUnlink(
   XLOG(DBG7) << "FUSE_UNLINK " << name;
 
   return dispatcher_->unlink(InodeNumber{header->nodeid}, name)
-      .thenValue([](auto&&) { RequestData::get().replyError(0); });
+      .thenValue([&request](auto&&) { request.replyError(0); });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseRmdir(
+    RequestData& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto nameStr = reinterpret_cast<const char*>(arg);
@@ -1550,10 +1562,11 @@ folly::Future<folly::Unit> FuseChannel::fuseRmdir(
   XLOG(DBG7) << "FUSE_RMDIR " << name;
 
   return dispatcher_->rmdir(InodeNumber{header->nodeid}, name)
-      .thenValue([](auto&&) { RequestData::get().replyError(0); });
+      .thenValue([&request](auto&&) { request.replyError(0); });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseRename(
+    RequestData& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto rename = reinterpret_cast<const fuse_rename_in*>(arg);
@@ -1569,10 +1582,11 @@ folly::Future<folly::Unit> FuseChannel::fuseRename(
           oldName,
           InodeNumber{rename->newdir},
           newName)
-      .thenValue([](auto&&) { RequestData::get().replyError(0); });
+      .thenValue([&request](auto&&) { request.replyError(0); });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseLink(
+    RequestData& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto link = reinterpret_cast<const fuse_link_in*>(arg);
@@ -1584,47 +1598,50 @@ folly::Future<folly::Unit> FuseChannel::fuseLink(
   return dispatcher_
       ->link(InodeNumber{link->oldnodeid}, InodeNumber{header->nodeid}, newName)
       .thenValue(
-          [](fuse_entry_out param) { RequestData::get().sendReply(param); });
+          [&request](fuse_entry_out param) { request.sendReply(param); });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseOpen(
+    RequestData& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto open = reinterpret_cast<const fuse_open_in*>(arg);
   XLOG(DBG7) << "FUSE_OPEN";
   auto ino = InodeNumber{header->nodeid};
-  return dispatcher_->open(ino, open->flags).thenValue([](uint64_t fh) {
+  return dispatcher_->open(ino, open->flags).thenValue([&request](uint64_t fh) {
     fuse_open_out out = {};
     out.open_flags |= FOPEN_KEEP_CACHE;
     out.fh = fh;
-    RequestData::get().sendReply(out);
+    request.sendReply(out);
   });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseStatFs(
+    RequestData& request,
     const fuse_in_header* header,
     const uint8_t* /*arg*/) {
   XLOG(DBG7) << "FUSE_STATFS";
   return dispatcher_->statfs(InodeNumber{header->nodeid})
-      .thenValue([](struct fuse_kstatfs&& info) {
+      .thenValue([&request](struct fuse_kstatfs&& info) {
         fuse_statfs_out out = {};
         out.st = info;
-        RequestData::get().sendReply(out);
+        request.sendReply(out);
       });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseRelease(
+    RequestData& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   XLOG(DBG7) << "FUSE_RELEASE";
   auto ino = InodeNumber{header->nodeid};
   auto release = reinterpret_cast<const fuse_release_in*>(arg);
-  return dispatcher_->release(ino, release->fh).thenValue([](folly::Unit) {
-    RequestData::get().replyError(0);
-  });
+  return dispatcher_->release(ino, release->fh)
+      .thenValue([&request](folly::Unit) { request.replyError(0); });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseFsync(
+    RequestData& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto fsync = reinterpret_cast<const fuse_fsync_in*>(arg);
@@ -1634,12 +1651,13 @@ folly::Future<folly::Unit> FuseChannel::fuseFsync(
   XLOG(DBG7) << "FUSE_FSYNC";
 
   auto ino = InodeNumber{header->nodeid};
-  return dispatcher_->fsync(ino, datasync).thenValue([](auto&&) {
-    RequestData::get().replyError(0);
+  return dispatcher_->fsync(ino, datasync).thenValue([&request](auto&&) {
+    request.replyError(0);
   });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseSetXAttr(
+    RequestData& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto setxattr = reinterpret_cast<const fuse_setxattr_in*>(arg);
@@ -1652,10 +1670,11 @@ folly::Future<folly::Unit> FuseChannel::fuseSetXAttr(
 
   return dispatcher_
       ->setxattr(InodeNumber{header->nodeid}, attrName, value, setxattr->flags)
-      .thenValue([](auto&&) { RequestData::get().replyError(0); });
+      .thenValue([&request](auto&&) { request.replyError(0); });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseGetXAttr(
+    RequestData& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto getxattr = reinterpret_cast<const fuse_getxattr_in*>(arg);
@@ -1663,8 +1682,7 @@ folly::Future<folly::Unit> FuseChannel::fuseGetXAttr(
   const StringPiece attrName{nameStr};
   XLOG(DBG7) << "FUSE_GETXATTR";
   return dispatcher_->getxattr(InodeNumber{header->nodeid}, attrName)
-      .thenValue([size = getxattr->size](std::string attr) {
-        auto& request = RequestData::get();
+      .thenValue([&request, size = getxattr->size](const std::string& attr) {
         if (size == 0) {
           fuse_getxattr_out out = {};
           out.size = attr.size();
@@ -1678,66 +1696,68 @@ folly::Future<folly::Unit> FuseChannel::fuseGetXAttr(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseListXAttr(
+    RequestData& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto listattr = reinterpret_cast<const fuse_getxattr_in*>(arg);
   XLOG(DBG7) << "FUSE_LISTXATTR";
   return dispatcher_->listxattr(InodeNumber{header->nodeid})
-      .thenValue([size = listattr->size](std::vector<std::string> attrs) {
-        auto& request = RequestData::get();
+      .thenValue(
+          [&request, size = listattr->size](std::vector<std::string> attrs) {
+            // Initialize count to include the \0 for each
+            // entry.
+            size_t count = attrs.size();
+            for (const auto& attr : attrs) {
+              count += attr.size();
+            }
 
-        // Initialize count to include the \0 for each
-        // entry.
-        size_t count = attrs.size();
-        for (const auto& attr : attrs) {
-          count += attr.size();
-        }
-
-        if (size == 0) {
-          // caller is asking for the overall size
-          fuse_getxattr_out out = {};
-          out.size = count;
-          request.sendReply(out);
-        } else if (size < count) {
-          XLOG(DBG7) << "LISTXATTR input size is " << size << " and count is "
-                     << count;
-          request.replyError(ERANGE);
-        } else {
-          std::string buf;
-          buf.reserve(count);
-          for (const auto& attr : attrs) {
-            buf.append(attr);
-            buf.push_back(0);
-          }
-          XLOG(DBG7) << "LISTXATTR: " << buf;
-          request.sendReply(folly::StringPiece(buf));
-        }
-      });
+            if (size == 0) {
+              // caller is asking for the overall size
+              fuse_getxattr_out out = {};
+              out.size = count;
+              request.sendReply(out);
+            } else if (size < count) {
+              XLOG(DBG7) << "LISTXATTR input size is " << size
+                         << " and count is " << count;
+              request.replyError(ERANGE);
+            } else {
+              std::string buf;
+              buf.reserve(count);
+              for (const auto& attr : attrs) {
+                buf.append(attr);
+                buf.push_back(0);
+              }
+              XLOG(DBG7) << "LISTXATTR: " << buf;
+              request.sendReply(folly::StringPiece(buf));
+            }
+          });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseRemoveXAttr(
+    RequestData& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto nameStr = reinterpret_cast<const char*>(arg);
   const StringPiece attrName{nameStr};
   XLOG(DBG7) << "FUSE_REMOVEXATTR";
   return dispatcher_->removexattr(InodeNumber{header->nodeid}, attrName)
-      .thenValue([](auto&&) { RequestData::get().replyError(0); });
+      .thenValue([&request](auto&&) { request.replyError(0); });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseFlush(
+    RequestData& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto flush = reinterpret_cast<const fuse_flush_in*>(arg);
   XLOG(DBG7) << "FUSE_FLUSH";
 
   auto ino = InodeNumber{header->nodeid};
-  return dispatcher_->flush(ino, flush->lock_owner).thenValue([](auto&&) {
-    RequestData::get().replyError(0);
-  });
+  return dispatcher_->flush(ino, flush->lock_owner)
+      .thenValue([&request](auto&&) { request.replyError(0); });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseOpenDir(
+    RequestData& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto open = reinterpret_cast<const fuse_open_in*>(arg);
@@ -1745,7 +1765,7 @@ folly::Future<folly::Unit> FuseChannel::fuseOpenDir(
   auto ino = InodeNumber{header->nodeid};
   auto minorVersion = connInfo_->minor;
   return dispatcher_->opendir(ino, open->flags)
-      .thenValue([minorVersion](uint64_t fh) {
+      .thenValue([&request, minorVersion](uint64_t fh) {
         fuse_open_out out = {};
 #ifdef FOPEN_CACHE_DIR
         if (minorVersion >= 28) {
@@ -1756,37 +1776,38 @@ folly::Future<folly::Unit> FuseChannel::fuseOpenDir(
         (void)minorVersion;
 #endif
         out.fh = fh;
-        RequestData::get().sendReply(out);
+        request.sendReply(out);
       });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseReadDir(
+    RequestData& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   auto read = reinterpret_cast<const fuse_read_in*>(arg);
   XLOG(DBG7) << "FUSE_READDIR";
   auto ino = InodeNumber{header->nodeid};
   return dispatcher_
-      ->readdir(
-          ino, DirList{read->size}, read->offset, read->fh, RequestData::get())
-      .thenValue([](DirList&& list) {
+      ->readdir(ino, DirList{read->size}, read->offset, read->fh, request)
+      .thenValue([&request](DirList&& list) {
         const auto buf = list.getBuf();
-        RequestData::get().sendReply(StringPiece{buf});
+        request.sendReply(StringPiece{buf});
       });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseReleaseDir(
+    RequestData& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   XLOG(DBG7) << "FUSE_RELEASEDIR";
   auto ino = InodeNumber{header->nodeid};
   auto release = reinterpret_cast<const fuse_release_in*>(arg);
-  return dispatcher_->releasedir(ino, release->fh).thenValue([](folly::Unit) {
-    RequestData::get().replyError(0);
-  });
+  return dispatcher_->releasedir(ino, release->fh)
+      .thenValue([&request](folly::Unit) { request.replyError(0); });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseFsyncDir(
+    RequestData& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto fsync = reinterpret_cast<const fuse_fsync_in*>(arg);
@@ -1796,21 +1817,23 @@ folly::Future<folly::Unit> FuseChannel::fuseFsyncDir(
   XLOG(DBG7) << "FUSE_FSYNCDIR";
 
   auto ino = InodeNumber{header->nodeid};
-  return dispatcher_->fsyncdir(ino, datasync).thenValue([](auto&&) {
-    RequestData::get().replyError(0);
+  return dispatcher_->fsyncdir(ino, datasync).thenValue([&request](auto&&) {
+    request.replyError(0);
   });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseAccess(
+    RequestData& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto access = reinterpret_cast<const fuse_access_in*>(arg);
   XLOG(DBG7) << "FUSE_ACCESS";
   return dispatcher_->access(InodeNumber{header->nodeid}, access->mask)
-      .thenValue([](auto&&) { RequestData::get().replyError(0); });
+      .thenValue([&request](auto&&) { request.replyError(0); });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseCreate(
+    RequestData& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto create = reinterpret_cast<const fuse_create_in*>(arg);
@@ -1818,7 +1841,7 @@ folly::Future<folly::Unit> FuseChannel::fuseCreate(
   XLOG(DBG7) << "FUSE_CREATE " << name;
   auto ino = InodeNumber{header->nodeid};
   return dispatcher_->create(ino, name, create->mode, create->flags)
-      .thenValue([](fuse_entry_out entry) {
+      .thenValue([&request](fuse_entry_out entry) {
         fuse_open_out out = {};
         out.open_flags |= FOPEN_KEEP_CACHE;
 
@@ -1831,25 +1854,27 @@ folly::Future<folly::Unit> FuseChannel::fuseCreate(
         vec.push_back(make_iovec(entry));
         vec.push_back(make_iovec(out));
 
-        RequestData::get().sendReply(std::move(vec));
+        request.sendReply(std::move(vec));
       });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseBmap(
+    RequestData& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto bmap = reinterpret_cast<const fuse_bmap_in*>(arg);
   XLOG(DBG7) << "FUSE_BMAP";
   return dispatcher_
       ->bmap(InodeNumber{header->nodeid}, bmap->blocksize, bmap->block)
-      .thenValue([](uint64_t resultIdx) {
+      .thenValue([&request](uint64_t resultIdx) {
         fuse_bmap_out out;
         out.block = resultIdx;
-        RequestData::get().sendReply(out);
+        request.sendReply(out);
       });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseBatchForget(
+    RequestData& /*request*/,
     const fuse_in_header* /*header*/,
     const uint8_t* arg) {
   const auto forgets = reinterpret_cast<const fuse_batch_forget_in*>(arg);

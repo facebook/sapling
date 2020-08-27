@@ -8,7 +8,6 @@
 #pragma once
 
 #include <folly/futures/Future.h>
-#include <folly/io/async/Request.h>
 #include <atomic>
 #include <utility>
 
@@ -25,19 +24,13 @@ namespace eden {
 class Dispatcher;
 
 /**
- * Follows a request across executors and futures. startRequest should be
- * called before initiating a request and will be run where this is
- * initated. catchErrors will wrap a request future so that finishRequest is
- * called when it is completed. finishRequest will be executed where the request
- * is executed which may be in a different thread than startRequest was run.
- * Thus this will be run single threaded (only running from one thread at a
- * time, but may run on different threads.
+ * Each FUSE request has a corresponding RequestData object that is allocated at
+ * request start and deallocated when it finishes.
  *
- * see folly/io/async/Request.h for more info on RequestData
- * see eden/fs/fuse/FuseChannel.cpp FuseChannel::processSession for how this
- * should be used
+ * Unless a member function indicates otherwise, RequestData may be used from
+ * multiple threads, but only by one thread at a time.
  */
-class RequestData : public folly::RequestData, public ObjectFetchContext {
+class RequestData : public ObjectFetchContext {
   FuseChannel* channel_;
   fuse_in_header fuseHeader_;
   // Needed to track stats
@@ -76,7 +69,6 @@ class RequestData : public folly::RequestData, public ObjectFetchContext {
       ImportPriority(ImportPriorityKind::High)};
 
  public:
-  static const std::string kKey;
   RequestData(const RequestData&) = delete;
   RequestData& operator=(const RequestData&) = delete;
   RequestData(RequestData&&) = delete;
@@ -85,17 +77,13 @@ class RequestData : public folly::RequestData, public ObjectFetchContext {
       FuseChannel* channel,
       const fuse_in_header& fuseHeader,
       Dispatcher* dispatcher);
-  static RequestData& get();
-  static RequestData& create(
-      FuseChannel* channel,
-      const fuse_in_header& fuseHeader,
-      Dispatcher* dispatcher);
 
-  bool hasCallback() override {
-    return false;
-  }
-
-  // Override of `ObjectFetchContext`
+  /**
+   * Override of `ObjectFetchContext`
+   *
+   * Unlike other RequestData function, this may be called concurrently by
+   * arbitrary threads.
+   */
   void didFetch(ObjectType /*type*/, const Hash& /*hash*/, Origin origin)
       override {
     if (origin == Origin::FromBackingStore) {
@@ -158,10 +146,10 @@ class RequestData : public folly::RequestData, public ObjectFetchContext {
   folly::Future<folly::Unit> catchErrors(
       folly::Future<folly::Unit>&& fut,
       Notifications* FOLLY_NULLABLE notifications) {
-    return std::move(fut).thenTryInline([notifications](
+    return std::move(fut).thenTryInline([this, notifications](
                                             folly::Try<folly::Unit>&& try_) {
       SCOPE_EXIT {
-        RequestData::get().finishRequest();
+        finishRequest();
       };
       if (try_.hasException()) {
         if (auto* err = try_.tryGetExceptionObject<folly::FutureTimeout>()) {
@@ -179,13 +167,13 @@ class RequestData : public folly::RequestData, public ObjectFetchContext {
     });
   }
 
-  static void systemErrorHandler(
+  void systemErrorHandler(
       const std::system_error& err,
       Notifications* FOLLY_NULLABLE notifications);
-  static void genericErrorHandler(
+  void genericErrorHandler(
       const std::exception& err,
       Notifications* FOLLY_NULLABLE notifications);
-  static void timeoutErrorHandler(
+  void timeoutErrorHandler(
       const folly::FutureTimeout& err,
       Notifications* FOLLY_NULLABLE notifications);
 

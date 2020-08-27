@@ -63,9 +63,12 @@ class Dispatcher {
   virtual void destroy();
 
   /**
-   * Lookup a directory entry by name and get its attributes
+   * Lookup a directory entry by name and get its attributes.
+   *
+   * requestID is given here to assert invariants in tests.
    */
   virtual folly::Future<fuse_entry_out> lookup(
+      uint64_t requestID,
       InodeNumber parent,
       PathComponentPiece name,
       ObjectFetchContext& context);

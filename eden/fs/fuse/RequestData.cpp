@@ -21,32 +21,11 @@ using namespace std::chrono;
 namespace facebook {
 namespace eden {
 
-const std::string RequestData::kKey("fuse");
-
 RequestData::RequestData(
     FuseChannel* channel,
     const fuse_in_header& fuseHeader,
     Dispatcher* dispatcher)
     : channel_(channel), fuseHeader_(fuseHeader), dispatcher_(dispatcher) {}
-
-RequestData& RequestData::get() {
-  const auto data = folly::RequestContext::get()->getContextData(kKey);
-  if (UNLIKELY(!data)) {
-    XLOG(FATAL) << "boom for missing RequestData";
-    throw std::runtime_error("no fuse request data set in this context!");
-  }
-  return *dynamic_cast<RequestData*>(data);
-}
-
-RequestData& RequestData::create(
-    FuseChannel* channel,
-    const fuse_in_header& fuseHeader,
-    Dispatcher* dispatcher) {
-  folly::RequestContext::get()->setContextData(
-      RequestData::kKey,
-      std::make_unique<RequestData>(channel, fuseHeader, dispatcher));
-  return get();
-}
 
 void RequestData::startRequest(
     EdenStats* stats,
@@ -130,7 +109,7 @@ void RequestData::systemErrorHandler(
     errnum = err.code().value();
   }
   XLOG(DBG5) << folly::exceptionStr(err);
-  RequestData::get().replyError(errnum);
+  replyError(errnum);
   if (notifications) {
     notifications->showGenericErrorNotification(err);
   }
@@ -140,7 +119,7 @@ void RequestData::genericErrorHandler(
     const std::exception& err,
     Notifications* FOLLY_NULLABLE notifications) {
   XLOG(DBG5) << folly::exceptionStr(err);
-  RequestData::get().replyError(EIO);
+  replyError(EIO);
   if (notifications) {
     notifications->showGenericErrorNotification(err);
   }
@@ -151,7 +130,7 @@ void RequestData::timeoutErrorHandler(
     Notifications* FOLLY_NULLABLE notifications) {
   XLOG_EVERY_MS(WARN, 1000)
       << "FUSE request timed out: " << folly::exceptionStr(err);
-  RequestData::get().replyError(ETIMEDOUT);
+  replyError(ETIMEDOUT);
   if (notifications) {
     notifications->showGenericErrorNotification(err);
   }

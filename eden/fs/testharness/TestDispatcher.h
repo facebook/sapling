@@ -21,6 +21,8 @@
 namespace facebook {
 namespace eden {
 
+class RequestData;
+
 /**
  * A FUSE Dispatcher implementation for use in unit tests.
  *
@@ -44,6 +46,7 @@ class TestDispatcher : public Dispatcher {
   using Dispatcher::Dispatcher;
 
   folly::Future<fuse_entry_out> lookup(
+      uint64_t requestID,
       InodeNumber parent,
       PathComponentPiece name,
       ObjectFetchContext& context) override;

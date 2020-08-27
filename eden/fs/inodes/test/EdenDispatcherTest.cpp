@@ -107,7 +107,8 @@ TEST(RawEdenDispatcherTest, lookup_returns_valid_inode_for_good_file) {
 
   auto entry =
       mount.getDispatcher()
-          ->lookup(kRootNodeId, "good"_pc, ObjectFetchContext::getNullContext())
+          ->lookup(
+              0, kRootNodeId, "good"_pc, ObjectFetchContext::getNullContext())
           .get(0ms);
   EXPECT_NE(0, entry.nodeid);
   EXPECT_NE(0, entry.attr.ino);
@@ -119,7 +120,7 @@ TEST(RawEdenDispatcherTest, lookup_returns_valid_inode_for_bad_file) {
   builder.setFile("bad", "contents");
   TestMount mount{builder, /*startReady=*/false};
   auto entryFuture = mount.getDispatcher()->lookup(
-      kRootNodeId, "bad"_pc, ObjectFetchContext::getNullContext());
+      0, kRootNodeId, "bad"_pc, ObjectFetchContext::getNullContext());
   builder.getStoredBlob("bad"_relpath)
       ->triggerError(std::runtime_error("failed to load"));
   auto entry = std::move(entryFuture).get(0ms);
