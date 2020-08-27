@@ -19,6 +19,7 @@ use anyhow::Error;
 use anyhow::{anyhow, bail, Result};
 use hostname;
 use minibytes::Text;
+use serde_json::{self, Value};
 
 use hgtime::HgTime;
 
@@ -135,7 +136,7 @@ impl Generator {
     pub fn new(repo_name: String, repo_path: PathBuf, user_name: String) -> Result<Self> {
         let repo = Repo::from_str(&repo_name)?;
 
-        let tiers: HashSet<String> = if Path::new("/etc/smc.tiers").exists() {
+        let mut tiers: HashSet<String> = if Path::new("/etc/smc.tiers").exists() {
             fs::read_to_string("/etc/smc.tiers")?
                 .split_whitespace()
                 .filter(|s| s.len() > 0)
@@ -144,6 +145,14 @@ impl Generator {
         } else {
             HashSet::new()
         };
+
+        if Path::new("/etc/fbitwhoami").exists() {
+            let raw_json = fs::read_to_string("/etc/fbitwhoami")?;
+            let value: Value = serde_json::from_str(raw_json.as_ref())?;
+            if let Some(Some(tier)) = value.get("tier").map(|v| v.as_str()) {
+                tiers.insert(tier.to_string());
+            }
+        }
 
         let hostname = hostname::get()?
             .to_string_lossy()
