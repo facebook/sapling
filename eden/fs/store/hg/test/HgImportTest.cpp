@@ -59,7 +59,8 @@ TEST_F(HgImportTest, importTest) {
   // Import the root tree
   HgImporter importer(repo_.path(), stats_);
 
-  auto fileHash = repo_.hg("manifest", "--debug").substr(0, 40);
+  auto output = repo_.hg("manifest", "--debug");
+  auto fileHash = output.substr(0, 40);
 
   auto blob = importer.importFileContents(filePath, Hash{fileHash});
   EXPECT_BLOB_EQ(blob, barData);

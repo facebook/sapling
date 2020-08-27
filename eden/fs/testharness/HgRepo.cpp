@@ -75,6 +75,9 @@ HgRepo::HgRepo(AbsolutePathPiece path) : path_{path} {
   hgEnv_.push_back("CHGDISABLE=1");
   hgEnv_.push_back("NOSCMLOG=1");
   hgEnv_.push_back("LOCALE=C");
+  // Trick Mercurial into thinking it's in a test so it doesn't generate
+  // prod configs.
+  hgEnv_.push_back("TESTTMP=");
 }
 
 string HgRepo::hg(vector<string> args) {
