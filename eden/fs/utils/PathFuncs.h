@@ -19,6 +19,7 @@
 #include <folly/Format.h>
 #include <folly/String.h>
 #include <folly/hash/Hash.h>
+#include <iterator>
 #include <optional>
 #include <type_traits>
 
@@ -445,9 +446,14 @@ class PathComponentBase : public PathBase<
  * able to use ComposedPathIterator as vector constructor arguments.
  */
 template <typename Piece, bool IsReverse>
-class ComposedPathIterator
-    : public std::iterator<std::input_iterator_tag, const Piece> {
+class ComposedPathIterator {
  public:
+  using iterator_category = std::input_iterator_tag;
+  using value_type = const Piece;
+  using difference_type = std::ptrdiff_t;
+  using pointer = value_type*;
+  using reference = value_type&;
+
   using position_type = folly::StringPiece::const_iterator;
 
   explicit ComposedPathIterator() : path_(), pos_(nullptr) {}
@@ -604,9 +610,14 @@ class ComposedPathIterator
  * An iterator over components in a composed path.
  */
 template <bool IsReverse>
-class PathComponentIterator
-    : public std::iterator<std::input_iterator_tag, const PathComponentPiece> {
+class PathComponentIterator {
  public:
+  using iterator_category = std::input_iterator_tag;
+  using value_type = const PathComponentPiece;
+  using difference_type = std::ptrdiff_t;
+  using pointer = value_type*;
+  using reference = value_type&;
+
   using position_type = folly::StringPiece::const_iterator;
   enum EndEnum { END };
 
@@ -1284,9 +1295,14 @@ class AbsolutePathBase : public ComposedPathBase<
  *   "foo/bar/baz"
  */
 template <bool IsReverse>
-class PathSuffixIterator
-    : public std::iterator<std::input_iterator_tag, const RelativePathPiece> {
+class PathSuffixIterator {
  public:
+  using iterator_category = std::input_iterator_tag;
+  using value_type = const RelativePathPiece;
+  using difference_type = std::ptrdiff_t;
+  using pointer = value_type*;
+  using reference = value_type&;
+
   explicit PathSuffixIterator() {}
   explicit PathSuffixIterator(folly::StringPiece path, size_t start = 0)
       : path_{path}, start_{start} {}
