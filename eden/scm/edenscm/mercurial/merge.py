@@ -2097,13 +2097,19 @@ def _logupdatedistance(ui, repo, node, branchmerge):
         return
 
     try:
+        # The passed in node might actually be a rev, and if it's -1, that
+        # doesn't play nicely with revsets later because it resolve to the tip
+        # commit.
+        node = repo[node].node()
         revdistance = abs(repo["."].rev() - repo[node].rev())
-        if revdistance >= 100000:
+        if revdistance == 0:
+            distance = 0
+        elif revdistance >= 100000:
             # Calculating real distance is too slow.
             # Use an approximate.
             distance = ((revdistance + 500) / 1000) * 1000
         else:
-            distance = len(repo.revs("(%s %% .) + (. %% %s)", node, node))
+            distance = len(repo.revs("(%n %% .) + (. %% %n)", node, node))
         repo.ui.log("update_size", update_distance=distance)
     except Exception:
         # error may happen like: RepoLookupError: unknown revision '-1'
