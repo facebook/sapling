@@ -62,7 +62,7 @@ function random_int() {
 }
 
 function sslcurl {
-  curl --cert "$TEST_CERTDIR/localhost.crt" --cacert "$TEST_CERTDIR/root-ca.crt" --key "$TEST_CERTDIR/localhost.key" "$@"
+  curl --noproxy localhost --cert "$TEST_CERTDIR/localhost.crt" --cacert "$TEST_CERTDIR/root-ca.crt" --key "$TEST_CERTDIR/localhost.key" "$@"
 }
 
 function ssldebuglfssend {
@@ -358,8 +358,7 @@ function wait_for_mononoke {
   timeout="${MONONOKE_START_TIMEOUT:-"$MONONOKE_DEFAULT_START_TIMEOUT"}"
   attempts="$((timeout * 10))"
 
-  SSLCURL="sslcurl --noproxy localhost \
-                https://localhost:$MONONOKE_SOCKET"
+  SSLCURL="sslcurl https://localhost:$MONONOKE_SOCKET"
 
   for _ in $(seq 1 $attempts); do
     $SSLCURL 2>&1 | grep -q 'Empty reply' && break
