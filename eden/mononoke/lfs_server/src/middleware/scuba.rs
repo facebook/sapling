@@ -246,25 +246,25 @@ fn log_stats(
         scuba.add(ScubaKey::ErrorMessage, err_msg.as_ref());
     }
 
-    ctx.add_post_request(
-        move |duration, client_hostname, bytes_sent, perf_counters| {
-            if let Some(duration) = duration {
-                scuba.add(ScubaKey::DurationMs, duration.as_millis_unchecked());
-            }
+    let core_ctx = ctx.ctx.clone();
 
-            if let Some(client_hostname) = client_hostname.as_deref() {
-                scuba.add(ScubaKey::ClientHostname, client_hostname);
-            }
+    ctx.add_post_request(move |duration, client_hostname, bytes_sent| {
+        if let Some(duration) = duration {
+            scuba.add(ScubaKey::DurationMs, duration.as_millis_unchecked());
+        }
 
-            if let Some(bytes_sent) = bytes_sent {
-                scuba.add(ScubaKey::ResponseBytesSent, bytes_sent);
-            }
+        if let Some(client_hostname) = client_hostname.as_deref() {
+            scuba.add(ScubaKey::ClientHostname, client_hostname);
+        }
 
-            perf_counters.insert_perf_counters(&mut scuba);
+        if let Some(bytes_sent) = bytes_sent {
+            scuba.add(ScubaKey::ResponseBytesSent, bytes_sent);
+        }
 
-            scuba.log();
-        },
-    );
+        core_ctx.perf_counters().insert_perf_counters(&mut scuba);
+
+        scuba.log();
+    });
 
     Some(())
 }

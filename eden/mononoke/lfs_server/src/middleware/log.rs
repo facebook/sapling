@@ -112,7 +112,7 @@ fn log_request_slog(logger: &Logger, state: &mut State, entry: LogEntry) -> Opti
             );
         }
         LogEntry::ResponseOut(status) => {
-            ctx.add_post_request(move |duration, client_hostname, bytes_sent, _| {
+            ctx.add_post_request(move |duration, client_hostname, bytes_sent| {
                 info!(
                     &logger,
                     SLOG_FORMAT!(),

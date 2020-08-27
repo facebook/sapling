@@ -9,7 +9,7 @@ use std::fmt;
 use std::time::{Duration, Instant};
 
 use cached_config::ConfigHandle;
-use context::{CoreContext, PerfCounters, SessionContainer};
+use context::{CoreContext, SessionContainer};
 use fbinit::FacebookInit;
 use futures::{
     channel::oneshot::{self, Receiver, Sender},
@@ -30,12 +30,8 @@ use crate::config::ServerConfig;
 
 use super::RequestStartTime;
 
-type PostRequestCallback = Box<
-    dyn FnOnce(&Option<Duration>, &Option<String>, Option<u64>, &PerfCounters)
-        + Sync
-        + Send
-        + 'static,
->;
+type PostRequestCallback =
+    Box<dyn FnOnce(&Option<Duration>, &Option<String>, Option<u64>) + Sync + Send + 'static>;
 
 #[derive(Copy, Clone)]
 pub enum LfsMethod {
@@ -93,10 +89,7 @@ impl RequestContext {
 
     pub fn add_post_request<T>(&mut self, callback: T)
     where
-        T: FnOnce(&Option<Duration>, &Option<String>, Option<u64>, &PerfCounters)
-            + Sync
-            + Send
-            + 'static,
+        T: FnOnce(&Option<Duration>, &Option<String>, Option<u64>) + Sync + Send + 'static,
     {
         self.post_request_callbacks.push(Box::new(callback));
     }
@@ -118,7 +111,6 @@ impl RequestContext {
         H: Future<Output = Option<String>> + Send + 'static,
     {
         let Self {
-            ctx,
             post_request_callbacks,
             checkpoint,
             ..
@@ -140,7 +132,7 @@ impl RequestContext {
             let client_hostname = client_hostname.await;
 
             for callback in post_request_callbacks.into_iter() {
-                callback(&elapsed, &client_hostname, bytes_sent, ctx.perf_counters())
+                callback(&elapsed, &client_hostname, bytes_sent)
             }
         };
 

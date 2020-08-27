@@ -36,7 +36,7 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
         return None;
     }
 
-    ctx.add_post_request(move |duration, _, response_bytes_sent, _| {
+    ctx.add_post_request(move |duration, _, response_bytes_sent| {
         if let Some(duration) = duration {
             match method {
                 LfsMethod::Upload => {
