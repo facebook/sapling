@@ -2687,11 +2687,9 @@ def diffhunks(
     modified = sorted(modifiedset)
     added = sorted(addedset)
     removed = sorted(removedset)
-    for dst, src in copy.items():
-        if src not in ctx1:
-            # Files merged in during a merge and then copied/renamed are
-            # reported as copies. We want to show them in the diff as additions.
-            del copy[dst]
+    # Files merged in during a merge and then copied/renamed are
+    # reported as copies. We want to show them in the diff as additions.
+    copy = {dst: src for (dst, src) in copy.items() if src in ctx1}
 
     def difffn(opts, losedata):
         return trydiff(
