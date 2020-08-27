@@ -10,8 +10,6 @@ use super::Repo;
 use super::Result;
 use super::IO;
 use configparser::hg::generate_dynamicconfig;
-use filetime::{set_file_mtime, FileTime};
-use tempfile::tempfile_in;
 
 define_flags! {
     pub struct DebugDynamicConfigOpts {

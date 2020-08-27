@@ -22,7 +22,6 @@ edenapi = { path = "../edenapi" }
 edenfs-client = { path = "../edenfs-client"}
 encoding = { path = "../encoding" }
 env_logger = "0.7"
-filetime = "0.2.9"
 flate2 = "1"
 hgtime = { path = "../hgtime"}
 indexedlog = { path = "../indexedlog" }
@@ -36,7 +35,6 @@ pytracing = { path = "../../edenscmnative/bindings/modules/pytracing", default-f
 revisionstore = { path = "../revisionstore"}
 taggederror = { path = "../taggederror"}
 thiserror = "1.0.5"
-tempfile = "3.1"
 tracing = "0.1"
 tracing-collector = { path = "../tracing-collector" }
 types = { path = "../types" }
