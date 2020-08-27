@@ -47,12 +47,6 @@ from .node import hex, short
 from .pycompat import decodeutf8, encodeutf8, range
 
 
-if sys.version_info[0] < 3:
-    from email.Parser import Parser
-else:
-    from email.parser import BytesParser as Parser
-
-
 stringio = util.stringio
 
 gitre = re.compile(br"diff --git a/(.*) b/(.*)")
@@ -119,7 +113,7 @@ def split(stream):
             cur.append(line)
         c = chunk(cur)
 
-        m = Parser().parse(c)
+        m = pycompat.parse_email(c)
         if not m.is_multipart():
             yield msgfp(m)
         else:
@@ -229,7 +223,7 @@ def extract(ui, fileobj):
     fd, tmpname = tempfile.mkstemp(prefix="hg-patch-")
     tmpfp = util.fdopen(fd, "wb")
     try:
-        msg = Parser().parse(fileobj)
+        msg = pycompat.parse_email(fileobj)
 
         subject = msg["Subject"] and mail.headdecode(msg["Subject"])
         data["user"] = msg["From"] and mail.headdecode(msg["From"])
@@ -257,7 +251,13 @@ def extract(ui, fileobj):
             ui.debug("Content-Type: %s\n" % content_type)
             if content_type not in ok_types:
                 continue
-            payload = part.get_payload(decode=True)
+            if sys.version_info[0] >= 3:
+                # The message was surrogateescape encoded, so we need to undo
+                # that.
+                payload = part.get_payload()
+                payload = payload.encode("ascii", errors="surrogateescape")
+            else:
+                payload = part.get_payload(decode=True)
             m = diffre.search(payload)
             if m:
                 hgpatch = False

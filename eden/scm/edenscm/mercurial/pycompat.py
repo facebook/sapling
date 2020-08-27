@@ -150,6 +150,23 @@ if sys.version_info[0] >= 3:
         # type: (str) -> str
         return value
 
+    def parse_email(fp):
+        # Rarely used, so let's lazy load it
+        import email.parser
+        import io
+
+        ep = email.parser.Parser()
+        # disable the "universal newlines" mode, which isn't binary safe.
+        # We'll have to use surrogateescape when encoding the string back to
+        # bytes later.
+        fp = io.TextIOWrapper(
+            fp, encoding=r"ascii", errors=r"surrogateescape", newline=chr(10)
+        )
+        try:
+            return ep.parse(fp)
+        finally:
+            fp.detach()
+
     ABC = abc.ABC
     import collections.abc
 
@@ -233,6 +250,12 @@ else:
     def toutf8lossy(value):
         # type: (str) -> str
         return value.decode("utf-8", "replace").encode("utf-8")
+
+    def parse_email(fp):
+        import email.parser
+
+        ep = email.parser.Parser()
+        return ep.parse(fp)
 
     class ABC(object):
         __metaclass__ = abc.ABCMeta
