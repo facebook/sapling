@@ -544,6 +544,9 @@ def wraprepo(repo):
             if depth is None:
                 depth = self.ui.configint("treemanifest", "fetchdepth")
 
+            if rootdir == "" and len(mfnodes) == 1 and list(mfnodes) == [nullid]:
+                return
+
             if self.ui.configbool("treemanifest", "bfsprefetch"):
                 self._bfsprefetch(rootdir, mfnodes, depth)
                 return
@@ -640,7 +643,8 @@ def wraprepo(repo):
             with progress.spinner(self.ui, "prefetching trees using BFS"):
                 store = self.manifestlog.datastore
                 for node in mfnodes:
-                    rustmanifest.prefetch(store, node, rootdir, depth)
+                    if node != nullid:
+                        rustmanifest.prefetch(store, node, rootdir, depth)
 
     repo.__class__ = treerepository
     repo._treefetches = 0
@@ -2601,6 +2605,9 @@ class remotetreestore(generatingdatastore):
         # Filter out keys for nodes already present locally.
         keys = self._shareddata.getmissing(keys)
         if not keys:
+            return
+
+        if len(keys) == 1 and list(keys) == [("", nullid)]:
             return
 
         # Otherwise, try to fetch the desired nodes via SSH. This
