@@ -299,32 +299,34 @@ def cloudrejoin(ui, repo, **opts):
     if workspace.currentworkspace(repo):
         return
 
-    workspacename = workspace.parseworkspace(ui, opts)
-    if workspacename is None:
-        # If the workspace name is not given, figure out the sensible default.
-        # The specific hostname workspace will be preferred over the default workspace.
-        reponame = ccutil.getreponame(repo)
-        hostnameworkspace = workspace.hostnameworkspace(ui)
-        winfos = service.get(ui, tokenmod.TokenLocator(ui).token).getworkspaces(
-            reponame, hostnameworkspace
-        )
-        if winfos and any([winfo.name == hostnameworkspace for winfo in winfos]):
-            workspacename = hostnameworkspace
-            hintutil.trigger("commitcloud-switch")
-        else:
-            workspacename = workspace.defaultworkspace(ui)
-
-    ui.status(
-        _("attempting to connect to the '%s' workspace for the '%s' repo\n")
-        % (workspacename, ccutil.getreponame(repo)),
-        component="commitcloud",
-    )
     try:
+        workspacename = workspace.parseworkspace(ui, opts)
+        if workspacename is None:
+            # If the workspace name is not given, figure out the sensible default.
+            # The specific hostname workspace will be preferred over the default workspace.
+            reponame = ccutil.getreponame(repo)
+            hostnameworkspace = workspace.hostnameworkspace(ui)
+            winfos = service.get(ui, tokenmod.TokenLocator(ui).token).getworkspaces(
+                reponame, hostnameworkspace
+            )
+            if winfos and any([winfo.name == hostnameworkspace for winfo in winfos]):
+                workspacename = hostnameworkspace
+                hintutil.trigger("commitcloud-switch")
+            else:
+                workspacename = workspace.defaultworkspace(ui)
+
+        ui.status(
+            _("attempting to connect to the '%s' workspace for the '%s' repo\n")
+            % (workspacename, ccutil.getreponame(repo)),
+            component="commitcloud",
+        )
+
         # update the raw_workspace option as workspacename has been already parsed
         for opt in workspace.workspaceopts:
             opts.pop(opt[1], None)
         opts.update({"raw_workspace": workspacename})
         cloudjoin(ui, repo, **opts)
+
     except ccerror.RegistrationError:
         ui.status(
             _("unable to connect: not authenticated with Commit Cloud on this host\n"),
