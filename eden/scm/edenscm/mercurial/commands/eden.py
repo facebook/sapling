@@ -470,7 +470,7 @@ class HgServer(object):
 
         manifest_node = request.body[:SHA1_NUM_BYTES]
         path = pycompat.decodeutf8(request.body[SHA1_NUM_BYTES:])
-        logging.warning(
+        logging.debug(
             "fetching tree for path %r manifest node %s", path, hex(manifest_node)
         )
 
