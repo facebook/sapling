@@ -212,6 +212,7 @@ Show the global options
   --quiet
   --repository
   --time
+  --trace
   --traceback
   --verbose
   --version
@@ -257,6 +258,7 @@ Show the options for the "serve" command
   --style
   --templates
   --time
+  --trace
   --traceback
   --verbose
   --version
@@ -433,7 +435,7 @@ Show all commands + options
   debugpull: bookmark, rev
   debugpushkey: 
   debugpvec: 
-  debugpython: trace
+  debugpython: 
   debugreadauthforuri: user
   debugrebuilddirstate: rev, minimal
   debugrebuildfncache: 

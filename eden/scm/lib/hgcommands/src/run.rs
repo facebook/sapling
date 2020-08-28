@@ -8,6 +8,7 @@
 use crate::{commands, HgPython};
 use anyhow::Result;
 use blackbox::serde_json;
+use clidispatch::global_flags::HgGlobalOpts;
 use clidispatch::{dispatch, errors};
 use parking_lot::Mutex;
 use std::env;
@@ -38,9 +39,12 @@ pub fn run_command(args: Vec<String>, io: &mut clidispatch::io::IO) -> i32 {
         return HgPython::new(&args).run_hg(args, io);
     }
 
+    // Extra initialization based on global flags.
+    let global_opts = dispatch::parse_global_opts(&args[1..]).ok();
+
     // Setup tracing early since "log_start" will use it immediately.
     // The tracing clock starts ticking from here.
-    let (_tracing_level, tracing_data) = setup_tracing();
+    let (_tracing_level, tracing_data) = setup_tracing(&global_opts);
 
     // This is intended to be "process start". "exec/hgmain" seems to be
     // a better place for it. However, chg makes it tricky. Because if hgmain
@@ -105,7 +109,14 @@ pub fn run_command(args: Vec<String>, io: &mut clidispatch::io::IO) -> i32 {
                 // code.
                 let _ = env::set_current_dir(cwd);
 
-                HgPython::new(&args).run_hg(args, io)
+                let mut interp = HgPython::new(&args);
+                if let Some(opts) = global_opts {
+                    if opts.trace {
+                        // Error is not fatal.
+                        let _ = interp.setup_tracing("*".into());
+                    }
+                }
+                interp.run_hg(args, io)
             }
         };
         span.record("exit_code", &exit_code);
@@ -147,7 +158,7 @@ fn current_dir(io: &mut clidispatch::io::IO) -> io::Result<PathBuf> {
     result
 }
 
-fn setup_tracing() -> (Level, Arc<Mutex<TracingData>>) {
+fn setup_tracing(global_opts: &Option<HgGlobalOpts>) -> (Level, Arc<Mutex<TracingData>>) {
     // Setup TracingData singleton (currently owned by pytracing).
     {
         let mut data = pytracing::DATA.lock();
@@ -164,7 +175,14 @@ fn setup_tracing() -> (Level, Arc<Mutex<TracingData>>) {
     let level = std::env::var("EDENSCM_TRACE_LEVEL")
         .ok()
         .and_then(|s| Level::from_str(&s).ok())
-        .unwrap_or(Level::INFO);
+        .unwrap_or_else(|| {
+            if let Some(opts) = global_opts {
+                if opts.trace {
+                    return Level::DEBUG;
+                }
+            }
+            Level::INFO
+        });
     let collector = TracingCollector::new(data.clone(), level.clone());
     let _ = tracing::subscriber::set_global_default(collector);
 

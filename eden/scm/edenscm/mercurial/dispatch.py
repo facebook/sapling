@@ -393,7 +393,7 @@ def dispatch(req):
         if not req.ui:
             req.ui = uimod.ui.load()
         req.earlyoptions.update(_earlyparseopts(req.ui, req.args))
-        if req.earlyoptions["traceback"]:
+        if req.earlyoptions["traceback"] or req.earlyoptions["trace"]:
             req.ui.setconfig("ui", "traceback", "on", "--traceback")
 
         # set ui streams from the request

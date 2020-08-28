@@ -156,6 +156,7 @@ globalopts = cmdutil._typedflags(
             _("ENCODE"),
         ),
         ("", "traceback", False, _("always print a traceback on exception")),
+        ("", "trace", False, _("enable more detailed tracing")),
         ("", "time", False, _("time how long the command takes")),
         ("", "profile", False, _("print command execution profile")),
         ("", "version", False, _("output version information and exit")),

@@ -52,6 +52,9 @@ define_flags! {
         /// always print a traceback on exception
         traceback: bool,
 
+        /// enable more detailed tracing
+        trace: bool,
+
         /// time how long the command takes
         time: bool,
 

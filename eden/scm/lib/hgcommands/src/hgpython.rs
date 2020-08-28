@@ -146,10 +146,6 @@ impl HgPython {
         let py = gil.python();
         let traceimport = py.import("edenscm.traceimport")?;
         traceimport.call(py, "enable", (pattern,), None)?;
-        // Show >= 20ms calls. This is an arbitrary setting. Users want to
-        // control this (and use output format other than ASCII) should
-        // consider setting up the tracing module explicitly.
-        traceimport.call(py, "registeratexit", (20_000,), None)?;
         Ok(())
     }
 

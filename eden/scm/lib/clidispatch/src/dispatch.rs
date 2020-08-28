@@ -140,6 +140,11 @@ fn initialize_indexedlog(config: &ConfigSet) -> Result<()> {
     Ok(())
 }
 
+pub fn parse_global_opts(args: &[String]) -> Result<HgGlobalOpts> {
+    let early_result = early_parse(args)?;
+    early_result.try_into()
+}
+
 pub fn dispatch(command_table: &CommandTable, args: &[String], io: &mut IO) -> Result<u8> {
     let early_result = early_parse(args)?;
     let global_opts: HgGlobalOpts = early_result.clone().try_into()?;
