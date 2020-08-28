@@ -60,6 +60,14 @@ pub struct TracingData {
     /// - Non-zero: Use a faked clock.
     #[serde(skip, default = "Default::default")]
     test_clock_step: u64,
+
+    /// Maximum reference count of a span.
+    #[serde(skip, default = "default_max_span_ref_count")]
+    max_span_ref_count: usize,
+}
+
+fn default_max_span_ref_count() -> usize {
+    1000
 }
 
 #[derive(Serialize, Deserialize, Default)]
@@ -90,6 +98,10 @@ struct Espan {
     /// Metadata from the tracing eco-system.
     #[serde(skip)]
     metadata: Option<&'static tracing::Metadata<'static>>,
+
+    /// Reference count of the span.
+    #[serde(skip, default = "Default::default")]
+    ref_count: usize,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -163,16 +175,33 @@ impl TracingData {
                 Ok(clock) => clock.parse::<u64>().unwrap_or(0),
                 Err(_) => 0,
             },
+            max_span_ref_count: default_max_span_ref_count(),
         })
+    }
+
+    pub fn set_max_span_ref_count(&mut self, value: usize) {
+        self.max_span_ref_count = value;
     }
 
     /// Push an `Eventus` at the current timestamp.
     /// Return `true` if the [`Eventus`] was pushed.
     /// Return `false` if `espan_id` is invalid.
     fn push_eventus(&mut self, action: Action, espan_id: EspanId) -> bool {
-        if self.get_espan_index(espan_id).is_none() {
+        let espan_index = match self.get_espan_index(espan_id) {
             // Ignore invalid EspanId.
+            None => return false,
+            Some(index) => index,
+        };
+        if self.espans[espan_index].ref_count >= self.max_span_ref_count {
+            // Exceed ref-count limit.
             return false;
+        }
+        if matches!(action, Action::ExitSpan | Action::Event) {
+            // Increase ref count of the span.
+            //
+            // Do not increase on EnterSpan, making it harder to have unmatched
+            // events (i.e. Enter without Exit).
+            self.espans[espan_index].ref_count += 1;
         }
         let timestamp = self.now_micros();
         let mut thread_id = THREAD_ID.with(|thread_id| *thread_id);
@@ -325,7 +354,11 @@ impl TracingData {
         espan.record_values(&mut self.strings, &mut meta);
 
         let metadata = Some(espan.metadata());
-        let espan = Espan { meta, metadata };
+        let espan = Espan {
+            meta,
+            metadata,
+            ref_count: 0,
+        };
 
         let result = EspanId(self.espans.len() as u64 + self.espan_id_offset.0);
         self.espans.push(espan);
@@ -565,7 +598,11 @@ impl TracingData {
         }
 
         let metadata = None;
-        let espan = Espan { meta, metadata };
+        let espan = Espan {
+            meta,
+            metadata,
+            ref_count: 0,
+        };
 
         let result = EspanId(self.espans.len() as u64 + self.espan_id_offset.0);
         self.espans.push(espan);
@@ -640,7 +677,11 @@ impl TracingData {
                     })
                     .collect();
                 let metadata = None;
-                espans.push(Espan { meta, metadata });
+                espans.push(Espan {
+                    meta,
+                    metadata,
+                    ref_count: espan.ref_count,
+                });
             }
 
             // Add Eventus
@@ -686,6 +727,7 @@ impl TracingData {
             default_thread_id,
             relative_start,
             test_clock_step,
+            max_span_ref_count: default_max_span_ref_count(),
         }
     }
 }
@@ -1353,12 +1395,15 @@ impl TracingData {
                     // Use milliseconds. This is consistent with traceprof.
                     format!("+{}", tree_span.duration / 1000)
                 };
-                let call_count = if tree_span.call_count > 1 {
+                let mut call_count = if tree_span.call_count > 1 {
                     format!(" ({} times)", tree_span.call_count)
                 } else {
                     assert!(tree_span.call_count > 0);
                     String::new()
                 };
+                if espan.ref_count >= ctx.this.max_span_ref_count {
+                    call_count += " (truncated)"
+                }
 
                 let first_row = Row {
                     columns: vec![
@@ -1904,11 +1949,37 @@ Start Dur.ms | Name               Source
         assert_eq!(
             data.ascii(&opts),
             r#"Process _ Thread _:
-Start Dur.ms | Name               Source
-    2 +40014 | foo                a.py line 10
-    4 +20000  \ bar (10000 times) a.py line 20
-40004    +10  \ bar               a.py line 20
-40006     +6   | foo              a.py line 10
+Start Dur.ms | Name                          Source
+    2  +4010 | foo                           a.py line 10
+    4  +2000  \ bar (1000 times) (truncated) a.py line 20
+ 4004     +6  \ foo                          a.py line 10
+
+"#
+        );
+    }
+
+    #[test]
+    fn test_max_span_ref_count() {
+        let mut data = TracingData::new_for_test();
+        data.set_max_span_ref_count(2000);
+
+        let span_id1 = data.add_espan(&meta("foo", "a.py", "10"), None);
+        let span_id2 = data.add_espan(&meta("bar", "a.py", "20"), None);
+        data.add_action(span_id1, Action::EnterSpan);
+        for _ in 0..5000 {
+            data.add_action(span_id2, Action::EnterSpan);
+            data.add_action(span_id2, Action::ExitSpan);
+        }
+        data.add_action(span_id1, Action::ExitSpan);
+
+        let mut opts = AsciiOptions::default();
+        opts.min_duration_micros_to_hide = 3000;
+        assert_eq!(
+            data.ascii(&opts),
+            r#"Process _ Thread _:
+Start Dur.ms | Name                         Source
+    2  +8002 | foo                          a.py line 10
+    4  +4000 | bar (2000 times) (truncated) a.py line 20
 
 "#
         );
