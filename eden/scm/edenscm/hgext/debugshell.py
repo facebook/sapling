@@ -13,8 +13,8 @@
 
 from __future__ import absolute_import
 
-import code
 import os
+import shlex
 import sys
 
 import bindings
@@ -22,7 +22,7 @@ import edenscm
 import edenscmnative
 from edenscm import hgext, mercurial
 from edenscm.hgext import commitcloud as cc
-from edenscm.mercurial import pycompat, registrar
+from edenscm.mercurial import pycompat, registrar, util
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.pycompat import decodeutf8
 
@@ -38,6 +38,7 @@ def _assignobjects(objects, repo):
             "b": bindings,
             "m": mercurial,
             "x": hgext,
+            "td": bindings.tracing.tracingdata,
             # Modules
             "bindings": bindings,
             "edenscm": edenscm,
@@ -58,6 +59,7 @@ def _assignobjects(objects, repo):
                 # metalog is not available on hg server-side repos. Consider making it
                 # available unconditionally once we get rid of hg servers.
                 "ml": getattr(repo.svfs, "metalog", None),
+                "ms": getattr(repo, "_mutationstore", None),
             }
         )
 
@@ -104,6 +106,13 @@ def debugshell(ui, repo, *args, **opts):
         exec(command)
         return 0
 
+    _startipython(ui, repo)
+
+
+def _startipython(ui, repo):
+    from IPython.terminal.ipapp import load_default_config
+    from IPython.terminal.embed import InteractiveShellEmbed
+
     bannermsg = "loaded repo:  %s\n" "using source: %s" % (
         repo and repo.root or "(none)",
         mercurial.__path__[0],
@@ -113,6 +122,7 @@ def debugshell(ui, repo, *args, **opts):
         " x:  edenscm.hgext\n"
         " b:  bindings\n"
         " ui: the ui object\n"
+        " c:  run command and take output\n"
     )
     if repo:
         bannermsg += (
@@ -121,8 +131,71 @@ def debugshell(ui, repo, *args, **opts):
             " cl: repo.changelog\n"
             " mf: repo.manifestlog\n"
             " ml: repo.svfs.metalog\n"
+            " ms: repo._mutationstore\n"
         )
+    bannermsg += """
+Available IPython magics (auto magic is on, `%` is optional):
+ time:   measure time
+ timeit: benchmark
+ trace:  run and print ASCII trace (better with --tracing command flag)
+ hg:     run commands inline
+"""
 
-    import IPython
+    config = load_default_config()
+    config.InteractiveShellEmbed = config.TerminalInteractiveShell
+    config.InteractiveShell.automagic = True
+    config.InteractiveShell.banner2 = bannermsg
+    config.InteractiveShell.confirm_exit = False
 
-    IPython.embed(header=bannermsg)
+    shell = InteractiveShellEmbed.instance(config=config)
+    _configipython(ui, shell)
+
+    shell()
+
+
+def c(args):
+    """Run command with args and take its output.
+
+    Example::
+
+        c(['log', '-r.'])
+        c('log -r.')
+        %trace c('log -r.')
+    """
+    if isinstance(args, str):
+        args = shlex.split(args)
+    ui = globals()["ui"]
+    fin = util.stringio()
+    fout = util.stringio()
+    bindings.commands.run(["hg"] + args, fin, fout, ui.ferr)
+    return fout.getvalue()
+
+
+def _configipython(ui, ipython):
+    """Set up IPython features like magics"""
+    from IPython.core.magic import register_line_magic
+
+    @register_line_magic
+    def hg(line):
+        args = ["hg"] + shlex.split(line)
+        return bindings.commands.run(args, ui.fin, ui.fout, ui.ferr)
+
+    @register_line_magic
+    def trace(line, ui=ui, shell=ipython):
+        """run and print ASCII trace"""
+        code = compile(line, "<magic-trace>", "exec")
+
+        td = bindings.tracing.tracingdata()
+        ns = shell.user_ns
+        ns.update(globals())
+        start = util.timer()
+        _execwith(td, code, ns)
+        durationmicros = (util.timer() - start) * 1e6
+        # hide spans less than 50 microseconds, or 1% of the total time
+        ui.write_err("%s" % td.ascii(int(durationmicros / 100) + 50))
+        return td
+
+
+def _execwith(td, code, ns):
+    with td:
+        exec(code, ns)
