@@ -37,7 +37,7 @@ pub enum Repo {
 #[cfg(not(feature = "fb"))]
 impl FromStr for Repo {
     type Err = Error;
-    fn from_str(name: &str) -> Result<Repo> {
+    fn from_str(_name: &str) -> Result<Repo> {
         Ok(Repo::Unknown)
     }
 }
@@ -68,6 +68,7 @@ impl HgGroup {
         }
     }
 
+    #[allow(dead_code)]
     pub(crate) fn from_str(string: &str) -> Result<HgGroup> {
         Ok(match string {
             "hg_dev" => HgGroup::Dev,
@@ -186,10 +187,12 @@ impl Generator {
         })
     }
 
+    #[allow(dead_code)]
     pub(crate) fn repo_path(&self) -> &Path {
         self.repo_path.as_ref()
     }
 
+    #[allow(dead_code)]
     pub(crate) fn group(&self) -> HgGroup {
         self.group
     }
@@ -269,6 +272,7 @@ impl Generator {
         &self.hostname
     }
 
+    #[allow(dead_code)]
     pub(crate) fn set_config(
         &mut self,
         section: impl AsRef<str>,
