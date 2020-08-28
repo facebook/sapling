@@ -452,10 +452,13 @@ fn push_with_union(spans: &mut Vec<Span>, span: Span) {
 
 impl Debug for SpanSet {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        let ranges: Vec<String> = self
+        // Limit spans to show.
+        let limit = f.width().unwrap_or(12);
+        let mut ranges: Vec<String> = self
             .spans
             .iter()
             .rev()
+            .take(limit)
             .flat_map(|s| {
                 if s.low + 2 >= s.high {
                     // "low..=high" form is not shorter.
@@ -465,6 +468,12 @@ impl Debug for SpanSet {
                 }
             })
             .collect();
+        let total = self.spans.len();
+        if total == limit + 1 {
+            ranges.push("and 1 span".into());
+        } else if total > limit {
+            ranges.push(format!("and {} spans", total - limit));
+        }
         write!(f, "{}", ranges.join(" "))
     }
 }
@@ -903,5 +912,14 @@ mod tests {
         assert_eq!(set.intersection_span_min((21..=32).into()), Some(Id(30)));
         assert_eq!(set.intersection_span_min((35..=45).into()), Some(Id(35)));
         assert_eq!(set.intersection_span_min((45..=55).into()), None);
+    }
+
+    #[test]
+    fn test_debug() {
+        let set = SpanSet::from_spans(vec![1..=1, 2..=9, 10..=10, 20..=20, 31..=35, 36..=40]);
+        assert_eq!(format!("{:10?}", &set), "1..=10 20 31..=40");
+        assert_eq!(format!("{:3?}", &set), "1..=10 20 31..=40");
+        assert_eq!(format!("{:2?}", &set), "1..=10 20 and 1 span");
+        assert_eq!(format!("{:1?}", &set), "1..=10 and 2 spans");
     }
 }
