@@ -5,52 +5,47 @@
  * GNU General Public License version 2.
  */
 
+macro_rules! commands {
+    ( $( mod $module:ident; )* ) => {
+        $( mod $module; )*
+        pub(crate) fn extend_command_table(table: &mut ::clidispatch::command::CommandTable) {
+            // NOTE: Consider passing 'config' to name() or doc() if we want
+            // some flexibility defining them using configs.
+            $(
+            {
+                use self::$module as m;
+                let command_name = m::name();
+                let doc = m::doc();
+                ::clidispatch::command::Register::register(table, m::run, &command_name, &doc);
+            }
+            )*
+        }
+    }
+}
+
 mod debug;
-mod root;
-mod status;
-mod version;
+
+commands! {
+    mod root;
+    mod status;
+    mod version;
+}
 
 pub use anyhow::Result;
 pub use clidispatch::io::IO;
 pub use clidispatch::repo::Repo;
 pub use cliparser::define_flags;
 
-use clidispatch::command::{CommandTable, Register};
-
-macro_rules! command_table {
-    ( $( $module:ident $( :: $submodule:ident )* ),* ) => {{
-        let mut table = CommandTable::new();
-        $(
-            // NOTE: Consider passing 'config' to name() or doc() if we want
-            // some flexibility defining them using configs.
-            {
-                use self::$module $( :: $submodule )* as m;
-                let command_name = m::name();
-                let doc = m::doc();
-                table.register(m::run, &command_name, &doc);
-            }
-        )*
-        table
-    }}
-}
+use clidispatch::command::CommandTable;
 
 #[allow(dead_code)]
 /// Return the main command table including all Rust commands.
 pub fn table() -> CommandTable {
-    command_table!(
-        debug::args,
-        debug::causerusterror,
-        debug::dumpindexedlog,
-        debug::dumptrace,
-        debug::dynamicconfig,
-        debug::fsync,
-        debug::http,
-        debug::python,
-        debug::store,
-        root,
-        status,
-        version
-    )
+    let mut table = CommandTable::new();
+    extend_command_table(&mut table);
+    debug::extend_command_table(&mut table);
+
+    table
 }
 
 define_flags! {

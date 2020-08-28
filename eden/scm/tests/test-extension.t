@@ -822,6 +822,7 @@ Make sure that single '-v' option shows help and global options for the 'dodo' c
       --encodingmode MODE     set the charset encoding mode (default: strict)
       --outputencoding ENCODE set the output encoding (default: utf-8)
       --traceback             always print a traceback on exception
+      --trace                 enable more detailed tracing
       --time                  time how long the command takes
       --profile               print command execution profile
       --version               output version information and exit

@@ -58,6 +58,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping lib/clib/portability/portability.h it has no-che?k-code (glob)
   Skipping lib/clib/portability/unistd.h it has no-che?k-code (glob)
   Skipping lib/clib/sha1.h it has no-che?k-code (glob)
+  edenscm/hgext/debugshell.py:179: use foobar, not foo_bar naming --> get_ipython = ipython.get_ipython  # noqa: F841
   edenscm/hgext/extlib/phabricator/graphql.py:*: use foobar, not foo_bar naming --> ca_bundle = repo.ui.configpath("web", "cacerts") (glob)
   edenscm/hgext/extlib/phabricator/graphql.py:*: use foobar, not foo_bar naming --> def scmquery_log( (glob)
   edenscm/hgext/hggit/git_handler.py:*: use foobar, not foo_bar naming --> git_renames = {} (glob)
