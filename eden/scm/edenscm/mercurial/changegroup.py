@@ -386,8 +386,8 @@ class cg1unpacker(object):
                 cl = repo.changelog
                 ml = repo.manifestlog
                 # validate incoming csets have their manifests
-                for cset in range(clstart, clend):
-                    mfnode = cl.changelogrevision(cset).manifest
+                for clnode in cgnodes:
+                    mfnode = cl.changelogrevision(clnode).manifest
                     mfest = ml[mfnode].readnew()
                     # store file cgnodes we must see
                     for f, n in pycompat.iteritems(mfest):
@@ -409,18 +409,18 @@ class cg1unpacker(object):
             )
             repo.invalidatevolatilesets()
 
-            if changesets > 0:
+            if len(cgnodes) > 0:
                 if "node" not in tr.hookargs:
-                    tr.hookargs["node"] = hex(cl.node(clstart))
-                    tr.hookargs["node_last"] = hex(cl.node(clend - 1))
+                    tr.hookargs["node"] = hex(cgnodes[0])
+                    tr.hookargs["node_last"] = hex(cgnodes[-1])
                     hookargs = dict(tr.hookargs)
                 else:
                     hookargs = dict(tr.hookargs)
-                    hookargs["node"] = hex(cl.node(clstart))
-                    hookargs["node_last"] = hex(cl.node(clend - 1))
+                    hookargs["node"] = hex(cgnodes[0])
+                    hookargs["node_last"] = hex(cgnodes[-1])
                 repo.hook("pretxnchangegroup", throw=True, **hookargs)
 
-            added = [cl.node(r) for r in range(clstart, clend)]
+            added = cgnodes
             phaseall = None
             if srctype in ("push", "serve"):
                 # Old servers can not push the boundary themselves.
