@@ -695,7 +695,6 @@ Revsets obey visibility rules
   $ hg log -T '{node} {desc}\n' -r "successors(1)"
   112478962961147124edd43549aedd1a335e44bf B
   2cb21a570bd242eb1225414c6634ed29cc9cfe93 C
-  82b1bbd9d7bb25fa8b9354ca7f6cfd007a6291af D
   $ hg log -T '{node} {desc}\n' -r "successors(1)" --hidden
   112478962961147124edd43549aedd1a335e44bf B
   2cb21a570bd242eb1225414c6634ed29cc9cfe93 C

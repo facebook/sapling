@@ -2339,18 +2339,24 @@ def sort(repo, subset, x, order):
     return baseset([c.rev() for c in ctxs])
 
 
-def _mapbynodefunc(repo, s, f):
+def _mapbynodefunc(repo, s, f, visiableonly=False):
     """(repo, smartset, [node] -> [node]) -> smartset
 
     Helper method to map a smartset to another smartset given a function only
     talking about nodes. Handles converting between rev numbers and nodes, and
     filtering.
+
+    If visiableonly is True, filter further by only returning visible nodes.
     """
     cl = repo.changelog
     torev = cl.rev
     tonode = cl.node
     nodemap = cl.nodemap
-    result = set(torev(n) for n in f(tonode(r) for r in s) if n in nodemap)
+    if visiableonly:
+        filter = mutation.getisvisiblefunc(repo)
+    else:
+        filter = nodemap.__contains__
+    result = set(torev(n) for n in f(tonode(r) for r in s) if filter(n))
     return smartset.baseset(result)
 
 
@@ -2456,7 +2462,7 @@ def _successors(repo, subset, targetset, startdepth, stopdepth):
             repo.obsstore, nodes, startdepth=startdepth, stopdepth=stopdepth
         )
     s = getset(repo, fullreposet(repo), targetset)
-    d = _mapbynodefunc(repo, s, f)
+    d = _mapbynodefunc(repo, s, f, visiableonly=True)
     return subset & d
 
 
