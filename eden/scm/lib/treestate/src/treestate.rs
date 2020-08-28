@@ -210,9 +210,8 @@ mod tests {
     }
 
     // Some random paths extracted from fb-hgext, plus some manually added entries, shuffled.
-    const SAMPLE_PATHS: [&[u8]; 22] = [
+    const SAMPLE_PATHS: [&[u8]; 21] = [
         b".fbarcanist",
-        b"build/.",
         b"phabricator/phabricator_graphql_client_urllib.pyc",
         b"hgext3rd/__init__.py",
         b"hgext3rd/.git/objects/14/8f179e7e702ddedb54c53f2726e7f81b14a33f",
@@ -303,8 +302,8 @@ mod tests {
         let dir = TempDir::new("treestate").expect("tempdir");
         let mut state = new_treestate(dir.path().join("1"));
         assert!(state.has_dir(b"/").unwrap());
-        assert!(state.has_dir(b"build/").unwrap());
-        assert!(!state.has_dir(b"build2/").unwrap());
+        assert!(state.has_dir(b"hgext3rd/").unwrap());
+        assert!(!state.has_dir(b"hgext4th/").unwrap());
         assert!(state.has_dir(b"rust/radixbuf/.git/objects/").unwrap());
         assert!(!state.has_dir(b"rust/radixbuf/.git2/objects/").unwrap());
     }

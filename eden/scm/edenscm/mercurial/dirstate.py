@@ -577,6 +577,10 @@ class dirstate(object):
                 raise error.Abort(
                     _("cannot add non-root-relative path to dirstate: %s") % f
                 )
+            relativedirs = [".", ".."]
+            if any(s for s in f.split("/") if s in relativedirs):
+                raise error.Abort(_("cannot add path with relative parents: %s") % f)
+
             # shadows
             for d in util.finddirs(f):
                 if self._map.hastrackeddir(d):

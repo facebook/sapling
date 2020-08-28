@@ -17,6 +17,8 @@ use std::cell::Cell;
 use std::collections::Bound;
 use std::io::{Cursor, Read, Write};
 
+use types::RepoPath;
+
 /// A node entry is an entry in a directory, either a file or another directory.
 #[derive(Debug)]
 pub(crate) enum NodeEntry<T> {
@@ -609,6 +611,8 @@ where
     /// Add a file to the node.  The name may contain a path, in which case sufficient
     /// subdirectories are updated to add or update the file.
     fn add(&mut self, store: &dyn StoreView, name: KeyRef, info: &T) -> Result<bool> {
+        // Construct a RepoPath so we match the core path validation logic.
+        let _ = RepoPath::from_utf8(name)?;
         let (new_entry, file_added) = match self.path_recurse(store, name)? {
             PathRecurse::Directory(_dir, path, node) => {
                 // The file is in a subdirectory.  Add it to the subdirectory.

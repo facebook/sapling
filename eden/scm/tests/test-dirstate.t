@@ -93,3 +93,17 @@ Verify that status reports deleted files correctly
   $ hg status
   ! a
   $ hg diff
+
+Dirstate should block addition of paths with relative parent components
+  $ hg up -C .
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ ls
+  $ hg debugsh -c "repo.dirstate.add('foo/../b')"
+  abort: cannot add path with relative parents: foo/../b
+  [255]
+  $ touch b
+  $ mkdir foo
+  $ hg add foo/../b
+  $ hg commit -m "add b"
+  $ hg status --change .
+  A b

@@ -9,6 +9,7 @@ anyhow = "1.0.20"
 bitflags = "1.0.4"
 byteorder = "1.2.7"
 thiserror = "1.0.5"
+types = { path = "../types" }
 twox-hash = "*"
 vlqencoding = { version = "0.1.0", path = "../vlqencoding" }
 
