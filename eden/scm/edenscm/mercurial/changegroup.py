@@ -353,15 +353,9 @@ class cg1unpacker(object):
             clstart = len(cl)
             with progress.bar(repo.ui, _("changesets"), total=expectedtotal) as prog:
                 self.progress = prog
-                efiles = set()
-
-                def onchangelog(cl, node):
-                    efiles.update(cl.readfiles(node))
-
                 self.changelogheader()
                 deltas = self.deltaiter()
-                cgnodes = cl.addgroup(deltas, csmap, trp, addrevisioncb=onchangelog)
-                efiles = len(efiles)
+                cgnodes = cl.addgroup(deltas, csmap, trp)
 
             perftrace.tracevalue("Commits", len(cgnodes))
             if cgnodes:
@@ -395,9 +389,7 @@ class cg1unpacker(object):
 
             # process the files
             repo.ui.status(_("adding file changes\n"))
-            newrevs, newfiles = _addchangegroupfiles(
-                repo, self, revmap, trp, efiles, needfiles
-            )
+            newrevs, newfiles = _addchangegroupfiles(repo, self, revmap, trp, needfiles)
             revisions += newrevs
             files += newfiles
 
@@ -1123,10 +1115,10 @@ def makestream(
     return bundler.generate(commonrevs, csets, fastpathlinkrev, source)
 
 
-def _addchangegroupfiles(repo, source, revmap, trp, expectedfiles, needfiles):
+def _addchangegroupfiles(repo, source, revmap, trp, needfiles):
     revisions = 0
     files = 0
-    with progress.bar(repo.ui, _("files"), _("files"), expectedfiles) as prog:
+    with progress.bar(repo.ui, _("files")) as prog:
         for chunkdata in iter(source.filelogheader, {}):
             files += 1
             f = chunkdata["filename"]

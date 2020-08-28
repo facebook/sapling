@@ -453,9 +453,9 @@ def makechangegroup(orig, repo, outgoing, version, source, *args, **kwargs):
         repo.shallowmatch = original
 
 
-def addchangegroupfiles(orig, repo, source, revmap, trp, expectedfiles, *args):
+def addchangegroupfiles(orig, repo, source, revmap, trp, *args):
     if not requirement in repo.requirements:
-        return orig(repo, source, revmap, trp, expectedfiles, *args)
+        return orig(repo, source, revmap, trp, *args)
 
     newfiles = 0
     visited = set()
@@ -469,7 +469,7 @@ def addchangegroupfiles(orig, repo, source, revmap, trp, expectedfiles, *args):
     # files in topological order.
 
     # read all the file chunks but don't add them
-    with progress.bar(repo.ui, _("files"), total=expectedfiles) as prog:
+    with progress.bar(repo.ui, _("files")) as prog:
         while True:
             chunkdata = source.filelogheader()
             if not chunkdata:
