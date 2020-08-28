@@ -725,18 +725,23 @@ def _callcatch(ui, func):
         raise
     except:  # probably re-raises
         # Potentially enter ipdb debugger when we hit an uncaught exception
+        ex = sys.exc_info()[1]
+        isipdb = isinstance(ex, NameError) and "'ipdb'" in str(ex)
         if (
-            ui.configbool("devel", "debugger")
+            (ui.configbool("devel", "debugger") or isipdb)
             and ui.interactive()
             and not ui.pageractive
             and not ui.plain()
             and ui.formatted
         ):
-            ui.write_err(
-                _(
-                    "Starting ipdb for this exception\nIf you don't want the behavior, set devel.debugger to False\n"
+            if isipdb:
+                ui.write_err(_("Starting ipdb for 'ipdb'\n"))
+            else:
+                ui.write_err(
+                    _(
+                        "Starting ipdb for this exception\nIf you don't want the behavior, set devel.debugger to False\n"
+                    )
                 )
-            )
 
             with demandimport.deactivated():
                 import ipdb
