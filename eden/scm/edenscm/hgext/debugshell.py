@@ -175,6 +175,9 @@ def _configipython(ui, ipython):
     """Set up IPython features like magics"""
     from IPython.core.magic import register_line_magic
 
+    # get_ipython is used by register_line_magic
+    get_ipython = ipython.get_ipython  # noqa: F841
+
     @register_line_magic
     def hg(line):
         args = ["hg"] + shlex.split(line)
