@@ -1058,6 +1058,10 @@ def _dispatch(req):
         cmd, func, args, options, cmdoptions, foundaliases = _parse(lui, args)
         lui.cmdname = ui.cmdname = cmd
 
+        # Do not profile the 'debugshell' command.
+        if cmd == "debugshell":
+            profiler.stop()
+
         if cmd == "help" and len(foundaliases) > 0:
             cmd = foundaliases[0]
             options["help"] = True

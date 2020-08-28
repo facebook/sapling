@@ -183,6 +183,7 @@ class profile(object):
         self._profiler = None
         self._entered = False
         self._started = False
+        self._stopped = False
         self._section = "profiling"
 
     def __enter__(self):
@@ -232,6 +233,15 @@ class profile(object):
         self._profiler.__enter__()
 
     def __exit__(self, exception_type, exception_value, traceback):
+        self._stop(exception_type, exception_value, traceback)
+
+    def stop(self):
+        self._stop(None, None, None)
+
+    def _stop(self, exception_type, exception_value, traceback):
+        if self._stopped:
+            return
+        self._stopped = True
         propagate = None
         if self._profiler is not None:
             propagate = self._profiler.__exit__(
