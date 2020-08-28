@@ -1579,6 +1579,7 @@ class Test(unittest.TestCase):
             hgrc.write(b"[format]\n")
             hgrc.write(b"use-zstore-commit-data=false\n")
             hgrc.write(b"[lfs]\n")
+            hgrc.write(b"[extensions]\npatchrmdir=\n")
             if self._watchman:
                 hgrc.write(b"[extensions]\nfsmonitor=\n")
                 hgrc.write(b"[fsmonitor]\ndetectrace=1\n")

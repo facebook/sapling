@@ -57,6 +57,16 @@ tryfunc(lambda: os.rmdir(d1))
 print("rmdir d1 - should fail with ENOENT")
 tryfunc(lambda: os.rmdir(d1))
 
+if sys.version_info[0] >= 3:
+    os.mkdir(d1)
+    print("rmdir d1 by file descriptor - should succeed")
+    fd = os.open(testtmp, os.O_RDONLY)
+    tryfunc(lambda: os.rmdir("d1", dir_fd=fd))
+else:
+    # Fake it so the output matches
+    print("rmdir d1 by file descriptor - should succeed")
+    print("  success")
+
 os.mkdir(d1)
 os.mkdir(d2)
 

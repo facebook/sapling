@@ -10,6 +10,7 @@ Create a repository:
   devel.all-warnings=true
   devel.default-date=0 0
   experimental.metalog=true
+  extensions.patchrmdir=
   extensions.fsmonitor= (fsmonitor !)
   extensions.treemanifest=!
   format.use-zstore-commit-data=false

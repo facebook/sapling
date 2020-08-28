@@ -8,6 +8,8 @@ rmdir d1 - should succeed
   success
 rmdir d1 - should fail with ENOENT
   error: *
+rmdir d1 by file descriptor - should succeed
+  success
 removedirs d2 (and d1) - should succeed
   success
 removedirs d1 - should fail with ENOENT

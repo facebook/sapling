@@ -26,15 +26,32 @@ IF UNAME_SYSNAME != "Windows":
         struct dirent:
             pass
 
-        DIR *opendir(const char *)
+        int openat(int dirfd, const char *path, int flags)
+        DIR *fdopendir(int fd)
+        DIR *opendir(const char *path)
         dirent *readdir(DIR *)
         int closedir(DIR *)
 
-    cdef int _countdir(const char *path):
+    cdef extern from "sys/fcntl.h":
+        cdef enum:
+            O_RDONLY "O_RDONLY"
+
+    cdef int _countdirat(int dir_fd, const char *path):
+        """return min(3, the number of entries inside a directory).
+        return -1 if the directory cannot be opened.
+        """
+        cdef int fd = openat(dir_fd, path, O_RDONLY)
+        cdef DIR *d = fdopendir(fd)
+        return _countdir(d)
+
+    cdef int _countdirpath(const char *path):
         """return min(3, the number of entries inside a directory).
         return -1 if the directory cannot be opened.
         """
         cdef DIR *d = opendir(path)
+        return _countdir(d)
+
+    cdef int _countdir(DIR *d):
         if d == NULL:
             return -1
 
@@ -49,11 +66,15 @@ IF UNAME_SYSNAME != "Windows":
                 if n > 2:
                     break
         closedir(d)
+        # No need to close the fd, it is owned by the DIR object.
         return n
 
-    def _rmdir(orig, path):
+    def _rmdir(orig, path, dir_fd=None):
         path = pycompat.encodeutf8(path)
-        n = _countdir(path)
+        if dir_fd is not None:
+            n = _countdirat(dir_fd, path)
+        else:
+            n = _countdirpath(path)
         if n >= 3:
             # The number 3 is because most systems have "." and "..". For systems
             # without them, we fallback to the original rmdir, the behavior should
@@ -62,7 +83,12 @@ IF UNAME_SYSNAME != "Windows":
             # empty" so the test could notice the difference.
             raise OSError(errno.ENOTEMPTY, b'Non-empty directory: %r' % path)
         else:
-            return orig(path)
+            if dir_fd is None:
+                # Python 2 doesn't have the dir_fd arg, so we can't just pass
+                # dir_fd=None when it's None.
+                return orig(path)
+            else:
+                return orig(path, dir_fd=dir_fd)
 
     def uisetup(ui):
         extensions.wrapfunction(os, 'rmdir', _rmdir)
