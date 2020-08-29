@@ -8,6 +8,7 @@
 
 import os
 import shlex
+import sys
 from pathlib import Path
 from textwrap import dedent
 from typing import Dict, Optional
@@ -117,7 +118,7 @@ class EdenDoctorChecker:
         self.instance = instance
         self.tracker = tracker
         self.mount_table = mount_table if mount_table is not None else mtab.new()
-        self.fs_util = fs_util if fs_util is not None else filesystem.LinuxFsUtil()
+        self.fs_util = fs_util if fs_util is not None else filesystem.new()
         self.proc_utils = proc_utils if proc_utils is not None else proc_utils_mod.new()
         self.out = out if out is not None else ui.get_output()
 
@@ -576,19 +577,24 @@ def check_edenfs_version(tracker: ProblemTracker, instance: EdenInstance) -> Non
     if running_version == installed_version:
         return
 
-    tracker.add_problem(
-        Problem(
-            dedent(
-                f"""\
-The version of Eden that is installed on your machine is:
-    fb-eden-{installed_version}.x86_64
-but the version of Eden that is currently running is:
-    fb-eden-{running_version}.x86_64
+    if sys.platform == "win32":
+        help_string = f"""\
+The version of EdenFS that is installed on your machine is:
+    fb.eden {installed_version}
+but the version of EdenFS that is currently running is:
+    fb.eden {running_version}
 
-Consider running `eden restart --graceful` to migrate to the newer version,
+Consider running `edenfsctl restart` to migrate to the newer version,
 which may have important bug fixes or performance improvements.
 """
-            ),
-            severity=ProblemSeverity.ADVICE,
-        )
-    )
+    else:
+        help_string = f"""\
+The version of EdenFS that is installed on your machine is:
+    fb-eden-{installed_version}.x86_64
+but the version of EdenFS that is currently running is:
+    fb-eden-{running_version}.x86_64
+
+Consider running `edenfsctl restart --graceful` to migrate to the newer version,
+which may have important bug fixes or performance improvements.
+"""
+    tracker.add_problem(Problem(dedent(help_string), severity=ProblemSeverity.ADVICE))

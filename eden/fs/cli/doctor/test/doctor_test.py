@@ -804,12 +804,12 @@ Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
         self.assertEqual(
             """\
 <yellow>- Found problem:<reset>
-The version of Eden that is installed on your machine is:
+The version of EdenFS that is installed on your machine is:
     fb-eden-20171120-246561.x86_64
-but the version of Eden that is currently running is:
+but the version of EdenFS that is currently running is:
     fb-eden-20171213-165642.x86_64
 
-Consider running `eden restart --graceful` to migrate to the newer version,
+Consider running `edenfsctl restart --graceful` to migrate to the newer version,
 which may have important bug fixes or performance improvements.
 
 """,

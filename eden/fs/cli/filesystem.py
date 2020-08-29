@@ -6,6 +6,7 @@
 
 import abc
 import os
+import shutil
 
 from . import util
 
@@ -16,13 +17,17 @@ class FsUtil(abc.ABC):
         """Performs `mkdir -p <path>` and returns the path."""
 
     @abc.abstractmethod
-    def statvfs(self, path: str) -> os.statvfs_result:
+    def disk_usage(self, path: str) -> shutil._ntuple_diskusage:
         """Calls os.statvfs on the mount"""
 
 
-class LinuxFsUtil(FsUtil):
+class RealFsUtil(FsUtil):
     def mkdir_p(self, path: str) -> str:
         return util.mkdir_p(path)
 
-    def statvfs(self, path: str) -> os.statvfs_result:
-        return os.statvfs(path)
+    def disk_usage(self, path: str) -> shutil._ntuple_diskusage:
+        return shutil.disk_usage(path)
+
+
+def new() -> FsUtil:
+    return RealFsUtil()

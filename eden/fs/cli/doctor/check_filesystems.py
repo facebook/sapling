@@ -151,14 +151,14 @@ def check_disk_usage(
 
     for eden_mount_pt in eden_mount_pts_set:
         if eden_mount_pt and os.path.exists(eden_mount_pt):
-            disk_status = fs_util.statvfs(eden_mount_pt)
+            disk_usage = fs_util.disk_usage(eden_mount_pt)
 
-            avail = disk_status.f_frsize * disk_status.f_bavail
-            size = disk_status.f_frsize * disk_status.f_blocks
+            size = disk_usage.total
             if size == 0:
                 continue
 
-            used = size - avail
+            avail = disk_usage.free
+            used = disk_usage.used
             used_percent = float(used) / size
 
             message = (

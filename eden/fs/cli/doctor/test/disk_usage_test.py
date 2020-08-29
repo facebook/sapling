@@ -24,9 +24,9 @@ class DiskUsageTest(DoctorTestBase):
 
     def _mock_disk_usage(self, blocks, avail, frsize=1024) -> None:
         """Mock test for disk usage."""
-        self.fs_util.f_blocks = blocks
-        self.fs_util.f_bavail = avail
-        self.fs_util.f_frsize = frsize
+        self.fs_util.total = blocks * frsize
+        self.fs_util.free = avail * frsize
+        self.fs_util.used = self.fs_util.total - self.fs_util.free
 
         mock_getmountpt_and_deviceid_patcher = patch(
             "eden.fs.cli.doctor.check_filesystems.get_mountpt"

@@ -9,6 +9,7 @@
 import logging
 import os
 import shlex
+import sys
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -26,7 +27,10 @@ def find_rogue_processes(
     # so that below we can we only check each eden directory once even if there are
     # multiple processes that appear to be running for it.
     info_by_eden_dir: Dict[Path, List[EdenFSProcess]] = {}
-    user_id = os.getuid() if uid is None else uid
+    if sys.platform == "win32":
+        user_id = 0
+    else:
+        user_id = os.getuid() if uid is None else uid
     for info in proc_utils.get_edenfs_processes():
         # Ignore processes not owned by the current user
         if info.uid != user_id:
