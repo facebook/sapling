@@ -736,7 +736,11 @@ def _setupdiff(ui):
         )
 
     def diff(orig, ui, repo, *pats, **opts):
-        issparse = bool(opts.get("sparse"))
+        issparse = False
+        # Make sure --sparse option is just ignored when it's not
+        # a sparse repo e.g. on eden checkouts.
+        if _hassparse(repo):
+            issparse = bool(opts.get("sparse"))
         if issparse:
             extensions.wrapfunction(patch, "trydiff", trydiff)
         try:
