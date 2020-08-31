@@ -1388,13 +1388,7 @@ def _reloadenv():
 
     global timer, getuser, istest
 
-    if pycompat.iswindows:
-        timer = time.clock
-    else:
-        timer = time.time
-
-    if safehasattr(time, "perf_counter"):
-        timer = time.perf_counter
+    timer = time.time
 
     if "TESTTMP" in os.environ or "testutil" in sys.modules:
         # Stabilize test output
