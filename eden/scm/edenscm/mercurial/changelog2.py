@@ -52,6 +52,8 @@ class changelog(object):
         self._uiconfig = uiconfig
         # Do not verify hg hash if git hash is being used.
         self._verifyhghash = not svfs.exists(GIT_DIR_FILE)
+        # Number of commit texts to buffer. Useful for bounding memory usage.
+        self._groupbuffersize = uiconfig.configint("pull", "buffer-commit-count")
 
     def userust(self, name=None):
         if name == "revset":
@@ -335,6 +337,7 @@ class changelog(object):
         nodes = []
         textmap = {}  # {node: btext}
         commits = []
+        buffersize = self._groupbuffersize
         for node, p1, p2, linknode, deltabase, delta, flags in deltas:
             assert flags == 0, "changelog flags cannot be non-zero"
             parents = [p for p in (p1, p2) if p != nullid]
@@ -342,6 +345,24 @@ class changelog(object):
             rawtext = bytes(mdiff.patch(basetext, delta))
             textmap[node] = rawtext
             commits.append((node, parents, rawtext))
+            # Attempt to make memory usage bound for large pulls.
+            if len(commits) > buffersize:
+                # PERF: Calling addcommits here is suboptimal for segments
+                # backend, because its commit graph bookkeeping has overhead,
+                # and we don't need such bookkeeping (ex. commits are querable
+                # in the graph).
+                # Ideally there is a "addcommitsdata" API to only add the
+                # commit data (text). However, revlog won't support such API
+                # so it might be a good idea to consider it after switching
+                # away from revlog.
+                self.inner.addcommits(commits)
+                # Flush the commit data (major memory consumption).
+                #
+                # Flushing the commit graph is tricky for segmented changelog,
+                # as we need to know the location of "master" here, which is
+                # a difficult problem.
+                self.inner.flushcommitdata()
+                commits[:] = []
             nodes.append(node)
         # Call 'addcommits' once with batched commits is important for
         # performance.
