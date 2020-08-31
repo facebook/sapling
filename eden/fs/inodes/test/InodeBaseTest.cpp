@@ -9,6 +9,7 @@
 #include <gtest/gtest.h>
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestMount.h"
 
@@ -27,7 +28,10 @@ TEST(InodeBase, getPath) {
   EXPECT_EQ("<root>", root->getLogPath());
 
   auto getChild = [](const TreeInodePtr& parent, StringPiece name) {
-    return parent->getOrLoadChild(PathComponentPiece{name}).get();
+    return parent
+        ->getOrLoadChild(
+            PathComponentPiece{name}, ObjectFetchContext::getNullContext())
+        .get();
   };
   auto childTree = [&getChild](const TreeInodePtr& parent, StringPiece name) {
     return getChild(parent, name).asTreePtr();

@@ -218,7 +218,9 @@ Dispatcher::Attr TreeInode::getAttrLocked(const DirContents& contents) {
 }
 #endif // !_WIN32
 
-Future<InodePtr> TreeInode::getOrLoadChild(PathComponentPiece name) {
+Future<InodePtr> TreeInode::getOrLoadChild(
+    PathComponentPiece name,
+    ObjectFetchContext& context) {
   TraceBlock block("getOrLoadChild");
 
 #ifndef _WIN32
@@ -276,10 +278,8 @@ Future<InodePtr> TreeInode::getOrLoadChild(PathComponentPiece name) {
                if (startLoad) {
                  // The inode is not already being loaded.  We have to start
                  // loading it now.
-                 // TODO: pass a fetch context down through getOrLoadChild to
-                 // track this load.
-                 auto loadFuture = startLoadingInodeNoThrow(
-                     entry, name, ObjectFetchContext::getNullContext());
+                 auto loadFuture =
+                     startLoadingInodeNoThrow(entry, name, context);
                  if (loadFuture.isReady() && loadFuture.hasValue()) {
                    // If we finished loading the inode immediately, just call
                    // InodeMap::inodeLoadComplete() now, since we still have the
@@ -309,13 +309,14 @@ Future<InodePtr> TreeInode::getOrLoadChild(PathComponentPiece name) {
 }
 
 Future<TreeInodePtr> TreeInode::getOrLoadChildTree(PathComponentPiece name) {
-  return getOrLoadChild(name).thenValue([](InodePtr child) {
-    auto treeInode = child.asTreePtrOrNull();
-    if (!treeInode) {
-      return makeFuture<TreeInodePtr>(InodeError(ENOTDIR, child));
-    }
-    return makeFuture(treeInode);
-  });
+  return getOrLoadChild(name, ObjectFetchContext::getNullContext())
+      .thenValue([](InodePtr child) {
+        auto treeInode = child.asTreePtrOrNull();
+        if (!treeInode) {
+          return makeFuture<TreeInodePtr>(InodeError(ENOTDIR, child));
+        }
+        return makeFuture(treeInode);
+      });
 }
 
 namespace {
@@ -338,7 +339,8 @@ class LookupProcessor {
     auto endIdx = pathStr.find(kDirSeparator, pathIndex_);
     if (endIdx == StringPiece::npos) {
       auto name = StringPiece{pathStr.data() + pathIndex_, pathStr.end()};
-      return tree->getOrLoadChild(PathComponentPiece{name});
+      return tree->getOrLoadChild(
+          PathComponentPiece{name}, ObjectFetchContext::getNullContext());
     }
 
     auto name =
@@ -1113,9 +1115,10 @@ TreeInodePtr TreeInode::mkdir(
 folly::Future<folly::Unit> TreeInode::unlink(
     PathComponentPiece name,
     InvalidationRequired invalidate) {
-  return getOrLoadChild(name).thenValue(
-      [self = inodePtrFromThis(), childName = PathComponent{name}, invalidate](
-          const InodePtr& child) mutable {
+  return getOrLoadChild(name, ObjectFetchContext::getNullContext())
+      .thenValue([self = inodePtrFromThis(),
+                  childName = PathComponent{name},
+                  invalidate](const InodePtr& child) mutable {
         return self->removeImpl<FileInodePtr>(
             std::move(childName), child, invalidate, 1);
       });
@@ -1124,9 +1127,10 @@ folly::Future<folly::Unit> TreeInode::unlink(
 folly::Future<folly::Unit> TreeInode::rmdir(
     PathComponentPiece name,
     InvalidationRequired invalidate) {
-  return getOrLoadChild(name).thenValue(
-      [self = inodePtrFromThis(), childName = PathComponent{name}, invalidate](
-          const InodePtr& child) mutable {
+  return getOrLoadChild(name, ObjectFetchContext::getNullContext())
+      .thenValue([self = inodePtrFromThis(),
+                  childName = PathComponent{name},
+                  invalidate](const InodePtr& child) mutable {
         return self->removeImpl<TreeInodePtr>(
             std::move(childName), child, invalidate, 1);
       });
@@ -1208,7 +1212,7 @@ folly::Future<folly::Unit> TreeInode::removeImpl(
   // getOrLoadChildTree(name).  C++17 fixes this order to guarantee that
   // the left side of "." will always get evaluated before the right
   // side.
-  auto childFuture = getOrLoadChild(name);
+  auto childFuture = getOrLoadChild(name, ObjectFetchContext::getNullContext());
   return std::move(childFuture)
       .thenValue([self = inodePtrFromThis(),
                   childName = PathComponent{std::move(name)},
@@ -1528,17 +1532,21 @@ Future<Unit> TreeInode::rename(
   };
 
   if (needSrc && needDest) {
-    auto srcFuture = getOrLoadChild(name);
-    auto destFuture = destParent->getOrLoadChild(destName);
+    auto srcFuture = getOrLoadChild(name, ObjectFetchContext::getNullContext());
+    auto destFuture = destParent->getOrLoadChild(
+        destName, ObjectFetchContext::getNullContext());
     // folly::collect is safe here because onLoadFinish has captured strong
     // references.
     return folly::collectUnsafe(srcFuture, destFuture)
         .thenValue(onLoadFinished);
   } else if (needSrc) {
-    return getOrLoadChild(name).thenValue(onLoadFinished);
+    return getOrLoadChild(name, ObjectFetchContext::getNullContext())
+        .thenValue(onLoadFinished);
   } else {
     CHECK(needDest);
-    return destParent->getOrLoadChild(destName).thenValue(onLoadFinished);
+    return destParent
+        ->getOrLoadChild(destName, ObjectFetchContext::getNullContext())
+        .thenValue(onLoadFinished);
   }
 }
 

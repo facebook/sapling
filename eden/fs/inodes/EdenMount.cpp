@@ -293,7 +293,8 @@ Future<Unit> ensureDotEdenSymlink(
     UnlinkThenSymlink,
   };
 
-  return directory->getOrLoadChild(symlinkName)
+  return directory
+      ->getOrLoadChild(symlinkName, ObjectFetchContext::getNullContext())
       .thenTryInline([=](Try<InodePtr>&& result) -> Future<Action> {
         if (!result.hasValue()) {
           // If we failed to look up the file this generally means it

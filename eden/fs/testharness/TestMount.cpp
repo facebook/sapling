@@ -623,13 +623,14 @@ Future<Unit> TestMount::loadAllInodesFuture(const TreeInodePtr& treeInode) {
   std::vector<Future<Unit>> childFutures;
   for (const auto& name : childNames) {
     auto childFuture =
-        treeInode->getOrLoadChild(name).thenValue([](InodePtr child) {
-          TreeInodePtr childTree = child.asTreePtrOrNull();
-          if (childTree) {
-            return loadAllInodesFuture(childTree);
-          }
-          return makeFuture();
-        });
+        treeInode->getOrLoadChild(name, ObjectFetchContext::getNullContext())
+            .thenValue([](InodePtr child) {
+              TreeInodePtr childTree = child.asTreePtrOrNull();
+              if (childTree) {
+                return loadAllInodesFuture(childTree);
+              }
+              return makeFuture();
+            });
     childFutures.emplace_back(std::move(childFuture));
   }
   return folly::collectUnsafe(childFutures).unit();

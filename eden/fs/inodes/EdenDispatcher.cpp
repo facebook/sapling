@@ -106,8 +106,9 @@ folly::Future<fuse_entry_out> EdenDispatcher::lookup(
     ObjectFetchContext& context) {
   FB_LOGF(mount_->getStraceLogger(), DBG7, "lookup({}, {})", parent, namepiece);
   return inodeMap_->lookupTreeInode(parent)
-      .thenValue([name = PathComponent(namepiece)](const TreeInodePtr& tree) {
-        return tree->getOrLoadChild(name);
+      .thenValue([name = PathComponent(namepiece),
+                  &context](const TreeInodePtr& tree) {
+        return tree->getOrLoadChild(name, context);
       })
       .thenValue([&context](const InodePtr& inode) {
         return folly::makeFutureWith([&]() { return inode->stat(context); })

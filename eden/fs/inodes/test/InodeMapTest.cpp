@@ -16,6 +16,7 @@
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestMount.h"
 #include "eden/fs/testharness/TestUtil.h"
@@ -62,7 +63,9 @@ TEST(InodeMap, simpleLookups) {
 
   // Look up the tree inode by name first
   auto root = testMount.getEdenMount()->getRootInode();
-  auto srcTree = root->getOrLoadChild("src"_pc).get();
+  auto srcTree =
+      root->getOrLoadChild("src"_pc, ObjectFetchContext::getNullContext())
+          .get();
 
   // Next look up the tree by inode number
   auto tree2 = inodeMap->lookupTreeInode(srcTree->getNodeId()).get();
@@ -70,7 +73,9 @@ TEST(InodeMap, simpleLookups) {
   EXPECT_EQ(RelativePath{"src"}, tree2->getPath());
 
   // Next look up src/noop.c by name
-  auto noop = tree2->getOrLoadChild("noop.c"_pc).get();
+  auto noop =
+      tree2->getOrLoadChild("noop.c"_pc, ObjectFetchContext::getNullContext())
+          .get();
   EXPECT_NE(srcTree->getNodeId(), noop->getNodeId());
 
   // And look up src/noop.c by inode ID
@@ -96,11 +101,13 @@ TEST(InodeMap, asyncLookup) {
   // Look up the "src" tree inode by name
   // The future should only be fulfilled when after we make the tree ready
   auto rootInode = testMount.getEdenMount()->getRootInode();
-  auto srcFuture = rootInode->getOrLoadChild("src"_pc);
+  auto srcFuture =
+      rootInode->getOrLoadChild("src"_pc, ObjectFetchContext::getNullContext());
   EXPECT_FALSE(srcFuture.isReady());
 
   // Start a second lookup before the first is ready
-  auto srcFuture2 = rootInode->getOrLoadChild("src"_pc);
+  auto srcFuture2 =
+      rootInode->getOrLoadChild("src"_pc, ObjectFetchContext::getNullContext());
   EXPECT_FALSE(srcFuture2.isReady());
 
   // Now make the tree ready
@@ -122,11 +129,13 @@ TEST(InodeMap, asyncError) {
   // Look up the "src" tree inode by name
   // The future should only be fulfilled when after we make the tree ready
   auto rootInode = testMount.getEdenMount()->getRootInode();
-  auto srcFuture = rootInode->getOrLoadChild("src"_pc);
+  auto srcFuture =
+      rootInode->getOrLoadChild("src"_pc, ObjectFetchContext::getNullContext());
   EXPECT_FALSE(srcFuture.isReady());
 
   // Start a second lookup before the first is ready
-  auto srcFuture2 = rootInode->getOrLoadChild("src"_pc);
+  auto srcFuture2 =
+      rootInode->getOrLoadChild("src"_pc, ObjectFetchContext::getNullContext());
   EXPECT_FALSE(srcFuture2.isReady());
 
   // Now fail the tree lookup

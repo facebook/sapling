@@ -13,6 +13,7 @@
 #include <folly/futures/Future.h>
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/utils/PathMap.h"
 
 namespace facebook {
@@ -85,7 +86,10 @@ class InodeLoader {
           continue;
         }
 
-        folly::makeFutureWith([&] { return tree->getOrLoadChild(childName); })
+        folly::makeFutureWith([&] {
+          return tree->getOrLoadChild(
+              childName, ObjectFetchContext::getNullContext());
+        })
             .thenTry(
                 [loader = std::move(childLoader)](
                     folly::Try<InodePtr>&& inode) { loader->loaded(inode); });

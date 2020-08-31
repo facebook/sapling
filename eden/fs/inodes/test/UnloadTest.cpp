@@ -10,6 +10,7 @@
 
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/InodeUnloader.h"
 #include "eden/fs/testharness/TestMount.h"
@@ -91,7 +92,8 @@ TYPED_TEST(UnloadTest, inodesCanBeUnloadedDuringLoad) {
   // Look up the "src" tree inode by name, which starts the load.
   // The future should only be fulfilled when after we make the tree ready
   auto rootInode = testMount.getEdenMount()->getRootInode();
-  auto srcFuture = rootInode->getOrLoadChild("src"_pc);
+  auto srcFuture =
+      rootInode->getOrLoadChild("src"_pc, ObjectFetchContext::getNullContext());
   EXPECT_FALSE(srcFuture.isReady());
 
   rootInode->unloadChildrenNow();
@@ -101,7 +103,8 @@ TYPED_TEST(UnloadTest, inodesCanBeUnloadedDuringLoad) {
   auto srcTree = std::move(srcFuture).get(1s).asTreePtr();
   EXPECT_NE(kRootNodeId, srcTree->getNodeId());
 
-  auto subFuture = srcTree->getOrLoadChild("sub"_pc);
+  auto subFuture =
+      srcTree->getOrLoadChild("sub"_pc, ObjectFetchContext::getNullContext());
   srcTree.reset();
   EXPECT_FALSE(subFuture.isReady());
 
