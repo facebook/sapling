@@ -86,9 +86,9 @@ editing a changeset without any actual change would corrupt the repository
   
   $ startediting 2 3 "(not changing anything)" # edit the 2nd of 3 changesets
   % start editing the history (not changing anything)
-  | pick 055a42cdd887 3 d
-  | edit e860deea161a 4 e
-  | pick 652413bf663e 5 f
+  | pick 055a42cdd887 d
+  | edit e860deea161a e
+  | pick 652413bf663e f
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   Editing (e860deea161a), you may commit or record as needed now.
   (hg histedit --continue to resume)
@@ -137,9 +137,9 @@ check state of working copy
   
   $ startediting 1,2 3 "(not changing anything)" # edit the 1st two of 3 changesets
   % start editing the history (not changing anything)
-  | edit 055a42cdd887 3 d
-  | edit e860deea161a 4 e
-  | pick 652413bf663e 5 f
+  | edit 055a42cdd887 d
+  | edit e860deea161a e
+  | pick 652413bf663e f
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
   Editing (055a42cdd887), you may commit or record as needed now.
   (hg histedit --continue to resume)
@@ -207,7 +207,7 @@ aborting and not changing files can skip mentioning updating (no) files
   $ hg commit -m 'closebranch' --config ui.allowemptycommit=1
   $ startediting 1 1 "(not changing anything)" # edit the 3rd of 3 changesets
   % start editing the history (not changing anything)
-  | edit 663c31f74acc 7 closebranch
+  | edit 663c31f74acc closebranch
   Editing (663c31f74acc), you may commit or record as needed now.
   (hg histedit --continue to resume)
   $ hg histedit --abort

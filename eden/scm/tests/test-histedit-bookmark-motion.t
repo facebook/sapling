@@ -57,11 +57,11 @@
      summary:     a
   
   $ HGEDITOR=cat hg histedit 'max(desc(b))'
-  pick d2ae7f538514 1 b
-  pick 177f92b77385 2 c
-  pick 055a42cdd887 3 d
-  pick e860deea161a 4 e
-  pick 652413bf663e 5 f
+  pick d2ae7f538514 b
+  pick 177f92b77385 c
+  pick 055a42cdd887 d
+  pick e860deea161a e
+  pick 652413bf663e f
   
   # Edit history between d2ae7f538514 and 652413bf663e
   #
@@ -117,9 +117,9 @@
      summary:     a
   
   $ HGEDITOR=cat hg histedit 'max(desc(c))'
-  pick b346ab9a313d 6 c
-  pick 59d9f330561f 9 d
-  pick cacdfd884a93 10 f
+  pick b346ab9a313d c
+  pick 59d9f330561f d
+  pick cacdfd884a93 f
   
   # Edit history between b346ab9a313d and cacdfd884a93
   #

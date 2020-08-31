@@ -36,9 +36,9 @@
 show the edit commands offered by outgoing
   $ cd r2
   $ HGEDITOR=cat hg histedit --outgoing ../r | grep -v comparing | grep -v searching
-  pick 055a42cdd887 3 d
-  pick e860deea161a 4 e
-  pick 652413bf663e 5 f
+  pick 055a42cdd887 d
+  pick e860deea161a e
+  pick 652413bf663e f
   
   # Edit history between 055a42cdd887 and 652413bf663e
   #
@@ -71,9 +71,9 @@ show the error from unrelated repos
   comparing with ../r
   searching for changes
   warning: repository is unrelated
-  pick 2a4042b45417 0 g
-  pick 68c46b4927ce 1 h
-  pick 51281e65ba79 2 i
+  pick 2a4042b45417 g
+  pick 68c46b4927ce h
+  pick 51281e65ba79 i
   
   # Edit history between 2a4042b45417 and 51281e65ba79
   #

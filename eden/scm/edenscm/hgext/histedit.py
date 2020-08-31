@@ -486,7 +486,7 @@ class histeditaction(object):
         """
         ctx = self.repo[self.node]
         summary = _getsummary(ctx)
-        line = "%s %s %d %s" % (self.verb, ctx, ctx.rev(), summary)
+        line = "%s %s %s" % (self.verb, ctx, summary)
         # trim to 75 columns by default so it's not stupidly wide in my editor
         # (the 5 more are left for verb)
         maxlen = self.repo.ui.configint("histedit", "linelen")

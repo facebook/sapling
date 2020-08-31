@@ -394,7 +394,7 @@ Attempting to fold a change into a public change should not work:
   hg: parse error: first changeset cannot use verb "fold"
   [255]
   $ cat .hg/histedit-last-edit.txt
-  fold 0012be4a27ea 3 extend a
+  fold 0012be4a27ea extend a
   
   # Edit history between 0012be4a27ea and 0012be4a27ea
   #

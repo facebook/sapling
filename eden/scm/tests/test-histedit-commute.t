@@ -52,10 +52,10 @@ log before edit
 
 show the edit commands offered
   $ HGEDITOR=cat hg histedit 177f92b77385
-  pick 177f92b77385 2 c
-  pick 055a42cdd887 3 d
-  pick e860deea161a 4 e
-  pick 652413bf663e 5 f
+  pick 177f92b77385 c
+  pick 055a42cdd887 d
+  pick e860deea161a e
+  pick 652413bf663e f
   
   # Edit history between 177f92b77385 and 652413bf663e
   #
@@ -332,9 +332,9 @@ Verify that revsetalias entries work with histedit:
   $ echo extra commit >> c
   $ hg ci -m 'extra commit to c'
   $ HGEDITOR=cat hg histedit 'grandparent(.)'
-  pick ece0b8d93dda 16 c
-  pick 803ef1c6fcfd 17 e
-  pick 9c863c565126 18 extra commit to c
+  pick ece0b8d93dda c
+  pick 803ef1c6fcfd e
+  pick 9c863c565126 extra commit to c
   
   # Edit history between ece0b8d93dda and 9c863c565126
   #

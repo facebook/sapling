@@ -237,8 +237,8 @@ tip before edit
   > pick 1ddb6c90f2ee e
   > fold 10c36dd37515 f
   > EOF
-  progress: editing: pick 1ddb6c90f2ee 4 e 1/2 changes (50.00%)
-  progress: editing: fold 10c36dd37515 6 f 2/2 changes (100.00%)
+  progress: editing: pick 1ddb6c90f2ee e 1/2 changes (50.00%)
+  progress: editing: fold 10c36dd37515 f 2/2 changes (100.00%)
   progress: editing (end)
 
 tip after edit, which should use the later date, from the second changeset

@@ -53,9 +53,9 @@ Run a dummy edit to make sure we get tip^^ correctly via revsingle.
 --------------------------------------------------------------------
 
   $ HGEDITOR=cat hg histedit "tip^^"
-  pick eb57da33312f 2 three
-  pick c8e68270e35a 3 four
-  pick 08d98a8350f3 4 five
+  pick eb57da33312f three
+  pick c8e68270e35a four
+  pick 08d98a8350f3 five
   
   # Edit history between eb57da33312f and 08d98a8350f3
   #
@@ -287,7 +287,7 @@ Test that trimming description using multi-byte characters
   $ hg --encoding utf-8 commit --logfile logfile
 
   $ HGEDITOR=cat hg --encoding utf-8 histedit tip
-  pick 3d3ea1f3a10b 8 1234567890123456789012345678901234567890123456789012345\xe3\x81\x82... (esc)
+  pick 3d3ea1f3a10b 1234567890123456789012345678901234567890123456789012345\xe3\x81\x82\xe3\x81\x84... (esc)
   
   # Edit history between 3d3ea1f3a10b and 3d3ea1f3a10b
   #
@@ -504,9 +504,9 @@ Test autoverb feature
 Check that 'roll' is selected by default
 
   $ HGEDITOR=cat hg histedit 6058cbb6cfd78cfdef42aa56faa272ee45d4b7dc --config experimental.histedit.autoverb=True
-  pick 6058cbb6cfd7 0 one
-  roll 4f34d0f8b5fa 2 roll! one
-  pick 579e40513370 1 two
+  pick 6058cbb6cfd7 one
+  roll 4f34d0f8b5fa roll! one
+  pick 579e40513370 two
   
   # Edit history between 6058cbb6cfd7 and 4f34d0f8b5fa
   #

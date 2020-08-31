@@ -71,7 +71,7 @@ show-plan should work
   histedit plan (call "histedit --continue/--retry" to resume it or "histedit --abort" to abort it):
       exec exit 1
       exec exit 2
-      pick 652413bf663e 5 f
+      pick 652413bf663e f
       exec exit 3
 
 continue should work
@@ -86,7 +86,7 @@ show-plan after consecutive failed execs
   $ hg histedit --show-plan
   histedit plan (call "histedit --continue/--retry" to resume it or "histedit --abort" to abort it):
       exec exit 2
-      pick 652413bf663e 5 f
+      pick 652413bf663e f
       exec exit 3
 
 continue after consecutive failed execs
