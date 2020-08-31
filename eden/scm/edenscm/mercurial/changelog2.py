@@ -333,13 +333,19 @@ class changelog(object):
 
     def addgroup(self, deltas, linkmapper, transaction):
         nodes = []
+        textmap = {}  # {node: btext}
+        commits = []
         for node, p1, p2, linknode, deltabase, delta, flags in deltas:
             assert flags == 0, "changelog flags cannot be non-zero"
             parents = [p for p in (p1, p2) if p != nullid]
-            basetext = self.revision(deltabase)
+            basetext = textmap.get(deltabase) or self.revision(deltabase)
             rawtext = bytes(mdiff.patch(basetext, delta))
-            self.inner.addcommits([(node, parents, rawtext)])
+            textmap[node] = rawtext
+            commits.append((node, parents, rawtext))
             nodes.append(node)
+        # Call 'addcommits' once with batched commits is important for
+        # performance.
+        self.inner.addcommits(commits)
         trnodes = transaction.changes.get("nodes")
         if trnodes is not None:
             trnodes += nodes
