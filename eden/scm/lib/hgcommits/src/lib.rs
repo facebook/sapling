@@ -21,11 +21,18 @@ pub trait ReadCommitText {
 }
 
 pub trait AppendCommits {
-    /// Add commits. They stay in-memory.
+    /// Add commits. They stay in-memory until `flush`.
     fn add_commits(&mut self, commits: &[HgCommit]) -> Result<()>;
 
     /// Write in-memory changes to disk.
+    ///
+    /// This function does more things than `flush_commit_data`.
     fn flush(&mut self, master_heads: &[Vertex]) -> Result<()>;
+
+    /// Write buffered commit data to disk.
+    ///
+    /// For the revlog backend, this also write the commit graph to disk.
+    fn flush_commit_data(&mut self) -> Result<()>;
 }
 
 pub trait DescribeBackend {

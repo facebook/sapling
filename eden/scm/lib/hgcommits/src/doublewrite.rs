@@ -49,6 +49,12 @@ impl AppendCommits for DoubleWriteCommits {
         self.commits.flush(master_heads)?;
         Ok(())
     }
+
+    fn flush_commit_data(&mut self) -> Result<()> {
+        self.revlog.flush_commit_data()?;
+        self.commits.flush_commit_data()?;
+        Ok(())
+    }
 }
 
 impl ReadCommitText for DoubleWriteCommits {

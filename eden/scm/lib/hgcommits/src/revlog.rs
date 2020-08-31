@@ -59,6 +59,11 @@ impl AppendCommits for RevlogCommits {
         self.revlog.flush()?;
         Ok(())
     }
+
+    fn flush_commit_data(&mut self) -> Result<()> {
+        self.revlog.flush()?;
+        Ok(())
+    }
 }
 
 impl ReadCommitText for RevlogCommits {

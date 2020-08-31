@@ -102,6 +102,10 @@ impl AppendCommits for GitSegmentedCommits {
     fn flush(&mut self, _master_heads: &[Vertex]) -> Result<()> {
         Ok(())
     }
+
+    fn flush_commit_data(&mut self) -> Result<()> {
+        Ok(())
+    }
 }
 
 impl ReadCommitText for GitSegmentedCommits {

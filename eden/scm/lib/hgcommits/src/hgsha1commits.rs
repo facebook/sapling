@@ -120,6 +120,11 @@ impl AppendCommits for HgCommits {
         self.dag.flush(master_heads)?;
         Ok(())
     }
+
+    fn flush_commit_data(&mut self) -> Result<()> {
+        self.commits.flush()?;
+        Ok(())
+    }
 }
 
 impl ReadCommitText for HgCommits {

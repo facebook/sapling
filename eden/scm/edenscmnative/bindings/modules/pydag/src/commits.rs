@@ -70,12 +70,20 @@ py_class!(pub class commits |py| {
         Ok(PyNone)
     }
 
-    /// Flush in-memory commits to disk.
+    /// Flush in-memory commit data and graph to disk.
     /// `masterheads` is a hint about what parts belong to the "master" group.
     def flush(&self, masterheads: Vec<PyBytes>) -> PyResult<PyNone> {
         let heads = masterheads.into_iter().map(|h| h.data(py).to_vec().into()).collect::<Vec<_>>();
         let mut inner = self.inner(py).borrow_mut();
         inner.flush(&heads).map_pyerr(py)?;
+        Ok(PyNone)
+    }
+
+    /// Flush in-memory commit data to disk.
+    /// For the revlog backend, this also write the commit graph to disk.
+    def flushcommitdata(&self) -> PyResult<PyNone> {
+        let mut inner = self.inner(py).borrow_mut();
+        inner.flush_commit_data().map_pyerr(py)?;
         Ok(PyNone)
     }
 

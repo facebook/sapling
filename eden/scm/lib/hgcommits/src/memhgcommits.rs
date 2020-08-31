@@ -75,6 +75,10 @@ impl AppendCommits for MemHgCommits {
     fn flush(&mut self, _master_heads: &[Vertex]) -> Result<()> {
         Ok(())
     }
+
+    fn flush_commit_data(&mut self) -> Result<()> {
+        Ok(())
+    }
 }
 
 impl ReadCommitText for MemHgCommits {
