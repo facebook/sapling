@@ -11,8 +11,8 @@ fn main() {
     let out_dir: &Path = out_dir.as_ref();
     fs::write(
         out_dir.join("cratemap"),
-        "commitsync _ crate
-repos _ repos",
+        "commitsync crate
+repos repos",
     ).expect("Failed to write cratemap");
 
     let conf = {
