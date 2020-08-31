@@ -126,6 +126,12 @@ The following option can be used to bypass a softblock on fullcheckouts.
    [sparse]
    bypassfullcheckoutwarn = True
 
+The following option can be used to check if a sparse profile includes any files that should not normally
+be included.
+
+    [sparse]
+    unsafe_sparse_profile_marker_files = "somefile, anotherfile"
+    unsafe_sparse_profile_message = "do not do this!"
 """
 
 from __future__ import division
@@ -539,6 +545,9 @@ def _clonesparsecmd(orig, ui, repo, *args, **opts):
                     include=include,
                     exclude=exclude,
                     enableprofile=enableprofile,
+                    # Allow unsafe sparse profiles because usually people call
+                    # fbclone command which already includes a few safeguards.
+                    allowunsafeprofilechanges=True,
                 )
             ret = orig(self, node, overwrite, *args, **kwargs)
             if enableprofile:
@@ -574,7 +583,9 @@ def _setupadd(ui):
             for pat in pats:
                 dirname, basename = util.split(pat)
                 dirs.add(dirname)
-            _config(ui, repo, list(dirs), opts, include=True)
+            _config(
+                ui, repo, list(dirs), opts, include=True, allowunsafeprofilechanges=True
+            )
         return orig(ui, repo, *pats, **opts)
 
     extensions.wrapcommand(commands.table, "add", _add)
@@ -1480,6 +1491,15 @@ _deprecate = (
             _("allow changing rules even with pending changes" "(DEPRECATED)"),
         ),
         (
+            "",
+            "allow-unsafe-profile-changes",
+            False,
+            _(
+                "allow sparse profile change even if this change might be unsafe"
+                "(DEPRECATED)"
+            ),
+        ),
+        (
             "I",
             "include",
             False,
@@ -1565,6 +1585,7 @@ def sparse(ui, repo, *pats, **opts):
     refresh = opts.get("refresh")
     reset = opts.get("reset")
     cwdlist = opts.get("cwd_list")
+    allowunsafeprofilechanges = opts.get("allow_unsafe_profile_changes")
     count = sum(
         [
             include,
@@ -1612,6 +1633,7 @@ def sparse(ui, repo, *pats, **opts):
             enableprofile=enableprofile,
             disableprofile=disableprofile,
             force=force,
+            allowunsafeprofilechanges=allowunsafeprofilechanges,
         )
         if enableprofile:
             _checknonexistingprofiles(ui, repo, pats)
@@ -2144,27 +2166,42 @@ def _listfilessubcmd(ui, repo, profile, *files, **opts):
 
 
 _common_config_opts = [
-    ("f", "force", False, _("allow changing rules even with pending changes"))
+    ("f", "force", False, _("allow changing rules even with pending changes")),
+    (
+        "",
+        "allow-unsafe-profile-changes",
+        False,
+        _("allow sparse profile change even if this change might be unsafe"),
+    ),
 ]
+
+
+def getcommonopts(opts):
+    allowunsafeprofilechanges = opts.get("allow_unsafe_profile_changes")
+    force = opts.get("force")
+    return {"allowunsafeprofilechanges": allowunsafeprofilechanges, "force": force}
 
 
 @subcmd("reset", _common_config_opts + commands.templateopts)
 def resetsubcmd(ui, repo, **opts):
     """disable all sparse profiles and convert to a full checkout"""
-    _config(ui, repo, [], opts, force=opts.get("force"), reset=True)
+    commonopts = getcommonopts(opts)
+    _config(ui, repo, [], opts, reset=True, **commonopts)
 
 
 @subcmd("disable|disableprofile", _common_config_opts, "[PROFILE]...")
 def disableprofilesubcmd(ui, repo, *pats, **opts):
     """disable a sparse profile"""
-    _config(ui, repo, pats, opts, force=opts.get("force"), disableprofile=True)
+    commonopts = getcommonopts(opts)
+    _config(ui, repo, pats, opts, disableprofile=True, **commonopts)
 
 
 @subcmd("enable|enableprofile", _common_config_opts, "[PROFILE]...")
 def enableprofilesubcmd(ui, repo, *pats, **opts):
     """enable a sparse profile"""
     _checknonexistingprofiles(ui, repo, pats)
-    _config(ui, repo, pats, opts, force=opts.get("force"), enableprofile=True)
+    commonopts = getcommonopts(opts)
+    _config(ui, repo, pats, opts, enableprofile=True, **commonopts)
 
 
 @subcmd("switch|switchprofile", _common_config_opts, "[PROFILE]...")
@@ -2175,39 +2212,43 @@ def switchprofilesubcmd(ui, repo, *pats, **opts):
     files you have previously included or excluded.
     """
     _checknonexistingprofiles(ui, repo, pats)
-    _config(
-        ui, repo, pats, opts, force=opts.get("force"), reset=True, enableprofile=True
-    )
+    commonopts = getcommonopts(opts)
+    _config(ui, repo, pats, opts, reset=True, enableprofile=True, **commonopts)
 
 
 @subcmd("delete", _common_config_opts, "[RULE]...")
 def deletesubcmd(ui, repo, *pats, **opts):
     """delete an include or exclude rule (DEPRECATED)"""
-    _config(ui, repo, pats, opts, force=opts.get("force"), delete=True)
+    commonopts = getcommonopts(opts)
+    _config(ui, repo, pats, opts, delete=True, **commonopts)
 
 
 @subcmd("exclude", _common_config_opts, "[RULE]...")
 def excludesubcmd(ui, repo, *pats, **opts):
     """exclude some additional files"""
-    _config(ui, repo, pats, opts, force=opts.get("force"), exclude=True)
+    commonopts = getcommonopts(opts)
+    _config(ui, repo, pats, opts, exclude=True, **commonopts)
 
 
 @subcmd("unexclude", _common_config_opts, "[RULE]...")
 def unexcludesubcmd(ui, repo, *pats, **opts):
     """stop excluding some additional files"""
-    _config(ui, repo, pats, opts, force=opts.get("force"), unexclude=True)
+    commonopts = getcommonopts(opts)
+    _config(ui, repo, pats, opts, unexclude=True, **commonopts)
 
 
 @subcmd("include", _common_config_opts, "[RULE]...")
 def includesubcmd(ui, repo, *pats, **opts):
     """include some additional files"""
-    _config(ui, repo, pats, opts, force=opts.get("force"), include=True)
+    commonopts = getcommonopts(opts)
+    _config(ui, repo, pats, opts, include=True, **commonopts)
 
 
 @subcmd("uninclude", _common_config_opts, "[RULE]...")
 def unincludesubcmd(ui, repo, *pats, **opts):
     """stop including some additional files"""
-    _config(ui, repo, pats, opts, force=opts.get("force"), uninclude=True)
+    commonopts = getcommonopts(opts)
+    _config(ui, repo, pats, opts, uninclude=True, **commonopts)
 
 
 for c in deletesubcmd, excludesubcmd, includesubcmd, unexcludesubcmd, unincludesubcmd:
@@ -2288,6 +2329,7 @@ def _config(
     enableprofile=False,
     disableprofile=False,
     force=False,
+    allowunsafeprofilechanges=False,
 ):
     _checksparse(repo)
 
@@ -2366,7 +2408,13 @@ def _config(
                 newinclude.difference_update(pats)
                 newexclude.difference_update(pats)
 
+            unsafemarkerfile = _find_unsafe_marker_files(repo, ui)
             repo.writesparseconfig(newinclude, newexclude, newprofiles)
+            # Check that new sparse profile is safe, however do it only
+            # if previous sparse profile was safe as well
+            if unsafemarkerfile is None and not allowunsafeprofilechanges:
+                _validate_new_sparse_config(repo, ui)
+
             fcounts = list(
                 map(len, _refresh(ui, repo, oldstatus, oldsparsematch, force))
             )
@@ -2384,6 +2432,39 @@ def _config(
             raise
     finally:
         wlock.release()
+
+
+def _find_unsafe_marker_files(repo, ui):
+    if not _hassparse(repo):
+        return None
+    unsafesparseprofilemarkerfiles = ui.configlist(
+        "sparse", "unsafe_sparse_profile_marker_files"
+    )
+    sparsematch = repo.sparsematch()
+    for f in unsafesparseprofilemarkerfiles:
+        if sparsematch(f):
+            return f
+    return None
+
+
+def _validate_new_sparse_config(repo, ui):
+    unsafemarkerfile = _find_unsafe_marker_files(repo, ui)
+    if unsafemarkerfile is not None:
+        msg = (
+            "'{}' file is included in sparse profile, "
+            + "it might not be safe because it may introduce a large "
+            + "amount of data into your repository"
+        ).format(unsafemarkerfile)
+        additionalmsg = ui.config("sparse", "unsafe_sparse_profile_message")
+        if additionalmsg:
+            msg = "{}\n{}".format(msg, additionalmsg)
+        raise error.Abort(
+            msg,
+            hint=(
+                "If you are know what you are doing re-run with allow-unsafe-profile-changes, "
+                + "otherwise contact Source control @ fb"
+            ),
+        )
 
 
 def _checknonexistingprofiles(ui, repo, profiles):
