@@ -11,6 +11,7 @@ from unittest.mock import patch
 import eden.fs.cli.doctor as doctor
 from eden.fs.cli.doctor.test.lib.fake_eden_instance import FakeEdenInstance
 from eden.fs.cli.doctor.test.lib.fake_fs_util import FakeFsUtil
+from eden.fs.cli.doctor.test.lib.fake_kerberos_checker import FakeKerberosChecker
 from eden.fs.cli.doctor.test.lib.testcase import DoctorTestBase
 from eden.fs.cli.test.lib.output import TestOutput
 
@@ -32,6 +33,7 @@ class NfsTest(DoctorTestBase):
             instance.mount_table,
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
+            kerberos_checker=FakeKerberosChecker(),
             out=out,
         )
         expected = f"""\
@@ -141,6 +143,7 @@ The Mercurial data directory for {v.client_path}/.hg/sharedpath is at\
             instance.mount_table,
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
+            kerberos_checker=FakeKerberosChecker(),
             out=out,
         )
         v.stdout = out.getvalue()

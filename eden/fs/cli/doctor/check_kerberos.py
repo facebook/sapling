@@ -11,14 +11,15 @@ import subprocess
 from eden.fs.cli.doctor.problem import Problem, ProblemTracker
 
 
-def run_kerberos_certificate_checks(tracker: ProblemTracker) -> None:
-    # Skip these checks on Windows machines and on Sandcastle
-    if platform.system() == "Windows" or os.environ.get("SANDCASTLE"):
-        return
+class KerberosChecker:
+    def run_kerberos_certificate_checks(self, tracker: ProblemTracker) -> None:
+        # Skip these checks on Windows machines and on Sandcastle
+        if platform.system() == "Windows" or os.environ.get("SANDCASTLE"):
+            return
 
-    result = subprocess.call(["klist", "-s"])
-    if result:
-        tracker.add_problem(KerberosProblem())
+        result = subprocess.call(["klist", "-s"])
+        if result:
+            tracker.add_problem(KerberosProblem())
 
 
 class KerberosProblem(Problem):

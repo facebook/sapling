@@ -56,10 +56,11 @@ def cure_what_ails_you(
     mount_table: Optional[mtab.MountTable] = None,
     fs_util: Optional[filesystem.FsUtil] = None,
     proc_utils: Optional[proc_utils_mod.ProcUtils] = None,
+    kerberos_checker: Optional[check_kerberos.KerberosChecker] = None,
     out: Optional[ui.Output] = None,
 ) -> int:
     return EdenDoctor(
-        instance, dry_run, mount_table, fs_util, proc_utils, out
+        instance, dry_run, mount_table, fs_util, proc_utils, kerberos_checker, out
     ).cure_what_ails_you()
 
 
@@ -97,6 +98,7 @@ class EdenDoctorChecker:
     mount_table: mtab.MountTable
     fs_util: filesystem.FsUtil
     proc_utils: proc_utils_mod.ProcUtils
+    kerberos_checker: check_kerberos.KerberosChecker
     tracker: ProblemTracker
     out: ui.Output
     # Setting run_system_wide_checks to False causes EdenDoctor to skip checks that
@@ -113,6 +115,7 @@ class EdenDoctorChecker:
         mount_table: Optional[mtab.MountTable] = None,
         fs_util: Optional[filesystem.FsUtil] = None,
         proc_utils: Optional[proc_utils_mod.ProcUtils] = None,
+        kerberos_checker: Optional[check_kerberos.KerberosChecker] = None,
         out: Optional[ui.Output] = None,
     ) -> None:
         self.instance = instance
@@ -120,6 +123,11 @@ class EdenDoctorChecker:
         self.mount_table = mount_table if mount_table is not None else mtab.new()
         self.fs_util = fs_util if fs_util is not None else filesystem.new()
         self.proc_utils = proc_utils if proc_utils is not None else proc_utils_mod.new()
+        self.kerberos_checker = (
+            kerberos_checker
+            if kerberos_checker is not None
+            else check_kerberos.KerberosChecker()
+        )
         self.out = out if out is not None else ui.get_output()
 
     def run_checks(self) -> None:
@@ -134,7 +142,7 @@ class EdenDoctorChecker:
                 self.tracker, self.proc_utils
             )
 
-            check_kerberos.run_kerberos_certificate_checks(self.tracker)
+            self.kerberos_checker.run_kerberos_certificate_checks(self.tracker)
 
         status = self.instance.check_health()
         if status.status == fb303_status.ALIVE:
@@ -246,6 +254,7 @@ class EdenDoctor(EdenDoctorChecker):
         mount_table: Optional[mtab.MountTable] = None,
         fs_util: Optional[filesystem.FsUtil] = None,
         proc_utils: Optional[proc_utils_mod.ProcUtils] = None,
+        kerberos_checker: Optional[check_kerberos.KerberosChecker] = None,
         out: Optional[ui.Output] = None,
     ) -> None:
         self.dry_run = dry_run
@@ -261,6 +270,7 @@ class EdenDoctor(EdenDoctorChecker):
             mount_table=mount_table,
             fs_util=fs_util,
             proc_utils=proc_utils,
+            kerberos_checker=kerberos_checker,
             out=out,
         )
 

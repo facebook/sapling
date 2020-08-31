@@ -17,6 +17,7 @@ from eden.fs.cli.doctor.test.lib.fake_client import ResetParentsCommitsArgs
 from eden.fs.cli.doctor.test.lib.fake_eden_instance import FakeEdenInstance
 from eden.fs.cli.doctor.test.lib.fake_fs_util import FakeFsUtil
 from eden.fs.cli.doctor.test.lib.fake_hg_repo import FakeHgRepo
+from eden.fs.cli.doctor.test.lib.fake_kerberos_checker import FakeKerberosChecker
 from eden.fs.cli.doctor.test.lib.fake_mount_table import FakeMountTable
 from eden.fs.cli.doctor.test.lib.testcase import DoctorTestBase
 from eden.fs.cli.test.lib.output import TestOutput
@@ -107,6 +108,7 @@ class DoctorTest(DoctorTestBase):
             instance.mount_table,
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
+            kerberos_checker=FakeKerberosChecker(),
             out=out,
         )
 
@@ -184,6 +186,7 @@ https://fb.facebook.com/groups/eden.users/
             mount_table=instance.mount_table,
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
+            kerberos_checker=FakeKerberosChecker(),
             out=out,
         )
 
@@ -211,6 +214,7 @@ https://fb.facebook.com/groups/eden.users/
             FakeMountTable(),
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
+            kerberos_checker=FakeKerberosChecker(),
             out=out,
         )
 
@@ -233,6 +237,7 @@ https://fb.facebook.com/groups/eden.users/
             FakeMountTable(),
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
+            kerberos_checker=FakeKerberosChecker(),
             out=out,
         )
 
@@ -268,6 +273,7 @@ https://fb.facebook.com/groups/eden.users/
             FakeMountTable(),
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
+            kerberos_checker=FakeKerberosChecker(),
             out=out,
         )
 
@@ -303,6 +309,7 @@ https://fb.facebook.com/groups/eden.users/
             FakeMountTable(),
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
+            kerberos_checker=FakeKerberosChecker(),
             out=out,
         )
 
@@ -858,6 +865,7 @@ which may have important bug fixes or performance improvements.
             instance.mount_table,
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
+            kerberos_checker=FakeKerberosChecker(),
             out=out,
         )
 
@@ -963,6 +971,7 @@ Would remount {mounts[1]}
             instance.mount_table,
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
+            kerberos_checker=FakeKerberosChecker(),
             out=out,
         )
         return exit_code, out.getvalue(), mounts
@@ -985,6 +994,7 @@ Would remount {mounts[1]}
             mount_table=instance.mount_table,
             fs_util=FakeFsUtil(),
             proc_utils=self.make_proc_utils(),
+            kerberos_checker=FakeKerberosChecker(),
             out=out,
         )
 
@@ -1060,6 +1070,7 @@ Checking {mount}
                 mount_table=instance.mount_table,
                 fs_util=FakeFsUtil(),
                 proc_utils=self.make_proc_utils(),
+                kerberos_checker=FakeKerberosChecker(),
                 out=out,
             )
             return exit_code, out.getvalue()
