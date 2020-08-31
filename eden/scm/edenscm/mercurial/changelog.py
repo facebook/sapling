@@ -533,11 +533,9 @@ class changelog(revlog.revlog):
             zstore.flush()
         return result
 
-    def addgroup(self, deltas, linkmapper, transaction, addrevisioncb=None):
+    def addgroup(self, deltas, linkmapper, transaction):
         self._invalidaterustrevlog()
-        result = super(changelog, self).addgroup(
-            deltas, linkmapper, transaction, addrevisioncb
-        )
+        result = super(changelog, self).addgroup(deltas, linkmapper, transaction)
         zstore = self.zstore
         if zstore is not None:
             zstore.flush()

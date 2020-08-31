@@ -1905,18 +1905,7 @@ class revlog(object):
         return True
 
     def _addrevision(
-        self,
-        node,
-        rawtext,
-        transaction,
-        link,
-        p1,
-        p2,
-        flags,
-        cachedelta,
-        ifh,
-        dfh,
-        alwayscache=False,
+        self, node, rawtext, transaction, link, p1, p2, flags, cachedelta, ifh, dfh
     ):
         """internal function to add revisions to the log
 
@@ -2085,9 +2074,6 @@ class revlog(object):
         entry = self._io.packentry(e, self.node, self.version, curr)
         self._writeentry(transaction, ifh, dfh, entry, data, link, offset)
 
-        if alwayscache and rawtext is None:
-            rawtext = buildtext()
-
         if type(rawtext) == bytes:  # only accept immutable objects
             self._cache = (node, curr, rawtext)
         self._chainbasecache[curr] = chainbase
@@ -2127,16 +2113,13 @@ class revlog(object):
             if not self._bypasstransaction:
                 self.checkinlinesize(transaction, ifh)
 
-    def addgroup(self, deltas, linkmapper, transaction, addrevisioncb=None):
+    def addgroup(self, deltas, linkmapper, transaction):
         """
         add a delta group
 
         given a set of deltas, add them to the revision log. the
         first delta is against its parent, which should be in our
         log, the rest are against the previous delta.
-
-        If ``addrevisioncb`` is defined, it will be called with arguments of
-        this revlog and the node that was added.
         """
 
         nodes = []
@@ -2200,13 +2183,6 @@ class revlog(object):
                 if not flags and self._peek_iscensored(baserev, delta, flush):
                     flags |= REVIDX_ISCENSORED
 
-                # We assume consumers of addrevisioncb will want to retrieve
-                # the added revision, which will require a call to
-                # revision(). revision() will fast path if there is a cache
-                # hit. So, we tell _addrevision() to always cache in this case.
-                # We're only using addgroup() in the context of changegroup
-                # generation so the revision data can always be handled as raw
-                # by the flagprocessor.
                 self._addrevision(
                     node,
                     None,
@@ -2218,11 +2194,7 @@ class revlog(object):
                     (baserev, delta),
                     ifh,
                     dfh,
-                    alwayscache=bool(addrevisioncb),
                 )
-
-                if addrevisioncb:
-                    addrevisioncb(self, node)
 
                 if not dfh and not self._inline:
                     # addrevision switched from inline to conventional
@@ -2389,12 +2361,7 @@ class revlog(object):
     DELTAREUSEALL = {"always", "samerevs", "never", "fulladd"}
 
     def clone(
-        self,
-        tr,
-        destrevlog,
-        addrevisioncb=None,
-        deltareuse=DELTAREUSESAMEREVS,
-        aggressivemergedeltas=None,
+        self, tr, destrevlog, deltareuse=DELTAREUSESAMEREVS, aggressivemergedeltas=None
     ):
         """Copy this revlog to another, possibly with format changes.
 
@@ -2515,9 +2482,6 @@ class revlog(object):
                         if dfh:
                             dfh.close()
                         ifh.close()
-
-                if addrevisioncb:
-                    addrevisioncb(self, rev, node)
         finally:
             destrevlog._lazydeltabase = oldlazydeltabase
             destrevlog._aggressivemergedeltas = oldamd

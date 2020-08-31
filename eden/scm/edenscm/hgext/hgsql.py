@@ -1989,12 +1989,12 @@ class EntryRevlog(revlog.revlog):
             self.checkinlinesize(transaction, ifh)
 
 
-def addgroup(orig, self, deltas, linkmapper, transaction, addrevisioncb=None):
+def addgroup(orig, self, deltas, linkmapper, transaction):
     """Copy paste of revlog.addgroup, but we ensure that the revisions are
     added in linkrev order.
     """
     if not util.safehasattr(transaction, "repo"):
-        return orig(self, deltas, linkmapper, transaction, addrevisioncb=addrevisioncb)
+        return orig(self, deltas, linkmapper, transaction)
 
     # track the base of the current delta log
     content = []
@@ -2127,15 +2127,6 @@ def addgroup(orig, self, deltas, linkmapper, transaction, addrevisioncb=None):
             chain = self._addrevision(
                 node, None, transaction, link, p1, p2, flags, (baserev, delta), ifh, dfh
             )
-
-            if addrevisioncb:
-                # Data for added revision can't be read unless flushed
-                # because _loadchunk always opensa new file handle and
-                # there is no guarantee data was actually written yet.
-                if dfh:
-                    dfh.flush()
-                ifh.flush()
-                addrevisioncb(self, chain)
 
             if not dfh and not self._inline:
                 # addrevision switched from inline to conventional

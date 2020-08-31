@@ -331,7 +331,7 @@ class changelog(object):
             nodes.append(node)
         return node
 
-    def addgroup(self, deltas, linkmapper, transaction, addrevisioncb=None):
+    def addgroup(self, deltas, linkmapper, transaction):
         nodes = []
         for node, p1, p2, linknode, deltabase, delta, flags in deltas:
             assert flags == 0, "changelog flags cannot be non-zero"
@@ -339,8 +339,6 @@ class changelog(object):
             basetext = self.revision(deltabase)
             rawtext = bytes(mdiff.patch(basetext, delta))
             self.inner.addcommits([(node, parents, rawtext)])
-            if addrevisioncb:
-                addrevisioncb(self, node)
             nodes.append(node)
         trnodes = transaction.changes.get("nodes")
         if trnodes is not None:
