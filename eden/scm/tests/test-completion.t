@@ -120,7 +120,6 @@ Show debug commands if there are no other candidates
   debugextensions
   debugfilerevision
   debugfileset
-  debugformat
   debugfsinfo
   debugfsync
   debuggetbundle
@@ -173,7 +172,6 @@ Show debug commands if there are no other candidates
   debugthrowrustexception
   debugtreestate
   debugupdatecaches
-  debugupgraderepo
   debugvisibility
   debugvisibleheads
   debugwalk
@@ -407,7 +405,6 @@ Show all commands + options
   debugextensions: excludedefault, template
   debugfilerevision: rev, include, exclude
   debugfileset: rev
-  debugformat: template
   debugfsinfo: 
   debugfsync: 
   debuggetbundle: head, common, type
@@ -460,7 +457,6 @@ Show all commands + options
   debugthrowrustexception: 
   debugtreestate: 
   debugupdatecaches: 
-  debugupgraderepo: optimize, run
   debugvisibility: 
   debugvisibleheads: style, template
   debugwalk: include, exclude

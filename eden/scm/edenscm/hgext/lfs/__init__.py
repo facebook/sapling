@@ -59,7 +59,6 @@ from edenscm.mercurial import (
     registrar,
     revlog,
     scmutil,
-    upgrade,
     util,
     vfs as vfsmod,
 )
@@ -150,11 +149,6 @@ def extsetup(ui):
         # "convert"-related and missing them is not fatal.  Ignore them so
         # bootstrapping from an old Mercurial works.
         wrapfunction(scmutil, "wrapconvertsink", wrapper.convertsink)
-        wrapfunction(
-            upgrade, "_finishdatamigration", wrapper.upgradefinishdatamigration
-        )
-        wrapfunction(upgrade, "preservedrequirements", wrapper.upgraderequirements)
-        wrapfunction(upgrade, "supporteddestrequirements", wrapper.upgraderequirements)
     except AttributeError:
         pass
 

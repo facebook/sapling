@@ -77,7 +77,6 @@ from .. import (
     streamclone,
     templater,
     treestate,
-    upgrade,
     util,
     vfs as vfsmod,
     visibility,
@@ -1209,73 +1208,6 @@ def debugfileset(ui, repo, expr, **opts):
 
     for f in ctx.getfileset(expr):
         ui.write("%s\n" % f)
-
-
-@command("debugformat", [] + cmdutil.formatteropts, _(""))
-def debugformat(ui, repo, **opts):
-    """display format information about the current repository
-
-    Use --verbose to get extra information about current config value and
-    Mercurial default."""
-    maxvariantlength = max(len(fv.name) for fv in upgrade.allformatvariant)
-    maxvariantlength = max(len("format-variant"), maxvariantlength)
-
-    def makeformatname(name):
-        return "%s:" + (" " * (maxvariantlength - len(name)))
-
-    fm = ui.formatter("debugformat", opts)
-    if fm.isplain():
-
-        def formatvalue(value):
-            if util.safehasattr(value, "startswith"):
-                return value
-            if value:
-                return "yes"
-            else:
-                return "no"
-
-    else:
-        formatvalue = pycompat.identity
-
-    fm.plain("format-variant")
-    fm.plain(" " * (maxvariantlength - len("format-variant")))
-    fm.plain(" repo")
-    if ui.verbose:
-        fm.plain(" config default")
-    fm.plain("\n")
-    for fv in upgrade.allformatvariant:
-        fm.startitem()
-        repovalue = fv.fromrepo(repo)
-        configvalue = fv.fromconfig(repo)
-
-        if repovalue != configvalue:
-            namelabel = "formatvariant.name.mismatchconfig"
-            repolabel = "formatvariant.repo.mismatchconfig"
-        elif repovalue != fv.default:
-            namelabel = "formatvariant.name.mismatchdefault"
-            repolabel = "formatvariant.repo.mismatchdefault"
-        else:
-            namelabel = "formatvariant.name.uptodate"
-            repolabel = "formatvariant.repo.uptodate"
-
-        fm.write("name", makeformatname(fv.name), fv.name, label=namelabel)
-        fm.write("repo", " %3s", formatvalue(repovalue), label=repolabel)
-        if fv.default != configvalue:
-            configlabel = "formatvariant.config.special"
-        else:
-            configlabel = "formatvariant.config.default"
-        fm.condwrite(
-            ui.verbose, "config", " %6s", formatvalue(configvalue), label=configlabel
-        )
-        fm.condwrite(
-            ui.verbose,
-            "default",
-            " %7s",
-            formatvalue(fv.default),
-            label="formatvariant.default",
-        )
-        fm.plain("\n")
-    fm.end()
 
 
 @command("debugfsinfo|debugfs", [], _("[PATH]"), norepo=True)
@@ -3298,35 +3230,6 @@ def debugupdatecaches(ui, repo, *pats, **opts):
     """warm all known caches in the repository"""
     with repo.wlock(), repo.lock():
         repo.updatecaches()
-
-
-@command(
-    "debugupgraderepo",
-    [
-        ("o", "optimize", [], _("extra optimization to perform"), _("NAME")),
-        ("", "run", False, _("performs an upgrade")),
-    ],
-)
-def debugupgraderepo(ui, repo, run=False, optimize=None):
-    """upgrade a repository to use different features
-
-    If no arguments are specified, the repository is evaluated for upgrade
-    and a list of problems and potential optimizations is printed.
-
-    With ``--run``, a repository upgrade is performed. Behavior of the upgrade
-    can be influenced via additional arguments. More details will be provided
-    by the command output when run without ``--run``.
-
-    During the upgrade, the repository will be locked and no writes will be
-    allowed.
-
-    At the end of the upgrade, the repository may not be readable while new
-    repository data is swapped in. This window will be as long as it takes to
-    rename some directories inside the ``.hg`` directory. On most machines, this
-    should complete almost instantaneously and the chances of a consumer being
-    unable to access the repository should be low.
-    """
-    return upgrade.upgraderepo(ui, repo, run=run, optimize=optimize)
 
 
 @command("debugvisibleheads", cmdutil.templateopts)

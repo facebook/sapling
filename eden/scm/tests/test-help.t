@@ -995,7 +995,6 @@ Test list of internal help commands
    debugfilerevision
                  dump internal metadata for given file revisions
    debugfileset  parse and apply a fileset specification
-   debugformat   display format information about the current repository
    debugfsinfo   show information detected about current filesystem
    debugfsync    call fsync on newly modified key storage files
    debuggentrees
@@ -1087,8 +1086,6 @@ Test list of internal help commands
                  manage treestate
    debugupdatecaches
                  warm all known caches in the repository
-   debugupgraderepo
-                 upgrade a repository to use different features
    debugvisibility
                  control visibility tracking
    debugvisibleheads

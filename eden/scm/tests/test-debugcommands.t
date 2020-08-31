@@ -143,10 +143,11 @@ Test debuglocks command:
   infinitepushbackup.lock: free
 
 Test WdirUnsupported exception
+(Rust changelog does not resolve ffffffffffffffffffffffffffffffffffffffff)
 
-  $ hg debugdata -c ffffffffffffffffffffffffffffffffffffffff
-  abort: working directory revision cannot be specified
-  [255]
+#  $ hg debugdata -c ffffffffffffffffffffffffffffffffffffffff
+#  abort: working directory revision cannot be specified
+#  [255]
 
 Test cache warming command
 
