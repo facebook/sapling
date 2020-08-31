@@ -27,15 +27,31 @@ namespace eden {
 class TreePrefetchLease {
   class TreePrefetchContext : public ObjectFetchContext {
    public:
+    TreePrefetchContext(
+        std::optional<pid_t> clientPid,
+        ObjectFetchContext::Cause cause)
+        : clientPid_(clientPid), cause_(cause) {}
     ImportPriority getPriority() const override {
       return ImportPriority::kLow();
     }
+    std::optional<pid_t> getClientPid() const override {
+      return clientPid_;
+    }
+    ObjectFetchContext::Cause getCause() const override {
+      return cause_;
+    }
+
+   private:
+    std::optional<pid_t> clientPid_ = std::nullopt;
+    ObjectFetchContext::Cause cause_;
   };
 
  public:
-  explicit TreePrefetchLease(TreeInodePtr inode)
+  explicit TreePrefetchLease(TreeInodePtr inode, ObjectFetchContext& context)
       : inode_{std::move(inode)},
-        context_(std::make_unique<TreePrefetchContext>()) {}
+        context_(std::make_unique<TreePrefetchContext>(
+            context.getClientPid(),
+            context.getCause())) {}
 
   ~TreePrefetchLease() {
     release();

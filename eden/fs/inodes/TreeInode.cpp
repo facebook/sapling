@@ -1752,7 +1752,7 @@ void TreeInode::TreeRenameLocks::lockDestChild(PathComponentPiece destName) {
 
 #ifndef _WIN32
 DirList
-TreeInode::readdir(DirList&& list, off_t off, ObjectFetchContext& /*context*/) {
+TreeInode::readdir(DirList&& list, off_t off, ObjectFetchContext& context) {
   /*
    * Implementing readdir correctly in the presence of concurrent modifications
    * to the directory is nontrivial. This function will be called multiple
@@ -1801,7 +1801,7 @@ TreeInode::readdir(DirList&& list, off_t off, ObjectFetchContext& /*context*/) {
   // given inode, fetch metadata for each entry in parallel. prefetch() may
   // return early if the metadata for this inode's children has already been
   // prefetched.
-  prefetch();
+  prefetch(context);
 
   // Possible offset values are:
   //   0: start at the beginning
@@ -3491,12 +3491,13 @@ InodeMetadata TreeInode::getMetadataLocked(const DirContents&) const {
   return getMount()->getInodeMetadataTable()->getOrThrow(getNodeId());
 }
 
-void TreeInode::prefetch() {
+void TreeInode::prefetch(ObjectFetchContext& context) {
   bool expected = false;
   if (!prefetched_.compare_exchange_strong(expected, true)) {
     return;
   }
-  auto prefetchLease = getMount()->tryStartTreePrefetch(inodePtrFromThis());
+  auto prefetchLease =
+      getMount()->tryStartTreePrefetch(inodePtrFromThis(), context);
   if (!prefetchLease) {
     XLOG(DBG3) << "skipping prefetch for " << getLogPath()
                << ": too many prefetches already in progress";

@@ -1480,13 +1480,14 @@ Future<Unit> EdenMount::ensureDirectoryExists(RelativePathPiece fromRoot) {
 }
 
 std::optional<TreePrefetchLease> EdenMount::tryStartTreePrefetch(
-    TreeInodePtr treeInode) {
+    TreeInodePtr treeInode,
+    ObjectFetchContext& context) {
   auto config = serverState_->getEdenConfig(ConfigReloadBehavior::NoReload);
   auto maxTreePrefetches = config->maxTreePrefetches.getValue();
   auto numInProgress =
       numPrefetchesInProgress_.fetch_add(1, std::memory_order_acq_rel);
   if (numInProgress < maxTreePrefetches) {
-    return TreePrefetchLease{std::move(treeInode)};
+    return TreePrefetchLease{std::move(treeInode), context};
   } else {
     numPrefetchesInProgress_.fetch_sub(1, std::memory_order_acq_rel);
     return std::nullopt;

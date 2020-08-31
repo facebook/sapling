@@ -483,7 +483,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   void updateAtime();
 #endif // !_WIN32
 
-  void prefetch();
+  void prefetch(ObjectFetchContext& context);
 
   /**
    * Get a TreeInodePtr to ourself.

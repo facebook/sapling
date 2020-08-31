@@ -668,7 +668,8 @@ class EdenMount {
    * prefetch has finished.
    */
   FOLLY_NODISCARD std::optional<TreePrefetchLease> tryStartTreePrefetch(
-      TreeInodePtr treeInode);
+      TreeInodePtr treeInode,
+      ObjectFetchContext& context);
 
  private:
   friend class RenameLock;
