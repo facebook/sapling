@@ -138,7 +138,9 @@ class remotefilectx(context.filectx):
             repo.ui, _("scanning for linkrev of %s") % path
         ) as prog:
             perftrace.tracevalue("Path", path)
-            for i, rev in enumerate(range(len(cl) - 1, 0, -1)):
+            allrevs = repo.revs("_all()")
+            allrevs.sort(reverse=True)
+            for i, rev in enumerate(allrevs):
                 prog.value = i
                 node = cl.node(rev)
                 data = cl.read(node)  # get changeset data (we avoid object creation)
@@ -146,7 +148,7 @@ class remotefilectx(context.filectx):
                     # The file has been touched, check if the hash is what we're
                     # looking for.
                     if fileid == mfl[data[0]].read().get(path):
-                        perftrace.tracevalue("Distance", len(cl) - rev)
+                        perftrace.tracevalue("Distance", i)
                         return rev
 
         # Couldn't find the linkrev. This should generally not happen, and will
