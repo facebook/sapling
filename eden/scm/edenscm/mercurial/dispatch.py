@@ -938,6 +938,8 @@ def runcommand(lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions):
         )
         _log_exception(lui, e)
         raise
+    if getattr(repo, "_txnreleased", False):
+        hook.hook(lui, repo, "postwritecommand", False)
     return ret
 
 

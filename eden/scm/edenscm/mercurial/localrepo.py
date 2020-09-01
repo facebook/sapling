@@ -592,6 +592,10 @@ class localrepository(object):
         # generic mapping between names and nodes
         self.names = namespaces.namespaces(self)
 
+        # whether the repo is changed (by transaction).
+        # currently used to decide whether to run fsync.
+        self._txnreleased = False
+
         self._applyopenerreqs()
 
         self._eventreporting = True
@@ -1583,6 +1587,7 @@ class localrepository(object):
                 # transaction running
                 repo.dirstate.write(None)
                 flushchangelog(tr)
+                repo._txnreleased = True
             else:
                 # discard all changes (including ones already written
                 # out) in this transaction
