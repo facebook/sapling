@@ -12,6 +12,9 @@ import types
 import bindings
 
 
+enabled = False
+
+
 class ModuleLoader(object):
     # load_module: (fullname) -> module
     # See find_module below for why it's implemented in this way.
@@ -222,6 +225,9 @@ def enable(config=None):
             return _any(startswith(p) for p in _prefix)
 
     sys.meta_path.insert(0, TraceImporter(shouldtrace))
+
+    global enabled
+    enabled = True
 
 
 def registeratexit(threshold=20000):

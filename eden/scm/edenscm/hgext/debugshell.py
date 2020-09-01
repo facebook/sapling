@@ -20,7 +20,7 @@ import sys
 import bindings
 import edenscm
 import edenscmnative
-from edenscm import hgext, mercurial
+from edenscm import hgext, mercurial, traceimport
 from edenscm.hgext import commitcloud as cc
 from edenscm.mercurial import pycompat, registrar, util
 from edenscm.mercurial.i18n import _
@@ -137,7 +137,7 @@ def _startipython(ui, repo):
 Available IPython magics (auto magic is on, `%` is optional):
  time:   measure time
  timeit: benchmark
- trace:  run and print ASCII trace (better with --tracing command flag)
+ trace:  run and print ASCII trace (better with --trace command flag)
  hg:     run commands inline
 """
 
@@ -195,7 +195,10 @@ def _configipython(ui, ipython):
         _execwith(td, code, ns)
         durationmicros = (util.timer() - start) * 1e6
         # hide spans less than 50 microseconds, or 1% of the total time
-        ui.write_err("%s" % td.ascii(int(durationmicros / 100) + 50))
+        asciitrace = td.ascii(int(durationmicros / 100) + 50)
+        ui.write_err("%s" % asciitrace)
+        if not traceimport.enabled:
+            ui.write_err("(use 'debugshell --trace' to enable more detailed trace)\n")
         return td
 
 
