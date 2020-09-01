@@ -247,7 +247,7 @@ def debuglfsreceive(ui, oid, size, url=None):
     pointers = [pointer.gitlfspointer(oid=longoid, size=size)]
     remote.readbatch(pointers, local)
 
-    ui.write((local.read(oid)))
+    ui.writebytes((local.read(oid)))
 
 
 @command(
@@ -272,7 +272,7 @@ def debuglfsreceiveall(ui, url, *objs):
     remote.readbatch(pointers, local)
 
     for oid in objs[::2]:
-        ui.write((local.read(oid)))
+        ui.writebytes((local.read(oid)))
 
 
 @command(
