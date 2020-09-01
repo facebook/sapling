@@ -90,6 +90,17 @@ class ObjectFetchContext {
    */
   static ObjectFetchContext& getNullContext();
 
+  /**
+   * Return a no-op fetch context which has causeDetail field. This field will
+   * be logged which in turn can point out "blind spots" in logging i.e. places
+   * where null context should be replaces with a real context.
+   * Note that this function allocates and return a pointer to a newly allocated
+   * memory. This pointer is intented to be used as static variable i.e. static
+   * auto ptr = ObjectFetchContext::getNullContextWithCauseDetail("someval");
+   */
+  static ObjectFetchContext* getNullContextWithCauseDetail(
+      folly::StringPiece causeDetail);
+
  private:
   ObjectFetchContext(const ObjectFetchContext&) = delete;
   ObjectFetchContext& operator=(const ObjectFetchContext&) = delete;

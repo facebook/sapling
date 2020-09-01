@@ -86,10 +86,10 @@ class InodeLoader {
           continue;
         }
 
-        folly::makeFutureWith([&] {
-          return tree->getOrLoadChild(
-              childName, ObjectFetchContext::getNullContext());
-        })
+        static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
+            "InodeLoader::loaded");
+        folly::makeFutureWith(
+            [&] { return tree->getOrLoadChild(childName, *context); })
             .thenTry(
                 [loader = std::move(childLoader)](
                     folly::Try<InodePtr>&& inode) { loader->loaded(inode); });

@@ -309,14 +309,15 @@ Future<InodePtr> TreeInode::getOrLoadChild(
 }
 
 Future<TreeInodePtr> TreeInode::getOrLoadChildTree(PathComponentPiece name) {
-  return getOrLoadChild(name, ObjectFetchContext::getNullContext())
-      .thenValue([](InodePtr child) {
-        auto treeInode = child.asTreePtrOrNull();
-        if (!treeInode) {
-          return makeFuture<TreeInodePtr>(InodeError(ENOTDIR, child));
-        }
-        return makeFuture(treeInode);
-      });
+  static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
+      "TreeInode::getOrLoadChildTree");
+  return getOrLoadChild(name, *context).thenValue([](InodePtr child) {
+    auto treeInode = child.asTreePtrOrNull();
+    if (!treeInode) {
+      return makeFuture<TreeInodePtr>(InodeError(ENOTDIR, child));
+    }
+    return makeFuture(treeInode);
+  });
 }
 
 namespace {
@@ -339,8 +340,10 @@ class LookupProcessor {
     auto endIdx = pathStr.find(kDirSeparator, pathIndex_);
     if (endIdx == StringPiece::npos) {
       auto name = StringPiece{pathStr.data() + pathIndex_, pathStr.end()};
-      return tree->getOrLoadChild(
-          PathComponentPiece{name}, ObjectFetchContext::getNullContext());
+      static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
+          "LookupProcessor::next");
+
+      return tree->getOrLoadChild(PathComponentPiece{name}, *context);
     }
 
     auto name =
@@ -480,8 +483,9 @@ void TreeInode::loadChildInode(PathComponentPiece name, InodeNumber number) {
 
     // loadChildInode is called by InodeMap during FUSE_LOOKUP processing. Pass
     // a null fetch context because we don't need to record statistics.
-    future = startLoadingInodeNoThrow(
-        entry, name, ObjectFetchContext::getNullContext());
+    static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
+        "TreeInode::loadChildInode");
+    future = startLoadingInodeNoThrow(entry, name, *context);
   }
   registerInodeLoadComplete(future, name, number);
 }
@@ -1115,7 +1119,9 @@ TreeInodePtr TreeInode::mkdir(
 folly::Future<folly::Unit> TreeInode::unlink(
     PathComponentPiece name,
     InvalidationRequired invalidate) {
-  return getOrLoadChild(name, ObjectFetchContext::getNullContext())
+  static auto context =
+      ObjectFetchContext::getNullContextWithCauseDetail("TreeInode::unlink");
+  return getOrLoadChild(name, *context)
       .thenValue([self = inodePtrFromThis(),
                   childName = PathComponent{name},
                   invalidate](const InodePtr& child) mutable {
@@ -1127,7 +1133,9 @@ folly::Future<folly::Unit> TreeInode::unlink(
 folly::Future<folly::Unit> TreeInode::rmdir(
     PathComponentPiece name,
     InvalidationRequired invalidate) {
-  return getOrLoadChild(name, ObjectFetchContext::getNullContext())
+  static auto context =
+      ObjectFetchContext::getNullContextWithCauseDetail("TreeInode::rmdir");
+  return getOrLoadChild(name, *context)
       .thenValue([self = inodePtrFromThis(),
                   childName = PathComponent{name},
                   invalidate](const InodePtr& child) mutable {
@@ -1212,7 +1220,9 @@ folly::Future<folly::Unit> TreeInode::removeImpl(
   // getOrLoadChildTree(name).  C++17 fixes this order to guarantee that
   // the left side of "." will always get evaluated before the right
   // side.
-  auto childFuture = getOrLoadChild(name, ObjectFetchContext::getNullContext());
+  static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
+      "TreeInode::removeImpl");
+  auto childFuture = getOrLoadChild(name, *context);
   return std::move(childFuture)
       .thenValue([self = inodePtrFromThis(),
                   childName = PathComponent{std::move(name)},
@@ -1531,21 +1541,20 @@ Future<Unit> TreeInode::rename(
     return self->rename(nameCopy, destParent, destNameCopy, invalidate);
   };
 
+  static auto context =
+      ObjectFetchContext::getNullContextWithCauseDetail("TreeInode::rename");
   if (needSrc && needDest) {
-    auto srcFuture = getOrLoadChild(name, ObjectFetchContext::getNullContext());
-    auto destFuture = destParent->getOrLoadChild(
-        destName, ObjectFetchContext::getNullContext());
+    auto srcFuture = getOrLoadChild(name, *context);
+    auto destFuture = destParent->getOrLoadChild(destName, *context);
     // folly::collect is safe here because onLoadFinish has captured strong
     // references.
     return folly::collectUnsafe(srcFuture, destFuture)
         .thenValue(onLoadFinished);
   } else if (needSrc) {
-    return getOrLoadChild(name, ObjectFetchContext::getNullContext())
-        .thenValue(onLoadFinished);
+    return getOrLoadChild(name, *context).thenValue(onLoadFinished);
   } else {
     CHECK(needDest);
-    return destParent
-        ->getOrLoadChild(destName, ObjectFetchContext::getNullContext())
+    return destParent->getOrLoadChild(destName, *context)
         .thenValue(onLoadFinished);
   }
 }
@@ -1884,6 +1893,8 @@ folly::Future<std::vector<FileMetadata>> TreeInode::readdir() {
       auto winName = name.wide();
 
       if (!isDir) {
+        static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
+            "TreeInode::readdir");
         // We only populates the file size for non-materialized files. For
         // the materialized files, ProjectedFS will use the on-disk size.
         auto hash = entry.getOptionalHash();
@@ -1891,8 +1902,7 @@ folly::Future<std::vector<FileMetadata>> TreeInode::readdir() {
           futures.emplace_back(
               getMount()
                   ->getObjectStore()
-                  ->getBlobSize(
-                      hash.value(), ObjectFetchContext::getNullContext())
+                  ->getBlobSize(hash.value(), *context)
                   .thenValue(
                       [winName = std::move(winName)](uint64_t size) mutable {
                         return FileMetadata(std::move(winName), false, size);
@@ -3452,12 +3462,13 @@ void TreeInode::getDebugStatus(vector<TreeInodeDebugInfo>& results) const {
       auto blobHash = childFile->getBlobHash();
       *infoEntry.materialized_ref() = !blobHash.has_value();
       *infoEntry.hash_ref() = thriftHash(blobHash);
-      futures.push_back(
-          childFile->stat(ObjectFetchContext::getNullContext())
-              .thenValue([i = info.entries_ref()->size() - 1](auto st) {
-                auto fileSize = st.st_size;
-                return std::make_pair(i, fileSize);
-              }));
+      static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
+          "TreeInode::getDebugStatus");
+      futures.push_back(childFile->stat(*context).thenValue(
+          [i = info.entries_ref()->size() - 1](auto st) {
+            auto fileSize = st.st_size;
+            return std::make_pair(i, fileSize);
+          }));
     }
   }
   auto fileSizeMappings = folly::collectAllUnsafe(futures).get();

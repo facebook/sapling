@@ -9,7 +9,20 @@
 
 namespace {
 using namespace facebook::eden;
-class NullObjectFetchContext : public ObjectFetchContext {};
+
+class NullObjectFetchContext : public ObjectFetchContext {
+ public:
+  NullObjectFetchContext() = default;
+  explicit NullObjectFetchContext(std::optional<folly::StringPiece> causeDetail)
+      : causeDetail_(causeDetail) {}
+
+  std::optional<folly::StringPiece> getCauseDetail() const override {
+    return causeDetail_;
+  }
+
+ private:
+  std::optional<folly::StringPiece> causeDetail_;
+};
 } // namespace
 
 namespace facebook {
@@ -19,5 +32,11 @@ ObjectFetchContext& ObjectFetchContext::getNullContext() {
   static auto* p = new NullObjectFetchContext;
   return *p;
 }
+
+ObjectFetchContext* ObjectFetchContext::getNullContextWithCauseDetail(
+    folly::StringPiece causeDetail) {
+  return new NullObjectFetchContext(folly::StringPiece{causeDetail});
+}
+
 } // namespace eden
 } // namespace facebook

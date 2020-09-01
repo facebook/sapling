@@ -273,9 +273,10 @@ folly::Future<TreeInodePtr> EdenMount::createRootInode(
     return TreeInodePtr::makeNew(
         this, std::move(*rootOverlayDir), std::nullopt);
   }
-  return objectStore_
-      ->getTreeForCommit(
-          parentCommits.parent1(), ObjectFetchContext::getNullContext())
+
+  static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
+      "EdenMount::createRootInode");
+  return objectStore_->getTreeForCommit(parentCommits.parent1(), *context)
       .thenValue([this](std::shared_ptr<const Tree> tree) {
         return TreeInodePtr::makeNew(this, std::move(tree));
       });
@@ -293,8 +294,9 @@ Future<Unit> ensureDotEdenSymlink(
     UnlinkThenSymlink,
   };
 
-  return directory
-      ->getOrLoadChild(symlinkName, ObjectFetchContext::getNullContext())
+  static auto context =
+      ObjectFetchContext::getNullContextWithCauseDetail("ensureDotEdenSymlink");
+  return directory->getOrLoadChild(symlinkName, *context)
       .thenTryInline([=](Try<InodePtr>&& result) -> Future<Action> {
         if (!result.hasValue()) {
           // If we failed to look up the file this generally means it
@@ -325,10 +327,7 @@ Future<Unit> ensureDotEdenSymlink(
         }
 
         // Check if the symlink already has the desired contents.
-        return fileInode
-            ->readlink(
-                ObjectFetchContext::getNullContext(),
-                CacheHint::LikelyNeededAgain)
+        return fileInode->readlink(*context, CacheHint::LikelyNeededAgain)
             .thenValue([=](std::string&& contents) {
               if (contents == symlinkTarget) {
                 // The symlink already contains the desired contents.
@@ -686,9 +685,10 @@ TreeInodePtr EdenMount::getRootInode() const {
 }
 
 folly::Future<std::shared_ptr<const Tree>> EdenMount::getRootTree() const {
+  static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
+      "EdenMount::getRootTree");
   auto commitHash = Hash{parentInfo_.rlock()->parents.parent1()};
-  return objectStore_->getTreeForCommit(
-      commitHash, ObjectFetchContext::getNullContext());
+  return objectStore_->getTreeForCommit(commitHash, *context);
 }
 
 #ifndef _WIN32

@@ -262,13 +262,13 @@ typename folly::futures::detail::callableResult<FileInode::LockedState, Fn>::
         });
       }
 
+      static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
+          "FileInode::runWhileMaterialized");
       // The blob must be loaded, so kick that off. There's no point in caching
       // it in memory - the blob will immediately be written into the overlay
       // and then dropped.
       future = startLoadingData(
-          std::move(state),
-          BlobCache::Interest::UnlikelyNeededAgain,
-          ObjectFetchContext::getNullContext());
+          std::move(state), BlobCache::Interest::UnlikelyNeededAgain, *context);
       break;
     case State::BLOB_LOADING:
       // If we're already loading, latch on to the in-progress load
@@ -613,9 +613,9 @@ Future<string> FileInode::getxattr(StringPiece name) {
     return makeFuture<string>(InodeError(kENOATTR, inodePtrFromThis()));
   }
 
-  return getSha1(ObjectFetchContext::getNullContext()).thenValue([](Hash hash) {
-    return hash.toString();
-  });
+  static auto context =
+      ObjectFetchContext::getNullContextWithCauseDetail("FileInode::getxattr");
+  return getSha1(*context).thenValue([](Hash hash) { return hash.toString(); });
 }
 #else
 
@@ -974,12 +974,14 @@ void FileInode::materializeNow(
   // This function should only be called from the BLOB_NOT_LOADING state
   DCHECK_EQ(state->tag, State::BLOB_NOT_LOADING);
 
+  static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
+      "FileInode::materializeNow");
   // If the blob metadata is immediately available, use it to populate the SHA-1
   // value in the overlay for this file.
   // Since this uses state->hash we perform this before calling
   // state.setMaterialized().
-  auto blobSha1Future = getObjectStore()->getBlobSha1(
-      state->hash.value(), ObjectFetchContext::getNullContext());
+  auto blobSha1Future =
+      getObjectStore()->getBlobSha1(state->hash.value(), *context);
   std::optional<Hash> blobSha1;
   if (blobSha1Future.isReady()) {
     blobSha1 = blobSha1Future.value();

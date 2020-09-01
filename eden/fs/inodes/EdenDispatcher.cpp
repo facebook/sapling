@@ -213,8 +213,10 @@ folly::Future<fuse_entry_out> EdenDispatcher::create(
       [=](const TreeInodePtr& inode) {
         auto childName = PathComponent{name};
         auto child = inode->mknod(childName, mode, 0, InvalidationRequired::No);
-        return child->stat(ObjectFetchContext::getNullContext())
-            .thenValue([child](struct stat st) -> fuse_entry_out {
+        static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
+            "EdenDispatcher::create");
+        return child->stat(*context).thenValue(
+            [child](struct stat st) -> fuse_entry_out {
               child->incFuseRefcount();
               return computeEntryParam(Dispatcher::Attr{st});
             });
@@ -284,13 +286,15 @@ Future<Unit> EdenDispatcher::fsyncdir(
 folly::Future<std::string> EdenDispatcher::readlink(
     InodeNumber ino,
     bool kernelCachesReadlink) {
+  static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
+      "EdenDispatcher::readlink");
   FB_LOGF(mount_->getStraceLogger(), DBG7, "readlink({})", ino);
   return inodeMap_->lookupFileInode(ino).thenValue(
       [kernelCachesReadlink](const FileInodePtr& inode) {
         // Only release the symlink blob after it's loaded if we can assume the
         // FUSE will cache the result in the kernel's page cache.
         return inode->readlink(
-            ObjectFetchContext::getNullContext(),
+            *context,
             kernelCachesReadlink ? CacheHint::NotNeededAgain
                                  : CacheHint::LikelyNeededAgain);
       });
@@ -323,12 +327,14 @@ folly::Future<fuse_entry_out> EdenDispatcher::mknod(
       name,
       mode,
       rdev);
+  static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
+      "EdenDispatcher::mknod");
   return inodeMap_->lookupTreeInode(parent).thenValue(
       [childName = PathComponent{name}, mode, rdev](const TreeInodePtr& inode) {
         auto child =
             inode->mknod(childName, mode, rdev, InvalidationRequired::No);
-        return child->stat(ObjectFetchContext::getNullContext())
-            .thenValue([child](struct stat st) -> fuse_entry_out {
+        return child->stat(*context).thenValue(
+            [child](struct stat st) -> fuse_entry_out {
               child->incFuseRefcount();
               return computeEntryParam(Dispatcher::Attr{st});
             });
@@ -346,14 +352,15 @@ folly::Future<fuse_entry_out> EdenDispatcher::mkdir(
       parent,
       name,
       mode);
+  static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
+      "EdenDispatcher::mkdir");
   return inodeMap_->lookupTreeInode(parent).thenValue(
       [childName = PathComponent{name}, mode](const TreeInodePtr& inode) {
         auto child = inode->mkdir(childName, mode, InvalidationRequired::No);
-        return child->stat(ObjectFetchContext::getNullContext())
-            .thenValue([child](struct stat st) {
-              child->incFuseRefcount();
-              return computeEntryParam(Dispatcher::Attr{st});
-            });
+        return child->stat(*context).thenValue([child](struct stat st) {
+          child->incFuseRefcount();
+          return computeEntryParam(Dispatcher::Attr{st});
+        });
       });
 }
 
@@ -390,14 +397,16 @@ folly::Future<fuse_entry_out> EdenDispatcher::symlink(
       parent,
       name,
       link);
+  static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
+      "EdenDispatcher::symlink");
   return inodeMap_->lookupTreeInode(parent).thenValue(
       [linkContents = link.str(),
        childName = PathComponent{name}](const TreeInodePtr& inode) {
         auto symlinkInode =
             inode->symlink(childName, linkContents, InvalidationRequired::No);
         symlinkInode->incFuseRefcount();
-        return symlinkInode->stat(ObjectFetchContext::getNullContext())
-            .thenValue([symlinkInode](struct stat st) {
+        return symlinkInode->stat(*context).thenValue(
+            [symlinkInode](struct stat st) {
               return computeEntryParam(Dispatcher::Attr{st});
             });
       });

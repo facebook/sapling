@@ -182,12 +182,14 @@ folly::Future<std::optional<InodeMetadata>> EdenDispatcher::lookup(
     RelativePath path) {
   FB_LOGF(mount_->getStraceLogger(), DBG7, "lookup({})", path);
 
+  static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
+      "win::EdenDispatcher::lookup");
   return mount_->getInode(path)
       .thenValue(
           [](const InodePtr inode)
               -> folly::Future<std::optional<InodeMetadata>> {
-            return inode->stat(ObjectFetchContext::getNullContext())
-                .thenValue([inode = std::move(inode)](struct stat&& stat) {
+            return inode->stat(*context).thenValue(
+                [inode = std::move(inode)](struct stat&& stat) {
                   // Ensure that the OS has a record of the canonical
                   // file name, and not just whatever case was used to
                   // lookup the file
@@ -317,11 +319,13 @@ EdenDispatcher::getFileData(
         byteOffset,
         length);
 
+    static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
+        "win::EdenDispatcher::getFileData");
     auto content =
         mount_->getInode(relPath)
             .thenValue([](const InodePtr inode) {
               auto fileInode = inode.asFilePtr();
-              return fileInode->readAll(ObjectFetchContext::getNullContext());
+              return fileInode->readAll(*context);
             })
             .thenError(
                 folly::tag_t<std::system_error>{},

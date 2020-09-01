@@ -850,7 +850,8 @@ void EdenServiceHandler::glob(
   auto rootInode = edenMount->getRootInode();
 
   // TODO: Track and report object fetches required for this glob.
-  auto& context = ObjectFetchContext::getNullContext();
+  static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
+      "EdenServiceHandler::glob");
 
   try {
     // Compile the list of globs into a tree
@@ -863,7 +864,7 @@ void EdenServiceHandler::glob(
     auto matches = globRoot
                        .evaluate(
                            edenMount->getObjectStore(),
-                           context,
+                           *context,
                            RelativePathPiece(),
                            rootInode,
                            /*fileBlobsToPrefetch=*/nullptr)
@@ -1001,16 +1002,15 @@ void EdenServiceHandler::getManifestEntry(
 std::optional<mode_t> EdenServiceHandler::isInManifestAsFile(
     const EdenMount* mount,
     const RelativePathPiece filename) {
+  static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
+      "EdenServiceHandler::isInManifestAsFile");
   auto tree = mount->getRootTree().get();
   auto parentDirectory = filename.dirname();
   auto objectStore = mount->getObjectStore();
   for (auto piece : parentDirectory.components()) {
     auto entry = tree->getEntryPtr(piece);
     if (entry != nullptr && entry->isTree()) {
-      tree =
-          objectStore
-              ->getTree(entry->getHash(), ObjectFetchContext::getNullContext())
-              .get();
+      tree = objectStore->getTree(entry->getHash(), *context).get();
     } else {
       return std::nullopt;
     }
@@ -1121,13 +1121,15 @@ void EdenServiceHandler::debugGetScmTree(
   auto edenMount = server_->getMount(*mountPoint);
   auto id = hashFromThrift(*idStr);
 
+  static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
+      "EdenServiceHandler::debugGetScmTree");
   std::shared_ptr<const Tree> tree;
   auto store = edenMount->getObjectStore();
   if (localStoreOnly) {
     auto localStore = store->getLocalStore();
     tree = localStore->getTree(id).get();
   } else {
-    tree = store->getTree(id, ObjectFetchContext::getNullContext()).get();
+    tree = store->getTree(id, *context).get();
   }
 
   if (!tree) {
@@ -1156,13 +1158,15 @@ void EdenServiceHandler::debugGetScmBlob(
   auto edenMount = server_->getMount(*mountPoint);
   auto id = hashFromThrift(*idStr);
 
+  static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
+      "EdenServiceHandler::debugGetScmBlob");
   std::shared_ptr<const Blob> blob;
   auto store = edenMount->getObjectStore();
   if (localStoreOnly) {
     auto localStore = store->getLocalStore();
     blob = localStore->getBlob(id).get();
   } else {
-    blob = store->getBlob(id, ObjectFetchContext::getNullContext()).get();
+    blob = store->getBlob(id, *context).get();
   }
 
   if (!blob) {
@@ -1185,16 +1189,16 @@ void EdenServiceHandler::debugGetScmBlobMetadata(
   auto edenMount = server_->getMount(*mountPoint);
   auto id = hashFromThrift(*idStr);
 
+  static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
+      "EdenServiceHandler::debugGetScmBlobMetadata");
   std::optional<BlobMetadata> metadata;
   auto store = edenMount->getObjectStore();
   if (localStoreOnly) {
     auto localStore = store->getLocalStore();
     metadata = localStore->getBlobMetadata(id).get();
   } else {
-    auto sha1 =
-        store->getBlobSha1(id, ObjectFetchContext::getNullContext()).get();
-    auto size =
-        store->getBlobSize(id, ObjectFetchContext::getNullContext()).get();
+    auto sha1 = store->getBlobSha1(id, *context).get();
+    auto size = store->getBlobSize(id, *context).get();
     metadata.emplace(sha1, size);
   }
 
