@@ -505,8 +505,8 @@ def syncdir(dirpath):
     # Do nothing.
 
 
-def gethgcmd():
-    return [sys.executable] + sys.argv[:1]
+def gethgcmd(argv=sys.argv):
+    return [sys.executable] + argv[:1]
 
 
 def groupmembers(name):

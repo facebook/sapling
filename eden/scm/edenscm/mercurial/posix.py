@@ -663,7 +663,9 @@ if pycompat.isdarwin:
 
         try:
             bytepath = pycompat.encodeutf8(path)
-            return pycompat.decodeutf8(encoding.asciilower(bytepath))  # exception for non-ASCII
+            return pycompat.decodeutf8(
+                encoding.asciilower(bytepath)
+            )  # exception for non-ASCII
         except UnicodeDecodeError:
             return normcasefallback(path)
 
@@ -908,8 +910,8 @@ def spawndetached(args):
     return os.spawnvp(os.P_NOWAIT | getattr(os, "P_DETACH", 0), args[0], args)
 
 
-def gethgcmd():
-    return sys.argv[:1]
+def gethgcmd(argv=sys.argv):
+    return argv[:1]
 
 
 def makedir(path, notindexed):
