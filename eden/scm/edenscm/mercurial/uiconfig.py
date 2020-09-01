@@ -20,7 +20,6 @@ from typing import List, Optional, Tuple
 
 from bindings import configparser
 
-from ..hgext.extutil import runbgcommand
 from . import configitems, encoding, error, pycompat, util
 from .encoding import unifromlocal, unitolocal
 from .i18n import _

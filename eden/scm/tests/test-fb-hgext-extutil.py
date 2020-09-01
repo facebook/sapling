@@ -9,7 +9,7 @@ import unittest
 
 import silenttestrunner
 from edenscm.hgext import extutil
-from edenscm.mercurial import error, vfs
+from edenscm.mercurial import error, util, vfs
 from hghave import require
 
 
@@ -29,35 +29,32 @@ def _exitstatus(code):
 
 
 class ExtutilTests(unittest.TestCase):
-    def testbgcommandnoblock(self):
-        """runbgcommand() should return without waiting for the process to
+    def testspawndetachednoblock(self):
+        """spawndetached() should return without waiting for the process to
         finish."""
-        env = os.environ.copy()
         start = time.time()
-        extutil.runbgcommand(["sleep", "5"], env)
+        util.spawndetached(["sleep", "5"])
         end = time.time()
         if end - start >= 1.0:
             self.fail(
-                "runbgcommand() took took %s seconds, should have "
+                "spawndetached() took took %s seconds, should have "
                 "returned immediately" % (end - start)
             )
 
-    def testbgcommandfailure1(self):
-        """runbgcommand() should throw if executing the process fails."""
-        env = os.environ.copy()
+    def testspawndetachedfailure1(self):
+        """spawndetached() should throw if executing the process fails."""
         try:
-            extutil.runbgcommand(["no_such_program", "arg1", "arg2"], env)
-            self.fail("expected runbgcommand to fail with ENOENT")
-        except OSError as ex:
+            util.spawndetached(["no_such_program", "arg1", "arg2"])
+            self.fail("expected spawndetached to fail with ENOENT")
+        except (OSError, IOError) as ex:
             self.assertEqual(ex.errno, errno.ENOENT)
 
-    def testbgcommandfailure2(self):
-        """runbgcommand() should throw if executing the process fails."""
-        env = os.environ.copy()
+    def testspawndetachedfailure2(self):
+        """spawndetached() should throw if executing the process fails."""
         try:
-            extutil.runbgcommand([os.devnull, "arg1", "arg2"], env)
-            self.fail("expected runbgcommand to fail with EACCES")
-        except OSError as ex:
+            util.spawndetached([os.devnull, "arg1", "arg2"])
+            self.fail("expected spawndetached to fail with EACCES")
+        except (OSError, IOError) as ex:
             self.assertEqual(ex.errno, errno.EACCES)
 
     def testflock(self):
