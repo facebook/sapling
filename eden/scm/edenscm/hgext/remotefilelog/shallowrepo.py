@@ -13,7 +13,6 @@ from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import hex, nullid, nullrev
 from edenscm.mercurial.pycompat import iteritems
 
-from ..extutil import runshellcommand
 from . import constants, fileserverclient, remotefilectx, remotefilelog, shallowutil
 from .repack import domaintenancerepack
 
@@ -125,9 +124,8 @@ def wraprepo(repo):
                 cmd += ["-r", revs]
             if base:
                 cmd += ["-b", base]
-            cmd = " ".join(map(util.shellquote, cmd))
 
-            runshellcommand(cmd, encoding.environ)
+            util.spawndetached(cmd)
 
         def prefetch(self, revs, base=None, pats=None, opts=None, matcher=None):
             """Prefetches all the necessary file revisions for the given revs

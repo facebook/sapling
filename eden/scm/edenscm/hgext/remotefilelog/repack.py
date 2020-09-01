@@ -16,7 +16,7 @@ from edenscm.mercurial import encoding, error, progress, util, vfs
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import nullid, short
 
-from ..extutil import flock, runshellcommand
+from ..extutil import flock
 from . import constants, datapack, historypack, shallowutil
 
 
@@ -38,11 +38,9 @@ def backgroundrepack(repo, incremental=True):
         cmd.append("--incremental")
         msg = _("(running background incremental repack)\n")
 
-    cmd = " ".join(map(util.shellquote, cmd))
-
     if not repo.ui.quiet:
         repo.ui.write_err(msg)
-    runshellcommand(cmd, encoding.environ)
+    util.spawndetached(cmd)
 
 
 def _runrustrepack(ui, packpath, stores, incremental, shared):
