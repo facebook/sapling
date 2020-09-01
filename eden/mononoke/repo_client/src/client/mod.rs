@@ -59,6 +59,7 @@ use mercurial_types::{
 use metaconfig_types::{RepoClientKnobs, RepoReadOnly};
 use mononoke_repo::{MononokeRepo, SqlStreamingCloneConfig};
 use rand::{self, Rng};
+use regex::Regex;
 use remotefilelog::{
     create_getpack_v1_blob, create_getpack_v2_blob, get_unordered_file_history_for_multiple_nodes,
     GetpackBlobInfo,
@@ -66,7 +67,7 @@ use remotefilelog::{
 use revisionstore_types::Metadata;
 use scuba_ext::ScubaSampleBuilderExt;
 use serde_json::{self, json};
-use slog::{debug, info, o};
+use slog::{debug, error, info, o};
 use stats::prelude::*;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::convert::TryInto;
@@ -288,6 +289,7 @@ struct UndesiredPathLogger {
     ctx: CoreContext,
     repo_needs_logging: bool,
     path_prefix_to_log: Option<MPath>,
+    path_regex_to_log: Option<Regex>,
 }
 
 impl UndesiredPathLogger {
@@ -302,10 +304,29 @@ impl UndesiredPathLogger {
             None
         };
 
+        let path_regex_to_log = if repo_needs_logging
+            && !tunables.get_undesired_path_regex_to_log().is_empty()
+        {
+            Some(
+                Regex::new(tunables.get_undesired_path_regex_to_log().as_str()).map_err(|e| {
+                    error!(
+                        ctx.logger(),
+                        "Error initializing undesired path regex for {}: {}",
+                        repo.name(),
+                        e
+                    );
+                    e
+                })?,
+            )
+        } else {
+            None
+        };
+
         Ok(Self {
             ctx,
             repo_needs_logging,
             path_prefix_to_log,
+            path_regex_to_log,
         })
     }
 
@@ -341,7 +362,17 @@ impl UndesiredPathLogger {
 
     fn should_log(&self, path: Option<&MPath>) -> bool {
         if self.repo_needs_logging {
-            MPath::is_prefix_of_opt(self.path_prefix_to_log.as_ref(), MPath::iter_opt(path))
+            let op1 = match self.path_prefix_to_log.as_ref() {
+                None => false,
+                Some(prefix) => prefix.is_prefix_of(MPath::iter_opt(path)),
+            };
+
+            let op2 = match (path, self.path_regex_to_log.as_ref()) {
+                (Some(path), Some(re)) => path.matches_regex(re),
+                _ => false,
+            };
+
+            op1 || op2
         } else {
             false
         }

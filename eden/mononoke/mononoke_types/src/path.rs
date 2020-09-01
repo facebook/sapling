@@ -19,6 +19,7 @@ use bytes::Bytes;
 use lazy_static::lazy_static;
 use quickcheck::{Arbitrary, Gen};
 use rand::{seq::SliceRandom, Rng};
+use regex::Regex;
 use serde_derive::{Deserialize, Serialize};
 
 use crate::bonsai_changeset::BonsaiChangeset;
@@ -608,6 +609,11 @@ impl MPath {
         ParentDirIterator {
             current: Some(self),
         }
+    }
+
+    pub fn matches_regex(&self, re: &Regex) -> bool {
+        let s: String = format!("{}", self);
+        re.is_match(&s)
     }
 }
 

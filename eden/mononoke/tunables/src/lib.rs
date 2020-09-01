@@ -71,6 +71,7 @@ pub struct MononokeTunables {
     // in a particular repo
     undesired_path_repo_name_to_log: TunableString,
     undesired_path_prefix_to_log: TunableString,
+    undesired_path_regex_to_log: TunableString,
     pushrebase_disable_rebased_commit_validation: AtomicBool,
     filenodes_disabled: AtomicBool,
     skiplist_max_skips_without_yield: AtomicI64,
