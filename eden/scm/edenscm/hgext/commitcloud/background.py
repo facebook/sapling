@@ -30,6 +30,7 @@ import stat
 import subprocess
 import time
 
+import bindings
 from edenscm.mercurial import (
     dispatch,
     encoding,
@@ -41,7 +42,6 @@ from edenscm.mercurial import (
 )
 from edenscm.mercurial.i18n import _
 
-from ..extutil import runbgcommand
 from . import util as ccutil, workspace
 
 
@@ -236,10 +236,14 @@ def backgroundbackup(repo, command=None, dest=None):
         timestamp = util.datestr(util.makedate(), "%Y-%m-%d %H:%M:%S %z")
         fullcmd = " ".join(util.shellquote(arg) for arg in background_cmd)
         f.write("\n%s starting: %s\n" % (timestamp, fullcmd))
-        # Windows doesn't support background process redirection of std*
-        if pycompat.iswindows:
-            f = None
-        runbgcommand(background_cmd, None, shell=False, stdout=f, stderr=f)
+
+    Stdio = bindings.process.Stdio
+    out = Stdio.open(logfile, append=True, create=True)
+    bindings.process.Command.new(background_cmd[0]).args(
+        background_cmd[1:]
+    ).avoidinherithandles().newsession().stdin(Stdio.null()).stdout(out).stderr(
+        out
+    ).spawn()
 
 
 class WrongPermissionsException(Exception):
