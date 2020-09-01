@@ -199,7 +199,9 @@ class _gitlfsremote(object):
         self._addextraheaders(request)
         if action == "upload":
             # If uploading blobs, read data from local blobstore.
-            request.data = filewithprogress(localstore.vfs(oid), None)
+            blob = filewithprogress(localstore.vfs(oid), None)
+            request.data = blob
+            request.add_header("content-length", str(len(blob)))
             request.get_method = lambda: "PUT"
 
         for k, v in headers:
