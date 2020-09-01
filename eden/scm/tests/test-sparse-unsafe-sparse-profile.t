@@ -55,6 +55,8 @@ Including another file is fine
 
 Now allow reset to go through
   $ hg sparse reset --allow-unsafe-profile-changes --config sparse.unsafe_sparse_profile_marker_files="hide"
+  hint[sparse-unsafe-profile]: Your sparse profile might be incorrect, and it can lead to downloading too much data and slower mercurial operations.
+  hint[hint-ack]: use 'hg hint --ack sparse-unsafe-profile' to silence these hints
   $ hg sparse show
   $ ls
   hide
@@ -62,5 +64,11 @@ Now allow reset to go through
 
 Make sure we don't get any errors if sparse profile already includes marker file
   $ hg sparse --config sparse.unsafe_sparse_profile_marker_files="hide" exclude show
+  hint[sparse-unsafe-profile]: Your sparse profile might be incorrect, and it can lead to downloading too much data and slower mercurial operations.
+  hint[hint-ack]: use 'hg hint --ack sparse-unsafe-profile' to silence these hints
   $ ls
   hide
+  $ hg st --config sparse.unsafe_sparse_profile_marker_files="hide" --config sparse.unsafe_sparse_profile_message="run 'hg sparse enable profile'"
+  hint[sparse-unsafe-profile]: Your sparse profile might be incorrect, and it can lead to downloading too much data and slower mercurial operations.
+  run 'hg sparse enable profile'
+  hint[hint-ack]: use 'hg hint --ack sparse-unsafe-profile' to silence these hints

@@ -507,6 +507,9 @@ def _trackdirstatesizes(lui, repo):
             and _hassparse(repo)
         ):
             hintutil.trigger("sparse-largecheckout", dirstatesize, repo)
+        f = _find_unsafe_marker_files(repo, lui)
+        if f is not None:
+            hintutil.trigger("sparse-unsafe-profile", f, repo, lui)
 
 
 def _clonesparsecmd(orig, ui, repo, *args, **opts):
@@ -1440,6 +1443,18 @@ def hintlargecheckout(dirstatesize, repo):
         )
         % dirstatesize
     )
+
+
+@hint("sparse-unsafe-profile")
+def hintsparseunsafeprofile(file, repo, ui):
+    msg = _(
+        "Your sparse profile might be incorrect, and it can lead to "
+        "downloading too much data and slower mercurial operations."
+    )
+    additionalmsg = ui.config("sparse", "unsafe_sparse_profile_message")
+    if additionalmsg:
+        msg = "{}\n{}".format(msg, additionalmsg)
+    return msg
 
 
 @hint("sparse-explain-verbose")
@@ -2440,6 +2455,8 @@ def _find_unsafe_marker_files(repo, ui):
     unsafesparseprofilemarkerfiles = ui.configlist(
         "sparse", "unsafe_sparse_profile_marker_files"
     )
+    if not unsafesparseprofilemarkerfiles:
+        return None
     sparsematch = repo.sparsematch()
     for f in unsafesparseprofilemarkerfiles:
         if sparsematch(f):
