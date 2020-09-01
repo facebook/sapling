@@ -10,7 +10,6 @@
 #include <folly/Exception.h>
 #include <folly/File.h>
 #include <folly/FileUtil.h>
-#include <folly/Subprocess.h>
 #include <folly/experimental/TestUtil.h>
 #include <folly/init/Init.h>
 #include <folly/logging/xlog.h>
@@ -26,6 +25,7 @@
 #include <string>
 #include <thread>
 #include "eden/fs/utils/FileUtils.h"
+#include "eden/fs/utils/SpawnedProcess.h"
 
 using namespace facebook::eden;
 using namespace std::chrono_literals;
@@ -46,18 +46,15 @@ namespace {
 struct FunctionResult {
   std::string standardOutput;
   std::string standardError;
-  folly::ProcessReturnCode returnCode;
+  ProcessStatus returnCode;
 };
 
 FunctionResult runFunctionInSeparateProcess(folly::StringPiece functionName);
 FunctionResult runFunctionInSeparateProcess(
     folly::StringPiece functionName,
     std::vector<std::string> arguments);
-folly::ProcessReturnCode waitWithTimeout(
-    folly::Subprocess&,
-    std::chrono::milliseconds timeout);
-bool isReadablePipeBroken(int fd);
-bool isWritablePipeBroken(int fd);
+bool isReadablePipeBroken(FileDescriptor& fd);
+bool isWritablePipeBroken(FileDescriptor& fd);
 
 bool fileExists(folly::fs::path);
 } // namespace
@@ -290,38 +287,49 @@ TEST_F(DaemonStartupLoggerTest, failure) {
 }
 
 TEST_F(DaemonStartupLoggerTest, daemonClosesStandardFileDescriptors) {
-  auto process = folly::Subprocess{
-      {{
-          folly::fs::executable_path().string(),
-          "daemonClosesStandardFileDescriptorsChild",
-      }},
-      folly::Subprocess::Options{}.pipeStdin().pipeStdout().pipeStderr(),
-  };
-  SCOPE_FAIL {
-    process.takeOwnershipOfPipes();
+  SpawnedProcess::Options opts;
+  opts.pipeStdin();
+  opts.pipeStdout();
+  opts.pipeStderr();
+  auto process = SpawnedProcess{{{
+                                    folly::fs::executable_path().string(),
+                                    "daemonClosesStandardFileDescriptorsChild",
+                                }},
+                                std::move(opts)};
+
+  auto stdinFd = process.stdinFd();
+  auto stdoutFd = process.stdoutFd();
+  auto stderrFd = process.stderrFd();
+  SCOPE_EXIT {
     process.wait();
   };
-  process.setAllNonBlocking();
+  stdinFd.setNonBlock();
+  stdoutFd.setNonBlock();
+  stderrFd.setNonBlock();
 
   // FIXME(strager): wait() could technically deadlock if the child is blocked
   // on writing to stdout or stderr.
-  auto returnCode = waitWithTimeout(process, 10s);
+  auto returnCode = process.waitTimeout(10s);
   EXPECT_EQ("exited with status 0", returnCode.str());
 
-  auto expectReadablePipeIsBroken = [](int fd, folly::StringPiece name) {
+  auto expectReadablePipeIsBroken = [](FileDescriptor& fd,
+                                       folly::StringPiece name) {
     EXPECT_TRUE(isReadablePipeBroken(fd))
         << "Daemon should have closed its " << name
-        << " file descriptor (parent fd " << fd << "), but it did not.";
+        << " file descriptor (parent fd " << fd.systemHandle()
+        << "), but it did not.";
   };
-  auto expectWritablePipeIsBroken = [](int fd, folly::StringPiece name) {
+  auto expectWritablePipeIsBroken = [](FileDescriptor& fd,
+                                       folly::StringPiece name) {
     EXPECT_TRUE(isWritablePipeBroken(fd))
         << "Daemon should have closed its " << name
-        << " file descriptor (parent fd " << fd << "), but it did not.";
+        << " file descriptor (parent fd " << fd.systemHandle()
+        << "), but it did not.";
   };
 
-  expectWritablePipeIsBroken(process.stdinFd(), "stdin");
-  expectReadablePipeIsBroken(process.stdoutFd(), "stdout");
-  expectReadablePipeIsBroken(process.stderrFd(), "stderr");
+  expectWritablePipeIsBroken(stdinFd, "stdin");
+  expectReadablePipeIsBroken(stdoutFd, "stdout");
+  expectReadablePipeIsBroken(stderrFd, "stderr");
 
   // NOTE(strager): The daemon process should eventually exit automatically, so
   // we don't need to explicitly kill it.
@@ -443,12 +451,12 @@ FunctionResult runFunctionInSeparateProcess(
   }};
   command.insert(command.end(), arguments.begin(), arguments.end());
 
-  auto process = folly::Subprocess{
-      command,
-      folly::Subprocess::Options{}.pipeStdout().pipeStderr(),
-  };
+  SpawnedProcess::Options opts;
+  opts.pipeStdout();
+  opts.pipeStderr();
+  auto process = SpawnedProcess{command, std::move(opts)};
   SCOPE_FAIL {
-    process.takeOwnershipOfPipes();
+    process.stdinFd();
     process.wait();
   };
   auto [out, err] = process.communicate();
@@ -491,44 +499,24 @@ FunctionResult runFunctionInSeparateProcess(
   std::exit(2);
 }
 
-folly::ProcessReturnCode waitWithTimeout(
-    folly::Subprocess& process,
-    std::chrono::milliseconds timeout) {
-  auto deadline = std::chrono::steady_clock::now() + timeout;
-  do {
-    auto returnCode = process.poll();
-    if (!returnCode.running()) {
-      return returnCode;
+bool isReadablePipeBroken(FileDescriptor& fd) {
+  while (true) {
+    char buffer[PIPE_BUF];
+    auto result = fd.readNoInt(buffer, sizeof(buffer));
+    result.throwIfFailed();
+    if (result.value() == 0) {
+      return true;
     }
-    std::this_thread::sleep_for(1ms);
-  } while (std::chrono::steady_clock::now() < deadline);
-  return {};
+  }
 }
 
-bool isReadablePipeBroken(int fd) {
-drain_pipe:
-  char buffer[PIPE_BUF];
-  ssize_t readSize = folly::readNoInt(fd, buffer, sizeof(buffer));
-  if (readSize == -1 && errno == EAGAIN) {
-    return false;
-  }
-  checkUnixError(readSize);
-  if (readSize == 0) {
-    return true;
-  }
-  goto drain_pipe;
-}
-
-bool isWritablePipeBroken(int fd) {
+bool isWritablePipeBroken(FileDescriptor& fd) {
   const char buffer[1] = {0};
-  ssize_t writtenSize = folly::writeNoInt(fd, buffer, sizeof(buffer));
-  if (writtenSize == -1 && errno == EAGAIN) {
-    return false;
+  auto result = fd.writeNoInt(buffer, sizeof(buffer));
+  if (auto exc = result.tryGetExceptionObject<std::system_error>()) {
+    return exc->code() == std::error_code(EPIPE, std::generic_category());
   }
-  if (writtenSize == -1 && errno == EPIPE) {
-    return true;
-  }
-  checkUnixError(writtenSize);
+  result.throwIfFailed();
   return false;
 }
 

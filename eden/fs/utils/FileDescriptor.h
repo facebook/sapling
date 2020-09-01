@@ -158,7 +158,7 @@ class FileDescriptor {
   }
 
   // Returns the underlying descriptor value
-  inline system_handle_type system_handle() const {
+  inline system_handle_type systemHandle() const {
     return fd_;
   }
 

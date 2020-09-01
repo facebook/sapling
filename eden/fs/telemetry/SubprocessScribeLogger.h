@@ -7,10 +7,10 @@
 
 #pragma once
 
-#include <folly/Subprocess.h>
 #include <folly/Synchronized.h>
 #include <list>
 #include "eden/fs/telemetry/ScribeLogger.h"
+#include "eden/fs/utils/SpawnedProcess.h"
 
 namespace facebook {
 namespace eden {
@@ -33,7 +33,7 @@ class SubprocessScribeLogger : public ScribeLogger {
    */
   explicit SubprocessScribeLogger(
       const std::vector<std::string>& argv,
-      int stdoutFd = -1);
+      FileDescriptor stdoutFd = FileDescriptor());
 
   /**
    * Waits for the managed process to exit. If it is hung and doesn't complete,
@@ -65,7 +65,7 @@ class SubprocessScribeLogger : public ScribeLogger {
     std::list<std::string> messages;
   };
 
-  folly::Subprocess process_;
+  SpawnedProcess process_;
   std::thread writerThread_;
 
   folly::Synchronized<State, std::mutex> state_;

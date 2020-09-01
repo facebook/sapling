@@ -7,6 +7,7 @@
 
 #include "eden/fs/telemetry/SubprocessScribeLogger.h"
 
+#include <folly/FileUtil.h>
 #include <folly/experimental/TestUtil.h>
 #include <gtest/gtest.h>
 
@@ -17,8 +18,10 @@ TEST(ScribeLogger, log_messages_are_written_with_newlines) {
   folly::test::TemporaryFile output;
 
   {
-    SubprocessScribeLogger logger{std::vector<std::string>{"/bin/cat"},
-                                  output.fd()};
+    SubprocessScribeLogger logger{
+        std::vector<std::string>{"/bin/cat"},
+        FileDescriptor(
+            ::dup(output.fd()), "dup", FileDescriptor::FDType::Generic)};
     logger.log("foo"_sp);
     logger.log("bar"_sp);
   }

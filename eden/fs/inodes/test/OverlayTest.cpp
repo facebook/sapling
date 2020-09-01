@@ -12,7 +12,6 @@
 #include <folly/Expected.h>
 #include <folly/FileUtil.h>
 #include <folly/Range.h>
-#include <folly/Subprocess.h>
 #include <folly/executors/CPUThreadPoolExecutor.h>
 #include <folly/experimental/TestUtil.h>
 #include <folly/logging/test/TestLogHandler.h>
@@ -35,9 +34,9 @@
 #include "eden/fs/testharness/TestMount.h"
 #include "eden/fs/testharness/TestUtil.h"
 #include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/SpawnedProcess.h"
 
 using namespace folly::string_piece_literals;
-using folly::Subprocess;
 
 namespace facebook {
 namespace eden {
@@ -55,12 +54,12 @@ TEST(OverlayGoldMasterTest, can_load_overlay_v2) {
   // this overlay format even if we change how the overlay is saved in the
   // future.
   auto tmpdir = makeTempDir("eden_test");
-  Subprocess tarProcess({"/usr/bin/tar",
-                         "-xzf",
-                         "eden/test-data/overlay-v2.tgz",
-                         "-C",
-                         tmpdir.path().string()});
-  tarProcess.waitChecked();
+  SpawnedProcess tarProcess({"/usr/bin/tar",
+                             "-xzf",
+                             "eden/test-data/overlay-v2.tgz",
+                             "-C",
+                             tmpdir.path().string()});
+  EXPECT_EQ(tarProcess.wait().str(), "exited with status 0");
 
   auto overlay =
       Overlay::create(realpath(tmpdir.path().string()) + "overlay-v2"_pc);

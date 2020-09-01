@@ -15,11 +15,11 @@
 
 #include <folly/File.h>
 #include <folly/Portability.h>
-#include <folly/Subprocess.h>
 #include <folly/io/async/AsyncTimeout.h>
 #include <folly/io/async/EventHandler.h>
 
 #include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/SpawnedProcess.h"
 
 namespace folly {
 class EventBase;
@@ -125,10 +125,10 @@ class SpawnedEdenInstance : public EdenInstance,
   void closeLogPipe();
   void checkLivenessImpl();
 
-  std::string edenfsExe_;
-  folly::Subprocess cmd_;
+  AbsolutePath edenfsExe_;
+  SpawnedProcess cmd_;
   pid_t pid_{0};
-  folly::File logPipe_;
+  FileDescriptor logPipe_;
   std::shared_ptr<LogFile> log_;
   std::unique_ptr<StartupStatusChecker> startupChecker_;
 

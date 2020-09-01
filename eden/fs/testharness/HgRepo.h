@@ -7,15 +7,11 @@
 
 #pragma once
 
-#include <folly/Subprocess.h>
 #include <string>
 #include <vector>
 
 #include "eden/fs/utils/PathFuncs.h"
-
-namespace folly {
-class Subprocess;
-}
+#include "eden/fs/utils/SpawnedProcess.h"
 
 namespace facebook {
 namespace eden {
@@ -64,19 +60,19 @@ class HgRepo {
   std::string hg(std::vector<std::string> args);
 
   /**
-   * Start an hg command and return the folly::Subprocess object without waiting
+   * Start an hg command and return the SpawnedProcess object without waiting
    * for it to complete.
    */
   template <typename... Args>
-  folly::Subprocess invokeHg(const Args&... args) {
+  SpawnedProcess invokeHg(const Args&... args) {
     std::vector<std::string> argsVector;
     buildHgArgs(argsVector, args...);
     return invokeHg(std::move(argsVector));
   }
-  folly::Subprocess invokeHg(std::vector<std::string> args);
-  folly::Subprocess invokeHg(
+  SpawnedProcess invokeHg(std::vector<std::string> args);
+  SpawnedProcess invokeHg(
       std::vector<std::string> args,
-      const folly::Subprocess::Options& options);
+      SpawnedProcess::Options&& options);
 
   /**
    * Call "hg init" to create the repository.
@@ -150,7 +146,7 @@ class HgRepo {
   }
 
   AbsolutePath hgCmd_;
-  std::vector<std::string> hgEnv_;
+  SpawnedProcess::Environment hgEnv_;
   AbsolutePath path_;
 };
 } // namespace eden

@@ -26,8 +26,6 @@
 #ifndef _WIN32
 #include <unistd.h>
 #else
-#include "eden/fs/win/utils/Pipe.h" // @manual
-#include "eden/fs/win/utils/Subprocess.h" // @manual
 #include "eden/fs/win/utils/WinError.h" // @manual
 #endif
 
@@ -40,17 +38,12 @@
 #include "eden/fs/store/hg/HgProxyHash.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/SpawnedProcess.h"
 #include "eden/fs/utils/TimeUtil.h"
 
 using folly::Endian;
 using folly::IOBuf;
 using folly::StringPiece;
-#ifndef _WIN32
-using folly::Subprocess;
-#else
-using facebook::eden::Pipe;
-using facebook::eden::Subprocess;
-#endif
 using folly::io::Appender;
 using folly::io::Cursor;
 using std::make_unique;
@@ -77,49 +70,6 @@ DEFINE_string(
     "this value is non-empty, the existing PYTHONPATH from the environment is "
     "replaced with this value.");
 
-namespace {
-using namespace facebook::eden;
-
-/**
- * File descriptor number to use for receiving output from the import helper
- * process.
- *
- * This value is rather arbitrary.  It shouldn't be 0, 1, or 2 (stdin, stdout,
- * or stderr, respectively), but other than that anything is probably fine,
- * since the child shouldn't have any FDs open besides these 3 standard FDs
- * when it starts.
- *
- * The only reason we don't simply use the child's stdout is to avoid
- * communication problems if any of the mercurial helper code somehow ends up
- * printing data to stdout.  We don't want arbitrary log message data from
- * mercurial interfering with our normal communication protocol.
- */
-constexpr int HELPER_PIPE_FD = 5;
-
-#ifndef _WIN32
-std::string findInPath(folly::StringPiece executable) {
-  auto path = getenv("PATH");
-  if (!path) {
-    throw std::runtime_error(folly::to<std::string>(
-        "unable to resolve ", executable, " in PATH because PATH is not set"));
-  }
-  std::vector<folly::StringPiece> dirs;
-  folly::split(":", path, dirs);
-
-  for (auto& dir : dirs) {
-    auto candidate = folly::to<std::string>(dir, "/", executable);
-    if (access(candidate.c_str(), X_OK) == 0) {
-      return candidate;
-    }
-  }
-
-  throw std::runtime_error(folly::to<std::string>(
-      "unable to resolve ", executable, " in PATH ", path));
-}
-#endif
-
-} // unnamed namespace
-
 namespace facebook {
 namespace eden {
 
@@ -145,36 +95,33 @@ HgImporter::HgImporter(
     cmd.push_back("debugedenimporthelper");
   }
 
-#ifndef _WIN32
-  cmd.push_back("--out-fd");
-  cmd.push_back(folly::to<string>(HELPER_PIPE_FD));
+  SpawnedProcess::Options opts;
 
-  // In the future, it might be better to use some other arbitrary fd for
-  // output from the helper process, rather than stdout (just in case anything
-  // in the python code ends up printing to stdout).
-  Subprocess::Options opts;
-  // Send commands to the child on its stdin.
-  // Receive output on HELPER_PIPE_FD.
-  opts.stdinFd(Subprocess::PIPE).fd(HELPER_PIPE_FD, Subprocess::PIPE_OUT);
+  opts.nullStdin();
+
+  // Send commands to the child on this pipe
+  Pipe childInPipe;
+  auto inFd = opts.inheritDescriptor(std::move(childInPipe.read));
+  cmd.push_back("--in-fd");
+  cmd.push_back(folly::to<string>(inFd));
+  helperIn_ = std::move(childInPipe.write);
+
+  // Read responses from this pipe
+  Pipe childOutPipe;
+  auto outFd = opts.inheritDescriptor(std::move(childOutPipe.write));
+  cmd.push_back("--out-fd");
+  cmd.push_back(folly::to<string>(outFd));
+  helperOut_ = std::move(childOutPipe.read);
 
   // Ensure that we run the helper process with cwd set to the repo.
   // This is important for `hg debugedenimporthelper` to pick up the
   // correct configuration in the currently available versions of
   // that subcommand.  In particular, without this, the tests may
   // fail when run in our CI environment.
-  opts.chdir(repoPath.value().str());
+  opts.chdir(AbsolutePathPiece{repoPath.value()});
 
-  // If argv[0] isn't an absolute path then we need to search $PATH.
-  // Ideally we'd just tell Subprocess to usePath, but it doesn't
-  // allow us to do so when we are also overriding the environment.
-  if (!boost::filesystem::path(cmd[0]).is_absolute()) {
-    cmd[0] = findInPath(cmd[0]);
-  }
-
-  auto env = folly::experimental::EnvironmentState::fromCurrentEnvironment();
   if (!FLAGS_hgPythonPath.empty()) {
-    env->erase("PYTHONPATH");
-    env->emplace("PYTHONPATH", FLAGS_hgPythonPath);
+    opts.environment().set("PYTHONPATH", FLAGS_hgPythonPath);
   }
 
   // Eden does not control the backing repo's configuration, if it has
@@ -183,7 +130,8 @@ HgImporter::HgImporter(
   // access the FUSE mount, which might be in the process of starting
   // up. This causes a cross-process deadlock. Thus, in a heavy-handed
   // way, prevent Watchman from ever attempting to spawn an instance.
-  (*env)["WATCHMAN_NO_SPAWN"] = "1";
+  opts.environment().set("WATCHMAN_NO_SPAWN", "1");
+
   cmd.insert(
       cmd.end(),
       {"--config",
@@ -192,36 +140,19 @@ HgImporter::HgImporter(
        "extensions.hgevents=!"});
 
   // HACK(T33686765): Work around LSAN reports for hg_importer_helper.
-  (*env)["LSAN_OPTIONS"] = "detect_leaks=0";
+  opts.environment().set("LSAN_OPTIONS", "detect_leaks=0");
+
   // If we're using `hg debugedenimporthelper`, don't allow the user
   // configuration to change behavior away from the system defaults.
-  (*env)["HGPLAIN"] = "1";
-  (*env)["CHGDISABLE"] = "1";
+  opts.environment().set("HGPLAIN", "1");
+  opts.environment().set("CHGDISABLE", "1");
 
-  auto envVector = env.toVector();
-  helper_ = Subprocess{cmd, opts, nullptr, &envVector};
+  helper_ = SpawnedProcess{cmd, std::move(opts)};
   SCOPE_FAIL {
-    helper_.closeParentFd(STDIN_FILENO);
+    helperIn_.close();
     helper_.wait();
   };
-  helperIn_ = helper_.stdinFd();
-  helperOut_ = helper_.parentFd(HELPER_PIPE_FD);
-#else
 
-  auto childInPipe = std::make_unique<Pipe>();
-  auto childOutPipe = std::make_unique<Pipe>();
-
-  cmd.push_back("--out-fd");
-  cmd.push_back(folly::to<string>((intptr_t)childOutPipe->writeHandle()));
-  cmd.push_back("--in-fd");
-  cmd.push_back(folly::to<string>((intptr_t)childInPipe->readHandle()));
-
-  helper_.createSubprocess(
-      cmd, std::move(childInPipe), std::move(childOutPipe), repoPath);
-  helperIn_ = helper_.childInPipe_->writeHandle();
-  helperOut_ = helper_.childOutPipe_->readHandle();
-
-#endif
   options_ = waitForHelperStart();
   XLOG(DBG1) << "hg_import_helper started for repository " << repoPath_;
 }
@@ -310,20 +241,16 @@ HgImporter::~HgImporter() {
   stopHelperProcess();
 }
 
-#ifndef _WIN32
-folly::ProcessReturnCode HgImporter::debugStopHelperProcess() {
+ProcessStatus HgImporter::debugStopHelperProcess() {
   stopHelperProcess();
-  return helper_.returnCode();
+  return helper_.wait();
 }
-#endif
 
 void HgImporter::stopHelperProcess() {
-#ifndef _WIN32
-  if (helper_.returnCode().running()) {
-    helper_.closeParentFd(STDIN_FILENO);
+  if (!helper_.terminated()) {
+    helperIn_.close();
     helper_.wait();
   }
-#endif
 }
 
 unique_ptr<Blob> HgImporter::importFileContents(
@@ -694,31 +621,21 @@ HgImporter::TransactionID HgImporter::sendFetchTreeRequest(
   return txnID;
 }
 
-namespace {
-std::string errStr() {
-#ifndef _WIN32
-  return folly::errnoStr(errno);
-#else
-  return win32ErrorToString(GetLastError());
-#endif
-}
-} // namespace
-
 void HgImporter::readFromHelper(void* buf, uint32_t size, StringPiece context) {
   size_t bytesRead;
 
-#ifdef _WIN32
-  auto result = Pipe::read(helperOut_, buf, size);
-#else
-  auto result = folly::readFull(helperOut_, buf, size);
-#endif
-  if (result < 0) {
+  auto result = helperOut_.readFull(buf, size);
+
+  if (result.hasException()) {
     HgImporterError err(
-        "error reading ", context, " from debugedenimporthelper: ", errStr());
+        "error reading ",
+        context,
+        " from debugedenimporthelper: ",
+        folly::exceptionStr(result.exception()));
     XLOG(ERR) << err.what();
     throw err;
   }
-  bytesRead = static_cast<size_t>(result);
+  bytesRead = static_cast<size_t>(result.value());
   if (bytesRead != size) {
     // The helper process closed the pipe early.
     // This generally means that it exited.
@@ -736,14 +653,13 @@ void HgImporter::writeToHelper(
     struct iovec* iov,
     size_t numIov,
     StringPiece context) {
-#ifdef _WIN32
-  auto result = Pipe::writevFull(helperIn_, iov, numIov);
-#else
-  auto result = folly::writevFull(helperIn_, iov, numIov);
-#endif
-  if (result < 0) {
+  auto result = helperIn_.writevFull(iov, numIov);
+  if (result.hasException()) {
     HgImporterError err(
-        "error writing ", context, " to debugedenimporthelper: ", errStr());
+        "error writing ",
+        context,
+        " to debugedenimporthelper: ",
+        folly::exceptionStr(result.exception()));
     XLOG(ERR) << err.what();
     throw err;
   }

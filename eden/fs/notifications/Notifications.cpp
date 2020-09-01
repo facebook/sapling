@@ -7,10 +7,10 @@
 
 #include "eden/fs/notifications/Notifications.h"
 
-#include <folly/Subprocess.h>
 #include <folly/futures/Future.h>
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/config/ReloadableConfig.h"
+#include "eden/fs/utils/SpawnedProcess.h"
 #include "eden/fs/utils/SystemError.h"
 
 namespace facebook {
@@ -53,11 +53,11 @@ void Notifications::showGenericErrorNotification(const std::exception& err) {
   }
   *lastShown_.wlock() = std::chrono::steady_clock::now();
 
-  folly::Subprocess proc(
+  SpawnedProcess(
       {"/bin/sh",
        "-c",
-       config_.getEdenConfig()->genericErrorNotificationCommand.getValue()},
-      folly::Subprocess::Options().detach());
+       config_.getEdenConfig()->genericErrorNotificationCommand.getValue()})
+      .detach();
 }
 } // namespace eden
 } // namespace facebook

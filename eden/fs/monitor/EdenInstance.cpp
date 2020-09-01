@@ -7,7 +7,6 @@
 
 #include "eden/fs/monitor/EdenInstance.h"
 
-#include <folly/Subprocess.h>
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
 #include <folly/portability/GFlags.h>
@@ -16,10 +15,10 @@
 #include "eden/fs/monitor/LogFile.h"
 #include "eden/fs/service/EdenInit.h"
 #include "eden/fs/service/gen-cpp2/EdenServiceAsyncClient.h"
+#include "eden/fs/utils/SpawnedProcess.h"
 
 using facebook::fb303::cpp2::fb303_status;
 using folly::Future;
-using folly::Subprocess;
 using folly::Try;
 using folly::Unit;
 using namespace std::chrono_literals;
@@ -154,7 +153,7 @@ SpawnedEdenInstance::SpawnedEdenInstance(
     : EdenInstance(monitor),
       EventHandler(monitor->getEventBase()),
       AsyncTimeout(monitor->getEventBase()),
-      edenfsExe_(FLAGS_edenfs),
+      edenfsExe_(AbsolutePath(FLAGS_edenfs)),
       log_(std::move(log)) {}
 
 SpawnedEdenInstance::~SpawnedEdenInstance() {
@@ -196,24 +195,23 @@ Future<Unit> SpawnedEdenInstance::start() {
     argv.push_back("--configPath");
     argv.push_back(FLAGS_configPath);
   }
-  Subprocess::Options options;
-  options.stdoutFd(Subprocess::PIPE_OUT).stderrFd(STDOUT_FILENO);
+  SpawnedProcess::Options options;
+  Pipe outputPipe;
+  options.dup2(outputPipe.write.duplicate(), STDOUT_FILENO);
+  options.dup2(std::move(outputPipe.write), STDERR_FILENO);
+  options.executablePath(edenfsExe_);
 
   // Execute edenfs.
   // Note that this will block until the fork() and execve() completes.
   // In practice this normally should not block for too long, so I'm not too
   // concerned about this at the moment.
-  cmd_ = Subprocess(argv, options, /*executable=*/edenfsExe_.c_str());
+  cmd_ = SpawnedProcess(argv, std::move(options));
   // Save the process pid as a member variable.  Subprocess.pid() will return -1
   // after the process has died, but we still want to be able to log the old pid
   // correctly even after the process has exited.
   pid_ = cmd_.pid();
 
-  // Extract the pipe from the Subprocess so we don't have to keep looking it up
-  auto pipes = cmd_.takeOwnershipOfPipes();
-  XCHECK_EQ(pipes.size(), size_t(1));
-  XCHECK_EQ(pipes[0].childFd, STDOUT_FILENO);
-  logPipe_ = std::move(pipes[0].pipe);
+  logPipe_ = std::move(outputPipe.read);
 
   beginProcessingLogPipe();
 
@@ -235,10 +233,10 @@ Future<Unit> SpawnedEdenInstance::start() {
 }
 
 void SpawnedEdenInstance::takeover(pid_t pid, int logFD) {
-  cmd_ = Subprocess::fromExistingProcess(pid);
+  cmd_ = SpawnedProcess::fromExistingProcess(pid);
   pid_ = pid;
 
-  logPipe_ = folly::File(logFD);
+  logPipe_ = FileDescriptor(logFD, "takeover", FileDescriptor::FDType::Generic);
   auto rc = fcntl(logPipe_.fd(), F_SETFD, FD_CLOEXEC);
   if (rc != 0) {
     XLOG(ERR) << "failed to restore CLOEXEC flag on log pipe during restart: "
@@ -277,14 +275,18 @@ void SpawnedEdenInstance::timeoutExpired() noexcept {
   // Note that forwarding with cat like this will continue writing to the old
   // log file even if the log gets rotated, but this probably shouldn't be a
   // major problem in practice.
-  Subprocess::Options options;
-  options.stdoutFd(log_->fd())
-      .stderrFd(log_->fd())
-      .stdinFd(logPipe_.fd())
-      .detach();
+  SpawnedProcess::Options options;
+  options.dup2(
+      FileDescriptor(::dup(log_->fd()), "dup", FileDescriptor::FDType::Generic),
+      STDOUT_FILENO);
+  options.dup2(
+      FileDescriptor(::dup(log_->fd()), "dup", FileDescriptor::FDType::Generic),
+      STDERR_FILENO);
+  options.dup2(logPipe_.duplicate(), STDIN_FILENO);
+  options.executablePath(AbsolutePathPiece(FLAGS_cat_exe));
   std::vector<std::string> argv = {"cat"};
   try {
-    Subprocess(argv, options, /*executable=*/FLAGS_cat_exe.c_str());
+    SpawnedProcess(argv, std::move(options)).detach();
   } catch (const std::exception& ex) {
     // Log an error.  There isn't a whole lot else we can do in this case.
     XLOG(ERR) << "failed to spawn " << FLAGS_cat_exe
@@ -309,20 +311,24 @@ void SpawnedEdenInstance::forwardLogOutput() {
   // does not support writing to files in O_APPEND mode.  Using O_APPEND for the
   // log seems important just in case multiple separate processes do end up
   // writing to the log file at the same time.
-  auto bytesRead =
-      folly::readNoInt(logPipe_.fd(), logBuffer_.data(), logBuffer_.size());
-  if (bytesRead <= 0) {
-    if (bytesRead == 0) {
-      XLOG(DBG1) << "EdenFS output closed";
-    } else {
-      int errnum = errno;
-      XLOG(ERR) << "error reading EdenFS output: " << folly::errnoStr(errnum);
-      if (errnum == EAGAIN) {
+  auto result = logPipe_.readNoInt(logBuffer_.data(), logBuffer_.size());
+  if (result.hasException()) {
+    XLOG(ERR) << "error reading EdenFS output: "
+              << folly::exceptionStr(result.exception());
+    if (auto exc = result.tryGetExceptionObject<std::system_error>()) {
+      if (exc->code() == std::error_code(EAGAIN, std::generic_category())) {
         // This isn't really expected, since we were told that the fd was ready.
         // Just return without closing the log pipe in this case.
         return;
       }
     }
+    closeLogPipe();
+    return;
+  }
+
+  auto bytesRead = result.value();
+  if (bytesRead == 0) {
+    XLOG(DBG1) << "EdenFS output closed";
     closeLogPipe();
     return;
   }
@@ -354,7 +360,7 @@ void SpawnedEdenInstance::closeLogPipe() {
 
   // If we had already noticed that EdenFS exited we can immediately inform
   // monitor_ that we have finished.
-  if (!cmd_.returnCode().running()) {
+  if (cmd_.terminated()) {
     monitor_->edenInstanceFinished(this);
     return;
   }
@@ -368,8 +374,7 @@ void SpawnedEdenInstance::closeLogPipe() {
 void SpawnedEdenInstance::checkLiveness() {
   // If we've already previously noticed that EdenFS has died then we don't need
   // to do anything else now.
-  if (!cmd_.returnCode().running()) {
-    XDCHECK(!cmd_.returnCode().notStarted());
+  if (cmd_.terminated()) {
     return;
   }
 
@@ -377,19 +382,12 @@ void SpawnedEdenInstance::checkLiveness() {
 }
 
 void SpawnedEdenInstance::checkLivenessImpl() {
-  auto returnCode = cmd_.poll();
-  if (returnCode.running()) {
+  if (!cmd_.terminated()) {
     return;
   }
+  auto returnCode = cmd_.wait();
 
-  if (returnCode.exited()) {
-    XLOG(INFO) << "EdenFS process " << getPid() << " exited with status "
-               << returnCode.exitStatus();
-  } else {
-    XDCHECK(returnCode.killed());
-    XLOG(INFO) << "EdenFS process " << getPid() << " killed with signal "
-               << returnCode.killSignal();
-  }
+  XLOG(INFO) << "EdenFS process " << getPid() << " exited " << returnCode.str();
 
   // If the log pipe has been closed then we are done, and can notify monitor_
   // that EdenFS is exited.

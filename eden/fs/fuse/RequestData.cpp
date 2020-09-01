@@ -7,7 +7,6 @@
 
 #include "eden/fs/fuse/RequestData.h"
 
-#include <folly/Subprocess.h>
 #include <folly/logging/xlog.h>
 
 #include "eden/fs/fuse/Dispatcher.h"

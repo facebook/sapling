@@ -8,13 +8,9 @@
 #pragma once
 
 #include <folly/Range.h>
-#include <optional>
-#ifndef _WIN32
-#include <folly/Subprocess.h>
-#else
 #include <folly/portability/IOVec.h>
-#include "eden/fs/win/utils/Subprocess.h" // @manual
-#endif
+#include <optional>
+#include "eden/fs/utils/SpawnedProcess.h"
 
 #include "eden/fs/eden-config.h"
 #include "eden/fs/telemetry/EdenStats.h"
@@ -37,14 +33,6 @@ class HgManifestImporter;
 class StoreResult;
 class Tree;
 class HgProxyHash;
-
-#ifdef _WIN32
-typedef HANDLE edenfd_t;
-const edenfd_t kInvalidFd = INVALID_HANDLE_VALUE;
-#else
-typedef int edenfd_t;
-constexpr edenfd_t kInvalidFd = -1;
-#endif
 
 /**
  * Options for this HgImporter.
@@ -137,9 +125,7 @@ class HgImporter : public Importer {
 
   virtual ~HgImporter();
 
-#ifndef _WIN32
-  folly::ProcessReturnCode debugStopHelperProcess();
-#endif
+  ProcessStatus debugStopHelperProcess();
 
   Hash resolveManifestNode(folly::StringPiece revName) override;
   std::unique_ptr<Blob> importFileContents(
@@ -280,26 +266,16 @@ class HgImporter : public Importer {
   // to implement its move constructor :-p
   TransactionID sendPrefetchFilesRequest(const std::vector<HgProxyHash>& files);
 
-#ifndef _WIN32
-  folly::Subprocess helper_;
-#else
-  facebook::eden::Subprocess helper_;
-#endif
+  SpawnedProcess helper_;
   const AbsolutePath repoPath_;
   std::shared_ptr<EdenStats> const stats_;
   ImporterOptions options_;
   uint32_t nextRequestID_{0};
   /**
    * The input and output file descriptors to the helper subprocess.
-   * We don't own these FDs, and don't need to close them--they will be closed
-   * automatically by the Subprocess object.
-   *
-   * We simply cache them as member variables to avoid having to look them up
-   * via helper_.parentFd() each time we need to use them.
    */
-
-  edenfd_t helperIn_{kInvalidFd};
-  edenfd_t helperOut_{kInvalidFd};
+  FileDescriptor helperIn_;
+  FileDescriptor helperOut_;
 };
 
 class HgImporterError : public std::exception {

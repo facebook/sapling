@@ -10,8 +10,6 @@
 #include <folly/logging/xlog.h>
 #include <folly/system/ThreadName.h>
 
-using folly::Subprocess;
-
 namespace {
 /**
  * If the writer process is backed up, limit the message queue size to the
@@ -35,17 +33,23 @@ SubprocessScribeLogger::SubprocessScribeLogger(
 
 SubprocessScribeLogger::SubprocessScribeLogger(
     const std::vector<std::string>& argv,
-    int stdoutFd) {
-  folly::File devnull{"/dev/null"};
-
-  Subprocess::Options options;
+    FileDescriptor stdoutFd) {
+  SpawnedProcess::Options options;
   options.pipeStdin();
-  options.stdoutFd(stdoutFd < 0 ? devnull.fd() : stdoutFd);
+
+  if (stdoutFd) {
+    options.dup2(std::move(stdoutFd), STDOUT_FILENO);
+  } else {
+    OpenFileHandleOptions openOpts;
+    openOpts.writeContents = 1;
+    options.open(STDOUT_FILENO, "/dev/null"_abspath, openOpts);
+  }
+
   // Forward stderr to the edenfs log.
   // Ensure that no cwd directory handles are held open.
-  options.chdir("/");
+  options.chdir("/"_abspath);
 
-  process_ = Subprocess{argv, options};
+  process_ = SpawnedProcess{argv, std::move(options)};
 
   SCOPE_FAIL {
     closeProcess();
@@ -107,7 +111,7 @@ void SubprocessScribeLogger::log(std::string message) {
 }
 
 void SubprocessScribeLogger::writerThread() {
-  int fd = process_.stdinFd();
+  auto fd = process_.stdinFd();
 
   for (;;) {
     std::string message;
@@ -144,7 +148,7 @@ void SubprocessScribeLogger::writerThread() {
     iov[0].iov_len = message.size();
     iov[1].iov_base = &newline;
     iov[1].iov_len = sizeof(newline);
-    if (-1 == folly::writevNoInt(fd, iov.data(), iov.size())) {
+    if (fd.writevFull(iov.data(), iov.size()).hasException()) {
       // TODO: We could attempt to restart the process here.
       XLOG(ERR) << "Failed to writev to logger process stdin: "
                 << folly::errnoStr(errno) << ". Giving up!";

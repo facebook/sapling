@@ -11,7 +11,6 @@
 #include <folly/File.h>
 #include <folly/FileUtil.h>
 #include <folly/String.h>
-#include <folly/Subprocess.h>
 #include <folly/logging/xlog.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -20,7 +19,6 @@
 #include "eden/fs/utils/FileUtils.h"
 
 using folly::StringPiece;
-using folly::Subprocess;
 using std::string;
 using std::vector;
 
@@ -64,20 +62,22 @@ HgRepo::HgRepo(AbsolutePathPiece path) : path_{path} {
   // Set up hgEnv_
   std::vector<const char*> passthroughVars{
       {"HG_REAL_BIN", "LLVM_PROFILE_FILE", "PATH"}};
+  hgEnv_.clear();
   for (const char* varName : passthroughVars) {
     auto value = getenv(varName);
     if (value) {
-      hgEnv_.push_back(folly::to<string>(varName, "=", value));
+      hgEnv_.set(varName, value);
     }
   }
-  hgEnv_.push_back("HGPLAIN=1");
-  hgEnv_.push_back("HGRCPATH=");
-  hgEnv_.push_back("CHGDISABLE=1");
-  hgEnv_.push_back("NOSCMLOG=1");
-  hgEnv_.push_back("LOCALE=C");
+
+  hgEnv_.set("HGPLAIN", "1");
+  hgEnv_.set("HGRCPATH", "");
+  hgEnv_.set("CHGDISABLE", "1");
+  hgEnv_.set("NOSCMLOG", "1");
+  hgEnv_.set("LOCALE", "C");
   // Trick Mercurial into thinking it's in a test so it doesn't generate
   // prod configs.
-  hgEnv_.push_back("TESTTMP=");
+  hgEnv_.set("TESTTMP", "");
 }
 
 string HgRepo::hg(vector<string> args) {
@@ -87,29 +87,36 @@ string HgRepo::hg(vector<string> args) {
   return outputs.first;
 }
 
-Subprocess HgRepo::invokeHg(vector<string> args) {
-  return invokeHg(
-      std::move(args), Subprocess::Options().chdir(path_.value()).pipeStdout());
+SpawnedProcess HgRepo::invokeHg(vector<string> args) {
+  SpawnedProcess::Options opts;
+  opts.chdir(path_);
+  opts.pipeStdout();
+  return invokeHg(std::move(args), std::move(opts));
 }
 
-Subprocess HgRepo::invokeHg(
+SpawnedProcess HgRepo::invokeHg(
     vector<string> args,
-    const Subprocess::Options& options) {
+    SpawnedProcess::Options&& options) {
   args.insert(args.begin(), "hg");
 
   XLOG(DBG1) << "repo " << path_ << " running: " << folly::join(" ", args);
-  return Subprocess(args, options, hgCmd_.value().c_str(), &hgEnv_);
+  options.environment() = hgEnv_;
+  options.executablePath(hgCmd_);
+  return SpawnedProcess(args, std::move(options));
 }
 
 void HgRepo::hgInit(std::vector<std::string> extraArgs) {
   XLOG(DBG1) << "creating new hg repository at " << path_;
 
-  // Invoke Subprocess directly here rather than using our hg() helper
+  // Invoke SpawnedProcess directly here rather than using our hg() helper
   // function.  The hg() function requires the repository directory to already
   // exist.
   std::vector<std::string> args = {"hg", "init", path_.value()};
   args.insert(args.end(), extraArgs.begin(), extraArgs.end());
-  Subprocess p(args, Subprocess::Options(), hgCmd_.value().c_str(), &hgEnv_);
+  SpawnedProcess::Options opts;
+  opts.environment() = hgEnv_;
+  opts.executablePath(hgCmd_);
+  SpawnedProcess p(args, std::move(opts));
   p.waitChecked();
 }
 
@@ -139,7 +146,10 @@ void HgRepo::cloneFrom(
   args.push_back(path_.value());
   XLOG(DBG1) << "running: " << folly::join(" ", args);
 
-  Subprocess p(args, Subprocess::Options(), hgCmd_.value().c_str(), &hgEnv_);
+  SpawnedProcess::Options opts;
+  opts.executablePath(hgCmd_);
+  opts.environment() = hgEnv_;
+  SpawnedProcess p(args, std::move(opts));
   p.waitChecked();
 }
 
