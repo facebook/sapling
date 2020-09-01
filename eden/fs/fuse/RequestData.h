@@ -93,9 +93,6 @@ class RequestData : public ObjectFetchContext {
 
   // Override of `ObjectFetchContext`
   std::optional<pid_t> getClientPid() const override {
-    if (fuseHeader_.opcode == 0) {
-      return std::nullopt;
-    }
     return static_cast<pid_t>(fuseHeader_.pid);
   }
 
