@@ -13,7 +13,7 @@ use anyhow::Error;
 use bytes::Bytes;
 use futures::future::TryFutureExt;
 use futures_ext::{BoxFuture, FutureExt};
-use futures_old::Future;
+use futures_old::{future::lazy, Future};
 use sql::{queries, Connection};
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
 use sql_ext::SqlConnections;
@@ -77,27 +77,29 @@ impl SqlConstruct for SqlStreamingChunksFetcher {
 
 impl SqlConstructFromMetadataDatabaseConfig for SqlStreamingChunksFetcher {}
 
-fn fetch_blob<B: Blobstore>(
+fn fetch_blob(
     ctx: CoreContext,
-    blobstore: &B,
+    blobstore: impl Blobstore,
     key: &[u8],
     expected_size: usize,
 ) -> BoxFuture<Bytes, Error> {
     let key = String::from_utf8_lossy(key).into_owned();
-    blobstore
-        .get(ctx.clone(), key.clone())
-        .compat()
-        .and_then(move |data| match data {
-            None => Err(ErrorKind::MissingStreamingBlob(key).into()),
-            Some(data) if data.as_bytes().len() == expected_size => Ok(data.into_raw_bytes()),
-            Some(data) => {
-                Err(
-                    ErrorKind::CorruptStreamingBlob(key, data.as_bytes().len(), expected_size)
-                        .into(),
-                )
-            }
-        })
-        .boxify()
+    lazy(move || {
+        blobstore
+            .get(ctx, key.clone())
+            .compat()
+            .and_then(move |data| match data {
+                None => Err(ErrorKind::MissingStreamingBlob(key).into()),
+                Some(data) if data.as_bytes().len() == expected_size => Ok(data.into_raw_bytes()),
+                Some(data) => {
+                    Err(
+                        ErrorKind::CorruptStreamingBlob(key, data.as_bytes().len(), expected_size)
+                            .into(),
+                    )
+                }
+            })
+    })
+    .boxify()
 }
 
 impl SqlStreamingChunksFetcher {
@@ -118,13 +120,13 @@ impl SqlStreamingChunksFetcher {
                         res.index_size += idx_size;
                         res.data_blobs.push(fetch_blob(
                             ctx.clone(),
-                            &blobstore,
+                            blobstore.clone(),
                             &data_blob_name,
                             data_size,
                         ));
                         res.index_blobs.push(fetch_blob(
                             ctx.clone(),
-                            &blobstore,
+                            blobstore.clone(),
                             &idx_blob_name,
                             idx_size,
                         ));

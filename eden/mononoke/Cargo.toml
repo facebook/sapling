@@ -4,7 +4,7 @@ edition = "2018"
 version = "0.1.0"
 authors = ['Facebook']
 license = "GPLv2+"
-include = ["cmds/admin/**/*.rs", "cmds/aliasverify.rs", "cmds/backfill_derived_data/**/*.rs", "cmds/backfill_git_mapping.rs", "cmds/benchmark_filestore.rs", "cmds/benchmark_storage_config/**/*.rs", "cmds/blobimport.rs", "cmds/blobstore_healer/**/*.rs", "cmds/bonsai_verify/**/*.rs", "cmds/configlint.rs", "cmds/dumprev.rs", "cmds/idxdump.rs", "cmds/lfs_import.rs", "cmds/manual_scrub/**/*.rs", "cmds/rechunker.rs", "cmds/revlogrepo.rs", "cmds/statistics_collector.rs", "cmds/upload_globalrevs.rs"]
+include = ["cmds/admin/**/*.rs", "cmds/aliasverify.rs", "cmds/backfill_derived_data/**/*.rs", "cmds/backfill_git_mapping.rs", "cmds/benchmark_filestore.rs", "cmds/benchmark_storage_config/**/*.rs", "cmds/blobimport.rs", "cmds/blobstore_healer/**/*.rs", "cmds/bonsai_verify/**/*.rs", "cmds/configlint.rs", "cmds/dumprev.rs", "cmds/idxdump.rs", "cmds/lfs_import.rs", "cmds/manual_scrub/**/*.rs", "cmds/rechunker.rs", "cmds/revlogrepo.rs", "cmds/statistics_collector.rs", "cmds/streaming_clone_warmup/**/*.rs", "cmds/upload_globalrevs.rs"]
 
 [[bin]]
 name = "admin"
@@ -75,6 +75,10 @@ name = "statistics_collector"
 path = "cmds/statistics_collector.rs"
 
 [[bin]]
+name = "streaming_clone_warmup"
+path = "cmds/streaming_clone_warmup/main.rs"
+
+[[bin]]
 name = "upload_globalrevs"
 path = "cmds/upload_globalrevs.rs"
 
@@ -130,6 +134,7 @@ skiplist = { path = "reachabilityindex/skiplist" }
 sql_construct = { path = "common/sql_construct" }
 sql_ext = { path = "common/rust/sql_ext" }
 sqlblob = { path = "blobstore/sqlblob" }
+streaming_clone = { path = "repo_client/streaming_clone" }
 synced_commit_mapping = { path = "commit_rewriting/synced_commit_mapping" }
 throttledblob = { path = "blobstore/throttledblob" }
 unodes = { path = "derived_data/unodes" }
@@ -360,7 +365,6 @@ prost = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runti
 prost-build = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
 prost-derive = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
 prost-types = { git = "https://github.com/gabrielrussoc/prost", branch = "protoc-runtime" }
-protobuf-build = { git = "https://github.com/tikv/protobuf-build.git", rev = "1b8b7f8b4aa1be4647acd85bab9345583a5df4f1" }
 pyo3 = { git = "https://github.com/PyO3/pyo3.git", rev = "4af61e83c34a04d74679a1048ee3866831a327ab" }
 r2d2_sqlite = { git = "https://github.com/jsgf/r2d2-sqlite.git", rev = "6d77a828ca0a3c507a3f58561532a1b6c66c7918" }
 rustfilt = { git = "https://github.com/jsgf/rustfilt.git", rev = "8141fa7f1caee562ee8daffb2ddeca3d1f0d36e5" }
