@@ -437,20 +437,7 @@ mod tests {
     /*
         The test checks, if get_large_repo_setting function returns the correct
         variables for a large repo setting given small repo settings.
-        small repo 1:
-            given path is unmatched:
-                default action: prepend path with large_repo
-                small repo dest path prefix = "dest_path_prefix"
-                => large repo dest path prefix = "large_repo/dest_path_prefix"
-        small repo 2:
-            given path is unmatched:
-                preserve path in large repo
-            given path is matched:
-                change path in large repo to dpp2
-                small repo dest path prefix = "dest_path_prefix_2/dir"
-                => large repo dest path prefix = "dpp2/dir"
-
-        bookmarks are prepended with the bookmark_prefixes given in the configs
+        -> bookmarks are prepended with the bookmark_prefixes given in the configs
     */
     #[fbinit::compat_test]
     async fn test_get_large_repo_setting(fb: FacebookInit) -> Result<()> {
@@ -462,7 +449,6 @@ mod tests {
         let small_repo_setting_1 = RepoImportSetting {
             importing_bookmark: create_bookmark_name("importing_bookmark"),
             dest_bookmark: create_bookmark_name("dest_bookmark"),
-            dest_path_prefix: mp("dest_path_prefix"),
         };
 
         let syncers_1 = create_commit_syncers(
@@ -478,7 +464,6 @@ mod tests {
         let expected_large_repo_setting_1 = RepoImportSetting {
             importing_bookmark: create_bookmark_name("large_repo_bookmark/importing_bookmark"),
             dest_bookmark: create_bookmark_name("large_repo_bookmark/dest_bookmark"),
-            dest_path_prefix: mp("large_repo/dest_path_prefix"),
         };
 
         assert_eq!(expected_large_repo_setting_1, large_repo_setting_1);
@@ -488,7 +473,6 @@ mod tests {
         let small_repo_setting_2 = RepoImportSetting {
             importing_bookmark: create_bookmark_name("importing_bookmark_2"),
             dest_bookmark: create_bookmark_name("dest_bookmark_2"),
-            dest_path_prefix: mp("dest_path_prefix_2/dir"),
         };
 
         let syncers_2 = create_commit_syncers(
@@ -504,7 +488,6 @@ mod tests {
         let expected_large_repo_setting_2 = RepoImportSetting {
             importing_bookmark: create_bookmark_name("large_repo_bookmark_2/importing_bookmark_2"),
             dest_bookmark: create_bookmark_name("large_repo_bookmark_2/dest_bookmark_2"),
-            dest_path_prefix: mp("dpp2/dir"),
         };
 
         assert_eq!(expected_large_repo_setting_2, large_repo_setting_2);

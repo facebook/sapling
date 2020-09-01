@@ -30,7 +30,7 @@ use maplit::hashset;
 use mercurial_types::{HgChangesetId, MPath};
 use metaconfig_types::RepoConfig;
 use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime};
-use movers::DefaultAction;
+use movers::{DefaultAction, Mover};
 use mutable_counters::{MutableCounters, SqlMutableCounters};
 use pushrebase::do_pushrebase_bonsai;
 use serde::{Deserialize, Serialize};
@@ -40,6 +40,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use std::convert::TryInto;
 use std::num::NonZeroUsize;
 use std::path::Path;
+use std::sync::Arc;
 use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
 use tokio::{fs, io::AsyncWriteExt, process, time};
 use topo_sort::sort_topological;
@@ -94,34 +95,30 @@ struct ChangesetArgs {
 struct RepoImportSetting {
     importing_bookmark: BookmarkName,
     dest_bookmark: BookmarkName,
-    dest_path_prefix: MPath,
 }
 
 async fn rewrite_file_paths(
     ctx: &CoreContext,
     repo: &BlobRepo,
     path: &Path,
-    dest_path_prefix: MPath,
     backup_hashes_path: &str,
+    mover: &Mover,
 ) -> Result<Vec<BonsaiChangeset>, Error> {
     let prefs = GitimportPreferences::default();
     let target = GitimportTarget::FullRepo;
     info!(ctx.logger(), "Started importing git commits to Mononoke");
     let import_map = import_tools::gitimport(ctx, repo, path, target, prefs).await?;
     info!(ctx.logger(), "Added commits to Mononoke");
-    let mut remapped_parents: HashMap<ChangesetId, ChangesetId> = HashMap::new();
-    let mover = movers::mover_factory(
-        HashMap::new(),
-        DefaultAction::PrependPrefix(dest_path_prefix),
-    )?;
-    let mut bonsai_changesets = vec![];
-    let mut index = 1;
-    let map_size = import_map.len();
     // Save the hashes to a txt file as a backup. If we failed at deriving data types, we can
     // use the hashes to derive the commits manually.
-    let mut file = fs::File::create(backup_hashes_path).await?;
-    for (_id, (bcs_id, bcs)) in import_map {
-        let bcs_mut = bcs.into_mut();
+    let mut backup_hashes_file = fs::File::create(backup_hashes_path).await?;
+    let bonsai_values: Vec<(ChangesetId, BonsaiChangeset)> = import_map.values().cloned().collect();
+    let mut remapped_parents: HashMap<ChangesetId, ChangesetId> = HashMap::new();
+    let mut index = 1;
+    let map_size = bonsai_values.len();
+    let mut bonsai_changesets = vec![];
+    for (bcs_id, bcs) in bonsai_values {
+        let bcs_mut = bcs.clone().into_mut();
         let rewritten_bcs_opt = rewrite_commit(
             ctx.clone(),
             bcs_mut,
@@ -133,21 +130,19 @@ async fn rewrite_file_paths(
 
         if let Some(rewritten_bcs_mut) = rewritten_bcs_opt {
             let rewritten_bcs = rewritten_bcs_mut.freeze()?;
-            remapped_parents.insert(bcs_id, rewritten_bcs.get_changeset_id());
+            remapped_parents.insert(bcs_id.clone(), rewritten_bcs.get_changeset_id());
+            let rewritten_bcs_id = rewritten_bcs.get_changeset_id();
             info!(
                 ctx.logger(),
-                "Commit {}/{}: Remapped {:?} => {:?}",
-                index,
-                map_size,
-                bcs_id,
-                rewritten_bcs.get_changeset_id(),
+                "Commit {}/{}: Remapped {:?} => {:?}", index, map_size, bcs_id, rewritten_bcs_id,
             );
-            let hash = format!("{}\n", rewritten_bcs.get_changeset_id());
-            file.write_all(hash.as_bytes()).await?;
+            let hash = format!("{}\n", rewritten_bcs_id);
+            backup_hashes_file.write_all(hash.as_bytes()).await?;
             bonsai_changesets.push(rewritten_bcs);
         }
         index += 1;
     }
+
     info!(ctx.logger(), "Saving bonsai changesets");
     save_bonsai_changesets(bonsai_changesets.clone(), ctx.clone(), repo.clone())
         .compat()
@@ -592,7 +587,6 @@ where
     let RepoImportSetting {
         importing_bookmark,
         dest_bookmark,
-        dest_path_prefix,
     } = small_repo_setting;
 
     let large_importing_bookmark =
@@ -620,22 +614,9 @@ where
         ctx.logger(),
         "Set large repo's destination bookmark to {}", large_dest_bookmark
     );
-    let large_dest_path_prefix =
-        commit_syncer.get_mover()(&dest_path_prefix)?.ok_or_else(|| {
-            format_err!(
-                "Couldn't not generate large dest pass prefix from {:?} using syncer {:?}",
-                dest_path_prefix,
-                commit_syncer
-            )
-        })?;
-    info!(
-        ctx.logger(),
-        "In large repo we import into {}", large_dest_path_prefix
-    );
     let large_repo_setting = RepoImportSetting {
         importing_bookmark: large_importing_bookmark,
         dest_bookmark: large_dest_bookmark,
-        dest_path_prefix: large_dest_path_prefix,
     };
     info!(ctx.logger(), "Finished generating the variables");
     Ok(large_repo_setting)
@@ -682,7 +663,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let mut repo_import_setting = RepoImportSetting {
         importing_bookmark,
         dest_bookmark,
-        dest_path_prefix,
     };
     args::init_cachelib(fb, &matches, None);
 
@@ -718,6 +698,11 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             )
             .await?;
 
+            let mut movers = vec![movers::mover_factory(
+                HashMap::new(),
+                DefaultAction::PrependPrefix(dest_path_prefix),
+            )?];
+
             if let Some(large_repo_config) = maybe_large_repo_config {
                 let large_repo_id = large_repo_config.repoid;
                 let large_repo = args::open_repo_with_repo_id(fb, &logger, large_repo_id, &matches)
@@ -741,6 +726,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                     &commit_sync_config,
                     mapping.clone(),
                 )?;
+
+                movers.push(syncers.small_to_large.get_mover().clone());
                 repo_import_setting =
                     get_large_repo_setting(&ctx, &repo_import_setting, &syncers.small_to_large)
                         .await?;
@@ -748,18 +735,24 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 repo_config = large_repo_config;
             }
 
+            let combined_mover: Mover = Arc::new(move |source_path: &MPath| {
+                let mut mutable_path = source_path.clone();
+                for mover in movers.clone() {
+                    let maybe_path = mover(&mutable_path)?;
+                    mutable_path = match maybe_path {
+                        Some(moved_path) => moved_path,
+                        None => return Ok(None),
+                    };
+                }
+                Ok(Some(mutable_path))
+            });
+
             let mutable_counters = args::open_sql::<SqlMutableCounters>(ctx.fb, &matches)
                 .compat()
                 .await?;
-
-            let mut shifted_bcs = rewrite_file_paths(
-                &ctx,
-                &repo,
-                &path,
-                repo_import_setting.dest_path_prefix,
-                &backup_hashes_path,
-            )
-            .await?;
+            let mut shifted_bcs =
+                rewrite_file_paths(&ctx, &repo, &path, &backup_hashes_path, &combined_mover)
+                    .await?;
             shifted_bcs = sort_bcs(&shifted_bcs)?;
             info!(ctx.logger(), "Start deriving data types");
             derive_bonsais(&ctx, &repo, &shifted_bcs).await?;
