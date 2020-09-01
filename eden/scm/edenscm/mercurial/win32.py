@@ -668,44 +668,6 @@ def enablevtmode():
     return True
 
 
-def spawndetached(args):
-    # No standard library function really spawns a fully detached
-    # process under win32 because they allocate pipes or other objects
-    # to handle standard streams communications. Passing these objects
-    # to the child process requires handle inheritance to be enabled
-    # which makes really detached processes impossible.
-    si = _STARTUPINFO()
-    si.cb = ctypes.sizeof(_STARTUPINFO)
-
-    pi = _PROCESS_INFORMATION()
-
-    env = ""
-    for k in encoding.environ:
-        env += "%s=%s\0" % (k, encoding.environ[k])
-    if not env:
-        env = "\0"
-    env += "\0"
-
-    args = subprocess.list2cmdline(args)
-
-    res = _kernel32.CreateProcessA(
-        None,
-        args,
-        None,
-        None,
-        False,
-        _CREATE_NO_WINDOW,
-        env,
-        pycompat.getcwd(),
-        ctypes.byref(si),
-        ctypes.byref(pi),
-    )
-    if not res:
-        raise ctypes.WinError()
-
-    return pi.dwProcessId
-
-
 def unlink(f):
     """try to implement POSIX' unlink semantics on Windows"""
 

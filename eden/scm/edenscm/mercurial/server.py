@@ -87,7 +87,8 @@ def runservice(
     if opts["daemon_postexec"]:
         try:
             os.setsid()
-        except AttributeError:
+        except (AttributeError, OSError):
+            # OSError can happen if spawn-ext already does setsid().
             pass
         for inst in opts["daemon_postexec"]:
             if inst.startswith("unlink:"):

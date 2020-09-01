@@ -165,7 +165,6 @@ setbinary = platform.setbinary
 setflags = platform.setflags
 setsignalhandler = platform.setsignalhandler
 shellquote = platform.shellquote
-spawndetached = platform.spawndetached
 split = platform.split
 sshargs = platform.sshargs
 statfiles = getattr(osutil, "statfiles", platform.statfiles)
@@ -4709,3 +4708,13 @@ def gcdir(path, mtimethreshold):
 
         if stat.st_mtime < deadline:
             tryunlink(path)
+
+
+def spawndetached(args, cwd=None, env=None):
+    cmd = bindings.process.Command.new(args[0])
+    cmd.args(args[1:])
+    if cwd is not None:
+        cmd.currentdir(cwd)
+    if env is not None:
+        cmd.envclear().envs(sorted(env.items()))
+    return cmd.spawndetached().id()
