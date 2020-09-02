@@ -989,7 +989,9 @@ class curseschunkselector(object):
         # strip \n, and convert control characters to ^[char] representation
         text = text.strip(b"\n")
         text = re.sub(
-            br"[\x00-\x08\x0a-\x1f]", lambda m: b"^" + chr(ord(m.group()) + 64), text
+            br"[\x00-\x08\x0a-\x1f]",
+            lambda m: b"^" + bytearray([ord(m.group()) + 64]),
+            text,
         )
 
         if pair is not None:
