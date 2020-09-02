@@ -441,6 +441,35 @@ impl SpanSet {
             }
         }
     }
+
+    /// Intersection with a span. Return the min Id.
+    ///
+    /// This is not a general purpose API, but useful for internal logic
+    /// like DAG descendant calculation.
+    pub(crate) fn intersection_span_min(&self, rhs: Span) -> Option<Id> {
+        let i = match self
+            .spans
+            .binary_search_by(|probe| rhs.low.cmp(&probe.high))
+        {
+            Ok(idx) => idx,
+            Err(idx) => idx.max(1) - 1,
+        };
+        // Prefer small index so we get the span that might overlap:
+        // |----spans[1]----|      |----spans[0]----|
+        //                     |----rhs-----|
+        //                     (want spans[0], not spans[1])
+        if i < self.spans.len() {
+            let lhs = self.spans[i];
+            if lhs.low <= rhs.high && lhs.high >= rhs.low {
+                Some(lhs.low.max(rhs.low))
+            } else {
+                None
+            }
+        } else {
+            // Happens if the set is empty.
+            None
+        }
+    }
 }
 
 /// Push a span to `VecDeque<Span>`. Try to union them in-place.
@@ -916,6 +945,17 @@ mod tests {
             set.as_spans(),
             &vec![Span::from(22..=30), Span::from(10..=20)]
         );
+    }
+
+    #[test]
+    fn test_intersection_span_min() {
+        let set = SpanSet::from_spans(vec![1..=10, 11..=20, 30..=40]);
+        assert_eq!(set.intersection_span_min((15..=45).into()), Some(Id(15)));
+        assert_eq!(set.intersection_span_min((20..=32).into()), Some(Id(20)));
+        assert_eq!(set.intersection_span_min((21..=29).into()), None);
+        assert_eq!(set.intersection_span_min((21..=32).into()), Some(Id(30)));
+        assert_eq!(set.intersection_span_min((35..=45).into()), Some(Id(35)));
+        assert_eq!(set.intersection_span_min((45..=55).into()), None);
     }
 
     #[test]
