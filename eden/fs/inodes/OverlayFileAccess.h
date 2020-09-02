@@ -12,7 +12,7 @@
 #include <folly/container/EvictingCacheMap.h>
 #include <memory>
 #include "eden/fs/fuse/BufVec.h"
-#include "eden/fs/fuse/InodeNumber.h"
+#include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/OverlayFile.h"
 #include "eden/fs/model/Hash.h"
 

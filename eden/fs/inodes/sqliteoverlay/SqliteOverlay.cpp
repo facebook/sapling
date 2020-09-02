@@ -12,7 +12,7 @@
 #include <folly/logging/xlog.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 #include <iostream>
-#include "eden/fs/fuse/InodeNumber.h"
+#include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/sqlite/Sqlite.h"
 #include "eden/fs/store/StoreResult.h"
 #include "eden/fs/utils/PathFuncs.h"

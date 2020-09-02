@@ -12,7 +12,7 @@
 #include <memory>
 #include <optional>
 #include <vector>
-#include "eden/fs/fuse/InodeNumber.h"
+#include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/inodes/InodeTimestamps.h"
 #include "eden/fs/store/IObjectStore.h"

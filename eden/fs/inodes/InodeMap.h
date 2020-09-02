@@ -22,8 +22,8 @@
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/takeover/gen-cpp2/takeover_types.h"
 #else
-#include "eden/fs/fuse/InodeNumber.h"
 #include "eden/fs/inodes/InodeBase.h"
+#include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/win/utils/Stub.h" // @manual
 #endif

@@ -13,11 +13,6 @@ if(WIN32)
     ${CMAKE_CURRENT_SOURCE_DIR}/OverlayFileAccess.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/InodeMetadata.cpp
   )
-  list(
-    APPEND
-    INODES_SRCS
-    ${CMAKE_CURRENT_SOURCE_DIR}/../fuse/InodeNumber.cpp
-  )
 else()
   file(GLOB INODES_SRCS "*.cpp")
 endif()

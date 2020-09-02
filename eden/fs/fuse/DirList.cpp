@@ -8,7 +8,7 @@
 #include "eden/fs/fuse/DirList.h"
 
 #include "eden/fs/fuse/FuseTypes.h"
-#include "eden/fs/fuse/InodeNumber.h"
+#include "eden/fs/inodes/InodeNumber.h"
 
 using folly::StringPiece;
 

@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/fuse/InodeNumber.h"
+#include "eden/fs/inodes/InodeNumber.h"
 
 #include <folly/Conv.h>
 #include <ostream>

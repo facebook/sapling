@@ -12,7 +12,7 @@
 #include <sys/statvfs.h>
 #include "eden/fs/fuse/BufVec.h"
 #include "eden/fs/fuse/FuseTypes.h"
-#include "eden/fs/fuse/InodeNumber.h"
+#include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/store/IObjectStore.h"
 #include "eden/fs/utils/PathFuncs.h"
 

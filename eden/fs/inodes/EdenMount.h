@@ -21,8 +21,8 @@
 #include <optional>
 #include <shared_mutex>
 #include <stdexcept>
-#include "eden/fs/fuse/InodeNumber.h"
 #include "eden/fs/inodes/CacheHint.h"
+#include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/InodePtrFwd.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/journal/Journal.h"

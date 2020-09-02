@@ -13,8 +13,8 @@
 #include <sys/stat.h>
 #include <optional>
 #include <vector>
-#include "eden/fs/fuse/InodeNumber.h"
 #include "eden/fs/inodes/EdenMount.h"
+#include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
