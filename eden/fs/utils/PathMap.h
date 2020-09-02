@@ -7,6 +7,7 @@
 
 #pragma once
 #include <folly/FBVector.h>
+#include <folly/Portability.h>
 #include <algorithm>
 #include <functional>
 #include <iterator>
@@ -15,6 +16,8 @@
 
 namespace facebook {
 namespace eden {
+
+constexpr bool kPathMapDefaultCaseSensitive = !folly::kIsWindows;
 
 /** An associative container that maps from one of our path types to an
  * arbitrary value type.
@@ -30,7 +33,10 @@ namespace eden {
  * - Since insert and erase operations move the vector contents around,
  *   those operations invalidate iterators.
  */
-template <typename Value, typename Key = PathComponent>
+template <
+    typename Value,
+    typename Key = PathComponent,
+    bool CaseSensitive = kPathMapDefaultCaseSensitive>
 class PathMap : private folly::fbvector<std::pair<Key, Value>> {
   using Pair = std::pair<Key, Value>;
   using Vector = folly::fbvector<Pair>;
@@ -164,18 +170,17 @@ class PathMap : private folly::fbvector<std::pair<Key, Value>> {
       // Found it
       return iter;
     }
-#ifdef _WIN32
-    // On Windows we need to do a case insensitive lookup for the file and
-    // directory names. For performance, we will do a case sensitive search
-    // first which should cover most of the cases and if not found then do a
-    // case sensitive search.
-    for (iter = begin(); iter != end(); ++iter) {
-      if (key.stringPiece().equals(
-              iter->first.stringPiece(), folly::AsciiCaseInsensitive())) {
-        return iter;
+    if (!CaseSensitive) {
+      // When !CaseSensitive, for performance, we will do a case sensitive
+      // search first which should cover most of the cases and if not found then
+      // do a case insensitive search.
+      for (iter = begin(); iter != end(); ++iter) {
+        if (key.stringPiece().equals(
+                iter->first.stringPiece(), folly::AsciiCaseInsensitive())) {
+          return iter;
+        }
       }
     }
-#endif
     return end();
   }
 
@@ -188,18 +193,14 @@ class PathMap : private folly::fbvector<std::pair<Key, Value>> {
       // Found it
       return iter;
     }
-#ifdef _WIN32
-    // On Windows we need to do a case insensitive lookup for the file and
-    // directory names. For performance, we will do a case sensitive search
-    // first which should cover most of the cases and if not found then do a
-    // case sensitive search.
-    for (iter = begin(); iter != end(); ++iter) {
-      if (key.stringPiece().equals(
-              iter->first.stringPiece(), folly::AsciiCaseInsensitive())) {
-        return iter;
+    if (!CaseSensitive) {
+      for (iter = begin(); iter != end(); ++iter) {
+        if (key.stringPiece().equals(
+                iter->first.stringPiece(), folly::AsciiCaseInsensitive())) {
+          return iter;
+        }
       }
     }
-#endif
     return end();
   }
 
@@ -209,10 +210,24 @@ class PathMap : private folly::fbvector<std::pair<Key, Value>> {
    * a boolean that is true if an insert took place. */
   std::pair<iterator, bool> insert(const value_type& val) {
     auto iter = lower_bound(val.first);
-    if (iter == end() || compare_(val.first, iter->first)) {
-      return std::make_pair(Vector::insert(iter, val), true);
+
+    if (iter != end() && !compare_(val.first, iter->first)) {
+      // Found it; leave it alone
+      return std::make_pair(iter, false);
     }
-    return std::make_pair(iter, false);
+
+    if (!CaseSensitive) {
+      for (auto insens = begin(); insens != end(); ++insens) {
+        if (val.first.stringPiece().equals(
+                insens->first.stringPiece(), folly::AsciiCaseInsensitive())) {
+          // Found it; leave it alone
+          return std::make_pair(insens, false);
+        }
+      }
+    }
+
+    // Otherwise, iter is the insertion point
+    return std::make_pair(Vector::insert(iter, val), true);
   }
 
   /** Emplace a new key-value pair by constructing it in-place.
@@ -224,22 +239,51 @@ class PathMap : private folly::fbvector<std::pair<Key, Value>> {
   template <typename... Args>
   std::pair<iterator, bool> emplace(Piece key, Args&&... args) {
     auto iter = lower_bound(key);
-    if (iter == end() || compare_(key, iter->first)) {
-      iter = Vector::emplace(
-          iter, std::make_pair(Key(key), Value(std::forward<Args>(args)...)));
-      return std::make_pair(iter, true);
+
+    if (iter != end() && !compare_(key, iter->first)) {
+      // Found it; leave it alone
+      return std::make_pair(iter, false);
     }
-    return std::make_pair(iter, false);
+
+    if (!CaseSensitive) {
+      for (auto insens = begin(); insens != end(); ++insens) {
+        if (key.stringPiece().equals(
+                insens->first.stringPiece(), folly::AsciiCaseInsensitive())) {
+          // Found it; leave it alone
+          return std::make_pair(insens, false);
+        }
+      }
+    }
+
+    // Otherwise, iter is the insertion point
+    iter = Vector::emplace(
+        iter, std::make_pair(Key(key), Value(std::forward<Args>(args)...)));
+    return std::make_pair(iter, true);
   }
 
   /** Returns a reference to the map position for key, creating it needed.
    * If the key is already present, no additional allocations are performed. */
   mapped_type& operator[](Piece key) {
     auto iter = lower_bound(key);
-    if (iter == end() || compare_(key, iter->first)) {
-      // Not yet present, make a new one
-      iter = Vector::insert(iter, std::make_pair(Key(key), mapped_type()));
+
+    if (iter != end() && !compare_(key, iter->first)) {
+      // Found it
+      return iter->second;
     }
+
+    if (!CaseSensitive) {
+      // Case insensitive lookup
+      for (auto insens = begin(); insens != end(); ++insens) {
+        if (key.stringPiece().equals(
+                insens->first.stringPiece(), folly::AsciiCaseInsensitive())) {
+          // Found it
+          return insens->second;
+        }
+      }
+    }
+
+    // Not yet present, make a new one at the insertion point
+    iter = Vector::insert(iter, std::make_pair(Key(key), mapped_type()));
     return iter->second;
   }
 

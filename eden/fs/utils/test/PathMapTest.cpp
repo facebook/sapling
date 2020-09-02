@@ -14,6 +14,54 @@ using facebook::eden::PathComponentPiece;
 using facebook::eden::PathMap;
 using namespace facebook::eden::path_literals;
 
+TEST(PathMap, caseSensitive) {
+  // Explicitly a case sensitive map, regardless of the host OS
+  PathMap<bool, PathComponent, true> map;
+
+  map.insert(std::make_pair(PathComponent("foo"), true));
+  EXPECT_TRUE(map.at("foo"_pc));
+  EXPECT_EQ(map.find("Foo"_pc), map.end());
+
+  EXPECT_TRUE(map.insert(std::make_pair(PathComponent("FOO"), false)).second);
+  EXPECT_EQ(map.size(), 2);
+  EXPECT_TRUE(map.at("foo"_pc));
+  EXPECT_FALSE(map.at("FOO"_pc));
+  EXPECT_EQ(map.erase("FOO"_pc), 1);
+  EXPECT_EQ(map.size(), 1);
+
+  map["FOO"_pc] = true;
+  map["Foo"_pc] = false;
+  EXPECT_EQ(map.size(), 3);
+}
+
+TEST(PathMap, caseInSensitive) {
+  // Explicitly a case IN-sensitive map, regardless of the host OS
+  PathMap<bool, PathComponent, false> map;
+
+  map.insert(std::make_pair(PathComponent("foo"), true));
+  EXPECT_TRUE(map.at("foo"_pc));
+  EXPECT_TRUE(map.at("Foo"_pc));
+
+  EXPECT_FALSE(map.insert(std::make_pair(PathComponent("FOO"), false)).second);
+  EXPECT_FALSE(map.emplace(PathComponent("FOO"), false).second);
+  EXPECT_EQ(map.size(), 1);
+  EXPECT_TRUE(map.at("foo"_pc));
+  EXPECT_TRUE(map.at("FOO"_pc));
+
+  EXPECT_EQ(map.erase("FOO"_pc), 1);
+  EXPECT_EQ(map.size(), 0);
+
+  // Case insensitive referencing
+  map["FOO"_pc] = true;
+  map["Foo"_pc] = false;
+  // Only one FOO entry
+  EXPECT_EQ(map.size(), 1);
+  // It shows as false
+  EXPECT_EQ(map["FOO"_pc], false);
+  // The assignment above didn't change the case of the key!
+  EXPECT_EQ(map.begin()->first, "FOO"_pc);
+}
+
 TEST(PathMap, insert) {
   PathMap<bool> map;
 
