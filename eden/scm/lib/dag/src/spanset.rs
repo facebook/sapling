@@ -398,6 +398,26 @@ impl SpanSet {
         push_with_union(&mut self.spans, span);
     }
 
+    /// Internal use only. Append a span, which must have high boundaries
+    /// than existing spans. In other words, spans passed to this function
+    /// should be in ascending order.
+    pub(crate) fn push_span_asc(&mut self, span: Span) {
+        if self.spans.is_empty() {
+            self.spans.push_back(span);
+        } else {
+            let mut last = &mut self.spans[0];
+            // | last |
+            //     | span |  | span |
+            debug_assert!(span.low >= last.low);
+            if last.high + 1 >= span.low {
+                // Update in-place.
+                last.high = span.high.max(last.high);
+            } else {
+                self.spans.push_front(span);
+            }
+        }
+    }
+
     /// Internal use only. Append a [`SpanSet`], which must have lower
     /// boundaries than the existing spans.
     ///
@@ -595,77 +615,6 @@ impl AsRef<SpanSet> for SpanSet {
     fn as_ref(&self) -> &SpanSet {
         self
     }
-}
-
-/// `SpanSetAsc` is optimized for pushing spans in ascending order.
-/// (`SpanSet` is optimized for pushing spans in descending order).
-///
-/// It is only used by internal logic like the "range" DAG algorithm.
-///
-/// Internally, it just uses `SpanSet`, but replaces `id` with
-/// `Id::MAX - id`.
-#[derive(Clone)]
-pub(crate) struct SpanSetAsc(SpanSet);
-
-impl SpanSetAsc {
-    /// Return an empty `SpanSetAsc`.
-    pub fn empty() -> Self {
-        Self(SpanSet::empty())
-    }
-
-    /// Push a span. Spans must be pushed in ascending order.
-    pub(crate) fn push_span(&mut self, span: impl Into<Span>) {
-        self.0.push_span(span_rev(span.into()))
-    }
-
-    /// Test if an id exists in this span.
-    pub fn contains(&self, span: impl Into<Span>) -> bool {
-        self.0.contains(span_rev(span.into()))
-    }
-
-    /// Intersection with a span. Return the min Id.
-    ///
-    /// This is not a general purpose API, but useful for internal logic
-    /// like DAG descendant calculation.
-    pub(crate) fn intersection_span_min(&self, rhs: Span) -> Option<Id> {
-        let i = match self
-            .0
-            .spans
-            .binary_search_by(|&lhs| span_rev(lhs).high.cmp(&rhs.low))
-        {
-            Ok(i) => i,
-            Err(i) => i,
-        };
-        self.0.spans.get(i).and_then(|&lhs| {
-            let lhs = span_rev(lhs);
-            debug_assert!(lhs.high >= rhs.low);
-            if lhs.low <= rhs.high {
-                Some(lhs.low.max(rhs.low))
-            } else {
-                None
-            }
-        })
-    }
-
-    pub fn intersection(&self, rhs: &SpanSetAsc) -> SpanSetAsc {
-        Self(self.0.intersection(&rhs.0))
-    }
-
-    pub fn from_span_set(set: &SpanSet) -> SpanSetAsc {
-        let spans = set.as_spans().iter().cloned().rev().map(span_rev);
-        SpanSetAsc(SpanSet::from_sorted_spans(spans))
-    }
-
-    /// Convert back to a `SpanSet` optimized for descending order.
-    pub fn into_span_set(self) -> SpanSet {
-        let spans = self.0.as_spans().iter().cloned().rev().map(span_rev);
-        SpanSet::from_sorted_spans(spans)
-    }
-}
-
-/// Reverse a `Span`, for `SpanSetAsc` use-cases.
-fn span_rev(span: Span) -> Span {
-    Span::from((Id::MAX - span.high.0)..=(Id::MAX - span.low.0))
 }
 
 #[cfg(test)]
@@ -950,35 +899,6 @@ mod tests {
     #[test]
     fn test_intersection_span_min() {
         let set = SpanSet::from_spans(vec![1..=10, 11..=20, 30..=40]);
-        assert_eq!(set.intersection_span_min((15..=45).into()), Some(Id(15)));
-        assert_eq!(set.intersection_span_min((20..=32).into()), Some(Id(20)));
-        assert_eq!(set.intersection_span_min((21..=29).into()), None);
-        assert_eq!(set.intersection_span_min((21..=32).into()), Some(Id(30)));
-        assert_eq!(set.intersection_span_min((35..=45).into()), Some(Id(35)));
-        assert_eq!(set.intersection_span_min((45..=55).into()), None);
-    }
-
-    #[test]
-    fn test_spanset_asc() {
-        let mut set = SpanSetAsc::empty();
-        assert!(!set.contains(3));
-
-        set.push_span(1..=10);
-        assert!(set.contains(3));
-
-        set.push_span(11..=20);
-        assert!(set.contains(10));
-        assert!(set.contains(11));
-        assert!(set.contains(20));
-        assert!(!set.contains(21));
-        assert_eq!(format!("{:?}", set.clone().into_span_set()), "1..=20");
-
-        set.push_span(30..=40);
-        assert_eq!(
-            format!("{:?}", set.clone().into_span_set()),
-            "1..=20 30..=40"
-        );
-
         assert_eq!(set.intersection_span_min((15..=45).into()), Some(Id(15)));
         assert_eq!(set.intersection_span_min((20..=32).into()), Some(Id(20)));
         assert_eq!(set.intersection_span_min((21..=29).into()), None);

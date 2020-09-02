@@ -12,7 +12,6 @@ use crate::idmap::AssignHeadOutcome;
 use crate::segment::{Segment, SegmentFlags};
 use crate::spanset::Span;
 use crate::spanset::SpanSet;
-use crate::spanset::SpanSetAsc;
 use crate::Error::Programming;
 use crate::Level;
 use crate::Result;
@@ -1335,7 +1334,7 @@ impl<Store: IdDagStore> IdDag<Store> {
             None => return Ok(SpanSet::empty()),
         };
         let max_root = roots.max().unwrap();
-        let mut result = SpanSetAsc::empty();
+        let mut result = SpanSet::empty();
 
         // For the master group, use linear scan for flat segments. This is
         // usually more efficient, because the master group usually only has 1
@@ -1369,9 +1368,9 @@ impl<Store: IdDagStore> IdDag<Store> {
             if low > master_max_id {
                 break;
             }
-            result.push_span(low..=span.high.min(master_max_id));
+            result.push_span_asc(Span::from(low..=span.high.min(master_max_id)));
         }
-        result = result.intersection(&SpanSetAsc::from_span_set(&ancestors));
+        result = result.intersection(&ancestors);
 
         // For the non-master group, only check flat segments covered by
         // `ancestors`.
@@ -1382,7 +1381,7 @@ impl<Store: IdDagStore> IdDag<Store> {
         // a few heads in the non-master group. It's a waste of time to iterate
         // through lots of invisible segments.
         let non_master_spans = ancestors.intersection(&Group::NON_MASTER.span().into());
-        // Visit in ascending order so SpanSetAsc::push_span works efficiently.
+        // Visit in ascending order.
         let mut span_iter = non_master_spans.as_spans().iter().rev().cloned();
         let mut next_optional_span = span_iter.next();
         while let Some(next_span) = next_optional_span {
@@ -1398,7 +1397,7 @@ impl<Store: IdDagStore> IdDag<Store> {
             if roots.contains(overlap_span.low) {
                 // Descendants includes 'overlap_span' since 'low' is in 'roots'.
                 // (no need to check 'result' - it does not include anything in 'overlap')
-                result.push_span(overlap_span);
+                result.push_span_asc(overlap_span);
             } else if next_span.low == seg_span.low {
                 let parents = seg.parents()?;
                 if !parents.is_empty()
@@ -1407,7 +1406,7 @@ impl<Store: IdDagStore> IdDag<Store> {
                         .any(|p| result.contains(p) || roots.contains(p))
                 {
                     // Descendants includes 'overlap_span' since parents are in roots or result.
-                    result.push_span(overlap_span);
+                    result.push_span_asc(overlap_span);
                 } else if overlap_span.low <= max_root && overlap_span.high >= min_root {
                     // If 'overlap_span' overlaps with roots, part of it should be in
                     // 'Descendants' result:
@@ -1420,7 +1419,7 @@ impl<Store: IdDagStore> IdDag<Store> {
                     let roots_intesection = roots.intersection(&overlap_span.into());
                     if let Some(id) = roots_intesection.min() {
                         overlap_span.low = id;
-                        result.push_span(overlap_span);
+                        result.push_span_asc(overlap_span);
                     }
                 }
             } else {
@@ -1435,7 +1434,7 @@ impl<Store: IdDagStore> IdDag<Store> {
                 // `next_span.low - 1` is the parent of `next_span.low`,
                 let p = next_span.low - 1;
                 if result.contains(p) || roots.contains(p) {
-                    result.push_span(overlap_span);
+                    result.push_span_asc(overlap_span);
                 }
             }
             // Update next_optional_span.
@@ -1443,7 +1442,7 @@ impl<Store: IdDagStore> IdDag<Store> {
                 .or_else(|| span_iter.next());
         }
 
-        Ok(result.into_span_set())
+        Ok(result)
     }
 }
 
