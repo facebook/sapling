@@ -9,12 +9,14 @@
 //!
 //! See [`SpanSet`] for the main structure.
 
+use crate::bsearch::BinarySearchBy;
 use crate::id::Id;
 use std::cmp::{
     Ordering::{self, Equal, Greater, Less},
     PartialOrd,
 };
 use std::collections::BinaryHeap;
+use std::collections::VecDeque;
 use std::fmt::{self, Debug};
 use std::ops::{Bound, RangeBounds, RangeInclusive};
 
@@ -28,7 +30,7 @@ pub struct Span {
 /// A set of integer spans.
 #[derive(Clone)]
 pub struct SpanSet {
-    spans: Vec<Span>,
+    spans: VecDeque<Span>,
 }
 
 impl PartialOrd for Span {
@@ -129,9 +131,7 @@ impl From<Id> for Span {
 
 impl<T: Into<Span>> From<T> for SpanSet {
     fn from(span: T) -> SpanSet {
-        SpanSet {
-            spans: vec![span.into()],
-        }
+        SpanSet::from_sorted_spans(std::iter::once(span.into()))
     }
 }
 
@@ -154,7 +154,7 @@ impl SpanSet {
     /// Overlapped or adjacent spans will be merged automatically.
     pub fn from_spans<T: Into<Span>, I: IntoIterator<Item = T>>(spans: I) -> Self {
         let mut heap: BinaryHeap<Span> = spans.into_iter().map(|span| span.into()).collect();
-        let mut spans = Vec::with_capacity(heap.len().min(64));
+        let mut spans = VecDeque::with_capacity(heap.len().min(64));
         while let Some(span) = heap.pop() {
             push_with_union(&mut spans, span);
         }
@@ -170,7 +170,7 @@ impl SpanSet {
     /// not have overlapped spans.
     /// Adjacent spans will be merged automatically.
     pub fn from_sorted_spans<T: Into<Span>, I: IntoIterator<Item = T>>(span_iter: I) -> Self {
-        let mut spans = Vec::<Span>::new();
+        let mut spans = VecDeque::<Span>::new();
         for span in span_iter {
             let span = span.into();
             push_with_union(&mut spans, span);
@@ -183,7 +183,7 @@ impl SpanSet {
 
     /// Construct an empty [`SpanSet`].
     pub fn empty() -> Self {
-        let spans = Vec::new();
+        let spans = VecDeque::new();
         SpanSet { spans }
     }
 
@@ -240,7 +240,7 @@ impl SpanSet {
 
     /// Calculates the union of two sets.
     pub fn union(&self, rhs: &SpanSet) -> SpanSet {
-        let mut spans = Vec::with_capacity((self.spans.len() + rhs.spans.len()).min(32));
+        let mut spans = VecDeque::with_capacity((self.spans.len() + rhs.spans.len()).min(32));
         let mut iter_left = self.spans.iter().cloned();
         let mut iter_right = rhs.spans.iter().cloned();
         let mut next_left = iter_left.next();
@@ -278,7 +278,7 @@ impl SpanSet {
 
     /// Calculates the intersection of two sets.
     pub fn intersection(&self, rhs: &SpanSet) -> SpanSet {
-        let mut spans = Vec::with_capacity(self.spans.len().max(rhs.spans.len()).min(32));
+        let mut spans = VecDeque::with_capacity(self.spans.len().max(rhs.spans.len()).min(32));
         let mut iter_left = self.spans.iter().cloned();
         let mut iter_right = rhs.spans.iter().cloned();
         let mut next_left = iter_left.next();
@@ -319,7 +319,7 @@ impl SpanSet {
 
     /// Calculates spans that are included only by this set, not `rhs`.
     pub fn difference(&self, rhs: &SpanSet) -> SpanSet {
-        let mut spans = Vec::with_capacity(self.spans.len().max(rhs.spans.len()).min(32));
+        let mut spans = VecDeque::with_capacity(self.spans.len().max(rhs.spans.len()).min(32));
         let mut iter_left = self.spans.iter().cloned();
         let mut iter_right = rhs.spans.iter().cloned();
         let mut next_left = iter_left.next();
@@ -363,27 +363,33 @@ impl SpanSet {
     /// Get an iterator for integers in this [`SpanSet`].
     /// By default, the iteration is in descending order.
     pub fn iter(&self) -> SpanSetIter<&SpanSet> {
+        let len = self.spans.len();
+        let back = (
+            len as isize - 1,
+            if len == 0 {
+                0
+            } else {
+                let span = self.spans[len - 1];
+                span.high.0 - span.low.0
+            },
+        );
         SpanSetIter {
             span_set: self,
             front: (0, 0),
-            back: (
-                self.spans.len() as isize - 1,
-                self.spans
-                    .last()
-                    .map(|span| span.high.0 - span.low.0)
-                    .unwrap_or(0),
-            ),
+            back,
         }
     }
 
     /// Get the maximum id in this set.
     pub fn max(&self) -> Option<Id> {
-        self.spans.first().map(|span| span.high)
+        self.spans.get(0).map(|span| span.high)
     }
 
     /// Get the minimal id in this set.
     pub fn min(&self) -> Option<Id> {
-        self.spans.last().map(|span| span.low)
+        self.spans
+            .get(self.spans.len().max(1) - 1)
+            .map(|span| span.low)
     }
 
     /// Internal use only. Append a span, which must have lower boundaries
@@ -405,7 +411,7 @@ impl SpanSet {
     }
 
     /// Get a reference to the spans.
-    pub fn as_spans(&self) -> &Vec<Span> {
+    pub fn as_spans(&self) -> &VecDeque<Span> {
         &self.spans
     }
 
@@ -415,39 +421,41 @@ impl SpanSet {
     /// `min()`.
     pub fn push(&mut self, span: impl Into<Span>) {
         let span = span.into();
-        match self.spans.last_mut() {
-            None => self.spans.push(span),
-            Some(mut last) => {
-                if last.high >= span.high {
-                    if last.low <= span.high + 1 {
-                        // Union spans in-place.
-                        last.low = last.low.min(span.low);
-                    } else {
-                        self.spans.push(span)
-                    }
+        if self.spans.is_empty() {
+            self.spans.push_back(span)
+        } else {
+            let len = self.spans.len();
+            let mut last = &mut self.spans[len - 1];
+            if last.high >= span.high {
+                if last.low <= span.high + 1 {
+                    // Union spans in-place.
+                    last.low = last.low.min(span.low);
                 } else {
-                    // PERF: There is a better way to do this by bisecting
-                    // spans and insert in-place.  For now, this code path is
-                    // rarely used.
-                    *self = self.union(&SpanSet::from(span))
+                    self.spans.push_back(span)
                 }
+            } else {
+                // PERF: There is a better way to do this by bisecting
+                // spans and insert in-place.  For now, this code path is
+                // rarely used.
+                *self = self.union(&SpanSet::from(span))
             }
         }
     }
 }
 
-/// Push a span to `Vec<Span>`. Try to union them in-place.
-fn push_with_union(spans: &mut Vec<Span>, span: Span) {
-    match spans.last_mut() {
-        None => spans.push(span),
-        Some(mut last) => {
-            debug_assert!(last.high >= span.high);
-            if last.low <= span.high + 1 {
-                // Union spans in-place.
-                last.low = last.low.min(span.low);
-            } else {
-                spans.push(span)
-            }
+/// Push a span to `VecDeque<Span>`. Try to union them in-place.
+fn push_with_union(spans: &mut VecDeque<Span>, span: Span) {
+    if spans.is_empty() {
+        spans.push_back(span);
+    } else {
+        let len = spans.len();
+        let mut last = &mut spans[len - 1];
+        debug_assert!(last.high >= span.high);
+        if last.low <= span.high + 1 {
+            // Union spans in-place.
+            last.low = last.low.min(span.low);
+        } else {
+            spans.push_back(span)
         }
     }
 }
@@ -536,12 +544,15 @@ impl IntoIterator for SpanSet {
 
     /// Get an iterator for integers in this [`SpanSet`].
     fn into_iter(self) -> SpanSetIter<SpanSet> {
+        let len = self.spans.len();
         let back = (
-            self.spans.len() as isize - 1,
-            self.spans
-                .last()
-                .map(|span| span.high.0 - span.low.0)
-                .unwrap_or(0),
+            len as isize - 1,
+            if len == 0 {
+                0
+            } else {
+                let span = self.spans[len - 1];
+                span.high.0 - span.low.0
+            },
         );
         SpanSetIter {
             span_set: self,
@@ -629,6 +640,7 @@ fn span_rev(span: Span) -> Span {
 }
 
 #[cfg(test)]
+#[allow(clippy::redundant_clone)]
 mod tests {
     use super::*;
 
@@ -787,24 +799,37 @@ mod tests {
         // |------------- a -------------------|
         // |--- spans1 ---|--- intersection ---|--- spans2 ---|
         //                |------------------- b -------------|
-        let intersected = intersect(a.spans.clone(), b.spans.clone());
-        let unioned = union(a.spans.clone(), b.spans.clone());
-        assert_eq!(
-            union(intersected.clone(), spans1.clone()),
-            union(a.spans.clone(), Vec::<Span>::new())
+        let intersected = intersect(
+            a.spans.iter().cloned().collect(),
+            b.spans.iter().cloned().collect(),
+        );
+        let unioned = union(
+            a.spans.iter().cloned().collect(),
+            b.spans.iter().cloned().collect(),
         );
         assert_eq!(
-            union(intersected.clone(), spans2.clone()),
-            union(b.spans.clone(), Vec::<Span>::new())
+            union(intersected.clone(), spans1.iter().cloned().collect()),
+            union(a.spans.iter().cloned().collect(), Vec::<Span>::new())
         );
         assert_eq!(
-            union(spans1.clone(), union(intersected.clone(), spans2.clone())),
+            union(intersected.clone(), spans2.iter().cloned().collect()),
+            union(b.spans.iter().cloned().collect(), Vec::<Span>::new())
+        );
+        assert_eq!(
+            union(
+                spans1.iter().cloned().collect(),
+                union(intersected.clone(), spans2.iter().cloned().collect())
+            ),
             unioned.clone(),
         );
 
-        assert!(intersect(spans1.clone(), spans2.clone()).is_empty());
-        assert!(intersect(spans1.clone(), intersected.clone()).is_empty());
-        assert!(intersect(spans2.clone(), intersected.clone()).is_empty());
+        assert!(intersect(
+            spans1.iter().cloned().collect(),
+            spans2.iter().cloned().collect()
+        )
+        .is_empty());
+        assert!(intersect(spans1.iter().cloned().collect(), intersected.clone()).is_empty());
+        assert!(intersect(spans2.iter().cloned().collect(), intersected.clone()).is_empty());
 
         spans1.into_iter().map(|span| span.into()).collect()
     }
