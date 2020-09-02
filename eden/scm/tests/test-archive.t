@@ -178,3 +178,10 @@ configured as GMT.
   456789012
 
   $ cd ..
+
+Disallow default archive in repositories with large working copies
+
+  $ hg -R test archive --config scale.largeworkingcopy=True result.zip
+  abort: this repository has a very large working copy and requires an explicit set of files to be archived
+  [255]
+  $ hg -R test archive --config scale.largeworkingcopy=True -I 'relglob:**' result.zip

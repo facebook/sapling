@@ -594,6 +594,13 @@ def archive(ui, repo, dest, **opts):
 
     prefix = cmdutil.makefilename(repo, prefix, node)
     match = scmutil.match(ctx, [], opts)
+    if repo.ui.configbool("scale", "largeworkingcopy") and match.always():
+        raise error.Abort(
+            _(
+                "this repository has a very large working copy and "
+                "requires an explicit set of files to be archived"
+            )
+        )
     archival.archive(repo, dest, node, kind, not opts.get("no_decode"), match, prefix)
 
 
