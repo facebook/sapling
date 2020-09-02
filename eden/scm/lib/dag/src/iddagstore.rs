@@ -736,11 +736,15 @@ mod tests {
         )
     });
 
-    fn init_store(segments: Vec<&Segment>) -> InProcessStore {
-        let mut store = InProcessStore::new();
+    fn insert_segments(store: &mut dyn IdDagStore, segments: Vec<&Segment>) {
         for segment in segments {
             store.insert_segment(segment.clone()).unwrap();
         }
+    }
+
+    fn init_store(segments: Vec<&Segment>) -> InProcessStore {
+        let mut store = InProcessStore::new();
+        insert_segments(&mut store, segments);
         store
     }
 
@@ -763,15 +767,7 @@ mod tests {
         segments.into_iter().cloned().cloned().collect()
     }
 
-    #[test]
-    fn test_in_process_store_insert() {
-        let _store = get_in_process_store();
-        // `get_in_process_stores` does inserts, we care that nothings panics.
-    }
-
-    #[test]
-    fn test_in_process_store_find_segment_by_head_and_level() {
-        let store = get_in_process_store();
+    fn test_find_segment_by_head_and_level(store: &dyn IdDagStore) {
         let segment = store
             .find_segment_by_head_and_level(Id(13), 1 as Level)
             .unwrap()
@@ -791,9 +787,7 @@ mod tests {
         assert_eq!(&segment, LEVEL0_HEADN2.deref());
     }
 
-    #[test]
-    fn test_in_process_store_find_flat_segment_including_id() {
-        let store = get_in_process_store();
+    fn test_find_flat_segment_including_id(store: &dyn IdDagStore) {
         let segment = store
             .find_flat_segment_including_id(Id(10))
             .unwrap()
@@ -813,9 +807,7 @@ mod tests {
         assert_eq!(&segment, LEVEL0_HEADN2.deref());
     }
 
-    #[test]
-    fn test_in_process_store_next_free_id() {
-        let store = get_in_process_store();
+    fn test_next_free_id(store: &dyn IdDagStore) {
         assert_eq!(
             store.next_free_id(0 as Level, Group::MASTER).unwrap(),
             Id(14)
@@ -834,10 +826,7 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_in_process_store_next_segments() {
-        let store = get_in_process_store();
-
+    fn test_next_segments(store: &dyn IdDagStore) {
         let segments = store.next_segments(Id(4), 0 as Level).unwrap();
         let expected = segments_to_owned(&[&LEVEL0_HEAD5, &LEVEL0_HEAD9, &LEVEL0_HEAD13]);
         assert_eq!(segments, expected);
@@ -853,19 +842,15 @@ mod tests {
         assert!(segments.is_empty());
     }
 
-    #[test]
-    fn test_in_process_store_max_level() {
-        let store = get_in_process_store();
+    fn test_max_level(store: &dyn IdDagStore) {
         assert_eq!(store.max_level().unwrap(), 1);
+    }
 
-        let store = InProcessStore::new();
+    fn test_empty_store_max_level(store: &dyn IdDagStore) {
         assert_eq!(store.max_level().unwrap(), 0);
     }
 
-    #[test]
-    fn test_in_process_store_iter_segments_descending() {
-        let store = get_in_process_store();
-
+    fn test_iter_segments_descending(store: &dyn IdDagStore) {
         let answer = store
             .iter_segments_descending(Id(12), 0)
             .unwrap()
@@ -889,10 +874,7 @@ mod tests {
         assert!(answer.next().is_none());
     }
 
-    #[test]
-    fn test_in_process_store_iter_segments_ascending() {
-        let store = get_in_process_store();
-
+    fn test_iter_segments_ascending(store: &dyn IdDagStore) {
         let answer = store
             .iter_segments_ascending(Id(12), 0)
             .unwrap()
@@ -929,10 +911,7 @@ mod tests {
         assert!(answer.next().is_none());
     }
 
-    #[test]
-    fn test_in_process_store_iter_master_flat_segments_with_parent() {
-        let store = get_in_process_store();
-
+    fn test_store_iter_master_flat_segments_with_parent(store: &dyn IdDagStore) {
         let answer = store
             .iter_master_flat_segments_with_parent(Id(2))
             .unwrap()
@@ -951,10 +930,7 @@ mod tests {
         assert!(answer.next().is_none());
     }
 
-    #[test]
-    fn test_in_process_store_iter_flat_segments_with_parent() {
-        let store = get_in_process_store();
-
+    fn test_store_iter_flat_segments_with_parent(store: &dyn IdDagStore) {
         let lookup = |id: Id| -> Vec<_> {
             let mut list = store
                 .iter_flat_segments_with_parent(id)
@@ -985,10 +961,7 @@ mod tests {
         assert_eq!(answer, expected);
     }
 
-    #[test]
-    fn test_in_process_store_remove_non_master() {
-        let mut store = get_in_process_store();
-
+    fn test_remove_non_master(store: &mut dyn IdDagStore) {
         store.remove_non_master().unwrap();
 
         assert!(store
@@ -1008,5 +981,73 @@ mod tests {
             .unwrap()
             .next()
             .is_none());
+    }
+
+    #[test]
+    fn test_in_process_store_insert() {
+        let _store = get_in_process_store();
+        // `get_in_process_stores` does inserts, we care that nothings panics.
+    }
+
+    #[test]
+    fn test_in_process_store_find_segment_by_head_and_level() {
+        let store = get_in_process_store();
+        test_find_segment_by_head_and_level(&store);
+    }
+
+    #[test]
+    fn test_in_process_store_find_flat_segment_including_id() {
+        let store = get_in_process_store();
+        test_find_flat_segment_including_id(&store);
+    }
+
+    #[test]
+    fn test_in_process_store_next_free_id() {
+        let store = get_in_process_store();
+        test_next_free_id(&store);
+    }
+
+    #[test]
+    fn test_in_process_store_next_segments() {
+        let store = get_in_process_store();
+        test_next_segments(&store);
+    }
+
+    #[test]
+    fn test_in_process_store_max_level() {
+        let store = get_in_process_store();
+        test_max_level(&store);
+        let store = InProcessStore::new();
+        test_empty_store_max_level(&store);
+    }
+
+    #[test]
+    fn test_in_process_store_iter_segments_descending() {
+        let store = get_in_process_store();
+        test_iter_segments_descending(&store);
+    }
+
+    #[test]
+    fn test_in_process_store_iter_segments_ascending() {
+        let store = get_in_process_store();
+        test_iter_segments_ascending(&store);
+    }
+
+    #[test]
+    fn test_in_process_store_iter_master_flat_segments_with_parent() {
+        let store = get_in_process_store();
+        test_store_iter_master_flat_segments_with_parent(&store);
+    }
+
+    #[test]
+    fn test_in_process_store_iter_flat_segments_with_parent() {
+        let store = get_in_process_store();
+        test_store_iter_flat_segments_with_parent(&store);
+    }
+
+    #[test]
+    fn test_in_process_store_remove_non_master() {
+        let mut store = get_in_process_store();
+        test_remove_non_master(&mut store);
     }
 }
