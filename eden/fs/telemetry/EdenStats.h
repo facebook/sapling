@@ -16,8 +16,7 @@
 namespace facebook {
 namespace eden {
 
-class FuseThreadStats;
-class PrjFSThreadStats;
+class ChannelThreadStats;
 class ObjectStoreThreadStats;
 class HgBackingStoreThreadStats;
 class HgImporterThreadStats;
@@ -25,12 +24,6 @@ class JournalThreadStats;
 
 class EdenStats {
  public:
-#ifndef _WIN32
-  using ChannelThreadStats = FuseThreadStats;
-#else
-  using ChannelThreadStats = PrjFSThreadStats;
-#endif
-
   /**
    * This function can be called on any thread.
    *
@@ -110,11 +103,12 @@ class EdenThreadStatsBase
   Timeseries createTimeseries(const std::string& name);
 };
 
-class FuseThreadStats : public EdenThreadStatsBase {
+class ChannelThreadStats : public EdenThreadStatsBase {
  public:
   // We track latency in units of microseconds, hence the _us suffix
   // in the histogram names below.
 
+#ifndef _WIN32
   Histogram lookup{createHistogram("fuse.lookup_us")};
   Histogram forget{createHistogram("fuse.forget_us")};
   Histogram getattr{createHistogram("fuse.getattr_us")};
@@ -148,29 +142,35 @@ class FuseThreadStats : public EdenThreadStatsBase {
   Histogram ioctl{createHistogram("fuse.ioctl_us")};
   Histogram poll{createHistogram("fuse.poll_us")};
   Histogram forgetmulti{createHistogram("fuse.forgetmulti_us")};
+#else
+  Timeseries outOfOrderCreate{createTimeseries("prjfs.out_of_order_create")};
+
+  Histogram opendir{createHistogram("prjfs.opendir_us")};
+  Histogram readdir{createHistogram("prjfs.readdir_us")};
+  Histogram lookup{createHistogram("prjfs.lookup_us")};
+  Histogram access{createHistogram("prjfs.access_us")};
+  Histogram read{createHistogram("prjfs.read_us")};
+  Histogram mkdir{createHistogram("prjfs.mkdir_us")};
+  Histogram mknod{createHistogram("prjfs.mknod_us")};
+  Histogram overwrite{createHistogram("prjfs.overwrite_us")};
+  Histogram modified{createHistogram("prjfs.modified_us")};
+  Histogram rename{createHistogram("prjfs.rename_us")};
+  Histogram rmdir{createHistogram("prjfs.rmdir_us")};
+  Histogram unlink{createHistogram("prjfs.unlink_us")};
+#endif
 
   // Since we can potentially finish a request in a different
   // thread from the one used to initiate it, we use HistogramPtr
   // as a helper for referencing the pointer-to-member that we
   // want to update at the end of the request.
-  using HistogramPtr = Histogram FuseThreadStats::*;
+  using HistogramPtr = Histogram ChannelThreadStats::*;
 
   /** Record a the latency for an operation.
    * item is the pointer-to-member for one of the histograms defined
    * above.
    * elapsed is the duration of the operation, measured in microseconds.
-   * now is the current steady clock value in seconds.
-   * (Once we open source the common stats code we can eliminate the
-   * now parameter from this method). */
-  void recordLatency(
-      HistogramPtr item,
-      std::chrono::microseconds elapsed,
-      std::chrono::seconds now);
-};
-
-class PrjFSThreadStats : public EdenThreadStatsBase {
- public:
-  Timeseries outOfOrderCreate{createTimeseries("prjfs.out_of_order_create")};
+   */
+  void recordLatency(HistogramPtr item, std::chrono::microseconds elapsed);
 };
 
 /**

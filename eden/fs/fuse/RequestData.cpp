@@ -24,7 +24,7 @@ RequestData::RequestData(FuseChannel* channel, const fuse_in_header& fuseHeader)
 
 void RequestData::startRequest(
     EdenStats* stats,
-    FuseThreadStats::HistogramPtr histogram,
+    ChannelThreadStats::HistogramPtr histogram,
     std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>&
         requestWatches) {
   startTime_ = steady_clock::now();
@@ -37,14 +37,13 @@ void RequestData::startRequest(
 
 void RequestData::finishRequest() {
   const auto now = steady_clock::now();
-  const auto now_since_epoch = duration_cast<seconds>(now.time_since_epoch());
 
   const auto diff = now - startTime_;
   const auto diff_us = duration_cast<microseconds>(diff);
   const auto diff_ns = duration_cast<nanoseconds>(diff);
 
   stats_->getChannelStatsForCurrentThread().recordLatency(
-      latencyHistogram_, diff_us, now_since_epoch);
+      latencyHistogram_, diff_us);
   latencyHistogram_ = nullptr;
   stats_ = nullptr;
   { auto temp = std::move(requestMetricsScope_); }

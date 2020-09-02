@@ -33,7 +33,7 @@ class RequestData : public ObjectFetchContext {
   fuse_in_header fuseHeader_;
   // Needed to track stats
   std::chrono::time_point<std::chrono::steady_clock> startTime_;
-  FuseThreadStats::HistogramPtr latencyHistogram_{nullptr};
+  ChannelThreadStats::HistogramPtr latencyHistogram_{nullptr};
   EdenStats* stats_{nullptr};
   RequestMetricsScope requestMetricsScope_;
   std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>
@@ -112,7 +112,7 @@ class RequestData : public ObjectFetchContext {
 
   void startRequest(
       EdenStats* stats,
-      FuseThreadStats::HistogramPtr histogram,
+      ChannelThreadStats::HistogramPtr histogram,
       std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>&
           requestWatches);
   void finishRequest();

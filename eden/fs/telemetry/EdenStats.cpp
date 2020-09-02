@@ -19,7 +19,7 @@ constexpr std::chrono::microseconds kBucketSize{1000};
 namespace facebook {
 namespace eden {
 
-EdenStats::ChannelThreadStats& EdenStats::getChannelStatsForCurrentThread() {
+ChannelThreadStats& EdenStats::getChannelStatsForCurrentThread() {
   return *threadLocalChannelStats_.get();
 }
 
@@ -86,11 +86,9 @@ EdenThreadStatsBase::Timeseries EdenThreadStatsBase::createTimeseries(
   return timeseries;
 }
 
-void FuseThreadStats::recordLatency(
+void ChannelThreadStats::recordLatency(
     HistogramPtr item,
-    std::chrono::microseconds elapsed,
-    std::chrono::seconds now) {
-  (void)now; // we don't use it in this code path
+    std::chrono::microseconds elapsed) {
   (this->*item).addValue(elapsed.count());
 }
 

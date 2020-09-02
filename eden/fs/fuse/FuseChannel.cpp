@@ -47,13 +47,13 @@ struct HandlerEntry {
   constexpr HandlerEntry(
       StringPiece n,
       Handler h,
-      FuseThreadStats::HistogramPtr hist,
+      ChannelThreadStats::HistogramPtr hist,
       AccessType at = AccessType::FuseOther)
       : name{n}, handler{h}, histogram{hist}, accessType{at} {}
 
   StringPiece name;
   Handler handler = nullptr;
-  FuseThreadStats::HistogramPtr histogram = nullptr;
+  ChannelThreadStats::HistogramPtr histogram = nullptr;
   AccessType accessType = AccessType::FuseOther;
 };
 
@@ -64,99 +64,109 @@ constexpr auto kFuseHandlers = [] {
   // Rely on assignment out of bounds to a constexpr array giving a
   // compiler error.
   std::array<HandlerEntry, 64> handlers;
-  handlers[FUSE_LOOKUP] = {
-      "FUSE_LOOKUP", &FuseChannel::fuseLookup, &FuseThreadStats::lookup, Read};
+  handlers[FUSE_LOOKUP] = {"FUSE_LOOKUP",
+                           &FuseChannel::fuseLookup,
+                           &ChannelThreadStats::lookup,
+                           Read};
   handlers[FUSE_FORGET] = {
-      "FUSE_FORGET", &FuseChannel::fuseForget, &FuseThreadStats::forget};
+      "FUSE_FORGET", &FuseChannel::fuseForget, &ChannelThreadStats::forget};
   handlers[FUSE_GETATTR] = {"FUSE_GETATTR",
                             &FuseChannel::fuseGetAttr,
-                            &FuseThreadStats::getattr,
+                            &ChannelThreadStats::getattr,
                             Read};
   handlers[FUSE_SETATTR] = {"FUSE_SETATTR",
                             &FuseChannel::fuseSetAttr,
-                            &FuseThreadStats::setattr,
+                            &ChannelThreadStats::setattr,
                             Write};
   handlers[FUSE_READLINK] = {"FUSE_READLINK",
                              &FuseChannel::fuseReadLink,
-                             &FuseThreadStats::readlink,
+                             &ChannelThreadStats::readlink,
                              Read};
   handlers[FUSE_SYMLINK] = {"FUSE_SYMLINK",
                             &FuseChannel::fuseSymlink,
-                            &FuseThreadStats::symlink,
+                            &ChannelThreadStats::symlink,
                             Write};
   handlers[FUSE_MKNOD] = {
-      "FUSE_MKNOD", &FuseChannel::fuseMknod, &FuseThreadStats::mknod, Write};
+      "FUSE_MKNOD", &FuseChannel::fuseMknod, &ChannelThreadStats::mknod, Write};
   handlers[FUSE_MKDIR] = {
-      "FUSE_MKDIR", &FuseChannel::fuseMkdir, &FuseThreadStats::mkdir, Write};
-  handlers[FUSE_UNLINK] = {
-      "FUSE_UNLINK", &FuseChannel::fuseUnlink, &FuseThreadStats::unlink, Write};
+      "FUSE_MKDIR", &FuseChannel::fuseMkdir, &ChannelThreadStats::mkdir, Write};
+  handlers[FUSE_UNLINK] = {"FUSE_UNLINK",
+                           &FuseChannel::fuseUnlink,
+                           &ChannelThreadStats::unlink,
+                           Write};
   handlers[FUSE_RMDIR] = {
-      "FUSE_RMDIR", &FuseChannel::fuseRmdir, &FuseThreadStats::rmdir, Write};
-  handlers[FUSE_RENAME] = {
-      "FUSE_RENAME", &FuseChannel::fuseRename, &FuseThreadStats::rename, Write};
+      "FUSE_RMDIR", &FuseChannel::fuseRmdir, &ChannelThreadStats::rmdir, Write};
+  handlers[FUSE_RENAME] = {"FUSE_RENAME",
+                           &FuseChannel::fuseRename,
+                           &ChannelThreadStats::rename,
+                           Write};
   handlers[FUSE_LINK] = {
-      "FUSE_LINK", &FuseChannel::fuseLink, &FuseThreadStats::link, Write};
+      "FUSE_LINK", &FuseChannel::fuseLink, &ChannelThreadStats::link, Write};
   handlers[FUSE_OPEN] = {
-      "FUSE_OPEN", &FuseChannel::fuseOpen, &FuseThreadStats::open};
+      "FUSE_OPEN", &FuseChannel::fuseOpen, &ChannelThreadStats::open};
   handlers[FUSE_READ] = {
-      "FUSE_READ", &FuseChannel::fuseRead, &FuseThreadStats::read, Read};
+      "FUSE_READ", &FuseChannel::fuseRead, &ChannelThreadStats::read, Read};
   handlers[FUSE_WRITE] = {
-      "FUSE_WRITE", &FuseChannel::fuseWrite, &FuseThreadStats::write, Write};
-  handlers[FUSE_STATFS] = {
-      "FUSE_STATFS", &FuseChannel::fuseStatFs, &FuseThreadStats::statfs, Read};
+      "FUSE_WRITE", &FuseChannel::fuseWrite, &ChannelThreadStats::write, Write};
+  handlers[FUSE_STATFS] = {"FUSE_STATFS",
+                           &FuseChannel::fuseStatFs,
+                           &ChannelThreadStats::statfs,
+                           Read};
   handlers[FUSE_RELEASE] = {
-      "FUSE_RELEASE", &FuseChannel::fuseRelease, &FuseThreadStats::release};
+      "FUSE_RELEASE", &FuseChannel::fuseRelease, &ChannelThreadStats::release};
   handlers[FUSE_FSYNC] = {
-      "FUSE_FSYNC", &FuseChannel::fuseFsync, &FuseThreadStats::fsync, Write};
+      "FUSE_FSYNC", &FuseChannel::fuseFsync, &ChannelThreadStats::fsync, Write};
   handlers[FUSE_SETXATTR] = {"FUSE_SETXATTR",
                              &FuseChannel::fuseSetXAttr,
-                             &FuseThreadStats::setxattr,
+                             &ChannelThreadStats::setxattr,
                              Write};
   handlers[FUSE_GETXATTR] = {"FUSE_GETXATTR",
                              &FuseChannel::fuseGetXAttr,
-                             &FuseThreadStats::getxattr,
+                             &ChannelThreadStats::getxattr,
                              Read};
   handlers[FUSE_LISTXATTR] = {"FUSE_LISTXATTR",
                               &FuseChannel::fuseListXAttr,
-                              &FuseThreadStats::listxattr,
+                              &ChannelThreadStats::listxattr,
                               Read};
   handlers[FUSE_REMOVEXATTR] = {"FUSE_REMOVEXATTR",
                                 &FuseChannel::fuseRemoveXAttr,
-                                &FuseThreadStats::removexattr,
+                                &ChannelThreadStats::removexattr,
                                 Write};
   handlers[FUSE_FLUSH] = {
-      "FUSE_FLUSH", &FuseChannel::fuseFlush, &FuseThreadStats::flush};
+      "FUSE_FLUSH", &FuseChannel::fuseFlush, &ChannelThreadStats::flush};
   handlers[FUSE_INIT] = {"FUSE_INIT"};
   handlers[FUSE_OPENDIR] = {
-      "FUSE_OPENDIR", &FuseChannel::fuseOpenDir, &FuseThreadStats::opendir};
+      "FUSE_OPENDIR", &FuseChannel::fuseOpenDir, &ChannelThreadStats::opendir};
   handlers[FUSE_READDIR] = {"FUSE_READDIR",
                             &FuseChannel::fuseReadDir,
-                            &FuseThreadStats::readdir,
+                            &ChannelThreadStats::readdir,
                             Read};
   handlers[FUSE_RELEASEDIR] = {"FUSE_RELEASEDIR",
                                &FuseChannel::fuseReleaseDir,
-                               &FuseThreadStats::releasedir};
+                               &ChannelThreadStats::releasedir};
   handlers[FUSE_FSYNCDIR] = {"FUSE_FSYNCDIR",
                              &FuseChannel::fuseFsyncDir,
-                             &FuseThreadStats::fsyncdir,
+                             &ChannelThreadStats::fsyncdir,
                              Write};
   handlers[FUSE_GETLK] = {"FUSE_GETLK"};
   handlers[FUSE_SETLK] = {"FUSE_SETLK"};
   handlers[FUSE_SETLKW] = {"FUSE_SETLKW"};
   handlers[FUSE_ACCESS] = {
-      "FUSE_ACCESS", &FuseChannel::fuseAccess, &FuseThreadStats::access};
-  handlers[FUSE_CREATE] = {
-      "FUSE_CREATE", &FuseChannel::fuseCreate, &FuseThreadStats::create, Write};
+      "FUSE_ACCESS", &FuseChannel::fuseAccess, &ChannelThreadStats::access};
+  handlers[FUSE_CREATE] = {"FUSE_CREATE",
+                           &FuseChannel::fuseCreate,
+                           &ChannelThreadStats::create,
+                           Write};
   handlers[FUSE_INTERRUPT] = {"FUSE_INTERRUPT"};
   handlers[FUSE_BMAP] = {
-      "FUSE_BMAP", &FuseChannel::fuseBmap, &FuseThreadStats::bmap};
+      "FUSE_BMAP", &FuseChannel::fuseBmap, &ChannelThreadStats::bmap};
   handlers[FUSE_DESTROY] = {"FUSE_DESTROY"};
   handlers[FUSE_IOCTL] = {"FUSE_IOCTL"};
   handlers[FUSE_POLL] = {"FUSE_POLL"};
   handlers[FUSE_NOTIFY_REPLY] = {"FUSE_NOTIFY_REPLY"};
   handlers[FUSE_BATCH_FORGET] = {"FUSE_BATCH_FORGET",
                                  &FuseChannel::fuseBatchForget,
-                                 &FuseThreadStats::forgetmulti};
+                                 &ChannelThreadStats::forgetmulti};
   handlers[FUSE_FALLOCATE] = {"FUSE_FALLOCATE", Write};
 #ifdef __linux__
   handlers[FUSE_READDIRPLUS] = {"FUSE_READDIRPLUS", Read};
