@@ -3409,9 +3409,9 @@ def debugstacktrace(msg="stacktrace", skip=0, f=stderr, otherf=stdout, depth=0):
     """
     if otherf:
         otherf.flush()
-    f.write("%s at:\n" % msg.rstrip())
+    f.write(encodeutf8("%s at:\n" % msg.rstrip()))
     for line in getstackframes(skip + 1, depth=depth):
-        f.write(line)
+        f.write(encodeutf8(line))
     f.flush()
 
 
