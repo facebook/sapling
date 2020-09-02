@@ -238,6 +238,10 @@ def readsigtraces(repo):
     names.sort(key=lambda name: -vfs.stat("sigtrace/%s" % name).st_mtime)
     result = ""
     for name in names:
+        # hg serve (non-forking commandserver) is used by emacsclient and
+        # can produce very long but boring traces. Skip them.
+        if "serve" in name:
+            continue
         content = pycompat.decodeutf8(
             vfs.tryread("sigtrace/%s" % name), errors="replace"
         )
