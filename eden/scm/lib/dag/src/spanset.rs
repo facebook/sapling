@@ -160,7 +160,8 @@ impl SpanSet {
         }
         let result = SpanSet { spans };
         // `result` should be valid because the use of `push_with_union`.
-        debug_assert!(result.is_valid());
+        #[cfg(debug_assertions)]
+        result.validate();
         result
     }
 
@@ -174,7 +175,10 @@ impl SpanSet {
             let span = span.into();
             push_with_union(&mut spans, span);
         }
-        Self { spans }
+        let result = Self { spans };
+        #[cfg(debug_assertions)]
+        result.validate();
+        result
     }
 
     /// Construct an empty [`SpanSet`].
@@ -194,20 +198,21 @@ impl SpanSet {
         self.spans.is_empty()
     }
 
-    /// Check if the spans satisfies internal assumptions: sorted and not
-    /// overlapped.
-    fn is_valid(&self) -> bool {
-        self.spans
-            .iter()
-            .rev()
-            .cloned()
-            .fold((-1, true), |(last_high, is_sorted), span| {
-                (
-                    span.high.0 as i64,
-                    is_sorted && last_high < span.low.0 as i64,
-                )
-            })
-            .1
+    /// Validate the spans are in the expected order and there are no mergable
+    /// adjacent spans.
+    #[cfg(debug_assertions)]
+    fn validate(&self) {
+        for (i, span) in self.spans.iter().enumerate() {
+            assert!(span.low <= span.high);
+            if i > 0 {
+                assert!(
+                    span.high + 1 < self.spans[i - 1].low,
+                    "{:?} is not in DESC order or has mergable adjacent spans (around #{})",
+                    &self.spans,
+                    i
+                );
+            }
+        }
     }
 
     /// Count integers covered by this [`SpanSet`].
@@ -263,7 +268,8 @@ impl SpanSet {
                 }
                 (None, None) => {
                     let result = SpanSet { spans };
-                    debug_assert!(result.is_valid());
+                    #[cfg(debug_assertions)]
+                    result.validate();
                     return result;
                 }
             }
@@ -303,7 +309,8 @@ impl SpanSet {
                 }
                 (_, None) | (None, _) => {
                     let result = SpanSet { spans };
-                    debug_assert!(result.is_valid());
+                    #[cfg(debug_assertions)]
+                    result.validate();
                     return result;
                 }
             }
@@ -345,7 +352,8 @@ impl SpanSet {
                 }
                 (None, _) => {
                     let result = SpanSet { spans };
-                    debug_assert!(result.is_valid());
+                    #[cfg(debug_assertions)]
+                    result.validate();
                     return result;
                 }
             }
