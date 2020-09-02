@@ -157,25 +157,6 @@ elif sys.platform.startswith("linux") and not os.path.exists("/etc/redhat-releas
         "test_eden_doctor_fixes_valid_mismatched_parents",
     ]
 
-    # The systemd_fixture tests have some issues on Ubuntu that I haven't fully
-    # investigated yet.
-    TEST_DISABLED[
-        "systemd_fixture_test.TemporarySystemdUserServiceManagerIsolationTest"
-    ] = [
-        # When run on Ubuntu the path contains some unexpected values like
-        # "/usr/games".  I haven't investigated if this is a legitimate issue or
-        # not.
-        "test_path_environment_variable_is_forced_to_default"
-    ]
-    TEST_DISABLED["systemd_fixture_test.TemporarySystemdUserServiceManagerTest"] = [
-        # This test does claim that there are a number of other different units
-        # being managed
-        "test_no_units_are_active",
-        # Running "systemd-analyze --user unit-paths" fails with the error
-        # "Unknown operation unit-paths"
-        "test_unit_paths_includes_manager_specific_directories",
-    ]
-
     TEST_DISABLED["hg.post_clone_test.SymlinkTestTreeOnly"] = [
         # This test fails with mismatched permissions (0775 vs 0755).
         # I haven't investigated too closely but it could be a umask configuration

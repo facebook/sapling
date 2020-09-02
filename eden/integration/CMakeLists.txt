@@ -11,7 +11,6 @@ if(WIN32 OR APPLE)
     REMOVE_ITEM INTEGRATION_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/linux_cgroup_test.py
     ${CMAKE_CURRENT_SOURCE_DIR}/stale_test.py
-    ${CMAKE_CURRENT_SOURCE_DIR}/systemd_fixture_test.py
   )
 endif()
 if(WIN32)
@@ -33,7 +32,6 @@ if(NOT pexpect_FOUND)
     ${CMAKE_CURRENT_SOURCE_DIR}/restart_test.py
     ${CMAKE_CURRENT_SOURCE_DIR}/service_log_test.py
     ${CMAKE_CURRENT_SOURCE_DIR}/stop_test.py
-    ${CMAKE_CURRENT_SOURCE_DIR}/systemd_test.py
   )
 endif()
 
