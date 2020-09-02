@@ -23,7 +23,7 @@ def start_edenfs_service(instance: EdenInstance, cmd: List[str]) -> int:
 
     cmdline = subprocess.list2cmdline(cmd)
     pid = proc_utils_win.create_process_shim(cmdline)
-    wait_for_pid_healthy(instance, pid, 10)
+    wait_for_pid_healthy(instance, pid, 60)
     return 0
 
 
