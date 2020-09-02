@@ -16,6 +16,7 @@ use mononoke_types::DateTime;
 
 pub const COMMIT_HASH: &'static str = "commit-hash";
 pub const GRADUAL_MERGE: &'static str = "gradual-merge";
+pub const GRADUAL_MERGE_PROGRESS: &'static str = "gradual-merge-progress";
 pub const MOVE: &'static str = "move";
 pub const MERGE: &'static str = "merge";
 pub const MARK_PUBLIC: &'static str = "mark-public";
@@ -317,6 +318,29 @@ pub fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .required(false),
         );
 
+    let gradual_merge_progress_subcommand = SubCommand::with_name(GRADUAL_MERGE_PROGRESS)
+        .about("Display progress of the gradual merge as #MERGED_COMMITS/#TOTAL_COMMITS_TO_MERGE")
+        .arg(
+            Arg::with_name(LAST_DELETION_COMMIT)
+                .long(LAST_DELETION_COMMIT)
+                .help("Last deletion commit")
+                .takes_value(true)
+                .required(true),
+        )
+        .arg(
+            Arg::with_name(PRE_DELETION_COMMIT)
+                .long(PRE_DELETION_COMMIT)
+                .help("Commit right before the first deletion commit")
+                .takes_value(true)
+                .required(true),
+        )
+        .arg(
+            Arg::with_name(COMMIT_BOOKMARK)
+                .help("bookmark to point to resulting commits (no sanity checks, will move existing bookmark, be careful)")
+                .long(COMMIT_BOOKMARK)
+                .takes_value(true)
+        );
+
     let manual_commit_sync_subcommand = SubCommand::with_name(MANUAL_COMMIT_SYNC)
         .about("Manually sync a commit from source repo to a target repo. It's usually used right after a big merge")
         .arg(
@@ -352,5 +376,6 @@ pub fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .subcommand(add_light_resulting_commit_args(pre_merge_delete_subcommand))
         .subcommand(add_light_resulting_commit_args(bonsai_merge_subcommand))
         .subcommand(add_light_resulting_commit_args(gradual_merge_subcommand))
+        .subcommand(gradual_merge_progress_subcommand)
         .subcommand(manual_commit_sync_subcommand)
 }

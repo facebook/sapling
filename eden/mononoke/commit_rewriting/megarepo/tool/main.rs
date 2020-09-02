@@ -39,9 +39,9 @@ use crate::cli::{
     cs_args_from_matches, get_delete_commits_cs_args_factory,
     get_gradual_merge_commits_cs_args_factory, setup_app, BONSAI_MERGE, BONSAI_MERGE_P1,
     BONSAI_MERGE_P2, CHANGESET, CHUNKING_HINT_FILE, COMMIT_BOOKMARK, COMMIT_HASH, DRY_RUN,
-    EVEN_CHUNK_SIZE, FIRST_PARENT, GRADUAL_MERGE, LAST_DELETION_COMMIT, LIMIT, MANUAL_COMMIT_SYNC,
-    MAX_NUM_OF_MOVES_IN_COMMIT, MERGE, MOVE, ORIGIN_REPO, PARENTS, PRE_DELETION_COMMIT,
-    PRE_MERGE_DELETE, SECOND_PARENT, SYNC_DIAMOND_MERGE,
+    EVEN_CHUNK_SIZE, FIRST_PARENT, GRADUAL_MERGE, GRADUAL_MERGE_PROGRESS, LAST_DELETION_COMMIT,
+    LIMIT, MANUAL_COMMIT_SYNC, MAX_NUM_OF_MOVES_IN_COMMIT, MERGE, MOVE, ORIGIN_REPO, PARENTS,
+    PRE_DELETION_COMMIT, PRE_MERGE_DELETE, SECOND_PARENT, SYNC_DIAMOND_MERGE,
 };
 use crate::merging::perform_merge;
 use megarepolib::chunking::{
@@ -325,6 +325,53 @@ async fn run_gradual_merge<'a>(
     Ok(())
 }
 
+async fn run_gradual_merge_progress<'a>(
+    ctx: CoreContext,
+    matches: &ArgMatches<'a>,
+    sub_m: &ArgMatches<'a>,
+) -> Result<(), Error> {
+    let repo = args::open_repo(ctx.fb, &ctx.logger(), &matches)
+        .compat()
+        .await?;
+
+    let last_deletion_commit = sub_m
+        .value_of(LAST_DELETION_COMMIT)
+        .ok_or(format_err!("last deletion commit is not specified"))?;
+    let pre_deletion_commit = sub_m
+        .value_of(PRE_DELETION_COMMIT)
+        .ok_or(format_err!("pre deletion commit is not specified"))?;
+    let bookmark = sub_m
+        .value_of(COMMIT_BOOKMARK)
+        .ok_or(format_err!("bookmark where to merge is not specified"))?;
+
+    let (_, repo_config) = args::get_config_by_repoid(ctx.fb, &matches, repo.get_repoid())?;
+    let last_deletion_commit =
+        helpers::csid_resolve(ctx.clone(), repo.clone(), last_deletion_commit).compat();
+    let pre_deletion_commit =
+        helpers::csid_resolve(ctx.clone(), repo.clone(), pre_deletion_commit).compat();
+
+    let blobstore = repo.get_blobstore().boxed();
+    let skiplist =
+        fetch_skiplist_index(&ctx, &repo_config.skiplist_index_blobstore_key, &blobstore);
+
+    let (last_deletion_commit, pre_deletion_commit, skiplist) =
+        try_join3(last_deletion_commit, pre_deletion_commit, skiplist).await?;
+
+    let (done, total) = gradual_merge::gradual_merge_progress(
+        &ctx,
+        &repo,
+        &skiplist,
+        &pre_deletion_commit,
+        &last_deletion_commit,
+        &BookmarkName::new(bookmark)?,
+    )
+    .await?;
+
+    println!("{}/{}", done, total);
+
+    Ok(())
+}
+
 async fn run_manual_commit_sync<'a>(
     ctx: CoreContext,
     matches: &ArgMatches<'a>,
@@ -414,6 +461,9 @@ fn main(fb: FacebookInit) -> Result<()> {
             (PRE_MERGE_DELETE, Some(sub_m)) => run_pre_merge_delete(ctx, &matches, sub_m).await,
             (BONSAI_MERGE, Some(sub_m)) => run_bonsai_merge(ctx, &matches, sub_m).await,
             (GRADUAL_MERGE, Some(sub_m)) => run_gradual_merge(ctx, &matches, sub_m).await,
+            (GRADUAL_MERGE_PROGRESS, Some(sub_m)) => {
+                run_gradual_merge_progress(ctx, &matches, sub_m).await
+            }
             (MANUAL_COMMIT_SYNC, Some(sub_m)) => run_manual_commit_sync(ctx, &matches, sub_m).await,
             _ => bail!("oh no, wrong arguments provided!"),
         }

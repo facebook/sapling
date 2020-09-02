@@ -38,6 +38,66 @@ pub struct GradualMergeParams {
     pub dry_run: bool,
 }
 
+/// Get total number of commits to merge and list
+/// of commits that haven't been merged yet
+async fn get_unmerged_commits_with_total_count(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    skiplist: &SkiplistIndex,
+    pre_deletion_commit: &ChangesetId,
+    last_deletion_commit: &ChangesetId,
+    bookmark_to_merge_into: &BookmarkName,
+) -> Result<(usize, Vec<(ChangesetId, StackPosition)>), Error> {
+    let commits_to_merge =
+        find_all_commits_to_merge(ctx, repo, *pre_deletion_commit, *last_deletion_commit).await?;
+
+    info!(
+        ctx.logger(),
+        "{} total commits to merge",
+        commits_to_merge.len()
+    );
+
+    let commits_to_merge = commits_to_merge
+        .into_iter()
+        .enumerate()
+        .map(|(idx, cs_id)| (cs_id, StackPosition(idx)))
+        .collect::<Vec<_>>();
+
+    let total_count = commits_to_merge.len();
+
+    let unmerged_commits = find_unmerged_commits(
+        ctx,
+        repo,
+        commits_to_merge,
+        &bookmark_to_merge_into,
+        skiplist,
+    )
+    .await?;
+
+    Ok((total_count, unmerged_commits))
+}
+
+/// Get how many merges has been done and how many merges are there in total
+pub async fn gradual_merge_progress(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    skiplist: &SkiplistIndex,
+    pre_deletion_commit: &ChangesetId,
+    last_deletion_commit: &ChangesetId,
+    bookmark_to_merge_into: &BookmarkName,
+) -> Result<(usize, usize), Error> {
+    let (to_merge_count, unmerged_commits) = get_unmerged_commits_with_total_count(
+        ctx,
+        repo,
+        skiplist,
+        pre_deletion_commit,
+        last_deletion_commit,
+        bookmark_to_merge_into,
+    )
+    .await?;
+    Ok((to_merge_count - unmerged_commits.len(), to_merge_count))
+}
+
 // This function implements a strategy to merge a large repository into another
 // while avoiding sudden increase in the working copy size.
 // Normally this function should be called after a list of deletion has been created
@@ -79,28 +139,16 @@ pub async fn gradual_merge(
         dry_run,
     } = params;
 
-    let commits_to_merge =
-        find_all_commits_to_merge(ctx, repo, *pre_deletion_commit, *last_deletion_commit).await?;
-    info!(
-        ctx.logger(),
-        "{} total commits to merge",
-        commits_to_merge.len()
-    );
-
-    let commits_to_merge = commits_to_merge
-        .into_iter()
-        .enumerate()
-        .map(|(idx, cs_id)| (cs_id, StackPosition(idx)))
-        .collect::<Vec<_>>();
-
-    let unmerged_commits = find_unmerged_commits(
+    let (_, unmerged_commits) = get_unmerged_commits_with_total_count(
         ctx,
         repo,
-        commits_to_merge,
-        &bookmark_to_merge_into,
         skiplist,
+        pre_deletion_commit,
+        last_deletion_commit,
+        bookmark_to_merge_into,
     )
     .await?;
+
     let unmerged_commits = if let Some(limit) = limit {
         unmerged_commits.into_iter().take(*limit).collect()
     } else {
