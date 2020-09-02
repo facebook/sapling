@@ -11,10 +11,10 @@
 #include <folly/Synchronized.h>
 #include <folly/container/EvictingCacheMap.h>
 #include <memory>
-#include "eden/fs/fuse/BufVec.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/OverlayFile.h"
 #include "eden/fs/model/Hash.h"
+#include "eden/fs/utils/BufVec.h"
 
 namespace facebook {
 namespace eden {

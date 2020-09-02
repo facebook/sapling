@@ -17,6 +17,7 @@
 #include "eden/fs/store/BlobCache.h"
 #include "eden/fs/store/IObjectStore.h"
 #include "eden/fs/store/ImportPriority.h"
+#include "eden/fs/utils/BufVec.h"
 #ifndef _WIN32
 #include "eden/fs/utils/CoverageSet.h"
 #endif
@@ -29,7 +30,6 @@ namespace facebook {
 namespace eden {
 
 class Blob;
-using BufVec = std::unique_ptr<folly::IOBuf>;
 class Hash;
 class ObjectFetchContext;
 class ObjectStore;
