@@ -21,8 +21,6 @@
 namespace facebook {
 namespace eden {
 
-class Dispatcher;
-
 /**
  * Each FUSE request has a corresponding RequestData object that is allocated at
  * request start and deallocated when it finishes.
@@ -37,7 +35,6 @@ class RequestData : public ObjectFetchContext {
   std::chrono::time_point<std::chrono::steady_clock> startTime_;
   FuseThreadStats::HistogramPtr latencyHistogram_{nullptr};
   EdenStats* stats_{nullptr};
-  Dispatcher* dispatcher_{nullptr};
   RequestMetricsScope requestMetricsScope_;
   std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>
       channelThreadLocalStats_;
@@ -73,10 +70,7 @@ class RequestData : public ObjectFetchContext {
   RequestData& operator=(const RequestData&) = delete;
   RequestData(RequestData&&) = delete;
   RequestData& operator=(RequestData&&) = delete;
-  explicit RequestData(
-      FuseChannel* channel,
-      const fuse_in_header& fuseHeader,
-      Dispatcher* dispatcher);
+  explicit RequestData(FuseChannel* channel, const fuse_in_header& fuseHeader);
 
   /**
    * Override of `ObjectFetchContext`
@@ -122,9 +116,6 @@ class RequestData : public ObjectFetchContext {
       std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>&
           requestWatches);
   void finishRequest();
-
-  // Returns the associated dispatcher instance
-  Dispatcher* getDispatcher() const;
 
   EdenTopStats& getEdenTopStats();
 

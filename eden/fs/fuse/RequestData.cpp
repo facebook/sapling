@@ -9,7 +9,6 @@
 
 #include <folly/logging/xlog.h>
 
-#include "eden/fs/fuse/Dispatcher.h"
 #include "eden/fs/notifications/Notifications.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/utils/SystemError.h"
@@ -20,11 +19,8 @@ using namespace std::chrono;
 namespace facebook {
 namespace eden {
 
-RequestData::RequestData(
-    FuseChannel* channel,
-    const fuse_in_header& fuseHeader,
-    Dispatcher* dispatcher)
-    : channel_(channel), fuseHeader_(fuseHeader), dispatcher_(dispatcher) {}
+RequestData::RequestData(FuseChannel* channel, const fuse_in_header& fuseHeader)
+    : channel_(channel), fuseHeader_(fuseHeader) {}
 
 void RequestData::startRequest(
     EdenStats* stats,
@@ -82,10 +78,6 @@ const fuse_in_header& RequestData::examineReq() const {
   // Will just return the fuseHeader_ and not throw(unlike getReq)
   // The caller is responsible to check the opcode and ignore if zero
   return fuseHeader_;
-}
-
-Dispatcher* RequestData::getDispatcher() const {
-  return dispatcher_;
 }
 
 RequestData::EdenTopStats& RequestData::getEdenTopStats() {

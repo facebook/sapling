@@ -1276,8 +1276,7 @@ void FuseChannel::processSession() {
           // This is a shared_ptr because, due to timeouts, the internal request
           // lifetime may not match the FUSE request lifetime, so we capture it
           // in both. I'm sure this could be improved with some cleverness.
-          auto request =
-              std::make_shared<RequestData>(this, *header, dispatcher_);
+          auto request = std::make_shared<RequestData>(this, *header);
           uint64_t requestId;
           {
             // Save a weak reference to this new request context.
