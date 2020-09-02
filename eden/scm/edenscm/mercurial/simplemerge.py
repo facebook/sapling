@@ -473,14 +473,11 @@ def simplemerge(ui, localctx, basectx, otherctx, **opts):
         extrakwargs["name_base"] = name_base
         extrakwargs["minimize"] = False
 
-    mergedtext = b""
-    for line in m3.merge_lines(name_a=name_a, name_b=name_b, **extrakwargs):
-        if opts.get("print"):
-            ui.fout.write(line)
-        else:
-            mergedtext += line
-
-    if not opts.get("print"):
+    lines = list(m3.merge_lines(name_a=name_a, name_b=name_b, **extrakwargs))
+    mergedtext = b"".join(lines)
+    if opts.get("print"):
+        ui.fout.write(mergedtext)
+    else:
         # HACK(phillco): We need to call ``workingflags()`` if ``localctx`` is
         # a workingfilectx (see workingfilectx.workingflags).
         flags = getattr(localctx, "workingflags", localctx.flags)()
