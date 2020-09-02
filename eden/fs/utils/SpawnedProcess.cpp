@@ -151,7 +151,7 @@ SpawnedProcess::Environment::asEnviron() const {
     const auto& key = it.first;
     const auto& val = it.second;
 
-    XLOG(DBG2) << "asEnviron " << key << "=" << val;
+    XLOG(DBG6) << "asEnviron " << key << "=" << val;
 
     envp[i++] = buf;
 
@@ -191,7 +191,7 @@ std::string SpawnedProcess::Environment::asWin32EnvBlock() const {
     const auto& key = it.first;
     const auto& val = it.second;
 
-    XLOG(DBG2) << "asWin32EnvBlock " << key << "=" << val;
+    XLOG(DBG6) << "asWin32EnvBlock " << key << "=" << val;
 
     block.append(key);
     block.push_back('=');
@@ -490,7 +490,7 @@ SpawnedProcess::SpawnedProcess(
       shellCommand.append(folly::shellQuote(word));
     }
 
-    XLOG(DBG2) << "will run : " << shellCommand;
+    XLOG(DBG6) << "will run : " << shellCommand;
 
     argStrings.clear();
     argStrings.emplace_back("/bin/sh");
@@ -501,7 +501,7 @@ SpawnedProcess::SpawnedProcess(
   std::vector<char*> argv;
   argv.reserve(argStrings.size() + 1);
   for (auto& a : argStrings) {
-    XLOG(DBG2) << "argv[" << argv.size() << "] = " << a;
+    XLOG(DBG6) << "argv[" << argv.size() << "] = " << a;
     argv.push_back(a.data());
   }
   // The argv array is required to be NULL terminated
@@ -515,7 +515,7 @@ SpawnedProcess::SpawnedProcess(
   }
 
   auto envp = options.env_.asEnviron();
-  XLOG(DBG2) << "exec: "
+  XLOG(DBG6) << "exec: "
              << (options.execPath_.has_value() ? options.execPath_->c_str()
                                                : argv[0]);
   auto ret = posix_spawnp(
@@ -605,7 +605,7 @@ SpawnedProcess::SpawnedProcess(
   }
 
   auto cmdLine = build_command_line(args);
-  XLOG(DBG2) << "Creating the process: " << cmdLine;
+  XLOG(DBG6) << "Creating the process: " << cmdLine;
   auto env = options.environment().asWin32EnvBlock();
 
   PROCESS_INFORMATION procInfo{};
