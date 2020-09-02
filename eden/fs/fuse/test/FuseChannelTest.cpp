@@ -13,7 +13,6 @@
 #include <gtest/gtest.h>
 #include <unordered_map>
 #include "eden/fs/fuse/Dispatcher.h"
-#include "eden/fs/fuse/RequestData.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/testharness/FakeFuse.h"
 #include "eden/fs/testharness/TestDispatcher.h"

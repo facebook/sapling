@@ -10,8 +10,6 @@
 #include <folly/Conv.h>
 #include <folly/logging/xlog.h>
 
-#include "eden/fs/fuse/RequestData.h"
-
 using folly::Future;
 using std::string;
 

@@ -33,9 +33,6 @@ namespace eden {
 class DirList;
 class Dispatcher;
 class EdenStats;
-class FileHandle;
-class MountPoint;
-class RequestData;
 
 class Dispatcher {
   fuse_init_out connInfo_{};
