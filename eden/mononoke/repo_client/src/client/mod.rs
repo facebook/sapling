@@ -344,12 +344,6 @@ impl UndesiredPathLogger {
             for size in sizes {
                 STATS::undesired_file_fetches.add_value(1);
                 STATS::undesired_file_fetches_sizes.add_value(size as i64);
-                self.ctx
-                    .perf_counters()
-                    .add_to_counter(PerfCounterType::UndesiredFileFetch, 1);
-                self.ctx
-                    .perf_counters()
-                    .add_to_counter(PerfCounterType::UndesiredFileFetchSize, size as i64);
 
                 self.ctx
                     .scuba()
