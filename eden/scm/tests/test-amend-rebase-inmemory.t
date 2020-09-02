@@ -34,20 +34,20 @@ Amend. Auto-restack partially succeeded:
   restacking would create conflicts (hit merge conflicts in E), so you must run it manually
   (run `hg restack` manually to restack this commit's children)
 
-Bug: C, D are rebased without moving bookmark!
+Commit B, C, D are rebased. Bookmarks are moved.
 
   $ hg log -r 'all()' -G -T '{desc} {bookmarks}'
-  o  D
+  o  D D
   |
-  o  C
+  o  C C
   |
   @  B B
   |
   | o  E E
   | |
-  | x  D D
+  | x  D
   | |
-  | x  C C
+  | x  C
   | |
   | x  B
   |/
@@ -71,22 +71,16 @@ Start restacking the rest (E):
   $ hg continue
   rebasing a98af8665cf0 "E" (E)
 
-Bug: Only bookmark on E are moved:
+All rebased bookmarks are moved:
 
   $ hg log -r 'all()' -G -T '{desc} {bookmarks}'
   o  E E
   |
-  o  D
+  o  D D
   |
-  o  C
+  o  C C
   |
   @  B B
   |
-  | x  D D
-  | |
-  | x  C C
-  | |
-  | x  B
-  |/
   o  A A
   

@@ -576,6 +576,18 @@ class rebaseruntime(object):
                             "noconflictmsg",
                             _("%s (in %s) and --noconflict passed; exiting"),
                         )
+                        # Some commits might have been rebased. Still move
+                        # their bookmarks.
+                        clearrebased(
+                            ui,
+                            repo,
+                            self.templ,
+                            self.destmap,
+                            self.state,
+                            self.skipped,
+                            None,
+                            self.keepf,
+                        )
                         raise error.AbortMergeToolError(msg % (kindstr, pathstr))
                     elif cmdutil.uncommittedchanges(repo):
                         raise error.UncommitedChangesAbort(
@@ -1999,7 +2011,7 @@ def clearrebased(
     If `collapsedas` is not None, the rebase was a collapse whose result if the
     `collapsedas` node.
 
-    If `keepf` is not True, the rebase has --keep set and no nodes should be
+    If `keepf` is True, the rebase has --keep set and no nodes should be
     removed (but bookmarks still need to be moved).
     """
     tonode = repo.changelog.node
