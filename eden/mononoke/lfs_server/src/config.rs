@@ -21,6 +21,7 @@ pub struct RawLimit {
     pub sleep_ms: i64,
     pub max_jitter_ms: i64,
     pub client_identities: Vec<String>,
+    pub probability_pct: i64,
 }
 
 /// Struct representing actual config data.
@@ -45,10 +46,10 @@ pub struct Limit {
     client_identities: Vec<MononokeIdentity>,
 }
 
-impl TryFrom<&RawLimit> for Limit {
+impl TryFrom<RawLimit> for Limit {
     type Error = anyhow::Error;
 
-    fn try_from(value: &RawLimit) -> Result<Self, Self::Error> {
+    fn try_from(value: RawLimit) -> Result<Self, Self::Error> {
         let client_identities = value
             .client_identities
             .iter()
@@ -56,7 +57,7 @@ impl TryFrom<&RawLimit> for Limit {
             .collect::<Result<Vec<_>, _>>()?;
 
         Ok(Self {
-            raw_limit: value.clone(),
+            raw_limit: value,
             client_identities,
         })
     }
@@ -77,6 +78,7 @@ impl<'de> Deserialize<'de> for ServerConfig {
         let try_throttle_limits = raw_server_config
             .throttle_limits
             .iter()
+            .cloned()
             .map(Limit::try_from)
             .collect::<Result<Vec<_>, _>>();
 
@@ -162,5 +164,8 @@ impl Limit {
     }
     pub fn client_identities(&self) -> Vec<MononokeIdentity> {
         self.client_identities.clone()
+    }
+    pub fn probability_pct(&self) -> i64 {
+        self.raw_limit.probability_pct
     }
 }

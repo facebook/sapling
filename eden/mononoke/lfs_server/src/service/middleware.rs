@@ -7,7 +7,7 @@
 
 use cached_config::ConfigHandle;
 use fbinit::FacebookInit;
-use futures::future::{self, FutureExt};
+use futures::future::FutureExt;
 use gotham::{handler::HandlerFuture, middleware::Middleware, state::State};
 use gotham_derive::NewMiddleware;
 use gotham_ext::error::HttpError;
@@ -64,6 +64,10 @@ impl Middleware for ThrottleMiddleware {
                 continue;
             }
 
+            if !limit_applies_probabilistically(&limit) {
+                continue;
+            }
+
             if let Some(err) = is_limit_exceeded(self.fb, &limit.counter(), limit.limit()) {
                 let err = HttpError::e429(err);
 
@@ -77,9 +81,15 @@ impl Middleware for ThrottleMiddleware {
 
                 let total_sleep_ms = sleep_ms + jitter;
 
-                return tokio::time::delay_for(Duration::from_millis(total_sleep_ms))
-                    .then(move |()| future::ready(http_error_to_handler_error(err, state)))
-                    .boxed();
+                let res = async move {
+                    if total_sleep_ms > 0 {
+                        tokio::time::delay_for(Duration::from_millis(total_sleep_ms)).await;
+                    }
+                    http_error_to_handler_error(err, state)
+                }
+                .boxed();
+
+                return res;
             }
         }
 
@@ -111,4 +121,44 @@ fn limit_applies_to_client(limit: &Limit, client_identity: &Option<&MononokeIden
             .iter()
             .any(|presented_id| presented_id == configured_id)
     })
+}
+
+fn limit_applies_probabilistically(limit: &Limit) -> bool {
+    limit.probability_pct() > rand::thread_rng().gen_range(0, 100)
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::config::RawLimit;
+
+    #[test]
+    fn test_limit_applies_probabilistically() {
+        let base = RawLimit {
+            counter: "".to_string(),
+            limit: 0,
+            sleep_ms: 0,
+            max_jitter_ms: 0,
+            client_identities: vec![],
+            probability_pct: 0,
+        };
+
+        let l0: Limit = RawLimit {
+            probability_pct: 0,
+            ..base.clone()
+        }
+        .try_into()
+        .unwrap();
+
+        assert!(!limit_applies_probabilistically(&l0));
+
+        let l100: Limit = RawLimit {
+            probability_pct: 100,
+            ..base.clone()
+        }
+        .try_into()
+        .unwrap();
+
+        assert!(limit_applies_probabilistically(&l100));
+    }
 }

@@ -21,6 +21,7 @@
   >       "limit": 10,
   >       "sleep_ms": 1000,
   >       "max_jitter_ms": 100,
+  >       "probability_pct": 100,
   >       "client_identities": [
   >         "USER:myusername0"
   >       ]
