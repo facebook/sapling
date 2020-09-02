@@ -45,8 +45,8 @@ void BackingStoreLogger::logImport(
 
   std::string cause_string = "<invalid>";
   switch (cause) {
-    case ObjectFetchContext::Cause::Fuse:
-      cause_string = "FUSE";
+    case ObjectFetchContext::Cause::Channel:
+      cause_string = "Channel";
       break;
     case ObjectFetchContext::Cause::Thrift:
       cause_string = "Thrift";

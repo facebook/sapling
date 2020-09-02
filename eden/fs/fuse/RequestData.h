@@ -113,7 +113,7 @@ class RequestData : public ObjectFetchContext {
 
   // Override of `ObjectFetchContext`
   Cause getCause() const override {
-    return ObjectFetchContext::Cause::Fuse;
+    return ObjectFetchContext::Cause::Channel;
   }
 
   void startRequest(
