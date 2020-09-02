@@ -30,6 +30,7 @@ from edenscm.mercurial import (
     error,
     extensions,
     merge as mergemod,
+    pycompat,
     scmutil,
     util,
 )
@@ -225,7 +226,7 @@ def _summarize(repo, workingfilectx, otherctx, basectx):
                 "issymlink": None,
             }
         return {
-            "contents": context.data(),
+            "contents": pycompat.decodeutf8(context.data()),
             "exists": True,
             "isexec": context.isexec(),
             "issymlink": context.islink(),
@@ -242,7 +243,7 @@ def _summarize(repo, workingfilectx, otherctx, basectx):
         #
         # Test cases affected in test-merge-conflict-cornercases.t: #0
         local = {
-            "contents": util.readfile(origfile),
+            "contents": pycompat.decodeutf8(util.readfile(origfile)),
             "exists": True,
             "isexec": util.isexec(origfile),
             "issymlink": util.statislink(filestat.stat),
