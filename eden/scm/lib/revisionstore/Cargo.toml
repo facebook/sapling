@@ -11,6 +11,7 @@ for-tests = []
 
 [dependencies]
 anyhow = "1.0.20"
+async-runtime = { path = "../async-runtime" }
 async-trait = "0.1"
 bytes = { version = "0.5", features = ["serde"] }
 byteorder = "1.2.7"

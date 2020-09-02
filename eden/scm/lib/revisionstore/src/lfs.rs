@@ -19,7 +19,6 @@ use std::{
         atomic::{AtomicUsize, Ordering},
         Arc,
     },
-    thread::sleep,
     time::Duration,
 };
 
@@ -30,10 +29,14 @@ use http::status::StatusCode;
 use parking_lot::{Mutex, RwLock};
 use rand::{thread_rng, Rng};
 use serde_derive::{Deserialize, Serialize};
-use tokio::{runtime::Runtime, task::spawn_blocking, time::timeout};
+use tokio::{
+    task::spawn_blocking,
+    time::{delay_for, timeout},
+};
 use tracing::info_span;
 use url::Url;
 
+use async_runtime::block_on_future;
 use configparser::{
     config::ConfigSet,
     hg::{ByteCount, ConfigSetHgExt},
@@ -91,7 +94,6 @@ struct HttpLfsRemote {
     backoff_times: Vec<f32>,
     request_timeout: Duration,
     client: HttpClient,
-    rt: Arc<Mutex<Runtime>>,
 }
 
 enum LfsRemoteInner {
@@ -902,6 +904,7 @@ impl LfsRemoteInner {
         add_extra: impl Fn(Request) -> Request,
     ) -> Result<Option<Bytes>> {
         let mut backoff = backoff_times.into_iter();
+        let mut rng = thread_rng();
 
         loop {
             let req = Request::new(url.clone(), method)
@@ -950,12 +953,8 @@ impl LfsRemoteInner {
                 }
 
                 if let Some(backoff_time) = backoff.next() {
-                    spawn_blocking(move || {
-                        let mut rng = thread_rng();
-                        let sleep_time = Duration::from_secs_f32(rng.gen_range(0.0, backoff_time));
-                        sleep(sleep_time)
-                    })
-                    .await?;
+                    let sleep_time = Duration::from_secs_f32(rng.gen_range(0.0, backoff_time));
+                    delay_for(sleep_time).await;
                     continue;
                 }
             }
@@ -1002,7 +1001,7 @@ impl LfsRemoteInner {
             .await
         };
 
-        let response = http.rt.lock().block_on(response_fut)?;
+        let response = block_on_future(response_fut)?;
         let response = match response {
             None => return Ok(None),
             Some(response) => response,
@@ -1126,7 +1125,7 @@ impl LfsRemoteInner {
 
         // Request a couple of blobs concurrently.
         let mut stream = iter(futures).buffer_unordered(http.concurrent_fetches);
-        http.rt.lock().block_on(async {
+        block_on_future(async {
             while let Some(next) = stream.next().await {
                 next.await?
             }
@@ -1205,7 +1204,6 @@ impl LfsRemote {
             let request_timeout =
                 Duration::from_millis(config.get_or("lfs", "requesttimeout", || 10_000)?);
 
-            let rt = Arc::new(Mutex::new(Runtime::new()?));
             let client = HttpClient::new();
 
             Ok(Self {
@@ -1219,7 +1217,6 @@ impl LfsRemote {
                     backoff_times,
                     request_timeout,
                     client,
-                    rt,
                 }),
             })
         }
