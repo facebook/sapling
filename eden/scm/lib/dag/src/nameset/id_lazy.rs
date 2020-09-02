@@ -419,7 +419,7 @@ pub(crate) mod tests {
             show(set1.clone() | set2.clone()),
             [
                 "<static [03, 02, 04, 07, 06]>",
-                "<spans [07+7, 06+6, 04+4, 03+3, 02+2]>"
+                "<spans [06:07+6:7, 02:04+2:4]>"
             ]
         );
         assert_eq!(

@@ -151,7 +151,7 @@ impl From<(Id, Id)> for SpanSet {
 
 impl SpanSet {
     /// Construct a [`SpanSet`] containing given spans.
-    /// Overlapped spans will be merged automatically.
+    /// Overlapped or adjacent spans will be merged automatically.
     pub fn from_spans<T: Into<Span>, I: IntoIterator<Item = T>>(spans: I) -> Self {
         let mut heap: BinaryHeap<Span> = spans.into_iter().map(|span| span.into()).collect();
         let mut spans = Vec::with_capacity(heap.len().min(64));
@@ -167,11 +167,14 @@ impl SpanSet {
     /// Construct a [`SpanSet`] containing given spans.
     /// The given spans must be already sorted (i.e. larger ids first), and do
     /// not have overlapped spans.
-    pub fn from_sorted_spans<T: Into<Span>, I: IntoIterator<Item = T>>(spans: I) -> Self {
-        let spans: Vec<Span> = spans.into_iter().map(Into::into).collect();
-        let result = SpanSet { spans };
-        assert!(result.is_valid());
-        result
+    /// Adjacent spans will be merged automatically.
+    pub fn from_sorted_spans<T: Into<Span>, I: IntoIterator<Item = T>>(span_iter: I) -> Self {
+        let mut spans = Vec::<Span>::new();
+        for span in span_iter {
+            let span = span.into();
+            push_with_union(&mut spans, span);
+        }
+        Self { spans }
     }
 
     /// Construct an empty [`SpanSet`].
@@ -214,28 +217,19 @@ impl SpanSet {
 
     /// Tests if a given [`Id`] or [`Span`] is covered by this set.
     pub fn contains(&self, value: impl Into<Span>) -> bool {
-        let mut span = value.into();
-        loop {
-            let idx = match self
-                .spans
-                .binary_search_by(|probe| span.low.cmp(&probe.low))
-            {
-                Ok(idx) => idx,
-                Err(idx) => idx,
-            };
-            if let Some(existing_span) = self.spans.get(idx) {
-                debug_assert!(existing_span.low <= span.low);
-                if existing_span.high < span.low {
-                    return false;
-                } else if existing_span.high >= span.high {
-                    return true;
-                } else {
-                    span.low = existing_span.high + 1;
-                    debug_assert!(span.low <= span.high);
-                }
-            } else {
-                return false;
-            }
+        let span = value.into();
+        let idx = match self
+            .spans
+            .binary_search_by(|probe| span.low.cmp(&probe.low))
+        {
+            Ok(idx) => idx,
+            Err(idx) => idx,
+        };
+        if let Some(existing_span) = self.spans.get(idx) {
+            debug_assert!(existing_span.low <= span.low);
+            existing_span.high >= span.high
+        } else {
+            false
         }
     }
 
@@ -671,6 +665,12 @@ mod tests {
     fn test_valid_spans() {
         SpanSet::empty();
         SpanSet::from_spans(vec![4..=4, 3..=3, 1..=2]);
+    }
+
+    #[test]
+    fn test_from_sorted_spans_merge() {
+        let s = SpanSet::from_sorted_spans(vec![4..=4, 3..=3, 1..=2]);
+        assert_eq!(format!("{:?}", s), "1..=4");
     }
 
     #[test]
