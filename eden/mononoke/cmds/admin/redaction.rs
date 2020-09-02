@@ -204,16 +204,22 @@ pub async fn subcommand_redaction<'a>(
     sub_m: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
     match sub_m.subcommand() {
-        (REDACTION_ADD, Some(sub_sub_m)) => redaction_add(fb, logger, matches, sub_sub_m),
-        (REDACTION_REMOVE, Some(sub_sub_m)) => redaction_remove(fb, logger, matches, sub_sub_m),
-        (REDACTION_LIST, Some(sub_sub_m)) => redaction_list(fb, logger, matches, sub_sub_m),
+        (REDACTION_ADD, Some(sub_sub_m)) => redaction_add(fb, logger, matches, sub_sub_m).await,
+        (REDACTION_REMOVE, Some(sub_sub_m)) => {
+            redaction_remove(fb, logger, matches, sub_sub_m)
+                .compat()
+                .await
+        }
+        (REDACTION_LIST, Some(sub_sub_m)) => {
+            redaction_list(fb, logger, matches, sub_sub_m)
+                .compat()
+                .await
+        }
         _ => {
             eprintln!("{}", matches.usage());
             ::std::process::exit(1);
         }
     }
-    .compat()
-    .await
 }
 
 /// Fetch the file list from the subcommand cli matches
@@ -330,27 +336,33 @@ fn content_ids_for_paths(
         .from_err()
 }
 
-fn redaction_add(
+async fn redaction_add<'a>(
     fb: FacebookInit,
     logger: Logger,
-    matches: &ArgMatches<'_>,
-    sub_m: &ArgMatches<'_>,
-) -> BoxFuture<(), SubcommandError> {
-    let (task, paths) = try_boxfuture!(task_and_paths_parser(sub_m));
-    get_ctx_blobrepo_redacted_blobs_cs_id(fb, logger.clone(), matches, sub_m)
-        .and_then(move |(ctx, blobrepo, redacted_blobs, cs_id)| {
-            content_ids_for_paths(ctx, logger, blobrepo, cs_id, paths)
-                .and_then(move |content_ids| {
-                    let blobstore_keys = content_ids
-                        .iter()
-                        .map(|content_id| content_id.blobstore_key())
-                        .collect();
-                    let timestamp = Timestamp::now();
-                    redacted_blobs.insert_redacted_blobs(&blobstore_keys, &task, &timestamp)
-                })
-                .from_err()
-        })
-        .boxify()
+    matches: &'a ArgMatches<'_>,
+    sub_m: &'a ArgMatches<'_>,
+) -> Result<(), SubcommandError> {
+    let (task, paths) = task_and_paths_parser(sub_m)?;
+    let (ctx, blobrepo, redacted_blobs, cs_id) =
+        get_ctx_blobrepo_redacted_blobs_cs_id(fb, logger.clone(), matches, sub_m)
+            .compat()
+            .await?;
+
+    let content_ids = content_ids_for_paths(ctx, logger, blobrepo, cs_id, paths)
+        .compat()
+        .await?;
+
+    let blobstore_keys = content_ids
+        .iter()
+        .map(|content_id| content_id.blobstore_key())
+        .collect();
+    let timestamp = Timestamp::now();
+    redacted_blobs
+        .insert_redacted_blobs(&blobstore_keys, &task, &timestamp)
+        .compat()
+        .await?;
+
+    Ok(())
 }
 
 fn redaction_list(
