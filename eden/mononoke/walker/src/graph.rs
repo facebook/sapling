@@ -5,11 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use ahash::RandomState;
 use anyhow::{format_err, Error};
 use bookmarks::BookmarkName;
 use filenodes::FilenodeInfo;
 use filestore::Alias;
 use futures::stream::BoxStream;
+use hash_memo::EagerHashMemoizer;
 use internment::ArcIntern;
 use mercurial_types::{
     blobs::{BlobManifest, HgBlobChangeset},
@@ -175,7 +177,7 @@ impl Hash for MPathHashMemo {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum WrappedPath {
     Root,
-    NonRoot(ArcIntern<MPathHashMemo>),
+    NonRoot(ArcIntern<EagerHashMemoizer<MPathHashMemo>>),
 }
 
 impl WrappedPath {
@@ -207,10 +209,16 @@ impl fmt::Display for WrappedPath {
     }
 }
 
+static PATH_HASHER_FACTORY: OnceCell<RandomState> = OnceCell::new();
+
 impl From<Option<MPath>> for WrappedPath {
     fn from(mpath: Option<MPath>) -> Self {
+        let hasher_fac = PATH_HASHER_FACTORY.get_or_init(|| RandomState::default());
         match mpath {
-            Some(mpath) => WrappedPath::NonRoot(ArcIntern::new(MPathHashMemo::new(mpath))),
+            Some(mpath) => WrappedPath::NonRoot(ArcIntern::new(EagerHashMemoizer::new(
+                MPathHashMemo::new(mpath),
+                hasher_fac,
+            ))),
             None => WrappedPath::Root,
         }
     }
