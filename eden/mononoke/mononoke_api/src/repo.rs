@@ -1174,11 +1174,14 @@ impl RepoContext {
         distance_to_descendant: u64,
     ) -> Result<ChangesetId, MononokeError> {
         let blob_repo = self.blob_repo();
-        let segmented_changelog = blob_repo.attribute::<SegmentedChangelog>().ok_or_else(|| {
-            MononokeError::InvalidRequest(String::from(
-                "Segmented Changelog is not enabled for this repo",
-            ))
-        })?;
+        let segmented_changelog =
+            blob_repo
+                .attribute::<dyn SegmentedChangelog>()
+                .ok_or_else(|| {
+                    MononokeError::InvalidRequest(String::from(
+                        "Segmented Changelog is not enabled for this repo",
+                    ))
+                })?;
         let ancestor = segmented_changelog
             .location_to_changeset_id(&self.ctx, known_descendant, distance_to_descendant)
             .await

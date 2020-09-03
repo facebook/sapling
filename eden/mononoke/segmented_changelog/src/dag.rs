@@ -11,10 +11,10 @@ use std::{
 };
 
 use anyhow::{format_err, Result};
-
+use async_trait::async_trait;
 use futures::{
     compat::Future01CompatExt,
-    stream::{FuturesOrdered, StreamExt, TryStreamExt},
+    stream::{self, FuturesOrdered, StreamExt, TryStreamExt},
     try_join,
 };
 use maplit::hashset;
@@ -30,6 +30,9 @@ use mononoke_types::{ChangesetId, RepositoryId};
 use phases::SqlPhases;
 
 use crate::idmap::{IdMap, MemIdMap};
+use crate::SegmentedChangelog;
+
+const IDMAP_CHANGESET_FETCH_BATCH: usize = 500;
 
 define_stats! {
     prefix = "mononoke.segmented_changelog";
@@ -46,6 +49,41 @@ pub struct Dag {
     idmap: Arc<IdMap>,
 }
 
+#[async_trait]
+impl SegmentedChangelog for Dag {
+    async fn location_to_many_changeset_ids(
+        &self,
+        ctx: &CoreContext,
+        known: ChangesetId,
+        distance: u64,
+        count: u64,
+    ) -> Result<Vec<ChangesetId>> {
+        STATS::location_to_changeset_id.add_value(1);
+        let known_vertex = self.idmap.get_vertex(ctx, self.repo_id, known).await?;
+        let mut dist_ancestor_vertex = self.iddag.first_ancestor_nth(known_vertex, distance)?;
+        let mut vertexes = vec![dist_ancestor_vertex];
+        for _ in 1..count {
+            let parents = self.iddag.parent_ids(dist_ancestor_vertex)?;
+            if parents.len() != 1 {
+                return Err(format_err!(
+                    "invalid request: changeset {} does not have {} single parent ancestors",
+                    known,
+                    distance + count - 1
+                ));
+            }
+            dist_ancestor_vertex = parents[0];
+            vertexes.push(dist_ancestor_vertex);
+        }
+        let changeset_futures = vertexes
+            .into_iter()
+            .map(|vertex| self.idmap.get_changeset_id(ctx, self.repo_id, vertex));
+        stream::iter(changeset_futures)
+            .buffered(IDMAP_CHANGESET_FETCH_BATCH)
+            .try_collect()
+            .await
+    }
+}
+
 impl Dag {
     pub fn new_in_process(repo_id: RepositoryId) -> Result<Dag> {
         Ok(Dag {
@@ -53,23 +91,6 @@ impl Dag {
             iddag: InProcessIdDag::new_in_process(),
             idmap: Arc::new(IdMap::with_sqlite_in_memory()?),
         })
-    }
-
-    // TODO(sfilip): error scenarios
-    pub async fn location_to_changeset_id(
-        &self,
-        ctx: &CoreContext,
-        known: ChangesetId,
-        distance: u64,
-    ) -> Result<ChangesetId> {
-        STATS::location_to_changeset_id.add_value(1);
-        let known_vertex = self.idmap.get_vertex(ctx, self.repo_id, known).await?;
-        let dist_ancestor_vertex = self.iddag.first_ancestor_nth(known_vertex, distance)?;
-        let dist_ancestor = self
-            .idmap
-            .get_changeset_id(ctx, self.repo_id, dist_ancestor_vertex)
-            .await?;
-        Ok(dist_ancestor)
     }
 
     pub async fn build_all_graph(
@@ -284,8 +305,9 @@ mod tests {
     use fbinit::FacebookInit;
 
     use blobrepo::BlobRepo;
-    use fixtures::{linear, merge_even, merge_uneven};
+    use fixtures::{linear, merge_even, merge_uneven, unshared_merge_even};
     use futures::compat::{Future01CompatExt, Stream01CompatExt};
+    use futures::future::try_join_all;
     use futures::StreamExt;
     use phases::mark_reachable_as_public;
     use revset::AncestorsNodeStream;
@@ -393,53 +415,97 @@ mod tests {
         Ok(())
     }
 
-    async fn validate_location_to_changeset_id(
+    async fn validate_location_to_changeset_ids(
         ctx: CoreContext,
         blobrepo: BlobRepo,
         known: &'static str,
-        distance: u64,
-        expected: &'static str,
+        distance_count: (u64, u64),
+        expected: Vec<&'static str>,
     ) -> Result<()> {
+        let (distance, count) = distance_count;
         let known_cs_id = resolve_cs_id(&ctx, &blobrepo, known).await?;
         setup_phases(&ctx, &blobrepo, known_cs_id).await?;
         let dag = Dag::new_build_all_from_blobrepo(&ctx, &blobrepo, known_cs_id).await?;
 
         let answer = dag
-            .location_to_changeset_id(&ctx, known_cs_id, distance)
+            .location_to_many_changeset_ids(&ctx, known_cs_id, distance, count)
             .await?;
-        let expected_cs_id = resolve_cs_id(&ctx, &blobrepo, expected).await?;
-        assert_eq!(answer, expected_cs_id);
+        let expected_cs_ids = try_join_all(
+            expected
+                .into_iter()
+                .map(|id| resolve_cs_id(&ctx, &blobrepo, id)),
+        )
+        .await?;
+        assert_eq!(answer, expected_cs_ids);
 
         Ok(())
     }
 
     #[fbinit::compat_test]
-    async fn test_location_to_changeset_id(fb: FacebookInit) -> Result<()> {
+    async fn test_location_to_changeset_ids(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        validate_location_to_changeset_id(
+        validate_location_to_changeset_ids(
             ctx.clone(),
             linear::getrepo(fb).await,
-            "79a13814c5ce7330173ec04d279bf95ab3f652fb",
-            4,
-            "0ed509bf086fadcb8a8a5384dc3b550729b0fc17",
+            "79a13814c5ce7330173ec04d279bf95ab3f652fb", // master commit, message: modified 10
+            (4, 3),
+            vec![
+                "0ed509bf086fadcb8a8a5384dc3b550729b0fc17", // message: added 7
+                "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b", // message: added 6
+                "cb15ca4a43a59acff5388cea9648c162afde8372", // message: added 5
+            ],
         )
         .await?;
-        validate_location_to_changeset_id(
-            ctx.clone(),
-            merge_even::getrepo(fb).await,
-            "4f7f3fd428bec1a48f9314414b063c706d9c1aed",
-            2,
-            "d7542c9db7f4c77dab4b315edd328edf1514952f",
-        )
-        .await?;
-        validate_location_to_changeset_id(
+        validate_location_to_changeset_ids(
             ctx.clone(),
             merge_uneven::getrepo(fb).await,
-            "264f01429683b3dd8042cb3979e8bf37007118bc",
-            5,
-            "4f7f3fd428bec1a48f9314414b063c706d9c1aed",
+            "264f01429683b3dd8042cb3979e8bf37007118bc", // top of merged branch, message: Add 5
+            (4, 2),
+            vec![
+                "795b8133cf375f6d68d27c6c23db24cd5d0cd00f", // message: Add 1
+                "4f7f3fd428bec1a48f9314414b063c706d9c1aed", // bottom of branch
+            ],
         )
         .await?;
+        validate_location_to_changeset_ids(
+            ctx.clone(),
+            unshared_merge_even::getrepo(fb).await,
+            "7fe9947f101acb4acf7d945e69f0d6ce76a81113", // master commit
+            (1, 1),
+            vec!["d592490c4386cdb3373dd93af04d563de199b2fb"], // parent of master, merge commit
+        )
+        .await?;
+        Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn test_location_to_changeset_id_invalid_req(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let blobrepo = unshared_merge_even::getrepo(fb).await;
+        let known_cs_id =
+            resolve_cs_id(&ctx, &blobrepo, "7fe9947f101acb4acf7d945e69f0d6ce76a81113").await?;
+        setup_phases(&ctx, &blobrepo, known_cs_id).await?;
+        let dag = Dag::new_build_all_from_blobrepo(&ctx, &blobrepo, known_cs_id).await?;
+        assert!(dag
+            .location_to_many_changeset_ids(&ctx, known_cs_id, 1, 2)
+            .await
+            .is_err());
+        // TODO(T74320664): Ideally LocationToHash should error when asked to go over merge commit.
+        // The parents order is not well defined enough for this not to be ambiguous.
+        assert!(dag
+            .location_to_many_changeset_ids(&ctx, known_cs_id, 2, 1)
+            .await
+            .is_ok());
+        let second_commit =
+            resolve_cs_id(&ctx, &blobrepo, "1700524113b1a3b1806560341009684b4378660b").await?;
+        assert!(dag
+            .location_to_many_changeset_ids(&ctx, second_commit, 1, 2)
+            .await
+            .is_err());
+        assert!(dag
+            .location_to_many_changeset_ids(&ctx, second_commit, 2, 1)
+            .await
+            .is_err());
         Ok(())
     }
 
