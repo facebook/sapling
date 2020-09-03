@@ -17,7 +17,7 @@ pub mod timer;
 pub mod tls_session_data;
 
 pub use client_identity::{ClientIdentity, ClientIdentityMiddleware};
-pub use post_request::{PostRequestCallbacks, PostRequestMiddleware};
+pub use post_request::{PostRequestCallbacks, PostRequestConfig, PostRequestMiddleware};
 pub use server_identity::ServerIdentityMiddleware;
 pub use timer::{HeadersDuration, RequestStartTime, TimerMiddleware};
 pub use tls_session_data::TlsSessionDataMiddleware;
