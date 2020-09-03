@@ -51,7 +51,7 @@ void RequestData::finishRequest() {
 
   auto& pal = channel_->getProcessAccessLog();
   if (getEdenTopStats().didImportFromBackingStore()) {
-    auto type = ProcessAccessLog::AccessType::FuseBackingStoreImport;
+    auto type = ProcessAccessLog::AccessType::FsChannelBackingStoreImport;
     pal.recordAccess(examineReq().pid, type);
   }
   pal.recordDuration(examineReq().pid, diff_ns);

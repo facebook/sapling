@@ -48,18 +48,18 @@ struct HandlerEntry {
       StringPiece n,
       Handler h,
       ChannelThreadStats::HistogramPtr hist,
-      AccessType at = AccessType::FuseOther)
+      AccessType at = AccessType::FsChannelOther)
       : name{n}, handler{h}, histogram{hist}, accessType{at} {}
 
   StringPiece name;
   Handler handler = nullptr;
   ChannelThreadStats::HistogramPtr histogram = nullptr;
-  AccessType accessType = AccessType::FuseOther;
+  AccessType accessType = AccessType::FsChannelOther;
 };
 
 constexpr auto kFuseHandlers = [] {
-  const auto Read = AccessType::FuseRead;
-  const auto Write = AccessType::FuseWrite;
+  const auto Read = AccessType::FsChannelRead;
+  const auto Write = AccessType::FsChannelWrite;
 
   // Rely on assignment out of bounds to a constexpr array giving a
   // compiler error.
@@ -1214,7 +1214,7 @@ void FuseChannel::processSession() {
     auto* handlerEntry = lookupFuseHandlerEntry(header->opcode);
     processAccessLog_.recordAccess(
         header->pid,
-        handlerEntry ? handlerEntry->accessType : AccessType::FuseOther);
+        handlerEntry ? handlerEntry->accessType : AccessType::FsChannelOther);
 
     switch (header->opcode) {
       case FUSE_INIT:

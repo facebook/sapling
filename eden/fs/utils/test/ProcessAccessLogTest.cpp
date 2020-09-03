@@ -30,7 +30,7 @@ TEST(ProcessAccessLog, accessAddsProcessToProcessNameCache) {
   auto pid = ::getpid();
   auto processNameCache = std::make_shared<ProcessNameCache>();
   auto log = ProcessAccessLog{processNameCache};
-  log.recordAccess(::getpid(), ProcessAccessLog::AccessType::FuseOther);
+  log.recordAccess(::getpid(), ProcessAccessLog::AccessType::FsChannelOther);
   EXPECT_THAT(processNameCache->getAllProcessNames(), Contains(Key(Eq(pid))));
 }
 
@@ -38,16 +38,17 @@ TEST(ProcessAccessLog, accessIncrementsAccessCount) {
   auto pid = pid_t{42};
   auto log = ProcessAccessLog{std::make_shared<ProcessNameCache>()};
 
-  log.recordAccess(pid, ProcessAccessLog::AccessType::FuseRead);
-  log.recordAccess(pid, ProcessAccessLog::AccessType::FuseWrite);
-  log.recordAccess(pid, ProcessAccessLog::AccessType::FuseOther);
-  log.recordAccess(pid, ProcessAccessLog::AccessType::FuseBackingStoreImport);
+  log.recordAccess(pid, ProcessAccessLog::AccessType::FsChannelRead);
+  log.recordAccess(pid, ProcessAccessLog::AccessType::FsChannelWrite);
+  log.recordAccess(pid, ProcessAccessLog::AccessType::FsChannelOther);
+  log.recordAccess(
+      pid, ProcessAccessLog::AccessType::FsChannelBackingStoreImport);
 
   auto ac = AccessCounts{};
-  *ac.fuseTotal_ref() = 3;
-  *ac.fuseReads_ref() = 1;
-  *ac.fuseWrites_ref() = 1;
-  *ac.fuseBackingStoreImports_ref() = 1;
+  ac.fsChannelTotal_ref() = 3;
+  ac.fsChannelReads_ref() = 1;
+  ac.fsChannelWrites_ref() = 1;
+  ac.fsChannelBackingStoreImports_ref() = 1;
 
   EXPECT_THAT(log.getAccessCounts(10s), Contains(std::pair{pid, ac}));
 }

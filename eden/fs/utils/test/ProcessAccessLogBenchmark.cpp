@@ -28,7 +28,7 @@ BENCHMARK_DEFINE_F(ProcessAccessLogFixture, add_self)(benchmark::State& state) {
   auto myPid = getpid();
   for (auto _ : state) {
     processAccessLog.recordAccess(
-        myPid, ProcessAccessLog::AccessType::FuseOther);
+        myPid, ProcessAccessLog::AccessType::FsChannelOther);
   }
 }
 

@@ -23,7 +23,7 @@ struct ThreadLocalBucket;
 
 /**
  * An inexpensive mechanism for counting accesses by pids. Intended for counting
- * FUSE and Thrift calls from external processes.
+ * channel and Thrift calls from external processes.
  *
  * The first time a thread calls recordAccess, that thread is then coupled to
  * this particular ProcessAccessLog, even if it calls recordAccess on another
@@ -33,10 +33,10 @@ struct ThreadLocalBucket;
 class ProcessAccessLog {
  public:
   enum class AccessType : unsigned int {
-    FuseRead,
-    FuseWrite,
-    FuseOther,
-    FuseBackingStoreImport,
+    FsChannelRead,
+    FsChannelWrite,
+    FsChannelOther,
+    FsChannelBackingStoreImport,
     Last,
   };
 
