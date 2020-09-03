@@ -18,9 +18,11 @@ use async_trait::async_trait;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
 
+mod builder;
 mod dag;
 mod idmap;
 
+pub use crate::builder::SegmentedChangelogBuilder;
 pub use crate::dag::Dag as InProcessSegmentedChangelog;
 
 // TODO(T74420661): use `thiserror` to represent error case

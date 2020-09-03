@@ -5,14 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
+use std::sync::Arc;
 
 use anyhow::{format_err, Result};
 use futures::{compat::Future01CompatExt, future, TryFutureExt};
 use sql::{queries, Connection};
 use sql_ext::{
-    open_sqlite_in_memory,
-    replication::{NoReplicaLagMonitor, ReplicaLagMonitor, WaitForReplicationConfig},
+    replication::{ReplicaLagMonitor, WaitForReplicationConfig},
     SqlConnections,
 };
 
@@ -32,7 +32,6 @@ define_stats! {
 
 const INSERT_MAX: usize = 1_000;
 
-#[derive(Clone)]
 pub struct IdMap {
     connections: SqlConnections,
     replica_lag_monitor: Arc<dyn ReplicaLagMonitor>,
@@ -85,22 +84,16 @@ queries! {
 }
 
 impl IdMap {
-    const CREATION_QUERY: &'static str = include_str!("../schemas/sqlite-segmented-changelog.sql");
-
-    pub fn with_sqlite_in_memory() -> Result<Self> {
-        let conn = open_sqlite_in_memory()?;
-        conn.execute_batch(Self::CREATION_QUERY)?;
-        let connections = SqlConnections::new_single(Connection::with_sqlite(conn));
-        let replica_lag_monitor = Arc::new(NoReplicaLagMonitor());
-        let idmap = Self {
+    pub fn new(
+        connections: SqlConnections,
+        replica_lag_monitor: Arc<dyn ReplicaLagMonitor>,
+    ) -> Self {
+        Self {
             connections,
             replica_lag_monitor,
-        };
-        Ok(idmap)
+        }
     }
-}
 
-impl IdMap {
     #[cfg(test)]
     pub async fn insert(
         &self,
@@ -373,12 +366,19 @@ mod tests {
     use mononoke_types_mocks::changesetid::{
         FIVES_CSID, FOURS_CSID, ONES_CSID, THREES_CSID, TWOS_CSID,
     };
+    use sql_construct::SqlConstruct;
+
+    use crate::builder::SegmentedChangelogBuilder;
+
+    fn in_memory_idmap() -> Result<IdMap> {
+        Ok(SegmentedChangelogBuilder::with_sqlite_in_memory()?.build_idmap())
+    }
 
     #[fbinit::compat_test]
     async fn test_get_last_entry(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let repo_id = RepositoryId::new(0);
-        let idmap = IdMap::with_sqlite_in_memory()?;
+        let idmap = in_memory_idmap()?;
 
         assert_eq!(idmap.get_last_entry(&ctx, repo_id).await?, None);
 
@@ -398,7 +398,7 @@ mod tests {
     async fn test_insert_many(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let repo_id = RepositoryId::new(0);
-        let idmap = IdMap::with_sqlite_in_memory()?;
+        let idmap = in_memory_idmap()?;
 
         assert_eq!(idmap.get_last_entry(&ctx, repo_id).await?, None);
 
@@ -464,7 +464,7 @@ mod tests {
     async fn test_find_many_changeset_ids(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let repo_id = RepositoryId::new(0);
-        let idmap = IdMap::with_sqlite_in_memory()?;
+        let idmap = in_memory_idmap()?;
 
         let response = idmap
             .find_many_changeset_ids(

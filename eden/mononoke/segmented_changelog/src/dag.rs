@@ -85,12 +85,12 @@ impl SegmentedChangelog for Dag {
 }
 
 impl Dag {
-    pub fn new_in_process(repo_id: RepositoryId) -> Result<Dag> {
-        Ok(Dag {
+    pub fn new(repo_id: RepositoryId, iddag: InProcessIdDag, idmap: Arc<IdMap>) -> Self {
+        Self {
             repo_id,
-            iddag: InProcessIdDag::new_in_process(),
-            idmap: Arc::new(IdMap::with_sqlite_in_memory()?),
-        })
+            iddag,
+            idmap,
+        }
     }
 
     pub async fn build_all_graph(
@@ -311,7 +311,10 @@ mod tests {
     use futures::StreamExt;
     use phases::mark_reachable_as_public;
     use revset::AncestorsNodeStream;
+    use sql_construct::SqlConstruct;
     use tests_utils::resolve_cs_id;
+
+    use crate::builder::SegmentedChangelogBuilder;
 
     impl Dag {
         async fn build_all_from_blobrepo(
@@ -349,6 +352,10 @@ mod tests {
             let mut dag = Self::new_in_process(blobrepo.get_repoid())?;
             dag.build_all_from_blobrepo(ctx, blobrepo, head).await?;
             Ok(dag)
+        }
+
+        pub fn new_in_process(repo_id: RepositoryId) -> Result<Dag> {
+            Ok(SegmentedChangelogBuilder::with_sqlite_in_memory()?.build_with_repo_id(repo_id))
         }
     }
 
