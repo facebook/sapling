@@ -13,8 +13,8 @@ use bytes::Bytes;
 use chrono::{DateTime, FixedOffset};
 use context::CoreContext;
 use filestore::{FetchKey, StoreRequest};
-use futures::compat::Future01CompatExt;
 use futures::stream::{FuturesOrdered, FuturesUnordered, Stream, TryStreamExt};
+use futures::{compat::Future01CompatExt, future::try_join3, Future};
 use futures_old::stream as old_stream;
 use manifest::PathTree;
 use mononoke_types::{
@@ -157,10 +157,10 @@ impl CreateChange {
 }
 
 /// Verify that all deleted files existed in at least one of the parents.
-async fn verify_deleted_files_existed_in_a_parent(
-    parent_ctxs: &Vec<ChangesetContext>,
-    changes: &BTreeMap<MononokePath, CreateChange>,
-) -> Result<(), MononokeError> {
+fn verify_deleted_files_existed_in_a_parent<'a, 'b>(
+    parent_ctxs: &'a [ChangesetContext],
+    changes: &'b BTreeMap<MononokePath, CreateChange>,
+) -> impl Future<Output = Result<(), MononokeError>> + 'a {
     // Collect a set of all deleted paths.
     let deleted_files: BTreeSet<_> = changes
         .iter()
@@ -184,36 +184,38 @@ async fn verify_deleted_files_existed_in_a_parent(
             }))
     }
 
-    // Filter these to files that existed in a parent.
-    let parent_files: BTreeSet<_> = parent_ctxs
-        .iter()
-        .map(|parent_ctx| get_matching_files(parent_ctx, &deleted_files))
-        .collect::<FuturesUnordered<_>>()
-        .try_flatten()
-        .try_collect()
-        .await?;
+    async move {
+        // Filter these to files that existed in a parent.
+        let parent_files: BTreeSet<_> = parent_ctxs
+            .iter()
+            .map(|parent_ctx| get_matching_files(parent_ctx, &deleted_files))
+            .collect::<FuturesUnordered<_>>()
+            .try_flatten()
+            .try_collect()
+            .await?;
 
-    // Quickly check if all deleted files existed by comparing set lengths.
-    if deleted_files.len() == parent_files.len() {
-        Ok(())
-    } else {
-        // At least one deleted file didn't exist. Find out which ones to
-        // give a good error message.
-        let non_existent_path = deleted_files
-            .difference(&parent_files)
-            .next()
-            .expect("at least one file did not exist");
-        let path_count = deleted_files.len().saturating_sub(parent_files.len());
-        if path_count == 1 {
-            Err(MononokeError::InvalidRequest(format!(
-                "Deleted file '{}' does not exist in any parent",
-                non_existent_path
-            )))
+        // Quickly check if all deleted files existed by comparing set lengths.
+        if deleted_files.len() == parent_files.len() {
+            Ok(())
         } else {
-            Err(MononokeError::InvalidRequest(format!(
-                "{} deleted files ('{}', ...) do not exist in any parent",
-                path_count, non_existent_path
-            )))
+            // At least one deleted file didn't exist. Find out which ones to
+            // give a good error message.
+            let non_existent_path = deleted_files
+                .difference(&parent_files)
+                .next()
+                .expect("at least one file did not exist");
+            let path_count = deleted_files.len().saturating_sub(parent_files.len());
+            if path_count == 1 {
+                Err(MononokeError::InvalidRequest(format!(
+                    "Deleted file '{}' does not exist in any parent",
+                    non_existent_path
+                )))
+            } else {
+                Err(MononokeError::InvalidRequest(format!(
+                    "{} deleted files ('{}', ...) do not exist in any parent",
+                    path_count, non_existent_path
+                )))
+            }
         }
     }
 }
@@ -227,11 +229,11 @@ fn is_prefix_changed(path: &MononokePath, paths: &PathTree<CreateChangeType>) ->
 
 /// Verify that any files that are prefixes of changed paths in `parent_ctx`
 /// have been marked as deleted in `paths`.
-async fn verify_prefix_files_deleted(
-    parent_ctx: &ChangesetContext,
-    changes: &BTreeMap<MononokePath, CreateChange>,
-    path_changes: &PathTree<CreateChangeType>,
-) -> Result<(), MononokeError> {
+fn verify_prefix_files_deleted<'a, 'b>(
+    parent_ctx: &'a ChangesetContext,
+    changes: &'b BTreeMap<MononokePath, CreateChange>,
+    path_changes: &'a PathTree<CreateChangeType>,
+) -> impl Future<Output = Result<(), MononokeError>> + 'a {
     let prefix_paths: BTreeSet<_> = changes
         .iter()
         .filter(|(_path, change)| change.change_type() == CreateChangeType::Change)
@@ -239,23 +241,25 @@ async fn verify_prefix_files_deleted(
         .flatten()
         .collect();
 
-    parent_ctx
-        .paths(prefix_paths.into_iter())
-        .await?
-        .try_for_each(|prefix_path| async move {
-            if prefix_path.is_file().await?
-                && path_changes.get(prefix_path.path().as_mpath())
-                    != Some(&CreateChangeType::Delete)
-            {
-                Err(MononokeError::InvalidRequest(format!(
-                    "Creating files inside '{}' requires deleting the file at that path",
-                    prefix_path.path()
-                )))
-            } else {
-                Ok(())
-            }
-        })
-        .await
+    async move {
+        parent_ctx
+            .paths(prefix_paths.into_iter())
+            .await?
+            .try_for_each(|prefix_path| async move {
+                if prefix_path.is_file().await?
+                    && path_changes.get(prefix_path.path().as_mpath())
+                        != Some(&CreateChangeType::Delete)
+                {
+                    Err(MononokeError::InvalidRequest(format!(
+                        "Creating files inside '{}' requires deleting the file at that path",
+                        prefix_path.path()
+                    )))
+                } else {
+                    Ok(())
+                }
+            })
+            .await
+    }
 }
 
 impl RepoWriteContext {
@@ -336,16 +340,16 @@ impl RepoWriteContext {
         );
 
         // Check deleted files existed in a parent. (1)
-        verify_deleted_files_existed_in_a_parent(&parent_ctxs, &changes).await?;
+        let fut_verify_deleted_files_existed =
+            verify_deleted_files_existed_in_a_parent(&parent_ctxs, &changes);
 
         // Check changes that replace a directory with a file also delete
         // all files in that directory in all parents. (3)
-        parent_ctxs
+        let fut_verify_prefix_files_deleted = parent_ctxs
             .iter()
             .map(|parent_ctx| verify_prefix_files_deleted(parent_ctx, &changes, &path_changes))
             .collect::<FuturesUnordered<_>>()
-            .try_for_each(|_| async { Ok(()) })
-            .await?;
+            .try_for_each(|_| async { Ok(()) });
 
         let changes: Vec<(MPath, CreateChange)> = changes
             .into_iter()
@@ -371,7 +375,7 @@ impl RepoWriteContext {
 
         // Resolve the changes into bonsai changes. This also checks (1) for
         // copy-from info.
-        let file_changes: BTreeMap<_, _> = changes
+        let file_changes_fut = changes
             .into_iter()
             .map(|(path, change)| {
                 let parent_ctxs = &parent_ctxs;
@@ -383,8 +387,14 @@ impl RepoWriteContext {
                 }
             })
             .collect::<FuturesUnordered<_>>()
-            .try_collect::<BTreeMap<MPath, Option<FileChange>>>()
-            .await?;
+            .try_collect::<BTreeMap<MPath, Option<FileChange>>>();
+
+        let ((), (), file_changes) = try_join3(
+            fut_verify_deleted_files_existed,
+            fut_verify_prefix_files_deleted,
+            file_changes_fut,
+        )
+        .await?;
 
         let author_date = MononokeDateTime::new(author_date);
         let committer_date = committer_date.map(MononokeDateTime::new);
