@@ -1172,7 +1172,8 @@ impl RepoContext {
         &self,
         known_descendant: ChangesetId,
         distance_to_descendant: u64,
-    ) -> Result<ChangesetId, MononokeError> {
+        count: u64,
+    ) -> Result<Vec<ChangesetId>, MononokeError> {
         let blob_repo = self.blob_repo();
         let segmented_changelog =
             blob_repo
@@ -1183,7 +1184,12 @@ impl RepoContext {
                     ))
                 })?;
         let ancestor = segmented_changelog
-            .location_to_changeset_id(&self.ctx, known_descendant, distance_to_descendant)
+            .location_to_many_changeset_ids(
+                &self.ctx,
+                known_descendant,
+                distance_to_descendant,
+                count,
+            )
             .await
             .map_err(MononokeError::from)?;
         Ok(ancestor)

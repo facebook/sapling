@@ -9,10 +9,9 @@ use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use bytes::Bytes;
 use context::CoreContext;
-use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
-    TryStream, TryStreamExt,
-};
+use futures::compat::{Future01CompatExt, Stream01CompatExt};
+use futures::future;
+use futures::{TryStream, TryStreamExt};
 use hgproto::GettreepackArgs;
 use mercurial_types::blobs::RevlogChangeset;
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId};
@@ -127,7 +126,8 @@ impl HgRepoContext {
         &self,
         known_descendant: HgChangesetId,
         distance_to_descendant: u64,
-    ) -> Result<HgChangesetId, MononokeError> {
+        count: u64,
+    ) -> Result<Vec<HgChangesetId>, MononokeError> {
         let known_descendent_csid = self
             .blob_repo()
             .get_bonsai_from_hg(self.ctx().clone(), known_descendant)
@@ -139,16 +139,18 @@ impl HgRepoContext {
                     known_descendant
                 ))
             })?;
-        let result_csid = self
+        let result_csids = self
             .repo()
-            .location_to_changeset_id(known_descendent_csid, distance_to_descendant)
+            .location_to_changeset_id(known_descendent_csid, distance_to_descendant, count)
             .await?;
-        let result = self
-            .blob_repo()
-            .get_hg_from_bonsai_changeset(self.ctx().clone(), result_csid)
-            .compat()
-            .await?;
-        Ok(result)
+        let hg_id_futures = result_csids.iter().map(|result_csid| {
+            self.blob_repo()
+                .get_hg_from_bonsai_changeset(self.ctx().clone(), *result_csid)
+                .compat()
+        });
+        future::try_join_all(hg_id_futures)
+            .await
+            .map_err(MononokeError::from)
     }
 
     pub async fn revlog_commit_data(

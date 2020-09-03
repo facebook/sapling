@@ -50,7 +50,7 @@ pub struct CommitLocationToHashRequest {
 #[derive(Serialize, Deserialize)]
 pub struct CommitLocationToHash {
     pub location: CommitLocation,
-    pub hgid: HgId,
+    pub hgids: Vec<HgId>,
 }
 
 impl CommitLocation {
@@ -64,8 +64,8 @@ impl CommitLocation {
 }
 
 impl CommitLocationToHash {
-    pub fn new(location: CommitLocation, hgid: HgId) -> Self {
-        Self { location, hgid }
+    pub fn new(location: CommitLocation, hgids: Vec<HgId>) -> Self {
+        Self { location, hgids }
     }
 }
 

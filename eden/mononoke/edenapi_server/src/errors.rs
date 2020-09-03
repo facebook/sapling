@@ -60,8 +60,6 @@ pub enum ErrorKind {
     CompleteTreeRequestFailed,
     #[error("Dag location to hash request failed")]
     CommitLocationToHashRequestFailed,
-    #[error("Functionality not implemented")]
-    NotImplemented,
     #[error("Commit data request failed")]
     CommitRevlogDataRequestFailed,
     #[error("HgId not found: {0}")]

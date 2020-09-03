@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{format_err, Context, Error};
+use anyhow::{Context, Error};
 use futures::{stream, StreamExt};
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
@@ -73,19 +73,18 @@ async fn translate_location(
     hg_repo_ctx: HgRepoContext,
     location: CommitLocation,
 ) -> Result<CommitLocationToHash, Error> {
-    if location.count != 1 {
-        return Err(
-            format_err!("location to hash with count different that 1 is unimplemented")
-                .context(ErrorKind::NotImplemented),
-        );
-    }
     let known_descendant = HgChangesetId::new(HgNodeHash::from(location.known_descendant));
 
-    let ancestor: HgChangesetId = hg_repo_ctx
-        .location_to_hg_changeset_id(known_descendant, location.distance_to_descendant)
+    let ancestors: Vec<HgChangesetId> = hg_repo_ctx
+        .location_to_hg_changeset_id(
+            known_descendant,
+            location.distance_to_descendant,
+            location.count,
+        )
         .await
         .with_context(|| ErrorKind::CommitLocationToHashRequestFailed)?;
-    let answer = CommitLocationToHash::new(location, ancestor.into_nodehash().into());
+    let converted = ancestors.iter().map(|a| a.into_nodehash().into()).collect();
+    let answer = CommitLocationToHash::new(location, converted);
 
     Ok(answer)
 }
