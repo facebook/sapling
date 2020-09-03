@@ -33,7 +33,8 @@ pub mod json;
 pub mod tree;
 
 pub use crate::commit::{
-    CommitRevlogData, CommitRevlogDataRequest, Location, LocationToHash, LocationToHashRequest,
+    CommitLocation, CommitLocationToHash, CommitLocationToHashRequest, CommitRevlogData,
+    CommitRevlogDataRequest,
 };
 pub use crate::complete_tree::CompleteTreeRequest;
 pub use crate::file::{FileEntry, FileError, FileRequest, FileResponse};

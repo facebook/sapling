@@ -25,8 +25,8 @@ use serde_json::Value;
 use structopt::StructOpt;
 
 use edenapi_types::{
-    json::FromJson, CommitRevlogDataRequest, CompleteTreeRequest, FileRequest, HistoryRequest,
-    LocationToHashRequest, TreeRequest,
+    json::FromJson, CommitLocationToHashRequest, CommitRevlogDataRequest, CompleteTreeRequest,
+    FileRequest, HistoryRequest, TreeRequest,
 };
 
 #[derive(Debug, StructOpt)]
@@ -36,8 +36,8 @@ enum Command {
     Tree(Args),
     History(Args),
     CompleteTree(Args),
-    LocationToHash(Args),
     CommitRevlogData(Args),
+    CommitLocationToHash(Args),
 }
 
 #[derive(Debug, StructOpt)]
@@ -54,7 +54,7 @@ fn main() -> Result<()> {
         Command::Tree(args) => make_req::<TreeRequest>(args),
         Command::History(args) => make_req::<HistoryRequest>(args),
         Command::CompleteTree(args) => make_req::<CompleteTreeRequest>(args),
-        Command::LocationToHash(args) => make_req::<LocationToHashRequest>(args),
+        Command::CommitLocationToHash(args) => make_req::<CommitLocationToHashRequest>(args),
         Command::CommitRevlogData(args) => make_req::<CommitRevlogDataRequest>(args),
     }
 }

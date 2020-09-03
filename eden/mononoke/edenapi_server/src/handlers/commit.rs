@@ -12,7 +12,8 @@ use gotham_derive::{StateData, StaticResponseExtender};
 use serde::Deserialize;
 
 use edenapi_types::{
-    CommitRevlogData, CommitRevlogDataRequest, Location, LocationToHash, LocationToHashRequest,
+    CommitLocation, CommitLocationToHash, CommitLocationToHashRequest, CommitRevlogData,
+    CommitRevlogDataRequest,
 };
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
 use mercurial_types::{HgChangesetId, HgNodeHash};
@@ -43,7 +44,7 @@ pub async fn location_to_hash(state: &mut State) -> Result<impl TryIntoResponse,
     let params = LocationToHashParams::borrow_from(state);
     let hg_repo_ctx = get_repo(&sctx, &rctx, &params.repo).await?;
 
-    let request: LocationToHashRequest = parse_cbor_request(state).await?;
+    let request: CommitLocationToHashRequest = parse_cbor_request(state).await?;
     let hgid_list = request
         .locations
         .into_iter()
@@ -70,8 +71,8 @@ pub async fn revlog_data(state: &mut State) -> Result<impl TryIntoResponse, Http
 
 async fn translate_location(
     hg_repo_ctx: HgRepoContext,
-    location: Location,
-) -> Result<LocationToHash, Error> {
+    location: CommitLocation,
+) -> Result<CommitLocationToHash, Error> {
     if location.count != 1 {
         return Err(
             format_err!("location to hash with count different that 1 is unimplemented")
@@ -84,7 +85,7 @@ async fn translate_location(
         .location_to_hg_changeset_id(known_descendant, location.distance_to_descendant)
         .await
         .with_context(|| ErrorKind::CommitLocationToHashRequestFailed)?;
-    let answer = LocationToHash::new(location, ancestor.into_nodehash().into());
+    let answer = CommitLocationToHash::new(location, ancestor.into_nodehash().into());
 
     Ok(answer)
 }

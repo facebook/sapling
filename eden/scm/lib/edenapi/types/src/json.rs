@@ -27,7 +27,7 @@ use serde_json::{json, Value};
 
 use types::{HgId, Key, RepoPathBuf};
 
-use crate::commit::{CommitRevlogDataRequest, Location, LocationToHashRequest};
+use crate::commit::{CommitLocation, CommitLocationToHashRequest, CommitRevlogDataRequest};
 use crate::complete_tree::CompleteTreeRequest;
 use crate::file::FileRequest;
 use crate::history::HistoryRequest;
@@ -61,7 +61,7 @@ pub fn parse_commit_revlog_data_req(json: &Value) -> Result<CommitRevlogDataRequ
 ///     "count": 2
 ///   }]
 /// }
-pub fn parse_location_to_hash_req(json: &Value) -> Result<LocationToHashRequest> {
+pub fn parse_commit_location_to_hash_req(json: &Value) -> Result<CommitLocationToHashRequest> {
     let json = json.as_object().context("input must be a JSON object")?;
     let locations_json = json
         .get("locations")
@@ -88,10 +88,10 @@ pub fn parse_location_to_hash_req(json: &Value) -> Result<LocationToHashRequest>
             .context("missing field count")?
             .as_u64()
             .context("field count is not a valid u64 number")?;
-        let location = Location::new(known_descendent, distance_to_descendant, count);
+        let location = CommitLocation::new(known_descendent, distance_to_descendant, count);
         locations.push(location);
     }
-    Ok(LocationToHashRequest { locations })
+    Ok(CommitLocationToHashRequest { locations })
 }
 
 /// Parse a `FileRequest` from JSON.
@@ -309,9 +309,9 @@ impl FromJson for CompleteTreeRequest {
     }
 }
 
-impl FromJson for LocationToHashRequest {
+impl FromJson for CommitLocationToHashRequest {
     fn from_json(json: &Value) -> Result<Self> {
-        parse_location_to_hash_req(json)
+        parse_commit_location_to_hash_req(json)
     }
 }
 
@@ -372,7 +372,7 @@ impl ToJson for CompleteTreeRequest {
     }
 }
 
-impl ToJson for Location {
+impl ToJson for CommitLocation {
     fn to_json(&self) -> Value {
         json!({
             "known_descendant": self.known_descendant.to_json(),
@@ -382,7 +382,7 @@ impl ToJson for Location {
     }
 }
 
-impl ToJson for LocationToHashRequest {
+impl ToJson for CommitLocationToHashRequest {
     fn to_json(&self) -> Value {
         json!({
             "locations": self.locations,

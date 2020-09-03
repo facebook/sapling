@@ -31,7 +31,7 @@ use types::hgid::HgId;
 ///  * We expect the default or master bookmark to be a known commit.
 #[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[derive(Serialize, Deserialize)]
-pub struct Location {
+pub struct CommitLocation {
     pub known_descendant: HgId,
     pub distance_to_descendant: u64,
     pub count: u64,
@@ -40,20 +40,20 @@ pub struct Location {
 /// A LocationToHashRequest consists of a set of locations that we want to retrieve the hashe for.
 #[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[derive(Serialize, Deserialize)]
-pub struct LocationToHashRequest {
-    pub locations: Vec<Location>,
+pub struct CommitLocationToHashRequest {
+    pub locations: Vec<CommitLocation>,
 }
 
 /// Given a Location we want to return the hash for the commit that it points to in the graph.
 /// LocationToHash groups together the Location and the commit hash for easy response construction.
 #[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[derive(Serialize, Deserialize)]
-pub struct LocationToHash {
-    pub location: Location,
+pub struct CommitLocationToHash {
+    pub location: CommitLocation,
     pub hgid: HgId,
 }
 
-impl Location {
+impl CommitLocation {
     pub fn new(known_descendant: HgId, distance_to_descendant: u64, count: u64) -> Self {
         Self {
             known_descendant,
@@ -63,8 +63,8 @@ impl Location {
     }
 }
 
-impl LocationToHash {
-    pub fn new(location: Location, hgid: HgId) -> Self {
+impl CommitLocationToHash {
+    pub fn new(location: CommitLocation, hgid: HgId) -> Self {
         Self { location, hgid }
     }
 }
