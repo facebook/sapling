@@ -59,6 +59,9 @@ else()
   set(EDEN_HAVE_GIT OFF)
 endif()
 
+find_package(Re2 MODULE REQUIRED)
+include_directories(${RE2_INCLUDE_DIR})
+
 # The following packages ship with their own CMake configuration files
 find_package(cpptoml CONFIG REQUIRED)
 find_package(gflags CONFIG REQUIRED)
