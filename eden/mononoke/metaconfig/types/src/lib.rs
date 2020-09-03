@@ -1253,10 +1253,23 @@ pub struct SegmentedChangelogConfig {
     /// This can mean that functionality is disabled to shed load, that the required data is not
     /// curretly being computed or that it was never computed for this repository.
     pub enabled: bool,
+    /// Specifies which update algorithm segmented changelog should be instantiate with. Check
+    /// SegmentedChangelogBuilder for valid options.
+    pub update_algorithm: Option<String>,
 }
 
 impl Default for SegmentedChangelogConfig {
     fn default() -> Self {
-        SegmentedChangelogConfig { enabled: false }
+        SegmentedChangelogConfig {
+            enabled: false,
+            update_algorithm: None,
+        }
+    }
+}
+
+impl SegmentedChangelogConfig {
+    /// Returns whether `update_algorithm` is set to 'ondemand'
+    pub fn is_update_ondemand(&self) -> bool {
+        self.update_algorithm.as_deref() == Some("ondemand")
     }
 }

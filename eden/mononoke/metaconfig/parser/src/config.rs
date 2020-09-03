@@ -21,7 +21,7 @@ use anyhow::{anyhow, Result};
 use fbinit::FacebookInit;
 use metaconfig_types::{
     AllowlistEntry, CommitSyncConfig, CommonConfig, HgsqlGlobalrevsName, HgsqlName, Redaction,
-    RepoConfig, RepoReadOnly, SegmentedChangelogConfig, StorageConfig,
+    RepoConfig, RepoReadOnly, StorageConfig,
 };
 use mononoke_types::RepositoryId;
 use repos::{
@@ -211,6 +211,7 @@ fn parse_repo_config(
         hgsql_globalrevs_name,
         enforce_lfs_acl_check,
         repo_client_use_warm_bookmarks_cache,
+        segmented_changelog_config,
         warm_bookmark_cache_check_blobimport,
         repo_client_knobs,
         phabricator_callsign,
@@ -330,7 +331,7 @@ fn parse_repo_config(
     let repo_client_use_warm_bookmarks_cache =
         repo_client_use_warm_bookmarks_cache.unwrap_or(false);
 
-    let segmented_changelog_config = SegmentedChangelogConfig::default();
+    let segmented_changelog_config = segmented_changelog_config.convert()?.unwrap_or_default();
 
     let warm_bookmark_cache_check_blobimport =
         warm_bookmark_cache_check_blobimport.unwrap_or(false);
@@ -972,6 +973,10 @@ mod test {
 
             [repo_client_knobs]
             allow_short_getpack_history = true
+
+            [segmented_changelog_config]
+            enabled = true
+            update_algorithm = "ondemand"
         "#;
         let www_content = r#"
             repoid=1
@@ -1191,7 +1196,10 @@ mod test {
                 hgsql_globalrevs_name: HgsqlGlobalrevsName("fbsource".to_string()),
                 enforce_lfs_acl_check: false,
                 repo_client_use_warm_bookmarks_cache: true,
-                segmented_changelog_config: SegmentedChangelogConfig { enabled: false },
+                segmented_changelog_config: SegmentedChangelogConfig {
+                    enabled: true,
+                    update_algorithm: Some(String::from("ondemand")),
+                },
                 warm_bookmark_cache_check_blobimport: true,
                 repo_client_knobs: RepoClientKnobs {
                     allow_short_getpack_history: true,
@@ -1246,7 +1254,10 @@ mod test {
                 hgsql_globalrevs_name: HgsqlGlobalrevsName("www-barfoo".to_string()),
                 enforce_lfs_acl_check: false,
                 repo_client_use_warm_bookmarks_cache: false,
-                segmented_changelog_config: SegmentedChangelogConfig { enabled: false },
+                segmented_changelog_config: SegmentedChangelogConfig {
+                    enabled: false,
+                    update_algorithm: None,
+                },
                 warm_bookmark_cache_check_blobimport: false,
                 repo_client_knobs: RepoClientKnobs::default(),
                 phabricator_callsign: Some("WWW".to_string()),

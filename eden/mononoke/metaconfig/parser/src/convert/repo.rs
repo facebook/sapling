@@ -14,17 +14,18 @@ use metaconfig_types::{
     BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams, CacheWarmupParams, ComparableRegex,
     DerivedDataConfig, HookBypass, HookConfig, HookManagerParams, HookParams,
     InfinitepushNamespace, InfinitepushParams, LfsParams, PushParams, PushrebaseFlags,
-    PushrebaseParams, RepoClientKnobs, ServiceWriteRestrictions, SourceControlServiceMonitoring,
-    SourceControlServiceParams, StorageConfig, UnodeVersion, WireprotoLoggingConfig,
+    PushrebaseParams, RepoClientKnobs, SegmentedChangelogConfig, ServiceWriteRestrictions,
+    SourceControlServiceMonitoring, SourceControlServiceParams, StorageConfig, UnodeVersion,
+    WireprotoLoggingConfig,
 };
 use mononoke_types::{MPath, PrefixTrie};
 use regex::Regex;
 use repos::{
     RawBookmarkConfig, RawBundle2ReplayParams, RawCacheWarmupConfig, RawDerivedDataConfig,
     RawHookConfig, RawHookManagerParams, RawInfinitepushParams, RawLfsParams, RawPushParams,
-    RawPushrebaseParams, RawRepoClientKnobs, RawServiceWriteRestrictions,
-    RawSourceControlServiceMonitoring, RawSourceControlServiceParams, RawUnodeVersion,
-    RawWireprotoLoggingConfig,
+    RawPushrebaseParams, RawRepoClientKnobs, RawSegmentedChangelogConfig,
+    RawServiceWriteRestrictions, RawSourceControlServiceMonitoring, RawSourceControlServiceParams,
+    RawUnodeVersion, RawWireprotoLoggingConfig,
 };
 
 use crate::convert::Convert;
@@ -381,5 +382,16 @@ impl Convert for RawRepoClientKnobs {
         Ok(RepoClientKnobs {
             allow_short_getpack_history: self.allow_short_getpack_history,
         })
+    }
+}
+
+impl Convert for RawSegmentedChangelogConfig {
+    type Output = SegmentedChangelogConfig;
+
+    fn convert(self) -> Result<Self::Output> {
+        let mut config = SegmentedChangelogConfig::default();
+        config.enabled = self.enabled.unwrap_or(config.enabled);
+        config.update_algorithm = self.update_algorithm.or(config.update_algorithm);
+        Ok(config)
     }
 }
