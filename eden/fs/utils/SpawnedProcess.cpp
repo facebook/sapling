@@ -541,10 +541,8 @@ SpawnedProcess::SpawnedProcess(
     auto handle = (HANDLE)d.second.handle();
     if (!SetHandleInformation(
             handle, HANDLE_FLAG_INHERIT, HANDLE_FLAG_INHERIT)) {
-      throw std::system_error(
-          GetLastError(),
-          std::system_category(),
-          "SetHandleInformation failed");
+      throw makeWin32ErrorExplicit(
+          GetLastError(), "SetHandleInformation failed");
     }
 
     // Populate stdio streams if appropriate
@@ -578,10 +576,8 @@ SpawnedProcess::SpawnedProcess(
 
   if (!InitializeProcThreadAttributeList(
           startupInfo.lpAttributeList, 1, 0, &size)) {
-    throw std::system_error(
-        GetLastError(),
-        std::system_category(),
-        "InitializeProcThreadAttributeList failed");
+    throw makeWin32ErrorExplicit(
+        GetLastError(), "InitializeProcThreadAttributeList failed");
   }
 
   SCOPE_EXIT {
@@ -598,10 +594,8 @@ SpawnedProcess::SpawnedProcess(
           handles.size() * sizeof(HANDLE),
           nullptr,
           nullptr)) {
-    throw std::system_error(
-        GetLastError(),
-        std::system_category(),
-        "UpdateProcThreadAttribute failed");
+    throw makeWin32ErrorExplicit(
+        GetLastError(), "UpdateProcThreadAttribute failed");
   }
 
   auto cmdLine = build_command_line(args);
@@ -623,9 +617,8 @@ SpawnedProcess::SpawnedProcess(
 
   if (!status) {
     auto errorCode = GetLastError();
-    std::system_error err(
+    auto err = makeWin32ErrorExplicit(
         errorCode,
-        std::system_category(),
         folly::to<std::string>("CreateProcess(", cmdLine, ") failed"));
     XLOG(ERR) << folly::exceptionStr(err);
     throw err;
@@ -841,10 +834,8 @@ ProcessStatus SpawnedProcess::wait() {
       return status_;
 
     default:
-      throw std::system_error(
-          GetLastError(),
-          std::system_category(),
-          "WaitForSingleObject on child process handle");
+      throw makeWin32ErrorExplicit(
+          GetLastError(), "WaitForSingleObject on child process handle");
   }
 #endif
 }
@@ -899,10 +890,8 @@ ProcessStatus SpawnedProcess::waitTimeout(std::chrono::milliseconds timeout) {
       return ProcessStatus(ProcessStatus::State::Running, 0);
 
     default:
-      throw std::system_error(
-          GetLastError(),
-          std::system_category(),
-          "WaitForSingleObject on child process handle");
+      throw makeWin32ErrorExplicit(
+          GetLastError(), "WaitForSingleObject on child process handle");
   }
 #endif
 }
