@@ -24,7 +24,7 @@ use manifest::{Entry, ManifestOps, PathOrPrefix};
 
 use mononoke_types::{ChangesetId, MPath};
 use revset::AncestorsNodeStream;
-use slog::Logger;
+use slog::{info, Logger};
 use std::collections::BTreeSet;
 use unodes::RootUnodeManifestId;
 
@@ -45,7 +45,7 @@ fn path_resolve(path: &str) -> Result<Option<MPath>, Error> {
 
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
     let csid_arg = Arg::with_name(ARG_CSID)
-        .help("{hg|boinsai} changset id or bookmark name")
+        .help("{hg|bonsai} changeset id or bookmark name")
         .index(1)
         .required(true);
 
@@ -63,13 +63,13 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
         )
         .subcommand(
             SubCommand::with_name(COMMAND_TREE)
-                .help("recursively list all unode entries starting with prefix")
+                .about("recursively list all unode entries starting with prefix")
                 .arg(csid_arg.clone())
                 .arg(path_arg.clone()),
         )
         .subcommand(
             SubCommand::with_name(COMMAND_VERIFY)
-                .help("verify unode tree agains hg-manifest")
+                .about("verify unode tree agains hg-manifest")
                 .arg(csid_arg.clone())
                 .arg(
                     Arg::with_name(ARG_LIMIT)
@@ -148,8 +148,8 @@ fn subcommand_tree(
     RootUnodeManifestId::derive(ctx.clone(), repo.clone(), csid)
         .from_err()
         .and_then(move |root| {
-            println!("ROOT: {:?}", root);
-            println!("PATH: {:?}", path);
+            info!(ctx.logger(), "ROOT: {:?}", root);
+            info!(ctx.logger(), "PATH: {:?}", path);
             root.manifest_unode_id()
                 .find_entries(ctx, repo.get_blobstore(), vec![PathOrPrefix::Prefix(path)])
                 .for_each(|(path, entry)| {

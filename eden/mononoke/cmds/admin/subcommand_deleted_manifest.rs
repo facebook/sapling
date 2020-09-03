@@ -37,7 +37,7 @@ const ARG_PATH: &str = "path";
 
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
     let csid_arg = Arg::with_name(ARG_CSID)
-        .help("{hg|boinsai} changset id or bookmark name")
+        .help("{hg|bonsai} changeset id or bookmark name")
         .index(1)
         .required(true);
 
@@ -50,13 +50,13 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
         .about("derive, inspect and verify deleted files manifest")
         .subcommand(
             SubCommand::with_name(COMMAND_MANIFEST)
-                .help("recursively list all deleted files manifest entries under the given path")
+                .about("recursively list all deleted files manifest entries under the given path")
                 .arg(csid_arg.clone())
                 .arg(path_arg.clone()),
         )
         .subcommand(
             SubCommand::with_name(COMMAND_VERIFY)
-                .help("verify deleted manifest against actual paths deleted in commits")
+                .about("verify deleted manifest against actual paths deleted in commits")
                 .arg(csid_arg.clone())
                 .arg(
                     Arg::with_name(ARG_LIMIT)
