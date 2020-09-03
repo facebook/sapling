@@ -564,3 +564,54 @@ class EdenConfigParserTest(unittest.TestCase):
                 )
             ),
         )
+
+
+class EdenInstanceConstructionTest(unittest.TestCase):
+    def test_full_cmd_line(self) -> None:
+        cmdline = [
+            b"/usr/local/libexec/eden/edenfs",
+            b"--edenfs",
+            b"--edenDir",
+            b"/data/users/testuser/.eden",
+            b"--etcEdenDir",
+            b"/etc/eden",
+            b"--configPath",
+            b"/home/testuser/.edenrc",
+            b"--edenfsctlPath",
+            b"/usr/local/bin/edenfsctl",
+            b"--takeover",
+            b"",
+        ]
+        instance = config_mod.eden_instance_from_cmdline(cmdline)
+        self.assertEqual(instance.state_dir, Path("/data/users/testuser/.eden"))
+        self.assertEqual(instance.etc_eden_dir, Path("/etc/eden"))
+        self.assertEqual(instance.home_dir, Path("/home/testuser/"))
+
+    def test_sparse_cmd_line(self) -> None:
+        cmdline = [
+            b"/usr/local/libexec/eden/edenfs",
+            b"--edenfs",
+            b"--etcEdenDir",
+            b"/etc/eden",
+            b"--configPath",
+            b"/home/testuser/.edenrc",
+            b"--edenfsctlPath",
+            b"/usr/local/bin/edenfsctl",
+            b"--takeover",
+            b"",
+        ]
+        instance = config_mod.eden_instance_from_cmdline(cmdline)
+        self.assertEqual(instance.state_dir, Path("/home/testuser/local/.eden"))
+        self.assertEqual(instance.etc_eden_dir, Path("/etc/eden"))
+        self.assertEqual(instance.home_dir, Path("/home/testuser/"))
+
+    def test_malformed_cmd_line(self) -> None:
+        cmdline = [
+            b"/usr/local/libexec/eden/edenfs",
+            b"--configPath",
+            b"/home/testuser/.edenrc",
+        ]
+        instance = config_mod.eden_instance_from_cmdline(cmdline)
+        self.assertEqual(instance.state_dir, Path("/home/testuser/local/.eden"))
+        self.assertEqual(instance.etc_eden_dir, Path("/etc/eden"))
+        self.assertEqual(instance.home_dir, Path("/home/testuser/"))

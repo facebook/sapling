@@ -179,6 +179,10 @@ class EdenInstance:
         return self._etc_eden_dir
 
     @property
+    def home_dir(self) -> Path:
+        return self._home_dir
+
+    @property
     def user_config_path(self) -> Path:
         return self._user_config_path
 
@@ -1045,6 +1049,27 @@ def find_eden(
         rel_path = checkout.get_relative_path(path, already_resolved=True)
 
     return (instance, checkout, rel_path)
+
+
+def eden_instance_from_cmdline(cmdline: List[bytes]) -> EdenInstance:
+    try:
+        eden_dir_idx = cmdline.index(b"--edenDir") + 1
+        eden_dir = Path(cmdline[eden_dir_idx].decode("utf-8"))
+    except ValueError:
+        eden_dir = None
+
+    try:
+        etc_eden_dir_idx = cmdline.index(b"--etcEdenDir") + 1
+        etc_eden_dir = Path(cmdline[etc_eden_dir_idx].decode("utf-8"))
+    except ValueError:
+        etc_eden_dir = None
+    try:
+        config_path_idx = cmdline.index(b"--configPath") + 1
+        config_path = Path(cmdline[config_path_idx].decode("utf-8")).parent
+    except ValueError:
+        config_path = None
+
+    return EdenInstance(eden_dir, etc_eden_dir, config_path)
 
 
 def _check_same_eden_directory(found_path: Path, path_arg: Path) -> None:
