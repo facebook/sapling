@@ -172,7 +172,7 @@ impl DagPersistent for NameDag {
 
         // Write to disk.
         map.sync()?;
-        dag.sync(std::iter::once(&mut self.dag))?;
+        dag.sync()?;
         mlog.write_meta(&lock)?;
 
         // Update snapshot_map.

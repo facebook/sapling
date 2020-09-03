@@ -48,8 +48,28 @@ pub struct IdDag<Store> {
 }
 
 /// Guard to make sure [`IdDag`] on-disk writes are race-free.
-pub struct SyncableIdDag<Store> {
-    dag: IdDag<Store>,
+///
+/// Aside from locking, another reason that `SyncableIdDag` exists is to make
+/// the on-disk segments lagging:
+/// - The in-memory high-level segments are not lagging, but might be
+///   fragmented because the last segment per level might not cover
+///   as many lower-level segments as it can.
+///   Some DAG algorithms (children_set, range_old, descendants_old)
+///   assume high-level segments are not lagging.
+/// - The on-disk data has lagging high-level segment. This is helpful
+///   because the Index backend is not good at (cheaply) deleting data
+///   with bytes freed.
+/// This adds some complexity:
+/// - IdDag -> SyncableIdMap needs to drop the last segment per high-level.
+///   This is done by `reload()` in `prepare_filesystem_sync()`.
+/// - SyncableIdDag -> IdDag needs to re-add the high-level segments.
+///   This is done by calling `build_all_high_level_segments()` at
+///   `SyncableIdDag::sync()`.
+///
+/// (Consider making `children_set` not rely on the property, and
+/// removing `*_old` to simplify things)
+pub struct SyncableIdDag<'a, Store> {
+    dag: &'a mut IdDag<Store>,
     lock_file: File,
 }
 
@@ -69,21 +89,12 @@ impl IdDag<IndexedLogStore> {
     /// actually writes changes to disk.
     ///
     /// Block if another instance is taking the lock.
-    pub fn prepare_filesystem_sync(&self) -> Result<SyncableIdDag<IndexedLogStore>> {
+    pub fn prepare_filesystem_sync(&mut self) -> Result<SyncableIdDag<IndexedLogStore>> {
         let lock_file = self.store.get_lock()?;
-        // Clone. But drop in-memory data.
-        let mut store = self.store.try_clone_without_dirty()?;
-
         // Read new entries from filesystem.
-        store.sync()?;
-        let max_level = store.max_level()?;
-
+        self.store.reload()?;
         Ok(SyncableIdDag {
-            dag: IdDag {
-                store,
-                max_level,
-                new_seg_size: self.new_seg_size,
-            },
+            dag: self,
             lock_file,
         })
     }
@@ -1508,7 +1519,7 @@ pub enum FirstAncestorConstraint {
     KnownUniversally { heads: SpanSet },
 }
 
-impl<Store: IdDagStore> SyncableIdDag<Store> {
+impl<Store: IdDagStore> SyncableIdDag<'_, Store> {
     /// Make sure the [`SyncableIdDag`] contains the given id (and all ids smaller
     /// than `high`) by building up segments on demand.
     ///
@@ -1541,18 +1552,12 @@ impl<Store: IdDagStore> SyncableIdDag<Store> {
     /// Write pending changes to disk. Release the exclusive lock.
     ///
     /// The newly written entries can be fetched by [`IdDag::reload`].
-    ///
-    /// To avoid races, [`IdDag`]s in the `reload_dags` list will be
-    /// reloaded while [`SyncableIdDag`] still holds the lock.
-    pub fn sync<'a, IterStore: 'a + IdDagStore>(
-        mut self,
-        reload_dags: impl IntoIterator<Item = &'a mut IdDag<IterStore>>,
-    ) -> Result<()> {
+    pub fn sync(self) -> Result<()> {
         self.dag.store.sync()?;
-        for dag in reload_dags {
-            dag.reload()?;
-        }
-        let _lock_file = self.lock_file; // Make sure lock is not dropped until here.
+        // Building high level segments happen in memory.
+        // No need to take a lock.
+        drop(self.lock_file);
+        self.dag.build_all_high_level_segments(false)?;
         Ok(())
     }
 
@@ -1738,7 +1743,7 @@ mod tests {
             .build_segments_persistent(Id(1001), &get_parents)
             .unwrap();
 
-        syncable.sync(std::iter::once(&mut dag)).unwrap();
+        syncable.sync().unwrap();
 
         assert_eq!(dag.max_level, 3);
         assert_eq!(

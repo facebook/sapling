@@ -52,7 +52,7 @@ fn main() {
                 let segment_len = syncable
                     .build_segments_persistent(head_id, &parents_by_id)
                     .unwrap();
-                syncable.sync(std::iter::once(&mut dag)).unwrap();
+                syncable.sync().unwrap();
                 let log_len = dag_dir.path().join("log").metadata().unwrap().len();
                 format!("segments: {}  log len: {}", segment_len, log_len)
             })
