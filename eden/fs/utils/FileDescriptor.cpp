@@ -372,9 +372,8 @@ folly::Try<ssize_t> FileDescriptor::wrapFull(
     bool onlyOnce) const {
   char* b = static_cast<char*>(buf);
   ssize_t totalBytes = 0;
-  ssize_t r;
   do {
-    Try<ssize_t> opResult = isRead ? read(buf, count) : write(buf, count);
+    Try<ssize_t> opResult = isRead ? read(b, count) : write(b, count);
 
     if (auto ex = opResult.tryGetExceptionObject<std::system_error>()) {
       if (ex->code() == std::error_code(EINTR, std::generic_category())) {
@@ -385,7 +384,7 @@ folly::Try<ssize_t> FileDescriptor::wrapFull(
       return opResult;
     }
 
-    r = opResult.value();
+    auto r = opResult.value();
     if (isRead && r == 0) {
       // EOF
       break;

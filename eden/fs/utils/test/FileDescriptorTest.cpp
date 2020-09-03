@@ -100,3 +100,61 @@ TEST(FileDescriptor, fileReadvWritev) {
     testReadv(f);
   }
 }
+
+TEST(FileDescriptor, readFullFile) {
+  std::vector<uint8_t> expect;
+
+  expect.reserve(2 * 1024 * 1024);
+  for (size_t i = 0; i < expect.capacity(); ++i) {
+    expect.push_back(uint8_t(i & 0xff));
+  }
+
+  auto dir = makeTempDir();
+  AbsolutePath fileName((dir.path() / "file.txt").generic_string());
+
+  {
+    auto f = FileDescriptor::open(fileName, OpenFileHandleOptions::writeFile());
+    f.writeFull(expect.data(), expect.size()).throwIfFailed();
+  }
+
+  {
+    auto f = FileDescriptor::open(fileName, OpenFileHandleOptions::readFile());
+    std::vector<uint8_t> got;
+    got.resize(expect.size());
+
+    f.readFull(got.data(), got.size()).throwIfFailed();
+
+    EXPECT_EQ(got, expect);
+  }
+}
+
+TEST(FileDescriptor, readFullPipe) {
+  std::vector<uint8_t> expect;
+
+  expect.reserve(2 * 1024 * 1024);
+  for (size_t i = 0; i < expect.capacity(); ++i) {
+    expect.push_back(uint8_t(i & 0xff));
+  }
+  EXPECT_GT(expect.size(), 0);
+
+  Pipe p;
+
+  // The writer thread trickles the data into the pipe in discrete
+  // chunks.  This increases the chances that the readFull call will
+  // observe a partial read which is the trigger for a specific bug
+  // we encountered.
+  std::thread writer([f = std::move(p.write), &expect]() {
+    constexpr size_t kChunkSize = 4096;
+    for (size_t i = 0; i < expect.size(); i += kChunkSize) {
+      f.writeFull(expect.data() + i, kChunkSize).throwIfFailed();
+    }
+  });
+
+  std::vector<uint8_t> got;
+  got.resize(expect.size());
+  p.read.readFull(got.data(), got.size()).throwIfFailed();
+
+  EXPECT_EQ(got, expect);
+
+  writer.join();
+}
