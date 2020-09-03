@@ -188,10 +188,6 @@ impl IdDagStore for InProcessStore {
         let iter = get_iter(Group::MASTER)?.chain(get_iter(Group::NON_MASTER)?);
         Ok(Box::new(iter))
     }
-
-    fn reload(&mut self) -> Result<()> {
-        Ok(())
-    }
 }
 
 impl InProcessStore {

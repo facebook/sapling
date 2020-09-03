@@ -91,7 +91,7 @@ impl IdDag<IndexedLogStore> {
     pub fn prepare_filesystem_sync(&mut self) -> Result<SyncableIdDag<IndexedLogStore>> {
         let lock = self.store.get_lock()?;
         // Read new entries from filesystem.
-        self.store.reload()?;
+        self.store.reload(&lock)?;
         Ok(SyncableIdDag { dag: self, lock })
     }
 

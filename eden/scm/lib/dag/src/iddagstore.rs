@@ -81,14 +81,14 @@ pub trait IdDagStore {
 
     /// Remove all non master Group identifiers from the DAG.
     fn remove_non_master(&mut self) -> Result<()>;
-
-    /// Reload from the source of truth. Discard pending changes.
-    fn reload(&mut self) -> Result<()>;
 }
 
 pub trait GetLock {
     type LockT;
     fn get_lock(&self) -> Result<Self::LockT>;
+
+    /// Reload from the source of truth. Drop pending changes.
+    fn reload(&mut self, _lock: &Self::LockT) -> Result<()>;
 
     /// Write pending changes to the source of truth.
     ///
