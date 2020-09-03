@@ -11,12 +11,14 @@ use gotham::state::State;
 use hyper::{Body, Response};
 
 pub mod client_identity;
+pub mod load;
 pub mod post_request;
 pub mod server_identity;
 pub mod timer;
 pub mod tls_session_data;
 
 pub use client_identity::{ClientIdentity, ClientIdentityMiddleware};
+pub use load::{LoadMiddleware, RequestLoad};
 pub use post_request::{PostRequestCallbacks, PostRequestConfig, PostRequestMiddleware};
 pub use server_identity::ServerIdentityMiddleware;
 pub use timer::{HeadersDuration, RequestStartTime, TimerMiddleware};
