@@ -837,6 +837,7 @@ pub fn setup_common<'a>(
             config.filestore,
             readonly_storage,
             config.derived_data_config,
+            config.segmented_changelog_config,
             repo_name.clone(),
             blobstore_options.cachelib_options.clone(),
         )

@@ -40,6 +40,7 @@ use rand::Rng;
 use rand_distr::Distribution;
 use repo_blobstore::RepoBlobstoreArgs;
 use scuba_ext::ScubaSampleBuilder;
+use segmented_changelog::DisabledSegmentedChangelog;
 use sql_construct::SqlConstruct;
 use std::{sync::Arc, time::Duration};
 
@@ -159,6 +160,7 @@ pub fn new_benchmark_repo(fb: FacebookInit, settings: DelaySettings) -> Result<B
         bonsai_hg_mapping,
         hg_mutation_store,
         Arc::new(DummyLease {}),
+        Arc::new(DisabledSegmentedChangelog::new()),
         FilestoreConfig::default(),
         phases_factory,
         init_all_derived_data(),

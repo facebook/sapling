@@ -37,7 +37,8 @@ use maplit::btreeset;
 use memblob::EagerMemblob;
 use mercurial_mutation::{HgMutationStore, SqlHgMutationStoreBuilder};
 use metaconfig_types::{
-    self, DerivedDataConfig, FilestoreParams, Redaction, RepoConfig, StorageConfig, UnodeVersion,
+    self, DerivedDataConfig, FilestoreParams, Redaction, RepoConfig, SegmentedChangelogConfig,
+    StorageConfig, UnodeVersion,
 };
 use mononoke_types::RepositoryId;
 use newfilenodes::NewFilenodesBuilder;
@@ -46,6 +47,9 @@ use readonlyblob::ReadOnlyBlobstore;
 use redactedblobstore::SqlRedactedContentStore;
 use repo_blobstore::RepoBlobstoreArgs;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
+use segmented_changelog::{
+    DisabledSegmentedChangelog, SegmentedChangelog, SegmentedChangelogBuilder,
+};
 use slog::Logger;
 use sql::{rusqlite::Connection as SqliteConnection, Connection};
 use sql_construct::SqlConstruct;
@@ -85,6 +89,7 @@ pub struct BlobrepoBuilder<'a> {
     blobstore_options: BlobstoreOptions,
     logger: &'a Logger,
     derived_data_config: DerivedDataConfig,
+    segmented_changelog_config: SegmentedChangelogConfig,
 }
 
 impl<'a> BlobrepoBuilder<'a> {
@@ -114,6 +119,7 @@ impl<'a> BlobrepoBuilder<'a> {
             blobstore_options,
             logger,
             derived_data_config: config.derived_data_config.clone(),
+            segmented_changelog_config: config.segmented_changelog_config.clone(),
         }
     }
 
@@ -143,6 +149,7 @@ impl<'a> BlobrepoBuilder<'a> {
             blobstore_options,
             logger,
             derived_data_config,
+            segmented_changelog_config,
         } = self;
 
         let sql_factory = make_metadata_sql_factory(
@@ -178,6 +185,7 @@ impl<'a> BlobrepoBuilder<'a> {
             filestore_params,
             readonly_storage,
             derived_data_config,
+            segmented_changelog_config,
             reponame,
             blobstore_options.cachelib_options,
         )
@@ -198,6 +206,7 @@ pub async fn open_blobrepo_given_datasources(
     filestore_params: Option<FilestoreParams>,
     readonly_storage: ReadOnlyStorage,
     derived_data_config: DerivedDataConfig,
+    segmented_chagelog_config: SegmentedChangelogConfig,
     reponame: String,
     cachelib_options: CachelibBlobstoreOptions,
 ) -> Result<BlobRepo, Error> {
@@ -247,6 +256,7 @@ pub async fn open_blobrepo_given_datasources(
                 filestore_config,
                 bookmarks_cache_ttl,
                 derived_data_config,
+                segmented_chagelog_config,
                 reponame,
             )
             .await?
@@ -368,6 +378,7 @@ impl TestRepoBuilder {
                     .with_repo_id(repo_id),
             ),
             Arc::new(InProcessLease::new()),
+            Arc::new(DisabledSegmentedChangelog::new()),
             FilestoreConfig::default(),
             phases_factory,
             init_all_derived_data(),
@@ -476,6 +487,7 @@ pub fn new_memblob_with_connection_with_id(
                     .with_repo_id(repo_id),
             ),
             Arc::new(InProcessLease::new()),
+            Arc::new(DisabledSegmentedChangelog::new()),
             FilestoreConfig::default(),
             phases_factory,
             init_all_derived_data(),
@@ -495,6 +507,7 @@ async fn new_development(
     filestore_config: FilestoreConfig,
     bookmarks_cache_ttl: Option<Duration>,
     derived_data_config: DerivedDataConfig,
+    segmented_changelog_config: SegmentedChangelogConfig,
     reponame: String,
 ) -> Result<BlobRepo, Error> {
     let bookmarks = async {
@@ -576,6 +589,14 @@ async fn new_development(
             .context(ErrorKind::StateOpen(StateOpenError::Phases))
     };
 
+    let segmented_changelog_builder = async {
+        sql_factory
+            .open::<SegmentedChangelogBuilder>()
+            .compat()
+            .await
+            .context(ErrorKind::StateOpen(StateOpenError::SegmentedChangelog))
+    };
+
     let (
         (bookmarks, bookmark_update_log),
         filenodes_builder,
@@ -585,6 +606,7 @@ async fn new_development(
         bonsai_hg_mapping,
         hg_mutation_store,
         phases_factory,
+        segmented_changelog_builder,
     ) = try_join!(
         bookmarks,
         filenodes_builder,
@@ -594,11 +616,28 @@ async fn new_development(
         bonsai_hg_mapping,
         hg_mutation_store,
         phases_factory,
+        segmented_changelog_builder,
     )?;
 
     let scuba_builder = ScubaSampleBuilder::with_opt_table(fb, scuba_censored_table);
     let changesets = Arc::new(changesets);
     let changeset_fetcher = Arc::new(SimpleChangesetFetcher::new(changesets.clone(), repoid));
+    let segmented_changelog: Arc<dyn SegmentedChangelog> = if !segmented_changelog_config.enabled {
+        Arc::new(segmented_changelog_builder.build_disabled())
+    } else {
+        if segmented_changelog_config.is_update_ondemand() {
+            let dag = segmented_changelog_builder
+                .with_repo_id(repoid)
+                .with_changeset_fetcher(changeset_fetcher.clone())
+                .build_on_demand_update()?;
+            Arc::new(dag)
+        } else {
+            let dag = segmented_changelog_builder
+                .with_repo_id(repoid)
+                .build_read_only()?;
+            Arc::new(dag)
+        }
+    };
 
     Ok(blobrepo_new(
         bookmarks,
@@ -612,6 +651,7 @@ async fn new_development(
         Arc::new(bonsai_hg_mapping),
         Arc::new(hg_mutation_store),
         Arc::new(InProcessLease::new()),
+        segmented_changelog,
         filestore_config,
         phases_factory,
         derived_data_config,
@@ -743,6 +783,7 @@ async fn new_production(
         Arc::new(bonsai_hg_mapping),
         Arc::new(hg_mutation_store),
         Arc::new(derived_data_lease),
+        Arc::new(DisabledSegmentedChangelog::new()),
         filestore_config,
         phases_factory,
         derived_data_config,
@@ -808,6 +849,7 @@ pub fn blobrepo_new(
     bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
     hg_mutation_store: Arc<dyn HgMutationStore>,
     derived_data_lease: Arc<dyn LeaseOps>,
+    segmented_changelog: Arc<dyn SegmentedChangelog>,
     filestore_config: FilestoreConfig,
     phases_factory: SqlPhasesFactory,
     derived_data_config: DerivedDataConfig,
@@ -821,6 +863,7 @@ pub fn blobrepo_new(
         attributes.insert::<dyn Filenodes>(filenodes);
         attributes.insert::<dyn HgMutationStore>(hg_mutation_store);
         attributes.insert::<dyn ChangesetFetcher>(changeset_fetcher);
+        attributes.insert::<dyn SegmentedChangelog>(segmented_changelog);
         Arc::new(attributes)
     };
     BlobRepo::new_dangerous(

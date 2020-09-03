@@ -40,6 +40,7 @@ newfilenodes = { path = "../newfilenodes" }
 phases = { path = "../phases" }
 repo_blobstore = { path = "../blobrepo/repo_blobstore" }
 scuba_ext = { path = "../common/scuba_ext" }
+segmented_changelog = { path = "../segmented_changelog" }
 sql_construct = { path = "../common/sql_construct" }
 unodes = { path = "../derived_data/unodes" }
 cachelib = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

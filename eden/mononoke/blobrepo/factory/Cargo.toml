@@ -39,6 +39,7 @@ readonlyblob = { path = "../../blobstore/readonlyblob" }
 redactedblobstore = { path = "../../blobstore/redactedblobstore" }
 repo_blobstore = { path = "../repo_blobstore" }
 scuba_ext = { path = "../../common/scuba_ext" }
+segmented_changelog = { path = "../../segmented_changelog" }
 sql_construct = { path = "../../common/sql_construct" }
 sql_ext = { path = "../../common/rust/sql_ext" }
 type_map = { path = "../../common/type_map" }
