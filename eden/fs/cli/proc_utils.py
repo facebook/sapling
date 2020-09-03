@@ -248,6 +248,43 @@ class UnixProcUtils(ProcUtils):
 
         return stdout.rstrip().decode("utf8")
 
+    def is_system_idle(
+        self, tty_idle_timeout: datetime.timedelta, root_path: Path
+    ) -> bool:
+        # We compute system idleness for now just by looking to at the most recent time
+        # that any of the TTYs have received input.  If there has been no activity
+        # within the specified idle interval we consider the system idle.
+        max_idle_time: float = (time.time() - tty_idle_timeout.total_seconds())
+        dev_path = root_path / "dev"
+
+        def is_tty_busy(tty_path: Path) -> bool:
+            try:
+                s = tty_path.lstat()
+            except OSError:
+                return False
+
+            # Check the atime.  This is what the "w" utility uses to report idleness.
+            # We don't want to use the mtime, since it gets updated whenever there is
+            # output to the terminal, even if the user has not made any input for a long
+            # time.  (e.g., if the user has left a command like "top" constantly
+            # printing output to the terminal and left it running for days.)
+            return s.st_atime > max_idle_time
+
+        try:
+            for entry in (dev_path / "pts").iterdir():
+                if is_tty_busy(entry):
+                    return False
+
+            for entry in dev_path.iterdir():
+                if not entry.name.startswith("tty"):
+                    continue
+                if is_tty_busy(entry):
+                    return False
+        except OSError:
+            pass
+
+        return True
+
 
 class MacProcUtils(UnixProcUtils):
     def get_edenfs_processes(self) -> Iterable[EdenFSProcess]:
@@ -256,13 +293,6 @@ class MacProcUtils(UnixProcUtils):
     def get_process_start_time(self, pid: int) -> float:
         raise NotImplementedError(
             "MacProcUtils does not currently implement get_process_start_time()"
-        )
-
-    def is_system_idle(
-        self, tty_idle_timeout: datetime.timedelta, root_path: Path
-    ) -> bool:
-        raise NotImplementedError(
-            "MacProcUtils does not currently implement is_system_idle()"
         )
 
 
@@ -397,43 +427,6 @@ class LinuxProcUtils(UnixProcUtils):
             jps = os.sysconf(os.sysconf_names["SC_CLK_TCK"])
             self._jiffies_per_sec = jps
         return jps
-
-    def is_system_idle(
-        self, tty_idle_timeout: datetime.timedelta, root_path: Path
-    ) -> bool:
-        # We compute system idleness for now just by looking to at the most recent time
-        # that any of the TTYs have received input.  If there has been no activity
-        # within the specified idle interval we consider the system idle.
-        max_idle_time: float = (time.time() - tty_idle_timeout.total_seconds())
-        dev_path = root_path / "dev"
-
-        def is_tty_busy(tty_path: Path) -> bool:
-            try:
-                s = tty_path.lstat()
-            except OSError:
-                return False
-
-            # Check the atime.  This is what the "w" utility uses to report idleness.
-            # We don't want to use the mtime, since it gets updated whenever there is
-            # output to the terminal, even if the user has not made any input for a long
-            # time.  (e.g., if the user has left a command like "top" constantly
-            # printing output to the terminal and left it running for days.)
-            return s.st_atime > max_idle_time
-
-        try:
-            for entry in (dev_path / "pts").iterdir():
-                if is_tty_busy(entry):
-                    return False
-
-            for entry in dev_path.iterdir():
-                if not entry.name.startswith("tty"):
-                    continue
-                if is_tty_busy(entry):
-                    return False
-        except OSError:
-            pass
-
-        return True
 
 
 def new() -> ProcUtils:
