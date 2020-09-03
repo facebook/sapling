@@ -50,6 +50,7 @@ mod redaction;
 mod skiplist_subcommand;
 mod subcommand_blame;
 mod subcommand_deleted_manifest;
+mod subcommand_fsnodes;
 mod subcommand_unodes;
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
@@ -74,6 +75,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .subcommand(phases::build_subcommand())
         .subcommand(filestore::build_subcommand())
         .subcommand(subcommand_unodes::build_subcommand())
+        .subcommand(subcommand_fsnodes::build_subcommand())
         .subcommand(crossrepo::build_subcommand())
         .subcommand(subcommand_blame::build_subcommand())
         .subcommand(subcommand_deleted_manifest::build_subcommand())
@@ -138,6 +140,9 @@ fn main(fb: FacebookInit) -> ExitCode {
             }
             (subcommand_unodes::UNODES, Some(sub_m)) => {
                 subcommand_unodes::subcommand_unodes(fb, logger, &matches, sub_m).await
+            }
+            (subcommand_fsnodes::FSNODES, Some(sub_m)) => {
+                subcommand_fsnodes::subcommand_fsnodes(fb, logger, &matches, sub_m).await
             }
             (crossrepo::CROSSREPO, Some(sub_m)) => {
                 subcommand_crossrepo(fb, logger, &matches, sub_m).await
