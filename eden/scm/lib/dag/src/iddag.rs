@@ -128,7 +128,7 @@ impl<Store: IdDagStore> IdDag<Store> {
             max_level,
             new_seg_size: DEFAULT_SEG_SIZE, // see D16660078 for this default setting
         };
-        dag.build_all_high_level_segments(false)?;
+        dag.build_all_high_level_segments(false, max_level)?;
         Ok(dag)
     }
 }
@@ -244,7 +244,7 @@ impl<Store: IdDagStore> IdDag<Store> {
         if self.next_free_id(0, high.group())? <= high {
             return bug("internal error: flat segments are not built as expected");
         }
-        count += self.build_all_high_level_segments(false)?;
+        count += self.build_all_high_level_segments(false, Level::MAX)?;
         Ok(count)
     }
 
@@ -255,7 +255,7 @@ impl<Store: IdDagStore> IdDag<Store> {
         outcome: &AssignHeadOutcome,
     ) -> Result<usize> {
         let mut count = self.build_flat_segments_from_assign_head_outcome(outcome)?;
-        count += self.build_all_high_level_segments(false)?;
+        count += self.build_all_high_level_segments(false, Level::MAX)?;
         Ok(count)
     }
 
@@ -528,9 +528,13 @@ impl<Store: IdDagStore> IdDag<Store> {
     /// reduce fragmentation.
     ///
     /// Return number of segments inserted.
-    fn build_all_high_level_segments(&mut self, drop_last: bool) -> Result<usize> {
+    fn build_all_high_level_segments(
+        &mut self,
+        drop_last: bool,
+        max_level: Level,
+    ) -> Result<usize> {
         let mut total = 0;
-        for level in 1.. {
+        for level in 1..=max_level {
             let count = self.build_high_level_segments(level, drop_last)?;
             tracing::debug!("new lv{} segments: {}", level, count);
             if count == 0 {
@@ -1525,7 +1529,7 @@ impl<Store: IdDagStore + GetLock> SyncableIdDag<'_, Store> {
     {
         let mut count = 0;
         count += self.dag.build_flat_segments(high, get_parents, 0)?;
-        count += self.dag.build_all_high_level_segments(true)?;
+        count += self.dag.build_all_high_level_segments(true, Level::MAX)?;
         Ok(count)
     }
 
@@ -1538,7 +1542,7 @@ impl<Store: IdDagStore + GetLock> SyncableIdDag<'_, Store> {
         let mut count = self
             .dag
             .build_flat_segments_from_assign_head_outcome(outcome)?;
-        count += self.dag.build_all_high_level_segments(true)?;
+        count += self.dag.build_all_high_level_segments(true, Level::MAX)?;
         Ok(count)
     }
 
@@ -1550,7 +1554,7 @@ impl<Store: IdDagStore + GetLock> SyncableIdDag<'_, Store> {
         // Building high level segments happen in memory.
         // No need to take a lock.
         drop(self.lock);
-        self.dag.build_all_high_level_segments(false)?;
+        self.dag.build_all_high_level_segments(false, Level::MAX)?;
         Ok(())
     }
 
