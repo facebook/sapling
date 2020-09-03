@@ -18,6 +18,7 @@ use futures::{
     try_join,
 };
 use maplit::hashset;
+use tokio::sync::RwLock;
 
 use dag::{self, Id as Vertex, InProcessIdDag};
 use stats::prelude::*;
@@ -41,12 +42,55 @@ define_stats! {
     location_to_changeset_id: timeseries(Sum),
 }
 
+pub struct OnDemandUpdateDag {
+    dag: RwLock<Dag>,
+    changeset_fetcher: Arc<dyn ChangesetFetcher>,
+}
+
+impl OnDemandUpdateDag {
+    pub fn new(dag: Dag, changeset_fetcher: Arc<dyn ChangesetFetcher>) -> Self {
+        Self {
+            dag: RwLock::new(dag),
+            changeset_fetcher,
+        }
+    }
+}
+
+#[async_trait]
+impl SegmentedChangelog for OnDemandUpdateDag {
+    async fn location_to_many_changeset_ids(
+        &self,
+        ctx: &CoreContext,
+        known: ChangesetId,
+        distance: u64,
+        count: u64,
+    ) -> Result<Vec<ChangesetId>> {
+        STATS::location_to_changeset_id.add_value(1);
+        {
+            let dag = self.dag.read().await;
+            if let Some(known_vertex) = dag.idmap.find_vertex(ctx, dag.repo_id, known).await? {
+                return dag
+                    .known_location_to_many_changeset_ids(ctx, known_vertex, distance, count)
+                    .await;
+            }
+        }
+        let known_vertex = {
+            let mut dag = self.dag.write().await;
+            dag.build_incremental(ctx, &self.changeset_fetcher, known)
+                .await?
+        };
+        let dag = self.dag.read().await;
+        dag.known_location_to_many_changeset_ids(ctx, known_vertex, distance, count)
+            .await
+    }
+}
+
 // Note. The equivalent graph in the scm/lib/dag crate is `NameDag`.
 pub struct Dag {
     // core fields
-    repo_id: RepositoryId,
-    iddag: InProcessIdDag,
-    idmap: Arc<IdMap>,
+    pub(crate) repo_id: RepositoryId,
+    pub(crate) iddag: InProcessIdDag,
+    pub(crate) idmap: Arc<IdMap>,
 }
 
 #[async_trait]
@@ -60,14 +104,36 @@ impl SegmentedChangelog for Dag {
     ) -> Result<Vec<ChangesetId>> {
         STATS::location_to_changeset_id.add_value(1);
         let known_vertex = self.idmap.get_vertex(ctx, self.repo_id, known).await?;
+        self.known_location_to_many_changeset_ids(ctx, known_vertex, distance, count)
+            .await
+    }
+}
+
+impl Dag {
+    pub fn new(repo_id: RepositoryId, iddag: InProcessIdDag, idmap: Arc<IdMap>) -> Self {
+        Self {
+            repo_id,
+            iddag,
+            idmap,
+        }
+    }
+
+    async fn known_location_to_many_changeset_ids(
+        &self,
+        ctx: &CoreContext,
+        known_vertex: Vertex,
+        distance: u64,
+        count: u64,
+    ) -> Result<Vec<ChangesetId>> {
+        STATS::location_to_changeset_id.add_value(1);
         let mut dist_ancestor_vertex = self.iddag.first_ancestor_nth(known_vertex, distance)?;
         let mut vertexes = vec![dist_ancestor_vertex];
         for _ in 1..count {
             let parents = self.iddag.parent_ids(dist_ancestor_vertex)?;
             if parents.len() != 1 {
                 return Err(format_err!(
-                    "invalid request: changeset {} does not have {} single parent ancestors",
-                    known,
+                    "invalid request: changeset with vertex {} does not have {} single parent ancestors",
+                    known_vertex,
                     distance + count - 1
                 ));
             }
@@ -82,16 +148,6 @@ impl SegmentedChangelog for Dag {
             .try_collect()
             .await
     }
-}
-
-impl Dag {
-    pub fn new(repo_id: RepositoryId, iddag: InProcessIdDag, idmap: Arc<IdMap>) -> Self {
-        Self {
-            repo_id,
-            iddag,
-            idmap,
-        }
-    }
 
     pub async fn build_all_graph(
         &mut self,
@@ -99,7 +155,7 @@ impl Dag {
         changesets: &SqlChangesets,
         phases: &SqlPhases,
         head: ChangesetId,
-    ) -> Result<()> {
+    ) -> Result<Vertex> {
         STATS::build_all_graph.add_value(1);
         let changeset_entries: Vec<ChangesetEntry> =
             fetch_all_public_changesets(ctx, self.repo_id, changesets, phases)
@@ -112,9 +168,7 @@ impl Dag {
 
         let low_vertex = dag::Group::MASTER.min_id();
         // TODO(sfilip, T67734329): monitor MySql lag replication
-        self.build(ctx, low_vertex, head, start_state).await?;
-
-        Ok(())
+        self.build(ctx, low_vertex, head, start_state).await
     }
 
     pub async fn build_incremental(
@@ -122,7 +176,7 @@ impl Dag {
         ctx: &CoreContext,
         changeset_fetcher: &dyn ChangesetFetcher,
         head: ChangesetId,
-    ) -> Result<()> {
+    ) -> Result<Vertex> {
         STATS::build_incremental.add_value(1);
         let mut visited = HashSet::new();
         let mut start_state = StartState::new();
@@ -134,7 +188,12 @@ impl Dag {
                 let (cs_id, parents, vertex) = entry?;
                 start_state.insert_parents(cs_id, parents.clone());
                 match vertex {
-                    Some(v) => start_state.insert_vertex_assignment(cs_id, v),
+                    Some(v) => {
+                        if cs_id == head {
+                            return Ok(v);
+                        }
+                        start_state.insert_vertex_assignment(cs_id, v);
+                    }
                     None => {
                         for parent in parents {
                             if visited.insert(parent) {
@@ -156,9 +215,7 @@ impl Dag {
             .await?
             .map_or_else(|| dag::Group::MASTER.min_id(), |(vertex, _)| vertex + 1);
 
-        self.build(ctx, low_vertex, head, start_state).await?;
-
-        Ok(())
+        self.build(ctx, low_vertex, head, start_state).await
     }
 
     async fn get_parents_and_vertex(
@@ -180,7 +237,7 @@ impl Dag {
         low_vertex: Vertex,
         head: ChangesetId,
         start_state: StartState,
-    ) -> Result<()> {
+    ) -> Result<Vertex> {
         enum Todo {
             Visit(ChangesetId),
             Assign(ChangesetId),
@@ -253,7 +310,7 @@ impl Dag {
         self.iddag
             .build_segments_volatile(head_vertex, &get_vertex_parents)?;
 
-        Ok(())
+        Ok(head_vertex)
     }
 }
 
@@ -355,7 +412,9 @@ mod tests {
         }
 
         pub fn new_in_process(repo_id: RepositoryId) -> Result<Dag> {
-            Ok(SegmentedChangelogBuilder::with_sqlite_in_memory()?.build_with_repo_id(repo_id))
+            SegmentedChangelogBuilder::with_sqlite_in_memory()?
+                .with_repo_id(repo_id)
+                .build_read_only()
         }
     }
 
@@ -527,7 +586,8 @@ mod tests {
 
             let known_cs =
                 resolve_cs_id(&ctx, &blobrepo, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
-            dag.build_incremental_from_blobrepo(&ctx, &blobrepo, known_cs)
+            let vertex1 = dag
+                .build_incremental_from_blobrepo(&ctx, &blobrepo, known_cs)
                 .await?;
             let distance: u64 = 4;
             let answer = dag
@@ -536,6 +596,10 @@ mod tests {
             let expected_cs =
                 resolve_cs_id(&ctx, &blobrepo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17").await?;
             assert_eq!(answer, expected_cs);
+            let vertex2 = dag
+                .build_incremental_from_blobrepo(&ctx, &blobrepo, known_cs)
+                .await?;
+            assert_eq!(vertex1, vertex2);
         }
         {
             // merge_uneven
@@ -624,6 +688,30 @@ mod tests {
         let expected_cs_id =
             resolve_cs_id(&ctx, &blobrepo2, "d7542c9db7f4c77dab4b315edd328edf1514952f").await?;
         assert_eq!(answer, expected_cs_id);
+
+        Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn test_on_demand_update_dag_location_to_changeset_ids(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let blobrepo = linear::getrepo(fb).await;
+
+        let known_cs =
+            resolve_cs_id(&ctx, &blobrepo, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
+
+        let dag = SegmentedChangelogBuilder::with_sqlite_in_memory()?
+            .with_repo_id(blobrepo.get_repoid())
+            .with_changeset_fetcher(blobrepo.get_changeset_fetcher())
+            .build_on_demand_update()?;
+
+        let distance: u64 = 4;
+        let answer = dag
+            .location_to_changeset_id(&ctx, known_cs, distance)
+            .await?;
+        let expected_cs =
+            resolve_cs_id(&ctx, &blobrepo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17").await?;
+        assert_eq!(answer, expected_cs);
 
         Ok(())
     }

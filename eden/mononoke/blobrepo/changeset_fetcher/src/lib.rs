@@ -36,6 +36,24 @@ pub trait ChangesetFetcher: Send + Sync + 'static {
     }
 }
 
+impl ChangesetFetcher for Arc<dyn ChangesetFetcher> {
+    fn get_generation_number(
+        &self,
+        ctx: CoreContext,
+        cs_id: ChangesetId,
+    ) -> BoxFuture<Generation, Error> {
+        (**self).get_generation_number(ctx, cs_id)
+    }
+
+    fn get_parents(
+        &self,
+        ctx: CoreContext,
+        cs_id: ChangesetId,
+    ) -> BoxFuture<Vec<ChangesetId>, Error> {
+        (**self).get_parents(ctx, cs_id)
+    }
+}
+
 /// Simplest ChangesetFetcher implementation which is just a wrapper around `Changesets` object
 pub struct SimpleChangesetFetcher {
     changesets: Arc<dyn Changesets>,
