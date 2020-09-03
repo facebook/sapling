@@ -110,7 +110,7 @@ impl OpenOptions {
                 if !multimeta.metas.contains_key(name_ref) {
                     // Create a new Log if it does not exist in MultiMeta.
                     utils::mkdir_p(&fspath)?;
-                    let meta = log::Log::load_or_create_shared_meta(&fspath.as_path().into())?;
+                    let meta = log::Log::load_or_create_meta(&fspath.as_path().into(), true)?;
                     let meta = Arc::new(Mutex::new(meta));
                     multimeta.metas.insert(name.to_string(), meta);
                 }
@@ -322,27 +322,18 @@ mod tests {
     }
 
     #[test]
-    fn test_individual_log_cannot_be_opened_directly() {
+    fn test_individual_log_can_be_opened_directly() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path();
         let mut mlog = simple_multilog(path);
 
-        assert_eq!(
-            log::OpenOptions::new()
-                .open(path.join("a"))
-                .unwrap_err()
-                .to_string()
-                .lines()
-                .last()
-                .unwrap(),
-            "- This Log is managed by MultiLog. Direct access is forbidden!"
-        );
-        log::OpenOptions::new().open(path.join("b")).unwrap_err();
+        log::OpenOptions::new().open(path.join("a")).unwrap();
+        log::OpenOptions::new().open(path.join("b")).unwrap();
 
-        // It's still an error after individual log flush.
+        // After flush - still readable.
         mlog[0].append(b"1").unwrap();
         mlog[0].flush().unwrap();
-        log::OpenOptions::new().open(path.join("a")).unwrap_err();
+        log::OpenOptions::new().open(path.join("a")).unwrap();
     }
 
     #[test]

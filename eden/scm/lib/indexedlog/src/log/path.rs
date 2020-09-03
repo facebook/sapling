@@ -113,8 +113,15 @@ impl GenericPath {
                 Ok(())
             }
             GenericPath::SharedMeta {
-                meta: shared_meta, ..
+                meta: shared_meta,
+                path,
             } => {
+                // Update the normal "meta" file for easy investigation.
+                // The meta file is not used directly, though.
+                if let GenericPath::Filesystem(dir) = path.as_ref() {
+                    let meta_path = dir.join(META_FILE);
+                    meta.write_file(&meta_path, fsync)?;
+                }
                 let mut shared_meta = shared_meta.lock().unwrap();
                 *shared_meta = meta.clone();
                 Ok(())
