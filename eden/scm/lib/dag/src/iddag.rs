@@ -81,20 +81,6 @@ impl IdDag<IndexedLogStore> {
         Self::open_from_store(store)
     }
 
-    /// Return a [`SyncableIdDag`] instance that provides race-free
-    /// filesytem read and write access by taking an exclusive lock.
-    ///
-    /// The [`SyncableIdDag`] instance provides a `sync` method that
-    /// actually writes changes to disk.
-    ///
-    /// Block if another instance is taking the lock.
-    pub fn prepare_filesystem_sync(&mut self) -> Result<SyncableIdDag<IndexedLogStore>> {
-        let lock = self.store.get_lock()?;
-        // Read new entries from filesystem.
-        self.store.reload(&lock)?;
-        Ok(SyncableIdDag { dag: self, lock })
-    }
-
     /// Set the maximum size of a new high-level segment.
     ///
     /// This does not affect existing segments.
@@ -218,6 +204,23 @@ impl<Store: IdDagStore> IdDag<Store> {
         parent: Id,
     ) -> Result<impl Iterator<Item = Result<Segment>> + 'a> {
         self.store.iter_master_flat_segments_with_parent(parent)
+    }
+}
+
+// Obtains SyncableIdDag
+impl<Store: IdDagStore + GetLock> IdDag<Store> {
+    /// Return a [`SyncableIdDag`] instance that provides race-free
+    /// filesytem read and write access by taking an exclusive lock.
+    ///
+    /// The [`SyncableIdDag`] instance provides a `sync` method that
+    /// actually writes changes to disk.
+    ///
+    /// Block if another instance is taking the lock.
+    pub fn prepare_filesystem_sync(&mut self) -> Result<SyncableIdDag<Store>> {
+        let lock = self.store.get_lock()?;
+        // Read new entries from filesystem.
+        self.store.reload(&lock)?;
+        Ok(SyncableIdDag { dag: self, lock })
     }
 }
 
