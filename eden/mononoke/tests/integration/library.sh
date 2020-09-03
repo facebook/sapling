@@ -859,6 +859,18 @@ else
 derived_data_types=["blame", "changeset_info", "deleted_manifest", "fastlog", "filenodes", "fsnodes", "unodes", "hgchangesets"]
 CONFIG
 fi
+
+if [[ -n "${SEGMENTED_CHANGELOG_ENABLE:-}" ]]; then
+  cat >> "repos/$reponame/server.toml" <<CONFIG
+[segmented_changelog_config]
+enabled=true
+CONFIG
+  if [[ -n "${SEGMENTED_CHANGELOG_ON_DEMAND_UPDATE:-}" ]]; then
+    cat >> "repos/$reponame/server.toml" <<CONFIG
+update_algorithm="ondemand"
+CONFIG
+  fi
+fi
 }
 
 function write_infinitepush_config {
