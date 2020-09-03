@@ -36,8 +36,8 @@ use fbinit::FacebookInit;
 use gotham_ext::{
     handler::MononokeHttpHandler,
     middleware::{
-        ClientIdentityMiddleware, LoadMiddleware, PostRequestMiddleware, ServerIdentityMiddleware,
-        TlsSessionDataMiddleware,
+        ClientIdentityMiddleware, LoadMiddleware, LogMiddleware, PostRequestMiddleware,
+        ServerIdentityMiddleware, TlsSessionDataMiddleware,
     },
     socket_data::TlsSocketData,
 };
@@ -63,6 +63,7 @@ const ARG_TLS_CA: &str = "tls-ca";
 const ARG_TLS_TICKET_SEEDS: &str = "tls-ticket-seeds";
 const ARG_TRUSTED_PROXY_IDENTITY: &str = "trusted-proxy-identity";
 const ARG_TLS_SESSION_DATA_LOG_FILE: &str = "tls-session-data-log-file";
+const ARG_TEST_FRIENDLY_LOGGING: &str = "test-friendly-logging";
 
 const SERVICE_NAME: &str = "mononoke_edenapi_server";
 
@@ -145,6 +146,11 @@ async fn start(
     // Set up context to hold the server's global state.
     let ctx = ServerContext::new(mononoke, will_exit.clone());
 
+    let log_middleware = match matches.is_present(ARG_TEST_FRIENDLY_LOGGING) {
+        true => LogMiddleware::test_friendly(),
+        false => LogMiddleware::slog(logger.clone()),
+    };
+
     // Set up the router and handler for serving HTTP requests, along with custom middleware.
     // The middleware added here does not implement Gotham's usual Middleware trait; instead,
     // it uses the custom Middleware API defined in the gotham_ext crate. Native Gotham
@@ -159,6 +165,7 @@ async fn start(
         .add(PostRequestMiddleware::default())
         .add(RequestContextMiddleware::new(fb, logger.clone()))
         .add(LoadMiddleware::new())
+        .add(log_middleware)
         .build(router);
 
     // Set up socket and TLS acceptor that this server will listen on.
