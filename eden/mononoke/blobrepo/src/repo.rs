@@ -15,7 +15,7 @@ use bookmarks::{
     Bookmarks, Freshness,
 };
 use cacheblob::LeaseOps;
-use changeset_fetcher::{ChangesetFetcher, SimpleChangesetFetcher};
+use changeset_fetcher::ChangesetFetcher;
 use changesets::{ChangesetInsert, Changesets};
 use cloned::cloned;
 use context::CoreContext;
@@ -61,10 +61,6 @@ pub struct BlobRepoInner {
     pub bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
     pub bonsai_globalrev_mapping: Arc<dyn BonsaiGlobalrevMapping>,
     pub repoid: RepositoryId,
-    // Returns new ChangesetFetcher that can be used by operation that work with commit graph
-    // (for example, revsets).
-    pub changeset_fetcher_factory:
-        Arc<dyn Fn() -> Arc<dyn ChangesetFetcher + Send + Sync> + Send + Sync>,
     pub derived_data_lease: Arc<dyn LeaseOps>,
     pub filestore_config: FilestoreConfig,
     pub phases_factory: SqlPhasesFactory,
@@ -112,23 +108,12 @@ impl BlobRepo {
     ) -> Self {
         let (blobstore, repoid) = blobstore_args.into_blobrepo_parts();
 
-        let changeset_fetcher_factory = {
-            cloned!(changesets, repoid);
-            move || {
-                let res: Arc<dyn ChangesetFetcher + Send + Sync> = Arc::new(
-                    SimpleChangesetFetcher::new(changesets.clone(), repoid.clone()),
-                );
-                res
-            }
-        };
-
         let inner = BlobRepoInner {
             blobstore,
             changesets,
             bonsai_git_mapping,
             bonsai_globalrev_mapping,
             repoid,
-            changeset_fetcher_factory: Arc::new(changeset_fetcher_factory),
             derived_data_lease,
             filestore_config,
             phases_factory,
@@ -350,7 +335,7 @@ impl BlobRepo {
     }
 
     pub fn get_changeset_fetcher(&self) -> Arc<dyn ChangesetFetcher> {
-        (self.inner.changeset_fetcher_factory)()
+        self.attribute_expected::<dyn ChangesetFetcher>().clone()
     }
 
     pub fn blobstore(&self) -> &RepoBlobstore {

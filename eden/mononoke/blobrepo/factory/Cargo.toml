@@ -17,6 +17,7 @@ bonsai_globalrev_mapping = { path = "../../bonsai_globalrev_mapping" }
 bonsai_hg_mapping = { path = "../../bonsai_hg_mapping" }
 bookmarks = { path = "../../bookmarks" }
 cacheblob = { path = "../../blobstore/cacheblob" }
+changeset_fetcher = { path = "../changeset_fetcher" }
 changeset_info = { path = "../../derived_data/changeset_info" }
 changesets = { path = "../../changesets" }
 dbbookmarks = { path = "../../bookmarks/dbbookmarks" }

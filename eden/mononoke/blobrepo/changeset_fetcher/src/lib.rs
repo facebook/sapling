@@ -18,7 +18,7 @@ use std::sync::Arc;
 
 /// Trait that knows how to fetch DAG info about commits. Primary user is revsets
 /// Concrete implementation may add more efficient caching logic to make request faster
-pub trait ChangesetFetcher: Send + Sync {
+pub trait ChangesetFetcher: Send + Sync + 'static {
     fn get_generation_number(
         &self,
         ctx: CoreContext,

@@ -111,20 +111,14 @@ impl DangerousOverride<Arc<dyn Changesets>> for BlobRepoInner {
         F: FnOnce(Arc<dyn Changesets>) -> Arc<dyn Changesets>,
     {
         let changesets = modify(self.changesets.clone());
-        let changeset_fetcher_factory = {
-            let repoid = self.repoid;
-            let changesets = changesets.clone();
-            move || {
-                let res: Arc<dyn ChangesetFetcher + Send + Sync> = Arc::new(
-                    SimpleChangesetFetcher::new(changesets.clone(), repoid.clone()),
-                );
-                res
-            }
-        };
+        let changesets_fetcher =
+            Arc::new(SimpleChangesetFetcher::new(changesets.clone(), self.repoid));
+        let mut attributes = self.attributes.as_ref().clone();
+        attributes.insert::<dyn ChangesetFetcher>(changesets_fetcher);
 
         Self {
             changesets,
-            changeset_fetcher_factory: Arc::new(changeset_fetcher_factory),
+            attributes: Arc::new(attributes),
             ..self.clone()
         }
     }

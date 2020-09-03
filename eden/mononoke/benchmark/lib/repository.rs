@@ -18,6 +18,7 @@ use bonsai_hg_mapping::{
     SqlBonsaiHgMapping,
 };
 use cacheblob::{dummy::DummyLease, new_cachelib_blobstore, CachelibBlobstoreOptions};
+use changeset_fetcher::SimpleChangesetFetcher;
 use changesets::{CachingChangesets, ChangesetEntry, ChangesetInsert, Changesets, SqlChangesets};
 use context::CoreContext;
 use dbbookmarks::SqlBookmarksBuilder;
@@ -142,6 +143,8 @@ pub fn new_benchmark_repo(fb: FacebookInit, settings: DelaySettings) -> Result<B
     let hg_mutation_store =
         Arc::new(SqlHgMutationStoreBuilder::with_sqlite_in_memory()?.with_repo_id(repoid));
 
+    let changeset_fetcher = Arc::new(SimpleChangesetFetcher::new(changesets.clone(), repoid));
+
     let blobstore =
         RepoBlobstoreArgs::new(blobstore, None, repoid, ScubaSampleBuilder::with_discard());
     Ok(blobrepo_factory::blobrepo_new(
@@ -150,6 +153,7 @@ pub fn new_benchmark_repo(fb: FacebookInit, settings: DelaySettings) -> Result<B
         blobstore,
         filenodes,
         changesets,
+        changeset_fetcher,
         bonsai_git_mapping,
         bonsai_globalrev_mapping,
         bonsai_hg_mapping,

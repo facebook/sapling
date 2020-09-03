@@ -19,6 +19,7 @@ use cacheblob::{
     new_cachelib_blobstore_no_lease, new_memcache_blobstore, CachelibBlobstoreOptions,
     InProcessLease, LeaseOps, MemcacheOps,
 };
+use changeset_fetcher::{ChangesetFetcher, SimpleChangesetFetcher};
 use changeset_info::ChangesetInfo;
 use changesets::{CachingChangesets, Changesets, SqlChangesets};
 use dbbookmarks::SqlBookmarksBuilder;
@@ -331,6 +332,12 @@ impl TestRepoBuilder {
         let bookmarks =
             Arc::new(SqlBookmarksBuilder::with_sqlite_in_memory()?.with_repo_id(repo_id));
 
+        let changesets = Arc::new(
+            SqlChangesets::with_sqlite_in_memory()
+                .context(ErrorKind::StateOpen(StateOpenError::Changesets))?,
+        );
+        let changeset_fetcher = Arc::new(SimpleChangesetFetcher::new(changesets.clone(), repo_id));
+
         Ok(blobrepo_new(
             bookmarks.clone(),
             bookmarks,
@@ -340,10 +347,8 @@ impl TestRepoBuilder {
                     .context(ErrorKind::StateOpen(StateOpenError::Filenodes))?
                     .build(),
             ),
-            Arc::new(
-                SqlChangesets::with_sqlite_in_memory()
-                    .context(ErrorKind::StateOpen(StateOpenError::Changesets))?,
-            ),
+            changesets,
+            changeset_fetcher,
             Arc::new(
                 SqlBonsaiGitMappingConnection::with_sqlite_in_memory()
                     .context(ErrorKind::StateOpen(StateOpenError::BonsaiGitMapping))?
@@ -440,6 +445,8 @@ pub fn new_memblob_with_connection_with_id(
     let bookmarks = Arc::new(
         SqlBookmarksBuilder::from_sql_connections(sql_connections.clone()).with_repo_id(repo_id),
     );
+    let changesets = Arc::new(SqlChangesets::from_sql_connections(sql_connections.clone()));
+    let changeset_fetcher = Arc::new(SimpleChangesetFetcher::new(changesets.clone(), repo_id));
 
     Ok((
         blobrepo_new(
@@ -452,7 +459,8 @@ pub fn new_memblob_with_connection_with_id(
                     .context(ErrorKind::StateOpen(StateOpenError::Filenodes))?
                     .build(),
             ),
-            Arc::new(SqlChangesets::from_sql_connections(sql_connections.clone())),
+            changesets,
+            changeset_fetcher,
             Arc::new(
                 SqlBonsaiGitMappingConnection::from_sql_connections(sql_connections.clone())
                     .with_repo_id(repo_id.clone()),
@@ -589,13 +597,16 @@ async fn new_development(
     )?;
 
     let scuba_builder = ScubaSampleBuilder::with_opt_table(fb, scuba_censored_table);
+    let changesets = Arc::new(changesets);
+    let changeset_fetcher = Arc::new(SimpleChangesetFetcher::new(changesets.clone(), repoid));
 
     Ok(blobrepo_new(
         bookmarks,
         bookmark_update_log,
         RepoBlobstoreArgs::new(blobstore, redacted_blobs, repoid, scuba_builder),
         Arc::new(filenodes_builder.build()),
-        Arc::new(changesets),
+        changesets,
+        changeset_fetcher,
         Arc::new(bonsai_git_mapping),
         Arc::new(bonsai_globalrev_mapping),
         Arc::new(bonsai_hg_mapping),
@@ -709,6 +720,7 @@ async fn new_production(
         Arc::new(changesets),
         changesets_cache_pool,
     ));
+    let changeset_fetcher = Arc::new(SimpleChangesetFetcher::new(changesets.clone(), repoid));
 
     let bonsai_hg_mapping = CachingBonsaiHgMapping::new(
         fb,
@@ -725,6 +737,7 @@ async fn new_production(
         RepoBlobstoreArgs::new(blobstore, redacted_blobs, repoid, scuba_builder),
         Arc::new(filenodes_builder.build()) as Arc<dyn Filenodes>,
         changesets,
+        changeset_fetcher,
         Arc::new(bonsai_git_mapping),
         Arc::new(bonsai_globalrev_mapping),
         Arc::new(bonsai_hg_mapping),
@@ -789,6 +802,7 @@ pub fn blobrepo_new(
     blobstore_args: RepoBlobstoreArgs,
     filenodes: Arc<dyn Filenodes>,
     changesets: Arc<dyn Changesets>,
+    changeset_fetcher: Arc<dyn ChangesetFetcher>,
     bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
     bonsai_globalrev_mapping: Arc<dyn BonsaiGlobalrevMapping>,
     bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
@@ -806,6 +820,7 @@ pub fn blobrepo_new(
         attributes.insert::<dyn BonsaiHgMapping>(bonsai_hg_mapping);
         attributes.insert::<dyn Filenodes>(filenodes);
         attributes.insert::<dyn HgMutationStore>(hg_mutation_store);
+        attributes.insert::<dyn ChangesetFetcher>(changeset_fetcher);
         Arc::new(attributes)
     };
     BlobRepo::new_dangerous(
