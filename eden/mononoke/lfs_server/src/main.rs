@@ -57,8 +57,6 @@ mod middleware;
 mod popularity;
 mod service;
 mod upload;
-#[macro_use]
-mod http;
 
 const ARG_SELF_URL: &str = "self-url";
 const ARG_UPSTREAM_URL: &str = "upstream-url";

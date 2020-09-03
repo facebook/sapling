@@ -9,6 +9,7 @@ use hyper::StatusCode;
 
 use thiserror::Error;
 
+use gotham_ext::error::HttpError;
 use lfs_protocol::{RequestObject, ResponseObject};
 
 use filestore::FetchKey;
@@ -81,4 +82,15 @@ pub enum LfsServerContextErrorKind {
     PermissionCheckFailed(anyhow::Error),
     #[error("Repository does not exist: {0}")]
     RepositoryDoesNotExist(String),
+}
+
+impl From<LfsServerContextErrorKind> for HttpError {
+    fn from(e: LfsServerContextErrorKind) -> HttpError {
+        use LfsServerContextErrorKind::*;
+        match e {
+            Forbidden => HttpError::e403(e),
+            RepositoryDoesNotExist(_) => HttpError::e400(e),
+            PermissionCheckFailed(_) => HttpError::e500(e),
+        }
+    }
 }

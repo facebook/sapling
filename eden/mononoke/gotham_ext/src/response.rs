@@ -9,10 +9,7 @@ use std::convert::TryInto;
 
 use anyhow::Error;
 use bytes::Bytes;
-use futures::{
-    channel::{mpsc, oneshot::Sender},
-    Stream, StreamExt,
-};
+use futures::{channel::mpsc, Stream, StreamExt};
 use gotham::{handler::HandlerError, state::State};
 use gotham_derive::StateData;
 use hyper::{
@@ -22,6 +19,7 @@ use hyper::{
 use mime::Mime;
 
 use crate::error::HttpError;
+use crate::middleware::PostRequestCallbacks;
 use crate::signal_stream::SignalStream;
 
 pub trait TryIntoResponse {
@@ -95,7 +93,6 @@ pub struct StreamBody<S> {
     stream: S,
     mime: Mime,
     content_length: Option<u64>,
-    signal_sender: Option<Sender<u64>>,
 }
 
 impl<S> StreamBody<S> {
@@ -104,7 +101,6 @@ impl<S> StreamBody<S> {
             stream,
             mime,
             content_length: None,
-            signal_sender: None,
         }
     }
 
@@ -115,16 +111,6 @@ impl<S> StreamBody<S> {
     pub fn content_length(self, length: u64) -> Self {
         Self {
             content_length: Some(length),
-            ..self
-        }
-    }
-
-    /// Set a Sender to be notified when the Stream is exhausted
-    /// and all data has been sent to the client. The total number
-    /// of bytes sent will be passed along the channel.
-    pub fn signal(self, sender: Sender<u64>) -> Self {
-        Self {
-            signal_sender: Some(sender),
             ..self
         }
     }
@@ -139,7 +125,6 @@ where
             stream,
             mime,
             content_length,
-            signal_sender,
         } = self;
 
         let mime_header: HeaderValue = mime.as_ref().parse()?;
@@ -153,8 +138,10 @@ where
         let (sender, receiver) = mpsc::channel(0);
         tokio::spawn(stream.map(Ok).forward(sender));
 
-        let stream = match signal_sender {
-            Some(sender) => SignalStream::new(receiver, sender).left_stream(),
+        // If `PostRequestMiddleware` is in use, arrange for post-request
+        // callbacks to be delayed until the entire stream has been sent.
+        let stream = match state.try_borrow_mut::<PostRequestCallbacks>() {
+            Some(callbacks) => SignalStream::new(receiver, callbacks.delay()).left_stream(),
             None => receiver.right_stream(),
         };
 

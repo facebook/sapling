@@ -17,13 +17,15 @@ use gotham_derive::{StateData, StaticResponseExtender};
 use serde::Deserialize;
 
 use filestore::{self, Alias, FetchKey};
-use gotham_ext::{error::HttpError, response::TryIntoResponse};
+use gotham_ext::{
+    error::HttpError,
+    response::{StreamBody, TryIntoResponse},
+};
 use mononoke_types::{hash::Sha256, ContentId};
 use redactedblobstore::has_redaction_root_cause;
 use stats::prelude::*;
 
 use crate::errors::ErrorKind;
-use crate::http::LfsStreamBody;
 use crate::lfs_server_context::RepositoryRequestContext;
 use crate::middleware::LfsMethod;
 
@@ -79,11 +81,7 @@ async fn fetch_by_key(
         stream.right_stream()
     };
 
-    Ok(LfsStreamBody::new(
-        stream,
-        size,
-        mime::APPLICATION_OCTET_STREAM,
-    ))
+    Ok(StreamBody::new(stream, mime::APPLICATION_OCTET_STREAM).content_length(size))
 }
 
 pub async fn download(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
