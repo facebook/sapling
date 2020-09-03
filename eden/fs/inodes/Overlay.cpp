@@ -222,11 +222,11 @@ optional<DirContents> Overlay::loadOverlayDir(InodeNumber inodeNumber) {
     }
 
     if (isMaterialized) {
-      result.emplace(PathComponentPiece{name}, value.mode, ino);
+      result.emplace(PathComponentPiece{name}, *value.mode_ref(), ino);
     } else {
       auto hash = Hash{folly::ByteRange{
           folly::StringPiece{value.hash_ref().value_unchecked()}}};
-      result.emplace(PathComponentPiece{name}, value.mode, ino, hash);
+      result.emplace(PathComponentPiece{name}, *value.mode_ref(), ino, hash);
     }
   }
 
