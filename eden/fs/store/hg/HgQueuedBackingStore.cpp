@@ -7,12 +7,16 @@
 
 #include "eden/fs/store/hg/HgQueuedBackingStore.h"
 
-#include <folly/futures/Future.h>
-#include <folly/logging/xlog.h>
-#include <gflags/gflags.h>
 #include <thread>
 #include <utility>
 #include <variant>
+
+#include <re2/re2.h>
+
+#include <folly/Range.h>
+#include <folly/futures/Future.h>
+#include <folly/logging/xlog.h>
+#include <gflags/gflags.h>
 
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/model/Blob.h"
@@ -269,9 +273,10 @@ void HgQueuedBackingStore::logBackingStoreFetch(
   if (!config_) {
     return;
   }
-  auto logFetchPath = config_->getEdenConfig()->logObjectFetchPath.getValue();
-
-  if (!logFetchPath) {
+  auto& logFetchPath = config_->getEdenConfig()->logObjectFetchPath.getValue();
+  auto& logFetchPathRegex =
+      config_->getEdenConfig()->logObjectFetchPathRegex.getValue();
+  if (!logFetchPath && !logFetchPathRegex) {
     return;
   }
   std::optional<HgProxyHash> proxyHash;
@@ -291,9 +296,17 @@ void HgQueuedBackingStore::logBackingStoreFetch(
 
   recordFetch(path.stringPiece());
 
-  if (RelativePathPiece(logFetchPath.value())
-          .isParentDirOf(RelativePathPiece(path))) {
-    logger_->logImport(context, path, type);
+  if (logFetchPathRegex) {
+    if (RE2::PartialMatch(
+            path.stringPiece().str(), *logFetchPathRegex.value())) {
+      logger_->logImport(context, path, type);
+    }
+  } else if (logFetchPath) {
+    // TODO: remove once logFetchPathRegex is rolled out everywhere
+    if (RelativePathPiece(logFetchPath.value())
+            .isParentDirOf(RelativePathPiece(path))) {
+      logger_->logImport(context, path, type);
+    }
   }
 }
 

@@ -13,6 +13,8 @@
 #include <string>
 #include <type_traits>
 
+#include <re2/re2.h>
+
 #include <folly/Expected.h>
 #include <folly/Range.h>
 
@@ -121,6 +123,16 @@ class FieldConverter<std::chrono::nanoseconds> {
       const std::map<std::string, std::string>& convData) const;
 
   std::string toDebugString(std::chrono::nanoseconds value) const;
+};
+
+template <>
+class FieldConverter<std::shared_ptr<re2::RE2>> {
+ public:
+  folly::Expected<std::shared_ptr<re2::RE2>, std::string> fromString(
+      folly::StringPiece value,
+      const std::map<std::string, std::string>& convData) const;
+
+  std::string toDebugString(std::shared_ptr<re2::RE2> value) const;
 };
 
 } // namespace eden

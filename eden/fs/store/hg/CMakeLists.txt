@@ -19,6 +19,7 @@ target_link_libraries(
     eden_model
     eden_store
     eden_utils
+    ${RE2_LIBRARY}
 )
 
 if (NOT WIN32)

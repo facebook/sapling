@@ -7,6 +7,8 @@
 
 #include "eden/fs/config/FieldConverter.h"
 
+#include <folly/Conv.h>
+
 #include "eden/fs/utils/ChronoParse.h"
 
 using folly::Expected;
@@ -94,6 +96,22 @@ FieldConverter<std::chrono::nanoseconds>::fromString(
 std::string FieldConverter<std::chrono::nanoseconds>::toDebugString(
     std::chrono::nanoseconds value) const {
   return durationToString(value);
+}
+
+Expected<std::shared_ptr<re2::RE2>, string>
+FieldConverter<std::shared_ptr<re2::RE2>>::fromString(
+    folly::StringPiece value,
+    const std::map<string, string>& /* unused */) const {
+  // value is a regex
+  return std::make_shared<re2::RE2>(value.str());
+}
+
+std::string FieldConverter<std::shared_ptr<re2::RE2>>::toDebugString(
+    std::shared_ptr<re2::RE2> value) const {
+  if (value) {
+    return value->pattern();
+  }
+  return "";
 }
 
 } // namespace eden

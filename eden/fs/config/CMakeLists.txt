@@ -22,6 +22,7 @@ target_link_libraries(
     eden_model
     eden_utils
     cpptoml
+    ${RE2_LIBRARY}
 )
 
 add_subdirectory(test)
