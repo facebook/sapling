@@ -44,6 +44,7 @@ use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::ops::Deref;
 use std::path::Path;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 #[cfg(test)]
@@ -54,6 +55,8 @@ use crate::idmap::IdMapBuildParents;
 /// A high-level wrapper structure. Combination of [`IdMap`] and [`Dag`].
 /// Maintains consistency of dag and map internally.
 pub struct NameDag {
+    path: PathBuf,
+
     pub(crate) dag: IdDag<IndexedLogStore>,
     pub(crate) map: IdMap,
 
@@ -106,6 +109,7 @@ impl NameDag {
         let dag = IdDag::open_from_store(IndexedLogStore::open_from_log(dag_log))?;
         let snapshot_map = Arc::new(map.try_clone()?);
         Ok(Self {
+            path: path.to_path_buf(),
             dag,
             map,
             snapshot_map,
@@ -202,15 +206,11 @@ impl DagPersistent for NameDag {
         };
         let non_master_heads = &snapshot.pending_heads;
 
-        self.reload()?;
-
-        let flush_result = self.add_heads_and_flush(&parents, master_heads, non_master_heads);
-        if let Err(flush_err) = flush_result {
-            // Attempt to add back commits to revert the side effect of 'reload()'.
-            // No slot for "add_heads" error.
-            let _ = self.add_heads(&parents, non_master_heads);
-            return Err(flush_err);
-        }
+        let mut new_name_dag = Self::open(&self.path)?;
+        let seg_size = self.dag.get_new_segment_size();
+        new_name_dag.dag.set_new_segment_size(seg_size);
+        new_name_dag.add_heads_and_flush(&parents, master_heads, non_master_heads)?;
+        *self = new_name_dag;
         Ok(())
     }
 }
@@ -273,14 +273,6 @@ impl DagAddHeads for NameDag {
 }
 
 impl NameDag {
-    /// Reload segments from disk. This discards in-memory content.
-    fn reload(&mut self) -> Result<()> {
-        self.map.reload()?;
-        self.dag.reload()?;
-        self.pending_heads.clear();
-        Ok(())
-    }
-
     /// Invalidate cached content. Call this after changing the graph.
     fn invalidate_snapshot(&mut self) {
         *self.snapshot.write() = None;
@@ -297,6 +289,7 @@ impl NameDag {
             Some(s) => Ok(s.clone()),
             None => {
                 let cloned = Self {
+                    path: self.path.clone(),
                     dag: self.dag.try_clone()?,
                     map: self.map.try_clone()?,
                     snapshot_map: self.snapshot_map.clone(),

@@ -163,7 +163,7 @@ impl IdMap {
     }
 
     /// Reload from the filesystem. Discard pending changes.
-    pub fn reload(&mut self) -> Result<()> {
+    fn reload(&mut self) -> Result<()> {
         self.log.clear_dirty()?;
         self.log.sync()?;
         // Invalidate the next free id cache.

@@ -105,6 +105,11 @@ impl IdDag<IndexedLogStore> {
         self.new_seg_size = size.max(2);
     }
 
+    /// Get the segment size used for building new high-level segments.
+    pub(crate) fn get_new_segment_size(&self) -> usize {
+        self.new_seg_size
+    }
+
     /// Attempt to clone the `IdDag`.
     pub fn try_clone(&self) -> Result<Self> {
         let store = self.store.try_clone()?;
@@ -531,17 +536,6 @@ impl<Store: IdDagStore> IdDag<Store> {
             total += count;
         }
         Ok(total)
-    }
-}
-
-// Reload.
-impl<Store: IdDagStore> IdDag<Store> {
-    /// Reload from the source of truth. Discard pending changes.
-    pub fn reload(&mut self) -> Result<()> {
-        self.store.reload()?;
-        self.max_level = self.store.max_level()?;
-        self.build_all_high_level_segments(false)?;
-        Ok(())
     }
 }
 
