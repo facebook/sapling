@@ -95,8 +95,19 @@ impl GenericPath {
                 let meta_path = dir.join(META_FILE);
                 LogMetadata::read_file(&meta_path).context(&meta_path, "when reading LogMetadata")
             }
-            GenericPath::SharedMeta { meta, .. } => {
+            GenericPath::SharedMeta { meta, path } => {
                 let meta = meta.lock().unwrap();
+                if let GenericPath::Filesystem(dir) = path.as_ref() {
+                    let meta_path = dir.join(META_FILE);
+                    if let Ok(on_disk_meta) = LogMetadata::read_file(&meta_path) {
+                        // Prefer the per-log "meta" if it is compatible with the multi-meta.
+                        // The per-log meta might contain more up-to-date information about
+                        // indexes, etc.
+                        if meta.is_compatible_with(&on_disk_meta) {
+                            return Ok(on_disk_meta);
+                        }
+                    }
+                }
                 Ok(meta.clone())
             }
             GenericPath::Nothing => Err(crate::Error::programming(
@@ -116,8 +127,9 @@ impl GenericPath {
                 meta: shared_meta,
                 path,
             } => {
-                // Update the normal "meta" file for easy investigation.
-                // The meta file is not used directly, though.
+                // Update the per-log "meta" file. This can be useful for
+                // picking up new indexes (see test_new_index_built_only_once),
+                // or log internal data investigation.
                 if let GenericPath::Filesystem(dir) = path.as_ref() {
                     let meta_path = dir.join(META_FILE);
                     meta.write_file(&meta_path, fsync)?;

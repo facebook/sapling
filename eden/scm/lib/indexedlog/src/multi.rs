@@ -396,6 +396,50 @@ mod tests {
     }
 
     #[test]
+    fn test_new_index_built_only_once() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path();
+        let mopts = OpenOptions::from_name_opts(vec![("a", log::OpenOptions::new())]);
+        let mut mlog = mopts.open(path).unwrap();
+        mlog[0].append(b"0").unwrap();
+        mlog.sync().unwrap();
+
+        // Reopen with an index newly defined.
+        let index_def =
+            log::IndexDef::new("i", |_| vec![log::IndexOutput::Reference(0..1)]).lag_threshold(0);
+        let mopts = OpenOptions::from_name_opts(vec![(
+            "a",
+            log::OpenOptions::new().index_defs(vec![index_def.clone()]),
+        )]);
+        let index_size = || {
+            path.join("a")
+                .join(index_def.filename())
+                .metadata()
+                .map(|m| m.len())
+                .unwrap_or_default()
+        };
+
+        assert_eq!(index_size(), 0);
+
+        // Open one time, index is built on demand.
+        let _mlog = mopts.open(path).unwrap();
+        assert_eq!(index_size(), 36);
+
+        // Open another time, index is reused.
+        let mlog = mopts.open(path).unwrap();
+        assert_eq!(index_size(), 36);
+
+        // Force updating epoch to make multimeta and per-log meta incompatible.
+        mlog.multimeta.metas["a"].lock().unwrap().epoch ^= 1;
+        let meta_path = multi_meta_path(&path);
+        mlog.multimeta.write_file(&meta_path).unwrap();
+
+        // The index is rebuilt (appended) at open time because of incompatible meta.
+        let _mlog = mopts.open(path).unwrap();
+        assert_eq!(index_size(), 71);
+    }
+
+    #[test]
     fn test_wrong_locks_cause_errors() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path();

@@ -121,6 +121,12 @@ impl LogMetadata {
             epoch: utils::epoch(),
         }
     }
+
+    /// Test if two Metadata is compatible, aka. having the same length
+    /// and epoch.
+    pub(crate) fn is_compatible_with(&self, other: &Self) -> bool {
+        self.primary_len == other.primary_len && self.epoch == other.epoch
+    }
 }
 
 #[cfg(test)]
