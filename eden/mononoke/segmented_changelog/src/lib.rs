@@ -21,9 +21,12 @@ use mononoke_types::ChangesetId;
 mod builder;
 mod dag;
 mod idmap;
+mod types;
 
 pub use crate::builder::SegmentedChangelogBuilder;
-pub use crate::dag::Dag as InProcessSegmentedChangelog;
+
+#[derive(Copy, Clone, Default)]
+pub(crate) struct IdMapVersion(pub u32);
 
 // TODO(T74420661): use `thiserror` to represent error case
 

@@ -17,6 +17,7 @@ use sql_ext::SqlConnections;
 
 use crate::dag::{Dag, OnDemandUpdateDag};
 use crate::idmap::SqlIdMap;
+use crate::types::IdMapVersion;
 use crate::DisabledSegmentedChangelog;
 
 /// SegmentedChangelog instatiation helper.
@@ -27,10 +28,11 @@ use crate::DisabledSegmentedChangelog;
 /// Enabled = true
 ///   update_algorithm = 'ondemand' -> OnDemandUpdateDag
 ///   update_algorithm != 'ondemand' -> Dag
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct SegmentedChangelogBuilder {
     connections: Option<SqlConnections>,
     repo_id: Option<RepositoryId>,
+    idmap_version: Option<IdMapVersion>,
     replica_lag_monitor: Option<Arc<dyn ReplicaLagMonitor>>,
     changeset_fetcher: Option<Arc<dyn ChangesetFetcher>>,
 }
@@ -44,6 +46,7 @@ impl SqlConstruct for SegmentedChangelogBuilder {
         Self {
             connections: Some(connections),
             repo_id: None,
+            idmap_version: None,
             replica_lag_monitor: None,
             changeset_fetcher: None,
         }
@@ -64,6 +67,11 @@ impl SegmentedChangelogBuilder {
 
     pub fn with_repo_id(mut self, repo_id: RepositoryId) -> Self {
         self.repo_id = Some(repo_id);
+        self
+    }
+
+    pub fn with_idmap_version(mut self, version: u32) -> Self {
+        self.idmap_version = Some(IdMapVersion(version));
         self
     }
 
@@ -105,13 +113,23 @@ impl SegmentedChangelogBuilder {
         let connections = self.connections()?;
         let replica_lag_monitor = self.replica_lag_monitor();
         let repo_id = self.repo_id()?;
-        Ok(SqlIdMap::new(connections, replica_lag_monitor, repo_id))
+        let idmap_version = self.idmap_version();
+        Ok(SqlIdMap::new(
+            connections,
+            replica_lag_monitor,
+            repo_id,
+            idmap_version,
+        ))
     }
 
-    fn repo_id(&mut self) -> Result<RepositoryId> {
+    fn repo_id(&self) -> Result<RepositoryId> {
         self.repo_id.ok_or_else(|| {
             format_err!("SegmentedChangelog cannot be built without RepositoryId being specified.")
         })
+    }
+
+    fn idmap_version(&self) -> IdMapVersion {
+        self.idmap_version.unwrap_or_default()
     }
 
     fn replica_lag_monitor(&mut self) -> Arc<dyn ReplicaLagMonitor> {

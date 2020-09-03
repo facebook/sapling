@@ -24,6 +24,7 @@ use context::{CoreContext, PerfCounterType};
 use mononoke_types::{ChangesetId, RepositoryId};
 
 use crate::idmap::IdMap;
+use crate::types::IdMapVersion;
 
 define_stats! {
     prefix = "mononoke.segmented_changelog.idmap";
@@ -39,49 +40,56 @@ pub struct SqlIdMap {
     connections: SqlConnections,
     replica_lag_monitor: Arc<dyn ReplicaLagMonitor>,
     repo_id: RepositoryId,
+    version: IdMapVersion,
 }
 
 queries! {
-    write InsertIdMapEntry(values: (repo_id: RepositoryId, vertex: u64, cs_id: ChangesetId)) {
+    write InsertIdMapEntry(
+        values: (repo_id: RepositoryId, version: u32, vertex: u64, cs_id: ChangesetId)
+    ) {
         insert_or_ignore,
         "
-        {insert_or_ignore} INTO segmented_changelog_idmap (repo_id, vertex, cs_id)
+        {insert_or_ignore} INTO segmented_changelog_idmap (repo_id, version, vertex, cs_id)
         VALUES {values}
         "
     }
 
-    read SelectChangesetId(repo_id: RepositoryId, vertex: u64) -> (ChangesetId) {
+    read SelectChangesetId(repo_id: RepositoryId, version: u32, vertex: u64) -> (ChangesetId) {
         "
         SELECT idmap.cs_id as cs_id
         FROM segmented_changelog_idmap AS idmap
-        WHERE idmap.repo_id = {repo_id} AND idmap.vertex = {vertex}
+        WHERE idmap.repo_id = {repo_id} AND idmap.version = {version} AND idmap.vertex = {vertex}
         "
     }
 
-    read SelectManyChangesetIds(repo_id: RepositoryId, >list vertex: u64) -> (u64, ChangesetId) {
+    read SelectManyChangesetIds(
+        repo_id: RepositoryId,
+        version: u32,
+        >list vertex: u64
+    ) -> (u64, ChangesetId) {
         "
         SELECT idmap.vertex as vertex, idmap.cs_id as cs_id
         FROM segmented_changelog_idmap AS idmap
-        WHERE idmap.repo_id = {repo_id} AND idmap.vertex IN {vertex}
+        WHERE idmap.repo_id = {repo_id} AND idmap.version = {version} AND idmap.vertex IN {vertex}
         "
     }
 
-    read SelectVertex(repo_id: RepositoryId, cs_id: ChangesetId) -> (u64) {
+    read SelectVertex(repo_id: RepositoryId, version: u32, cs_id: ChangesetId) -> (u64) {
         "
         SELECT idmap.vertex as vertex
         FROM segmented_changelog_idmap AS idmap
-        WHERE idmap.repo_id = {repo_id} AND idmap.cs_id = {cs_id}
+        WHERE idmap.repo_id = {repo_id} AND idmap.version = {version} AND idmap.cs_id = {cs_id}
         "
     }
 
-    read SelectLastEntry(repo_id: RepositoryId) -> (u64, ChangesetId) {
+    read SelectLastEntry(repo_id: RepositoryId, version: u32) -> (u64, ChangesetId) {
         "
         SELECT idmap.vertex as vertex, idmap.cs_id as cs_id
         FROM segmented_changelog_idmap AS idmap
-        WHERE idmap.repo_id = {repo_id} AND idmap.vertex = (
+        WHERE idmap.repo_id = {repo_id} AND idmap.version = {version} AND idmap.vertex = (
             SELECT MAX(inner.vertex)
             FROM segmented_changelog_idmap AS inner
-            WHERE inner.repo_id = {repo_id}
+            WHERE inner.repo_id = {repo_id} AND inner.version = {version}
         )
         "
     }
@@ -92,11 +100,13 @@ impl SqlIdMap {
         connections: SqlConnections,
         replica_lag_monitor: Arc<dyn ReplicaLagMonitor>,
         repo_id: RepositoryId,
+        version: IdMapVersion,
     ) -> Self {
         Self {
             connections,
             replica_lag_monitor,
             repo_id,
+            version,
         }
     }
 }
@@ -119,7 +129,7 @@ impl IdMap for SqlIdMap {
             }
             let mut to_insert = Vec::with_capacity(chunk.len());
             for (vertex, cs_id) in chunk {
-                to_insert.push((&self.repo_id, &vertex.0, cs_id));
+                to_insert.push((&self.repo_id, &self.version.0, &vertex.0, cs_id));
             }
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::SqlWrites);
@@ -147,6 +157,7 @@ impl IdMap for SqlIdMap {
                         let (t, rows) = SelectManyChangesetIds::query_with_transaction(
                             transaction,
                             &self.repo_id,
+                            &self.version.0,
                             &to_select[..],
                         )
                         .compat()
@@ -195,7 +206,7 @@ impl IdMap for SqlIdMap {
         vertexes: Vec<Vertex>,
     ) -> Result<HashMap<Vertex, ChangesetId>> {
         let select_vertexes = |connection: &Connection, vertexes: &[u64]| {
-            SelectManyChangesetIds::query(connection, &self.repo_id, vertexes)
+            SelectManyChangesetIds::query(connection, &self.repo_id, &self.version.0, vertexes)
                 .compat()
                 .and_then(|rows| {
                     future::ok(
@@ -233,7 +244,7 @@ impl IdMap for SqlIdMap {
     async fn find_vertex(&self, ctx: &CoreContext, cs_id: ChangesetId) -> Result<Option<Vertex>> {
         STATS::find_vertex.add_value(1);
         let select = |connection| async move {
-            let rows = SelectVertex::query(connection, &self.repo_id, &cs_id)
+            let rows = SelectVertex::query(connection, &self.repo_id, &self.version.0, &cs_id)
                 .compat()
                 .await?;
             Ok(rows.into_iter().next().map(|r| Vertex(r.0)))
@@ -254,9 +265,13 @@ impl IdMap for SqlIdMap {
         STATS::get_last_entry.add_value(1);
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
-        let rows = SelectLastEntry::query(&self.connections.read_connection, &self.repo_id)
-            .compat()
-            .await?;
+        let rows = SelectLastEntry::query(
+            &self.connections.read_connection,
+            &self.repo_id,
+            &self.version.0,
+        )
+        .compat()
+        .await?;
         Ok(rows.into_iter().next().map(|r| (Vertex(r.0), r.1)))
     }
 }
@@ -389,6 +404,47 @@ mod tests {
 
         let response = idmap.find_many_changeset_ids(&ctx, vec![Vertex(6)]).await?;
         assert!(response.is_empty());
+
+        Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn test_many_repo_id_many_versions(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let builder = SegmentedChangelogBuilder::with_sqlite_in_memory()?;
+
+        let idmap11 = builder
+            .clone()
+            .with_repo_id(RepositoryId::new(1))
+            .with_idmap_version(1)
+            .build_sql_idmap()?;
+
+        let idmap12 = builder
+            .clone()
+            .with_repo_id(RepositoryId::new(1))
+            .with_idmap_version(2)
+            .build_sql_idmap()?;
+
+        let idmap21 = builder
+            .clone()
+            .with_repo_id(RepositoryId::new(2))
+            .with_idmap_version(1)
+            .build_sql_idmap()?;
+
+        idmap11.insert(&ctx, Vertex(1), ONES_CSID).await?;
+        idmap11.insert(&ctx, Vertex(2), TWOS_CSID).await?;
+        idmap12.insert(&ctx, Vertex(1), TWOS_CSID).await?;
+        idmap21.insert(&ctx, Vertex(1), FOURS_CSID).await?;
+        idmap21.insert(&ctx, Vertex(2), ONES_CSID).await?;
+
+        assert_eq!(idmap11.get_changeset_id(&ctx, Vertex(1)).await?, ONES_CSID);
+        assert_eq!(idmap11.get_changeset_id(&ctx, Vertex(2)).await?, TWOS_CSID);
+        assert_eq!(idmap12.get_changeset_id(&ctx, Vertex(1)).await?, TWOS_CSID);
+        assert_eq!(idmap21.get_changeset_id(&ctx, Vertex(1)).await?, FOURS_CSID);
+        assert_eq!(idmap21.get_changeset_id(&ctx, Vertex(2)).await?, ONES_CSID);
+
+        assert_eq!(idmap11.get_vertex(&ctx, ONES_CSID).await?, Vertex(1));
+        assert_eq!(idmap11.get_vertex(&ctx, TWOS_CSID).await?, Vertex(2));
 
         Ok(())
     }
