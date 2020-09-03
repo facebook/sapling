@@ -84,14 +84,16 @@ pub trait IdDagStore {
 
     /// Reload from the source of truth. Discard pending changes.
     fn reload(&mut self) -> Result<()>;
-
-    /// Reload from the source of truth (without discarding pending changes).
-    fn sync(&mut self) -> Result<()>;
 }
 
 pub trait GetLock {
     type LockT;
     fn get_lock(&self) -> Result<Self::LockT>;
+
+    /// Write pending changes to the source of truth.
+    ///
+    /// This requires a lock.
+    fn persist(&mut self, _lock: &Self::LockT) -> Result<()>;
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]

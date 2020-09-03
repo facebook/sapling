@@ -192,10 +192,6 @@ impl IdDagStore for InProcessStore {
     fn reload(&mut self) -> Result<()> {
         Ok(())
     }
-
-    fn sync(&mut self) -> Result<()> {
-        Ok(())
-    }
 }
 
 impl InProcessStore {

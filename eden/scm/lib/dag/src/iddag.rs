@@ -20,7 +20,6 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::collections::{BTreeSet, BinaryHeap};
 use std::fmt::{self, Debug, Formatter};
-use std::fs::File;
 use std::path::Path;
 use tracing::{debug_span, field, trace};
 
@@ -68,9 +67,9 @@ pub struct IdDag<Store> {
 ///
 /// (Consider making `children_set` not rely on the property, and
 /// removing `*_old` to simplify things)
-pub struct SyncableIdDag<'a, Store> {
+pub struct SyncableIdDag<'a, Store: GetLock> {
     dag: &'a mut IdDag<Store>,
-    lock_file: File,
+    lock: <Store as GetLock>::LockT,
 }
 
 static DEFAULT_SEG_SIZE: usize = 16;
@@ -90,13 +89,10 @@ impl IdDag<IndexedLogStore> {
     ///
     /// Block if another instance is taking the lock.
     pub fn prepare_filesystem_sync(&mut self) -> Result<SyncableIdDag<IndexedLogStore>> {
-        let lock_file = self.store.get_lock()?;
+        let lock = self.store.get_lock()?;
         // Read new entries from filesystem.
         self.store.reload()?;
-        Ok(SyncableIdDag {
-            dag: self,
-            lock_file,
-        })
+        Ok(SyncableIdDag { dag: self, lock })
     }
 
     /// Set the maximum size of a new high-level segment.
@@ -1519,7 +1515,7 @@ pub enum FirstAncestorConstraint {
     KnownUniversally { heads: SpanSet },
 }
 
-impl<Store: IdDagStore> SyncableIdDag<'_, Store> {
+impl<Store: IdDagStore + GetLock> SyncableIdDag<'_, Store> {
     /// Make sure the [`SyncableIdDag`] contains the given id (and all ids smaller
     /// than `high`) by building up segments on demand.
     ///
@@ -1553,10 +1549,10 @@ impl<Store: IdDagStore> SyncableIdDag<'_, Store> {
     ///
     /// The newly written entries can be fetched by [`IdDag::reload`].
     pub fn sync(self) -> Result<()> {
-        self.dag.store.sync()?;
+        self.dag.store.persist(&self.lock)?;
         // Building high level segments happen in memory.
         // No need to take a lock.
-        drop(self.lock_file);
+        drop(self.lock);
         self.dag.build_all_high_level_segments(false)?;
         Ok(())
     }

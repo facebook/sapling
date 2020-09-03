@@ -224,11 +224,6 @@ impl IdDagStore for IndexedLogStore {
         self.log.sync()?;
         Ok(())
     }
-
-    fn sync(&mut self) -> Result<()> {
-        self.log.sync()?;
-        Ok(())
-    }
 }
 
 impl GetLock for IndexedLogStore {
@@ -249,6 +244,11 @@ impl GetLock for IndexedLogStore {
         };
         lock_file.lock_exclusive()?;
         Ok(lock_file)
+    }
+
+    fn persist(&mut self, _lock: &Self::LockT) -> Result<()> {
+        self.log.sync()?;
+        Ok(())
     }
 }
 
