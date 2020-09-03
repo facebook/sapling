@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use dag::iddagstore::GetLock;
+use dag::iddagstore::IdDagStore;
 use dag::idmap::IdMapAssignHead;
 use dag::idmap::IdMapBuildParents;
 use dag::namedag::NameDag;
@@ -16,6 +18,16 @@ use minibench::{bench, elapsed};
 use tempfile::tempdir;
 
 fn main() {
+    let dag_dir = tempdir().unwrap();
+
+    bench_with_iddag(|| IdDag::open(&dag_dir.path()).unwrap());
+    bench_with_iddag(|| IdDag::new_in_process());
+
+    bench_many_heads_namedag();
+}
+
+fn bench_with_iddag<S: IdDagStore + GetLock>(get_empty_iddag: impl Fn() -> IdDag<S>) {
+    println!("benchmarking {}", std::any::type_name::<S>());
     let parents = bindag::parse_bindag(bindag::MOZILLA);
 
     let head_name = VertexName::copy_from(format!("{}", parents.len() - 1).as_bytes());
@@ -39,10 +51,8 @@ fn main() {
     let head_id = id_map.find_id_by_name(head_name.as_ref()).unwrap().unwrap();
     let parents_by_id = id_map.build_get_parents_by_id(&parents_by_name);
 
-    let dag_dir = tempdir().unwrap();
-
     bench("building segments (old)", || {
-        let mut dag = IdDag::open(&dag_dir.path()).unwrap();
+        let mut dag = get_empty_iddag();
         elapsed(|| {
             dag.build_segments_volatile(head_id, &parents_by_id)
                 .unwrap();
@@ -50,7 +60,7 @@ fn main() {
     });
 
     bench("building segments (new)", || {
-        let mut dag = IdDag::open(&dag_dir.path()).unwrap();
+        let mut dag = get_empty_iddag();
         elapsed(|| {
             dag.build_segments_volatile_from_assign_head_outcome(&outcome)
                 .unwrap();
@@ -58,12 +68,12 @@ fn main() {
     });
 
     // Write segments to filesystem.
-    let mut dag = IdDag::open(&dag_dir.path()).unwrap();
+    let mut dag = get_empty_iddag();
     let mut syncable = dag.prepare_filesystem_sync().unwrap();
     syncable
         .build_segments_persistent(head_id, &parents_by_id)
         .unwrap();
-    syncable.sync(std::iter::once(&mut dag)).unwrap();
+    syncable.sync().unwrap();
 
     let sample_two_ids: Vec<SpanSet> = (0..parents.len() as u64)
         .step_by(10079)
@@ -228,7 +238,10 @@ fn main() {
             }
         })
     });
+}
 
+fn bench_many_heads_namedag() {
+    println!("benchmarking NameDag with many heads");
     // Create a graph with M linear vertexes in the master branch, and M
     // child for every vertex in the master branch.
     //

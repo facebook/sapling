@@ -18,7 +18,7 @@ pub mod errors;
 mod fmt;
 pub mod id;
 mod iddag;
-mod iddagstore;
+pub mod iddagstore;
 pub mod idmap;
 pub mod namedag;
 pub mod nameset;
