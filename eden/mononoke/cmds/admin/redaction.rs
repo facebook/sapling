@@ -6,7 +6,7 @@
  */
 
 use crate::common::get_file_nodes;
-use anyhow::{format_err, Error};
+use anyhow::{anyhow, format_err, Error};
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
@@ -28,7 +28,7 @@ use itertools::{Either, Itertools};
 use mercurial_types::{blobs::HgBlobChangeset, HgChangesetId, HgEntryId, HgManifest, MPath};
 use mononoke_types::{typed_hash::MononokeId, ContentId, Timestamp};
 use redactedblobstore::SqlRedactedContentStore;
-use slog::{info, Logger};
+use slog::{error, info, Logger};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -40,7 +40,10 @@ pub const REDACTION: &str = "redaction";
 const REDACTION_ADD: &str = "add";
 const REDACTION_REMOVE: &str = "remove";
 const REDACTION_LIST: &str = "list";
+const ARG_FORCE: &str = "force";
 const ARG_INPUT_FILE: &str = "input-file";
+const ARG_MAIN_BOOKMARK: &str = "main-bookmark";
+const DEFAULT_MAIN_BOOKMARK: &str = "master";
 
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
     SubCommand::with_name(REDACTION)
@@ -59,7 +62,21 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
                         .help("hg commit hash")
                         .takes_value(true)
                         .required(true),
-                ),
+                )
+                .arg(
+                    Arg::with_name(ARG_MAIN_BOOKMARK)
+                        .long(ARG_MAIN_BOOKMARK)
+                        .takes_value(true)
+                        .required(false)
+                        .default_value(DEFAULT_MAIN_BOOKMARK)
+                        .help("Redaction fails if any of the content to be redacted is present in --main-bookmark unless --force is set.")
+                )
+                .arg(
+                    Arg::with_name(ARG_FORCE)
+                        .long(ARG_FORCE)
+                        .takes_value(false)
+                        .help("by default redaction fails if any of the redacted files is in main-bookmark. This flag overrides it.")
+                )
         ))
         .subcommand(add_path_parameters(
             SubCommand::with_name(REDACTION_REMOVE)
@@ -109,7 +126,7 @@ fn find_files_with_given_content_id_blobstore_keys(
     repo: BlobRepo,
     cs: HgBlobChangeset,
     keys_to_tasks: HashMap<String, String>,
-) -> impl Future<Item = Vec<(String, String)>, Error = Error> {
+) -> impl Future<Item = Vec<(String, MPath, ContentId)>, Error = Error> {
     let manifest_id = cs.manifestid();
     let keys_to_tasks: Arc<HashMap<String, String>> = Arc::new(keys_to_tasks);
     bounded_traversal_stream(4096, Some((repo.clone(), manifest_id, None)), {
@@ -155,7 +172,7 @@ fn find_files_with_given_content_id_blobstore_keys(
                         .load(ctx.clone(), repo.blobstore())
                         .compat()
                         .from_err()
-                        .map(|env| (env.content_id().blobstore_key(), full_path))
+                        .map(|env| (env.content_id(), full_path))
                 }
             });
             join_all(blobstore_key_futs)
@@ -176,15 +193,13 @@ fn find_files_with_given_content_id_blobstore_keys(
                         }
                         keys_to_tasks
                             .clone()
-                            .get(&key)
-                            .map(|task| (task.clone(), full_path.clone()))
+                            .get(&key.blobstore_key())
+                            .map(|task| (task.clone(), key, full_path.clone()))
                     }
                 })
                 .map({
-                    move |(task, full_path)| {
-                        let full_path =
-                            format!("{}", full_path.expect("None MPath, yet not a root"));
-                        (task, full_path)
+                    move |(task, key, full_path)| {
+                        (task, full_path.expect("None MPath, yet not a root"), key)
                     }
                 })
                 .collect::<Vec<_>>();
@@ -336,11 +351,11 @@ fn content_ids_for_paths(
         .from_err()
 }
 
-async fn redaction_add<'a>(
+async fn redaction_add<'a, 'b>(
     fb: FacebookInit,
     logger: Logger,
-    matches: &'a ArgMatches<'_>,
-    sub_m: &'a ArgMatches<'_>,
+    matches: &'a ArgMatches<'b>,
+    sub_m: &'a ArgMatches<'b>,
 ) -> Result<(), SubcommandError> {
     let (task, paths) = task_and_paths_parser(sub_m)?;
     let (ctx, blobrepo, redacted_blobs, cs_id) =
@@ -348,14 +363,32 @@ async fn redaction_add<'a>(
             .compat()
             .await?;
 
-    let content_ids = content_ids_for_paths(ctx, logger, blobrepo, cs_id, paths)
-        .compat()
-        .await?;
+    let content_ids =
+        content_ids_for_paths(ctx.clone(), logger.clone(), blobrepo.clone(), cs_id, paths)
+            .compat()
+            .await?;
 
-    let blobstore_keys = content_ids
+    let blobstore_keys: Vec<_> = content_ids
         .iter()
         .map(|content_id| content_id.blobstore_key())
         .collect();
+
+    let force = sub_m.is_present(ARG_FORCE);
+
+    if !force {
+        let main_bookmark = sub_m
+            .value_of(ARG_MAIN_BOOKMARK)
+            .unwrap_or(DEFAULT_MAIN_BOOKMARK);
+        check_if_content_is_reachable_from_bookmark(
+            &ctx,
+            &blobrepo,
+            &blobstore_keys,
+            main_bookmark,
+            &task,
+        )
+        .await?;
+    }
+
     let timestamp = Timestamp::now();
     redacted_blobs
         .insert_redacted_blobs(&blobstore_keys, &task, &timestamp)
@@ -403,7 +436,7 @@ fn redaction_list(
                                     info!(logger, "No files are redacted at this commit");
                                 } else {
                                     res.sort();
-                                    res.into_iter().for_each(|(task_id, file_path)| {
+                                    res.into_iter().for_each(|(task_id, file_path, _)| {
                                         info!(logger, "{:20}: {}", task_id, file_path);
                                     })
                                 }
@@ -436,4 +469,66 @@ fn redaction_remove(
                 .from_err()
         })
         .boxify()
+}
+
+async fn check_if_content_is_reachable_from_bookmark(
+    ctx: &CoreContext,
+    blobrepo: &BlobRepo,
+    keys_to_redact: &Vec<String>,
+    main_bookmark: &str,
+    task: &String,
+) -> Result<(), Error> {
+    let keys_to_tasks = keys_to_redact
+        .clone()
+        .into_iter()
+        .map(|key| (key, task.clone()))
+        .collect();
+
+    info!(
+        ctx.logger(),
+        "Checking if redacted content exist in '{}' bookmark...", main_bookmark
+    );
+    let csid = helpers::csid_resolve(ctx.clone(), blobrepo.clone(), main_bookmark)
+        .compat()
+        .await?;
+    let hg_cs_id = blobrepo
+        .get_hg_from_bonsai_changeset(ctx.clone(), csid)
+        .compat()
+        .await?;
+
+    let hg_cs = hg_cs_id
+        .load(ctx.clone(), blobrepo.blobstore())
+        .map_err(Error::from)
+        .await?;
+
+    let redacted_files = find_files_with_given_content_id_blobstore_keys(
+        ctx.logger().clone(),
+        ctx.clone(),
+        blobrepo.clone(),
+        hg_cs,
+        keys_to_tasks,
+    )
+    .compat()
+    .await?;
+    let redacted_files_len = redacted_files.len();
+    if redacted_files_len > 0 {
+        for (_, path, content_id) in redacted_files {
+            error!(
+                ctx.logger(),
+                "Redacted in {}: {} {}",
+                main_bookmark,
+                path,
+                content_id.blobstore_key()
+            );
+        }
+        return Err(anyhow!(
+            "{} files will be redacted in {}. \
+            That means that checking it out will be impossible!",
+            redacted_files_len,
+            main_bookmark,
+        )
+        .into());
+    }
+
+    Ok(())
 }

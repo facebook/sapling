@@ -163,7 +163,7 @@ Update redacted blob
   ac82d8b1f7c418c61a493ed229ffaa981bda8e90
 
 Censore the redacted blob (file 'c' in commit '064d994d0240f9738dba1ef7479f0a4ce8486b05')
-  $ mononoke_admin redaction add my_task 064d994d0240f9738dba1ef7479f0a4ce8486b05 c
+  $ mononoke_admin redaction add my_task 064d994d0240f9738dba1ef7479f0a4ce8486b05 c --force
   * using repo "repo" repoid RepositoryId(0) (glob)
   * changeset resolved as: * (glob)
 

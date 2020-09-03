@@ -67,13 +67,27 @@ Push files
 Censor file (file 'b' in commit '2cc2702dde1d7133c30a1ed763ee82c04befb237')
   $ mononoke_admin redaction add "[TASK]Censor b" 2cc2702dde1d7133c30a1ed763ee82c04befb237 b
   * using repo "repo" repoid RepositoryId(0) (glob)
+  * changeset resolved as: ChangesetId(Blake2(cb0018b825fca6742515d05be36efc150279162f2b771e239cc266393d73659f)) (glob)
+  * Checking if redacted content exist in 'master' bookmark... (glob)
+  * invalid (hash|bookmark) or does not exist in this repository: master (glob)
+  [1]
+  $ mononoke_admin redaction add "[TASK]Censor b" 2cc2702dde1d7133c30a1ed763ee82c04befb237 b --main-bookmark master_bookmark
+  * using repo "repo" repoid RepositoryId(0) (glob)
+  * changeset resolved as: ChangesetId(Blake2(cb0018b825fca6742515d05be36efc150279162f2b771e239cc266393d73659f)) (glob)
+  * Checking if redacted content exist in 'master_bookmark' bookmark... (glob)
+  * changeset resolved as: ChangesetId(Blake2(cb0018b825fca6742515d05be36efc150279162f2b771e239cc266393d73659f)) (glob)
+  * Redacted in master_bookmark: b content.blake2.21c519fe0eb401bc97888f270902935f858d0c5361211f892fd26ed9ce127ff9 (glob)
+  * 1 files will be redacted in master_bookmark. That means that checking it out will be impossible! (glob)
+  [1]
+  $ mononoke_admin redaction add "[TASK]Censor b" 2cc2702dde1d7133c30a1ed763ee82c04befb237 b --force
+  * using repo "repo" repoid RepositoryId(0) (glob)
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
 
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" 'SELECT * FROM censored_contents;'
   1|content.blake2.21c519fe0eb401bc97888f270902935f858d0c5361211f892fd26ed9ce127ff9|[TASK]Censor b|* (glob)
 
 Censor file inside directory (file 'dir/c' in commit '2cc2702dde1d7133c30a1ed763ee82c04befb237')
-  $ mononoke_admin redaction add "[TASK]Censor c" 2cc2702dde1d7133c30a1ed763ee82c04befb237 dir/c
+  $ mononoke_admin redaction add "[TASK]Censor c" 2cc2702dde1d7133c30a1ed763ee82c04befb237 dir/c --force
   * using repo "repo" repoid RepositoryId(0) (glob)
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
 
@@ -83,7 +97,7 @@ Censor file inside directory (file 'dir/c' in commit '2cc2702dde1d7133c30a1ed763
 
 Censor multiple files but pass these files via a filename
   $ echo -e "f\ndir/g" > "$TESTTMP"/input
-  $ mononoke_admin redaction add "[TASK]Censor g,f" 2cc2702dde1d7133c30a1ed763ee82c04befb237 --input-file "$TESTTMP/input"
+  $ mononoke_admin redaction add "[TASK]Censor g,f" 2cc2702dde1d7133c30a1ed763ee82c04befb237 --input-file "$TESTTMP/input" --force
   * using repo "repo" repoid RepositoryId(0) (glob)
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
 
@@ -94,7 +108,7 @@ Censor multiple files but pass these files via a filename
   4|content.blake2.0991063aafe55b2bcbbfa6b349e76ab5d57a102c89e841abdac8ce3f84d55b8a|[TASK]Censor g,f|* (glob)
 
 Expect error when censoring tree
-  $ mononoke_admin redaction add "[TASK]Censor dir" 2cc2702dde1d7133c30a1ed763ee82c04befb237 dir/dirdir
+  $ mononoke_admin redaction add "[TASK]Censor dir" 2cc2702dde1d7133c30a1ed763ee82c04befb237 dir/dirdir 
   * using repo "repo" repoid RepositoryId(0) (glob)
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
   * failed to identify the files associated with the file paths [MPath("dir/dirdir")] (glob)
@@ -125,7 +139,7 @@ Fewer entries in the table
   2|content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2|[TASK]Censor c|* (glob)
 
 Let's make sure multiple files can be redacted under the same task
-  $ mononoke_admin redaction add "[TASK]Censor b" 2cc2702dde1d7133c30a1ed763ee82c04befb237 dir/g
+  $ mononoke_admin redaction add "[TASK]Censor b" 2cc2702dde1d7133c30a1ed763ee82c04befb237 dir/g --force
   * using repo "repo" repoid RepositoryId(0) (glob)
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
 
