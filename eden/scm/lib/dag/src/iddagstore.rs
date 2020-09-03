@@ -742,14 +742,8 @@ mod tests {
         }
     }
 
-    fn init_store(segments: Vec<&Segment>) -> InProcessStore {
-        let mut store = InProcessStore::new();
-        insert_segments(&mut store, segments);
-        store
-    }
-
-    fn get_in_process_store() -> InProcessStore {
-        let segments: Vec<&Segment> = vec![
+    fn get_segments() -> Vec<&'static Segment> {
+        vec![
             &LEVEL0_HEAD2,
             &LEVEL0_HEAD5,
             &LEVEL0_HEAD9,
@@ -759,8 +753,7 @@ mod tests {
             &LEVEL0_HEADN4,
             &LEVEL0_HEADN6,
             &LEVEL1_HEADN6,
-        ];
-        init_store(segments)
+        ]
     }
 
     fn segments_to_owned(segments: &[&Segment]) -> Vec<Segment> {
@@ -912,12 +905,13 @@ mod tests {
     }
 
     fn test_store_iter_master_flat_segments_with_parent(store: &dyn IdDagStore) {
-        let answer = store
+        let mut answer = store
             .iter_master_flat_segments_with_parent(Id(2))
             .unwrap()
             .collect::<Result<Vec<_>>>()
             .unwrap();
         let expected = segments_to_owned(&[&LEVEL0_HEAD5, &LEVEL0_HEAD9]);
+        answer.sort_by_key(|s| s.head().unwrap());
         assert_eq!(answer, expected);
 
         let mut answer = store.iter_master_flat_segments_with_parent(Id(13)).unwrap();
@@ -983,71 +977,75 @@ mod tests {
             .is_none());
     }
 
-    #[test]
-    fn test_in_process_store_insert() {
-        let _store = get_in_process_store();
-        // `get_in_process_stores` does inserts, we care that nothings panics.
+    fn for_each_empty_store(f: impl Fn(&mut dyn IdDagStore)) {
+        let mut store = InProcessStore::new();
+        f(&mut store);
+
+        let dir = tempfile::tempdir().unwrap();
+        let mut store = IndexedLogStore::open(&dir.path()).unwrap();
+        f(&mut store);
+    }
+
+    fn for_each_store(f: impl Fn(&mut dyn IdDagStore)) {
+        for_each_empty_store(|store| {
+            insert_segments(store, get_segments());
+            f(store);
+        })
     }
 
     #[test]
-    fn test_in_process_store_find_segment_by_head_and_level() {
-        let store = get_in_process_store();
-        test_find_segment_by_head_and_level(&store);
+    fn test_multi_stores_insert() {
+        // `for_each_store` does inserts, we care that nothings panics.
+        for_each_store(|_store| ())
     }
 
     #[test]
-    fn test_in_process_store_find_flat_segment_including_id() {
-        let store = get_in_process_store();
-        test_find_flat_segment_including_id(&store);
+    fn test_multi_stores_find_segment_by_head_and_level() {
+        for_each_store(|store| test_find_segment_by_head_and_level(store));
     }
 
     #[test]
-    fn test_in_process_store_next_free_id() {
-        let store = get_in_process_store();
-        test_next_free_id(&store);
+    fn test_multi_stores_find_flat_segment_including_id() {
+        for_each_store(|store| test_find_flat_segment_including_id(store));
     }
 
     #[test]
-    fn test_in_process_store_next_segments() {
-        let store = get_in_process_store();
-        test_next_segments(&store);
+    fn test_multi_stores_next_free_id() {
+        for_each_store(|store| test_next_free_id(store));
     }
 
     #[test]
-    fn test_in_process_store_max_level() {
-        let store = get_in_process_store();
-        test_max_level(&store);
-        let store = InProcessStore::new();
-        test_empty_store_max_level(&store);
+    fn test_multi_stores_next_segments() {
+        for_each_store(|store| test_next_segments(store));
     }
 
     #[test]
-    fn test_in_process_store_iter_segments_descending() {
-        let store = get_in_process_store();
-        test_iter_segments_descending(&store);
+    fn test_multi_stores_max_level() {
+        for_each_empty_store(|store| test_empty_store_max_level(store));
     }
 
     #[test]
-    fn test_in_process_store_iter_segments_ascending() {
-        let store = get_in_process_store();
-        test_iter_segments_ascending(&store);
+    fn test_multi_stores_iter_segments_descending() {
+        for_each_store(|store| test_iter_segments_descending(store));
     }
 
     #[test]
-    fn test_in_process_store_iter_master_flat_segments_with_parent() {
-        let store = get_in_process_store();
-        test_store_iter_master_flat_segments_with_parent(&store);
+    fn test_multi_stores_iter_segments_ascending() {
+        for_each_store(|store| test_iter_segments_ascending(store));
     }
 
     #[test]
-    fn test_in_process_store_iter_flat_segments_with_parent() {
-        let store = get_in_process_store();
-        test_store_iter_flat_segments_with_parent(&store);
+    fn test_multi_stores_iter_master_flat_segments_with_parent() {
+        for_each_store(|store| test_store_iter_master_flat_segments_with_parent(store));
     }
 
     #[test]
-    fn test_in_process_store_remove_non_master() {
-        let mut store = get_in_process_store();
-        test_remove_non_master(&mut store);
+    fn test_multi_stores_iter_flat_segments_with_parent() {
+        for_each_store(|store| test_store_iter_flat_segments_with_parent(store));
+    }
+
+    #[test]
+    fn test_multi_stores_remove_non_master() {
+        for_each_store(|store| test_remove_non_master(store));
     }
 }
