@@ -23,7 +23,7 @@ from typing import Any, Dict, List, Mapping, Optional, Set, Tuple, Type, Union, 
 
 import facebook.eden.ttypes as eden_ttypes
 import toml
-from eden.thrift.legacy import EdenClient, create_thrift_client
+from eden.thrift.legacy import EdenClient, EdenNotRunningError, create_thrift_client
 
 from . import configinterpolator, configutil, telemetry, util, version
 from .util import (
@@ -295,6 +295,14 @@ class EdenInstance:
             bi.get("build_package_version", ""),
             bi.get("build_package_release", ""),
         )
+
+    def get_current_and_running_versions(self) -> Tuple[str, Optional[str]]:
+        try:
+            running = self.get_running_version()
+        except EdenNotRunningError:
+            # return None if EdenFS does not currently appear to be running
+            running = None
+        return version.get_current_version(), running
 
     def get_running_version(self) -> str:
         """Get a human-readable string representation of the currently running EdenFS
