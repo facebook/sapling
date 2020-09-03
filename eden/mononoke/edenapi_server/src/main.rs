@@ -35,7 +35,10 @@ use cmdlib::{
 use fbinit::FacebookInit;
 use gotham_ext::{
     handler::MononokeHttpHandler,
-    middleware::{ClientIdentityMiddleware, ServerIdentityMiddleware, TlsSessionDataMiddleware},
+    middleware::{
+        ClientIdentityMiddleware, LoadMiddleware, PostRequestMiddleware, ServerIdentityMiddleware,
+        TlsSessionDataMiddleware,
+    },
     socket_data::TlsSocketData,
 };
 use mononoke_api::Mononoke;
@@ -153,7 +156,9 @@ async fn start(
         .add(ServerIdentityMiddleware::new(HeaderValue::from_static(
             "edenapi_server",
         )))
+        .add(PostRequestMiddleware::default())
         .add(RequestContextMiddleware::new(fb, logger.clone()))
+        .add(LoadMiddleware::new())
         .build(router);
 
     // Set up socket and TLS acceptor that this server will listen on.
