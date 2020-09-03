@@ -13,6 +13,7 @@ name = "edenapi_cli"
 path = "src/bin/cli.rs"
 
 [dependencies]
+async-runtime = { path = "../async-runtime" }
 auth = { path = "../auth" }
 configparser = { path = "../configparser" }
 edenapi_types = { path = "types" }

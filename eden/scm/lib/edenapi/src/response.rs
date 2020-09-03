@@ -7,11 +7,10 @@
 
 use std::pin::Pin;
 
-use anyhow::Context;
 use futures::prelude::*;
 use http::{HeaderMap, StatusCode, Version};
-use tokio::runtime::Runtime;
 
+use async_runtime::block_on_future;
 use http_client::{AsyncResponse, Response, Stats};
 
 use crate::errors::EdenApiError;
@@ -57,16 +56,14 @@ impl<T> BlockingFetch<T> {
     where
         F: Future<Output = Result<Fetch<T>, EdenApiError>>,
     {
-        let mut rt = Runtime::new().context("Failed to initialize Tokio runtime")?;
-
         let Fetch {
             meta,
             entries,
             stats,
-        } = rt.block_on(fetch)?;
+        } = block_on_future(fetch)?;
 
-        let entries = rt.block_on(entries.try_collect())?;
-        let stats = rt.block_on(stats)?;
+        let entries = block_on_future(entries.try_collect())?;
+        let stats = block_on_future(stats)?;
 
         Ok(Self {
             meta,

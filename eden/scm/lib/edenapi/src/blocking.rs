@@ -5,9 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Context;
-use tokio::runtime::Runtime;
-
+use async_runtime::block_on_future;
 use edenapi_types::{CommitRevlogData, FileEntry, HistoryEntry, TreeEntry};
 use types::{HgId, Key, RepoPathBuf};
 
@@ -17,8 +15,7 @@ use crate::response::{BlockingFetch, ResponseMeta};
 
 pub trait EdenApiBlocking: EdenApi {
     fn health_blocking(&self) -> Result<ResponseMeta, EdenApiError> {
-        let mut rt = Runtime::new().context("Failed to initialize Tokio runtime")?;
-        rt.block_on(self.health())
+        block_on_future(self.health())
     }
 
     fn files_blocking(
