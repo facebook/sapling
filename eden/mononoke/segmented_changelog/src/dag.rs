@@ -68,7 +68,7 @@ impl SegmentedChangelog for OnDemandUpdateDag {
         STATS::location_to_changeset_id.add_value(1);
         {
             let dag = self.dag.read().await;
-            if let Some(known_vertex) = dag.idmap.find_vertex(ctx, dag.repo_id, known).await? {
+            if let Some(known_vertex) = dag.idmap.find_vertex(ctx, known).await? {
                 return dag
                     .known_location_to_many_changeset_ids(ctx, known_vertex, distance, count)
                     .await;
@@ -90,7 +90,7 @@ pub struct Dag {
     // core fields
     pub(crate) repo_id: RepositoryId,
     pub(crate) iddag: InProcessIdDag,
-    pub(crate) idmap: Arc<IdMap>,
+    pub(crate) idmap: Arc<dyn IdMap>,
 }
 
 #[async_trait]
@@ -103,14 +103,14 @@ impl SegmentedChangelog for Dag {
         count: u64,
     ) -> Result<Vec<ChangesetId>> {
         STATS::location_to_changeset_id.add_value(1);
-        let known_vertex = self.idmap.get_vertex(ctx, self.repo_id, known).await?;
+        let known_vertex = self.idmap.get_vertex(ctx, known).await?;
         self.known_location_to_many_changeset_ids(ctx, known_vertex, distance, count)
             .await
     }
 }
 
 impl Dag {
-    pub fn new(repo_id: RepositoryId, iddag: InProcessIdDag, idmap: Arc<IdMap>) -> Self {
+    pub fn new(repo_id: RepositoryId, iddag: InProcessIdDag, idmap: Arc<dyn IdMap>) -> Self {
         Self {
             repo_id,
             iddag,
@@ -142,7 +142,7 @@ impl Dag {
         }
         let changeset_futures = vertexes
             .into_iter()
-            .map(|vertex| self.idmap.get_changeset_id(ctx, self.repo_id, vertex));
+            .map(|vertex| self.idmap.get_changeset_id(ctx, vertex));
         stream::iter(changeset_futures)
             .buffered(IDMAP_CHANGESET_FETCH_BATCH)
             .try_collect()
@@ -211,7 +211,7 @@ impl Dag {
 
         let low_vertex = self
             .idmap
-            .get_last_entry(ctx, self.repo_id)
+            .get_last_entry(ctx)
             .await?
             .map_or_else(|| dag::Group::MASTER.min_id(), |(vertex, _)| vertex + 1);
 
@@ -226,7 +226,7 @@ impl Dag {
     ) -> Result<(ChangesetId, Vec<ChangesetId>, Option<Vertex>)> {
         let (parents, vertex) = try_join!(
             changeset_fetcher.get_parents(ctx.clone(), cs_id).compat(),
-            self.idmap.find_vertex(ctx, self.repo_id, cs_id)
+            self.idmap.find_vertex(ctx, cs_id)
         )?;
         Ok((cs_id, parents, vertex))
     }
@@ -274,7 +274,7 @@ impl Dag {
             .ok_or_else(|| format_err!("error building IdMap; failed to assign head {}", head))?;
 
         self.idmap
-            .insert_many(ctx, self.repo_id, mem_idmap.iter().collect::<Vec<_>>())
+            .insert_many(ctx, mem_idmap.iter().collect::<Vec<_>>())
             .await?;
 
         let get_vertex_parents = |vertex: Vertex| -> dag::Result<Vec<Vertex>> {
@@ -443,14 +443,8 @@ mod tests {
                 .compat()
                 .await?;
             for parent in parents {
-                let parent_vertex = dag
-                    .idmap
-                    .get_vertex(&ctx, blobrepo.get_repoid(), parent)
-                    .await?;
-                let vertex = dag
-                    .idmap
-                    .get_vertex(&ctx, blobrepo.get_repoid(), cs_id)
-                    .await?;
+                let parent_vertex = dag.idmap.get_vertex(&ctx, parent).await?;
+                let vertex = dag.idmap.get_vertex(&ctx, cs_id).await?;
                 assert!(parent_vertex < vertex);
             }
         }

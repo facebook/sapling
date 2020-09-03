@@ -16,7 +16,7 @@ use sql_ext::replication::{NoReplicaLagMonitor, ReplicaLagMonitor};
 use sql_ext::SqlConnections;
 
 use crate::dag::{Dag, OnDemandUpdateDag};
-use crate::idmap::IdMap;
+use crate::idmap::SqlIdMap;
 use crate::DisabledSegmentedChangelog;
 
 /// SegmentedChangelog instatiation helper.
@@ -27,8 +27,9 @@ use crate::DisabledSegmentedChangelog;
 /// Enabled = true
 ///   update_algorithm = 'ondemand' -> OnDemandUpdateDag
 ///   update_algorithm != 'ondemand' -> Dag
+#[derive(Default)]
 pub struct SegmentedChangelogBuilder {
-    connections: SqlConnections,
+    connections: Option<SqlConnections>,
     repo_id: Option<RepositoryId>,
     replica_lag_monitor: Option<Arc<dyn ReplicaLagMonitor>>,
     changeset_fetcher: Option<Arc<dyn ChangesetFetcher>>,
@@ -41,7 +42,7 @@ impl SqlConstruct for SegmentedChangelogBuilder {
 
     fn from_sql_connections(connections: SqlConnections) -> Self {
         Self {
-            connections,
+            connections: Some(connections),
             repo_id: None,
             replica_lag_monitor: None,
             changeset_fetcher: None,
@@ -52,6 +53,15 @@ impl SqlConstruct for SegmentedChangelogBuilder {
 impl SqlConstructFromMetadataDatabaseConfig for SegmentedChangelogBuilder {}
 
 impl SegmentedChangelogBuilder {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn with_sql_connections(mut self, connections: SqlConnections) -> Self {
+        self.connections = Some(connections);
+        self
+    }
+
     pub fn with_repo_id(mut self, repo_id: RepositoryId) -> Self {
         self.repo_id = Some(repo_id);
         self
@@ -75,31 +85,31 @@ impl SegmentedChangelogBuilder {
     }
 
     pub fn build_read_only(mut self) -> Result<Dag> {
-        let iddag = InProcessIdDag::new_in_process();
-        let replica_lag_monitor = self.replica_lag_monitor();
-        let repo_id = self.repo_id()?;
-        let idmap = Arc::new(IdMap::new(self.connections, replica_lag_monitor));
-        Ok(Dag::new(repo_id, iddag, idmap))
+        self.build_dag()
     }
 
     pub fn build_on_demand_update(mut self) -> Result<OnDemandUpdateDag> {
-        let iddag = InProcessIdDag::new_in_process();
-        let replica_lag_monitor = self.replica_lag_monitor();
-        let repo_id = self.repo_id()?;
+        let dag = self.build_dag()?;
         let changeset_fetcher = self.changeset_fetcher()?;
-        let idmap = Arc::new(IdMap::new(self.connections, replica_lag_monitor));
-        let dag = Dag::new(repo_id, iddag, idmap);
         Ok(OnDemandUpdateDag::new(dag, changeset_fetcher))
     }
 
-    #[cfg(test)]
-    pub(crate) fn build_idmap(mut self) -> IdMap {
+    pub fn build_dag(&mut self) -> Result<Dag> {
+        let iddag = InProcessIdDag::new_in_process();
+        let repo_id = self.repo_id()?;
+        let idmap = Arc::new(self.build_sql_idmap()?);
+        Ok(Dag::new(repo_id, iddag, idmap))
+    }
+
+    pub(crate) fn build_sql_idmap(&mut self) -> Result<SqlIdMap> {
+        let connections = self.connections()?;
         let replica_lag_monitor = self.replica_lag_monitor();
-        IdMap::new(self.connections, replica_lag_monitor)
+        let repo_id = self.repo_id()?;
+        Ok(SqlIdMap::new(connections, replica_lag_monitor, repo_id))
     }
 
     fn repo_id(&mut self) -> Result<RepositoryId> {
-        self.repo_id.take().ok_or_else(|| {
+        self.repo_id.ok_or_else(|| {
             format_err!("SegmentedChangelog cannot be built without RepositoryId being specified.")
         })
     }
@@ -114,6 +124,14 @@ impl SegmentedChangelogBuilder {
         self.changeset_fetcher.take().ok_or_else(|| {
             format_err!(
                 "SegmentedChangelog cannot be built without ChangesetFetcher being specified."
+            )
+        })
+    }
+
+    fn connections(&mut self) -> Result<SqlConnections> {
+        self.connections.take().ok_or_else(|| {
+            format_err!(
+                "SegmentedChangelog cannot be built without SqlConnections being specified."
             )
         })
     }
