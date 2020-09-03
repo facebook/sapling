@@ -4,11 +4,16 @@ edition = "2018"
 version = "0.1.0"
 authors = ['Facebook']
 license = "GPLv2+"
-include = ["src/**/*.rs"]
+include = ["hooks-tests/src/**/*.rs", "src/**/*.rs"]
 
 [lib]
+path = "src/lib.rs"
 test = false
 doctest = false
+
+[[test]]
+name = "hooks_tests"
+path = "hooks-tests/src/lib.rs"
 
 [dependencies]
 bookmarks = { path = "../bookmarks" }
@@ -42,3 +47,12 @@ slog = { version = "2.5", features = ["max_level_debug"] }
 tempdir = "0.3"
 thiserror = "1.0"
 tokio = { version = "=0.2.13", features = ["full"] }
+
+[dev-dependencies]
+blobrepo = { path = "../blobrepo" }
+blobrepo_factory = { path = "../blobrepo/factory" }
+blobstore = { path = "../blobstore" }
+fixtures = { path = "../tests/fixtures" }
+mononoke_types-mocks = { path = "../mononoke_types/mocks" }
+tests_utils = { path = "../tests/utils" }
+async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

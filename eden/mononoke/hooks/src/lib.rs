@@ -18,7 +18,6 @@ pub mod errors;
 #[cfg(fbcode_build)]
 mod facebook;
 pub mod hook_loader;
-#[cfg(not(fbcode_build))]
 mod rust_hooks;
 
 use anyhow::{Error, Result};
