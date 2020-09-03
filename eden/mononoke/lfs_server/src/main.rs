@@ -42,7 +42,7 @@ use metaconfig_types::RepoConfig;
 
 use crate::lfs_server_context::{LfsServerContext, ServerUris};
 use crate::middleware::{
-    ClientIdentityMiddleware, LoadMiddleware, LogMiddleware, OdsMiddleware,
+    ClientIdentityMiddleware, LoadMiddleware, LogMiddleware, OdsMiddleware, PostRequestMiddleware,
     RequestContextMiddleware, ScubaMiddleware, ServerIdentityMiddleware, TimerMiddleware,
     TlsSessionDataMiddleware,
 };
@@ -350,11 +350,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let root = MononokeHttpHandler::builder()
         .add(TlsSessionDataMiddleware::new(tls_session_data_log)?)
         .add(ClientIdentityMiddleware::new(trusted_proxy_idents))
-        .add(RequestContextMiddleware::new(
-            fb,
-            logger.clone(),
-            config_handle,
-        ))
+        .add(PostRequestMiddleware::with_config(config_handle))
+        .add(RequestContextMiddleware::new(fb, logger.clone()))
         .add(LoadMiddleware::new())
         .add(log_middleware)
         .add(ServerIdentityMiddleware::new(HeaderValue::from_static(

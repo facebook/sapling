@@ -11,7 +11,7 @@ use hyper::{Body, Response};
 use stats::prelude::*;
 use time_ext::DurationExt;
 
-use super::{LfsMethod, Middleware, RequestContext};
+use super::{LfsMethod, Middleware, PostRequestCallbacks, RequestContext};
 
 define_stats! {
     prefix = "mononoke.lfs.request";
@@ -36,8 +36,10 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
         return None;
     }
 
-    ctx.add_post_request(move |duration, _, response_bytes_sent| {
-        if let Some(duration) = duration {
+    let callbacks = state.try_borrow_mut::<PostRequestCallbacks>()?;
+
+    callbacks.add(move |info| {
+        if let Some(duration) = info.duration {
             match method {
                 LfsMethod::Upload => {
                     STATS::upload_duration.add_value(duration.as_millis_unchecked() as i64, (repo,))
@@ -62,7 +64,7 @@ fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
             STATS::failure_5xx.add_value(1, (repo_and_method.clone(),));
         }
 
-        if let Some(response_bytes_sent) = response_bytes_sent {
+        if let Some(response_bytes_sent) = info.bytes_sent {
             STATS::response_bytes_sent
                 .add_value(response_bytes_sent as i64, (repo_and_method.clone(),))
         }

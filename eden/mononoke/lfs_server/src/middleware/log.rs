@@ -13,7 +13,7 @@ use std::fmt::{self, Debug, Display};
 use std::time::Duration;
 use time_ext::DurationExt;
 
-use super::{ClientIdentity, Middleware, RequestContext, RequestLoad};
+use super::{ClientIdentity, Middleware, PostRequestCallbacks, RequestLoad};
 
 const DIRECTION_REQUEST_IN: &str = "IN  >";
 const DIRECTION_RESPONSE_OUT: &str = "OUT <";
@@ -91,7 +91,7 @@ fn log_request_slog(logger: &Logger, state: &mut State, entry: LogEntry) -> Opti
         .flatten()
         .map(|addr| addr.to_string());
 
-    let ctx = state.try_borrow_mut::<RequestContext>()?;
+    let callbacks = state.try_borrow_mut::<PostRequestCallbacks>()?;
     let logger = logger.new(o!("request_id" => request_id));
 
     match entry {
@@ -112,19 +112,19 @@ fn log_request_slog(logger: &Logger, state: &mut State, entry: LogEntry) -> Opti
             );
         }
         LogEntry::ResponseOut(status) => {
-            ctx.add_post_request(move |duration, client_hostname, bytes_sent| {
+            callbacks.add(move |info| {
                 info!(
                     &logger,
                     SLOG_FORMAT!(),
                     DIRECTION_RESPONSE_OUT,
                     address.as_ref().map(String::as_ref).unwrap_or("-"),
-                    client_hostname.as_ref().map(String::as_ref).unwrap_or("-"),
+                    info.client_hostname.as_ref().map_or("-", String::as_ref),
                     method,
                     uri,
                     version,
                     status.as_u16(),
-                    bytes_sent.unwrap_or(0),
-                    DurationForDisplay::from(*duration),
+                    info.bytes_sent.unwrap_or(0),
+                    DurationForDisplay::from(info.duration),
                     load,
                 );
             });

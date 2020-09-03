@@ -8,7 +8,7 @@
 use gotham::state::{request_id, FromState, State};
 use gotham_derive::StateData;
 use gotham_ext::{
-    middleware::{ClientIdentity, Middleware},
+    middleware::{ClientIdentity, Middleware, PostRequestCallbacks},
     response::ResponseContentLength,
 };
 use hyper::{
@@ -247,17 +247,18 @@ fn log_stats(
     }
 
     let core_ctx = ctx.ctx.clone();
+    let callbacks = state.try_borrow_mut::<PostRequestCallbacks>()?;
 
-    ctx.add_post_request(move |duration, client_hostname, bytes_sent| {
-        if let Some(duration) = duration {
+    callbacks.add(move |info| {
+        if let Some(duration) = info.duration {
             scuba.add(ScubaKey::DurationMs, duration.as_millis_unchecked());
         }
 
-        if let Some(client_hostname) = client_hostname.as_deref() {
+        if let Some(client_hostname) = info.client_hostname.as_deref() {
             scuba.add(ScubaKey::ClientHostname, client_hostname);
         }
 
-        if let Some(bytes_sent) = bytes_sent {
+        if let Some(bytes_sent) = info.bytes_sent {
             scuba.add(ScubaKey::ResponseBytesSent, bytes_sent);
         }
 

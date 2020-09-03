@@ -12,8 +12,9 @@ mod request_context;
 mod scuba;
 
 pub use gotham_ext::middleware::{
-    ClientIdentity, ClientIdentityMiddleware, HeadersDuration, Middleware, RequestStartTime,
-    ServerIdentityMiddleware, TimerMiddleware, TlsSessionDataMiddleware,
+    ClientIdentity, ClientIdentityMiddleware, HeadersDuration, Middleware, PostRequestCallbacks,
+    PostRequestMiddleware, RequestStartTime, ServerIdentityMiddleware, TimerMiddleware,
+    TlsSessionDataMiddleware,
 };
 
 pub use self::load::{LoadMiddleware, RequestLoad};

@@ -6,6 +6,7 @@
  */
 
 use anyhow;
+use gotham_ext::middleware::PostRequestConfig;
 use permission_checker::MononokeIdentity;
 use serde::de::{Deserializer, Error};
 use serde::ser::Serializer;
@@ -167,5 +168,11 @@ impl Limit {
     }
     pub fn probability_pct(&self) -> i64 {
         self.raw_limit.probability_pct
+    }
+}
+
+impl PostRequestConfig for ServerConfig {
+    fn resolve_hostname(&self) -> bool {
+        !self.disable_hostname_logging()
     }
 }

@@ -17,7 +17,7 @@ use hyper::{Body, Response};
 use mime::Mime;
 
 use crate::errors::LfsServerContextErrorKind;
-use crate::middleware::RequestContext;
+use crate::middleware::PostRequestCallbacks;
 
 impl From<LfsServerContextErrorKind> for HttpError {
     fn from(e: LfsServerContextErrorKind) -> HttpError {
@@ -45,8 +45,8 @@ where
     S: Stream<Item = Result<Bytes, Error>> + Send + 'static,
 {
     fn try_into_response(self, state: &mut State) -> Result<Response<Body>, Error> {
-        match state.try_borrow_mut::<RequestContext>() {
-            Some(ctx) => self.0.signal(ctx.delay_post_request()),
+        match state.try_borrow_mut::<PostRequestCallbacks>() {
+            Some(callbacks) => self.0.signal(callbacks.delay()),
             None => self.0,
         }
         .try_into_response(state)
