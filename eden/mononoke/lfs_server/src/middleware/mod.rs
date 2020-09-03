@@ -5,18 +5,16 @@
  * GNU General Public License version 2.
  */
 
-mod log;
 mod ods;
 mod request_context;
 mod scuba;
 
 pub use gotham_ext::middleware::{
-    ClientIdentity, ClientIdentityMiddleware, HeadersDuration, LoadMiddleware, Middleware,
-    PostRequestCallbacks, PostRequestMiddleware, RequestLoad, RequestStartTime,
+    ClientIdentity, ClientIdentityMiddleware, HeadersDuration, LoadMiddleware, LogMiddleware,
+    Middleware, PostRequestCallbacks, PostRequestMiddleware, RequestLoad, RequestStartTime,
     ServerIdentityMiddleware, TimerMiddleware, TlsSessionDataMiddleware,
 };
 
-pub use self::log::LogMiddleware;
 pub use self::ods::OdsMiddleware;
 pub use self::request_context::{LfsMethod, RequestContext, RequestContextMiddleware};
 pub use self::scuba::{ScubaKey, ScubaMiddleware, ScubaMiddlewareState};

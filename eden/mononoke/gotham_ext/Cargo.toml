@@ -9,6 +9,7 @@ include = ["src/**/*.rs"]
 [dependencies]
 permission_checker = { path = "../permission_checker" }
 cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
 async-trait = "0.1.29"
 bytes = { version = "0.5", features = ["serde"] }
@@ -28,4 +29,5 @@ percent-encoding = "2.1"
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_derive = "1.0"
 serde_json = "1.0"
+slog = { version = "2.5", features = ["max_level_debug"] }
 tokio = { version = "=0.2.13", features = ["full"] }
