@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::fmt;
+
 use bytes::Bytes;
 use serde_derive::{Deserialize, Serialize};
 
@@ -29,12 +31,22 @@ use types::hgid::HgId;
 ///
 /// Notes.
 ///  * We expect the default or master bookmark to be a known commit.
-#[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[derive(Serialize, Deserialize)]
 pub struct CommitLocation {
     pub known_descendant: HgId,
     pub distance_to_descendant: u64,
     pub count: u64,
+}
+
+impl fmt::Debug for CommitLocation {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "CommitLocation(known=\"{}\", dist={}, count={})",
+            self.known_descendant, self.distance_to_descendant, self.count
+        )
+    }
 }
 
 /// A LocationToHashRequest consists of a set of locations that we want to retrieve the hashe for.

@@ -24,8 +24,8 @@ use sha1::{Digest, Sha1};
 use structopt::StructOpt;
 
 use edenapi_types::{
-    CommitRevlogData, FileEntry, FileError, HistoryResponseChunk, TreeEntry, TreeError,
-    WireHistoryEntry,
+    CommitLocationToHash, CommitRevlogData, FileEntry, FileError, HistoryResponseChunk, TreeEntry,
+    TreeError, WireHistoryEntry,
 };
 use types::{HgId, Key, Parents, RepoPathBuf};
 
@@ -36,6 +36,7 @@ enum Args {
     File(FileArgs),
     History(HistoryArgs),
     CommitRevlogData(CommitRevlogDataArgs),
+    CommitLocationToHash(CommitLocationToHashArgs),
 }
 
 #[derive(Debug, StructOpt)]
@@ -157,12 +158,26 @@ struct CommitRevlogDataCheckArgs {
     limit: Option<usize>,
 }
 
+#[derive(Debug, StructOpt)]
+#[structopt(about = "Read the contents of a commit location-to-hash request")]
+struct CommitLocationToHashArgs {
+    #[structopt(help = "Input CBOR file (stdin is used if omitted)")]
+    input: Option<PathBuf>,
+    #[structopt(long, short, help = "Output file (stdout used if omitted)")]
+    output: Option<PathBuf>,
+    #[structopt(long, short, help = "Look at items starting with index start")]
+    start: Option<usize>,
+    #[structopt(long, short, help = "Only look at N entries")]
+    limit: Option<usize>,
+}
+
 fn main() -> Result<()> {
     match Args::from_args() {
         Args::Tree(args) => cmd_tree(args),
         Args::File(args) => cmd_file(args),
         Args::History(args) => cmd_history(args),
         Args::CommitRevlogData(args) => cmd_commit_revlog_data(args),
+        Args::CommitLocationToHash(args) => cmd_commit_location_to_hash(args),
     }
 }
 
@@ -336,6 +351,21 @@ fn cmd_commit_revlog_data_check(args: CommitRevlogDataCheckArgs) -> Result<()> {
             println!("{} matches", hgid);
         } else {
             println!("ERROR. expected '{}' but got '{}'", hgid, result);
+        }
+    }
+    Ok(())
+}
+
+fn cmd_commit_location_to_hash(args: CommitLocationToHashArgs) -> Result<()> {
+    let commit_location_to_hash_list: Vec<CommitLocationToHash> = read_input(args.input, None)?;
+    let iter = commit_location_to_hash_list
+        .iter()
+        .skip(args.start.unwrap_or(0))
+        .take(args.limit.unwrap_or(usize::MAX));
+    for clh in iter {
+        println!("{:?}", clh.location);
+        for hgid in clh.hgids.iter() {
+            println!("  {}", hgid);
         }
     }
     Ok(())

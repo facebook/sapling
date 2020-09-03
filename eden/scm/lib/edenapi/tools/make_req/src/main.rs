@@ -54,8 +54,8 @@ fn main() -> Result<()> {
         Command::Tree(args) => make_req::<TreeRequest>(args),
         Command::History(args) => make_req::<HistoryRequest>(args),
         Command::CompleteTree(args) => make_req::<CompleteTreeRequest>(args),
-        Command::CommitLocationToHash(args) => make_req::<CommitLocationToHashRequest>(args),
         Command::CommitRevlogData(args) => make_req::<CommitRevlogDataRequest>(args),
+        Command::CommitLocationToHash(args) => make_req::<CommitLocationToHashRequest>(args),
     }
 }
 
