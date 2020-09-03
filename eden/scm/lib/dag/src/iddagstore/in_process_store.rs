@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use super::GetLock;
 use super::IdDagStore;
 use super::StoreId;
 use crate::id::{Group, Id};
@@ -187,6 +188,22 @@ impl IdDagStore for InProcessStore {
         };
         let iter = get_iter(Group::MASTER)?.chain(get_iter(Group::NON_MASTER)?);
         Ok(Box::new(iter))
+    }
+}
+
+impl GetLock for InProcessStore {
+    type LockT = ();
+
+    fn get_lock(&self) -> Result<()> {
+        Ok(())
+    }
+
+    fn reload(&mut self, _lock: &Self::LockT) -> Result<()> {
+        Ok(())
+    }
+
+    fn persist(&mut self, _lock: &Self::LockT) -> Result<()> {
+        Ok(())
     }
 }
 
