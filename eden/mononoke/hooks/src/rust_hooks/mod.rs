@@ -13,6 +13,7 @@ mod check_nocommit;
 mod conflict_markers;
 mod limit_commit_message_length;
 mod limit_path_length;
+pub(crate) mod no_bad_filenames;
 mod no_insecure_filenames;
 
 use anyhow::Result;
@@ -50,6 +51,11 @@ pub fn hook_name_to_file_hook(
         "limit_path_length" => Some(Box::new(limit_path_length::LimitPathLengthHook::new(
             &config,
         )?)),
+        "no_bad_filenames" => Some(Box::new(
+            no_bad_filenames::NoBadFilenames::builder()
+                .set_from_config(config)
+                .build()?,
+        )),
         "no_insecure_filenames" => {
             Some(Box::new(no_insecure_filenames::NoInsecureFilenames::new()?))
         }
