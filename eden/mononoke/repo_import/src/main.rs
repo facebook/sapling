@@ -42,7 +42,7 @@ use std::num::NonZeroUsize;
 use std::path::Path;
 use std::sync::Arc;
 use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
-use tokio::{fs, io::AsyncWriteExt, process, time};
+use tokio::{process, time};
 use topo_sort::sort_topological;
 use unbundle::get_pushrebase_hooks;
 
@@ -50,10 +50,9 @@ mod cli;
 mod tests;
 
 use crate::cli::{
-    setup_app, ARG_BACKUP_HASHES_FILE_PATH, ARG_BATCH_SIZE, ARG_BOOKMARK_SUFFIX, ARG_COMMIT_AUTHOR,
-    ARG_COMMIT_DATE_RFC3339, ARG_COMMIT_MESSAGE, ARG_DEST_BOOKMARK, ARG_DEST_PATH,
-    ARG_GIT_REPOSITORY_PATH, ARG_HG_SYNC_CHECK_DISABLED, ARG_PHAB_CHECK_DISABLED, ARG_SLEEP_TIME,
-    ARG_X_REPO_CHECK_DISABLED,
+    setup_app, ARG_BATCH_SIZE, ARG_BOOKMARK_SUFFIX, ARG_COMMIT_AUTHOR, ARG_COMMIT_DATE_RFC3339,
+    ARG_COMMIT_MESSAGE, ARG_DEST_BOOKMARK, ARG_DEST_PATH, ARG_GIT_REPOSITORY_PATH,
+    ARG_HG_SYNC_CHECK_DISABLED, ARG_PHAB_CHECK_DISABLED, ARG_SLEEP_TIME, ARG_X_REPO_CHECK_DISABLED,
 };
 
 const LATEST_REPLAYED_REQUEST_KEY: &'static str = "latest-replayed-request";
@@ -100,19 +99,9 @@ struct RepoImportSetting {
 async fn rewrite_file_paths(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    path: &Path,
-    backup_hashes_path: &str,
     mover: &Mover,
+    bonsai_values: &mut Vec<(ChangesetId, BonsaiChangeset)>,
 ) -> Result<Vec<BonsaiChangeset>, Error> {
-    let prefs = GitimportPreferences::default();
-    let target = GitimportTarget::FullRepo;
-    info!(ctx.logger(), "Started importing git commits to Mononoke");
-    let import_map = import_tools::gitimport(ctx, repo, path, target, prefs).await?;
-    info!(ctx.logger(), "Added commits to Mononoke");
-    // Save the hashes to a txt file as a backup. If we failed at deriving data types, we can
-    // use the hashes to derive the commits manually.
-    let mut backup_hashes_file = fs::File::create(backup_hashes_path).await?;
-    let bonsai_values: Vec<(ChangesetId, BonsaiChangeset)> = import_map.values().cloned().collect();
     let mut remapped_parents: HashMap<ChangesetId, ChangesetId> = HashMap::new();
     let mut index = 1;
     let map_size = bonsai_values.len();
@@ -130,25 +119,57 @@ async fn rewrite_file_paths(
 
         if let Some(rewritten_bcs_mut) = rewritten_bcs_opt {
             let rewritten_bcs = rewritten_bcs_mut.freeze()?;
-            remapped_parents.insert(bcs_id.clone(), rewritten_bcs.get_changeset_id());
             let rewritten_bcs_id = rewritten_bcs.get_changeset_id();
+            remapped_parents.insert(bcs_id.clone(), rewritten_bcs_id);
             info!(
                 ctx.logger(),
                 "Commit {}/{}: Remapped {:?} => {:?}", index, map_size, bcs_id, rewritten_bcs_id,
             );
-            let hash = format!("{}\n", rewritten_bcs_id);
-            backup_hashes_file.write_all(hash.as_bytes()).await?;
             bonsai_changesets.push(rewritten_bcs);
         }
         index += 1;
     }
 
+    bonsai_changesets = sort_bcs(&bonsai_changesets)?;
     info!(ctx.logger(), "Saving bonsai changesets");
     save_bonsai_changesets(bonsai_changesets.clone(), ctx.clone(), repo.clone())
         .compat()
         .await?;
     info!(ctx.logger(), "Saved bonsai changesets");
     Ok(bonsai_changesets)
+}
+
+async fn back_sync_commits_to_small_repo(
+    ctx: &CoreContext,
+    small_repo: &BlobRepo,
+    large_to_small_syncer: &CommitSyncer<SqlSyncedCommitMapping>,
+    bonsai_changesets: &[BonsaiChangeset],
+) -> Result<Vec<BonsaiChangeset>, Error> {
+    info!(
+        ctx.logger(),
+        "Back syncing from large repo {} to small repo {}",
+        large_to_small_syncer.get_large_repo().name(),
+        small_repo.name()
+    );
+    let mut synced_bonsai_changesets = vec![];
+    for bcs in bonsai_changesets {
+        let bcs_id = bcs.get_changeset_id();
+        let maybe_synced_cs_id: Option<ChangesetId> =
+            large_to_small_syncer.sync_commit(&ctx, bcs_id).await?;
+        if let Some(synced_cs_id) = maybe_synced_cs_id {
+            info!(
+                ctx.logger(),
+                "Synced large repo cs: {} => {}", bcs_id, synced_cs_id
+            );
+            let synced_bcs = synced_cs_id
+                .load(ctx.clone(), &small_repo.get_blobstore())
+                .await?;
+            synced_bonsai_changesets.push(synced_bcs);
+        }
+    }
+
+    info!(ctx.logger(), "Finished back syncing shifted bonsais");
+    Ok(synced_bonsai_changesets)
 }
 
 async fn derive_bonsais(
@@ -646,7 +667,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let hg_sync_check_disabled = matches.is_present(ARG_HG_SYNC_CHECK_DISABLED);
     let sleep_time = matches.value_of(ARG_SLEEP_TIME).unwrap();
     let sleep_time = sleep_time.parse::<u64>()?;
-    let backup_hashes_path = matches.value_of(ARG_BACKUP_HASHES_FILE_PATH).unwrap();
     let dest_bookmark_name = matches.value_of(ARG_DEST_BOOKMARK).unwrap();
     let dest_bookmark = BookmarkName::new(dest_bookmark_name)?;
     let commit_author = matches.value_of(ARG_COMMIT_AUTHOR).unwrap();
@@ -665,7 +685,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         dest_bookmark,
     };
     args::init_cachelib(fb, &matches, None);
-
+    let mut maybe_large_to_small_syncer = None;
     let logger = args::init_logging(fb, &matches);
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     let repo = args::create_repo(fb, &logger, &matches);
@@ -731,6 +751,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 repo_import_setting =
                     get_large_repo_setting(&ctx, &repo_import_setting, &syncers.small_to_large)
                         .await?;
+                maybe_large_to_small_syncer = Some(syncers.large_to_small);
                 repo = large_repo;
                 repo_config = large_repo_config;
             }
@@ -750,10 +771,34 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             let mutable_counters = args::open_sql::<SqlMutableCounters>(ctx.fb, &matches)
                 .compat()
                 .await?;
-            let mut shifted_bcs =
-                rewrite_file_paths(&ctx, &repo, &path, &backup_hashes_path, &combined_mover)
-                    .await?;
-            shifted_bcs = sort_bcs(&shifted_bcs)?;
+
+            // Importing process starts here
+            let prefs = GitimportPreferences::default();
+            let target = GitimportTarget::FullRepo;
+            info!(ctx.logger(), "Started importing git commits to Mononoke");
+            let import_map = import_tools::gitimport(&ctx, &repo, &path, target, prefs).await?;
+            info!(ctx.logger(), "Added commits to Mononoke");
+            let mut bonsai_values: Vec<(ChangesetId, BonsaiChangeset)> =
+                import_map.values().cloned().collect();
+
+            let mut repo_to_changesets = vec![];
+            let shifted_bcs =
+                rewrite_file_paths(&ctx, &repo, &combined_mover, &mut bonsai_values).await?;
+
+            repo_to_changesets.push((repo.clone(), shifted_bcs.clone()));
+
+            if let Some(large_to_small_syncer) = maybe_large_to_small_syncer {
+                let small_repo = large_to_small_syncer.get_small_repo();
+                let synced_bonsai_changesets = back_sync_commits_to_small_repo(
+                    &ctx,
+                    &small_repo,
+                    &large_to_small_syncer,
+                    &shifted_bcs,
+                )
+                .await?;
+                repo_to_changesets.push((small_repo.clone(), synced_bonsai_changesets));
+            }
+
             info!(ctx.logger(), "Start deriving data types");
             derive_bonsais(&ctx, &repo, &shifted_bcs).await?;
             info!(ctx.logger(), "Finished deriving data types");

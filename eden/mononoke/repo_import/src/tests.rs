@@ -8,8 +8,9 @@
 #[cfg(test)]
 mod tests {
     use crate::{
-        check_dependent_systems, get_large_repo_config_if_pushredirected, get_large_repo_setting,
-        merge_imported_commit, move_bookmark, push_merge_commit, sort_bcs, ChangesetArgs,
+        back_sync_commits_to_small_repo, check_dependent_systems,
+        get_large_repo_config_if_pushredirected, get_large_repo_setting, merge_imported_commit,
+        move_bookmark, push_merge_commit, rewrite_file_paths, sort_bcs, ChangesetArgs,
         CheckerFlags, RepoImportSetting, LATEST_REPLAYED_REQUEST_KEY,
     };
 
@@ -37,9 +38,10 @@ mod tests {
     };
     use mononoke_types::{
         globalrev::{Globalrev, START_COMMIT_GLOBALREV},
-        DateTime, RepositoryId,
+        BonsaiChangeset, DateTime, RepositoryId,
     };
     use mononoke_types_mocks::changesetid::{ONES_CSID as MON_CSID, TWOS_CSID};
+    use movers::{DefaultAction, Mover};
     use mutable_counters::{MutableCounters, SqlMutableCounters};
     use sql::rusqlite::Connection as SqliteConnection;
     use sql_construct::SqlConstruct;
@@ -65,6 +67,14 @@ mod tests {
         )?;
         Ok(repo)
     }
+
+    fn get_file_changes_mpaths(bcs: &BonsaiChangeset) -> Vec<MPath> {
+        bcs.file_changes()
+            .map(|(mpath, _)| mpath)
+            .cloned()
+            .collect()
+    }
+
     #[fbinit::compat_test]
     async fn test_move_bookmark(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
@@ -405,7 +415,9 @@ mod tests {
             default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(mp(
                 "large_repo",
             )),
-            map: HashMap::new(),
+            map: hashmap! {
+                mp("dest_path_prefix/B") => mp("random_dir/B"),
+            },
             bookmark_prefix: AsciiString::from_ascii("large_repo_bookmark/".to_string()).unwrap(),
             direction: CommitSyncDirection::SmallToLarge,
         }
@@ -491,6 +503,103 @@ mod tests {
         };
 
         assert_eq!(expected_large_repo_setting_2, large_repo_setting_2);
+        Ok(())
+    }
+
+    /*
+        The test checks if we have imported the files into the right paths
+        in a pushredirected large repo and if we have back-sycned the files
+        in the right places in small repo.
+
+        Given file A, B and destination prefix "dest_path_prefix".
+        If we imported into small repo and allowed it to push-redirect to
+        large repo, we would get the following path rewriting sequences:
+        A -> dest_path_prefix/A (in small_repo) -> large_repo/dest_path_prefix/A
+        B -> dest_path_prefix/B (in small_repo) -> random_dir/B
+
+        Therefore, repo_import tool should import A into large_repo_dest_prefix/A
+        and B into random_dir/B places. When we backsync to small_repo, we should get
+        dest_path_prefix/A and dest_path_prefix/B paths, respectively.
+    */
+    #[fbinit::compat_test]
+    async fn test_rewrite_file_paths_and_backsync(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let large_repo = create_repo(0)?;
+        let small_repo = create_repo(1)?;
+        let changesets = create_from_dag(
+            &ctx,
+            &large_repo,
+            r##"
+                A-B
+            "##,
+        )
+        .await?;
+        let mut bonsai_values = vec![];
+        for csid in changesets.values() {
+            bonsai_values.push((
+                csid.clone(),
+                csid.load(ctx.clone(), &large_repo.get_blobstore()).await?,
+            ));
+        }
+
+        let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap();
+        let syncers = create_commit_syncers(
+            small_repo.clone(),
+            large_repo.clone(),
+            &get_large_repo_sync_config(),
+            mapping.clone(),
+        )?;
+
+        let large_to_small_syncer = syncers.large_to_small;
+        let mut movers = vec![];
+        let importing_mover = movers::mover_factory(
+            HashMap::new(),
+            DefaultAction::PrependPrefix(mp("dest_path_prefix")),
+        )?;
+        movers.push(importing_mover);
+        movers.push(syncers.small_to_large.get_mover().clone());
+
+        let combined_mover: Mover = Arc::new(move |source_path: &MPath| {
+            let mut mutable_path = source_path.clone();
+            for mover in movers.clone() {
+                let maybe_path = mover(&mutable_path)?;
+                mutable_path = match maybe_path {
+                    Some(moved_path) => moved_path,
+                    None => return Ok(None),
+                };
+            }
+            Ok(Some(mutable_path))
+        });
+
+        let shifted_bcs =
+            rewrite_file_paths(&ctx, &large_repo, &combined_mover, &mut bonsai_values).await?;
+
+        let large_repo_cs_a = &shifted_bcs[0];
+        let large_repo_cs_a_mpaths = get_file_changes_mpaths(&large_repo_cs_a);
+        assert_eq!(
+            vec![mp("large_repo/dest_path_prefix/A")],
+            large_repo_cs_a_mpaths
+        );
+
+        let large_repo_cs_b = &shifted_bcs[1];
+        let large_repo_cs_b_mpaths = get_file_changes_mpaths(&large_repo_cs_b);
+        assert_eq!(vec![mp("random_dir/B")], large_repo_cs_b_mpaths);
+
+        let synced_bcs = back_sync_commits_to_small_repo(
+            &ctx,
+            &small_repo,
+            &large_to_small_syncer,
+            &shifted_bcs,
+        )
+        .await?;
+        let small_repo_cs_a = &synced_bcs[0];
+        let small_repo_cs_a_mpaths = get_file_changes_mpaths(&small_repo_cs_a);
+        assert_eq!(vec![mp("dest_path_prefix/A")], small_repo_cs_a_mpaths);
+
+        let small_repo_cs_b = &synced_bcs[1];
+        let small_repo_cs_b_mpaths = get_file_changes_mpaths(&small_repo_cs_b);
+        assert_eq!(vec![mp("dest_path_prefix/B")], small_repo_cs_b_mpaths);
+
         Ok(())
     }
 }

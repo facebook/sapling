@@ -63,7 +63,6 @@
   > --bookmark-suffix "new_repo" \
   > --disable-phabricator-check \
   > --disable-hg-sync-check \
-  > --backup-hashes-file-path "$GIT_REPO/hashes.txt" \
   > --dest-bookmark master_bookmark \
   > --commit-author user \
   > --commit-message "merging" \
@@ -122,9 +121,6 @@
 # Clone the repository
   $ cd "$TESTTMP"
   $ hgclone_treemanifest ssh://user@dummy/repo-hg repo1 --noupdate -q
-  $ cat "$GIT_REPO/hashes.txt"
-  a159bc614d2dbd07a5ecc6476156fa464b69e884d819bbc2e854ade3e4c353b9
-  a2e6329ed60e3dd304f53efd0f92c28b849404a47979fcf48bb43b6fe3a0cad5
   $ cd repo1
   $ hgmn pull
   pulling from ssh://user@dummy/repo

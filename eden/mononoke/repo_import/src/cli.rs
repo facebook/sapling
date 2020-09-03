@@ -16,7 +16,6 @@ pub const ARG_PHAB_CHECK_DISABLED: &str = "disable-phabricator-check";
 pub const ARG_X_REPO_CHECK_DISABLED: &str = "disable-x-repo-check";
 pub const ARG_HG_SYNC_CHECK_DISABLED: &str = "disable-hg-sync-check";
 pub const ARG_SLEEP_TIME: &str = "sleep-time";
-pub const ARG_BACKUP_HASHES_FILE_PATH: &str = "backup-hashes-file-path";
 pub const ARG_DEST_BOOKMARK: &str = "dest-bookmark";
 pub const ARG_COMMIT_MESSAGE: &'static str = "commit-message";
 pub const ARG_COMMIT_AUTHOR: &'static str = "commit-author";
@@ -81,13 +80,6 @@ pub fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .help(
                     "Sleep time, if we fail dependent system (phabricator, hg_sync ...) checkers",
                 ),
-        )
-        .arg(
-            Arg::with_name(ARG_BACKUP_HASHES_FILE_PATH)
-                .long(ARG_BACKUP_HASHES_FILE_PATH)
-                .takes_value(true)
-                .required(true)
-                .help("Backup file path to save bonsai hashes if deriving data types fail"),
         )
         .arg(
             Arg::with_name(ARG_DEST_BOOKMARK)
