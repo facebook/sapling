@@ -16,23 +16,21 @@ use cmdlib::{args, helpers};
 use context::CoreContext;
 use failure_ext::FutureFailureErrorExt;
 use fbinit::FacebookInit;
-use futures::{compat::Future01CompatExt, future::TryFutureExt};
-use futures_ext::{
-    bounded_traversal::bounded_traversal_stream, try_boxfuture, BoxFuture, FutureExt,
+use futures::{
+    compat::{Future01CompatExt, Stream01CompatExt},
+    future::{FutureExt as NewFutureExt, TryFutureExt},
+    stream::{StreamExt, TryStreamExt},
 };
-use futures_old::{
-    future::{self, join_all, Future},
-    stream::Stream,
-};
-use itertools::{Either, Itertools};
-use mercurial_types::{blobs::HgBlobChangeset, HgChangesetId, HgEntryId, HgManifest, MPath};
+use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use futures_old::future::{self, join_all, Future};
+use manifest::ManifestOps;
+use mercurial_types::{blobs::HgBlobChangeset, HgChangesetId, MPath};
 use mononoke_types::{typed_hash::MononokeId, ContentId, Timestamp};
 use redactedblobstore::SqlRedactedContentStore;
 use slog::{error, info, Logger};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
-use std::sync::Arc;
 
 use crate::error::SubcommandError;
 
@@ -120,95 +118,36 @@ pub fn add_path_parameters<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     )
 }
 
-fn find_files_with_given_content_id_blobstore_keys(
-    logger: Logger,
-    ctx: CoreContext,
-    repo: BlobRepo,
+async fn find_files_with_given_content_id_blobstore_keys<'a>(
+    ctx: &'a CoreContext,
+    repo: &'a BlobRepo,
     cs: HgBlobChangeset,
     keys_to_tasks: HashMap<String, String>,
-) -> impl Future<Item = Vec<(String, MPath, ContentId)>, Error = Error> {
+) -> Result<Vec<(String, MPath, ContentId)>, Error> {
     let manifest_id = cs.manifestid();
-    let keys_to_tasks: Arc<HashMap<String, String>> = Arc::new(keys_to_tasks);
-    bounded_traversal_stream(4096, Some((repo.clone(), manifest_id, None)), {
-        cloned!(ctx);
-        move |(repo, manifest_id, path)| {
-            manifest_id
-                .load(ctx.clone(), repo.blobstore())
-                .compat()
-                .from_err()
-                .map({
-                    cloned!(repo);
-                    move |manifest| {
-                        let (manifests, filenodes): (Vec<_>, Vec<_>) = HgManifest::list(&manifest)
-                            .partition_map(|child| {
-                                let full_path =
-                                    MPath::join_element_opt(path.as_ref(), child.get_name());
-                                match child.get_hash() {
-                                    HgEntryId::File(_, filenode_id) => {
-                                        Either::Right((full_path, filenode_id.clone()))
-                                    }
-                                    HgEntryId::Manifest(manifest_id) => {
-                                        Either::Left((full_path, manifest_id.clone()))
-                                    }
-                                }
-                            });
+    let mut s = manifest_id
+        .list_leaf_entries(ctx.clone(), repo.get_blobstore())
+        .compat()
+        .map_ok(|(full_path, (_, filenode_id))| async move {
+            let env = filenode_id.load(ctx.clone(), repo.blobstore()).await?;
+            Result::<_, Error>::Ok((env.content_id(), full_path))
+        })
+        .try_buffer_unordered(100);
 
-                        let children_manifests: Vec<_> = manifests
-                            .into_iter()
-                            .map(|(fp, mid)| (repo.clone(), mid, fp))
-                            .collect();
-                        (filenodes, children_manifests)
-                    }
-                })
+    let mut collected_tasks_and_pairs = vec![];
+    let mut processed_files_count = 0;
+    while let Some(key_and_path) = s.next().await {
+        let (key, full_path) = key_and_path?;
+        processed_files_count += 1;
+        if processed_files_count % 100_000 == 0 {
+            info!(ctx.logger(), "Processed files: {}", processed_files_count);
         }
-    })
-    .map({
-        cloned!(ctx, repo);
-        move |filenodes| {
-            let blobstore_key_futs = filenodes.into_iter().map({
-                cloned!(ctx, repo);
-                move |(full_path, filenode_id)| {
-                    filenode_id
-                        .load(ctx.clone(), repo.blobstore())
-                        .compat()
-                        .from_err()
-                        .map(|env| (env.content_id(), full_path))
-                }
-            });
-            join_all(blobstore_key_futs)
+
+        if let Some(task) = keys_to_tasks.get(&key.blobstore_key()) {
+            collected_tasks_and_pairs.push((task.clone(), full_path, key));
         }
-    })
-    .buffered(100)
-    .fold((vec![], 0), {
-        cloned!(logger, keys_to_tasks,);
-        move |(mut collected_tasks_and_pairs, processed_files_count), keys_and_paths| {
-            let mut pfc = processed_files_count;
-            let filtered_tasks_and_pairs = keys_and_paths
-                .into_iter()
-                .filter_map({
-                    |(key, full_path)| {
-                        pfc += 1;
-                        if pfc % 100_000 == 0 {
-                            info!(logger.clone(), "Processed files: {}", pfc);
-                        }
-                        keys_to_tasks
-                            .clone()
-                            .get(&key.blobstore_key())
-                            .map(|task| (task.clone(), key, full_path.clone()))
-                    }
-                })
-                .map({
-                    move |(task, key, full_path)| {
-                        (task, full_path.expect("None MPath, yet not a root"), key)
-                    }
-                })
-                .collect::<Vec<_>>();
-            collected_tasks_and_pairs.extend(filtered_tasks_and_pairs);
-            let res: Result<(Vec<_>, usize), Error> = Ok((collected_tasks_and_pairs, pfc));
-            res
-        }
-    })
-    .map(|(res, _)| res)
+    }
+    Ok(collected_tasks_and_pairs)
 }
 
 /// Entrypoint for redaction subcommand handling
@@ -422,13 +361,17 @@ fn redaction_list(
                 .and_then({
                     cloned!(logger);
                     move |(redacted_blobs, hg_cs)| {
-                        find_files_with_given_content_id_blobstore_keys(
-                            logger.clone(),
-                            ctx,
-                            blobrepo,
-                            hg_cs,
-                            redacted_blobs,
-                        )
+                        async move {
+                            find_files_with_given_content_id_blobstore_keys(
+                                &ctx,
+                                &blobrepo,
+                                hg_cs,
+                                redacted_blobs,
+                            )
+                            .await
+                        }
+                        .boxed()
+                        .compat()
                         .map({
                             cloned!(logger);
                             move |mut res| {
@@ -501,15 +444,9 @@ async fn check_if_content_is_reachable_from_bookmark(
         .map_err(Error::from)
         .await?;
 
-    let redacted_files = find_files_with_given_content_id_blobstore_keys(
-        ctx.logger().clone(),
-        ctx.clone(),
-        blobrepo.clone(),
-        hg_cs,
-        keys_to_tasks,
-    )
-    .compat()
-    .await?;
+    let redacted_files =
+        find_files_with_given_content_id_blobstore_keys(&ctx, &blobrepo, hg_cs, keys_to_tasks)
+            .await?;
     let redacted_files_len = redacted_files.len();
     if redacted_files_len > 0 {
         for (_, path, content_id) in redacted_files {
