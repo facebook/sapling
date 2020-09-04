@@ -451,6 +451,10 @@ pub struct HookConfig {
     pub strings: HashMap<String, String>,
     /// Map of config to it's value. Values here are integers
     pub ints: HashMap<String, i32>,
+    /// Map of config to it's value. Values here are lists of strings
+    pub string_lists: HashMap<String, Vec<String>>,
+    /// Map of config to it's value. Values here are lists of integers
+    pub int_lists: HashMap<String, Vec<i32>>,
 }
 
 /// Configuration for a hook

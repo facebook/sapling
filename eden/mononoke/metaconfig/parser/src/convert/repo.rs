@@ -123,6 +123,8 @@ impl Convert for RawHookConfig {
             bypass,
             strings: self.config_strings.unwrap_or_default(),
             ints: self.config_ints.unwrap_or_default(),
+            string_lists: self.config_string_lists.unwrap_or_default(),
+            int_lists: self.config_int_lists.unwrap_or_default(),
         };
 
         Ok(HookParams {
