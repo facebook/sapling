@@ -70,7 +70,6 @@ class basectx(object):
     memctx: a context that represents changes in-memory and can also
             be committed."""
 
-    _rev = nullrev
     _node = nullid
     _repo = None
 
@@ -81,10 +80,16 @@ class basectx(object):
         o = super(basectx, cls).__new__(cls)
 
         o._repo = repo
-        o._rev = nullrev
         o._node = nullid
 
         return o
+
+    @property
+    def _rev(self):
+        if self._node is None:
+            # workingctx
+            return None
+        return self._repo.changelog.rev(self._node)
 
     def __bytes__(self):
         return encodeutf8(str(self))
@@ -104,7 +109,7 @@ class basectx(object):
 
     def __eq__(self, other):
         try:
-            return type(self) == type(other) and self._rev == other._rev
+            return type(self) == type(other) and self._node == other._node
         except AttributeError:
             return False
 
@@ -388,24 +393,20 @@ class changectx(basectx):
         try:
             if isinstance(changeid, int):
                 self._node = repo.changelog.node(changeid)
-                self._rev = changeid
                 return
             if sys.version_info[0] < 3 and isinstance(changeid, long):  # noqa
                 changeid = str(changeid)
             if changeid == "null":
                 self._node = nullid
-                self._rev = nullrev
                 return
             if changeid == "tip":
                 self._node = repo.changelog.tip()
-                self._rev = repo.changelog.rev(self._node)
                 return
             try:
                 if changeid == "." or repo.local() and changeid == repo.dirstate.p1():
                     # this is a hack to delay/avoid loading obsmarkers
                     # when we know that '.' won't be hidden
                     self._node = repo.dirstate.p1()
-                    self._rev = repo.changelog.rev(self._node)
                     return
             except Exception:
                 self._repo.ui.warn(
@@ -417,7 +418,7 @@ class changectx(basectx):
             if len(changeid) == 20 and isinstance(changeid, bytes):
                 try:
                     self._node = changeid
-                    self._rev = repo.changelog.rev(changeid)
+                    repo.changelog.rev(changeid)
                     return
                 except LookupError:
                     # The only valid bytes changeid is a node, and if the node was not
@@ -444,7 +445,6 @@ class changectx(basectx):
                 if r < 0 and r != wdirrev:
                     raise ValueError
                 node = repo.changelog.node(r)
-                self._rev = r
                 self._node = node
                 return
             except (ValueError, OverflowError, IndexError, TypeError, error.RustError):
@@ -453,7 +453,7 @@ class changectx(basectx):
             if len(changeid) == 40:
                 try:
                     self._node = bin(changeid)
-                    self._rev = repo.changelog.rev(self._node)
+                    repo.changelog.rev(self._node)
                     return
                 except (TypeError, LookupError):
                     pass
@@ -461,7 +461,7 @@ class changectx(basectx):
             # lookup bookmarks through the name interface
             try:
                 self._node = repo.names.singlenode(repo, changeid)
-                self._rev = repo.changelog.rev(self._node)
+                repo.changelog.rev(self._node)
                 return
             except KeyError:
                 pass
@@ -470,7 +470,7 @@ class changectx(basectx):
 
             self._node = repo.changelog._partialmatch(changeid)
             if self._node is not None:
-                self._rev = repo.changelog.rev(self._node)
+                repo.changelog.rev(self._node)
                 return
 
             # lookup failed
@@ -489,18 +489,18 @@ class changectx(basectx):
 
     def __hash__(self):
         try:
-            return hash(self._rev)
+            return hash(self._node)
         except AttributeError:
             return id(self)
 
     def __nonzero__(self):
-        return self._rev != nullrev
+        return self._node != nullid
 
     __bool__ = __nonzero__
 
     @propertycache
     def _changeset(self):
-        return self._repo.changelog.changelogrevision(self.rev())
+        return self._repo.changelog.changelogrevision(self._node)
 
     @propertycache
     def _manifest(self):
@@ -1334,7 +1334,6 @@ class committablectx(basectx):
         mutinfo=None,
     ):
         self._repo = repo
-        self._rev = None
         self._node = None
         self._text = text
         if date:
@@ -2530,7 +2529,6 @@ class memctx(committablectx):
         super(memctx, self).__init__(
             repo, text, user, date, extra, loginfo=loginfo, mutinfo=mutinfo
         )
-        self._rev = None
         self._node = None
         parents = [(p or nullid) for p in parents]
         p1, p2 = parents
@@ -2770,7 +2768,6 @@ class metadataonlyctx(committablectx):
         super(metadataonlyctx, self).__init__(
             repo, text, user, date, extra, loginfo=loginfo, mutinfo=mutinfo
         )
-        self._rev = None
         self._node = None
         self._originalctx = originalctx
         self._manifestnode = originalctx.manifestnode()
