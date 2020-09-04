@@ -15,6 +15,7 @@ mod limit_commit_message_length;
 mod limit_path_length;
 pub(crate) mod no_bad_filenames;
 mod no_insecure_filenames;
+pub(crate) mod no_questionable_filenames;
 
 use anyhow::Result;
 use fbinit::FacebookInit;
@@ -59,6 +60,11 @@ pub fn hook_name_to_file_hook(
         "no_insecure_filenames" => {
             Some(Box::new(no_insecure_filenames::NoInsecureFilenames::new()?))
         }
+        "no_questionable_filenames" => Some(Box::new(
+            no_questionable_filenames::NoQuestionableFilenames::builder()
+                .set_from_config(config)
+                .build()?,
+        )),
         _ => None,
     })
 }
