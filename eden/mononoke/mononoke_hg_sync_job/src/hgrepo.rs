@@ -53,7 +53,7 @@ pub fn list_hg_server_bookmarks(
         "--path",
         &hg_repo_path,
     ];
-    let cmd = Command::new("hg").args(&full_args).output();
+    let cmd = get_hg_command(&full_args).output();
 
     cmd.into_future()
         .from_err()
@@ -97,6 +97,7 @@ where
     S: AsRef<OsStr>,
 {
     let full_args = vec![
+        "--traceback",
         "--config",
         "extensions.clienttelemetry=",
         "--config",

@@ -15,6 +15,7 @@ import sys
 from edenscm.mercurial import error, hg, replay, util
 from edenscm.mercurial.commands import command
 from edenscm.mercurial.i18n import _
+from edenscm.mercurial.pycompat import encodeutf8
 
 
 def getcommitdates(ui, fname=None):
@@ -46,6 +47,8 @@ def runreplay(ui, remote, stream, commitdates, rebasedhead, ontobook):
             ui.configbool("sendunbundlereplay", "respondlightly", True),
         )
     except Exception:
+        ui.warn(_("exception executing unbundlereplay on remote\n"))
+        ui.traceback()
         returncode = 255
     finally:
         if returncode != 0:
@@ -62,7 +65,7 @@ def runreplay(ui, remote, stream, commitdates, rebasedhead, ontobook):
 
 
 def writereport(reportsfile, msg):
-    reportsfile.write(msg)
+    reportsfile.write(encodeutf8(msg))
     reportsfile.flush()
     os.fsync(reportsfile.fileno())
 

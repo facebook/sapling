@@ -1443,7 +1443,7 @@ def verify_replay(ui, repo, *args, **kwargs):
         ui.note("[ReplayVerification] Everything seems in order\n")
         return 0
 
-     ui.warn("[ReplayVerification] Expected: (%s, %s). Actual: (%s, %s)\n" % (expected_book, expected_head, actual_book, actual_head))
+     ui.warn("[ReplayVerification] Expected: (%r, %r). Actual: (%r, %r)\n" % (expected_book, expected_head, actual_book, actual_head))
      return 1
 EOF
 
@@ -1453,7 +1453,7 @@ def run(*args, **kwargs):
    In-process style hook."""
    if kwargs.get("EXPECTED_ONTOBOOK"):
        return 0
-   print "[RepoLock] Repo locked for non-unbundlereplay pushes"
+   print("[RepoLock] Repo locked for non-unbundlereplay pushes")
    return 1
 EOF
 
