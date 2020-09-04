@@ -1448,12 +1448,12 @@ def verify_replay(ui, repo, *args, **kwargs):
 EOF
 
 cat >> "$TESTTMP"/repo_lock.py << EOF
-def run(*args, **kwargs):
+def run(ui, repo, *args, **kwargs):
    """Repo is locked for everything except replays
    In-process style hook."""
    if kwargs.get("EXPECTED_ONTOBOOK"):
        return 0
-   print("[RepoLock] Repo locked for non-unbundlereplay pushes")
+   ui.warn("[RepoLock] Repo locked for non-unbundlereplay pushes\n")
    return 1
 EOF
 

@@ -50,18 +50,8 @@ PY3_SKIPLIST: Set[str] = {
     "test-hook-no-bad-filenames.t",
     "test-hook-no-insecure-filenames.t",
     "test-large-path-and-content.t",
-    "test-mononoke-hg-sync-job-generate-bundles-force.t",
-    "test-mononoke-hg-sync-job-generate-bundles-lfs.t",
-    "test-mononoke-hg-sync-job-generate-bundles-lfs-verification.t",
-    "test-mononoke-hg-sync-job-generate-bundles-loop.t",
-    "test-mononoke-hg-sync-job-generate-bundles-other-books.t",
-    "test-mononoke-hg-sync-job-generate-bundles.t",
-    "test-mononoke-hg-sync-job-sync-globalrevs.t",
-    "test-mononoke-hg-sync-job.t",
-    "test-mononoke-hg-sync-job-with-copies.t",
     "test-push-redirector-sync-job.t",
     "test-redaction.t",
-    "test-scs-modify-bookmarks.t",
 }
 
 

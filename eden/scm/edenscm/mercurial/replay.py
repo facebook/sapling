@@ -35,11 +35,11 @@ class ReplayData(object):
             "rebasedhead": self.rebasedhead,
             "ontobook": self.ontobook,
         }
-        return json.dumps(res).encode("utf-8")
+        return json.dumps(res)
 
     @classmethod
     def deserialize(cls, s):
-        d = json.loads(s.decode("utf-8"))
+        d = json.loads(s)
         commitdates = d.get("commitdates", {})
         rebasedhead = d.get("rebasedhead")
         ontobook = d.get("ontobook")
