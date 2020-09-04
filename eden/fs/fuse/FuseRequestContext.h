@@ -13,6 +13,7 @@
 
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/fuse/FuseTypes.h"
+#include "eden/fs/inodes/RequestContext.h"
 #include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/telemetry/EdenStats.h"
@@ -22,102 +23,31 @@ namespace facebook {
 namespace eden {
 
 /**
- * Each FUSE request has a corresponding RequestData object that is allocated at
- * request start and deallocated when it finishes.
+ * Each FUSE request has a corresponding FuseRequestContext object that is
+ * allocated at request start and deallocated when it finishes.
  *
- * Unless a member function indicates otherwise, RequestData may be used from
- * multiple threads, but only by one thread at a time.
+ * Unless a member function indicates otherwise, FuseRequestContext may be used
+ * from multiple threads, but only by one thread at a time.
  */
-class RequestData : public ObjectFetchContext {
+class FuseRequestContext : public RequestContext {
   FuseChannel* channel_;
   fuse_in_header fuseHeader_;
-  // Needed to track stats
-  std::chrono::time_point<std::chrono::steady_clock> startTime_;
-  ChannelThreadStats::HistogramPtr latencyHistogram_{nullptr};
-  EdenStats* stats_{nullptr};
-  RequestMetricsScope requestMetricsScope_;
-  std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>
-      channelThreadLocalStats_;
-
-  struct EdenTopStats {
-   public:
-    bool didImportFromBackingStore() const {
-      return didImportFromBackingStore_.load(std::memory_order_relaxed);
-    }
-    void setDidImportFromBackingStore() {
-      didImportFromBackingStore_.store(true, std::memory_order_relaxed);
-    }
-    std::chrono::nanoseconds fuseDuration{0};
-
-   private:
-    std::atomic<bool> didImportFromBackingStore_{false};
-  } edenTopStats_;
 
   fuse_in_header stealReq();
 
-  /**
-   * Normally, one requestData is created for only one fetch request,
-   * so priority will only be accessed by one thread, but that is
-   * not strictly guaranteed. Atomic is used here because there
-   * might be rare cases where multiple threads access priority_
-   * at the same time.
-   */
-  std::atomic<ImportPriority> priority_{
-      ImportPriority(ImportPriorityKind::High)};
-
  public:
-  RequestData(const RequestData&) = delete;
-  RequestData& operator=(const RequestData&) = delete;
-  RequestData(RequestData&&) = delete;
-  RequestData& operator=(RequestData&&) = delete;
-  explicit RequestData(FuseChannel* channel, const fuse_in_header& fuseHeader);
-
-  /**
-   * Override of `ObjectFetchContext`
-   *
-   * Unlike other RequestData function, this may be called concurrently by
-   * arbitrary threads.
-   */
-  void didFetch(ObjectType /*type*/, const Hash& /*hash*/, Origin origin)
-      override {
-    if (origin == Origin::FromBackingStore) {
-      edenTopStats_.setDidImportFromBackingStore();
-    }
-  }
+  FuseRequestContext(const FuseRequestContext&) = delete;
+  FuseRequestContext& operator=(const FuseRequestContext&) = delete;
+  FuseRequestContext(FuseRequestContext&&) = delete;
+  FuseRequestContext& operator=(FuseRequestContext&&) = delete;
+  explicit FuseRequestContext(
+      FuseChannel* channel,
+      const fuse_in_header& fuseHeader);
 
   // Override of `ObjectFetchContext`
   std::optional<pid_t> getClientPid() const override {
     return static_cast<pid_t>(fuseHeader_.pid);
   }
-
-  // Override of `getPriority`
-  ImportPriority getPriority() const override {
-    return priority_;
-  }
-
-  // Override of `deprioritize`
-  virtual void deprioritize(uint64_t delta) override {
-    ImportPriority prev = priority_.load();
-    priority_.compare_exchange_strong(prev, prev.getDeprioritized(delta));
-    if (getClientPid().has_value()) {
-      XLOG(DBG7) << "priority for " << getClientPid().value()
-                 << " has changed to: " << priority_.load().value();
-    }
-  }
-
-  // Override of `ObjectFetchContext`
-  Cause getCause() const override {
-    return ObjectFetchContext::Cause::Channel;
-  }
-
-  void startRequest(
-      EdenStats* stats,
-      ChannelThreadStats::HistogramPtr histogram,
-      std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>&
-          requestWatches);
-  void finishRequest();
-
-  EdenTopStats& getEdenTopStats();
 
   // Returns the underlying fuse request, throwing an error if it has
   // already been released

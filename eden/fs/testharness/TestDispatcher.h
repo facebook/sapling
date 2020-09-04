@@ -21,8 +21,6 @@
 namespace facebook {
 namespace eden {
 
-class RequestData;
-
 /**
  * A FUSE Dispatcher implementation for use in unit tests.
  *

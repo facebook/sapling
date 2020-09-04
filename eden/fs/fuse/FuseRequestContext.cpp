@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/fuse/RequestData.h"
+#include "eden/fs/fuse/FuseRequestContext.h"
 
 #include <folly/logging/xlog.h>
 
@@ -19,45 +19,14 @@ using namespace std::chrono;
 namespace facebook {
 namespace eden {
 
-RequestData::RequestData(FuseChannel* channel, const fuse_in_header& fuseHeader)
-    : channel_(channel), fuseHeader_(fuseHeader) {}
+FuseRequestContext::FuseRequestContext(
+    FuseChannel* channel,
+    const fuse_in_header& fuseHeader)
+    : RequestContext(channel->getProcessAccessLog()),
+      channel_(channel),
+      fuseHeader_(fuseHeader) {}
 
-void RequestData::startRequest(
-    EdenStats* stats,
-    ChannelThreadStats::HistogramPtr histogram,
-    std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>&
-        requestWatches) {
-  startTime_ = steady_clock::now();
-  DCHECK(latencyHistogram_ == nullptr);
-  latencyHistogram_ = histogram;
-  stats_ = stats;
-  channelThreadLocalStats_ = requestWatches;
-  requestMetricsScope_ = RequestMetricsScope(channelThreadLocalStats_.get());
-}
-
-void RequestData::finishRequest() {
-  const auto now = steady_clock::now();
-
-  const auto diff = now - startTime_;
-  const auto diff_us = duration_cast<microseconds>(diff);
-  const auto diff_ns = duration_cast<nanoseconds>(diff);
-
-  stats_->getChannelStatsForCurrentThread().recordLatency(
-      latencyHistogram_, diff_us);
-  latencyHistogram_ = nullptr;
-  stats_ = nullptr;
-  { auto temp = std::move(requestMetricsScope_); }
-  channelThreadLocalStats_.reset();
-
-  auto& pal = channel_->getProcessAccessLog();
-  if (getEdenTopStats().didImportFromBackingStore()) {
-    auto type = ProcessAccessLog::AccessType::FsChannelBackingStoreImport;
-    pal.recordAccess(examineReq().pid, type);
-  }
-  pal.recordDuration(examineReq().pid, diff_ns);
-}
-
-fuse_in_header RequestData::stealReq() {
+fuse_in_header FuseRequestContext::stealReq() {
   if (fuseHeader_.opcode == 0) {
     throw std::runtime_error("req_ has been released");
   }
@@ -66,32 +35,28 @@ fuse_in_header RequestData::stealReq() {
   return res;
 }
 
-const fuse_in_header& RequestData::getReq() const {
+const fuse_in_header& FuseRequestContext::getReq() const {
   if (fuseHeader_.opcode == 0) {
     throw std::runtime_error("req_ has been released");
   }
   return fuseHeader_;
 }
 
-const fuse_in_header& RequestData::examineReq() const {
+const fuse_in_header& FuseRequestContext::examineReq() const {
   // Will just return the fuseHeader_ and not throw(unlike getReq)
   // The caller is responsible to check the opcode and ignore if zero
   return fuseHeader_;
 }
 
-RequestData::EdenTopStats& RequestData::getEdenTopStats() {
-  return edenTopStats_;
-}
-
-void RequestData::replyError(int err) {
+void FuseRequestContext::replyError(int err) {
   channel_->replyError(stealReq(), err);
 }
 
-void RequestData::replyNone() {
+void FuseRequestContext::replyNone() {
   stealReq();
 }
 
-void RequestData::systemErrorHandler(
+void FuseRequestContext::systemErrorHandler(
     const std::system_error& err,
     Notifications* FOLLY_NULLABLE notifications) {
   int errnum = EIO;
@@ -105,7 +70,7 @@ void RequestData::systemErrorHandler(
   }
 }
 
-void RequestData::genericErrorHandler(
+void FuseRequestContext::genericErrorHandler(
     const std::exception& err,
     Notifications* FOLLY_NULLABLE notifications) {
   XLOG(DBG5) << folly::exceptionStr(err);
@@ -115,7 +80,7 @@ void RequestData::genericErrorHandler(
   }
 }
 
-void RequestData::timeoutErrorHandler(
+void FuseRequestContext::timeoutErrorHandler(
     const folly::FutureTimeout& err,
     Notifications* FOLLY_NULLABLE notifications) {
   XLOG_EVERY_MS(WARN, 1000)

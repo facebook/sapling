@@ -39,7 +39,7 @@ namespace eden {
 
 class Dispatcher;
 class Notifications;
-class RequestData;
+class FuseRequestContext;
 
 class FuseChannel {
  public:
@@ -402,127 +402,127 @@ class FuseChannel {
 
  public:
   folly::Future<folly::Unit> fuseRead(
-      RequestData& request,
+      FuseRequestContext& request,
       const fuse_in_header* header,
       const uint8_t* arg);
   folly::Future<folly::Unit> fuseWrite(
-      RequestData& request,
+      FuseRequestContext& request,
       const fuse_in_header* header,
       const uint8_t* arg);
   folly::Future<folly::Unit> fuseLookup(
-      RequestData& request,
+      FuseRequestContext& request,
       const fuse_in_header* header,
       const uint8_t* arg);
   folly::Future<folly::Unit> fuseForget(
-      RequestData& request,
+      FuseRequestContext& request,
       const fuse_in_header* header,
       const uint8_t* arg);
   folly::Future<folly::Unit> fuseGetAttr(
-      RequestData& request,
+      FuseRequestContext& request,
       const fuse_in_header* header,
       const uint8_t* arg);
   folly::Future<folly::Unit> fuseSetAttr(
-      RequestData& request,
+      FuseRequestContext& request,
       const fuse_in_header* header,
       const uint8_t* arg);
   folly::Future<folly::Unit> fuseReadLink(
-      RequestData& request,
+      FuseRequestContext& request,
       const fuse_in_header* header,
       const uint8_t* arg);
   folly::Future<folly::Unit> fuseSymlink(
-      RequestData& request,
+      FuseRequestContext& request,
       const fuse_in_header* header,
       const uint8_t* arg);
   folly::Future<folly::Unit> fuseMknod(
-      RequestData& request,
+      FuseRequestContext& request,
       const fuse_in_header* header,
       const uint8_t* arg);
   folly::Future<folly::Unit> fuseMkdir(
-      RequestData& request,
+      FuseRequestContext& request,
       const fuse_in_header* header,
       const uint8_t* arg);
   folly::Future<folly::Unit> fuseUnlink(
-      RequestData& request,
+      FuseRequestContext& request,
       const fuse_in_header* header,
       const uint8_t* arg);
   folly::Future<folly::Unit> fuseRmdir(
-      RequestData& request,
+      FuseRequestContext& request,
       const fuse_in_header* header,
       const uint8_t* arg);
   folly::Future<folly::Unit> fuseRename(
-      RequestData& request,
+      FuseRequestContext& request,
       const fuse_in_header* header,
       const uint8_t* arg);
   folly::Future<folly::Unit> fuseLink(
-      RequestData& request,
+      FuseRequestContext& request,
       const fuse_in_header* header,
       const uint8_t* arg);
   folly::Future<folly::Unit> fuseOpen(
-      RequestData& request,
+      FuseRequestContext& request,
       const fuse_in_header* header,
       const uint8_t* arg);
   folly::Future<folly::Unit> fuseStatFs(
-      RequestData& request,
+      FuseRequestContext& request,
       const fuse_in_header* header,
       const uint8_t* arg);
   folly::Future<folly::Unit> fuseRelease(
-      RequestData& request,
+      FuseRequestContext& request,
       const fuse_in_header* header,
       const uint8_t* arg);
   folly::Future<folly::Unit> fuseFsync(
-      RequestData& request,
+      FuseRequestContext& request,
       const fuse_in_header* header,
       const uint8_t* arg);
   folly::Future<folly::Unit> fuseSetXAttr(
-      RequestData& request,
+      FuseRequestContext& request,
       const fuse_in_header* header,
       const uint8_t* arg);
   folly::Future<folly::Unit> fuseGetXAttr(
-      RequestData& request,
+      FuseRequestContext& request,
       const fuse_in_header* header,
       const uint8_t* arg);
   folly::Future<folly::Unit> fuseListXAttr(
-      RequestData& request,
+      FuseRequestContext& request,
       const fuse_in_header* header,
       const uint8_t* arg);
   folly::Future<folly::Unit> fuseRemoveXAttr(
-      RequestData& request,
+      FuseRequestContext& request,
       const fuse_in_header* header,
       const uint8_t* arg);
   folly::Future<folly::Unit> fuseFlush(
-      RequestData& request,
+      FuseRequestContext& request,
       const fuse_in_header* header,
       const uint8_t* arg);
   folly::Future<folly::Unit> fuseOpenDir(
-      RequestData& request,
+      FuseRequestContext& request,
       const fuse_in_header* header,
       const uint8_t* arg);
   folly::Future<folly::Unit> fuseReadDir(
-      RequestData& request,
+      FuseRequestContext& request,
       const fuse_in_header* header,
       const uint8_t* arg);
   folly::Future<folly::Unit> fuseReleaseDir(
-      RequestData& request,
+      FuseRequestContext& request,
       const fuse_in_header* header,
       const uint8_t* arg);
   folly::Future<folly::Unit> fuseFsyncDir(
-      RequestData& request,
+      FuseRequestContext& request,
       const fuse_in_header* header,
       const uint8_t* arg);
   folly::Future<folly::Unit> fuseAccess(
-      RequestData& request,
+      FuseRequestContext& request,
       const fuse_in_header* header,
       const uint8_t* arg);
   folly::Future<folly::Unit> fuseCreate(
-      RequestData& request,
+      FuseRequestContext& request,
       const fuse_in_header* header,
       const uint8_t* arg);
   folly::Future<folly::Unit> fuseBmap(
-      RequestData& request,
+      FuseRequestContext& request,
       const fuse_in_header* header,
       const uint8_t* arg);
   folly::Future<folly::Unit> fuseBatchForget(
-      RequestData& request,
+      FuseRequestContext& request,
       const fuse_in_header* header,
       const uint8_t* arg);
 

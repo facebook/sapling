@@ -17,6 +17,8 @@ else()
   file(GLOB INODES_SRCS "*.cpp")
 endif()
 
+list(REMOVE_ITEM INODES_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/RequestContext.cpp)
+
 add_library(
   eden_inodes STATIC
     ${INODES_SRCS}
@@ -54,6 +56,21 @@ else()
       eden_takeover_thrift
   )
 endif()
+
+add_library(
+  eden_request_context STATIC
+  RequestContext.cpp
+)
+
+target_link_libraries(
+  eden_request_context
+  PUBLIC
+    eden_notifications
+    eden_store
+    eden_telemetry
+    eden_utils
+    Folly::folly
+)
 
 add_subdirectory(overlay)
 add_subdirectory(test)

@@ -14,6 +14,7 @@ if(NOT WIN32)
     PUBLIC
       eden_fuse_privhelper
       eden_notifications
+      eden_request_context
       eden_telemetry
       Folly::folly
   )

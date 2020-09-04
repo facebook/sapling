@@ -15,7 +15,7 @@
 #include <type_traits>
 #include "eden/fs/fuse/DirList.h"
 #include "eden/fs/fuse/Dispatcher.h"
-#include "eden/fs/fuse/RequestData.h"
+#include "eden/fs/fuse/FuseRequestContext.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/Synchronized.h"
 #include "eden/fs/utils/SystemError.h"
@@ -33,7 +33,7 @@ namespace {
 constexpr size_t MIN_BUFSIZE = 0x21000;
 
 using Handler = folly::Future<folly::Unit> (FuseChannel::*)(
-    RequestData& request,
+    FuseRequestContext& request,
     const fuse_in_header* header,
     const uint8_t* arg);
 
@@ -1286,7 +1286,7 @@ void FuseChannel::processSession() {
           // This is a shared_ptr because, due to timeouts, the internal request
           // lifetime may not match the FUSE request lifetime, so we capture it
           // in both. I'm sure this could be improved with some cleverness.
-          auto request = std::make_shared<RequestData>(this, *header);
+          auto request = std::make_shared<FuseRequestContext>(this, *header);
           uint64_t requestId;
           {
             // Save a weak reference to this new request context.
@@ -1389,7 +1389,7 @@ void FuseChannel::sessionComplete(folly::Synchronized<State>::LockedPtr state) {
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseRead(
-    RequestData& request,
+    FuseRequestContext& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto read = reinterpret_cast<const fuse_read_in*>(arg);
@@ -1402,7 +1402,7 @@ folly::Future<folly::Unit> FuseChannel::fuseRead(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseWrite(
-    RequestData& request,
+    FuseRequestContext& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto write = reinterpret_cast<const fuse_write_in*>(arg);
@@ -1423,7 +1423,7 @@ folly::Future<folly::Unit> FuseChannel::fuseWrite(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseLookup(
-    RequestData& request,
+    FuseRequestContext& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   PathComponentPiece name{reinterpret_cast<const char*>(arg)};
@@ -1437,7 +1437,7 @@ folly::Future<folly::Unit> FuseChannel::fuseLookup(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseForget(
-    RequestData& request,
+    FuseRequestContext& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   auto forget = reinterpret_cast<const fuse_forget_in*>(arg);
@@ -1449,7 +1449,7 @@ folly::Future<folly::Unit> FuseChannel::fuseForget(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseGetAttr(
-    RequestData& request,
+    FuseRequestContext& request,
     const fuse_in_header* header,
     const uint8_t* /*arg*/) {
   XLOG(DBG7) << "FUSE_GETATTR inode=" << header->nodeid;
@@ -1460,7 +1460,7 @@ folly::Future<folly::Unit> FuseChannel::fuseGetAttr(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseSetAttr(
-    RequestData& request,
+    FuseRequestContext& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto setattr = reinterpret_cast<const fuse_setattr_in*>(arg);
@@ -1472,7 +1472,7 @@ folly::Future<folly::Unit> FuseChannel::fuseSetAttr(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseReadLink(
-    RequestData& request,
+    FuseRequestContext& request,
     const fuse_in_header* header,
     const uint8_t* /*arg*/) {
   XLOG(DBG7) << "FUSE_READLINK inode=" << header->nodeid;
@@ -1488,7 +1488,7 @@ folly::Future<folly::Unit> FuseChannel::fuseReadLink(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseSymlink(
-    RequestData& request,
+    FuseRequestContext& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto nameStr = reinterpret_cast<const char*>(arg);
@@ -1502,7 +1502,7 @@ folly::Future<folly::Unit> FuseChannel::fuseSymlink(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseMknod(
-    RequestData& request,
+    FuseRequestContext& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto nod = reinterpret_cast<const fuse_mknod_in*>(arg);
@@ -1527,7 +1527,7 @@ folly::Future<folly::Unit> FuseChannel::fuseMknod(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseMkdir(
-    RequestData& request,
+    FuseRequestContext& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto dir = reinterpret_cast<const fuse_mkdir_in*>(arg);
@@ -1549,7 +1549,7 @@ folly::Future<folly::Unit> FuseChannel::fuseMkdir(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseUnlink(
-    RequestData& request,
+    FuseRequestContext& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto nameStr = reinterpret_cast<const char*>(arg);
@@ -1562,7 +1562,7 @@ folly::Future<folly::Unit> FuseChannel::fuseUnlink(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseRmdir(
-    RequestData& request,
+    FuseRequestContext& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto nameStr = reinterpret_cast<const char*>(arg);
@@ -1575,7 +1575,7 @@ folly::Future<folly::Unit> FuseChannel::fuseRmdir(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseRename(
-    RequestData& request,
+    FuseRequestContext& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto rename = reinterpret_cast<const fuse_rename_in*>(arg);
@@ -1595,7 +1595,7 @@ folly::Future<folly::Unit> FuseChannel::fuseRename(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseLink(
-    RequestData& request,
+    FuseRequestContext& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto link = reinterpret_cast<const fuse_link_in*>(arg);
@@ -1611,7 +1611,7 @@ folly::Future<folly::Unit> FuseChannel::fuseLink(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseOpen(
-    RequestData& request,
+    FuseRequestContext& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto open = reinterpret_cast<const fuse_open_in*>(arg);
@@ -1626,7 +1626,7 @@ folly::Future<folly::Unit> FuseChannel::fuseOpen(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseStatFs(
-    RequestData& request,
+    FuseRequestContext& request,
     const fuse_in_header* header,
     const uint8_t* /*arg*/) {
   XLOG(DBG7) << "FUSE_STATFS";
@@ -1639,7 +1639,7 @@ folly::Future<folly::Unit> FuseChannel::fuseStatFs(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseRelease(
-    RequestData& request,
+    FuseRequestContext& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   XLOG(DBG7) << "FUSE_RELEASE";
@@ -1650,7 +1650,7 @@ folly::Future<folly::Unit> FuseChannel::fuseRelease(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseFsync(
-    RequestData& request,
+    FuseRequestContext& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto fsync = reinterpret_cast<const fuse_fsync_in*>(arg);
@@ -1666,7 +1666,7 @@ folly::Future<folly::Unit> FuseChannel::fuseFsync(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseSetXAttr(
-    RequestData& request,
+    FuseRequestContext& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto setxattr = reinterpret_cast<const fuse_setxattr_in*>(arg);
@@ -1683,7 +1683,7 @@ folly::Future<folly::Unit> FuseChannel::fuseSetXAttr(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseGetXAttr(
-    RequestData& request,
+    FuseRequestContext& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto getxattr = reinterpret_cast<const fuse_getxattr_in*>(arg);
@@ -1705,7 +1705,7 @@ folly::Future<folly::Unit> FuseChannel::fuseGetXAttr(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseListXAttr(
-    RequestData& request,
+    FuseRequestContext& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto listattr = reinterpret_cast<const fuse_getxattr_in*>(arg);
@@ -1743,7 +1743,7 @@ folly::Future<folly::Unit> FuseChannel::fuseListXAttr(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseRemoveXAttr(
-    RequestData& request,
+    FuseRequestContext& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto nameStr = reinterpret_cast<const char*>(arg);
@@ -1754,7 +1754,7 @@ folly::Future<folly::Unit> FuseChannel::fuseRemoveXAttr(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseFlush(
-    RequestData& request,
+    FuseRequestContext& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto flush = reinterpret_cast<const fuse_flush_in*>(arg);
@@ -1766,7 +1766,7 @@ folly::Future<folly::Unit> FuseChannel::fuseFlush(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseOpenDir(
-    RequestData& request,
+    FuseRequestContext& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto open = reinterpret_cast<const fuse_open_in*>(arg);
@@ -1790,7 +1790,7 @@ folly::Future<folly::Unit> FuseChannel::fuseOpenDir(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseReadDir(
-    RequestData& request,
+    FuseRequestContext& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   auto read = reinterpret_cast<const fuse_read_in*>(arg);
@@ -1805,7 +1805,7 @@ folly::Future<folly::Unit> FuseChannel::fuseReadDir(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseReleaseDir(
-    RequestData& request,
+    FuseRequestContext& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   XLOG(DBG7) << "FUSE_RELEASEDIR";
@@ -1816,7 +1816,7 @@ folly::Future<folly::Unit> FuseChannel::fuseReleaseDir(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseFsyncDir(
-    RequestData& request,
+    FuseRequestContext& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto fsync = reinterpret_cast<const fuse_fsync_in*>(arg);
@@ -1832,7 +1832,7 @@ folly::Future<folly::Unit> FuseChannel::fuseFsyncDir(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseAccess(
-    RequestData& request,
+    FuseRequestContext& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto access = reinterpret_cast<const fuse_access_in*>(arg);
@@ -1842,7 +1842,7 @@ folly::Future<folly::Unit> FuseChannel::fuseAccess(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseCreate(
-    RequestData& request,
+    FuseRequestContext& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto create = reinterpret_cast<const fuse_create_in*>(arg);
@@ -1868,7 +1868,7 @@ folly::Future<folly::Unit> FuseChannel::fuseCreate(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseBmap(
-    RequestData& request,
+    FuseRequestContext& request,
     const fuse_in_header* header,
     const uint8_t* arg) {
   const auto bmap = reinterpret_cast<const fuse_bmap_in*>(arg);
@@ -1883,7 +1883,7 @@ folly::Future<folly::Unit> FuseChannel::fuseBmap(
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseBatchForget(
-    RequestData& /*request*/,
+    FuseRequestContext& /*request*/,
     const fuse_in_header* /*header*/,
     const uint8_t* arg) {
   const auto forgets = reinterpret_cast<const fuse_batch_forget_in*>(arg);

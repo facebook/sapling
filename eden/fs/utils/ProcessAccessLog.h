@@ -8,7 +8,6 @@
 #pragma once
 
 #include <folly/Synchronized.h>
-#include <unistd.h>
 #include <type_traits>
 
 #include "eden/fs/service/gen-cpp2/eden_types.h"
