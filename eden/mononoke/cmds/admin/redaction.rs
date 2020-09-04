@@ -28,7 +28,7 @@ use mercurial_types::{blobs::HgBlobChangeset, HgChangesetId, MPath};
 use mononoke_types::{typed_hash::MononokeId, ContentId, Timestamp};
 use redactedblobstore::SqlRedactedContentStore;
 use slog::{error, info, Logger};
-use std::collections::HashMap;
+use std::collections::HashSet;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
@@ -122,8 +122,8 @@ async fn find_files_with_given_content_id_blobstore_keys<'a>(
     ctx: &'a CoreContext,
     repo: &'a BlobRepo,
     cs: HgBlobChangeset,
-    keys_to_tasks: HashMap<String, String>,
-) -> Result<Vec<(String, MPath, ContentId)>, Error> {
+    keys: HashSet<&String>,
+) -> Result<Vec<(MPath, ContentId)>, Error> {
     let manifest_id = cs.manifestid();
     let mut s = manifest_id
         .list_leaf_entries(ctx.clone(), repo.get_blobstore())
@@ -134,7 +134,7 @@ async fn find_files_with_given_content_id_blobstore_keys<'a>(
         })
         .try_buffer_unordered(100);
 
-    let mut collected_tasks_and_pairs = vec![];
+    let mut paths_and_content_ids = vec![];
     let mut processed_files_count = 0;
     while let Some(key_and_path) = s.next().await {
         let (key, full_path) = key_and_path?;
@@ -143,11 +143,11 @@ async fn find_files_with_given_content_id_blobstore_keys<'a>(
             info!(ctx.logger(), "Processed files: {}", processed_files_count);
         }
 
-        if let Some(task) = keys_to_tasks.get(&key.blobstore_key()) {
-            collected_tasks_and_pairs.push((task.clone(), full_path, key));
+        if keys.contains(&key.blobstore_key()) {
+            paths_and_content_ids.push((full_path, key));
         }
     }
-    Ok(collected_tasks_and_pairs)
+    Ok(paths_and_content_ids)
 }
 
 /// Entrypoint for redaction subcommand handling
@@ -321,9 +321,8 @@ async fn redaction_add<'a, 'b>(
         check_if_content_is_reachable_from_bookmark(
             &ctx,
             &blobrepo,
-            &blobstore_keys,
+            blobstore_keys.iter().collect(),
             main_bookmark,
-            &task,
         )
         .await?;
     }
@@ -362,13 +361,24 @@ fn redaction_list(
                     cloned!(logger);
                     move |(redacted_blobs, hg_cs)| {
                         async move {
-                            find_files_with_given_content_id_blobstore_keys(
+                            let redacted_keys = redacted_blobs.iter().map(|(key, _)| key).collect();
+                            let path_keys = find_files_with_given_content_id_blobstore_keys(
                                 &ctx,
                                 &blobrepo,
                                 hg_cs,
-                                redacted_blobs,
+                                redacted_keys,
                             )
-                            .await
+                            .await?;
+
+                            Ok(path_keys
+                                .into_iter()
+                                .filter_map(move |(path, key)| {
+                                    redacted_blobs
+                                        .get(&key.blobstore_key())
+                                        .cloned()
+                                        .map(|task| (task, path, key))
+                                })
+                                .collect::<Vec<_>>())
                         }
                         .boxed()
                         .compat()
@@ -417,16 +427,9 @@ fn redaction_remove(
 async fn check_if_content_is_reachable_from_bookmark(
     ctx: &CoreContext,
     blobrepo: &BlobRepo,
-    keys_to_redact: &Vec<String>,
+    keys_to_redact: HashSet<&String>,
     main_bookmark: &str,
-    task: &String,
 ) -> Result<(), Error> {
-    let keys_to_tasks = keys_to_redact
-        .clone()
-        .into_iter()
-        .map(|key| (key, task.clone()))
-        .collect();
-
     info!(
         ctx.logger(),
         "Checking if redacted content exist in '{}' bookmark...", main_bookmark
@@ -445,11 +448,11 @@ async fn check_if_content_is_reachable_from_bookmark(
         .await?;
 
     let redacted_files =
-        find_files_with_given_content_id_blobstore_keys(&ctx, &blobrepo, hg_cs, keys_to_tasks)
+        find_files_with_given_content_id_blobstore_keys(&ctx, &blobrepo, hg_cs, keys_to_redact)
             .await?;
     let redacted_files_len = redacted_files.len();
     if redacted_files_len > 0 {
-        for (_, path, content_id) in redacted_files {
+        for (path, content_id) in redacted_files {
             error!(
                 ctx.logger(),
                 "Redacted in {}: {} {}",
