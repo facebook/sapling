@@ -12,7 +12,7 @@ use futures::{future::BoxFuture, FutureExt, TryFutureExt};
 use futures_ext::FutureExt as _;
 use futures_old::Future as _;
 use mononoke_types::{
-    fsnode::{Fsnode, FsnodeEntry},
+    fsnode::{Fsnode, FsnodeEntry, FsnodeFile},
     unode::{ManifestUnode, UnodeEntry},
     ContentId, FileType, FileUnodeId, FsnodeId, MPath, MPathElement, ManifestUnodeId,
 };
@@ -57,7 +57,7 @@ fn convert_unode(unode_entry: &UnodeEntry) -> Entry<ManifestUnodeId, FileUnodeId
 
 impl Manifest for Fsnode {
     type TreeId = FsnodeId;
-    type LeafId = (ContentId, FileType);
+    type LeafId = FsnodeFile;
 
     fn lookup(&self, name: &MPathElement) -> Option<Entry<Self::TreeId, Self::LeafId>> {
         self.lookup(name).map(convert_fsnode)
@@ -72,12 +72,9 @@ impl Manifest for Fsnode {
     }
 }
 
-fn convert_fsnode(fsnode_entry: &FsnodeEntry) -> Entry<FsnodeId, (ContentId, FileType)> {
+fn convert_fsnode(fsnode_entry: &FsnodeEntry) -> Entry<FsnodeId, FsnodeFile> {
     match fsnode_entry {
-        FsnodeEntry::File(fsnode_file) => Entry::Leaf((
-            fsnode_file.content_id().clone(),
-            fsnode_file.file_type().clone(),
-        )),
+        FsnodeEntry::File(fsnode_file) => Entry::Leaf(*fsnode_file),
         FsnodeEntry::Directory(fsnode_directory) => Entry::Tree(fsnode_directory.id().clone()),
     }
 }

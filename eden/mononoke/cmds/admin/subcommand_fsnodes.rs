@@ -95,12 +95,13 @@ async fn subcommand_tree(
     while let Some((path, entry)) = stream.next().await.transpose()? {
         match entry {
             Entry::Tree(..) => {}
-            Entry::Leaf((content_id, file_type)) => {
+            Entry::Leaf(file) => {
                 println!(
-                    "{}\t{}\t{}",
+                    "{}\t{}\t{}\t{}",
                     MPath::display_opt(path.as_ref()),
-                    content_id,
-                    file_type
+                    file.content_id(),
+                    file.file_type(),
+                    file.size(),
                 );
             }
         };

@@ -29,7 +29,8 @@ use futures::stream::{Stream, TryStreamExt};
 use futures::try_join;
 use manifest::{Entry, ManifestOps};
 use mononoke_types::{
-    Blame, ChangesetId, ContentId, FileType, FileUnodeId, FsnodeId, Generation, ManifestUnodeId,
+    fsnode::FsnodeFile, Blame, ChangesetId, FileType, FileUnodeId, FsnodeId, Generation,
+    ManifestUnodeId,
 };
 use reachabilityindex::ReachabilityIndex;
 use skiplist::SkiplistIndex;
@@ -72,7 +73,7 @@ pub struct UnifiedDiff {
     pub is_binary: bool,
 }
 
-type FsnodeResult = Result<Option<Entry<FsnodeId, (ContentId, FileType)>>, MononokeError>;
+type FsnodeResult = Result<Option<Entry<FsnodeId, FsnodeFile>>, MononokeError>;
 type UnodeResult = Result<Option<Entry<ManifestUnodeId, FileUnodeId>>, MononokeError>;
 
 /// A path within a changeset.
@@ -103,7 +104,7 @@ impl ChangesetPathContext {
     fn new_impl(
         changeset: ChangesetContext,
         path: impl Into<MononokePath>,
-        fsnode_entry: Option<Entry<FsnodeId, (ContentId, FileType)>>,
+        fsnode_entry: Option<Entry<FsnodeId, FsnodeFile>>,
     ) -> Self {
         let path = path.into();
         let fsnode_id = if let Some(fsnode_entry) = fsnode_entry {
@@ -164,7 +165,7 @@ impl ChangesetPathContext {
     pub(crate) fn new_with_fsnode_entry(
         changeset: ChangesetContext,
         path: impl Into<MononokePath>,
-        fsnode_entry: Entry<FsnodeId, (ContentId, FileType)>,
+        fsnode_entry: Entry<FsnodeId, FsnodeFile>,
     ) -> Self {
         Self::new_impl(changeset, path, Some(fsnode_entry))
     }
@@ -184,9 +185,7 @@ impl ChangesetPathContext {
         &self.path
     }
 
-    async fn fsnode_id(
-        &self,
-    ) -> Result<Option<Entry<FsnodeId, (ContentId, FileType)>>, MononokeError> {
+    async fn fsnode_id(&self) -> Result<Option<Entry<FsnodeId, FsnodeFile>>, MononokeError> {
         self.fsnode_id.clone().await
     }
 
@@ -219,7 +218,7 @@ impl ChangesetPathContext {
 
     pub async fn file_type(&self) -> Result<Option<FileType>, MononokeError> {
         let file_type = match self.fsnode_id().await? {
-            Some(Entry::Leaf((_content_id, file_type))) => Some(file_type),
+            Some(Entry::Leaf(file)) => Some(*file.file_type()),
             _ => None,
         };
         Ok(file_type)
@@ -239,9 +238,9 @@ impl ChangesetPathContext {
     /// is not a file in this commit.
     pub async fn file(&self) -> Result<Option<FileContext>, MononokeError> {
         let file = match self.fsnode_id().await? {
-            Some(Entry::Leaf((content_id, _file_type))) => Some(FileContext::new(
+            Some(Entry::Leaf(file)) => Some(FileContext::new(
                 self.repo().clone(),
-                FetchKey::Canonical(content_id),
+                FetchKey::Canonical(*file.content_id()),
             )),
             _ => None,
         };
@@ -256,9 +255,9 @@ impl ChangesetPathContext {
             Some(Entry::Tree(fsnode_id)) => {
                 PathEntry::Tree(TreeContext::new(self.repo().clone(), fsnode_id))
             }
-            Some(Entry::Leaf((content_id, file_type))) => PathEntry::File(
-                FileContext::new(self.repo().clone(), FetchKey::Canonical(content_id)),
-                file_type,
+            Some(Entry::Leaf(file)) => PathEntry::File(
+                FileContext::new(self.repo().clone(), FetchKey::Canonical(*file.content_id())),
+                *file.file_type(),
             ),
             _ => PathEntry::NotPresent,
         };

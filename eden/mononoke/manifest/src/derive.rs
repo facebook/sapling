@@ -43,7 +43,25 @@ pub struct LeafInfo<LeafId, Leaf> {
     pub leaf: Option<Leaf>,
 }
 
-pub fn derive_manifest<TreeId, LeafId, Leaf, T, TFut, L, LFut, Ctx, Store>(
+/// Derive a new manifest from parents and a set of changes. The types have to match in the
+/// following way here:
+///
+/// - We'll walk and merge the manifests from the parents. Those must be Manifests where trees are
+/// TreeId and leaves are LeafId.
+/// - We'll create new leaves (for the diff) through create_leaf (which should merge changes), and
+/// new tres through create_tree, which will receive entries consisting of existing trees and tres
+/// merged with new leaves and trees (and should produce a new tree).
+/// - To make this work, create_tree must return the same kind of TreeId as the ones that exist in
+/// the tree currently. That said, this constraint is marginally relaxed for leaves: create_leaf
+/// can return an IntermediateLeafId that must, and that is the also the type that create_tree will
+/// receive for leaves (to make this work, IntermediateLeafId must implement From<LeafId> so that
+/// leaves that are to be reused from the existing tree can be turned into IntermediateLeafId).
+///
+/// Note that for most use cases, IntermediateLeafId and LeafId should probably be the same type.
+/// That said, this distinction can be useful in cases where the leaves aren't actually objects
+/// that exist in the blobstore, and are just contained in trees. This is notably the case with
+/// Fsnodes, where leaves are FsnodeFiles and are actually stored in their parent manifest.
+pub fn derive_manifest<TreeId, LeafId, IntermediateLeafId, Leaf, T, TFut, L, LFut, Ctx, Store>(
     ctx: CoreContext,
     store: Store,
     parents: impl IntoIterator<Item = TreeId>,
@@ -54,13 +72,14 @@ pub fn derive_manifest<TreeId, LeafId, Leaf, T, TFut, L, LFut, Ctx, Store>(
 where
     Store: Sync + Send + Clone + 'static,
     LeafId: Send + Clone + Eq + Hash + fmt::Debug + 'static,
+    IntermediateLeafId: Send + From<LeafId> + 'static,
     TreeId: StoreLoadable<Store> + Send + Clone + Eq + Hash + fmt::Debug + 'static,
     TreeId::Value: Manifest<TreeId = TreeId, LeafId = LeafId>,
-    T: FnMut(TreeInfo<TreeId, LeafId, Ctx>) -> TFut,
+    T: FnMut(TreeInfo<TreeId, IntermediateLeafId, Ctx>) -> TFut,
     TFut: IntoFuture<Item = (Ctx, TreeId), Error = Error>,
     TFut::Future: Send + 'static,
     L: FnMut(LeafInfo<LeafId, Leaf>) -> LFut,
-    LFut: IntoFuture<Item = (Ctx, LeafId), Error = Error>,
+    LFut: IntoFuture<Item = (Ctx, IntermediateLeafId), Error = Error>,
     LFut::Future: Send + 'static,
     Ctx: Send + 'static,
 {
@@ -122,7 +141,18 @@ where
 /// 4. Current path have `Some(leaf)` change associated with it.
 ///   - _: all the trees are removed in favour of this leaf.
 ///
-pub fn derive_manifest_inner<TreeId, LeafId, Leaf, T, TFut, L, LFut, Ctx, Store>(
+pub fn derive_manifest_inner<
+    TreeId,
+    LeafId,
+    IntermediateLeafId,
+    Leaf,
+    T,
+    TFut,
+    L,
+    LFut,
+    Ctx,
+    Store,
+>(
     ctx: CoreContext,
     store: Store,
     event_id: EventId,
@@ -134,13 +164,14 @@ pub fn derive_manifest_inner<TreeId, LeafId, Leaf, T, TFut, L, LFut, Ctx, Store>
 where
     Store: Sync + Send + Clone + 'static,
     LeafId: Send + Clone + Eq + Hash + fmt::Debug + 'static,
+    IntermediateLeafId: Send + From<LeafId> + 'static,
     TreeId: StoreLoadable<Store> + Send + Clone + Eq + Hash + fmt::Debug + 'static,
     TreeId::Value: Manifest<TreeId = TreeId, LeafId = LeafId>,
-    T: FnMut(TreeInfo<TreeId, LeafId, Ctx>) -> TFut,
+    T: FnMut(TreeInfo<TreeId, IntermediateLeafId, Ctx>) -> TFut,
     TFut: IntoFuture<Item = (Ctx, TreeId), Error = Error>,
     TFut::Future: Send + 'static,
     L: FnMut(LeafInfo<LeafId, Leaf>) -> LFut,
-    LFut: IntoFuture<Item = (Ctx, LeafId), Error = Error>,
+    LFut: IntoFuture<Item = (Ctx, IntermediateLeafId), Error = Error>,
     LFut::Future: Send + 'static,
     Ctx: Send + 'static,
 {
@@ -166,7 +197,7 @@ where
             let ctx = ctx.clone();
             move |merge_result, subentries| match merge_result {
                 MergeResult::Reuse { name, entry } => {
-                    future::ok(Some((name, None, entry))).boxify()
+                    future::ok(Some((name, None, convert_to_intermediate_entry(entry)))).boxify()
                 }
                 MergeResult::Delete => future::ok(None).boxify(),
                 MergeResult::CreateTree {
@@ -232,6 +263,18 @@ where
     .map(|result: Option<_>| result.and_then(|(_, _, entry)| entry.into_tree()))
 }
 
+fn convert_to_intermediate_entry<TreeId, LeafId, IntermediateLeafId>(
+    e: Entry<TreeId, LeafId>,
+) -> Entry<TreeId, IntermediateLeafId>
+where
+    IntermediateLeafId: From<LeafId>,
+{
+    match e {
+        Entry::Tree(t) => Entry::Tree(t),
+        Entry::Leaf(l) => Entry::Leaf(l.into()),
+    }
+}
+
 /// A convenience wrapper around `derive_manifest` that allows for the tree and leaf creation
 /// closures to send IO work onto a channel that is then fed into a buffered stream. NOTE: don't
 /// send computationally expensive work as it will block the task.
@@ -240,7 +283,18 @@ where
 ///
 /// `derive_manifest_with_work_sender` guarantees that all work is completed before it returns, but
 /// it does not guarantee the order in which the work is completed.
-pub fn derive_manifest_with_io_sender<TreeId, LeafId, Leaf, T, TFut, L, LFut, Ctx, Store>(
+pub fn derive_manifest_with_io_sender<
+    TreeId,
+    LeafId,
+    IntermediateLeafId,
+    Leaf,
+    T,
+    TFut,
+    L,
+    LFut,
+    Ctx,
+    Store,
+>(
     ctx: CoreContext,
     store: Store,
     parents: impl IntoIterator<Item = TreeId>,
@@ -250,14 +304,18 @@ pub fn derive_manifest_with_io_sender<TreeId, LeafId, Leaf, T, TFut, L, LFut, Ct
 ) -> impl Future<Item = Option<TreeId>, Error = Error>
 where
     LeafId: Send + Clone + Eq + Hash + fmt::Debug + 'static,
+    IntermediateLeafId: Send + From<LeafId> + 'static,
     Store: Sync + Send + Clone + 'static,
     TreeId: StoreLoadable<Store> + Send + Clone + Eq + Hash + fmt::Debug + 'static,
     TreeId::Value: Manifest<TreeId = TreeId, LeafId = LeafId>,
-    T: FnMut(TreeInfo<TreeId, LeafId, Ctx>, mpsc::UnboundedSender<BoxFuture<(), Error>>) -> TFut,
+    T: FnMut(
+        TreeInfo<TreeId, IntermediateLeafId, Ctx>,
+        mpsc::UnboundedSender<BoxFuture<(), Error>>,
+    ) -> TFut,
     TFut: IntoFuture<Item = (Ctx, TreeId), Error = Error>,
     TFut::Future: Send + 'static,
     L: FnMut(LeafInfo<LeafId, Leaf>, mpsc::UnboundedSender<BoxFuture<(), Error>>) -> LFut,
-    LFut: IntoFuture<Item = (Ctx, LeafId), Error = Error>,
+    LFut: IntoFuture<Item = (Ctx, IntermediateLeafId), Error = Error>,
     LFut::Future: Send + 'static,
     Ctx: Send + 'static,
 {

@@ -357,7 +357,7 @@ where
 /// file, either all the parents have the same file contents, or the
 /// changeset includes a change for that file.
 fn check_fsnode_leaf(
-    leaf_info: LeafInfo<(ContentId, FileType), (ContentId, FileType)>,
+    leaf_info: LeafInfo<FsnodeFile, (ContentId, FileType)>,
 ) -> impl Future<Item = (Option<FsnodeSummary>, (ContentId, FileType)), Error = Error> {
     if let Some(content_id_and_file_type) = leaf_info.leaf {
         future::ok((None, content_id_and_file_type))
@@ -374,15 +374,15 @@ fn check_fsnode_leaf(
             );
         }
         let mut iter = leaf_info.parents.clone().into_iter();
-        let content_id_and_file_type = iter.next().and_then(|first_elem| {
+        let fsnode_file = iter.next().and_then(|first_elem| {
             if iter.all(|next_elem| next_elem == first_elem) {
                 Some(first_elem)
             } else {
                 None
             }
         });
-        if let Some(content_id_and_file_type) = content_id_and_file_type {
-            future::ok((None, content_id_and_file_type))
+        if let Some(fsnode_file) = fsnode_file {
+            future::ok((None, fsnode_file.into()))
         } else {
             future::err(
                 ErrorKind::InvalidBonsai(

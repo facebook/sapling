@@ -157,13 +157,19 @@ impl FsnodeEntry {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct FsnodeFile {
     content_id: ContentId,
     file_type: FileType,
     size: u64,
     content_sha1: Sha1,
     content_sha256: Sha256,
+}
+
+impl From<FsnodeFile> for (ContentId, FileType) {
+    fn from(f: FsnodeFile) -> Self {
+        (f.content_id, f.file_type)
+    }
 }
 
 impl FsnodeFile {

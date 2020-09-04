@@ -317,7 +317,8 @@ async fn list_fsnodes(
     fsnode_id
         .list_leaf_entries(ctx.clone(), repo.get_blobstore())
         .compat()
-        .map_ok(|(path, (content_id, ty))| {
+        .map_ok(|(path, fsnode)| {
+            let (content_id, ty): (ContentId, FileType) = fsnode.into();
             let val = (ty, content_id, ManifestType::Fsnodes);
             (path, val)
         })
