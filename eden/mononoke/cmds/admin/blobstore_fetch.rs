@@ -31,7 +31,9 @@ use mercurial_types::{HgChangesetEnvelope, HgFileEnvelope, HgManifestEnvelope};
 use metaconfig_types::{BlobConfig, BlobstoreId, Redaction, ScrubAction, StorageConfig};
 use mononoke_types::{FileContents, RepositoryId};
 use prefixblob::PrefixBlobstore;
-use redactedblobstore::{RedactedBlobstore, RedactedBlobstoreConfig, SqlRedactedContentStore};
+use redactedblobstore::{
+    RedactedBlobstore, RedactedBlobstoreConfig, RedactedMetadata, SqlRedactedContentStore,
+};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::{info, warn, Logger};
 use sql_ext::facebook::MysqlOptions;
@@ -273,7 +275,7 @@ fn get_from_sources<T: Blobstore + Clone>(
     no_prefix: bool,
     key: String,
     ctx: CoreContext,
-    redacted_blobs: Option<HashMap<String, String>>,
+    redacted_blobs: Option<HashMap<String, RedactedMetadata>>,
     scuba_redaction_builder: ScubaSampleBuilder,
     repo_id: RepositoryId,
 ) -> BoxFuture<Option<BlobstoreGetData>, Error> {

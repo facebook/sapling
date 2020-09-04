@@ -18,7 +18,6 @@ use futures_old::{future, future::Either, Future, IntoFuture};
 use mononoke_types::BlobstoreBytes;
 use prefixblob::PrefixBlobstore;
 use redactedblobstore::{config::GET_OPERATION, RedactedBlobstore};
-use slog::debug;
 use stats::prelude::*;
 use std::fmt;
 use std::sync::Arc;
@@ -443,18 +442,7 @@ impl<T: CacheBlobstoreExt + Clone> CacheBlobstoreExt for RedactedBlobstore<T> {
         ctx: CoreContext,
         key: String,
     ) -> BoxFuture01<Option<BlobstoreGetData>, Error> {
-        self.access_blobstore(&key)
-            .map_err({
-                cloned!(ctx, key);
-                move |err| {
-                    debug!(
-                        ctx.logger(),
-                        "Accessing redacted blobstore with key {:?}", key
-                    );
-                    self.to_scuba_redacted_blob_accessed(&ctx, &key, GET_OPERATION);
-                    err
-                }
-            })
+        self.access_blobstore(&ctx, &key, GET_OPERATION)
             .map(move |blobstore| blobstore.get_no_cache_fill(ctx, key))
             .into_future()
             .flatten()
@@ -467,18 +455,7 @@ impl<T: CacheBlobstoreExt + Clone> CacheBlobstoreExt for RedactedBlobstore<T> {
         ctx: CoreContext,
         key: String,
     ) -> BoxFuture01<Option<BlobstoreGetData>, Error> {
-        self.access_blobstore(&key)
-            .map_err({
-                cloned!(ctx, key);
-                move |err| {
-                    debug!(
-                        ctx.logger(),
-                        "Accessing redacted blobstore with key {:?}", key
-                    );
-                    self.to_scuba_redacted_blob_accessed(&ctx, &key, GET_OPERATION);
-                    err
-                }
-            })
+        self.access_blobstore(&ctx, &key, GET_OPERATION)
             .map(move |blobstore| blobstore.get_cache_only(ctx, key))
             .into_future()
             .flatten()

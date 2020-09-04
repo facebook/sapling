@@ -38,6 +38,7 @@ pub const REDACTION: &str = "redaction";
 const REDACTION_ADD: &str = "add";
 const REDACTION_REMOVE: &str = "remove";
 const REDACTION_LIST: &str = "list";
+const ARG_LOG_ONLY: &str = "log-only";
 const ARG_FORCE: &str = "force";
 const ARG_INPUT_FILE: &str = "input-file";
 const ARG_MAIN_BOOKMARK: &str = "main-bookmark";
@@ -74,6 +75,12 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
                         .long(ARG_FORCE)
                         .takes_value(false)
                         .help("by default redaction fails if any of the redacted files is in main-bookmark. This flag overrides it.")
+                )
+                .arg(
+                    Arg::with_name(ARG_LOG_ONLY)
+                        .long(ARG_LOG_ONLY)
+                        .takes_value(false)
+                        .help("redact file in log-only mode. All accesses to this file will be allowed, but they will all be logged")
                 )
         ))
         .subcommand(add_path_parameters(
@@ -313,6 +320,7 @@ async fn redaction_add<'a, 'b>(
         .collect();
 
     let force = sub_m.is_present(ARG_FORCE);
+    let log_only = sub_m.is_present(ARG_LOG_ONLY);
 
     if !force {
         let main_bookmark = sub_m
@@ -329,7 +337,7 @@ async fn redaction_add<'a, 'b>(
 
     let timestamp = Timestamp::now();
     redacted_blobs
-        .insert_redacted_blobs(&blobstore_keys, &task, &timestamp)
+        .insert_redacted_blobs(&blobstore_keys, &task, &timestamp, log_only)
         .compat()
         .await?;
 
@@ -373,10 +381,11 @@ fn redaction_list(
                             Ok(path_keys
                                 .into_iter()
                                 .filter_map(move |(path, key)| {
-                                    redacted_blobs
-                                        .get(&key.blobstore_key())
-                                        .cloned()
-                                        .map(|task| (task, path, key))
+                                    redacted_blobs.get(&key.blobstore_key()).cloned().map(
+                                        |redacted_meta| {
+                                            (redacted_meta.task, path, redacted_meta.log_only)
+                                        },
+                                    )
                                 })
                                 .collect::<Vec<_>>())
                         }
@@ -389,8 +398,13 @@ fn redaction_list(
                                     info!(logger, "No files are redacted at this commit");
                                 } else {
                                     res.sort();
-                                    res.into_iter().for_each(|(task_id, file_path, _)| {
-                                        info!(logger, "{:20}: {}", task_id, file_path);
+                                    res.into_iter().for_each(|(task_id, file_path, log_only)| {
+                                        let log_only_msg =
+                                            if log_only { " (log only)" } else { "" };
+                                        info!(
+                                            logger,
+                                            "{:20}: {}{}", task_id, file_path, log_only_msg
+                                        );
                                     })
                                 }
                             }

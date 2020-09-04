@@ -9,7 +9,9 @@ CREATE TABLE  `censored_contents` (
 	`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`content_key` VARCHAR(255) NOT NULL,
 	`task` VARCHAR(64) NOT NULL,
-	`add_timestamp` BIGINT(20) NOT NULL
+	`add_timestamp` BIGINT(20) NOT NULL,
+	`log_only` BIT DEFAULT NULL,
+	UNIQUE(`content_key`)
 );
 
 CREATE INDEX `content_key`

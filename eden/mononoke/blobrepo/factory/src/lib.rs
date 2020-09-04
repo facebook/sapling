@@ -44,7 +44,7 @@ use mononoke_types::RepositoryId;
 use newfilenodes::NewFilenodesBuilder;
 use phases::SqlPhasesFactory;
 use readonlyblob::ReadOnlyBlobstore;
-use redactedblobstore::SqlRedactedContentStore;
+use redactedblobstore::{RedactedMetadata, SqlRedactedContentStore};
 use repo_blobstore::RepoBlobstoreArgs;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use segmented_changelog::{
@@ -289,7 +289,7 @@ pub async fn open_blobrepo_given_datasources(
 pub struct TestRepoBuilder {
     repo_id: RepositoryId,
     blobstore: Arc<dyn Blobstore>,
-    redacted: Option<HashMap<String, String>>,
+    redacted: Option<HashMap<String, RedactedMetadata>>,
 }
 
 impl TestRepoBuilder {
@@ -306,7 +306,7 @@ impl TestRepoBuilder {
         self
     }
 
-    pub fn redacted(mut self, redacted: Option<HashMap<String, String>>) -> Self {
+    pub fn redacted(mut self, redacted: Option<HashMap<String, RedactedMetadata>>) -> Self {
         self.redacted = redacted;
         self
     }
@@ -501,7 +501,7 @@ async fn new_development(
     fb: FacebookInit,
     sql_factory: &MetadataSqlFactory,
     blobstore: Arc<dyn Blobstore>,
-    redacted_blobs: Option<HashMap<String, String>>,
+    redacted_blobs: Option<HashMap<String, RedactedMetadata>>,
     censored_scuba_params: CensoredScubaParams,
     repoid: RepositoryId,
     filestore_config: FilestoreConfig,
@@ -665,7 +665,7 @@ async fn new_production(
     fb: FacebookInit,
     sql_factory: &MetadataSqlFactory,
     blobstore: Arc<dyn Blobstore>,
-    redacted_blobs: Option<HashMap<String, String>>,
+    redacted_blobs: Option<HashMap<String, RedactedMetadata>>,
     censored_scuba_params: CensoredScubaParams,
     repoid: RepositoryId,
     bookmarks_cache_ttl: Option<Duration>,

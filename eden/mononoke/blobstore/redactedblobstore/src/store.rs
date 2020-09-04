@@ -14,7 +14,6 @@ use sql::{queries, Connection};
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
 use sql_ext::SqlConnections;
 use std::collections::HashMap;
-use std::iter::FromIterator;
 
 #[derive(Clone)]
 pub struct SqlRedactedContentStore {
@@ -25,14 +24,21 @@ pub struct SqlRedactedContentStore {
 queries! {
 
     write InsertRedactedBlobs(
-        values: (content_key: String, task: String, add_timestamp: Timestamp)
+        values: (content_key: String, task: String, add_timestamp: Timestamp, log_only: bool)
     ) {
         none,
-        "INSERT into censored_contents(content_key, task, add_timestamp) VALUES {values}"
+        mysql(
+            "INSERT INTO censored_contents(content_key, task, add_timestamp, log_only) VALUES {values}
+            ON DUPLICATE KEY UPDATE task = VALUES(task), add_timestamp = VALUES(add_timestamp), log_ONLY = VALUES(log_only)
+            "
+        )
+        sqlite(
+            "REPLACE INTO censored_contents(content_key, task, add_timestamp, log_only) VALUES {values}"
+        )
     }
 
-    read GetAllRedactedBlobs() -> (String, String) {
-        "SELECT content_key, task
+    read GetAllRedactedBlobs() -> (String, String, Option<bool>) {
+        "SELECT content_key, task, log_only
         FROM censored_contents"
     }
 
@@ -58,10 +64,27 @@ impl SqlConstruct for SqlRedactedContentStore {
 
 impl SqlConstructFromMetadataDatabaseConfig for SqlRedactedContentStore {}
 
+#[derive(Clone, Debug)]
+pub struct RedactedMetadata {
+    pub task: String,
+    pub log_only: bool,
+}
+
 impl SqlRedactedContentStore {
-    pub fn get_all_redacted_blobs(&self) -> BoxFuture<HashMap<String, String>, Error> {
+    pub fn get_all_redacted_blobs(&self) -> BoxFuture<HashMap<String, RedactedMetadata>, Error> {
         GetAllRedactedBlobs::query(&self.read_connection)
-            .map(HashMap::from_iter)
+            .map(|redacted_blobs| {
+                redacted_blobs
+                    .into_iter()
+                    .map(|(key, task, log_only)| {
+                        let redacted_metadata = RedactedMetadata {
+                            task,
+                            log_only: log_only.unwrap_or(false),
+                        };
+                        (key, redacted_metadata)
+                    })
+                    .collect()
+            })
             .boxify()
     }
 
@@ -70,10 +93,12 @@ impl SqlRedactedContentStore {
         content_keys: &Vec<String>,
         task: &String,
         add_timestamp: &Timestamp,
+        log_only: bool,
     ) -> impl Future<Item = (), Error = Error> {
+        let log_only = &log_only;
         let redacted_inserts: Vec<_> = content_keys
             .iter()
-            .map(move |key| (key, task, add_timestamp))
+            .map(move |key| (key, task, add_timestamp, log_only))
             .collect();
 
         InsertRedactedBlobs::query(&self.write_connection, &redacted_inserts[..])
@@ -109,12 +134,12 @@ mod test {
         let store = SqlRedactedContentStore::with_sqlite_in_memory().unwrap();
 
         store
-            .insert_redacted_blobs(&redacted_keys1, &task1, &Timestamp::now())
+            .insert_redacted_blobs(&redacted_keys1, &task1, &Timestamp::now(), false)
             .compat()
             .await
             .expect("insert failed");
         store
-            .insert_redacted_blobs(&redacted_keys2, &task2, &Timestamp::now())
+            .insert_redacted_blobs(&redacted_keys2, &task2, &Timestamp::now(), true)
             .compat()
             .await
             .expect("insert failed");
@@ -125,6 +150,23 @@ mod test {
             .await
             .expect("select failed");
         assert_eq!(res.len(), 4);
+        assert!(!res.get(&key_a).unwrap().log_only);
+        assert!(!res.get(&key_b).unwrap().log_only);
+        assert!(res.get(&key_c).unwrap().log_only);
+        assert!(res.get(&key_d).unwrap().log_only);
+
+        store
+            .insert_redacted_blobs(&redacted_keys1, &task1, &Timestamp::now(), true)
+            .compat()
+            .await
+            .expect("insert failed");
+        let res = store
+            .get_all_redacted_blobs()
+            .compat()
+            .await
+            .expect("select failed");
+        assert!(res.get(&key_a).unwrap().log_only);
+        assert!(res.get(&key_b).unwrap().log_only);
 
         store
             .delete_redacted_blobs(&redacted_keys1)

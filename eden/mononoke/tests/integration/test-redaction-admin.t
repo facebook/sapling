@@ -160,3 +160,20 @@ List redacted files for a commit without any
   * Listing redacted files for ChangesetId: HgChangesetId(HgNodeHash(Sha1(ac82d8b1f7c418c61a493ed229ffaa981bda8e90))) (glob)
   * Please be patient. (glob)
   * No files are redacted at this commit (glob)
+
+Redact a file in log-only mode
+  $ mononoke_admin redaction add "[TASK]Censor b" 2cc2702dde1d7133c30a1ed763ee82c04befb237 dir/g --log-only --force
+  * using repo "repo" repoid RepositoryId(0) (glob)
+  * changeset resolved as: ChangesetId(Blake2(*)) (glob)
+  $ mononoke_admin redaction list 2cc2702dde1d7133c30a1ed763ee82c04befb237
+  * using repo "repo" repoid RepositoryId(0) (glob)
+  * changeset resolved as: ChangesetId(Blake2(*)) (glob)
+  * Listing redacted files for ChangesetId: HgChangesetId(HgNodeHash(Sha1(*))) (glob)
+  * Please be patient. (glob)
+  * [TASK]Censor b      : b (glob)
+  * [TASK]Censor b      : dir/g (log only) (glob)
+  * [TASK]Censor c      : dir/c (glob)
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" 'SELECT * FROM censored_contents;'
+  1|content.blake2.21c519fe0eb401bc97888f270902935f858d0c5361211f892fd26ed9ce127ff9|[TASK]Censor b|*|0 (glob)
+  2|content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2|[TASK]Censor c|*|0 (glob)
+  6|content.blake2.0991063aafe55b2bcbbfa6b349e76ab5d57a102c89e841abdac8ce3f84d55b8a|[TASK]Censor b|*|1 (glob)

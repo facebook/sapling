@@ -144,11 +144,17 @@ Update redacted blob
   $ cd "$TESTTMP/repo-push"
   $ echo "testcupdate" > c
   $ hg ci -q -m "uncensore c"
+  $ hgmn push -q -r .  --to master_bookmark
 
+  $ echo "log-only" > log_only
+  $ hg add log_only
+  $ hg ci -q -m "log-only"
   $ hgmn push -q -r .  --to master_bookmark
 
   $ tglogpnr
-  @  bbb84cdc8ec0 public 'uncensore c'  default/master_bookmark
+  @  73f850a22540 public 'log-only'  default/master_bookmark
+  |
+  o  bbb84cdc8ec0 public 'uncensore c'
   |
   o  064d994d0240 public 'add censored c'
   |
@@ -158,6 +164,7 @@ Update redacted blob
   
 
   $ hg log -T '{node}\n'
+  73f850a225400422723d433ab3ea194c09c2c8c5
   bbb84cdc8ec039fe71d78a3adb6f5cf244fafb6a
   064d994d0240f9738dba1ef7479f0a4ce8486b05
   14961831bd3af3a6331fef7e63367d61cb6c9f6b
@@ -167,6 +174,9 @@ Censore the redacted blob (file 'c' in commit '064d994d0240f9738dba1ef7479f0a4ce
   $ mononoke_admin redaction add my_task 064d994d0240f9738dba1ef7479f0a4ce8486b05 c --force
   * using repo "repo" repoid RepositoryId(0) (glob)
   * changeset resolved as: * (glob)
+  $ mononoke_admin redaction add my_task_2 73f850a225400422723d433ab3ea194c09c2c8c5 log_only --force --log-only
+  * using repo "repo" repoid RepositoryId(0) (glob)
+  * changeset resolved as: ChangesetId(Blake2(aac5f17ddfcadf26a410f701b860b2a7c7d5c082cec420b816296014660f7fca)) (glob)
 
 Restart mononoke
   $ killandwait $MONONOKE_PID
@@ -256,7 +266,9 @@ As of the time of writing, updating redacted files throws an error - artifact of
   $ hgmn pull -q
 
   $ tglogpnr
-  o  bbb84cdc8ec0 public 'uncensore c'  default/master_bookmark
+  o  73f850a22540 public 'log-only'  default/master_bookmark
+  |
+  o  bbb84cdc8ec0 public 'uncensore c'
   |
   @  064d994d0240 public 'add censored c'
   |
@@ -273,7 +285,9 @@ Expect success (no blob in this commit is redacted)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ tglogpnr
-  @  bbb84cdc8ec0 public 'uncensore c'  default/master_bookmark
+  o  73f850a22540 public 'log-only'  default/master_bookmark
+  |
+  @  bbb84cdc8ec0 public 'uncensore c'
   |
   o  064d994d0240 public 'add censored c'
   |
@@ -297,7 +311,9 @@ Test rebasing local commit on top of master_bookmark, when base commit contains 
 
   $ hgmn pull -q
   $ tglogpnr
-  o  bbb84cdc8ec0 public 'uncensore c'  default/master_bookmark
+  o  73f850a22540 public 'log-only'  default/master_bookmark
+  |
+  o  bbb84cdc8ec0 public 'uncensore c'
   |
   | @  c6e4e7cae299 draft 'update a'
   |/
@@ -315,7 +331,9 @@ Should be successful
   $ tglogpnr
   @  d967612e0cc1 draft 'update a'
   |
-  o  bbb84cdc8ec0 public 'uncensore c'  default/master_bookmark
+  | o  73f850a22540 public 'log-only'  default/master_bookmark
+  |/
+  o  bbb84cdc8ec0 public 'uncensore c'
   |
   o  064d994d0240 public 'add censored c'
   |
@@ -330,7 +348,9 @@ Should be successful
   $ tglogpnr
   o  d967612e0cc1 draft 'update a'
   |
-  o  bbb84cdc8ec0 public 'uncensore c'  default/master_bookmark
+  | o  73f850a22540 public 'log-only'  default/master_bookmark
+  |/
+  o  bbb84cdc8ec0 public 'uncensore c'
   |
   @  064d994d0240 public 'add censored c'
   |
@@ -345,7 +365,9 @@ Updating from a commit that contains a redacted file to another commit should su
   $ tglogpnr
   o  d967612e0cc1 draft 'update a'
   |
-  @  bbb84cdc8ec0 public 'uncensore c'  default/master_bookmark
+  | o  73f850a22540 public 'log-only'  default/master_bookmark
+  |/
+  @  bbb84cdc8ec0 public 'uncensore c'
   |
   o  064d994d0240 public 'add censored c'
   |
@@ -372,8 +394,14 @@ Updating to a commit with censored files works in getpackv2 repo
   $ cat c
   This version of the file is redacted and you are not allowed to access it. Update or rebase to a newer commit.
 
+Update to log_only commit
+  $ hgmn up -q 73f850a225400422723d433ab3ea194c09c2c8c5
+  $ cat log_only
+  log-only
+
 Check logging
   $ cat "$TESTTMP/censored_scuba.json"
   {"int":{"time":*},"normal":{"key":"content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2","operation":"GET","session_uuid":"*","unix_username":"None"}} (glob)
   {"int":{"time":*},"normal":{"key":"content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2","operation":"GET","session_uuid":"*","unix_username":"None"}} (glob)
   {"int":{"time":*},"normal":{"key":"content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2","operation":"GET","session_uuid":"*","unix_username":"None"}} (glob)
+  {"int":{"time":*},"normal":{"key":"content.blake2.8e86b59a7708c54ab97f95db4a39e27886e5d3775c24a7d0d8106f82b3d38d49","operation":"GET","session_uuid":"*","unix_username":"None"}} (glob)

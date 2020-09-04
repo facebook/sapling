@@ -129,6 +129,7 @@ mod test {
     use maplit::hashmap;
     use mononoke_types::typed_hash::MononokeId;
     use mononoke_types_mocks::contentid::ONES_CTID;
+    use redactedblobstore::RedactedMetadata;
 
     #[fbinit::compat_test]
     async fn test_redacted_fetch(fb: FacebookInit) -> Result<(), Error> {
@@ -137,7 +138,10 @@ mod test {
 
         let repo = TestRepoBuilder::new()
             .redacted(Some(
-                hashmap! { content_id.blobstore_key() => reason.to_string() },
+                hashmap! { content_id.blobstore_key() => RedactedMetadata {
+                   task: reason.to_string(),
+                   log_only: false,
+                }},
             ))
             .build()?;
 

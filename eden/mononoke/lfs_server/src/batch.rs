@@ -568,6 +568,7 @@ mod test {
     use futures_old::stream as stream_old;
     use hyper::Uri;
     use mononoke_types_mocks::hash::ONES_SHA256;
+    use redactedblobstore::RedactedMetadata;
     use std::sync::Arc;
 
     use lfs_protocol::Sha256 as LfsSha256;
@@ -833,7 +834,10 @@ mod test {
         // into it, which has the data (but now it is redacted)!
         let repo = TestRepoBuilder::new()
             .redacted(Some(
-                hashmap! { meta.content_id.blobstore_key() => "test".to_string() },
+                hashmap! { meta.content_id.blobstore_key() => RedactedMetadata {
+                   task: "test".to_string(),
+                   log_only: false,
+                }},
             ))
             .build()?
             .dangerous_override(|_: Arc<dyn Blobstore>| stub_blobstore);

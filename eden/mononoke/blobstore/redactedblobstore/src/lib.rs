@@ -17,7 +17,6 @@ use slog::debug;
 use std::collections::HashMap;
 mod errors;
 pub use crate::errors::ErrorKind;
-use cloned::cloned;
 use std::{
     ops::Deref,
     sync::{
@@ -26,7 +25,7 @@ use std::{
     },
 };
 mod store;
-pub use crate::store::SqlRedactedContentStore;
+pub use crate::store::{RedactedMetadata, SqlRedactedContentStore};
 
 pub mod config {
     pub const GET_OPERATION: &str = "GET";
@@ -36,7 +35,7 @@ pub mod config {
 
 #[derive(Debug, Clone)]
 pub struct RedactedBlobstoreConfigInner {
-    redacted: Option<HashMap<String, String>>,
+    redacted: Option<HashMap<String, RedactedMetadata>>,
     scuba_builder: ScubaSampleBuilder,
 }
 
@@ -55,7 +54,7 @@ impl Deref for RedactedBlobstoreConfig {
 
 impl RedactedBlobstoreConfig {
     pub fn new(
-        redacted: Option<HashMap<String, String>>,
+        redacted: Option<HashMap<String, RedactedMetadata>>,
         scuba_builder: ScubaSampleBuilder,
     ) -> Self {
         Self {
@@ -117,10 +116,25 @@ impl<T: Blobstore + Clone> RedactedBlobstoreInner<T> {
     }
 
     // Checks for access to this key, then yields the blobstore if access is allowed.
-    pub fn access_blobstore(&self, key: &str) -> Result<&T, Error> {
+    pub fn access_blobstore(
+        &self,
+        ctx: &CoreContext,
+        key: &str,
+        operation: &'static str,
+    ) -> Result<&T, Error> {
         match &self.config.redacted {
-            Some(redacted) => redacted.get(key).map_or(Ok(&self.blobstore), |task| {
-                Err(ErrorKind::Censored(key.to_string(), task.to_string()).into())
+            Some(redacted) => redacted.get(key).map_or(Ok(&self.blobstore), |metadata| {
+                debug!(
+                    ctx.logger(),
+                    "{} operation with redacted blobstore with key {:?}", operation, key
+                );
+                self.to_scuba_redacted_blob_accessed(&ctx, &key, operation);
+
+                if metadata.log_only {
+                    Ok(&self.blobstore)
+                } else {
+                    Err(ErrorKind::Censored(key.to_string(), metadata.task.to_string()).into())
+                }
             }),
             None => Ok(&self.blobstore),
         }
@@ -163,18 +177,7 @@ impl<T: Blobstore + Clone> Blobstore for RedactedBlobstoreInner<T> {
         key: String,
     ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
         let get = self
-            .access_blobstore(&key)
-            .map_err({
-                cloned!(ctx, key);
-                move |err| {
-                    debug!(
-                        ctx.logger(),
-                        "Accessing redacted blobstore with key {:?}", key
-                    );
-                    self.to_scuba_redacted_blob_accessed(&ctx, &key, config::GET_OPERATION);
-                    err
-                }
-            })
+            .access_blobstore(&ctx, &key, config::GET_OPERATION)
             .map(move |blobstore| blobstore.get(ctx, key));
         async move { get?.await }.boxed()
     }
@@ -186,19 +189,7 @@ impl<T: Blobstore + Clone> Blobstore for RedactedBlobstoreInner<T> {
         value: BlobstoreBytes,
     ) -> BoxFuture<'static, Result<(), Error>> {
         let put = self
-            .access_blobstore(&key)
-            .map_err({
-                cloned!(ctx, key);
-                move |err| {
-                    debug!(
-                        ctx.logger(),
-                        "Updating redacted blobstore with key {:?}", key
-                    );
-
-                    self.to_scuba_redacted_blob_accessed(&ctx, &key, config::PUT_OPERATION);
-                    err
-                }
-            })
+            .access_blobstore(&ctx, &key, config::PUT_OPERATION)
             .map(move |blobstore| blobstore.put(ctx, key, value));
         async move { put?.await }.boxed()
     }
@@ -275,7 +266,10 @@ mod test {
 
         let inner = EagerMemblob::new();
         let redacted_pairs = hashmap! {
-            redacted_key.clone() => redacted_task.clone(),
+            redacted_key.clone() => RedactedMetadata {
+                task: redacted_task.clone(),
+                log_only: false,
+            },
         };
 
         let blob = RedactedBlobstore::new(
@@ -318,5 +312,36 @@ mod test {
         // Test accessing a key which exists and is accesible
         let res = blob.get(ctx.clone(), unredacted_key.clone()).await;
         assert!(res.is_ok(), "the key should be found and available");
+    }
+
+    #[fbinit::compat_test]
+    async fn test_log_only_redacted_key(fb: FacebookInit) -> Result<(), Error> {
+        let redacted_log_only_key = "bar".to_string();
+        let redacted_task = "bar task".to_string();
+
+        let ctx = CoreContext::test_mock(fb);
+
+        let inner = EagerMemblob::new();
+        let redacted_pairs = hashmap! {
+            redacted_log_only_key.clone() => RedactedMetadata {
+                task: redacted_task.clone(),
+                log_only: true,
+            },
+        };
+
+        let blob = RedactedBlobstore::new(
+            PrefixBlobstore::new(inner, "prefix"),
+            RedactedBlobstoreConfig::new(Some(redacted_pairs), ScubaSampleBuilder::with_discard()),
+        );
+
+        // Since this is a log-only mode it should succeed
+        let val = BlobstoreBytes::from_bytes("test bar");
+        blob.put(ctx.clone(), redacted_log_only_key.clone(), val.clone())
+            .await?;
+
+        let actual = blob.get(ctx.clone(), redacted_log_only_key.clone()).await?;
+        assert_eq!(Some(val), actual.map(|val| val.into_bytes()));
+
+        Ok(())
     }
 }

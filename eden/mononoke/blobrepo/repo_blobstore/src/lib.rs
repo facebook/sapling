@@ -11,7 +11,7 @@ use context::CoreContext;
 use futures::future::BoxFuture;
 use mononoke_types::{BlobstoreBytes, RepositoryId};
 use prefixblob::PrefixBlobstore;
-use redactedblobstore::{RedactedBlobstore, RedactedBlobstoreConfig};
+use redactedblobstore::{RedactedBlobstore, RedactedBlobstoreConfig, RedactedMetadata};
 use scuba_ext::ScubaSampleBuilder;
 use std::collections::HashMap;
 use std::ops::Deref;
@@ -90,7 +90,7 @@ pub struct RepoBlobstoreArgs {
 impl RepoBlobstoreArgs {
     pub fn new<T: Blobstore + Clone>(
         blobstore: T,
-        redacted_blobs: Option<HashMap<String, String>>,
+        redacted_blobs: Option<HashMap<String, RedactedMetadata>>,
         repoid: RepositoryId,
         scuba_builder: ScubaSampleBuilder,
     ) -> Self {

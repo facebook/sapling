@@ -35,6 +35,7 @@ EPHEMERAL_DB_ALLOWLIST = {
     "test-mononoke-hg-sync-job-generate-bundles-loop.t",
     "test-blobstore-healer.t",
     "test-infinitepush-mutation.t",
+    "test-redaction-sql.t",
 }
 
 # At this time, all tests support the network void script (except when
