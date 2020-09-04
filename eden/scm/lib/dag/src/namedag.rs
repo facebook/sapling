@@ -98,7 +98,7 @@ impl NameDag {
     pub fn open(path: impl AsRef<Path>) -> Result<Self> {
         let path = path.as_ref();
         let opts = multi::OpenOptions::from_name_opts(vec![
-            ("idmap", IdMap::log_open_options()),
+            ("idmap2", IdMap::log_open_options()),
             ("iddag", IndexedLogStore::log_open_options()),
         ]);
         let mut mlog = opts.open(path)?;

@@ -15,13 +15,13 @@ use crate::id::{Group, Id, VertexName};
 use crate::ops::IdConvert;
 use crate::ops::PrefixLookup;
 use crate::Result;
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{BigEndian, ReadBytesExt};
 use fs2::FileExt;
 use indexedlog::log;
 use std::collections::{BTreeMap, HashMap};
 use std::fmt;
 use std::fs::{self, File};
-use std::io::{Cursor, Read, Write};
+use std::io::{Cursor, Read};
 use std::ops::{Deref, DerefMut};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{self, AtomicU64};
@@ -58,12 +58,15 @@ pub struct SyncableIdMap<'a> {
 
 impl IdMap {
     const INDEX_ID_TO_NAME: usize = 0;
-    const INDEX_NAME_TO_ID: usize = 1;
+    const INDEX_GROUP_NAME_TO_ID: usize = 1;
 
     /// Magic bytes in `Log` that indicates "remove all non-master id->name
     /// mappings". A valid entry has at least 8 bytes so does not conflict
     /// with this.
     const MAGIC_CLEAR_NON_MASTER: &'static [u8] = b"CLRNM";
+
+    /// Start offset in an entry for "name".
+    const NAME_OFFSET: usize = 8 + Group::BYTES;
 
     /// Create an [`IdMap`] backed by the given directory.
     ///
@@ -113,11 +116,17 @@ impl IdMap {
                     vec![log::IndexOutput::Reference(0..8)]
                 }
             })
-            .index("name", |data| {
+            .index("group-name", |data| {
                 if data.len() >= 8 {
-                    vec![log::IndexOutput::Reference(8..data.len() as u64)]
+                    vec![log::IndexOutput::Reference(8..(data.len() as u64))]
                 } else {
-                    Vec::new()
+                    if data == Self::MAGIC_CLEAR_NON_MASTER {
+                        vec![log::IndexOutput::RemovePrefix(Box::new([
+                            Group::NON_MASTER.0 as u8,
+                        ]))]
+                    } else {
+                        panic!("bug: invalid segment {:?}", &data);
+                    }
                 }
             })
             .flush_filter(Some(|_, _| {
@@ -173,15 +182,14 @@ impl IdMap {
 
     /// Find name by a specified integer id.
     pub fn find_name_by_id(&self, id: Id) -> Result<Option<&[u8]>> {
-        let mut key = Vec::with_capacity(8);
-        key.write_u64::<BigEndian>(id.0).unwrap();
-        let key = self.log.lookup(Self::INDEX_ID_TO_NAME, key)?.nth(0);
+        let key = id.0.to_be_bytes();
+        let key = self.log.lookup(Self::INDEX_ID_TO_NAME, &key)?.nth(0);
         match key {
             Some(Ok(entry)) => {
                 if entry.len() < 8 {
                     return bug("index key should have 8 bytes at least");
                 }
-                Ok(Some(&entry[8..]))
+                Ok(Some(&entry[Self::NAME_OFFSET..]))
             }
             None => Ok(None),
             Some(Err(err)) => Err(err.into()),
@@ -196,27 +204,27 @@ impl IdMap {
 
     /// Find the integer id matching the given name.
     pub fn find_id_by_name(&self, name: &[u8]) -> Result<Option<Id>> {
-        let key = self.log.lookup(Self::INDEX_NAME_TO_ID, name)?.nth(0);
-        match key {
-            Some(Ok(mut entry)) => {
-                if entry.len() < 8 {
-                    return bug("index key should have 8 bytes at least");
+        for group in Group::ALL.iter() {
+            let mut group_name = Vec::with_capacity(Group::BYTES + name.len());
+            group_name.extend_from_slice(&group.bytes());
+            group_name.extend_from_slice(name);
+            let key = self
+                .log
+                .lookup(Self::INDEX_GROUP_NAME_TO_ID, group_name)?
+                .nth(0);
+            match key {
+                Some(Ok(mut entry)) => {
+                    if entry.len() < 8 {
+                        return bug("index key should have 8 bytes at least");
+                    }
+                    let id = Id(entry.read_u64::<BigEndian>().unwrap());
+                    return Ok(Some(id));
                 }
-                let id = Id(entry.read_u64::<BigEndian>().unwrap());
-                // Double check. Id should <= next_free_id. This is useful for 'remove_non_master'
-                // and re-insert ids.
-                // This is because 'remove_non_master' only removes the id->name index, not
-                // the name->id index.
-                let group = id.group();
-                if group != Group::MASTER && self.next_free_id(group)? <= id {
-                    Ok(None)
-                } else {
-                    Ok(Some(id))
-                }
+                None => (),
+                Some(Err(err)) => return Err(err.into()),
             }
-            None => Ok(None),
-            Some(Err(err)) => Err(err.into()),
         }
+        Ok(None)
     }
 
     /// Similar to `find_name_by_id`, but returns None if group > `max_group`.
@@ -273,9 +281,10 @@ impl IdMap {
             self.need_rebuild_non_master = true;
         }
 
-        let mut data = Vec::with_capacity(8 + name.len());
-        data.write_u64::<BigEndian>(id.0).unwrap();
-        data.write_all(name).unwrap();
+        let mut data = Vec::with_capacity(8 + Group::BYTES + name.len());
+        data.extend_from_slice(&id.0.to_be_bytes());
+        data.extend_from_slice(&id.group().bytes());
+        data.extend_from_slice(&name);
         self.log.append(data)?;
         let next_free_id = self.cached_next_free_ids[group.0].get_mut();
         if id.0 >= *next_free_id {
@@ -299,15 +308,26 @@ impl IdMap {
 
     /// Lookup names by hex prefix.
     fn find_names_by_hex_prefix(&self, hex_prefix: &[u8], limit: usize) -> Result<Vec<VertexName>> {
-        self.log
-            .lookup_prefix_hex(Self::INDEX_NAME_TO_ID, hex_prefix)?
-            .take(limit)
-            .map(|entry| {
+        let mut result = Vec::with_capacity(limit);
+        for group in Group::ALL.iter().rev() {
+            let mut prefix = Vec::with_capacity(Group::BYTES * 2 + hex_prefix.len());
+            prefix.extend_from_slice(&group.hex_bytes());
+            prefix.extend_from_slice(hex_prefix);
+            for entry in self
+                .log
+                .lookup_prefix_hex(Self::INDEX_GROUP_NAME_TO_ID, prefix)?
+            {
                 let (k, _v) = entry?;
-                let vertex = self.log.slice_to_bytes(&k);
-                Ok(VertexName(vertex))
-            })
-            .collect::<Result<_>>()
+                let vertex = VertexName(self.log.slice_to_bytes(&k[Group::BYTES..]));
+                if !result.contains(&vertex) {
+                    result.push(vertex);
+                }
+                if result.len() >= limit {
+                    return Ok(result);
+                }
+            }
+        }
+        Ok(result)
     }
 
     // Find an unused id that is bigger than existing ids.
@@ -645,6 +665,7 @@ impl fmt::Debug for IdMap {
         for data in self.log.iter() {
             if let Ok(mut data) = data {
                 let id = data.read_u64::<BigEndian>().unwrap();
+                let _group = data.read_u8().unwrap();
                 let mut name = Vec::with_capacity(20);
                 data.read_to_end(&mut name).unwrap();
                 let name = if name.len() >= 20 {

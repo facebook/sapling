@@ -784,25 +784,27 @@ fn test_namedag_reassign_non_master() {
     // Prompt C to master. Triggers non-master reassignment.
     t.drawdag("", &["C"]);
 
-    // BUG: Z disappeared!
+    // Z still exists.
     assert_eq!(
         t.render_graph(),
         r#"
-            E  N1
+            Z  N2
             │
-            D  N0
-            │
-            C  2
-            │
+            │ E  N1
+            │ │
+            │ D  N0
+            │ │
+            │ C  2
+            ├─╯
             B  1
             │
             A  0"#
     );
 
-    // BUG: Z is shadowed by E.
+    // Z can round-trip in IdMap.
     let z_id = t.dag.vertex_id("Z".into()).unwrap();
     let z_vertex = t.dag.vertex_name(z_id).unwrap();
-    assert_eq!(format!("{:?}", z_vertex), "E");
+    assert_eq!(format!("{:?}", z_vertex), "Z");
 }
 
 #[test]

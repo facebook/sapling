@@ -131,6 +131,7 @@ impl Group {
 
     // 1 byte for Group so it's easier to remove everything in a group.
     pub(crate) const BITS: u32 = 8;
+    pub(crate) const BYTES: usize = 1;
 
     /// The first [`Id`] in this group.
     pub const fn min_id(self) -> Id {
@@ -147,6 +148,20 @@ impl Group {
         Span {
             low: self.min_id(),
             high: self.max_id(),
+        }
+    }
+
+    /// Convert to array.
+    pub const fn bytes(self) -> [u8; 1] {
+        [self.0 as u8]
+    }
+
+    /// Convert to hex array.
+    pub fn hex_bytes(self) -> [u8; 2] {
+        if self.0 < 10 {
+            [b'0', b'0' + (self.0 as u8)]
+        } else {
+            unreachable!()
         }
     }
 }

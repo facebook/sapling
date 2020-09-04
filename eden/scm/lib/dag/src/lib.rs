@@ -6,6 +6,7 @@
  */
 
 #![allow(dead_code)]
+#![allow(clippy::iter_nth_zero)]
 
 //! # dag
 //!
