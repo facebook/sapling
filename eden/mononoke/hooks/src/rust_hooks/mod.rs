@@ -12,6 +12,8 @@ mod block_empty_commit;
 mod check_nocommit;
 mod conflict_markers;
 mod limit_commit_message_length;
+pub(crate) mod limit_commitsize;
+pub(crate) mod limit_filesize;
 mod limit_path_length;
 pub(crate) mod no_bad_filenames;
 mod no_insecure_filenames;
@@ -36,7 +38,12 @@ pub fn hook_name_to_changeset_hook(
         }
         "block_empty_commit" => Some(Box::new(block_empty_commit::BlockEmptyCommit::new())),
         "limit_commit_message_length" => Some(Box::new(
-            limit_commit_message_length::LimitCommitMessageLength::new(&config)?,
+            limit_commit_message_length::LimitCommitMessageLength::new(config)?,
+        )),
+        "limit_commitsize" => Some(Box::new(
+            limit_commitsize::LimitCommitsize::builder()
+                .set_from_config(config)
+                .build()?,
         )),
         _ => None,
     })
@@ -47,10 +54,15 @@ pub fn hook_name_to_file_hook(
     config: &HookConfig,
 ) -> Result<Option<Box<dyn FileHook>>> {
     Ok(match name {
-        "check_nocommit" => Some(Box::new(check_nocommit::CheckNocommitHook::new(&config)?)),
+        "check_nocommit" => Some(Box::new(check_nocommit::CheckNocommitHook::new(config)?)),
         "conflict_markers" => Some(Box::new(conflict_markers::ConflictMarkers::new())),
+        "limit_filesize" => Some(Box::new(
+            limit_filesize::LimitFilesize::builder()
+                .set_from_config(config)
+                .build()?,
+        )),
         "limit_path_length" => Some(Box::new(limit_path_length::LimitPathLengthHook::new(
-            &config,
+            config,
         )?)),
         "no_bad_filenames" => Some(Box::new(
             no_bad_filenames::NoBadFilenames::builder()
