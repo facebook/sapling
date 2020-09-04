@@ -935,6 +935,11 @@ py_class!(pub class contentstore |py| {
         let store = self.store(py);
         store.metadata_py(py, name, node)
     }
+
+    def getloggedfetches(&self) -> PyResult<Vec<PyPathBuf>> {
+        let store = self.store(py);
+        Ok(store.get_logged_fetches().into_iter().map(|p| p.into()).collect::<Vec<PyPathBuf>>())
+    }
 });
 
 impl ExtractInnerRef for contentstore {

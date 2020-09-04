@@ -555,6 +555,8 @@ class remotefileslog(filelog.fileslog):
         additions."""
         if self.contentstore:
             self.contentstore.flush()
+            self.logfetches()
+
         if self.metadatastore:
             self.metadatastore.flush()
         self.commitsharedpacks()
@@ -562,6 +564,21 @@ class remotefileslog(filelog.fileslog):
     def abortpending(self):
         """Used in alternative filelog implementations to throw out pending
         additions."""
+        self.logfetches()
         self.contentstore = None
         self.metadatastore = None
         self._memcachestore = None
+
+    def logfetches(self):
+        if self.contentstore:
+            fetched = self.contentstore.getloggedfetches()
+            if fetched:
+                ui = self.repo.ui
+                for path in fetched:
+                    ui.log(
+                        "undesired_file_fetches",
+                        "",
+                        filename=path,
+                        reponame=self.repo.name,
+                    )
+                ui.metrics.gauge("undesiredfilefetches", len(fetched))

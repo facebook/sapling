@@ -6,6 +6,7 @@
  */
 
 use std::{
+    collections::HashSet,
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -19,7 +20,7 @@ use configparser::{
     config::ConfigSet,
     hg::{ByteCount, ConfigSetHgExt},
 };
-use types::Key;
+use types::{Key, RepoPathBuf};
 
 use crate::{
     datastore::{
@@ -74,6 +75,14 @@ impl ContentStore {
             Ok(Some(bytes))
         } else {
             Ok(None)
+        }
+    }
+
+    pub fn get_logged_fetches(&self) -> HashSet<RepoPathBuf> {
+        if let Some(remote_store) = &self.remote_store {
+            remote_store.take_seen()
+        } else {
+            HashSet::new()
         }
     }
 }
