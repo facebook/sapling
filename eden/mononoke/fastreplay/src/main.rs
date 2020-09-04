@@ -28,7 +28,7 @@ use futures_stats::TimedFutureExt;
 use hgproto::HgCommands;
 use hooks::HookManager;
 use hooks_content_stores::InMemoryFileContentFetcher;
-use metaconfig_types::{BlobConfig, HookManagerParams};
+use metaconfig_types::{BlobConfig, CensoredScubaParams, HookManagerParams};
 use mononoke_types::Timestamp;
 use nonzero_ext::nonzero;
 use rand::{thread_rng, Rng};
@@ -311,7 +311,11 @@ async fn bootstrap_repositories<'a>(
                 config,
                 mysql_options,
                 caching,
-                None, // Don't report censored blob access
+                // Don't report censored blob access
+                CensoredScubaParams {
+                    table: None,
+                    local_path: None,
+                },
                 readonly_storage,
                 blobstore_options.clone(),
                 false, // Don't record infinitepush writes

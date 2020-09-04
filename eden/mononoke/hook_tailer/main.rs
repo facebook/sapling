@@ -127,7 +127,7 @@ async fn run_hook_tailer<'a>(
         &config,
         cmdlib::args::parse_mysql_options(&matches),
         caching,
-        common_config.scuba_censored_table,
+        common_config.censored_scuba_params,
         readonly_storage,
         cmdlib::args::parse_blobstore_options(&matches),
         &logger,

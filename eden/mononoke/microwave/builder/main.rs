@@ -83,7 +83,7 @@ async fn do_main<'a>(
     let caching = cmdlib::args::init_cachelib(fb, &matches, None);
 
     let RepoConfigs { repos, common } = args::load_repo_configs(fb, &matches)?;
-    let scuba_censored_table = common.scuba_censored_table;
+    let censored_scuba_params = common.censored_scuba_params;
 
     let location = match matches.subcommand() {
         (SUBCOMMAND_LOCAL_PATH, Some(sub)) => {
@@ -98,7 +98,7 @@ async fn do_main<'a>(
     let futs = repos
         .into_iter()
         .map(|(name, config)| {
-            cloned!(blobstore_options, scuba_censored_table, mut scuba);
+            cloned!(blobstore_options, censored_scuba_params, mut scuba);
 
             async move {
                 let logger = logger.new(o!("repo" => name.clone()));
@@ -120,7 +120,7 @@ async fn do_main<'a>(
                         &config,
                         mysql_options,
                         caching,
-                        scuba_censored_table,
+                        censored_scuba_params,
                         readonly_storage,
                         blobstore_options,
                         &logger,

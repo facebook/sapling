@@ -58,7 +58,7 @@ pub async fn create_repo_listeners(
         mysql_options,
         caching,
         disabled_hooks,
-        common_config.scuba_censored_table.clone(),
+        common_config.censored_scuba_params.clone(),
         readonly_storage,
         blobstore_options,
         &root_log,

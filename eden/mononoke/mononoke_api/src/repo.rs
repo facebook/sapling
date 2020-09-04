@@ -178,7 +178,7 @@ impl Repo {
             &config,
             mysql_options,
             with_cachelib,
-            common_config.scuba_censored_table,
+            common_config.censored_scuba_params,
             readonly_storage,
             blobstore_options,
             &logger,

@@ -20,8 +20,8 @@ use crate::errors::ConfigurationError;
 use anyhow::{anyhow, Result};
 use fbinit::FacebookInit;
 use metaconfig_types::{
-    AllowlistEntry, CommitSyncConfig, CommonConfig, HgsqlGlobalrevsName, HgsqlName, Redaction,
-    RepoConfig, RepoReadOnly, StorageConfig,
+    AllowlistEntry, CensoredScubaParams, CommitSyncConfig, CommonConfig, HgsqlGlobalrevsName,
+    HgsqlName, Redaction, RepoConfig, RepoReadOnly, StorageConfig,
 };
 use mononoke_types::RepositoryId;
 use repos::{
@@ -157,11 +157,16 @@ fn parse_common_config(common: RawCommonConfig) -> Result<CommonConfig> {
         .loadlimiter_category
         .filter(|category| !category.is_empty());
     let scuba_censored_table = common.scuba_censored_table;
+    let scuba_censored_local_path = common.scuba_local_path_censored;
 
+    let censored_scuba_params = CensoredScubaParams {
+        table: scuba_censored_table,
+        local_path: scuba_censored_local_path,
+    };
     Ok(CommonConfig {
         security_config,
         loadlimiter_category,
-        scuba_censored_table,
+        censored_scuba_params,
     })
 }
 
@@ -997,6 +1002,8 @@ mod test {
         "#;
         let common_content = r#"
             loadlimiter_category="test-category"
+            scuba_censored_table="censored_table"
+            scuba_local_path_censored="censored_local_path"
 
             [[whitelist_entry]]
             tier = "tier1"
@@ -1282,7 +1289,10 @@ mod test {
                     },
                 ],
                 loadlimiter_category: Some("test-category".to_string()),
-                scuba_censored_table: None
+                censored_scuba_params: CensoredScubaParams {
+                    table: Some("censored_table".to_string()),
+                    local_path: Some("censored_local_path".to_string()),
+                },
             }
         );
         assert_eq!(

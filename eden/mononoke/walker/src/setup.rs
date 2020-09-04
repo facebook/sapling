@@ -833,7 +833,7 @@ pub fn setup_common<'a>(
             caching,
             config.bookmarks_cache_ttl,
             redaction,
-            common_config.scuba_censored_table,
+            common_config.censored_scuba_params,
             config.filestore,
             readonly_storage,
             config.derived_data_config,

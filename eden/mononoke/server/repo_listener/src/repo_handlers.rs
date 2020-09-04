@@ -27,7 +27,9 @@ use futures_old::{future, Future};
 use hook_manager_factory::make_hook_manager;
 use maplit::btreeset;
 use mercurial_derived_data::MappedHgChangesetId;
-use metaconfig_types::{CommitSyncConfig, RepoClientKnobs, RepoConfig, WireprotoLoggingConfig};
+use metaconfig_types::{
+    CensoredScubaParams, CommitSyncConfig, RepoClientKnobs, RepoConfig, WireprotoLoggingConfig,
+};
 use mononoke_types::RepositoryId;
 use mutable_counters::SqlMutableCounters;
 use repo_client::{MononokeRepo, MononokeRepoBuilder, PushRedirectorArgs, WireprotoLogging};
@@ -154,7 +156,7 @@ pub fn repo_handlers(
     mysql_options: MysqlOptions,
     caching: Caching,
     mut disabled_hooks: HashMap<String, HashSet<String>>,
-    scuba_censored_table: Option<String>,
+    censored_scuba_params: CensoredScubaParams,
     readonly_storage: ReadOnlyStorage,
     blobstore_options: BlobstoreOptions,
     root_log: &Logger,
@@ -198,7 +200,7 @@ pub fn repo_handlers(
             // And clone a few things of which we only have one but which we're going to need one
             // per repo.
             let blobstore_options = blobstore_options.clone();
-            let scuba_censored_table = scuba_censored_table.clone();
+            let censored_scuba_params = censored_scuba_params.clone();
 
             let fut = async move {
                 info!(logger, "Opening blobrepo");
@@ -208,7 +210,7 @@ pub fn repo_handlers(
                     config,
                     mysql_options,
                     caching,
-                    scuba_censored_table.clone(),
+                    censored_scuba_params.clone(),
                     readonly_storage,
                     blobstore_options,
                     record_infinitepush_writes,

@@ -979,7 +979,7 @@ fn open_repo_internal_with_repo_id<'a>(
             &config,
             mysql_options,
             caching,
-            common_config.scuba_censored_table,
+            common_config.censored_scuba_params,
             readonly_storage,
             blobstore_options,
             &logger,

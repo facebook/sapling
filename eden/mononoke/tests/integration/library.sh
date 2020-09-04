@@ -501,7 +501,12 @@ EOF
   cd mononoke-config || exit 1
   mkdir -p common
   touch common/commitsyncmap.toml
+  if [[ -n "$SCUBA_CENSORED_LOGGING_PATH" ]]; then
   cat > common/common.toml <<CONFIG
+scuba_local_path_censored="$SCUBA_CENSORED_LOGGING_PATH"
+CONFIG
+  fi
+  cat >> common/common.toml <<CONFIG
 [[whitelist_entry]]
 identity_type = "$ALLOWED_IDENTITY_TYPE"
 identity_data = "${OVERRIDE_ALLOWED_IDDATA:-$ALLOWED_IDENTITY_DATA}"

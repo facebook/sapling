@@ -100,8 +100,17 @@ pub struct CommonConfig {
     pub security_config: Vec<AllowlistEntry>,
     /// Parent category to use for load limiting
     pub loadlimiter_category: Option<String>,
+    /// Params for logging censored blobstore accesses
+    pub censored_scuba_params: CensoredScubaParams,
+}
+
+/// Configuration for logging of censored blobstore accesses
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct CensoredScubaParams {
     /// Scuba table for logging redacted file accesses
-    pub scuba_censored_table: Option<String>,
+    pub table: Option<String>,
+    /// Scuba table for logging redacted file accesses
+    pub local_path: Option<String>,
 }
 
 /// Configuration of a single repository

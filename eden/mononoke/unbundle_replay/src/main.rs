@@ -32,7 +32,7 @@ use futures_old::stream::Stream as OldStream;
 use futures_stats::{FutureStats, TimedFutureExt};
 use hooks_content_stores::blobrepo_text_only_fetcher;
 use mercurial_bundles::bundle2::{Bundle2Stream, StreamEvent};
-use metaconfig_types::{RepoConfig, RepoReadOnly};
+use metaconfig_types::{CensoredScubaParams, RepoConfig, RepoReadOnly};
 use mononoke_types::{BonsaiChangeset, ChangesetId, Timestamp};
 use scuba_ext::ScubaSampleBuilder;
 use slog::{info, warn, Logger};
@@ -396,7 +396,11 @@ async fn do_main(
         &repo_config,
         mysql_options,
         caching,
-        None, // We don't need to log redacted access from here
+        // We don't need to log redacted access from here
+        CensoredScubaParams {
+            table: None,
+            local_path: None,
+        },
         readonly_storage,
         blobstore_options,
         &logger,

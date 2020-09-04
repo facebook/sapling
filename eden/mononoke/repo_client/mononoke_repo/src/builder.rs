@@ -11,7 +11,7 @@ use blobrepo_factory::{BlobrepoBuilder, BlobstoreOptions, Caching, ReadOnlyStora
 use context::CoreContext;
 use futures::{compat::Future01CompatExt, future, FutureExt};
 use hooks::HookManager;
-use metaconfig_types::RepoConfig;
+use metaconfig_types::{CensoredScubaParams, RepoConfig};
 use mutable_counters::SqlMutableCounters;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_read_write_status::{RepoReadWriteFetcher, SqlRepoReadWriteStatus};
@@ -39,7 +39,7 @@ impl MononokeRepoBuilder {
         config: RepoConfig,
         mysql_options: MysqlOptions,
         caching: Caching,
-        scuba_censored_table: Option<String>,
+        censored_scuba_params: CensoredScubaParams,
         readonly_storage: ReadOnlyStorage,
         blobstore_options: BlobstoreOptions,
         record_infinitepush_writes: bool,
@@ -50,7 +50,7 @@ impl MononokeRepoBuilder {
             &config,
             mysql_options,
             caching,
-            scuba_censored_table.clone(),
+            censored_scuba_params.clone(),
             readonly_storage,
             blobstore_options.clone(),
             ctx.logger(),

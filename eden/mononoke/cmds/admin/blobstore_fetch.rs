@@ -184,8 +184,15 @@ pub async fn subcommand_blobstore_fetch<'a>(
     );
 
     let common_config = args::load_common_config(fb, &matches)?;
-    let scuba_censored_table = common_config.scuba_censored_table;
-    let scuba_redaction_builder = ScubaSampleBuilder::with_opt_table(fb, scuba_censored_table);
+    let censored_scuba_params = common_config.censored_scuba_params;
+    let mut scuba_redaction_builder =
+        ScubaSampleBuilder::with_opt_table(fb, censored_scuba_params.table);
+
+    if let Some(scuba_log_file) = censored_scuba_params.local_path {
+        scuba_redaction_builder = scuba_redaction_builder
+            .with_log_file(scuba_log_file)
+            .map_err(Error::from)?;
+    }
 
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     let key = sub_m.value_of("KEY").unwrap().to_string();

@@ -37,8 +37,8 @@ use maplit::btreeset;
 use memblob::EagerMemblob;
 use mercurial_mutation::{HgMutationStore, SqlHgMutationStoreBuilder};
 use metaconfig_types::{
-    self, DerivedDataConfig, FilestoreParams, Redaction, RepoConfig, SegmentedChangelogConfig,
-    StorageConfig, UnodeVersion,
+    self, CensoredScubaParams, DerivedDataConfig, FilestoreParams, Redaction, RepoConfig,
+    SegmentedChangelogConfig, StorageConfig, UnodeVersion,
 };
 use mononoke_types::RepositoryId;
 use newfilenodes::NewFilenodesBuilder;
@@ -83,7 +83,7 @@ pub struct BlobrepoBuilder<'a> {
     caching: Caching,
     bookmarks_cache_ttl: Option<Duration>,
     redaction: Redaction,
-    scuba_censored_table: Option<String>,
+    censored_scuba_params: CensoredScubaParams,
     filestore_params: Option<FilestoreParams>,
     readonly_storage: ReadOnlyStorage,
     blobstore_options: BlobstoreOptions,
@@ -99,7 +99,7 @@ impl<'a> BlobrepoBuilder<'a> {
         config: &RepoConfig,
         mysql_options: MysqlOptions,
         caching: Caching,
-        scuba_censored_table: Option<String>,
+        censored_scuba_params: CensoredScubaParams,
         readonly_storage: ReadOnlyStorage,
         blobstore_options: BlobstoreOptions,
         logger: &'a Logger,
@@ -113,7 +113,7 @@ impl<'a> BlobrepoBuilder<'a> {
             caching,
             bookmarks_cache_ttl: config.bookmarks_cache_ttl.clone(),
             redaction: config.redaction.clone(),
-            scuba_censored_table,
+            censored_scuba_params,
             filestore_params: config.filestore.clone(),
             readonly_storage,
             blobstore_options,
@@ -143,7 +143,7 @@ impl<'a> BlobrepoBuilder<'a> {
             caching,
             bookmarks_cache_ttl,
             redaction,
-            scuba_censored_table,
+            censored_scuba_params,
             filestore_params,
             readonly_storage,
             blobstore_options,
@@ -181,7 +181,7 @@ impl<'a> BlobrepoBuilder<'a> {
             caching,
             bookmarks_cache_ttl,
             redaction,
-            scuba_censored_table,
+            censored_scuba_params,
             filestore_params,
             readonly_storage,
             derived_data_config,
@@ -202,7 +202,7 @@ pub async fn open_blobrepo_given_datasources(
     caching: Caching,
     bookmarks_cache_ttl: Option<Duration>,
     redaction: Redaction,
-    scuba_censored_table: Option<String>,
+    censored_scuba_params: CensoredScubaParams,
     filestore_params: Option<FilestoreParams>,
     readonly_storage: ReadOnlyStorage,
     derived_data_config: DerivedDataConfig,
@@ -251,7 +251,7 @@ pub async fn open_blobrepo_given_datasources(
                 &sql_factory,
                 blobstore,
                 redacted_blobs,
-                scuba_censored_table,
+                censored_scuba_params,
                 repoid,
                 filestore_config,
                 bookmarks_cache_ttl,
@@ -270,7 +270,7 @@ pub async fn open_blobrepo_given_datasources(
                 &sql_factory,
                 blobstore,
                 redacted_blobs,
-                scuba_censored_table,
+                censored_scuba_params,
                 repoid,
                 bookmarks_cache_ttl,
                 filestore_config,
@@ -502,7 +502,7 @@ async fn new_development(
     sql_factory: &MetadataSqlFactory,
     blobstore: Arc<dyn Blobstore>,
     redacted_blobs: Option<HashMap<String, String>>,
-    scuba_censored_table: Option<String>,
+    censored_scuba_params: CensoredScubaParams,
     repoid: RepositoryId,
     filestore_config: FilestoreConfig,
     bookmarks_cache_ttl: Option<Duration>,
@@ -619,7 +619,7 @@ async fn new_development(
         segmented_changelog_builder,
     )?;
 
-    let scuba_builder = ScubaSampleBuilder::with_opt_table(fb, scuba_censored_table);
+    let censored_scuba_builder = get_censored_scuba_builder(fb, censored_scuba_params)?;
     let changesets = Arc::new(changesets);
     let changeset_fetcher = Arc::new(SimpleChangesetFetcher::new(changesets.clone(), repoid));
     let segmented_changelog: Arc<dyn SegmentedChangelog> = if !segmented_changelog_config.enabled {
@@ -642,7 +642,7 @@ async fn new_development(
     Ok(blobrepo_new(
         bookmarks,
         bookmark_update_log,
-        RepoBlobstoreArgs::new(blobstore, redacted_blobs, repoid, scuba_builder),
+        RepoBlobstoreArgs::new(blobstore, redacted_blobs, repoid, censored_scuba_builder),
         Arc::new(filenodes_builder.build()),
         changesets,
         changeset_fetcher,
@@ -666,7 +666,7 @@ async fn new_production(
     sql_factory: &MetadataSqlFactory,
     blobstore: Arc<dyn Blobstore>,
     redacted_blobs: Option<HashMap<String, String>>,
-    scuba_censored_table: Option<String>,
+    censored_scuba_params: CensoredScubaParams,
     repoid: RepositoryId,
     bookmarks_cache_ttl: Option<Duration>,
     filestore_config: FilestoreConfig,
@@ -769,12 +769,12 @@ async fn new_production(
     );
 
     phases_factory.enable_caching(fb, phases_cache_pool);
-    let scuba_builder = ScubaSampleBuilder::with_opt_table(fb, scuba_censored_table);
+    let censored_scuba_builder = get_censored_scuba_builder(fb, censored_scuba_params)?;
 
     Ok(blobrepo_new(
         bookmarks,
         bookmark_update_log,
-        RepoBlobstoreArgs::new(blobstore, redacted_blobs, repoid, scuba_builder),
+        RepoBlobstoreArgs::new(blobstore, redacted_blobs, repoid, censored_scuba_builder),
         Arc::new(filenodes_builder.build()) as Arc<dyn Filenodes>,
         changesets,
         changeset_fetcher,
@@ -878,4 +878,16 @@ pub fn blobrepo_new(
         reponame,
         attributes,
     )
+}
+
+fn get_censored_scuba_builder(
+    fb: FacebookInit,
+    censored_scuba_params: CensoredScubaParams,
+) -> Result<ScubaSampleBuilder, Error> {
+    let mut builder = ScubaSampleBuilder::with_opt_table(fb, censored_scuba_params.table);
+
+    if let Some(scuba_log_file) = censored_scuba_params.local_path {
+        builder = builder.with_log_file(scuba_log_file)?;
+    }
+    Ok(builder)
 }

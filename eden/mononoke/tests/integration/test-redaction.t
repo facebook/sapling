@@ -8,6 +8,7 @@
 
 setup configuration
 
+  $ export SCUBA_CENSORED_LOGGING_PATH="$TESTTMP/censored_scuba.json"
   $ REPOTYPE="blob_files"
   $ setup_common_config $REPOTYPE
   $ enable remotenames
@@ -370,3 +371,9 @@ Updating to a commit with censored files works in getpackv2 repo
   $ hgmn up -q 064d994d0240
   $ cat c
   This version of the file is redacted and you are not allowed to access it. Update or rebase to a newer commit.
+
+Check logging
+  $ cat "$TESTTMP/censored_scuba.json"
+  {"int":{"time":*},"normal":{"key":"content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2","operation":"GET","session_uuid":"*","unix_username":"None"}} (glob)
+  {"int":{"time":*},"normal":{"key":"content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2","operation":"GET","session_uuid":"*","unix_username":"None"}} (glob)
+  {"int":{"time":*},"normal":{"key":"content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2","operation":"GET","session_uuid":"*","unix_username":"None"}} (glob)
