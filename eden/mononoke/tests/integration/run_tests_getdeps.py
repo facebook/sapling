@@ -76,6 +76,7 @@ else:
         "test-blobimport.t",  # Case insensitivity of paths in MacOS
         "test-bookmarks-filler.t",  # Probably missing binary
         "test-cmd-manual-scrub.t",  # Just wrong outout
+        "test-edenapi-server-commit-location-to-hash.t",  # Missing eden/scm's commands
         "test-edenapi-server-commit-revlog-data.t",  # Missing eden/scm's commands
         "test-edenapi-server-complete-trees.t",  # Missing eden/scm's commands
         "test-edenapi-server-files.t",  # Missing eden/scm's commands
@@ -118,6 +119,7 @@ else:
         "test-scs-list-bookmarks.t",  # Missing SCS_SERVER
         "test-scs-log.t",  # Missing SCS_SERVER
         "test-scs-lookup.t",  # Missing SCS_SERVER
+        "test-scs-modify-bookmarks.t",  # Missing SCS_SERVER
         "test-scs-x-repo.t",  # Missing SCS_SERVER
         "test-scs.t",  # Missing SCS_SERVER
         "test-server.t",  # Returns different data in OSS
