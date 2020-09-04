@@ -50,7 +50,7 @@ if typing.TYPE_CHECKING:
 # Use --etcEdenDir to change the value used for a given invocation
 # of the eden cli.
 if sys.platform == "win32":
-    DEFAULT_ETC_EDEN_DIR = "C:/tools/eden/config"
+    DEFAULT_ETC_EDEN_DIR = "C:\\ProgramData\\facebook\\eden"
 else:
     DEFAULT_ETC_EDEN_DIR = "/etc/eden"
 
