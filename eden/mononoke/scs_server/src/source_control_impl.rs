@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -13,11 +14,13 @@ use context::generate_session_id;
 use fbinit::FacebookInit;
 use futures_stats::{FutureStats, TimedFutureExt};
 use identity::Identity;
+use maplit::hashset;
 use mononoke_api::{
     ChangesetContext, ChangesetId, ChangesetSpecifier, CoreContext, FileContext, FileId, Mononoke,
     RepoContext, SessionContainer, TreeContext, TreeId,
 };
 use mononoke_types::hash::{Sha1, Sha256};
+use once_cell::sync::Lazy;
 use permission_checker::{MononokeIdentity, MononokeIdentitySet};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt, ScubaValue};
 use slog::Logger;
@@ -27,6 +30,7 @@ use source_control::services::source_control_service as service;
 use srserver::RequestContext;
 use stats::prelude::*;
 use time_ext::DurationExt;
+use tunables::tunables;
 
 use crate::commit_id::CommitIdExt;
 use crate::errors;
@@ -50,6 +54,9 @@ define_stats! {
     // Duration per method
     method_completion_time_ms: dynamic_histogram("method.{}.completion_time_ms", (method: String); 10, 0, 1_000, Average, Sum, Count; P 5; P 50 ; P 90),
 }
+
+static POPULAR_METHODS: Lazy<HashSet<&'static str>> =
+    Lazy::new(|| hashset! {"repo_list_hg_manifest"});
 
 #[derive(Clone)]
 pub(crate) struct SourceControlServiceImpl {
@@ -104,6 +111,18 @@ impl SourceControlServiceImpl {
                 scuba.add("path", path);
             }
         }
+
+        let sampling_rate = core::num::NonZeroU64::new(if POPULAR_METHODS.contains(name) {
+            tunables().get_scs_popular_methods_sampling_rate() as u64
+        } else {
+            tunables().get_scs_other_methods_sampling_rate() as u64
+        });
+        if let Some(sampling_rate) = sampling_rate {
+            scuba.sampled(sampling_rate);
+        } else {
+            scuba.unsampled();
+        }
+
         params.add_scuba_params(&mut scuba);
         let session_id = generate_session_id();
         scuba.add("session_uuid", session_id.to_string());
@@ -313,6 +332,9 @@ fn log_result<T>(ctx: CoreContext, stats: &FutureStats, result: &Result<T, error
     scuba.add_future_stats(stats);
     scuba.add("status", status);
     if let Some(error) = error {
+        if !tunables().get_scs_error_log_sampling() {
+            scuba.unsampled();
+        }
         scuba.add("error", error.as_str());
     }
     scuba.log_with_msg("Request complete", None);

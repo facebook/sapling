@@ -81,6 +81,11 @@ pub struct MononokeTunables {
     disable_hooks_on_plain_push: AtomicBool,
     run_hooks_on_additional_changesets: AtomicBool,
     hooks_additional_changesets_limit: AtomicI64,
+    // SCS scuba sampling knobs
+    scs_popular_methods_sampling_rate: AtomicI64,
+    scs_other_methods_sampling_rate: AtomicI64,
+    // When false error logs are never sampled
+    scs_error_log_sampling: AtomicBool,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {
