@@ -72,7 +72,13 @@ pub struct SyncableIdDag<'a, Store: GetLock> {
     lock: <Store as GetLock>::LockT,
 }
 
-static DEFAULT_SEG_SIZE: usize = 16;
+/// See benches/segment_sizes.rs (D16660078) for this choice.
+const DEFAULT_SEG_SIZE: usize = 16;
+
+/// Maximum meaningful level. 4 is chosen because it is good enough
+/// for an existing large repo (level 5 is not built because it
+/// cannot merge level 4 segments).
+const MAX_MEANINGFUL_LEVEL: Level = 4;
 
 impl IdDag<IndexedLogStore> {
     /// Open [`IdDag`] at the given directory. Create it on demand.
@@ -534,6 +540,7 @@ impl<Store: IdDagStore> IdDag<Store> {
         max_level: Level,
     ) -> Result<usize> {
         let mut total = 0;
+        let max_level = max_level.min(MAX_MEANINGFUL_LEVEL);
         for level in 1..=max_level {
             let count = self.build_high_level_segments(level, drop_last)?;
             tracing::debug!("new lv{} segments: {}", level, count);
