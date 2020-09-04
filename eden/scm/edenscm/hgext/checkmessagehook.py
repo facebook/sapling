@@ -37,9 +37,13 @@ def checkcommitmessage(ui, repo, **kwargs):
                 break
 
     if badlines:
-        ui.warn(_("non-printable characters in commit message\n"))
+        ui.warn(_("+-------------------------------------------------------------\n"))
+        ui.warn(_("| Non-printable characters in commit message are not allowed.\n"))
+        ui.warn(_("| Edit your commit message to fix this issue.\n"))
+        ui.warn(_("| The problematic commit message can be found at:\n"))
         for num, l in badlines:
-            ui.warn(_("Line {}: {!r}\n".format(num, l)))
+            ui.warn(_("|  Line {}: {!r}\n".format(num, l)))
+        ui.warn(_("+-------------------------------------------------------------\n"))
 
     # False means success
     return bool(badlines)

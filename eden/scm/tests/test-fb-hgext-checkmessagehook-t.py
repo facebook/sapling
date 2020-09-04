@@ -20,9 +20,13 @@ sh % "cd repo"
 sh % "touch a"
 sh % 'hg commit -A -l "$TESTDIR/ctrlchar-msg.txt"' == r"""
     adding a
-    non-printable characters in commit message
-    Line 5: 'This has a sneaky ctrl-A: \x01'
-    Line 6: 'And this has esc: \x1b'
+    +-------------------------------------------------------------
+    | Non-printable characters in commit message are not allowed.
+    | Edit your commit message to fix this issue.
+    | The problematic commit message can be found at:
+    |  Line 5: 'This has a sneaky ctrl-A: \x01'
+    |  Line 6: 'And this has esc: \x1b'
+    +-------------------------------------------------------------
     abort: pretxncommit.checkmessage hook failed
     [255]"""
 sh % 'hg commit -A -l "$TESTDIR/perfectlyok-msg.txt"' == "adding a"
