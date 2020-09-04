@@ -774,6 +774,38 @@ fn test_namedag_reassign_master() -> crate::Result<()> {
 }
 
 #[test]
+fn test_namedag_reassign_non_master() {
+    let mut t = TestDag::new();
+
+    // A: master; B, Z: non-master.
+    t.drawdag("A--B--Z", &["A"]);
+    // C, D, E: non-master.
+    t.drawdag("B--C--D--E", &[]);
+    // Prompt C to master. Triggers non-master reassignment.
+    t.drawdag("", &["C"]);
+
+    // BUG: Z disappeared!
+    assert_eq!(
+        t.render_graph(),
+        r#"
+            E  N1
+            │
+            D  N0
+            │
+            C  2
+            │
+            B  1
+            │
+            A  0"#
+    );
+
+    // BUG: Z is shadowed by E.
+    let z_id = t.dag.vertex_id("Z".into()).unwrap();
+    let z_vertex = t.dag.vertex_name(z_id).unwrap();
+    assert_eq!(format!("{:?}", z_vertex), "E");
+}
+
+#[test]
 fn test_segment_ancestors_example1() {
     // DAG from segmented-changelog.pdf
     let ascii_dag = r#"
