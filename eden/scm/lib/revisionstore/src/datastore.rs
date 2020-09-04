@@ -15,6 +15,7 @@ use std::{
 use anyhow::{bail, Result};
 use bytes::Bytes;
 use parking_lot::Mutex;
+use regex::Regex;
 use serde_derive::{Deserialize, Serialize};
 
 use edenapi_types::{FileEntry, TreeEntry};
@@ -205,13 +206,15 @@ pub fn strip_metadata(data: &Bytes) -> Result<(Bytes, Option<Key>)> {
 
 pub struct ReportingRemoteDataStore {
     store: Box<dyn RemoteDataStore>,
+    filter: Option<Regex>,
     seen: Mutex<HashSet<RepoPathBuf>>,
 }
 
 impl ReportingRemoteDataStore {
-    pub fn new(store: Box<dyn RemoteDataStore>) -> Self {
+    pub fn new(store: Box<dyn RemoteDataStore>, filter: Option<Regex>) -> Self {
         Self {
             store,
+            filter,
             seen: Mutex::new(HashSet::new()),
         }
     }
@@ -220,13 +223,56 @@ impl ReportingRemoteDataStore {
         let mut seen = self.seen.lock();
         std::mem::take(&mut *seen)
     }
+
+    fn report_keys(&self, keys: &[StoreKey]) {
+        if let Some(filter) = &self.filter {
+            let mut matches = Vec::new();
+            use crate::StoreKey::*;
+            for path in keys
+                .iter()
+                .filter_map(|k| match k {
+                    HgId(k) => Some(&k.path),
+                    Content(_, Some(k)) => Some(&k.path),
+                    _ => None,
+                })
+                .filter(|p| filter.is_match(p.as_str()))
+            {
+                matches.push(path.clone());
+            }
+
+            if !matches.is_empty() {
+                let mut seen = self.seen.lock();
+                seen.extend(matches.into_iter());
+            }
+        }
+    }
 }
 
-impl Deref for ReportingRemoteDataStore {
-    type Target = dyn RemoteDataStore;
+impl LocalStore for ReportingRemoteDataStore {
+    fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
+        self.store.get_missing(keys)
+    }
+}
 
-    fn deref(&self) -> &Self::Target {
-        &self.store
+impl HgIdDataStore for ReportingRemoteDataStore {
+    fn get(&self, key: StoreKey) -> Result<StoreResult<Vec<u8>>> {
+        self.report_keys(&[key.clone()]);
+        self.store.get(key)
+    }
+    fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
+        self.report_keys(&[key.clone()]);
+        self.store.get_meta(key)
+    }
+}
+
+impl RemoteDataStore for ReportingRemoteDataStore {
+    fn prefetch(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
+        self.report_keys(keys);
+        self.store.prefetch(keys)
+    }
+
+    fn upload(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
+        self.store.upload(keys)
     }
 }
 

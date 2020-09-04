@@ -12,6 +12,7 @@ use std::{
 
 use anyhow::{format_err, Result};
 use bytes::Bytes;
+use regex::Regex;
 use tracing::info_span;
 
 use configparser::{
@@ -397,7 +398,13 @@ impl<'a> ContentStoreBuilder<'a> {
                 }
 
                 let remotestores: Box<dyn RemoteDataStore> = Box::new(remotestores);
-                let remotestores = Arc::new(ReportingRemoteDataStore::new(remotestores));
+                let logging_regex = self
+                    .config
+                    .get_opt::<String>("remotefilelog", "undesiredfileregex")?
+                    .map(|s| Regex::new(&s))
+                    .transpose()?;
+                let remotestores =
+                    Arc::new(ReportingRemoteDataStore::new(remotestores, logging_regex));
                 datastore.add(remotestores.clone());
                 Some(remotestores)
             } else {
