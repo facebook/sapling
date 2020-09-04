@@ -8,7 +8,6 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <sys/types.h>
-#include <unistd.h>
 #include <utility>
 
 #include "eden/fs/utils/ProcessAccessLog.h"
