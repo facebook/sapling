@@ -45,6 +45,25 @@ DISABLE_ALL_NETWORK_ACCESS_SKIPLIST: Set[str] = {
     "test-commitcloud-reversefiller.t",
 }
 
+PY3_SKIPLIST: Set[str] = {
+    "test-hook-limit-path-length.t",
+    "test-hook-no-bad-filenames.t",
+    "test-hook-no-insecure-filenames.t",
+    "test-large-path-and-content.t",
+    "test-mononoke-hg-sync-job-generate-bundles-force.t",
+    "test-mononoke-hg-sync-job-generate-bundles-lfs.t",
+    "test-mononoke-hg-sync-job-generate-bundles-lfs-verification.t",
+    "test-mononoke-hg-sync-job-generate-bundles-loop.t",
+    "test-mononoke-hg-sync-job-generate-bundles-other-books.t",
+    "test-mononoke-hg-sync-job-generate-bundles.t",
+    "test-mononoke-hg-sync-job-sync-globalrevs.t",
+    "test-mononoke-hg-sync-job.t",
+    "test-mononoke-hg-sync-job-with-copies.t",
+    "test-push-redirector-sync-job.t",
+    "test-redaction.t",
+    "test-scs-modify-bookmarks.t",
+}
+
 
 def is_mode_opt_buck_binary():
     try:
@@ -219,7 +238,7 @@ def hg_runner_facebook(manifest_env: Env, *args, **kwargs):
         return True
 
 
-def discover_tests(manifest_env: Env, mysql: bool):
+def discover_tests(manifest_env: Env, mysql: bool, py3_skip_list: bool):
     all_tests = []
 
     for runner in [hg_runner_public, hg_runner_facebook]:
@@ -235,13 +254,20 @@ def discover_tests(manifest_env: Env, mysql: bool):
     if mysql:
         all_tests = [t for t in all_tests if t in EPHEMERAL_DB_ALLOWLIST]
 
+    if py3_skip_list:
+        all_tests = [t for t in all_tests if t not in PY3_SKIPLIST]
+
     return all_tests
 
 
 def run_discover_tests(
-    ctx: Any, manifest_env: ManifestEnv, xunit_output: str, mysql: bool
+    ctx: Any,
+    manifest_env: ManifestEnv,
+    xunit_output: str,
+    mysql: bool,
+    py3_skip_list: bool,
 ):
-    tests = discover_tests(manifest_env, mysql)
+    tests = discover_tests(manifest_env, mysql, py3_skip_list)
 
     if xunit_output is None:
         print("\n".join(tests))
@@ -359,6 +385,12 @@ def run_tests(
     is_flag=False,
     help="Use devdb to run tests with MySQL, specify the shard e.g. --devdb=$USER",
 )
+@click.option(
+    "--py3-skip-list",
+    default=False,
+    is_flag=True,
+    help="Use the Python 3 skip list, for tests that have yet to be fixed for Python 3",
+)
 @click.argument("manifest", type=click.Path())
 @click.argument("tests", nargs=-1, type=click.Path())
 @click.pass_context
@@ -376,6 +408,7 @@ def run(
     mysql,
     mysql_schemas,
     devdb,
+    py3_skip_list,
 ):
     manifest = os.path.abspath(manifest)
     if is_libfb_present():
@@ -393,7 +426,7 @@ def run(
     maybe_use_local_test_paths(manifest_env)
 
     if dry_run:
-        return run_discover_tests(ctx, manifest_env, output, mysql)
+        return run_discover_tests(ctx, manifest_env, output, mysql, py3_skip_list)
 
     test_flags: TestFlags = TestFlags(
         interactive,
