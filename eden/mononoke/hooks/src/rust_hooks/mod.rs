@@ -11,10 +11,12 @@ mod always_fail_changeset;
 mod block_empty_commit;
 mod check_nocommit;
 mod conflict_markers;
+pub(crate) mod deny_files;
 mod limit_commit_message_length;
 pub(crate) mod limit_commitsize;
 pub(crate) mod limit_filesize;
 mod limit_path_length;
+mod lua_pattern;
 pub(crate) mod no_bad_filenames;
 mod no_insecure_filenames;
 pub(crate) mod no_questionable_filenames;
@@ -24,6 +26,7 @@ use fbinit::FacebookInit;
 use metaconfig_types::HookConfig;
 use permission_checker::ArcMembershipChecker;
 
+pub(crate) use self::lua_pattern::LuaPattern;
 use crate::{ChangesetHook, FileHook};
 
 pub fn hook_name_to_changeset_hook(
@@ -56,6 +59,11 @@ pub fn hook_name_to_file_hook(
     Ok(match name {
         "check_nocommit" => Some(Box::new(check_nocommit::CheckNocommitHook::new(config)?)),
         "conflict_markers" => Some(Box::new(conflict_markers::ConflictMarkers::new())),
+        "deny_files" => Some(Box::new(
+            deny_files::DenyFiles::builder()
+                .set_from_config(config)
+                .build()?,
+        )),
         "limit_filesize" => Some(Box::new(
             limit_filesize::LimitFilesize::builder()
                 .set_from_config(config)
