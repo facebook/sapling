@@ -6,6 +6,7 @@
  */
 
 use std::{
+    collections::HashSet,
     ops::Deref,
     path::PathBuf,
     str::{self, FromStr},
@@ -13,10 +14,11 @@ use std::{
 
 use anyhow::{bail, Result};
 use bytes::Bytes;
+use parking_lot::Mutex;
 use serde_derive::{Deserialize, Serialize};
 
 use edenapi_types::{FileEntry, TreeEntry};
-use types::{HgId, Key, RepoPath};
+use types::{HgId, Key, RepoPath, RepoPathBuf};
 
 pub use crate::Metadata;
 use crate::{
@@ -198,6 +200,33 @@ pub fn strip_metadata(data: &Bytes) -> Result<(Bytes, Option<Key>)> {
         Ok((data.slice(2 + pos + 2..), key))
     } else {
         Ok((data.clone(), None))
+    }
+}
+
+pub struct ReportingRemoteDataStore {
+    store: Box<dyn RemoteDataStore>,
+    seen: Mutex<HashSet<RepoPathBuf>>,
+}
+
+impl ReportingRemoteDataStore {
+    pub fn new(store: Box<dyn RemoteDataStore>) -> Self {
+        Self {
+            store,
+            seen: Mutex::new(HashSet::new()),
+        }
+    }
+
+    pub fn take_seen(&self) -> HashSet<RepoPathBuf> {
+        let mut seen = self.seen.lock();
+        std::mem::take(&mut *seen)
+    }
+}
+
+impl Deref for ReportingRemoteDataStore {
+    type Target = dyn RemoteDataStore;
+
+    fn deref(&self) -> &Self::Target {
+        &self.store
     }
 }
 

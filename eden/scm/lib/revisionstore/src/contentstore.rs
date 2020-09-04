@@ -23,7 +23,7 @@ use types::Key;
 use crate::{
     datastore::{
         strip_metadata, ContentDataStore, ContentMetadata, Delta, HgIdDataStore,
-        HgIdMutableDeltaStore, Metadata, RemoteDataStore, StoreResult,
+        HgIdMutableDeltaStore, Metadata, RemoteDataStore, ReportingRemoteDataStore, StoreResult,
     },
     indexedlogdatastore::IndexedLogHgIdDataStore,
     lfs::{LfsFallbackRemoteStore, LfsMultiplexer, LfsRemote, LfsStore},
@@ -49,7 +49,7 @@ pub struct ContentStore {
     datastore: UnionHgIdDataStore<Arc<dyn HgIdDataStore>>,
     local_mutabledatastore: Option<Arc<dyn HgIdMutableDeltaStore>>,
     shared_mutabledatastore: Arc<dyn HgIdMutableDeltaStore>,
-    remote_store: Option<Arc<dyn RemoteDataStore>>,
+    remote_store: Option<Arc<ReportingRemoteDataStore>>,
 
     blob_stores: UnionContentDataStore<Arc<dyn ContentDataStore>>,
 }
@@ -341,7 +341,7 @@ impl<'a> ContentStoreBuilder<'a> {
                 (None, None)
             };
 
-        let remote_store: Option<Arc<dyn RemoteDataStore>> =
+        let remote_store: Option<Arc<ReportingRemoteDataStore>> =
             if let Some(remotestore) = self.remotestore {
                 let (cache, shared_store) = if let Some(memcachestore) = self.memcachestore {
                     // Combine the memcache store with the other stores. The intent is that all
@@ -396,7 +396,8 @@ impl<'a> ContentStoreBuilder<'a> {
                     remotestores.add(lfs_fallback);
                 }
 
-                let remotestores = Arc::new(remotestores);
+                let remotestores: Box<dyn RemoteDataStore> = Box::new(remotestores);
+                let remotestores = Arc::new(ReportingRemoteDataStore::new(remotestores));
                 datastore.add(remotestores.clone());
                 Some(remotestores)
             } else {
