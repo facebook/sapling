@@ -40,6 +40,9 @@ tokio = { version = "=0.2.13", features = ["full"] }
 
 [dev-dependencies]
 blobrepo_factory = { path = "../blobrepo/factory" }
+blobrepo_override = { path = "../blobrepo/override" }
+derived_data = { path = "../derived_data" }
+git_types = { path = "../git/git_types" }
 mercurial_types-mocks = { path = "../mercurial/types/mocks" }
 mononoke_types-mocks = { path = "../mononoke_types/mocks" }
 sql_construct = { path = "../common/sql_construct" }

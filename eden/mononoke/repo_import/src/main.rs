@@ -172,10 +172,24 @@ async fn back_sync_commits_to_small_repo(
     Ok(synced_bonsai_changesets)
 }
 
-async fn derive_bonsais(
+async fn derive_bonsais_multiple_repos(
+    ctx: &CoreContext,
+    repo_to_changesets: &[(BlobRepo, Vec<BonsaiChangeset>)],
+) -> Result<(), Error> {
+    let len = repo_to_changesets.len();
+    stream::iter(repo_to_changesets)
+        .map(Ok)
+        .try_for_each_concurrent(len, |(repo, changesets)| async move {
+            derive_bonsais_single_repo(&ctx, &repo, &changesets).await?;
+            Result::<(), Error>::Ok(())
+        })
+        .await
+}
+
+async fn derive_bonsais_single_repo(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    shifted_bcs: &[BonsaiChangeset],
+    changesets: &[BonsaiChangeset],
 ) -> Result<(), Error> {
     let derived_data_types = &repo.get_derived_data_config().derived_data_types;
 
@@ -189,7 +203,7 @@ async fn derive_bonsais(
     stream::iter(derived_utils)
         .map(Ok)
         .try_for_each_concurrent(len, |derived_util| async move {
-            for bcs in shifted_bcs {
+            for bcs in changesets {
                 let csid = bcs.get_changeset_id();
                 derived_util
                     .derive(ctx.clone(), repo.clone(), csid)
@@ -800,7 +814,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             }
 
             info!(ctx.logger(), "Start deriving data types");
-            derive_bonsais(&ctx, &repo, &shifted_bcs).await?;
+            derive_bonsais_multiple_repos(&ctx, &repo_to_changesets).await?;
             info!(ctx.logger(), "Finished deriving data types");
             move_bookmark(
                 &ctx,

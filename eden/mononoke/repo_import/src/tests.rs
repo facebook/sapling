@@ -8,7 +8,7 @@
 #[cfg(test)]
 mod tests {
     use crate::{
-        back_sync_commits_to_small_repo, check_dependent_systems,
+        back_sync_commits_to_small_repo, check_dependent_systems, derive_bonsais_multiple_repos,
         get_large_repo_config_if_pushredirected, get_large_repo_setting, merge_imported_commit,
         move_bookmark, push_merge_commit, rewrite_file_paths, sort_bcs, ChangesetArgs,
         CheckerFlags, RepoImportSetting, LATEST_REPLAYED_REQUEST_KEY,
@@ -17,13 +17,17 @@ mod tests {
     use anyhow::Result;
     use ascii::AsciiString;
     use blobrepo::BlobRepo;
+    use blobrepo_override::DangerousOverride;
     use blobstore::Loadable;
     use bookmarks::{BookmarkName, BookmarkUpdateLog, BookmarkUpdateReason, Freshness};
     use cached_config::{ConfigStore, TestSource};
     use context::CoreContext;
     use cross_repo_sync::create_commit_syncers;
+    use derived_data::BonsaiDerived;
+    use derived_data_utils::derived_data_utils;
     use fbinit::FacebookInit;
     use futures::{compat::Future01CompatExt, stream::TryStreamExt};
+    use git_types::TreeHandle;
     use live_commit_sync_config::{
         CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS, CONFIGERATOR_CURRENT_COMMIT_SYNC_CONFIGS,
         CONFIGERATOR_PUSHREDIRECT_ENABLE,
@@ -33,12 +37,12 @@ mod tests {
     use mercurial_types_mocks::nodehash::ONES_CSID as HG_CSID;
     use metaconfig_types::{
         CommitSyncConfig, CommitSyncConfigVersion, CommitSyncDirection,
-        DefaultSmallToLargeCommitSyncPathAction, PushrebaseParams, RepoConfig,
+        DefaultSmallToLargeCommitSyncPathAction, DerivedDataConfig, PushrebaseParams, RepoConfig,
         SmallRepoCommitSyncConfig,
     };
     use mononoke_types::{
         globalrev::{Globalrev, START_COMMIT_GLOBALREV},
-        BonsaiChangeset, DateTime, RepositoryId,
+        BonsaiChangeset, ChangesetId, DateTime, RepositoryId,
     };
     use mononoke_types_mocks::changesetid::{ONES_CSID as MON_CSID, TWOS_CSID};
     use movers::{DefaultAction, Mover};
@@ -61,11 +65,25 @@ mod tests {
     }
 
     fn create_repo(id: i32) -> Result<BlobRepo> {
-        let (repo, _) = blobrepo_factory::new_memblob_with_sqlite_connection_with_id(
+        let (mut repo, _) = blobrepo_factory::new_memblob_with_sqlite_connection_with_id(
             SqliteConnection::open_in_memory()?,
             RepositoryId::new(id),
         )?;
+        repo = repo.dangerous_override(|mut derived_data_config: DerivedDataConfig| {
+            derived_data_config
+                .derived_data_types
+                .remove(&TreeHandle::NAME.to_string());
+            derived_data_config
+        });
         Ok(repo)
+    }
+
+    fn gen_cs_ids(changesets: &[BonsaiChangeset]) -> Vec<ChangesetId> {
+        let mut cs_ids = vec![];
+        for bcs in changesets {
+            cs_ids.push(bcs.get_changeset_id());
+        }
+        cs_ids
     }
 
     fn get_file_changes_mpaths(bcs: &BonsaiChangeset) -> Vec<MPath> {
@@ -600,6 +618,153 @@ mod tests {
         let small_repo_cs_b_mpaths = get_file_changes_mpaths(&small_repo_cs_b);
         assert_eq!(vec![mp("dest_path_prefix/B")], small_repo_cs_b_mpaths);
 
+        Ok(())
+    }
+
+    async fn check_no_pending_commits(
+        ctx: &CoreContext,
+        repo: &BlobRepo,
+        cs_ids: &[ChangesetId],
+    ) -> Result<()> {
+        let derived_data_types = &repo.get_derived_data_config().derived_data_types;
+
+        for derived_data_type in derived_data_types {
+            let derived_utils = derived_data_utils(repo.clone(), derived_data_type)?;
+            let pending = derived_utils
+                .pending(ctx.clone(), repo.clone(), cs_ids.to_vec())
+                .compat()
+                .await?;
+            assert!(pending.is_empty());
+        }
+
+        Ok(())
+    }
+
+    /*
+        Given two repos and their changesets, we check if we have derived all the
+        data types for the changesets
+    */
+    #[fbinit::compat_test]
+    async fn test_derive_bonsais_multiple_repos(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo_0 = create_repo(0)?;
+
+        let repo_0_commits = create_from_dag(
+            &ctx,
+            &repo_0,
+            r##"
+                A-B
+            "##,
+        )
+        .await?;
+        let mut repo_0_bcs = vec![];
+        let mut repo_0_cs_ids = vec![];
+        for csid in repo_0_commits.values() {
+            repo_0_bcs.push(csid.load(ctx.clone(), &repo_0.get_blobstore()).await?);
+            repo_0_cs_ids.push(csid.clone());
+        }
+
+        let mut repo_to_changesets = vec![(repo_0.clone(), repo_0_bcs.clone())];
+
+        let repo_1 = create_repo(1)?;
+        let repo_1_commits = create_from_dag(
+            &ctx,
+            &repo_1,
+            r##"
+                C-D
+            "##,
+        )
+        .await?;
+        let mut repo_1_bcs = vec![];
+        let mut repo_1_cs_ids = vec![];
+        for csid in repo_1_commits.values() {
+            repo_1_bcs.push(csid.load(ctx.clone(), &repo_1.get_blobstore()).await?);
+            repo_1_cs_ids.push(csid.clone());
+        }
+
+        repo_to_changesets.push((repo_1.clone(), repo_1_bcs.clone()));
+
+        derive_bonsais_multiple_repos(&ctx, &repo_to_changesets).await?;
+
+        check_no_pending_commits(&ctx, &repo_0, &repo_0_cs_ids).await?;
+        check_no_pending_commits(&ctx, &repo_1, &repo_1_cs_ids).await?;
+        Ok(())
+    }
+
+    /*
+        The test combines rewrite and derive functionalities:
+        Given a large repo that backsyncs to small_repo, we check if we have
+        derived all the data types for both repos.
+    */
+    #[fbinit::compat_test]
+    async fn test_rewrite_and_derive(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let large_repo = create_repo(0)?;
+        let small_repo = create_repo(1)?;
+        let changesets = create_from_dag(
+            &ctx,
+            &large_repo,
+            r##"
+                A-B
+            "##,
+        )
+        .await?;
+        let mut bonsai_values = vec![];
+        for csid in changesets.values() {
+            bonsai_values.push((
+                csid.clone(),
+                csid.load(ctx.clone(), &large_repo.get_blobstore()).await?,
+            ));
+        }
+
+        let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap();
+        let syncers = create_commit_syncers(
+            small_repo.clone(),
+            large_repo.clone(),
+            &get_large_repo_sync_config(),
+            mapping.clone(),
+        )?;
+
+        let large_to_small_syncer = syncers.large_to_small;
+        let mut movers = vec![];
+        let importing_mover = movers::mover_factory(
+            HashMap::new(),
+            DefaultAction::PrependPrefix(mp("dest_path_prefix")),
+        )?;
+        movers.push(importing_mover);
+        movers.push(syncers.small_to_large.get_mover().clone());
+
+        let combined_mover: Mover = Arc::new(move |source_path: &MPath| {
+            let mut mutable_path = source_path.clone();
+            for mover in movers.clone() {
+                let maybe_path = mover(&mutable_path)?;
+                mutable_path = match maybe_path {
+                    Some(moved_path) => moved_path,
+                    None => return Ok(None),
+                };
+            }
+            Ok(Some(mutable_path))
+        });
+
+        let shifted_bcs =
+            rewrite_file_paths(&ctx, &large_repo, &combined_mover, &mut bonsai_values).await?;
+        let synced_bcs = back_sync_commits_to_small_repo(
+            &ctx,
+            &small_repo,
+            &large_to_small_syncer,
+            &shifted_bcs,
+        )
+        .await?;
+
+        let mut repo_to_changesets = vec![(large_repo.clone(), shifted_bcs.clone())];
+        repo_to_changesets.push((small_repo.clone(), synced_bcs.clone()));
+
+        derive_bonsais_multiple_repos(&ctx, &repo_to_changesets).await?;
+
+        let large_repo_cs_ids = gen_cs_ids(&shifted_bcs);
+        let small_repo_cs_ids = gen_cs_ids(&synced_bcs);
+        check_no_pending_commits(&ctx, &large_repo, &large_repo_cs_ids).await?;
+        check_no_pending_commits(&ctx, &small_repo, &small_repo_cs_ids).await?;
         Ok(())
     }
 }
