@@ -990,7 +990,7 @@ class curseschunkselector(object):
         text = text.strip(b"\n")
         text = re.sub(
             br"[\x00-\x08\x0a-\x1f]",
-            lambda m: b"^" + bytearray([ord(m.group()) + 64]),
+            lambda m: b"^%s" % bytearray([ord(m.group()) + 64]),
             text,
         )
 
