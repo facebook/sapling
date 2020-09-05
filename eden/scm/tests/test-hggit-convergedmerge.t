@@ -24,10 +24,10 @@ Load commonly used test logic
   $ hg ci -m "merge"
 
   $ hg log --graph --style compact
-  @    :ea82b67264a1,0dbe4ac1a758   eaa21d002113   1970-01-01 00:00 +0000   test
+  @       eaa21d002113   1970-01-01 00:00 +0000   test
   |\     merge
   | |
-  | o  :5d1a6b64f9d0   ea82b67264a1   1970-01-01 00:00 +0000   test
+  | o     ea82b67264a1   1970-01-01 00:00 +0000   test
   | |    A->C
   | |
   o |     0dbe4ac1a758   1970-01-01 00:00 +0000   test
@@ -59,13 +59,13 @@ Load commonly used test logic
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 expect the same revision ids as above
   $ hg -R hgrepo2 log --graph --style compact
-  @    [master]:8ec5b459b86e,8bfd72bff163   b08a922386d5   1970-01-01 00:00 +0000   test
+  @    [master]   b08a922386d5   1970-01-01 00:00 +0000   test
   |\     merge
   | |
   | o     8bfd72bff163   1970-01-01 00:00 +0000   test
   | |    B->C
   | |
-  | o  :fd5eb788c3a1   47fc555571b8   1970-01-01 00:00 +0000   test
+  | o     47fc555571b8   1970-01-01 00:00 +0000   test
   | |    A->B
   | |
   o |     8ec5b459b86e   1970-01-01 00:00 +0000   test

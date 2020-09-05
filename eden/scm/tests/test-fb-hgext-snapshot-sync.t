@@ -74,8 +74,6 @@
   $ hg snapshot show --debug $OID1
   commit:      7917335ca0064e431e045fdebf0bd483fcc8e28d
   phase:       secret
-  parent:      df4f53cec30af1e4f669102135076fd4f9673fcc
-  parent:      0000000000000000000000000000000000000000
   manifest:    4e7eb8574ed56675aa89d2b5abbced12d5688cef
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -104,8 +102,6 @@
   $ hg snapshot show --debug $OID2
   commit:      5e55990d984329c0cd0395dad5fcee6d6e8cc126
   phase:       secret
-  parent:      df4f53cec30af1e4f669102135076fd4f9673fcc
-  parent:      0000000000000000000000000000000000000000
   manifest:    4e7eb8574ed56675aa89d2b5abbced12d5688cef
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -173,8 +169,6 @@
   $ hg snapshot show --debug "$OID1"
   commit:      7917335ca0064e431e045fdebf0bd483fcc8e28d
   phase:       secret
-  parent:      df4f53cec30af1e4f669102135076fd4f9673fcc
-  parent:      0000000000000000000000000000000000000000
   manifest:    4e7eb8574ed56675aa89d2b5abbced12d5688cef
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -238,8 +232,6 @@
   $ hg snapshot show --debug "$OID2"
   commit:      5e55990d984329c0cd0395dad5fcee6d6e8cc126
   phase:       secret
-  parent:      df4f53cec30af1e4f669102135076fd4f9673fcc
-  parent:      0000000000000000000000000000000000000000
   manifest:    4e7eb8574ed56675aa89d2b5abbced12d5688cef
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000

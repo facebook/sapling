@@ -171,7 +171,6 @@ Adding some more history to repo a:
   (leaving bookmark stable)
   $ hg parents
   commit:      7bc8ee83a26f
-  parent:      a7949464abda
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     starting branch stable

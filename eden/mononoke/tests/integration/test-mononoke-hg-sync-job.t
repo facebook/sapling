@@ -190,7 +190,6 @@ Continue replay
   $ hg log -r tip
   commit:      67d5c96d65a7
   bookmark:    master_bookmark
-  parent:      1e43292ffbb3
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     onemorecommit
@@ -309,7 +308,6 @@ Test bookmark deletion sync
   bookmark:    default/master_bookmark
   hoistedname: book_to_delete
   hoistedname: master_bookmark
-  parent:      a7acac33c050
   user:        test
   date:        * (glob)
   summary:     symlink
@@ -328,7 +326,6 @@ Test bookmark deletion sync
   commit:      6f24f1b38581
   bookmark:    default/master_bookmark
   hoistedname: master_bookmark
-  parent:      a7acac33c050
   user:        test
   date:        * (glob)
   summary:     symlink
@@ -352,7 +349,6 @@ Test force pushrebase sync
   $ mkcommit commit_to_force_pushmaster
   $ hg log -r .
   commit:      cc83c88b72d3
-  parent:      a7acac33c050
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     commit_to_force_pushmaster
@@ -364,7 +360,6 @@ Test force pushrebase sync
   commit:      cc83c88b72d3
   bookmark:    default/master_bookmark
   hoistedname: master_bookmark
-  parent:      a7acac33c050
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     commit_to_force_pushmaster
@@ -378,7 +373,6 @@ Test force pushrebase sync
   $ hg log -r master_bookmark
   commit:      cc83c88b72d3
   bookmark:    master_bookmark
-  parent:      a7acac33c050
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     commit_to_force_pushmaster

@@ -77,8 +77,6 @@ Test that output remains the same with multiple invocations.
   commit:      a5d935fe38ada2b984c29e4e02bffd7f19bf818d
   bookmark:    foo
   phase:       draft
-  parent:      b292c1e3311fd0f13ae83b409caae4a6d1fb348c
-  parent:      0000000000000000000000000000000000000000
   manifest:    87b34bbb5b48d4106fd2da95fbe8beb73c1850d2
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -162,8 +160,6 @@ Test that corrupt caches are gracefully ignored, and updated
   commit:      a5d935fe38ada2b984c29e4e02bffd7f19bf818d
   bookmark:    foo
   phase:       draft
-  parent:      b292c1e3311fd0f13ae83b409caae4a6d1fb348c
-  parent:      0000000000000000000000000000000000000000
   manifest:    87b34bbb5b48d4106fd2da95fbe8beb73c1850d2
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -218,8 +214,6 @@ Test strange (unicode) filenames
   commit:      f3a143469693894d291b7388ea8392a07492751f
   bookmark:    foo
   phase:       draft
-  parent:      a5d935fe38ada2b984c29e4e02bffd7f19bf818d
-  parent:      0000000000000000000000000000000000000000
   manifest:    0640a75d79d252a6348f1e2316af42e7960b4a90
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000

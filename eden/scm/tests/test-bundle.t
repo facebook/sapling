@@ -142,7 +142,6 @@ Log -R full.hg in fresh empty
   $ cd empty
   $ hg -R ../full.hg log
   commit:      aa35859c02ea
-  parent:      eebf5a27f8ca
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0.3m
@@ -163,7 +162,6 @@ Log -R full.hg in fresh empty
   summary:     1.2
   
   commit:      095197eb4973
-  parent:      f9ee2f85a263
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1.1
@@ -369,7 +367,6 @@ Log -R full.hg in partial
   $ hg -R ../full.hg log -T phases
   commit:      aa35859c02ea
   phase:       draft
-  parent:      eebf5a27f8ca
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0.3m
@@ -394,7 +391,6 @@ Log -R full.hg in partial
   
   commit:      095197eb4973
   phase:       draft
-  parent:      f9ee2f85a263
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1.1
@@ -430,7 +426,6 @@ Incoming full.hg in partial
   comparing with bundle:../full.hg
   searching for changes
   commit:      095197eb4973
-  parent:      f9ee2f85a263
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1.1
@@ -451,7 +446,6 @@ Incoming full.hg in partial
   summary:     1.3m
   
   commit:      aa35859c02ea
-  parent:      eebf5a27f8ca
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0.3m
@@ -463,7 +457,6 @@ Outgoing -R full.hg vs partial2 in partial
   comparing with ../partial2
   searching for changes
   commit:      095197eb4973
-  parent:      f9ee2f85a263
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     1.1
@@ -484,7 +477,6 @@ Outgoing -R full.hg vs partial2 in partial
   summary:     1.3m
   
   commit:      aa35859c02ea
-  parent:      eebf5a27f8ca
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0.3m
@@ -512,7 +504,6 @@ Direct clone from bundle (all-history)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R full-clone heads
   commit:      aa35859c02ea
-  parent:      eebf5a27f8ca
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     0.3m
@@ -772,7 +763,6 @@ directory does not exist
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg log -G
   o  commit:      8bd3e1f196af
-  |  parent:      a01eca7af26d
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     3

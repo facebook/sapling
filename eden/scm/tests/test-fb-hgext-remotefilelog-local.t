@@ -162,7 +162,6 @@
 
   $ hg log -r 'max(desc(a))' --stat
   commit:      19edf50f4de7
-  parent:      fed61014d323
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a

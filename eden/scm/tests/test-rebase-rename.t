@@ -90,8 +90,6 @@ Rebased revision does not contain information about b (issue3739)
   $ hg log -r 'max(desc(rename))' --debug
   commit:      032a9b75e83bff1dcfb6cbfa4ef50a704bf1b569
   phase:       draft
-  parent:      220d0626d185f372d9d8f69d9c73b0811d7725f7
-  parent:      0000000000000000000000000000000000000000
   manifest:    035d66b27a1b06b2d12b46d41a39adb7a200c370
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -172,8 +170,6 @@ Rebased revision does not contain information about b (issue3739)
   $ hg log -r 'max(desc(copy))' --debug
   commit:      98f6e6dbf45ab54079c2237fbd11066a5c41a11d
   phase:       draft
-  parent:      39e588434882ff77d01229d169cdc77f29e8855e
-  parent:      0000000000000000000000000000000000000000
   manifest:    2232f329d66fffe3930d43479ae624f66322b04d
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000

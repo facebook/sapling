@@ -195,8 +195,6 @@ New test set
   $ hg bisect --bad
   The first bad revision is:
   commit:      a41c9f2666a8
-  parent:      e694d9484bb8
-  parent:      d910e57b873b
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     13: merge(9,12)

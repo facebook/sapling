@@ -128,7 +128,6 @@ log
 
   $ hg log
   commit:      d42e18c7bc9b
-  parent:      857b178a7cf3
   user:        test
   date:        Thu Jan 01 00:00:18 1970 +0000
   summary:     18
@@ -144,14 +143,11 @@ log
   summary:     16
   
   commit:      857b178a7cf3
-  parent:      b0a32c86eb31
-  parent:      429fcd26f52d
   user:        test
   date:        Thu Jan 01 00:00:15 1970 +0000
   summary:     merge 10,13
   
   commit:      faa450606157
-  parent:      82ca6f06eccd
   user:        test
   date:        Thu Jan 01 00:00:14 1970 +0000
   summary:     14
@@ -167,14 +163,11 @@ log
   summary:     12
   
   commit:      82ca6f06eccd
-  parent:      dab8161ac8fc
   user:        test
   date:        Thu Jan 01 00:00:11 1970 +0000
   summary:     11
   
   commit:      429fcd26f52d
-  parent:      3c77083deb4a
-  parent:      a214d5d3811a
   user:        test
   date:        Thu Jan 01 00:00:10 1970 +0000
   summary:     merge 6,9
@@ -185,26 +178,21 @@ log
   summary:     9
   
   commit:      dab8161ac8fc
-  parent:      4ca5088da217
   user:        test
   date:        Thu Jan 01 00:00:08 1970 +0000
   summary:     8
   
   commit:      50c76098bbf2
-  parent:      5c668c22234f
   user:        test
   date:        Thu Jan 01 00:00:07 1970 +0000
   summary:     7
   
   commit:      a214d5d3811a
-  parent:      385a529b6670
-  parent:      5c668c22234f
   user:        test
   date:        Thu Jan 01 00:00:06 1970 +0000
   summary:     merge 4,5
   
   commit:      385a529b6670
-  parent:      051e12f87bf1
   user:        test
   date:        Thu Jan 01 00:00:05 1970 +0000
   summary:     5
@@ -452,8 +440,6 @@ first bad rev is 15
   summary:     9
   
   commit:      429fcd26f52d
-  parent:      3c77083deb4a
-  parent:      a214d5d3811a
   user:        test
   date:        Thu Jan 01 00:00:10 1970 +0000
   summary:     merge 6,9
@@ -464,8 +450,6 @@ first bad rev is 15
   summary:     13
   
   commit:      857b178a7cf3
-  parent:      b0a32c86eb31
-  parent:      429fcd26f52d
   user:        test
   date:        Thu Jan 01 00:00:15 1970 +0000
   summary:     merge 10,13
@@ -540,8 +524,6 @@ first good revision is 17
   $ hg bisect -s
   Due to skipped revisions, the first good revision could be any of:
   commit:      857b178a7cf3
-  parent:      b0a32c86eb31
-  parent:      429fcd26f52d
   user:        test
   date:        Thu Jan 01 00:00:15 1970 +0000
   summary:     merge 10,13
@@ -623,8 +605,6 @@ end at merge: 17 bad, 11 good (but 9 is first bad)
   $ hg bisect -b
   The first bad revision is:
   commit:      857b178a7cf3
-  parent:      b0a32c86eb31
-  parent:      429fcd26f52d
   user:        test
   date:        Thu Jan 01 00:00:15 1970 +0000
   summary:     merge 10,13
@@ -766,7 +746,6 @@ user adds irrelevant but consistent information (here: -g 2) to bisect state
   $ hg bisect -b
   The first bad revision is:
   commit:      82ca6f06eccd
-  parent:      dab8161ac8fc
   user:        test
   date:        Thu Jan 01 00:00:11 1970 +0000
   summary:     11

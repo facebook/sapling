@@ -91,8 +91,6 @@ Remove the directory, then try to replace it with a file (issue754)
   $ hg -R git-repo-hg tip -v
   commit:      c78094926be2
   bookmark:    master
-  parent:      f5f5cb45432b
-  parent:      4e174f80c67c
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:15 2007 +0000
   files:       a
@@ -962,8 +960,6 @@ convert will not retain custom metadata keys by default
   commit:      e13a39880f68479127b2a80fa0b448cc8524aa09
   bookmark:    master
   phase:       draft
-  parent:      dcb68977c55cd02cbd13b901df65c4b6e7b9c4b9
-  parent:      0000000000000000000000000000000000000000
   manifest:    6a3df4de388f3c4f8e28f4f9a814299a3cbb5f50
   user:        test <test@example.com>
   date:        Sun Sep 09 01:46:40 2001 +0000
@@ -996,8 +992,6 @@ Converting a specific extra works
   commit:      d40fb205d58597e6ecfd55b16f198be5bf436391
   bookmark:    master
   phase:       draft
-  parent:      dcb68977c55cd02cbd13b901df65c4b6e7b9c4b9
-  parent:      0000000000000000000000000000000000000000
   manifest:    6a3df4de388f3c4f8e28f4f9a814299a3cbb5f50
   user:        test <test@example.com>
   date:        Sun Sep 09 01:46:40 2001 +0000
@@ -1024,8 +1018,6 @@ Converting multiple extras works
   commit:      0105af33379e7b6491501fd34141b7af700fe125
   bookmark:    master
   phase:       draft
-  parent:      dcb68977c55cd02cbd13b901df65c4b6e7b9c4b9
-  parent:      0000000000000000000000000000000000000000
   manifest:    6a3df4de388f3c4f8e28f4f9a814299a3cbb5f50
   user:        test <test@example.com>
   date:        Sun Sep 09 01:46:40 2001 +0000
@@ -1053,8 +1045,6 @@ convert.git.saverev can be disabled to prevent convert_revision from being writt
   commit:      1dcaf4ffe5bee43fa86db2800821f6f0af212c5c
   bookmark:    master
   phase:       draft
-  parent:      a13935fec4daf06a5a87a7307ccb0fc94f98d06d
-  parent:      0000000000000000000000000000000000000000
   manifest:    6a3df4de388f3c4f8e28f4f9a814299a3cbb5f50
   user:        test <test@example.com>
   date:        Sun Sep 09 01:46:40 2001 +0000
@@ -1080,8 +1070,6 @@ convert_revision from source
   commit:      574d85931544d4542007664fee3747360e85ee28
   bookmark:    master
   phase:       draft
-  parent:      a13935fec4daf06a5a87a7307ccb0fc94f98d06d
-  parent:      0000000000000000000000000000000000000000
   manifest:    6a3df4de388f3c4f8e28f4f9a814299a3cbb5f50
   user:        test <test@example.com>
   date:        Sun Sep 09 01:46:40 2001 +0000

@@ -242,215 +242,157 @@ sh % "hg log -G -q" == r"""
 
 sh % "hg log -G" == r"""
     @  commit:      fea3ac5810e0
-    |  parent:      d06dffa21a31
     |  user:        test
     |  date:        Thu Jan 01 00:00:34 1970 +0000
     |  summary:     (34) head
     |
     | o  commit:      68608f5145f9
-    | |  parent:      1aa84d96232a
     | |  user:        test
     | |  date:        Thu Jan 01 00:00:33 1970 +0000
     | |  summary:     (33) head
     | |
     o |    commit:      d06dffa21a31
-    |\ \   parent:      886ed638191b
-    | | |  parent:      621d83e11f67
-    | | |  user:        test
+    |\ \   user:        test
     | | |  date:        Thu Jan 01 00:00:32 1970 +0000
     | | |  summary:     (32) expand
     | | |
     | o |    commit:      621d83e11f67
-    | |\ \   parent:      d42a756af44d
-    | | | |  parent:      6e11cd4b648f
-    | | | |  user:        test
+    | |\ \   user:        test
     | | | |  date:        Thu Jan 01 00:00:31 1970 +0000
     | | | |  summary:     (31) expand
     | | | |
     | | o |    commit:      6e11cd4b648f
-    | | |\ \   parent:      44ecd0b9ae99
-    | | | | |  parent:      cd9bb2be7593
-    | | | | |  user:        test
+    | | |\ \   user:        test
     | | | | |  date:        Thu Jan 01 00:00:30 1970 +0000
     | | | | |  summary:     (30) expand
     | | | | |
     | | | o |  commit:      cd9bb2be7593
-    | | | | |  parent:      e6eb3150255d
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:29 1970 +0000
     | | | | |  summary:     (29) regular commit
     | | | | |
     | | o | |    commit:      44ecd0b9ae99
-    | | |\ \ \   parent:      6db2ef61d156
-    | | | | | |  parent:      7f25b6c2f0b9
-    | | | | | |  user:        test
+    | | |\ \ \   user:        test
     | | | | | |  date:        Thu Jan 01 00:00:28 1970 +0000
     | | | | | |  summary:     (28) merge zero known
     | | | | | |
     o | | | | |  commit:      886ed638191b
-    |/ / / / /   parent:      d42a756af44d
-    | | | | |    user:        test
+    |/ / / / /   user:        test
     | | | | |    date:        Thu Jan 01 00:00:27 1970 +0000
     | | | | |    summary:     (27) collapse
     | | | | |
     | | o---+  commit:      7f25b6c2f0b9
-    | | | | |  parent:      1aa84d96232a
-    | | | | |  parent:      91da8ed57247
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:26 1970 +0000
     | | | | |  summary:     (26) merge one known; far right
     | | | | |
     +---o | |  commit:      91da8ed57247
-    | | | | |  parent:      d42a756af44d
-    | | | | |  parent:      a9c19a3d96b7
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:25 1970 +0000
     | | | | |  summary:     (25) merge one known; far left
     | | | | |
     | | o | |  commit:      a9c19a3d96b7
-    | | |\| |  parent:      e6eb3150255d
-    | | | | |  parent:      a01cddf0766d
-    | | | | |  user:        test
+    | | |\| |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:24 1970 +0000
     | | | | |  summary:     (24) merge one known; immediate right
     | | | | |
     | | o | |  commit:      a01cddf0766d
-    | |/| | |  parent:      6db2ef61d156
-    | | | | |  parent:      e0d9cccacb5d
-    | | | | |  user:        test
+    | |/| | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:23 1970 +0000
     | | | | |  summary:     (23) merge one known; immediate left
     | | | | |
     +---o---+  commit:      e0d9cccacb5d
-    | |   | |  parent:      1aa84d96232a
-    | |  / /   parent:      d42a756af44d
-    | | | |    user:        test
-    | | | |    date:        Thu Jan 01 00:00:22 1970 +0000
+    | |   | |  user:        test
+    | |  / /   date:        Thu Jan 01 00:00:22 1970 +0000
     | | | |    summary:     (22) merge two known; one far left, one far right
     | | | |
     o | | |    commit:      d42a756af44d
-    |\ \ \ \   parent:      31ddc2c1573b
-    | | | | |  parent:      d30ed6450e32
-    | | | | |  user:        test
+    |\ \ \ \   user:        test
     | | | | |  date:        Thu Jan 01 00:00:21 1970 +0000
     | | | | |  summary:     (21) expand
     | | | | |
     | o---+-+  commit:      d30ed6450e32
-    |   | | |  parent:      e6eb3150255d
-    |  / / /   parent:      1aa84d96232a
-    | | | |    user:        test
-    | | | |    date:        Thu Jan 01 00:00:20 1970 +0000
+    |   | | |  user:        test
+    |  / / /   date:        Thu Jan 01 00:00:20 1970 +0000
     | | | |    summary:     (20) merge two known; two far right
     | | | |
     o | | |    commit:      31ddc2c1573b
-    |\ \ \ \   parent:      1dda3f72782d
-    | | | | |  parent:      44765d7c06e0
-    | | | | |  user:        test
+    |\ \ \ \   user:        test
     | | | | |  date:        Thu Jan 01 00:00:19 1970 +0000
     | | | | |  summary:     (19) expand
     | | | | |
     +---+---o  commit:      1aa84d96232a
-    | | | |    parent:      6db2ef61d156
-    | | | |    parent:      1dda3f72782d
     | | | |    user:        test
     | | | |    date:        Thu Jan 01 00:00:18 1970 +0000
     | | | |    summary:     (18) merge two known; two far left
     | | | |
     | o | |    commit:      44765d7c06e0
-    | |\ \ \   parent:      86b91144a6e9
-    | | | | |  parent:      3677d192927d
-    | | | | |  user:        test
+    | |\ \ \   user:        test
     | | | | |  date:        Thu Jan 01 00:00:17 1970 +0000
     | | | | |  summary:     (17) expand
     | | | | |
     | | o---+  commit:      3677d192927d
-    | | | | |  parent:      e6eb3150255d
-    | | |/ /   parent:      6db2ef61d156
-    | | | |    user:        test
-    | | | |    date:        Thu Jan 01 00:00:16 1970 +0000
+    | | | | |  user:        test
+    | | |/ /   date:        Thu Jan 01 00:00:16 1970 +0000
     | | | |    summary:     (16) merge two known; one immediate right, one near right
     | | | |
     o | | |    commit:      1dda3f72782d
-    |\ \ \ \   parent:      22d8966a97e3
-    | | | | |  parent:      8eac370358ef
-    | | | | |  user:        test
+    |\ \ \ \   user:        test
     | | | | |  date:        Thu Jan 01 00:00:15 1970 +0000
     | | | | |  summary:     (15) expand
     | | | | |
     | o-----+  commit:      8eac370358ef
-    | | | | |  parent:      e6eb3150255d
-    | |/ / /   parent:      86b91144a6e9
-    | | | |    user:        test
-    | | | |    date:        Thu Jan 01 00:00:14 1970 +0000
+    | | | | |  user:        test
+    | |/ / /   date:        Thu Jan 01 00:00:14 1970 +0000
     | | | |    summary:     (14) merge two known; one immediate right, one far right
     | | | |
     o | | |    commit:      22d8966a97e3
-    |\ \ \ \   parent:      7010c0af0a35
-    | | | | |  parent:      832d76e6bdf2
-    | | | | |  user:        test
+    |\ \ \ \   user:        test
     | | | | |  date:        Thu Jan 01 00:00:13 1970 +0000
     | | | | |  summary:     (13) expand
     | | | | |
     +---o | |  commit:      86b91144a6e9
-    | | |/ /   parent:      6db2ef61d156
-    | | | |    parent:      7010c0af0a35
-    | | | |    user:        test
+    | | |/ /   user:        test
     | | | |    date:        Thu Jan 01 00:00:12 1970 +0000
     | | | |    summary:     (12) merge two known; one immediate right, one far left
     | | | |
     | o | |    commit:      832d76e6bdf2
-    | |\ \ \   parent:      b105a072e251
-    | | | | |  parent:      74c64d036d72
-    | | | | |  user:        test
+    | |\ \ \   user:        test
     | | | | |  date:        Thu Jan 01 00:00:11 1970 +0000
     | | | | |  summary:     (11) expand
     | | | | |
     | | o---+  commit:      74c64d036d72
-    | | | | |  parent:      e6eb3150255d
-    | |/ / /   parent:      b105a072e251
-    | | | |    user:        test
-    | | | |    date:        Thu Jan 01 00:00:10 1970 +0000
+    | | | | |  user:        test
+    | |/ / /   date:        Thu Jan 01 00:00:10 1970 +0000
     | | | |    summary:     (10) merge two known; one immediate left, one near right
     | | | |
     o | | |    commit:      7010c0af0a35
-    |\ \ \ \   parent:      b632bb1b1224
-    | | | | |  parent:      7a0b11f71937
-    | | | | |  user:        test
+    |\ \ \ \   user:        test
     | | | | |  date:        Thu Jan 01 00:00:09 1970 +0000
     | | | | |  summary:     (9) expand
     | | | | |
     | o-----+  commit:      7a0b11f71937
-    | | | | |  parent:      e6eb3150255d
-    |/ / / /   parent:      b632bb1b1224
-    | | | |    user:        test
-    | | | |    date:        Thu Jan 01 00:00:08 1970 +0000
+    | | | | |  user:        test
+    |/ / / /   date:        Thu Jan 01 00:00:08 1970 +0000
     | | | |    summary:     (8) merge two known; one immediate left, one far right
     | | | |
     o | | |    commit:      b632bb1b1224
-    |\ \ \ \   parent:      3d9a33b8d1e1
-    | | | | |  parent:      4409d547b708
-    | | | | |  user:        test
+    |\ \ \ \   user:        test
     | | | | |  date:        Thu Jan 01 00:00:07 1970 +0000
     | | | | |  summary:     (7) expand
     | | | | |
     +---o | |  commit:      b105a072e251
-    | |/ / /   parent:      3d9a33b8d1e1
-    | | | |    parent:      4409d547b708
-    | | | |    user:        test
+    | |/ / /   user:        test
     | | | |    date:        Thu Jan 01 00:00:06 1970 +0000
     | | | |    summary:     (6) merge two known; one immediate left, one far left
     | | | |
     | o | |    commit:      4409d547b708
-    | |\ \ \   parent:      27eef8ed80b4
-    | | | | |  parent:      26a8bac39d9f
-    | | | | |  user:        test
+    | |\ \ \   user:        test
     | | | | |  date:        Thu Jan 01 00:00:05 1970 +0000
     | | | | |  summary:     (5) expand
     | | | | |
     | | o | |  commit:      26a8bac39d9f
-    | |/|/ /   parent:      6db2ef61d156
-    | | | |    parent:      27eef8ed80b4
-    | | | |    user:        test
+    | |/|/ /   user:        test
     | | | |    date:        Thu Jan 01 00:00:04 1970 +0000
     | | | |    summary:     (4) merge two known; one immediate left, one immediate right
     | | | |
@@ -477,215 +419,157 @@ sh % "hg log -G" == r"""
 # File glog:
 sh % "hg log -G a" == r"""
     @  commit:      fea3ac5810e0
-    |  parent:      d06dffa21a31
     |  user:        test
     |  date:        Thu Jan 01 00:00:34 1970 +0000
     |  summary:     (34) head
     |
     | o  commit:      68608f5145f9
-    | |  parent:      1aa84d96232a
     | |  user:        test
     | |  date:        Thu Jan 01 00:00:33 1970 +0000
     | |  summary:     (33) head
     | |
     o |    commit:      d06dffa21a31
-    |\ \   parent:      886ed638191b
-    | | |  parent:      621d83e11f67
-    | | |  user:        test
+    |\ \   user:        test
     | | |  date:        Thu Jan 01 00:00:32 1970 +0000
     | | |  summary:     (32) expand
     | | |
     | o |    commit:      621d83e11f67
-    | |\ \   parent:      d42a756af44d
-    | | | |  parent:      6e11cd4b648f
-    | | | |  user:        test
+    | |\ \   user:        test
     | | | |  date:        Thu Jan 01 00:00:31 1970 +0000
     | | | |  summary:     (31) expand
     | | | |
     | | o |    commit:      6e11cd4b648f
-    | | |\ \   parent:      44ecd0b9ae99
-    | | | | |  parent:      cd9bb2be7593
-    | | | | |  user:        test
+    | | |\ \   user:        test
     | | | | |  date:        Thu Jan 01 00:00:30 1970 +0000
     | | | | |  summary:     (30) expand
     | | | | |
     | | | o |  commit:      cd9bb2be7593
-    | | | | |  parent:      e6eb3150255d
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:29 1970 +0000
     | | | | |  summary:     (29) regular commit
     | | | | |
     | | o | |    commit:      44ecd0b9ae99
-    | | |\ \ \   parent:      6db2ef61d156
-    | | | | | |  parent:      7f25b6c2f0b9
-    | | | | | |  user:        test
+    | | |\ \ \   user:        test
     | | | | | |  date:        Thu Jan 01 00:00:28 1970 +0000
     | | | | | |  summary:     (28) merge zero known
     | | | | | |
     o | | | | |  commit:      886ed638191b
-    |/ / / / /   parent:      d42a756af44d
-    | | | | |    user:        test
+    |/ / / / /   user:        test
     | | | | |    date:        Thu Jan 01 00:00:27 1970 +0000
     | | | | |    summary:     (27) collapse
     | | | | |
     | | o---+  commit:      7f25b6c2f0b9
-    | | | | |  parent:      1aa84d96232a
-    | | | | |  parent:      91da8ed57247
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:26 1970 +0000
     | | | | |  summary:     (26) merge one known; far right
     | | | | |
     +---o | |  commit:      91da8ed57247
-    | | | | |  parent:      d42a756af44d
-    | | | | |  parent:      a9c19a3d96b7
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:25 1970 +0000
     | | | | |  summary:     (25) merge one known; far left
     | | | | |
     | | o | |  commit:      a9c19a3d96b7
-    | | |\| |  parent:      e6eb3150255d
-    | | | | |  parent:      a01cddf0766d
-    | | | | |  user:        test
+    | | |\| |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:24 1970 +0000
     | | | | |  summary:     (24) merge one known; immediate right
     | | | | |
     | | o | |  commit:      a01cddf0766d
-    | |/| | |  parent:      6db2ef61d156
-    | | | | |  parent:      e0d9cccacb5d
-    | | | | |  user:        test
+    | |/| | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:23 1970 +0000
     | | | | |  summary:     (23) merge one known; immediate left
     | | | | |
     +---o---+  commit:      e0d9cccacb5d
-    | |   | |  parent:      1aa84d96232a
-    | |  / /   parent:      d42a756af44d
-    | | | |    user:        test
-    | | | |    date:        Thu Jan 01 00:00:22 1970 +0000
+    | |   | |  user:        test
+    | |  / /   date:        Thu Jan 01 00:00:22 1970 +0000
     | | | |    summary:     (22) merge two known; one far left, one far right
     | | | |
     o | | |    commit:      d42a756af44d
-    |\ \ \ \   parent:      31ddc2c1573b
-    | | | | |  parent:      d30ed6450e32
-    | | | | |  user:        test
+    |\ \ \ \   user:        test
     | | | | |  date:        Thu Jan 01 00:00:21 1970 +0000
     | | | | |  summary:     (21) expand
     | | | | |
     | o---+-+  commit:      d30ed6450e32
-    |   | | |  parent:      e6eb3150255d
-    |  / / /   parent:      1aa84d96232a
-    | | | |    user:        test
-    | | | |    date:        Thu Jan 01 00:00:20 1970 +0000
+    |   | | |  user:        test
+    |  / / /   date:        Thu Jan 01 00:00:20 1970 +0000
     | | | |    summary:     (20) merge two known; two far right
     | | | |
     o | | |    commit:      31ddc2c1573b
-    |\ \ \ \   parent:      1dda3f72782d
-    | | | | |  parent:      44765d7c06e0
-    | | | | |  user:        test
+    |\ \ \ \   user:        test
     | | | | |  date:        Thu Jan 01 00:00:19 1970 +0000
     | | | | |  summary:     (19) expand
     | | | | |
     +---+---o  commit:      1aa84d96232a
-    | | | |    parent:      6db2ef61d156
-    | | | |    parent:      1dda3f72782d
     | | | |    user:        test
     | | | |    date:        Thu Jan 01 00:00:18 1970 +0000
     | | | |    summary:     (18) merge two known; two far left
     | | | |
     | o | |    commit:      44765d7c06e0
-    | |\ \ \   parent:      86b91144a6e9
-    | | | | |  parent:      3677d192927d
-    | | | | |  user:        test
+    | |\ \ \   user:        test
     | | | | |  date:        Thu Jan 01 00:00:17 1970 +0000
     | | | | |  summary:     (17) expand
     | | | | |
     | | o---+  commit:      3677d192927d
-    | | | | |  parent:      e6eb3150255d
-    | | |/ /   parent:      6db2ef61d156
-    | | | |    user:        test
-    | | | |    date:        Thu Jan 01 00:00:16 1970 +0000
+    | | | | |  user:        test
+    | | |/ /   date:        Thu Jan 01 00:00:16 1970 +0000
     | | | |    summary:     (16) merge two known; one immediate right, one near right
     | | | |
     o | | |    commit:      1dda3f72782d
-    |\ \ \ \   parent:      22d8966a97e3
-    | | | | |  parent:      8eac370358ef
-    | | | | |  user:        test
+    |\ \ \ \   user:        test
     | | | | |  date:        Thu Jan 01 00:00:15 1970 +0000
     | | | | |  summary:     (15) expand
     | | | | |
     | o-----+  commit:      8eac370358ef
-    | | | | |  parent:      e6eb3150255d
-    | |/ / /   parent:      86b91144a6e9
-    | | | |    user:        test
-    | | | |    date:        Thu Jan 01 00:00:14 1970 +0000
+    | | | | |  user:        test
+    | |/ / /   date:        Thu Jan 01 00:00:14 1970 +0000
     | | | |    summary:     (14) merge two known; one immediate right, one far right
     | | | |
     o | | |    commit:      22d8966a97e3
-    |\ \ \ \   parent:      7010c0af0a35
-    | | | | |  parent:      832d76e6bdf2
-    | | | | |  user:        test
+    |\ \ \ \   user:        test
     | | | | |  date:        Thu Jan 01 00:00:13 1970 +0000
     | | | | |  summary:     (13) expand
     | | | | |
     +---o | |  commit:      86b91144a6e9
-    | | |/ /   parent:      6db2ef61d156
-    | | | |    parent:      7010c0af0a35
-    | | | |    user:        test
+    | | |/ /   user:        test
     | | | |    date:        Thu Jan 01 00:00:12 1970 +0000
     | | | |    summary:     (12) merge two known; one immediate right, one far left
     | | | |
     | o | |    commit:      832d76e6bdf2
-    | |\ \ \   parent:      b105a072e251
-    | | | | |  parent:      74c64d036d72
-    | | | | |  user:        test
+    | |\ \ \   user:        test
     | | | | |  date:        Thu Jan 01 00:00:11 1970 +0000
     | | | | |  summary:     (11) expand
     | | | | |
     | | o---+  commit:      74c64d036d72
-    | | | | |  parent:      e6eb3150255d
-    | |/ / /   parent:      b105a072e251
-    | | | |    user:        test
-    | | | |    date:        Thu Jan 01 00:00:10 1970 +0000
+    | | | | |  user:        test
+    | |/ / /   date:        Thu Jan 01 00:00:10 1970 +0000
     | | | |    summary:     (10) merge two known; one immediate left, one near right
     | | | |
     o | | |    commit:      7010c0af0a35
-    |\ \ \ \   parent:      b632bb1b1224
-    | | | | |  parent:      7a0b11f71937
-    | | | | |  user:        test
+    |\ \ \ \   user:        test
     | | | | |  date:        Thu Jan 01 00:00:09 1970 +0000
     | | | | |  summary:     (9) expand
     | | | | |
     | o-----+  commit:      7a0b11f71937
-    | | | | |  parent:      e6eb3150255d
-    |/ / / /   parent:      b632bb1b1224
-    | | | |    user:        test
-    | | | |    date:        Thu Jan 01 00:00:08 1970 +0000
+    | | | | |  user:        test
+    |/ / / /   date:        Thu Jan 01 00:00:08 1970 +0000
     | | | |    summary:     (8) merge two known; one immediate left, one far right
     | | | |
     o | | |    commit:      b632bb1b1224
-    |\ \ \ \   parent:      3d9a33b8d1e1
-    | | | | |  parent:      4409d547b708
-    | | | | |  user:        test
+    |\ \ \ \   user:        test
     | | | | |  date:        Thu Jan 01 00:00:07 1970 +0000
     | | | | |  summary:     (7) expand
     | | | | |
     +---o | |  commit:      b105a072e251
-    | |/ / /   parent:      3d9a33b8d1e1
-    | | | |    parent:      4409d547b708
-    | | | |    user:        test
+    | |/ / /   user:        test
     | | | |    date:        Thu Jan 01 00:00:06 1970 +0000
     | | | |    summary:     (6) merge two known; one immediate left, one far left
     | | | |
     | o | |    commit:      4409d547b708
-    | |\ \ \   parent:      27eef8ed80b4
-    | | | | |  parent:      26a8bac39d9f
-    | | | | |  user:        test
+    | |\ \ \   user:        test
     | | | | |  date:        Thu Jan 01 00:00:05 1970 +0000
     | | | | |  summary:     (5) expand
     | | | | |
     | | o | |  commit:      26a8bac39d9f
-    | |/|/ /   parent:      6db2ef61d156
-    | | | |    parent:      27eef8ed80b4
-    | | | |    user:        test
+    | |/|/ /   user:        test
     | | | |    date:        Thu Jan 01 00:00:04 1970 +0000
     | | | |    summary:     (4) merge two known; one immediate left, one immediate right
     | | | |
@@ -713,215 +597,157 @@ sh % "hg log -G a" == r"""
 
 sh % "hg log -G -r 'file(\"a\")'" == r"""
     @  commit:      fea3ac5810e0
-    |  parent:      d06dffa21a31
     |  user:        test
     |  date:        Thu Jan 01 00:00:34 1970 +0000
     |  summary:     (34) head
     |
     | o  commit:      68608f5145f9
-    | |  parent:      1aa84d96232a
     | |  user:        test
     | |  date:        Thu Jan 01 00:00:33 1970 +0000
     | |  summary:     (33) head
     | |
     o |    commit:      d06dffa21a31
-    |\ \   parent:      886ed638191b
-    | | |  parent:      621d83e11f67
-    | | |  user:        test
+    |\ \   user:        test
     | | |  date:        Thu Jan 01 00:00:32 1970 +0000
     | | |  summary:     (32) expand
     | | |
     | o |    commit:      621d83e11f67
-    | |\ \   parent:      d42a756af44d
-    | | | |  parent:      6e11cd4b648f
-    | | | |  user:        test
+    | |\ \   user:        test
     | | | |  date:        Thu Jan 01 00:00:31 1970 +0000
     | | | |  summary:     (31) expand
     | | | |
     | | o |    commit:      6e11cd4b648f
-    | | |\ \   parent:      44ecd0b9ae99
-    | | | | |  parent:      cd9bb2be7593
-    | | | | |  user:        test
+    | | |\ \   user:        test
     | | | | |  date:        Thu Jan 01 00:00:30 1970 +0000
     | | | | |  summary:     (30) expand
     | | | | |
     | | | o |  commit:      cd9bb2be7593
-    | | | | |  parent:      e6eb3150255d
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:29 1970 +0000
     | | | | |  summary:     (29) regular commit
     | | | | |
     | | o | |    commit:      44ecd0b9ae99
-    | | |\ \ \   parent:      6db2ef61d156
-    | | | | | |  parent:      7f25b6c2f0b9
-    | | | | | |  user:        test
+    | | |\ \ \   user:        test
     | | | | | |  date:        Thu Jan 01 00:00:28 1970 +0000
     | | | | | |  summary:     (28) merge zero known
     | | | | | |
     o | | | | |  commit:      886ed638191b
-    |/ / / / /   parent:      d42a756af44d
-    | | | | |    user:        test
+    |/ / / / /   user:        test
     | | | | |    date:        Thu Jan 01 00:00:27 1970 +0000
     | | | | |    summary:     (27) collapse
     | | | | |
     | | o---+  commit:      7f25b6c2f0b9
-    | | | | |  parent:      1aa84d96232a
-    | | | | |  parent:      91da8ed57247
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:26 1970 +0000
     | | | | |  summary:     (26) merge one known; far right
     | | | | |
     +---o | |  commit:      91da8ed57247
-    | | | | |  parent:      d42a756af44d
-    | | | | |  parent:      a9c19a3d96b7
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:25 1970 +0000
     | | | | |  summary:     (25) merge one known; far left
     | | | | |
     | | o | |  commit:      a9c19a3d96b7
-    | | |\| |  parent:      e6eb3150255d
-    | | | | |  parent:      a01cddf0766d
-    | | | | |  user:        test
+    | | |\| |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:24 1970 +0000
     | | | | |  summary:     (24) merge one known; immediate right
     | | | | |
     | | o | |  commit:      a01cddf0766d
-    | |/| | |  parent:      6db2ef61d156
-    | | | | |  parent:      e0d9cccacb5d
-    | | | | |  user:        test
+    | |/| | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:23 1970 +0000
     | | | | |  summary:     (23) merge one known; immediate left
     | | | | |
     +---o---+  commit:      e0d9cccacb5d
-    | |   | |  parent:      1aa84d96232a
-    | |  / /   parent:      d42a756af44d
-    | | | |    user:        test
-    | | | |    date:        Thu Jan 01 00:00:22 1970 +0000
+    | |   | |  user:        test
+    | |  / /   date:        Thu Jan 01 00:00:22 1970 +0000
     | | | |    summary:     (22) merge two known; one far left, one far right
     | | | |
     o | | |    commit:      d42a756af44d
-    |\ \ \ \   parent:      31ddc2c1573b
-    | | | | |  parent:      d30ed6450e32
-    | | | | |  user:        test
+    |\ \ \ \   user:        test
     | | | | |  date:        Thu Jan 01 00:00:21 1970 +0000
     | | | | |  summary:     (21) expand
     | | | | |
     | o---+-+  commit:      d30ed6450e32
-    |   | | |  parent:      e6eb3150255d
-    |  / / /   parent:      1aa84d96232a
-    | | | |    user:        test
-    | | | |    date:        Thu Jan 01 00:00:20 1970 +0000
+    |   | | |  user:        test
+    |  / / /   date:        Thu Jan 01 00:00:20 1970 +0000
     | | | |    summary:     (20) merge two known; two far right
     | | | |
     o | | |    commit:      31ddc2c1573b
-    |\ \ \ \   parent:      1dda3f72782d
-    | | | | |  parent:      44765d7c06e0
-    | | | | |  user:        test
+    |\ \ \ \   user:        test
     | | | | |  date:        Thu Jan 01 00:00:19 1970 +0000
     | | | | |  summary:     (19) expand
     | | | | |
     +---+---o  commit:      1aa84d96232a
-    | | | |    parent:      6db2ef61d156
-    | | | |    parent:      1dda3f72782d
     | | | |    user:        test
     | | | |    date:        Thu Jan 01 00:00:18 1970 +0000
     | | | |    summary:     (18) merge two known; two far left
     | | | |
     | o | |    commit:      44765d7c06e0
-    | |\ \ \   parent:      86b91144a6e9
-    | | | | |  parent:      3677d192927d
-    | | | | |  user:        test
+    | |\ \ \   user:        test
     | | | | |  date:        Thu Jan 01 00:00:17 1970 +0000
     | | | | |  summary:     (17) expand
     | | | | |
     | | o---+  commit:      3677d192927d
-    | | | | |  parent:      e6eb3150255d
-    | | |/ /   parent:      6db2ef61d156
-    | | | |    user:        test
-    | | | |    date:        Thu Jan 01 00:00:16 1970 +0000
+    | | | | |  user:        test
+    | | |/ /   date:        Thu Jan 01 00:00:16 1970 +0000
     | | | |    summary:     (16) merge two known; one immediate right, one near right
     | | | |
     o | | |    commit:      1dda3f72782d
-    |\ \ \ \   parent:      22d8966a97e3
-    | | | | |  parent:      8eac370358ef
-    | | | | |  user:        test
+    |\ \ \ \   user:        test
     | | | | |  date:        Thu Jan 01 00:00:15 1970 +0000
     | | | | |  summary:     (15) expand
     | | | | |
     | o-----+  commit:      8eac370358ef
-    | | | | |  parent:      e6eb3150255d
-    | |/ / /   parent:      86b91144a6e9
-    | | | |    user:        test
-    | | | |    date:        Thu Jan 01 00:00:14 1970 +0000
+    | | | | |  user:        test
+    | |/ / /   date:        Thu Jan 01 00:00:14 1970 +0000
     | | | |    summary:     (14) merge two known; one immediate right, one far right
     | | | |
     o | | |    commit:      22d8966a97e3
-    |\ \ \ \   parent:      7010c0af0a35
-    | | | | |  parent:      832d76e6bdf2
-    | | | | |  user:        test
+    |\ \ \ \   user:        test
     | | | | |  date:        Thu Jan 01 00:00:13 1970 +0000
     | | | | |  summary:     (13) expand
     | | | | |
     +---o | |  commit:      86b91144a6e9
-    | | |/ /   parent:      6db2ef61d156
-    | | | |    parent:      7010c0af0a35
-    | | | |    user:        test
+    | | |/ /   user:        test
     | | | |    date:        Thu Jan 01 00:00:12 1970 +0000
     | | | |    summary:     (12) merge two known; one immediate right, one far left
     | | | |
     | o | |    commit:      832d76e6bdf2
-    | |\ \ \   parent:      b105a072e251
-    | | | | |  parent:      74c64d036d72
-    | | | | |  user:        test
+    | |\ \ \   user:        test
     | | | | |  date:        Thu Jan 01 00:00:11 1970 +0000
     | | | | |  summary:     (11) expand
     | | | | |
     | | o---+  commit:      74c64d036d72
-    | | | | |  parent:      e6eb3150255d
-    | |/ / /   parent:      b105a072e251
-    | | | |    user:        test
-    | | | |    date:        Thu Jan 01 00:00:10 1970 +0000
+    | | | | |  user:        test
+    | |/ / /   date:        Thu Jan 01 00:00:10 1970 +0000
     | | | |    summary:     (10) merge two known; one immediate left, one near right
     | | | |
     o | | |    commit:      7010c0af0a35
-    |\ \ \ \   parent:      b632bb1b1224
-    | | | | |  parent:      7a0b11f71937
-    | | | | |  user:        test
+    |\ \ \ \   user:        test
     | | | | |  date:        Thu Jan 01 00:00:09 1970 +0000
     | | | | |  summary:     (9) expand
     | | | | |
     | o-----+  commit:      7a0b11f71937
-    | | | | |  parent:      e6eb3150255d
-    |/ / / /   parent:      b632bb1b1224
-    | | | |    user:        test
-    | | | |    date:        Thu Jan 01 00:00:08 1970 +0000
+    | | | | |  user:        test
+    |/ / / /   date:        Thu Jan 01 00:00:08 1970 +0000
     | | | |    summary:     (8) merge two known; one immediate left, one far right
     | | | |
     o | | |    commit:      b632bb1b1224
-    |\ \ \ \   parent:      3d9a33b8d1e1
-    | | | | |  parent:      4409d547b708
-    | | | | |  user:        test
+    |\ \ \ \   user:        test
     | | | | |  date:        Thu Jan 01 00:00:07 1970 +0000
     | | | | |  summary:     (7) expand
     | | | | |
     +---o | |  commit:      b105a072e251
-    | |/ / /   parent:      3d9a33b8d1e1
-    | | | |    parent:      4409d547b708
-    | | | |    user:        test
+    | |/ / /   user:        test
     | | | |    date:        Thu Jan 01 00:00:06 1970 +0000
     | | | |    summary:     (6) merge two known; one immediate left, one far left
     | | | |
     | o | |    commit:      4409d547b708
-    | |\ \ \   parent:      27eef8ed80b4
-    | | | | |  parent:      26a8bac39d9f
-    | | | | |  user:        test
+    | |\ \ \   user:        test
     | | | | |  date:        Thu Jan 01 00:00:05 1970 +0000
     | | | | |  summary:     (5) expand
     | | | | |
     | | o | |  commit:      26a8bac39d9f
-    | |/|/ /   parent:      6db2ef61d156
-    | | | |    parent:      27eef8ed80b4
-    | | | |    user:        test
+    | |/|/ /   user:        test
     | | | |    date:        Thu Jan 01 00:00:04 1970 +0000
     | | | |    summary:     (4) merge two known; one immediate left, one immediate right
     | | | |
@@ -950,192 +776,138 @@ sh % "hg log -G -r 'file(\"a\")'" == r"""
 
 sh % "hg log -G -r 'file(\"a\")' -m" == r"""
     o    commit:      d06dffa21a31
-    |\   parent:      886ed638191b
-    | :  parent:      621d83e11f67
-    | :  user:        test
+    |\   user:        test
     | :  date:        Thu Jan 01 00:00:32 1970 +0000
     | :  summary:     (32) expand
     | :
     o :  commit:      621d83e11f67
-    |\:  parent:      d42a756af44d
-    | :  parent:      6e11cd4b648f
-    | :  user:        test
+    |\:  user:        test
     | :  date:        Thu Jan 01 00:00:31 1970 +0000
     | :  summary:     (31) expand
     | :
     o :    commit:      6e11cd4b648f
-    |\ \   parent:      44ecd0b9ae99
-    | ~ :  parent:      cd9bb2be7593
-    |   :  user:        test
-    |   :  date:        Thu Jan 01 00:00:30 1970 +0000
+    |\ \   user:        test
+    | ~ :  date:        Thu Jan 01 00:00:30 1970 +0000
     |   :  summary:     (30) expand
     |  /
     o :    commit:      44ecd0b9ae99
-    |\ \   parent:      6db2ef61d156
-    | ~ :  parent:      7f25b6c2f0b9
-    |   :  user:        test
-    |   :  date:        Thu Jan 01 00:00:28 1970 +0000
+    |\ \   user:        test
+    | ~ :  date:        Thu Jan 01 00:00:28 1970 +0000
     |   :  summary:     (28) merge zero known
     |  /
     o :    commit:      7f25b6c2f0b9
-    |\ \   parent:      1aa84d96232a
-    | | :  parent:      91da8ed57247
-    | | :  user:        test
+    |\ \   user:        test
     | | :  date:        Thu Jan 01 00:00:26 1970 +0000
     | | :  summary:     (26) merge one known; far right
     | | :
     | o :  commit:      91da8ed57247
-    | |\:  parent:      d42a756af44d
-    | | :  parent:      a9c19a3d96b7
-    | | :  user:        test
+    | |\:  user:        test
     | | :  date:        Thu Jan 01 00:00:25 1970 +0000
     | | :  summary:     (25) merge one known; far left
     | | :
     | o :    commit:      a9c19a3d96b7
-    | |\ \   parent:      e6eb3150255d
-    | | ~ :  parent:      a01cddf0766d
-    | |   :  user:        test
-    | |   :  date:        Thu Jan 01 00:00:24 1970 +0000
+    | |\ \   user:        test
+    | | ~ :  date:        Thu Jan 01 00:00:24 1970 +0000
     | |   :  summary:     (24) merge one known; immediate right
     | |  /
     | o :    commit:      a01cddf0766d
-    | |\ \   parent:      6db2ef61d156
-    | | ~ :  parent:      e0d9cccacb5d
-    | |   :  user:        test
-    | |   :  date:        Thu Jan 01 00:00:23 1970 +0000
+    | |\ \   user:        test
+    | | ~ :  date:        Thu Jan 01 00:00:23 1970 +0000
     | |   :  summary:     (23) merge one known; immediate left
     | |  /
     | o :  commit:      e0d9cccacb5d
-    |/:/   parent:      1aa84d96232a
-    | :    parent:      d42a756af44d
-    | :    user:        test
+    |/:/   user:        test
     | :    date:        Thu Jan 01 00:00:22 1970 +0000
     | :    summary:     (22) merge two known; one far left, one far right
     | :
     | o    commit:      d42a756af44d
-    | |\   parent:      31ddc2c1573b
-    | | |  parent:      d30ed6450e32
-    | | |  user:        test
+    | |\   user:        test
     | | |  date:        Thu Jan 01 00:00:21 1970 +0000
     | | |  summary:     (21) expand
     | | |
     +---o  commit:      d30ed6450e32
-    | | |  parent:      e6eb3150255d
-    | | ~  parent:      1aa84d96232a
-    | |    user:        test
-    | |    date:        Thu Jan 01 00:00:20 1970 +0000
+    | | |  user:        test
+    | | ~  date:        Thu Jan 01 00:00:20 1970 +0000
     | |    summary:     (20) merge two known; two far right
     | |
     | o    commit:      31ddc2c1573b
-    | |\   parent:      1dda3f72782d
-    | | |  parent:      44765d7c06e0
-    | | |  user:        test
+    | |\   user:        test
     | | |  date:        Thu Jan 01 00:00:19 1970 +0000
     | | |  summary:     (19) expand
     | | |
     o | |  commit:      1aa84d96232a
-    |\| |  parent:      6db2ef61d156
-    ~ | |  parent:      1dda3f72782d
-      | |  user:        test
-      | |  date:        Thu Jan 01 00:00:18 1970 +0000
+    |\| |  user:        test
+    ~ | |  date:        Thu Jan 01 00:00:18 1970 +0000
       | |  summary:     (18) merge two known; two far left
      / /
     | o    commit:      44765d7c06e0
-    | |\   parent:      86b91144a6e9
-    | | |  parent:      3677d192927d
-    | | |  user:        test
+    | |\   user:        test
     | | |  date:        Thu Jan 01 00:00:17 1970 +0000
     | | |  summary:     (17) expand
     | | |
     | | o    commit:      3677d192927d
-    | | |\   parent:      e6eb3150255d
-    | | ~ ~  parent:      6db2ef61d156
-    | |      user:        test
-    | |      date:        Thu Jan 01 00:00:16 1970 +0000
+    | | |\   user:        test
+    | | ~ ~  date:        Thu Jan 01 00:00:16 1970 +0000
     | |      summary:     (16) merge two known; one immediate right, one near right
     | |
     o |    commit:      1dda3f72782d
-    |\ \   parent:      22d8966a97e3
-    | | |  parent:      8eac370358ef
-    | | |  user:        test
+    |\ \   user:        test
     | | |  date:        Thu Jan 01 00:00:15 1970 +0000
     | | |  summary:     (15) expand
     | | |
     | o |  commit:      8eac370358ef
-    | |\|  parent:      e6eb3150255d
-    | ~ |  parent:      86b91144a6e9
-    |   |  user:        test
-    |   |  date:        Thu Jan 01 00:00:14 1970 +0000
+    | |\|  user:        test
+    | ~ |  date:        Thu Jan 01 00:00:14 1970 +0000
     |   |  summary:     (14) merge two known; one immediate right, one far right
     |  /
     o |    commit:      22d8966a97e3
-    |\ \   parent:      7010c0af0a35
-    | | |  parent:      832d76e6bdf2
-    | | |  user:        test
+    |\ \   user:        test
     | | |  date:        Thu Jan 01 00:00:13 1970 +0000
     | | |  summary:     (13) expand
     | | |
     +---o  commit:      86b91144a6e9
-    | | |  parent:      6db2ef61d156
-    | | ~  parent:      7010c0af0a35
-    | |    user:        test
-    | |    date:        Thu Jan 01 00:00:12 1970 +0000
+    | | |  user:        test
+    | | ~  date:        Thu Jan 01 00:00:12 1970 +0000
     | |    summary:     (12) merge two known; one immediate right, one far left
     | |
     | o    commit:      832d76e6bdf2
-    | |\   parent:      b105a072e251
-    | | |  parent:      74c64d036d72
-    | | |  user:        test
+    | |\   user:        test
     | | |  date:        Thu Jan 01 00:00:11 1970 +0000
     | | |  summary:     (11) expand
     | | |
     | | o  commit:      74c64d036d72
-    | |/|  parent:      e6eb3150255d
-    | | ~  parent:      b105a072e251
-    | |    user:        test
-    | |    date:        Thu Jan 01 00:00:10 1970 +0000
+    | |/|  user:        test
+    | | ~  date:        Thu Jan 01 00:00:10 1970 +0000
     | |    summary:     (10) merge two known; one immediate left, one near right
     | |
     o |    commit:      7010c0af0a35
-    |\ \   parent:      b632bb1b1224
-    | | |  parent:      7a0b11f71937
-    | | |  user:        test
+    |\ \   user:        test
     | | |  date:        Thu Jan 01 00:00:09 1970 +0000
     | | |  summary:     (9) expand
     | | |
     | o |  commit:      7a0b11f71937
-    |/| |  parent:      e6eb3150255d
-    | ~ |  parent:      b632bb1b1224
-    |   |  user:        test
-    |   |  date:        Thu Jan 01 00:00:08 1970 +0000
+    |/| |  user:        test
+    | ~ |  date:        Thu Jan 01 00:00:08 1970 +0000
     |   |  summary:     (8) merge two known; one immediate left, one far right
     |  /
     o |    commit:      b632bb1b1224
-    |\ \   parent:      3d9a33b8d1e1
-    | ~ |  parent:      4409d547b708
-    |   |  user:        test
-    |   |  date:        Thu Jan 01 00:00:07 1970 +0000
+    |\ \   user:        test
+    | ~ |  date:        Thu Jan 01 00:00:07 1970 +0000
     |   |  summary:     (7) expand
     |  /
     | o  commit:      b105a072e251
-    |/|  parent:      3d9a33b8d1e1
-    | ~  parent:      4409d547b708
-    |    user:        test
-    |    date:        Thu Jan 01 00:00:06 1970 +0000
+    |/|  user:        test
+    | ~  date:        Thu Jan 01 00:00:06 1970 +0000
     |    summary:     (6) merge two known; one immediate left, one far left
     |
     o    commit:      4409d547b708
-    |\   parent:      27eef8ed80b4
-    | ~  parent:      26a8bac39d9f
-    |    user:        test
-    |    date:        Thu Jan 01 00:00:05 1970 +0000
+    |\   user:        test
+    | ~  date:        Thu Jan 01 00:00:05 1970 +0000
     |    summary:     (5) expand
     |
     o    commit:      26a8bac39d9f
-    |\   parent:      6db2ef61d156
-    ~ ~  parent:      27eef8ed80b4
-         user:        test
-         date:        Thu Jan 01 00:00:04 1970 +0000
+    |\   user:        test
+    ~ ~  date:        Thu Jan 01 00:00:04 1970 +0000
          summary:     (4) merge two known; one immediate left, one immediate right"""
 
 
@@ -1216,26 +988,21 @@ sh % "hg incoming --graph ../repo" == r"""
     comparing with ../repo
     searching for changes
     o  commit:      fea3ac5810e0
-    |  parent:      d06dffa21a31
     |  user:        test
     |  date:        Thu Jan 01 00:00:34 1970 +0000
     |  summary:     (34) head
     |
     | o  commit:      68608f5145f9
-    |    parent:      1aa84d96232a
     |    user:        test
     |    date:        Thu Jan 01 00:00:33 1970 +0000
     |    summary:     (33) head
     |
     o  commit:      d06dffa21a31
-    |  parent:      886ed638191b
-    |  parent:      621d83e11f67
     |  user:        test
     |  date:        Thu Jan 01 00:00:32 1970 +0000
     |  summary:     (32) expand
     |
     o  commit:      886ed638191b
-       parent:      d42a756af44d
        user:        test
        date:        Thu Jan 01 00:00:27 1970 +0000
        summary:     (27) collapse"""
@@ -1245,26 +1012,21 @@ sh % "hg -R repo outgoing --graph repo2" == r"""
     comparing with repo2
     searching for changes
     @  commit:      fea3ac5810e0
-    |  parent:      d06dffa21a31
     |  user:        test
     |  date:        Thu Jan 01 00:00:34 1970 +0000
     |  summary:     (34) head
     |
     | o  commit:      68608f5145f9
-    |    parent:      1aa84d96232a
     |    user:        test
     |    date:        Thu Jan 01 00:00:33 1970 +0000
     |    summary:     (33) head
     |
     o  commit:      d06dffa21a31
-    |  parent:      886ed638191b
-    |  parent:      621d83e11f67
     |  user:        test
     |  date:        Thu Jan 01 00:00:32 1970 +0000
     |  summary:     (32) expand
     |
     o  commit:      886ed638191b
-       parent:      d42a756af44d
        user:        test
        date:        Thu Jan 01 00:00:27 1970 +0000
        summary:     (27) collapse"""
@@ -1275,81 +1037,67 @@ sh % "touch b"
 sh % "hg ci -Aqm0"
 sh % "hg log -G -l2 a" == r"""
     o  commit:      fea3ac5810e0
-    |  parent:      d06dffa21a31
-    ~  user:        test
-       date:        Thu Jan 01 00:00:34 1970 +0000
+    |  user:        test
+    ~  date:        Thu Jan 01 00:00:34 1970 +0000
        summary:     (34) head
 
     o  commit:      68608f5145f9
-    |  parent:      1aa84d96232a
-    ~  user:        test
-       date:        Thu Jan 01 00:00:33 1970 +0000
+    |  user:        test
+    ~  date:        Thu Jan 01 00:00:33 1970 +0000
        summary:     (33) head"""
 
 # File + limit + -ra:b, (b - a) < limit:
 sh % "hg log -G -l3000 '-r32:tip' a" == r"""
     o  commit:      fea3ac5810e0
-    |  parent:      d06dffa21a31
     |  user:        test
     |  date:        Thu Jan 01 00:00:34 1970 +0000
     |  summary:     (34) head
     |
     | o  commit:      68608f5145f9
-    | |  parent:      1aa84d96232a
-    | ~  user:        test
-    |    date:        Thu Jan 01 00:00:33 1970 +0000
+    | |  user:        test
+    | ~  date:        Thu Jan 01 00:00:33 1970 +0000
     |    summary:     (33) head
     |
     o    commit:      d06dffa21a31
-    |\   parent:      886ed638191b
-    ~ ~  parent:      621d83e11f67
-         user:        test
-         date:        Thu Jan 01 00:00:32 1970 +0000
+    |\   user:        test
+    ~ ~  date:        Thu Jan 01 00:00:32 1970 +0000
          summary:     (32) expand"""
 
 # Point out a common and an uncommon unshown parent
 
 sh % "hg log -G -r 'rev(8) or rev(9)'" == r"""
     o    commit:      7010c0af0a35
-    |\   parent:      b632bb1b1224
-    | ~  parent:      7a0b11f71937
-    |    user:        test
-    |    date:        Thu Jan 01 00:00:09 1970 +0000
+    |\   user:        test
+    | ~  date:        Thu Jan 01 00:00:09 1970 +0000
     |    summary:     (9) expand
     |
     o    commit:      7a0b11f71937
-    |\   parent:      e6eb3150255d
-    ~ ~  parent:      b632bb1b1224
-         user:        test
-         date:        Thu Jan 01 00:00:08 1970 +0000
+    |\   user:        test
+    ~ ~  date:        Thu Jan 01 00:00:08 1970 +0000
          summary:     (8) merge two known; one immediate left, one far right"""
 
 # File + limit + -ra:b, b < tip:
 
 sh % "hg log -G -l1 '-r32:34' a" == r"""
     o  commit:      fea3ac5810e0
-    |  parent:      d06dffa21a31
-    ~  user:        test
-       date:        Thu Jan 01 00:00:34 1970 +0000
+    |  user:        test
+    ~  date:        Thu Jan 01 00:00:34 1970 +0000
        summary:     (34) head"""
 
 # file(File) + limit + -ra:b, b < tip:
 
 sh % "hg log -G -l1 '-r32:34' -r 'file(\"a\")'" == r"""
     o  commit:      fea3ac5810e0
-    |  parent:      d06dffa21a31
-    ~  user:        test
-       date:        Thu Jan 01 00:00:34 1970 +0000
+    |  user:        test
+    ~  date:        Thu Jan 01 00:00:34 1970 +0000
        summary:     (34) head"""
 
 # limit(file(File) and a::b), b < tip:
 
 sh % "hg log -G -r 'limit(file(\"a\") and 32::34, 1)'" == r"""
     o    commit:      d06dffa21a31
-    |\   parent:      886ed638191b
-    ~ ~  parent:      621d83e11f67
-         user:        test
-         date:        Thu Jan 01 00:00:32 1970 +0000
+    |\   user:        test
+    ~ ~  date:        Thu Jan 01 00:00:32 1970 +0000
          summary:     (32) expand"""
 
 # File + limit + -ra:b, b < tip:
@@ -1360,15 +1108,13 @@ sh % "hg log -G -r 'limit(file(\"a\") and 34::32, 1)'"
 
 sh % "hg log -G -l10 '-r33:34' a" == r"""
     o  commit:      fea3ac5810e0
-    |  parent:      d06dffa21a31
-    ~  user:        test
-       date:        Thu Jan 01 00:00:34 1970 +0000
+    |  user:        test
+    ~  date:        Thu Jan 01 00:00:34 1970 +0000
        summary:     (34) head
 
     o  commit:      68608f5145f9
-    |  parent:      1aa84d96232a
-    ~  user:        test
-       date:        Thu Jan 01 00:00:33 1970 +0000
+    |  user:        test
+    ~  date:        Thu Jan 01 00:00:33 1970 +0000
        summary:     (33) head"""
 
 # Do not crash or produce strange graphs if history is buggy
@@ -1376,8 +1122,6 @@ sh % "hg log -G -l10 '-r33:34' a" == r"""
 sh % "commit 36 'buggy merge: identical parents' 35 35"
 sh % "hg log -G -l5" == r"""
     @  commit:      95fa8febd08a
-    |  parent:      9159c3644c5e
-    |  parent:      9159c3644c5e
     |  user:        test
     |  date:        Thu Jan 01 00:00:36 1970 +0000
     |  summary:     (36) buggy merge: identical parents
@@ -1388,22 +1132,18 @@ sh % "hg log -G -l5" == r"""
     |  summary:     0
     |
     o  commit:      fea3ac5810e0
-    |  parent:      d06dffa21a31
     |  user:        test
     |  date:        Thu Jan 01 00:00:34 1970 +0000
     |  summary:     (34) head
     |
     | o  commit:      68608f5145f9
-    | |  parent:      1aa84d96232a
-    | ~  user:        test
-    |    date:        Thu Jan 01 00:00:33 1970 +0000
+    | |  user:        test
+    | ~  date:        Thu Jan 01 00:00:33 1970 +0000
     |    summary:     (33) head
     |
     o    commit:      d06dffa21a31
-    |\   parent:      886ed638191b
-    ~ ~  parent:      621d83e11f67
-         user:        test
-         date:        Thu Jan 01 00:00:32 1970 +0000
+    |\   user:        test
+    ~ ~  date:        Thu Jan 01 00:00:32 1970 +0000
          summary:     (32) expand"""
 
 # Test log -G options
@@ -1857,10 +1597,8 @@ sh % "hg log -G --git --stat --follow b" == r"""
 sh % "hg up -q 6"
 sh % "hg log -G --git --patch --follow-first e" == r"""
     @    commit:      fc281d8ff18d
-    |\   parent:      99b31f1c2782
-    | ~  parent:      17d952250a9d
-    |    user:        test
-    |    date:        Thu Jan 01 00:00:00 1970 +0000
+    |\   user:        test
+    | ~  date:        Thu Jan 01 00:00:00 1970 +0000
     |    summary:     merge 5 and 4
     |
     |    diff --git a/e b/e
@@ -1871,9 +1609,8 @@ sh % "hg log -G --git --patch --follow-first e" == r"""
     |    +merge
     |
     o  commit:      99b31f1c2782
-    |  parent:      5918b8d165d1
-    ~  user:        test
-       date:        Thu Jan 01 00:00:00 1970 +0000
+    |  user:        test
+    ~  date:        Thu Jan 01 00:00:00 1970 +0000
        summary:     add another e
 
        diff --git a/e b/e
@@ -2303,397 +2040,285 @@ graphstyle.missing =
 """ >> "$HGRCPATH"
 sh % "hg log -G -r 'file(\"a\")' -m" == r"""
     @  commit:      95fa8febd08a
-    :  parent:      9159c3644c5e
-    :  parent:      9159c3644c5e
     :  user:        test
     :  date:        Thu Jan 01 00:00:36 1970 +0000
     :  summary:     (36) buggy merge: identical parents
     :
     o    commit:      d06dffa21a31
-    |\   parent:      886ed638191b
-    | :  parent:      621d83e11f67
-    | :  user:        test
+    |\   user:        test
     | :  date:        Thu Jan 01 00:00:32 1970 +0000
     | :  summary:     (32) expand
     | :
     o :  commit:      621d83e11f67
-    |\:  parent:      d42a756af44d
-    | :  parent:      6e11cd4b648f
-    | :  user:        test
+    |\:  user:        test
     | :  date:        Thu Jan 01 00:00:31 1970 +0000
     | :  summary:     (31) expand
     | :
     o :    commit:      6e11cd4b648f
-    |\ \   parent:      44ecd0b9ae99
-    | ~ :  parent:      cd9bb2be7593
-    |   :  user:        test
-    |   :  date:        Thu Jan 01 00:00:30 1970 +0000
+    |\ \   user:        test
+    | ~ :  date:        Thu Jan 01 00:00:30 1970 +0000
     |   :  summary:     (30) expand
     |  /
     o :    commit:      44ecd0b9ae99
-    |\ \   parent:      6db2ef61d156
-    | ~ :  parent:      7f25b6c2f0b9
-    |   :  user:        test
-    |   :  date:        Thu Jan 01 00:00:28 1970 +0000
+    |\ \   user:        test
+    | ~ :  date:        Thu Jan 01 00:00:28 1970 +0000
     |   :  summary:     (28) merge zero known
     |  /
     o :    commit:      7f25b6c2f0b9
-    |\ \   parent:      1aa84d96232a
-    | | :  parent:      91da8ed57247
-    | | :  user:        test
+    |\ \   user:        test
     | | :  date:        Thu Jan 01 00:00:26 1970 +0000
     | | :  summary:     (26) merge one known; far right
     | | :
     | o :  commit:      91da8ed57247
-    | |\:  parent:      d42a756af44d
-    | | :  parent:      a9c19a3d96b7
-    | | :  user:        test
+    | |\:  user:        test
     | | :  date:        Thu Jan 01 00:00:25 1970 +0000
     | | :  summary:     (25) merge one known; far left
     | | :
     | o :    commit:      a9c19a3d96b7
-    | |\ \   parent:      e6eb3150255d
-    | | ~ :  parent:      a01cddf0766d
-    | |   :  user:        test
-    | |   :  date:        Thu Jan 01 00:00:24 1970 +0000
+    | |\ \   user:        test
+    | | ~ :  date:        Thu Jan 01 00:00:24 1970 +0000
     | |   :  summary:     (24) merge one known; immediate right
     | |  /
     | o :    commit:      a01cddf0766d
-    | |\ \   parent:      6db2ef61d156
-    | | ~ :  parent:      e0d9cccacb5d
-    | |   :  user:        test
-    | |   :  date:        Thu Jan 01 00:00:23 1970 +0000
+    | |\ \   user:        test
+    | | ~ :  date:        Thu Jan 01 00:00:23 1970 +0000
     | |   :  summary:     (23) merge one known; immediate left
     | |  /
     | o :  commit:      e0d9cccacb5d
-    |/:/   parent:      1aa84d96232a
-    | :    parent:      d42a756af44d
-    | :    user:        test
+    |/:/   user:        test
     | :    date:        Thu Jan 01 00:00:22 1970 +0000
     | :    summary:     (22) merge two known; one far left, one far right
     | :
     | o    commit:      d42a756af44d
-    | |\   parent:      31ddc2c1573b
-    | | |  parent:      d30ed6450e32
-    | | |  user:        test
+    | |\   user:        test
     | | |  date:        Thu Jan 01 00:00:21 1970 +0000
     | | |  summary:     (21) expand
     | | |
     +---o  commit:      d30ed6450e32
-    | | |  parent:      e6eb3150255d
-    | | ~  parent:      1aa84d96232a
-    | |    user:        test
-    | |    date:        Thu Jan 01 00:00:20 1970 +0000
+    | | |  user:        test
+    | | ~  date:        Thu Jan 01 00:00:20 1970 +0000
     | |    summary:     (20) merge two known; two far right
     | |
     | o    commit:      31ddc2c1573b
-    | |\   parent:      1dda3f72782d
-    | | |  parent:      44765d7c06e0
-    | | |  user:        test
+    | |\   user:        test
     | | |  date:        Thu Jan 01 00:00:19 1970 +0000
     | | |  summary:     (19) expand
     | | |
     o | |  commit:      1aa84d96232a
-    |\| |  parent:      6db2ef61d156
-    ~ | |  parent:      1dda3f72782d
-      | |  user:        test
-      | |  date:        Thu Jan 01 00:00:18 1970 +0000
+    |\| |  user:        test
+    ~ | |  date:        Thu Jan 01 00:00:18 1970 +0000
       | |  summary:     (18) merge two known; two far left
      / /
     | o    commit:      44765d7c06e0
-    | |\   parent:      86b91144a6e9
-    | | |  parent:      3677d192927d
-    | | |  user:        test
+    | |\   user:        test
     | | |  date:        Thu Jan 01 00:00:17 1970 +0000
     | | |  summary:     (17) expand
     | | |
     | | o    commit:      3677d192927d
-    | | |\   parent:      e6eb3150255d
-    | | ~ ~  parent:      6db2ef61d156
-    | |      user:        test
-    | |      date:        Thu Jan 01 00:00:16 1970 +0000
+    | | |\   user:        test
+    | | ~ ~  date:        Thu Jan 01 00:00:16 1970 +0000
     | |      summary:     (16) merge two known; one immediate right, one near right
     | |
     o |    commit:      1dda3f72782d
-    |\ \   parent:      22d8966a97e3
-    | | |  parent:      8eac370358ef
-    | | |  user:        test
+    |\ \   user:        test
     | | |  date:        Thu Jan 01 00:00:15 1970 +0000
     | | |  summary:     (15) expand
     | | |
     | o |  commit:      8eac370358ef
-    | |\|  parent:      e6eb3150255d
-    | ~ |  parent:      86b91144a6e9
-    |   |  user:        test
-    |   |  date:        Thu Jan 01 00:00:14 1970 +0000
+    | |\|  user:        test
+    | ~ |  date:        Thu Jan 01 00:00:14 1970 +0000
     |   |  summary:     (14) merge two known; one immediate right, one far right
     |  /
     o |    commit:      22d8966a97e3
-    |\ \   parent:      7010c0af0a35
-    | | |  parent:      832d76e6bdf2
-    | | |  user:        test
+    |\ \   user:        test
     | | |  date:        Thu Jan 01 00:00:13 1970 +0000
     | | |  summary:     (13) expand
     | | |
     +---o  commit:      86b91144a6e9
-    | | |  parent:      6db2ef61d156
-    | | ~  parent:      7010c0af0a35
-    | |    user:        test
-    | |    date:        Thu Jan 01 00:00:12 1970 +0000
+    | | |  user:        test
+    | | ~  date:        Thu Jan 01 00:00:12 1970 +0000
     | |    summary:     (12) merge two known; one immediate right, one far left
     | |
     | o    commit:      832d76e6bdf2
-    | |\   parent:      b105a072e251
-    | | |  parent:      74c64d036d72
-    | | |  user:        test
+    | |\   user:        test
     | | |  date:        Thu Jan 01 00:00:11 1970 +0000
     | | |  summary:     (11) expand
     | | |
     | | o  commit:      74c64d036d72
-    | |/|  parent:      e6eb3150255d
-    | | ~  parent:      b105a072e251
-    | |    user:        test
-    | |    date:        Thu Jan 01 00:00:10 1970 +0000
+    | |/|  user:        test
+    | | ~  date:        Thu Jan 01 00:00:10 1970 +0000
     | |    summary:     (10) merge two known; one immediate left, one near right
     | |
     o |    commit:      7010c0af0a35
-    |\ \   parent:      b632bb1b1224
-    | | |  parent:      7a0b11f71937
-    | | |  user:        test
+    |\ \   user:        test
     | | |  date:        Thu Jan 01 00:00:09 1970 +0000
     | | |  summary:     (9) expand
     | | |
     | o |  commit:      7a0b11f71937
-    |/| |  parent:      e6eb3150255d
-    | ~ |  parent:      b632bb1b1224
-    |   |  user:        test
-    |   |  date:        Thu Jan 01 00:00:08 1970 +0000
+    |/| |  user:        test
+    | ~ |  date:        Thu Jan 01 00:00:08 1970 +0000
     |   |  summary:     (8) merge two known; one immediate left, one far right
     |  /
     o |    commit:      b632bb1b1224
-    |\ \   parent:      3d9a33b8d1e1
-    | ~ |  parent:      4409d547b708
-    |   |  user:        test
-    |   |  date:        Thu Jan 01 00:00:07 1970 +0000
+    |\ \   user:        test
+    | ~ |  date:        Thu Jan 01 00:00:07 1970 +0000
     |   |  summary:     (7) expand
     |  /
     | o  commit:      b105a072e251
-    |/|  parent:      3d9a33b8d1e1
-    | ~  parent:      4409d547b708
-    |    user:        test
-    |    date:        Thu Jan 01 00:00:06 1970 +0000
+    |/|  user:        test
+    | ~  date:        Thu Jan 01 00:00:06 1970 +0000
     |    summary:     (6) merge two known; one immediate left, one far left
     |
     o    commit:      4409d547b708
-    |\   parent:      27eef8ed80b4
-    | ~  parent:      26a8bac39d9f
-    |    user:        test
-    |    date:        Thu Jan 01 00:00:05 1970 +0000
+    |\   user:        test
+    | ~  date:        Thu Jan 01 00:00:05 1970 +0000
     |    summary:     (5) expand
     |
     o    commit:      26a8bac39d9f
-    |\   parent:      6db2ef61d156
-    ~ ~  parent:      27eef8ed80b4
-         user:        test
-         date:        Thu Jan 01 00:00:04 1970 +0000
+    |\   user:        test
+    ~ ~  date:        Thu Jan 01 00:00:04 1970 +0000
          summary:     (4) merge two known; one immediate left, one immediate right"""
 
 # Setting HGPLAIN ignores graphmod styling:
 
 sh % "'HGPLAIN=1' hg log -G -r 'file(\"a\")' -m" == r"""
     @  commit:      95fa8febd08a
-    |  parent:      9159c3644c5e
-    |  parent:      9159c3644c5e
     |  user:        test
     |  date:        Thu Jan 01 00:00:36 1970 +0000
     |  summary:     (36) buggy merge: identical parents
     |
     o    commit:      d06dffa21a31
-    |\   parent:      886ed638191b
-    | |  parent:      621d83e11f67
-    | |  user:        test
+    |\   user:        test
     | |  date:        Thu Jan 01 00:00:32 1970 +0000
     | |  summary:     (32) expand
     | |
     o |  commit:      621d83e11f67
-    |\|  parent:      d42a756af44d
-    | |  parent:      6e11cd4b648f
-    | |  user:        test
+    |\|  user:        test
     | |  date:        Thu Jan 01 00:00:31 1970 +0000
     | |  summary:     (31) expand
     | |
     o |    commit:      6e11cd4b648f
-    |\ \   parent:      44ecd0b9ae99
-    | | |  parent:      cd9bb2be7593
-    | | |  user:        test
+    |\ \   user:        test
     | | |  date:        Thu Jan 01 00:00:30 1970 +0000
     | | |  summary:     (30) expand
     | | |
     o | |    commit:      44ecd0b9ae99
-    |\ \ \   parent:      6db2ef61d156
-    | | | |  parent:      7f25b6c2f0b9
-    | | | |  user:        test
+    |\ \ \   user:        test
     | | | |  date:        Thu Jan 01 00:00:28 1970 +0000
     | | | |  summary:     (28) merge zero known
     | | | |
     o | | |    commit:      7f25b6c2f0b9
-    |\ \ \ \   parent:      1aa84d96232a
-    | | | | |  parent:      91da8ed57247
-    | | | | |  user:        test
+    |\ \ \ \   user:        test
     | | | | |  date:        Thu Jan 01 00:00:26 1970 +0000
     | | | | |  summary:     (26) merge one known; far right
     | | | | |
     | o-----+  commit:      91da8ed57247
-    | | | | |  parent:      d42a756af44d
-    | | | | |  parent:      a9c19a3d96b7
     | | | | |  user:        test
     | | | | |  date:        Thu Jan 01 00:00:25 1970 +0000
     | | | | |  summary:     (25) merge one known; far left
     | | | | |
     | o | | |    commit:      a9c19a3d96b7
-    | |\ \ \ \   parent:      e6eb3150255d
-    | | | | | |  parent:      a01cddf0766d
-    | | | | | |  user:        test
+    | |\ \ \ \   user:        test
     | | | | | |  date:        Thu Jan 01 00:00:24 1970 +0000
     | | | | | |  summary:     (24) merge one known; immediate right
     | | | | | |
     | o---+ | |  commit:      a01cddf0766d
-    | | | | | |  parent:      6db2ef61d156
-    | | | | | |  parent:      e0d9cccacb5d
     | | | | | |  user:        test
     | | | | | |  date:        Thu Jan 01 00:00:23 1970 +0000
     | | | | | |  summary:     (23) merge one known; immediate left
     | | | | | |
     | o-------+  commit:      e0d9cccacb5d
-    | | | | | |  parent:      1aa84d96232a
-    |/ / / / /   parent:      d42a756af44d
-    | | | | |    user:        test
-    | | | | |    date:        Thu Jan 01 00:00:22 1970 +0000
+    | | | | | |  user:        test
+    |/ / / / /   date:        Thu Jan 01 00:00:22 1970 +0000
     | | | | |    summary:     (22) merge two known; one far left, one far right
     | | | | |
     | | | | o    commit:      d42a756af44d
-    | | | | |\   parent:      31ddc2c1573b
-    | | | | | |  parent:      d30ed6450e32
-    | | | | | |  user:        test
+    | | | | |\   user:        test
     | | | | | |  date:        Thu Jan 01 00:00:21 1970 +0000
     | | | | | |  summary:     (21) expand
     | | | | | |
     +-+-------o  commit:      d30ed6450e32
-    | | | | |    parent:      e6eb3150255d
-    | | | | |    parent:      1aa84d96232a
     | | | | |    user:        test
     | | | | |    date:        Thu Jan 01 00:00:20 1970 +0000
     | | | | |    summary:     (20) merge two known; two far right
     | | | | |
     | | | | o    commit:      31ddc2c1573b
-    | | | | |\   parent:      1dda3f72782d
-    | | | | | |  parent:      44765d7c06e0
-    | | | | | |  user:        test
+    | | | | |\   user:        test
     | | | | | |  date:        Thu Jan 01 00:00:19 1970 +0000
     | | | | | |  summary:     (19) expand
     | | | | | |
     o---+---+ |  commit:      1aa84d96232a
-      | | | | |  parent:      6db2ef61d156
-     / / / / /   parent:      1dda3f72782d
-    | | | | |    user:        test
-    | | | | |    date:        Thu Jan 01 00:00:18 1970 +0000
+      | | | | |  user:        test
+     / / / / /   date:        Thu Jan 01 00:00:18 1970 +0000
     | | | | |    summary:     (18) merge two known; two far left
     | | | | |
     | | | | o    commit:      44765d7c06e0
-    | | | | |\   parent:      86b91144a6e9
-    | | | | | |  parent:      3677d192927d
-    | | | | | |  user:        test
+    | | | | |\   user:        test
     | | | | | |  date:        Thu Jan 01 00:00:17 1970 +0000
     | | | | | |  summary:     (17) expand
     | | | | | |
     +-+-------o  commit:      3677d192927d
-    | | | | |    parent:      e6eb3150255d
-    | | | | |    parent:      6db2ef61d156
     | | | | |    user:        test
     | | | | |    date:        Thu Jan 01 00:00:16 1970 +0000
     | | | | |    summary:     (16) merge two known; one immediate right, one near right
     | | | | |
     | | | o |    commit:      1dda3f72782d
-    | | | |\ \   parent:      22d8966a97e3
-    | | | | | |  parent:      8eac370358ef
-    | | | | | |  user:        test
+    | | | |\ \   user:        test
     | | | | | |  date:        Thu Jan 01 00:00:15 1970 +0000
     | | | | | |  summary:     (15) expand
     | | | | | |
     +-------o |  commit:      8eac370358ef
-    | | | | |/   parent:      e6eb3150255d
-    | | | | |    parent:      86b91144a6e9
-    | | | | |    user:        test
+    | | | | |/   user:        test
     | | | | |    date:        Thu Jan 01 00:00:14 1970 +0000
     | | | | |    summary:     (14) merge two known; one immediate right, one far right
     | | | | |
     | | | o |    commit:      22d8966a97e3
-    | | | |\ \   parent:      7010c0af0a35
-    | | | | | |  parent:      832d76e6bdf2
-    | | | | | |  user:        test
+    | | | |\ \   user:        test
     | | | | | |  date:        Thu Jan 01 00:00:13 1970 +0000
     | | | | | |  summary:     (13) expand
     | | | | | |
     | +---+---o  commit:      86b91144a6e9
-    | | | | |    parent:      6db2ef61d156
-    | | | | |    parent:      7010c0af0a35
     | | | | |    user:        test
     | | | | |    date:        Thu Jan 01 00:00:12 1970 +0000
     | | | | |    summary:     (12) merge two known; one immediate right, one far left
     | | | | |
     | | | | o    commit:      832d76e6bdf2
-    | | | | |\   parent:      b105a072e251
-    | | | | | |  parent:      74c64d036d72
-    | | | | | |  user:        test
+    | | | | |\   user:        test
     | | | | | |  date:        Thu Jan 01 00:00:11 1970 +0000
     | | | | | |  summary:     (11) expand
     | | | | | |
     +---------o  commit:      74c64d036d72
-    | | | | |/   parent:      e6eb3150255d
-    | | | | |    parent:      b105a072e251
-    | | | | |    user:        test
+    | | | | |/   user:        test
     | | | | |    date:        Thu Jan 01 00:00:10 1970 +0000
     | | | | |    summary:     (10) merge two known; one immediate left, one near right
     | | | | |
     | | | o |    commit:      7010c0af0a35
-    | | | |\ \   parent:      b632bb1b1224
-    | | | | | |  parent:      7a0b11f71937
-    | | | | | |  user:        test
+    | | | |\ \   user:        test
     | | | | | |  date:        Thu Jan 01 00:00:09 1970 +0000
     | | | | | |  summary:     (9) expand
     | | | | | |
     +-------o |  commit:      7a0b11f71937
-    | | | |/ /   parent:      e6eb3150255d
-    | | | | |    parent:      b632bb1b1224
-    | | | | |    user:        test
+    | | | |/ /   user:        test
     | | | | |    date:        Thu Jan 01 00:00:08 1970 +0000
     | | | | |    summary:     (8) merge two known; one immediate left, one far right
     | | | | |
     | | | o |    commit:      b632bb1b1224
-    | | | |\ \   parent:      3d9a33b8d1e1
-    | | | | | |  parent:      4409d547b708
-    | | | | | |  user:        test
+    | | | |\ \   user:        test
     | | | | | |  date:        Thu Jan 01 00:00:07 1970 +0000
     | | | | | |  summary:     (7) expand
     | | | | | |
     | | | +---o  commit:      b105a072e251
-    | | | | |/   parent:      3d9a33b8d1e1
-    | | | | |    parent:      4409d547b708
-    | | | | |    user:        test
+    | | | | |/   user:        test
     | | | | |    date:        Thu Jan 01 00:00:06 1970 +0000
     | | | | |    summary:     (6) merge two known; one immediate left, one far left
     | | | | |
     | | | o |    commit:      4409d547b708
-    | | | |\ \   parent:      27eef8ed80b4
-    | | | | | |  parent:      26a8bac39d9f
-    | | | | | |  user:        test
+    | | | |\ \   user:        test
     | | | | | |  date:        Thu Jan 01 00:00:05 1970 +0000
     | | | | | |  summary:     (5) expand
     | | | | | |
     | +---o | |  commit:      26a8bac39d9f
-    | | | |/ /   parent:      6db2ef61d156
-    | | | | |    parent:      27eef8ed80b4
-    | | | | |    user:        test
+    | | | |/ /   user:        test
     | | | | |    date:        Thu Jan 01 00:00:04 1970 +0000
     | | | | |    summary:     (4) merge two known; one immediate left, one immediate right
     | | | | |"""
@@ -2702,199 +2327,143 @@ sh % "'HGPLAIN=1' hg log -G -r 'file(\"a\")' -m" == r"""
 
 sh % "'HGPLAIN=1' 'HGPLAINEXCEPT=graph' hg log -G -r 'file(\"a\")' -m" == r"""
     @  commit:      95fa8febd08a
-    :  parent:      9159c3644c5e
-    :  parent:      9159c3644c5e
     :  user:        test
     :  date:        Thu Jan 01 00:00:36 1970 +0000
     :  summary:     (36) buggy merge: identical parents
     :
     o    commit:      d06dffa21a31
-    |\   parent:      886ed638191b
-    | :  parent:      621d83e11f67
-    | :  user:        test
+    |\   user:        test
     | :  date:        Thu Jan 01 00:00:32 1970 +0000
     | :  summary:     (32) expand
     | :
     o :  commit:      621d83e11f67
-    |\:  parent:      d42a756af44d
-    | :  parent:      6e11cd4b648f
-    | :  user:        test
+    |\:  user:        test
     | :  date:        Thu Jan 01 00:00:31 1970 +0000
     | :  summary:     (31) expand
     | :
     o :    commit:      6e11cd4b648f
-    |\ \   parent:      44ecd0b9ae99
-    | ~ :  parent:      cd9bb2be7593
-    |   :  user:        test
-    |   :  date:        Thu Jan 01 00:00:30 1970 +0000
+    |\ \   user:        test
+    | ~ :  date:        Thu Jan 01 00:00:30 1970 +0000
     |   :  summary:     (30) expand
     |  /
     o :    commit:      44ecd0b9ae99
-    |\ \   parent:      6db2ef61d156
-    | ~ :  parent:      7f25b6c2f0b9
-    |   :  user:        test
-    |   :  date:        Thu Jan 01 00:00:28 1970 +0000
+    |\ \   user:        test
+    | ~ :  date:        Thu Jan 01 00:00:28 1970 +0000
     |   :  summary:     (28) merge zero known
     |  /
     o :    commit:      7f25b6c2f0b9
-    |\ \   parent:      1aa84d96232a
-    | | :  parent:      91da8ed57247
-    | | :  user:        test
+    |\ \   user:        test
     | | :  date:        Thu Jan 01 00:00:26 1970 +0000
     | | :  summary:     (26) merge one known; far right
     | | :
     | o :  commit:      91da8ed57247
-    | |\:  parent:      d42a756af44d
-    | | :  parent:      a9c19a3d96b7
-    | | :  user:        test
+    | |\:  user:        test
     | | :  date:        Thu Jan 01 00:00:25 1970 +0000
     | | :  summary:     (25) merge one known; far left
     | | :
     | o :    commit:      a9c19a3d96b7
-    | |\ \   parent:      e6eb3150255d
-    | | ~ :  parent:      a01cddf0766d
-    | |   :  user:        test
-    | |   :  date:        Thu Jan 01 00:00:24 1970 +0000
+    | |\ \   user:        test
+    | | ~ :  date:        Thu Jan 01 00:00:24 1970 +0000
     | |   :  summary:     (24) merge one known; immediate right
     | |  /
     | o :    commit:      a01cddf0766d
-    | |\ \   parent:      6db2ef61d156
-    | | ~ :  parent:      e0d9cccacb5d
-    | |   :  user:        test
-    | |   :  date:        Thu Jan 01 00:00:23 1970 +0000
+    | |\ \   user:        test
+    | | ~ :  date:        Thu Jan 01 00:00:23 1970 +0000
     | |   :  summary:     (23) merge one known; immediate left
     | |  /
     | o :  commit:      e0d9cccacb5d
-    |/:/   parent:      1aa84d96232a
-    | :    parent:      d42a756af44d
-    | :    user:        test
+    |/:/   user:        test
     | :    date:        Thu Jan 01 00:00:22 1970 +0000
     | :    summary:     (22) merge two known; one far left, one far right
     | :
     | o    commit:      d42a756af44d
-    | |\   parent:      31ddc2c1573b
-    | | |  parent:      d30ed6450e32
-    | | |  user:        test
+    | |\   user:        test
     | | |  date:        Thu Jan 01 00:00:21 1970 +0000
     | | |  summary:     (21) expand
     | | |
     +---o  commit:      d30ed6450e32
-    | | |  parent:      e6eb3150255d
-    | | ~  parent:      1aa84d96232a
-    | |    user:        test
-    | |    date:        Thu Jan 01 00:00:20 1970 +0000
+    | | |  user:        test
+    | | ~  date:        Thu Jan 01 00:00:20 1970 +0000
     | |    summary:     (20) merge two known; two far right
     | |
     | o    commit:      31ddc2c1573b
-    | |\   parent:      1dda3f72782d
-    | | |  parent:      44765d7c06e0
-    | | |  user:        test
+    | |\   user:        test
     | | |  date:        Thu Jan 01 00:00:19 1970 +0000
     | | |  summary:     (19) expand
     | | |
     o | |  commit:      1aa84d96232a
-    |\| |  parent:      6db2ef61d156
-    ~ | |  parent:      1dda3f72782d
-      | |  user:        test
-      | |  date:        Thu Jan 01 00:00:18 1970 +0000
+    |\| |  user:        test
+    ~ | |  date:        Thu Jan 01 00:00:18 1970 +0000
       | |  summary:     (18) merge two known; two far left
      / /
     | o    commit:      44765d7c06e0
-    | |\   parent:      86b91144a6e9
-    | | |  parent:      3677d192927d
-    | | |  user:        test
+    | |\   user:        test
     | | |  date:        Thu Jan 01 00:00:17 1970 +0000
     | | |  summary:     (17) expand
     | | |
     | | o    commit:      3677d192927d
-    | | |\   parent:      e6eb3150255d
-    | | ~ ~  parent:      6db2ef61d156
-    | |      user:        test
-    | |      date:        Thu Jan 01 00:00:16 1970 +0000
+    | | |\   user:        test
+    | | ~ ~  date:        Thu Jan 01 00:00:16 1970 +0000
     | |      summary:     (16) merge two known; one immediate right, one near right
     | |
     o |    commit:      1dda3f72782d
-    |\ \   parent:      22d8966a97e3
-    | | |  parent:      8eac370358ef
-    | | |  user:        test
+    |\ \   user:        test
     | | |  date:        Thu Jan 01 00:00:15 1970 +0000
     | | |  summary:     (15) expand
     | | |
     | o |  commit:      8eac370358ef
-    | |\|  parent:      e6eb3150255d
-    | ~ |  parent:      86b91144a6e9
-    |   |  user:        test
-    |   |  date:        Thu Jan 01 00:00:14 1970 +0000
+    | |\|  user:        test
+    | ~ |  date:        Thu Jan 01 00:00:14 1970 +0000
     |   |  summary:     (14) merge two known; one immediate right, one far right
     |  /
     o |    commit:      22d8966a97e3
-    |\ \   parent:      7010c0af0a35
-    | | |  parent:      832d76e6bdf2
-    | | |  user:        test
+    |\ \   user:        test
     | | |  date:        Thu Jan 01 00:00:13 1970 +0000
     | | |  summary:     (13) expand
     | | |
     +---o  commit:      86b91144a6e9
-    | | |  parent:      6db2ef61d156
-    | | ~  parent:      7010c0af0a35
-    | |    user:        test
-    | |    date:        Thu Jan 01 00:00:12 1970 +0000
+    | | |  user:        test
+    | | ~  date:        Thu Jan 01 00:00:12 1970 +0000
     | |    summary:     (12) merge two known; one immediate right, one far left
     | |
     | o    commit:      832d76e6bdf2
-    | |\   parent:      b105a072e251
-    | | |  parent:      74c64d036d72
-    | | |  user:        test
+    | |\   user:        test
     | | |  date:        Thu Jan 01 00:00:11 1970 +0000
     | | |  summary:     (11) expand
     | | |
     | | o  commit:      74c64d036d72
-    | |/|  parent:      e6eb3150255d
-    | | ~  parent:      b105a072e251
-    | |    user:        test
-    | |    date:        Thu Jan 01 00:00:10 1970 +0000
+    | |/|  user:        test
+    | | ~  date:        Thu Jan 01 00:00:10 1970 +0000
     | |    summary:     (10) merge two known; one immediate left, one near right
     | |
     o |    commit:      7010c0af0a35
-    |\ \   parent:      b632bb1b1224
-    | | |  parent:      7a0b11f71937
-    | | |  user:        test
+    |\ \   user:        test
     | | |  date:        Thu Jan 01 00:00:09 1970 +0000
     | | |  summary:     (9) expand
     | | |
     | o |  commit:      7a0b11f71937
-    |/| |  parent:      e6eb3150255d
-    | ~ |  parent:      b632bb1b1224
-    |   |  user:        test
-    |   |  date:        Thu Jan 01 00:00:08 1970 +0000
+    |/| |  user:        test
+    | ~ |  date:        Thu Jan 01 00:00:08 1970 +0000
     |   |  summary:     (8) merge two known; one immediate left, one far right
     |  /
     o |    commit:      b632bb1b1224
-    |\ \   parent:      3d9a33b8d1e1
-    | ~ |  parent:      4409d547b708
-    |   |  user:        test
-    |   |  date:        Thu Jan 01 00:00:07 1970 +0000
+    |\ \   user:        test
+    | ~ |  date:        Thu Jan 01 00:00:07 1970 +0000
     |   |  summary:     (7) expand
     |  /
     | o  commit:      b105a072e251
-    |/|  parent:      3d9a33b8d1e1
-    | ~  parent:      4409d547b708
-    |    user:        test
-    |    date:        Thu Jan 01 00:00:06 1970 +0000
+    |/|  user:        test
+    | ~  date:        Thu Jan 01 00:00:06 1970 +0000
     |    summary:     (6) merge two known; one immediate left, one far left
     |
     o    commit:      4409d547b708
-    |\   parent:      27eef8ed80b4
-    | ~  parent:      26a8bac39d9f
-    |    user:        test
-    |    date:        Thu Jan 01 00:00:05 1970 +0000
+    |\   user:        test
+    | ~  date:        Thu Jan 01 00:00:05 1970 +0000
     |    summary:     (5) expand
     |
     o    commit:      26a8bac39d9f
-    |\   parent:      6db2ef61d156
-    ~ ~  parent:      27eef8ed80b4
-         user:        test
-         date:        Thu Jan 01 00:00:04 1970 +0000
+    |\   user:        test
+    ~ ~  date:        Thu Jan 01 00:00:04 1970 +0000
          summary:     (4) merge two known; one immediate left, one immediate right"""
 # Draw only part of a grandparent line differently with "<N><char>"; only the
 # last N lines (for positive N) or everything but the first N lines (for
@@ -2911,101 +2480,73 @@ graphstyle.missing =
 """ >> "$HGRCPATH"
 sh % "hg log -G -r '36:18 & file(\"a\")' -m" == r"""
     @  commit:      95fa8febd08a
-    !  parent:      9159c3644c5e
-    !  parent:      9159c3644c5e
     !  user:        test
     .  date:        Thu Jan 01 00:00:36 1970 +0000
     .  summary:     (36) buggy merge: identical parents
     .
     o    commit:      d06dffa21a31
-    !\   parent:      886ed638191b
-    ! !  parent:      621d83e11f67
-    ! !  user:        test
+    !\   user:        test
     ! .  date:        Thu Jan 01 00:00:32 1970 +0000
     ! .  summary:     (32) expand
     ! .
     o !  commit:      621d83e11f67
-    !\!  parent:      d42a756af44d
-    ! !  parent:      6e11cd4b648f
-    ! !  user:        test
+    !\!  user:        test
     ! !  date:        Thu Jan 01 00:00:31 1970 +0000
     ! !  summary:     (31) expand
     ! !
     o !    commit:      6e11cd4b648f
-    !\ \   parent:      44ecd0b9ae99
-    ! ~ !  parent:      cd9bb2be7593
-    !   !  user:        test
-    !   !  date:        Thu Jan 01 00:00:30 1970 +0000
+    !\ \   user:        test
+    ! ~ !  date:        Thu Jan 01 00:00:30 1970 +0000
     !   !  summary:     (30) expand
     !  /
     o !    commit:      44ecd0b9ae99
-    !\ \   parent:      6db2ef61d156
-    ! ~ !  parent:      7f25b6c2f0b9
-    !   !  user:        test
-    !   !  date:        Thu Jan 01 00:00:28 1970 +0000
+    !\ \   user:        test
+    ! ~ !  date:        Thu Jan 01 00:00:28 1970 +0000
     !   !  summary:     (28) merge zero known
     !  /
     o !    commit:      7f25b6c2f0b9
-    !\ \   parent:      1aa84d96232a
-    ! ! !  parent:      91da8ed57247
-    ! ! !  user:        test
+    !\ \   user:        test
     ! ! !  date:        Thu Jan 01 00:00:26 1970 +0000
     ! ! !  summary:     (26) merge one known; far right
     ! ! !
     ! o !  commit:      91da8ed57247
-    ! !\!  parent:      d42a756af44d
-    ! ! !  parent:      a9c19a3d96b7
-    ! ! !  user:        test
+    ! !\!  user:        test
     ! ! !  date:        Thu Jan 01 00:00:25 1970 +0000
     ! ! !  summary:     (25) merge one known; far left
     ! ! !
     ! o !    commit:      a9c19a3d96b7
-    ! !\ \   parent:      e6eb3150255d
-    ! ! ~ !  parent:      a01cddf0766d
-    ! !   !  user:        test
-    ! !   !  date:        Thu Jan 01 00:00:24 1970 +0000
+    ! !\ \   user:        test
+    ! ! ~ !  date:        Thu Jan 01 00:00:24 1970 +0000
     ! !   !  summary:     (24) merge one known; immediate right
     ! !  /
     ! o !    commit:      a01cddf0766d
-    ! !\ \   parent:      6db2ef61d156
-    ! ! ~ !  parent:      e0d9cccacb5d
-    ! !   !  user:        test
-    ! !   !  date:        Thu Jan 01 00:00:23 1970 +0000
+    ! !\ \   user:        test
+    ! ! ~ !  date:        Thu Jan 01 00:00:23 1970 +0000
     ! !   !  summary:     (23) merge one known; immediate left
     ! !  /
     ! o !  commit:      e0d9cccacb5d
-    !/!/   parent:      1aa84d96232a
-    ! !    parent:      d42a756af44d
-    ! !    user:        test
+    !/!/   user:        test
     ! !    date:        Thu Jan 01 00:00:22 1970 +0000
     ! !    summary:     (22) merge two known; one far left, one far right
     ! !
     ! o    commit:      d42a756af44d
-    ! !\   parent:      31ddc2c1573b
-    ! ! !  parent:      d30ed6450e32
-    ! ! !  user:        test
+    ! !\   user:        test
     ! ! !  date:        Thu Jan 01 00:00:21 1970 +0000
     ! ! !  summary:     (21) expand
     ! ! !
     +---o  commit:      d30ed6450e32
-    ! ! |  parent:      e6eb3150255d
-    ! ! ~  parent:      1aa84d96232a
-    ! !    user:        test
-    ! !    date:        Thu Jan 01 00:00:20 1970 +0000
+    ! ! |  user:        test
+    ! ! ~  date:        Thu Jan 01 00:00:20 1970 +0000
     ! !    summary:     (20) merge two known; two far right
     ! !
     ! o    commit:      31ddc2c1573b
-    ! |\   parent:      1dda3f72782d
-    ! ~ ~  parent:      44765d7c06e0
-    !      user:        test
-    !      date:        Thu Jan 01 00:00:19 1970 +0000
+    ! |\   user:        test
+    ! ~ ~  date:        Thu Jan 01 00:00:19 1970 +0000
     !      summary:     (19) expand
     !
     o    commit:      1aa84d96232a
-    |\   parent:      6db2ef61d156
-    ~ ~  parent:      1dda3f72782d
-         user:        test
-         date:        Thu Jan 01 00:00:18 1970 +0000
+    |\   user:        test
+    ~ ~  date:        Thu Jan 01 00:00:18 1970 +0000
          summary:     (18) merge two known; two far left"""
 # All but the first 3 lines:
 
@@ -3017,101 +2558,73 @@ graphstyle.missing =
 """ >> "$HGRCPATH"
 sh % "hg log -G -r '36:18 & file(\"a\")' -m" == r"""
     @  commit:      95fa8febd08a
-    !  parent:      9159c3644c5e
-    !  parent:      9159c3644c5e
-    .  user:        test
-    .  date:        Thu Jan 01 00:00:36 1970 +0000
+    !  user:        test
+    !  date:        Thu Jan 01 00:00:36 1970 +0000
     .  summary:     (36) buggy merge: identical parents
     .
     o    commit:      d06dffa21a31
-    !\   parent:      886ed638191b
-    ! !  parent:      621d83e11f67
-    ! .  user:        test
-    ! .  date:        Thu Jan 01 00:00:32 1970 +0000
+    !\   user:        test
+    ! !  date:        Thu Jan 01 00:00:32 1970 +0000
     ! .  summary:     (32) expand
     ! .
     o !  commit:      621d83e11f67
-    !\!  parent:      d42a756af44d
-    ! !  parent:      6e11cd4b648f
-    ! !  user:        test
+    !\!  user:        test
     ! !  date:        Thu Jan 01 00:00:31 1970 +0000
     ! !  summary:     (31) expand
     ! !
     o !    commit:      6e11cd4b648f
-    !\ \   parent:      44ecd0b9ae99
-    ! ~ !  parent:      cd9bb2be7593
-    !   !  user:        test
-    !   !  date:        Thu Jan 01 00:00:30 1970 +0000
+    !\ \   user:        test
+    ! ~ !  date:        Thu Jan 01 00:00:30 1970 +0000
     !   !  summary:     (30) expand
     !  /
     o !    commit:      44ecd0b9ae99
-    !\ \   parent:      6db2ef61d156
-    ! ~ !  parent:      7f25b6c2f0b9
-    !   !  user:        test
-    !   !  date:        Thu Jan 01 00:00:28 1970 +0000
+    !\ \   user:        test
+    ! ~ !  date:        Thu Jan 01 00:00:28 1970 +0000
     !   !  summary:     (28) merge zero known
     !  /
     o !    commit:      7f25b6c2f0b9
-    !\ \   parent:      1aa84d96232a
-    ! ! !  parent:      91da8ed57247
-    ! ! !  user:        test
+    !\ \   user:        test
     ! ! !  date:        Thu Jan 01 00:00:26 1970 +0000
     ! ! !  summary:     (26) merge one known; far right
     ! ! !
     ! o !  commit:      91da8ed57247
-    ! !\!  parent:      d42a756af44d
-    ! ! !  parent:      a9c19a3d96b7
-    ! ! !  user:        test
+    ! !\!  user:        test
     ! ! !  date:        Thu Jan 01 00:00:25 1970 +0000
     ! ! !  summary:     (25) merge one known; far left
     ! ! !
     ! o !    commit:      a9c19a3d96b7
-    ! !\ \   parent:      e6eb3150255d
-    ! ! ~ !  parent:      a01cddf0766d
-    ! !   !  user:        test
-    ! !   !  date:        Thu Jan 01 00:00:24 1970 +0000
+    ! !\ \   user:        test
+    ! ! ~ !  date:        Thu Jan 01 00:00:24 1970 +0000
     ! !   !  summary:     (24) merge one known; immediate right
     ! !  /
     ! o !    commit:      a01cddf0766d
-    ! !\ \   parent:      6db2ef61d156
-    ! ! ~ !  parent:      e0d9cccacb5d
-    ! !   !  user:        test
-    ! !   !  date:        Thu Jan 01 00:00:23 1970 +0000
+    ! !\ \   user:        test
+    ! ! ~ !  date:        Thu Jan 01 00:00:23 1970 +0000
     ! !   !  summary:     (23) merge one known; immediate left
     ! !  /
     ! o !  commit:      e0d9cccacb5d
-    !/!/   parent:      1aa84d96232a
-    ! !    parent:      d42a756af44d
-    ! !    user:        test
+    !/!/   user:        test
     ! !    date:        Thu Jan 01 00:00:22 1970 +0000
     ! !    summary:     (22) merge two known; one far left, one far right
     ! !
     ! o    commit:      d42a756af44d
-    ! !\   parent:      31ddc2c1573b
-    ! ! !  parent:      d30ed6450e32
-    ! ! !  user:        test
+    ! !\   user:        test
     ! ! !  date:        Thu Jan 01 00:00:21 1970 +0000
     ! ! !  summary:     (21) expand
     ! ! !
     +---o  commit:      d30ed6450e32
-    ! ! |  parent:      e6eb3150255d
-    ! ! ~  parent:      1aa84d96232a
-    ! !    user:        test
-    ! !    date:        Thu Jan 01 00:00:20 1970 +0000
+    ! ! |  user:        test
+    ! ! ~  date:        Thu Jan 01 00:00:20 1970 +0000
     ! !    summary:     (20) merge two known; two far right
     ! !
     ! o    commit:      31ddc2c1573b
-    ! |\   parent:      1dda3f72782d
-    ! ~ ~  parent:      44765d7c06e0
-    !      user:        test
-    !      date:        Thu Jan 01 00:00:19 1970 +0000
+    ! |\   user:        test
+    ! ~ ~  date:        Thu Jan 01 00:00:19 1970 +0000
     !      summary:     (19) expand
     !
     o    commit:      1aa84d96232a
-    |\   parent:      6db2ef61d156
-    ~ ~  parent:      1dda3f72782d
-         user:        test
-         date:        Thu Jan 01 00:00:18 1970 +0000
+    |\   user:        test
+    ~ ~  date:        Thu Jan 01 00:00:18 1970 +0000
          summary:     (18) merge two known; two far left"""
 sh % "cd .."
 
@@ -3241,9 +2754,7 @@ sh % "hg merge -r 3" == r"""
 sh % "hg ci -qm 6"
 sh % "hg log -G -r '0 | 1 | 2 | 6'" == r"""
     @    commit:      851fe89689ad
-    :\   parent:      4f1e3cf15f5d
-    : :  parent:      b74ba7084d2d
-    : :  user:        test
+    :\   user:        test
     : :  date:        Thu Jan 01 00:00:00 1970 +0000
     : :  summary:     6
     : :

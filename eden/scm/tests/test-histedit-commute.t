@@ -119,7 +119,6 @@ log after edit
   |  summary:     f
   |
   o  commit:      d8249471110a
-  |  parent:      177f92b77385
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     e
@@ -161,7 +160,6 @@ put things back
   |  summary:     e
   |
   o  commit:      10517e47bbbb
-  |  parent:      177f92b77385
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     d
@@ -207,7 +205,6 @@ slightly different this time
   |  summary:     f
   |
   o  commit:      799205341b6b
-  |  parent:      d2ae7f538514
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     d
@@ -237,7 +234,6 @@ keep prevents stripping dead revs
   |  summary:     e
   |
   o  commit:      ece0b8d93dda
-  |  parent:      be9ae3a309c6
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     c
@@ -258,7 +254,6 @@ keep prevents stripping dead revs
   |  summary:     f
   |
   o  commit:      799205341b6b
-  |  parent:      d2ae7f538514
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     d
@@ -288,7 +283,6 @@ try with --rev
   |  summary:     e
   |
   o  commit:      ece0b8d93dda
-  |  parent:      be9ae3a309c6
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     c
@@ -309,7 +303,6 @@ try with --rev
   |  summary:     f
   |
   o  commit:      799205341b6b
-  |  parent:      d2ae7f538514
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     d

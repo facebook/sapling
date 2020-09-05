@@ -626,7 +626,6 @@ sh % "hg ci -Amb1 -d '1 0'" == "adding b1"
 
 sh % "hg log -f" == r"""
     commit:      e62f78d544b4
-    parent:      3d5bf5654eda
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     b1
@@ -655,7 +654,6 @@ sh % "hg log -r 'follow('\\''glob:b*'\\'')'" == r"""
     summary:     r1
 
     commit:      e62f78d544b4
-    parent:      3d5bf5654eda
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     b1"""
@@ -666,7 +664,6 @@ sh % "echo b2" > "b2"
 sh % "hg ci -Amb2 -d '1 0'" == "adding b2"
 sh % "hg log -f -r '1 + 4'" == r"""
     commit:      ddb82e70d1a1
-    parent:      67e992f2c4f3
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     b2
@@ -684,7 +681,6 @@ sh % "hg log -f -r '1 + 4'" == r"""
 
 sh % "hg log -r 'follow('\\''set:grep(b2)'\\'')'" == r"""
     commit:      ddb82e70d1a1
-    parent:      67e992f2c4f3
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     b2"""
@@ -693,7 +689,6 @@ sh % "hg log -r 'follow('\\''set:grep(b2)'\\'')'" == r"""
 sh % "hg up -qC 0"
 sh % "hg log -r 'follow('\\''set:grep(b2)'\\'', 4)'" == r"""
     commit:      ddb82e70d1a1
-    parent:      67e992f2c4f3
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     b2"""
@@ -751,7 +746,6 @@ sh % "hg merge tip" == r"""
     (branch merge, don't forget to commit)"""
 sh % "hg log -r ." == r"""
     commit:      e62f78d544b4
-    parent:      3d5bf5654eda
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     b1"""
@@ -762,8 +756,6 @@ sh % "hg log -r ." == r"""
 sh % "hg ci -mm12 -d '1 0'"
 sh % "hg log -r ." == r"""
     commit:      302e9dd6890d
-    parent:      e62f78d544b4
-    parent:      ddb82e70d1a1
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     m12"""
@@ -781,14 +773,11 @@ sh % "hg log --follow-first" == r"""
     summary:     b1.1
 
     commit:      302e9dd6890d
-    parent:      e62f78d544b4
-    parent:      ddb82e70d1a1
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     m12
 
     commit:      e62f78d544b4
-    parent:      3d5bf5654eda
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     b1
@@ -813,20 +802,16 @@ sh % "hg log -P 2" == r"""
     summary:     b1.1
 
     commit:      302e9dd6890d
-    parent:      e62f78d544b4
-    parent:      ddb82e70d1a1
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     m12
 
     commit:      ddb82e70d1a1
-    parent:      67e992f2c4f3
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     b2
 
     commit:      e62f78d544b4
-    parent:      3d5bf5654eda
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     b1"""
@@ -883,8 +868,6 @@ sh % "hg --config 'extensions.color=' --config 'color.mode=ansi' log -p -l2 '--c
     [0;92m+postm[0m
 
     [0;93mcommit:      302e9dd6890d[0m
-    [0;93mparent:      e62f78d544b4[0m
-    [0;93mparent:      ddb82e70d1a1[0m
     user:        test
     date:        Thu Jan 01 00:00:01 1970 +0000
     summary:     m12
@@ -1206,7 +1189,6 @@ sh % "mkdir dir"
 sh % "hg log -p --cwd dir" == r"""
     commit:      91f0fa364897
     bookmark:    test
-    parent:      45efe61fb969
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     commit on test
@@ -1325,21 +1307,16 @@ sh % "hg ci -m 'Last merge, related'"
 
 sh % "hg log --graph" == r"""
     @    commit:      4dae8563d2c5
-    |\   parent:      7b35701b003e
-    | |  parent:      88176d361b69
-    | |  user:        test
+    |\   user:        test
     | |  date:        Thu Jan 01 00:00:00 1970 +0000
     | |  summary:     Last merge, related
     | |
     | o    commit:      7b35701b003e
-    | |\   parent:      e5416ad8a855
-    | | |  parent:      87fe3144dcfa
-    | | |  user:        test
+    | |\   user:        test
     | | |  date:        Thu Jan 01 00:00:00 1970 +0000
     | | |  summary:     First merge, related
     | | |
     | | o  commit:      e5416ad8a855
-    | | |  parent:      dc6c325fe5ee
     | | |  user:        test
     | | |  date:        Thu Jan 01 00:00:00 1970 +0000
     | | |  summary:     change foo in branch, related
@@ -1355,7 +1332,6 @@ sh % "hg log --graph" == r"""
     | |  summary:     create foo, related
     | |
     | o  commit:      73db34516eb9
-    | |  parent:      e87515fd044a
     | |  user:        test
     | |  date:        Thu Jan 01 00:00:00 1970 +0000
     | |  summary:     first branch, unrelated
@@ -1387,21 +1363,16 @@ sh % "hg log --graph" == r"""
 
 sh % "hg --traceback log -f foo" == r"""
     commit:      4dae8563d2c5
-    parent:      7b35701b003e
-    parent:      88176d361b69
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     Last merge, related
 
     commit:      7b35701b003e
-    parent:      e5416ad8a855
-    parent:      87fe3144dcfa
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     First merge, related
 
     commit:      e5416ad8a855
-    parent:      dc6c325fe5ee
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     change foo in branch, related
@@ -1480,8 +1451,6 @@ sh % "hg diff --rev '2:3'" == r"""
 
 sh % "hg log -vpr 3" == r"""
     commit:      8e07aafe1edc
-    parent:      b09be438c43a
-    parent:      925d80f479bb
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     files:       a
@@ -1652,14 +1621,11 @@ sh % "hg log -r 'null:null'" == r"""
 sh % "hg log -r 'wdir()' --debug" == r"""
     commit:      ffffffffffffffffffffffffffffffffffffffff
     phase:       draft
-    parent:      65624cd9070a035fa7191a54f2b8af39f16b0c08
-    parent:      0000000000000000000000000000000000000000
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     extra:       branch=default"""
 sh % "hg log -r 'wdir()' -p --stat" == r"""
     commit:      ffffffffffff
-    parent:      65624cd9070a
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000"""
 
@@ -1676,7 +1642,6 @@ sh % "hg status" == r"""
 
 sh % "hg log -r 'wdir()'" == r"""
     commit:      ffffffffffff
-    parent:      65624cd9070a
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000"""
 sh % "hg log -r 'wdir()' -q" == "ffffffffffff"
@@ -1684,8 +1649,6 @@ sh % "hg log -r 'wdir()' -q" == "ffffffffffff"
 sh % "hg log -r 'wdir()' --debug" == r"""
     commit:      ffffffffffffffffffffffffffffffffffffffff
     phase:       draft
-    parent:      65624cd9070a035fa7191a54f2b8af39f16b0c08
-    parent:      0000000000000000000000000000000000000000
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     files:       d1/f1
@@ -1694,7 +1657,6 @@ sh % "hg log -r 'wdir()' --debug" == r"""
     extra:       branch=default"""
 sh % "hg log -r 'wdir()' -p --stat --git" == r"""
     commit:      ffffffffffff
-    parent:      65624cd9070a
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
 
@@ -1885,7 +1847,6 @@ sh % "hg log -G" == r"""
     |  summary:     content2
     |
     o  commit:      2029acd1168c
-    |  parent:      ae0a3c9f9e95
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
     |  summary:     unrelated
@@ -1970,7 +1931,6 @@ sh % "hg log -G" == r"""
     |  summary:     content2
     |
     o  commit:      2029acd1168c
-    |  parent:      ae0a3c9f9e95
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
     |  summary:     unrelated
@@ -2023,14 +1983,12 @@ sh % "hg ci -Am2" == "adding c"
 sh % "hg up 'head() and not .'" == "1 files updated, 0 files merged, 1 files removed, 0 files unresolved"
 sh % "hg log -G" == r"""
     o  commit:      db815d6d32e6
-    |  parent:      f7b1eb17ad24
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
     |  summary:     2
     |
     | @  commit:      9bc8ce7f9356
-    |/   parent:      f7b1eb17ad24
-    |    user:        test
+    |/   user:        test
     |    date:        Thu Jan 01 00:00:00 1970 +0000
     |    summary:     1
     |
@@ -2040,15 +1998,13 @@ sh % "hg log -G" == r"""
        summary:     0"""
 sh % "hg log -f -G b" == r"""
     @  commit:      9bc8ce7f9356
-    |  parent:      f7b1eb17ad24
-    ~  user:        test
-       date:        Thu Jan 01 00:00:00 1970 +0000
+    |  user:        test
+    ~  date:        Thu Jan 01 00:00:00 1970 +0000
        summary:     1"""
 sh % "hg log -G b" == r"""
     @  commit:      9bc8ce7f9356
-    |  parent:      f7b1eb17ad24
-    ~  user:        test
-       date:        Thu Jan 01 00:00:00 1970 +0000
+    |  user:        test
+    ~  date:        Thu Jan 01 00:00:00 1970 +0000
        summary:     1"""
 sh % "cd .."
 
@@ -2075,7 +2031,6 @@ sh % "hg commit -m A3B2C2"
 
 sh % "hg log -G" == r"""
     @  commit:      fe5fc3d0eb17
-    |  parent:      abf4f0e38563
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
     |  summary:     A3B2C2
@@ -2094,7 +2049,6 @@ sh % "hg log -G" == r"""
 
 sh % "hg log -fG B" == r"""
     @  commit:      fe5fc3d0eb17
-    |  parent:      abf4f0e38563
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
     |  summary:     A3B2C2

@@ -27,10 +27,10 @@ resolve using second parent
   $ hg ci -m "merge to B"
 
   $ hg log --graph --style compact
-  @    :ea82b67264a1,7205e83b5a3f   120385945d08   1970-01-01 00:00 +0000   test
+  @       120385945d08   1970-01-01 00:00 +0000   test
   |\     merge to B
   | |
-  | o  :5d1a6b64f9d0   ea82b67264a1   1970-01-01 00:00 +0000   test
+  | o     ea82b67264a1   1970-01-01 00:00 +0000   test
   | |    A->C
   | |
   o |     7205e83b5a3f   1970-01-01 00:00 +0000   test
@@ -59,10 +59,10 @@ resolve using second parent
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 expect the same revision ids as above
   $ hg -R hgrepo2 log --graph --style compact
-  @    [master]:8ec5b459b86e,47fc555571b8   df42911f11c1   1970-01-01 00:00 +0000   test
+  @    [master]   df42911f11c1   1970-01-01 00:00 +0000   test
   |\     merge to B
   | |
-  | o  :fd5eb788c3a1   47fc555571b8   1970-01-01 00:00 +0000   test
+  | o     47fc555571b8   1970-01-01 00:00 +0000   test
   | |    A->B
   | |
   o |     8ec5b459b86e   1970-01-01 00:00 +0000   test

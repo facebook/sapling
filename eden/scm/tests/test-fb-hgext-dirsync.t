@@ -358,7 +358,6 @@ Test committing part of the working copy
   A dir1/b
   $ hg log -r . --stat
   commit:      50bf2325c501
-  parent:      000000000000
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add dir1/a
@@ -379,7 +378,6 @@ Test committing part of the working copy
   $ hg status
   $ hg log -r . --stat
   commit:      5245011388b8
-  parent:      000000000000
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add dir1/a

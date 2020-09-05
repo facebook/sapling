@@ -142,7 +142,6 @@ Tree-only amend
 
   $ hg log -r 'predecessors(tip)-tip' --stat
   commit:      43903a6bf43f
-  parent:      d618f764f9a1
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     tree only commit
@@ -182,7 +181,6 @@ Test pulling new commits from a hybrid server
   fetching tree '' 7e265a5dc5229c2b237874c6bd19f6ef4120f949, found via 098a163f13ea
   2 trees fetched over * (glob)
   commit:      098a163f13ea
-  parent:      d618f764f9a1
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     modify subdir/x
@@ -383,7 +381,6 @@ Test pushing to a hybrid server w/ pushrebase w/o hooks
 - Verify the manifest data is accessible
   $ hg log -r tip --stat
   commit:      dad1be784127
-  parent:      d618f764f9a1
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     extra head commit

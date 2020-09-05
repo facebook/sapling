@@ -39,7 +39,6 @@ Criss cross merging
 
   $ hg log -G
   @  commit:      6373bbfdae1d
-  |  parent:      c202c8af058d
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     6 second change f2
@@ -50,21 +49,16 @@ Criss cross merging
   | |  summary:     5 second change f1
   | |
   | o    commit:      177f58377c06
-  | |\   parent:      d1d156401c1b
-  | | |  parent:      0f6b37dbe527
-  | | |  user:        test
+  | |\   user:        test
   | | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | | |  summary:     4 merge
   | | |
   o---+  commit:      c202c8af058d
-  | | |  parent:      d1d156401c1b
-  |/ /   parent:      0f6b37dbe527
-  | |    user:        test
-  | |    date:        Thu Jan 01 00:00:00 1970 +0000
+  | | |  user:        test
+  |/ /   date:        Thu Jan 01 00:00:00 1970 +0000
   | |    summary:     3 merge
   | |
   | o  commit:      d1d156401c1b
-  | |  parent:      40494bf2444c
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     2 first change f2

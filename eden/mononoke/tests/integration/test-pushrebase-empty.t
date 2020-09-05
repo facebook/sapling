@@ -25,7 +25,6 @@ Push single empty commit
   $ hg commit --amend
   $ hg show
   commit:      4d5799789652
-  parent:      426bada5c675
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   description:

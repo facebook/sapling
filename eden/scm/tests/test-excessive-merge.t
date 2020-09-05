@@ -34,21 +34,16 @@
 
   $ hg log
   commit:      2ee31f665a86
-  parent:      96155394af80
-  parent:      92cc4c306b19
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     merge a/b -> blah
   
   commit:      e16a66a37edd
-  parent:      92cc4c306b19
-  parent:      96155394af80
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     merge b/a -> blah
   
   commit:      92cc4c306b19
-  parent:      5e0375449e74
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     branch b

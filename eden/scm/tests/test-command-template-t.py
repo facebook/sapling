@@ -352,13 +352,13 @@ sh % "hg log -Tcompact" == r"""
     95c24699272e   2020-01-01 10:01 +0000   test
       third
 
-    :000000000000   29114dbae42b   1970-01-12 13:46 +0000   user
+       29114dbae42b   1970-01-12 13:46 +0000   user
       second
 
-    :13207e5a10d9,07fa1db10648   f7e5795620e7   1970-01-18 08:40 +0000   person
+       f7e5795620e7   1970-01-18 08:40 +0000   person
       merge
 
-    :10e46f2dcbf4   13207e5a10d9   1970-01-18 08:40 +0000   person
+       13207e5a10d9   1970-01-18 08:40 +0000   person
       new head
 
     [foo]   07fa1db10648   1970-01-17 04:53 +0000   person
@@ -380,63 +380,63 @@ sh % "hg log -v --style compact" == r"""
     95c24699272e   2020-01-01 10:01 +0000   test
       third
 
-    :000000000000   29114dbae42b   1970-01-12 13:46 +0000   User Name <user@hostname>
+    29114dbae42b   1970-01-12 13:46 +0000   User Name <user@hostname>
       second
 
-    :13207e5a10d9,07fa1db10648   f7e5795620e7   1970-01-18 08:40 +0000   person
+    f7e5795620e7   1970-01-18 08:40 +0000   person
       merge
 
-    :10e46f2dcbf4   13207e5a10d9   1970-01-18 08:40 +0000   person
+    13207e5a10d9   1970-01-18 08:40 +0000   person
       new head
 
-       07fa1db10648   1970-01-17 04:53 +0000   person
+    07fa1db10648   1970-01-17 04:53 +0000   person
       new branch
 
-       10e46f2dcbf4   1970-01-16 01:06 +0000   person
+    10e46f2dcbf4   1970-01-16 01:06 +0000   person
       no user, no domain
 
-       97054abb4ab8   1970-01-14 21:20 +0000   other@place
+    97054abb4ab8   1970-01-14 21:20 +0000   other@place
       no person
 
-       b608e9d1a3f0   1970-01-13 17:33 +0000   A. N. Other <other@place>
+    b608e9d1a3f0   1970-01-13 17:33 +0000   A. N. Other <other@place>
       other 1
     other 2
 
     other 3
 
-       1e4e1b8f71e0   1970-01-12 13:46 +0000   User Name <user@hostname>
+    1e4e1b8f71e0   1970-01-12 13:46 +0000   User Name <user@hostname>
       line 1
     line 2"""
 
 sh % "hg log --debug --style compact" == r"""
-    :29114dbae42b,000000000000   95c24699272e   2020-01-01 10:01 +0000   test
+    95c24699272e   2020-01-01 10:01 +0000   test
       third
 
-    :000000000000,000000000000   29114dbae42b   1970-01-12 13:46 +0000   User Name <user@hostname>
+    29114dbae42b   1970-01-12 13:46 +0000   User Name <user@hostname>
       second
 
-    :13207e5a10d9,07fa1db10648   f7e5795620e7   1970-01-18 08:40 +0000   person
+    f7e5795620e7   1970-01-18 08:40 +0000   person
       merge
 
-    :10e46f2dcbf4,000000000000   13207e5a10d9   1970-01-18 08:40 +0000   person
+    13207e5a10d9   1970-01-18 08:40 +0000   person
       new head
 
-    :10e46f2dcbf4,000000000000   07fa1db10648   1970-01-17 04:53 +0000   person
+    07fa1db10648   1970-01-17 04:53 +0000   person
       new branch
 
-    :97054abb4ab8,000000000000   10e46f2dcbf4   1970-01-16 01:06 +0000   person
+    10e46f2dcbf4   1970-01-16 01:06 +0000   person
       no user, no domain
 
-    :b608e9d1a3f0,000000000000   97054abb4ab8   1970-01-14 21:20 +0000   other@place
+    97054abb4ab8   1970-01-14 21:20 +0000   other@place
       no person
 
-    :1e4e1b8f71e0,000000000000   b608e9d1a3f0   1970-01-13 17:33 +0000   A. N. Other <other@place>
+    b608e9d1a3f0   1970-01-13 17:33 +0000   A. N. Other <other@place>
       other 1
     other 2
 
     other 3
 
-    :000000000000,000000000000   1e4e1b8f71e0   1970-01-12 13:46 +0000   User Name <user@hostname>
+    1e4e1b8f71e0   1970-01-12 13:46 +0000   User Name <user@hostname>
       line 1
     line 2"""
 
@@ -456,20 +456,16 @@ sh % "hg log --style xml" == r"""
     <msg xml:space="preserve">third</msg>
     </logentry>
     <logentry node="29114dbae42b9f078cf2714dbe3a86bba8ec7453">
-    <parent node="0000000000000000000000000000000000000000" />
     <author email="user@hostname">User Name</author>
     <date>1970-01-12T13:46:40+00:00</date>
     <msg xml:space="preserve">second</msg>
     </logentry>
     <logentry node="f7e5795620e78993ad76680c4306bb2da83907b3">
-    <parent node="13207e5a10d9fd28ec424934298e176197f2c67f" />
-    <parent node="07fa1db1064879a32157227401eb44b322ae53ce" />
     <author email="person">person</author>
     <date>1970-01-18T08:40:01+00:00</date>
     <msg xml:space="preserve">merge</msg>
     </logentry>
     <logentry node="13207e5a10d9fd28ec424934298e176197f2c67f">
-    <parent node="10e46f2dcbf4823578cf180f33ecf0b957964c47" />
     <author email="person">person</author>
     <date>1970-01-18T08:40:00+00:00</date>
     <msg xml:space="preserve">new head</msg>
@@ -523,7 +519,6 @@ sh % "hg log -v --style xml" == r"""
     </copies>
     </logentry>
     <logentry node="29114dbae42b9f078cf2714dbe3a86bba8ec7453">
-    <parent node="0000000000000000000000000000000000000000" />
     <author email="user@hostname">User Name</author>
     <date>1970-01-12T13:46:40+00:00</date>
     <msg xml:space="preserve">second</msg>
@@ -532,8 +527,6 @@ sh % "hg log -v --style xml" == r"""
     </paths>
     </logentry>
     <logentry node="f7e5795620e78993ad76680c4306bb2da83907b3">
-    <parent node="13207e5a10d9fd28ec424934298e176197f2c67f" />
-    <parent node="07fa1db1064879a32157227401eb44b322ae53ce" />
     <author email="person">person</author>
     <date>1970-01-18T08:40:01+00:00</date>
     <msg xml:space="preserve">merge</msg>
@@ -541,7 +534,6 @@ sh % "hg log -v --style xml" == r"""
     </paths>
     </logentry>
     <logentry node="13207e5a10d9fd28ec424934298e176197f2c67f">
-    <parent node="10e46f2dcbf4823578cf180f33ecf0b957964c47" />
     <author email="person">person</author>
     <date>1970-01-18T08:40:00+00:00</date>
     <msg xml:space="preserve">new head</msg>
@@ -599,8 +591,6 @@ sh % "hg log --debug --style xml" == r"""
     <?xml version="1.0"?>
     <log>
     <logentry node="95c24699272ef57d062b8bccc32c878bf841784a">
-    <parent node="29114dbae42b9f078cf2714dbe3a86bba8ec7453" />
-    <parent node="0000000000000000000000000000000000000000" />
     <author email="test">test</author>
     <date>2020-01-01T10:01:00+00:00</date>
     <msg xml:space="preserve">third</msg>
@@ -615,8 +605,6 @@ sh % "hg log --debug --style xml" == r"""
     <extra key="branch">default</extra>
     </logentry>
     <logentry node="29114dbae42b9f078cf2714dbe3a86bba8ec7453">
-    <parent node="0000000000000000000000000000000000000000" />
-    <parent node="0000000000000000000000000000000000000000" />
     <author email="user@hostname">User Name</author>
     <date>1970-01-12T13:46:40+00:00</date>
     <msg xml:space="preserve">second</msg>
@@ -626,8 +614,6 @@ sh % "hg log --debug --style xml" == r"""
     <extra key="branch">default</extra>
     </logentry>
     <logentry node="f7e5795620e78993ad76680c4306bb2da83907b3">
-    <parent node="13207e5a10d9fd28ec424934298e176197f2c67f" />
-    <parent node="07fa1db1064879a32157227401eb44b322ae53ce" />
     <author email="person">person</author>
     <date>1970-01-18T08:40:01+00:00</date>
     <msg xml:space="preserve">merge</msg>
@@ -636,8 +622,6 @@ sh % "hg log --debug --style xml" == r"""
     <extra key="branch">default</extra>
     </logentry>
     <logentry node="13207e5a10d9fd28ec424934298e176197f2c67f">
-    <parent node="10e46f2dcbf4823578cf180f33ecf0b957964c47" />
-    <parent node="0000000000000000000000000000000000000000" />
     <author email="person">person</author>
     <date>1970-01-18T08:40:00+00:00</date>
     <msg xml:space="preserve">new head</msg>
@@ -648,8 +632,6 @@ sh % "hg log --debug --style xml" == r"""
     </logentry>
     <logentry node="07fa1db1064879a32157227401eb44b322ae53ce">
     <bookmark>foo</bookmark>
-    <parent node="10e46f2dcbf4823578cf180f33ecf0b957964c47" />
-    <parent node="0000000000000000000000000000000000000000" />
     <author email="person">person</author>
     <date>1970-01-17T04:53:20+00:00</date>
     <msg xml:space="preserve">new branch</msg>
@@ -658,8 +640,6 @@ sh % "hg log --debug --style xml" == r"""
     <extra key="branch">default</extra>
     </logentry>
     <logentry node="10e46f2dcbf4823578cf180f33ecf0b957964c47">
-    <parent node="97054abb4ab824450e9164180baf491ae0078465" />
-    <parent node="0000000000000000000000000000000000000000" />
     <author email="person">person</author>
     <date>1970-01-16T01:06:40+00:00</date>
     <msg xml:space="preserve">no user, no domain</msg>
@@ -669,8 +649,6 @@ sh % "hg log --debug --style xml" == r"""
     <extra key="branch">default</extra>
     </logentry>
     <logentry node="97054abb4ab824450e9164180baf491ae0078465">
-    <parent node="b608e9d1a3f0273ccf70fb85fd6866b3482bf965" />
-    <parent node="0000000000000000000000000000000000000000" />
     <author email="other@place">other</author>
     <date>1970-01-14T21:20:00+00:00</date>
     <msg xml:space="preserve">no person</msg>
@@ -680,8 +658,6 @@ sh % "hg log --debug --style xml" == r"""
     <extra key="branch">default</extra>
     </logentry>
     <logentry node="b608e9d1a3f0273ccf70fb85fd6866b3482bf965">
-    <parent node="1e4e1b8f71e05681d422154f5421e385fec3454f" />
-    <parent node="0000000000000000000000000000000000000000" />
     <author email="other@place">A. N. Other</author>
     <date>1970-01-13T17:33:20+00:00</date>
     <msg xml:space="preserve">other 1
@@ -694,8 +670,6 @@ sh % "hg log --debug --style xml" == r"""
     <extra key="branch">default</extra>
     </logentry>
     <logentry node="1e4e1b8f71e05681d422154f5421e385fec3454f">
-    <parent node="0000000000000000000000000000000000000000" />
-    <parent node="0000000000000000000000000000000000000000" />
     <author email="user@hostname">User Name</author>
     <date>1970-01-12T13:46:40+00:00</date>
     <msg xml:space="preserve">line 1
@@ -1144,23 +1118,23 @@ parent = ' {rev} ({phase})'
 """ > "parentphase"
 sh % "hg debugmakepublic 5"
 sh % "hg log --debug -G --style ./parentphase" == r"""
-    @  8 (draft): 7 (draft) -1 (public)
+    @  8 (draft): 7 (draft)
     |
-    o  7 (draft): -1 (public) -1 (public)
+    o  7 (draft): -1 (public)
 
     o    6 (draft): 5 (public) 4 (draft)
     |\
-    | o  5 (public): 3 (public) -1 (public)
+    | o  5 (public): 3 (public)
     | |
-    o |  4 (draft): 3 (public) -1 (public)
+    o |  4 (draft): 3 (public)
     |/
-    o  3 (public): 2 (public) -1 (public)
+    o  3 (public): 2 (public)
     |
-    o  2 (public): 1 (public) -1 (public)
+    o  2 (public): 1 (public)
     |
-    o  1 (public): 0 (public) -1 (public)
+    o  1 (public): 0 (public)
     |
-    o  0 (public): -1 (public) -1 (public)"""
+    o  0 (public): -1 (public)"""
 
 # Missing non-standard names give no error (backward compatibility):
 
@@ -1647,33 +1621,33 @@ eq(
     node--debug: 97054abb4ab824450e9164180baf491ae0078465
     node--debug: b608e9d1a3f0273ccf70fb85fd6866b3482bf965
     node--debug: 1e4e1b8f71e05681d422154f5421e385fec3454f
-    parents:
+    parents: 29114dbae42b
     parents: 000000000000
     parents: 13207e5a10d9 07fa1db10648
     parents: 10e46f2dcbf4
-    parents:
-    parents:
-    parents:
-    parents:
-    parents:
-    parents--verbose:
+    parents: 10e46f2dcbf4
+    parents: 97054abb4ab8
+    parents: b608e9d1a3f0
+    parents: 1e4e1b8f71e0
+    parents: 000000000000
+    parents--verbose: 29114dbae42b
     parents--verbose: 000000000000
     parents--verbose: 13207e5a10d9 07fa1db10648
     parents--verbose: 10e46f2dcbf4
-    parents--verbose:
-    parents--verbose:
-    parents--verbose:
-    parents--verbose:
-    parents--verbose:
-    parents--debug: 29114dbae42b9f078cf2714dbe3a86bba8ec7453 0000000000000000000000000000000000000000
-    parents--debug: 0000000000000000000000000000000000000000 0000000000000000000000000000000000000000
+    parents--verbose: 10e46f2dcbf4
+    parents--verbose: 97054abb4ab8
+    parents--verbose: b608e9d1a3f0
+    parents--verbose: 1e4e1b8f71e0
+    parents--verbose: 000000000000
+    parents--debug: 29114dbae42b9f078cf2714dbe3a86bba8ec7453
+    parents--debug: 0000000000000000000000000000000000000000
     parents--debug: 13207e5a10d9fd28ec424934298e176197f2c67f 07fa1db1064879a32157227401eb44b322ae53ce
-    parents--debug: 10e46f2dcbf4823578cf180f33ecf0b957964c47 0000000000000000000000000000000000000000
-    parents--debug: 10e46f2dcbf4823578cf180f33ecf0b957964c47 0000000000000000000000000000000000000000
-    parents--debug: 97054abb4ab824450e9164180baf491ae0078465 0000000000000000000000000000000000000000
-    parents--debug: b608e9d1a3f0273ccf70fb85fd6866b3482bf965 0000000000000000000000000000000000000000
-    parents--debug: 1e4e1b8f71e05681d422154f5421e385fec3454f 0000000000000000000000000000000000000000
-    parents--debug: 0000000000000000000000000000000000000000 0000000000000000000000000000000000000000
+    parents--debug: 10e46f2dcbf4823578cf180f33ecf0b957964c47
+    parents--debug: 10e46f2dcbf4823578cf180f33ecf0b957964c47
+    parents--debug: 97054abb4ab824450e9164180baf491ae0078465
+    parents--debug: b608e9d1a3f0273ccf70fb85fd6866b3482bf965
+    parents--debug: 1e4e1b8f71e05681d422154f5421e385fec3454f
+    parents--debug: 0000000000000000000000000000000000000000
     rev: 8
     rev: 7
     rev: 6
@@ -2113,8 +2087,6 @@ sh % "hg log -T status -C -r 10 -v" == r"""
 sh % "hg log -T status -C -r 10 --debug" == r"""
     commit:      0f9759ec227a4859c2014a345cd8a859022b7c6c
     phase:       draft
-    parent:      bf9dfba36635106d6a73ccc01e28b762da60e066
-    parent:      0000000000000000000000000000000000000000
     manifest:    89dd546f2de0a9d6d664f58d86097eb97baba567
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
@@ -2170,8 +2142,6 @@ sh % "hg '--color=debug' log -T status -C -r 10 -v" == r"""
 sh % "hg '--color=debug' log -T status -C -r 10 --debug" == r"""
     [log.changeset changeset.draft|commit:      0f9759ec227a4859c2014a345cd8a859022b7c6c]
     [log.phase|phase:       draft]
-    [log.parent changeset.draft|parent:      bf9dfba36635106d6a73ccc01e28b762da60e066]
-    [log.parent changeset.public|parent:      0000000000000000000000000000000000000000]
     [ui.debug log.manifest|manifest:    89dd546f2de0a9d6d664f58d86097eb97baba567]
     [log.user|user:        test]
     [log.date|date:        Thu Jan 01 00:00:00 1970 +0000]
@@ -2227,8 +2197,6 @@ sh % "hg log --debug -T bisect -r '0:4'" == r"""
     commit:      1e4e1b8f71e05681d422154f5421e385fec3454f
     bisect:      good (implicit)
     phase:       public
-    parent:      0000000000000000000000000000000000000000
-    parent:      0000000000000000000000000000000000000000
     manifest:    a0c8bcbbb45c63b90b70ad007bf38961f64f2af0
     user:        User Name <user@hostname>
     date:        Mon Jan 12 13:46:40 1970 +0000
@@ -2242,8 +2210,6 @@ sh % "hg log --debug -T bisect -r '0:4'" == r"""
     commit:      b608e9d1a3f0273ccf70fb85fd6866b3482bf965
     bisect:      good
     phase:       public
-    parent:      1e4e1b8f71e05681d422154f5421e385fec3454f
-    parent:      0000000000000000000000000000000000000000
     manifest:    4e8d705b1e53e3f9375e0e60dc7b525d8211fe55
     user:        A. N. Other <other@place>
     date:        Tue Jan 13 17:33:20 1970 +0000
@@ -2259,8 +2225,6 @@ sh % "hg log --debug -T bisect -r '0:4'" == r"""
     commit:      97054abb4ab824450e9164180baf491ae0078465
     bisect:      untested
     phase:       public
-    parent:      b608e9d1a3f0273ccf70fb85fd6866b3482bf965
-    parent:      0000000000000000000000000000000000000000
     manifest:    6e0e82995c35d0d57a52aca8da4e56139e06b4b1
     user:        other@place
     date:        Wed Jan 14 21:20:00 1970 +0000
@@ -2273,8 +2237,6 @@ sh % "hg log --debug -T bisect -r '0:4'" == r"""
     commit:      10e46f2dcbf4823578cf180f33ecf0b957964c47
     bisect:      bad
     phase:       public
-    parent:      97054abb4ab824450e9164180baf491ae0078465
-    parent:      0000000000000000000000000000000000000000
     manifest:    cb5a1327723bada42f117e4c55a303246eaf9ccc
     user:        person
     date:        Fri Jan 16 01:06:40 1970 +0000
@@ -2288,8 +2250,6 @@ sh % "hg log --debug -T bisect -r '0:4'" == r"""
     bisect:      bad (implicit)
     bookmark:    foo
     phase:       draft
-    parent:      10e46f2dcbf4823578cf180f33ecf0b957964c47
-    parent:      0000000000000000000000000000000000000000
     manifest:    cb5a1327723bada42f117e4c55a303246eaf9ccc
     user:        person
     date:        Sat Jan 17 04:53:20 1970 +0000
@@ -2379,8 +2339,6 @@ sh % "hg '--color=debug' log --debug -T bisect -r '0:4'" == r"""
     [log.changeset changeset.public|commit:      1e4e1b8f71e05681d422154f5421e385fec3454f]
     [log.bisect bisect.good|bisect:      good (implicit)]
     [log.phase|phase:       public]
-    [log.parent changeset.public|parent:      0000000000000000000000000000000000000000]
-    [log.parent changeset.public|parent:      0000000000000000000000000000000000000000]
     [ui.debug log.manifest|manifest:    a0c8bcbbb45c63b90b70ad007bf38961f64f2af0]
     [log.user|user:        User Name <user@hostname>]
     [log.date|date:        Mon Jan 12 13:46:40 1970 +0000]
@@ -2394,8 +2352,6 @@ sh % "hg '--color=debug' log --debug -T bisect -r '0:4'" == r"""
     [log.changeset changeset.public|commit:      b608e9d1a3f0273ccf70fb85fd6866b3482bf965]
     [log.bisect bisect.good|bisect:      good]
     [log.phase|phase:       public]
-    [log.parent changeset.public|parent:      1e4e1b8f71e05681d422154f5421e385fec3454f]
-    [log.parent changeset.public|parent:      0000000000000000000000000000000000000000]
     [ui.debug log.manifest|manifest:    4e8d705b1e53e3f9375e0e60dc7b525d8211fe55]
     [log.user|user:        A. N. Other <other@place>]
     [log.date|date:        Tue Jan 13 17:33:20 1970 +0000]
@@ -2411,8 +2367,6 @@ sh % "hg '--color=debug' log --debug -T bisect -r '0:4'" == r"""
     [log.changeset changeset.public|commit:      97054abb4ab824450e9164180baf491ae0078465]
     [log.bisect bisect.untested|bisect:      untested]
     [log.phase|phase:       public]
-    [log.parent changeset.public|parent:      b608e9d1a3f0273ccf70fb85fd6866b3482bf965]
-    [log.parent changeset.public|parent:      0000000000000000000000000000000000000000]
     [ui.debug log.manifest|manifest:    6e0e82995c35d0d57a52aca8da4e56139e06b4b1]
     [log.user|user:        other@place]
     [log.date|date:        Wed Jan 14 21:20:00 1970 +0000]
@@ -2425,8 +2379,6 @@ sh % "hg '--color=debug' log --debug -T bisect -r '0:4'" == r"""
     [log.changeset changeset.public|commit:      10e46f2dcbf4823578cf180f33ecf0b957964c47]
     [log.bisect bisect.bad|bisect:      bad]
     [log.phase|phase:       public]
-    [log.parent changeset.public|parent:      97054abb4ab824450e9164180baf491ae0078465]
-    [log.parent changeset.public|parent:      0000000000000000000000000000000000000000]
     [ui.debug log.manifest|manifest:    cb5a1327723bada42f117e4c55a303246eaf9ccc]
     [log.user|user:        person]
     [log.date|date:        Fri Jan 16 01:06:40 1970 +0000]
@@ -2440,8 +2392,6 @@ sh % "hg '--color=debug' log --debug -T bisect -r '0:4'" == r"""
     [log.bisect bisect.bad|bisect:      bad (implicit)]
     [log.bookmark|bookmark:    foo]
     [log.phase|phase:       draft]
-    [log.parent changeset.public|parent:      10e46f2dcbf4823578cf180f33ecf0b957964c47]
-    [log.parent changeset.public|parent:      0000000000000000000000000000000000000000]
     [ui.debug log.manifest|manifest:    cb5a1327723bada42f117e4c55a303246eaf9ccc]
     [log.user|user:        person]
     [log.date|date:        Sat Jan 17 04:53:20 1970 +0000]
@@ -3466,9 +3416,9 @@ sh % 'hg log -T \'{rev} p: {revset("p1(%s)", rev) % "{rev}:{node|short}"}\\n\'' 
     0 p:"""
 
 sh % "hg log --debug -T '{rev} p:{parents % \" {rev}:{node|short}\"}\\n'" == r"""
-    2 p: 1:ea4c0948489d -1:000000000000
-    1 p: 0:f7769ec2ab97 -1:000000000000
-    0 p: -1:000000000000 -1:000000000000"""
+    2 p: 1:ea4c0948489d
+    1 p: 0:f7769ec2ab97
+    0 p: -1:000000000000"""
 
 #  therefore, 'revcache' should be recreated for each rev
 

@@ -127,7 +127,6 @@ test style
   
   commit:      e07efca37c43
   bisect:      
-  parent:      8417d459b90c
   user:        test
   date:        Thu Jan 01 00:00:13 1970 +0000
   summary:     13
@@ -152,8 +151,6 @@ test style
   
   commit:      2197c557e14c
   bisect:      untested
-  parent:      e74a86251f58
-  parent:      8417d459b90c
   user:        test
   date:        Thu Jan 01 00:00:09 1970 +0000
   summary:     9=8+3
@@ -184,7 +181,6 @@ test style
   
   commit:      2a1daef14cd4
   bisect:      good
-  parent:      ce7c85e06a9f
   user:        test
   date:        Thu Jan 01 00:00:04 1970 +0000
   summary:     4

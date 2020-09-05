@@ -107,14 +107,11 @@ check that the changes are synced
   $ hg log -G
   o    commit:      9c3b218de12e
   |\   bookmark:    master_bookmark
-  | |  parent:      14e20a60e5f4
-  | |  parent:      4523b8346e49
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     merge_commit
   | |
   | o  commit:      4523b8346e49
-  |    parent:      000000000000
   |    user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     to merge

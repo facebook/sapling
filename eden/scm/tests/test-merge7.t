@@ -115,20 +115,16 @@ pull and merge from test-a again
 
   $ hg log
   commit:      40d11a4173a8
-  parent:      96b70246a118
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     two -> two-point-one
   
   commit:      50c3a7e29886
-  parent:      d1e159716d41
-  parent:      96b70246a118
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     Merge 1
   
   commit:      96b70246a118
-  parent:      b1832b9d912a
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     Numbers as words

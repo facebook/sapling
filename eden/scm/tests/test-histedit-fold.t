@@ -91,8 +91,6 @@ check histedit_source, including that it uses the later date, from the first cha
   $ hg log --debug --rev 'max(desc(f))'
   commit:      575228819b7e6ed69e8c0a6a383ee59a80db7358
   phase:       draft
-  parent:      505a591af19eed18f560af827b9e03d2076773dc
-  parent:      0000000000000000000000000000000000000000
   manifest:    81eede616954057198ead0b2c73b41d1f392829a
   user:        test
   date:        Thu Jan 01 00:00:06 1970 +0000
@@ -135,8 +133,6 @@ description is taken from rollup target commit
   $ hg log --debug --rev 'max(desc(b))'
   commit:      5d939c56c72e77e29f5167696218e2131a40f5cf
   phase:       draft
-  parent:      8580ff50825a50c8f716709acdf8de0deddcd6ab
-  parent:      0000000000000000000000000000000000000000
   manifest:    b5e112a3a8354e269b1524729f0918662d847c38
   user:        test
   date:        Thu Jan 01 00:00:02 1970 +0000
@@ -225,7 +221,6 @@ folding preserves initial author but uses later date
 tip before edit
   $ hg log --rev .
   commit:      10c36dd37515
-  parent:      1ddb6c90f2ee
   user:        someone else
   date:        Thu Jan 01 00:00:07 1970 +0000
   summary:     f
@@ -244,7 +239,6 @@ tip before edit
 tip after edit, which should use the later date, from the second changeset
   $ hg log --rev .
   commit:      e4f3ec5d0b40
-  parent:      532247a8969b
   user:        test
   date:        Thu Jan 01 00:00:07 1970 +0000
   summary:     e

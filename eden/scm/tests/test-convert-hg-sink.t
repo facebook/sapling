@@ -222,8 +222,6 @@ Verify meta data converted correctly:
   $ hg -R dest log -r 1 --debug -p --git
   commit:      bd51f17597bf32268e68a560b206898c3960cda2
   phase:       draft
-  parent:      a4a1dae0fe3514cefd9b8541b7abbc8f44f946d5
-  parent:      0000000000000000000000000000000000000000
   manifest:    040c72ed9b101773c24ac314776bfc846943781f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -279,8 +277,6 @@ Verify the conversion back:
   $ hg -R source log --debug -r tip
   commit:      e6d364a69ff1248b2099e603b0c145504cade6f0
   phase:       draft
-  parent:      0613c8e59a3ddb9789072ef52f1ed13496489bb4
-  parent:      0000000000000000000000000000000000000000
   manifest:    aa3e9542f3b76d4f1f1b2e9c7ce9dbb48b6a95ec
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -430,7 +426,6 @@ Two way tests
 
   $ hg -R 0 log -G
   o  commit:      637fbbbe96b6
-  |  parent:      8a028c7c77f6
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     b

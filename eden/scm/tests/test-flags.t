@@ -47,7 +47,6 @@ the changelog should mention file a:
   added 1 changesets with 0 changes to 0 files
   $ hg heads
   commit:      7f4313b42a34
-  parent:      22a449e20da5
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     chmod +x a
@@ -59,7 +58,6 @@ the changelog should mention file a:
   
   $ hg history
   commit:      7f4313b42a34
-  parent:      22a449e20da5
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     chmod +x a
@@ -96,7 +94,6 @@ the changelog should mention file a:
   added 1 changesets with 0 changes to 0 files
   $ hg heads
   commit:      7f4313b42a34
-  parent:      22a449e20da5
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     chmod +x a
@@ -108,7 +105,6 @@ the changelog should mention file a:
   
   $ hg history
   commit:      7f4313b42a34
-  parent:      22a449e20da5
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     chmod +x a

@@ -1963,9 +1963,6 @@ class changeset_printer(object):
                 self.ui.write(ns.logfmt % name, label="log.%s" % ns.colorname)
         if self.ui.debugflag:
             self.ui.write(columns["phase"] % ctx.phasestr(), label="log.phase")
-        for pctx in scmutil.meaningfulparents(self.repo, ctx):
-            label = "log.parent changeset.%s" % pctx.phasestr()
-            self.ui.write(columns["parent"] % scmutil.formatchangeid(pctx), label=label)
 
         if self.ui.debugflag and rev is not None:
             mnode = ctx.manifestnode()

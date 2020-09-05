@@ -47,7 +47,6 @@
   summary:     e
   
   commit:      65bd5f99a4a3
-  parent:      ef3a871183d7
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     d
@@ -79,7 +78,6 @@
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   % after update desc(e), strip desc(e)
   commit:      65bd5f99a4a3
-  parent:      ef3a871183d7
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     d
@@ -131,7 +129,6 @@
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   % before update desc(c), strip desc(b)
   commit:      264128213d29
-  parent:      ef3a871183d7
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     c
@@ -150,7 +147,6 @@
 
   $ hg log
   commit:      264128213d29
-  parent:      ef3a871183d7
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     c
@@ -179,7 +175,6 @@
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg parents
   commit:      264128213d29
-  parent:      ef3a871183d7
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     c
@@ -209,7 +204,6 @@
   $ rm .hg/strip-backup/*
   $ hg log --graph
   o  commit:      264128213d29
-  |  parent:      ef3a871183d7
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     c
@@ -249,7 +243,6 @@ before strip of merge parent
   summary:     d
   
   commit:      264128213d29
-  parent:      ef3a871183d7
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     c
@@ -273,7 +266,6 @@ after strip of merge parent
   1 other heads for branch "default"
   $ hg log -G
   @  commit:      264128213d29
-  |  parent:      ef3a871183d7
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     c
@@ -326,7 +318,6 @@ after strip of merge parent
   |  summary:     e
   |
   o  commit:      65bd5f99a4a3
-  |  parent:      ef3a871183d7
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     d
@@ -562,14 +553,11 @@ initialization (previous repo is empty anyway)
   $ hg ci -m 'mergeCD'
   $ hg log -G
   @    commit:      d8db9d137221
-  |\   parent:      5c51d8d6557d
-  | |  parent:      6625a5168474
-  | |  user:        test
+  |\   user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     mergeCD
   | |
   | o  commit:      6625a5168474
-  | |  parent:      eca11cf91c71
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     commitD
@@ -596,14 +584,11 @@ Check bundle behavior:
   2 changesets found
   $ hg log -r 'bundle()' -R ../issue4736.hg
   commit:      6625a5168474
-  parent:      eca11cf91c71
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     commitD
   
   commit:      d8db9d137221
-  parent:      5c51d8d6557d
-  parent:      6625a5168474
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     mergeCD
@@ -659,14 +644,11 @@ strip backup content
   summary:     commitC
   
   commit:      6625a5168474
-  parent:      eca11cf91c71
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     commitD
   
   commit:      d8db9d137221
-  parent:      5c51d8d6557d
-  parent:      6625a5168474
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     mergeCD

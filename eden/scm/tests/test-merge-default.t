@@ -66,7 +66,6 @@ Should succeed - 2 heads:
 
   $ hg merge -P
   commit:      ea9ff125ff88
-  parent:      1846eede8b68
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     d

@@ -106,8 +106,6 @@ Push of a merge with a copy
   commit:      bc6bfc6ac632
   bookmark:    default/master_bookmark
   hoistedname: master_bookmark
-  parent:      af1639811192
-  parent:      21ecc753c272
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     copied
@@ -126,8 +124,6 @@ Push of a merge with a copy
   $ hg log -r tip
   commit:      bc6bfc6ac632
   bookmark:    master_bookmark
-  parent:      af1639811192
-  parent:      21ecc753c272
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     copied

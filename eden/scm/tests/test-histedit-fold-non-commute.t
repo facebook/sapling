@@ -140,7 +140,6 @@ log after edit
   |  summary:     f
   |
   o  commit:      e2ac33269083
-  |  parent:      092e4ce14829
   |  user:        test
   |  date:        Thu Jan 01 00:00:07 1970 +0000
   |  summary:     d
@@ -279,7 +278,6 @@ log after edit
   |  summary:     f
   |
   o  commit:      317e37cb6d66
-  |  parent:      092e4ce14829
   |  user:        test
   |  date:        Thu Jan 01 00:00:04 1970 +0000
   |  summary:     d
@@ -323,8 +321,6 @@ description is taken from rollup target commit
   $ hg log --debug --rev 'max(desc(d))'
   commit:      317e37cb6d66c1c84628c00e5bf4c8c292831951
   phase:       draft
-  parent:      092e4ce14829f4974399ce4316d59f64ef0b6725
-  parent:      0000000000000000000000000000000000000000
   manifest:    b068a323d969f22af1296ec6a5ea9384cef437ac
   user:        test
   date:        Thu Jan 01 00:00:04 1970 +0000

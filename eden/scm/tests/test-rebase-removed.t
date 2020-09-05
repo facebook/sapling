@@ -28,7 +28,6 @@
 
   $ hg log -Gr 'all()'
   @  commit:      27652fba03b2
-  |  parent:      96cc3511f894
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     B
@@ -71,7 +70,6 @@
   |  summary:     A1
   |
   o  commit:      27652fba03b2
-  |  parent:      96cc3511f894
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     B

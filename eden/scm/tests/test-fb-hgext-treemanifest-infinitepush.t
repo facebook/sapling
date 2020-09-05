@@ -187,7 +187,6 @@ Pull just part of a normal scratch branch (this causes rebundling on the server)
   added 1 changesets with 1 changes to 1 files
   $ hg log -r 3ef288300b64 --stat
   commit:      3ef288300b64
-  parent:      085784c01c08
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add bar/car

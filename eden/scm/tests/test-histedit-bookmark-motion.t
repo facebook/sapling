@@ -97,7 +97,6 @@
   o  commit:      59d9f330561f
   |  bookmark:    four
   |  bookmark:    three
-  |  parent:      b346ab9a313d
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     d
@@ -105,7 +104,6 @@
   o  commit:      b346ab9a313d
   |  bookmark:    also-two
   |  bookmark:    two
-  |  parent:      cb9a9f314b8b
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     c
@@ -157,7 +155,6 @@ likely the useful signal.
   |  summary:     d
   |
   o  commit:      c13eb81022ca
-  |  parent:      b346ab9a313d
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     f
@@ -165,7 +162,6 @@ likely the useful signal.
   o  commit:      b346ab9a313d
   |  bookmark:    also-two
   |  bookmark:    two
-  |  parent:      cb9a9f314b8b
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     c

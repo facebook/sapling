@@ -36,7 +36,6 @@ location (so the generaldelta bit isn't stripped before the comparison)
   $ hg unbundle -q $TESTTMP/master/.hg/strip-backup/d34c38483be9-3839604f-backup.hg --config hgsql.bypass=True
   $ hg log -l 1
   commit:      d34c38483be9
-  parent:      b292c1e3311f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     y

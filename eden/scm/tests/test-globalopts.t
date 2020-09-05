@@ -80,7 +80,6 @@ Abbreviation of long option:
 
   $ hg --repo c tip
   commit:      b6c483daf290
-  parent:      000000000000
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     b
@@ -90,7 +89,6 @@ earlygetopt with duplicate options (36d23de02da1):
 
   $ hg --cwd a --cwd b --cwd c tip
   commit:      b6c483daf290
-  parent:      000000000000
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     b
@@ -158,7 +156,6 @@ Testing -v/--verbose:
 
   $ hg --cwd c head -v
   commit:      b6c483daf290
-  parent:      000000000000
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
   files:       b
@@ -209,8 +206,6 @@ Testing --debug:
   $ hg --cwd c log --debug
   commit:      b6c483daf2907ce5825c0bb50f5716226281cc1a
   phase:       draft
-  parent:      0000000000000000000000000000000000000000
-  parent:      0000000000000000000000000000000000000000
   manifest:    23226e7a252cacdc2d99e4fbdc3653441056de49
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
@@ -222,8 +217,6 @@ Testing --debug:
   
   commit:      8580ff50825a50c8f716709acdf8de0deddcd6ab
   phase:       draft
-  parent:      0000000000000000000000000000000000000000
-  parent:      0000000000000000000000000000000000000000
   manifest:    a0c8bcbbb45c63b90b70ad007bf38961f64f2af0
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000

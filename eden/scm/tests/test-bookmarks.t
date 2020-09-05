@@ -307,7 +307,6 @@ look up stripped bookmark name
   commit:      db815d6d32e6
   bookmark:    Y
   bookmark:    x  y
-  parent:      f7b1eb17ad24
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2
@@ -713,7 +712,6 @@ test stripping a non-checked-out but bookmarked revision
 
   $ hg log --graph
   @  commit:      9c404beeabc2
-  |  parent:      db815d6d32e6
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     y
@@ -724,7 +722,6 @@ test stripping a non-checked-out but bookmarked revision
   |    summary:     x
   |
   o  commit:      db815d6d32e6
-  |  parent:      f7b1eb17ad24
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     2
@@ -756,7 +753,6 @@ tipmost surviving ancestor of the stripped revision.
   |  summary:     y
   |
   o  commit:      db815d6d32e6
-  |  parent:      f7b1eb17ad24
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     2
@@ -1006,7 +1002,6 @@ add hooks:
   $ hg log -G -T phases
   @  commit:      81dcce76aa0b
   |  phase:       draft
-  |  parent:      125c9a1d6df6
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     xx
@@ -1014,7 +1009,6 @@ add hooks:
   | o  commit:      f047c86095b7
   | |  bookmark:    Z
   | |  phase:       draft
-  | |  parent:      9c404beeabc2
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     yy
@@ -1022,7 +1016,6 @@ add hooks:
   o |  commit:      125c9a1d6df6
   | |  bookmark:    Y
   | |  phase:       public
-  | |  parent:      db815d6d32e6
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     x
@@ -1040,7 +1033,6 @@ add hooks:
   |  bookmark:    foo@2
   |  bookmark:    x  y
   |  phase:       public
-  |  parent:      f7b1eb17ad24
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     2

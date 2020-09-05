@@ -135,7 +135,6 @@ Test -u/-d:
 
   $ hg log -r .
   commit:      815553afc946
-  parent:      4a2df7238c3b
   user:        foo
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     no changes, new message
@@ -224,7 +223,6 @@ Same, but with changes in working dir (different code path):
   $ rm editor.sh
   $ hg log -r .
   commit:      f7f2c5aae908
-  parent:      4a2df7238c3b
   user:        foo
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     another precious commit message
@@ -553,7 +551,6 @@ Test if amend preserves executable bit changes
   $ hg ci --amend -m "chmod amended second time"
   $ hg log -p --git -r .
   commit:      b4aab18bba3e
-  parent:      112478962961
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     chmod amended second time

@@ -554,7 +554,6 @@ using ui.statuscopies setting
 using log status template (issue5155)
   $ hg log -Tstatus -r 'wdir()' -C
   commit:      ffffffffffff
-  parent:      8c55c58b4c0e
   user:        test
   date:        * (glob)
   files:

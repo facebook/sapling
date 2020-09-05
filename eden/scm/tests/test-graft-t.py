@@ -152,8 +152,6 @@ sh % "hg export tip --git" == r"""
 sh % "hg log --debug -r tip" == r"""
     commit:      ef0ef43d49e79e81ddafdc7997401ba0041efc82
     phase:       draft
-    parent:      68795b066622ca79a25816a662041d8f78f3cd9e
-    parent:      0000000000000000000000000000000000000000
     manifest:    e59b6b228f9cbf9903d5e9abf996e083a1f533eb
     user:        foo
     date:        Thu Jan 01 00:00:00 1970 +0000
@@ -389,8 +387,6 @@ sh % "hg log -r 2 --template '{rev}:{node}\\n'" == "2:5c095ad7e90f871700f02dd1fa
 sh % "hg log --debug -r tip" == r"""
     commit:      7a4785234d87ec1aa420ed6b11afe40fa73e12a9
     phase:       draft
-    parent:      b592ea63bb0c19a6c5c44685ee29a2284f9f1b8f
-    parent:      0000000000000000000000000000000000000000
     manifest:    dc313617b8c32457c0d589e0dbbedfe71f3cd637
     user:        foo
     date:        Thu Jan 01 00:00:00 1970 +0000
@@ -748,7 +744,6 @@ sh % "hg mv f5a f5b"
 sh % "hg ci -qAm E0"
 sh % "hg log -G" == r"""
     @  commit:      6bd1736cab86
-    |  parent:      11f7a1b56675
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
     |  summary:     E0
@@ -759,8 +754,7 @@ sh % "hg log -G" == r"""
     | |  summary:     D1
     | |
     | o  commit:      c9763722f9bd
-    |/   parent:      11f7a1b56675
-    |    user:        test
+    |/   user:        test
     |    date:        Thu Jan 01 00:00:00 1970 +0000
     |    summary:     C1
     |
@@ -855,7 +849,6 @@ sh % "hg log -CGv --patch --git" == r"""
     |  +c5c
     |
     o  commit:      6bd1736cab86
-    |  parent:      11f7a1b56675
     |  user:        test
     |  date:        Thu Jan 01 00:00:00 1970 +0000
     |  files:       f1a f1e f2a f3a f3e f4a f4e f5a f5b
@@ -905,8 +898,7 @@ sh % "hg log -CGv --patch --git" == r"""
     | |  +c4d
     | |
     | o  commit:      c9763722f9bd
-    |/   parent:      11f7a1b56675
-    |    user:        test
+    |/   user:        test
     |    date:        Thu Jan 01 00:00:00 1970 +0000
     |    files:       f1a f2a f2c f5a
     |    copies:      f2c (f2a)

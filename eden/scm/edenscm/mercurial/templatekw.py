@@ -827,13 +827,11 @@ def showp2node(repo, ctx, templ, **args):
 
 @templatekeyword("parents")
 def showparents(**args):
-    """List of strings. The parents of the changeset in "rev:node" format.
-    If the changeset's only parent has the previous revision number, it is
-    omitted."""
+    """List of strings. The parents of the changeset in "rev:node" format."""
     args = args
     repo = args["repo"]
     ctx = args["ctx"]
-    pctxs = scmutil.meaningfulparents(repo, ctx)
+    pctxs = ctx.parents()
     prevs = [p.rev() for p in pctxs]
     parents = [
         [("rev", p.rev()), ("node", p.hex()), ("phase", p.phasestr())] for p in pctxs

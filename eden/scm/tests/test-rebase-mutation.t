@@ -244,8 +244,6 @@ More complex case where part of the rebase set were already rebased
   $ hg log --style default --debug -r 4596109a6a4328c398bde3a4a3b6737cfade3003
   commit:      4596109a6a4328c398bde3a4a3b6737cfade3003
   phase:       draft
-  parent:      02de42196ebee42ef284b6780a87cdc96e8eaab6
-  parent:      0000000000000000000000000000000000000000
   manifest:    a91006e3a02f1edf631f7018e6e5684cf27dd905
   user:        Nicolas Dumazet <nicdumz.commits@gmail.com>
   date:        Sat Apr 30 15:24:48 2011 +0200
@@ -266,8 +264,6 @@ More complex case where part of the rebase set were already rebased
   $ hg log --style default --debug -r tip
   commit:      627d4614809036ba22b9e7cb31638ddc06ab99ab
   phase:       draft
-  parent:      9520eea781bcca16c1e15acc0ba14335a0e8e5ba
-  parent:      0000000000000000000000000000000000000000
   manifest:    648e8ede73ae3e497d093d3a4c8fcc2daa864f42
   user:        Nicolas Dumazet <nicdumz.commits@gmail.com>
   date:        Sat Apr 30 15:24:48 2011 +0200

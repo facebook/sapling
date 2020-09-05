@@ -166,8 +166,6 @@ Test order of parents of rebased merged with un-rebased changes as p1.
   $ hg ci -m 'merge p1 3=outside p2 1=ancestor'
   $ hg par
   commit:      6990226659be
-  parent:      f59da8fc0fcf
-  parent:      dd40c13f7a6f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     merge p1 3=outside p2 1=ancestor
@@ -177,8 +175,6 @@ Test order of parents of rebased merged with un-rebased changes as p1.
   $ hg ci -qm 'merge p1 1=ancestor p2 3=outside'
   $ hg par
   commit:      a57575f79074
-  parent:      dd40c13f7a6f
-  parent:      f59da8fc0fcf
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     merge p1 1=ancestor p2 3=outside
@@ -200,8 +196,6 @@ Test order of parents of rebased merged with un-rebased changes as p1.
   rebasing 6990226659be "merge p1 3=outside p2 1=ancestor"
   $ hg tip
   commit:      cca50676b1c5
-  parent:      a60552eb93fb
-  parent:      f59da8fc0fcf
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     merge p1 3=outside p2 1=ancestor
@@ -210,8 +204,6 @@ Test order of parents of rebased merged with un-rebased changes as p1.
   rebasing a57575f79074 "merge p1 1=ancestor p2 3=outside"
   $ hg tip
   commit:      f9daf77ffe76
-  parent:      a60552eb93fb
-  parent:      f59da8fc0fcf
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     merge p1 1=ancestor p2 3=outside

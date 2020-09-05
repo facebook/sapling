@@ -71,7 +71,6 @@ Load commonly used test logic
   +beta
   
   commit:      9865e289be73
-  parent:      69982ec78c6d
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:12 2007 +0000
   summary:     add d/gamma

@@ -22,7 +22,6 @@ https://bz.mercurial-scm.org/1877
   $ hg heads
   commit:      d36c0562f908
   bookmark:    main
-  parent:      cb9a9f314b8b
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     c

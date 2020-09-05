@@ -150,8 +150,6 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
   $ hg log -G
   o    commit:      2f2496ddf49d
   |\   branch:      f1
-  | |  parent:      4c9fbe56a16f
-  | |  parent:      e31216eec445
   | |  user:        szhang
   | |  date:        Thu Sep 05 12:59:39 2013 -0400
   | |  summary:     merge
@@ -164,28 +162,23 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
   | |
   | o    commit:      8e4e2c1a07ae
   | |\   branch:      f1
-  | | |  parent:      4bc80088dc6b
-  | | |  parent:      400110238667
   | | |  user:        szhang
   | | |  date:        Thu Sep 05 12:57:59 2013 -0400
   | | |  summary:     bad merge
   | | |
   o | |  commit:      4c9fbe56a16f
   |/ /   branch:      f1
-  | |    parent:      4bc80088dc6b
   | |    user:        szhang
   | |    date:        Thu Sep 05 12:54:00 2013 -0400
   | |    summary:     changed f1
   | |
   | o  commit:      400110238667
   | |  branch:      f2
-  | |  parent:      12e8ec6bb010
   | |  user:        szhang
   | |  date:        Tue Sep 03 13:58:02 2013 -0400
   | |  summary:     changed f2 on f2
   | |
   | | @  commit:      d79e2059b5c0
-  | | |  parent:      8a951942e016
   | | |  user:        szhang
   | | |  date:        Tue Sep 03 13:57:39 2013 -0400
   | | |  summary:     changed f2 on default
@@ -197,7 +190,6 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
   | |    summary:     created f2 branch
   | |
   | o  commit:      8a951942e016
-  | |  parent:      24797d4f68de
   | |  user:        szhang
   | |  date:        Tue Sep 03 13:57:11 2013 -0400
   | |  summary:     added f2.txt

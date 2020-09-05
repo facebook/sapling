@@ -685,13 +685,11 @@ each root have a different common ancestor with the destination and this is a de
   rebasing 23a4ace37988 "K"
   $ hg log --rev 'children(desc(G))'
   commit:      adb617877056
-  parent:      eea13746799a
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     I
   
   commit:      882431a34a0e
-  parent:      eea13746799a
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     K
@@ -826,7 +824,6 @@ Make the repo a bit more interesting
   $ hg commit -m aaa
   $ hg log -G
   @  commit:      5f7bc9025ed2
-  |  parent:      58d79cc1cf43
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     aaa
@@ -837,8 +834,7 @@ Make the repo a bit more interesting
   | |  summary:     second source with subdir
   | |
   | o  commit:      82901330b6ef
-  |/   parent:      58d79cc1cf43
-  |    user:        test
+  |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     first source commit
   |
@@ -859,7 +855,6 @@ Testing from lower head
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg log -r '_destrebase()'
   commit:      5f7bc9025ed2
-  parent:      58d79cc1cf43
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     aaa

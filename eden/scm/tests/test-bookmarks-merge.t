@@ -93,7 +93,6 @@
   
   commit:      26bee9c5bcf3
   bookmark:    e
-  parent:      b8f96cf4688b
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     e
@@ -132,15 +131,12 @@
   $ hg heads
   commit:      04dd21731d95
   bookmark:    g
-  parent:      be381d1126a0
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     g
   
   commit:      ca784329f0ba
   bookmark:    e
-  parent:      26bee9c5bcf3
-  parent:      a0546fcfe0fb
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     merge

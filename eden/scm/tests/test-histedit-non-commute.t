@@ -183,7 +183,6 @@ log after edit
   |  summary:     f
   |
   o  commit:      e334d87a1e55
-  |  parent:      00f1c5383965
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     does not commute with e
@@ -266,7 +265,6 @@ post message fix
   |  summary:     f
   |
   o  commit:      e334d87a1e55
-  |  parent:      00f1c5383965
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     does not commute with e

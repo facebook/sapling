@@ -40,8 +40,6 @@ this should not mention bar but should mention foo:
 
   $ hg tip -v
   commit:      c53d17ff3380
-  parent:      ed1b79f46b9a
-  parent:      d394a8db219b
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       foo

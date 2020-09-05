@@ -273,13 +273,11 @@ push should succeed even though it has an unexpected response
   remote: KABOOM IN PROCESS
   $ hg -R ../remote heads
   commit:      1383141674ec
-  parent:      a28a9d1a809c
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     z
   
   commit:      6c0482d977a3
-  parent:      1160648e36ce
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     z

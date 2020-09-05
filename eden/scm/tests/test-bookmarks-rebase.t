@@ -43,13 +43,11 @@ rebase
   $ hg log
   commit:      42e5ed2cdcf4
   bookmark:    two
-  parent:      925d80f479bb
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     3
   
   commit:      db815d6d32e6
-  parent:      f7b1eb17ad24
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2

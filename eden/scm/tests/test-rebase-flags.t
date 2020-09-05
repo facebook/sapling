@@ -36,7 +36,6 @@ Test rebasing a single commit that changes flags:
   $ hg com -m "change"
   $ hg log -G
   @  commit:      a7f7eece6b0c
-  |  parent:      c0233516197f
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     change

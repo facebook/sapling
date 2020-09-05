@@ -50,7 +50,6 @@ Now try to push over a merge commit
   commit:      c8a34708eb3a
   bookmark:    default/master_bookmark
   hoistedname: master_bookmark
-  parent:      2a9ef460b971
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     pushrebase over merge

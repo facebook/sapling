@@ -31,7 +31,6 @@
 
   $ hg heads
   commit:      9a79c33a9db3
-  parent:      000000000000
   user:        a
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a

@@ -174,8 +174,6 @@ check histedit_source
   $ hg log --debug --rev 'desc(foobaz)'
   commit:      a5e1ba2f7afb899ef1581cea528fd885d2fca70d
   phase:       draft
-  parent:      1a60820cd1f6004a362aa622ebc47d59bc48eb34
-  parent:      0000000000000000000000000000000000000000
   manifest:    5ad3be8791f39117565557781f5464363b918a45
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -222,7 +220,6 @@ check histedit_source
 log after edit
   $ hg log --limit 1
   commit:      a107ee126658
-  parent:      a5e1ba2f7afb
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     f
@@ -237,7 +234,6 @@ say we'll change the message, but don't.
   $ hg status
   $ hg log --limit 1
   commit:      1fd3b2fe7754
-  parent:      a5e1ba2f7afb
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     f
@@ -351,7 +347,6 @@ then, check "modify the message" itself
   $ hg status
   $ hg log --limit 1
   commit:      62feedb1200e
-  parent:      a5e1ba2f7afb
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     f
@@ -372,7 +367,6 @@ then, check "modify the message" itself
 
   $ hg log -G
   @  commit:      0efcea34f18a
-     parent:      000000000000
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     a

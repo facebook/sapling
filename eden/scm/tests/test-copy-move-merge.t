@@ -157,7 +157,6 @@ Verify we duplicate existing copies, instead of detecting them
 
   $ hg log -G -f b
   @  commit:      76024fb4b05b
-  :  parent:      235d81efe3d3
   :  user:        test
   :  date:        Thu Jan 01 00:00:00 1970 +0000
   :  summary:     copy a->b (2)

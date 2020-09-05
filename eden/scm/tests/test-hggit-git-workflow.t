@@ -10,8 +10,6 @@ Load commonly used test logic
   $ fn_hg_commit -m "add alpha"
   $ hg log --graph --debug | grep -v phase:
   @  commit:      0221c246a56712c6aa64e5ee382244d8a471b1e2
-     parent:      0000000000000000000000000000000000000000
-     parent:      0000000000000000000000000000000000000000
      manifest:    8b8a0e87dfd7a0706c0524afa8ba67e20544cbf0
      user:        test
      date:        Mon Jan 01 00:00:10 2007 +0000
@@ -50,8 +48,6 @@ get things back to hg
   $ hg log --graph --debug | grep -v phase:
   o  commit:      d294862c083a2eac3c1b31d3a3bdbdffb49a5b25
   |  bookmark:    master
-  |  parent:      0221c246a56712c6aa64e5ee382244d8a471b1e2
-  |  parent:      0000000000000000000000000000000000000000
   |  manifest:    f0bd6fbafbaebe4bb59c35108428f6fce152431d
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:11 2007 +0000
@@ -64,8 +60,6 @@ get things back to hg
   |
   |
   o  commit:      0221c246a56712c6aa64e5ee382244d8a471b1e2
-     parent:      0000000000000000000000000000000000000000
-     parent:      0000000000000000000000000000000000000000
      manifest:    8b8a0e87dfd7a0706c0524afa8ba67e20544cbf0
      user:        test
      date:        Mon Jan 01 00:00:10 2007 +0000

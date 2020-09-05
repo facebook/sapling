@@ -72,7 +72,6 @@ stop & continue cannot preserve hashes without obsolescence
   |  summary:     f
   |
   o  commit:      04d2fab98077
-  |  parent:      055a42cdd887
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     e
@@ -138,8 +137,6 @@ check histedit_source
   $ hg log --debug --rev '.^'
   commit:      d51720eb7a133e2dabf74a445e509a3900e9c0b5
   phase:       draft
-  parent:      055a42cdd88768532f9cf79daa407fc8d138de9b
-  parent:      0000000000000000000000000000000000000000
   manifest:    b2ebbc42649134e3236996c0a3b1c6ec526e8f2e
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000

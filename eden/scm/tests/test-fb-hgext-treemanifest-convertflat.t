@@ -232,7 +232,6 @@ manifest for commit 'f7febcf0f689'.
 
   $ hg log -vpr 'f7febcf0f689'
   commit:      f7febcf0f689
-  parent:      9055b56f3916
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       subdir/x

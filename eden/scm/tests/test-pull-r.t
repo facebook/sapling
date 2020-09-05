@@ -13,7 +13,6 @@
 
   $ hg log
   commit:      effea6de0384
-  parent:      bbd179dfa0a7
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     add bar

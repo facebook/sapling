@@ -156,7 +156,6 @@ the client doesn't receive the public commit file data during the pull.
   commit:      7644808a0e88
   bookmark:    default/master
   hoistedname: master
-  parent:      22ea264ff89d
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     extracommit

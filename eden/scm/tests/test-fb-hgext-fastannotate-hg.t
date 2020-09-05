@@ -699,7 +699,6 @@ create history with a filerev whose linkrev points to another branch
   |  summary:     contentB
   |
   o  commit:      62aaf3f6fc06
-  |  parent:      f0932f74827e
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     unrelated

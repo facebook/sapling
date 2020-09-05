@@ -480,7 +480,6 @@ running into merge conflict and invoking rebase --continue.
   rebasing 1fb04abbc715 "a-dev"
   $ hg log
   commit:      925b342b51db
-  parent:      3c8db56a44bc
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     a-default-dev

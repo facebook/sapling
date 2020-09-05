@@ -149,7 +149,6 @@ move master bookmarks
    2 files changed, 2 insertions(+), 2 deletions(-)
   
   commit:      fbd6b221382e
-  parent:      bb0985934a0f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     d
@@ -199,7 +198,6 @@ move master bookmarks
   summary:     c
    (re)
   commit:      fbd6b221382e
-  parent:      bb0985934a0f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     d

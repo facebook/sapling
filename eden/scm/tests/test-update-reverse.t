@@ -31,7 +31,6 @@
   summary:     Added side2
   
   commit:      b932d7dbb1e1
-  parent:      c2eda428b523
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     Added side1

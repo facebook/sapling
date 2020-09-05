@@ -337,14 +337,11 @@ small reminder of the repository state
   |  summary:     subrepo
   |
   o    commit:      * (glob)
-  |\   parent:      55b05bdebf36
-  | |  parent:      * (glob)
-  | |  user:        test
+  |\   user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     merge
   | |
   | o  commit:      55b05bdebf36
-  | |  parent:      8a9576c51c1f
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     diverging

@@ -96,14 +96,12 @@ pull everything else
   $ hg -R hgrepo log --graph
   o  commit:      78f47553e70d
   |  bookmark:    master
-  |  parent:      69982ec78c6d
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:13 2007 +0000
   |  summary:     add gamma
   |
   | o  commit:      0a22250873dd
   |/   bookmark:    delta
-  |    parent:      69982ec78c6d
   |    user:        test <test@example.org>
   |    date:        Mon Jan 01 00:00:12 2007 +0000
   |    summary:     add delta
@@ -137,21 +135,17 @@ pull the merge
   $ hg -R hgrepo log --graph
   o    commit:      10c1db28cc89
   |\   bookmark:    master
-  | |  parent:      78f47553e70d
-  | |  parent:      3bb02b6794dd
   | |  user:        test <test@example.org>
   | |  date:        Mon Jan 01 00:00:13 2007 +0000
   | |  summary:     Merge branch 'beta'
   | |
   | o  commit:      78f47553e70d
-  | |  parent:      69982ec78c6d
   | |  user:        test <test@example.org>
   | |  date:        Mon Jan 01 00:00:13 2007 +0000
   | |  summary:     add gamma
   | |
   | | o  commit:      0a22250873dd
   | |/   bookmark:    delta
-  | |    parent:      69982ec78c6d
   | |    user:        test <test@example.org>
   | |    date:        Mon Jan 01 00:00:12 2007 +0000
   | |    summary:     add delta
@@ -192,7 +186,6 @@ ensure that releases/v1 and releases/v2 are pulled but not notreleases/v1
   $ hg -R hgrepo log --graph
   o  commit:      47d709856ce8
   |  bookmark:    releases/v2
-  |  parent:      10c1db28cc89
   |  user:        test <test@example.org>
   |  date:        Mon Jan 01 00:00:15 2007 +0000
   |  summary:     add eta
@@ -205,21 +198,17 @@ ensure that releases/v1 and releases/v2 are pulled but not notreleases/v1
   |
   o    commit:      10c1db28cc89
   |\   bookmark:    master
-  | |  parent:      78f47553e70d
-  | |  parent:      3bb02b6794dd
   | |  user:        test <test@example.org>
   | |  date:        Mon Jan 01 00:00:13 2007 +0000
   | |  summary:     Merge branch 'beta'
   | |
   | o  commit:      78f47553e70d
-  | |  parent:      69982ec78c6d
   | |  user:        test <test@example.org>
   | |  date:        Mon Jan 01 00:00:13 2007 +0000
   | |  summary:     add gamma
   | |
   | | o  commit:      0a22250873dd
   | |/   bookmark:    delta
-  | |    parent:      69982ec78c6d
   | |    user:        test <test@example.org>
   | |    date:        Mon Jan 01 00:00:12 2007 +0000
   | |    summary:     add delta
@@ -267,8 +256,6 @@ also add an annotated tag
   $ hg -R hgrepo log -r master
   commit:      10c1db28cc89
   bookmark:    master
-  parent:      78f47553e70d
-  parent:      3bb02b6794dd
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:13 2007 +0000
   summary:     Merge branch 'beta'
@@ -296,14 +283,12 @@ also add an annotated tag
   summary:     newcommit
   
   commit:      6809e41e5128
-  parent:      10c1db28cc89
   user:        test <test@example.org>
   date:        Sat Mar 01 00:00:00 2014 +0000
   summary:     oldtag
   
   commit:      47d709856ce8
   bookmark:    releases/v2
-  parent:      10c1db28cc89
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:15 2007 +0000
   summary:     add eta
@@ -316,7 +301,6 @@ also add an annotated tag
   
   commit:      0a22250873dd
   bookmark:    delta
-  parent:      69982ec78c6d
   user:        test <test@example.org>
   date:        Mon Jan 01 00:00:12 2007 +0000
   summary:     add delta

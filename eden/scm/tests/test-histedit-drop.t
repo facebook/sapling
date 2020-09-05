@@ -71,7 +71,6 @@ log after edit
   |  summary:     f
   |
   o  commit:      ee283cb5f2d5
-  |  parent:      d2ae7f538514
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     e
@@ -92,8 +91,6 @@ Check histedit_source
   $ hg log --debug --rev f518305ce889
   commit:      f518305ce889c07cb5bd05522176d75590ef3324
   phase:       draft
-  parent:      a4f7421b80f79fcc59fff01bcbf4a53d127dd6d3
-  parent:      0000000000000000000000000000000000000000
   manifest:    d3d4f51c157ff242c32ff745d4799aaa26ccda44
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -127,7 +124,6 @@ Drop the last changeset
   |  summary:     f
   |
   o  commit:      ee283cb5f2d5
-  |  parent:      d2ae7f538514
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     e
@@ -159,7 +155,6 @@ Drop the last changeset
   > EOF
   $ hg log --graph
   @  commit:      e99c679bf03e
-  |  parent:      cb9a9f314b8b
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     e

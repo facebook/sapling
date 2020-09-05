@@ -127,8 +127,6 @@
 
   $ hg snapshot show "$REBASEOID"
   commit:      bcda34b7ba8a
-  parent:      fdf2c0326bba
-  parent:      9d3ebf4630d3
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     snapshot
@@ -153,8 +151,6 @@
   The snapshot is in an unfinished *rebase* state.
   $ hg snapshot show "$OID" --template status
   commit:      be6e4139c42c
-  parent:      fdf2c0326bba
-  parent:      9d3ebf4630d3
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     snapshot
@@ -212,7 +208,6 @@
 
   $ hg snapshot show "$HOID"
   commit:      03d785189d28
-  parent:      ffb8db6e9ac3
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     snapshot
@@ -228,7 +223,6 @@
 
   $ hg show --hidden "$HOID"
   commit:      03d785189d28
-  parent:      ffb8db6e9ac3
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   description:
@@ -240,21 +234,16 @@
 # 3) Show them in ssl
   $ hg smartlog -T default
   s    commit:      be6e4139c42c
-  |\   parent:      fdf2c0326bba
-  | |  parent:      9d3ebf4630d3
-  | |  user:        test
+  |\   user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     snapshot
   | |
   +---s  commit:      bcda34b7ba8a
-  | |/   parent:      fdf2c0326bba
-  | |    parent:      9d3ebf4630d3
-  | |    user:        test
+  | |/   user:        test
   | |    date:        Thu Jan 01 00:00:00 1970 +0000
   | |    summary:     snapshot
   | |
   | o  commit:      fdf2c0326bba
-  | |  parent:      fa948fa73a59
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     merge #2
@@ -270,13 +259,11 @@
   | |  summary:     draft2
   | |
   o |  commit:      d521223a2fb5
-  |/   parent:      fa948fa73a59
-  |    user:        test
+  |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     draft1 amend2
   |
   | s  commit:      03d785189d28
-  | |  parent:      ffb8db6e9ac3
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     snapshot
@@ -324,7 +311,6 @@
   $ setconfig extensions.snapshot=!
   $ hg smartlog -T default
   o  commit:      fdf2c0326bba
-  |  parent:      fa948fa73a59
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     merge #2
@@ -340,8 +326,7 @@
   | |  summary:     draft2
   | |
   | o  commit:      d521223a2fb5
-  |/   parent:      fa948fa73a59
-  |    user:        test
+  |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     draft1 amend2
   |
@@ -370,14 +355,11 @@
   03d785189d28 snapshot
   $ hg smartlog -T default
   s    commit:      bcda34b7ba8a
-  |\   parent:      fdf2c0326bba
-  | |  parent:      9d3ebf4630d3
-  | |  user:        test
+  |\   user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     snapshot
   | |
   | o  commit:      fdf2c0326bba
-  | |  parent:      fa948fa73a59
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     merge #2
@@ -393,13 +375,11 @@
   | |  summary:     draft2
   | |
   o |  commit:      d521223a2fb5
-  |/   parent:      fa948fa73a59
-  |    user:        test
+  |/   user:        test
   |    date:        Thu Jan 01 00:00:00 1970 +0000
   |    summary:     draft1 amend2
   |
   | s  commit:      03d785189d28
-  | |  parent:      ffb8db6e9ac3
   | |  user:        test
   | |  date:        Thu Jan 01 00:00:00 1970 +0000
   | |  summary:     snapshot
@@ -427,21 +407,16 @@
   $ hg unhide "$HOID"
   $ hg log -r "snapshot()"
   commit:      bcda34b7ba8a
-  parent:      fdf2c0326bba
-  parent:      9d3ebf4630d3
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     snapshot
   
   commit:      be6e4139c42c
-  parent:      fdf2c0326bba
-  parent:      9d3ebf4630d3
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     snapshot
   
   commit:      03d785189d28
-  parent:      ffb8db6e9ac3
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     snapshot

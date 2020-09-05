@@ -115,7 +115,6 @@ merge working dir with 2 parents, hg parents c
   summary:     c
   
   commit:      48cee28d4b4e
-  parent:      d786049f033a
   user:        test
   date:        Thu Jan 01 00:00:04 1970 +0000
   summary:     c2
@@ -136,7 +135,6 @@ merge working dir with 1 parent, hg parents
   summary:     b
   
   commit:      48cee28d4b4e
-  parent:      d786049f033a
   user:        test
   date:        Thu Jan 01 00:00:04 1970 +0000
   summary:     c2
@@ -146,7 +144,6 @@ merge working dir with 1 parent, hg parents c
 
   $ hg parents c
   commit:      48cee28d4b4e
-  parent:      d786049f033a
   user:        test
   date:        Thu Jan 01 00:00:04 1970 +0000
   summary:     c2

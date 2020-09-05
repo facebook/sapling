@@ -84,8 +84,6 @@ log should show foo and quux changed:
 
   $ hg log -v -r tip
   commit:      d8a521142a3c
-  parent:      f6718a9cb7f3
-  parent:      bdd988058d16
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
   files:       foo quux
