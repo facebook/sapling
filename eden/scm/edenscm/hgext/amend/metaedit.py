@@ -18,16 +18,20 @@ from __future__ import absolute_import
 from edenscm.mercurial import (
     cmdutil,
     commands,
+    encoding,
     error,
     hg,
+    json,
     mutation,
     node as nodemod,
     phases,
     pycompat,
     registrar,
     scmutil,
+    util,
 )
 from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import bin
 
 from . import common, fold
 
@@ -85,6 +89,7 @@ def editmessages(repo, revs):
             False,
             _("edit messages of multiple commits in one editor invocation"),
         ),
+        ("", "json-input-file", "", _("read commit messages and users from JSON file")),
         ("M", "reuse-message", "", _("reuse commit message from another commit")),
     ]
     + commands.commitopts
@@ -106,6 +111,17 @@ def metaedit(ui, repo, templ, *revs, **opts):
     You can edit other pieces of commit metadata, namely the user or date,
     by specifying -u or -d, respectively. The expected format for user is
     'Full Name <user@example.com>'.
+
+    There is also automation-friendly JSON input mode which allows the caller
+    to provide the mapping between commit and new message and username in the
+    following format:
+
+        {
+            "<commit_hash>": {
+                "message": "<message>",
+                "user": "<user>" // optional
+            }
+        }
 
     .. note::
 
@@ -137,6 +153,7 @@ def metaedit(ui, repo, templ, *revs, **opts):
     with repo.wlock(), repo.lock():
         revs = scmutil.revrange(repo, revs)
         msgmap = {}  # {node: message}, predefined messages, currently used by --batch
+        usermap = {}  # {node: author}, predefined authors, used by --jsoninputfile
 
         if opts["fold"]:
             root, head = fold._foldcheck(repo, revs)
@@ -154,6 +171,7 @@ def metaedit(ui, repo, templ, *revs, **opts):
         try:
             commitopts = opts.copy()
             allctx = [repo[r] for r in revs]
+            jsoninputfile = None
 
             if any(
                 commitopts.get(name) for name in ["message", "logfile", "reuse_message"]
@@ -170,7 +188,51 @@ def metaedit(ui, repo, templ, *revs, **opts):
                 else:
                     if opts["batch"] and len(revs) > 1:
                         msgmap = editmessages(repo, revs)
+
                     msgs = [head.description()]
+                    jsoninputfile = opts.get("json_input_file")
+                    if jsoninputfile:
+                        try:
+                            if cmdutil.isstdiofilename(jsoninputfile):
+                                inputjson = pycompat.decodeutf8(ui.fin.read())
+                            else:
+                                inputjson = pycompat.decodeutf8(
+                                    util.readfile(jsoninputfile)
+                                )
+                            msgusermap = json.loads(inputjson)
+                        except IOError as inst:
+                            raise error.Abort(
+                                _("can't read JSON input file '%s': %s")
+                                % (jsoninputfile, encoding.strtolocal(inst.strerror))
+                            )
+                        except ValueError as inst:
+                            raise error.Abort(
+                                _("can't decode JSON input file '%s': %s")
+                                % (jsoninputfile, str(inst))
+                            )
+
+                        if not isinstance(msgusermap, dict):
+                            raise error.Abort(
+                                _(
+                                    "JSON input is not a dictionary (see --help for input format)"
+                                )
+                            )
+
+                        try:
+                            msgmap = {
+                                bin(node): msguser.get("message")
+                                for (node, msguser) in msgusermap.items()
+                                if "message" in msguser
+                            }
+
+                            usermap = {
+                                bin(node): msguser.get("user")
+                                for (node, msguser) in msgusermap.items()
+                                if "user" in msguser
+                            }
+                        except TypeError:
+                            raise error.Abort(_("invalid JSON input"))
+
                 commitopts["message"] = "\n".join(msgs)
                 commitopts["edit"] = True
 
@@ -206,9 +268,14 @@ def metaedit(ui, repo, templ, *revs, **opts):
                 def _rewritesingle(c, _commitopts):
                     # Predefined message overrides other message editing choices.
                     msg = msgmap.get(c.node())
+                    if jsoninputfile:
+                        _commitopts["edit"] = False
                     if msg is not None:
                         _commitopts["message"] = msg
                         _commitopts["edit"] = False
+                    user = usermap.get(c.node())
+                    if user is not None:
+                        _commitopts["user"] = user
                     if _commitopts.get("edit", False):
                         msg = "HG: Commit message of changeset %s\n%s" % (
                             str(c),

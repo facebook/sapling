@@ -538,6 +538,68 @@ Test actually editing the commits
   
 #endif
 
+Create some commits for testing the editing of commits in batch using JSON input
+
+  $ newrepo json-input
+  $ drawdag << 'EOS'
+  > A3
+  > |
+  > A2
+  > |
+  > A1
+  > EOS
+
+  $ cat << EOF >> jsoninput
+  > {
+  >   "$(shaof A3)": {
+  >     "message": "C3",
+  >     "user": "C3PO <c3po@tatooine.com>"
+  >   },
+  >   "$(shaof A2)": {
+  >     "message": "R2\nD2",
+  >     "user": "R2D2 <r2d2@naboo.com>"
+  >   }
+  > }
+  > EOF
+
+  $ hg metaedit -r "$A2::" --json-input-file jsoninput
+
+  $ hg log -Gr 'all()' -T '{desc|firstline} {author}'
+  o  C3 C3PO <c3po@tatooine.com>
+  |
+  o  R2 R2D2 <r2d2@naboo.com>
+  |
+  o  A1 test
+  
+
+  $ cat << EOF > jsoninput
+  > {
+  >   "a3b": {
+  >     "message": "C3",
+  >     "user": "C3PO <c3po@tatooine.com>"
+  >   },
+  > EOF
+  $ hg metaedit -r "$A2::" --json-input-file jsoninput
+  abort: can't decode JSON input file 'jsoninput': * (glob)
+  [255]
+
+  $ cat << EOF > jsoninput
+  > {
+  >   "not a hash)": {
+  >     "message": [1,2,3],
+  >     "user": "C3PO <c3po@tatooine.com>"
+  >   }
+  > }
+  > EOF
+  $ hg metaedit -r "$A2::" --json-input-file jsoninput
+  abort: invalid JSON input
+  [255]
+
+  $ hg metaedit -r "$A2::" --json-input-file jsoninput_other
+  abort: can't read JSON input file 'jsoninput_other': $ENOENT$
+  [255]
+
+
 Test reusing commit message from another commit
 
   $ newrepo
