@@ -11,9 +11,10 @@ use std::sync::Arc;
 use context::CoreContext;
 use futures::stream::{self, StreamExt, TryStreamExt};
 use futures::{future, try_join};
+use maplit::btreeset;
 use mononoke_api::{
-    unified_diff, ChangesetContext, ChangesetHistoryOptions, ChangesetId, ChangesetSpecifier,
-    CopyInfo, MononokeError, MononokePath, UnifiedDiffMode,
+    unified_diff, ChangesetContext, ChangesetDiffItem, ChangesetHistoryOptions, ChangesetId,
+    ChangesetSpecifier, CopyInfo, MononokeError, MononokePath, UnifiedDiffMode,
 };
 use source_control as thrift;
 
@@ -262,7 +263,12 @@ impl SourceControlServiceImpl {
             ),
         };
         let diff = base_changeset
-            .diff(other_changeset_id, !params.skip_copies_renames, paths)
+            .diff(
+                other_changeset_id,
+                !params.skip_copies_renames,
+                paths,
+                btreeset! {ChangesetDiffItem::FILES},
+            )
             .await?;
         let diff_files = stream::iter(diff)
             .map(|d| d.into_response())

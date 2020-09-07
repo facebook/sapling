@@ -41,7 +41,9 @@ pub mod tree;
 #[cfg(test)]
 mod test;
 
-pub use crate::changeset::{ChangesetContext, ChangesetHistoryOptions, Generation};
+pub use crate::changeset::{
+    ChangesetContext, ChangesetDiffItem, ChangesetHistoryOptions, Generation,
+};
 pub use crate::changeset_path::{
     unified_diff, ChangesetPathContext, ChangesetPathHistoryOptions, CopyInfo, PathEntry,
     UnifiedDiff, UnifiedDiffMode,

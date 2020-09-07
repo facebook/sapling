@@ -18,9 +18,10 @@ use chrono::{FixedOffset, TimeZone};
 use fbinit::FacebookInit;
 use fixtures::{branch_uneven, linear, many_files_dirs};
 use futures::stream::TryStreamExt;
+use maplit::btreeset;
 
 use crate::{
-    BookmarkFreshness, ChangesetId, ChangesetIdPrefix, ChangesetPathDiffContext,
+    BookmarkFreshness, ChangesetDiffItem, ChangesetId, ChangesetIdPrefix, ChangesetPathDiffContext,
     ChangesetPrefixSpecifier, ChangesetSpecifier, ChangesetSpecifierPrefixResolution, CoreContext,
     FileId, FileMetadata, FileType, HgChangesetId, HgChangesetIdPrefix, Mononoke, MononokePath,
     TreeEntry, TreeId,
@@ -912,8 +913,10 @@ async fn test_diff_with_moves(fb: FacebookInit) -> Result<(), Error> {
         .ok_or(anyhow!("commit not found"))?;
     let diff = commit_with_move_ctx
         .diff(
-            root, true, /* include_copies_renames */
+            root,
+            true, /* include_copies_renames */
             None, /* path_restrictions */
+            btreeset! {ChangesetDiffItem::FILES},
         )
         .await?;
 
@@ -927,5 +930,79 @@ async fn test_diff_with_moves(fb: FacebookInit) -> Result<(), Error> {
             panic!("unexpected diff");
         }
     }
+    Ok(())
+}
+
+#[fbinit::compat_test]
+async fn test_diff_with_dirs(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let mononoke = Mononoke::new_test(
+        ctx.clone(),
+        vec![("test".to_string(), many_files_dirs::getrepo(fb).await)],
+    )
+    .await?;
+    let repo = mononoke.repo(ctx, "test").await?.expect("repo exists");
+
+    // Case one: dirs added
+    let cs_id = HgChangesetId::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4")?;
+    let cs = repo
+        .changeset(ChangesetSpecifier::Hg(cs_id))
+        .await?
+        .expect("changeset exists");
+    let other_cs_id = HgChangesetId::from_str("5a28e25f924a5d209b82ce0713d8d83e68982bc8")?;
+    let other_cs = repo
+        .changeset(ChangesetSpecifier::Hg(other_cs_id))
+        .await?
+        .expect("other changeset exists");
+
+    let diff: Vec<_> = cs
+        .diff(
+            other_cs.id(),
+            false,
+            None,
+            btreeset! {ChangesetDiffItem::TREES},
+        )
+        .await?;
+    assert_eq!(diff.len(), 5);
+    match diff.get(0) {
+        Some(ChangesetPathDiffContext::Added(path)) => {
+            assert_eq!(path.path(), &MononokePath::try_from("dir2")?);
+        }
+        _ => {
+            panic!("unexpected diff");
+        }
+    }
+
+    // Case two: dir (with subdirs) replaced with file
+    let cs_id = HgChangesetId::from_str("051946ed218061e925fb120dac02634f9ad40ae2")?;
+    let cs = repo
+        .changeset(ChangesetSpecifier::Hg(cs_id))
+        .await?
+        .expect("changeset exists");
+    let other_cs_id = HgChangesetId::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4")?;
+    let other_cs = repo
+        .changeset(ChangesetSpecifier::Hg(other_cs_id))
+        .await?
+        .expect("other changeset exists");
+
+    // Added
+    let diff: Vec<_> = cs
+        .diff(
+            other_cs.id(),
+            false,
+            None,
+            btreeset! {ChangesetDiffItem::TREES},
+        )
+        .await?;
+    assert_eq!(diff.len(), 4);
+    match diff.get(0) {
+        Some(ChangesetPathDiffContext::Removed(path)) => {
+            assert_eq!(path.path(), &MononokePath::try_from("dir1")?);
+        }
+        _ => {
+            panic!("unexpected diff");
+        }
+    }
+
     Ok(())
 }

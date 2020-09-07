@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet, VecDeque};
 use std::convert::TryInto;
 use std::fmt;
 use std::future::Future;
@@ -57,6 +57,12 @@ pub struct ChangesetHistoryOptions {
     pub until_timestamp: Option<i64>,
     pub descendants_of: Option<ChangesetId>,
     pub exclude_changeset_and_ancestors: Option<ChangesetId>,
+}
+
+#[derive(PartialEq, Eq, PartialOrd, Ord)]
+pub enum ChangesetDiffItem {
+    TREES,
+    FILES,
 }
 
 impl fmt::Debug for ChangesetContext {
@@ -363,13 +369,15 @@ impl ChangesetContext {
     ///
     /// `self` is considered the "new" changeset (so files missing there are "Removed")
     /// `other` is considered the "old" changeset (so files missing there are "Added")
-    /// `include_copies_renames` is only available for diffing commits with its parent
+    /// `include_copies_renames` is only available for files when diffing commits with its parent
     /// `path_restrictions` if present will narrow down the diff to given paths
+    /// `diff_items` what to include in the output (files, dirs or both)
     pub async fn diff(
         &self,
         other: ChangesetId,
         include_copies_renames: bool,
         path_restrictions: Option<Vec<MononokePath>>,
+        diff_items: BTreeSet<ChangesetDiffItem>,
     ) -> Result<Vec<ChangesetPathDiffContext>, MononokeError> {
         // Helper to that checks if a path is within the givien path restrictions
         fn within_restrictions(
@@ -452,6 +460,10 @@ impl ChangesetContext {
 
         let (self_manifest_root, other_manifest_root) =
             try_join(self.root_fsnode_id(), other.root_fsnode_id()).await?;
+
+        let diff_files = diff_items.contains(&ChangesetDiffItem::FILES);
+        let diff_trees = diff_items.contains(&ChangesetDiffItem::TREES);
+
         let change_contexts = other_manifest_root // yes, we start from "other" as manfest.diff() is backwards
             .fsnode_id()
             .filtered_diff(
@@ -474,7 +486,9 @@ impl ChangesetContext {
             .try_filter_map(|diff_entry| {
                 future::ok(match diff_entry {
                     ManifestDiff::Added(Some(path), entry @ ManifestEntry::Leaf(_)) => {
-                        if !within_restrictions(Some(path.clone()), &path_restrictions) {
+                        if !diff_files
+                            || !within_restrictions(Some(path.clone()), &path_restrictions)
+                        {
                             None
                         } else if let Some((from_path, from_entry)) = inv_copy_path_map.get(&&path)
                         {
@@ -522,7 +536,9 @@ impl ChangesetContext {
                         if let Some(_) = copy_path_map.get(&path) {
                             // The file is was moved (not removed), it will be covered by a "Moved" entry.
                             None
-                        } else if !within_restrictions(Some(path.clone()), &path_restrictions) {
+                        } else if !diff_files
+                            || !within_restrictions(Some(path.clone()), &path_restrictions)
+                        {
                             None
                         } else {
                             Some(ChangesetPathDiffContext::Removed(
@@ -539,7 +555,9 @@ impl ChangesetContext {
                         from_entry @ ManifestEntry::Leaf(_),
                         to_entry @ ManifestEntry::Leaf(_),
                     ) => {
-                        if !within_restrictions(Some(path.clone()), &path_restrictions) {
+                        if !diff_files
+                            || !within_restrictions(Some(path.clone()), &path_restrictions)
+                        {
                             None
                         } else {
                             Some(ChangesetPathDiffContext::Changed(
@@ -556,7 +574,62 @@ impl ChangesetContext {
                             ))
                         }
                     }
-                    // We don't care about diffs not involving leaves
+                    ManifestDiff::Added(Some(path), entry @ ManifestEntry::Tree(_)) => {
+                        if !diff_trees
+                            || !within_restrictions(Some(path.clone()), &path_restrictions)
+                        {
+                            None
+                        } else {
+                            Some(ChangesetPathDiffContext::Added(
+                                ChangesetPathContext::new_with_fsnode_entry(
+                                    self.clone(),
+                                    path,
+                                    entry,
+                                ),
+                            ))
+                        }
+                    }
+                    ManifestDiff::Removed(Some(path), entry @ ManifestEntry::Tree(_)) => {
+                        if !diff_trees
+                            || !within_restrictions(Some(path.clone()), &path_restrictions)
+                        {
+                            None
+                        } else {
+                            Some(ChangesetPathDiffContext::Removed(
+                                ChangesetPathContext::new_with_fsnode_entry(
+                                    self.clone(),
+                                    path,
+                                    entry,
+                                ),
+                            ))
+                        }
+                    }
+                    ManifestDiff::Changed(
+                        Some(path),
+                        from_entry @ ManifestEntry::Tree(_),
+                        to_entry @ ManifestEntry::Tree(_),
+                    ) => {
+                        if !diff_trees
+                            || !within_restrictions(Some(path.clone()), &path_restrictions)
+                        {
+                            None
+                        } else {
+                            Some(ChangesetPathDiffContext::Changed(
+                                ChangesetPathContext::new_with_fsnode_entry(
+                                    self.clone(),
+                                    path.clone(),
+                                    to_entry,
+                                ),
+                                ChangesetPathContext::new_with_fsnode_entry(
+                                    other.clone(),
+                                    path,
+                                    from_entry,
+                                ),
+                            ))
+                        }
+                    }
+                    // We've already covered all practical possiblities as there are no "changed"
+                    // between from trees and files as such are represented as removal+addition
                     _ => None,
                 })
             })
