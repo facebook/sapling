@@ -10,8 +10,8 @@ use futures::future::try_join_all;
 use futures_util::try_join;
 use itertools::Itertools;
 use mononoke_api::{
-    ChangesetContext, ChangesetPathContext, ChangesetPathDiffContext, FileMetadata, FileType,
-    MononokeError, TreeEntry, UnifiedDiff,
+    ChangesetContext, ChangesetPathContext, FileMetadata, FileType, MononokeError, TreeEntry,
+    TreeId, TreeSummary, UnifiedDiff,
 };
 use source_control as thrift;
 use std::collections::{BTreeMap, BTreeSet};
@@ -79,6 +79,22 @@ impl IntoResponse<thrift::FileInfo> for FileMetadata {
     }
 }
 
+impl IntoResponse<thrift::TreeInfo> for (TreeId, TreeSummary) {
+    fn into_response(self) -> thrift::TreeInfo {
+        let (id, summary) = self;
+        thrift::TreeInfo {
+            id: id.as_ref().to_vec(),
+            simple_format_sha1: summary.simple_format_sha1.as_ref().to_vec(),
+            simple_format_sha256: summary.simple_format_sha256.as_ref().to_vec(),
+            child_files_count: summary.child_files_count as i64,
+            child_files_total_size: summary.child_files_total_size as i64,
+            child_dirs_count: summary.child_dirs_count as i64,
+            descendant_files_count: summary.descendant_files_count as i64,
+            descendant_files_total_size: summary.descendant_files_total_size as i64,
+        }
+    }
+}
+
 impl IntoResponse<thrift::Diff> for UnifiedDiff {
     fn into_response(self) -> thrift::Diff {
         thrift::Diff::raw_diff(thrift::RawDiff {
@@ -119,38 +135,21 @@ impl AsyncIntoResponse<Option<thrift::FilePathInfo>> for ChangesetPathContext {
 }
 
 #[async_trait]
-impl AsyncIntoResponse<thrift::CommitCompareFile> for ChangesetPathDiffContext {
-    async fn into_response(self) -> Result<thrift::CommitCompareFile, errors::ServiceError> {
-        let (other_file, base_file, copy_info) = match self {
-            ChangesetPathDiffContext::Added(base_context) => {
-                let entry = base_context.into_response().await?;
-                (None, entry, thrift::CopyInfo::NONE)
-            }
-            ChangesetPathDiffContext::Removed(other_context) => {
-                let entry = other_context.into_response().await?;
-                (entry, None, thrift::CopyInfo::NONE)
-            }
-            ChangesetPathDiffContext::Changed(base_context, other_context) => {
-                let (other_entry, base_entry) =
-                    try_join!(other_context.into_response(), base_context.into_response(),)?;
-                (other_entry, base_entry, thrift::CopyInfo::NONE)
-            }
-            ChangesetPathDiffContext::Copied(base_context, other_context) => {
-                let (other_entry, base_entry) =
-                    try_join!(other_context.into_response(), base_context.into_response(),)?;
-                (other_entry, base_entry, thrift::CopyInfo::COPY)
-            }
-            ChangesetPathDiffContext::Moved(base_context, other_context) => {
-                let (other_entry, base_entry) =
-                    try_join!(other_context.into_response(), base_context.into_response(),)?;
-                (other_entry, base_entry, thrift::CopyInfo::MOVE)
-            }
+impl AsyncIntoResponse<Option<thrift::TreePathInfo>> for ChangesetPathContext {
+    async fn into_response(self) -> Result<Option<thrift::TreePathInfo>, errors::ServiceError> {
+        let tree = self.tree().await?;
+        let summary = match tree {
+            Some(tree) => Some((tree.id().clone(), tree.summary().await?)),
+            None => None,
         };
-        Ok(thrift::CommitCompareFile {
-            base_file,
-            other_file,
-            copy_info,
-        })
+        if let Some(summary) = summary {
+            Ok(Some(thrift::TreePathInfo {
+                path: self.path().to_string(),
+                info: summary.into_response(),
+            }))
+        } else {
+            Ok(None)
+        }
     }
 }
 

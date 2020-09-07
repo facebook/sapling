@@ -5,16 +5,19 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::BTreeSet;
 use std::convert::{TryFrom, TryInto};
 use std::sync::Arc;
 
 use context::CoreContext;
 use futures::stream::{self, StreamExt, TryStreamExt};
 use futures::{future, try_join};
+use itertools::{Either, Itertools};
 use maplit::btreeset;
 use mononoke_api::{
     unified_diff, ChangesetContext, ChangesetDiffItem, ChangesetHistoryOptions, ChangesetId,
-    ChangesetSpecifier, CopyInfo, MononokeError, MononokePath, UnifiedDiffMode,
+    ChangesetPathDiffContext, ChangesetSpecifier, CopyInfo, MononokeError, MononokePath,
+    UnifiedDiffMode,
 };
 use source_control as thrift;
 
@@ -28,6 +31,90 @@ use crate::specifiers::SpecifierExt;
 
 // Magic number used when we want to limit concurrency with buffer_unordered.
 const CONCURRENCY_LIMIT: usize = 100;
+
+enum CommitComparePath {
+    File(thrift::CommitCompareFile),
+    Tree(thrift::CommitCompareTree),
+}
+
+// helper used by commit_compare
+async fn into_compare_path(
+    path_diff: ChangesetPathDiffContext,
+) -> Result<CommitComparePath, errors::ServiceError> {
+    let mut file: Option<(
+        Option<thrift::FilePathInfo>,
+        Option<thrift::FilePathInfo>,
+        thrift::CopyInfo,
+    )> = None;
+    let mut tree: Option<(Option<thrift::TreePathInfo>, Option<thrift::TreePathInfo>)> = None;
+    match path_diff {
+        ChangesetPathDiffContext::Added(base_context) => {
+            if base_context.is_file().await? {
+                let entry = base_context.into_response().await?;
+                file = Some((None, entry, thrift::CopyInfo::NONE));
+            } else {
+                let entry = base_context.into_response().await?;
+                tree = Some((None, entry));
+            }
+        }
+        ChangesetPathDiffContext::Removed(other_context) => {
+            if other_context.is_file().await? {
+                let entry = other_context.into_response().await?;
+                file = Some((entry, None, thrift::CopyInfo::NONE));
+            } else {
+                let entry = other_context.into_response().await?;
+                tree = Some((entry, None));
+            }
+        }
+        ChangesetPathDiffContext::Changed(base_context, other_context) => {
+            if other_context.is_file().await? {
+                let (other_entry, base_entry) =
+                    try_join!(other_context.into_response(), base_context.into_response(),)?;
+                file = Some((other_entry, base_entry, thrift::CopyInfo::NONE));
+            } else {
+                let (other_entry, base_entry) =
+                    try_join!(other_context.into_response(), base_context.into_response(),)?;
+                tree = Some((other_entry, base_entry));
+            }
+        }
+        ChangesetPathDiffContext::Copied(base_context, other_context) => {
+            if other_context.is_file().await? {
+                let (other_entry, base_entry) =
+                    try_join!(other_context.into_response(), base_context.into_response(),)?;
+                file = Some((other_entry, base_entry, thrift::CopyInfo::COPY));
+            } else {
+                let (other_entry, base_entry) =
+                    try_join!(other_context.into_response(), base_context.into_response(),)?;
+                tree = Some((other_entry, base_entry));
+            }
+        }
+        ChangesetPathDiffContext::Moved(base_context, other_context) => {
+            if other_context.is_file().await? {
+                let (other_entry, base_entry) =
+                    try_join!(other_context.into_response(), base_context.into_response(),)?;
+                file = Some((other_entry, base_entry, thrift::CopyInfo::MOVE));
+            } else {
+                let (other_entry, base_entry) =
+                    try_join!(other_context.into_response(), base_context.into_response(),)?;
+                tree = Some((other_entry, base_entry));
+            }
+        }
+    };
+    if let Some((other_file, base_file, copy_info)) = file {
+        return Ok(CommitComparePath::File(thrift::CommitCompareFile {
+            base_file,
+            other_file,
+            copy_info,
+        }));
+    }
+    if let Some((other_tree, base_tree)) = tree {
+        return Ok(CommitComparePath::Tree(thrift::CommitCompareTree {
+            base_tree,
+            other_tree,
+        }));
+    }
+    Err(errors::internal_error("programming error, diff is neither tree nor file").into())
+}
 
 impl SourceControlServiceImpl {
     /// Returns the lowest common ancestor of two commits.
@@ -253,6 +340,20 @@ impl SourceControlServiceImpl {
                     ))
                 })?,
         };
+        let mut diff_items: BTreeSet<_> = params
+            .compare_items
+            .into_iter()
+            .filter_map(|item| match item {
+                thrift::CommitCompareItem::FILES => Some(ChangesetDiffItem::FILES),
+                thrift::CommitCompareItem::TREES => Some(ChangesetDiffItem::TREES),
+                _ => None,
+            })
+            .collect();
+
+        if diff_items.is_empty() {
+            diff_items = btreeset! { ChangesetDiffItem::FILES };
+        }
+
         let paths: Option<Vec<MononokePath>> = match params.paths {
             None => None,
             Some(paths) => Some(
@@ -267,14 +368,19 @@ impl SourceControlServiceImpl {
                 other_changeset_id,
                 !params.skip_copies_renames,
                 paths,
-                btreeset! {ChangesetDiffItem::FILES},
+                diff_items,
             )
             .await?;
-        let diff_files = stream::iter(diff)
-            .map(|d| d.into_response())
+        let (diff_files, diff_trees) = stream::iter(diff)
+            .map(into_compare_path)
             .buffer_unordered(CONCURRENCY_LIMIT)
-            .try_collect()
-            .await?;
+            .try_collect::<Vec<_>>()
+            .await?
+            .into_iter()
+            .partition_map(|diff| match diff {
+                CommitComparePath::File(entry) => Either::Left(entry),
+                CommitComparePath::Tree(entry) => Either::Right(entry),
+            });
 
         let other_changeset = repo
             .changeset(ChangesetSpecifier::Bonsai(other_changeset_id))
@@ -284,6 +390,7 @@ impl SourceControlServiceImpl {
             map_commit_identity(&other_changeset, &params.identity_schemes).await?;
         Ok(thrift::CommitCompareResponse {
             diff_files,
+            diff_trees,
             other_commit_ids,
         })
     }
