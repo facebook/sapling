@@ -86,7 +86,6 @@ else:
         "test-gitimport-octopus.t",  # Unknown, fails on GitHub MacOs
         "test-gitimport.t",  # Issue with hggit extension
         "test-hook-tailer.t",  # Issue with hggit extension
-        "test-hooks.t",  # Hooks are not in OSS yet
         "test-infinitepush-lfs.t",  # Timed out
         "test-large-path-and-content.t",  # Complex bash issues
         "test-lfs-copytracing.t",  # Timed out
@@ -109,9 +108,7 @@ else:
         "test-mononoke-hg-sync-job-generate-bundles-lfs-verification.t",  # Timed out
         "test-mononoke-hg-sync-job-generate-bundles-lfs.t",  # Timed out
         "test-push-protocol-lfs.t",  # Timed out
-        "test-push-redirector-pushrebase-hooks.t",  # Hooks are not in OSS yet
         "test-pushrebase-block-casefolding.t",  # Most likely MacOS path case insensitivity
-        "test-pushrebase-discovery.t",  # Hooks are not in OSS yet
         "test-remotefilelog-lfs.t",  # Timed out
         "test-scs-blame.t",  # Missing SCS_SERVER
         "test-scs-common-base.t",  # Missing SCS_SERVER

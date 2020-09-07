@@ -31,6 +31,10 @@
   > hook_name="deny_files"
   > [[hooks]]
   > name="deny_files"
+  > [hooks.config_string_lists]
+  >   deny_patterns = [
+  >     "/[.]git/",
+  >   ]
   > CONFIG
   $ start_large_small_repo --local-configerator-path="$TESTTMP/configerator"
   Starting Mononoke server

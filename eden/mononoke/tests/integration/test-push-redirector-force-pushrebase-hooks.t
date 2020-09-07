@@ -31,6 +31,10 @@
   > hook_name="deny_files"
   > [[hooks]]
   > name="deny_files"
+  > [hooks.config_string_lists]
+  >   deny_patterns = [
+  >     "/[.]git/",
+  >   ]
   > CONFIG
 
   $ cat > $TESTTMP/mononoke_tunables.json <<EOF
