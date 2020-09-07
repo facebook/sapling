@@ -87,7 +87,7 @@ else:
         "test-gitimport.t",  # Issue with hggit extension
         "test-hook-tailer.t",  # Issue with hggit extension
         "test-infinitepush-lfs.t",  # Timed out
-        "test-large-path-and-content.t",  # Complex bash issues
+        "test-large-path-and-content.t",  # Timed out
         "test-lfs-copytracing.t",  # Timed out
         "test-lfs-server-acl-check.t",  # Timed out
         "test-lfs-server-consistent-hashing.t",  # Timed out
@@ -96,7 +96,6 @@ else:
         "test-lfs-server-identity-parsing-untrusted.t",  # Timed out
         "test-lfs-server-identity-parsing.t",  # Timed out
         "test-lfs-server-max-upload-size.t",  # Timed out
-        "test-lfs-server-proxy-skip-upstream.t",  # Complex bash issues
         "test-lfs-server-proxy-sync.t",  # Timed out
         "test-lfs-server-proxy.t",  # Timed out
         "test-lfs-server-rate-limiting.t",  # Timed out

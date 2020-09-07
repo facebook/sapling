@@ -29,7 +29,7 @@ jobs:
         python-version: '2.7'
     - name: Install Brew dependencies
       run: |
-        brew install bash coreutils curl-openssl gnu-sed grep jq
+        brew install bash coreutils curl-openssl gnu-sed grep jq nmap
     - name: Install system deps
       run: sudo python3 build/fbcode_builder/getdeps.py --allow-system-packages install-system-deps --recursive eden_scm
     - name: Build eden_scm dependencies
