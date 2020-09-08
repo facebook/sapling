@@ -395,9 +395,15 @@ class MacProcUtils(UnixProcUtils):
         return pid_mapping
 
     def get_process_start_time(self, pid: int) -> float:
-        raise NotImplementedError(
-            "MacProcUtils does not currently implement get_process_start_time()"
-        )
+        try:
+            stdout = subprocess.check_output(
+                ["/bin/ps", "-p", str(pid), "-o", "lstart="]
+            )
+        except subprocess.CalledProcessError as ex:
+            raise ValueError(f"Unable to determine process start time pid: {pid}: {ex}")
+
+        output = stdout.rstrip().decode("utf8")
+        return datetime.datetime.strptime(output, "%c").timestamp()
 
 
 class LinuxProcUtils(UnixProcUtils):
