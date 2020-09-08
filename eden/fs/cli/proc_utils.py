@@ -18,7 +18,7 @@ import sys
 import time
 import typing
 from pathlib import Path
-from typing import Iterable, List, NamedTuple, Optional, Tuple
+from typing import Dict, Iterable, List, NamedTuple, Optional, Tuple
 
 import eden.thrift.legacy
 
@@ -288,7 +288,90 @@ class UnixProcUtils(ProcUtils):
 
 class MacProcUtils(UnixProcUtils):
     def get_edenfs_processes(self) -> Iterable[EdenFSProcess]:
-        return []
+        try:
+            stdout = subprocess.check_output(
+                ["/bin/ps", "-ww", "-o", "uid,pid,command", "-ax"]
+            )
+        except subprocess.CalledProcessError:
+            return
+
+        processes = stdout.rstrip().decode("utf8").split("\n")
+
+        uids = []
+        pids = []
+        cmds = []
+
+        for row in processes[1:]:
+            fields = row.split(None, 2)
+
+            uid = fields[0]
+            pid = fields[1]
+            cmd = [x.encode("utf-8") for x in fields[2].split(" ")]
+
+            if b"edenfs" not in cmd[0]:
+                # constrain to just eden process
+                continue
+
+            # Ignore processes owned by root, to avoid matching privhelper processes
+            if uid == "0":
+                continue
+
+            uids.append(uid)
+            pids.append(pid)
+            cmds.append(cmd)
+
+        pid_to_eden_dir = self.get_eden_dir_mapping(pids)
+
+        for uid, pid, cmdline in zip(uids, pids, cmds):
+
+            if pid in pid_to_eden_dir:
+                eden_dir = pid_to_eden_dir[pid]
+                holding_lock = True
+            else:
+                log.debug(f"could not determine edenDir for edenfs process {pid}")
+                eden_dir = None
+                holding_lock = None
+
+            yield EdenFSProcess(
+                pid=int(pid),
+                uid=int(uid),
+                cmdline=cmdline,
+                eden_dir=eden_dir,
+                holding_lock=holding_lock,
+            )
+
+    def get_eden_dir_mapping(self, pids: List[str]) -> Dict[str, Path]:
+        # In case the state directory was not specified on the command line we can
+        # look at the open FDs to find the state directory
+        pid_list = ",".join(pids)
+
+        try:
+            stdout = subprocess.check_output(
+                ["lsof", "-w", "-b", "-l", "-n", "-P", "-F", "n", "-p", pid_list]
+            )
+        except subprocess.CalledProcessError:
+            return {}
+
+        lsof_output = stdout.rstrip().decode("utf8").split("\n")
+
+        pid_mapping = {}
+        current_pid = ""
+
+        # The format of the output is:
+        # a line p<pid>, noting that until the next instance, the following
+        # lines belong to that pid
+        # alternating lines n<file> and f<fd>. we explicitly skip the file descriptor
+        # lines, since we only care about finding the path of the lock file
+        # More information can be found in `man lsof`
+        for row in lsof_output:
+            if row[0] == "p":
+                current_pid = row[1:]
+            if row[0] == "n":
+                lock_file = row[1:]
+                if lock_file.endswith("/lock"):
+                    pid_mapping[current_pid] = Path(lock_file).parent
+
+        return pid_mapping
 
     def get_process_start_time(self, pid: int) -> float:
         raise NotImplementedError(
