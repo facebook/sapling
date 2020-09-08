@@ -111,6 +111,15 @@ pub trait SyncedCommitMapping: Send + Sync {
         target_repo_id: RepositoryId,
     ) -> BoxFuture<Option<(ChangesetId, Option<CommitSyncConfigVersion>)>, Error>;
 
+    /// Find all the mapping entries for a given source commit and target repo
+    fn get(
+        &self,
+        ctx: CoreContext,
+        source_repo_id: RepositoryId,
+        bcs_id: ChangesetId,
+        target_repo_id: RepositoryId,
+    ) -> BoxFuture<Vec<(ChangesetId, Option<CommitSyncConfigVersion>)>, Error>;
+
     /// Inserts equivalent working copy of a large bcs id. It's similar to mapping entry,
     /// however there are a few differences:
     /// 1) For (large repo, small repo) pair, many large commits can map to the same small commit
@@ -155,6 +164,16 @@ impl SyncedCommitMapping for Arc<dyn SyncedCommitMapping> {
         target_repo_id: RepositoryId,
     ) -> BoxFuture<Option<(ChangesetId, Option<CommitSyncConfigVersion>)>, Error> {
         (**self).get_one(ctx, source_repo_id, bcs_id, target_repo_id)
+    }
+
+    fn get(
+        &self,
+        ctx: CoreContext,
+        source_repo_id: RepositoryId,
+        bcs_id: ChangesetId,
+        target_repo_id: RepositoryId,
+    ) -> BoxFuture<Vec<(ChangesetId, Option<CommitSyncConfigVersion>)>, Error> {
+        (**self).get(ctx, source_repo_id, bcs_id, target_repo_id)
     }
 
     fn insert_equivalent_working_copy(
@@ -327,6 +346,68 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
             } else {
                 None
             }
+        })
+        .boxify()
+    }
+
+    fn get(
+        &self,
+        _ctx: CoreContext,
+        source_repo_id: RepositoryId,
+        bcs_id: ChangesetId,
+        target_repo_id: RepositoryId,
+    ) -> BoxFuture<Vec<(ChangesetId, Option<CommitSyncConfigVersion>)>, Error> {
+        STATS::gets.add_value(1);
+
+        SelectMapping::query(
+            &self.read_connection,
+            &source_repo_id,
+            &bcs_id,
+            &target_repo_id,
+        )
+        .and_then({
+            cloned!(self.read_master_connection);
+            move |rows| {
+                if rows.is_empty() {
+                    STATS::gets_master.add_value(1);
+                    SelectMapping::query(
+                        &read_master_connection,
+                        &source_repo_id,
+                        &bcs_id,
+                        &target_repo_id,
+                    )
+                    .left_future()
+                } else {
+                    future::ok(rows).right_future()
+                }
+            }
+        })
+        .map(move |rows| {
+            let v: Vec<_> = rows
+                .iter()
+                .map(|row| {
+                    let (
+                        large_repo_id,
+                        large_bcs_id,
+                        _small_repo_id,
+                        small_bcs_id,
+                        ref version_name,
+                    ) = row;
+                    let maybe_version_name: Option<CommitSyncConfigVersion> = match version_name {
+                        Some(version_name) => {
+                            Some(CommitSyncConfigVersion(version_name.to_owned()))
+                        }
+                        None => None,
+                    };
+                    if target_repo_id == *large_repo_id {
+                        (*large_bcs_id, maybe_version_name)
+                    } else {
+                        (*small_bcs_id, maybe_version_name)
+                    }
+                })
+                .collect();
+
+            v
         })
         .boxify()
     }
