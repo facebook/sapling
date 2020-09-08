@@ -26,6 +26,7 @@ use stats::prelude::*;
 use filestore::{self, Alias, FetchKey, StoreRequest};
 use gotham_ext::{
     error::HttpError,
+    middleware::{HttpScubaKey, ScubaMiddlewareState},
     response::{EmptyBody, TryIntoResponse},
 };
 use lfs_protocol::{
@@ -36,7 +37,7 @@ use mononoke_types::hash::Sha256;
 
 use crate::errors::ErrorKind;
 use crate::lfs_server_context::RepositoryRequestContext;
-use crate::middleware::{HttpScubaKey, LfsMethod, ScubaMiddlewareState};
+use crate::middleware::LfsMethod;
 use crate::scuba::LfsScubaKey;
 
 define_stats! {

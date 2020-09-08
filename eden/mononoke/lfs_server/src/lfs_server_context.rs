@@ -22,7 +22,7 @@ use futures::{
 };
 use gotham::state::{FromState, State};
 use gotham_derive::StateData;
-use gotham_ext::body_ext::BodyExt;
+use gotham_ext::{body_ext::BodyExt, middleware::ClientIdentity};
 use http::{
     header::HeaderMap,
     uri::{Authority, Parts, PathAndQuery, Scheme, Uri},
@@ -43,7 +43,7 @@ use mononoke_types::ContentId;
 
 use crate::config::ServerConfig;
 use crate::errors::{ErrorKind, LfsServerContextErrorKind};
-use crate::middleware::{ClientIdentity, LfsMethod, RequestContext};
+use crate::middleware::{LfsMethod, RequestContext};
 
 pub type HttpsHyperClient = Client<HttpsConnector<HttpConnector>>;
 

@@ -14,6 +14,7 @@ use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
 use gotham_ext::{
     body_ext::BodyExt,
+    middleware::{RequestStartTime, ScubaMiddlewareState},
     response::{BytesBody, TryIntoResponse},
 };
 use http::header::HeaderMap;
@@ -39,7 +40,7 @@ use mononoke_types::{hash::Sha256, typed_hash::ContentId, MononokeId};
 
 use crate::errors::ErrorKind;
 use crate::lfs_server_context::{RepositoryRequestContext, UriBuilder};
-use crate::middleware::{LfsMethod, RequestStartTime, ScubaMiddlewareState};
+use crate::middleware::LfsMethod;
 use crate::popularity::allow_consistent_routing;
 use crate::scuba::LfsScubaKey;
 

@@ -20,7 +20,14 @@ use futures::{
 };
 use futures_util::try_join;
 use gotham::{bind_server, bind_server_with_socket_data};
-use gotham_ext::{handler::MononokeHttpHandler, socket_data::TlsSocketData};
+use gotham_ext::{
+    handler::MononokeHttpHandler,
+    middleware::{
+        ClientIdentityMiddleware, LoadMiddleware, LogMiddleware, PostRequestMiddleware,
+        ScubaMiddleware, ServerIdentityMiddleware, TimerMiddleware, TlsSessionDataMiddleware,
+    },
+    socket_data::TlsSocketData,
+};
 use hyper::header::HeaderValue;
 use permission_checker::{ArcPermissionChecker, MononokeIdentitySet, PermissionCheckerBuilder};
 use slog::{info, warn};
@@ -41,11 +48,7 @@ use metaconfig_parser::RepoConfigs;
 use metaconfig_types::RepoConfig;
 
 use crate::lfs_server_context::{LfsServerContext, ServerUris};
-use crate::middleware::{
-    ClientIdentityMiddleware, LoadMiddleware, LogMiddleware, OdsMiddleware, PostRequestMiddleware,
-    RequestContextMiddleware, ScubaMiddleware, ServerIdentityMiddleware, TimerMiddleware,
-    TlsSessionDataMiddleware,
-};
+use crate::middleware::{OdsMiddleware, RequestContextMiddleware};
 use crate::scuba::LfsScubaHandler;
 use crate::service::build_router;
 

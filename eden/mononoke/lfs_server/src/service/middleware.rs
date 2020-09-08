@@ -11,6 +11,7 @@ use futures::future::FutureExt;
 use gotham::{handler::HandlerFuture, middleware::Middleware, state::State};
 use gotham_derive::NewMiddleware;
 use gotham_ext::error::HttpError;
+use gotham_ext::middleware::ClientIdentity;
 use permission_checker::MononokeIdentitySet;
 use rand::Rng;
 use stats::prelude::*;
@@ -19,9 +20,7 @@ use std::pin::Pin;
 use std::time::Duration;
 
 use crate::config::{Limit, ServerConfig};
-
 use crate::errors::ErrorKind;
-use crate::middleware::ClientIdentity;
 
 use super::util::http_error_to_handler_error;
 
