@@ -1208,7 +1208,11 @@ impl LfsRemote {
                 bail!("Unsupported url: {}", url);
             }
 
-            let auth = AuthConfig::new(&config).auth_for_url(&url);
+            let auth = if config.get_or("lfs", "use-client-certs", || true)? {
+                AuthConfig::new(&config).auth_for_url(&url)
+            } else {
+                None
+            };
 
             let user_agent = config.get_or("experimental", "lfs.user-agent", || {
                 "mercurial/revisionstore".to_string()

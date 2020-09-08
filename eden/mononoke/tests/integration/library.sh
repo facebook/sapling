@@ -1375,6 +1375,7 @@ lfs=!
 [lfs]
 url=$1
 threshold=$2
+backofftimes=0
 EOF
 }
 

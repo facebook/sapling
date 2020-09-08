@@ -42,8 +42,16 @@ Configure TLS
   $ setconfig "auth.lfs.schemes=https"
   $ setconfig "auth.lfs.prefix=localhost"
 
-Now, update. The server will send this file as LFS.
+Initially, enable the killswitch This will fail, because we don't have certs.
 
+  $ setconfig "lfs.use-client-certs=false"
+  $ hgmn up master -q 2>&1 | grep -i 'ssl'
+  * SSL peer certificate or SSH remote key was not OK * (glob)
+  $ ! test -f large
+
+Now, remove the killswitch. This will work
+
+  $ setconfig "lfs.use-client-certs=true"
   $ hgmn up master -q
   $ test -f large
 
