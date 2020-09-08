@@ -36,8 +36,9 @@ use fbinit::FacebookInit;
 use gotham_ext::{
     handler::MononokeHttpHandler,
     middleware::{
-        ClientIdentityMiddleware, LoadMiddleware, LogMiddleware, PostRequestMiddleware,
-        ServerIdentityMiddleware, TlsSessionDataMiddleware,
+        ClientIdentityMiddleware, DefaultScubaHandler, LoadMiddleware, LogMiddleware,
+        PostRequestMiddleware, ScubaMiddleware, ServerIdentityMiddleware, TimerMiddleware,
+        TlsSessionDataMiddleware,
     },
     socket_data::TlsSocketData,
 };
@@ -123,7 +124,8 @@ async fn start(
     let trusted_proxy_idents = parse_identities(&matches)?;
     let tls_session_data_log = matches.value_of(ARG_TLS_SESSION_DATA_LOG_FILE);
     let config_store = args::maybe_init_config_store(fb, &logger, &matches)
-        .expect("failed to instantiate ConfigStore");
+        .context("failed to instantiate ConfigStore")?;
+    let mut scuba_logger = args::get_scuba_sample_builder(fb, &matches)?;
 
     debug!(logger, "Initializing Mononoke API");
     let mononoke = Mononoke::new(
@@ -146,10 +148,13 @@ async fn start(
     // Set up context to hold the server's global state.
     let ctx = ServerContext::new(mononoke, will_exit.clone());
 
+    // Configure logging.
     let log_middleware = match matches.is_present(ARG_TEST_FRIENDLY_LOGGING) {
         true => LogMiddleware::test_friendly(),
         false => LogMiddleware::slog(logger.clone()),
     };
+
+    scuba_logger.add_common_server_data();
 
     // Set up the router and handler for serving HTTP requests, along with custom middleware.
     // The middleware added here does not implement Gotham's usual Middleware trait; instead,
@@ -166,6 +171,8 @@ async fn start(
         .add(RequestContextMiddleware::new(fb, logger.clone()))
         .add(LoadMiddleware::new())
         .add(log_middleware)
+        .add(<ScubaMiddleware<DefaultScubaHandler>>::new(scuba_logger))
+        .add(TimerMiddleware::new())
         .build(router);
 
     // Set up socket and TLS acceptor that this server will listen on.
@@ -245,6 +252,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         .with_fb303_args()
         .with_all_repos()
         .with_shutdown_timeout_args()
+        .with_scuba_logging_args()
         .with_disabled_hooks_args()
         .with_test_args()
         .build()
