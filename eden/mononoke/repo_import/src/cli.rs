@@ -15,7 +15,7 @@ pub const ARG_BOOKMARK_SUFFIX: &str = "bookmark-suffix";
 pub const ARG_PHAB_CHECK_DISABLED: &str = "disable-phabricator-check";
 pub const ARG_X_REPO_CHECK_DISABLED: &str = "disable-x-repo-check";
 pub const ARG_HG_SYNC_CHECK_DISABLED: &str = "disable-hg-sync-check";
-pub const ARG_SLEEP_TIME: &str = "sleep-time";
+pub const ARG_SLEEP_TIME: &str = "sleep-time-secs";
 pub const ARG_DEST_BOOKMARK: &str = "dest-bookmark";
 pub const ARG_COMMIT_MESSAGE: &'static str = "commit-message";
 pub const ARG_COMMIT_AUTHOR: &'static str = "commit-author";
@@ -76,9 +76,9 @@ pub fn setup_app<'a, 'b>() -> App<'a, 'b> {
             Arg::with_name(ARG_SLEEP_TIME)
                 .long(ARG_SLEEP_TIME)
                 .takes_value(true)
-                .default_value("1")
+                .default_value("5")
                 .help(
-                    "Sleep time, if we fail dependent system (phabricator, hg_sync ...) checkers",
+                    "Sleep time in seconds, if we fail dependent system (phabricator, hg_sync ...) checkers",
                 ),
         )
         .arg(
