@@ -95,7 +95,7 @@ pub(crate) fn beautify(
             }
         }
         Ok(best_branch)
-    };
+    }
 
     // Sort heads recursively.
     fn sort(
@@ -135,7 +135,7 @@ pub(crate) fn beautify(
         }
 
         Ok(())
-    };
+    }
 
     let main_branch = main_branch.unwrap_or_else(NameSet::empty);
     let mut heads: Vec<_> = this

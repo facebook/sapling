@@ -499,7 +499,7 @@ mod tests {
         struct Body<'a> {
             foo: &'a str,
             hello: &'a str,
-        };
+        }
 
         let body = Body {
             foo: "bar",

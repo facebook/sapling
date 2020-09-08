@@ -98,7 +98,7 @@ impl Iterator for Iter {
                 match self.rhs.contains(&name) {
                     Err(err) => break Some(Err(err)),
                     Ok(true) => continue,
-                    _ => (),
+                    _ => {}
                 }
             }
             break result;

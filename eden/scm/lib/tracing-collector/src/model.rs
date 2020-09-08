@@ -816,7 +816,7 @@ impl TracingData {
                 }
             }
             None
-        };
+        }
 
         // Calculate JSON objects in a streaming way to reduce memory usage.
         let trace_event_iter = self.eventus.iter().map(move |eventus| {
@@ -1144,7 +1144,7 @@ impl TracingData {
                             self.matched.insert(enter_eid, eid);
                         }
                     }
-                    Action::Event => (),
+                    Action::Event => {}
                 }
             }
         }
@@ -1357,7 +1357,7 @@ impl TracingData {
                 }
             }
             ""
-        };
+        }
 
         /// Render RawTreeSpan to rows.
         fn render_span(ctx: &mut Context, id: usize, mut indent: usize, first_row_ch: char) {

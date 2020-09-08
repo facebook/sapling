@@ -608,7 +608,7 @@ where
             }
         }
         // Impossible here.
-        (None, None) => (),
+        (None, None) => {}
     }
 
     // When the files have no differences we shouldn't print any further
@@ -635,7 +635,7 @@ where
                     state.emit_binary_files_differ(old_file.path.as_ref(), new_file.path.as_ref())
                 }
             }
-            _ => (),
+            _ => {}
         }
         return state.collect();
     }

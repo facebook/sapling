@@ -101,10 +101,10 @@ fn register_error_handlers() {
             match e {
                 dag::Error::Backend(ref backend_error) => match backend_error.as_ref() {
                     dag::errors::BackendError::Io(e) => {
-                        return Some(cpython_ext::error::translate_io_error(py, &e))
+                        return Some(cpython_ext::error::translate_io_error(py, &e));
                     }
                     dag::errors::BackendError::Other(e) => return specific_error_handler(py, e, m),
-                    _ => (),
+                    _ => {}
                 },
                 dag::Error::VertexNotFound(_) | dag::Error::IdNotFound(_) => {
                     return Some(PyErr::new::<CommitLookupError, _>(
@@ -112,7 +112,7 @@ fn register_error_handlers() {
                         cpython_ext::Str::from(e.to_string()),
                     ));
                 }
-                _ => (),
+                _ => {}
             }
         }
 

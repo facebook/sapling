@@ -286,14 +286,14 @@ fn next_path_separator(pat: &[u8], start: usize) -> Option<usize> {
         } else if in_box_brackets {
             match ch {
                 b']' => in_box_brackets = false,
-                _ => (),
+                _ => {}
             }
         } else {
             match ch {
                 b'\\' => escaped = true,
                 b'[' => in_box_brackets = true,
                 b'/' => return Some(i + start),
-                _ => (),
+                _ => {}
             }
         }
     }

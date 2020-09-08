@@ -80,7 +80,7 @@ impl GitSegmentedCommits {
                         bookmarks.push(format!("{} {}\n", vertex.to_hex(), name));
                     }
                 }
-                _ => (),
+                _ => {}
             }
         }
 

@@ -438,7 +438,7 @@ pub(crate) fn load_root(blobs: &Zstore, id: Id20) -> Result<Root> {
             return Err(crate::Error(format!(
                 "Root ID {} is not found",
                 id.to_hex()
-            )))
+            )));
         }
     };
 

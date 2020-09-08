@@ -327,7 +327,7 @@ pub(crate) fn mkdir_p(dir: impl AsRef<Path>) -> crate::Result<()> {
                         }
                     }
                 }
-                _ => (),
+                _ => {}
             }
             Err(err).context(dir, "cannot mkdir")
         })

@@ -493,7 +493,7 @@ impl LfsBlobsStore {
                 remove_file(path).with_context(|| format!("Cannot remove LFS blob {}", hash))?;
             }
 
-            _ => (),
+            _ => {}
         }
 
         Ok(())
@@ -2107,7 +2107,10 @@ mod tests {
             let objs = [(blob.0, blob.1)].iter().cloned().collect::<HashSet<_>>();
             let resp = remote.batch_fetch(&objs, |_, _| unreachable!());
             let err = resp.err().unwrap();
-            assert_eq!(err.to_string(), "Couldn't fetch oid 0000000000000000000000000000000000000000000000000000000000000000: ObjectError { code: 404, message: \"Object does not exist\" }");
+            assert_eq!(
+                err.to_string(),
+                "Couldn't fetch oid 0000000000000000000000000000000000000000000000000000000000000000: ObjectError { code: 404, message: \"Object does not exist\" }"
+            );
 
             Ok(())
         }
@@ -2192,7 +2195,10 @@ mod tests {
             let objs = [(blob.0, blob.1)].iter().cloned().collect::<HashSet<_>>();
             let resp = remote.batch_fetch(&objs, |_, _| unreachable!());
             let err = resp.err().unwrap();
-            assert_eq!(err.to_string(), "Couldn't fetch oid 0000000000000000000000000000000000000000000000000000000000000000: ObjectError { code: 404, message: \"Object does not exist\" }");
+            assert_eq!(
+                err.to_string(),
+                "Couldn't fetch oid 0000000000000000000000000000000000000000000000000000000000000000: ObjectError { code: 404, message: \"Object does not exist\" }"
+            );
 
             Ok(())
         }
@@ -2220,7 +2226,10 @@ mod tests {
             let objs = [(blob.0, blob.1)].iter().cloned().collect::<HashSet<_>>();
             let resp = remote.batch_fetch(&objs, |_, _| unreachable!());
             let err = resp.err().unwrap();
-            assert_eq!(err.to_string(), "Couldn't fetch oid 0000000000000000000000000000000000000000000000000000000000000000: ObjectError { code: 404, message: \"Object does not exist\" }");
+            assert_eq!(
+                err.to_string(),
+                "Couldn't fetch oid 0000000000000000000000000000000000000000000000000000000000000000: ObjectError { code: 404, message: \"Object does not exist\" }"
+            );
 
             Ok(())
         }

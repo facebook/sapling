@@ -253,7 +253,7 @@ fn map_to_python_err(py: Python, err: ParseError) -> PyErr {
             return PyErr::new::<exceptions::OptionAmbiguous, _>(
                 py,
                 (msg, option_name, possibilities),
-            )
+            );
         }
         ParseError::AmbiguousCommand {
             command_name,
@@ -262,10 +262,10 @@ fn map_to_python_err(py: Python, err: ParseError) -> PyErr {
             return PyErr::new::<exceptions::AmbiguousCommand, _>(
                 py,
                 (msg, command_name, possibilities),
-            )
+            );
         }
         ParseError::CircularReference { command_name } => {
-            return PyErr::new::<exceptions::CircularReference, _>(py, (msg, command_name))
+            return PyErr::new::<exceptions::CircularReference, _>(py, (msg, command_name));
         }
         ParseError::MalformedAlias { name, value } => {
             return PyErr::new::<exceptions::MalformedAlias, _>(py, (msg, name, value));

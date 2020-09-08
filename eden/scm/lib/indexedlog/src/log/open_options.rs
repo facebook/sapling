@@ -471,7 +471,7 @@ impl IndexOutput {
             IndexOutput::Remove(_) | IndexOutput::RemovePrefix(_) => {
                 return Err(crate::Error::programming(
                     "into_cow does not support Remove or RemovePrefix",
-                ))
+                ));
             }
         })
     }

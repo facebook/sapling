@@ -111,7 +111,7 @@ pub fn parse(text: impl AsRef<str>) -> BTreeMap<String, BTreeSet<String>> {
                     return;
                 }
                 match (ch, direction) {
-                    (' ', _) => (),
+                    (' ', _) => {}
                     ('|', BottomTop) => {
                         to_visit.push((y + 1, x - 1, "/"));
                         to_visit.push((y + 1, x, "|/\\t"));
@@ -174,7 +174,7 @@ pub fn parse(text: impl AsRef<str>) -> BTreeMap<String, BTreeSet<String>> {
             match (ch, direction) {
                 ('-', BottomTop) => panic!("'-' is incompatible with BottomTop direction"),
                 ('|', LeftRight) => panic!("'|' is incompatible with LeftRight direction"),
-                _ => (),
+                _ => {}
             }
         }
     }

@@ -304,7 +304,7 @@ impl<T: RemoteDataStore + ?Sized> RemoteDataStorePyExt for T {
                     results.append(py, key_tuple.into_object());
                 }
                 StoreKey::Content(_, _) => {
-                    return Err(format_err!("Unsupported key: {:?}", key)).map_pyerr(py)
+                    return Err(format_err!("Unsupported key: {:?}", key)).map_pyerr(py);
                 }
             }
         }

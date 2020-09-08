@@ -143,7 +143,7 @@ impl GitignoreMatcher {
             match matched {
                 Match::Ignore(glob) => explain.add_glob(glob),
                 Match::Whitelist(glob) => explain.add_glob(glob),
-                _ => (),
+                _ => {}
             }
         }
 

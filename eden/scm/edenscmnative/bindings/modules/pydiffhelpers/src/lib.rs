@@ -116,7 +116,7 @@ fn fix_newline(py: Python, hunk: &PyList, a: &PyList, b: &PyList) -> PyResult<us
             Some(b'-') => {
                 a.set_item(py, a.len(py) - 1, to_object(py, &last_line[..]));
             }
-            _ => (),
+            _ => {}
         }
         hunk.set_item(py, hunk_len - 1, to_object(py, &last_line));
     }

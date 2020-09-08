@@ -443,7 +443,7 @@ impl RotateLog {
                             match filter(&context, content).map_err(|err| {
                                 crate::Error::wrap(err, "failed to run filter function")
                             })? {
-                                FlushFilterOutput::Drop => (),
+                                FlushFilterOutput::Drop => {}
                                 FlushFilterOutput::Keep => log.append(content)?,
                                 FlushFilterOutput::Replace(content) => log.append(content)?,
                             }

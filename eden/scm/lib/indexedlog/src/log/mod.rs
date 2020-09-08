@@ -411,10 +411,13 @@ impl Log {
             fn check_append_only(this: &Log, new_meta: &LogMetadata) -> crate::Result<()> {
                 let old_meta = &this.meta;
                 if old_meta.primary_len > new_meta.primary_len {
-                    Err(crate::Error::path(this.dir.as_opt_path().unwrap(), format!(
-                    "on-disk log is unexpectedly smaller ({} bytes) than its previous version ({} bytes)",
-                    new_meta.primary_len, old_meta.primary_len
-                )))
+                    Err(crate::Error::path(
+                        this.dir.as_opt_path().unwrap(),
+                        format!(
+                            "on-disk log is unexpectedly smaller ({} bytes) than its previous version ({} bytes)",
+                            new_meta.primary_len, old_meta.primary_len
+                        ),
+                    ))
                 } else {
                     Ok(())
                 }
@@ -483,7 +486,7 @@ impl Log {
                     match filter(&context, content)
                         .map_err(|err| crate::Error::wrap(err, "failed to run filter function"))?
                     {
-                        FlushFilterOutput::Drop => (),
+                        FlushFilterOutput::Drop => {}
                         FlushFilterOutput::Keep => log.append(content)?,
                         FlushFilterOutput::Replace(content) => log.append(content)?,
                     }
@@ -1309,7 +1312,7 @@ impl Log {
                 let msg = format!("read offset {} exceeds buffer size {}", offset, buf.len());
                 return Err(data_error(msg));
             }
-            _ => (),
+            _ => {}
         }
 
         let (entry_flags, vlq_len): (u32, _) = buf.read_vlq_at(offset as usize).map_err(|e| {

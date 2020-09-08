@@ -59,13 +59,13 @@ impl<'a> Iterator for BfsIter<'a> {
             None => return None,
             Some((path, link)) => match link {
                 Link::Leaf(file_metadata) => {
-                    return Some(Ok((path, FsNodeMetadata::File(*file_metadata))))
+                    return Some(Ok((path, FsNodeMetadata::File(*file_metadata))));
                 }
                 Link::Ephemeral(children) => (path, children, None),
                 Link::Durable(entry) => loop {
                     match entry.get_links() {
                         None => match self.prefetch((&path, &entry)) {
-                            Ok(_) => (),
+                            Ok(_) => {}
                             Err(e) => return Some(Err(e)),
                         },
                         Some(children_result) => match children_result {
@@ -162,12 +162,12 @@ impl<'a> DfsCursor<'a> {
             State::Push => {
                 self.state = State::Pop;
             }
-            State::Pop => (),
+            State::Pop => {}
             State::Next => {
                 // We don't have any scenario this would be reached.
                 panic!("Calling skip_subtree on cursor is not implemented for State::Next");
             }
-            State::Done => (),
+            State::Done => {}
         }
     }
 }

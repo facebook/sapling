@@ -156,7 +156,7 @@ fn update(
 
     let meta = match state.store.get_meta(StoreKey::hgid(key))? {
         StoreResult::NotFound(key) => {
-            return Err(format_err!("Can't find metadata for key: {:?}", key))
+            return Err(format_err!("Can't find metadata for key: {:?}", key));
         }
         StoreResult::Found(meta) => meta,
     };

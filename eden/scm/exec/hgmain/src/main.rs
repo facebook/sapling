@@ -55,7 +55,7 @@ fn main() {
                 full_args = debugpython_args;
             }
         }
-        _ => (),
+        _ => {}
     }
 
     #[cfg(feature = "with_chg")]

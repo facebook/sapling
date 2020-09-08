@@ -160,7 +160,7 @@ impl BlackboxOptions {
                                 push(INDEX_EVENT_TAG_NAME, name.as_bytes());
                             }
                         }
-                        _ => (),
+                        _ => {}
                     }
                 }
                 result

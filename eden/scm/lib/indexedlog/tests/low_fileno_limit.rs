@@ -84,7 +84,7 @@ mod unix_tests {
                         Ok(())
                     };
                     match run() {
-                        Ok(_) => (),
+                        Ok(_) => {}
                         Err(err) => {
                             if verbose {
                                 eprintln!(

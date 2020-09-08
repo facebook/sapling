@@ -1021,10 +1021,10 @@ fn test_repair_and_delete_content() {
         // Check no SIGBUS
         let log = long_lived_log.borrow();
         match log.lookup(0, "z") {
-            Err(_) => (), // okay - not SIGBUS
+            Err(_) => {} // okay - not SIGBUS
             Ok(iter) => match iter.into_vec() {
-                Err(_) => (), // okay - not SIGBUS
-                Ok(_) => (),  // okay - not SIGBUS
+                Err(_) => {} // okay - not SIGBUS
+                Ok(_) => {}  // okay - not SIGBUS
             },
         }
         // Check 'sync' on a long-lived log will load the right data and

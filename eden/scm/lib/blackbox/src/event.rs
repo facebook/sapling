@@ -685,7 +685,15 @@ impl fmt::Display for Event {
                 write!(
                     f,
                     "[network] {:?} finished in {} calls, duration {} ms, latency {} ms, read {} bytes, write {} bytes, session id {}, url {}{}",
-                    op, calls, duration_ms, latency_ms, read_bytes, write_bytes, session_id, url, result,
+                    op,
+                    calls,
+                    duration_ms,
+                    latency_ms,
+                    read_bytes,
+                    write_bytes,
+                    session_id,
+                    url,
+                    result,
                 )?;
             }
             Start {

@@ -1000,16 +1000,16 @@ I ignored.txt
         });
 
         let mardui_color_stdout = concat!(
-"\u{001B}[34m\u{001B}[1mM modified.txt\u{001B}[0m\n",
-"\u{001B}[32m\u{001B}[1mA added.txt\u{001B}[0m\n",
-"\u{001B}[32m\u{001B}[1mA added_even_though_normally_ignored.txt\u{001B}[0m\n",
-"\u{001B}[32m\u{001B}[1mA added_other_parent.txt\u{001B}[0m\n",
-"\u{001B}[31m\u{001B}[1mR modified_and_marked_for_removal.txt\u{001B}[0m\n",
-"\u{001B}[31m\u{001B}[1mR removed.txt\u{001B}[0m\n",
-"\u{001B}[36m\u{001B}[1m\u{001b}[4m! removed_but_not_marked_for_removal.txt\u{001B}[0m\n",
-"\u{001B}[35m\u{001B}[1m\u{001b}[4m? unknown.txt\u{001B}[0m\n",
-"\u{001B}[30;1m\u{001B}[1mI ignored.txt\u{001B}[0m\n",
-);
+            "\u{001B}[34m\u{001B}[1mM modified.txt\u{001B}[0m\n",
+            "\u{001B}[32m\u{001B}[1mA added.txt\u{001B}[0m\n",
+            "\u{001B}[32m\u{001B}[1mA added_even_though_normally_ignored.txt\u{001B}[0m\n",
+            "\u{001B}[32m\u{001B}[1mA added_other_parent.txt\u{001B}[0m\n",
+            "\u{001B}[31m\u{001B}[1mR modified_and_marked_for_removal.txt\u{001B}[0m\n",
+            "\u{001B}[31m\u{001B}[1mR removed.txt\u{001B}[0m\n",
+            "\u{001B}[36m\u{001B}[1m\u{001b}[4m! removed_but_not_marked_for_removal.txt\u{001B}[0m\n",
+            "\u{001B}[35m\u{001B}[1m\u{001b}[4m? unknown.txt\u{001B}[0m\n",
+            "\u{001B}[30;1m\u{001B}[1mI ignored.txt\u{001B}[0m\n",
+        );
         test_status(StatusTestCase {
             args: vec!["-mardui".to_owned()],
             entries: entries.clone(),

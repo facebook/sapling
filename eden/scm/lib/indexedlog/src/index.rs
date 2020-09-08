@@ -650,7 +650,7 @@ impl LeafOffset {
             match key_offset.to_typed(&*index) {
                 Ok(TypedOffset::Key(x)) => x.mark_unused(index),
                 Ok(TypedOffset::ExtKey(x)) => x.mark_unused(index),
-                _ => (),
+                _ => {}
             };
             index.dirty_leafs[self.dirty_index()].mark_unused()
         }
@@ -812,7 +812,7 @@ impl<'a> Iterator for RangeIter<'a> {
         let result = Self::step(self.index, &mut self.front_stack, Back, exclusive);
         match result {
             Some(Err(_)) | None => self.completed = true,
-            _ => (),
+            _ => {}
         }
         result
     }
@@ -829,7 +829,7 @@ impl<'a> DoubleEndedIterator for RangeIter<'a> {
         let result = Self::step(self.index, &mut self.back_stack, Front, exclusive);
         match result {
             Some(Err(_)) | None => self.completed = true,
-            _ => (),
+            _ => {}
         }
         result
     }
@@ -2504,9 +2504,9 @@ impl Index {
                     .context(&path, "cannot seek to end")?;
                 if len < old_len {
                     let message = format!(
-                    "on-disk index is unexpectedly smaller ({} bytes) than its previous version ({} bytes)",
-                    len, old_len
-                );
+                        "on-disk index is unexpectedly smaller ({} bytes) than its previous version ({} bytes)",
+                        len, old_len
+                    );
                     // This is not a "corruption" - something has truncated the
                     // file, potentially recreating it. We haven't checked the
                     // new content, so it's not considered as "data corruption".
@@ -3188,7 +3188,7 @@ impl Index {
                     radix.offsets[b2v as usize] = new_leaf_offset.into();
                     completed = true;
                 }
-                _ => (),
+                _ => {}
             }
 
             // Create the Radix entry, and connect it to the parent entry.

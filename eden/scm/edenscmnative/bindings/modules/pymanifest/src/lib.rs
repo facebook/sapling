@@ -562,7 +562,7 @@ fn file_metadata_to_py_tuple(
     let flag = {
         let mut s = String::new();
         match file_metadata.file_type {
-            FileType::Regular => (),
+            FileType::Regular => {}
             FileType::Executable => s.push('x'),
             FileType::Symlink => s.push('l'),
         };

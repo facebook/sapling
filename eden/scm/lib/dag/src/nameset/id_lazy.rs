@@ -144,7 +144,7 @@ impl fmt::Debug for IdLazySet {
         match (remaining, inner.state) {
             (0, State::Incomplete) => f.write_str(" + ? more")?,
             (n, State::Incomplete) => write!(f, "+ {} + ? more", n)?,
-            (0, _) => (),
+            (0, _) => {}
             (n, _) => write!(f, " + {} more", n)?,
         }
         f.write_str(">")?;

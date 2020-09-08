@@ -222,7 +222,6 @@ impl<'a, K: 'a, V: 'a> Iterator for IterMut<'a, K, V> {
 
 #[cfg(test)]
 mod tests {
-
     use crate::vecmap::{Iter, VecMap};
     use quickcheck::quickcheck;
     use std::collections::BTreeMap;

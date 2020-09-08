@@ -160,7 +160,7 @@ pub fn absolute(path: impl AsRef<Path>) -> io::Result<PathBuf> {
             Component::ParentDir => {
                 result.pop();
             }
-            Component::CurDir => (),
+            Component::CurDir => {}
         }
     }
     Ok(result)
@@ -188,7 +188,7 @@ pub fn remove_file<P: AsRef<Path>>(path: P) -> io::Result<()> {
                 return Ok(());
             }
         }
-        _ => (),
+        _ => {}
     }
     result.map_err(Into::into)
 }

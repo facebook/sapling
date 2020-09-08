@@ -78,7 +78,7 @@ impl IntersectionSet {
             (Some(id1), Some(id2), true) => {
                 hints.set_min_id(id1.max(id2));
             }
-            (None, Some(_), false) | (None, None, _) => (),
+            (None, Some(_), false) | (None, None, _) => {}
         }
         match (lhs.hints().max_id(), rhs.hints().max_id(), compatible) {
             (Some(id), None, _) | (Some(id), Some(_), false) | (None, Some(id), true) => {
@@ -87,7 +87,7 @@ impl IntersectionSet {
             (Some(id1), Some(id2), true) => {
                 hints.set_max_id(id1.min(id2));
             }
-            (None, Some(_), false) | (None, None, _) => (),
+            (None, Some(_), false) | (None, None, _) => {}
         }
         Self { lhs, rhs, hints }
     }
@@ -210,7 +210,7 @@ impl Iterator for Iter {
                         }
                         continue;
                     }
-                    Ok(true) => (),
+                    Ok(true) => {}
                 }
             }
             break result;

@@ -364,7 +364,7 @@ impl ConfigSetHgExt for ConfigSet {
             let res = generate_dynamicconfig(repo_path, repo_name, None, user_name);
             if let Err(e) = res {
                 match e.downcast_ref::<IOError>() {
-                    Some(io_error) if io_error.kind() == ErrorKind::PermissionDenied => (),
+                    Some(io_error) if io_error.kind() == ErrorKind::PermissionDenied => {}
                     _ => return Err(e),
                 };
             }
@@ -716,7 +716,7 @@ fn parse_list_internal(value: &str) -> Vec<String> {
     enum State {
         Plain,
         Quote,
-    };
+    }
 
     let mut offset = 0;
     let mut parts: Vec<String> = vec![String::new()];

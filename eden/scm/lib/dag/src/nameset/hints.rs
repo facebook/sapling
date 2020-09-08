@@ -229,7 +229,7 @@ impl fmt::Debug for Hints {
             (Some(min), Some(max)) => write!(f, ", {}..={}", min.0, max.0)?,
             (Some(min), None) => write!(f, ", {}..", min.0)?,
             (None, Some(max)) => write!(f, ", ..={}", max.0)?,
-            (None, None) => (),
+            (None, None) => {}
         }
         write!(f, ")")?;
         Ok(())

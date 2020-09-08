@@ -81,7 +81,7 @@ impl RevlogIndex {
         for rev in (min_rev as usize..self.len()).rev() {
             let state = states[rev - min_rev as usize];
             match state {
-                State::Unspecified => (),
+                State::Unspecified => {}
                 State::PotentialHead | State::NotHead => {
                     if state == State::PotentialHead {
                         result.push(rev as u32);
@@ -143,7 +143,7 @@ impl RevlogIndex {
                 // Do not track "unknown" explicitly. This is future-proof,
                 // since tracking "unknown" explicitly is quite expensive
                 // with the new "dag" abstraction.
-                Phase::Unspecified => (),
+                Phase::Unspecified => {}
             }
             for &parent_rev in self.parent_revs(rev as u32)?.as_revs() {
                 // Propagate phases from this rev to its parents.
@@ -894,7 +894,7 @@ impl PrefixLookup for RevlogIndex {
                     result.push(node.to_vec().into());
                 }
             }
-            Ok(None) => (),
+            Ok(None) => {}
             Err(crate::Error::AmbiguousPrefix) => {
                 // Convert AmbiguousPrefix to a non-error with multiple vertex pushed to
                 // result.  That's what the Python code base expects.
@@ -1239,7 +1239,7 @@ impl DagAlgorithm for RevlogIndex {
         for i in (0..states.len()).rev() {
             let state = states[i];
             match state {
-                State::Unspecified => (),
+                State::Unspecified => {}
                 State::PotentialHead | State::NotHead => {
                     let rev = i + min_rev;
                     if state == State::PotentialHead {
@@ -1953,7 +1953,7 @@ commit 3"#
                 match slice {
                     [b1, b2] => result += &format!("{:02x}{:02x} ", b1, b2),
                     [b1] => result += &format!("{:02x}   ", b1),
-                    _ => (),
+                    _ => {}
                 }
             }
             result += &"     ".repeat(8 - (chunk.len() + 1) / 2);

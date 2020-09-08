@@ -293,7 +293,7 @@ impl ConfigSet {
                         };
                         return handle_value(this, pair, section, name, location);
                     }
-                    _ => (),
+                    _ => {}
                 }
             }
             unreachable!();
@@ -348,7 +348,7 @@ impl ConfigSet {
                     match pair.as_rule() {
                         Rule::include => handle_include(this, pair, errors),
                         Rule::unset => handle_unset(this, pair, section),
-                        _ => (),
+                        _ => {}
                     }
                 }
             };
@@ -366,7 +366,7 @@ impl ConfigSet {
                 Rule::config_item => handle_config_item(self, pair, section.clone()),
                 Rule::section => handle_section(pair, &mut section),
                 Rule::directive => handle_directive(self, pair, &section, errors),
-                Rule::blank_line | Rule::comment_line | Rule::new_line | Rule::EOI => (),
+                Rule::blank_line | Rule::comment_line | Rule::new_line | Rule::EOI => {}
 
                 Rule::comment_start
                 | Rule::compound
@@ -524,7 +524,7 @@ impl ConfigSet {
                     (None, Some(value)) => {
                         result.missing.push(((sname.clone(), kname.clone()), value));
                     }
-                    (None, None) => (),
+                    (None, None) => {}
                 };
 
                 if !removed && super_value.is_some() && super_value != last_value {

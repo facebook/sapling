@@ -152,7 +152,7 @@ fn current_dir(io: &mut clidispatch::io::IO) -> io::Result<PathBuf> {
                     }
                 }
             }
-            _ => (),
+            _ => {}
         }
     }
     result

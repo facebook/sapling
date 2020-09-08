@@ -59,7 +59,7 @@ pub fn expand_curly_brackets(pat: &str) -> Vec<String> {
         } else if in_box_brackets {
             match ch {
                 ']' => in_box_brackets = false,
-                _ => (),
+                _ => {}
             }
         } else {
             match ch {
@@ -98,7 +98,7 @@ pub fn expand_curly_brackets(pat: &str) -> Vec<String> {
                     dag.push(StrNode::default());
                     need_write = false;
                 }
-                _ => (),
+                _ => {}
             }
         }
 
@@ -170,7 +170,7 @@ pub fn plain_to_glob(plain: &str) -> String {
     for ch in plain.chars() {
         match ch {
             '\\' | '*' | '{' | '}' | '[' | ']' => result.push('\\'),
-            _ => (),
+            _ => {}
         }
         result.push(ch);
     }

@@ -67,7 +67,7 @@ fn repack_datapack(data_pack: &DataPack, mut_pack: &mut MutableDataPack) -> Resu
                 // If we managed to get a delta, the metadata must be present.
                 match data_pack.get_meta(StoreKey::hgid(delta.key.clone()))? {
                     StoreResult::Found(meta) => mut_pack.add(&delta, &meta)?,
-                    _ => (),
+                    _ => {}
                 }
             }
         }
@@ -331,7 +331,7 @@ fn repack_datapack_to_contentstore(
                         StoreResult::Found(meta) => {
                             store.add_pending(&key, Bytes::from(content), meta, location)?
                         }
-                        _ => (),
+                        _ => {}
                     }
                 }
             }

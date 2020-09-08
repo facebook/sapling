@@ -29,7 +29,9 @@ pub struct UnknownCommand(pub String);
 pub struct FallbackToPython;
 
 #[derive(Debug, Error)]
-#[error("'{0}' is not inside a repository, but this command requires a repository!\n(use 'cd' to go to a directory inside a repository and try again)")]
+#[error(
+    "'{0}' is not inside a repository, but this command requires a repository!\n(use 'cd' to go to a directory inside a repository and try again)"
+)]
 pub struct RepoRequired(pub String);
 
 #[derive(Debug, Error)]

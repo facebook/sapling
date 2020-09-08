@@ -94,7 +94,7 @@ impl fmt::Debug for IdStaticSet {
             }))
             .finish()?;
         match spans.len().max(limit) - limit {
-            0 => (),
+            0 => {}
             1 => write!(f, " + 1 span")?,
             n => write!(f, " + {} spans", n)?,
         }

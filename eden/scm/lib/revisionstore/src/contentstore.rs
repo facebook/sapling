@@ -351,74 +351,74 @@ impl<'a> ContentStoreBuilder<'a> {
                 (None, None)
             };
 
-        let remote_store: Option<Arc<ReportingRemoteDataStore>> =
-            if let Some(remotestore) = self.remotestore {
-                let (cache, shared_store) = if let Some(memcachestore) = self.memcachestore {
-                    // Combine the memcache store with the other stores. The intent is that all
-                    // remote requests will first go to the memcache store, and only reach the
-                    // slower remote store after that.
-                    //
-                    // If data isn't found in the memcache store, once fetched from the remote
-                    // store it will be written to the local cache, and will populate the memcache
-                    // store, so other clients and future requests won't need to go to a network
-                    // store.
-                    let memcachedatastore = memcachestore
-                        .clone()
-                        .datastore(shared_mutabledatastore.clone());
+        let remote_store: Option<Arc<ReportingRemoteDataStore>> = if let Some(remotestore) =
+            self.remotestore
+        {
+            let (cache, shared_store) = if let Some(memcachestore) = self.memcachestore {
+                // Combine the memcache store with the other stores. The intent is that all
+                // remote requests will first go to the memcache store, and only reach the
+                // slower remote store after that.
+                //
+                // If data isn't found in the memcache store, once fetched from the remote
+                // store it will be written to the local cache, and will populate the memcache
+                // store, so other clients and future requests won't need to go to a network
+                // store.
+                let memcachedatastore = memcachestore
+                    .clone()
+                    .datastore(shared_mutabledatastore.clone());
 
-                    let mut multiplexstore: MultiplexDeltaStore<Arc<dyn HgIdMutableDeltaStore>> =
-                        MultiplexDeltaStore::new();
-                    multiplexstore.add_store(memcachestore);
-                    multiplexstore.add_store(shared_mutabledatastore.clone());
+                let mut multiplexstore: MultiplexDeltaStore<Arc<dyn HgIdMutableDeltaStore>> =
+                    MultiplexDeltaStore::new();
+                multiplexstore.add_store(memcachestore);
+                multiplexstore.add_store(shared_mutabledatastore.clone());
 
-                    (
-                        Some(memcachedatastore),
-                        Arc::new(multiplexstore) as Arc<dyn HgIdMutableDeltaStore>,
-                    )
-                } else {
-                    (None, shared_mutabledatastore.clone())
-                };
-
-                let mut remotestores = UnionHgIdDataStore::new();
-
-                // First, the fast memcache store
-                if let Some(cache) = cache {
-                    remotestores.add(cache.clone());
-                };
-
-                // Second, the slower remotestore. For LFS blobs, the LFS pointers will be fetched
-                // at this step and be written to the LFS store.
-                let filenode_remotestore = remotestore.datastore(shared_store.clone());
-                remotestores.add(filenode_remotestore.clone());
-
-                // Third, the LFS remote store. The previously fetched LFS pointers will be used to
-                // fetch the actual blobs in this store.
-                if enable_lfs {
-                    let lfs_remote_store = Arc::new(LfsRemote::new(
-                        shared_lfs_store,
-                        local_lfs_store,
-                        self.config,
-                    )?);
-                    remotestores.add(lfs_remote_store.datastore(shared_store.clone()));
-
-                    // Fallback store if the LFS one is dead.
-                    let lfs_fallback = LfsFallbackRemoteStore::new(filenode_remotestore);
-                    remotestores.add(lfs_fallback);
-                }
-
-                let remotestores: Box<dyn RemoteDataStore> = Box::new(remotestores);
-                let logging_regex = self
-                    .config
-                    .get_opt::<String>("remotefilelog", "undesiredfileregex")?
-                    .map(|s| Regex::new(&s))
-                    .transpose()?;
-                let remotestores =
-                    Arc::new(ReportingRemoteDataStore::new(remotestores, logging_regex));
-                datastore.add(remotestores.clone());
-                Some(remotestores)
+                (
+                    Some(memcachedatastore),
+                    Arc::new(multiplexstore) as Arc<dyn HgIdMutableDeltaStore>,
+                )
             } else {
-                None
+                (None, shared_mutabledatastore.clone())
             };
+
+            let mut remotestores = UnionHgIdDataStore::new();
+
+            // First, the fast memcache store
+            if let Some(cache) = cache {
+                remotestores.add(cache.clone());
+            };
+
+            // Second, the slower remotestore. For LFS blobs, the LFS pointers will be fetched
+            // at this step and be written to the LFS store.
+            let filenode_remotestore = remotestore.datastore(shared_store.clone());
+            remotestores.add(filenode_remotestore.clone());
+
+            // Third, the LFS remote store. The previously fetched LFS pointers will be used to
+            // fetch the actual blobs in this store.
+            if enable_lfs {
+                let lfs_remote_store = Arc::new(LfsRemote::new(
+                    shared_lfs_store,
+                    local_lfs_store,
+                    self.config,
+                )?);
+                remotestores.add(lfs_remote_store.datastore(shared_store.clone()));
+
+                // Fallback store if the LFS one is dead.
+                let lfs_fallback = LfsFallbackRemoteStore::new(filenode_remotestore);
+                remotestores.add(lfs_fallback);
+            }
+
+            let remotestores: Box<dyn RemoteDataStore> = Box::new(remotestores);
+            let logging_regex = self
+                .config
+                .get_opt::<String>("remotefilelog", "undesiredfileregex")?
+                .map(|s| Regex::new(&s))
+                .transpose()?;
+            let remotestores = Arc::new(ReportingRemoteDataStore::new(remotestores, logging_regex));
+            datastore.add(remotestores.clone());
+            Some(remotestores)
+        } else {
+            None
+        };
 
         Ok(ContentStore {
             datastore,

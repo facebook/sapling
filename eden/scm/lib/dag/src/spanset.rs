@@ -100,7 +100,7 @@ impl Span {
                 (Excluded(_), _) | (Unbounded, _) | (_, Unbounded) => {
                     panic!("unsupported bound type")
                 }
-                _ => (),
+                _ => {}
             }
         }
         match (bounds.start_bound(), bounds.end_bound()) {

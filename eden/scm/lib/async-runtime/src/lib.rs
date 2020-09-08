@@ -46,9 +46,7 @@ pub static STREAM_BUFFER_SIZE: usize = 128;
 ///
 /// If the async computation panics then the panic gets propagated up. At that point the mutex
 /// holding the runtime gets poisoned.
-pub fn block_on_future<F: Future>(f: F) -> F::Output
-where
-{
+pub fn block_on_future<F: Future>(f: F) -> F::Output {
     // Should be replaced with `runtime.handle().block_on` after updating tokio, see T65261126.
     // T73962890 tracks updating this code internally. Externally the issue is tracked under at
     // https://github.com/tokio-rs/tokio/issues/2390

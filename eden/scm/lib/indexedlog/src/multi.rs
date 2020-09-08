@@ -85,7 +85,7 @@ impl OpenOptions {
             let mut multimeta = MultiMeta::default();
             if let Err(e) = multimeta.read_file(&meta_path) {
                 match e.kind() {
-                    io::ErrorKind::NotFound => (), // not fatal.
+                    io::ErrorKind::NotFound => {} // not fatal.
                     _ => return Err(e).context(&meta_path, "when opening MultiLog"),
                 }
             };

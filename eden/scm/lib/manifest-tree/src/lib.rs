@@ -387,7 +387,7 @@ impl TreeManifest {
             path: RepoPathBuf,
             converted_nodes: Vec<(RepoPathBuf, HgId, Bytes, HgId, HgId)>,
             parent_trees: Vec<DfsCursor<'a>>,
-        };
+        }
         impl<'a> Executor<'a> {
             fn new(
                 store: &'a InnerStore,
@@ -403,7 +403,7 @@ impl TreeManifest {
                 // be pointing to the underlying link.
                 for cursor in executor.parent_trees.iter_mut() {
                     match cursor.step() {
-                        Step::Success | Step::End => (),
+                        Step::Success | Step::End => {}
                         Step::Err(err) => return Err(err),
                     }
                 }
@@ -425,7 +425,7 @@ impl TreeManifest {
                 for id in active_parents {
                     let cursor = &mut self.parent_trees[*id];
                     match cursor.step() {
-                        Step::Success | Step::End => (),
+                        Step::Success | Step::End => {}
                         Step::Err(err) => return Err(err),
                     }
                 }
@@ -441,13 +441,13 @@ impl TreeManifest {
                     while !cursor.finished() && cursor.path() < self.path.as_repo_path() {
                         cursor.skip_subtree();
                         match cursor.step() {
-                            Step::Success | Step::End => (),
+                            Step::Success | Step::End => {}
                             Step::Err(err) => return Err(err),
                         }
                     }
                     if !cursor.finished() && cursor.path() == self.path.as_repo_path() {
                         match cursor.link() {
-                            Leaf(_) => (), // files and directories don't share history
+                            Leaf(_) => {} // files and directories don't share history
                             Durable(_) => result.push(*id),
                             Ephemeral(_) => {
                                 panic!("Found ephemeral parent when finalizing manifest.")
@@ -1179,7 +1179,7 @@ mod tests {
         cursor.skip_subtree();
         match cursor.step() {
             Step::Success => panic!("should have reached the end of the tree"),
-            Step::End => (), // success
+            Step::End => {} // success
             Step::Err(error) => panic!(error),
         }
     }
@@ -1188,7 +1188,7 @@ mod tests {
     fn test_cursor_skip() {
         fn step<'a>(cursor: &mut DfsCursor<'a>) {
             match cursor.step() {
-                Step::Success => (),
+                Step::Success => {}
                 Step::End => panic!("reached the end too soon"),
                 Step::Err(error) => panic!(error),
             }
@@ -1216,7 +1216,7 @@ mod tests {
         cursor.skip_subtree();
         match cursor.step() {
             Step::Success => panic!("should have reached the end of the tree"),
-            Step::End => (), // success
+            Step::End => {} // success
             Step::Err(error) => panic!(error),
         }
     }

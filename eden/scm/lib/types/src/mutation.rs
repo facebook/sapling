@@ -75,7 +75,7 @@ impl MutationEntry {
         enum EntryFormat {
             FloatDate,
             Latest,
-        };
+        }
         let format = match r.read_u8()? {
             0 => return Err(anyhow!("invalid mutation entry version: 0")),
             1..=4 => {

@@ -220,7 +220,7 @@ impl IdMap {
                     let id = Id(entry.read_u64::<BigEndian>().unwrap());
                     return Ok(Some(id));
                 }
-                None => (),
+                None => {}
                 Some(Err(err)) => return Err(err.into()),
             }
         }
