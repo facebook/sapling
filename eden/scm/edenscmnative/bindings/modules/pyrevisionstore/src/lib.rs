@@ -217,14 +217,14 @@ py_class!(class datapackstore |py| {
     data store: Box<DataPackStore>;
     data path: PathBuf;
 
-    def __new__(_cls, path: &PyPath, deletecorruptpacks: bool = false) -> PyResult<datapackstore> {
+    def __new__(_cls, path: &PyPath, deletecorruptpacks: bool = false, maxbytes: Option<u64> = None) -> PyResult<datapackstore> {
         let corruption_policy = if deletecorruptpacks {
             CorruptionPolicy::REMOVE
         } else {
             CorruptionPolicy::IGNORE
         };
 
-        datapackstore::create_instance(py, Box::new(DataPackStore::new(path, corruption_policy)), path.to_path_buf())
+        datapackstore::create_instance(py, Box::new(DataPackStore::new(path, corruption_policy, maxbytes)), path.to_path_buf())
     }
 
     def get(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyBytes> {
@@ -310,14 +310,14 @@ py_class!(class historypackstore |py| {
     data store: Box<HistoryPackStore>;
     data path: PathBuf;
 
-    def __new__(_cls, path: PyPathBuf, deletecorruptpacks: bool = false) -> PyResult<historypackstore> {
+    def __new__(_cls, path: PyPathBuf, deletecorruptpacks: bool = false, maxbytes: Option<u64> = None) -> PyResult<historypackstore> {
         let corruption_policy = if deletecorruptpacks {
             CorruptionPolicy::REMOVE
         } else {
             CorruptionPolicy::IGNORE
         };
 
-        historypackstore::create_instance(py, Box::new(HistoryPackStore::new(path.as_path(), corruption_policy)), path.to_path_buf())
+        historypackstore::create_instance(py, Box::new(HistoryPackStore::new(path.as_path(), corruption_policy, maxbytes)), path.to_path_buf())
     }
 
     def getnodeinfo(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyTuple> {

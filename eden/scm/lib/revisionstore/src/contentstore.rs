@@ -264,6 +264,10 @@ impl<'a> ContentStoreBuilder<'a> {
                 ByteCount::from(4 * (1024 ^ 3))
             })?
             .value();
+        let max_bytes = self
+            .config
+            .get_opt::<ByteCount>("packs", "maxdatabytes")?
+            .map(|v| v.value());
 
         let mut datastore: UnionHgIdDataStore<Arc<dyn HgIdDataStore>> = UnionHgIdDataStore::new();
         let mut blob_stores: UnionContentDataStore<Arc<dyn ContentDataStore>> =
@@ -273,6 +277,7 @@ impl<'a> ContentStoreBuilder<'a> {
             &cache_packs_path,
             CorruptionPolicy::REMOVE,
             max_pending_bytes,
+            max_bytes,
         )?);
         let shared_indexedlogdatastore = Arc::new(IndexedLogHgIdDataStore::new(
             get_indexedlogdatastore_path(&cache_path)?,
@@ -328,6 +333,7 @@ impl<'a> ContentStoreBuilder<'a> {
                     get_packs_path(&unsuffixed_local_path, &self.suffix)?,
                     CorruptionPolicy::IGNORE,
                     max_pending_bytes,
+                    None,
                 )?);
 
                 let local_lfs_store = Arc::new(LfsStore::local(&local_path.unwrap(), self.config)?);

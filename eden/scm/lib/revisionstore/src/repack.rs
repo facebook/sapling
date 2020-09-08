@@ -52,6 +52,7 @@ pub trait ToKeys {
 
 pub trait Repackable {
     fn delete(self) -> Result<()>;
+    fn size(&self) -> u64;
 }
 
 fn repack_datapack(data_pack: &DataPack, mut_pack: &mut MutableDataPack) -> Result<()> {

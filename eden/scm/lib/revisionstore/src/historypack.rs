@@ -386,6 +386,10 @@ impl Repackable for HistoryPack {
         result2?;
         Ok(())
     }
+
+    fn size(&self) -> u64 {
+        self.mmap.len() as u64
+    }
 }
 
 struct HistoryPackIterator<'a> {

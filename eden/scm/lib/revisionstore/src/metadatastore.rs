@@ -12,7 +12,10 @@ use std::{
 
 use anyhow::{format_err, Result};
 
-use configparser::{config::ConfigSet, hg::ConfigSetHgExt};
+use configparser::{
+    config::ConfigSet,
+    hg::{ByteCount, ConfigSetHgExt},
+};
 use types::{Key, NodeInfo};
 
 use crate::{
@@ -184,12 +187,17 @@ impl<'a> MetadataStoreBuilder<'a> {
         let max_pending: u64 = self
             .config
             .get_or("packs", "maxhistorypending", || 10000000)?;
+        let max_bytes = self
+            .config
+            .get_opt::<ByteCount>("packs", "maxhistorybytes")?
+            .map(|v| v.value());
 
         let cache_packs_path = get_cache_packs_path(self.config, &self.suffix)?;
         let shared_pack_store = Arc::new(MutableHistoryPackStore::new(
             &cache_packs_path,
             CorruptionPolicy::REMOVE,
             max_pending,
+            max_bytes,
         )?);
         let mut historystore: UnionHgIdHistoryStore<Arc<dyn HgIdHistoryStore>> =
             UnionHgIdHistoryStore::new();
@@ -225,6 +233,7 @@ impl<'a> MetadataStoreBuilder<'a> {
                     get_packs_path(&local_path, &self.suffix)?,
                     CorruptionPolicy::IGNORE,
                     max_pending,
+                    None,
                 )?);
                 historystore.add(local_pack_store.clone());
 

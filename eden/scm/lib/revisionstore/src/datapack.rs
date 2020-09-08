@@ -439,6 +439,10 @@ impl Repackable for DataPack {
         result2?;
         Ok(())
     }
+
+    fn size(&self) -> u64 {
+        self.mmap.len() as u64
+    }
 }
 
 struct DataPackIterator<'a> {

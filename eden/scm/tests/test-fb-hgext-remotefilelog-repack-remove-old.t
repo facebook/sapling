@@ -25,9 +25,6 @@
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
 
   $ cd shallow
-  $ cd ..
-
-  $ cd shallow
   $ find $CACHEDIR/master/packs | sort
   $TESTTMP/hgcache/master/packs
   $TESTTMP/hgcache/master/packs/276d308429d0303762befa376788300f0310f90e.histidx
@@ -45,3 +42,39 @@
   $TESTTMP/hgcache/master/packs/276d308429d0303762befa376788300f0310f90e.histidx
   $TESTTMP/hgcache/master/packs/276d308429d0303762befa376788300f0310f90e.histpack
   $TESTTMP/hgcache/master/packs/repacklock
+
+
+Cleanup old packs during writes when we're over the threshold
+
+  $ cd ../master
+  $ echo 12345678901234567890123456789012345678901234567890 > a
+  $ echo 12345678901234567890123456789012345678901234567890 > b
+  $ echo 12345678901234567890123456789012345678901234567890 > c
+  $ echo 12345678901234567890123456789012345678901234567890 > d
+  $ echo 12345678901234567890123456789012345678901234567890 > e
+  $ hg commit -Aqm "add a bunch of files"
+  $ cd ../shallow
+  $ hg pull -q
+  $ clearcache
+  $ hg up -q tip --config packs.maxdatapendingbytes=30
+  $ ls_l $CACHEDIR/master/packs | grep datapack
+  -r--r--r--     144 *.datapack (glob)
+  -r--r--r--      80 *.datapack (glob)
+  -r--r--r--      80 *.datapack (glob)
+  -r--r--r--      80 *.datapack (glob)
+  -r--r--r--      80 *.datapack (glob)
+  $ hg up -q null
+
+  $ clearcache
+  $ hg up -q tip --config packs.maxdatapendingbytes=30 --config packs.maxdatabytes=120
+  $ ls_l $CACHEDIR/master/packs | grep datapack
+  -r--r--r--      65 *.datapack (glob)
+  -r--r--r--      80 *.datapack (glob)
+  $ hg up -q null
+
+  $ clearcache
+  $ hg up -q tip --config packs.maxdatapendingbytes=30 --config packs.maxdatabytes=200
+  $ ls_l $CACHEDIR/master/packs | grep datapack
+  -r--r--r--      65 *.datapack (glob)
+  -r--r--r--      80 *.datapack (glob)
+  -r--r--r--      80 *.datapack (glob)
