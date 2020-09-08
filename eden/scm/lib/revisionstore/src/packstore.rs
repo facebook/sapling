@@ -395,10 +395,17 @@ struct MutableDataPackStoreInner {
 /// A `MutableDataPackStore` allows both reading and writing to data packfiles.
 pub struct MutableDataPackStore {
     inner: MutableDataPackStoreInner,
+    pending: AtomicU64,
+    result_packs: Arc<Mutex<Vec<PathBuf>>>,
+    max_pending_bytes: u64,
 }
 
 impl MutableDataPackStore {
-    pub fn new(pack_dir: impl AsRef<Path>, corruption_policy: CorruptionPolicy) -> Result<Self> {
+    pub fn new(
+        pack_dir: impl AsRef<Path>,
+        corruption_policy: CorruptionPolicy,
+        max_pending_bytes: u64,
+    ) -> Result<Self> {
         let pack_store = Arc::new(DataPackStore::new(pack_dir.as_ref(), corruption_policy));
         let mutable_pack = Arc::new(MutableDataPack::new(pack_dir, DataPackVersion::One)?);
         let mut union_store: UnionHgIdDataStore<Arc<dyn HgIdDataStore>> = UnionHgIdDataStore::new();
@@ -411,7 +418,23 @@ impl MutableDataPackStore {
                 mutable_pack,
                 union_store,
             },
+            pending: AtomicU64::new(0),
+            result_packs: Arc::new(Mutex::new(Vec::new())),
+            max_pending_bytes,
         })
+    }
+
+    fn inner_flush(&self) -> Result<()> {
+        self.pending.store(0, Ordering::SeqCst);
+        if let Some(paths) = self.inner.mutable_pack.flush()? {
+            let mut result_packs = self.result_packs.lock();
+            for path in paths {
+                let datapack = DataPack::new(path.as_path())?;
+                self.inner.pack_store.add_pack(datapack);
+                result_packs.push(path);
+            }
+        }
+        Ok(())
     }
 }
 
@@ -433,18 +456,24 @@ impl LocalStore for MutableDataPackStore {
 
 impl HgIdMutableDeltaStore for MutableDataPackStore {
     fn add(&self, delta: &Delta, metadata: &Metadata) -> Result<()> {
-        self.inner.mutable_pack.add(delta, metadata)
+        self.inner.mutable_pack.add(delta, metadata)?;
+        let pending = self
+            .pending
+            .fetch_add(delta.data.len() as u64, Ordering::SeqCst)
+            + (delta.data.len() as u64);
+        if pending >= self.max_pending_bytes {
+            self.inner_flush()?;
+        }
+        Ok(())
     }
 
     /// Flush the current mutable datapack to disk and add it to the `PackStore`.
-    fn flush(&self) -> Result<Option<PathBuf>> {
-        if let Some(path) = self.inner.mutable_pack.flush()? {
-            let datapack = DataPack::new(path.as_path())?;
-            self.inner.pack_store.add_pack(datapack);
-            Ok(Some(path))
-        } else {
-            Ok(None)
-        }
+    fn flush(&self) -> Result<Option<Vec<PathBuf>>> {
+        self.inner_flush()?;
+        let mut packs = self.result_packs.lock();
+        let result = std::mem::take(&mut *packs);
+
+        Ok(if result.len() > 0 { Some(result) } else { None })
     }
 }
 
@@ -839,7 +868,7 @@ mod tests {
     #[test]
     fn test_add_flush() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let packstore = MutableDataPackStore::new(&tempdir, CorruptionPolicy::REMOVE)?;
+        let packstore = MutableDataPackStore::new(&tempdir, CorruptionPolicy::REMOVE, 1000)?;
 
         let k1 = key("a", "2");
         let delta = Delta {
@@ -856,7 +885,7 @@ mod tests {
     #[test]
     fn test_add_get_delta() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let packstore = MutableDataPackStore::new(&tempdir, CorruptionPolicy::REMOVE)?;
+        let packstore = MutableDataPackStore::new(&tempdir, CorruptionPolicy::REMOVE, 1000)?;
 
         let k1 = key("a", "2");
         let delta = Delta {
@@ -874,7 +903,7 @@ mod tests {
     #[test]
     fn test_add_flush_get_delta() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let packstore = MutableDataPackStore::new(&tempdir, CorruptionPolicy::REMOVE)?;
+        let packstore = MutableDataPackStore::new(&tempdir, CorruptionPolicy::REMOVE, 1000)?;
 
         let k1 = key("a", "2");
         let delta = Delta {
@@ -950,9 +979,42 @@ mod tests {
     }
 
     #[test]
+    fn test_datapack_auto_flush() -> Result<()> {
+        let tempdir = TempDir::new()?;
+        let packstore = MutableDataPackStore::new(&tempdir, CorruptionPolicy::REMOVE, 0)?;
+
+        let k1 = key("a", "1");
+        let delta1 = Delta {
+            data: Bytes::from(&[1, 2, 3, 4][..]),
+            base: None,
+            key: k1.clone(),
+        };
+        let k2 = key("a", "2");
+        let delta2 = Delta {
+            data: Bytes::from(&[1, 2, 3, 4][..]),
+            base: None,
+            key: k2.clone(),
+        };
+        let k3 = key("a", "3");
+        let delta3 = Delta {
+            data: Bytes::from(&[1, 2, 3, 4][..]),
+            base: None,
+            key: k3.clone(),
+        };
+
+        packstore.add(&delta1, &Default::default())?;
+        packstore.add(&delta2, &Default::default())?;
+        packstore.add(&delta3, &Default::default())?;
+
+        let packs = packstore.flush().unwrap().unwrap();
+        assert_eq!(packs.len(), 3);
+        Ok(())
+    }
+
+    #[test]
     fn test_datapack_flush_empty() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let packstore = MutableDataPackStore::new(&tempdir, CorruptionPolicy::REMOVE)?;
+        let packstore = MutableDataPackStore::new(&tempdir, CorruptionPolicy::REMOVE, 1000)?;
         packstore.flush()?;
         Ok(())
     }

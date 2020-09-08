@@ -60,7 +60,7 @@ impl<T: HgIdMutableDeltaStore> HgIdMutableDeltaStore for MultiplexDeltaStore<T> 
         Ok(())
     }
 
-    fn flush(&self) -> Result<Option<PathBuf>> {
+    fn flush(&self) -> Result<Option<Vec<PathBuf>>> {
         let mut ret = None;
         for store in self.stores.iter() {
             let opt = store.flush()?;

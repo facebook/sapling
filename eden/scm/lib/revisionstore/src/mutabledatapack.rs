@@ -202,12 +202,15 @@ impl HgIdMutableDeltaStore for MutableDataPack {
         self.inner.lock().add(delta, metadata)
     }
 
-    fn flush(&self) -> Result<Option<PathBuf>> {
+    fn flush(&self) -> Result<Option<Vec<PathBuf>>> {
         let mut guard = self.inner.lock();
         let new_inner = MutableDataPackInner::new(&guard.dir, DataPackVersion::One)?;
         let old_inner = replace(&mut *guard, new_inner);
 
-        old_inner.close_pack()
+        Ok(match old_inner.close_pack()? {
+            Some(pack) => Some(vec![pack]),
+            None => Some(vec![]),
+        })
     }
 }
 
@@ -326,7 +329,7 @@ mod tests {
             key: Key::new(RepoPathBuf::new(), Default::default()),
         };
         mutdatapack.add(&delta, &Default::default()).expect("add");
-        let datapackbase = mutdatapack.flush().expect("flush").unwrap();
+        let datapackbase = mutdatapack.flush().expect("flush").unwrap()[0].clone();
         let datapackpath = datapackbase.with_extension("datapack");
         let dataindexpath = datapackbase.with_extension("dataidx");
 
@@ -469,7 +472,7 @@ mod tests {
         let tempdir = tempdir().unwrap();
 
         let mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
-        assert_eq!(mutdatapack.flush().unwrap(), None);
+        assert_eq!(mutdatapack.flush().unwrap(), Some(vec![]));
         drop(mutdatapack);
         assert_eq!(fs::read_dir(tempdir.path()).unwrap().count(), 0);
     }

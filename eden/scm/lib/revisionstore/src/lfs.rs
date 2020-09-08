@@ -677,7 +677,7 @@ impl HgIdMutableDeltaStore for LfsStore {
         self.pointers.write().add(entry)
     }
 
-    fn flush(&self) -> Result<Option<PathBuf>> {
+    fn flush(&self) -> Result<Option<Vec<PathBuf>>> {
         self.blobs.flush()?;
         self.pointers.write().0.flush()?;
         Ok(None)
@@ -852,7 +852,7 @@ impl HgIdMutableDeltaStore for LfsMultiplexer {
         }
     }
 
-    fn flush(&self) -> Result<Option<PathBuf>> {
+    fn flush(&self) -> Result<Option<Vec<PathBuf>>> {
         let ret = self.non_lfs.flush()?;
         self.lfs.flush()?;
         Ok(ret)

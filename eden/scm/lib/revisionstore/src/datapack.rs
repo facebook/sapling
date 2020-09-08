@@ -498,7 +498,7 @@ pub mod tests {
             mutdatapack.add(delta, metadata).unwrap();
         }
 
-        let path = mutdatapack.flush().unwrap().unwrap();
+        let path = mutdatapack.flush().unwrap().unwrap()[0].clone();
 
         DataPack::new(&path).unwrap()
     }

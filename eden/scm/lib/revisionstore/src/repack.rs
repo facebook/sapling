@@ -348,12 +348,16 @@ fn repack_datapack_to_contentstore(
         return Err(RepackFailure::Total(errors).into());
     }
 
-    let new_pack = store.commit_pending(location)?;
+    let new_packs = store
+        .commit_pending(location)?
+        .unwrap_or_else(|| vec![])
+        .into_iter()
+        .collect::<HashSet<PathBuf>>();
 
     for path in repacked {
         // TODO: This is a bit fragile as a bug in commit_pending not returning a path could lead
         // to data loss. A better return type would avoid this.
-        if Some(&path) != new_pack.as_ref() {
+        if !new_packs.contains(&path) {
             match DataPack::new(&path) {
                 Ok(pack) => pack.delete()?,
                 Err(_) => continue,

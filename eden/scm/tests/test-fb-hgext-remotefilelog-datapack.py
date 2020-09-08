@@ -73,7 +73,7 @@ class datapacktestsbase(object):
                 meta = args[4]
             packer.add(filename, node, base, content, metadata=meta)
 
-        path = packer.flush()
+        path = packer.flush()[0]
         return self.datapackreader(path)
 
     def _testAddSingle(self, content):

@@ -203,7 +203,7 @@ impl HgIdMutableDeltaStore for IndexedLogHgIdDataStore {
         entry.write_to_log(&mut inner.log)
     }
 
-    fn flush(&self) -> Result<Option<PathBuf>> {
+    fn flush(&self) -> Result<Option<Vec<PathBuf>>> {
         self.inner.write().log.flush()?;
         Ok(None)
     }

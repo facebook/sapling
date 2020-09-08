@@ -62,7 +62,7 @@ pub trait RemoteDataStore: HgIdDataStore + Send + Sync {
 
 pub trait HgIdMutableDeltaStore: HgIdDataStore + Send + Sync {
     fn add(&self, delta: &Delta, metadata: &Metadata) -> Result<()>;
-    fn flush(&self) -> Result<Option<PathBuf>>;
+    fn flush(&self) -> Result<Option<Vec<PathBuf>>>;
 
     fn add_file(&self, entry: &FileEntry) -> Result<()> {
         let delta = Delta {
@@ -137,7 +137,7 @@ impl<T: HgIdMutableDeltaStore + ?Sized, U: Deref<Target = T> + Send + Sync> HgId
         T::add(self, delta, metadata)
     }
 
-    fn flush(&self) -> Result<Option<PathBuf>> {
+    fn flush(&self) -> Result<Option<Vec<PathBuf>>> {
         T::flush(self)
     }
 }

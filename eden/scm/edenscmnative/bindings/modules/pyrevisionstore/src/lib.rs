@@ -467,7 +467,7 @@ py_class!(pub class mutabledeltastore |py| {
         store.add_py(py, &name, node, deltabasenode, delta, metadata)
     }
 
-    def flush(&self) -> PyResult<Option<PyPathBuf>> {
+    def flush(&self) -> PyResult<Option<Vec<PyPathBuf>>> {
         let store = self.store(py);
         store.flush_py(py)
     }
@@ -534,7 +534,7 @@ impl HgIdMutableDeltaStore for mutabledeltastore {
         self.store(py).add(delta, metadata)
     }
 
-    fn flush(&self) -> Result<Option<PathBuf>> {
+    fn flush(&self) -> Result<Option<Vec<PathBuf>>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
@@ -911,7 +911,7 @@ py_class!(pub class contentstore |py| {
         store.add_py(py, &name, node, deltabasenode, delta, metadata)
     }
 
-    def flush(&self) -> PyResult<Option<PyPathBuf>> {
+    def flush(&self) -> PyResult<Option<Vec<PyPathBuf>>> {
         let store = self.store(py);
         store.flush_py(py)
     }

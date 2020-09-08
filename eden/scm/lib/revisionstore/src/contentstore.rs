@@ -108,7 +108,7 @@ impl ContentStore {
         }
     }
 
-    pub(crate) fn commit_pending(&self, location: RepackLocation) -> Result<Option<PathBuf>> {
+    pub(crate) fn commit_pending(&self, location: RepackLocation) -> Result<Option<Vec<PathBuf>>> {
         match location {
             RepackLocation::Local => self.flush(),
             RepackLocation::Shared => self.shared_mutabledatastore.flush(),
@@ -179,7 +179,7 @@ impl HgIdMutableDeltaStore for ContentStore {
     }
 
     /// Commit the data written to the local store.
-    fn flush(&self) -> Result<Option<PathBuf>> {
+    fn flush(&self) -> Result<Option<Vec<PathBuf>>> {
         self.local_mutabledatastore
             .as_ref()
             .ok_or_else(|| format_err!("flushing a non-local ContentStore is not allowed"))?
@@ -257,6 +257,13 @@ impl<'a> ContentStoreBuilder<'a> {
         let local_path = get_local_path(&self.local_path, &self.suffix)?;
         let cache_path = get_cache_path(self.config, &self.suffix)?;
         let cache_packs_path = get_cache_packs_path(self.config, &self.suffix)?;
+        let max_pending_bytes = self
+            .config
+            .get_or("packs", "maxdatapendingbytes", || {
+                // Default to 4GB
+                ByteCount::from(4 * (1024 ^ 3))
+            })?
+            .value();
 
         let mut datastore: UnionHgIdDataStore<Arc<dyn HgIdDataStore>> = UnionHgIdDataStore::new();
         let mut blob_stores: UnionContentDataStore<Arc<dyn ContentDataStore>> =
@@ -265,6 +272,7 @@ impl<'a> ContentStoreBuilder<'a> {
         let shared_pack_store = Arc::new(MutableDataPackStore::new(
             &cache_packs_path,
             CorruptionPolicy::REMOVE,
+            max_pending_bytes,
         )?);
         let shared_indexedlogdatastore = Arc::new(IndexedLogHgIdDataStore::new(
             get_indexedlogdatastore_path(&cache_path)?,
@@ -319,6 +327,7 @@ impl<'a> ContentStoreBuilder<'a> {
                 let local_pack_store = Arc::new(MutableDataPackStore::new(
                     get_packs_path(&unsuffixed_local_path, &self.suffix)?,
                     CorruptionPolicy::IGNORE,
+                    max_pending_bytes,
                 )?);
 
                 let local_lfs_store = Arc::new(LfsStore::local(&local_path.unwrap(), self.config)?);
