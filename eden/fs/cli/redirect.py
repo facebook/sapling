@@ -19,6 +19,7 @@ from typing import Dict, Iterable, Optional
 from thrift.Thrift import TApplicationException
 
 from . import cmd_util, mtab, subcmd as subcmd_mod, tabulate
+from .buck import is_buckd_running_for_path, stop_buckd_for_path
 from .config import CheckoutConfig, EdenCheckout, EdenInstance, load_toml_config
 from .stats_print import format_size
 from .subcmd import Subcmd
@@ -378,6 +379,14 @@ class Redirection:
         disposition = RepoPathDisposition.analyze(repo_path)
         if disposition == RepoPathDisposition.DOES_NOT_EXIST:
             return disposition
+
+        # If this redirect was setup by buck, we should stop buck
+        # prior to unmounting it, as it doesn't currently have a
+        # great way to detect that the directories have gone away.
+        maybe_buck_project = str(repo_path.parent)
+        if is_buckd_running_for_path(maybe_buck_project):
+            stop_buckd_for_path(maybe_buck_project)
+
         if disposition == RepoPathDisposition.IS_SYMLINK:
             repo_path.unlink()
             return RepoPathDisposition.DOES_NOT_EXIST
@@ -787,6 +796,15 @@ class AddCmd(Subcmd):
 
         instance, checkout, _rel_path = cmd_util.require_checkout(args, args.mount)
 
+        # We need to query the status of the mounts to catch things like
+        # a redirect being configured but unmounted.  This improves the
+        # UX in the case where eg: buck is adding a redirect.  Without this
+        # we'd hit the skip case below because it is configured, but we wouldn't
+        # bring the redirection back online.
+        # However, we keep this separate from the `redirs` list below for
+        # the reasons stated in the comment below.
+        effective_redirs = get_effective_redirections(checkout, mtab.new())
+
         # Get only the explicitly configured entries for the purposes of the
         # add command, so that we avoid writing out any of the effective list
         # of redirections to the local configuration.  That doesn't matter so
@@ -797,11 +815,12 @@ class AddCmd(Subcmd):
         redir = Redirection(
             Path(args.repo_path), redir_type, None, USER_REDIRECTION_SOURCE
         )
-        existing_redir = redirs.get(args.repo_path, None)
+        existing_redir = effective_redirs.get(args.repo_path, None)
         if (
             existing_redir
             and existing_redir == redir
             and not args.force_remount_bind_mounts
+            and existing_redir.state != RedirectionState.NOT_MOUNTED
         ):
             print(
                 f"Skipping {redir.repo_path}; it is already configured "
