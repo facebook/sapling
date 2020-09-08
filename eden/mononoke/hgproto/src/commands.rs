@@ -499,17 +499,19 @@ where
     let mut send = Some(send);
 
     let bundle2items = bundle2
-        .then(move |res_stream_event| match res_stream_event {
-            Ok(StreamEvent::Next(bundle2item)) => Ok(Some(bundle2item)),
-            Ok(StreamEvent::Done(remainder)) => {
-                let send = send.take().ok_or(ErrorKind::Bundle2Invalid(
-                    "stream remainder was sent twice".into(),
-                ))?;
-                // Receiving end will deal with failures
-                let _ = send.send(remainder);
-                Ok(None)
+        .then(move |res_stream_event| {
+            match res_stream_event {
+                Ok(StreamEvent::Next(bundle2item)) => Ok(Some(bundle2item)),
+                Ok(StreamEvent::Done(remainder)) => {
+                    let send = send.take().ok_or(ErrorKind::Bundle2Invalid(
+                        "stream remainder was sent twice".into(),
+                    ))?;
+                    // Receiving end will deal with failures
+                    let _ = send.send(remainder);
+                    Ok(None)
+                }
+                Err(err) => Err(err),
             }
-            Err(err) => Err(err),
         })
         .filter_map(|val| val)
         .boxify();
@@ -710,7 +712,7 @@ mod test {
         res.insert("capabilities".into(), vec!["something".into()]);
 
         match r {
-            Ok(SingleResponse::Hello(ref r)) if r == &res => (),
+            Ok(SingleResponse::Hello(ref r)) if r == &res => {}
             bad => panic!("Bad result {:?}", bad),
         }
     }

@@ -134,7 +134,7 @@ fn disk_node_dir(
         // This is content directly for the root, e.g. a root manifest
         Some(WrappedPath::Root) => o.push("root"),
         // Not path associated in any way, e.g. a BonsaiChangeset
-        None => (),
+        None => {}
     };
 
     // Separate the dumped data from the repo dir structure

@@ -226,7 +226,10 @@ async fn run_pre_merge_delete<'a>(
 
     let PreMergeDelete { mut delete_commits } = pmd;
 
-    info!(ctx.logger(), "Listing deletion commits in top-to-bottom order (first commit is a descendant of the last)");
+    info!(
+        ctx.logger(),
+        "Listing deletion commits in top-to-bottom order (first commit is a descendant of the last)"
+    );
     delete_commits.reverse();
     for delete_commit in delete_commits {
         println!("{}", delete_commit);

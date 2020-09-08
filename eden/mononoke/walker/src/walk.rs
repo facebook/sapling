@@ -536,50 +536,58 @@ fn hg_file_node_step<'a, V: VisitOne>(
     };
     repo.get_filenode_opt(ctx, &repo_path, hg_file_node_id)
         .and_then(|filenode| filenode.do_not_handle_disabled_filenodes())
-        .map(move |file_node_opt| match file_node_opt {
-            Some(file_node_info) => {
-                let mut edges = vec![];
-                // Validate hg link node
-                checker.add_edge(&mut edges, EdgeType::HgLinkNodeToHgChangeset, || {
-                    Node::HgChangeset(file_node_info.linknode)
-                });
+        .map(move |file_node_opt| {
+            match file_node_opt {
+                Some(file_node_info) => {
+                    let mut edges = vec![];
+                    // Validate hg link node
+                    checker.add_edge(&mut edges, EdgeType::HgLinkNodeToHgChangeset, || {
+                        Node::HgChangeset(file_node_info.linknode)
+                    });
 
-                // Following linknode bonsai increases parallelism of walk.
-                // Linknodes will point to many commits we can then walk
-                // in parallel
-                checker.add_edge(&mut edges, EdgeType::HgLinkNodeToHgBonsaiMapping, || {
-                    Node::HgBonsaiMapping(file_node_info.linknode)
-                });
+                    // Following linknode bonsai increases parallelism of walk.
+                    // Linknodes will point to many commits we can then walk
+                    // in parallel
+                    checker.add_edge(&mut edges, EdgeType::HgLinkNodeToHgBonsaiMapping, || {
+                        Node::HgBonsaiMapping(file_node_info.linknode)
+                    });
 
-                // Parents
-                for parent in &[file_node_info.p1, file_node_info.p2] {
-                    if let Some(parent) = parent {
-                        checker.add_edge(&mut edges, EdgeType::HgFileNodeToHgParentFileNode, || {
-                            Node::HgFileNode((path.clone(), *parent))
-                        })
+                    // Parents
+                    for parent in &[file_node_info.p1, file_node_info.p2] {
+                        if let Some(parent) = parent {
+                            checker.add_edge(
+                                &mut edges,
+                                EdgeType::HgFileNodeToHgParentFileNode,
+                                || Node::HgFileNode((path.clone(), *parent)),
+                            )
+                        }
                     }
-                }
 
-                // Copyfrom is like another parent
-                for (repo_path, file_node_id) in &file_node_info.copyfrom {
-                    checker.add_edge(&mut edges, EdgeType::HgFileNodeToHgCopyfromFileNode, || {
-                        Node::HgFileNode((
-                            WrappedPath::from(repo_path.clone().into_mpath()),
-                            *file_node_id,
-                        ))
-                    })
+                    // Copyfrom is like another parent
+                    for (repo_path, file_node_id) in &file_node_info.copyfrom {
+                        checker.add_edge(
+                            &mut edges,
+                            EdgeType::HgFileNodeToHgCopyfromFileNode,
+                            || {
+                                Node::HgFileNode((
+                                    WrappedPath::from(repo_path.clone().into_mpath()),
+                                    *file_node_id,
+                                ))
+                            },
+                        )
+                    }
+                    StepOutput(
+                        checker.step_data(NodeType::HgFileNode, || {
+                            NodeData::HgFileNode(Some(file_node_info))
+                        }),
+                        edges,
+                    )
                 }
-                StepOutput(
-                    checker.step_data(NodeType::HgFileNode, || {
-                        NodeData::HgFileNode(Some(file_node_info))
-                    }),
-                    edges,
-                )
+                None => StepOutput(
+                    checker.step_data(NodeType::HgFileNode, || NodeData::HgFileNode(None)),
+                    vec![],
+                ),
             }
-            None => StepOutput(
-                checker.step_data(NodeType::HgFileNode, || NodeData::HgFileNode(None)),
-                vec![],
-            ),
         })
         .compat()
 }
@@ -749,7 +757,7 @@ pub fn expand_checked_nodes(children: &mut Vec<OutgoingEdge>) -> () {
                     path.clone(),
                 ));
             }
-            _ => (),
+            _ => {}
         }
     }
     if !extra.is_empty() {

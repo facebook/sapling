@@ -106,57 +106,59 @@ fn find_file_changes(
         cs.manifestid(),
         parent_manifests.iter().cloned().collect(),
     )
-    .map(move |changed_file| match changed_file {
-        BonsaiDiffFileChange::Changed(path, ty, entry_id) => {
-            let file_node_id = HgFileNodeId::new(entry_id.into_nodehash());
-            cloned!(ctx, bonsai_parents, repo, parent_manifests);
-            file_node_id
-                .load(ctx.clone(), repo.blobstore())
-                .compat()
-                .from_err()
-                .and_then(move |envelope| {
-                    let size = envelope.content_size();
-                    let content_id = envelope.content_id();
-
-                    get_copy_info(
-                        ctx,
-                        repo,
-                        bonsai_parents,
-                        path.clone(),
-                        envelope,
-                        parent_manifests,
-                    )
-                    .context("While fetching copy information")
+    .map(move |changed_file| {
+        match changed_file {
+            BonsaiDiffFileChange::Changed(path, ty, entry_id) => {
+                let file_node_id = HgFileNodeId::new(entry_id.into_nodehash());
+                cloned!(ctx, bonsai_parents, repo, parent_manifests);
+                file_node_id
+                    .load(ctx.clone(), repo.blobstore())
+                    .compat()
                     .from_err()
-                    .map(move |copyinfo| {
-                        (
-                            path,
-                            Some(FileChange::new(content_id, ty, size as u64, copyinfo)),
-                        )
-                    })
-                })
-                .boxify()
-        }
-        BonsaiDiffFileChange::ChangedReusedId(path, ty, entry_id) => {
-            let file_node_id = HgFileNodeId::new(entry_id.into_nodehash());
-            cloned!(ctx, repo);
-            file_node_id
-                .load(ctx, repo.blobstore())
-                .compat()
-                .from_err()
-                .and_then(move |envelope| {
-                    let size = envelope.content_size();
-                    let content_id = envelope.content_id();
+                    .and_then(move |envelope| {
+                        let size = envelope.content_size();
+                        let content_id = envelope.content_id();
 
-                    // Reused ID means copy info is *not* stored.
-                    Ok((
-                        path,
-                        Some(FileChange::new(content_id, ty, size as u64, None)),
-                    ))
-                })
-                .boxify()
+                        get_copy_info(
+                            ctx,
+                            repo,
+                            bonsai_parents,
+                            path.clone(),
+                            envelope,
+                            parent_manifests,
+                        )
+                        .context("While fetching copy information")
+                        .from_err()
+                        .map(move |copyinfo| {
+                            (
+                                path,
+                                Some(FileChange::new(content_id, ty, size as u64, copyinfo)),
+                            )
+                        })
+                    })
+                    .boxify()
+            }
+            BonsaiDiffFileChange::ChangedReusedId(path, ty, entry_id) => {
+                let file_node_id = HgFileNodeId::new(entry_id.into_nodehash());
+                cloned!(ctx, repo);
+                file_node_id
+                    .load(ctx, repo.blobstore())
+                    .compat()
+                    .from_err()
+                    .and_then(move |envelope| {
+                        let size = envelope.content_size();
+                        let content_id = envelope.content_id();
+
+                        // Reused ID means copy info is *not* stored.
+                        Ok((
+                            path,
+                            Some(FileChange::new(content_id, ty, size as u64, None)),
+                        ))
+                    })
+                    .boxify()
+            }
+            BonsaiDiffFileChange::Deleted(path) => Ok((path, None)).into_future().boxify(),
         }
-        BonsaiDiffFileChange::Deleted(path) => Ok((path, None)).into_future().boxify(),
     })
     .buffer_unordered(100) // TODO(stash): magic number?
     .collect()

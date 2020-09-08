@@ -223,7 +223,7 @@ impl Convert for RawCommitSyncSmallRepoConfig {
                 None => {
                     return Err(anyhow!(
                         "default_prefix must be provided when default_action=\"prepend_prefix\""
-                    ))
+                    ));
                 }
             },
             other => return Err(anyhow!("unknown default_action: {:?}", other)),

@@ -84,12 +84,12 @@ fn pattern_to_regex(other: &str) -> String {
         if !acc.is_empty() {
             output.push(TranslationOutput::Literal(acc));
         }
-    };
+    }
 
     fn flush_class(acc: &mut String, output: &mut Vec<TranslationOutput>) {
         let acc = std::mem::replace(acc, String::new());
         output.push(TranslationOutput::CharClass(acc));
-    };
+    }
 
     for c in other.chars() {
         match (state, c) {

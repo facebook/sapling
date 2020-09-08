@@ -258,7 +258,7 @@ pub async fn subcommand_blobstore_fetch<'a>(
                             FileContents::from_encoded_bytes(value.into_raw_bytes())
                         ),
                         Some("git-tree") => display::<GitTree>(&value.try_into()),
-                        _ => (),
+                        _ => {}
                     }
                 }
             }

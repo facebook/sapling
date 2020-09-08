@@ -373,7 +373,7 @@ fn combine_entries(
             return err(Error::msg(
                 "cannot create a combined entry from an empty list",
             ))
-            .left_future()
+            .left_future();
         }
         Some(entry) => entry.clone(),
     };
@@ -550,49 +550,51 @@ fn loop_over_log_entries(
     fetch_up_to_bundles: u64,
     repo_read_write_fetcher: RepoReadWriteFetcher,
 ) -> impl Stream<Item = Vec<BookmarkUpdateLogEntry>, Error = Error> {
-    stream::unfold(Some(start_id), move |maybe_id| match maybe_id {
-        Some(current_id) => Some(
-            bookmarks
-                .read_next_bookmark_log_entries_same_bookmark_and_reason(
-                    ctx.clone(),
-                    current_id as u64,
-                    fetch_up_to_bundles,
-                )
-                .compat()
-                .collect()
-                .and_then({
-                    cloned!(ctx, repo_read_write_fetcher, mut scuba_sample);
-                    move |entries| match entries.iter().last().cloned() {
-                        None => {
-                            if loop_forever {
-                                info!(ctx.logger(), "id: {}, no new entries found", current_id);
-                                scuba_sample
-                                    .add("repo", repo_id.id())
-                                    .add("success", 1)
-                                    .add("delay", 0)
-                                    .log();
+    stream::unfold(Some(start_id), move |maybe_id| {
+        match maybe_id {
+            Some(current_id) => Some(
+                bookmarks
+                    .read_next_bookmark_log_entries_same_bookmark_and_reason(
+                        ctx.clone(),
+                        current_id as u64,
+                        fetch_up_to_bundles,
+                    )
+                    .compat()
+                    .collect()
+                    .and_then({
+                        cloned!(ctx, repo_read_write_fetcher, mut scuba_sample);
+                        move |entries| match entries.iter().last().cloned() {
+                            None => {
+                                if loop_forever {
+                                    info!(ctx.logger(), "id: {}, no new entries found", current_id);
+                                    scuba_sample
+                                        .add("repo", repo_id.id())
+                                        .add("success", 1)
+                                        .add("delay", 0)
+                                        .log();
 
-                                // First None means that no new entries will be added to the stream,
-                                // Some(current_id) means that bookmarks will be fetched again
-                                sleep(Duration::new(SLEEP_SECS, 0))
-                                    .from_err()
-                                    .and_then({
-                                        cloned!(ctx, repo_read_write_fetcher);
-                                        move |()| {
-                                            unlock_repo_if_locked(ctx, repo_read_write_fetcher)
-                                        }
-                                    })
-                                    .map(move |()| (vec![], Some(current_id)))
-                                    .right_future()
-                            } else {
-                                ok((vec![], None)).left_future()
+                                    // First None means that no new entries will be added to the stream,
+                                    // Some(current_id) means that bookmarks will be fetched again
+                                    sleep(Duration::new(SLEEP_SECS, 0))
+                                        .from_err()
+                                        .and_then({
+                                            cloned!(ctx, repo_read_write_fetcher);
+                                            move |()| {
+                                                unlock_repo_if_locked(ctx, repo_read_write_fetcher)
+                                            }
+                                        })
+                                        .map(move |()| (vec![], Some(current_id)))
+                                        .right_future()
+                                } else {
+                                    ok((vec![], None)).left_future()
+                                }
                             }
+                            Some(last_entry) => ok((entries, Some(last_entry.id))).left_future(),
                         }
-                        Some(last_entry) => ok((entries, Some(last_entry.id))).left_future(),
-                    }
-                }),
-        ),
-        None => None,
+                    }),
+            ),
+            None => None,
+        }
     })
 }
 

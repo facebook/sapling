@@ -736,7 +736,7 @@ impl PreparedFilenodeEntry {
                 .await?;
 
             Ok(FileBytes(content))
-        };
+        }
 
         let (blob, flags) = match content {
             FilenodeEntryContent::InlineV2(content_id) => {

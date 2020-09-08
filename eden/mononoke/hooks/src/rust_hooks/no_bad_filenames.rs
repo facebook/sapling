@@ -118,7 +118,7 @@ impl FileHook for NoBadFilenames {
                             "ABORT: Illegal filename: '{}'. Filenames must not match '{}'.",
                             path, self.illegal_regex
                         ),
-                    )))
+                    )));
                 }
             }
         }

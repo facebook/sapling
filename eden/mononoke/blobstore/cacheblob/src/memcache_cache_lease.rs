@@ -347,9 +347,8 @@ impl LeaseOps for MemcacheOps {
         // This future checks the state of the lease, and releases it only
         // if it's locked by us right now.
         let f = future::lazy(move || {
-            memcache
-                .get(mc_key.clone())
-                .and_then(move |maybe_data| match maybe_data {
+            memcache.get(mc_key.clone()).and_then(move |maybe_data| {
+                match maybe_data {
                     Some(bytes) => {
                         let state: Result<LockState, Error> =
                             compact_protocol::deserialize(Vec::from(bytes));
@@ -399,7 +398,8 @@ impl LeaseOps for MemcacheOps {
                         LEASE_STATS::release_no_lease.add_value(1, (lease_type,));
                         future::ok(()).right_future()
                     }
-                })
+                }
+            })
         });
         // We don't have to wait for the releasing to finish, it can be done in background
         // because leases have a timeout. So even if they haven't been released explicitly they

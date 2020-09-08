@@ -289,11 +289,15 @@ async fn get_resume_state(
         State::from_init(Arc::new(BlobstoreKeyParam::from(start..end)))
     };
 
-    resume_state.map(move |resume_state| match resume_state {
-        None => init_state,
-        // if initial_state mismatch, start from provided initial state
-        Some(ref resume_state) if resume_state.init_range != init_state.init_range => init_state,
-        Some(resume_state) => resume_state,
+    resume_state.map(move |resume_state| {
+        match resume_state {
+            None => init_state,
+            // if initial_state mismatch, start from provided initial state
+            Some(ref resume_state) if resume_state.init_range != init_state.init_range => {
+                init_state
+            }
+            Some(resume_state) => resume_state,
+        }
     })
 }
 

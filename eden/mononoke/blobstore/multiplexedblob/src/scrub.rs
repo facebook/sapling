@@ -213,7 +213,7 @@ async fn blobstore_get(
                                 needs_repair.insert(*k, s.as_ref());
                             }
                         }
-                        None => (),
+                        None => {}
                     }
                 }
                 if scrub_action == ScrubAction::ReportOnly {

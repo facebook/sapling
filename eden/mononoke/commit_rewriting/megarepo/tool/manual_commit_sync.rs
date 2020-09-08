@@ -40,13 +40,11 @@ pub async fn manual_commit_sync<M: SyncedCommitMapping + Clone + 'static>(
         .await?;
     let source_parents: Vec<_> = source_cs.parents().collect();
     if source_parents.len() != target_repo_parents.len() {
-        return Err(
-            anyhow!(
-                "wrong number of parents: source repo has {} parents, while {} target repo parents specified",
-                source_parents.len(),
-                target_repo_parents.len(),
-            )
-        );
+        return Err(anyhow!(
+            "wrong number of parents: source repo has {} parents, while {} target repo parents specified",
+            source_parents.len(),
+            target_repo_parents.len(),
+        ));
     }
 
     let remapped_parents = source_parents

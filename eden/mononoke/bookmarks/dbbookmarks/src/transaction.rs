@@ -194,7 +194,7 @@ impl SqlBookmarksTransactionPayload {
                 return Err(anyhow!(
                     "FindMaxBookmarkLogId returned multiple entries: {:?}",
                     max_id_entries
-                ))
+                ));
             }
         };
         Ok((txn, next_id))
@@ -542,7 +542,7 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
                     Err(BookmarkTransactionError::RetryableError(_))
                         if attempt < MAX_BOOKMARK_TRANSACTION_ATTEMPT_COUNT =>
                     {
-                        continue
+                        continue;
                     }
                     err => break err,
                 };
@@ -551,7 +551,7 @@ impl BookmarkTransaction for SqlBookmarksTransaction {
                     Err(BookmarkTransactionError::RetryableError(_))
                         if attempt < MAX_BOOKMARK_TRANSACTION_ATTEMPT_COUNT =>
                     {
-                        continue
+                        continue;
                     }
                     result => break result,
                 }

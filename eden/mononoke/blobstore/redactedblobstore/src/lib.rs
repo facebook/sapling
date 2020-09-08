@@ -247,7 +247,6 @@ pub fn has_redaction_root_cause(e: &Error) -> bool {
 
 #[cfg(test)]
 mod test {
-
     use super::*;
     use assert_matches::assert_matches;
     use context::CoreContext;

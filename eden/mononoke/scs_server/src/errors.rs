@@ -180,12 +180,13 @@ pub(crate) fn limit_too_low(limit: usize) -> thrift::RequestError {
 
 pub(crate) fn diff_input_too_big(total_size: u64) -> thrift::RequestError {
     thrift::RequestError {
-            kind: thrift::RequestErrorKind::INVALID_REQUEST_INPUT_TOO_BIG,
-            reason: format!(
-                "only {} bytes of files (in total) can be diffed in one request, you asked for {} bytes",
-                thrift::consts::COMMIT_FILE_DIFFS_SIZE_LIMIT, total_size,
-            ),
-        }
+        kind: thrift::RequestErrorKind::INVALID_REQUEST_INPUT_TOO_BIG,
+        reason: format!(
+            "only {} bytes of files (in total) can be diffed in one request, you asked for {} bytes",
+            thrift::consts::COMMIT_FILE_DIFFS_SIZE_LIMIT,
+            total_size,
+        ),
+    }
 }
 
 pub(crate) fn diff_input_too_many_paths(path_count: usize) -> thrift::RequestError {

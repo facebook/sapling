@@ -94,7 +94,7 @@ impl FileHook for NoQuestionableFilenames {
                     return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
                         "Illegal filename",
                         format!("ABORT: Illegal filename: {}", path),
-                    )))
+                    )));
                 }
             }
         }
@@ -106,7 +106,7 @@ impl FileHook for NoQuestionableFilenames {
                     return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
                         "Illegal filename",
                         format!("ABORT: Illegal filename: {}", path),
-                    )))
+                    )));
                 }
             }
         }

@@ -334,7 +334,7 @@ impl BonsaiDerivedMapping for FilenodesOnlyPublicMapping {
                         let maybe_root_filenode = match filenode_res {
                             FilenodeResult::Present(maybe_root_filenode) => maybe_root_filenode,
                             FilenodeResult::Disabled => {
-                                return Ok(Some((cs_id, FilenodesOnlyPublic::Disabled)))
+                                return Ok(Some((cs_id, FilenodesOnlyPublic::Disabled)));
                             }
                         };
 
@@ -374,7 +374,7 @@ impl BonsaiDerivedMapping for FilenodesOnlyPublicMapping {
                     // If filenodes are disabled then just return success
                     // but use explicit match here in case we add more variants
                     // to FilenodeResult enum
-                    FilenodeResult::Present(()) | FilenodeResult::Disabled => (),
+                    FilenodeResult::Present(()) | FilenodeResult::Disabled => {}
                 })
                 .boxify(),
             None => old_future::ok(()).boxify(),

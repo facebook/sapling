@@ -98,8 +98,8 @@ where
         + Send,
     InStats: 'static + Send,
 {
-    s.map_ok(
-        move |(WalkKeyOptPath(n, _path), data_opt, _stats_opt)| match (&n, data_opt) {
+    s.map_ok(move |(WalkKeyOptPath(n, _path), data_opt, _stats_opt)| {
+        match (&n, data_opt) {
             (Node::FileContent(_content_id), Some(NodeData::FileContent(fc)))
                 if sampler.is_sampling(&n) =>
             {
@@ -159,8 +159,8 @@ where
 
                 future::ready(sizes.map(|sizes| (n, data_opt, sizes))).right_future()
             }
-        },
-    )
+        }
+    })
     .try_buffer_unordered(scheduled_max)
 }
 

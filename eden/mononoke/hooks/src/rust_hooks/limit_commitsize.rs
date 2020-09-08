@@ -96,13 +96,13 @@ impl ChangesetHook for LimitCommitsize {
 
             totalsize += file.size();
             if totalsize > self.commit_size_limit {
-                return Ok(HookExecution::Rejected(
-					HookRejectionInfo::new_long(
-						"Commit too large",
-						 format!("Commit size limit is {} bytes. You tried to push commit that is over the limit. See https://fburl.com/landing_big_diffs for instructions.", self.commit_size_limit)
-						)
-					)
-				);
+                return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+                    "Commit too large",
+                    format!(
+                        "Commit size limit is {} bytes. You tried to push commit that is over the limit. See https://fburl.com/landing_big_diffs for instructions.",
+                        self.commit_size_limit
+                    ),
+                )));
             }
         }
         Ok(HookExecution::Accepted)

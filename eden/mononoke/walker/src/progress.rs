@@ -83,7 +83,7 @@ where
             Some(ss) => {
                 entry.1 = entry.1 + *ss;
             }
-            None => (),
+            None => {}
         }
     }
 }

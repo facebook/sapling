@@ -60,7 +60,7 @@ impl SkiplistNodeType {
             let cs_id = cs_id.into_thrift();
             let gen = skiplist_thrift::GenerationNum(gen_num.value() as i64);
             skiplist_thrift::CommitAndGenerationNumber { cs_id, gen }
-        };
+        }
 
         fn encode_vec_to_thrift(
             cs_gen: Vec<(ChangesetId, Generation)>,
@@ -69,7 +69,7 @@ impl SkiplistNodeType {
                 .into_iter()
                 .map(|(cs_id, gen_num)| encode_edge_to_thrift(cs_id, gen_num))
                 .collect()
-        };
+        }
 
         match self {
             SkiplistNodeType::SingleEdge((cs_id, gen)) => {

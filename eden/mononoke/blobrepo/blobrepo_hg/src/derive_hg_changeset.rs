@@ -234,7 +234,7 @@ pub fn check_case_conflict_in_manifest(
                                             potential_conflicts.extend(path);
                                         }
                                     }
-                                    _ => (),
+                                    _ => {}
                                 }
                             }
 

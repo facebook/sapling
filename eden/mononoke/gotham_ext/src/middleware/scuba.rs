@@ -179,7 +179,7 @@ fn log_stats<H: ScubaHandler>(
     state: &mut State,
     status_code: &StatusCode,
     content_length: Option<u64>,
-) -> Option<()> where {
+) -> Option<()> {
     let mut scuba = state.try_take::<ScubaMiddlewareState>()?.0;
 
     scuba.add(HttpScubaKey::HttpStatus, status_code.as_u16());

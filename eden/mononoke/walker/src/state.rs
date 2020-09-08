@@ -136,7 +136,7 @@ impl WalkState {
                 self.visited_bcs_mapping
                     .insert(HashMemoizer::new(*bcs_id, &self.hasher_factory), ());
             }
-            _ => (),
+            _ => {}
         }
     }
 

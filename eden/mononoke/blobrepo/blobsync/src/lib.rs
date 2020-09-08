@@ -65,7 +65,7 @@ pub fn copy_content(
                                         "File not found for fetch key: {:?}",
                                         fetch_key
                                     ))
-                                    .left_future()
+                                    .left_future();
                                 }
                             };
 
@@ -76,7 +76,7 @@ pub fn copy_content(
                                             "File not found for fetch key: {:?}",
                                             fetch_key
                                         ))
-                                        .left_future()
+                                        .left_future();
                                     }
                                     Some(byte_stream) => {
                                         ok((store_request, byte_stream)).right_future()

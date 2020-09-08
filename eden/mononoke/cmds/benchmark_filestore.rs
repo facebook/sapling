@@ -168,7 +168,7 @@ async fn run_benchmark_filestore<'a>(
         Some(delay) => {
             tokio_timer::sleep(delay).compat().await?;
         }
-        None => (),
+        None => {}
     }
 
     eprintln!("Write committed: {:?}", metadata.content_id.blobstore_key());

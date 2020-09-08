@@ -110,7 +110,7 @@ mod test {
         match decode_delta(start_after_end) {
             Ok(bad) => panic!("unexpected success {:?}", bad),
             Err(err) => match err_downcast_ref!(err, err: ErrorKind => err) {
-                Some(&ErrorKind::InvalidDelta(..)) => (),
+                Some(&ErrorKind::InvalidDelta(..)) => {}
                 Some(bad) => panic!("Bad ErrorKind {:?}", bad),
                 None => panic!("Unexpected error {:?}", err),
             },

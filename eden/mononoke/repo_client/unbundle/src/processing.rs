@@ -636,7 +636,7 @@ async fn plain_push_bookmark(
                     )
                     .await;
             match res {
-                Ok(()) => (),
+                Ok(()) => {}
                 Err(err) => match err {
                     BookmarkMovementError::HookFailure(rejections) => {
                         let rejections =
@@ -646,7 +646,7 @@ async fn plain_push_bookmark(
                     _ => {
                         return Err(BundleResolverError::Error(
                             Error::from(err).context("Failed to create bookmark"),
-                        ))
+                        ));
                     }
                 },
             }
@@ -681,7 +681,7 @@ async fn plain_push_bookmark(
             )
             .await;
             match res {
-                Ok(()) => (),
+                Ok(()) => {}
                 Err(err) => match err {
                     BookmarkMovementError::HookFailure(rejections) => {
                         let rejections =
@@ -698,7 +698,7 @@ async fn plain_push_bookmark(
                                     "NON_FAST_FORWARD=true for a non-fast-forward move)",
                                 )
                             },
-                        )))
+                        )));
                     }
                 },
             }

@@ -47,9 +47,9 @@ pub(crate) fn convert_wireproto_logging_config(
     let storage_config_and_threshold = match (wireproto_storage_config, remote_arg_size_threshold) {
         (Some(storage_config), Some(threshold)) => Some((storage_config, threshold as u64)),
         (None, Some(_threshold)) => {
-            return Err(
-                anyhow!("Invalid configuration: wireproto threshold is specified, but storage config is not")
-            );
+            return Err(anyhow!(
+                "Invalid configuration: wireproto threshold is specified, but storage config is not"
+            ));
         }
         (Some(storage_config), None) => Some((storage_config, DEFAULT_ARG_SIZE_THRESHOLD)),
         (None, None) => None,
@@ -147,7 +147,7 @@ impl Convert for RawBookmarkConfig {
                         "invalid bookmark regex: {}",
                         err
                     ))
-                    .into())
+                    .into());
                 }
             },
             _ => {

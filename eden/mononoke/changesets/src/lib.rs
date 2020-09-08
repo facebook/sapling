@@ -607,7 +607,6 @@ fn select_many_changesets(
 
 #[cfg(test)]
 mod tests {
-
     use super::*;
 
     #[test]

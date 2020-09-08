@@ -341,7 +341,7 @@ mod test {
         let mut decoder = SshDecoder::new();
 
         match decoder.decode(&mut buf) {
-            Ok(Some(ref res)) if res == &SshMsg::new(Stdin, b"ls -l".bytes()) => (),
+            Ok(Some(ref res)) if res == &SshMsg::new(Stdin, b"ls -l".bytes()) => {}
             bad => panic!("decode failed: {:?}", bad.as_ref()),
         }
     }
@@ -354,7 +354,7 @@ mod test {
         let mut decoder = SshDecoder::new();
 
         match decoder.decode(&mut buf) {
-            Ok(Some(ref res)) if res == &SshMsg::new(Stdin, b"".bytes()) => (),
+            Ok(Some(ref res)) if res == &SshMsg::new(Stdin, b"".bytes()) => {}
             bad => panic!("decode failed: {:?}", bad.as_ref()),
         }
     }
@@ -367,7 +367,7 @@ mod test {
         let mut decoder = SshDecoder::new();
 
         match decoder.decode(&mut buf) {
-            Ok(Some(ref res)) if res == &SshMsg::new(Stdin, b"X".bytes()) => (),
+            Ok(Some(ref res)) if res == &SshMsg::new(Stdin, b"X".bytes()) => {}
             bad => panic!("decode failed: {:?}", bad.as_ref()),
         }
     }
@@ -380,15 +380,15 @@ mod test {
         let mut decoder = SshDecoder::new();
 
         match decoder.decode(&mut buf) {
-            Ok(Some(ref res)) if res == &SshMsg::new(Stdin, b"X".bytes()) => (),
+            Ok(Some(ref res)) if res == &SshMsg::new(Stdin, b"X".bytes()) => {}
             bad => panic!("decode failed: {:?}", bad.as_ref()),
         }
         match decoder.decode(&mut buf) {
-            Ok(Some(ref res)) if res == &SshMsg::new(Stdout, b"Y".bytes()) => (),
+            Ok(Some(ref res)) if res == &SshMsg::new(Stdout, b"Y".bytes()) => {}
             bad => panic!("decode failed: {:?}", bad.as_ref()),
         }
         match decoder.decode(&mut buf) {
-            Ok(Some(ref res)) if res == &SshMsg::new(Stderr, b"Z".bytes()) => (),
+            Ok(Some(ref res)) if res == &SshMsg::new(Stderr, b"Z".bytes()) => {}
             bad => panic!("decode failed: {:?}", bad.as_ref()),
         }
     }
@@ -402,7 +402,7 @@ mod test {
 
         match decoder.decode(&mut buf) {
             Ok(bad) => panic!("unexpected success: {:?}", bad),
-            Err(_err) => (),
+            Err(_err) => {}
         }
     }
 
@@ -414,7 +414,7 @@ mod test {
         let mut decoder = SshDecoder::new();
 
         match decoder.decode(&mut buf) {
-            Ok(None) => (),
+            Ok(None) => {}
             bad => panic!("bad framing: {:?}", bad),
         }
     }
@@ -428,7 +428,7 @@ mod test {
 
         match decoder.decode(&mut buf) {
             Ok(bad) => panic!("unexpected success: {:?}", bad),
-            Err(_err) => (),
+            Err(_err) => {}
         }
     }
 }

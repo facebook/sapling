@@ -144,7 +144,8 @@ fn parse_fixed_parent_order<P: AsRef<Path>>(
             }
             (None, None) => {
                 warn!(
-                    logger, "{}: parent order is fixed for a commit with no parents, most likely won't have any effect",
+                    logger,
+                    "{}: parent order is fixed for a commit with no parents, most likely won't have any effect",
                     hg_cs_id,
                 );
                 vec![]

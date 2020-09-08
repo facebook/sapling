@@ -282,7 +282,7 @@ impl BonsaiGitMapping for SqlBonsaiGitMapping {
 
             for entry in entries.iter() {
                 match mapping_from_db.get(&entry.git_sha1) {
-                    Some(bcs_id) if bcs_id == &entry.bcs_id => (), // We've tried to insert a duplicate, proceed.
+                    Some(bcs_id) if bcs_id == &entry.bcs_id => {} // We've tried to insert a duplicate, proceed.
                     _ => {
                         return Err(AddGitMappingErrorKind::Conflict(vec![entry.clone()].into()));
                     } // A real conflict!

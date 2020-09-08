@@ -324,7 +324,7 @@ impl ChangesetPathContext {
             exclude_changeset_and_ancestors: Option<(ChangesetId, Generation)>,
             cache: HashMap<(Option<ChangesetId>, Vec<ChangesetId>), Vec<ChangesetId>>,
             skiplist_index: Arc<SkiplistIndex>,
-        };
+        }
         impl FilterVisitor {
             async fn _visit(
                 &self,
@@ -506,7 +506,7 @@ impl ChangesetPathContext {
                 });
                 Ok(())
             }
-        };
+        }
         let cs_info_enabled = self.repo().derive_changeset_info_enabled();
 
         let history_across_deletions = if opts.follow_history_across_deletions {

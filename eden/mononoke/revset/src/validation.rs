@@ -145,7 +145,7 @@ mod test {
             loop {
                 match nodestream.poll() {
                     Ok(Async::Ready(None)) => return,
-                    _ => (),
+                    _ => {}
                 }
             }
         });
@@ -180,7 +180,7 @@ mod test {
             loop {
                 match nodestream.poll() {
                     Ok(Async::Ready(None)) => return,
-                    _ => (),
+                    _ => {}
                 }
             }
         });

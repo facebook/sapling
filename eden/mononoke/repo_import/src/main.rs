@@ -310,7 +310,7 @@ async fn merge_imported_commit(
             return Err(format_err!(
                 "Couldn't extract changeset id from bookmark: {}",
                 dest_bookmark
-            ))
+            ));
         }
     };
     let master_leaf_entries = get_leaf_entries(&ctx, &repo, master_cs_id).await?;
@@ -475,7 +475,7 @@ async fn check_dependent_systems(
                 return Err(format_err!(
                     "Couldn't fetch the counter value from mutable_counters for repo_id {:?}",
                     repo_id
-                ))
+                ));
             }
         };
         passed_hg_sync_check = largest_id <= mut_counters_value.try_into().unwrap();
@@ -562,7 +562,7 @@ fn sort_bcs(shifted_bcs: &[BonsaiChangeset]) -> Result<Vec<BonsaiChangeset>, Err
                 return Err(format_err!(
                     "Could not find mapping for changeset id {}",
                     csid
-                ))
+                ));
             }
         }
     }
@@ -598,7 +598,7 @@ async fn get_large_repo_config_if_pushredirected<'a>(
             None => {
                 return Err(format_err!(
                     "Couldn't fetch the large repo config we pushredirect into"
-                ))
+                ));
             }
         };
         return Ok(Some(large_repo_config.clone()));
@@ -744,12 +744,11 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                     .await?;
                 let commit_sync_config = large_repo_config.commit_sync_config.clone().unwrap();
                 if commit_sync_config.small_repos.len() > 1 {
-                    return Err(
-                        format_err!(
-                            "Currently repo_import tool doesn't support backsyncing into multiple small repos for large repo {:?}, name: {}",
-                            large_repo_id,
-                            large_repo.name()
-                        ));
+                    return Err(format_err!(
+                        "Currently repo_import tool doesn't support backsyncing into multiple small repos for large repo {:?}, name: {}",
+                        large_repo_id,
+                        large_repo.name()
+                    ));
                 }
                 let mapping = args::open_source_sql::<SqlSyncedCommitMapping>(fb, &matches)
                     .compat()

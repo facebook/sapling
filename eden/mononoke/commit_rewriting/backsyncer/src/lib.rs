@@ -191,7 +191,8 @@ where
             if new_counter <= counter {
                 return Err(format_err!(
                     "backsync transaction failed, but the counter didn't move forward. Was {}, became {}",
-                    counter, new_counter,
+                    counter,
+                    new_counter,
                 ));
             } else {
                 debug!(

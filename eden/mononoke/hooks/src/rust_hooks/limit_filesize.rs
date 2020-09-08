@@ -91,11 +91,13 @@ impl FileHook for LimitFilesize {
                 .await?;
             if len > self.file_size_limit {
                 return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
-				"File too large",
-				format!("File size limit is {} bytes. \
+                    "File too large",
+                    format!(
+                        "File size limit is {} bytes. \
 You tried to push file {} that is over the limit ({} bytes).  See https://fburl.com/landing_big_diffs for instructions.",
-					self.file_size_limit, path, len)
-			)));
+                        self.file_size_limit, path, len
+                    ),
+                )));
             }
         }
         Ok(HookExecution::Accepted)

@@ -416,7 +416,11 @@ async fn heal_blob_some_unknown_queue_entry(fb: FacebookInit) -> Result<(), Erro
     .expect("expecting to delete entries")
     .await;
     assert!(r.is_ok());
-    assert_eq!(3, sync_queue.len(&ctx, mp).await?, "expecting 3 new entries on queue, i.e. all sources for known stores, plus the unknown store");
+    assert_eq!(
+        3,
+        sync_queue.len(&ctx, mp).await?,
+        "expecting 3 new entries on queue, i.e. all sources for known stores, plus the unknown store"
+    );
     assert_eq!(
         1,
         underlying_stores.get(&bids[1]).unwrap().len(),

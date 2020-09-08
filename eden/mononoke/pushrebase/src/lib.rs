@@ -117,13 +117,17 @@ pub enum PushrebaseInternalError {
 pub enum PushrebaseError {
     #[error("Conflicts while pushrebasing: {0:?}")]
     Conflicts(Vec<PushrebaseConflict>),
-    #[error("PotentialCaseConflict: the change this commit introduces at {0} may conflict with other commits. Rebase and retry.")]
+    #[error(
+        "PotentialCaseConflict: the change this commit introduces at {0} may conflict with other commits. Rebase and retry."
+    )]
     PotentialCaseConflict(MPath),
     #[error("Pushrebase over merge")]
     RebaseOverMerge,
     #[error("Root is too far behind")]
     RootTooFarBehind,
-    #[error("Pushrebase validation failed to validate commit {source_cs_id} (rebased to {rebased_cs_id})")]
+    #[error(
+        "Pushrebase validation failed to validate commit {source_cs_id} (rebased to {rebased_cs_id})"
+    )]
     ValidationError {
         source_cs_id: ChangesetId,
         rebased_cs_id: ChangesetId,
@@ -960,7 +964,7 @@ async fn rebase_changeset(
             let newdate = DateTime::from_timestamp(timestamp.timestamp_seconds(), tz_offset_secs)?;
             bcs.author_date = newdate;
         }
-        None => (),
+        None => {}
     }
 
     // Mutation information from the original commit must be stripped.
@@ -2131,7 +2135,7 @@ mod tests {
             };
             let result = do_pushrebase(&ctx, &repo, &config, &book, &hgcss, None).await;
             match result {
-                Err(PushrebaseError::RootTooFarBehind) => (),
+                Err(PushrebaseError::RootTooFarBehind) => {}
                 _ => panic!("push-rebase should have failed because root too far behind"),
             }
 

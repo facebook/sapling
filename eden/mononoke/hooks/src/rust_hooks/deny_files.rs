@@ -74,13 +74,13 @@ impl FileHook for DenyFiles {
         let path = path.to_string();
         for pattern in &self.deny_patterns {
             if pattern.is_match(&path) {
-                return Ok(HookExecution::Rejected(
-                    HookRejectionInfo::new_long(
-                        "Denied filename matched name pattern",
-                        format!("Denied filename '{}' matched name pattern '{}'. Rename or remove this file and try again.", path, pattern)
-                    )
-                )
-            );
+                return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+                    "Denied filename matched name pattern",
+                    format!(
+                        "Denied filename '{}' matched name pattern '{}'. Rename or remove this file and try again.",
+                        path, pattern
+                    ),
+                )));
             }
         }
         Ok(HookExecution::Accepted)

@@ -323,7 +323,7 @@ pub async fn resolve<'a>(
         } else {
             fn changegroup_always_unacceptable() -> bool {
                 false
-            };
+            }
             resolve_pushrebase(
                 ctx,
                 commonheads,
@@ -508,7 +508,7 @@ fn get_post_resolve_infinitepush(
         Some(AllBookmarkPushes::PlainPushes(_)) => {
             return Err(format_err!(
                 "Infinitepush push cannot contain regular bookmarks"
-            ))
+            ));
         }
         Some(AllBookmarkPushes::Inifinitepush(bookmark_push)) => Some(bookmark_push),
         None => None,
@@ -539,8 +539,8 @@ fn get_post_resolve_push(
     let bookmark_pushes = match maybe_bonsai_bookmark_push {
         Some(AllBookmarkPushes::Inifinitepush(_bookmark_push)) => {
             return Err(format_err!(
-            "This should actually be impossible: non-infinitepush push with infinitepush bookmarks"
-        ))
+                "This should actually be impossible: non-infinitepush push with infinitepush bookmarks"
+            ));
         }
         Some(AllBookmarkPushes::PlainPushes(bookmark_pushes)) => bookmark_pushes,
         None => vec![],

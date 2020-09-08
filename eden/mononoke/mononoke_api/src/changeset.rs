@@ -697,7 +697,7 @@ impl ChangesetContext {
             match ancestor.is_ancestor_of(self.id()).await {
                 Ok(false) => return stream::empty().boxed(),
                 Err(e) => return stream::once(async { Err(e) }).boxed(),
-                _ => (),
+                _ => {}
             }
         }
 
@@ -709,7 +709,7 @@ impl ChangesetContext {
             match self.is_ancestor_of(exclude_changeset.id()).await {
                 Ok(true) => return stream::empty().boxed(),
                 Err(e) => return stream::once(async { Err(e) }).boxed(),
-                _ => (),
+                _ => {}
             }
         }
 

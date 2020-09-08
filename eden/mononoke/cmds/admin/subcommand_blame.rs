@@ -348,27 +348,32 @@ fn subcommand_compute_blame(
                                 .from_err()
                                 .and_then(move |file_unode| {
                                     let csid = *file_unode.linknode();
-                                    csid
-                                        .load(ctx.clone(), &blobstore)
+                                    csid.load(ctx.clone(), &blobstore)
                                         .compat()
                                         .from_err()
                                         .and_then({
                                             cloned!(ctx, repo, path);
                                             move |bonsai| {
-                                                let copy_from = bonsai.file_changes_map()
+                                                let copy_from = bonsai
+                                                    .file_changes_map()
                                                     .get(&path)
                                                     .and_then(|file_change| file_change.as_ref())
-                                                    .and_then(|file_change| file_change.copy_from().clone());
+                                                    .and_then(|file_change| {
+                                                        file_change.copy_from().clone()
+                                                    });
                                                 match copy_from {
                                                     None => future::ok(None).left_future(),
-                                                    Some((r_path, r_csid)) => {
-                                                        find_leaf(ctx, repo, *r_csid, r_path.clone())
-                                                            .map({
-                                                                cloned!(r_path);
-                                                                move |r_unode_id| Some((r_unode_id, r_path))
-                                                            })
-                                                            .right_future()
-                                                    }
+                                                    Some((r_path, r_csid)) => find_leaf(
+                                                        ctx,
+                                                        repo,
+                                                        *r_csid,
+                                                        r_path.clone(),
+                                                    )
+                                                    .map({
+                                                        cloned!(r_path);
+                                                        move |r_unode_id| Some((r_unode_id, r_path))
+                                                    })
+                                                    .right_future(),
                                                 }
                                             }
                                         })
@@ -379,16 +384,16 @@ fn subcommand_compute_blame(
                                                 .map(|unode_id| (*unode_id, path.clone()))
                                                 .chain(copy_parent)
                                                 .collect();
-                                            (
-                                                (csid, path, file_unode_id),
-                                                parents,
-                                            )
+                                            ((csid, path, file_unode_id), parents)
                                         })
                                 })
                         }
                     },
                     {
-                        move |(csid, path, file_unode_id), parents: Iter<Result<(Bytes, Blame), BlameRejected>>| {
+                        move |
+                            (csid, path, file_unode_id),
+                            parents: Iter<Result<(Bytes, Blame), BlameRejected>>,
+                        | {
                             cloned!(path);
                             {
                                 cloned!(ctx, repo);
@@ -419,11 +424,10 @@ fn subcommand_compute_blame(
                 )
             }
         })
-        .and_then(|result| {
-            Ok(result.ok_or_else(|| Error::msg("cycle found"))??)
-        })
+        .and_then(|result| Ok(result.ok_or_else(|| Error::msg("cycle found"))??))
         .and_then(move |(content, blame)| {
-            blame_hg_annotate(ctx, repo, content, blame, line_number).map(|annotate| println!("{}", annotate))
+            blame_hg_annotate(ctx, repo, content, blame, line_number)
+                .map(|annotate| println!("{}", annotate))
         })
 }
 

@@ -206,7 +206,7 @@ fn check_bonsai_phase_is_public(
                                 return Some(n.clone());
                             }
                         }
-                        _ => (),
+                        _ => {}
                     }
                 }
                 return None;
@@ -231,7 +231,7 @@ fn check_linknode_populated(
             for n in r.via.iter().rev() {
                 match n {
                     Node::HgChangeset(_via_hg_cs_id) => return Some(n.clone()),
-                    _ => (),
+                    _ => {}
                 }
             }
             return None;
@@ -279,7 +279,7 @@ impl ValidateRoute {
         // Only track changesets for the via information
         match node {
             Node::HgChangeset(_) | Node::BonsaiChangeset(_) => next_via.push(node.clone()),
-            _ => (),
+            _ => {}
         };
         Self {
             src_node: node,

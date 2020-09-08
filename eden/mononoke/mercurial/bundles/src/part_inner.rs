@@ -238,7 +238,6 @@ impl Decoder for EmptyUnpacker {
 
 #[cfg(test)]
 mod test {
-
     use crate::changegroup::unpacker::CgVersion;
     use crate::part_header::{PartHeaderBuilder, PartHeaderType};
     use crate::part_inner::*;

@@ -751,15 +751,15 @@ pub fn setup_common<'a>(
         if !error_as_data_node_types.is_empty() || !error_as_data_edge_types.is_empty() {
             if !readonly_storage.0 {
                 return Err(format_err!(
-                "Error as data could mean internal state is invalid, run with --readonly-storage to ensure no risk of persisting it"
-            ));
+                    "Error as data could mean internal state is invalid, run with --readonly-storage to ensure no risk of persisting it"
+                ));
             }
             warn!(
-            logger,
-            "Error as data enabled, walk results may not be complete. Errors as data enabled for node types {:?} edge types {:?}",
-            sort_by_string(&error_as_data_node_types),
-            sort_by_string(&error_as_data_edge_types)
-        );
+                logger,
+                "Error as data enabled, walk results may not be complete. Errors as data enabled for node types {:?} edge types {:?}",
+                sort_by_string(&error_as_data_node_types),
+                sort_by_string(&error_as_data_edge_types)
+            );
         }
 
         let mysql_options = args::parse_mysql_options(&matches);

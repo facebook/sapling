@@ -794,18 +794,18 @@ mod test {
         }
 
         match params(p, 5) {
-            IResult::Error(Err::Position(ErrorKind::Alt, _)) => (),
+            IResult::Error(Err::Position(ErrorKind::Alt, _)) => {}
             bad => panic!("bad result {:?}", bad),
         }
 
         match params(&p[..3], 1) {
-            IResult::Incomplete(_) => (),
+            IResult::Incomplete(_) => {}
             bad => panic!("bad result {:?}", bad),
         }
 
         for l in 0..p.len() {
             match params(&p[..l], 4) {
-                IResult::Incomplete(_) => (),
+                IResult::Incomplete(_) => {}
                 IResult::Done(remain, ref kv) => {
                     assert_eq!(kv.len(), 4);
                     assert!(
@@ -876,7 +876,7 @@ mod test {
         }
 
         match params(&star[..4], 2) {
-            IResult::Incomplete(_) => (),
+            IResult::Incomplete(_) => {}
             IResult::Done(remain, kv) => panic!("unexpected Done remain {:?} kv {:?}", remain, kv),
             IResult::Error(err) => panic!("unexpected error {:?}", err),
         }
@@ -957,7 +957,7 @@ mod test {
         b"foo".to_vec() => b"0000000000000000000000000000000000000000extra".to_vec(),
         };
         match parseval(&kv, "foo", hashlist) {
-            Err(_) => (),
+            Err(_) => {}
             _ => panic!(
                 "Paramval parse failed: Did not raise an error for param\
                  with trailing characters."
@@ -971,7 +971,7 @@ mod test {
         b"foo".to_vec() => b"0000000000000000000000000000000000000000extra".to_vec(),
         };
         match parseval_default(&kv, "foo", hashlist) {
-            Err(_) => (),
+            Err(_) => {}
             _ => panic!(
                 "paramval_default parse failed: Did not raise an error for param\
                  with trailing characters."
@@ -1190,7 +1190,7 @@ mod test_parse {
         for l in 0..inbytes.len() - 1 {
             let mut buf = BytesMut::from(inbytes[0..l].to_vec());
             match parse_request(&mut buf) {
-                Ok(None) => (),
+                Ok(None) => {}
                 Ok(Some(val)) => panic!(
                     "BAD PASS: inp >>{:?}<< lpassed unexpectedly val {:?} pass with {}/{} bytes",
                     Bytes::from(inbytes.to_vec()),

@@ -842,7 +842,7 @@ mod test {
             ) -> Result<Vec<ChangesetId>, Error> {
                 Ok(vec![])
             }
-        };
+        }
         let history = list_file_history(
             ctx.clone(),
             repo.clone(),
@@ -870,7 +870,7 @@ mod test {
             ) -> Result<Vec<ChangesetId>, Error> {
                 Ok(cs_ids.into_iter().next().into_iter().collect())
             }
-        };
+        }
         let history = list_file_history(
             ctx,
             repo,

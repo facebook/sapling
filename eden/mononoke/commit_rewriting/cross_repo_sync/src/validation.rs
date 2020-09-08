@@ -265,17 +265,19 @@ pub fn list_all_filenode_ids(
     );
     mf_id
         .list_all_entries(ctx.clone(), repo.get_blobstore())
-        .filter_map(move |(path, entry)| match entry {
-            Entry::Leaf(leaf_payload) => {
-                match path {
-                    Some(path) => Some((path, leaf_payload)),
-                    None => {
-                        // Leaf shouldn't normally be None
-                        None
+        .filter_map(move |(path, entry)| {
+            match entry {
+                Entry::Leaf(leaf_payload) => {
+                    match path {
+                        Some(path) => Some((path, leaf_payload)),
+                        None => {
+                            // Leaf shouldn't normally be None
+                            None
+                        }
                     }
                 }
+                Entry::Tree(_) => None,
             }
-            Entry::Tree(_) => None,
         })
         .collect_to::<HashMap<_, _>>()
         .inspect(move |res| {

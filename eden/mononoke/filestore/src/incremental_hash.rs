@@ -13,9 +13,7 @@ use std::convert::TryInto;
 
 use mononoke_types::{hash, typed_hash, ContentId};
 
-pub fn hash_bytes<H>(mut hasher: impl Hasher<H>, bytes: &Bytes) -> H
-where
-{
+pub fn hash_bytes<H>(mut hasher: impl Hasher<H>, bytes: &Bytes) -> H {
     hasher.update(&bytes);
     hasher.finish()
 }

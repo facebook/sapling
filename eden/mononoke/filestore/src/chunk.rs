@@ -349,7 +349,7 @@ mod test {
         struct StrictStream {
             chunks: Vec<Bytes>,
             done: bool,
-        };
+        }
 
         impl Stream for StrictStream {
             type Item = Bytes;

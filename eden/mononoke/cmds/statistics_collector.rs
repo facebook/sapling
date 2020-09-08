@@ -346,7 +346,9 @@ pub async fn generate_statistics_from_file<P: AsRef<Path>>(
                 info!(
                     ctx.logger(),
                     "Changeset {} with timestamp {} was created more than {} seconds after previous, calculating statistics for it",
-                    hg_cs_id, cs_timestamp, REQUIRED_COMMITS_DISTANCE
+                    hg_cs_id,
+                    cs_timestamp,
+                    REQUIRED_COMMITS_DISTANCE
                 );
                 let (old_manifest, manifest) = try_join!(
                     get_manifest_from_changeset(ctx, repo, &old_hg_cs_id,),

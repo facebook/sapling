@@ -995,7 +995,7 @@ impl HgCommands for RepoClient {
             n: HgChangesetId,
             bottom: HgChangesetId,
             wait_cs: Option<CS>,
-        };
+        }
 
         impl<CS> ParentStream<CS> {
             fn new(
@@ -1234,7 +1234,7 @@ impl HgCommands for RepoClient {
                     enum LookupOutcome {
                         HighPriority(HgCommandRes<BytesOld>),
                         LowPriority(HgCommandRes<BytesOld>),
-                    };
+                    }
 
                     let outcome = match resolved_cids {
                         Single(csid) => {

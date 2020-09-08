@@ -328,7 +328,7 @@ fn parse_repo_config(
             return Err(anyhow!(
                 "Repo {} participates in more than one commit sync config",
                 repoid,
-            ))
+            ));
         }
     };
 

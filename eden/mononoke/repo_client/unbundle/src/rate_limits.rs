@@ -87,18 +87,20 @@ fn enforce_commit_rate_limits_on_commits<'a, I: Iterator<Item = &'a BonsaiChange
     join_all(checks)
         .map(|_| ())
         .timeout(Duration::from_secs(limit.timeout as u64))
-        .or_else(move |err| match err.into_inner() {
-            Some((author, count)) => Err(BundleResolverError::RateLimitExceeded {
-                limit,
-                entity: author,
-                value: count as f64,
-            }),
-            // into_inner() being None means we had a timeout. We fail open in this case.
-            None => {
-                ctx.scuba()
-                    .clone()
-                    .log_with_msg("Rate Limit: Timed out", None);
-                Ok(())
+        .or_else(move |err| {
+            match err.into_inner() {
+                Some((author, count)) => Err(BundleResolverError::RateLimitExceeded {
+                    limit,
+                    entity: author,
+                    value: count as f64,
+                }),
+                // into_inner() being None means we had a timeout. We fail open in this case.
+                None => {
+                    ctx.scuba()
+                        .clone()
+                        .log_with_msg("Rate Limit: Timed out", None);
+                    Ok(())
+                }
             }
         })
         .boxify()

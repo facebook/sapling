@@ -317,7 +317,7 @@ where
     fn poll_eos(mut sink: PartSink<W>, eos_written: bool) -> (Poll<W, Error>, EncodeState<W>) {
         if !eos_written {
             match sink.start_send(Chunk::empty()) {
-                Ok(AsyncSink::Ready) => (),
+                Ok(AsyncSink::Ready) => {}
                 Ok(AsyncSink::NotReady(_)) => {
                     return (Ok(Async::NotReady), EncodeState::EndOfStream(sink, false));
                 }

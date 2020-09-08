@@ -89,7 +89,7 @@ impl<T: Blobstore + Clone> Blobstore for PackBlob<T> {
                 StorageFormat::Packed(packed) => pack::decode_pack(meta, packed, key.clone())
                     .with_context(|| format!("While decoding pack for {:?}", key))?,
                 StorageFormat::UnknownField(e) => {
-                    return Err(format_err!("StorageFormat::UnknownField {:?}", e))
+                    return Err(format_err!("StorageFormat::UnknownField {:?}", e));
                 }
             };
 

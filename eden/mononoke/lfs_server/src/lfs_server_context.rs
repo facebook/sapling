@@ -126,7 +126,7 @@ impl LfsServerContext {
                 None => {
                     return Err(LfsServerContextErrorKind::RepositoryDoesNotExist(
                         repository,
-                    ))
+                    ));
                 }
             }
         };

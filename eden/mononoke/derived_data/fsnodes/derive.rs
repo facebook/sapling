@@ -70,18 +70,26 @@ pub(crate) fn derive_fsnode(
                     },
                     |leaf_info, _sender| check_fsnode_leaf(leaf_info),
                 )
-                .and_then(move |maybe_tree_id| match maybe_tree_id {
-                    Some(tree_id) => future::ok(tree_id).left_future(),
-                    None => {
-                        // All files have been deleted, generate empty fsnode
-                        let tree_info = TreeInfo {
-                            path: None,
-                            parents,
-                            subentries: Default::default(),
-                        };
-                        create_fsnode(ctx, blobstore, None, prefetched_content_metadata, tree_info)
+                .and_then(move |maybe_tree_id| {
+                    match maybe_tree_id {
+                        Some(tree_id) => future::ok(tree_id).left_future(),
+                        None => {
+                            // All files have been deleted, generate empty fsnode
+                            let tree_info = TreeInfo {
+                                path: None,
+                                parents,
+                                subentries: Default::default(),
+                            };
+                            create_fsnode(
+                                ctx,
+                                blobstore,
+                                None,
+                                prefetched_content_metadata,
+                                tree_info,
+                            )
                             .map(|(_, tree_id)| tree_id)
                             .right_future()
+                        }
                     }
                 })
             })

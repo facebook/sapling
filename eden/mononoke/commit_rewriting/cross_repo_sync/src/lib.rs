@@ -1333,7 +1333,9 @@ where
             }
             None => {
                 if !source_is_large {
-                    bail!("unexpected wc equivalence update: small repo commit should always remap to large repo");
+                    bail!(
+                        "unexpected wc equivalence update: small repo commit should always remap to large repo"
+                    );
                 }
                 EquivalentWorkingCopyEntry {
                     large_repo_id: source_repoid,

@@ -161,7 +161,7 @@ where
                 self.seen_end,
                 "End of stream reached, but no Part::End noticed"
             ),
-            _ => (), // all good, proceed
+            _ => {} // all good, proceed
         }
         Ok(Async::Ready(part))
     }

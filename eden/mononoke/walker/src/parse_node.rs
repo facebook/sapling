@@ -40,20 +40,20 @@ pub fn parse_node(s: &str) -> Result<Node, Error> {
     }
     let node_type = NodeType::from_str(parts[0])?;
     match (node_type, parts.len()) {
-        (NodeType::Root, 1) | (NodeType::PublishedBookmarks, 1) => (),
+        (NodeType::Root, 1) | (NodeType::PublishedBookmarks, 1) => {}
         (NodeType::Root, _) | (NodeType::PublishedBookmarks, _) => {
             return Err(format_err!(
                 "parse_node expects {} not to be followed by any parts",
                 node_type
-            ))
+            ));
         }
         (_, l) if l < 2 => {
             return Err(format_err!(
                 "parse_node for {} requires at least NodeType:node_key",
                 node_type
-            ))
+            ));
         }
-        _ => (),
+        _ => {}
     }
 
     let parts = &parts[1..];

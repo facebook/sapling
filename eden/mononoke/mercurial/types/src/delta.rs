@@ -501,7 +501,7 @@ mod tests {
         };
 
         match apply(text, &delta) {
-            Err(_) => (),
+            Err(_) => {}
             Ok(res) => panic!("Unexpected success: {:?}", res),
         }
     }
@@ -518,7 +518,7 @@ mod tests {
         };
 
         match apply(text, &delta) {
-            Err(_) => (),
+            Err(_) => {}
             Ok(res) => panic!("Unexpected success: {:?}", res),
         }
     }

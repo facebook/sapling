@@ -88,13 +88,13 @@ pub fn decode_pack(
                     return Err(format_err!(
                         "Unexpected PackedValue::Single on key {}",
                         &key
-                    ))
+                    ));
                 }
                 PackedValue::ZstdFromDict(v) => {
-                    return Ok(decode_zstd_from_dict(pack_meta, &key, v, possible_dicts)?)
+                    return Ok(decode_zstd_from_dict(pack_meta, &key, v, possible_dicts)?);
                 }
                 PackedValue::UnknownField(e) => {
-                    return Err(format_err!("PackedValue::UnknownField {:?}", e))
+                    return Err(format_err!("PackedValue::UnknownField {:?}", e));
                 }
             }
         }

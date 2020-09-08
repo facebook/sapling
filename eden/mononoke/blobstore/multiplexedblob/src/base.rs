@@ -292,7 +292,7 @@ async fn blobstore_get(
                     (blobstore_id, Err(error)) => {
                         errors.insert(blobstore_id, error);
                     }
-                    (_, Ok(None)) => (),
+                    (_, Ok(None)) => {}
                 }
             }
 
@@ -545,7 +545,7 @@ impl Blobstore for MultiplexedBlobstoreBase {
                             (blobstore_id, Err(error)) => {
                                 errors.insert(blobstore_id, error);
                             }
-                            (_, Ok(false)) => (),
+                            (_, Ok(false)) => {}
                         }
                     }
                     if errors.is_empty() {

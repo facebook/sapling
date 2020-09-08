@@ -52,7 +52,9 @@ pub enum MononokeError {
         identities: String,
         reponame: String,
     },
-    #[error("permission denied: access to repo {reponame} on behalf of {service_identity} not permitted for {identities}")]
+    #[error(
+        "permission denied: access to repo {reponame} on behalf of {service_identity} not permitted for {identities}"
+    )]
     ServicePermissionDenied {
         identities: String,
         reponame: String,

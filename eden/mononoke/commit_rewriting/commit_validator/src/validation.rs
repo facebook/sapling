@@ -207,7 +207,7 @@ impl ValidationHelper {
                     large_repo_id,
                     small_repo_id,
                     cs_id
-                ))
+                ));
             }
             Some(RewrittenAs(cs_id, Some(version_name))) => Some((Small(cs_id), version_name)),
         })
@@ -275,7 +275,10 @@ impl ValidationHelper {
                         // p1 does not even have an entry at this path, definitely
                         // something fishy (we really should not have gotten ChangedTo
                         // in the first place).
-                        return Err(format_err!("parent's manifest lacks a file at {:?}, but we were told the diff is Changed, not Added", mpath));
+                        return Err(format_err!(
+                            "parent's manifest lacks a file at {:?}, but we were told the diff is Changed, not Added",
+                            mpath
+                        ));
                     }
                     Some(Entry::Tree(_)) => {
                         // p1 has this path as a directory, it's a true change
@@ -946,7 +949,7 @@ async fn validate_topological_order<'a>(
                             small_cs_id,
                             small_repo_id,
                             large_repo_id,
-                        ))
+                        ));
                     }
                 };
                 Ok((small_parent, remapping_of_small_parent))

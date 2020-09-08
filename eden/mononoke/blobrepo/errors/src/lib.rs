@@ -114,15 +114,21 @@ pub enum ErrorKind {
     BonsaiMappingNotFound(HgChangesetId),
     #[error("Root path wasn't expected at this context")]
     UnexpectedRootPath,
-    #[error("Incorrect copy info: not found a file version {from_path} {from_node} the file {to_path} {to_node} was copied from")]
+    #[error(
+        "Incorrect copy info: not found a file version {from_path} {from_node} the file {to_path} {to_node} was copied from"
+    )]
     IncorrectCopyInfo {
         from_path: MPath,
         from_node: HgFileNodeId,
         to_path: MPath,
         to_node: HgFileNodeId,
     },
-    #[error("CaseConflict: the changes introduced by this commit have conflicting case. The first offending path is '{0}'. Resolve the conflict.")]
+    #[error(
+        "CaseConflict: the changes introduced by this commit have conflicting case. The first offending path is '{0}'. Resolve the conflict."
+    )]
     InternalCaseConflict(MPath),
-    #[error("CaseConflict: the changes introduced by this commit conflict with existing files in the repository. The first conflicting path in this commit was '{0}', and conflicted with '{1}' in the repository. Resolve the conflict.")]
+    #[error(
+        "CaseConflict: the changes introduced by this commit conflict with existing files in the repository. The first conflicting path in this commit was '{0}', and conflicted with '{1}' in the repository. Resolve the conflict."
+    )]
     ExternalCaseConflict(MPath, MPath),
 }

@@ -109,7 +109,7 @@ impl BlameRejected {
                 return Err(format_err!(
                     "BlameRejected contains unknown variant: {}",
                     id
-                ))
+                ));
             }
         };
         Ok(rejected)

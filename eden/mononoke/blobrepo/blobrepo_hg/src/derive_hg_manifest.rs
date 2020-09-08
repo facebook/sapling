@@ -61,18 +61,20 @@ pub fn derive_hg_manifest(
             move |leaf_info, _sender| create_hg_file(ctx.clone(), blobstore.clone(), leaf_info)
         },
     )
-    .and_then(move |tree_id| match tree_id {
-        Some(traced_tree_id) => future::ok(traced_tree_id.into_untraced()).left_future(),
-        None => {
-            // All files have been deleted, generate empty **root** manifest
-            let tree_info = TreeInfo {
-                path: None,
-                parents,
-                subentries: Default::default(),
-            };
-            create_hg_manifest(ctx, blobstore, None, tree_info)
-                .map(|(_, traced_tree_id)| traced_tree_id.into_untraced())
-                .right_future()
+    .and_then(move |tree_id| {
+        match tree_id {
+            Some(traced_tree_id) => future::ok(traced_tree_id.into_untraced()).left_future(),
+            None => {
+                // All files have been deleted, generate empty **root** manifest
+                let tree_info = TreeInfo {
+                    path: None,
+                    parents,
+                    subentries: Default::default(),
+                };
+                create_hg_manifest(ctx, blobstore, None, tree_info)
+                    .map(|(_, traced_tree_id)| traced_tree_id.into_untraced())
+                    .right_future()
+            }
         }
     })
 }
