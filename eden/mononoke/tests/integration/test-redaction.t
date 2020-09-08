@@ -400,8 +400,49 @@ Update to log_only commit
   log-only
 
 Check logging
-  $ cat "$TESTTMP/censored_scuba.json"
-  {"int":{"time":*},"normal":{"key":"content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2","operation":"GET","session_uuid":"*","unix_username":"None"}} (glob)
-  {"int":{"time":*},"normal":{"key":"content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2","operation":"GET","session_uuid":"*","unix_username":"None"}} (glob)
-  {"int":{"time":*},"normal":{"key":"content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2","operation":"GET","session_uuid":"*","unix_username":"None"}} (glob)
-  {"int":{"time":*},"normal":{"key":"content.blake2.8e86b59a7708c54ab97f95db4a39e27886e5d3775c24a7d0d8106f82b3d38d49","operation":"GET","session_uuid":"*","unix_username":"None"}} (glob)
+  $ wait_for_json_record_count "$TESTTMP/censored_scuba.json" 4
+  $ jq -S < "$TESTTMP/censored_scuba.json"
+  {
+    "int": {
+      "time": * (glob)
+    },
+    "normal": {
+      "key": "content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2",
+      "operation": "GET",
+      "session_uuid": "*", (glob)
+      "unix_username": "None"
+    }
+  }
+  {
+    "int": {
+      "time": * (glob)
+    },
+    "normal": {
+      "key": "content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2",
+      "operation": "GET",
+      "session_uuid": "*", (glob)
+      "unix_username": "None"
+    }
+  }
+  {
+    "int": {
+      "time": * (glob)
+    },
+    "normal": {
+      "key": "content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2",
+      "operation": "GET",
+      "session_uuid": "*", (glob)
+      "unix_username": "None"
+    }
+  }
+  {
+    "int": {
+      "time": * (glob)
+    },
+    "normal": {
+      "key": "content.blake2.8e86b59a7708c54ab97f95db4a39e27886e5d3775c24a7d0d8106f82b3d38d49",
+      "operation": "GET",
+      "session_uuid": "*", (glob)
+      "unix_username": "None"
+    }
+  }
