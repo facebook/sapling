@@ -36,10 +36,9 @@ def _find_default_daemon_binary() -> Optional[str]:
         suffix = ""
         candidate = os.path.normpath(os.path.join(cli_dir, "../libexec/eden/edenfs"))
     else:
-        # On Windows, edenfs.exe is normally installed in the same directory as
-        # edenfsctl.exe
+        # On Windows, edenfs.exe is installed in the libexec sibling directory
         suffix = ".exe"
-        candidate = os.path.normpath(os.path.join(cli_dir, "edenfs.exe"))
+        candidate = os.path.normpath(os.path.join(cli_dir, "../libexec/edenfs.exe"))
     permissions = os.R_OK | os.X_OK
     if os.access(candidate, permissions):
         return candidate
