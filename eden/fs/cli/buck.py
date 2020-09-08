@@ -56,7 +56,18 @@ def stop_buckd_for_path(path: str) -> None:
             buckversion = f.read().strip()
 
     env = os.environ.copy()
-    env["BUCKVERSION"] = buckversion
+
+    # Buck's version selection is currently having problems on macOS
+    if sys.platform != "darwin":
+        env["BUCKVERSION"] = buckversion
+
+    # Clean out par related environment so that we don't cause problems
+    # for our child process
+    for k in os.environ.keys():
+        if k in ("DYLD_LIBRARY_PATH", "DYLD_INSERT_LIBRARIES", "PAR_LAUNCH_TIMESTAMP"):
+            del env[k]
+        elif k.startswith("FB_PAR") or k.startswith("PYTHON"):
+            del env[k]
 
     subprocess.run(
         ["buck", "kill"],
