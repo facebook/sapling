@@ -104,7 +104,7 @@ class EdenFSProcess(NamedTuple):
         distinguishing failure to get build info vs dev builds that have an empty
         BuildInfo.)
         """
-        info = get_build_info_from_pid(self.pid)
+        info = get_build_info_from_pid(self.pid, self.eden_dir)
         if info is None:
             return BuildInfo()
         return info
@@ -113,7 +113,9 @@ class EdenFSProcess(NamedTuple):
 try:
     from common.base.pid_info.py import build_info_lib  # @manual
 
-    def get_build_info_from_pid(pid: int) -> Optional[BuildInfo]:
+    def get_build_info_from_pid(
+        pid: int, eden_dir: Optional[Path]
+    ) -> Optional[BuildInfo]:
         build_info_dict = build_info_lib.get_build_info_from_pid(pid)
         return BuildInfo(
             package_name=typing.cast(str, build_info_dict.get("package_name", "")),
@@ -133,10 +135,29 @@ try:
 
 except ImportError:
 
-    def get_build_info_from_pid(pid: int) -> Optional[BuildInfo]:
-        # TODO: We could potentially try making a getExportedValues() thrift call to the
-        # process if get_build_info_from_pid() is unavailable.
-        return None
+    def get_build_info_from_pid(
+        pid: int, eden_dir: Optional[Path]
+    ) -> Optional[BuildInfo]:
+        if eden_dir is None:
+            return None
+
+        try:
+            with eden.thrift.legacy.create_thrift_client(
+                eden_dir=str(eden_dir), timeout=0.5
+            ) as client:
+                exported_values = client.getExportedValues()
+        except Exception as ex:
+            log.warning(f"Failed to query build info from EdenFS process {pid}: {ex}")
+            return None
+
+        return BuildInfo(
+            package_name=exported_values.get("build_package_name", ""),
+            package_version=exported_values.get("build_package_version", ""),
+            package_release=exported_values.get("build_package_release", ""),
+            revision=exported_values.get("build_revision", ""),
+            upstream_revision="",
+            build_time=int(exported_values.get("build_time_unix", 0)),
+        )
 
 
 class ProcUtils(abc.ABC):
