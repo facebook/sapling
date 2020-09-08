@@ -34,7 +34,7 @@ pub async fn get_commit_sync_outcome<'a, M: SyncedCommitMapping>(
     mapping: &'a M,
 ) -> Result<Option<CommitSyncOutcome>, Error> {
     let remapped = mapping
-        .get(
+        .get_one(
             ctx.clone(),
             source_repo_id.0,
             source_cs_id.0,

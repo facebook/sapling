@@ -531,7 +531,7 @@ pub fn is_already_synced<M: SyncedCommitMapping + Clone + 'static>(
     );
     commit_syncer
         .get_mapping()
-        .get(ctx.clone(), source_repo_id, cs_id.clone(), target_repo_id)
+        .get_one(ctx.clone(), source_repo_id, cs_id.clone(), target_repo_id)
         .map({
             cloned!(ctx);
             move |maybe_mapping| {

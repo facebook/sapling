@@ -103,7 +103,7 @@ pub trait SyncedCommitMapping: Send + Sync {
     ) -> BoxFuture<u64, Error>;
 
     /// Find the mapping entry for a given source commit and target repo
-    fn get(
+    fn get_one(
         &self,
         ctx: CoreContext,
         source_repo_id: RepositoryId,
@@ -147,14 +147,14 @@ impl SyncedCommitMapping for Arc<dyn SyncedCommitMapping> {
         (**self).add_bulk(ctx, entries)
     }
 
-    fn get(
+    fn get_one(
         &self,
         ctx: CoreContext,
         source_repo_id: RepositoryId,
         bcs_id: ChangesetId,
         target_repo_id: RepositoryId,
     ) -> BoxFuture<Option<(ChangesetId, Option<CommitSyncConfigVersion>)>, Error> {
-        (**self).get(ctx, source_repo_id, bcs_id, target_repo_id)
+        (**self).get_one(ctx, source_repo_id, bcs_id, target_repo_id)
     }
 
     fn insert_equivalent_working_copy(
@@ -279,7 +279,7 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
         self.add_many(entries).boxify()
     }
 
-    fn get(
+    fn get_one(
         &self,
         _ctx: CoreContext,
         source_repo_id: RepositoryId,

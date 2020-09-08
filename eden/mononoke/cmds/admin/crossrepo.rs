@@ -268,7 +268,7 @@ async fn subcommand_map(
         .await?;
 
     let mapped = mapping
-        .get(ctx.clone(), source_repo_id, source_hash, target_repo_id)
+        .get_one(ctx.clone(), source_repo_id, source_hash, target_repo_id)
         .compat()
         .await?;
 
@@ -425,7 +425,7 @@ async fn update_large_repo_bookmarks(
                 ..
             } => {
                 let maybe_large_cs_id = mapping
-                    .get(
+                    .get_one(
                         ctx.clone(),
                         small_repo.get_repoid(),
                         *target_cs_id,

@@ -88,7 +88,7 @@ async fn add_and_get<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {
     );
 
     let result = mapping
-        .get(ctx.clone(), REPO_ZERO, bonsai::ONES_CSID, REPO_ONE)
+        .get_one(ctx.clone(), REPO_ZERO, bonsai::ONES_CSID, REPO_ONE)
         .compat()
         .await
         .expect("Get failed")
@@ -96,7 +96,7 @@ async fn add_and_get<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {
         .0;
     assert_eq!(result, bonsai::TWOS_CSID);
     let result = mapping
-        .get(ctx.clone(), REPO_ONE, bonsai::TWOS_CSID, REPO_ZERO)
+        .get_one(ctx.clone(), REPO_ONE, bonsai::TWOS_CSID, REPO_ZERO)
         .compat()
         .await
         .expect("Get failed")
@@ -108,7 +108,7 @@ async fn add_and_get<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {
 async fn missing<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {
     let ctx = CoreContext::test_mock(fb);
     let result = mapping
-        .get(ctx.clone(), REPO_ONE, bonsai::TWOS_CSID, REPO_ZERO)
+        .get_one(ctx.clone(), REPO_ONE, bonsai::TWOS_CSID, REPO_ZERO)
         .compat()
         .await
         .expect("Failed to fetch missing changeset (should succeed with None instead)");

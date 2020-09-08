@@ -207,7 +207,7 @@ impl PushRedirector {
                     let (repo, cs_id) = match large_to_small.get(&cs_id) {
                         Some(&small_cs_id) => (small_repo, small_cs_id),
                         None => match mapping
-                            .get(ctx.clone(), large_repo_id, cs_id, small_repo_id)
+                            .get_one(ctx.clone(), large_repo_id, cs_id, small_repo_id)
                             .compat()
                             .await?
                         {

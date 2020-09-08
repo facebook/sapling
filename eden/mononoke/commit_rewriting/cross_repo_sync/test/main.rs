@@ -173,7 +173,7 @@ async fn check_mapping<M>(
     let mapping = config.get_mapping();
     assert_eq!(
         mapping
-            .get(
+            .get_one(
                 ctx.clone(),
                 source_repoid,
                 source_bcs_id,
@@ -189,7 +189,7 @@ async fn check_mapping<M>(
     if let Some(expected_bcs_id) = expected_bcs_id {
         assert_eq!(
             mapping
-                .get(
+                .get_one(
                     ctx.clone(),
                     destination_repoid,
                     expected_bcs_id,
