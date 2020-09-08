@@ -1367,6 +1367,7 @@ function setup_hg_modern_lfs() {
 [remotefilelog]
 lfs=True
 useruststore=True
+getpackversion = 2
 [worker]
 rustworkers=True
 [extensions]

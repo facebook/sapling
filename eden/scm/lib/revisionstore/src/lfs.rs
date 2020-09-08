@@ -37,6 +37,7 @@ use tracing::info_span;
 use url::Url;
 
 use async_runtime::block_on_future;
+use auth::{Auth, AuthConfig};
 use configparser::{
     config::ConfigSet,
     hg::{ByteCount, ConfigSetHgExt},
@@ -89,6 +90,7 @@ enum LfsBlobsStore {
 
 struct HttpLfsRemote {
     url: Url,
+    auth: Option<Auth>,
     user_agent: String,
     concurrent_fetches: usize,
     backoff_times: Vec<f32>,
@@ -895,10 +897,11 @@ impl LfsRemoteInner {
     }
 
     async fn send_with_retry(
-        client: HttpClient,
+        client: &HttpClient,
+        auth: Option<&Auth>,
         method: Method,
         url: Url,
-        user_agent: String,
+        user_agent: &str,
         backoff_times: Vec<f32>,
         request_timeout: Duration,
         add_extra: impl Fn(Request) -> Request,
@@ -907,10 +910,20 @@ impl LfsRemoteInner {
         let mut rng = thread_rng();
 
         loop {
-            let req = Request::new(url.clone(), method)
+            let mut req = Request::new(url.clone(), method)
                 .header("Accept", "application/vnd.git-lfs+json")
                 .header("Content-Type", "application/vnd.git-lfs+json")
                 .header("User-Agent", &user_agent);
+
+            if let Some(auth) = &auth {
+                if let (Some(cert), Some(key)) = (&auth.cert, &auth.key) {
+                    req = req.creds(cert, key)?;
+                }
+
+                if let Some(ca) = &auth.cacerts {
+                    req = req.cainfo(ca)?;
+                }
+            }
 
             let req = add_extra(req);
 
@@ -990,10 +1003,11 @@ impl LfsRemoteInner {
 
         let response_fut = async move {
             LfsRemoteInner::send_with_retry(
-                http.client.clone(),
+                &http.client,
+                http.auth.as_ref(),
                 Method::Post,
                 http.url.join("objects/batch")?,
-                http.user_agent.clone(),
+                &http.user_agent,
                 http.backoff_times.clone(),
                 http.request_timeout,
                 move |builder| builder.body(batch_json.clone()),
@@ -1011,8 +1025,9 @@ impl LfsRemoteInner {
     }
 
     async fn process_action(
-        client: HttpClient,
-        user_agent: String,
+        client: &HttpClient,
+        auth: Option<&Auth>,
+        user_agent: &str,
         backoff_times: Vec<f32>,
         request_timeout: Duration,
         op: Operation,
@@ -1035,6 +1050,7 @@ impl LfsRemoteInner {
         let url = Url::from_str(&action.href.to_string())?;
         let data = LfsRemoteInner::send_with_retry(
             client,
+            auth,
             method,
             url,
             user_agent,
@@ -1097,8 +1113,6 @@ impl LfsRemoteInner {
             };
 
             for (op, action) in actions.drain() {
-                let client = http.client.clone();
-                let user_agent = http.user_agent.clone();
                 let backoff_times = http.backoff_times.clone();
                 let request_timeout = http.request_timeout.clone();
 
@@ -1107,8 +1121,9 @@ impl LfsRemoteInner {
                 let write_to_store = write_to_store.clone();
                 let fut = async move {
                     LfsRemoteInner::process_action(
-                        client,
-                        user_agent,
+                        &http.client,
+                        http.auth.as_ref(),
+                        &http.user_agent,
                         backoff_times,
                         request_timeout,
                         op,
@@ -1193,6 +1208,8 @@ impl LfsRemote {
                 bail!("Unsupported url: {}", url);
             }
 
+            let auth = AuthConfig::new(&config).auth_for_url(&url);
+
             let user_agent = config.get_or("experimental", "lfs.user-agent", || {
                 "mercurial/revisionstore".to_string()
             })?;
@@ -1212,6 +1229,7 @@ impl LfsRemote {
                 move_after_upload,
                 remote: LfsRemoteInner::Http(HttpLfsRemote {
                     url,
+                    auth,
                     user_agent,
                     concurrent_fetches,
                     backoff_times,
