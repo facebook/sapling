@@ -36,7 +36,8 @@ use mononoke_types::hash::Sha256;
 
 use crate::errors::ErrorKind;
 use crate::lfs_server_context::RepositoryRequestContext;
-use crate::middleware::{LfsMethod, ScubaKey, ScubaMiddlewareState};
+use crate::middleware::{HttpScubaKey, LfsMethod, ScubaMiddlewareState};
+use crate::scuba::LfsScubaKey;
 
 define_stats! {
     prefix ="mononoke.lfs.upload";
@@ -297,7 +298,7 @@ where
 
     let res = try_join!(internal_upload, upstream_upload, consume_stream);
 
-    ScubaMiddlewareState::maybe_add(scuba, ScubaKey::RequestBytesReceived, received);
+    ScubaMiddlewareState::maybe_add(scuba, HttpScubaKey::RequestBytesReceived, received);
 
     res.map(|_| ())
 }
@@ -317,12 +318,12 @@ async fn sync_internal_and_upstream(
     match res {
         Some(stream) => {
             // We have the data, so presumably upstream does not have it.
-            ScubaMiddlewareState::maybe_add(scuba, ScubaKey::UploadSync, "internal_to_upstream");
+            ScubaMiddlewareState::maybe_add(scuba, LfsScubaKey::UploadSync, "internal_to_upstream");
             upstream_upload(ctx, oid, size, stream.compat()).await?
         }
         None => {
             // We do not have the data. Get it from upstream.
-            ScubaMiddlewareState::maybe_add(scuba, ScubaKey::UploadSync, "upstream_to_internal");
+            ScubaMiddlewareState::maybe_add(scuba, LfsScubaKey::UploadSync, "upstream_to_internal");
             let object = RequestObject {
                 oid: LfsSha256(oid.into_inner()),
                 size,
@@ -386,7 +387,11 @@ pub async fn upload(state: &mut State) -> Result<impl TryIntoResponse, HttpError
         .map_err(HttpError::e400)?;
 
     if let Some(content_length) = content_length {
-        ScubaMiddlewareState::try_borrow_add(state, ScubaKey::RequestContentLength, content_length);
+        ScubaMiddlewareState::try_borrow_add(
+            state,
+            HttpScubaKey::RequestContentLength,
+            content_length,
+        );
     }
 
     STATS::size_bytes.add_value(size as i64);

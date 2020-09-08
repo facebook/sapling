@@ -39,8 +39,9 @@ use mononoke_types::{hash::Sha256, typed_hash::ContentId, MononokeId};
 
 use crate::errors::ErrorKind;
 use crate::lfs_server_context::{RepositoryRequestContext, UriBuilder};
-use crate::middleware::{LfsMethod, RequestStartTime, ScubaKey, ScubaMiddlewareState};
+use crate::middleware::{LfsMethod, RequestStartTime, ScubaMiddlewareState};
 use crate::popularity::allow_consistent_routing;
+use crate::scuba::LfsScubaKey;
 
 define_stats! {
     prefix ="mononoke.lfs.batch";
@@ -400,7 +401,11 @@ fn batch_download_response_objects(
         })
         .collect::<Result<Vec<_>, _>>()?;
 
-    ScubaMiddlewareState::maybe_add(scuba, ScubaKey::BatchInternalMissingBlobs, upstream_blobs);
+    ScubaMiddlewareState::maybe_add(
+        scuba,
+        LfsScubaKey::BatchInternalMissingBlobs,
+        upstream_blobs,
+    );
 
     Ok(responses)
 }
@@ -443,7 +448,7 @@ async fn batch_download(
     pin_mut!(upstream, internal);
 
     let mut update_batch_order = |status| {
-        ScubaMiddlewareState::maybe_add(scuba, ScubaKey::BatchOrder, status);
+        ScubaMiddlewareState::maybe_add(scuba, LfsScubaKey::BatchOrder, status);
     };
 
     update_batch_order("error");
@@ -499,7 +504,7 @@ pub async fn batch(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
 
     ScubaMiddlewareState::maybe_add(
         &mut state.try_borrow_mut::<ScubaMiddlewareState>(),
-        ScubaKey::BatchRequestContextReadyUs,
+        LfsScubaKey::BatchRequestContextReadyUs,
         start_time.elapsed().as_micros_unchecked(),
     );
 
@@ -517,7 +522,7 @@ pub async fn batch(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
 
     ScubaMiddlewareState::maybe_add(
         &mut scuba,
-        ScubaKey::BatchRequestReceivedUs,
+        LfsScubaKey::BatchRequestReceivedUs,
         start_time.elapsed().as_micros_unchecked(),
     );
 
@@ -527,13 +532,13 @@ pub async fn batch(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
 
     ScubaMiddlewareState::maybe_add(
         &mut scuba,
-        ScubaKey::BatchObjectCount,
+        LfsScubaKey::BatchObjectCount,
         request_batch.objects.len(),
     );
 
     ScubaMiddlewareState::maybe_add(
         &mut scuba,
-        ScubaKey::BatchRequestParsedUs,
+        LfsScubaKey::BatchRequestParsedUs,
         start_time.elapsed().as_micros_unchecked(),
     );
 
@@ -544,7 +549,7 @@ pub async fn batch(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
 
     ScubaMiddlewareState::maybe_add(
         &mut scuba,
-        ScubaKey::BatchResponseReadyUs,
+        LfsScubaKey::BatchResponseReadyUs,
         start_time.elapsed().as_micros_unchecked(),
     );
 

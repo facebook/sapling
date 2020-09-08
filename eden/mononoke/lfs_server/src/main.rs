@@ -46,6 +46,7 @@ use crate::middleware::{
     RequestContextMiddleware, ScubaMiddleware, ServerIdentityMiddleware, TimerMiddleware,
     TlsSessionDataMiddleware,
 };
+use crate::scuba::LfsScubaHandler;
 use crate::service::build_router;
 
 mod batch;
@@ -55,6 +56,7 @@ mod errors;
 mod lfs_server_context;
 mod middleware;
 mod popularity;
+mod scuba;
 mod service;
 mod upload;
 
@@ -355,7 +357,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .add(ServerIdentityMiddleware::new(HeaderValue::from_static(
             "mononoke-lfs",
         )))
-        .add(ScubaMiddleware::new(scuba_logger))
+        .add(<ScubaMiddleware<LfsScubaHandler>>::new(scuba_logger))
         .add(OdsMiddleware::new())
         .add(TimerMiddleware::new())
         .build(router);

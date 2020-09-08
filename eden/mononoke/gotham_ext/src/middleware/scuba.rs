@@ -5,12 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::marker::PhantomData;
+use std::panic::RefUnwindSafe;
+
 use gotham::state::{request_id, FromState, State};
 use gotham_derive::StateData;
-use gotham_ext::{
-    middleware::{ClientIdentity, Middleware, PostRequestCallbacks},
-    response::ResponseContentLength,
-};
 use hyper::{
     header::{self, AsHeaderName, HeaderMap},
     Method, StatusCode, Uri,
@@ -19,10 +18,18 @@ use hyper::{Body, Response};
 use scuba::{ScubaSampleBuilder, ScubaValue};
 use time_ext::DurationExt;
 
-use super::{HeadersDuration, RequestContext, RequestLoad as RequestLoadMiddleware};
+use crate::{
+    middleware::{ClientIdentity, Middleware, PostRequestCallbacks},
+    response::ResponseContentLength,
+};
 
+use super::{HeadersDuration, RequestLoad};
+
+/// Common HTTP-related Scuba columns that the middlware will set automatically.
+/// Applications using the middleware are encouraged to follow a similar pattern
+/// when adding application-specific columns to the `ScubaMiddlewareState`.
 #[derive(Copy, Clone, Debug)]
-pub enum ScubaKey {
+pub enum HttpScubaKey {
     /// The status code for this response
     HttpStatus,
     /// The HTTP Path requested by the client.
@@ -49,12 +56,6 @@ pub enum ScubaKey {
     RequestLoad,
     /// A unique ID identifying this request.
     RequestId,
-    /// The repository this request was for.
-    Repository,
-    /// The method this request matched for in our handlers.
-    Method,
-    /// If an error was encountered during processing, the error message.
-    ErrorMessage,
     /// How long it took to send headers.
     HeadersDurationMs,
     /// How long it took to finish sending the response.
@@ -65,24 +66,11 @@ pub enum ScubaKey {
     ResponseBytesSent,
     /// How many bytes were received from the client (should normally equal the content length)
     RequestBytesReceived,
-    /// The order in which the response to a batch request was produced.
-    BatchOrder,
-    /// The number of objects in a batch request
-    BatchObjectCount,
-    /// The objects that could not be serviced by this LFS server in a batch request
-    BatchInternalMissingBlobs,
-    /// Timing checkpoints in batch requests
-    BatchRequestContextReadyUs,
-    BatchRequestReceivedUs,
-    BatchRequestParsedUs,
-    BatchResponseReadyUs,
-    /// Whether the upload was a sync
-    UploadSync,
 }
 
-impl AsRef<str> for ScubaKey {
+impl AsRef<str> for HttpScubaKey {
     fn as_ref(&self) -> &'static str {
-        use ScubaKey::*;
+        use HttpScubaKey::*;
 
         match self {
             HttpStatus => "http_status",
@@ -98,47 +86,77 @@ impl AsRef<str> for ScubaKey {
             ClientIdentities => "client_identities",
             RequestLoad => "request_load",
             RequestId => "request_id",
-            Repository => "repository",
-            Method => "method",
-            ErrorMessage => "error_msg",
             HeadersDurationMs => "headers_duration_ms",
             DurationMs => "duration_ms",
             ClientHostname => "client_hostname",
             ResponseBytesSent => "response_bytes_sent",
             RequestBytesReceived => "request_bytes_received",
-            BatchOrder => "batch_order",
-            BatchObjectCount => "batch_object_count",
-            BatchInternalMissingBlobs => "batch_internal_missing_blobs",
-            BatchRequestContextReadyUs => "batch_context_ready_us",
-            BatchRequestReceivedUs => "batch_request_received_us",
-            BatchRequestParsedUs => "batch_request_parsed_us",
-            BatchResponseReadyUs => "batch_response_ready_us",
-            UploadSync => "upload_sync",
         }
     }
 }
 
-impl Into<String> for ScubaKey {
+impl Into<String> for HttpScubaKey {
     fn into(self) -> String {
         self.as_ref().to_string()
     }
 }
 
-#[derive(Clone)]
-pub struct ScubaMiddleware {
-    scuba: ScubaSampleBuilder,
+pub trait ScubaHandler: Send + 'static {
+    fn from_state(state: &State) -> Self;
+
+    fn add_stats(self, scuba: &mut ScubaSampleBuilder);
 }
 
-impl ScubaMiddleware {
+#[derive(Clone)]
+pub struct DefaultScubaHandler;
+
+impl ScubaHandler for DefaultScubaHandler {
+    fn from_state(_state: &State) -> Self {
+        DefaultScubaHandler
+    }
+
+    fn add_stats(self, _scuba: &mut ScubaSampleBuilder) {}
+}
+
+#[derive(Clone)]
+pub struct ScubaMiddleware<H> {
+    scuba: ScubaSampleBuilder,
+    _phantom: PhantomHandler<H>,
+}
+
+impl<H> ScubaMiddleware<H> {
     pub fn new(scuba: ScubaSampleBuilder) -> Self {
-        Self { scuba }
+        Self {
+            scuba,
+            _phantom: PhantomHandler(PhantomData),
+        }
     }
 }
+
+/// Phantom type that ensures that `ScubaMiddleware` can be `RefUnwindSafe` and
+/// `Sync` without imposing those constraints on its type parameter.
+///
+/// Since `ScubaMiddleware` is generic over its handler type, in order for it
+/// to automatically implement `Sync` and `RefUnwindSafe` (which are required
+/// by the `Middleware` trait), the handler would ordinarily need to also
+/// be subject to those constraints.
+///
+/// This isn't actually necessary since the middleware itself does not contain
+/// an instance of the handler. (The handler is instantiated shortly before it
+/// is used in a post-request callback.) Therefore, it is safe to manually mark
+/// `PhantomData<H>` with these traits via a wrapper struct, ensuring that
+/// the middleware automatically implements the required marker traits.
+#[derive(Clone)]
+struct PhantomHandler<H>(PhantomData<H>);
+
+impl<H> RefUnwindSafe for PhantomHandler<H> {}
+
+unsafe impl<H> Sync for PhantomHandler<H> {}
 
 fn add_header<'a, Header, Converter, Value>(
     scuba: &mut ScubaSampleBuilder,
     headers: &'a HeaderMap,
-    scuba_key: ScubaKey,
+    scuba_key: HttpScubaKey,
     header: Header,
     convert: Converter,
 ) -> Option<&'a str>
@@ -157,31 +175,31 @@ where
     None
 }
 
-fn log_stats(
+fn log_stats<H: ScubaHandler>(
     state: &mut State,
     status_code: &StatusCode,
     content_length: Option<u64>,
-) -> Option<()> {
+) -> Option<()> where {
     let mut scuba = state.try_take::<ScubaMiddlewareState>()?.0;
 
-    scuba.add(ScubaKey::HttpStatus, status_code.as_u16());
+    scuba.add(HttpScubaKey::HttpStatus, status_code.as_u16());
 
     if let Some(uri) = Uri::try_borrow_from(&state) {
-        scuba.add(ScubaKey::HttpPath, uri.path());
+        scuba.add(HttpScubaKey::HttpPath, uri.path());
         if let Some(query) = uri.query() {
-            scuba.add(ScubaKey::HttpQuery, query);
+            scuba.add(HttpScubaKey::HttpQuery, query);
         }
     }
 
     if let Some(method) = Method::try_borrow_from(&state) {
-        scuba.add(ScubaKey::HttpMethod, method.to_string());
+        scuba.add(HttpScubaKey::HttpMethod, method.to_string());
     }
 
     if let Some(headers) = HeaderMap::try_borrow_from(&state) {
         add_header(
             &mut scuba,
             headers,
-            ScubaKey::HttpHost,
+            HttpScubaKey::HttpHost,
             header::HOST,
             |header| header.to_string(),
         );
@@ -189,7 +207,7 @@ fn log_stats(
         add_header(
             &mut scuba,
             headers,
-            ScubaKey::RequestContentLength,
+            HttpScubaKey::RequestContentLength,
             header::CONTENT_LENGTH,
             |header| header.parse::<u64>().unwrap_or(0),
         );
@@ -197,72 +215,64 @@ fn log_stats(
         add_header(
             &mut scuba,
             headers,
-            ScubaKey::HttpUserAgent,
+            HttpScubaKey::HttpUserAgent,
             header::USER_AGENT,
             |header| header.to_string(),
         );
     }
 
     if let Some(content_length) = content_length {
-        scuba.add(ScubaKey::ResponseContentLength, content_length);
+        scuba.add(HttpScubaKey::ResponseContentLength, content_length);
     }
 
     if let Some(identity) = ClientIdentity::try_borrow_from(&state) {
         if let Some(ref address) = identity.address() {
-            scuba.add(ScubaKey::ClientIp, address.to_string());
+            scuba.add(HttpScubaKey::ClientIp, address.to_string());
         }
 
         if let Some(ref client_correlator) = identity.client_correlator() {
-            scuba.add(ScubaKey::ClientCorrelator, client_correlator.to_string());
+            scuba.add(
+                HttpScubaKey::ClientCorrelator,
+                client_correlator.to_string(),
+            );
         }
 
         if let Some(ref identities) = identity.identities() {
             let identities: Vec<_> = identities.into_iter().map(|i| i.to_string()).collect();
-            scuba.add(ScubaKey::ClientIdentities, identities);
+            scuba.add(HttpScubaKey::ClientIdentities, identities);
         }
     }
 
-    if let Some(request_load) = RequestLoadMiddleware::try_borrow_from(&state) {
-        scuba.add(ScubaKey::RequestLoad, request_load.0);
+    if let Some(request_load) = RequestLoad::try_borrow_from(&state) {
+        scuba.add(HttpScubaKey::RequestLoad, request_load.0);
     }
 
-    scuba.add(ScubaKey::RequestId, request_id(&state));
+    scuba.add(HttpScubaKey::RequestId, request_id(&state));
 
     if let Some(HeadersDuration(duration)) = HeadersDuration::try_borrow_from(&state) {
-        scuba.add(ScubaKey::HeadersDurationMs, duration.as_millis_unchecked());
+        scuba.add(
+            HttpScubaKey::HeadersDurationMs,
+            duration.as_millis_unchecked(),
+        );
     }
 
-    let ctx = state.try_borrow_mut::<RequestContext>()?;
+    let handler = H::from_state(state);
 
-    if let Some(repository) = &ctx.repository {
-        scuba.add(ScubaKey::Repository, repository.as_ref());
-    }
-
-    if let Some(method) = ctx.method {
-        scuba.add(ScubaKey::Method, method.to_string());
-    }
-
-    if let Some(err_msg) = &ctx.error_msg {
-        scuba.add(ScubaKey::ErrorMessage, err_msg.as_ref());
-    }
-
-    let core_ctx = ctx.ctx.clone();
     let callbacks = state.try_borrow_mut::<PostRequestCallbacks>()?;
-
     callbacks.add(move |info| {
         if let Some(duration) = info.duration {
-            scuba.add(ScubaKey::DurationMs, duration.as_millis_unchecked());
+            scuba.add(HttpScubaKey::DurationMs, duration.as_millis_unchecked());
         }
 
         if let Some(client_hostname) = info.client_hostname.as_deref() {
-            scuba.add(ScubaKey::ClientHostname, client_hostname);
+            scuba.add(HttpScubaKey::ClientHostname, client_hostname);
         }
 
         if let Some(bytes_sent) = info.bytes_sent {
-            scuba.add(ScubaKey::ResponseBytesSent, bytes_sent);
+            scuba.add(HttpScubaKey::ResponseBytesSent, bytes_sent);
         }
 
-        core_ctx.perf_counters().insert_perf_counters(&mut scuba);
+        handler.add_stats(&mut scuba);
 
         scuba.log();
     });
@@ -274,24 +284,32 @@ fn log_stats(
 pub struct ScubaMiddlewareState(ScubaSampleBuilder);
 
 impl ScubaMiddlewareState {
-    pub fn add<V: Into<ScubaValue>>(&mut self, key: ScubaKey, value: V) -> &mut Self {
+    pub fn add<K, V>(&mut self, key: K, value: V) -> &mut Self
+    where
+        K: Into<String>,
+        V: Into<ScubaValue>,
+    {
         self.0.add(key, value);
         self
     }
 
     /// Borrow the ScubaMiddlewareState, if any, and add a key-value pair to it.
-    pub fn try_borrow_add<V: Into<ScubaValue>>(state: &mut State, key: ScubaKey, value: V) {
+    pub fn try_borrow_add<K, V>(state: &mut State, key: K, value: V)
+    where
+        K: Into<String>,
+        V: Into<ScubaValue>,
+    {
         let mut scuba = state.try_borrow_mut::<Self>();
         if let Some(ref mut scuba) = scuba {
             scuba.add(key, value);
         }
     }
 
-    pub fn maybe_add(
-        scuba: &mut Option<&mut ScubaMiddlewareState>,
-        key: ScubaKey,
-        value: impl Into<ScubaValue>,
-    ) {
+    pub fn maybe_add<K, V>(scuba: &mut Option<&mut ScubaMiddlewareState>, key: K, value: V)
+    where
+        K: Into<String>,
+        V: Into<ScubaValue>,
+    {
         if let Some(ref mut scuba) = scuba {
             scuba.add(key, value);
         }
@@ -299,7 +317,7 @@ impl ScubaMiddlewareState {
 }
 
 #[async_trait::async_trait]
-impl Middleware for ScubaMiddleware {
+impl<H: ScubaHandler> Middleware for ScubaMiddleware<H> {
     async fn inbound(&self, state: &mut State) -> Option<Response<Body>> {
         state.put(ScubaMiddlewareState(self.scuba.clone()));
         None
@@ -314,6 +332,6 @@ impl Middleware for ScubaMiddleware {
 
         let content_length = ResponseContentLength::try_borrow_from(&state).map(|l| l.0);
 
-        log_stats(state, &response.status(), content_length);
+        log_stats::<H>(state, &response.status(), content_length);
     }
 }

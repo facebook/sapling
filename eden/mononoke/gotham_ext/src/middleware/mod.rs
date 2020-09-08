@@ -14,17 +14,21 @@ pub mod client_identity;
 pub mod load;
 pub mod log;
 pub mod post_request;
+pub mod scuba;
 pub mod server_identity;
 pub mod timer;
 pub mod tls_session_data;
 
-pub use client_identity::{ClientIdentity, ClientIdentityMiddleware};
-pub use load::{LoadMiddleware, RequestLoad};
-pub use log::LogMiddleware;
-pub use post_request::{PostRequestCallbacks, PostRequestConfig, PostRequestMiddleware};
-pub use server_identity::ServerIdentityMiddleware;
-pub use timer::{HeadersDuration, RequestStartTime, TimerMiddleware};
-pub use tls_session_data::TlsSessionDataMiddleware;
+pub use self::client_identity::{ClientIdentity, ClientIdentityMiddleware};
+pub use self::load::{LoadMiddleware, RequestLoad};
+pub use self::log::LogMiddleware;
+pub use self::post_request::{PostRequestCallbacks, PostRequestConfig, PostRequestMiddleware};
+pub use self::scuba::{
+    DefaultScubaHandler, HttpScubaKey, ScubaHandler, ScubaMiddleware, ScubaMiddlewareState,
+};
+pub use self::server_identity::ServerIdentityMiddleware;
+pub use self::timer::{HeadersDuration, RequestStartTime, TimerMiddleware};
+pub use self::tls_session_data::TlsSessionDataMiddleware;
 
 #[async_trait::async_trait]
 pub trait Middleware: 'static + RefUnwindSafe + Send + Sync {

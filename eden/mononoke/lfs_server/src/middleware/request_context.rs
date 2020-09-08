@@ -36,7 +36,7 @@ impl fmt::Display for LfsMethod {
     }
 }
 
-#[derive(StateData)]
+#[derive(StateData, Clone)]
 pub struct RequestContext {
     pub ctx: CoreContext,
     pub repository: Option<String>,
