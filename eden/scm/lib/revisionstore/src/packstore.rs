@@ -9,7 +9,7 @@ use std::{
     cell::RefCell,
     collections::vec_deque::{Iter, IterMut},
     collections::VecDeque,
-    fs::read_dir,
+    fs::{read_dir, DirEntry},
     io::ErrorKind,
     path::{Path, PathBuf},
     sync::{
@@ -235,34 +235,42 @@ impl<T: LocalStore + Repackable + StoreFromPath> PackStoreInner<T> {
     fn rescan(&self) -> Result<()> {
         let mut new_packs = Vec::new();
 
+        for entry in self.get_pack_paths()?.into_iter() {
+            if let Ok(pack) = T::from_path(&entry.path()) {
+                new_packs.push(pack);
+            }
+        }
+
+        self.packs.replace(new_packs.into());
+        Ok(())
+    }
+
+    fn get_pack_paths(&self) -> Result<Vec<DirEntry>> {
         let readdir = match read_dir(&self.pack_dir) {
             Ok(readdir) => readdir,
             Err(e) => {
                 if e.kind() == ErrorKind::NotFound {
-                    return Ok(());
+                    return Ok(vec![]);
                 } else {
                     return Err(e.into());
                 }
             }
         };
 
+        let mut result = vec![];
         for entry in readdir {
             let entry = entry?;
             if entry.file_type()?.is_file() {
                 let path = entry.path();
-
                 if let Some(ext) = path.extension() {
                     if ext == self.extension {
-                        if let Ok(pack) = T::from_path(&path) {
-                            new_packs.push(pack);
-                        }
+                        result.push(entry);
                     }
                 }
             }
         }
 
-        self.packs.replace(new_packs.into());
-        Ok(())
+        Ok(result)
     }
 
     /// Scan the store when too much time has passed since the last scan. Returns whether the
