@@ -63,7 +63,7 @@ pub fn maybe_status_fastpath(
 }
 
 #[cfg(windows)]
-fn maybe_status_fastpath_internal(
+async fn maybe_status_fastpath_internal(
     repo_root: &Path,
     cwd: &Path,
     print_config: PrintConfig,
