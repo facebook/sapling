@@ -16,6 +16,7 @@ derived_data = { path = "../../derived_data" }
 filestore = { path = "../../filestore" }
 git_types = { path = "../git_types" }
 manifest = { path = "../../manifest" }
+mercurial_derived_data = { path = "../../derived_data/mercurial_derived_data" }
 mercurial_types = { path = "../../mercurial/types" }
 mononoke_types = { path = "../../mononoke_types" }
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

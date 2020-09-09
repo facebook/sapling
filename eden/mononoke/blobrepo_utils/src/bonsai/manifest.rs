@@ -8,7 +8,6 @@
 use crate::changeset::{visit_changesets, ChangesetVisitMeta, ChangesetVisitor};
 use anyhow::{bail, Error};
 use blobrepo::BlobRepo;
-use blobrepo_hg::derive_hg_manifest::derive_hg_manifest;
 use blobrepo_override::DangerousOverride;
 use blobstore::{Blobstore, Loadable};
 use cacheblob::MemWritesBlobstore;
@@ -21,6 +20,7 @@ use futures_old::{
     Future, Stream,
 };
 use manifest::{bonsai_diff, BonsaiDiffFileChange, Diff, Entry, ManifestOps};
+use mercurial_derived_data::derive_hg_manifest;
 use mercurial_types::{
     blobs::{BlobManifest, HgBlobChangeset, HgBlobEntry},
     HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash, Type,

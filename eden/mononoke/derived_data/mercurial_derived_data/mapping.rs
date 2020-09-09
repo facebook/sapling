@@ -5,13 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use crate::get_hg_from_bonsai_changeset;
 use anyhow::Error;
 use blobrepo::BlobRepo;
-use blobrepo_hg::BlobRepoHg;
 use bonsai_hg_mapping::BonsaiHgMapping;
 use context::CoreContext;
-use futures::{future, Future};
 use futures_ext::{BoxFuture, FutureExt};
+use futures_old::{future, Future};
 use mercurial_types::HgChangesetId;
 use mononoke_types::{BonsaiChangeset, ChangesetId, RepositoryId};
 
@@ -37,7 +37,7 @@ impl BonsaiDerived for MappedHgChangesetId {
         _parents: Vec<Self>,
     ) -> BoxFuture<Self, Error> {
         let bcs_id = bonsai.get_changeset_id();
-        repo.get_hg_from_bonsai_changeset(ctx, bcs_id)
+        get_hg_from_bonsai_changeset(&repo, ctx, bcs_id)
             .map(|hg_cs_id| MappedHgChangesetId(hg_cs_id))
             .boxify()
     }
@@ -53,7 +53,7 @@ impl HgChangesetIdMapping {
     pub fn new(repo: &BlobRepo) -> Self {
         Self {
             repo_id: repo.get_repoid(),
-            mapping: repo.get_bonsai_hg_mapping().clone(),
+            mapping: repo.attribute_expected::<dyn BonsaiHgMapping>().clone(),
         }
     }
 }

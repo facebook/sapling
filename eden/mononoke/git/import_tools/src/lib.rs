@@ -15,7 +15,7 @@ pub use crate::gitimport_objects::{
 };
 use anyhow::{format_err, Context, Error};
 use blobrepo::BlobRepo;
-use blobrepo_hg::{derive_hg_changeset::get_manifest_from_bonsai, BlobRepoHg};
+use blobrepo_hg::BlobRepoHg;
 use blobstore::Blobstore;
 use bytes::Bytes;
 use changesets::ChangesetInsert;
@@ -37,6 +37,7 @@ use git2::{Oid, Repository, Sort};
 use git_types::TreeHandle;
 use linked_hash_map::LinkedHashMap;
 use manifest::{bonsai_diff, BonsaiDiffFileChange, StoreLoadable};
+use mercurial_derived_data::get_manifest_from_bonsai;
 use mercurial_types::HgManifestId;
 use mononoke_types::{
     blob::BlobstoreValue, hash::RichGitSha1, typed_hash::MononokeId, BonsaiChangeset,

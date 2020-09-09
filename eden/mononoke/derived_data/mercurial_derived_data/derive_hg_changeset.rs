@@ -5,11 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use crate::{
-    derive_hg_manifest::derive_hg_manifest, repo_commit::compute_changed_files, BlobRepoHg,
-};
+use crate::derive_hg_manifest::derive_hg_manifest;
 use anyhow::Error;
 use blobrepo::BlobRepo;
+use blobrepo_common::changed_files::compute_changed_files;
 use blobstore::Loadable;
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry};
 use cloned::cloned;
@@ -22,7 +21,7 @@ use futures_old::{
     stream, Future, IntoFuture, Stream,
 };
 use futures_stats::futures01::Timed;
-use manifest::{Entry, Manifest, ManifestOps};
+use manifest::ManifestOps;
 use maplit::hashmap;
 use mercurial_types::{
     blobs::{
@@ -77,7 +76,7 @@ fn store_file_change(
             let store = repo.get_blobstore().boxed();
             cloned!(ctx, change, path);
             parent
-                .load(ctx.clone(), &store)
+                .load(ctx, &store)
                 .compat()
                 .from_err()
                 .map(move |parent_envelope| {
@@ -128,7 +127,7 @@ fn store_file_change(
                 } else if p1.is_none() {
                     future::ok((p2, None)).left_future()
                 } else if p2.is_some() {
-                    crate::file_history::check_if_related(
+                    blobrepo_common::file_history::check_if_related(
                         ctx.clone(),
                         repo.clone(),
                         p1.unwrap(),
@@ -136,7 +135,7 @@ fn store_file_change(
                         path.clone(),
                     )
                     .map(move |res| {
-                        use crate::file_history::FilenodesRelatedResult::*;
+                        use blobrepo_common::file_history::FilenodesRelatedResult::*;
 
                         match res {
                             Unrelated => (p1, p2),
@@ -168,7 +167,7 @@ fn store_file_change(
                                 Ok((_, upload_fut)) => {
                                     upload_fut.map(move |(entry, _)| entry).left_future()
                                 }
-                                Err(err) => return future::err(err).right_future(),
+                                Err(err) => future::err(err).right_future(),
                             }
                         }
                     })
@@ -176,89 +175,6 @@ fn store_file_change(
             }
         }
     })
-}
-
-/// Check if adding a single path to manifest would cause case-conflict
-///
-/// Implementation traverses manifest and checks if correspoinding path element is present,
-/// if path element is not present, it lowercases current path element and checks if it
-/// collides with any existing elements inside manifest. if so it also needs to check that
-/// child manifest contains this entry, because it might have been removed.
-pub fn check_case_conflict_in_manifest(
-    repo: BlobRepo,
-    ctx: CoreContext,
-    parent_mf_id: HgManifestId,
-    child_mf_id: HgManifestId,
-    path: MPath,
-) -> impl Future<Item = Option<MPath>, Error = Error> {
-    let child_mf_id = child_mf_id.clone();
-    parent_mf_id
-        .load(ctx.clone(), &repo.get_blobstore())
-        .compat()
-        .from_err()
-        .and_then(move |mf| {
-            loop_fn(
-                (None, mf, path.into_iter()),
-                move |(cur_path, mf, mut elements): (Option<MPath>, _, _)| {
-                    let element = match elements.next() {
-                        None => return future::ok(Loop::Break(None)).boxify(),
-                        Some(element) => element,
-                    };
-
-                    match mf.lookup(&element) {
-                        Some(entry) => {
-                            let cur_path = MPath::join_opt_element(cur_path.as_ref(), &element);
-                            match entry {
-                                Entry::Leaf(..) => future::ok(Loop::Break(None)).boxify(),
-                                Entry::Tree(manifest_id) => manifest_id
-                                    .load(ctx.clone(), repo.blobstore())
-                                    .compat()
-                                    .from_err()
-                                    .map(move |mf| Loop::Continue((Some(cur_path), mf, elements)))
-                                    .boxify(),
-                            }
-                        }
-                        None => {
-                            let element_utf8 = String::from_utf8(Vec::from(element.as_ref()));
-                            let mut potential_conflicts = vec![];
-                            // Find all entries in the manifests that can potentially be a conflict.
-                            // Entry can potentially be a conflict if its lowercased version
-                            // is the same as lowercased version of the current element
-
-                            for (basename, _) in mf.list() {
-                                let path =
-                                    MPath::join_element_opt(cur_path.as_ref(), Some(&basename));
-                                match (&element_utf8, std::str::from_utf8(basename.as_ref())) {
-                                    (Ok(ref element), Ok(ref basename)) => {
-                                        if basename.to_lowercase() == element.to_lowercase() {
-                                            potential_conflicts.extend(path);
-                                        }
-                                    }
-                                    _ => {}
-                                }
-                            }
-
-                            // For each potential conflict we need to check if it's present in
-                            // child manifest. If it is, then we've got a conflict, otherwise
-                            // this has been deleted and it's no longer a conflict.
-                            child_mf_id
-                                .find_entries(
-                                    ctx.clone(),
-                                    repo.get_blobstore(),
-                                    potential_conflicts,
-                                )
-                                .collect()
-                                .map(|entries| {
-                                    // NOTE: We flatten here because we cannot have a conflict
-                                    // at the root.
-                                    Loop::Break(entries.into_iter().next().and_then(|x| x.0))
-                                })
-                                .boxify()
-                        }
-                    }
-                },
-            )
-        })
 }
 
 pub fn get_manifest_from_bonsai(
@@ -422,7 +338,7 @@ fn take_hg_generation_lease(
     let repoid = repo.get_repoid();
 
     let derived_data_lease = repo.get_derived_data_lease_ops();
-    let bonsai_hg_mapping = repo.get_bonsai_hg_mapping().clone();
+    let bonsai_hg_mapping = get_bonsai_hg_mapping(&repo).clone();
 
     let backoff_ms = 200;
     loop_fn(backoff_ms, move |mut backoff_ms| {
@@ -549,9 +465,7 @@ fn generate_hg_changeset(
                     message: bcs.message().to_string(),
                 };
 
-                metadata.record_step_parents(
-                    step_parents.into_iter().map(|blob| blob.get_changeset_id()),
-                );
+                metadata.record_step_parents(step_parents.map(|blob| blob.get_changeset_id()));
 
                 let content =
                     HgChangesetContent::new_from_parts(hg_parents, manifest_id, metadata, files);
@@ -562,7 +476,7 @@ fn generate_hg_changeset(
                     .and_then({
                         cloned!(ctx, repo);
                         move |_| {
-                            repo.get_bonsai_hg_mapping().add(
+                            get_bonsai_hg_mapping(&repo).add(
                                 ctx,
                                 BonsaiHgMappingEntry {
                                     repo_id: repo.get_repoid(),
@@ -666,7 +580,7 @@ pub fn get_hg_from_bonsai_changeset_with_impl(
         repo: BlobRepo,
         bcs_id: ChangesetId,
     ) -> impl Future<Item = HgBlobChangeset, Error = Error> {
-        let bonsai_hg_mapping = repo.get_bonsai_hg_mapping().clone();
+        let bonsai_hg_mapping = get_bonsai_hg_mapping(&repo).clone();
         let repoid = repo.get_repoid();
         bonsai_hg_mapping
             .get_hg_from_bonsai(ctx.clone(), repoid, bcs_id)
@@ -753,7 +667,7 @@ pub fn get_hg_from_bonsai_changeset_with_impl(
     }
 
     let repoid = repo.get_repoid();
-    let bonsai_hg_mapping = repo.get_bonsai_hg_mapping().clone();
+    let bonsai_hg_mapping = get_bonsai_hg_mapping(&repo).clone();
     find_toposorted_bonsai_cs_with_no_hg_cs_generated(
         ctx.clone(),
         repo.clone(),
@@ -818,7 +732,7 @@ pub fn get_hg_from_bonsai_changeset_with_impl(
     })
 }
 
-pub(crate) fn get_hg_from_bonsai_changeset(
+pub fn get_hg_from_bonsai_changeset(
     repo: &BlobRepo,
     ctx: CoreContext,
     bcs_id: ChangesetId,
@@ -835,4 +749,8 @@ pub(crate) fn get_hg_from_bonsai_changeset(
                 .add_value(stats.completion_time.as_millis_unchecked() as i64);
             Ok(())
         })
+}
+
+fn get_bonsai_hg_mapping(repo: &BlobRepo) -> &Arc<dyn BonsaiHgMapping> {
+    repo.attribute_expected::<dyn BonsaiHgMapping>()
 }

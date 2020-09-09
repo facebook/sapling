@@ -47,6 +47,7 @@ derived_data_filenodes = { path = "../derived_data/filenodes" }
 fixtures = { path = "../tests/fixtures" }
 manifest = { path = "../manifest" }
 memblob = { path = "../blobstore/memblob" }
+mercurial_derived_data = { path = "../derived_data/mercurial_derived_data" }
 mercurial_types = { path = "../mercurial/types" }
 mercurial_types-mocks = { path = "../mercurial/types/mocks" }
 scuba_ext = { path = "../common/scuba_ext" }

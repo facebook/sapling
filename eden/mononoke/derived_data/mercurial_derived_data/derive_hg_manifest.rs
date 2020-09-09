@@ -6,6 +6,7 @@
  */
 
 use anyhow::{format_err, Error};
+use blobrepo_errors::ErrorKind;
 use blobstore::{Blobstore, Loadable};
 use cloned::cloned;
 use context::CoreContext;
@@ -26,8 +27,6 @@ use mercurial_types::{
 };
 use mononoke_types::{FileType, MPath, RepoPath};
 use std::{io::Write, sync::Arc};
-
-use crate::errors::ErrorKind;
 
 #[derive(Copy, Clone, Debug, Hash, Eq, PartialEq)]
 struct ParentIndex(usize);
@@ -130,9 +129,9 @@ fn create_hg_manifest(
         contents: contents.into(),
         p1,
         p2,
-        path: path.clone(),
+        path,
     }
-    .upload(ctx.clone(), blobstore);
+    .upload(ctx, blobstore);
 
     let (hash, upload_fut) = match uploader {
         Ok((hash, fut)) => (hash, fut.map(|_| ())),

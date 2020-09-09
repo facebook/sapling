@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use crate::derive_hg_changeset::check_case_conflict_in_manifest;
 use crate::BlobRepoHg;
 use anyhow::{format_err, Error, Result};
 use cloned::cloned;
@@ -19,7 +18,7 @@ use futures_ext::{
     BoxFuture as OldBoxFuture, BoxStream as OldBoxStream, FutureExt as OldFutureExt,
 };
 use futures_old::future::{
-    self as old_future, result, Future as OldFuture, Shared, SharedError, SharedItem,
+    self as old_future, loop_fn, result, Future as OldFuture, Loop, Shared, SharedError, SharedItem,
 };
 use futures_old::stream::Stream as OldStream;
 use futures_old::sync::oneshot;
@@ -31,7 +30,7 @@ use std::collections::{HashMap, HashSet};
 use std::mem;
 use std::sync::{Arc, Mutex};
 
-use ::manifest::{find_intersection_of_diffs, Diff, Entry, ManifestOps};
+use ::manifest::{find_intersection_of_diffs, Diff, Entry, Manifest, ManifestOps};
 pub use blobrepo_common::changed_files::compute_changed_files;
 use blobstore::{Blobstore, Loadable};
 use context::CoreContext;
@@ -668,4 +667,87 @@ pub fn make_new_changeset(
 ) -> Result<HgBlobChangeset> {
     let changeset = HgChangesetContent::new_from_parts(parents, root_hash, cs_metadata, files);
     HgBlobChangeset::new(changeset)
+}
+
+/// Check if adding a single path to manifest would cause case-conflict
+///
+/// Implementation traverses manifest and checks if correspoinding path element is present,
+/// if path element is not present, it lowercases current path element and checks if it
+/// collides with any existing elements inside manifest. if so it also needs to check that
+/// child manifest contains this entry, because it might have been removed.
+pub fn check_case_conflict_in_manifest(
+    repo: BlobRepo,
+    ctx: CoreContext,
+    parent_mf_id: HgManifestId,
+    child_mf_id: HgManifestId,
+    path: MPath,
+) -> impl OldFuture<Item = Option<MPath>, Error = Error> {
+    let child_mf_id = child_mf_id.clone();
+    parent_mf_id
+        .load(ctx.clone(), &repo.get_blobstore())
+        .compat()
+        .from_err()
+        .and_then(move |mf| {
+            loop_fn(
+                (None, mf, path.into_iter()),
+                move |(cur_path, mf, mut elements): (Option<MPath>, _, _)| {
+                    let element = match elements.next() {
+                        None => return old_future::ok(Loop::Break(None)).boxify(),
+                        Some(element) => element,
+                    };
+
+                    match mf.lookup(&element) {
+                        Some(entry) => {
+                            let cur_path = MPath::join_opt_element(cur_path.as_ref(), &element);
+                            match entry {
+                                Entry::Leaf(..) => old_future::ok(Loop::Break(None)).boxify(),
+                                Entry::Tree(manifest_id) => manifest_id
+                                    .load(ctx.clone(), repo.blobstore())
+                                    .compat()
+                                    .from_err()
+                                    .map(move |mf| Loop::Continue((Some(cur_path), mf, elements)))
+                                    .boxify(),
+                            }
+                        }
+                        None => {
+                            let element_utf8 = String::from_utf8(Vec::from(element.as_ref()));
+                            let mut potential_conflicts = vec![];
+                            // Find all entries in the manifests that can potentially be a conflict.
+                            // Entry can potentially be a conflict if its lowercased version
+                            // is the same as lowercased version of the current element
+
+                            for (basename, _) in mf.list() {
+                                let path =
+                                    MPath::join_element_opt(cur_path.as_ref(), Some(&basename));
+                                match (&element_utf8, std::str::from_utf8(basename.as_ref())) {
+                                    (Ok(ref element), Ok(ref basename)) => {
+                                        if basename.to_lowercase() == element.to_lowercase() {
+                                            potential_conflicts.extend(path);
+                                        }
+                                    }
+                                    _ => {}
+                                }
+                            }
+
+                            // For each potential conflict we need to check if it's present in
+                            // child manifest. If it is, then we've got a conflict, otherwise
+                            // this has been deleted and it's no longer a conflict.
+                            child_mf_id
+                                .find_entries(
+                                    ctx.clone(),
+                                    repo.get_blobstore(),
+                                    potential_conflicts,
+                                )
+                                .collect()
+                                .map(|entries| {
+                                    // NOTE: We flatten here because we cannot have a conflict
+                                    // at the root.
+                                    Loop::Break(entries.into_iter().next().and_then(|x| x.0))
+                                })
+                                .boxify()
+                        }
+                    }
+                },
+            )
+        })
 }

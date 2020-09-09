@@ -17,10 +17,7 @@ use assert_matches::assert_matches;
 use blobrepo::BlobRepo;
 use blobrepo_errors::ErrorKind;
 use blobrepo_hg::{
-    derive_hg_changeset::{
-        check_case_conflict_in_manifest, get_hg_from_bonsai_changeset_with_impl,
-        get_manifest_from_bonsai,
-    },
+    check_case_conflict_in_manifest,
     repo_commit::{compute_changed_files, UploadEntries},
     BlobRepoHg,
 };
@@ -36,6 +33,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use futures_old::{Future, Stream};
 use maplit::btreemap;
 use memblob::LazyMemblob;
+use mercurial_derived_data::{get_hg_from_bonsai_changeset_with_impl, get_manifest_from_bonsai};
 use mercurial_types::{
     blobs::{
         BlobManifest, ContentBlobMeta, File, HgBlobChangeset, UploadHgFileContents,

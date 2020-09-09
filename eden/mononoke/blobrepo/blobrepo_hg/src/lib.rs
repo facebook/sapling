@@ -9,13 +9,13 @@
 
 mod bonsai_generation;
 mod create_changeset;
-pub mod derive_hg_changeset;
-pub mod derive_hg_manifest;
 pub mod repo_commit;
 pub use crate::repo_commit::ChangesetHandle;
 pub use changeset_fetcher::ChangesetFetcher;
 // TODO: This is exported for testing - is this the right place for it?
-pub use crate::repo_commit::{check_case_conflicts, compute_changed_files, UploadEntries};
+pub use crate::repo_commit::{
+    check_case_conflict_in_manifest, check_case_conflicts, compute_changed_files, UploadEntries,
+};
 pub mod errors {
     pub use blobrepo_errors::*;
 }
@@ -453,7 +453,7 @@ impl BlobRepoHg for BlobRepo {
         ctx: CoreContext,
         bcs_id: ChangesetId,
     ) -> BoxFuture<HgChangesetId, Error> {
-        derive_hg_changeset::get_hg_from_bonsai_changeset(self, ctx, bcs_id).boxify()
+        mercurial_derived_data::get_hg_from_bonsai_changeset(self, ctx, bcs_id).boxify()
     }
 }
 

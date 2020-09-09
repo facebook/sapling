@@ -10,7 +10,7 @@
 mod config;
 
 use anyhow::{format_err, Error, Result};
-use blobrepo_hg::{derive_hg_changeset::get_manifest_from_bonsai, BlobRepoHg};
+use blobrepo_hg::BlobRepoHg;
 use blobrepo_utils::{BonsaiMFVerify, BonsaiMFVerifyResult};
 use blobstore::Loadable;
 use clap::{App, Arg, ArgMatches, SubCommand};
@@ -30,6 +30,7 @@ use futures_old::{
     Future, Stream,
 };
 use lock_ext::LockExt;
+use mercurial_derived_data::get_manifest_from_bonsai;
 use mercurial_types::HgChangesetId;
 use revset::AncestorsNodeStream;
 use slog::{debug, error, info, warn, Logger};
