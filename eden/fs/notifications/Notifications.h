@@ -8,6 +8,7 @@
 #pragma once
 
 #include <folly/Synchronized.h>
+#include <optional>
 #include "eden/fs/config/ReloadableConfig.h"
 
 namespace facebook {
