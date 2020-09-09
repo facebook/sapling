@@ -119,7 +119,6 @@ else:
         "test-scs-x-repo.t",  # Missing SCS_SERVER
         "test-scs.t",  # Missing SCS_SERVER
         "test-server.t",  # Returns different data in OSS
-        "test-traffic-replay.t",  # Missing TRAFFIC_REPLAY
         "test-unbundle-replay-hg-recording.t",  # Returns different data in OSS
     }
 
