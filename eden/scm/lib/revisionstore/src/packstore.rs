@@ -864,15 +864,19 @@ mod tests {
 
         let k2 = StoreKey::hgid(k2);
         let _ = packstore.get(k2.clone())?;
-        assert!(packstore.inner.lock().packs.borrow().stores[0]
-            .get(k2)
-            .is_ok());
+        assert!(
+            packstore.inner.lock().packs.borrow().stores[0]
+                .get(k2)
+                .is_ok()
+        );
 
         let k1 = StoreKey::hgid(k1);
         let _ = packstore.get(k1.clone())?;
-        assert!(packstore.inner.lock().packs.borrow().stores[0]
-            .get(k1)
-            .is_ok());
+        assert!(
+            packstore.inner.lock().packs.borrow().stores[0]
+                .get(k1)
+                .is_ok()
+        );
 
         Ok(())
     }

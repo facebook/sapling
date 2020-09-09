@@ -30,7 +30,9 @@ mod windows {
 
     impl Drop for Snapshot {
         fn drop(&mut self) {
-            unsafe { CloseHandle(self.handle) };
+            unsafe {
+                CloseHandle(self.handle)
+            };
         }
     }
 

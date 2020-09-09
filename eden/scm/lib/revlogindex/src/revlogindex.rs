@@ -119,11 +119,7 @@ impl RevlogIndex {
         }
         impl Phase {
             fn max(self, other: Phase) -> Phase {
-                if self > other {
-                    self
-                } else {
-                    other
-                }
+                if self > other { self } else { other }
             }
         }
 
@@ -1128,11 +1124,7 @@ impl DagAlgorithm for RevlogIndex {
                 .as_revs()
                 .iter()
                 .all(|&p| !id_set.contains(Id(p as _)));
-            if should_include {
-                Some(Ok(i))
-            } else {
-                None
-            }
+            if should_include { Some(Ok(i)) } else { None }
         });
         let set = Set::from_id_iter_dag(iter, self)?;
         set.hints()

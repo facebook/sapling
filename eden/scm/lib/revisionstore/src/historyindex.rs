@@ -259,10 +259,9 @@ impl HistoryIndex {
             }
             seen_files.insert(&file_name);
 
-            let file_nodes: &HashMap<Key, NodeLocation> =
-                nodes.get(file_name).ok_or_else(|| {
-                    HistoryIndexError(format!("unable to find nodes for {:?}", file_name))
-                })?;
+            let file_nodes: &HashMap<Key, NodeLocation> = nodes.get(file_name).ok_or_else(|| {
+                HistoryIndexError(format!("unable to find nodes for {:?}", file_name))
+            })?;
             let hgid_section_size = file_nodes.len() * NODE_ENTRY_LEN;
             FileIndexEntry {
                 hgid: file_hash.clone(),

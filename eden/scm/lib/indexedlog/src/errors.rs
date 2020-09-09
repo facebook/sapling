@@ -410,12 +410,16 @@ Caused by 2 errors:
     fn test_inherit_corruption() {
         assert!(!Error::blank().is_corruption());
         assert!(!Error::blank().source(Error::blank()).is_corruption());
-        assert!(Error::blank()
-            .source(Error::blank().mark_corruption())
-            .is_corruption());
-        assert!(Error::blank()
-            .source(Error::blank().source(Error::blank().mark_corruption()))
-            .is_corruption());
+        assert!(
+            Error::blank()
+                .source(Error::blank().mark_corruption())
+                .is_corruption()
+        );
+        assert!(
+            Error::blank()
+                .source(Error::blank().source(Error::blank().mark_corruption()))
+                .is_corruption()
+        );
     }
 
     #[test]

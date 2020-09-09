@@ -507,12 +507,14 @@ mod tests {
             store.shared_mutablehistorystore.get_node_info(&k)?,
             Some(nodeinfo)
         );
-        assert!(store
-            .local_mutablehistorystore
-            .as_ref()
-            .unwrap()
-            .get_node_info(&k)?
-            .is_none());
+        assert!(
+            store
+                .local_mutablehistorystore
+                .as_ref()
+                .unwrap()
+                .get_node_info(&k)?
+                .is_none()
+        );
         Ok(())
     }
 

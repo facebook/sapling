@@ -53,13 +53,14 @@ impl NameSetQuery for UnionSet {
     fn iter(&self) -> Result<Box<dyn NameIter>> {
         debug_assert_eq!(self.sets.len(), 2);
         let set0 = self.sets[0].clone();
-        let iter =
-            self.sets[0]
-                .iter()?
-                .chain(self.sets[1].iter()?.filter(move |name| match name {
+        let iter = self.sets[0]
+            .iter()?
+            .chain(self.sets[1].iter()?.filter(move |name| {
+                match name {
                     Ok(name) => set0.contains(name).ok() != Some(true),
                     _ => true,
-                }));
+                }
+            }));
         Ok(Box::new(iter))
     }
 
@@ -68,9 +69,11 @@ impl NameSetQuery for UnionSet {
         let set0 = self.sets[0].clone();
         let iter = self.sets[1]
             .iter_rev()?
-            .filter(move |name| match name {
-                Ok(name) => set0.contains(name).ok() != Some(true),
-                _ => true,
+            .filter(move |name| {
+                match name {
+                    Ok(name) => set0.contains(name).ok() != Some(true),
+                    _ => true,
+                }
             })
             .chain(self.sets[0].iter_rev()?);
         Ok(Box::new(iter))

@@ -169,11 +169,7 @@ impl<'a> FromPyObject<'a> for Spans {
             .filter_map(|o| match o {
                 Ok(i) => {
                     // Skip "nullrev" automatically.
-                    if i >= 0 {
-                        Some(Ok(Id(i as u64)))
-                    } else {
-                        None
-                    }
+                    if i >= 0 { Some(Ok(Id(i as u64))) } else { None }
                 }
                 Err(e) => Some(Err(e)),
             })

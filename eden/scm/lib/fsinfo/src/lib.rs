@@ -83,7 +83,9 @@ mod windows {
 
     impl Drop for WinFileHandle {
         fn drop(&mut self) {
-            unsafe { CloseHandle(self.handle) };
+            unsafe {
+                CloseHandle(self.handle)
+            };
         }
     }
 

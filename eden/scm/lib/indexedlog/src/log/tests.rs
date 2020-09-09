@@ -169,11 +169,12 @@ fn test_iter_and_iter_dirty() {
 
     log.sync().unwrap();
 
-    assert!(log
-        .iter_dirty()
-        .collect::<crate::Result<Vec<_>>>()
-        .unwrap()
-        .is_empty());
+    assert!(
+        log.iter_dirty()
+            .collect::<crate::Result<Vec<_>>>()
+            .unwrap()
+            .is_empty()
+    );
     assert_eq!(
         log.iter().collect::<crate::Result<Vec<_>>>().unwrap(),
         vec![b"2", b"4", b"3"]
@@ -825,12 +826,12 @@ fn test_sync_missing_meta() {
 
 fn test_rebuild_indexes() {
     let dir = tempdir().unwrap();
-    let open_opts = OpenOptions::new()
-        .create(true)
-        .index_defs(vec![IndexDef::new("key", |data| {
+    let open_opts = OpenOptions::new().create(true).index_defs(vec![
+        IndexDef::new("key", |data| {
             vec![IndexOutput::Reference(0..data.len() as u64)]
         })
-        .lag_threshold(1)]);
+        .lag_threshold(1),
+    ]);
     let mut log = open_opts.clone().open(dir.path()).unwrap();
 
     log.append(b"abc").unwrap();
@@ -978,12 +979,9 @@ fn test_repair_noop() {
 fn test_repair_and_delete_content() {
     let dir = tempdir().unwrap();
     let path = dir.path();
-    let open_opts = OpenOptions::new()
-        .create(true)
-        .index_defs(vec![IndexDef::new("c", |_| {
-            vec![IndexOutput::Reference(0..1)]
-        })
-        .lag_threshold(5000)]);
+    let open_opts = OpenOptions::new().create(true).index_defs(vec![
+        IndexDef::new("c", |_| vec![IndexOutput::Reference(0..1)]).lag_threshold(5000),
+    ]);
 
     let long_lived_log = RefCell::new(open_opts.open(()).unwrap());
     let open = || open_opts.open(path);

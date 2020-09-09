@@ -384,23 +384,29 @@ mod tests {
     fn test_remove_non_master(store: &mut dyn IdDagStore) {
         store.remove_non_master().unwrap();
 
-        assert!(store
-            .find_segment_by_head_and_level(nid(2), 0 as Level)
-            .unwrap()
-            .is_none());
-        assert!(store
-            .find_flat_segment_including_id(nid(1))
-            .unwrap()
-            .is_none());
+        assert!(
+            store
+                .find_segment_by_head_and_level(nid(2), 0 as Level)
+                .unwrap()
+                .is_none()
+        );
+        assert!(
+            store
+                .find_flat_segment_including_id(nid(1))
+                .unwrap()
+                .is_none()
+        );
         assert_eq!(
             store.next_free_id(0 as Level, Group::NON_MASTER).unwrap(),
             nid(0)
         );
-        assert!(store
-            .iter_master_flat_segments_with_parent(nid(2))
-            .unwrap()
-            .next()
-            .is_none());
+        assert!(
+            store
+                .iter_master_flat_segments_with_parent(nid(2))
+                .unwrap()
+                .next()
+                .is_none()
+        );
     }
 
     fn for_each_empty_store(f: impl Fn(&mut dyn IdDagStore)) {

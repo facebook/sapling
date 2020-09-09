@@ -658,9 +658,11 @@ mod tests {
         left.insert(repo_path_buf("a2/b2/c2"), make_meta("30"))
             .unwrap();
 
-        assert!(Diff::new(&left, &right, &AlwaysMatcher::new())
-            .next()
-            .is_none());
+        assert!(
+            Diff::new(&left, &right, &AlwaysMatcher::new())
+                .next()
+                .is_none()
+        );
     }
 
     #[test]
@@ -668,15 +670,19 @@ mod tests {
         // Leaving the store empty intentionaly so that we get a panic if anything is read from it.
         let left = TreeManifest::durable(Arc::new(TestStore::new()), hgid("10"));
         let right = TreeManifest::durable(Arc::new(TestStore::new()), hgid("10"));
-        assert!(Diff::new(&left, &right, &AlwaysMatcher::new())
-            .next()
-            .is_none());
+        assert!(
+            Diff::new(&left, &right, &AlwaysMatcher::new())
+                .next()
+                .is_none()
+        );
 
         let right = TreeManifest::durable(Arc::new(TestStore::new()), hgid("20"));
-        assert!(Diff::new(&left, &right, &AlwaysMatcher::new())
-            .next()
-            .unwrap()
-            .is_err());
+        assert!(
+            Diff::new(&left, &right, &AlwaysMatcher::new())
+                .next()
+                .unwrap()
+                .is_err()
+        );
     }
 
     #[test]
@@ -812,13 +818,15 @@ mod tests {
                 ),
             )
         );
-        assert!(Diff::new(
-            &left,
-            &right,
-            &TreeMatcher::from_rules(["a3/**"].iter()).unwrap()
-        )
-        .next()
-        .is_none());
+        assert!(
+            Diff::new(
+                &left,
+                &right,
+                &TreeMatcher::from_rules(["a3/**"].iter()).unwrap()
+            )
+            .next()
+            .is_none()
+        );
     }
 
     #[test]

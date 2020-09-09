@@ -131,15 +131,17 @@ impl IdDagStore for IndexedLogStore {
             .log
             .lookup_range(Self::INDEX_LEVEL_HEAD, &lower_bound[..]..=&upper_bound[..])?
             .rev();
-        let iter = iter.flat_map(move |entry| match entry {
-            Ok((_key, values)) => values
-                .into_iter()
-                .map(|value| {
-                    let value = value?;
-                    Ok(Segment(self.log.slice_to_bytes(value)))
-                })
-                .collect(),
-            Err(err) => vec![Err(err.into())],
+        let iter = iter.flat_map(move |entry| {
+            match entry {
+                Ok((_key, values)) => values
+                    .into_iter()
+                    .map(|value| {
+                        let value = value?;
+                        Ok(Segment(self.log.slice_to_bytes(value)))
+                    })
+                    .collect(),
+                Err(err) => vec![Err(err.into())],
+            }
         });
         Ok(Box::new(iter))
     }
@@ -154,14 +156,16 @@ impl IdDagStore for IndexedLogStore {
         let iter = self
             .log
             .lookup_range(Self::INDEX_LEVEL_HEAD, &lower_bound[..]..=&upper_bound[..])?;
-        let iter = iter.flat_map(move |entry| match entry {
-            Ok((_key, values)) => values
-                .map(|value| {
-                    let value = value?;
-                    Ok(Segment(self.log.slice_to_bytes(value)))
-                })
-                .collect(),
-            Err(err) => vec![Err(err.into())],
+        let iter = iter.flat_map(move |entry| {
+            match entry {
+                Ok((_key, values)) => values
+                    .map(|value| {
+                        let value = value?;
+                        Ok(Segment(self.log.slice_to_bytes(value)))
+                    })
+                    .collect(),
+                Err(err) => vec![Err(err.into())],
+            }
         });
         Ok(Box::new(iter))
     }
@@ -175,9 +179,11 @@ impl IdDagStore for IndexedLogStore {
         key.write_u8(Group::MASTER.0 as u8).unwrap();
         key.write_u64::<BigEndian>(parent.0).unwrap();
         let iter = self.log.lookup(Self::INDEX_PARENT, &key)?;
-        let iter = iter.map(move |result| match result {
-            Ok(bytes) => Ok(Segment(self.log.slice_to_bytes(bytes))),
-            Err(err) => Err(err.into()),
+        let iter = iter.map(move |result| {
+            match result {
+                Ok(bytes) => Ok(Segment(self.log.slice_to_bytes(bytes))),
+                Err(err) => Err(err.into()),
+            }
         });
         Ok(Box::new(iter))
     }
@@ -191,9 +197,11 @@ impl IdDagStore for IndexedLogStore {
             key.write_u8(group.0 as u8).unwrap();
             key.write_u64::<BigEndian>(parent.0).unwrap();
             let iter = self.log.lookup(Self::INDEX_PARENT, &key)?;
-            let iter = iter.map(move |result| match result {
-                Ok(bytes) => Ok(Segment(self.log.slice_to_bytes(bytes))),
-                Err(err) => Err(err.into()),
+            let iter = iter.map(move |result| {
+                match result {
+                    Ok(bytes) => Ok(Segment(self.log.slice_to_bytes(bytes))),
+                    Err(err) => Err(err.into()),
+                }
             });
             Ok(iter)
         };

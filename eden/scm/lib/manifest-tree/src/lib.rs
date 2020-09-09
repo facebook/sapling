@@ -809,9 +809,10 @@ mod tests {
         let mut tree = TreeManifest::ephemeral(Arc::new(TestStore::new()));
         tree.insert(repo_path_buf("foo/bar/baz"), make_meta("10"))
             .unwrap();
-        assert!(tree
-            .insert(repo_path_buf("foo/bar"), make_meta("20"))
-            .is_err());
+        assert!(
+            tree.insert(repo_path_buf("foo/bar"), make_meta("20"))
+                .is_err()
+        );
         assert!(tree.insert(repo_path_buf("foo"), make_meta("30")).is_err());
     }
 
@@ -819,12 +820,14 @@ mod tests {
     fn test_insert_with_file_parent() {
         let mut tree = TreeManifest::ephemeral(Arc::new(TestStore::new()));
         tree.insert(repo_path_buf("foo"), make_meta("10")).unwrap();
-        assert!(tree
-            .insert(repo_path_buf("foo/bar"), make_meta("20"))
-            .is_err());
-        assert!(tree
-            .insert(repo_path_buf("foo/bar/baz"), make_meta("30"))
-            .is_err());
+        assert!(
+            tree.insert(repo_path_buf("foo/bar"), make_meta("20"))
+                .is_err()
+        );
+        assert!(
+            tree.insert(repo_path_buf("foo/bar/baz"), make_meta("30"))
+                .is_err()
+        );
     }
 
     #[test]

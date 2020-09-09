@@ -103,7 +103,9 @@ pub extern "C" fn rust_backingstore_get_blob_batch(
             .and_then(|opt| opt.ok_or_else(|| Error::msg("no blob found")))
             .map(CBytes::from_vec)
             .map(|result| Box::into_raw(Box::new(result)));
-        unsafe { resolve(data, idx, result.into()) };
+        unsafe {
+            resolve(data, idx, result.into())
+        };
     });
 }
 

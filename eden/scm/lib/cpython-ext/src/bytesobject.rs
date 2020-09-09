@@ -10,13 +10,13 @@ use std::os::raw::c_char;
 use std::{mem, slice};
 
 use cpython::{PyObject as RustPyObject, Python as RustPythonGILGuard};
-#[cfg(feature = "python2")]
-use python27_sys::{
-    PyBytesObject, PyBytes_Type, PyObject, PyTypeObject, PyVarObject, Py_ssize_t, _PyObject_NewVar,
-};
 #[cfg(feature = "python3")]
 use python3_sys::{
     PyBytes_Type, PyObject, PyTypeObject, PyVarObject, Py_hash_t, Py_ssize_t, _PyObject_NewVar,
+};
+#[cfg(feature = "python2")]
+use python27_sys::{
+    PyBytesObject, PyBytes_Type, PyObject, PyTypeObject, PyVarObject, Py_ssize_t, _PyObject_NewVar,
 };
 
 // From Python bytesobject.h. Must match the C definition.

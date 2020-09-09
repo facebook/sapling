@@ -801,11 +801,13 @@ mod tests {
             unioned.clone(),
         );
 
-        assert!(intersect(
-            spans1.iter().cloned().collect(),
-            spans2.iter().cloned().collect()
-        )
-        .is_empty());
+        assert!(
+            intersect(
+                spans1.iter().cloned().collect(),
+                spans2.iter().cloned().collect()
+            )
+            .is_empty()
+        );
         assert!(intersect(spans1.iter().cloned().collect(), intersected.clone()).is_empty());
         assert!(intersect(spans2.iter().cloned().collect(), intersected.clone()).is_empty());
 

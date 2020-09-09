@@ -11,10 +11,10 @@ use cpython::*;
 use cpython_ext::{Bytes, PyNone, ResultPyErrExt, Str};
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
-#[cfg(feature = "python2")]
-use python27_sys as ffi;
 #[cfg(feature = "python3")]
 use python3_sys as ffi;
+#[cfg(feature = "python2")]
+use python27_sys as ffi;
 use std::cell::Cell;
 use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};

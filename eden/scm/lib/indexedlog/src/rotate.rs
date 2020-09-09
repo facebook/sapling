@@ -858,11 +858,13 @@ mod tests {
 
         assert!(OpenOptions::new().create(false).open(&path).is_err());
         assert!(OpenOptions::new().create(true).open(&path).is_ok());
-        assert!(OpenOptions::new()
-            .checksum_type(log::ChecksumType::Xxhash64)
-            .create(false)
-            .open(&path)
-            .is_ok());
+        assert!(
+            OpenOptions::new()
+                .checksum_type(log::ChecksumType::Xxhash64)
+                .create(false)
+                .open(&path)
+                .is_ok()
+        );
     }
 
     // lookup via index 0
@@ -1313,10 +1315,10 @@ mod tests {
         let dir = tempdir().unwrap();
         let opts = OpenOptions::new()
             .create(true)
-            .index_defs(vec![IndexDef::new("idx", |_| {
-                vec![IndexOutput::Reference(0..2)]
-            })
-            .lag_threshold(u64::max_value())])
+            .index_defs(vec![
+                IndexDef::new("idx", |_| vec![IndexOutput::Reference(0..2)])
+                    .lag_threshold(u64::max_value()),
+            ])
             .max_bytes_per_log(100)
             .max_log_count(3);
 
