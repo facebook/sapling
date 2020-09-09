@@ -374,9 +374,17 @@ def consumev1(repo, fp, filecount, bytecount):
                         # for backwards compat, name was partially encoded
                         path = store.decodedir(decodeutf8(name))
                         with repo.svfs(path, "w", backgroundclose=True) as ofp:
+                            fetchedsize = 0
                             for chunk in util.filechunkiter(fp, limit=size):
-                                prog.value += len(chunk)
                                 ofp.write(chunk)
+                                chunksize = len(chunk)
+                                prog.value += chunksize
+                                fetchedsize += chunksize
+                            if fetchedsize != size:
+                                msg = _(
+                                    "failed to fully fetch %s: fetched:%s expected:%s"
+                                ) % (name, fetchedsize, size)
+                                raise error.Abort(msg)
 
                 # force @filecache properties to be reloaded from
                 # streamclone-ed file at next access
