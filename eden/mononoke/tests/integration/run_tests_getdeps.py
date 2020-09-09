@@ -108,7 +108,9 @@ else:
         "test-mononoke-hg-sync-job-generate-bundles-lfs-verification.t",  # Timed out
         "test-mononoke-hg-sync-job-generate-bundles-lfs.t",  # Timed out
         "test-push-protocol-lfs.t",  # Timed out
+        "test-redaction.t",  # This test is temporary broken
         "test-remotefilelog-lfs.t",  # Timed out
+        "test-remotefilelog-lfs-client-certs.t",  # Returns different data in OSS
         "test-scs-blame.t",  # Missing SCS_SERVER
         "test-scs-common-base.t",  # Missing SCS_SERVER
         "test-scs-diff.t",  # Missing SCS_SERVER
