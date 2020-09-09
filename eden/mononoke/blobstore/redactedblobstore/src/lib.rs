@@ -24,13 +24,13 @@ use std::{
         Arc,
     },
 };
+use tunables::tunables;
 mod store;
 pub use crate::store::{RedactedMetadata, SqlRedactedContentStore};
 
 pub mod config {
     pub const GET_OPERATION: &str = "GET";
     pub const PUT_OPERATION: &str = "PUT";
-    pub const MIN_REPORT_TIME_DIFFERENCE_NS: i64 = 1_000_000_000;
 }
 
 #[derive(Debug, Clone)]
@@ -143,29 +143,38 @@ impl<T: Blobstore + Clone> RedactedBlobstoreInner<T> {
     pub fn to_scuba_redacted_blob_accessed(&self, ctx: &CoreContext, key: &str, operation: &str) {
         let curr_timestamp = Timestamp::now().timestamp_nanos();
         let last_timestamp = self.timestamp.load(Ordering::Acquire);
-        if config::MIN_REPORT_TIME_DIFFERENCE_NS < curr_timestamp - last_timestamp {
-            let res = &self.timestamp.compare_exchange(
-                last_timestamp,
-                curr_timestamp,
-                Ordering::Acquire,
-                Ordering::Relaxed,
-            );
 
-            if res.is_ok() {
-                let mut scuba_builder = self.config.scuba_builder.clone();
-                let session = &ctx.session_id();
-                scuba_builder
-                    .add("time", curr_timestamp)
-                    .add("operation", operation)
-                    .add("key", key.to_string())
-                    .add("session_uuid", session.to_string());
+        let sampling_rate =
+            core::num::NonZeroU64::new(tunables().get_redacted_logging_sampling_rate() as u64);
 
-                if let Some(unix_username) = ctx.user_unix_name().clone() {
-                    scuba_builder.add("unix_username", unix_username);
-                }
+        let res = &self.timestamp.compare_exchange(
+            last_timestamp,
+            curr_timestamp,
+            Ordering::Acquire,
+            Ordering::Relaxed,
+        );
 
-                scuba_builder.log();
+        if res.is_ok() {
+            let mut scuba_builder = self.config.scuba_builder.clone();
+
+            if let Some(sampling_rate) = sampling_rate {
+                scuba_builder.sampled(sampling_rate);
+            } else {
+                scuba_builder.unsampled();
             }
+
+            let session = &ctx.session_id();
+            scuba_builder
+                .add("time", curr_timestamp)
+                .add("operation", operation)
+                .add("key", key.to_string())
+                .add("session_uuid", session.to_string());
+
+            if let Some(unix_username) = ctx.user_unix_name().clone() {
+                scuba_builder.add("unix_username", unix_username);
+            }
+
+            scuba_builder.log();
         }
     }
 }
