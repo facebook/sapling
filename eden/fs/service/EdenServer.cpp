@@ -1702,12 +1702,11 @@ void EdenServer::prepareThriftAddress() const {
     try {
       sock->bind(addr);
       break;
-    } catch (const std::system_error& ex) {
+    } catch (const std::system_error&) {
       if (tries == maxTries) {
         throw;
       }
 
-#ifdef _WIN32
       // On Windows, a race condition exist where an attempt to connect to a
       // non-existing socket will create it on-disk, preventing bind(2) from
       // succeeding, leading to the Thrift server failing to start.
@@ -1715,12 +1714,6 @@ void EdenServer::prepareThriftAddress() const {
       // Since at this point we're holding the lock, no other edenfs process
       // should be attempting to bind to the socket, and thus it's safe to try
       // to remove it, and retry.
-      if (std::system_category().equivalent(ex.code(), WSAEADDRINUSE)) {
-        throw;
-      }
-#else
-      (void)ex;
-#endif
 
       tries++;
     }
