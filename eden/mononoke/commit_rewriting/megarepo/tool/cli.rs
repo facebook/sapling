@@ -81,33 +81,22 @@ pub fn cs_args_from_matches<'a>(sub_m: &ArgMatches<'a>) -> BoxFuture<ChangesetAr
 pub fn get_delete_commits_cs_args_factory<'a>(
     sub_m: &ArgMatches<'a>,
 ) -> Result<Box<dyn ChangesetArgsFactory>, Error> {
-    let message = sub_m
-        .value_of(COMMIT_MESSAGE)
-        .ok_or_else(|| format_err!("missing argument {}", COMMIT_MESSAGE))?
-        .to_string();
-
-    let author = sub_m
-        .value_of(COMMIT_AUTHOR)
-        .ok_or_else(|| format_err!("missing argument {}", COMMIT_AUTHOR))?
-        .to_string();
-
-    let datetime = sub_m
-        .value_of(COMMIT_DATE_RFC3339)
-        .map(|datetime_str| DateTime::from_rfc3339(datetime_str))
-        .transpose()?
-        .unwrap_or_else(|| DateTime::now());
-
-    Ok(Box::new(move |num: StackPosition| ChangesetArgs {
-        author: author.clone(),
-        message: format!("[MEGAREPO DELETE] {} ({})", message, num.0),
-        datetime: datetime.clone(),
-        bookmark: None,
-        mark_public: false,
-    }))
+    get_commit_factory(sub_m, |s, num| -> String {
+        format!("[MEGAREPO DELETE] {} ({})", s, num)
+    })
 }
 
 pub fn get_gradual_merge_commits_cs_args_factory<'a>(
     sub_m: &ArgMatches<'a>,
+) -> Result<Box<dyn ChangesetArgsFactory>, Error> {
+    get_commit_factory(sub_m, |s, num| -> String {
+        format!("[MEGAREPO GRADUAL MERGE] {} ({})", s, num)
+    })
+}
+
+fn get_commit_factory<'a>(
+    sub_m: &ArgMatches<'a>,
+    msg_factory: impl Fn(&String, usize) -> String + Send + Sync + 'static,
 ) -> Result<Box<dyn ChangesetArgsFactory>, Error> {
     let message = sub_m
         .value_of(COMMIT_MESSAGE)
@@ -127,7 +116,7 @@ pub fn get_gradual_merge_commits_cs_args_factory<'a>(
 
     Ok(Box::new(move |num: StackPosition| ChangesetArgs {
         author: author.clone(),
-        message: format!("[MEGAREPO GRADUAL MERGE] {} ({})", message, num.0),
+        message: msg_factory(&message, num.0),
         datetime: datetime.clone(),
         bookmark: None,
         mark_public: false,
