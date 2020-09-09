@@ -22,7 +22,7 @@ edenapi_types = { path = "../edenapi/types" }
 futures = "0.3"
 hex = "0.4"
 http = "0.2"
-http_client = { path = "../http_client" }
+http-client = { path = "../http-client" }
 indexedlog = { path = "../indexedlog" }
 lz4-pyframe = { path = "../lz4-pyframe" }
 memmap = "0.7.0"
