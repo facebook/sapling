@@ -14,7 +14,7 @@ use clidispatch::{errors::FallbackToPython, io::IO};
 use eden::client::EdenService;
 use eden::{GetScmStatusParams, GetScmStatusResult, ScmFileStatus, ScmStatus};
 #[cfg(unix)]
-use fbthrift_socket::SocketTransportLegacy;
+use fbthrift_socket::SocketTransport;
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::default::Default;
@@ -33,10 +33,8 @@ use std::sync::Arc;
 use thrift_types::fb303_core::client::BaseService;
 use thrift_types::fbthrift::binary_protocol::BinaryProtocol;
 use thrift_types::fbthrift::ApplicationExceptionErrorCode;
-use thrift_types::futures::future::TryFutureExt;
-use tokio_core::reactor::Core;
 #[cfg(unix)]
-use tokio_uds::UnixStream;
+use tokio::net::UnixStream;
 
 /// Standalone status command for edenfs.
 ///
@@ -59,7 +57,9 @@ pub fn maybe_status_fastpath(
     print_config: PrintConfig,
     io: &mut IO,
 ) -> Result<u8> {
-    maybe_status_fastpath_internal(repo_root, cwd, print_config, io)
+    let mut rt = tokio::runtime::Runtime::new()?;
+
+    rt.block_on(async { maybe_status_fastpath_internal(repo_root, cwd, print_config, io).await })
 }
 
 #[cfg(windows)]
@@ -73,15 +73,12 @@ fn maybe_status_fastpath_internal(
 }
 
 #[cfg(unix)]
-fn maybe_status_fastpath_internal(
+async fn maybe_status_fastpath_internal(
     repo_root: &Path,
     cwd: &Path,
     print_config: PrintConfig,
     io: &mut IO,
 ) -> Result<u8> {
-    let mut core = Core::new().expect("Core creation failed");
-    let handle = core.handle();
-
     // Look up the mount point name where Eden thinks this repository is
     // located.  This may be different from repo_root if a parent directory
     // of the Eden mount has been bind mounted to another location, resulting
@@ -96,13 +93,17 @@ fn maybe_status_fastpath_internal(
     // Look up Eden's socket address.
     let sock_addr = repo_root.join(".eden").join("socket");
     let sock_addr = read_link(sock_addr).map_err(|_| FallbackToPython)?;
-    let sock = UnixStream::connect(&sock_addr, &handle).map_err(|_| FallbackToPython)?;
+    let sock = UnixStream::connect(&sock_addr)
+        .await
+        .map_err(|_| FallbackToPython)?;
 
-    let transport = SocketTransportLegacy::new(&handle, sock);
+    let transport = SocketTransport::new(sock);
     let client = EdenService::new(BinaryProtocol, transport);
-    let sock2 = UnixStream::connect(sock_addr, &handle).map_err(|_| FallbackToPython)?;
+    let sock2 = UnixStream::connect(sock_addr)
+        .await
+        .map_err(|_| FallbackToPython)?;
 
-    let transport = SocketTransportLegacy::new(&handle, sock2);
+    let transport = SocketTransport::new(sock2);
     let fb303_client = BaseService::new(BinaryProtocol, transport);
 
     // TODO(mbolin): Run read_hg_dirstate() and core.run() in parallel.
@@ -121,13 +122,13 @@ fn maybe_status_fastpath_internal(
     let use_color = should_colorize_output(&stdout);
 
     let status = get_status_helper(
-        &mut core,
         &client,
         &fb303_client,
         &eden_root,
         dirstate_data.p1,
         print_config.status_types.ignored,
-    )?;
+    )
+    .await?;
 
     let relativizer = PathRelativizer::new(cwd, repo_root);
     let relativizer = HgStatusPathRelativizer::new(print_config.root_relative, relativizer);
@@ -218,26 +219,21 @@ fn is_unknown_method_error(error: &eden::errors::eden_service::GetScmStatusV2Err
     }
 }
 
-fn run_fallback_status(
-    core: &mut Core,
+async fn run_fallback_status(
     client: &Arc<impl EdenService>,
     fb303_client: &Arc<impl BaseService>,
     eden_root: &String,
     commit: CommitHash,
     ignored: bool,
 ) -> Result<GetScmStatusResult, Error> {
-    match core.run(
-        client
-            .getScmStatus(&eden_root.as_bytes().to_vec(), ignored, &commit.to_vec())
-            .compat(),
-    ) {
+    match client
+        .getScmStatus(&eden_root.as_bytes().to_vec(), ignored, &commit.to_vec())
+        .await
+    {
         Ok(status) => {
-            let version = core
-                .run(
-                    fb303_client
-                        .getExportedValue("build_package_version")
-                        .compat(),
-                )
+            let version = fb303_client
+                .getExportedValue("build_package_version")
+                .await
                 .unwrap_or_else(|_| "".to_owned());
 
             Ok(GetScmStatusResult { status, version })
@@ -246,8 +242,7 @@ fn run_fallback_status(
     }
 }
 
-fn get_status_helper(
-    mut core: &mut Core,
+async fn get_status_helper(
     client: &Arc<impl EdenService>,
     fb303_client: &Arc<impl BaseService>,
     eden_root: &String,
@@ -260,20 +255,13 @@ fn get_status_helper(
             commit: commit.to_vec(),
             listIgnored: ignored,
         })
-        .compat();
+        .await;
 
-    match core.run(status) {
+    match status {
         Ok(status) => Ok(status),
         Err(error) => {
             if is_unknown_method_error(&error) {
-                run_fallback_status(
-                    &mut core,
-                    &client,
-                    &fb303_client,
-                    &eden_root,
-                    commit,
-                    ignored,
-                )
+                run_fallback_status(&client, &fb303_client, &eden_root, commit, ignored).await
             } else {
                 Err(error.into())
             }
