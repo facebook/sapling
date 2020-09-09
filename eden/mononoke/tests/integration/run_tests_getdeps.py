@@ -12,6 +12,7 @@ import sys
 from glob import iglob
 from os.path import abspath, basename, dirname, join
 from pathlib import Path
+from sys import platform
 
 
 parser = argparse.ArgumentParser(
@@ -73,7 +74,6 @@ else:
     excluded_tests = {
         "test-backsync-forever.t",  # Unknown issue
         "test-blobimport-lfs.t",  # Timed out
-        "test-blobimport.t",  # Case insensitivity of paths in MacOS
         "test-bookmarks-filler.t",  # Probably missing binary
         "test-cmd-manual-scrub.t",  # Just wrong outout
         "test-edenapi-server-commit-location-to-hash.t",  # Missing eden/scm's commands
@@ -108,7 +108,6 @@ else:
         "test-mononoke-hg-sync-job-generate-bundles-lfs-verification.t",  # Timed out
         "test-mononoke-hg-sync-job-generate-bundles-lfs.t",  # Timed out
         "test-push-protocol-lfs.t",  # Timed out
-        "test-pushrebase-block-casefolding.t",  # Most likely MacOS path case insensitivity
         "test-remotefilelog-lfs.t",  # Timed out
         "test-scs-blame.t",  # Missing SCS_SERVER
         "test-scs-common-base.t",  # Missing SCS_SERVER
@@ -123,6 +122,11 @@ else:
         "test-traffic-replay.t",  # Missing TRAFFIC_REPLAY
         "test-unbundle-replay-hg-recording.t",  # Returns different data in OSS
     }
+
+    if platform == "darwin":
+        excluded_tests.update(
+            {"test-pushrebase-block-casefolding.t"}  # MacOS is path case insensitive
+        )
 
     tests = [
         t
