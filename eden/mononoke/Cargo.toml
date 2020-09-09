@@ -175,7 +175,7 @@ tokio = { version = "=0.2.13", features = ["full"] }
 tokio-compat = "0.1"
 tokio-old = { package = "tokio", version = "0.1" }
 tokio-timer = "0.2"
-tokio-util = "0.2"
+tokio-util = { version = "0.2", features = ["codec", "udp"] }
 toml = "=0.5.6"
 
 [dev-dependencies]
