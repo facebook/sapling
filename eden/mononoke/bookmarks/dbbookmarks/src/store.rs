@@ -54,6 +54,18 @@ queries! {
          LIMIT {limit}"
     }
 
+    read SelectAllUnordered(
+        repo_id: RepositoryId,
+        limit: u64,
+        >list kinds: BookmarkKind
+    ) -> (BookmarkName, BookmarkKind, ChangesetId) {
+        "SELECT name, hg_kind, changeset_id
+         FROM bookmarks
+         WHERE repo_id = {repo_id}
+           AND hg_kind IN {kinds}
+         LIMIT {limit}"
+    }
+
     read SelectAllAfter(
         repo_id: RepositoryId,
         after: BookmarkName,
@@ -82,6 +94,21 @@ queries! {
            AND name LIKE {prefix_like_pattern} ESCAPE {escape_character}
            AND hg_kind IN {kinds}
          ORDER BY name ASC
+         LIMIT {limit}"
+    }
+
+    read SelectByPrefixUnordered(
+        repo_id: RepositoryId,
+        prefix_like_pattern: String,
+        escape_character: &str,
+        limit: u64,
+        >list kinds: BookmarkKind
+    ) -> (BookmarkName, BookmarkKind, ChangesetId) {
+        "SELECT name, hg_kind, changeset_id
+         FROM bookmarks
+         WHERE repo_id = {repo_id}
+           AND name LIKE {prefix_like_pattern} ESCAPE {escape_character}
+           AND hg_kind IN {kinds}
          LIMIT {limit}"
     }
 
@@ -248,7 +275,17 @@ impl Bookmarks for SqlBookmarks {
         if prefix.is_empty() {
             match pagination {
                 BookmarkPagination::FromStart => {
-                    query_to_stream(SelectAll::query(&conn, &self.repo_id, &limit, kinds).compat())
+                    // Sorting is only useful for pagination. If the query returns all bookmark
+                    // names, then skip the sorting.
+                    if limit == std::u64::MAX {
+                        query_to_stream(
+                            SelectAllUnordered::query(&conn, &self.repo_id, &limit, kinds).compat(),
+                        )
+                    } else {
+                        query_to_stream(
+                            SelectAll::query(&conn, &self.repo_id, &limit, kinds).compat(),
+                        )
+                    }
                 }
                 BookmarkPagination::After(ref after) => query_to_stream(
                     SelectAllAfter::query(&conn, &self.repo_id, after, &limit, kinds).compat(),
@@ -257,17 +294,33 @@ impl Bookmarks for SqlBookmarks {
         } else {
             let prefix_like_pattern = prefix.to_escaped_sql_like_pattern();
             match pagination {
-                BookmarkPagination::FromStart => query_to_stream(
-                    SelectByPrefix::query(
-                        &conn,
-                        &self.repo_id,
-                        &prefix_like_pattern,
-                        &"\\",
-                        &limit,
-                        kinds,
-                    )
-                    .compat(),
-                ),
+                BookmarkPagination::FromStart => {
+                    if limit == std::u64::MAX {
+                        query_to_stream(
+                            SelectByPrefixUnordered::query(
+                                &conn,
+                                &self.repo_id,
+                                &prefix_like_pattern,
+                                &"\\",
+                                &limit,
+                                kinds,
+                            )
+                            .compat(),
+                        )
+                    } else {
+                        query_to_stream(
+                            SelectByPrefix::query(
+                                &conn,
+                                &self.repo_id,
+                                &prefix_like_pattern,
+                                &"\\",
+                                &limit,
+                                kinds,
+                            )
+                            .compat(),
+                        )
+                    }
+                }
                 BookmarkPagination::After(ref after) => query_to_stream(
                     SelectByPrefixAfter::query(
                         &conn,

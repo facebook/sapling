@@ -1271,3 +1271,78 @@ fn test_creating_publishing_bookmarks(fb: FacebookInit) {
         );
     })
 }
+
+#[fbinit::test]
+fn test_pagination_ordering(fb: FacebookInit) {
+    async_unit::tokio_unit_test(async move {
+        let ctx = CoreContext::test_mock(fb);
+        let bookmarks = SqlBookmarksBuilder::with_sqlite_in_memory()
+            .unwrap()
+            .with_repo_id(REPO_ZERO);
+        let name_1 = create_bookmark_name("book1");
+        let name_2 = create_bookmark_name("book2");
+        let name_3 = create_bookmark_name("book3");
+
+        let mut txn = bookmarks.create_transaction(ctx.clone());
+        txn.create_publishing(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
+            .unwrap();
+        txn.create_publishing(&name_2, ONES_CSID, BookmarkUpdateReason::TestMove, None)
+            .unwrap();
+        txn.create_publishing(&name_3, ONES_CSID, BookmarkUpdateReason::TestMove, None)
+            .unwrap();
+        assert!(txn.commit().await.unwrap());
+
+        // If the code breaks and these results become unordered then that will happen non
+        // deterministically. Call list() many times to ensure that the bookmarks are actually
+        // ordered.
+        for _ in 0..10 {
+            assert_eq!(
+                bookmarks
+                    .list(
+                        ctx.clone(),
+                        Freshness::MostRecent,
+                        &BookmarkPrefix::empty(),
+                        BookmarkKind::ALL,
+                        &BookmarkPagination::FromStart,
+                        3
+                    )
+                    .try_collect::<Vec<(_, _)>>()
+                    .await
+                    .unwrap(),
+                vec![
+                    (
+                        Bookmark::new(name_1.clone(), BookmarkKind::Publishing),
+                        ONES_CSID
+                    ),
+                    (
+                        Bookmark::new(name_2.clone(), BookmarkKind::Publishing),
+                        ONES_CSID
+                    ),
+                    (
+                        Bookmark::new(name_3.clone(), BookmarkKind::Publishing),
+                        ONES_CSID
+                    ),
+                ]
+            );
+
+            assert_eq!(
+                bookmarks
+                    .list(
+                        ctx.clone(),
+                        Freshness::MostRecent,
+                        &BookmarkPrefix::empty(),
+                        BookmarkKind::ALL,
+                        &BookmarkPagination::After(name_1.clone()),
+                        1
+                    )
+                    .try_collect::<Vec<(_, _)>>()
+                    .await
+                    .unwrap()[0],
+                (
+                    Bookmark::new(name_2.clone(), BookmarkKind::Publishing),
+                    ONES_CSID
+                )
+            );
+        }
+    })
+}
