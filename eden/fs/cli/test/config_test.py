@@ -601,7 +601,10 @@ class EdenInstanceConstructionTest(unittest.TestCase):
             b"",
         ]
         instance = config_mod.eden_instance_from_cmdline(cmdline)
-        self.assertEqual(instance.state_dir, Path("/home/testuser/local/.eden"))
+
+        self.assertEqual(
+            instance.state_dir, Path("/home/testuser/local/.eden").resolve()
+        )
         self.assertEqual(instance.etc_eden_dir, Path("/etc/eden"))
         self.assertEqual(instance.home_dir, Path("/home/testuser/"))
 
@@ -612,6 +615,9 @@ class EdenInstanceConstructionTest(unittest.TestCase):
             b"/home/testuser/.edenrc",
         ]
         instance = config_mod.eden_instance_from_cmdline(cmdline)
-        self.assertEqual(instance.state_dir, Path("/home/testuser/local/.eden"))
+
+        self.assertEqual(
+            instance.state_dir, Path("/home/testuser/local/.eden").resolve()
+        )
         self.assertEqual(instance.etc_eden_dir, Path("/etc/eden"))
         self.assertEqual(instance.home_dir, Path("/home/testuser/"))
