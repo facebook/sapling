@@ -162,6 +162,10 @@ pub fn create_runtime(
     builder.name_prefix(log_thread_name_prefix.unwrap_or("tk"));
     if let Some(core_threads) = core_threads {
         builder.core_threads(core_threads);
+    } else {
+        // TODO(stash) T75113443 remove when
+        // https://github.com/tokio-rs/tokio/issues/2269 is landed
+        builder.core_threads(num_cpus::get());
     }
     builder.build()
 }
