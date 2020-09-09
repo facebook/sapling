@@ -14,7 +14,7 @@ use clidispatch::{errors::FallbackToPython, io::IO};
 use eden::client::EdenService;
 use eden::{GetScmStatusParams, GetScmStatusResult, ScmFileStatus, ScmStatus};
 #[cfg(unix)]
-use fbthrift_socket::SocketTransport;
+use fbthrift_socket::SocketTransportLegacy;
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::default::Default;
@@ -98,11 +98,11 @@ fn maybe_status_fastpath_internal(
     let sock_addr = read_link(sock_addr).map_err(|_| FallbackToPython)?;
     let sock = UnixStream::connect(&sock_addr, &handle).map_err(|_| FallbackToPython)?;
 
-    let transport = SocketTransport::new(&handle, sock);
+    let transport = SocketTransportLegacy::new(&handle, sock);
     let client = EdenService::new(BinaryProtocol, transport);
     let sock2 = UnixStream::connect(sock_addr, &handle).map_err(|_| FallbackToPython)?;
 
-    let transport = SocketTransport::new(&handle, sock2);
+    let transport = SocketTransportLegacy::new(&handle, sock2);
     let fb303_client = BaseService::new(BinaryProtocol, transport);
 
     // TODO(mbolin): Run read_hg_dirstate() and core.run() in parallel.
