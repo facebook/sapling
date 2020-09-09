@@ -15,8 +15,6 @@
   >     kwstr = ", ".join(kw)
   >     msgstr = msg[0] % msg[1:]
   >     self.warn('%s: %s (%s)\n' % (service, msgstr, kwstr))
-  >     with open('$TESTTMP/undesiredfiles', 'a') as f:
-  >       f.write('%s: %s (%s)\n' % (service, msgstr, kwstr))
   >   return orig(self, service, *msg, **opts)
   > EOF
 
