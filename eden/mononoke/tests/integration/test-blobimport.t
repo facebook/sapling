@@ -37,8 +37,8 @@
 
 # Capitals and underscores in a filename. Total len of the filename is 253
 # 253 because: 253 + len(".i") = 255 (max filename in UNIX system)
-  $ UNDERSCORES=`printf '_%.0s' {1..123}`
-  $ CAPITALS=`printf 'A%.0s' {1..130}`
+  $ UNDERSCORES=`printf '_%.0s' {1..122}`
+  $ CAPITALS=`printf 'A%.0s' {1..131}`
   $ echo s > "$UNDERSCORES$CAPITALS"
   $ hg commit -Aqm "underscores, capitals"
 
