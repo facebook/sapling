@@ -42,7 +42,7 @@ commitcloud: searching workspaces for the 'server' repo
 workspaces:
         default
 run `hg cloud sl -w <workspace name>` to view the commits
-run `hg cloud join -w <workspace name> --switch` to switch to a different workspace
+run `hg cloud switch -w <workspace name>` to switch to a different workspace
 run `hg cloud list --all` to list all workspaces, including deleted
 """
 
@@ -52,7 +52,7 @@ workspaces:
         default
         old (archived)
 run `hg cloud sl -w <workspace name>` to view the commits
-run `hg cloud join -w <workspace name> --switch` to switch to a different workspace
+run `hg cloud switch -w <workspace name>` to switch to a different workspace
 """
 
 sh % "hg cloud delete -w default" == r"""
@@ -70,7 +70,7 @@ workspaces:
         old (archived)
         default (archived)
 run `hg cloud sl -w <workspace name>` to view the commits
-run `hg cloud join -w <workspace name> --switch` to switch to a different workspace
+run `hg cloud switch -w <workspace name>` to switch to a different workspace
 """
 
 sh % "hg cloud list" == r"""
@@ -87,7 +87,7 @@ commitcloud: searching workspaces for the 'server' repo
 workspaces:
         default
 run `hg cloud sl -w <workspace name>` to view the commits
-run `hg cloud join -w <workspace name> --switch` to switch to a different workspace
+run `hg cloud switch -w <workspace name>` to switch to a different workspace
 run `hg cloud list --all` to list all workspaces, including deleted
 """
 
@@ -101,5 +101,5 @@ workspaces:
         default
         old
 run `hg cloud sl -w <workspace name>` to view the commits
-run `hg cloud join -w <workspace name> --switch` to switch to a different workspace
+run `hg cloud switch -w <workspace name>` to switch to a different workspace
 """

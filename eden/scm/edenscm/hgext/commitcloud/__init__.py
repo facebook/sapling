@@ -304,7 +304,7 @@ def hintcommitcloudeducation(ui):
 def hintcommitcloudswitch():
     return _(
         "if you would like to switch to the default workspace\n"
-        "run `hg cloud join --switch -w default` inside the repo\n"
+        "run `hg cloud switch -w default` inside the repo\n"
         "run `hg cloud list` to see all your workspaces and learn how to switch between them\n"
     )
 

@@ -64,6 +64,17 @@ pullopts = [
 
 remoteopts = [("", "dest", "", _("remote that is used for backups"))]
 
+createopts = [
+    (
+        "",
+        "create",
+        None,
+        _(
+            "create the workspace if it doesn't exist (applicable to all non default workspaces)"
+        ),
+    )
+]
+
 
 @command("cloud", [], "SUBCOMMAND ...")
 def cloud(ui, repo, **opts):
@@ -97,6 +108,7 @@ subcmd = cloud.subcommand(
             ["backup", "check", "listbackups", "restorebackup", "deletebackup"],
         ),
         ("Manage automatic backup or sync", ["disable", "enable"]),
+        ("Manage cloud workspaces", ["delete", "undelete", "list"]),
     ]
 )
 
@@ -106,24 +118,18 @@ subcmd = cloud.subcommand(
     [
         ("", "switch", None, _("switch to another workspace")),
         ("", "merge", None, _("merge to another workspace")),
-        (
-            "",
-            "create",
-            None,
-            _(
-                "create the workspace if it doesn't exist (applicable to all non default workspace)"
-            ),
-        ),
     ]
+    + createopts
     + workspace.workspaceopts
     + pullopts
     + remoteopts,
 )
 def cloudjoin(ui, repo, **opts):
-    """connect the local repository to commit cloud
+    """connect the local repository to a commit cloud workspace
 
-    Commits and bookmarks will be synchronized between all repositories that
-    have been connected to the service.
+    Local commits and bookmarks will be backed up to the commit cloud and
+    synchronized between all repositories that have been connected
+    to the same commit cloud workspace
 
     Use `hg cloud sync` to trigger a new synchronization.
     """
@@ -283,6 +289,13 @@ def cloudjoin(ui, repo, **opts):
     cloudsync(ui, repo, **opts)
 
 
+@subcmd("switch", [] + createopts + workspace.workspaceopts + pullopts + remoteopts)
+def switchworkspace(ui, repo, **opts):
+    """switch the local repository to a different commit cloud workspace"""
+    opts.update({"switch": True})
+    cloudjoin(ui, repo, **opts)
+
+
 @subcmd("rejoin|reconnect", [] + workspace.workspaceopts + pullopts + remoteopts)
 def cloudrejoin(ui, repo, **opts):
     """reconnect the local repository to commit cloud
@@ -292,7 +305,7 @@ def cloudrejoin(ui, repo, **opts):
     describing how to connect to commit cloud.
 
     If connection is successful, then commits and bookmarks will be synchronized
-    between all repositories that have been connected to the service.
+    between all repositories that have been connected to the same commit cloud workspace.
 
     Use `hg cloud sync` to trigger a new synchronization.
     """
@@ -857,7 +870,7 @@ def cloudlistworspaces(ui, repo, **opts):
     ui.status(_("run `hg cloud sl -w <workspace name>` to view the commits\n"))
     ui.status(
         _(
-            "run `hg cloud join -w <workspace name> --switch` to switch to a different workspace\n"
+            "run `hg cloud switch -w <workspace name>` to switch to a different workspace\n"
         )
     )
     if activeonly and archived:
@@ -1309,7 +1322,10 @@ def cloudstatus(ui, repo, **opts):
 
     userworkspaceprefix = workspace.userworkspaceprefix(ui)
     if workspacename.startswith(userworkspaceprefix):
-        ui.write(_("Workspace: %s\n") % workspacename[len(userworkspaceprefix) :])
+        ui.write(
+            _("Workspace: %s\n")
+            % ui.label(workspacename[len(userworkspaceprefix) :], "bold")
+        )
 
     ui.write(_("Raw Workspace Name: %s\n") % workspacename)
 

@@ -502,3 +502,15 @@ Test switch to non default non-existent workspace
   |
   @  0 base: public
   
+ 
+
+Test switch back to the default workpsace using a shorter `switch` command
+  $ hg cloud switch -w default
+  commitcloud: synchronizing 'server' with 'user/test/brand_new_empty'
+  commitcloud: commits synchronized
+  finished in * (glob)
+  commitcloud: now this repository will be switched from the 'user/test/brand_new_empty' to the 'user/test/default' workspace
+  commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
+  commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: commits synchronized
+  finished in * (glob)

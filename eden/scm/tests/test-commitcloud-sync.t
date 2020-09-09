@@ -1335,7 +1335,7 @@ Host-specific workspace now exists, so it should be chosen as the one to connect
   commitcloud: commits synchronized
   finished in * (glob)
   hint[commitcloud-switch]: if you would like to switch to the default workspace
-  run `hg cloud join --switch -w default` inside the repo
+  run `hg cloud switch -w default` inside the repo
   run `hg cloud list` to see all your workspaces and learn how to switch between them
   hint[hint-ack]: use 'hg hint --ack commitcloud-switch' to silence these hints
 
