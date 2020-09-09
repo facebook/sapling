@@ -25,6 +25,7 @@ use std::{
     collections::{HashMap, HashSet},
     fmt,
     future::Future,
+    hash::Hasher,
     iter::Iterator,
     num::{NonZeroU64, NonZeroUsize},
     sync::{
@@ -36,10 +37,11 @@ use std::{
 use thiserror::Error;
 use time_ext::DurationExt;
 use tokio::time::timeout;
+use twox_hash::XxHash;
 
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(600);
 
-type BlobstoresWithEntry = HashSet<BlobstoreId>;
+type BlobstoresWithEntry = Vec<HashSet<BlobstoreId>>;
 type BlobstoresReturnedNone = HashSet<BlobstoreId>;
 type BlobstoresReturnedError = HashMap<BlobstoreId, Error>;
 
@@ -52,7 +54,7 @@ pub enum ErrorKind {
     // Errors below this point are from ScrubBlobstore only. If they include an
     // Option<BlobstoreBytes>, this implies that this error is recoverable
     #[error(
-        "Different blobstores have different values for this item: {0:?} differ, {1:?} do not have"
+        "Different blobstores have different values for this item: {0:?} are grouped by content, {1:?} do not have"
     )]
     ValueMismatch(Arc<BlobstoresWithEntry>, Arc<BlobstoresReturnedNone>),
     #[error("Some blobstores missing this item: {0:?}")]
@@ -159,44 +161,50 @@ impl MultiplexedBlobstoreBase {
             return Err(ErrorKind::AllFailed(errors.into()));
         }
 
-        let mut best_value = None;
+        let mut all_values = HashMap::new();
         let mut missing = HashSet::new();
-        let mut answered = HashSet::new();
-        let mut all_same = true;
+        let mut last_get_data = None;
 
         for (blobstore_id, value) in successes.into_iter() {
-            if value.is_none() {
-                missing.insert(blobstore_id);
-            } else {
-                answered.insert(blobstore_id);
-                if best_value.is_none() {
-                    best_value = value;
-                } else if value.as_ref().map(BlobstoreGetData::as_bytes)
-                    != best_value.as_ref().map(BlobstoreGetData::as_bytes)
-                {
-                    all_same = false;
-                } else if value.as_ref().and_then(|v| v.as_meta().ctime())
-                    > best_value.as_ref().and_then(|v| v.as_meta().ctime())
-                {
-                    best_value = value;
+            match value {
+                None => {
+                    missing.insert(blobstore_id);
+                }
+                Some(value) => {
+                    let mut content_hash = XxHash::with_seed(0);
+                    content_hash.write(value.as_raw_bytes());
+                    let content_hash = content_hash.finish();
+                    all_values
+                        .entry(content_hash)
+                        .or_insert_with(HashSet::new)
+                        .insert(blobstore_id);
+                    last_get_data = Some(value);
                 }
             }
         }
 
-        match (all_same, best_value.is_some(), missing.is_empty()) {
-            (false, _, _) => Err(ErrorKind::ValueMismatch(
-                Arc::new(answered),
-                Arc::new(missing),
-            )),
-            (true, false, _) => {
+        match all_values.len() {
+            0 => {
                 if errors.is_empty() {
                     Ok(None)
                 } else {
                     Err(ErrorKind::SomeFailedOthersNone(errors.into()))
                 }
             }
-            (true, true, false) => Err(ErrorKind::SomeMissingItem(Arc::new(missing), best_value)),
-            (true, true, true) => Ok(best_value),
+            1 => {
+                if missing.is_empty() {
+                    Ok(last_get_data)
+                } else {
+                    Err(ErrorKind::SomeMissingItem(Arc::new(missing), last_get_data))
+                }
+            }
+            _ => {
+                let answered = all_values.drain().map(|(_, stores)| stores).collect();
+                Err(ErrorKind::ValueMismatch(
+                    Arc::new(answered),
+                    Arc::new(missing),
+                ))
+            }
         }
     }
 }

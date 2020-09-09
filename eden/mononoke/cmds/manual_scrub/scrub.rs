@@ -23,7 +23,8 @@ async fn scrub_key(
 ) -> Result<()> {
     let handle = tokio::task::spawn(blobstore.get(ctx.clone(), key.clone()));
     handle
-        .await??
+        .await?
+        .with_context(|| format!("Scrubbing key {}", &key))?
         .with_context(|| format!("Key {} is missing", &key))?;
     output.send(key).await?;
     Ok(())

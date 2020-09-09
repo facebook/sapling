@@ -159,7 +159,7 @@ impl From<BlobstoreGetData> for BlobstoreBytes {
     }
 }
 
-#[derive(Abomonation, Clone, Debug, PartialEq, Eq)]
+#[derive(Abomonation, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct BlobstoreMetadata {
     ctime: Option<i64>,
 }
@@ -179,7 +179,7 @@ impl BlobstoreMetadata {
 /// A type representing bytes written to or read from a blobstore. The goal here is to ensure
 /// that only types that implement `From<BlobstoreBytes>` and `Into<BlobstoreBytes>` can be
 /// stored in the blob store.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct BlobstoreBytes(Bytes);
 
 impl BlobstoreBytes {

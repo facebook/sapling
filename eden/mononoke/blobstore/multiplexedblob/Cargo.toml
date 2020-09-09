@@ -25,6 +25,7 @@ once_cell = "1.4"
 slog = { version = "2.5", features = ["max_level_debug"] }
 thiserror = "1.0"
 tokio = { version = "=0.2.13", features = ["full"] }
+twox-hash = "1.5"
 
 [dev-dependencies]
 memblob = { path = "../memblob" }
