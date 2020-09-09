@@ -194,6 +194,7 @@ members = [
     "blobrepo/blobrepo_hg",
     "blobrepo/blobsync",
     "blobrepo/changeset_fetcher",
+    "blobrepo/common",
     "blobrepo/errors",
     "blobrepo/factory",
     "blobrepo/override",

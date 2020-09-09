@@ -8,6 +8,7 @@ include = ["src/**/*.rs"]
 
 [dependencies]
 blobrepo = { path = ".." }
+blobrepo_common = { path = "../common" }
 blobrepo_errors = { path = "../errors" }
 blobstore = { path = "../../blobstore" }
 bonsai_hg_mapping = { path = "../../bonsai_hg_mapping" }
@@ -36,6 +37,5 @@ futures-old = { package = "futures", version = "0.1" }
 maplit = "1.0"
 rand = { version = "0.7", features = ["small_rng"] }
 slog = { version = "2.5", features = ["max_level_debug"] }
-thiserror = "1.0"
 tokio = { version = "=0.2.13", features = ["full"] }
 uuid = { version = "0.8.1", features = ["v4"] }

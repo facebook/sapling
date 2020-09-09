@@ -5,14 +5,16 @@
  * GNU General Public License version 2.
  */
 
-use crate::BlobRepoHg;
-use anyhow::{anyhow, Error};
+use anyhow::{anyhow, Context, Error};
 use blobrepo::BlobRepo;
+use blobstore::{Blobstore, Loadable};
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
-use filenodes::{FilenodeInfo, FilenodeRangeResult, FilenodeResult};
+use failure_ext::FutureFailureExt;
+use filenodes::{FilenodeInfo, FilenodeRangeResult, FilenodeResult, Filenodes};
 use futures::{
     compat::Future01CompatExt,
+    future::TryFutureExt,
     stream,
     stream::{StreamExt, TryStreamExt},
 };
@@ -23,7 +25,8 @@ use futures_old::{
 };
 use maplit::hashset;
 use mercurial_types::{
-    HgFileHistoryEntry, HgFileNodeId, HgParents, MPath, RepoPath, NULL_CSID, NULL_HASH,
+    HgBlobEnvelope, HgChangesetId, HgFileHistoryEntry, HgFileNodeId, HgParents, MPath, RepoPath,
+    NULL_CSID, NULL_HASH,
 };
 use stats::prelude::*;
 use std::collections::{HashMap, VecDeque};
@@ -107,13 +110,18 @@ pub fn get_file_history_maybe_incomplete(
                     // Filenodes are disabled - fetch a single filenode
                     // from a blobstore
                     let path = RepoPath::FilePath(path);
-                    repo.get_filenode_from_envelope(ctx.clone(), &path, filenode, NULL_CSID)
-                        .and_then(move |filenode_info| {
-                            let filenode =
-                                filenode_to_history_entry(filenode, filenode_info, &path)?;
-                            Ok(vec![filenode])
-                        })
-                        .right_future()
+                    get_filenode_from_envelope(
+                        repo.get_blobstore(),
+                        ctx.clone(),
+                        &path,
+                        filenode,
+                        NULL_CSID,
+                    )
+                    .and_then(move |filenode_info| {
+                        let filenode = filenode_to_history_entry(filenode, filenode_info, &path)?;
+                        Ok(vec![filenode])
+                    })
+                    .right_future()
                 }
             }
         }
@@ -167,7 +175,8 @@ fn prefetch_history(
     path: MPath,
     limit: Option<u64>,
 ) -> impl Future<Item = FilenodeRangeResult<HashMap<HgFileNodeId, FilenodeInfo>>, Error = Error> {
-    repo.get_all_filenodes_maybe_stale(ctx, RepoPath::FilePath(path), limit)
+    repo.attribute_expected::<dyn Filenodes>()
+        .get_all_filenodes_maybe_stale(ctx, &RepoPath::FilePath(path), repo.get_repoid(), limit)
         .map(|filenodes_res| {
             filenodes_res.map(|filenodes| {
                 filenodes
@@ -293,19 +302,57 @@ fn get_maybe_missing_filenode(
     path: &RepoPath,
     node: HgFileNodeId,
 ) -> impl Future<Item = FilenodeInfo, Error = Error> {
-    repo.get_filenode_opt(ctx.clone(), path, node).and_then({
-        cloned!(repo, ctx, path, node);
-        move |filenode_res| match filenode_res {
-            FilenodeResult::Present(Some(filenode)) => ok(filenode).left_future(),
-            FilenodeResult::Present(None) | FilenodeResult::Disabled => {
-                // The filenode couldn't be found.  This may be because it is a
-                // draft node, which doesn't get stored in the database or because
-                // filenodes were intentionally disabled.  Attempt
-                // to reconstruct the filenode from the envelope.  Use `NULL_CSID`
-                // to indicate a draft or missing linknode.
-                repo.get_filenode_from_envelope(ctx, &path, node, NULL_CSID)
-                    .right_future()
+    repo.attribute_expected::<dyn Filenodes>()
+        .get_filenode(ctx.clone(), path, node, repo.get_repoid())
+        .and_then({
+            cloned!(repo, ctx, path, node);
+            move |filenode_res| match filenode_res {
+                FilenodeResult::Present(Some(filenode)) => ok(filenode).left_future(),
+                FilenodeResult::Present(None) | FilenodeResult::Disabled => {
+                    // The filenode couldn't be found.  This may be because it is a
+                    // draft node, which doesn't get stored in the database or because
+                    // filenodes were intentionally disabled.  Attempt
+                    // to reconstruct the filenode from the envelope.  Use `NULL_CSID`
+                    // to indicate a draft or missing linknode.
+                    get_filenode_from_envelope(repo.get_blobstore(), ctx, &path, node, NULL_CSID)
+                        .right_future()
+                }
             }
-        }
-    })
+        })
+}
+
+fn get_filenode_from_envelope(
+    blobstore: impl Blobstore + Clone,
+    ctx: CoreContext,
+    path: &RepoPath,
+    node: HgFileNodeId,
+    linknode: HgChangesetId,
+) -> impl Future<Item = FilenodeInfo, Error = Error> {
+    node.load(ctx, &blobstore)
+        .compat()
+        .with_context({
+            cloned!(path);
+            move || format!("While fetching filenode for {} {}", path, node)
+        })
+        .from_err()
+        .and_then({
+            cloned!(path, linknode);
+            move |envelope| {
+                let (p1, p2) = envelope.parents();
+                let copyfrom = envelope
+                    .get_copy_info()
+                    .with_context({
+                        cloned!(path);
+                        move || format!("While parsing copy information for {} {}", path, node)
+                    })?
+                    .map(|(path, node)| (RepoPath::FilePath(path), node));
+                Ok(FilenodeInfo {
+                    filenode: node,
+                    p1,
+                    p2,
+                    copyfrom,
+                    linknode,
+                })
+            }
+        })
 }
