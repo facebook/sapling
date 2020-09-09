@@ -109,6 +109,30 @@ pub struct FastlogBatchId(Blake2);
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 pub struct BlameId(Blake2);
 
+struct Blake2HexVisitor;
+
+impl<'de> serde::de::Visitor<'de> for Blake2HexVisitor {
+    type Value = String;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("64 hex digits")
+    }
+
+    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        Ok(value.to_string())
+    }
+
+    fn visit_string<E>(self, value: String) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        Ok(value)
+    }
+}
+
 /// Implementations of typed hashes.
 macro_rules! impl_typed_hash_no_context {
     {
@@ -208,6 +232,19 @@ macro_rules! impl_typed_hash_no_context {
                 S: serde::Serializer,
             {
                 serializer.serialize_str(self.to_hex().as_str())
+            }
+        }
+
+        impl<'de> serde::de::Deserialize<'de> for $typed {
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where
+                D: serde::de::Deserializer<'de>,
+            {
+                let hex = deserializer.deserialize_string(Blake2HexVisitor)?;
+                match Blake2::from_str(hex.as_str()) {
+                    Ok(blake2) => Ok($typed(blake2)),
+                    Err(error) => Err(serde::de::Error::custom(error)),
+                }
             }
         }
 
@@ -522,5 +559,58 @@ mod test {
 
         let id = FastlogBatchId::from_byte_array([1; 32]);
         assert_eq!(id.blobstore_key(), format!("fastlogbatch.blake2.{}", id));
+    }
+
+    #[test]
+    fn test_serialize_deserialize() {
+        let id = ChangesetId::new(Blake2::from_byte_array([1; 32]));
+        let serialized = serde_json::to_string(&id).unwrap();
+        let deserialized = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(id, deserialized);
+
+        let id = ContentId::new(Blake2::from_byte_array([1; 32]));
+        let serialized = serde_json::to_string(&id).unwrap();
+        let deserialized = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(id, deserialized);
+
+        let id = ContentChunkId::from_byte_array([1; 32]);
+        let serialized = serde_json::to_string(&id).unwrap();
+        let deserialized = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(id, deserialized);
+
+        let id = RawBundle2Id::from_byte_array([1; 32]);
+        let serialized = serde_json::to_string(&id).unwrap();
+        let deserialized = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(id, deserialized);
+
+        let id = FileUnodeId::from_byte_array([1; 32]);
+        let serialized = serde_json::to_string(&id).unwrap();
+        let deserialized = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(id, deserialized);
+
+        let id = ManifestUnodeId::from_byte_array([1; 32]);
+        let serialized = serde_json::to_string(&id).unwrap();
+        let deserialized = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(id, deserialized);
+
+        let id = DeletedManifestId::from_byte_array([1; 32]);
+        let serialized = serde_json::to_string(&id).unwrap();
+        let deserialized = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(id, deserialized);
+
+        let id = FsnodeId::from_byte_array([1; 32]);
+        let serialized = serde_json::to_string(&id).unwrap();
+        let deserialized = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(id, deserialized);
+
+        let id = ContentMetadataId::from_byte_array([1; 32]);
+        let serialized = serde_json::to_string(&id).unwrap();
+        let deserialized = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(id, deserialized);
+
+        let id = FastlogBatchId::from_byte_array([1; 32]);
+        let serialized = serde_json::to_string(&id).unwrap();
+        let deserialized = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(id, deserialized);
     }
 }
