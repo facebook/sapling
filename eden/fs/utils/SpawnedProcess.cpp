@@ -562,6 +562,19 @@ SpawnedProcess::SpawnedProcess(
     handles.push_back(handle);
   }
 
+  if (!startupInfo.StartupInfo.hStdInput) {
+    startupInfo.StartupInfo.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
+    handles.push_back(startupInfo.StartupInfo.hStdInput);
+  }
+  if (!startupInfo.StartupInfo.hStdOutput) {
+    startupInfo.StartupInfo.hStdOutput = GetStdHandle(STD_OUTPUT_HANDLE);
+    handles.push_back(startupInfo.StartupInfo.hStdOutput);
+  }
+  if (!startupInfo.StartupInfo.hStdError) {
+    startupInfo.StartupInfo.hStdError = GetStdHandle(STD_ERROR_HANDLE);
+    handles.push_back(startupInfo.StartupInfo.hStdError);
+  }
+
   SIZE_T size;
   InitializeProcThreadAttributeList(nullptr, 1, 0, &size);
 
