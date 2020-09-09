@@ -451,10 +451,11 @@ async fn tree_list(fb: FacebookInit) -> Result<(), Error> {
         vec![String::from("file_1"), String::from("file_2")]
     );
     // Get tree by non-existent id returns None.
-    assert!(repo
-        .tree(TreeId::from_bytes([1; 32]).unwrap())
-        .await?
-        .is_none());
+    assert!(
+        repo.tree(TreeId::from_bytes([1; 32]).unwrap())
+            .await?
+            .is_none()
+    );
     // Get tree by non-existent path returns None.
     {
         let path = cs.path("nonexistent")?;

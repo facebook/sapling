@@ -187,9 +187,11 @@ impl Changesets for CachingChangesets {
         if let Some(id) = cs_prefix.into_changeset_id() {
             return self
                 .get(ctx, repo_id, id)
-                .map(move |res| match res {
-                    Some(_) if limit > 0 => ChangesetIdsResolvedFromPrefix::Single(id),
-                    _ => ChangesetIdsResolvedFromPrefix::NoMatch,
+                .map(move |res| {
+                    match res {
+                        Some(_) if limit > 0 => ChangesetIdsResolvedFromPrefix::Single(id),
+                        _ => ChangesetIdsResolvedFromPrefix::NoMatch,
+                    }
                 })
                 .boxify();
         }

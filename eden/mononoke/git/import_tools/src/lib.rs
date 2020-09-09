@@ -96,21 +96,25 @@ where
     S: Stream<Item = BonsaiDiffFileChange<GitLeaf>, Error = Error>,
 {
     changes
-        .map(move |change| match change {
-            BonsaiDiffFileChange::Changed(path, ty, GitLeaf(oid))
-            | BonsaiDiffFileChange::ChangedReusedId(path, ty, GitLeaf(oid)) => {
-                do_upload(ctx.clone(), blobstore.clone(), pool.clone(), oid)
-                    .boxed()
-                    .compat()
-                    .map(move |meta| {
-                        (
-                            path,
-                            Some(FileChange::new(meta.content_id, ty, meta.total_size, None)),
-                        )
-                    })
-                    .left_future()
+        .map(move |change| {
+            match change {
+                BonsaiDiffFileChange::Changed(path, ty, GitLeaf(oid))
+                | BonsaiDiffFileChange::ChangedReusedId(path, ty, GitLeaf(oid)) => {
+                    do_upload(ctx.clone(), blobstore.clone(), pool.clone(), oid)
+                        .boxed()
+                        .compat()
+                        .map(move |meta| {
+                            (
+                                path,
+                                Some(FileChange::new(meta.content_id, ty, meta.total_size, None)),
+                            )
+                        })
+                        .left_future()
+                }
+                BonsaiDiffFileChange::Deleted(path) => {
+                    Ok((path, None)).into_future().right_future()
+                }
             }
-            BonsaiDiffFileChange::Deleted(path) => Ok((path, None)).into_future().right_future(),
         })
         .buffer_unordered(100)
         .collect_to()

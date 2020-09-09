@@ -84,11 +84,7 @@ impl HgNodeHash {
 
     #[inline]
     pub fn into_option(self) -> Option<Self> {
-        if self == NULL_HASH {
-            None
-        } else {
-            Some(self)
-        }
+        if self == NULL_HASH { None } else { Some(self) }
     }
 
     pub fn into_thrift(self) -> thrift::HgNodeHash {

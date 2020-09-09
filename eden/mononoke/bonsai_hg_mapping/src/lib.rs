@@ -347,13 +347,15 @@ impl BonsaiHgMapping for SqlBonsaiHgMapping {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
         fetch_many_hg_by_prefix(&self.read_connection, repo_id, &cs_prefix, limit)
-            .and_then(move |resolved_cs| match resolved_cs {
-                HgChangesetIdsResolvedFromPrefix::NoMatch => {
-                    ctx.perf_counters()
-                        .increment_counter(PerfCounterType::SqlReadsMaster);
-                    fetch_many_hg_by_prefix(&read_master_connection, repo_id, &cs_prefix, limit)
+            .and_then(move |resolved_cs| {
+                match resolved_cs {
+                    HgChangesetIdsResolvedFromPrefix::NoMatch => {
+                        ctx.perf_counters()
+                            .increment_counter(PerfCounterType::SqlReadsMaster);
+                        fetch_many_hg_by_prefix(&read_master_connection, repo_id, &cs_prefix, limit)
+                    }
+                    _ => future::ok(resolved_cs).boxify(),
                 }
-                _ => future::ok(resolved_cs).boxify(),
             })
             .boxify()
     }

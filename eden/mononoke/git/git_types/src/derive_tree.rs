@@ -47,9 +47,11 @@ impl TreeMapping {
         self.blobstore
             .get(ctx, self.root_key(cs_id))
             .compat()
-            .and_then(move |bytes| match bytes {
-                Some(bytes) => bytes.try_into().map(|handle| Some((cs_id, handle))),
-                None => Ok(None),
+            .and_then(move |bytes| {
+                match bytes {
+                    Some(bytes) => bytes.try_into().map(|handle| Some((cs_id, handle))),
+                    None => Ok(None),
+                }
             })
     }
 }
@@ -142,11 +144,13 @@ fn derive_git_manifest<B: Blobstore + Clone>(
             }
         },
     )
-    .and_then(move |handle| match handle {
-        Some(handle) => Ok(handle).into_future().left_future(),
-        None => {
-            let tree: Tree = TreeBuilder::default().into();
-            tree.store(ctx.clone(), &blobstore).compat().right_future()
+    .and_then(move |handle| {
+        match handle {
+            Some(handle) => Ok(handle).into_future().left_future(),
+            None => {
+                let tree: Tree = TreeBuilder::default().into();
+                tree.store(ctx.clone(), &blobstore).compat().right_future()
+            }
         }
     })
 }

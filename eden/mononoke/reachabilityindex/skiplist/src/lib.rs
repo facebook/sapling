@@ -1260,14 +1260,16 @@ mod test {
                         .into_iter()
                         .map(|(node, _)| node)
                         .collect();
-                    assert!(skip_edges.contains(
-                        &string_to_bonsai(
-                            ctx.clone(),
-                            &repo,
-                            "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"
+                    assert!(
+                        skip_edges.contains(
+                            &string_to_bonsai(
+                                ctx.clone(),
+                                &repo,
+                                "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"
+                            )
+                            .await
                         )
-                        .await
-                    ));
+                    );
                 }
             }
         });
@@ -1790,10 +1792,11 @@ mod test {
         // indexing doesn't even take place if the query can conclude true or false right away
 
         for (_, node) in ordered_hashes_oldest_to_newest.into_iter().enumerate() {
-            assert!(sli
-                .query_reachability(&ctx, &repo.get_changeset_fetcher(), node, node)
-                .await
-                .unwrap());
+            assert!(
+                sli.query_reachability(&ctx, &repo.get_changeset_fetcher(), node, node)
+                    .await
+                    .unwrap()
+            );
         }
     }
 

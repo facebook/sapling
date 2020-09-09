@@ -44,22 +44,30 @@ pub const BONSAI_MERGE_P1: &'static str = "bonsai-merge-p1";
 pub const BONSAI_MERGE_P2: &'static str = "bonsai-merge-p2";
 
 pub fn cs_args_from_matches<'a>(sub_m: &ArgMatches<'a>) -> BoxFuture<ChangesetArgs, Error> {
-    let message = try_boxfuture!(sub_m
-        .value_of(COMMIT_MESSAGE)
-        .ok_or_else(|| format_err!("missing argument {}", COMMIT_MESSAGE)))
+    let message = try_boxfuture!(
+        sub_m
+            .value_of(COMMIT_MESSAGE)
+            .ok_or_else(|| format_err!("missing argument {}", COMMIT_MESSAGE))
+    )
     .to_string();
-    let author = try_boxfuture!(sub_m
-        .value_of(COMMIT_AUTHOR)
-        .ok_or_else(|| format_err!("missing argument {}", COMMIT_AUTHOR)))
+    let author = try_boxfuture!(
+        sub_m
+            .value_of(COMMIT_AUTHOR)
+            .ok_or_else(|| format_err!("missing argument {}", COMMIT_AUTHOR))
+    )
     .to_string();
-    let datetime = try_boxfuture!(sub_m
-        .value_of(COMMIT_DATE_RFC3339)
-        .map(|datetime_str| DateTime::from_rfc3339(datetime_str))
-        .unwrap_or_else(|| Ok(DateTime::now())));
-    let bookmark = try_boxfuture!(sub_m
-        .value_of(COMMIT_BOOKMARK)
-        .map(|bookmark_str| BookmarkName::new(bookmark_str))
-        .transpose());
+    let datetime = try_boxfuture!(
+        sub_m
+            .value_of(COMMIT_DATE_RFC3339)
+            .map(|datetime_str| DateTime::from_rfc3339(datetime_str))
+            .unwrap_or_else(|| Ok(DateTime::now()))
+    );
+    let bookmark = try_boxfuture!(
+        sub_m
+            .value_of(COMMIT_BOOKMARK)
+            .map(|bookmark_str| BookmarkName::new(bookmark_str))
+            .transpose()
+    );
     let mark_public = sub_m.is_present(MARK_PUBLIC);
     if !mark_public && bookmark.is_some() {
         return err(format_err!(

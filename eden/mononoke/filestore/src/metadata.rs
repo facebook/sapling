@@ -94,9 +94,11 @@ fn rebuild_metadata<B: Blobstore + Clone>(
     content_id
         .load(ctx.clone(), &blobstore)
         .compat()
-        .or_else(move |err| match err {
-            LoadableError::Error(err) => Err(InternalError(content_id, err)),
-            LoadableError::Missing(_) => Err(NotFound(content_id)),
+        .or_else(move |err| {
+            match err {
+                LoadableError::Error(err) => Err(InternalError(content_id, err)),
+                LoadableError::Missing(_) => Err(NotFound(content_id)),
+            }
         })
         .and_then({
             cloned!(blobstore, ctx);

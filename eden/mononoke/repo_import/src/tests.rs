@@ -182,30 +182,34 @@ mod tests {
         let repo_id = repo.get_repoid();
         let bookmark = create_bookmark_name("book");
 
-        assert!(check_dependent_systems(
-            &ctx,
-            &repo,
-            &checker_flags,
-            HG_CSID,
-            sleep_time,
-            &mutable_counters
-        )
-        .await
-        .is_err());
+        assert!(
+            check_dependent_systems(
+                &ctx,
+                &repo,
+                &checker_flags,
+                HG_CSID,
+                sleep_time,
+                &mutable_counters
+            )
+            .await
+            .is_err()
+        );
 
         let mut txn = repo.update_bookmark_transaction(ctx.clone());
         txn.create(&bookmark, MON_CSID, BookmarkUpdateReason::TestMove, None)?;
         txn.commit().await.unwrap();
-        assert!(check_dependent_systems(
-            &ctx,
-            &repo,
-            &checker_flags,
-            HG_CSID,
-            sleep_time,
-            &mutable_counters
-        )
-        .await
-        .is_err());
+        assert!(
+            check_dependent_systems(
+                &ctx,
+                &repo,
+                &checker_flags,
+                HG_CSID,
+                sleep_time,
+                &mutable_counters
+            )
+            .await
+            .is_err()
+        );
 
         mutable_counters
             .set_counter(ctx.clone(), repo_id, LATEST_REPLAYED_REQUEST_KEY, 1, None)

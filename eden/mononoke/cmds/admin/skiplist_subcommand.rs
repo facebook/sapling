@@ -143,16 +143,18 @@ pub async fn subcommand_skiplist<'a>(
                     cloned!(logger);
                     move |repo| read_skiplist_index(ctx.clone(), repo, key, logger)
                 })
-                .map(move |maybe_index| match maybe_index {
-                    Some(index) => {
-                        info!(
-                            logger,
-                            "skiplist graph has {} entries",
-                            index.indexed_node_count()
-                        );
-                    }
-                    None => {
-                        info!(logger, "skiplist not found");
+                .map(move |maybe_index| {
+                    match maybe_index {
+                        Some(index) => {
+                            info!(
+                                logger,
+                                "skiplist graph has {} entries",
+                                index.indexed_node_count()
+                            );
+                        }
+                        None => {
+                            info!(logger, "skiplist not found");
+                        }
                     }
                 })
                 .from_err()
@@ -296,20 +298,22 @@ fn read_skiplist_index<S: ToString>(
     repo.get_blobstore()
         .get(ctx, key.to_string())
         .compat()
-        .and_then(move |maybebytes| match maybebytes {
-            Some(bytes) => {
-                debug!(
-                    logger,
-                    "received {} bytes from blobstore",
-                    bytes.as_bytes().len()
-                );
-                let bytes = bytes.into_raw_bytes();
-                deserialize_skiplist_index(logger.clone(), bytes)
-                    .into_future()
-                    .map(Some)
-                    .left_future()
+        .and_then(move |maybebytes| {
+            match maybebytes {
+                Some(bytes) => {
+                    debug!(
+                        logger,
+                        "received {} bytes from blobstore",
+                        bytes.as_bytes().len()
+                    );
+                    let bytes = bytes.into_raw_bytes();
+                    deserialize_skiplist_index(logger.clone(), bytes)
+                        .into_future()
+                        .map(Some)
+                        .left_future()
+                }
+                None => ok(None).right_future(),
             }
-            None => ok(None).right_future(),
         })
         .boxify()
 }

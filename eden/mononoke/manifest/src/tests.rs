@@ -207,16 +207,18 @@ impl Loadable for Files {
             move |(path, entry)| {
                 Loadable::load(&entry, ctx.clone(), &blobstore)
                     .compat()
-                    .map(move |content| match content {
-                        Entry::Leaf(leaf) => (Some((path, leaf)), Vec::new()),
-                        Entry::Tree(tree) => {
-                            let recurse = tree
-                                .list()
-                                .map(|(name, entry)| {
-                                    (Some(MPath::join_opt_element(path.as_ref(), &name)), entry)
-                                })
-                                .collect();
-                            (None, recurse)
+                    .map(move |content| {
+                        match content {
+                            Entry::Leaf(leaf) => (Some((path, leaf)), Vec::new()),
+                            Entry::Tree(tree) => {
+                                let recurse = tree
+                                    .list()
+                                    .map(|(name, entry)| {
+                                        (Some(MPath::join_opt_element(path.as_ref(), &name)), entry)
+                                    })
+                                    .collect();
+                                (None, recurse)
+                            }
                         }
                     })
             },

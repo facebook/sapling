@@ -352,10 +352,12 @@ mod test {
 
         let book = BookmarkName::try_from("book123")?;
 
-        assert!(client
-            .next_entry_by_onto(&ctx, &book, &ONES_CSID)
-            .await?
-            .is_none());
+        assert!(
+            client
+                .next_entry_by_onto(&ctx, &book, &ONES_CSID)
+                .await?
+                .is_none()
+        );
 
         Ok(())
     }
@@ -372,10 +374,12 @@ mod test {
 
         let book = BookmarkName::try_from("book123")?;
 
-        assert!(client
-            .next_entry_by_onto(&ctx, &book, &ONES_CSID)
-            .await?
-            .is_none());
+        assert!(
+            client
+                .next_entry_by_onto(&ctx, &book, &ONES_CSID)
+                .await?
+                .is_none()
+        );
 
         Ok(())
     }

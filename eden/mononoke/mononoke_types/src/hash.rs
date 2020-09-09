@@ -261,11 +261,7 @@ impl Blake2Prefix {
     /// Convert into blake2 if it is the full prefix of the hash.
     #[inline]
     pub fn into_blake2(self) -> Option<Blake2> {
-        if self.0 == self.1 {
-            Some(self.0)
-        } else {
-            None
-        }
+        if self.0 == self.1 { Some(self.0) } else { None }
     }
 
     pub fn to_hex(&self) -> AsciiString {

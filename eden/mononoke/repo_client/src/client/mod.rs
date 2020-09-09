@@ -945,19 +945,21 @@ where
     async move { session.should_throttle(metric, *LOAD_LIMIT_TIMEFRAME).await }
         .boxed()
         .compat()
-        .then(move |throttle| match throttle {
-            Ok(throttle) => {
-                if throttle {
-                    let err: Error = ErrorKind::RequestThrottled {
-                        request_name: name.to_string(),
+        .then(move |throttle| {
+            match throttle {
+                Ok(throttle) => {
+                    if throttle {
+                        let err: Error = ErrorKind::RequestThrottled {
+                            request_name: name.to_string(),
+                        }
+                        .into();
+                        Err(err)
+                    } else {
+                        Ok(func())
                     }
-                    .into();
-                    Err(err)
-                } else {
-                    Ok(func())
                 }
+                Err(never_type) => never_type,
             }
-            Err(never_type) => never_type,
         })
         .flatten_stream()
 }

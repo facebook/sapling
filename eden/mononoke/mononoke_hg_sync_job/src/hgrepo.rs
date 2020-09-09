@@ -39,10 +39,12 @@ pub fn list_hg_server_bookmarks(
     hg_repo_path: String,
 ) -> BoxFuture<HashMap<BookmarkName, HgChangesetId>, Error> {
     let extension_file = try_boxfuture!(NamedTempFile::new());
-    let file_path = try_boxfuture!(extension_file
-        .path()
-        .to_str()
-        .ok_or(Error::msg("Temp file path contains non-unicode chars")));
+    let file_path = try_boxfuture!(
+        extension_file
+            .path()
+            .to_str()
+            .ok_or(Error::msg("Temp file path contains non-unicode chars"))
+    );
     try_boxfuture!(fs::write(file_path, LIST_SERVER_BOOKMARKS_EXTENSION));
     let ext = format!("extensions.listserverbookmarks={}", file_path);
 

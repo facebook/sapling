@@ -283,9 +283,10 @@ async fn base(fb: FacebookInit) {
         assert_eq!(bs0.storage.with(|s| s.get(&k0).cloned()), Some(v0.clone()));
         assert!(bs1.storage.with(|s| s.is_empty()));
         bs1.tick(Some("bs1 failed"));
-        assert!(log
-            .log
-            .with(|log| log == &vec![(BlobstoreId::new(0), k0.clone())]));
+        assert!(
+            log.log
+                .with(|log| log == &vec![(BlobstoreId::new(0), k0.clone())])
+        );
 
         // should succeed as it is stored in bs1
         let mut get_fut = bs.get(ctx.clone(), k0).map_err(|_| ()).boxed();
@@ -314,9 +315,10 @@ async fn base(fb: FacebookInit) {
         put_fut.await.unwrap();
         assert!(bs0.storage.with(|s| s.get(&k1).is_none()));
         assert_eq!(bs1.storage.with(|s| s.get(&k1).cloned()), Some(v1.clone()));
-        assert!(log
-            .log
-            .with(|log| log == &vec![(BlobstoreId::new(1), k1.clone())]));
+        assert!(
+            log.log
+                .with(|log| log == &vec![(BlobstoreId::new(1), k1.clone())])
+        );
 
         let mut get_fut = bs.get(ctx.clone(), k1.clone()).map_err(|_| ()).boxed();
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);
@@ -904,9 +906,10 @@ async fn write_mostly_put(fb: FacebookInit) {
         );
         assert!(write_mostly_bs.storage.with(|s| s.is_empty()));
         write_mostly_bs.tick(Some("write_mostly_bs failed"));
-        assert!(log
-            .log
-            .with(|log| log == &vec![(BlobstoreId::new(0), k0.clone())]));
+        assert!(
+            log.log
+                .with(|log| log == &vec![(BlobstoreId::new(0), k0.clone())])
+        );
 
         // should succeed as it is stored in main_bs
         let mut get_fut = bs.get(ctx.clone(), k0).map_err(|_| ()).boxed();
@@ -939,9 +942,10 @@ async fn write_mostly_put(fb: FacebookInit) {
         );
         assert!(main_bs.storage.with(|s| s.is_empty()));
         main_bs.tick(Some("main_bs failed"));
-        assert!(log
-            .log
-            .with(|log| log == &vec![(BlobstoreId::new(1), k0.clone())]));
+        assert!(
+            log.log
+                .with(|log| log == &vec![(BlobstoreId::new(1), k0.clone())])
+        );
 
         // should succeed as it is stored in write_mostly_bs, but main won't read
         let mut get_fut = bs.get(ctx.clone(), k0).map_err(|_| ()).boxed();
@@ -976,9 +980,10 @@ async fn write_mostly_put(fb: FacebookInit) {
             write_mostly_bs.storage.with(|s| s.get(&k1).cloned()),
             Some(v1.clone())
         );
-        assert!(log
-            .log
-            .with(|log| log == &vec![(BlobstoreId::new(1), k1.clone())]));
+        assert!(
+            log.log
+                .with(|log| log == &vec![(BlobstoreId::new(1), k1.clone())])
+        );
 
         let mut get_fut = bs.get(ctx.clone(), k1.clone()).map_err(|_| ()).boxed();
         assert_eq!(PollOnce::new(Pin::new(&mut get_fut)).await, Poll::Pending);

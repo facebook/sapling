@@ -234,12 +234,14 @@ impl ChangesetVisitor for BonsaiMFVerifyVisitor {
                 )
                 .collect()
                 .join(root_mf_fut)
-                .and_then(move |(diff, root_mf)| match root_mf {
-                    Some(root_mf) => Ok((diff, root_mf, parents)),
-                    None => bail!(
-                        "internal error: didn't find root manifest id {}",
-                        changeset.manifestid()
-                    ),
+                .and_then(move |(diff, root_mf)| {
+                    match root_mf {
+                        Some(root_mf) => Ok((diff, root_mf, parents)),
+                        None => bail!(
+                            "internal error: didn't find root manifest id {}",
+                            changeset.manifestid()
+                        ),
+                    }
                 })
             }
         });

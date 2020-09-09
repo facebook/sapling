@@ -546,26 +546,30 @@ mod tests {
             resolve_cs_id(&ctx, &blobrepo, "7fe9947f101acb4acf7d945e69f0d6ce76a81113").await?;
         setup_phases(&ctx, &blobrepo, known_cs_id).await?;
         let dag = Dag::new_build_all_from_blobrepo(&ctx, &blobrepo, known_cs_id).await?;
-        assert!(dag
-            .location_to_many_changeset_ids(&ctx, known_cs_id, 1, 2)
-            .await
-            .is_err());
+        assert!(
+            dag.location_to_many_changeset_ids(&ctx, known_cs_id, 1, 2)
+                .await
+                .is_err()
+        );
         // TODO(T74320664): Ideally LocationToHash should error when asked to go over merge commit.
         // The parents order is not well defined enough for this not to be ambiguous.
-        assert!(dag
-            .location_to_many_changeset_ids(&ctx, known_cs_id, 2, 1)
-            .await
-            .is_ok());
+        assert!(
+            dag.location_to_many_changeset_ids(&ctx, known_cs_id, 2, 1)
+                .await
+                .is_ok()
+        );
         let second_commit =
             resolve_cs_id(&ctx, &blobrepo, "1700524113b1a3b1806560341009684b4378660b").await?;
-        assert!(dag
-            .location_to_many_changeset_ids(&ctx, second_commit, 1, 2)
-            .await
-            .is_err());
-        assert!(dag
-            .location_to_many_changeset_ids(&ctx, second_commit, 2, 1)
-            .await
-            .is_err());
+        assert!(
+            dag.location_to_many_changeset_ids(&ctx, second_commit, 1, 2)
+                .await
+                .is_err()
+        );
+        assert!(
+            dag.location_to_many_changeset_ids(&ctx, second_commit, 2, 1)
+                .await
+                .is_err()
+        );
         Ok(())
     }
 

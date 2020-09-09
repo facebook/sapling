@@ -183,11 +183,13 @@ async fn equivalent_working_copy<M: SyncedCommitMapping>(fb: FacebookInit, mappi
         small_repo_id: REPO_ONE,
         small_bcs_id: Some(bonsai::TWOS_CSID),
     };
-    assert!(mapping
-        .insert_equivalent_working_copy(ctx.clone(), should_fail)
-        .compat()
-        .await
-        .is_err());
+    assert!(
+        mapping
+            .insert_equivalent_working_copy(ctx.clone(), should_fail)
+            .compat()
+            .await
+            .is_err()
+    );
 }
 
 #[fbinit::test]

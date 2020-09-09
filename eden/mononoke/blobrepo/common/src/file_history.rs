@@ -65,23 +65,25 @@ pub fn check_if_related(
         None,
     )
     .join(get_file_history(ctx, repo, filenode_b.clone(), path, None))
-    .and_then(move |(history_a, history_b)| match (history_a, history_b) {
-        (FilenodeResult::Present(history_a), FilenodeResult::Present(history_b)) => {
-            if history_a
-                .iter()
-                .any(|entry| entry.filenode() == &filenode_b)
-            {
-                ok(FilenodesRelatedResult::SecondAncestorOfFirst).left_future()
-            } else if history_b
-                .iter()
-                .any(|entry| entry.filenode() == &filenode_a)
-            {
-                ok(FilenodesRelatedResult::FirstAncestorOfSecond).left_future()
-            } else {
-                ok(FilenodesRelatedResult::Unrelated).left_future()
+    .and_then(move |(history_a, history_b)| {
+        match (history_a, history_b) {
+            (FilenodeResult::Present(history_a), FilenodeResult::Present(history_b)) => {
+                if history_a
+                    .iter()
+                    .any(|entry| entry.filenode() == &filenode_b)
+                {
+                    ok(FilenodesRelatedResult::SecondAncestorOfFirst).left_future()
+                } else if history_b
+                    .iter()
+                    .any(|entry| entry.filenode() == &filenode_a)
+                {
+                    ok(FilenodesRelatedResult::FirstAncestorOfSecond).left_future()
+                } else {
+                    ok(FilenodesRelatedResult::Unrelated).left_future()
+                }
             }
+            _ => err(anyhow!("filenodes are disabled")).right_future(),
         }
-        _ => err(anyhow!("filenodes are disabled")).right_future(),
     })
 }
 

@@ -110,11 +110,7 @@ impl Serializer for ErrorSerializer {
 }
 
 fn non_empty_str_maybe(s: String) -> Option<String> {
-    if s == "" {
-        None
-    } else {
-        Some(s)
-    }
+    if s == "" { None } else { Some(s) }
 }
 
 fn fix_indentation(s: String) -> String {

@@ -145,11 +145,7 @@ impl Extra {
 
 fn try_get<T>(v: &[T], idx: usize) -> Option<&T> {
     let v = v.as_ref();
-    if idx < v.len() {
-        Some(&v[idx])
-    } else {
-        None
-    }
+    if idx < v.len() { Some(&v[idx]) } else { None }
 }
 
 // Time has the format: time tz extra\n
@@ -229,19 +225,21 @@ impl RevlogChangeset {
             let fut = blobstore
                 .get(ctx, key.clone())
                 .compat()
-                .and_then(move |got| match got {
-                    None => Ok(None),
-                    Some(bytes) => {
-                        let envelope = HgChangesetEnvelope::from_blob(bytes.into())?;
-                        if changesetid != envelope.node_id() {
-                            bail!(
-                                "Changeset ID mismatch (requested: {}, got: {})",
-                                changesetid,
-                                envelope.node_id()
-                            );
+                .and_then(move |got| {
+                    match got {
+                        None => Ok(None),
+                        Some(bytes) => {
+                            let envelope = HgChangesetEnvelope::from_blob(bytes.into())?;
+                            if changesetid != envelope.node_id() {
+                                bail!(
+                                    "Changeset ID mismatch (requested: {}, got: {})",
+                                    changesetid,
+                                    envelope.node_id()
+                                );
+                            }
+                            let revlogcs = RevlogChangeset::from_envelope(envelope)?;
+                            Ok(Some(revlogcs))
                         }
-                        let revlogcs = RevlogChangeset::from_envelope(envelope)?;
-                        Ok(Some(revlogcs))
                     }
                 })
                 .with_context(move || {

@@ -92,14 +92,14 @@ where
     )
     .try_buffer_unordered(scheduled_max)
     // Dump the data to disk
-    .map_ok(
-        move |(WalkKeyOptPath(n, path), sample, mtime, stats)| match sample {
+    .map_ok(move |(WalkKeyOptPath(n, path), sample, mtime, stats)| {
+        match sample {
             Some(sample) => move_node_files(output_dir.clone(), n.clone(), path, mtime, sample)
                 .map_ok(move |()| (n, Some(()), stats))
                 .left_future(),
             None => future::ok((n, Some(()), stats)).right_future(),
-        },
-    )
+        }
+    })
     .try_buffer_unordered(scheduled_max)
 }
 

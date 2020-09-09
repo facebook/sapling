@@ -129,13 +129,16 @@ mod test {
         );
 
         // Test that is_present works for both the prefixed and unprefixed stores.
-        assert!(prefixed
-            .is_present(ctx.clone(), unprefixed_key.clone())
-            .await
-            .expect("is_present should succeed"));
-        assert!(base
-            .is_present(ctx.clone(), prefixed_key.clone())
-            .await
-            .expect("is_present should succeed"));
+        assert!(
+            prefixed
+                .is_present(ctx.clone(), unprefixed_key.clone())
+                .await
+                .expect("is_present should succeed")
+        );
+        assert!(
+            base.is_present(ctx.clone(), prefixed_key.clone())
+                .await
+                .expect("is_present should succeed")
+        );
     }
 }

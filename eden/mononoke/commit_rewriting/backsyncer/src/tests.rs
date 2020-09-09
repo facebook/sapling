@@ -604,11 +604,13 @@ async fn verify_bookmarks(
         match bookmark_renamer(&bookmark.name()) {
             Some(renamed_book) => {
                 if &renamed_book != bookmark.name() {
-                    assert!(target_repo
-                        .get_bookmark(ctx.clone(), &bookmark.name())
-                        .compat()
-                        .await?
-                        .is_none());
+                    assert!(
+                        target_repo
+                            .get_bookmark(ctx.clone(), &bookmark.name())
+                            .compat()
+                            .await?
+                            .is_none()
+                    );
                 }
                 let target_hg_cs_id = target_repo
                     .get_bookmark(ctx.clone(), &renamed_book)
@@ -650,11 +652,13 @@ async fn verify_bookmarks(
             }
             None => {
                 // Make sure we don't have this bookmark in target repo
-                assert!(target_repo
-                    .get_bookmark(ctx.clone(), &bookmark.name())
-                    .compat()
-                    .await?
-                    .is_none());
+                assert!(
+                    target_repo
+                        .get_bookmark(ctx.clone(), &bookmark.name())
+                        .compat()
+                        .await?
+                        .is_none()
+                );
             }
         }
     }

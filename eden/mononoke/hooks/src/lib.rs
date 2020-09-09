@@ -210,20 +210,22 @@ fn is_hook_bypassed(
     cs_msg: &str,
     maybe_pushvars: Option<&HashMap<String, Bytes>>,
 ) -> bool {
-    bypass.map_or(false, move |bypass| match bypass {
-        HookBypass::CommitMessage(bypass_string) => cs_msg.contains(bypass_string),
-        HookBypass::Pushvar { name, value } => {
-            if let Some(pushvars) = maybe_pushvars {
-                let pushvar_val = pushvars
-                    .get(name)
-                    .map(|bytes| String::from_utf8(bytes.to_vec()));
+    bypass.map_or(false, move |bypass| {
+        match bypass {
+            HookBypass::CommitMessage(bypass_string) => cs_msg.contains(bypass_string),
+            HookBypass::Pushvar { name, value } => {
+                if let Some(pushvars) = maybe_pushvars {
+                    let pushvar_val = pushvars
+                        .get(name)
+                        .map(|bytes| String::from_utf8(bytes.to_vec()));
 
-                if let Some(Ok(pushvar_val)) = pushvar_val {
-                    return &pushvar_val == value;
+                    if let Some(Ok(pushvar_val)) = pushvar_val {
+                        return &pushvar_val == value;
+                    }
+                    return false;
                 }
-                return false;
+                false
             }
-            false
         }
     })
 }

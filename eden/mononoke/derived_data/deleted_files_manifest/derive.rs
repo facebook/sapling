@@ -92,11 +92,13 @@ pub(crate) fn derive_deleted_files_manifest(
             // unfold
             {
                 cloned!(ctx, repo);
-                move |DeletedManifestUnfoldNode {
-                          path_element,
-                          changes,
-                          parents,
-                      }| {
+                move |
+                    DeletedManifestUnfoldNode {
+                        path_element,
+                        changes,
+                        parents,
+                    },
+                | {
                     do_derive_unfold(ctx.clone(), repo.clone(), changes, parents)
                         .boxed()
                         .compat()
@@ -1090,31 +1092,27 @@ mod tests {
         manifest_id: DeletedManifestId,
     ) -> impl Stream<Item = (Option<MPath>, Status, DeletedManifestId), Error = Error> {
         let blobstore = repo.get_blobstore();
-        bounded_traversal_stream(
-            256,
-            Some((None, manifest_id)),
-            move |(path, manifest_id)| {
-                manifest_id
-                    .load(ctx.clone(), &blobstore)
-                    .compat()
-                    .map(move |manifest| {
-                        let entry = (
-                            path.clone(),
-                            Status::from(manifest.linknode().clone()),
-                            manifest_id,
-                        );
-                        let recurse_subentries = manifest
-                            .list()
-                            .map(|(name, mf_id)| {
-                                let full_path = MPath::join_opt_element(path.as_ref(), &name);
-                                (Some(full_path), mf_id.clone())
-                            })
-                            .collect::<Vec<_>>();
+        bounded_traversal_stream(256, Some((None, manifest_id)), move |(path, manifest_id)| {
+            manifest_id
+                .load(ctx.clone(), &blobstore)
+                .compat()
+                .map(move |manifest| {
+                    let entry = (
+                        path.clone(),
+                        Status::from(manifest.linknode().clone()),
+                        manifest_id,
+                    );
+                    let recurse_subentries = manifest
+                        .list()
+                        .map(|(name, mf_id)| {
+                            let full_path = MPath::join_opt_element(path.as_ref(), &name);
+                            (Some(full_path), mf_id.clone())
+                        })
+                        .collect::<Vec<_>>();
 
-                        (vec![entry], recurse_subentries)
-                    })
-            },
-        )
+                    (vec![entry], recurse_subentries)
+                })
+        })
         .map(|entries| iter_ok(entries))
         .flatten()
     }

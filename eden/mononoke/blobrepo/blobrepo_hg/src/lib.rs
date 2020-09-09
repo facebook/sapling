@@ -271,12 +271,14 @@ impl BlobRepoHg for BlobRepo {
         let changesets = self.get_changesets_object();
 
         self.get_bonsai_from_hg(ctx.clone(), changesetid)
-            .and_then(move |maybebonsai| match maybebonsai {
-                Some(bonsai) => changesets
-                    .get(ctx, repoid, bonsai)
-                    .map(|res| res.is_some())
-                    .left_future(),
-                None => Ok(false).into_future().right_future(),
+            .and_then(move |maybebonsai| {
+                match maybebonsai {
+                    Some(bonsai) => changesets
+                        .get(ctx, repoid, bonsai)
+                        .map(|res| res.is_some())
+                        .left_future(),
+                    None => Ok(false).into_future().right_future(),
+                }
             })
             .boxify()
     }

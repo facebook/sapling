@@ -519,9 +519,11 @@ pub fn process_entries(
     let mut scuba_logger = entry_processor.scuba_logger();
     root_manifest_fut
         .join(child_entries_fut)
-        .and_then(move |(root_hash, ())| match root_hash {
-            None => old_future::ok(HgManifestId::new(NULL_HASH)).boxify(),
-            Some(root_hash) => old_future::ok(HgManifestId::new(root_hash)).boxify(),
+        .and_then(move |(root_hash, ())| {
+            match root_hash {
+                None => old_future::ok(HgManifestId::new(NULL_HASH)).boxify(),
+                Some(root_hash) => old_future::ok(HgManifestId::new(root_hash)).boxify(),
+            }
         })
         .timed(move |stats, result| {
             if result.is_ok() {

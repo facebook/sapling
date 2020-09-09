@@ -375,13 +375,15 @@ pub fn peek<B: Blobstore + Clone>(
     size: usize,
 ) -> impl Future<Item = Option<Bytes>, Error = Error> {
     fetch(blobstore, ctx, key)
-        .map(move |maybe_stream| match maybe_stream {
-            None => Ok(None).into_future().left_future(),
-            Some(stream) => chunk::ChunkStream::new(stream, size)
-                .into_future()
-                .map(|(bytes, _rest)| bytes)
-                .map_err(|(err, _rest)| err)
-                .right_future(),
+        .map(move |maybe_stream| {
+            match maybe_stream {
+                None => Ok(None).into_future().left_future(),
+                Some(stream) => chunk::ChunkStream::new(stream, size)
+                    .into_future()
+                    .map(|(bytes, _rest)| bytes)
+                    .map_err(|(err, _rest)| err)
+                    .right_future(),
+            }
         })
         .flatten()
 }

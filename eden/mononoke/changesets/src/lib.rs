@@ -329,13 +329,15 @@ impl Changesets for SqlChangesets {
         cloned!(self.read_master_connection);
 
         select_changeset(&self.read_connection, repo_id, cs_id)
-            .and_then(move |maybe_mapping| match maybe_mapping {
-                Some(mapping) => Ok(Some(mapping)).into_future().boxify(),
-                None => {
-                    STATS::gets_master.add_value(1);
-                    ctx.perf_counters()
-                        .increment_counter(PerfCounterType::SqlReadsMaster);
-                    select_changeset(&read_master_connection, repo_id, cs_id)
+            .and_then(move |maybe_mapping| {
+                match maybe_mapping {
+                    Some(mapping) => Ok(Some(mapping)).into_future().boxify(),
+                    None => {
+                        STATS::gets_master.add_value(1);
+                        ctx.perf_counters()
+                            .increment_counter(PerfCounterType::SqlReadsMaster);
+                        select_changeset(&read_master_connection, repo_id, cs_id)
+                    }
                 }
             })
             .boxify()
@@ -398,13 +400,15 @@ impl Changesets for SqlChangesets {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlReadsReplica);
         fetch_many_by_prefix(&self.read_connection, repo_id, &cs_prefix, limit)
-            .and_then(move |resolved_cs| match resolved_cs {
-                ChangesetIdsResolvedFromPrefix::NoMatch => {
-                    ctx.perf_counters()
-                        .increment_counter(PerfCounterType::SqlReadsMaster);
-                    fetch_many_by_prefix(&read_master_connection, repo_id, &cs_prefix, limit)
+            .and_then(move |resolved_cs| {
+                match resolved_cs {
+                    ChangesetIdsResolvedFromPrefix::NoMatch => {
+                        ctx.perf_counters()
+                            .increment_counter(PerfCounterType::SqlReadsMaster);
+                        fetch_many_by_prefix(&read_master_connection, repo_id, &cs_prefix, limit)
+                    }
+                    _ => ok(resolved_cs).boxify(),
                 }
-                _ => ok(resolved_cs).boxify(),
             })
             .boxify()
     }

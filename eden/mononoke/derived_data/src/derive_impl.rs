@@ -694,14 +694,14 @@ mod test {
     }
 
     async fn init_linear(fb: FacebookInit) -> BlobRepo {
-        linear::getrepo(fb).await.dangerous_override(
-            |mut derived_data_config: DerivedDataConfig| {
+        linear::getrepo(fb)
+            .await
+            .dangerous_override(|mut derived_data_config: DerivedDataConfig| {
                 derived_data_config
                     .derived_data_types
                     .insert(TestGenNum::NAME.to_string());
                 derived_data_config
-            },
-        )
+            })
     }
 
     #[fbinit::test]

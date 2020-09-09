@@ -98,28 +98,30 @@ fn loading_stream<InStream, SS>(
 where
     InStream: Stream<Item = Result<(Node, Option<NodeData>, Option<SS>), Error>> + 'static + Send,
 {
-    s.map_ok(move |(n, nd, _progress_stats)| match nd {
-        Some(NodeData::FileContent(FileContentData::ContentStream(file_bytes_stream)))
-            if !limit_data_fetch =>
-        {
-            cloned!(sampler);
-            file_bytes_stream
-                .try_fold(0, |acc, file_bytes| future::ok(acc + file_bytes.size()))
-                .map_ok(move |num_bytes| {
-                    let size = ScrubStats::from(sampler.complete_step(&n).as_ref());
-                    (
-                        n,
-                        Some(NodeData::FileContent(FileContentData::Consumed(num_bytes))),
-                        Some(size),
-                    )
-                })
-                .left_future()
-        }
-        data_opt => {
-            let size = data_opt
-                .as_ref()
-                .map(|_d| ScrubStats::from(sampler.complete_step(&n).as_ref()));
-            future::ok((n, data_opt, size)).right_future()
+    s.map_ok(move |(n, nd, _progress_stats)| {
+        match nd {
+            Some(NodeData::FileContent(FileContentData::ContentStream(file_bytes_stream)))
+                if !limit_data_fetch =>
+            {
+                cloned!(sampler);
+                file_bytes_stream
+                    .try_fold(0, |acc, file_bytes| future::ok(acc + file_bytes.size()))
+                    .map_ok(move |num_bytes| {
+                        let size = ScrubStats::from(sampler.complete_step(&n).as_ref());
+                        (
+                            n,
+                            Some(NodeData::FileContent(FileContentData::Consumed(num_bytes))),
+                            Some(size),
+                        )
+                    })
+                    .left_future()
+            }
+            data_opt => {
+                let size = data_opt
+                    .as_ref()
+                    .map(|_d| ScrubStats::from(sampler.complete_step(&n).as_ref()));
+                future::ok((n, data_opt, size)).right_future()
+            }
         }
     })
     .try_buffer_unordered(scheduled_max)

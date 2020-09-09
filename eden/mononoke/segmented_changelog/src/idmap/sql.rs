@@ -355,10 +355,12 @@ mod tests {
             .await?;
         assert_eq!(idmap.get_changeset_id(&ctx, Vertex(4)).await?, FOURS_CSID);
 
-        assert!(idmap
-            .insert_many(&ctx, vec![(Vertex(1), FIVES_CSID)])
-            .await
-            .is_err());
+        assert!(
+            idmap
+                .insert_many(&ctx, vec![(Vertex(1), FIVES_CSID)])
+                .await
+                .is_err()
+        );
 
         Ok(())
     }

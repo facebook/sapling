@@ -229,29 +229,32 @@ fn test_create_change_same_bookmark(fb: FacebookInit) {
         let mut txn = bookmarks.create_transaction(ctx.clone());
         txn.create(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
             .unwrap();
-        assert!(txn
-            .force_set(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
-            .is_err());
+        assert!(
+            txn.force_set(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
+                .is_err()
+        );
 
         let mut txn = bookmarks.create_transaction(ctx.clone());
         txn.force_set(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
             .unwrap();
-        assert!(txn
-            .create(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
-            .is_err());
+        assert!(
+            txn.create(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
+                .is_err()
+        );
 
         let mut txn = bookmarks.create_transaction(ctx.clone());
         txn.force_set(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
             .unwrap();
-        assert!(txn
-            .update(
+        assert!(
+            txn.update(
                 &name_1,
                 TWOS_CSID,
                 ONES_CSID,
                 BookmarkUpdateReason::TestMove,
                 None,
             )
-            .is_err());
+            .is_err()
+        );
 
         let mut txn = bookmarks.create_transaction(ctx.clone());
         txn.update(
@@ -262,9 +265,10 @@ fn test_create_change_same_bookmark(fb: FacebookInit) {
             None,
         )
         .unwrap();
-        assert!(txn
-            .force_set(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
-            .is_err());
+        assert!(
+            txn.force_set(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
+                .is_err()
+        );
 
         let mut txn = bookmarks.create_transaction(ctx.clone());
         txn.update(
@@ -275,35 +279,38 @@ fn test_create_change_same_bookmark(fb: FacebookInit) {
             None,
         )
         .unwrap();
-        assert!(txn
-            .force_delete(&name_1, BookmarkUpdateReason::TestMove, None)
-            .is_err());
+        assert!(
+            txn.force_delete(&name_1, BookmarkUpdateReason::TestMove, None)
+                .is_err()
+        );
 
         let mut txn = bookmarks.create_transaction(ctx.clone());
         txn.force_delete(&name_1, BookmarkUpdateReason::TestMove, None)
             .unwrap();
-        assert!(txn
-            .update(
+        assert!(
+            txn.update(
                 &name_1,
                 TWOS_CSID,
                 ONES_CSID,
                 BookmarkUpdateReason::TestMove,
                 None
             )
-            .is_err());
+            .is_err()
+        );
 
         let mut txn = bookmarks.create_transaction(ctx.clone());
         txn.delete(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
             .unwrap();
-        assert!(txn
-            .update(
+        assert!(
+            txn.update(
                 &name_1,
                 TWOS_CSID,
                 ONES_CSID,
                 BookmarkUpdateReason::TestMove,
                 None,
             )
-            .is_err());
+            .is_err()
+        );
 
         let mut txn = bookmarks.create_transaction(ctx.clone());
         txn.update(
@@ -314,9 +321,10 @@ fn test_create_change_same_bookmark(fb: FacebookInit) {
             None,
         )
         .unwrap();
-        assert!(txn
-            .delete(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
-            .is_err());
+        assert!(
+            txn.delete(&name_1, ONES_CSID, BookmarkUpdateReason::TestMove, None)
+                .is_err()
+        );
     })
 }
 

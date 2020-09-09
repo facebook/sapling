@@ -194,11 +194,13 @@ impl PushRedirector {
             let small_repo_id = self.small_to_large_commit_syncer.get_source_repo_id();
             let large_repo_id = self.small_to_large_commit_syncer.get_target_repo_id();
             let mapping = self.small_to_large_commit_syncer.mapping.clone();
-            move |HookRejection {
-                      hook_name,
-                      cs_id,
-                      reason,
-                  }| {
+            move |
+                HookRejection {
+                    hook_name,
+                    cs_id,
+                    reason,
+                },
+            | {
                 cloned!(small_repo, large_repo, ctx, large_to_small, mapping);
                 // For the benefit of the user seeing the error, remap the commit hash back
                 // to the small repo, so that while the error message may contain large repo

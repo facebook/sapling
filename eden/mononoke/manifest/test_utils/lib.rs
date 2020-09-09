@@ -48,23 +48,25 @@ where
     <MfId as Loadable>::Value: Manifest<TreeId = MfId, LeafId = LId>,
 {
     let blobstore = repo.get_blobstore().clone();
-    bounded_traversal_stream(256, Some((None, entry)), move |(path, entry)| match entry {
-        Entry::Leaf(_) => future::ok((vec![(path, entry.clone())], vec![])).left_future(),
-        Entry::Tree(tree) => tree
-            .load(ctx.clone(), &blobstore)
-            .compat()
-            .map(move |mf| {
-                let recurse = mf
-                    .list()
-                    .map(|(basename, new_entry)| {
-                        let path = MPath::join_opt_element(path.as_ref(), &basename);
-                        (Some(path), new_entry.clone())
-                    })
-                    .collect();
+    bounded_traversal_stream(256, Some((None, entry)), move |(path, entry)| {
+        match entry {
+            Entry::Leaf(_) => future::ok((vec![(path, entry.clone())], vec![])).left_future(),
+            Entry::Tree(tree) => tree
+                .load(ctx.clone(), &blobstore)
+                .compat()
+                .map(move |mf| {
+                    let recurse = mf
+                        .list()
+                        .map(|(basename, new_entry)| {
+                            let path = MPath::join_opt_element(path.as_ref(), &basename);
+                            (Some(path), new_entry.clone())
+                        })
+                        .collect();
 
-                (vec![(path, Entry::Tree(tree))], recurse)
-            })
-            .right_future(),
+                    (vec![(path, Entry::Tree(tree))], recurse)
+                })
+                .right_future(),
+        }
     })
     .map(|entries| stream::iter_ok(entries))
     .flatten()

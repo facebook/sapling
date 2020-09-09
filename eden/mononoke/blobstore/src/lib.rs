@@ -89,7 +89,9 @@ impl BlobstoreGetData {
     pub fn encode(self, encode_limit: Option<u64>) -> Result<Bytes, ()> {
         let mut bytes = vec![UNCOMPRESSED];
         let get_data = BlobstoreGetDataSerialisable::from(self);
-        unsafe { abomonation::encode(&get_data, &mut bytes).map_err(|_| ())? };
+        unsafe {
+            abomonation::encode(&get_data, &mut bytes).map_err(|_| ())?
+        };
 
         match encode_limit {
             Some(encode_limit) if bytes.len() as u64 >= encode_limit => {

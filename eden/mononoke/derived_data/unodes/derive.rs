@@ -263,8 +263,8 @@ fn create_unode_file(
             move |id| id.load(ctx.clone(), &blobstore.clone()).compat()
         }))
         .from_err()
-        .and_then(
-            move |parent_unodes| match return_if_unique_filenode(&parent_unodes) {
+        .and_then(move |parent_unodes| {
+            match return_if_unique_filenode(&parent_unodes) {
                 Some((content_id, file_type)) => save_unode(
                     ctx,
                     blobstore,
@@ -283,8 +283,8 @@ fn create_unode_file(
                     .into(),
                 )
                 .boxify(),
-            },
-        )
+            }
+        })
         .boxify()
     }
     .map(|leaf_id| ((), leaf_id))
@@ -576,40 +576,46 @@ mod tests {
         let repo = runtime.block_on_std(linear::getrepo(fb));
         let ctx = CoreContext::test_mock(fb);
 
-        assert!(build_diamond_graph(
-            ctx.clone(),
-            &mut runtime,
-            repo.clone(),
-            btreemap! {"A" => Some(("A", FileType::Regular))},
-            btreemap! {"A" => Some(("B", FileType::Regular))},
-            btreemap! {"A" => Some(("B", FileType::Regular))},
-            btreemap! {},
-        )
-        .is_ok());
+        assert!(
+            build_diamond_graph(
+                ctx.clone(),
+                &mut runtime,
+                repo.clone(),
+                btreemap! {"A" => Some(("A", FileType::Regular))},
+                btreemap! {"A" => Some(("B", FileType::Regular))},
+                btreemap! {"A" => Some(("B", FileType::Regular))},
+                btreemap! {},
+            )
+            .is_ok()
+        );
 
         // Content is different - fail!
-        assert!(build_diamond_graph(
-            ctx.clone(),
-            &mut runtime,
-            repo.clone(),
-            btreemap! {"A" => Some(("A", FileType::Regular))},
-            btreemap! {"A" => Some(("B", FileType::Regular))},
-            btreemap! {"A" => Some(("C", FileType::Regular))},
-            btreemap! {},
-        )
-        .is_err());
+        assert!(
+            build_diamond_graph(
+                ctx.clone(),
+                &mut runtime,
+                repo.clone(),
+                btreemap! {"A" => Some(("A", FileType::Regular))},
+                btreemap! {"A" => Some(("B", FileType::Regular))},
+                btreemap! {"A" => Some(("C", FileType::Regular))},
+                btreemap! {},
+            )
+            .is_err()
+        );
 
         // Type is different - fail!
-        assert!(build_diamond_graph(
-            ctx,
-            &mut runtime,
-            repo,
-            btreemap! {"A" => Some(("A", FileType::Regular))},
-            btreemap! {"A" => Some(("B", FileType::Regular))},
-            btreemap! {"A" => Some(("B", FileType::Executable))},
-            btreemap! {},
-        )
-        .is_err());
+        assert!(
+            build_diamond_graph(
+                ctx,
+                &mut runtime,
+                repo,
+                btreemap! {"A" => Some(("A", FileType::Regular))},
+                btreemap! {"A" => Some(("B", FileType::Regular))},
+                btreemap! {"A" => Some(("B", FileType::Executable))},
+                btreemap! {},
+            )
+            .is_err()
+        );
     }
 
     async fn diamond_merge_unodes_v2(fb: FacebookInit) -> Result<(), Error> {

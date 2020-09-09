@@ -30,12 +30,16 @@ pub fn copy_blob(
     src_blobstore
         .get(ctx.clone(), key.clone())
         .compat()
-        .and_then(move |maybe_blobstore_bytes| match maybe_blobstore_bytes {
-            Some(srcdata) => dst_blobstore
-                .put(ctx, key, srcdata.into())
-                .compat()
-                .left_future(),
-            None => err(format_err!("Key {} is missing in the original store", key)).right_future(),
+        .and_then(move |maybe_blobstore_bytes| {
+            match maybe_blobstore_bytes {
+                Some(srcdata) => dst_blobstore
+                    .put(ctx, key, srcdata.into())
+                    .compat()
+                    .left_future(),
+                None => {
+                    err(format_err!("Key {} is missing in the original store", key)).right_future()
+                }
+            }
         })
 }
 
@@ -70,16 +74,18 @@ pub fn copy_content(
                             };
 
                             fetch(&src_blobstore, ctx, &fetch_key)
-                                .and_then(move |maybe_byte_stream| match maybe_byte_stream {
-                                    None => {
-                                        return err(format_err!(
-                                            "File not found for fetch key: {:?}",
-                                            fetch_key
-                                        ))
-                                        .left_future();
-                                    }
-                                    Some(byte_stream) => {
-                                        ok((store_request, byte_stream)).right_future()
+                                .and_then(move |maybe_byte_stream| {
+                                    match maybe_byte_stream {
+                                        None => {
+                                            return err(format_err!(
+                                                "File not found for fetch key: {:?}",
+                                                fetch_key
+                                            ))
+                                            .left_future();
+                                        }
+                                        Some(byte_stream) => {
+                                            ok((store_request, byte_stream)).right_future()
+                                        }
                                     }
                                 })
                                 .right_future()

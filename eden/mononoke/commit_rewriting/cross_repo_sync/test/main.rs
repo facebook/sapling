@@ -651,18 +651,18 @@ async fn sync_remap_failure(fb: FacebookInit) {
     let copyfrom_fail_repos = CommitSyncRepos::LargeToSmall {
         small_repo: linear.clone(),
         large_repo: megarepo.clone(),
-        mover: Arc::new(
-            move |path: &MPath| match path.basename().to_bytes().as_ref() {
+        mover: Arc::new(move |path: &MPath| {
+            match path.basename().to_bytes().as_ref() {
                 b"1" => bail!("This only fails if the file is named '1'"),
                 _ => Ok(path.remove_prefix_component(&linear_path_in_megarepo)),
-            },
-        ),
-        reverse_mover: Arc::new(
-            move |path: &MPath| match path.basename().to_bytes().as_ref() {
+            }
+        }),
+        reverse_mover: Arc::new(move |path: &MPath| {
+            match path.basename().to_bytes().as_ref() {
                 b"1" => bail!("This only fails if the file is named '1'"),
                 _ => Ok(Some(mpath("linear").join(path))),
-            },
-        ),
+            }
+        }),
         bookmark_renamer: Arc::new(identity_renamer),
         reverse_bookmark_renamer: Arc::new(identity_renamer),
         version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),

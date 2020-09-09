@@ -176,21 +176,23 @@ fn bookmark_step<'a, V: VisitOne>(
         // Just in case we have non-public bookmarks
         None => repo.get_bonsai_bookmark(ctx, &b).compat().right_future(),
     }
-    .and_then(move |bcs_opt| match bcs_opt {
-        Some(bcs_id) => {
-            let mut edges = vec![];
-            checker.add_edge(&mut edges, EdgeType::BookmarkToBonsaiChangeset, || {
-                Node::BonsaiChangeset(bcs_id)
-            });
-            checker.add_edge(&mut edges, EdgeType::BookmarkToBonsaiHgMapping, || {
-                Node::BonsaiHgMapping(bcs_id)
-            });
-            future::ok(StepOutput(
-                checker.step_data(NodeType::Bookmark, || NodeData::Bookmark(bcs_id)),
-                edges,
-            ))
+    .and_then(move |bcs_opt| {
+        match bcs_opt {
+            Some(bcs_id) => {
+                let mut edges = vec![];
+                checker.add_edge(&mut edges, EdgeType::BookmarkToBonsaiChangeset, || {
+                    Node::BonsaiChangeset(bcs_id)
+                });
+                checker.add_edge(&mut edges, EdgeType::BookmarkToBonsaiHgMapping, || {
+                    Node::BonsaiHgMapping(bcs_id)
+                });
+                future::ok(StepOutput(
+                    checker.step_data(NodeType::Bookmark, || NodeData::Bookmark(bcs_id)),
+                    edges,
+                ))
+            }
+            None => future::err(format_err!("Unknown Bookmark {}", b)),
         }
-        None => future::err(format_err!("Unknown Bookmark {}", b)),
     })
 }
 
@@ -258,11 +260,9 @@ async fn bonsai_changeset_step<V: VisitOne>(
         });
     }
     // Allow Hg based lookup
-    checker.add_edge(
-        &mut edges,
-        EdgeType::BonsaiChangesetToBonsaiHgMapping,
-        || Node::BonsaiHgMapping(*bcs_id),
-    );
+    checker.add_edge(&mut edges, EdgeType::BonsaiChangesetToBonsaiHgMapping, || {
+        Node::BonsaiHgMapping(*bcs_id)
+    });
     checker.add_edge(
         &mut edges,
         EdgeType::BonsaiChangesetToBonsaiPhaseMapping,
@@ -323,35 +323,35 @@ fn file_content_metadata_step<'a, V: VisitOne>(
     };
 
     loader
-        .map(move |metadata_opt| match metadata_opt {
-            Some(Some(metadata)) => {
-                let mut edges = vec![];
-                checker.add_edge(&mut edges, EdgeType::FileContentMetadataToSha1Alias, || {
-                    Node::AliasContentMapping(Alias::Sha1(metadata.sha1))
-                });
-                checker.add_edge(
-                    &mut edges,
-                    EdgeType::FileContentMetadataToSha256Alias,
-                    || Node::AliasContentMapping(Alias::Sha256(metadata.sha256)),
-                );
-                checker.add_edge(
-                    &mut edges,
-                    EdgeType::FileContentMetadataToGitSha1Alias,
-                    || Node::AliasContentMapping(Alias::GitSha1(metadata.git_sha1.sha1())),
-                );
-                StepOutput(
+        .map(move |metadata_opt| {
+            match metadata_opt {
+                Some(Some(metadata)) => {
+                    let mut edges = vec![];
+                    checker.add_edge(&mut edges, EdgeType::FileContentMetadataToSha1Alias, || {
+                        Node::AliasContentMapping(Alias::Sha1(metadata.sha1))
+                    });
+                    checker.add_edge(&mut edges, EdgeType::FileContentMetadataToSha256Alias, || {
+                        Node::AliasContentMapping(Alias::Sha256(metadata.sha256))
+                    });
+                    checker.add_edge(
+                        &mut edges,
+                        EdgeType::FileContentMetadataToGitSha1Alias,
+                        || Node::AliasContentMapping(Alias::GitSha1(metadata.git_sha1.sha1())),
+                    );
+                    StepOutput(
+                        checker.step_data(NodeType::FileContentMetadata, || {
+                            NodeData::FileContentMetadata(Some(metadata))
+                        }),
+                        edges,
+                    )
+                }
+                Some(None) | None => StepOutput(
                     checker.step_data(NodeType::FileContentMetadata, || {
-                        NodeData::FileContentMetadata(Some(metadata))
+                        NodeData::FileContentMetadata(None)
                     }),
-                    edges,
-                )
+                    vec![],
+                ),
             }
-            Some(None) | None => StepOutput(
-                checker.step_data(NodeType::FileContentMetadata, || {
-                    NodeData::FileContentMetadata(None)
-                }),
-                vec![],
-            ),
         })
         .compat()
 }
@@ -414,25 +414,27 @@ fn bonsai_to_hg_mapping_step<'a, V: 'a + VisitOne>(
     };
 
     hg_cs_id
-        .map(move |maybe_hg_cs_id| match maybe_hg_cs_id {
-            Some(hg_cs_id) => {
-                let mut edges = vec![];
-                checker.add_edge(&mut edges, EdgeType::BonsaiHgMappingToHgChangeset, || {
-                    Node::HgChangeset(hg_cs_id)
-                });
-                StepOutput(
+        .map(move |maybe_hg_cs_id| {
+            match maybe_hg_cs_id {
+                Some(hg_cs_id) => {
+                    let mut edges = vec![];
+                    checker.add_edge(&mut edges, EdgeType::BonsaiHgMappingToHgChangeset, || {
+                        Node::HgChangeset(hg_cs_id)
+                    });
+                    StepOutput(
+                        checker.step_data(NodeType::BonsaiHgMapping, || {
+                            NodeData::BonsaiHgMapping(Some(hg_cs_id))
+                        }),
+                        edges,
+                    )
+                }
+                None => StepOutput(
                     checker.step_data(NodeType::BonsaiHgMapping, || {
-                        NodeData::BonsaiHgMapping(Some(hg_cs_id))
+                        NodeData::BonsaiHgMapping(None)
                     }),
-                    edges,
-                )
+                    vec![],
+                ),
             }
-            None => StepOutput(
-                checker.step_data(NodeType::BonsaiHgMapping, || {
-                    NodeData::BonsaiHgMapping(None)
-                }),
-                vec![],
-            ),
         })
         .compat()
 }
@@ -444,27 +446,27 @@ fn hg_to_bonsai_mapping_step<'a, V: VisitOne>(
     id: HgChangesetId,
 ) -> impl Future<Output = Result<StepOutput, Error>> + 'a {
     repo.get_bonsai_from_hg(ctx, id)
-        .map(move |maybe_bcs_id| match maybe_bcs_id {
-            Some(bcs_id) => {
-                let mut edges = vec![];
-                checker.add_edge(
-                    &mut edges,
-                    EdgeType::HgBonsaiMappingToBonsaiChangeset,
-                    || Node::BonsaiChangeset(bcs_id),
-                );
-                StepOutput(
+        .map(move |maybe_bcs_id| {
+            match maybe_bcs_id {
+                Some(bcs_id) => {
+                    let mut edges = vec![];
+                    checker.add_edge(&mut edges, EdgeType::HgBonsaiMappingToBonsaiChangeset, || {
+                        Node::BonsaiChangeset(bcs_id)
+                    });
+                    StepOutput(
+                        checker.step_data(NodeType::HgBonsaiMapping, || {
+                            NodeData::HgBonsaiMapping(Some(bcs_id))
+                        }),
+                        edges,
+                    )
+                }
+                None => StepOutput(
                     checker.step_data(NodeType::HgBonsaiMapping, || {
-                        NodeData::HgBonsaiMapping(Some(bcs_id))
+                        NodeData::HgBonsaiMapping(None)
                     }),
-                    edges,
-                )
+                    vec![],
+                ),
             }
-            None => StepOutput(
-                checker.step_data(NodeType::HgBonsaiMapping, || {
-                    NodeData::HgBonsaiMapping(None)
-                }),
-                vec![],
-            ),
         })
         .compat()
 }
@@ -565,16 +567,12 @@ fn hg_file_node_step<'a, V: VisitOne>(
 
                     // Copyfrom is like another parent
                     for (repo_path, file_node_id) in &file_node_info.copyfrom {
-                        checker.add_edge(
-                            &mut edges,
-                            EdgeType::HgFileNodeToHgCopyfromFileNode,
-                            || {
-                                Node::HgFileNode((
-                                    WrappedPath::from(repo_path.clone().into_mpath()),
-                                    *file_node_id,
-                                ))
-                            },
-                        )
+                        checker.add_edge(&mut edges, EdgeType::HgFileNodeToHgCopyfromFileNode, || {
+                            Node::HgFileNode((
+                                WrappedPath::from(repo_path.clone().into_mpath()),
+                                *file_node_id,
+                            ))
+                        })
                     }
                     StepOutput(
                         checker.step_data(NodeType::HgFileNode, || {
@@ -646,11 +644,9 @@ fn alias_content_mapping_step<'a, V: VisitOne>(
         .load(ctx, &repo.get_blobstore())
         .map_ok(move |content_id| {
             let mut edges = vec![];
-            checker.add_edge(
-                &mut edges,
-                EdgeType::AliasContentMappingToFileContent,
-                || Node::FileContent(content_id),
-            );
+            checker.add_edge(&mut edges, EdgeType::AliasContentMappingToFileContent, || {
+                Node::FileContent(content_id)
+            });
             StepOutput(
                 checker.step_data(NodeType::AliasContentMapping, || {
                     NodeData::AliasContentMapping(content_id)

@@ -81,9 +81,11 @@ async fn upload_blob_no_parents(fb: FacebookInit, repo: BlobRepo) {
     let fake_path = RepoPath::file("fake/file").expect("Can't generate fake RepoPath");
 
     // The blob does not exist...
-    assert!(get_content(ctx.clone(), &repo, expected_hash)
-        .await
-        .is_err());
+    assert!(
+        get_content(ctx.clone(), &repo, expected_hash)
+            .await
+            .is_err()
+    );
 
     // We upload it...
     let (hash, future) = upload_file_no_parents(ctx.clone(), &repo, "blob", &fake_path);
@@ -189,11 +191,13 @@ async fn create_one_changeset(fb: FacebookInit, repo: BlobRepo) {
     let ctx = CoreContext::test_mock(fb);
     let fake_file_path = RepoPath::file("dir/file").expect("Can't generate fake RepoPath");
     let fake_dir_path = RepoPath::dir("dir").expect("Can't generate fake RepoPath");
-    let expected_files = vec![RepoPath::file("dir/file")
-        .expect("Can't generate fake RepoPath")
-        .mpath()
-        .unwrap()
-        .clone()];
+    let expected_files = vec![
+        RepoPath::file("dir/file")
+            .expect("Can't generate fake RepoPath")
+            .mpath()
+            .unwrap()
+            .clone(),
+    ];
     let author: String = "author <author@fb.com>".into();
 
     let (filehash, file_future) =
@@ -743,10 +747,12 @@ fn test_get_manifest_from_bonsai(fb: FacebookInit) {
             ))
             .compat()
             .await;
-            assert!(ms_hash
-                .expect_err("should have failed")
-                .to_string()
-                .contains("conflict"));
+            assert!(
+                ms_hash
+                    .expect_err("should have failed")
+                    .to_string()
+                    .contains("conflict")
+            );
         }
 
         // resolves same content different parents for `branch` file
@@ -948,12 +954,14 @@ fn test_case_conflict_two_changeset(fb: FacebookInit) {
             )
         };
 
-        assert!(commit1
-            .get_completed_changeset()
-            .join(commit2.get_completed_changeset())
-            .compat()
-            .await
-            .is_err());
+        assert!(
+            commit1
+                .get_completed_changeset()
+                .join(commit2.get_completed_changeset())
+                .compat()
+                .await
+                .is_err()
+        );
     });
 }
 
@@ -1032,12 +1040,14 @@ fn test_no_case_conflict_removal(fb: FacebookInit) {
             )
         };
 
-        assert!((commit1
-            .get_completed_changeset()
-            .join(commit2.get_completed_changeset()))
-        .compat()
-        .await
-        .is_ok());
+        assert!(
+            (commit1
+                .get_completed_changeset()
+                .join(commit2.get_completed_changeset()))
+            .compat()
+            .await
+            .is_ok()
+        );
     });
 }
 
@@ -1104,12 +1114,14 @@ fn test_no_case_conflict_removal_dir(fb: FacebookInit) {
             )
         };
 
-        assert!((commit1
-            .get_completed_changeset()
-            .join(commit2.get_completed_changeset()))
-        .compat()
-        .await
-        .is_ok());
+        assert!(
+            (commit1
+                .get_completed_changeset()
+                .join(commit2.get_completed_changeset()))
+            .compat()
+            .await
+            .is_ok()
+        );
     });
 }
 

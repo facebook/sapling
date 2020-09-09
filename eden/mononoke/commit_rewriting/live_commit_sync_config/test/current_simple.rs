@@ -31,9 +31,11 @@ fn test_empty_configs(fb: FacebookInit) {
         live_commit_sync_config.push_redirector_enabled_for_public(repo_1),
         false
     );
-    assert!(live_commit_sync_config
-        .get_current_commit_sync_config(&ctx, repo_1)
-        .is_err());
+    assert!(
+        live_commit_sync_config
+            .get_current_commit_sync_config(&ctx, repo_1)
+            .is_err()
+    );
 }
 
 #[fbinit::test]

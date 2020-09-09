@@ -263,10 +263,12 @@ impl BonsaiGitMapping for SqlBonsaiGitMapping {
             let git_shas = entries
                 .iter()
                 .map(
-                    |BonsaiGitMappingEntry {
-                         git_sha1,
-                         bcs_id: _,
-                     }| git_sha1.clone(),
+                    |
+                        BonsaiGitMappingEntry {
+                            git_sha1,
+                            bcs_id: _,
+                        },
+                    | git_sha1.clone(),
                 )
                 .collect::<Vec<_>>();
 

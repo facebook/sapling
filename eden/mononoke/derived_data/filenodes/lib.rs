@@ -232,18 +232,20 @@ pub async fn generate_all_filenodes(
             Ok(Some((path, entry)))
         }
     })
-    .map_ok(move |(path, entry)| match entry {
-        Entry::Tree(hg_mf_id) => fetch_manifest_envelope(ctx.clone(), &blobstore, hg_mf_id)
-            .map(move |envelope| create_manifest_filenode(path, envelope, linknode))
-            .left_future()
-            .compat(),
-        Entry::Leaf((_, hg_filenode_id)) => hg_filenode_id
-            .load(ctx.clone(), &blobstore)
-            .compat()
-            .from_err()
-            .and_then(move |envelope| create_file_filenode(path, envelope, linknode))
-            .right_future()
-            .compat(),
+    .map_ok(move |(path, entry)| {
+        match entry {
+            Entry::Tree(hg_mf_id) => fetch_manifest_envelope(ctx.clone(), &blobstore, hg_mf_id)
+                .map(move |envelope| create_manifest_filenode(path, envelope, linknode))
+                .left_future()
+                .compat(),
+            Entry::Leaf((_, hg_filenode_id)) => hg_filenode_id
+                .load(ctx.clone(), &blobstore)
+                .compat()
+                .from_err()
+                .and_then(move |envelope| create_file_filenode(path, envelope, linknode))
+                .right_future()
+                .compat(),
+        }
     })
     .try_buffer_unordered(100)
     .try_collect()
@@ -474,10 +476,12 @@ mod tests {
 
         assert_eq!(filenodes.len(), expected_paths.len());
         for path in expected_paths {
-            assert!(filenodes
-                .iter()
-                .find(|filenode| filenode.path == path)
-                .is_some());
+            assert!(
+                filenodes
+                    .iter()
+                    .find(|filenode| filenode.path == path)
+                    .is_some()
+            );
         }
 
         let linknode = repo

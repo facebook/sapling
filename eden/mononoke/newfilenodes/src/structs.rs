@@ -116,11 +116,7 @@ impl<'a> PathWithHash<'a> {
     }
 
     pub fn sql_is_tree(&self) -> &'static i8 {
-        if self.is_tree {
-            &1
-        } else {
-            &0
-        }
+        if self.is_tree { &1 } else { &0 }
     }
 }
 
@@ -159,11 +155,7 @@ impl PathHash {
     }
 
     pub fn sql_is_tree(&self) -> &'static i8 {
-        if self.is_tree {
-            &1
-        } else {
-            &0
-        }
+        if self.is_tree { &1 } else { &0 }
     }
 }
 

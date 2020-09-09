@@ -496,22 +496,24 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
                 .right_future()
             }
         })
-        .map(move |maybe_row| match maybe_row {
-            Some(row) => {
-                let (large_repo_id, large_bcs_id, _small_repo_id, maybe_small_bcs_id) = row;
+        .map(move |maybe_row| {
+            match maybe_row {
+                Some(row) => {
+                    let (large_repo_id, large_bcs_id, _small_repo_id, maybe_small_bcs_id) = row;
 
-                if target_repo_id == large_repo_id {
-                    Some(WorkingCopyEquivalence::WorkingCopy(large_bcs_id))
-                } else {
-                    match maybe_small_bcs_id {
-                        Some(small_bcs_id) => {
-                            Some(WorkingCopyEquivalence::WorkingCopy(small_bcs_id))
+                    if target_repo_id == large_repo_id {
+                        Some(WorkingCopyEquivalence::WorkingCopy(large_bcs_id))
+                    } else {
+                        match maybe_small_bcs_id {
+                            Some(small_bcs_id) => {
+                                Some(WorkingCopyEquivalence::WorkingCopy(small_bcs_id))
+                            }
+                            None => Some(WorkingCopyEquivalence::NoWorkingCopy),
                         }
-                        None => Some(WorkingCopyEquivalence::NoWorkingCopy),
                     }
                 }
+                None => None,
             }
-            None => None,
         })
         .boxify()
     }

@@ -486,15 +486,14 @@ pub fn save_bonsai_changesets(
     bonsai_objects
         .join(parents_to_check)
         .and_then(move |_| {
-            loop_fn(
-                bonsai_complete_futs.into_iter(),
-                move |mut futs| match futs.next() {
+            loop_fn(bonsai_complete_futs.into_iter(), move |mut futs| {
+                match futs.next() {
                     Some(fut) => fut
                         .and_then(move |_| ok(Loop::Continue(futs)))
                         .left_future(),
                     None => ok(Loop::Break(())).right_future(),
-                },
-            )
+                }
+            })
         })
         .and_then(|_| ok(()))
 }

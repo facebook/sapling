@@ -10,11 +10,7 @@ use std::iter::{FromIterator, Iterator};
 use std::str::FromStr;
 
 fn exclude_empty<'a>(e: &'a str) -> Option<&'a str> {
-    if e.is_empty() {
-        None
-    } else {
-        Some(e)
-    }
+    if e.is_empty() { None } else { Some(e) }
 }
 
 pub fn split_separated_list<'a>(

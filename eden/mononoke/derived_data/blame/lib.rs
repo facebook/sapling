@@ -70,10 +70,12 @@ pub fn fetch_blame(
                                 let err = Error::from(err);
                                 BlameError::Error(err)
                             })
-                            .and_then(move |blame_maybe_rejected| match blame_maybe_rejected {
-                                BlameMaybeRejected::Blame(blame) => Ok((blame_id, blame)),
-                                BlameMaybeRejected::Rejected(reason) => {
-                                    Err(BlameError::Rejected(reason.into()))
+                            .and_then(move |blame_maybe_rejected| {
+                                match blame_maybe_rejected {
+                                    BlameMaybeRejected::Blame(blame) => Ok((blame_id, blame)),
+                                    BlameMaybeRejected::Rejected(reason) => {
+                                        Err(BlameError::Rejected(reason.into()))
+                                    }
                                 }
                             })
                             .from_err()
@@ -126,13 +128,15 @@ fn fetch_blame_if_derived(
                 blame_id
                     .load(ctx.clone(), &blobstore)
                     .compat()
-                    .then(move |result| match result {
-                        Ok(BlameMaybeRejected::Blame(blame)) => Ok(Ok((blame_id, blame))),
-                        Ok(BlameMaybeRejected::Rejected(reason)) => {
-                            Err(BlameError::Rejected(reason.into()))
+                    .then(move |result| {
+                        match result {
+                            Ok(BlameMaybeRejected::Blame(blame)) => Ok(Ok((blame_id, blame))),
+                            Ok(BlameMaybeRejected::Rejected(reason)) => {
+                                Err(BlameError::Rejected(reason.into()))
+                            }
+                            Err(LoadableError::Error(error)) => Err(error.into()),
+                            Err(LoadableError::Missing(_)) => Ok(Err(blame_id)),
                         }
-                        Err(LoadableError::Error(error)) => Err(error.into()),
-                        Err(LoadableError::Missing(_)) => Ok(Err(blame_id)),
                     })
             }
         })

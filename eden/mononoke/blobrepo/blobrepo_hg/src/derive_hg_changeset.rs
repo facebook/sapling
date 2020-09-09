@@ -437,32 +437,36 @@ fn take_hg_generation_lease(
                         bonsai_hg_mapping.get_hg_from_bonsai(ctx.clone(), repoid, bcs_id);
                     if leased {
                         maybe_hg_cs
-                            .and_then(move |maybe_hg_cs| match maybe_hg_cs {
-                                Some(hg_cs) => release_hg_generation_lease(&repo, bcs_id)
-                                    .then(move |_| Ok(Loop::Break(Some(hg_cs))))
-                                    .left_future(),
-                                None => future::ok(Loop::Break(None)).right_future(),
+                            .and_then(move |maybe_hg_cs| {
+                                match maybe_hg_cs {
+                                    Some(hg_cs) => release_hg_generation_lease(&repo, bcs_id)
+                                        .then(move |_| Ok(Loop::Break(Some(hg_cs))))
+                                        .left_future(),
+                                    None => future::ok(Loop::Break(None)).right_future(),
+                                }
                             })
                             .left_future()
                     } else {
                         maybe_hg_cs
-                            .and_then(move |maybe_hg_cs_id| match maybe_hg_cs_id {
-                                Some(hg_cs_id) => {
-                                    future::ok(Loop::Break(Some(hg_cs_id))).left_future()
-                                }
-                                None => {
-                                    let sleep = rand::random::<u64>() % backoff_ms;
-                                    tokio::time::delay_for(Duration::from_millis(sleep))
-                                        .then(|_| new_future::ready(Ok(())))
-                                        .compat()
-                                        .then(move |_: Result<(), Error>| {
-                                            backoff_ms *= 2;
-                                            if backoff_ms >= 1000 {
-                                                backoff_ms = 1000;
-                                            }
-                                            Ok(Loop::Continue(backoff_ms))
-                                        })
-                                        .right_future()
+                            .and_then(move |maybe_hg_cs_id| {
+                                match maybe_hg_cs_id {
+                                    Some(hg_cs_id) => {
+                                        future::ok(Loop::Break(Some(hg_cs_id))).left_future()
+                                    }
+                                    None => {
+                                        let sleep = rand::random::<u64>() % backoff_ms;
+                                        tokio::time::delay_for(Duration::from_millis(sleep))
+                                            .then(|_| new_future::ready(Ok(())))
+                                            .compat()
+                                            .then(move |_: Result<(), Error>| {
+                                                backoff_ms *= 2;
+                                                if backoff_ms >= 1000 {
+                                                    backoff_ms = 1000;
+                                                }
+                                                Ok(Loop::Continue(backoff_ms))
+                                            })
+                                            .right_future()
+                                    }
                                 }
                             })
                             .right_future()
@@ -615,21 +619,25 @@ pub fn get_hg_from_bonsai_changeset_with_impl(
                 match queue.pop_front() {
                     Some(bcs_id) => bonsai_hg_mapping
                         .get_hg_from_bonsai(ctx.clone(), repoid, bcs_id)
-                        .and_then(move |maybe_hg| match maybe_hg {
-                            Some(_hg_cs_id) => {
-                                future::ok(Loop::Continue((queue, commits_to_generate, visited)))
-                                    .left_future()
+                        .and_then(move |maybe_hg| {
+                            match maybe_hg {
+                                Some(_hg_cs_id) => future::ok(Loop::Continue((
+                                    queue,
+                                    commits_to_generate,
+                                    visited,
+                                )))
+                                .left_future(),
+                                None => bcs_id
+                                    .load(ctx.clone(), repo.blobstore())
+                                    .compat()
+                                    .from_err()
+                                    .map(move |bcs| {
+                                        commits_to_generate.push(bcs.clone());
+                                        queue.extend(bcs.parents().filter(|p| visited.insert(*p)));
+                                        Loop::Continue((queue, commits_to_generate, visited))
+                                    })
+                                    .right_future(),
                             }
-                            None => bcs_id
-                                .load(ctx.clone(), repo.blobstore())
-                                .compat()
-                                .from_err()
-                                .map(move |bcs| {
-                                    commits_to_generate.push(bcs.clone());
-                                    queue.extend(bcs.parents().filter(|p| visited.insert(*p)));
-                                    Loop::Continue((queue, commits_to_generate, visited))
-                                })
-                                .right_future(),
                         })
                         .left_future(),
                     None => future::ok(Loop::Break(commits_to_generate)).right_future(),
@@ -662,9 +670,11 @@ pub fn get_hg_from_bonsai_changeset_with_impl(
         let repoid = repo.get_repoid();
         bonsai_hg_mapping
             .get_hg_from_bonsai(ctx.clone(), repoid, bcs_id)
-            .and_then(move |maybe_hg| match maybe_hg {
-                Some(hg_cs_id) => hg_cs_id.load(ctx, repo.blobstore()).compat().from_err(),
-                None => panic!("hg changeset must be generated already"),
+            .and_then(move |maybe_hg| {
+                match maybe_hg {
+                    Some(hg_cs_id) => hg_cs_id.load(ctx, repo.blobstore()).compat().from_err(),
+                    None => panic!("hg changeset must be generated already"),
+                }
             })
     }
 

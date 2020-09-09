@@ -681,9 +681,11 @@ mod test {
             bookmark(&ctx, &smallrepo, "master")
                 .set_to(diamond_merge)
                 .await?;
-            assert!(sync_and_validate(&ctx, &commit_syncer, &mutable_counters)
-                .await
-                .is_err());
+            assert!(
+                sync_and_validate(&ctx, &commit_syncer, &mutable_counters)
+                    .await
+                    .is_err()
+            );
             Ok(())
         })
     }
@@ -828,9 +830,11 @@ mod test {
                 .await?;
 
             bookmark(&ctx, &smallrepo, "somebook").set_to(merge).await?;
-            assert!(sync_and_validate(&ctx, &commit_syncer, &mutable_counters)
-                .await
-                .is_err());
+            assert!(
+                sync_and_validate(&ctx, &commit_syncer, &mutable_counters)
+                    .await
+                    .is_err()
+            );
             Ok(())
         })
     }

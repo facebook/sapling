@@ -123,11 +123,13 @@ fn test_counter_conditional_update(fb: FacebookInit) {
     );
 
     // Wasn't updated because prev_value is incorrect
-    assert!(!run_future(
-        &mut runtime,
-        mutable_counters.set_counter(ctx.clone(), REPO_ZERO, &counter, 3, Some(1)),
-    )
-    .unwrap());
+    assert!(
+        !run_future(
+            &mut runtime,
+            mutable_counters.set_counter(ctx.clone(), REPO_ZERO, &counter, 3, Some(1)),
+        )
+        .unwrap()
+    );
     assert_eq!(
         run_future(
             &mut runtime,
@@ -139,11 +141,13 @@ fn test_counter_conditional_update(fb: FacebookInit) {
 
     // Trying to update another counter, make sure it doesn't touch first counter
     let another_counter_name = "counter2".to_string();
-    assert!(!run_future(
-        &mut runtime,
-        mutable_counters.set_counter(ctx.clone(), REPO_ZERO, &another_counter_name, 3, Some(2)),
-    )
-    .unwrap());
+    assert!(
+        !run_future(
+            &mut runtime,
+            mutable_counters.set_counter(ctx.clone(), REPO_ZERO, &another_counter_name, 3, Some(2)),
+        )
+        .unwrap()
+    );
     assert_eq!(
         run_future(
             &mut runtime,

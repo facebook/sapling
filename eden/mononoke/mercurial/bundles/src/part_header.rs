@@ -283,16 +283,15 @@ pub fn decode(mut header_bytes: Bytes) -> Result<PartHeader> {
 
     for cur in 0..nmparams {
         let (ksize, vsize) = param_sizes[cur];
-        let (key, val) =
-            decode_header_param(&mut header_bytes, ksize, vsize).with_context(|| {
-                let err_msg = format!(
-                    "part '{:?}' (id {}): invalid param {}",
-                    header.part_type(),
-                    part_id,
-                    cur
-                );
-                ErrorKind::Bundle2Decode(err_msg)
-            })?;
+        let (key, val) = decode_header_param(&mut header_bytes, ksize, vsize).with_context(|| {
+            let err_msg = format!(
+                "part '{:?}' (id {}): invalid param {}",
+                header.part_type(),
+                part_id,
+                cur
+            );
+            ErrorKind::Bundle2Decode(err_msg)
+        })?;
         header
             .add_mparam(key, val)
             .with_context(|| ErrorKind::Bundle2Decode("invalid part header".into()))?;
@@ -300,16 +299,15 @@ pub fn decode(mut header_bytes: Bytes) -> Result<PartHeader> {
 
     for cur in nmparams..(nmparams + naparams) {
         let (ksize, vsize) = param_sizes[cur];
-        let (key, val) =
-            decode_header_param(&mut header_bytes, ksize, vsize).with_context(|| {
-                let err_msg = format!(
-                    "part '{:?}' (id {}): invalid param {}",
-                    header.part_type(),
-                    part_id,
-                    cur
-                );
-                ErrorKind::Bundle2Decode(err_msg)
-            })?;
+        let (key, val) = decode_header_param(&mut header_bytes, ksize, vsize).with_context(|| {
+            let err_msg = format!(
+                "part '{:?}' (id {}): invalid param {}",
+                header.part_type(),
+                part_id,
+                cur
+            );
+            ErrorKind::Bundle2Decode(err_msg)
+        })?;
         header
             .add_aparam(key, val)
             .with_context(|| ErrorKind::Bundle2Decode("invalid part header".into()))?;

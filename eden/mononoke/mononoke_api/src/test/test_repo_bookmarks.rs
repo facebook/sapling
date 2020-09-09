@@ -87,15 +87,17 @@ async fn resolve_bookmark(fb: FacebookInit) -> Result<()> {
     );
 
     // Test that non-existent bookmarks don't exist either way.
-    assert!(repo
-        .resolve_bookmark("scratch/nonexistent", BookmarkFreshness::MaybeStale)
-        .await?
-        .is_none());
+    assert!(
+        repo.resolve_bookmark("scratch/nonexistent", BookmarkFreshness::MaybeStale)
+            .await?
+            .is_none()
+    );
 
-    assert!(repo
-        .resolve_bookmark("nonexistent", BookmarkFreshness::MostRecent)
-        .await?
-        .is_none());
+    assert!(
+        repo.resolve_bookmark("nonexistent", BookmarkFreshness::MostRecent)
+            .await?
+            .is_none()
+    );
 
     Ok(())
 }

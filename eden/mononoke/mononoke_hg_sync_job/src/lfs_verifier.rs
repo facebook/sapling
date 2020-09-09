@@ -76,9 +76,11 @@ impl LfsVerifier {
                 .into();
 
         let uri = self.inner.batch_uri.clone();
-        let req = try_boxfuture!(Request::post(uri)
-            .body(body.into())
-            .context(ErrorKind::RequestCreationFailed));
+        let req = try_boxfuture!(
+            Request::post(uri)
+                .body(body.into())
+                .context(ErrorKind::RequestCreationFailed)
+        );
 
         self.inner
             .client

@@ -217,11 +217,7 @@ impl Sha1Prefix {
     /// Convert into sha1 if it is the full prefix of the hash.
     #[inline]
     pub fn into_sha1(self) -> Option<Sha1> {
-        if self.0 == self.1 {
-            Some(self.0)
-        } else {
-            None
-        }
+        if self.0 == self.1 { Some(self.0) } else { None }
     }
 
     pub fn to_hex(&self) -> AsciiString {

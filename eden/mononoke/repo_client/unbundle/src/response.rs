@@ -148,12 +148,14 @@ impl UnbundleResponse {
         };
 
         let obsmarkers_part = match pushrebase_params.emit_obsmarkers {
-            true => try_boxfuture!(obsolete::pushrebased_changesets_to_obsmarkers_part(
-                ctx.clone(),
-                &repo,
-                pushrebased_changesets,
-            )
-            .transpose()),
+            true => try_boxfuture!(
+                obsolete::pushrebased_changesets_to_obsmarkers_part(
+                    ctx.clone(),
+                    &repo,
+                    pushrebased_changesets,
+                )
+                .transpose()
+            ),
             false => None,
         };
 

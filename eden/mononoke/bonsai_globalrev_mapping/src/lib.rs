@@ -235,11 +235,13 @@ impl BonsaiGlobalrevMapping for SqlBonsaiGlobalrevMapping {
         let entries: Vec<_> = entries
             .iter()
             .map(
-                |BonsaiGlobalrevMappingEntry {
-                     repo_id,
-                     bcs_id,
-                     globalrev,
-                 }| (repo_id, bcs_id, globalrev),
+                |
+                    BonsaiGlobalrevMappingEntry {
+                        repo_id,
+                        bcs_id,
+                        globalrev,
+                    },
+                | (repo_id, bcs_id, globalrev),
             )
             .collect();
 
@@ -452,11 +454,13 @@ pub async fn add_globalrevs(
     let rows: Vec<_> = entries
         .into_iter()
         .map(
-            |BonsaiGlobalrevMappingEntry {
-                 repo_id,
-                 bcs_id,
-                 globalrev,
-             }| (repo_id, bcs_id, globalrev),
+            |
+                BonsaiGlobalrevMappingEntry {
+                    repo_id,
+                    bcs_id,
+                    globalrev,
+                },
+            | (repo_id, bcs_id, globalrev),
         )
         .collect();
 

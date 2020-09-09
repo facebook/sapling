@@ -99,10 +99,11 @@ async fn move_bookmark(fb: FacebookInit) -> Result<()> {
 
     // Attempt to move to a non-descendant commit without allowing
     // non-fast-forward moves should fail.
-    assert!(repo
-        .move_bookmark("trunk", changesets["G"], None, false)
-        .await
-        .is_err());
+    assert!(
+        repo.move_bookmark("trunk", changesets["G"], None, false)
+            .await
+            .is_err()
+    );
     repo.move_bookmark("trunk", changesets["G"], None, true)
         .await?;
     let trunk = repo
@@ -150,16 +151,18 @@ async fn delete_bookmark(fb: FacebookInit) -> Result<()> {
 
     // Can delete public bookmarks.
     repo.delete_bookmark("bookmark1", None).await?;
-    assert!(repo
-        .resolve_bookmark("bookmark1", BookmarkFreshness::MostRecent)
-        .await?
-        .is_none());
+    assert!(
+        repo.resolve_bookmark("bookmark1", BookmarkFreshness::MostRecent)
+            .await?
+            .is_none()
+    );
 
     // Deleting a bookmark with the wrong old-target fails.
-    assert!(repo
-        .delete_bookmark("bookmark2", Some(changesets["E"]))
-        .await
-        .is_err());
+    assert!(
+        repo.delete_bookmark("bookmark2", Some(changesets["E"]))
+            .await
+            .is_err()
+    );
     let bookmark2 = repo
         .resolve_bookmark("bookmark2", BookmarkFreshness::MostRecent)
         .await?
@@ -169,16 +172,18 @@ async fn delete_bookmark(fb: FacebookInit) -> Result<()> {
     // But with the right old-target succeeds.
     repo.delete_bookmark("bookmark2", Some(changesets["F"]))
         .await?;
-    assert!(repo
-        .resolve_bookmark("bookmark1", BookmarkFreshness::MostRecent)
-        .await?
-        .is_none());
+    assert!(
+        repo.resolve_bookmark("bookmark1", BookmarkFreshness::MostRecent)
+            .await?
+            .is_none()
+    );
 
     // Can't delete scratch bookmarks.
-    assert!(repo
-        .delete_bookmark("scratch/bookmark3", None)
-        .await
-        .is_err());
+    assert!(
+        repo.delete_bookmark("scratch/bookmark3", None)
+            .await
+            .is_err()
+    );
 
     Ok(())
 }

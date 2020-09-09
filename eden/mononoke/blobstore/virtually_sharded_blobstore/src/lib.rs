@@ -317,11 +317,7 @@ impl<T> Inner<T> {
             (Some(PresenceData::Put(v1)), PresenceData::Put(v2)) => {
                 // We have a put in the cache, and we want to check for a put. If they're the same,
                 // this is a match (see test_dedupe_writes and test_dedupe_writes_different_data).
-                if v1 == v2 {
-                    Some(KnownToExist)
-                } else {
-                    None
-                }
+                if v1 == v2 { Some(KnownToExist) } else { None }
             }
         };
 

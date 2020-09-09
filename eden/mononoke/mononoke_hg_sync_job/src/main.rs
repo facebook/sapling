@@ -276,9 +276,8 @@ fn unlock_repo_if_locked(
     ctx: CoreContext,
     read_write_fetcher: RepoReadWriteFetcher,
 ) -> impl Future<Item = (), Error = Error> {
-    read_write_fetcher
-        .readonly()
-        .and_then(move |repo_state| match repo_state {
+    read_write_fetcher.readonly().and_then(move |repo_state| {
+        match repo_state {
             RepoReadOnly::ReadOnly(ref lock_msg) if lock_msg == LOCK_REASON => read_write_fetcher
                 .set_mononoke_read_write(&UNLOCK_REASON.to_string())
                 .map(move |updated| {
@@ -288,7 +287,8 @@ fn unlock_repo_if_locked(
                 })
                 .left_future(),
             RepoReadOnly::ReadOnly(..) | RepoReadOnly::ReadWrite => ok(()).right_future(),
-        })
+        }
+    })
 }
 
 fn lock_repo_if_unlocked(
@@ -296,9 +296,8 @@ fn lock_repo_if_unlocked(
     read_write_fetcher: RepoReadWriteFetcher,
 ) -> impl Future<Item = (), Error = Error> {
     info!(ctx.logger(), "locking repo...");
-    read_write_fetcher
-        .readonly()
-        .and_then(move |repo_state| match repo_state {
+    read_write_fetcher.readonly().and_then(move |repo_state| {
+        match repo_state {
             RepoReadOnly::ReadWrite => read_write_fetcher
                 .set_read_only(&LOCK_REASON.to_string())
                 .map(move |updated| {
@@ -311,7 +310,8 @@ fn lock_repo_if_unlocked(
             RepoReadOnly::ReadOnly(ref lock_msg) => {
                 ok(info!(ctx.logger(), "repo is locked already: {}", lock_msg)).right_future()
             }
-        })
+        }
+    })
 }
 
 fn build_outcome_handler(
@@ -658,10 +658,12 @@ fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> BoxFuture<(), Error> {
     let retry_num = args::get_usize(&matches, "retry-num", DEFAULT_RETRY_NUM);
 
     let generate_bundles = matches.is_present(GENERATE_BUNDLES);
-    let bookmark_regex_force_lfs = try_boxfuture!(matches
-        .value_of(ARG_BOOKMARK_REGEX_FORCE_GENERATE_LFS)
-        .map(Regex::new)
-        .transpose());
+    let bookmark_regex_force_lfs = try_boxfuture!(
+        matches
+            .value_of(ARG_BOOKMARK_REGEX_FORCE_GENERATE_LFS)
+            .map(Regex::new)
+            .transpose()
+    );
 
     let lfs_params = repo_config.lfs.clone();
 

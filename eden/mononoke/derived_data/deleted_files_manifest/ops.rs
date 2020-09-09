@@ -357,31 +357,27 @@ pub fn list_all_entries(
     blobstore: impl Blobstore + Clone,
     manifest_id: DeletedManifestId,
 ) -> impl Stream<Item = (Option<MPath>, DeletedManifestId), Error = Error> {
-    bounded_traversal_stream(
-        256,
-        Some((None, manifest_id)),
-        move |(path, manifest_id)| {
-            manifest_id
-                .load(ctx.clone(), &blobstore)
-                .compat()
-                .map(move |manifest| {
-                    let entry = if manifest.is_deleted() {
-                        vec![(path.clone(), manifest_id)]
-                    } else {
-                        vec![]
-                    };
-                    let recurse_subentries = manifest
-                        .list()
-                        .map(|(name, mf_id)| {
-                            let full_path = MPath::join_opt_element(path.as_ref(), &name);
-                            (Some(full_path), mf_id.clone())
-                        })
-                        .collect::<Vec<_>>();
+    bounded_traversal_stream(256, Some((None, manifest_id)), move |(path, manifest_id)| {
+        manifest_id
+            .load(ctx.clone(), &blobstore)
+            .compat()
+            .map(move |manifest| {
+                let entry = if manifest.is_deleted() {
+                    vec![(path.clone(), manifest_id)]
+                } else {
+                    vec![]
+                };
+                let recurse_subentries = manifest
+                    .list()
+                    .map(|(name, mf_id)| {
+                        let full_path = MPath::join_opt_element(path.as_ref(), &name);
+                        (Some(full_path), mf_id.clone())
+                    })
+                    .collect::<Vec<_>>();
 
-                    (entry, recurse_subentries)
-                })
-        },
-    )
+                (entry, recurse_subentries)
+            })
+    })
     .map(|entries| iter_ok(entries))
     .flatten()
 }
