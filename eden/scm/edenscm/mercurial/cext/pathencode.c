@@ -686,13 +686,7 @@ static int sha1hash(char hash[20], const char* str, Py_ssize_t len) {
   PyObject *shaobj, *hashobj;
 
   if (shafunc == NULL) {
-    PyObject *hashlib, *name = PyBytes_FromString("hashlib");
-
-    if (name == NULL)
-      return -1;
-
-    hashlib = PyImport_Import(name);
-    Py_DECREF(name);
+    PyObject* hashlib = PyImport_ImportModule("hashlib");
 
     if (hashlib == NULL) {
       PyErr_SetString(PyExc_ImportError, "hashlib");
@@ -710,10 +704,15 @@ static int sha1hash(char hash[20], const char* str, Py_ssize_t len) {
     }
   }
 
+#ifdef IS_PY3K
+  shaobj = PyObject_CallFunction(shafunc, "y#", str, len);
+#else
   shaobj = PyObject_CallFunction(shafunc, "s#", str, len);
+#endif
 
-  if (shaobj == NULL)
+  if (shaobj == NULL) {
     return -1;
+  }
 
   hashobj = PyObject_CallMethod(shaobj, "digest", "");
   Py_DECREF(shaobj);
@@ -802,8 +801,9 @@ PyObject* pathencode(PyObject* self, PyObject* args) {
       basicencode(PyBytes_AS_STRING(newobj), newlen, path, len + 1);
     }
 #endif
-  } else
+  } else {
     newobj = hashencode(path, len + 1);
+  }
 
   return newobj;
 }

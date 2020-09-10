@@ -45,14 +45,7 @@ DISABLE_ALL_NETWORK_ACCESS_SKIPLIST: Set[str] = {
     "test-commitcloud-reversefiller.t",
 }
 
-PY3_SKIPLIST: Set[str] = {
-    "test-hook-limit-path-length.t",
-    "test-hook-no-bad-filenames.t",
-    "test-hook-no-insecure-filenames.t",
-    "test-large-path-and-content.t",
-    "test-push-redirector-sync-job.t",
-    "test-redaction.t",
-}
+PY3_SKIPLIST: Set[str] = set()
 
 
 def is_mode_opt_buck_binary():
