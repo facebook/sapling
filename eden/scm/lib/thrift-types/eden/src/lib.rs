@@ -383,15 +383,15 @@ pub mod types {
     #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
     pub struct AccessCounts {
         #[serde(default)]
-        pub fuseTotal: ::std::primitive::i64,
+        pub fsChannelTotal: ::std::primitive::i64,
         #[serde(default)]
-        pub fuseReads: ::std::primitive::i64,
+        pub fsChannelReads: ::std::primitive::i64,
         #[serde(default)]
-        pub fuseWrites: ::std::primitive::i64,
+        pub fsChannelWrites: ::std::primitive::i64,
         #[serde(default)]
-        pub fuseBackingStoreImports: ::std::primitive::i64,
+        pub fsChannelBackingStoreImports: ::std::primitive::i64,
         #[serde(default)]
-        pub fuseDurationNs: ::std::primitive::i64,
+        pub fsChannelDurationNs: ::std::primitive::i64,
     }
 
     #[derive(Clone, Debug, PartialEq, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
@@ -3772,11 +3772,11 @@ pub mod types {
     impl ::std::default::Default for self::AccessCounts {
         fn default() -> Self {
             Self {
-                fuseTotal: ::std::default::Default::default(),
-                fuseReads: ::std::default::Default::default(),
-                fuseWrites: ::std::default::Default::default(),
-                fuseBackingStoreImports: ::std::default::Default::default(),
-                fuseDurationNs: ::std::default::Default::default(),
+                fsChannelTotal: ::std::default::Default::default(),
+                fsChannelReads: ::std::default::Default::default(),
+                fsChannelWrites: ::std::default::Default::default(),
+                fsChannelBackingStoreImports: ::std::default::Default::default(),
+                fsChannelDurationNs: ::std::default::Default::default(),
             }
         }
     }
@@ -3794,20 +3794,20 @@ pub mod types {
     {
         fn write(&self, p: &mut P) {
             p.write_struct_begin("AccessCounts");
-            p.write_field_begin("fuseTotal", ::fbthrift::TType::I64, 1);
-            ::fbthrift::Serialize::write(&self.fuseTotal, p);
+            p.write_field_begin("fsChannelTotal", ::fbthrift::TType::I64, 1);
+            ::fbthrift::Serialize::write(&self.fsChannelTotal, p);
             p.write_field_end();
-            p.write_field_begin("fuseReads", ::fbthrift::TType::I64, 2);
-            ::fbthrift::Serialize::write(&self.fuseReads, p);
+            p.write_field_begin("fsChannelReads", ::fbthrift::TType::I64, 2);
+            ::fbthrift::Serialize::write(&self.fsChannelReads, p);
             p.write_field_end();
-            p.write_field_begin("fuseWrites", ::fbthrift::TType::I64, 3);
-            ::fbthrift::Serialize::write(&self.fuseWrites, p);
+            p.write_field_begin("fsChannelWrites", ::fbthrift::TType::I64, 3);
+            ::fbthrift::Serialize::write(&self.fsChannelWrites, p);
             p.write_field_end();
-            p.write_field_begin("fuseBackingStoreImports", ::fbthrift::TType::I64, 4);
-            ::fbthrift::Serialize::write(&self.fuseBackingStoreImports, p);
+            p.write_field_begin("fsChannelBackingStoreImports", ::fbthrift::TType::I64, 4);
+            ::fbthrift::Serialize::write(&self.fsChannelBackingStoreImports, p);
             p.write_field_end();
-            p.write_field_begin("fuseDurationNs", ::fbthrift::TType::I64, 5);
-            ::fbthrift::Serialize::write(&self.fuseDurationNs, p);
+            p.write_field_begin("fsChannelDurationNs", ::fbthrift::TType::I64, 5);
+            ::fbthrift::Serialize::write(&self.fsChannelDurationNs, p);
             p.write_field_end();
             p.write_field_stop();
             p.write_struct_end();
@@ -3819,32 +3819,32 @@ pub mod types {
         P: ::fbthrift::ProtocolReader,
     {
         fn read(p: &mut P) -> ::anyhow::Result<Self> {
-            let mut field_fuseTotal = ::std::option::Option::None;
-            let mut field_fuseReads = ::std::option::Option::None;
-            let mut field_fuseWrites = ::std::option::Option::None;
-            let mut field_fuseBackingStoreImports = ::std::option::Option::None;
-            let mut field_fuseDurationNs = ::std::option::Option::None;
+            let mut field_fsChannelTotal = ::std::option::Option::None;
+            let mut field_fsChannelReads = ::std::option::Option::None;
+            let mut field_fsChannelWrites = ::std::option::Option::None;
+            let mut field_fsChannelBackingStoreImports = ::std::option::Option::None;
+            let mut field_fsChannelDurationNs = ::std::option::Option::None;
             let _ = p.read_struct_begin(|_| ())?;
             loop {
                 let (_, fty, fid) = p.read_field_begin(|_| ())?;
                 match (fty, fid as ::std::primitive::i32) {
                     (::fbthrift::TType::Stop, _) => break,
-                    (::fbthrift::TType::I64, 1) => field_fuseTotal = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
-                    (::fbthrift::TType::I64, 2) => field_fuseReads = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
-                    (::fbthrift::TType::I64, 3) => field_fuseWrites = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
-                    (::fbthrift::TType::I64, 4) => field_fuseBackingStoreImports = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
-                    (::fbthrift::TType::I64, 5) => field_fuseDurationNs = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
+                    (::fbthrift::TType::I64, 1) => field_fsChannelTotal = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
+                    (::fbthrift::TType::I64, 2) => field_fsChannelReads = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
+                    (::fbthrift::TType::I64, 3) => field_fsChannelWrites = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
+                    (::fbthrift::TType::I64, 4) => field_fsChannelBackingStoreImports = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
+                    (::fbthrift::TType::I64, 5) => field_fsChannelDurationNs = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
                     (fty, _) => p.skip(fty)?,
                 }
                 p.read_field_end()?;
             }
             p.read_struct_end()?;
             ::std::result::Result::Ok(Self {
-                fuseTotal: field_fuseTotal.unwrap_or_default(),
-                fuseReads: field_fuseReads.unwrap_or_default(),
-                fuseWrites: field_fuseWrites.unwrap_or_default(),
-                fuseBackingStoreImports: field_fuseBackingStoreImports.unwrap_or_default(),
-                fuseDurationNs: field_fuseDurationNs.unwrap_or_default(),
+                fsChannelTotal: field_fsChannelTotal.unwrap_or_default(),
+                fsChannelReads: field_fsChannelReads.unwrap_or_default(),
+                fsChannelWrites: field_fsChannelWrites.unwrap_or_default(),
+                fsChannelBackingStoreImports: field_fsChannelBackingStoreImports.unwrap_or_default(),
+                fsChannelDurationNs: field_fsChannelDurationNs.unwrap_or_default(),
             })
         }
     }
