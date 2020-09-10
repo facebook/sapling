@@ -34,13 +34,16 @@ use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::{info, warn, Logger};
 use sql_ext::facebook::MysqlOptions;
 use std::collections::HashMap;
+use std::ffi::OsStr;
 use std::iter::FromIterator;
 use std::str::FromStr;
+use tokio::{fs::File, io::AsyncWriteExt};
 
 use crate::error::SubcommandError;
 
 pub const BLOBSTORE_FETCH: &str = "blobstore-fetch";
 const SCRUB_BLOBSTORE_ACTION_ARG: &str = "scrub-blobstore-action";
+const RAW_FILE_NAME_ARG: &str = "raw-blob";
 
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
     SubCommand::with_name(BLOBSTORE_FETCH)
@@ -85,6 +88,13 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
                 .takes_value(true)
                 .required(false)
                 .help("Enable ScrubBlobstore with the given action. Checks for keys missing from stores. In ReportOnly mode this logs only, otherwise it performs a copy to the missing stores."),
+        )
+        .arg(
+            Arg::with_name(RAW_FILE_NAME_ARG)
+                .long(RAW_FILE_NAME_ARG)
+                .takes_value(true)
+                .required(false)
+                .help("Write the raw blob bytes to the given filename instead of printing to stdout."),
         )
 }
 
@@ -191,6 +201,7 @@ pub async fn subcommand_blobstore_fetch<'a>(
     let decode_as = sub_m.value_of("decode-as").map(|val| val.to_string());
     let use_memcache = sub_m.value_of("use-memcache").map(|val| val.to_string());
     let no_prefix = sub_m.is_present("no-prefix");
+    let maybe_output_file = sub_m.value_of_os(RAW_FILE_NAME_ARG);
 
     let maybe_redacted_blobs_fut = match redaction {
         Redaction::Enabled => args::open_sql::<SqlRedactedContentStore>(fb, &matches)
@@ -223,7 +234,7 @@ pub async fn subcommand_blobstore_fetch<'a>(
     )
     .await?;
 
-    println!("{:?}", value);
+    output_blob(maybe_output_file, value.as_ref()).await?;
     if let Some(value) = value {
         let decode_as = decode_as.as_ref().and_then(|val| {
             let val = val.as_str();
@@ -248,6 +259,20 @@ pub async fn subcommand_blobstore_fetch<'a>(
         }
     }
 
+    Ok(())
+}
+
+async fn output_blob(path: Option<&OsStr>, value: Option<&BlobstoreGetData>) -> Result<(), Error> {
+    match (path, value) {
+        (None, _) | (_, None) => {
+            println!("{:?}", value);
+        }
+        (Some(path), Some(value)) => {
+            let mut file = File::create(path).await?;
+            file.write_all(value.as_raw_bytes()).await?;
+            file.flush().await?;
+        }
+    }
     Ok(())
 }
 
