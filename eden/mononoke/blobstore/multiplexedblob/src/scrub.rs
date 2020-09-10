@@ -18,7 +18,7 @@ use cloned::cloned;
 use context::CoreContext;
 use futures::{
     future::{BoxFuture, FutureExt},
-    stream::{FuturesUnordered, StreamExt},
+    stream::{FuturesUnordered, TryStreamExt},
 };
 use metaconfig_types::{BlobstoreId, MultiplexId, ScrubAction};
 use mononoke_types::{BlobstoreBytes, DateTime};
@@ -145,7 +145,7 @@ async fn put_and_mark_repaired(
     key: &String,
     value: &BlobstoreGetData,
     scrub_handler: &dyn ScrubHandler,
-) {
+) -> Result<(), Error> {
     let (_, res) = inner_put(
         ctx,
         scuba.clone(),
@@ -157,6 +157,7 @@ async fn put_and_mark_repaired(
     )
     .await;
     scrub_handler.on_repair(&ctx, id, &key, res.is_ok(), value.as_meta());
+    res
 }
 
 // Workaround for Blobstore returning a static lifetime future
@@ -239,7 +240,7 @@ async fn blobstore_get(
                         })
                         .collect();
 
-                    repair_puts.for_each(|_| async {}).await;
+                    repair_puts.try_for_each(|_| async { Ok(()) }).await?;
                 }
                 Ok(Some(value))
             }
