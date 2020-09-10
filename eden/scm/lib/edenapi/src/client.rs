@@ -18,6 +18,7 @@ use edenapi_types::{
     CommitRevlogData, CommitRevlogDataRequest, CompleteTreeRequest, FileEntry, FileRequest,
     HistoryEntry, HistoryRequest, HistoryResponseChunk, TreeEntry, TreeRequest,
 };
+use hg_http::http_client;
 use http_client::{HttpClient, Request};
 use types::{HgId, Key, RepoPathBuf};
 
@@ -49,7 +50,7 @@ impl Client {
     pub(crate) fn with_config(config: Config) -> Self {
         Self {
             config,
-            client: HttpClient::new(),
+            client: http_client("edenapi"),
         }
     }
 
