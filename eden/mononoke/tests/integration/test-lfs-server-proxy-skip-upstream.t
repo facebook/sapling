@@ -13,7 +13,7 @@
 # Start a "server" that never responds as the upstream
   $ upstream_port="$(get_free_socket)"
   $ upstream="http://127.0.0.1:${upstream_port}/"
-  $ nc --sh-exec "sleep 1" --keep-open --listen 127.0.0.1 "$upstream_port" &
+  $ ncat --sh-exec "sleep 1" --keep-open --listen 127.0.0.1 "$upstream_port" &
   $ nc_pid="$!"
 
 # Start a LFS server
