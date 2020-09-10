@@ -421,12 +421,13 @@ def dispatch(req):
         ui = req.ui
         if ui.logmeasuredtimes:
             ui.log("measuredtimes", **(ui._measuredtimes))
-        if ui.metrics.stats:
+        hgmetrics = bindings.hgmetrics.summarize()
+        if hgmetrics:
             # Re-arrange metrics so "a_b_c", "a_b_d", "a_c" becomes
             # {'a': {'b': {'c': ..., 'd': ...}, 'c': ...}
             metrics = {}
             splitre = re.compile("_|/")
-            for key, value in ui.metrics.stats.items():
+            for key, value in hgmetrics.items():
                 cur = metrics
                 names = splitre.split(key)
                 for name in names[:-1]:
@@ -440,11 +441,9 @@ def dispatch(req):
                 # Print it out.
                 msg = "%s\n" % pformat({"metrics": metrics}).replace("'", " ")
                 ui.flush()
-                ui.write_err(msg, label="ui.metrics")
+                ui.write_err(msg, label="hgmetrics")
             # Write to blackbox, and sampling
-            ui.log(
-                "metrics", pformat({"metrics": metrics}, width=1024), **ui.metrics.stats
-            )
+            ui.log("metrics", pformat({"metrics": metrics}, width=1024), **hgmetrics)
         blackbox.sync()
 
     if util.isoldversion():
