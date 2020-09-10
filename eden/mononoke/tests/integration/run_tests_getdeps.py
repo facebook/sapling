@@ -121,6 +121,8 @@ else:
         "test-scs.t",  # Missing SCS_SERVER
         "test-server.t",  # Returns different data in OSS
         "test-unbundle-replay-hg-recording.t",  # Returns different data in OSS
+        "test-walker-count-objects.t",  # Flaky test
+        "test-walker-error-as-data.t",  # Flaky test
     }
 
     if platform == "darwin":
