@@ -978,13 +978,13 @@ class Process:
             self.last_access = other.last_access
 
     def increment_counts(self, access_counts):
-        self.access_counts.fuseReads += access_counts.fuseReads
-        self.access_counts.fuseWrites += access_counts.fuseWrites
-        self.access_counts.fuseTotal += access_counts.fuseTotal
-        self.access_counts.fuseBackingStoreImports += (
-            access_counts.fuseBackingStoreImports
+        self.access_counts.fsChannelReads += access_counts.fsChannelReads
+        self.access_counts.fsChannelWrites += access_counts.fsChannelWrites
+        self.access_counts.fsChannelTotal += access_counts.fsChannelTotal
+        self.access_counts.fsChannelBackingStoreImports += (
+            access_counts.fsChannelBackingStoreImports
         )
-        self.access_counts.fuseDurationNs += access_counts.fuseDurationNs
+        self.access_counts.fsChannelDurationNs += access_counts.fsChannelDurationNs
 
     def set_fetchs(self, fetch_counts):
         self.fuseFetch = fetch_counts
@@ -993,12 +993,12 @@ class Process:
         return Row(
             top_pid=self.pid,
             mount=self.mount,
-            fuse_reads=self.access_counts.fuseReads,
-            fuse_writes=self.access_counts.fuseWrites,
-            fuse_total=self.access_counts.fuseTotal,
+            fuse_reads=self.access_counts.fsChannelReads,
+            fuse_writes=self.access_counts.fsChannelWrites,
+            fuse_total=self.access_counts.fsChannelTotal,
             fuse_fetch=self.fuseFetch,
-            fuse_backing_store_imports=self.access_counts.fuseBackingStoreImports,
-            fuse_duration=self.access_counts.fuseDurationNs,
+            fuse_backing_store_imports=self.access_counts.fsChannelBackingStoreImports,
+            fuse_duration=self.access_counts.fsChannelDurationNs,
             fuse_last_access=self.last_access,
             command=self.cmd,
         )
