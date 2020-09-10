@@ -27,12 +27,12 @@ use cpython_ext::{
 use pyconfigparser::config;
 use revisionstore::{
     repack, ContentStore, ContentStoreBuilder, CorruptionPolicy, DataPack, DataPackStore,
-    DataPackVersion, Delta, EdenApiFileStore, EdenApiTreeStore, HgIdDataStore, HgIdHistoryStore,
-    HgIdMutableDeltaStore, HgIdMutableHistoryStore, HgIdRemoteStore, HistoryPack, HistoryPackStore,
-    HistoryPackVersion, IndexedLogHgIdDataStore, IndexedLogHgIdHistoryStore, IndexedlogRepair,
-    LocalStore, MemcacheStore, Metadata, MetadataStore, MetadataStoreBuilder, MutableDataPack,
-    MutableHistoryPack, RemoteDataStore, RemoteHistoryStore, RepackKind, RepackLocation, StoreKey,
-    StoreResult,
+    DataPackVersion, Delta, EdenApiFileStore, EdenApiTreeStore, ExtStoredPolicy, HgIdDataStore,
+    HgIdHistoryStore, HgIdMutableDeltaStore, HgIdMutableHistoryStore, HgIdRemoteStore, HistoryPack,
+    HistoryPackStore, HistoryPackVersion, IndexedLogHgIdDataStore, IndexedLogHgIdHistoryStore,
+    IndexedlogRepair, LocalStore, MemcacheStore, Metadata, MetadataStore, MetadataStoreBuilder,
+    MutableDataPack, MutableHistoryPack, RemoteDataStore, RemoteHistoryStore, RepackKind,
+    RepackLocation, StoreKey, StoreResult,
 };
 use types::{Key, NodeInfo};
 
@@ -133,7 +133,7 @@ py_class!(class datapack |py| {
     ) -> PyResult<datapack> {
         datapack::create_instance(
             py,
-            Box::new(DataPack::new(path).map_pyerr(py)?),
+            Box::new(DataPack::new(path, ExtStoredPolicy::Ignore).map_pyerr(py)?),
         )
     }
 
@@ -224,7 +224,7 @@ py_class!(class datapackstore |py| {
             CorruptionPolicy::IGNORE
         };
 
-        datapackstore::create_instance(py, Box::new(DataPackStore::new(path, corruption_policy, maxbytes)), path.to_path_buf())
+        datapackstore::create_instance(py, Box::new(DataPackStore::new(path, corruption_policy, maxbytes, ExtStoredPolicy::Ignore)), path.to_path_buf())
     }
 
     def get(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyBytes> {
@@ -353,7 +353,7 @@ py_class!(class indexedlogdatastore |py| {
         let config = config.get_cfg(py);
         indexedlogdatastore::create_instance(
             py,
-            Box::new(IndexedLogHgIdDataStore::new(path.as_path(), &config).map_pyerr(py)?),
+            Box::new(IndexedLogHgIdDataStore::new(path.as_path(), ExtStoredPolicy::Ignore, &config).map_pyerr(py)?),
         )
     }
 
@@ -445,6 +445,7 @@ fn make_mutabledeltastore(
     } else if let Some(indexedlogpath) = indexedlogpath {
         Arc::new(IndexedLogHgIdDataStore::new(
             indexedlogpath.as_path(),
+            ExtStoredPolicy::Ignore,
             &config,
         )?)
     } else {

@@ -1,6 +1,7 @@
 #chg-compatible
 
   $ configure modern
+  $ setconfig experimental.changegroup3=False
   $ enable rebase
   $ setconfig experimental.mmapindexthreshold=1
 

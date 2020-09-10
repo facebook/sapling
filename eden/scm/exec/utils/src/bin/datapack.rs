@@ -9,7 +9,10 @@ use std::path::PathBuf;
 
 use structopt::StructOpt;
 
-use revisionstore::{datapack::DataPack, datastore::DataStore, uniondatastore::UnionDataStore};
+use revisionstore::{
+    datapack::DataPack, datastore::DataStore, localstore::ExtStoredPolicy,
+    uniondatastore::UnionDataStore,
+};
 use types::{Key, Node, RepoPathBuf};
 
 #[derive(StructOpt)]
@@ -22,7 +25,7 @@ struct Cli {
 
 fn main() {
     let args = Cli::from_args();
-    let pack = DataPack::new(&args.path).unwrap();
+    let pack = DataPack::new(&args.path, ExtStoredPolicy::Use).unwrap();
     let mut store = UnionDataStore::new();
     store.add(pack);
 

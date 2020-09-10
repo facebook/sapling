@@ -16,6 +16,7 @@ from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, nullid
 
 from . import constants, fileserverclient, shallowutil
+from .repack import fulllocaldatarepack
 
 
 # corresponds to uncompressed length of revlog's indexformatng (2 gigs, 4-byte
@@ -465,6 +466,53 @@ class remotefileslog(filelog.fileslog):
     def __init__(self, repo):
         super(remotefileslog, self).__init__(repo)
         self._memcachestore = None
+
+        def needmaintenance(fname):
+            # type: (str) -> bool
+            if repo.svfs.exists(fname):
+                tstamp = int(repo.svfs.readutf8(fname))
+                return tstamp < repo.ui.configint(
+                    "remotefilelog", "maintenance.timestamp.%s" % fname
+                )
+            else:
+                return True
+
+        def markmaintenancedone(fname):
+            with repo.lock():
+                repo.svfs.writeutf8(
+                    fname,
+                    str(
+                        repo.ui.configint(
+                            "remotefilelog", "maintenance.timestamp.%s" % fname
+                        )
+                    ),
+                )
+
+        maintenance = repo.ui.configlist("remotefilelog", "maintenance")
+        if maintenance:
+            for kind in maintenance:
+                if needmaintenance(kind):
+                    if kind == "localrepack":
+                        with repo.ui.configoverride(
+                            {("remotefilelog", "useextstored"): True}
+                        ):
+                            self.makeruststore(repo)
+                            repo.ui.warn(
+                                _(
+                                    "Running a one-time local repack, this may take some time\n"
+                                )
+                            )
+                            fulllocaldatarepack(
+                                repo, (self.contentstore, self.metadatastore)
+                            )
+                            repo.ui.warn(_("Done with one-time local repack\n"))
+                        markmaintenancedone(kind)
+                    else:
+                        repo.ui.warn(
+                            _("Unknown config value: %s in remotefilelog.maintenance\n")
+                            % kind
+                        )
+
         self.makeruststore(repo)
 
     def memcachestore(self, repo):

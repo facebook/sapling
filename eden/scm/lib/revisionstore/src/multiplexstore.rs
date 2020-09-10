@@ -172,13 +172,15 @@ mod tests {
     use crate::historypack::HistoryPackVersion;
     use crate::historystore::HgIdHistoryStore;
     use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
+    use crate::localstore::ExtStoredPolicy;
     use crate::mutabledatapack::MutableDataPack;
     use crate::mutablehistorypack::MutableHistoryPack;
 
     #[test]
     fn test_delta_add_static() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let mut log = IndexedLogHgIdDataStore::new(&tempdir, &ConfigSet::new())?;
+        let mut log =
+            IndexedLogHgIdDataStore::new(&tempdir, ExtStoredPolicy::Ignore, &ConfigSet::new())?;
         let mut multiplex = MultiplexDeltaStore::new();
         multiplex.add_store(Box::new(&mut log));
 
@@ -200,7 +202,8 @@ mod tests {
     #[test]
     fn test_delta_add_dynamic() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let mut log = IndexedLogHgIdDataStore::new(&tempdir, &ConfigSet::new())?;
+        let mut log =
+            IndexedLogHgIdDataStore::new(&tempdir, ExtStoredPolicy::Ignore, &ConfigSet::new())?;
         let mut pack = MutableDataPack::new(&tempdir, DataPackVersion::One)?;
         let mut multiplex: MultiplexDeltaStore<Box<dyn HgIdMutableDeltaStore>> =
             MultiplexDeltaStore::new();

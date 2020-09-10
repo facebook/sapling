@@ -29,7 +29,7 @@ use crate::{
     datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata, StoreResult},
     historypack::{HistoryPack, HistoryPackVersion},
     historystore::{HgIdHistoryStore, HgIdMutableHistoryStore},
-    localstore::{LocalStore, StoreFromPath},
+    localstore::{ExtStoredPolicy, LocalStore, StoreFromPath},
     mutabledatapack::MutableDataPack,
     mutablehistorypack::MutableHistoryPack,
     repack::Repackable,
@@ -115,6 +115,7 @@ struct PackStoreInner<T> {
     pack_dir: PathBuf,
     extension: &'static str,
     corruption_policy: CorruptionPolicy,
+    extstored_policy: ExtStoredPolicy,
     scan_frequency: Duration,
     last_scanned: RefCell<Instant>,
     packs: RefCell<LruStore<T>>,
@@ -137,6 +138,7 @@ struct PackStoreOptions {
     extension: &'static str,
     corruption_policy: CorruptionPolicy,
     max_bytes: Option<u64>,
+    extstored_policy: ExtStoredPolicy,
 }
 
 impl PackStoreOptions {
@@ -147,6 +149,7 @@ impl PackStoreOptions {
             extension: "",
             corruption_policy: CorruptionPolicy::IGNORE,
             max_bytes: None,
+            extstored_policy: ExtStoredPolicy::Use,
         }
     }
 
@@ -178,6 +181,12 @@ impl PackStoreOptions {
         self
     }
 
+    /// Should externally stored blobs (LFS) be used or ignored?
+    fn extstored_policy(mut self, extstored_policy: ExtStoredPolicy) -> Self {
+        self.extstored_policy = extstored_policy;
+        self
+    }
+
     fn build<T>(self) -> PackStore<T> {
         let now = Instant::now();
         let force_rescan = now - self.scan_frequency;
@@ -188,6 +197,7 @@ impl PackStoreOptions {
                 scan_frequency: self.scan_frequency,
                 extension: self.extension,
                 corruption_policy: self.corruption_policy,
+                extstored_policy: self.extstored_policy,
                 last_scanned: RefCell::new(force_rescan),
                 packs: RefCell::new(LruStore::new()),
                 max_bytes: self.max_bytes,
@@ -238,11 +248,13 @@ impl DataPackStore {
         pack_dir: P,
         corruption_policy: CorruptionPolicy,
         max_bytes: Option<u64>,
+        extstored_policy: ExtStoredPolicy,
     ) -> Self {
         PackStoreOptions::new()
             .directory(pack_dir)
             .corruption_policy(corruption_policy)
             .max_bytes(max_bytes)
+            .extstored_policy(extstored_policy)
             .extension("datapack")
             .build()
     }
@@ -274,7 +286,7 @@ impl<T: LocalStore + Repackable + StoreFromPath> PackStoreInner<T> {
 
         let mut new_size = 0;
         for entry in self.get_pack_paths()?.into_iter() {
-            if let Ok(pack) = T::from_path(&entry.path()) {
+            if let Ok(pack) = T::from_path(&entry.path(), self.extstored_policy) {
                 new_size += pack.size();
                 new_packs.push(pack);
             }
@@ -308,7 +320,7 @@ impl<T: LocalStore + Repackable + StoreFromPath> PackStoreInner<T> {
             for entry in entries.into_iter() {
                 if size >= max_bytes {
                     // Delete the remaining packs
-                    match T::from_path(&entry.0.path()) {
+                    match T::from_path(&entry.0.path(), self.extstored_policy) {
                         Ok(pack) => pack.delete()?,
                         Err(_) => continue,
                     };
@@ -489,11 +501,13 @@ impl MutableDataPackStore {
         corruption_policy: CorruptionPolicy,
         max_pending_bytes: u64,
         max_bytes: Option<u64>,
+        extstored_policy: ExtStoredPolicy,
     ) -> Result<Self> {
         let pack_store = Arc::new(DataPackStore::new(
             pack_dir.as_ref(),
             corruption_policy,
             max_bytes,
+            extstored_policy,
         ));
         let mutable_pack = Arc::new(MutableDataPack::new(pack_dir, DataPackVersion::One)?);
         let mut union_store: UnionHgIdDataStore<Arc<dyn HgIdDataStore>> = UnionHgIdDataStore::new();
@@ -517,7 +531,10 @@ impl MutableDataPackStore {
         if let Some(paths) = self.inner.mutable_pack.flush()? {
             let mut result_packs = self.result_packs.lock();
             for path in paths {
-                let datapack = DataPack::new(path.as_path())?;
+                let datapack = DataPack::new(
+                    path.as_path(),
+                    self.inner.pack_store.inner.lock().extstored_policy,
+                )?;
                 self.inner.pack_store.add_pack(datapack)?;
                 result_packs.push(path);
             }
@@ -686,7 +703,12 @@ mod tests {
         );
         make_datapack(&tempdir, &vec![revision.clone()]);
 
-        let store = DataPackStore::new(&tempdir, CorruptionPolicy::REMOVE, None);
+        let store = DataPackStore::new(
+            &tempdir,
+            CorruptionPolicy::REMOVE,
+            None,
+            ExtStoredPolicy::Use,
+        );
         let stored = store.get(StoreKey::hgid(k))?;
         assert_eq!(
             stored,
@@ -710,7 +732,12 @@ mod tests {
         );
         make_datapack(&tempdir, &vec![revision.clone()]);
 
-        let store = DataPackStore::new(&tempdir, CorruptionPolicy::REMOVE, None);
+        let store = DataPackStore::new(
+            &tempdir,
+            CorruptionPolicy::REMOVE,
+            None,
+            ExtStoredPolicy::Use,
+        );
         let missing = store.get_missing(&vec![StoreKey::from(k)])?;
         assert_eq!(missing.len(), 0);
         Ok(())
@@ -719,7 +746,12 @@ mod tests {
     #[test]
     fn test_datapack_created_after() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let store = DataPackStore::new(&tempdir, CorruptionPolicy::REMOVE, None);
+        let store = DataPackStore::new(
+            &tempdir,
+            CorruptionPolicy::REMOVE,
+            None,
+            ExtStoredPolicy::Use,
+        );
 
         let k = key("a", "2");
         let revision = (
@@ -860,7 +892,12 @@ mod tests {
         );
         make_datapack(&tempdir, &vec![revision2.clone()]);
 
-        let packstore = DataPackStore::new(&tempdir, CorruptionPolicy::REMOVE, None);
+        let packstore = DataPackStore::new(
+            &tempdir,
+            CorruptionPolicy::REMOVE,
+            None,
+            ExtStoredPolicy::Use,
+        );
 
         let k2 = StoreKey::hgid(k2);
         let _ = packstore.get(k2.clone())?;
@@ -919,7 +956,12 @@ mod tests {
             .set_len(datapack.metadata().unwrap().len() / 2)
             .unwrap();
 
-        let packstore = DataPackStore::new(&tempdir, CorruptionPolicy::REMOVE, None);
+        let packstore = DataPackStore::new(
+            &tempdir,
+            CorruptionPolicy::REMOVE,
+            None,
+            ExtStoredPolicy::Use,
+        );
         let k1 = StoreKey::hgid(k1);
         assert_eq!(
             packstore.get(k1.clone()).unwrap(),
@@ -954,7 +996,12 @@ mod tests {
 
         assert_eq!(read_dir(&tempdir)?.count(), 2);
 
-        let packstore = DataPackStore::new(&tempdir, CorruptionPolicy::IGNORE, None);
+        let packstore = DataPackStore::new(
+            &tempdir,
+            CorruptionPolicy::IGNORE,
+            None,
+            ExtStoredPolicy::Use,
+        );
         let k1 = StoreKey::hgid(k1);
         assert_eq!(packstore.get(k1.clone())?, StoreResult::NotFound(k1));
 
@@ -965,7 +1012,13 @@ mod tests {
     #[test]
     fn test_add_flush() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let packstore = MutableDataPackStore::new(&tempdir, CorruptionPolicy::REMOVE, 1000, None)?;
+        let packstore = MutableDataPackStore::new(
+            &tempdir,
+            CorruptionPolicy::REMOVE,
+            1000,
+            None,
+            ExtStoredPolicy::Use,
+        )?;
 
         let k1 = key("a", "2");
         let delta = Delta {
@@ -982,7 +1035,13 @@ mod tests {
     #[test]
     fn test_add_get_delta() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let packstore = MutableDataPackStore::new(&tempdir, CorruptionPolicy::REMOVE, 1000, None)?;
+        let packstore = MutableDataPackStore::new(
+            &tempdir,
+            CorruptionPolicy::REMOVE,
+            1000,
+            None,
+            ExtStoredPolicy::Use,
+        )?;
 
         let k1 = key("a", "2");
         let delta = Delta {
@@ -1000,7 +1059,13 @@ mod tests {
     #[test]
     fn test_add_flush_get_delta() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let packstore = MutableDataPackStore::new(&tempdir, CorruptionPolicy::REMOVE, 1000, None)?;
+        let packstore = MutableDataPackStore::new(
+            &tempdir,
+            CorruptionPolicy::REMOVE,
+            1000,
+            None,
+            ExtStoredPolicy::Use,
+        )?;
 
         let k1 = key("a", "2");
         let delta = Delta {
@@ -1080,7 +1145,13 @@ mod tests {
     #[test]
     fn test_datapack_auto_flush() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let packstore = MutableDataPackStore::new(&tempdir, CorruptionPolicy::REMOVE, 0, None)?;
+        let packstore = MutableDataPackStore::new(
+            &tempdir,
+            CorruptionPolicy::REMOVE,
+            0,
+            None,
+            ExtStoredPolicy::Ignore,
+        )?;
 
         let k1 = key("a", "1");
         let delta1 = Delta {
@@ -1113,7 +1184,13 @@ mod tests {
     #[test]
     fn test_datapack_flush_empty() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let packstore = MutableDataPackStore::new(&tempdir, CorruptionPolicy::REMOVE, 1000, None)?;
+        let packstore = MutableDataPackStore::new(
+            &tempdir,
+            CorruptionPolicy::REMOVE,
+            1000,
+            None,
+            ExtStoredPolicy::Use,
+        )?;
         packstore.flush()?;
         Ok(())
     }

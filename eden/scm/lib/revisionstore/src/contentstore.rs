@@ -29,7 +29,7 @@ use crate::{
     },
     indexedlogdatastore::IndexedLogHgIdDataStore,
     lfs::{LfsFallbackRemoteStore, LfsMultiplexer, LfsRemote, LfsStore},
-    localstore::LocalStore,
+    localstore::{ExtStoredPolicy, LocalStore},
     memcache::MemcacheStore,
     multiplexstore::MultiplexDeltaStore,
     packstore::{CorruptionPolicy, MutableDataPackStore},
@@ -273,22 +273,36 @@ impl<'a> ContentStoreBuilder<'a> {
         let mut blob_stores: UnionContentDataStore<Arc<dyn ContentDataStore>> =
             UnionContentDataStore::new();
 
+        let enable_lfs = self.config.get_or_default::<bool>("remotefilelog", "lfs")?;
+        let extstored_policy = if enable_lfs {
+            if self
+                .config
+                .get_or_default::<bool>("remotefilelog", "useextstored")?
+            {
+                ExtStoredPolicy::Use
+            } else {
+                ExtStoredPolicy::Ignore
+            }
+        } else {
+            ExtStoredPolicy::Use
+        };
+
         let shared_pack_store = Arc::new(MutableDataPackStore::new(
             &cache_packs_path,
             CorruptionPolicy::REMOVE,
             max_pending_bytes,
             max_bytes,
+            extstored_policy,
         )?);
         let shared_indexedlogdatastore = Arc::new(IndexedLogHgIdDataStore::new(
             get_indexedlogdatastore_path(&cache_path)?,
+            extstored_policy,
             self.config,
         )?);
 
         // The shared stores should precede the local one since we expect both the number of blobs,
         // and the number of requests satisfied by the shared cache to be significantly higher than
         // ones in the local store.
-
-        let enable_lfs = self.config.get_or_default::<bool>("remotefilelog", "lfs")?;
 
         let lfs_threshold = if enable_lfs {
             self.config.get_opt::<ByteCount>("lfs", "threshold")?
@@ -334,6 +348,7 @@ impl<'a> ContentStoreBuilder<'a> {
                     CorruptionPolicy::IGNORE,
                     max_pending_bytes,
                     None,
+                    extstored_policy,
                 )?);
 
                 let local_lfs_store = Arc::new(LfsStore::local(&local_path.unwrap(), self.config)?);

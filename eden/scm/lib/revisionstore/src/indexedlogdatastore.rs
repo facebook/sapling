@@ -29,7 +29,7 @@ use types::{hgid::ReadHgIdExt, HgId, Key, RepoPath};
 
 use crate::{
     datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata, StoreResult},
-    localstore::LocalStore,
+    localstore::{ExtStoredPolicy, LocalStore},
     repack::ToKeys,
     sliceext::SliceExt,
     types::StoreKey,
@@ -41,6 +41,7 @@ struct IndexedLogHgIdDataStoreInner {
 
 pub struct IndexedLogHgIdDataStore {
     inner: RwLock<IndexedLogHgIdDataStoreInner>,
+    extstored_policy: ExtStoredPolicy,
 }
 
 struct Entry {
@@ -158,7 +159,11 @@ impl Entry {
 
 impl IndexedLogHgIdDataStore {
     /// Create or open an `IndexedLogHgIdDataStore`.
-    pub fn new(path: impl AsRef<Path>, config: &ConfigSet) -> Result<Self> {
+    pub fn new(
+        path: impl AsRef<Path>,
+        extstored_policy: ExtStoredPolicy,
+        config: &ConfigSet,
+    ) -> Result<Self> {
         let mut open_options = Self::default_open_options();
         if let Some(max_bytes_per_log) =
             config.get_opt::<ByteCount>("indexedlog", "data.max-bytes-per-log")?
@@ -176,6 +181,7 @@ impl IndexedLogHgIdDataStore {
         let log = open_options.open(&path)?;
         Ok(IndexedLogHgIdDataStore {
             inner: RwLock::new(IndexedLogHgIdDataStoreInner { log }),
+            extstored_policy,
         })
     }
 }
@@ -238,8 +244,13 @@ impl HgIdDataStore for IndexedLogHgIdDataStore {
             None => return Ok(StoreResult::NotFound(StoreKey::HgId(key))),
             Some(entry) => entry,
         };
-        let content = entry.content()?;
-        Ok(StoreResult::Found(content.as_ref().to_vec()))
+
+        if self.extstored_policy == ExtStoredPolicy::Ignore && entry.metadata().is_lfs() {
+            Ok(StoreResult::NotFound(StoreKey::HgId(key)))
+        } else {
+            let content = entry.content()?;
+            Ok(StoreResult::Found(content.as_ref().to_vec()))
+        }
     }
 
     fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
@@ -254,7 +265,12 @@ impl HgIdDataStore for IndexedLogHgIdDataStore {
             Some(entry) => entry,
         };
 
-        Ok(StoreResult::Found(entry.metadata().clone()))
+        let metadata = entry.metadata();
+        if self.extstored_policy == ExtStoredPolicy::Ignore && entry.metadata().is_lfs() {
+            Ok(StoreResult::NotFound(StoreKey::HgId(key)))
+        } else {
+            Ok(StoreResult::Found(metadata.clone()))
+        }
     }
 }
 
@@ -284,14 +300,16 @@ mod tests {
     #[test]
     fn test_empty() {
         let tempdir = TempDir::new().unwrap();
-        let log = IndexedLogHgIdDataStore::new(&tempdir, &ConfigSet::new()).unwrap();
+        let log = IndexedLogHgIdDataStore::new(&tempdir, ExtStoredPolicy::Use, &ConfigSet::new())
+            .unwrap();
         log.flush().unwrap();
     }
 
     #[test]
     fn test_add() {
         let tempdir = TempDir::new().unwrap();
-        let log = IndexedLogHgIdDataStore::new(&tempdir, &ConfigSet::new()).unwrap();
+        let log = IndexedLogHgIdDataStore::new(&tempdir, ExtStoredPolicy::Use, &ConfigSet::new())
+            .unwrap();
 
         let delta = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),
@@ -307,7 +325,8 @@ mod tests {
     #[test]
     fn test_add_get() {
         let tempdir = TempDir::new().unwrap();
-        let log = IndexedLogHgIdDataStore::new(&tempdir, &ConfigSet::new()).unwrap();
+        let log = IndexedLogHgIdDataStore::new(&tempdir, ExtStoredPolicy::Use, &ConfigSet::new())
+            .unwrap();
 
         let delta = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),
@@ -319,7 +338,8 @@ mod tests {
         log.add(&delta, &metadata).unwrap();
         log.flush().unwrap();
 
-        let log = IndexedLogHgIdDataStore::new(&tempdir, &ConfigSet::new()).unwrap();
+        let log = IndexedLogHgIdDataStore::new(&tempdir, ExtStoredPolicy::Use, &ConfigSet::new())
+            .unwrap();
         let read_data = log.get(StoreKey::hgid(delta.key)).unwrap();
         assert_eq!(StoreResult::Found(delta.data.as_ref().to_vec()), read_data);
     }
@@ -327,7 +347,8 @@ mod tests {
     #[test]
     fn test_lookup_failure() {
         let tempdir = TempDir::new().unwrap();
-        let log = IndexedLogHgIdDataStore::new(&tempdir, &ConfigSet::new()).unwrap();
+        let log = IndexedLogHgIdDataStore::new(&tempdir, ExtStoredPolicy::Use, &ConfigSet::new())
+            .unwrap();
 
         let key = StoreKey::hgid(key("a", "1"));
         assert_eq!(log.get(key.clone()).unwrap(), StoreResult::NotFound(key));
@@ -336,7 +357,7 @@ mod tests {
     #[test]
     fn test_add_chain() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let log = IndexedLogHgIdDataStore::new(&tempdir, &ConfigSet::new())?;
+        let log = IndexedLogHgIdDataStore::new(&tempdir, ExtStoredPolicy::Use, &ConfigSet::new())?;
 
         let delta = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),
@@ -352,7 +373,7 @@ mod tests {
     #[test]
     fn test_iter() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let log = IndexedLogHgIdDataStore::new(&tempdir, &ConfigSet::new())?;
+        let log = IndexedLogHgIdDataStore::new(&tempdir, ExtStoredPolicy::Use, &ConfigSet::new())?;
 
         let k = key("a", "2");
         let delta = Delta {
@@ -370,7 +391,7 @@ mod tests {
     #[test]
     fn test_corrupted() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let log = IndexedLogHgIdDataStore::new(&tempdir, &ConfigSet::new())?;
+        let log = IndexedLogHgIdDataStore::new(&tempdir, ExtStoredPolicy::Use, &ConfigSet::new())?;
 
         let k = key("a", "2");
         let delta = Delta {
@@ -390,7 +411,7 @@ mod tests {
         rotate_log_path.push("log");
         remove_file(rotate_log_path)?;
 
-        let log = IndexedLogHgIdDataStore::new(&tempdir, &ConfigSet::new())?;
+        let log = IndexedLogHgIdDataStore::new(&tempdir, ExtStoredPolicy::Use, &ConfigSet::new())?;
         let k = key("a", "3");
         let delta = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),
@@ -403,6 +424,62 @@ mod tests {
 
         // There should be only one key in the store.
         assert_eq!(log.to_keys().into_iter().count(), 1);
+        Ok(())
+    }
+
+    #[test]
+    fn test_extstored_ignore() -> Result<()> {
+        let tempdir = TempDir::new().unwrap();
+        let log =
+            IndexedLogHgIdDataStore::new(&tempdir, ExtStoredPolicy::Ignore, &ConfigSet::new())
+                .unwrap();
+
+        let delta = Delta {
+            data: Bytes::from(&[1, 2, 3, 4][..]),
+            base: None,
+            key: key("a", "1"),
+        };
+
+        log.add(
+            &delta,
+            &Metadata {
+                size: None,
+                flags: Some(Metadata::LFS_FLAG),
+            },
+        )?;
+
+        let k = StoreKey::hgid(delta.key);
+        assert_eq!(log.get(k.clone())?, StoreResult::NotFound(k));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_extstored_use() -> Result<()> {
+        let tempdir = TempDir::new().unwrap();
+        let log = IndexedLogHgIdDataStore::new(&tempdir, ExtStoredPolicy::Use, &ConfigSet::new())
+            .unwrap();
+
+        let delta = Delta {
+            data: Bytes::from(&[1, 2, 3, 4][..]),
+            base: None,
+            key: key("a", "1"),
+        };
+
+        log.add(
+            &delta,
+            &Metadata {
+                size: None,
+                flags: Some(Metadata::LFS_FLAG),
+            },
+        )?;
+
+        let k = StoreKey::hgid(delta.key);
+        assert_eq!(
+            log.get(k)?,
+            StoreResult::Found(delta.data.as_ref().to_vec())
+        );
+
         Ok(())
     }
 }

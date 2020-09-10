@@ -26,7 +26,7 @@ use crate::{
     datastore::{HgIdDataStore, HgIdMutableDeltaStore, StoreResult},
     historypack::{HistoryPack, HistoryPackVersion},
     historystore::{HgIdHistoryStore, HgIdMutableHistoryStore},
-    localstore::{LocalStore, StoreFromPath},
+    localstore::{ExtStoredPolicy, LocalStore, StoreFromPath},
     metadatastore::MetadataStore,
     mutabledatapack::MutableDataPack,
     mutablehistorypack::MutableHistoryPack,
@@ -105,7 +105,7 @@ fn repack_packs<T: MutablePack, U: LocalStore + Repackable + ToKeys + StoreFromP
     let mut errors = vec![];
 
     for path in paths {
-        match U::from_path(&path) {
+        match U::from_path(&path, ExtStoredPolicy::Use) {
             Ok(pack) => {
                 if let Err(e) = repack_pack(&pack, &mut mut_pack) {
                     errors.push((path.clone(), e));
@@ -134,12 +134,12 @@ fn repack_packs<T: MutablePack, U: LocalStore + Repackable + ToKeys + StoreFromP
     }
 
     let new_pack_path = mut_pack.close_pack()?.unwrap();
-    let new_pack = U::from_path(&new_pack_path)?;
+    let new_pack = U::from_path(&new_pack_path, ExtStoredPolicy::Use)?;
 
     let mut successfully_repacked = 0;
     for path in repacked {
         if *path != new_pack_path {
-            let pack = match U::from_path(&path) {
+            let pack = match U::from_path(&path, ExtStoredPolicy::Use) {
                 Ok(pack) => pack,
                 Err(_e) => {
                     // We were about to remove this file, let's just ignore the failures to open
@@ -318,7 +318,7 @@ fn repack_datapack_to_contentstore(
     let mut errors = vec![];
 
     for path in paths {
-        let pack = match DataPack::new(&path) {
+        let pack = match DataPack::new(&path, ExtStoredPolicy::Use) {
             Ok(pack) => pack,
             Err(_) => continue,
         };
@@ -359,7 +359,7 @@ fn repack_datapack_to_contentstore(
         // TODO: This is a bit fragile as a bug in commit_pending not returning a path could lead
         // to data loss. A better return type would avoid this.
         if !new_packs.contains(&path) {
-            match DataPack::new(&path) {
+            match DataPack::new(&path, ExtStoredPolicy::Use) {
                 Ok(pack) => pack.delete()?,
                 Err(_) => continue,
             }
@@ -604,7 +604,7 @@ mod tests {
         assert!(newpath.is_ok());
         let newpath2 = newpath.unwrap().unwrap();
         assert_eq!(newpath2.with_extension("datapack"), pack.pack_path());
-        let datapack = DataPack::new(&newpath2);
+        let datapack = DataPack::new(&newpath2, ExtStoredPolicy::Use);
         assert!(datapack.is_ok());
         let newpack = datapack.unwrap();
         assert_eq!(
@@ -654,7 +654,7 @@ mod tests {
 
         let newpath = repack_datapacks(paths.into_iter(), tempdir.path());
         assert!(newpath.is_ok());
-        let newpack = DataPack::new(&newpath.unwrap().unwrap()).unwrap();
+        let newpack = DataPack::new(&newpath.unwrap().unwrap(), ExtStoredPolicy::Use).unwrap();
         assert_eq!(
             newpack
                 .to_keys()

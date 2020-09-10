@@ -170,7 +170,7 @@ pub use crate::historypack::{HistoryEntry, HistoryPack, HistoryPackVersion};
 pub use crate::historystore::{HgIdHistoryStore, HgIdMutableHistoryStore, RemoteHistoryStore};
 pub use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
 pub use crate::indexedloghistorystore::IndexedLogHgIdHistoryStore;
-pub use crate::localstore::LocalStore;
+pub use crate::localstore::{ExtStoredPolicy, LocalStore};
 pub use crate::memcache::MemcacheStore;
 pub use crate::metadatastore::{MetadataStore, MetadataStoreBuilder};
 pub use crate::multiplexstore::{MultiplexDeltaStore, MultiplexHgIdHistoryStore};

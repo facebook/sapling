@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ . "$TESTDIR/library.sh"
+  $ configure modern
 
   $ newserver master
   $ setconfig extensions.lfs= lfs.url=file:$TESTTMP/lfs-server
@@ -18,8 +18,18 @@
 
 # Make sure that when remotefilelog.lfs is enabled, we can still read the blob properly
   $ setconfig remotefilelog.lfs=True
+
+# Verify that without the one-time repack, we can't read the LFS blobs.
+  $ hg up null 2> /dev/null
+  [1]
+
+# Now do the one time repack
+  $ setconfig remotefilelog.maintenance.timestamp.localrepack=1 remotefilelog.maintenance=localrepack
   $ hg up null
+  Running a one-time local repack, this may take some time
+  Done with one-time local repack
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+
   $ hg up -r tip
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat x
@@ -28,12 +38,10 @@
   $ echo "THIS IS ANOTHER LFS BLOB" > y
   $ hg commit -qAm y
 
-# Only the first LFS blobs is created via the LFS extension, ie: one datapack.
-  $ findfilessorted .hg/store/packs
+# No datapack remaining due to the full repack done above
+  $ find .hg/store/packs -type f | sort
   .hg/store/packs/2fcfe5e792f7f55c4f39486d348654be30a5934a.histidx
   .hg/store/packs/2fcfe5e792f7f55c4f39486d348654be30a5934a.histpack
-  .hg/store/packs/537800aabca8d55a85249dc165e50c4fd2a447a7.dataidx
-  .hg/store/packs/537800aabca8d55a85249dc165e50c4fd2a447a7.datapack
   .hg/store/packs/dcb97073fda83c4a025153d7b929406f4d86e188.histidx
   .hg/store/packs/dcb97073fda83c4a025153d7b929406f4d86e188.histpack
   .hg/store/packs/manifests/1ad2258b3968784028da4c7af67e58472ed95148.dataidx
@@ -45,31 +53,32 @@
   .hg/store/packs/manifests/da1b23b92928a4cf48dc85136fde02a3b90cc657.histidx
   .hg/store/packs/manifests/da1b23b92928a4cf48dc85136fde02a3b90cc657.histpack
 
-  $ findfilessorted .hg/store/lfs/objects
+  $ find .hg/store/lfs/objects -type f | sort
   .hg/store/lfs/objects/e4/1d3fc42af9a3407f07926c75946c0aa433ccbd99c175b98474fa19b2ee5963
   .hg/store/lfs/objects/f3/8ef89300956a8cf001746d6e4b015708c3d0d883d1a69bf00f4958090cbe21
 
   $ hg push -q --to master --create
-  $ findfilessorted $TESTTMP/lfs-server
+  $ find $TESTTMP/lfs-server -type f | sort
   $TESTTMP/lfs-server/e4/1d3fc42af9a3407f07926c75946c0aa433ccbd99c175b98474fa19b2ee5963
   $TESTTMP/lfs-server/f3/8ef89300956a8cf001746d6e4b015708c3d0d883d1a69bf00f4958090cbe21
 
-# Of the 2 blob, one is uploaded via the legacy LFS extension, and thus not
-# moved, while the other is properly moved to the shared store.
-  $ findfilessorted .hg/store/lfs/objects
-  .hg/store/lfs/objects/e4/1d3fc42af9a3407f07926c75946c0aa433ccbd99c175b98474fa19b2ee5963
-
-# Now let's repack to move the LFS pointer to the remotefilelog LFS pointer store.
-  $ hg repack
+# Both blobs were in the LFS store, and thus have been uploaded and moved to the shared store.
+  $ find .hg/store/lfs/objects -type f | sort
 
 # No datapack should be present.
-  $ findfilessorted .hg/store/packs
-  .hg/store/packs/cdd6b0d104ad718cec29643359c67c56c91e483e.histidx
-  .hg/store/packs/cdd6b0d104ad718cec29643359c67c56c91e483e.histpack
-  .hg/store/packs/manifests/2eece36afda8d776ef688304461f9bf904379e3e.dataidx
-  .hg/store/packs/manifests/2eece36afda8d776ef688304461f9bf904379e3e.datapack
-  .hg/store/packs/manifests/6f96b59e7b3c62bf2d3aba403f72343b53c05d95.histidx
-  .hg/store/packs/manifests/6f96b59e7b3c62bf2d3aba403f72343b53c05d95.histpack
+  $ find .hg/store/packs -type f | sort
+  .hg/store/packs/2fcfe5e792f7f55c4f39486d348654be30a5934a.histidx
+  .hg/store/packs/2fcfe5e792f7f55c4f39486d348654be30a5934a.histpack
+  .hg/store/packs/dcb97073fda83c4a025153d7b929406f4d86e188.histidx
+  .hg/store/packs/dcb97073fda83c4a025153d7b929406f4d86e188.histpack
+  .hg/store/packs/manifests/1ad2258b3968784028da4c7af67e58472ed95148.dataidx
+  .hg/store/packs/manifests/1ad2258b3968784028da4c7af67e58472ed95148.datapack
+  .hg/store/packs/manifests/9bb7cc2e0e433f3564cbef21705ff896d9be2473.histidx
+  .hg/store/packs/manifests/9bb7cc2e0e433f3564cbef21705ff896d9be2473.histpack
+  .hg/store/packs/manifests/b00bb3b75ccfe82ff2ac879b3b323c8005835d1a.dataidx
+  .hg/store/packs/manifests/b00bb3b75ccfe82ff2ac879b3b323c8005835d1a.datapack
+  .hg/store/packs/manifests/da1b23b92928a4cf48dc85136fde02a3b90cc657.histidx
+  .hg/store/packs/manifests/da1b23b92928a4cf48dc85136fde02a3b90cc657.histpack
 
 # And verify we can read the blobs properly
   $ hg up null
@@ -92,38 +101,35 @@
   $ setconfig extensions.lfs= lfs.threshold=10B lfs.url=file:$TESTTMP/lfs-server/ remotefilelog.lfs=True
 
   $ hg update -r tip
-  fetching tree '' 11643b8969ec3aa286b2209783159cee526e902a, found via 316bb9353f6a
-  1 trees fetched over 0.00s
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat x
   THIS IS AN LFS BLOB
   $ cat y
   THIS IS ANOTHER LFS BLOB
-  $ findfilessorted $CACHEDIR
-  $TESTTMP/hgcache/master/indexedlogdatastore/0/index2-node
-  $TESTTMP/hgcache/master/indexedlogdatastore/0/log
-  $TESTTMP/hgcache/master/indexedlogdatastore/0/meta
-  $TESTTMP/hgcache/master/indexedlogdatastore/latest
-  $TESTTMP/hgcache/master/indexedloghistorystore/0/index2-node_and_path
-  $TESTTMP/hgcache/master/indexedloghistorystore/0/log
-  $TESTTMP/hgcache/master/indexedloghistorystore/0/meta
-  $TESTTMP/hgcache/master/indexedloghistorystore/latest
-  $TESTTMP/hgcache/master/lfs/blobs/0/index2-sha256
-  $TESTTMP/hgcache/master/lfs/blobs/0/log
-  $TESTTMP/hgcache/master/lfs/blobs/0/meta
-  $TESTTMP/hgcache/master/lfs/blobs/latest
-  $TESTTMP/hgcache/master/lfs/pointers/0/index2-node
-  $TESTTMP/hgcache/master/lfs/pointers/0/index2-sha256
-  $TESTTMP/hgcache/master/lfs/pointers/0/log
-  $TESTTMP/hgcache/master/lfs/pointers/0/meta
-  $TESTTMP/hgcache/master/lfs/pointers/latest
-  $TESTTMP/hgcache/master/packs/cdd6b0d104ad718cec29643359c67c56c91e483e.histidx
-  $TESTTMP/hgcache/master/packs/cdd6b0d104ad718cec29643359c67c56c91e483e.histpack
-  $TESTTMP/hgcache/master/packs/manifests/1ad2258b3968784028da4c7af67e58472ed95148.dataidx
-  $TESTTMP/hgcache/master/packs/manifests/1ad2258b3968784028da4c7af67e58472ed95148.datapack
-  $TESTTMP/hgcache/master/packs/manifests/9bb7cc2e0e433f3564cbef21705ff896d9be2473.histidx
-  $TESTTMP/hgcache/master/packs/manifests/9bb7cc2e0e433f3564cbef21705ff896d9be2473.histpack
-  $TESTTMP/hgcache/master/packs/repacklock
+  $ find $TESTTMP/default-hgcache -type f | sort
+  $TESTTMP/default-hgcache/master/indexedlogdatastore/0/index2-node
+  $TESTTMP/default-hgcache/master/indexedlogdatastore/0/log
+  $TESTTMP/default-hgcache/master/indexedlogdatastore/0/meta
+  $TESTTMP/default-hgcache/master/indexedlogdatastore/latest
+  $TESTTMP/default-hgcache/master/indexedloghistorystore/0/index2-node_and_path
+  $TESTTMP/default-hgcache/master/indexedloghistorystore/0/log
+  $TESTTMP/default-hgcache/master/indexedloghistorystore/0/meta
+  $TESTTMP/default-hgcache/master/indexedloghistorystore/latest
+  $TESTTMP/default-hgcache/master/lfs/blobs/0/index2-sha256
+  $TESTTMP/default-hgcache/master/lfs/blobs/0/log
+  $TESTTMP/default-hgcache/master/lfs/blobs/0/meta
+  $TESTTMP/default-hgcache/master/lfs/blobs/latest
+  $TESTTMP/default-hgcache/master/lfs/pointers/0/index2-node
+  $TESTTMP/default-hgcache/master/lfs/pointers/0/index2-sha256
+  $TESTTMP/default-hgcache/master/lfs/pointers/0/log
+  $TESTTMP/default-hgcache/master/lfs/pointers/0/meta
+  $TESTTMP/default-hgcache/master/lfs/pointers/latest
+  $TESTTMP/default-hgcache/master/packs/cdd6b0d104ad718cec29643359c67c56c91e483e.histidx
+  $TESTTMP/default-hgcache/master/packs/cdd6b0d104ad718cec29643359c67c56c91e483e.histpack
+  $TESTTMP/default-hgcache/master/packs/manifests/1ad2258b3968784028da4c7af67e58472ed95148.dataidx
+  $TESTTMP/default-hgcache/master/packs/manifests/1ad2258b3968784028da4c7af67e58472ed95148.datapack
+  $TESTTMP/default-hgcache/master/packs/manifests/9bb7cc2e0e433f3564cbef21705ff896d9be2473.histidx
+  $TESTTMP/default-hgcache/master/packs/manifests/9bb7cc2e0e433f3564cbef21705ff896d9be2473.histpack
 
 # Disable the remotefilelog LFS implementation to verify we can still read the LFS blobs properly.
   $ setconfig remotefilelog.lfs=False

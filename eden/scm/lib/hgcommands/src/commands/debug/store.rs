@@ -11,8 +11,8 @@ use super::Result;
 use super::IO;
 use clidispatch::errors;
 use revisionstore::{
-    CorruptionPolicy, DataPackStore, HgIdDataStore, IndexedLogHgIdDataStore, StoreKey, StoreResult,
-    UnionHgIdDataStore,
+    CorruptionPolicy, DataPackStore, ExtStoredPolicy, HgIdDataStore, IndexedLogHgIdDataStore,
+    StoreKey, StoreResult, UnionHgIdDataStore,
 };
 use std::str::FromStr;
 use types::{HgId, Key, RepoPathBuf};
@@ -43,9 +43,15 @@ pub fn run(opts: DebugstoreOpts, io: &mut IO, repo: Repo) -> Result<u8> {
         None => return Err(errors::Abort("remotefilelog.reponame is not set".into()).into()),
     };
     let fullpath = format!("{}/{}/packs", cachepath, reponame);
-    let packstore = Box::new(DataPackStore::new(fullpath, CorruptionPolicy::IGNORE, None));
+    let packstore = Box::new(DataPackStore::new(
+        fullpath,
+        CorruptionPolicy::IGNORE,
+        None,
+        ExtStoredPolicy::Use,
+    ));
     let fullpath = format!("{}/{}/indexedlogdatastore", cachepath, reponame);
-    let indexedstore = Box::new(IndexedLogHgIdDataStore::new(fullpath, &config).unwrap());
+    let indexedstore =
+        Box::new(IndexedLogHgIdDataStore::new(fullpath, ExtStoredPolicy::Use, &config).unwrap());
     let mut unionstore: UnionHgIdDataStore<Box<dyn HgIdDataStore>> = UnionHgIdDataStore::new();
     unionstore.add(packstore);
     unionstore.add(indexedstore);

@@ -83,6 +83,16 @@ def _localdatarepack(repo, incremental):
         _runrepack(repo, packpath, incremental, False)
 
 
+def fulllocaldatarepack(repo, stores):
+    if repo.ui.configbool("remotefilelog", "localdatarepack"):
+        packpath = shallowutil.getlocalpackpath(
+            repo.svfs.vfs.base, constants.FILEPACK_CATEGORY
+        )
+        _cleanuppacks(repo.ui, packpath, 0)
+
+        _runrustrepack(repo.ui, packpath, stores, False, False)
+
+
 def _manifestrepack(repo, incremental):
     if repo.ui.configbool("treemanifest", "server"):
         _runrepack(repo, repo.localvfs.join("cache/packs/manifests"), incremental)

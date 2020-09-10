@@ -114,22 +114,6 @@ class datapacktestsbase(object):
             chain = pack.getdeltachain(filename, node)
             self.assertEqual(content, chain[0][4])
 
-    def testPackMetadata(self):
-        revisions = []
-        for i in range(100):
-            filename = "%s.txt" % i
-            content = b"put-something-here \n" * i
-            node = self.getHash(content)
-            meta = {constants.METAKEYFLAG: i ** 4, constants.METAKEYSIZE: len(content)}
-            revisions.append((filename, node, nullid, content, meta))
-        pack = self.createPack(revisions, version=1)
-        for name, node, x, content, origmeta in revisions:
-            parsedmeta = pack.getmeta(name, node)
-            # flag == 0 should be optimized out
-            if origmeta[constants.METAKEYFLAG] == 0:
-                del origmeta[constants.METAKEYFLAG]
-            self.assertEqual(parsedmeta, origmeta)
-
     def testGetMissing(self):
         """Test the getmissing() api.
         """

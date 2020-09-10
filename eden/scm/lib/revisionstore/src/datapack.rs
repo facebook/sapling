@@ -103,7 +103,7 @@ use util::path::remove_file;
 use crate::{
     dataindex::{DataIndex, DeltaBaseOffset},
     datastore::{Delta, HgIdDataStore, Metadata, StoreResult},
-    localstore::{LocalStore, StoreFromPath},
+    localstore::{ExtStoredPolicy, LocalStore, StoreFromPath},
     repack::{Repackable, ToKeys},
     sliceext::SliceExt,
     types::StoreKey,
@@ -126,6 +126,7 @@ pub struct DataPack {
     base_path: Arc<PathBuf>,
     pack_path: PathBuf,
     index_path: PathBuf,
+    extstored_policy: ExtStoredPolicy,
 }
 
 pub struct DataEntry<'a> {
@@ -267,11 +268,11 @@ impl<'a> fmt::Debug for DataEntry<'a> {
 }
 
 impl DataPack {
-    pub fn new(p: impl AsRef<Path>) -> Result<Self> {
-        DataPack::with_path(p.as_ref())
+    pub fn new(p: impl AsRef<Path>, extstored_policy: ExtStoredPolicy) -> Result<Self> {
+        DataPack::with_path(p.as_ref(), extstored_policy)
     }
 
-    fn with_path(path: &Path) -> Result<Self> {
+    fn with_path(path: &Path, extstored_policy: ExtStoredPolicy) -> Result<Self> {
         let base_path = PathBuf::from(path);
         let pack_path = path.with_extension("datapack");
         let file = File::open(&pack_path)?;
@@ -293,6 +294,7 @@ impl DataPack {
             base_path: Arc::new(base_path),
             pack_path,
             index_path,
+            extstored_policy,
         })
     }
 
@@ -331,6 +333,10 @@ impl DataPack {
             }
 
             let data_entry = self.read_entry(next_entry.pack_entry_offset())?;
+            if self.extstored_policy == ExtStoredPolicy::Ignore && data_entry.metadata.is_lfs() {
+                return Ok(None);
+            }
+
             chain.push(Delta {
                 data: data_entry.delta()?,
                 base: data_entry
@@ -389,15 +395,19 @@ impl HgIdDataStore for DataPack {
             None => return Ok(StoreResult::NotFound(StoreKey::hgid(key))),
             Some(entry) => entry,
         };
-        Ok(StoreResult::Found(
-            self.read_entry(index_entry.pack_entry_offset())?.metadata,
-        ))
+
+        let entry = self.read_entry(index_entry.pack_entry_offset())?;
+        if self.extstored_policy == ExtStoredPolicy::Ignore && entry.metadata.is_lfs() {
+            Ok(StoreResult::NotFound(StoreKey::hgid(key)))
+        } else {
+            Ok(StoreResult::Found(entry.metadata))
+        }
     }
 }
 
 impl StoreFromPath for DataPack {
-    fn from_path(path: &Path) -> Result<Self> {
-        DataPack::new(path)
+    fn from_path(path: &Path, extstored: ExtStoredPolicy) -> Result<Self> {
+        DataPack::new(path, extstored)
     }
 }
 
@@ -504,7 +514,7 @@ pub mod tests {
 
         let path = mutdatapack.flush().unwrap().unwrap()[0].clone();
 
-        DataPack::new(&path).unwrap()
+        DataPack::new(&path, ExtStoredPolicy::Use).unwrap()
     }
 
     #[test]
@@ -717,7 +727,7 @@ pub mod tests {
         )];
 
         let pack = make_datapack(&tempdir, &revisions);
-        let pack2 = DataPack::new(pack.base_path()).unwrap();
+        let pack2 = DataPack::new(pack.base_path(), ExtStoredPolicy::Use).unwrap();
         assert!(pack.delete().is_ok());
         assert!(!pack2.pack_path().exists());
         assert!(!pack2.index_path().exists());
@@ -744,6 +754,31 @@ pub mod tests {
             data,
             StoreResult::Found(revisions[0].0.data.as_ref().to_vec())
         );
+    }
+
+    #[test]
+    fn test_extstored_ignore() -> Result<()> {
+        let tempdir = TempDir::new()?;
+
+        let revisions = vec![(
+            Delta {
+                data: Bytes::from(&[1, 2, 3, 4][..]),
+                base: None,
+                key: key("a", "1"),
+            },
+            Metadata {
+                size: None,
+                flags: Some(Metadata::LFS_FLAG),
+            },
+        )];
+        let pack = make_datapack(&tempdir, &revisions);
+        let pack2 = DataPack::new(pack.base_path(), ExtStoredPolicy::Ignore)?;
+
+        let k = StoreKey::hgid(revisions[0].0.key.clone());
+        let res = pack2.get(k.clone())?;
+        assert_eq!(res, StoreResult::NotFound(k));
+
+        Ok(())
     }
 
     quickcheck! {
