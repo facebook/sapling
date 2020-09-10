@@ -425,9 +425,10 @@ def dispatch(req):
             # Re-arrange metrics so "a_b_c", "a_b_d", "a_c" becomes
             # {'a': {'b': {'c': ..., 'd': ...}, 'c': ...}
             metrics = {}
+            splitre = re.compile("_|/")
             for key, value in ui.metrics.stats.items():
                 cur = metrics
-                names = key.split("_")
+                names = splitre.split(key)
                 for name in names[:-1]:
                     cur = cur.setdefault(name, {})
                 cur[names[-1]] = value
