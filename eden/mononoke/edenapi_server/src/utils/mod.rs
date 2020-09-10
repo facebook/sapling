@@ -31,7 +31,7 @@ pub async fn get_repo(
 ) -> Result<HgRepoContext, HttpError> {
     let name = name.as_ref();
     sctx.mononoke_api()
-        .repo(rctx.core_context().clone(), name)
+        .repo(rctx.ctx.clone(), name)
         .await
         .map_err(|e| e.into_http_error(ErrorKind::RepoLoadFailed(name.to_string())))?
         .map(|repo| repo.hg())

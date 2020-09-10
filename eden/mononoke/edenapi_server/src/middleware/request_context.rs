@@ -18,19 +18,11 @@ use scuba::ScubaSampleBuilder;
 #[derive(StateData)]
 pub struct RequestContext {
     pub ctx: CoreContext,
-    pub repository: Option<String>,
 }
 
 impl RequestContext {
     fn new(ctx: CoreContext) -> Self {
-        Self {
-            ctx,
-            repository: None,
-        }
-    }
-
-    pub fn core_context(&self) -> CoreContext {
-        self.ctx.clone()
+        Self { ctx }
     }
 }
 
