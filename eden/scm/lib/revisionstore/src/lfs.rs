@@ -42,6 +42,7 @@ use configparser::{
     config::ConfigSet,
     hg::{ByteCount, ConfigSetHgExt},
 };
+use hg_http::http_client;
 use http_client::{HttpClient, Method, Request};
 use indexedlog::log::IndexOutput;
 use lfs_protocol::{
@@ -1225,7 +1226,7 @@ impl LfsRemote {
             let request_timeout =
                 Duration::from_millis(config.get_or("lfs", "requesttimeout", || 10_000)?);
 
-            let client = HttpClient::new();
+            let client = http_client("lfs");
 
             Ok(Self {
                 shared,
