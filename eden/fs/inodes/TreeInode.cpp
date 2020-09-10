@@ -3514,6 +3514,16 @@ void TreeInode::prefetch(ObjectFetchContext& context) {
   if (!prefetched_.compare_exchange_strong(expected, true)) {
     return;
   }
+  // Blob metadata will already be prefetched when this
+  // tree is first fetched. This could beat the metadata
+  // prefetch to the punch and cause a full blob fetch.
+  // So when metadata prefetching is turned on we can
+  // just skip this.
+  if (getMount()->getServerState()->getEdenConfig()->useScs.getValue()) {
+    XLOG(DBG4) << "skipping prefetch for " << getLogPath()
+               << ": metadata prefetching is turned on in the backing store";
+    return;
+  }
   auto prefetchLease =
       getMount()->tryStartTreePrefetch(inodePtrFromThis(), context);
   if (!prefetchLease) {
