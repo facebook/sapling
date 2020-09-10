@@ -1,0 +1,12 @@
+[package]
+name = "hg-http"
+edition = "2018"
+version = "0.1.0"
+include = ["src/**/*.rs", "src/bin/cli.rs"]
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+http-client = { path = "../http-client" }
+hg-metrics = { path = "../hg-metrics" }

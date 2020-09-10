@@ -48,7 +48,7 @@ impl fmt::Display for Method {
 
 /// A builder struct for HTTP requests, designed to be
 /// a more egonomic API for setting up a curl handle.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Request {
     url: Url,
     method: Method,

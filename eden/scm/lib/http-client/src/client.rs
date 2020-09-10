@@ -7,6 +7,7 @@
 
 use std::convert::{TryFrom, TryInto};
 use std::pin::Pin;
+use std::sync::Arc;
 
 use curl::easy::Easy2;
 use futures::prelude::*;
@@ -40,11 +41,31 @@ pub type StatsFuture =
 #[derive(Clone)]
 pub struct HttpClient {
     pool: Pool,
+    report_stats: Option<Arc<dyn Fn(&Stats) + Send + Sync + 'static>>,
 }
 
 impl HttpClient {
     pub fn new() -> Self {
-        Self { pool: Pool::new() }
+        Self {
+            pool: Pool::new(),
+            report_stats: None,
+        }
+    }
+
+    /// Automatically report stats using the provided function.
+    ///
+    /// For all functions that return `Stats`, the `report_stats`
+    /// function will be called with the same `Stats` struct that
+    /// is returned. `report_stats` will be invoked just before
+    /// the struct is handed to the caller.
+    pub fn with_stats_reporting<F>(self, report_stats: F) -> Self
+    where
+        F: Fn(&Stats) + Send + Sync + 'static,
+    {
+        Self {
+            report_stats: Some(Arc::new(report_stats)),
+            ..self
+        }
     }
 
     /// Perform multiple HTTP requests concurrently.
@@ -86,12 +107,18 @@ impl HttpClient {
             driver.add(handle)?;
         }
 
-        driver.perform(|res| {
+        let stats = driver.perform(|res| {
             let res = res
                 .map_err(|(_, e)| e.into())
                 .and_then(|mut easy| Response::try_from(easy.get_mut()));
             response_cb(res)
-        })
+        })?;
+
+        if let Some(report_stats) = &self.report_stats {
+            report_stats(&stats);
+        }
+
+        Ok(stats)
     }
 
     /// Async version of `send` which runs all of the given request concurrently
@@ -185,7 +212,14 @@ impl HttpClient {
             driver.add(handle)?;
         }
 
-        driver.perform(report_result_and_drop_receiver)
+        driver
+            .perform(report_result_and_drop_receiver)
+            .map(|stats| {
+                if let Some(report_stats) = &self.report_stats {
+                    report_stats(&stats);
+                }
+                stats
+            })
     }
 }
 
@@ -397,6 +431,50 @@ mod tests {
 
         let stats = stats.await?;
         assert_eq!(stats.requests, 3);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_report_stats() -> Result<()> {
+        let server_url = Url::parse(&mockito::server_url())?;
+
+        // this is actually used, it changes how mockito behaves
+        let _mock1 = mock("GET", "/test1")
+            .with_status(201)
+            .with_body(&b"body")
+            .create();
+
+        let url = server_url.join("test1")?;
+        let request = Request::get(url);
+
+        let (tx, rx) = crossbeam::channel::unbounded();
+
+        let client = HttpClient::new().with_stats_reporting(move |stats| {
+            tx.send(stats.clone()).expect("send stats over channel")
+        });
+
+        let stats = client.send(vec![request.clone()], |_| Ok(()))?;
+        assert_eq!(stats, rx.recv()?);
+
+        let stats = client.send_with_progress(vec![request.clone()], |_| Ok(()), |_| ())?;
+        assert_eq!(stats, rx.recv()?);
+
+        let (_stream, stats) = client.send_async(vec![request.clone()])?;
+        let stats = stats.await?;
+        assert_eq!(stats, rx.recv()?);
+
+        let (_stream, stats) = client.send_async_with_progress(vec![request.clone()], |_| ())?;
+        let stats = stats.await?;
+        assert_eq!(stats, rx.recv()?);
+
+        let my_stream_req = || request.clone().into_streaming(TestReceiver::new());
+
+        let stats = client.stream(vec![my_stream_req()])?;
+        assert_eq!(stats, rx.recv()?);
+
+        let stats = client.stream_with_progress(vec![my_stream_req()], |_| ())?;
+        assert_eq!(stats, rx.recv()?);
 
         Ok(())
     }

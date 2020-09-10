@@ -33,5 +33,6 @@ tokio = { version = "=0.2.13", features = ["full"] }
 url = "2.1.0"
 
 [dev-dependencies]
+crossbeam = "0.7"
 mockito = "0.25"
 tempdir = "0.3"
