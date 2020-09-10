@@ -8,7 +8,7 @@
 #[cfg(test)]
 mod tests {
     use crate::{
-        back_sync_commits_to_small_repo, check_dependent_systems, derive_bonsais_multiple_repos,
+        back_sync_commits_to_small_repo, check_dependent_systems, derive_bonsais_single_repo,
         get_large_repo_config_if_pushredirected, get_large_repo_setting, merge_imported_commit,
         move_bookmark, push_merge_commit, rewrite_file_paths, sort_bcs, ChangesetArgs,
         CheckerFlags, RepoImportSetting, LATEST_REPLAYED_REQUEST_KEY,
@@ -130,6 +130,7 @@ mod tests {
             &checker_flags,
             sleep_time,
             &mutable_counters,
+            &None,
         )
         .await?;
         // Check the bookmark moves created BookmarkLogUpdate entries
@@ -668,8 +669,6 @@ mod tests {
             repo_0_cs_ids.push(csid.clone());
         }
 
-        let mut repo_to_changesets = vec![(repo_0.clone(), repo_0_bcs.clone())];
-
         let repo_1 = create_repo(1)?;
         let repo_1_commits = create_from_dag(
             &ctx,
@@ -686,9 +685,8 @@ mod tests {
             repo_1_cs_ids.push(csid.clone());
         }
 
-        repo_to_changesets.push((repo_1.clone(), repo_1_bcs.clone()));
-
-        derive_bonsais_multiple_repos(&ctx, &repo_to_changesets).await?;
+        derive_bonsais_single_repo(&ctx, &repo_0, &repo_0_bcs).await?;
+        derive_bonsais_single_repo(&ctx, &repo_1, &repo_1_bcs).await?;
 
         check_no_pending_commits(&ctx, &repo_0, &repo_0_cs_ids).await?;
         check_no_pending_commits(&ctx, &repo_1, &repo_1_cs_ids).await?;
@@ -760,10 +758,8 @@ mod tests {
         )
         .await?;
 
-        let mut repo_to_changesets = vec![(large_repo.clone(), shifted_bcs.clone())];
-        repo_to_changesets.push((small_repo.clone(), synced_bcs.clone()));
-
-        derive_bonsais_multiple_repos(&ctx, &repo_to_changesets).await?;
+        derive_bonsais_single_repo(&ctx, &large_repo, &shifted_bcs).await?;
+        derive_bonsais_single_repo(&ctx, &small_repo, &synced_bcs).await?;
 
         let large_repo_cs_ids = gen_cs_ids(&shifted_bcs);
         let small_repo_cs_ids = gen_cs_ids(&synced_bcs);

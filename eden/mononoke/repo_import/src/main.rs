@@ -7,10 +7,12 @@
 
 #![type_length_limit = "4522397"]
 use anyhow::{format_err, Error};
+use backsyncer::{backsync_latest, open_backsyncer_dbs, BacksyncLimit, TargetRepoDbs};
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateLog, BookmarkUpdateReason, Freshness};
+use borrowed::borrowed;
 use cached_config::ConfigStore;
 use cmdlib::args;
 use cmdlib::helpers::block_execute;
@@ -20,7 +22,7 @@ use derived_data_utils::derived_data_utils;
 use fbinit::FacebookInit;
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
-    future::TryFutureExt,
+    future::{self, TryFutureExt},
     stream::{self, StreamExt, TryStreamExt},
 };
 use import_tools::{GitimportPreferences, GitimportTarget};
@@ -94,6 +96,14 @@ struct ChangesetArgs {
 struct RepoImportSetting {
     importing_bookmark: BookmarkName,
     dest_bookmark: BookmarkName,
+}
+
+#[derive(Clone)]
+struct SmallRepoBackSyncVars {
+    large_to_small_syncer: CommitSyncer<SqlSyncedCommitMapping>,
+    target_repo_dbs: TargetRepoDbs,
+    small_repo_bookmark: BookmarkName,
+    small_repo: BlobRepo,
 }
 
 async fn rewrite_file_paths(
@@ -172,20 +182,6 @@ async fn back_sync_commits_to_small_repo(
     Ok(synced_bonsai_changesets)
 }
 
-async fn derive_bonsais_multiple_repos(
-    ctx: &CoreContext,
-    repo_to_changesets: &[(BlobRepo, Vec<BonsaiChangeset>)],
-) -> Result<(), Error> {
-    let len = repo_to_changesets.len();
-    stream::iter(repo_to_changesets)
-        .map(Ok)
-        .try_for_each_concurrent(len, |(repo, changesets)| async move {
-            derive_bonsais_single_repo(&ctx, &repo, &changesets).await?;
-            Result::<(), Error>::Ok(())
-        })
-        .await
-}
-
 async fn derive_bonsais_single_repo(
     ctx: &CoreContext,
     repo: &BlobRepo,
@@ -225,6 +221,7 @@ async fn move_bookmark(
     checker_flags: &CheckerFlags,
     sleep_time: u64,
     mutable_counters: &SqlMutableCounters,
+    maybe_small_repo_back_sync_vars: &Option<SmallRepoBackSyncVars>,
 ) -> Result<(), Error> {
     info!(ctx.logger(), "Start moving the bookmark");
     if shifted_bcs.is_empty() {
@@ -270,17 +267,70 @@ async fn move_bookmark(
             ctx.logger(),
             "Set bookmark {:?} to point to {:?}", bookmark, curr_csid
         );
-        let hg_csid = repo
-            .get_hg_from_bonsai_changeset(ctx.clone(), curr_csid)
-            .compat()
+        let check_repo = async move {
+            let hg_csid = repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), curr_csid)
+                .compat()
+                .await?;
+            check_dependent_systems(
+                &ctx,
+                &repo,
+                &checker_flags,
+                hg_csid,
+                sleep_time,
+                &mutable_counters,
+            )
             .await?;
-        check_dependent_systems(
-            &ctx,
-            &repo,
-            &checker_flags,
-            hg_csid,
-            sleep_time,
-            &mutable_counters,
+            Result::<_, Error>::Ok(())
+        };
+
+        let check_small_repo = async move {
+            let small_repo_back_sync_vars = match maybe_small_repo_back_sync_vars {
+                Some(v) => v,
+                None => return Ok(()),
+            };
+
+            info!(ctx.logger(), "Back syncing bookmark movement to small repo");
+            backsync_latest(
+                ctx.clone(),
+                small_repo_back_sync_vars.large_to_small_syncer.clone(),
+                small_repo_back_sync_vars.target_repo_dbs.clone(),
+                BacksyncLimit::NoLimit,
+            )
+            .await?;
+            let small_repo_cs_id = repo
+                .get_bonsai_bookmark(ctx.clone(), &small_repo_back_sync_vars.small_repo_bookmark)
+                .compat()
+                .await?
+                .ok_or_else(|| {
+                    format_err!(
+                        "Couldn't extract backsynced changeset id from bookmark: {}",
+                        small_repo_back_sync_vars.small_repo_bookmark
+                    )
+                })?;
+
+            let small_repo_hg_csid = small_repo_back_sync_vars
+                .small_repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), small_repo_cs_id)
+                .compat()
+                .await?;
+            check_dependent_systems(
+                &ctx,
+                &small_repo_back_sync_vars.small_repo,
+                &checker_flags,
+                small_repo_hg_csid,
+                sleep_time,
+                &mutable_counters,
+            )
+            .await?;
+
+            Result::<_, Error>::Ok(())
+        };
+
+        future::try_join(
+            check_repo.map_err(|e| e.context("Error checking dependent systems")),
+            check_small_repo
+                .map_err(|e| e.context("Error checking dependent systems in small repository")),
         )
         .await?;
         old_csid = curr_csid;
@@ -724,6 +774,9 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             };
             let maybe_config_store = args::maybe_init_config_store(fb, &logger, &matches);
             let configs = args::load_repo_configs(fb, &matches)?;
+            let mysql_options = args::parse_mysql_options(&matches);
+            let readonly_storage = args::parse_readonly_storage(&matches);
+
             let maybe_large_repo_config = get_large_repo_config_if_pushredirected(
                 &ctx,
                 &repo,
@@ -731,7 +784,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 &configs.repos,
             )
             .await?;
-
+            let mut maybe_small_repo_back_sync_vars = None;
             let mut movers = vec![movers::mover_factory(
                 HashMap::new(),
                 DefaultAction::PrependPrefix(dest_path_prefix),
@@ -759,6 +812,20 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                     &commit_sync_config,
                     mapping.clone(),
                 )?;
+                let target_repo_dbs = open_backsyncer_dbs(
+                    ctx.clone(),
+                    repo.clone(),
+                    repo_config.storage_config.metadata,
+                    mysql_options,
+                    readonly_storage,
+                )
+                .await?;
+                maybe_small_repo_back_sync_vars = Some(SmallRepoBackSyncVars {
+                    large_to_small_syncer: syncers.large_to_small.clone(),
+                    target_repo_dbs,
+                    small_repo_bookmark: repo_import_setting.importing_bookmark.clone(),
+                    small_repo: repo.clone(),
+                });
 
                 movers.push(syncers.small_to_large.get_mover().clone());
                 repo_import_setting =
@@ -794,27 +861,43 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             let mut bonsai_values: Vec<(ChangesetId, BonsaiChangeset)> =
                 import_map.values().cloned().collect();
 
-            let mut repo_to_changesets = vec![];
             let shifted_bcs =
                 rewrite_file_paths(&ctx, &repo, &combined_mover, &mut bonsai_values).await?;
 
-            repo_to_changesets.push((repo.clone(), shifted_bcs.clone()));
+            let derive_changesets = derive_bonsais_single_repo(&ctx, &repo, &shifted_bcs);
 
-            if let Some(large_to_small_syncer) = maybe_large_to_small_syncer {
-                let small_repo = large_to_small_syncer.get_small_repo();
-                let synced_bonsai_changesets = back_sync_commits_to_small_repo(
-                    &ctx,
-                    &small_repo,
-                    &large_to_small_syncer,
-                    &shifted_bcs,
-                )
-                .await?;
-                repo_to_changesets.push((small_repo.clone(), synced_bonsai_changesets));
-            }
+            let backsync_and_derive_changesets = {
+                borrowed!(ctx, shifted_bcs);
+
+                async move {
+                    let vars = match maybe_small_repo_back_sync_vars {
+                        Some(vars) => {
+                            info!(ctx.logger(), "Backsyncing changesets");
+                            vars
+                        }
+                        None => return Ok(None),
+                    };
+
+                    let small_repo = &vars.small_repo;
+
+                    let synced_bcs = back_sync_commits_to_small_repo(
+                        &ctx,
+                        &small_repo,
+                        &vars.large_to_small_syncer,
+                        &shifted_bcs,
+                    )
+                    .await?;
+
+                    derive_bonsais_single_repo(&ctx, &small_repo, &synced_bcs).await?;
+                    Ok(Some(vars))
+                }
+            };
 
             info!(ctx.logger(), "Start deriving data types");
-            derive_bonsais_multiple_repos(&ctx, &repo_to_changesets).await?;
+            let ((), maybe_small_repo_back_sync_vars) =
+                future::try_join(derive_changesets, backsync_and_derive_changesets).await?;
             info!(ctx.logger(), "Finished deriving data types");
+
             move_bookmark(
                 &ctx,
                 &repo,
@@ -824,8 +907,10 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 &checker_flags,
                 sleep_time,
                 &mutable_counters,
+                &maybe_small_repo_back_sync_vars,
             )
             .await?;
+
             let merged_cs_id = merge_imported_commit(
                 &ctx,
                 &repo,
