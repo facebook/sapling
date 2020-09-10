@@ -410,6 +410,7 @@ class Redirection:
         if (
             disposition == RepoPathDisposition.IS_NON_EMPTY_DIR
             and self.type == RedirectionType.SYMLINK
+            or (self.type == RedirectionType.BIND and sys.platform == "win32")
         ):
             # Part of me would like to show this error even if we're going
             # to mount something over the top, but on macOS the act of mounting
