@@ -12,17 +12,13 @@ use std::sync::Arc;
 use anyhow::{format_err, Error, Result};
 use clap::{App, Arg, ArgMatches, SubCommand};
 use fbinit::FacebookInit;
-use futures::{
-    compat::Future01CompatExt,
-    future::{FutureExt as _, TryFutureExt},
-};
-use futures_ext::{BoxFuture, FutureExt};
+use futures::{compat::Future01CompatExt, future::try_join};
+use futures_ext::FutureExt;
 use futures_old::prelude::*;
 
 use blobstore::{Blobstore, BlobstoreGetData};
 use blobstore_factory::{make_blobstore, BlobstoreOptions, ReadOnlyStorage};
 use cacheblob::{new_memcache_blobstore, CacheBlobstoreExt};
-use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
 use futures_old::future;
@@ -127,7 +123,7 @@ fn get_blobconfig(
     })
 }
 
-fn get_blobstore(
+async fn get_blobstore(
     fb: FacebookInit,
     storage_config: StorageConfig,
     inner_blobstore_id: Option<u64>,
@@ -136,24 +132,18 @@ fn get_blobstore(
     logger: Logger,
     readonly_storage: ReadOnlyStorage,
     blobstore_options: BlobstoreOptions,
-) -> BoxFuture<Arc<dyn Blobstore>, Error> {
-    async move {
-        let blobconfig =
-            get_blobconfig(storage_config.blobstore, inner_blobstore_id, scrub_action)?;
+) -> Result<Arc<dyn Blobstore>, Error> {
+    let blobconfig = get_blobconfig(storage_config.blobstore, inner_blobstore_id, scrub_action)?;
 
-        make_blobstore(
-            fb,
-            blobconfig,
-            mysql_options,
-            readonly_storage,
-            &blobstore_options,
-            &logger,
-        )
-        .await
-    }
-    .boxed()
-    .compat()
-    .boxify()
+    make_blobstore(
+        fb,
+        blobconfig,
+        mysql_options,
+        readonly_storage,
+        &blobstore_options,
+        &logger,
+    )
+    .await
 }
 
 pub async fn subcommand_blobstore_fetch<'a>(
@@ -213,62 +203,55 @@ pub async fn subcommand_blobstore_fetch<'a>(
             })
             .left_future(),
         Redaction::Disabled => future::ok(None).right_future(),
-    };
+    }
+    .compat();
 
-    let value_fut = blobstore_fut.join(maybe_redacted_blobs_fut).and_then({
-        cloned!(logger, key, ctx);
-        move |(blobstore, maybe_redacted_blobs)| {
-            info!(logger, "using blobstore: {:?}", blobstore);
-            get_from_sources(
-                fb,
-                use_memcache,
-                blobstore,
-                no_prefix,
-                key.clone(),
-                ctx,
-                maybe_redacted_blobs,
-                scuba_redaction_builder,
-                repo_id,
-            )
-        }
-    });
+    let (blobstore, maybe_redacted_blobs) =
+        try_join(blobstore_fut, maybe_redacted_blobs_fut).await?;
 
-    value_fut
-        .map({
-            cloned!(key);
-            move |value| {
-                println!("{:?}", value);
-                if let Some(value) = value {
-                    let decode_as = decode_as.as_ref().and_then(|val| {
-                        let val = val.as_str();
-                        if val == "auto" {
-                            detect_decode(&key, &logger)
-                        } else {
-                            Some(val)
-                        }
-                    });
+    info!(logger, "using blobstore: {:?}", blobstore);
+    let value = get_from_sources(
+        fb,
+        use_memcache,
+        blobstore,
+        no_prefix,
+        key.clone(),
+        ctx,
+        maybe_redacted_blobs,
+        scuba_redaction_builder,
+        repo_id,
+    )
+    .await?;
 
-                    match decode_as {
-                        Some("changeset") => display(&HgChangesetEnvelope::from_blob(value.into())),
-                        Some("manifest") => display(&HgManifestEnvelope::from_blob(value.into())),
-                        Some("file") => display(&HgFileEnvelope::from_blob(value.into())),
-                        // TODO: (rain1) T30974137 add a better way to print out file contents
-                        Some("contents") => println!(
-                            "{:?}",
-                            FileContents::from_encoded_bytes(value.into_raw_bytes())
-                        ),
-                        Some("git-tree") => display::<GitTree>(&value.try_into()),
-                        _ => {}
-                    }
-                }
+    println!("{:?}", value);
+    if let Some(value) = value {
+        let decode_as = decode_as.as_ref().and_then(|val| {
+            let val = val.as_str();
+            if val == "auto" {
+                detect_decode(&key, &logger)
+            } else {
+                Some(val)
             }
-        })
-        .from_err()
-        .compat()
-        .await
+        });
+
+        match decode_as {
+            Some("changeset") => display(&HgChangesetEnvelope::from_blob(value.into())),
+            Some("manifest") => display(&HgManifestEnvelope::from_blob(value.into())),
+            Some("file") => display(&HgFileEnvelope::from_blob(value.into())),
+            // TODO: (rain1) T30974137 add a better way to print out file contents
+            Some("contents") => println!(
+                "{:?}",
+                FileContents::from_encoded_bytes(value.into_raw_bytes())
+            ),
+            Some("git-tree") => display::<GitTree>(&value.try_into()),
+            _ => {}
+        }
+    }
+
+    Ok(())
 }
 
-fn get_from_sources<T: Blobstore + Clone>(
+async fn get_from_sources<T: Blobstore + Clone>(
     fb: FacebookInit,
     use_memcache: Option<String>,
     blobstore: T,
@@ -278,7 +261,7 @@ fn get_from_sources<T: Blobstore + Clone>(
     redacted_blobs: Option<HashMap<String, RedactedMetadata>>,
     scuba_redaction_builder: ScubaSampleBuilder,
     repo_id: RepositoryId,
-) -> BoxFuture<Option<BlobstoreGetData>, Error> {
+) -> Result<Option<BlobstoreGetData>, Error> {
     let empty_prefix = "".to_string();
 
     match use_memcache {
@@ -293,8 +276,8 @@ fn get_from_sources<T: Blobstore + Clone>(
                 RedactedBlobstoreConfig::new(redacted_blobs, scuba_redaction_builder),
             );
             get_cache(ctx.clone(), &blobstore, key.clone(), mode)
+                .await
                 .map(|opt_blob| opt_blob.map(Into::into))
-                .boxify()
         }
         None => {
             let blobstore = match no_prefix {
@@ -305,7 +288,7 @@ fn get_from_sources<T: Blobstore + Clone>(
                 blobstore,
                 RedactedBlobstoreConfig::new(redacted_blobs, scuba_redaction_builder),
             );
-            blobstore.get(ctx, key).compat().boxify()
+            blobstore.get(ctx, key).await
         }
     }
 }
@@ -347,17 +330,17 @@ fn detect_decode(key: &str, logger: &Logger) -> Option<&'static str> {
     }
 }
 
-fn get_cache<B: CacheBlobstoreExt>(
+async fn get_cache<B: CacheBlobstoreExt>(
     ctx: CoreContext,
     blobstore: &B,
     key: String,
     mode: String,
-) -> BoxFuture<Option<BlobstoreGetData>, Error> {
+) -> Result<Option<BlobstoreGetData>, Error> {
     if mode == "cache-only" {
-        blobstore.get_cache_only(ctx, key)
+        blobstore.get_cache_only(ctx, key).compat().await
     } else if mode == "no-fill" {
-        blobstore.get_no_cache_fill(ctx, key)
+        blobstore.get_no_cache_fill(ctx, key).compat().await
     } else {
-        blobstore.get(ctx, key).compat().boxify()
+        blobstore.get(ctx, key).await
     }
 }
