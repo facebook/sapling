@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+pub mod ods;
 pub mod request_context;
 
+pub use self::ods::OdsMiddleware;
 pub use self::request_context::{RequestContext, RequestContextMiddleware};

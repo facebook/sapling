@@ -54,7 +54,7 @@ mod utils;
 
 use crate::context::ServerContext;
 use crate::handlers::build_router;
-use crate::middleware::RequestContextMiddleware;
+use crate::middleware::{OdsMiddleware, RequestContextMiddleware};
 
 const ARG_LISTEN_HOST: &str = "listen-host";
 const ARG_LISTEN_PORT: &str = "listen-port";
@@ -171,6 +171,7 @@ async fn start(
         .add(RequestContextMiddleware::new(fb, logger.clone()))
         .add(LoadMiddleware::new())
         .add(log_middleware)
+        .add(OdsMiddleware::new())
         .add(<ScubaMiddleware<DefaultScubaHandler>>::new(scuba_logger))
         .add(TimerMiddleware::new())
         .build(router);
