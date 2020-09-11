@@ -28,7 +28,7 @@ define_stats! {
 }
 
 fn log_stats(state: &mut State, status: StatusCode) -> Option<()> {
-    let ctx = state.try_borrow_mut::<RequestContext>()?;
+    let ctx = state.try_borrow::<RequestContext>()?;
     let method = ctx.method?;
     let repo = ctx.repository.clone()?;
     let repo_and_method = format!("{}.{}", &repo, method.to_string());
