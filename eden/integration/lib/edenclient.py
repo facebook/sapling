@@ -509,13 +509,14 @@ class EdenFS(object):
         """Gets all eden mounts found in /proc/mounts, and returns
         true if this eden instance exists in list.
         """
-        with open("/proc/mounts", "r") as f:
-            mounts = [
-                line.split(" ")[1]
+
+        mount_path_bytes = mount_path.encode()
+        with open("/proc/mounts", "rb") as f:
+            return any(
+                mount_path_bytes == line.split(b" ")[1]
                 for line in f.readlines()
-                if line.split(" ")[0] == "edenfs"
-            ]
-        return mount_path in mounts
+                if util.is_edenfs_mount_device(line.split(b" ")[0])
+            )
 
     def is_healthy(self) -> bool:
         """Executes `eden health` and returns True if it exited with code 0."""

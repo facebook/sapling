@@ -13,6 +13,9 @@ from typing import Dict, List, Optional, Set, Union
 from eden.fs.cli import mtab
 
 
+EDENFS_DEVTYPE = "edenfs:"
+
+
 class FakeMountTable(mtab.MountTable):
     def __init__(self) -> None:
         self.mounts: List[mtab.MountInfo] = []
@@ -30,7 +33,7 @@ class FakeMountTable(mtab.MountTable):
         uid: Optional[int] = None,
         dev: Optional[int] = None,
         mode: Optional[int] = None,
-        device: str = "edenfs",
+        device: str = EDENFS_DEVTYPE,
         vfstype: str = "fuse",
     ) -> None:
         if uid is None:
@@ -43,7 +46,7 @@ class FakeMountTable(mtab.MountTable):
 
         self._add_mount_info(path, device=device, vfstype=vfstype)
         self.stats[path] = mtab.MTStat(st_uid=uid, st_dev=dev, st_mode=mode)
-        if device == "edenfs":
+        if device == EDENFS_DEVTYPE:
             self.stats[os.path.join(path, ".eden")] = mtab.MTStat(
                 st_uid=uid, st_dev=dev, st_mode=mode
             )

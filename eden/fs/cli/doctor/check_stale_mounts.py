@@ -11,6 +11,7 @@ from typing import List, Set
 
 from eden.fs.cli import mtab
 from eden.fs.cli.doctor.problem import FixableProblem, ProblemTracker, RemediationError
+from eden.fs.cli.util import is_edenfs_mount_device
 
 
 def check_for_stale_mounts(
@@ -102,5 +103,5 @@ def get_all_eden_mount_points(mount_table: mtab.MountTable) -> Set[bytes]:
     return {
         mount.mount_point
         for mount in all_system_mounts
-        if mount.device == b"edenfs" and mount.vfstype == b"fuse"
+        if is_edenfs_mount_device(mount.device) and mount.vfstype == b"fuse"
     }

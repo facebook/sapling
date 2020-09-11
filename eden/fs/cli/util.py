@@ -677,3 +677,7 @@ def format_cmd(cmd):
 
 def format_mount(mount):
     return os.fsdecode(os.path.basename(mount))
+
+
+def is_edenfs_mount_device(device: bytes) -> bool:
+    return device == b"edenfs" or device.startswith(b"edenfs:")
