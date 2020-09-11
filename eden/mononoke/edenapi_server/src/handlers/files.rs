@@ -22,6 +22,8 @@ use crate::errors::ErrorKind;
 use crate::middleware::RequestContext;
 use crate::utils::{cbor_stream, get_repo, parse_cbor_request};
 
+use super::{EdenApiMethod, HandlerInfo};
+
 /// XXX: This number was chosen arbitrarily.
 const MAX_CONCURRENT_FILE_FETCHES_PER_REQUEST: usize = 10;
 
@@ -32,9 +34,12 @@ pub struct FileParams {
 
 /// Fetch the content of the files requested by the client.
 pub async fn files(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
+    let params = FileParams::take_from(state);
+
+    state.put(HandlerInfo::new(&params.repo, EdenApiMethod::Files));
+
     let rctx = RequestContext::borrow_from(state);
     let sctx = ServerContext::borrow_from(state);
-    let params = FileParams::borrow_from(state);
 
     let repo = get_repo(&sctx, &rctx, &params.repo).await?;
     let request = parse_cbor_request(state).await?;

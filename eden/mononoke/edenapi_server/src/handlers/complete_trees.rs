@@ -26,15 +26,20 @@ use crate::errors::ErrorKind;
 use crate::middleware::RequestContext;
 use crate::utils::{cbor_stream, get_repo, parse_cbor_request, to_hg_path, to_mononoke_path};
 
+use super::{EdenApiMethod, HandlerInfo};
+
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
 pub struct CompleteTreesParams {
     repo: String,
 }
 
 pub async fn complete_trees(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
+    let params = CompleteTreesParams::take_from(state);
+
+    state.put(HandlerInfo::new(&params.repo, EdenApiMethod::CompleteTrees));
+
     let rctx = RequestContext::borrow_from(state);
     let sctx = ServerContext::borrow_from(state);
-    let params = CompleteTreesParams::borrow_from(state);
 
     let repo = get_repo(&sctx, &rctx, &params.repo).await?;
     let request = parse_cbor_request(state).await?;

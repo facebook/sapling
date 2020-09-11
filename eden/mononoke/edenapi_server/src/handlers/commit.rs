@@ -25,6 +25,8 @@ use crate::errors::ErrorKind;
 use crate::middleware::RequestContext;
 use crate::utils::{cbor_stream, get_repo, parse_cbor_request};
 
+use super::{EdenApiMethod, HandlerInfo};
+
 /// XXX: This number was chosen arbitrarily.
 const MAX_CONCURRENT_FETCHES_PER_REQUEST: usize = 100;
 
@@ -39,9 +41,16 @@ pub struct RevlogDataParams {
 }
 
 pub async fn location_to_hash(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
+    let params = LocationToHashParams::take_from(state);
+
+    state.put(HandlerInfo::new(
+        &params.repo,
+        EdenApiMethod::CommitLocationToHash,
+    ));
+
     let sctx = ServerContext::borrow_from(state);
     let rctx = RequestContext::borrow_from(state);
-    let params = LocationToHashParams::borrow_from(state);
+
     let hg_repo_ctx = get_repo(&sctx, &rctx, &params.repo).await?;
 
     let request: CommitLocationToHashRequest = parse_cbor_request(state).await?;
@@ -54,9 +63,16 @@ pub async fn location_to_hash(state: &mut State) -> Result<impl TryIntoResponse,
 }
 
 pub async fn revlog_data(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
+    let params = RevlogDataParams::take_from(state);
+
+    state.put(HandlerInfo::new(
+        &params.repo,
+        EdenApiMethod::CommitRevlogData,
+    ));
+
     let sctx = ServerContext::borrow_from(state);
     let rctx = RequestContext::borrow_from(state);
-    let params = RevlogDataParams::borrow_from(state);
+
     let hg_repo_ctx = get_repo(&sctx, &rctx, &params.repo).await?;
 
     let request: CommitRevlogDataRequest = parse_cbor_request(state).await?;

@@ -22,6 +22,8 @@ use crate::errors::ErrorKind;
 use crate::middleware::RequestContext;
 use crate::utils::{cbor_stream, get_repo, parse_cbor_request};
 
+use super::{EdenApiMethod, HandlerInfo};
+
 /// XXX: This number was chosen arbitrarily.
 const MAX_CONCURRENT_TREE_FETCHES_PER_REQUEST: usize = 10;
 
@@ -32,9 +34,12 @@ pub struct TreeParams {
 
 /// Fetch the tree nodes requested by the client.
 pub async fn trees(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
+    let params = TreeParams::take_from(state);
+
+    state.put(HandlerInfo::new(&params.repo, EdenApiMethod::Trees));
+
     let rctx = RequestContext::borrow_from(state);
     let sctx = ServerContext::borrow_from(state);
-    let params = TreeParams::borrow_from(state);
 
     let repo = get_repo(&sctx, &rctx, &params.repo).await?;
     let request = parse_cbor_request(state).await?;

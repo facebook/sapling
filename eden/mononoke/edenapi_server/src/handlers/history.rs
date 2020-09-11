@@ -28,6 +28,8 @@ use crate::errors::ErrorKind;
 use crate::middleware::RequestContext;
 use crate::utils::{cbor_stream, get_repo, parse_cbor_request, to_mpath};
 
+use super::{EdenApiMethod, HandlerInfo};
+
 type HistoryStream = BoxStream<'static, Result<WireHistoryEntry, Error>>;
 
 /// XXX: This number was chosen arbitrarily.
@@ -39,9 +41,12 @@ pub struct HistoryParams {
 }
 
 pub async fn history(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
+    let params = HistoryParams::take_from(state);
+
+    state.put(HandlerInfo::new(&params.repo, EdenApiMethod::History));
+
     let rctx = RequestContext::borrow_from(state);
     let sctx = ServerContext::borrow_from(state);
-    let params = HistoryParams::borrow_from(state);
 
     let repo = get_repo(&sctx, &rctx, &params.repo).await?;
     let request = parse_cbor_request(state).await?;

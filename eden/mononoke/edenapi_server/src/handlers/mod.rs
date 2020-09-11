@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::fmt;
 use std::pin::Pin;
 
 use futures::FutureExt;
@@ -18,6 +19,7 @@ use gotham::{
     },
     state::{FromState, State},
 };
+use gotham_derive::StateData;
 
 use gotham_ext::response::build_response;
 
@@ -29,6 +31,51 @@ mod files;
 mod history;
 mod repos;
 mod trees;
+
+/// Enum identifying the EdenAPI method that each handler corresponds to.
+/// Used to identify the handler for logging and stats collection.
+#[derive(Copy, Clone)]
+pub enum EdenApiMethod {
+    Files,
+    Trees,
+    CompleteTrees,
+    History,
+    CommitLocationToHash,
+    CommitRevlogData,
+}
+
+impl fmt::Display for EdenApiMethod {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let name = match self {
+            Self::Files => "files",
+            Self::Trees => "trees",
+            Self::CompleteTrees => "complete_trees",
+            Self::History => "history",
+            Self::CommitLocationToHash => "commit_location_to_hash",
+            Self::CommitRevlogData => "commit_revlog_data",
+        };
+        write!(f, "{}", name)
+    }
+}
+
+/// Information about the handler that served the request.
+///
+/// This should be inserted into the request's `State` by each handler. It will
+/// typically be used by middlware for request logging and stats reporting.
+#[derive(Default, StateData, Clone)]
+pub struct HandlerInfo {
+    pub repo: Option<String>,
+    pub method: Option<EdenApiMethod>,
+}
+
+impl HandlerInfo {
+    pub fn new(repo: impl ToString, method: EdenApiMethod) -> Self {
+        Self {
+            repo: Some(repo.to_string()),
+            method: Some(method),
+        }
+    }
+}
 
 /// Macro to create a Gotham handler function from an async function.
 ///
