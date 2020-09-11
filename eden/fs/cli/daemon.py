@@ -179,6 +179,8 @@ def get_edenfs_cmd(instance: EdenInstance, daemon_binary: str) -> List[str]:
     cmd = [
         daemon_binary,
         "--edenfs",
+        "--edenfsctlPath",
+        os.environ.get("EDENFS_CLI_PATH", os.path.abspath(sys.argv[0])),
         "--edenDir",
         str(instance.state_dir),
         "--etcEdenDir",
@@ -186,10 +188,6 @@ def get_edenfs_cmd(instance: EdenInstance, daemon_binary: str) -> List[str]:
         "--configPath",
         str(instance.user_config_path),
     ]
-
-    if sys.platform != "win32":
-        edenfsctl = os.environ.get("EDENFS_CLI_PATH", os.path.abspath(sys.argv[0]))
-        cmd += ["--edenfsctlPath", edenfsctl]
 
     return cmd
 
