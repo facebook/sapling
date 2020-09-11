@@ -15,7 +15,7 @@ use fbinit::FacebookInit;
 use gotham_ext::middleware::{ClientIdentity, Middleware};
 use scuba::ScubaSampleBuilder;
 
-#[derive(StateData)]
+#[derive(StateData, Clone)]
 pub struct RequestContext {
     pub ctx: CoreContext,
 }

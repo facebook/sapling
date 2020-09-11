@@ -36,9 +36,8 @@ use fbinit::FacebookInit;
 use gotham_ext::{
     handler::MononokeHttpHandler,
     middleware::{
-        ClientIdentityMiddleware, DefaultScubaHandler, LoadMiddleware, LogMiddleware,
-        PostRequestMiddleware, ScubaMiddleware, ServerIdentityMiddleware, TimerMiddleware,
-        TlsSessionDataMiddleware,
+        ClientIdentityMiddleware, LoadMiddleware, LogMiddleware, PostRequestMiddleware,
+        ScubaMiddleware, ServerIdentityMiddleware, TimerMiddleware, TlsSessionDataMiddleware,
     },
     socket_data::TlsSocketData,
 };
@@ -50,11 +49,13 @@ mod context;
 mod errors;
 mod handlers;
 mod middleware;
+mod scuba;
 mod utils;
 
 use crate::context::ServerContext;
 use crate::handlers::build_router;
 use crate::middleware::{OdsMiddleware, RequestContextMiddleware};
+use crate::scuba::EdenApiScubaHandler;
 
 const ARG_LISTEN_HOST: &str = "listen-host";
 const ARG_LISTEN_PORT: &str = "listen-port";
@@ -172,7 +173,7 @@ async fn start(
         .add(LoadMiddleware::new())
         .add(log_middleware)
         .add(OdsMiddleware::new())
-        .add(<ScubaMiddleware<DefaultScubaHandler>>::new(scuba_logger))
+        .add(<ScubaMiddleware<EdenApiScubaHandler>>::new(scuba_logger))
         .add(TimerMiddleware::new())
         .build(router);
 
