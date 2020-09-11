@@ -23,9 +23,43 @@ namespace facebook {
 namespace eden {
 
 /**
- * Function to check if the passed stats are equal or not.
+ * Why a file is considered to have changed. Evaluates as true in
+ * conditionals if a file is considered changed.
  */
-bool equalStats(const struct stat& stat1, const struct stat& stat2) noexcept;
+class FileChangeReason {
+ public:
+  enum Reason {
+    NONE,
+    SIZE,
+    DEV,
+    INO,
+    MODE,
+    CTIME,
+    MTIME,
+  };
+
+  const Reason reason;
+
+  /* implicit */ FileChangeReason(Reason reason) : reason{reason} {}
+
+  explicit operator bool() const {
+    return reason != NONE;
+  }
+
+  /**
+   * Return a human-readable string for why a file changed.
+   */
+  folly::StringPiece str() const;
+};
+
+/**
+ * If two stat results are equal, returns a value that converts to
+ * boolean true. Otherwise, returns the reason why we consider the
+ * field to have changed.
+ */
+FileChangeReason hasFileChanged(
+    const struct stat& stat1,
+    const struct stat& stat2) noexcept;
 
 /**
  * FileChangeMonitor monitors a file for changes. The "invokeIfUpdated()"

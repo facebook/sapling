@@ -18,15 +18,54 @@
 namespace facebook {
 namespace eden {
 
-bool equalStats(const struct stat& stat1, const struct stat& stat2) noexcept {
-#ifdef _WIN32
-  return stat1.st_size == stat2.st_size && stat1.st_mtime == stat2.st_mtime;
-#else
-  return stat1.st_dev == stat2.st_dev && stat1.st_size == stat2.st_size &&
-      stat1.st_ino == stat2.st_ino && stat1.st_mode == stat2.st_mode &&
-      stCtime(stat1) == stCtime(stat2) && stMtime(stat1) == stMtime(stat2);
-#endif
+FileChangeReason hasFileChanged(
+    const struct stat& stat1,
+    const struct stat& stat2) noexcept {
+  if (stat1.st_size != stat2.st_size) {
+    return FileChangeReason::SIZE;
+  }
+  if (stMtime(stat1) != stMtime(stat2)) {
+    return FileChangeReason::MTIME;
+  }
+  if (!folly::kIsWindows) {
+    // On Windows, these stat entries are synthesized by MSVCRT, and
+    // checking them may falsely consider files changed.
+    if (stat1.st_dev != stat2.st_dev) {
+      return FileChangeReason::DEV;
+    }
+    if (stat1.st_ino != stat2.st_ino) {
+      return FileChangeReason::INO;
+    }
+    if (stat1.st_mode != stat2.st_mode) {
+      return FileChangeReason::MODE;
+    }
+    if (stCtime(stat1) != stCtime(stat2)) {
+      return FileChangeReason::CTIME;
+    }
+  }
+  return FileChangeReason::NONE;
 }
+
+folly::StringPiece FileChangeReason::str() const {
+  switch (reason) {
+    case NONE:
+      return "none";
+    case SIZE:
+      return "size";
+    case DEV:
+      return "dev";
+    case INO:
+      return "ino";
+    case MODE:
+      return "mode";
+    case CTIME:
+      return "ctime";
+    case MTIME:
+      return "mtime";
+  }
+  return "invalid reason value";
+}
+
 AbsolutePath FileChangeMonitor::getFilePath() {
   return filePath_;
 }
@@ -137,10 +176,7 @@ bool FileChangeMonitor::isChanged() {
     return false;
   }
 
-  if (!equalStats(currentStat, fileStat_)) {
-    return true;
-  }
-  return false;
+  return hasFileChanged(currentStat, fileStat_) ? true : false;
 }
 
 } // namespace eden

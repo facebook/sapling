@@ -11,6 +11,8 @@
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/EnumValue.h"
 
+#include <folly/logging/xlog.h>
+
 namespace {
 /// Throttle change checks to a maximum of one per
 /// kEdenConfigMinimumPollDuration.
@@ -58,14 +60,20 @@ std::shared_ptr<const EdenConfig> ReloadableConfig::getEdenConfig(
   // Throttle the updates when using ConfigReloadBehavior::AutoReload
   lastCheck_.store(now.time_since_epoch().count(), std::memory_order_release);
 
-  bool userConfigChanged = state->config->hasUserConfigFileChanged();
-  bool systemConfigChanged = state->config->hasSystemConfigFileChanged();
+  auto& config = state->config;
+
+  auto userConfigChanged = config->hasUserConfigFileChanged();
+  auto systemConfigChanged = config->hasSystemConfigFileChanged();
   if (userConfigChanged || systemConfigChanged) {
-    auto newConfig = std::make_shared<EdenConfig>(*state->config);
+    auto newConfig = std::make_shared<EdenConfig>(*config);
     if (userConfigChanged) {
+      XLOG(DBG3) << "Reloading " << config->getUserConfigPath() << " because "
+                 << userConfigChanged.str();
       newConfig->loadUserConfig();
     }
     if (systemConfigChanged) {
+      XLOG(DBG3) << "Reloading " << config->getSystemConfigPath() << " because "
+                 << systemConfigChanged.str();
       newConfig->loadSystemConfig();
     }
     state->config = std::move(newConfig);

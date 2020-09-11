@@ -250,7 +250,8 @@ void EdenConfig::setSystemConfigPath(AbsolutePath systemConfigPath) {
   systemConfigPath_ = systemConfigPath;
 }
 
-bool hasConfigFileChanged(
+namespace {
+FileChangeReason hasConfigFileChanged(
     AbsolutePath configFileName,
     const struct stat* oldStat) {
   struct stat currentStat;
@@ -270,14 +271,15 @@ bool hasConfigFileChanged(
     currentStat = {};
   }
 
-  return !equalStats(currentStat, *oldStat);
+  return hasFileChanged(currentStat, *oldStat);
 }
+} // namespace
 
-bool EdenConfig::hasUserConfigFileChanged() const {
+FileChangeReason EdenConfig::hasUserConfigFileChanged() const {
   return hasConfigFileChanged(getUserConfigPath(), &userConfigFileStat_);
 }
 
-bool EdenConfig::hasSystemConfigFileChanged() const {
+FileChangeReason EdenConfig::hasSystemConfigFileChanged() const {
   return hasConfigFileChanged(getSystemConfigPath(), &systemConfigFileStat_);
 }
 

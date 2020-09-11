@@ -17,6 +17,7 @@
 #include <folly/portability/Unistd.h>
 
 #include "eden/fs/config/ConfigSetting.h"
+#include "eden/fs/config/FileChangeMonitor.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/ParentCommits.h"
 #include "eden/fs/utils/PathFuncs.h"
@@ -99,10 +100,10 @@ class EdenConfig : private ConfigSettingManager {
   EdenConfigData toThriftConfigData() const;
 
   /** Determine if user config has changed, fstat userConfigFile.*/
-  bool hasUserConfigFileChanged() const;
+  FileChangeReason hasUserConfigFileChanged() const;
 
   /** Determine if user config has changed, fstat systemConfigFile.*/
-  bool hasSystemConfigFileChanged() const;
+  FileChangeReason hasSystemConfigFileChanged() const;
 
   /** Get the user config path. Default "userHomePath/.edenrc" */
   const AbsolutePath& getUserConfigPath() const;
