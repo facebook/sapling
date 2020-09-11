@@ -38,10 +38,15 @@ pub const MAX_NUM_OF_MOVES_IN_COMMIT: &'static str = "max-num-of-moves-in-commit
 pub const CHUNKING_HINT_FILE: &'static str = "chunking-hint-file";
 pub const PARENTS: &'static str = "parents";
 pub const PRE_MERGE_DELETE: &'static str = "pre-merge-delete";
+pub const CATCHUP_DELETE_HEAD: &'static str = "create-catchup-head-deletion-commits";
 pub const EVEN_CHUNK_SIZE: &'static str = "even-chunk-size";
 pub const BONSAI_MERGE: &'static str = "bonsai-merge";
 pub const BONSAI_MERGE_P1: &'static str = "bonsai-merge-p1";
 pub const BONSAI_MERGE_P2: &'static str = "bonsai-merge-p2";
+pub const HEAD_BOOKMARK: &'static str = "head-bookmark";
+pub const TO_MERGE_CS_ID: &'static str = "to-merge-cs-id";
+pub const PATH_REGEX: &'static str = "path-regex";
+pub const DELETION_CHUNK_SIZE: &'static str = "deletion-chunk-size";
 
 pub fn cs_args_from_matches<'a>(sub_m: &ArgMatches<'a>) -> BoxFuture<ChangesetArgs, Error> {
     let message = try_boxfuture!(
@@ -91,6 +96,14 @@ pub fn get_delete_commits_cs_args_factory<'a>(
 ) -> Result<Box<dyn ChangesetArgsFactory>, Error> {
     get_commit_factory(sub_m, |s, num| -> String {
         format!("[MEGAREPO DELETE] {} ({})", s, num)
+    })
+}
+
+pub fn get_catchup_head_delete_commits_cs_args_factory<'a>(
+    sub_m: &ArgMatches<'a>,
+) -> Result<Box<dyn ChangesetArgsFactory>, Error> {
+    get_commit_factory(sub_m, |s, num| -> String {
+        format!("[MEGAREPO CATCHUP DELETE] {} ({})", s, num)
     })
 }
 
@@ -363,6 +376,55 @@ pub fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .required(true),
         );
 
+    let catchup_delete_head_subcommand = SubCommand::with_name(CATCHUP_DELETE_HEAD)
+        .about("Create delete commits for 'catchup strategy. \
+        This is normally used after invisible merge is done, but small repo got a few new commits
+        that needs merging.
+
+        O         <-  head bookmark
+        |
+        O   O <-  new commits (we want to merge them in master)
+        |  ...
+        IM  |       <- invisible merge commit
+        |\\ /
+        O O
+
+        This command create deletion commits on top of master bookmark for files that were changed in new commits,
+        and pushrebases them.
+
+        After all of the commits are pushrebased paths that match --path-regex in head bookmark should be a subset
+        of all paths that match --path-regex in the latest new commit we want to merge.
+        ")
+        .arg(
+            Arg::with_name(HEAD_BOOKMARK)
+                .long(HEAD_BOOKMARK)
+                .help("commit to merge into")
+                .takes_value(true)
+                .required(true),
+        )
+        .arg(
+            Arg::with_name(TO_MERGE_CS_ID)
+                .long(TO_MERGE_CS_ID)
+                .help("commit to merge")
+                .takes_value(true)
+                .required(true),
+        )
+        .arg(
+            Arg::with_name(PATH_REGEX)
+                .long(PATH_REGEX)
+                .help("regex that matches all paths that should be merged in head commit")
+                .takes_value(true)
+                .required(true),
+        )
+        .arg(
+            Arg::with_name(DELETION_CHUNK_SIZE)
+                .long(DELETION_CHUNK_SIZE)
+                .help("how many files to delete in a single commit")
+                .default_value("10000")
+                .takes_value(true)
+                .required(false),
+        );
+
     args::MononokeApp::new("megarepo preparation tool")
         .with_advanced_args_hidden()
         .with_source_and_target_repos()
@@ -375,4 +437,7 @@ pub fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .subcommand(add_light_resulting_commit_args(gradual_merge_subcommand))
         .subcommand(gradual_merge_progress_subcommand)
         .subcommand(manual_commit_sync_subcommand)
+        .subcommand(add_light_resulting_commit_args(
+            catchup_delete_head_subcommand,
+        ))
 }

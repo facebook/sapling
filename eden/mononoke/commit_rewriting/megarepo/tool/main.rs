@@ -23,12 +23,14 @@ use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use metaconfig_types::RepoConfig;
 use mononoke_types::RepositoryId;
 use movers::get_small_to_large_mover;
+use regex::Regex;
 use skiplist::fetch_skiplist_index;
 use slog::info;
 use std::collections::BTreeMap;
 use std::num::NonZeroU64;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 
+mod catchup;
 mod cli;
 mod gradual_merge;
 mod manual_commit_sync;
@@ -36,12 +38,14 @@ mod merging;
 mod sync_diamond_merge;
 
 use crate::cli::{
-    cs_args_from_matches, get_delete_commits_cs_args_factory,
-    get_gradual_merge_commits_cs_args_factory, setup_app, BONSAI_MERGE, BONSAI_MERGE_P1,
-    BONSAI_MERGE_P2, CHANGESET, CHUNKING_HINT_FILE, COMMIT_BOOKMARK, COMMIT_HASH, DRY_RUN,
-    EVEN_CHUNK_SIZE, FIRST_PARENT, GRADUAL_MERGE, GRADUAL_MERGE_PROGRESS, LAST_DELETION_COMMIT,
-    LIMIT, MANUAL_COMMIT_SYNC, MAX_NUM_OF_MOVES_IN_COMMIT, MERGE, MOVE, ORIGIN_REPO, PARENTS,
-    PRE_DELETION_COMMIT, PRE_MERGE_DELETE, SECOND_PARENT, SYNC_DIAMOND_MERGE,
+    cs_args_from_matches, get_catchup_head_delete_commits_cs_args_factory,
+    get_delete_commits_cs_args_factory, get_gradual_merge_commits_cs_args_factory, setup_app,
+    BONSAI_MERGE, BONSAI_MERGE_P1, BONSAI_MERGE_P2, CATCHUP_DELETE_HEAD, CHANGESET,
+    CHUNKING_HINT_FILE, COMMIT_BOOKMARK, COMMIT_HASH, DELETION_CHUNK_SIZE, DRY_RUN,
+    EVEN_CHUNK_SIZE, FIRST_PARENT, GRADUAL_MERGE, GRADUAL_MERGE_PROGRESS, HEAD_BOOKMARK,
+    LAST_DELETION_COMMIT, LIMIT, MANUAL_COMMIT_SYNC, MAX_NUM_OF_MOVES_IN_COMMIT, MERGE, MOVE,
+    ORIGIN_REPO, PARENTS, PATH_REGEX, PRE_DELETION_COMMIT, PRE_MERGE_DELETE, SECOND_PARENT,
+    SYNC_DIAMOND_MERGE, TO_MERGE_CS_ID,
 };
 use crate::merging::perform_merge;
 use megarepolib::chunking::{
@@ -422,6 +426,52 @@ async fn run_manual_commit_sync<'a>(
     Ok(())
 }
 
+async fn run_catchup_delete_head<'a>(
+    ctx: CoreContext,
+    matches: &ArgMatches<'a>,
+    sub_m: &ArgMatches<'a>,
+) -> Result<(), Error> {
+    let repo = args::open_repo(ctx.fb, &ctx.logger().clone(), &matches)
+        .compat()
+        .await?;
+
+    let head_bookmark = sub_m
+        .value_of(HEAD_BOOKMARK)
+        .ok_or_else(|| format_err!("{} not set", HEAD_BOOKMARK))?;
+
+    let head_bookmark = BookmarkName::new(head_bookmark)?;
+
+    let to_merge_cs_id = sub_m
+        .value_of(TO_MERGE_CS_ID)
+        .ok_or_else(|| format_err!("{} not set", TO_MERGE_CS_ID))?;
+    let to_merge_cs_id = helpers::csid_resolve(ctx.clone(), repo.clone(), to_merge_cs_id)
+        .compat()
+        .await?;
+
+    let path_regex = sub_m
+        .value_of(PATH_REGEX)
+        .ok_or_else(|| format_err!("{} not set", PATH_REGEX))?;
+    let path_regex = Regex::new(path_regex)?;
+
+    let deletion_chunk_size = args::get_usize(&sub_m, DELETION_CHUNK_SIZE, 10000);
+
+    let cs_args_factory = get_catchup_head_delete_commits_cs_args_factory(&sub_m)?;
+    let (_, repo_config) = args::get_config(ctx.fb, &matches)?;
+
+    catchup::create_deletion_head_commits(
+        &ctx,
+        &repo,
+        head_bookmark,
+        to_merge_cs_id,
+        path_regex,
+        deletion_chunk_size,
+        cs_args_factory,
+        &repo_config.pushrebase.flags,
+    )
+    .await?;
+    Ok(())
+}
+
 fn get_and_verify_repo_config<'a>(
     fb: FacebookInit,
     matches: &ArgMatches<'a>,
@@ -468,6 +518,9 @@ fn main(fb: FacebookInit) -> Result<()> {
                 run_gradual_merge_progress(ctx, &matches, sub_m).await
             }
             (MANUAL_COMMIT_SYNC, Some(sub_m)) => run_manual_commit_sync(ctx, &matches, sub_m).await,
+            (CATCHUP_DELETE_HEAD, Some(sub_m)) => {
+                run_catchup_delete_head(ctx, &matches, sub_m).await
+            }
             _ => bail!("oh no, wrong arguments provided!"),
         }
     };
