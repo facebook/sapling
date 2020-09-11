@@ -156,7 +156,11 @@ fn fail_if_disabled<Derived: BonsaiDerived>(repo: &BlobRepo) -> Result<(), Deriv
         .contains(Derived::NAME)
     {
         STATS::derived_data_disabled.add_value(1, (repo.get_repoid().id(), Derived::NAME));
-        return Err(DeriveError::Disabled(Derived::NAME, repo.get_repoid()));
+        return Err(DeriveError::Disabled(
+            Derived::NAME,
+            repo.get_repoid(),
+            repo.name().clone(),
+        ));
     }
     Ok(())
 }

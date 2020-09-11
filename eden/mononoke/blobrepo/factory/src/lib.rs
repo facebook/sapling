@@ -35,6 +35,7 @@ use futures::{compat::Future01CompatExt, future, try_join};
 use git_types::TreeHandle;
 use maplit::btreeset;
 use memblob::EagerMemblob;
+use mercurial_derived_data::MappedHgChangesetId;
 use mercurial_mutation::{HgMutationStore, SqlHgMutationStoreBuilder};
 use metaconfig_types::{
     self, CensoredScubaParams, DerivedDataConfig, FilestoreParams, Redaction, RepoConfig,
@@ -415,6 +416,7 @@ pub fn init_all_derived_data() -> DerivedDataConfig {
             RootDeletedManifestId::NAME.to_string(),
             RootUnodeManifestId::NAME.to_string(),
             TreeHandle::NAME.to_string(),
+            MappedHgChangesetId::NAME.to_string(),
         },
         unode_version: UnodeVersion::V2,
         override_blame_filesize_limit: None,

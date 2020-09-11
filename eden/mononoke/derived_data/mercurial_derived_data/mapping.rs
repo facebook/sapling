@@ -5,13 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use crate::get_hg_from_bonsai_changeset;
 use anyhow::Error;
 use blobrepo::BlobRepo;
-use bonsai_hg_mapping::BonsaiHgMapping;
+use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry};
 use context::CoreContext;
-use futures_ext::{BoxFuture, FutureExt};
-use futures_old::{future, Future};
+use futures::{FutureExt, TryFutureExt};
+use futures_ext::{BoxFuture, FutureExt as _};
+use futures_old::Future;
 use mercurial_types::HgChangesetId;
 use mononoke_types::{BonsaiChangeset, ChangesetId, RepositoryId};
 
@@ -20,7 +20,7 @@ use std::{collections::HashMap, sync::Arc};
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct MappedHgChangesetId(HgChangesetId);
+pub struct MappedHgChangesetId(pub HgChangesetId);
 
 impl BonsaiDerived for MappedHgChangesetId {
     const NAME: &'static str = "hgchangesets";
@@ -34,11 +34,11 @@ impl BonsaiDerived for MappedHgChangesetId {
         ctx: CoreContext,
         repo: BlobRepo,
         bonsai: BonsaiChangeset,
-        _parents: Vec<Self>,
+        parents: Vec<Self>,
     ) -> BoxFuture<Self, Error> {
-        let bcs_id = bonsai.get_changeset_id();
-        get_hg_from_bonsai_changeset(&repo, ctx, bcs_id)
-            .map(|hg_cs_id| MappedHgChangesetId(hg_cs_id))
+        crate::derive_hg_changeset::derive_from_parents(ctx, repo, bonsai, parents)
+            .boxed()
+            .compat()
             .boxify()
     }
 }
@@ -76,8 +76,17 @@ impl BonsaiDerivedMapping for HgChangesetIdMapping {
             .boxify()
     }
 
-    // This just succeeds, because generation of the derived data also saves the mapping
-    fn put(&self, _ctx: CoreContext, _csid: ChangesetId, _id: Self::Value) -> BoxFuture<(), Error> {
-        future::ok(()).boxify()
+    fn put(&self, ctx: CoreContext, csid: ChangesetId, id: Self::Value) -> BoxFuture<(), Error> {
+        self.mapping
+            .add(
+                ctx,
+                BonsaiHgMappingEntry {
+                    repo_id: self.repo_id,
+                    hg_cs_id: id.0,
+                    bcs_id: csid,
+                },
+            )
+            .map(|_| ())
+            .boxify()
     }
 }

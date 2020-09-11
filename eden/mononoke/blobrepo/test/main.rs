@@ -33,7 +33,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use futures_old::{Future, Stream};
 use maplit::btreemap;
 use memblob::LazyMemblob;
-use mercurial_derived_data::{get_hg_from_bonsai_changeset_with_impl, get_manifest_from_bonsai};
+use mercurial_derived_data::get_manifest_from_bonsai;
 use mercurial_types::{
     blobs::{
         BlobManifest, ContentBlobMeta, File, HgBlobChangeset, UploadHgFileContents,
@@ -1140,10 +1140,20 @@ fn test_hg_commit_generation_simple(fb: FacebookInit) {
             repo.clone(),
         ))
         .unwrap();
-    let (_, count) = runtime
-        .block_on(get_hg_from_bonsai_changeset_with_impl(&repo, ctx, bcs_id))
+    let hg_cs_id = runtime
+        .block_on(repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id))
         .unwrap();
-    assert_eq!(count, 1);
+    assert_eq!(
+        hg_cs_id,
+        HgChangesetId::new(string_to_nodehash(
+            "5c31d1196c64c93cb5bcf8bca3a24860f103d69f"
+        ))
+    );
+    // make sure bonsai hg mapping is updated
+    let map_bcs_id = runtime
+        .block_on(repo.get_bonsai_from_hg(ctx, hg_cs_id))
+        .unwrap();
+    assert_eq!(map_bcs_id, Some(bcs_id));
 }
 
 #[fbinit::test]
@@ -1174,14 +1184,15 @@ fn test_hg_commit_generation_stack(fb: FacebookInit) {
             repo.clone(),
         ))
         .unwrap();
-    let (_, count) = runtime
-        .block_on(get_hg_from_bonsai_changeset_with_impl(
-            &repo,
-            ctx,
-            top_of_stack,
-        ))
+    let hg_cs_id = runtime
+        .block_on(repo.get_hg_from_bonsai_changeset(ctx, top_of_stack))
         .unwrap();
-    assert_eq!(count, stack_size);
+    assert_eq!(
+        hg_cs_id,
+        HgChangesetId::new(string_to_nodehash(
+            "b15a980d805db1646422dbf02016aa8a9f8aacd3",
+        ))
+    );
 }
 
 #[fbinit::test]
@@ -1204,23 +1215,25 @@ fn test_hg_commit_generation_one_after_another(fb: FacebookInit) {
         ))
         .unwrap();
 
-    let (_, count) = runtime
-        .block_on(get_hg_from_bonsai_changeset_with_impl(
-            &repo,
-            ctx.clone(),
-            first_bcs_id,
-        ))
+    let hg_cs_id = runtime
+        .block_on(repo.get_hg_from_bonsai_changeset(ctx.clone(), first_bcs_id))
         .unwrap();
-    assert_eq!(count, 1);
+    assert_eq!(
+        hg_cs_id,
+        HgChangesetId::new(string_to_nodehash(
+            "5c31d1196c64c93cb5bcf8bca3a24860f103d69f",
+        ))
+    );
 
-    let (_, count) = runtime
-        .block_on(get_hg_from_bonsai_changeset_with_impl(
-            &repo,
-            ctx,
-            second_bcs_id,
-        ))
+    let hg_cs_id = runtime
+        .block_on(repo.get_hg_from_bonsai_changeset(ctx, second_bcs_id))
         .unwrap();
-    assert_eq!(count, 1);
+    assert_eq!(
+        hg_cs_id,
+        HgChangesetId::new(string_to_nodehash(
+            "09e9a31873e07ad483aa64e4dfd2cc705de40276",
+        ))
+    );
 }
 
 #[fbinit::test]
@@ -1237,14 +1250,15 @@ fn test_hg_commit_generation_diamond(fb: FacebookInit) {
         ))
         .unwrap();
 
-    let (_, count) = runtime
-        .block_on(get_hg_from_bonsai_changeset_with_impl(
-            &repo,
-            ctx.clone(),
-            last_bcs_id,
-        ))
+    let hg_cs_id = runtime
+        .block_on(repo.get_hg_from_bonsai_changeset(ctx.clone(), last_bcs_id))
         .unwrap();
-    assert_eq!(count, 4);
+    assert_eq!(
+        hg_cs_id,
+        HgChangesetId::new(string_to_nodehash(
+            "5d69478d73e67e5270550e44f2acfd93f456d74a",
+        ))
+    );
 }
 
 #[fbinit::test]
@@ -1258,14 +1272,15 @@ fn test_hg_commit_generation_many_diamond(fb: FacebookInit) {
         .unwrap()
         .unwrap();
 
-    let (_, count) = runtime
-        .block_on(get_hg_from_bonsai_changeset_with_impl(
-            &repo,
-            ctx.clone(),
-            bcs_id,
-        ))
+    let hg_cs_id = runtime
+        .block_on(repo.get_hg_from_bonsai_changeset(ctx, bcs_id))
         .unwrap();
-    assert_eq!(count, 200);
+    assert_eq!(
+        hg_cs_id,
+        HgChangesetId::new(string_to_nodehash(
+            "6b43556e77b7312cabd16ac5f0a85cd920d95272",
+        ))
+    );
 }
 
 #[fbinit::test]
@@ -1299,9 +1314,15 @@ fn test_hg_commit_generation_uneven_branch(fb: FacebookInit) {
     );
 
     runtime.block_on(f).unwrap();
-    runtime
+    let hg_cs_id = runtime
         .block_on(repo.get_hg_from_bonsai_changeset(ctx.clone(), merge.get_changeset_id()))
         .unwrap();
+    assert_eq!(
+        hg_cs_id,
+        HgChangesetId::new(string_to_nodehash(
+            "62b3de4cbd1bc4bf8422c6588234c28842476d3b",
+        ))
+    );
 }
 
 #[cfg(fbcode_build)]

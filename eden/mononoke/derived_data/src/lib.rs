@@ -34,8 +34,8 @@ pub enum Mode {
 
 #[derive(Debug, Error)]
 pub enum DeriveError {
-    #[error("Derivation of {0} is not enabled for repo {1}")]
-    Disabled(&'static str, RepositoryId),
+    #[error("Derivation of {0} is not enabled for repo={2} repoid={1}")]
+    Disabled(&'static str, RepositoryId, String),
     #[error("{0}")]
     Error(#[from] Error),
 }
