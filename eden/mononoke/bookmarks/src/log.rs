@@ -13,6 +13,7 @@ use context::CoreContext;
 use futures::future::BoxFuture;
 use futures::stream::BoxStream;
 use mononoke_types::{ChangesetId, RepositoryId, Timestamp};
+use sql::mysql;
 use sql::mysql_async::prelude::{ConvIr, FromValue};
 use sql::mysql_async::{FromValueError, Value};
 
@@ -102,7 +103,7 @@ pub trait BookmarkUpdateLog: Send + Sync + 'static {
 }
 
 /// Describes why a bookmark was moved
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, mysql::OptTryFromRowField)]
 pub enum BookmarkUpdateReason {
     /// Bookmark was updated by a pushrebase.
     Pushrebase,

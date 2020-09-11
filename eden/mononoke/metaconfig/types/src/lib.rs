@@ -30,6 +30,7 @@ use mononoke_types::{BonsaiChangeset, MPath, PrefixTrie, RepositoryId};
 use regex::Regex;
 use scuba::ScubaValue;
 use serde_derive::Deserialize;
+use sql::mysql;
 use sql::mysql_async::{
     from_value_opt,
     prelude::{ConvIr, FromValue},
@@ -565,6 +566,7 @@ pub struct LfsParams {
 
 /// Id used to discriminate diffirent underlying blobstore instances
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd, Deserialize)]
+#[derive(mysql::OptTryFromRowField)]
 pub struct BlobstoreId(u64);
 
 impl BlobstoreId {
@@ -610,6 +612,7 @@ impl From<BlobstoreId> for ScubaValue {
 
 /// Id used to identify storage configuration for a multiplexed blobstore.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd)]
+#[derive(mysql::OptTryFromRowField)]
 pub struct MultiplexId(i32);
 
 impl MultiplexId {

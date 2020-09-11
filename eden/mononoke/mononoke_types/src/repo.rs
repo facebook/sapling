@@ -10,6 +10,7 @@ use anyhow::Error;
 use lazy_static::lazy_static;
 use regex::Regex;
 use serde_derive::Serialize;
+use sql::mysql;
 use std::default::Default;
 use std::fmt;
 use std::str::FromStr;
@@ -27,18 +28,8 @@ lazy_static! {
 }
 
 /// Represents a repository. This ID is used throughout storage.
-#[derive(
-    Clone,
-    Copy,
-    Eq,
-    PartialEq,
-    Ord,
-    PartialOrd,
-    Debug,
-    Hash,
-    Abomonation,
-    Serialize
-)]
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash, Abomonation)]
+#[derive(Serialize, mysql::OptTryFromRowField)]
 pub struct RepositoryId(i32);
 
 impl RepositoryId {

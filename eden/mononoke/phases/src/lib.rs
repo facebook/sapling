@@ -25,6 +25,7 @@ use futures::{
 };
 use futures_ext::{BoxFuture, FutureExt as OldFutureExt};
 use mononoke_types::{ChangesetId, RepositoryId};
+use sql::mysql;
 use sql::mysql_async::{
     prelude::{ConvIr, FromValue},
     FromValueError, Value,
@@ -37,6 +38,7 @@ use std::{
 };
 
 #[derive(Abomonation, Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(mysql::OptTryFromRowField)]
 pub enum Phase {
     Draft,
     Public,

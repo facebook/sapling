@@ -12,6 +12,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use futures_old::future::{err, ok};
 use futures_old::Future;
 use metaconfig_types::HgsqlName;
+use sql::mysql;
 use sql::{queries, Connection};
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
 use sql_ext::SqlConnections;
@@ -27,7 +28,7 @@ static DEFAULT_MSG: &str = "Defaulting to locked as the lock state isn't initial
 static NOT_CONNECTED_MSG: &str = "Defaulting to locked as no database connection passed";
 static DB_MSG: &str = "Repo is locked in DB";
 
-#[derive(Clone)]
+#[derive(Clone, mysql::OptTryFromRowField)]
 enum HgMononokeReadWrite {
     NoWrite,
     HgWrite,

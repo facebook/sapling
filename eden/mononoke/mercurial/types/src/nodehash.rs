@@ -13,6 +13,7 @@ use ascii::{AsciiStr, AsciiString};
 use manifest::Entry;
 use mononoke_types::FileType;
 use quickcheck::{Arbitrary, Gen};
+use sql::mysql;
 use std::{
     fmt::{self, Display},
     result,
@@ -213,7 +214,7 @@ impl Arbitrary for HgNodeHash {
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
-#[derive(Abomonation)]
+#[derive(Abomonation, mysql::OptTryFromRowField)]
 pub struct HgChangesetId(HgNodeHash);
 
 impl HgChangesetId {
@@ -439,7 +440,7 @@ impl Arbitrary for HgManifestId {
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
-#[derive(Abomonation)]
+#[derive(Abomonation, mysql::OptTryFromRowField)]
 pub struct HgFileNodeId(HgNodeHash);
 
 impl HgFileNodeId {

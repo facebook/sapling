@@ -20,6 +20,7 @@ use futures::{
 };
 use metaconfig_types::{BlobstoreId, MultiplexId};
 use mononoke_types::{errors::ErrorKind, DateTime, Timestamp};
+use sql::mysql;
 use sql::mysql_async::{
     prelude::{ConvIr, FromValue},
     FromValueError, Value,
@@ -41,7 +42,7 @@ define_stats! {
 
 // Identifier for given blobstore operation to faciliate correlating same operation
 // across multiple blobstores.
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash, mysql::OptTryFromRowField)]
 pub struct OperationKey(pub Uuid);
 impl OperationKey {
     pub fn gen() -> OperationKey {

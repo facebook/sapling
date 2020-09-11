@@ -15,6 +15,9 @@ use sql::mysql_async::{
     prelude::{ConvIr, FromValue},
     FromValueError, Value,
 };
+use sql::sql_common::mysql::{
+    opt_try_from_rowfield, MysqlError, OptionalTryFromRowField, RowField,
+};
 
 type FromValueResult<T> = Result<T, FromValueError>;
 
@@ -122,6 +125,12 @@ impl ConvIr<GitSha1> for GitSha1 {
 
 impl FromValue for GitSha1 {
     type Intermediate = GitSha1;
+}
+
+impl OptionalTryFromRowField for GitSha1 {
+    fn try_from_opt(field: RowField) -> Result<Option<Self>, MysqlError> {
+        opt_try_from_rowfield(field)
+    }
 }
 
 impl From<Globalrev> for Value {

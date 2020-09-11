@@ -10,6 +10,7 @@ use anyhow::Error;
 use filenodes::FilenodeInfo;
 use mercurial_types::{HgChangesetId, HgFileNodeId};
 use mononoke_types::{hash, RepoPath};
+use sql::mysql;
 use sql::mysql_async::{
     prelude::{ConvIr, FromValue},
     FromValueError, Value,
@@ -21,6 +22,7 @@ use std::hash::Hash;
 use crate::local_cache::{CachePool, Cacheable};
 
 #[derive(Abomonation, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(mysql::OptTryFromRowField)]
 pub struct PathHashBytes(pub Vec<u8>);
 
 impl ConvIr<PathHashBytes> for Vec<u8> {
@@ -48,6 +50,7 @@ impl From<PathHashBytes> for Value {
 }
 
 #[derive(Abomonation, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(mysql::OptTryFromRowField)]
 pub struct PathBytes(pub Vec<u8>);
 
 impl Cacheable for PathBytes {

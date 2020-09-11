@@ -14,6 +14,7 @@ use chrono::{
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
 use rand::Rng;
 use serde_derive::{Deserialize, Serialize};
+use sql::mysql;
 
 use crate::errors::ErrorKind;
 use crate::thrift;
@@ -122,18 +123,8 @@ impl Arbitrary for DateTime {
 const SEC_IN_NS: i64 = 1_000_000_000;
 
 /// Number of non-leap-nanoseconds since January 1, 1970 UTC
-#[derive(
-    Debug,
-    Clone,
-    Copy,
-    PartialEq,
-    Eq,
-    Hash,
-    Ord,
-    PartialOrd,
-    Deserialize,
-    Serialize
-)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd)]
+#[derive(Deserialize, Serialize, mysql::OptTryFromRowField)]
 pub struct Timestamp(i64);
 
 impl Timestamp {

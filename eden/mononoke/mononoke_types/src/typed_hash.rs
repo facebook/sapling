@@ -15,6 +15,7 @@ use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use context::CoreContext;
 use futures::future::{BoxFuture, FutureExt};
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
+use sql::mysql;
 
 use crate::{
     blob::{Blob, BlobstoreValue},
@@ -52,6 +53,7 @@ pub trait MononokeId: Copy + Sync + Send + 'static {
 
 /// An identifier for a changeset in Mononoke.
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash, Abomonation)]
+#[derive(mysql::OptTryFromRowField)]
 pub struct ChangesetId(Blake2);
 
 /// An identifier for a changeset hash prefix in Mononoke.

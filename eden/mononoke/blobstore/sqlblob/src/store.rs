@@ -18,6 +18,7 @@ use twox_hash::XxHash32;
 use crate::delay::BlobDelay;
 
 mod types {
+    use sql::mysql;
     use sql::mysql_async::{
         prelude::{ConvIr, FromValue},
         FromValueError, Value,
@@ -25,7 +26,7 @@ mod types {
 
     type FromValueResult<T> = Result<T, FromValueError>;
 
-    #[derive(Clone, Copy, Debug, PartialEq)]
+    #[derive(Clone, Copy, Debug, PartialEq, mysql::OptTryFromRowField)]
     pub enum ChunkingMethod {
         ByContentHashBlake2,
     }

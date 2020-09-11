@@ -11,6 +11,7 @@ use anyhow::{format_err, Error};
 use ascii::{AsciiChar, AsciiString};
 use quickcheck::{Arbitrary, Gen};
 use rand::Rng;
+use sql::mysql;
 use sql::mysql_async::{
     prelude::{ConvIr, FromValue},
     FromValueError, Value,
@@ -97,6 +98,7 @@ impl Bookmark {
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq, Ord, PartialOrd)]
+#[derive(mysql::OptTryFromRowField)]
 pub struct BookmarkName {
     bookmark: AsciiString,
 }
@@ -197,7 +199,7 @@ impl From<BookmarkPrefix> for Value {
 }
 
 /// Describes the behavior of a Bookmark in Mercurial operations.
-#[derive(Clone, Debug, Eq, Hash, PartialEq, Copy)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq, Copy, mysql::OptTryFromRowField)]
 pub enum BookmarkKind {
     Scratch,
     Publishing,
