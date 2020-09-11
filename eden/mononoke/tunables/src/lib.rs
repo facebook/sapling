@@ -87,6 +87,9 @@ pub struct MononokeTunables {
     // When false error logs are never sampled
     scs_error_log_sampling: AtomicBool,
     redacted_logging_sampling_rate: AtomicI64,
+    getbundle_use_low_gen_optimization: AtomicBool,
+    getbundle_low_gen_num_threshold: AtomicI64,
+    getbundle_low_gen_optimization_max_traversal_limit: AtomicI64,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {

@@ -8,8 +8,8 @@
 #![deny(warnings)]
 
 use crate::errors::ErrorKind;
-use anyhow::{Error, Result};
-use blobrepo::BlobRepo;
+use anyhow::{anyhow, Error, Result};
+use blobrepo::{BlobRepo, ChangesetFetcher};
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bytes::Bytes;
@@ -45,11 +45,12 @@ use mercurial_types::{
     FileBytes, HgBlobNode, HgChangesetId, HgFileNodeId, HgManifestId, HgParents, MPath, RevFlags,
     NULL_CSID,
 };
-use mononoke_types::{hash::Sha256, ChangesetId, ContentId};
+use mononoke_types::{hash::Sha256, ChangesetId, ContentId, Generation};
 use phases::{Phase, Phases};
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_blobstore::RepoBlobstore;
-use revset::{add_generations_by_bonsai, DifferenceOfUnionsOfAncestorsNodeStream};
+use revset::DifferenceOfUnionsOfAncestorsNodeStream;
+use scuba_ext::ScubaSampleBuilderExt;
 use slog::{debug, info, o};
 use stats::prelude::*;
 use std::{
@@ -60,9 +61,12 @@ use std::{
 use tunables::tunables;
 
 mod errors;
+mod low_gen_nums_optimization;
+use low_gen_nums_optimization::{has_low_gen_num, low_gen_num_optimization};
 
 pub const MAX_FILENODE_BYTES_IN_MEMORY: u64 = 100_000_000;
 pub const GETBUNDLE_COMMIT_NUM_WARN: u64 = 1_000_000;
+const UNEXPECTED_NONE_ERR_MSG: &str = "unexpected None while calling DifferenceOfUnionsOfAncestors";
 
 define_stats! {
     prefix = "mononoke.getbundle_response";
@@ -274,22 +278,69 @@ async fn find_commits_to_send(
     );
 
     let (heads, excludes) = try_join!(heads, excludes)?;
+
+    let params = Params { heads, excludes };
     let changeset_fetcher = blobrepo.get_changeset_fetcher();
-    let heads = add_generations_by_bonsai(
-        ctx.clone(),
-        old_stream::iter_ok(heads.into_iter()).boxify(),
-        changeset_fetcher.clone(),
-    )
-    .collect()
-    .compat();
-    let excludes = add_generations_by_bonsai(
-        ctx.clone(),
-        old_stream::iter_ok(excludes.into_iter()).boxify(),
-        changeset_fetcher.clone(),
-    )
-    .collect()
-    .compat();
-    let (heads, excludes) = try_join!(heads, excludes)?;
+    let nodes_to_send = if !tunables().get_getbundle_use_low_gen_optimization()
+        || !has_low_gen_num(&params.heads)
+    {
+        call_difference_of_union_of_ancestors_revset(
+            &ctx,
+            &changeset_fetcher,
+            params,
+            &lca_hint,
+            None,
+        )
+        .await?
+        .ok_or_else(|| anyhow!(UNEXPECTED_NONE_ERR_MSG))?
+    } else {
+        ctx.scuba()
+            .clone()
+            .log_with_msg("Using low generation getbundle optimization", None);
+        let maybe_result =
+            low_gen_num_optimization(&ctx, &changeset_fetcher, params.clone(), &lca_hint).await?;
+        if let Some(result) = maybe_result {
+            result
+        } else {
+            ctx.scuba()
+                .clone()
+                .log_with_msg("Skipped low generation getbundle optimization", None);
+            call_difference_of_union_of_ancestors_revset(
+                &ctx,
+                &changeset_fetcher,
+                params,
+                &lca_hint,
+                None,
+            )
+            .await?
+            .ok_or_else(|| anyhow!(UNEXPECTED_NONE_ERR_MSG))?
+        }
+    };
+
+    ctx.session()
+        .bump_load(Metric::EgressCommits, nodes_to_send.len() as f64);
+    ctx.perf_counters().add_to_counter(
+        PerfCounterType::GetbundleNumCommits,
+        nodes_to_send.len() as i64,
+    );
+
+    Ok(nodes_to_send.into_iter().rev().collect())
+}
+
+#[derive(Default, Clone)]
+pub(crate) struct Params {
+    heads: Vec<(ChangesetId, Generation)>,
+    excludes: Vec<(ChangesetId, Generation)>,
+}
+
+async fn call_difference_of_union_of_ancestors_revset(
+    ctx: &CoreContext,
+    changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+    params: Params,
+    lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
+    limit: Option<u64>,
+) -> Result<Option<Vec<ChangesetId>>, Error> {
+    let Params { heads, excludes } = params;
 
     let mut notified_expensive_getbundle = false;
     let min_heads_gen_num = heads.iter().map(|(_, gen)| gen).min();
@@ -306,7 +357,7 @@ async fn find_commits_to_send(
 
     let nodes_to_send = DifferenceOfUnionsOfAncestorsNodeStream::new_with_excludes_gen_num(
         ctx.clone(),
-        &blobrepo.get_changeset_fetcher(),
+        &changeset_fetcher,
         lca_hint.clone(),
         heads,
         excludes,
@@ -320,18 +371,18 @@ async fn find_commits_to_send(
                 notified_expensive_getbundle = true;
             }
         }
-    })
-    .collect()
-    .compat()
-    .await?;
+    });
 
-    ctx.session().bump_load(Metric::EgressCommits, 1.0);
-    ctx.perf_counters().add_to_counter(
-        PerfCounterType::GetbundleNumCommits,
-        nodes_to_send.len() as i64,
-    );
-
-    Ok(nodes_to_send.into_iter().rev().collect())
+    if let Some(limit) = limit {
+        let res = nodes_to_send.take(limit).collect().compat().await?;
+        if res.len() as u64 == limit {
+            Ok(None)
+        } else {
+            Ok(Some(res))
+        }
+    } else {
+        nodes_to_send.collect().compat().map_ok(Some).await
+    }
 }
 
 fn warn_expensive_getbundle(ctx: &CoreContext) {
@@ -446,15 +497,24 @@ async fn hg_to_bonsai_stream(
     ctx: &CoreContext,
     repo: &BlobRepo,
     nodes: Vec<HgChangesetId>,
-) -> Result<Vec<ChangesetId>, Error> {
+) -> Result<Vec<(ChangesetId, Generation)>, Error> {
     stream::iter(nodes)
         .map({
-            move |node| {
-                repo.get_bonsai_from_hg(ctx.clone(), node)
+            move |node| async move {
+                let bcs_id = repo
+                    .get_bonsai_from_hg(ctx.clone(), node)
                     .and_then(move |maybe_bonsai| {
                         maybe_bonsai.ok_or(ErrorKind::BonsaiNotFoundForHgChangeset(node).into())
                     })
                     .compat()
+                    .await?;
+
+                let cs_fetcher = repo.get_changeset_fetcher();
+                let gen_num = cs_fetcher
+                    .get_generation_number(ctx.clone(), bcs_id)
+                    .compat()
+                    .await?;
+                Ok((bcs_id, gen_num))
             }
         })
         .buffered(100)

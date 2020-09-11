@@ -24,6 +24,7 @@ phases = { path = "../../phases" }
 reachabilityindex = { path = "../../reachabilityindex" }
 repo_blobstore = { path = "../../blobrepo/repo_blobstore" }
 revset = { path = "../../revset" }
+scuba_ext = { path = "../../common/scuba_ext" }
 tunables = { path = "../../tunables" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
@@ -36,3 +37,13 @@ futures-old = { package = "futures", version = "0.1" }
 futures-util = "0.3"
 slog = { version = "2.5", features = ["max_level_debug"] }
 thiserror = "1.0"
+
+[dev-dependencies]
+blobrepo_factory = { path = "../../blobrepo/factory" }
+mercurial_types-mocks = { path = "../../mercurial/types/mocks" }
+mononoke_types-mocks = { path = "../../mononoke_types/mocks" }
+skiplist = { path = "../../reachabilityindex/skiplist" }
+tests_utils = { path = "../../tests/utils" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+maplit = "1.0"
+tokio-compat = "0.1"
