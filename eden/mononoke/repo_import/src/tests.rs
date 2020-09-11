@@ -10,8 +10,8 @@ mod tests {
     use crate::{
         back_sync_commits_to_small_repo, check_dependent_systems, derive_bonsais_single_repo,
         get_large_repo_config_if_pushredirected, get_large_repo_setting, merge_imported_commit,
-        move_bookmark, push_merge_commit, rewrite_file_paths, sort_bcs, ChangesetArgs,
-        CheckerFlags, RepoImportSetting, LATEST_REPLAYED_REQUEST_KEY,
+        move_bookmark, push_merge_commit, rewrite_file_paths, ChangesetArgs, CheckerFlags,
+        RepoImportSetting, LATEST_REPLAYED_REQUEST_KEY,
     };
 
     use anyhow::Result;
@@ -78,14 +78,6 @@ mod tests {
         Ok(repo)
     }
 
-    fn gen_cs_ids(changesets: &[BonsaiChangeset]) -> Vec<ChangesetId> {
-        let mut cs_ids = vec![];
-        for bcs in changesets {
-            cs_ids.push(bcs.get_changeset_id());
-        }
-        cs_ids
-    }
-
     fn get_file_changes_mpaths(bcs: &BonsaiChangeset) -> Vec<MPath> {
         bcs.file_changes()
             .map(|(mpath, _)| mpath)
@@ -115,16 +107,13 @@ mod tests {
             "##,
         )
         .await?;
-        let mut bonsais = vec![];
-        for (_, csid) in &changesets {
-            bonsais.push(csid.load(ctx.clone(), &blob_repo.get_blobstore()).await?);
-        }
-        bonsais = sort_bcs(&bonsais)?;
+
+        let bcs_ids: Vec<ChangesetId> = changesets.values().copied().collect();
         let importing_bookmark = BookmarkName::new("repo_import_test_repo")?;
         move_bookmark(
             &ctx,
             &blob_repo,
-            &bonsais,
+            &bcs_ids,
             batch_size,
             &importing_bookmark,
             &checker_flags,
@@ -282,7 +271,6 @@ mod tests {
             .add_file("b", "b")
             .commit()
             .await?;
-        let imported_cs = imported_cs_id.load(ctx.clone(), repo.blobstore()).await?;
 
         let dest_bookmark = bookmark(&ctx, &repo, "master").set_to(master_cs_id).await?;
 
@@ -292,14 +280,9 @@ mod tests {
             datetime: DateTime::now(),
         };
 
-        let merged_cs_id = merge_imported_commit(
-            &ctx,
-            &repo,
-            &[imported_cs.clone()],
-            &dest_bookmark,
-            changeset_args,
-        )
-        .await?;
+        let merged_cs_id =
+            merge_imported_commit(&ctx, &repo, imported_cs_id, &dest_bookmark, changeset_args)
+                .await?;
 
         let mut repo_config = RepoConfig::default();
         repo_config.pushrebase = PushrebaseParams {
@@ -594,32 +577,41 @@ mod tests {
             Ok(Some(mutable_path))
         });
 
-        let shifted_bcs =
+        let shifted_bcs_ids =
             rewrite_file_paths(&ctx, &large_repo, &combined_mover, &mut bonsai_values).await?;
 
-        let large_repo_cs_a = &shifted_bcs[0];
+        let large_repo_cs_a = &shifted_bcs_ids[0]
+            .load(ctx.clone(), &large_repo.get_blobstore())
+            .await?;
         let large_repo_cs_a_mpaths = get_file_changes_mpaths(&large_repo_cs_a);
         assert_eq!(
             vec![mp("large_repo/dest_path_prefix/A")],
             large_repo_cs_a_mpaths
         );
 
-        let large_repo_cs_b = &shifted_bcs[1];
+        let large_repo_cs_b = &shifted_bcs_ids[1]
+            .load(ctx.clone(), &large_repo.get_blobstore())
+            .await?;
         let large_repo_cs_b_mpaths = get_file_changes_mpaths(&large_repo_cs_b);
         assert_eq!(vec![mp("random_dir/B")], large_repo_cs_b_mpaths);
 
-        let synced_bcs = back_sync_commits_to_small_repo(
+        let synced_bcs_ids = back_sync_commits_to_small_repo(
             &ctx,
             &small_repo,
             &large_to_small_syncer,
-            &shifted_bcs,
+            &shifted_bcs_ids,
         )
         .await?;
-        let small_repo_cs_a = &synced_bcs[0];
+
+        let small_repo_cs_a = &synced_bcs_ids[0]
+            .load(ctx.clone(), &small_repo.get_blobstore())
+            .await?;
         let small_repo_cs_a_mpaths = get_file_changes_mpaths(&small_repo_cs_a);
         assert_eq!(vec![mp("dest_path_prefix/A")], small_repo_cs_a_mpaths);
 
-        let small_repo_cs_b = &synced_bcs[1];
+        let small_repo_cs_b = &synced_bcs_ids[1]
+            .load(ctx.clone(), &small_repo.get_blobstore())
+            .await?;
         let small_repo_cs_b_mpaths = get_file_changes_mpaths(&small_repo_cs_b);
         assert_eq!(vec![mp("dest_path_prefix/B")], small_repo_cs_b_mpaths);
 
@@ -662,12 +654,8 @@ mod tests {
             "##,
         )
         .await?;
-        let mut repo_0_bcs = vec![];
-        let mut repo_0_cs_ids = vec![];
-        for csid in repo_0_commits.values() {
-            repo_0_bcs.push(csid.load(ctx.clone(), &repo_0.get_blobstore()).await?);
-            repo_0_cs_ids.push(csid.clone());
-        }
+
+        let repo_0_cs_ids: Vec<ChangesetId> = repo_0_commits.values().copied().collect();
 
         let repo_1 = create_repo(1)?;
         let repo_1_commits = create_from_dag(
@@ -678,15 +666,11 @@ mod tests {
             "##,
         )
         .await?;
-        let mut repo_1_bcs = vec![];
-        let mut repo_1_cs_ids = vec![];
-        for csid in repo_1_commits.values() {
-            repo_1_bcs.push(csid.load(ctx.clone(), &repo_1.get_blobstore()).await?);
-            repo_1_cs_ids.push(csid.clone());
-        }
 
-        derive_bonsais_single_repo(&ctx, &repo_0, &repo_0_bcs).await?;
-        derive_bonsais_single_repo(&ctx, &repo_1, &repo_1_bcs).await?;
+        let repo_1_cs_ids: Vec<ChangesetId> = repo_1_commits.values().copied().collect();
+
+        derive_bonsais_single_repo(&ctx, &repo_0, &repo_0_cs_ids).await?;
+        derive_bonsais_single_repo(&ctx, &repo_1, &repo_1_cs_ids).await?;
 
         check_no_pending_commits(&ctx, &repo_0, &repo_0_cs_ids).await?;
         check_no_pending_commits(&ctx, &repo_1, &repo_1_cs_ids).await?;
@@ -748,21 +732,19 @@ mod tests {
             Ok(Some(mutable_path))
         });
 
-        let shifted_bcs =
+        let large_repo_cs_ids =
             rewrite_file_paths(&ctx, &large_repo, &combined_mover, &mut bonsai_values).await?;
-        let synced_bcs = back_sync_commits_to_small_repo(
+        let small_repo_cs_ids = back_sync_commits_to_small_repo(
             &ctx,
             &small_repo,
             &large_to_small_syncer,
-            &shifted_bcs,
+            &large_repo_cs_ids,
         )
         .await?;
 
-        derive_bonsais_single_repo(&ctx, &large_repo, &shifted_bcs).await?;
-        derive_bonsais_single_repo(&ctx, &small_repo, &synced_bcs).await?;
+        derive_bonsais_single_repo(&ctx, &large_repo, &large_repo_cs_ids).await?;
+        derive_bonsais_single_repo(&ctx, &small_repo, &small_repo_cs_ids).await?;
 
-        let large_repo_cs_ids = gen_cs_ids(&shifted_bcs);
-        let small_repo_cs_ids = gen_cs_ids(&synced_bcs);
         check_no_pending_commits(&ctx, &large_repo, &large_repo_cs_ids).await?;
         check_no_pending_commits(&ctx, &small_repo, &small_repo_cs_ids).await?;
         Ok(())

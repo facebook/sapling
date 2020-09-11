@@ -111,7 +111,7 @@ async fn rewrite_file_paths(
     repo: &BlobRepo,
     mover: &Mover,
     bonsai_values: &mut Vec<(ChangesetId, BonsaiChangeset)>,
-) -> Result<Vec<BonsaiChangeset>, Error> {
+) -> Result<Vec<ChangesetId>, Error> {
     let mut remapped_parents: HashMap<ChangesetId, ChangesetId> = HashMap::new();
     let mut index = 1;
     let map_size = bonsai_values.len();
@@ -141,51 +141,49 @@ async fn rewrite_file_paths(
     }
 
     bonsai_changesets = sort_bcs(&bonsai_changesets)?;
+    let bcs_ids = get_cs_ids(&bonsai_changesets);
     info!(ctx.logger(), "Saving bonsai changesets");
     save_bonsai_changesets(bonsai_changesets.clone(), ctx.clone(), repo.clone())
         .compat()
         .await?;
     info!(ctx.logger(), "Saved bonsai changesets");
-    Ok(bonsai_changesets)
+    Ok(bcs_ids)
 }
 
 async fn back_sync_commits_to_small_repo(
     ctx: &CoreContext,
     small_repo: &BlobRepo,
     large_to_small_syncer: &CommitSyncer<SqlSyncedCommitMapping>,
-    bonsai_changesets: &[BonsaiChangeset],
-) -> Result<Vec<BonsaiChangeset>, Error> {
+    bcs_ids: &[ChangesetId],
+) -> Result<Vec<ChangesetId>, Error> {
     info!(
         ctx.logger(),
         "Back syncing from large repo {} to small repo {}",
         large_to_small_syncer.get_large_repo().name(),
         small_repo.name()
     );
-    let mut synced_bonsai_changesets = vec![];
-    for bcs in bonsai_changesets {
-        let bcs_id = bcs.get_changeset_id();
-        let maybe_synced_cs_id: Option<ChangesetId> =
-            large_to_small_syncer.sync_commit(&ctx, bcs_id).await?;
+    let mut synced_bcs_ids = vec![];
+    for bcs_id in bcs_ids {
+        let maybe_synced_cs_id: Option<ChangesetId> = large_to_small_syncer
+            .sync_commit(&ctx, bcs_id.clone())
+            .await?;
         if let Some(synced_cs_id) = maybe_synced_cs_id {
             info!(
                 ctx.logger(),
                 "Synced large repo cs: {} => {}", bcs_id, synced_cs_id
             );
-            let synced_bcs = synced_cs_id
-                .load(ctx.clone(), &small_repo.get_blobstore())
-                .await?;
-            synced_bonsai_changesets.push(synced_bcs);
+            synced_bcs_ids.push(synced_cs_id);
         }
     }
 
     info!(ctx.logger(), "Finished back syncing shifted bonsais");
-    Ok(synced_bonsai_changesets)
+    Ok(synced_bcs_ids)
 }
 
 async fn derive_bonsais_single_repo(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    changesets: &[BonsaiChangeset],
+    bcs_ids: &[ChangesetId],
 ) -> Result<(), Error> {
     let derived_data_types = &repo.get_derived_data_config().derived_data_types;
 
@@ -199,10 +197,9 @@ async fn derive_bonsais_single_repo(
     stream::iter(derived_utils)
         .map(Ok)
         .try_for_each_concurrent(len, |derived_util| async move {
-            for bcs in changesets {
-                let csid = bcs.get_changeset_id();
+            for csid in bcs_ids {
                 derived_util
-                    .derive(ctx.clone(), repo.clone(), csid)
+                    .derive(ctx.clone(), repo.clone(), csid.clone())
                     .compat()
                     .map_ok(|_| ())
                     .await?;
@@ -215,7 +212,7 @@ async fn derive_bonsais_single_repo(
 async fn move_bookmark(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    shifted_bcs: &[BonsaiChangeset],
+    shifted_bcs_ids: &[ChangesetId],
     batch_size: usize,
     bookmark: &BookmarkName,
     checker_flags: &CheckerFlags,
@@ -224,19 +221,23 @@ async fn move_bookmark(
     maybe_small_repo_back_sync_vars: &Option<SmallRepoBackSyncVars>,
 ) -> Result<(), Error> {
     info!(ctx.logger(), "Start moving the bookmark");
-    if shifted_bcs.is_empty() {
+    if shifted_bcs_ids.is_empty() {
         return Err(format_err!("There is no bonsai changeset present"));
     }
 
-    let first_bcs = match shifted_bcs.first() {
+    let mut old_csid = match shifted_bcs_ids.first() {
         Some(first) => first,
         None => {
             return Err(format_err!("There is no bonsai changeset present"));
         }
     };
-    let mut old_csid = first_bcs.get_changeset_id();
     let mut transaction = repo.update_bookmark_transaction(ctx.clone());
-    transaction.create(&bookmark, old_csid, BookmarkUpdateReason::ManualMove, None)?;
+    transaction.create(
+        &bookmark,
+        old_csid.clone(),
+        BookmarkUpdateReason::ManualMove,
+        None,
+    )?;
     if !transaction.commit().await? {
         return Err(format_err!("Logical failure while creating {:?}", bookmark));
     }
@@ -244,18 +245,18 @@ async fn move_bookmark(
         ctx.logger(),
         "Created bookmark {:?} pointing to {}", bookmark, old_csid
     );
-    for chunk in shifted_bcs.chunks(batch_size) {
+    for chunk in shifted_bcs_ids.chunks(batch_size) {
         transaction = repo.update_bookmark_transaction(ctx.clone());
         let curr_csid = match chunk.last() {
-            Some(bcs) => bcs.get_changeset_id(),
+            Some(bcs_id) => bcs_id,
             None => {
                 return Err(format_err!("There is no bonsai changeset present"));
             }
         };
         transaction.update(
             &bookmark,
-            curr_csid,
-            old_csid,
+            curr_csid.clone(),
+            old_csid.clone(),
             BookmarkUpdateReason::ManualMove,
             None,
         )?;
@@ -269,7 +270,7 @@ async fn move_bookmark(
         );
         let check_repo = async move {
             let hg_csid = repo
-                .get_hg_from_bonsai_changeset(ctx.clone(), curr_csid)
+                .get_hg_from_bonsai_changeset(ctx.clone(), curr_csid.clone())
                 .compat()
                 .await?;
             check_dependent_systems(
@@ -342,7 +343,7 @@ async fn move_bookmark(
 async fn merge_imported_commit(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    shifted_bcs: &[BonsaiChangeset],
+    imported_cs_id: ChangesetId,
     dest_bookmark: &BookmarkName,
     changeset_args: ChangesetArgs,
 ) -> Result<ChangesetId, Error> {
@@ -365,10 +366,6 @@ async fn merge_imported_commit(
     };
     let master_leaf_entries = get_leaf_entries(&ctx, &repo, master_cs_id).await?;
 
-    let imported_cs_id = match shifted_bcs.last() {
-        Some(bcs) => bcs.get_changeset_id(),
-        None => return Err(format_err!("There is no bonsai changeset present")),
-    };
     let imported_leaf_entries = get_leaf_entries(&ctx, &repo, imported_cs_id).await?;
 
     let intersection: Vec<MPath> = imported_leaf_entries
@@ -619,6 +616,14 @@ fn sort_bcs(shifted_bcs: &[BonsaiChangeset]) -> Result<Vec<BonsaiChangeset>, Err
     Ok(sorted_bcs)
 }
 
+fn get_cs_ids(changesets: &[BonsaiChangeset]) -> Vec<ChangesetId> {
+    let mut cs_ids = vec![];
+    for bcs in changesets {
+        cs_ids.push(bcs.get_changeset_id());
+    }
+    cs_ids
+}
+
 // Note: pushredirection only works from small repo to large repo.
 async fn get_large_repo_config_if_pushredirected<'a>(
     ctx: &CoreContext,
@@ -749,7 +754,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         dest_bookmark,
     };
     args::init_cachelib(fb, &matches, None);
-    let mut maybe_large_to_small_syncer = None;
     let logger = args::init_logging(fb, &matches);
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     let repo = args::create_repo(fb, &logger, &matches);
@@ -831,7 +835,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 repo_import_setting =
                     get_large_repo_setting(&ctx, &repo_import_setting, &syncers.small_to_large)
                         .await?;
-                maybe_large_to_small_syncer = Some(syncers.large_to_small);
                 repo = large_repo;
                 repo_config = large_repo_config;
             }
@@ -861,13 +864,13 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             let mut bonsai_values: Vec<(ChangesetId, BonsaiChangeset)> =
                 import_map.values().cloned().collect();
 
-            let shifted_bcs =
+            let shifted_bcs_ids =
                 rewrite_file_paths(&ctx, &repo, &combined_mover, &mut bonsai_values).await?;
 
-            let derive_changesets = derive_bonsais_single_repo(&ctx, &repo, &shifted_bcs);
+            let derive_changesets = derive_bonsais_single_repo(&ctx, &repo, &shifted_bcs_ids);
 
             let backsync_and_derive_changesets = {
-                borrowed!(ctx, shifted_bcs);
+                borrowed!(ctx, shifted_bcs_ids);
 
                 async move {
                     let vars = match maybe_small_repo_back_sync_vars {
@@ -880,15 +883,15 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
                     let small_repo = &vars.small_repo;
 
-                    let synced_bcs = back_sync_commits_to_small_repo(
+                    let synced_bcs_ids = back_sync_commits_to_small_repo(
                         &ctx,
                         &small_repo,
                         &vars.large_to_small_syncer,
-                        &shifted_bcs,
+                        &shifted_bcs_ids,
                     )
                     .await?;
 
-                    derive_bonsais_single_repo(&ctx, &small_repo, &synced_bcs).await?;
+                    derive_bonsais_single_repo(&ctx, &small_repo, &synced_bcs_ids).await?;
                     Ok(Some(vars))
                 }
             };
@@ -901,7 +904,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             move_bookmark(
                 &ctx,
                 &repo,
-                &shifted_bcs,
+                &shifted_bcs_ids,
                 batch_size,
                 &repo_import_setting.importing_bookmark,
                 &checker_flags,
@@ -911,10 +914,15 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             )
             .await?;
 
+            let imported_cs_id = match shifted_bcs_ids.last() {
+                Some(bcs_id) => bcs_id,
+                None => return Err(format_err!("There is no bonsai changeset present")),
+            };
+
             let merged_cs_id = merge_imported_commit(
                 &ctx,
                 &repo,
-                &shifted_bcs,
+                imported_cs_id.clone(),
                 &repo_import_setting.dest_bookmark,
                 changeset_args,
             )
