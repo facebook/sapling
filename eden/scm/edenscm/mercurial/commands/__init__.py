@@ -2823,13 +2823,15 @@ def grep(ui, repo, pattern, *pats, **opts):
                 name, info = shard.split("=")
                 corpusrev, timestamp = info.split(":")
                 corpusrevs.append(corpusrev)
-            corpusrevs = repo.set("min(%ls)", corpusrevs)
+
             if not corpusrevs:
                 raise error.Abort(
                     _("unable to resolve biggrep revision: %s") % revisionline,
                     hint=_("pass `--config grep.usebiggrep=False` to bypass biggrep"),
                 )
-            corpusrev = list(corpusrevs)[0].hex()
+
+            # Sort so our choice of revision is deterministic
+            corpusrev = sorted(corpusrevs)[0]
         else:
             corpusrev, timestamp = revisionline.split(":", 1)
 
