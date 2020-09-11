@@ -11,6 +11,7 @@ use std::pin::Pin;
 use bytes::Bytes;
 use futures::{
     channel::oneshot::Sender,
+    ready,
     stream::Stream,
     task::{Context, Poll},
 };
@@ -70,26 +71,19 @@ where
     fn poll_next(self: Pin<&mut Self>, ctx: &mut Context) -> Poll<Option<Self::Item>> {
         let (stream, sender, size_sent) = self.pin_get_parts();
 
-        if sender.is_none() {
-            return Poll::Ready(None);
-        }
+        let poll = ready!(stream.poll_next(ctx));
 
-        let poll = match stream.poll_next(ctx) {
-            Poll::Ready(poll) => poll,
-            Poll::Pending => {
-                return Poll::Pending;
-            }
-        };
-
-        if let Some(Ok(ref item)) = poll {
+        match poll {
             // We have an item: increment the amount of data we sent.
-            *size_sent += item.size();
-        } else {
+            Some(Ok(ref item)) => *size_sent += item.size(),
+            // Got an error: ignore it for size purposes.
+            Some(Err(_)) => {}
             // No items left: signal our receiver.
-            let _ = sender
-                .take()
-                .expect("presence checked above")
-                .send(*size_sent);
+            None => {
+                if let Some(sender) = sender.take() {
+                    let _ = sender.send(*size_sent);
+                }
+            }
         }
 
         Poll::Ready(poll)
