@@ -39,7 +39,7 @@ sh % "cat" << r"""
 
 sh % "hg cloud list" == r"""
 commitcloud: searching workspaces for the 'server' repo
-workspaces:
+the following commitcloud workspaces are available:
         default
 run `hg cloud sl -w <workspace name>` to view the commits
 run `hg cloud switch -w <workspace name>` to switch to a different workspace
@@ -48,7 +48,7 @@ run `hg cloud list --all` to list all workspaces, including deleted
 
 sh % "hg cloud list --all" == r"""
 commitcloud: searching workspaces for the 'server' repo
-workspaces:
+the following commitcloud workspaces are available:
         default
         old (archived)
 run `hg cloud sl -w <workspace name>` to view the commits
@@ -66,7 +66,7 @@ abort: unknown workspace: user/test/default_abc
 
 sh % "hg cloud list --all" == r"""
 commitcloud: searching workspaces for the 'server' repo
-workspaces:
+the following commitcloud workspaces are available:
         old (archived)
         default (archived)
 run `hg cloud sl -w <workspace name>` to view the commits
@@ -84,7 +84,7 @@ commitcloud: workspace user/test/default has been restored
 
 sh % "hg cloud list" == r"""
 commitcloud: searching workspaces for the 'server' repo
-workspaces:
+the following commitcloud workspaces are available:
         default
 run `hg cloud sl -w <workspace name>` to view the commits
 run `hg cloud switch -w <workspace name>` to switch to a different workspace
@@ -97,7 +97,7 @@ commitcloud: workspace user/test/old has been restored
 
 sh % "hg cloud list" == r"""
 commitcloud: searching workspaces for the 'server' repo
-workspaces:
+the following commitcloud workspaces are available:
         default
         old
 run `hg cloud sl -w <workspace name>` to view the commits

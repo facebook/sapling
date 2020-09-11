@@ -301,11 +301,17 @@ def hintcommitcloudeducation(ui):
 
 
 @hint("commitcloud-switch")
-def hintcommitcloudswitch():
-    return _(
-        "if you would like to switch to the default workspace\n"
-        "run `hg cloud switch -w default` inside the repo\n"
-        "run `hg cloud list` to see all your workspaces and learn how to switch between them\n"
+def hintcommitcloudswitch(ui, active):
+    wliststr = "\n".join([winfo.name for winfo in active])
+    return ui.label(
+        _(
+            "the following commitcloud workspaces (backups) are available for this repo:\n%s\n"
+        )
+        % wliststr,
+        "bold",
+    ) + _(
+        "run `hg cloud list` inside the repo to see all your workspaces,\n"
+        "find the one the repo is connected to and learn how to switch between them\n"
     )
 
 

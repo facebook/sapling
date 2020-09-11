@@ -312,6 +312,7 @@ def cloudrejoin(ui, repo, **opts):
     if workspace.currentworkspace(repo):
         return
 
+    active = []
     try:
         workspacename = workspace.parseworkspace(ui, opts)
         if workspacename is None:
@@ -320,11 +321,13 @@ def cloudrejoin(ui, repo, **opts):
             reponame = ccutil.getreponame(repo)
             hostnameworkspace = workspace.hostnameworkspace(ui)
             winfos = service.get(ui, tokenmod.TokenLocator(ui).token).getworkspaces(
-                reponame, hostnameworkspace
+                reponame, workspace.userworkspaceprefix(ui)
             )
-            if winfos and any([winfo.name == hostnameworkspace for winfo in winfos]):
+
+            active = [winfo for winfo in winfos if not winfo.archived]
+
+            if winfos and any([winfo.name == hostnameworkspace for winfo in active]):
                 workspacename = hostnameworkspace
-                hintutil.trigger("commitcloud-switch")
             else:
                 workspacename = workspace.defaultworkspace(ui)
 
@@ -348,6 +351,11 @@ def cloudrejoin(ui, repo, **opts):
         educationpage = ui.config("commitcloud", "education_page")
         if educationpage:
             ui.status(_("learn more about Commit Cloud at %s\n") % educationpage)
+
+    else:
+        # provide a hint if several alternatives have been available
+        if len(active) > 1:
+            hintutil.trigger("commitcloud-switch", ui, active)
 
 
 @subcmd("leave|disconnect")
@@ -855,7 +863,9 @@ def cloudlistworspaces(ui, repo, **opts):
         )
         return
 
-    ui.write(_("workspaces:\n"))
+    ui.write(
+        ui.label(_("the following commitcloud workspaces are available:\n"), "bold")
+    )
 
     for winfo in active if activeonly else active + archived:
         fullname, shortname = (winfo.name, winfo.name[len(workspacenameprefix) :])

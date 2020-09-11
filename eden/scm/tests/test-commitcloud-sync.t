@@ -1260,6 +1260,12 @@ Reconnect to the default repository.  This should work and pull in the commits.
   added 2 changesets with 3 changes to 3 files
   commitcloud: commits synchronized
   finished in * (glob)
+  hint[commitcloud-switch]: the following commitcloud workspaces (backups) are available for this repo:
+  user/test/feature
+  user/test/default
+  run `hg cloud list` inside the repo to see all your workspaces,
+  find the one the repo is connected to and learn how to switch between them
+  hint[hint-ack]: use 'hg hint --ack commitcloud-switch' to silence these hints
 
   $ hg trglog
   o  af621240884f 'stack 1 second'
@@ -1296,6 +1302,12 @@ This should also reconnect.
   commitcloud: synchronizing 'server' with 'user/test/default'
   commitcloud: commits synchronized
   finished in * (glob)
+  hint[commitcloud-switch]: the following commitcloud workspaces (backups) are available for this repo:
+  user/test/feature
+  user/test/default
+  run `hg cloud list` inside the repo to see all your workspaces,
+  find the one the repo is connected to and learn how to switch between them
+  hint[hint-ack]: use 'hg hint --ack commitcloud-switch' to silence these hints
 
 But not if already connected.
   $ hg pull --config commitcloud.automigrate=true
@@ -1334,9 +1346,12 @@ Host-specific workspace now exists, so it should be chosen as the one to connect
   commitcloud: synchronizing 'server' with 'user/test/testhost'
   commitcloud: commits synchronized
   finished in * (glob)
-  hint[commitcloud-switch]: if you would like to switch to the default workspace
-  run `hg cloud switch -w default` inside the repo
-  run `hg cloud list` to see all your workspaces and learn how to switch between them
+  hint[commitcloud-switch]: the following commitcloud workspaces (backups) are available for this repo:
+  user/test/feature
+  user/test/default
+  user/test/testhost
+  run `hg cloud list` inside the repo to see all your workspaces,
+  find the one the repo is connected to and learn how to switch between them
   hint[hint-ack]: use 'hg hint --ack commitcloud-switch' to silence these hints
 
   $ hg cloud join --switch -w default
