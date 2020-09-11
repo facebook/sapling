@@ -58,6 +58,7 @@ use mercurial_types::{
 };
 use metaconfig_types::{RepoClientKnobs, RepoReadOnly};
 use mononoke_repo::{MononokeRepo, SqlStreamingCloneConfig};
+use mononoke_types::hash::GitSha1;
 use rand::{self, Rng};
 use regex::Regex;
 use remotefilelog::{
@@ -1135,22 +1136,9 @@ impl HgCommands for RepoClient {
 
     // @wireprotocommand('lookup', 'key')
     fn lookup(&self, key: String) -> HgCommandRes<BytesOld> {
-        fn generate_resp_buf(success: bool, message: &[u8]) -> BytesOld {
-            let mut buf = BytesMutOld::with_capacity(message.len() + 3);
-            if success {
-                buf.put(b'1');
-            } else {
-                buf.put(b'0');
-            }
-            buf.put(b' ');
-            buf.put(message);
-            buf.put(b'\n');
-            buf.freeze()
-        }
-
         // Generate positive response including HgChangesetId as hex.
         fn generate_changeset_resp_buf(csid: HgChangesetId) -> HgCommandRes<BytesOld> {
-            Ok(generate_resp_buf(true, csid.to_hex().as_bytes()))
+            Ok(generate_lookup_resp_buf(true, csid.to_hex().as_bytes()))
                 .into_future()
                 .boxify()
         }
@@ -1182,7 +1170,7 @@ impl HgCommands for RepoClient {
                         .collect::<Vec<_>>();
                     infos.push(b"ambiguous identifier\nsuggestions are:\n".to_vec());
                     infos.reverse();
-                    generate_resp_buf(false, &infos.join(&[b'\n'][..]))
+                    generate_lookup_resp_buf(false, &infos.join(&[b'\n'][..]))
                 })
                 .boxify()
         }
@@ -1190,6 +1178,7 @@ impl HgCommands for RepoClient {
         // Controls how many suggestions to fetch in case of ambiguous outcome of prefix lookup.
         const MAX_NUMBER_OF_SUGGESTIONS_TO_FETCH: usize = 10;
 
+        let maybe_git_lookup = parse_git_lookup(&key);
         self.command_future(ops::LOOKUP, |ctx, command_logger| {
             let repo = self.repo.blobrepo().clone();
 
@@ -1222,6 +1211,7 @@ impl HgCommands for RepoClient {
             };
 
             // The lookup order:
+            // If there is a git_lookup match, return that.
             // If there is an exact commit match, return that even if the key is the prefix of the hash.
             // If there is a bookmark match, return that.
             // If there are suggestions, show them. This happens in case of ambiguous outcome of prefix lookup.
@@ -1229,69 +1219,81 @@ impl HgCommands for RepoClient {
 
             let bookmark = BookmarkName::new(&key).ok();
             let lookup_fut = node_fut
-                .and_then(move |resolved_cids| {
-                    use HgChangesetIdsResolvedFromPrefix::*;
+                .and_then({
+                    cloned!(ctx, repo);
+                    move |resolved_cids| {
+                        use HgChangesetIdsResolvedFromPrefix::*;
 
-                    // Describing the priority relative to bookmark presence for the key.
-                    enum LookupOutcome {
-                        HighPriority(HgCommandRes<BytesOld>),
-                        LowPriority(HgCommandRes<BytesOld>),
-                    }
-
-                    let outcome = match resolved_cids {
-                        Single(csid) => {
-                            LookupOutcome::HighPriority(generate_changeset_resp_buf(csid))
+                        // Describing the priority relative to bookmark presence for the key.
+                        enum LookupOutcome {
+                            HighPriority(HgCommandRes<BytesOld>),
+                            LowPriority(HgCommandRes<BytesOld>),
                         }
-                        Multiple(suggestion_cids) => {
-                            LookupOutcome::LowPriority(generate_suggestions_resp_buf(
-                                ctx.clone(),
-                                repo.clone(),
-                                suggestion_cids,
-                            ))
-                        }
-                        TooMany(_) => LookupOutcome::LowPriority(
-                            Ok(generate_resp_buf(
-                                false,
-                                format!("ambiguous identifier '{}'", key).as_bytes(),
-                            ))
-                            .into_future()
-                            .boxify(),
-                        ),
-                        NoMatch => LookupOutcome::LowPriority(
-                            Ok(generate_resp_buf(
-                                false,
-                                format!("{} not found", key).as_bytes(),
-                            ))
-                            .into_future()
-                            .boxify(),
-                        ),
-                    };
 
-                    match (outcome, bookmark) {
-                        (LookupOutcome::HighPriority(res), _) => res,
-                        (LookupOutcome::LowPriority(res), Some(bookmark)) => repo
-                            .get_bookmark(ctx.clone(), &bookmark)
-                            .and_then(move |maybe_csid| {
-                                if let Some(csid) = maybe_csid {
-                                    generate_changeset_resp_buf(csid)
-                                } else {
-                                    res
-                                }
-                            })
-                            .boxify(),
-                        (LookupOutcome::LowPriority(res), None) => res,
+                        let outcome = match resolved_cids {
+                            Single(csid) => {
+                                LookupOutcome::HighPriority(generate_changeset_resp_buf(csid))
+                            }
+                            Multiple(suggestion_cids) => {
+                                LookupOutcome::LowPriority(generate_suggestions_resp_buf(
+                                    ctx.clone(),
+                                    repo.clone(),
+                                    suggestion_cids,
+                                ))
+                            }
+                            TooMany(_) => LookupOutcome::LowPriority(
+                                Ok(generate_lookup_resp_buf(
+                                    false,
+                                    format!("ambiguous identifier '{}'", key).as_bytes(),
+                                ))
+                                .into_future()
+                                .boxify(),
+                            ),
+                            NoMatch => LookupOutcome::LowPriority(
+                                Ok(generate_lookup_resp_buf(
+                                    false,
+                                    format!("{} not found", key).as_bytes(),
+                                ))
+                                .into_future()
+                                .boxify(),
+                            ),
+                        };
+
+                        match (outcome, bookmark) {
+                            (LookupOutcome::HighPriority(res), _) => res,
+                            (LookupOutcome::LowPriority(res), Some(bookmark)) => repo
+                                .get_bookmark(ctx.clone(), &bookmark)
+                                .and_then(move |maybe_csid| {
+                                    if let Some(csid) = maybe_csid {
+                                        generate_changeset_resp_buf(csid)
+                                    } else {
+                                        res
+                                    }
+                                })
+                                .boxify(),
+                            (LookupOutcome::LowPriority(res), None) => res,
+                        }
                     }
                 })
                 .boxify();
 
-            lookup_fut
-                .timeout(*TIMEOUT)
-                .map_err(process_timeout_error)
-                .traced(self.session.trace(), ops::LOOKUP, trace_args!())
-                .timed(move |stats, _| {
-                    command_logger.without_wireproto().finalize_command(&stats);
-                    Ok(())
-                })
+            async move {
+                if let Some(git_lookup) = maybe_git_lookup {
+                    if let Some(res) = git_lookup.lookup(&ctx, &repo).await? {
+                        return Ok(res);
+                    }
+                }
+                lookup_fut.compat().await
+            }
+            .boxed()
+            .compat()
+            .timeout(*TIMEOUT)
+            .map_err(process_timeout_error)
+            .traced(self.session.trace(), ops::LOOKUP, trace_args!())
+            .timed(move |stats, _| {
+                command_logger.without_wireproto().finalize_command(&stats);
+                Ok(())
+            })
         })
     }
 
@@ -2409,6 +2411,96 @@ fn with_command_monitor<T>(ctx: CoreContext, t: T) -> Monitor<T, Sender<()>> {
     Monitor::new(t, sender)
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum GitLookup {
+    GitToHg(GitSha1),
+    HgToGit(HgChangesetId),
+}
+
+impl GitLookup {
+    pub async fn lookup(
+        &self,
+        ctx: &CoreContext,
+        repo: &BlobRepo,
+    ) -> Result<Option<BytesOld>, Error> {
+        use GitLookup::*;
+        match self {
+            GitToHg(git_sha1) => {
+                let bonsai_git_mapping = repo.bonsai_git_mapping();
+
+                let maybe_bonsai = bonsai_git_mapping
+                    .get_bonsai_from_git_sha1(ctx, *git_sha1)
+                    .await?;
+
+                match maybe_bonsai {
+                    Some(bcs_id) => {
+                        let hg_cs_id = repo
+                            .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
+                            .compat()
+                            .await?;
+                        Ok(Some(generate_lookup_resp_buf(
+                            true,
+                            hg_cs_id.to_hex().as_bytes(),
+                        )))
+                    }
+                    None => Ok(None),
+                }
+            }
+            HgToGit(hg_changeset_id) => {
+                let maybe_bcs_id = repo
+                    .get_bonsai_from_hg(ctx.clone(), *hg_changeset_id)
+                    .compat()
+                    .await?;
+                let bonsai_git_mapping = repo.bonsai_git_mapping();
+
+                let bcs_id = match maybe_bcs_id {
+                    Some(bcs_id) => bcs_id,
+                    None => {
+                        return Ok(None);
+                    }
+                };
+
+                let maybe_git_sha1 = bonsai_git_mapping
+                    .get_git_sha1_from_bonsai(ctx, bcs_id)
+                    .await?;
+                match maybe_git_sha1 {
+                    Some(git_sha1) => Ok(Some(generate_lookup_resp_buf(
+                        true,
+                        git_sha1.to_hex().as_bytes(),
+                    ))),
+                    None => Ok(None),
+                }
+            }
+        }
+    }
+}
+
+fn parse_git_lookup(s: &str) -> Option<GitLookup> {
+    let hg_prefix = "_gitlookup_hg_";
+    let git_prefix = "_gitlookup_git_";
+
+    if let Some(hg_hash) = s.strip_prefix(hg_prefix) {
+        Some(GitLookup::HgToGit(HgChangesetId::from_str(hg_hash).ok()?))
+    } else if let Some(git_hash) = s.strip_prefix(git_prefix) {
+        Some(GitLookup::GitToHg(GitSha1::from_str(git_hash).ok()?))
+    } else {
+        None
+    }
+}
+
+fn generate_lookup_resp_buf(success: bool, message: &[u8]) -> BytesOld {
+    let mut buf = BytesMutOld::with_capacity(message.len() + 3);
+    if success {
+        buf.put(b'1');
+    } else {
+        buf.put(b'0');
+    }
+    buf.put(b' ');
+    buf.put(message);
+    buf.put(b'\n');
+    buf.freeze()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2418,5 +2510,27 @@ mod tests {
         assert_eq!(&debug_format_directories(vec![&"foo"]), "foo,");
         assert_eq!(&debug_format_directories(vec![&"foo,bar"]), "foo:obar,");
         assert_eq!(&debug_format_directories(vec![&"foo", &"bar"]), "foo,bar,");
+    }
+
+    #[test]
+    fn test_parse_git_lookup() -> Result<(), Error> {
+        assert!(parse_git_lookup("ololo").is_none());
+        assert!(parse_git_lookup("_gitlookup_hg_badhash").is_none());
+        assert!(parse_git_lookup("_gitlookup_git_badhash").is_none());
+        assert_eq!(
+            parse_git_lookup("_gitlookup_hg_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+            Some(GitLookup::HgToGit(HgChangesetId::from_str(
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            )?))
+        );
+
+        assert_eq!(
+            parse_git_lookup("_gitlookup_git_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+            Some(GitLookup::GitToHg(GitSha1::from_str(
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            )?))
+        );
+
+        Ok(())
     }
 }

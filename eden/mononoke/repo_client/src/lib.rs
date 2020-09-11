@@ -7,6 +7,7 @@
 
 #![deny(warnings)]
 #![feature(async_closure)]
+#![feature(str_strip)]
 
 //! State for a single source control Repo
 
