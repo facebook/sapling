@@ -7,15 +7,15 @@
 
 use anyhow::Error;
 use futures::{future::ok, Future};
-use sshrelay::SshEnvVars;
+use sshrelay::Metadata;
 
 use crate::core::CoreContext;
 
-pub fn is_quicksand(_ssh_env_vars: &SshEnvVars) -> bool {
+pub fn is_quicksand(_ssh_env_vars: &Metadata) -> bool {
     false
 }
 
-pub fn is_external_sync(_ssh_env_vars: &SshEnvVars) -> bool {
+pub fn is_external_sync(_ssh_env_vars: &Metadata) -> bool {
     false
 }
 

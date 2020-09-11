@@ -294,18 +294,6 @@ async fn try_convert_preamble_to_metadata(
         None => addr,
     };
 
-    // SSH Connections are either authentication via ssh certificate principals or
-    // via some form of keyboard-interactive. In the case of certificates we should always
-    // rely on these. If they are not present, we should fallback to use the unix username
-    // as the primary principal.
-    let ssh_identities = match vars.ssh_cert_principals {
-        Some(ssh_identities) => ssh_identities,
-        None => preamble
-            .unix_name()
-            .ok_or_else(|| anyhow!("missing username and principals from preamble"))?
-            .to_string(),
-    };
-
     let priority = match Priority::extract_from_preamble(&preamble) {
         Ok(Some(p)) => {
             info!(&conn_log, "Using priority: {}", p; "remote" => "true");
@@ -318,9 +306,39 @@ async fn try_convert_preamble_to_metadata(
         }
     };
 
+    let identity = {
+        #[cfg(fbcode_build)]
+        {
+            // SSH Connections are either authentication via ssh certificate principals or
+            // via some form of keyboard-interactive. In the case of certificates we should always
+            // rely on these. If they are not present, we should fallback to use the unix username
+            // as the primary principal.
+            let ssh_identities = match vars.ssh_cert_principals {
+                Some(ssh_identities) => ssh_identities,
+                None => preamble
+                    .unix_name()
+                    .ok_or_else(|| anyhow!("missing username and principals from preamble"))?
+                    .to_string(),
+            };
+
+            MononokeIdentity::try_from_ssh_encoded(&ssh_identities)?
+        }
+        #[cfg(not(fbcode_build))]
+        {
+            use maplit::btreeset;
+            btreeset!{ MononokeIdentity::new(
+                "USER",
+               preamble
+                    .unix_name()
+                    .ok_or_else(|| anyhow!("missing username from preamble"))?
+                    .to_string(),
+            )?}
+        }
+    };
+
     Ok(Metadata::new(
         preamble.misc.get("session_uuid"),
-        MononokeIdentity::try_from_ssh_encoded(&ssh_identities)?,
+        identity,
         priority,
         preamble
             .misc
