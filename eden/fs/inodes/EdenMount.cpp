@@ -1205,19 +1205,24 @@ folly::Future<TakeoverData::MountInfo> EdenMount::getChannelCompletionFuture() {
 folly::Future<EdenMount::channelType> EdenMount::channelMount(bool readOnly) {
   return folly::makeFutureWith([&] { return &beginMount(); })
       .thenValue([this, readOnly](folly::Promise<folly::Unit>* mountPromise) {
+        AbsolutePath mountPath = getPath();
 #ifdef _WIN32
         return folly::makeFutureWith(
-                   [readOnly, this]() -> folly::Future<FsChannel*> {
-                     auto channel = new PrjfsChannel(this);
+                   [this,
+                    mountPath = std::move(mountPath),
+                    readOnly]() -> folly::Future<FsChannel*> {
+                     auto channel = new PrjfsChannel(
+                         mountPath,
+                         getDispatcher(),
+                         serverState_->getProcessNameCache());
                      channel->start(
                          readOnly,
-                         getDispatcher(),
                          serverState_->getReloadableConfig()
                              .getEdenConfig()
                              ->prjfsUseNegativePathCaching.getValue());
                      return channel;
                    })
-            .thenTry([mountPromise, this](Try<FsChannel*>&& channel) {
+            .thenTry([mountPromise](Try<FsChannel*>&& channel) {
               if (channel.hasException()) {
                 mountPromise->setException(channel.exception());
                 return makeFuture<FsChannel*>(channel.exception());
@@ -1230,7 +1235,6 @@ folly::Future<EdenMount::channelType> EdenMount::channelMount(bool readOnly) {
               return makeFuture(channel);
             });
 #else
-        AbsolutePath mountPath = getPath();
         return serverState_->getPrivHelper()
             ->fuseMount(mountPath.stringPiece(), readOnly)
             .thenTry(

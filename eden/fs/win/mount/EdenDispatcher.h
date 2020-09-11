@@ -18,8 +18,6 @@
 #include "eden/fs/win/mount/Enumerator.h"
 #include "eden/fs/win/utils/Guid.h"
 
-constexpr uint32_t kDispatcherCode = 0x1155aaff;
-
 namespace facebook {
 namespace eden {
 class EdenMount;
@@ -66,15 +64,6 @@ class EdenDispatcher {
       PCWSTR destinationFileName,
       PRJ_NOTIFICATION_PARAMETERS& notificationParameters) noexcept;
 
-  //
-  // Pointer to the dispatcher will be returned from the underlying file system.
-  // isValidDispatcher() can be used to verify that it is a correct pointer.
-  //
-
-  bool isValidDispatcher() const {
-    return (verificationCode_ == kDispatcherCode);
-  }
-
  private:
   // The EdenMount that owns this EdenDispatcher.
   EdenMount* const mount_;
@@ -83,8 +72,6 @@ class EdenDispatcher {
   folly::Synchronized<folly::F14FastMap<Guid, Enumerator>> enumSessions_;
 
   const std::string dotEdenConfig_;
-
-  const uint32_t verificationCode_ = kDispatcherCode;
 };
 
 } // namespace eden

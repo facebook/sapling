@@ -17,10 +17,10 @@ using folly::sformat;
 
 namespace {
 
-using facebook::eden::EdenDispatcher;
 using facebook::eden::exceptionToHResult;
 using facebook::eden::Guid;
 using facebook::eden::InodeMetadata;
+using facebook::eden::PrjfsChannel;
 using facebook::eden::RelativePath;
 using facebook::eden::win32ErrorToString;
 
@@ -33,16 +33,14 @@ using facebook::eden::win32ErrorToString;
     }                                                                      \
   } while (false)
 
-static EdenDispatcher* getDispatcher(
-    const PRJ_CALLBACK_DATA* callbackData) noexcept {
+PrjfsChannel* getChannel(const PRJ_CALLBACK_DATA* callbackData) noexcept {
   DCHECK(callbackData);
-  auto dispatcher = static_cast<EdenDispatcher*>(callbackData->InstanceContext);
-  DCHECK(dispatcher);
-  DCHECK(dispatcher->isValidDispatcher());
-  return dispatcher;
+  auto channel = static_cast<PrjfsChannel*>(callbackData->InstanceContext);
+  DCHECK(channel);
+  return channel;
 }
 
-static HRESULT startEnumeration(
+HRESULT startEnumeration(
     const PRJ_CALLBACK_DATA* callbackData,
     const GUID* enumerationId) noexcept {
   BAIL_ON_RECURSIVE_CALL(callbackData);
@@ -50,7 +48,8 @@ static HRESULT startEnumeration(
   try {
     auto path = RelativePath(callbackData->FilePathName);
     auto guid = Guid(*enumerationId);
-    return getDispatcher(callbackData)
+    return getChannel(callbackData)
+        ->getDispatcher()
         ->opendir(std::move(path), std::move(guid))
         .thenValue([](auto&&) { return S_OK; })
         .thenError(
@@ -64,20 +63,23 @@ static HRESULT startEnumeration(
   }
 }
 
-static HRESULT endEnumeration(
+HRESULT endEnumeration(
     const PRJ_CALLBACK_DATA* callbackData,
     const GUID* enumerationId) noexcept {
   BAIL_ON_RECURSIVE_CALL(callbackData);
-  return getDispatcher(callbackData)->endEnumeration(*enumerationId);
+  return getChannel(callbackData)
+      ->getDispatcher()
+      ->endEnumeration(*enumerationId);
 }
 
-static HRESULT getEnumerationData(
+HRESULT getEnumerationData(
     const PRJ_CALLBACK_DATA* callbackData,
     const GUID* enumerationId,
     PCWSTR searchExpression,
     PRJ_DIR_ENTRY_BUFFER_HANDLE dirEntryBufferHandle) noexcept {
   BAIL_ON_RECURSIVE_CALL(callbackData);
-  return getDispatcher(callbackData)
+  return getChannel(callbackData)
+      ->getDispatcher()
       ->getEnumerationData(
           *callbackData,
           *enumerationId,
@@ -85,13 +87,13 @@ static HRESULT getEnumerationData(
           dirEntryBufferHandle);
 }
 
-static HRESULT getPlaceholderInfo(
-    const PRJ_CALLBACK_DATA* callbackData) noexcept {
+HRESULT getPlaceholderInfo(const PRJ_CALLBACK_DATA* callbackData) noexcept {
   BAIL_ON_RECURSIVE_CALL(callbackData);
 
   try {
     auto path = RelativePath(callbackData->FilePathName);
-    return getDispatcher(callbackData)
+    return getChannel(callbackData)
+        ->getDispatcher()
         ->lookup(std::move(path))
         .thenValue([context = callbackData->NamespaceVirtualizationContext](
                        const std::optional<InodeMetadata>&& optMetadata) {
@@ -131,12 +133,13 @@ static HRESULT getPlaceholderInfo(
   }
 }
 
-static HRESULT queryFileName(const PRJ_CALLBACK_DATA* callbackData) noexcept {
+HRESULT queryFileName(const PRJ_CALLBACK_DATA* callbackData) noexcept {
   BAIL_ON_RECURSIVE_CALL(callbackData);
 
   try {
     auto path = RelativePath(callbackData->FilePathName);
-    return getDispatcher(callbackData)
+    return getChannel(callbackData)
+        ->getDispatcher()
         ->access(std::move(path))
         .thenValue([](bool present) {
           if (present) {
@@ -154,23 +157,25 @@ static HRESULT queryFileName(const PRJ_CALLBACK_DATA* callbackData) noexcept {
   }
 }
 
-static HRESULT getFileData(
+HRESULT getFileData(
     const PRJ_CALLBACK_DATA* callbackData,
     UINT64 byteOffset,
     UINT32 length) noexcept {
   BAIL_ON_RECURSIVE_CALL(callbackData);
-  return getDispatcher(callbackData)
+  return getChannel(callbackData)
+      ->getDispatcher()
       ->getFileData(*callbackData, byteOffset, length);
 }
 
-static HRESULT notification(
+HRESULT notification(
     const PRJ_CALLBACK_DATA* callbackData,
     BOOLEAN isDirectory,
     PRJ_NOTIFICATION notificationType,
     PCWSTR destinationFileName,
     PRJ_NOTIFICATION_PARAMETERS* notificationParameters) noexcept {
   BAIL_ON_RECURSIVE_CALL(callbackData);
-  return getDispatcher(callbackData)
+  return getChannel(callbackData)
+      ->getDispatcher()
       ->notification(
           *callbackData,
           isDirectory,
@@ -183,8 +188,14 @@ static HRESULT notification(
 namespace facebook {
 namespace eden {
 
-PrjfsChannel::PrjfsChannel(EdenMount* mount)
-    : mountPath_(mount->getPath()), mountId_{Guid::generate()} {}
+PrjfsChannel::PrjfsChannel(
+    AbsolutePathPiece mountPath,
+    EdenDispatcher* const dispatcher,
+    std::shared_ptr<ProcessNameCache> processNameCache)
+    : mountPath_(mountPath),
+      dispatcher_(dispatcher),
+      mountId_(Guid::generate()),
+      processAccessLog_(std::move(processNameCache)) {}
 
 PrjfsChannel::~PrjfsChannel() {
   if (isRunning_) {
@@ -192,10 +203,7 @@ PrjfsChannel::~PrjfsChannel() {
   }
 }
 
-void PrjfsChannel::start(
-    bool readOnly,
-    EdenDispatcher* dispatcher,
-    bool useNegativePathCaching) {
+void PrjfsChannel::start(bool readOnly, bool useNegativePathCaching) {
   if (readOnly) {
     NOT_IMPLEMENTED();
   }
@@ -229,7 +237,6 @@ void PrjfsChannel::start(
   }
 
   XLOG(INFO) << "Starting PrjfsChannel for: " << mountPath_;
-  DCHECK(dispatcher->isValidDispatcher());
 
   auto winPath = mountPath_.wide();
 
@@ -243,7 +250,7 @@ void PrjfsChannel::start(
   }
 
   result = PrjStartVirtualizing(
-      winPath.c_str(), &callbacks, dispatcher, &startOpts, &mountChannel_);
+      winPath.c_str(), &callbacks, this, &startOpts, &mountChannel_);
 
   if (FAILED(result)) {
     throw makeHResultErrorExplicit(result, "Failed to start the mount point");

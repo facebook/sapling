@@ -11,6 +11,7 @@
 
 #include <ProjectedFSLib.h>
 #include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/ProcessAccessLog.h"
 #include "eden/fs/win/mount/FsChannel.h"
 #include "eden/fs/win/utils/Guid.h"
 
@@ -26,10 +27,13 @@ class PrjfsChannel : public FsChannel {
 
   explicit PrjfsChannel() = delete;
 
-  PrjfsChannel(EdenMount* mount);
+  PrjfsChannel(
+      AbsolutePathPiece mountPath,
+      EdenDispatcher* const dispatcher,
+      std::shared_ptr<ProcessNameCache> processNameCache);
   ~PrjfsChannel();
-  void
-  start(bool readOnly, EdenDispatcher* dispatcher, bool useNegativePathCaching);
+
+  void start(bool readOnly, bool useNegativePathCaching);
   void stop();
 
   folly::SemiFuture<FsChannel::StopData> getStopFuture() override;
@@ -44,17 +48,28 @@ class PrjfsChannel : public FsChannel {
 
   void flushNegativePathCache() override;
 
+  EdenDispatcher* getDispatcher() {
+    return dispatcher_;
+  }
+
+  ProcessAccessLog& getProcessAccessLog() {
+    return processAccessLog_;
+  }
+
  private:
   //
   // Channel to talk to projectedFS.
   //
   PRJ_NAMESPACE_VIRTUALIZATION_CONTEXT mountChannel_{nullptr};
 
-  const AbsolutePath& mountPath_;
+  const AbsolutePath mountPath_;
+  EdenDispatcher* const dispatcher_{nullptr};
   Guid mountId_;
   bool isRunning_{false};
   bool useNegativePathCaching_{true};
   folly::Promise<FsChannel::StopData> stopPromise_;
+
+  ProcessAccessLog processAccessLog_;
 };
 
 } // namespace eden

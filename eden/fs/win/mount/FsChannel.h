@@ -21,10 +21,7 @@ class FsChannel {
 
   FsChannel(){};
   virtual ~FsChannel() = default;
-  virtual void start(
-      bool readOnly,
-      EdenDispatcher* dispatcher,
-      bool useNegativePathCaching) = 0;
+  virtual void start(bool readOnly, bool useNegativePathCaching) = 0;
   virtual void stop() = 0;
 
   virtual void removeCachedFile(RelativePathPiece path) = 0;
