@@ -12,6 +12,7 @@ use std::sync::Arc;
 
 use anyhow::Error;
 use async_trait::async_trait;
+use auto_impl::auto_impl;
 use futures_util::compat::Future01CompatExt;
 use maplit::{hashmap, hashset};
 
@@ -174,6 +175,7 @@ pub trait ReachabilityIndex {
 
 /// Trait for any method supporting computing an "LCA hint"
 #[async_trait]
+#[auto_impl(Arc)]
 pub trait LeastCommonAncestorsHint: Send + Sync {
     /// Return a Future for an advanced frontier of ancestors from a set of nodes.
     /// Given a set "nodes", and a maximum generation "gen",
