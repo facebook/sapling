@@ -169,6 +169,16 @@ EdenConfig::EdenConfig(
       userHomePath + kDefaultUserIgnoreFile, ConfigSource::Default, true);
   systemIgnoreFile.setValue(
       systemConfigDir_ + kDefaultSystemIgnoreFile, ConfigSource::Default, true);
+
+  // I have observed Clang on macOS (Xcode 11.6.0) not zero-initialize
+  // padding in these members, even though they should be
+  // zero-initialized. Explicitly zero.  (Technically, none of this
+  // code relies on the padding bits of these stat() results being
+  // zeroed, but since we assert it elsewhere to catch bugs,
+  // explicitly zero here to be consistent. Another option would be to
+  // use std::optional.)
+  memset(&systemConfigFileStat_, 0, sizeof(systemConfigFileStat_));
+  memset(&userConfigFileStat_, 0, sizeof(userConfigFileStat_));
 }
 
 EdenConfig::EdenConfig(const EdenConfig& source) {
@@ -268,7 +278,7 @@ FileChangeReason hasConfigFileChanged(
                  << folly::errnoStr(errno);
     }
     // We use all 0's to check if a file is created/deleted
-    currentStat = {};
+    memset(&currentStat, 0, sizeof(currentStat));
   }
 
   return hasFileChanged(currentStat, *oldStat);

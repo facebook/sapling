@@ -9,8 +9,19 @@
 #include <folly/FBString.h>
 #include <string>
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
+
+/**
+ * Asserts the specified memory consists entirely of zeroes, and aborts the
+ * process if not.
+ */
+void assertZeroBits(const void* memory, size_t size);
+
+template <typename T>
+void assertZeroBits(const T& value) {
+  assertZeroBits(&value, sizeof(T));
+}
+
 template <typename StringType>
 bool isStringStorageEmbedded(const StringType& t) {
   const void* tbegin = &t;
@@ -27,5 +38,5 @@ size_t estimateIndirectMemoryUsage(const StringType& s) {
     return folly::goodMallocSize(s.capacity());
   }
 }
-} // namespace eden
-} // namespace facebook
+
+} // namespace facebook::eden

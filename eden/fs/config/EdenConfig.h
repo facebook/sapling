@@ -178,8 +178,8 @@ class EdenConfig : private ConfigSettingManager {
   AbsolutePath systemConfigPath_;
   AbsolutePath systemConfigDir_;
 
-  struct stat systemConfigFileStat_ = {};
-  struct stat userConfigFileStat_ = {};
+  struct stat systemConfigFileStat_ {};
+  struct stat userConfigFileStat_ {};
 
   /*
    * Settings follow. Their initialization registers themselves with the
