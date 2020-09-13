@@ -432,3 +432,22 @@ TEST_F(EdenConfigTest, variablesExpandInPathOptions) {
       getConfig().userIgnoreFile.getValue(),
       normalizeBestEffort("/var/user/42/myignore"));
 }
+
+TEST_F(EdenConfigTest, missing_config_files_never_change) {
+  auto rootTestDir = AbsolutePathPiece(rootTestDir_->path().string());
+  auto userConfigDir = rootTestDir + "user-home"_pc;
+  auto systemConfigDir = rootTestDir + "etc-eden"_pc;
+  auto userConfigPath = userConfigDir + ".edenrc"_pc;
+  auto systemConfigPath = systemConfigDir + "edenrc.toml"_pc;
+
+  folly::fs::create_directory(folly::fs::path(systemConfigDir.stringPiece()));
+
+  EdenConfig config{"username",
+                    42,
+                    userConfigDir,
+                    userConfigPath,
+                    systemConfigDir,
+                    systemConfigPath};
+  config.loadUserConfig();
+  EXPECT_EQ(FileChangeReason::NONE, config.hasUserConfigFileChanged().reason);
+}

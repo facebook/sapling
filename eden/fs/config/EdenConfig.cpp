@@ -43,10 +43,10 @@ void toAppend(facebook::eden::EdenConfig& ec, String* result) {
 void getConfigStat(
     facebook::eden::AbsolutePathPiece configPath,
     int configFd,
-    struct stat* configStat) {
+    struct stat& configStat) {
   int statRslt{-1};
   if (configFd >= 0) {
-    statRslt = fstat(configFd, configStat);
+    statRslt = fstat(configFd, &configStat);
     // Report failure that is not due to ENOENT
     if (statRslt != 0) {
       XLOG(WARN) << "error accessing config file " << configPath << ": "
@@ -56,7 +56,7 @@ void getConfigStat(
 
   // We use all 0's to check if a file is created/deleted
   if (statRslt != 0) {
-    configStat = {};
+    memset(&configStat, 0, sizeof(configStat));
   }
 }
 } // namespace
@@ -210,6 +210,9 @@ void EdenConfig::doCopy(const EdenConfig& source) {
   systemConfigPath_ = source.systemConfigPath_;
   systemConfigDir_ = source.systemConfigDir_;
 
+  systemConfigFileStat_ = source.systemConfigFileStat_;
+  userConfigFileStat_ = source.userConfigFileStat_;
+
   // Copy each ConfigSettings from source.
   for (const auto& sectionEntry : source.configMap_) {
     auto& section = sectionEntry.first;
@@ -263,7 +266,7 @@ void EdenConfig::setSystemConfigPath(AbsolutePath systemConfigPath) {
 namespace {
 FileChangeReason hasConfigFileChanged(
     AbsolutePath configFileName,
-    const struct stat* oldStat) {
+    const struct stat& oldStat) {
   struct stat currentStat;
 
   // We are using stat to check for file deltas. Since we don't open file,
@@ -281,16 +284,16 @@ FileChangeReason hasConfigFileChanged(
     memset(&currentStat, 0, sizeof(currentStat));
   }
 
-  return hasFileChanged(currentStat, *oldStat);
+  return hasFileChanged(currentStat, oldStat);
 }
 } // namespace
 
 FileChangeReason EdenConfig::hasUserConfigFileChanged() const {
-  return hasConfigFileChanged(getUserConfigPath(), &userConfigFileStat_);
+  return hasConfigFileChanged(getUserConfigPath(), userConfigFileStat_);
 }
 
 FileChangeReason EdenConfig::hasSystemConfigFileChanged() const {
-  return hasConfigFileChanged(getSystemConfigPath(), &systemConfigFileStat_);
+  return hasConfigFileChanged(getSystemConfigPath(), systemConfigFileStat_);
 }
 
 const AbsolutePath& EdenConfig::getUserConfigPath() const {
@@ -337,7 +340,7 @@ void EdenConfig::loadConfig(
                  << folly::errnoStr(errno);
     }
   }
-  getConfigStat(path, configFd, &configStat);
+  getConfigStat(path, configFd, configStat);
   memcpy(configFileStat, &configStat, sizeof(struct stat));
   if (configFd >= 0) {
     parseAndApplyConfigFile(configFd, path, configSource);
