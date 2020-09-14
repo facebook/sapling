@@ -7,6 +7,7 @@
 
 use std::{
     collections::HashSet,
+    fs,
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -20,6 +21,7 @@ use configparser::{
     config::ConfigSet,
     hg::{ByteCount, ConfigSetHgExt},
 };
+use hgtime::HgTime;
 use types::{Key, RepoPathBuf};
 
 use crate::{
@@ -38,8 +40,8 @@ use crate::{
     types::StoreKey,
     uniondatastore::{UnionContentDataStore, UnionHgIdDataStore},
     util::{
-        get_cache_packs_path, get_cache_path, get_indexedlogdatastore_path, get_local_path,
-        get_packs_path,
+        check_run_once, get_cache_packs_path, get_cache_path, get_indexedlogdatastore_path,
+        get_local_path, get_packs_path, RUN_ONCE_FILENAME,
     },
 };
 
@@ -256,6 +258,9 @@ impl<'a> ContentStoreBuilder<'a> {
     pub fn build(self) -> Result<ContentStore> {
         let local_path = get_local_path(&self.local_path, &self.suffix)?;
         let cache_path = get_cache_path(self.config, &self.suffix)?;
+        check_cache_buster(&self.config, &cache_path);
+
+        // Do this after the cache busting, since this will recreate the necessary directories.
         let cache_packs_path = get_cache_packs_path(self.config, &self.suffix)?;
         let max_pending_bytes = self
             .config
@@ -460,11 +465,53 @@ impl<'a> ContentStoreBuilder<'a> {
     }
 }
 
+/// Reads the configs and deletes the hgcache if a hgcache-purge.$KEY=$DATE value hasn't already
+/// been processed.
+fn check_cache_buster(config: &ConfigSet, store_path: &Path) {
+    for key in config.keys("hgcache-purge").into_iter() {
+        if let Some(cutoff) = config
+            .get("hgcache-purge", &key)
+            .map(|c| HgTime::parse(&c))
+            .flatten()
+        {
+            if check_run_once(store_path, &key, cutoff) {
+                let _ = delete_hgcache(store_path);
+                break;
+            }
+        }
+    }
+}
+
+/// Recursively deletes the contents of the path, excluding the run-once marker file.
+/// Ignores errors on individual files or directories.
+fn delete_hgcache(store_path: &Path) -> Result<()> {
+    for file in fs::read_dir(store_path)? {
+        let _ = (|| -> Result<()> {
+            let file = file?;
+            if file.file_name() == RUN_ONCE_FILENAME {
+                return Ok(());
+            }
+
+            let path = file.path();
+            let file_type = file.file_type()?;
+            if file_type.is_dir() {
+                fs::remove_dir_all(path)?;
+            } else if file_type.is_file() || file_type.is_symlink() {
+                fs::remove_file(path)?;
+            }
+            Ok(())
+        })();
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     use std::collections::HashMap;
+    use std::ffi::OsString;
+    use std::ops::{Add, Sub};
 
     use bytes::Bytes;
     use tempfile::TempDir;
@@ -873,6 +920,90 @@ mod tests {
         let store = Arc::new(ContentStore::new(&localdir, &config)?);
         let stored = store.get(StoreKey::hgid(k1))?;
         assert_eq!(stored, StoreResult::Found(delta.data.as_ref().to_vec()));
+        Ok(())
+    }
+
+    #[test]
+    fn test_purge_cache() -> Result<()> {
+        let cachedir = TempDir::new()?;
+        let localdir = TempDir::new()?;
+        let mut config = make_config(&cachedir);
+
+        let k = key("a", "2");
+        let store_key = StoreKey::hgid(k.clone());
+        let data = Bytes::from(&[1, 2, 3, 4, 5][..]);
+
+        let mut map = HashMap::new();
+        map.insert(k.clone(), (data.clone(), None));
+        let mut remotestore = FakeHgIdRemoteStore::new();
+        remotestore.data(map);
+        let remotestore = Arc::new(remotestore);
+
+        let create_store = |config: &ConfigSet| -> ContentStore {
+            ContentStoreBuilder::new(&config)
+                .local_path(&localdir)
+                .remotestore(remotestore.clone())
+                .build()
+                .unwrap()
+        };
+
+        // Populate the cache
+        let store = create_store(&mut config);
+        let stored = store.get(store_key.clone())?;
+        assert_eq!(stored, StoreResult::Found(data.as_ref().to_vec()));
+
+        // Drop the store so any temp files (for mutable packs) are deleted.
+        drop(store);
+
+        let get_subdirs = || -> Vec<OsString> {
+            fs::read_dir(cachedir.path().join("test/packs"))
+                .unwrap()
+                .map(|f| f.unwrap().file_name())
+                .collect::<Vec<_>>()
+        };
+
+        // Ensure pack files exist
+        assert!(!get_subdirs().is_empty());
+
+        // Set a purge that ended yesterday.
+        let yesterday = HgTime::now().unwrap().sub(86000);
+        config.set(
+            "hgcache-purge",
+            "marker",
+            yesterday.map(|t| t.to_utc().to_string()),
+            &Default::default(),
+        );
+
+        // Recreate the store, which should not activate the purge.
+        let store = create_store(&mut config);
+        drop(store);
+
+        assert!(!get_subdirs().is_empty());
+
+        // Set a purge that lasts until tomorrow.
+        let tomorrow = HgTime::now().unwrap().add(86000);
+        config.set(
+            "hgcache-purge",
+            "marker",
+            tomorrow.map(|t| t.to_utc().to_string()),
+            &Default::default(),
+        );
+
+        // Recreate the store, which will activate the purge.
+        let store = create_store(&mut config);
+        drop(store);
+
+        assert!(get_subdirs().is_empty());
+
+        // Populate the store again
+        let store = create_store(&mut config);
+        let _ = store.get(store_key.clone())?;
+
+        // Construct a store again and verify it doesn't purge the cache
+        let store = create_store(&mut config);
+        drop(store);
+
+        assert!(!get_subdirs().is_empty());
         Ok(())
     }
 

@@ -5,9 +5,12 @@
  * GNU General Public License version 2.
  */
 
+use std::fs::{read_to_string, OpenOptions};
+use std::io::{ErrorKind, Write};
 use std::path::{Path, PathBuf};
 
 use anyhow::Result;
+use hgtime::HgTime;
 use thiserror::Error;
 
 use configparser::{config::ConfigSet, hg::ConfigSetHgExt};
@@ -134,4 +137,32 @@ pub fn get_lfs_blobs_path(store_path: impl AsRef<Path>) -> Result<PathBuf> {
     create_shared_dir(&path)?;
 
     Ok(path)
+}
+
+pub const RUN_ONCE_FILENAME: &str = "runoncemarker";
+pub fn check_run_once(store_path: impl AsRef<Path>, key: &str, cutoff: HgTime) -> bool {
+    if HgTime::now() > Some(cutoff) {
+        return false;
+    }
+
+    let marker_path = store_path.as_ref().join(RUN_ONCE_FILENAME);
+    let line = format!("\n{}\n", key);
+    let marked = match read_to_string(&marker_path) {
+        Ok(contents) => contents.contains(&line),
+        // If the file doesn't exist, it hasn't run yet.
+        Err(e) if e.kind() == ErrorKind::NotFound => false,
+        // If it's some other IO error (permission denied, etc), just give up.
+        _ => return false,
+    };
+
+    if !marked {
+        let mut fp = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(marker_path)
+            .unwrap();
+        return write!(fp, "{}", line).is_ok();
+    }
+
+    return false;
 }
