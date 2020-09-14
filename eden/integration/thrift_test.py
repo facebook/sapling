@@ -177,42 +177,6 @@ class ThriftTest(testcase.EdenRepoTest):
     def get_counter(self, name: str) -> float:
         return self.get_counters()[name]
 
-    def test_invalidate_inode_cache(self) -> None:
-        filename = "bdir/file"
-        full_dirname = os.path.join(self.mount, "bdir/")
-
-        # Exercise eden a bit to make sure counters are ready
-        for _ in range(20):
-            fn = os.path.join(self.mount, "_tmp_")
-            with open(fn, "w") as f:
-                f.write("foo!\n")
-            os.unlink(fn)
-
-        reads = self.get_counter("fuse.read_us.count")
-        self.read_file(filename)
-        reads_1read = self.get_counter("fuse.read_us.count")
-        self.assertEqual(reads_1read, reads + 1)
-        self.read_file(filename)
-        reads_2read = self.get_counter("fuse.read_us.count")
-        self.assertEqual(reads_1read, reads_2read)
-        with self.get_thrift_client() as client:
-            client.invalidateKernelInodeCache(self.mount_path_bytes, b"bdir/file")
-        self.read_file(filename)
-        reads_3read = self.get_counter("fuse.read_us.count")
-        self.assertEqual(reads_2read + 1, reads_3read)
-
-        lookups = self.get_counter("fuse.lookup_us.count")
-        # -hl makes ls to do a lookup of the file to determine type
-        os.system("ls -hl " + full_dirname + " > /dev/null")
-        lookups_1ls = self.get_counter("fuse.lookup_us.count")
-        # equal, the file was lookup'ed above.
-        self.assertEqual(lookups, lookups_1ls)
-        with self.get_thrift_client() as client:
-            client.invalidateKernelInodeCache(self.mount_path_bytes, b"bdir")
-        os.system("ls -hl " + full_dirname + " > /dev/null")
-        lookups_2ls = self.get_counter("fuse.lookup_us.count")
-        self.assertEqual(lookups_1ls + 1, lookups_2ls)
-
     def test_diff_revisions(self) -> None:
         # Convert the commit hashes to binary for the thrift call
         with self.get_thrift_client() as client:

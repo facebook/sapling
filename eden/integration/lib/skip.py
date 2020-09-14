@@ -85,7 +85,6 @@ if sys.platform == "win32":
         "takeover_test.TakeoverTestHg": True,
         "thrift_test.ThriftTestHg": [
             "test_get_sha1_throws_for_symlink",
-            "test_invalidate_inode_cache",
             "test_pid_fetch_counts",
             "test_unload_free_inodes",
             "test_unload_thrift_api_accepts_single_dot_as_root",
