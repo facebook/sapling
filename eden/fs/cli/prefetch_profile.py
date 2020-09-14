@@ -46,11 +46,9 @@ class FinishProfileCmd(Subcmd):
                 else os.path.abspath("prefetch_profile.txt")
             )
             with open(output_path, "w") as f:
-                f.write("HgQueuedBackingStore:\n")
-                for path in files.fetchedFilePaths["HgQueuedBackingStore"]:
+                for path in sorted(files.fetchedFilePaths["HgQueuedBackingStore"]):
                     f.write(os.fsdecode(path))
                     f.write("\n")
-                f.write("\n")
         return 0
 
 
