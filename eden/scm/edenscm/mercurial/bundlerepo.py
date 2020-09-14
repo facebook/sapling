@@ -183,6 +183,8 @@ class bundlerevlog(revlog.revlog):
         )
         if validatehash:
             self.checkhash(text, node, rev=rev)
+        # pyre-fixme[8]: Attribute has type `None`; used as `Tuple[typing.Any,
+        #  typing.Any, typing.Any]`.
         self._cache = (node, rev, rawtext)
         return text
 

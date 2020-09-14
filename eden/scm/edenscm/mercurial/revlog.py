@@ -1552,6 +1552,8 @@ class revlog(object):
                 bins = bins[1:]
 
             rawtext = mdiff.patches(rawtext, bins)
+            # pyre-fixme[8]: Attribute has type `None`; used as `Tuple[typing.Any,
+            #  typing.Any, bytes]`.
             self._cache = (node, rev, rawtext)
 
         if flags is None:

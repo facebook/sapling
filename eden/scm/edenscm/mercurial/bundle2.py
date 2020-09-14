@@ -672,6 +672,8 @@ class bundle20(object):
         assert not any(n.lower() == "compression" for n, v in self._params)
         self.addparam("Compression", alg)
         self._compengine = util.compengines.forbundletype(alg)
+        # pyre-fixme[8]: Attribute has type `None`; used as
+        #  `Optional[Dict[typing.Any, typing.Any]]`.
         self._compopts = compopts
 
     @property
@@ -695,6 +697,7 @@ class bundle20(object):
 
         Parts contains the actual applicative payload."""
         assert part.id is None
+        # pyre-fixme[8]: Attribute has type `None`; used as `int`.
         part.id = len(self._parts)  # very cheap counter
         self._parts.append(part)
 
@@ -1001,6 +1004,7 @@ def processcompression(unbundler, param, value):
         raise error.BundleUnknownFeatureError(params=(param,), values=(value,))
     unbundler._compengine = util.compengines.forbundletype(value)
     if value is not None:
+        # pyre-fixme[8]: Attribute has type `None`; used as `bool`.
         unbundler._compressed = True
 
 
@@ -1126,6 +1130,7 @@ class bundlepart(object):
         # type: (Any) -> Iterable[bytes]
         if self._generated is not None:
             raise error.ProgrammingError("part can only be consumed once")
+        # pyre-fixme[8]: Attribute has type `None`; used as `bool`.
         self._generated = False
 
         if ui.debugflag:
@@ -1226,6 +1231,7 @@ class bundlepart(object):
         # end of payload
         outdebug(ui, "closing payload chunk")
         yield _pack(_fpayloadsize, 0)
+        # pyre-fixme[8]: Attribute has type `None`; used as `bool`.
         self._generated = True
 
     def _payloadchunks(self, ui):

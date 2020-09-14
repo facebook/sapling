@@ -31,6 +31,7 @@ class conversionrevision(
     def _classinit(cls):
         # type: () -> None
         """Initialize class members"""
+        # pyre-fixme[8]: Attribute has type `None`; used as `conversionrevision`.
         cls.NONE = conversionrevision(
             conversionrevision.VARIANT_NONE, nodemod.nullhex, "", ""
         )
