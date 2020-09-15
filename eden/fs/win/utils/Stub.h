@@ -24,10 +24,6 @@ class SerializedInodeMap {
   int stub;
 };
 
-struct SerializedFileHandleMap {
-  int stub;
-};
-
 using uid_t = int;
 using gid_t = int;
 
@@ -36,13 +32,6 @@ struct FuseChannelData {
   int fd;
   fuse_init_out connInfo;
 };
-
-static int unlink(const char* path) {
-  // Ideally unlink should be a part of folly portability layer but there is a
-  // deprecated definition of unlink in stdio which will make it ambiguous and
-  // break the build for other softwares using folly on Windows.
-  return _unlink(path);
-}
 
 #define NOT_IMPLEMENTED()                             \
   do {                                                \
