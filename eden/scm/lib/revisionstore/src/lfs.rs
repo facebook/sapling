@@ -10,7 +10,7 @@ use std::{
     collections::{HashMap, HashSet},
     convert::TryInto,
     fs::File,
-    io::{ErrorKind, Read, Write},
+    io::{Cursor, ErrorKind, Read, Write},
     iter, mem,
     ops::Range,
     path::{Path, PathBuf},
@@ -97,6 +97,7 @@ struct HttpLfsRemote {
     backoff_times: Vec<f32>,
     request_timeout: Duration,
     client: HttpClient,
+    accept_zstd: bool,
 }
 
 enum LfsRemoteInner {
@@ -906,6 +907,7 @@ impl LfsRemoteInner {
         backoff_times: Vec<f32>,
         request_timeout: Duration,
         add_extra: impl Fn(Request) -> Request,
+        accept_zstd: bool,
     ) -> Result<Option<Bytes>> {
         let mut backoff = backoff_times.into_iter();
         let mut rng = thread_rng();
@@ -915,6 +917,10 @@ impl LfsRemoteInner {
                 .header("Accept", "application/vnd.git-lfs+json")
                 .header("Content-Type", "application/vnd.git-lfs+json")
                 .header("User-Agent", &user_agent);
+
+            if accept_zstd {
+                req = req.header("Accept-Encoding", "zstd");
+            }
 
             if let Some(auth) = &auth {
                 if let (Some(cert), Some(key)) = (&auth.cert, &auth.key) {
@@ -942,6 +948,8 @@ impl LfsRemoteInner {
             };
 
             let status = reply.status;
+            let headers = reply.headers;
+
             if status.is_success() {
                 let mut body = reply.body;
                 let mut chunks: Vec<Vec<u8>> = vec![];
@@ -953,7 +961,23 @@ impl LfsRemoteInner {
                 for chunk in chunks.into_iter() {
                     result.extend_from_slice(&chunk);
                 }
-                return Ok(Some(result.freeze()));
+                let result = result.freeze();
+
+                let content_encoding = headers.get("Content-Encoding");
+
+                let result = match content_encoding
+                    .map(|c| std::str::from_utf8(c.as_bytes()))
+                    .transpose()
+                    .with_context(|| format!("Invalid Content-Encoding: {:?}", content_encoding))?
+                {
+                    Some("identity") | None => result,
+                    Some("zstd") => Bytes::from(zstd::stream::decode_all(Cursor::new(&result))?),
+                    Some(other) => {
+                        return Err(format_err!("Unsupported Content-Encoding: {}", other));
+                    }
+                };
+
+                return Ok(Some(result));
             }
 
             if status.is_server_error() {
@@ -1012,6 +1036,7 @@ impl LfsRemoteInner {
                 http.backoff_times.clone(),
                 http.request_timeout,
                 move |builder| builder.body(batch_json.clone()),
+                http.accept_zstd,
             )
             .await
         };
@@ -1036,6 +1061,7 @@ impl LfsRemoteInner {
         oid: Sha256,
         read_from_store: impl Fn(Sha256) -> Result<Option<Bytes>> + Send + 'static,
         write_to_store: impl Fn(Sha256, Bytes) -> Result<()> + Send + 'static,
+        accept_zstd: bool,
     ) -> Result<()> {
         let body = if op == Operation::Upload {
             spawn_blocking(move || read_from_store(oid)).await??
@@ -1070,6 +1096,7 @@ impl LfsRemoteInner {
                     builder.header("Content-Length", 0)
                 }
             },
+            accept_zstd,
         )
         .await?;
 
@@ -1132,6 +1159,7 @@ impl LfsRemoteInner {
                         oid,
                         read_from_store,
                         write_to_store,
+                        http.accept_zstd,
                     )
                 };
 
@@ -1226,6 +1254,8 @@ impl LfsRemote {
             let request_timeout =
                 Duration::from_millis(config.get_or("lfs", "requesttimeout", || 10_000)?);
 
+            let accept_zstd = config.get_or("lfs", "accept-zstd", || true)?;
+
             let client = http_client("lfs");
 
             Ok(Self {
@@ -1240,6 +1270,7 @@ impl LfsRemote {
                     backoff_times,
                     request_timeout,
                     client,
+                    accept_zstd,
                 }),
             })
         }

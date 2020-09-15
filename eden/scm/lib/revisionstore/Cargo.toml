@@ -48,6 +48,7 @@ tracing = "0.1"
 types = { path = "../types" }
 url = "2.1.0"
 util = { path = "../util" }
+zstd = { version = "0.5" }
 
 [dev-dependencies]
 maplit = "1.0"
