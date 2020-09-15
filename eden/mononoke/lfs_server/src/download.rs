@@ -18,8 +18,10 @@ use serde::Deserialize;
 
 use filestore::{self, Alias, FetchKey};
 use gotham_ext::{
+    content_encoding::ContentEncoding,
     error::HttpError,
-    response::{StreamBody, TryIntoResponse},
+    middleware::ScubaMiddlewareState,
+    response::{CompressedContentStream, ContentStream, StreamBody, TryIntoResponse},
 };
 use mononoke_types::{hash::Sha256, ContentId};
 use redactedblobstore::has_redaction_root_cause;
@@ -28,6 +30,7 @@ use stats::prelude::*;
 use crate::errors::ErrorKind;
 use crate::lfs_server_context::RepositoryRequestContext;
 use crate::middleware::LfsMethod;
+use crate::scuba::LfsScubaKey;
 
 define_stats! {
     prefix = "mononoke.lfs.download";
@@ -37,7 +40,6 @@ define_stats! {
         Duration::from_secs(5), Duration::from_secs(15), Duration::from_secs(60)
     ),
 }
-
 #[derive(Deserialize, StateData, StaticResponseExtender)]
 pub struct DownloadParamsContentId {
     repository: String,
@@ -53,6 +55,8 @@ pub struct DownloadParamsSha256 {
 async fn fetch_by_key(
     ctx: RepositoryRequestContext,
     key: FetchKey,
+    content_encoding: ContentEncoding,
+    scuba: &mut Option<&mut ScubaMiddlewareState>,
 ) -> Result<impl TryIntoResponse, HttpError> {
     // Query a stream out of the Filestore
     let fetched = filestore::fetch_with_size(ctx.repo.blobstore(), ctx.ctx.clone(), &key)
@@ -73,6 +77,15 @@ async fn fetch_by_key(
 
     let stream = stream.compat();
 
+    ScubaMiddlewareState::maybe_add(scuba, LfsScubaKey::DownloadContentSize, size);
+
+    let stream = match content_encoding {
+        ContentEncoding::Identity => ContentStream::new(stream)
+            .content_length(size)
+            .left_stream(),
+        ContentEncoding::Compressed(c) => CompressedContentStream::new(stream, c).right_stream(),
+    };
+
     let stream = if ctx.config.track_bytes_sent() {
         stream
             .inspect_ok(|bytes| STATS::size_bytes_sent.add_value(bytes.len() as i64))
@@ -81,7 +94,7 @@ async fn fetch_by_key(
         stream.right_stream()
     };
 
-    Ok(StreamBody::new(stream, mime::APPLICATION_OCTET_STREAM).content_length(size))
+    Ok(StreamBody::new(stream, mime::APPLICATION_OCTET_STREAM))
 }
 
 pub async fn download(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
@@ -95,11 +108,13 @@ pub async fn download(state: &mut State) -> Result<impl TryIntoResponse, HttpErr
         .map_err(HttpError::e400)?;
 
     let key = FetchKey::Canonical(content_id);
+    let content_encoding = ContentEncoding::from_state(&state);
 
     let ctx = RepositoryRequestContext::instantiate(state, repository.clone(), LfsMethod::Download)
         .await?;
 
-    fetch_by_key(ctx, key).await
+    let mut scuba = state.try_borrow_mut::<ScubaMiddlewareState>();
+    fetch_by_key(ctx, key, content_encoding, &mut scuba).await
 }
 
 pub async fn download_sha256(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
@@ -110,12 +125,14 @@ pub async fn download_sha256(state: &mut State) -> Result<impl TryIntoResponse, 
         .map_err(HttpError::e400)?;
 
     let key = FetchKey::Aliased(Alias::Sha256(oid));
+    let content_encoding = ContentEncoding::from_state(&state);
 
     let ctx =
         RepositoryRequestContext::instantiate(state, repository.clone(), LfsMethod::DownloadSha256)
             .await?;
 
-    fetch_by_key(ctx, key).await
+    let mut scuba = state.try_borrow_mut::<ScubaMiddlewareState>();
+    fetch_by_key(ctx, key, content_encoding, &mut scuba).await
 }
 
 #[cfg(test)]
@@ -151,7 +168,10 @@ mod test {
 
         let key = FetchKey::Canonical(content_id);
 
-        let err = fetch_by_key(ctx, key).await.map(|_| ()).unwrap_err();
+        let err = fetch_by_key(ctx, key, ContentEncoding::Identity, &mut None)
+            .await
+            .map(|_| ())
+            .unwrap_err();
         assert_eq!(err.status_code, StatusCode::GONE);
         assert!(err.error.to_string().contains(reason));
         Ok(())

@@ -8,16 +8,24 @@
 use std::convert::TryInto;
 
 use anyhow::Error;
+use async_compression::stream::{BrotliEncoder, GzipEncoder, ZstdEncoder};
 use bytes::Bytes;
-use futures::{channel::mpsc, Stream, StreamExt};
+use futures::{
+    channel::mpsc,
+    stream::{BoxStream, Stream, StreamExt, TryStreamExt},
+    task::{Context, Poll},
+};
 use gotham::{handler::HandlerError, state::State};
 use gotham_derive::StateData;
 use hyper::{
-    header::{HeaderValue, CONTENT_LENGTH, CONTENT_TYPE},
+    header::{HeaderValue, CONTENT_ENCODING, CONTENT_LENGTH, CONTENT_TYPE},
     Body, Response, StatusCode,
 };
 use mime::Mime;
+use pin_project::pin_project;
+use std::pin::Pin;
 
+use crate::content_encoding::{ContentCompression, ContentEncoding};
 use crate::error::HttpError;
 use crate::middleware::PostRequestCallbacks;
 use crate::signal_stream::SignalStream;
@@ -37,8 +45,22 @@ pub fn build_response<IR: TryIntoResponse>(
     }
 }
 
-#[derive(StateData)]
-pub struct ResponseContentLength(pub u64);
+#[derive(StateData, Copy, Clone, Debug)]
+pub enum ResponseContentMeta {
+    Sized(u64),
+    Chunked,
+    Compressed(ContentCompression),
+}
+
+impl ResponseContentMeta {
+    pub fn content_length(&self) -> Option<u64> {
+        match self {
+            Self::Sized(s) => Some(*s),
+            Self::Compressed(..) => None,
+            Self::Chunked => None,
+        }
+    }
+}
 
 pub struct EmptyBody;
 
@@ -50,7 +72,7 @@ impl EmptyBody {
 
 impl TryIntoResponse for EmptyBody {
     fn try_into_response(self, state: &mut State) -> Result<Response<Body>, Error> {
-        state.put(ResponseContentLength(0));
+        state.put(ResponseContentMeta::Sized(0));
 
         Response::builder()
             .status(StatusCode::OK)
@@ -79,7 +101,7 @@ where
         let bytes = self.bytes.into();
         let mime_header: HeaderValue = self.mime.as_ref().parse()?;
 
-        state.put(ResponseContentLength(bytes.len().try_into()?));
+        state.put(ResponseContentMeta::Sized(bytes.len().try_into()?));
 
         Response::builder()
             .header(CONTENT_TYPE, mime_header)
@@ -92,42 +114,45 @@ where
 pub struct StreamBody<S> {
     stream: S,
     mime: Mime,
-    content_length: Option<u64>,
 }
 
 impl<S> StreamBody<S> {
     pub fn new(stream: S, mime: Mime) -> Self {
-        Self {
-            stream,
-            mime,
-            content_length: None,
-        }
-    }
-
-    /// Set the value of the Content-Length HTTP header sent to
-    /// the client. This should be equal to the total number of
-    /// bytes that will be produced by the underlying Stream.
-    /// If omitted, no Content-Length will be sent to the client.
-    pub fn content_length(self, length: u64) -> Self {
-        Self {
-            content_length: Some(length),
-            ..self
-        }
+        Self { stream, mime }
     }
 }
 
 impl<S> TryIntoResponse for StreamBody<S>
 where
-    S: Stream<Item = Result<Bytes, Error>> + Send + 'static,
+    S: Stream<Item = Result<Bytes, Error>> + ContentMeta + Send + 'static,
 {
     fn try_into_response(self, state: &mut State) -> Result<Response<Body>, Error> {
-        let Self {
-            stream,
-            mime,
-            content_length,
-        } = self;
+        let Self { stream, mime } = self;
 
         let mime_header: HeaderValue = mime.as_ref().parse()?;
+
+        let content_encoding = stream.content_encoding();
+        let content_length = stream.content_length();
+
+        let res = Response::builder()
+            .header(CONTENT_TYPE, mime_header)
+            .header(CONTENT_ENCODING, content_encoding)
+            .status(StatusCode::OK);
+
+        let (res, meta) = match content_encoding {
+            ContentEncoding::Compressed(compression) => {
+                (res, ResponseContentMeta::Compressed(compression))
+            }
+            ContentEncoding::Identity => match content_length {
+                Some(content_length) => (
+                    res.header(CONTENT_LENGTH, content_length),
+                    ResponseContentMeta::Sized(content_length),
+                ),
+                None => (res, ResponseContentMeta::Chunked),
+            },
+        };
+
+        state.put(meta);
 
         // This is kind of annoying, but right now Hyper requires a Body's stream to be Sync (even
         // though it doesn't actually need it). For now, we have to work around by spawning the
@@ -145,15 +170,148 @@ where
             None => receiver.right_stream(),
         };
 
-        let mut res = Response::builder()
-            .header(CONTENT_TYPE, mime_header)
-            .status(StatusCode::OK);
-
-        if let Some(content_length) = content_length {
-            state.put(ResponseContentLength(content_length));
-            res = res.header(CONTENT_LENGTH, content_length);
-        }
-
         Ok(res.body(Body::wrap_stream(stream))?)
+    }
+}
+
+pub trait ContentMeta {
+    /// Provide the content (i.e. Content-Encoding) for the underlying content. This will be sent
+    /// to the client.
+    fn content_encoding(&self) -> ContentEncoding;
+
+    /// Provide the length of the content in this stream, if available (i.e. Content-Length). If
+    /// provided, this must be the actual length of the stream. If missing, the transfer will be
+    /// chunked.
+    fn content_length(&self) -> Option<u64>;
+}
+
+#[pin_project]
+pub struct CompressedContentStream<'a> {
+    inner: BoxStream<'a, Result<Bytes, Error>>,
+    content_compression: ContentCompression,
+}
+
+impl<'a> CompressedContentStream<'a> {
+    pub fn new<S>(inner: S, content_compression: ContentCompression) -> Self
+    where
+        S: Stream<Item = Result<Bytes, Error>> + Send + 'a,
+    {
+        use std::io;
+
+        let inner = inner.map_err(|e| io::Error::new(io::ErrorKind::Other, e));
+
+        let inner = match content_compression {
+            ContentCompression::Zstd => ZstdEncoder::new(inner).map_err(Error::from).boxed(),
+            ContentCompression::Brotli => BrotliEncoder::new(inner).map_err(Error::from).boxed(),
+            ContentCompression::Gzip => GzipEncoder::new(inner).map_err(Error::from).boxed(),
+        };
+
+        Self {
+            inner,
+            content_compression,
+        }
+    }
+}
+
+impl ContentMeta for CompressedContentStream<'_> {
+    fn content_length(&self) -> Option<u64> {
+        None
+    }
+
+    fn content_encoding(&self) -> ContentEncoding {
+        ContentEncoding::Compressed(self.content_compression)
+    }
+}
+
+impl Stream for CompressedContentStream<'_> {
+    type Item = Result<Bytes, Error>;
+
+    fn poll_next(self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        self.project().inner.poll_next_unpin(ctx)
+    }
+}
+
+#[pin_project]
+pub struct ContentStream<S> {
+    #[pin]
+    inner: S,
+    content_length: Option<u64>,
+}
+
+impl<S> ContentStream<S> {
+    pub fn new(inner: S) -> Self {
+        Self {
+            inner,
+            content_length: None,
+        }
+    }
+
+    /// Set a Content-Length for this stream. This *must* match the exact size of the uncompressed
+    /// content that will be sent, since that is what the client will expect.
+    pub fn content_length(self, content_length: u64) -> Self {
+        Self {
+            content_length: Some(content_length),
+            ..self
+        }
+    }
+}
+
+impl<S> ContentMeta for ContentStream<S> {
+    fn content_length(&self) -> Option<u64> {
+        self.content_length
+    }
+
+    fn content_encoding(&self) -> ContentEncoding {
+        ContentEncoding::Identity
+    }
+}
+
+impl<S> Stream for ContentStream<S>
+where
+    S: Stream,
+{
+    type Item = S::Item;
+
+    fn poll_next(self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        self.project().inner.poll_next(ctx)
+    }
+}
+
+/// Provide an implementation of ContentMeta that propagates through Either (i.e. left_stream(),
+/// right_stream()).
+impl<A, B> ContentMeta for futures::future::Either<A, B>
+where
+    A: ContentMeta,
+    B: ContentMeta,
+{
+    fn content_length(&self) -> Option<u64> {
+        // left_stream(), right_stream() doesn't change the stream data.
+        match self {
+            Self::Left(a) => a.content_length(),
+            Self::Right(b) => b.content_length(),
+        }
+    }
+
+    fn content_encoding(&self) -> ContentEncoding {
+        // left_stream(), right_stream() doesn't change the stream data.
+        match self {
+            Self::Left(a) => a.content_encoding(),
+            Self::Right(b) => b.content_encoding(),
+        }
+    }
+}
+
+impl<S, F> ContentMeta for futures::stream::InspectOk<S, F>
+where
+    S: ContentMeta,
+{
+    fn content_length(&self) -> Option<u64> {
+        // inspect_ok doesn't change the stream data.
+        self.get_ref().content_length()
+    }
+
+    fn content_encoding(&self) -> ContentEncoding {
+        // inspect_ok doesn't change the stream data.
+        self.get_ref().content_encoding()
     }
 }

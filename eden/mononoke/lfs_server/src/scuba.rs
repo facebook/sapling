@@ -33,6 +33,8 @@ pub enum LfsScubaKey {
     BatchResponseReadyUs,
     /// Whether the upload was a sync
     UploadSync,
+    /// The actual size of the content being sent
+    DownloadContentSize,
 }
 
 impl AsRef<str> for LfsScubaKey {
@@ -51,6 +53,7 @@ impl AsRef<str> for LfsScubaKey {
             BatchRequestParsedUs => "batch_request_parsed_us",
             BatchResponseReadyUs => "batch_response_ready_us",
             UploadSync => "upload_sync",
+            DownloadContentSize => "download_content_size",
         }
     }
 }

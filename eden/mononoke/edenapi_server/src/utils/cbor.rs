@@ -17,7 +17,7 @@ use serde::{de::DeserializeOwned, Serialize};
 
 use gotham_ext::{
     error::HttpError,
-    response::{StreamBody, TryIntoResponse},
+    response::{ContentStream, StreamBody, TryIntoResponse},
 };
 
 use crate::errors::ErrorKind;
@@ -47,7 +47,7 @@ where
     T: Serialize + Send + 'static,
 {
     let byte_stream = stream.and_then(|item| async { to_cbor_bytes(item) });
-    StreamBody::new(byte_stream, cbor_mime())
+    StreamBody::new(ContentStream::new(byte_stream), cbor_mime())
 }
 
 pub async fn parse_cbor_request<R: DeserializeOwned>(state: &mut State) -> Result<R, HttpError> {

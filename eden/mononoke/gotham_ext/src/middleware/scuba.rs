@@ -20,7 +20,7 @@ use time_ext::DurationExt;
 
 use crate::{
     middleware::{ClientIdentity, Middleware, PostRequestCallbacks},
-    response::ResponseContentLength,
+    response::ResponseContentMeta,
 };
 
 use super::{HeadersDuration, RequestLoad};
@@ -46,6 +46,8 @@ pub enum HttpScubaKey {
     RequestContentLength,
     /// The "Content-Length" we returned in our response.
     ResponseContentLength,
+    /// The Content-Encoding we used for our response.
+    ResponseContentEncoding,
     /// The IP of the connecting client.
     ClientIp,
     /// The client correlator submitted by the client, if any.
@@ -81,6 +83,7 @@ impl AsRef<str> for HttpScubaKey {
             HttpUserAgent => "http_user_agent",
             RequestContentLength => "request_content_length",
             ResponseContentLength => "response_content_length",
+            ResponseContentEncoding => "response_content_encoding",
             ClientIp => "client_ip",
             ClientCorrelator => "client_correlator",
             ClientIdentities => "client_identities",
@@ -178,7 +181,7 @@ where
 fn log_stats<H: ScubaHandler>(
     state: &mut State,
     status_code: &StatusCode,
-    content_length: Option<u64>,
+    content_meta: Option<ResponseContentMeta>,
 ) -> Option<()> {
     let mut scuba = state.try_take::<ScubaMiddlewareState>()?.0;
 
@@ -221,8 +224,14 @@ fn log_stats<H: ScubaHandler>(
         );
     }
 
-    if let Some(content_length) = content_length {
-        scuba.add(HttpScubaKey::ResponseContentLength, content_length);
+    match content_meta {
+        Some(ResponseContentMeta::Sized(content_length)) => {
+            scuba.add(HttpScubaKey::ResponseContentLength, content_length);
+        }
+        Some(ResponseContentMeta::Compressed(compression)) => {
+            scuba.add(HttpScubaKey::ResponseContentEncoding, compression.as_str());
+        }
+        Some(ResponseContentMeta::Chunked) | None => {}
     }
 
     if let Some(identity) = ClientIdentity::try_borrow_from(&state) {
@@ -330,8 +339,8 @@ impl<H: ScubaHandler> Middleware for ScubaMiddleware<H> {
             }
         }
 
-        let content_length = ResponseContentLength::try_borrow_from(&state).map(|l| l.0);
+        let content_meta = ResponseContentMeta::try_borrow_from(&state).copied();
 
-        log_stats::<H>(state, &response.status(), content_length);
+        log_stats::<H>(state, &response.status(), content_meta);
     }
 }

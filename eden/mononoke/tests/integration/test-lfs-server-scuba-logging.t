@@ -209,6 +209,7 @@
       "SqlReadsMaster": 0,
       "SqlReadsReplica": 0,
       "SqlWrites": 0,
+      "download_content_size": 2048,
       "duration_ms": *, (glob)
       "headers_duration_ms": *, (glob)
       "http_status": 200,
