@@ -27,6 +27,10 @@ set up the local repo
   no changes found
 
   $ hg pull -q --config lfs.wantslfspointers=True
+  $ hg pull -q --config lfs.wantslfspointers=True --config clienttelemetryvalues.somevalue=value
+  $ hg pull -q --config lfs.wantslfspointers=True \
+  > --config clienttelemetryvalues.somevalue=value \
+  > --config clienttelemetryvalues.anothervalue=value2
 
 check telemetry
   >>> import json
@@ -34,8 +38,9 @@ check telemetry
   ...     data = f.read()
   >>> for record in data.strip("\0").split("\0"):
   ...     parsedrecord = json.loads(record)
-  ...     for key in "command", "fullcommand", "wantslfspointers":
-  ...         print("%s: %s" % (key, parsedrecord["data"]["client_%s" % key]))
+  ...     for key in "command", "fullcommand", "wantslfspointers", "somevalue", "anothervalue":
+  ...         if "client_%s" % key in parsedrecord["data"]:
+  ...             print("%s: %s" % (key, parsedrecord["data"]["client_%s" % key]))
   command: clone
   fullcommand: clone 'ssh://user@dummy/server' local -q
   wantslfspointers: False
@@ -51,9 +56,20 @@ check telemetry
   command: pull
   fullcommand: pull -q --config 'lfs.wantslfspointers=True'
   wantslfspointers: True
+  command: pull
+  fullcommand: pull -q --config 'lfs.wantslfspointers=True' --config 'clienttelemetryvalues.somevalue=value'
+  wantslfspointers: True
+  somevalue: value
+  command: pull
+  fullcommand: pull -q --config 'lfs.wantslfspointers=True' --config 'clienttelemetryvalues.somevalue=value' --config 'clienttelemetryvalues.anothervalue=value2'
+  wantslfspointers: True
+  somevalue: value
+  anothervalue: value2
 
 check blackbox
   $ hg blackbox --pattern '{"clienttelemetry": "_"}'
+  * [clienttelemetry] peer name: * (glob)
+  * [clienttelemetry] peer name: * (glob)
   * [clienttelemetry] peer name: * (glob)
   * [clienttelemetry] peer name: * (glob)
   * [clienttelemetry] peer name: * (glob)

@@ -106,6 +106,13 @@ def _capabilities(orig, repo, proto):
     return result
 
 
+def clienttelemetryvaluesfromconfig(ui):
+    result = {}
+    for name, value in ui.configitems("clienttelemetryvalues"):
+        result[name] = value
+    return result
+
+
 def _runcommand(orig, lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdoptions):
     # Record the command that is running in the client telemetry data.
     _clienttelemetrydata["command"] = cmd
@@ -121,7 +128,8 @@ def _runcommand(orig, lui, repo, cmd, fullargs, ui, options, d, cmdpats, cmdopti
 
 def _peersetup(ui, peer):
     if peer.capable("clienttelemetry"):
-        logargs = {name: f(ui) for name, f in _clienttelemetryfuncs.items()}
+        logargs = clienttelemetryvaluesfromconfig(ui)
+        logargs.update({name: f(ui) for name, f in _clienttelemetryfuncs.items()})
         logargs.update(_clienttelemetrydata)
         peername = decodeutf8(peer._call("clienttelemetry", **logargs))
         peer._realhostname = peername
