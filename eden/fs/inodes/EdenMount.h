@@ -588,6 +588,7 @@ class EdenMount {
    */
   FOLLY_NODISCARD folly::Future<folly::Unit> startChannel(bool readOnly);
 
+#ifndef _WIN32
   /**
    * Take over a FUSE channel for an existing mount point.
    *
@@ -598,6 +599,7 @@ class EdenMount {
    * throws an EdenMountCancelled exception.
    */
   void takeoverFuse(FuseChannelData takeoverData);
+#endif
 
   /**
    * Obtains a future that will complete once the channel has wound down.

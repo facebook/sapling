@@ -27,12 +27,6 @@ class SerializedInodeMap {
 using uid_t = int;
 using gid_t = int;
 
-struct FuseChannelData {
-  //  folly::File fd;
-  int fd;
-  fuse_init_out connInfo;
-};
-
 #define NOT_IMPLEMENTED()                             \
   do {                                                \
     throw newEdenError(                               \
