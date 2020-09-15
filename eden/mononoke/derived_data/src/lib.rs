@@ -109,11 +109,11 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
         limit: u64,
     ) -> Result<u64, DeriveError> {
         let mapping = Self::mapping(&ctx, &repo);
-        let underived = derive_impl::find_topo_sorted_underived::<Self, Self::Mapping>(
+        let underived = derive_impl::find_topo_sorted_underived::<Self, Self::Mapping, _>(
             ctx,
             repo,
             &mapping,
-            csid,
+            Some(*csid),
             Some(limit),
             Mode::OnlyIfEnabled,
         )
@@ -121,17 +121,21 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
         Ok(underived.len() as u64)
     }
 
+    /// Find all underived ancestors reachable from provided set of changesets.
+    ///
+    /// Items are returned in topologically sorted order starting from changesets
+    /// with no dependencies or derived dependencies.
     async fn find_all_underived_ancestors(
         ctx: &CoreContext,
         repo: &BlobRepo,
-        csid: &ChangesetId,
+        csids: Vec<ChangesetId>,
     ) -> Result<Vec<ChangesetId>, DeriveError> {
         let mapping = Self::mapping(&ctx, &repo);
-        let underived = derive_impl::find_topo_sorted_underived::<Self, Self::Mapping>(
+        let underived = derive_impl::find_topo_sorted_underived::<Self, Self::Mapping, _>(
             ctx,
             repo,
             &mapping,
-            csid,
+            csids,
             None,
             Mode::OnlyIfEnabled,
         )

@@ -83,9 +83,15 @@ pub fn derive_impl<
 ) -> impl Future<Item = Derived, Error = DeriveError> {
     async move {
         let derivation = async {
-            let all_csids =
-                find_topo_sorted_underived(&ctx, &repo, &derived_mapping, &start_csid, None, mode)
-                    .await?;
+            let all_csids = find_topo_sorted_underived(
+                &ctx,
+                &repo,
+                &derived_mapping,
+                Some(start_csid),
+                None,
+                mode,
+            )
+            .await?;
 
             for csid in &all_csids {
                 ctx.scuba().clone().log_with_msg(
@@ -168,11 +174,12 @@ fn fail_if_disabled<Derived: BonsaiDerived>(repo: &BlobRepo) -> Result<(), Deriv
 pub(crate) async fn find_topo_sorted_underived<
     Derived: BonsaiDerived,
     Mapping: BonsaiDerivedMapping<Value = Derived> + Send + Sync + Clone + 'static,
+    Changesets: IntoIterator<Item = ChangesetId>,
 >(
     ctx: &CoreContext,
     repo: &BlobRepo,
     derived_mapping: &Mapping,
-    start_csid: &ChangesetId,
+    start_csids: Changesets,
     limit: Option<u64>,
     mode: Mode,
 ) -> Result<Vec<ChangesetId>, Error> {
@@ -187,7 +194,7 @@ pub(crate) async fn find_topo_sorted_underived<
     let changeset_fetcher = &changeset_fetcher;
     let visited = &visited;
     let commits_not_derived_to_parents =
-        bounded_traversal::bounded_traversal_stream(100, Some(*start_csid), {
+        bounded_traversal::bounded_traversal_stream(100, start_csids, {
             move |cs_id| {
                 async move {
                     if let Some(limit) = limit {

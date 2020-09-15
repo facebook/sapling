@@ -250,7 +250,11 @@ where
     ) -> Result<Option<BonsaiChangeset>, Error> {
         let mut underived_ancestors = vec![];
         for cs_id in csids {
-            underived_ancestors.push(M::Value::find_all_underived_ancestors(&ctx, &repo, cs_id));
+            underived_ancestors.push(M::Value::find_all_underived_ancestors(
+                &ctx,
+                &repo,
+                vec![*cs_id],
+            ));
         }
 
         let boxed_stream = stream::iter(underived_ancestors)
