@@ -3,17 +3,10 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-if(WIN32)
-  add_executable(
-    edenfs
-    win/service/main.cpp
-  )
-else()
-  add_executable(
-    edenfs
-    service/oss/main.cpp
-  )
-endif()
+add_executable(
+  edenfs
+  service/oss/main.cpp
+)
 
 install(TARGETS edenfs RUNTIME DESTINATION bin)
 target_include_directories(
