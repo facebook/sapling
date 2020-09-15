@@ -857,7 +857,11 @@ class fetchbuilddeps(Command):
                 "thrift/util/tests/__init__.py",
             ],
         ),
-        fbsourcepylibrary("eden", "../../eden/fs/py/eden"),
+        fbsourcepylibrary(
+            "eden",
+            "../../eden/fs/py/eden",
+            excludes=["eden/thrift/client.py", "eden/thrift/test/client_test.py"],
+        ),
     ]
     pyassets += (
         [
