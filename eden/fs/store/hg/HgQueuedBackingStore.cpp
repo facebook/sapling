@@ -294,7 +294,9 @@ void HgQueuedBackingStore::logBackingStoreFetch(
     }
   }
 
-  recordFetch(path.stringPiece());
+  if (type != ObjectFetchContext::ObjectType::Tree) {
+    recordFetch(path.stringPiece());
+  }
 
   if (logFetchPathRegex) {
     if (RE2::PartialMatch(
