@@ -36,21 +36,11 @@ use futures_ext::FutureExt as OldFutureExt;
 use futures_old::Future as OldFuture;
 use futures_stats::Timed;
 use futures_stats::TimedFutureExt;
-use lock_ext::LockExt;
 use metaconfig_types::DerivedDataConfig;
 use mononoke_types::{ChangesetId, DateTime};
 use slog::{info, Logger};
 use stats::prelude::*;
-use std::{
-    collections::HashMap,
-    fs,
-    path::Path,
-    sync::{
-        atomic::{AtomicUsize, Ordering},
-        Arc, Mutex,
-    },
-    time::Duration,
-};
+use std::{collections::HashMap, fs, path::Path, sync::Arc, time::Duration};
 use time_ext::DurationExt;
 
 mod warmup;
@@ -443,8 +433,8 @@ async fn subcommand_backfill(
     );
 
     let total_count = changesets.len();
-    let generated_count = &Arc::new(AtomicUsize::new(0));
-    let total_duration = &Arc::new(Mutex::new(Duration::from_secs(0)));
+    let mut generated_count = 0;
+    let mut total_duration = Duration::from_secs(0);
 
     if regenerate {
         derived_utils.regenerate(&changesets);
@@ -470,15 +460,12 @@ async fn subcommand_backfill(
         .await;
 
         let chunk_size = chunk_size?;
-        generated_count.fetch_add(chunk_size, Ordering::SeqCst);
-        let elapsed = total_duration.with(|total_duration| {
-            *total_duration += stats.completion_time;
-            *total_duration
-        });
+        generated_count += chunk_size;
+        let elapsed = stats.completion_time;
+        total_duration += elapsed;
 
-        let generated = generated_count.load(Ordering::SeqCst);
-        if generated != 0 {
-            let generated = generated as f32;
+        if generated_count != 0 {
+            let generated = generated_count as f32;
             let total = total_count as f32;
             info!(
                 ctx.logger(),
@@ -663,7 +650,10 @@ mod tests {
     use fixtures::linear;
     use futures::future::{BoxFuture, FutureExt};
     use mercurial_types::HgChangesetId;
-    use std::str::FromStr;
+    use std::{
+        str::FromStr,
+        sync::atomic::{AtomicUsize, Ordering},
+    };
     use tests_utils::resolve_cs_id;
     use tokio_compat::runtime::Runtime;
     use unodes::RootUnodeManifestId;
