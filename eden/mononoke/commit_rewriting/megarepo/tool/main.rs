@@ -429,7 +429,8 @@ async fn run_manual_commit_sync<'a>(
     let source_cs = sub_m
         .value_of(CHANGESET)
         .ok_or_else(|| format_err!("{} not set", CHANGESET))?;
-    let source_cs_id = helpers::csid_resolve(ctx.clone(), target_repo.clone(), source_cs)
+    let source_repo = commit_syncer.get_source_repo();
+    let source_cs_id = helpers::csid_resolve(ctx.clone(), source_repo.clone(), source_cs)
         .compat()
         .await?;
 
