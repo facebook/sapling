@@ -431,6 +431,20 @@ TEST_F(EdenConfigTest, variablesExpandInPathOptions) {
   EXPECT_EQ(
       getConfig().userIgnoreFile.getValue(),
       normalizeBestEffort("/var/user/42/myignore"));
+
+#ifndef _WIN32
+  setenv("THRIFT_TLS_CL_CERT_PATH", "edenTest", 1);
+#else
+  _putenv_s("THRIFT_TLS_CL_CERT_PATH", "edenTest");
+#endif
+  writeFile(
+      userConfigPath,
+      "[core]\n"
+      "ignoreFile=\"/var/user/${THRIFT_TLS_CL_CERT_PATH}/myignore\"\n"_sp)
+      .throwIfFailed();
+  EXPECT_EQ(
+      getConfig().userIgnoreFile.getValue(),
+      normalizeBestEffort("/var/user/edenTest/myignore"));
 }
 
 TEST_F(EdenConfigTest, missing_config_files_never_change) {

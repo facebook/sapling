@@ -15,10 +15,11 @@ using folly::Expected;
 using std::string;
 
 namespace {
-constexpr std::array<folly::StringPiece, 3> kEnvVars = {
+constexpr std::array<folly::StringPiece, 4> kEnvVars = {
     folly::StringPiece{"HOME"},
     folly::StringPiece{"USER"},
     folly::StringPiece{"USER_ID"},
+    folly::StringPiece{"THRIFT_TLS_CL_CERT_PATH"},
 };
 
 /**

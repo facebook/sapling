@@ -395,6 +395,9 @@ void EdenConfig::parseAndApplyConfigFile(
   attrMap["HOME"] = userHomePath_.value();
   attrMap["USER"] = userName_;
   attrMap["USER_ID"] = std::to_string(userID_);
+  if (auto certPath = std::getenv("THRIFT_TLS_CL_CERT_PATH")) {
+    attrMap["THRIFT_TLS_CL_CERT_PATH"] = certPath;
+  }
 
   try {
     std::string fileContents;
