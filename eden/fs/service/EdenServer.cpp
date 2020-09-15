@@ -61,6 +61,7 @@
 #include "eden/fs/utils/FileUtils.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/ProcUtil.h"
+#include "eden/fs/utils/ProcessNameCache.h"
 #include "eden/fs/utils/UserInfo.h"
 
 #ifdef _WIN32
@@ -75,7 +76,6 @@
 #include "eden/fs/takeover/TakeoverClient.h"
 #include "eden/fs/takeover/TakeoverData.h"
 #include "eden/fs/takeover/TakeoverServer.h"
-#include "eden/fs/utils/ProcessNameCache.h"
 #endif // _WIN32
 
 #ifdef EDEN_HAVE_GIT

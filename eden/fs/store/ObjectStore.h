@@ -22,11 +22,7 @@
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/StructuredLogger.h"
-#ifndef _WIN32
 #include "eden/fs/utils/ProcessNameCache.h"
-#else
-#include "eden/fs/win/utils/Stub.h" // @manual
-#endif
 
 namespace facebook {
 namespace eden {

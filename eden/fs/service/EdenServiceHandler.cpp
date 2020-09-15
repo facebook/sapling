@@ -32,7 +32,6 @@
 #include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/store/ScmStatusDiffCallback.h"
-#include "eden/fs/utils/ProcessNameCache.h"
 #endif // _WIN32
 
 #include "eden/fs/inodes/EdenMount.h"
@@ -64,6 +63,7 @@
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/FaultInjector.h"
 #include "eden/fs/utils/ProcUtil.h"
+#include "eden/fs/utils/ProcessNameCache.h"
 #include "eden/fs/utils/StatTimes.h"
 
 using folly::Future;

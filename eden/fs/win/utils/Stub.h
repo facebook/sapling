@@ -37,10 +37,6 @@ struct FuseChannelData {
   fuse_init_out connInfo;
 };
 
-class ProcessNameCache {
-  int stub;
-};
-
 static int unlink(const char* path) {
   // Ideally unlink should be a part of folly portability layer but there is a
   // deprecated definition of unlink in stdio which will make it ambiguous and

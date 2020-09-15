@@ -9,18 +9,14 @@
 #include <folly/executors/QueuedImmediateExecutor.h>
 #include <gtest/gtest.h>
 #include <chrono>
+#include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/StoreResult.h"
+#include "eden/fs/telemetry/NullStructuredLogger.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/LoggingFetchContext.h"
-#ifndef _WIN32
 #include "eden/fs/utils/ProcessNameCache.h"
-#else
-#include "eden/fs/win/utils/Stub.h" // @manual
-#endif
-#include "eden/fs/config/EdenConfig.h"
-#include "eden/fs/telemetry/NullStructuredLogger.h"
 
 using namespace folly::literals;
 using namespace std::chrono_literals;

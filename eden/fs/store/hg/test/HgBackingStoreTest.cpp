@@ -11,20 +11,16 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/hg/HgBackingStore.h"
 #include "eden/fs/store/hg/HgImporter.h"
 #include "eden/fs/telemetry/EdenStats.h"
-#include "eden/fs/testharness/HgRepo.h"
-#ifndef _WIN32
-#include "eden/fs/utils/ProcessNameCache.h"
-#else
-#include "eden/fs/win/utils/Stub.h" // @manual
-#endif
-#include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/telemetry/NullStructuredLogger.h"
+#include "eden/fs/testharness/HgRepo.h"
+#include "eden/fs/utils/ProcessNameCache.h"
 
 using namespace facebook::eden;
 using namespace std::chrono_literals;

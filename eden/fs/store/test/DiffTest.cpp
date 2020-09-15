@@ -12,22 +12,18 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/model/git/TopLevelIgnores.h"
 #include "eden/fs/store/DiffContext.h"
 #include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/ScmStatusDiffCallback.h"
+#include "eden/fs/telemetry/NullStructuredLogger.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestUtil.h"
 #include "eden/fs/utils/PathFuncs.h"
-#ifndef _WIN32
 #include "eden/fs/utils/ProcessNameCache.h"
-#else
-#include "eden/fs/win/utils/Stub.h" // @manual
-#endif
-#include "eden/fs/config/EdenConfig.h"
-#include "eden/fs/telemetry/NullStructuredLogger.h"
 
 using namespace facebook::eden;
 using namespace std::chrono_literals;
