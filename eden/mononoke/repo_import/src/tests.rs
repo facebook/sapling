@@ -11,9 +11,8 @@ mod tests {
         back_sync_commits_to_small_repo, check_dependent_systems, derive_bonsais_single_repo,
         get_large_repo_config_if_pushredirected, get_large_repo_setting, merge_imported_commit,
         move_bookmark, push_merge_commit, rewrite_file_paths, ChangesetArgs, CheckerFlags,
-        RepoImportSetting, LATEST_REPLAYED_REQUEST_KEY,
+        RepoImportSetting,
     };
-
     use anyhow::Result;
     use ascii::AsciiString;
     use blobrepo::BlobRepo;
@@ -40,6 +39,7 @@ mod tests {
         DefaultSmallToLargeCommitSyncPathAction, DerivedDataConfig, PushrebaseParams, RepoConfig,
         SmallRepoCommitSyncConfig,
     };
+    use mononoke_hg_sync_job_helper_lib::LATEST_REPLAYED_REQUEST_KEY;
     use mononoke_types::{
         globalrev::{Globalrev, START_COMMIT_GLOBALREV},
         BonsaiChangeset, ChangesetId, DateTime, RepositoryId,

@@ -8,11 +8,13 @@
 #![deny(warnings)]
 
 use anyhow::{bail, format_err, Error, Result};
+use blobrepo::BlobRepo;
 use blobstore::{Blobstore, Loadable};
+use bookmarks::{BookmarkUpdateLog, Freshness};
 use bytes_old::{Bytes as BytesOld, BytesMut as BytesMutOld};
 use cloned::cloned;
 use context::CoreContext;
-use futures::{future::try_join_all, stream::TryStreamExt};
+use futures::{compat::Future01CompatExt, future::try_join_all, stream::TryStreamExt};
 use futures_ext::FutureExt;
 use futures_old::{
     future::{loop_fn, IntoFuture, Loop},
@@ -20,7 +22,9 @@ use futures_old::{
 };
 use mercurial_bundles::stream_start;
 use mononoke_types::RawBundle2Id;
+use mutable_counters::{MutableCounters, SqlMutableCounters};
 use slog::{info, Logger};
+use std::convert::TryInto;
 use std::io::{Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
@@ -28,9 +32,11 @@ use tempfile::NamedTempFile;
 use tokio::{
     fs::{read as async_read_all, File as AsyncFile, OpenOptions},
     io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
-    time::{delay_for, timeout},
+    time::{self, delay_for, timeout},
 };
 use tokio_io::codec::Decoder;
+
+pub const LATEST_REPLAYED_REQUEST_KEY: &str = "latest-replayed-request";
 
 pub async fn save_bundle_to_temp_file<B: Blobstore + Clone>(
     ctx: &CoreContext,
@@ -301,6 +307,61 @@ where
             })
     })
     .flatten()
+}
+
+/// Wait until all of the entries in the queue have been synced to hg
+pub async fn wait_for_latest_log_id_to_be_synced(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    mutable_counters: &SqlMutableCounters,
+    sleep_secs: u64,
+) -> Result<(), Error> {
+    let repo_id = repo.get_repoid();
+    let largest_id = match repo
+        .attribute_expected::<dyn BookmarkUpdateLog>()
+        .get_largest_log_id(ctx.clone(), Freshness::MostRecent)
+        .await?
+    {
+        Some(id) => id,
+        None => return Err(format_err!("Couldn't fetch id from bookmarks update log")),
+    };
+
+    /*
+        In mutable counters table we store the latest bookmark id replayed by mercurial with
+        LATEST_REPLAYED_REQUEST_KEY key. We use this key to extract the latest replayed id
+        and compare it with the largest bookmark log id after we move the bookmark.
+        If the replayed id is larger or equal to the bookmark id, we can try to move the bookmark
+        to the next batch of commits
+    */
+
+    loop {
+        let mut_counters_value = match mutable_counters
+            .get_counter(ctx.clone(), repo_id, LATEST_REPLAYED_REQUEST_KEY)
+            .compat()
+            .await?
+        {
+            Some(value) => value,
+            None => {
+                return Err(format_err!(
+                    "Couldn't fetch the counter value from mutable_counters for repo_id {:?}",
+                    repo_id
+                ));
+            }
+        };
+        if largest_id > mut_counters_value.try_into().unwrap() {
+            info!(
+                ctx.logger(),
+                "Waiting for {} to be replayed to hg, the latest replayed is {}",
+                largest_id,
+                mut_counters_value
+            );
+            time::delay_for(time::Duration::from_secs(sleep_secs)).await;
+        } else {
+            break;
+        }
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]

@@ -11,7 +11,7 @@ use backsyncer::{backsync_latest, open_backsyncer_dbs, BacksyncLimit, TargetRepo
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
-use bookmarks::{BookmarkName, BookmarkUpdateLog, BookmarkUpdateReason, Freshness};
+use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use borrowed::borrowed;
 use cached_config::ConfigStore;
 use cmdlib::args;
@@ -31,15 +31,15 @@ use manifest::ManifestOps;
 use maplit::hashset;
 use mercurial_types::{HgChangesetId, MPath};
 use metaconfig_types::RepoConfig;
+use mononoke_hg_sync_job_helper_lib::wait_for_latest_log_id_to_be_synced;
 use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime};
 use movers::{DefaultAction, Mover};
-use mutable_counters::{MutableCounters, SqlMutableCounters};
+use mutable_counters::SqlMutableCounters;
 use pushrebase::do_pushrebase_bonsai;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use slog::info;
 use std::collections::{BTreeMap, HashMap, HashSet};
-use std::convert::TryInto;
 use std::num::NonZeroUsize;
 use std::path::Path;
 use std::sync::Arc;
@@ -56,8 +56,6 @@ use crate::cli::{
     ARG_COMMIT_MESSAGE, ARG_DEST_BOOKMARK, ARG_DEST_PATH, ARG_GIT_REPOSITORY_PATH,
     ARG_HG_SYNC_CHECK_DISABLED, ARG_PHAB_CHECK_DISABLED, ARG_SLEEP_TIME, ARG_X_REPO_CHECK_DISABLED,
 };
-
-const LATEST_REPLAYED_REQUEST_KEY: &'static str = "latest-replayed-request";
 
 #[derive(Deserialize, Clone, Debug)]
 struct GraphqlQueryObj {
@@ -480,9 +478,8 @@ async fn check_dependent_systems(
     // if a check is disabled, we have already passed the check
     let mut passed_phab_check = checker_flags.phab_check_disabled;
     let mut _passed_x_repo_check = checker_flags.x_repo_check_disabled;
-    let mut passed_hg_sync_check = checker_flags.hg_sync_check_disabled;
+    let passed_hg_sync_check = checker_flags.hg_sync_check_disabled;
 
-    let repo_id = repo.get_repoid();
     while !passed_phab_check {
         let call_sign = checker_flags.call_sign.as_ref().unwrap();
         passed_phab_check = phabricator_commit_check(&call_sign, &hg_csid).await?;
@@ -495,47 +492,10 @@ async fn check_dependent_systems(
         }
     }
 
-    let largest_id = match repo
-        .attribute_expected::<dyn BookmarkUpdateLog>()
-        .get_largest_log_id(ctx.clone(), Freshness::MostRecent)
-        .await?
-    {
-        Some(id) => id,
-        None => return Err(format_err!("Couldn't fetch id from bookmarks update log")),
-    };
-
-    /*
-        In mutable counters table we store the latest bookmark id replayed by mercurial with
-        LATEST_REPLAYED_REQUEST_KEY key. We use this key to extract the latest replayed id
-        and compare it with the largest bookmark log id after we move the bookmark.
-        If the replayed id is larger or equal to the bookmark id, we can try to move the bookmark
-        to the next batch of commits
-    */
-    while !passed_hg_sync_check {
-        let mut_counters_value = match mutable_counters
-            .get_counter(ctx.clone(), repo_id, LATEST_REPLAYED_REQUEST_KEY)
-            .compat()
-            .await?
-        {
-            Some(value) => value,
-            None => {
-                return Err(format_err!(
-                    "Couldn't fetch the counter value from mutable_counters for repo_id {:?}",
-                    repo_id
-                ));
-            }
-        };
-        passed_hg_sync_check = largest_id <= mut_counters_value.try_into().unwrap();
-        if !passed_hg_sync_check {
-            info!(
-                ctx.logger(),
-                "Waiting for {} to be replayed to hg, the latest replayed is {}",
-                largest_id,
-                mut_counters_value
-            );
-            time::delay_for(time::Duration::from_secs(sleep_time)).await;
-        }
+    if !passed_hg_sync_check {
+        wait_for_latest_log_id_to_be_synced(ctx, repo, mutable_counters, sleep_time).await?;
     }
+
     Ok(())
 }
 
