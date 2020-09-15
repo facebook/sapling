@@ -6,6 +6,7 @@
  */
 
 #include "eden/fs/config/EdenConfig.h"
+#include "eden/fs/utils/PathFuncs.h"
 
 #include <folly/experimental/TestUtil.h>
 #include <folly/test/TestUtils.h>
@@ -378,4 +379,35 @@ TEST_F(ConfigSettingTest, setDuration) {
   checkSetError(setting, "empty input string", "");
   checkSetError(setting, "unknown duration unit specifier", "90");
   checkSetError(setting, "non-digit character found", "bogus");
+}
+
+TEST_F(ConfigSettingTest, setArray) {
+  ConfigSetting<std::vector<std::string>> setting{
+      "test:value", std::vector<std::string>{}, nullptr};
+  EXPECT_EQ(std::vector<std::string>{}, setting.getValue());
+  checkSet(setting, std::vector<std::string>{"a"}, "[\"a\"]");
+  checkSet(setting, std::vector<std::string>{"a", "b"}, "[\"a\", \"b\"]");
+  checkSet(setting, std::vector<std::string>{}, "[]");
+  checkSetError(
+      setting,
+      "Error parsing an array of strings: Failed to parse value type at line 1",
+      "");
+  checkSetError(
+      setting,
+      "Error parsing an array of strings: Unidentified trailing character ','--"
+      "-did you forget a '#'? at line 1",
+      "\"a\", \"b\", \"c\"");
+}
+
+TEST_F(ConfigSettingTest, setArrayDuration) {
+  ConfigSetting<std::vector<std::chrono::nanoseconds>> setting{
+      "test:value", std::vector<std::chrono::nanoseconds>{}, nullptr};
+  checkSet(setting, std::vector<std::chrono::nanoseconds>{90s}, "[\"1m30s\"]");
+}
+
+TEST_F(ConfigSettingTest, setArrayOptional) {
+  ConfigSetting<std::vector<std::optional<std::string>>> setting{
+      "test:value", std::vector<std::optional<std::string>>{}, nullptr};
+  checkSet(
+      setting, std::vector<std::optional<std::string>>{"foo"}, "[\"foo\"]");
 }

@@ -9,6 +9,7 @@
 
 #include <cpptoml.h> // @manual=fbsource//third-party/cpptoml:cpptoml
 #include <array>
+#include <sstream>
 
 #include <folly/File.h>
 #include <folly/FileUtil.h>
@@ -354,12 +355,12 @@ void EdenConfig::loadConfig(
 
 namespace {
 // This is a bit gross.  We have enough type information in the toml
-// file to know when an option is a boolean, but at the moment our
+// file to know when an option is a boolean or array, but at the moment our
 // intermediate layer stringly-types all the data.  When the upper
-// layers want to consume a bool, they expect to do so by consuming
+// layers want to consume a bool or array, they expect to do so by consuming
 // the string representation of it.
 // This helper performs the reverse transformation so that we allow
-// users to specify their configuration as a true boolean type.
+// users to specify their configuration as a true boolean or array type.
 cpptoml::option<std::string> itemAsString(
     const std::shared_ptr<cpptoml::table>& currSection,
     const std::string& entryKey) {
@@ -371,6 +372,14 @@ cpptoml::option<std::string> itemAsString(
   auto valueBool = currSection->get_as<bool>(entryKey);
   if (valueBool) {
     return cpptoml::option<std::string>(*valueBool ? "true" : "false");
+  }
+
+  auto valueArray = currSection->get_array(entryKey);
+  if (valueArray) {
+    // re-serialize using cpp-toml
+    std::ostringstream stringifiedValue{};
+    stringifiedValue << *valueArray;
+    return stringifiedValue.str();
   }
 
   return {};

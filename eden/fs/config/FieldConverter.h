@@ -7,9 +7,11 @@
 
 #pragma once
 
+#include <cpptoml.h> // @manual=fbsource//third-party/cpptoml:cpptoml
 #include <chrono>
 #include <map>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <type_traits>
 
@@ -17,6 +19,7 @@
 
 #include <folly/Expected.h>
 #include <folly/Range.h>
+#include <folly/String.h>
 
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -71,6 +74,63 @@ class FieldConverter<std::optional<T>> {
 
   std::string toDebugString(const std::optional<T>& value) const {
     return FieldConverter<T>{}.toDebugString(value.value_or(T{}));
+  }
+};
+
+template <typename T>
+class FieldConverter<std::vector<T>> {
+ public:
+  folly::Expected<std::vector<T>, std::string> fromString(
+      folly::StringPiece value,
+      const std::map<std::string, std::string>& convData) const {
+    // make the array parsable by cpptoml
+    std::string kArrayKeyName{"array"};
+    std::istringstream valueStream{
+        folly::to<std::string>(kArrayKeyName, " = ", value.str())};
+
+    // parse in toml type
+    std::shared_ptr<cpptoml::array> elements;
+    try {
+      cpptoml::parser parser{valueStream};
+      auto table = parser.parse();
+      elements = table->get_array(kArrayKeyName);
+    } catch (cpptoml::parse_exception& err) {
+      return folly::Unexpected<std::string>(folly::to<std::string>(
+          "Error parsing an array of strings: ", err.what()));
+    }
+
+    // parse from toml type to eden type
+    std::vector<T> deserializedElements;
+    deserializedElements.reserve(elements->get().size());
+    for (auto& element : *elements) {
+      auto stringElement = cpptoml::get_impl<std::string>(element);
+      if (stringElement) {
+        auto deserializedElement =
+            FieldConverter<T>{}.fromString(*stringElement, convData);
+        if (deserializedElement.hasValue()) {
+          deserializedElements.push_back(deserializedElement.value());
+        } else {
+          return folly::Unexpected(deserializedElement.error());
+        }
+      } else {
+        return folly::Unexpected<std::string>(
+            "eden currenly only supports lists of strings for config values");
+      }
+    }
+    return deserializedElements;
+  }
+
+  std::string toDebugString(const std::vector<T>& value) const {
+    std::vector<std::string> serializedElements;
+    serializedElements.resize(value.size());
+    std::transform(
+        value.begin(),
+        value.end(),
+        serializedElements.begin(),
+        [](auto& element) {
+          return FieldConverter<T>{}.toDebugString(element);
+        });
+    return folly::join(", ", serializedElements);
   }
 };
 

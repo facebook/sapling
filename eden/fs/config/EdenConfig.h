@@ -10,6 +10,7 @@
 #include <chrono>
 #include <memory>
 #include <optional>
+#include <vector>
 
 #include <folly/dynamic.h>
 #include <folly/portability/SysStat.h>
