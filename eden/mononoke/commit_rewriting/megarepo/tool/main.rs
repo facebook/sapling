@@ -40,8 +40,8 @@ mod sync_diamond_merge;
 use crate::cli::{
     cs_args_from_matches, get_catchup_head_delete_commits_cs_args_factory,
     get_delete_commits_cs_args_factory, get_gradual_merge_commits_cs_args_factory, setup_app,
-    BONSAI_MERGE, BONSAI_MERGE_P1, BONSAI_MERGE_P2, CATCHUP_DELETE_HEAD, CHANGESET,
-    CHUNKING_HINT_FILE, COMMIT_BOOKMARK, COMMIT_HASH, DELETION_CHUNK_SIZE, DRY_RUN,
+    BASE_COMMIT_HASH, BONSAI_MERGE, BONSAI_MERGE_P1, BONSAI_MERGE_P2, CATCHUP_DELETE_HEAD,
+    CHANGESET, CHUNKING_HINT_FILE, COMMIT_BOOKMARK, COMMIT_HASH, DELETION_CHUNK_SIZE, DRY_RUN,
     EVEN_CHUNK_SIZE, FIRST_PARENT, GRADUAL_MERGE, GRADUAL_MERGE_PROGRESS, HEAD_BOOKMARK,
     LAST_DELETION_COMMIT, LIMIT, MANUAL_COMMIT_SYNC, MAX_NUM_OF_MOVES_IN_COMMIT, MERGE, MOVE,
     ORIGIN_REPO, PARENTS, PATH_REGEX, PRE_DELETION_COMMIT, PRE_MERGE_DELETE, SECOND_PARENT,
@@ -225,8 +225,26 @@ async fn run_pre_merge_delete<'a>(
             .await?
     };
 
-    let pmd = create_pre_merge_delete(&ctx, &repo, parent_bcs_id, chunker, delete_cs_args_factory)
-        .await?;
+    let base_bcs_id = {
+        match sub_m.value_of(BASE_COMMIT_HASH) {
+            Some(hash) => {
+                let bcs_id = helpers::csid_resolve(ctx.clone(), repo.clone(), hash)
+                    .compat()
+                    .await?;
+                Some(bcs_id)
+            }
+            None => None,
+        }
+    };
+    let pmd = create_pre_merge_delete(
+        &ctx,
+        &repo,
+        parent_bcs_id,
+        chunker,
+        delete_cs_args_factory,
+        base_bcs_id,
+    )
+    .await?;
 
     let PreMergeDelete { mut delete_commits } = pmd;
 

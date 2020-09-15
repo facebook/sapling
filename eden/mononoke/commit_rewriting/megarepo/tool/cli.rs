@@ -14,6 +14,7 @@ use futures_old::future::{err, ok};
 use megarepolib::common::{ChangesetArgs, ChangesetArgsFactory, StackPosition};
 use mononoke_types::DateTime;
 
+pub const BASE_COMMIT_HASH: &str = "base-commit-hash";
 pub const COMMIT_HASH: &'static str = "commit-hash";
 pub const GRADUAL_MERGE: &'static str = "gradual-merge";
 pub const GRADUAL_MERGE_PROGRESS: &'static str = "gradual-merge-progress";
@@ -272,6 +273,14 @@ pub fn setup_app<'a, 'b>() -> App<'a, 'b> {
             Arg::with_name(EVEN_CHUNK_SIZE)
                 .help("chunk size for even chunking when --chunking-hing-file is not provided")
                 .long(EVEN_CHUNK_SIZE)
+                .takes_value(true)
+                .required(false)
+        )
+        .arg(
+            Arg::with_name(BASE_COMMIT_HASH)
+                .help("commit that will be diffed against to find what files needs to be deleted - \
+                 only files that don't exist or differ from base commit will be deleted.")
+                .long(BASE_COMMIT_HASH)
                 .takes_value(true)
                 .required(false)
         );
