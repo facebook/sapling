@@ -95,7 +95,7 @@ else
 endif
 
 build:
-	$(PYTHON) setup.py $(PURE) build $(COMPILERFLAG)
+	$(PYTHON3) setup.py $(PURE) build $(COMPILERFLAG)
 
 wheel:
 	FORCE_SETUPTOOLS=1 $(PYTHON) setup.py $(PURE) bdist_wheel $(COMPILERFLAG)
@@ -109,7 +109,7 @@ getdepsbuild:
 	ln -sfn $(GETDEPS_INSTALL_DIR)/rust-shed/source/shed ../../common/rust/shed
 	GETDEPS_BUILD=1 \
 		THRIFT="$(GETDEPS_INSTALL_DIR)/fbthrift/bin/thrift1" \
-		$(PYTHON) setup.py $(PURE) build $(COMPILERFLAG)
+		$(PYTHON3) setup.py $(PURE) build $(COMPILERFLAG)
 
 cleanbutpackages:
 	-$(PYTHON) setup.py clean --all # ignore errors from this command
@@ -131,13 +131,13 @@ clean: cleanbutpackages
 	rm -rf packages
 
 install: build
-	$(PYTHON) setup.py $(PURE) install --root="$(DESTDIR)/" --prefix="$(PREFIX)" --force
+	$(PYTHON3) setup.py $(PURE) install --root="$(DESTDIR)/" --prefix="$(PREFIX)" --force
 
 install-home: build
-	$(PYTHON) setup.py $(PURE) install --home="$(HOME)" --prefix="" --force
+	$(PYTHON3) setup.py $(PURE) install --home="$(HOME)" --prefix="" --force
 
 install-getdeps: getdepsbuild
-	GETDEPS_BUILD=1 $(PYTHON) setup.py $(PURE) install --root="$(DESTDIR)/" --prefix="$(PREFIX)" --force
+	GETDEPS_BUILD=1 $(PYTHON3) setup.py $(PURE) install --root="$(DESTDIR)/" --prefix="$(PREFIX)" --force
 
 check: tests
 
