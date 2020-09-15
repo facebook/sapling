@@ -6,10 +6,7 @@
  */
 
 #pragma once
-#include <iostream>
-#include <string>
 #include "eden/fs/service/EdenError.h"
-#include "eden/fs/utils/PathFuncs.h"
 
 // This is a stub to compile eden/service on Window.
 struct fuse_init_out {
