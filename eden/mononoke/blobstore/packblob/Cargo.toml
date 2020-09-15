@@ -20,7 +20,7 @@ bufsize = "0.5"
 bytes = { version = "0.5", features = ["serde"] }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }
-zstd = "=0.4.23"
+zstd = "=0.5.3+zstd.1.4.5"
 
 [dev-dependencies]
 memblob = { path = "../memblob" }

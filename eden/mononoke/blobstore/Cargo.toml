@@ -26,7 +26,7 @@ futures-old = { package = "futures", version = "0.1" }
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_derive = "1.0"
 thiserror = "1.0"
-zstd = "=0.4.23"
+zstd = "=0.5.3+zstd.1.4.5"
 
 [dev-dependencies]
 cacheblob = { path = "cacheblob" }
