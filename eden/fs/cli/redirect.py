@@ -407,9 +407,8 @@ class Redirection:
 
     def apply(self, checkout: EdenCheckout):
         disposition = self.remove_existing(checkout)
-        if (
-            disposition == RepoPathDisposition.IS_NON_EMPTY_DIR
-            and self.type == RedirectionType.SYMLINK
+        if disposition == RepoPathDisposition.IS_NON_EMPTY_DIR and (
+            self.type == RedirectionType.SYMLINK
             or (self.type == RedirectionType.BIND and sys.platform == "win32")
         ):
             # Part of me would like to show this error even if we're going
