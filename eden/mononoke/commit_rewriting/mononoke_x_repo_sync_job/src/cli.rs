@@ -17,6 +17,7 @@ pub const ARG_LOG_TO_SCUBA: &'static str = "log-to-scuba";
 pub const ARG_BACKPRESSURE_REPOS_IDS: &'static str = "backpressure-repo-ids";
 pub const ARG_DERIVED_DATA_TYPES: &'static str = "derived-data-types";
 pub const ARG_SLEEP_SECS: &'static str = "sleep-secs";
+pub const ARG_BOOKMARK_REGEX: &str = "bookmark-regex";
 
 pub fn create_app<'a, 'b>() -> App<'a, 'b> {
     let app = args::MononokeApp::new("Mononoke cross-repo sync job")
@@ -84,6 +85,15 @@ pub fn create_app<'a, 'b>() -> App<'a, 'b> {
                 .required(false)
                 .help(
                     "derived data to derive in target repo after sync",
+                ),
+        )
+        .arg(
+            Arg::with_name(ARG_BOOKMARK_REGEX)
+                .long(ARG_BOOKMARK_REGEX)
+                .takes_value(true)
+                .required(false)
+                .help(
+                    "sync only bookmarks that match the regex",
                 ),
         );
 

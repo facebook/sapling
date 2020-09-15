@@ -44,6 +44,7 @@ use futures_stats::TimedFutureExt;
 use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use mononoke_types::{ChangesetId, RepositoryId};
 use mutable_counters::{MutableCounters, SqlMutableCounters};
+use regex::Regex;
 use scuba_ext::ScubaSampleBuilder;
 use skiplist::SkiplistIndex;
 use slog::{debug, error, info, warn};
@@ -56,8 +57,8 @@ mod setup;
 mod sync;
 
 use crate::cli::{
-    create_app, ARG_BACKPRESSURE_REPOS_IDS, ARG_CATCH_UP_ONCE, ARG_DERIVED_DATA_TYPES, ARG_ONCE,
-    ARG_TAIL,
+    create_app, ARG_BACKPRESSURE_REPOS_IDS, ARG_BOOKMARK_REGEX, ARG_CATCH_UP_ONCE,
+    ARG_DERIVED_DATA_TYPES, ARG_ONCE, ARG_TAIL,
 };
 use crate::reporting::{add_common_fields, log_bookmark_update_result, log_noop_iteration};
 use crate::setup::{
@@ -143,6 +144,7 @@ async fn run_in_tailing_mode<
     derived_data_types: Vec<String>,
     tailing_args: TailingArgs<M>,
     sleep_secs: u64,
+    maybe_bookmark_regex: Option<Regex>,
 ) -> Result<(), Error> {
     match tailing_args {
         TailingArgs::CatchUpOnce(commit_syncer) => {
@@ -158,6 +160,7 @@ async fn run_in_tailing_mode<
                 &backpressure_repos,
                 &derived_data_types,
                 sleep_secs,
+                &maybe_bookmark_regex,
             )
             .await?;
         }
@@ -198,6 +201,7 @@ async fn run_in_tailing_mode<
                     &backpressure_repos,
                     &derived_data_types,
                     sleep_secs,
+                    &maybe_bookmark_regex,
                 )
                 .await?;
 
@@ -226,6 +230,7 @@ async fn tail<
     backpressure_repos: &[BlobRepo],
     derived_data_types: &[String],
     sleep_secs: u64,
+    maybe_bookmark_regex: &Option<Regex>,
 ) -> Result<bool, Error> {
     let source_repo = commit_syncer.get_source_repo();
     let target_repo_id = commit_syncer.get_target_repo_id();
@@ -259,6 +264,20 @@ async fn tail<
         for entry in log_entries {
             let entry_id = entry.id;
             scuba_sample.add("entry_id", entry.id);
+
+            if let Some(regex) = maybe_bookmark_regex {
+                if !regex.is_match(entry.bookmark_name.as_str()) {
+                    info!(
+                        ctx.logger(),
+                        "skipping log entry #{} for {}", entry.id, entry.bookmark_name
+                    );
+                    let mut scuba_sample = scuba_sample.clone();
+                    scuba_sample.add("source_bookmark_name", format!("{}", entry.bookmark_name));
+                    scuba_sample.add("skipped", true);
+                    scuba_sample.log();
+                    continue;
+                }
+            }
 
             let (stats, res) = sync_single_bookmark_update_log(
                 &ctx,
@@ -481,6 +500,11 @@ async fn run(
                 None => vec![],
             };
 
+            let maybe_bookmark_regex = match sub_m.value_of(ARG_BOOKMARK_REGEX) {
+                Some(regex) => Some(Regex::new(regex)?),
+                None => None,
+            };
+
             run_in_tailing_mode(
                 &ctx,
                 counters,
@@ -492,6 +516,7 @@ async fn run(
                 derived_data_types,
                 tailing_args,
                 sleep_secs,
+                maybe_bookmark_regex,
             )
             .await
         }
