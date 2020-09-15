@@ -10,6 +10,7 @@ import os
 import pathlib
 import shlex
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -334,21 +335,31 @@ class EdenFS(object):
         process = self._process
         assert process is not None
 
+        # Before shutting down, get the current pid. This may differ from process.pid when
+        # edenfs is started with sudo.
+        daemon_pid = util.check_health(
+            self.get_thrift_client, self.eden_dir, timeout=30
+        ).pid
+
         # Run "edenfsctl stop" with a timeout of 0 to tell it not to wait for the EdenFS
         # process to exit.  Since we are running it directly (self._process) we will
         # need to wait on it.  Depending on exactly how it is being run the process may
         # not go away until we wait on it.
         self.run_cmd("stop", "-t", "0")
 
-        # Wait up to 30 seconds for EdenFS to exit.
+        # Wait up to 120 seconds for EdenFS to exit. It generally won't take this long,
+        # but under heavy contention on CI machines, 30 seconds isn't long enough.
         self._process = None
         try:
-            return_code = process.wait(timeout=30)
+            return_code = process.wait(timeout=120)
         except subprocess.TimeoutExpired:
             # EdenFS did not exit normally on its own.
-            process.kill()
-            return_code = process.wait(timeout=10)
-            raise Exception("EdenFS did not exit on its own; had to send SIGKILL")
+            if can_run_sudo() and daemon_pid is not None:
+                os.kill(daemon_pid, signal.SIGKILL)
+            else:
+                process.kill()
+            process.wait(timeout=10)
+            raise Exception("EdenFS did not shutdown on time; had to send SIGKILL")
 
         if return_code != 0:
             raise Exception(
