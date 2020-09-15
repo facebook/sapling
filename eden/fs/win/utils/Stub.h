@@ -17,10 +17,6 @@ struct fuse_init_out {
   uint32_t minor;
 };
 
-struct fuse_in_header {
-  uint32_t len;
-};
-
 namespace facebook {
 namespace eden {
 
