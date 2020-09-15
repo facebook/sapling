@@ -25,6 +25,12 @@ from facebook.eden.ttypes import MountState
 from .find_executables import FindExe
 
 
+# Two minutes is very generous, but 30 seconds is not enough CI hosts
+# and many-core machines under load.
+EDENFS_START_TIMEOUT = 120
+EDENFS_STOP_TIMEOUT = 240
+
+
 class EdenFS(object):
     """Manages an instance of the EdenFS fuse server."""
 
@@ -200,7 +206,7 @@ class EdenFS(object):
         cmd.extend(args)
         return cmd
 
-    def wait_for_is_healthy(self, timeout: float = 30) -> bool:
+    def wait_for_is_healthy(self, timeout: float = EDENFS_START_TIMEOUT) -> bool:
         process = self._process
         assert process is not None
         health = util.wait_for_daemon_healthy(
@@ -213,7 +219,7 @@ class EdenFS(object):
 
     def start(
         self,
-        timeout: float = 60,
+        timeout: float = EDENFS_START_TIMEOUT,
         takeover_from: Optional[int] = None,
         extra_args: Optional[List[str]] = None,
     ) -> None:
@@ -347,11 +353,9 @@ class EdenFS(object):
         # not go away until we wait on it.
         self.run_cmd("stop", "-t", "0")
 
-        # Wait up to 120 seconds for EdenFS to exit. It generally won't take this long,
-        # but under heavy contention on CI machines, 30 seconds isn't long enough.
         self._process = None
         try:
-            return_code = process.wait(timeout=120)
+            return_code = process.wait(timeout=EDENFS_STOP_TIMEOUT)
         except subprocess.TimeoutExpired:
             # EdenFS did not exit normally on its own.
             if can_run_sudo() and daemon_pid is not None:
@@ -359,7 +363,10 @@ class EdenFS(object):
             else:
                 process.kill()
             process.wait(timeout=10)
-            raise Exception("EdenFS did not shutdown on time; had to send SIGKILL")
+            raise Exception(
+                f"edenfs did not shutdown within {EDENFS_STOP_TIMEOUT} seconds; "
+                "had to send SIGKILL"
+            )
 
         if return_code != 0:
             raise Exception(
@@ -374,7 +381,7 @@ class EdenFS(object):
         with self.get_thrift_client() as client:
             return client.getDaemonInfo().pid
 
-    def graceful_restart(self, timeout: float = 30) -> None:
+    def graceful_restart(self, timeout: float = EDENFS_START_TIMEOUT) -> None:
         old_process = self._process
         assert old_process is not None
 
