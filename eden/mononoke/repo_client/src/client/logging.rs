@@ -147,7 +147,7 @@ impl CommandLogger {
             wireproto,
         } = self;
 
-        let session_id = inner.ctx.session_id().clone();
+        let session_id = inner.ctx.metadata().session_id().clone();
 
         inner.log_command_processed(stats);
 
@@ -223,7 +223,7 @@ fn do_wireproto_logging<'a>(
         .add("mononoke_session_uuid", session_id.into_string())
         .add("reponame", wireproto.reponame.clone());
 
-    if let Some(client_hostname) = ctx.session().source_hostname() {
+    if let Some(client_hostname) = ctx.session().metadata().client_hostname() {
         builder.add("client_hostname", client_hostname.clone());
     }
 

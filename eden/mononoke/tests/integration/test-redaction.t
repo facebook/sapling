@@ -410,7 +410,7 @@ Check logging
       "key": "content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2",
       "operation": "GET",
       "session_uuid": "*", (glob)
-      "unix_username": "None"
+      "unix_username": "*" (glob)
     }
   }
   {
@@ -421,7 +421,7 @@ Check logging
       "key": "content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2",
       "operation": "GET",
       "session_uuid": "*", (glob)
-      "unix_username": "None"
+      "unix_username": "*" (glob)
     }
   }
   {
@@ -432,7 +432,7 @@ Check logging
       "key": "content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2",
       "operation": "GET",
       "session_uuid": "*", (glob)
-      "unix_username": "None"
+      "unix_username": "*" (glob)
     }
   }
   {
@@ -443,6 +443,6 @@ Check logging
       "key": "content.blake2.8e86b59a7708c54ab97f95db4a39e27886e5d3775c24a7d0d8106f82b3d38d49",
       "operation": "GET",
       "session_uuid": "*", (glob)
-      "unix_username": "None"
+      "unix_username": "*" (glob)
     }
   }

@@ -6,13 +6,11 @@
  */
 
 use fbinit::FacebookInit;
-use permission_checker::MononokeIdentitySet;
 use scribe_ext::Scribe;
 use scuba_ext::ScubaSampleBuilder;
-use session_id::SessionId;
 use slog::{o, Drain, Level, Logger};
 use slog_glog_fmt::default_drain;
-use sshrelay::SshEnvVars;
+use sshrelay::Metadata;
 use tracing::TraceContext;
 
 use crate::logging::{LoggingContainer, SamplingKey};
@@ -95,10 +93,6 @@ impl CoreContext {
         }
     }
 
-    pub fn session_id(&self) -> &SessionId {
-        &self.session.session_id()
-    }
-
     pub fn logger(&self) -> &Logger {
         &self.logging.logger()
     }
@@ -119,24 +113,12 @@ impl CoreContext {
         &self.session.trace()
     }
 
-    pub fn user_unix_name(&self) -> &Option<String> {
-        &self.session.user_unix_name()
-    }
-
-    pub fn source_hostname(&self) -> &Option<String> {
-        &self.session.source_hostname()
-    }
-
-    pub fn ssh_env_vars(&self) -> &SshEnvVars {
-        &self.session.ssh_env_vars()
+    pub fn metadata(&self) -> &Metadata {
+        &self.session.metadata()
     }
 
     pub fn session(&self) -> &SessionContainer {
         &self.session
-    }
-
-    pub fn identities(&self) -> Option<&MononokeIdentitySet> {
-        self.session().identities()
     }
 
     pub fn scribe(&self) -> &Scribe {

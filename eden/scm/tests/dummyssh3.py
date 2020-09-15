@@ -96,7 +96,12 @@ if "hgcli" in hgcmd:
     )
 
     mock_username = os.environ.get("MOCK_USERNAME")
-    hgcmd += " --mock-username '{}'".format(mock_username)
+    if mock_username:
+        hgcmd += " --mock-username '{}'".format(mock_username)
+
+    client_debug = os.environ.get("CLIENT_DEBUG")
+    if client_debug == "true":
+        hgcmd += " --client-debug"
 
 if os.environ.get("DUMMYSSH_STABLE_ORDER"):
     # Buffer all stderr outputs until the end of connection.  This reduces test

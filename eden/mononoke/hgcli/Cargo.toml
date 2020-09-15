@@ -7,8 +7,8 @@ license = "GPLv2+"
 include = ["src/**/*.rs"]
 
 [dependencies]
-context = { path = "../server/context" }
 scuba_ext = { path = "../common/scuba_ext" }
+session_id = { path = "../server/session_id" }
 sshrelay = { path = "../sshrelay" }
 failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

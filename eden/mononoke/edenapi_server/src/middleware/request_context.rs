@@ -14,6 +14,7 @@ use context::{CoreContext, SessionContainer};
 use fbinit::FacebookInit;
 use gotham_ext::middleware::{ClientIdentity, Middleware};
 use scuba::ScubaSampleBuilder;
+use sshrelay::Metadata;
 
 #[derive(StateData, Clone)]
 pub struct RequestContext {
@@ -41,9 +42,13 @@ impl RequestContextMiddleware {
 #[async_trait::async_trait]
 impl Middleware for RequestContextMiddleware {
     async fn inbound(&self, state: &mut State) -> Option<Response<Body>> {
-        let identities = ClientIdentity::borrow_from(state).identities().clone();
+        let identities = ClientIdentity::borrow_from(state)
+            .identities()
+            .clone()
+            .unwrap_or_default();
+        let metadata = Metadata::default().set_identities(identities);
         let session = SessionContainer::builder(self.fb)
-            .identities(identities)
+            .metadata(metadata)
             .build();
 
         let request_id = request_id(&state);

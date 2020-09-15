@@ -5,10 +5,16 @@
  * GNU General Public License version 2.
  */
 
+use rand::{self, distributions::Alphanumeric, thread_rng, Rng};
 use std::fmt;
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub struct SessionId(String);
+
+pub fn generate_session_id() -> SessionId {
+    let s: String = thread_rng().sample_iter(&Alphanumeric).take(16).collect();
+    SessionId::from_string(s)
+}
 
 impl SessionId {
     pub fn from_string<T: ToString>(s: T) -> Self {
@@ -21,6 +27,12 @@ impl SessionId {
 
     pub fn into_string(self) -> String {
         self.0
+    }
+}
+
+impl Default for SessionId {
+    fn default() -> Self {
+        generate_session_id()
     }
 }
 

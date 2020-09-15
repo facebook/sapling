@@ -72,6 +72,9 @@ fn main(fb: FacebookInit) {
                 )
                 .arg(Arg::from_usage(
                     "--mock-username [USERNAME] 'use only in tests, send this username instead of the currently logged in'",
+                ))
+                .arg(Arg::from_usage(
+                    "--client-debug 'tell mononoke to send debug information to the client'",
                 )),
         )
         .get_matches();

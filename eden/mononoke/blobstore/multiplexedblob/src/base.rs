@@ -237,7 +237,7 @@ pub async fn inner_put(
         stats,
         result.as_ref(),
         key,
-        ctx.session_id().to_string(),
+        ctx.metadata().session_id().to_string(),
         OperationType::Put,
         size,
         Some(blobstore_id),
@@ -612,7 +612,7 @@ async fn multiplexed_get_one(
         stats,
         result.as_ref(),
         key,
-        ctx.borrow().session_id().to_string(),
+        ctx.borrow().metadata().session_id().to_string(),
         operation,
         Some(blobstore_id),
     );

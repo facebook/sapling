@@ -583,7 +583,7 @@ mod test {
         type Mapping = TestMapping;
 
         fn mapping(ctx: &CoreContext, _repo: &BlobRepo) -> Self::Mapping {
-            let session = ctx.session_id().clone();
+            let session = ctx.metadata().session_id().clone();
             MAPPINGS.with(|m| m.entry(session).or_insert_with(TestMapping::new).clone())
         }
 

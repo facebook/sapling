@@ -163,14 +163,14 @@ impl<T: Blobstore + Clone> RedactedBlobstoreInner<T> {
                 scuba_builder.unsampled();
             }
 
-            let session = &ctx.session_id();
+            let session = &ctx.metadata().session_id();
             scuba_builder
                 .add("time", curr_timestamp)
                 .add("operation", operation)
                 .add("key", key.to_string())
                 .add("session_uuid", session.to_string());
 
-            if let Some(unix_username) = ctx.user_unix_name().clone() {
+            if let Some(unix_username) = ctx.metadata().unix_name() {
                 scuba_builder.add("unix_username", unix_username);
             }
 

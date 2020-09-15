@@ -14,8 +14,8 @@ use async_limiter::AsyncLimiter;
 use bytes::Bytes;
 use cached_config::ConfigHandle;
 use context::{
-    generate_session_id, is_quicksand, LoggingContainer, SessionClass, SessionContainer,
-    SessionContainerBuilder, SessionId,
+    is_quicksand, LoggingContainer, SessionClass, SessionContainer, SessionContainerBuilder,
+    SessionId,
 };
 use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
@@ -23,7 +23,6 @@ use futures::compat::Future01CompatExt;
 use futures_old::{sync::mpsc::Sender, Future, Sink, Stream};
 use futures_stats::TimedFutureExt;
 use hgproto::{sshproto, HgProtoHandler};
-use itertools::join;
 use lazy_static::lazy_static;
 use limits::types::{MononokeThrottleLimit, MononokeThrottleLimits, RateLimits};
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
@@ -34,10 +33,10 @@ use ratelimit_meter::{algorithms::LeakyBucket, DirectRateLimiter};
 use repo_client::RepoClient;
 use scribe_ext::Scribe;
 use scuba_ext::ScubaSampleBuilderExt;
-use slog::{self, error, info, o, warn, Drain, Level, Logger};
+use slog::{self, error, o, Drain, Level, Logger};
 use slog_ext::SimpleFormatWithError;
 use slog_kvfilter::KVFilter;
-use sshrelay::{Priority, SenderBytesWrite, SshEnvVars, Stdio};
+use sshrelay::{Metadata, Priority, SenderBytesWrite, Stdio};
 use stats::prelude::*;
 use std::convert::TryInto;
 use std::mem;
@@ -105,6 +104,7 @@ async fn set_blobstore_limiters(builder: &mut SessionContainerBuilder, priority:
 
 pub async fn request_handler(
     fb: FacebookInit,
+    reponame: String,
     repo_handlers: Arc<HashMap<String, RepoHandler>>,
     security_checker: Arc<ConnectionsSecurityChecker>,
     identities: BTreeSet<MononokeIdentity>,
@@ -118,39 +118,23 @@ pub async fn request_handler(
         stdin,
         stdout,
         stderr,
-        mut preamble,
+        metadata,
     } = stdio;
 
-    let session_id = match preamble
-        .misc
-        .get("session_uuid")
-        .map(SessionId::from_string)
-    {
-        Some(session_id) => session_id,
-        None => {
-            let session_id = generate_session_id();
-            preamble
-                .misc
-                .insert("session_uuid".to_owned(), session_id.to_string());
-            session_id
-        }
-    };
+    let session_id = metadata.session_id();
 
     // We don't have a repository yet, so create without server drain
-    let conn_log = create_conn_logger(stderr.clone(), None, &session_id);
+    let conn_log = create_conn_logger(stderr.clone(), None, Some(session_id));
 
-    let handler = repo_handlers
-        .get(&preamble.reponame)
-        .cloned()
-        .ok_or_else(|| {
-            error!(
-                conn_log,
-                "Requested repo \"{}\" does not exist or is disabled", preamble.reponame;
-                "remote" => "true"
-            );
+    let handler = repo_handlers.get(&reponame).cloned().ok_or_else(|| {
+        error!(
+            conn_log,
+            "Requested repo \"{}\" does not exist or is disabled", reponame;
+            "remote" => "true"
+        );
 
-            anyhow!("unknown repo: {}", preamble.reponame)
-        })?;
+        anyhow!("unknown repo: {}", reponame)
+    })?;
 
     let RepoHandler {
         logger,
@@ -165,12 +149,10 @@ pub async fn request_handler(
     } = handler;
 
     // Upgrade log to include server drain
-    let conn_log = create_conn_logger(stderr.clone(), Some(logger), &session_id);
+    let conn_log = create_conn_logger(stderr.clone(), Some(logger), Some(session_id));
 
-    scuba
-        .add_preamble(&preamble)
-        .add("client_ip", addr.to_string())
-        .add("client_identities", join(identities.iter(), ","));
+    scuba.add("repo", reponame);
+    scuba.add_metadata(&metadata);
 
     let is_allowed = security_checker
         .check_if_connections_allowed(&identities)
@@ -193,58 +175,24 @@ pub async fn request_handler(
     let wireproto_calls = Arc::new(Mutex::new(Vec::new()));
     let trace = TraceContext::new(TraceId::from_string(session_id.to_string()), Instant::now());
 
-    let priority = match Priority::extract_from_preamble(&preamble) {
-        Ok(Some(p)) => {
-            info!(&conn_log, "Using priority: {}", p; "remote" => "true");
-            p
-        }
-        Ok(None) => Priority::Default,
-        Err(e) => {
-            warn!(&conn_log, "Could not parse priority: {}", e; "remote" => "true");
-            Priority::Default
-        }
-    };
-
+    let priority = metadata.priority();
     scuba.add("priority", priority.to_string());
     scuba.log_with_msg("Connection established", None);
 
-    let client_hostname = preamble
-        .misc
-        .get("source_hostname")
-        .cloned()
-        .unwrap_or("".to_string());
-
-    let ssh_env_vars = SshEnvVars::from_map(&preamble.misc);
     let load_limiter = load_limiting_config.map(|(config, category)| {
-        let (throttle_limits, rate_limits) =
-            loadlimiting_configs(config, &client_hostname, &ssh_env_vars);
+        let (throttle_limits, rate_limits) = loadlimiting_configs(config, &metadata);
         LoadLimiterBuilder::build(fb, throttle_limits, rate_limits, category)
     });
 
-    let client_ip = ssh_env_vars
-        .ssh_client
-        .as_ref()
-        .and_then(|ssh_client| {
-            // Parse SSH_CLIENT, if provided by the trusted peer.
-            let raw = ssh_client.split_whitespace().next()?;
-            let ip = raw.parse().ok()?;
-            Some(ip)
-        })
-        .unwrap_or(addr); // Fallback to the peer's IP.
-
     let mut session_builder = SessionContainer::builder(fb)
-        .session_id(session_id)
         .trace(trace.clone())
-        .user_unix_name(preamble.misc.get("unix_username").cloned())
-        .source_hostname(client_hostname)
-        .ssh_env_vars(ssh_env_vars)
-        .load_limiter(load_limiter)
-        .user_ip(client_ip);
+        .metadata(metadata.clone())
+        .load_limiter(load_limiter);
 
-    if priority == Priority::Wishlist {
+    if priority == &Priority::Wishlist {
         session_builder = session_builder.session_class(SessionClass::Background);
     }
-    set_blobstore_limiters(&mut session_builder, priority).await;
+    set_blobstore_limiters(&mut session_builder, *priority).await;
 
     let session = session_builder.build();
 
@@ -333,10 +281,9 @@ pub async fn request_handler(
 
 fn loadlimiting_configs(
     config: ConfigHandle<MononokeThrottleLimits>,
-    client_hostname: &str,
-    ssh_env_vars: &SshEnvVars,
+    metadata: &Metadata,
 ) -> (MononokeThrottleLimit, RateLimits) {
-    let is_quicksand = is_quicksand(&ssh_env_vars);
+    let is_quicksand = is_quicksand(&metadata);
 
     let config = config.get();
     let region_percentage = config
@@ -344,11 +291,16 @@ fn loadlimiting_configs(
         .get(&*DATACENTER_REGION_PREFIX)
         .copied()
         .unwrap_or(DEFAULT_PERCENTAGE);
-    let host_scheme = hostname_scheme(client_hostname);
-    let limit = config
-        .hostprefixes
-        .get(host_scheme)
-        .unwrap_or(&config.defaults);
+    let limit = match metadata.client_hostname() {
+        Some(client_hostname) => {
+            let host_scheme = hostname_scheme(client_hostname);
+            config
+                .hostprefixes
+                .get(host_scheme)
+                .unwrap_or(&config.defaults)
+        }
+        None => &config.defaults,
+    };
 
     let multiplier = if is_quicksand {
         region_percentage / 100.0 * config.quicksand_multiplier
@@ -380,12 +332,17 @@ fn hostname_scheme(hostname: &str) -> &str {
     }
 }
 
-fn create_conn_logger(
+pub fn create_conn_logger(
     stderr: Sender<Bytes>,
     server_logger: Option<Logger>,
-    session_id: &SessionId,
+    session_id: Option<&SessionId>,
 ) -> Logger {
+    let session_id = match session_id {
+        Some(session_id) => session_id.to_string(),
+        None => "".to_string(),
+    };
     let decorator = o!("session_uuid" => format!("{}", session_id));
+
     let stderr_write = SenderBytesWrite {
         chan: stderr.wait(),
     };

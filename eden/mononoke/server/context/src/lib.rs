@@ -6,7 +6,7 @@
  */
 
 #![deny(warnings)]
-#![feature(atomic_min_max, never_type)]
+#![feature(atomic_min_max, never_type, result_flattening)]
 
 pub use session_id::SessionId;
 
@@ -17,9 +17,7 @@ pub use crate::logging::{LoggingContainer, SamplingKey};
 #[cfg(not(fbcode_build))]
 pub use crate::oss::{is_external_sync, is_quicksand};
 pub use crate::perf_counters::{PerfCounterType, PerfCounters};
-pub use crate::session::{
-    generate_session_id, SessionClass, SessionContainer, SessionContainerBuilder,
-};
+pub use crate::session::{SessionClass, SessionContainer, SessionContainerBuilder};
 
 mod core;
 #[cfg(fbcode_build)]

@@ -47,15 +47,19 @@ impl<'params> BookmarkMoveAuthorization<'params> {
                     )
                     .into());
                 }
-                if let Some(user) = ctx.user_unix_name() {
-                    // TODO: clean up `is_allowed_user` to avoid this clone.
-                    if !bookmark_attrs.is_allowed_user(&Some(user.clone()), bookmark) {
-                        return Err(BookmarkMovementError::PermissionDeniedUser {
-                            user: user.clone(),
-                            bookmark: bookmark.clone(),
-                        });
-                    }
+
+                // If user is missing, fallback to "svcscm" which is the catch-all
+                // user for service identities etc.
+                let user = ctx.metadata().unix_name().unwrap_or("svcscm");
+
+                // TODO: clean up `is_allowed_user` to avoid this clone.
+                if !bookmark_attrs.is_allowed_user(&Some(user.to_string()), bookmark) {
+                    return Err(BookmarkMovementError::PermissionDeniedUser {
+                        user: user.to_string(),
+                        bookmark: bookmark.clone(),
+                    });
                 }
+
                 // TODO: Check using ctx.identities, and deny if neither are provided.
             }
             BookmarkMoveAuthorization::Service(service_name, scs_params) => {

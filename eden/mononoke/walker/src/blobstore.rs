@@ -83,7 +83,7 @@ impl ScrubHandler for StatsScrubHandler {
             .add(NODE_KEY, key)
             .add(CHECK_TYPE, "scrub_repair")
             .add(CHECK_FAIL, if is_repaired { 0 } else { 1 })
-            .add("session", ctx.session().session_id().to_string())
+            .add("session", ctx.session().metadata().session_id().to_string())
             .add("ctime", ctime)
             .log();
         if is_repaired {

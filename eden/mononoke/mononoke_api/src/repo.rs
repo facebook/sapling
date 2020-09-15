@@ -7,7 +7,6 @@
 
 use std::fmt;
 use std::{
-    borrow::Cow,
     sync::Arc,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -48,7 +47,7 @@ use mononoke_types::{
     Generation, RepositoryId,
 };
 use mutable_counters::SqlMutableCounters;
-use permission_checker::{ArcPermissionChecker, MononokeIdentitySet, PermissionCheckerBuilder};
+use permission_checker::{ArcPermissionChecker, PermissionCheckerBuilder};
 #[cfg(test)]
 use regex::Regex;
 use revset::AncestorsNodeStream;
@@ -556,9 +555,7 @@ impl Repo {
     }
 
     async fn check_permissions(&self, ctx: &CoreContext, mode: &str) -> Result<(), MononokeError> {
-        let identities = ctx.identities();
-        let identities =
-            identities.map_or_else(|| Cow::Owned(MononokeIdentitySet::new()), Cow::Borrowed);
+        let identities = ctx.metadata().identities();
 
         if !self
             .repo_permission_checker
@@ -588,9 +585,7 @@ impl Repo {
         ctx: &CoreContext,
         service_identity: String,
     ) -> Result<(), MononokeError> {
-        let identities = ctx.identities();
-        let identities =
-            identities.map_or_else(|| Cow::Owned(MononokeIdentitySet::new()), Cow::Borrowed);
+        let identities = ctx.metadata().identities();
 
         if !self
             .service_permission_checker

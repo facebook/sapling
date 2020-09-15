@@ -5,19 +5,26 @@
  * GNU General Public License version 2.
  */
 
+#![feature(result_flattening)]
 mod priority;
 
+use anyhow::{anyhow, Error, Result};
 use std::collections::HashMap;
 use std::env::var;
 use std::io;
+use std::net::IpAddr;
+use std::time::Duration;
 
 use bytes::{BufMut, Bytes, BytesMut};
 use futures::{sink::Wait, sync::mpsc};
 use futures_ext::BoxStream;
 use maplit::hashmap;
+use permission_checker::MononokeIdentitySet;
 use serde::{Deserialize, Serialize};
-use session_id::SessionId;
+use session_id::{generate_session_id, SessionId};
+use tokio::time::timeout;
 use tokio_util::codec::{Decoder, Encoder};
+use trust_dns_resolver::TokioAsyncResolver;
 
 use netstring::{NetstringDecoder, NetstringEncoder};
 
@@ -31,7 +38,7 @@ pub struct SshDecoder(NetstringDecoder);
 pub struct SshEncoder(NetstringEncoder<Bytes>);
 
 pub struct Stdio {
-    pub preamble: Preamble,
+    pub metadata: Metadata,
     pub stdin: BoxStream<Bytes, io::Error>,
     pub stdout: mpsc::Sender<Bytes>,
     pub stderr: mpsc::Sender<Bytes>,
@@ -53,6 +60,115 @@ impl io::Write for SenderBytesWrite {
             .send(Bytes::copy_from_slice(buf))
             .map(|_| buf.len())
             .map_err(|e| io::Error::new(io::ErrorKind::BrokenPipe, e))
+    }
+}
+
+#[derive(Clone, Debug, Default)]
+pub struct Metadata {
+    session_id: SessionId,
+    identities: MononokeIdentitySet,
+    priority: Priority,
+    client_debug: bool,
+    client_ip: Option<IpAddr>,
+    client_hostname: Option<String>,
+}
+
+impl Metadata {
+    pub async fn new(
+        session_id: Option<&String>,
+        identities: MononokeIdentitySet,
+        priority: Priority,
+        client_debug: bool,
+        client_ip: Option<IpAddr>,
+    ) -> Self {
+        let session_id: SessionId = match session_id {
+            Some(id) => SessionId::from_string(id.to_owned()),
+            None => generate_session_id(),
+        };
+
+        // Hostname of the client is for non-critical use only, make sure we don't block clients
+        // in case DNS is down by setting a timeout. In case DNS resolving is down, we maximumly
+        // delay the request for one second.
+        let client_hostname = match client_ip {
+            Some(client_ip) => timeout(Duration::from_secs(1), Metadata::reverse_lookup(client_ip))
+                .await
+                .map_err(Error::from)
+                .flatten()
+                .ok(),
+            None => None,
+        };
+
+        Self {
+            session_id,
+            identities,
+            priority,
+            client_debug,
+            client_ip,
+            client_hostname,
+        }
+    }
+
+    // Reverse lookups an IP to associated hostname. Trailing dots are stripped
+    // to remain compatible with historical logging and common usage of reverse
+    // hostnames in other logs (even though trailing dot is technically more correct)
+    async fn reverse_lookup(client_ip: IpAddr) -> Result<String> {
+        // This parses /etc/resolv.conf on each request. Given that this should be in
+        // the page cache and the parsing of the text is very minimal, this shouldn't
+        // impact performance much. In case this does lead to performance issues we
+        // could start caching this, which for now would be preferred to avoid as this
+        // might lead to unexpected behavior if the system configuration changes.
+        let resolver = TokioAsyncResolver::tokio_from_system_conf().await?;
+        resolver
+            .reverse_lookup(client_ip)
+            .await?
+            .iter()
+            .next()
+            .map(|name| name.to_string().trim_end_matches('.').to_string())
+            .ok_or_else(|| anyhow!("failed to do reverse lookup"))
+    }
+
+    pub fn session_id(&self) -> &SessionId {
+        &self.session_id
+    }
+
+    pub fn identities(&self) -> &MononokeIdentitySet {
+        &self.identities
+    }
+
+    pub fn set_identities(mut self, identities: MononokeIdentitySet) -> Self {
+        self.identities = identities;
+        self
+    }
+
+    pub fn priority(&self) -> &Priority {
+        &self.priority
+    }
+
+    pub fn client_debug(&self) -> bool {
+        self.client_debug
+    }
+
+    pub fn client_ip(&self) -> Option<&IpAddr> {
+        self.client_ip.as_ref()
+    }
+
+    pub fn client_hostname(&self) -> Option<&str> {
+        self.client_hostname.as_deref()
+    }
+
+    pub fn set_client_hostname(mut self, client_hostname: Option<String>) -> Self {
+        self.client_hostname = client_hostname;
+        self
+    }
+
+    pub fn unix_name(&self) -> Option<&str> {
+        for identity in self.identities() {
+            if identity.id_type() == "USER" {
+                return Some(identity.id_data());
+            }
+        }
+
+        None
     }
 }
 
@@ -84,6 +200,10 @@ impl Preamble {
         ssh_env_vars.add_into_map(&mut misc);
 
         Self { reponame, misc }
+    }
+
+    pub fn unix_name(&self) -> Option<&str> {
+        self.misc.get("unix_username").map(AsRef::as_ref)
     }
 }
 

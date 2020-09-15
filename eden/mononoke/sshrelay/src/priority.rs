@@ -13,7 +13,7 @@ use crate::Preamble;
 
 const KEY: &str = "priority";
 
-#[derive(Copy, Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Copy, Clone, Debug, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Priority {
     Default,
     Wishlist,
@@ -35,6 +35,12 @@ impl Priority {
 
     pub fn extract_from_preamble(preamble: &Preamble) -> Result<Option<Self>, Error> {
         preamble.misc.get(KEY).map(|s| s.parse()).transpose()
+    }
+}
+
+impl Default for Priority {
+    fn default() -> Self {
+        Self::Default
     }
 }
 

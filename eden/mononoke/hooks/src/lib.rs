@@ -169,11 +169,8 @@ impl HookManager {
         let futs = FuturesUnordered::new();
 
         let mut scuba = self.scuba.clone();
-        let user_option = ctx
-            .source_hostname()
-            .as_ref()
-            .or_else(|| ctx.user_unix_name().as_ref())
-            .map(|s| s.as_str());
+        let username = ctx.metadata().unix_name();
+        let user_option = ctx.metadata().client_hostname().or(username);
 
         if let Some(user) = user_option {
             scuba.add("user", user);

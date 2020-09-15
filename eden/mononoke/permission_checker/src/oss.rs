@@ -18,6 +18,10 @@ impl MononokeIdentity {
         MononokeIdentitySet::new()
     }
 
+    pub fn try_from_ssh_encoded(encoded: &str) -> Result<MononokeIdentitySet> {
+        bail!("Decoding from SSH Principals is not yet implemented for MononokeIdentity")
+    }
+
     pub fn try_from_json_encoded(_: &str) -> Result<MononokeIdentitySet> {
         bail!("Decoding from JSON is not yet implemented for MononokeIdentity")
     }

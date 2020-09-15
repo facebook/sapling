@@ -825,14 +825,16 @@ async fn log_commits_to_scribe(
 
                 let (generation, parents) = try_join(get_generation, get_parents).await?;
 
+                let username = ctx.metadata().unix_name();
+                let hostname = ctx.metadata().client_hostname();
                 let ci = scribe_commit_queue::CommitInfo::new(
                     repo_id,
                     bookmark,
                     generation,
                     changeset_id,
                     parents,
-                    ctx.user_unix_name().as_deref(),
-                    ctx.source_hostname().as_deref(),
+                    username.as_deref(),
+                    hostname.as_deref(),
                     received_timestamp,
                 );
                 queue.queue_commit(&ci)

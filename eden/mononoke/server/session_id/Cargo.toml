@@ -5,3 +5,6 @@ version = "0.1.0"
 authors = ['Facebook']
 license = "GPLv2+"
 include = ["src/lib.rs"]
+
+[dependencies]
+rand = { version = "0.7", features = ["small_rng"] }

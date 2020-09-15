@@ -876,7 +876,7 @@ impl RepoClient {
             self.repo.force_lfs_if_threshold_set()
         } else {
             self.repo
-                .lfs_params(self.session.source_hostname().as_deref())
+                .lfs_params(self.session.metadata().client_hostname().as_deref())
         }
     }
 

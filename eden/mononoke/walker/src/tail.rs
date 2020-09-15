@@ -59,7 +59,7 @@ where
         cloned!(make_run, repo, mut scuba_builder, visitor,);
 
         let ctx = CoreContext::new_with_logger(fb, logger.clone());
-        scuba_builder.add("session", ctx.session().session_id().to_string());
+        scuba_builder.add("session", ctx.session().metadata().session_id().to_string());
         let walk_run = RepoWalkRun {
             ctx: ctx.clone(),
             scuba_builder: scuba_builder.clone(),

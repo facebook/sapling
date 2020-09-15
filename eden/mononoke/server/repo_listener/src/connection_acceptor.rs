@@ -8,14 +8,14 @@
 use crate::security_checker::ConnectionsSecurityChecker;
 use std::collections::HashMap;
 use std::io;
-use std::net::SocketAddr;
+use std::net::{IpAddr, SocketAddr};
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc,
 };
 use std::time::Duration;
 
-use anyhow::{Context, Error, Result};
+use anyhow::{anyhow, Context, Error, Result};
 use bytes::Bytes;
 use cached_config::{ConfigHandle, ConfigStore};
 use cloned::cloned;
@@ -32,8 +32,7 @@ use metaconfig_types::CommonConfig;
 use openssl::ssl::SslAcceptor;
 use permission_checker::MononokeIdentity;
 use scribe_ext::Scribe;
-use slog::{debug, error, Logger};
-// use slog_kvfilter::KVFilter;
+use slog::{debug, error, info, warn, Logger};
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::task::JoinHandle;
@@ -41,11 +40,13 @@ use tokio_util::codec::{FramedRead, FramedWrite};
 
 use cmdlib::monitoring::ReadyFlagService;
 use limits::types::MononokeThrottleLimits;
-use sshrelay::{SshDecoder, SshEncoder, SshMsg, SshStream, Stdio};
+use sshrelay::{
+    Metadata, Preamble, Priority, SshDecoder, SshEncoder, SshEnvVars, SshMsg, SshStream, Stdio,
+};
 
 use crate::errors::ErrorKind;
 use crate::repo_handlers::RepoHandler;
-use crate::request_handler::request_handler;
+use crate::request_handler::{create_conn_logger, request_handler};
 
 const CHUNK_SIZE: usize = 10000;
 const CONFIGERATOR_LIMITS_CONFIG: &str = "scm/mononoke/loadshedding/limits";
@@ -173,12 +174,13 @@ async fn accept(
         None => Err(ErrorKind::ConnectionNoClientCertificate.into()),
     }?;
 
-    let (stdio, forwarding_join_handle) = ssh_server_mux(ssl_socket)
+    let (stdio, reponame, forwarding_join_handle) = ssh_server_mux(addr.ip(), ssl_socket)
         .await
         .with_context(|| format!("reading preamble failed: talking to '{}'", addr))?;
 
     request_handler(
         fb,
+        reponame,
         repo_handlers,
         security_checker,
         identities,
@@ -197,8 +199,13 @@ async fn accept(
 // As a server, given a stream to a client, return an Io pair with stdin/stdout, and an
 // auxillary sink for stderr.
 async fn ssh_server_mux<S>(
+    addr: IpAddr,
     s: S,
-) -> Result<(Stdio, JoinHandle<std::result::Result<(), std::io::Error>>)>
+) -> Result<(
+    Stdio,
+    String,
+    JoinHandle<std::result::Result<(), std::io::Error>>,
+)>
 where
     S: AsyncRead + AsyncWrite + Send + 'static,
 {
@@ -254,15 +261,75 @@ where
         (otx, etx, join_handle)
     };
 
+    let conn_log = create_conn_logger(stderr.clone(), None, None);
+    let metadata = try_convert_preamble_to_metadata(&preamble, addr, &conn_log).await?;
+    if metadata.client_debug() {
+        info!(&conn_log, "{:#?}", metadata; "remote" => "true");
+    }
+
     Ok((
         Stdio {
-            preamble,
+            metadata,
             stdin,
             stdout,
             stderr,
         },
+        preamble.reponame,
         join_handle,
     ))
+}
+
+async fn try_convert_preamble_to_metadata(
+    preamble: &Preamble,
+    addr: IpAddr,
+    conn_log: &Logger,
+) -> Result<Metadata> {
+    let vars = SshEnvVars::from_map(&preamble.misc);
+    let client_ip = match vars.ssh_client {
+        Some(ssh_client) => ssh_client
+            .split_whitespace()
+            .next()
+            .and_then(|ip| ip.parse::<IpAddr>().ok())
+            .unwrap_or(addr),
+        None => addr,
+    };
+
+    // SSH Connections are either authentication via ssh certificate principals or
+    // via some form of keyboard-interactive. In the case of certificates we should always
+    // rely on these. If they are not present, we should fallback to use the unix username
+    // as the primary principal.
+    let ssh_identities = match vars.ssh_cert_principals {
+        Some(ssh_identities) => ssh_identities,
+        None => preamble
+            .unix_name()
+            .ok_or_else(|| anyhow!("missing username and principals from preamble"))?
+            .to_string(),
+    };
+
+    let priority = match Priority::extract_from_preamble(&preamble) {
+        Ok(Some(p)) => {
+            info!(&conn_log, "Using priority: {}", p; "remote" => "true");
+            p
+        }
+        Ok(None) => Priority::Default,
+        Err(e) => {
+            warn!(&conn_log, "Could not parse priority: {}", e; "remote" => "true");
+            Priority::Default
+        }
+    };
+
+    Ok(Metadata::new(
+        preamble.misc.get("session_uuid"),
+        MononokeIdentity::try_from_ssh_encoded(&ssh_identities)?,
+        priority,
+        preamble
+            .misc
+            .get("client_debug")
+            .map(|debug| debug.parse::<bool>().unwrap_or_default())
+            .unwrap_or_default(),
+        Some(client_ip),
+    )
+    .await)
 }
 
 // TODO(stash): T33775046 we had to chunk responses because hgcli

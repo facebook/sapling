@@ -13,6 +13,7 @@ use metaconfig_types::RepoClientKnobs;
 use repo_client::{MononokeRepo, RepoClient, WireprotoLogging};
 use scuba_ext::ScubaSampleBuilder;
 use slog::Logger;
+use sshrelay::Metadata;
 use std::sync::Arc;
 
 pub struct FastReplayDispatcher {
@@ -48,10 +49,12 @@ impl FastReplayDispatcher {
         })
     }
 
-    pub fn client(&self, scuba: ScubaSampleBuilder, source_hostname: Option<String>) -> RepoClient {
+    pub fn client(&self, scuba: ScubaSampleBuilder, client_hostname: Option<String>) -> RepoClient {
+        let metadata = Metadata::default().set_client_hostname(client_hostname);
+
         let logging = LoggingContainer::new(self.fb, self.logger.clone(), scuba);
         let session = SessionContainer::builder(self.fb)
-            .source_hostname(source_hostname)
+            .metadata(metadata)
             .build();
 
         RepoClient::new(

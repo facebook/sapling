@@ -8,20 +8,11 @@
 use async_limiter::AsyncLimiter;
 use fbinit::FacebookInit;
 use load_limiter::BoxLoadLimiter;
-use permission_checker::MononokeIdentitySet;
-use rand::{self, distributions::Alphanumeric, thread_rng, Rng};
-use session_id::SessionId;
-use sshrelay::SshEnvVars;
-use std::net::IpAddr;
+use sshrelay::Metadata;
 use std::sync::Arc;
 use tracing::TraceContext;
 
 use super::{SessionClass, SessionContainer, SessionContainerInner};
-
-pub fn generate_session_id() -> SessionId {
-    let s: String = thread_rng().sample_iter(&Alphanumeric).take(16).collect();
-    SessionId::from_string(s)
-}
 
 pub struct SessionContainerBuilder {
     fb: FacebookInit,
@@ -40,24 +31,14 @@ impl SessionContainerBuilder {
         Self {
             fb,
             inner: SessionContainerInner {
-                session_id: generate_session_id(),
                 trace: TraceContext::default(),
-                user_unix_name: None,
-                source_hostname: None,
-                ssh_env_vars: SshEnvVars::default(),
-                identities: None,
+                metadata: Metadata::default(),
                 load_limiter: None,
                 blobstore_write_limiter: None,
                 blobstore_read_limiter: None,
-                user_ip: None,
                 session_class: SessionClass::UserWaiting,
             },
         }
-    }
-
-    pub fn session_id(mut self, value: SessionId) -> Self {
-        self.inner.session_id = value;
-        self
     }
 
     pub fn trace(mut self, value: TraceContext) -> Self {
@@ -65,23 +46,8 @@ impl SessionContainerBuilder {
         self
     }
 
-    pub fn user_unix_name(mut self, value: impl Into<Option<String>>) -> Self {
-        self.inner.user_unix_name = value.into();
-        self
-    }
-
-    pub fn source_hostname(mut self, value: impl Into<Option<String>>) -> Self {
-        self.inner.source_hostname = value.into();
-        self
-    }
-
-    pub fn ssh_env_vars(mut self, value: SshEnvVars) -> Self {
-        self.inner.ssh_env_vars = value;
-        self
-    }
-
-    pub fn identities(mut self, value: impl Into<Option<MononokeIdentitySet>>) -> Self {
-        self.inner.identities = value.into();
+    pub fn metadata(mut self, value: Metadata) -> Self {
+        self.inner.metadata = value;
         self
     }
 
@@ -96,11 +62,6 @@ impl SessionContainerBuilder {
 
     pub fn blobstore_write_limiter(&mut self, limiter: AsyncLimiter) {
         self.inner.blobstore_write_limiter = Some(limiter);
-    }
-
-    pub fn user_ip(mut self, value: impl Into<Option<IpAddr>>) -> Self {
-        self.inner.user_ip = value.into();
-        self
     }
 
     pub fn session_class(mut self, value: SessionClass) -> Self {

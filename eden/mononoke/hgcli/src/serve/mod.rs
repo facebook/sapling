@@ -13,15 +13,15 @@ use std::time::Duration;
 use anyhow::{bail, format_err, Context, Error, Result};
 use bytes::Bytes;
 use clap::ArgMatches;
-use context::generate_session_id;
 use dns_lookup::lookup_addr;
 use failure_ext::{err_downcast_ref, SlogKVError};
 use fbinit::FacebookInit;
 use futures::compat::Future01CompatExt;
 use futures::stream::{self, StreamExt, TryStreamExt};
 use futures::{pin_mut, select};
+use futures_ext::BoxStream;
 use futures_ext::StreamExt as OtherStreamExt;
-use futures_old::{future, Sink, Stream};
+use futures_old::{future, sync::mpsc, Sink, Stream};
 use futures_stats::TimedFutureExt;
 use futures_util::compat::Stream01CompatExt;
 use futures_util::future::FutureExt;
@@ -30,10 +30,10 @@ use libc::c_ulong;
 use openssl::ssl::{SslConnector, SslMethod, SslVerifyMode};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use secure_utils::{build_identity, read_x509};
+use session_id::generate_session_id;
 use slog::{debug, error, o, Drain, Logger};
 use sshrelay::{
     Preamble, Priority, SenderBytesWrite, SshDecoder, SshEncoder, SshEnvVars, SshMsg, SshStream,
-    Stdio,
 };
 use tokio::net::TcpStream;
 use tokio::time::timeout;
@@ -80,6 +80,7 @@ pub async fn cmd(
             let is_remote_proxy = main.is_present("remote-proxy");
             let scuba_table = main.value_of("scuba-table");
             let mock_username = sub.value_of("mock-username");
+            let client_debug = sub.is_present("client-debug");
 
             return StdioRelay {
                 fb,
@@ -96,6 +97,7 @@ pub async fn cmd(
                 mock_username,
                 show_session_output,
                 priority,
+                client_debug,
             }
             .run()
             .await;
@@ -120,6 +122,7 @@ struct StdioRelay<'a> {
     mock_username: Option<&'a str>,
     show_session_output: bool,
     priority: Priority,
+    client_debug: bool,
 }
 
 impl<'a> StdioRelay<'a> {
@@ -157,20 +160,23 @@ impl<'a> StdioRelay<'a> {
             SshEnvVars::new_from_env(),
         );
 
+        if self.client_debug {
+            preamble
+                .misc
+                .insert("client_debug".to_string(), "true".to_string());
+        }
+
         self.priority.add_to_preamble(&mut preamble);
 
         scuba_logger.add_preamble(&preamble);
 
-        let stdio = Stdio {
-            preamble,
-            stdin: fdio::stdin(),
-            stdout: fdio::stdout(),
-            stderr: fdio::stderr(),
-        };
+        let stdin = fdio::stdin();
+        let stdout = fdio::stdout();
+        let stderr = fdio::stderr();
 
         let client_logger = {
             let stderr_write = SenderBytesWrite {
-                chan: stdio.stderr.clone().wait(),
+                chan: stderr.clone().wait(),
             };
             let drain = slog_term::PlainSyncDecorator::new(stderr_write);
             let drain = slog_term::FullFormat::new(drain).build();
@@ -196,7 +202,10 @@ impl<'a> StdioRelay<'a> {
 
         scuba_logger.log_with_msg("Hgcli proxy - Connected", None);
 
-        let (stats, result) = self.internal_run(stdio).timed().await;
+        let (stats, result) = self
+            .internal_run(preamble, stdin, stdout, stderr)
+            .timed()
+            .await;
         scuba_logger.add_future_stats(&stats);
         match result {
             Ok(_) => scuba_logger.log_with_msg("Hgcli proxy - Success", None),
@@ -262,14 +271,13 @@ impl<'a> StdioRelay<'a> {
             .with_context(|| format!("tls failed: talking to '{}'", path))
     }
 
-    async fn internal_run(self, stdio: Stdio) -> Result<(), Error> {
-        let Stdio {
-            preamble,
-            stdin,
-            stdout,
-            stderr,
-        } = stdio;
-
+    async fn internal_run(
+        self,
+        preamble: Preamble,
+        stdin: BoxStream<Bytes, std_io::Error>,
+        stdout: mpsc::Sender<Bytes>,
+        stderr: mpsc::Sender<Bytes>,
+    ) -> Result<(), Error> {
         let socket = timeout(Duration::from_secs(15), self.establish_connection())
             .await
             .with_context(|| format!("timed out: connecting to '{}'", self.path))??;

@@ -49,7 +49,7 @@ impl<B: Blobstore> Blobstore for LogBlob<B> {
             .increment_counter(PerfCounterType::BlobGets);
 
         let get = self.inner.get(ctx.clone(), key.clone());
-        let session_id = ctx.session_id().to_string();
+        let session_id = ctx.metadata().session_id().to_string();
         async move {
             let (stats, result) = get.timed().await;
             record_get_stats(
@@ -86,7 +86,7 @@ impl<B: Blobstore> Blobstore for LogBlob<B> {
                 stats,
                 result.as_ref(),
                 key,
-                ctx.session_id().to_string(),
+                ctx.metadata().session_id().to_string(),
                 OperationType::Put,
                 size,
                 None,

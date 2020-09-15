@@ -9,18 +9,15 @@ use anyhow::Result;
 use async_limiter::AsyncLimiter;
 use fbinit::FacebookInit;
 use load_limiter::{BoxLoadLimiter, LoadCost, LoadLimiter, Metric};
-use permission_checker::MononokeIdentitySet;
 use scribe_ext::Scribe;
 use scuba_ext::ScubaSampleBuilder;
-use session_id::SessionId;
 use slog::Logger;
-use sshrelay::SshEnvVars;
-use std::net::IpAddr;
+use sshrelay::Metadata;
 use std::sync::Arc;
 use std::time::Duration;
 use tracing::TraceContext;
 
-pub use self::builder::{generate_session_id, SessionContainerBuilder};
+pub use self::builder::SessionContainerBuilder;
 use crate::core::CoreContext;
 use crate::logging::LoggingContainer;
 use crate::{is_external_sync, is_quicksand};
@@ -45,16 +42,11 @@ pub enum SessionClass {
 }
 
 struct SessionContainerInner {
-    session_id: SessionId,
     trace: TraceContext,
-    user_unix_name: Option<String>,
-    source_hostname: Option<String>,
-    ssh_env_vars: SshEnvVars,
-    identities: Option<MononokeIdentitySet>,
+    metadata: Metadata,
     load_limiter: Option<BoxLoadLimiter>,
     blobstore_write_limiter: Option<AsyncLimiter>,
     blobstore_read_limiter: Option<AsyncLimiter>,
-    user_ip: Option<IpAddr>,
     session_class: SessionClass,
 }
 
@@ -89,32 +81,12 @@ impl SessionContainer {
         self.fb
     }
 
-    pub fn session_id(&self) -> &SessionId {
-        &self.inner.session_id
-    }
-
     pub fn trace(&self) -> &TraceContext {
         &self.inner.trace
     }
 
-    pub fn user_unix_name(&self) -> &Option<String> {
-        &self.inner.user_unix_name
-    }
-
-    pub fn user_ip(&self) -> &Option<IpAddr> {
-        &self.inner.user_ip
-    }
-
-    pub fn source_hostname(&self) -> &Option<String> {
-        &self.inner.source_hostname
-    }
-
-    pub fn ssh_env_vars(&self) -> &SshEnvVars {
-        &self.inner.ssh_env_vars
-    }
-
-    pub fn identities(&self) -> Option<&MononokeIdentitySet> {
-        self.inner.identities.as_ref()
+    pub fn metadata(&self) -> &Metadata {
+        &self.inner.metadata
     }
 
     pub fn load_limiter(&self) -> Option<&dyn LoadLimiter> {
@@ -141,11 +113,11 @@ impl SessionContainer {
     }
 
     pub fn is_quicksand(&self) -> bool {
-        is_quicksand(self.ssh_env_vars())
+        is_quicksand(self.metadata())
     }
 
     pub fn is_external_sync(&self) -> bool {
-        is_external_sync(self.ssh_env_vars())
+        is_external_sync(self.metadata())
     }
 
     pub fn blobstore_read_limiter(&self) -> &Option<AsyncLimiter> {

@@ -10,8 +10,9 @@
 use fbinit::FacebookInit;
 use futures_ext::BoxFuture;
 use futures_stats::{FutureStats, StreamStats};
+use itertools::join;
 pub use scuba::{ScubaSampleBuilder, ScubaValue};
-use sshrelay::Preamble;
+use sshrelay::{Metadata, Preamble};
 use std::convert::TryInto;
 use time_ext::DurationExt;
 use tracing::TraceContext;
@@ -25,6 +26,7 @@ pub use scribe_ext::ScribeClientImplementation;
 pub trait ScubaSampleBuilderExt {
     fn with_opt_table(fb: FacebookInit, scuba_table: Option<String>) -> Self;
     fn add_preamble(&mut self, preamble: &Preamble) -> &mut Self;
+    fn add_metadata(&mut self, metadata: &Metadata) -> &mut Self;
     fn log_with_msg<S: Into<Option<String>>>(&mut self, log_tag: &'static str, msg: S);
     fn add_stream_stats(&mut self, stats: &StreamStats) -> &mut Self;
     fn add_future_stats(&mut self, stats: &FutureStats) -> &mut Self;
@@ -44,6 +46,25 @@ impl ScubaSampleBuilderExt for ScubaSampleBuilder {
         for (key, value) in preamble.misc.iter() {
             self.add(key, value.as_ref());
         }
+        self
+    }
+
+    fn add_metadata(&mut self, metadata: &Metadata) -> &mut Self {
+        self.add("session_uuid", metadata.session_id().to_string());
+        self.add("client_identities", join(metadata.identities().iter(), ","));
+
+        if let Some(client_ip) = metadata.client_ip() {
+            self.add("client_ip", client_ip.to_string());
+        }
+        if let Some(client_hostname) = metadata.client_hostname() {
+            // "source_hostname" to remain compatible with historical logging
+            self.add("source_hostname", client_hostname.to_owned());
+        }
+        if let Some(unix_name) = metadata.unix_name() {
+            // "unix_username" to remain compatible with historical logging
+            self.add("unix_username", unix_name);
+        }
+
         self
     }
 

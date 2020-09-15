@@ -10,7 +10,6 @@ use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
 
-use context::generate_session_id;
 use fbinit::FacebookInit;
 use futures_stats::{FutureStats, TimedFutureExt};
 use identity::Identity;
@@ -28,6 +27,7 @@ use source_control as thrift;
 use source_control::server::SourceControlService;
 use source_control::services::source_control_service as service;
 use srserver::RequestContext;
+use sshrelay::Metadata;
 use stats::prelude::*;
 use time_ext::DurationExt;
 use tunables::tunables;
@@ -124,8 +124,6 @@ impl SourceControlServiceImpl {
         }
 
         params.add_scuba_params(&mut scuba);
-        let session_id = generate_session_id();
-        scuba.add("session_uuid", session_id.to_string());
 
         const CLIENT_HEADERS: &[&str] = &[
             "client_id",
@@ -156,9 +154,10 @@ impl SourceControlServiceImpl {
             .into_iter()
             .filter_map(|id| MononokeIdentity::try_from_identity_ref(id).ok())
             .collect();
+        let metadata = Metadata::default().set_identities(identities);
+        scuba.add("session_uuid", metadata.session_id().to_string());
         let session = SessionContainer::builder(self.fb)
-            .session_id(session_id)
-            .identities(identities)
+            .metadata(metadata)
             .build();
 
         let ctx = session.new_context(self.logger.clone(), scuba);

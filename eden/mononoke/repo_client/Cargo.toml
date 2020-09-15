@@ -29,7 +29,6 @@ remotefilelog = { path = "remotefilelog" }
 repo_read_write_status = { path = "repo_read_write_status" }
 revisionstore_types = { path = "../../scm/lib/revisionstore/types" }
 scuba_ext = { path = "../common/scuba_ext" }
-skiplist = { path = "../reachabilityindex/skiplist" }
 streaming_clone = { path = "streaming_clone" }
 tunables = { path = "../tunables" }
 unbundle = { path = "unbundle" }
