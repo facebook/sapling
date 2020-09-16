@@ -20,16 +20,28 @@
   $ setconfig remotefilelog.lfs=True
 
 # Verify that without the one-time repack, we can't read the LFS blobs.
-  $ hg up null 2> /dev/null
+  $ hg log -p -r . 2> /dev/null
   [1]
 
 # Now do the one time repack
   $ setconfig remotefilelog.maintenance.timestamp.localrepack=1 remotefilelog.maintenance=localrepack
-  $ hg up null
+  $ hg log -p -r .
   Running a one-time local repack, this may take some time
   Done with one-time local repack
-  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  commit:      ab1b0b8595ed
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     x
+  
+  diff -r 000000000000 -r ab1b0b8595ed x
+  --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
+  +++ b/x	Thu Jan 01 00:00:00 1970 +0000
+  @@ -0,0 +1,1 @@
+  +THIS IS AN LFS BLOB
+  
 
+  $ hg up null
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg up -r tip
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat x
