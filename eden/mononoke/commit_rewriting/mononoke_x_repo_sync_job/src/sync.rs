@@ -32,7 +32,7 @@ use reachabilityindex::ReachabilityIndex;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 use scuba_ext::ScubaSampleBuilder;
 use skiplist::SkiplistIndex;
-use slog::info;
+use slog::{info, warn};
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
@@ -134,7 +134,7 @@ pub async fn sync_single_bookmark_update_log<M: SyncedCommitMapping + Clone + 's
         let maybe_remapped_cs_id = find_remapped_cs_id(ctx, commit_syncer, to_cs_id).await?;
         let remapped_cs_id =
             maybe_remapped_cs_id.ok_or(format_err!("unknown sync outcome for {}", to_cs_id))?;
-        force_set_bookmark(
+        move_or_create_bookmark(
             &ctx,
             &commit_syncer.get_target_repo(),
             &bookmark,
@@ -331,7 +331,7 @@ async fn process_bookmark_deletion<M: SyncedCommitMapping + Clone + 'static>(
     } else {
         info!(ctx.logger(), "deleting bookmark {}", bookmark);
         let (stats, result) =
-            force_delete_bookmark(ctx.clone(), &commit_syncer.get_target_repo(), &bookmark)
+            delete_bookmark(ctx.clone(), &commit_syncer.get_target_repo(), &bookmark)
                 .timed()
                 .await;
         log_bookmark_deletion_result(scuba_sample, &result, stats);
@@ -490,29 +490,72 @@ async fn check_if_independent_branch_and_return(
     Ok(Some(cs_to_parents.keys().cloned().collect()))
 }
 
-async fn force_delete_bookmark(
+async fn delete_bookmark(
     ctx: CoreContext,
     repo: &BlobRepo,
     bookmark: &BookmarkName,
 ) -> Result<(), Error> {
-    let mut book_txn = repo.update_bookmark_transaction(ctx);
-    book_txn.force_delete(&bookmark, BookmarkUpdateReason::XRepoSync, None)?;
-    book_txn.commit().await?;
+    let mut book_txn = repo.update_bookmark_transaction(ctx.clone());
+    let maybe_bookmark_val = repo
+        .get_bonsai_bookmark(ctx.clone(), bookmark)
+        .compat()
+        .await?;
+    if let Some(bookmark_value) = maybe_bookmark_val {
+        book_txn.delete(
+            &bookmark,
+            bookmark_value,
+            BookmarkUpdateReason::XRepoSync,
+            None,
+        )?;
+        let res = book_txn.commit().await?;
 
-    Ok(())
+        if res {
+            Ok(())
+        } else {
+            Err(format_err!("failed to delete a bookmark"))
+        }
+    } else {
+        warn!(
+            ctx.logger(),
+            "Not deleting '{}' bookmark because it does not exist", bookmark
+        );
+        Ok(())
+    }
 }
 
-async fn force_set_bookmark(
+async fn move_or_create_bookmark(
     ctx: &CoreContext,
     repo: &BlobRepo,
     bookmark: &BookmarkName,
     cs_id: ChangesetId,
 ) -> Result<(), Error> {
-    let mut book_txn = repo.update_bookmark_transaction(ctx.clone());
-    book_txn.force_set(&bookmark, cs_id, BookmarkUpdateReason::XRepoSync, None)?;
-    book_txn.commit().await?;
+    let maybe_bookmark_val = repo
+        .get_bonsai_bookmark(ctx.clone(), bookmark)
+        .compat()
+        .await?;
 
-    Ok(())
+    let mut book_txn = repo.update_bookmark_transaction(ctx.clone());
+    match maybe_bookmark_val {
+        Some(old_bookmark_val) => {
+            book_txn.update(
+                &bookmark,
+                cs_id,
+                old_bookmark_val,
+                BookmarkUpdateReason::XRepoSync,
+                None,
+            )?;
+        }
+        None => {
+            book_txn.create(&bookmark, cs_id, BookmarkUpdateReason::XRepoSync, None)?;
+        }
+    }
+    let res = book_txn.commit().await?;
+
+    if res {
+        Ok(())
+    } else {
+        Err(format_err!("failed to move or create a bookmark"))
+    }
 }
 
 pub fn is_already_synced<M: SyncedCommitMapping + Clone + 'static>(
