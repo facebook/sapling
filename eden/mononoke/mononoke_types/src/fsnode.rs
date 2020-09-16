@@ -16,6 +16,7 @@ use crate::thrift;
 use crate::typed_hash::{ContentId, FsnodeId, FsnodeIdContext};
 
 use fbthrift::compact_protocol;
+use sorted_vector_map::SortedVectorMap;
 use std::collections::BTreeMap;
 
 // An fsnode is a manifest node containing summary information about the
@@ -53,12 +54,15 @@ use std::collections::BTreeMap;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Fsnode {
-    subentries: BTreeMap<MPathElement, FsnodeEntry>,
+    subentries: SortedVectorMap<MPathElement, FsnodeEntry>,
     summary: FsnodeSummary,
 }
 
 impl Fsnode {
-    pub fn new(subentries: BTreeMap<MPathElement, FsnodeEntry>, summary: FsnodeSummary) -> Self {
+    pub fn new(
+        subentries: SortedVectorMap<MPathElement, FsnodeEntry>,
+        summary: FsnodeSummary,
+    ) -> Self {
         Self {
             subentries,
             summary,
@@ -78,7 +82,7 @@ impl Fsnode {
         self.subentries.iter()
     }
 
-    pub fn into_subentries(self) -> BTreeMap<MPathElement, FsnodeEntry> {
+    pub fn into_subentries(self) -> SortedVectorMap<MPathElement, FsnodeEntry> {
         self.subentries
     }
 

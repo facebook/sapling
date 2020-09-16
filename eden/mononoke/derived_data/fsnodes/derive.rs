@@ -26,6 +26,7 @@ use mononoke_types::hash::{Sha1, Sha256};
 use mononoke_types::{BlobstoreValue, ContentId, ContentMetadata, FileType, FsnodeId, MononokeId};
 use mononoke_types::{MPath, MPathElement};
 use repo_blobstore::RepoBlobstore;
+use sorted_vector_map::SortedVectorMap;
 
 use crate::ErrorKind;
 
@@ -259,7 +260,7 @@ fn create_fsnode(
     )
     .and_then(move |entries| {
         // Build a summary of the entries and store it as the new fsnode.
-        let entries: BTreeMap<_, _> = entries.into_iter().collect();
+        let entries: SortedVectorMap<_, _> = entries.into_iter().collect();
         let simple_format_sha1 = {
             let digest = generate_simple_format_digest(
                 sha1::Sha1::new(),
@@ -330,7 +331,7 @@ fn create_fsnode(
 /// format is.
 fn generate_simple_format_digest<H, F, D>(
     mut digest: H,
-    dir: &BTreeMap<MPathElement, FsnodeEntry>,
+    dir: &SortedVectorMap<MPathElement, FsnodeEntry>,
     get_file_hash: F,
     get_dir_hash: D,
 ) -> H

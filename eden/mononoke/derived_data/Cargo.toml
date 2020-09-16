@@ -19,6 +19,7 @@ topo_sort = { path = "../common/topo_sort" }
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 lock_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+sorted_vector_map = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 tracing = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
