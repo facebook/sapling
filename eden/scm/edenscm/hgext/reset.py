@@ -140,7 +140,7 @@ def _findbundle(repo, rev):
     """
     ui = repo.ui
     backuppath = repo.localvfs.join("strip-backup")
-    backups = filter(os.path.isfile, glob.glob(backuppath + "/*.hg"))
+    backups = list(filter(os.path.isfile, glob.glob(backuppath + "/*.hg")))
     backups.sort(key=lambda x: os.path.getmtime(x), reverse=True)
     for backup in backups:
         # Much of this is copied from the hg incoming logic
