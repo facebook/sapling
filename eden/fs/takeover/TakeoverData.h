@@ -90,20 +90,27 @@ class TakeoverData {
         AbsolutePathPiece stateDirectory,
         const std::vector<AbsolutePath>& bindMountPaths,
         folly::File fd,
+#ifndef _WIN32
         fuse_init_out connInfo,
+#endif
         SerializedInodeMap&& inodeMap)
         : mountPath{mountPath},
           stateDirectory{stateDirectory},
           bindMounts{bindMountPaths},
           fuseFD{std::move(fd)},
+#ifndef _WIN32
           connInfo{connInfo},
-          inodeMap{std::move(inodeMap)} {}
+#endif
+          inodeMap{std::move(inodeMap)} {
+    }
 
     AbsolutePath mountPath;
     AbsolutePath stateDirectory;
     std::vector<AbsolutePath> bindMounts;
     folly::File fuseFD;
+#ifndef _WIN32
     fuse_init_out connInfo;
+#endif
     SerializedInodeMap inodeMap;
   };
 

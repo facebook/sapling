@@ -1362,7 +1362,6 @@ void EdenMount::channelInitSuccessful(
             config_->getClientDirectory(),
             bindMounts,
             folly::File{},
-            fuse_init_out{},
             SerializedInodeMap{} // placeholder
             ));
 #else

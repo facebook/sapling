@@ -8,12 +8,6 @@
 #pragma once
 #include "eden/fs/service/EdenError.h"
 
-// This is a stub to compile eden/service on Window.
-struct fuse_init_out {
-  uint32_t major;
-  uint32_t minor;
-};
-
 namespace facebook {
 namespace eden {
 
