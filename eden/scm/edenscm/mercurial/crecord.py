@@ -1495,7 +1495,7 @@ the following are valid keystrokes:
         )
         try:
             for line in helplines:
-                self.printstring(helpwin, line, pairname="legend")
+                self.printstring(helpwin, pycompat.encodeutf8(line), pairname="legend")
         except curses.error:
             pass
         helpwin.refresh()
