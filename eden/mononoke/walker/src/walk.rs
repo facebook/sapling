@@ -703,7 +703,8 @@ async fn fsnode_step<V: VisitOne>(
         .map_err(Error::from)
         .await?;
 
-    let mut edges = vec![];
+    let mut content_edges = vec![];
+    let mut dir_edges = vec![];
     for (child, fsnode_entry) in fsnode.list() {
         // Fsnode do not have separate "file" entries, so we visit only directories
         match fsnode_entry {
@@ -711,13 +712,13 @@ async fn fsnode_step<V: VisitOne>(
                 let fsnode_id = dir.id();
                 let mpath_opt =
                     WrappedPath::from(MPath::join_element_opt(path.as_ref(), Some(child)));
-                checker.add_edge(&mut edges, EdgeType::FsnodeToChildFsnode, || {
+                checker.add_edge(&mut dir_edges, EdgeType::FsnodeToChildFsnode, || {
                     Node::Fsnode((WrappedPath::from(mpath_opt), *fsnode_id))
                 });
             }
             FsnodeEntry::File(file) => {
                 checker.add_edge_with_path(
-                    &mut edges,
+                    &mut content_edges,
                     EdgeType::FsnodeToFileContent,
                     || Node::FileContent(*file.content_id()),
                     || {
@@ -730,9 +731,12 @@ async fn fsnode_step<V: VisitOne>(
         }
     }
 
+    // Output content then dir edges, as content edges will drain from queue without recurising too much
+    content_edges.append(&mut dir_edges);
+
     Ok(StepOutput(
         checker.step_data(NodeType::Fsnode, || NodeData::Fsnode(fsnode)),
-        edges,
+        content_edges,
     ))
 }
 
