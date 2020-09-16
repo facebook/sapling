@@ -34,7 +34,9 @@
 #include "eden/fs/config/TomlConfig.h"
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
 #include "eden/fs/inodes/EdenMount.h"
+#include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/inodes/InodeMap.h"
+#include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/service/EdenCPUThreadPool.h"
 #include "eden/fs/service/EdenError.h"
 #include "eden/fs/service/EdenServiceHandler.h"
@@ -59,6 +61,7 @@
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/EnumValue.h"
 #include "eden/fs/utils/FileUtils.h"
+#include "eden/fs/utils/NotImplemented.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/ProcUtil.h"
 #include "eden/fs/utils/ProcessNameCache.h"
@@ -67,12 +70,10 @@
 #ifdef _WIN32
 #include "eden/fs/win/mount/PrjfsChannel.h" // @manual
 #include "eden/fs/win/utils/FileUtils.h" // @manual
-#include "eden/fs/win/utils/Stub.h" // @manual
 #else
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/Overlay.h"
-#include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/takeover/TakeoverClient.h"
 #include "eden/fs/takeover/TakeoverData.h"
 #include "eden/fs/takeover/TakeoverServer.h"
@@ -931,7 +932,11 @@ std::vector<Future<Unit>> EdenServer::prepareMountsTakeover(
   // Trigger remounting of existing mount points
   // If doingTakeover is true, use the mounts received in TakeoverData
   std::vector<Future<Unit>> mountFutures;
-#ifndef _WIN32
+
+  if (folly::kIsWindows) {
+    NOT_IMPLEMENTED();
+  }
+
   for (auto& info : takeoverMounts) {
     const auto stateDirectory = info.stateDirectory;
     auto mountFuture =
@@ -960,9 +965,7 @@ std::vector<Future<Unit>> EdenServer::prepareMountsTakeover(
             });
     mountFutures.push_back(std::move(mountFuture));
   }
-#else
-  NOT_IMPLEMENTED();
-#endif
+
   return mountFutures;
 }
 

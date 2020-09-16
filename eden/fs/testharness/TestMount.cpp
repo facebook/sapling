@@ -38,13 +38,13 @@
 #include "eden/fs/testharness/TempFile.h"
 #include "eden/fs/testharness/TestUtil.h"
 #include "eden/fs/utils/FileUtils.h"
+#include "eden/fs/utils/NotImplemented.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 #include "eden/fs/utils/UserInfo.h"
 
 #ifdef _WIN32
 #include "eden/fs/inodes/sqliteoverlay/SqliteOverlay.h" // @manual
 #include "eden/fs/win/utils/Guid.h" // @manual
-#include "eden/fs/win/utils/Stub.h" // @manual
 #else
 #include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/InodeTable.h"

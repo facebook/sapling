@@ -22,10 +22,6 @@
 #include "eden/fs/config/FileChangeMonitor.h"
 #include "eden/fs/utils/EnumValue.h"
 
-#ifdef _WIN32
-#include "eden/fs/win/utils/Stub.h" // @manual
-#endif
-
 using folly::StringPiece;
 using std::optional;
 using std::string;

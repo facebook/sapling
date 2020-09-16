@@ -38,7 +38,6 @@
 #include "eden/fs/inodes/OverlayFileAccess.h"
 #else
 #include "eden/fs/win/mount/FsChannel.h" // @manual
-#include "eden/fs/win/utils/Stub.h" // @manual
 #endif
 
 DECLARE_string(edenfsctlPath);

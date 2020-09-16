@@ -19,6 +19,7 @@
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/service/ThriftUtil.h"
 #include "eden/fs/utils/Bug.h"
+#include "eden/fs/utils/NotImplemented.h"
 
 using folly::Future;
 using folly::Promise;

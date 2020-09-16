@@ -18,8 +18,6 @@
 
 #ifndef _WIN32
 #include "eden/fs/fuse/FuseTypes.h"
-#else
-#include "eden/fs/win/utils/Stub.h" // @manual
 #endif
 
 namespace folly {

@@ -25,7 +25,6 @@
 
 #ifdef _WIN32
 #include "eden/fs/service/gen-cpp2/eden_types.h"
-#include "eden/fs/win/utils/stub.h" // @manual
 #else
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/inodes/EdenDispatcher.h"
@@ -62,6 +61,7 @@
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/FaultInjector.h"
+#include "eden/fs/utils/NotImplemented.h"
 #include "eden/fs/utils/ProcUtil.h"
 #include "eden/fs/utils/ProcessNameCache.h"
 #include "eden/fs/utils/StatTimes.h"

@@ -26,7 +26,6 @@
 
 #ifdef _WIN32
 #include <psapi.h> // @manual
-#include "eden/fs/win/utils/stub.h" // @manual
 #endif
 
 using folly::StringPiece;

@@ -22,9 +22,6 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/ParentCommits.h"
 #include "eden/fs/utils/PathFuncs.h"
-#ifdef _WIN32
-#include "eden/fs/win/utils/Stub.h" // @manual
-#endif
 
 namespace facebook {
 namespace eden {

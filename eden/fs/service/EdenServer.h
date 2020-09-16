@@ -33,18 +33,12 @@
 #include "eden/fs/service/PeriodicTask.h"
 #include "eden/fs/service/StartupLogger.h"
 #include "eden/fs/store/hg/MetadataImporter.h"
+#include "eden/fs/takeover/TakeoverData.h"
 #include "eden/fs/takeover/TakeoverHandler.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/PathFuncs.h"
-
-#ifdef _WIN32
-#include "eden/fs/win/utils/Stub.h" // @manual
-#else
-#include "eden/fs/fuse/FuseTypes.h"
-#include "eden/fs/takeover/TakeoverData.h"
-#endif
 
 constexpr folly::StringPiece kPeriodicUnloadCounterKey{"PeriodicUnloadCounter"};
 DECLARE_bool(takeover);

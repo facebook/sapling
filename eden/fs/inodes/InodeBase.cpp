@@ -15,6 +15,7 @@
 #include "eden/fs/inodes/ParentInodeInfo.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/utils/Clock.h"
+#include "eden/fs/utils/NotImplemented.h"
 
 #ifndef _WIN32
 #include "eden/fs/inodes/InodeTable.h"

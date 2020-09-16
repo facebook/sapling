@@ -9,9 +9,6 @@
 #include <folly/logging/xlog.h>
 
 #include "eden/fs/config/FileChangeMonitor.h"
-#ifdef _WIN32
-#include "eden/fs/win/utils/Stub.h" // @manual
-#endif
 #include "eden/fs/utils/StatTimes.h"
 #include "eden/fs/utils/TimeUtil.h"
 

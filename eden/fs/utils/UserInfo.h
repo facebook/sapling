@@ -10,9 +10,6 @@
 #include <gtest/gtest_prod.h>
 
 #include "eden/fs/utils/PathFuncs.h"
-#ifdef _WIN32
-#include "eden/fs/win/utils/Stub.h" // @manual
-#endif // _WIN32
 
 namespace facebook {
 namespace eden {
