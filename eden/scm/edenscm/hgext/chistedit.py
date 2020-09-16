@@ -244,6 +244,9 @@ def event(state, ch):
     oldpos = state["pos"]
     rules = state["rules"]
 
+    if ch is None:
+        return
+
     if ch in (curses.KEY_RESIZE, "KEY_RESIZE"):
         return E_RESIZE
 
@@ -359,7 +362,7 @@ def main(repo, rules, stdscr):
         maxy, maxx = win.getmaxyx()
         length = maxx - 3
 
-        line = "changeset: {0}:{1:<12}".format(ctx.rev(), ctx)
+        line = "changeset: {0}:{1:<12}".format(ctx.rev(), str(ctx))
         win.addstr(1, 1, line[:length])
 
         line = "user:      {0}".format(util.shortuser(ctx.user()))
