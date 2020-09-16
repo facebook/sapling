@@ -18,6 +18,7 @@ cross_repo_sync = { path = "../cross_repo_sync" }
 derived_data_utils = { path = "../../derived_data/utils" }
 live_commit_sync_config = { path = "../live_commit_sync_config" }
 metaconfig_types = { path = "../../metaconfig/types" }
+mononoke_hg_sync_job_helper_lib = { path = "../../mononoke_hg_sync_job" }
 mononoke_types = { path = "../../mononoke_types" }
 mutable_counters = { path = "../../mutable_counters" }
 reachabilityindex = { path = "../../reachabilityindex" }

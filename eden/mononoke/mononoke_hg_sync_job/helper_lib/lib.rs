@@ -22,7 +22,7 @@ use futures_old::{
 };
 use mercurial_bundles::stream_start;
 use mononoke_types::RawBundle2Id;
-use mutable_counters::{MutableCounters, SqlMutableCounters};
+use mutable_counters::MutableCounters;
 use slog::{info, Logger};
 use std::convert::TryInto;
 use std::io::{Read, Seek, SeekFrom};
@@ -310,12 +310,15 @@ where
 }
 
 /// Wait until all of the entries in the queue have been synced to hg
-pub async fn wait_for_latest_log_id_to_be_synced(
+pub async fn wait_for_latest_log_id_to_be_synced<C>(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    mutable_counters: &SqlMutableCounters,
+    mutable_counters: &C,
     sleep_secs: u64,
-) -> Result<(), Error> {
+) -> Result<(), Error>
+where
+    C: MutableCounters + Clone + Sync + 'static,
+{
     let repo_id = repo.get_repoid();
     let largest_id = match repo
         .attribute_expected::<dyn BookmarkUpdateLog>()

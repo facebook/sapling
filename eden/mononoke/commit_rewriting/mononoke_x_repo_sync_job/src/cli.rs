@@ -8,15 +8,16 @@
 use clap::{App, Arg, SubCommand};
 use cmdlib::args;
 
-pub const ARG_ONCE: &'static str = "once";
-pub const ARG_COMMIT: &'static str = "commit";
-pub const ARG_TAIL: &'static str = "tail";
-pub const ARG_TARGET_BOOKMARK: &'static str = "target-bookmark";
-pub const ARG_CATCH_UP_ONCE: &'static str = "catch-up-once";
-pub const ARG_LOG_TO_SCUBA: &'static str = "log-to-scuba";
-pub const ARG_BACKPRESSURE_REPOS_IDS: &'static str = "backpressure-repo-ids";
-pub const ARG_DERIVED_DATA_TYPES: &'static str = "derived-data-types";
-pub const ARG_SLEEP_SECS: &'static str = "sleep-secs";
+pub const ARG_ONCE: &str = "once";
+pub const ARG_COMMIT: &str = "commit";
+pub const ARG_TAIL: &str = "tail";
+pub const ARG_TARGET_BOOKMARK: &str = "target-bookmark";
+pub const ARG_CATCH_UP_ONCE: &str = "catch-up-once";
+pub const ARG_LOG_TO_SCUBA: &str = "log-to-scuba";
+pub const ARG_BACKSYNC_BACKPRESSURE_REPOS_IDS: &str = "backsync-backpressure-repo-ids";
+pub const ARG_HG_SYNC_BACKPRESSURE: &str = "hg-sync-backpressure";
+pub const ARG_DERIVED_DATA_TYPES: &str = "derived-data-types";
+pub const ARG_SLEEP_SECS: &str = "sleep-secs";
 pub const ARG_BOOKMARK_REGEX: &str = "bookmark-regex";
 
 pub fn create_app<'a, 'b>() -> App<'a, 'b> {
@@ -68,14 +69,20 @@ pub fn create_app<'a, 'b>() -> App<'a, 'b> {
                 ),
         )
         .arg(
-            Arg::with_name(ARG_BACKPRESSURE_REPOS_IDS)
-                .long(ARG_BACKPRESSURE_REPOS_IDS)
+            Arg::with_name(ARG_BACKSYNC_BACKPRESSURE_REPOS_IDS)
+                .long(ARG_BACKSYNC_BACKPRESSURE_REPOS_IDS)
                 .takes_value(true)
                 .multiple(true)
                 .required(false)
                 .help(
                     "Monitors how many entries to backsync in the queue for other repos and pauses syncing if queue is too large",
                 ),
+        )
+        .arg(
+            Arg::with_name(ARG_HG_SYNC_BACKPRESSURE)
+                .long(ARG_HG_SYNC_BACKPRESSURE)
+                .required(false)
+                .help("Waits until new commits created in the target repo are synced to hg"),
         )
         .arg(
             Arg::with_name(ARG_DERIVED_DATA_TYPES)

@@ -42,6 +42,7 @@ use futures::{
 };
 use futures_stats::TimedFutureExt;
 use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
+use mononoke_hg_sync_job_helper_lib::wait_for_latest_log_id_to_be_synced;
 use mononoke_types::{ChangesetId, RepositoryId};
 use mutable_counters::{MutableCounters, SqlMutableCounters};
 use regex::Regex;
@@ -57,8 +58,8 @@ mod setup;
 mod sync;
 
 use crate::cli::{
-    create_app, ARG_BACKPRESSURE_REPOS_IDS, ARG_BOOKMARK_REGEX, ARG_CATCH_UP_ONCE,
-    ARG_DERIVED_DATA_TYPES, ARG_ONCE, ARG_TAIL,
+    create_app, ARG_BACKSYNC_BACKPRESSURE_REPOS_IDS, ARG_BOOKMARK_REGEX, ARG_CATCH_UP_ONCE,
+    ARG_DERIVED_DATA_TYPES, ARG_HG_SYNC_BACKPRESSURE, ARG_ONCE, ARG_TAIL,
 };
 use crate::reporting::{add_common_fields, log_bookmark_update_result, log_noop_iteration};
 use crate::setup::{
@@ -140,7 +141,7 @@ async fn run_in_tailing_mode<
     target_skiplist_index: Target<Arc<SkiplistIndex>>,
     common_pushrebase_bookmarks: HashSet<BookmarkName>,
     base_scuba_sample: ScubaSampleBuilder,
-    backpressure_repos: Vec<BlobRepo>,
+    backpressure_params: BackpressureParams,
     derived_data_types: Vec<String>,
     tailing_args: TailingArgs<M>,
     sleep_secs: u64,
@@ -157,7 +158,7 @@ async fn run_in_tailing_mode<
                 &common_pushrebase_bookmarks,
                 &source_skiplist_index,
                 &target_skiplist_index,
-                &backpressure_repos,
+                &backpressure_params,
                 &derived_data_types,
                 sleep_secs,
                 &maybe_bookmark_regex,
@@ -198,7 +199,7 @@ async fn run_in_tailing_mode<
                     &common_pushrebase_bookmarks,
                     &source_skiplist_index,
                     &target_skiplist_index,
-                    &backpressure_repos,
+                    &backpressure_params,
                     &derived_data_types,
                     sleep_secs,
                     &maybe_bookmark_regex,
@@ -227,7 +228,7 @@ async fn tail<
     common_pushrebase_bookmarks: &HashSet<BookmarkName>,
     source_skiplist_index: &Source<Arc<SkiplistIndex>>,
     target_skiplist_index: &Target<Arc<SkiplistIndex>>,
-    backpressure_repos: &[BlobRepo],
+    backpressure_params: &BackpressureParams,
     derived_data_types: &[String],
     sleep_secs: u64,
     maybe_bookmark_regex: &Option<Regex>,
@@ -305,8 +306,8 @@ async fn tail<
             maybe_apply_backpressure(
                 ctx,
                 mutable_counters,
-                backpressure_repos,
-                commit_syncer.get_target_repo().get_repoid(),
+                backpressure_params,
+                commit_syncer.get_target_repo(),
                 scuba_sample.clone(),
                 sleep_secs,
             )
@@ -327,17 +328,18 @@ async fn tail<
 async fn maybe_apply_backpressure<C>(
     ctx: &CoreContext,
     mutable_counters: &C,
-    backpressure_repos: &[BlobRepo],
-    target_repo_id: RepositoryId,
+    backpressure_params: &BackpressureParams,
+    target_repo: &BlobRepo,
     scuba_sample: ScubaSampleBuilder,
     sleep_secs: u64,
 ) -> Result<(), Error>
 where
     C: MutableCounters + Clone + Sync + 'static,
 {
+    let target_repo_id = target_repo.get_repoid();
     let limit = 10;
     loop {
-        let max_further_entries = stream::iter(backpressure_repos)
+        let max_further_entries = stream::iter(&backpressure_params.backsync_repos)
             .map(Ok)
             .map_ok(|repo| {
                 async move {
@@ -381,6 +383,10 @@ where
         } else {
             break;
         }
+    }
+
+    if backpressure_params.wait_for_target_repo_hg_sync {
+        wait_for_latest_log_id_to_be_synced(ctx, target_repo, mutable_counters, sleep_secs).await?;
     }
     Ok(())
 }
@@ -468,29 +474,7 @@ async fn run(
                 TailingArgs::LoopForever(commit_syncer_args, config_store)
             };
 
-            let backpressure_repos_ids = sub_m.values_of(ARG_BACKPRESSURE_REPOS_IDS);
-            let backpressure_repos = match backpressure_repos_ids {
-                Some(backpressure_repos_ids) => {
-                    let backpressure_repos =
-                        stream::iter(backpressure_repos_ids.into_iter().map(|repo_id| {
-                            let repo_id = repo_id.parse::<i32>()?;
-                            Ok(repo_id)
-                        }))
-                        .map_ok(|repo_id| {
-                            args::open_repo_with_repo_id(
-                                fb,
-                                ctx.logger(),
-                                RepositoryId::new(repo_id),
-                                &matches,
-                            )
-                            .compat()
-                        })
-                        .try_buffer_unordered(100)
-                        .try_collect::<Vec<_>>();
-                    backpressure_repos.await?
-                }
-                None => vec![],
-            };
+            let backpressure_params = BackpressureParams::new(&ctx, &matches, sub_m).await?;
 
             let derived_data_types: Vec<String> = match sub_m.values_of(ARG_DERIVED_DATA_TYPES) {
                 Some(derived_data_types) => derived_data_types
@@ -512,7 +496,7 @@ async fn run(
                 target_skiplist_index,
                 common_bookmarks,
                 scuba_sample,
-                backpressure_repos,
+                backpressure_params,
                 derived_data_types,
                 tailing_args,
                 sleep_secs,
@@ -533,6 +517,48 @@ fn context_and_matches<'a>(fb: FacebookInit, app: App<'a, '_>) -> (CoreContext, 
     args::init_cachelib(fb, &matches, None);
     let ctx = CoreContext::new_with_logger(fb, logger);
     (ctx, matches)
+}
+
+struct BackpressureParams {
+    backsync_repos: Vec<BlobRepo>,
+    wait_for_target_repo_hg_sync: bool,
+}
+
+impl BackpressureParams {
+    async fn new(
+        ctx: &CoreContext,
+        matches: &ArgMatches<'static>,
+        sub_m: &ArgMatches<'static>,
+    ) -> Result<Self, Error> {
+        let backsync_repos_ids = sub_m.values_of(ARG_BACKSYNC_BACKPRESSURE_REPOS_IDS);
+        let backsync_repos = match backsync_repos_ids {
+            Some(backsync_repos_ids) => {
+                let backsync_repos = stream::iter(backsync_repos_ids.into_iter().map(|repo_id| {
+                    let repo_id = repo_id.parse::<i32>()?;
+                    Ok(repo_id)
+                }))
+                .map_ok(|repo_id| {
+                    args::open_repo_with_repo_id(
+                        ctx.fb,
+                        ctx.logger(),
+                        RepositoryId::new(repo_id),
+                        &matches,
+                    )
+                    .compat()
+                })
+                .try_buffer_unordered(100)
+                .try_collect::<Vec<_>>();
+                backsync_repos.await?
+            }
+            None => vec![],
+        };
+
+        let wait_for_target_repo_hg_sync = sub_m.is_present(ARG_HG_SYNC_BACKPRESSURE);
+        Ok(Self {
+            backsync_repos,
+            wait_for_target_repo_hg_sync,
+        })
+    }
 }
 
 #[fbinit::main]
