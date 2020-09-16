@@ -16,11 +16,11 @@
 
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/model/Hash.h"
+#include "eden/fs/takeover/gen-cpp2/takeover_types.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 #ifndef _WIN32
 #include "eden/fs/fuse/FuseChannel.h"
-#include "eden/fs/takeover/gen-cpp2/takeover_types.h"
 #else
 #include "eden/fs/inodes/InodeBase.h"
 #include "eden/fs/inodes/InodeNumber.h"

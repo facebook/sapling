@@ -17,10 +17,6 @@ struct fuse_init_out {
 namespace facebook {
 namespace eden {
 
-class SerializedInodeMap {
-  int stub;
-};
-
 #define NOT_IMPLEMENTED()                             \
   do {                                                \
     throw newEdenError(                               \

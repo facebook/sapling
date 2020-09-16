@@ -34,6 +34,7 @@ target_link_libraries(
     eden_service_thrift_util
     eden_sqlite
     eden_store
+    eden_takeover_thrift
     eden_telemetry
     eden_utils
     Folly::folly
@@ -53,7 +54,6 @@ else()
       eden_fuse
       eden_overlay
       eden_service
-      eden_takeover_thrift
   )
 endif()
 

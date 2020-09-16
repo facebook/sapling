@@ -13,11 +13,11 @@
 #include <optional>
 #include <vector>
 
+#include "eden/fs/takeover/gen-cpp2/takeover_types.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 #ifndef _WIN32
 #include "eden/fs/fuse/FuseTypes.h"
-#include "eden/fs/takeover/gen-cpp2/takeover_types.h"
 #else
 #include "eden/fs/win/utils/Stub.h" // @manual
 #endif
