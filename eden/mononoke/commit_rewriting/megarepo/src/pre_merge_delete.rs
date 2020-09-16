@@ -11,7 +11,6 @@ use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
-use fsnodes::RootFsnodeId;
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
     future::try_join,
@@ -23,6 +22,7 @@ use mercurial_types::MPath;
 use mononoke_types::ChangesetId;
 use slog::info;
 use std::collections::BTreeMap;
+use unodes::RootUnodeManifestId;
 
 use crate::chunking::Chunker;
 use crate::common::{create_and_save_bonsai, ChangesetArgsFactory, StackPosition};
@@ -79,14 +79,18 @@ async fn get_changed_working_copy_paths(
     bcs_id: ChangesetId,
     base_cs_id: ChangesetId,
 ) -> Result<Vec<MPath>, Error> {
-    let fsnode_id = RootFsnodeId::derive(ctx.clone(), repo.clone(), bcs_id);
-    let base_fsnode_id = RootFsnodeId::derive(ctx.clone(), repo.clone(), base_cs_id);
+    let unode_id = RootUnodeManifestId::derive(ctx.clone(), repo.clone(), bcs_id);
+    let base_unode_id = RootUnodeManifestId::derive(ctx.clone(), repo.clone(), base_cs_id);
 
-    let (fsnode_id, base_fsnode_id) = try_join(fsnode_id.compat(), base_fsnode_id.compat()).await?;
+    let (unode_id, base_unode_id) = try_join(unode_id.compat(), base_unode_id.compat()).await?;
 
-    let paths = base_fsnode_id
-        .fsnode_id()
-        .diff(ctx.clone(), repo.get_blobstore(), *fsnode_id.fsnode_id())
+    let paths = base_unode_id
+        .manifest_unode_id()
+        .diff(
+            ctx.clone(),
+            repo.get_blobstore(),
+            *unode_id.manifest_unode_id(),
+        )
         .compat()
         .try_filter_map(|diff| async move {
             use Diff::*;
@@ -279,6 +283,14 @@ mod test {
         let commit_b = CreateCommitContext::new(&ctx, &repo, vec![master_bcs_id])
             .add_file("common", "common")
             .add_file("changed", "second")
+            .add_file("somethingelse", "content")
+            .commit()
+            .await?;
+        let commit_b = CreateCommitContext::new(&ctx, &repo, vec![commit_b])
+            .add_file("common", "common")
+            // Revert the file content to the same value - it should still be
+            // reported as changed
+            .add_file("changed", "first")
             .add_file("somethingelse", "content")
             .commit()
             .await?;

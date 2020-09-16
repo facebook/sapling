@@ -12,7 +12,6 @@ use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
-use fsnodes::RootFsnodeId;
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
     future::{self, try_join},
@@ -27,6 +26,7 @@ use mononoke_types::{ChangesetId, MPath};
 use pushrebase::do_pushrebase_bonsai;
 use regex::Regex;
 use slog::info;
+use unodes::RootUnodeManifestId;
 
 pub async fn create_deletion_head_commits<'a>(
     ctx: &'a CoreContext,
@@ -111,22 +111,22 @@ async fn find_files_that_need_to_be_deleted(
     let head_bookmark_val =
         maybe_head_bookmark_val.ok_or(anyhow!("{} not found", head_bookmark))?;
 
-    let head_root_fsnode = RootFsnodeId::derive(ctx.clone(), repo.clone(), head_bookmark_val);
-    let commit_to_merge_root_fsnode =
-        RootFsnodeId::derive(ctx.clone(), repo.clone(), commit_to_merge);
+    let head_root_unode = RootUnodeManifestId::derive(ctx.clone(), repo.clone(), head_bookmark_val);
+    let commit_to_merge_root_unode =
+        RootUnodeManifestId::derive(ctx.clone(), repo.clone(), commit_to_merge);
 
-    let (head_root_fsnode, commit_to_merge_root_fsnode) = try_join(
-        head_root_fsnode.compat(),
-        commit_to_merge_root_fsnode.compat(),
+    let (head_root_unode, commit_to_merge_root_unode) = try_join(
+        head_root_unode.compat(),
+        commit_to_merge_root_unode.compat(),
     )
     .await?;
 
-    let paths = head_root_fsnode
-        .fsnode_id()
+    let paths = head_root_unode
+        .manifest_unode_id()
         .diff(
             ctx.clone(),
             repo.get_blobstore(),
-            *commit_to_merge_root_fsnode.fsnode_id(),
+            *commit_to_merge_root_unode.manifest_unode_id(),
         )
         .compat()
         .try_filter_map(|diff| async move {
@@ -185,6 +185,49 @@ mod test {
                 MPath::new("toremove/file2")?,
             ]
         );
+
+        Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn test_find_changed_files_with_revert(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+
+        let repo = blobrepo_factory::new_memblob_empty(None)?;
+
+        let root_commit = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("file", "a")
+            .commit()
+            .await?;
+
+        // Change file content and then revert it back to existing value
+        let head_commit = CreateCommitContext::new(&ctx, &repo, vec![root_commit])
+            .add_file("file", "b")
+            .commit()
+            .await?;
+        let head_commit = CreateCommitContext::new(&ctx, &repo, vec![head_commit])
+            .add_file("file", "a")
+            .commit()
+            .await?;
+        bookmark(&ctx, &repo, "book").set_to(head_commit).await?;
+
+        let commit_to_merge = CreateCommitContext::new(&ctx, &repo, vec![root_commit])
+            .commit()
+            .await?;
+
+
+        let book = BookmarkName::new("book")?;
+        let mut paths = find_files_that_need_to_be_deleted(
+            &ctx,
+            &repo,
+            &book,
+            commit_to_merge,
+            Regex::new(".*")?,
+        )
+        .await?;
+
+        paths.sort();
+        assert_eq!(paths, vec![MPath::new("file")?,]);
 
         Ok(())
     }
@@ -255,9 +298,13 @@ mod test {
     async fn prepare_repo(ctx: &CoreContext) -> Result<BlobRepo, Error> {
         let repo = blobrepo_factory::new_memblob_empty(None)?;
 
-        let head_commit = CreateCommitContext::new_root(ctx, &repo)
-            .add_file("unrelated_file", "a")
+        let root_commit = CreateCommitContext::new_root(ctx, &repo)
             .add_file("unchanged/a", "a")
+            .commit()
+            .await?;
+
+        let head_commit = CreateCommitContext::new(ctx, &repo, vec![root_commit])
+            .add_file("unrelated_file", "a")
             .add_file("changed/a", "oldcontent")
             .add_file("changed/b", "oldcontent")
             .add_file("toremove/file1", "content")
@@ -265,8 +312,7 @@ mod test {
             .commit()
             .await?;
 
-        let commit_to_merge = CreateCommitContext::new_root(ctx, &repo)
-            .add_file("unchanged/a", "a")
+        let commit_to_merge = CreateCommitContext::new(ctx, &repo, vec![root_commit])
             .add_file("changed/a", "newcontent")
             .add_file("changed/b", "newcontent")
             .commit()
