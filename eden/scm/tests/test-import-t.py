@@ -1,3 +1,4 @@
+# coding=utf-8
 # Copyright (c) Facebook, Inc. and its affiliates.
 # Copyright (c) Mercurial Contributors.
 #
@@ -1497,3 +1498,12 @@ sh % "printf 'diff --git a/a b/b\\nrename from a\\nrename to b'" | "hg import -"
     a not tracked!
     abort: source file 'a' does not exist
     [255]"""
+
+# Verify that utf-8 characters in patches can be imported
+open("unicode.txt", "w").write("echo 🍺")
+sh % "hg commit -Aqm unicode"
+sh % "hg rm unicode.txt"
+sh % "hg commit -qm remove"
+sh % "hg export --rev 'desc(unicode)'" | "hg import -" == r"""
+    applying patch from stdin
+"""

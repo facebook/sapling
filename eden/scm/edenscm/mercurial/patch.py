@@ -251,13 +251,7 @@ def extract(ui, fileobj):
             ui.debug("Content-Type: %s\n" % content_type)
             if content_type not in ok_types:
                 continue
-            if sys.version_info[0] >= 3:
-                # The message was surrogateescape encoded, so we need to undo
-                # that.
-                payload = part.get_payload()
-                payload = payload.encode("ascii", errors="surrogateescape")
-            else:
-                payload = part.get_payload(decode=True)
+            payload = part.get_payload(decode=True)
             m = diffre.search(payload)
             if m:
                 hgpatch = False

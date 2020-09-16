@@ -157,8 +157,10 @@ if sys.version_info[0] >= 3:
 
         ep = email.parser.Parser()
         # disable the "universal newlines" mode, which isn't binary safe.
-        # We'll have to use surrogateescape when encoding the string back to
-        # bytes later.
+        # Note, although we specific ascii+surrogateescape decoding here, we don't have
+        # to specify it elsewhere for reencoding as the email.parser detects the
+        # surrogates and automatically chooses the appropriate encoding.
+        # See: https://github.com/python/cpython/blob/3.8/Lib/email/message.py::get_payload()
         fp = io.TextIOWrapper(
             fp, encoding=r"ascii", errors=r"surrogateescape", newline=chr(10)
         )
