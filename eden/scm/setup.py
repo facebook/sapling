@@ -574,7 +574,7 @@ void print_buildinfo() {
 """
 
     path = pjoin(builddir, "buildinfo.c")
-    write_if_changed(path, buildinfosrc)
+    write_if_changed(path, buildinfosrc.encode("utf-8"))
     return path
 
 
