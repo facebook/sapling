@@ -106,7 +106,14 @@ Disable bookmarks cache because bookmarks are modified by two separate processes
   $ createfile arvr/newfile
   $ hg -q ci -m "ovrsource commit 3"
   $ REPONAME=ovr-mon hgmn push -r . --to master_bookmark -q
+  $ REPONAME=ovr-mon hgmn up somebookmark -q
+  $ createfile arvr/somefile2
+  $ hg -q ci -m "ovrsource commit 4"
+  $ REPONAME=ovr-mon hgmn push -r . --to somebookmark -q --create
 
   $ mononoke_x_repo_sync 2 0 tail --bookmark-regex "master_bookmark" --catch-up-once |& grep -E '(processing|skipping)'
   * skipping log entry #4 for somebookmark (glob)
   * processing log entry * (glob)
+  * skipping log entry #6 for somebookmark (glob)
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select * from mutable_counters";
+  0|xreposync_from_2|6
