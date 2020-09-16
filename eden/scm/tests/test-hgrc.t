@@ -82,12 +82,7 @@ issue1829: wrong indentation
   $ export FAKEPATH
   $ echo '%include $FAKEPATH/no-such-file' > $HGRC
   $ hg version
-  Mercurial Distributed SCM (version *) (glob)
-  (see https://mercurial-scm.org for more information)
-  
-  Copyright (C) 2005-* Matt Mackall and others (glob)
-  This is free software; see the source for copying conditions. There is NO
-  warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+  EdenSCM * (glob)
   $ unset FAKEPATH
 
 make sure global options given on the cmdline take precedence

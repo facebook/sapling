@@ -10,16 +10,7 @@ use super::Result;
 use super::IO;
 
 pub fn run(_opts: NoOpts, io: &mut IO) -> Result<u8> {
-    io.write(format!(
-        r#"Mercurial Distributed SCM (version {})
-(see https://mercurial-scm.org for more information)
-
-Copyright (C) 2005-2017 Matt Mackall and others
-This is free software; see the source for copying conditions. There is NO
-warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
-"#,
-        ::version::VERSION
-    ))?;
+    io.write(format!("EdenSCM {}\n", ::version::VERSION))?;
     Ok(0)
 }
 
