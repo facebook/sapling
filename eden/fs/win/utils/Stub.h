@@ -21,9 +21,6 @@ class SerializedInodeMap {
   int stub;
 };
 
-using uid_t = int;
-using gid_t = int;
-
 #define NOT_IMPLEMENTED()                             \
   do {                                                \
     throw newEdenError(                               \
