@@ -83,7 +83,7 @@ pub fn record_get_stats(
         Err(error) => {
             // Always log errors
             scuba.unsampled();
-            scuba.add(ERROR, error.to_string());
+            scuba.add(ERROR, format!("{:#}", error));
         }
         Ok(None) => {}
     }
@@ -112,7 +112,7 @@ pub fn record_put_stats(
             }
         }
         Err(error) => {
-            scuba.add(ERROR, error.to_string());
+            scuba.add(ERROR, format!("{:#}", error));
         }
     };
 
