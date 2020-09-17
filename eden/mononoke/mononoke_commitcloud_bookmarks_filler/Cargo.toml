@@ -1,0 +1,38 @@
+[package]
+name = "mononoke_commitcloud_bookmarks_filler"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["schemas/**/*.sql", "src/**/*.rs"]
+
+[dependencies]
+blobrepo = { path = "../blobrepo" }
+blobrepo_hg = { path = "../blobrepo/blobrepo_hg" }
+bookmarks = { path = "../bookmarks" }
+cmdlib = { path = "../cmdlib" }
+context = { path = "../server/context" }
+mercurial_types = { path = "../mercurial/types" }
+metaconfig_types = { path = "../metaconfig/types" }
+scuba_ext = { path = "../common/scuba_ext" }
+sql_construct = { path = "../common/sql_construct" }
+sql_ext = { path = "../common/rust/sql_ext" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+anyhow = "1.0"
+ascii = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+clap = "2.33"
+futures = { version = "0.3.5", features = ["async-await", "compat"] }
+futures-old = { package = "futures", version = "0.1" }
+slog = { version = "2.5", features = ["max_level_debug"] }
+thiserror = "1.0"
+tokio = { version = "=0.2.13", features = ["full"] }
+
+[dev-dependencies]
+mercurial_types-mocks = { path = "../mercurial/types/mocks" }
+maplit = "1.0"
+tokio-compat = "0.1"

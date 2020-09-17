@@ -112,11 +112,14 @@ def get_test_groups(repo_root):
             "test-push-protocol-lfs.t",
             "test-remotefilelog-lfs.t",
         },
-        TestGroup.FLAKY: {"test-walker-count-objects.t", "test-walker-error-as-data.t"},
+        TestGroup.FLAKY: {
+            "test-cache-warmup-microwave.t",
+            "test-gitimport-octopus.t",
+            "test-redaction.t",
+            "test-walker-count-objects.t",
+            "test-walker-error-as-data.t",
+        },
         TestGroup.BROKEN: {
-            "test-backsync-forever.t",  # Unknown issue
-            "test-bookmarks-filler.t",  # Probably missing binary
-            "test-cmd-manual-scrub.t",  # Just wrong output
             "test-edenapi-server-commit-location-to-hash.t",  # Missing eden/scm's commands
             "test-edenapi-server-commit-revlog-data.t",  # Missing eden/scm's commands
             "test-edenapi-server-complete-trees.t",  # Missing eden/scm's commands
@@ -124,10 +127,8 @@ def get_test_groups(repo_root):
             "test-edenapi-server-history.t",  # Missing eden/scm's commands
             "test-edenapi-server-trees.t",  # Missing eden/scm's commands
             "test-fastreplay-inline-args.t",  # Returns different data in OSS
-            "test-gitimport-octopus.t",  # Unknown, fails on GitHub MacOs
             "test-gitimport.t",  # Issue with hggit extension
             "test-hook-tailer.t",  # Issue with hggit extension
-            "test-redaction.t",  # This test is temporary broken
             "test-remotefilelog-lfs-client-certs.t",  # Returns different data in OSS
             "test-server.t",  # Returns different data in OSS
             "test-unbundle-replay-hg-recording.t",  # Returns different data in OSS
