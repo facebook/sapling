@@ -488,30 +488,16 @@ def intrev(ctx):
 
 
 def formatchangeid(ctx):
-    """Format changectx as '{rev}:{node|formatnode}', which is the default
+    """Format changectx as '{node|formatnode}', which is the default
     template provided by cmdutil.changeset_templater
-
-    If experimental.template-new-builtin is set, do not show revision number.
     """
     repo = ctx.repo()
     ui = repo.ui
-    if ui.configbool("experimental", "template-new-builtin"):
-        # Do not show revision number.
-        if ui.debugflag:
-            hexfunc = hex
-        else:
-            hexfunc = short
-        return hexfunc(binnode(ctx))
-    return formatrevnode(repo.ui, intrev(ctx), binnode(ctx))
-
-
-def formatrevnode(ui, rev, node):
-    """Format given revision and node depending on the current verbosity"""
     if ui.debugflag:
         hexfunc = hex
     else:
         hexfunc = short
-    return "%d:%s" % (rev, hexfunc(node))
+    return hexfunc(binnode(ctx))
 
 
 def revsingle(repo, revspec, default=".", localalias=None):

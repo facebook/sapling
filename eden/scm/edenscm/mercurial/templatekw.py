@@ -926,17 +926,5 @@ def loadkeyword(ui, extname, registrarobj):
         keywords[name] = func
 
 
-def init(ui):
-    """Update default templates"""
-    global templatefixtures, defaulttempl
-
-    if ui.configbool("experimental", "template-new-builtin"):
-        from . import templatenew as templatefixtures
-    else:
-        from . import templateold as templatefixtures
-
-    defaulttempl = templatefixtures.defaulttempl
-
-
 # tell hggettext to extract docstrings from these functions:
 i18nfunctions = keywords.values()
