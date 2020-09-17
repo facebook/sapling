@@ -162,6 +162,8 @@ class _HttpsCommitCloudService(baseservice.BaseService):
                 # print response if debugrequests and debug are both on
                 if self.debugrequests:
                     self.ui.debug("%s\n" % json.dumps(cleandict(data)))
+                if "error" in data:
+                    raise ccerror.ServiceError(self.ui, data["error"])
                 return data
             except httplib.HTTPException:
                 self.connection.close()
@@ -181,6 +183,15 @@ class _HttpsCommitCloudService(baseservice.BaseService):
         if e:
             raise ccerror.ServiceError(self.ui, str(e))
 
+    def _timedsend(self, path, data):
+        start = util.timer()
+        response = self._send(path, data)
+        elapsed = util.timer() - start
+        self.ui.debug(
+            "response received in %0.2f sec\n" % elapsed, component="commitcloud"
+        )
+        return response
+
     @perftrace.tracefunc("Check Commit Cloud Authentication")
     def check(self):
         # send a check request.  Currently this is an empty 'get_references'
@@ -194,9 +205,7 @@ class _HttpsCommitCloudService(baseservice.BaseService):
             component="commitcloud",
         )
         path = "/commit_cloud/get_references"
-        response = self._send(path, {})
-        if "error" in response:
-            raise ccerror.ServiceError(self.ui, response["error"])
+        self._send(path, {})
 
     @perftrace.tracefunc("Get Commit Cloud References")
     def getreferences(self, reponame, workspace, baseversion):
@@ -209,16 +218,7 @@ class _HttpsCommitCloudService(baseservice.BaseService):
             "repo_name": reponame,
             "workspace": workspace,
         }
-        start = util.timer()
-        response = self._send(path, data)
-        elapsed = util.timer() - start
-        self.ui.debug(
-            "response received in %0.2f sec\n" % elapsed, component="commitcloud"
-        )
-
-        if "error" in response:
-            raise ccerror.ServiceError(self.ui, response["error"])
-
+        response = self._timedsend(path, data)
         version = response["ref"]["version"]
 
         if version == 0:
@@ -294,7 +294,6 @@ class _HttpsCommitCloudService(baseservice.BaseService):
 
         # send request
         path = "/commit_cloud/update_references"
-
         data = {
             "version": version,
             "repo_name": reponame,
@@ -310,16 +309,7 @@ class _HttpsCommitCloudService(baseservice.BaseService):
             "new_snapshots": newsnapshots,
         }
 
-        start = util.timer()
-        response = self._send(path, data)
-        elapsed = util.timer() - start
-        self.ui.debug(
-            "response received in %0.2f sec\n" % elapsed, component="commitcloud"
-        )
-
-        if "error" in response:
-            raise ccerror.ServiceError(self.ui, response["error"])
-
+        response = self._timedsend(path, data)
         data = response["ref"]
         rc = response["rc"]
         newversion = data["version"]
@@ -346,19 +336,9 @@ class _HttpsCommitCloudService(baseservice.BaseService):
     @perftrace.tracefunc("Get Commit Cloud Smartlog")
     def getsmartlog(self, reponame, workspace, repo, limit, flags=[]):
         self.ui.debug("sending 'get_smartlog' request\n", component="commitcloud")
-
         path = "/commit_cloud/get_smartlog"
         data = {"repo_name": reponame, "workspace": workspace, "flags": flags}
-
-        start = util.timer()
-        response = self._send(path, data)
-        elapsed = util.timer() - start
-        self.ui.debug(
-            "responce received in %0.2f sec\n" % elapsed, component="commitcloud"
-        )
-
-        if "error" in response:
-            raise ccerror.ServiceError(self.ui, response["error"])
+        response = self._timedsend(path, data)
 
         # if 200 OK response format is:
         # {
@@ -402,15 +382,7 @@ class _HttpsCommitCloudService(baseservice.BaseService):
                 "flags": flags,
             }
 
-        start = util.timer()
-        response = self._send(path, data)
-        elapsed = util.timer() - start
-        self.ui.debug(
-            "response received in %0.2f sec\n" % elapsed, component="commitcloud"
-        )
-
-        if "error" in response:
-            raise ccerror.ServiceError(self.ui, response["error"])
+        response = self._timedsend(path, data)
 
         # if 200 OK response format is:
         # {
@@ -441,16 +413,8 @@ class _HttpsCommitCloudService(baseservice.BaseService):
         )
         path = "/commit_cloud/get_historical_versions"
         data = {"repo_name": reponame, "workspace": workspace}
-        start = util.timer()
-        response = self._send(path, data)
-        elapsed = util.timer() - start
-        self.ui.debug(
-            "response received in %0.2f sec\n" % elapsed, component="commitcloud"
-        )
 
-        if "error" in response:
-            raise ccerror.ServiceError(self.ui, response["error"])
-
+        response = self._timedsend(path, data)
         versions = response["versions"]["versions"]
 
         self.ui.debug(
@@ -480,35 +444,17 @@ class _HttpsCommitCloudService(baseservice.BaseService):
             "shared_path": sharedpath,
             "unixname": unixname,
         }
-        start = util.timer()
-        response = self._send(path, data)
-        elapsed = util.timer() - start
-        self.ui.debug(
-            "response received in %0.2f sec\n" % elapsed, component="commitcloud"
-        )
-
-        if "error" in response:
-            raise ccerror.ServiceError(self.ui, response["error"])
-
+        self._timedsend(path, data)
         self.ui.debug("'update_checkout_locations' successful", component="commitcloud")
 
     @perftrace.tracefunc("Get Commit Cloud Workspaces")
     def getworkspaces(self, reponame, prefix):
+        """Fetch Commit Cloud workspaces for the given prefix
+        """
         self.ui.debug("sending 'get_workspaces' request\n", component="commitcloud")
-
-        # send request
         path = "/commit_cloud/get_workspaces"
         data = {"repo_name": reponame, "prefix": prefix}
-        start = util.timer()
-        response = self._send(path, data)
-        elapsed = util.timer() - start
-        self.ui.debug(
-            "response received in %0.2f sec\n" % elapsed, component="commitcloud"
-        )
-
-        if "error" in response:
-            raise ccerror.ServiceError(self.ui, response["error"])
-
+        response = self._timedsend(path, data)
         workspaces = response["workspaces_data"]
         return self._makeworkspacesinfo(workspaces)
 
@@ -521,14 +467,7 @@ class _HttpsCommitCloudService(baseservice.BaseService):
         )
         path = "/commit_cloud/update_workspace_archive"
         data = {"repo_name": reponame, "workspace": workspace, "archived": archived}
-        start = util.timer()
-        response = self._send(path, data)
-        elapsed = util.timer() - start
-        self.ui.debug(
-            "response received in %0.2f sec\n" % elapsed, component="commitcloud"
-        )
-        if "error" in response:
-            raise ccerror.ServiceError(self.ui, response["error"])
+        self._timedsend(path, data)
 
 
 # Make sure that the HttpsCommitCloudService is a singleton
