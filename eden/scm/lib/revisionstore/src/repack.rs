@@ -317,6 +317,7 @@ fn repack_datapack_to_contentstore(
     let mut repacked = Vec::with_capacity(paths.len());
     let mut errors = vec![];
 
+    let mut seen = HashSet::new();
     for path in paths {
         let pack = match DataPack::new(&path, ExtStoredPolicy::Use) {
             Ok(pack) => pack,
@@ -326,13 +327,15 @@ fn repack_datapack_to_contentstore(
         let res = (|| -> Result<()> {
             for key in pack.to_keys() {
                 let key = key?;
-
-                if let StoreResult::Found(content) = store.get(StoreKey::hgid(key.clone()))? {
-                    match store.get_meta(StoreKey::hgid(key.clone()))? {
-                        StoreResult::Found(meta) => {
-                            store.add_pending(&key, Bytes::from(content), meta, location)?
+                if !seen.contains(&key) {
+                    if let StoreResult::Found(content) = store.get(StoreKey::hgid(key.clone()))? {
+                        match store.get_meta(StoreKey::hgid(key.clone()))? {
+                            StoreResult::Found(meta) => {
+                                store.add_pending(&key, Bytes::from(content), meta, location)?;
+                                seen.insert(key);
+                            }
+                            _ => {}
                         }
-                        _ => {}
                     }
                 }
             }
