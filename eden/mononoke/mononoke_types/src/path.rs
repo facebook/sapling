@@ -599,7 +599,18 @@ impl MPath {
 
     pub fn get_path_hash(&self) -> MPathHash {
         let mut context = MPathHashContext::new();
-        context.update(self.to_vec());
+        let num_el = self.elements.len();
+        if num_el > 0 {
+            if num_el > 1 {
+                for e in &self.elements[..num_el - 1] {
+                    context.update(e.as_ref());
+                    context.update(&[b'/'])
+                }
+            }
+            context.update(self.elements[num_el - 1].as_ref());
+        } else {
+            context.update(&[])
+        }
         context.finish()
     }
 
