@@ -28,7 +28,9 @@ void RequestContext::startRequest(
   latencyHistogram_ = histogram;
   stats_ = stats;
   channelThreadLocalStats_ = requestWatches;
-  requestMetricsScope_ = RequestMetricsScope(channelThreadLocalStats_.get());
+  if (channelThreadLocalStats_) {
+    requestMetricsScope_ = RequestMetricsScope(channelThreadLocalStats_.get());
+  }
 }
 
 void RequestContext::finishRequest() {
@@ -42,8 +44,13 @@ void RequestContext::finishRequest() {
       latencyHistogram_, diff_us);
   latencyHistogram_ = nullptr;
   stats_ = nullptr;
-  { auto temp = std::move(requestMetricsScope_); }
-  channelThreadLocalStats_.reset();
+
+  if (channelThreadLocalStats_) {
+    {
+      auto temp = std::move(requestMetricsScope_);
+    }
+    channelThreadLocalStats_.reset();
+  }
 
   if (auto pid = getClientPid(); pid.has_value()) {
     if (getEdenTopStats().didImportFromBackingStore()) {

@@ -22,6 +22,7 @@
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/utils/SystemError.h"
 #include "eden/fs/win/mount/EdenDispatcher.h"
+#include "eden/fs/win/mount/PrjfsRequestContext.h"
 #include "eden/fs/win/utils/Guid.h"
 #include "eden/fs/win/utils/StringConv.h"
 #include "eden/fs/win/utils/WinError.h"
@@ -533,11 +534,11 @@ folly::Future<folly::Unit> removeFile(
 }
 
 folly::Future<folly::Unit> newFileCreated(
+    RelativePathPiece relPath,
     const EdenMount& mount,
-    PCWSTR path,
     PCWSTR destPath,
-    bool isDirectory) {
-  auto relPath = RelativePath(path);
+    bool isDirectory,
+    ObjectFetchContext& context) {
   FB_LOGF(
       mount.getStraceLogger(),
       DBG7,
@@ -548,31 +549,31 @@ folly::Future<folly::Unit> newFileCreated(
 }
 
 folly::Future<folly::Unit> fileOverwritten(
+    RelativePathPiece relPath,
     const EdenMount& mount,
-    PCWSTR path,
     PCWSTR destPath,
-    bool isDirectory) {
-  auto relPath = RelativePath(path);
+    bool isDirectory,
+    ObjectFetchContext& context) {
   FB_LOGF(mount.getStraceLogger(), DBG7, "overwrite({})", relPath);
   return materializeFile(mount, relPath);
 }
 
 folly::Future<folly::Unit> fileHandleClosedFileModified(
+    RelativePathPiece relPath,
     const EdenMount& mount,
-    PCWSTR path,
     PCWSTR destPath,
-    bool isDirectory) {
-  auto relPath = RelativePath(path);
+    bool isDirectory,
+    ObjectFetchContext& context) {
   FB_LOGF(mount.getStraceLogger(), DBG7, "modified({})", relPath);
   return materializeFile(mount, relPath);
 }
 
 folly::Future<folly::Unit> fileRenamed(
+    RelativePathPiece oldPath,
     const EdenMount& mount,
-    PCWSTR path,
     PCWSTR destPath,
-    bool isDirectory) {
-  auto oldPath = RelativePath(path);
+    bool isDirectory,
+    ObjectFetchContext& context) {
   auto newPath = RelativePath(destPath);
 
   FB_LOGF(mount.getStraceLogger(), DBG7, "rename({} -> {})", oldPath, newPath);
@@ -589,25 +590,26 @@ folly::Future<folly::Unit> fileRenamed(
 }
 
 folly::Future<folly::Unit> preRename(
+    RelativePathPiece relPath,
     const EdenMount& mount,
-    PCWSTR path,
     PCWSTR destPath,
-    bool isDirectory) {
+    bool isDirectory,
+    ObjectFetchContext& context) {
   FB_LOGF(
       mount.getStraceLogger(),
       DBG7,
       "prerename({} -> {})",
-      RelativePath(path),
+      relPath,
       RelativePath(destPath));
   return folly::unit;
 }
 
 folly::Future<folly::Unit> fileHandleClosedFileDeleted(
+    RelativePathPiece oldPath,
     const EdenMount& mount,
-    PCWSTR path,
     PCWSTR destPath,
-    bool isDirectory) {
-  auto oldPath = RelativePath(path);
+    bool isDirectory,
+    ObjectFetchContext& context) {
   FB_LOGF(
       mount.getStraceLogger(),
       DBG7,
@@ -618,11 +620,11 @@ folly::Future<folly::Unit> fileHandleClosedFileDeleted(
 }
 
 folly::Future<folly::Unit> preSetHardlink(
+    RelativePathPiece relPath,
     const EdenMount& mount,
-    PCWSTR path,
     PCWSTR destPath,
-    bool isDirectory) {
-  auto relPath = RelativePath(path);
+    bool isDirectory,
+    ObjectFetchContext& context) {
   FB_LOGF(mount.getStraceLogger(), DBG7, "link({})", relPath);
   return folly::makeFuture<folly::Unit>(makeHResultErrorExplicit(
       HRESULT_FROM_WIN32(ERROR_ACCESS_DENIED),
@@ -630,26 +632,63 @@ folly::Future<folly::Unit> preSetHardlink(
 }
 
 typedef folly::Future<folly::Unit> (*NotificationHandler)(
+    RelativePathPiece relPath,
     const EdenMount& mount,
-    PCWSTR path,
     PCWSTR destPath,
-    bool isDirectory);
+    bool isDirectory,
+    ObjectFetchContext& context);
 
-const std::unordered_map<PRJ_NOTIFICATION, NotificationHandler> handlerMap = {
-    {PRJ_NOTIFICATION_NEW_FILE_CREATED, newFileCreated},
-    {PRJ_NOTIFICATION_FILE_OVERWRITTEN, fileOverwritten},
-    {PRJ_NOTIFICATION_FILE_HANDLE_CLOSED_FILE_MODIFIED,
-     fileHandleClosedFileModified},
-    {PRJ_NOTIFICATION_FILE_RENAMED, fileRenamed},
-    {PRJ_NOTIFICATION_PRE_RENAME, preRename},
-    {PRJ_NOTIFICATION_FILE_HANDLE_CLOSED_FILE_DELETED,
-     fileHandleClosedFileDeleted},
-    {PRJ_NOTIFICATION_PRE_SET_HARDLINK, preSetHardlink},
+struct HandlerEntry {
+  constexpr HandlerEntry() = default;
+  constexpr HandlerEntry(
+      NotificationHandler h,
+      ChannelThreadStats::HistogramPtr hist)
+      : handler{h}, histogram{hist} {}
+
+  NotificationHandler handler = nullptr;
+  ChannelThreadStats::HistogramPtr histogram = nullptr;
+};
+
+const std::unordered_map<PRJ_NOTIFICATION, HandlerEntry> handlerMap = {
+    {
+        PRJ_NOTIFICATION_NEW_FILE_CREATED,
+        {newFileCreated, &ChannelThreadStats::newFileCreated},
+    },
+    {
+        PRJ_NOTIFICATION_FILE_OVERWRITTEN,
+        {fileOverwritten, &ChannelThreadStats::fileOverwritten},
+    },
+    {
+        PRJ_NOTIFICATION_FILE_HANDLE_CLOSED_FILE_MODIFIED,
+        {fileHandleClosedFileModified,
+         &ChannelThreadStats::fileHandleClosedFileModified},
+    },
+    {
+        PRJ_NOTIFICATION_FILE_RENAMED,
+        {fileRenamed, &ChannelThreadStats::fileRenamed},
+    },
+    {
+        PRJ_NOTIFICATION_PRE_RENAME,
+        {preRename, &ChannelThreadStats::preRenamed},
+    },
+    {
+        PRJ_NOTIFICATION_FILE_HANDLE_CLOSED_FILE_DELETED,
+        {fileHandleClosedFileDeleted,
+         &ChannelThreadStats::fileHandleClosedFileDeleted},
+    },
+    {
+        PRJ_NOTIFICATION_PRE_SET_HARDLINK,
+        {
+            preSetHardlink,
+            &ChannelThreadStats::preSetHardlink,
+        },
+    },
 };
 
 } // namespace
 
 HRESULT EdenDispatcher::notification(
+    std::unique_ptr<PrjfsRequestContext> context,
     const PRJ_CALLBACK_DATA& callbackData,
     bool isDirectory,
     PRJ_NOTIFICATION notificationType,
@@ -661,11 +700,18 @@ HRESULT EdenDispatcher::notification(
       XLOG(WARN) << "Unrecognized notification: " << notificationType;
       return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
     } else {
-      it->second(
-            *mount_,
-            callbackData.FilePathName,
-            destinationFileName,
-            isDirectory)
+      auto requestWatch =
+          std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(nullptr);
+      context->startRequest(
+          mount_->getStats(), it->second.histogram, requestWatch);
+      auto relPath = RelativePath(callbackData.FilePathName);
+      it->second
+          .handler(relPath, *mount_, destinationFileName, isDirectory, *context)
+          .thenTryInline([context = std::move(context)](
+                             folly::Try<folly::Unit>&& try_) mutable {
+            context->finishRequest();
+            return try_;
+          })
           .get();
     }
     return S_OK;

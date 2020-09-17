@@ -11,6 +11,7 @@
 #include "eden/fs/utils/NotImplemented.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/win/mount/EdenDispatcher.h"
+#include "eden/fs/win/mount/PrjfsRequestContext.h"
 #include "eden/fs/win/utils/Guid.h"
 #include "eden/fs/win/utils/WinError.h"
 
@@ -22,6 +23,7 @@ using facebook::eden::exceptionToHResult;
 using facebook::eden::Guid;
 using facebook::eden::InodeMetadata;
 using facebook::eden::PrjfsChannel;
+using facebook::eden::PrjfsRequestContext;
 using facebook::eden::RelativePath;
 using facebook::eden::win32ErrorToString;
 
@@ -175,14 +177,15 @@ HRESULT notification(
     PCWSTR destinationFileName,
     PRJ_NOTIFICATION_PARAMETERS* notificationParameters) noexcept {
   BAIL_ON_RECURSIVE_CALL(callbackData);
-  return getChannel(callbackData)
-      ->getDispatcher()
-      ->notification(
-          *callbackData,
-          isDirectory,
-          notificationType,
-          destinationFileName,
-          *notificationParameters);
+  auto channel = getChannel(callbackData);
+  auto context = std::make_unique<PrjfsRequestContext>(channel, *callbackData);
+  return channel->getDispatcher()->notification(
+      std::move(context),
+      *callbackData,
+      isDirectory,
+      notificationType,
+      destinationFileName,
+      *notificationParameters);
 }
 } // namespace
 

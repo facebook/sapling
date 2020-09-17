@@ -145,18 +145,15 @@ class ChannelThreadStats : public EdenThreadStatsBase {
 #else
   Timeseries outOfOrderCreate{createTimeseries("prjfs.out_of_order_create")};
 
-  Histogram opendir{createHistogram("prjfs.opendir_us")};
-  Histogram readdir{createHistogram("prjfs.readdir_us")};
-  Histogram lookup{createHistogram("prjfs.lookup_us")};
-  Histogram access{createHistogram("prjfs.access_us")};
-  Histogram read{createHistogram("prjfs.read_us")};
-  Histogram mkdir{createHistogram("prjfs.mkdir_us")};
-  Histogram mknod{createHistogram("prjfs.mknod_us")};
-  Histogram overwrite{createHistogram("prjfs.overwrite_us")};
-  Histogram modified{createHistogram("prjfs.modified_us")};
-  Histogram rename{createHistogram("prjfs.rename_us")};
-  Histogram rmdir{createHistogram("prjfs.rmdir_us")};
-  Histogram unlink{createHistogram("prjfs.unlink_us")};
+  Histogram newFileCreated{createHistogram("prjfs.newFileCreated_us")};
+  Histogram fileOverwritten{createHistogram("prjfs.fileOverwritten_us")};
+  Histogram fileHandleClosedFileModified{
+      createHistogram("prjfs.fileHandleClosedFileModified_us")};
+  Histogram fileRenamed{createHistogram("prjfs.fileRenamed_us")};
+  Histogram preRenamed{createHistogram("prjfs.preRenamed_us")};
+  Histogram fileHandleClosedFileDeleted{
+      createHistogram("prjfs.fileHandleClosedFileDeleted_us")};
+  Histogram preSetHardlink{createHistogram("prjfs.preSetHardlink_us")};
 #endif
 
   // Since we can potentially finish a request in a different

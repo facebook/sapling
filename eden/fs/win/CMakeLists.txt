@@ -11,6 +11,7 @@ add_library(
 target_link_libraries(
   eden_win
   PUBLIC
+    eden_request_context
     eden_inodes
     eden_journal
     eden_model

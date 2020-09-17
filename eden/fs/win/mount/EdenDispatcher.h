@@ -20,7 +20,9 @@
 
 namespace facebook {
 namespace eden {
+
 class EdenMount;
+class PrjfsRequestContext;
 
 struct InodeMetadata {
   // To ensure that the OS has a record of the canonical file name, and not
@@ -58,6 +60,7 @@ class EdenDispatcher {
       uint32_t length) noexcept;
 
   HRESULT notification(
+      std::unique_ptr<PrjfsRequestContext> context,
       const PRJ_CALLBACK_DATA& callbackData,
       bool isDirectory,
       PRJ_NOTIFICATION notificationType,
