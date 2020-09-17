@@ -5,6 +5,9 @@
 
 Set up repos
   $ hg init remoterepo
+  $ cd remoterepo
+  $ setconfig treemanifest.server=True
+  $ cd ..
   $ hg clone -q ssh://user@dummy/remoterepo localrepo
 
 Pull master bookmark

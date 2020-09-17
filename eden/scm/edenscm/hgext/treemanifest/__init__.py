@@ -2121,25 +2121,14 @@ def createtreepackpart(repo, outgoing, partname, sendtrees=shallowbundle.AllTree
     basemfnodes = []
     directories = []
 
-    localmfstore = None
-    if len(repo.manifestlog.localdatastores) > 0:
-        localmfstore = repo.manifestlog.localdatastores[0]
-
-    def shouldsend(ctx):
-        mfnode = ctx.manifestnode()
-        if sendtrees == shallowbundle.AllTrees or ctx.phase() != phases.public:
-            return True
-
-        # Else LocalTrees
-        return localmfstore and not localmfstore.getmissing([("", mfnode)])
-
     linknodemap = {}
     for node in outgoing.missing:
         ctx = repo[node]
-        if shouldsend(ctx):
+        if sendtrees == shallowbundle.AllTrees or ctx.phase() != phases.public:
             mfnode = ctx.manifestnode()
             mfnodes.append(mfnode)
             linknodemap.setdefault(mfnode, node)
+
     basectxs = repo.set("parents(%ln) - %ln", outgoing.missing, outgoing.missing)
     for basectx in basectxs:
         basemfnodes.append(basectx.manifestnode())

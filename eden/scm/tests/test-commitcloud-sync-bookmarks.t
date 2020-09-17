@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ enable amend commitcloud infinitepush rebase remotenames pullcreatemarkers
+  $ enable amend commitcloud infinitepush rebase remotenames treemanifest pullcreatemarkers
   $ configure dummyssh
   $ setconfig commitcloud.hostname=testhost
   $ setconfig remotefilelog.reponame=server
@@ -9,6 +9,7 @@
   $ cd server
   $ setconfig infinitepush.server=yes infinitepush.reponame=testrepo
   $ setconfig infinitepush.indextype=disk infinitepush.storetype=disk
+  $ setconfig treemanifest.server=True
   $ touch base
   $ hg commit -Aqm base
   $ hg bookmark master

@@ -15,6 +15,8 @@ preferuncompressed = False so that we can make both generaldelta and non-general
   > bundle2-exp = True
   > [server]
   > preferuncompressed = False
+  > [treemanifest]
+  > server=True
   > EOF
   $ echo x > x
   $ hg commit -qAm x
@@ -23,6 +25,8 @@ preferuncompressed = False so that we can make both generaldelta and non-general
 
   $ hgcloneshallow ssh://user@dummy/master shallow-generaldelta -q --pull --config experimental.bundle2-exp=True
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
+  fetching tree '' bc0c2c938b929f98b1c31a8c5994396ebb096bf0
+  1 trees fetched over 0.00s
   $ grep generaldelta shallow-generaldelta/.hg/requires
   generaldelta
   $ hgcloneshallow ssh://user@dummy/master shallow-plain -q --pull --config format.usegeneraldelta=False --config format.generaldelta=False --config experimental.bundle2-exp=True
@@ -42,8 +46,10 @@ pull from generaldelta to generaldelta
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
+  fetching tree '' 126c4ddee02e922d5f05b4304b80e383a53a82e6, found via 2fbb8bb2b903
+  1 trees fetched over 0.00s
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 push from generaldelta to generaldelta
   $ echo b > b
   $ hg commit -qAm b
@@ -63,8 +69,10 @@ pull from generaldelta to non-generaldelta
   adding manifests
   adding file changes
   added 2 changesets with 0 changes to 0 files
-  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
+  fetching tree '' bc905f0fce7a7e7dfb60db06ddf9df54b3983840, found via d6788bd632ca
+  1 trees fetched over 0.00s
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 push from non-generaldelta to generaldelta
   $ echo c > c
   $ hg commit -qAm c

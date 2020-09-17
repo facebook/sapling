@@ -141,34 +141,6 @@ class shallowcg1packer(changegroup.cg1packer):
         else:
             # If not using the fast path, we need to discover what files to send
             if not fastpathlinkrev:
-                localmfstore = None
-                if len(repo.manifestlog.localdatastores) > 0:
-                    localmfstore = repo.manifestlog.localdatastores[0]
-                sharedmfstore = None
-                if len(repo.manifestlog.shareddatastores) > 0:
-                    sharedmfstore = contentstore.unioncontentstore(
-                        *repo.manifestlog.shareddatastores
-                    )
-
-                def containslocalfiles(mfnode):
-                    # This is a local tree, then it contains local files.
-                    if localmfstore and not localmfstore.getmissing([("", mfnode)]):
-                        return True
-
-                    # If not a local tree, and it doesn't exist in the store,
-                    # then it is to be generated and may contain local files.
-                    # This can happen while serving an infinitepush bundle that
-                    # contains flat manifests. It will need to generate trees
-                    # for that manifest.
-                    if (
-                        repo.svfs.treemanifestserver
-                        and sharedmfstore
-                        and sharedmfstore.getmissing([("", mfnode)])
-                    ):
-                        return True
-
-                    return False
-
                 # If we're sending files, we need to process the manifests
                 filestosend = self.shouldaddfilegroups(source)
                 if filestosend is not NoFiles:
@@ -176,11 +148,11 @@ class shallowcg1packer(changegroup.cg1packer):
                     with progress.bar(repo.ui, _("manifests"), total=len(mfs)) as prog:
                         for mfnode, clnode in pycompat.iteritems(mfs):
                             prog.value += 1
-                            if filestosend == LocalFiles and not containslocalfiles(
-                                mfnode
+                            if (
+                                filestosend == LocalFiles
+                                and repo[clnode].phase() == phases.public
                             ):
                                 continue
-
                             try:
                                 mfctx = mflog[mfnode]
                                 p1node = mfctx.parents[0]

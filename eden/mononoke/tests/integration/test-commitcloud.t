@@ -277,62 +277,24 @@ On the first client make 2 stacks
   
 Make one of the commits public when it shouldn't be.
   $ hgmn debugmakepublic 8d621fa11677
+  $ hgmn cloud sync 2>&1 | grep "Error while uploading data for changesets"
+  remote:     Error while uploading data for changesets, hashes: [HgChangesetId(HgNodeHash(Sha1(ec61bf312a03c1ae89f421ca46eba7fc8801129e)))]
+  remote:             context: "Error while uploading data for changesets, hashes: [HgChangesetId(HgNodeHash(Sha1(ec61bf312a03c1ae89f421ca46eba7fc8801129e)))]",
+  remote:     Error while uploading data for changesets, hashes: [HgChangesetId(HgNodeHash(Sha1(8d621fa1167779dffcefe5cb813fc11f2f272874))), HgChangesetId(HgNodeHash(Sha1(ec61bf312a03c1ae89f421ca46eba7fc8801129e)))]
+  remote:             context: "Error while uploading data for changesets, hashes: [HgChangesetId(HgNodeHash(Sha1(8d621fa1167779dffcefe5cb813fc11f2f272874))), HgChangesetId(HgNodeHash(Sha1(ec61bf312a03c1ae89f421ca46eba7fc8801129e)))]",
+
+  $ hgmn debugmakepublic --delete 8d621fa11677
   $ hgmn cloud sync
   commitcloud: synchronizing 'client1' with 'user/test/default'
-  backing up stack rooted at ec61bf312a03
-  remote: Command failed
-  remote:   Error:
-  remote:     bundle2_resolver error
-  remote: 
-  remote:   Root cause:
-  remote:     Bonsai changeset not found for hg changeset 8d621fa1167779dffcefe5cb813fc11f2f272874
-  remote: 
-  remote:   Caused by:
-  remote:     Error while uploading data for changesets, hashes: [HgChangesetId(HgNodeHash(Sha1(ec61bf312a03c1ae89f421ca46eba7fc8801129e)))]
-  remote:   Caused by:
-  remote:     While creating Changeset Some(HgNodeHash(Sha1(ec61bf312a03c1ae89f421ca46eba7fc8801129e))), uuid: * (glob)
-  remote:   Caused by:
-  remote:     While waiting for parents to complete
-  remote:   Caused by:
-  remote:     Bonsai changeset not found for hg changeset 8d621fa1167779dffcefe5cb813fc11f2f272874
-  remote: 
-  remote:   Debug context:
-  remote:     Error {
-  remote:         context: "bundle2_resolver error",
-  remote:         source: Error {
-  remote:             context: "Error while uploading data for changesets, hashes: [HgChangesetId(HgNodeHash(Sha1(ec61bf312a03c1ae89f421ca46eba7fc8801129e)))]",
-  remote:             source: SharedError {
-  remote:                 error: Error {
-  remote:                     context: "While creating Changeset Some(HgNodeHash(Sha1(ec61bf312a03c1ae89f421ca46eba7fc8801129e))), uuid: *", (glob)
-  remote:                     source: Error {
-  remote:                         context: "While waiting for parents to complete",
-  remote:                         source: SharedError {
-  remote:                             error: BonsaiMappingNotFound(
-  remote:                                 HgChangesetId(
-  remote:                                     HgNodeHash(
-  remote:                                         Sha1(8d621fa1167779dffcefe5cb813fc11f2f272874),
-  remote:                                     ),
-  remote:                                 ),
-  remote:                             ),
-  remote:                         },
-  remote:                     },
-  remote:                 },
-  remote:             },
-  remote:         },
-  remote:     }
-  push failed: stream ended unexpectedly (got 0 bytes, expected 4)
-  retrying push with discovery
-  searching for changes
-  backing up stack rooted at 77a917e6c3a5
+  backing up stack rooted at 8d621fa11677
   commitcloud: commits synchronized
-  finished in * (glob)
-
+  finished in 0.00 sec
 
 Commit still becomes available in the other repo
   $ cd ../client2
   $ hgmn cloud sync
   commitcloud: synchronizing 'client2' with 'user/test/default'
-  pulling ec61bf312a03 88d416aed919 from ssh://user@dummy/repo
+  pulling 88d416aed919 ec61bf312a03 from ssh://user@dummy/repo
   searching for changes
   adding changesets
   adding manifests

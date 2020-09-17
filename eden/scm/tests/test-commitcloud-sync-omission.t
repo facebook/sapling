@@ -18,6 +18,8 @@
   > indextype = disk
   > storetype = disk
   > reponame = testrepo
+  > [treemanifest]
+  > server = True
   > EOF
   $ touch base
   $ hg commit -Aqm base
