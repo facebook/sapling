@@ -11,7 +11,8 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 # Test issue2761
 
-sh % "hg init"
+sh % "hg init repo"
+sh % "cd repo"
 
 sh % "touch to-be-deleted"
 sh % "hg add" == "adding to-be-deleted"

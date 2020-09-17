@@ -2,7 +2,8 @@
 
 # init
 
-  $ hg init
+  $ hg init repo
+  $ cd repo
   $ echo a > a
   $ hg add a
   $ hg commit -m'a'

@@ -13,7 +13,8 @@ feature.require(["symlink"])
 
 # https://bz.mercurial-scm.org/1438
 
-sh % "hg init"
+sh % "hg init repo"
+sh % "cd repo"
 
 sh % "ln -s foo link"
 sh % "hg add link"

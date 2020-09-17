@@ -11,7 +11,8 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 # https://bz.mercurial-scm.org/1089
 
-sh % "hg init"
+sh % "hg init repo"
+sh % "cd repo"
 sh % "mkdir a"
 sh % "echo a" > "a/b"
 sh % "hg ci -Am m" == "adding a/b"

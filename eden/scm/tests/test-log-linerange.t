@@ -3,7 +3,8 @@
 
   $ setconfig diff.git=true
 
-  $ hg init
+  $ hg init repo
+  $ cd repo
   $ cat > foo << EOF
   > 0
   > 1

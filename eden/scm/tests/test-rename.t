@@ -1,6 +1,7 @@
 #chg-compatible
 
-  $ hg init
+  $ hg init repo
+  $ cd repo
   $ mkdir d1 d1/d11 d2
   $ echo d1/a > d1/a
   $ echo d1/ba > d1/ba
@@ -607,7 +608,7 @@ check illegal path components
   [255]
   $ hg status -C
   $ hg rename d1/d11/a1 ../foo
-  abort: ../foo not under root '$TESTTMP'
+  abort: ../foo not under root '$TESTTMP/repo'
   [255]
   $ hg status -C
 
@@ -626,7 +627,7 @@ check illegal path components
   [255]
   $ hg status -C
   $ hg rename d1/d11/a1 ..
-  abort: ../a1 not under root '$TESTTMP'
+  abort: ../a1 not under root '$TESTTMP/repo'
   [255]
   $ hg status -C
 
@@ -645,7 +646,7 @@ check illegal path components
   [255]
   $ hg status -C
   $ (cd d1/d11; hg rename ../../d2/b ../../../foo)
-  abort: ../../../foo not under root '$TESTTMP'
+  abort: ../../../foo not under root '$TESTTMP/repo'
   [255]
   $ hg status -C
 

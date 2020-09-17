@@ -3,7 +3,8 @@
 
 Test temp file used with an editor has the expected suffix.
 
-  $ hg init
+  $ hg init repo
+  $ cd repo
 
 Create an editor that writes its arguments to stdout and set it to $HGEDITOR.
 
@@ -12,7 +13,7 @@ Create an editor that writes its arguments to stdout and set it to $HGEDITOR.
   > exit 1
   > EOF
   $ hg add editor.sh
-  $ HGEDITOR="sh $TESTTMP/editor.sh"
+  $ HGEDITOR="sh $TESTTMP/repo/editor.sh"
   $ export HGEDITOR
 
 Verify that the path for a commit editor has the expected suffix.

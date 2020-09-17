@@ -9,7 +9,8 @@ Make sure HGMERGE doesn't interfere with the test:
 
   $ unset HGMERGE
 
-  $ hg init
+  $ hg init repo
+  $ cd repo
 
 Initial file contents:
 

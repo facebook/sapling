@@ -3,7 +3,8 @@
 Tests of 'hg status --rev <rev>' to make sure status between <rev> and '.' get
 combined correctly with the dirstate status.
 
-  $ hg init
+  $ hg init repo
+  $ cd repo
 
 First commit
 

@@ -12,7 +12,8 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 # https://bz.mercurial-scm.org/660 and:
 # https://bz.mercurial-scm.org/322
 
-sh % "hg init"
+sh % "hg init repo"
+sh % "cd repo"
 sh % "echo a" > "a"
 sh % "mkdir b"
 sh % "echo b" > "b/b"

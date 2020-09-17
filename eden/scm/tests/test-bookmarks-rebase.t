@@ -5,7 +5,8 @@
 
 initialize repository
 
-  $ hg init
+  $ hg init repo
+  $ cd repo
 
   $ echo 'a' > a
   $ hg ci -A -m "0"

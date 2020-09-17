@@ -9,11 +9,10 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-
-
 # https://bz.mercurial-scm.org/612
 
-sh % "hg init"
+sh % "hg init repo"
+sh % "cd repo"
 sh % "mkdir src"
 sh % "echo a" > "src/a.c"
 sh % "hg ci -Ama" == "adding src/a.c"

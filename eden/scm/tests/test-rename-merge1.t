@@ -1,6 +1,7 @@
 #chg-compatible
 
-  $ hg init
+  $ hg init repo
+  $ cd repo
 
   $ setconfig merge.followcopies=1
 

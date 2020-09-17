@@ -9,7 +9,8 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-sh % "hg init"
+sh % "hg init repo"
+sh % "cd repo"
 
 sh % "echo 'added file1'" > "file1"
 sh % "echo 'another line of text'" >> "file1"

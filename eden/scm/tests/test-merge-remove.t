@@ -1,7 +1,8 @@
 #chg-compatible
 
 
-  $ hg init
+  $ hg init repo
+  $ cd repo
 
   $ echo foo > foo
   $ echo bar > bar
