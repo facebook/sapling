@@ -83,7 +83,6 @@ struct CheckerFlags {
     phab_check_disabled: bool,
     x_repo_check_disabled: bool,
     hg_sync_check_disabled: bool,
-    call_sign: Option<String>,
 }
 #[derive(Clone, Debug)]
 struct ChangesetArgs {
@@ -103,6 +102,7 @@ struct SmallRepoBackSyncVars {
     target_repo_dbs: TargetRepoDbs,
     small_repo_bookmark: BookmarkName,
     small_repo: BlobRepo,
+    maybe_call_sign: Option<String>,
 }
 
 #[derive(Copy, Clone, Serialize, Deserialize, Debug, PartialEq)]
@@ -264,6 +264,7 @@ async fn move_bookmark(
     shifted_bcs_ids: &[ChangesetId],
     bookmark: &BookmarkName,
     checker_flags: &CheckerFlags,
+    maybe_call_sign: &Option<String>,
     mutable_counters: &SqlMutableCounters,
     maybe_small_repo_back_sync_vars: &Option<SmallRepoBackSyncVars>,
     recovery_fields: &mut RecoveryFields,
@@ -357,6 +358,7 @@ async fn move_bookmark(
                 hg_csid,
                 sleep_time,
                 &mutable_counters,
+                &maybe_call_sign,
             )
             .await?;
             Result::<_, Error>::Ok(())
@@ -392,6 +394,7 @@ async fn move_bookmark(
                 .get_hg_from_bonsai_changeset(ctx.clone(), small_repo_cs_id)
                 .compat()
                 .await?;
+
             check_dependent_systems(
                 &ctx,
                 &small_repo_back_sync_vars.small_repo,
@@ -399,6 +402,7 @@ async fn move_bookmark(
                 small_repo_hg_csid,
                 sleep_time,
                 &mutable_counters,
+                &small_repo_back_sync_vars.maybe_call_sign,
             )
             .await?;
 
@@ -553,6 +557,7 @@ async fn check_dependent_systems(
     hg_csid: HgChangesetId,
     sleep_time: u64,
     mutable_counters: &SqlMutableCounters,
+    maybe_call_sign: &Option<String>,
 ) -> Result<(), Error> {
     // if a check is disabled, we have already passed the check
     let mut passed_phab_check = checker_flags.phab_check_disabled;
@@ -560,7 +565,7 @@ async fn check_dependent_systems(
     let passed_hg_sync_check = checker_flags.hg_sync_check_disabled;
 
     while !passed_phab_check {
-        let call_sign = checker_flags.call_sign.as_ref().unwrap();
+        let call_sign = maybe_call_sign.as_ref().unwrap();
         passed_phab_check = phabricator_commit_check(&call_sign, &hg_csid).await?;
         if !passed_phab_check {
             info!(
@@ -806,7 +811,7 @@ async fn repo_import(
         dest_bookmark,
     };
     let (_, mut repo_config) = args::get_config_by_repoid(ctx.fb, &matches, repo.get_repoid())?;
-    let call_sign = repo_config.phabricator_callsign.clone();
+    let mut call_sign = repo_config.phabricator_callsign.clone();
     if !recovery_fields.phab_check_disabled && call_sign.is_none() {
         return Err(format_err!(
             "The repo ({}) we import to doesn't have a callsign. \
@@ -815,11 +820,10 @@ async fn repo_import(
             repo.name()
         ));
     }
-    let mut checker_flags = CheckerFlags {
+    let checker_flags = CheckerFlags {
         phab_check_disabled: recovery_fields.phab_check_disabled,
         x_repo_check_disabled: recovery_fields.x_repo_check_disabled,
         hg_sync_check_disabled: recovery_fields.hg_sync_check_disabled,
-        call_sign,
     };
     let maybe_config_store = args::maybe_init_config_store(fb, &ctx.logger(), &matches);
     let configs = args::load_repo_configs(fb, &matches)?;
@@ -870,6 +874,7 @@ async fn repo_import(
             target_repo_dbs,
             small_repo_bookmark: repo_import_setting.importing_bookmark.clone(),
             small_repo: repo.clone(),
+            maybe_call_sign: call_sign.clone(),
         });
 
         movers.push(syncers.small_to_large.get_mover().clone());
@@ -877,8 +882,8 @@ async fn repo_import(
             get_large_repo_setting(&ctx, &repo_import_setting, &syncers.small_to_large).await?;
         repo = large_repo;
         repo_config = large_repo_config;
-        let large_repo_call_sign = repo_config.phabricator_callsign.clone();
-        if !recovery_fields.phab_check_disabled && large_repo_call_sign.is_none() {
+        call_sign = repo_config.phabricator_callsign.clone();
+        if !recovery_fields.phab_check_disabled && call_sign.is_none() {
             return Err(format_err!(
                 "Repo ({}) we push-redirect to doesn't have a callsign. \
                          Make sure the callsign for the repo is set in configerator: \
@@ -886,10 +891,6 @@ async fn repo_import(
                 repo.name()
             ));
         }
-        checker_flags = CheckerFlags {
-            call_sign: large_repo_call_sign,
-            ..checker_flags
-        };
     }
 
     let combined_mover: Mover = Arc::new(move |source_path: &MPath| {
@@ -997,6 +998,7 @@ async fn repo_import(
             &shifted_bcs_ids,
             &repo_import_setting.importing_bookmark,
             &checker_flags,
+            &call_sign,
             &mutable_counters,
             &maybe_small_repo_back_sync_vars,
             recovery_fields,

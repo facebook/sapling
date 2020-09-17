@@ -118,7 +118,6 @@ mod tests {
             phab_check_disabled: true,
             x_repo_check_disabled: true,
             hg_sync_check_disabled: true,
-            call_sign,
         };
         let mutable_counters = SqlMutableCounters::with_sqlite_in_memory().unwrap();
         let changesets = create_from_dag(
@@ -138,6 +137,7 @@ mod tests {
             &bcs_ids,
             &importing_bookmark,
             &checker_flags,
+            &call_sign,
             &mutable_counters,
             &None,
             &mut recovery_fields,
@@ -179,7 +179,6 @@ mod tests {
             phab_check_disabled: true,
             x_repo_check_disabled: true,
             hg_sync_check_disabled: true,
-            call_sign: None,
         };
         let mutable_counters = SqlMutableCounters::with_sqlite_in_memory().unwrap();
         let changesets = create_from_dag(
@@ -207,6 +206,7 @@ mod tests {
             &bcs_ids,
             &importing_bookmark,
             &checker_flags,
+            &None,
             &mutable_counters,
             &None,
             &mut recovery_fields,
@@ -255,8 +255,8 @@ mod tests {
             phab_check_disabled: true,
             x_repo_check_disabled: true,
             hg_sync_check_disabled: false,
-            call_sign: None,
         };
+        let call_sign = None;
         let sleep_time = 1;
         let mutable_counters = SqlMutableCounters::with_sqlite_in_memory().unwrap();
         let repo_id = repo.get_repoid();
@@ -269,7 +269,8 @@ mod tests {
                 &checker_flags,
                 HG_CSID,
                 sleep_time,
-                &mutable_counters
+                &mutable_counters,
+                &call_sign,
             )
             .await
             .is_err()
@@ -285,7 +286,8 @@ mod tests {
                 &checker_flags,
                 HG_CSID,
                 sleep_time,
-                &mutable_counters
+                &mutable_counters,
+                &call_sign,
             )
             .await
             .is_err()
@@ -303,6 +305,7 @@ mod tests {
             HG_CSID,
             sleep_time,
             &mutable_counters,
+            &call_sign,
         )
         .await?;
 
@@ -325,6 +328,7 @@ mod tests {
                 HG_CSID,
                 sleep_time,
                 &mutable_counters,
+                &call_sign,
             ),
         )
         .await
@@ -343,6 +347,7 @@ mod tests {
             HG_CSID,
             sleep_time,
             &mutable_counters,
+            &call_sign,
         )
         .await?;
         Ok(())
