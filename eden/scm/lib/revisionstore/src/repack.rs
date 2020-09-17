@@ -201,7 +201,7 @@ fn repack_historypacks(
     paths: impl IntoIterator<Item = PathBuf> + Clone,
     outdir: &Path,
 ) -> Result<Option<PathBuf>> {
-    let mut_pack = MutableHistoryPack::new(outdir, HistoryPackVersion::One)?;
+    let mut_pack = MutableHistoryPack::new(outdir, HistoryPackVersion::One);
 
     repack_packs(paths, mut_pack, repack_historypack)
 }

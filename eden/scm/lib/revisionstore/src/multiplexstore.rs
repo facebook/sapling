@@ -235,7 +235,7 @@ mod tests {
     #[test]
     fn test_history_add_static() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let mut pack = MutableHistoryPack::new(&tempdir, HistoryPackVersion::One)?;
+        let mut pack = MutableHistoryPack::new(&tempdir, HistoryPackVersion::One);
         let mut multiplex = MultiplexHgIdHistoryStore::new();
         multiplex.add_store(Box::new(&mut pack));
 
@@ -258,8 +258,8 @@ mod tests {
     #[test]
     fn test_history_add_dynamic() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let mut pack1 = MutableHistoryPack::new(&tempdir, HistoryPackVersion::One)?;
-        let mut pack2 = MutableHistoryPack::new(&tempdir, HistoryPackVersion::One)?;
+        let mut pack1 = MutableHistoryPack::new(&tempdir, HistoryPackVersion::One);
+        let mut pack2 = MutableHistoryPack::new(&tempdir, HistoryPackVersion::One);
         let mut multiplex = MultiplexHgIdHistoryStore::new();
         multiplex.add_store(Box::new(&mut pack1));
         multiplex.add_store(Box::new(&mut pack2));

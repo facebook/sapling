@@ -550,7 +550,7 @@ fn make_mutablehistorystore(
         Arc::new(MutableHistoryPack::new(
             packfilepath.as_path(),
             HistoryPackVersion::One,
-        )?)
+        ))
     } else {
         return Err(format_err!("No packfile path passed in"));
     };

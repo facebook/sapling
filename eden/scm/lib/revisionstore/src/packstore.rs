@@ -608,7 +608,7 @@ impl MutableHistoryPackStore {
             corruption_policy,
             max_bytes,
         ));
-        let mutable_pack = Arc::new(MutableHistoryPack::new(pack_dir, HistoryPackVersion::One)?);
+        let mutable_pack = Arc::new(MutableHistoryPack::new(pack_dir, HistoryPackVersion::One));
         let mut union_store: UnionHgIdHistoryStore<Arc<dyn HgIdHistoryStore>> =
             UnionHgIdHistoryStore::new();
         union_store.add(pack_store.clone());

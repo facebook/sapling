@@ -9,9 +9,7 @@ use std::{
     collections::{HashMap, HashSet, VecDeque},
     io::Write,
     iter::FromIterator,
-    mem::replace,
     path::{Path, PathBuf},
-    sync::Arc,
 };
 
 use anyhow::Result;
@@ -44,9 +42,10 @@ struct MutableHistoryPackInner {
     mem_index: HashMap<RepoPathBuf, HashMap<Key, NodeInfo>>,
 }
 
-#[derive(Clone)]
 pub struct MutableHistoryPack {
-    inner: Arc<Mutex<MutableHistoryPackInner>>,
+    dir: PathBuf,
+    version: HistoryPackVersion,
+    inner: Mutex<Option<MutableHistoryPackInner>>,
 }
 
 impl MutableHistoryPackInner {
@@ -120,16 +119,32 @@ impl MutableHistoryPackInner {
 }
 
 impl MutableHistoryPack {
-    pub fn new(dir: impl AsRef<Path>, version: HistoryPackVersion) -> Result<Self> {
-        Ok(Self {
-            inner: Arc::new(Mutex::new(MutableHistoryPackInner::new(dir, version)?)),
-        })
+    pub fn new(dir: impl AsRef<Path>, version: HistoryPackVersion) -> Self {
+        Self {
+            dir: dir.as_ref().to_path_buf(),
+            version,
+            inner: Mutex::new(None),
+        }
+    }
+
+    fn get_pack<'a>(
+        &self,
+        inner: &'a mut Option<MutableHistoryPackInner>,
+    ) -> Result<&'a mut MutableHistoryPackInner> {
+        if inner.is_none() {
+            inner.replace(MutableHistoryPackInner::new(
+                &self.dir,
+                self.version.clone(),
+            )?);
+        }
+        Ok(inner.as_mut().unwrap())
     }
 }
 
 impl HgIdMutableHistoryStore for MutableHistoryPack {
     fn add(&self, key: &Key, info: &NodeInfo) -> Result<()> {
-        let mut inner = self.inner.lock();
+        let mut guard = self.inner.lock();
+        let pack = self.get_pack(&mut guard)?;
         // Loops in the graph aren't allowed. Since this is a logic error in the code, let's
         // assert.
         assert_ne!(key.hgid, info.parents[0].hgid);
@@ -139,7 +154,7 @@ impl HgIdMutableHistoryStore for MutableHistoryPack {
         //     self.mem_index.entry(key.name()).or_insert_with(|| HashMap::new())
         // To get the inner map, then insert our new NodeInfo. Unfortunately it requires
         // key.name().clone() though. So we have to do it the long way to avoid the allocation.
-        let entries = inner
+        let entries = pack
             .mem_index
             .entry(key.path.clone())
             .or_insert_with(HashMap::new);
@@ -149,13 +164,16 @@ impl HgIdMutableHistoryStore for MutableHistoryPack {
 
     fn flush(&self) -> Result<Option<Vec<PathBuf>>> {
         let mut guard = self.inner.lock();
-        let new_inner = MutableHistoryPackInner::new(&guard.dir, HistoryPackVersion::One)?;
-        let old_inner = replace(&mut *guard, new_inner);
+        let old_inner = (*guard).take();
 
-        Ok(match old_inner.close_pack()? {
-            Some(pack) => Some(vec![pack]),
-            None => Some(vec![]),
-        })
+        if let Some(old_inner) = old_inner {
+            Ok(match old_inner.close_pack()? {
+                Some(pack) => Some(vec![pack]),
+                None => Some(vec![]),
+            })
+        } else {
+            Ok(None)
+        }
     }
 }
 
@@ -223,11 +241,12 @@ impl MutablePack for MutableHistoryPackInner {
 
 impl MutablePack for MutableHistoryPack {
     fn build_files(self) -> Result<(NamedTempFile, NamedTempFile, PathBuf)> {
-        let mut guard = self.inner.lock();
-        let new_inner = MutableHistoryPackInner::new(&guard.dir, HistoryPackVersion::One)?;
-        let old_inner = replace(&mut *guard, new_inner);
-
-        old_inner.build_files()
+        let old_inner = (*self.inner.lock()).take();
+        if let Some(old_inner) = old_inner {
+            old_inner.build_files()
+        } else {
+            Err(EmptyMutablePack.into())
+        }
     }
 
     fn extension(&self) -> &'static str {
@@ -302,8 +321,9 @@ fn topo_sort(hgid_map: &HashMap<Key, NodeInfo>) -> Result<Vec<(&Key, &NodeInfo)>
 
 impl HgIdHistoryStore for MutableHistoryPack {
     fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
-        let inner = self.inner.lock();
-        Ok(inner
+        let mut guard = self.inner.lock();
+        let pack = self.get_pack(&mut guard)?;
+        Ok(pack
             .mem_index
             .get(&key.path)
             .and_then(|nodes| nodes.get(key))
@@ -313,11 +333,12 @@ impl HgIdHistoryStore for MutableHistoryPack {
 
 impl LocalStore for MutableHistoryPack {
     fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-        let inner = self.inner.lock();
+        let mut guard = self.inner.lock();
+        let pack = self.get_pack(&mut guard)?;
         Ok(keys
             .iter()
             .filter(|k| match k {
-                StoreKey::HgId(k) => match inner.mem_index.get(&k.path) {
+                StoreKey::HgId(k) => match pack.mem_index.get(&k.path) {
                     Some(e) => e.get(k).is_none(),
                     None => true,
                 },
@@ -351,8 +372,7 @@ mod tests {
         // but may take a long time if there is bad time complexity.
         let mut rng = ChaChaRng::from_seed([0u8; 32]);
         let tempdir = tempdir().unwrap();
-        let muthistorypack =
-            MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One).unwrap();
+        let muthistorypack = MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One);
         let null_key = Key::new(RepoPathBuf::new(), HgId::null_id().clone());
 
         let chain_count = 2;
@@ -421,8 +441,7 @@ mod tests {
     #[should_panic]
     fn test_loop() {
         let tempdir = tempdir().unwrap();
-        let muthistorypack =
-            MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One).unwrap();
+        let muthistorypack = MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One);
 
         let k = key("a", "1");
         let nodeinfo = NodeInfo {
@@ -436,9 +455,8 @@ mod tests {
     #[test]
     fn test_empty() {
         let tempdir = tempdir().unwrap();
-        let muthistorypack =
-            MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One).unwrap();
-        assert_eq!(muthistorypack.flush().unwrap().unwrap().len(), 0);
+        let muthistorypack = MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One);
+        assert!(muthistorypack.flush().unwrap().is_none());
         drop(muthistorypack);
         assert_eq!(fs::read_dir(tempdir.path()).unwrap().count(), 0);
     }
@@ -447,7 +465,7 @@ mod tests {
         fn test_get_node_info(insert: HashMap<Key, NodeInfo>, notinsert: Vec<Key>) -> bool {
             let tempdir = tempdir().unwrap();
             let muthistorypack =
-                MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One).unwrap();
+                MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One);
 
             for (key, info) in insert.iter() {
                 muthistorypack.add(&key, &info).unwrap();
@@ -471,7 +489,7 @@ mod tests {
         fn test_get_missing(insert: HashMap<Key, NodeInfo>, notinsert: Vec<StoreKey>) -> bool {
             let tempdir = tempdir().unwrap();
             let muthistorypack =
-                MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One).unwrap();
+                MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One);
 
             for (key, info) in insert.iter() {
                 muthistorypack.add(&key, &info).unwrap();
