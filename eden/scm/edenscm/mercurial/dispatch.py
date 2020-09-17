@@ -21,6 +21,12 @@ import re
 import signal
 import socket
 import sys
+
+# stdin can be None if the parent process unset the stdin file descriptor.
+# Replace it early, since it may be read in layer modules, like pycompat.
+if sys.stdin is None:
+    sys.stdin = open(os.devnull, 'r')
+
 import time
 import traceback
 

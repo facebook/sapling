@@ -54,6 +54,13 @@ Writes to stdio succeed and fail appropriately
   [255]
 #endif
 
+Commands can succeed without a stdin
+  $ hg log -r tip 0<&-
+  commit:      000000000000
+  user:        
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  
+
 #if devfull no-chg
   $ hg status >/dev/full 2>&1
   [1]
