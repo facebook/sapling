@@ -57,29 +57,4 @@ pull from mononoke and log data
   remote: }
   searching for changes
   no changes found
-  $ MOCK_USERNAME=foobar CLIENT_DEBUG=true LOCALIP="2401:db00:31ff:ff1f:face:b00c:0:598" hgmn pull
-  pulling from ssh://user@dummy/repo
-  remote: Metadata {
-  remote:     session_id: SessionId(
-  remote:         "*", (glob)
-  remote:     ),
-  remote:     identities: {
-  remote:         MononokeIdentity {
-  remote:             id_type: "USER",
-  remote:             id_data: "foobar",
-  remote:         },
-  remote:     },
-  remote:     priority: Default,
-  remote:     client_debug: true,
-  remote:     client_ip: Some(
-  remote:         V6(
-  remote:             2401:db00:31ff:ff1f:face:b00c:0:598,
-  remote:         ),
-  remote:     ),
-  remote:     client_hostname: Some(
-  remote:         "hg-regional6-shv-01.rcln0.facebook.com",
-  remote:     ),
-  remote: }
-  searching for changes
-  no changes found
 

@@ -44,7 +44,7 @@ DISABLE_ALL_NETWORK_ACCESS_SKIPLIST: Set[str] = {
     "test-commitcloud-forwardfiller.t",
     "test-commitcloud-reversefiller.t",
     # Purposely not disabling network as this tests reverse dns lookups
-    "test-metadata.t",
+    "test-metadata-fb-host.t",
 }
 
 PY3_SKIPLIST: Set[str] = set()
