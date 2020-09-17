@@ -186,6 +186,7 @@ impl HgIdMutableDeltaStore for ContentStore {
 
     /// Commit the data written to the local store.
     fn flush(&self) -> Result<Option<Vec<PathBuf>>> {
+        self.shared_mutabledatastore.as_ref().flush()?;
         self.local_mutabledatastore
             .as_ref()
             .ok_or_else(|| format_err!("flushing a non-local ContentStore is not allowed"))?

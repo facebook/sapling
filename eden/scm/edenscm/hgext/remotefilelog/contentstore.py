@@ -165,6 +165,11 @@ class unioncontentstore(object):
                 store.prefetch(keys)
                 break
 
+    def flush(self):
+        for store in self.stores:
+            if util.safehasattr(store, "flush"):
+                store.flush()
+
 
 class manifestrevlogstore(object):
     def __init__(self, repo):

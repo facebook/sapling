@@ -48,3 +48,8 @@ class unionmetadatastore(object):
 
     def removestore(self, store):
         self.stores.remove(store)
+
+    def flush(self):
+        for store in self.stores:
+            if util.safehasattr(store, "flush"):
+                store.flush()

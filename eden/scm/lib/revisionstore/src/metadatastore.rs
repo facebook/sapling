@@ -125,6 +125,7 @@ impl HgIdMutableHistoryStore for MetadataStore {
     }
 
     fn flush(&self) -> Result<Option<Vec<PathBuf>>> {
+        self.shared_mutablehistorystore.as_ref().flush()?;
         self.local_mutablehistorystore
             .as_ref()
             .ok_or_else(|| format_err!("flushing a non-local MetadataStore is not allowed"))?
