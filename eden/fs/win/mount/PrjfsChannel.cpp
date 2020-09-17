@@ -175,6 +175,10 @@ HRESULT getFileData(
       ->getFileData(*callbackData, byteOffset, length);
 }
 
+void cancelCommand(const PRJ_CALLBACK_DATA* callbackData) noexcept {
+  // TODO(T67329233): Interrupt the future.
+}
+
 typedef folly::Future<folly::Unit> (EdenDispatcher::*NotificationHandler)(
     RelativePathPiece oldPath,
     RelativePathPiece destPath,
@@ -258,15 +262,34 @@ HRESULT notification(
           dispatcher->getStats(), it->second.histogram, requestWatch);
       auto fut =
           (dispatcher->*handler)(relPath, destPath, isDirectory, *context);
-      std::move(fut)
-          .thenTryInline([context = std::move(context)](
-                             folly::Try<folly::Unit>&& try_) mutable {
-            context->finishRequest();
-            return try_;
-          })
-          .get();
 
-      return S_OK;
+      std::move(fut).thenTryInline(
+          [context = std::move(context),
+           channel = channel](folly::Try<folly::Unit>&& try_) {
+            SCOPE_EXIT {
+              context->finishRequest();
+            };
+
+            HRESULT result = S_OK;
+            if (try_.hasException()) {
+              auto* err = try_.tryGetExceptionObject<std::exception>();
+              DCHECK(err);
+              result = exceptionToHResult(*err);
+            }
+
+            PRJ_COMPLETE_COMMAND_EXTENDED_PARAMETERS extra{};
+            extra.CommandType = PRJ_COMPLETE_COMMAND_TYPE_NOTIFICATION;
+            result = PrjCompleteCommand(
+                channel->getMountChannelContext(),
+                context->getCommandId(),
+                result,
+                &extra);
+            if (FAILED(result)) {
+              XLOG(ERR) << "Couldn't complete command";
+            }
+          });
+
+      return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
     }
   } catch (const std::exception& ex) {
     return exceptionToHResult(ex);
@@ -306,6 +329,7 @@ void PrjfsChannel::start(bool readOnly, bool useNegativePathCaching) {
   callbacks.GetFileDataCallback = getFileData;
   callbacks.NotificationCallback = notification;
   callbacks.QueryFileNameCallback = queryFileName;
+  callbacks.CancelCommandCallback = cancelCommand;
 
   PRJ_NOTIFICATION_MAPPING notificationMappings[] = {
       {PRJ_NOTIFY_NEW_FILE_CREATED | PRJ_NOTIFY_FILE_OVERWRITTEN |

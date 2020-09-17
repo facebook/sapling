@@ -56,6 +56,10 @@ class PrjfsChannel : public FsChannel {
     return processAccessLog_;
   }
 
+  PRJ_NAMESPACE_VIRTUALIZATION_CONTEXT getMountChannelContext() const {
+    return mountChannel_;
+  }
+
  private:
   //
   // Channel to talk to projectedFS.

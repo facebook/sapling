@@ -28,6 +28,10 @@ class PrjfsRequestContext : public RequestContext {
         channel_(channel),
         commandId_(prjfsData.CommandId) {}
 
+  int32_t getCommandId() const {
+    return commandId_;
+  }
+
  private:
   PrjfsChannel* channel_;
   int32_t commandId_;
