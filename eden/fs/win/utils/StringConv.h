@@ -12,7 +12,7 @@
 #include <cassert>
 #include <memory>
 #include <string>
-#include "eden/fs/win/utils/WinError.h"
+#include "eden/fs/utils/WinError.h"
 #include "folly/Range.h"
 #include "folly/String.h"
 

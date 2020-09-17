@@ -6,6 +6,7 @@
  */
 
 #pragma once
+#ifdef _WIN32
 
 #include <string>
 #include <system_error>
@@ -80,3 +81,4 @@ static HRESULT exceptionToHResultWrapper(Callable&& f) noexcept {
 
 } // namespace eden
 } // namespace facebook
+#endif

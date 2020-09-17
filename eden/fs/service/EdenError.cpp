@@ -7,9 +7,7 @@
 
 #include "eden/fs/service/EdenError.h"
 #include "eden/fs/utils/SystemError.h"
-#ifdef _WIN32
-#include "eden/fs/win/utils/WinError.h" // @manual
-#endif
+#include "eden/fs/utils/WinError.h"
 
 namespace facebook {
 namespace eden {

@@ -8,6 +8,7 @@
 #include "eden/fs/service/StartupLogger.h"
 #include "eden/fs/service/EdenInit.h"
 #include "eden/fs/service/Systemd.h"
+#include "eden/fs/utils/WinError.h"
 
 #include <folly/Exception.h>
 #include <folly/FileUtil.h>
@@ -17,9 +18,7 @@
 #include <gflags/gflags.h>
 #include <sys/types.h>
 
-#ifdef _WIN32
-#include "eden/fs/win/utils/WinError.h" // @manual
-#else
+#ifndef _WIN32
 #include <sys/wait.h>
 #include <sysexits.h>
 #endif

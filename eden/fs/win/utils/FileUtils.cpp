@@ -13,8 +13,8 @@
 #include <iostream>
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/WinError.h"
 #include "eden/fs/win/utils/FileUtils.h"
-#include "eden/fs/win/utils/WinError.h"
 
 using folly::ByteRange;
 using folly::sformat;

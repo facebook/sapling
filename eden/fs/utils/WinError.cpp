@@ -5,7 +5,8 @@
  * GNU General Public License version 2.
  */
 
-#include "WinError.h"
+#ifdef _WIN32
+#include "eden/fs/utils/WinError.h"
 #include <iostream>
 #include <memory>
 #include <sstream>
@@ -92,3 +93,4 @@ HRESULT exceptionToHResult(const std::exception& ex) noexcept {
 
 } // namespace eden
 } // namespace facebook
+#endif

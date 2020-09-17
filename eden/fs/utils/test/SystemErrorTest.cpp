@@ -5,9 +5,10 @@
  * GNU General Public License version 2.
  */
 
+#ifdef _WIN32
 #include <iostream>
 #include <string>
-#include "eden/fs/win/utils/WinError.h"
+#include "eden/fs/utils/WinError.h"
 #include "gtest/gtest.h"
 using namespace facebook::eden;
 
@@ -161,3 +162,4 @@ TEST(WinErrorTest, testexceptionToHResult_EACCES) {
     EXPECT_EQ(exceptionToHResult(ex), ERROR_ERRORS_ENCOUNTERED);
   }
 }
+#endif

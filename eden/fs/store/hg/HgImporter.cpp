@@ -25,8 +25,6 @@
 #include <glog/logging.h>
 #ifndef _WIN32
 #include <unistd.h>
-#else
-#include "eden/fs/win/utils/WinError.h" // @manual
 #endif
 
 #include <mutex>
@@ -40,6 +38,7 @@
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/SpawnedProcess.h"
 #include "eden/fs/utils/TimeUtil.h"
+#include "eden/fs/utils/WinError.h"
 
 using folly::Endian;
 using folly::IOBuf;
