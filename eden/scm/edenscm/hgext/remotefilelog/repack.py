@@ -55,32 +55,34 @@ def _runrustrepack(ui, packpath, stores, incremental, shared):
             raise
 
 
-def _runrepack(repo, packpath, incremental, shared):
-    stores = (repo.fileslog.contentstore, repo.fileslog.metadatastore)
-
-    _runrustrepack(repo.ui, packpath, stores, incremental, shared)
-
-
 def runrepacklegacy(ui, packpath, incremental, shared):
     _runrustrepack(ui, packpath, None, incremental, shared)
 
 
-def _shareddatastoresrepack(repo, incremental):
-    packpath = shallowutil.getcachepackpath(repo, constants.FILEPACK_CATEGORY)
+def _getstores(repo, category):
+    if category == constants.FILEPACK_CATEGORY:
+        return (repo.fileslog.contentstore, repo.fileslog.metadatastore)
+    elif category == constants.TREEPACK_CATEGORY:
+        return (repo.manifestlog.datastore, repo.manifestlog.historystore)
+    raise error.ProgrammingError("invalid pack category")
+
+
+def _shareddatastoresrepack(repo, incremental, category):
+    packpath = shallowutil.getcachepackpath(repo, category)
     limit = repo.ui.configbytes("remotefilelog", "cachelimit", "10GB")
     _cleanuppacks(repo.ui, packpath, limit)
 
-    _runrepack(repo, packpath, incremental, True)
+    _runrustrepack(repo.ui, packpath, _getstores(repo, category), incremental, True)
 
 
-def _localdatarepack(repo, incremental):
+def _localdatarepack(repo, incremental, category):
     if repo.ui.configbool("remotefilelog", "localdatarepack"):
-        packpath = shallowutil.getlocalpackpath(
-            repo.svfs.vfs.base, constants.FILEPACK_CATEGORY
-        )
+        packpath = shallowutil.getlocalpackpath(repo.svfs.vfs.base, category)
         _cleanuppacks(repo.ui, packpath, 0)
 
-        _runrepack(repo, packpath, incremental, False)
+        _runrustrepack(
+            repo.ui, packpath, _getstores(repo, category), incremental, False
+        )
 
 
 def fulllocaldatarepack(repo, stores):
@@ -95,26 +97,34 @@ def fulllocaldatarepack(repo, stores):
 
 def _manifestrepack(repo, incremental):
     if repo.ui.configbool("treemanifest", "server"):
-        _runrepack(repo, repo.localvfs.join("cache/packs/manifests"), incremental)
+        # This code path is no longer used. Will be deleted soon.
+        pass
     elif util.safehasattr(repo.manifestlog, "datastore"):
-        localdata, shareddata = _getmanifeststores(repo)
-        lpackpath, ldstores, lhstores = localdata
-        spackpath, sdstores, shstores = shareddata
+        if repo.ui.configbool("treemanifest", "useruststore"):
+            # Shared
+            _shareddatastoresrepack(repo, incremental, constants.TREEPACK_CATEGORY)
 
-        def _domanifestrepack(packpath, dstores, hstores, shared):
-            limit = (
-                repo.ui.configbytes("remotefilelog", "manifestlimit", "2GB")
-                if shared
-                else 0
-            )
-            _cleanuppacks(repo.ui, packpath, limit)
-            runrepacklegacy(repo.ui, packpath, incremental, shared)
+            # Local
+            _localdatarepack(repo, incremental, constants.TREEPACK_CATEGORY)
+        else:
+            localdata, shareddata = _getmanifeststores(repo)
+            lpackpath, ldstores, lhstores = localdata
+            spackpath, sdstores, shstores = shareddata
 
-        # Repack the shared manifest store
-        _domanifestrepack(spackpath, sdstores, shstores, True)
+            def _domanifestrepack(packpath, dstores, hstores, shared):
+                limit = (
+                    repo.ui.configbytes("remotefilelog", "manifestlimit", "2GB")
+                    if shared
+                    else 0
+                )
+                _cleanuppacks(repo.ui, packpath, limit)
+                runrepacklegacy(repo.ui, packpath, incremental, shared)
 
-        # Repack the local manifest store
-        _domanifestrepack(lpackpath, ldstores, lhstores, False)
+            # Repack the shared manifest store
+            _domanifestrepack(spackpath, sdstores, shstores, True)
+
+            # Repack the local manifest store
+            _domanifestrepack(lpackpath, ldstores, lhstores, False)
 
 
 def _dorepack(repo, incremental):
@@ -127,8 +137,8 @@ def _dorepack(repo, incremental):
         ):
             repo.hook("prerepack")
 
-            _shareddatastoresrepack(repo, incremental)
-            _localdatarepack(repo, incremental)
+            _shareddatastoresrepack(repo, incremental, constants.FILEPACK_CATEGORY)
+            _localdatarepack(repo, incremental, constants.FILEPACK_CATEGORY)
             _manifestrepack(repo, incremental)
     except error.LockHeld:
         raise RepackAlreadyRunning(
