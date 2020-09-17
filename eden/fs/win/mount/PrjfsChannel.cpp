@@ -90,9 +90,16 @@ HRESULT endEnumeration(
     const PRJ_CALLBACK_DATA* callbackData,
     const GUID* enumerationId) noexcept {
   BAIL_ON_RECURSIVE_CALL(callbackData);
-  return getChannel(callbackData)
-      ->getDispatcher()
-      ->endEnumeration(*enumerationId);
+
+  try {
+    auto guid = Guid(*enumerationId);
+
+    getChannel(callbackData)->getDispatcher()->closedir(guid);
+
+    return S_OK;
+  } catch (const std::exception& ex) {
+    return exceptionToHResult(ex);
+  }
 }
 
 HRESULT getEnumerationData(

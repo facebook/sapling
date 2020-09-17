@@ -44,13 +44,13 @@ class EdenDispatcher {
   folly::Future<folly::Unit>
   opendir(RelativePathPiece path, const Guid guid, ObjectFetchContext& context);
 
+  void closedir(const Guid& guid);
+
   HRESULT getEnumerationData(
       const PRJ_CALLBACK_DATA& callbackData,
       const GUID& enumerationId,
       PCWSTR searchExpression,
       PRJ_DIR_ENTRY_BUFFER_HANDLE dirEntryBufferHandle) noexcept;
-
-  HRESULT endEnumeration(const GUID& enumerationId) noexcept;
 
   folly::Future<std::optional<InodeMetadata>> lookup(
       RelativePath path,

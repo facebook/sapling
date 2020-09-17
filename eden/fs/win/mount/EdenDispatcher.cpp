@@ -88,17 +88,11 @@ folly::Future<folly::Unit> EdenDispatcher::opendir(
       });
 }
 
-HRESULT EdenDispatcher::endEnumeration(const GUID& enumerationId) noexcept {
-  try {
-    auto guid = Guid(enumerationId);
-    FB_LOGF(mount_->getStraceLogger(), DBG7, "releasedir({})", guid);
+void EdenDispatcher::closedir(const Guid& guid) {
+  FB_LOGF(mount_->getStraceLogger(), DBG7, "closedir({})", guid);
 
-    auto erasedCount = enumSessions_.wlock()->erase(guid);
-    DCHECK(erasedCount == 1);
-    return S_OK;
-  } catch (const std::exception& ex) {
-    return exceptionToHResult(ex);
-  }
+  auto erasedCount = enumSessions_.wlock()->erase(guid);
+  DCHECK(erasedCount == 1);
 }
 
 HRESULT EdenDispatcher::getEnumerationData(
