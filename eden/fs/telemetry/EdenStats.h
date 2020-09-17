@@ -154,6 +154,8 @@ class ChannelThreadStats : public EdenThreadStatsBase {
   Histogram fileHandleClosedFileDeleted{
       createHistogram("prjfs.fileHandleClosedFileDeleted_us")};
   Histogram preSetHardlink{createHistogram("prjfs.preSetHardlink_us")};
+
+  Histogram openDir{createHistogram("prjfs.opendir_us")};
 #endif
 
   // Since we can potentially finish a request in a different

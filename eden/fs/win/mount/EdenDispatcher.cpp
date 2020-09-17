@@ -69,8 +69,9 @@ EdenDispatcher::EdenDispatcher(EdenMount* mount)
     : mount_{mount}, dotEdenConfig_{makeDotEdenConfig(*mount)} {}
 
 folly::Future<folly::Unit> EdenDispatcher::opendir(
-    RelativePath path,
-    const Guid guid) {
+    RelativePathPiece path,
+    const Guid guid,
+    ObjectFetchContext& context) {
   FB_LOGF(mount_->getStraceLogger(), DBG7, "opendir({}, guid={})", path, guid);
 
   return mount_->getInode(path)

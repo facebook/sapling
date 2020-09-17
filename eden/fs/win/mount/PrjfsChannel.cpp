@@ -54,18 +54,32 @@ HRESULT startEnumeration(
   BAIL_ON_RECURSIVE_CALL(callbackData);
 
   try {
-    auto path = RelativePath(callbackData->FilePathName);
+    auto channel = getChannel(callbackData);
+    auto dispatcher = channel->getDispatcher();
     auto guid = Guid(*enumerationId);
-    return getChannel(callbackData)
-        ->getDispatcher()
-        ->opendir(std::move(path), std::move(guid))
-        .thenValue([](auto&&) { return S_OK; })
-        .thenError(
-            folly::tag_t<std::exception>{},
-            [](const std::exception& ex) { return exceptionToHResult(ex); })
-        .get();
+    auto context =
+        std::make_unique<PrjfsRequestContext>(channel, *callbackData);
+    auto path = RelativePath(callbackData->FilePathName);
 
-    return S_OK;
+    context
+        ->catchErrors(folly::makeFutureWith([context = context.get(),
+                                             dispatcher = dispatcher,
+                                             guid = std::move(guid),
+                                             path = std::move(path)] {
+          auto requestWatch =
+              std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(
+                  nullptr);
+          auto histogram = &ChannelThreadStats::openDir;
+          context->startRequest(
+              dispatcher->getStats(), histogram, requestWatch);
+
+          return dispatcher->opendir(path, std::move(guid), *context)
+              .thenValue(
+                  [context = context](auto&&) { context->sendSuccess(); });
+        }))
+        .ensure([context = std::move(context)] {});
+
+    return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
   } catch (const std::exception& ex) {
     return exceptionToHResult(ex);
   }

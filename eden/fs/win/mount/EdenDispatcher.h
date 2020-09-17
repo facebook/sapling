@@ -41,7 +41,8 @@ class EdenDispatcher {
     return mount_->getStats();
   }
 
-  folly::Future<folly::Unit> opendir(RelativePath path, const Guid guid);
+  folly::Future<folly::Unit>
+  opendir(RelativePathPiece path, const Guid guid, ObjectFetchContext& context);
 
   HRESULT getEnumerationData(
       const PRJ_CALLBACK_DATA& callbackData,
