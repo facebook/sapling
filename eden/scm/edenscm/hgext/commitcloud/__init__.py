@@ -267,6 +267,15 @@ def _smartlog(orig, ui, repo, **opts):
     return res
 
 
+@hint("commitcloud-username-migration")
+def _smartlogusernamemigrationmsg(repo):
+    repo.ui.debug(
+        "username migration is required for the current workspace",
+        component="commitcloud",
+    )
+    return _("")
+
+
 @hint("commitcloud-old-commits")
 def _smartlogomittedcommitsmsg(repo):
     return _(

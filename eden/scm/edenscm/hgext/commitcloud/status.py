@@ -49,13 +49,17 @@ def summary(repo):
                 notice=_("note"),
             )
 
-    workspacename = workspace.currentworkspace(repo)
+    (workspacename, usernamemigration) = workspace.currentworkspacewithusernamecheck(
+        repo
+    )
     if workspacename:
         subscription.check(repo)
         backuplock.status(repo)
         lastsyncstate = syncstate.SyncState(repo, workspacename)
         if lastsyncstate.omittedheads or lastsyncstate.omittedbookmarks:
             hintutil.trigger("commitcloud-old-commits", repo)
+        if usernamemigration:
+            hintutil.trigger("commitcloud-username-migration", repo)
 
     # Don't output the summary if a backup is currently in progress.
     if backuplock.islocked(repo):

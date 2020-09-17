@@ -107,15 +107,19 @@ def hostnameworkspace(ui, user=None):
 filename = "commitcloudrc"
 
 
-def _get(repo, name):
+def _get(repo, *names):
     """Read commitcloudrc file to get a value"""
     if repo.svfs.exists(filename):
         with repo.svfs.open(filename, r"rb") as f:
             cloudconfig = config.config()
             cloudconfig.read(filename, f)
-            return cloudconfig.get("commitcloud", name)
+            return (
+                cloudconfig.get("commitcloud", names[0])
+                if len(names) == 1
+                else tuple(cloudconfig.get("commitcloud", name) for name in names)
+            )
     else:
-        return None
+        return None if len(names) == 1 else tuple(None for name in names)
 
 
 def currentworkspace(repo):
@@ -124,6 +128,38 @@ def currentworkspace(repo):
     connected to a workspace.
     """
     return _get(repo, "current_workspace")
+
+
+def currentworkspacewithlocallyownedinfo(repo):
+    """
+    Returns the currently connected workspace, or None if the repo is not
+    connected to a workspace and the flag that it's locally owned.
+    """
+    (current_workspace, locally_owned) = _get(
+        repo, "current_workspace", "locally_owned"
+    )
+
+    # populate existing workspaces with 'locally_owned' flag if it isn't set
+    # TODO: the code to be removed when all workspaces are populated
+    if current_workspace and locally_owned is None:
+        setworkspace(repo, current_workspace)
+        return (current_workspace, False)
+
+    return (current_workspace, bool(locally_owned))
+
+
+def currentworkspacewithusernamecheck(repo):
+    """
+    Returns the currently connected workspace, or None if the repo is not
+    connected to a workspace and the flag if it requires username migration
+    because the workspace name doesn't match the current username anymore.
+    """
+
+    (current_workspace, locally_owned) = currentworkspacewithlocallyownedinfo(repo)
+    migrationrequired = locally_owned and not current_workspace.startswith(
+        userworkspaceprefix(repo.ui)
+    )
+    return (current_workspace, migrationrequired)
 
 
 def disconnected(repo):
@@ -141,8 +177,10 @@ def setworkspace(repo, workspace):
     with repo.wlock(), repo.lock(), repo.svfs.open(
         filename, "wb", atomictemp=True
     ) as f:
+        locallyowned = workspace.startswith(userworkspaceprefix(repo.ui))
         f.write(
-            b"[commitcloud]\ncurrent_workspace=%s\n" % pycompat.encodeutf8(workspace)
+            b"[commitcloud]\ncurrent_workspace=%s\nlocally_owned=%s\n"
+            % (pycompat.encodeutf8(workspace), pycompat.encodeutf8(str(locallyowned)))
         )
 
 
