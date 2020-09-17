@@ -169,7 +169,9 @@ def get_test_groups(repo_root):
 def get_tests_to_run(repo_root, tests, groups_to_run, rerun_failed):
     test_groups = get_test_groups(repo_root)
 
-    groups_to_run = set(groups_to_run or ([TestGroup.PASSING] if not tests else []))
+    groups_to_run = set(
+        groups_to_run or ([TestGroup.PASSING] if not (tests or rerun_failed) else [])
+    )
 
     tests_to_run = set()
     for group in groups_to_run:
