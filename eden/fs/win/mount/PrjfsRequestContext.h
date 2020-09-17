@@ -52,11 +52,11 @@ class PrjfsRequestContext : public RequestContext {
     return channel_->sendSuccess(commandId_, &extra);
   }
 
- private:
   void sendError(HRESULT result) const {
     return channel_->sendError(commandId_, result);
   }
 
+ private:
   PrjfsChannel* channel_;
   int32_t commandId_;
 };

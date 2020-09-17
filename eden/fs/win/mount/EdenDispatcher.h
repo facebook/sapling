@@ -52,7 +52,9 @@ class EdenDispatcher {
 
   HRESULT endEnumeration(const GUID& enumerationId) noexcept;
 
-  folly::Future<std::optional<InodeMetadata>> lookup(RelativePath path);
+  folly::Future<std::optional<InodeMetadata>> lookup(
+      RelativePath path,
+      ObjectFetchContext& context);
 
   folly::Future<bool> access(RelativePath path);
 

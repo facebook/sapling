@@ -24,6 +24,7 @@ using facebook::eden::EdenDispatcher;
 using facebook::eden::exceptionToHResult;
 using facebook::eden::Guid;
 using facebook::eden::InodeMetadata;
+using facebook::eden::makeHResultErrorExplicit;
 using facebook::eden::ObjectFetchContext;
 using facebook::eden::PrjfsChannel;
 using facebook::eden::PrjfsRequestContext;
@@ -113,43 +114,64 @@ HRESULT getPlaceholderInfo(const PRJ_CALLBACK_DATA* callbackData) noexcept {
   BAIL_ON_RECURSIVE_CALL(callbackData);
 
   try {
+    auto channel = getChannel(callbackData);
+    auto dispatcher = channel->getDispatcher();
+    auto context =
+        std::make_unique<PrjfsRequestContext>(channel, *callbackData);
+
     auto path = RelativePath(callbackData->FilePathName);
-    return getChannel(callbackData)
-        ->getDispatcher()
-        ->lookup(std::move(path))
-        .thenValue([context = callbackData->NamespaceVirtualizationContext](
-                       const std::optional<InodeMetadata>&& optMetadata) {
-          if (!optMetadata) {
-            return HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
-          }
-          auto metadata = std::move(optMetadata).value();
+    auto virtualizationContext = callbackData->NamespaceVirtualizationContext;
 
-          PRJ_PLACEHOLDER_INFO placeholderInfo{};
-          placeholderInfo.FileBasicInfo.IsDirectory = metadata.isDir;
-          placeholderInfo.FileBasicInfo.FileSize = metadata.size;
-          auto inodeName = metadata.path.wide();
+    context
+        ->catchErrors(folly::makeFutureWith([context = context.get(),
+                                             dispatcher = dispatcher,
+                                             path = std::move(path),
+                                             virtualizationContext =
+                                                 virtualizationContext] {
+          auto requestWatch =
+              std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(
+                  nullptr);
+          auto histogram = &ChannelThreadStats::lookup;
+          context->startRequest(
+              dispatcher->getStats(), histogram, requestWatch);
 
-          HRESULT result = PrjWritePlaceholderInfo(
-              context,
-              inodeName.c_str(),
-              &placeholderInfo,
-              sizeof(placeholderInfo));
+          return dispatcher->lookup(std::move(path), *context)
+              .thenValue([context = context,
+                          virtualizationContext = virtualizationContext](
+                             const std::optional<InodeMetadata>&& optMetadata) {
+                if (!optMetadata) {
+                  context->sendError(HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND));
+                  return folly::makeFuture(folly::unit);
+                }
+                auto metadata = std::move(optMetadata).value();
 
-          if (FAILED(result)) {
-            XLOGF(
-                DBG6,
-                "{}: {:x} ({})",
-                metadata.path,
-                result,
-                win32ErrorToString(result));
-          }
+                PRJ_PLACEHOLDER_INFO placeholderInfo{};
+                placeholderInfo.FileBasicInfo.IsDirectory = metadata.isDir;
+                placeholderInfo.FileBasicInfo.FileSize = metadata.size;
+                auto inodeName = metadata.path.wide();
 
-          return result;
-        })
-        .thenError(
-            folly::tag_t<std::exception>{},
-            [](const std::exception& ex) { return exceptionToHResult(ex); })
-        .get();
+                HRESULT result = PrjWritePlaceholderInfo(
+                    virtualizationContext,
+                    inodeName.c_str(),
+                    &placeholderInfo,
+                    sizeof(placeholderInfo));
+
+                if (FAILED(result)) {
+                  return folly::makeFuture<folly::Unit>(
+                      makeHResultErrorExplicit(
+                          result,
+                          fmt::format(
+                              FMT_STRING("Writing placeholder for {}"),
+                              metadata.path)));
+                }
+
+                context->sendSuccess();
+                return folly::makeFuture(folly::unit);
+              });
+        }))
+        .ensure([context = std::move(context)] {});
+
+    return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
   } catch (const std::exception& ex) {
     return exceptionToHResult(ex);
   }
