@@ -556,15 +556,27 @@ class rebaseruntime(object):
                 prog.value = (pos, "%d:%s" % (rev, ctx))
                 try:
                     self._performrebaseone(rev, ctx, desc, tr, dest)
+                    inmemoryerror = None
                 except error.InMemoryMergeConflictsError as e:
+                    inmemoryerror = e
+
+                # Do the fallback outside the except clause since Python 3 hides
+                # any stack trace from errors inside except clauses, and instead
+                # shows the original exception.
+                if inmemoryerror is not None:
                     perftrace.traceflag("disk-fallback")
                     # in-memory merge doesn't support conflicts, so if we hit any, abort
                     # and re-run as an on-disk merge.
                     clearstatus(repo)
                     mergemod.mergestate.clean(repo)
 
-                    pathstr = ", ".join(i18n.limititems(e.paths, maxitems=3))
-                    if e.type == error.InMemoryMergeConflictsError.TYPE_FILE_CONFLICTS:
+                    pathstr = ", ".join(
+                        i18n.limititems(inmemoryerror.paths, maxitems=3)
+                    )
+                    if (
+                        inmemoryerror.type
+                        == error.InMemoryMergeConflictsError.TYPE_FILE_CONFLICTS
+                    ):
                         kindstr = _("hit merge conflicts")
                     else:
                         kindstr = _("artifact rebuild required")
