@@ -37,6 +37,10 @@ class EdenDispatcher {
  public:
   explicit EdenDispatcher(EdenMount* mount);
 
+  EdenStats* getStats() {
+    return mount_->getStats();
+  }
+
   folly::Future<folly::Unit> opendir(RelativePath path, const Guid guid);
 
   HRESULT getEnumerationData(
@@ -50,8 +54,6 @@ class EdenDispatcher {
   folly::Future<std::optional<InodeMetadata>> lookup(RelativePath path);
 
   folly::Future<bool> access(RelativePath path);
-  HRESULT
-  queryFileName(const PRJ_CALLBACK_DATA& callbackData) noexcept;
 
   HRESULT
   getFileData(
@@ -59,13 +61,47 @@ class EdenDispatcher {
       uint64_t byteOffset,
       uint32_t length) noexcept;
 
-  HRESULT notification(
-      std::unique_ptr<PrjfsRequestContext> context,
-      const PRJ_CALLBACK_DATA& callbackData,
+  folly::Future<folly::Unit> newFileCreated(
+      RelativePathPiece relPath,
+      RelativePathPiece destPath,
       bool isDirectory,
-      PRJ_NOTIFICATION notificationType,
-      PCWSTR destinationFileName,
-      PRJ_NOTIFICATION_PARAMETERS& notificationParameters) noexcept;
+      ObjectFetchContext& context);
+
+  folly::Future<folly::Unit> fileOverwritten(
+      RelativePathPiece relPath,
+      RelativePathPiece destPath,
+      bool isDirectory,
+      ObjectFetchContext& context);
+
+  folly::Future<folly::Unit> fileHandleClosedFileModified(
+      RelativePathPiece relPath,
+      RelativePathPiece destPath,
+      bool isDirectory,
+      ObjectFetchContext& context);
+
+  folly::Future<folly::Unit> fileRenamed(
+      RelativePathPiece oldPath,
+      RelativePathPiece newPath,
+      bool isDirectory,
+      ObjectFetchContext& context);
+
+  folly::Future<folly::Unit> preRename(
+      RelativePathPiece oldPath,
+      RelativePathPiece newPath,
+      bool isDirectory,
+      ObjectFetchContext& context);
+
+  folly::Future<folly::Unit> fileHandleClosedFileDeleted(
+      RelativePathPiece relPath,
+      RelativePathPiece destPath,
+      bool isDirectory,
+      ObjectFetchContext& context);
+
+  folly::Future<folly::Unit> preSetHardlink(
+      RelativePathPiece oldPath,
+      RelativePathPiece newPath,
+      bool isDirectory,
+      ObjectFetchContext& context);
 
  private:
   // The EdenMount that owns this EdenDispatcher.

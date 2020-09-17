@@ -19,12 +19,17 @@ using folly::sformat;
 
 namespace {
 
+using facebook::eden::ChannelThreadStats;
+using facebook::eden::EdenDispatcher;
 using facebook::eden::exceptionToHResult;
 using facebook::eden::Guid;
 using facebook::eden::InodeMetadata;
+using facebook::eden::ObjectFetchContext;
 using facebook::eden::PrjfsChannel;
 using facebook::eden::PrjfsRequestContext;
 using facebook::eden::RelativePath;
+using facebook::eden::RelativePathPiece;
+using facebook::eden::RequestMetricsScope;
 using facebook::eden::win32ErrorToString;
 
 #define BAIL_ON_RECURSIVE_CALL(callbackData)                               \
@@ -170,6 +175,60 @@ HRESULT getFileData(
       ->getFileData(*callbackData, byteOffset, length);
 }
 
+typedef folly::Future<folly::Unit> (EdenDispatcher::*NotificationHandler)(
+    RelativePathPiece oldPath,
+    RelativePathPiece destPath,
+    bool isDirectory,
+    ObjectFetchContext& context);
+
+struct NotificationHandlerEntry {
+  constexpr NotificationHandlerEntry() = default;
+  constexpr NotificationHandlerEntry(
+      NotificationHandler h,
+      ChannelThreadStats::HistogramPtr hist)
+      : handler{h}, histogram{hist} {}
+
+  NotificationHandler handler = nullptr;
+  ChannelThreadStats::HistogramPtr histogram = nullptr;
+};
+
+const std::unordered_map<PRJ_NOTIFICATION, NotificationHandlerEntry>
+    notificationHandlerMap = {
+        {
+            PRJ_NOTIFICATION_NEW_FILE_CREATED,
+            {&EdenDispatcher::newFileCreated,
+             &ChannelThreadStats::newFileCreated},
+        },
+        {
+            PRJ_NOTIFICATION_FILE_OVERWRITTEN,
+            {&EdenDispatcher::fileOverwritten,
+             &ChannelThreadStats::fileOverwritten},
+        },
+        {
+            PRJ_NOTIFICATION_FILE_HANDLE_CLOSED_FILE_MODIFIED,
+            {&EdenDispatcher::fileHandleClosedFileModified,
+             &ChannelThreadStats::fileHandleClosedFileModified},
+        },
+        {
+            PRJ_NOTIFICATION_FILE_RENAMED,
+            {&EdenDispatcher::fileRenamed, &ChannelThreadStats::fileRenamed},
+        },
+        {
+            PRJ_NOTIFICATION_PRE_RENAME,
+            {&EdenDispatcher::preRename, &ChannelThreadStats::preRenamed},
+        },
+        {
+            PRJ_NOTIFICATION_FILE_HANDLE_CLOSED_FILE_DELETED,
+            {&EdenDispatcher::fileHandleClosedFileDeleted,
+             &ChannelThreadStats::fileHandleClosedFileDeleted},
+        },
+        {
+            PRJ_NOTIFICATION_PRE_SET_HARDLINK,
+            {&EdenDispatcher::preSetHardlink,
+             &ChannelThreadStats::preSetHardlink},
+        },
+};
+
 HRESULT notification(
     const PRJ_CALLBACK_DATA* callbackData,
     BOOLEAN isDirectory,
@@ -177,16 +236,43 @@ HRESULT notification(
     PCWSTR destinationFileName,
     PRJ_NOTIFICATION_PARAMETERS* notificationParameters) noexcept {
   BAIL_ON_RECURSIVE_CALL(callbackData);
-  auto channel = getChannel(callbackData);
-  auto context = std::make_unique<PrjfsRequestContext>(channel, *callbackData);
-  return channel->getDispatcher()->notification(
-      std::move(context),
-      *callbackData,
-      isDirectory,
-      notificationType,
-      destinationFileName,
-      *notificationParameters);
+
+  try {
+    auto it = notificationHandlerMap.find(notificationType);
+    if (it == notificationHandlerMap.end()) {
+      XLOG(WARN) << "Unrecognized notification: " << notificationType;
+      return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
+    } else {
+      auto channel = getChannel(callbackData);
+      auto dispatcher = channel->getDispatcher();
+      auto context =
+          std::make_unique<PrjfsRequestContext>(channel, *callbackData);
+      auto requestWatch =
+          std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(nullptr);
+      auto handler = it->second.handler;
+
+      auto relPath = RelativePath(callbackData->FilePathName);
+      auto destPath = RelativePath(destinationFileName);
+
+      context->startRequest(
+          dispatcher->getStats(), it->second.histogram, requestWatch);
+      auto fut =
+          (dispatcher->*handler)(relPath, destPath, isDirectory, *context);
+      std::move(fut)
+          .thenTryInline([context = std::move(context)](
+                             folly::Try<folly::Unit>&& try_) mutable {
+            context->finishRequest();
+            return try_;
+          })
+          .get();
+
+      return S_OK;
+    }
+  } catch (const std::exception& ex) {
+    return exceptionToHResult(ex);
+  }
 }
+
 } // namespace
 
 namespace facebook {

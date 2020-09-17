@@ -8,7 +8,7 @@
 #include "folly/portability/Windows.h"
 
 #include <cpptoml.h>
-#include <folly/Format.h>
+#include <fmt/format.h>
 #include <folly/logging/xlog.h>
 #include "ProjectedFSLib.h"
 #include "eden/fs/config/CheckoutConfig.h"
@@ -26,10 +26,6 @@
 #include "eden/fs/win/utils/Guid.h"
 #include "eden/fs/win/utils/StringConv.h"
 #include "eden/fs/win/utils/WinError.h"
-
-using folly::sformat;
-using std::make_unique;
-using std::wstring;
 
 namespace facebook {
 namespace eden {
@@ -533,191 +529,92 @@ folly::Future<folly::Unit> removeFile(
   });
 }
 
-folly::Future<folly::Unit> newFileCreated(
+} // namespace
+
+folly::Future<folly::Unit> EdenDispatcher::newFileCreated(
     RelativePathPiece relPath,
-    const EdenMount& mount,
-    PCWSTR destPath,
+    RelativePathPiece destPath,
     bool isDirectory,
     ObjectFetchContext& context) {
   FB_LOGF(
-      mount.getStraceLogger(),
+      mount_->getStraceLogger(),
       DBG7,
       "{}({})",
       isDirectory ? "mkdir" : "mknod",
       relPath);
-  return createFile(mount, relPath, isDirectory);
+  return createFile(*mount_, relPath, isDirectory);
 }
 
-folly::Future<folly::Unit> fileOverwritten(
+folly::Future<folly::Unit> EdenDispatcher::fileOverwritten(
     RelativePathPiece relPath,
-    const EdenMount& mount,
-    PCWSTR destPath,
+    RelativePathPiece destPath,
     bool isDirectory,
     ObjectFetchContext& context) {
-  FB_LOGF(mount.getStraceLogger(), DBG7, "overwrite({})", relPath);
-  return materializeFile(mount, relPath);
+  FB_LOGF(mount_->getStraceLogger(), DBG7, "overwrite({})", relPath);
+  return materializeFile(*mount_, relPath);
 }
 
-folly::Future<folly::Unit> fileHandleClosedFileModified(
+folly::Future<folly::Unit> EdenDispatcher::fileHandleClosedFileModified(
     RelativePathPiece relPath,
-    const EdenMount& mount,
-    PCWSTR destPath,
+    RelativePathPiece destPath,
     bool isDirectory,
     ObjectFetchContext& context) {
-  FB_LOGF(mount.getStraceLogger(), DBG7, "modified({})", relPath);
-  return materializeFile(mount, relPath);
+  FB_LOGF(mount_->getStraceLogger(), DBG7, "modified({})", relPath);
+  return materializeFile(*mount_, relPath);
 }
 
-folly::Future<folly::Unit> fileRenamed(
+folly::Future<folly::Unit> EdenDispatcher::fileRenamed(
     RelativePathPiece oldPath,
-    const EdenMount& mount,
-    PCWSTR destPath,
+    RelativePathPiece newPath,
     bool isDirectory,
     ObjectFetchContext& context) {
-  auto newPath = RelativePath(destPath);
-
-  FB_LOGF(mount.getStraceLogger(), DBG7, "rename({} -> {})", oldPath, newPath);
+  FB_LOGF(
+      mount_->getStraceLogger(), DBG7, "rename({} -> {})", oldPath, newPath);
 
   // When files are moved in and out of the repo, the rename paths are
   // empty, handle these like creation/removal of files.
   if (oldPath.empty()) {
-    return createFile(mount, newPath, isDirectory);
+    return createFile(*mount_, newPath, isDirectory);
   } else if (newPath.empty()) {
-    return removeFile(mount, oldPath, isDirectory);
+    return removeFile(*mount_, oldPath, isDirectory);
   } else {
-    return renameFile(mount, oldPath, newPath);
+    return renameFile(*mount_, oldPath, newPath);
   }
 }
 
-folly::Future<folly::Unit> preRename(
-    RelativePathPiece relPath,
-    const EdenMount& mount,
-    PCWSTR destPath,
+folly::Future<folly::Unit> EdenDispatcher::preRename(
+    RelativePathPiece oldPath,
+    RelativePathPiece newPath,
     bool isDirectory,
     ObjectFetchContext& context) {
   FB_LOGF(
-      mount.getStraceLogger(),
-      DBG7,
-      "prerename({} -> {})",
-      relPath,
-      RelativePath(destPath));
+      mount_->getStraceLogger(), DBG7, "prerename({} -> {})", oldPath, newPath);
   return folly::unit;
 }
 
-folly::Future<folly::Unit> fileHandleClosedFileDeleted(
+folly::Future<folly::Unit> EdenDispatcher::fileHandleClosedFileDeleted(
     RelativePathPiece oldPath,
-    const EdenMount& mount,
-    PCWSTR destPath,
+    RelativePathPiece destPath,
     bool isDirectory,
     ObjectFetchContext& context) {
   FB_LOGF(
-      mount.getStraceLogger(),
+      mount_->getStraceLogger(),
       DBG7,
       "{}({})",
       isDirectory ? "rmdir" : "unlink",
       oldPath);
-  return removeFile(mount, oldPath, isDirectory);
+  return removeFile(*mount_, oldPath, isDirectory);
 }
 
-folly::Future<folly::Unit> preSetHardlink(
+folly::Future<folly::Unit> EdenDispatcher::preSetHardlink(
     RelativePathPiece relPath,
-    const EdenMount& mount,
-    PCWSTR destPath,
+    RelativePathPiece destPath,
     bool isDirectory,
     ObjectFetchContext& context) {
-  FB_LOGF(mount.getStraceLogger(), DBG7, "link({})", relPath);
+  FB_LOGF(mount_->getStraceLogger(), DBG7, "link({})", relPath);
   return folly::makeFuture<folly::Unit>(makeHResultErrorExplicit(
       HRESULT_FROM_WIN32(ERROR_ACCESS_DENIED),
-      sformat("Hardlinks are not supported: {}", relPath)));
-}
-
-typedef folly::Future<folly::Unit> (*NotificationHandler)(
-    RelativePathPiece relPath,
-    const EdenMount& mount,
-    PCWSTR destPath,
-    bool isDirectory,
-    ObjectFetchContext& context);
-
-struct HandlerEntry {
-  constexpr HandlerEntry() = default;
-  constexpr HandlerEntry(
-      NotificationHandler h,
-      ChannelThreadStats::HistogramPtr hist)
-      : handler{h}, histogram{hist} {}
-
-  NotificationHandler handler = nullptr;
-  ChannelThreadStats::HistogramPtr histogram = nullptr;
-};
-
-const std::unordered_map<PRJ_NOTIFICATION, HandlerEntry> handlerMap = {
-    {
-        PRJ_NOTIFICATION_NEW_FILE_CREATED,
-        {newFileCreated, &ChannelThreadStats::newFileCreated},
-    },
-    {
-        PRJ_NOTIFICATION_FILE_OVERWRITTEN,
-        {fileOverwritten, &ChannelThreadStats::fileOverwritten},
-    },
-    {
-        PRJ_NOTIFICATION_FILE_HANDLE_CLOSED_FILE_MODIFIED,
-        {fileHandleClosedFileModified,
-         &ChannelThreadStats::fileHandleClosedFileModified},
-    },
-    {
-        PRJ_NOTIFICATION_FILE_RENAMED,
-        {fileRenamed, &ChannelThreadStats::fileRenamed},
-    },
-    {
-        PRJ_NOTIFICATION_PRE_RENAME,
-        {preRename, &ChannelThreadStats::preRenamed},
-    },
-    {
-        PRJ_NOTIFICATION_FILE_HANDLE_CLOSED_FILE_DELETED,
-        {fileHandleClosedFileDeleted,
-         &ChannelThreadStats::fileHandleClosedFileDeleted},
-    },
-    {
-        PRJ_NOTIFICATION_PRE_SET_HARDLINK,
-        {
-            preSetHardlink,
-            &ChannelThreadStats::preSetHardlink,
-        },
-    },
-};
-
-} // namespace
-
-HRESULT EdenDispatcher::notification(
-    std::unique_ptr<PrjfsRequestContext> context,
-    const PRJ_CALLBACK_DATA& callbackData,
-    bool isDirectory,
-    PRJ_NOTIFICATION notificationType,
-    PCWSTR destinationFileName,
-    PRJ_NOTIFICATION_PARAMETERS& notificationParameters) noexcept {
-  try {
-    auto it = handlerMap.find(notificationType);
-    if (it == handlerMap.end()) {
-      XLOG(WARN) << "Unrecognized notification: " << notificationType;
-      return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
-    } else {
-      auto requestWatch =
-          std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(nullptr);
-      context->startRequest(
-          mount_->getStats(), it->second.histogram, requestWatch);
-      auto relPath = RelativePath(callbackData.FilePathName);
-      it->second
-          .handler(relPath, *mount_, destinationFileName, isDirectory, *context)
-          .thenTryInline([context = std::move(context)](
-                             folly::Try<folly::Unit>&& try_) mutable {
-            context->finishRequest();
-            return try_;
-          })
-          .get();
-    }
-    return S_OK;
-  } catch (const std::exception& ex) {
-    return exceptionToHResult(ex);
-  }
+      fmt::format(FMT_STRING("Hardlinks are not supported: {}"), relPath)));
 }
 
 } // namespace eden
