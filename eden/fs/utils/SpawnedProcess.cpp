@@ -689,13 +689,10 @@ bool SpawnedProcess::terminated() {
   }
 
   if (pid == -1 && errno == ECHILD) {
-    throw std::system_error(
-        ECHILD,
-        std::generic_category(),
-        folly::to<std::string>(
-            "SpawnedProcess::terminated() attempted to wait for pid ",
-            pid_,
-            " but that is not a child of this process"));
+    // This can happen if we are a forked child.
+    // Treat this as successfully finished.
+    status_ = ProcessStatus(ProcessStatus::State::Exited, 0);
+    waited_ = true;
   }
 
 #else
@@ -829,6 +826,14 @@ ProcessStatus SpawnedProcess::wait() {
       return status_;
     }
 
+    if (errno == ECHILD) {
+      // This can happen if we are a forked child.
+      // Treat this as successfully finished.
+      waited_ = true;
+      status_ = ProcessStatus(ProcessStatus::State::Exited, 0);
+      return status_;
+    }
+
     if (errno != EINTR) {
       throw std::system_error(
           errno,
@@ -873,13 +878,11 @@ ProcessStatus SpawnedProcess::waitTimeout(std::chrono::milliseconds timeout) {
     }
 
     if (pid == -1 && errno == ECHILD) {
-      throw std::system_error(
-          ECHILD,
-          std::generic_category(),
-          folly::to<std::string>(
-              "SpawnedProcess::waitTimeout attempted to wait for pid ",
-              pid_,
-              " but that is not a child of this process"));
+      // This can happen if we are a forked child.
+      // Treat this as successfully finished.
+      status_ = ProcessStatus(ProcessStatus::State::Exited, 0);
+      waited_ = true;
+      return status_;
     }
 
     if (std::chrono::steady_clock::now() >= deadline) {
