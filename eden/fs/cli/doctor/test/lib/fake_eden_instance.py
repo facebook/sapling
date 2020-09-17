@@ -212,7 +212,7 @@ class FakeEdenInstance:
     def get_server_build_info(self) -> Dict[str, str]:
         return dict(self._build_info)
 
-    def get_thrift_client(self) -> FakeClient:
+    def get_thrift_client_legacy(self) -> FakeClient:
         return self._fake_client
 
     def get_checkouts(self) -> List[EdenCheckout]:

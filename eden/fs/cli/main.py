@@ -396,7 +396,7 @@ Legacy bind mount dirs listed above are unused and can be removed!
         overlay_dir = os.path.join(client_dir, "local")
 
         self.usage_for_dir(overlay_dir, "materialized")
-        with instance.get_thrift_client() as client:
+        with instance.get_thrift_client_legacy() as client:
             scm_status = client.getScmStatus(
                 bytes(checkout.path), True, checkout.get_snapshot().encode()
             )
@@ -503,7 +503,7 @@ class ListCmd(Subcmd):
     @classmethod
     def get_mounts(cls, instance: EdenInstance) -> Dict[Path, ListMountInfo]:
         try:
-            with instance.get_thrift_client() as client:
+            with instance.get_thrift_client_legacy() as client:
                 thrift_mounts = client.listMounts()
         except EdenNotRunningError:
             thrift_mounts = []
@@ -925,7 +925,7 @@ class GcCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
 
-        with instance.get_thrift_client() as client:
+        with instance.get_thrift_client_legacy() as client:
             # TODO: unload
             print("Clearing and compacting local caches...", end="", flush=True)
             client.clearAndCompactLocalStore()
@@ -969,7 +969,7 @@ class ChownCmd(Subcmd):
         gid = self.resolve_gid(args.gid)
 
         instance, checkout, _rel_path = require_checkout(args, args.path)
-        with instance.get_thrift_client() as client:
+        with instance.get_thrift_client_legacy() as client:
             print("Chowning Eden repository...", end="", flush=True)
             client.chown(args.path, uid, gid)
             print("done")
@@ -1560,7 +1560,7 @@ re-open these files after Eden is restarted.
         daemon.wait_for_shutdown(pid, timeout=timeout)
 
     def _do_stop(self, instance: EdenInstance, pid: int, timeout: int) -> None:
-        with instance.get_thrift_client(timeout=timeout) as client:
+        with instance.get_thrift_client_legacy(timeout=timeout) as client:
             try:
                 stop_aux_processes(client)
             except Exception:
@@ -1706,7 +1706,7 @@ class StopCmd(Subcmd):
         pid = None
         try:
             try:
-                with instance.get_thrift_client(
+                with instance.get_thrift_client_legacy(
                     timeout=self.__thrift_timeout(args)
                 ) as client:
                     pid = client.getPid()

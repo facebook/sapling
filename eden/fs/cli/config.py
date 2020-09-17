@@ -23,7 +23,7 @@ from typing import Any, Dict, List, Mapping, Optional, Set, Tuple, Type, Union, 
 
 import facebook.eden.ttypes as eden_ttypes
 import toml
-from eden.thrift.legacy import EdenClient, EdenNotRunningError, create_thrift_client
+from eden.thrift import legacy
 
 from . import configinterpolator, configutil, telemetry, util, version
 from .util import (
@@ -299,7 +299,7 @@ class EdenInstance:
     def get_current_and_running_versions(self) -> Tuple[str, Optional[str]]:
         try:
             running = self.get_running_version()
-        except EdenNotRunningError:
+        except legacy.EdenNotRunningError:
             # return None if EdenFS does not currently appear to be running
             running = None
         return version.get_current_version(), running
@@ -358,8 +358,10 @@ class EdenInstance:
         """Return the paths of the set mount points stored in config.json"""
         return [str(path) for path in self._get_directory_map().keys()]
 
-    def get_thrift_client(self, timeout=None) -> EdenClient:
-        return create_thrift_client(eden_dir=str(self._config_dir), timeout=timeout)
+    def get_thrift_client_legacy(self, timeout=None) -> legacy.EdenClient:
+        return legacy.create_thrift_client(
+            eden_dir=str(self._config_dir), timeout=timeout
+        )
 
     def get_checkout_info(self, path: Union[Path, str]) -> collections.OrderedDict:
         """
@@ -419,7 +421,7 @@ Do you want to run `eden mount %s` instead?"""
             edenClientPath=os.fsencode(client_dir),
             readOnly=False,
         )
-        with self.get_thrift_client() as client:
+        with self.get_thrift_client_legacy() as client:
             client.mount(mount_info)
 
         self._post_clone_checkout_setup(checkout, snapshot_id)
@@ -589,7 +591,7 @@ Do you want to run `eden mount %s` instead?"""
         )
 
         try:
-            with self.get_thrift_client() as client:
+            with self.get_thrift_client_legacy() as client:
                 client.mount(mount_info)
         except eden_ttypes.EdenError as ex:
             if "already mounted" in str(ex):
@@ -608,7 +610,7 @@ Do you want to run `eden mount %s` instead?"""
         #
         # For now at least time out here so the CLI commands do not hang in this
         # case.
-        with self.get_thrift_client(timeout=15) as client:
+        with self.get_thrift_client_legacy(timeout=15) as client:
             client.unmount(os.fsencode(path))
 
     def destroy_mount(self, path: Union[Path, str]) -> None:
@@ -670,7 +672,7 @@ Do you want to run `eden mount %s` instead?"""
         Returns a HealthStatus object containing health information.
         """
         return util.check_health(
-            self.get_thrift_client, self._config_dir, timeout=timeout
+            self.get_thrift_client_legacy, self._config_dir, timeout=timeout
         )
 
     def get_log_path(self) -> Path:
@@ -760,12 +762,12 @@ Do you want to run `eden mount %s` instead?"""
         return self._config_dir / CLIENTS_DIR
 
     def get_server_build_info(self) -> Dict[str, str]:
-        with self.get_thrift_client() as client:
+        with self.get_thrift_client_legacy() as client:
             return client.getRegexExportedValues("^build_.*")
 
     def get_uptime(self) -> datetime.timedelta:
         now = datetime.datetime.now()
-        with self.get_thrift_client() as client:
+        with self.get_thrift_client_legacy() as client:
             since_in_seconds = client.aliveSince()
         since = datetime.datetime.fromtimestamp(since_in_seconds)
         return now - since

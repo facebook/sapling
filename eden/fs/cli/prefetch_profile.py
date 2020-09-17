@@ -18,7 +18,7 @@ prefetch_profile_cmd = subcmd_mod.Decorator()
 class RecordProfileCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
-        with instance.get_thrift_client() as client:
+        with instance.get_thrift_client_legacy() as client:
             client.startRecordingBackingStoreFetch()
         return 0
 
@@ -38,7 +38,7 @@ class FinishProfileCmd(Subcmd):
 
     def run(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
-        with instance.get_thrift_client() as client:
+        with instance.get_thrift_client_legacy() as client:
             files = client.stopRecordingBackingStoreFetch()
             output_path = (
                 args.output_path

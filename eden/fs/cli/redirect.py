@@ -297,7 +297,7 @@ class Redirection:
         self, instance: EdenInstance, checkout_path: Path, target: Path
     ):
         abs_mount_path_in_repo = checkout_path / self.repo_path
-        with instance.get_thrift_client() as client:
+        with instance.get_thrift_client_legacy() as client:
             if abs_mount_path_in_repo.exists():
                 try:
                     # To deal with the case where someone has manually unmounted
@@ -330,7 +330,7 @@ class Redirection:
                 raise
 
     def _bind_unmount_linux(self, checkout: EdenCheckout):
-        with checkout.instance.get_thrift_client() as client:
+        with checkout.instance.get_thrift_client_legacy() as client:
             try:
                 client.removeBindMount(
                     os.fsencode(checkout.path), os.fsencode(self.repo_path)

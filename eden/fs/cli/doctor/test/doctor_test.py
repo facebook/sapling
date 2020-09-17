@@ -615,7 +615,9 @@ Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
         )
         self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
         # The dirstate file should have been updated to use the snapshot hash
-        self.assertEqual(checkout.instance.get_thrift_client().set_parents_calls, [])
+        self.assertEqual(
+            checkout.instance.get_thrift_client_legacy().set_parents_calls, []
+        )
         self.assert_dirstate_p0(checkout, snapshot_hex)
 
     def test_snapshot_and_dirstate_file_differ_and_snapshot_invalid(self):
@@ -642,7 +644,7 @@ Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
         self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
         # Make sure resetParentCommits() was called once with the expected arguments
         self.assertEqual(
-            checkout.instance.get_thrift_client().set_parents_calls,
+            checkout.instance.get_thrift_client_legacy().set_parents_calls,
             [
                 ResetParentsCommitsArgs(
                     mount=bytes(checkout.path),
@@ -686,7 +688,7 @@ Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
         self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
         # Make sure resetParentCommits() was called once with the expected arguments
         self.assertEqual(
-            checkout.instance.get_thrift_client().set_parents_calls,
+            checkout.instance.get_thrift_client_legacy().set_parents_calls,
             [
                 ResetParentsCommitsArgs(
                     mount=bytes(checkout.path),
@@ -733,7 +735,7 @@ Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
         self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
         # Make sure resetParentCommits() was called once with the expected arguments
         self.assertEqual(
-            checkout.instance.get_thrift_client().set_parents_calls,
+            checkout.instance.get_thrift_client_legacy().set_parents_calls,
             [
                 ResetParentsCommitsArgs(
                     mount=bytes(checkout.path),
@@ -768,7 +770,9 @@ Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
         )
         self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
         # The dirstate file should have been updated to use the snapshot hash
-        self.assertEqual(checkout.instance.get_thrift_client().set_parents_calls, [])
+        self.assertEqual(
+            checkout.instance.get_thrift_client_legacy().set_parents_calls, []
+        )
         self.assert_dirstate_p0(checkout, snapshot_hex)
 
     def _test_hash_check(
@@ -962,7 +966,7 @@ Would remount {mounts[1]}
         mounts.append(instance.create_test_mount("path2", active=False).path)
         if old_edenfs:
             # Mimic older versions of edenfs, and do not return mount state data.
-            instance.get_thrift_client().change_mount_state(mount1.path, None)
+            instance.get_thrift_client_legacy().change_mount_state(mount1.path, None)
 
         out = TestOutput()
         exit_code = doctor.cure_what_ails_you(

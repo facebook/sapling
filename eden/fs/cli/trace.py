@@ -15,7 +15,7 @@ from .trace_cmd import trace_cmd
 class EnableTraceCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
         instance = cmd_util.get_eden_instance(args)
-        with instance.get_thrift_client() as client:
+        with instance.get_thrift_client_legacy() as client:
             client.enableTracing()
         return 0
 
@@ -24,7 +24,7 @@ class EnableTraceCmd(Subcmd):
 class DisableTraceCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
         instance = cmd_util.get_eden_instance(args)
-        with instance.get_thrift_client() as client:
+        with instance.get_thrift_client_legacy() as client:
             client.disableTracing()
         return 0
 

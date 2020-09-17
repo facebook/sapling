@@ -54,7 +54,7 @@ class PrefetchCmd(Subcmd):
             with open(args.pattern_file) as f:
                 args.PATTERN += [pat.strip() for pat in f.readlines()]
 
-        with instance.get_thrift_client() as client:
+        with instance.get_thrift_client_legacy() as client:
             result = client.globFiles(
                 GlobParams(
                     mountPoint=bytes(checkout.path),

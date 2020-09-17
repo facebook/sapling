@@ -182,7 +182,7 @@ class EdenDoctorChecker:
         checkouts: Dict[Path, CheckoutInfo] = {}
         # Get information about the checkouts currently known to the running
         # edenfs process
-        with self.instance.get_thrift_client() as client:
+        with self.instance.get_thrift_client_legacy() as client:
             for mount in client.listMounts():
                 # Old versions of edenfs did not return a mount state field.
                 # These versions only listed running mounts, so treat the mount state

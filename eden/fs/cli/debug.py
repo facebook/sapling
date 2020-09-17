@@ -160,7 +160,7 @@ class TreeCmd(Subcmd):
         tree_id = parse_object_id(args.id)
 
         local_only = not args.load
-        with instance.get_thrift_client() as client:
+        with instance.get_thrift_client_legacy() as client:
             entries = client.debugGetScmTree(
                 bytes(checkout.path), tree_id, localStoreOnly=local_only
             )
@@ -222,7 +222,7 @@ class ProcessFetchCmd(Subcmd):
         rows = []
 
         eden = cmd_util.get_eden_instance(args)
-        with eden.get_thrift_client() as client:
+        with eden.get_thrift_client_legacy() as client:
 
             # Get the data in the past 16 seconds. All data is collected only within
             # this period except that fetchCountsByPid is from the beginning of start
@@ -287,7 +287,7 @@ class BlobCmd(Subcmd):
         blob_id = parse_object_id(args.id)
 
         local_only = not args.load
-        with instance.get_thrift_client() as client:
+        with instance.get_thrift_client_legacy() as client:
             data = client.debugGetScmBlob(
                 bytes(checkout.path), blob_id, localStoreOnly=local_only
             )
@@ -314,7 +314,7 @@ class BlobMetaCmd(Subcmd):
         blob_id = parse_object_id(args.id)
 
         local_only = not args.load
-        with instance.get_thrift_client() as client:
+        with instance.get_thrift_client_legacy() as client:
             info = client.debugGetScmBlobMetadata(
                 bytes(checkout.path), blob_id, localStoreOnly=local_only
             )
@@ -370,7 +370,7 @@ class GcProcessFetchCmd(Subcmd):
 
     def run(self, args: argparse.Namespace) -> int:
         eden = cmd_util.get_eden_instance(args)
-        with eden.get_thrift_client() as client:
+        with eden.get_thrift_client_legacy() as client:
             if args.mount:
                 instance, checkout, _rel_path = cmd_util.require_checkout(
                     args, args.mount
@@ -385,7 +385,7 @@ class GcProcessFetchCmd(Subcmd):
 class ClearLocalCachesCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
         instance = cmd_util.get_eden_instance(args)
-        with instance.get_thrift_client() as client:
+        with instance.get_thrift_client_legacy() as client:
             client.debugClearLocalStoreCaches()
         return 0
 
@@ -394,7 +394,7 @@ class ClearLocalCachesCmd(Subcmd):
 class CompactLocalStorageCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
         instance = cmd_util.get_eden_instance(args)
-        with instance.get_thrift_client() as client:
+        with instance.get_thrift_client_legacy() as client:
             client.debugCompactLocalStorage()
         return 0
 
@@ -482,7 +482,7 @@ class HgGetDirstateTupleCmd(Subcmd):
             _print_hg_nonnormal_file(rel_path, dirstate_tuple, out)
         else:
             instance = cmd_util.get_eden_instance(args)
-            with instance.get_thrift_client() as client:
+            with instance.get_thrift_client_legacy() as client:
                 try:
                     entry = client.getManifestEntry(
                         bytes(checkout.path), bytes(rel_path)
@@ -558,7 +558,7 @@ class InodeCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
         out = sys.stdout.buffer
         instance, checkout, rel_path = cmd_util.require_checkout(args, args.path)
-        with instance.get_thrift_client() as client:
+        with instance.get_thrift_client_legacy() as client:
             results = client.debugInodeStatus(bytes(checkout.path), bytes(rel_path))
 
         out.write(b"%d loaded TreeInodes\n" % len(results))
@@ -625,7 +625,7 @@ class FileStatsCMD(Subcmd):
         request_root = args.path
         instance, checkout, rel_path = cmd_util.require_checkout(args, request_root)
 
-        with instance.get_thrift_client() as client:
+        with instance.get_thrift_client_legacy() as client:
             inode_results = client.debugInodeStatus(
                 bytes(checkout.path), bytes(rel_path)
             )
@@ -653,7 +653,7 @@ class FuseCallsCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
         out = sys.stdout.buffer
         instance, checkout, _rel_path = cmd_util.require_checkout(args, args.path)
-        with instance.get_thrift_client() as client:
+        with instance.get_thrift_client_legacy() as client:
             outstanding_call = client.debugOutstandingFuseCalls(bytes(checkout.path))
 
         out.write(b"Number of outstanding Calls: %d\n" % len(outstanding_call))
@@ -713,7 +713,7 @@ class GetPathCmd(Subcmd):
         path = args.path or os.getcwd()
         instance, checkout, _rel_path = cmd_util.require_checkout(args, path)
 
-        with instance.get_thrift_client() as client:
+        with instance.get_thrift_client_legacy() as client:
             inodePathInfo = client.debugGetInodePath(bytes(checkout.path), args.number)
 
         state = "loaded" if inodePathInfo.loaded else "unloaded"
@@ -746,7 +746,7 @@ class UnloadInodesCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
         instance, checkout, rel_path = cmd_util.require_checkout(args, args.path)
 
-        with instance.get_thrift_client() as client:
+        with instance.get_thrift_client_legacy() as client:
             # set the age in nanoSeconds
             age = TimeSpec()
             age.seconds = int(args.age)
@@ -771,7 +771,7 @@ class FlushCacheCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
         instance, checkout, rel_path = cmd_util.require_checkout(args, args.path)
 
-        with instance.get_thrift_client() as client:
+        with instance.get_thrift_client_legacy() as client:
             client.invalidateKernelInodeCache(bytes(checkout.path), bytes(rel_path))
 
         return 0
@@ -837,7 +837,7 @@ class LoggingCmd(Subcmd):
                 "WARN:default,eden=DBG2; default=stream:stream=stderr,async=true"
             )
 
-        with instance.get_thrift_client() as client:
+        with instance.get_thrift_client_legacy() as client:
             if args.config is not None:
                 if args.reset:
                     print(f"Resetting logging configuration to {args.config!r}")
@@ -916,7 +916,7 @@ class DebugJournalSetMemoryLimitCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
         instance, checkout, _rel_path = cmd_util.require_checkout(args, args.path)
 
-        with instance.get_thrift_client() as client:
+        with instance.get_thrift_client_legacy() as client:
             try:
                 client.setJournalMemoryLimit(bytes(checkout.path), args.limit)
             except EdenError as err:
@@ -937,7 +937,7 @@ class DebugJournalGetMemoryLimitCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
         instance, checkout, _rel_path = cmd_util.require_checkout(args, args.path)
 
-        with instance.get_thrift_client() as client:
+        with instance.get_thrift_client_legacy() as client:
             try:
                 mem = client.getJournalMemoryLimit(bytes(checkout.path))
             except EdenError as err:
@@ -962,7 +962,7 @@ class DebugFlushJournalCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
         instance, checkout, _rel_path = cmd_util.require_checkout(args, args.path)
 
-        with instance.get_thrift_client() as client:
+        with instance.get_thrift_client_legacy() as client:
             try:
                 client.flushJournal(bytes(checkout.path))
             except EdenError as err:
@@ -1019,7 +1019,7 @@ class DebugJournalCmd(Subcmd):
         mount = bytes(checkout.path)
 
         def refresh(params):
-            with instance.get_thrift_client() as client:
+            with instance.get_thrift_client_legacy() as client:
                 journal = client.debugGetRawJournal(params)
 
             deltas = journal.allDeltas
@@ -1184,7 +1184,7 @@ class DebugThriftCmd(Subcmd):
             raise AttributeError(f"Failed to find {name} in {modules}")
 
         instance = cmd_util.get_eden_instance(args)
-        with instance.get_thrift_client() as client:
+        with instance.get_thrift_client_legacy() as client:
             fn = getattr(client, args.function_name)
             result = fn(**python_args)
             if args.json:
