@@ -204,7 +204,7 @@ mod tests {
         let tempdir = TempDir::new()?;
         let mut log =
             IndexedLogHgIdDataStore::new(&tempdir, ExtStoredPolicy::Ignore, &ConfigSet::new())?;
-        let mut pack = MutableDataPack::new(&tempdir, DataPackVersion::One)?;
+        let mut pack = MutableDataPack::new(&tempdir, DataPackVersion::One);
         let mut multiplex: MultiplexDeltaStore<Box<dyn HgIdMutableDeltaStore>> =
             MultiplexDeltaStore::new();
         multiplex.add_store(Box::new(&mut log));

@@ -441,7 +441,7 @@ fn make_mutabledeltastore(
         Arc::new(MutableDataPack::new(
             packfilepath.as_path(),
             DataPackVersion::One,
-        )?)
+        ))
     } else if let Some(indexedlogpath) = indexedlogpath {
         Arc::new(IndexedLogHgIdDataStore::new(
             indexedlogpath.as_path(),

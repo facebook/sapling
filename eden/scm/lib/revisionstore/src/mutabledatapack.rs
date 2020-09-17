@@ -44,7 +44,9 @@ struct MutableDataPackInner {
 }
 
 pub struct MutableDataPack {
-    inner: Mutex<MutableDataPackInner>,
+    dir: PathBuf,
+    version: DataPackVersion,
+    inner: Mutex<Option<MutableDataPackInner>>,
 }
 
 #[derive(Debug, Error)]
@@ -162,18 +164,31 @@ impl MutableDataPackInner {
 }
 
 impl MutableDataPack {
-    pub fn new(dir: impl AsRef<Path>, version: DataPackVersion) -> Result<Self> {
-        Ok(Self {
-            inner: Mutex::new(MutableDataPackInner::new(dir, version)?),
-        })
+    pub fn new(dir: impl AsRef<Path>, version: DataPackVersion) -> Self {
+        Self {
+            dir: dir.as_ref().to_path_buf(),
+            version,
+            inner: Mutex::new(None),
+        }
+    }
+
+    fn get_pack<'a>(
+        &self,
+        inner: &'a mut Option<MutableDataPackInner>,
+    ) -> Result<&'a mut MutableDataPackInner> {
+        if inner.is_none() {
+            inner.replace(MutableDataPackInner::new(&self.dir, self.version.clone())?);
+        }
+        Ok(inner.as_mut().unwrap())
     }
 
     fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
         let mut chain: Vec<Delta> = Default::default();
         let mut next_key = Some(key.clone());
-        let inner = self.inner.lock();
+        let mut guard = self.inner.lock();
+        let pack = self.get_pack(&mut guard)?;
         while let Some(key) = next_key {
-            let (delta, _metadata) = match inner.read_entry(&key) {
+            let (delta, _metadata) = match pack.read_entry(&key) {
                 Ok(Some(entry)) => entry,
                 Ok(None) => {
                     if chain.is_empty() {
@@ -201,18 +216,23 @@ impl MutableDataPack {
 impl HgIdMutableDeltaStore for MutableDataPack {
     /// Adds the given entry to the mutable datapack.
     fn add(&self, delta: &Delta, metadata: &Metadata) -> Result<()> {
-        self.inner.lock().add(delta, metadata)
+        let mut guard = self.inner.lock();
+        let pack = self.get_pack(&mut guard)?;
+        pack.add(delta, metadata)
     }
 
     fn flush(&self) -> Result<Option<Vec<PathBuf>>> {
         let mut guard = self.inner.lock();
-        let new_inner = MutableDataPackInner::new(&guard.dir, DataPackVersion::One)?;
-        let old_inner = replace(&mut *guard, new_inner);
+        let old_inner = replace(&mut *guard, None);
 
-        Ok(match old_inner.close_pack()? {
-            Some(pack) => Some(vec![pack]),
-            None => Some(vec![]),
-        })
+        if let Some(old_inner) = old_inner {
+            Ok(match old_inner.close_pack()? {
+                Some(pack) => Some(vec![pack]),
+                None => Some(vec![]),
+            })
+        } else {
+            Ok(None)
+        }
     }
 }
 
@@ -239,11 +259,12 @@ impl MutablePack for MutableDataPackInner {
 
 impl MutablePack for MutableDataPack {
     fn build_files(self) -> Result<(NamedTempFile, NamedTempFile, PathBuf)> {
-        let mut guard = self.inner.lock();
-        let new_inner = MutableDataPackInner::new(&guard.dir, DataPackVersion::One)?;
-        let old_inner = replace(&mut *guard, new_inner);
-
-        old_inner.build_files()
+        let old_inner = (*self.inner.lock()).take();
+        if let Some(old_inner) = old_inner {
+            old_inner.build_files()
+        } else {
+            Err(EmptyMutablePack.into())
+        }
     }
 
     fn extension(&self) -> &'static str {
@@ -286,7 +307,8 @@ impl HgIdDataStore for MutableDataPack {
             content => return Ok(StoreResult::NotFound(content)),
         };
 
-        match self.inner.lock().read_entry(&key)? {
+        let mut guard = self.inner.lock();
+        match self.get_pack(&mut guard)?.read_entry(&key)? {
             None => Ok(StoreResult::NotFound(StoreKey::HgId(key))),
             Some((_, metadata)) => Ok(StoreResult::Found(metadata)),
         }
@@ -295,11 +317,12 @@ impl HgIdDataStore for MutableDataPack {
 
 impl LocalStore for MutableDataPack {
     fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-        let inner = self.inner.lock();
+        let mut guard = self.inner.lock();
+        let pack = self.get_pack(&mut guard)?;
         Ok(keys
             .iter()
             .filter(|k| match k {
-                StoreKey::HgId(k) => inner.mem_index.get(&k.hgid).is_none(),
+                StoreKey::HgId(k) => pack.mem_index.get(&k.hgid).is_none(),
                 StoreKey::Content(_, _) => true,
             })
             .cloned()
@@ -324,7 +347,7 @@ mod tests {
     #[test]
     fn test_basic_creation() {
         let tempdir = tempdir().unwrap();
-        let mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
+        let mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One);
         let delta = Delta {
             data: Bytes::from(&[0, 1, 2][..]),
             base: None,
@@ -357,7 +380,7 @@ mod tests {
     fn test_basic_abort() {
         let tempdir = tempdir().unwrap();
         {
-            let mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
+            let mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One);
             let delta = Delta {
                 data: Bytes::from(&[0, 1, 2][..]),
                 base: None,
@@ -372,7 +395,7 @@ mod tests {
     #[test]
     fn test_get_delta_chain() {
         let tempdir = tempdir().unwrap();
-        let mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
+        let mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One);
         let delta = Delta {
             data: Bytes::from(&[0, 1, 2][..]),
             base: None,
@@ -396,7 +419,7 @@ mod tests {
     #[test]
     fn test_get_partial_delta_chain() -> Result<()> {
         let tempdir = tempdir()?;
-        let mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One)?;
+        let mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One);
 
         let delta = Delta {
             data: Bytes::from(&[0, 1, 2][..]),
@@ -416,7 +439,7 @@ mod tests {
     fn test_get_meta() {
         let tempdir = tempdir().unwrap();
 
-        let mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
+        let mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One);
         let delta = Delta {
             data: Bytes::from(&[0, 1, 2][..]),
             base: None,
@@ -454,7 +477,7 @@ mod tests {
     fn test_get_missing() {
         let tempdir = tempdir().unwrap();
 
-        let mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
+        let mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One);
         let delta = Delta {
             data: Bytes::from(&[0, 1, 2][..]),
             base: None,
@@ -473,8 +496,8 @@ mod tests {
     fn test_empty() {
         let tempdir = tempdir().unwrap();
 
-        let mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One).unwrap();
-        assert_eq!(mutdatapack.flush().unwrap(), Some(vec![]));
+        let mutdatapack = MutableDataPack::new(tempdir.path(), DataPackVersion::One);
+        assert_eq!(mutdatapack.flush().unwrap(), None);
         drop(mutdatapack);
         assert_eq!(fs::read_dir(tempdir.path()).unwrap().count(), 0);
     }

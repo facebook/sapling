@@ -181,7 +181,7 @@ fn repack_datapacks(
     paths: impl IntoIterator<Item = PathBuf> + Clone,
     outdir: &Path,
 ) -> Result<Option<PathBuf>> {
-    let mut_pack = MutableDataPack::new(outdir, DataPackVersion::One)?;
+    let mut_pack = MutableDataPack::new(outdir, DataPackVersion::One);
 
     repack_packs(paths, mut_pack, repack_datapack)
 }

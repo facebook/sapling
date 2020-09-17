@@ -509,7 +509,7 @@ impl MutableDataPackStore {
             max_bytes,
             extstored_policy,
         ));
-        let mutable_pack = Arc::new(MutableDataPack::new(pack_dir, DataPackVersion::One)?);
+        let mutable_pack = Arc::new(MutableDataPack::new(pack_dir, DataPackVersion::One));
         let mut union_store: UnionHgIdDataStore<Arc<dyn HgIdDataStore>> = UnionHgIdDataStore::new();
         union_store.add(pack_store.clone());
         union_store.add(mutable_pack.clone());
