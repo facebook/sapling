@@ -19,7 +19,18 @@ use sql::mysql;
 use crate::errors::ErrorKind;
 use crate::thrift;
 
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, Serialize, PartialEq, PartialOrd)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    Eq,
+    Hash,
+    Ord,
+    Deserialize,
+    Serialize,
+    PartialEq,
+    PartialOrd
+)]
 pub struct DateTime(ChronoDateTime<FixedOffset>);
 
 impl DateTime {

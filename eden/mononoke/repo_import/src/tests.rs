@@ -11,7 +11,7 @@ mod tests {
         back_sync_commits_to_small_repo, check_dependent_systems, derive_bonsais_single_repo,
         get_large_repo_config_if_pushredirected, get_large_repo_setting, merge_imported_commit,
         move_bookmark, push_merge_commit, rewrite_file_paths, ChangesetArgs, CheckerFlags,
-        RepoImportSetting,
+        ImportStage, RecoveryFields, RepoImportSetting,
     };
     use anyhow::Result;
     use ascii::AsciiString;
@@ -85,11 +85,34 @@ mod tests {
             .collect()
     }
 
+    fn create_mock_recovery_fields() -> RecoveryFields {
+        RecoveryFields {
+            import_stage: ImportStage::GitImport,
+            recovery_file_path: "recovery_path".to_string(),
+            git_repo_path: "git_repo_path".to_string(),
+            dest_path: "dest_path".to_string(),
+            bookmark_suffix: "bookmark_suffix".to_string(),
+            batch_size: 2,
+            move_bookmark_commits_done: 0,
+            phab_check_disabled: true,
+            x_repo_check_disabled: true,
+            hg_sync_check_disabled: true,
+            sleep_time: 1,
+            dest_bookmark_name: "dest_bookmark_name".to_string(),
+            commit_author: "commit_author".to_string(),
+            commit_message: "commit_message".to_string(),
+            datetime: DateTime::now(),
+            shifted_bcs_ids: None,
+            gitimport_bcs_ids: None,
+            merged_cs_id: None,
+        }
+    }
+
     #[fbinit::compat_test]
     async fn test_move_bookmark(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let blob_repo = blobrepo_factory::new_memblob_empty(None)?;
-        let batch_size: usize = 2;
+        let mut recovery_fields = create_mock_recovery_fields();
         let call_sign = Some("FBS".to_string());
         let checker_flags = CheckerFlags {
             phab_check_disabled: true,
@@ -97,7 +120,6 @@ mod tests {
             hg_sync_check_disabled: true,
             call_sign,
         };
-        let sleep_time = 1;
         let mutable_counters = SqlMutableCounters::with_sqlite_in_memory().unwrap();
         let changesets = create_from_dag(
             &ctx,
@@ -114,12 +136,80 @@ mod tests {
             &ctx,
             &blob_repo,
             &bcs_ids,
-            batch_size,
             &importing_bookmark,
             &checker_flags,
-            sleep_time,
             &mutable_counters,
             &None,
+            &mut recovery_fields,
+        )
+        .await?;
+        // Check the bookmark moves created BookmarkLogUpdate entries
+        let entries = blob_repo
+            .attribute_expected::<dyn BookmarkUpdateLog>()
+            .list_bookmark_log_entries(
+                ctx.clone(),
+                BookmarkName::new("repo_import_test_repo")?,
+                5,
+                None,
+                Freshness::MostRecent,
+            )
+            .map_ok(|(cs, rs, _ts)| (cs, rs)) // dropping timestamps
+            .try_collect::<Vec<_>>()
+            .await?;
+
+        assert_eq!(
+            entries,
+            vec![
+                (Some(changesets["G"]), BookmarkUpdateReason::ManualMove),
+                (Some(changesets["F"]), BookmarkUpdateReason::ManualMove),
+                (Some(changesets["D"]), BookmarkUpdateReason::ManualMove),
+                (Some(changesets["B"]), BookmarkUpdateReason::ManualMove),
+                (Some(changesets["A"]), BookmarkUpdateReason::ManualMove),
+            ]
+        );
+        Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn test_move_bookmark_with_existing_bookmark(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let blob_repo = blobrepo_factory::new_memblob_empty(None)?;
+        let mut recovery_fields = create_mock_recovery_fields();
+        let checker_flags = CheckerFlags {
+            phab_check_disabled: true,
+            x_repo_check_disabled: true,
+            hg_sync_check_disabled: true,
+            call_sign: None,
+        };
+        let mutable_counters = SqlMutableCounters::with_sqlite_in_memory().unwrap();
+        let changesets = create_from_dag(
+            &ctx,
+            &blob_repo,
+            r##"
+                A-B-C-D-E-F-G
+            "##,
+        )
+        .await?;
+
+        let bcs_ids: Vec<ChangesetId> = changesets.values().copied().collect();
+        let importing_bookmark = BookmarkName::new("repo_import_test_repo")?;
+        let mut txn = blob_repo.update_bookmark_transaction(ctx.clone());
+        txn.create(
+            &importing_bookmark,
+            bcs_ids.first().unwrap().clone(),
+            BookmarkUpdateReason::ManualMove,
+            None,
+        )?;
+        txn.commit().await.unwrap();
+        move_bookmark(
+            &ctx,
+            &blob_repo,
+            &bcs_ids,
+            &importing_bookmark,
+            &checker_flags,
+            &mutable_counters,
+            &None,
+            &mut recovery_fields,
         )
         .await?;
         // Check the bookmark moves created BookmarkLogUpdate entries
@@ -540,13 +630,7 @@ mod tests {
             "##,
         )
         .await?;
-        let mut bonsai_values = vec![];
-        for csid in changesets.values() {
-            bonsai_values.push((
-                csid.clone(),
-                csid.load(ctx.clone(), &large_repo.get_blobstore()).await?,
-            ));
-        }
+        let cs_ids: Vec<ChangesetId> = changesets.values().copied().collect();
 
         let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap();
         let syncers = create_commit_syncers(
@@ -578,7 +662,7 @@ mod tests {
         });
 
         let shifted_bcs_ids =
-            rewrite_file_paths(&ctx, &large_repo, &combined_mover, &mut bonsai_values).await?;
+            rewrite_file_paths(&ctx, &large_repo, &combined_mover, &cs_ids).await?;
 
         let large_repo_cs_a = &shifted_bcs_ids[0]
             .load(ctx.clone(), &large_repo.get_blobstore())
@@ -695,13 +779,8 @@ mod tests {
             "##,
         )
         .await?;
-        let mut bonsai_values = vec![];
-        for csid in changesets.values() {
-            bonsai_values.push((
-                csid.clone(),
-                csid.load(ctx.clone(), &large_repo.get_blobstore()).await?,
-            ));
-        }
+
+        let cs_ids: Vec<ChangesetId> = changesets.values().copied().collect();
 
         let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap();
         let syncers = create_commit_syncers(
@@ -733,7 +812,7 @@ mod tests {
         });
 
         let large_repo_cs_ids =
-            rewrite_file_paths(&ctx, &large_repo, &combined_mover, &mut bonsai_values).await?;
+            rewrite_file_paths(&ctx, &large_repo, &combined_mover, &cs_ids).await?;
         let small_repo_cs_ids = back_sync_commits_to_small_repo(
             &ctx,
             &small_repo,

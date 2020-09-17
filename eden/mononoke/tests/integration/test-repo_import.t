@@ -57,7 +57,11 @@
 
 # Import it into Mononoke
   $ cd "$TESTTMP"
-  $ repo_import "$GIT_REPO" \
+  $ repo_import \
+  > --test-instance \
+  > --local-configerator-path="$TESTTMP/configerator" \
+  > import \
+  > "$GIT_REPO" \
   > --dest-path "new_dir/new_repo" \
   > --batch-size 3 \
   > --bookmark-suffix "new_repo" \
@@ -66,8 +70,7 @@
   > --dest-bookmark master_bookmark \
   > --commit-author user \
   > --commit-message "merging" \
-  > --test-instance \
-  > --local-configerator-path="$TESTTMP/configerator"
+  > --recovery-file-path "$GIT_REPO/recovery_file.json"
   * using repo "repo" repoid RepositoryId(0) (glob)
   * Initializing CfgrLiveCommitSyncConfig (glob)
   * Done initializing CfgrLiveCommitSyncConfig (glob)
@@ -77,10 +80,12 @@
   * 2 bonsai changesets have been committed (glob)
   * Ref: Some("refs/heads/master"): Some(ChangesetId(Blake2(f7708ed066b1c23591f862148e0386ec704a450e572154cc52f87ca0e394a0fb))) (glob)
   * Added commits to Mononoke (glob)
+  * Saving gitimported bonsai changesets (glob)
+  * Saved gitimported bonsai changesets (glob)
   * Remapped ChangesetId(Blake2(f7cbf75d9c08ff96896ed2cebd0327aa514e58b1dd9901d50129b9e08f4aa062)) => ChangesetId(Blake2(a159bc614d2dbd07a5ecc6476156fa464b69e884d819bbc2e854ade3e4c353b9)) (glob)
   * Remapped ChangesetId(Blake2(f7708ed066b1c23591f862148e0386ec704a450e572154cc52f87ca0e394a0fb)) => ChangesetId(Blake2(a2e6329ed60e3dd304f53efd0f92c28b849404a47979fcf48bb43b6fe3a0cad5)) (glob)
-  * Saving bonsai changesets (glob)
-  * Saved bonsai changesets (glob)
+  * Saving shifted bonsai changesets (glob)
+  * Saved shifted bonsai changesets (glob)
   * Start deriving data types (glob)
   * Finished deriving data types (glob)
   * Start moving the bookmark (glob)
@@ -120,6 +125,35 @@
 
 # Clone the repository
   $ cd "$TESTTMP"
+  $ jq -S '.' "$GIT_REPO/recovery_file.json" > "$GIT_REPO/recovery_file_sorted.json"
+  $ cat "$GIT_REPO/recovery_file_sorted.json"
+  {
+    "batch_size": 3,
+    "bookmark_suffix": "new_repo",
+    "commit_author": "user",
+    "commit_message": "merging",
+    "datetime": * (glob)
+    "dest_bookmark_name": "master_bookmark",
+    "dest_path": "new_dir/new_repo",
+    "git_repo_path": "$TESTTMP/repo-git",
+    "gitimport_bcs_ids": [
+      "f7cbf75d9c08ff96896ed2cebd0327aa514e58b1dd9901d50129b9e08f4aa062",
+      "f7708ed066b1c23591f862148e0386ec704a450e572154cc52f87ca0e394a0fb"
+    ],
+    "hg_sync_check_disabled": true,
+    "import_stage": "PushCommit",
+    "merged_cs_id": * (glob)
+    "move_bookmark_commits_done": 1,
+    "phab_check_disabled": true,
+    "recovery_file_path": "$TESTTMP/repo-git/recovery_file.json",
+    "shifted_bcs_ids": [
+      "a159bc614d2dbd07a5ecc6476156fa464b69e884d819bbc2e854ade3e4c353b9",
+      "a2e6329ed60e3dd304f53efd0f92c28b849404a47979fcf48bb43b6fe3a0cad5"
+    ],
+    "sleep_time": 5,
+    "x_repo_check_disabled": false
+  }
+
   $ hgclone_treemanifest ssh://user@dummy/repo-hg repo1 --noupdate -q
   $ cd repo1
   $ hgmn pull

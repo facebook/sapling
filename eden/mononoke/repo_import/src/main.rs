@@ -14,6 +14,7 @@ use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use borrowed::borrowed;
 use cached_config::ConfigStore;
+use clap::ArgMatches;
 use cmdlib::args;
 use cmdlib::helpers::block_execute;
 use context::CoreContext;
@@ -26,6 +27,7 @@ use futures::{
     stream::{self, StreamExt, TryStreamExt},
 };
 use import_tools::{GitimportPreferences, GitimportTarget};
+use itertools::Itertools;
 use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use manifest::ManifestOps;
 use maplit::hashset;
@@ -40,22 +42,21 @@ use serde::{Deserialize, Serialize};
 use serde_json;
 use slog::info;
 use std::collections::{BTreeMap, HashMap, HashSet};
-use std::num::NonZeroUsize;
 use std::path::Path;
 use std::sync::Arc;
 use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
-use tokio::{process, time};
+use tokio::{
+    fs,
+    io::{AsyncReadExt, AsyncWriteExt},
+    process, time,
+};
 use topo_sort::sort_topological;
 use unbundle::get_pushrebase_hooks;
 
 mod cli;
 mod tests;
 
-use crate::cli::{
-    setup_app, ARG_BATCH_SIZE, ARG_BOOKMARK_SUFFIX, ARG_COMMIT_AUTHOR, ARG_COMMIT_DATE_RFC3339,
-    ARG_COMMIT_MESSAGE, ARG_DEST_BOOKMARK, ARG_DEST_PATH, ARG_GIT_REPOSITORY_PATH,
-    ARG_HG_SYNC_CHECK_DISABLED, ARG_PHAB_CHECK_DISABLED, ARG_SLEEP_TIME, ARG_X_REPO_CHECK_DISABLED,
-};
+use crate::cli::{setup_app, setup_import_args, IMPORT, RECOVER_PROCESS, SAVED_RECOVERY_FILE_PATH};
 
 #[derive(Deserialize, Clone, Debug)]
 struct GraphqlQueryObj {
@@ -104,21 +105,68 @@ struct SmallRepoBackSyncVars {
     small_repo: BlobRepo,
 }
 
+#[derive(Copy, Clone, Serialize, Deserialize, Debug, PartialEq)]
+enum ImportStage {
+    GitImport,
+    RewritePaths,
+    DeriveBonsais,
+    MoveBookmark,
+    MergeCommits,
+    PushCommit,
+}
+
+/*
+    Most fields can be found with 'repo_import --help'
+*/
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct RecoveryFields {
+    /// Indicates which stage we will recover from in case of recovery process
+    import_stage: ImportStage,
+    recovery_file_path: String,
+    git_repo_path: String,
+    dest_path: String,
+    bookmark_suffix: String,
+    batch_size: usize,
+    move_bookmark_commits_done: usize,
+    phab_check_disabled: bool,
+    x_repo_check_disabled: bool,
+    hg_sync_check_disabled: bool,
+    sleep_time: u64,
+    dest_bookmark_name: String,
+    commit_author: String,
+    commit_message: String,
+    datetime: DateTime,
+    /// ChangesetId of the merged commit we make to merge the imported commits into dest_bookmark
+    merged_cs_id: Option<ChangesetId>,
+    /// ChangesetIds created after shifting the file paths of the gitimported commits
+    shifted_bcs_ids: Option<Vec<ChangesetId>>,
+    /// ChangesetIds of the gitimported commits
+    gitimport_bcs_ids: Option<Vec<ChangesetId>>,
+}
+
 async fn rewrite_file_paths(
     ctx: &CoreContext,
     repo: &BlobRepo,
     mover: &Mover,
-    bonsai_values: &mut Vec<(ChangesetId, BonsaiChangeset)>,
+    gitimport_bcs_ids: &[ChangesetId],
 ) -> Result<Vec<ChangesetId>, Error> {
     let mut remapped_parents: HashMap<ChangesetId, ChangesetId> = HashMap::new();
-    let mut index = 1;
-    let map_size = bonsai_values.len();
     let mut bonsai_changesets = vec![];
-    for (bcs_id, bcs) in bonsai_values {
-        let bcs_mut = bcs.clone().into_mut();
+
+    let len = gitimport_bcs_ids.len();
+    let gitimport_changesets = stream::iter(gitimport_bcs_ids.iter().map(|bcs_id| async move {
+        let bcs = bcs_id.load(ctx.clone(), &repo.get_blobstore()).await?;
+        Result::<_, Error>::Ok(bcs)
+    }))
+    .buffered(len)
+    .try_collect::<Vec<_>>()
+    .await?;
+
+    for (index, bcs) in gitimport_changesets.iter().enumerate() {
+        let bcs_id = bcs.get_changeset_id();
         let rewritten_bcs_opt = rewrite_commit(
             ctx.clone(),
-            bcs_mut,
+            bcs.clone().into_mut(),
             &remapped_parents,
             mover.clone(),
             repo.clone(),
@@ -131,20 +179,23 @@ async fn rewrite_file_paths(
             remapped_parents.insert(bcs_id.clone(), rewritten_bcs_id);
             info!(
                 ctx.logger(),
-                "Commit {}/{}: Remapped {:?} => {:?}", index, map_size, bcs_id, rewritten_bcs_id,
+                "Commit {}/{}: Remapped {:?} => {:?}",
+                (index + 1),
+                len,
+                bcs_id,
+                rewritten_bcs_id,
             );
             bonsai_changesets.push(rewritten_bcs);
         }
-        index += 1;
     }
 
     bonsai_changesets = sort_bcs(&bonsai_changesets)?;
     let bcs_ids = get_cs_ids(&bonsai_changesets);
-    info!(ctx.logger(), "Saving bonsai changesets");
-    save_bonsai_changesets(bonsai_changesets.clone(), ctx.clone(), repo.clone())
+    info!(ctx.logger(), "Saving shifted bonsai changesets");
+    save_bonsai_changesets(bonsai_changesets, ctx.clone(), repo.clone())
         .compat()
         .await?;
-    info!(ctx.logger(), "Saved bonsai changesets");
+    info!(ctx.logger(), "Saved shifted bonsai changesets");
     Ok(bcs_ids)
 }
 
@@ -211,42 +262,67 @@ async fn move_bookmark(
     ctx: &CoreContext,
     repo: &BlobRepo,
     shifted_bcs_ids: &[ChangesetId],
-    batch_size: usize,
     bookmark: &BookmarkName,
     checker_flags: &CheckerFlags,
-    sleep_time: u64,
     mutable_counters: &SqlMutableCounters,
     maybe_small_repo_back_sync_vars: &Option<SmallRepoBackSyncVars>,
+    recovery_fields: &mut RecoveryFields,
 ) -> Result<(), Error> {
+    let batch_size = recovery_fields.batch_size;
+    let sleep_time = recovery_fields.sleep_time;
     info!(ctx.logger(), "Start moving the bookmark");
     if shifted_bcs_ids.is_empty() {
         return Err(format_err!("There is no bonsai changeset present"));
     }
 
-    let mut old_csid = match shifted_bcs_ids.first() {
+    let first_csid = match shifted_bcs_ids.first() {
         Some(first) => first,
         None => {
             return Err(format_err!("There is no bonsai changeset present"));
         }
     };
+
+    let maybe_old_csid = repo
+        .get_bonsai_bookmark(ctx.clone(), bookmark)
+        .compat()
+        .await?;
+
+    /* If the bookmark already exists, we should continue moving the
+    bookmark from the last commit it points to */
+    let mut old_csid = match maybe_old_csid {
+        Some(ref id) => id,
+        None => first_csid,
+    };
+
     let mut transaction = repo.update_bookmark_transaction(ctx.clone());
-    transaction.create(
-        &bookmark,
-        old_csid.clone(),
-        BookmarkUpdateReason::ManualMove,
-        None,
-    )?;
-    if !transaction.commit().await? {
-        return Err(format_err!("Logical failure while creating {:?}", bookmark));
+    if maybe_old_csid.is_none() {
+        transaction.create(
+            &bookmark,
+            old_csid.clone(),
+            BookmarkUpdateReason::ManualMove,
+            None,
+        )?;
+        if !transaction.commit().await? {
+            return Err(format_err!("Logical failure while creating {:?}", bookmark));
+        }
+        info!(
+            ctx.logger(),
+            "Created bookmark {:?} pointing to {}", bookmark, old_csid
+        );
     }
-    info!(
-        ctx.logger(),
-        "Created bookmark {:?} pointing to {}", bookmark, old_csid
-    );
-    for chunk in shifted_bcs_ids.chunks(batch_size) {
+
+    let commits_done = recovery_fields.move_bookmark_commits_done;
+
+    for chunk in shifted_bcs_ids
+        .iter()
+        .skip(commits_done)
+        .enumerate()
+        .chunks(batch_size)
+        .into_iter()
+    {
         transaction = repo.update_bookmark_transaction(ctx.clone());
-        let curr_csid = match chunk.last() {
-            Some(bcs_id) => bcs_id,
+        let (shifted_index, curr_csid) = match chunk.last() {
+            Some(tuple) => tuple,
             None => {
                 return Err(format_err!("There is no bonsai changeset present"));
             }
@@ -266,6 +342,9 @@ async fn move_bookmark(
             ctx.logger(),
             "Set bookmark {:?} to point to {:?}", bookmark, curr_csid
         );
+
+        recovery_fields.move_bookmark_commits_done = commits_done + shifted_index;
+
         let check_repo = async move {
             let hg_csid = repo
                 .get_hg_from_bonsai_changeset(ctx.clone(), curr_csid.clone())
@@ -672,230 +751,329 @@ where
     Ok(large_repo_setting)
 }
 
-#[fbinit::main]
-fn main(fb: FacebookInit) -> Result<(), Error> {
-    let app = setup_app();
-    let matches = app.get_matches();
+async fn save_importing_state(recovery_fields: &RecoveryFields) -> Result<(), Error> {
+    let mut proc_recovery_file = fs::File::create(&recovery_fields.recovery_file_path).await?;
+    let serialized = serde_json::to_string_pretty(&recovery_fields)?;
+    proc_recovery_file.write_all(serialized.as_bytes()).await?;
+    Ok(())
+}
 
-    let path = Path::new(matches.value_of(ARG_GIT_REPOSITORY_PATH).unwrap());
-    let prefix = matches.value_of(ARG_DEST_PATH).unwrap();
-    let dest_path_prefix = MPath::new(prefix)?;
-    let bookmark_suffix = matches.value_of(ARG_BOOKMARK_SUFFIX).unwrap();
-    let importing_bookmark = BookmarkName::new(format!("repo_import_{}", bookmark_suffix))?;
-    let batch_size = matches.value_of(ARG_BATCH_SIZE).unwrap();
-    let batch_size = batch_size.parse::<NonZeroUsize>()?.get();
-    if !is_valid_bookmark_suffix(&bookmark_suffix) {
+async fn fetch_recovery_state(
+    ctx: &CoreContext,
+    saved_recovery_file_paths: &str,
+) -> Result<RecoveryFields, Error> {
+    info!(ctx.logger(), "Fetching the recovery stage for importing");
+    let mut saved_proc_recovery_file = fs::File::open(saved_recovery_file_paths).await?;
+    let mut serialized = String::new();
+    saved_proc_recovery_file
+        .read_to_string(&mut serialized)
+        .await?;
+    let recovery_fields: RecoveryFields = serde_json::from_str(&serialized)?;
+    info!(
+        ctx.logger(),
+        "Fetched the recovery stage for importing.\nStarting from stage: {:?}",
+        recovery_fields.import_stage
+    );
+    Ok(recovery_fields)
+}
+
+async fn repo_import(
+    ctx: CoreContext,
+    mut repo: BlobRepo,
+    recovery_fields: &mut RecoveryFields,
+    fb: FacebookInit,
+    matches: &ArgMatches<'_>,
+) -> Result<(), Error> {
+    let arg_git_repo_path = recovery_fields.git_repo_path.clone();
+    let path = Path::new(&arg_git_repo_path);
+    let dest_path_prefix = MPath::new(&recovery_fields.dest_path)?;
+    let importing_bookmark =
+        BookmarkName::new(format!("repo_import_{}", &recovery_fields.bookmark_suffix))?;
+    if !is_valid_bookmark_suffix(&recovery_fields.bookmark_suffix) {
         return Err(format_err!(
             "The bookmark suffix contains invalid character(s).
-            You can only use alphanumeric and \"./-_\" characters"
+                    You can only use alphanumeric and \"./-_\" characters"
         ));
     }
-
-    let phab_check_disabled = matches.is_present(ARG_PHAB_CHECK_DISABLED);
-    let x_repo_check_disabled = matches.is_present(ARG_X_REPO_CHECK_DISABLED);
-    let hg_sync_check_disabled = matches.is_present(ARG_HG_SYNC_CHECK_DISABLED);
-    let sleep_time = matches.value_of(ARG_SLEEP_TIME).unwrap();
-    let sleep_time = sleep_time.parse::<u64>()?;
-    let dest_bookmark_name = matches.value_of(ARG_DEST_BOOKMARK).unwrap();
-    let dest_bookmark = BookmarkName::new(dest_bookmark_name)?;
-    let commit_author = matches.value_of(ARG_COMMIT_AUTHOR).unwrap();
-    let commit_message = matches.value_of(ARG_COMMIT_MESSAGE).unwrap();
-    let datetime = match matches.value_of(ARG_COMMIT_DATE_RFC3339) {
-        Some(date) => DateTime::from_rfc3339(date)?,
-        None => DateTime::now(),
-    };
+    let dest_bookmark = BookmarkName::new(&recovery_fields.dest_bookmark_name)?;
     let changeset_args = ChangesetArgs {
-        author: commit_author.to_string(),
-        message: commit_message.to_string(),
-        datetime,
+        author: recovery_fields.commit_author.clone(),
+        message: recovery_fields.commit_message.clone(),
+        datetime: recovery_fields.datetime,
     };
     let mut repo_import_setting = RepoImportSetting {
         importing_bookmark,
         dest_bookmark,
     };
-    args::init_cachelib(fb, &matches, None);
-    let logger = args::init_logging(fb, &matches);
-    let ctx = CoreContext::new_with_logger(fb, logger.clone());
-    let repo = args::create_repo(fb, &logger, &matches);
-    block_execute(
-        async {
-            let mut repo = repo.compat().await?;
-            let (_, mut repo_config) =
-                args::get_config_by_repoid(ctx.fb, &matches, repo.get_repoid())?;
-            let call_sign = repo_config.phabricator_callsign.clone();
-            if !phab_check_disabled && call_sign.is_none() {
-                return Err(format_err!(
-                    "The repo we import to doesn't have a callsign. \
+    let (_, mut repo_config) = args::get_config_by_repoid(ctx.fb, &matches, repo.get_repoid())?;
+    let call_sign = repo_config.phabricator_callsign.clone();
+    if !recovery_fields.phab_check_disabled && call_sign.is_none() {
+        return Err(format_err!(
+            "The repo ({}) we import to doesn't have a callsign. \
                      Make sure the callsign for the repo is set in configerator: \
-                     e.g CF/../source/scm/mononoke/repos/repos/hg.cinc"
-                ));
-            }
-            let checker_flags = CheckerFlags {
-                phab_check_disabled,
-                x_repo_check_disabled,
-                hg_sync_check_disabled,
-                call_sign,
-            };
-            let maybe_config_store = args::maybe_init_config_store(fb, &logger, &matches);
-            let configs = args::load_repo_configs(fb, &matches)?;
-            let mysql_options = args::parse_mysql_options(&matches);
-            let readonly_storage = args::parse_readonly_storage(&matches);
+                     e.g CF/../source/scm/mononoke/repos/repos/hg.cinc",
+            repo.name()
+        ));
+    }
+    let mut checker_flags = CheckerFlags {
+        phab_check_disabled: recovery_fields.phab_check_disabled,
+        x_repo_check_disabled: recovery_fields.x_repo_check_disabled,
+        hg_sync_check_disabled: recovery_fields.hg_sync_check_disabled,
+        call_sign,
+    };
+    let maybe_config_store = args::maybe_init_config_store(fb, &ctx.logger(), &matches);
+    let configs = args::load_repo_configs(fb, &matches)?;
+    let mysql_options = args::parse_mysql_options(&matches);
+    let readonly_storage = args::parse_readonly_storage(&matches);
 
-            let maybe_large_repo_config = get_large_repo_config_if_pushredirected(
-                &ctx,
-                &repo,
-                &maybe_config_store,
-                &configs.repos,
-            )
+    let maybe_large_repo_config =
+        get_large_repo_config_if_pushredirected(&ctx, &repo, &maybe_config_store, &configs.repos)
             .await?;
-            let mut maybe_small_repo_back_sync_vars = None;
-            let mut movers = vec![movers::mover_factory(
-                HashMap::new(),
-                DefaultAction::PrependPrefix(dest_path_prefix),
-            )?];
+    let mut maybe_small_repo_back_sync_vars = None;
+    let mut movers = vec![movers::mover_factory(
+        HashMap::new(),
+        DefaultAction::PrependPrefix(dest_path_prefix),
+    )?];
 
-            if let Some(large_repo_config) = maybe_large_repo_config {
-                let large_repo_id = large_repo_config.repoid;
-                let large_repo = args::open_repo_with_repo_id(fb, &logger, large_repo_id, &matches)
-                    .compat()
-                    .await?;
-                let commit_sync_config = large_repo_config.commit_sync_config.clone().unwrap();
-                if commit_sync_config.small_repos.len() > 1 {
-                    return Err(format_err!(
-                        "Currently repo_import tool doesn't support backsyncing into multiple small repos for large repo {:?}, name: {}",
-                        large_repo_id,
-                        large_repo.name()
-                    ));
-                }
-                let mapping = args::open_source_sql::<SqlSyncedCommitMapping>(fb, &matches)
-                    .compat()
-                    .await?;
-                let syncers = create_commit_syncers(
-                    repo.clone(),
-                    large_repo.clone(),
-                    &commit_sync_config,
-                    mapping.clone(),
-                )?;
-                let target_repo_dbs = open_backsyncer_dbs(
-                    ctx.clone(),
-                    repo.clone(),
-                    repo_config.storage_config.metadata,
-                    mysql_options,
-                    readonly_storage,
+    if let Some(large_repo_config) = maybe_large_repo_config {
+        let large_repo_id = large_repo_config.repoid;
+        let large_repo = args::open_repo_with_repo_id(fb, &ctx.logger(), large_repo_id, &matches)
+            .compat()
+            .await?;
+        let commit_sync_config = large_repo_config.commit_sync_config.clone().unwrap();
+        if commit_sync_config.small_repos.len() > 1 {
+            return Err(format_err!(
+                "Currently repo_import tool doesn't support backsyncing into multiple small repos for large repo {:?}, name: {}",
+                large_repo_id,
+                large_repo.name()
+            ));
+        }
+        let mapping = args::open_source_sql::<SqlSyncedCommitMapping>(fb, &matches)
+            .compat()
+            .await?;
+        let syncers = create_commit_syncers(
+            repo.clone(),
+            large_repo.clone(),
+            &commit_sync_config,
+            mapping.clone(),
+        )?;
+        let target_repo_dbs = open_backsyncer_dbs(
+            ctx.clone(),
+            repo.clone(),
+            repo_config.storage_config.metadata,
+            mysql_options,
+            readonly_storage,
+        )
+        .await?;
+        maybe_small_repo_back_sync_vars = Some(SmallRepoBackSyncVars {
+            large_to_small_syncer: syncers.large_to_small.clone(),
+            target_repo_dbs,
+            small_repo_bookmark: repo_import_setting.importing_bookmark.clone(),
+            small_repo: repo.clone(),
+        });
+
+        movers.push(syncers.small_to_large.get_mover().clone());
+        repo_import_setting =
+            get_large_repo_setting(&ctx, &repo_import_setting, &syncers.small_to_large).await?;
+        repo = large_repo;
+        repo_config = large_repo_config;
+        let large_repo_call_sign = repo_config.phabricator_callsign.clone();
+        if !recovery_fields.phab_check_disabled && large_repo_call_sign.is_none() {
+            return Err(format_err!(
+                "Repo ({}) we push-redirect to doesn't have a callsign. \
+                         Make sure the callsign for the repo is set in configerator: \
+                         e.g CF/../source/scm/mononoke/repos/repos/hg.cinc",
+                repo.name()
+            ));
+        }
+        checker_flags = CheckerFlags {
+            call_sign: large_repo_call_sign,
+            ..checker_flags
+        };
+    }
+
+    let combined_mover: Mover = Arc::new(move |source_path: &MPath| {
+        let mut mutable_path = source_path.clone();
+        for mover in movers.clone() {
+            let maybe_path = mover(&mutable_path)?;
+            mutable_path = match maybe_path {
+                Some(moved_path) => moved_path,
+                None => return Ok(None),
+            };
+        }
+        Ok(Some(mutable_path))
+    });
+
+    let mutable_counters = args::open_sql::<SqlMutableCounters>(ctx.fb, &matches)
+        .compat()
+        .await?;
+
+    // Importing process starts here
+    if recovery_fields.import_stage == ImportStage::GitImport {
+        let prefs = GitimportPreferences::default();
+        let target = GitimportTarget::FullRepo;
+        info!(ctx.logger(), "Started importing git commits to Mononoke");
+        let import_map = import_tools::gitimport(&ctx, &repo, &path, target, prefs).await?;
+        info!(ctx.logger(), "Added commits to Mononoke");
+
+        let bonsai_values: Vec<(ChangesetId, BonsaiChangeset)> =
+            import_map.values().cloned().collect();
+        let gitimport_bcs: Vec<BonsaiChangeset> =
+            bonsai_values.iter().map(|(_, bcs)| bcs.clone()).collect();
+        let gitimport_bcs_ids: Vec<ChangesetId> =
+            bonsai_values.iter().map(|(id, _)| id.clone()).collect();
+
+        info!(ctx.logger(), "Saving gitimported bonsai changesets");
+        save_bonsai_changesets(gitimport_bcs.clone(), ctx.clone(), repo.clone())
+            .compat()
+            .await?;
+        info!(ctx.logger(), "Saved gitimported bonsai changesets");
+
+        recovery_fields.import_stage = ImportStage::RewritePaths;
+        recovery_fields.gitimport_bcs_ids = Some(gitimport_bcs_ids);
+        save_importing_state(&recovery_fields).await?;
+    }
+
+    if recovery_fields.import_stage == ImportStage::RewritePaths {
+        let gitimport_bcs_ids = recovery_fields
+            .gitimport_bcs_ids
+            .as_ref()
+            .ok_or_else(|| format_err!("gitimported changeset ids are not found"))?;
+        let shifted_bcs_ids =
+            rewrite_file_paths(&ctx, &repo, &combined_mover, &gitimport_bcs_ids).await?;
+        recovery_fields.import_stage = ImportStage::DeriveBonsais;
+        recovery_fields.shifted_bcs_ids = Some(shifted_bcs_ids);
+        save_importing_state(&recovery_fields).await?;
+    }
+
+    let shifted_bcs_ids = recovery_fields
+        .shifted_bcs_ids
+        .as_ref()
+        .ok_or_else(|| format_err!("Changeset ids after rewriting the file paths are not found"))?
+        .clone();
+
+    if recovery_fields.import_stage == ImportStage::DeriveBonsais {
+        let derive_changesets = derive_bonsais_single_repo(&ctx, &repo, &shifted_bcs_ids);
+
+        let backsync_and_derive_changesets = {
+            borrowed!(ctx, shifted_bcs_ids, maybe_small_repo_back_sync_vars);
+
+            async move {
+                let vars = match maybe_small_repo_back_sync_vars {
+                    Some(vars) => {
+                        info!(ctx.logger(), "Backsyncing changesets");
+                        vars
+                    }
+                    None => return Ok(()),
+                };
+
+                let small_repo = &vars.small_repo;
+
+                let synced_bcs_ids = back_sync_commits_to_small_repo(
+                    &ctx,
+                    &small_repo,
+                    &vars.large_to_small_syncer,
+                    &shifted_bcs_ids,
                 )
                 .await?;
-                maybe_small_repo_back_sync_vars = Some(SmallRepoBackSyncVars {
-                    large_to_small_syncer: syncers.large_to_small.clone(),
-                    target_repo_dbs,
-                    small_repo_bookmark: repo_import_setting.importing_bookmark.clone(),
-                    small_repo: repo.clone(),
-                });
 
-                movers.push(syncers.small_to_large.get_mover().clone());
-                repo_import_setting =
-                    get_large_repo_setting(&ctx, &repo_import_setting, &syncers.small_to_large)
-                        .await?;
-                repo = large_repo;
-                repo_config = large_repo_config;
+                derive_bonsais_single_repo(&ctx, &small_repo, &synced_bcs_ids).await?;
+                Ok(())
             }
+        };
 
-            let combined_mover: Mover = Arc::new(move |source_path: &MPath| {
-                let mut mutable_path = source_path.clone();
-                for mover in movers.clone() {
-                    let maybe_path = mover(&mutable_path)?;
-                    mutable_path = match maybe_path {
-                        Some(moved_path) => moved_path,
-                        None => return Ok(None),
-                    };
-                }
-                Ok(Some(mutable_path))
-            });
+        info!(ctx.logger(), "Start deriving data types");
+        future::try_join(derive_changesets, backsync_and_derive_changesets).await?;
+        info!(ctx.logger(), "Finished deriving data types");
 
-            let mutable_counters = args::open_sql::<SqlMutableCounters>(ctx.fb, &matches)
-                .compat()
-                .await?;
+        recovery_fields.import_stage = ImportStage::MoveBookmark;
+        save_importing_state(&recovery_fields).await?;
+    }
 
-            // Importing process starts here
-            let prefs = GitimportPreferences::default();
-            let target = GitimportTarget::FullRepo;
-            info!(ctx.logger(), "Started importing git commits to Mononoke");
-            let import_map = import_tools::gitimport(&ctx, &repo, &path, target, prefs).await?;
-            info!(ctx.logger(), "Added commits to Mononoke");
-            let mut bonsai_values: Vec<(ChangesetId, BonsaiChangeset)> =
-                import_map.values().cloned().collect();
+    if recovery_fields.import_stage == ImportStage::MoveBookmark {
+        move_bookmark(
+            &ctx,
+            &repo,
+            &shifted_bcs_ids,
+            &repo_import_setting.importing_bookmark,
+            &checker_flags,
+            &mutable_counters,
+            &maybe_small_repo_back_sync_vars,
+            recovery_fields,
+        )
+        .await?;
 
-            let shifted_bcs_ids =
-                rewrite_file_paths(&ctx, &repo, &combined_mover, &mut bonsai_values).await?;
+        recovery_fields.import_stage = ImportStage::MergeCommits;
+        save_importing_state(&recovery_fields).await?;
+    }
 
-            let derive_changesets = derive_bonsais_single_repo(&ctx, &repo, &shifted_bcs_ids);
+    if recovery_fields.import_stage == ImportStage::MergeCommits {
+        let imported_cs_id = match shifted_bcs_ids.last() {
+            Some(bcs_id) => bcs_id,
+            None => return Err(format_err!("There is no bonsai changeset present")),
+        };
 
-            let backsync_and_derive_changesets = {
-                borrowed!(ctx, shifted_bcs_ids);
-
-                async move {
-                    let vars = match maybe_small_repo_back_sync_vars {
-                        Some(vars) => {
-                            info!(ctx.logger(), "Backsyncing changesets");
-                            vars
-                        }
-                        None => return Ok(None),
-                    };
-
-                    let small_repo = &vars.small_repo;
-
-                    let synced_bcs_ids = back_sync_commits_to_small_repo(
-                        &ctx,
-                        &small_repo,
-                        &vars.large_to_small_syncer,
-                        &shifted_bcs_ids,
-                    )
-                    .await?;
-
-                    derive_bonsais_single_repo(&ctx, &small_repo, &synced_bcs_ids).await?;
-                    Ok(Some(vars))
-                }
-            };
-
-            info!(ctx.logger(), "Start deriving data types");
-            let ((), maybe_small_repo_back_sync_vars) =
-                future::try_join(derive_changesets, backsync_and_derive_changesets).await?;
-            info!(ctx.logger(), "Finished deriving data types");
-
-            move_bookmark(
-                &ctx,
-                &repo,
-                &shifted_bcs_ids,
-                batch_size,
-                &repo_import_setting.importing_bookmark,
-                &checker_flags,
-                sleep_time,
-                &mutable_counters,
-                &maybe_small_repo_back_sync_vars,
-            )
-            .await?;
-
-            let imported_cs_id = match shifted_bcs_ids.last() {
-                Some(bcs_id) => bcs_id,
-                None => return Err(format_err!("There is no bonsai changeset present")),
-            };
-
-            let merged_cs_id = merge_imported_commit(
+        let maybe_merged_cs_id = Some(
+            merge_imported_commit(
                 &ctx,
                 &repo,
                 imported_cs_id.clone(),
                 &repo_import_setting.dest_bookmark,
                 changeset_args,
             )
-            .await?;
-            push_merge_commit(
-                &ctx,
-                &repo,
-                merged_cs_id,
-                &repo_import_setting.dest_bookmark,
-                &repo_config,
-            )
-            .await?;
-            Ok(())
+            .await?,
+        );
+
+        recovery_fields.import_stage = ImportStage::PushCommit;
+        recovery_fields.merged_cs_id = maybe_merged_cs_id;
+        save_importing_state(&recovery_fields).await?;
+    }
+
+
+    let merged_cs_id = recovery_fields
+        .merged_cs_id
+        .ok_or_else(|| format_err!("Changeset id for the merged commit is not found"))?;
+    push_merge_commit(
+        &ctx,
+        &repo,
+        merged_cs_id,
+        &repo_import_setting.dest_bookmark,
+        &repo_config,
+    )
+    .await?;
+    Ok(())
+}
+
+#[fbinit::main]
+fn main(fb: FacebookInit) -> Result<(), Error> {
+    let app = setup_app();
+    let matches = app.get_matches();
+
+    args::init_cachelib(fb, &matches, None);
+    let logger = args::init_logging(fb, &matches);
+    let ctx = CoreContext::new_with_logger(fb, logger.clone());
+    let repo = args::create_repo(fb, &logger, &matches);
+
+    block_execute(
+        async {
+            let repo = repo.compat().await?;
+            let mut recovery_fields = match matches.subcommand() {
+                (RECOVER_PROCESS, Some(sub_arg_matches)) => {
+                    let saved_recovery_file_paths =
+                        sub_arg_matches.value_of(SAVED_RECOVERY_FILE_PATH).unwrap();
+                    fetch_recovery_state(&ctx, &saved_recovery_file_paths).await?
+                }
+                (IMPORT, Some(sub_arg_matches)) => setup_import_args(&sub_arg_matches)?,
+                _ => return Err(format_err!("Invalid subcommand")),
+            };
+
+            match repo_import(ctx, repo, &mut recovery_fields, fb, &matches).await {
+                Ok(()) => Ok(()),
+                Err(e) => {
+                    save_importing_state(&recovery_fields).await?;
+                    Err(e)
+                }
+            }
         },
         fb,
         "repo_import",
