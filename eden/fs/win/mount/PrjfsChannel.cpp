@@ -181,21 +181,36 @@ HRESULT queryFileName(const PRJ_CALLBACK_DATA* callbackData) noexcept {
   BAIL_ON_RECURSIVE_CALL(callbackData);
 
   try {
+    auto channel = getChannel(callbackData);
+    auto dispatcher = channel->getDispatcher();
+    auto context =
+        std::make_unique<PrjfsRequestContext>(channel, *callbackData);
+
     auto path = RelativePath(callbackData->FilePathName);
-    return getChannel(callbackData)
-        ->getDispatcher()
-        ->access(std::move(path))
-        .thenValue([](bool present) {
-          if (present) {
-            return S_OK;
-          } else {
-            return HRESULT(ERROR_FILE_NOT_FOUND);
-          }
-        })
-        .thenError(
-            folly::tag_t<std::exception>{},
-            [](const std::exception& ex) { return exceptionToHResult(ex); })
-        .get();
+
+    context
+        ->catchErrors(folly::makeFutureWith([context = context.get(),
+                                             dispatcher = dispatcher,
+                                             path = std::move(path)] {
+          auto requestWatch =
+              std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(
+                  nullptr);
+          auto histogram = &ChannelThreadStats::access;
+          context->startRequest(
+              dispatcher->getStats(), histogram, requestWatch);
+
+          return dispatcher->access(std::move(path), *context)
+              .thenValue([context = context](bool present) {
+                if (present) {
+                  context->sendSuccess();
+                } else {
+                  context->sendError(HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND));
+                }
+              });
+        }))
+        .ensure([context = std::move(context)] {});
+
+    return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
   } catch (const std::exception& ex) {
     return exceptionToHResult(ex);
   }

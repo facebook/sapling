@@ -56,7 +56,7 @@ class EdenDispatcher {
       RelativePath path,
       ObjectFetchContext& context);
 
-  folly::Future<bool> access(RelativePath path);
+  folly::Future<bool> access(RelativePath path, ObjectFetchContext& context);
 
   HRESULT
   getFileData(

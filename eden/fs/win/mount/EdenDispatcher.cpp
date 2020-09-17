@@ -211,7 +211,9 @@ folly::Future<std::optional<InodeMetadata>> EdenDispatcher::lookup(
           });
 }
 
-folly::Future<bool> EdenDispatcher::access(RelativePath path) {
+folly::Future<bool> EdenDispatcher::access(
+    RelativePath path,
+    ObjectFetchContext& context) {
   FB_LOGF(mount_->getStraceLogger(), DBG7, "access({})", path);
 
   return mount_->getInode(path)
