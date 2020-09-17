@@ -63,7 +63,7 @@ def parse_args():
 
 def prepare_manifest_deps(install_dir, build_dir, repo_root):
     exec(
-        "global OSS_DEPS; global MONONOKE_BINS; global EDENSCM_BINS; "
+        "global OSS_DEPS; global MONONOKE_BINS; global EDENSCM_BINS; global EDENSCMLIBEDENAPITOOLS_BINS; "
         + open(
             join(repo_root, "eden/mononoke/tests/integration/manifest_deps"), "r"
         ).read()
@@ -79,6 +79,8 @@ def prepare_manifest_deps(install_dir, build_dir, repo_root):
         MANIFEST_DEPS[k] = join(install_dir, "mononoke/bin", v)
     for k, v in EDENSCM_BINS.items():  # noqa: F821
         MANIFEST_DEPS[k] = join(install_dir, "eden_scm/bin", v)
+    for k, v in EDENSCMLIBEDENAPITOOLS_BINS.items():  # noqa: F821
+        MANIFEST_DEPS[k] = join(install_dir, "eden_scm_lib_edenapi_tools/bin", v)
 
     os.makedirs(build_dir, exist_ok=True)
     with open(join(build_dir, "manifest.json"), "w") as f:
@@ -120,12 +122,6 @@ def get_test_groups(repo_root):
             "test-walker-error-as-data.t",
         },
         TestGroup.BROKEN: {
-            "test-edenapi-server-commit-location-to-hash.t",  # Missing eden/scm's commands
-            "test-edenapi-server-commit-revlog-data.t",  # Missing eden/scm's commands
-            "test-edenapi-server-complete-trees.t",  # Missing eden/scm's commands
-            "test-edenapi-server-files.t",  # Missing eden/scm's commands
-            "test-edenapi-server-history.t",  # Missing eden/scm's commands
-            "test-edenapi-server-trees.t",  # Missing eden/scm's commands
             "test-fastreplay-inline-args.t",  # Returns different data in OSS
             "test-gitimport.t",  # Issue with hggit extension
             "test-hook-tailer.t",  # Issue with hggit extension

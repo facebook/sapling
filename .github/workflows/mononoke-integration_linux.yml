@@ -35,7 +35,7 @@ jobs:
         python-version: '2.7'
     - name: Install Apt-get dependencies
       run: |
-        sudo apt-get install nmap
+        sudo apt-get install nmap tree
     - name: Install system deps
       run: sudo python3 build/fbcode_builder/getdeps.py --allow-system-packages install-system-deps --recursive eden_scm
     - name: Build eden_scm dependencies
@@ -59,6 +59,20 @@ jobs:
     - name: Clean up eden_scm build
       run: |
         rm -rf /tmp/build/build/eden_scm/*
+        df -h
+    - name: Build eden_scm_lib_edenapi_tools
+      run: >-
+        python3 build/fbcode_builder/getdeps.py build
+        --allow-system-packages
+        --scratch-path /tmp/build
+        --no-deps
+        --src-dir=.
+        eden_scm_lib_edenapi_tools
+    - name: Check space before cleanup
+      run: df -h
+    - name: Clean up eden_scm_lib_edenapi_tools build
+      run: |
+        rm -rf /tmp/build/build/eden_scm_lib_edenapi_tools/*
         df -h
     - name: Build mononoke dependencies
       run: >-
