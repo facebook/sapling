@@ -251,43 +251,34 @@ HRESULT notification(
       auto dispatcher = channel->getDispatcher();
       auto context =
           std::make_unique<PrjfsRequestContext>(channel, *callbackData);
-      auto requestWatch =
-          std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(nullptr);
+      auto histogram = it->second.histogram;
       auto handler = it->second.handler;
 
       auto relPath = RelativePath(callbackData->FilePathName);
       auto destPath = RelativePath(destinationFileName);
 
-      context->startRequest(
-          dispatcher->getStats(), it->second.histogram, requestWatch);
-      auto fut =
-          (dispatcher->*handler)(relPath, destPath, isDirectory, *context);
+      context
+          ->catchErrors(folly::makeFutureWith([context = context.get(),
+                                               handler = handler,
+                                               histogram = histogram,
+                                               dispatcher = dispatcher,
+                                               relPath = std::move(relPath),
+                                               destPath = std::move(destPath),
+                                               isDirectory] {
+            auto requestWatch =
+                std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(
+                    nullptr);
+            context->startRequest(
+                dispatcher->getStats(), histogram, requestWatch);
 
-      std::move(fut).thenTryInline(
-          [context = std::move(context),
-           channel = channel](folly::Try<folly::Unit>&& try_) {
-            SCOPE_EXIT {
-              context->finishRequest();
-            };
-
-            HRESULT result = S_OK;
-            if (try_.hasException()) {
-              auto* err = try_.tryGetExceptionObject<std::exception>();
-              DCHECK(err);
-              result = exceptionToHResult(*err);
-            }
-
-            PRJ_COMPLETE_COMMAND_EXTENDED_PARAMETERS extra{};
-            extra.CommandType = PRJ_COMPLETE_COMMAND_TYPE_NOTIFICATION;
-            result = PrjCompleteCommand(
-                channel->getMountChannelContext(),
-                context->getCommandId(),
-                result,
-                &extra);
-            if (FAILED(result)) {
-              XLOG(ERR) << "Couldn't complete command";
-            }
-          });
+            return (dispatcher->*handler)(
+                       relPath, destPath, isDirectory, *context)
+                .thenValue([context = context](auto&&) {
+                  context->sendNotificationSuccess();
+                });
+          }))
+          // Make sure that the context is alive for the duration of the future.
+          .ensure([context = std::move(context)] {});
 
       return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
     }
@@ -448,6 +439,30 @@ void PrjfsChannel::flushNegativePathCache() {
 
     XLOGF(DBG6, "Flushed {} entries", numFlushed);
   }
+}
+
+namespace {
+void sendReply(
+    PRJ_NAMESPACE_VIRTUALIZATION_CONTEXT context,
+    int32_t commandId,
+    HRESULT result,
+    PRJ_COMPLETE_COMMAND_EXTENDED_PARAMETERS* FOLLY_NULLABLE extra) {
+  result = PrjCompleteCommand(context, commandId, result, extra);
+  if (FAILED(result)) {
+    XLOG(ERR) << "Couldn't complete command: " << commandId << ": "
+              << win32ErrorToString(result);
+  }
+}
+} // namespace
+
+void PrjfsChannel::sendSuccess(
+    int32_t commandId,
+    PRJ_COMPLETE_COMMAND_EXTENDED_PARAMETERS* FOLLY_NULLABLE extra) {
+  sendReply(getMountChannelContext(), commandId, S_OK, extra);
+}
+
+void PrjfsChannel::sendError(int32_t commandId, HRESULT result) {
+  sendReply(getMountChannelContext(), commandId, result, nullptr);
 }
 
 } // namespace eden

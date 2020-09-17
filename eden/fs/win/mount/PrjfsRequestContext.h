@@ -28,11 +28,35 @@ class PrjfsRequestContext : public RequestContext {
         channel_(channel),
         commandId_(prjfsData.CommandId) {}
 
-  int32_t getCommandId() const {
-    return commandId_;
+  folly::Future<folly::Unit> catchErrors(folly::Future<folly::Unit>&& fut) {
+    return std::move(fut).thenTryInline([this](folly::Try<folly::Unit>&& try_) {
+      SCOPE_EXIT {
+        finishRequest();
+      };
+
+      if (try_.hasException()) {
+        auto* err = try_.tryGetExceptionObject<std::exception>();
+        DCHECK(err);
+        sendError(exceptionToHResult(*err));
+      }
+    });
+  }
+
+  void sendSuccess() const {
+    return channel_->sendSuccess(commandId_, nullptr);
+  }
+
+  void sendNotificationSuccess() const {
+    PRJ_COMPLETE_COMMAND_EXTENDED_PARAMETERS extra{};
+    extra.CommandType = PRJ_COMPLETE_COMMAND_TYPE_NOTIFICATION;
+    return channel_->sendSuccess(commandId_, &extra);
   }
 
  private:
+  void sendError(HRESULT result) const {
+    return channel_->sendError(commandId_, result);
+  }
+
   PrjfsChannel* channel_;
   int32_t commandId_;
 };

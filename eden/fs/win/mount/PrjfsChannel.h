@@ -60,6 +60,12 @@ class PrjfsChannel : public FsChannel {
     return mountChannel_;
   }
 
+  void sendSuccess(
+      int32_t commandId,
+      PRJ_COMPLETE_COMMAND_EXTENDED_PARAMETERS* FOLLY_NULLABLE extra);
+
+  void sendError(int32_t commandId, HRESULT error);
+
  private:
   //
   // Channel to talk to projectedFS.
