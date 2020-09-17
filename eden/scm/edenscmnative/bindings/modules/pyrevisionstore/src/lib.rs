@@ -875,7 +875,8 @@ py_class!(pub class contentstore |py| {
         config: config,
         remote: pyremotestore,
         memcache: Option<memcachestore>,
-        edenapi: Option<edenapifilestore> = None
+        edenapi: Option<edenapifilestore> = None,
+        suffix: Option<String> = None
     ) -> PyResult<contentstore> {
         let remotestore = remote.extract_inner(py);
         let config = config.get_cfg(py);
@@ -896,6 +897,12 @@ py_class!(pub class contentstore |py| {
 
         builder = if let Some(memcache) = memcache {
             builder.memcachestore(memcache.extract_inner(py))
+        } else {
+            builder
+        };
+
+        builder = if let Some(suffix) = suffix {
+            builder.suffix(suffix)
         } else {
             builder
         };
@@ -986,7 +993,8 @@ py_class!(class metadatastore |py| {
         config: config,
         remote: pyremotestore,
         memcache: Option<memcachestore>,
-        edenapi: Option<edenapifilestore> = None
+        edenapi: Option<edenapifilestore> = None,
+        suffix: Option<String> = None
     ) -> PyResult<metadatastore> {
         let remotestore = remote.extract_inner(py);
         let config = config.get_cfg(py);
@@ -1007,6 +1015,12 @@ py_class!(class metadatastore |py| {
 
         builder = if let Some(memcache) = memcache {
             builder.memcachestore(memcache.extract_inner(py))
+        } else {
+            builder
+        };
+
+        builder = if let Some(suffix) = suffix {
+            builder.suffix(suffix)
         } else {
             builder
         };

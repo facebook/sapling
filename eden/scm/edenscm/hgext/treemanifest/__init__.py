@@ -257,6 +257,12 @@ def treeenabled(ui):
     )
 
 
+def useruststore(ui):
+    return ui.configbool("treemanifest", "useruststore") and not ui.configbool(
+        "treemanifest", "server"
+    )
+
+
 def hgupdate(orig, repo, node, quietempty=False, updatecheck=None):
     oldfallbackpath = getattr(repo, "fallbackpath", None)
     if util.safehasattr(repo, "stickypushpath"):
@@ -714,6 +720,10 @@ def setuptreestores(repo, mfl):
         mfl.localhistorystores = []
         return
 
+    if useruststore(ui):
+        mfl.makeruststore()
+        return
+
     if not util.safehasattr(repo, "name"):
         repo.name = ui.config("remotefilelog", "reponame", "unknown")
     packpath = shallowutil.getcachepackpath(repo, PACK_CATEGORY)
@@ -835,9 +845,17 @@ class basetreemanifestlog(object):
 
     def _getmutablelocalpacks(self):
         """Returns a tuple containing a data pack and a history pack."""
-        return self._mutablelocalpacks.getmutablepack()
+        if useruststore(self._repo.ui):
+            return (self.datastore, self.historystore)
+        else:
+            return self._mutablelocalpacks.getmutablepack()
 
     def getmutablesharedpacks(self):
+        if useruststore(self._repo.ui):
+            raise error.ProgrammingError(
+                "getmutablesharedpacks not supported when treemanifest.useruststore is True"
+            )
+
         return self._mutablesharedpacks.getmutablepack()
 
     def _addtreeentry(
@@ -927,6 +945,9 @@ class basetreemanifestlog(object):
 
         self.datastore.markforrefresh()
         self.historystore.markforrefresh()
+        if useruststore(self.ui):
+            self.datastore.flush()
+            self.historystore.flush()
 
     def commitpending(self):
         self._mutablelocalpacks.commit()
@@ -965,6 +986,30 @@ class basetreemanifestlog(object):
         m = treemanifestctx(self, dir, node)
         self._treemanifestcache[node] = m
         return m
+
+    def makeruststore(self):
+        remotestore = revisionstore.pyremotestore(remotetreestore(self._repo))
+
+        mask = os.umask(0o002)
+        try:
+            self.datastore = revisionstore.contentstore(
+                self._repo.svfs.vfs.base,
+                self.ui._rcfg._rcfg,
+                remotestore,
+                None,
+                None,
+                "manifests",
+            )
+            self.historystore = revisionstore.metadatastore(
+                self._repo.svfs.vfs.base,
+                self.ui._rcfg._rcfg,
+                remotestore,
+                None,
+                None,
+                "manifests",
+            )
+        finally:
+            os.umask(mask)
 
 
 class treemanifestlog(basetreemanifestlog, manifest.manifestlog):
