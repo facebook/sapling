@@ -117,7 +117,7 @@ struct PackStoreInner<T> {
     corruption_policy: CorruptionPolicy,
     extstored_policy: ExtStoredPolicy,
     scan_frequency: Duration,
-    last_scanned: RefCell<Instant>,
+    last_scanned: RefCell<Option<Instant>>,
     packs: RefCell<LruStore<T>>,
     max_bytes: Option<u64>,
     current_bytes: AtomicU64,
@@ -188,9 +188,6 @@ impl PackStoreOptions {
     }
 
     fn build<T>(self) -> PackStore<T> {
-        let now = Instant::now();
-        let force_rescan = now - self.scan_frequency;
-
         PackStore {
             inner: Mutex::new(PackStoreInner {
                 pack_dir: self.pack_dir,
@@ -198,7 +195,7 @@ impl PackStoreOptions {
                 extension: self.extension,
                 corruption_policy: self.corruption_policy,
                 extstored_policy: self.extstored_policy,
-                last_scanned: RefCell::new(force_rescan),
+                last_scanned: RefCell::new(None),
                 packs: RefCell::new(LruStore::new()),
                 max_bytes: self.max_bytes,
                 current_bytes: AtomicU64::new(0),
@@ -212,9 +209,7 @@ impl<T: LocalStore + Repackable + StoreFromPath> PackStore<T> {
     /// out-of-process created packfiles.
     pub fn force_rescan(&self) {
         let packstore = self.inner.lock();
-        packstore
-            .last_scanned
-            .replace(Instant::now() - packstore.scan_frequency);
+        packstore.last_scanned.replace(None);
     }
 
     /// Add a packfile to this store.
@@ -365,9 +360,13 @@ impl<T: LocalStore + Repackable + StoreFromPath> PackStoreInner<T> {
     fn try_scan(&self) -> Result<bool> {
         let now = Instant::now();
 
-        if now.duration_since(*self.last_scanned.borrow()) >= self.scan_frequency {
+        let needs_scan = match *self.last_scanned.borrow() {
+            Some(last_scanned) => now.duration_since(last_scanned) >= self.scan_frequency,
+            None => true,
+        };
+        if needs_scan {
             self.rescan()?;
-            self.last_scanned.replace(now);
+            self.last_scanned.replace(Some(now));
             Ok(true)
         } else {
             Ok(false)
