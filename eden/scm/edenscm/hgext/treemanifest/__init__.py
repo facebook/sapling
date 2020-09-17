@@ -524,13 +524,19 @@ def wraprepo(repo):
                     (("", n) for n in mfnodes), "tree nodes missing on server"
                 )
 
-            # If we have no base nodes, scan the changelog looking for a
-            # semi-recent manifest node to treat as the base.
-            if not basemfnodes:
-                changeloglen = len(self.changelog) - 1
-                basemfnodes = _findrecenttree(self, changeloglen, mfnodes)
+            # TODO: handle depth
+            if useruststore(self.ui):
+                self.manifestlog.datastore.prefetch(
+                    list(("", node) for node in mfnodes)
+                )
+            else:
+                # If we have no base nodes, scan the changelog looking for a
+                # semi-recent manifest node to treat as the base.
+                if not basemfnodes:
+                    changeloglen = len(self.changelog) - 1
+                    basemfnodes = _findrecenttree(self, changeloglen, mfnodes)
 
-            self._prefetchtrees("", mfnodes, basemfnodes, [], depth)
+                self._prefetchtrees("", mfnodes, basemfnodes, [], depth)
 
         @perftrace.tracefunc("Fetch Trees")
         def _prefetchtrees(
@@ -2588,6 +2594,14 @@ class generatingdatastore(pycompat.ABC):
 
 
 class remotetreestore(generatingdatastore):
+    def __init__(self, repo):
+        super(remotetreestore, self).__init__(repo)
+
+        if useruststore(self._repo.ui):
+            self.prefetch = self._rustprefetch
+        else:
+            self.prefetch = self._pythonprefetch
+
     def _generatetrees(self, name, node):
         self._prefetchtrees([(name, node)])
 
@@ -2645,13 +2659,15 @@ class remotetreestore(generatingdatastore):
             if linkrev:
                 msg += _(", found via %s") % short(self._repo[linkrev].node())
             self._repo.ui.warn(msg + "\n")
-        self._repo._prefetchtrees(name, [node], basemfnodes, [])
-        self._shareddata.markforrefresh()
-        self._sharedhistory.markforrefresh()
+        self._repo._prefetchtrees(name, nodes, basemfnodes, [])
 
-    def prefetch(self, keys):
+        mfl = self._repo.manifestlog
+        mfl.datastore.markforrefresh()
+        mfl.historystore.markforrefresh()
+
+    def _pythonprefetch(self, keys):
         # Filter out keys for nodes already present locally.
-        keys = self._shareddata.getmissing(keys)
+        keys = self._repo.manifestlog.datastore.getmissing(keys)
         if not keys:
             return
 
@@ -2663,6 +2679,42 @@ class remotetreestore(generatingdatastore):
         # capability, so the prefetch is not guaranteed to succeed.
         if self._repo.ui.configbool("treemanifest", "ondemandfetch"):
             self._repo.getdesignatednodes(keys)
+
+    def _rustprefetch(self, *args):
+        # len() == 3 means it's a call from the Rust store layer, with the
+        # mutable stores. len() == 1 means it's a call from Python, which
+        # we'll then route to the Rust store layer, which will then come
+        # back to here.
+        if len(args) == 3:
+            # This is a temporary hack. The Rust python bindings assume the
+            # prefetch function has certain args and that it has complete
+            # ownership of the mutable stores (and therefore passes mutable
+            # stores for you to use). The python code takes a different pattern,
+            # assuming the mutable packs are owned somewhere else and jumps
+            # through several layers:
+            #   remotetreestore._generatedtrees -> repo._prefetchtrees ->
+            #   _gettrees -> bundle2 treeparthandler2 (gets the mutable packs here) ->
+            #   wirepack (calls add on the packs).
+            # Once we're fully migrated to the Rust store we can remove the
+            # local notions of getmutablesharedpacks and maybe simplify this.
+            datastore, historystore, keys = args
+            mfl = self._repo.manifestlog
+            oldfunc = mfl.getmutablesharedpacks
+            try:
+
+                def getstores():
+                    return datastore, historystore
+
+                mfl.getmutablesharedpacks = getstores
+                if self._repo.ui.configbool("treemanifest", "ondemandfetch"):
+                    self._repo.getdesignatednodes(keys)
+                else:
+                    self._prefetchtrees(keys)
+            finally:
+                mfl.getmutablesharedpacks = oldfunc
+        else:
+            keys = args[0]
+            self.datastore.prefetch(keys)
 
 
 class ondemandtreedatastore(generatingdatastore):
