@@ -652,13 +652,13 @@ async fn sync_remap_failure(fb: FacebookInit) {
         small_repo: linear.clone(),
         large_repo: megarepo.clone(),
         mover: Arc::new(move |path: &MPath| {
-            match path.basename().to_bytes().as_ref() {
+            match path.basename().as_ref() {
                 b"1" => bail!("This only fails if the file is named '1'"),
                 _ => Ok(path.remove_prefix_component(&linear_path_in_megarepo)),
             }
         }),
         reverse_mover: Arc::new(move |path: &MPath| {
-            match path.basename().to_bytes().as_ref() {
+            match path.basename().as_ref() {
                 b"1" => bail!("This only fails if the file is named '1'"),
                 _ => Ok(Some(mpath("linear").join(path))),
             }

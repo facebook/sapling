@@ -15,12 +15,12 @@ use std::iter::{once, FromIterator, Once};
 use std::slice::Iter;
 
 use anyhow::{bail, Context as _, Error, Result};
-use bytes::Bytes;
 use lazy_static::lazy_static;
 use quickcheck::{Arbitrary, Gen};
 use rand::{seq::SliceRandom, Rng};
 use regex::Regex;
 use serde_derive::{Deserialize, Serialize};
+use smallvec::SmallVec;
 
 use crate::bonsai_changeset::BonsaiChangeset;
 use crate::errors::ErrorKind;
@@ -188,14 +188,19 @@ impl<'a> From<&'a RepoPath> for RepoPath {
 /// Mercurial treats pathnames as sequences of bytes, but the manifest format
 /// assumes they cannot contain zero bytes. The bytes are not necessarily utf-8
 /// and so cannot be converted into a string (or - strictly speaking - be displayed).
+///
+/// Internally using SmallVec as many path elements are directory names and thus
+/// quite short, avoiding need for heap alloc. Its stack storage size is set to 24
+/// as with the union feature the smallvec is 32 bytes on stack which is same as previous
+/// Bytes member stack sise (Bytes will usually have heap as well of course)
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Serialize, Deserialize)]
-pub struct MPathElement(Bytes);
+pub struct MPathElement(SmallVec<[u8; 24]>);
 
 impl MPathElement {
     #[inline]
     pub fn new(element: Vec<u8>) -> Result<MPathElement> {
         Self::verify(&element)?;
-        Ok(MPathElement(Bytes::from(element)))
+        Ok(MPathElement(SmallVec::from(element)))
     }
 
     #[inline]
@@ -203,7 +208,7 @@ impl MPathElement {
         Self::verify(&element.0).with_context(|| {
             ErrorKind::InvalidThrift("MPathElement".into(), "invalid path element".into())
         })?;
-        Ok(MPathElement(Bytes::from(element.0)))
+        Ok(MPathElement(SmallVec::from(element.0)))
     }
 
     fn verify(p: &[u8]) -> Result<()> {
@@ -264,13 +269,8 @@ impl MPathElement {
     }
 
     #[inline]
-    pub fn to_bytes(&self) -> Bytes {
-        self.0.clone()
-    }
-
-    #[inline]
     pub fn into_thrift(self) -> thrift::MPathElement {
-        thrift::MPathElement(Vec::from(self.as_ref()))
+        thrift::MPathElement(self.0.into_vec())
     }
 }
 
@@ -328,7 +328,7 @@ impl MPath {
                 // are split on '/' bytes and non-empty, so they're valid by construction. We do
                 // however need to check the length of the individual components:
                 MPathElement::check_len(e)?;
-                Result::<_, Error>::Ok(MPathElement(Bytes::copy_from_slice(e)))
+                Result::<_, Error>::Ok(MPathElement(SmallVec::from_slice(e)))
             })
             .collect::<Result<_, _>>()?;
         if elements.is_empty() {
@@ -811,7 +811,7 @@ impl Arbitrary for MPathElement {
             let c = COMPONENT_CHARS[..].choose(g).unwrap();
             element.push(*c);
         }
-        MPathElement(Bytes::from(element))
+        MPathElement(SmallVec::from(element))
     }
 }
 
@@ -1173,8 +1173,8 @@ mod test {
                 return TestResult::discard();
             }
 
-            let joined = elements.iter().map(|elem| elem.0.clone())
-                .collect::<Vec<Bytes>>()
+            let joined = elements.iter().map(|elem| elem.as_ref().to_vec())
+                .collect::<Vec<Vec<u8>>>()
                 .join(&b'/');
             let expected_len = joined.len();
             let path = MPath::new(joined).unwrap();
