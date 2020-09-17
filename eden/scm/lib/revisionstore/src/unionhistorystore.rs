@@ -29,6 +29,13 @@ impl<T: HgIdHistoryStore> HgIdHistoryStore for UnionHgIdHistoryStore<T> {
 
         Ok(None)
     }
+
+    fn refresh(&self) -> Result<()> {
+        for store in self {
+            store.refresh()?;
+        }
+        Ok(())
+    }
 }
 
 impl<T: RemoteHistoryStore> RemoteHistoryStore for UnionHgIdHistoryStore<T> {
@@ -72,6 +79,10 @@ mod tests {
         fn get_node_info(&self, _key: &Key) -> Result<Option<NodeInfo>> {
             Ok(None)
         }
+
+        fn refresh(&self) -> Result<()> {
+            Ok(())
+        }
     }
 
     impl LocalStore for EmptyHgIdHistoryStore {
@@ -83,6 +94,10 @@ mod tests {
     impl HgIdHistoryStore for BadHgIdHistoryStore {
         fn get_node_info(&self, _key: &Key) -> Result<Option<NodeInfo>> {
             Err(BadHgIdHistoryStoreError.into())
+        }
+
+        fn refresh(&self) -> Result<()> {
+            Ok(())
         }
     }
 

@@ -313,6 +313,10 @@ impl HgIdDataStore for MutableDataPack {
             Some((_, metadata)) => Ok(StoreResult::Found(metadata)),
         }
     }
+
+    fn refresh(&self) -> Result<()> {
+        Ok(())
+    }
 }
 
 impl LocalStore for MutableDataPack {

@@ -7,8 +7,8 @@
 
 use anyhow::Result;
 use cpython::{
-    exc, FromPyObject, ObjectProtocol, PyBytes, PyDict, PyList, PyObject, Python, PythonObject,
-    PythonObjectWithTypeObject,
+    exc, FromPyObject, NoArgs, ObjectProtocol, PyBytes, PyDict, PyList, PyObject, Python,
+    PythonObject, PythonObjectWithTypeObject,
 };
 
 use cpython_ext::{PyErr, PyPathBuf};
@@ -84,6 +84,18 @@ impl HgIdDataStore for PythonHgIdDataStore {
         to_metadata(py, &py_dict)
             .map_err(|e| PyErr::from(e).into())
             .map(StoreResult::Found)
+    }
+
+    fn refresh(&self) -> Result<()> {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+        match self
+            .py_store
+            .call_method(py, "markforrefresh", NoArgs, None)
+        {
+            Ok(_) => Ok(()),
+            Err(py_err) => Err(PyErr::from(py_err).into()),
+        }
     }
 }
 

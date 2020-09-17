@@ -7,7 +7,7 @@
 
 use anyhow::Result;
 use cpython::{
-    exc, FromPyObject, ObjectProtocol, PyBytes, PyClone, PyList, PyObject, PyTuple, Python,
+    exc, FromPyObject, NoArgs, ObjectProtocol, PyBytes, PyDict, PyList, PyObject, Python,
     PythonObject, PythonObjectWithTypeObject,
 };
 
@@ -62,6 +62,18 @@ impl HgIdHistoryStore for PythonHgIdHistoryStore {
             to_node_info(py, &py_name, &py_p1, &py_p2, &py_linknode, py_copyfrom)
                 .map_err(|e| PyErr::from(e))?,
         ))
+    }
+
+    fn refresh(&self) -> Result<()> {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+        match self
+            .py_store
+            .call_method(py, "markforrefresh", NoArgs, None)
+        {
+            Ok(_) => Ok(()),
+            Err(py_err) => Err(PyErr::from(py_err).into()),
+        }
     }
 }
 

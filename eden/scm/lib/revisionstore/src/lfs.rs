@@ -653,6 +653,10 @@ impl HgIdDataStore for LfsStore {
             Ok(StoreResult::NotFound(key))
         }
     }
+
+    fn refresh(&self) -> Result<()> {
+        Ok(())
+    }
 }
 
 impl HgIdMutableDeltaStore for LfsStore {
@@ -744,6 +748,10 @@ impl HgIdDataStore for LfsMultiplexer {
 
     fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
         self.union.get_meta(key)
+    }
+
+    fn refresh(&self) -> Result<()> {
+        self.union.refresh()
     }
 }
 
@@ -1507,6 +1515,10 @@ impl HgIdDataStore for LfsRemoteStore {
             Err(_) => Ok(StoreResult::NotFound(key)),
         }
     }
+
+    fn refresh(&self) -> Result<()> {
+        Ok(())
+    }
 }
 
 impl LocalStore for LfsRemoteStore {
@@ -1574,6 +1586,10 @@ impl HgIdDataStore for LfsFallbackRemoteStore {
             Ok(_) => self.0.get_meta(key),
             Err(_) => Ok(StoreResult::NotFound(key)),
         }
+    }
+
+    fn refresh(&self) -> Result<()> {
+        self.0.refresh()
     }
 }
 

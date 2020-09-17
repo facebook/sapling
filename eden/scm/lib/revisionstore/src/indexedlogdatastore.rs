@@ -272,6 +272,10 @@ impl HgIdDataStore for IndexedLogHgIdDataStore {
             Ok(StoreResult::Found(metadata.clone()))
         }
     }
+
+    fn refresh(&self) -> Result<()> {
+        Ok(())
+    }
 }
 
 impl ToKeys for IndexedLogHgIdDataStore {

@@ -126,6 +126,10 @@ impl HgIdDataStore for ContentStore {
     fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
         self.datastore.get_meta(key)
     }
+
+    fn refresh(&self) -> Result<()> {
+        self.datastore.refresh()
+    }
 }
 
 impl RemoteDataStore for ContentStore {

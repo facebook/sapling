@@ -329,6 +329,10 @@ impl HgIdHistoryStore for MutableHistoryPack {
             .and_then(|nodes| nodes.get(key))
             .cloned())
     }
+
+    fn refresh(&self) -> Result<()> {
+        Ok(())
+    }
 }
 
 impl LocalStore for MutableHistoryPack {

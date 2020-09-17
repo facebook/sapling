@@ -133,6 +133,10 @@ impl HgIdDataStore for FakeRemoteDataStore {
             Ok(_) => self.store.get_meta(key),
         }
     }
+
+    fn refresh(&self) -> Result<()> {
+        Ok(())
+    }
 }
 
 impl LocalStore for FakeRemoteDataStore {
@@ -167,6 +171,10 @@ impl HgIdHistoryStore for FakeRemoteHistoryStore {
             Err(_) => Ok(None),
             Ok(()) => self.store.get_node_info(key),
         }
+    }
+
+    fn refresh(&self) -> Result<()> {
+        Ok(())
     }
 }
 

@@ -340,6 +340,10 @@ impl HgIdHistoryStore for HistoryPack {
         };
         self.read_node_info(key, hgid_location.offset).map(Some)
     }
+
+    fn refresh(&self) -> Result<()> {
+        Ok(())
+    }
 }
 
 impl StoreFromPath for HistoryPack {

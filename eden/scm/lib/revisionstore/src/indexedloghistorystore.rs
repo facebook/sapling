@@ -248,6 +248,10 @@ impl HgIdHistoryStore for IndexedLogHgIdHistoryStore {
         };
         Ok(Some(entry.node_info()))
     }
+
+    fn refresh(&self) -> Result<()> {
+        Ok(())
+    }
 }
 
 impl HgIdMutableHistoryStore for IndexedLogHgIdHistoryStore {

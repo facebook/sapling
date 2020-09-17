@@ -67,6 +67,10 @@ impl HgIdHistoryStore for EdenApiHistoryStore {
         self.prefetch(&[StoreKey::hgid(key.clone())])?;
         self.store.get_node_info(key)
     }
+
+    fn refresh(&self) -> Result<()> {
+        Ok(())
+    }
 }
 
 impl LocalStore for EdenApiHistoryStore {

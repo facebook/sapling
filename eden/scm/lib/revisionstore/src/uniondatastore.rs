@@ -42,6 +42,13 @@ impl<T: HgIdDataStore> HgIdDataStore for UnionHgIdDataStore<T> {
 
         Ok(StoreResult::NotFound(key))
     }
+
+    fn refresh(&self) -> Result<()> {
+        for store in self {
+            store.refresh()?;
+        }
+        Ok(())
+    }
 }
 
 impl<T: RemoteDataStore> RemoteDataStore for UnionHgIdDataStore<T> {
@@ -128,6 +135,10 @@ mod tests {
         fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
             Ok(StoreResult::NotFound(key))
         }
+
+        fn refresh(&self) -> Result<()> {
+            Ok(())
+        }
     }
 
     impl LocalStore for EmptyHgIdDataStore {
@@ -143,6 +154,10 @@ mod tests {
 
         fn get_meta(&self, _key: StoreKey) -> Result<StoreResult<Metadata>> {
             Err(BadHgIdDataStoreError.into())
+        }
+
+        fn refresh(&self) -> Result<()> {
+            Ok(())
         }
     }
 

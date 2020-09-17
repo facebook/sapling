@@ -50,6 +50,9 @@ impl HgIdDataStore for FakeRemoteDataStore {
     fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
         Ok(StoreResult::NotFound(key))
     }
+    fn refresh(&self) -> Result<()> {
+        Ok(())
+    }
 }
 
 impl LocalStore for FakeRemoteDataStore {

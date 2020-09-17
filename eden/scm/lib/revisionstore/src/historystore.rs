@@ -16,6 +16,7 @@ use crate::{localstore::LocalStore, types::StoreKey};
 
 pub trait HgIdHistoryStore: LocalStore + Send + Sync {
     fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>>;
+    fn refresh(&self) -> Result<()>;
 }
 
 pub trait HgIdMutableHistoryStore: HgIdHistoryStore + Send + Sync {
@@ -43,6 +44,10 @@ pub trait RemoteHistoryStore: HgIdHistoryStore + Send + Sync {
 impl<T: HgIdHistoryStore + ?Sized, U: Deref<Target = T> + Send + Sync> HgIdHistoryStore for U {
     fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
         T::get_node_info(self, key)
+    }
+
+    fn refresh(&self) -> Result<()> {
+        T::refresh(self)
     }
 }
 

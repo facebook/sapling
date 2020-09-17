@@ -403,6 +403,10 @@ impl HgIdDataStore for DataPack {
             Ok(StoreResult::Found(entry.metadata))
         }
     }
+
+    fn refresh(&self) -> Result<()> {
+        Ok(())
+    }
 }
 
 impl StoreFromPath for DataPack {

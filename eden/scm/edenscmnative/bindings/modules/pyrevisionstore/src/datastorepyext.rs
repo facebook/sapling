@@ -13,7 +13,7 @@ use cpython::{
     ToPyObject,
 };
 
-use cpython_ext::{PyPath, PyPathBuf, ResultPyErrExt};
+use cpython_ext::{PyNone, PyPath, PyPathBuf, ResultPyErrExt};
 use revisionstore::{
     datastore::{Delta, StoreResult},
     ContentDataStore, ContentHash, HgIdDataStore, HgIdMutableDeltaStore, RemoteDataStore, StoreKey,
@@ -32,6 +32,7 @@ pub trait HgIdDataStorePyExt {
     fn get_delta_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyObject>;
     fn get_meta_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyDict>;
     fn get_missing_py(&self, py: Python, keys: &mut PyIterator) -> PyResult<PyList>;
+    fn refresh_py(&self, py: Python) -> PyResult<PyNone>;
 }
 
 pub trait ContentDataStorePyExt {
@@ -186,6 +187,11 @@ impl<T: HgIdDataStore + ?Sized> HgIdDataStorePyExt for T {
         }
 
         Ok(results)
+    }
+
+    fn refresh_py(&self, py: Python) -> PyResult<PyNone> {
+        self.refresh().map_pyerr(py)?;
+        Ok(PyNone)
     }
 }
 

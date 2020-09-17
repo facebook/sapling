@@ -12,7 +12,7 @@ use cpython::{
     PyBytes, PyIterator, PyList, PyObject, PyResult, PyTuple, Python, PythonObject, ToPyObject,
 };
 
-use cpython_ext::{PyPathBuf, ResultPyErrExt};
+use cpython_ext::{PyNone, PyPathBuf, ResultPyErrExt};
 use revisionstore::{
     HgIdHistoryStore, HgIdMutableHistoryStore, RemoteHistoryStore, StoreKey, ToKeys,
 };
@@ -25,6 +25,7 @@ use crate::pythonutil::{
 pub trait HgIdHistoryStorePyExt {
     fn get_missing_py(&self, py: Python, keys: &mut PyIterator) -> PyResult<PyList>;
     fn get_node_info_py(&self, py: Python, name: &PyPathBuf, node: &PyBytes) -> PyResult<PyTuple>;
+    fn refresh_py(&self, py: Python) -> PyResult<PyNone>;
 }
 
 pub trait IterableHgIdHistoryStorePyExt {
@@ -85,6 +86,11 @@ impl<T: HgIdHistoryStore + ?Sized> HgIdHistoryStorePyExt for T {
             .ok_or_else(|| key_error(py, &StoreKey::hgid(key.clone())))?;
 
         Ok(from_node_info(py, &key, &info))
+    }
+
+    fn refresh_py(&self, py: Python) -> PyResult<PyNone> {
+        self.refresh().map_pyerr(py)?;
+        Ok(PyNone)
     }
 }
 

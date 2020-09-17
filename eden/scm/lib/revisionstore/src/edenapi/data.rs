@@ -95,6 +95,10 @@ impl HgIdDataStore for EdenApiDataStore<File> {
         self.prefetch(&[key.clone()])?;
         self.store.get_meta(key)
     }
+
+    fn refresh(&self) -> Result<()> {
+        Ok(())
+    }
 }
 
 impl HgIdDataStore for EdenApiDataStore<Tree> {
@@ -106,6 +110,10 @@ impl HgIdDataStore for EdenApiDataStore<Tree> {
     fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
         self.prefetch(&[key.clone()])?;
         self.store.get_meta(key)
+    }
+
+    fn refresh(&self) -> Result<()> {
+        Ok(())
     }
 }
 

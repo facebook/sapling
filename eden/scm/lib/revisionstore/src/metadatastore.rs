@@ -80,6 +80,10 @@ impl HgIdHistoryStore for MetadataStore {
     fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
         self.historystore.get_node_info(key)
     }
+
+    fn refresh(&self) -> Result<()> {
+        self.historystore.refresh()
+    }
 }
 
 impl RemoteHistoryStore for MetadataStore {

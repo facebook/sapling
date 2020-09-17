@@ -96,6 +96,13 @@ impl<T: HgIdMutableDeltaStore> HgIdDataStore for MultiplexDeltaStore<T> {
 
         Ok(StoreResult::NotFound(key))
     }
+
+    fn refresh(&self) -> Result<()> {
+        for store in self.stores.iter() {
+            store.refresh()?;
+        }
+        Ok(())
+    }
 }
 
 impl<T: HgIdMutableDeltaStore> LocalStore for MultiplexDeltaStore<T> {
@@ -142,6 +149,13 @@ impl<T: HgIdMutableHistoryStore> HgIdHistoryStore for MultiplexHgIdHistoryStore<
         }
 
         Ok(None)
+    }
+
+    fn refresh(&self) -> Result<()> {
+        for store in self.stores.iter() {
+            store.refresh()?;
+        }
+        Ok(())
     }
 }
 

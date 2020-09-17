@@ -91,6 +91,10 @@ impl HgIdDataStore for MemcacheStore {
     fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
         Ok(StoreResult::NotFound(key))
     }
+
+    fn refresh(&self) -> Result<()> {
+        Ok(())
+    }
 }
 
 impl HgIdMutableDeltaStore for MemcacheStore {
@@ -107,6 +111,10 @@ impl HgIdMutableDeltaStore for MemcacheStore {
 impl HgIdHistoryStore for MemcacheStore {
     fn get_node_info(&self, _key: &Key) -> Result<Option<NodeInfo>> {
         Ok(None)
+    }
+
+    fn refresh(&self) -> Result<()> {
+        Ok(())
     }
 }
 
@@ -167,6 +175,10 @@ impl HgIdDataStore for MemcacheHgIdDataStore {
             Ok(_) => self.store.get_meta(key),
             Err(_) => Ok(StoreResult::NotFound(key)),
         }
+    }
+
+    fn refresh(&self) -> Result<()> {
+        Ok(())
     }
 }
 
@@ -241,6 +253,10 @@ impl HgIdHistoryStore for MemcacheHgIdHistoryStore {
             Ok(()) => self.store.get_node_info(key),
             Err(_) => Ok(None),
         }
+    }
+
+    fn refresh(&self) -> Result<()> {
+        Ok(())
     }
 }
 

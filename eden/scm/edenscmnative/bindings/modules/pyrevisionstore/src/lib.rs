@@ -516,6 +516,13 @@ impl HgIdDataStore for mutabledeltastore {
 
         self.store(py).get_meta(key)
     }
+
+    fn refresh(&self) -> Result<()> {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+
+        self.store(py).refresh()
+    }
 }
 
 impl LocalStore for mutabledeltastore {
@@ -601,6 +608,13 @@ impl HgIdHistoryStore for mutablehistorystore {
         let py = gil.python();
 
         self.store(py).get_node_info(key)
+    }
+
+    fn refresh(&self) -> Result<()> {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+
+        self.store(py).refresh()
     }
 }
 
@@ -734,6 +748,10 @@ impl HgIdDataStore for PyRemoteDataStore {
             Err(_) => Ok(StoreResult::NotFound(key)),
         }
     }
+
+    fn refresh(&self) -> Result<()> {
+        Ok(())
+    }
 }
 
 impl LocalStore for PyRemoteDataStore {
@@ -767,6 +785,10 @@ impl HgIdHistoryStore for PyRemoteHistoryStore {
                 .get_node_info(key),
             Err(_) => Ok(None),
         }
+    }
+
+    fn refresh(&self) -> Result<()> {
+        Ok(())
     }
 }
 
@@ -922,6 +944,11 @@ py_class!(pub class contentstore |py| {
         store.prefetch_py(py, keys)
     }
 
+    def markforrefresh(&self) -> PyResult<PyNone> {
+        let store = self.store(py);
+        store.refresh_py(py)
+    }
+
     def upload(&self, keys: PyList) -> PyResult<PyList> {
         let store = self.store(py);
         store.upload_py(py, keys)
@@ -1009,6 +1036,11 @@ py_class!(class metadatastore |py| {
     def prefetch(&self, keys: PyList) -> PyResult<PyObject> {
         let store = self.store(py);
         store.prefetch_py(py, keys)
+    }
+
+    def markforrefresh(&self) -> PyResult<PyNone> {
+        let store = self.store(py);
+        store.refresh_py(py)
     }
 });
 

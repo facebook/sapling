@@ -472,11 +472,23 @@ impl HgIdDataStore for DataPackStore {
             Some(meta) => Ok(StoreResult::Found(meta)),
         }
     }
+
+    fn refresh(&self) -> Result<()> {
+        let inner = self.inner.lock();
+        inner.last_scanned.replace(None);
+        Ok(())
+    }
 }
 
 impl HgIdHistoryStore for HistoryPackStore {
     fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
         self.inner.lock().run(|store| store.get_node_info(key))
+    }
+
+    fn refresh(&self) -> Result<()> {
+        let inner = self.inner.lock();
+        inner.last_scanned.replace(None);
+        Ok(())
     }
 }
 
@@ -549,6 +561,10 @@ impl HgIdDataStore for MutableDataPackStore {
 
     fn get_meta(&self, key: StoreKey) -> Result<StoreResult<Metadata>> {
         self.inner.union_store.get_meta(key)
+    }
+
+    fn refresh(&self) -> Result<()> {
+        self.inner.union_store.refresh()
     }
 }
 
@@ -642,6 +658,10 @@ impl MutableHistoryPackStore {
 impl HgIdHistoryStore for MutableHistoryPackStore {
     fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
         self.inner.union_store.get_node_info(key)
+    }
+
+    fn refresh(&self) -> Result<()> {
+        self.inner.union_store.refresh()
     }
 }
 
@@ -842,6 +862,51 @@ mod tests {
         make_datapack(&tempdir, &vec![revision.clone()]);
 
         store.force_rescan();
+        assert_eq!(
+            store.get(StoreKey::hgid(k))?,
+            StoreResult::Found(vec![1, 2, 3, 4])
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_refresh() -> Result<()> {
+        let tempdir = TempDir::new()?;
+        let store = PackStoreOptions::new()
+            .directory(&tempdir)
+            .extension("datapack")
+            .scan_frequency(Duration::from_secs(10000))
+            .build();
+
+        let k = key("a", "2");
+        let revision = (
+            Delta {
+                data: Bytes::from(&[1, 2, 3, 4][..]),
+                base: None,
+                key: k.clone(),
+            },
+            Default::default(),
+        );
+        make_datapack(&tempdir, &vec![revision]);
+
+        store.get(StoreKey::hgid(k))?;
+
+        let k = key("a", "3");
+        let revision = (
+            Delta {
+                data: Bytes::from(&[1, 2, 3, 4][..]),
+                base: None,
+                key: k.clone(),
+            },
+            Default::default(),
+        );
+        make_datapack(&tempdir, &vec![revision]);
+
+        assert_eq!(
+            store.get(StoreKey::hgid(k.clone()))?,
+            StoreResult::NotFound(StoreKey::hgid(k.clone())),
+        );
+        store.refresh().unwrap();
         assert_eq!(
             store.get(StoreKey::hgid(k))?,
             StoreResult::Found(vec![1, 2, 3, 4])
