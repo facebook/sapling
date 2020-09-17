@@ -98,7 +98,11 @@ impl SessionBookmarkCache {
         ctx: CoreContext,
     ) -> impl Future<Item = HashMap<Bookmark, HgChangesetId>, Error = Error> {
         if let Some(warm_bookmarks_cache) = &self.maybe_warm_bookmarks_cache {
-            if !tunables().get_disable_repo_client_warm_bookmarks_cache() {
+            let mut skip_warm_bookmark_cache =
+                tunables().get_disable_repo_client_warm_bookmarks_cache();
+            // We don't ever need warm bookmark cache for the externa sync job
+            skip_warm_bookmark_cache |= ctx.session().is_external_sync();
+            if !skip_warm_bookmark_cache {
                 ctx.scuba()
                     .clone()
                     .log_with_msg("Fetching bookmarks from Warm bookmarks cache", None);
