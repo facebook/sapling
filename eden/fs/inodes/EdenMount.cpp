@@ -1310,8 +1310,8 @@ folly::Future<folly::Unit> EdenMount::startChannel(bool readOnly) {
 #ifdef _WIN32
           channelInitSuccessful(fsChannel_->getStopFuture());
 #else
-          return channel_->initialize().thenValue(
-              [this](FuseChannel::StopFuture&& fuseCompleteFuture) {
+          return channel_->initialize(config_->getCaseSensitive())
+              .thenValue([this](FuseChannel::StopFuture&& fuseCompleteFuture) {
                 channelInitSuccessful(std::move(fuseCompleteFuture));
               });
 #endif

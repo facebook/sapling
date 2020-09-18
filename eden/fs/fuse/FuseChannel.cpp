@@ -488,14 +488,15 @@ FuseChannel::FuseChannel(
 
 FuseChannel::~FuseChannel() {}
 
-Future<FuseChannel::StopFuture> FuseChannel::initialize() {
+Future<FuseChannel::StopFuture> FuseChannel::initialize(bool caseSensitive) {
   // Start one worker thread which will perform the initialization,
   // and will then start the remaining worker threads and signal success
   // once initialization completes.
   return folly::makeFutureWith([&] {
     auto state = state_.wlock();
     state->workerThreads.reserve(numThreads_);
-    state->workerThreads.emplace_back([this] { initWorkerThread(); });
+    state->workerThreads.emplace_back(
+        [this, caseSensitive] { initWorkerThread(caseSensitive); });
     return initPromise_.getFuture();
   });
 }
@@ -821,13 +822,13 @@ void FuseChannel::setThreadSigmask() {
   folly::checkPosixError(pthread_sigmask(SIG_UNBLOCK, &sigset, &oldset));
 }
 
-void FuseChannel::initWorkerThread() noexcept {
+void FuseChannel::initWorkerThread(bool caseSensitive) noexcept {
   try {
     setThreadSigmask();
     setThreadName(to<std::string>("fuse", mountPath_.basename()));
 
     // Read the INIT packet
-    readInitPacket();
+    readInitPacket(caseSensitive);
 
     // Start the other FUSE worker threads.
     startWorkerThreads();
@@ -934,7 +935,7 @@ void FuseChannel::stopInvalidationThread() {
   invalidationThread_.join();
 }
 
-void FuseChannel::readInitPacket() {
+void FuseChannel::readInitPacket(bool caseSensitive) {
   struct {
     fuse_in_header header;
     fuse_init_in init;
@@ -1054,6 +1055,13 @@ void FuseChannel::readInitPacket() {
   // File handles are stateless so the kernel does not need to send
   // open() and release().
   want |= FUSE_NO_OPENDIR_SUPPORT;
+#endif
+#ifdef FUSE_CASE_INSENSITIVE
+  if (!caseSensitive) {
+    want |= FUSE_CASE_INSENSITIVE;
+  }
+#else
+  (void)caseSensitive;
 #endif
 
   // Only return the capabilities the kernel supports.

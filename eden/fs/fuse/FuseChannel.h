@@ -143,7 +143,8 @@ class FuseChannel {
    * Callers should normally use via() to perform any additional work in
    * another executor thread.
    */
-  FOLLY_NODISCARD folly::Future<StopFuture> initialize();
+  FOLLY_NODISCARD folly::Future<StopFuture> initialize(
+      bool caseSensitive = true);
 
   /**
    * Initialize the FuseChannel when taking over an existing FuseDevice.
@@ -528,14 +529,14 @@ class FuseChannel {
 
  private:
   void setThreadSigmask();
-  void initWorkerThread() noexcept;
+  void initWorkerThread(bool caseSensitive) noexcept;
   void fuseWorkerThread() noexcept;
   void invalidationThread() noexcept;
   void stopInvalidationThread();
   void sendInvalidation(InvalidationEntry& entry);
   void sendInvalidateInode(InodeNumber ino, int64_t off, int64_t len);
   void sendInvalidateEntry(InodeNumber parent, PathComponentPiece name);
-  void readInitPacket();
+  void readInitPacket(bool caseSensitive);
   void startWorkerThreads();
 
   /**

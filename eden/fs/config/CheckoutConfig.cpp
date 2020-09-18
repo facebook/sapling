@@ -15,6 +15,7 @@
 #include <folly/io/IOBuf.h>
 #include <folly/json.h>
 #include "eden/fs/utils/FileUtils.h"
+#include "eden/fs/utils/PathMap.h"
 
 using folly::ByteRange;
 using folly::IOBuf;
@@ -29,6 +30,7 @@ const facebook::eden::RelativePathPiece kCheckoutConfig{"config.toml"};
 constexpr folly::StringPiece kRepoSection{"repository"};
 constexpr folly::StringPiece kRepoSourceKey{"path"};
 constexpr folly::StringPiece kRepoTypeKey{"type"};
+constexpr folly::StringPiece kRepoCaseSensitiveKey{"case-sensitive"};
 
 // Files of interest in the client directory.
 const facebook::eden::RelativePathPiece kSnapshotFile{"SNAPSHOT"};
@@ -144,6 +146,10 @@ const AbsolutePath& CheckoutConfig::getClientDirectory() const {
   return clientDirectory_;
 }
 
+bool CheckoutConfig::getCaseSensitive() const {
+  return caseSensitive_;
+}
+
 AbsolutePath CheckoutConfig::getSnapshotPath() const {
   return clientDirectory_ + kSnapshotFile;
 }
@@ -166,6 +172,11 @@ std::unique_ptr<CheckoutConfig> CheckoutConfig::loadFromClientDirectory(
   auto repository = configRoot->get_table(kRepoSection.str());
   config->repoType_ = *repository->get_as<std::string>(kRepoTypeKey.str());
   config->repoSource_ = *repository->get_as<std::string>(kRepoSourceKey.str());
+
+  // Read optional case-sensitivity.
+  auto caseSensitive = repository->get_as<bool>(kRepoCaseSensitiveKey.str());
+  config->caseSensitive_ =
+      caseSensitive ? *caseSensitive : kPathMapDefaultCaseSensitive;
 
   return config;
 }

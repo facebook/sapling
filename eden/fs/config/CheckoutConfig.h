@@ -96,11 +96,15 @@ class CheckoutConfig {
   /** Path to the client directory */
   const AbsolutePath& getClientDirectory() const;
 
+  /** Whether this repository is mounted in case-sensitive mode */
+  bool getCaseSensitive() const;
+
  private:
   const AbsolutePath clientDirectory_;
   const AbsolutePath mountPath_;
   std::string repoType_;
   std::string repoSource_;
+  bool caseSensitive_{!folly::kIsWindows};
 };
 } // namespace eden
 } // namespace facebook
