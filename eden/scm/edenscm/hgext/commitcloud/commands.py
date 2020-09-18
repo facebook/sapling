@@ -15,7 +15,6 @@ from edenscm.mercurial import (
     cmdutil,
     error,
     extensions,
-    graphmod,
     hintutil,
     lock as lockmod,
     node as nodemod,
@@ -78,20 +77,28 @@ createopts = [
 
 @command("cloud", [], "SUBCOMMAND ...")
 def cloud(ui, repo, **opts):
-    """synchronise commits via commit cloud
+    """backup your commits and synchronise them via commit cloud
+
+    Commit Cloud is the modern infrastructure for backing up your draft commits and bookmarks.
+
+    Commit Cloud introduces a new abstraction: the commit cloud workspace.
+    A workspace holds a set of draft commits and bookmarks.
+    You can think of it as a backup of the contents of your smartlog in the cloud.
+    You can have multiple workspaces (and so multiple smartlogs) and switch between them.
 
     Commit cloud lets you synchronize commits and bookmarks between
-    different copies of the same repository.  This may be useful, for
-    example, to keep your laptop and desktop computers in sync.
+    different copies of the same repository if they are connected to the same commit cloud workspace.
+    This may be useful, for example, to keep your laptop and desktop computers in sync.
 
-    Use 'hg cloud join' to connect your repository to the commit cloud
-    service and begin synchronizing commits.
+    Use 'hg cloud join' to connect your repository to the default commit cloud workspace and get started.
 
-    Use 'hg cloud sync' to trigger a new synchronization.  Synchronizations
-    also happen automatically in the background as you create and modify
-    commits.
+    Use 'hg cloud sync' to trigger a new backup and synchronization. Backups and synchronizations
+    also happen automatically in the background as you create and modify commits.
 
-    Use 'hg cloud leave' to disconnect your repository from commit cloud.
+    Use 'hg cloud switch' to change which workspace you are connected to.
+    Use 'hg cloud list' to see your workspaces.
+
+    Use 'hg cloud leave' to stop using commit cloud workspaces.
     """
     raise error.Abort(
         "you need to specify a subcommand (run with --help to see a list of subcommands)"
@@ -100,15 +107,18 @@ def cloud(ui, repo, **opts):
 
 subcmd = cloud.subcommand(
     categories=[
-        ("Connect to a cloud workspace", ["authenticate", "join", "leave", "rejoin"]),
-        ("Synchronize with the cloud workspace", ["sync"]),
-        ("View other cloud workspaces", ["sl", "ssl"]),
+        ("Connect to a cloud workspace", ["authenticate", "join", "switch", "leave"]),
+        ("Synchronize with the connected cloud workspace", ["sync"]),
+        (
+            "Manage cloud workspaces",
+            ["delete", "undelete", "list", "rename", "reclaim"],
+        ),
+        ("View the smartlog for a cloud workspace", ["sl", "ssl"]),
         (
             "Back up commits",
             ["backup", "check", "listbackups", "restorebackup", "deletebackup"],
         ),
         ("Manage automatic backup or sync", ["disable", "enable"]),
-        ("Manage cloud workspaces", ["delete", "undelete", "list"]),
     ]
 )
 
@@ -125,13 +135,13 @@ subcmd = cloud.subcommand(
     + remoteopts,
 )
 def cloudjoin(ui, repo, **opts):
-    """connect the local repository to a commit cloud workspace
+    """connect the local repository to a commit cloud workspace ('default' workspace with no arguments)
 
     Local commits and bookmarks will be backed up to the commit cloud and
     synchronized between all repositories that have been connected
     to the same commit cloud workspace
 
-    Use `hg cloud sync` to trigger a new synchronization.
+    Use `hg cloud sync` to trigger a new backup and synchronization.
     """
 
     tokenlocator = tokenmod.TokenLocator(ui)
@@ -1406,7 +1416,7 @@ def clouddeletebackup(ui, repo, dest=None, **opts):
     + remoteopts,
 )
 def cloudsync(ui, repo, cloudrefs=None, dest=None, **opts):
-    """synchronize commits with the commit cloud service
+    """backup and synchronize commits with the commit cloud service
     """
     # external services can run cloud sync and require to check if
     # auto sync is enabled
