@@ -1049,6 +1049,8 @@ Test list of internal help commands
    debugpython   run python interpreter
    debugreadauthforuri
                  (no help text available)
+   debugrebuildchangelog
+                 rebuild changelog by recloning and copying draft commits
    debugrebuilddirstate
                  rebuild the dirstate as it would look like for the given
                  revision

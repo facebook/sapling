@@ -151,6 +151,7 @@ Show debug commands if there are no other candidates
   debugpvec
   debugpython
   debugreadauthforuri
+  debugrebuildchangelog
   debugrebuilddirstate
   debugrebuildfncache
   debugrename
@@ -436,6 +437,7 @@ Show all commands + options
   debugpvec: 
   debugpython: 
   debugreadauthforuri: user
+  debugrebuildchangelog: 
   debugrebuilddirstate: rev, minimal
   debugrebuildfncache: 
   debugrename: rev

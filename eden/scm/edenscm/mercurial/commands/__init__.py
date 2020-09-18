@@ -83,6 +83,7 @@ with hgdemandimport.deactivated():
         debugdirs,
         debugmetalog,
         debugmutation,
+        debugrebuildchangelog,
         debugrunshell,
         debugsendunbundle,
         debugstatus,
