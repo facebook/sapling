@@ -39,7 +39,7 @@ import platform as pyplatform
 import random
 import re as remod
 import shutil
-import signal
+import signal as signalmod
 import socket
 import stat as statmod
 import string
@@ -2821,9 +2821,9 @@ def rundetached(args, condfn):
         terminated.add(os.wait())
 
     prevhandler = None
-    SIGCHLD = getattr(signal, "SIGCHLD", None)
+    SIGCHLD = getattr(signalmod, "SIGCHLD", None)
     if SIGCHLD is not None:
-        prevhandler = signal.signal(SIGCHLD, handler)
+        prevhandler = signal(SIGCHLD, handler)
     try:
         pid = spawndetached(args)
         while not condfn():
@@ -2833,7 +2833,7 @@ def rundetached(args, condfn):
         return pid
     finally:
         if prevhandler is not None:
-            signal.signal(signal.SIGCHLD, prevhandler)
+            signal(signalmod.SIGCHLD, prevhandler)
 
 
 def interpolate(prefix, mapping, s, fn=None, escape_prefix=False):
@@ -4791,3 +4791,92 @@ def spawndetached(args, cwd=None, env=None):
     if env is not None:
         cmd.envclear().envs(sorted(env.items()))
     return cmd.spawndetached().id()
+
+
+_sighandlers = {}
+
+
+def signal(signum, handler):
+    """Set the handler for signal signalnum to the function handler.
+
+    Unlike the stdlib signal.signal, this can work from non-main thread.
+    """
+    oldhandler = _sighandlers.get(signum)
+    if signum not in _sighandlers:
+        raise error.ProgrammingError(
+            "signal %d cannot be registered - add it in _preregistersighandlers first"
+            % signum
+        )
+    _sighandlers[signum] = handler
+    return oldhandler
+
+
+def getsignal(signum):
+    """Get the signal handler for signum registered by 'util.signal'.
+
+    Note: if 'util' gets reloaded, the returned function might be a wrapper
+    (specialsighandler) instead of what's set by 'util.signal'.
+    """
+    return _sighandlers.get(signum)
+
+
+def _preregistersighandlers():
+    """Pre-register signal handlers so 'util.signal' can work.
+
+    This works by registering a special signal handler that reads
+    '_sighandlers' to decide what to do. Other threads can modify
+    '_sighandlers' via 'util.signal' to control what the signal
+    handler does.
+    """
+
+    def term(signum, frame):
+        raise error.SignalInterrupt
+
+    def ignore(signum, frame):
+        pass
+
+    def stop(signum, frame):
+        os.kill(0, signalmod.SIGSTOP)
+
+    # Signals used by the program.
+    # If a new signal is used, it should be added here.
+    # See 'man 7 signal' for defaults.
+    defaultbyname = {
+        # SIGBREAK is Windows-only.
+        "SIGBREAK": term,
+        # Following POSIX-ish signals can be missing on Windows,
+        # or some POSIX platforms.
+        "SIGCHLD": ignore,
+        "SIGHUP": term,
+        "SIGINT": term,
+        "SIGPIPE": term,
+        "SIGPROF": term,
+        "SIGTERM": term,
+        "SIGTSTP": stop,
+        "SIGUSR1": term,
+        "SIGUSR2": term,
+        "SIGWINCH": ignore,
+    }
+    defaultbynum = {}
+
+    def specialsighandler(signum, frame):
+        handler = _sighandlers.get(signum, signalmod.SIG_DFL)
+        if handler == signalmod.SIG_DFL or handler is None:
+            handler = defaultbynum.get(signum, term)
+        elif handler == signalmod.SIG_IGN:
+            handler = ignore
+        return handler(signum, frame)
+
+    for name, action in defaultbyname.items():
+        signum = getattr(signalmod, name, None)
+        if signum is None:
+            continue
+        defaultbynum[signum] = action
+        try:
+            _sighandlers[signum] = signalmod.signal(signum, specialsighandler)
+        except ValueError:
+            # Not all signals are supported on Windows.
+            pass
+
+
+_preregistersighandlers()
