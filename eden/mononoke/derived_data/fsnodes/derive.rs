@@ -309,9 +309,9 @@ fn create_fsnode(
             }
         }
         let fsnode = Fsnode::new(entries, summary.clone());
-        let fsnode_id = fsnode.get_fsnode_id();
-        let key = fsnode_id.blobstore_key();
         let blob = fsnode.into_blob();
+        let fsnode_id = *blob.id();
+        let key = fsnode_id.blobstore_key();
         let f = blobstore.put(ctx, key, blob.into()).compat().boxify();
 
         let res = match sender {

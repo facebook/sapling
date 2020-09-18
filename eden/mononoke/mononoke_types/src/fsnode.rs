@@ -69,11 +69,6 @@ impl Fsnode {
         }
     }
 
-    pub fn get_fsnode_id(&self) -> FsnodeId {
-        // TODO(mbthomas): try to avoid clone (although BonsaiChangeset and unodes have the same problems)
-        *self.clone().into_blob().id()
-    }
-
     pub fn lookup(&self, basename: &MPathElement) -> Option<&FsnodeEntry> {
         self.subentries.get(basename)
     }
