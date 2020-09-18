@@ -842,7 +842,7 @@ class ui(object):
         wasformatted = self.formatted
         wasterminaloutput = self.terminaloutput()
         if util.safehasattr(signal, "SIGPIPE"):
-            signal.signal(signal.SIGPIPE, _catchterm)
+            util.signal(signal.SIGPIPE, _catchterm)
         if pagercmd == "internal:streampager":
             self._runinternalstreampager()
         elif self._runpager(pagercmd, pagerenv):
@@ -973,7 +973,7 @@ class ui(object):
         @self.atexit
         def killpager():
             if util.safehasattr(signal, "SIGINT"):
-                signal.signal(signal.SIGINT, signal.SIG_IGN)
+                util.signal(signal.SIGINT, signal.SIG_IGN)
             # restore original fds, closing pager.stdin copies in the process
             os.dup2(stdoutfd, util.stdout.fileno())
             os.dup2(stderrfd, util.stderr.fileno())

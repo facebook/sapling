@@ -519,7 +519,7 @@ class unixforkingservice(object):
         self._servicehandler.bindsocket(self._sock, self.address)
         if util.safehasattr(util, "unblocksignal"):
             util.unblocksignal(signal.SIGCHLD)
-        o = signal.signal(signal.SIGCHLD, self._sigchldhandler)
+        o = util.signal(signal.SIGCHLD, self._sigchldhandler)
         self._oldsigchldhandler = o
         self._socketunlinked = False
 
@@ -529,7 +529,7 @@ class unixforkingservice(object):
             self._socketunlinked = True
 
     def _cleanup(self):
-        signal.signal(signal.SIGCHLD, self._oldsigchldhandler)
+        util.signal(signal.SIGCHLD, self._oldsigchldhandler)
         self._sock.close()
         self._unlinksocket()
         # don't kill child processes as they have active clients, just wait
@@ -612,7 +612,7 @@ class unixforkingservice(object):
             self._workerpids.discard(pid)
 
     def _runworker(self, conn):
-        signal.signal(signal.SIGCHLD, self._oldsigchldhandler)
+        util.signal(signal.SIGCHLD, self._oldsigchldhandler)
         _initworkerprocess()
         h = self._servicehandler
         try:

@@ -549,7 +549,7 @@ def chunkselector(ui, headerlist, operation=None):
     chunkselector = curseschunkselector(headerlist, ui, operation)
     origsigtstp = sentinel = object()
     if util.safehasattr(signal, "SIGTSTP"):
-        origsigtstp = signal.getsignal(signal.SIGTSTP)
+        origsigtstp = util.getsignal(signal.SIGTSTP)
     try:
         with progress.suspend(), util.traced("crecord", cat="blocked"):
             curses.wrapper(chunkselector.main)
@@ -561,7 +561,7 @@ def chunkselector(ui, headerlist, operation=None):
             # ncurses does not restore signal handler for SIGTSTP
     finally:
         if origsigtstp is not sentinel:
-            signal.signal(signal.SIGTSTP, origsigtstp)
+            util.signal(signal.SIGTSTP, origsigtstp)
     return chunkselector.opts
 
 
@@ -1762,12 +1762,12 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
 
         origsigwinch = sentinel = object()
         if util.safehasattr(signal, "SIGWINCH"):
-            origsigwinch = signal.signal(signal.SIGWINCH, self.sigwinchhandler)
+            origsigwinch = util.signal(signal.SIGWINCH, self.sigwinchhandler)
         try:
             return self._main(stdscr)
         finally:
             if origsigwinch is not sentinel:
-                signal.signal(signal.SIGWINCH, origsigwinch)
+                util.signal(signal.SIGWINCH, origsigwinch)
 
     def _main(self, stdscr):
         self.stdscr = stdscr

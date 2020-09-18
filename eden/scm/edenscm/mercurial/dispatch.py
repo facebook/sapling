@@ -21,12 +21,6 @@ import re
 import signal
 import socket
 import sys
-
-# stdin can be None if the parent process unset the stdin file descriptor.
-# Replace it early, since it may be read in layer modules, like pycompat.
-if sys.stdin is None:
-    sys.stdin = open(os.devnull, 'r')
-
 import time
 import traceback
 
@@ -58,6 +52,12 @@ from . import (
     util,
 )
 from .i18n import _, _x
+
+
+# stdin can be None if the parent process unset the stdin file descriptor.
+# Replace it early, since it may be read in layer modules, like pycompat.
+if sys.stdin is None:
+    sys.stdin = open(os.devnull, "r")
 
 
 cliparser = bindings.cliparser
@@ -104,7 +104,7 @@ class request(object):
         # Silence potential EPIPE or SIGPIPE errors when writing to stdout or
         # stderr.
         if util.safehasattr(signal, "SIGPIPE"):
-            signal.signal(signal.SIGPIPE, signal.SIG_IGN)
+            util.signal(signal.SIGPIPE, signal.SIG_IGN)
 
         class ignoreerrorui(self.ui.__class__):
             def _write(self, *args, **kwargs):
@@ -542,7 +542,7 @@ def _runcatch(req):
         for name in "SIGBREAK", "SIGHUP", "SIGTERM":
             num = getattr(signal, name, None)
             if num:
-                signal.signal(num, catchterm)
+                util.signal(num, catchterm)
     except ValueError:
         pass  # happens if called in a thread
 

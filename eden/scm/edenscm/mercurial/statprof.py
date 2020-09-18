@@ -120,7 +120,7 @@ import tempfile
 import threading
 import time
 
-from . import encoding, pycompat
+from . import encoding, pycompat, util
 
 
 defaultdict = collections.defaultdict
@@ -325,7 +325,7 @@ def start(mechanism="thread"):
         lastmechanism = mechanism
 
         if mechanism == "signal":
-            signal.signal(signal.SIGPROF, profile_signal_handler)
+            util.signal(signal.SIGPROF, profile_signal_handler)
             signal.setitimer(signal.ITIMER_PROF, rpt or state.sample_interval, 0.0)
         elif mechanism == "thread":
             frame = inspect.currentframe()
@@ -342,7 +342,7 @@ def stop():
     if state.profile_level == 0:
         if lastmechanism == "signal":
             rpt = signal.setitimer(signal.ITIMER_PROF, 0.0, 0.0)
-            signal.signal(signal.SIGPROF, signal.SIG_IGN)
+            util.signal(signal.SIGPROF, signal.SIG_IGN)
             state.remaining_prof_time = rpt[0]
         elif lastmechanism == "thread":
             stopthread.set()

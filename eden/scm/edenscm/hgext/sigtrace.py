@@ -104,12 +104,12 @@ def uisetup(ui):
     signame = ui.config("sigtrace", "signal")
     sig = getattr(signal, "SIG" + signame, None)
     if sig is not None:
-        signal.signal(sig, printstacks)
+        util.signal(sig, printstacks)
 
     sig2name = ui.config("sigtrace", "memsignal")
     sig2 = getattr(signal, "SIG" + sig2name, None)
     if sig2:
-        signal.signal(sig2, printmemory)
+        util.signal(sig2, printmemory)
 
 
 def reposetup(ui, repo):
