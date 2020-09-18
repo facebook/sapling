@@ -29,7 +29,7 @@ jobs:
         python-version: '2.7'
     - name: Install Brew dependencies
       run: |
-        brew install bash coreutils curl-openssl gnu-sed grep jq nmap
+        brew install bash coreutils curl-openssl gnu-sed grep jq nmap tree
     - name: Install system deps
       run: sudo python3 build/fbcode_builder/getdeps.py --allow-system-packages install-system-deps --recursive eden_scm
     - name: Build eden_scm dependencies
@@ -48,6 +48,14 @@ jobs:
         --no-deps
         --src-dir=.
         eden_scm
+    - name: Build eden_scm_lib_edenapi_tools
+      run: >-
+        python3 build/fbcode_builder/getdeps.py build
+        --allow-system-packages
+        --scratch-path /tmp/build
+        --no-deps
+        --src-dir=.
+        eden_scm_lib_edenapi_tools
     - name: Build mononoke dependencies
       run: >-
         python3 build/fbcode_builder/getdeps.py build

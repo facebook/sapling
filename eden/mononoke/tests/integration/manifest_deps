@@ -43,6 +43,14 @@ EDENSCM_BINS = {
     "BINARY_HG": "hg",
 }
 
+# The values here should correspond to both the name of binary as builded by
+# getdeps.py's eden_scm_lib_edenapi_tools project and the buck target. Those
+# names must be unique.
+EDENSCMLIBEDENAPITOOLS_BINS = {
+    "EDENAPI_MAKE_REQ": "make_req",
+    "EDENAPI_READ_RES": "read_res",
+}
+
 # The "//" in the values here corresponds to the root of repo (both GitHub and
 # fbcode repos have the same folder layout)
 OSS_DEPS = {
