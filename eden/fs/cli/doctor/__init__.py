@@ -142,7 +142,9 @@ class EdenDoctorChecker:
                 self.tracker, self.proc_utils
             )
 
-            self.kerberos_checker.run_kerberos_certificate_checks(self.tracker)
+            self.kerberos_checker.run_kerberos_certificate_checks(
+                self.instance, self.tracker
+            )
 
         status = self.instance.check_health()
         if status.status == fb303_status.ALIVE:

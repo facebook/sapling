@@ -319,6 +319,11 @@ class EdenInstance:
         section, option = key.split(".", 1)
         return parser.get_str(section, option, default=default)
 
+    def get_config_bool(self, key: str, default: bool) -> bool:
+        parser = self._loadConfig()
+        section, option = key.split(".", 1)
+        return parser.get_bool(section, option, default=default)
+
     def should_use_experimental_systemd_mode(self) -> bool:
         if not sys.platform.startswith("linux"):
             return False

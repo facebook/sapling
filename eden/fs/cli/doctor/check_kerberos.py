@@ -4,17 +4,17 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-import os
-import platform
 import subprocess
 
+from eden.fs.cli.config import EdenInstance
 from eden.fs.cli.doctor.problem import Problem, ProblemTracker
 
 
 class KerberosChecker:
-    def run_kerberos_certificate_checks(self, tracker: ProblemTracker) -> None:
-        # Skip these checks on Windows machines and on Sandcastle
-        if platform.system() == "Windows" or os.environ.get("SANDCASTLE"):
+    def run_kerberos_certificate_checks(
+        self, instance: EdenInstance, tracker: ProblemTracker
+    ) -> None:
+        if not instance.get_config_bool("doctor.enable-kerberos-check", default=False):
             return
 
         result = subprocess.call(["klist", "-s"])
