@@ -7,6 +7,8 @@
 import json
 import os
 import subprocess
+import sys
+from pathlib import Path
 
 from eden.fs.cli.util import mkscratch_bin
 
@@ -15,7 +17,9 @@ from .lib import testcase
 
 def scratch_path(repo: str, subdir: str) -> str:
     return (
-        subprocess.check_output([mkscratch_bin(), "path", repo, "--subdir", subdir])
+        subprocess.check_output(
+            [os.fsdecode(mkscratch_bin()), "path", repo, "--subdir", subdir]
+        )
         .decode("utf-8")
         .strip()
     )
@@ -97,6 +101,7 @@ via-profile = "bind"
                 )
 
     def test_list(self) -> None:
+        repo_path = os.path.join("a", "new-one")
         profile_path = scratch_path(self.mount, "edenfs/redirections/via-profile")
         output = self.eden.run_cmd("redirect", "list", "--json", "--mount", self.mount)
         self.assertEqual(
@@ -114,7 +119,7 @@ via-profile = "bind"
         )
 
         output = self.eden.run_cmd(
-            "redirect", "add", "--mount", self.mount, "a/new-one", "bind"
+            "redirect", "add", "--mount", self.mount, repo_path, "bind"
         )
         self.assertEqual(output, "", msg="we believe we set up a new bind mount")
 
@@ -126,7 +131,7 @@ via-profile = "bind"
             json.loads(list_output),
             [
                 {
-                    "repo_path": "a/new-one",
+                    "repo_path": repo_path,
                     "type": "bind",
                     "target": target_path,
                     "source": ".eden/client/config.toml:redirections",
@@ -143,16 +148,32 @@ via-profile = "bind"
             msg="saved config agrees with last output",
         )
 
-        mount_stat = os.stat(self.mount)
-        bind_mount_stat = os.stat(os.path.join(self.mount, "a/new-one"))
-        self.assertNotEqual(
-            mount_stat.st_dev,
-            bind_mount_stat.st_dev,
-            msg="new-one dir was created and mounted with a different device",
-        )
+        if sys.platform != "win32":
+            mount_stat = os.stat(self.mount)
+            bind_mount_stat = os.stat(os.path.join(self.mount, repo_path))
+            self.assertNotEqual(
+                mount_stat.st_dev,
+                bind_mount_stat.st_dev,
+                msg="new-one dir was created and mounted with a different device",
+            )
+        else:
+            # On Windows we use symlink to implement bind mount type
+            # redirection. As a result `st_dev` check will fail so we check if
+            # the symlink is pointing actually outside of the repository.
+            redirection = os.path.join(self.mount, repo_path)
+            link_target = os.readlink(redirection)
+
+            # This checks if the common parent of redirection target and the
+            # repository is still in the mount (i.e. if redirection target is a
+            # subdirectory of the mount).
+            self.assertNotEqual(
+                os.path.commonprefix([self.mount, link_target]),
+                self.mount,
+                msg="Redirection target is still inside the repository.",
+            )
 
         output = self.eden.run_cmd(
-            "redirect", "add", "--mount", self.mount, "a/new-one", "symlink"
+            "redirect", "add", "--mount", self.mount, repo_path, "symlink"
         )
         self.assertEqual(output, "", msg="we believe we switched to a symlink")
 
@@ -163,7 +184,7 @@ via-profile = "bind"
             json.loads(list_output),
             [
                 {
-                    "repo_path": "a/new-one",
+                    "repo_path": repo_path,
                     "type": "symlink",
                     "target": target_path,
                     "source": ".eden/client/config.toml:redirections",
@@ -181,14 +202,12 @@ via-profile = "bind"
         )
 
         self.assertEqual(
-            os.readlink(os.path.join(self.mount, "a", "new-one")),
-            target_path,
+            Path(os.readlink(os.path.join(self.mount, "a", "new-one"))).resolve(),
+            Path(target_path).resolve(),
             msg="symlink points to scratch space",
         )
 
-        output = self.eden.run_cmd(
-            "redirect", "del", "--mount", self.mount, "a/new-one"
-        )
+        output = self.eden.run_cmd("redirect", "del", "--mount", self.mount, repo_path)
         self.assertEqual(output, "", msg="we believe we removed the symlink")
 
         list_output = self.eden.run_cmd(
@@ -270,7 +289,9 @@ via-profile = "bind"
                     "type": "bind",
                     "target": profile_path,
                     "source": ".eden-redirections",
-                    "state": "not-mounted",
+                    "state": "not-mounted"
+                    if sys.platform != "win32"
+                    else "symlink-missing",
                 }
             ],
         )

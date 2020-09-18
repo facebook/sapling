@@ -535,11 +535,14 @@ def get_effective_redirections(
                 redir.state = RedirectionState.NOT_MOUNTED
             elif redir.type == RedirectionType.SYMLINK or sys.platform == "win32":
                 try:
+                    # Resolve to normalize extended-length path on Windows
                     expected_target = redir.expand_target_abspath(checkout)
+                    if expected_target:
+                        expected_target = expected_target.resolve()
                     # TODO: replace this with Path.readlink once Python 3.9+
                     target = Path(
                         os.readlink(os.fsdecode(redir.expand_repo_path(checkout)))
-                    )
+                    ).resolve()
                     if target != expected_target:
                         redir.state = RedirectionState.SYMLINK_INCORRECT
                 except OSError:

@@ -54,7 +54,7 @@ if sys.platform == "win32":
         ],
         "rage_test.RageTest": True,
         "rc_test.RCTestHg": True,
-        "redirect_test.RedirectTestHg": True,
+        "redirect_test.RedirectTestHg": ["test_disallow_bind_mount_outside_repo"],
         "remount_test.RemountTestHg": True,
         "rename_test.RenameTestHg": True,
         "restart_test.RestartTestAdHoc": True,

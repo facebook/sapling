@@ -109,7 +109,10 @@ class EdenTestCase(EdenTestCaseBase):
         # Place scratch configuration somewhere deterministic for the tests
         scratch_config_file = os.path.join(self.tmp_dir, "scratch.toml")
         with open(scratch_config_file, "w") as f:
-            f.write('template = "%s/scratch"\n' % self.tmp_dir)
+            f.write(
+                'template = "%s"\n'
+                % os.path.join(self.tmp_dir, "scratch").replace("\\", "\\\\")
+            )
             f.write("overrides = {}\n")
         self.setenv("SCRATCH_CONFIG_PATH", scratch_config_file)
 
