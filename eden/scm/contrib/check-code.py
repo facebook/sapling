@@ -514,6 +514,8 @@ rev_name rev_range send_chunk send_error send_exception treemanifest_paths
 txn_id use_mononoke use_treemanifest
 
 st_mtime st_ctime st_atime
+
+get_ipython
 """.split()
 
 # ported from check-commit

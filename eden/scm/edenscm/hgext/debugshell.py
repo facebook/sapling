@@ -72,6 +72,12 @@ def _assignobjects(objects, repo):
         except Exception:
             pass
 
+        # EdenAPI client
+        try:
+            objects["api"] = repo.edenapi
+        except Exception:
+            pass
+
     # Import other handy modules
     for name in ["os", "sys", "subprocess", "re"]:
         objects[name] = __import__(name)
@@ -128,6 +134,7 @@ def _startipython(ui, repo):
         bannermsg += (
             " repo: the repo object\n"
             " serv: commitcloud service\n"
+            " api: edenapi client\n"
             " cl: repo.changelog\n"
             " mf: repo.manifestlog\n"
             " ml: repo.svfs.metalog\n"
