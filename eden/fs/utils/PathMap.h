@@ -18,6 +18,8 @@ namespace facebook {
 namespace eden {
 
 constexpr bool kPathMapDefaultCaseSensitive = !folly::kIsWindows;
+constexpr bool kPathMapCaseSensitive = true;
+constexpr bool kPathMapCaseInSensitive = !kPathMapCaseSensitive;
 
 /** An associative container that maps from one of our path types to an
  * arbitrary value type.
@@ -33,10 +35,7 @@ constexpr bool kPathMapDefaultCaseSensitive = !folly::kIsWindows;
  * - Since insert and erase operations move the vector contents around,
  *   those operations invalidate iterators.
  */
-template <
-    typename Value,
-    typename Key = PathComponent,
-    bool CaseSensitive = kPathMapDefaultCaseSensitive>
+template <typename Value, typename Key = PathComponent>
 class PathMap : private folly::fbvector<std::pair<Key, Value>> {
   using Pair = std::pair<Key, Value>;
   using Vector = folly::fbvector<Pair>;
@@ -79,6 +78,7 @@ class PathMap : private folly::fbvector<std::pair<Key, Value>> {
   // Hold an instance of the comparator.  It doesn't actually
   // occupy any space.
   Compare compare_;
+  bool caseSensitive_{kPathMapDefaultCaseSensitive};
 
  public:
   // Various type aliases to satisfy container concepts.
@@ -99,15 +99,16 @@ class PathMap : private folly::fbvector<std::pair<Key, Value>> {
   using const_reverse_iterator = typename Vector::const_reverse_iterator;
 
   // Construct empty.
-  PathMap() {}
+  PathMap(bool caseSensitive) : caseSensitive_(caseSensitive) {}
 
   // Populate from an initializer_list.
-  PathMap(std::initializer_list<value_type> init)
-      : PathMap(init.begin(), init.end()) {}
+  PathMap(std::initializer_list<value_type> init, bool caseSensitive)
+      : PathMap(init.begin(), init.end(), caseSensitive) {}
 
   // Populate from a pair of input iterators.
   template <typename InputIterator>
-  PathMap(InputIterator first, InputIterator last) {
+  PathMap(InputIterator first, InputIterator last, bool caseSensitive)
+      : caseSensitive_(caseSensitive) {
     // The std::distance call is O(1) if the iterators are random-access, but
     // O(n) otherwise.  We're fine with the O(n) on the basis that if n is large
     // enough to matter, the cost of iterating will be dwarfed by the cost
@@ -150,6 +151,7 @@ class PathMap : private folly::fbvector<std::pair<Key, Value>> {
   // Swap contents with another map.
   void swap(PathMap& other) noexcept {
     Vector::swap(other);
+    std::swap(caseSensitive_, other.caseSensitive_);
   }
 
   // lower_bound performs the binary search for locating keys.
@@ -170,8 +172,8 @@ class PathMap : private folly::fbvector<std::pair<Key, Value>> {
       // Found it
       return iter;
     }
-    if (!CaseSensitive) {
-      // When !CaseSensitive, for performance, we will do a case sensitive
+    if (!caseSensitive_) {
+      // When !caseSensitive_, for performance, we will do a case sensitive
       // search first which should cover most of the cases and if not found then
       // do a case insensitive search.
       for (iter = begin(); iter != end(); ++iter) {
@@ -193,7 +195,7 @@ class PathMap : private folly::fbvector<std::pair<Key, Value>> {
       // Found it
       return iter;
     }
-    if (!CaseSensitive) {
+    if (!caseSensitive_) {
       for (iter = begin(); iter != end(); ++iter) {
         if (key.stringPiece().equals(
                 iter->first.stringPiece(), folly::AsciiCaseInsensitive())) {
@@ -216,7 +218,7 @@ class PathMap : private folly::fbvector<std::pair<Key, Value>> {
       return std::make_pair(iter, false);
     }
 
-    if (!CaseSensitive) {
+    if (!caseSensitive_) {
       for (auto insens = begin(); insens != end(); ++insens) {
         if (val.first.stringPiece().equals(
                 insens->first.stringPiece(), folly::AsciiCaseInsensitive())) {
@@ -245,7 +247,7 @@ class PathMap : private folly::fbvector<std::pair<Key, Value>> {
       return std::make_pair(iter, false);
     }
 
-    if (!CaseSensitive) {
+    if (!caseSensitive_) {
       for (auto insens = begin(); insens != end(); ++insens) {
         if (key.stringPiece().equals(
                 insens->first.stringPiece(), folly::AsciiCaseInsensitive())) {
@@ -271,7 +273,7 @@ class PathMap : private folly::fbvector<std::pair<Key, Value>> {
       return iter->second;
     }
 
-    if (!CaseSensitive) {
+    if (!caseSensitive_) {
       // Case insensitive lookup
       for (auto insens = begin(); insens != end(); ++insens) {
         if (key.stringPiece().equals(

@@ -39,7 +39,7 @@ static TreeEntry makeTreeEntry(folly::StringPiece name) {
 }
 
 TEST(TreeInode, findEntryDifferencesWithSameEntriesReturnsNone) {
-  DirContents dir;
+  DirContents dir(kPathMapCaseSensitive);
   dir.emplace("one"_pc, makeDirEntry());
   dir.emplace("two"_pc, makeDirEntry());
   Tree tree{{makeTreeEntry("one"), makeTreeEntry("two")}};
@@ -48,7 +48,7 @@ TEST(TreeInode, findEntryDifferencesWithSameEntriesReturnsNone) {
 }
 
 TEST(TreeInode, findEntryDifferencesReturnsAdditionsAndSubtractions) {
-  DirContents dir;
+  DirContents dir(kPathMapCaseSensitive);
   dir.emplace("one"_pc, makeDirEntry());
   dir.emplace("two"_pc, makeDirEntry());
   Tree tree{{makeTreeEntry("one"), makeTreeEntry("three")}};
@@ -59,7 +59,7 @@ TEST(TreeInode, findEntryDifferencesReturnsAdditionsAndSubtractions) {
 }
 
 TEST(TreeInode, findEntryDifferencesWithOneSubtraction) {
-  DirContents dir;
+  DirContents dir(kPathMapCaseSensitive);
   dir.emplace("one"_pc, makeDirEntry());
   dir.emplace("two"_pc, makeDirEntry());
   Tree tree{{makeTreeEntry("one")}};
@@ -70,7 +70,7 @@ TEST(TreeInode, findEntryDifferencesWithOneSubtraction) {
 }
 
 TEST(TreeInode, findEntryDifferencesWithOneAddition) {
-  DirContents dir;
+  DirContents dir(kPathMapCaseSensitive);
   dir.emplace("one"_pc, makeDirEntry());
   dir.emplace("two"_pc, makeDirEntry());
   Tree tree{

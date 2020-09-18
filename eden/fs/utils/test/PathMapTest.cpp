@@ -9,14 +9,12 @@
 #include <folly/portability/Unistd.h>
 #include <gtest/gtest.h>
 
-using facebook::eden::PathComponent;
-using facebook::eden::PathComponentPiece;
-using facebook::eden::PathMap;
+using namespace facebook::eden;
 using namespace facebook::eden::path_literals;
 
 TEST(PathMap, caseSensitive) {
   // Explicitly a case sensitive map, regardless of the host OS
-  PathMap<bool, PathComponent, true> map;
+  PathMap<bool> map(kPathMapCaseSensitive);
 
   map.insert(std::make_pair(PathComponent("foo"), true));
   EXPECT_TRUE(map.at("foo"_pc));
@@ -36,7 +34,7 @@ TEST(PathMap, caseSensitive) {
 
 TEST(PathMap, caseInSensitive) {
   // Explicitly a case IN-sensitive map, regardless of the host OS
-  PathMap<bool, PathComponent, false> map;
+  PathMap<bool> map(kPathMapCaseInSensitive);
 
   map.insert(std::make_pair(PathComponent("foo"), true));
   EXPECT_TRUE(map.at("foo"_pc));
@@ -63,7 +61,7 @@ TEST(PathMap, caseInSensitive) {
 }
 
 TEST(PathMap, insert) {
-  PathMap<bool> map;
+  PathMap<bool> map(kPathMapDefaultCaseSensitive);
 
   EXPECT_TRUE(map.empty());
 
@@ -94,11 +92,13 @@ TEST(PathMap, insert) {
 }
 
 TEST(PathMap, iteration_and_erase) {
-  PathMap<int> map{
-      std::make_pair(PathComponent("foo"), 1),
-      std::make_pair(PathComponent("bar"), 2),
-      std::make_pair(PathComponent("baz"), 3),
-  };
+  PathMap<int> map(
+      {
+          std::make_pair(PathComponent("foo"), 1),
+          std::make_pair(PathComponent("bar"), 2),
+          std::make_pair(PathComponent("baz"), 3),
+      },
+      kPathMapDefaultCaseSensitive);
 
   std::vector<PathComponentPiece> keys;
   for (const auto& it : map) {
@@ -123,22 +123,26 @@ TEST(PathMap, iteration_and_erase) {
 }
 
 TEST(PathMap, copy) {
-  PathMap<int> map{
-      std::make_pair(PathComponent("foo"), 1),
-      std::make_pair(PathComponent("bar"), 2),
-      std::make_pair(PathComponent("baz"), 3),
-  };
+  PathMap<int> map(
+      {
+          std::make_pair(PathComponent("foo"), 1),
+          std::make_pair(PathComponent("bar"), 2),
+          std::make_pair(PathComponent("baz"), 3),
+      },
+      kPathMapDefaultCaseSensitive);
   PathMap<int> other = map;
   EXPECT_EQ(3, other.size());
   EXPECT_EQ(map, other);
 }
 
 TEST(PathMap, move) {
-  PathMap<int> map{
-      std::make_pair(PathComponent("foo"), 1),
-      std::make_pair(PathComponent("bar"), 2),
-      std::make_pair(PathComponent("baz"), 3),
-  };
+  PathMap<int> map(
+      {
+          std::make_pair(PathComponent("foo"), 1),
+          std::make_pair(PathComponent("bar"), 2),
+          std::make_pair(PathComponent("baz"), 3),
+      },
+      kPathMapDefaultCaseSensitive);
   PathMap<int> other = std::move(map);
   EXPECT_EQ(3, other.size());
   EXPECT_EQ(0, map.size());
@@ -158,7 +162,7 @@ struct EmplaceTest {
 int EmplaceTest::counter = 0;
 
 TEST(PathMap, emplace) {
-  PathMap<EmplaceTest> map;
+  PathMap<EmplaceTest> map(kPathMapDefaultCaseSensitive);
 
   auto result = map.emplace("one"_pc, true, 42);
   EXPECT_EQ(1, EmplaceTest::counter)
@@ -176,7 +180,9 @@ TEST(PathMap, emplace) {
 }
 
 TEST(PathMap, swap) {
-  PathMap<std::string> b, a{std::make_pair(PathComponent("foo"), "foo")};
+  PathMap<std::string> b(kPathMapDefaultCaseSensitive),
+      a({std::make_pair(PathComponent("foo"), "foo")},
+        kPathMapDefaultCaseSensitive);
 
   b.swap(a);
   EXPECT_EQ(0, a.size()) << "a now has 0 elements";

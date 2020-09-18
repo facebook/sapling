@@ -74,7 +74,9 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
    * The caller must call initialize() after creating the Overlay and wait for
    * it to succeed before using any other methods.
    */
-  static std::shared_ptr<Overlay> create(AbsolutePathPiece localDir);
+  static std::shared_ptr<Overlay> create(
+      AbsolutePathPiece localDir,
+      bool caseSensitive);
 
   ~Overlay();
 
@@ -217,7 +219,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   struct statfs statFs();
 #endif // !_WIN32
  private:
-  explicit Overlay(AbsolutePathPiece localDir);
+  explicit Overlay(AbsolutePathPiece localDir, bool caseSensitive);
 
   /**
    * A request for the background GC thread.  There are two types of requests:
@@ -298,6 +300,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   mutable std::atomic<uint64_t> outstandingIORequests_{0};
 
   folly::Baton<> lastOutstandingRequestIsComplete_;
+  bool caseSensitive_;
 
   friend class IORequest;
 };

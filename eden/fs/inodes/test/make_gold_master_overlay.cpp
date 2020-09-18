@@ -37,7 +37,7 @@ void createGoldMasterOverlay(AbsolutePath overlayPath) {
   Hash hash3{folly::ByteRange{"e0e0e0e0e0e0e0e0e0e0"_sp}};
   Hash hash4{folly::ByteRange{"44444444444444444444"_sp}};
 
-  auto overlay = Overlay::create(overlayPath);
+  auto overlay = Overlay::create(overlayPath, kPathMapCaseSensitive);
 
   auto fileInode = overlay->allocateInodeNumber();
   CHECK_EQ(2_ino, fileInode);
@@ -45,15 +45,15 @@ void createGoldMasterOverlay(AbsolutePath overlayPath) {
   auto emptyDirInode = overlay->allocateInodeNumber();
   auto helloInode = overlay->allocateInodeNumber();
 
-  DirContents root;
+  DirContents root(kPathMapCaseSensitive);
   root.emplace("file"_pc, S_IFREG | 0644, fileInode, hash1);
   root.emplace("subdir"_pc, S_IFDIR | 0755, subdirInode, hash2);
 
-  DirContents subdir;
+  DirContents subdir(kPathMapCaseSensitive);
   subdir.emplace("empty"_pc, S_IFDIR | 0755, emptyDirInode, hash3);
   subdir.emplace("hello"_pc, S_IFREG | 0644, helloInode, hash4);
 
-  DirContents emptyDir;
+  DirContents emptyDir(kPathMapCaseSensitive);
 
   overlay->saveOverlayDir(kRootNodeId, root);
   overlay->saveOverlayDir(subdirInode, subdir);

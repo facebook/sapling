@@ -14,6 +14,7 @@
 #include <folly/logging/xlog.h>
 #include <vector>
 
+#include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/inodes/CheckoutAction.h"
 #include "eden/fs/inodes/CheckoutContext.h"
 #include "eden/fs/inodes/DeferredDiffEntry.h"
@@ -422,7 +423,9 @@ void TreeInode::loadUnlinkedChildInode(
           name,
           mode,
           std::nullopt,
-          std::move(overlayContents).value_or(DirContents{}),
+          std::move(overlayContents)
+              .value_or(
+                  DirContents(getMount()->getConfig()->getCaseSensitive())),
           hash);
       promises = getInodeMap()->inodeLoadComplete(tree.get());
       inodePtr = InodePtr::takeOwnership(std::move(tree));
@@ -859,13 +862,17 @@ DirContents TreeInode::saveDirFromTree(
     const Tree* tree,
     EdenMount* mount) {
   auto overlay = mount->getOverlay();
-  auto dir = buildDirFromTree(tree, overlay);
+  auto dir =
+      buildDirFromTree(tree, overlay, mount->getConfig()->getCaseSensitive());
   // buildDirFromTree just allocated inode numbers; they should be saved.
   overlay->saveOverlayDir(inodeNumber, dir);
   return dir;
 }
 
-DirContents TreeInode::buildDirFromTree(const Tree* tree, Overlay* overlay) {
+DirContents TreeInode::buildDirFromTree(
+    const Tree* tree,
+    Overlay* overlay,
+    bool caseSensitive) {
   CHECK(tree);
 
   // A future optimization is for this code to allocate all of the inode numbers
@@ -873,7 +880,7 @@ DirContents TreeInode::buildDirFromTree(const Tree* tree, Overlay* overlay) {
   // of atomic operations from N to 1, though if the atomic is issued with the
   // other work this loop is doing it may not matter much.
 
-  DirContents dir;
+  DirContents dir(caseSensitive);
   // TODO: O(N^2)
   for (const auto& treeEntry : tree->getTreeEntries()) {
     dir.emplace(
@@ -1077,7 +1084,7 @@ TreeInodePtr TreeInode::mkdir(
     mode = S_IFDIR | (07777 & mode);
 
     // Store the overlay entry for this dir
-    DirContents emptyDir;
+    DirContents emptyDir(getMount()->getConfig()->getCaseSensitive());
     saveOverlayDir(childNumber, emptyDir);
 
     // Add a new entry to contents_.entries

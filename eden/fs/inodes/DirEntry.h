@@ -236,7 +236,9 @@ static_assert(sizeof(DirEntry) == 32, "DirEntry is four words");
 /**
  * Represents a directory in the overlay.
  */
-struct DirContents : PathMap<DirEntry> {};
+struct DirContents : PathMap<DirEntry> {
+  explicit DirContents(bool caseSensitive) : PathMap(caseSensitive) {}
+};
 
 } // namespace eden
 } // namespace facebook

@@ -202,7 +202,9 @@ EdenMount::EdenMount(
       objectStore_{std::move(objectStore)},
       blobCache_{std::move(blobCache)},
       blobAccess_{objectStore_, blobCache_},
-      overlay_{Overlay::create(config_->getOverlayPath())},
+      overlay_{Overlay::create(
+          config_->getOverlayPath(),
+          config_->getCaseSensitive())},
 #ifndef _WIN32
       overlayFileAccess_{overlay_.get()},
 #endif

@@ -40,15 +40,18 @@ constexpr uint64_t ioClosedMask = 1ull << 63;
 using folly::Unit;
 using std::optional;
 
-std::shared_ptr<Overlay> Overlay::create(AbsolutePathPiece localDir) {
+std::shared_ptr<Overlay> Overlay::create(
+    AbsolutePathPiece localDir,
+    bool caseSensitive) {
   struct MakeSharedEnabler : public Overlay {
-    explicit MakeSharedEnabler(AbsolutePathPiece localDir)
-        : Overlay(localDir) {}
+    explicit MakeSharedEnabler(AbsolutePathPiece localDir, bool caseSensitive)
+        : Overlay(localDir, caseSensitive) {}
   };
-  return std::make_shared<MakeSharedEnabler>(localDir);
+  return std::make_shared<MakeSharedEnabler>(localDir, caseSensitive);
 }
 
-Overlay::Overlay(AbsolutePathPiece localDir) : backingOverlay_{localDir} {}
+Overlay::Overlay(AbsolutePathPiece localDir, bool caseSensitive)
+    : backingOverlay_{localDir}, caseSensitive_{caseSensitive} {}
 
 Overlay::~Overlay() {
   close();
@@ -204,7 +207,7 @@ optional<DirContents> Overlay::loadOverlayDir(InodeNumber inodeNumber) {
 
   bool shouldMigrateToNewFormat = false;
 
-  DirContents result;
+  DirContents result(caseSensitive_);
   for (auto& iter : *dir.entries_ref()) {
     const auto& name = iter.first;
     const auto& value = iter.second;

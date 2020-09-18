@@ -61,8 +61,9 @@ TEST(OverlayGoldMasterTest, can_load_overlay_v2) {
                              tmpdir.path().string()});
   EXPECT_EQ(tarProcess.wait().str(), "exited with status 0");
 
-  auto overlay =
-      Overlay::create(realpath(tmpdir.path().string()) + "overlay-v2"_pc);
+  auto overlay = Overlay::create(
+      realpath(tmpdir.path().string()) + "overlay-v2"_pc,
+      kPathMapDefaultCaseSensitive);
   overlay->initialize().get();
 
   Hash hash1{folly::ByteRange{"abcdabcdabcdabcdabcd"_sp}};
@@ -217,7 +218,7 @@ TEST_F(OverlayTest, roundTripThroughSaveAndLoad) {
   auto ino2 = overlay->allocateInodeNumber();
   auto ino3 = overlay->allocateInodeNumber();
 
-  DirContents dir;
+  DirContents dir(kPathMapDefaultCaseSensitive);
   dir.emplace("one"_pc, S_IFREG | 0644, ino2, hash);
   dir.emplace("two"_pc, S_IFDIR | 0755, ino3);
 
@@ -255,7 +256,8 @@ TEST_F(OverlayTest, getFilePath) {
 
 TEST(PlainOverlayTest, new_overlay_is_clean) {
   folly::test::TemporaryDirectory testDir;
-  auto overlay = Overlay::create(AbsolutePath{testDir.path().string()});
+  auto overlay = Overlay::create(
+      AbsolutePath{testDir.path().string()}, kPathMapDefaultCaseSensitive);
   overlay->initialize().get();
   EXPECT_TRUE(overlay->hadCleanStartup());
 }
@@ -263,11 +265,13 @@ TEST(PlainOverlayTest, new_overlay_is_clean) {
 TEST(PlainOverlayTest, reopened_overlay_is_clean) {
   folly::test::TemporaryDirectory testDir;
   {
-    auto overlay = Overlay::create(AbsolutePath{testDir.path().string()});
+    auto overlay = Overlay::create(
+        AbsolutePath{testDir.path().string()}, kPathMapDefaultCaseSensitive);
     overlay->initialize().get();
   }
 
-  auto overlay = Overlay::create(AbsolutePath{testDir.path().string()});
+  auto overlay = Overlay::create(
+      AbsolutePath{testDir.path().string()}, kPathMapDefaultCaseSensitive);
   overlay->initialize().get();
   EXPECT_TRUE(overlay->hadCleanStartup());
 }
@@ -277,7 +281,8 @@ TEST(PlainOverlayTest, unclean_overlay_is_dirty) {
   auto localDir = AbsolutePath{testDir.path().string()};
 
   {
-    auto overlay = Overlay::create(AbsolutePath{testDir.path().string()});
+    auto overlay = Overlay::create(
+        AbsolutePath{testDir.path().string()}, kPathMapDefaultCaseSensitive);
     overlay->initialize().get();
   }
 
@@ -285,7 +290,8 @@ TEST(PlainOverlayTest, unclean_overlay_is_dirty) {
     folly::throwSystemError("removing saved inode numebr");
   }
 
-  auto overlay = Overlay::create(AbsolutePath{testDir.path().string()});
+  auto overlay = Overlay::create(
+      AbsolutePath{testDir.path().string()}, kPathMapDefaultCaseSensitive);
   overlay->initialize().get();
   EXPECT_FALSE(overlay->hadCleanStartup());
 }
@@ -322,7 +328,7 @@ class RawOverlayTest : public ::testing::TestWithParam<OverlayRestartMode> {
   }
 
   void loadOverlay() {
-    overlay = Overlay::create(getLocalDir());
+    overlay = Overlay::create(getLocalDir(), kPathMapDefaultCaseSensitive);
     overlay->initialize().get();
   }
 
@@ -447,7 +453,7 @@ TEST_P(RawOverlayTest, cannot_save_overlay_dir_when_closed) {
   auto ino2 = overlay->allocateInodeNumber();
   EXPECT_EQ(2_ino, ino2);
 
-  DirContents dir;
+  DirContents dir(kPathMapDefaultCaseSensitive);
   EXPECT_THROW_RE(
       overlay->saveOverlayDir(ino2, dir),
       std::system_error,
@@ -499,7 +505,7 @@ TEST_P(RawOverlayTest, remembers_max_inode_number_of_tree_inodes) {
   auto ino2 = overlay->allocateInodeNumber();
   EXPECT_EQ(2_ino, ino2);
 
-  DirContents dir;
+  DirContents dir(kPathMapDefaultCaseSensitive);
   overlay->saveOverlayDir(ino2, dir);
 
   recreate();
@@ -513,7 +519,7 @@ TEST_P(RawOverlayTest, remembers_max_inode_number_of_tree_entries) {
   auto ino3 = overlay->allocateInodeNumber();
   auto ino4 = overlay->allocateInodeNumber();
 
-  DirContents dir;
+  DirContents dir(kPathMapDefaultCaseSensitive);
   dir.emplace(PathComponentPiece{"f"}, S_IFREG | 0644, ino3);
   dir.emplace(PathComponentPiece{"d"}, S_IFDIR | 0755, ino4);
   overlay->saveOverlayDir(kRootNodeId, dir);
@@ -546,11 +552,12 @@ TEST_P(
   auto rootIno = kRootNodeId;
   ASSERT_GT(subdirectoryIno, rootIno);
 
-  DirContents root;
+  DirContents root(kPathMapDefaultCaseSensitive);
   root.emplace("subdirectory"_pc, S_IFDIR | 0755, subdirectoryIno);
   overlay->saveOverlayDir(rootIno, root);
 
-  overlay->saveOverlayDir(subdirectoryIno, DirContents{});
+  overlay->saveOverlayDir(
+      subdirectoryIno, DirContents(kPathMapDefaultCaseSensitive));
 
   unloadOverlay();
   corruptOverlayFile(subdirectoryIno);
@@ -590,7 +597,7 @@ TEST_P(
   auto corruptedByDeletionIno = InodeNumber{};
 
   auto setUpOverlay = [&](const PathNames& pathNames) {
-    DirContents root;
+    DirContents root(kPathMapDefaultCaseSensitive);
     root.emplace(
         pathNames.corruptedByTruncationName,
         S_IFDIR | 0755,
@@ -598,14 +605,16 @@ TEST_P(
     root.emplace(pathNames.tempName, S_IFDIR | 0755, tempDirIno);
     overlay->saveOverlayDir(rootIno, root);
 
-    overlay->saveOverlayDir(corruptedByTruncationIno, DirContents{});
+    overlay->saveOverlayDir(
+        corruptedByTruncationIno, DirContents(kPathMapDefaultCaseSensitive));
 
-    DirContents tempDir;
+    DirContents tempDir(kPathMapDefaultCaseSensitive);
     tempDir.emplace(
         "corrupted_by_deletion"_pc, S_IFDIR | 0755, corruptedByDeletionIno);
     overlay->saveOverlayDir(tempDirIno, tempDir);
 
-    overlay->saveOverlayDir(corruptedByDeletionIno, DirContents{});
+    overlay->saveOverlayDir(
+        corruptedByDeletionIno, DirContents(kPathMapDefaultCaseSensitive));
   };
 
   const PathNames pathNamesToTest[] = {
@@ -653,7 +662,7 @@ TEST_P(RawOverlayTest, inode_numbers_not_reused_after_unclean_shutdown) {
   overlay->createOverlayFile(ino5, folly::ByteRange{"contents"_sp});
 
   // The subdir is written next.
-  DirContents subdir;
+  DirContents subdir(kPathMapDefaultCaseSensitive);
   subdir.emplace(PathComponentPiece{"f"}, S_IFREG | 0644, ino5);
   overlay->saveOverlayDir(ino4, subdir);
 
@@ -674,12 +683,12 @@ TEST_P(RawOverlayTest, inode_numbers_after_takeover) {
   auto ino5 = overlay->allocateInodeNumber();
 
   // Write a subdir.
-  DirContents subdir;
+  DirContents subdir(kPathMapDefaultCaseSensitive);
   subdir.emplace(PathComponentPiece{"f"}, S_IFREG | 0644, ino5);
   overlay->saveOverlayDir(ino4, subdir);
 
   // Write the root.
-  DirContents dir;
+  DirContents dir(kPathMapDefaultCaseSensitive);
   dir.emplace(PathComponentPiece{"f"}, S_IFREG | 0644, ino3);
   dir.emplace(PathComponentPiece{"d"}, S_IFDIR | 0755, ino4);
   overlay->saveOverlayDir(kRootNodeId, dir);
@@ -688,7 +697,7 @@ TEST_P(RawOverlayTest, inode_numbers_after_takeover) {
 
   // Rewrite the root (say, after a takeover) without the file.
 
-  DirContents newroot;
+  DirContents newroot(kPathMapDefaultCaseSensitive);
   newroot.emplace(PathComponentPiece{"d"}, S_IFDIR | 0755, 4_ino);
   overlay->saveOverlayDir(kRootNodeId, newroot);
 
@@ -719,7 +728,9 @@ class DebugDumpOverlayInodesTest : public ::testing::Test {
  public:
   DebugDumpOverlayInodesTest()
       : testDir_{makeTempDir("eden_DebugDumpOverlayInodesTest")},
-        overlay{Overlay::create(AbsolutePathPiece{testDir_.path().string()})} {
+        overlay{Overlay::create(
+            AbsolutePathPiece{testDir_.path().string()},
+            kPathMapDefaultCaseSensitive)} {
     overlay->initialize().get();
   }
 
@@ -731,7 +742,7 @@ TEST_F(DebugDumpOverlayInodesTest, dump_empty_directory) {
   auto ino = kRootNodeId;
   EXPECT_EQ(1_ino, ino);
 
-  overlay->saveOverlayDir(ino, DirContents{});
+  overlay->saveOverlayDir(ino, DirContents(kPathMapDefaultCaseSensitive));
   EXPECT_EQ(
       "/\n"
       "  Inode number: 1\n"
@@ -749,7 +760,7 @@ TEST_F(DebugDumpOverlayInodesTest, dump_directory_with_3_regular_files) {
   auto fileCIno = overlay->allocateInodeNumber();
   EXPECT_EQ(4_ino, fileCIno);
 
-  DirContents root;
+  DirContents root(kPathMapDefaultCaseSensitive);
   root.emplace("file_a"_pc, S_IFREG | 0644, fileAIno);
   root.emplace("file_b"_pc, S_IFREG | 0644, fileBIno);
   root.emplace("file_c"_pc, S_IFREG | 0644, fileCIno);
@@ -775,11 +786,11 @@ TEST_F(DebugDumpOverlayInodesTest, dump_directory_with_an_empty_subdirectory) {
   auto subdirIno = overlay->allocateInodeNumber();
   EXPECT_EQ(2_ino, subdirIno);
 
-  DirContents root;
+  DirContents root(kPathMapDefaultCaseSensitive);
   root.emplace("subdir"_pc, S_IFDIR | 0755, subdirIno);
   overlay->saveOverlayDir(rootIno, root);
 
-  overlay->saveOverlayDir(subdirIno, DirContents{});
+  overlay->saveOverlayDir(subdirIno, DirContents(kPathMapDefaultCaseSensitive));
 
   EXPECT_EQ(
       "/\n"
@@ -798,7 +809,7 @@ TEST_F(DebugDumpOverlayInodesTest, dump_directory_with_unsaved_subdirectory) {
   auto directoryDoesNotExistIno = overlay->allocateInodeNumber();
   EXPECT_EQ(2_ino, directoryDoesNotExistIno);
 
-  DirContents root;
+  DirContents root(kPathMapDefaultCaseSensitive);
   root.emplace(
       "directory_does_not_exist"_pc, S_IFDIR | 0755, directoryDoesNotExistIno);
   overlay->saveOverlayDir(rootIno, root);
@@ -819,7 +830,7 @@ TEST_F(DebugDumpOverlayInodesTest, dump_directory_with_unsaved_regular_file) {
   auto regularFileDoesNotExistIno = overlay->allocateInodeNumber();
   EXPECT_EQ(2_ino, regularFileDoesNotExistIno);
 
-  DirContents root;
+  DirContents root(kPathMapDefaultCaseSensitive);
   root.emplace(
       "regular_file_does_not_exist"_pc,
       S_IFREG | 0644,
@@ -848,23 +859,26 @@ TEST_F(DebugDumpOverlayInodesTest, directories_are_dumped_depth_first) {
   auto subdirBXIno = overlay->allocateInodeNumber();
   EXPECT_EQ(6_ino, subdirBXIno);
 
-  DirContents root;
+  DirContents root(kPathMapDefaultCaseSensitive);
   root.emplace("subdir_a"_pc, S_IFDIR | 0755, subdirAIno);
   root.emplace("subdir_b"_pc, S_IFDIR | 0755, subdirBIno);
   overlay->saveOverlayDir(rootIno, root);
 
-  DirContents subdirA;
+  DirContents subdirA(kPathMapDefaultCaseSensitive);
   subdirA.emplace("x"_pc, S_IFDIR | 0755, subdirAXIno);
   subdirA.emplace("y"_pc, S_IFDIR | 0755, subdirAYIno);
   overlay->saveOverlayDir(subdirAIno, subdirA);
 
-  DirContents subdirB;
+  DirContents subdirB(kPathMapDefaultCaseSensitive);
   subdirB.emplace("x"_pc, S_IFDIR | 0755, subdirBXIno);
   overlay->saveOverlayDir(subdirBIno, subdirB);
 
-  overlay->saveOverlayDir(subdirAXIno, DirContents{});
-  overlay->saveOverlayDir(subdirAYIno, DirContents{});
-  overlay->saveOverlayDir(subdirBXIno, DirContents{});
+  overlay->saveOverlayDir(
+      subdirAXIno, DirContents(kPathMapDefaultCaseSensitive));
+  overlay->saveOverlayDir(
+      subdirAYIno, DirContents(kPathMapDefaultCaseSensitive));
+  overlay->saveOverlayDir(
+      subdirBXIno, DirContents(kPathMapDefaultCaseSensitive));
 
   EXPECT_EQ(
       "/\n"

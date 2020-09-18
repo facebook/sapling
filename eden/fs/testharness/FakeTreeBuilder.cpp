@@ -262,14 +262,14 @@ StoredBlob* FakeTreeBuilder::getStoredBlob(RelativePathPiece path) {
 
 FakeTreeBuilder::EntryInfo::EntryInfo(TreeEntryType fileType) : type(fileType) {
   if (type == TreeEntryType::TREE) {
-    entries = make_unique<PathMap<EntryInfo>>();
+    entries = make_unique<PathMap<EntryInfo>>(kPathMapDefaultCaseSensitive);
   }
 }
 
 FakeTreeBuilder::EntryInfo::EntryInfo(ExplicitClone, const EntryInfo& orig)
     : type(orig.type), contents(orig.contents) {
   if (orig.entries) {
-    entries = make_unique<PathMap<EntryInfo>>();
+    entries = make_unique<PathMap<EntryInfo>>(kPathMapDefaultCaseSensitive);
     for (const auto& e : *orig.entries) {
       auto ret = entries->emplace(e.first, EntryInfo{CLONE, e.second});
       CHECK(ret.second) << "failed to insert " << e.first;

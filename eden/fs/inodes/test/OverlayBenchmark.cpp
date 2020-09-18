@@ -26,13 +26,13 @@ void benchmarkOverlayTreeWrites(AbsolutePathPiece overlayPath) {
   //
   // overlayPath is parameterized to measure on different filesystem types.
 
-  auto overlay = Overlay::create(overlayPath);
+  auto overlay = Overlay::create(overlayPath, kPathMapDefaultCaseSensitive);
   overlay->initialize().get();
 
   Hash hash1{folly::ByteRange{"abcdabcdabcdabcdabcd"_sp}};
   Hash hash2{folly::ByteRange{"01234012340123401234"_sp}};
 
-  DirContents contents;
+  DirContents contents(kPathMapDefaultCaseSensitive);
   contents.emplace(
       PathComponent{"one"},
       S_IFREG | 0644,

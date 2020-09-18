@@ -102,7 +102,7 @@ class InodeLoader {
   // for this to avoid creating a self-referential type and fail to
   // compile.  This happens to have the nice property of maintaining
   // a stable address for the contents of the InodeLoader.
-  PathMap<std::unique_ptr<InodeLoader>> children_;
+  PathMap<std::unique_ptr<InodeLoader>> children_{kPathMapCaseSensitive};
   // promises for the inode load attempts
   std::vector<folly::Promise<InodePtr>> promises_;
 
