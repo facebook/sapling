@@ -4316,17 +4316,42 @@ def threaded(func):
         def target(*args, **kwargs):
             try:
                 result[:] = ["ok", func(*args, **kwargs)]
-            except Exception as e:
+            except BaseException as e:
                 result[:] = ["err", e]
 
         thread = threading.Thread(target=target, args=args, kwargs=kwargs)
+        # If the main program decides to exit, do not wait for the thread.
+        thread.daemon = True
         thread.start()
 
         # XXX: Need to repeatedly poll the thread because blocking
         # indefinitely on join() would prevent the interpreter from
         # handling signals.
         while thread.is_alive():
-            thread.join(1)
+            try:
+                thread.join(1)
+            except KeyboardInterrupt as e:
+                # Exceptions from the signal handlers are sent to the
+                # main thread (here). The 'thread' won't get exceptions
+                # from signal handlers therefore will continue run.
+                # Attempt to interrupt it to make it stop.
+                interrupt(thread, type(e))
+
+                # Give the thread some time to run 'finally' blocks.
+                try:
+                    thread.join(5)
+                except KeyboardInterrupt:
+                    # Ctrl+C is pressed again. The user becomes inpatient.
+                    pass
+
+                # Re-raise. This returns control to callsite if the background
+                # thread is still blocking. It might potentially miss some
+                # 'finally' blocks, but our storage should be generally fine.
+                # 'hg recover' might be needed to recover from an aborted
+                # transaction. In the future if we migrate off legacy revlog,
+                # we might be able to remove the file-truncation-based
+                # transaction layer.
+                raise
 
         variant, value = result
         if variant == "err":
@@ -4335,6 +4360,17 @@ def threaded(func):
         return value
 
     return wrapped
+
+
+def interrupt(thread, exc):
+    """Interrupt a thread using the given exception"""
+    # See https://github.com/python/cpython/blob/fbf43f051e7bf479709e122efa4b6edd4b09d4df/Lib/test/test_threading.py#L189
+    import ctypes
+
+    if thread.is_alive():
+        ctypes.pythonapi.PyThreadState_SetAsyncExc(
+            ctypes.c_ulong(thread.ident), ctypes.py_object(exc)
+        )
 
 
 def info(name, **kwargs):
