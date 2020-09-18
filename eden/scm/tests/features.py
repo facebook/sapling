@@ -30,9 +30,6 @@ narrowheadsincompatiblelist = """
     test-revset-t.py
 """
 
-transactionincompatiblelist = """
-"""
-
 
 def setup(testname, hgrcpath):
     # Disable mutation.record to maintain commit hashes.
@@ -46,7 +43,3 @@ def setup(testname, hgrcpath):
     if testname in narrowheadsincompatiblelist:
         with open(hgrcpath, "a") as f:
             f.write("\n[experimental]\nnarrow-heads=False\n")
-    # Disable head-based-commit-transaction if incomaptible.
-    if testname in transactionincompatiblelist:
-        with open(hgrcpath, "a") as f:
-            f.write("\n[experimental]\nhead-based-commit-transaction=False\n")
