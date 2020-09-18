@@ -469,6 +469,19 @@ class _HttpsCommitCloudService(baseservice.BaseService):
         data = {"repo_name": reponame, "workspace": workspace, "archived": archived}
         self._timedsend(path, data)
 
+    @perftrace.tracefunc("Rename Workspace")
+    def renameworkspace(self, reponame, workspace, new_workspace):
+        """Rename the given workspace
+        """
+        self.ui.debug("sending 'rename_workspace' request\n", component="commitcloud")
+        path = "/commit_cloud/rename_workspace"
+        data = {
+            "repo_name": reponame,
+            "workspace": workspace,
+            "new_workspace": new_workspace,
+        }
+        self._timedsend(path, data)
+
 
 # Make sure that the HttpsCommitCloudService is a singleton
 HttpsCommitCloudService = baseservice.SingletonDecorator(_HttpsCommitCloudService)

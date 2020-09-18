@@ -41,6 +41,12 @@ class SyncState(object):
         # clean up the current state in force recover mode
         repo.svfs.tryunlink(filename)
 
+    @classmethod
+    def movestate(cls, repo, workspacename, new_workspacename):
+        src = cls._filename(workspacename)
+        dst = cls._filename(new_workspacename)
+        repo.svfs.rename(src, dst)
+
     def __init__(self, repo, workspacename):
         self.workspacename = workspacename
         self.filename = self._filename(workspacename)

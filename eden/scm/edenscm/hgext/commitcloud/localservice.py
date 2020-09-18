@@ -100,6 +100,12 @@ class _LocalService(baseservice.BaseService):
             )
             return baseservice.References(version, None, None, None, None, None, None)
         else:
+            if baseversion > version:
+                raise error.Abort(
+                    _(
+                        "'get_references' failed, the workspace has been renamed or client has an invalid state"
+                    )
+                )
             self._ui.debug(
                 "commitcloud local service: "
                 "get_references for versions from %s to %s\n" % (baseversion, version)
@@ -290,21 +296,58 @@ class _LocalService(baseservice.BaseService):
         found = next(
             (winfo for winfo in allworkspaces if winfo.name == workspace), None
         )
-        # filter
         if found:
             allworkspaces = [
                 winfo for winfo in allworkspaces if winfo.name != workspace
             ]
-        # update
-        if found:
             allworkspaces.append(
                 baseservice.WorkspaceInfo(
                     name=found.name, archived=archived, version=found.version
                 )
             )
+            self._saveworkspaces(allworkspaces)
         else:
             raise error.Abort(_("unknown workspace: %s") % workspace)
-        self._saveworkspaces(allworkspaces)
+
+    def renameworkspace(self, reponame, workspace, new_workspace):
+        """Rename the given workspace
+        """
+        allworkspaces = self.getworkspaces(reponame, None)
+        if next(
+            (winfo for winfo in allworkspaces if winfo.name == new_workspace), None
+        ):
+            raise error.Abort(_("workspace: '%s' already exists") % new_workspace)
+
+        found = next(
+            (winfo for winfo in allworkspaces if winfo.name == workspace), None
+        )
+        if found:
+            # update the list of workspaces
+            allworkspaces = [
+                winfo for winfo in allworkspaces if winfo.name != workspace
+            ]
+            allworkspaces.append(
+                baseservice.WorkspaceInfo(
+                    name=new_workspace, archived=found.archived, version=found.version
+                )
+            )
+            # rename bunch of files:
+            for name in [
+                "usersmartlogdata",
+                "checkoutlocations",
+                "usersmartlogbyversiondata",
+                "nodedata",
+                "commitcloudservicedb",
+            ]:
+                src = os.path.join(self.path, self._workspacefilename(name, workspace))
+                dst = os.path.join(
+                    self.path, self._workspacefilename(name, new_workspace)
+                )
+                if os.path.exists(src):
+                    os.rename(src, dst)
+            self._saveworkspaces(allworkspaces)
+        else:
+            raise error.Abort(_("unknown workspace: %s") % workspace)
 
 
 # Make sure that the LocalService is a singleton

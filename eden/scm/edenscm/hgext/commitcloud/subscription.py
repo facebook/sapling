@@ -68,6 +68,25 @@ def remove(repo):
         _restart_subscriptions(repo.ui, warn_service_not_running=False)
 
 
+def move(repo, workspace, new_workspace):
+    reponame = ccutil.getreponame(repo)
+    if not workspace or not new_workspace:
+        return
+    src = _uniquefilename(repo.path, reponame, workspace)
+    dst = _uniquefilename(repo.path, reponame, new_workspace)
+    vfs = _subscriptionvfs(repo)
+    if vfs.exists(src):
+        vfs.tryunlink(src)
+        with vfs.open(dst, "wb") as configfile:
+            configfile.write(
+                encodeutf8(
+                    "[commitcloud]\nworkspace=%s\nrepo_name=%s\nrepo_root=%s\n"
+                    % (new_workspace, reponame, repo.path)
+                )
+            )
+        _restart_subscriptions(repo.ui, warn_service_not_running=False)
+
+
 def _warn_service_not_running(ui):
     ui.status(
         _(

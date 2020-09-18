@@ -278,6 +278,11 @@ class BaseService(pycompat.ABC):
         """Archive or Restore the given workspace
         """
 
+    @abstractmethod
+    def renameworkspace(self, reponame, workspace, new_workspace):
+        """Rename the given workspace
+        """
+
     @staticmethod
     def _makesmartloginfo(data):
         """Returns a SmartlogInfo that supports DAG operations like heads, parents,

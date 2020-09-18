@@ -829,7 +829,14 @@ def cloudbackup(ui, repo, *revs, **opts):
 @subcmd(
     "listworkspaces|list",
     [
-        ("", "user", "", _("username, defaults to current user")),
+        (
+            "",
+            "user",
+            "",
+            _(
+                "username, defaults to current user (specified by username or email address)"
+            ),
+        ),
         ("a", "all", None, _("list all workspaces, including archived")),
     ],
 )
@@ -933,6 +940,86 @@ def cloudundeleteworkspace(ui, repo, **opts):
     ui.status(
         _("workspace %s has been restored\n") % workspacename, component="commitcloud"
     )
+
+
+@subcmd(
+    "renameworkspace|rename",
+    [
+        ("s", "source", "", _("short name for the source workspace")),
+        ("d", "destination", "", _("short name for the destination workspace")),
+        ("", "rehost", None, _("rebind commit cloud workspace to the current host")),
+    ],
+)
+def cloudrenameworkspace(ui, repo, **opts):
+    """rename Commit Cloud workspace
+
+    The command only supports renaming the workspaces of the current user.
+    """
+
+    source = opts.get("source")
+    destination = opts.get("destination")
+    rehost = opts.get("rehost")
+
+    userworkspaceprefix = workspace.userworkspaceprefix(ui)
+    (currentworkspace, locally_owned) = workspace.currentworkspacewithlocallyownedinfo(
+        repo
+    )
+    reponame = ccutil.getreponame(repo)
+
+    if not destination and not rehost:
+        raise error.Abort(_("please provide the destination workspace"))
+
+    if destination and rehost:
+        raise error.Abort(
+            _("'rehost' option and 'destination' option are incompatible")
+        )
+
+    if rehost:
+        destination = workspace.hostnameworkspace(ui)
+    else:
+        destination = userworkspaceprefix + destination
+
+    if not source:
+        source = currentworkspace
+    else:
+        source = userworkspaceprefix + source
+
+    if source == workspace.defaultworkspace(ui):
+        raise error.Abort(_("rename of the default workspace is not allowed"))
+
+    confirmed = True
+    if ui.interactive():
+        prompt = _(
+            "are you sure you would like to rename the '%s' workspace to '%s' for the repo '%s'[yn]:\n"
+        ) % (source, destination, reponame)
+        ui.write(ui.label(prompt, "ui.prompt"))
+        confirmed = ui.prompt("", default="").strip().lower().startswith("y")
+    if not confirmed:
+        return
+
+    if source == currentworkspace:
+        # sync all the current commits and bookmarks before rename
+        cloudsync(ui, repo, **opts)
+
+    ui.status(
+        _("rename the '%s' workspace to '%s' for the repo '%s'\n")
+        % (source, destination, reponame),
+        component="commitcloud",
+    )
+
+    service.get(ui, tokenmod.TokenLocator(ui).token).renameworkspace(
+        reponame, source, destination
+    )
+
+    if source == currentworkspace:
+        # move the current state
+        syncstate.SyncState.movestate(repo, source, destination)
+        # move the subscription
+        subscription.move(repo, source, destination)
+        # update the current workspace name
+        workspace.setworkspace(repo, destination)
+
+    ui.status(_("rename successful\n"), component="commitcloud")
 
 
 @subcmd(
