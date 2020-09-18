@@ -315,10 +315,11 @@ class obsoletecache(object):
             clrev = repo.changelog.rev
             obsolete = self.obsolete[None]
             for node in repo.nodes("not public()"):
-                succsets = successorssets(repo, node, closest=True)
-                if succsets != [[node]]:
-                    if any(clhasnode(succ) for succset in succsets for succ in succset):
-                        obsolete.add(node)
+                if any(
+                    clhasnode(succ)
+                    for succ in allsuccessors(repo, [node], startdepth=1)
+                ):
+                    obsolete.add(node)
             candidates = set(obsolete)
             seen = set(obsolete)
             while candidates:
