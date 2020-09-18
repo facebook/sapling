@@ -11,13 +11,11 @@ use http::header::{HeaderMap, HeaderValue, ACCEPT_ENCODING};
 
 const GZIP: &str = "gzip";
 const ZSTD: &str = "zstd";
-const BROTLI: &str = "br";
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum ContentCompression {
     Gzip,
     Zstd,
-    Brotli,
 }
 
 impl ContentCompression {
@@ -25,7 +23,6 @@ impl ContentCompression {
         match self {
             Self::Gzip => GZIP,
             Self::Zstd => ZSTD,
-            Self::Brotli => BROTLI,
         }
     }
 }
@@ -68,7 +65,6 @@ impl ContentEncoding {
     fn from_header(header: &[u8]) -> Result<Self, Error> {
         let mut gzip = false;
         let mut zstd = false;
-        let mut brotli = false;
 
         let encodings = std::str::from_utf8(header)?.split(' ');
 
@@ -82,10 +78,6 @@ impl ContentEncoding {
                 zstd = true;
             }
 
-            if encoding == BROTLI {
-                brotli = true;
-            }
-
             if encoding == GZIP {
                 gzip = true;
             }
@@ -93,10 +85,6 @@ impl ContentEncoding {
 
         if zstd {
             return Ok(Self::Compressed(ContentCompression::Zstd));
-        }
-
-        if brotli {
-            return Ok(Self::Compressed(ContentCompression::Brotli));
         }
 
         if gzip {
@@ -136,16 +124,6 @@ mod test {
         assert_eq!(
             ContentEncoding::from_header(b"deflate, gzip;q=1.0, *;q=0.5")?,
             ContentEncoding::Compressed(ContentCompression::Gzip),
-        );
-
-        assert_eq!(
-            ContentEncoding::from_header(b"br, gzip")?,
-            ContentEncoding::Compressed(ContentCompression::Gzip)
-        );
-
-        assert_eq!(
-            ContentEncoding::from_header(b"brotli")?,
-            ContentEncoding::Identity,
         );
 
         assert_eq!(

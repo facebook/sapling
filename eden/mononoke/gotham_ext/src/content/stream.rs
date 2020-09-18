@@ -8,7 +8,7 @@
 use std::pin::Pin;
 
 use anyhow::Error;
-use async_compression::stream::{BrotliEncoder, GzipEncoder, ZstdEncoder};
+use async_compression::stream::{GzipEncoder, ZstdEncoder};
 use bytes::Bytes;
 use futures::{
     stream::{BoxStream, Stream, StreamExt, TryStreamExt},
@@ -46,7 +46,6 @@ impl<'a> CompressedContentStream<'a> {
 
         let inner = match content_compression {
             ContentCompression::Zstd => ZstdEncoder::new(inner).map_err(Error::from).boxed(),
-            ContentCompression::Brotli => BrotliEncoder::new(inner).map_err(Error::from).boxed(),
             ContentCompression::Gzip => GzipEncoder::new(inner).map_err(Error::from).boxed(),
         };
 

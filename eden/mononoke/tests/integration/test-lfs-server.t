@@ -44,7 +44,6 @@
   $ curl "${lfs_uri}/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d" -s -o identity
   $ curl "${lfs_uri}/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d" -s -o gzip -H "Accept-Encoding: gzip"
   $ curl "${lfs_uri}/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d" -s -o zstd -H "Accept-Encoding: zstd"
-  $ curl "${lfs_uri}/download/d28548bc21aabf04d143886d717d72375e3deecd0dafb3d110676b70a192cb5d" -s -o brotli -H "Accept-Encoding: br"
 
 # Check that the encoding yield different sizes, but the same content.
 
@@ -62,6 +61,3 @@
   18 zstd
   $ zstdcat < zstd | sha256sum
   ab02c2a1923c8eb11cb3ddab70320746d71d32ad63f255698dc67c3295757746  -
-
-  $ wc -c brotli
-  13 brotli
