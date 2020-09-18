@@ -18,10 +18,10 @@ use serde::Deserialize;
 
 use filestore::{self, Alias, FetchKey};
 use gotham_ext::{
-    content_encoding::ContentEncoding,
+    content::{CompressedContentStream, ContentEncoding, ContentStream},
     error::HttpError,
     middleware::ScubaMiddlewareState,
-    response::{CompressedContentStream, ContentStream, StreamBody, TryIntoResponse},
+    response::{StreamBody, TryIntoResponse},
 };
 use mononoke_types::{hash::Sha256, ContentId};
 use redactedblobstore::has_redaction_root_cause;
