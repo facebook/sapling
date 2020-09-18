@@ -334,7 +334,13 @@ impl WorkspaceSubscriberService {
                         reason,
                     );
                     // log outputs, results and continue even if unsuccessful
-                    let _res = CloudSyncTrigger::fire(&sid, repo_root, cloudsync_retries, version);
+                    let _res = CloudSyncTrigger::fire(
+                        &sid,
+                        repo_root,
+                        cloudsync_retries,
+                        version,
+                        subscription.workspace.clone(),
+                    );
                     if interrupt.load(Ordering::Relaxed) {
                         break;
                     }

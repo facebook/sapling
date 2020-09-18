@@ -20,10 +20,11 @@ impl CloudSyncTrigger {
         path: P,
         retries: u32,
         version: Option<u64>,
+        workspace: String,
     ) -> Result<()> {
-        let mut version_args = vec![];
+        let mut workspace_args = vec!["--raw-workspace-name".to_owned(), workspace];
         if let Some(version) = version {
-            version_args.append(&mut vec![
+            workspace_args.append(&mut vec![
                 "--workspace-version".to_owned(),
                 version.to_string(),
             ]);
@@ -36,7 +37,7 @@ impl CloudSyncTrigger {
                 .args(vec!["cloud", "sync"])
                 .arg("--check-autosync-enabled")
                 .arg("--use-bgssh")
-                .args(&version_args)
+                .args(&workspace_args)
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())
                 .spawn()?; // do not retry if failed to start

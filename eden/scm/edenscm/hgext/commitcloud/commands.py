@@ -37,6 +37,7 @@ from . import (
     dependencies,
     error as ccerror,
     interactivehistory,
+    scmdaemon,
     service,
     subscription,
     sync,
@@ -1285,9 +1286,7 @@ def cloudrestorebackup(ui, repo, dest=None, **opts):
         "backuprestore"
     ) as tr:
 
-        maxrevbeforepull = len(repo.changelog)
         result = pullcmd(ui, repo, **pullopts)
-        maxrevafterpull = len(repo.changelog)
 
         changes = []
         for name, hexnode in pycompat.iteritems(bookmarks):
@@ -1381,71 +1380,32 @@ def clouddeletebackup(ui, repo, dest=None, **opts):
     return 0
 
 
-@subcmd(
-    "sync",
-    [
-        (
-            "",
-            "workspace-version",
-            "",
-            _(
-                "target workspace version to sync to "
-                "(skip `cloud sync` if the current version is greater or equal than the given one) (EXPERIMENTAL)"
-            ),
-        ),
-        (
-            "",
-            "check-autosync-enabled",
-            None,
-            _(
-                "check automatic synchronization settings "
-                "(skip `cloud sync` if automatic synchronization is disabled) (EXPERIMENTAL)"
-            ),
-        ),
-        (
-            "",
-            "use-bgssh",
-            None,
-            _(
-                "try to use the password-less login for ssh if defined in the config "
-                "(option requires infinitepush.bgssh config) (EXPERIMENTAL)"
-            ),
-        ),
-    ]
-    + pullopts
-    + remoteopts,
-)
+@subcmd("sync", scmdaemon.scmdaemonsyncopts + pullopts + remoteopts)
 def cloudsync(ui, repo, cloudrefs=None, dest=None, **opts):
     """backup and synchronize commits with the commit cloud service
     """
-    # external services can run cloud sync and require to check if
-    # auto sync is enabled
-    if opts.get("check_autosync_enabled") and not background.autobackupenabled(repo):
-        ui.status(
-            _("automatic backup and synchronization is currently disabled\n"),
-            component="commitcloud",
-        )
-        return 0
-
     repo.ignoreautobackup = True
-    if opts.get("use_bgssh"):
-        bgssh = ui.config("infinitepush", "bgssh")
-        if bgssh:
-            ui.setconfig("ui", "ssh", bgssh)
-
     full = opts.get("full")
 
-    version = None
-    versionstr = opts.get("workspace_version")
-    if versionstr:
-        try:
-            version = int(versionstr)
-        except ValueError:
-            raise error.Abort(
-                _("error: argument 'workspace-version' should be a number")
-            )
+    if scmdaemon.checkmaybeskiprun(repo, opts):
+        return 0
 
-    ret = sync.sync(repo, cloudrefs, full, version, dest=dest, connect_opts=opts)
+    maybeversion = scmdaemon.parsemaybeworkspaceversion(opts)
+    maybeworkspace = scmdaemon.parsemaybeworkspacename(opts)
+    maybebgssh = scmdaemon.parsemaybebgssh(ui, opts)
+
+    if maybebgssh:
+        ui.setconfig("ui", "ssh", maybebgssh)
+
+    ret = sync.sync(
+        repo,
+        cloudrefs,
+        full,
+        maybeversion,
+        maybeworkspace,
+        dest=dest,
+        connect_opts=opts,
+    )
     background.backgroundbackupother(repo, dest=dest)
     return ret
 

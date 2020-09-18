@@ -795,18 +795,42 @@ Check cloud sync pulls in the shared commit in the other client
   |
   o  0: d20a80d4def3 'base'
   
-Check '--workspace_version' option
+ 
+
+Check handling of scm daemon options:
+
+Check '--workspace-version' option
   $ hg cloud sync --workspace-version 1
   commitcloud: synchronizing 'server' with 'user/test/default'
   commitcloud: this version has been already synchronized
 
 Check '--check-autosync-enabled' option
   $ hg cloud sync --check-autosync-enabled
-  commitcloud: automatic backup and synchronization is currently disabled
+  commitcloud: background operations are currently disabled
   $ hg cloud sync --check-autosync-enabled --config infinitepushbackup.autobackup=true
   commitcloud: synchronizing 'server' with 'user/test/default'
   commitcloud: commits synchronized
   finished in * (glob)
+
+Check '--raw-workspace-name' option
+  $ hg cloud sync --raw-workspace-name 'user/test/default'
+  commitcloud: synchronizing 'server' with 'user/test/default'
+  commitcloud: commits synchronized
+  finished in 0.00 sec
+  $ hg cloud sync --raw-workspace-name 'user/test/other'
+  current workspace is different than the workspace to sync
+  [1]
+
+Check '--use-bgssh' option 
+  $ setconfig infinitepush.bgssh='trashssh'
+  $ mkcommit "trashssh test"
+  $ hg cloud sync --use-bgssh
+  commitcloud: synchronizing 'server' with 'user/test/default'
+  remote: /bin/sh: trashssh: command not found
+  abort: no suitable response from remote hg!
+  [255]
+  $ hg hide -r . -q
+  $ hg cloud sync -q
 
 Check handling of failures
 Simulate failure to backup a commit by setting the server maxbundlesize limit very low
@@ -823,9 +847,9 @@ Simulate failure to backup a commit by setting the server maxbundlesize limit ve
   $ mkcommit toobig
   $ hg book toobig
   $ tglog
-  @  17: 9bd68ef10d6b 'toobig' testbookmark toobig
+  @  18: 9bd68ef10d6b 'toobig' testbookmark toobig
   |
-  | o  16: a6b97eebbf74 'shared commit updated'
+  | o  17: a6b97eebbf74 'shared commit updated'
   |/
   o  14: 715c1454ae33 'stack commit 2'
   |
@@ -928,9 +952,9 @@ Now sync in the repo we failed in.  This time it should work.
   $ hg cloud check -r .
   9bd68ef10d6bdb8ebf3273a7b91bc4f3debe2a87 backed up
   $ tglog
-  @  17: 9bd68ef10d6b 'toobig' testbookmark toobig
+  @  18: 9bd68ef10d6b 'toobig' testbookmark toobig
   |
-  | o  16: a6b97eebbf74 'shared commit updated'
+  | o  17: a6b97eebbf74 'shared commit updated'
   |/
   o  14: 715c1454ae33 'stack commit 2'
   |
@@ -1033,13 +1057,13 @@ Commit still becomes available in the other repo
   commitcloud: commits synchronized
   finished in * (glob)
   $ tglog
-  o  21: 9a3e7907fd5c 'stack 1 second'
+  o  22: 9a3e7907fd5c 'stack 1 second'
   |
-  o  20: e58a6603d256 'stack 1 first'
+  o  21: e58a6603d256 'stack 1 first'
   |
-  | o  19: 799d22972c4e 'stack 2 second'
+  | o  20: 799d22972c4e 'stack 2 second'
   | |
-  | o  18: 3597ff85ead0 'stack 2 first'
+  | o  19: 3597ff85ead0 'stack 2 first'
   |/
   @  0: d20a80d4def3 'base'
   

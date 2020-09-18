@@ -113,7 +113,13 @@ def sync(repo, *args, **kwargs):
 
 
 def _sync(
-    repo, cloudrefs=None, full=False, cloudversion=None, connect_opts=None, dest=None
+    repo,
+    cloudrefs=None,
+    full=False,
+    cloudversion=None,
+    cloudworkspace=None,
+    connect_opts=None,
+    dest=None,
 ):
     ui = repo.ui
     start = util.timer()
@@ -135,6 +141,11 @@ def _sync(
     workspacename = workspace.currentworkspace(repo)
     if workspacename is None:
         raise ccerror.WorkspaceError(ui, _("undefined workspace"))
+
+    # External services may know the workspacename to trigger the sync
+    if cloudworkspace and workspacename != cloudworkspace:
+        ui.status(_("current workspace is different than the workspace to sync\n"))
+        return (1, None)
 
     # Connect to the commit cloud service.
     tokenlocator = token.TokenLocator(ui)
