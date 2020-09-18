@@ -42,7 +42,10 @@ impl<'a> CompressedContentStream<'a> {
     {
         use std::io;
 
+        const YIELD_EVERY: usize = 4 * (2 ^ 20); // 4MiB, for LFS that's about once every content chunk.
+
         let inner = inner.map_err(|e| io::Error::new(io::ErrorKind::Other, e));
+        let inner = YieldStream::new(inner, YIELD_EVERY);
 
         let inner = match content_compression {
             ContentCompression::Zstd => ZstdEncoder::new(inner).map_err(Error::from).boxed(),
@@ -156,5 +159,86 @@ where
     fn content_encoding(&self) -> ContentEncoding {
         // inspect_ok doesn't change the stream data.
         self.get_ref().content_encoding()
+    }
+}
+
+/// This is a helper that forces the underlying stream to yield (i.e. return Pending) periodically.
+/// This is useful with compression, because our compression library will try to compress as much
+/// as it can. If the data is always ready (which it often is with e.g. LFS, where we have
+/// everything in cache most of the time), then it'll compress the entire stream before returning,
+/// which is good for compression performance, but terrible for time-to-first-byte. So, we force
+/// our compression to periodically stop compresing (every YIELD_EVERY).
+#[pin_project]
+pub struct YieldStream<S> {
+    read: usize,
+    yield_every: usize,
+    #[pin]
+    inner: S,
+}
+
+impl<S> YieldStream<S> {
+    pub fn new(inner: S, yield_every: usize) -> Self {
+        Self {
+            read: 0,
+            yield_every,
+            inner,
+        }
+    }
+}
+
+impl<S, E> Stream for YieldStream<S>
+where
+    S: Stream<Item = Result<Bytes, E>>,
+{
+    type Item = Result<Bytes, E>;
+
+    fn poll_next(self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        let mut projection = self.project();
+
+        if *projection.read >= *projection.yield_every {
+            *projection.read %= *projection.yield_every;
+            ctx.waker().wake_by_ref();
+            return Poll::Pending;
+        }
+
+        let ret = futures::ready!(projection.inner.poll_next_unpin(ctx));
+        if let Some(Ok(ref bytes)) = ret {
+            *projection.read += bytes.len();
+        }
+
+        Poll::Ready(ret)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    use futures::stream;
+
+    #[tokio::test]
+    async fn test_yield_stream() {
+        // NOTE: This tests that the yield probably wakes up but assumes it yields.
+
+        let data = &[b"foo".as_ref(), b"bar2".as_ref()];
+        let data = stream::iter(
+            data.iter()
+                .map(|d| Result::<_, ()>::Ok(Bytes::copy_from_slice(d))),
+        );
+        let mut stream = YieldStream::new(data, 1);
+
+        assert_eq!(
+            stream.next().await,
+            Some(Ok(Bytes::copy_from_slice(b"foo")))
+        );
+
+        assert!(stream.read > stream.yield_every);
+
+        assert_eq!(
+            stream.next().await,
+            Some(Ok(Bytes::copy_from_slice(b"bar2")))
+        );
+
+        assert_eq!(stream.next().await, None,);
     }
 }
