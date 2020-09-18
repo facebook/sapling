@@ -12,7 +12,6 @@ use ahash::RandomState;
 use array_init::array_init;
 use context::CoreContext;
 use dashmap::DashMap;
-use hash_memo::{BuildMemoHasher, EagerHashMemoizer as HashMemoizer};
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId};
 use mononoke_types::{ChangesetId, ContentId, FsnodeId, MPathHash};
 use phases::Phase;
@@ -42,8 +41,7 @@ impl Add<StepStats> for StepStats {
     }
 }
 
-type BuildStateHasher = BuildMemoHasher<RandomState>;
-type StateMap<T> = DashMap<HashMemoizer<T>, (), BuildStateHasher>;
+type StateMap<T> = DashMap<T, (), RandomState>;
 
 pub struct WalkState {
     // TODO implement ID interning to u32 or u64 for types in more than one map
@@ -62,7 +60,6 @@ pub struct WalkState {
     visited_hg_manifest: StateMap<(Option<MPathHash>, HgManifestId)>,
     visited_fsnode: StateMap<(Option<MPathHash>, FsnodeId)>,
     visit_count: [AtomicUsize; NodeType::MAX_ORDINAL + 1],
-    hasher_factory: BuildStateHasher,
 }
 
 impl WalkState {
@@ -71,9 +68,8 @@ impl WalkState {
         include_edge_types: HashSet<EdgeType>,
         always_emit_edge_types: HashSet<EdgeType>,
     ) -> Self {
-        let fac = BuildStateHasher::default();
+        let fac = RandomState::default();
         Self {
-            hasher_factory: fac.clone(),
             include_node_types,
             include_edge_types,
             always_emit_edge_types,
@@ -95,11 +91,10 @@ impl WalkState {
     where
         K: Eq + Hash + Copy,
     {
-        let k = HashMemoizer::new(*k, &self.hasher_factory);
-        if visited.contains_key(&k) {
+        if visited.contains_key(k) {
             false
         } else {
-            visited.insert(k, ()).is_none()
+            visited.insert(*k, ()).is_none()
         }
     }
 
@@ -114,7 +109,7 @@ impl WalkState {
     {
         let (path, id) = k;
         let mpathhash_opt = path.get_path_hash().cloned();
-        let key = HashMemoizer::new((mpathhash_opt, *id), &self.hasher_factory);
+        let key = (mpathhash_opt, *id);
         if visited_with_path.contains_key(&key) {
             false
         } else {
@@ -129,12 +124,10 @@ impl WalkState {
                 Some(NodeData::BonsaiPhaseMapping(Some(Phase::Public))),
             ) => {
                 // Only retain visit if already public, otherwise it could mutate between walks.
-                self.visited_bcs_phase
-                    .insert(HashMemoizer::new(*bcs_id, &self.hasher_factory), ());
+                self.visited_bcs_phase.insert(*bcs_id, ());
             }
             (Node::BonsaiHgMapping(bcs_id), Some(NodeData::BonsaiHgMapping(Some(_)))) => {
-                self.visited_bcs_mapping
-                    .insert(HashMemoizer::new(*bcs_id, &self.hasher_factory), ());
+                self.visited_bcs_mapping.insert(*bcs_id, ());
             }
             _ => {}
         }
