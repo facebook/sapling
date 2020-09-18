@@ -269,11 +269,10 @@ def _smartlog(orig, ui, repo, **opts):
 
 @hint("commitcloud-username-migration")
 def _smartlogusernamemigrationmsg(repo):
-    repo.ui.debug(
-        "username migration is required for the current workspace",
-        component="commitcloud",
+    return _(
+        "username configuration has been changed\n"
+        "please, run `hg cloud reclaim` to migrate your commit cloud workspaces\n"
     )
-    return _("")
 
 
 @hint("commitcloud-old-commits")

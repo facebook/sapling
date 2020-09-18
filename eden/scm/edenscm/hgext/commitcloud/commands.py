@@ -945,12 +945,35 @@ def cloudundeleteworkspace(ui, repo, **opts):
 @subcmd(
     "renameworkspace|rename",
     [
-        ("s", "source", "", _("short name for the source workspace")),
+        (
+            "s",
+            "source",
+            "",
+            _("short name for the source workspace, defaults to the current workspace"),
+        ),
         ("d", "destination", "", _("short name for the destination workspace")),
         ("", "rehost", None, _("rebind commit cloud workspace to the current host")),
+        (
+            "",
+            "raw-source-workspace",
+            "",
+            _(
+                "raw source workspace name (e.g. 'user/<username>/<workspace>'), "
+                "permissions are checked on the server (ADVANCED)"
+            ),
+        ),
+        (
+            "",
+            "raw-destination-workspace",
+            "",
+            _(
+                "raw destination workspace name (e.g. 'user/<username>/<workspace>'), "
+                "permissions are checked on the server (ADVANCED)"
+            ),
+        ),
     ],
 )
-def cloudrenameworkspace(ui, repo, **opts):
+def cloudrenameworkspace(ui, repo, skipconfirmation=False, **opts):
     """rename Commit Cloud workspace
 
     The command only supports renaming the workspaces of the current user.
@@ -959,28 +982,42 @@ def cloudrenameworkspace(ui, repo, **opts):
     source = opts.get("source")
     destination = opts.get("destination")
     rehost = opts.get("rehost")
+    rawsource = opts.get("raw_source_workspace")
+    rawdestination = opts.get("raw_destination_workspace")
 
     userworkspaceprefix = workspace.userworkspaceprefix(ui)
-    (currentworkspace, locally_owned) = workspace.currentworkspacewithlocallyownedinfo(
+    (currentworkspace, locallyowned) = workspace.currentworkspacewithlocallyownedinfo(
         repo
     )
     reponame = ccutil.getreponame(repo)
-
-    if not destination and not rehost:
-        raise error.Abort(_("please provide the destination workspace"))
 
     if destination and rehost:
         raise error.Abort(
             _("'rehost' option and 'destination' option are incompatible")
         )
 
-    if rehost:
-        destination = workspace.hostnameworkspace(ui)
+    if not destination:
+        destination = workspace.hostnameworkspace(ui) if rehost else rawdestination
+        if not destination:
+            raise error.Abort(_("please provide the destination workspace"))
     else:
         destination = userworkspaceprefix + destination
 
     if not source:
-        source = currentworkspace
+        if rawsource:
+            source = rawsource
+        # default to the current workspace
+        elif currentworkspace:
+            source = currentworkspace
+            if not locallyowned:
+                raise error.Abort(_("rename is only supported for personal workspaces"))
+        else:
+            raise error.Abort(
+                _(
+                    "the repo is not connected to any workspace, "
+                    "please provide the source workspace"
+                )
+            )
     else:
         source = userworkspaceprefix + source
 
@@ -988,7 +1025,7 @@ def cloudrenameworkspace(ui, repo, **opts):
         raise error.Abort(_("rename of the default workspace is not allowed"))
 
     confirmed = True
-    if ui.interactive():
+    if ui.interactive() and not skipconfirmation:
         prompt = _(
             "are you sure you would like to rename the '%s' workspace to '%s' for the repo '%s'[yn]:\n"
         ) % (source, destination, reponame)
@@ -1012,14 +1049,132 @@ def cloudrenameworkspace(ui, repo, **opts):
     )
 
     if source == currentworkspace:
-        # move the current state
-        syncstate.SyncState.movestate(repo, source, destination)
-        # move the subscription
-        subscription.move(repo, source, destination)
-        # update the current workspace name
-        workspace.setworkspace(repo, destination)
+        with backuplock.lock(repo), repo.wlock(), repo.lock():
+            # move the current state
+            syncstate.SyncState.movestate(repo, source, destination)
+            # move the subscription
+            subscription.move(repo, source, destination)
+            # update the current workspace name
+            workspace.setworkspace(repo, destination)
 
     ui.status(_("rename successful\n"), component="commitcloud")
+
+
+@subcmd(
+    "reclaimworkspaces|reclaim",
+    [
+        (
+            "",
+            "user",
+            "",
+            _(
+                "former username (can be specified by username or email address), "
+                "defaults to the owner of the workspace the repo is connected to"
+            ),
+        )
+    ],
+)
+def cloudreclaimworkspaces(ui, repo, **opts):
+    """reclaim Commit Cloud workspaces to the current user
+
+    The command is useful for username changes in configuration
+    """
+    reponame = ccutil.getreponame(repo)
+
+    user = opts.get("user")
+    if user:
+        formeruserprefix = workspace.userworkspaceprefix(ui, user)
+    else:
+        (
+            currentworkspace,
+            migrationcheck,
+        ) = workspace.currentworkspacewithusernamecheck(repo)
+
+        if not migrationcheck:
+            raise error.Abort(
+                _(
+                    "please, provide '--user' option, "
+                    "can not identify the former username from the current workspace"
+                )
+            )
+        formeruserprefix = currentworkspace.rpartition("/")[0] + "/"
+
+    currentuserprefix = workspace.userworkspaceprefix(ui)
+
+    if currentuserprefix == formeruserprefix:
+        ui.status(
+            _("nothing to reclaim: triggered for the same username\n"),
+            component="commitcloud",
+        )
+        return 1
+
+    formerworkspaces = list(
+        service.get(ui, tokenmod.TokenLocator(ui).token).getworkspaces(
+            reponame, formeruserprefix
+        )
+    )
+
+    if not formerworkspaces:
+        ui.status(_("nothing to reclaim\n"), component="commitcloud")
+
+    active, archived = [], []
+    for winfo in formerworkspaces:
+        (active if not winfo.archived else archived).append(winfo)
+
+    def getshortname(formerworkspacename):
+        return formerworkspacename[len(formeruserprefix) :]
+
+    def reclaimhelper(workspaces, archived=False):
+        if not workspaces:
+            return
+
+        archivedlabel = (
+            ui.label(_("archived"), "bold")
+            if archived
+            else ui.label(_("active"), "bold")
+        )
+        ui.status(
+            _("the following %s workspaces are reclaim candidates:\n") % archivedlabel,
+            component="commitcloud",
+        )
+        for winfo in workspaces:
+            ui.write(_("    %s\n") % getshortname(winfo.name))
+
+        confirmed = True
+        if ui.interactive():
+            prompt = _(
+                "are you sure you would like to reclaim the workspaces above [yn]:\n"
+            )
+            ui.write(ui.label(prompt, "ui.prompt"))
+            confirmed = ui.prompt("", default="").strip().lower().startswith("y")
+
+        if not confirmed:
+            return
+
+        for winfo in workspaces:
+            shortname = getshortname(winfo.name)
+            renameopts = {
+                "raw_source_workspace": winfo.name,
+                "raw_destination_workspace": currentuserprefix + shortname,
+            }
+            configoverride = {("ui", "quiet"): True}
+            try:
+                with ui.configoverride(configoverride):
+                    cloudrenameworkspace(ui, repo, skipconfirmation=True, **renameopts)
+            except Exception as e:
+                ui.status(
+                    ui.label(_("skipping the workspace '%s'\n") % shortname, "bold"),
+                    component="commitcloud",
+                )
+                ui.status(_("reason: %s\n") % e)
+
+        ui.status(
+            _("reclaim of %s workspaces completed\n") % archivedlabel,
+            component="commitcloud",
+        )
+
+    reclaimhelper(active)
+    reclaimhelper(archived, archived=True)
 
 
 @subcmd(

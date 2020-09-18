@@ -1,6 +1,7 @@
 #chg-compatible
 
   $ configure modern
+  $ enable smartlog
   $ showgraph() {
   >    hg log -G -T "{rev} {desc}: {phase} {bookmarks} {remotenames}" -r "all()"
   > }
@@ -182,3 +183,110 @@ Try to rename an unknown workspace
   commitcloud: rename the 'user/test/abc' workspace to 'user/test/w5' for the repo 'server'
   abort: unknown workspace: user/test/abc
   [255]
+
+Try to rename a workspace after leave
+  $ hg cloud leave
+  commitcloud: this repository is now disconnected from the 'user/test/testhost' workspace
+  $ hg cloud rename -d w5
+  abort: the repo is not connected to any workspace, please provide the source workspace
+  [255]
+  $ hg cloud join -w testhost
+  commitcloud: this repository is now connected to the 'user/test/testhost' workspace for the 'server' repo
+  commitcloud: synchronizing 'server' with 'user/test/testhost'
+  commitcloud: commits synchronized
+  finished in * (glob)
+
+Test reclaim workspace
+  $ hg cloud reclaim
+  abort: please, provide '--user' option, can not identify the former username from the current workspace
+  [255]
+
+  $ hg cloud reclaim --user test
+  commitcloud: nothing to reclaim: triggered for the same username
+  [1]
+
+  $ unset HGUSER
+  $ setconfig ui.username='Jane Doe <jdoe@example.com>'
+
+  $ hg smartlog -T '{rev}: {desc}\n'
+  @  0: base
+  
+  note: hiding 1 old heads without bookmarks
+  (use --all to see them)
+  note: background backup is currently disabled so your commits are not being backed up.
+  hint[commitcloud-username-migration]: username configuration has been changed
+  please, run `hg cloud reclaim` to migrate your commit cloud workspaces
+  hint[hint-ack]: use 'hg hint --ack commitcloud-username-migration' to silence these hints
+
+  $ hg cloud reclaim
+  commitcloud: the following active workspaces are reclaim candidates:
+      default
+      w3
+      testhost
+  commitcloud: reclaim of active workspaces completed
+
+  $ hg cloud list
+  commitcloud: searching workspaces for the 'server' repo
+  the following commitcloud workspaces are available:
+          default
+          w3
+          testhost (connected)
+  run `hg cloud sl -w <workspace name>` to view the commits
+  run `hg cloud switch -w <workspace name>` to switch to a different workspace
+
+  $ hg cloud status
+  Workspace: testhost
+  Raw Workspace Name: user/jdoe@example.com/testhost
+  Automatic Sync (on local changes): OFF
+  Automatic Sync via 'Scm Daemon' (on remote changes): OFF
+  Last Sync Version: 1
+  Last Sync Heads: 1 (0 omitted)
+  Last Sync Bookmarks: 0 (0 omitted)
+  Last Sync Remote Bookmarks: 1
+  Last Sync Snapshots: 0
+  Last Sync Time: * (glob)
+  Last Sync Status: Success
+
+Check that sync is ok after the reclaim
+  $ hg cloud sync
+  commitcloud: synchronizing 'server' with 'user/jdoe@example.com/testhost'
+  commitcloud: commits synchronized
+  finished in * (glob)
+
+Reclaim again
+  $ setconfig ui.username='Jane Doe <janedoe@example.com>'
+  $ hg cloud reclaim --user 'jdoe@example.com'
+  commitcloud: the following active workspaces are reclaim candidates:
+      default
+      w3
+      testhost
+  commitcloud: reclaim of active workspaces completed
+
+  $ hg cloud delete -w w3
+  commitcloud: workspace user/janedoe@example.com/w3 has been deleted
+  $ hg cloud delete -w testhost
+  commitcloud: workspace user/janedoe@example.com/testhost has been deleted
+
+  $ setconfig ui.username='Jane Doe <jdoe@example.com>'
+  $ hg cloud reclaim 
+  commitcloud: the following active workspaces are reclaim candidates:
+      default
+  commitcloud: reclaim of active workspaces completed
+  commitcloud: the following archived workspaces are reclaim candidates:
+      w3
+      testhost
+  commitcloud: reclaim of archived workspaces completed
+
+Try to reclaim after cloud leave
+  $ hg cloud leave
+  commitcloud: this repository is now disconnected from the 'user/jdoe@example.com/testhost' workspace
+  $ setconfig ui.username='Jane Doe <janedoe@example.com>'
+  $ hg cloud reclaim
+  abort: please, provide '--user' option, can not identify the former username from the current workspace
+  [255]
+
+  $ hg cloud join
+  commitcloud: this repository is now connected to the 'user/janedoe@example.com/default' workspace for the 'server' repo
+  commitcloud: synchronizing 'server' with 'user/janedoe@example.com/default'
+  commitcloud: commits synchronized
+  finished in * (glob)
