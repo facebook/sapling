@@ -31,7 +31,6 @@ from .util import (
     HealthStatus,
     print_stderr,
     readlink_retry_estale,
-    resolve_path,
     write_file_atomically,
 )
 
@@ -165,7 +164,7 @@ class EdenInstance:
         else:
             self._config_dir = self._home_dir / "local" / ".eden"
 
-        self._config_dir = resolve_path(self._config_dir, strict=False)
+        self._config_dir = self._config_dir.resolve(strict=False)
 
     def __repr__(self) -> str:
         return f"EdenInstance({self._config_dir!r})"
@@ -373,7 +372,7 @@ class EdenInstance:
         Given a path to a checkout, return a dictionary containing diagnostic
         information about it.
         """
-        path = resolve_path(Path(path), strict=False)
+        path = Path(path).resolve(strict=False)
         client_dir = self._get_client_dir_for_mount_point(path)
         checkout = EdenCheckout(self, path, client_dir)
         return self.get_checkout_info_from_checkout(checkout)
@@ -545,7 +544,7 @@ Do you want to run `eden mount %s` instead?"""
     def mount(self, path: Union[Path, str], read_only: bool) -> int:
         # Load the config info for this client, to make sure we
         # know about the client.
-        path = resolve_path(Path(path), strict=False)
+        path = Path(path).resolve(strict=False)
         client_dir = self._get_client_dir_for_mount_point(path)
         checkout = EdenCheckout(self, path, client_dir)
 
@@ -800,7 +799,7 @@ class EdenCheckout:
         correctly resolve an input path of "/data/user/foo/eden_checkout/test"
         """
         if not already_resolved:
-            path = resolve_path(path, strict=False)
+            path = path.resolve(strict=False)
 
         # First try using path.relative_to()
         # This should work in the common case
@@ -976,7 +975,7 @@ def find_eden(
     if isinstance(path, str):
         path = Path(path)
 
-    path = resolve_path(path, strict=False)
+    path = path.resolve(strict=False)
 
     # First check to see if this looks like a mounted checkout
     eden_state_dir = None
