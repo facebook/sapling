@@ -84,7 +84,7 @@ async fn get_changed_working_copy_paths(
 
     let (unode_id, base_unode_id) = try_join(unode_id.compat(), base_unode_id.compat()).await?;
 
-    let paths = base_unode_id
+    let mut paths = base_unode_id
         .manifest_unode_id()
         .diff(
             ctx.clone(),
@@ -107,6 +107,7 @@ async fn get_changed_working_copy_paths(
         .try_collect::<Vec<_>>()
         .await?;
 
+    paths.sort();
     Ok(paths)
 }
 

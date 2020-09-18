@@ -24,7 +24,6 @@ cmdlib_x_repo = { path = "../../cmdlib/x_repo" }
 context = { path = "../../server/context" }
 cross_repo_sync = { path = "../cross_repo_sync" }
 derived_data = { path = "../../derived_data" }
-fsnodes = { path = "../../derived_data/fsnodes" }
 live_commit_sync_config = { path = "../live_commit_sync_config" }
 manifest = { path = "../../manifest" }
 mercurial_types = { path = "../../mercurial/types" }

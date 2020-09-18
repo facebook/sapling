@@ -121,7 +121,7 @@ async fn find_files_that_need_to_be_deleted(
     )
     .await?;
 
-    let paths = head_root_unode
+    let mut paths = head_root_unode
         .manifest_unode_id()
         .diff(
             ctx.clone(),
@@ -145,6 +145,7 @@ async fn find_files_that_need_to_be_deleted(
         .try_collect::<Vec<_>>()
         .await?;
 
+    paths.sort();
     Ok(paths)
 }
 
