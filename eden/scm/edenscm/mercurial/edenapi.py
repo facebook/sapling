@@ -5,11 +5,9 @@
 
 from __future__ import absolute_import
 
-import threading
-
 from bindings import edenapi
 
-from . import error
+from . import util
 from .i18n import _
 
 
@@ -27,44 +25,8 @@ class pyclient(object):
     def __getattr__(self, name):
         method = getattr(self._rustclient, name)
         method = _warnexceptions(self._ui)(method)
-        method = _spawnthread(method)
+        method = util.threaded(method)
         return method
-
-
-def _spawnthread(func):
-    """Decorator that spawns a new Python thread to run the wrapped function.
-
-    This is useful for FFI calls to allow the Python interpreter to handle
-    signals during the FFI call. For example, without this it would not be
-    possible to interrupt the process with Ctrl-C during a long-running FFI
-    call.
-    """
-
-    def wrapped(*args, **kwargs):
-        result = ["err", error.Abort(_("thread aborted unexpectedly"))]
-
-        def target(*args, **kwargs):
-            try:
-                result[:] = ["ok", func(*args, **kwargs)]
-            except Exception as e:
-                result[:] = ["err", e]
-
-        thread = threading.Thread(target=target, args=args, kwargs=kwargs)
-        thread.start()
-
-        # XXX: Need to repeatedly poll the thread because blocking
-        # indefinitely on join() would prevent the interpreter from
-        # handling signals.
-        while thread.is_alive():
-            thread.join(1)
-
-        variant, value = result
-        if variant == "err":
-            raise value
-
-        return value
-
-    return wrapped
 
 
 def _warnexceptions(ui):

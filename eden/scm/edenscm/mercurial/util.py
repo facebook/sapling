@@ -47,6 +47,7 @@ import subprocess
 import sys
 import tempfile
 import textwrap
+import threading
 import time
 import traceback
 import types
@@ -4298,6 +4299,42 @@ class traced(object):
 
     def __exit__(self, exctype, excvalue, traceback):
         tracer.exit(self.spanid)
+
+
+def threaded(func):
+    """Decorator that spawns a new Python thread to run the wrapped function.
+
+    This is useful for FFI calls to allow the Python interpreter to handle
+    signals during the FFI call. For example, without this it would not be
+    possible to interrupt the process with Ctrl-C during a long-running FFI
+    call.
+    """
+
+    def wrapped(*args, **kwargs):
+        result = ["err", error.Abort(_("thread aborted unexpectedly"))]
+
+        def target(*args, **kwargs):
+            try:
+                result[:] = ["ok", func(*args, **kwargs)]
+            except Exception as e:
+                result[:] = ["err", e]
+
+        thread = threading.Thread(target=target, args=args, kwargs=kwargs)
+        thread.start()
+
+        # XXX: Need to repeatedly poll the thread because blocking
+        # indefinitely on join() would prevent the interpreter from
+        # handling signals.
+        while thread.is_alive():
+            thread.join(1)
+
+        variant, value = result
+        if variant == "err":
+            raise value
+
+        return value
+
+    return wrapped
 
 
 def info(name, **kwargs):
