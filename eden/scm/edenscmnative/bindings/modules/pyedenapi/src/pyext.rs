@@ -14,7 +14,7 @@ use tokio::runtime::Runtime;
 
 use cpython_ext::{PyPathBuf, ResultPyErrExt};
 use edenapi::{EdenApi, EdenApiBlocking, EdenApiError, Fetch, Stats};
-use edenapi_types::{FileEntry, HistoryEntry, TreeEntry};
+use edenapi_types::{CommitRevlogData, FileEntry, HistoryEntry, TreeEntry};
 use revisionstore::{HgIdMutableDeltaStore, HgIdMutableHistoryStore};
 
 use crate::stats::stats;
@@ -139,6 +139,44 @@ pub trait EdenApiPyExt: EdenApi {
             .map_pyerr(py)?;
 
         stats::new(py, stats)
+    }
+
+    fn commit_revlog_data_py(
+        self: Arc<Self>,
+        py: Python,
+        repo: String,
+        nodes: Vec<PyBytes>,
+        progress: Option<PyObject>,
+    ) -> PyResult<(Vec<(PyBytes, PyBytes)>, stats)> {
+        let nodes = to_hgids(py, nodes);
+        let progress = progress.map(wrap_callback);
+
+        let (commits, stats): (Vec<CommitRevlogData>, Stats) = py
+            .allow_threads(|| {
+                let mut rt = Runtime::new().context("Failed to initialize Tokio runtime")?;
+                rt.block_on(async move {
+                    let mut commits: Vec<CommitRevlogData> = Vec::with_capacity(nodes.len());
+                    let mut response = self.commit_revlog_data(repo, nodes, progress).await?;
+                    while let Some(entry) = response.entries.try_next().await? {
+                        commits.push(entry);
+                    }
+                    let stats = response.stats.await?;
+                    Ok::<_, EdenApiError>((commits, stats))
+                })
+            })
+            .map_pyerr(py)?;
+
+        let commits_py = commits
+            .into_iter()
+            .map(|e| {
+                (
+                    PyBytes::new(py, e.hgid.as_ref()),
+                    PyBytes::new(py, e.revlog_data.as_ref()),
+                )
+            })
+            .collect();
+        let stats_py = stats::new(py, stats)?;
+        Ok((commits_py, stats_py))
     }
 }
 

@@ -92,6 +92,19 @@ py_class!(pub class client |py| {
         )
     }
 
+
+    /// commitdata(repo: str, nodes: [bytes], progress=None) -> [(node: bytes, data: bytes)], stats
+    ///
+    /// Fetch commit data in raw HG format (sorted([p1, p2]) + text).
+    def commitdata(
+        &self,
+        repo: String,
+        nodes: Vec<PyBytes>,
+        progress: Option<PyObject> = None
+    ) -> PyResult<(Vec<(PyBytes, PyBytes)>, stats)> {
+        self.inner(py).clone().commit_revlog_data_py(py, repo, nodes, progress)
+    }
+
     def filestore(&self, repo: String) -> PyResult<edenapifilestore> {
         let edenapi = self.extract_inner(py);
         let store = EdenApiFileStore::new(repo, edenapi).map_pyerr(py)?;
