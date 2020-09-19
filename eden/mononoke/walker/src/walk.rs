@@ -1095,29 +1095,17 @@ where
     match step_output {
         StepOutput(node_data, children) => {
             // make sure steps are valid.  would be nice if this could be static
-            let children = children
-                .into_iter()
-                .map(|c| {
-                    if c.label.outgoing_type() != c.target.get_type() {
-                        Err(format_err!(
-                            "Bad step {:?} to {:?}",
-                            c.label,
-                            c.target.get_type()
-                        ))
-                    } else if c
-                        .label
-                        .incoming_type()
-                        .map(|t| t != node_type)
-                        .unwrap_or(false)
-                    {
-                        Err(format_err!("Bad step {:?} from {:?}", c.label, node_type,))
-                    } else {
-                        Ok(c)
-                    }
-                })
-                .collect::<Result<Vec<OutgoingEdge>, Error>>();
-
-            let children = children?;
+            for c in &children {
+                if c.label.outgoing_type() != c.target.get_type() {
+                    return Err(format_err!(
+                        "Bad step {:?} to {:?}",
+                        c.label,
+                        c.target.get_type()
+                    ));
+                } else if c.label.incoming_type().map_or(false, |t| t != node_type) {
+                    return Err(format_err!("Bad step {:?} from {:?}", c.label, node_type,));
+                }
+            }
 
             // Allow WalkVisitor to record state and decline outgoing nodes if already visited
             Ok(visitor.visit(&ctx, walk_item, Some(node_data), via, children)).map(
