@@ -132,6 +132,7 @@ import time
 import traceback
 from contextlib import contextmanager
 
+from bindings import edenapi
 from edenscm.mercurial import (
     archival,
     bundle2,
@@ -144,7 +145,6 @@ from edenscm.mercurial import (
     copies,
     dirstate,
     dispatch,
-    edenapi,
     error,
     exchange,
     extensions,
@@ -388,7 +388,7 @@ def setupclient(ui, repo):
 
     repo.edenapi = None
     if ui.config("edenapi", "url"):
-        repo.edenapi = edenapi.pyclient(ui)
+        repo.edenapi = edenapi.client(ui._rcfg._rcfg)
 
 
 clientonetime = False
