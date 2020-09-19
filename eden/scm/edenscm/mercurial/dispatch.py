@@ -45,6 +45,7 @@ from . import (
     pycompat,
     registrar,
     scmutil,
+    sshpeer,
     templatekw,
     templater,
     ui as uimod,
@@ -52,12 +53,6 @@ from . import (
     util,
 )
 from .i18n import _, _x
-
-
-# stdin can be None if the parent process unset the stdin file descriptor.
-# Replace it early, since it may be read in layer modules, like pycompat.
-if sys.stdin is None:
-    sys.stdin = open(os.devnull, "r")
 
 
 cliparser = bindings.cliparser
@@ -546,26 +541,26 @@ def _runcatch(req):
     except ValueError:
         pass  # happens if called in a thread
 
-    def _runcatchfunc():
-        realcmd = None
-        try:
-            cmdargs = cliparser.parseargs(req.args[:])
-            cmd = cmdargs[0]
-            aliases, entry = cmdutil.findcmd(cmd, commands.table)
-            realcmd = aliases[0]
-        except (
-            error.UnknownCommand,
-            error.AmbiguousCommand,
-            IndexError,
-            getopt.GetoptError,
-            UnicodeDecodeError,
-        ):
-            # Don't handle this here. We know the command is
-            # invalid, but all we're worried about for now is that
-            # it's not a command that server operators expect to
-            # be safe to offer to users in a sandbox.
-            pass
+    realcmd = None
+    try:
+        cmdargs = cliparser.parseargs(req.args[:])
+        cmd = cmdargs[0]
+        aliases, entry = cmdutil.findcmd(cmd, commands.table)
+        realcmd = aliases[0]
+    except (
+        error.UnknownCommand,
+        error.AmbiguousCommand,
+        IndexError,
+        getopt.GetoptError,
+        UnicodeDecodeError,
+    ):
+        # Don't handle this here. We know the command is
+        # invalid, but all we're worried about for now is that
+        # it's not a command that server operators expect to
+        # be safe to offer to users in a sandbox.
+        pass
 
+    def _runcatchfunc():
         if realcmd == "serve" and "--read-only" in req.args:
             req.args.remove("--read-only")
 
@@ -681,6 +676,15 @@ def _runcatch(req):
                 ipdb.post_mortem(sys.exc_info()[2])
                 os._exit(255)
             raise
+
+    # IPython (debugshell) has some background (sqlite?) threads that is incompatible
+    # with util.threaded. But "debugshell -c" should use util.threaded.
+    if (
+        ui.configbool("ui", "threaded")
+        and req.args not in [["dbsh"], ["debugsh"], ["debugshell"]]
+        and realcmd != "serve"
+    ):
+        _runcatchfunc = util.threaded(_runcatchfunc)
 
     return _callcatch(ui, _runcatchfunc)
 

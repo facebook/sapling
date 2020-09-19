@@ -599,7 +599,6 @@ Test that the prepushrebase hook can run against the bundle repo
   pushing rev 0e067c57feba to destination ssh://user@dummy/prepushrebaseserver bookmark master
   searching for changes
   remote: prepushrebase hook exited with status * (glob)
-  abort: push failed on remote
   remote: commit:      0e067c57feba
   remote: user:        test
   remote: date:        Thu Jan 01 00:00:00 1970 +0000
@@ -607,6 +606,7 @@ Test that the prepushrebase hook can run against the bundle repo
   remote: 
   remote: Checking if lock exists (it should not):
   remote: ls: *.hg/store/lock*: $ENOENT$ (glob)
+  abort: push failed on remote
   [255]
 
   $ cd ..

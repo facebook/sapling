@@ -14,6 +14,7 @@ from __future__ import absolute_import
 
 import re
 import threading
+import weakref
 from typing import Any
 
 from . import error, progress, pycompat, util, wireproto
@@ -132,6 +133,23 @@ class threadedstderr(object):
             self._thread.join(timeout)
 
 
+_sshpeerweakrefs = []
+
+
+def cleanupall():
+    """Call _cleanup for all remaining sshpeers.
+
+    sshpeer.__del__ -> _cleanup -> thread.join might cause deadlock
+    if triggered by Python 3's PyFinalize -> GC. Calling this before exiting
+    the main thread would prevent that deadlock.
+    """
+    for ref in _sshpeerweakrefs:
+        peer = ref()
+        if peer is not None:
+            peer._cleanup()
+    _sshpeerweakrefs[:] = []
+
+
 class sshpeer(wireproto.wirepeer):
     def __init__(self, ui, path, create=False):
         self._url = path
@@ -172,6 +190,7 @@ class sshpeer(wireproto.wirepeer):
             if res != 0:
                 self._abort(error.RepoError(_("could not create remote repo")))
 
+        _sshpeerweakrefs.append(weakref.ref(self))
         with self.ui.timeblockedsection("sshsetup"), progress.suspend(), util.traced(
             "ssh_setup", cat="blocked"
         ):

@@ -42,8 +42,8 @@ Test verify sql lock is not held during prelockrebase and txnclose hooks
   pushing to ssh://user@dummy/master
   searching for changes
   remote: lock was FREE
-  abort: push failed on remote
   remote: error: prepushrebase hook failed: lock was FREE
+  abort: push failed on remote
   [255]
 
   $ cd ../master

@@ -276,6 +276,16 @@ static int isunsupported(int argc, const char* argv[]) {
   return (state & SERVEDAEMON) == SERVEDAEMON;
 }
 
+/*
+ * Test whether any of the stdio fds are missing.
+ */
+static int isstdiomissing() {
+  return (
+      fcntl(STDIN_FILENO, F_GETFD) == -1 ||
+      fcntl(STDOUT_FILENO, F_GETFD) == -1 ||
+      fcntl(STDERR_FILENO, F_GETFD) == -1);
+}
+
 static void execoriginalhg(const char* argv[]) {
   debugmsg("execute original hg");
   if (execvp(gethgcmd(), (char**)argv) < 0)
@@ -305,7 +315,7 @@ int chg_main(int argc, const char* argv[], const char* envp[]) {
         "wrapper to chg. Alternatively, set $CHGHG to the "
         "path of real hg.");
 
-  if (isunsupported(argc - 1, argv + 1) || nice(0) > 0) {
+  if (isunsupported(argc - 1, argv + 1) || nice(0) > 0 || isstdiomissing()) {
     // For cases when chg and original hg are the same binary,
     // we need to tell the original hg that we've already made
     // a decision to not use chg logic

@@ -7,7 +7,6 @@ from __future__ import absolute_import
 
 from bindings import edenapi
 
-from . import util
 from .i18n import _
 
 
@@ -25,7 +24,6 @@ class pyclient(object):
     def __getattr__(self, name):
         method = getattr(self._rustclient, name)
         method = _warnexceptions(self._ui)(method)
-        method = util.threaded(method)
         return method
 
 

@@ -114,8 +114,8 @@ Test that pushrebase hooks can access the commit data
   pushing to ssh://user@dummy/master
   searching for changes
   remote: prepushrebase.cat hook exited with status 1
-  abort: push failed on remote
   remote: baz
+  abort: push failed on remote
   [255]
 
 - Disable the hook

@@ -87,7 +87,7 @@ Traceback must be printed for unknown exceptions
 
   $ hg --config "extensions.t=$abspath" --config 'worker.numcpus=8' \
   > test 100000.0 exc 2>&1 | grep '^Exception' | sort
-  Exception in thread Thread-1:
+  Exception in thread Thread-*: (glob)
   Exception: unknown exception
   Exception: unknown exception
 

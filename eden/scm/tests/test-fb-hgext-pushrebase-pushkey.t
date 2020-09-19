@@ -80,7 +80,6 @@ Push without pushrebase, and check that the hook sees the commit that was actual
   |
   @  commitA
   
-  abort: updating bookmark master failed!
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
@@ -89,6 +88,7 @@ Push without pushrebase, and check that the hook sees the commit that was actual
   remote: pushkey-abort: prepushkey.log hook failed
   remote: transaction abort!
   remote: rollback completed
+  abort: updating bookmark master failed!
   [255]
 
 Now, do a pushrebase. First, reset the server-side.
@@ -109,7 +109,6 @@ Then, pushrebase. This time, we expect the pushkey to be updated
   |
   @  commitA
   
-  abort: updating bookmark master failed!
   remote: pushing 1 changeset:
   remote:     24c8a95a9829  commitC
   remote: 2 new changesets from the server will be downloaded
@@ -117,4 +116,5 @@ Then, pushrebase. This time, we expect the pushkey to be updated
   remote: pushkey-abort: prepushkey.log hook failed
   remote: transaction abort!
   remote: rollback completed
+  abort: updating bookmark master failed!
   [255]

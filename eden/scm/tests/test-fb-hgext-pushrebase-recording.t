@@ -231,11 +231,11 @@ Enable pretxnchangegroup hooks and make sure we record failed pushes in that cas
   pushing to ssh://user@dummy/server
   searching for changes
   remote: pretxnchangegroup hook exited with status 1
-  abort: push failed on remote
   remote: pushing 1 changeset:
   remote:     e42da70f7a80  hook will fail
   remote: transaction abort!
   remote: rollback completed
+  abort: push failed on remote
   [255]
   $ mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER $DBPASSOPT -e 'select repo_id, ontorev, onto_rebased_rev, onto, bundlehandle, conflicts, pushrebase_errmsg from pushrebaserecording'
   repo_id	ontorev	onto_rebased_rev	onto	bundlehandle	conflicts	pushrebase_errmsg
@@ -290,8 +290,8 @@ Run python hook that records hook failure reason
   pushing to ssh://user@dummy/server
   searching for changes
   remote: failure
-  abort: push failed on remote
   remote: error: prepushrebase hook failed: failure
+  abort: push failed on remote
   [255]
   $ mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER $DBPASSOPT -e 'select repo_id, ontorev, onto_rebased_rev, onto, bundlehandle, conflicts, pushrebase_errmsg from pushrebaserecording'
   repo_id	ontorev	onto_rebased_rev	onto	bundlehandle	conflicts	pushrebase_errmsg

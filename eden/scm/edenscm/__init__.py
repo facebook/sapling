@@ -6,9 +6,11 @@
 from __future__ import absolute_import
 
 
-def _fixsyspath():
+def _fixsys():
     """Fix sys.path so core edenscm modules (edenscmnative, and 3rd party
     libraries) are in sys.path
+
+    Fix sys.stdin if it's None.
     """
     # Do not expose those modules to edenscm.__dict__
     import sys
@@ -41,12 +43,17 @@ def _fixsyspath():
 
     edenscmnative.__name__
 
+    # stdin can be None if the parent process unset the stdin file descriptor.
+    # Replace it early, since it may be read in layer modules, like pycompat.
+    if sys.stdin is None:
+        sys.stdin = open(os.devnull, "r")
 
-_fixsyspath()
+
+_fixsys()
 
 
 # Keep the module clean
-del globals()["_fixsyspath"]
+del globals()["_fixsys"]
 
 
 def run(args=None, fin=None, fout=None, ferr=None):

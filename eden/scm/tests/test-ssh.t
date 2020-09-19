@@ -518,12 +518,12 @@ remote hook failure is attributed to remote
   pushing to ssh://user@dummy/remote
   searching for changes
   remote: pretxnchangegroup.fail hook failed
-  abort: push failed on remote
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
   remote: hook failure!
+  abort: push failed on remote
   [255]
 
 abort during pull is properly reported as such

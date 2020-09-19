@@ -251,13 +251,13 @@ Test that we still don't allow non-ff bm changes
   $ hg -R client push --to bm
   pushing rev 2f9755549086 to destination ssh://user@dummy/server bookmark bm
   searching for changes
-  abort: updating bookmark bm failed!
   remote: moved bookmark to rev 1
   remote: pushing 1 changeset:
   remote:     2f9755549086  dd
   remote: 1 new changeset from the server will be downloaded
   remote: transaction abort!
   remote: rollback completed
+  abort: updating bookmark bm failed!
   [255]
 
 Test force pushes
@@ -433,7 +433,7 @@ that requires pushrebase.
   pushing rev d2ae7f538514 to destination ssh://user@dummy/pushrebaseserver bookmark serverfeature
   searching for changes
   remote: this repository requires that you enable the pushrebase extension and push using 'hg push --to'
-  abort: push failed on remote
   remote: error: prechangegroup.blocknonpushrebase hook failed: this repository requires that you enable the pushrebase extension and push using 'hg push --to'
+  abort: push failed on remote
   [255]
 

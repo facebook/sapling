@@ -337,9 +337,9 @@
   pushing rev 026f7366f3d2 to destination ssh://user@dummy/master2 bookmark master
   searching for changes
   remote: lfs.url needs to be configured
-  abort: push failed on remote
   remote: pushing 1 changeset:
   remote:     026f7366f3d2  y-not-lfs
+  abort: push failed on remote
   [255]
 
 # Can push once server has lfs.url set
