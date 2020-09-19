@@ -81,26 +81,6 @@ async fn fetch_by_key(
 
     ScubaMiddlewareState::maybe_add(scuba, LfsScubaKey::DownloadContentSize, size);
 
-    // XXX: Right now we call end_on_err prior to creating a content stream in
-    // order to ensure that the stream type passed to StreamBody is a TryStream
-    // that implements ContentMeta. The actual intended usage is to call
-    // end_on_err immediately prior to passing the stream to StreamBody. As
-    // written right now, this will not log errors caused by compression.
-    //
-    // TODO(kulshrax): Move the end_on_err call to the end of the function once
-    // StreamBody accepts plain Streams.
-    let logger = ctx.logger().clone();
-    let stream = stream
-        .end_on_err(move |e| {
-            // XXX: Ideally, we'd do something better with the error than just
-            // printing it to stderr, but the server's code likely needs to be
-            // restructed in order to do anything smarter here (such as setting
-            // the error message in the RequestContext, so that the error would
-            // get logged to Scuba).
-            error!(&logger, "Error during streaming response: {:?}", &e);
-        })
-        .map(<Result<_, anyhow::Error>>::Ok);
-
     let stream = match content_encoding {
         ContentEncoding::Identity => ContentStream::new(stream)
             .content_length(size)
@@ -115,6 +95,16 @@ async fn fetch_by_key(
     } else {
         stream.right_stream()
     };
+
+    let logger = ctx.logger().clone();
+    let stream = stream.end_on_err(move |e| {
+        // XXX: Ideally, we'd do something better with the error than just
+        // printing it to stderr, but the server's code likely needs to be
+        // restructed in order to do anything smarter here (such as setting
+        // the error message in the RequestContext, so that the error would
+        // get logged to Scuba).
+        error!(&logger, "Error during streaming response: {:?}", &e);
+    });
 
     Ok(StreamBody::new(stream, mime::APPLICATION_OCTET_STREAM))
 }

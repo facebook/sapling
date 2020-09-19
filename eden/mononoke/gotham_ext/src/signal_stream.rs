@@ -61,12 +61,12 @@ impl<S> SignalStream<S> {
     }
 }
 
-impl<S, I, E> Stream for SignalStream<S>
+impl<S, T> Stream for SignalStream<S>
 where
-    S: Stream<Item = Result<I, E>>,
-    I: Sizeable,
+    S: Stream<Item = T>,
+    T: Sizeable,
 {
-    type Item = Result<I, E>;
+    type Item = T;
 
     fn poll_next(self: Pin<&mut Self>, ctx: &mut Context) -> Poll<Option<Self::Item>> {
         let (stream, sender, size_sent) = self.pin_get_parts();
@@ -75,9 +75,7 @@ where
 
         match poll {
             // We have an item: increment the amount of data we sent.
-            Some(Ok(ref item)) => *size_sent += item.size(),
-            // Got an error: ignore it for size purposes.
-            Some(Err(_)) => {}
+            Some(ref item) => *size_sent += item.size(),
             // No items left: signal our receiver.
             None => {
                 if let Some(sender) = sender.take() {

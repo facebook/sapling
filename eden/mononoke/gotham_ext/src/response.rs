@@ -123,7 +123,7 @@ impl<S> StreamBody<S> {
 
 impl<S> TryIntoResponse for StreamBody<S>
 where
-    S: Stream<Item = Result<Bytes, Error>> + ContentMeta + Send + 'static,
+    S: Stream<Item = Bytes> + ContentMeta + Send + 'static,
 {
     fn try_into_response(self, state: &mut State) -> Result<Response<Body>, Error> {
         let Self { stream, mime } = self;
@@ -155,19 +155,20 @@ where
 
         // This is kind of annoying, but right now Hyper requires a Body's stream to be Sync (even
         // though it doesn't actually need it). For now, we have to work around by spawning the
-        // stream on its own task, and giving Hyper a channel that receives from it. Note that the
-        // map(Ok) is here because we want to forward Result<Bytes, Error> instances over our
-        // stream.
+        // stream on its own task, and giving Hyper a channel that receives from it.
         // TODO: This is fixed now in Hyper: https://github.com/hyperium/hyper/pull/2187
         let (sender, receiver) = mpsc::channel(0);
         tokio::spawn(stream.map(Ok).forward(sender));
 
-        // If `PostRequestMiddleware` is in use, arrange for post-request
+        // If PostRequestMiddleware is in use, arrange for post-request
         // callbacks to be delayed until the entire stream has been sent.
         let stream = match state.try_borrow_mut::<PostRequestCallbacks>() {
             Some(callbacks) => SignalStream::new(receiver, callbacks.delay()).left_stream(),
             None => receiver.right_stream(),
         };
+
+        // Turn the stream into a TryStream, as expected by hyper::Body.
+        let stream = stream.map(<Result<_, Error>>::Ok);
 
         Ok(res.body(Body::wrap_stream(stream))?)
     }

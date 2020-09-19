@@ -51,12 +51,6 @@ where
     let byte_stream = stream.and_then(|item| async { to_cbor_bytes(item) });
     let content_stream = ContentStream::new(byte_stream).forward_err(rctx.error_tx);
 
-    // XXX: This is a hack to turn this back into a TryStream that implements ContentMeta.
-    // Ordinarily, ContentStreams should not be nested like this.
-    //
-    // TODO(kulshrax): Delete this line once ContentStream accepts plain Streams.
-    let content_stream = ContentStream::new(content_stream.map(<Result<_, anyhow::Error>>::Ok));
-
     StreamBody::new(content_stream, cbor_mime())
 }
 
