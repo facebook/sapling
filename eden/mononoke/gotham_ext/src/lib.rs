@@ -13,3 +13,4 @@ pub mod middleware;
 pub mod response;
 pub mod signal_stream;
 pub mod socket_data;
+pub mod stream_ext;
