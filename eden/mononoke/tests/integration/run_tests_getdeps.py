@@ -123,8 +123,6 @@ def get_test_groups(repo_root):
         },
         TestGroup.BROKEN: {
             "test-fastreplay-inline-args.t",  # Returns different data in OSS
-            "test-gitimport.t",  # Issue with hggit extension
-            "test-hook-tailer.t",  # Issue with hggit extension
             "test-remotefilelog-lfs-client-certs.t",  # Returns different data in OSS
             "test-server.t",  # Returns different data in OSS
             "test-unbundle-replay-hg-recording.t",  # Returns different data in OSS
