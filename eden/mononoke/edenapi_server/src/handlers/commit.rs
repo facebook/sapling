@@ -49,7 +49,7 @@ pub async fn location_to_hash(state: &mut State) -> Result<impl TryIntoResponse,
     ));
 
     let sctx = ServerContext::borrow_from(state);
-    let rctx = RequestContext::borrow_from(state);
+    let rctx = RequestContext::borrow_from(state).clone();
 
     let hg_repo_ctx = get_repo(&sctx, &rctx, &params.repo).await?;
 
@@ -59,7 +59,7 @@ pub async fn location_to_hash(state: &mut State) -> Result<impl TryIntoResponse,
         .into_iter()
         .map(move |location| translate_location(hg_repo_ctx.clone(), location));
     let response = stream::iter(hgid_list).buffer_unordered(MAX_CONCURRENT_FETCHES_PER_REQUEST);
-    Ok(cbor_stream(response))
+    Ok(cbor_stream(rctx, response))
 }
 
 pub async fn revlog_data(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
@@ -71,7 +71,7 @@ pub async fn revlog_data(state: &mut State) -> Result<impl TryIntoResponse, Http
     ));
 
     let sctx = ServerContext::borrow_from(state);
-    let rctx = RequestContext::borrow_from(state);
+    let rctx = RequestContext::borrow_from(state).clone();
 
     let hg_repo_ctx = get_repo(&sctx, &rctx, &params.repo).await?;
 
@@ -82,7 +82,7 @@ pub async fn revlog_data(state: &mut State) -> Result<impl TryIntoResponse, Http
         .map(move |hg_id| commit_revlog_data(hg_repo_ctx.clone(), hg_id));
     let response =
         stream::iter(revlog_commits).buffer_unordered(MAX_CONCURRENT_FETCHES_PER_REQUEST);
-    Ok(cbor_stream(response))
+    Ok(cbor_stream(rctx, response))
 }
 
 async fn translate_location(

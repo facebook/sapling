@@ -45,13 +45,13 @@ pub async fn history(state: &mut State) -> Result<impl TryIntoResponse, HttpErro
 
     state.put(HandlerInfo::new(&params.repo, EdenApiMethod::History));
 
-    let rctx = RequestContext::borrow_from(state);
+    let rctx = RequestContext::borrow_from(state).clone();
     let sctx = ServerContext::borrow_from(state);
 
     let repo = get_repo(&sctx, &rctx, &params.repo).await?;
     let request = parse_cbor_request(state).await?;
 
-    Ok(cbor_stream(fetch_history(repo, request).await))
+    Ok(cbor_stream(rctx, fetch_history(repo, request).await))
 }
 
 /// Fetch history for all of the requested files concurrently.

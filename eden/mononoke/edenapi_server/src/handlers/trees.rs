@@ -38,13 +38,13 @@ pub async fn trees(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
 
     state.put(HandlerInfo::new(&params.repo, EdenApiMethod::Trees));
 
-    let rctx = RequestContext::borrow_from(state);
+    let rctx = RequestContext::borrow_from(state).clone();
     let sctx = ServerContext::borrow_from(state);
 
     let repo = get_repo(&sctx, &rctx, &params.repo).await?;
     let request = parse_cbor_request(state).await?;
 
-    Ok(cbor_stream(fetch_all_trees(repo, request)))
+    Ok(cbor_stream(rctx, fetch_all_trees(repo, request)))
 }
 
 /// Fetch trees for all of the requested keys concurrently.

@@ -38,13 +38,13 @@ pub async fn complete_trees(state: &mut State) -> Result<impl TryIntoResponse, H
 
     state.put(HandlerInfo::new(&params.repo, EdenApiMethod::CompleteTrees));
 
-    let rctx = RequestContext::borrow_from(state);
+    let rctx = RequestContext::borrow_from(state).clone();
     let sctx = ServerContext::borrow_from(state);
 
     let repo = get_repo(&sctx, &rctx, &params.repo).await?;
     let request = parse_cbor_request(state).await?;
 
-    Ok(cbor_stream(fetch_trees_under_path(&repo, request)?))
+    Ok(cbor_stream(rctx, fetch_trees_under_path(&repo, request)?))
 }
 
 /// Fetch the complete tree under the specified path.

@@ -9,7 +9,7 @@
 
 use anyhow::{Context, Error};
 use bytes::Bytes;
-use futures::{Stream, TryStreamExt};
+use futures::prelude::*;
 use gotham::state::State;
 use mime::Mime;
 use once_cell::sync::Lazy;
@@ -19,9 +19,11 @@ use gotham_ext::{
     content::ContentStream,
     error::HttpError,
     response::{StreamBody, TryIntoResponse},
+    stream_ext::GothamTryStreamExt,
 };
 
 use crate::errors::ErrorKind;
+use crate::middleware::RequestContext;
 
 use super::get_request_body;
 
@@ -37,18 +39,25 @@ pub fn to_cbor_bytes<S: Serialize>(s: S) -> Result<Bytes, Error> {
         .context(ErrorKind::SerializationFailed)
 }
 
-/// Serialize each item of the input stream as CBOR and return
-/// a streaming response. Note that although the input stream
-/// can fail, the error type is `anyhow::Error` rather than
-/// `HttpError` because the HTTP status code would have already
-/// been sent at the time of the failure.
-pub fn cbor_stream<S, T>(stream: S) -> impl TryIntoResponse
+/// Serialize each item of the input stream as CBOR and return a streaming
+/// response. Any errors yielded by the stream will be filtered out and reported
+/// to the request context; this ensures that a mid-stream error will not
+/// prematurely terminate the response.
+pub fn cbor_stream<S, T>(rctx: RequestContext, stream: S) -> impl TryIntoResponse
 where
     S: Stream<Item = Result<T, Error>> + Send + 'static,
     T: Serialize + Send + 'static,
 {
     let byte_stream = stream.and_then(|item| async { to_cbor_bytes(item) });
-    StreamBody::new(ContentStream::new(byte_stream), cbor_mime())
+    let content_stream = ContentStream::new(byte_stream).forward_err(rctx.error_tx);
+
+    // XXX: This is a hack to turn this back into a TryStream that implements ContentMeta.
+    // Ordinarily, ContentStreams should not be nested like this.
+    //
+    // TODO(kulshrax): Delete this line once ContentStream accepts plain Streams.
+    let content_stream = ContentStream::new(content_stream.map(<Result<_, anyhow::Error>>::Ok));
+
+    StreamBody::new(content_stream, cbor_mime())
 }
 
 pub async fn parse_cbor_request<R: DeserializeOwned>(state: &mut State) -> Result<R, HttpError> {
