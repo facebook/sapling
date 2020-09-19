@@ -21,6 +21,25 @@ target_link_libraries(
     Folly::folly
 )
 
+if(NOT WIN32)
+  add_executable(
+    edenfs_privhelper
+    service/PrivHelperMain.cpp
+  )
+  install(TARGETS edenfs_privhelper RUNTIME DESTINATION bin)
+  target_include_directories(
+    edenfs_privhelper
+    PUBLIC
+      ${CMAKE_SOURCE_DIR}
+      ${CMAKE_BINARY_DIR}
+  )
+  target_link_libraries(
+    edenfs_privhelper
+      eden_fuse_privhelper
+      Folly::folly
+  )
+endif()
+
 add_library(
   eden_build_config STATIC
   eden-config.cpp

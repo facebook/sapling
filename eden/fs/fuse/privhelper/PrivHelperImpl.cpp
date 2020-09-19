@@ -14,8 +14,10 @@
 #include <folly/String.h>
 #include <folly/Synchronized.h>
 #include <folly/futures/Future.h>
+#include <folly/init/Init.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/async/EventBase.h>
+#include <folly/logging/Init.h>
 #include <folly/logging/xlog.h>
 #include <folly/portability/SysTypes.h>
 #include <folly/portability/Unistd.h>
@@ -29,6 +31,9 @@
 #include "eden/fs/fuse/privhelper/PrivHelperConn.h"
 #include "eden/fs/fuse/privhelper/PrivHelperServer.h"
 #include "eden/fs/utils/Bug.h"
+#include "eden/fs/utils/FileDescriptor.h"
+#include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/SpawnedProcess.h"
 #include "eden/fs/utils/UserInfo.h"
 #endif // _WIN32
 
@@ -60,8 +65,8 @@ class PrivHelperClientImpl : public PrivHelper,
                              private UnixSocket::SendCallback,
                              private EventBase::OnDestructionCallback {
  public:
-  PrivHelperClientImpl(File&& conn, pid_t helperPid)
-      : helperPid_(helperPid),
+  PrivHelperClientImpl(File&& conn, std::optional<SpawnedProcess> proc)
+      : helperProc_(std::move(proc)),
         conn_(UnixSocket::makeUnique(nullptr, std::move(conn))) {}
   ~PrivHelperClientImpl() override {
     cleanup();
@@ -126,7 +131,7 @@ class PrivHelperClientImpl : public PrivHelper,
    * Returns the exit status of the privhelper process, or an errno value on
    * error.
    */
-  folly::Expected<int, int> cleanup() {
+  folly::Expected<ProcessStatus, int> cleanup() {
     EventBase* eventBase{nullptr};
     {
       auto state = state_.wlock();
@@ -154,34 +159,13 @@ class PrivHelperClientImpl : public PrivHelper,
     closeSocket(std::runtime_error("privhelper client being destroyed"));
 
     // Wait until the privhelper process exits.
-    if (helperPid_ != 0) {
-      int exitStatus;
-      int err;
-      pid_t pid;
-      do {
-        pid = waitpid(helperPid_, &exitStatus, 0);
-        err = errno;
-      } while (pid == -1 && err == EINTR);
-      if (pid == -1) {
-        if (err == ECHILD) {
-          // Not our child, so we can't wait for it, but also, we
-          // don't need to wait for it.
-          return folly::makeExpected<int>(0);
-        }
-        XLOG(ERR) << "error waiting on privhelper process: "
-                  << folly::errnoStr(err);
-        return folly::makeUnexpected(err);
-      }
-      if (WIFSIGNALED(exitStatus)) {
-        return folly::makeExpected<int>(-WTERMSIG(exitStatus));
-      }
-      DCHECK(WIFEXITED(exitStatus))
-          << "unexpected exit status type: " << exitStatus;
-      return folly::makeExpected<int>(WEXITSTATUS(exitStatus));
+    if (helperProc_.has_value()) {
+      return folly::makeExpected<int>(helperProc_->wait());
     } else {
-      // helperPid_ can be 0 during the unit tests, where we aren't actually
-      // running the privhelper in a separate process.
-      return folly::makeExpected<int>(0);
+      // helperProc_ can be nullopt during the unit tests, where we aren't
+      // actually running the privhelper in a separate process.
+      return folly::makeExpected<int>(
+          ProcessStatus(ProcessStatus::State::Exited, 0));
     }
   }
 
@@ -338,7 +322,7 @@ class PrivHelperClientImpl : public PrivHelper,
     conn_->detachEventBase();
   }
 
-  const pid_t helperPid_{0};
+  std::optional<SpawnedProcess> helperProc_;
   std::atomic<uint32_t> nextXid_{1};
   folly::Synchronized<ThreadSafeData> state_;
 
@@ -462,17 +446,109 @@ int PrivHelperClientImpl::stop() {
     folly::throwSystemErrorExplicit(
         result.error(), "error shutting down privhelper process");
   }
-  return result.value();
+  auto status = result.value();
+  if (status.killSignal() != 0) {
+    return -status.killSignal();
+  }
+  return status.exitStatus();
 }
 
 } // unnamed namespace
 
 unique_ptr<PrivHelper> startPrivHelper(const UserInfo& userInfo) {
-  PrivHelperServer server;
-  return startPrivHelper(&server, userInfo);
+  SpawnedProcess::Options opts;
+
+  // As we are running as root, we need to be cautious about the privhelper
+  // process that we are about start.
+  // We require that `edenfs_privhelper` be a sibling of our executable file,
+  // and that both of these paths are not symlinks, and that both are owned
+  // and controlled by the same user.
+
+  auto exePath = executablePath();
+  auto canonPath = realpath(exePath.c_str());
+  if (exePath != canonPath) {
+    throw std::runtime_error(folly::to<std::string>(
+        "Refusing to start because my exePath ",
+        exePath,
+        " is not the realpath to myself (which is ",
+        canonPath,
+        "). This is an unsafe installation and may be an indication of a "
+        "symlink attack or similar attempt to escalate privileges"));
+  }
+
+  auto helperPath = exePath.dirname() + "edenfs_privhelper"_relpath;
+
+  struct stat helperStat {};
+  struct stat selfStat {};
+
+  checkUnixError(lstat(exePath.c_str(), &selfStat), "lstat ", exePath);
+  checkUnixError(lstat(helperPath.c_str(), &helperStat), "lstat ", helperPath);
+
+  if (getuid() != geteuid()) {
+    // We are a setuid binary.  Require that our executable be owned by
+    // root, otherwise refuse to continue on the basis that something is
+    // very fishy.
+    if (selfStat.st_uid != 0) {
+      throw std::runtime_error(folly::to<std::string>(
+          "Refusing to start because my exePath ",
+          exePath,
+          "is owned by uid ",
+          selfStat.st_uid,
+          " rather than by root."));
+    }
+  }
+
+  if (selfStat.st_uid != helperStat.st_uid ||
+      selfStat.st_gid != helperStat.st_gid) {
+    throw std::runtime_error(folly::to<std::string>(
+        "Refusing to start because my exePath ",
+        exePath,
+        "is owned by uid=",
+        selfStat.st_uid,
+        " gid=",
+        selfStat.st_gid,
+        " and that doesn't match the ownership of ",
+        helperPath,
+        "which is owned by uid=",
+        helperStat.st_uid,
+        " gid=",
+        helperStat.st_gid));
+  }
+
+  if (S_ISLNK(helperStat.st_mode)) {
+    throw std::runtime_error(folly::to<std::string>(
+        "Refusing to start because ", helperPath, " is a symlink"));
+  }
+
+  opts.executablePath(helperPath);
+
+  File clientConn;
+  File serverConn;
+  PrivHelperConn::createConnPair(clientConn, serverConn);
+  auto control = opts.inheritDescriptor(
+      FileDescriptor(serverConn.release(), FileDescriptor::FDType::Socket));
+  SpawnedProcess proc(
+      {
+          "edenfs_privhelper",
+          // pass down identity information.
+          folly::to<std::string>("--privhelper_uid=", userInfo.getUid()),
+          folly::to<std::string>("--privhelper_gid=", userInfo.getGid()),
+          // pass down the control pipe
+          folly::to<std::string>("--privhelper_fd=", control),
+      },
+      std::move(opts));
+
+  XLOG(DBG1) << "Spawned mount helper process: pid=" << proc.pid();
+  return make_unique<PrivHelperClientImpl>(
+      std::move(clientConn), std::move(proc));
 }
 
-unique_ptr<PrivHelper> startPrivHelper(
+unique_ptr<PrivHelper> createTestPrivHelper(File&& conn) {
+  return make_unique<PrivHelperClientImpl>(std::move(conn), std::nullopt);
+}
+
+#ifdef __linux__
+std::unique_ptr<PrivHelper> forkPrivHelper(
     PrivHelperServer* server,
     const UserInfo& userInfo) {
   File clientConn;
@@ -485,7 +561,8 @@ unique_ptr<PrivHelper> startPrivHelper(
     // Parent
     serverConn.close();
     XLOG(DBG1) << "Forked mount helper process: pid=" << pid;
-    return make_unique<PrivHelperClientImpl>(std::move(clientConn), pid);
+    return make_unique<PrivHelperClientImpl>(
+        std::move(clientConn), SpawnedProcess::fromExistingProcess(pid));
   }
 
   // Child
@@ -507,10 +584,7 @@ unique_ptr<PrivHelper> startPrivHelper(
   }
   _exit(rc);
 }
-
-unique_ptr<PrivHelper> createTestPrivHelper(File&& conn) {
-  return make_unique<PrivHelperClientImpl>(std::move(conn), 0);
-}
+#endif
 
 #else // _WIN32
 

@@ -72,6 +72,12 @@ class UserInfo {
    */
   void dropPrivileges();
 
+  // 65534 is commonly used for the "nobody" UID/GID.
+  // This isn't universal, however, it still seems like a safer default
+  // to use than root.
+  static constexpr uid_t kDefaultNobodyUid = 65534;
+  static constexpr gid_t kDefaultNobodyGid = 65534;
+
  private:
   FRIEND_TEST(UserInfo, initFromSudo);
 
@@ -111,11 +117,8 @@ class UserInfo {
   void restoreEnvironmentAfterSudo();
 #endif // !_WIN32
 
-  // 65534 is commonly used for the "nobody" UID/GID.
-  // This isn't universal, however, it still seems like a safer default
-  // to use than root.
-  uid_t uid_{65534};
-  gid_t gid_{65534};
+  uid_t uid_{kDefaultNobodyUid};
+  gid_t gid_{kDefaultNobodyGid};
   std::string username_;
   AbsolutePath homeDirectory_;
 };

@@ -394,7 +394,9 @@ pid_t SpawnedProcess::pid() const {
 }
 
 SpawnedProcess SpawnedProcess::fromExistingProcess(pid_t pid) {
-  return SpawnedProcess(pid);
+  SpawnedProcess proc(pid);
+  proc.waited_ = false;
+  return proc;
 }
 
 SpawnedProcess::SpawnedProcess(pid_t pid) : pid_(pid) {}
@@ -527,7 +529,13 @@ SpawnedProcess::SpawnedProcess(
       envp.get());
 
   if (ret) {
-    throw std::system_error(ret, std::generic_category(), "posix_spawnp");
+    throw std::system_error(
+        ret,
+        std::generic_category(),
+        folly::to<std::string>(
+            "posix_spawnp ",
+            options.execPath_.has_value() ? options.execPath_->c_str()
+                                          : argv[0]));
   }
 #else
   // Only handles listed in this vector will be inherited

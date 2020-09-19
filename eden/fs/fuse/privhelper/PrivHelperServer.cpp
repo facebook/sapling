@@ -59,20 +59,6 @@ PrivHelperServer::PrivHelperServer() {}
 PrivHelperServer::~PrivHelperServer() {}
 
 void PrivHelperServer::init(folly::File&& socket, uid_t uid, gid_t gid) {
-  // Call folly::init()
-  // For simplicity and safety we always use a fixed set of arguments rather
-  // than processing user-supplied arguments since we are running with root
-  // privileges.
-  std::array<const char*, 3> privhelperArgv = {{
-      "edenfs_privhelper",
-      "--logging",
-      "WARN:default, eden=DBG2; "
-      "default=stream:stream=stderr,async=false",
-  }};
-  char** argv = const_cast<char**>(privhelperArgv.data());
-  int argc = privhelperArgv.size();
-  folly::init(&argc, &argv, false);
-
   initPartial(std::move(socket), uid, gid);
 }
 

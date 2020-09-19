@@ -35,6 +35,7 @@ list(
   REMOVE_ITEM SERVICE_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/EdenError.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/PrettyPrinters.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/PrivHelperMain.cpp
 )
 add_library(
   eden_service_thrift_util STATIC

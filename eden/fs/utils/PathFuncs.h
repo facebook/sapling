@@ -1673,6 +1673,14 @@ realpath(const T& path) {
   return realpath(path.c_str());
 }
 
+/** Returns the path to the currently running executable.
+ * This can fail for example if the executable has been renamed or
+ * deleted while it is running.
+ * This path is absolute but is not guaranteed to be canonical
+ * and my be prone to TOCTOU issues.
+ */
+AbsolutePath executablePath();
+
 /**
  * Convert an arbitrary unsanitized input string to a normalized AbsolutePath.
  *

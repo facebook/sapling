@@ -540,6 +540,7 @@ TEST_F(PrivHelperTest, setLogFile) {
   EXPECT_EQ(s1.st_ino, s2.st_ino);
 }
 
+#ifdef __linux__
 /*
  * A test that actually forks a separate privhelper process and verifies it
  * cleans up successfully.
@@ -568,7 +569,7 @@ TEST(PrivHelper, ForkedServerShutdownTest) {
   auto other = otherDir.string();
 
   {
-    auto privHelper = startPrivHelper(&server, UserInfo::lookup());
+    auto privHelper = forkPrivHelper(&server, UserInfo::lookup());
     EventBaseThread evbt;
     evbt.getEventBase()->runInEventBaseThreadAndWait(
         [&] { privHelper->attachEventBase(evbt.getEventBase()); });
@@ -599,3 +600,4 @@ TEST(PrivHelper, ForkedServerShutdownTest) {
   EXPECT_FALSE(server.isMounted(bar));
   EXPECT_FALSE(server.isMounted(other));
 }
+#endif

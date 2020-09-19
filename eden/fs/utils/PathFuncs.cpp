@@ -20,6 +20,10 @@
 #include <unistd.h>
 #endif
 
+#ifdef __APPLE__
+#include <mach-o/dyld.h> // @manual
+#endif
+
 using folly::Expected;
 using folly::StringPiece;
 
@@ -330,5 +334,48 @@ AbsolutePath expandUser(
       folly::to<std::string>(*homeDir, kDirSeparator, path.subpiece(2));
   return canonicalPath(expanded);
 }
+
+AbsolutePath executablePath() {
+#ifdef __linux__
+  // The maximum symlink limit is filesystem dependent, but many common Linux
+  // filesystems have a limit of 4096.
+  constexpr size_t pathMax = 4096;
+  std::array<char, pathMax> buf;
+  auto result = readlink("/proc/self/exe", buf.data(), buf.size());
+  folly::checkUnixError(result, "failed to read /proc/self/exe");
+  return AbsolutePath(
+      folly::StringPiece(buf.data(), static_cast<size_t>(result)));
+#elif defined(__APPLE__)
+  std::vector<char> buf;
+  buf.resize(4096, 0);
+  uint32_t size = buf.size();
+  if (_NSGetExecutablePath(buf.data(), &size) != 0) {
+    buf.resize(size, 0);
+    if (_NSGetExecutablePath(buf.data(), &size) != 0) {
+      throw std::runtime_error("_NSGetExecutablePath failed");
+    }
+  }
+  // Note that on success, the size is not updated and we need to look
+  // for NUL termination
+  return AbsolutePath(folly::StringPiece(buf.data()));
+#elif defined(_WIN32)
+  std::vector<WCHAR> buf;
+  buf.resize(4096);
+  auto res =
+      GetModuleFileNameW(NULL, buf.data(), static_cast<DWORD>(buf.size()));
+  while (res == buf.size()) {
+    buf.resize(buf.size() * 2);
+    res = GetModuleFileNameW(NULL, buf.data(), static_cast<DWORD>(buf.size()));
+  }
+  if (res == 0) {
+    auto err = GetLastError();
+    throw std::system_error(err, std::system_category(), "GetModuleFileNameW");
+  }
+  return AbsolutePath(std::wstring_view(buf.data(), static_cast<size_t>(res)));
+#else
+#error executablePath not implemented
+#endif
+}
+
 } // namespace eden
 } // namespace facebook
