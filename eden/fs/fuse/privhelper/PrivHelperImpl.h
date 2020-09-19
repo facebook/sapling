@@ -7,8 +7,11 @@
 
 #pragma once
 
+#include <gflags/gflags.h>
 #include <memory>
 #include "eden/fs/utils/PathFuncs.h"
+
+DECLARE_int32(privhelper_fd);
 
 namespace folly {
 class File;
@@ -28,7 +31,8 @@ class PrivHelper;
  * any other threads are forked.  After it is called UserInfo::dropPrivileges()
  * should be called to return the desired user privileges.
  */
-std::unique_ptr<PrivHelper> startPrivHelper(const UserInfo& userInfo);
+std::unique_ptr<PrivHelper>
+startOrConnectToPrivHelper(const UserInfo& userInfo, int argc, char** argv);
 
 #ifdef __linux__
 /**

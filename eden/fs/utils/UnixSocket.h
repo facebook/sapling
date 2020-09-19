@@ -283,6 +283,13 @@ class UnixSocket : public folly::DelayedDestruction,
    */
   void setSendTimeout(std::chrono::milliseconds timeout);
 
+  /**
+   * Returns the underlying file descriptor value.
+   * This is intended to be used to pass the privhelper_fd option down
+   * to a child process, and it must not be used for general reading/writing.
+   */
+  int getRawFd() const;
+
  private:
   struct Header {
     Header(uint64_t id, uint32_t data, uint32_t files)

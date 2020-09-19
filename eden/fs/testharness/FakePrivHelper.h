@@ -68,6 +68,9 @@ class FakePrivHelper : public PrivHelper {
   folly::Future<folly::Unit> setDaemonTimeout(
       std::chrono::nanoseconds duration) override;
   int stop() override;
+  int getRawClientFd() const override {
+    return -1;
+  }
 
  private:
   FakePrivHelper(FakePrivHelper const&) = delete;

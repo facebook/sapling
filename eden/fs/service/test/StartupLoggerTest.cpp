@@ -5,6 +5,29 @@
  * GNU General Public License version 2.
  */
 
+/* The code in this test is a little hard to follow.
+ * Here's a quick primer!
+ *
+ * The StartupLogger class encapsulates a channel between a parent
+ * and child process pair that is used in the main project to allow
+ * the parent to daemonize its child, but for the parent to linger
+ * long enough to report the status of the child initialization.
+ *
+ * It works by spawning a new copy of itself and passing some command
+ * line arguments to allow the child to realize that it is should
+ * report back to its parent.
+ *
+ * This test verifies the behavior of the channel between the two
+ * processes and thus needs to be able to spawn a copy of itself.
+ *
+ * Because we want the behavior of the spawned child to vary based
+ * on the test we have a custom `main()` function that will look
+ * at any command line arguments that spill over from the
+ * gflags-registered arguments; the convention is that the first
+ * argument names a function that will be called in a child process,
+ * and that a second optional argument can be passed down to it.
+ */
+
 #include "eden/fs/service/StartupLogger.h"
 
 #include <folly/Exception.h>
@@ -43,6 +66,11 @@ namespace facebook {
 namespace eden {
 
 namespace {
+
+// Copy the original command line arguments for use with
+// the StartupLogger::spawn method
+std::vector<std::string> originalCommandLine;
+
 struct FunctionResult {
   std::string standardOutput;
   std::string standardError;
@@ -55,9 +83,7 @@ FunctionResult runFunctionInSeparateProcess(
     std::vector<std::string> arguments);
 bool isReadablePipeBroken(FileDescriptor& fd);
 bool isWritablePipeBroken(FileDescriptor& fd);
-
 bool fileExists(folly::fs::path);
-} // namespace
 
 class StartupLoggerTestBase : public ::testing::Test {
  protected:
@@ -70,69 +96,65 @@ class StartupLoggerTestBase : public ::testing::Test {
 
   TemporaryFile logFile_{"eden_test_log"};
 };
+} // namespace
 
 class DaemonStartupLoggerTest : public StartupLoggerTestBase {
  protected:
-  /*
-   * Use DaemonStartupLogger::daemonizeImpl() to run the specified function in
-   * the child process.
-   *
-   * Returns the ParentResult object in the parent process.
-   */
-  template <typename Fn>
-  DaemonStartupLogger::ParentResult runDaemonize(Fn&& fn) {
-    DaemonStartupLogger logger;
-    auto parentInfo = logger.daemonizeImpl(logPath().stringPiece());
-    if (parentInfo) {
-      // parent
-      auto pid = parentInfo->first;
-      auto& readPipe = parentInfo->second;
-      return logger.waitForChildStatus(
-          std::move(readPipe), pid, logPath().stringPiece());
-    }
-
-    // child
-    try {
-      fn(std::move(logger));
-    } catch (const std::exception& ex) {
-      XLOG(ERR) << "unexpected error: " << folly::exceptionStr(ex);
-      exit(1);
-    }
-    exit(0);
-  }
-
   // Wrappers simply to allow our tests to access private DaemonStartupLogger
   // methods
-  File createPipe(DaemonStartupLogger& logger) {
-    return logger.createPipe();
+  FileDescriptor createPipe(DaemonStartupLogger& logger) {
+    Pipe pipe;
+    logger.pipe_ = std::move(pipe.write);
+    return std::move(pipe.read);
   }
   void closePipe(DaemonStartupLogger& logger) {
     logger.pipe_.close();
   }
   DaemonStartupLogger::ParentResult waitForChildStatus(
       DaemonStartupLogger& logger,
-      File readPipe,
-      pid_t childPid,
+      FileDescriptor& readPipe,
+      SpawnedProcess& childProc,
       StringPiece logPath) {
-    return logger.waitForChildStatus(std::move(readPipe), childPid, logPath);
+    return logger.waitForChildStatus(readPipe, childProc, logPath);
+  }
+
+  DaemonStartupLogger::ParentResult spawnInChild(folly::StringPiece name) {
+    DaemonStartupLogger logger{};
+    auto args = originalCommandLine;
+    args.push_back(name.str());
+    args.push_back(logPath().stringPiece().str());
+    auto [proc, pipe] =
+        logger.spawnImpl(logPath().stringPiece(), nullptr, args);
+    auto result =
+        logger.waitForChildStatus(pipe, proc, logPath().stringPiece());
+    proc.kill();
+    proc.wait();
+    return result;
   }
 };
 
+namespace {
+void crashWithNoResult(const std::string& logPath) {
+  DaemonStartupLogger logger{};
+  logger.initClient(
+      logPath,
+      FileDescriptor(FLAGS_startupLoggerFd, FileDescriptor::FDType::Pipe));
+  fprintf(stderr, "this message should go to the log\n");
+  fflush(stderr);
+  kill(getpid(), SIGKILL);
+  // Wait until we get killed.
+  while (true) {
+    /* sleep override */ std::this_thread::sleep_for(30s);
+  }
+}
+
 TEST_F(DaemonStartupLoggerTest, crashWithNoResult) {
-  // Fork a child that just kills itself
-  auto result = runDaemonize([](DaemonStartupLogger&&) {
-    fprintf(stderr, "this message should go to the log\n");
-    fflush(stderr);
-    kill(getpid(), SIGKILL);
-    // Wait until we get killed.
-    while (true) {
-      /* sleep override */ std::this_thread::sleep_for(30s);
-    }
-  });
+  auto result = spawnInChild("crashWithNoResult");
+
   EXPECT_EQ(EX_SOFTWARE, result.exitCode);
   EXPECT_EQ(
       folly::to<string>(
-          "error: edenfs crashed with signal ",
+          "error: edenfs crashed with status killed by signal ",
           SIGKILL,
           " before it finished initializing\n"
           "Check the edenfs log file at ",
@@ -154,9 +176,9 @@ TEST_F(DaemonStartupLoggerTest, successWritesStartedMessageToStandardError) {
 
 void successWritesStartedMessageToStandardErrorDaemonChild() {
   auto logFile = TemporaryFile{"eden_test_log"};
-  auto logger = DaemonStartupLogger{};
-  logger.daemonize(logFile.path().string());
-  logger.success();
+  auto logger = daemonizeIfRequested(
+      logFile.path().string(), nullptr, originalCommandLine);
+  logger->success();
   exit(0);
 }
 
@@ -177,15 +199,23 @@ TEST_F(
 void programExitsUnsuccessfullyIfLogFileIsInaccessibleChild() {
   auto logFile = TemporaryFile{"eden_test_log"};
   auto badLogFilePath = logFile.path() / "file.txt";
-  auto logger = DaemonStartupLogger{};
-  logger.daemonize(badLogFilePath.string());
-  logger.success();
+  auto logger = daemonizeIfRequested(
+      badLogFilePath.string(), nullptr, originalCommandLine);
+  logger->success();
   exit(0);
+}
+
+void exitWithNoResult(const std::string& logPath) {
+  DaemonStartupLogger logger{};
+  logger.initClient(
+      logPath,
+      FileDescriptor(FLAGS_startupLoggerFd, FileDescriptor::FDType::Pipe));
+  _exit(19);
 }
 
 TEST_F(DaemonStartupLoggerTest, exitWithNoResult) {
   // Fork a child that exits unsuccessfully
-  auto result = runDaemonize([](DaemonStartupLogger&&) { _exit(19); });
+  auto result = spawnInChild("exitWithNoResult");
 
   EXPECT_EQ(19, result.exitCode);
   EXPECT_EQ(
@@ -197,9 +227,17 @@ TEST_F(DaemonStartupLoggerTest, exitWithNoResult) {
       result.errorMessage);
 }
 
+void exitSuccessfullyWithNoResult(const std::string& logPath) {
+  DaemonStartupLogger logger{};
+  logger.initClient(
+      logPath,
+      FileDescriptor(FLAGS_startupLoggerFd, FileDescriptor::FDType::Pipe));
+  _exit(0);
+}
+
 TEST_F(DaemonStartupLoggerTest, exitSuccessfullyWithNoResult) {
   // Fork a child that exits successfully
-  auto result = runDaemonize([](DaemonStartupLogger&&) { _exit(0); });
+  auto result = spawnInChild("exitSuccessfullyWithNoResult");
 
   // The parent process should be EX_SOFTWARE in this case
   EXPECT_EQ(EX_SOFTWARE, result.exitCode);
@@ -212,32 +250,22 @@ TEST_F(DaemonStartupLoggerTest, exitSuccessfullyWithNoResult) {
       result.errorMessage);
 }
 
+void destroyLoggerWhileDaemonIsStillRunning(const std::string& logPath) {
+  DaemonStartupLogger logger{};
+  logger.initClient(
+      logPath,
+      FileDescriptor(FLAGS_startupLoggerFd, FileDescriptor::FDType::Pipe));
+
+  // Destroy the DaemonStartupLogger object to force it to close its pipes
+  // without sending a result.
+  std::optional<DaemonStartupLogger> optLogger(std::move(logger));
+  optLogger.reset();
+
+  /* sleep override */ std::this_thread::sleep_for(30s);
+}
+
 TEST_F(DaemonStartupLoggerTest, destroyLoggerWhileDaemonIsStillRunning) {
-  // Fork a child process that will destroy the DaemonStartupLogger and then
-  // wait until we tell it to exit.
-  std::array<int, 2> pipeFDs;
-  auto rc = pipe2(pipeFDs.data(), O_CLOEXEC);
-  checkUnixError(rc, "failed to create pipes");
-  folly::File readPipe(pipeFDs[0], /*ownsFd=*/true);
-  folly::File writePipe(pipeFDs[1], /*ownsFd=*/true);
-
-  auto result =
-      runDaemonize([&readPipe, &writePipe](DaemonStartupLogger&& logger) {
-        writePipe.close();
-
-        // Destroy the DaemonStartupLogger object to force it to close its pipes
-        // without sending a result.
-        std::optional<DaemonStartupLogger> optLogger(std::move(logger));
-        optLogger.reset();
-
-        // Wait for the parent process to signal us to exit.
-        // We do so by calling readFull(). It will return when the pipe has
-        // closed.
-        uint8_t byte;
-        auto readResult = folly::readFull(readPipe.fd(), &byte, sizeof(byte));
-        checkUnixError(
-            readResult, "error reading close signal from parent process");
-      });
+  auto result = spawnInChild("destroyLoggerWhileDaemonIsStillRunning");
 
   EXPECT_EQ(EX_SOFTWARE, result.exitCode);
   EXPECT_EQ(
@@ -248,9 +276,6 @@ TEST_F(DaemonStartupLoggerTest, destroyLoggerWhileDaemonIsStillRunning) {
           logPath(),
           " for more details"),
       result.errorMessage);
-
-  // Close the write end of the pipe so the child process will quit
-  writePipe.close();
 }
 
 TEST_F(DaemonStartupLoggerTest, closePipeWithWaitError) {
@@ -259,28 +284,41 @@ TEST_F(DaemonStartupLoggerTest, closePipeWithWaitError) {
   DaemonStartupLogger logger;
   auto readPipe = createPipe(logger);
   closePipe(logger);
-  auto result = waitForChildStatus(
-      logger, std::move(readPipe), getpid(), "/var/log/edenfs.log");
+  auto selfProc = SpawnedProcess::fromExistingProcess(getpid());
+  auto result =
+      waitForChildStatus(logger, readPipe, selfProc, "/var/log/edenfs.log");
 
   EXPECT_EQ(EX_SOFTWARE, result.exitCode);
   EXPECT_EQ(
-      "error: edenfs did not report its initialization status\n"
-      "error: error checking status of edenfs daemon: No child processes\n"
+      "error: edenfs exited with status 0 before it finished initializing\n"
       "Check the edenfs log file at /var/log/edenfs.log for more details",
       result.errorMessage);
 }
 
+void success(const std::string& logPath) {
+  DaemonStartupLogger logger{};
+  logger.initClient(
+      logPath,
+      FileDescriptor(FLAGS_startupLoggerFd, FileDescriptor::FDType::Pipe));
+  logger.success();
+}
+
 TEST_F(DaemonStartupLoggerTest, success) {
-  auto result =
-      runDaemonize([](DaemonStartupLogger&& logger) { logger.success(); });
+  auto result = spawnInChild("success");
   EXPECT_EQ(0, result.exitCode);
   EXPECT_EQ("", result.errorMessage);
 }
 
+void failure(const std::string& logPath) {
+  DaemonStartupLogger logger{};
+  logger.initClient(
+      logPath,
+      FileDescriptor(FLAGS_startupLoggerFd, FileDescriptor::FDType::Pipe));
+  logger.exitUnsuccessfully(3, "example failure for tests");
+}
+
 TEST_F(DaemonStartupLoggerTest, failure) {
-  auto result = runDaemonize([](DaemonStartupLogger&& logger) {
-    logger.exitUnsuccessfully(3, "example failure for tests");
-  });
+  auto result = spawnInChild("failure");
   EXPECT_EQ(3, result.exitCode);
   EXPECT_EQ("", result.errorMessage);
   EXPECT_THAT(readLogContents(), HasSubstr("example failure for tests"));
@@ -292,7 +330,7 @@ TEST_F(DaemonStartupLoggerTest, daemonClosesStandardFileDescriptors) {
   opts.pipeStdout();
   opts.pipeStderr();
   auto process = SpawnedProcess{{{
-                                    folly::fs::executable_path().string(),
+                                    executablePath().stringPiece().str(),
                                     "daemonClosesStandardFileDescriptorsChild",
                                 }},
                                 std::move(opts)};
@@ -337,9 +375,9 @@ TEST_F(DaemonStartupLoggerTest, daemonClosesStandardFileDescriptors) {
 
 void daemonClosesStandardFileDescriptorsChild() {
   auto logFile = TemporaryFile{"eden_test_log"};
-  auto logger = DaemonStartupLogger{};
-  logger.daemonize(logFile.path().string());
-  logger.success();
+  auto logger = daemonizeIfRequested(
+      logFile.path().string(), nullptr, originalCommandLine);
+  logger->success();
   std::this_thread::sleep_for(30s);
   exit(1);
 }
@@ -437,7 +475,6 @@ void exitUnsuccessfullyWritesMessageAndKillsProcessChild(std::string logPath) {
   logger.exitUnsuccessfully(3, "error message");
 }
 
-namespace {
 FunctionResult runFunctionInSeparateProcess(folly::StringPiece functionName) {
   return runFunctionInSeparateProcess(functionName, std::vector<std::string>{});
 }
@@ -445,10 +482,11 @@ FunctionResult runFunctionInSeparateProcess(folly::StringPiece functionName) {
 FunctionResult runFunctionInSeparateProcess(
     folly::StringPiece functionName,
     std::vector<std::string> arguments) {
-  auto command = std::vector<std::string>{{
-      folly::fs::executable_path().string(),
-      std::string{functionName},
-  }};
+  auto execPath = executablePath();
+  auto command = std::vector<std::string>{
+      execPath.stringPiece().str(),
+      functionName.str(),
+  };
   command.insert(command.end(), arguments.begin(), arguments.end());
 
   SpawnedProcess::Options opts;
@@ -464,6 +502,8 @@ FunctionResult runFunctionInSeparateProcess(
   return FunctionResult{out, err, returnCode};
 }
 
+// This function implements a basic lookup "table" that can call
+// a function defined in this file.
 [[noreturn]] void runFunctionInCurrentProcess(
     folly::StringPiece functionName,
     std::vector<std::string> arguments) {
@@ -482,6 +522,7 @@ FunctionResult runFunctionInSeparateProcess(
       std::exit(0);
     }
   };
+  // CHECK_FUNCTION defines a lookup table entry
 #define CHECK_FUNCTION(name) checkFunction(#name, name)
   CHECK_FUNCTION(daemonClosesStandardFileDescriptorsChild);
   CHECK_FUNCTION(exitUnsuccessfullyMakesProcessExitWithCodeChild);
@@ -491,6 +532,12 @@ FunctionResult runFunctionInSeparateProcess(
   CHECK_FUNCTION(successWritesStartedMessageToStandardErrorDaemonChild);
   CHECK_FUNCTION(successWritesStartedMessageToStandardErrorForegroundChild);
   CHECK_FUNCTION(xlogsAfterSuccessAreWrittenToStandardErrorChild);
+  CHECK_FUNCTION(crashWithNoResult);
+  CHECK_FUNCTION(exitWithNoResult);
+  CHECK_FUNCTION(exitSuccessfullyWithNoResult);
+  CHECK_FUNCTION(destroyLoggerWhileDaemonIsStillRunning);
+  CHECK_FUNCTION(success);
+  CHECK_FUNCTION(failure);
 #undef CHECK_FUNCTION
   std::fprintf(
       stderr,
@@ -529,9 +576,13 @@ bool fileExists(folly::fs::path path) {
 } // namespace facebook
 
 int main(int argc, char** argv) {
+  originalCommandLine = {argv, argv + argc};
   ::testing::InitGoogleTest(&argc, argv);
   auto removeFlags = true;
   auto initGuard = folly::Init(&argc, &argv, removeFlags);
+  // If we arguments left over then they are (probably) generated by
+  // calls to DaemonStartupLoggerTest::spawnInChild that need to
+  // be mapped back to functions defined in this module.
   if (argc >= 2) {
     auto functionName = folly::StringPiece{argv[1]};
     auto arguments = std::vector<std::string>{&argv[2], &argv[argc]};

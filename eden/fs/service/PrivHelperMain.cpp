@@ -19,8 +19,6 @@ using namespace facebook::eden;
 FOLLY_INIT_LOGGING_CONFIG(
     "WARN:default, eden=DBG2; default:stream=stderr,async=false");
 
-DEFINE_int32(privhelper_fd, -1, "The file descriptor number of control socket");
-
 DEFINE_int32(
     privhelper_uid,
     facebook::eden::UserInfo::kDefaultNobodyUid,

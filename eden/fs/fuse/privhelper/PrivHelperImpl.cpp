@@ -49,6 +49,8 @@ using std::string;
 using std::unique_ptr;
 using std::vector;
 
+DEFINE_int32(privhelper_fd, -1, "The file descriptor number of control socket");
+
 namespace facebook {
 namespace eden {
 
@@ -107,6 +109,9 @@ class PrivHelperClientImpl : public PrivHelper,
   Future<folly::Unit> setDaemonTimeout(
       std::chrono::nanoseconds duration) override;
   int stop() override;
+  int getRawClientFd() const override {
+    return conn_->getRawFd();
+  }
 
  private:
   using PendingRequestMap =
@@ -455,7 +460,23 @@ int PrivHelperClientImpl::stop() {
 
 } // unnamed namespace
 
-unique_ptr<PrivHelper> startPrivHelper(const UserInfo& userInfo) {
+unique_ptr<PrivHelper>
+startOrConnectToPrivHelper(const UserInfo& userInfo, int argc, char** argv) {
+  // If we were passed the --privhelper_fd option (eg: by daemonizeIfRequested)
+  // then we have a channel through which we can communicate with a previously
+  // spawned privhelper process.
+  // Return a client constructed from that channel.
+  // We can't use FLAGS_privhelper_fd here because we are called
+  // before folly::init() and the args haven't been parsed.
+  // We do a very simple iteration here to parse out this option.
+  for (int i = 1; i < argc - 1; ++i) {
+    if (StringPiece(argv[i]) == "--privhelper_fd") {
+      auto fdNum = folly::to<int>(argv[i + 1]);
+      return make_unique<PrivHelperClientImpl>(
+          folly::File(fdNum, true), std::nullopt);
+    }
+  }
+
   SpawnedProcess::Options opts;
 
   // As we are running as root, we need to be cautious about the privhelper
@@ -588,7 +609,8 @@ std::unique_ptr<PrivHelper> forkPrivHelper(
 
 #else // _WIN32
 
-unique_ptr<PrivHelper> startPrivHelper(const UserInfo&) {
+unique_ptr<PrivHelper>
+startOrConnectToPrivHelper(const UserInfo&, int, char**) {
   return make_unique<PrivHelper>();
 }
 

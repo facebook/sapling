@@ -1026,5 +1026,9 @@ void UnixSocket::timeoutExpired() noexcept {
       folly::makeSystemErrorExplicit(ETIMEDOUT, "send timeout on unix socket"));
 }
 
+int UnixSocket::getRawFd() const {
+  return socket_.fd();
+}
+
 } // namespace eden
 } // namespace facebook

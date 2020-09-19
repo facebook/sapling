@@ -163,9 +163,12 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
   //
   // We do this even before calling folly::init().  The privhelper server
   // process will call folly::init() on its own.
+  //
+  // If the privileged parent edenfs process has already started a privhelper
+  // process, then the --privhelper_fd flag is given and this child process will
+  // use it to connect to the existing privhelper.
   auto identity = UserInfo::lookup();
-  auto originalEUID = geteuid();
-  auto privHelper = startPrivHelper(identity);
+  auto privHelper = startOrConnectToPrivHelper(identity, argc, argv);
   identity.dropPrivileges();
 
   ////////////////////////////////////////////////////////////////////
@@ -198,15 +201,6 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
     return kExitCodeUsage;
   }
 
-  // Fail if we were not started as root.  The privhelper needs root
-  // privileges in order to perform mount and unmount operations.
-  // We check this after calling folly::init() so that non-root users
-  // can use the --help argument.
-  if (originalEUID != 0) {
-    fprintf(stderr, "error: edenfs must be started as root\n");
-    return kExitCodeUsage;
-  }
-
   if (identity.getUid() == 0 && !FLAGS_allowRoot) {
     fprintf(
         stderr,
@@ -233,7 +227,8 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
   }
 
   auto logPath = getLogPath(edenConfig->edenDir.getValue());
-  auto startupLogger = daemonizeIfRequested(logPath);
+  auto startupLogger =
+      daemonizeIfRequested(logPath, privHelper.get(), originalCommandLine);
   XLOG(DBG3) << edenConfig->toString();
   std::optional<EdenServer> server;
   auto prepareFuture = folly::Future<folly::Unit>::makeEmpty();

@@ -251,9 +251,21 @@ class StartFakeEdenFSTest(StartFakeEdenFSTestBase):
         self.start_edenfs(extra_args=["--"] + extra_daemon_args)
 
         argv = get_fake_edenfs_argv(self.eden_dir)
+        if "--experimentalSystemd" in argv:
+            expected = extra_daemon_args
+        else:
+            expected = [
+                "--allowExtraArgs",
+                "--foreground",
+                "--logPath",
+                str(self.eden_dir / "logs/edenfs.log"),
+                "--startupLoggerFd",
+                "5",
+            ] + extra_daemon_args[1:]
+
         self.assertEqual(
-            argv[-len(extra_daemon_args) :],
-            extra_daemon_args,
+            argv[-len(expected) :],
+            expected,
             f"fake_edenfs should have received arguments verbatim\nargv: {argv}",
         )
 
@@ -270,13 +282,27 @@ class StartFakeEdenFSTest(StartFakeEdenFSTestBase):
             ]
         )
 
-        expected_extra_daemon_args = [
-            "hello world",
-            "another fake_edenfs argument",
-            "--allowExtraArgs",
-            "arg_after_dashdash",
-        ]
         argv = get_fake_edenfs_argv(self.eden_dir)
+        if "--experimentalSystemd" in argv:
+            expected_extra_daemon_args = [
+                "hello world",
+                "another fake_edenfs argument",
+                "--allowExtraArgs",
+                "arg_after_dashdash",
+            ]
+        else:
+            expected_extra_daemon_args = [
+                "hello world",
+                "another fake_edenfs argument",
+                "--allowExtraArgs",
+                "arg_after_dashdash",
+                "--foreground",
+                "--logPath",
+                str(self.eden_dir / "logs/edenfs.log"),
+                "--startupLoggerFd",
+                "5",
+            ]
+
         self.assertEqual(
             argv[-len(expected_extra_daemon_args) :],
             expected_extra_daemon_args,

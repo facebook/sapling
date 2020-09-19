@@ -16,14 +16,47 @@
 #include <memory>
 #include <optional>
 #include "eden/fs/config/EdenConfig.h"
+#include "eden/fs/utils/FileDescriptor.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
 namespace eden {
 
-class StartupLogger;
+DECLARE_int32(startupLoggerFd);
 
-std::shared_ptr<StartupLogger> daemonizeIfRequested(folly::StringPiece logPath);
+class StartupLogger;
+class PrivHelper;
+class SpawnedProcess;
+class FileDescriptor;
+
+/**
+ * daemonizeIfRequested manages optionally daemonizing the edenfs process.
+ * Daemonizing is controlled primarily by the `--foreground` command line
+ * argument NOT being present, and on Windows systems we don't currently
+ * daemonize, but could do so now that we no longer rely on `fork` to
+ * implement this feature.
+ *
+ * If daemonizing: this function will configure a channel to communicate
+ * with the child process so that the parent can tell when it has finished
+ * initializing.  The parent will then call into
+ * DaemonStartupLogger::runParentProcess which waits for initialization
+ * to complete, prints the status and then terminates.  This function will
+ * therefore never return in the parent process.
+ *
+ * In the child process spawned as part of daemonizing, `--startupLoggerFd`
+ * is passed as a command line argument and the child will use that file
+ * descriptor to set up a client to communicate status with the parent.
+ * This function will return a `StartupLogger` instance in the child to
+ * manage that state.
+ *
+ * In the non-daemonizing case, no child is spawned and this function
+ * will return a `StartupLogger` that simply writes to the configured
+ * log location.
+ */
+std::shared_ptr<StartupLogger> daemonizeIfRequested(
+    folly::StringPiece logPath,
+    PrivHelper* privHelper,
+    const std::vector<std::string>& argv);
 
 /**
  * StartupLogger provides an API for logging messages that should be displayed
@@ -111,18 +144,30 @@ class DaemonStartupLogger : public StartupLogger {
   DaemonStartupLogger() = default;
 
   /**
-   * daemonize the current process.
+   * Spawn a child process to act as the server.
    *
-   * This method returns in a new process.  This method will never return in the
-   * parent process that originally called daemonize().  Instead the parent
-   * waits for the child process to either call StartupLogger::success() or
+   * This method will never return.
+   * It spawns a child process and then waits for the child to either call
+   * StartupLogger::success() or
    * StartupLogger::fail(), and exits with a status code based on which of these
    * was called.
    *
    * If logPath is non-empty the child process will redirect its stdout and
    * stderr file descriptors to the specified log file before returning.
    */
-  void daemonize(folly::StringPiece logPath);
+  [[noreturn]] void spawn(
+      folly::StringPiece logPath,
+      PrivHelper* privHelper,
+      const std::vector<std::string>& argv);
+
+  /** Configure the logger to act as a client of it parent.
+   * `pipe` is the file descriptor passed down via `--startupLoggerFd`
+   * and is connected to the parent process which is waiting in the
+   * `spawn`/`runParentProcess` method.
+   * This method configures this startup logger for the child so that it
+   * can communicate the status with the parent.
+   */
+  void initClient(folly::StringPiece logPath, FileDescriptor&& pipe);
 
  protected:
   void writeMessageImpl(folly::LogLevel level, folly::StringPiece message)
@@ -145,31 +190,25 @@ class DaemonStartupLogger : public StartupLogger {
     std::string errorMessage;
   };
 
-  std::optional<std::pair<pid_t, folly::File>> daemonizeImpl(
-      folly::StringPiece logPath);
-
-  /**
-   * Create the pipe for communication between the parent process and the
-   * daemonized child.  Stores the write end in pipe_ and returns the read end.
-   */
-  folly::File createPipe();
+  std::pair<SpawnedProcess, FileDescriptor> spawnImpl(
+      folly::StringPiece logPath,
+      PrivHelper* privHelper,
+      const std::vector<std::string>& argv);
 
   [[noreturn]] void runParentProcess(
-      folly::File readPipe,
-      pid_t childPid,
+      FileDescriptor&& readPipe,
+      SpawnedProcess&& childProc,
       folly::StringPiece logPath);
-  void prepareChildProcess(folly::StringPiece logPath);
-  void closeUndesiredInheritedFileDescriptors();
   void redirectOutput(folly::StringPiece logPath);
 
   /**
    * Wait for the child process to write its initialization status.
    */
   ParentResult waitForChildStatus(
-      const folly::File& pipe,
-      pid_t childPid,
+      FileDescriptor& pipe,
+      SpawnedProcess& proc,
       folly::StringPiece logPath);
-  ParentResult handleChildCrash(pid_t childPid);
+  ParentResult handleChildCrash(SpawnedProcess& childPid);
 
   void sendResult(ResultType result);
 
@@ -187,7 +226,7 @@ class DaemonStartupLogger : public StartupLogger {
   // If we have daemonized, pipe_ is a pipe connected to the original foreground
   // process.  We use this to inform the original process when we have fully
   // completed daemon startup.
-  folly::File pipe_;
+  FileDescriptor pipe_;
 };
 #endif // !_WIN32
 

@@ -340,7 +340,8 @@ int main(int argc, char** argv) {
   auto edenDir = edenConfig->edenDir.getValue();
 
   auto logPath = makeDefaultLogDirectory(edenDir) + getDefaultLogFileName();
-  auto startupLogger = daemonizeIfRequested(logPath.value());
+  auto startupLogger =
+      daemonizeIfRequested(logPath.value(), nullptr, originalCommandArguments);
 
   // Acquire the lock file
   if (!acquireLock(edenDir)) {

@@ -150,6 +150,13 @@ class PrivHelper {
    * error occurs.
    */
   virtual int stop() = 0;
+
+  /**
+   * Returns the underlying file descriptor value.
+   * This is intended to be used to pass the privhelper_fd option down
+   * to a child process and it must not to used for general reading/writing.
+   */
+  virtual int getRawClientFd() const = 0;
 };
 
 #else // _WIN32

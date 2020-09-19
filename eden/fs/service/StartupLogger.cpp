@@ -17,6 +17,9 @@
 #include <folly/portability/Unistd.h>
 #include <gflags/gflags.h>
 #include <sys/types.h>
+#include "eden/fs/fuse/privhelper/PrivHelper.h"
+#include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/SpawnedProcess.h"
 
 #ifndef _WIN32
 #include <sys/wait.h>
@@ -39,6 +42,8 @@ DEFINE_string(
     "",
     "If set, log messages to this file until startup completes.");
 
+DEFINE_int32(startupLoggerFd, -1, "The control pipe for startup logging");
+
 namespace {
 void writeMessageToFile(folly::File&, folly::StringPiece);
 #ifdef _WIN32
@@ -47,15 +52,25 @@ void redirectOutput(folly::StringPiece);
 } // namespace
 
 std::shared_ptr<StartupLogger> daemonizeIfRequested(
-    folly::StringPiece logPath) {
+    folly::StringPiece logPath,
+    PrivHelper* privHelper,
+    const std::vector<std::string>& argv) {
 #ifndef _WIN32
-  if (!FLAGS_foreground) {
+  if (!FLAGS_foreground && FLAGS_startupLoggerFd == -1) {
     auto startupLogger = std::make_shared<DaemonStartupLogger>();
     if (!FLAGS_startupLogPath.empty()) {
       startupLogger->warn(
           "Ignoring --startupLogPath because --foreground was not specified");
     }
-    startupLogger->daemonize(logPath);
+    startupLogger->spawn(logPath, privHelper, argv);
+    /* NOTREACHED */
+  }
+  if (FLAGS_startupLoggerFd != -1) {
+    // We're the child spawned by DaemonStartupLogger::spawn above
+    auto startupLogger = std::make_shared<DaemonStartupLogger>();
+    startupLogger->initClient(
+        logPath,
+        FileDescriptor(FLAGS_startupLoggerFd, FileDescriptor::FDType::Pipe));
     return startupLogger;
   }
 #else
@@ -140,74 +155,97 @@ void DaemonStartupLogger::sendResult(ResultType result) {
   setsid();
 }
 
-namespace {
-void setCloExec(int fd) {
-#ifndef FOLLY_HAVE_PIPE2
-  fcntl(fd, F_SETFD, fcntl(fd, F_GETFD) | FD_CLOEXEC);
-#else
-  (void)fd;
-#endif
-}
-} // namespace
-
-File DaemonStartupLogger::createPipe() {
-  // Create the pipe for communication between the processes
-  std::array<int, 2> pipeFDs;
-#ifdef FOLLY_HAVE_PIPE2
-  auto rc = pipe2(pipeFDs.data(), O_CLOEXEC);
-#else
-  auto rc = pipe(pipeFDs.data());
-#endif
-  checkUnixError(rc, "failed to create communication pipes for daemonization");
-  setCloExec(pipeFDs[0]);
-  setCloExec(pipeFDs[1]);
-  pipe_ = folly::File(pipeFDs[1], /*ownsFd=*/true);
-
-  return folly::File(pipeFDs[0], /*ownsFd=*/true);
+void DaemonStartupLogger::spawn(
+    StringPiece logPath,
+    PrivHelper* privHelper,
+    const std::vector<std::string>& argv) {
+  auto [proc, pipe] = spawnImpl(logPath, privHelper, argv);
+  runParentProcess(std::move(pipe), std::move(proc), logPath);
 }
 
-void DaemonStartupLogger::daemonize(StringPiece logPath) {
-  auto parentInfo = daemonizeImpl(logPath);
-  if (parentInfo) {
-    auto pid = parentInfo->first;
-    auto& readPipe = parentInfo->second;
-    runParentProcess(std::move(readPipe), pid, logPath);
-  }
-}
-
-std::optional<std::pair<pid_t, File>> DaemonStartupLogger::daemonizeImpl(
-    StringPiece logPath) {
+std::pair<SpawnedProcess, FileDescriptor> DaemonStartupLogger::spawnImpl(
+    StringPiece logPath,
+    PrivHelper* privHelper,
+    const std::vector<std::string>& argv) {
   DCHECK(!logPath.empty());
 
-  auto readPipe = createPipe();
-  logPath_ = logPath.str();
-
-  fflush(stdout);
-  fflush(stderr);
-
-  // fork
-  auto pid = fork();
-  checkUnixError(pid, "failed to fork for daemonization");
-  if (pid == 0) {
-    // Child process.
-    readPipe.close();
-    prepareChildProcess(logPath);
-    return std::nullopt;
+  auto exePath = executablePath();
+  auto canonPath = realpath(exePath.c_str());
+  if (exePath != canonPath) {
+    throw std::runtime_error(folly::to<std::string>(
+        "Refusing to start because my exePath ",
+        exePath,
+        " is not the realpath to myself (which is ",
+        canonPath,
+        "). This is an unsafe installation and may be an indication of a "
+        "symlink attack or similar attempt to escalate privileges"));
   }
 
-  // Parent process.
-  pipe_.close();
-  return std::make_pair(pid, std::move(readPipe));
+  SpawnedProcess::Options opts;
+  opts.executablePath(exePath);
+  opts.nullStdin();
+
+  // We want to append arguments to the argv list, but we need to take
+  // care for the case where the args look like:
+  // ["some", "args", "--", "extra", "args"]
+  // In that case we want to insert before the the "--" in order to
+  // preserve the semantic meaning of the command line.
+  std::vector<std::string> args;
+  std::vector<std::string> extraArgs;
+  for (auto& a : argv) {
+    if (!extraArgs.empty() || a == "--") {
+      extraArgs.push_back(a);
+    } else {
+      args.push_back(a);
+    }
+  }
+  // Tell the child to run in the foreground, to avoid fork bombing ourselves.
+  args.push_back("--foreground");
+  // We need to ensure that we pass down the log path, otherwise
+  // getLogPath() will spot that we used --foreground and will pass an empty
+  // logPath to this function.
+  args.push_back("--logPath");
+  args.push_back(logPath.str());
+
+  // If we started a privhelper, pass its control descriptor to the child
+  if (privHelper && privHelper->getRawClientFd() != -1) {
+    auto fd = opts.inheritDescriptor(FileDescriptor(
+        ::dup(privHelper->getRawClientFd()), FileDescriptor::FDType::Socket));
+    // Note: we can't use `--privhelper_fd=123` here because
+    // startOrConnectToPrivHelper has an intentionally anemic argv parser.
+    // It requires that the flag and the value be in separate
+    // array entries.
+    args.push_back("--privhelper_fd");
+    args.push_back(folly::to<std::string>(fd));
+  }
+
+  // Set up a pipe for the child to pass back startup status
+  Pipe pipe;
+  args.push_back("--startupLoggerFd");
+  args.push_back(
+      folly::to<std::string>(opts.inheritDescriptor(std::move(pipe.write))));
+
+  args.insert(args.end(), extraArgs.begin(), extraArgs.end());
+  SpawnedProcess proc(args, std::move(opts));
+  return std::make_pair(std::move(proc), std::move(pipe.read));
+}
+
+void DaemonStartupLogger::initClient(
+    folly::StringPiece logPath,
+    FileDescriptor&& pipe) {
+  DCHECK(!logPath.empty());
+  pipe_ = std::move(pipe);
+  redirectOutput(logPath);
 }
 
 void DaemonStartupLogger::runParentProcess(
-    File readPipe,
-    pid_t childPid,
-    StringPiece logPath) {
+    FileDescriptor&& readPipe,
+    SpawnedProcess&& childProc,
+    folly::StringPiece logPath) {
   // Wait for the child to finish initializing itself and then exit
   // without ever returning to the caller.
   try {
-    auto result = waitForChildStatus(readPipe, childPid, logPath);
+    auto result = waitForChildStatus(readPipe, childProc, logPath);
     if (!result.errorMessage.empty()) {
       fprintf(stderr, "%s\n", result.errorMessage.c_str());
       fflush(stderr);
@@ -215,7 +253,7 @@ void DaemonStartupLogger::runParentProcess(
     _exit(result.exitCode);
   } catch (const std::exception& ex) {
     // Catch exceptions to make sure we don't accidentally propagate them
-    // out of daemonize() in the parent process.
+    // out of spawn() in the parent process.
     fprintf(
         stderr,
         "unexpected error in daemonization parent process: %s\n",
@@ -223,17 +261,6 @@ void DaemonStartupLogger::runParentProcess(
     fflush(stderr);
     _exit(EX_SOFTWARE);
   }
-}
-
-void DaemonStartupLogger::prepareChildProcess(StringPiece logPath) {
-  closeUndesiredInheritedFileDescriptors();
-  // Redirect stdout & stderr
-  redirectOutput(logPath);
-}
-
-void DaemonStartupLogger::closeUndesiredInheritedFileDescriptors() {
-  auto devNull = File{"/dev/null", O_CLOEXEC | O_RDONLY};
-  checkUnixError(dup2(devNull.fd(), STDIN_FILENO));
 }
 
 void DaemonStartupLogger::redirectOutput(StringPiece logPath) {
@@ -259,22 +286,24 @@ void DaemonStartupLogger::redirectOutput(StringPiece logPath) {
 }
 
 DaemonStartupLogger::ParentResult DaemonStartupLogger::waitForChildStatus(
-    const File& pipe,
-    pid_t childPid,
+    FileDescriptor& pipe,
+    SpawnedProcess& proc,
     StringPiece logPath) {
   ResultType status;
-  auto bytesRead = folly::readFull(pipe.fd(), &status, sizeof(status));
-  if (bytesRead < 0) {
+  auto readResult = pipe.readFull(&status, sizeof(status));
+  if (readResult.hasException()) {
     return ParentResult(
         EX_SOFTWARE,
         "error reading status of edenfs initialization: ",
-        folly::errnoStr(errno));
+        folly::exceptionStr(readResult.exception()));
   }
+
+  auto bytesRead = readResult.value();
 
   if (static_cast<size_t>(bytesRead) < sizeof(status)) {
     // This should only happen if edenfs crashed before writing its status.
     // Check to see if the child process has died.
-    auto result = handleChildCrash(childPid);
+    auto result = handleChildCrash(proc);
     result.errorMessage += folly::to<string>(
         "\nCheck the edenfs log file at ", logPath, " for more details");
     return result;
@@ -286,71 +315,51 @@ DaemonStartupLogger::ParentResult DaemonStartupLogger::waitForChildStatus(
 }
 
 DaemonStartupLogger::ParentResult DaemonStartupLogger::handleChildCrash(
-    pid_t childPid) {
+    SpawnedProcess& proc) {
   constexpr size_t kMaxRetries = 5;
   constexpr auto kRetrySleep = 100ms;
 
   size_t numRetries = 0;
   while (true) {
-    int status;
-    auto waitedPid = waitpid(childPid, &status, WNOHANG);
-    if (waitedPid == childPid) {
-      if (WIFSIGNALED(status)) {
+    if (proc.terminated()) {
+      auto status = proc.wait();
+      if (status.killSignal() != 0) {
         return ParentResult(
             EX_SOFTWARE,
-            "error: edenfs crashed with signal ",
-            WTERMSIG(status),
+            "error: edenfs crashed with status ",
+            status.str(),
             " before it finished initializing");
-      } else if (WIFEXITED(status)) {
-        int exitCode = WEXITSTATUS(status);
-        if (exitCode == 0) {
-          // We don't ever want to exit successfully in this case, even if
-          // the edenfs daemon somehow did.
-          exitCode = EX_SOFTWARE;
-        }
-        return ParentResult(
-            exitCode,
-            "error: edenfs exited with status ",
-            WEXITSTATUS(status),
-            " before it finished initializing");
-      } else {
-        // This is unlikely to occur; it potentially means something attached to
-        // the child with ptrace.
-        return ParentResult(
-            EX_SOFTWARE,
-            "error: edenfs stopped unexpectedly before it "
-            "finished initializing");
       }
-    }
-
-    if (waitedPid == 0) {
-      // The child hasn't actually exited yet.
-      // Some of our tests appear to trigger this when killing the child with
-      // SIGKILL.  We see the pipe closed before the child is waitable.
-      // Sleep briefly and try the wait again, under the assumption that the
-      // child will become waitable soon.
-      if (numRetries < kMaxRetries) {
-        ++numRetries;
-        /* sleep override */ std::this_thread::sleep_for(kRetrySleep);
-        continue;
+      auto exitCode = status.exitStatus();
+      if (exitCode == 0) {
+        // We don't ever want to exit successfully in this case, even if
+        // the edenfs daemon somehow did.
+        exitCode = EX_SOFTWARE;
       }
-
-      // The child still wasn't waitable after waiting for a while.
-      // This should only happen if there is a bug somehow.
       return ParentResult(
-          EX_SOFTWARE,
-          "error: edenfs is still running but did not report "
-          "its initialization status");
+          exitCode,
+          "error: edenfs ",
+          status.str(),
+          " before it finished initializing");
     }
 
-    string msg = "error: edenfs did not report its initialization status";
-    if (waitedPid == -1) {
-      // Something went wrong trying to wait.  Also report that error.
-      msg += folly::to<string>(
-          "\nerror: error checking status of edenfs daemon: ",
-          folly::errnoStr(errno));
+    // The child hasn't actually exited yet.
+    // Some of our tests appear to trigger this when killing the child with
+    // SIGKILL.  We see the pipe closed before the child is waitable.
+    // Sleep briefly and try the wait again, under the assumption that the
+    // child will become waitable soon.
+    if (numRetries < kMaxRetries) {
+      ++numRetries;
+      /* sleep override */ std::this_thread::sleep_for(kRetrySleep);
+      continue;
     }
-    return ParentResult(EX_SOFTWARE, msg);
+
+    // The child still wasn't waitable after waiting for a while.
+    // This should only happen if there is a bug somehow.
+    return ParentResult(
+        EX_SOFTWARE,
+        "error: edenfs is still running but did not report "
+        "its initialization status");
   }
 }
 #endif // !_WIN32

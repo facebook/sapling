@@ -88,4 +88,12 @@ class FakeEdenFS(typing.ContextManager[int]):
 
 def get_fake_edenfs_argv(eden_dir: pathlib.Path) -> typing.List[str]:
     with create_thrift_client(str(eden_dir)) as client:
-        return client.getDaemonInfo().commandLine
+        argv = client.getDaemonInfo().commandLine
+        # StartupLogger may add `--startupLoggerFd 5` as a parameter.
+        # The 5 is a file descriptor number and has no guarantees as
+        # to which number is selected by the kernel.
+        # We perform various test assertions on these arguments.
+        # To make those easier, we rewrite the fd number to always be 5
+        if "--startupLoggerFd" in argv:
+            argv[argv.index("--startupLoggerFd") + 1] = "5"
+        return argv

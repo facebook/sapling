@@ -366,9 +366,19 @@ class CloneFakeEdenFSTest(CloneFakeEdenFSTestBase):
         )
 
         argv = get_fake_edenfs_argv(self.eden_dir)
+        if "--experimentalSystemd" in argv:
+            expected = extra_daemon_args
+        else:
+            expected = extra_daemon_args + [
+                "--foreground",
+                "--logPath",
+                str(self.eden_dir / "logs/edenfs.log"),
+                "--startupLoggerFd",
+                "5",
+            ]
         self.assertEqual(
-            argv[-len(extra_daemon_args) :],
-            extra_daemon_args,
+            argv[-len(expected) :],
+            expected,
             f"fake_edenfs should have received arguments verbatim\nargv: {argv}",
         )
 

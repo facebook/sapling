@@ -97,7 +97,7 @@ int main(int argc, char** argv) {
 
   // Fork the privhelper process, then drop privileges.
   auto identity = UserInfo::lookup();
-  auto privHelper = startPrivHelper(identity);
+  auto privHelper = startOrConnectToPrivHelper(identity, argc, argv);
   identity.dropPrivileges();
 
   auto mountPath = normalizeBestEffort(argv[1]);
