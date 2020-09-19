@@ -28,6 +28,17 @@ pub trait GothamTryStreamExt: TryStream {
     {
         ForwardErr::new(self, sink)
     }
+
+    /// Immediately end the `TryStream` upon encountering an error.
+    ///
+    /// The error will be passed to the given callback, and the stream will be
+    /// fused to prevent the underlying `TryStream` from being polled again.
+    fn end_on_err<F>(self, f: F) -> EndOnErr<Self, F>
+    where
+        Self: Sized,
+    {
+        EndOnErr::new(self, f)
+    }
 }
 
 impl<S: TryStream + ?Sized> GothamTryStreamExt for S {}
@@ -137,6 +148,54 @@ fn poll_send<T, Si: Sink<T>>(
     Poll::Ready(())
 }
 
+#[pin_project]
+pub struct EndOnErr<S, F> {
+    #[pin]
+    stream: S,
+    error_fn: Option<F>,
+}
+
+impl<S, F> EndOnErr<S, F> {
+    pub fn new(stream: S, error_fn: F) -> Self {
+        Self {
+            stream,
+            error_fn: Some(error_fn),
+        }
+    }
+
+    pub fn get_ref(&self) -> &S {
+        &self.stream
+    }
+}
+
+impl<S, F> Stream for EndOnErr<S, F>
+where
+    S: TryStream,
+    F: FnOnce(S::Error),
+{
+    type Item = S::Ok;
+
+    fn poll_next(self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        let this = self.project();
+
+        // Fuse the stream once the error callback has fired.
+        if this.error_fn.is_none() {
+            return Poll::Ready(None);
+        }
+
+        match ready!(this.stream.try_poll_next(ctx)) {
+            Some(Ok(item)) => Poll::Ready(Some(item)),
+            Some(Err(e)) => {
+                if let Some(f) = this.error_fn.take() {
+                    f(e);
+                }
+                Poll::Ready(None)
+            }
+            None => Poll::Ready(None),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -154,5 +213,22 @@ mod tests {
 
         assert_eq!(&items, &["hello", "world"]);
         assert_eq!(&errors, &["foo", "bar"]);
+    }
+
+    #[tokio::test]
+    async fn test_end_on_err() {
+        let s = stream::iter(vec![
+            Ok("hello"),
+            Ok("world"),
+            Err("error"),
+            Ok("foo"),
+            Err("bar"),
+        ]);
+
+        let mut errors = Vec::new();
+        let items = s.end_on_err(|e| errors.push(e)).collect::<Vec<_>>().await;
+
+        assert_eq!(&items, &["hello", "world"]);
+        assert_eq!(&errors, &["error"]);
     }
 }
