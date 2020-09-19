@@ -16,6 +16,8 @@ use futures::{
 };
 use pin_project::pin_project;
 
+use crate::stream_ext::ForwardErr;
+
 use super::encoding::{ContentCompression, ContentEncoding};
 
 pub trait ContentMeta {
@@ -158,6 +160,21 @@ where
 
     fn content_encoding(&self) -> ContentEncoding {
         // inspect_ok doesn't change the stream data.
+        self.get_ref().content_encoding()
+    }
+}
+
+impl<St, Si, E> ContentMeta for ForwardErr<St, Si, E>
+where
+    St: ContentMeta,
+{
+    fn content_length(&self) -> Option<u64> {
+        // forward_err doesn't change the stream data.
+        self.get_ref().content_length()
+    }
+
+    fn content_encoding(&self) -> ContentEncoding {
+        // forward_err doesn't change the stream data.
         self.get_ref().content_encoding()
     }
 }

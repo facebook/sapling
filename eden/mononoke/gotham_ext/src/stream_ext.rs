@@ -51,6 +51,10 @@ impl<St, Si, E> ForwardErr<St, Si, E> {
             sink_fused: false,
         }
     }
+
+    pub fn get_ref(&self) -> &St {
+        &self.stream
+    }
 }
 
 impl<St, Si> Stream for ForwardErr<St, Si, St::Error>
