@@ -28,7 +28,7 @@ use source_control as thrift;
 use crate::commit_id::{map_commit_identities, map_commit_identity, CommitIdExt};
 use crate::errors;
 use crate::from_request::{check_range_and_convert, FromRequest};
-use crate::into_response::{AsyncIntoResponse, IntoResponse};
+use crate::into_response::{AsyncIntoResponseWith, IntoResponse};
 use crate::source_control_impl::SourceControlServiceImpl;
 
 impl SourceControlServiceImpl {
@@ -411,14 +411,14 @@ impl SourceControlServiceImpl {
                     try_join_all(
                         draft_commits
                             .into_iter()
-                            .map(|cs| (cs, &params.identity_schemes).into_response()),
+                            .map(|cs| cs.into_response_with(&params.identity_schemes)),
                     ),
                     try_join_all(
                         public_parents
                             .into_iter()
-                            .map(|cs| (cs, &params.identity_schemes).into_response()),
+                            .map(|cs| cs.into_response_with(&params.identity_schemes)),
                     ),
-                    (leftover_heads, &params.identity_schemes).into_response(),
+                    leftover_heads.into_response_with(&params.identity_schemes),
                 )?;
                 Ok(thrift::RepoStackInfoResponse {
                     draft_commits,

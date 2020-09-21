@@ -19,8 +19,31 @@ use std::collections::{BTreeMap, BTreeSet};
 use crate::commit_id::{map_commit_identities, map_commit_identity};
 use crate::errors;
 
+/// Convert an item into a thrift type suitable for inclusion in a thrift
+/// response.
 pub(crate) trait IntoResponse<T> {
     fn into_response(self) -> T;
+}
+
+/// Asynchronously convert an item into a thrift type suitable for inclusion
+/// in a thrift response.
+#[async_trait]
+pub(crate) trait AsyncIntoResponse<T> {
+    async fn into_response(self) -> Result<T, errors::ServiceError>;
+}
+
+/// Asynchronously convert an item into a thrift type suitable for inclusion
+/// in a thrift response, with additional data required for the conversion.
+#[async_trait]
+pub(crate) trait AsyncIntoResponseWith<T> {
+    /// The type of additional data that must be provided to convert this
+    /// value into a response value.
+    type Additional;
+
+    async fn into_response_with(
+        self,
+        additional: &Self::Additional,
+    ) -> Result<T, errors::ServiceError>;
 }
 
 impl IntoResponse<thrift::EntryType> for FileType {
@@ -105,11 +128,6 @@ impl IntoResponse<thrift::Diff> for UnifiedDiff {
 }
 
 #[async_trait]
-pub(crate) trait AsyncIntoResponse<T> {
-    async fn into_response(self) -> Result<T, errors::ServiceError>;
-}
-
-#[async_trait]
 impl AsyncIntoResponse<Option<thrift::FilePathInfo>> for ChangesetPathContext {
     async fn into_response(self) -> Result<Option<thrift::FilePathInfo>, errors::ServiceError> {
         let (meta, type_) = try_join!(
@@ -154,11 +172,15 @@ impl AsyncIntoResponse<Option<thrift::TreePathInfo>> for ChangesetPathContext {
 }
 
 #[async_trait]
-impl AsyncIntoResponse<thrift::CommitInfo>
-    for (ChangesetContext, &BTreeSet<thrift::CommitIdentityScheme>)
-{
-    async fn into_response(self) -> Result<thrift::CommitInfo, errors::ServiceError> {
-        let (changeset, identity_schemes) = self;
+impl AsyncIntoResponseWith<thrift::CommitInfo> for ChangesetContext {
+    /// The additional data is the set of commit identity schemes to be
+    /// returned in the response.
+    type Additional = BTreeSet<thrift::CommitIdentityScheme>;
+
+    async fn into_response_with(
+        self,
+        identity_schemes: &BTreeSet<thrift::CommitIdentityScheme>,
+    ) -> Result<thrift::CommitInfo, errors::ServiceError> {
         async fn map_parent_identities(
             changeset: &ChangesetContext,
             identity_schemes: &BTreeSet<thrift::CommitIdentityScheme>,
@@ -179,13 +201,13 @@ impl AsyncIntoResponse<thrift::CommitInfo>
         }
 
         let (ids, message, date, author, parents, extra, generation) = try_join!(
-            map_commit_identity(&changeset, identity_schemes),
-            changeset.message(),
-            changeset.author_date(),
-            changeset.author(),
-            map_parent_identities(&changeset, identity_schemes),
-            changeset.extras(),
-            changeset.generation(),
+            map_commit_identity(&self, identity_schemes),
+            self.message(),
+            self.author_date(),
+            self.author(),
+            map_parent_identities(&self, identity_schemes),
+            self.extras(),
+            self.generation(),
         )?;
         Ok(thrift::CommitInfo {
             ids,
@@ -201,19 +223,20 @@ impl AsyncIntoResponse<thrift::CommitInfo>
 }
 
 #[async_trait]
-impl AsyncIntoResponse<Vec<BTreeMap<thrift::CommitIdentityScheme, thrift::CommitId>>>
-    for (
-        Vec<ChangesetContext>,
-        &BTreeSet<thrift::CommitIdentityScheme>,
-    )
+impl AsyncIntoResponseWith<Vec<BTreeMap<thrift::CommitIdentityScheme, thrift::CommitId>>>
+    for Vec<ChangesetContext>
 {
-    async fn into_response(
+    /// The additional data is the set of commit identity schemes to be
+    /// returned in the response.
+    type Additional = BTreeSet<thrift::CommitIdentityScheme>;
+
+    async fn into_response_with(
         self,
+        identity_schemes: &BTreeSet<thrift::CommitIdentityScheme>,
     ) -> Result<Vec<BTreeMap<thrift::CommitIdentityScheme, thrift::CommitId>>, errors::ServiceError>
     {
-        let (changesets, identity_schemes) = self;
         let res = try_join_all({
-            let changesets_grouped_by_repo = changesets
+            let changesets_grouped_by_repo = self
                 .into_iter()
                 .map(|c| c.into_repo_and_id())
                 .into_group_map();

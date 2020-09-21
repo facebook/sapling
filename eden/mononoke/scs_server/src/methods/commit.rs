@@ -25,7 +25,7 @@ use crate::commit_id::{map_commit_identities, map_commit_identity, CommitIdExt};
 use crate::errors;
 use crate::from_request::{check_range_and_convert, validate_timestamp, FromRequest};
 use crate::history::collect_history;
-use crate::into_response::{AsyncIntoResponse, IntoResponse};
+use crate::into_response::{AsyncIntoResponse, AsyncIntoResponseWith, IntoResponse};
 use crate::source_control_impl::SourceControlServiceImpl;
 use crate::specifiers::SpecifierExt;
 
@@ -278,7 +278,7 @@ impl SourceControlServiceImpl {
         params: thrift::CommitInfoParams,
     ) -> Result<thrift::CommitInfo, errors::ServiceError> {
         let (_repo, changeset) = self.repo_changeset(ctx, &commit).await?;
-        (changeset, &params.identity_schemes).into_response().await
+        changeset.into_response_with(&params.identity_schemes).await
     }
 
     /// Returns `true` if this commit is an ancestor of `other_commit`.

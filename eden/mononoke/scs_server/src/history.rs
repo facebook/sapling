@@ -12,7 +12,7 @@ use mononoke_api::{ChangesetContext, MononokeError};
 use source_control as thrift;
 
 use crate::errors;
-use crate::into_response::AsyncIntoResponse;
+use crate::into_response::AsyncIntoResponseWith;
 
 pub(crate) async fn collect_history(
     history_stream: impl Stream<Item = Result<ChangesetContext, MononokeError>>,
@@ -65,7 +65,7 @@ pub(crate) async fn collect_history(
             let commit_infos: Vec<_> = history
                 .map(|changeset| async {
                     match changeset {
-                        Ok(cs) => (cs, identity_schemes).into_response().await,
+                        Ok(cs) => cs.into_response_with(identity_schemes).await,
                         Err(err) => Err(err),
                     }
                 })
@@ -84,8 +84,8 @@ pub(crate) async fn collect_history(
                     let identity_schemes = identity_schemes.clone();
                     async move {
                         Ok(stream::iter(
-                            (changesets, &identity_schemes)
-                                .into_response()
+                            changesets
+                                .into_response_with(&identity_schemes)
                                 .await?
                                 .into_iter()
                                 .map(Ok::<_, errors::ServiceError>)
