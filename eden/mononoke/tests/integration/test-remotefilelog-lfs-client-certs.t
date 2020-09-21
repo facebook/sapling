@@ -58,14 +58,8 @@ Now, remove the killswitch. This will work
 Finally, check what identities the client presented.
 
   $ wait_for_json_record_count "$TESTTMP/scuba.json" 2
-  $ jq -S .normvector.client_identities "$TESTTMP/scuba.json"
-  [
-    "MACHINE:devvm000.lla0.facebook.com",
-    "MACHINE_TIER:devvm",
-    "USER:myusername0"
-  ]
-  [
-    "MACHINE:devvm000.lla0.facebook.com",
-    "MACHINE_TIER:devvm",
-    "USER:myusername0"
-  ]
+  $ diff <(
+  >   jq -S .normvector.client_identities "$TESTTMP/scuba.json"
+  > ) <(
+  >   printf "$JSON_CLIENT_ID\n$JSON_CLIENT_ID" | jq -S .
+  > )

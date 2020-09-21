@@ -121,12 +121,7 @@ def get_test_groups(repo_root):
             "test-walker-count-objects.t",
             "test-walker-error-as-data.t",
         },
-        TestGroup.BROKEN: {
-            "test-fastreplay-inline-args.t",  # Returns different data in OSS
-            "test-remotefilelog-lfs-client-certs.t",  # Returns different data in OSS
-            "test-server.t",  # Returns different data in OSS
-            "test-unbundle-replay-hg-recording.t",  # Returns different data in OSS
-        },
+        TestGroup.BROKEN: set(),
     }
 
     if platform == "darwin":

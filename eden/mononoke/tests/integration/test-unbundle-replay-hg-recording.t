@@ -90,7 +90,7 @@ Check history again. We're back to where we were:
   (master_bookmark) 7a8f33ce453248a6f5cc4747002e931c77234fbd pushrebase * (glob)
   (master_bookmark) 26805aba1e600a82e93661149f2313866a221a7b blobimport * (glob)
 
-  $ jq -S . < $TESTTMP/scuba.json
+  $ format_single_scuba_sample < $TESTTMP/scuba.json
   {
     "int": {
       "age_s": *, (glob)
@@ -105,10 +105,7 @@ Check history again. We're back to where we were:
     },
     "normal": {
       "bookmark": "master_bookmark",
-      "build_revision": *, (glob)
-      "build_rule": "fbcode:eden/mononoke/unbundle_replay:unbundle_replay",
       "from_cs_id": "c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd",
-      "server_hostname": *, (glob)
       "to_cs_id": "604bc07f395768cd320516a640bef6a1af75d13b4214d44ae3faa2a36f1203bb"
     }
   }
