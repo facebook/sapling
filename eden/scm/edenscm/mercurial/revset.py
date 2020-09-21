@@ -853,14 +853,16 @@ def _children(repo, subset, parentset):
         def isvisible(rev):
             return True
 
-    for r in subset:
-        if r <= minrev:
-            continue
-        p1, p2 = pr(r)
-        if p1 in parentset and isvisible(r):
-            cs.add(r)
-        if p2 != nullrev and p2 in parentset and isvisible(r):
-            cs.add(r)
+    if minrev is not None:
+        for r in _makerangeset(repo, subset, minrev, smartset.maxrev, anyorder):
+            if r == nullrev:
+                continue
+
+            p1, p2 = pr(r)
+            if p1 in parentset and isvisible(r):
+                cs.add(r)
+            if p2 != nullrev and p2 in parentset and isvisible(r):
+                cs.add(r)
     return baseset(cs)
 
 
