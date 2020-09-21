@@ -524,6 +524,11 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             params: thrift::RepoDeleteBookmarkParams,
         ) -> Result<thrift::RepoDeleteBookmarkResponse, service::RepoDeleteBookmarkExn>;
 
+        async fn repo_land_stack(
+            repo: thrift::RepoSpecifier,
+            params: thrift::RepoLandStackParams,
+        ) -> Result<thrift::RepoLandStackResponse, service::RepoLandStackExn>;
+
         async fn repo_list_hg_manifest(
             repo: thrift::RepoSpecifier,
             params: thrift::RepoListHgManifestParams,

@@ -66,6 +66,24 @@ impl AddScubaParams for thrift::RepoDeleteBookmarkParams {
     }
 }
 
+impl AddScubaParams for thrift::RepoLandStackParams {
+    fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
+        scuba.add("bookmark_name", self.bookmark.as_str());
+        scuba.add("commit", self.head.to_string());
+        scuba.add("param_base", self.base.to_string());
+        self.identity_schemes.add_scuba_params(scuba);
+        if let Some(old_identity_schemes) = &self.old_identity_schemes {
+            scuba.add(
+                "old_identity_schemes",
+                old_identity_schemes
+                    .iter()
+                    .map(ToString::to_string)
+                    .collect::<ScubaValue>(),
+            );
+        }
+    }
+}
+
 impl AddScubaParams for thrift::RepoListBookmarksParams {
     fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
         scuba.add("param_include_scratch", self.include_scratch as i32);

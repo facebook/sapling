@@ -5,13 +5,16 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashSet;
+
 use async_trait::async_trait;
 use futures::future::try_join_all;
-use futures_util::try_join;
+use futures::try_join;
 use itertools::Itertools;
+use maplit::btreemap;
 use mononoke_api::{
-    ChangesetContext, ChangesetPathContext, FileMetadata, FileType, MononokeError, TreeEntry,
-    TreeId, TreeSummary, UnifiedDiff,
+    ChangesetContext, ChangesetId, ChangesetPathContext, FileMetadata, FileType, MononokeError,
+    PushrebaseOutcome, RepoContext, TreeEntry, TreeId, TreeSummary, UnifiedDiff,
 };
 use source_control as thrift;
 use std::collections::{BTreeMap, BTreeSet};
@@ -268,5 +271,67 @@ impl AsyncIntoResponseWith<Vec<BTreeMap<thrift::CommitIdentityScheme, thrift::Co
         .flatten()
         .collect();
         Ok(res)
+    }
+}
+
+#[async_trait]
+impl AsyncIntoResponseWith<thrift::PushrebaseOutcome> for PushrebaseOutcome {
+    /// The additional data is the repo context, the set of commit identity
+    /// schemes to be returned in the response, and optionally a different set
+    /// of commit identity schemes to use for the old commit ids.
+    type Additional = (
+        RepoContext,
+        BTreeSet<thrift::CommitIdentityScheme>,
+        Option<BTreeSet<thrift::CommitIdentityScheme>>,
+    );
+
+    async fn into_response_with(
+        self,
+        additional: &Self::Additional,
+    ) -> Result<thrift::PushrebaseOutcome, errors::ServiceError> {
+        let (repo, identity_schemes, old_identity_schemes) = additional;
+        let mut new_ids = HashSet::new();
+        let mut old_ids = HashSet::new();
+        new_ids.insert(self.head);
+        for rebase in self.rebased_changesets.iter() {
+            old_ids.insert(rebase.id_old);
+            new_ids.insert(rebase.id_new);
+        }
+        let old_identity_schemes = old_identity_schemes.as_ref().unwrap_or(&identity_schemes);
+        let (old_id_map, new_id_map) = try_join!(
+            map_commit_identities(&repo, old_ids.into_iter().collect(), old_identity_schemes),
+            map_commit_identities(&repo, new_ids.into_iter().collect(), &identity_schemes),
+        )?;
+
+        // Map IDs using one of the maps we just fetched.  If we couldn't
+        // perform the look-up then just return the bonsai ID only.
+        fn try_get(
+            map: &BTreeMap<ChangesetId, BTreeMap<thrift::CommitIdentityScheme, thrift::CommitId>>,
+            cs_id: ChangesetId,
+        ) -> BTreeMap<thrift::CommitIdentityScheme, thrift::CommitId> {
+            match map.get(&cs_id) {
+                Some(ids) => ids.clone(),
+                None => btreemap! {
+                    thrift::CommitIdentityScheme::BONSAI =>
+                        thrift::CommitId::bonsai(cs_id.as_ref().into()),
+                },
+            }
+        }
+
+        let head = try_get(&new_id_map, self.head);
+        let rebased_commits: Vec<_> = self
+            .rebased_changesets
+            .iter()
+            .map(|rebase| {
+                let old_ids = try_get(&old_id_map, rebase.id_old);
+                let new_ids = try_get(&new_id_map, rebase.id_new);
+                thrift::PushrebaseRebasedCommit { old_ids, new_ids }
+            })
+            .collect();
+
+        Ok(thrift::PushrebaseOutcome {
+            head,
+            rebased_commits,
+        })
     }
 }

@@ -54,6 +54,7 @@ pub use crate::file::{FileContext, FileId, FileMetadata, FileType};
 pub use crate::path::MononokePath;
 pub use crate::repo::{BookmarkFreshness, RepoContext};
 pub use crate::repo_write::create_changeset::{CreateChange, CreateCopyInfo};
+pub use crate::repo_write::land_stack::PushrebaseOutcome;
 pub use crate::repo_write::RepoWriteContext;
 pub use crate::specifiers::{
     ChangesetId, ChangesetIdPrefix, ChangesetPrefixSpecifier, ChangesetSpecifier,

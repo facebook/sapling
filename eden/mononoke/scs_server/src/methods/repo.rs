@@ -9,12 +9,14 @@ use std::collections::BTreeMap;
 use std::convert::{identity, TryFrom};
 
 use blobstore::Loadable;
+use borrowed::borrowed;
 use bytes::Bytes;
 use chrono::{DateTime, FixedOffset, Local};
 use context::CoreContext;
-use futures::{compat::Future01CompatExt, future::try_join_all, try_join};
-use futures_util::stream::FuturesOrdered;
-use futures_util::{StreamExt, TryStreamExt};
+use futures::compat::Future01CompatExt;
+use futures::future::try_join_all;
+use futures::stream::{FuturesOrdered, StreamExt, TryStreamExt};
+use futures::try_join;
 use manifest::{Entry, Manifest};
 use maplit::btreemap;
 use mononoke_api::{
@@ -515,6 +517,41 @@ impl SourceControlServiceImpl {
             .await?;
         Ok(thrift::RepoDeleteBookmarkResponse {})
     }
+
+    pub(crate) async fn repo_land_stack(
+        &self,
+        ctx: CoreContext,
+        repo: thrift::RepoSpecifier,
+        params: thrift::RepoLandStackParams,
+    ) -> Result<thrift::RepoLandStackResponse, errors::ServiceError> {
+        let repo = self.repo(ctx, &repo).await?;
+        let repo = match params.service_identity {
+            Some(service_identity) => repo.service_write(service_identity).await?,
+            None => repo.write().await?,
+        };
+        borrowed!(params.head, params.base);
+        let head = repo
+            .changeset(ChangesetSpecifier::from_request(head)?)
+            .await?
+            .ok_or_else(|| errors::commit_not_found(head.to_string()))?;
+        let base = repo
+            .changeset(ChangesetSpecifier::from_request(base)?)
+            .await?
+            .ok_or_else(|| errors::commit_not_found(base.to_string()))?;
+
+        let pushrebase_outcome = repo
+            .land_stack(&params.bookmark, head.id(), base.id())
+            .await?
+            .into_response_with(&(
+                repo.clone(),
+                params.identity_schemes,
+                params.old_identity_schemes,
+            ))
+            .await?;
+
+        Ok(thrift::RepoLandStackResponse { pushrebase_outcome })
+    }
+
     pub(crate) async fn repo_list_hg_manifest(
         &self,
         ctx: CoreContext,
