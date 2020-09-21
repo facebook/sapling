@@ -7,11 +7,10 @@
 
 use std::sync::Arc;
 
-use anyhow::Context;
 use cpython::*;
 use futures::prelude::*;
-use tokio::runtime::Runtime;
 
+use async_runtime::block_on_future;
 use cpython_async::PyFuture;
 use cpython_async::TStream;
 use cpython_ext::{PyPathBuf, ResultPyErrExt};
@@ -51,8 +50,7 @@ pub trait EdenApiPyExt: EdenApi {
 
         let stats = py
             .allow_threads(|| {
-                let mut rt = Runtime::new().context("Failed to initialize Tokio runtime")?;
-                rt.block_on(async move {
+                block_on_future(async move {
                     let response = self.files(repo, keys, progress).await?;
                     write_file(response, store).await
                 })
@@ -77,8 +75,7 @@ pub trait EdenApiPyExt: EdenApi {
 
         let stats = py
             .allow_threads(|| {
-                let mut rt = Runtime::new().context("Failed to initialize Tokio runtime")?;
-                rt.block_on(async move {
+                block_on_future(async move {
                     let response = self.history(repo, keys, length, progress).await?;
                     write_history(response, store).await
                 })
@@ -102,8 +99,7 @@ pub trait EdenApiPyExt: EdenApi {
 
         let stats = py
             .allow_threads(|| {
-                let mut rt = Runtime::new().context("Failed to initialize Tokio runtime")?;
-                rt.block_on(async move {
+                block_on_future(async move {
                     let response = self.trees(repo, keys, progress).await?;
                     write_tree(response, store).await
                 })
@@ -132,8 +128,7 @@ pub trait EdenApiPyExt: EdenApi {
 
         let stats = py
             .allow_threads(|| {
-                let mut rt = Runtime::new().context("Failed to initialize Tokio runtime")?;
-                rt.block_on(async move {
+                block_on_future(async move {
                     let response = self
                         .complete_trees(repo, rootdir, mfnodes, basemfnodes, depth, progress)
                         .await?;
@@ -157,8 +152,7 @@ pub trait EdenApiPyExt: EdenApi {
 
         let (commits, stats) = py
             .allow_threads(|| {
-                let mut rt = Runtime::new().context("Failed to initialize Tokio runtime")?;
-                rt.block_on(async move {
+                block_on_future(async move {
                     let response = self.commit_revlog_data(repo, nodes, progress).await?;
                     let commits = response.entries;
                     let stats = response.stats;

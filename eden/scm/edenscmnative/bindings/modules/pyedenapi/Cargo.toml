@@ -5,6 +5,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
+async-runtime = { path = "../../../../lib/async-runtime" }
 bytes = "0.5"
 cpython-async = { path = "../../../../lib/cpython-async", default-features = false }
 cpython-ext = { path = "../../../../lib/cpython-ext", default-features = false }
@@ -15,7 +16,6 @@ futures = { version = "0.3.5", features = ["async-await", "compat"] }
 pyconfigparser = { path = "../pyconfigparser" }
 pyrevisionstore = { path = "../pyrevisionstore" }
 revisionstore = { path = "../../../../lib/revisionstore" }
-tokio = { version = "=0.2.13", features = ["full"] }
 types = { path = "../../../../lib/types" }
 
 [features]
