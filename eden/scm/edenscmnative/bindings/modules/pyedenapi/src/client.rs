@@ -10,6 +10,7 @@ use std::sync::Arc;
 use cpython::*;
 
 use cpython_async::PyFuture;
+use cpython_async::TStream;
 use cpython_ext::{ExtractInner, ExtractInnerRef, PyPathBuf, ResultPyErrExt};
 use edenapi::{Builder, EdenApi};
 use pyconfigparser::config;
@@ -17,6 +18,7 @@ use pyrevisionstore::{edenapifilestore, edenapitreestore};
 use revisionstore::{EdenApiFileStore, EdenApiTreeStore};
 
 use crate::pyext::EdenApiPyExt;
+use crate::pytypes::PyCommitRevlogData;
 use crate::stats::stats;
 
 // Python wrapper around an EdenAPI client.
@@ -102,7 +104,7 @@ py_class!(pub class client |py| {
         repo: String,
         nodes: Vec<PyBytes>,
         progress: Option<PyObject> = None
-    ) -> PyResult<(Vec<(PyBytes, PyBytes)>, PyFuture)> {
+    ) -> PyResult<(TStream<anyhow::Result<PyCommitRevlogData>>, PyFuture)> {
         self.inner(py).clone().commit_revlog_data_py(py, repo, nodes, progress)
     }
 

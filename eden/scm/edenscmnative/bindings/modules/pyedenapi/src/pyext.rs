@@ -13,11 +13,13 @@ use futures::prelude::*;
 use tokio::runtime::Runtime;
 
 use cpython_async::PyFuture;
+use cpython_async::TStream;
 use cpython_ext::{PyPathBuf, ResultPyErrExt};
 use edenapi::{EdenApi, EdenApiBlocking, EdenApiError, Fetch, Stats};
-use edenapi_types::{CommitRevlogData, FileEntry, HistoryEntry, TreeEntry};
+use edenapi_types::{FileEntry, HistoryEntry, TreeEntry};
 use revisionstore::{HgIdMutableDeltaStore, HgIdMutableHistoryStore};
 
+use crate::pytypes::PyCommitRevlogData;
 use crate::pytypes::PyStats;
 use crate::stats::stats;
 use crate::util::{
@@ -149,36 +151,25 @@ pub trait EdenApiPyExt: EdenApi {
         repo: String,
         nodes: Vec<PyBytes>,
         progress: Option<PyObject>,
-    ) -> PyResult<(Vec<(PyBytes, PyBytes)>, PyFuture)> {
+    ) -> PyResult<(TStream<anyhow::Result<PyCommitRevlogData>>, PyFuture)> {
         let nodes = to_hgids(py, nodes);
         let progress = progress.map(wrap_callback);
 
-        let (commits, stats): (Vec<CommitRevlogData>, _) = py
+        let (commits, stats) = py
             .allow_threads(|| {
                 let mut rt = Runtime::new().context("Failed to initialize Tokio runtime")?;
                 rt.block_on(async move {
-                    let mut commits: Vec<CommitRevlogData> = Vec::with_capacity(nodes.len());
-                    let mut response = self.commit_revlog_data(repo, nodes, progress).await?;
-                    while let Some(entry) = response.entries.try_next().await? {
-                        commits.push(entry);
-                    }
+                    let response = self.commit_revlog_data(repo, nodes, progress).await?;
+                    let commits = response.entries;
                     let stats = response.stats;
                     Ok::<_, EdenApiError>((commits, stats))
                 })
             })
             .map_pyerr(py)?;
 
-        let commits_py = commits
-            .into_iter()
-            .map(|e| {
-                (
-                    PyBytes::new(py, e.hgid.as_ref()),
-                    PyBytes::new(py, e.revlog_data.as_ref()),
-                )
-            })
-            .collect();
+        let commits_py = commits.map_ok(PyCommitRevlogData).map_err(Into::into);
         let stats_py = PyFuture::new(py, stats.map_ok(PyStats))?;
-        Ok((commits_py, stats_py))
+        Ok((commits_py.into(), stats_py))
     }
 }
 
