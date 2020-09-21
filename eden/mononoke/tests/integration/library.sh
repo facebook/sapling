@@ -13,6 +13,7 @@ fi
 
 ALLOWED_IDENTITY_TYPE="${FB_ALLOWED_IDENTITY_TYPE:-X509_SUBJECT_NAME}"
 ALLOWED_IDENTITY_DATA="${FB_ALLOWED_IDENTITY_DATA:-CN=localhost,O=Mononoke,C=US,ST=CA}"
+JSON_CLIENT_ID="${FB_JSON_CLIENT_ID:-[\"X509_SUBJECT_NAME:CN=localhost,O=Mononoke,C=US,ST=CA\"]}"
 
 if [[ -n "$DB_SHARD_NAME" ]]; then
   MONONOKE_DEFAULT_START_TIMEOUT=60
@@ -1647,6 +1648,12 @@ function summarize_scuba_json() {
   done
   jq -S "if (.normal.log_tag | match(\"^($interesting_tags)\$\")) then ${key_spec:3} else empty end"
 }
+
+if [ -z "$HAS_FB" ]; then
+  function format_single_scuba_sample() {
+    jq -S .
+  }
+fi
 
 function regenerate_hg_filenodes() {
   "$MONONOKE_REGENERATE_HG_FILENODES" \
