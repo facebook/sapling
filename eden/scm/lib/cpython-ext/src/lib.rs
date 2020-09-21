@@ -29,3 +29,6 @@ pub use crate::pybuf::SimplePyBuf;
 pub use crate::pyset::{pyset_add, pyset_new};
 pub use crate::str::Str;
 pub use bytes::Bytes;
+
+// Re-export
+pub use cpython;

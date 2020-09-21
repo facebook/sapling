@@ -1,0 +1,15 @@
+[package]
+name = "cpython-async"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+anyhow = "1"
+async-runtime = { path = "../async-runtime" }
+cpython-ext = { path = "../cpython-ext", default-features = false }
+futures = "0.3"
+
+[features]
+default = ["python3"]
+python2 = ["cpython-ext/python2"]
+python3 = ["cpython-ext/python3"]
