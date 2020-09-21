@@ -105,11 +105,6 @@ if sys.platform == "win32":
         "hg.debug_hg_dirstate_test.DebugHgDirstateTestTreeOnly": True,
         "hg.debug_hg_get_dirstate_tuple_test.DebugHgGetDirstateTupleTestTreeOnly": True,
         "hg.diff_test.DiffTestTreeOnly": True,
-        "hg.doctor_test.DoctorTestTreeOnly": [
-            # TODO: Figure out why `hg whereami` agrees with `hg log -r .`
-            "test_eden_doctor_fixes_invalid_mismatched_parents",
-            "test_eden_doctor_fixes_valid_mismatched_parents",
-        ],
         "hg.fold_test.FoldTestTreeOnly": True,
         "hg.grep_test.GrepTestTreeOnly": [
             "test_grep_directory_from_root",
