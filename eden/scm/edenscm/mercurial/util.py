@@ -4774,7 +4774,7 @@ def gcdir(path, mtimethreshold):
     """
     paths = [os.path.join(path, p[0]) for p in listdir(path)]
     stats = statfiles(paths)
-    deadline = time.time() - 24 * 3600 * 14
+    deadline = time.time() - mtimethreshold
     for path, stat in zip(paths, stats):
         if stat is None:
             continue
