@@ -12,11 +12,13 @@ use cpython::*;
 use futures::prelude::*;
 use tokio::runtime::Runtime;
 
+use cpython_async::PyFuture;
 use cpython_ext::{PyPathBuf, ResultPyErrExt};
 use edenapi::{EdenApi, EdenApiBlocking, EdenApiError, Fetch, Stats};
 use edenapi_types::{CommitRevlogData, FileEntry, HistoryEntry, TreeEntry};
 use revisionstore::{HgIdMutableDeltaStore, HgIdMutableHistoryStore};
 
+use crate::pytypes::PyStats;
 use crate::stats::stats;
 use crate::util::{
     as_deltastore, as_historystore, meta_to_dict, to_hgids, to_keys, to_path, wrap_callback,
@@ -147,11 +149,11 @@ pub trait EdenApiPyExt: EdenApi {
         repo: String,
         nodes: Vec<PyBytes>,
         progress: Option<PyObject>,
-    ) -> PyResult<(Vec<(PyBytes, PyBytes)>, stats)> {
+    ) -> PyResult<(Vec<(PyBytes, PyBytes)>, PyFuture)> {
         let nodes = to_hgids(py, nodes);
         let progress = progress.map(wrap_callback);
 
-        let (commits, stats): (Vec<CommitRevlogData>, Stats) = py
+        let (commits, stats): (Vec<CommitRevlogData>, _) = py
             .allow_threads(|| {
                 let mut rt = Runtime::new().context("Failed to initialize Tokio runtime")?;
                 rt.block_on(async move {
@@ -160,7 +162,7 @@ pub trait EdenApiPyExt: EdenApi {
                     while let Some(entry) = response.entries.try_next().await? {
                         commits.push(entry);
                     }
-                    let stats = response.stats.await?;
+                    let stats = response.stats;
                     Ok::<_, EdenApiError>((commits, stats))
                 })
             })
@@ -175,7 +177,7 @@ pub trait EdenApiPyExt: EdenApi {
                 )
             })
             .collect();
-        let stats_py = stats::new(py, stats)?;
+        let stats_py = PyFuture::new(py, stats.map_ok(PyStats))?;
         Ok((commits_py, stats_py))
     }
 }

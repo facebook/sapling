@@ -14,6 +14,7 @@ use cpython::*;
 
 mod client;
 mod pyext;
+mod pytypes;
 mod stats;
 mod util;
 

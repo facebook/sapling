@@ -9,6 +9,7 @@ use std::sync::Arc;
 
 use cpython::*;
 
+use cpython_async::PyFuture;
 use cpython_ext::{ExtractInner, ExtractInnerRef, PyPathBuf, ResultPyErrExt};
 use edenapi::{Builder, EdenApi};
 use pyconfigparser::config;
@@ -101,7 +102,7 @@ py_class!(pub class client |py| {
         repo: String,
         nodes: Vec<PyBytes>,
         progress: Option<PyObject> = None
-    ) -> PyResult<(Vec<(PyBytes, PyBytes)>, stats)> {
+    ) -> PyResult<(Vec<(PyBytes, PyBytes)>, PyFuture)> {
         self.inner(py).clone().commit_revlog_data_py(py, repo, nodes, progress)
     }
 
