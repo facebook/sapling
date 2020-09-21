@@ -130,7 +130,7 @@ move trunk forwards
 
 moves fail if you give the wrong existing commit
   $ scsc move-bookmark -R repo --name trunk -i $A -i $C
-  error: SourceControlService::repo_move_bookmark failed with InternalError { reason: "Bookmark transaction failed", backtrace: None, source_chain: ["Bookmark transaction failed"] }
+  error: SourceControlService::repo_move_bookmark failed with RequestError { kind: RequestErrorKind::INVALID_REQUEST, reason: "Bookmark transaction failed" }
   [1]
 
 but work if you get it right
@@ -164,7 +164,7 @@ there's no way to specify pushvars at the moment, however service writes can byp
 
 creating a bookmark that already exists fails
   $ scsc create-bookmark -R repo --name trunk -i $B
-  error: SourceControlService::repo_create_bookmark failed with InternalError { reason: "Bookmark transaction failed", backtrace: None, source_chain: ["Bookmark transaction failed"] }
+  error: SourceControlService::repo_create_bookmark failed with RequestError { kind: RequestErrorKind::INVALID_REQUEST, reason: "Bookmark transaction failed" }
   [1]
 
 create a bookmark
@@ -229,7 +229,7 @@ advancing trunk over a commit with a git mapping populates the git mapping
 
 write restrictions prevent creating a bookmark over a path that is not allowed (relative to trunk)
   $ scsc create-bookmark -R repo --name other -i $G --service-id restricted-service
-  error: SourceControlService::repo_create_bookmark failed with InternalError { reason: "Service \'restricted-service\' is not permitted to modify path \'G\'", backtrace: None, source_chain: ["Service \'restricted-service\' is not permitted to modify path \'G\'"] }
+  error: SourceControlService::repo_create_bookmark failed with RequestError { kind: RequestErrorKind::INVALID_REQUEST, reason: "Service \'restricted-service\' is not permitted to modify path \'G\'" }
   [1]
 
 write restrictions don't prevent creating a bookmark that is an ancestor of trunk
@@ -237,7 +237,7 @@ write restrictions don't prevent creating a bookmark that is an ancestor of trun
 
 write restrictions do prevent moving a bookmark over a path that is not allowed
   $ scsc move-bookmark -R repo --name other -i $G --service-id restricted-service
-  error: SourceControlService::repo_move_bookmark failed with InternalError { reason: "Service \'restricted-service\' is not permitted to modify path \'G\'", backtrace: None, source_chain: ["Service \'restricted-service\' is not permitted to modify path \'G\'"] }
+  error: SourceControlService::repo_move_bookmark failed with RequestError { kind: RequestErrorKind::INVALID_REQUEST, reason: "Service \'restricted-service\' is not permitted to modify path \'G\'" }
   [1]
 
 write restrictions don't prevent moving a bookmark over a path that is permitted
@@ -246,7 +246,7 @@ this time we also use another bookmark as the target
 
 a service with no permitted paths can't create a bookmark that touches anything
   $ scsc create-bookmark -R repo --name nopaths -i $J --service-id no-paths-service
-  error: SourceControlService::repo_create_bookmark failed with InternalError { reason: "Service \'no-paths-service\' is not permitted to modify path \'J\'", backtrace: None, source_chain: ["Service \'no-paths-service\' is not permitted to modify path \'J\'"] }
+  error: SourceControlService::repo_create_bookmark failed with RequestError { kind: RequestErrorKind::INVALID_REQUEST, reason: "Service \'no-paths-service\' is not permitted to modify path \'J\'" }
   [1]
 
 trunk can't be deleted
@@ -267,7 +267,7 @@ services can delete their permitted bookmarks
 
 deletion of a bookmark with the wrong existing commit fails
   $ scsc delete-bookmark -R repo --name newgolf -i $A
-  error: SourceControlService::repo_delete_bookmark failed with InternalError { reason: "Bookmark transaction failed", backtrace: None, source_chain: ["Bookmark transaction failed"] }
+  error: SourceControlService::repo_delete_bookmark failed with RequestError { kind: RequestErrorKind::INVALID_REQUEST, reason: "Bookmark transaction failed" }
   [1]
 
 restricted services can't if they don't have the method permission

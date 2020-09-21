@@ -86,7 +86,7 @@ pub enum BookmarkMovementError {
     #[error("Hooks failed:\n{}", describe_hook_rejections(.0.as_slice()))]
     HookFailure(Vec<HookRejection>),
 
-    #[error("Pushrebase failed")]
+    #[error("Pushrebase failed: {0}")]
     PushrebaseError(#[source] PushrebaseError),
 
     #[error(transparent)]

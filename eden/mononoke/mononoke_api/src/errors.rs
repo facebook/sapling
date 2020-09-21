@@ -107,12 +107,9 @@ impl From<BookmarkMovementError> for MononokeError {
     fn from(e: BookmarkMovementError) -> Self {
         use BookmarkMovementError::*;
         match e {
-            NonFastForwardMove { .. }
-            | PushrebaseRequiredGlobalrevs
-            | DeletionProhibited { .. }
-            | PermissionDeniedUser { .. } => MononokeError::InvalidRequest(e.to_string()),
             HookFailure(rejections) => MononokeError::HookFailure(rejections),
-            _ => MononokeError::InternalError(InternalError(Arc::new(e.into()))),
+            Error(e) => MononokeError::InternalError(InternalError::from(e)),
+            _ => MononokeError::InvalidRequest(e.to_string()),
         }
     }
 }
