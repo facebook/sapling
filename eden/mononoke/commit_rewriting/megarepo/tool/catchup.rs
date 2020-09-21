@@ -26,6 +26,8 @@ use mononoke_types::{ChangesetId, MPath};
 use pushrebase::do_pushrebase_bonsai;
 use regex::Regex;
 use slog::info;
+use std::time::Duration;
+use tokio::time::delay_for;
 use unodes::RootUnodeManifestId;
 
 pub async fn create_deletion_head_commits<'a>(
@@ -37,6 +39,7 @@ pub async fn create_deletion_head_commits<'a>(
     deletion_chunk_size: usize,
     cs_args_factory: Box<dyn ChangesetArgsFactory>,
     pushrebase_flags: &'a PushrebaseFlags,
+    wait_secs: u64,
 ) -> Result<(), Error> {
     let files =
         find_files_that_need_to_be_deleted(ctx, repo, &head_bookmark, commit_to_merge, path_regex)
@@ -88,6 +91,10 @@ pub async fn create_deletion_head_commits<'a>(
         )
         .await?;
         info!(ctx.logger(), "Pushrebased to {}", pushrebase_res.head);
+        if wait_secs > 0 {
+            info!(ctx.logger(), "waiting for {} seconds", wait_secs);
+            delay_for(Duration::from_secs(wait_secs)).await;
+        }
     }
 
     Ok(())
@@ -267,6 +274,7 @@ mod test {
             1,
             args_factory,
             &pushrebase_flags,
+            0,
         )
         .await?;
         let commit_after_push = resolve_cs_id(&ctx, &repo, book.clone()).await?;

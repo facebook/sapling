@@ -48,6 +48,7 @@ pub const HEAD_BOOKMARK: &'static str = "head-bookmark";
 pub const TO_MERGE_CS_ID: &'static str = "to-merge-cs-id";
 pub const PATH_REGEX: &'static str = "path-regex";
 pub const DELETION_CHUNK_SIZE: &'static str = "deletion-chunk-size";
+pub const WAIT_SECS: &str = "wait-secs";
 
 pub fn cs_args_from_matches<'a>(sub_m: &ArgMatches<'a>) -> BoxFuture<ChangesetArgs, Error> {
     let message = try_boxfuture!(
@@ -430,6 +431,14 @@ pub fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .long(DELETION_CHUNK_SIZE)
                 .help("how many files to delete in a single commit")
                 .default_value("10000")
+                .takes_value(true)
+                .required(false),
+        )
+        .arg(
+            Arg::with_name(WAIT_SECS)
+                .long(WAIT_SECS)
+                .help("how many seconds to wait after each push")
+                .default_value("0")
                 .takes_value(true)
                 .required(false),
         );

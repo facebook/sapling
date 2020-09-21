@@ -45,7 +45,7 @@ use crate::cli::{
     EVEN_CHUNK_SIZE, FIRST_PARENT, GRADUAL_MERGE, GRADUAL_MERGE_PROGRESS, HEAD_BOOKMARK,
     LAST_DELETION_COMMIT, LIMIT, MANUAL_COMMIT_SYNC, MAX_NUM_OF_MOVES_IN_COMMIT, MERGE, MOVE,
     ORIGIN_REPO, PARENTS, PATH_REGEX, PRE_DELETION_COMMIT, PRE_MERGE_DELETE, SECOND_PARENT,
-    SYNC_DIAMOND_MERGE, TO_MERGE_CS_ID,
+    SYNC_DIAMOND_MERGE, TO_MERGE_CS_ID, WAIT_SECS,
 };
 use crate::merging::perform_merge;
 use megarepolib::chunking::{
@@ -477,6 +477,8 @@ async fn run_catchup_delete_head<'a>(
     let cs_args_factory = get_catchup_head_delete_commits_cs_args_factory(&sub_m)?;
     let (_, repo_config) = args::get_config(ctx.fb, &matches)?;
 
+    let wait_secs = args::get_u64(&sub_m, WAIT_SECS, 0);
+
     catchup::create_deletion_head_commits(
         &ctx,
         &repo,
@@ -486,6 +488,7 @@ async fn run_catchup_delete_head<'a>(
         deletion_chunk_size,
         cs_args_factory,
         &repo_config.pushrebase.flags,
+        wait_secs,
     )
     .await?;
     Ok(())
