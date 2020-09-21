@@ -289,8 +289,8 @@ class _HttpsCommitCloudService(baseservice.BaseService):
         newheadsset = set(newheads)
         commonset = set([item for item in oldheads if item in newheadsset])
 
-        newheads = filter(lambda h: h not in commonset, newheads)
-        oldheads = filter(lambda h: h not in commonset, oldheads)
+        newheads = [h for h in newheads if h not in commonset]
+        oldheads = [h for h in oldheads if h not in commonset]
 
         # send request
         path = "/commit_cloud/update_references"
