@@ -1321,6 +1321,12 @@ This should also reconnect.
   pulling from ssh://user@dummy/server
   searching for changes
   no changes found
+Enable commit cloud background operations.
+  $ setconfig infinitepushbackup.autobackup=true
+  $ hg pull --config commitcloud.automigrate=true
+  pulling from ssh://user@dummy/server
+  searching for changes
+  no changes found
   commitcloud: attempting to connect to the 'user/test/default' workspace for the 'server' repo
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/default'

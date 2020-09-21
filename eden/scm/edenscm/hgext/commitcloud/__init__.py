@@ -252,7 +252,11 @@ def reposetup(ui, repo):
         def automigratefinish(self):
             super(commitcloudrepo, self).automigratefinish()
             automigrate = self.ui.configbool("commitcloud", "automigrate")
-            if automigrate and not workspace.disconnected(self):
+            if (
+                automigrate
+                and not workspace.disconnected(self)
+                and background.autobackupenabled(self)
+            ):
                 workspacename = None
                 if self.ui.configbool("commitcloud", "automigratehostworkspace"):
                     workspacename = workspace.hostnameworkspace(self.ui)
