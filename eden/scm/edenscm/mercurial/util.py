@@ -4317,6 +4317,8 @@ def threaded(func):
             try:
                 result[:] = ["ok", func(*args, **kwargs)]
             except BaseException as e:
+                tb = sys.exc_info()[2]
+                e.__traceback__ = tb
                 result[:] = ["err", e]
 
         thread = threading.Thread(target=target, args=args, kwargs=kwargs)
