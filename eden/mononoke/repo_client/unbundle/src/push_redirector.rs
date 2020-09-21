@@ -84,25 +84,21 @@ impl PushRedirectorArgs {
     pub fn into_push_redirector(
         self,
         ctx: &CoreContext,
-        maybe_live_commit_sync_config: &Option<CfgrLiveCommitSyncConfig>,
+        live_commit_sync_config: &CfgrLiveCommitSyncConfig,
     ) -> Result<PushRedirector, Error> {
         // TODO: This function needs to be extended
         //       and query configerator for the fresh
         //       value of `commit_sync_config`
         let PushRedirectorArgs {
-            commit_sync_config: original_commit_sync_config,
             target_repo,
             source_blobrepo,
             synced_commit_mapping,
             target_repo_dbs,
+            ..
         } = self;
 
-        debug!(ctx.logger(), "Original: {:?}", original_commit_sync_config);
-        let commit_sync_config = match maybe_live_commit_sync_config {
-            None => original_commit_sync_config,
-            Some(live_commmit_sync_config) => live_commmit_sync_config
-                .get_current_commit_sync_config(&ctx, source_blobrepo.get_repoid())?,
-        };
+        let commit_sync_config = live_commit_sync_config
+            .get_current_commit_sync_config(&ctx, source_blobrepo.get_repoid())?;
 
         let small_repo = source_blobrepo;
         let large_repo = target_repo.blobrepo().clone();
