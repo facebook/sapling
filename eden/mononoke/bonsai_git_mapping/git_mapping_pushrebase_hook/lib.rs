@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Error;
+use anyhow::{anyhow, Error};
 use async_trait::async_trait;
 use bookmarks::BookmarkTransactionError;
 use context::CoreContext;
@@ -97,8 +97,10 @@ impl PushrebaseCommitHook for GitMappingCommitHook {
         // NOTE: This check shouldn't be necessary as long as pushrebase hooks are bug-free, but
         // since they're a new addition, let's be conservative.
         if rebased.len() != self.assignments.len() {
-            return Err(Error::msg(
-                "Rebased set and assignments have different lengths!",
+            return Err(anyhow!(
+                "Git mapping rebased set ({}) and assignments ({}) have different lengths!",
+                rebased.len(),
+                self.assignments.len(),
             ));
         }
 
