@@ -684,9 +684,12 @@ def _runcatch(req):
         and req.args not in [["dbsh"], ["debugsh"], ["debugshell"]]
         and realcmd != "serve"
     ):
-        _runcatchfunc = util.threaded(_runcatchfunc)
-
-    return _callcatch(ui, _runcatchfunc)
+        # Run command (and maybe start ipdb) in a background thread for
+        # better Ctrl+C handling of long native logic.
+        return util.threaded(_callcatch)(ui, _runcatchfunc)
+    else:
+        # Run in the main thread.
+        return _callcatch(ui, _runcatchfunc)
 
 
 def _callcatch(ui, func):
