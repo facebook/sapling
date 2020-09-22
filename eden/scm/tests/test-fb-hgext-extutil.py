@@ -82,6 +82,7 @@ class ExtutilTests(unittest.TestCase):
             except error.LockHeld:
                 os._exit(locktimeout)
         else:
+            time.sleep(0.1) # Avoids a crash on OSX
             p, st = os.waitpid(pid, 0)
             st = _exitstatus(st)  # Convert back to an int
             return st
