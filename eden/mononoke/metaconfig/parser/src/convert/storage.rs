@@ -116,6 +116,12 @@ impl Convert for RawBlobstoreConfig {
             RawBlobstoreConfig::pack(raw) => BlobConfig::Pack {
                 blobconfig: Box::new(raw.blobstore.convert()?),
             },
+            RawBlobstoreConfig::s3(raw) => BlobConfig::S3 {
+                bucket: raw.bucket,
+                keychain_group: raw.keychain_group,
+                region_name: raw.region_name,
+                endpoint: raw.endpoint,
+            },
             RawBlobstoreConfig::UnknownField(f) => {
                 return Err(anyhow!("unsupported blobstore configuration ({})", f));
             }

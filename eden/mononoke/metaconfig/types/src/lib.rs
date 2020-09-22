@@ -780,6 +780,17 @@ pub enum BlobConfig {
         /// The config for the blobstore that is wrapped.
         blobconfig: Box<BlobConfig>,
     },
+    /// Store in a S3 compatible storage
+    S3 {
+        /// Bucket to connect to
+        bucket: String,
+        /// Name of keychain group, to retrieve access key
+        keychain_group: String,
+        /// Name of the region, currently arbitrary
+        region_name: String,
+        /// S3 host:port to connect to
+        endpoint: String,
+    },
 }
 
 impl BlobConfig {
@@ -790,7 +801,7 @@ impl BlobConfig {
 
         match self {
             Disabled | Files { .. } | Sqlite { .. } => true,
-            Manifold { .. } | Mysql { .. } | ManifoldWithTtl { .. } => false,
+            Manifold { .. } | Mysql { .. } | ManifoldWithTtl { .. } | S3 { .. } => false,
             Multiplexed { blobstores, .. } | Scrub { blobstores, .. } => blobstores
                 .iter()
                 .map(|(_, _, config)| config)
