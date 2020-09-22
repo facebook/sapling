@@ -73,3 +73,16 @@ Check backing up top stack commit and mid commit
   $ hg cloud check -r $D1 --hidden
   7c8a43610cd6d316f9bec941fa2677e5c7a90bf5 not backed up
 
+Test --force option
+  $ hg cloud backup --debug
+  nothing to back up
+
+  $ hg cloud backup -f --debug
+  running * (glob)
+  sending hello command
+  sending between command
+  remote: * (glob)
+  remote: * (glob)
+  remote: * (glob)
+  sending knownnodes command
+  nothing to back up

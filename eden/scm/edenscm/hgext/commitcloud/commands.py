@@ -779,6 +779,12 @@ def checkauthenticated(ui, repo, tokenlocator):
     [
         ("r", "rev", [], _("revisions to back up")),
         ("", "background", None, "run backup in background"),
+        (
+            "f",
+            "force",
+            None,
+            "reset local state (reinitialise the local cache of backed up heads from the server)",
+        ),
     ]
     + remoteopts,
     _("[-r REV...]"),
@@ -790,6 +796,7 @@ def cloudbackup(ui, repo, *revs, **opts):
 
     If no revision is specified, backs up all visible commits.
     """
+    force = opts.get("force")
     inbackground = opts.get("background")
     revs = revs + tuple(opts.get("rev", ()))
     if revs:
@@ -798,6 +805,9 @@ def cloudbackup(ui, repo, *revs, **opts):
         revs = scmutil.revrange(repo, revs)
     else:
         revs = None
+
+    if force and inbackground:
+        raise error.Abort("'--background' cannot be used with '--force'")
 
     dest = opts.get("dest")
 
@@ -813,7 +823,12 @@ def cloudbackup(ui, repo, *revs, **opts):
         pass
 
     backedup, failed = backup.backup(
-        repo, revs, dest=dest, connect_opts=opts, backupsnapshots=backupsnapshots
+        repo,
+        revs,
+        dest=dest,
+        connect_opts=opts,
+        backupsnapshots=backupsnapshots,
+        force=force,
     )
 
     if backedup:

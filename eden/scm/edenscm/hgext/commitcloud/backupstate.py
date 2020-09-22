@@ -22,7 +22,7 @@ class BackupState(object):
 
     prefix = "commitcloud/backedupheads."
 
-    def __init__(self, repo, remotepath):
+    def __init__(self, repo, remotepath, resetlocalstate=False):
         self.repo = repo
         self.remotepath = remotepath
         repo.sharedvfs.makedirs("commitcloud")
@@ -30,7 +30,7 @@ class BackupState(object):
             self.prefix + hashlib.sha256(encodeutf8(remotepath)).hexdigest()[0:8]
         )
         self.heads = set()
-        if repo.sharedvfs.exists(self.filename):
+        if repo.sharedvfs.exists(self.filename) and not resetlocalstate:
             lines = repo.sharedvfs.readutf8(self.filename).splitlines()
             if len(lines) < 2 or lines[0].strip() != FORMAT_VERSION:
                 repo.ui.debug(
