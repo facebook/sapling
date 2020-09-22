@@ -872,7 +872,7 @@ async fn write_mostly_get(fb: FacebookInit) {
     }
 
     // Fetch the blob that's in main blobstores, see that the write mostly blobstore
-    // None value is currently used when the main blobstore fails
+    // None value is not used when the main blobstore fails
     {
         let mut fut = bs.get(ctx.clone(), main_only_key);
         assert!(PollOnce::new(Pin::new(&mut fut)).await.is_pending());
@@ -887,11 +887,12 @@ async fn write_mostly_get(fb: FacebookInit) {
         main_bs.tick(Some("Main blobstore failed - fallback to write_mostly"));
         assert!(PollOnce::new(Pin::new(&mut fut)).await.is_pending());
 
-        // Finally, should get an error as showing some failed, others None
+        // Finally, should get an error as None from a write mostly is indeterminate
+        // as it might not have been fully populated yet
         write_mostly_bs.tick(None);
         assert_eq!(
             fut.await.err().unwrap().to_string().as_str(),
-            "Some blobstores failed, and other returned None: {BlobstoreId(0): Main blobstore failed - fallback to write_mostly}"
+            "All blobstores failed: {BlobstoreId(0): Main blobstore failed - fallback to write_mostly}"
         );
         log.clear();
     }

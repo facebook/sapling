@@ -22,11 +22,11 @@ use mononoke_types::BlobstoreBytes;
 use scuba::ScubaSampleBuilder;
 use std::{
     borrow::Borrow,
-    collections::{HashMap, HashSet},
+    collections::{hash_map::RandomState, HashMap, HashSet},
     fmt,
     future::Future,
     hash::Hasher,
-    iter::Iterator,
+    iter::{FromIterator, Iterator},
     num::{NonZeroU64, NonZeroUsize},
     sync::{
         atomic::{AtomicUsize, Ordering},
@@ -100,6 +100,21 @@ pub struct MultiplexedBlobstoreBase {
     handler: Arc<dyn MultiplexedBlobstorePutHandler>,
     scuba: ScubaSampleBuilder,
     scuba_sample_rate: NonZeroU64,
+}
+
+fn write_mostly_error(
+    blobstores: &[(BlobstoreId, Arc<dyn Blobstore>)],
+    errors: HashMap<BlobstoreId, Error>,
+) -> ErrorKind {
+    let main_blobstore_ids: HashSet<BlobstoreId, RandomState> =
+        HashSet::from_iter(blobstores.iter().map(|(id, _)| *id));
+    let errored_blobstore_ids = HashSet::from_iter(errors.keys().cloned());
+    if errored_blobstore_ids == main_blobstore_ids {
+        // The write mostly store that returned None might not have been fully populated
+        ErrorKind::AllFailed(Arc::new(errors))
+    } else {
+        ErrorKind::SomeFailedOthersNone(Arc::new(errors))
+    }
 }
 
 impl MultiplexedBlobstoreBase {
@@ -188,7 +203,7 @@ impl MultiplexedBlobstoreBase {
                 if errors.is_empty() {
                     Ok(None)
                 } else {
-                    Err(ErrorKind::SomeFailedOthersNone(errors.into()))
+                    Err(write_mostly_error(&self.blobstores, errors))
                 }
             }
             1 => {
@@ -307,12 +322,10 @@ async fn blobstore_get(
             if errors.is_empty() {
                 // All blobstores must have returned None, as Some would have triggered a return,
                 Ok(None)
+            } else if errors.len() == blobstores_count {
+                Err(ErrorKind::AllFailed(Arc::new(errors)))
             } else {
-                if errors.len() == blobstores_count {
-                    Err(ErrorKind::AllFailed(Arc::new(errors)))
-                } else {
-                    Err(ErrorKind::SomeFailedOthersNone(Arc::new(errors)))
-                }
+                Err(write_mostly_error(&blobstores, errors))
             }
         }
         .timed()
@@ -538,6 +551,7 @@ impl Blobstore for MultiplexedBlobstoreBase {
         // `chain` here guarantees that `main_requests` is empty before it starts
         // polling anything in `write_mostly_requests`
         let mut requests = main_requests.chain(write_mostly_requests);
+        cloned!(self.blobstores);
         async move {
             let (stats, result) = {
                 let ctx = &ctx;
@@ -558,12 +572,10 @@ impl Blobstore for MultiplexedBlobstoreBase {
                     }
                     if errors.is_empty() {
                         Ok(false)
+                    } else if errors.len() == blobstores_count {
+                        Err(ErrorKind::AllFailed(Arc::new(errors)))
                     } else {
-                        if errors.len() == blobstores_count {
-                            Err(ErrorKind::AllFailed(Arc::new(errors)))
-                        } else {
-                            Err(ErrorKind::SomeFailedOthersNone(Arc::new(errors)))
-                        }
+                        Err(write_mostly_error(&blobstores, errors))
                     }
                 }
                 .timed()
