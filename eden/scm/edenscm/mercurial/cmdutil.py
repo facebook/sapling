@@ -57,7 +57,7 @@ from . import (
 )
 from .i18n import _, _x
 from .node import hex, nullid, nullrev, short
-from .pycompat import ensurestr, range
+from .pycompat import ensurestr, ensureunicode, range
 
 
 stringio = util.stringio
@@ -3220,7 +3220,10 @@ def rustdisplaygraph(
             ctx, copies=copies, matchfn=revmatchfn, _graphwidth=width, **props
         )
         # The Rust graph renderer works with unicode.
-        msg = u"".join(encoding.unifromlocal(s) for s in displayer.hunk.pop(rev))
+        msg = u"".join(
+            ensureunicode(encoding.unifromlocal(s), errors="replace")
+            for s in displayer.hunk.pop(rev)
+        )
         ui.write(encoding.unitolocal(renderer.nextrow(rev, parents, char, msg)))
         displayer.flush(ctx)
 
