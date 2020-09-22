@@ -18,14 +18,14 @@
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/prjfs/EdenDispatcher.h"
+#include "eden/fs/prjfs/PrjfsRequestContext.h"
 #include "eden/fs/service/EdenError.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/utils/Guid.h"
 #include "eden/fs/utils/StringConv.h"
 #include "eden/fs/utils/SystemError.h"
 #include "eden/fs/utils/WinError.h"
-#include "eden/fs/win/mount/EdenDispatcher.h"
-#include "eden/fs/win/mount/PrjfsRequestContext.h"
 
 namespace facebook {
 namespace eden {

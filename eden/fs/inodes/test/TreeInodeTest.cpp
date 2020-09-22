@@ -14,7 +14,7 @@
 #include <folly/test/TestUtils.h>
 #include <gflags/gflags.h>
 #ifdef _WIN32
-#include "eden/fs/win/mount/Enumerator.h" // @manual
+#include "eden/fs/prjfs/Enumerator.h" // @manual
 #else
 #include "eden/fs/fuse/DirList.h"
 #endif // _WIN32

@@ -8,6 +8,7 @@
 #pragma once
 
 #include <folly/futures/Future.h>
+#include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
 namespace eden {

@@ -10,10 +10,10 @@
 #include "folly/portability/Windows.h"
 
 #include <ProjectedFSLib.h>
+#include "eden/fs/prjfs/FsChannel.h"
 #include "eden/fs/utils/Guid.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/ProcessAccessLog.h"
-#include "eden/fs/win/mount/FsChannel.h"
 
 namespace facebook {
 namespace eden {

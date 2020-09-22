@@ -67,9 +67,7 @@
 #include "eden/fs/utils/ProcessNameCache.h"
 #include "eden/fs/utils/UserInfo.h"
 
-#ifdef _WIN32
-#include "eden/fs/win/mount/PrjfsChannel.h" // @manual
-#else
+#ifndef _WIN32
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/Overlay.h"

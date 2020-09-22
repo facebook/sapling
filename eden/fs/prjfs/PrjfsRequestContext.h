@@ -9,8 +9,8 @@
 
 #include <ProjectedFSLib.h>
 #include "eden/fs/inodes/RequestContext.h"
+#include "eden/fs/prjfs/PrjfsChannel.h"
 #include "eden/fs/utils/PathFuncs.h"
-#include "eden/fs/win/mount/PrjfsChannel.h"
 
 namespace facebook::eden {
 

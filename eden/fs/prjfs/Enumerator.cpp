@@ -8,7 +8,7 @@
 #include "folly/portability/Windows.h"
 
 #include <ProjectedFSLib.h>
-#include "eden/fs/win/mount/Enumerator.h"
+#include "eden/fs/prjfs/Enumerator.h"
 
 namespace facebook {
 namespace eden {

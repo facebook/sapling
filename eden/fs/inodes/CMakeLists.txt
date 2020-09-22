@@ -44,7 +44,7 @@ if (WIN32)
   target_link_libraries(
     eden_inodes
     PUBLIC
-      eden_win
+      eden_prjfs
   )
 else()
   target_link_libraries(

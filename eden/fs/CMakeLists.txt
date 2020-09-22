@@ -65,8 +65,4 @@ add_subdirectory(py)
 add_subdirectory(cli)
 add_subdirectory(notifications)
 add_subdirectory(takeover)
-
-# Platform specific code
-if (WIN32)
-  add_subdirectory(win)
-endif()
+add_subdirectory(prjfs)

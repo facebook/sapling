@@ -50,8 +50,8 @@
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 
 #ifdef _WIN32
-#include "eden/fs/win/mount/EdenDispatcher.h" // @manual
-#include "eden/fs/win/mount/PrjfsChannel.h" // @manual
+#include "eden/fs/prjfs/EdenDispatcher.h" // @manual
+#include "eden/fs/prjfs/PrjfsChannel.h" // @manual
 #else
 #include <folly/File.h>
 #include "eden/fs/fuse/FuseChannel.h"
