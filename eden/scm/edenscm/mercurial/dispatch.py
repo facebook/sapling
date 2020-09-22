@@ -540,6 +540,11 @@ def _runcatch(req):
                 util.signal(num, catchterm)
     except ValueError:
         pass  # happens if called in a thread
+    # In some cases, SIGINT handler is set to SIG_IGN on OSX.
+    # Reset it to raise KeyboardInterrupt.
+    sigint = getattr(signal, "SIGINT", None)
+    if sigint is not None and util.getsignal(sigint) == signal.SIG_IGN:
+        util.signal(sigint, signal.default_int_handler)
 
     realcmd = None
     try:

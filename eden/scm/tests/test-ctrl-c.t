@@ -17,12 +17,21 @@
   >         time.sleep(1)
   > pid = int(open("pid").read())
   > os.kill(pid, signal.SIGINT)
-  > time.sleep(10)
+  > try:
+  >     for _ in range(30):
+  >         os.kill(pid, 0)  # raise if pid no loner exists
+  >         time.sleep(1)
+  > except Exception:
+  >     pass
   > EOF
 
   $ hg debugpython -- interrupt.py
 
-Should have "interrupted!":
+Should have "interrupted!" printed by dispatch.py:
 
   $ cat err
   interrupted!
+
+Should not have "exited" printed by "echo exited" because non-zero exit code:
+
+  $ cat out
