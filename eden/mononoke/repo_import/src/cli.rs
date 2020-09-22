@@ -28,6 +28,7 @@ pub const ARG_COMMIT_DATE_RFC3339: &str = "commit-date-rfc3339";
 pub const ARG_RECOVERY_FILE_PATH: &str = "recovery-file-path";
 pub const RECOVER_PROCESS: &str = "recover-process";
 pub const SAVED_RECOVERY_FILE_PATH: &str = "saved-recovery-file-path";
+pub const CHECK_ADDITIONAL_SETUP_STEPS: &str = "check-additional-setup-steps";
 
 pub fn setup_app<'a, 'b>() -> App<'a, 'b> {
     args::MononokeApp::new("Import Repository")
@@ -36,6 +37,31 @@ pub fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .build()
         .version("0.0.0")
         .about("Automating repository imports")
+        .subcommand(
+            SubCommand::with_name(CHECK_ADDITIONAL_SETUP_STEPS)
+            .about("Check for additional setup steps before running the repo_import tool")
+            .arg(
+                Arg::with_name(ARG_PHAB_CHECK_DISABLED)
+                    .long(ARG_PHAB_CHECK_DISABLED)
+                    .takes_value(false)
+                    .help("Disable waiting for Phabricator to parse commits."),
+            )
+            .arg(
+                Arg::with_name(ARG_BOOKMARK_SUFFIX)
+                    .long(ARG_BOOKMARK_SUFFIX)
+                    .required(true)
+                    .takes_value(true)
+                    .help("Suffix of the bookmark (repo_import_<suffix>). \
+                    This bookmark is used to publish the imported commits and to track the parsing of commits on Phabricator."),
+            )
+            .arg(
+                Arg::with_name(ARG_DEST_BOOKMARK)
+                    .long(ARG_DEST_BOOKMARK)
+                    .takes_value(true)
+                    .required(true)
+                    .help("The bookmark branch we want to merge our repo into (e.g. master)"),
+            )
+        )
         .subcommand(
             SubCommand::with_name(IMPORT)
                 .about("Run the whole repo_import process")
@@ -63,7 +89,8 @@ pub fn setup_app<'a, 'b>() -> App<'a, 'b> {
                         .long(ARG_BOOKMARK_SUFFIX)
                         .required(true)
                         .takes_value(true)
-                        .help("Suffix of the bookmark (repo_import_<suffix>)"),
+                        .help("Suffix of the bookmark (repo_import_<suffix>). \
+                        This bookmark is used to publish the imported commits and to track the parsing of commits on Phabricator."),
                 )
                 .arg(
                     Arg::with_name(ARG_PHAB_CHECK_DISABLED)

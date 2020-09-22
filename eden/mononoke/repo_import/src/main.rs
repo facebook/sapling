@@ -18,7 +18,7 @@ use clap::ArgMatches;
 use cmdlib::args;
 use cmdlib::helpers::block_execute;
 use context::CoreContext;
-use cross_repo_sync::{create_commit_syncers, rewrite_commit, CommitSyncer};
+use cross_repo_sync::{create_commit_syncers, rewrite_commit, CommitSyncer, Syncers};
 use derived_data_utils::derived_data_utils;
 use fbinit::FacebookInit;
 use futures::{
@@ -56,7 +56,10 @@ use unbundle::get_pushrebase_hooks;
 mod cli;
 mod tests;
 
-use crate::cli::{setup_app, setup_import_args, IMPORT, RECOVER_PROCESS, SAVED_RECOVERY_FILE_PATH};
+use crate::cli::{
+    setup_app, setup_import_args, ARG_BOOKMARK_SUFFIX, ARG_DEST_BOOKMARK, ARG_PHAB_CHECK_DISABLED,
+    CHECK_ADDITIONAL_SETUP_STEPS, IMPORT, RECOVER_PROCESS, SAVED_RECOVERY_FILE_PATH,
+};
 
 #[derive(Deserialize, Clone, Debug)]
 struct GraphqlQueryObj {
@@ -668,6 +671,10 @@ fn get_cs_ids(changesets: &[BonsaiChangeset]) -> Vec<ChangesetId> {
     cs_ids
 }
 
+fn get_importing_bookmark(bookmark_suffix: &str) -> Result<BookmarkName, Error> {
+    BookmarkName::new(format!("repo_import_{}", &bookmark_suffix))
+}
+
 // Note: pushredirection only works from small repo to large repo.
 async fn get_large_repo_config_if_pushredirected<'a>(
     ctx: &CoreContext,
@@ -742,18 +749,61 @@ where
         "Bookmark {:?} unexpectedly dropped in {:?} when trying to generate large_dest_bookmark",
         dest_bookmark,
         commit_syncer
-    )
-        })?;
+    )})?;
     info!(
         ctx.logger(),
         "Set large repo's destination bookmark to {}", large_dest_bookmark
     );
+
     let large_repo_setting = RepoImportSetting {
         importing_bookmark: large_importing_bookmark,
         dest_bookmark: large_dest_bookmark,
     };
     info!(ctx.logger(), "Finished generating the variables");
     Ok(large_repo_setting)
+}
+
+async fn get_pushredirected_vars(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    repo_import_setting: &RepoImportSetting,
+    large_repo_config: &RepoConfig,
+    matches: &ArgMatches<'_>,
+) -> Result<(BlobRepo, RepoImportSetting, Syncers<SqlSyncedCommitMapping>), Error> {
+    let large_repo_id = large_repo_config.repoid;
+    let large_repo = args::open_repo_with_repo_id(ctx.fb, &ctx.logger(), large_repo_id, &matches)
+        .compat()
+        .await?;
+    let commit_sync_config = match large_repo_config.commit_sync_config.clone() {
+        Some(config) => config,
+        None => {
+            return Err(format_err!(
+                "The repo ({}) doesn't have a commit sync config",
+                large_repo.name()
+            ));
+        }
+    };
+
+    if commit_sync_config.small_repos.len() > 1 {
+        return Err(format_err!(
+            "Currently repo_import tool doesn't support backsyncing into multiple small repos for large repo {:?}, name: {}",
+            large_repo_id,
+            large_repo.name()
+        ));
+    }
+    let mapping = args::open_source_sql::<SqlSyncedCommitMapping>(ctx.fb, &matches)
+        .compat()
+        .await?;
+    let syncers = create_commit_syncers(
+        repo.clone(),
+        large_repo.clone(),
+        &commit_sync_config,
+        mapping.clone(),
+    )?;
+
+    let large_repo_import_setting =
+        get_large_repo_setting(&ctx, &repo_import_setting, &syncers.small_to_large).await?;
+    Ok((large_repo, large_repo_import_setting, syncers))
 }
 
 async fn save_importing_state(recovery_fields: &RecoveryFields) -> Result<(), Error> {
@@ -792,8 +842,7 @@ async fn repo_import(
     let arg_git_repo_path = recovery_fields.git_repo_path.clone();
     let path = Path::new(&arg_git_repo_path);
     let dest_path_prefix = MPath::new(&recovery_fields.dest_path)?;
-    let importing_bookmark =
-        BookmarkName::new(format!("repo_import_{}", &recovery_fields.bookmark_suffix))?;
+    let importing_bookmark = get_importing_bookmark(&recovery_fields.bookmark_suffix)?;
     if !is_valid_bookmark_suffix(&recovery_fields.bookmark_suffix) {
         return Err(format_err!(
             "The bookmark suffix contains invalid character(s).
@@ -840,27 +889,14 @@ async fn repo_import(
     )?];
 
     if let Some(large_repo_config) = maybe_large_repo_config {
-        let large_repo_id = large_repo_config.repoid;
-        let large_repo = args::open_repo_with_repo_id(fb, &ctx.logger(), large_repo_id, &matches)
-            .compat()
-            .await?;
-        let commit_sync_config = large_repo_config.commit_sync_config.clone().unwrap();
-        if commit_sync_config.small_repos.len() > 1 {
-            return Err(format_err!(
-                "Currently repo_import tool doesn't support backsyncing into multiple small repos for large repo {:?}, name: {}",
-                large_repo_id,
-                large_repo.name()
-            ));
-        }
-        let mapping = args::open_source_sql::<SqlSyncedCommitMapping>(fb, &matches)
-            .compat()
-            .await?;
-        let syncers = create_commit_syncers(
-            repo.clone(),
-            large_repo.clone(),
-            &commit_sync_config,
-            mapping.clone(),
-        )?;
+        let (large_repo, large_repo_import_setting, syncers) = get_pushredirected_vars(
+            &ctx,
+            &repo,
+            &repo_import_setting,
+            &large_repo_config,
+            &matches,
+        )
+        .await?;
         let target_repo_dbs = open_backsyncer_dbs(
             ctx.clone(),
             repo.clone(),
@@ -878,8 +914,7 @@ async fn repo_import(
         });
 
         movers.push(syncers.small_to_large.get_mover().clone());
-        repo_import_setting =
-            get_large_repo_setting(&ctx, &repo_import_setting, &syncers.small_to_large).await?;
+        repo_import_setting = large_repo_import_setting;
         repo = large_repo;
         repo_config = large_repo_config;
         call_sign = repo_config.phabricator_callsign.clone();
@@ -1031,7 +1066,6 @@ async fn repo_import(
         save_importing_state(&recovery_fields).await?;
     }
 
-
     let merged_cs_id = recovery_fields
         .merged_cs_id
         .ok_or_else(|| format_err!("Changeset id for the merged commit is not found"))?;
@@ -1043,6 +1077,109 @@ async fn repo_import(
         &repo_config,
     )
     .await?;
+    Ok(())
+}
+
+async fn check_additional_setup_steps(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    fb: FacebookInit,
+    sub_arg_matches: &ArgMatches<'_>,
+    matches: &ArgMatches<'_>,
+) -> Result<(), Error> {
+    let bookmark_suffix = match sub_arg_matches.value_of(ARG_BOOKMARK_SUFFIX) {
+        Some(suffix) => suffix,
+        None => {
+            return Err(format_err!(
+                "Expected a bookmark suffix for checking additional setup steps"
+            ));
+        }
+    };
+    if !is_valid_bookmark_suffix(&bookmark_suffix) {
+        return Err(format_err!(
+            "The bookmark suffix contains invalid character(s).
+                    You can only use alphanumeric and \"./-_\" characters"
+        ));
+    }
+    let importing_bookmark = get_importing_bookmark(&bookmark_suffix)?;
+    info!(
+        ctx.logger(),
+        "The importing bookmark name is: {}. \
+        Make sure to notify Phabricator oncall to track this bookmark!",
+        importing_bookmark
+    );
+    let dest_bookmark_name = match sub_arg_matches.value_of(ARG_DEST_BOOKMARK) {
+        Some(name) => name,
+        None => {
+            return Err(format_err!(
+                "Expected a destination bookmark name for checking additional setup steps"
+            ));
+        }
+    };
+    let dest_bookmark = BookmarkName::new(dest_bookmark_name)?;
+    info!(
+        ctx.logger(),
+        "The destination bookmark name is: {}. \
+        If the bookmark doesn't exist already, make sure to notify Phabricator oncall to track it!",
+        dest_bookmark
+    );
+
+    let repo_import_setting = RepoImportSetting {
+        importing_bookmark,
+        dest_bookmark,
+    };
+    let (_, repo_config) = args::get_config_by_repoid(ctx.fb, &matches, repo.get_repoid())?;
+
+    let call_sign = repo_config.phabricator_callsign;
+    let phab_check_disabled = sub_arg_matches.is_present(ARG_PHAB_CHECK_DISABLED);
+    if !phab_check_disabled && call_sign.is_none() {
+        return Err(format_err!(
+            "The repo ({}) we import to doesn't have a callsign for checking the commits on Phabricator. \
+                     Make sure the callsign for the repo is set in configerator: \
+                     e.g CF/../source/scm/mononoke/repos/repos/hg.cinc",
+            repo.name()
+        ));
+    }
+
+    let maybe_config_store = args::maybe_init_config_store(fb, &ctx.logger(), &matches);
+    let configs = args::load_repo_configs(fb, &matches)?;
+    let maybe_large_repo_config =
+        get_large_repo_config_if_pushredirected(&ctx, &repo, &maybe_config_store, &configs.repos)
+            .await?;
+
+    if let Some(large_repo_config) = maybe_large_repo_config {
+        let (large_repo, large_repo_import_setting, _syncers) = get_pushredirected_vars(
+            &ctx,
+            &repo,
+            &repo_import_setting,
+            &large_repo_config,
+            &matches,
+        )
+        .await?;
+        info!(
+            ctx.logger(),
+            "The repo we import {} into pushredirects to another repo {}. \
+            The importing bookmark of the pushredirected repo is {} and \
+            the destination bookmark is {}. If they don't exist already,
+            make sure to notify Phabricator oncall to track these bookmarks as well!",
+            repo.name(),
+            large_repo.name(),
+            large_repo_import_setting.importing_bookmark,
+            large_repo_import_setting.dest_bookmark,
+        );
+
+        let large_repo_call_sign = large_repo_config.phabricator_callsign;
+        if !phab_check_disabled && large_repo_call_sign.is_none() {
+            return Err(format_err!(
+                "Repo ({}) we push-redirect to doesn't have a callsign for checking the commits on Phabricator. \
+                         Make sure the callsign for the repo is set in configerator: \
+                         e.g CF/../source/scm/mononoke/repos/repos/hg.cinc",
+                large_repo.name()
+            ));
+        }
+    } else {
+        info!(ctx.logger(), "There is no additional setup step needed!");
+    }
     Ok(())
 }
 
@@ -1060,6 +1197,10 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         async {
             let repo = repo.compat().await?;
             let mut recovery_fields = match matches.subcommand() {
+                (CHECK_ADDITIONAL_SETUP_STEPS, Some(sub_arg_matches)) => {
+                    check_additional_setup_steps(ctx, repo, fb, &sub_arg_matches, &matches).await?;
+                    return Ok(());
+                }
                 (RECOVER_PROCESS, Some(sub_arg_matches)) => {
                     let saved_recovery_file_paths =
                         sub_arg_matches.value_of(SAVED_RECOVERY_FILE_PATH).unwrap();

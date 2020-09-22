@@ -25,7 +25,7 @@
   > "per_repo": {
   >   "0": {
   >      "draft_push": false,
-  >      "public_push": false
+  >      "public_push": true
   >    }
   >   }
   > }
@@ -55,8 +55,51 @@
    1 file changed, 1 insertion(+)
    create mode 100644 file3_repo/file3
 
-# Import it into Mononoke
+# Run setup checker
   $ cd "$TESTTMP"
+  $ repo_import \
+  > --test-instance \
+  > --local-configerator-path="$TESTTMP/configerator" \
+  > check-additional-setup-steps \
+  > --disable-phabricator-check \
+  > --bookmark-suffix "new_repo" \
+  > --dest-bookmark master_bookmark
+  * using repo "repo" repoid RepositoryId(0) (glob)
+  * The importing bookmark name is: repo_import_new_repo. * (glob)
+  * The destination bookmark name is: master_bookmark. * (glob)
+  * Initializing CfgrLiveCommitSyncConfig (glob)
+  * Done initializing CfgrLiveCommitSyncConfig (glob)
+  * using repo "repo" repoid RepositoryId(0) (glob)
+  * Execution error: The repo (repo) doesn't have a commit sync config (glob)
+  Error: Execution failed
+  [1]
+
+  $ cat > "$PUSHREDIRECT_CONF/enable" <<EOF
+  > {
+  > "per_repo": {
+  >   "0": {
+  >      "draft_push": false,
+  >      "public_push": false
+  >    }
+  >   }
+  > }
+  > EOF
+
+  $ repo_import \
+  > --test-instance \
+  > --local-configerator-path="$TESTTMP/configerator" \
+  > check-additional-setup-steps \
+  > --disable-phabricator-check \
+  > --bookmark-suffix "new_repo" \
+  > --dest-bookmark master_bookmark
+  * using repo "repo" repoid RepositoryId(0) (glob)
+  * The importing bookmark name is: repo_import_new_repo. * (glob)
+  * The destination bookmark name is: master_bookmark. * (glob)
+  * Initializing CfgrLiveCommitSyncConfig (glob)
+  * Done initializing CfgrLiveCommitSyncConfig (glob)
+  * There is no additional setup step needed! (glob)
+
+# Import the repo
   $ repo_import \
   > --test-instance \
   > --local-configerator-path="$TESTTMP/configerator" \
