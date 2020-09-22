@@ -343,20 +343,32 @@ class PeekaheadList(object):
     the full list.
     """
 
-    def __init__(self, revs):
+    def __init__(self, revs, chunksize):
         self.revs = revs
+        self.chunksize = chunksize
+        self.offset = 0
         self.done = False
 
-    def peekahead(self):
-        self.done = True
-        return self.revs
+    def peekahead(self, chunksize=None):
+        chunksize = chunksize or self.chunksize
+        revs = self.revs[self.offset : self.offset + self.chunksize]
+        self.offset += self.chunksize
+        if self.offset >= len(self.revs):
+            self.done = True
+        return revs
 
 
 def _getsmartlogdag(orig, ui, repo, revs, *args):
     # smartlog just uses a plain list for its revisions, and not an
-    # abstractsmartset type.  We just save a copy of it.
-    repo._phabstatusrevs = PeekaheadList(revs)
-    return orig(ui, repo, revs, *args)
+    # abstractsmartset type.  We just save a copy of it in the order
+    # the commits appear in smartlog.
+    results, reserved = orig(ui, repo, revs, *args)
+
+    revs = [result[0] for result in results]
+    peekahead = repo.ui.configint("phabstatus", "logpeekaheadlist", 30)
+    repo._phabstatusrevs = PeekaheadList(revs, peekahead)
+
+    return results, reserved
 
 
 def extsetup(ui):
