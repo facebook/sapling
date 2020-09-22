@@ -8,7 +8,7 @@
 #pragma once
 #include "folly/portability/Windows.h"
 
-#include <combaseapi.h>
+#include <combaseapi.h> // @manual
 #include <fmt/format.h>
 #include "eden/fs/utils/WinError.h"
 

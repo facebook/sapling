@@ -8,12 +8,12 @@
 #include "eden/fs/win/mount/PrjfsChannel.h"
 #include <folly/logging/xlog.h>
 #include "eden/fs/inodes/EdenMount.h"
+#include "eden/fs/utils/Guid.h"
 #include "eden/fs/utils/NotImplemented.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/WinError.h"
 #include "eden/fs/win/mount/EdenDispatcher.h"
 #include "eden/fs/win/mount/PrjfsRequestContext.h"
-#include "eden/fs/win/utils/Guid.h"
 
 using folly::sformat;
 

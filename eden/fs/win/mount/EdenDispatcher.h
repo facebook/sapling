@@ -15,8 +15,8 @@
 #include <cstdint>
 #include <cstring>
 #include <string>
+#include "eden/fs/utils/Guid.h"
 #include "eden/fs/win/mount/Enumerator.h"
-#include "eden/fs/win/utils/Guid.h"
 
 namespace facebook {
 namespace eden {

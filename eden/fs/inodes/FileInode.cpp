@@ -30,8 +30,6 @@
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/store/BlobAccess.h"
 #include "eden/fs/utils/XAttr.h"
-#else
-#include "eden/fs/win/utils/FileUtils.h" // @manual
 #endif
 
 using folly::Future;

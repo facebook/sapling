@@ -69,7 +69,6 @@
 
 #ifdef _WIN32
 #include "eden/fs/win/mount/PrjfsChannel.h" // @manual
-#include "eden/fs/win/utils/FileUtils.h" // @manual
 #else
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/inodes/EdenDispatcher.h"

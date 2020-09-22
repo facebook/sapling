@@ -5,7 +5,9 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/win/utils/Guid.h"
+#ifdef _WIN32
+
+#include "eden/fs/utils/Guid.h"
 #include <fmt/format.h>
 #include <iostream>
 #include <string>
@@ -88,3 +90,5 @@ TEST(GuidTest, formatGuid) {
   auto s = fmt::format(FMT_STRING("{}"), guid1);
   EXPECT_EQ(s, "{811305DA-F51E-4E2D-9201-0D12A1E7F8D5}");
 }
+
+#endif

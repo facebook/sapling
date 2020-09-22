@@ -29,12 +29,4 @@ target_link_libraries(
     ${LIBGMOCK_LIBRARIES}
 )
 
-if (WIN32)
-  target_link_libraries(
-    eden_inodes_test
-    PRIVATE
-      eden_win_utils
-  )
-endif()
-
 gtest_discover_tests(eden_inodes_test)

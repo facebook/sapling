@@ -24,7 +24,7 @@
 #include <type_traits>
 
 #ifdef _WIN32
-#include <eden/fs/win/utils/StringConv.h> // @manual
+#include <eden/fs/utils/StringConv.h>
 #endif
 
 namespace facebook {

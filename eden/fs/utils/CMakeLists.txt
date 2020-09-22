@@ -31,4 +31,12 @@ target_link_libraries(
     Folly::folly
 )
 
+if (WIN32)
+  target_link_libraries(
+    eden_utils
+    PUBLIC
+      Userenv.lib
+  )
+endif()
+
 add_subdirectory(test)

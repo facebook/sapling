@@ -19,10 +19,7 @@ target_link_libraries(
     eden_telemetry
     eden_utils
     eden_service_thrift_util
-    eden_win_utils
     Folly::folly
     ProjectedFS
     cpptoml
 )
-
-add_subdirectory(utils)

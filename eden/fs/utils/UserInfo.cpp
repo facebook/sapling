@@ -19,8 +19,8 @@
 #else // !_WIN32
 #include <Lmcons.h> // @manual
 #include <userenv.h> // @manual
+#include "eden/fs/utils/Handle.h"
 #include "eden/fs/utils/WinError.h"
-#include "eden/fs/win/utils/Handle.h" // @manual
 #endif // _WIN32
 
 #include <vector>

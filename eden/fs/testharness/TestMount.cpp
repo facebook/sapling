@@ -44,7 +44,7 @@
 
 #ifdef _WIN32
 #include "eden/fs/inodes/sqliteoverlay/SqliteOverlay.h"
-#include "eden/fs/win/utils/Guid.h" // @manual
+#include "eden/fs/utils/Guid.h"
 #else
 #include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/InodeTable.h"

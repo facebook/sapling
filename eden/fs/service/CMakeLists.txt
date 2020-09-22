@@ -76,14 +76,7 @@ target_link_libraries(
     cpptoml
 )
 
-if (WIN32)
-  target_link_libraries(
-    eden_service
-    PUBLIC
-      eden_win
-      eden_win_utils
-  )
-else()
+if (NOT WIN32)
   target_link_libraries(
     eden_service
     PUBLIC
