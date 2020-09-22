@@ -790,6 +790,7 @@ async fn write_mostly_get(fb: FacebookInit) {
     let both_key = "both".to_string();
     let value = make_value("value");
     let write_mostly_key = "write_mostly".to_string();
+    let main_only_key = "main_only".to_string();
     let main_bs = Arc::new(Tickable::new());
     let write_mostly_bs = Arc::new(Tickable::new());
 
@@ -808,6 +809,7 @@ async fn write_mostly_get(fb: FacebookInit) {
 
     // Put one blob into both blobstores
     main_bs.add_content(both_key.clone(), value.clone());
+    main_bs.add_content(main_only_key.clone(), value.clone());
     write_mostly_bs.add_content(both_key.clone(), value.clone());
     // Put a blob only into the write mostly blobstore
     write_mostly_bs.add_content(write_mostly_key.clone(), value.clone());
@@ -866,6 +868,31 @@ async fn write_mostly_get(fb: FacebookInit) {
         // Finally, the write_mostly store returns our value
         write_mostly_bs.tick(None);
         assert_eq!(fut.await.unwrap(), Some(value.clone().into()));
+        log.clear();
+    }
+
+    // Fetch the blob that's in main blobstores, see that the write mostly blobstore
+    // None value is currently used when the main blobstore fails
+    {
+        let mut fut = bs.get(ctx.clone(), main_only_key);
+        assert!(PollOnce::new(Pin::new(&mut fut)).await.is_pending());
+
+        // Ticking the write_mostly store does nothing.
+        for _ in 0..3usize {
+            write_mostly_bs.tick(None);
+            assert!(PollOnce::new(Pin::new(&mut fut)).await.is_pending());
+        }
+
+        // Tick the main store, and we're still stuck
+        main_bs.tick(Some("Main blobstore failed - fallback to write_mostly"));
+        assert!(PollOnce::new(Pin::new(&mut fut)).await.is_pending());
+
+        // Finally, should get an error as showing some failed, others None
+        write_mostly_bs.tick(None);
+        assert_eq!(
+            fut.await.err().unwrap().to_string().as_str(),
+            "Some blobstores failed, and other returned None: {BlobstoreId(0): Main blobstore failed - fallback to write_mostly}"
+        );
         log.clear();
     }
 }
