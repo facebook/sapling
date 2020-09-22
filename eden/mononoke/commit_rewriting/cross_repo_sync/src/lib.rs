@@ -6,6 +6,7 @@
  */
 
 #![deny(warnings)]
+#![feature(trait_alias)]
 
 use anyhow::{bail, format_err, Error};
 use blobrepo::{save_bonsai_changesets, BlobRepo};
@@ -58,7 +59,10 @@ mod pushrebase_hook;
 pub mod types;
 pub mod validation;
 
-pub use crate::commit_sync_outcome::{get_commit_sync_outcome, CommitSyncOutcome};
+pub use crate::commit_sync_outcome::{
+    get_commit_sync_outcome, get_commit_sync_outcome_with_hint, CandidateSelectionHint,
+    CommitSyncOutcome,
+};
 
 #[derive(Debug, Error)]
 pub enum ErrorKind {
@@ -573,6 +577,23 @@ where
             Target(self.repos.get_target_repo().get_repoid()),
             Source(source_cs_id),
             &self.mapping,
+        )
+        .await
+    }
+
+    pub async fn get_commit_sync_outcome_with_hint(
+        &self,
+        ctx: CoreContext,
+        source_cs_id: Source<ChangesetId>,
+        hint: CandidateSelectionHint,
+    ) -> Result<Option<CommitSyncOutcome>, Error> {
+        get_commit_sync_outcome_with_hint(
+            &ctx,
+            Source(self.repos.get_source_repo().get_repoid()),
+            Target(self.repos.get_target_repo().get_repoid()),
+            source_cs_id,
+            &self.mapping,
+            hint,
         )
         .await
     }

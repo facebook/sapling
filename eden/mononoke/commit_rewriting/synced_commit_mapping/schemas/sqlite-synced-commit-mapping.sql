@@ -12,7 +12,6 @@ CREATE TABLE `synced_commit_mapping` (
   `large_repo_id` int(11) NOT NULL,
   `large_bcs_id` binary(32) NOT NULL,
   `sync_map_version_name` varchar(255),
-  UNIQUE (`large_repo_id`,`small_repo_id`,`small_bcs_id`),
   UNIQUE (`small_repo_id`,`large_repo_id`,`large_bcs_id`)
 );
 
