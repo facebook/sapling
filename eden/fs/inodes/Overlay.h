@@ -23,7 +23,7 @@
 #include "eden/fs/utils/PathFuncs.h"
 
 #ifdef _WIN32
-#include "eden/fs/inodes/sqliteoverlay/SqliteOverlay.h" // @manual
+#include "eden/fs/inodes/sqliteoverlay/SqliteOverlay.h"
 #else
 #include "eden/fs/inodes/overlay/FsOverlay.h"
 

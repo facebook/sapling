@@ -43,7 +43,7 @@
 #include "eden/fs/utils/UserInfo.h"
 
 #ifdef _WIN32
-#include "eden/fs/inodes/sqliteoverlay/SqliteOverlay.h" // @manual
+#include "eden/fs/inodes/sqliteoverlay/SqliteOverlay.h"
 #include "eden/fs/win/utils/Guid.h" // @manual
 #else
 #include "eden/fs/inodes/EdenDispatcher.h"

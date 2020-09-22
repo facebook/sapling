@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "SqliteOverlay.h"
+#include "eden/fs/inodes/sqliteoverlay/SqliteOverlay.h"
 
 #include <folly/String.h>
 #include <folly/container/Array.h>
