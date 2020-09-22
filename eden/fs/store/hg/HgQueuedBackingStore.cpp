@@ -276,7 +276,8 @@ void HgQueuedBackingStore::logBackingStoreFetch(
   auto& logFetchPath = config_->getEdenConfig()->logObjectFetchPath.getValue();
   auto& logFetchPathRegex =
       config_->getEdenConfig()->logObjectFetchPathRegex.getValue();
-  if (!logFetchPath && !logFetchPathRegex) {
+  // If we are not logging at least one of these instances, early return
+  if (!(logFetchPath || logFetchPathRegex || isRecordingFetch_.load())) {
     return;
   }
   std::optional<HgProxyHash> proxyHash;
