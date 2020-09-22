@@ -108,6 +108,8 @@ getdepsbuild:
 	mkdir -p ../../common/rust
 	ln -sfn $(GETDEPS_INSTALL_DIR)/rust-shed/source/shed ../../common/rust/shed
 	GETDEPS_BUILD=1 \
+		INCLUDE_DIRS="$(OPENSSL_DIR)/include:/usr/local/include:/opt/local/include:/opt/homebrew/include/" \
+		LIBRARY_DIRS="$(OPENSSL_DIR)/lib:/usr/local/lib:/opt/local/lib:/opt/homebrew/lib/" \
 		THRIFT="$(GETDEPS_INSTALL_DIR)/fbthrift/bin/thrift1" \
 		$(PYTHON) setup.py $(PURE) build $(COMPILERFLAG)
 

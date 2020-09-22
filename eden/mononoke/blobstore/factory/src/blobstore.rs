@@ -24,7 +24,6 @@ use metaconfig_types::{
 use multiplexedblob::{LoggingScrubHandler, MultiplexedBlobstore, ScrubBlobstore, ScrubHandler};
 use packblob::{PackBlob, PackOptions};
 use readonlyblob::ReadOnlyBlobstore;
-use s3blob::S3Blob;
 use scuba::ScubaSampleBuilder;
 use slog::Logger;
 use sql_construct::SqlConstructFromDatabaseConfig;
@@ -290,10 +289,20 @@ pub fn make_blobstore<'a>(
                 keychain_group,
                 region_name,
                 endpoint,
-            } => S3Blob::new(fb, bucket, keychain_group, region_name, endpoint)
-                .await
-                .context(ErrorKind::StateOpen)
-                .map(|store| Arc::new(store) as Arc<dyn Blobstore>)?,
+            } => {
+                #[cfg(fbcode_build)]
+                {
+                    ::s3blob::S3Blob::new(fb, bucket, keychain_group, region_name, endpoint)
+                        .await
+                        .context(ErrorKind::StateOpen)
+                        .map(|store| Arc::new(store) as Arc<dyn Blobstore>)?
+                }
+                #[cfg(not(fbcode_build))]
+                {
+                    let _ = (bucket, keychain_group, region_name, endpoint);
+                    unimplemented!("This is implemented only for fbcode_build")
+                }
+            }
         };
 
         let store = if readonly_storage.0 {
