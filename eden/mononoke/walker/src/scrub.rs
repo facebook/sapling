@@ -23,7 +23,7 @@ use crate::tail::{walk_exact_tail, RepoWalkRun};
 use crate::validate::TOTAL;
 use crate::walk::EmptyRoute;
 
-use anyhow::Error;
+use anyhow::{format_err, Error};
 use clap::ArgMatches;
 use cloned::cloned;
 use context::CoreContext;
@@ -114,6 +114,7 @@ where
                             Some(size),
                         )
                     })
+                    .map_err(|e| e.context(format_err!("While scrubbing file content stream")))
                     .left_future()
             }
             data_opt => {
