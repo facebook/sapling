@@ -826,8 +826,8 @@ Check '--use-bgssh' option
   $ mkcommit "trashssh test"
   $ hg cloud sync --use-bgssh
   commitcloud: synchronizing 'server' with 'user/test/default'
-  remote: /bin/sh: trashssh: command not found
-  abort: no suitable response from remote hg!
+  remote:*trashssh: command not found (glob)
+  abort: no suitable response from remote hg* (glob)
   [255]
   $ hg hide -r . -q
   $ hg cloud sync -q
