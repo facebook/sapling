@@ -25,7 +25,7 @@ use metaconfig_types::PushrebaseFlags;
 use mononoke_types::{ChangesetId, MPath};
 use pushrebase::do_pushrebase_bonsai;
 use regex::Regex;
-use slog::info;
+use slog::{error, info};
 use std::time::Duration;
 use tokio::time::delay_for;
 use unodes::RootUnodeManifestId;
@@ -97,6 +97,75 @@ pub async fn create_deletion_head_commits<'a>(
         }
     }
 
+    Ok(())
+}
+
+pub async fn validate(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    head_commit: ChangesetId,
+    to_merge_commit: ChangesetId,
+    path_regex: Regex,
+) -> Result<(), Error> {
+    let head_root_unode = RootUnodeManifestId::derive(ctx.clone(), repo.clone(), head_commit);
+    let to_merge_commit_root_unode =
+        RootUnodeManifestId::derive(ctx.clone(), repo.clone(), to_merge_commit);
+
+    let (head_root_unode, to_merge_commit_root_unode) = try_join(
+        head_root_unode.compat(),
+        to_merge_commit_root_unode.compat(),
+    )
+    .await?;
+
+    let head_leaves = head_root_unode
+        .manifest_unode_id()
+        .list_leaf_entries(ctx.clone(), repo.get_blobstore())
+        .compat()
+        .try_collect::<Vec<_>>();
+    let to_merge_commit_leaves = to_merge_commit_root_unode
+        .manifest_unode_id()
+        .list_leaf_entries(ctx.clone(), repo.get_blobstore())
+        .compat()
+        .try_collect::<Vec<_>>();
+
+    let (head_leaves, mut to_merge_commit_leaves) =
+        try_join(head_leaves, to_merge_commit_leaves).await?;
+
+    info!(
+        ctx.logger(),
+        "total unodes in head commit: {}",
+        head_leaves.len()
+    );
+    info!(
+        ctx.logger(),
+        "total unodes in to merge commit: {}",
+        to_merge_commit_leaves.len()
+    );
+    let mut head_leaves = head_leaves
+        .into_iter()
+        .filter(|(path, _)| path.matches_regex(&path_regex))
+        .collect::<Vec<_>>();
+    info!(
+        ctx.logger(),
+        "unodes in to head commit after filtering: {}",
+        head_leaves.len()
+    );
+
+    head_leaves.sort();
+    to_merge_commit_leaves.sort();
+
+    if head_leaves == to_merge_commit_leaves {
+        info!(ctx.logger(), "all is well");
+    } else {
+        error!(ctx.logger(), "validation failed!");
+        for (path, unode) in head_leaves {
+            println!("{}\t{}\t{}", head_commit, path, unode);
+        }
+
+        for (path, unode) in to_merge_commit_leaves {
+            println!("{}\t{}\t{}", to_merge_commit, path, unode);
+        }
+    }
     Ok(())
 }
 

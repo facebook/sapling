@@ -15,40 +15,41 @@ use megarepolib::common::{ChangesetArgs, ChangesetArgsFactory, StackPosition};
 use mononoke_types::DateTime;
 
 pub const BASE_COMMIT_HASH: &str = "base-commit-hash";
-pub const COMMIT_HASH: &'static str = "commit-hash";
-pub const GRADUAL_MERGE: &'static str = "gradual-merge";
-pub const GRADUAL_MERGE_PROGRESS: &'static str = "gradual-merge-progress";
-pub const MOVE: &'static str = "move";
-pub const MERGE: &'static str = "merge";
-pub const MARK_PUBLIC: &'static str = "mark-public";
-pub const ORIGIN_REPO: &'static str = "origin-repo";
-pub const CHANGESET: &'static str = "commit";
-pub const FIRST_PARENT: &'static str = "first-parent";
-pub const SECOND_PARENT: &'static str = "second-parent";
-pub const COMMIT_MESSAGE: &'static str = "commit-message";
-pub const COMMIT_AUTHOR: &'static str = "commit-author";
-pub const COMMIT_DATE_RFC3339: &'static str = "commit-date-rfc3339";
-pub const COMMIT_BOOKMARK: &'static str = "bookmark";
-pub const DRY_RUN: &'static str = "dry-run";
-pub const LAST_DELETION_COMMIT: &'static str = "last-deletion-commit";
-pub const LIMIT: &'static str = "limit";
-pub const MANUAL_COMMIT_SYNC: &'static str = "manual-commit-sync";
-pub const PRE_DELETION_COMMIT: &'static str = "pre-deletion-commit";
-pub const SYNC_DIAMOND_MERGE: &'static str = "sync-diamond-merge";
-pub const MAX_NUM_OF_MOVES_IN_COMMIT: &'static str = "max-num-of-moves-in-commit";
-pub const CHUNKING_HINT_FILE: &'static str = "chunking-hint-file";
-pub const PARENTS: &'static str = "parents";
-pub const PRE_MERGE_DELETE: &'static str = "pre-merge-delete";
-pub const CATCHUP_DELETE_HEAD: &'static str = "create-catchup-head-deletion-commits";
-pub const EVEN_CHUNK_SIZE: &'static str = "even-chunk-size";
-pub const BONSAI_MERGE: &'static str = "bonsai-merge";
-pub const BONSAI_MERGE_P1: &'static str = "bonsai-merge-p1";
-pub const BONSAI_MERGE_P2: &'static str = "bonsai-merge-p2";
-pub const HEAD_BOOKMARK: &'static str = "head-bookmark";
-pub const TO_MERGE_CS_ID: &'static str = "to-merge-cs-id";
-pub const PATH_REGEX: &'static str = "path-regex";
-pub const DELETION_CHUNK_SIZE: &'static str = "deletion-chunk-size";
+pub const COMMIT_HASH: &str = "commit-hash";
+pub const GRADUAL_MERGE: &str = "gradual-merge";
+pub const GRADUAL_MERGE_PROGRESS: &str = "gradual-merge-progress";
+pub const MOVE: &str = "move";
+pub const MERGE: &str = "merge";
+pub const MARK_PUBLIC: &str = "mark-public";
+pub const ORIGIN_REPO: &str = "origin-repo";
+pub const CHANGESET: &str = "commit";
+pub const FIRST_PARENT: &str = "first-parent";
+pub const SECOND_PARENT: &str = "second-parent";
+pub const COMMIT_MESSAGE: &str = "commit-message";
+pub const COMMIT_AUTHOR: &str = "commit-author";
+pub const COMMIT_DATE_RFC3339: &str = "commit-date-rfc3339";
+pub const COMMIT_BOOKMARK: &str = "bookmark";
+pub const DRY_RUN: &str = "dry-run";
+pub const LAST_DELETION_COMMIT: &str = "last-deletion-commit";
+pub const LIMIT: &str = "limit";
+pub const MANUAL_COMMIT_SYNC: &str = "manual-commit-sync";
+pub const PRE_DELETION_COMMIT: &str = "pre-deletion-commit";
+pub const SYNC_DIAMOND_MERGE: &str = "sync-diamond-merge";
+pub const MAX_NUM_OF_MOVES_IN_COMMIT: &str = "max-num-of-moves-in-commit";
+pub const CHUNKING_HINT_FILE: &str = "chunking-hint-file";
+pub const PARENTS: &str = "parents";
+pub const PRE_MERGE_DELETE: &str = "pre-merge-delete";
+pub const CATCHUP_DELETE_HEAD: &str = "create-catchup-head-deletion-commits";
+pub const EVEN_CHUNK_SIZE: &str = "even-chunk-size";
+pub const BONSAI_MERGE: &str = "bonsai-merge";
+pub const BONSAI_MERGE_P1: &str = "bonsai-merge-p1";
+pub const BONSAI_MERGE_P2: &str = "bonsai-merge-p2";
+pub const HEAD_BOOKMARK: &str = "head-bookmark";
+pub const TO_MERGE_CS_ID: &str = "to-merge-cs-id";
+pub const PATH_REGEX: &str = "path-regex";
+pub const DELETION_CHUNK_SIZE: &str = "deletion-chunk-size";
 pub const WAIT_SECS: &str = "wait-secs";
+pub const CATCHUP_VALIDATE_COMMAND: &str = "catchup-validate";
 
 pub fn cs_args_from_matches<'a>(sub_m: &ArgMatches<'a>) -> BoxFuture<ChangesetArgs, Error> {
     let message = try_boxfuture!(
@@ -443,6 +444,32 @@ pub fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .required(false),
         );
 
+
+    let catchup_validate_subcommand = SubCommand::with_name(CATCHUP_VALIDATE_COMMAND)
+        .about("validate invariants about the catchup")
+        .arg(
+            Arg::with_name(COMMIT_HASH)
+                .long(COMMIT_HASH)
+                .help("merge commit i.e. commit where all catchup commits were merged into")
+                .takes_value(true)
+                .required(true),
+        )
+        .arg(
+            Arg::with_name(TO_MERGE_CS_ID)
+                .long(TO_MERGE_CS_ID)
+                .help("commit to merge")
+                .takes_value(true)
+                .required(true),
+        )
+        .arg(
+            Arg::with_name(PATH_REGEX)
+                .long(PATH_REGEX)
+                .help("regex that matches all paths that should be merged in head commit")
+                .takes_value(true)
+                .required(true),
+        );
+
+
     args::MononokeApp::new("megarepo preparation tool")
         .with_advanced_args_hidden()
         .with_source_and_target_repos()
@@ -458,4 +485,5 @@ pub fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .subcommand(add_light_resulting_commit_args(
             catchup_delete_head_subcommand,
         ))
+        .subcommand(catchup_validate_subcommand)
 }

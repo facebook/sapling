@@ -41,11 +41,11 @@ use crate::cli::{
     cs_args_from_matches, get_catchup_head_delete_commits_cs_args_factory,
     get_delete_commits_cs_args_factory, get_gradual_merge_commits_cs_args_factory, setup_app,
     BASE_COMMIT_HASH, BONSAI_MERGE, BONSAI_MERGE_P1, BONSAI_MERGE_P2, CATCHUP_DELETE_HEAD,
-    CHANGESET, CHUNKING_HINT_FILE, COMMIT_BOOKMARK, COMMIT_HASH, DELETION_CHUNK_SIZE, DRY_RUN,
-    EVEN_CHUNK_SIZE, FIRST_PARENT, GRADUAL_MERGE, GRADUAL_MERGE_PROGRESS, HEAD_BOOKMARK,
-    LAST_DELETION_COMMIT, LIMIT, MANUAL_COMMIT_SYNC, MAX_NUM_OF_MOVES_IN_COMMIT, MERGE, MOVE,
-    ORIGIN_REPO, PARENTS, PATH_REGEX, PRE_DELETION_COMMIT, PRE_MERGE_DELETE, SECOND_PARENT,
-    SYNC_DIAMOND_MERGE, TO_MERGE_CS_ID, WAIT_SECS,
+    CATCHUP_VALIDATE_COMMAND, CHANGESET, CHUNKING_HINT_FILE, COMMIT_BOOKMARK, COMMIT_HASH,
+    DELETION_CHUNK_SIZE, DRY_RUN, EVEN_CHUNK_SIZE, FIRST_PARENT, GRADUAL_MERGE,
+    GRADUAL_MERGE_PROGRESS, HEAD_BOOKMARK, LAST_DELETION_COMMIT, LIMIT, MANUAL_COMMIT_SYNC,
+    MAX_NUM_OF_MOVES_IN_COMMIT, MERGE, MOVE, ORIGIN_REPO, PARENTS, PATH_REGEX, PRE_DELETION_COMMIT,
+    PRE_MERGE_DELETE, SECOND_PARENT, SYNC_DIAMOND_MERGE, TO_MERGE_CS_ID, WAIT_SECS,
 };
 use crate::merging::perform_merge;
 use megarepolib::chunking::{
@@ -494,6 +494,37 @@ async fn run_catchup_delete_head<'a>(
     Ok(())
 }
 
+async fn run_catchup_validate<'a>(
+    ctx: CoreContext,
+    matches: &ArgMatches<'a>,
+    sub_m: &ArgMatches<'a>,
+) -> Result<(), Error> {
+    let repo = args::open_repo(ctx.fb, &ctx.logger().clone(), &matches)
+        .compat()
+        .await?;
+
+    let result_commit = sub_m
+        .value_of(COMMIT_HASH)
+        .ok_or_else(|| format_err!("{} not set", COMMIT_HASH))?;
+    let to_merge_cs_id = sub_m
+        .value_of(TO_MERGE_CS_ID)
+        .ok_or_else(|| format_err!("{} not set", TO_MERGE_CS_ID))?;
+    let result_commit = helpers::csid_resolve(ctx.clone(), repo.clone(), result_commit).compat();
+
+    let to_merge_cs_id = helpers::csid_resolve(ctx.clone(), repo.clone(), to_merge_cs_id).compat();
+
+    let (result_commit, to_merge_cs_id) = try_join(result_commit, to_merge_cs_id).await?;
+
+    let path_regex = sub_m
+        .value_of(PATH_REGEX)
+        .ok_or_else(|| format_err!("{} not set", PATH_REGEX))?;
+    let path_regex = Regex::new(path_regex)?;
+
+    catchup::validate(&ctx, &repo, result_commit, to_merge_cs_id, path_regex).await?;
+
+    Ok(())
+}
+
 fn get_and_verify_repo_config<'a>(
     fb: FacebookInit,
     matches: &ArgMatches<'a>,
@@ -542,6 +573,9 @@ fn main(fb: FacebookInit) -> Result<()> {
             (MANUAL_COMMIT_SYNC, Some(sub_m)) => run_manual_commit_sync(ctx, &matches, sub_m).await,
             (CATCHUP_DELETE_HEAD, Some(sub_m)) => {
                 run_catchup_delete_head(ctx, &matches, sub_m).await
+            }
+            (CATCHUP_VALIDATE_COMMAND, Some(sub_m)) => {
+                run_catchup_validate(ctx, &matches, sub_m).await
             }
             _ => bail!("oh no, wrong arguments provided!"),
         }
