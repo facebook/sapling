@@ -231,7 +231,7 @@ struct PrjAlignedBufferDeleter {
 
 HRESULT readMultipleFileChunks(
     PRJ_NAMESPACE_VIRTUALIZATION_CONTEXT namespaceVirtualizationContext,
-    const GUID& dataStreamId,
+    const Guid& dataStreamId,
     const std::string& content,
     uint64_t startOffset,
     uint64_t length,
@@ -262,7 +262,7 @@ HRESULT readMultipleFileChunks(
     // Write the data to the file in the local file system.
     result = PrjWriteFileData(
         namespaceVirtualizationContext,
-        &dataStreamId,
+        dataStreamId,
         writeBuffer.get(),
         startOffset,
         folly::to_narrow(copySize));
@@ -280,7 +280,7 @@ HRESULT readMultipleFileChunks(
 
 HRESULT readSingleFileChunk(
     PRJ_NAMESPACE_VIRTUALIZATION_CONTEXT namespaceVirtualizationContext,
-    const GUID& dataStreamId,
+    const Guid& dataStreamId,
     const std::string& content,
     uint64_t startOffset,
     uint64_t length) {
@@ -312,66 +312,98 @@ HRESULT getFileData(
     auto context =
         std::make_unique<PrjfsRequestContext>(channel, *callbackData);
 
-    auto path = RelativePath(callbackData->FilePathName);
+    context
+        ->catchErrors(folly::makeFutureWith(
+            [context = context.get(),
+             dispatcher = dispatcher,
+             path = RelativePath(callbackData->FilePathName),
+             virtualizationContext =
+                 callbackData->NamespaceVirtualizationContext,
+             dataStreamId = Guid(callbackData->DataStreamId),
+             byteOffset = byteOffset,
+             length = length] {
+              auto requestWatch =
+                  std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(
+                      nullptr);
+              auto histogram = &ChannelThreadStats::read;
+              context->startRequest(
+                  dispatcher->getStats(), histogram, requestWatch);
 
-    auto content =
-        dispatcher->read(std::move(path), byteOffset, length, *context).get();
+              return dispatcher
+                  ->read(std::move(path), byteOffset, length, *context)
+                  .thenValue([context = context,
+                              virtualizationContext = virtualizationContext,
+                              dataStreamId = std::move(dataStreamId),
+                              byteOffset = byteOffset,
+                              length = length](const std::string content) {
+                    //
+                    // We should return file data which is smaller than
+                    // our kMaxChunkSize and meets the memory alignment
+                    // requirements of the virtualization instance's storage
+                    // device.
+                    //
 
-    //
-    // We should return file data which is smaller than
-    // our kMaxChunkSize and meets the memory alignment requirements
-    // of the virtualization instance's storage device.
-    //
+                    HRESULT result;
+                    if (content.length() <= kMinChunkSize) {
+                      //
+                      // If the file is small - copy the whole file in one shot.
+                      //
+                      result = readSingleFileChunk(
+                          virtualizationContext,
+                          dataStreamId,
+                          content,
+                          /*startOffset=*/0,
+                          /*writeLength=*/content.length());
 
-    if (content.length() <= kMinChunkSize) {
-      //
-      // If the file is small - copy the whole file in one shot.
-      //
-      return readSingleFileChunk(
-          callbackData->NamespaceVirtualizationContext,
-          callbackData->DataStreamId,
-          content,
-          /*startOffset=*/0,
-          /*writeLength=*/content.length());
+                    } else if (length <= kMaxChunkSize) {
+                      //
+                      // If the request is with in our kMaxChunkSize - copy the
+                      // entire request.
+                      //
+                      result = readSingleFileChunk(
+                          virtualizationContext,
+                          dataStreamId,
+                          content,
+                          /*startOffset=*/byteOffset,
+                          /*writeLength=*/length);
+                    } else {
+                      //
+                      // When the request is larger than kMaxChunkSize we split
+                      // the request into multiple chunks.
+                      //
+                      PRJ_VIRTUALIZATION_INSTANCE_INFO instanceInfo;
+                      result = PrjGetVirtualizationInstanceInfo(
+                          virtualizationContext, &instanceInfo);
 
-    } else if (length <= kMaxChunkSize) {
-      //
-      // If the request is with in our kMaxChunkSize - copy the entire request.
-      //
-      return readSingleFileChunk(
-          callbackData->NamespaceVirtualizationContext,
-          callbackData->DataStreamId,
-          content,
-          /*startOffset=*/byteOffset,
-          /*writeLength=*/length);
-    } else {
-      //
-      // When the request is larger than kMaxChunkSize we split the
-      // request into multiple chunks.
-      //
-      PRJ_VIRTUALIZATION_INSTANCE_INFO instanceInfo;
-      HRESULT result = PrjGetVirtualizationInstanceInfo(
-          callbackData->NamespaceVirtualizationContext, &instanceInfo);
+                      if (SUCCEEDED(result)) {
+                        uint64_t startOffset = byteOffset;
+                        uint64_t endOffset = BlockAlignTruncate(
+                            startOffset + kMaxChunkSize,
+                            instanceInfo.WriteAlignment);
+                        DCHECK(endOffset > 0);
+                        DCHECK(endOffset > startOffset);
 
-      if (FAILED(result)) {
-        return result;
-      }
+                        uint64_t chunkSize = endOffset - startOffset;
+                        result = readMultipleFileChunks(
+                            virtualizationContext,
+                            dataStreamId,
+                            content,
+                            /*startOffset=*/startOffset,
+                            /*length=*/length,
+                            /*chunkSize=*/chunkSize);
+                      }
+                    }
 
-      uint64_t startOffset = byteOffset;
-      uint64_t endOffset = BlockAlignTruncate(
-          startOffset + kMaxChunkSize, instanceInfo.WriteAlignment);
-      DCHECK(endOffset > 0);
-      DCHECK(endOffset > startOffset);
+                    if (FAILED(result)) {
+                      context->sendError(result);
+                    } else {
+                      context->sendSuccess();
+                    }
+                  });
+            }))
+        .ensure([context = std::move(context)] {});
 
-      uint64_t chunkSize = endOffset - startOffset;
-      return readMultipleFileChunks(
-          callbackData->NamespaceVirtualizationContext,
-          callbackData->DataStreamId,
-          content,
-          /*startOffset=*/startOffset,
-          /*length=*/length,
-          /*chunkSize=*/chunkSize);
-    }
+    return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
   } catch (const std::exception& ex) {
     return exceptionToHResult(ex);
   }

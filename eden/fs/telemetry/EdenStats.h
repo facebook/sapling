@@ -158,6 +158,7 @@ class ChannelThreadStats : public EdenThreadStatsBase {
   Histogram openDir{createHistogram("prjfs.opendir_us")};
   Histogram lookup{createHistogram("prjfs.lookup_us")};
   Histogram access{createHistogram("prjfs.access_us")};
+  Histogram read{createHistogram("prjfs.read_us")};
 #endif
 
   // Since we can potentially finish a request in a different
