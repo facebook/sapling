@@ -13,11 +13,10 @@ use backsyncer::{
 };
 use blobrepo_hg::BlobRepoHg;
 use bookmarks::Freshness;
-use cached_config::ConfigStore;
 use clap::{Arg, SubCommand};
 use cloned::cloned;
 use cmdlib::{args, monitoring};
-use cmdlib_x_repo::{create_commit_syncer_args_from_matches, create_commit_syncer_from_matches};
+use cmdlib_x_repo::create_commit_syncer_args_from_matches;
 use context::{CoreContext, SessionContainer};
 use cross_repo_sync::{CommitSyncOutcome, CommitSyncer, CommitSyncerArgs};
 use fbinit::FacebookInit;
@@ -103,17 +102,16 @@ async fn derive_target_hg_changesets(
 
 pub async fn backsync_forever<M>(
     ctx: CoreContext,
-    config_store: ConfigStore,
     commit_syncer_args: CommitSyncerArgs<M>,
     target_repo_dbs: TargetRepoDbs,
     source_repo_name: String,
     target_repo_name: String,
+    live_commit_sync_config: CfgrLiveCommitSyncConfig,
 ) -> Result<(), Error>
 where
     M: SyncedCommitMapping + Clone + 'static,
 {
     let target_repo_id = commit_syncer_args.get_target_repo_id();
-    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &config_store)?;
 
     loop {
         // We only care about public pushes because draft pushes are not in the bookmark
@@ -281,16 +279,18 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         "syncing from repoid {:?} into repoid {:?}", source_repo_id, target_repo_id,
     );
 
+    let config_store = args::maybe_init_config_store(fb, &logger, &matches)
+        .ok_or_else(|| format_err!("Failed initializing ConfigStore"))?;
+    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(&logger, &config_store)?;
+
     match matches.subcommand() {
         (ARG_MODE_BACKSYNC_ALL, _) => {
-            // NOTE: this does not use `CfgrLiveCommitSyncConfig`, as I want to allow
-            // for an opportunity to call this binary in non-forever mode with
-            // local fs-based configs
-            let commit_syncer =
-                runtime.block_on_std(create_commit_syncer_from_matches(fb, &logger, &matches))?;
-
             let scuba_sample = ScubaSampleBuilder::with_discard();
             let ctx = session_container.new_context(logger.clone(), scuba_sample);
+            let commit_sync_config =
+                live_commit_sync_config.get_current_commit_sync_config(&ctx, target_repo_id)?;
+            let commit_syncer = commit_syncer_args.try_into_commit_syncer(&commit_sync_config)?;
+
             let db_config = target_repo_config.storage_config.metadata;
             let target_repo_dbs = runtime.block_on_std(
                 open_backsyncer_dbs(
@@ -323,9 +323,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .boxed(),
             )?;
 
-            let config_store = args::maybe_init_config_store(fb, &logger, &matches)
-                .ok_or_else(|| format_err!("Failed initializing ConfigStore"))?;
-
             let mut scuba_sample = ScubaSampleBuilder::new(fb, SCUBA_TABLE);
             scuba_sample.add("source_repo", source_repo_id.id());
             scuba_sample.add("source_repo_name", source_repo_name.clone());
@@ -336,11 +333,11 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             let ctx = session_container.new_context(logger.clone(), scuba_sample);
             let f = backsync_forever(
                 ctx,
-                config_store,
                 commit_syncer_args,
                 target_repo_dbs,
                 source_repo_name,
                 target_repo_name,
+                live_commit_sync_config,
             )
             .boxed();
 
@@ -355,13 +352,11 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             runtime.block_on_std(f)?;
         }
         (ARG_MODE_BACKSYNC_COMMITS, Some(sub_m)) => {
-            // NOTE: this does not use `CfgrLiveCommitSyncConfig`, as I want to allow
-            // for an opportunity to call this binary in non-forever mode with
-            // local fs-based configs
-            let commit_syncer =
-                runtime.block_on_std(create_commit_syncer_from_matches(fb, &logger, &matches))?;
-
             let ctx = session_container.new_context(logger, ScubaSampleBuilder::with_discard());
+            let commit_sync_config =
+                live_commit_sync_config.get_current_commit_sync_config(&ctx, target_repo_id)?;
+            let commit_syncer = commit_syncer_args.try_into_commit_syncer(&commit_sync_config)?;
+
             let inputfile = sub_m
                 .value_of(ARG_INPUT_FILE)
                 .expect("input file is not set");

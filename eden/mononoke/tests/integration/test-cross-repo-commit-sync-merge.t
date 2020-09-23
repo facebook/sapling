@@ -11,6 +11,7 @@ setup configuration
   $ REPOID=0 REPONAME=meg-mon setup_common_config $REPOTYPE
   $ REPOID=1 REPONAME=fbs-mon setup_common_config $REPOTYPE
   $ setup_commitsyncmap
+  $ setup_configerator_configs
   $ ls $TESTTMP/monsql/sqlite_dbs
   ls: cannot access *: No such file or directory (glob)
   [2]
@@ -70,6 +71,8 @@ start mononoke server
 
 run the sync, expected to fail, as parent of the synced commit is not present in the mapping
   $ mononoke_x_repo_sync 1 0 once --target-bookmark master_bookamrk --commit fbsource_master |& grep -v "using repo"
+  * Initializing CfgrLiveCommitSyncConfig (glob)
+  * Done initializing CfgrLiveCommitSyncConfig (glob)
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
   * Checking if * is already synced 1->0 (glob)
   * syncing without pushrebase (glob)
@@ -83,6 +86,8 @@ insert sync mapping entry
 
 run the sync again
   $ mononoke_x_repo_sync 1 0 once --target-bookmark bookmarktomerge --commit "$TOMERGE" |& grep -v "using repo"
+  * Initializing CfgrLiveCommitSyncConfig (glob)
+  * Done initializing CfgrLiveCommitSyncConfig (glob)
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
   * Checking if 6d7f84d613e4cccb4ec27259b7b59335573cdd65ee5dc78887056a5eeb6e6a47 is already synced 1->0 (glob)
   * syncing without pushrebase (glob)
@@ -90,6 +95,8 @@ run the sync again
   * changeset 6d7f84d613e4cccb4ec27259b7b59335573cdd65ee5dc78887056a5eeb6e6a47 synced as fa8f65693524f78f5e0a40099d10acdc3001d6d472c62baabf03231e51b109c7 in * (glob)
   * successful sync (glob)
   $ mononoke_x_repo_sync 1 0 once --target-bookmark master_bookmark --commit fbsource_master |& grep -v "using repo"
+  * Initializing CfgrLiveCommitSyncConfig (glob)
+  * Done initializing CfgrLiveCommitSyncConfig (glob)
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
   * Checking if * is already synced 1->0 (glob)
   * syncing via pushrebase (glob)

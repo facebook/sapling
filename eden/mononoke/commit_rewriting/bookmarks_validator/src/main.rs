@@ -10,24 +10,28 @@
 use anyhow::{format_err, Error};
 use bookmarks::{BookmarkName, Freshness};
 use cached_config::ConfigStore;
+use clap::ArgMatches;
 use cmdlib::{args, helpers, monitoring};
-use cmdlib_x_repo::{create_commit_syncer_from_matches, create_reverse_commit_syncer_from_matches};
+use cmdlib_x_repo::{
+    create_commit_syncer_args_from_matches, create_reverse_commit_syncer_args_from_matches,
+};
 use context::{CoreContext, SessionContainer};
 use cross_repo_sync::{
     validation::{self, BookmarkDiff},
-    CommitSyncOutcome, CommitSyncer, Syncers,
+    CommitSyncOutcome, CommitSyncer, CommitSyncerArgs, Syncers,
 };
 use fbinit::FacebookInit;
 use futures::{compat::Future01CompatExt, future};
 use futures_old::Stream;
 use live_commit_sync_config::CONFIGERATOR_PUSHREDIRECT_ENABLE;
+use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use mononoke_types::ChangesetId;
 use pushredirect_enable::types::MononokePushRedirectEnable;
 use scuba_ext::ScubaSampleBuilder;
-use slog::{debug, error};
+use slog::{debug, error, Logger};
 use stats::prelude::*;
 use std::{sync::Arc, time::Duration};
-use synced_commit_mapping::SyncedCommitMapping;
+use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
 
 const CONFIGERATOR_TIMEOUT: Duration = Duration::from_millis(25);
 const CONFIGERATOR_POLL_INTERVAL: Duration = Duration::from_secs(1);
@@ -49,9 +53,13 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .build();
     let matches = app.get_matches();
     let (_, logger, mut runtime) = args::init_mononoke(fb, &matches, None)?;
+    let ctx = create_core_context(fb, logger.clone());
 
+    let large_to_small_commit_syncer_args = runtime.block_on_std(
+        create_commit_syncer_args_from_matches(ctx.fb, &logger, &matches),
+    )?;
     let large_to_small_commit_syncer =
-        runtime.block_on_std(create_commit_syncer_from_matches(fb, &logger, &matches))?;
+        get_commit_syncer(&ctx, &logger, &matches, large_to_small_commit_syncer_args)?;
 
     if large_to_small_commit_syncer.get_source_repo().get_repoid()
         != large_to_small_commit_syncer.get_large_repo().get_repoid()
@@ -62,18 +70,17 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     // Backsyncer works in large -> small direction, however
     // for bookmarks vaidator it's simpler to have commits syncer in small -> large direction
     // Hence here we are creating a reverse syncer
-    let small_to_large_commit_syncer = runtime.block_on_std(
-        create_reverse_commit_syncer_from_matches(fb, &logger, &matches),
+    let small_to_large_commit_syncer_args = runtime.block_on_std(
+        create_reverse_commit_syncer_args_from_matches(ctx.fb, &logger, &matches),
     )?;
+    let small_to_large_commit_syncer =
+        get_commit_syncer(&ctx, &logger, &matches, small_to_large_commit_syncer_args)?;
 
     let syncers = Syncers {
         large_to_small: large_to_small_commit_syncer,
         small_to_large: small_to_large_commit_syncer,
     };
 
-    let session_container = SessionContainer::new_with_defaults(fb);
-    let scuba_sample = ScubaSampleBuilder::with_discard();
-    let ctx = session_container.new_context(logger.clone(), scuba_sample);
     helpers::block_execute(
         loop_forever(ctx, syncers),
         fb,
@@ -82,6 +89,27 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         &matches,
         monitoring::AliveService,
     )
+}
+
+fn create_core_context(fb: FacebookInit, logger: Logger) -> CoreContext {
+    let session_container = SessionContainer::new_with_defaults(fb);
+    let scuba_sample = ScubaSampleBuilder::with_discard();
+    session_container.new_context(logger, scuba_sample)
+}
+
+fn get_commit_syncer<'a>(
+    ctx: &CoreContext,
+    logger: &Logger,
+    matches: &ArgMatches<'a>,
+    commit_syncer_args: CommitSyncerArgs<SqlSyncedCommitMapping>,
+) -> Result<CommitSyncer<SqlSyncedCommitMapping>, Error> {
+    let target_repo_id = args::get_target_repo_id(ctx.fb, &matches)?;
+    let config_store = args::maybe_init_config_store(ctx.fb, &logger, &matches)
+        .ok_or_else(|| format_err!("Failed initializing ConfigStore"))?;
+    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(&logger, &config_store)?;
+    let commit_sync_config =
+        live_commit_sync_config.get_current_commit_sync_config(&ctx, target_repo_id)?;
+    commit_syncer_args.try_into_commit_syncer(&commit_sync_config)
 }
 
 async fn loop_forever<M: SyncedCommitMapping + Clone + 'static>(

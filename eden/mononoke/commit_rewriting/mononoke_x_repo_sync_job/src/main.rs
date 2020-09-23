@@ -25,7 +25,7 @@ use bookmarks::{BookmarkName, BookmarkUpdateLog, Freshness};
 use cached_config::ConfigStore;
 use clap::{App, ArgMatches};
 use cmdlib::{args, monitoring};
-use cmdlib_x_repo::{create_commit_syncer_args_from_matches, create_commit_syncer_from_matches};
+use cmdlib_x_repo::create_commit_syncer_args_from_matches;
 use context::CoreContext;
 use cross_repo_sync::{
     types::{Source, Target},
@@ -167,7 +167,7 @@ async fn run_in_tailing_mode<
         }
         TailingArgs::LoopForever(commit_syncer_args, config_store) => {
             let live_commit_sync_config =
-                CfgrLiveCommitSyncConfig::new(ctx.logger(), &config_store)?;
+                Arc::new(CfgrLiveCommitSyncConfig::new(ctx.logger(), &config_store)?);
             let source_repo_id = commit_syncer_args.get_source_repo().get_repoid();
 
             loop {
@@ -431,10 +431,16 @@ async fn run(
         try_join3(source_repo, target_repo, mutable_counters).await?;
 
     let commit_syncer_args = create_commit_syncer_args_from_matches(fb, &logger, &matches).await?;
-    // NOTE: this does not use `CfgrLiveCommitSyncConfig`, as I want to allow
-    // for an opportunity to call this binary in "once" mode with
-    // local fs-based configs
-    let commit_syncer = create_commit_syncer_from_matches(fb, &logger, &matches).await?;
+
+    let config_store = args::maybe_init_config_store(ctx.fb, &logger, &matches)
+        .ok_or_else(|| format_err!("Failed initializing ConfigStore"))?;
+    let live_commit_sync_config = Arc::new(CfgrLiveCommitSyncConfig::new(&logger, &config_store)?);
+    let commit_sync_config =
+        live_commit_sync_config.get_current_commit_sync_config(&ctx, source_repo.get_repoid())?;
+
+    let commit_syncer = commit_syncer_args
+        .clone()
+        .try_into_commit_syncer(&commit_sync_config)?;
 
     let source_skiplist =
         get_skiplist_index(&ctx, &source_repo_config, &source_repo).map_ok(Source);

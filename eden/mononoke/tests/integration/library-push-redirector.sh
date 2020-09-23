@@ -12,6 +12,8 @@ function verify_wc() {
    large_repo_commit="$1"
    "$MONONOKE_ADMIN" "${COMMON_ARGS[@]}" --log-level ERROR \
      --mononoke-config-path  "$TESTTMP"/mononoke-config \
+     --test-instance \
+     --local-configerator-path="$TESTTMP/configerator" \
      --source-repo-id="$REPOIDLARGE" --target-repo-id="$REPOIDSMALL" \
      crossrepo verify-wc "$large_repo_commit"
 }
@@ -165,6 +167,8 @@ function backsync_large_to_small() {
   "$BACKSYNCER" "${COMMON_ARGS[@]}" --debug --source-repo-id "$REPOIDLARGE" \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
     --target-repo-id "$REPOIDSMALL" \
+   --test-instance \
+   --local-configerator-path="$TESTTMP/configerator" \
     backsync-all
 }
 
