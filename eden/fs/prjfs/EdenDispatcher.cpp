@@ -57,7 +57,9 @@ std::string makeDotEdenConfig(EdenMount& mount) {
 } // namespace
 
 EdenDispatcher::EdenDispatcher(EdenMount* mount)
-    : mount_{mount}, dotEdenConfig_{makeDotEdenConfig(*mount)} {}
+    : Dispatcher(mount->getStats()),
+      mount_{mount},
+      dotEdenConfig_{makeDotEdenConfig(*mount)} {}
 
 folly::Future<folly::Unit> EdenDispatcher::opendir(
     RelativePathPiece path,

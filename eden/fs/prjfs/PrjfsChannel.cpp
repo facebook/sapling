@@ -9,7 +9,7 @@
 #include <fmt/format.h>
 #include <folly/logging/xlog.h>
 #include "eden/fs/inodes/EdenMount.h"
-#include "eden/fs/prjfs/EdenDispatcher.h"
+#include "eden/fs/prjfs/Dispatcher.h"
 #include "eden/fs/prjfs/PrjfsRequestContext.h"
 #include "eden/fs/utils/Guid.h"
 #include "eden/fs/utils/NotImplemented.h"
@@ -19,7 +19,7 @@
 namespace {
 
 using facebook::eden::ChannelThreadStats;
-using facebook::eden::EdenDispatcher;
+using facebook::eden::Dispatcher;
 using facebook::eden::exceptionToHResult;
 using facebook::eden::Guid;
 using facebook::eden::InodeMetadata;
@@ -412,7 +412,7 @@ void cancelCommand(const PRJ_CALLBACK_DATA* callbackData) noexcept {
   // TODO(T67329233): Interrupt the future.
 }
 
-typedef folly::Future<folly::Unit> (EdenDispatcher::*NotificationHandler)(
+typedef folly::Future<folly::Unit> (Dispatcher::*NotificationHandler)(
     RelativePathPiece oldPath,
     RelativePathPiece destPath,
     bool isDirectory,
@@ -433,36 +433,34 @@ const std::unordered_map<PRJ_NOTIFICATION, NotificationHandlerEntry>
     notificationHandlerMap = {
         {
             PRJ_NOTIFICATION_NEW_FILE_CREATED,
-            {&EdenDispatcher::newFileCreated,
-             &ChannelThreadStats::newFileCreated},
+            {&Dispatcher::newFileCreated, &ChannelThreadStats::newFileCreated},
         },
         {
             PRJ_NOTIFICATION_FILE_OVERWRITTEN,
-            {&EdenDispatcher::fileOverwritten,
+            {&Dispatcher::fileOverwritten,
              &ChannelThreadStats::fileOverwritten},
         },
         {
             PRJ_NOTIFICATION_FILE_HANDLE_CLOSED_FILE_MODIFIED,
-            {&EdenDispatcher::fileHandleClosedFileModified,
+            {&Dispatcher::fileHandleClosedFileModified,
              &ChannelThreadStats::fileHandleClosedFileModified},
         },
         {
             PRJ_NOTIFICATION_FILE_RENAMED,
-            {&EdenDispatcher::fileRenamed, &ChannelThreadStats::fileRenamed},
+            {&Dispatcher::fileRenamed, &ChannelThreadStats::fileRenamed},
         },
         {
             PRJ_NOTIFICATION_PRE_RENAME,
-            {&EdenDispatcher::preRename, &ChannelThreadStats::preRenamed},
+            {&Dispatcher::preRename, &ChannelThreadStats::preRenamed},
         },
         {
             PRJ_NOTIFICATION_FILE_HANDLE_CLOSED_FILE_DELETED,
-            {&EdenDispatcher::fileHandleClosedFileDeleted,
+            {&Dispatcher::fileHandleClosedFileDeleted,
              &ChannelThreadStats::fileHandleClosedFileDeleted},
         },
         {
             PRJ_NOTIFICATION_PRE_SET_HARDLINK,
-            {&EdenDispatcher::preSetHardlink,
-             &ChannelThreadStats::preSetHardlink},
+            {&Dispatcher::preSetHardlink, &ChannelThreadStats::preSetHardlink},
         },
 };
 
@@ -527,7 +525,7 @@ namespace eden {
 
 PrjfsChannel::PrjfsChannel(
     AbsolutePathPiece mountPath,
-    EdenDispatcher* const dispatcher,
+    Dispatcher* const dispatcher,
     std::shared_ptr<ProcessNameCache> processNameCache)
     : mountPath_(mountPath),
       dispatcher_(dispatcher),

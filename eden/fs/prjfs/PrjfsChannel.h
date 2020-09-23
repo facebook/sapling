@@ -18,7 +18,7 @@
 namespace facebook {
 namespace eden {
 class EdenMount;
-class EdenDispatcher;
+class Dispatcher;
 
 class PrjfsChannel : public FsChannel {
  public:
@@ -29,7 +29,7 @@ class PrjfsChannel : public FsChannel {
 
   PrjfsChannel(
       AbsolutePathPiece mountPath,
-      EdenDispatcher* const dispatcher,
+      Dispatcher* const dispatcher,
       std::shared_ptr<ProcessNameCache> processNameCache);
   ~PrjfsChannel();
 
@@ -48,7 +48,7 @@ class PrjfsChannel : public FsChannel {
 
   void flushNegativePathCache() override;
 
-  EdenDispatcher* getDispatcher() {
+  Dispatcher* getDispatcher() {
     return dispatcher_;
   }
 
@@ -73,7 +73,7 @@ class PrjfsChannel : public FsChannel {
   PRJ_NAMESPACE_VIRTUALIZATION_CONTEXT mountChannel_{nullptr};
 
   const AbsolutePath mountPath_;
-  EdenDispatcher* const dispatcher_{nullptr};
+  Dispatcher* const dispatcher_{nullptr};
   Guid mountId_;
   bool isRunning_{false};
   bool useNegativePathCaching_{true};
