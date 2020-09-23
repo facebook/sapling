@@ -66,7 +66,7 @@ folly::Future<folly::Unit> EdenDispatcher::opendir(
     ObjectFetchContext& context) {
   FB_LOGF(mount_->getStraceLogger(), DBG7, "opendir({}, guid={})", path, guid);
 
-  return mount_->getInode(path)
+  return mount_->getInode(path, context)
       .thenValue([&context](const InodePtr inode) {
         auto treePtr = inode.asTreePtr();
         return treePtr->readdir(context);
@@ -167,7 +167,7 @@ folly::Future<std::optional<InodeMetadata>> EdenDispatcher::lookup(
     ObjectFetchContext& context) {
   FB_LOGF(mount_->getStraceLogger(), DBG7, "lookup({})", path);
 
-  return mount_->getInode(path)
+  return mount_->getInode(path, context)
       .thenValue(
           [&context](const InodePtr inode) mutable
           -> folly::Future<std::optional<InodeMetadata>> {
@@ -202,7 +202,7 @@ folly::Future<bool> EdenDispatcher::access(
     ObjectFetchContext& context) {
   FB_LOGF(mount_->getStraceLogger(), DBG7, "access({})", path);
 
-  return mount_->getInode(path)
+  return mount_->getInode(path, context)
       .thenValue([](const InodePtr) { return true; })
       .thenError(
           folly::tag_t<std::system_error>{},
@@ -230,7 +230,7 @@ folly::Future<std::string> EdenDispatcher::read(
       byteOffset,
       length);
 
-  return mount_->getInode(path)
+  return mount_->getInode(path, context)
       .thenValue([&context](const InodePtr inode) {
         auto fileInode = inode.asFilePtr();
         return fileInode->readAll(context);
@@ -249,8 +249,9 @@ folly::Future<std::string> EdenDispatcher::read(
 namespace {
 folly::Future<TreeInodePtr> createDirInode(
     const EdenMount& mount,
-    const RelativePathPiece path) {
-  return mount.getInode(path)
+    const RelativePathPiece path,
+    ObjectFetchContext& context) {
+  return mount.getInode(path, context)
       .thenValue([](const InodePtr inode) { return inode.asTreePtr(); })
       .thenError(
           folly::tag_t<std::system_error>{},
@@ -297,8 +298,9 @@ folly::Future<TreeInodePtr> createDirInode(
 folly::Future<folly::Unit> createFile(
     const EdenMount& mount,
     const RelativePathPiece path,
-    bool isDirectory) {
-  return createDirInode(mount, path.dirname())
+    bool isDirectory,
+    ObjectFetchContext& context) {
+  return createDirInode(mount, path.dirname(), context)
       .thenValue([=, &mount](const TreeInodePtr treeInode) {
         if (isDirectory) {
           try {
@@ -325,8 +327,9 @@ folly::Future<folly::Unit> createFile(
 
 folly::Future<folly::Unit> materializeFile(
     const EdenMount& mount,
-    const RelativePathPiece path) {
-  return mount.getInode(path).thenValue([](const InodePtr inode) {
+    const RelativePathPiece path,
+    ObjectFetchContext& context) {
+  return mount.getInode(path, context).thenValue([](const InodePtr inode) {
     auto fileInode = inode.asFilePtr();
     fileInode->materialize();
     return folly::unit;
@@ -336,9 +339,10 @@ folly::Future<folly::Unit> materializeFile(
 folly::Future<folly::Unit> renameFile(
     const EdenMount& mount,
     const RelativePathPiece oldPath,
-    const RelativePathPiece newPath) {
-  auto oldParentInode = createDirInode(mount, oldPath.dirname());
-  auto newParentInode = createDirInode(mount, newPath.dirname());
+    const RelativePathPiece newPath,
+    ObjectFetchContext& context) {
+  auto oldParentInode = createDirInode(mount, oldPath.dirname(), context);
+  auto newParentInode = createDirInode(mount, newPath.dirname(), context);
 
   return std::move(oldParentInode)
       .thenValue([=, newParentInode = std::move(newParentInode)](
@@ -368,15 +372,18 @@ folly::Future<folly::Unit> renameFile(
 folly::Future<folly::Unit> removeFile(
     const EdenMount& mount,
     const RelativePathPiece path,
-    bool isDirectory) {
-  return mount.getInode(path.dirname()).thenValue([=](const InodePtr inode) {
-    auto treeInodePtr = inode.asTreePtr();
-    if (isDirectory) {
-      return treeInodePtr->rmdir(path.basename(), InvalidationRequired::No);
-    } else {
-      return treeInodePtr->unlink(path.basename(), InvalidationRequired::No);
-    }
-  });
+    bool isDirectory,
+    ObjectFetchContext& context) {
+  return mount.getInode(path.dirname(), context)
+      .thenValue([=](const InodePtr inode) {
+        auto treeInodePtr = inode.asTreePtr();
+        if (isDirectory) {
+          return treeInodePtr->rmdir(path.basename(), InvalidationRequired::No);
+        } else {
+          return treeInodePtr->unlink(
+              path.basename(), InvalidationRequired::No);
+        }
+      });
 }
 
 } // namespace
@@ -392,7 +399,7 @@ folly::Future<folly::Unit> EdenDispatcher::newFileCreated(
       "{}({})",
       isDirectory ? "mkdir" : "mknod",
       relPath);
-  return createFile(*mount_, relPath, isDirectory);
+  return createFile(*mount_, relPath, isDirectory, context);
 }
 
 folly::Future<folly::Unit> EdenDispatcher::fileOverwritten(
@@ -401,7 +408,7 @@ folly::Future<folly::Unit> EdenDispatcher::fileOverwritten(
     bool isDirectory,
     ObjectFetchContext& context) {
   FB_LOGF(mount_->getStraceLogger(), DBG7, "overwrite({})", relPath);
-  return materializeFile(*mount_, relPath);
+  return materializeFile(*mount_, relPath, context);
 }
 
 folly::Future<folly::Unit> EdenDispatcher::fileHandleClosedFileModified(
@@ -410,7 +417,7 @@ folly::Future<folly::Unit> EdenDispatcher::fileHandleClosedFileModified(
     bool isDirectory,
     ObjectFetchContext& context) {
   FB_LOGF(mount_->getStraceLogger(), DBG7, "modified({})", relPath);
-  return materializeFile(*mount_, relPath);
+  return materializeFile(*mount_, relPath, context);
 }
 
 folly::Future<folly::Unit> EdenDispatcher::fileRenamed(
@@ -424,11 +431,11 @@ folly::Future<folly::Unit> EdenDispatcher::fileRenamed(
   // When files are moved in and out of the repo, the rename paths are
   // empty, handle these like creation/removal of files.
   if (oldPath.empty()) {
-    return createFile(*mount_, newPath, isDirectory);
+    return createFile(*mount_, newPath, isDirectory, context);
   } else if (newPath.empty()) {
-    return removeFile(*mount_, oldPath, isDirectory);
+    return removeFile(*mount_, oldPath, isDirectory, context);
   } else {
-    return renameFile(*mount_, oldPath, newPath);
+    return renameFile(*mount_, oldPath, newPath, context);
   }
 }
 
@@ -453,7 +460,7 @@ folly::Future<folly::Unit> EdenDispatcher::fileHandleClosedFileDeleted(
       "{}({})",
       isDirectory ? "rmdir" : "unlink",
       oldPath);
-  return removeFile(*mount_, oldPath, isDirectory);
+  return removeFile(*mount_, oldPath, isDirectory, context);
 }
 
 folly::Future<folly::Unit> EdenDispatcher::preSetHardlink(

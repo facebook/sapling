@@ -14,6 +14,7 @@
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestMount.h"
 #include "eden/fs/testharness/TestUtil.h"
@@ -514,7 +515,8 @@ TEST_F(RenameLoadingTest, renameWithLoadPending) {
   builder_.setReady("a/b");
 
   // Start a lookup on a/b/c before we start the rename
-  auto inodeFuture = mount_->getEdenMount()->getInode("a/b/c"_relpath);
+  auto inodeFuture = mount_->getEdenMount()->getInode(
+      "a/b/c"_relpath, ObjectFetchContext::getNullContext());
   EXPECT_FALSE(inodeFuture.isReady());
 
   // Perform a rename on a/b/c before that inode is ready.
@@ -561,7 +563,8 @@ TEST_F(RenameLoadingTest, loadWithRenamePending) {
   EXPECT_FALSE(renameFuture.isReady());
 
   // Also start a lookup on a/b/c after starting the rename
-  auto inodeFuture = mount_->getEdenMount()->getInode("a/b/c"_relpath);
+  auto inodeFuture = mount_->getEdenMount()->getInode(
+      "a/b/c"_relpath, ObjectFetchContext::getNullContext());
   EXPECT_FALSE(inodeFuture.isReady());
 
   // Now make a/b/c ready

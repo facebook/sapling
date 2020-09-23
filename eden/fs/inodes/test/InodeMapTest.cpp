@@ -154,13 +154,15 @@ TEST(InodeMap, recursiveLookup) {
   const auto& edenMount = testMount.getEdenMount();
 
   // Call EdenMount::getInode() on the root
-  auto rootFuture = edenMount->getInode(""_relpath);
+  auto rootFuture =
+      edenMount->getInode(""_relpath, ObjectFetchContext::getNullContext());
   ASSERT_TRUE(rootFuture.isReady());
   auto rootResult = std::move(rootFuture).get();
   EXPECT_EQ(edenMount->getRootInode(), rootResult);
 
   // Call EdenMount::getInode() to do a recursive lookup
-  auto fileFuture = edenMount->getInode("a/b/c/d/file.txt"_relpath);
+  auto fileFuture = edenMount->getInode(
+      "a/b/c/d/file.txt"_relpath, ObjectFetchContext::getNullContext());
   EXPECT_FALSE(fileFuture.isReady());
 
   builder.setReady("a/b/c");
@@ -184,13 +186,15 @@ TEST(InodeMap, recursiveLookupError) {
   const auto& edenMount = testMount.getEdenMount();
 
   // Call EdenMount::getInode() on the root
-  auto rootFuture = edenMount->getInode(""_relpath);
+  auto rootFuture =
+      edenMount->getInode(""_relpath, ObjectFetchContext::getNullContext());
   ASSERT_TRUE(rootFuture.isReady());
   auto rootResult = std::move(rootFuture).get();
   EXPECT_EQ(edenMount->getRootInode(), rootResult);
 
   // Call EdenMount::getInode() to do a recursive lookup
-  auto fileFuture = edenMount->getInode("a/b/c/d/file.txt"_relpath);
+  auto fileFuture = edenMount->getInode(
+      "a/b/c/d/file.txt"_relpath, ObjectFetchContext::getNullContext());
   EXPECT_FALSE(fileFuture.isReady());
 
   builder.setReady("a");
@@ -217,13 +221,15 @@ TEST(InodeMap, renameDuringRecursiveLookup) {
   const auto& edenMount = testMount.getEdenMount();
 
   // Call EdenMount::getInode() on the root
-  auto rootFuture = edenMount->getInode(""_relpath);
+  auto rootFuture =
+      edenMount->getInode(""_relpath, ObjectFetchContext::getNullContext());
   ASSERT_TRUE(rootFuture.isReady());
   auto rootResult = std::move(rootFuture).get();
   EXPECT_EQ(edenMount->getRootInode(), rootResult);
 
   // Call EdenMount::getInode() to do a recursive lookup
-  auto fileFuture = edenMount->getInode("a/b/c/d/file.txt"_relpath);
+  auto fileFuture = edenMount->getInode(
+      "a/b/c/d/file.txt"_relpath, ObjectFetchContext::getNullContext());
   EXPECT_FALSE(fileFuture.isReady());
 
   builder.setReady("a/b/c");
@@ -233,7 +239,8 @@ TEST(InodeMap, renameDuringRecursiveLookup) {
   builder.setReady("a/b");
   EXPECT_FALSE(fileFuture.isReady());
 
-  auto bFuture = edenMount->getInode("a/b"_relpath);
+  auto bFuture =
+      edenMount->getInode("a/b"_relpath, ObjectFetchContext::getNullContext());
   ASSERT_TRUE(bFuture.isReady());
   auto bInode = std::move(bFuture).get().asTreePtr();
 
@@ -262,13 +269,15 @@ TEST(InodeMap, renameDuringRecursiveLookupAndLoad) {
   const auto& edenMount = testMount.getEdenMount();
 
   // Call EdenMount::getInode() on the root
-  auto rootFuture = edenMount->getInode(""_relpath);
+  auto rootFuture =
+      edenMount->getInode(""_relpath, ObjectFetchContext::getNullContext());
   ASSERT_TRUE(rootFuture.isReady());
   auto rootResult = std::move(rootFuture).get();
   EXPECT_EQ(edenMount->getRootInode(), rootResult);
 
   // Call EdenMount::getInode() to do a recursive lookup
-  auto fileFuture = edenMount->getInode("a/b/c/d/file.txt"_relpath);
+  auto fileFuture = edenMount->getInode(
+      "a/b/c/d/file.txt"_relpath, ObjectFetchContext::getNullContext());
   EXPECT_FALSE(fileFuture.isReady());
 
   builder.setReady("a");
@@ -276,7 +285,8 @@ TEST(InodeMap, renameDuringRecursiveLookupAndLoad) {
   builder.setReady("a/b");
   EXPECT_FALSE(fileFuture.isReady());
 
-  auto bFuture = edenMount->getInode("a/b"_relpath);
+  auto bFuture =
+      edenMount->getInode("a/b"_relpath, ObjectFetchContext::getNullContext());
   ASSERT_TRUE(bFuture.isReady());
   auto bInode = std::move(bFuture).get().asTreePtr();
 
@@ -311,8 +321,14 @@ TEST(InodeMap, unloadedUnlinkedTreesAreRemovedFromOverlay) {
   auto edenMount = mount.getEdenMount();
 
   auto root = edenMount->getRootInode();
-  auto dir1 = edenMount->getInode("dir1"_relpath).get().asTreePtr();
-  auto dir2 = edenMount->getInode("dir2"_relpath).get().asTreePtr();
+  auto dir1 =
+      edenMount->getInode("dir1"_relpath, ObjectFetchContext::getNullContext())
+          .get()
+          .asTreePtr();
+  auto dir2 =
+      edenMount->getInode("dir2"_relpath, ObjectFetchContext::getNullContext())
+          .get()
+          .asTreePtr();
   auto dir1ino = dir1->getNodeId();
   auto dir2ino = dir2->getNodeId();
 
@@ -347,14 +363,32 @@ TEST(InodeMap, unloadedFileMetadataIsForgotten) {
   auto edenMount = mount.getEdenMount();
 
   auto root = edenMount->getRootInode();
-  auto dir1 = edenMount->getInode(RelativePathPiece{"dir1"}).get().asTreePtr();
-  auto dir2 = edenMount->getInode(RelativePathPiece{"dir2"}).get().asTreePtr();
+  auto dir1 =
+      edenMount
+          ->getInode(
+              RelativePathPiece{"dir1"}, ObjectFetchContext::getNullContext())
+          .get()
+          .asTreePtr();
+  auto dir2 =
+      edenMount
+          ->getInode(
+              RelativePathPiece{"dir2"}, ObjectFetchContext::getNullContext())
+          .get()
+          .asTreePtr();
 
-  auto file1 =
-      edenMount->getInode(RelativePathPiece{"dir1/file.txt"}).get().asFilePtr();
+  auto file1 = edenMount
+                   ->getInode(
+                       RelativePathPiece{"dir1/file.txt"},
+                       ObjectFetchContext::getNullContext())
+                   .get()
+                   .asFilePtr();
   auto file1ino = file1->getNodeId();
-  auto file2 =
-      edenMount->getInode(RelativePathPiece{"dir2/file.txt"}).get().asFilePtr();
+  auto file2 = edenMount
+                   ->getInode(
+                       RelativePathPiece{"dir2/file.txt"},
+                       ObjectFetchContext::getNullContext())
+                   .get()
+                   .asFilePtr();
   auto file2ino = file2->getNodeId();
 
   EXPECT_TRUE(mount.hasMetadata(file1ino));
@@ -395,9 +429,19 @@ struct InodePersistenceTakeoverTest : InodePersistenceTreeTest {
   void SetUp() override {
     InodePersistenceTreeTest::SetUp();
 
-    auto tree = edenMount->getInode("dir"_relpath).get();
-    auto file1 = edenMount->getInode("dir/file1.txt"_relpath).get();
-    auto file2 = edenMount->getInode("dir/file2.txt"_relpath).get();
+    auto tree =
+        edenMount->getInode("dir"_relpath, ObjectFetchContext::getNullContext())
+            .get();
+    auto file1 =
+        edenMount
+            ->getInode(
+                "dir/file1.txt"_relpath, ObjectFetchContext::getNullContext())
+            .get();
+    auto file2 =
+        edenMount
+            ->getInode(
+                "dir/file2.txt"_relpath, ObjectFetchContext::getNullContext())
+            .get();
 
     // Pretend FUSE is keeping references to these.
     tree->incFuseRefcount();
@@ -436,9 +480,19 @@ TEST_F(
     InodePersistenceTakeoverTest,
     preservesInodeNumbersForLoadedInodesDuringTakeover_lookupFirstByName) {
   // Look up in a different order to avoid allocating the same numbers.
-  auto tree = edenMount->getInode("dir"_relpath).get();
-  auto file2 = edenMount->getInode("dir/file2.txt"_relpath).get();
-  auto file1 = edenMount->getInode("dir/file1.txt"_relpath).get();
+  auto tree =
+      edenMount->getInode("dir"_relpath, ObjectFetchContext::getNullContext())
+          .get();
+  auto file2 =
+      edenMount
+          ->getInode(
+              "dir/file2.txt"_relpath, ObjectFetchContext::getNullContext())
+          .get();
+  auto file1 =
+      edenMount
+          ->getInode(
+              "dir/file1.txt"_relpath, ObjectFetchContext::getNullContext())
+          .get();
 
 #ifndef _WIN32
   EXPECT_EQ(1, tree->debugGetFuseRefcount());
@@ -483,9 +537,19 @@ TEST_F(
       edenMount->getInodeMap()->lookupInode(oldFile2Id).get()->getLogPath());
 
   // Verify the same inodes can be looked up by name too.
-  auto tree = edenMount->getInode("dir"_relpath).get();
-  auto file2 = edenMount->getInode("dir/file2.txt"_relpath).get();
-  auto file1 = edenMount->getInode("dir/file1.txt"_relpath).get();
+  auto tree =
+      edenMount->getInode("dir"_relpath, ObjectFetchContext::getNullContext())
+          .get();
+  auto file2 =
+      edenMount
+          ->getInode(
+              "dir/file2.txt"_relpath, ObjectFetchContext::getNullContext())
+          .get();
+  auto file1 =
+      edenMount
+          ->getInode(
+              "dir/file1.txt"_relpath, ObjectFetchContext::getNullContext())
+          .get();
 
 #ifndef _WIN32
   EXPECT_EQ(1, tree->debugGetFuseRefcount());
@@ -512,9 +576,19 @@ TEST_F(
   TestMount testMount{builder};
   auto edenMount = testMount.getEdenMount();
 
-  auto tree = edenMount->getInode("dir"_relpath).get();
-  auto file1 = edenMount->getInode("dir/file1.txt"_relpath).get();
-  auto file2 = edenMount->getInode("dir/file2.txt"_relpath).get();
+  auto tree =
+      edenMount->getInode("dir"_relpath, ObjectFetchContext::getNullContext())
+          .get();
+  auto file1 =
+      edenMount
+          ->getInode(
+              "dir/file1.txt"_relpath, ObjectFetchContext::getNullContext())
+          .get();
+  auto file2 =
+      edenMount
+          ->getInode(
+              "dir/file2.txt"_relpath, ObjectFetchContext::getNullContext())
+          .get();
 
   tree->incFuseRefcount();
   file1->incFuseRefcount();
@@ -545,9 +619,17 @@ TEST_F(
   edenMount = testMount.getEdenMount();
 
   // Look up in a different order.
-  tree = edenMount->getInode("dir"_relpath).get();
-  file2 = edenMount->getInode("dir/file2.txt"_relpath).get();
-  file1 = edenMount->getInode("dir/file1.txt"_relpath).get();
+  tree =
+      edenMount->getInode("dir"_relpath, ObjectFetchContext::getNullContext())
+          .get();
+  file2 = edenMount
+              ->getInode(
+                  "dir/file2.txt"_relpath, ObjectFetchContext::getNullContext())
+              .get();
+  file1 = edenMount
+              ->getInode(
+                  "dir/file1.txt"_relpath, ObjectFetchContext::getNullContext())
+              .get();
 
   EXPECT_EQ(oldTreeId, tree->getNodeId());
   EXPECT_EQ(oldFile1Id, file1->getNodeId());

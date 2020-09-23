@@ -231,7 +231,7 @@ Future<InodePtr> TreeInode::getOrLoadChild(
     // because getInode() will call TreeInode::getOrLoadChild()
     // recursively, and it is cleaner to break this logic out
     // separately.
-    return getMount()->getInode(".eden/this-dir"_relpath);
+    return getMount()->getInode(".eden/this-dir"_relpath, context);
   }
 #endif // !_WIN32
 
@@ -332,7 +332,8 @@ namespace {
  */
 class LookupProcessor {
  public:
-  explicit LookupProcessor(RelativePathPiece path) : path_{path} {}
+  explicit LookupProcessor(RelativePathPiece path, ObjectFetchContext& context)
+      : path_{path}, context_{context} {}
 
   Future<InodePtr> next(TreeInodePtr tree) {
     auto pathStr = path_.stringPiece();
@@ -340,10 +341,7 @@ class LookupProcessor {
     auto endIdx = pathStr.find(kDirSeparator, pathIndex_);
     if (endIdx == StringPiece::npos) {
       auto name = StringPiece{pathStr.data() + pathIndex_, pathStr.end()};
-      static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
-          "LookupProcessor::next");
-
-      return tree->getOrLoadChild(PathComponentPiece{name}, *context);
+      return tree->getOrLoadChild(PathComponentPiece{name}, context_);
     }
 
     auto name =
@@ -355,17 +353,24 @@ class LookupProcessor {
 
  private:
   RelativePath path_;
+  // The ObjectFetchContext is allocated at the beginning of a request and
+  // released once the request completes. Since the lifetime of LookupProcessor
+  // is strictly less than the one of a request, we can safely store a
+  // reference to the fetch context.
+  ObjectFetchContext& context_;
   size_t pathIndex_{0};
 };
 } // namespace
 
-Future<InodePtr> TreeInode::getChildRecursive(RelativePathPiece path) {
+Future<InodePtr> TreeInode::getChildRecursive(
+    RelativePathPiece path,
+    ObjectFetchContext& context) {
   auto pathStr = path.stringPiece();
   if (pathStr.empty()) {
     return makeFuture<InodePtr>(inodePtrFromThis());
   }
 
-  auto processor = std::make_unique<LookupProcessor>(path);
+  auto processor = std::make_unique<LookupProcessor>(path, context);
   auto future = processor->next(inodePtrFromThis());
   // This ensure() callback serves to hold onto the unique_ptr,
   // and makes sure it only gets destroyed when the future is finally resolved.

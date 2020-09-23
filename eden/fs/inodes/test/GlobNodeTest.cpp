@@ -271,7 +271,10 @@ TEST(GlobNodeTest, matchingDirectoryDoesNotLoadTree) {
   builder.setFiles({{"dir/subdir/file", ""}});
   mount.initialize(builder, /*startReady=*/false);
   builder.setReady("dir");
-  ASSERT_FALSE(mount.getEdenMount()->getInode("dir/subdir"_relpath).isReady())
+  ASSERT_FALSE(
+      mount.getEdenMount()
+          ->getInode("dir/subdir"_relpath, ObjectFetchContext::getNullContext())
+          .isReady())
       << "Loading dir/subdir should hang indefinitely";
 
   for (folly::StringPiece pattern : {"dir/*"_sp, "dir/subdir"_sp}) {
@@ -288,7 +291,11 @@ TEST(GlobNodeTest, matchingDirectoryDoesNotLoadTree) {
       FAIL() << "Matching dir/subdir should not load dir/subdir";
     }
 
-    EXPECT_FALSE(mount.getEdenMount()->getInode("dir/subdir"_relpath).isReady())
+    EXPECT_FALSE(
+        mount.getEdenMount()
+            ->getInode(
+                "dir/subdir"_relpath, ObjectFetchContext::getNullContext())
+            .isReady())
         << "dir/subdir should still be unloaded after evaluating glob";
     EXPECT_EQ(
         (std::vector<GlobResult>{

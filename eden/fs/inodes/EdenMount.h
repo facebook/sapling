@@ -405,7 +405,9 @@ class EdenMount {
    * besides the path being invalid (for instance, an error loading data from
    * the ObjectStore).
    */
-  folly::Future<InodePtr> getInode(RelativePathPiece path) const;
+  folly::Future<InodePtr> getInode(
+      RelativePathPiece path,
+      ObjectFetchContext& context) const;
 
   /**
    * Resolves symlinks and loads file contents from the Inode at the given path.

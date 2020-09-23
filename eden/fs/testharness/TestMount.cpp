@@ -504,7 +504,9 @@ bool TestMount::hasFileAt(folly::StringPiece path) {
   auto relativePath = RelativePathPiece{path};
   mode_t mode;
   try {
-    auto child = edenMount_->getInode(relativePath).get();
+    auto child =
+        edenMount_->getInode(relativePath, ObjectFetchContext::getNullContext())
+            .get();
     mode = child->stat(ObjectFetchContext::getNullContext()).get().st_mode;
   } catch (const std::system_error& e) {
     if (e.code().value() == ENOENT) {
@@ -571,7 +573,8 @@ InodePtr TestMount::getInode(RelativePathPiece path) const {
   // Call future.get() with a timeout.  Generally in tests we expect the future
   // to be immediately ready.  We want to make sure the test does not hang
   // forever if something goes wrong.
-  return edenMount_->getInode(path).get(std::chrono::milliseconds(1));
+  return edenMount_->getInode(path, ObjectFetchContext::getNullContext())
+      .get(std::chrono::milliseconds(1));
 }
 
 InodePtr TestMount::getInode(folly::StringPiece path) const {

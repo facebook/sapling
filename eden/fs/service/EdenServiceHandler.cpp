@@ -243,7 +243,10 @@ facebook::eden::InodePtr inodeFromUserPath(
   if (rootRelativePath.empty() || rootRelativePath == ".") {
     return mount.getRootInode();
   } else {
-    return mount.getInode(facebook::eden::RelativePathPiece{rootRelativePath})
+    static auto context =
+        ObjectFetchContext::getNullContextWithCauseDetail("inodeFromUserPath");
+    return mount
+        .getInode(facebook::eden::RelativePathPiece{rootRelativePath}, *context)
         .get();
   }
 }
@@ -488,7 +491,7 @@ Future<Hash> EdenServiceHandler::getSHA1ForPath(
 
   auto edenMount = server_->getMount(mountPoint);
   auto relativePath = RelativePathPiece{path};
-  return edenMount->getInode(relativePath)
+  return edenMount->getInode(relativePath, fetchContext)
       .thenValue([&fetchContext](const InodePtr& inode) {
         auto fileInode = inode.asFilePtr();
         if (!S_ISREG(fileInode->getMode())) {

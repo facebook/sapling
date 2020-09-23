@@ -923,7 +923,8 @@ TEST(Checkout, checkoutModifiesDirectoryDuringLoad) {
   commit2->setReady();
 
   // Begin loading "dir/sub".
-  auto inodeFuture = testMount.getEdenMount()->getInode("dir/sub"_relpath);
+  auto inodeFuture = testMount.getEdenMount()->getInode(
+      "dir/sub"_relpath, ObjectFetchContext::getNullContext());
   EXPECT_FALSE(inodeFuture.isReady());
 
   // Checkout to a revision where the contents of "dir/sub" have changed.
@@ -963,13 +964,16 @@ TEST(Checkout, checkoutRemovingDirectoryDeletesOverlayFile) {
   commit2->setReady();
 
   // Load "dir/sub".
-  auto subTree = testMount.getEdenMount()
-                     ->getInode("dir/sub"_relpath)
-                     .get(1ms)
-                     .asTreePtr();
+  auto subTree =
+      testMount.getEdenMount()
+          ->getInode("dir/sub"_relpath, ObjectFetchContext::getNullContext())
+          .get(1ms)
+          .asTreePtr();
   auto subInodeNumber = subTree->getNodeId();
   auto fileInodeNumber = testMount.getEdenMount()
-                             ->getInode(RelativePathPiece{"dir/sub/file.txt"})
+                             ->getInode(
+                                 RelativePathPiece{"dir/sub/file.txt"},
+                                 ObjectFetchContext::getNullContext())
                              .get(1ms)
                              ->getNodeId();
   subTree.reset();
@@ -1016,10 +1020,11 @@ TEST(Checkout, checkoutUpdatesUnlinkedStatusForLoadedTrees) {
   commit2->setReady();
 
   // Load "dir/sub" on behalf of a FUSE connection.
-  auto subTree = testMount.getEdenMount()
-                     ->getInode("dir/sub"_relpath)
-                     .get(1ms)
-                     .asTreePtr();
+  auto subTree =
+      testMount.getEdenMount()
+          ->getInode("dir/sub"_relpath, ObjectFetchContext::getNullContext())
+          .get(1ms)
+          .asTreePtr();
   auto subInodeNumber = subTree->getNodeId();
   subTree->incFuseRefcount();
   subTree.reset();
@@ -1050,7 +1055,10 @@ TEST(Checkout, checkoutUpdatesUnlinkedStatusForLoadedTrees) {
   }
 
   auto dirTree =
-      testMount.getEdenMount()->getInode("dir"_relpath).get(1ms).asTreePtr();
+      testMount.getEdenMount()
+          ->getInode("dir"_relpath, ObjectFetchContext::getNullContext())
+          .get(1ms)
+          .asTreePtr();
   auto dirContents = dirTree->getContents().rlock();
   EXPECT_FALSE(dirContents->isMaterialized());
 }
@@ -1068,10 +1076,11 @@ TEST(Checkout, checkoutRemembersInodeNumbersAfterCheckoutAndTakeover) {
   commit2->setReady();
 
   // Load "dir/sub" on behalf of a FUSE connection.
-  auto subTree = testMount.getEdenMount()
-                     ->getInode("dir/sub"_relpath)
-                     .get(1ms)
-                     .asTreePtr();
+  auto subTree =
+      testMount.getEdenMount()
+          ->getInode("dir/sub"_relpath, ObjectFetchContext::getNullContext())
+          .get(1ms)
+          .asTreePtr();
   auto dirInodeNumber = subTree->getParentRacy()->getNodeId();
   auto subInodeNumber = subTree->getNodeId();
   subTree->incFuseRefcount();
@@ -1098,10 +1107,11 @@ TEST(Checkout, checkoutRemembersInodeNumbersAfterCheckoutAndTakeover) {
   EXPECT_EQ(dirInodeNumber, subTree->getParentRacy()->getNodeId());
   EXPECT_EQ(subInodeNumber, subTree->getNodeId());
 
-  auto subTree2 = testMount.getEdenMount()
-                      ->getInode("dir/sub"_relpath)
-                      .get(1ms)
-                      .asTreePtr();
+  auto subTree2 =
+      testMount.getEdenMount()
+          ->getInode("dir/sub"_relpath, ObjectFetchContext::getNullContext())
+          .get(1ms)
+          .asTreePtr();
   EXPECT_EQ(dirInodeNumber, subTree2->getParentRacy()->getNodeId());
   EXPECT_EQ(subInodeNumber, subTree2->getNodeId());
 
@@ -1109,10 +1119,11 @@ TEST(Checkout, checkoutRemembersInodeNumbersAfterCheckoutAndTakeover) {
   subTree.reset();
   subTree2.reset();
 
-  subTree = testMount.getEdenMount()
-                ->getInode("dir/sub"_relpath)
-                .get(1ms)
-                .asTreePtr();
+  subTree =
+      testMount.getEdenMount()
+          ->getInode("dir/sub"_relpath, ObjectFetchContext::getNullContext())
+          .get(1ms)
+          .asTreePtr();
   EXPECT_EQ(dirInodeNumber, subTree->getParentRacy()->getNodeId());
   EXPECT_EQ(subInodeNumber, subTree->getNodeId());
 }
@@ -1148,28 +1159,42 @@ TYPED_TEST(
 
   auto edenMount = testMount.getEdenMount();
 
-  auto abcfile1 =
-      edenMount->getInode("root/a/b/c/file1.txt"_relpath).get(1ms).asFilePtr();
+  auto abcfile1 = edenMount
+                      ->getInode(
+                          "root/a/b/c/file1.txt"_relpath,
+                          ObjectFetchContext::getNullContext())
+                      .get(1ms)
+                      .asFilePtr();
   auto abcfile1InodeNumber = abcfile1->getNodeId();
   auto abcInodeNumber = abcfile1->getParentRacy()->getNodeId();
   abcfile1->incFuseRefcount();
   abcfile1.reset();
 
-  auto deffile2 =
-      edenMount->getInode("root/d/e/f/file2.txt"_relpath).get(1ms).asFilePtr();
+  auto deffile2 = edenMount
+                      ->getInode(
+                          "root/d/e/f/file2.txt"_relpath,
+                          ObjectFetchContext::getNullContext())
+                      .get(1ms)
+                      .asFilePtr();
   auto deffile2InodeNumber = deffile2->getNodeId();
   auto defInodeNumber = deffile2->getParentRacy()->getNodeId();
   deffile2->getParentRacy()->incFuseRefcount();
   deffile2.reset();
 
-  auto ghifile3 =
-      edenMount->getInode("root/g/h/i/file3.txt"_relpath).get(1ms).asFilePtr();
+  auto ghifile3 = edenMount
+                      ->getInode(
+                          "root/g/h/i/file3.txt"_relpath,
+                          ObjectFetchContext::getNullContext())
+                      .get(1ms)
+                      .asFilePtr();
   auto ghifile3InodeNumber = ghifile3->getNodeId();
   auto ghiInodeNumber = ghifile3->getParentRacy()->getNodeId();
   ghifile3.reset();
 
   auto unloaded = this->unloader.unload(
-      *edenMount->getInode("root"_relpath).get(1ms).asTreePtr());
+      *edenMount->getInode("root"_relpath, ObjectFetchContext::getNullContext())
+           .get(1ms)
+           .asTreePtr());
   // Everything was unloaded.
   EXPECT_EQ(12, unloaded);
 
@@ -1189,29 +1214,44 @@ TYPED_TEST(
   // Files always change inode numbers during a checkout.
   EXPECT_NE(
       abcfile1InodeNumber,
-      edenMount->getInode("root/a/b/c/file1.txt"_relpath)
+      edenMount
+          ->getInode(
+              "root/a/b/c/file1.txt"_relpath,
+              ObjectFetchContext::getNullContext())
           .get(1ms)
           ->getNodeId());
 
   EXPECT_EQ(
       abcInodeNumber,
-      edenMount->getInode("root/a/b/c"_relpath).get(1ms)->getNodeId());
+      edenMount
+          ->getInode("root/a/b/c"_relpath, ObjectFetchContext::getNullContext())
+          .get(1ms)
+          ->getNodeId());
 
   // Files always change inode numbers during a checkout.
   EXPECT_NE(
       deffile2InodeNumber,
-      edenMount->getInode("root/d/e/f/file2.txt"_relpath)
+      edenMount
+          ->getInode(
+              "root/d/e/f/file2.txt"_relpath,
+              ObjectFetchContext::getNullContext())
           .get(1ms)
           ->getNodeId());
 
   EXPECT_EQ(
       defInodeNumber,
-      edenMount->getInode("root/d/e/f"_relpath).get(1ms)->getNodeId());
+      edenMount
+          ->getInode("root/d/e/f"_relpath, ObjectFetchContext::getNullContext())
+          .get(1ms)
+          ->getNodeId());
 
   // Files always change inode numbers during a checkout.
   EXPECT_NE(
       ghifile3InodeNumber,
-      edenMount->getInode("root/g/h/i/file3.txt"_relpath)
+      edenMount
+          ->getInode(
+              "root/g/h/i/file3.txt"_relpath,
+              ObjectFetchContext::getNullContext())
           .get(1ms)
           ->getNodeId());
 
@@ -1219,7 +1259,10 @@ TYPED_TEST(
   // been forgotten.
   EXPECT_NE(
       ghiInodeNumber,
-      edenMount->getInode("root/g/h/i"_relpath).get(1ms)->getNodeId());
+      edenMount
+          ->getInode("root/g/h/i"_relpath, ObjectFetchContext::getNullContext())
+          .get(1ms)
+          ->getNodeId());
 
   // Replaced files should be unlinked.
 
