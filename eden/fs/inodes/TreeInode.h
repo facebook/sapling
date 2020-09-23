@@ -156,7 +156,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * way to get it, so in this function as an optimization we don't populate the
    * size of materialized files.
    */
-  FOLLY_NODISCARD folly::Future<std::vector<FileMetadata>> readdir();
+  FOLLY_NODISCARD folly::Future<std::vector<FileMetadata>> readdir(
+      ObjectFetchContext& context);
 #endif
 
   const folly::Synchronized<TreeInodeState>& getContents() const {

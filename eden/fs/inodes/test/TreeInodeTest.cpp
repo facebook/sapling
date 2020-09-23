@@ -88,7 +88,7 @@ TEST(TreeInode, readdirTest) {
   TestMount mount{builder};
 
   auto root = mount.getEdenMount()->getRootInode();
-  auto result = root->readdir().get(0ms);
+  auto result = root->readdir(ObjectFetchContext::getNullContext()).get(0ms);
 
   ASSERT_EQ(2, result.size());
   EXPECT_EQ(L".eden", result[0].name);
@@ -104,7 +104,7 @@ TEST(TreeInode, updateAndReaddir) {
 
   // Test creating a new file
   auto somedir = mount.getTreeInode("somedir"_relpath);
-  auto result = somedir->readdir().get(0ms);
+  auto result = somedir->readdir(ObjectFetchContext::getNullContext()).get(0ms);
 
   ASSERT_EQ(3, result.size());
   EXPECT_EQ(L"file1", result[0].name);
@@ -113,7 +113,7 @@ TEST(TreeInode, updateAndReaddir) {
 
   auto resultInode =
       somedir->mknod("newfile.txt"_pc, S_IFREG, 0, InvalidationRequired::No);
-  result = somedir->readdir().get(0ms);
+  result = somedir->readdir(ObjectFetchContext::getNullContext()).get(0ms);
   ASSERT_EQ(4, result.size());
   EXPECT_EQ(L"file1", result[0].name);
   EXPECT_EQ(L"file2", result[1].name);
@@ -121,7 +121,7 @@ TEST(TreeInode, updateAndReaddir) {
   EXPECT_EQ(L"newfile.txt", result[3].name);
 
   somedir->unlink("file2"_pc, InvalidationRequired::No).get(0ms);
-  result = somedir->readdir().get(0ms);
+  result = somedir->readdir(ObjectFetchContext::getNullContext()).get(0ms);
   ASSERT_EQ(3, result.size());
   EXPECT_EQ(L"file1", result[0].name);
   EXPECT_EQ(L"file3", result[1].name);
@@ -131,7 +131,7 @@ TEST(TreeInode, updateAndReaddir) {
       ->rename(
           "file3"_pc, somedir, "renamedfile.txt"_pc, InvalidationRequired::No)
       .get(0ms);
-  result = somedir->readdir().get(0ms);
+  result = somedir->readdir(ObjectFetchContext::getNullContext()).get(0ms);
   ASSERT_EQ(3, result.size());
   EXPECT_EQ(L"file1", result[0].name);
   EXPECT_EQ(L"newfile.txt", result[1].name);

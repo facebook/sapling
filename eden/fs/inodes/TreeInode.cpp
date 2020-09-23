@@ -1887,7 +1887,8 @@ TreeInode::readdir(DirList&& list, off_t off, ObjectFetchContext& context) {
 
 #else
 
-folly::Future<std::vector<FileMetadata>> TreeInode::readdir() {
+folly::Future<std::vector<FileMetadata>> TreeInode::readdir(
+    ObjectFetchContext& context) {
   vector<Future<FileMetadata>> futures;
   {
     auto dir = contents_.rlock();
@@ -1899,8 +1900,6 @@ folly::Future<std::vector<FileMetadata>> TreeInode::readdir() {
       auto winName = name.wide();
 
       if (!isDir) {
-        static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
-            "TreeInode::readdir");
         // We only populates the file size for non-materialized files. For
         // the materialized files, ProjectedFS will use the on-disk size.
         auto hash = entry.getOptionalHash();
@@ -1908,7 +1907,7 @@ folly::Future<std::vector<FileMetadata>> TreeInode::readdir() {
           futures.emplace_back(
               getMount()
                   ->getObjectStore()
-                  ->getBlobSize(hash.value(), *context)
+                  ->getBlobSize(hash.value(), context)
                   .thenValue(
                       [winName = std::move(winName)](uint64_t size) mutable {
                         return FileMetadata(std::move(winName), false, size);

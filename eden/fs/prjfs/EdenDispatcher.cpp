@@ -67,9 +67,9 @@ folly::Future<folly::Unit> EdenDispatcher::opendir(
   FB_LOGF(mount_->getStraceLogger(), DBG7, "opendir({}, guid={})", path, guid);
 
   return mount_->getInode(path)
-      .thenValue([](const InodePtr inode) {
+      .thenValue([&context](const InodePtr inode) {
         auto treePtr = inode.asTreePtr();
-        return treePtr->readdir();
+        return treePtr->readdir(context);
       })
       .thenValue([this, guid = std::move(guid)](auto&& dirents) {
         auto [iterator, inserted] =
