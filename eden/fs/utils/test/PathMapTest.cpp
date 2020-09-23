@@ -32,6 +32,29 @@ TEST(PathMap, caseSensitive) {
   EXPECT_EQ(map.size(), 3);
 }
 
+TEST(PathMap, caseSensitiveCopyMove) {
+  PathMap<bool> map(kPathMapCaseSensitive);
+  map.insert(std::make_pair(PathComponent("foo"), true));
+
+  PathMap<bool> copied(map);
+  EXPECT_TRUE(copied.at("foo"_pc));
+  EXPECT_EQ(copied.find("Foo"_pc), copied.end());
+
+  PathMap<bool> copy_assign(kPathMapCaseInSensitive);
+  copy_assign = map;
+  EXPECT_TRUE(copy_assign.at("foo"_pc));
+  EXPECT_EQ(copy_assign.find("Foo"_pc), copy_assign.end());
+
+  PathMap<bool> moved(std::move(map));
+  EXPECT_TRUE(moved.at("foo"_pc));
+  EXPECT_EQ(moved.find("Foo"_pc), moved.end());
+
+  PathMap<bool> move_assign(kPathMapCaseInSensitive);
+  move_assign = std::move(moved);
+  EXPECT_TRUE(move_assign.at("foo"_pc));
+  EXPECT_EQ(move_assign.find("Foo"_pc), move_assign.end());
+}
+
 TEST(PathMap, caseInSensitive) {
   // Explicitly a case IN-sensitive map, regardless of the host OS
   PathMap<bool> map(kPathMapCaseInSensitive);
@@ -58,6 +81,29 @@ TEST(PathMap, caseInSensitive) {
   EXPECT_EQ(map["FOO"_pc], false);
   // The assignment above didn't change the case of the key!
   EXPECT_EQ(map.begin()->first, "FOO"_pc);
+}
+
+TEST(PathMap, caseInSensitiveCopyMove) {
+  PathMap<bool> map(kPathMapCaseInSensitive);
+  map.insert(std::make_pair(PathComponent("foo"), true));
+
+  PathMap<bool> copied(map);
+  EXPECT_TRUE(copied.at("foo"_pc));
+  EXPECT_TRUE(copied.at("Foo"_pc));
+
+  PathMap<bool> copy_assign(kPathMapCaseSensitive);
+  copy_assign = map;
+  EXPECT_TRUE(copy_assign.at("foo"_pc));
+  EXPECT_TRUE(copy_assign.at("Foo"_pc));
+
+  PathMap<bool> moved(std::move(map));
+  EXPECT_TRUE(moved.at("foo"_pc));
+  EXPECT_TRUE(moved.at("Foo"_pc));
+
+  PathMap<bool> move_assign(kPathMapCaseSensitive);
+  move_assign = std::move(moved);
+  EXPECT_TRUE(move_assign.at("foo"_pc));
+  EXPECT_TRUE(move_assign.at("Foo"_pc));
 }
 
 TEST(PathMap, insert) {

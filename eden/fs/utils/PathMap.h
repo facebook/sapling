@@ -120,14 +120,16 @@ class PathMap : private folly::fbvector<std::pair<Key, Value>> {
   }
 
   // Inherit the underlying vector copy/assignment.
-  PathMap(const PathMap& other) : Vector(other) {}
+  PathMap(const PathMap& other)
+      : Vector(other), caseSensitive_(other.caseSensitive_) {}
   PathMap& operator=(const PathMap& other) {
     PathMap(other).swap(*this);
     return *this;
   }
 
   // inherit Move construction.
-  PathMap(PathMap&& other) noexcept : Vector(std::move(other)) {}
+  PathMap(PathMap&& other) noexcept
+      : Vector(std::move(other)), caseSensitive_(other.caseSensitive_) {}
   PathMap& operator=(PathMap&& other) {
     other.swap(*this);
     return *this;
