@@ -43,6 +43,6 @@ Verify smartlog shows only the configured data
      stable
   
   note: background backup is currently disabled so your commits are not being backed up.
-  abort: default repository not configured!
+  abort: none of 'infinitepushwrite', 'infinitepush', 'default' repositories configured!
   (see 'hg help config.paths')
   [255]

@@ -124,11 +124,6 @@ def _sync(
     ui = repo.ui
     start = util.timer()
 
-    remotepath = ccutil.getremotepath(repo, dest)
-    getconnection = lambda: repo.connectionpool.get(
-        remotepath, connect_opts, reason="cloudsync"
-    )
-
     startnode = repo["."].node()
 
     if full:
@@ -186,6 +181,16 @@ def _sync(
 
     origheads = _getheads(repo)
     origbookmarks = _getbookmarks(repo)
+
+    readonly = not origheads and not origbookmarks
+    remotepath = (
+        ccutil.getremotereadpath(repo, dest)
+        if readonly
+        else ccutil.getremotepath(repo, dest)
+    )
+    getconnection = lambda: repo.connectionpool.get(
+        remotepath, connect_opts, reason="cloudsync"
+    )
 
     # Back up all local commits that are not already backed up.
     # Load the backup state under the repo lock to ensure a consistent view.
