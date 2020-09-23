@@ -5,9 +5,11 @@
  * GNU General Public License version 2.
  */
 
+#ifdef _WIN32
+
 #include "folly/portability/Windows.h"
 
-#include <ProjectedFSLib.h>
+#include <ProjectedFSLib.h> // @manual
 #include "eden/fs/prjfs/Enumerator.h"
 
 namespace facebook {
@@ -42,3 +44,5 @@ const FileMetadata* Enumerator::current() {
 
 } // namespace eden
 } // namespace facebook
+
+#endif

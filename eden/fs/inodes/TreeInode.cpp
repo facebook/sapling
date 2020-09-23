@@ -45,7 +45,7 @@
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 
 #ifdef _WIN32
-#include "eden/fs/prjfs/Enumerator.h" // @manual
+#include "eden/fs/prjfs/Enumerator.h"
 #else
 #include <folly/FileUtil.h>
 #include "eden/fs/fuse/DirList.h"

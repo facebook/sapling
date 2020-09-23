@@ -37,7 +37,7 @@
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/inodes/OverlayFileAccess.h"
 #else
-#include "eden/fs/prjfs/FsChannel.h" // @manual
+#include "eden/fs/prjfs/FsChannel.h"
 #endif
 
 DECLARE_string(edenfsctlPath);

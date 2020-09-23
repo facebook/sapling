@@ -51,7 +51,7 @@
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 
 #ifdef _WIN32
-#include "eden/fs/prjfs/PrjfsChannel.h" // @manual
+#include "eden/fs/prjfs/PrjfsChannel.h"
 #else
 #include <folly/File.h>
 #include "eden/fs/fuse/FuseChannel.h"

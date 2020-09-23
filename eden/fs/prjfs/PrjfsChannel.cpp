@@ -5,10 +5,11 @@
  * GNU General Public License version 2.
  */
 
+#ifdef _WIN32
+
 #include "eden/fs/prjfs/PrjfsChannel.h"
 #include <fmt/format.h>
 #include <folly/logging/xlog.h>
-#include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/prjfs/Dispatcher.h"
 #include "eden/fs/prjfs/PrjfsRequestContext.h"
 #include "eden/fs/utils/Guid.h"
@@ -700,3 +701,5 @@ void PrjfsChannel::sendError(int32_t commandId, HRESULT result) {
 
 } // namespace eden
 } // namespace facebook
+
+#endif

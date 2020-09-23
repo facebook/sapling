@@ -14,8 +14,8 @@
 #include "folly/portability/Windows.h"
 
 #include <ProjectedFSLib.h> // @manual
-#include "eden/fs/prjfs/Dispatcher.h" // @manual
-#include "eden/fs/prjfs/Enumerator.h" // @manual
+#include "eden/fs/prjfs/Dispatcher.h"
+#include "eden/fs/prjfs/Enumerator.h"
 #include "eden/fs/utils/Guid.h"
 #include "folly/Synchronized.h"
 #include "folly/container/F14Map.h"

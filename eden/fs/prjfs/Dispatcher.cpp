@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#ifdef _WIN32
+
 #include "eden/fs/prjfs/Dispatcher.h"
 
 namespace facebook::eden {
@@ -16,3 +18,5 @@ EdenStats* Dispatcher::getStats() const {
   return stats_;
 }
 } // namespace facebook::eden
+
+#endif
