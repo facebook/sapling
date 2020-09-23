@@ -6,6 +6,7 @@
  */
 
 #include "eden/fs/prjfs/PrjfsChannel.h"
+#include <fmt/format.h>
 #include <folly/logging/xlog.h>
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/prjfs/EdenDispatcher.h"
@@ -14,8 +15,6 @@
 #include "eden/fs/utils/NotImplemented.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/WinError.h"
-
-using folly::sformat;
 
 namespace {
 
@@ -585,7 +584,9 @@ void PrjfsChannel::start(bool readOnly, bool useNegativePathCaching) {
   if (FAILED(result) &&
       result != HRESULT_FROM_WIN32(ERROR_REPARSE_POINT_ENCOUNTERED)) {
     throw makeHResultErrorExplicit(
-        result, sformat("Failed to setup the mount point: {}", mountPath_));
+        result,
+        fmt::format(
+            FMT_STRING("Failed to setup the mount point: {}"), mountPath_));
   }
 
   result = PrjStartVirtualizing(
@@ -601,7 +602,7 @@ void PrjfsChannel::start(bool readOnly, bool useNegativePathCaching) {
 }
 
 void PrjfsChannel::stop() {
-  XLOG(INFO) << sformat("Stopping PrjfsChannel for {}", mountPath_);
+  XLOG(INFO) << "Stopping PrjfsChannel for: " << mountPath_;
   DCHECK(isRunning_);
   PrjStopVirtualizing(mountChannel_);
   stopPromise_.setValue(FsChannel::StopData{});
