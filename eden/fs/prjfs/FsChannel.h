@@ -13,8 +13,6 @@
 namespace facebook {
 namespace eden {
 
-class EdenDispatcher;
-
 class FsChannel {
  public:
   FsChannel(const FsChannel&) = delete;

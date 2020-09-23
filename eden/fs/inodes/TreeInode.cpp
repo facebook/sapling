@@ -50,7 +50,6 @@
 #include <folly/FileUtil.h>
 #include "eden/fs/fuse/DirList.h"
 #include "eden/fs/fuse/FuseChannel.h"
-#include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/utils/XAttr.h"
 #endif // _WIN32

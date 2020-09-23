@@ -19,6 +19,7 @@
 #include <sys/types.h>
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/config/EdenConfig.h"
+#include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
@@ -46,7 +47,6 @@
 #include "eden/fs/inodes/sqliteoverlay/SqliteOverlay.h"
 #include "eden/fs/utils/Guid.h"
 #else
-#include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/testharness/FakeFuse.h"
 #include "eden/fs/utils/ProcessNameCache.h"

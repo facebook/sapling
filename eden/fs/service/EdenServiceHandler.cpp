@@ -27,7 +27,6 @@
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #else
 #include "eden/fs/fuse/FuseChannel.h"
-#include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/store/ScmStatusDiffCallback.h"

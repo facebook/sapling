@@ -69,7 +69,6 @@
 
 #ifndef _WIN32
 #include "eden/fs/fuse/FuseChannel.h"
-#include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/takeover/TakeoverClient.h"
 #include "eden/fs/takeover/TakeoverData.h"

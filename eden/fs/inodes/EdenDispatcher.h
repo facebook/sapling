@@ -6,9 +6,20 @@
  */
 
 #pragma once
-#include "eden/fs/fuse/Dispatcher.h"
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/store/IObjectStore.h"
+#ifndef _WIN32
+#include "eden/fs/fuse/Dispatcher.h"
+#else
+#include "folly/portability/Windows.h"
+
+#include <ProjectedFSLib.h> // @manual
+#include "eden/fs/prjfs/Dispatcher.h" // @manual
+#include "eden/fs/prjfs/Enumerator.h" // @manual
+#include "eden/fs/utils/Guid.h"
+#include "folly/Synchronized.h"
+#include "folly/container/F14Map.h"
+#endif
 
 namespace facebook {
 namespace eden {
@@ -30,6 +41,7 @@ class EdenDispatcher : public Dispatcher {
    */
   explicit EdenDispatcher(EdenMount* mount);
 
+#ifndef _WIN32
   folly::Future<struct fuse_kstatfs> statfs(InodeNumber ino) override;
   folly::Future<Attr> getattr(InodeNumber ino, ObjectFetchContext& context)
       override;
@@ -103,15 +115,92 @@ class EdenDispatcher : public Dispatcher {
   folly::Future<std::string> getxattr(InodeNumber ino, folly::StringPiece name)
       override;
   folly::Future<std::vector<std::string>> listxattr(InodeNumber ino) override;
+#else
+  folly::Future<folly::Unit> opendir(
+      RelativePathPiece path,
+      const Guid guid,
+      ObjectFetchContext& context) override;
+
+  void closedir(const Guid& guid);
+
+  HRESULT getEnumerationData(
+      const PRJ_CALLBACK_DATA& callbackData,
+      const GUID& enumerationId,
+      PCWSTR searchExpression,
+      PRJ_DIR_ENTRY_BUFFER_HANDLE dirEntryBufferHandle) noexcept override;
+
+  folly::Future<std::optional<InodeMetadata>> lookup(
+      RelativePath path,
+      ObjectFetchContext& context) override;
+
+  folly::Future<bool> access(RelativePath path, ObjectFetchContext& context)
+      override;
+
+  folly::Future<std::string> read(
+      RelativePath path,
+      uint64_t offset,
+      uint32_t length,
+      ObjectFetchContext& context) override;
+
+  folly::Future<folly::Unit> newFileCreated(
+      RelativePathPiece relPath,
+      RelativePathPiece destPath,
+      bool isDirectory,
+      ObjectFetchContext& context) override;
+
+  folly::Future<folly::Unit> fileOverwritten(
+      RelativePathPiece relPath,
+      RelativePathPiece destPath,
+      bool isDirectory,
+      ObjectFetchContext& context) override;
+
+  folly::Future<folly::Unit> fileHandleClosedFileModified(
+      RelativePathPiece relPath,
+      RelativePathPiece destPath,
+      bool isDirectory,
+      ObjectFetchContext& context) override;
+
+  folly::Future<folly::Unit> fileRenamed(
+      RelativePathPiece oldPath,
+      RelativePathPiece newPath,
+      bool isDirectory,
+      ObjectFetchContext& context) override;
+
+  folly::Future<folly::Unit> preRename(
+      RelativePathPiece oldPath,
+      RelativePathPiece newPath,
+      bool isDirectory,
+      ObjectFetchContext& context) override;
+
+  folly::Future<folly::Unit> fileHandleClosedFileDeleted(
+      RelativePathPiece relPath,
+      RelativePathPiece destPath,
+      bool isDirectory,
+      ObjectFetchContext& context) override;
+
+  folly::Future<folly::Unit> preSetHardlink(
+      RelativePathPiece oldPath,
+      RelativePathPiece newPath,
+      bool isDirectory,
+      ObjectFetchContext& context) override;
+#endif
 
  private:
   // The EdenMount that owns this EdenDispatcher.
   EdenMount* const mount_;
+
+#ifndef _WIN32
   // The EdenMount's InodeMap.
   // We store this pointer purely for convenience.  We need it on pretty much
   // every FUSE request, and having it locally avoids  having to dereference
   // mount_ first.
   InodeMap* const inodeMap_;
+#else
+  // Set of currently active directory enumerations.
+  folly::Synchronized<folly::F14FastMap<Guid, Enumerator>> enumSessions_;
+
+  const std::string dotEdenConfig_;
+#endif
 };
 } // namespace eden
 } // namespace facebook

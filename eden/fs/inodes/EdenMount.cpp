@@ -23,6 +23,7 @@
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/CheckoutContext.h"
+#include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/InodeMap.h"
@@ -50,13 +51,11 @@
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 
 #ifdef _WIN32
-#include "eden/fs/prjfs/EdenDispatcher.h" // @manual
 #include "eden/fs/prjfs/PrjfsChannel.h" // @manual
 #else
 #include <folly/File.h>
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
-#include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/InodeTable.h"
 #endif
 

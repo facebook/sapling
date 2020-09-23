@@ -15,7 +15,6 @@ if (WIN32)
     eden_prjfs
     PUBLIC
       eden_request_context
-      eden_inodes
       eden_journal
       eden_model
       eden_store
