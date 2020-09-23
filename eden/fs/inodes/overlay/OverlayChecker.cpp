@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#ifndef _WIN32
+
 #include "eden/fs/inodes/overlay/OverlayChecker.h"
 
 #include <boost/filesystem.hpp>
@@ -1089,3 +1091,5 @@ void OverlayChecker::addError(unique_ptr<Error> error) {
 
 } // namespace eden
 } // namespace facebook
+
+#endif

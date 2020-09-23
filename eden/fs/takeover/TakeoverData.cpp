@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#ifndef _WIN32
+
 #include "eden/fs/takeover/TakeoverData.h"
 
 #include <folly/Format.h>
@@ -380,3 +382,5 @@ TakeoverData TakeoverData::deserializeVersion3(IOBuf* buf) {
 
 } // namespace eden
 } // namespace facebook
+
+#endif

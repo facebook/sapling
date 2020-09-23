@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#ifndef _WIN32
+
 #include "eden/fs/inodes/OverlayFile.h"
 
 #include <folly/FileUtil.h>
@@ -137,3 +139,5 @@ folly::Expected<std::string, int> OverlayFile::readFile() const {
 
 } // namespace eden
 } // namespace facebook
+
+#endif

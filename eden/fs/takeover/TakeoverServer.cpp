@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#ifndef _WIN32
+
 #include "eden/fs/takeover/TakeoverServer.h"
 
 #include <chrono>
@@ -322,3 +324,5 @@ void TakeoverServer::acceptError(const std::exception& ex) noexcept {
 }
 } // namespace eden
 } // namespace facebook
+
+#endif

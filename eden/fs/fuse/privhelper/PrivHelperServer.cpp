@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#ifndef _WIN32
+
 #include "eden/fs/fuse/privhelper/PrivHelperServer.h"
 
 #include <boost/algorithm/string/predicate.hpp>
@@ -789,3 +791,5 @@ void PrivHelperServer::cleanupMountPoints() {
 
 } // namespace eden
 } // namespace facebook
+
+#endif

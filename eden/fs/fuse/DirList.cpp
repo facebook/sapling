@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#ifndef _WIN32
+
 #include "eden/fs/fuse/DirList.h"
 
 #include "eden/fs/fuse/FuseTypes.h"
@@ -65,3 +67,5 @@ std::vector<DirList::ExtractedEntry> DirList::extract() const {
 
 } // namespace eden
 } // namespace facebook
+
+#endif

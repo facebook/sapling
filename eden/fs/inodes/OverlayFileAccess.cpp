@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#ifndef _WIN32
+
 #include "eden/fs/inodes/OverlayFileAccess.h"
 
 #include <folly/Expected.h>
@@ -287,3 +289,5 @@ OverlayFileAccess::EntryPtr OverlayFileAccess::getEntryForInode(
 
 } // namespace eden
 } // namespace facebook
+
+#endif

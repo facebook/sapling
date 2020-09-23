@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#ifndef _WIN32
+
 #include "eden/fs/takeover/TakeoverClient.h"
 
 #include <folly/io/Cursor.h>
@@ -117,3 +119,5 @@ TakeoverData takeoverMounts(
 }
 } // namespace eden
 } // namespace facebook
+
+#endif

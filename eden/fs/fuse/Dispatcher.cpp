@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#ifndef _WIN32
+
 #include "eden/fs/fuse/Dispatcher.h"
 
 #include <folly/Exception.h>
@@ -274,3 +276,5 @@ EdenStats* Dispatcher::getStats() const {
 
 } // namespace eden
 } // namespace facebook
+
+#endif

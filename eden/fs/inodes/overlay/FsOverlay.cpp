@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#ifndef _WIN32
+
 #include "eden/fs/inodes/overlay/FsOverlay.h"
 
 #include <boost/filesystem.hpp>
@@ -664,3 +666,5 @@ std::array<char, InodePath::kMaxPathLength>& InodePath::rawData() noexcept {
 
 } // namespace eden
 } // namespace facebook
+
+#endif

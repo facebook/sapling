@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#ifndef _WIN32
+
 #include "eden/fs/fuse/FuseChannel.h"
 
 #include <boost/cast.hpp>
@@ -1925,3 +1927,5 @@ size_t FuseChannel::getRequestMetric(
 
 } // namespace eden
 } // namespace facebook
+
+#endif

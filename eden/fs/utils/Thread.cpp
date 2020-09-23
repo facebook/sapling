@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#ifndef _WIN32
+
 #include "eden/fs/utils/Thread.h"
 #include <pthread.h>
 
@@ -20,3 +22,5 @@ void disablePthreadCancellation() {
 
 } // namespace eden
 } // namespace facebook
+
+#endif

@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#ifndef _WIN32
+
 #include "eden/fs/fuse/privhelper/PrivHelperConn.h"
 
 #include <fcntl.h>
@@ -333,3 +335,5 @@ PrivHelperError::PrivHelperError(StringPiece remoteExType, StringPiece msg)
 
 } // namespace eden
 } // namespace facebook
+
+#endif

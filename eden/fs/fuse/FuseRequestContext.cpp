@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#ifndef _WIN32
+
 #include "eden/fs/fuse/FuseRequestContext.h"
 
 #include <folly/logging/xlog.h>
@@ -93,3 +95,5 @@ void FuseRequestContext::timeoutErrorHandler(
 
 } // namespace eden
 } // namespace facebook
+
+#endif

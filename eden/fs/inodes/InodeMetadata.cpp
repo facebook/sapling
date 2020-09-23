@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#ifndef _WIN32
+
 #include "eden/fs/inodes/InodeMetadata.h"
 #include "eden/fs/fuse/FuseTypes.h"
 
@@ -39,3 +41,5 @@ void InodeMetadata::applyToStat(struct stat& st) const {
 
 } // namespace eden
 } // namespace facebook
+
+#endif

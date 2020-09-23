@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#ifndef _WIN32
+
 #include "eden/fs/fuse/PollHandle.h"
 
 namespace facebook {
@@ -26,3 +28,5 @@ void PollHandle::notify() {
 
 } // namespace eden
 } // namespace facebook
+
+#endif
