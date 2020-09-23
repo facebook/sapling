@@ -2688,7 +2688,7 @@ class localrepository(object):
         """Used by workingctx to clear post-dirstate-status hooks."""
         del self._postdsstatus[:]
 
-    def _cachedheadrevs(self, includepublic=True, includedraft=True):
+    def _cachedheadnodes(self, includepublic=True, includedraft=True):
         """Get nodes of both public and draft heads.
 
         Cached. Invalidate on transaction commit.
@@ -2737,12 +2737,20 @@ class localrepository(object):
             hasnode = cl.hasnode
             nodes = [n for n in set(nodes) if n != nullid and hasnode(n)]
             headnodes = cl.dag.headsancestors(nodes)
-            headrevs = list(cl.torevs(headnodes))
         else:
             revs = [r for r in map(torev, nodes) if r is not None and r >= 0]
             headrevs = cl.index2.headsancestors(revs)
-        self._headcache[key] = headrevs
-        return headrevs
+            headnodes = list(map(cl.node, headrevs))
+        self._headcache[key] = headnodes
+        return headnodes
+
+    def _cachedheadrevs(self, includepublic=True, includedraft=True):
+        nodes = self._cachedheadnodes(includepublic, includedraft)
+        cl = self.changelog
+        if cl.userust("index2"):
+            return list(cl.torevs(nodes))
+        else:
+            return list(map(cl.rev, nodes))
 
     def headrevs(self, start=None, includepublic=True, includedraft=True, reverse=True):
         cl = self.changelog
