@@ -4357,6 +4357,9 @@ def threaded(func):
 
         variant, value = result
         if variant == "err":
+            tb = getattr(value, "__traceback__", None)
+            if tb is not None:
+                pycompat.raisewithtb(value, tb)
             raise value
 
         return value
