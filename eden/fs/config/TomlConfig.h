@@ -57,7 +57,7 @@ template <typename T>
 std::pair<T, bool>
 setDefault(cpptoml::table& root, TomlPath key, const T& defaultValue) {
   // TODO: Much of this function could be moved into the .cpp file.
-  DCHECK_GE(key.size(), 1);
+  DCHECK_GE(key.size(), 1u);
 
   auto begin = key.begin();
   const auto end = key.end();

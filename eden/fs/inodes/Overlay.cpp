@@ -193,7 +193,7 @@ InodeNumber Overlay::allocateInodeNumber() {
 #ifdef _WIN32
   backingOverlay_.updateUsedInodeNumber(previous);
 #endif
-  DCHECK_NE(0, previous) << "allocateInodeNumber called before initialize";
+  DCHECK_NE(0u, previous) << "allocateInodeNumber called before initialize";
   return InodeNumber{previous};
 }
 
@@ -373,7 +373,7 @@ OverlayFile Overlay::createOverlayFile(
 
 InodeNumber Overlay::getMaxInodeNumber() {
   auto ino = nextInodeNumber_.load(std::memory_order_relaxed);
-  CHECK_GT(ino, 1);
+  CHECK_GT(ino, 1u);
   return InodeNumber{ino - 1};
 }
 

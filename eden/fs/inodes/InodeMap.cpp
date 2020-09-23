@@ -115,8 +115,8 @@ void InodeMap::initialize(TreeInodePtr root) {
   CHECK(!root_);
   root_ = std::move(root);
   insertLoadedInode(data, root_.get());
-  DCHECK_EQ(1, data->numTreeInodes_);
-  DCHECK_EQ(0, data->numFileInodes_);
+  DCHECK_EQ(1u, data->numTreeInodes_);
+  DCHECK_EQ(0u, data->numFileInodes_);
 }
 
 void InodeMap::initializeFromTakeover(
@@ -763,8 +763,8 @@ void InodeMap::unloadInode(
   }
 
   auto numErased = data->loadedInodes_.erase(inode->getNodeId());
-  CHECK_EQ(numErased, 1) << "inconsistent loaded inodes data: "
-                         << inode->getLogPath();
+  CHECK_EQ(numErased, 1u) << "inconsistent loaded inodes data: "
+                          << inode->getLogPath();
   if (inode->getType() == dtype_t::Dir) {
     --data->numTreeInodes_;
   } else {

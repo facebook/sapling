@@ -49,7 +49,7 @@ struct InodeNumber {
    * Use this accessor when handing inode numbers to FUSE.
    */
   uint64_t get() const {
-    DCHECK_NE(0, rawValue_);
+    DCHECK_NE(0u, rawValue_);
     return rawValue_;
   }
 

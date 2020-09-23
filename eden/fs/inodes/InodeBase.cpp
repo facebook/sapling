@@ -318,7 +318,7 @@ ParentInodeInfo InodeBase::getParentInfo() const {
 
     if (!parent) {
       // We are the root inode.
-      DCHECK_EQ(numTries, 1);
+      DCHECK_EQ(numTries, 1u);
       return ParentInodeInfo{
           PathComponentPiece{"", detail::SkipPathSanityCheck()},
           nullptr,
