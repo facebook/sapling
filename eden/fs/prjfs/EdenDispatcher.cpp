@@ -19,7 +19,6 @@
 #include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/prjfs/EdenDispatcher.h"
-#include "eden/fs/prjfs/PrjfsRequestContext.h"
 #include "eden/fs/service/EdenError.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/utils/Guid.h"
