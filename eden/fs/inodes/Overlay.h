@@ -19,14 +19,12 @@
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/inodes/overlay/OverlayChecker.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
+#include "eden/fs/inodes/sqliteoverlay/SqliteOverlay.h"
 #include "eden/fs/utils/DirType.h"
 #include "eden/fs/utils/PathFuncs.h"
 
-#ifdef _WIN32
-#include "eden/fs/inodes/sqliteoverlay/SqliteOverlay.h"
-#else
+#ifndef _WIN32
 #include "eden/fs/inodes/overlay/FsOverlay.h"
-
 #endif
 
 namespace facebook {
