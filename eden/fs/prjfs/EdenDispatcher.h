@@ -58,11 +58,16 @@ class EdenDispatcher {
 
   folly::Future<bool> access(RelativePath path, ObjectFetchContext& context);
 
-  HRESULT
-  getFileData(
-      const PRJ_CALLBACK_DATA& callbackData,
-      uint64_t byteOffset,
-      uint32_t length) noexcept;
+  /** Returns the entire content of the file at path.
+   *
+   * In the future, this will return only what's in between offset and
+   * offset+length.
+   */
+  folly::Future<std::string> read(
+      RelativePath path,
+      uint64_t offset,
+      uint32_t length,
+      ObjectFetchContext& context);
 
   folly::Future<folly::Unit> newFileCreated(
       RelativePathPiece relPath,

@@ -223,14 +223,158 @@ HRESULT queryFileName(const PRJ_CALLBACK_DATA* callbackData) noexcept {
   }
 }
 
+struct PrjAlignedBufferDeleter {
+  void operator()(void* buffer) noexcept {
+    ::PrjFreeAlignedBuffer(buffer);
+  }
+};
+
+HRESULT readMultipleFileChunks(
+    PRJ_NAMESPACE_VIRTUALIZATION_CONTEXT namespaceVirtualizationContext,
+    const GUID& dataStreamId,
+    const std::string& content,
+    uint64_t startOffset,
+    uint64_t length,
+    uint64_t chunkSize) {
+  HRESULT result;
+  std::unique_ptr<void, PrjAlignedBufferDeleter> writeBuffer{
+      PrjAllocateAlignedBuffer(namespaceVirtualizationContext, chunkSize)};
+
+  if (writeBuffer.get() == nullptr) {
+    return E_OUTOFMEMORY;
+  }
+
+  uint64_t remainingLength = length;
+
+  while (remainingLength > 0) {
+    uint64_t copySize = std::min(remainingLength, chunkSize);
+
+    //
+    // TODO(puneetk): Once backing store has the support for chunking the file
+    // contents, we can read the chunks of large files here and then write
+    // them to FS.
+    //
+    // TODO(puneetk): Build an interface to backing store so that we can pass
+    // the aligned buffer to avoid coping here.
+    //
+    RtlCopyMemory(writeBuffer.get(), content.data() + startOffset, copySize);
+
+    // Write the data to the file in the local file system.
+    result = PrjWriteFileData(
+        namespaceVirtualizationContext,
+        &dataStreamId,
+        writeBuffer.get(),
+        startOffset,
+        folly::to_narrow(copySize));
+
+    if (FAILED(result)) {
+      return result;
+    }
+
+    remainingLength -= copySize;
+    startOffset += copySize;
+  }
+
+  return S_OK;
+}
+
+HRESULT readSingleFileChunk(
+    PRJ_NAMESPACE_VIRTUALIZATION_CONTEXT namespaceVirtualizationContext,
+    const GUID& dataStreamId,
+    const std::string& content,
+    uint64_t startOffset,
+    uint64_t length) {
+  return readMultipleFileChunks(
+      namespaceVirtualizationContext,
+      dataStreamId,
+      content,
+      /*startOffset=*/startOffset,
+      /*length=*/length,
+      /*writeLength=*/length);
+}
+
+uint64_t BlockAlignTruncate(uint64_t ptr, uint32_t alignment) {
+  return ((ptr) & (0 - (static_cast<uint64_t>(alignment))));
+}
+
+constexpr uint32_t kMinChunkSize = 512 * 1024; // 512 KiB
+constexpr uint32_t kMaxChunkSize = 5 * 1024 * 1024; // 5 MiB
+
 HRESULT getFileData(
     const PRJ_CALLBACK_DATA* callbackData,
     UINT64 byteOffset,
     UINT32 length) noexcept {
   BAIL_ON_RECURSIVE_CALL(callbackData);
-  return getChannel(callbackData)
-      ->getDispatcher()
-      ->getFileData(*callbackData, byteOffset, length);
+
+  try {
+    auto channel = getChannel(callbackData);
+    auto dispatcher = channel->getDispatcher();
+    auto context =
+        std::make_unique<PrjfsRequestContext>(channel, *callbackData);
+
+    auto path = RelativePath(callbackData->FilePathName);
+
+    auto content =
+        dispatcher->read(std::move(path), byteOffset, length, *context).get();
+
+    //
+    // We should return file data which is smaller than
+    // our kMaxChunkSize and meets the memory alignment requirements
+    // of the virtualization instance's storage device.
+    //
+
+    if (content.length() <= kMinChunkSize) {
+      //
+      // If the file is small - copy the whole file in one shot.
+      //
+      return readSingleFileChunk(
+          callbackData->NamespaceVirtualizationContext,
+          callbackData->DataStreamId,
+          content,
+          /*startOffset=*/0,
+          /*writeLength=*/content.length());
+
+    } else if (length <= kMaxChunkSize) {
+      //
+      // If the request is with in our kMaxChunkSize - copy the entire request.
+      //
+      return readSingleFileChunk(
+          callbackData->NamespaceVirtualizationContext,
+          callbackData->DataStreamId,
+          content,
+          /*startOffset=*/byteOffset,
+          /*writeLength=*/length);
+    } else {
+      //
+      // When the request is larger than kMaxChunkSize we split the
+      // request into multiple chunks.
+      //
+      PRJ_VIRTUALIZATION_INSTANCE_INFO instanceInfo;
+      HRESULT result = PrjGetVirtualizationInstanceInfo(
+          callbackData->NamespaceVirtualizationContext, &instanceInfo);
+
+      if (FAILED(result)) {
+        return result;
+      }
+
+      uint64_t startOffset = byteOffset;
+      uint64_t endOffset = BlockAlignTruncate(
+          startOffset + kMaxChunkSize, instanceInfo.WriteAlignment);
+      DCHECK(endOffset > 0);
+      DCHECK(endOffset > startOffset);
+
+      uint64_t chunkSize = endOffset - startOffset;
+      return readMultipleFileChunks(
+          callbackData->NamespaceVirtualizationContext,
+          callbackData->DataStreamId,
+          content,
+          /*startOffset=*/startOffset,
+          /*length=*/length,
+          /*chunkSize=*/chunkSize);
+    }
+  } catch (const std::exception& ex) {
+    return exceptionToHResult(ex);
+  }
 }
 
 void cancelCommand(const PRJ_CALLBACK_DATA* callbackData) noexcept {
