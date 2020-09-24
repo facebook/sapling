@@ -151,8 +151,12 @@ impl Client {
 impl EdenApi for Client {
     async fn health(&self) -> Result<ResponseMeta, EdenApiError> {
         let url = self.url(paths::HEALTH_CHECK, None)?;
+
+        tracing::info!("Sending health check request: {}", &url);
+
         let req = self.configure(Request::get(url))?;
         let res = req.send_async().await?;
+
         Ok(ResponseMeta::from(&res))
     }
 
@@ -162,6 +166,8 @@ impl EdenApi for Client {
         keys: Vec<Key>,
         progress: Option<ProgressCallback>,
     ) -> Result<Fetch<FileEntry>, EdenApiError> {
+        tracing::info!("Requesting content for {} files", keys.len());
+
         if keys.is_empty() {
             return Err(EdenApiError::EmptyRequest);
         }
@@ -181,6 +187,8 @@ impl EdenApi for Client {
         length: Option<u32>,
         progress: Option<ProgressCallback>,
     ) -> Result<Fetch<HistoryEntry>, EdenApiError> {
+        tracing::info!("Requesting history for {} files", keys.len());
+
         if keys.is_empty() {
             return Err(EdenApiError::EmptyRequest);
         }
@@ -217,6 +225,8 @@ impl EdenApi for Client {
         keys: Vec<Key>,
         progress: Option<ProgressCallback>,
     ) -> Result<Fetch<TreeEntry>, EdenApiError> {
+        tracing::info!("Requesting content for {} files", keys.len());
+
         if keys.is_empty() {
             return Err(EdenApiError::EmptyRequest);
         }
@@ -238,6 +248,12 @@ impl EdenApi for Client {
         depth: Option<usize>,
         progress: Option<ProgressCallback>,
     ) -> Result<Fetch<TreeEntry>, EdenApiError> {
+        tracing::info!(
+            "Requesting {} complete trees for directory {}",
+            mfnodes.len(),
+            &rootdir
+        );
+
         let url = self.url(paths::COMPLETE_TREES, Some(&repo))?;
         let tree_req = CompleteTreeRequest {
             rootdir,
@@ -260,6 +276,8 @@ impl EdenApi for Client {
         hgids: Vec<HgId>,
         progress: Option<ProgressCallback>,
     ) -> Result<Fetch<CommitRevlogData>, EdenApiError> {
+        tracing::info!("Requesting revlog data for {} commits", hgids.len());
+
         let url = self.url(paths::COMMIT_REVLOG_DATA, Some(&repo))?;
         let commit_revlog_data_req = CommitRevlogDataRequest { hgids };
 
