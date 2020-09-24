@@ -501,7 +501,7 @@ def wraprepo(repo):
                 self.ui.warn(_("not prefetching trees for draft parents: %s\n") % ex)
 
         @perftrace.tracefunc("Prefetch Trees")
-        def prefetchtrees(self, mfnodes, basemfnodes=None, depth=None):
+        def prefetchtrees(self, mfnodes, basemfnodes=None):
             if not treeenabled(self.ui):
                 return
 
@@ -524,7 +524,6 @@ def wraprepo(repo):
                     (("", n) for n in mfnodes), "tree nodes missing on server"
                 )
 
-            # TODO: handle depth
             if useruststore(self.ui):
                 self.manifestlog.datastore.prefetch(
                     list(("", node) for node in mfnodes)
@@ -536,12 +535,10 @@ def wraprepo(repo):
                     changeloglen = len(self.changelog) - 1
                     basemfnodes = _findrecenttree(self, changeloglen, mfnodes)
 
-                self._prefetchtrees("", mfnodes, basemfnodes, [], depth)
+                self._prefetchtrees("", mfnodes, basemfnodes, [])
 
         @perftrace.tracefunc("Fetch Trees")
-        def _prefetchtrees(
-            self, rootdir, mfnodes, basemfnodes, directories, depth=None
-        ):
+        def _prefetchtrees(self, rootdir, mfnodes, basemfnodes, directories):
             self._treefetches += 1
             # If possible, use remotefilelog's more expressive fallbackpath
             fallbackpath = getfallbackpath(self)
@@ -553,8 +550,7 @@ def wraprepo(repo):
                     traceback=util.smarttraceback(),
                 )
 
-            if depth is None:
-                depth = self.ui.configint("treemanifest", "fetchdepth")
+            depth = self.ui.configint("treemanifest", "fetchdepth")
 
             if rootdir == "" and len(mfnodes) == 1 and list(mfnodes) == [nullid]:
                 return
@@ -1391,7 +1387,8 @@ def _writemanifestwrapper(orig, self, tr, link, p1, p2, added, removed):
 
 @command("debuggetroottree", [], "NODE")
 def debuggetroottree(ui, repo, rootnode):
-    repo.prefetchtrees([bin(rootnode)], depth=1)
+    with ui.configoverride({("treemanifest", "fetchdepth"): "1"}, "forcesinglefetch"):
+        repo.prefetchtrees([bin(rootnode)])
 
 
 @command(
