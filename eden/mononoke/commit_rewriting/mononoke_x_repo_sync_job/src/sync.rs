@@ -18,7 +18,7 @@ use context::CoreContext;
 use cross_repo_sync::{
     find_toposorted_unsynced_ancestors,
     types::{Source, Target},
-    CommitSyncOutcome, CommitSyncer,
+    CandidateSelectionHint, CommitSyncOutcome, CommitSyncer,
 };
 use futures::{
     compat::Future01CompatExt,
@@ -28,7 +28,7 @@ use futures::{
 use futures_old::{stream::Stream, Future};
 use futures_stats::TimedFutureExt;
 use mononoke_types::ChangesetId;
-use reachabilityindex::ReachabilityIndex;
+use reachabilityindex::{LeastCommonAncestorsHint, ReachabilityIndex};
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 use scuba_ext::ScubaSampleBuilder;
 use skiplist::SkiplistIndex;
@@ -221,9 +221,15 @@ pub async fn sync_commits_via_pushrebase<M: SyncedCommitMapping + Clone + 'stati
                 ctx.logger(),
                 "syncing {} via pushrebase for {}", cs_id, bookmark
             );
-            let (stats, result) = pushrebase_commit(ctx.clone(), &commit_syncer, &bookmark, cs_id)
-                .timed()
-                .await;
+            let (stats, result) = pushrebase_commit(
+                ctx.clone(),
+                &commit_syncer,
+                &bookmark,
+                cs_id,
+                &target_skiplist_index,
+            )
+            .timed()
+            .await;
             log_pushrebase_sync_single_changeset_result(
                 ctx.clone(),
                 scuba_sample.clone(),
@@ -299,7 +305,7 @@ pub async fn sync_commit_without_pushrebase<M: SyncedCommitMapping + Clone + 'st
         }
     } else {
         commit_syncer
-            .unsafe_sync_commit(ctx.clone(), cs_id)
+            .unsafe_sync_commit(ctx.clone(), cs_id, CandidateSelectionHint::Only)
             .timed()
             .await
     };
@@ -379,17 +385,20 @@ async fn find_remapped_cs_id<M: SyncedCommitMapping + Clone + 'static>(
     }
 }
 
-pub async fn pushrebase_commit<M: SyncedCommitMapping + Clone + 'static>(
+async fn pushrebase_commit<M: SyncedCommitMapping + Clone + 'static>(
     ctx: CoreContext,
     commit_syncer: &CommitSyncer<M>,
     bookmark: &BookmarkName,
     cs_id: ChangesetId,
+    target_skiplist_index: &Target<Arc<SkiplistIndex>>,
 ) -> Result<Option<ChangesetId>, Error> {
     let source_repo = commit_syncer.get_source_repo();
     let bcs = cs_id.load(ctx.clone(), source_repo.blobstore()).await?;
-
+    // TODO: do not require clone here
+    let target_lca_hint: Target<Arc<dyn LeastCommonAncestorsHint>> =
+        Target(Arc::new((*target_skiplist_index.0).clone()));
     commit_syncer
-        .unsafe_sync_commit_pushrebase(ctx, bcs, bookmark.clone())
+        .unsafe_sync_commit_pushrebase(ctx, bcs, bookmark.clone(), target_lca_hint)
         .await
 }
 

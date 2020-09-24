@@ -19,8 +19,8 @@ use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use cloned::cloned;
 use context::CoreContext;
 use cross_repo_sync::{
-    create_commit_syncers, rewrite_commit, update_mapping, upload_commits, CommitSyncOutcome,
-    CommitSyncer, Syncers,
+    create_commit_syncers, rewrite_commit, update_mapping, upload_commits, CandidateSelectionHint,
+    CommitSyncOutcome, CommitSyncer, Syncers,
 };
 use futures::{
     compat::Future01CompatExt,
@@ -137,9 +137,13 @@ pub async fn do_sync_diamond_merge(
             ));
         }
         info!(ctx.logger(), "syncing commit from new branch {}", cs_id);
+        // It is unclear if we can do something better than use an `Only`
+        // hint here. Current thinking is: let the sync fail if one of
+        // the `new_branch` commits rewrites into 2 commits in the target
+        // repo. Manual remediation would be needed in that case.
         syncers
             .small_to_large
-            .unsafe_sync_commit(ctx.clone(), cs_id)
+            .unsafe_sync_commit(ctx.clone(), cs_id, CandidateSelectionHint::Only)
             .await?;
     }
 

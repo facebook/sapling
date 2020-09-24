@@ -41,6 +41,7 @@ use mononoke_types::{
 use movers::{get_large_to_small_mover, get_small_to_large_mover, Mover};
 use movers::{get_movers, Movers};
 use pushrebase::{do_pushrebase_bonsai, PushrebaseError};
+use reachabilityindex::LeastCommonAncestorsHint;
 use slog::info;
 use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
@@ -62,8 +63,8 @@ pub mod types;
 pub mod validation;
 
 pub use crate::commit_sync_outcome::{
-    get_commit_sync_outcome, get_commit_sync_outcome_with_hint, CandidateSelectionHint,
-    CommitSyncOutcome,
+    get_commit_sync_outcome, get_commit_sync_outcome_with_hint, get_plural_commit_sync_outcome,
+    CandidateSelectionHint, CommitSyncOutcome, PluralCommitSyncOutcome,
 };
 
 #[derive(Debug, Error)]
@@ -295,9 +296,10 @@ async fn remap_parents_and_rewrite_commit<'a, M: SyncedCommitMapping + Clone + '
     cs: BonsaiChangesetMut,
     commit_syncer: &'a CommitSyncer<M>,
     source_repo: BlobRepo,
+    parent_selection_hint: CandidateSelectionHint,
 ) -> Result<Option<BonsaiChangesetMut>, Error> {
     let (_, _, mover) = commit_syncer.get_source_target_mover();
-    let remapped_parents = remap_parents(&ctx, &cs, commit_syncer).await?;
+    let remapped_parents = remap_parents(&ctx, &cs, commit_syncer, parent_selection_hint).await?;
     rewrite_commit(ctx.clone(), cs, &remapped_parents, mover, source_repo).await
 }
 
@@ -305,11 +307,12 @@ async fn remap_parents<'a, M: SyncedCommitMapping + Clone + 'static>(
     ctx: &CoreContext,
     cs: &BonsaiChangesetMut,
     commit_syncer: &'a CommitSyncer<M>,
+    hint: CandidateSelectionHint,
 ) -> Result<HashMap<ChangesetId, ChangesetId>, Error> {
     let mut remapped_parents = HashMap::new();
     for commit in &cs.parents {
         let maybe_sync_outcome = commit_syncer
-            .get_commit_sync_outcome(ctx.clone(), *commit)
+            .get_commit_sync_outcome_with_hint(ctx.clone(), Source(*commit), hint.clone())
             .await?;
         let sync_outcome: Result<_, Error> =
             maybe_sync_outcome.ok_or(ErrorKind::ParentNotRemapped(*commit).into());
@@ -651,7 +654,8 @@ where
         }
 
         for ancestor in unsynced_ancestors {
-            self.unsafe_sync_commit(ctx.clone(), ancestor).await?;
+            self.unsafe_sync_commit(ctx.clone(), ancestor, CandidateSelectionHint::Only)
+                .await?;
         }
 
         let commit_sync_outcome = self
@@ -678,10 +682,13 @@ where
     /// This function is prefixed with unsafe because it requires that ancestors commits are
     /// already synced and because syncing commit public commits from a small repo to a large repo
     /// using this function might lead to repo corruption.
+    /// `parent_selection_hint` is used when remapping this commit's parents.
+    /// See `CandidateSelectionHint` doctring for more details.
     pub async fn unsafe_sync_commit(
         &self,
         ctx: CoreContext,
         source_cs_id: ChangesetId,
+        parent_mapping_selection_hint: CandidateSelectionHint,
     ) -> Result<Option<ChangesetId>, Error> {
         // Take most of below function unsafe_sync_commit into here and delete. Leave pushrebase in next fn
         let (source_repo, _, _) = self.get_source_target_mover();
@@ -694,7 +701,8 @@ where
         if parents.is_empty() {
             self.sync_commit_no_parents(ctx.clone(), cs).await
         } else if parents.len() == 1 {
-            self.sync_commit_single_parent(ctx.clone(), cs).await
+            self.sync_commit_single_parent(ctx.clone(), cs, parent_mapping_selection_hint)
+                .await
         } else {
             self.sync_merge(ctx.clone(), cs).await
         }
@@ -731,7 +739,7 @@ where
         let source_cs = source_cs.clone().into_mut();
         let remapped_parents = match maybe_parents {
             Some(parents) => parents,
-            None => remap_parents(&ctx, &source_cs, self).await?,
+            None => remap_parents(&ctx, &source_cs, self, CandidateSelectionHint::Only).await?, // TODO: check if only is ok
         };
 
         let (_, _, mover) = self.get_source_target_mover();
@@ -774,15 +782,22 @@ where
         ctx: CoreContext,
         source_cs: BonsaiChangeset,
         bookmark: BookmarkName,
+        target_lca_hint: Target<Arc<dyn LeastCommonAncestorsHint>>,
     ) -> Result<Option<ChangesetId>, Error> {
         let hash = source_cs.get_changeset_id();
         let (source_repo, target_repo, _) = self.get_source_target_mover();
 
+        let parent_selection_hint = CandidateSelectionHint::OnlyOrAncestorOfBookmark(
+            Target(bookmark.clone()),
+            Target(self.get_target_repo().clone()),
+            target_lca_hint,
+        );
         match remap_parents_and_rewrite_commit(
             ctx.clone(),
             source_cs.clone().into_mut(),
             self,
             source_repo.clone(),
+            parent_selection_hint,
         )
         .await?
         {
@@ -952,13 +967,21 @@ where
         &self,
         ctx: CoreContext,
         cs: BonsaiChangeset,
+        parent_mapping_selection_hint: CandidateSelectionHint,
     ) -> Result<Option<ChangesetId>, Error> {
         let source_cs_id = cs.get_changeset_id();
         let cs = cs.into_mut();
         let p = cs.parents[0];
         let (source_repo, target_repo, rewrite_paths) = self.get_source_target_mover();
 
-        let maybe_parent_sync_outcome = self.get_commit_sync_outcome(ctx.clone(), p).await?;
+        let maybe_parent_sync_outcome = self
+            .get_commit_sync_outcome_with_hint(
+                ctx.clone(),
+                Source(p),
+                parent_mapping_selection_hint,
+            )
+            .await?;
+
         let parent_sync_outcome = maybe_parent_sync_outcome
             .ok_or(format_err!("Parent commit {} is not synced yet", p))?;
 

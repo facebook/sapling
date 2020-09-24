@@ -9,14 +9,14 @@
 
 #![deny(warnings)]
 
+use anyhow::{bail, Error};
+use ascii::AsciiString;
 use bytes::Bytes;
 use fbinit::FacebookInit;
 use std::collections::BTreeMap;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use anyhow::{bail, Error};
-use ascii::AsciiString;
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobrepo_factory;
 use blobrepo_hg::BlobRepoHg;
@@ -24,7 +24,6 @@ use blobstore::{Loadable, Storable};
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use context::CoreContext;
 use cross_repo_sync_test_utils::rebase_root_on_master;
-
 use fixtures::{linear, many_files_dirs};
 use futures::compat::Future01CompatExt;
 use live_commit_sync_config::TestLiveCommitSyncConfig;
@@ -38,13 +37,19 @@ use mononoke_types::{
     BlobstoreValue, BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileContents, FileType,
     MPath, RepositoryId,
 };
+use reachabilityindex::LeastCommonAncestorsHint;
+use skiplist::SkiplistIndex;
 use sql_construct::SqlConstruct;
 use sql_ext::SqlConnections;
 use synced_commit_mapping::{
     SqlSyncedCommitMapping, SyncedCommitMapping, SyncedCommitMappingEntry,
 };
 
-use cross_repo_sync::{CommitSyncRepos, CommitSyncer};
+use cross_repo_sync::{
+    get_plural_commit_sync_outcome,
+    types::{Source, Target},
+    CandidateSelectionHint, CommitSyncRepos, CommitSyncer, PluralCommitSyncOutcome,
+};
 use sql::rusqlite::Connection as SqliteConnection;
 
 fn identity_renamer(b: &BookmarkName) -> Option<BookmarkName> {
@@ -53,6 +58,23 @@ fn identity_renamer(b: &BookmarkName) -> Option<BookmarkName> {
 
 fn mpath(p: &str) -> MPath {
     MPath::new(p).unwrap()
+}
+
+async fn move_bookmark(ctx: &CoreContext, repo: &BlobRepo, bookmark: &str, cs_id: ChangesetId) {
+    let bookmark = BookmarkName::new(bookmark).unwrap();
+    let mut txn = repo.update_bookmark_transaction(ctx.clone());
+    txn.force_set(&bookmark, cs_id, BookmarkUpdateReason::TestMove, None)
+        .unwrap();
+    txn.commit().await.unwrap();
+}
+
+async fn get_bookmark(ctx: &CoreContext, repo: &BlobRepo, bookmark: &str) -> ChangesetId {
+    let bookmark = BookmarkName::new(bookmark).unwrap();
+    repo.get_bonsai_bookmark(ctx.clone(), &bookmark)
+        .compat()
+        .await
+        .unwrap()
+        .unwrap()
 }
 
 async fn create_initial_commit(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId {
@@ -142,7 +164,12 @@ where
         .unwrap();
 
     config
-        .unsafe_sync_commit_pushrebase(ctx.clone(), source_bcs, bookmark_name)
+        .unsafe_sync_commit_pushrebase(
+            ctx.clone(),
+            source_bcs,
+            bookmark_name,
+            Target(Arc::new(SkiplistIndex::new())),
+        )
         .await
 }
 
@@ -318,6 +345,56 @@ async fn test_sync_parentage(fb: FacebookInit) -> Result<(), Error> {
     );
 
     Ok(())
+}
+
+async fn create_commit_from_parent_and_changes<'a>(
+    ctx: &'a CoreContext,
+    repo: &'a BlobRepo,
+    p1: ChangesetId,
+    changes: BTreeMap<&'static str, Option<&'static str>>,
+) -> ChangesetId {
+    let mut proper_changes: BTreeMap<MPath, Option<FileChange>> = BTreeMap::new();
+    for (path, maybe_content) in changes.into_iter() {
+        let mpath = MPath::new(path).unwrap();
+        match maybe_content {
+            None => {
+                proper_changes.insert(mpath, None);
+            }
+            Some(content) => {
+                let file_contents = FileContents::new_bytes(content.as_bytes());
+                let content_id = file_contents
+                    .into_blob()
+                    .store(ctx.clone(), repo.blobstore())
+                    .await
+                    .unwrap();
+                let file_change =
+                    FileChange::new(content_id, FileType::Regular, content.len() as u64, None);
+
+                proper_changes.insert(mpath, Some(file_change));
+            }
+        }
+    }
+
+    let bcs = BonsaiChangesetMut {
+        parents: vec![p1],
+        author: "Test User <test@fb.com>".to_string(),
+        author_date: DateTime::from_timestamp(1504040001, 0).unwrap(),
+        committer: None,
+        committer_date: None,
+        message: "ababagalamaga".to_string(),
+        extra: btreemap! {},
+        file_changes: proper_changes,
+    }
+    .freeze()
+    .unwrap();
+
+    let bcs_id = bcs.get_changeset_id();
+    save_bonsai_changesets(vec![bcs], ctx.clone(), repo.clone())
+        .compat()
+        .await
+        .unwrap();
+
+    bcs_id
 }
 
 async fn update_master_file(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId {
@@ -934,6 +1011,302 @@ async fn test_sync_parent_search(fb: FacebookInit) -> Result<(), Error> {
         Some(new_commit),
     )
     .await;
+
+    Ok(())
+}
+
+async fn check_rewritten_multiple(
+    ctx: &CoreContext,
+    source_repo: &BlobRepo,
+    target_repo: &BlobRepo,
+    mapping: &SqlSyncedCommitMapping,
+    cs_id: ChangesetId,
+    expected_rewrite_count: usize,
+) -> Result<(), Error> {
+    let plural_commit_sync_outcome = get_plural_commit_sync_outcome(
+        ctx,
+        Source(source_repo.get_repoid()),
+        Target(target_repo.get_repoid()),
+        Source(cs_id),
+        mapping,
+    )
+    .await?
+    .expect("should've been remapped");
+    if let PluralCommitSyncOutcome::RewrittenAs(v) = plural_commit_sync_outcome {
+        assert_eq!(v.len(), expected_rewrite_count);
+    } else {
+        panic!(
+            "incorrect remapping of {}: {:?}",
+            cs_id, plural_commit_sync_outcome
+        );
+    }
+
+    Ok(())
+}
+
+/// Prepare two repos with small repo master remapping to
+/// two commits in the large repo:
+/// ```text
+/// master     master
+///   | other   |
+///   | branch  |
+///   |  |      |
+///   D'.D''....D
+///   |  |      |
+///   B  C      |
+///   | /       |
+///   A'........A
+///   |         |
+/// LARGE      SMALL
+/// ```
+/// (horizontal dots represent `RewrittenAs` relationship)
+async fn get_multiple_master_mapping_setup(
+    fb: FacebookInit,
+) -> Result<
+    (
+        CoreContext,
+        BlobRepo,
+        BlobRepo,
+        ChangesetId,
+        ChangesetId,
+        CommitSyncer<SqlSyncedCommitMapping>,
+    ),
+    Error,
+> {
+    let ctx = CoreContext::test_mock(fb);
+    let (small_repo, megarepo, mapping) = prepare_repos_and_mapping().unwrap();
+    linear::initrepo(fb, &small_repo).await;
+    let small_to_large_syncer = create_small_to_large_commit_syncer(
+        small_repo.clone(),
+        megarepo.clone(),
+        "prefix",
+        mapping.clone(),
+    )?;
+
+    create_initial_commit(ctx.clone(), &megarepo).await;
+
+    let megarepo_lca_hint: Arc<dyn LeastCommonAncestorsHint> = Arc::new(SkiplistIndex::new());
+    let megarepo_master_cs_id = get_bookmark(&ctx, &megarepo, "master").await;
+    let small_repo_master_cs_id = get_bookmark(&ctx, &small_repo, "master").await;
+    // Masters map to each other before we even do any syncs
+    mapping
+        .add(
+            ctx.clone(),
+            SyncedCommitMappingEntry::new(
+                megarepo.get_repoid(),
+                megarepo_master_cs_id,
+                small_repo.get_repoid(),
+                small_repo_master_cs_id,
+                None,
+            ),
+        )
+        .compat()
+        .await?;
+
+    // 1. Create two commits in megarepo, on separate branches,
+    // neither touching small repo files.
+    let b1 = create_commit_from_parent_and_changes(
+        &ctx,
+        &megarepo,
+        megarepo_master_cs_id,
+        btreemap! {"unrelated_1" => Some("unrelated")},
+    )
+    .await;
+    let b2 = create_commit_from_parent_and_changes(
+        &ctx,
+        &megarepo,
+        megarepo_master_cs_id,
+        btreemap! {"unrelated_2" => Some("unrelated")},
+    )
+    .await;
+
+    move_bookmark(&ctx, &megarepo, "other_branch", b2).await;
+    move_bookmark(&ctx, &megarepo, "master", b1).await;
+
+    // 2. Create a small repo commit and sync it onto both branches
+    let small_repo_master_cs_id = create_commit_from_parent_and_changes(
+        &ctx,
+        &small_repo,
+        small_repo_master_cs_id,
+        btreemap! {"small_repo_file" => Some("content")},
+    )
+    .await;
+    move_bookmark(&ctx, &small_repo, "master", small_repo_master_cs_id).await;
+
+    let small_cs = small_repo_master_cs_id
+        .load(ctx.clone(), small_repo.blobstore())
+        .await?;
+    small_to_large_syncer
+        .unsafe_sync_commit_pushrebase(
+            ctx.clone(),
+            small_cs.clone(),
+            BookmarkName::new("master").unwrap(),
+            Target(megarepo_lca_hint.clone()),
+        )
+        .await
+        .expect("sync should have succeeded");
+
+    small_to_large_syncer
+        .unsafe_sync_commit_pushrebase(
+            ctx.clone(),
+            small_cs.clone(),
+            BookmarkName::new("other_branch").unwrap(),
+            Target(megarepo_lca_hint.clone()),
+        )
+        .await
+        .expect("sync should have succeeded");
+
+    // 3. Sanity-check that the small repo master is indeed rewritten
+    // into two different commits in the large repo
+    check_rewritten_multiple(
+        &ctx,
+        &small_repo,
+        &megarepo,
+        &mapping,
+        small_repo_master_cs_id,
+        2,
+    )
+    .await?;
+
+    // Re-query megarepo master bookmark, as its localtion has changed due
+    // to a cross-repo sync
+    let megarepo_master_cs_id = get_bookmark(&ctx, &megarepo, "master").await;
+    Ok((
+        ctx,
+        small_repo,
+        megarepo,
+        megarepo_master_cs_id,
+        small_repo_master_cs_id,
+        small_to_large_syncer,
+    ))
+}
+
+#[fbinit::compat_test]
+async fn test_sync_parent_has_multiple_mappings(fb: FacebookInit) -> Result<(), Error> {
+    let (
+        ctx,
+        small_repo,
+        megarepo,
+        _megarepo_master_cs_id,
+        small_repo_master_cs_id,
+        small_to_large_syncer,
+    ) = get_multiple_master_mapping_setup(fb).await?;
+
+    // Create a small repo commit on top of master
+    let to_sync = create_commit_from_parent_and_changes(
+        &ctx,
+        &small_repo,
+        small_repo_master_cs_id,
+        btreemap! {"foo" => Some("bar")},
+    )
+    .await;
+
+    // Cannot sync without a hint
+    let e = small_to_large_syncer
+        .unsafe_sync_commit(ctx.clone(), to_sync, CandidateSelectionHint::Only)
+        .await
+        .expect_err("sync should have failed");
+    assert!(format!("{:?}", e).contains("Too many rewritten candidates for"));
+
+
+    // Can sync with a bookmark-based hint
+    let book = Target(BookmarkName::new("master").unwrap());
+    let lca_hint: Target<Arc<dyn LeastCommonAncestorsHint>> =
+        Target(Arc::new(SkiplistIndex::new()));
+    small_to_large_syncer
+        .unsafe_sync_commit(
+            ctx.clone(),
+            to_sync,
+            CandidateSelectionHint::OnlyOrAncestorOfBookmark(
+                book,
+                Target(megarepo.clone()),
+                lca_hint,
+            ),
+        )
+        .await
+        .expect("sync should have succeeded");
+
+    Ok(())
+}
+
+#[fbinit::compat_test]
+async fn test_sync_no_op_pushrebase_has_multiple_mappings(fb: FacebookInit) -> Result<(), Error> {
+    let (
+        ctx,
+        small_repo,
+        _megarepo,
+        _megarepo_master_cs_id,
+        small_repo_master_cs_id,
+        small_to_large_syncer,
+    ) = get_multiple_master_mapping_setup(fb).await?;
+
+    // Create a small repo commit on top of master
+    let to_sync_id = create_commit_from_parent_and_changes(
+        &ctx,
+        &small_repo,
+        small_repo_master_cs_id,
+        btreemap! {"foo" => Some("bar")},
+    )
+    .await;
+    let to_sync = to_sync_id.load(ctx.clone(), small_repo.blobstore()).await?;
+
+    let lca_hint: Target<Arc<dyn LeastCommonAncestorsHint>> =
+        Target(Arc::new(SkiplistIndex::new()));
+    small_to_large_syncer
+        .unsafe_sync_commit_pushrebase(
+            ctx.clone(),
+            to_sync,
+            BookmarkName::new("master").unwrap(),
+            lca_hint,
+        )
+        .await
+        .expect("sync should have succeeded");
+
+    Ok(())
+}
+
+#[fbinit::compat_test]
+async fn test_sync_real_pushrebase_has_multiple_mappings(fb: FacebookInit) -> Result<(), Error> {
+    let (
+        ctx,
+        small_repo,
+        megarepo,
+        megarepo_master_cs_id,
+        small_repo_master_cs_id,
+        small_to_large_syncer,
+    ) = get_multiple_master_mapping_setup(fb).await?;
+
+    // Advance megarepo master
+    let cs_id = create_commit_from_parent_and_changes(
+        &ctx,
+        &megarepo,
+        megarepo_master_cs_id,
+        btreemap! {"unrelated_3" => Some("unrelated")},
+    )
+    .await;
+    move_bookmark(&ctx, &megarepo, "master", cs_id).await;
+
+    // Create a small repo commit on top of master
+    let to_sync_id = create_commit_from_parent_and_changes(
+        &ctx,
+        &small_repo,
+        small_repo_master_cs_id,
+        btreemap! {"foo" => Some("bar")},
+    )
+    .await;
+    let to_sync = to_sync_id.load(ctx.clone(), small_repo.blobstore()).await?;
+
+    let lca_hint: Target<Arc<dyn LeastCommonAncestorsHint>> =
+        Target(Arc::new(SkiplistIndex::new()));
+    small_to_large_syncer
+        .unsafe_sync_commit_pushrebase(
+            ctx.clone(),
+            to_sync,
+            BookmarkName::new("master").unwrap(),
+            lca_hint,
+        )
+        .await
+        .expect("sync should have succeeded");
 
     Ok(())
 }

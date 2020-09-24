@@ -51,6 +51,7 @@ pub enum PluralCommitSyncOutcome {
 }
 
 /// A hint to the synced commit selection algorithm
+#[derive(Clone)]
 pub enum CandidateSelectionHint {
     /// Selected candidate should be the only candidate
     Only,
@@ -192,7 +193,7 @@ impl CandidateSelectionHint {
 /// - `B` and `C` don't touch any files form the small repo (`NotSyncCandidate`)
 /// - `A` and `D` are fully identical with the exception of their parent commits
 /// Then both `A` and `D` are in `PluralCommitSyncOutcome::RewrittenAs` of `E`
-async fn get_plural_commit_sync_outcome<'a, M: SyncedCommitMapping>(
+pub async fn get_plural_commit_sync_outcome<'a, M: SyncedCommitMapping>(
     ctx: &'a CoreContext,
     source_repo_id: Source<RepositoryId>,
     target_repo_id: Target<RepositoryId>,

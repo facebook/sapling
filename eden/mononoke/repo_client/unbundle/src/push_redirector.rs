@@ -27,10 +27,12 @@ use backsyncer::{backsync_latest, BacksyncLimit, TargetRepoDbs};
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
+use bookmarks::BookmarkName;
 use cloned::cloned;
 use context::CoreContext;
 use cross_repo_sync::create_commit_syncers;
-use cross_repo_sync::{CommitSyncOutcome, CommitSyncer};
+use cross_repo_sync::types::Target;
+use cross_repo_sync::{CandidateSelectionHint, CommitSyncOutcome, CommitSyncer};
 use futures::{
     compat::Future01CompatExt,
     future::{try_join_all, FutureExt},
@@ -295,7 +297,7 @@ impl PushRedirector {
         } = orig;
 
         let uploaded_bonsais = self
-            .sync_uploaded_changesets(ctx.clone(), uploaded_bonsais)
+            .sync_uploaded_changesets(ctx.clone(), uploaded_bonsais, None)
             .await?;
 
         let bookmark_pushes = try_join_all(bookmark_pushes.into_iter().map(|bookmark_push| {
@@ -347,9 +349,21 @@ impl PushRedirector {
             hook_rejection_remapper: _,
         } = orig;
 
+
+        // We cannot yet call `convert_pushrebase_bookmark_spec`, as that fn requires
+        // changesets to be rewritten
+        let maybe_renamed_bookmark = self
+            .small_to_large_commit_syncer
+            .rename_bookmark(bookmark_spec.get_bookmark_name());
+
         let uploaded_bonsais = self
-            .sync_uploaded_changesets(ctx.clone(), uploaded_bonsais)
+            .sync_uploaded_changesets(
+                ctx.clone(),
+                uploaded_bonsais,
+                maybe_renamed_bookmark.as_ref(),
+            )
             .await?;
+
         let bookmark_spec = self
             .convert_pushrebase_bookmark_spec(ctx.clone(), bookmark_spec)
             .await?;
@@ -418,7 +432,7 @@ impl PushRedirector {
             is_cross_backend_sync,
         } = orig;
         let uploaded_bonsais = self
-            .sync_uploaded_changesets(ctx.clone(), uploaded_bonsais)
+            .sync_uploaded_changesets(ctx.clone(), uploaded_bonsais, None)
             .await?;
         let maybe_bookmark_push = match maybe_bookmark_push {
             Some(bookmark_push) => Some(
@@ -837,6 +851,7 @@ impl PushRedirector {
         &self,
         ctx: CoreContext,
         uploaded_map: UploadedBonsais,
+        maybe_bookmark: Option<&BookmarkName>,
     ) -> Result<HashMap<ChangesetId, BonsaiChangeset>, Error> {
         let target_repo = self.small_to_large_commit_syncer.get_target_repo();
         let uploaded_ids: HashSet<ChangesetId> = uploaded_map
@@ -864,10 +879,22 @@ impl PushRedirector {
 
         let mut synced_ids = Vec::new();
 
+        // Only when we know the target bookmark, we tell the mapping logic
+        // to look for its ancestor  if small repo commit rewrites into multiple
+        // large repo commits.
+        let candidate_selection_hint = match maybe_bookmark {
+            Some(bookmark) => CandidateSelectionHint::OnlyOrAncestorOfBookmark(
+                Target(bookmark.clone()),
+                Target(self.small_to_large_commit_syncer.get_target_repo().clone()),
+                Target(self.repo.lca_hint().clone()),
+            ),
+            None => CandidateSelectionHint::Only,
+        };
+
         for bcs_id in to_sync.iter() {
             let synced_bcs_id = self
                 .small_to_large_commit_syncer
-                .unsafe_sync_commit(ctx.clone(), *bcs_id)
+                .unsafe_sync_commit(ctx.clone(), *bcs_id, candidate_selection_hint.clone())
                 .await?
                 .ok_or(format_err!(
                     "{} was rewritten into nothingness during uploaded changesets sync",
