@@ -937,7 +937,6 @@ class EdenCheckout:
             if prefetch_profiles_list is not None:
                 if not isinstance(prefetch_profiles_list, list):
                     raise Exception(f"{config_path} has an invalid [profiles] section")
-
                 for profile in prefetch_profiles_list:
                     if not isinstance(profile, str):
                         raise Exception(

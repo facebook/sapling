@@ -6,8 +6,8 @@
 import argparse
 import os
 
-from . import subcmd as subcmd_mod
-from .cmd_util import get_eden_instance
+from . import subcmd as subcmd_mod, tabulate
+from .cmd_util import get_eden_instance, require_checkout
 from .subcmd import Subcmd
 
 
@@ -49,6 +49,32 @@ class FinishProfileCmd(Subcmd):
                 for path in sorted(files.fetchedFilePaths["HgQueuedBackingStore"]):
                     f.write(os.fsdecode(path))
                     f.write("\n")
+        return 0
+
+
+@prefetch_profile_cmd(
+    "list", "List all of the currenly activated prefetch profiles for a checkout."
+)
+class ListProfileCmd(Subcmd):
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "--checkout",
+            help="The checkout for which you want to see all the profiles this profile.",
+            default=None,
+        )
+
+    def run(self, args: argparse.Namespace) -> int:
+        checkout = args.checkout
+
+        instance, checkout, _rel_path = require_checkout(args, checkout)
+
+        profiles = sorted(checkout.get_config().active_prefetch_profiles)
+
+        columns = ["Name"]
+        data = [{"Name": name} for name in profiles]
+
+        print(tabulate.tabulate(columns, data))
+
         return 0
 
 
