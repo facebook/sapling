@@ -22,9 +22,11 @@ use crate::{
     stats::Stats,
 };
 
-/// Timeout for a single iteration of waiting for activity
-/// on any active transfer in a curl::Multi session.
-const DEFAULT_TIMEOUT: Duration = Duration::from_secs(10);
+/// Maximum time that libcurl should wait for socket activity during a call to
+/// `Multi::wait`. The Multi session maintains its own timeout internally based
+/// on the state of the underlying transfers; this default value will only be
+/// used if there is no internal timer value set at the time `wait` is called.
+const MULTI_WAIT_TIMEOUT: Duration = Duration::from_secs(10);
 
 /// A complete transfer, along with the associated error
 /// if the transfer did not complete successfully.
@@ -142,12 +144,10 @@ where
                 break;
             }
 
-            let timeout = self.multi.get_timeout()?.unwrap_or(DEFAULT_TIMEOUT);
-            log::trace!("Waiting for I/O with timeout: {:?}", &timeout);
-
-            let num_active_transfers = self.multi.wait(&mut [], timeout)?;
-            if num_active_transfers == 0 {
-                log::trace!("Timed out waiting for I/O; polling active transfers anyway.");
+            log::trace!("Waiting for socket activity");
+            let active_sockets = self.multi.wait(&mut [], MULTI_WAIT_TIMEOUT)?;
+            if active_sockets == 0 {
+                log::trace!("Timed out waiting for activity");
             }
         }
 
