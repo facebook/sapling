@@ -1520,8 +1520,9 @@ the following are valid keystrokes:
         "display an informational window, then wait for and return a keypress."
 
         confirmwin = curses.newwin(self.yscreensize, 0, 0, 0)
+        windowtext = pycompat.encodeutf8(windowtext)
         try:
-            lines = windowtext.split("\n")
+            lines = windowtext.split(b"\n")
             for line in lines:
                 self.printstring(confirmwin, line, pairname="selected")
         except curses.error:

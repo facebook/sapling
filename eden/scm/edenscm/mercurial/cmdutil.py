@@ -434,13 +434,15 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, filterfn, *pats, **opt
             # 2.5 optionally review / modify patch in text editor
             if opts.get("review", False):
                 patchtext = (
-                    crecordmod.diffhelptext + crecordmod.patchhelptext + fp.read()
+                    crecordmod.diffhelptext
+                    + crecordmod.patchhelptext
+                    + pycompat.decodeutf8(fp.read())
                 )
                 reviewedpatch = ui.edit(
                     patchtext, "", action="diff", repopath=repo.path
                 )
                 fp.truncate(0)
-                fp.write(reviewedpatch)
+                fp.write(pycompat.encodeutf8(reviewedpatch))
                 fp.seek(0)
 
             [os.unlink(repo.wjoin(c)) for c in newlyaddedandmodifiedfiles]
