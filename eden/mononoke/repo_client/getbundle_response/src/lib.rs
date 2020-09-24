@@ -62,7 +62,9 @@ use tunables::tunables;
 
 mod errors;
 mod low_gen_nums_optimization;
-use low_gen_nums_optimization::{has_low_gen_num, low_gen_num_optimization};
+use low_gen_nums_optimization::{
+    compute_partial_getbundle, has_low_gen_num, low_gen_num_optimization,
+};
 
 pub const MAX_FILENODE_BYTES_IN_MEMORY: u64 = 100_000_000;
 pub const GETBUNDLE_COMMIT_NUM_WARN: u64 = 1_000_000;
@@ -256,6 +258,7 @@ async fn find_commits_to_send(
     lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
 ) -> Result<Vec<ChangesetId>, Error> {
     let common_heads: HashSet<_> = HashSet::from_iter(common.iter());
+    let changeset_fetcher = blobrepo.get_changeset_fetcher();
 
     let heads = hg_to_bonsai_stream(
         &ctx,
@@ -277,10 +280,14 @@ async fn find_commits_to_send(
             .collect(),
     );
 
-    let (heads, excludes) = try_join!(heads, excludes)?;
+    let (mut heads, mut excludes) = try_join!(heads, excludes)?;
+
+    let partial_result =
+        compute_partial_getbundle(ctx, &changeset_fetcher, heads, excludes).await?;
+    heads = partial_result.new_heads;
+    excludes = partial_result.new_excludes;
 
     let params = Params { heads, excludes };
-    let changeset_fetcher = blobrepo.get_changeset_fetcher();
     let nodes_to_send = if !tunables().get_getbundle_use_low_gen_optimization()
         || !has_low_gen_num(&params.heads)
     {
@@ -324,7 +331,12 @@ async fn find_commits_to_send(
         nodes_to_send.len() as i64,
     );
 
-    Ok(nodes_to_send.into_iter().rev().collect())
+    Ok(partial_result
+        .partial
+        .into_iter()
+        .chain(nodes_to_send.into_iter())
+        .rev()
+        .collect())
 }
 
 #[derive(Default, Clone)]

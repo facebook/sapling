@@ -67,6 +67,7 @@ define_perf_counters! {
         GetbundleNumDrafts,
         GetbundleNumFilenodes,
         GetbundleNumManifests,
+        GetbundlePartialTraversal,
         GetcommitdataNumCommits,
         GetcommitdataResponseSize,
         GetpackMaxFileSize,

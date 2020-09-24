@@ -8,15 +8,20 @@
 use crate::{call_difference_of_union_of_ancestors_revset, Params};
 use anyhow::{anyhow, Error, Result};
 use blobrepo::ChangesetFetcher;
-use context::CoreContext;
+use context::{CoreContext, PerfCounterType};
 use futures::{
     compat::Future01CompatExt,
+    future::{try_join_all, TryFutureExt},
     stream::{self, StreamExt, TryStreamExt},
 };
 use mononoke_types::{ChangesetId, Generation};
 use reachabilityindex::LeastCommonAncestorsHint;
 use scuba_ext::ScubaSampleBuilderExt;
-use std::{collections::HashSet, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet, VecDeque},
+    iter::FromIterator,
+    sync::Arc,
+};
 use tunables::tunables;
 
 pub const DEFAULT_TRAVERSAL_LIMIT: u64 = 20;
@@ -30,6 +35,137 @@ pub(crate) fn has_low_gen_num(heads: &[(ChangesetId, Generation)]) -> bool {
     }
 
     false
+}
+
+#[derive(Debug)]
+pub(crate) struct PartialGetBundle {
+    pub(crate) partial: Vec<ChangesetId>,
+    pub(crate) new_heads: Vec<(ChangesetId, Generation)>,
+    pub(crate) new_excludes: Vec<(ChangesetId, Generation)>,
+}
+
+impl PartialGetBundle {
+    fn new_no_partial_result(
+        new_heads: Vec<(ChangesetId, Generation)>,
+        new_excludes: Vec<(ChangesetId, Generation)>,
+    ) -> Self {
+        Self {
+            partial: vec![],
+            new_heads,
+            new_excludes,
+        }
+    }
+}
+
+/// This is the preprocessing of getbundle parameters - `heads` and `excludes`.
+/// It tries to preprocess getbundle parameters in a way that make low_gen_num_optimization
+/// kick in later. This helps in a case where a small repo merged in a large repository.
+/// In particular, it tries to do a short walk starting from the head with the largest
+/// generation number and return:
+/// 1) partial answer to the getbundle query - i.e. a set of nodes that are ancestors of head
+///    with the largest gen number that will be returned to the client
+/// 2) Modified `heads` and `common` parameters.
+///
+/// The idea of this optimization is that returned `heads` parameters might contain
+/// a commit with a low generation number, and this will later be processed by a second
+/// `low_gen_num_optimization` and make the overall getbundle call much faster.
+///
+///   A <- head with largest generation
+///   |
+///   B
+///   | \
+///   |  C <- a node with a low generation number
+/// ...
+///   O <- common with largest generation
+///
+/// Returns:
+/// partial result - [A, B]
+/// new_heads[ .., C, ...]
+/// new_common: common
+pub(crate) async fn compute_partial_getbundle(
+    ctx: &CoreContext,
+    changeset_fetcher: &Arc<dyn ChangesetFetcher>,
+    heads: Vec<(ChangesetId, Generation)>,
+    excludes: Vec<(ChangesetId, Generation)>,
+) -> Result<PartialGetBundle, Error> {
+    let traversal_limit = tunables().get_getbundle_partial_getbundle_traversal_limit();
+    if traversal_limit == 0 {
+        // This optimimization is disabled, just exit quickly
+        return Ok(PartialGetBundle::new_no_partial_result(heads, excludes));
+    }
+
+    ctx.scuba()
+        .clone()
+        .log_with_msg("Computing partial getbundle", None);
+    let gen_num_threshold = tunables().get_getbundle_low_gen_num_threshold() as u64;
+    let maybe_max_head = heads.iter().max_by_key(|node| node.1);
+
+    let mut queue = VecDeque::new();
+    let mut visited = HashSet::new();
+    let mut new_heads: HashMap<_, _> = HashMap::from_iter(heads.clone());
+    let new_excludes: HashMap<_, _> = HashMap::from_iter(excludes);
+
+    if let Some(max_head) = maybe_max_head {
+        if !new_excludes.contains_key(&max_head.0) && max_head.1.value() > gen_num_threshold {
+            queue.push_back(max_head.0);
+            visited.insert(max_head.0);
+        }
+    }
+
+    let mut partial = vec![];
+    let mut traversed = 0;
+
+    // Do a BFS traversal starting from a commit with the highest generation number, and return all the
+    // visited nodes. We don't visit a node if:
+    // 1) It has a very low generation number
+    // 2) It is excluded (i.e. it's in new_excludes parameter)
+    // 3) We've traversed more or equal than traversal limit
+    //
+    // All the parents that weren't traversed but also weren't excluded will be added to
+    // new_heads
+    while let Some(cs_id) = queue.pop_front() {
+        partial.push(cs_id);
+        new_heads.remove(&cs_id);
+
+        let parents = changeset_fetcher
+            .get_parents(ctx.clone(), cs_id)
+            .compat()
+            .await?;
+        let parents = try_join_all(parents.into_iter().map(|p| {
+            changeset_fetcher
+                .get_generation_number(ctx.clone(), p)
+                .compat()
+                .map_ok(move |gen_num| (p, gen_num))
+        }))
+        .await?;
+        for (p, gen_num) in parents {
+            // This parent was already visited or excluded - just ignore it
+            if !visited.insert(p) || new_excludes.contains_key(&p) {
+                continue;
+            }
+
+            new_heads.insert(p, gen_num);
+            if gen_num.value() > gen_num_threshold {
+                // We don't visit a parent that has a very low generation number -
+                // it will be processed separately
+                queue.push_back(p);
+            }
+        }
+
+        traversed += 1;
+        if traversed >= traversal_limit {
+            break;
+        }
+    }
+
+    ctx.perf_counters()
+        .add_to_counter(PerfCounterType::GetbundlePartialTraversal, traversed);
+
+    Ok(PartialGetBundle {
+        partial,
+        new_heads: new_heads.into_iter().collect(),
+        new_excludes: new_excludes.into_iter().collect(),
+    })
 }
 
 /// Optimization for the case when params.heads has values with very low generation number.
@@ -381,6 +517,237 @@ mod test {
         .await?;
 
         Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn test_compute_partial_getbundle(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = blobrepo_factory::new_memblob_empty(None)?;
+
+        let commit_map = create_from_dag(
+            &ctx,
+            &repo,
+            r##"
+                A-B-C-D-E-F-G-H-I-J
+                         /
+                    K-L-M
+            "##,
+        )
+        .await?;
+
+        // Partial getbundle optimization is disabled, so it should do nothing
+        let (res, params) = test_compute_partial_bundle(
+            &ctx,
+            &repo,
+            &commit_map,
+            hashmap! {},
+            &["J".to_string()],
+            &["I".to_string()],
+        )
+        .await?;
+
+        assert!(res.partial.is_empty());
+        assert_eq!(res.new_heads, params.heads);
+        assert_eq!(res.new_excludes, params.excludes);
+
+
+        // Now let's enable the optimization, but set very low traversal limit
+        let (res, params) = test_compute_partial_bundle(
+            &ctx,
+            &repo,
+            &commit_map,
+            hashmap! {
+                "getbundle_partial_getbundle_traversal_limit".to_string() => 1,
+                "getbundle_low_gen_num_threshold".to_string() => 4,
+            },
+            &["J".to_string()],
+            &["G".to_string()],
+        )
+        .await?;
+        assert_eq!(res.partial, vec![commit_map.get("J").cloned().unwrap()]);
+        assert_eq!(res.new_heads.len(), 1);
+        assert_eq!(res.new_heads[0].0, commit_map["I"]);
+        assert_eq!(res.new_excludes, params.excludes);
+
+
+        // Simplest case - it should traverse a single changeset id and return it
+        let (res, params) = test_compute_partial_bundle(
+            &ctx,
+            &repo,
+            &commit_map,
+            hashmap! {
+                "getbundle_partial_getbundle_traversal_limit".to_string() => 10,
+                "getbundle_low_gen_num_threshold".to_string() => 4,
+            },
+            &["J".to_string()],
+            &["I".to_string()],
+        )
+        .await?;
+        assert_eq!(res.partial, vec![commit_map.get("J").cloned().unwrap()]);
+        assert!(res.new_heads.is_empty());
+        assert_eq!(res.new_excludes, params.excludes);
+
+
+
+        // Let it traverse the whole repo
+        let (res, params) = test_compute_partial_bundle(
+            &ctx,
+            &repo,
+            &commit_map,
+            hashmap! {
+                "getbundle_partial_getbundle_traversal_limit".to_string() => 20,
+                "getbundle_low_gen_num_threshold".to_string() => 0,
+            },
+            &["J".to_string(), "I".to_string()],
+            &[],
+        )
+        .await?;
+        assert_eq!(res.partial.len(), 13);
+        assert!(res.new_heads.is_empty());
+        assert_eq!(res.new_excludes, params.excludes);
+
+
+        // Now let's enable the optimization and make it traverse up until a merge commit
+        let (res, params) = test_compute_partial_bundle(
+            &ctx,
+            &repo,
+            &commit_map,
+            hashmap! {
+                "getbundle_partial_getbundle_traversal_limit".to_string() => 10,
+                "getbundle_low_gen_num_threshold".to_string() => 4,
+            },
+            &["J".to_string()],
+            &["E".to_string()],
+        )
+        .await?;
+        assert_eq!(
+            res.partial,
+            vec![
+                commit_map.get("J").cloned().unwrap(),
+                commit_map.get("I").cloned().unwrap(),
+                commit_map.get("H").cloned().unwrap(),
+                commit_map.get("G").cloned().unwrap(),
+                commit_map.get("F").cloned().unwrap(),
+            ]
+        );
+        assert_eq!(res.new_heads.len(), 1);
+        assert_eq!(
+            res.new_heads.get(0).map(|x| x.0),
+            commit_map.get("M").cloned()
+        );
+        assert_eq!(res.new_excludes, params.excludes);
+
+
+        // Now let's add a few more heads that are ancestors of each other.
+        // It shouldn't change the result
+        let (res, params) = test_compute_partial_bundle(
+            &ctx,
+            &repo,
+            &commit_map,
+            hashmap! {
+                "getbundle_partial_getbundle_traversal_limit".to_string() => 10,
+                "getbundle_low_gen_num_threshold".to_string() => 4,
+            },
+            &["J".to_string(), "I".to_string(), "H".to_string()],
+            &["E".to_string()],
+        )
+        .await?;
+        assert_eq!(
+            res.partial,
+            vec![
+                commit_map.get("J").cloned().unwrap(),
+                commit_map.get("I").cloned().unwrap(),
+                commit_map.get("H").cloned().unwrap(),
+                commit_map.get("G").cloned().unwrap(),
+                commit_map.get("F").cloned().unwrap(),
+            ]
+        );
+        assert_eq!(res.new_heads.len(), 1);
+        assert_eq!(
+            res.new_heads.get(0).map(|x| x.0),
+            commit_map.get("M").cloned()
+        );
+        assert_eq!(res.new_excludes, params.excludes);
+
+
+        // Set higher gen num limit
+        let (res, params) = test_compute_partial_bundle(
+            &ctx,
+            &repo,
+            &commit_map,
+            hashmap! {
+                "getbundle_partial_getbundle_traversal_limit".to_string() => 10,
+                "getbundle_low_gen_num_threshold".to_string() => 6,
+            },
+            &["J".to_string()],
+            &["E".to_string()],
+        )
+        .await?;
+        assert_eq!(
+            res.partial,
+            vec![
+                commit_map.get("J").cloned().unwrap(),
+                commit_map.get("I").cloned().unwrap(),
+                commit_map.get("H").cloned().unwrap(),
+                commit_map.get("G").cloned().unwrap(),
+            ]
+        );
+        assert_eq!(res.new_heads.len(), 1);
+        assert_eq!(
+            res.new_heads.get(0).map(|x| x.0),
+            commit_map.get("F").cloned()
+        );
+        assert_eq!(res.new_excludes, params.excludes);
+
+
+        // Set very high gen num limit
+        let (res, params) = test_compute_partial_bundle(
+            &ctx,
+            &repo,
+            &commit_map,
+            hashmap! {
+                "getbundle_partial_getbundle_traversal_limit".to_string() => 10,
+                "getbundle_low_gen_num_threshold".to_string() => 60,
+            },
+            &["J".to_string()],
+            &["E".to_string()],
+        )
+        .await?;
+        assert!(res.partial.is_empty());
+        assert_eq!(res.new_heads, params.heads);
+        assert_eq!(res.new_excludes, params.excludes);
+
+        Ok(())
+    }
+
+    async fn test_compute_partial_bundle(
+        ctx: &CoreContext,
+        repo: &BlobRepo,
+        commit_map: &BTreeMap<String, ChangesetId>,
+        values: HashMap<String, i64>,
+        heads: &[String],
+        excludes: &[String],
+    ) -> Result<(PartialGetBundle, Params), Error> {
+        let params = generate_params(&ctx, &repo, &commit_map, &heads, &excludes).await?;
+
+        let tunables = MononokeTunables::default();
+        tunables.update_ints(&values);
+        let bundle = with_tunables_async(
+            tunables,
+            async {
+                let res = compute_partial_getbundle(
+                    &ctx,
+                    &repo.get_changeset_fetcher(),
+                    params.heads.clone(),
+                    params.excludes.clone(),
+                )
+                .await?;
+                Result::<_, Error>::Ok(res)
+            }
+            .boxed(),
+        )
+        .await?;
+        Ok((bundle, params))
     }
 
     async fn generate_params(

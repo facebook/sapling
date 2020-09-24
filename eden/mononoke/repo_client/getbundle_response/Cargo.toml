@@ -40,7 +40,6 @@ thiserror = "1.0"
 
 [dev-dependencies]
 blobrepo_factory = { path = "../../blobrepo/factory" }
-mercurial_types-mocks = { path = "../../mercurial/types/mocks" }
 mononoke_types-mocks = { path = "../../mononoke_types/mocks" }
 skiplist = { path = "../../reachabilityindex/skiplist" }
 tests_utils = { path = "../../tests/utils" }
