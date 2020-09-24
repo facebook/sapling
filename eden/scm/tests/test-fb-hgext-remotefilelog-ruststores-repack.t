@@ -1,7 +1,6 @@
 #chg-compatible
 
   $ . "$TESTDIR/library.sh"
-  $ setconfig treemanifest.useruststore=False
 
   $ newserver master
 
@@ -81,6 +80,7 @@ Test that we can repack packs into indexedlog
 # Verify new fetches go to the indexedlog
   $ clearcache
   $ hg prefetch -r .
+  fetching tree '' d80a4bdb312d799dffbbce4719a5e2ad7987058e, found via d34c38483be9
   1 trees fetched over * (glob)
   $ ls_l $CACHEDIR/master/indexedlogdatastore/0
   -rw-rw-r--      25 index2-node
@@ -90,3 +90,4 @@ Test that we can repack packs into indexedlog
   [1]
   $ hg cat -r tip x
   x
+

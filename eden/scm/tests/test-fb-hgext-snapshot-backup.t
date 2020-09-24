@@ -4,7 +4,6 @@
 # Initial setup
   $ enable rebase snapshot remotenames
   $ setconfig visibility.enabled=true
-  $ setconfig treemanifest.useruststore=False
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"
   $ setupcommon
@@ -140,6 +139,7 @@
   $ cd ../restored
   $ hg checkout "$OID"
   pulling '751f5ef10bc73a8f549197b380773d4f680daa8c' from 'ssh://user@dummy/server'
+  fetching tree '' 5acaace5875a90ee839764a9d8a6ba846f243f3a, found via 751f5ef10bc7
   2 trees fetched over 0.00s
   abort: 751f5ef10bc7 is a snapshot, set ui.allow-checkout-snapshot config to True to checkout on it
   

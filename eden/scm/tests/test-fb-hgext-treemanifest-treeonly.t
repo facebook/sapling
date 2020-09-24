@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ setconfig treemanifest.flatcompat=False treemanifest.useruststore=True remotefilelog.localdatarepack=True
+  $ setconfig treemanifest.flatcompat=False remotefilelog.localdatarepack=True
   $ . "$TESTDIR/library.sh"
 
 Setup the server

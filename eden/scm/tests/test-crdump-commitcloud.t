@@ -3,7 +3,6 @@
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"
   $ setupcommon
-  $ setconfig treemanifest.useruststore=False
 
   $ enable crdump remotenames
   $ setconfig crdump.commitcloud=true

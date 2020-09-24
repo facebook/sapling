@@ -4,7 +4,6 @@
   $ . "$TESTDIR/infinitepush/library.sh"
   $ setupcommon
   $ setconfig infinitepush.bundlecompression=GZ
-  $ setconfig treemanifest.useruststore=False
 
 Setup server
   $ hg init repo

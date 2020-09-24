@@ -1,7 +1,6 @@
 #chg-compatible
 
   $ enable share
-  $ setconfig treemanifest.useruststore=False
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"
   $ setupcommon

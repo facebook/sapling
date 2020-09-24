@@ -2832,13 +2832,6 @@ def _handlebundle2part(orig, self, bundle, part):
         mfl.datastore = unioncontentstore(tempstore, mfl.datastore)
         mfl.historystore = unionmetadatastore(tempstore, mfl.historystore)
 
-        # Add it to the local datastores so server operations know this data is
-        # not available on the server. Like when sending infinitepush data from
-        # the server, this lets it know to send anything that is found in the
-        # bundle.
-        mfl.localdatastores.append(tempstore)
-        mfl.localhistorystores.append(tempstore)
-
         if isinstance(mfl, hybridmanifestlog):
             tmfl = mfl.treemanifestlog
             tmfl.datastore = mfl.datastore

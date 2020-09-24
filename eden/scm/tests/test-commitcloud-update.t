@@ -1,7 +1,6 @@
 #chg-compatible
 
   $ configure mutation-norecord
-  $ setconfig treemanifest.useruststore=False
   $ enable amend
 
   $ . "$TESTDIR/library.sh"

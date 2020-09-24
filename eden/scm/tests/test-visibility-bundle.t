@@ -5,7 +5,6 @@
   $ setconfig experimental.narrow-heads=true
   $ setconfig visibility.enabled=true
   $ setconfig mutation.record=true mutation.enabled=true mutation.date="0 0"
-  $ setconfig treemanifest.useruststore=False
 
 Setup
   $ newrepo
