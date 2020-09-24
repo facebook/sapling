@@ -3,6 +3,7 @@
   $ . "$TESTDIR/library.sh"
   $ setconfig remotefilelog.useruststore=True remotefilelog.write-hgcache-to-indexedlog=True
   $ setconfig remotefilelog.debug=False
+  $ setconfig treemanifest.useruststore=False
 
   $ newserver master
 

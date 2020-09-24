@@ -4,6 +4,7 @@
   $ . "$TESTDIR/infinitepush/library.sh"
   $ setupcommon
   $ setconfig infinitepushbackup.logdir="$TESTTMP/logs" infinitepushbackup.hostname=testhost
+  $ setconfig treemanifest.useruststore=False
 
 Setup server
   $ hg init repo

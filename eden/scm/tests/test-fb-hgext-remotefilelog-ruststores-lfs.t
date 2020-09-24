@@ -56,8 +56,6 @@
   .hg/store/packs/2fcfe5e792f7f55c4f39486d348654be30a5934a.histpack
   .hg/store/packs/dcb97073fda83c4a025153d7b929406f4d86e188.histidx
   .hg/store/packs/dcb97073fda83c4a025153d7b929406f4d86e188.histpack
-  .hg/store/packs/manifests/1ad2258b3968784028da4c7af67e58472ed95148.dataidx
-  .hg/store/packs/manifests/1ad2258b3968784028da4c7af67e58472ed95148.datapack
   .hg/store/packs/manifests/9bb7cc2e0e433f3564cbef21705ff896d9be2473.histidx
   .hg/store/packs/manifests/9bb7cc2e0e433f3564cbef21705ff896d9be2473.histpack
   .hg/store/packs/manifests/b00bb3b75ccfe82ff2ac879b3b323c8005835d1a.dataidx
@@ -83,8 +81,6 @@
   .hg/store/packs/2fcfe5e792f7f55c4f39486d348654be30a5934a.histpack
   .hg/store/packs/dcb97073fda83c4a025153d7b929406f4d86e188.histidx
   .hg/store/packs/dcb97073fda83c4a025153d7b929406f4d86e188.histpack
-  .hg/store/packs/manifests/1ad2258b3968784028da4c7af67e58472ed95148.dataidx
-  .hg/store/packs/manifests/1ad2258b3968784028da4c7af67e58472ed95148.datapack
   .hg/store/packs/manifests/9bb7cc2e0e433f3564cbef21705ff896d9be2473.histidx
   .hg/store/packs/manifests/9bb7cc2e0e433f3564cbef21705ff896d9be2473.histpack
   .hg/store/packs/manifests/b00bb3b75ccfe82ff2ac879b3b323c8005835d1a.dataidx
@@ -136,10 +132,25 @@
   $TESTTMP/default-hgcache/master/lfs/pointers/0/log
   $TESTTMP/default-hgcache/master/lfs/pointers/0/meta
   $TESTTMP/default-hgcache/master/lfs/pointers/latest
+  $TESTTMP/default-hgcache/master/manifests/indexedlogdatastore/0/index2-node
+  $TESTTMP/default-hgcache/master/manifests/indexedlogdatastore/0/log
+  $TESTTMP/default-hgcache/master/manifests/indexedlogdatastore/0/meta
+  $TESTTMP/default-hgcache/master/manifests/indexedlogdatastore/latest
+  $TESTTMP/default-hgcache/master/manifests/indexedloghistorystore/0/index2-node_and_path
+  $TESTTMP/default-hgcache/master/manifests/indexedloghistorystore/0/log
+  $TESTTMP/default-hgcache/master/manifests/indexedloghistorystore/0/meta
+  $TESTTMP/default-hgcache/master/manifests/indexedloghistorystore/latest
+  $TESTTMP/default-hgcache/master/manifests/lfs/blobs/0/index2-sha256
+  $TESTTMP/default-hgcache/master/manifests/lfs/blobs/0/log
+  $TESTTMP/default-hgcache/master/manifests/lfs/blobs/0/meta
+  $TESTTMP/default-hgcache/master/manifests/lfs/blobs/latest
+  $TESTTMP/default-hgcache/master/manifests/lfs/pointers/0/index2-node
+  $TESTTMP/default-hgcache/master/manifests/lfs/pointers/0/index2-sha256
+  $TESTTMP/default-hgcache/master/manifests/lfs/pointers/0/log
+  $TESTTMP/default-hgcache/master/manifests/lfs/pointers/0/meta
+  $TESTTMP/default-hgcache/master/manifests/lfs/pointers/latest
   $TESTTMP/default-hgcache/master/packs/cdd6b0d104ad718cec29643359c67c56c91e483e.histidx
   $TESTTMP/default-hgcache/master/packs/cdd6b0d104ad718cec29643359c67c56c91e483e.histpack
-  $TESTTMP/default-hgcache/master/packs/manifests/1ad2258b3968784028da4c7af67e58472ed95148.dataidx
-  $TESTTMP/default-hgcache/master/packs/manifests/1ad2258b3968784028da4c7af67e58472ed95148.datapack
   $TESTTMP/default-hgcache/master/packs/manifests/9bb7cc2e0e433f3564cbef21705ff896d9be2473.histidx
   $TESTTMP/default-hgcache/master/packs/manifests/9bb7cc2e0e433f3564cbef21705ff896d9be2473.histpack
 

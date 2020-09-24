@@ -24,7 +24,7 @@ Set up the server
 
 Create client
   $ cd ..
-  $ hgcloneshallow ssh://user@dummy/master client -q --config extensions.treemanifest= --config treemanifest.treeonly=true
+  $ hgcloneshallow ssh://user@dummy/master client -q --config extensions.treemanifest= --config treemanifest.treeonly=true --config treemanifest.useruststore=True
   fetching tree '' 2e4a95dcb6b42bbf0034f84d293bd9c71b19de64
   1 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
@@ -38,6 +38,7 @@ Create client
   > [treemanifest]
   > treeonly=true
   > sendtrees=true
+  > useruststore=true
   > EOF
 
 Create a commit, and then amend the message twice.  All three should share a manifest.

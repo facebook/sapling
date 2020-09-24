@@ -149,20 +149,23 @@ Multiple trees are fetched in this case because the file prefetching code path
 requires tree manifest for the base commit.
 
   $ hg prefetch -r '2' --base '1'
-  2 trees fetched over * (glob)
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
+  fetching tree '' 60a7f7acb6bb5aaf93ca7d9062931b0f6a0d6db5, found via bd6f9b289c01
+  3 trees fetched over 0.00s
   fetching tree '' 1be4ab2126dd2252dcae6be2aac2561dd3ddcda0, based on 60a7f7acb6bb5aaf93ca7d9062931b0f6a0d6db5, found via bd6f9b289c01
   2 trees fetched over * (glob)
-  fetching tree 'subdir' ddb35f099a648a43a997aef53123bce309c794fd
-  1 trees fetched over * (glob)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ ls $CACHEDIR/master/packs/manifests/*.dataidx
-  $TESTTMP/hgcache/master/packs/manifests/9e2665e9046d365538eaa0f532dfd5c62aa1bf9c.dataidx
+  $TESTTMP/hgcache/master/packs/manifests/b3bd3b918c8eb05705e84b9c46b6be6cc2934f64.dataidx
 
   $ hg debugdatapack $TESTTMP/hgcache/master/packs/manifests/*.dataidx
-  $TESTTMP/hgcache/master/packs/manifests/9e2665e9046d365538eaa0f532dfd5c62aa1bf9c:
+  $TESTTMP/hgcache/master/packs/manifests/b3bd3b918c8eb05705e84b9c46b6be6cc2934f64:
   dir:
   Node          Delta Base    Delta Length  Blob Size
   a18d21674e76  000000000000  43            (missing)
+  
+  subdir:
+  Node          Delta Base    Delta Length  Blob Size
+  ddb35f099a64  000000000000  43            (missing)
   
   (empty name):
   Node          Delta Base    Delta Length  Blob Size
@@ -176,18 +179,15 @@ requires tree manifest for the base commit.
   Node          Delta Base    Delta Length  Blob Size
   1be4ab2126dd  000000000000  95            (missing)
   
-  subdir:
-  Node          Delta Base    Delta Length  Blob Size
-  ddb35f099a64  000000000000  43            (missing)
-  
 Test prefetching when a draft commit is marked public
   $ mkdir $TESTTMP/cachedir.bak
   $ mv $CACHEDIR/* $TESTTMP/cachedir.bak
 
 - Create a draft commit, and force it to be public
   $ hg prefetch -r .
-  3 trees fetched over * (glob)
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
+  fetching tree '' 60a7f7acb6bb5aaf93ca7d9062931b0f6a0d6db5, found via bd6f9b289c01
+  3 trees fetched over * (glob)
   $ echo foo > foo
   $ hg commit -Aqm 'add foo'
   $ hg debugmakepublic -r .
@@ -274,12 +274,14 @@ Test auto prefetch during normal access
 Test that auto prefetch scans up the changelog for base trees
   $ rm -rf $CACHEDIR/master
   $ hg prefetch -r 'tip^'
-  3 trees fetched over * (glob)
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
+  fetching tree '' 1be4ab2126dd2252dcae6be2aac2561dd3ddcda0, found via bd6f9b289c01
+  3 trees fetched over * (glob)
   $ rm -rf $CACHEDIR/master
   $ hg prefetch -r tip
-  3 trees fetched over * (glob)
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
+  fetching tree '' 60a7f7acb6bb5aaf93ca7d9062931b0f6a0d6db5, found via bd6f9b289c01
+  3 trees fetched over * (glob)
 - Only 2 of the 3 trees from tip^ are downloaded as part of --stat's fetch
   $ hg log -r tip --stat --pager=off > /dev/null
   fetching tree '' 1be4ab2126dd2252dcae6be2aac2561dd3ddcda0, based on 60a7f7acb6bb5aaf93ca7d9062931b0f6a0d6db5, found via f15c65c6e9bd
@@ -335,6 +337,7 @@ Test auto prefetch during pull
   searching for changes
   no changes found
   prefetching tree for bd6f9b289c01
+  fetching tree '' 60a7f7acb6bb5aaf93ca7d9062931b0f6a0d6db5, found via bd6f9b289c01
   3 trees fetched over * (glob)
   $ hg debugdatapack --config extensions.remotefilelog= \
   > $CACHEDIR/master/packs/manifests/*.dataidx
@@ -355,8 +358,9 @@ Test auto prefetch during pull
 - Prefetch commit 1 then minimally prefetch commit 2
   $ rm -rf $CACHEDIR/master
   $ hg prefetch -r 1
-  3 trees fetched over * (glob)
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
+  fetching tree '' 1be4ab2126dd2252dcae6be2aac2561dd3ddcda0, found via bd6f9b289c01
+  3 trees fetched over * (glob)
   $ ls $CACHEDIR/master/packs/manifests/*dataidx
   $TESTTMP/hgcache/master/packs/manifests/c3ae0c4afc5f96ac510fd7ea3dddd0720a6d4dfb.dataidx
   $ hg pull --config treemanifest.pullprefetchcount=1 --traceback
@@ -364,6 +368,7 @@ Test auto prefetch during pull
   searching for changes
   no changes found
   prefetching tree for bd6f9b289c01
+  fetching tree '' 60a7f7acb6bb5aaf93ca7d9062931b0f6a0d6db5, based on 1be4ab2126dd2252dcae6be2aac2561dd3ddcda0, found via bd6f9b289c01
   2 trees fetched over * (glob)
   $ ls $CACHEDIR/master/packs/manifests/*dataidx
   $TESTTMP/hgcache/master/packs/manifests/4113a1ecc22f9f280deb722133d462720d3d7a9d.dataidx
@@ -410,6 +415,7 @@ Test prefetching certain revs during pull
   adding file changes
   added 2 changesets with 0 changes to 0 files
   prefetching tree for bd6f9b289c01
+  fetching tree '' 60a7f7acb6bb5aaf93ca7d9062931b0f6a0d6db5, found via cfacdcc4cee5
   3 trees fetched over * (glob)
   $ hg debugdatapack --config extensions.remotefilelog= \
   > $CACHEDIR/master/packs/manifests/*.dataidx
@@ -434,6 +440,7 @@ Test prefetching certain revs during pull
   searching for changes
   no changes found
   prefetching tree for cfacdcc4cee5
+  fetching tree '' aa52a49be5221fd6fb50743e0641040baa96ba89, based on 60a7f7acb6bb5aaf93ca7d9062931b0f6a0d6db5, found via cfacdcc4cee5
   2 trees fetched over * (glob)
   $ hg debugdatapack --config extensions.remotefilelog= \
   > $CACHEDIR/master/packs/manifests/*.dataidx
@@ -484,16 +491,19 @@ Test repack option
   $ rm -rf $CACHEDIR/master
 
   $ hg prefetch -r '0'
-  2 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
+  fetching tree '' ef362f8bbe8aa457b0cfc49f200cbeb7747984ed, found via 7609b5c63072
+  2 trees fetched over * (glob)
   $ hg prefetch -r '2'
-  3 trees fetched over * (glob)
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
+  fetching tree '' 60a7f7acb6bb5aaf93ca7d9062931b0f6a0d6db5, based on ef362f8bbe8aa457b0cfc49f200cbeb7747984ed, found via 7609b5c63072
+  3 trees fetched over * (glob)
 
   $ hg prefetch -r '4' --repack
+  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
+  fetching tree '' aa52a49be5221fd6fb50743e0641040baa96ba89, based on 60a7f7acb6bb5aaf93ca7d9062931b0f6a0d6db5, found via 7609b5c63072
   2 trees fetched over * (glob)
   (running background incremental repack)
-  1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
 
   $ sleep 3
   $ hg debugwaitonrepack

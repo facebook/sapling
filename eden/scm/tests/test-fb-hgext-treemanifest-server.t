@@ -67,8 +67,7 @@ Create client
 
 Test committing auto-downloads server trees and produces local trees
   $ [ -d $CACHEDIR/master/packs/manifests/ ]
-  $ [ -d .hg/store/packs/manifests/ ]
-  [1]
+  $ ls_l .hg/store/packs/manifests/
 
   $ mkdir subdir2
   $ echo z >> subdir2/z

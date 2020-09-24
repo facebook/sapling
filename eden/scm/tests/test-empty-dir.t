@@ -1,6 +1,7 @@
 #chg-compatible
 
-  $ hg init
+  $ hg init repo
+  $ cd repo
 
   $ echo 123 > a
   $ hg add a

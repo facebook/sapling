@@ -1597,8 +1597,10 @@ class Test(unittest.TestCase):
             hgrc.write(b"sendtrees=True\n")
             hgrc.write(b"treeonly=True\n")
             hgrc.write(b"rustmanifest=True\n")
+            hgrc.write(b"useruststore=True\n")
             hgrc.write(b"[remotefilelog]\n")
             hgrc.write(b"reponame=reponame-default\n")
+            hgrc.write(b"localdatarepack=True\n")
             hgrc.write(b"cachepath=$TESTTMP/default-hgcache\n")
 
             for opt in self._extraconfigopts:

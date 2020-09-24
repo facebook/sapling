@@ -1,13 +1,16 @@
 #!/usr/bin/env python
 from __future__ import absolute_import, print_function
 
+import os
+
 from edenscm.mercurial import commands, localrepo, ui as uimod
 
 
 u = uimod.ui.load()
 
 u.write("% creating repo\n")
-repo = localrepo.localrepository(u, ".", create=True)
+repo = localrepo.localrepository(u, "repo", create=True)
+os.chdir("repo")
 
 f = open("test.py", "w")
 try:

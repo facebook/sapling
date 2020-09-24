@@ -72,6 +72,7 @@ Checkout commits. Expect BFS prefetch to fill our tree
 
   $ rm -r "$TESTTMP/test_repo.cache"
   $ hgmn debuggetroottree "$(hg log -r '.' -T '{manifest}')"
+  fetching tree '' e6226c902ed8e9cd5583dcae4de931e10a4e267a, found via 2b5a205a671e
   1 trees fetched over * (glob)
 
   $ hgmn up 'master_bookmark'

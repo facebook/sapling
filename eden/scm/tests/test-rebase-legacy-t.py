@@ -18,7 +18,8 @@ sh % "cat" << r"""
 rebase=
 """ >> "$HGRCPATH"
 
-sh % "hg init"
+sh % "hg init repo"
+sh % "cd repo"
 sh % "hg debugdrawdag" << r"""
    D H
    | |

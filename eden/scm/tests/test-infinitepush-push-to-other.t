@@ -5,6 +5,7 @@ Setup the test
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"
   $ setupcommon
+  $ setconfig treemanifest.useruststore=False
   $ enable infinitepush pushrebase
   $ cp "$HGRCPATH" "$TESTTMP/defaulthgrc"
   $ hg init repo1

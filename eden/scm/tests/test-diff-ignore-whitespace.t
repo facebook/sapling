@@ -6,7 +6,8 @@ Prepare tests:
 
   $ setconfig alias.ndiff='diff --nodates'
 
-  $ hg init
+  $ hg init repo
+  $ cd repo
   $ printf 'hello world\ngoodbye world\n' >foo
   $ hg ci -Amfoo -ufoo
   adding foo

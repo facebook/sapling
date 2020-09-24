@@ -21,7 +21,8 @@ enabled = true
 """ >> "$HGRCPATH"
 
 # Create repo
-sh % "hg init"
+sh % "hg init repo"
+sh % "cd repo"
 sh % "drawdag" << r"""
 E
 |

@@ -18,11 +18,13 @@ Create a repository:
   fsmonitor.detectrace=1 (fsmonitor !)
   mutation.record=False
   remotefilelog.reponame=reponame-default
+  remotefilelog.localdatarepack=True
   remotefilelog.cachepath=$TESTTMP/default-hgcache
   treemanifest.flatcompat=True
   treemanifest.sendtrees=False
   treemanifest.treeonly=False
   treemanifest.rustmanifest=True
+  treemanifest.useruststore=True
   ui.slash=True
   ui.interactive=False
   ui.mergemarkers=detailed

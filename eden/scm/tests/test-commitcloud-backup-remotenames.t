@@ -3,6 +3,7 @@
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"
   $ setupcommon
+  $ setconfig treemanifest.useruststore=False
 
 Setup server
   $ hg init repo

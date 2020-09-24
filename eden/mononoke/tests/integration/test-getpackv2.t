@@ -57,8 +57,7 @@ Pull from Mononoke
   warning: stream clone is disabled
 
 Make sure that cache is empty
-  $ [[ -a $TESTTMP/cachepath/repo/packs/manifests ]]
-  [1]
+  $ ls $TESTTMP/cachepath/repo/packs/manifests
 
   $ hgmn prefetch -r 0 -r1 --debug 2>&1 | grep "getpackv2 command"
   sending getpackv2 command

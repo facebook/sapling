@@ -1,6 +1,7 @@
 #chg-compatible
 
   $ . "$TESTDIR/library.sh"
+  $ setconfig treemanifest.useruststore=False
 
   $ newserver master
 

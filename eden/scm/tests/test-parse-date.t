@@ -2,7 +2,8 @@
 
 This runs with TZ="GMT"
 
-  $ hg init
+  $ hg init repo
+  $ cd repo
   $ echo "test-parse-date" > a
   $ hg add a
   $ hg ci -d "2006-02-01 13:00:30" -m "rev 0"

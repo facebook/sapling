@@ -4,6 +4,7 @@
 # Initial setup
   $ enable rebase snapshot remotenames
   $ setconfig visibility.enabled=true
+  $ setconfig treemanifest.useruststore=False
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"
   $ setupcommon

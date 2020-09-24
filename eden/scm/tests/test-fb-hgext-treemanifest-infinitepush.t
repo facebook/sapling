@@ -264,6 +264,7 @@ treemanifest data for the public commits.
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
+  fetching tree '' bc0c2c938b929f98b1c31a8c5994396ebb096bf0, found via 02c12aef64ff
   1 trees fetched over * (glob)
 
   $ hg log -G -T '{node|short} {phase} {desc}'

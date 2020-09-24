@@ -10,7 +10,8 @@
 #        4--5--6--7--8
 
 
-  $ hg init
+  $ hg init repo
+  $ cd repo
 
   $ echo '0' >a
   $ hg add a

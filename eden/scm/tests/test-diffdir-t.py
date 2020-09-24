@@ -12,7 +12,8 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 feature.require(["py2"])
 
 
-sh % "hg init"
+sh % "hg init repo"
+sh % "cd repo"
 sh % "touch a"
 sh % "hg add a"
 sh % "hg ci -m a"

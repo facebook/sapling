@@ -1,6 +1,6 @@
 #chg-compatible
 
-  $ setconfig treemanifest.flatcompat=False
+  $ setconfig treemanifest.flatcompat=False treemanifest.useruststore=True remotefilelog.localdatarepack=True
   $ . "$TESTDIR/library.sh"
 
 Setup the server
@@ -458,6 +458,7 @@ Test pushing from a treeonly client to a treeonly server
   treemanifest.sendtrees=True
   treemanifest.treeonly=True
   treemanifest.rustmanifest=True
+  treemanifest.useruststore=True
   treemanifest.demanddownload=True
   $ echo 'pushable' >> subdir/x
   $ hg commit -Aqm 'pushable treeonly commit'
@@ -661,6 +662,7 @@ with pullprefetchrevs configured.
   adding file changes
   added 3 changesets with 3 changes to 2 files
   prefetching tree for dad1be784127
+  fetching tree '' 9bd1ef658bef2ded12bd295198d1abbe1cf4115b, found via dad1be784127
   2 trees fetched over * (glob)
   $ cd ..
 

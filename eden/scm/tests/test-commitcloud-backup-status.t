@@ -4,6 +4,7 @@
 
   $ enable amend smartlog
   $ setconfig infinitepushbackup.enablestatus=true
+  $ setconfig treemanifest.useruststore=False
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"
   $ setupcommon

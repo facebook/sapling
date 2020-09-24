@@ -13,7 +13,8 @@ sh % "cat" << r"""
 absorb=
 """ >> "$HGRCPATH"
 
-sh % "hg init"
+sh % "hg init repo"
+sh % "cd repo"
 sh % "hg debugdrawdag" << r"""
 C
 |

@@ -10,7 +10,8 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 # Test case that makes use of the weakness of patience diff algorithm
 
-sh % "hg init"
+sh % "hg init repo"
+sh % "cd repo"
 open("a", "w").write("\n".join(list("a" + "x" * 10 + "u" + "x" * 30 + "a\n")))
 sh % "hg commit -m 1 -A a"
 open("a", "w").write("\n".join(list("b" + "x" * 30 + "u" + "x" * 10 + "b\n")))

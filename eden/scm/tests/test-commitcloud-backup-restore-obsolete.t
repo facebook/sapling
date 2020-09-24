@@ -2,6 +2,7 @@
 
   $ enable amend
   $ setconfig infinitepushbackup.hostname=testhost
+  $ setconfig treemanifest.useruststore=False
 
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/infinitepush/library.sh"
