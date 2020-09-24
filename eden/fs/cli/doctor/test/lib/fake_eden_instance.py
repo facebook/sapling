@@ -107,6 +107,7 @@ class FakeEdenInstance:
             scm_type=scm_type,
             default_revision=snapshot,
             redirections={},
+            active_prefetch_profiles=[],
         )
         checkout = FakeCheckout(state_dir=state_dir, config=config, snapshot=snapshot)
         self._checkouts_by_path[full_path] = checkout

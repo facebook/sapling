@@ -631,6 +631,7 @@ def apply_redirection_configs_to_checkout_config(
         scm_type=config.scm_type,
         default_revision=config.default_revision,
         redirections=redirections,
+        active_prefetch_profiles=config.active_prefetch_profiles,
     )
 
 

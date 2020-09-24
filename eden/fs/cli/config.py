@@ -124,6 +124,7 @@ class CheckoutConfig(typing.NamedTuple):
     scm_type: str
     default_revision: str
     redirections: Dict[str, "RedirectionType"]
+    active_prefetch_profiles: List[str]
 
 
 class EdenInstance:
@@ -867,6 +868,7 @@ class EdenCheckout:
                 "type": checkout_config.scm_type,
             },
             "redirections": redirections,
+            "profiles": {"active": checkout_config.active_prefetch_profiles},
         }
 
         util.write_file_atomically(
@@ -927,6 +929,24 @@ class EdenCheckout:
                         f"{str(exc)}"
                     )
 
+        prefetch_profiles = []
+        prefetch_profiles_list = config.get("profiles")
+
+        if prefetch_profiles_list is not None:
+            prefetch_profiles_list = prefetch_profiles_list.get("active")
+            if prefetch_profiles_list is not None:
+                if not isinstance(prefetch_profiles_list, list):
+                    raise Exception(f"{config_path} has an invalid [profiles] section")
+
+                for profile in prefetch_profiles_list:
+                    if not isinstance(profile, str):
+                        raise Exception(
+                            f"{config_path} has invalid value in "
+                            f"[profiles] {profile} (string expected)"
+                        )
+
+                    prefetch_profiles.append(profile)
+
         return CheckoutConfig(
             backing_repo=Path(get_field("path")),
             scm_type=scm_type,
@@ -934,6 +954,7 @@ class EdenCheckout:
             default_revision=(
                 repository.get("default-revision") or DEFAULT_REVISION[scm_type]
             ),
+            active_prefetch_profiles=prefetch_profiles,
         )
 
     def get_snapshot(self) -> str:

@@ -734,6 +734,7 @@ re-run `eden clone` with --allow-empty-repo"""
             scm_type=repo.type,
             default_revision=config_mod.DEFAULT_REVISION[repo.type],
             redirections={},
+            active_prefetch_profiles=[],
         )
 
         return repo, repo_type, repo_config
