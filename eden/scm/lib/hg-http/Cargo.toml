@@ -8,3 +8,4 @@ include = ["src/**/*.rs"]
 [dependencies]
 hg-metrics = { path = "../hg-metrics" }
 http-client = { path = "../http-client" }
+tracing = "0.1"
