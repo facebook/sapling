@@ -125,7 +125,8 @@ class DeactivateProfileCmd(Subcmd):
 
 class PrefetchProfileCmd(Subcmd):
     NAME = "prefetch_profile"
-    HELP = "Collect backing store fetched file paths to obtain a prefetch profile"
+    HELP = "Create, manage, and use Prefetch Profiles. This command is "
+    " primarily for use in automation."
 
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         self.add_subcommands(parser, prefetch_profile_cmd.commands)

@@ -1273,7 +1273,7 @@ class DebugCmd(Subcmd):
         if sys.platform != "win32":
             from . import debug_posix  # noqa: F401
 
-        subcmd_add_list: List[Type[Subcmd]] = [prefetch_profile_mod.PrefetchProfileCmd]
+        subcmd_add_list: List[Type[Subcmd]] = []
         # Save the parser so we can use it to print help in run() if we are
         # called with no arguments.
         self.parser = parser

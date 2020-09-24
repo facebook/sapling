@@ -37,6 +37,7 @@ from . import (
     filesystem,
     mtab,
     prefetch as prefetch_mod,
+    prefetch_profile as prefetch_profile_mod,
     proc_utils,
     rage as rage_mod,
     redirect as redirect_mod,
@@ -1798,6 +1799,7 @@ def create_parser() -> argparse.ArgumentParser:
         trace_mod.TraceCmd,
         redirect_mod.RedirectCmd,
         prefetch_mod.PrefetchCmd,
+        prefetch_profile_mod.PrefetchProfileCmd,
     ]
 
     subcmd_add_list.append(debug_mod.DebugCmd)
