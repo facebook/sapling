@@ -240,7 +240,12 @@ fn create_small_to_large_commit_syncer(
 
     let commit_sync_config = create_commit_sync_config(small_repo_id, large_repo_id, prefix)?;
     let repos = CommitSyncRepos::new(small_repo, large_repo, &commit_sync_config)?;
-    let live_commit_sync_config = Arc::new(TestLiveCommitSyncConfig::new_empty());
+
+    let (sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
+    source.set_commit_sync_config(small_repo_id, commit_sync_config.clone());
+    source.set_commit_sync_config(large_repo_id, commit_sync_config);
+
+    let live_commit_sync_config = Arc::new(sync_config);
     Ok(CommitSyncer::new(mapping, repos, live_commit_sync_config))
 }
 
@@ -255,7 +260,12 @@ fn create_large_to_small_commit_syncer(
 
     let commit_sync_config = create_commit_sync_config(small_repo_id, large_repo_id, prefix)?;
     let repos = CommitSyncRepos::new(large_repo, small_repo, &commit_sync_config)?;
-    let live_commit_sync_config = Arc::new(TestLiveCommitSyncConfig::new_empty());
+
+    let (sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
+    source.set_commit_sync_config(small_repo_id, commit_sync_config.clone());
+    source.set_commit_sync_config(large_repo_id, commit_sync_config);
+
+    let live_commit_sync_config = Arc::new(sync_config);
     Ok(CommitSyncer::new(mapping, repos, live_commit_sync_config))
 }
 
