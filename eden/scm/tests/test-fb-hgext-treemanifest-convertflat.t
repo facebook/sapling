@@ -64,7 +64,7 @@ The following will simulate the transition from flat to tree-only
 Create flat manifest client
   $ cd ..
   $ hgcloneshallow ssh://user@dummy/master client -q
-  fetching tree '' 85b359fdb09e9b8d7ac4a74551612b277345e8fd
+  fetching tree '' 85b359fdb09e9b8d7ac4a74551612b277345e8fd, found via 2278cc8c6ce6
   2 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ cd client

@@ -25,7 +25,7 @@ preferuncompressed = False so that we can make both generaldelta and non-general
 
   $ hgcloneshallow ssh://user@dummy/master shallow-generaldelta -q --pull --config experimental.bundle2-exp=True
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
-  fetching tree '' bc0c2c938b929f98b1c31a8c5994396ebb096bf0
+  fetching tree '' bc0c2c938b929f98b1c31a8c5994396ebb096bf0, found via b292c1e3311f
   1 trees fetched over 0.00s
   $ grep generaldelta shallow-generaldelta/.hg/requires
   generaldelta

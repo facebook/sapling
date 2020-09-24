@@ -100,7 +100,7 @@ Test rebasing a stack of commits results in a pack with all the trees
   $ hg commit -Am 'modify subdir/y again'
   $ hg rebase -d 085784c01c08984ae3b6f4e4a6e553035d58380b -s '.^'
   rebasing 6a2476258ba5 "modify subdir/y"
-  fetching tree '' bc0c2c938b929f98b1c31a8c5994396ebb096bf0
+  fetching tree '' bc0c2c938b929f98b1c31a8c5994396ebb096bf0, found via 085784c01c08
   1 trees fetched over * (glob)
   rebasing f096b21e165f "modify subdir/y again"
   $ hg log -r '.^::.' -T '{manifest}\n'

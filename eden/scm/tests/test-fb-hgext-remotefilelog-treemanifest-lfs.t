@@ -22,7 +22,7 @@
   searching for changes
   no changes found
   updating to branch default
-  fetching tree '' 287ee6e53d4fbc5fab2157eb0383fdff1c3277c8
+  fetching tree '' 287ee6e53d4fbc5fab2157eb0383fdff1c3277c8, found via 17c112049057
   2 trees fetched over * (glob)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)

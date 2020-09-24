@@ -61,7 +61,7 @@ This file tests that normal mercurial operations never read the flat manifests
   $ hg pull -q -r 0
   $ hg pull -q -r 1
   $ hg up 0
-  fetching tree '' 5ce27016a79d253c34c64aebd35bfb09605ad3ee
+  fetching tree '' 5ce27016a79d253c34c64aebd35bfb09605ad3ee, found via ce051c95cfb8
   1 trees fetched over * (glob)
   8 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

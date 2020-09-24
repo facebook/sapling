@@ -35,7 +35,7 @@ Shallow clone
   dir/x
   dir/ydir/y
   $ hg up .~1
-  fetching tree '' 287ee6e53d4fbc5fab2157eb0383fdff1c3277c8, based on c6668049fdd8d48b367e0979dda40548062c0fca
+  fetching tree '' 287ee6e53d4fbc5fab2157eb0383fdff1c3277c8, based on c6668049fdd8d48b367e0979dda40548062c0fca, found via 7ad7ed4adc14
   2 trees fetched over 0.00s
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ findfilessorted dir

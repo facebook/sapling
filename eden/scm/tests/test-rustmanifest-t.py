@@ -100,7 +100,7 @@ eq(
 )
 
 sh % "hg clone 'ssh://user@dummy/serverpushrebasemerge' $TESTTMP/clientpushrebasemerge -q" == r"""
-    fetching tree '' 7607ba5a97e3117540bbb7525093678eb26e374f
+    fetching tree '' 7607ba5a97e3117540bbb7525093678eb26e374f, found via bd99ff0a074c
     2 trees fetched over 0.00s"""
 sh % "cd $TESTTMP/clientpushrebasemerge"
 sh % "cat" << r"""

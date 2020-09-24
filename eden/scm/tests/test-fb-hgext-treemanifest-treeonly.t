@@ -31,7 +31,7 @@ The following will simulate the transition from flat to tree-only
 Create flat manifest client
   $ cd ..
   $ hgcloneshallow ssh://user@dummy/master client -q
-  fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143
+  fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143, found via d618f764f9a1
   2 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ cd client
@@ -279,7 +279,7 @@ Test peer-to-peer push/pull of tree only commits
   |   1 files changed, 1 insertions(+), 0 deletions(-)
   |
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
-  fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143
+  fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143, found via d618f764f9a1
   2 trees fetched over * (glob)
   o  modify subdir/x
   |   subdir/x |  1 +
@@ -674,13 +674,13 @@ Test ondemand downloading trees with a limited depth
 
   $ clearcache
   $ hg status --change 'tip^'
-  fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143
+  fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143, found via d618f764f9a1
   2 trees fetched over * (glob)
   A subdir/x
 
   $ clearcache
   $ hg status --change 'tip^' --config treemanifest.fetchdepth=1
-  fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143
+  fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143, found via d618f764f9a1
   1 trees fetched over * (glob)
   fetching tree 'subdir' bc0c2c938b929f98b1c31a8c5994396ebb096bf0
   1 trees fetched over * (glob)
@@ -735,7 +735,7 @@ old repository into another repo.
   pushing rev 0a0cac7a2bb2 to destination ssh://user@dummy/master bookmark main
   searching for changes
   warning: repository is unrelated
-  fetching tree '' 99dd81527cb1abd011deb06b629366bfc7c76e3a
+  fetching tree '' 99dd81527cb1abd011deb06b629366bfc7c76e3a, found via 03e23940cb22
   2 trees fetched over * (glob)
   exporting bookmark main
   remote: adding changesets

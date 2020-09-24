@@ -53,7 +53,7 @@ Test that local commits on the server produce trees
 Create client
   $ cd ..
   $ hgcloneshallow ssh://user@dummy/master client -q
-  fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143
+  fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143, found via d618f764f9a1
   2 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ cd client
@@ -277,7 +277,7 @@ Test fetching from the server populates the cache
   $ rm -rf .hg/store/00manifest*
   $ clearcache
   $ hg status --change tip > /dev/null
-  fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143
+  fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143, found via d618f764f9a1
   2 trees fetched over * (glob)
   fetching tree '' fc64d44480b1e632a2561bf8a8500b004eaa8d9a, found via 4d563be8759a
   3 trees fetched over 0.00s
@@ -297,7 +297,7 @@ Test fetching from the server populates the cache
   $ mv ../master/.hg/store/meta ../master/.hg/store/meta.bak
   $ clearcache
   $ hg status --change tip > /dev/null
-  fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143
+  fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143, found via d618f764f9a1
   2 trees fetched over * (glob)
   fetching tree '' fc64d44480b1e632a2561bf8a8500b004eaa8d9a, found via 4d563be8759a
   3 trees fetched over 0.00s
@@ -312,7 +312,7 @@ Test fetching from the server populates the cache
   $ clearcache
 The server sometimes throws spurious errors, see: D14446457
   $ hg status --change tip 2>&1 > /dev/null | grep -v '^remote:'
-  fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143
+  fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143, found via d618f764f9a1
   2 trees fetched over * (glob)
   fetching tree '' fc64d44480b1e632a2561bf8a8500b004eaa8d9a, found via 4d563be8759a
   abort: "unable to find the following nodes locally or on the server: ('', fc64d44480b1e632a2561bf8a8500b004eaa8d9a)"
@@ -323,7 +323,7 @@ The server sometimes throws spurious errors, see: D14446457
   $ clearcache
   $ mv ../master/.hg/store/meta.bak ../master/.hg/store/meta
   $ hg status --change tip > /dev/null
-  fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143
+  fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143, found via d618f764f9a1
   2 trees fetched over * (glob)
   fetching tree '' fc64d44480b1e632a2561bf8a8500b004eaa8d9a, found via 4d563be8759a
   3 trees fetched over 0.00s
@@ -349,7 +349,7 @@ The server sometimes throws spurious errors, see: D14446457
 #endif
   $ clearcache
   $ hg status --change tip
-  fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143
+  fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143, found via d618f764f9a1
   2 trees fetched over * (glob)
   fetching tree '' fc64d44480b1e632a2561bf8a8500b004eaa8d9a, found via 4d563be8759a
   3 trees fetched over 0.00s

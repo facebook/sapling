@@ -34,7 +34,7 @@
 
 # Test repacking shared manifest packs
   $ hg up -q -r 0
-  fetching tree '' a0c8bcbbb45c63b90b70ad007bf38961f64f2af0
+  fetching tree '' a0c8bcbbb45c63b90b70ad007bf38961f64f2af0, found via 1f0dee641bb7
   1 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ hg up -q -r 1

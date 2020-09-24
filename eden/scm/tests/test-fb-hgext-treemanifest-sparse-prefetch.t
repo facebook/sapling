@@ -34,7 +34,7 @@ support designated nodes.
 
   $ cd client
   $ hg up 'master~3'
-  fetching tree '' 4ccb43944747fdc11a890fcae40e0bc0ac6732da
+  fetching tree '' 4ccb43944747fdc11a890fcae40e0bc0ac6732da, found via f1a8fb47c12d
   2 trees fetched over * (glob)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ enable sparse

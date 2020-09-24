@@ -64,5 +64,5 @@ Test that log -p downloads each tree using the prior tree as a base
   2 trees fetched over * (glob)
   fetching tree '' d09a7a1172be7d3c00d4bc16831b6394d11ce33f, found via 6bfefea56efe
   2 trees fetched over * (glob)
-  fetching tree '' 1b3e02c1b4460e2d6264781579eb163e76cffad4
+  fetching tree '' 1b3e02c1b4460e2d6264781579eb163e76cffad4, found via dc2a67e3cebc
   2 trees fetched over * (glob)

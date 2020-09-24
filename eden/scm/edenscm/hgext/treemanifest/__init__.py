@@ -532,8 +532,7 @@ def wraprepo(repo):
                 # If we have no base nodes, scan the changelog looking for a
                 # semi-recent manifest node to treat as the base.
                 if not basemfnodes:
-                    changeloglen = len(self.changelog) - 1
-                    basemfnodes = _findrecenttree(self, changeloglen, mfnodes)
+                    basemfnodes = _findrecenttree(self, self["tip"].node(), mfnodes)
 
                 self._prefetchtrees("", mfnodes, basemfnodes, [])
 
@@ -2279,11 +2278,10 @@ def _postpullprefetch(ui, repo):
 
 
 @util.timefunction("findrecenttrees")
-def _findrecenttree(repo, startrev, targetmfnodes):
+def _findrecenttree(repo, startnode, targetmfnodes):
     cl = repo.changelog
     mfstore = repo.manifestlog.datastore
     targetmfnodes = set(targetmfnodes)
-    startnode = repo.changelog.node(startrev)
 
     with progress.spinner(repo.ui, _("finding nearest trees")):
         # Look up and down from the given rev
@@ -2623,29 +2621,27 @@ class remotetreestore(generatingdatastore):
 
         # Only look at the server if not root or is public
         basemfnodes = []
-        linkrev = None
+        linknode = None
         if name == "" and len(self._repo) != 0:
             node = list(nodes)[0] if len(nodes) == 1 else self._repo["tip"].node()
             if util.safehasattr(self._repo.manifestlog, "_revlog"):
                 mfrevlog = self._repo.manifestlog._revlog
                 if node in mfrevlog.nodemap:
                     rev = mfrevlog.rev(node)
-                    linkrev = mfrevlog.linkrev(rev)
-                    if self._repo[linkrev].phase() != phases.public:
+                    linknode = self._repo[mfrevlog.linkrev(rev)].node()
+                    if self._repo[linknode].phase() != phases.public:
                         raise KeyError((name, node))
 
-            if linkrev is None:
+            if linknode is None:
                 # Recentlinknode is set any time a changectx accesses a
                 # manifest. This let's us get an approximate linknode to use for
                 # finding nearby manifests.
-                recentlinknode = self._repo.manifestlog.recentlinknode
-                if recentlinknode is not None:
-                    linkrev = self._repo[recentlinknode].rev()
-                else:
-                    linkrev = self._repo["tip"].rev()
+                linknode = self._repo.manifestlog.recentlinknode
+                if linknode is None:
+                    linknode = self._repo["tip"].node()
 
             # Find a recent tree that we already have
-            basemfnodes = _findrecenttree(self._repo, linkrev, nodes)
+            basemfnodes = _findrecenttree(self._repo, linknode, nodes)
 
         if self._repo.ui.configbool("remotefilelog", "debug") and len(nodes) == 1:
             node = list(nodes)[0]
@@ -2654,8 +2650,8 @@ class remotetreestore(generatingdatastore):
                 msg += _(", based on %s") % hex(basemfnodes[0])
             if len(basemfnodes) > 1:
                 msg += _(" and %d others") % (len(basemfnodes) - 1)
-            if linkrev:
-                msg += _(", found via %s") % short(self._repo[linkrev].node())
+            if linknode:
+                msg += _(", found via %s") % short(linknode)
             self._repo.ui.warn(msg + "\n")
         self._repo._prefetchtrees(name, nodes, basemfnodes, [])
 

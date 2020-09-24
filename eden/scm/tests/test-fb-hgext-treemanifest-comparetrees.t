@@ -20,7 +20,7 @@
 Clone it
   $ cd ..
   $ hgcloneshallow ssh://user@dummy/master client1 -q --config extensions.treemanifest= --config treemanifest.treeonly=True
-  fetching tree '' 1dd55a482f8027ebff785185b3691491312757d3
+  fetching tree '' 1dd55a482f8027ebff785185b3691491312757d3, found via 1e4be0697311
   1 trees fetched over * (glob)
   1 files fetched over * (glob) (?)
   $ cd client1
