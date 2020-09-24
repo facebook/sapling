@@ -11,7 +11,10 @@ use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
 use serde::Deserialize;
 
-use edenapi_types::{TreeEntry, TreeRequest};
+use edenapi_types::{
+    wire::{ToApi, ToWire, WireTreeRequest},
+    TreeEntry, TreeRequest,
+};
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
 use mercurial_types::{HgManifestId, HgNodeHash};
 use mononoke_api::hg::{HgDataContext, HgDataId, HgRepoContext};
@@ -42,9 +45,18 @@ pub async fn trees(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
     let sctx = ServerContext::borrow_from(state);
 
     let repo = get_repo(&sctx, &rctx, &params.repo).await?;
-    let request = parse_cbor_request(state).await?;
+    let request: WireTreeRequest = parse_cbor_request(state).await?;
+    let request: TreeRequest = match request.to_api() {
+        Ok(r) => r,
+        Err(e) => {
+            return Err(HttpError::e400(e));
+        }
+    };
 
-    Ok(cbor_stream(rctx, fetch_all_trees(repo, request)))
+    Ok(cbor_stream(
+        rctx,
+        fetch_all_trees(repo, request).map(|r| r.map(|v| v.to_wire())),
+    ))
 }
 
 /// Fetch trees for all of the requested keys concurrently.

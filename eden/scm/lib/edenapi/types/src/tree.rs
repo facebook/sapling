@@ -5,16 +5,17 @@
  * GNU General Public License version 2.
  */
 
-use std::iter::FromIterator;
-
 use bytes::Bytes;
 use serde_derive::{Deserialize, Serialize};
 use thiserror::Error;
 
+#[cfg(any(test, feature = "for-tests"))]
+use quickcheck::Arbitrary;
+
 use revisionstore_types::Metadata;
 use types::{hgid::HgId, key::Key, parents::Parents};
 
-use crate::{is_default, InvalidHgId};
+use crate::InvalidHgId;
 
 #[derive(Debug, Error)]
 pub enum TreeError {
@@ -44,19 +45,12 @@ impl TreeError {
 /// Structure representing source control tree entry on the wire.
 /// Includes the information required to add the data to a mutable store,
 /// along with the parents for hash validation.
-#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq)]
 pub struct TreeEntry {
-    #[serde(rename = "0", default, skip_serializing_if = "is_default")]
-    key: Key,
-
-    #[serde(rename = "1", default, skip_serializing_if = "is_default")]
-    data: Bytes,
-
-    #[serde(rename = "2", default, skip_serializing_if = "is_default")]
-    parents: Parents,
-
-    #[serde(rename = "3", default, skip_serializing_if = "is_default")]
-    metadata: Metadata,
+    pub key: Key,
+    pub data: Bytes,
+    pub parents: Parents,
+    pub metadata: Metadata,
 }
 
 impl TreeEntry {
@@ -115,43 +109,23 @@ impl TreeEntry {
     }
 }
 
-#[derive(Clone, Debug, Default, Serialize, Deserialize, Eq, PartialEq)]
-pub struct TreeRequest {
-    #[serde(rename = "0", default, skip_serializing_if = "is_default")]
-    pub keys: Vec<Key>,
-}
-
-#[derive(Debug, Default, Serialize, Deserialize)]
-pub struct TreeResponse {
-    #[serde(rename = "0", default, skip_serializing_if = "is_default")]
-    pub entries: Vec<TreeEntry>,
-}
-
-impl TreeResponse {
-    pub fn new(entries: impl IntoIterator<Item = TreeEntry>) -> Self {
-        Self::from_iter(entries)
-    }
-}
-
-impl FromIterator<TreeEntry> for TreeResponse {
-    fn from_iter<I: IntoIterator<Item = TreeEntry>>(entries: I) -> Self {
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for TreeEntry {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        let bytes: Vec<u8> = Arbitrary::arbitrary(g);
         Self {
-            entries: entries.into_iter().collect(),
+            key: Arbitrary::arbitrary(g),
+            data: Bytes::from(bytes),
+            parents: Arbitrary::arbitrary(g),
+            metadata: Arbitrary::arbitrary(g),
         }
     }
 }
 
-impl IntoIterator for TreeResponse {
-    type Item = TreeEntry;
-    type IntoIter = std::vec::IntoIter<TreeEntry>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.entries.into_iter()
-    }
+#[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq)]
+pub struct TreeRequest {
+    pub keys: Vec<Key>,
 }
-
-#[cfg(any(test, feature = "for-tests"))]
-use quickcheck::Arbitrary;
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for TreeRequest {

@@ -9,8 +9,6 @@ use serde_derive::{Deserialize, Serialize};
 
 use types::{hgid::HgId, path::RepoPathBuf};
 
-use crate::is_default;
-
 /// Struct reprenting the arguments to a "gettreepack" operation, which
 /// is used by Mercurial to prefetch treemanifests. This struct is intended
 /// to provide a way to support requests compatible with Mercurial's existing
@@ -21,18 +19,11 @@ use crate::is_default;
 /// containing the keys of the desired tree nodes.
 ///
 /// In all cases, trees will be returned in a `TreeResponse`.
-#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, Deserialize, Serialize, PartialEq)]
 pub struct CompleteTreeRequest {
-    #[serde(rename = "0", default, skip_serializing_if = "is_default")]
     pub rootdir: RepoPathBuf,
-
-    #[serde(rename = "1", default, skip_serializing_if = "is_default")]
     pub mfnodes: Vec<HgId>,
-
-    #[serde(rename = "2", default, skip_serializing_if = "is_default")]
     pub basemfnodes: Vec<HgId>,
-
-    #[serde(rename = "3", default, skip_serializing_if = "is_default")]
     pub depth: Option<usize>,
 }
 

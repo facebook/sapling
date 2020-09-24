@@ -21,8 +21,8 @@ use tokio::prelude::*;
 use configparser::config::{ConfigSet, Options};
 use edenapi::{Builder, Client, EdenApi, Entries, Fetch, Progress, ProgressCallback};
 use edenapi_types::{
-    json::FromJson, CommitRevlogDataRequest, CompleteTreeRequest, FileRequest, HistoryRequest,
-    TreeRequest,
+    json::FromJson, wire::ToWire, CommitRevlogDataRequest, CompleteTreeRequest, FileRequest,
+    HistoryRequest, TreeRequest,
 };
 
 const DEFAULT_CONFIG_FILE: &str = ".hgrc.edenapi";
@@ -127,7 +127,7 @@ async fn cmd_history(args: Args) -> Result<()> {
         let res = client
             .history(repo.clone(), req.keys, req.length, Some(cb))
             .await?;
-        handle_response(res, bar).await?;
+        handle_response_raw(res, bar).await?;
     }
 
     Ok(())
@@ -196,7 +196,7 @@ async fn cmd_commit_revlog_data(args: Args) -> Result<()> {
         let res = client
             .commit_revlog_data(repo.clone(), req.hgids, Some(cb))
             .await?;
-        handle_response(res, bar).await?;
+        handle_response_raw(res, bar).await?;
     }
 
     Ok(())
@@ -205,8 +205,28 @@ async fn cmd_commit_revlog_data(args: Args) -> Result<()> {
 /// Handle the incoming deserialized response by reserializing it
 /// and dumping it to stdout (only if stdout isn't a TTY, to avoid
 /// messing up the user's terminal).
-async fn handle_response<T: Serialize>(res: Fetch<T>, bar: ProgressBar) -> Result<()> {
+async fn handle_response<T: ToWire>(res: Fetch<T>, bar: ProgressBar) -> Result<()> {
     let buf = serialize_and_concat(res.entries).await?;
+
+    let stats = res.stats.await?;
+    bar.finish_at_current_pos();
+
+    log::info!("{}", &stats);
+    log::trace!("Response metadata: {:#?}", &res.meta);
+
+    if atty::is(atty::Stream::Stdout) {
+        log::warn!("Not writing output because stdout is a TTY");
+    } else {
+        log::info!("Writing output to stdout");
+        io::stdout().write_all(&buf).await?;
+    }
+
+    Ok(())
+}
+
+// TODO(meyer): Remove when all types have wire type
+async fn handle_response_raw<T: Serialize>(res: Fetch<T>, bar: ProgressBar) -> Result<()> {
+    let buf = serialize_and_concat_raw(res.entries).await?;
 
     let stats = res.stats.await?;
     bar.finish_at_current_pos();
@@ -231,7 +251,16 @@ async fn handle_response<T: Serialize>(res: Fetch<T>, bar: ProgressBar) -> Resul
 /// However, in this case we're explicitly trying to exercise the public API
 /// of the client, including deserialization. In practice, most users will
 /// never want the raw (CBOR-encoded) entries.
-async fn serialize_and_concat<T: Serialize>(entries: Entries<T>) -> Result<Vec<u8>> {
+async fn serialize_and_concat<T: ToWire>(entries: Entries<T>) -> Result<Vec<u8>> {
+    entries
+        .err_into()
+        .and_then(|entry| async move { Ok(serde_cbor::to_vec(&entry.to_wire())?) })
+        .try_concat()
+        .await
+}
+
+// TODO: Remove when all types have wire type
+async fn serialize_and_concat_raw<T: Serialize>(entries: Entries<T>) -> Result<Vec<u8>> {
     entries
         .err_into()
         .and_then(|entry| async move { Ok(serde_cbor::to_vec(&entry)?) })

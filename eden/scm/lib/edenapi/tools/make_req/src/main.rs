@@ -25,8 +25,8 @@ use serde_json::Value;
 use structopt::StructOpt;
 
 use edenapi_types::{
-    json::FromJson, CommitLocationToHashRequest, CommitRevlogDataRequest, CompleteTreeRequest,
-    FileRequest, HistoryRequest, TreeRequest,
+    json::FromJson, wire::ToWire, CommitLocationToHashRequest, CommitRevlogDataRequest,
+    CompleteTreeRequest, FileRequest, HistoryRequest, TreeRequest,
 };
 
 #[derive(Debug, StructOpt)]
@@ -52,14 +52,23 @@ fn main() -> Result<()> {
     match Command::from_args() {
         Command::File(args) => make_req::<FileRequest>(args),
         Command::Tree(args) => make_req::<TreeRequest>(args),
-        Command::History(args) => make_req::<HistoryRequest>(args),
+        Command::History(args) => make_req_wire::<HistoryRequest>(args),
         Command::CompleteTree(args) => make_req::<CompleteTreeRequest>(args),
-        Command::CommitRevlogData(args) => make_req::<CommitRevlogDataRequest>(args),
-        Command::CommitLocationToHash(args) => make_req::<CommitLocationToHashRequest>(args),
+        Command::CommitRevlogData(args) => make_req_wire::<CommitRevlogDataRequest>(args),
+        Command::CommitLocationToHash(args) => make_req_wire::<CommitLocationToHashRequest>(args),
     }
 }
 
-fn make_req<R: FromJson + Serialize + Debug>(args: Args) -> Result<()> {
+fn make_req<R: FromJson + ToWire>(args: Args) -> Result<()> {
+    let json = read_input(args.input)?;
+    let req = R::from_json(&json)?.to_wire();
+    let bytes = serde_cbor::to_vec(&req)?;
+    eprintln!("Generated request: {:#?}", &req);
+    write_output(args.output, &bytes)
+}
+
+// TODO: Remove after all requests standarize to match FileRequest, TreeRequest, CompleteTreeRequest
+fn make_req_wire<R: FromJson + Serialize + Debug>(args: Args) -> Result<()> {
     let json = read_input(args.input)?;
     let req = R::from_json(&json)?;
     let bytes = serde_cbor::to_vec(&req)?;

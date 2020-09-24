@@ -42,19 +42,19 @@ Create and send file request.
   > }
   > EOF
   Reading from stdin
-  Generated request: FileRequest {
+  Generated request: WireFileRequest {
       keys: [
-          Key {
-              path: RepoPathBuf(
+          WireKey {
+              path: WireRepoPathBuf(
                   "test.txt",
               ),
-              hgid: HgId("186cafa3319c24956783383dc44c5cbc68c5a0ca"),
+              hgid: WireHgId("186cafa3319c24956783383dc44c5cbc68c5a0ca"),
           },
-          Key {
-              path: RepoPathBuf(
+          WireKey {
+              path: WireRepoPathBuf(
                   "copy.txt",
               ),
-              hgid: HgId("17b8d4e3bafd4ec4812ad7c930aace9bf07ab033"),
+              hgid: WireHgId("17b8d4e3bafd4ec4812ad7c930aace9bf07ab033"),
           },
       ],
   }

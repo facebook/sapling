@@ -5,16 +5,17 @@
  * GNU General Public License version 2.
  */
 
-use std::iter::FromIterator;
-
 use bytes::Bytes;
 use serde_derive::{Deserialize, Serialize};
 use thiserror::Error;
 
+#[cfg(any(test, feature = "for-tests"))]
+use quickcheck::Arbitrary;
+
 use revisionstore_types::Metadata;
 use types::{hgid::HgId, key::Key, parents::Parents};
 
-use crate::{is_default, InvalidHgId};
+use crate::InvalidHgId;
 
 /// Tombstone string that replaces the content of redacted files.
 /// TODO(T48685378): Handle redacted content in a less hacky way.
@@ -49,19 +50,12 @@ impl FileError {
 /// Structure representing source control file content on the wire.
 /// Includes the information required to add the data to a mutable store,
 /// along with the parents for hash validation.
-#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq)]
 pub struct FileEntry {
-    #[serde(rename = "0", default, skip_serializing_if = "is_default")]
-    key: Key,
-
-    #[serde(rename = "1", default, skip_serializing_if = "is_default")]
-    data: Bytes,
-
-    #[serde(rename = "2", default, skip_serializing_if = "is_default")]
-    parents: Parents,
-
-    #[serde(rename = "3", default, skip_serializing_if = "is_default")]
-    metadata: Metadata,
+    pub key: Key,
+    pub data: Bytes,
+    pub parents: Parents,
+    pub metadata: Metadata,
 }
 
 impl FileEntry {
@@ -121,43 +115,23 @@ impl FileEntry {
     }
 }
 
-#[derive(Clone, Default, Debug, Serialize, Deserialize, Eq, PartialEq)]
-pub struct FileRequest {
-    #[serde(rename = "0", default, skip_serializing_if = "is_default")]
-    pub keys: Vec<Key>,
-}
-
-#[derive(Debug, Default, Serialize, Deserialize)]
-pub struct FileResponse {
-    #[serde(rename = "0", default, skip_serializing_if = "is_default")]
-    pub entries: Vec<FileEntry>,
-}
-
-impl FileResponse {
-    pub fn new(entries: impl IntoIterator<Item = FileEntry>) -> Self {
-        Self::from_iter(entries)
-    }
-}
-
-impl FromIterator<FileEntry> for FileResponse {
-    fn from_iter<I: IntoIterator<Item = FileEntry>>(entries: I) -> Self {
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for FileEntry {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        let bytes: Vec<u8> = Arbitrary::arbitrary(g);
         Self {
-            entries: entries.into_iter().collect(),
+            key: Arbitrary::arbitrary(g),
+            data: Bytes::from(bytes),
+            parents: Arbitrary::arbitrary(g),
+            metadata: Arbitrary::arbitrary(g),
         }
     }
 }
 
-impl IntoIterator for FileResponse {
-    type Item = FileEntry;
-    type IntoIter = std::vec::IntoIter<FileEntry>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.entries.into_iter()
-    }
+#[derive(Clone, Default, Debug, Deserialize, Serialize, Eq, PartialEq)]
+pub struct FileRequest {
+    pub keys: Vec<Key>,
 }
-
-#[cfg(any(test, feature = "for-tests"))]
-use quickcheck::Arbitrary;
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for FileRequest {

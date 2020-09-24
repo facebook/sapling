@@ -15,6 +15,7 @@ use serde::{de::DeserializeOwned, Serialize};
 use url::Url;
 
 use edenapi_types::{
+    wire::{ToApi, ToWire, WireFileEntry, WireTreeEntry},
     CommitRevlogData, CommitRevlogDataRequest, CompleteTreeRequest, FileEntry, FileRequest,
     HistoryEntry, HistoryRequest, HistoryResponseChunk, TreeEntry, TreeRequest,
 };
@@ -107,7 +108,7 @@ impl Client {
             .collect()
     }
 
-    /// Fetch data from the server.
+    /// Fetch data from the server without Wire to Api conversion.
     ///
     /// Concurrently performs all of the given HTTP requests, each of
     /// which must result in streaming response of CBOR-encoded values
@@ -115,7 +116,7 @@ impl Client {
     /// the order the responses arrive. The response streams will be
     /// combined into a single stream, in which the returned entries
     /// from different HTTP responses may be arbitrarily interleaved.
-    async fn fetch<T: DeserializeOwned + Send + 'static>(
+    async fn fetch_raw<T: DeserializeOwned + Send + 'static>(
         &self,
         requests: Vec<Request>,
         progress: Option<ProgressCallback>,
@@ -133,6 +134,55 @@ impl Client {
             meta.push(ResponseMeta::from(&res));
 
             let entries = res.into_cbor_stream::<T>().err_into().boxed();
+            streams.push(entries);
+        }
+
+        let entries = stream::select_all(streams).boxed();
+        let stats = stats.err_into().boxed();
+
+        Ok(Fetch {
+            meta,
+            entries,
+            stats,
+        })
+    }
+
+    /// Fetch data from the server.
+    ///
+    /// Concurrently performs all of the given HTTP requests, each of
+    /// which must result in streaming response of CBOR-encoded values
+    /// of type `T`. The metadata of each response will be returned in
+    /// the order the responses arrive. The response streams will be
+    /// combined into a single stream, in which the returned entries
+    /// from different HTTP responses may be arbitrarily interleaved.
+    async fn fetch<T>(
+        &self,
+        requests: Vec<Request>,
+        progress: Option<ProgressCallback>,
+    ) -> Result<Fetch<<T as ToApi>::Api>, EdenApiError>
+    where
+        T: ToApi + Send + DeserializeOwned + 'static,
+        <T as ToApi>::Api: Send + 'static,
+    {
+        let progress = progress.unwrap_or_else(|| Box::new(|_| ()));
+        let requests = requests.into_iter().collect::<Vec<_>>();
+        let n_requests = requests.len();
+
+        let (mut responses, stats) = self.client.send_async_with_progress(requests, progress)?;
+
+        let mut meta = Vec::with_capacity(n_requests);
+        let mut streams = Vec::with_capacity(n_requests);
+
+        while let Some(res) = responses.try_next().await? {
+            meta.push(ResponseMeta::from(&res));
+
+            let entries = res
+                .into_cbor_stream::<T>()
+                .map(|r| {
+                    r.map_err(|e| EdenApiError::from(e))
+                        .and_then(|v| v.to_api().map_err(|e| EdenApiError::from(e.into())))
+                })
+                .boxed();
             streams.push(entries);
         }
 
@@ -173,11 +223,11 @@ impl EdenApi for Client {
         }
 
         let url = self.url(paths::FILES, Some(&repo))?;
-        let requests = self.prepare(&url, keys, self.config.max_files, |keys| FileRequest {
-            keys,
+        let requests = self.prepare(&url, keys, self.config.max_files, |keys| {
+            FileRequest { keys }.to_wire()
         })?;
 
-        self.fetch::<FileEntry>(requests, progress).await
+        Ok(self.fetch::<WireFileEntry>(requests, progress).await?)
     }
 
     async fn history(
@@ -203,7 +253,7 @@ impl EdenApi for Client {
             entries,
             stats,
         } = self
-            .fetch::<HistoryResponseChunk>(requests, progress)
+            .fetch_raw::<HistoryResponseChunk>(requests, progress)
             .await?;
 
         // Convert received `HistoryResponseChunk`s into `HistoryEntry`s.
@@ -232,11 +282,11 @@ impl EdenApi for Client {
         }
 
         let url = self.url(paths::TREES, Some(&repo))?;
-        let requests = self.prepare(&url, keys, self.config.max_trees, |keys| TreeRequest {
-            keys,
+        let requests = self.prepare(&url, keys, self.config.max_trees, |keys| {
+            TreeRequest { keys }.to_wire()
         })?;
 
-        self.fetch::<TreeEntry>(requests, progress).await
+        Ok(self.fetch::<WireTreeEntry>(requests, progress).await?)
     }
 
     async fn complete_trees(
@@ -260,14 +310,15 @@ impl EdenApi for Client {
             mfnodes,
             basemfnodes,
             depth,
-        };
+        }
+        .to_wire();
 
         let req = self
             .configure(Request::post(url))?
             .cbor(&tree_req)
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
-        self.fetch::<TreeEntry>(vec![req], progress).await
+        Ok(self.fetch::<WireTreeEntry>(vec![req], progress).await?)
     }
 
     async fn commit_revlog_data(
@@ -286,7 +337,8 @@ impl EdenApi for Client {
             .cbor(&commit_revlog_data_req)
             .map_err(EdenApiError::RequestSerializationFailed)?;
 
-        self.fetch::<CommitRevlogData>(vec![req], progress).await
+        self.fetch_raw::<CommitRevlogData>(vec![req], progress)
+            .await
     }
 }
 

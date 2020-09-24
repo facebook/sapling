@@ -95,6 +95,10 @@ impl HgId {
         HgId(bytes)
     }
 
+    pub fn into_byte_array(self) -> [u8; HgId::len()] {
+        self.0
+    }
+
     pub fn to_hex(&self) -> String {
         to_hex(self.0.as_ref())
     }

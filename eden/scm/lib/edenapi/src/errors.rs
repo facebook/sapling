@@ -7,6 +7,7 @@
 
 use thiserror::Error;
 
+use edenapi_types::wire::WireToApiConversionError;
 use http_client::{CertOrKeyMissing, HttpClientError};
 
 #[derive(Debug, Error)]
@@ -23,6 +24,8 @@ pub enum EdenApiError {
     Http(#[from] HttpClientError),
     #[error(transparent)]
     InvalidUrl(#[from] url::ParseError),
+    #[error(transparent)]
+    WireToApiConversionFailed(#[from] WireToApiConversionError),
     #[error(transparent)]
     Other(#[from] anyhow::Error),
 }

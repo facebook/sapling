@@ -17,6 +17,16 @@ pub struct Metadata {
     pub flags: Option<u64>,
 }
 
+#[cfg(any(test, feature = "for-tests"))]
+impl quickcheck::Arbitrary for Metadata {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        Self {
+            size: quickcheck::Arbitrary::arbitrary(g),
+            flags: quickcheck::Arbitrary::arbitrary(g),
+        }
+    }
+}
+
 impl Metadata {
     pub const LFS_FLAG: u64 = 0x2000;
 

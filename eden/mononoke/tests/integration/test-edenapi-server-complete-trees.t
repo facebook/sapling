@@ -92,16 +92,16 @@ Create and send complete tree request.
   > }
   > EOF
   Reading from stdin
-  Generated request: CompleteTreeRequest {
-      rootdir: RepoPathBuf(
+  Generated request: WireCompleteTreeRequest {
+      rootdir: WireRepoPathBuf(
           "",
       ),
       mfnodes: [
-          HgId("3d866afaa8cdb847e3800fef742c1fe9e741f75f"),
-          HgId("8cad2f4cf4dc3d149356ed44a973fd3f6284deb6"),
+          WireHgId("3d866afaa8cdb847e3800fef742c1fe9e741f75f"),
+          WireHgId("8cad2f4cf4dc3d149356ed44a973fd3f6284deb6"),
       ],
       basemfnodes: [
-          HgId("63e28e06687f0750555703a5993d72665ed21467"),
+          WireHgId("63e28e06687f0750555703a5993d72665ed21467"),
       ],
       depth: Some(
           2,

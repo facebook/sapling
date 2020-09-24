@@ -24,8 +24,9 @@ use sha1::{Digest, Sha1};
 use structopt::StructOpt;
 
 use edenapi_types::{
-    CommitLocationToHash, CommitRevlogData, FileEntry, FileError, HistoryResponseChunk, TreeEntry,
-    TreeError, WireHistoryEntry,
+    wire::{ToApi, WireFileEntry, WireTreeEntry},
+    CommitLocationToHash, CommitRevlogData, FileError, HistoryResponseChunk, TreeError,
+    WireHistoryEntry,
 };
 use types::{HgId, Key, Parents, RepoPathBuf};
 
@@ -198,8 +199,8 @@ fn cmd_file(args: FileArgs) -> Result<()> {
 }
 
 fn cmd_tree_ls(args: DataLsArgs) -> Result<()> {
-    let entries: Vec<TreeEntry> = read_input(args.input, args.limit)?;
-    for entry in entries {
+    let entries: Vec<WireTreeEntry> = read_input(args.input, args.limit)?;
+    for entry in entries.into_iter().filter_map(to_api) {
         println!("{}", entry.key());
     }
     Ok(())
@@ -210,9 +211,10 @@ fn cmd_tree_cat(args: DataCatArgs) -> Result<()> {
     let hgid = args.hgid.parse()?;
     let key = Key::new(path, hgid);
 
-    let entries: Vec<TreeEntry> = read_input(args.input, args.limit)?;
+    let entries: Vec<WireTreeEntry> = read_input(args.input, args.limit)?;
     let entry = entries
         .into_iter()
+        .filter_map(to_api)
         .find(|entry| entry.key() == &key)
         .ok_or_else(|| anyhow!("Key not found"))?;
 
@@ -220,8 +222,8 @@ fn cmd_tree_cat(args: DataCatArgs) -> Result<()> {
 }
 
 fn cmd_tree_check(args: DataCheckArgs) -> Result<()> {
-    let entries: Vec<TreeEntry> = read_input(args.input, args.limit)?;
-    for entry in entries {
+    let entries: Vec<WireTreeEntry> = read_input(args.input, args.limit)?;
+    for entry in entries.into_iter().filter_map(to_api) {
         match entry.data() {
             Ok(_) => {}
             Err(TreeError::MaybeHybridManifest(e)) => {
@@ -236,8 +238,8 @@ fn cmd_tree_check(args: DataCheckArgs) -> Result<()> {
 }
 
 fn cmd_file_ls(args: DataLsArgs) -> Result<()> {
-    let entries: Vec<FileEntry> = read_input(args.input, args.limit)?;
-    for entry in entries {
+    let entries: Vec<WireFileEntry> = read_input(args.input, args.limit)?;
+    for entry in entries.into_iter().filter_map(to_api) {
         println!("{}", entry.key());
     }
     Ok(())
@@ -248,9 +250,10 @@ fn cmd_file_cat(args: DataCatArgs) -> Result<()> {
     let hgid = args.hgid.parse()?;
     let key = Key::new(path, hgid);
 
-    let entries: Vec<FileEntry> = read_input(args.input, args.limit)?;
+    let entries: Vec<WireFileEntry> = read_input(args.input, args.limit)?;
     let entry = entries
         .into_iter()
+        .filter_map(to_api)
         .find(|entry| entry.key() == &key)
         .ok_or_else(|| anyhow!("Key not found"))?;
 
@@ -258,8 +261,8 @@ fn cmd_file_cat(args: DataCatArgs) -> Result<()> {
 }
 
 fn cmd_file_check(args: DataCheckArgs) -> Result<()> {
-    let entries: Vec<FileEntry> = read_input(args.input, args.limit)?;
-    for entry in entries {
+    let entries: Vec<WireFileEntry> = read_input(args.input, args.limit)?;
+    for entry in entries.into_iter().filter_map(to_api) {
         match entry.data() {
             Ok(_) => {}
             Err(FileError::Redacted(..)) => {
@@ -424,6 +427,16 @@ fn read_input<T: DeserializeOwned>(path: Option<PathBuf>, limit: Option<usize>) 
                 .collect::<Result<Vec<_>, _>>()?
         }
     })
+}
+
+fn to_api<T: ToApi>(entry: T) -> Option<T::Api> {
+    match entry.to_api() {
+        Ok(api) => Some(api),
+        Err(_) => {
+            eprintln!("Failed to convert entry to API type");
+            None
+        }
+    }
 }
 
 fn write_output(path: Option<PathBuf>, content: &[u8]) -> Result<()> {

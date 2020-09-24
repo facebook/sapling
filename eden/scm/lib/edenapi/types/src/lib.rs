@@ -31,17 +31,18 @@ pub mod file;
 pub mod history;
 pub mod json;
 pub mod tree;
+pub mod wire;
 
 pub use crate::commit::{
     CommitLocation, CommitLocationToHash, CommitLocationToHashRequest, CommitRevlogData,
     CommitRevlogDataRequest,
 };
 pub use crate::complete_tree::CompleteTreeRequest;
-pub use crate::file::{FileEntry, FileError, FileRequest, FileResponse};
+pub use crate::file::{FileEntry, FileError, FileRequest};
 pub use crate::history::{
     HistoryEntry, HistoryRequest, HistoryResponse, HistoryResponseChunk, WireHistoryEntry,
 };
-pub use crate::tree::{TreeEntry, TreeError, TreeRequest, TreeResponse};
+pub use crate::tree::{TreeEntry, TreeError, TreeRequest};
 
 use thiserror::Error;
 
@@ -55,8 +56,4 @@ pub struct InvalidHgId {
     computed: HgId,
     data: Bytes,
     parents: Parents,
-}
-
-fn is_default<T: Default + PartialEq>(v: &T) -> bool {
-    v == &T::default()
 }

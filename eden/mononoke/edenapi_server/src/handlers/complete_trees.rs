@@ -6,12 +6,15 @@
  */
 
 use anyhow::Error;
-use futures::{Stream, TryStreamExt};
+use futures::{Stream, StreamExt, TryStreamExt};
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
 use serde::Deserialize;
 
-use edenapi_types::{CompleteTreeRequest, TreeEntry};
+use edenapi_types::{
+    wire::{ToApi, ToWire, WireCompleteTreeRequest},
+    CompleteTreeRequest, TreeEntry,
+};
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
 use mercurial_types::{HgManifestId, HgNodeHash};
 use mononoke_api::{
@@ -42,9 +45,18 @@ pub async fn complete_trees(state: &mut State) -> Result<impl TryIntoResponse, H
     let sctx = ServerContext::borrow_from(state);
 
     let repo = get_repo(&sctx, &rctx, &params.repo).await?;
-    let request = parse_cbor_request(state).await?;
+    let request: WireCompleteTreeRequest = parse_cbor_request(state).await?;
+    let request: CompleteTreeRequest = match request.to_api() {
+        Ok(r) => r,
+        Err(e) => {
+            return Err(HttpError::e400(e));
+        }
+    };
 
-    Ok(cbor_stream(rctx, fetch_trees_under_path(&repo, request)?))
+    Ok(cbor_stream(
+        rctx,
+        fetch_trees_under_path(&repo, request)?.map(|r| r.map(|e| e.to_wire())),
+    ))
 }
 
 /// Fetch the complete tree under the specified path.
