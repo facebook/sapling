@@ -69,21 +69,17 @@ pub async fn subcommand_crossrepo<'a>(
         (VERIFY_WC_SUBCOMMAND, Some(sub_sub_m)) => {
             let (source_repo, target_repo, mapping) =
                 get_source_target_repos_and_mapping(fb, logger, matches).await?;
-            let source_repo_id = source_repo.get_repoid();
 
-            let (_, source_repo_config) = args::get_config_by_repoid(fb, matches, source_repo_id)?;
-
+            let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> =
+                Arc::new(live_commit_sync_config);
             let commit_syncer = {
                 let commit_sync_repos = get_large_to_small_commit_sync_repos(
+                    &ctx,
                     source_repo,
                     target_repo,
-                    &source_repo_config,
+                    &live_commit_sync_config,
                 )?;
-                CommitSyncer::new(
-                    mapping,
-                    commit_sync_repos,
-                    Arc::new(live_commit_sync_config),
-                )
+                CommitSyncer::new(mapping, commit_sync_repos, live_commit_sync_config)
             };
 
             let large_hash = {
@@ -322,9 +318,10 @@ async fn subcommand_verify_bookmarks(
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<(), SubcommandError> {
     let commit_sync_repos = get_large_to_small_commit_sync_repos(
+        &ctx,
         source_repo.clone(),
         target_repo.clone(),
-        &source_repo_config,
+        &live_commit_sync_config,
     )?;
     let commit_syncer =
         CommitSyncer::new(mapping.clone(), commit_sync_repos, live_commit_sync_config);
@@ -561,54 +558,50 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
 }
 
 fn get_large_to_small_commit_sync_repos(
+    ctx: &CoreContext,
     source_repo: BlobRepo,
     target_repo: BlobRepo,
-    repo_config: &RepoConfig,
+    live_commit_sync_config: &Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<CommitSyncRepos, Error> {
-    repo_config
-        .commit_sync_config
-        .as_ref()
-        .ok_or_else(|| format_err!("missing CommitSyncMapping config"))
-        .and_then(|commit_sync_config| {
-            let (large_repo, small_repo) = if commit_sync_config.large_repo_id
-                == source_repo.get_repoid()
-                && commit_sync_config
-                    .small_repos
-                    .contains_key(&target_repo.get_repoid())
-            {
-                (source_repo, target_repo)
-            } else if commit_sync_config.large_repo_id == target_repo.get_repoid()
-                && commit_sync_config
-                    .small_repos
-                    .contains_key(&source_repo.get_repoid())
-            {
-                (target_repo, source_repo)
-            } else {
-                return Err(format_err!(
-                    "CommitSyncMapping incompatible with source repo {:?} and target repo {:?}",
-                    source_repo.get_repoid(),
-                    target_repo.get_repoid()
-                ));
-            };
+    let commit_sync_config =
+        live_commit_sync_config.get_current_commit_sync_config(ctx, source_repo.get_repoid())?;
 
-            let bookmark_renamer =
-                get_large_to_small_renamer(commit_sync_config, small_repo.get_repoid())?;
-            let reverse_bookmark_renamer =
-                get_small_to_large_renamer(commit_sync_config, small_repo.get_repoid())?;
-            let mover = get_large_to_small_mover(&commit_sync_config, small_repo.get_repoid())?;
-            let reverse_mover =
-                get_small_to_large_mover(&commit_sync_config, small_repo.get_repoid())?;
+    let (large_repo, small_repo) = if commit_sync_config.large_repo_id == source_repo.get_repoid()
+        && commit_sync_config
+            .small_repos
+            .contains_key(&target_repo.get_repoid())
+    {
+        (source_repo, target_repo)
+    } else if commit_sync_config.large_repo_id == target_repo.get_repoid()
+        && commit_sync_config
+            .small_repos
+            .contains_key(&source_repo.get_repoid())
+    {
+        (target_repo, source_repo)
+    } else {
+        return Err(format_err!(
+            "CommitSyncMapping incompatible with source repo {:?} and target repo {:?}",
+            source_repo.get_repoid(),
+            target_repo.get_repoid()
+        ));
+    };
 
-            Ok(CommitSyncRepos::LargeToSmall {
-                large_repo,
-                small_repo,
-                mover,
-                reverse_mover,
-                bookmark_renamer,
-                reverse_bookmark_renamer,
-                version_name: commit_sync_config.version_name.clone(),
-            })
-        })
+    let bookmark_renamer =
+        get_large_to_small_renamer(&commit_sync_config, small_repo.get_repoid())?;
+    let reverse_bookmark_renamer =
+        get_small_to_large_renamer(&commit_sync_config, small_repo.get_repoid())?;
+    let mover = get_large_to_small_mover(&commit_sync_config, small_repo.get_repoid())?;
+    let reverse_mover = get_small_to_large_mover(&commit_sync_config, small_repo.get_repoid())?;
+
+    Ok(CommitSyncRepos::LargeToSmall {
+        large_repo,
+        small_repo,
+        mover,
+        reverse_mover,
+        bookmark_renamer,
+        reverse_bookmark_renamer,
+        version_name: commit_sync_config.version_name.clone(),
+    })
 }
 
 #[cfg(test)]
