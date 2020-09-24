@@ -12,13 +12,13 @@ use bookmarks::{BookmarkName, BookmarkUpdateLogEntry};
 use cloned::cloned;
 use context::CoreContext;
 use cross_repo_sync::{
-    create_commit_syncers, get_commit_sync_outcome,
+    get_commit_sync_outcome,
     types::{Large, Small, Source, Target},
     validation::{
         fetch_root_mf_id, list_all_filenode_ids, report_different,
         verify_filenodes_have_same_contents,
     },
-    CommitSyncOutcome, Syncers,
+    CommitSyncOutcome,
 };
 use futures::compat::{Future01CompatExt, Stream01CompatExt};
 use futures::future::try_join_all;
@@ -28,10 +28,10 @@ use futures_stats::TimedFutureExt;
 use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use manifest::{Diff, Entry, ManifestOps};
 use mercurial_types::{FileType, HgFileNodeId, HgManifestId};
-use metaconfig_types::CommitSyncConfigVersion;
+use metaconfig_types::{CommitSyncConfigVersion, CommitSyncDirection};
 use mononoke_types::MPath;
 use mononoke_types::{ChangesetId, RepositoryId};
-use movers::Mover;
+use movers::{get_movers, Mover};
 use reachabilityindex::LeastCommonAncestorsHint;
 use ref_cast::RefCast;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
@@ -646,24 +646,22 @@ impl ValidationHelpers {
         maybe_cs_id.ok_or(format_err!("No master in the large repo"))
     }
 
-    fn create_syncers(
+    // First returned mover is small to large, second is large to small
+    fn create_movers(
         &self,
         small_repo_id: &Small<RepositoryId>,
         version_name: &CommitSyncConfigVersion,
-    ) -> Result<Syncers<SqlSyncedCommitMapping>, Error> {
-        // `Syncers` struct needs to be initialized with `CommitSyncConfig`
-        // of a version used to sync commits
+    ) -> Result<(Mover, Mover), Error> {
         let commit_sync_config = self
             .live_commit_sync_config
             .get_commit_sync_config_by_version(self.large_repo.0.get_repoid(), version_name)?;
 
-        create_commit_syncers(
-            self.get_small_repo(small_repo_id)?.0.clone(),
-            self.large_repo.0.clone(),
+        let movers = get_movers(
             &commit_sync_config,
-            self.mapping.clone(),
-            Arc::new(self.live_commit_sync_config.clone()),
-        )
+            small_repo_id.0,
+            CommitSyncDirection::SmallToLarge,
+        )?;
+        Ok((movers.mover, movers.reverse_mover))
     }
 }
 
@@ -1054,23 +1052,22 @@ fn compare_diffs_at_mpath(
 
 /// Given full manifest diffs, check that they represent
 /// equivalent sets of changes in two repos
-async fn validate_full_manifest_diffs_equivalence(
-    ctx: &CoreContext,
-    validation_helper: &ValidationHelper,
-    large_cs_id: &Large<ChangesetId>,
-    small_cs_id: &Small<ChangesetId>,
+async fn validate_full_manifest_diffs_equivalence<'a>(
+    ctx: &'a CoreContext,
+    validation_helper: &'a ValidationHelper,
+    large_cs_id: &'a Large<ChangesetId>,
+    small_cs_id: &'a Small<ChangesetId>,
     large_repo_full_manifest_diff: Large<FullManifestDiff>,
     small_repo_full_manifest_diff: Small<FullManifestDiff>,
-    syncers: Syncers<SqlSyncedCommitMapping>,
+    small_to_large_mover: Mover,
+    large_to_small_mover: Mover,
 ) -> Result<(), Error> {
-    let large_to_small_mover = syncers.large_to_small.get_mover();
     let moved_large_repo_full_manifest_diff = validation_helper
         .move_full_manifest_diff_large_to_small(
             large_repo_full_manifest_diff,
-            large_to_small_mover,
+            &large_to_small_mover,
         )?;
 
-    let small_to_large_mover = syncers.small_to_large.get_mover();
 
     // Let's remove all `FilenodeDiff` structs, which are strictly equivalent
     // Note that `in_small_but_not_in_large` and `in_large_but_not_in_small`
@@ -1293,7 +1290,8 @@ async fn validate_in_a_single_repo(
     large_repo_full_manifest_diff: Large<FullManifestDiff>,
     small_repo_full_manifest_diff: Small<FullManifestDiff>,
     large_repo_lca_hint: Arc<dyn LeastCommonAncestorsHint>,
-    syncers: Syncers<SqlSyncedCommitMapping>,
+    small_to_large_mover: Mover,
+    large_to_small_mover: Mover,
     mapping: SqlSyncedCommitMapping,
 ) -> Result<(), Error> {
     validate_full_manifest_diffs_equivalence(
@@ -1303,7 +1301,8 @@ async fn validate_in_a_single_repo(
         &small_cs_id,
         large_repo_full_manifest_diff,
         small_repo_full_manifest_diff,
-        syncers,
+        small_to_large_mover,
+        large_to_small_mover,
     )
     .await?;
 
@@ -1350,9 +1349,8 @@ pub async fn validate_entry(
                     .clone();
                 let scuba_sample = validation_helper.scuba_sample.clone();
                 let mapping = &validation_helpers.mapping;
-                let syncers = validation_helpers.create_syncers(&repo_id, &version_name)?;
-
-                let large_to_small_syncer = syncers.large_to_small.clone();
+                let (small_to_large_mover, large_to_small_mover) =
+                    validation_helpers.create_movers(&repo_id, &version_name)?;
 
                 let (stats, validation_result): (_, Result<Result<(), _>, tokio::task::JoinError>) =
                     tokio::task::spawn({
@@ -1367,7 +1365,8 @@ pub async fn validate_entry(
                                 large_repo_full_manifest_diff,
                                 small_repo_full_manifest_diff,
                                 large_repo_lca_hint,
-                                syncers,
+                                small_to_large_mover,
+                                large_to_small_mover,
                                 mapping,
                             )
                             .await
@@ -1385,7 +1384,7 @@ pub async fn validate_entry(
                     Err(e) => {
                         error!(
                             ctx.logger(),
-                            "Error while verifying against {:?}: {:?}", large_to_small_syncer, e
+                            "Error while verifying against {}: {:?}", version_name, e
                         );
                         Some(format!("{}", e))
                     }

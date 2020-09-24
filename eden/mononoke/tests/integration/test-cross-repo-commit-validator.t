@@ -330,7 +330,7 @@ Check that we validate the topological order
 -- run the validator, check that commits are eqiuvalent
   $ REPOIDLARGE=0 validate_commit_sync 15 |& grep -E "(topological order|is not an ancestor)"
   * validating topological order for *<->* (glob)
-  * Error while verifying against CommitSyncer{0->1}: * (remapping of parent * of * in 1) is not an ancestor of * in 0 (glob)
+  * Error while verifying against TEST_VERSION_NAME: * (remapping of parent * of * in 1) is not an ancestor of * in 0 (glob)
   * Execution error: * (remapping of parent * of * in 1) is not an ancestor of * in 0 (glob)
 
 Check that we validate the newly-added root commits
