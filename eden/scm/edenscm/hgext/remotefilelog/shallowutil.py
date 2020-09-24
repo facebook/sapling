@@ -106,6 +106,26 @@ def getindexedloghistorystorepath(repo):
     return os.path.join(path, "indexedloghistorystore")
 
 
+def getallindexedlogdatastorepath(ui):
+    cachepath = getcachepath(ui)
+    paths = []
+    for name in os.listdir(cachepath):
+        fullpath = os.path.join(cachepath, name, "indexedlogdatastore")
+        if os.path.isdir(fullpath):
+            paths.append(fullpath)
+    return paths
+
+
+def getallindexedloghistorystorepath(ui):
+    cachepath = getcachepath(ui)
+    paths = []
+    for name in os.listdir(cachepath):
+        fullpath = os.path.join(cachepath, name, "indexedloghistorystore")
+        if os.path.isdir(fullpath):
+            paths.append(fullpath)
+    return paths
+
+
 def createrevlogtext(text, copyfrom=None, copyrev=None):
     """returns a string that matches the revlog contents in a
     traditional revlog

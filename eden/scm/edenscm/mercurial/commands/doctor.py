@@ -55,8 +55,10 @@ def doctor(ui, **opts):
     # a real repo object.
     repopath, ui = dispatch._getlocal(origui, "")
     if not repopath:
+        runglobalindexedlogdoctor(ui)
         runedenfsdoctor(ui)
         return
+
     repohgpath = os.path.join(repopath, ".hg")
     vfs = vfsmod.vfs(repohgpath)
     sharedhgpath = vfs.tryreadutf8("sharedpath").rstrip("\n") or repohgpath
@@ -492,3 +494,25 @@ def indent(message):
 def runedenfsdoctor(ui):
     ui.write(_("running 'edenfsctl doctor'\n"))
     os.system("edenfsctl doctor")
+
+
+def runglobalindexedlogdoctor(ui):
+    """Global indexed log doctor"""
+    if not ui.config("remotefilelog", "cachepath"):
+        # remotefilelog is not enabled, skipping
+        return
+
+    from ...hgext.remotefilelog import shallowutil
+
+    for path in shallowutil.getallindexedlogdatastorepath(ui):
+        repair(
+            ui, "indexedlogdatastore", path, revisionstore.indexedlogdatastore.repair
+        )
+
+    for path in shallowutil.getallindexedloghistorystorepath(ui):
+        repair(
+            ui,
+            "indexedloghistorystore",
+            path,
+            revisionstore.indexedloghistorystore.repair,
+        )
