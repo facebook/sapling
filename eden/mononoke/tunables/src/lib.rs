@@ -90,6 +90,11 @@ pub struct MononokeTunables {
     getbundle_use_low_gen_optimization: AtomicBool,
     getbundle_low_gen_num_threshold: AtomicI64,
     getbundle_low_gen_optimization_max_traversal_limit: AtomicI64,
+    repo_client_bookmarks_timeout_secs: AtomicI64,
+    repo_client_clone_timeout_secs: AtomicI64,
+    repo_client_default_timeout_secs: AtomicI64,
+    repo_client_getbundle_timeout_secs: AtomicI64,
+    repo_client_getpack_timeout_secs: AtomicI64,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {

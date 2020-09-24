@@ -201,17 +201,43 @@ where
 }
 
 lazy_static! {
-    static ref TIMEOUT: Duration = Duration::from_secs(15 * 60);
-    // Bookmarks taking a long time is unexpected and bad - limit them specially
-    static ref BOOKMARKS_TIMEOUT: Duration = Duration::from_secs(3 * 60);
-    // getbundle requests can be very slow for huge commits
-    static ref GETBUNDLE_TIMEOUT: Duration = Duration::from_secs(30 * 60);
-    // clone requests can be rather long. Let's bump the timeout
-    static ref CLONE_TIMEOUT: Duration = Duration::from_secs(4 * 60 * 60);
-    // getfiles requests can be rather long. Let's bump the timeout
-    static ref GETPACK_TIMEOUT: Duration = Duration::from_secs(90 * 60);
     static ref LOAD_LIMIT_TIMEFRAME: Duration = Duration::from_secs(1);
     static ref SLOW_REQUEST_THRESHOLD: Duration = Duration::from_secs(1);
+}
+
+fn clone_timeout() -> Duration {
+    let timeout = tunables().get_repo_client_clone_timeout_secs();
+    if timeout > 0 {
+        Duration::from_secs(timeout as u64)
+    } else {
+        Duration::from_secs(4 * 60 * 60)
+    }
+}
+
+fn default_timeout() -> Duration {
+    let timeout = tunables().get_repo_client_default_timeout_secs();
+    if timeout > 0 {
+        Duration::from_secs(timeout as u64)
+    } else {
+        Duration::from_secs(15 * 60)
+    }
+}
+fn getbundle_timeout() -> Duration {
+    let timeout = tunables().get_repo_client_getbundle_timeout_secs();
+    if timeout > 0 {
+        Duration::from_secs(timeout as u64)
+    } else {
+        Duration::from_secs(30 * 60)
+    }
+}
+
+fn getpack_timeout() -> Duration {
+    let timeout = tunables().get_repo_client_getpack_timeout_secs();
+    if timeout > 0 {
+        Duration::from_secs(timeout as u64)
+    } else {
+        Duration::from_secs(5 * 60 * 60)
+    }
 }
 
 pub(crate) fn process_timeout_error(err: TimeoutError<Error>) -> Error {
@@ -738,7 +764,7 @@ impl RepoClient {
                 };
                 let s = s
                     .buffered_weight_limited(params)
-                    .whole_stream_timeout(*GETPACK_TIMEOUT)
+                    .whole_stream_timeout(getpack_timeout())
                     .map_err(process_stream_timeout_error)
                     .map({
                         cloned!(ctx);
@@ -1068,7 +1094,7 @@ impl HgCommands for RepoClient {
                     }
                 })
                 .collect()
-                .timeout(*TIMEOUT)
+                .timeout(default_timeout())
                 .map_err(process_timeout_error)
                 .traced(self.session.trace(), ops::BETWEEN, trace_args!())
                 .timed(move |stats, _| {
@@ -1104,7 +1130,7 @@ impl HgCommands for RepoClient {
             }
 
             future_old::ok(hostname)
-                .timeout(*TIMEOUT)
+                .timeout(default_timeout())
                 .map_err(process_timeout_error)
                 .traced(self.session.trace(), ops::CLIENTTELEMETRY, trace_args!())
                 .timed(move |stats, _| {
@@ -1123,7 +1149,7 @@ impl HgCommands for RepoClient {
             // that points to it.
             self.get_publishing_bookmarks_maybe_stale(ctx)
                 .map(|map| map.into_iter().map(|(_, hg_cs_id)| hg_cs_id).collect())
-                .timeout(*TIMEOUT)
+                .timeout(default_timeout())
                 .map_err(process_timeout_error)
                 .traced(self.session.trace(), ops::HEADS, trace_args!())
                 .timed(move |stats, _| {
@@ -1286,7 +1312,7 @@ impl HgCommands for RepoClient {
             }
             .boxed()
             .compat()
-            .timeout(*TIMEOUT)
+            .timeout(default_timeout())
             .map_err(process_timeout_error)
             .traced(self.session.trace(), ops::LOOKUP, trace_args!())
             .timed(move |stats, _| {
@@ -1335,7 +1361,7 @@ impl HgCommands for RepoClient {
                         .map(move |node| found_hg_changesets.contains(&node))
                         .collect::<Vec<_>>()
                 })
-                .timeout(*TIMEOUT)
+                .timeout(default_timeout())
                 .map_err(process_timeout_error)
                 .traced(self.session.trace(), ops::KNOWN, trace_args!())
                 .timed(move |stats, known_nodes| {
@@ -1368,7 +1394,7 @@ impl HgCommands for RepoClient {
                         .map(move |node| hg_bcs_mapping.contains_key(&node))
                         .collect::<Vec<_>>()
                 })
-                .timeout(*TIMEOUT)
+                .timeout(default_timeout())
                 .map_err(process_timeout_error)
                 .traced(self.session.trace(), ops::KNOWNNODES, trace_args!())
                 .timed(move |stats, known_nodes| {
@@ -1399,7 +1425,7 @@ impl HgCommands for RepoClient {
 
             let s = self
                 .create_bundle(ctx.clone(), args)
-                .whole_stream_timeout(*GETBUNDLE_TIMEOUT)
+                .whole_stream_timeout(getbundle_timeout())
                 .map_err(process_stream_timeout_error)
                 .traced(self.session.trace(), ops::GETBUNDLE, trace_args!())
                 .timed(move |stats, _| {
@@ -1428,7 +1454,7 @@ impl HgCommands for RepoClient {
             res.insert("capabilities".to_string(), caps);
 
             future_old::ok(res)
-                .timeout(*TIMEOUT)
+                .timeout(default_timeout())
                 .map_err(process_timeout_error)
                 .traced(self.session.trace(), ops::HELLO, trace_args!())
                 .timed(move |stats, _| {
@@ -1518,7 +1544,7 @@ impl HgCommands for RepoClient {
             stream::futures_unordered(queries)
                 .concat2()
                 .map(|bookmarks| bookmarks.into_iter().collect())
-                .timeout(*TIMEOUT)
+                .timeout(default_timeout())
                 .map_err(process_timeout_error)
                 .traced(self.session.trace(), ops::LISTKEYS, trace_args!())
                 .timed(move |stats, _| {
@@ -1727,7 +1753,7 @@ impl HgCommands for RepoClient {
                     })
                     .map(bytes_ext::copy_from_new)
                     .from_err()
-                    .timeout(*TIMEOUT)
+                    .timeout(default_timeout())
                     .map_err(process_timeout_error)
                     .inspect(move |_| STATS::push_success.add_value(1, (reponame,)))
                     .traced(&trace, ops::UNBUNDLE, trace_args!())
@@ -1774,7 +1800,7 @@ impl HgCommands for RepoClient {
 
             let s = self
                 .gettreepack_untimed(ctx.clone(), params)
-                .whole_stream_timeout(*TIMEOUT)
+                .whole_stream_timeout(default_timeout())
                 .map_err(process_stream_timeout_error)
                 .traced(self.session.trace(), ops::GETTREEPACK, trace_args!())
                 .inspect({
@@ -1929,7 +1955,7 @@ impl HgCommands for RepoClient {
                     }
                 })
                 .flatten_stream()
-                .whole_stream_timeout(*CLONE_TIMEOUT)
+                .whole_stream_timeout(clone_timeout())
                 .map(bytes_ext::copy_from_new)
                 .map_err(process_stream_timeout_error)
                 .timed({
@@ -1997,7 +2023,7 @@ impl HgCommands for RepoClient {
                     }
                 })
                 .buffered(100)
-                .whole_stream_timeout(*TIMEOUT)
+                .whole_stream_timeout(default_timeout())
                 .map_err(process_stream_timeout_error)
                 .inspect({
                     cloned!(ctx);

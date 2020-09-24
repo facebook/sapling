@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use super::{process_timeout_error, BOOKMARKS_TIMEOUT};
+use super::process_timeout_error;
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobrepo_hg::{to_hg_bookmark_stream, BlobRepoHg};
@@ -17,6 +17,7 @@ use mercurial_types::HgChangesetId;
 use scuba_ext::ScubaSampleBuilderExt;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 use tokio_old::util::FutureExt as TokioFutureExt;
 use tunables::tunables;
 use warm_bookmarks_cache::WarmBookmarksCache;
@@ -27,6 +28,15 @@ pub struct SessionBookmarkCache {
     cached_publishing_bookmarks_maybe_stale: Arc<Mutex<Option<HashMap<Bookmark, HgChangesetId>>>>,
     repo: BlobRepo,
     maybe_warm_bookmarks_cache: Option<Arc<WarmBookmarksCache>>,
+}
+
+fn bookmarks_timeout() -> Duration {
+    let timeout = tunables().get_repo_client_bookmarks_timeout_secs();
+    if timeout > 0 {
+        Duration::from_secs(timeout as u64)
+    } else {
+        Duration::from_secs(3 * 60)
+    }
 }
 
 impl SessionBookmarkCache {
@@ -133,7 +143,7 @@ impl SessionBookmarkCache {
                 let ret: Result<_, Error> = Ok(map);
                 ret
             })
-            .timeout(*BOOKMARKS_TIMEOUT)
+            .timeout(bookmarks_timeout())
             .map_err(process_timeout_error)
     }
 }
