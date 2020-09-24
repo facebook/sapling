@@ -8,6 +8,7 @@
 use std::convert::{TryFrom, TryInto};
 use std::fmt;
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 use curl::{
     self,
@@ -56,6 +57,7 @@ pub struct Request {
     body: Option<Vec<u8>>,
     creds: Option<(PathBuf, PathBuf)>,
     cainfo: Option<PathBuf>,
+    timeout: Option<Duration>,
 }
 
 impl Request {
@@ -69,6 +71,7 @@ impl Request {
             body: None,
             creds: None,
             cainfo: None,
+            timeout: None,
         }
     }
 
@@ -157,6 +160,14 @@ impl Request {
             cainfo: Some(cainfo.into()),
             ..self
         })
+    }
+
+    /// Set the maximum time this request is allowed to take.
+    pub fn timeout(self, timeout: Duration) -> Self {
+        Self {
+            timeout: Some(timeout),
+            ..self
+        }
     }
 
     /// Execute the request, blocking until completion.
@@ -249,6 +260,11 @@ impl Request {
 
         if let Some(cainfo) = self.cainfo {
             easy.cainfo(cainfo)?;
+        }
+
+        // Set timeout.
+        if let Some(timeout) = self.timeout {
+            easy.timeout(timeout)?;
         }
 
         // Always use attempt to use HTTP/2. Will fall back to HTTP/1.1
