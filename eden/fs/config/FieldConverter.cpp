@@ -26,14 +26,16 @@ constexpr std::array<folly::StringPiece, 4> kEnvVars = {
  * Check if string represents a well-formed file path.
  */
 bool isValidAbsolutePath(folly::StringPiece path) {
-  // TODO: we should probably move this into PathFuncs.cpp and consolidate it
-  // with some of the logic in AbsolutePathSanityCheck.
-  //
-  // Alternatively, all we really care about here is making sure that
+  // All we really care about here is making sure that
   // normalizeBestEffort() isn't going to treat the path as relatively.  We
   // probably should just add an option to normalizeBestEffort() to make it
   // reject relative paths.
-  return path.startsWith(facebook::eden::kDirSeparator);
+  try {
+    facebook::eden::detail::AbsolutePathSanityCheck()(path);
+    return true;
+  } catch (std::domain_error&) {
+    return false;
+  }
 }
 } // namespace
 

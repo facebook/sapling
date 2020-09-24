@@ -11,6 +11,7 @@
 #include <array>
 #include <sstream>
 
+#include <boost/filesystem.hpp>
 #include <folly/File.h>
 #include <folly/FileUtil.h>
 #include <folly/Range.h>
@@ -234,12 +235,17 @@ void EdenConfig::registerConfiguration(ConfigSettingBase* configSetting) {
 }
 
 const optional<AbsolutePath> EdenConfig::getClientCertificate() const {
-  auto value = clientCertificate.getValue();
-
-  if (value == kUnspecifiedDefault) {
-    return std::nullopt;
+  // return the first cert path that exists
+  for (auto& cert : clientCertificateLocations.getValue()) {
+    if (boost::filesystem::exists(cert.stringPiece().str())) {
+      return cert;
+    }
   }
-  return value;
+  auto singleCertificateConfig = clientCertificate.getValue();
+  if (singleCertificateConfig != kUnspecifiedDefault) {
+    return singleCertificateConfig;
+  }
+  return std::nullopt;
 }
 
 std::optional<std::string> EdenConfig::getMononokeHostName() const {

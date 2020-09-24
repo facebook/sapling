@@ -117,13 +117,13 @@ TEST_F(ConfigSettingTest, configSetInvalidStringValue) {
   EXPECT_EQ(testDir.getSource(), ConfigSource::SystemConfig);
   EXPECT_EQ(testDir.getValue(), systemConfigDir_);
 
-  folly::StringPiece userConfigDir{"INVALID USER_CONFIG_SETTING"};
+  folly::StringPiece userConfigDir{"INVALID USER_CONFIG_SETTING/"};
   rslt =
       testDir.setStringValue(userConfigDir, attrMap, ConfigSource::UserConfig);
   EXPECT_EQ(rslt.hasError(), true);
   EXPECT_EQ(
       rslt.error(),
-      "Cannot convert value 'INVALID USER_CONFIG_SETTING' to an absolute path");
+      "Cannot convert value 'INVALID USER_CONFIG_SETTING/' to an absolute path");
   EXPECT_EQ(testDir.getSource(), ConfigSource::SystemConfig);
   EXPECT_EQ(testDir.getValue(), systemConfigDir_);
 }

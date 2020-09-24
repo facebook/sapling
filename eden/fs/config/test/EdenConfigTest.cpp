@@ -7,12 +7,14 @@
 
 #include "eden/fs/config/EdenConfig.h"
 
+#include <boost/algorithm/string/replace.hpp>
 #include <folly/experimental/TestUtil.h>
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
 
 #include "eden/fs/utils/FileUtils.h"
 #include "eden/fs/utils/PathFuncs.h"
+#include "folly/Range.h"
 
 using folly::test::TemporaryDirectory;
 using std::optional;
@@ -21,6 +23,17 @@ using namespace facebook::eden;
 using namespace facebook::eden::path_literals;
 
 namespace {
+
+// This doesn't really escape backslashes, it rewrites them to forward slashes
+// so that we can side-step properly quoting the path for embedding in TOML
+// on Windows systems.  It's a bit of a quick and dirty solution, but it works!
+// Note: this returns a string so that the user can decide wheather they want to
+// normalize the path or just take it as an absolute path as is.
+std::string escapeBackslashesForWindows(AbsolutePathPiece path) {
+  auto rawPath = folly::to<std::string>(path);
+  boost::replace_all(rawPath, "\\", "/");
+  return rawPath;
+}
 
 class EdenConfigTest : public ::testing::Test {
  protected:
@@ -37,6 +50,7 @@ class EdenConfigTest : public ::testing::Test {
   AbsolutePath defaultUserIgnoreFilePath_{"/home/bob/.edenignore"};
   AbsolutePath defaultSystemIgnoreFilePath_{"/etc/eden/ignore"};
   AbsolutePath defaultEdenDirPath_{"/home/bob/.eden"};
+  RelativePath clientCertificatePath_{"home/bob/client.pem"};
   optional<AbsolutePath> defaultClientCertificatePath_;
   bool defaultUseMononoke_ = false;
 
@@ -55,6 +69,19 @@ class EdenConfigTest : public ::testing::Test {
   }
 
   void setupSimpleOverRideTest() {
+    // we need to create the config path, since our getConfig will check that
+    // the config file exists before returning it.
+    auto homePath =
+        AbsolutePathPiece(rootTestDir_->path().string()) + "home"_pc;
+    folly::fs::create_directory(folly::fs::path(homePath.stringPiece()));
+    auto userPath = homePath + "bob"_pc;
+    folly::fs::create_directory(folly::fs::path(userPath.stringPiece()));
+
+    auto clientConfigPath = AbsolutePath(escapeBackslashesForWindows(
+        AbsolutePathPiece(rootTestDir_->path().string()) +
+        clientCertificatePath_));
+    writeFile(clientConfigPath, folly::StringPiece{"test"}).value();
+
     auto testCaseDir = AbsolutePathPiece(rootTestDir_->path().string()) +
         PathComponent(simpleOverRideTest_);
     folly::fs::create_directory(folly::fs::path(testCaseDir.stringPiece()));
@@ -74,15 +101,18 @@ class EdenConfigTest : public ::testing::Test {
     folly::fs::create_directory(folly::fs::path(systemConfigDir.stringPiece()));
 
     auto systemConfigPath = systemConfigDir + "edenfs.rc"_pc;
-    auto systemConfigFileData = folly::StringPiece{
+    auto systemConfigFileData = folly::to<std::string>(
         "[core]\n"
         "ignoreFile=\"/should_be_over_ridden\"\n"
         "systemIgnoreFile=\"/etc/eden/systemCustomIgnore\"\n"
         "[mononoke]\n"
         "use-mononoke=true\n"
         "[ssl]\n"
-        "client-certificate=\"/system_config_cert/${USER}/foo/${USER}\"\n"};
-    writeFile(systemConfigPath, systemConfigFileData).value();
+        "client-certificate-locations=[\"",
+        clientConfigPath,
+        "\"]\n");
+    writeFile(systemConfigPath, folly::StringPiece{systemConfigFileData})
+        .value();
 
     testPathMap_[simpleOverRideTest_] =
         std::pair<AbsolutePath, AbsolutePath>(systemConfigPath, userConfigPath);
@@ -133,7 +163,8 @@ TEST_F(EdenConfigTest, simpleSetGetTest) {
   AbsolutePath ignoreFile{"/home/bob/alternativeIgnore"};
   AbsolutePath systemIgnoreFile{"/etc/eden/fix/systemIgnore"};
   AbsolutePath edenDir{"/home/bob/alt/.eden"};
-  AbsolutePath clientCertificate{"/home/bob/client.pem"};
+  AbsolutePath clientCertificate =
+      AbsolutePathPiece(rootTestDir_->path().string()) + clientCertificatePath_;
   bool useMononoke = true;
 
   AbsolutePath updatedUserConfigPath{
@@ -151,8 +182,8 @@ TEST_F(EdenConfigTest, simpleSetGetTest) {
   edenConfig->systemIgnoreFile.setValue(
       systemIgnoreFile, ConfigSource::CommandLine);
   edenConfig->edenDir.setValue(edenDir, ConfigSource::CommandLine);
-  edenConfig->clientCertificate.setValue(
-      clientCertificate, ConfigSource::CommandLine);
+  edenConfig->clientCertificateLocations.setValue(
+      {clientCertificate}, ConfigSource::CommandLine);
   edenConfig->useMononoke.setValue(useMononoke, ConfigSource::CommandLine);
 
   // Config path
@@ -177,7 +208,10 @@ TEST_F(EdenConfigTest, cloneTest) {
   AbsolutePath ignoreFile{"/NON_DEFAULT_IGNORE_FILE"};
   AbsolutePath systemIgnoreFile{"/NON_DEFAULT_SYSTEM_IGNORE_FILE"};
   AbsolutePath edenDir{"/NON_DEFAULT_EDEN_DIR"};
-  AbsolutePath clientCertificate{"/NON_DEFAULT_CLIENT_CERTIFICATE"};
+  AbsolutePath clientCertificate =
+      AbsolutePathPiece(rootTestDir_->path().string()) +
+      PathComponent{"NON_DEFAULT_CLIENT_CERTIFICATE"};
+  writeFile(clientCertificate, folly::StringPiece{"test"}).value();
   bool useMononoke = true;
 
   std::shared_ptr<EdenConfig> configCopy;
@@ -195,8 +229,8 @@ TEST_F(EdenConfigTest, cloneTest) {
     edenConfig->systemIgnoreFile.setValue(
         systemIgnoreFile, ConfigSource::SystemConfig);
     edenConfig->edenDir.setValue(edenDir, ConfigSource::UserConfig);
-    edenConfig->clientCertificate.setValue(
-        clientCertificate, ConfigSource::UserConfig);
+    edenConfig->clientCertificateLocations.setValue(
+        {clientCertificate}, ConfigSource::UserConfig);
     edenConfig->useMononoke.setValue(useMononoke, ConfigSource::UserConfig);
 
     EXPECT_EQ(edenConfig->getUserName(), testUser_);
@@ -336,6 +370,11 @@ TEST_F(EdenConfigTest, loadSystemUserConfigTest) {
 
   edenConfig->loadSystemConfig();
 
+  auto rawClientConfigPath = escapeBackslashesForWindows(
+      AbsolutePathPiece(rootTestDir_->path().string()) +
+      clientCertificatePath_);
+  auto clientConfigPath = normalizeBestEffort(rawClientConfigPath);
+
   EXPECT_EQ(edenConfig->edenDir.getValue(), defaultEdenDirPath_);
   EXPECT_EQ(
       edenConfig->userIgnoreFile.getValue(),
@@ -344,8 +383,7 @@ TEST_F(EdenConfigTest, loadSystemUserConfigTest) {
       edenConfig->systemIgnoreFile.getValue(),
       normalizeBestEffort("/etc/eden/systemCustomIgnore"));
   EXPECT_EQ(
-      edenConfig->getClientCertificate()->stringPiece(),
-      normalizeBestEffort("/system_config_cert/bob/foo/bob"));
+      edenConfig->getClientCertificate()->stringPiece(), clientConfigPath);
   EXPECT_EQ(edenConfig->useMononoke.getValue(), true);
 
   edenConfig->loadUserConfig();
@@ -358,8 +396,7 @@ TEST_F(EdenConfigTest, loadSystemUserConfigTest) {
       edenConfig->systemIgnoreFile.getValue(),
       normalizeBestEffort("/etc/eden/systemCustomIgnore"));
   EXPECT_EQ(
-      edenConfig->getClientCertificate()->stringPiece(),
-      normalizeBestEffort("/system_config_cert/bob/foo/bob"));
+      edenConfig->getClientCertificate()->stringPiece(), clientConfigPath);
   EXPECT_EQ(edenConfig->useMononoke.getValue(), false);
 }
 
@@ -464,4 +501,91 @@ TEST_F(EdenConfigTest, missing_config_files_never_change) {
                     systemConfigPath};
   config.loadUserConfig();
   EXPECT_EQ(FileChangeReason::NONE, config.hasUserConfigFileChanged().reason);
+}
+
+TEST_F(EdenConfigTest, clientCertIsFirstAvailable) {
+  uid_t userID{};
+  AbsolutePath userConfigPath{"/home/bob/.edenrc"};
+  AbsolutePath systemConfigPath{"/etc/eden/edenfs.rc"};
+  AbsolutePath systemConfigDir{"/etc/eden"};
+
+  // cert1 and cert2 are both be avialable, so they could be returned from
+  // getConfig. However, cert3 is not available, so it can not be.
+  AbsolutePath clientCertificate1 =
+      AbsolutePathPiece(rootTestDir_->path().string()) + "cert1"_pc;
+  writeFile(clientCertificate1, folly::StringPiece{"test"}).value();
+  AbsolutePath clientCertificate2 =
+      AbsolutePathPiece(rootTestDir_->path().string()) + "cert2"_pc;
+  writeFile(clientCertificate2, folly::StringPiece{"test"}).value();
+  AbsolutePath clientCertificate3 =
+      AbsolutePathPiece(rootTestDir_->path().string()) + "cert3"_pc;
+
+  auto edenConfig = std::make_shared<EdenConfig>(
+      testUser_,
+      userID,
+      testHomeDir_,
+      userConfigPath,
+      systemConfigDir,
+      systemConfigPath);
+
+  edenConfig->clientCertificateLocations.setValue(
+      {clientCertificate1, clientCertificate2}, ConfigSource::UserConfig);
+  EXPECT_EQ(edenConfig->getClientCertificate(), clientCertificate1);
+
+  edenConfig->clientCertificateLocations.setValue(
+      {clientCertificate2, clientCertificate1}, ConfigSource::UserConfig);
+  EXPECT_EQ(edenConfig->getClientCertificate(), clientCertificate2);
+
+  edenConfig->clientCertificateLocations.setValue(
+      {clientCertificate1, clientCertificate3}, ConfigSource::UserConfig);
+  EXPECT_EQ(edenConfig->getClientCertificate(), clientCertificate1);
+
+  edenConfig->clientCertificateLocations.setValue(
+      {clientCertificate3, clientCertificate1}, ConfigSource::UserConfig);
+  EXPECT_EQ(edenConfig->getClientCertificate(), clientCertificate1);
+}
+
+TEST_F(EdenConfigTest, fallbackToOldSingleCertConfig) {
+  uid_t userID{};
+  AbsolutePath userConfigPath{"/home/bob/.edenrc"};
+  AbsolutePath systemConfigPath{"/etc/eden/edenfs.rc"};
+  AbsolutePath systemConfigDir{"/etc/eden"};
+
+  // used in list cert
+  AbsolutePath clientCertificate1 =
+      AbsolutePathPiece(rootTestDir_->path().string()) + "cert1"_pc;
+  writeFile(clientCertificate1, folly::StringPiece{"test"}).value();
+  AbsolutePath clientCertificate2 =
+      AbsolutePathPiece(rootTestDir_->path().string()) + "cert2"_pc;
+  writeFile(clientCertificate2, folly::StringPiece{"test"}).value();
+  // used in invalid list cert
+  AbsolutePath clientCertificate3 =
+      AbsolutePathPiece(rootTestDir_->path().string()) + "cert3"_pc;
+  // used in single cert
+  AbsolutePath clientCertificate4 =
+      AbsolutePathPiece(rootTestDir_->path().string()) + "cert4"_pc;
+
+  auto edenConfig = std::make_shared<EdenConfig>(
+      testUser_,
+      userID,
+      testHomeDir_,
+      userConfigPath,
+      systemConfigDir,
+      systemConfigPath);
+
+  // Without clientCertificateLocations set clientCertificate should be used.
+  edenConfig->clientCertificate.setValue(
+      clientCertificate4, ConfigSource::UserConfig);
+  EXPECT_EQ(edenConfig->getClientCertificate(), clientCertificate4);
+
+  // Now that clientCertificateLocations is set this should be used.
+  edenConfig->clientCertificateLocations.setValue(
+      {clientCertificate1, clientCertificate2}, ConfigSource::UserConfig);
+  EXPECT_EQ(edenConfig->getClientCertificate(), clientCertificate1);
+
+  // Now that clientCertificateLocations does not contain a valid cert we should
+  // fall back to the old single cert.
+  edenConfig->clientCertificateLocations.setValue(
+      {clientCertificate3}, ConfigSource::UserConfig);
+  EXPECT_EQ(edenConfig->getClientCertificate(), clientCertificate4);
 }
