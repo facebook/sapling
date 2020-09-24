@@ -20,7 +20,7 @@ use context::{
 use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
 use futures::compat::Future01CompatExt;
-use futures_old::{sync::mpsc::Sender, Future, Sink, Stream};
+use futures_old::{sync::mpsc, Future, Stream};
 use futures_stats::TimedFutureExt;
 use hgproto::{sshproto, HgProtoHandler};
 use lazy_static::lazy_static;
@@ -333,7 +333,7 @@ fn hostname_scheme(hostname: &str) -> &str {
 }
 
 pub fn create_conn_logger(
-    stderr: Sender<Bytes>,
+    stderr: mpsc::UnboundedSender<Bytes>,
     server_logger: Option<Logger>,
     session_id: Option<&SessionId>,
 ) -> Logger {
@@ -343,9 +343,7 @@ pub fn create_conn_logger(
     };
     let decorator = o!("session_uuid" => format!("{}", session_id));
 
-    let stderr_write = SenderBytesWrite {
-        chan: stderr.wait(),
-    };
+    let stderr_write = SenderBytesWrite { chan: stderr };
     let client_drain = slog_term::PlainSyncDecorator::new(stderr_write);
     let client_drain = SimpleFormatWithError::new(client_drain);
     let client_drain = KVFilter::new(client_drain, Level::Critical).only_pass_any_on_all_keys(

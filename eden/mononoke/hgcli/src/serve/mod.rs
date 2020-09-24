@@ -17,13 +17,12 @@ use dns_lookup::lookup_addr;
 use failure_ext::{err_downcast_ref, SlogKVError};
 use fbinit::FacebookInit;
 use futures::compat::Future01CompatExt;
+use futures::sink::SinkExt;
 use futures::stream::{self, StreamExt, TryStreamExt};
 use futures::{pin_mut, select};
-use futures_ext::BoxStream;
 use futures_ext::StreamExt as OtherStreamExt;
-use futures_old::{future, sync::mpsc, Sink, Stream};
+use futures_old::{future, Sink};
 use futures_stats::TimedFutureExt;
-use futures_util::compat::Stream01CompatExt;
 use futures_util::future::FutureExt;
 use hostname::get_hostname;
 use libc::c_ulong;
@@ -32,18 +31,17 @@ use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use secure_utils::{build_identity, read_x509};
 use session_id::generate_session_id;
 use slog::{debug, error, o, Drain, Logger};
-use sshrelay::{
-    Preamble, Priority, SenderBytesWrite, SshDecoder, SshEncoder, SshEnvVars, SshMsg, SshStream,
-};
+use sshrelay::{Preamble, Priority, SshDecoder, SshEncoder, SshEnvVars, SshMsg, SshStream};
+use tokio::io::{self, BufReader, Stderr, Stdin, Stdout};
 use tokio::net::TcpStream;
 use tokio::time::timeout;
 use tokio_openssl::SslStream;
-use tokio_util::codec::{FramedRead, FramedWrite};
+use tokio_util::codec::{BytesCodec, FramedRead, FramedWrite};
 use users::get_current_username;
 
-mod fdio;
-
 const X509_R_CERT_ALREADY_IN_HASH_TABLE: c_ulong = 185057381;
+const BUFSZ: usize = 8192;
+const NUMBUFS: usize = 50000; // This seems high
 
 // Wait for up to 1sec to let Scuba flush its data to the server.
 const SCUBA_TIMEOUT: Duration = Duration::from_millis(1000);
@@ -170,15 +168,12 @@ impl<'a> StdioRelay<'a> {
 
         scuba_logger.add_preamble(&preamble);
 
-        let stdin = fdio::stdin();
-        let stdout = fdio::stdout();
-        let stderr = fdio::stderr();
+        let stdin = io::stdin();
+        let stdout = io::stdout();
+        let stderr = io::stderr();
 
         let client_logger = {
-            let stderr_write = SenderBytesWrite {
-                chan: stderr.clone().wait(),
-            };
-            let drain = slog_term::PlainSyncDecorator::new(stderr_write);
+            let drain = slog_term::PlainSyncDecorator::new(std::io::stderr());
             let drain = slog_term::FullFormat::new(drain).build();
             Logger::root(drain.ignore_res(), o!())
         };
@@ -274,9 +269,9 @@ impl<'a> StdioRelay<'a> {
     async fn internal_run(
         self,
         preamble: Preamble,
-        stdin: BoxStream<Bytes, std_io::Error>,
-        stdout: mpsc::Sender<Bytes>,
-        stderr: mpsc::Sender<Bytes>,
+        stdin: Stdin,
+        stdout: Stdout,
+        stderr: Stderr,
     ) -> Result<(), Error> {
         let socket = timeout(Duration::from_secs(15), self.establish_connection())
             .await
@@ -291,19 +286,28 @@ impl<'a> StdioRelay<'a> {
             stream::once(async { Ok(SshMsg::new(SshStream::Preamble(preamble), Bytes::new())) });
 
         // Start a task to copy from stdin to the socket
+        let stdin = BufReader::with_capacity(BUFSZ, stdin);
+        let stdin = FramedRead::new(stdin, BytesCodec::new());
         let stdin_future = preamble
-            .chain(stdin.map(|buf| SshMsg::new(SshStream::Stdin, buf)).compat())
-            .forward(tx);
+            .chain(stdin.map_ok(|buf| SshMsg::new(SshStream::Stdin, buf.freeze())))
+            .forward(tx.buffer(NUMBUFS));
 
         // A task to copy from the socket, then use streamfork() to split the
         // input between stdout and stderr.
+        let stdout = FramedWrite::new(stdout, BytesCodec::new()).buffer(NUMBUFS);
+        let stderr = FramedWrite::new(stderr, BytesCodec::new()).buffer(NUMBUFS);
+
         let stdout_future = rx
             .compat()
             .streamfork(
                 // a sink each for stdout and stderr, prefixed with With to remove the
                 // SshMsg framing and expose the raw data
-                stdout.with(|m: SshMsg| future::ok::<_, Error>(m.data())),
-                stderr.with(|m: SshMsg| future::ok::<_, Error>(m.data())),
+                stdout
+                    .compat()
+                    .with(|m: SshMsg| future::ok::<_, Error>(m.data())),
+                stderr
+                    .compat()
+                    .with(|m: SshMsg| future::ok::<_, Error>(m.data())),
                 |msg| -> Result<bool> {
                     // Select a sink based on the stream
                     match msg.stream() {

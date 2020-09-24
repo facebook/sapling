@@ -237,7 +237,7 @@ where
 
     let (stdout, stderr, join_handle) = {
         let (otx, orx) = mpsc::channel(1);
-        let (etx, erx) = mpsc::channel(1);
+        let (etx, erx) = mpsc::unbounded();
 
         let orx = orx
             .map(|blob| split_bytes_in_chunk(blob, CHUNK_SIZE))

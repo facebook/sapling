@@ -6,12 +6,11 @@
  */
 
 #![deny(warnings)]
-// TODO: (rain1) T21726029 tokio/futures deprecated a bunch of stuff, clean it all up
-#![allow(deprecated)]
 
 use anyhow::Error;
 use clap::{App, Arg, SubCommand};
 use fbinit::FacebookInit;
+use std::time::Duration;
 
 mod serve;
 
@@ -80,11 +79,21 @@ fn main(fb: FacebookInit) {
         .get_matches();
 
     let res = if let Some(subcmd) = matches.subcommand_matches("serve") {
-        tokio_compat::runtime::Runtime::new()
+        tokio::runtime::Runtime::new()
             .map_err(Error::from)
             .and_then(|mut runtime| {
-                let result = runtime.block_on_std(serve::cmd(fb, &matches, subcmd));
-                runtime.shutdown_on_idle();
+                // NOTE: We shutdown immediately here. This is a bit unfortunate, but it's due to
+                // the fact that we use Stdin / Stdout and Stderr from Tokio, and those things
+                // spawn blocking threads, which will prevent the runtime from shutting down. This
+                // would normally be OK, but hgcli is a bit special in the sense that the client
+                // does not close stdin, so stdin will usually be blocked waiting for input. Note
+                // that if serve has exited, there is nothing left to do, since it means
+                // - The client may have closed stdin, in which case we don't really have anything
+                // to say to them anymore.
+                // - The server may have closed the connection, in which case reading from stdin
+                // doesn't make any sense.
+                let result = runtime.block_on(serve::cmd(fb, &matches, subcmd));
+                runtime.shutdown_timeout(Duration::from_nanos(0));
                 result
             })
     } else {

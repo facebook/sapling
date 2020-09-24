@@ -16,7 +16,7 @@ use std::net::IpAddr;
 use std::time::Duration;
 
 use bytes::{BufMut, Bytes, BytesMut};
-use futures::{sink::Wait, sync::mpsc};
+use futures::sync::mpsc;
 use futures_ext::BoxStream;
 use maplit::hashmap;
 use permission_checker::MononokeIdentitySet;
@@ -41,23 +41,22 @@ pub struct Stdio {
     pub metadata: Metadata,
     pub stdin: BoxStream<Bytes, io::Error>,
     pub stdout: mpsc::Sender<Bytes>,
-    pub stderr: mpsc::Sender<Bytes>,
+    pub stderr: mpsc::UnboundedSender<Bytes>,
 }
 
 pub struct SenderBytesWrite {
-    pub chan: Wait<mpsc::Sender<Bytes>>,
+    pub chan: mpsc::UnboundedSender<Bytes>,
 }
 
 impl io::Write for SenderBytesWrite {
     fn flush(&mut self) -> io::Result<()> {
-        self.chan
-            .flush()
-            .map_err(|e| io::Error::new(io::ErrorKind::BrokenPipe, e))
+        // Nothing to do. We don't control what happens in our receiver.
+        Ok(())
     }
 
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.chan
-            .send(Bytes::copy_from_slice(buf))
+            .unbounded_send(Bytes::copy_from_slice(buf))
             .map(|_| buf.len())
             .map_err(|e| io::Error::new(io::ErrorKind::BrokenPipe, e))
     }
