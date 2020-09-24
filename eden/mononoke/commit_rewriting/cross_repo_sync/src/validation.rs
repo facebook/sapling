@@ -654,6 +654,7 @@ mod test {
     use fbinit::FacebookInit;
     use fixtures::linear;
     use futures_old::stream::Stream;
+    use live_commit_sync_config::TestLiveCommitSyncConfig;
     use metaconfig_types::{CommitSyncConfigVersion, CommitSyncDirection};
     use mononoke_types::{MPath, RepositoryId};
     use revset::AncestorsNodeStream;
@@ -863,6 +864,7 @@ mod test {
             },
         };
 
-        Ok(CommitSyncer::new(mapping, repos))
+        let live_commit_sync_config = Arc::new(TestLiveCommitSyncConfig::new_empty());
+        Ok(CommitSyncer::new(mapping, repos, live_commit_sync_config))
     }
 }

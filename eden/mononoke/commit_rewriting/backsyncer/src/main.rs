@@ -37,6 +37,7 @@ use stats::prelude::*;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::str::FromStr;
+use std::sync::Arc;
 use std::time::Duration;
 use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
 
@@ -113,6 +114,7 @@ where
 {
     let target_repo_id = commit_syncer_args.get_target_repo_id();
 
+    let live_commit_sync_config = Arc::new(live_commit_sync_config);
     loop {
         // We only care about public pushes because draft pushes are not in the bookmark
         // update log at all.
@@ -131,7 +133,7 @@ where
 
                 let commit_syncer = commit_syncer_args
                     .clone()
-                    .try_into_commit_syncer(&commit_sync_config)?;
+                    .try_into_commit_syncer(&commit_sync_config, live_commit_sync_config.clone())?;
 
                 backsync_latest(
                     ctx.clone(),
@@ -289,7 +291,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             let ctx = session_container.new_context(logger.clone(), scuba_sample);
             let commit_sync_config =
                 live_commit_sync_config.get_current_commit_sync_config(&ctx, target_repo_id)?;
-            let commit_syncer = commit_syncer_args.try_into_commit_syncer(&commit_sync_config)?;
+            let commit_syncer = commit_syncer_args
+                .try_into_commit_syncer(&commit_sync_config, Arc::new(live_commit_sync_config))?;
 
             let db_config = target_repo_config.storage_config.metadata;
             let target_repo_dbs = runtime.block_on_std(
@@ -355,7 +358,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             let ctx = session_container.new_context(logger, ScubaSampleBuilder::with_discard());
             let commit_sync_config =
                 live_commit_sync_config.get_current_commit_sync_config(&ctx, target_repo_id)?;
-            let commit_syncer = commit_syncer_args.try_into_commit_syncer(&commit_sync_config)?;
+            let commit_syncer = commit_syncer_args
+                .try_into_commit_syncer(&commit_sync_config, Arc::new(live_commit_sync_config))?;
 
             let inputfile = sub_m
                 .value_of(ARG_INPUT_FILE)

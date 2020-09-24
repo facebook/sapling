@@ -28,6 +28,7 @@ use futures::{
 };
 use futures_old::Future;
 use futures_old::Stream as StreamOld;
+use live_commit_sync_config::LiveCommitSyncConfig;
 use manifest::get_implicit_deletes;
 use maplit::{hashmap, hashset};
 use mercurial_types::HgManifestId;
@@ -42,6 +43,7 @@ use movers::{get_movers, Movers};
 use pushrebase::{do_pushrebase_bonsai, PushrebaseError};
 use slog::info;
 use std::collections::{BTreeMap, HashMap};
+use std::sync::Arc;
 use std::{collections::VecDeque, fmt};
 use synced_commit_mapping::{
     EquivalentWorkingCopyEntry, SyncedCommitMapping, SyncedCommitMappingEntry,
@@ -485,6 +487,7 @@ pub struct CommitSyncer<M> {
     // TODO: Finish refactor and remove pub
     pub mapping: M,
     pub repos: CommitSyncRepos,
+    live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
 }
 
 impl<M> fmt::Debug for CommitSyncer<M>
@@ -502,8 +505,16 @@ impl<M> CommitSyncer<M>
 where
     M: SyncedCommitMapping + Clone + 'static,
 {
-    pub fn new(mapping: M, repos: CommitSyncRepos) -> Self {
-        Self { mapping, repos }
+    pub fn new(
+        mapping: M,
+        repos: CommitSyncRepos,
+        live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
+    ) -> Self {
+        Self {
+            mapping,
+            repos,
+            live_commit_sync_config,
+        }
     }
 
     pub fn get_source_repo(&self) -> &BlobRepo {
@@ -1253,7 +1264,7 @@ where
         source_bcs_id: ChangesetId,
         maybe_target_bcs_id: Option<ChangesetId>,
     ) -> Result<(), Error> {
-        let CommitSyncer { repos, mapping } = self.clone();
+        let CommitSyncer { repos, mapping, .. } = self.clone();
         let (source_repo, target_repo, source_is_large) = match repos {
             CommitSyncRepos::LargeToSmall {
                 large_repo,
@@ -1488,6 +1499,7 @@ pub fn create_commit_syncers<M>(
     large_repo: BlobRepo,
     commit_sync_config: &CommitSyncConfig,
     mapping: M,
+    live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<Syncers<M>, Error>
 where
     M: SyncedCommitMapping + Clone + 'static,
@@ -1523,10 +1535,12 @@ where
     let large_to_small_commit_syncer = CommitSyncer {
         mapping: mapping.clone(),
         repos: large_to_small_commit_sync_repos,
+        live_commit_sync_config: live_commit_sync_config.clone(),
     };
     let small_to_large_commit_syncer = CommitSyncer {
         mapping,
         repos: small_to_large_commit_sync_repos,
+        live_commit_sync_config: live_commit_sync_config.clone(),
     };
 
     Ok(Syncers {

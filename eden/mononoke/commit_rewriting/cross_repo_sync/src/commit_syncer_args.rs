@@ -7,9 +7,11 @@
 
 use anyhow::Error;
 use blobrepo::BlobRepo;
+use live_commit_sync_config::LiveCommitSyncConfig;
 use metaconfig_types::CommitSyncConfig;
 use mononoke_types::RepositoryId;
 use std::fmt;
+use std::sync::Arc;
 use synced_commit_mapping::SyncedCommitMapping;
 
 use crate::{CommitSyncRepos, CommitSyncer};
@@ -50,6 +52,8 @@ impl<T: SyncedCommitMapping + Clone + 'static> CommitSyncerArgs<T> {
     pub fn try_into_commit_syncer(
         self,
         commit_sync_config: &CommitSyncConfig,
+        // TODO(stash): remove commit_sync_config and use just live_commit_sync_config
+        live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     ) -> Result<CommitSyncer<T>, Error> {
         let Self {
             source_repo,
@@ -58,7 +62,11 @@ impl<T: SyncedCommitMapping + Clone + 'static> CommitSyncerArgs<T> {
         } = self;
 
         let commit_sync_repos = CommitSyncRepos::new(source_repo, target_repo, commit_sync_config)?;
-        Ok(CommitSyncer::new(mapping, commit_sync_repos))
+        Ok(CommitSyncer::new(
+            mapping,
+            commit_sync_repos,
+            live_commit_sync_config,
+        ))
     }
 }
 

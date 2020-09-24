@@ -28,6 +28,7 @@ use skiplist::fetch_skiplist_index;
 use slog::info;
 use std::collections::BTreeMap;
 use std::num::NonZeroU64;
+use std::sync::Arc;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 
 mod catchup;
@@ -173,6 +174,9 @@ async fn run_sync_diamond_merge<'a>(
             .compat()
             .await?;
 
+    let config_store = args::maybe_init_config_store(ctx.fb, ctx.logger(), &matches)
+        .ok_or_else(|| format_err!("Failed initializing ConfigStore"))?;
+    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &config_store)?;
     sync_diamond_merge::do_sync_diamond_merge(
         ctx,
         source_repo,
@@ -181,6 +185,7 @@ async fn run_sync_diamond_merge<'a>(
         mapping,
         source_repo_config,
         bookmark,
+        Arc::new(live_commit_sync_config),
     )
     .await
     .map(|_| ())
@@ -410,7 +415,8 @@ async fn run_manual_commit_sync<'a>(
         create_commit_syncer_args_from_matches(ctx.fb, ctx.logger(), &matches).await?;
     let commit_sync_config =
         live_commit_sync_config.get_current_commit_sync_config(&ctx, target_repo_id)?;
-    let commit_syncer = commit_syncer_args.try_into_commit_syncer(&commit_sync_config)?;
+    let commit_syncer = commit_syncer_args
+        .try_into_commit_syncer(&commit_sync_config, Arc::new(live_commit_sync_config))?;
 
     let target_repo = commit_syncer.get_target_repo();
     let target_repo_parents = sub_m.values_of(PARENTS);

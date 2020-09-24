@@ -29,6 +29,7 @@ use futures::{
 };
 use futures_ext::{BoxStream, StreamExt};
 use futures_old::{Future, IntoFuture, Stream};
+use live_commit_sync_config::LiveCommitSyncConfig;
 use manifest::{bonsai_diff, BonsaiDiffFileChange};
 use maplit::hashmap;
 use mercurial_types::{HgFileNodeId, HgManifestId};
@@ -38,6 +39,7 @@ use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 use skiplist::fetch_skiplist_index;
 use slog::{info, warn};
 use std::collections::{BTreeMap, HashMap};
+use std::sync::Arc;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 
 /// The function syncs merge commit M from a small repo into a large repo.
@@ -91,6 +93,7 @@ pub async fn do_sync_diamond_merge(
     mapping: SqlSyncedCommitMapping,
     small_repo_config: RepoConfig,
     onto_bookmark: BookmarkName,
+    live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<(), Error> {
     info!(
         ctx.logger(),
@@ -114,6 +117,7 @@ pub async fn do_sync_diamond_merge(
             .commit_sync_config
             .ok_or(Error::msg("Commit sync config is not specified"))?,
         mapping,
+        live_commit_sync_config,
     )?;
 
     let small_root = find_root(&new_branch)?;

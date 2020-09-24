@@ -662,6 +662,7 @@ impl ValidationHelpers {
             self.large_repo.0.clone(),
             &commit_sync_config,
             self.mapping.clone(),
+            Arc::new(self.live_commit_sync_config.clone()),
         )
     }
 }

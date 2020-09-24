@@ -189,7 +189,7 @@ async fn run_in_tailing_mode<
 
                 let commit_syncer = commit_syncer_args
                     .clone()
-                    .try_into_commit_syncer(&commit_sync_config)?;
+                    .try_into_commit_syncer(&commit_sync_config, live_commit_sync_config.clone())?;
 
                 let synced_something = tail(
                     &ctx,
@@ -438,7 +438,7 @@ async fn run(
 
     let commit_syncer = commit_syncer_args
         .clone()
-        .try_into_commit_syncer(&commit_sync_config)?;
+        .try_into_commit_syncer(&commit_sync_config, live_commit_sync_config)?;
 
     let source_skiplist =
         get_skiplist_index(&ctx, &source_repo_config, &source_repo).map_ok(Source);

@@ -11,7 +11,6 @@
 
 use bytes::Bytes;
 use fbinit::FacebookInit;
-use maplit::{btreemap, hashmap};
 use std::collections::BTreeMap;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -28,6 +27,8 @@ use cross_repo_sync_test_utils::rebase_root_on_master;
 
 use fixtures::{linear, many_files_dirs};
 use futures::compat::Future01CompatExt;
+use live_commit_sync_config::TestLiveCommitSyncConfig;
+use maplit::{btreemap, hashmap};
 use mercurial_types::HgChangesetId;
 use metaconfig_types::{
     CommitSyncConfig, CommitSyncConfigVersion, CommitSyncDirection,
@@ -239,7 +240,8 @@ fn create_small_to_large_commit_syncer(
 
     let commit_sync_config = create_commit_sync_config(small_repo_id, large_repo_id, prefix)?;
     let repos = CommitSyncRepos::new(small_repo, large_repo, &commit_sync_config)?;
-    Ok(CommitSyncer::new(mapping, repos))
+    let live_commit_sync_config = Arc::new(TestLiveCommitSyncConfig::new_empty());
+    Ok(CommitSyncer::new(mapping, repos, live_commit_sync_config))
 }
 
 fn create_large_to_small_commit_syncer(
@@ -253,7 +255,8 @@ fn create_large_to_small_commit_syncer(
 
     let commit_sync_config = create_commit_sync_config(small_repo_id, large_repo_id, prefix)?;
     let repos = CommitSyncRepos::new(large_repo, small_repo, &commit_sync_config)?;
-    Ok(CommitSyncer::new(mapping, repos))
+    let live_commit_sync_config = Arc::new(TestLiveCommitSyncConfig::new_empty());
+    Ok(CommitSyncer::new(mapping, repos, live_commit_sync_config))
 }
 
 #[fbinit::compat_test]

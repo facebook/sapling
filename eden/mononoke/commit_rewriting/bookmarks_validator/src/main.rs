@@ -106,10 +106,10 @@ fn get_commit_syncer<'a>(
     let target_repo_id = args::get_target_repo_id(ctx.fb, &matches)?;
     let config_store = args::maybe_init_config_store(ctx.fb, &logger, &matches)
         .ok_or_else(|| format_err!("Failed initializing ConfigStore"))?;
-    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(&logger, &config_store)?;
+    let live_commit_sync_config = Arc::new(CfgrLiveCommitSyncConfig::new(&logger, &config_store)?);
     let commit_sync_config =
         live_commit_sync_config.get_current_commit_sync_config(&ctx, target_repo_id)?;
-    commit_syncer_args.try_into_commit_syncer(&commit_sync_config)
+    commit_syncer_args.try_into_commit_syncer(&commit_sync_config, live_commit_sync_config)
 }
 
 async fn loop_forever<M: SyncedCommitMapping + Clone + 'static>(

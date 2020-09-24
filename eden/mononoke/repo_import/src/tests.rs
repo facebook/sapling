@@ -28,8 +28,8 @@ mod tests {
     use futures::{compat::Future01CompatExt, stream::TryStreamExt};
     use git_types::TreeHandle;
     use live_commit_sync_config::{
-        CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS, CONFIGERATOR_CURRENT_COMMIT_SYNC_CONFIGS,
-        CONFIGERATOR_PUSHREDIRECT_ENABLE,
+        CfgrLiveCommitSyncConfig, TestLiveCommitSyncConfig, CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS,
+        CONFIGERATOR_CURRENT_COMMIT_SYNC_CONFIGS, CONFIGERATOR_PUSHREDIRECT_ENABLE,
     };
     use maplit::hashmap;
     use mercurial_types::MPath;
@@ -484,13 +484,13 @@ mod tests {
         test_source.insert_to_refresh(CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS.to_string());
 
         let config_store = ConfigStore::new(test_source.clone(), Duration::from_millis(2), None);
-        let maybe_config_store = Some(config_store);
+        let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &config_store)?;
 
         let repo0 = create_repo(0)?;
 
         insert_repo_config(0, &mut repos);
         assert!(
-            get_large_repo_config_if_pushredirected(&ctx, &repo0, &maybe_config_store, &repos)
+            get_large_repo_config_if_pushredirected(&ctx, &repo0, &live_commit_sync_config, &repos)
                 .await?
                 .is_none()
         );
@@ -498,13 +498,14 @@ mod tests {
         let repo1 = create_repo(1)?;
 
         insert_repo_config(1, &mut repos);
-        get_large_repo_config_if_pushredirected(&ctx, &repo1, &maybe_config_store, &repos).await?;
+        get_large_repo_config_if_pushredirected(&ctx, &repo1, &live_commit_sync_config, &repos)
+            .await?;
 
         let repo2 = create_repo(2)?;
 
         insert_repo_config(2, &mut repos);
         assert!(
-            get_large_repo_config_if_pushredirected(&ctx, &repo2, &maybe_config_store, &repos)
+            get_large_repo_config_if_pushredirected(&ctx, &repo2, &live_commit_sync_config, &repos)
                 .await?
                 .is_none()
         );
@@ -564,11 +565,13 @@ mod tests {
             dest_bookmark: create_bookmark_name("dest_bookmark"),
         };
 
+        let live_commit_sync_config = Arc::new(TestLiveCommitSyncConfig::new_empty());
         let syncers_1 = create_commit_syncers(
             small_repo_1.clone(),
             large_repo.clone(),
             &get_large_repo_sync_config(),
             mapping.clone(),
+            live_commit_sync_config,
         )?;
 
         let large_repo_setting_1 =
@@ -588,11 +591,13 @@ mod tests {
             dest_bookmark: create_bookmark_name("dest_bookmark_2"),
         };
 
+        let live_commit_sync_config = Arc::new(TestLiveCommitSyncConfig::new_empty());
         let syncers_2 = create_commit_syncers(
             small_repo_2.clone(),
             large_repo.clone(),
             &get_large_repo_sync_config(),
             mapping.clone(),
+            live_commit_sync_config,
         )?;
 
         let large_repo_setting_2 =
@@ -637,12 +642,14 @@ mod tests {
         .await?;
         let cs_ids: Vec<ChangesetId> = changesets.values().copied().collect();
 
+        let live_commit_sync_config = Arc::new(TestLiveCommitSyncConfig::new_empty());
         let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap();
         let syncers = create_commit_syncers(
             small_repo.clone(),
             large_repo.clone(),
             &get_large_repo_sync_config(),
             mapping.clone(),
+            live_commit_sync_config,
         )?;
 
         let large_to_small_syncer = syncers.large_to_small;
@@ -787,12 +794,14 @@ mod tests {
 
         let cs_ids: Vec<ChangesetId> = changesets.values().copied().collect();
 
+        let live_commit_sync_config = Arc::new(TestLiveCommitSyncConfig::new_empty());
         let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap();
         let syncers = create_commit_syncers(
             small_repo.clone(),
             large_repo.clone(),
             &get_large_repo_sync_config(),
             mapping.clone(),
+            live_commit_sync_config,
         )?;
 
         let large_to_small_syncer = syncers.large_to_small;

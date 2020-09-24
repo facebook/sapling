@@ -13,7 +13,6 @@ use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use borrowed::borrowed;
-use cached_config::ConfigStore;
 use clap::ArgMatches;
 use cmdlib::args;
 use cmdlib::helpers::block_execute;
@@ -679,14 +678,10 @@ fn get_importing_bookmark(bookmark_suffix: &str) -> Result<BookmarkName, Error> 
 async fn get_large_repo_config_if_pushredirected<'a>(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    maybe_config_store: &Option<ConfigStore>,
+    live_commit_sync_config: &CfgrLiveCommitSyncConfig,
     repos: &HashMap<String, RepoConfig>,
 ) -> Result<Option<RepoConfig>, Error> {
     let repo_id = repo.get_repoid();
-    let config_store = maybe_config_store
-        .as_ref()
-        .ok_or(format_err!("failed to instantiate ConfigStore"))?;
-    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &config_store)?;
     let enabled = live_commit_sync_config.push_redirector_enabled_for_public(repo_id);
 
     if enabled {
@@ -769,6 +764,7 @@ async fn get_pushredirected_vars(
     repo_import_setting: &RepoImportSetting,
     large_repo_config: &RepoConfig,
     matches: &ArgMatches<'_>,
+    live_commit_sync_config: CfgrLiveCommitSyncConfig,
 ) -> Result<(BlobRepo, RepoImportSetting, Syncers<SqlSyncedCommitMapping>), Error> {
     let large_repo_id = large_repo_config.repoid;
     let large_repo = args::open_repo_with_repo_id(ctx.fb, &ctx.logger(), large_repo_id, &matches)
@@ -799,6 +795,7 @@ async fn get_pushredirected_vars(
         large_repo.clone(),
         &commit_sync_config,
         mapping.clone(),
+        Arc::new(live_commit_sync_config),
     )?;
 
     let large_repo_import_setting =
@@ -874,14 +871,21 @@ async fn repo_import(
         x_repo_check_disabled: recovery_fields.x_repo_check_disabled,
         hg_sync_check_disabled: recovery_fields.hg_sync_check_disabled,
     };
-    let maybe_config_store = args::maybe_init_config_store(fb, &ctx.logger(), &matches);
+    let config_store = args::maybe_init_config_store(fb, &ctx.logger(), &matches)
+        .ok_or_else(|| format_err!("failed to instantiate ConfigStore"))?;
+    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &config_store)?;
+
     let configs = args::load_repo_configs(fb, &matches)?;
     let mysql_options = args::parse_mysql_options(&matches);
     let readonly_storage = args::parse_readonly_storage(&matches);
 
-    let maybe_large_repo_config =
-        get_large_repo_config_if_pushredirected(&ctx, &repo, &maybe_config_store, &configs.repos)
-            .await?;
+    let maybe_large_repo_config = get_large_repo_config_if_pushredirected(
+        &ctx,
+        &repo,
+        &live_commit_sync_config,
+        &configs.repos,
+    )
+    .await?;
     let mut maybe_small_repo_back_sync_vars = None;
     let mut movers = vec![movers::mover_factory(
         HashMap::new(),
@@ -895,6 +899,7 @@ async fn repo_import(
             &repo_import_setting,
             &large_repo_config,
             &matches,
+            live_commit_sync_config,
         )
         .await?;
         let target_repo_dbs = open_backsyncer_dbs(
@@ -1141,12 +1146,17 @@ async fn check_additional_setup_steps(
         ));
     }
 
-    let maybe_config_store = args::maybe_init_config_store(fb, &ctx.logger(), &matches);
+    let config_store = args::maybe_init_config_store(fb, &ctx.logger(), &matches)
+        .ok_or_else(|| format_err!("failed to instantiate ConfigStore"))?;
+    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &config_store)?;
     let configs = args::load_repo_configs(fb, &matches)?;
-    let maybe_large_repo_config =
-        get_large_repo_config_if_pushredirected(&ctx, &repo, &maybe_config_store, &configs.repos)
-            .await?;
-
+    let maybe_large_repo_config = get_large_repo_config_if_pushredirected(
+        &ctx,
+        &repo,
+        &live_commit_sync_config,
+        &configs.repos,
+    )
+    .await?;
     if let Some(large_repo_config) = maybe_large_repo_config {
         let (large_repo, large_repo_import_setting, _syncers) = get_pushredirected_vars(
             &ctx,
@@ -1154,6 +1164,7 @@ async fn check_additional_setup_steps(
             &repo_import_setting,
             &large_repo_config,
             &matches,
+            live_commit_sync_config,
         )
         .await?;
         info!(

@@ -26,6 +26,7 @@ use futures::{
 };
 use futures_ext::spawn_future;
 use futures_old::{future, stream::Stream as OldStream};
+use live_commit_sync_config::TestLiveCommitSyncConfig;
 use manifest::{Entry, ManifestOps};
 use maplit::btreemap;
 use mercurial_types::HgChangesetId;
@@ -904,8 +905,9 @@ async fn init_repos(
     )
     .await;
 
+    let live_commit_sync_config = Arc::new(TestLiveCommitSyncConfig::new_empty());
     // Sync first commit manually
-    let commit_syncer = CommitSyncer::new(mapping.clone(), repos);
+    let commit_syncer = CommitSyncer::new(mapping.clone(), repos, live_commit_sync_config);
     let initial_bcs_id = source_repo
         .get_bonsai_from_hg(
             ctx.clone(),
@@ -1197,7 +1199,8 @@ async fn init_merged_repos(
             version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
         };
 
-        let commit_syncer = CommitSyncer::new(mapping.clone(), repos);
+        let live_commit_sync_config = Arc::new(TestLiveCommitSyncConfig::new_empty());
+        let commit_syncer = CommitSyncer::new(mapping.clone(), repos, live_commit_sync_config);
         output.push((commit_syncer, small_repo_dbs));
 
         let filename = format!("file_in_smallrepo{}", small_repo.get_repoid().id());
@@ -1433,7 +1436,8 @@ async fn preserve_premerge_commit(
             version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
         };
 
-        CommitSyncer::new(mapping.clone(), repos)
+        let live_commit_sync_config = Arc::new(TestLiveCommitSyncConfig::new_empty());
+        CommitSyncer::new(mapping.clone(), repos, live_commit_sync_config)
     };
 
     small_to_large_sync_config

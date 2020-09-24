@@ -127,6 +127,8 @@ function megarepo_tool {
 function megarepo_tool_multirepo {
   GLOG_minloglevel=5 "$MEGAREPO_TOOL" \
     "${COMMON_ARGS[@]}" \
+    --test-instance \
+    --local-configerator-path="$TESTTMP/configerator" \
     --mononoke-config-path "$TESTTMP"/mononoke-config \
     "$@"
 }
@@ -307,6 +309,8 @@ function mononoke_admin_source_target {
   shift
   GLOG_minloglevel=5 "$MONONOKE_ADMIN" \
     "${COMMON_ARGS[@]}" \
+    --test-instance \
+    --local-configerator-path="$TESTTMP/configerator" \
     --source-repo-id "$source_repo_id" \
     --target-repo-id "$target_repo_id" \
     --mononoke-config-path "$TESTTMP"/mononoke-config "$@"
@@ -315,6 +319,8 @@ function mononoke_admin_source_target {
 function mononoke_admin_sourcerepo {
   GLOG_minloglevel=5 "$MONONOKE_ADMIN" \
     "${COMMON_ARGS[@]}" \
+    --test-instance \
+    --local-configerator-path="$TESTTMP/configerator" \
     --source-repo-id $REPOID \
     --mononoke-config-path "$TESTTMP"/mononoke-config "$@"
 

@@ -20,6 +20,7 @@ use cross_repo_sync::{
     rewrite_commit, update_mapping, upload_commits, CommitSyncRepos, CommitSyncer, Syncers,
 };
 use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt};
+use live_commit_sync_config::TestLiveCommitSyncConfig;
 use maplit::hashmap;
 use megarepolib::{common::ChangesetArgs, perform_move};
 use metaconfig_types::{
@@ -142,6 +143,8 @@ pub async fn init_small_large_repo(
         RepositoryId::new(1),
     )?;
 
+    let live_commit_sync_config = Arc::new(TestLiveCommitSyncConfig::new_empty());
+
     let mapping =
         SqlSyncedCommitMapping::from_sql_connections(SqlConnections::new_single(con.clone()));
     let (smallrepo, _) =
@@ -156,7 +159,11 @@ pub async fn init_small_large_repo(
         reverse_bookmark_renamer: Arc::new(identity_renamer),
         version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
     };
-    let small_to_large_commit_syncer = CommitSyncer::new(mapping.clone(), repos.clone());
+    let small_to_large_commit_syncer = CommitSyncer::new(
+        mapping.clone(),
+        repos.clone(),
+        live_commit_sync_config.clone(),
+    );
 
     let repos = CommitSyncRepos::LargeToSmall {
         small_repo: smallrepo.clone(),
@@ -167,7 +174,8 @@ pub async fn init_small_large_repo(
         reverse_bookmark_renamer: Arc::new(identity_renamer),
         version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
     };
-    let large_to_small_commit_syncer = CommitSyncer::new(mapping.clone(), repos.clone());
+    let large_to_small_commit_syncer =
+        CommitSyncer::new(mapping.clone(), repos.clone(), live_commit_sync_config);
 
     let first_bcs_id = CreateCommitContext::new_root(&ctx, &smallrepo)
         .add_file("file", "content")

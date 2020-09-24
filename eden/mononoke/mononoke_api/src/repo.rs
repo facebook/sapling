@@ -1082,8 +1082,11 @@ impl RepoContext {
                     specifier
                 )))?;
 
-        let commit_syncer =
-            CommitSyncer::new(self.synced_commit_mapping().clone(), commit_sync_repos);
+        let commit_syncer = CommitSyncer::new(
+            self.synced_commit_mapping().clone(),
+            commit_sync_repos,
+            self.live_commit_sync_config(),
+        );
 
         let maybe_cs_id = commit_syncer.sync_commit(&self.ctx, changeset).await?;
         Ok(maybe_cs_id.map(|cs_id| ChangesetContext::new(other.clone(), cs_id)))

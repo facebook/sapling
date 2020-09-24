@@ -26,6 +26,7 @@ use metaconfig_types::{CommitSyncConfig, RepoConfig};
 use mononoke_types::RepositoryId;
 use movers::{get_large_to_small_mover, get_small_to_large_mover};
 use slog::{info, warn, Logger};
+use std::sync::Arc;
 use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
 
 use crate::error::SubcommandError;
@@ -51,6 +52,10 @@ pub async fn subcommand_crossrepo<'a>(
     matches: &'a ArgMatches<'_>,
     sub_m: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
+    let config_store = args::maybe_init_config_store(fb, &logger, &matches)
+        .ok_or_else(|| format_err!("Failed initializing ConfigStore"))?;
+    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(&logger, &config_store)?;
+
     args::init_cachelib(fb, &matches, None);
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     match sub_m.subcommand() {
@@ -74,7 +79,11 @@ pub async fn subcommand_crossrepo<'a>(
                     target_repo,
                     &source_repo_config,
                 )?;
-                CommitSyncer::new(mapping, commit_sync_repos)
+                CommitSyncer::new(
+                    mapping,
+                    commit_sync_repos,
+                    Arc::new(live_commit_sync_config),
+                )
             };
 
             let large_hash = {
@@ -106,11 +115,12 @@ pub async fn subcommand_crossrepo<'a>(
                 target_repo,
                 mapping,
                 update_large_repo_bookmarks,
+                Arc::new(live_commit_sync_config),
             )
             .await
         }
         (SUBCOMMAND_CONFIG, Some(sub_sub_m)) => {
-            run_config_sub_subcommand(fb, ctx, logger, matches, sub_sub_m).await
+            run_config_sub_subcommand(fb, ctx, matches, sub_sub_m, live_commit_sync_config).await
         }
         _ => Err(SubcommandError::InvalidArgs),
     }
@@ -119,14 +129,11 @@ pub async fn subcommand_crossrepo<'a>(
 async fn run_config_sub_subcommand<'a>(
     fb: FacebookInit,
     ctx: CoreContext,
-    logger: Logger,
     matches: &'a ArgMatches<'_>,
     config_subcommand_matches: &'a ArgMatches<'a>,
+    live_commit_sync_config: CfgrLiveCommitSyncConfig,
 ) -> Result<(), SubcommandError> {
     let repo_id = args::get_repo_id(fb, matches)?;
-    let config_store = args::maybe_init_config_store(fb, &logger, &matches)
-        .expect("failed to instantiate ConfigStore");
-    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &config_store)?;
 
     match config_subcommand_matches.subcommand() {
         (SUBCOMMAND_BY_VERSION, Some(sub_m)) => {
@@ -312,13 +319,15 @@ async fn subcommand_verify_bookmarks(
     target_repo: BlobRepo,
     mapping: SqlSyncedCommitMapping,
     should_update_large_repo_bookmarks: bool,
+    live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<(), SubcommandError> {
     let commit_sync_repos = get_large_to_small_commit_sync_repos(
         source_repo.clone(),
         target_repo.clone(),
         &source_repo_config,
     )?;
-    let commit_syncer = CommitSyncer::new(mapping.clone(), commit_sync_repos);
+    let commit_syncer =
+        CommitSyncer::new(mapping.clone(), commit_sync_repos, live_commit_sync_config);
 
     let large_repo = commit_syncer.get_large_repo();
     let small_repo = commit_syncer.get_small_repo();
@@ -609,6 +618,7 @@ mod test {
     use cross_repo_sync::validation::find_bookmark_diff;
     use fixtures::{linear, set_bookmark};
     use futures_old::stream::Stream;
+    use live_commit_sync_config::TestLiveCommitSyncConfig;
     use maplit::{hashmap, hashset};
     use metaconfig_types::{
         CommitSyncConfig, CommitSyncConfigVersion, CommitSyncDirection,
@@ -814,6 +824,7 @@ mod test {
             },
         };
 
-        Ok(CommitSyncer::new(mapping, repos))
+        let live_commit_sync_config = Arc::new(TestLiveCommitSyncConfig::new_empty());
+        Ok(CommitSyncer::new(mapping, repos, live_commit_sync_config))
     }
 }
