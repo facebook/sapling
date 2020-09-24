@@ -8,6 +8,7 @@
 use std::collections::HashMap;
 use std::convert::{TryFrom, TryInto};
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 use anyhow::{Context, Error};
 use url::Url;
@@ -28,6 +29,7 @@ pub struct Builder {
     max_files: Option<usize>,
     max_trees: Option<usize>,
     max_history: Option<usize>,
+    timeout: Option<Duration>,
 }
 
 impl Builder {
@@ -74,6 +76,11 @@ impl Builder {
             .get_opt("edenapi", "maxhistory")
             .map_err(|e| ConfigError::Malformed("edenapi.maxhistory".into(), e))?;
 
+        let timeout = config
+            .get_opt("edenapi", "timeout")
+            .map_err(|e| ConfigError::Malformed("edenapi.timeout".into(), e))?
+            .map(Duration::from_secs);
+
         Ok(Self {
             server_url: Some(server_url),
             client_creds,
@@ -82,6 +89,7 @@ impl Builder {
             max_files,
             max_trees,
             max_history,
+            timeout,
         })
     }
 
@@ -136,6 +144,12 @@ impl Builder {
         self.max_history = size;
         self
     }
+
+    /// Timeout for HTTP requests sent by the client.
+    pub fn timeout(mut self, timeout: Duration) -> Self {
+        self.timeout = Some(timeout);
+        self
+    }
 }
 
 /// Client certificate and private key paths for TLS mutual authentication.
@@ -166,6 +180,7 @@ pub(crate) struct Config {
     pub(crate) max_files: Option<usize>,
     pub(crate) max_trees: Option<usize>,
     pub(crate) max_history: Option<usize>,
+    pub(crate) timeout: Option<Duration>,
 }
 
 impl TryFrom<Builder> for Config {
@@ -180,6 +195,7 @@ impl TryFrom<Builder> for Config {
             max_files,
             max_trees,
             max_history,
+            timeout,
         } = builder;
 
         // Check for missing required fields.
@@ -198,6 +214,7 @@ impl TryFrom<Builder> for Config {
             max_files,
             max_trees,
             max_history,
+            timeout,
         })
     }
 }

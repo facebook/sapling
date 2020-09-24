@@ -72,12 +72,19 @@ impl Client {
         if let Some(ClientCreds { cert, key }) = &self.config.client_creds {
             req = req.creds(cert, key)?;
         }
+
         if let Some(ca) = &self.config.ca_bundle {
             req = req.cainfo(ca)?;
         }
+
         for (k, v) in &self.config.headers {
             req = req.header(k, v);
         }
+
+        if let Some(timeout) = self.config.timeout {
+            req = req.timeout(timeout);
+        }
+
         Ok(req)
     }
 

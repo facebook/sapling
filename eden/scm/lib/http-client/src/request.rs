@@ -262,7 +262,6 @@ impl Request {
             easy.cainfo(cainfo)?;
         }
 
-        // Set timeout.
         if let Some(timeout) = self.timeout {
             easy.timeout(timeout)?;
         }
