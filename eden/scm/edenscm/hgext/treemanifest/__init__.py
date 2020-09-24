@@ -2610,20 +2610,20 @@ class remotetreestore(generatingdatastore):
             if self._repo.getdesignatednodes(keys):
                 return
 
-        names = set(name for name, node in keys)
-        nodes = set(node for name, node in keys)
+        names = list(set(name for name, node in keys))
+        nodes = list(set(node for name, node in keys))
         if len(names) != 1:
             raise error.ProgrammingError(
                 "Legacy remotetreestore._prefetchtrees "
                 "does not support multiple tree names at once"
             )
-        name = list(names)[0]
+        name = names[0]
 
         # Only look at the server if not root or is public
         basemfnodes = []
         linknode = None
         if name == "" and len(self._repo) != 0:
-            node = list(nodes)[0] if len(nodes) == 1 else self._repo["tip"].node()
+            node = nodes[0] if len(nodes) == 1 else self._repo["tip"].node()
             if util.safehasattr(self._repo.manifestlog, "_revlog"):
                 mfrevlog = self._repo.manifestlog._revlog
                 if node in mfrevlog.nodemap:
@@ -2644,7 +2644,7 @@ class remotetreestore(generatingdatastore):
             basemfnodes = _findrecenttree(self._repo, linknode, nodes)
 
         if self._repo.ui.configbool("remotefilelog", "debug") and len(nodes) == 1:
-            node = list(nodes)[0]
+            node = nodes[0]
             msg = _("fetching tree %r %s") % (name, hex(node))
             if len(basemfnodes) >= 1:
                 msg += _(", based on %s") % hex(basemfnodes[0])
