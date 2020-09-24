@@ -46,7 +46,8 @@ KeySpace stringToKeySpace(StringPiece name) {
       return ks;
     }
   }
-  throw ArgumentError("unknown key space \"", name, "\"");
+  throw ArgumentError(
+      fmt::format(FMT_STRING("unknown key space \"{}\""), name));
 }
 
 optional<KeySpace> getKeySpace() {
@@ -218,7 +219,7 @@ std::unique_ptr<Command> createCommand(StringPiece name) {
       return factory->create();
     }
   }
-  throw ArgumentError("unknown command \"", name, "\"");
+  throw ArgumentError(fmt::format(FMT_STRING("unknown command \"{}\""), name));
 }
 
 } // namespace

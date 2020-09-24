@@ -60,9 +60,7 @@ std::unique_ptr<EdenConfig> getEdenConfig(UserInfo& identity);
  */
 class ArgumentError : public std::exception {
  public:
-  template <class... Args>
-  explicit ArgumentError(Args&&... args)
-      : message_(folly::to<std::string>(std::forward<Args>(args)...)) {}
+  explicit ArgumentError(std::string&& str) : message_(std::move(str)) {}
 
   const char* what() const noexcept override {
     return message_.c_str();

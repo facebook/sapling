@@ -280,9 +280,7 @@ class HgImporter : public Importer {
 
 class HgImporterError : public std::exception {
  public:
-  template <typename... Args>
-  HgImporterError(Args&&... args)
-      : message_(folly::to<std::string>(std::forward<Args>(args)...)) {}
+  explicit HgImporterError(std::string&& str) : message_(std::move(str)) {}
 
   const char* what() const noexcept override {
     return message_.c_str();

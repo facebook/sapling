@@ -434,14 +434,12 @@ HgImporter::ChunkHeader HgImporter::readChunkHeader(
   }
 
   if (header.requestID != txnID) {
-    auto err = HgImporterError(
-        "received unexpected transaction ID (",
+    auto err = HgImporterError(fmt::format(
+        FMT_STRING(
+            "received unexpected transaction ID ({}) != {}) when reading {} response"),
         header.requestID,
-        " != ",
         txnID,
-        ") when reading ",
-        cmdName,
-        " response");
+        cmdName));
     XLOG(ERR) << err.what();
     throw err;
   }
@@ -626,11 +624,10 @@ void HgImporter::readFromHelper(void* buf, uint32_t size, StringPiece context) {
   auto result = helperOut_.readFull(buf, size);
 
   if (result.hasException()) {
-    HgImporterError err(
-        "error reading ",
+    HgImporterError err(fmt::format(
+        FMT_STRING("error reading {} from debugedenimporthelper: {}"),
         context,
-        " from debugedenimporthelper: ",
-        folly::exceptionStr(result.exception()));
+        folly::exceptionStr(result.exception()).c_str()));
     XLOG(ERR) << err.what();
     throw err;
   }
@@ -638,11 +635,11 @@ void HgImporter::readFromHelper(void* buf, uint32_t size, StringPiece context) {
   if (bytesRead != size) {
     // The helper process closed the pipe early.
     // This generally means that it exited.
-    HgImporterEofError err(
-        "received unexpected EOF from debugedenimporthelper after ",
+    HgImporterEofError err(fmt::format(
+        FMT_STRING(
+            "received unexpected EOF from debugedenimporthelper after {} bytes while reading {}"),
         bytesRead,
-        " bytes while reading ",
-        context);
+        context));
     XLOG(ERR) << err.what();
     throw err;
   }
@@ -654,11 +651,10 @@ void HgImporter::writeToHelper(
     StringPiece context) {
   auto result = helperIn_.writevFull(iov, numIov);
   if (result.hasException()) {
-    HgImporterError err(
-        "error writing ",
+    HgImporterError err(fmt::format(
+        FMT_STRING("error writing {} to debugedenimporthelper: {}"),
         context,
-        " to debugedenimporthelper: ",
-        folly::exceptionStr(result.exception()));
+        folly::exceptionStr(result.exception()).c_str()));
     XLOG(ERR) << err.what();
     throw err;
   }
