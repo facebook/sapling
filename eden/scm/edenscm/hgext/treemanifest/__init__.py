@@ -858,8 +858,9 @@ class basetreemanifestlog(object):
 
     def getmutablesharedpacks(self):
         if useruststore(self._repo.ui):
-            raise error.ProgrammingError(
-                "getmutablesharedpacks not supported when treemanifest.useruststore is True"
+            return (
+                self.datastore.getsharedmutable(),
+                self.historystore.getsharedmutable(),
             )
 
         return self._mutablesharedpacks.getmutablepack()
@@ -2686,32 +2687,11 @@ class remotetreestore(generatingdatastore):
         # we'll then route to the Rust store layer, which will then come
         # back to here.
         if len(args) == 3:
-            # This is a temporary hack. The Rust python bindings assume the
-            # prefetch function has certain args and that it has complete
-            # ownership of the mutable stores (and therefore passes mutable
-            # stores for you to use). The python code takes a different pattern,
-            # assuming the mutable packs are owned somewhere else and jumps
-            # through several layers:
-            #   remotetreestore._generatedtrees -> repo._prefetchtrees ->
-            #   _gettrees -> bundle2 treeparthandler2 (gets the mutable packs here) ->
-            #   wirepack (calls add on the packs).
-            # Once we're fully migrated to the Rust store we can remove the
-            # local notions of getmutablesharedpacks and maybe simplify this.
-            datastore, historystore, keys = args
-            mfl = self._repo.manifestlog
-            oldfunc = mfl.getmutablesharedpacks
-            try:
-
-                def getstores():
-                    return datastore, historystore
-
-                mfl.getmutablesharedpacks = getstores
-                if self._repo.ui.configbool("treemanifest", "ondemandfetch"):
-                    self._repo.getdesignatednodes(keys)
-                else:
-                    self._prefetchtrees(keys)
-            finally:
-                mfl.getmutablesharedpacks = oldfunc
+            keys = args[2]
+            if self._repo.ui.configbool("treemanifest", "ondemandfetch"):
+                self._repo.getdesignatednodes(args[2])
+            else:
+                self._prefetchtrees(keys)
         else:
             keys = args[0]
             self.datastore.prefetch(keys)

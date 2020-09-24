@@ -87,6 +87,10 @@ impl ContentStore {
             HashSet::new()
         }
     }
+
+    pub fn get_shared_mutable(&self) -> Arc<dyn HgIdMutableDeltaStore> {
+        self.shared_mutabledatastore.clone()
+    }
 }
 
 // Repack specific methods, not to be used directly but by the repack code.

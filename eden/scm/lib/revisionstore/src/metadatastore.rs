@@ -74,6 +74,10 @@ impl MetadataStore {
             RepackLocation::Shared => self.shared_mutablehistorystore.flush(),
         }
     }
+
+    pub fn get_shared_mutable(&self) -> Arc<dyn HgIdMutableHistoryStore> {
+        self.shared_mutablehistorystore.clone()
+    }
 }
 
 impl HgIdHistoryStore for MetadataStore {

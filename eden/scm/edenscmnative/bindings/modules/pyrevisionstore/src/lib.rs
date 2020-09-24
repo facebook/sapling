@@ -975,6 +975,11 @@ py_class!(pub class contentstore |py| {
         let store = self.store(py);
         Ok(store.get_logged_fetches().into_iter().map(|p| p.into()).collect::<Vec<PyPathBuf>>())
     }
+
+    def getsharedmutable(&self) -> PyResult<mutabledeltastore> {
+        let store = self.store(py);
+        mutabledeltastore::create_instance(py, store.get_shared_mutable())
+    }
 });
 
 impl ExtractInnerRef for contentstore {
@@ -1055,6 +1060,11 @@ py_class!(class metadatastore |py| {
     def markforrefresh(&self) -> PyResult<PyNone> {
         let store = self.store(py);
         store.refresh_py(py)
+    }
+
+    def getsharedmutable(&self) -> PyResult<mutablehistorystore> {
+        let store = self.store(py);
+        mutablehistorystore::create_instance(py, store.get_shared_mutable())
     }
 });
 
