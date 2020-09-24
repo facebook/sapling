@@ -101,6 +101,28 @@ class ActivateProfileCmd(Subcmd):
         return checkout.activate_profile(args.profile_name)
 
 
+@prefetch_profile_cmd(
+    "deactivate",
+    "Tell EdenFS to STOP smart prefetching the files specified by the prefetch"
+    " profile.",
+)
+class DeactivateProfileCmd(Subcmd):
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("profile_name", help="Profile to activate.")
+        parser.add_argument(
+            "--checkout",
+            help="The checkout for which you want to activate this profile.",
+            default=None,
+        )
+
+    def run(self, args: argparse.Namespace) -> int:
+        checkout = args.checkout
+
+        instance, checkout, _rel_path = require_checkout(args, checkout)
+
+        return checkout.deactivate_profile(args.profile_name)
+
+
 class PrefetchProfileCmd(Subcmd):
     NAME = "prefetch_profile"
     HELP = "Collect backing store fetched file paths to obtain a prefetch profile"

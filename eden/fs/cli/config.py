@@ -1000,6 +1000,32 @@ class EdenCheckout:
         self.save_config(new_config)
         return 0
 
+    def deactivate_profile(self, profile) -> int:
+        """Remove a profile to the config (read the config file and write it back
+        with profile added). Returns 0 on sucess and anything else on failure.
+        Note this should print information on why it failed if this is not
+        returning 0."""
+
+        old_config = self.get_config()
+        old_active_profiles = old_config.active_prefetch_profiles
+        if profile not in old_active_profiles:
+            print(f"Profile {profile} was not activated.")
+            return 1
+
+        new_active_profiles = old_active_profiles.copy()
+        new_active_profiles.remove(profile)
+
+        new_config = CheckoutConfig(
+            backing_repo=old_config.backing_repo,
+            scm_type=old_config.scm_type,
+            redirections=old_config.redirections,
+            default_revision=old_config.default_revision,
+            active_prefetch_profiles=new_active_profiles,
+        )
+
+        self.save_config(new_config)
+        return 0
+
 
 def find_eden(
     path: Union[str, Path],
