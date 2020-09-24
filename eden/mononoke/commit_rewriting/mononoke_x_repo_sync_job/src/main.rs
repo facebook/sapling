@@ -415,14 +415,6 @@ async fn run(
     let (_, source_repo_config) = args::get_config_by_repoid(fb, &matches, source_repo_id)?;
     let (_, target_repo_config) = args::get_config_by_repoid(fb, &matches, target_repo_id)?;
 
-    let common_bookmarks: HashSet<_> = source_repo_config
-        .commit_sync_config
-        .clone()
-        .ok_or(format_err!("commit sync config not found!"))?
-        .common_pushrebase_bookmarks
-        .into_iter()
-        .collect();
-
     let logger = ctx.logger();
     let source_repo = args::open_repo_with_repo_id(fb, &logger, source_repo_id, &matches).compat();
     let target_repo = args::open_repo_with_repo_id(fb, &logger, target_repo_id, &matches).compat();
@@ -437,6 +429,12 @@ async fn run(
     let live_commit_sync_config = Arc::new(CfgrLiveCommitSyncConfig::new(&logger, &config_store)?);
     let commit_sync_config =
         live_commit_sync_config.get_current_commit_sync_config(&ctx, source_repo.get_repoid())?;
+
+    let common_bookmarks: HashSet<_> = commit_sync_config
+        .common_pushrebase_bookmarks
+        .clone()
+        .into_iter()
+        .collect();
 
     let commit_syncer = commit_syncer_args
         .clone()
