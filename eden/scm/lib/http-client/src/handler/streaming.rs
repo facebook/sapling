@@ -65,7 +65,7 @@ impl<R: Receiver> Handler for Streaming<R> {
                 }
             }
             Err(e) => {
-                log::trace!("{}", e);
+                log::error!("{}", e);
             }
         }
         true

@@ -122,7 +122,7 @@ where
                     completed.push(complete);
                 }
                 Err(e) => {
-                    log::trace!("Failed to handle message: {}", e);
+                    log::error!("Failed to handle message: {}", e);
                 }
             });
 

@@ -104,7 +104,7 @@ impl Handler for Buffered {
                 self.status = Some(code);
             }
             Ok(Header::EndOfHeaders) => {}
-            Err(e) => log::trace!("{}", e),
+            Err(e) => log::error!("{}", e),
         }
         true
     }
