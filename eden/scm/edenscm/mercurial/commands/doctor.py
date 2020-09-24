@@ -91,7 +91,7 @@ def doctor(ui, **opts):
     if "remotefilelog" in repo.requirements:
         from ...hgext.remotefilelog import shallowutil
 
-        if ui.configbool("remotefilelog", "indexedlogdatastore"):
+        if ui.configbool("remotefilelog", "write-hgcache-to-indexedlog"):
             path = shallowutil.getindexedlogdatastorepath(repo)
             repair(
                 ui,
@@ -100,7 +100,6 @@ def doctor(ui, **opts):
                 revisionstore.indexedlogdatastore.repair,
             )
 
-        if ui.configbool("remotefilelog", "indexedloghistorystore"):
             path = shallowutil.getindexedloghistorystorepath(repo)
             repair(
                 ui,

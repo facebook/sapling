@@ -17,7 +17,7 @@ Test indexedlogdatapack
 
   $ cd $TESTTMP
   $ enable remotenames
-  $ setconfig remotefilelog.debug=false remotefilelog.indexedlogdatastore=true remotefilelog.fetchpacks=true
+  $ setconfig remotefilelog.debug=false remotefilelog.write-hgcache-to-indexedlog=true remotefilelog.fetchpacks=true
   $ setconfig diff.git=true experimental.narrow-heads=true mutation.record=true mutation.enabled=true mutation.date="0 0" visibility.enabled=1
 
   $ hgcloneshallow ssh://user@dummy/master shallow -q
