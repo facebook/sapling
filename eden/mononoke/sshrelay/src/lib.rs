@@ -65,6 +65,7 @@ impl io::Write for SenderBytesWrite {
 #[derive(Clone, Debug, Default)]
 pub struct Metadata {
     session_id: SessionId,
+    is_trusted_client: bool,
     identities: MononokeIdentitySet,
     priority: Priority,
     client_debug: bool,
@@ -75,6 +76,7 @@ pub struct Metadata {
 impl Metadata {
     pub async fn new(
         session_id: Option<&String>,
+        is_trusted_client: bool,
         identities: MononokeIdentitySet,
         priority: Priority,
         client_debug: bool,
@@ -99,6 +101,7 @@ impl Metadata {
 
         Self {
             session_id,
+            is_trusted_client,
             identities,
             priority,
             client_debug,
@@ -132,6 +135,10 @@ impl Metadata {
 
     pub fn identities(&self) -> &MononokeIdentitySet {
         &self.identities
+    }
+
+    pub fn is_trusted_client(&self) -> bool {
+        self.is_trusted_client
     }
 
     pub fn set_identities(mut self, identities: MononokeIdentitySet) -> Self {

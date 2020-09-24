@@ -7,7 +7,7 @@
 
 use crate::errors::ErrorKind;
 use crate::security_checker::ConnectionsSecurityChecker;
-use std::collections::{BTreeSet, HashMap};
+use std::collections::HashMap;
 
 use anyhow::{anyhow, Context, Error, Result};
 use async_limiter::AsyncLimiter;
@@ -28,7 +28,6 @@ use limits::types::{MononokeThrottleLimit, MononokeThrottleLimits, RateLimits};
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use load_limiter::{LoadLimiterBuilder, Metric};
 use maplit::{hashmap, hashset};
-use permission_checker::MononokeIdentity;
 use ratelimit_meter::{algorithms::LeakyBucket, DirectRateLimiter};
 use repo_client::RepoClient;
 use scribe_ext::Scribe;
@@ -107,7 +106,6 @@ pub async fn request_handler(
     reponame: String,
     repo_handlers: Arc<HashMap<String, RepoHandler>>,
     security_checker: Arc<ConnectionsSecurityChecker>,
-    identities: BTreeSet<MononokeIdentity>,
     stdio: Stdio,
     load_limiting_config: Option<(ConfigHandle<MononokeThrottleLimits>, String)>,
     addr: IpAddr,
@@ -154,21 +152,28 @@ pub async fn request_handler(
     scuba.add("repo", reponame);
     scuba.add_metadata(&metadata);
 
-    let is_allowed = security_checker
-        .check_if_connections_allowed(&identities)
-        .await
-        .with_context(|| {
-            format!(
-                "failed to check if connection is allowed for client: '{}'",
-                addr
-            )
-        })?;
-    if !is_allowed {
-        let err: Error = ErrorKind::AuthorizationFailed.into();
-        scuba.log_with_msg("Authorization failed", format!("{}", err));
-        error!(conn_log, "Authorization failed: {}", err; "remote" => "true");
+    let reponame = repo.reponame();
 
-        return Err(err);
+    if !metadata.is_trusted_client() {
+        let is_allowed_to_repo = security_checker
+            .check_if_repo_access_allowed(reponame, metadata.identities())
+            .await
+            .with_context(|| {
+                format!(
+                    "failed to check if access to repo '{}' is allowed for client '{}' with identity set '{:#?}'.",
+                    reponame,
+                    addr,
+                    metadata.identities(),
+                )
+            })?;
+
+        if !is_allowed_to_repo {
+            let err: Error = ErrorKind::AuthorizationFailed.into();
+            scuba.log_with_msg("Authorization failed", format!("{}", err));
+            error!(conn_log, "Authorization failed: {}", err; "remote" => "true");
+
+            return Err(err);
+        }
     }
 
     // Info per wireproto command within this session

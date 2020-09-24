@@ -22,7 +22,7 @@ else
 fi
 
 REPOID=0
-REPONAME=repo
+REPONAME=${REPONAME:-repo}
 COMMON_ARGS=(--skip-caching --mysql-master-only --tunables-config "file:$TESTTMP/mononoke_tunables.json")
 TEST_CERTDIR="${HGTEST_CERTDIR:-"$TEST_CERTS"}"
 
@@ -649,6 +649,12 @@ CONFIG
 if [[ -n "${HGSQL_NAME:-}" ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 hgsql_name="$HGSQL_NAME"
+CONFIG
+fi
+
+if [[ -n "${ACL_NAME:-}" ]]; then
+  cat >> "repos/$reponame/server.toml" <<CONFIG
+hipster_acl = "$ACL_NAME"
 CONFIG
 fi
 

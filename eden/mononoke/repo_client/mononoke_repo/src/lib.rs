@@ -68,6 +68,7 @@ pub struct MononokeRepo {
     // This field is `None` if we don't want recording to happen
     maybe_reverse_filler_queue: Option<Arc<dyn ReverseFillerQueue>>,
     push_params: PushParams,
+    hipster_acl: Option<String>,
 }
 
 impl MononokeRepo {
@@ -88,6 +89,7 @@ impl MononokeRepo {
         mutable_counters: Arc<dyn MutableCounters>,
         maybe_reverse_filler_queue: Option<Arc<dyn ReverseFillerQueue>>,
         push_params: PushParams,
+        hipster_acl: Option<String>,
     ) -> Result<Self, Error> {
         let lfs_rolled_out_hostnames = Arc::new(RwLock::new(HashSet::new()));
         if let Some(rollout_smc_tier) = &lfs_params.rollout_smc_tier {
@@ -122,6 +124,7 @@ impl MononokeRepo {
             lfs_rolled_out_hostnames,
             maybe_reverse_filler_queue,
             push_params,
+            hipster_acl,
         })
     }
 
@@ -132,6 +135,10 @@ impl MononokeRepo {
 
     pub fn pushrebase_params(&self) -> &PushrebaseParams {
         &self.pushrebase_params
+    }
+
+    pub fn hipster_acl(&self) -> &Option<String> {
+        &self.hipster_acl
     }
 
     pub fn push_params(&self) -> &PushParams {

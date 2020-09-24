@@ -38,6 +38,7 @@ pull from mononoke and log data
   remote:     session_id: SessionId(
   remote:         "*", (glob)
   remote:     ),
+  remote:     is_trusted_client: true,
   remote:     identities: {
   remote:         MononokeIdentity {
   remote:             id_type: "USER",

@@ -6,6 +6,7 @@
  */
 
 use crate::security_checker::ConnectionsSecurityChecker;
+use session_id::generate_session_id;
 use std::collections::HashMap;
 use std::io;
 use std::net::{IpAddr, SocketAddr};
@@ -30,7 +31,7 @@ use lazy_static::lazy_static;
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use metaconfig_types::CommonConfig;
 use openssl::ssl::SslAcceptor;
-use permission_checker::MononokeIdentity;
+use permission_checker::{MononokeIdentity, MononokeIdentitySet};
 use scribe_ext::Scribe;
 use slog::{debug, error, info, warn, Logger};
 use tokio::io::{AsyncRead, AsyncWrite};
@@ -96,7 +97,9 @@ pub async fn connection_acceptor(
         None => (None, None),
     };
 
-    let security_checker = Arc::new(ConnectionsSecurityChecker::new(fb, common_config).await?);
+    let security_checker = Arc::new(
+        ConnectionsSecurityChecker::new(fb, common_config, &repo_handlers, &root_log).await?,
+    );
     let repo_handlers = Arc::new(repo_handlers);
     let tls_acceptor = Arc::new(tls_acceptor);
     let addr: SocketAddr = sockname.parse()?;
@@ -139,7 +142,7 @@ pub async fn connection_acceptor(
                             scribe,
                         )
                         .await {
-                            Err(err) => error!(logger, "{}", err.to_string(); SlogKVError(Error::from(err))),
+                            Err(err) => error!(logger, "Failed to accept connection: {}", err.to_string(); SlogKVError(Error::from(err))),
                             _ => {},
                         };
                         OPEN_CONNECTIONS.fetch_sub(1, Ordering::Relaxed);
@@ -174,16 +177,16 @@ async fn accept(
         None => Err(ErrorKind::ConnectionNoClientCertificate.into()),
     }?;
 
-    let (stdio, reponame, forwarding_join_handle) = ssh_server_mux(addr.ip(), ssl_socket)
-        .await
-        .with_context(|| format!("reading preamble failed: talking to '{}'", addr))?;
+    let (stdio, reponame, forwarding_join_handle) =
+        ssh_server_mux(addr.ip(), ssl_socket, &security_checker, &identities)
+            .await
+            .with_context(|| format!("reading preamble failed: talking to '{}'", addr))?;
 
     request_handler(
         fb,
         reponame,
         repo_handlers,
         security_checker,
-        identities,
         stdio,
         load_limiting_config,
         addr.ip(),
@@ -201,6 +204,8 @@ async fn accept(
 async fn ssh_server_mux<S>(
     addr: IpAddr,
     s: S,
+    security_checker: &Arc<ConnectionsSecurityChecker>,
+    tls_identities: &MononokeIdentitySet,
 ) -> Result<(
     Stdio,
     String,
@@ -262,7 +267,25 @@ where
     };
 
     let conn_log = create_conn_logger(stderr.clone(), None, None);
-    let metadata = try_convert_preamble_to_metadata(&preamble, addr, &conn_log).await?;
+
+    let metadata = if security_checker.check_if_trusted(&tls_identities).await? {
+        // Relayed through trusted proxy. Proxy authenticates end client and generates
+        // preamble so we can trust it. Use identity provided in preamble.
+        try_convert_preamble_to_metadata(&preamble, addr, &conn_log).await?
+    } else {
+        // Most likely client is connecting directly. We can't trust preamble.
+        // Use TLS connection cert as identity.
+        Metadata::new(
+            Some(&generate_session_id().to_string()),
+            false,
+            tls_identities.clone(),
+            Priority::Default,
+            false,
+            Some(addr),
+        )
+        .await
+    };
+
     if metadata.client_debug() {
         info!(&conn_log, "{:#?}", metadata; "remote" => "true");
     }
@@ -338,6 +361,7 @@ async fn try_convert_preamble_to_metadata(
 
     Ok(Metadata::new(
         preamble.misc.get("session_uuid"),
+        true,
         identity,
         priority,
         preamble
