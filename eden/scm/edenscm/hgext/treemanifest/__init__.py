@@ -145,6 +145,13 @@ fetching.
 
     [treemanifest]
     ondemandfetch = True
+
+`treemanifest.http` causes treemanifest to fetch tress over HTTP using EdenAPI.
+
+::
+
+    [treemanifest]
+    http = True
 """
 from __future__ import absolute_import
 
@@ -236,6 +243,7 @@ configitem("treemanifest", "stickypushpath", default=True)
 configitem("treemanifest", "treeonly", default=True)
 configitem("treemanifest", "prefetchdraftparents", default=True)
 configitem("treemanifest", "ondemandfetch", default=False)
+configitem("treemanifest", "http", default=False)
 
 PACK_CATEGORY = "manifests"
 
@@ -469,6 +477,19 @@ def wraprepo(repo):
             tr.addpostclose("draftparenttreefetch", self._parenttreefetch)
             return tr
 
+        def _shouldusehttp(self):
+            """Returns True if HTTP fetching should be used."""
+            return (
+                self.ui.configbool("treemanifest", "http")
+                and getattr(self, "edenapi", None) is not None
+            )
+
+        def _interactivedebug(self):
+            """Returns True if this is an interactive command running in debug mode."""
+            return self.ui.interactive() and self.ui.configbool(
+                "remotefilelog", "debug"
+            )
+
         def _parenttreefetch(self, tr):
             """Prefetches draft commit parents after draft commits are added to the
             repository. This is useful for avoiding expensive ondemand downloads when
@@ -537,8 +558,15 @@ def wraprepo(repo):
                 self._prefetchtrees("", mfnodes, basemfnodes, [])
 
         @perftrace.tracefunc("Fetch Trees")
-        def _prefetchtrees(self, rootdir, mfnodes, basemfnodes, directories):
+        def _prefetchtrees(self, *args, **kwargs):
             self._treefetches += 1
+            if self._shouldusehttp():
+                return self._httpprefetchtrees(*args, **kwargs)
+            else:
+                return self._sshprefetchtrees(*args, **kwargs)
+
+        @perftrace.tracefunc("SSH Fetch Trees")
+        def _sshprefetchtrees(self, rootdir, mfnodes, basemfnodes, directories):
             # If possible, use remotefilelog's more expressive fallbackpath
             fallbackpath = getfallbackpath(self)
             if mfnodes == basemfnodes:
@@ -585,8 +613,27 @@ def wraprepo(repo):
             caps = _addservercaps(self, caps)
             return caps
 
-        @perftrace.tracefunc("On-Demand Fetch Trees")
         def getdesignatednodes(self, keys):
+            if self._interactivedebug():
+                n = len(keys)
+                (firstpath, firstnode) = keys[0]
+                firstnode = hex(firstnode)
+                self.ui.write_err(
+                    _n(
+                        "fetching tree for ('%(path)s', %(node)s)\n",
+                        "fetching %(num)s trees\n",
+                        n,
+                    )
+                    % {"path": firstpath, "node": firstnode, "num": n}
+                )
+
+            if self._shouldusehttp():
+                return self._httpgetdesignatednodes(keys)
+            else:
+                return self._sshgetdesignatednodes(keys)
+
+        @perftrace.tracefunc("SSH On-Demand Fetch Trees")
+        def _sshgetdesignatednodes(self, keys):
             """
             Fetch the specified tree nodes over SSH.
 
@@ -602,20 +649,6 @@ def wraprepo(repo):
             with self.connectionpool.get(fallbackpath) as conn:
                 if "designatednodes" not in conn.peer.capabilities():
                     return False
-
-                debug = self.ui.configbool("remotefilelog", "debug")
-                if debug and self.ui.interactive():
-                    n = len(keys)
-                    (firstpath, firstnode) = keys[0]
-                    firstnode = hex(firstnode)
-                    self.ui.write_err(
-                        _n(
-                            "fetching tree for ('%(path)s', %(node)s)\n",
-                            "fetching %(num)s trees\n",
-                            n,
-                        )
-                        % {"path": firstpath, "node": firstnode, "num": n}
-                    )
 
                 mfnodes = [node for path, node in keys]
                 directories = [path for path, node in keys]
@@ -635,6 +668,26 @@ def wraprepo(repo):
                     )
 
             return True
+
+        @perftrace.tracefunc("HTTP Fetch Trees")
+        def _httpprefetchtrees(
+            self, rootdir, mfnodes, basemfnodes, directories, depth=None
+        ):
+            dpack, _hpack = self.manifestlog.getmutablesharedpacks()
+            with progress.spinner(self.ui, "fetching complete trees over HTTP"):
+                stats = self.edenapi.complete_trees(
+                    dpack, self.name, rootdir, mfnodes, basemfnodes, depth
+                )
+            if self._interactivedebug():
+                self.ui.write(str(stats) + "\n")
+
+        @perftrace.tracefunc("HTTP On-Demand Fetch Trees")
+        def _httpgetdesignatednodes(self, keys):
+            dpack, _hpack = self.manifestlog.getmutablesharedpacks()
+            with progress.spinner(self.ui, "fetching tree nodes over HTTP"):
+                stats = self.edenapi.trees(dpack, self.name, keys)
+            if self._interactivedebug():
+                self.ui.write(str(stats) + "\n")
 
         def forcebfsprefetch(self, rootdir, mfnodes, depth=None):
             # It is always safe to enable ondemandfetch: this requires the
@@ -2668,9 +2721,6 @@ class remotetreestore(generatingdatastore):
         if len(keys) == 1 and list(keys) == [("", nullid)]:
             return
 
-        # Otherwise, try to fetch the desired nodes via SSH. This
-        # depends on the server supporting the "designatednodes"
-        # capability, so the prefetch is not guaranteed to succeed.
         if self._repo.ui.configbool("treemanifest", "ondemandfetch"):
             self._repo.getdesignatednodes(keys)
 
