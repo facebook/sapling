@@ -36,6 +36,8 @@ import gc
 import os
 import tempfile
 
+from edenscm.mercurial import pycompat
+
 cdef extern from "edenscm/hgext/extlib/traceprofimpl.cpp":
     void enable()
     void disable()
@@ -75,7 +77,7 @@ def profile(ui, fp, section="profiling"):
         # the file handlers like `fdopen`, `PyFile_AsFile` would segfault
         # on Windows. Workaround that by using `fopen` provided by Cython
         # so only the Cython version of the file handlers are used.
-        cfp = fopen(filename, "w")
+        cfp = fopen(pycompat.encodeutf8(filename), "w")
         report(cfp)
         fclose(cfp)
         content = open(filename).read()
