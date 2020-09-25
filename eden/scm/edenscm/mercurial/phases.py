@@ -225,13 +225,23 @@ class phasecache(object):
     def getrevset(self, repo, phases, subset=None):
         """return a smartset for the given phases"""
         if self._headbased:
-            revs = bindings.dag.spans([])
+            revs = None
             if public in phases:
-                revs += self.publicrevs(repo)
+                revs = self.publicrevs(repo)
             if draft in phases:
-                revs += self.draftrevs(repo)
+                if revs is None:
+                    revs = self.draftrevs(repo)
+                else:
+                    # Ideally we'd just add draftrevs and publicrevs together.
+                    # Unfortunately the add implementation currently sorts
+                    # the result, causing it to no longer be lazy. Let's use
+                    # addset instead, which lazily sorts.
+                    revs = smartset.addset(revs, self.draftrevs(repo))
+
+            if revs is None:
+                revs = smartset.idset(bindings.dag.spans([]))
+
             # XXX: 'secret' is treated as an ampty set.
-            revs = smartset.idset(revs)
             if subset is not None:
                 revs = subset & revs
             return revs
