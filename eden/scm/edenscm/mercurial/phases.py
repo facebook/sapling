@@ -312,37 +312,54 @@ class phasecache(object):
         self._loadedrevslen = len(cl)
 
     def draftrevs(self, repo):
-        if self._draftrevs is None:
-            self.loaddraftpublicrevs(repo)
-        return self._draftrevs
-
-    def publicrevs(self, repo):
-        if self._publicrevs is None:
-            self.loaddraftpublicrevs(repo)
-        return self._publicrevs
-
-    def loaddraftpublicrevs(self, repo):
         if not self._headbased:
             raise error.ProgrammingError(
                 "non-headbased phases should use loadphaserevs"
             )
 
-        cl = repo.changelog
+        if self._draftrevs is None:
+            cl = repo.changelog
+            if cl.userust("index2"):
+                publicheadnodes = repo.heads(includepublic=True, includedraft=False)
+                draftheadnodes = repo.heads(includepublic=False, includedraft=True)
+                draftnodes = cl.dag.only(draftheadnodes, publicheadnodes)
+                self._draftrevs = cl.torevset(draftnodes)
+            else:
+                publicheadrevs = repo.headrevs(includepublic=True, includedraft=False)
+                draftheadrevs = repo.headrevs(includepublic=False, includedraft=True)
 
-        if cl.userust("index2"):
-            publicheadnodes = repo.heads(includepublic=True, includedraft=False)
-            draftheadnodes = repo.heads(includepublic=False, includedraft=True)
-            draftnodes, publicnodes = cl.dag.onlyboth(draftheadnodes, publicheadnodes)
-            torevs = cl.torevs
-            self._publicrevs = torevs(publicnodes)
-            self._draftrevs = torevs(draftnodes)
-        else:
-            publicheadrevs = repo.headrevs(includepublic=True, includedraft=False)
-            draftheadrevs = repo.headrevs(includepublic=False, includedraft=True)
+                self._publicrevs, self._draftrevs = cl.index2.phasesets(
+                    publicheadrevs, draftheadrevs
+                )
 
-            self._publicrevs, self._draftrevs = cl.index2.phasesets(
-                publicheadrevs, draftheadrevs
+        return self._draftrevs
+
+    def publicrevs(self, repo):
+        if not self._headbased:
+            raise error.ProgrammingError(
+                "non-headbased phases should use loadphaserevs"
             )
+
+        if self._publicrevs is None:
+            cl = repo.changelog
+
+            if cl.userust("index2"):
+                publicheadnodes = repo.heads(includepublic=True, includedraft=False)
+                draftheadnodes = repo.heads(includepublic=False, includedraft=True)
+                draftnodes, publicnodes = cl.dag.onlyboth(
+                    draftheadnodes, publicheadnodes
+                )
+                torevs = cl.torevs
+                self._publicrevs = torevs(publicnodes)
+                self._draftrevs = torevs(draftnodes)
+            else:
+                publicheadrevs = repo.headrevs(includepublic=True, includedraft=False)
+                draftheadrevs = repo.headrevs(includepublic=False, includedraft=True)
+
+                self._publicrevs, self._draftrevs = cl.index2.phasesets(
+                    publicheadrevs, draftheadrevs
+                )
+        return self._publicrevs
 
     def loadphaserevs(self, repo):
         """ensure phase information is loaded in the object"""
