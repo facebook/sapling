@@ -684,7 +684,7 @@ where
         parent_mapping_selection_hint: CandidateSelectionHint,
     ) -> Result<Option<ChangesetId>, Error> {
         // Take most of below function unsafe_sync_commit into here and delete. Leave pushrebase in next fn
-        let (source_repo, _, _) = self.get_source_target_mover(&ctx)?;
+        let (source_repo, _) = self.get_source_target();
 
         let cs = source_cs_id
             .load(ctx.clone(), source_repo.blobstore())
@@ -724,7 +724,7 @@ where
         source_cs_id: ChangesetId,
         maybe_parents: Option<HashMap<ChangesetId, ChangesetId>>,
     ) -> Result<Option<ChangesetId>, Error> {
-        let (source_repo, target_repo, _) = self.get_source_target_mover(&ctx)?;
+        let (source_repo, target_repo, mover) = self.get_source_target_mover(&ctx)?;
         let source_cs = source_cs_id
             .load(ctx.clone(), source_repo.blobstore())
             .await?;
@@ -735,7 +735,6 @@ where
             None => remap_parents(&ctx, &source_cs, self, CandidateSelectionHint::Only).await?, // TODO: check if only is ok
         };
 
-        let (_, _, mover) = self.get_source_target_mover(&ctx)?;
         let rewritten_commit = rewrite_commit(
             ctx.clone(),
             source_cs,
@@ -778,7 +777,7 @@ where
         target_lca_hint: Target<Arc<dyn LeastCommonAncestorsHint>>,
     ) -> Result<Option<ChangesetId>, Error> {
         let hash = source_cs.get_changeset_id();
-        let (source_repo, target_repo, _) = self.get_source_target_mover(&ctx)?;
+        let (source_repo, target_repo) = self.get_source_target();
         // TODO(stash): use the actual version that was used to remap commits
         let version_name = self.get_current_version(&ctx)?;
 
@@ -881,7 +880,7 @@ where
         ctx: CoreContext,
         source_cs_id: ChangesetId,
     ) -> Result<(), Error> {
-        let (source_repo, target_repo, _) = self.get_source_target_mover(&ctx)?;
+        let (source_repo, target_repo) = self.get_source_target();
         let cs = source_cs_id
             .load(ctx.clone(), source_repo.blobstore())
             .await?;
@@ -1281,7 +1280,15 @@ where
         &self,
         ctx: &CoreContext,
     ) -> Result<(BlobRepo, BlobRepo, CommitSyncConfigVersion), Error> {
-        let (source, target) = match self.repos.clone() {
+        let (source, target) = self.get_source_target();
+        let version = self
+            .commit_sync_data_provider
+            .get_current_version(ctx, source.get_repoid())?;
+        Ok((source, target, version))
+    }
+
+    fn get_source_target(&self) -> (BlobRepo, BlobRepo) {
+        match self.repos.clone() {
             CommitSyncRepos::LargeToSmall {
                 large_repo,
                 small_repo,
@@ -1292,11 +1299,7 @@ where
                 large_repo,
                 ..
             } => (small_repo, large_repo),
-        };
-        let version = self
-            .commit_sync_data_provider
-            .get_current_version(ctx, source.get_repoid())?;
-        Ok((source, target, version))
+        }
     }
 
     async fn update_wc_equivalence(
