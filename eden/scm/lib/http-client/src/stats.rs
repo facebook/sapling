@@ -28,14 +28,16 @@ impl Stats {
 
 impl fmt::Display for Stats {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let bytes_per_second = self.bytes_per_second();
         write!(
             f,
-            "{} downloaded in {} over {} request{} ({:.2} MB/s; latency: {})",
+            "Downloaded {} in {} over {} request{} ({:.2} Mbit/s, {:.2} MiB/s, latency: {})",
             fmt_num_bytes(self.downloaded),
             fmt_duration(self.time),
             self.requests,
             if self.requests == 1 { "" } else { "s" },
-            self.bytes_per_second() / 1_000_000.0,
+            8.0 * bytes_per_second / 1_000_000.0,
+            bytes_per_second / (1024.0 * 1024.0),
             fmt_duration(self.latency)
         )
     }
