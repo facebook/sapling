@@ -113,9 +113,6 @@ pub async fn do_sync_diamond_merge(
     let syncers = create_commit_syncers(
         small_repo.clone(),
         large_repo.clone(),
-        &small_repo_config
-            .commit_sync_config
-            .ok_or(Error::msg("Commit sync config is not specified"))?,
         mapping,
         live_commit_sync_config,
     )?;
@@ -222,7 +219,7 @@ async fn create_rewritten_merge_commit(
         ctx.clone(),
         merge_bcs,
         &remapped_parents,
-        syncers.small_to_large.get_mover()?,
+        syncers.small_to_large.get_mover(&ctx)?,
         syncers.small_to_large.get_source_repo().clone(),
     )
     .await?;
@@ -265,7 +262,7 @@ async fn generate_additional_file_changes(
             BonsaiDiffFileChange::Changed(ref path, ..)
             | BonsaiDiffFileChange::ChangedReusedId(ref path, ..)
             | BonsaiDiffFileChange::Deleted(ref path) => {
-                let maybe_new_path = large_to_small.get_mover()?(path)?;
+                let maybe_new_path = large_to_small.get_mover(&ctx)?(path)?;
                 if maybe_new_path.is_some() {
                     continue;
                 }

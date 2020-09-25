@@ -57,6 +57,27 @@ pub trait LiveCommitSyncConfig: Send + Sync {
     ///       as this queries  config source
     fn push_redirector_enabled_for_public(&self, repo_id: RepositoryId) -> bool;
 
+
+    /// Return current version for a given repository
+    ///
+    /// NOTE: two subsequent calls may return different results
+    ///       as this queries  config source
+    fn get_current_commit_sync_config_version(
+        &self,
+        ctx: &CoreContext,
+        repo_id: RepositoryId,
+    ) -> Result<CommitSyncConfigVersion> {
+        let commit_sync_config = self.get_current_commit_sync_config(ctx, repo_id)?;
+
+        let version_name = commit_sync_config.version_name;
+        debug!(
+            ctx.logger(),
+            "Fetched current commit sync config version: {:?}", version_name
+        );
+
+        Ok(version_name)
+    }
+
     /// Return current version of `CommitSyncConfig` struct
     /// for a given repository
     ///

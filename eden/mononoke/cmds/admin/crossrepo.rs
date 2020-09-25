@@ -588,7 +588,6 @@ fn get_large_to_small_commit_sync_repos(
     Ok(CommitSyncRepos::LargeToSmall {
         large_repo,
         small_repo,
-        version_name: commit_sync_config.version_name.clone(),
     })
 }
 
@@ -787,23 +786,25 @@ mod test {
             CommitSyncDirection::LargeToSmall => CommitSyncRepos::LargeToSmall {
                 small_repo: small_repo.clone(),
                 large_repo: large_repo.clone(),
-                version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
             },
             CommitSyncDirection::SmallToLarge => CommitSyncRepos::SmallToLarge {
                 small_repo: small_repo.clone(),
                 large_repo: large_repo.clone(),
-                version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
             },
         };
 
-        let commit_sync_data_provider = CommitSyncDataProvider::Test(hashmap! {
-            CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()) => SyncData {
-                mover: Arc::new(identity_mover),
-                reverse_mover: Arc::new(identity_mover),
-                bookmark_renamer: Arc::new(noop_book_renamer),
-                reverse_bookmark_renamer: Arc::new(noop_book_renamer),
-            }
-        });
+        let current_version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
+        let commit_sync_data_provider = CommitSyncDataProvider::Test {
+            map: hashmap! {
+                current_version.clone() => SyncData {
+                    mover: Arc::new(identity_mover),
+                    reverse_mover: Arc::new(identity_mover),
+                    bookmark_renamer: Arc::new(noop_book_renamer),
+                    reverse_bookmark_renamer: Arc::new(noop_book_renamer),
+                }
+            },
+            current_version,
+        };
         Ok(CommitSyncer {
             mapping,
             repos,

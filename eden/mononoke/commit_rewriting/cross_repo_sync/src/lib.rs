@@ -294,7 +294,7 @@ async fn remap_parents_and_rewrite_commit<'a, M: SyncedCommitMapping + Clone + '
     source_repo: BlobRepo,
     parent_selection_hint: CandidateSelectionHint,
 ) -> Result<Option<BonsaiChangesetMut>, Error> {
-    let (_, _, mover) = commit_syncer.get_source_target_mover()?;
+    let (_, _, mover) = commit_syncer.get_source_target_mover(&ctx)?;
     let remapped_parents = remap_parents(&ctx, &cs, commit_syncer, parent_selection_hint).await?;
     rewrite_commit(ctx.clone(), cs, &remapped_parents, mover, source_repo).await
 }
@@ -391,12 +391,10 @@ pub enum CommitSyncRepos {
     LargeToSmall {
         large_repo: BlobRepo,
         small_repo: BlobRepo,
-        version_name: CommitSyncConfigVersion,
     },
     SmallToLarge {
         small_repo: BlobRepo,
         large_repo: BlobRepo,
-        version_name: CommitSyncConfigVersion,
     },
 }
 
@@ -432,19 +430,15 @@ impl CommitSyncRepos {
             ));
         };
 
-        let version_name = commit_sync_config.version_name.clone();
-
         if source_repo.get_repoid() == small_repo_id {
             Ok(CommitSyncRepos::SmallToLarge {
                 large_repo: target_repo.clone(),
                 small_repo: source_repo.clone(),
-                version_name,
             })
         } else {
             Ok(CommitSyncRepos::LargeToSmall {
                 large_repo: source_repo.clone(),
                 small_repo: target_repo.clone(),
-                version_name,
             })
         }
     }
@@ -522,13 +516,13 @@ where
         &self.mapping
     }
 
-    pub fn get_mover(&self) -> Result<Mover, Error> {
-        let (_, _, mover) = self.get_source_target_mover()?;
+    pub fn get_mover(&self, ctx: &CoreContext) -> Result<Mover, Error> {
+        let (_, _, mover) = self.get_source_target_mover(ctx)?;
         Ok(mover)
     }
 
-    pub fn get_reverse_mover(&self) -> Result<Mover, Error> {
-        let (source_repo, target_repo, version_name) = self.get_source_target_version();
+    pub fn get_reverse_mover(&self, ctx: &CoreContext) -> Result<Mover, Error> {
+        let (source_repo, target_repo, version_name) = self.get_source_target_version(ctx)?;
 
         self.commit_sync_data_provider.get_reverse_mover(
             &version_name,
@@ -537,8 +531,8 @@ where
         )
     }
 
-    pub fn get_bookmark_renamer(&self) -> Result<BookmarkRenamer, Error> {
-        let (source_repo, target_repo, version_name) = self.get_source_target_version();
+    pub fn get_bookmark_renamer(&self, ctx: &CoreContext) -> Result<BookmarkRenamer, Error> {
+        let (source_repo, target_repo, version_name) = self.get_source_target_version(ctx)?;
 
         self.commit_sync_data_provider.get_bookmark_renamer(
             &version_name,
@@ -547,8 +541,11 @@ where
         )
     }
 
-    pub fn get_reverse_bookmark_renamer(&self) -> Result<BookmarkRenamer, Error> {
-        let (source_repo, target_repo, version_name) = self.get_source_target_version();
+    pub fn get_reverse_bookmark_renamer(
+        &self,
+        ctx: &CoreContext,
+    ) -> Result<BookmarkRenamer, Error> {
+        let (source_repo, target_repo, version_name) = self.get_source_target_version(ctx)?;
 
         self.commit_sync_data_provider.get_reverse_bookmark_renamer(
             &version_name,
@@ -557,12 +554,18 @@ where
         )
     }
 
-    pub fn rename_bookmark(&self, bookmark: &BookmarkName) -> Result<Option<BookmarkName>, Error> {
-        Ok(self.get_bookmark_renamer()?(bookmark))
+    pub fn get_current_version(&self, ctx: &CoreContext) -> Result<CommitSyncConfigVersion, Error> {
+        let (_, _, version_name) = self.get_source_target_version(ctx)?;
+
+        Ok(version_name)
     }
 
-    pub fn get_version_name(&self) -> &CommitSyncConfigVersion {
-        &self.repos.get_version_name()
+    pub fn rename_bookmark(
+        &self,
+        ctx: &CoreContext,
+        bookmark: &BookmarkName,
+    ) -> Result<Option<BookmarkName>, Error> {
+        Ok(self.get_bookmark_renamer(ctx)?(bookmark))
     }
 
     pub async fn get_commit_sync_outcome(
@@ -677,7 +680,7 @@ where
         parent_mapping_selection_hint: CandidateSelectionHint,
     ) -> Result<Option<ChangesetId>, Error> {
         // Take most of below function unsafe_sync_commit into here and delete. Leave pushrebase in next fn
-        let (source_repo, _, _) = self.get_source_target_mover()?;
+        let (source_repo, _, _) = self.get_source_target_mover(&ctx)?;
 
         let cs = source_cs_id
             .load(ctx.clone(), source_repo.blobstore())
@@ -717,7 +720,7 @@ where
         source_cs_id: ChangesetId,
         maybe_parents: Option<HashMap<ChangesetId, ChangesetId>>,
     ) -> Result<Option<ChangesetId>, Error> {
-        let (source_repo, target_repo, _) = self.get_source_target_mover()?;
+        let (source_repo, target_repo, _) = self.get_source_target_mover(&ctx)?;
         let source_cs = source_cs_id
             .load(ctx.clone(), source_repo.blobstore())
             .await?;
@@ -728,7 +731,7 @@ where
             None => remap_parents(&ctx, &source_cs, self, CandidateSelectionHint::Only).await?, // TODO: check if only is ok
         };
 
-        let (_, _, mover) = self.get_source_target_mover()?;
+        let (_, _, mover) = self.get_source_target_mover(&ctx)?;
         let rewritten_commit = rewrite_commit(
             ctx.clone(),
             source_cs,
@@ -771,7 +774,9 @@ where
         target_lca_hint: Target<Arc<dyn LeastCommonAncestorsHint>>,
     ) -> Result<Option<ChangesetId>, Error> {
         let hash = source_cs.get_changeset_id();
-        let (source_repo, target_repo, _) = self.get_source_target_mover()?;
+        let (source_repo, target_repo, _) = self.get_source_target_mover(&ctx)?;
+        // TODO(stash): use the actual version that was used to remap commits
+        let version_name = self.get_current_version(&ctx)?;
 
         let parent_selection_hint = CandidateSelectionHint::OnlyOrAncestorOfBookmark(
             Target(bookmark.clone()),
@@ -849,7 +854,11 @@ where
                     &bookmark,
                     &rewritten_list,
                     None,
-                    &[CrossRepoSyncPushrebaseHook::new(hash, self.repos.clone())],
+                    &[CrossRepoSyncPushrebaseHook::new(
+                        hash,
+                        self.repos.clone(),
+                        version_name,
+                    )],
                 )
                 .await;
                 let pushrebase_res =
@@ -868,7 +877,7 @@ where
         ctx: CoreContext,
         source_cs_id: ChangesetId,
     ) -> Result<(), Error> {
-        let (source_repo, target_repo, _) = self.get_source_target_mover()?;
+        let (source_repo, target_repo, _) = self.get_source_target_mover(&ctx)?;
         let cs = source_cs_id
             .load(ctx.clone(), source_repo.blobstore())
             .await?;
@@ -910,7 +919,7 @@ where
         cs: BonsaiChangeset,
     ) -> Result<Option<ChangesetId>, Error> {
         let source_cs_id = cs.get_changeset_id();
-        let (source_repo, target_repo, rewrite_paths) = self.get_source_target_mover()?;
+        let (source_repo, target_repo, rewrite_paths) = self.get_source_target_mover(&ctx)?;
 
         match rewrite_commit(
             ctx.clone(),
@@ -958,7 +967,7 @@ where
         let source_cs_id = cs.get_changeset_id();
         let cs = cs.into_mut();
         let p = cs.parents[0];
-        let (source_repo, target_repo, rewrite_paths) = self.get_source_target_mover()?;
+        let (source_repo, target_repo, rewrite_paths) = self.get_source_target_mover(&ctx)?;
 
         let maybe_parent_sync_outcome = self
             .get_commit_sync_outcome_with_hint(
@@ -1061,7 +1070,7 @@ where
 
         let source_cs_id = cs.get_changeset_id();
         let cs = cs.into_mut();
-        let (_, _, rewrite_paths) = self.get_source_target_mover()?;
+        let (_, _, rewrite_paths) = self.get_source_target_mover(&ctx)?;
 
         let parent_outcomes = stream::iter(cs.parents.clone().into_iter().map(|p| {
             self.get_commit_sync_outcome(ctx.clone(), p)
@@ -1190,7 +1199,7 @@ where
         source_cs_id: ChangesetId,
         rewritten: BonsaiChangesetMut,
     ) -> Result<ChangesetId, Error> {
-        let (source_repo, target_repo, _) = self.get_source_target_mover()?;
+        let (source_repo, target_repo, _) = self.get_source_target_mover(&ctx)?;
 
         let frozen = rewritten.freeze()?;
         let target_cs_id = frozen.get_changeset_id();
@@ -1250,8 +1259,11 @@ where
         Ok(source_cs)
     }
 
-    fn get_source_target_mover(&self) -> Result<(BlobRepo, BlobRepo, Mover), Error> {
-        let (source_repo, target_repo, version_name) = self.get_source_target_version();
+    fn get_source_target_mover(
+        &self,
+        ctx: &CoreContext,
+    ) -> Result<(BlobRepo, BlobRepo, Mover), Error> {
+        let (source_repo, target_repo, version_name) = self.get_source_target_version(ctx)?;
         let mover = self.commit_sync_data_provider.get_mover(
             &version_name,
             source_repo.get_repoid(),
@@ -1261,21 +1273,26 @@ where
         Ok((source_repo, target_repo, mover))
     }
 
-    fn get_source_target_version(&self) -> (BlobRepo, BlobRepo, CommitSyncConfigVersion) {
-        match self.repos.clone() {
+    fn get_source_target_version(
+        &self,
+        ctx: &CoreContext,
+    ) -> Result<(BlobRepo, BlobRepo, CommitSyncConfigVersion), Error> {
+        let (source, target) = match self.repos.clone() {
             CommitSyncRepos::LargeToSmall {
                 large_repo,
                 small_repo,
-                version_name,
                 ..
-            } => (large_repo, small_repo, version_name),
+            } => (large_repo, small_repo),
             CommitSyncRepos::SmallToLarge {
                 small_repo,
                 large_repo,
-                version_name,
                 ..
-            } => (small_repo, large_repo, version_name),
-        }
+            } => (small_repo, large_repo),
+        };
+        let version = self
+            .commit_sync_data_provider
+            .get_current_version(ctx, source.get_repoid())?;
+        Ok((source, target, version))
     }
 
     async fn update_wc_equivalence(
@@ -1356,13 +1373,6 @@ impl CommitSyncRepos {
             CommitSyncRepos::SmallToLarge { large_repo, .. } => large_repo,
         }
     }
-
-    pub(crate) fn get_version_name(&self) -> &CommitSyncConfigVersion {
-        match self {
-            CommitSyncRepos::LargeToSmall { version_name, .. } => version_name,
-            CommitSyncRepos::SmallToLarge { version_name, .. } => version_name,
-        }
-    }
 }
 
 pub async fn upload_commits(
@@ -1421,9 +1431,14 @@ pub async fn update_mapping<'a, M: SyncedCommitMapping + Clone + 'static>(
     mapped: HashMap<ChangesetId, ChangesetId>,
     syncer: &'a CommitSyncer<M>,
 ) -> Result<(), Error> {
+    // TODO(stash): we shouldn't always use current version, but rather pass the actual version
+    // that was used to remap a commit
+    let version_name = syncer.get_current_version(&ctx)?;
     let entries: Vec<_> = mapped
         .into_iter()
-        .map(|(from, to)| create_synced_commit_mapping_entry(from, to, &syncer.repos))
+        .map(|(from, to)| {
+            create_synced_commit_mapping_entry(from, to, &syncer.repos, &version_name)
+        })
         .collect();
     syncer
         .mapping
@@ -1437,20 +1452,19 @@ pub fn create_synced_commit_mapping_entry(
     from: ChangesetId,
     to: ChangesetId,
     repos: &CommitSyncRepos,
+    version_name: &CommitSyncConfigVersion,
 ) -> SyncedCommitMappingEntry {
-    let (source_repo, target_repo, version_name, source_is_large) = match repos {
+    let (source_repo, target_repo, source_is_large) = match repos {
         CommitSyncRepos::LargeToSmall {
             large_repo,
             small_repo,
-            version_name,
             ..
-        } => (large_repo, small_repo, version_name, true),
+        } => (large_repo, small_repo, true),
         CommitSyncRepos::SmallToLarge {
             small_repo,
             large_repo,
-            version_name,
             ..
-        } => (small_repo, large_repo, version_name, false),
+        } => (small_repo, large_repo, false),
     };
 
     let source_repoid = source_repo.get_repoid();
@@ -1479,7 +1493,6 @@ pub struct Syncers<M: SyncedCommitMapping + Clone + 'static> {
 pub fn create_commit_syncers<M>(
     small_repo: BlobRepo,
     large_repo: BlobRepo,
-    commit_sync_config: &CommitSyncConfig,
     mapping: M,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<Syncers<M>, Error>
@@ -1489,13 +1502,11 @@ where
     let small_to_large_commit_sync_repos = CommitSyncRepos::SmallToLarge {
         small_repo: small_repo.clone(),
         large_repo: large_repo.clone(),
-        version_name: commit_sync_config.version_name.clone(),
     };
 
     let large_to_small_commit_sync_repos = CommitSyncRepos::LargeToSmall {
         small_repo,
         large_repo,
-        version_name: commit_sync_config.version_name.clone(),
     };
 
     let commit_sync_data_provider = CommitSyncDataProvider::Live(live_commit_sync_config);

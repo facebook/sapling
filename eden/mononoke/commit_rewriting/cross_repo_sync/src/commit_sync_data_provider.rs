@@ -7,6 +7,7 @@
 
 use anyhow::{anyhow, Error};
 use bookmark_renaming::{get_bookmark_renamers, BookmarkRenamer, BookmarkRenamers};
+use context::CoreContext;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use metaconfig_types::{CommitSyncConfig, CommitSyncConfigVersion, CommitSyncDirection};
 use mononoke_types::RepositoryId;
@@ -17,7 +18,10 @@ use std::sync::Arc;
 #[derive(Clone)]
 pub enum CommitSyncDataProvider {
     Live(Arc<dyn LiveCommitSyncConfig>),
-    Test(HashMap<CommitSyncConfigVersion, SyncData>),
+    Test {
+        current_version: CommitSyncConfigVersion,
+        map: HashMap<CommitSyncConfigVersion, SyncData>,
+    },
 }
 
 #[derive(Clone)]
@@ -46,7 +50,7 @@ impl CommitSyncDataProvider {
                     get_movers_from_config(&commit_sync_config, source_repo_id, target_repo_id)?;
                 Ok(mover)
             }
-            Test(map) => {
+            Test { map, .. } => {
                 let sync_data = map
                     .get(version)
                     .ok_or_else(|| anyhow!("sync data not found for {}", version))?;
@@ -72,7 +76,7 @@ impl CommitSyncDataProvider {
                     get_movers_from_config(&commit_sync_config, source_repo_id, target_repo_id)?;
                 Ok(reverse_mover)
             }
-            Test(map) => {
+            Test { map, .. } => {
                 let sync_data = map
                     .get(version)
                     .ok_or_else(|| anyhow!("sync data not found for {}", version))?;
@@ -103,7 +107,7 @@ impl CommitSyncDataProvider {
                 )?;
                 Ok(bookmark_renamer)
             }
-            Test(map) => {
+            Test { map, .. } => {
                 let sync_data = map
                     .get(version)
                     .ok_or_else(|| anyhow!("sync data not found for {}", version))?;
@@ -135,12 +139,29 @@ impl CommitSyncDataProvider {
                 )?;
                 Ok(reverse_bookmark_renamer)
             }
-            Test(map) => {
+            Test { map, .. } => {
                 let sync_data = map
                     .get(version)
                     .ok_or_else(|| anyhow!("sync data not found for {}", version))?;
                 Ok(sync_data.reverse_bookmark_renamer.clone())
             }
+        }
+    }
+
+    pub fn get_current_version(
+        &self,
+        ctx: &CoreContext,
+        repo_id: RepositoryId,
+    ) -> Result<CommitSyncConfigVersion, Error> {
+        use CommitSyncDataProvider::*;
+
+        match self {
+            Live(live_commit_sync_config) => {
+                live_commit_sync_config.get_current_commit_sync_config_version(ctx, repo_id)
+            }
+            Test {
+                current_version, ..
+            } => Ok(current_version.clone()),
         }
     }
 }

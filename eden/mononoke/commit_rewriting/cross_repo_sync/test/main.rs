@@ -699,17 +699,20 @@ async fn test_sync_remap_failure(fb: FacebookInit) -> Result<(), Error> {
     let fail_repos = CommitSyncRepos::LargeToSmall {
         small_repo: linear.clone(),
         large_repo: megarepo.clone(),
-        version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
     };
     fail_config.repos = fail_repos;
-    let commit_sync_data_provider = CommitSyncDataProvider::Test(hashmap! {
-        CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()) => SyncData {
-            mover: Arc::new(move |_path: &MPath| bail!("This always fails")),
-            reverse_mover: Arc::new(move |_path: &MPath| bail!("This always fails")),
-            bookmark_renamer: Arc::new(identity_renamer),
-            reverse_bookmark_renamer: Arc::new(identity_renamer),
-        }
-    });
+    let current_version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
+    let commit_sync_data_provider = CommitSyncDataProvider::Test {
+        map: hashmap! {
+            current_version.clone() => SyncData {
+                mover: Arc::new(move |_path: &MPath| bail!("This always fails")),
+                reverse_mover: Arc::new(move |_path: &MPath| bail!("This always fails")),
+                bookmark_renamer: Arc::new(identity_renamer),
+                reverse_bookmark_renamer: Arc::new(identity_renamer),
+            }
+        },
+        current_version: current_version.clone(),
+    };
     fail_config.commit_sync_data_provider = commit_sync_data_provider;
 
     let stl_config = create_small_to_large_commit_syncer(
@@ -730,26 +733,28 @@ async fn test_sync_remap_failure(fb: FacebookInit) -> Result<(), Error> {
     let copyfrom_fail_repos = CommitSyncRepos::LargeToSmall {
         small_repo: linear.clone(),
         large_repo: megarepo.clone(),
-        version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
     };
-    let commit_sync_data_provider = CommitSyncDataProvider::Test(hashmap! {
-        CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()) => SyncData {
-            mover: Arc::new(move |path: &MPath| {
-                match path.basename().as_ref() {
-                    b"1" => bail!("This only fails if the file is named '1'"),
-                    _ => Ok(path.remove_prefix_component(&linear_path_in_megarepo)),
-                }
-            }),
-            reverse_mover: Arc::new(move |path: &MPath| {
-                match path.basename().as_ref() {
-                    b"1" => bail!("This only fails if the file is named '1'"),
-                    _ => Ok(Some(mpath("linear").join(path))),
-                }
-            }),
-            bookmark_renamer: Arc::new(identity_renamer),
-            reverse_bookmark_renamer: Arc::new(identity_renamer),
-        }
-    });
+    let commit_sync_data_provider = CommitSyncDataProvider::Test {
+        map: hashmap! {
+            current_version.clone() => SyncData {
+                mover: Arc::new(move |path: &MPath| {
+                    match path.basename().as_ref() {
+                        b"1" => bail!("This only fails if the file is named '1'"),
+                        _ => Ok(path.remove_prefix_component(&linear_path_in_megarepo)),
+                    }
+                }),
+                reverse_mover: Arc::new(move |path: &MPath| {
+                    match path.basename().as_ref() {
+                        b"1" => bail!("This only fails if the file is named '1'"),
+                        _ => Ok(Some(mpath("linear").join(path))),
+                    }
+                }),
+                bookmark_renamer: Arc::new(identity_renamer),
+                reverse_bookmark_renamer: Arc::new(identity_renamer),
+            }
+        },
+        current_version,
+    };
     copyfrom_fail_config.commit_sync_data_provider = commit_sync_data_provider;
     copyfrom_fail_config.repos = copyfrom_fail_repos;
 
@@ -844,16 +849,19 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
     let commit_sync_repos = CommitSyncRepos::SmallToLarge {
         small_repo: repo.clone(),
         large_repo: megarepo.clone(),
-        version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
     };
-    let commit_sync_data_provider = CommitSyncDataProvider::Test(hashmap! {
-        CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()) => SyncData {
-            mover,
-            reverse_mover,
-            bookmark_renamer: Arc::new(identity_renamer),
-            reverse_bookmark_renamer: Arc::new(identity_renamer),
-        }
-    });
+    let current_version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
+    let commit_sync_data_provider = CommitSyncDataProvider::Test {
+        map: hashmap! {
+            current_version.clone() => SyncData {
+                mover,
+                reverse_mover,
+                bookmark_renamer: Arc::new(identity_renamer),
+                reverse_bookmark_renamer: Arc::new(identity_renamer),
+            }
+        },
+        current_version,
+    };
     commit_syncer.commit_sync_data_provider = commit_sync_data_provider;
     commit_syncer.repos = commit_sync_repos;
 

@@ -10,6 +10,7 @@ use async_trait::async_trait;
 use bookmarks::BookmarkTransactionError;
 use context::CoreContext;
 use futures::compat::Future01CompatExt;
+use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types::ChangesetId;
 use pushrebase::{
     PushrebaseCommitHook, PushrebaseHook, PushrebaseTransactionHook, RebasedChangesets,
@@ -23,11 +24,20 @@ use synced_commit_mapping::{add_many_in_txn, SyncedCommitMappingEntry};
 pub struct CrossRepoSyncPushrebaseHook {
     cs_id: ChangesetId,
     repos: CommitSyncRepos,
+    version_name: CommitSyncConfigVersion,
 }
 
 impl CrossRepoSyncPushrebaseHook {
-    pub fn new(cs_id: ChangesetId, repos: CommitSyncRepos) -> Box<dyn PushrebaseHook> {
-        Box::new(Self { cs_id, repos })
+    pub fn new(
+        cs_id: ChangesetId,
+        repos: CommitSyncRepos,
+        version_name: CommitSyncConfigVersion,
+    ) -> Box<dyn PushrebaseHook> {
+        Box::new(Self {
+            cs_id,
+            repos,
+            version_name,
+        })
     }
 }
 
@@ -52,7 +62,12 @@ impl PushrebaseCommitHook for CrossRepoSyncPushrebaseHook {
 
         match rebased.into_iter().next() {
             Some((_, (new_cs_id, _))) => {
-                let entry = create_synced_commit_mapping_entry(self.cs_id, *new_cs_id, &self.repos);
+                let entry = create_synced_commit_mapping_entry(
+                    self.cs_id,
+                    *new_cs_id,
+                    &self.repos,
+                    &self.version_name,
+                );
                 Ok(Box::new(CrossRepoSyncTransactionHook { entry })
                     as Box<dyn PushrebaseTransactionHook>)
             }

@@ -731,7 +731,7 @@ where
 
     let large_importing_bookmark =
         commit_syncer
-            .rename_bookmark(&importing_bookmark)?
+            .rename_bookmark(ctx, &importing_bookmark)?
             .ok_or_else(|| format_err!(
         "Bookmark {:?} unexpectedly dropped in {:?} when trying to generate large_importing_bookmark",
         importing_bookmark,
@@ -742,7 +742,7 @@ where
         "Set large repo's importing bookmark to {}", large_importing_bookmark
     );
     let large_dest_bookmark = commit_syncer
-        .rename_bookmark(&dest_bookmark)?
+        .rename_bookmark(ctx, &dest_bookmark)?
         .ok_or_else(|| {
             format_err!(
         "Bookmark {:?} unexpectedly dropped in {:?} when trying to generate large_dest_bookmark",
@@ -797,7 +797,6 @@ async fn get_pushredirected_vars(
     let syncers = create_commit_syncers(
         repo.clone(),
         large_repo.clone(),
-        &commit_sync_config,
         mapping.clone(),
         Arc::new(live_commit_sync_config),
     )?;
@@ -922,7 +921,7 @@ async fn repo_import(
             maybe_call_sign: call_sign.clone(),
         });
 
-        movers.push(syncers.small_to_large.get_mover()?);
+        movers.push(syncers.small_to_large.get_mover(&ctx)?);
         repo_import_setting = large_repo_import_setting;
         repo = large_repo;
         repo_config = large_repo_config;

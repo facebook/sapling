@@ -580,7 +580,6 @@ mod tests {
         let syncers_1 = create_commit_syncers(
             small_repo_1.clone(),
             large_repo.clone(),
-            &get_large_repo_sync_config(),
             mapping.clone(),
             live_commit_sync_config.clone(),
         )?;
@@ -605,7 +604,6 @@ mod tests {
         let syncers_2 = create_commit_syncers(
             small_repo_2.clone(),
             large_repo.clone(),
-            &get_large_repo_sync_config(),
             mapping.clone(),
             live_commit_sync_config,
         )?;
@@ -657,7 +655,6 @@ mod tests {
         let syncers = create_commit_syncers(
             small_repo.clone(),
             large_repo.clone(),
-            &get_large_repo_sync_config(),
             mapping.clone(),
             live_commit_sync_config,
         )?;
@@ -669,7 +666,7 @@ mod tests {
             DefaultAction::PrependPrefix(mp("dest_path_prefix")),
         )?;
         movers.push(importing_mover);
-        movers.push(syncers.small_to_large.get_mover()?);
+        movers.push(syncers.small_to_large.get_mover(&ctx)?);
 
         let combined_mover: Mover = Arc::new(move |source_path: &MPath| {
             let mut mutable_path = source_path.clone();
@@ -809,7 +806,6 @@ mod tests {
         let syncers = create_commit_syncers(
             small_repo.clone(),
             large_repo.clone(),
-            &get_large_repo_sync_config(),
             mapping.clone(),
             live_commit_sync_config,
         )?;
@@ -821,7 +817,7 @@ mod tests {
             DefaultAction::PrependPrefix(mp("dest_path_prefix")),
         )?;
         movers.push(importing_mover);
-        movers.push(syncers.small_to_large.get_mover()?);
+        movers.push(syncers.small_to_large.get_mover(&ctx)?);
 
         let combined_mover: Mover = Arc::new(move |source_path: &MPath| {
             let mut mutable_path = source_path.clone();

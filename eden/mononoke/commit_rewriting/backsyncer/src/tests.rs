@@ -510,7 +510,7 @@ async fn verify_mapping_and_all_wc(
 ) -> Result<(), Error> {
     let source_repo = commit_syncer.get_source_repo();
     let target_repo = commit_syncer.get_target_repo();
-    let mover = commit_syncer.get_mover()?;
+    let mover = commit_syncer.get_mover(&ctx)?;
 
     verify_bookmarks(ctx.clone(), commit_syncer.clone()).await?;
 
@@ -589,8 +589,8 @@ async fn verify_bookmarks(
 ) -> Result<(), Error> {
     let source_repo = commit_syncer.get_source_repo();
     let target_repo = commit_syncer.get_target_repo();
-    let mover = commit_syncer.get_mover()?;
-    let bookmark_renamer = commit_syncer.get_bookmark_renamer()?;
+    let mover = commit_syncer.get_mover(&ctx)?;
+    let bookmark_renamer = commit_syncer.get_bookmark_renamer(&ctx)?;
 
     let bookmarks = source_repo
         .get_publishing_bookmarks_maybe_stale(ctx.clone())
@@ -886,7 +886,6 @@ async fn init_repos(
     let repos = CommitSyncRepos::LargeToSmall {
         large_repo: source_repo.clone(),
         small_repo: target_repo.clone(),
-        version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
     };
 
     let empty: BTreeMap<_, Option<&str>> = BTreeMap::new();
@@ -899,14 +898,18 @@ async fn init_repos(
     )
     .await;
 
-    let commit_sync_data_provider = CommitSyncDataProvider::Test(hashmap! {
-        CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()) => SyncData {
-            mover: mover_type.get_mover(),
-            reverse_mover: mover_type.get_reverse_mover(),
-            bookmark_renamer: bookmark_renamer_type.get_bookmark_renamer(),
-            reverse_bookmark_renamer: bookmark_renamer_type.get_reverse_bookmark_renamer(),
-        }
-    });
+    let current_version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
+    let commit_sync_data_provider = CommitSyncDataProvider::Test {
+        map: hashmap! {
+            current_version.clone() => SyncData {
+                mover: mover_type.get_mover(),
+                reverse_mover: mover_type.get_reverse_mover(),
+                bookmark_renamer: bookmark_renamer_type.get_bookmark_renamer(),
+                reverse_bookmark_renamer: bookmark_renamer_type.get_reverse_bookmark_renamer(),
+            }
+        },
+        current_version,
+    };
     let commit_syncer = CommitSyncer {
         repos,
         mapping: mapping.clone(),
@@ -1203,17 +1206,19 @@ async fn init_merged_repos(
         let repos = CommitSyncRepos::LargeToSmall {
             large_repo: large_repo.clone(),
             small_repo: small_repo.clone(),
-            version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
         };
-
-        let commit_sync_data_provider = CommitSyncDataProvider::Test(hashmap! {
-            CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()) => SyncData {
-                mover: mover_type.get_reverse_mover(),
-                reverse_mover: mover_type.get_mover(),
-                bookmark_renamer: bookmark_renamer,
-                reverse_bookmark_renamer: reverse_bookmark_renamer,
-            }
-        });
+        let current_version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
+        let commit_sync_data_provider = CommitSyncDataProvider::Test {
+            map: hashmap! {
+                current_version.clone() => SyncData {
+                    mover: mover_type.get_reverse_mover(),
+                    reverse_mover: mover_type.get_mover(),
+                    bookmark_renamer: bookmark_renamer,
+                    reverse_bookmark_renamer: reverse_bookmark_renamer,
+                }
+            },
+            current_version,
+        };
 
         let commit_syncer = CommitSyncer {
             mapping: mapping.clone(),
@@ -1448,17 +1453,20 @@ async fn preserve_premerge_commit(
         let repos = CommitSyncRepos::SmallToLarge {
             large_repo: large_repo.clone(),
             small_repo: small_repo.clone(),
-            version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
         };
 
-        let commit_sync_data_provider = CommitSyncDataProvider::Test(hashmap! {
-            CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()) => SyncData {
-                mover: Arc::new(identity_mover),
-                reverse_mover: Arc::new(identity_mover),
-                bookmark_renamer: bookmark_renamer.clone(),
-                reverse_bookmark_renamer: bookmark_renamer.clone(),
-            }
-        });
+        let current_version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
+        let commit_sync_data_provider = CommitSyncDataProvider::Test {
+            map: hashmap! {
+                current_version.clone() => SyncData {
+                    mover: Arc::new(identity_mover),
+                    reverse_mover: Arc::new(identity_mover),
+                    bookmark_renamer: bookmark_renamer.clone(),
+                    reverse_bookmark_renamer: bookmark_renamer.clone(),
+                }
+            },
+            current_version,
+        };
         CommitSyncer {
             repos,
             mapping: mapping.clone(),
