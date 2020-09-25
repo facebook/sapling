@@ -56,6 +56,7 @@ pub use commit_syncer_args::CommitSyncerArgs;
 use pushrebase_hook::CrossRepoSyncPushrebaseHook;
 use types::{Source, Target};
 
+mod commit_sync_data_provider;
 pub mod commit_sync_outcome;
 mod commit_syncer_args;
 mod pushrebase_hook;
@@ -66,6 +67,7 @@ pub use crate::commit_sync_outcome::{
     get_commit_sync_outcome, get_commit_sync_outcome_with_hint, get_plural_commit_sync_outcome,
     CandidateSelectionHint, CommitSyncOutcome, PluralCommitSyncOutcome,
 };
+use commit_sync_data_provider::CommitSyncDataProvider;
 
 #[derive(Debug, Error)]
 pub enum ErrorKind {
@@ -490,7 +492,7 @@ pub struct CommitSyncer<M> {
     // TODO: Finish refactor and remove pub
     pub mapping: M,
     pub repos: CommitSyncRepos,
-    live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
+    pub commit_sync_data_provider: CommitSyncDataProvider,
 }
 
 impl<M> fmt::Debug for CommitSyncer<M>
@@ -513,10 +515,11 @@ where
         repos: CommitSyncRepos,
         live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     ) -> Self {
+        let commit_sync_data_provider = CommitSyncDataProvider::Live(live_commit_sync_config);
         Self {
             mapping,
             repos,
-            live_commit_sync_config,
+            commit_sync_data_provider,
         }
     }
 
@@ -1556,15 +1559,16 @@ where
         version_name: commit_sync_config.version_name.clone(),
     };
 
+    let commit_sync_data_provider = CommitSyncDataProvider::Live(live_commit_sync_config);
     let large_to_small_commit_syncer = CommitSyncer {
         mapping: mapping.clone(),
         repos: large_to_small_commit_sync_repos,
-        live_commit_sync_config: live_commit_sync_config.clone(),
+        commit_sync_data_provider: commit_sync_data_provider.clone(),
     };
     let small_to_large_commit_syncer = CommitSyncer {
         mapping,
         repos: small_to_large_commit_sync_repos,
-        live_commit_sync_config: live_commit_sync_config.clone(),
+        commit_sync_data_provider,
     };
 
     Ok(Syncers {
