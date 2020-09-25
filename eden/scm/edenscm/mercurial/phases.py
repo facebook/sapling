@@ -352,16 +352,9 @@ class phasecache(object):
 
         if self._publicrevs is None:
             cl = repo.changelog
-
             if cl.userust("index2"):
                 publicheadnodes = repo.heads(includepublic=True, includedraft=False)
-                draftheadnodes = repo.heads(includepublic=False, includedraft=True)
-                draftnodes, publicnodes = cl.dag.onlyboth(
-                    draftheadnodes, publicheadnodes
-                )
-                torevs = cl.torevs
-                self._publicrevs = torevs(publicnodes)
-                self._draftrevs = torevs(draftnodes)
+                self._publicrevs = cl.torevset(cl.dag.ancestors(publicheadnodes))
             else:
                 publicheadrevs = repo.headrevs(includepublic=True, includedraft=False)
                 draftheadrevs = repo.headrevs(includepublic=False, includedraft=True)
