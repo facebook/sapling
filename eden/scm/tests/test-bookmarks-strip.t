@@ -1,7 +1,8 @@
 #chg-compatible
 
   $ configure modern
-  $ hg init
+  $ hg init repo
+  $ cd repo
 
   $ echo qqq>qqq.txt
 
