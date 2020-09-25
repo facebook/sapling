@@ -1321,6 +1321,8 @@ where
                 ..
             } => (small_repo, large_repo, false),
         };
+        // TODO(stash): use the real version that was used to remap a commit
+        let version_name = self.get_current_version(&ctx)?;
 
         let source_repoid = source_repo.get_repoid();
         let target_repoid = target_repo.get_repoid();
@@ -1333,6 +1335,7 @@ where
                         large_bcs_id: source_bcs_id,
                         small_repo_id: target_repoid,
                         small_bcs_id: Some(target_bcs_id),
+                        version_name: Some(version_name),
                     }
                 } else {
                     EquivalentWorkingCopyEntry {
@@ -1340,6 +1343,7 @@ where
                         large_bcs_id: target_bcs_id,
                         small_repo_id: source_repoid,
                         small_bcs_id: Some(source_bcs_id),
+                        version_name: Some(version_name),
                     }
                 }
             }
@@ -1354,6 +1358,7 @@ where
                     large_bcs_id: source_bcs_id,
                     small_repo_id: target_repoid,
                     small_bcs_id: None,
+                    version_name: Some(version_name),
                 }
             }
         };

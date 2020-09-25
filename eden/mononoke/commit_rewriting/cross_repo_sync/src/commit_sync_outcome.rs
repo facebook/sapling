@@ -230,10 +230,10 @@ pub async fn get_plural_commit_sync_outcome<'a, M: SyncedCommitMapping>(
 
     match maybe_wc_equivalence {
         None => Ok(None),
-        Some(WorkingCopyEquivalence::NoWorkingCopy) => {
+        Some(WorkingCopyEquivalence::NoWorkingCopy(_mapping)) => {
             Ok(Some(PluralCommitSyncOutcome::NotSyncCandidate))
         }
-        Some(WorkingCopyEquivalence::WorkingCopy(cs_id)) => {
+        Some(WorkingCopyEquivalence::WorkingCopy(cs_id, _)) => {
             if source_cs_id.0 == cs_id {
                 Ok(Some(PluralCommitSyncOutcome::Preserved))
             } else {

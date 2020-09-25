@@ -1487,6 +1487,7 @@ async fn preserve_premerge_commit(
                     large_bcs_id: bcs_id,
                     small_repo_id: another_repo_id,
                     small_bcs_id: None,
+                    version_name: Some(CommitSyncConfigVersion("TEST_VERSION_NAME".to_string())),
                 },
             )
             .compat()
