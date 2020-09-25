@@ -208,7 +208,11 @@ class phasecache(object):
             self._draftrevs = None
             self._publicrevs = None
             if _load:
-                self.loadphaserevs(repo)  # ensure phase's sets are loaded
+                if self._headbased:
+                    self.draftrevs(repo)
+                    self.publicrevs(repo)
+                else:
+                    self.loadphaserevs(repo)  # ensure phase's sets are loaded
         else:
             if _load:
                 # Cheap trick to allow shallow-copy without copy module
@@ -220,19 +224,19 @@ class phasecache(object):
 
     def getrevset(self, repo, phases, subset=None):
         """return a smartset for the given phases"""
-        self.loadphaserevs(repo)  # ensure phase's sets are loaded
         if self._headbased:
             revs = bindings.dag.spans([])
             if public in phases:
-                revs += self._publicrevs
+                revs += self.publicrevs(repo)
             if draft in phases:
-                revs += self._draftrevs
+                revs += self.draftrevs(repo)
             # XXX: 'secret' is treated as an ampty set.
             revs = smartset.idset(revs)
             if subset is not None:
                 revs = subset & revs
             return revs
 
+        self.loadphaserevs(repo)  # ensure phase's sets are loaded
         phases = set(phases)
         if public not in phases:
             # fast path: _phasesets contains the interesting sets,
@@ -307,33 +311,45 @@ class phasecache(object):
             self._phasesets[draft] = ps
         self._loadedrevslen = len(cl)
 
+    def draftrevs(self, repo):
+        if self._draftrevs is None:
+            self.loaddraftpublicrevs(repo)
+        return self._draftrevs
+
+    def publicrevs(self, repo):
+        if self._publicrevs is None:
+            self.loaddraftpublicrevs(repo)
+        return self._publicrevs
+
+    def loaddraftpublicrevs(self, repo):
+        if not self._headbased:
+            raise error.ProgrammingError(
+                "non-headbased phases should use loadphaserevs"
+            )
+
+        cl = repo.changelog
+
+        if cl.userust("index2"):
+            publicheadnodes = repo.heads(includepublic=True, includedraft=False)
+            draftheadnodes = repo.heads(includepublic=False, includedraft=True)
+            draftnodes, publicnodes = cl.dag.onlyboth(draftheadnodes, publicheadnodes)
+            torevs = cl.torevs
+            self._publicrevs = torevs(publicnodes)
+            self._draftrevs = torevs(draftnodes)
+        else:
+            publicheadrevs = repo.headrevs(includepublic=True, includedraft=False)
+            draftheadrevs = repo.headrevs(includepublic=False, includedraft=True)
+
+            self._publicrevs, self._draftrevs = cl.index2.phasesets(
+                publicheadrevs, draftheadrevs
+            )
+
     def loadphaserevs(self, repo):
         """ensure phase information is loaded in the object"""
         if self._headbased:
-            if self._draftrevs is None:
-                cl = repo.changelog
-
-                if cl.userust("index2"):
-                    publicheadnodes = repo.heads(includepublic=True, includedraft=False)
-                    draftheadnodes = repo.heads(includepublic=False, includedraft=True)
-                    draftnodes, publicnodes = cl.dag.onlyboth(
-                        draftheadnodes, publicheadnodes
-                    )
-                    torevs = cl.torevs
-                    self._publicrevs = torevs(publicnodes)
-                    self._draftrevs = torevs(draftnodes)
-                else:
-                    publicheadrevs = repo.headrevs(
-                        includepublic=True, includedraft=False
-                    )
-                    draftheadrevs = repo.headrevs(
-                        includepublic=False, includedraft=True
-                    )
-
-                    self._publicrevs, self._draftrevs = cl.index2.phasesets(
-                        publicheadrevs, draftheadrevs
-                    )
-            return
+            raise error.ProgrammingError(
+                "headbased phases should use loaddraftpublicrevs"
+            )
 
         if self._phasesets is None:
             try:
@@ -351,8 +367,6 @@ class phasecache(object):
         self._phasesets = None
 
     def phase(self, repo, rev):
-        if self._headbased:
-            self.loadphaserevs(repo)  # ensure phase's sets are loaded
         # We need a repo argument here to be able to build _phasesets
         # if necessary. The repository instance is not stored in
         # phasecache to avoid reference cycles. The changelog instance
@@ -363,9 +377,9 @@ class phasecache(object):
         if rev < nullrev:
             raise ValueError(_("cannot lookup negative revision"))
         if self._headbased:
-            if rev in self._draftrevs:
+            if rev in self.draftrevs(repo):
                 return draft
-            if rev in self._publicrevs:
+            if rev in self.publicrevs(repo):
                 return public
             else:
                 # 'secret' is repurposed as 'normally invisible' commits.
