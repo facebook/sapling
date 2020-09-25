@@ -25,7 +25,7 @@ generatorset = smartset.generatorset
 _maxlogdepth = 0x80000000
 
 
-def _walkrevtree(pfunc, revs, startdepth, stopdepth, reverse):
+def _walkrevtree(pfunc, revs, startdepth, stopdepth, reverse, stopfunc=None):
     """Walk DAG using 'pfunc' from the given 'revs' nodes
 
     'pfunc(rev)' should return the parent/child revisions of the given 'rev'
@@ -61,6 +61,14 @@ def _walkrevtree(pfunc, revs, startdepth, stopdepth, reverse):
     while pendingheap:
         currev, curdepth = heapq.heappop(pendingheap)
         currev = heapsign * currev
+
+        # Process the stopfunc after the rev has been added to the heap, instead
+        # of before, so we don't pay the stopfunc cost for revs that might not
+        # even be reached. This saves us from having to traverse to ancient
+        # ancestors.
+        if stopfunc and stopfunc(currev):
+            continue
+
         if currev == inputrev:
             inputrev = next(irevs, None)
             if inputrev is not None:
@@ -134,12 +142,11 @@ def _genrevancestors(repo, revs, followfirst, startdepth, stopdepth, cutfunc):
         except error.WdirUnsupported:
             return (pctx.rev() for pctx in repo[rev].parents()[:cut])
 
-    if cutfunc is None:
-        pfunc = plainpfunc
-    else:
-        pfunc = lambda rev: [r for r in plainpfunc(rev) if not cutfunc(r)]
+    if cutfunc is not None:
         revs = revs.filter(lambda rev: not cutfunc(rev))
-    return _walkrevtree(pfunc, revs, startdepth, stopdepth, reverse=True)
+    return _walkrevtree(
+        plainpfunc, revs, startdepth, stopdepth, reverse=True, stopfunc=cutfunc
+    )
 
 
 def revancestors(
