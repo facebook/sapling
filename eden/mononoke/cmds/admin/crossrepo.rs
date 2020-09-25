@@ -7,7 +7,7 @@
 
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
-use bookmark_renaming::{get_large_to_small_renamer, get_small_to_large_renamer};
+use bookmark_renaming::get_small_to_large_renamer;
 use bookmarks::BookmarkUpdateReason;
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cmdlib::{args, helpers};
@@ -585,16 +585,9 @@ fn get_large_to_small_commit_sync_repos(
         ));
     };
 
-    let bookmark_renamer =
-        get_large_to_small_renamer(&commit_sync_config, small_repo.get_repoid())?;
-    let reverse_bookmark_renamer =
-        get_small_to_large_renamer(&commit_sync_config, small_repo.get_repoid())?;
-
     Ok(CommitSyncRepos::LargeToSmall {
         large_repo,
         small_repo,
-        bookmark_renamer,
-        reverse_bookmark_renamer,
         version_name: commit_sync_config.version_name.clone(),
     })
 }
@@ -603,16 +596,15 @@ fn get_large_to_small_commit_sync_repos(
 mod test {
     use super::*;
     use bookmarks::BookmarkName;
-    use cross_repo_sync::validation::find_bookmark_diff;
+    use cross_repo_sync::{validation::find_bookmark_diff, CommitSyncDataProvider, SyncData};
     use fixtures::{linear, set_bookmark};
     use futures_old::stream::Stream;
-    use live_commit_sync_config::TestLiveCommitSyncConfig;
     use maplit::{hashmap, hashset};
     use metaconfig_types::{
         CommitSyncConfig, CommitSyncConfigVersion, CommitSyncDirection,
         DefaultSmallToLargeCommitSyncPathAction, SmallRepoCommitSyncConfig,
     };
-    use mononoke_types::RepositoryId;
+    use mononoke_types::{MPath, RepositoryId};
     use revset::AncestorsNodeStream;
     use sql_construct::SqlConstruct;
     use std::{collections::HashSet, sync::Arc};
@@ -621,6 +613,10 @@ mod test {
 
     fn noop_book_renamer(bookmark_name: &BookmarkName) -> Option<BookmarkName> {
         Some(bookmark_name.clone())
+    }
+
+    fn identity_mover(p: &MPath) -> Result<Option<MPath>, Error> {
+        Ok(Some(p.clone()))
     }
 
     #[fbinit::test]
@@ -770,7 +766,7 @@ mod test {
                 .compat()
                 .await?;
 
-        let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap();
+        let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
         for cs_id in changesets {
             mapping
                 .add(
@@ -791,20 +787,27 @@ mod test {
             CommitSyncDirection::LargeToSmall => CommitSyncRepos::LargeToSmall {
                 small_repo: small_repo.clone(),
                 large_repo: large_repo.clone(),
-                bookmark_renamer: Arc::new(noop_book_renamer),
-                reverse_bookmark_renamer: Arc::new(noop_book_renamer),
                 version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
             },
             CommitSyncDirection::SmallToLarge => CommitSyncRepos::SmallToLarge {
                 small_repo: small_repo.clone(),
                 large_repo: large_repo.clone(),
-                bookmark_renamer: Arc::new(noop_book_renamer),
-                reverse_bookmark_renamer: Arc::new(noop_book_renamer),
                 version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
             },
         };
 
-        let live_commit_sync_config = Arc::new(TestLiveCommitSyncConfig::new_empty());
-        Ok(CommitSyncer::new(mapping, repos, live_commit_sync_config))
+        let commit_sync_data_provider = CommitSyncDataProvider::Test(hashmap! {
+            CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()) => SyncData {
+                mover: Arc::new(identity_mover),
+                reverse_mover: Arc::new(identity_mover),
+                bookmark_renamer: Arc::new(noop_book_renamer),
+                reverse_bookmark_renamer: Arc::new(noop_book_renamer),
+            }
+        });
+        Ok(CommitSyncer {
+            mapping,
+            repos,
+            commit_sync_data_provider,
+        })
     }
 }

@@ -28,8 +28,9 @@ mod tests {
     use futures::{compat::Future01CompatExt, stream::TryStreamExt};
     use git_types::TreeHandle;
     use live_commit_sync_config::{
-        CfgrLiveCommitSyncConfig, TestLiveCommitSyncConfig, CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS,
-        CONFIGERATOR_CURRENT_COMMIT_SYNC_CONFIGS, CONFIGERATOR_PUSHREDIRECT_ENABLE,
+        CfgrLiveCommitSyncConfig, LiveCommitSyncConfig, TestLiveCommitSyncConfig,
+        CONFIGERATOR_ALL_COMMIT_SYNC_CONFIGS, CONFIGERATOR_CURRENT_COMMIT_SYNC_CONFIGS,
+        CONFIGERATOR_PUSHREDIRECT_ENABLE,
     };
     use maplit::hashmap;
     use mercurial_types::MPath;
@@ -536,6 +537,16 @@ mod tests {
         }
     }
 
+    fn get_large_repo_live_commit_sync_config() -> Arc<dyn LiveCommitSyncConfig> {
+        let commit_sync_config = get_large_repo_sync_config();
+        let (sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
+        source.set_commit_sync_config(RepositoryId::new(0), commit_sync_config.clone());
+        source.set_commit_sync_config(RepositoryId::new(1), commit_sync_config.clone());
+        source.set_commit_sync_config(RepositoryId::new(2), commit_sync_config);
+
+        Arc::new(sync_config)
+    }
+
     fn get_large_repo_sync_config() -> CommitSyncConfig {
         CommitSyncConfig {
             large_repo_id: RepositoryId::new(0),
@@ -565,13 +576,13 @@ mod tests {
             dest_bookmark: create_bookmark_name("dest_bookmark"),
         };
 
-        let live_commit_sync_config = Arc::new(TestLiveCommitSyncConfig::new_empty());
+        let live_commit_sync_config = get_large_repo_live_commit_sync_config();
         let syncers_1 = create_commit_syncers(
             small_repo_1.clone(),
             large_repo.clone(),
             &get_large_repo_sync_config(),
             mapping.clone(),
-            live_commit_sync_config,
+            live_commit_sync_config.clone(),
         )?;
 
         let large_repo_setting_1 =
@@ -591,7 +602,6 @@ mod tests {
             dest_bookmark: create_bookmark_name("dest_bookmark_2"),
         };
 
-        let live_commit_sync_config = Arc::new(TestLiveCommitSyncConfig::new_empty());
         let syncers_2 = create_commit_syncers(
             small_repo_2.clone(),
             large_repo.clone(),
@@ -642,12 +652,7 @@ mod tests {
         .await?;
         let cs_ids: Vec<ChangesetId> = changesets.values().copied().collect();
 
-        let commit_sync_config = get_large_repo_sync_config();
-        let (sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
-        source.set_commit_sync_config(RepositoryId::new(0), commit_sync_config.clone());
-        source.set_commit_sync_config(RepositoryId::new(1), commit_sync_config.clone());
-
-        let live_commit_sync_config = Arc::new(sync_config);
+        let live_commit_sync_config = get_large_repo_live_commit_sync_config();
         let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap();
         let syncers = create_commit_syncers(
             small_repo.clone(),
@@ -799,12 +804,7 @@ mod tests {
 
         let cs_ids: Vec<ChangesetId> = changesets.values().copied().collect();
 
-        let commit_sync_config = get_large_repo_sync_config();
-        let (sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
-        source.set_commit_sync_config(RepositoryId::new(0), commit_sync_config.clone());
-        source.set_commit_sync_config(RepositoryId::new(1), commit_sync_config.clone());
-
-        let live_commit_sync_config = Arc::new(sync_config);
+        let live_commit_sync_config = get_large_repo_live_commit_sync_config();
         let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
         let syncers = create_commit_syncers(
             small_repo.clone(),

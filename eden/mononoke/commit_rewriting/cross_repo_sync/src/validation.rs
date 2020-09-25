@@ -221,7 +221,7 @@ pub async fn find_bookmark_diff<M: SyncedCommitMapping + Clone + 'static>(
         }
         let corresponding_changesets = renamed_source_bookmarks.get(target_book);
         let remapped_source_cs_id = corresponding_changesets.map(|cs| cs.target_cs_id);
-        let reverse_bookmark_renamer = commit_syncer.get_reverse_bookmark_renamer();
+        let reverse_bookmark_renamer = commit_syncer.get_reverse_bookmark_renamer()?;
         if remapped_source_cs_id.is_none() && reverse_bookmark_renamer(target_book).is_none() {
             // Note that the reverse_bookmark_renamer check below is necessary because there
             // might be bookmark in the source repo that shouldn't be present in the target repo
@@ -595,7 +595,7 @@ async fn rename_and_remap_bookmarks<M: SyncedCommitMapping + Clone + 'static>(
     ),
     Error,
 > {
-    let bookmark_renamer = commit_syncer.get_bookmark_renamer();
+    let bookmark_renamer = commit_syncer.get_bookmark_renamer()?;
 
     let mut renamed_and_remapped_bookmarks = vec![];
     for (bookmark, cs_id) in bookmarks {
@@ -847,15 +847,11 @@ mod test {
             CommitSyncDirection::LargeToSmall => CommitSyncRepos::LargeToSmall {
                 small_repo: small_repo.clone(),
                 large_repo: large_repo.clone(),
-                bookmark_renamer: bookmark_renamer.clone(),
-                reverse_bookmark_renamer: reverse_bookmark_renamer.clone(),
                 version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
             },
             CommitSyncDirection::SmallToLarge => CommitSyncRepos::SmallToLarge {
                 small_repo: small_repo.clone(),
                 large_repo: large_repo.clone(),
-                bookmark_renamer: bookmark_renamer.clone(),
-                reverse_bookmark_renamer: reverse_bookmark_renamer.clone(),
                 version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
             },
         };

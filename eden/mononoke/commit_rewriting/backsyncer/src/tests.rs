@@ -590,7 +590,7 @@ async fn verify_bookmarks(
     let source_repo = commit_syncer.get_source_repo();
     let target_repo = commit_syncer.get_target_repo();
     let mover = commit_syncer.get_mover()?;
-    let bookmark_renamer = commit_syncer.get_bookmark_renamer().clone();
+    let bookmark_renamer = commit_syncer.get_bookmark_renamer()?;
 
     let bookmarks = source_repo
         .get_publishing_bookmarks_maybe_stale(ctx.clone())
@@ -886,8 +886,6 @@ async fn init_repos(
     let repos = CommitSyncRepos::LargeToSmall {
         large_repo: source_repo.clone(),
         small_repo: target_repo.clone(),
-        bookmark_renamer: bookmark_renamer_type.get_bookmark_renamer(),
-        reverse_bookmark_renamer: bookmark_renamer_type.get_reverse_bookmark_renamer(),
         version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
     };
 
@@ -1205,10 +1203,6 @@ async fn init_merged_repos(
         let repos = CommitSyncRepos::LargeToSmall {
             large_repo: large_repo.clone(),
             small_repo: small_repo.clone(),
-            // Reverse the movers, because we want to strip prefix when syncing from large
-            // to small
-            bookmark_renamer: bookmark_renamer.clone(),
-            reverse_bookmark_renamer: reverse_bookmark_renamer.clone(),
             version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
         };
 
@@ -1454,8 +1448,6 @@ async fn preserve_premerge_commit(
         let repos = CommitSyncRepos::SmallToLarge {
             large_repo: large_repo.clone(),
             small_repo: small_repo.clone(),
-            bookmark_renamer: bookmark_renamer.clone(),
-            reverse_bookmark_renamer: bookmark_renamer.clone(),
             version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
         };
 

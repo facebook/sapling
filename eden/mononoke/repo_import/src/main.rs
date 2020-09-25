@@ -731,7 +731,7 @@ where
 
     let large_importing_bookmark =
         commit_syncer
-            .rename_bookmark(&importing_bookmark)
+            .rename_bookmark(&importing_bookmark)?
             .ok_or_else(|| format_err!(
         "Bookmark {:?} unexpectedly dropped in {:?} when trying to generate large_importing_bookmark",
         importing_bookmark,
@@ -742,7 +742,7 @@ where
         "Set large repo's importing bookmark to {}", large_importing_bookmark
     );
     let large_dest_bookmark = commit_syncer
-        .rename_bookmark(&dest_bookmark)
+        .rename_bookmark(&dest_bookmark)?
         .ok_or_else(|| {
             format_err!(
         "Bookmark {:?} unexpectedly dropped in {:?} when trying to generate large_dest_bookmark",

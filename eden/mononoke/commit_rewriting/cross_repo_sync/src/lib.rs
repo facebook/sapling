@@ -13,10 +13,7 @@ use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use blobsync::copy_content;
-use bookmark_renaming::{
-    get_bookmark_renamers, get_large_to_small_renamer, get_small_to_large_renamer, BookmarkRenamer,
-    BookmarkRenamers,
-};
+use bookmark_renaming::BookmarkRenamer;
 use bookmarks::BookmarkName;
 use cloned::cloned;
 use context::CoreContext;
@@ -32,9 +29,7 @@ use live_commit_sync_config::LiveCommitSyncConfig;
 use manifest::get_implicit_deletes;
 use maplit::{hashmap, hashset};
 use mercurial_types::HgManifestId;
-use metaconfig_types::{
-    CommitSyncConfig, CommitSyncConfigVersion, CommitSyncDirection, PushrebaseFlags,
-};
+use metaconfig_types::{CommitSyncConfig, CommitSyncConfigVersion, PushrebaseFlags};
 use mononoke_types::{
     BonsaiChangeset, BonsaiChangesetMut, ChangesetId, FileChange, MPath, RepositoryId,
 };
@@ -396,15 +391,11 @@ pub enum CommitSyncRepos {
     LargeToSmall {
         large_repo: BlobRepo,
         small_repo: BlobRepo,
-        bookmark_renamer: BookmarkRenamer,
-        reverse_bookmark_renamer: BookmarkRenamer,
         version_name: CommitSyncConfigVersion,
     },
     SmallToLarge {
         small_repo: BlobRepo,
         large_repo: BlobRepo,
-        bookmark_renamer: BookmarkRenamer,
-        reverse_bookmark_renamer: BookmarkRenamer,
         version_name: CommitSyncConfigVersion,
     },
 }
@@ -443,31 +434,16 @@ impl CommitSyncRepos {
 
         let version_name = commit_sync_config.version_name.clone();
 
-        let direction = if source_repo.get_repoid() == small_repo_id {
-            CommitSyncDirection::SmallToLarge
-        } else {
-            CommitSyncDirection::LargeToSmall
-        };
-
-        let BookmarkRenamers {
-            bookmark_renamer,
-            reverse_bookmark_renamer,
-        } = get_bookmark_renamers(&commit_sync_config, small_repo_id, direction)?;
-
         if source_repo.get_repoid() == small_repo_id {
             Ok(CommitSyncRepos::SmallToLarge {
                 large_repo: target_repo.clone(),
                 small_repo: source_repo.clone(),
-                bookmark_renamer,
-                reverse_bookmark_renamer,
                 version_name,
             })
         } else {
             Ok(CommitSyncRepos::LargeToSmall {
                 large_repo: source_repo.clone(),
                 small_repo: target_repo.clone(),
-                bookmark_renamer,
-                reverse_bookmark_renamer,
                 version_name,
             })
         }
@@ -561,16 +537,28 @@ where
         )
     }
 
-    pub fn get_bookmark_renamer(&self) -> &BookmarkRenamer {
-        self.repos.get_bookmark_renamer()
+    pub fn get_bookmark_renamer(&self) -> Result<BookmarkRenamer, Error> {
+        let (source_repo, target_repo, version_name) = self.get_source_target_version();
+
+        self.commit_sync_data_provider.get_bookmark_renamer(
+            &version_name,
+            source_repo.get_repoid(),
+            target_repo.get_repoid(),
+        )
     }
 
-    pub fn get_reverse_bookmark_renamer(&self) -> &BookmarkRenamer {
-        self.repos.get_reverse_bookmark_renamer()
+    pub fn get_reverse_bookmark_renamer(&self) -> Result<BookmarkRenamer, Error> {
+        let (source_repo, target_repo, version_name) = self.get_source_target_version();
+
+        self.commit_sync_data_provider.get_reverse_bookmark_renamer(
+            &version_name,
+            source_repo.get_repoid(),
+            target_repo.get_repoid(),
+        )
     }
 
-    pub fn rename_bookmark(&self, bookmark: &BookmarkName) -> Option<BookmarkName> {
-        self.repos.get_bookmark_renamer()(bookmark)
+    pub fn rename_bookmark(&self, bookmark: &BookmarkName) -> Result<Option<BookmarkName>, Error> {
+        Ok(self.get_bookmark_renamer()?(bookmark))
     }
 
     pub fn get_version_name(&self) -> &CommitSyncConfigVersion {
@@ -1369,30 +1357,6 @@ impl CommitSyncRepos {
         }
     }
 
-    pub(crate) fn get_bookmark_renamer(&self) -> &BookmarkRenamer {
-        match self {
-            CommitSyncRepos::LargeToSmall {
-                bookmark_renamer, ..
-            } => bookmark_renamer,
-            CommitSyncRepos::SmallToLarge {
-                bookmark_renamer, ..
-            } => bookmark_renamer,
-        }
-    }
-
-    pub(crate) fn get_reverse_bookmark_renamer(&self) -> &BookmarkRenamer {
-        match self {
-            CommitSyncRepos::LargeToSmall {
-                reverse_bookmark_renamer,
-                ..
-            } => reverse_bookmark_renamer,
-            CommitSyncRepos::SmallToLarge {
-                reverse_bookmark_renamer,
-                ..
-            } => reverse_bookmark_renamer,
-        }
-    }
-
     pub(crate) fn get_version_name(&self) -> &CommitSyncConfigVersion {
         match self {
             CommitSyncRepos::LargeToSmall { version_name, .. } => version_name,
@@ -1522,24 +1486,15 @@ pub fn create_commit_syncers<M>(
 where
     M: SyncedCommitMapping + Clone + 'static,
 {
-    let small_repo_id = small_repo.get_repoid();
-
-    let small_to_large_renamer = get_small_to_large_renamer(commit_sync_config, small_repo_id)?;
-    let large_to_small_renamer = get_large_to_small_renamer(commit_sync_config, small_repo_id)?;
-
     let small_to_large_commit_sync_repos = CommitSyncRepos::SmallToLarge {
         small_repo: small_repo.clone(),
         large_repo: large_repo.clone(),
-        bookmark_renamer: small_to_large_renamer.clone(),
-        reverse_bookmark_renamer: large_to_small_renamer.clone(),
         version_name: commit_sync_config.version_name.clone(),
     };
 
     let large_to_small_commit_sync_repos = CommitSyncRepos::LargeToSmall {
         small_repo,
         large_repo,
-        bookmark_renamer: large_to_small_renamer,
-        reverse_bookmark_renamer: small_to_large_renamer.clone(),
         version_name: commit_sync_config.version_name.clone(),
     };
 

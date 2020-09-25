@@ -699,8 +699,6 @@ async fn test_sync_remap_failure(fb: FacebookInit) -> Result<(), Error> {
     let fail_repos = CommitSyncRepos::LargeToSmall {
         small_repo: linear.clone(),
         large_repo: megarepo.clone(),
-        bookmark_renamer: Arc::new(identity_renamer),
-        reverse_bookmark_renamer: Arc::new(identity_renamer),
         version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
     };
     fail_config.repos = fail_repos;
@@ -732,8 +730,6 @@ async fn test_sync_remap_failure(fb: FacebookInit) -> Result<(), Error> {
     let copyfrom_fail_repos = CommitSyncRepos::LargeToSmall {
         small_repo: linear.clone(),
         large_repo: megarepo.clone(),
-        bookmark_renamer: Arc::new(identity_renamer),
-        reverse_bookmark_renamer: Arc::new(identity_renamer),
         version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
     };
     let commit_sync_data_provider = CommitSyncDataProvider::Test(hashmap! {
@@ -848,8 +844,6 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
     let commit_sync_repos = CommitSyncRepos::SmallToLarge {
         small_repo: repo.clone(),
         large_repo: megarepo.clone(),
-        bookmark_renamer: Arc::new(identity_renamer),
-        reverse_bookmark_renamer: Arc::new(identity_renamer),
         version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
     };
     let commit_sync_data_provider = CommitSyncDataProvider::Test(hashmap! {
