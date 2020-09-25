@@ -219,7 +219,7 @@ async fn create_rewritten_merge_commit(
         ctx.clone(),
         merge_bcs,
         &remapped_parents,
-        syncers.small_to_large.get_mover(&ctx)?,
+        syncers.small_to_large.get_current_mover_DEPRECATED(&ctx)?,
         syncers.small_to_large.get_source_repo().clone(),
     )
     .await?;
@@ -262,7 +262,7 @@ async fn generate_additional_file_changes(
             BonsaiDiffFileChange::Changed(ref path, ..)
             | BonsaiDiffFileChange::ChangedReusedId(ref path, ..)
             | BonsaiDiffFileChange::Deleted(ref path) => {
-                let maybe_new_path = large_to_small.get_mover(&ctx)?(path)?;
+                let maybe_new_path = large_to_small.get_current_mover_DEPRECATED(&ctx)?(path)?;
                 if maybe_new_path.is_some() {
                     continue;
                 }

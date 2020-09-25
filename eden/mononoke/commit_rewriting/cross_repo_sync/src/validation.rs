@@ -55,8 +55,8 @@ pub async fn verify_working_copy<M: SyncedCommitMapping + Clone + 'static>(
         Target::ref_cast(target_repo),
         Source(source_hash),
         Target(target_hash),
-        &commit_syncer.get_mover(&ctx)?,
-        &commit_syncer.get_reverse_mover(&ctx)?,
+        &commit_syncer.get_current_mover_DEPRECATED(&ctx)?,
+        &commit_syncer.get_current_reverse_mover_DEPRECATED(&ctx)?,
     )
     .await
 }

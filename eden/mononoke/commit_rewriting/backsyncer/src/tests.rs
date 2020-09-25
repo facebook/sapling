@@ -510,7 +510,7 @@ async fn verify_mapping_and_all_wc(
 ) -> Result<(), Error> {
     let source_repo = commit_syncer.get_source_repo();
     let target_repo = commit_syncer.get_target_repo();
-    let mover = commit_syncer.get_mover(&ctx)?;
+    let mover = commit_syncer.get_current_mover_DEPRECATED(&ctx)?;
 
     verify_bookmarks(ctx.clone(), commit_syncer.clone()).await?;
 
@@ -589,7 +589,7 @@ async fn verify_bookmarks(
 ) -> Result<(), Error> {
     let source_repo = commit_syncer.get_source_repo();
     let target_repo = commit_syncer.get_target_repo();
-    let mover = commit_syncer.get_mover(&ctx)?;
+    let mover = commit_syncer.get_current_mover_DEPRECATED(&ctx)?;
     let bookmark_renamer = commit_syncer.get_bookmark_renamer(&ctx)?;
 
     let bookmarks = source_repo

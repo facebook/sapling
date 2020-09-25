@@ -516,12 +516,16 @@ where
         &self.mapping
     }
 
-    pub fn get_mover(&self, ctx: &CoreContext) -> Result<Mover, Error> {
+    // TODO(stash): remove callers of this function
+    #[allow(non_snake_case)]
+    pub fn get_current_mover_DEPRECATED(&self, ctx: &CoreContext) -> Result<Mover, Error> {
         let (_, _, mover) = self.get_source_target_mover(ctx)?;
         Ok(mover)
     }
 
-    pub fn get_reverse_mover(&self, ctx: &CoreContext) -> Result<Mover, Error> {
+    // TODO(stash): remove callers of this function
+    #[allow(non_snake_case)]
+    pub fn get_current_reverse_mover_DEPRECATED(&self, ctx: &CoreContext) -> Result<Mover, Error> {
         let (source_repo, target_repo, version_name) = self.get_source_target_version(ctx)?;
 
         self.commit_sync_data_provider.get_reverse_mover(

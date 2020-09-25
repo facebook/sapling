@@ -76,7 +76,7 @@ where
                 ctx.clone(),
                 source_bcs_mut,
                 &map,
-                commit_syncer.get_mover(&ctx)?,
+                commit_syncer.get_current_mover_DEPRECATED(&ctx)?,
                 source_repo.clone(),
             )
             .await
