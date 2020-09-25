@@ -5,6 +5,7 @@
 # directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library.sh"
+  $ . "${TEST_FIXTURES}/library-push-redirector.sh"
 
 setup configuration
   $ REPOTYPE="blob_files"
@@ -59,6 +60,34 @@ setup configerator configs
   >         "version_name": "TEST_VERSION_NAME_LIVE_V1"
   >     }
   >   }
+  > }
+  > EOF
+  $ cat > "$COMMIT_SYNC_CONF/all" << EOF
+  > {
+  >  "repos": {
+  >    "megarepo_test": {
+  >      "versions": [
+  >        {
+  >          "large_repo_id": 0,
+  >          "common_pushrebase_bookmarks": ["master_bookmark"],
+  >          "small_repos": [
+  >            {
+  >              "repoid": 1,
+  >              "default_action": "prepend_prefix",
+  >              "default_prefix": "smallrepofolder1",
+  >              "bookmark_prefix": "bookprefix1/",
+  >              "mapping": {
+  >                "special": "specialsmallrepofolder1"
+  >              },
+  >              "direction": "large_to_small"
+  >            }
+  >          ],
+  >          "version_name": "TEST_VERSION_NAME_LIVE_V1"
+  >        }
+  >      ],
+  >      "current_version": "new_version"
+  >    }
+  >  }
   > }
   > EOF
 
@@ -152,31 +181,8 @@ Normal pushrebase with one commit
   ~
 
 Live change of the config, without Mononoke restart
-  $ cat > "$COMMIT_SYNC_CONF/current" <<EOF
-  > {
-  >   "repos": {
-  >     "megarepo_test": {
-  >         "large_repo_id": 0,
-  >         "common_pushrebase_bookmarks": [
-  >           "master_bookmark"
-  >         ],
-  >         "small_repos": [
-  >           {
-  >             "repoid": 1,
-  >             "default_action": "prepend_prefix",
-  >             "default_prefix": "smallrepofolder1",
-  >             "bookmark_prefix": "bookprefix1/",
-  >             "mapping": {
-  >               "special": "specialsmallrepofolder_after_change"
-  >             },
-  >             "direction": "large_to_small"
-  >           }
-  >         ],
-  >         "version_name": "TEST_VERSION_NAME_LIVE_V2"
-  >     }
-  >   }
-  > }
-  > EOF
+  $ update_commit_sync_map_second_option
+
 -- sleep to ensure live_commit_sync_config had a chance to refresh
   $ sleep 1
 

@@ -72,6 +72,35 @@ EOF
 }
 EOF
 
+    cat > "$COMMIT_SYNC_CONF/all" << EOF
+{
+  "repos": {
+    "megarepo_test": {
+      "versions": [
+        {
+          "large_repo_id": 0,
+          "common_pushrebase_bookmarks": ["master_bookmark"],
+          "small_repos": [
+            {
+              "repoid": 1,
+              "bookmark_prefix": "bookprefix/",
+              "default_action": "prepend_prefix",
+              "default_prefix": "smallrepofolder",
+              "direction": "large_to_small",
+              "mapping": {
+                "non_path_shifting": "non_path_shifting"
+              }
+            }
+          ],
+          "version_name": ""
+        }
+      ],
+      "current_version": ""
+    }
+  }
+}
+EOF
+
   fi
 
   echo "Setting up hg server repos"
@@ -123,6 +152,156 @@ EOF
   echo "Adding synced mapping entry"
   add_synced_commit_mapping_entry "$REPOIDSMALL" "$SMALL_MASTER_BONSAI" \
    "$REPOIDLARGE" "$LARGE_MASTER_BONSAI"
+}
+
+function update_commit_sync_map_first_option {
+  cat > "$COMMIT_SYNC_CONF/current" << EOF
+{
+  "repos": {
+    "megarepo_test": {
+      "large_repo_id": 0,
+      "common_pushrebase_bookmarks": ["master_bookmark"],
+      "small_repos": [
+        {
+          "repoid": 1,
+          "bookmark_prefix": "bookprefix/",
+          "default_action": "prepend_prefix",
+          "default_prefix": "smallrepofolder_after",
+          "direction": "large_to_small",
+          "mapping": {
+            "non_path_shifting": "non_path_shifting"
+          }
+        }
+      ],
+      "version_name": "new_version"
+    }
+  }
+}
+EOF
+
+  cat > "$COMMIT_SYNC_CONF/all" << EOF
+{
+  "repos": {
+    "megarepo_test": {
+      "versions": [
+        {
+          "large_repo_id": 0,
+          "common_pushrebase_bookmarks": ["master_bookmark"],
+          "small_repos": [
+            {
+              "repoid": 1,
+              "bookmark_prefix": "bookprefix/",
+              "default_action": "prepend_prefix",
+              "default_prefix": "smallrepofolder",
+              "direction": "large_to_small",
+              "mapping": {
+                "non_path_shifting": "non_path_shifting"
+              }
+            }
+          ],
+          "version_name": ""
+        },
+      {
+        "large_repo_id": 0,
+        "common_pushrebase_bookmarks": ["master_bookmark"],
+        "small_repos": [
+          {
+            "repoid": 1,
+            "bookmark_prefix": "bookprefix/",
+            "default_action": "prepend_prefix",
+            "default_prefix": "smallrepofolder_after",
+            "direction": "large_to_small",
+            "mapping": {
+              "non_path_shifting": "non_path_shifting"
+            }
+          }
+        ],
+        "version_name": "new_version"
+      }
+      ],
+      "current_version": "new_version"
+    }
+  }
+}
+EOF
+
+}
+
+function update_commit_sync_map_second_option {
+  cat > "$COMMIT_SYNC_CONF/current" <<EOF
+{
+  "repos": {
+    "megarepo_test": {
+        "large_repo_id": 0,
+        "common_pushrebase_bookmarks": [
+          "master_bookmark"
+        ],
+        "small_repos": [
+          {
+            "repoid": 1,
+            "default_action": "prepend_prefix",
+            "default_prefix": "smallrepofolder1",
+            "bookmark_prefix": "bookprefix1/",
+            "mapping": {
+              "special": "specialsmallrepofolder_after_change"
+            },
+            "direction": "large_to_small"
+          }
+        ],
+        "version_name": "TEST_VERSION_NAME_LIVE_V2"
+    }
+  }
+}
+EOF
+
+  cat > "$COMMIT_SYNC_CONF/all" << EOF
+{
+  "repos": {
+    "megarepo_test": {
+      "versions": [
+        {
+          "large_repo_id": 0,
+          "common_pushrebase_bookmarks": ["master_bookmark"],
+          "small_repos": [
+            {
+              "repoid": 1,
+              "default_action": "prepend_prefix",
+              "default_prefix": "smallrepofolder1",
+              "bookmark_prefix": "bookprefix1/",
+              "mapping": {
+                "special": "specialsmallrepofolder1"
+              },
+              "direction": "large_to_small"
+            }
+          ],
+          "version_name": "TEST_VERSION_NAME_LIVE_V1"
+        },
+        {
+          "large_repo_id": 0,
+          "common_pushrebase_bookmarks": [
+            "master_bookmark"
+          ],
+          "small_repos": [
+            {
+              "repoid": 1,
+              "default_action": "prepend_prefix",
+              "default_prefix": "smallrepofolder1",
+              "bookmark_prefix": "bookprefix1/",
+              "mapping": {
+                "special": "specialsmallrepofolder_after_change"
+              },
+              "direction": "large_to_small"
+            }
+          ],
+          "version_name": "TEST_VERSION_NAME_LIVE_V2"
+        }
+      ],
+      "current_version": "TEST_VERSION_NAME_LIVE_V2"
+    }
+  }
+}
+EOF
+
 }
 
 function init_large_small_repo() {

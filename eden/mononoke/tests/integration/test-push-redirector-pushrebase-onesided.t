@@ -15,6 +15,7 @@ setup configuration
   > [megarepo_test]
   > large_repo_id = 0
   > common_pushrebase_bookmarks = ["master_bookmark"]
+  > version_name = "TEST_VERSION_NAME_LIVE"
   >   [[megarepo_test.small_repos]]
   >   repoid = 1
   >   bookmark_prefix = "bookprefix1/"
@@ -76,6 +77,46 @@ setup configerator configs
   >           }
   >         ],
   >         "version_name": "TEST_VERSION_NAME_LIVE"
+  >     }
+  >   }
+  > }
+  > EOF
+  $ cat > "$COMMIT_SYNC_CONF/all" <<EOF
+  > {
+  >   "repos": {
+  >     "megarepo_test": {
+  >       "versions": [
+  >         {
+  >           "large_repo_id": 0,
+  >           "common_pushrebase_bookmarks": [
+  >             "master_bookmark"
+  >           ],
+  >           "small_repos": [
+  >             {
+  >               "repoid": 1,
+  >               "default_action": "prepend_prefix",
+  >               "default_prefix": "smallrepofolder1",
+  >               "bookmark_prefix": "bookprefix1/",
+  >               "mapping": {
+  >                 "special": "specialsmallrepofolder1"
+  >               },
+  >               "direction": "large_to_small"
+  >             },
+  >             {
+  >               "repoid": 2,
+  >               "default_action": "prepend_prefix",
+  >               "default_prefix": "smallrepofolder2",
+  >               "bookmark_prefix": "bookprefix2/",
+  >               "mapping": {
+  >                 "special": "specialsmallrepofolder2"
+  >               },
+  >               "direction": "small_to_large"
+  >             }
+  >           ],
+  >           "version_name": "TEST_VERSION_NAME_LIVE"
+  >         }
+  >       ],
+  >      "current_version": "TEST_VERSION_NAME_LIVE"
   >     }
   >   }
   > }
