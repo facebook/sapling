@@ -55,7 +55,7 @@ pub async fn verify_working_copy<M: SyncedCommitMapping + Clone + 'static>(
         Target::ref_cast(target_repo),
         Source(source_hash),
         Target(target_hash),
-        commit_syncer.get_mover(),
+        &commit_syncer.get_mover()?,
         commit_syncer.get_reverse_mover(),
     )
     .await
@@ -648,13 +648,13 @@ async fn rename_and_remap_bookmarks<M: SyncedCommitMapping + Clone + 'static>(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::CommitSyncRepos;
+    use crate::{CommitSyncDataProvider, CommitSyncRepos, SyncData};
     use bookmark_renaming::BookmarkRenamer;
     use bookmarks::BookmarkName;
     use fbinit::FacebookInit;
     use fixtures::linear;
     use futures_old::stream::Stream;
-    use live_commit_sync_config::TestLiveCommitSyncConfig;
+    use maplit::hashmap;
     use metaconfig_types::{CommitSyncConfigVersion, CommitSyncDirection};
     use mononoke_types::{MPath, RepositoryId};
     use revset::AncestorsNodeStream;
@@ -847,24 +847,35 @@ mod test {
             CommitSyncDirection::LargeToSmall => CommitSyncRepos::LargeToSmall {
                 small_repo: small_repo.clone(),
                 large_repo: large_repo.clone(),
-                mover: Arc::new(identity_mover),
                 reverse_mover: Arc::new(identity_mover),
-                bookmark_renamer,
-                reverse_bookmark_renamer,
+                bookmark_renamer: bookmark_renamer.clone(),
+                reverse_bookmark_renamer: reverse_bookmark_renamer.clone(),
                 version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
             },
             CommitSyncDirection::SmallToLarge => CommitSyncRepos::SmallToLarge {
                 small_repo: small_repo.clone(),
                 large_repo: large_repo.clone(),
-                mover: Arc::new(identity_mover),
                 reverse_mover: Arc::new(identity_mover),
-                bookmark_renamer,
-                reverse_bookmark_renamer,
+                bookmark_renamer: bookmark_renamer.clone(),
+                reverse_bookmark_renamer: reverse_bookmark_renamer.clone(),
                 version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
             },
         };
 
-        let live_commit_sync_config = Arc::new(TestLiveCommitSyncConfig::new_empty());
-        Ok(CommitSyncer::new(mapping, repos, live_commit_sync_config))
+
+        let commit_sync_data_provider = CommitSyncDataProvider::Test(hashmap! {
+            CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()) => SyncData {
+                mover: Arc::new(identity_mover),
+                reverse_mover: Arc::new(identity_mover),
+                bookmark_renamer: bookmark_renamer,
+                reverse_bookmark_renamer: reverse_bookmark_renamer,
+            }
+        });
+
+        Ok(CommitSyncer {
+            repos,
+            mapping,
+            commit_sync_data_provider,
+        })
     }
 }

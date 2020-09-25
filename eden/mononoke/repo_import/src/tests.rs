@@ -642,7 +642,12 @@ mod tests {
         .await?;
         let cs_ids: Vec<ChangesetId> = changesets.values().copied().collect();
 
-        let live_commit_sync_config = Arc::new(TestLiveCommitSyncConfig::new_empty());
+        let commit_sync_config = get_large_repo_sync_config();
+        let (sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
+        source.set_commit_sync_config(RepositoryId::new(0), commit_sync_config.clone());
+        source.set_commit_sync_config(RepositoryId::new(1), commit_sync_config.clone());
+
+        let live_commit_sync_config = Arc::new(sync_config);
         let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap();
         let syncers = create_commit_syncers(
             small_repo.clone(),
@@ -659,7 +664,7 @@ mod tests {
             DefaultAction::PrependPrefix(mp("dest_path_prefix")),
         )?;
         movers.push(importing_mover);
-        movers.push(syncers.small_to_large.get_mover().clone());
+        movers.push(syncers.small_to_large.get_mover()?);
 
         let combined_mover: Mover = Arc::new(move |source_path: &MPath| {
             let mut mutable_path = source_path.clone();
@@ -794,8 +799,13 @@ mod tests {
 
         let cs_ids: Vec<ChangesetId> = changesets.values().copied().collect();
 
-        let live_commit_sync_config = Arc::new(TestLiveCommitSyncConfig::new_empty());
-        let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap();
+        let commit_sync_config = get_large_repo_sync_config();
+        let (sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
+        source.set_commit_sync_config(RepositoryId::new(0), commit_sync_config.clone());
+        source.set_commit_sync_config(RepositoryId::new(1), commit_sync_config.clone());
+
+        let live_commit_sync_config = Arc::new(sync_config);
+        let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
         let syncers = create_commit_syncers(
             small_repo.clone(),
             large_repo.clone(),
@@ -811,7 +821,7 @@ mod tests {
             DefaultAction::PrependPrefix(mp("dest_path_prefix")),
         )?;
         movers.push(importing_mover);
-        movers.push(syncers.small_to_large.get_mover().clone());
+        movers.push(syncers.small_to_large.get_mover()?);
 
         let combined_mover: Mover = Arc::new(move |source_path: &MPath| {
             let mut mutable_path = source_path.clone();

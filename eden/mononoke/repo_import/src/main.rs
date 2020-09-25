@@ -922,7 +922,7 @@ async fn repo_import(
             maybe_call_sign: call_sign.clone(),
         });
 
-        movers.push(syncers.small_to_large.get_mover().clone());
+        movers.push(syncers.small_to_large.get_mover()?);
         repo_import_setting = large_repo_import_setting;
         repo = large_repo;
         repo_config = large_repo_config;

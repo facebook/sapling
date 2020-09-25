@@ -17,10 +17,10 @@ use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use cloned::cloned;
 use context::CoreContext;
 use cross_repo_sync::{
-    rewrite_commit, update_mapping, upload_commits, CommitSyncRepos, CommitSyncer, Syncers,
+    rewrite_commit, update_mapping, upload_commits, CommitSyncDataProvider, CommitSyncRepos,
+    CommitSyncer, SyncData, Syncers,
 };
 use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt};
-use live_commit_sync_config::TestLiveCommitSyncConfig;
 use maplit::hashmap;
 use megarepolib::{common::ChangesetArgs, perform_move};
 use metaconfig_types::{
@@ -76,7 +76,7 @@ where
                 ctx,
                 source_bcs_mut,
                 &map,
-                commit_syncer.get_mover().clone(),
+                commit_syncer.get_mover()?,
                 source_repo.clone(),
             )
             .await
@@ -143,8 +143,6 @@ pub async fn init_small_large_repo(
         RepositoryId::new(1),
     )?;
 
-    let live_commit_sync_config = Arc::new(TestLiveCommitSyncConfig::new_empty());
-
     let mapping =
         SqlSyncedCommitMapping::from_sql_connections(SqlConnections::new_single(con.clone()));
     let (smallrepo, _) =
@@ -153,29 +151,50 @@ pub async fn init_small_large_repo(
     let repos = CommitSyncRepos::SmallToLarge {
         small_repo: smallrepo.clone(),
         large_repo: megarepo.clone(),
-        mover: Arc::new(prefix_mover),
         reverse_mover: Arc::new(reverse_prefix_mover),
         bookmark_renamer: Arc::new(identity_renamer),
         reverse_bookmark_renamer: Arc::new(identity_renamer),
         version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
     };
-    let small_to_large_commit_syncer = CommitSyncer::new(
-        mapping.clone(),
-        repos.clone(),
-        live_commit_sync_config.clone(),
-    );
+
+    let commit_sync_data_provider = CommitSyncDataProvider::Test(hashmap! {
+        CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()) => SyncData {
+            mover: Arc::new(prefix_mover),
+            reverse_mover: Arc::new(reverse_prefix_mover),
+            bookmark_renamer: Arc::new(identity_renamer),
+            reverse_bookmark_renamer: Arc::new(identity_renamer),
+        }
+    });
+
+    let small_to_large_commit_syncer = CommitSyncer {
+        mapping: mapping.clone(),
+        repos: repos.clone(),
+        commit_sync_data_provider,
+    };
 
     let repos = CommitSyncRepos::LargeToSmall {
         small_repo: smallrepo.clone(),
         large_repo: megarepo.clone(),
-        mover: Arc::new(reverse_prefix_mover),
         reverse_mover: Arc::new(prefix_mover),
         bookmark_renamer: Arc::new(identity_renamer),
         reverse_bookmark_renamer: Arc::new(identity_renamer),
         version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
     };
-    let large_to_small_commit_syncer =
-        CommitSyncer::new(mapping.clone(), repos.clone(), live_commit_sync_config);
+
+    let commit_sync_data_provider = CommitSyncDataProvider::Test(hashmap! {
+        CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()) => SyncData {
+            mover: Arc::new(reverse_prefix_mover),
+            reverse_mover: Arc::new(prefix_mover),
+            bookmark_renamer: Arc::new(identity_renamer),
+            reverse_bookmark_renamer: Arc::new(identity_renamer),
+        }
+    });
+
+    let large_to_small_commit_syncer = CommitSyncer {
+        mapping: mapping.clone(),
+        repos: repos.clone(),
+        commit_sync_data_provider,
+    };
 
     let first_bcs_id = CreateCommitContext::new_root(&ctx, &smallrepo)
         .add_file("file", "content")

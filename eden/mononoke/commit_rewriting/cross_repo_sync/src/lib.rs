@@ -67,7 +67,7 @@ pub use crate::commit_sync_outcome::{
     get_commit_sync_outcome, get_commit_sync_outcome_with_hint, get_plural_commit_sync_outcome,
     CandidateSelectionHint, CommitSyncOutcome, PluralCommitSyncOutcome,
 };
-use commit_sync_data_provider::CommitSyncDataProvider;
+pub use commit_sync_data_provider::{CommitSyncDataProvider, SyncData};
 
 #[derive(Debug, Error)]
 pub enum ErrorKind {
@@ -300,7 +300,7 @@ async fn remap_parents_and_rewrite_commit<'a, M: SyncedCommitMapping + Clone + '
     source_repo: BlobRepo,
     parent_selection_hint: CandidateSelectionHint,
 ) -> Result<Option<BonsaiChangesetMut>, Error> {
-    let (_, _, mover) = commit_syncer.get_source_target_mover();
+    let (_, _, mover) = commit_syncer.get_source_target_mover()?;
     let remapped_parents = remap_parents(&ctx, &cs, commit_syncer, parent_selection_hint).await?;
     rewrite_commit(ctx.clone(), cs, &remapped_parents, mover, source_repo).await
 }
@@ -397,7 +397,6 @@ pub enum CommitSyncRepos {
     LargeToSmall {
         large_repo: BlobRepo,
         small_repo: BlobRepo,
-        mover: Mover,
         reverse_mover: Mover,
         bookmark_renamer: BookmarkRenamer,
         reverse_bookmark_renamer: BookmarkRenamer,
@@ -406,7 +405,6 @@ pub enum CommitSyncRepos {
     SmallToLarge {
         small_repo: BlobRepo,
         large_repo: BlobRepo,
-        mover: Mover,
         reverse_mover: Mover,
         bookmark_renamer: BookmarkRenamer,
         reverse_bookmark_renamer: BookmarkRenamer,
@@ -453,10 +451,8 @@ impl CommitSyncRepos {
         } else {
             CommitSyncDirection::LargeToSmall
         };
-        let Movers {
-            mover,
-            reverse_mover,
-        } = get_movers(&commit_sync_config, small_repo_id, direction)?;
+        let Movers { reverse_mover, .. } =
+            get_movers(&commit_sync_config, small_repo_id, direction)?;
 
         let BookmarkRenamers {
             bookmark_renamer,
@@ -467,7 +463,6 @@ impl CommitSyncRepos {
             Ok(CommitSyncRepos::SmallToLarge {
                 large_repo: target_repo.clone(),
                 small_repo: source_repo.clone(),
-                mover,
                 reverse_mover,
                 bookmark_renamer,
                 reverse_bookmark_renamer,
@@ -477,7 +472,6 @@ impl CommitSyncRepos {
             Ok(CommitSyncRepos::LargeToSmall {
                 large_repo: source_repo.clone(),
                 small_repo: target_repo.clone(),
-                mover,
                 reverse_mover,
                 bookmark_renamer,
                 reverse_bookmark_renamer,
@@ -559,8 +553,9 @@ where
         &self.mapping
     }
 
-    pub fn get_mover(&self) -> &Mover {
-        self.repos.get_mover()
+    pub fn get_mover(&self) -> Result<Mover, Error> {
+        let (_, _, mover) = self.get_source_target_mover()?;
+        Ok(mover)
     }
 
     pub fn get_reverse_mover(&self) -> &Mover {
@@ -695,7 +690,7 @@ where
         parent_mapping_selection_hint: CandidateSelectionHint,
     ) -> Result<Option<ChangesetId>, Error> {
         // Take most of below function unsafe_sync_commit into here and delete. Leave pushrebase in next fn
-        let (source_repo, _, _) = self.get_source_target_mover();
+        let (source_repo, _, _) = self.get_source_target_mover()?;
 
         let cs = source_cs_id
             .load(ctx.clone(), source_repo.blobstore())
@@ -735,7 +730,7 @@ where
         source_cs_id: ChangesetId,
         maybe_parents: Option<HashMap<ChangesetId, ChangesetId>>,
     ) -> Result<Option<ChangesetId>, Error> {
-        let (source_repo, target_repo, _) = self.get_source_target_mover();
+        let (source_repo, target_repo, _) = self.get_source_target_mover()?;
         let source_cs = source_cs_id
             .load(ctx.clone(), source_repo.blobstore())
             .await?;
@@ -746,7 +741,7 @@ where
             None => remap_parents(&ctx, &source_cs, self, CandidateSelectionHint::Only).await?, // TODO: check if only is ok
         };
 
-        let (_, _, mover) = self.get_source_target_mover();
+        let (_, _, mover) = self.get_source_target_mover()?;
         let rewritten_commit = rewrite_commit(
             ctx.clone(),
             source_cs,
@@ -789,7 +784,7 @@ where
         target_lca_hint: Target<Arc<dyn LeastCommonAncestorsHint>>,
     ) -> Result<Option<ChangesetId>, Error> {
         let hash = source_cs.get_changeset_id();
-        let (source_repo, target_repo, _) = self.get_source_target_mover();
+        let (source_repo, target_repo, _) = self.get_source_target_mover()?;
 
         let parent_selection_hint = CandidateSelectionHint::OnlyOrAncestorOfBookmark(
             Target(bookmark.clone()),
@@ -886,7 +881,7 @@ where
         ctx: CoreContext,
         source_cs_id: ChangesetId,
     ) -> Result<(), Error> {
-        let (source_repo, target_repo, _) = self.get_source_target_mover();
+        let (source_repo, target_repo, _) = self.get_source_target_mover()?;
         let cs = source_cs_id
             .load(ctx.clone(), source_repo.blobstore())
             .await?;
@@ -928,7 +923,7 @@ where
         cs: BonsaiChangeset,
     ) -> Result<Option<ChangesetId>, Error> {
         let source_cs_id = cs.get_changeset_id();
-        let (source_repo, target_repo, rewrite_paths) = self.get_source_target_mover();
+        let (source_repo, target_repo, rewrite_paths) = self.get_source_target_mover()?;
 
         match rewrite_commit(
             ctx.clone(),
@@ -976,7 +971,7 @@ where
         let source_cs_id = cs.get_changeset_id();
         let cs = cs.into_mut();
         let p = cs.parents[0];
-        let (source_repo, target_repo, rewrite_paths) = self.get_source_target_mover();
+        let (source_repo, target_repo, rewrite_paths) = self.get_source_target_mover()?;
 
         let maybe_parent_sync_outcome = self
             .get_commit_sync_outcome_with_hint(
@@ -1079,7 +1074,7 @@ where
 
         let source_cs_id = cs.get_changeset_id();
         let cs = cs.into_mut();
-        let (_, _, rewrite_paths) = self.get_source_target_mover();
+        let (_, _, rewrite_paths) = self.get_source_target_mover()?;
 
         let parent_outcomes = stream::iter(cs.parents.clone().into_iter().map(|p| {
             self.get_commit_sync_outcome(ctx.clone(), p)
@@ -1208,7 +1203,7 @@ where
         source_cs_id: ChangesetId,
         rewritten: BonsaiChangesetMut,
     ) -> Result<ChangesetId, Error> {
-        let (source_repo, target_repo, _) = self.get_source_target_mover();
+        let (source_repo, target_repo, _) = self.get_source_target_mover()?;
 
         let frozen = rewritten.freeze()?;
         let target_cs_id = frozen.get_changeset_id();
@@ -1268,21 +1263,28 @@ where
         Ok(source_cs)
     }
 
-    fn get_source_target_mover(&self) -> (BlobRepo, BlobRepo, Mover) {
-        match self.repos.clone() {
+    fn get_source_target_mover(&self) -> Result<(BlobRepo, BlobRepo, Mover), Error> {
+        let (source_repo, target_repo, version_name) = match self.repos.clone() {
             CommitSyncRepos::LargeToSmall {
                 large_repo,
                 small_repo,
-                mover,
+                version_name,
                 ..
-            } => (large_repo, small_repo, mover),
+            } => (large_repo, small_repo, version_name),
             CommitSyncRepos::SmallToLarge {
                 small_repo,
                 large_repo,
-                mover,
+                version_name,
                 ..
-            } => (small_repo, large_repo, mover),
-        }
+            } => (small_repo, large_repo, version_name),
+        };
+        let mover = self.commit_sync_data_provider.get_mover(
+            &version_name,
+            source_repo.get_repoid(),
+            target_repo.get_repoid(),
+        )?;
+
+        Ok((source_repo, target_repo, mover))
     }
 
     async fn update_wc_equivalence(
@@ -1361,13 +1363,6 @@ impl CommitSyncRepos {
         match self {
             CommitSyncRepos::LargeToSmall { small_repo, .. } => small_repo,
             CommitSyncRepos::SmallToLarge { large_repo, .. } => large_repo,
-        }
-    }
-
-    pub(crate) fn get_mover(&self) -> &Mover {
-        match self {
-            CommitSyncRepos::LargeToSmall { mover, .. } => mover,
-            CommitSyncRepos::SmallToLarge { mover, .. } => mover,
         }
     }
 
@@ -1542,7 +1537,6 @@ where
     let small_to_large_commit_sync_repos = CommitSyncRepos::SmallToLarge {
         small_repo: small_repo.clone(),
         large_repo: large_repo.clone(),
-        mover: small_to_large_mover.clone(),
         reverse_mover: large_to_small_mover.clone(),
         bookmark_renamer: small_to_large_renamer.clone(),
         reverse_bookmark_renamer: large_to_small_renamer.clone(),
@@ -1552,7 +1546,6 @@ where
     let large_to_small_commit_sync_repos = CommitSyncRepos::LargeToSmall {
         small_repo,
         large_repo,
-        mover: large_to_small_mover,
         reverse_mover: small_to_large_mover.clone(),
         bookmark_renamer: large_to_small_renamer,
         reverse_bookmark_renamer: small_to_large_renamer.clone(),
