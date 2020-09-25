@@ -15,7 +15,6 @@ use http_client::{HttpClient, Stats};
 pub fn http_client(client_id: impl ToString) -> HttpClient {
     let client_id = client_id.to_string();
     let reporter = move |stats: &Stats| {
-        tracing::debug!("{}", &stats);
         bump_counters(&client_id, stats);
     };
     HttpClient::new().with_stats_reporting(reporter)
