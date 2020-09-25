@@ -244,7 +244,7 @@ fn report_result_and_drop_receiver<R: Receiver>(
     if let Some(receiver) = easy.get_mut().take_receiver() {
         receiver.done(res)
     } else {
-        log::error!("Cannot report status because receiver is missing");
+        tracing::error!("Cannot report status because receiver is missing");
         Ok(())
     }
 }

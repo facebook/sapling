@@ -109,22 +109,32 @@ where
         let total = self.num_transfers();
         let mut in_progress = total;
 
+        tracing::debug!("Performing {} transfer(s)", total);
+
         let start = Instant::now();
 
         loop {
-            log::trace!("{}/{} transfers complete", total - in_progress, total);
+            let active_transfers = self.multi.perform()? as usize;
 
-            in_progress = self.multi.perform()? as usize;
+            // Check how many transfers have completed so far.
+            if active_transfers != in_progress {
+                tracing::debug!(
+                    "{}/{} transfer(s) complete",
+                    total - active_transfers,
+                    total
+                );
+                in_progress = active_transfers;
+            }
 
             // Check for messages. A message indicates a transfer completed or failed.
             let mut completed = Vec::new();
             self.multi.messages(|msg| match self.handle_msg(&msg) {
                 Ok(complete) => {
-                    log::trace!("Transfer {} complete", complete.token);
+                    tracing::trace!("Transfer {} complete", complete.token);
                     completed.push(complete);
                 }
                 Err(e) => {
-                    log::error!("Failed to handle message: {}", e);
+                    tracing::error!("Failed to handle message: {}", e);
                 }
             });
 
@@ -133,21 +143,21 @@ where
             for c in completed {
                 let token = c.token;
                 callback(c.into_result())?;
-                log::trace!("Successfully handled transfer: {}", token);
+                tracing::trace!("Successfully handled transfer: {}", token);
             }
 
             // If any tranfers reported progress, notify the user.
             self.progress.report_if_updated();
 
             if in_progress == 0 {
-                log::trace!("All transfers finished successfully");
+                tracing::trace!("All transfers finished successfully");
                 break;
             }
 
-            log::trace!("Waiting for socket activity");
+            tracing::trace!("Waiting for socket activity");
             let active_sockets = self.multi.wait(&mut [], MULTI_WAIT_TIMEOUT)?;
             if active_sockets == 0 {
-                log::trace!("Timed out waiting for activity");
+                tracing::trace!("Timed out waiting for activity");
             }
         }
 
@@ -160,13 +170,17 @@ where
             .unwrap_or(start)
             .duration_since(start);
 
-        Ok(Stats {
+        let stats = Stats {
             downloaded: progress.downloaded,
             uploaded: progress.uploaded,
             requests: self.num_transfers(),
             time: elapsed,
             latency,
-        })
+        };
+
+        tracing::debug!("{}", &stats);
+
+        Ok(stats)
     }
 
     /// Handle a message emitted by the Multi session for any of the
@@ -216,7 +230,7 @@ where
         }
 
         if dropped > 0 {
-            log::debug!("Dropped {} outstanding transfers", dropped);
+            tracing::debug!("Dropped {} outstanding transfers", dropped);
         }
     }
 }
