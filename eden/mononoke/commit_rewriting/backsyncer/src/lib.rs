@@ -34,7 +34,7 @@ use bookmarks::{
 };
 use cloned::cloned;
 use context::CoreContext;
-use cross_repo_sync::{CommitSyncOutcome, CommitSyncer};
+use cross_repo_sync::{CandidateSelectionHint, CommitSyncOutcome, CommitSyncer};
 use futures::{
     compat::Future01CompatExt,
     future::{FutureExt, TryFutureExt},
@@ -149,7 +149,12 @@ where
         let start_instant = Instant::now();
 
         if let Some(to_cs_id) = entry.to_changeset_id {
-            commit_syncer.sync_commit(&ctx, to_cs_id).await?;
+            // Backsyncer is always used in the large-to-small direction,
+            // therefore there can be at most one remapped candidate,
+            // so `CandidateSelectionHint::Only` is a safe choice
+            commit_syncer
+                .sync_commit(&ctx, to_cs_id, CandidateSelectionHint::Only)
+                .await?;
         }
 
         let new_counter = entry.id;

@@ -51,6 +51,8 @@ pub enum PluralCommitSyncOutcome {
 }
 
 /// A hint to the synced commit selection algorithm
+/// See the docstring for `get_plural_commit_sync_outcome`
+/// for why this is needed.
 #[derive(Clone)]
 pub enum CandidateSelectionHint {
     /// Selected candidate should be the only candidate

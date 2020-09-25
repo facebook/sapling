@@ -22,7 +22,7 @@ use bookmarks::{BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, 
 use cached_config::ConfigStore;
 use changeset_info::ChangesetInfo;
 use context::CoreContext;
-use cross_repo_sync::{CommitSyncRepos, CommitSyncer};
+use cross_repo_sync::{CandidateSelectionHint, CommitSyncRepos, CommitSyncer};
 use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
 use filestore::{Alias, FetchKey};
@@ -1088,7 +1088,14 @@ impl RepoContext {
             self.live_commit_sync_config(),
         );
 
-        let maybe_cs_id = commit_syncer.sync_commit(&self.ctx, changeset).await?;
+        // TODO: `Only` should be the default option, but there
+        // needs to be a way to pass the hint from the client
+        // as it is going to be useful for manual resolution
+        let parent_selection_hint = CandidateSelectionHint::Only;
+
+        let maybe_cs_id = commit_syncer
+            .sync_commit(&self.ctx, changeset, parent_selection_hint)
+            .await?;
         Ok(maybe_cs_id.map(|cs_id| ChangesetContext::new(other.clone(), cs_id)))
     }
 

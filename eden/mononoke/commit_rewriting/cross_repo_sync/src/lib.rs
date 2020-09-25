@@ -625,6 +625,7 @@ where
         &self,
         ctx: &CoreContext,
         source_cs_id: ChangesetId,
+        parent_selection_hint: CandidateSelectionHint,
     ) -> Result<Option<ChangesetId>, Error> {
         let unsynced_ancestors =
             find_toposorted_unsynced_ancestors(&ctx, self, source_cs_id).await?;
@@ -654,7 +655,7 @@ where
         }
 
         for ancestor in unsynced_ancestors {
-            self.unsafe_sync_commit(ctx.clone(), ancestor, CandidateSelectionHint::Only)
+            self.unsafe_sync_commit(ctx.clone(), ancestor, parent_selection_hint.clone())
                 .await?;
         }
 
