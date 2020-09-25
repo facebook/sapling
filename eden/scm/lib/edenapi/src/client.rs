@@ -138,7 +138,9 @@ impl Client {
         let mut streams = Vec::with_capacity(n_requests);
 
         while let Some(res) = responses.try_next().await? {
-            meta.push(ResponseMeta::from(&res));
+            let response_meta = ResponseMeta::from(&res);
+            tracing::debug!("{:?}", &response_meta);
+            meta.push(response_meta);
 
             let entries = res.into_cbor_stream::<T>().err_into().boxed();
             streams.push(entries);
@@ -181,7 +183,9 @@ impl Client {
         let mut streams = Vec::with_capacity(n_requests);
 
         while let Some(res) = responses.try_next().await? {
-            meta.push(ResponseMeta::from(&res));
+            let response_meta = ResponseMeta::from(&res);
+            tracing::debug!("{:?}", &response_meta);
+            meta.push(response_meta);
 
             let entries = res
                 .into_cbor_stream::<T>()
