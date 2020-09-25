@@ -151,7 +151,6 @@ pub async fn init_small_large_repo(
     let repos = CommitSyncRepos::SmallToLarge {
         small_repo: smallrepo.clone(),
         large_repo: megarepo.clone(),
-        reverse_mover: Arc::new(reverse_prefix_mover),
         bookmark_renamer: Arc::new(identity_renamer),
         reverse_bookmark_renamer: Arc::new(identity_renamer),
         version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
@@ -175,7 +174,6 @@ pub async fn init_small_large_repo(
     let repos = CommitSyncRepos::LargeToSmall {
         small_repo: smallrepo.clone(),
         large_repo: megarepo.clone(),
-        reverse_mover: Arc::new(prefix_mover),
         bookmark_renamer: Arc::new(identity_renamer),
         reverse_bookmark_renamer: Arc::new(identity_renamer),
         version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),

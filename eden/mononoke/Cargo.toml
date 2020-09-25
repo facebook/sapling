@@ -124,7 +124,6 @@ mercurial_types = { path = "mercurial/types" }
 metaconfig_types = { path = "metaconfig/types" }
 mononoke_hg_sync_job_helper_lib = { path = "mononoke_hg_sync_job" }
 mononoke_types = { path = "mononoke_types" }
-movers = { path = "commit_rewriting/movers" }
 mutable_counters = { path = "mutable_counters" }
 prefixblob = { path = "blobstore/prefixblob" }
 redactedblobstore = { path = "blobstore/redactedblobstore" }

@@ -56,7 +56,7 @@ pub async fn verify_working_copy<M: SyncedCommitMapping + Clone + 'static>(
         Source(source_hash),
         Target(target_hash),
         &commit_syncer.get_mover()?,
-        commit_syncer.get_reverse_mover(),
+        &commit_syncer.get_reverse_mover()?,
     )
     .await
 }
@@ -847,7 +847,6 @@ mod test {
             CommitSyncDirection::LargeToSmall => CommitSyncRepos::LargeToSmall {
                 small_repo: small_repo.clone(),
                 large_repo: large_repo.clone(),
-                reverse_mover: Arc::new(identity_mover),
                 bookmark_renamer: bookmark_renamer.clone(),
                 reverse_bookmark_renamer: reverse_bookmark_renamer.clone(),
                 version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
@@ -855,7 +854,6 @@ mod test {
             CommitSyncDirection::SmallToLarge => CommitSyncRepos::SmallToLarge {
                 small_repo: small_repo.clone(),
                 large_repo: large_repo.clone(),
-                reverse_mover: Arc::new(identity_mover),
                 bookmark_renamer: bookmark_renamer.clone(),
                 reverse_bookmark_renamer: reverse_bookmark_renamer.clone(),
                 version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),

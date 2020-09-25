@@ -24,7 +24,6 @@ use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::{CommitSyncConfig, RepoConfig};
 use mononoke_types::RepositoryId;
-use movers::get_small_to_large_mover;
 use slog::{info, warn, Logger};
 use std::sync::Arc;
 use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
@@ -590,12 +589,10 @@ fn get_large_to_small_commit_sync_repos(
         get_large_to_small_renamer(&commit_sync_config, small_repo.get_repoid())?;
     let reverse_bookmark_renamer =
         get_small_to_large_renamer(&commit_sync_config, small_repo.get_repoid())?;
-    let reverse_mover = get_small_to_large_mover(&commit_sync_config, small_repo.get_repoid())?;
 
     Ok(CommitSyncRepos::LargeToSmall {
         large_repo,
         small_repo,
-        reverse_mover,
         bookmark_renamer,
         reverse_bookmark_renamer,
         version_name: commit_sync_config.version_name.clone(),
@@ -615,16 +612,12 @@ mod test {
         CommitSyncConfig, CommitSyncConfigVersion, CommitSyncDirection,
         DefaultSmallToLargeCommitSyncPathAction, SmallRepoCommitSyncConfig,
     };
-    use mononoke_types::{MPath, RepositoryId};
+    use mononoke_types::RepositoryId;
     use revset::AncestorsNodeStream;
     use sql_construct::SqlConstruct;
     use std::{collections::HashSet, sync::Arc};
     // To support async tests
     use synced_commit_mapping::SyncedCommitMappingEntry;
-
-    fn identity_mover(v: &MPath) -> Result<Option<MPath>, Error> {
-        Ok(Some(v.clone()))
-    }
 
     fn noop_book_renamer(bookmark_name: &BookmarkName) -> Option<BookmarkName> {
         Some(bookmark_name.clone())
@@ -798,7 +791,6 @@ mod test {
             CommitSyncDirection::LargeToSmall => CommitSyncRepos::LargeToSmall {
                 small_repo: small_repo.clone(),
                 large_repo: large_repo.clone(),
-                reverse_mover: Arc::new(identity_mover),
                 bookmark_renamer: Arc::new(noop_book_renamer),
                 reverse_bookmark_renamer: Arc::new(noop_book_renamer),
                 version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
@@ -806,7 +798,6 @@ mod test {
             CommitSyncDirection::SmallToLarge => CommitSyncRepos::SmallToLarge {
                 small_repo: small_repo.clone(),
                 large_repo: large_repo.clone(),
-                reverse_mover: Arc::new(identity_mover),
                 bookmark_renamer: Arc::new(noop_book_renamer),
                 reverse_bookmark_renamer: Arc::new(noop_book_renamer),
                 version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
