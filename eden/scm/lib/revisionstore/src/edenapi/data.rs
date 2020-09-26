@@ -10,6 +10,8 @@ use std::sync::Arc;
 use anyhow::Result;
 use futures::prelude::*;
 
+use async_runtime::block_on_future;
+
 use crate::{
     datastore::{HgIdDataStore, HgIdMutableDeltaStore, Metadata, RemoteDataStore, StoreResult},
     localstore::LocalStore,
@@ -51,8 +53,7 @@ impl RemoteDataStore for EdenApiDataStore<File> {
             self.store.get_missing(keys)
         };
 
-        let mut rt = self.remote.runtime.lock();
-        rt.block_on(fetch)
+        block_on_future(fetch)
     }
 
     fn upload(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
@@ -75,8 +76,7 @@ impl RemoteDataStore for EdenApiDataStore<Tree> {
             self.store.get_missing(keys)
         };
 
-        let mut rt = self.remote.runtime.lock();
-        rt.block_on(fetch)
+        block_on_future(fetch)
     }
 
     fn upload(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
@@ -152,8 +152,8 @@ mod tests {
         let trees = HashMap::new();
 
         let client = FakeEdenApi::new().files(files).trees(trees).into_arc();
-        let remote_files = EdenApiRemoteStore::<File>::new("repo", client.clone())?;
-        let remote_trees = EdenApiRemoteStore::<Tree>::new("repo", client.clone())?;
+        let remote_files = EdenApiRemoteStore::<File>::new("repo", client.clone());
+        let remote_trees = EdenApiRemoteStore::<Tree>::new("repo", client);
 
         // Set up local mutable store to write received data.
         let tmp = TempDir::new()?;
@@ -217,8 +217,8 @@ mod tests {
         let trees = hashmap! { k.clone() => d.data.clone() };
 
         let client = FakeEdenApi::new().files(files).trees(trees).into_arc();
-        let remote_files = EdenApiRemoteStore::<File>::new("repo", client.clone())?;
-        let remote_trees = EdenApiRemoteStore::<Tree>::new("repo", client.clone())?;
+        let remote_files = EdenApiRemoteStore::<File>::new("repo", client.clone());
+        let remote_trees = EdenApiRemoteStore::<Tree>::new("repo", client);
 
         // Set up local mutable store to write received data.
         let tmp = TempDir::new()?;
@@ -277,7 +277,7 @@ mod tests {
     fn test_missing() -> Result<()> {
         // Set up empty EdenApi remote store.
         let client = FakeEdenApi::new().into_arc();
-        let remote = EdenApiRemoteStore::<File>::new("repo", client)?;
+        let remote = EdenApiRemoteStore::<File>::new("repo", client);
 
         // Set up local mutable store.
         let tmp = TempDir::new()?;

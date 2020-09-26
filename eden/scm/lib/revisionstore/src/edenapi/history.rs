@@ -10,6 +10,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use futures::prelude::*;
 
+use async_runtime::block_on_future;
 use types::{Key, NodeInfo};
 
 use crate::{
@@ -57,8 +58,7 @@ impl RemoteHistoryStore for EdenApiHistoryStore {
             Ok(())
         };
 
-        let mut rt = self.remote.runtime.lock();
-        rt.block_on(fetch)
+        block_on_future(fetch)
     }
 }
 
@@ -107,7 +107,7 @@ mod tests {
         let history = hashmap! { k.clone() => n.clone() };
 
         let client = FakeEdenApi::new().history(history).into_arc();
-        let remote = EdenApiRemoteStore::<File>::new("repo", client.clone())?;
+        let remote = EdenApiRemoteStore::<File>::new("repo", client);
 
         // Set up local mutable store to write received data.
         let tmp = TempDir::new()?;
@@ -131,7 +131,7 @@ mod tests {
     #[should_panic]
     fn test_tree_history() {
         let client = FakeEdenApi::new().into_arc();
-        let remote = EdenApiRemoteStore::<Tree>::new("repo", client.clone()).unwrap();
+        let remote = EdenApiRemoteStore::<Tree>::new("repo", client);
 
         // Set up local mutable store to write received data.
         let tmp = TempDir::new().unwrap();

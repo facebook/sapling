@@ -8,10 +8,7 @@
 use std::marker::PhantomData;
 use std::sync::Arc;
 
-use anyhow::Result;
 use async_trait::async_trait;
-use parking_lot::Mutex;
-use tokio::runtime::Runtime;
 
 use edenapi::{EdenApi, EdenApiError, Fetch, ProgressCallback};
 use edenapi_types::{FileEntry, TreeEntry};
@@ -45,7 +42,6 @@ pub type EdenApiTreeStore = EdenApiRemoteStore<Tree>;
 pub struct EdenApiRemoteStore<T> {
     client: Arc<dyn EdenApi>,
     repo: String,
-    runtime: Mutex<Runtime>,
     _phantom: PhantomData<T>,
 }
 
@@ -70,13 +66,12 @@ impl<T: EdenApiStoreKind> EdenApiRemoteStore<T> {
     /// ```rust,ignore
     /// let store = EdenApiStore::<File>::new(repo, edenapi);
     /// ```
-    pub fn new(repo: impl ToString, client: Arc<dyn EdenApi>) -> Result<Arc<Self>> {
-        Ok(Arc::new(Self {
+    pub fn new(repo: impl ToString, client: Arc<dyn EdenApi>) -> Arc<Self> {
+        Arc::new(Self {
             client,
             repo: repo.to_string(),
-            runtime: Mutex::new(Runtime::new()?),
             _phantom: PhantomData,
-        }))
+        })
     }
 }
 

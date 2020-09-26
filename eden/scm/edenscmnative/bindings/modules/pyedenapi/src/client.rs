@@ -110,13 +110,13 @@ py_class!(pub class client |py| {
 
     def filestore(&self, repo: String) -> PyResult<edenapifilestore> {
         let edenapi = self.extract_inner(py);
-        let store = EdenApiFileStore::new(repo, edenapi).map_pyerr(py)?;
+        let store = EdenApiFileStore::new(repo, edenapi);
         edenapifilestore::new(py, store)
     }
 
     def treestore(&self, repo: String) -> PyResult<edenapitreestore> {
         let edenapi = self.extract_inner(py);
-        let store = EdenApiTreeStore::new(repo, edenapi).map_pyerr(py)?;
+        let store = EdenApiTreeStore::new(repo, edenapi);
         edenapitreestore::new(py, store)
     }
 });
