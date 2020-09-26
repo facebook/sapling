@@ -40,7 +40,7 @@ def _loadfile(filename):
 
 
 def loadforpath(path):
-    # location where `arc install-certificate` writes .arcrc
+    # location where `jf authenticate` writes .arcrc
     if pycompat.iswindows:
         envvar = "APPDATA"
     else:
