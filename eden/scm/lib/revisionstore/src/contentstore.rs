@@ -275,7 +275,7 @@ impl<'a> ContentStoreBuilder<'a> {
             .config
             .get_or("packs", "maxdatapendingbytes", || {
                 // Default to 4GB
-                ByteCount::from(4 * (1024 ^ 3))
+                ByteCount::from(4 * (1024 * 1024 * 1024))
             })?
             .value();
         let max_bytes = self
