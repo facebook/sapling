@@ -343,7 +343,7 @@ Merge with preserved ancestors
   * using repo "with_merge_mon" repoid RepositoryId(1) (glob)
   * using repo "meg_mon" repoid RepositoryId(0) (glob)
   * changeset resolved as: ChangesetId(Blake2(a530e2a1eb7ed81c57328f1c0b8fb20656190c5c272d94f7bf768a689c83670d)) (glob)
-  * target repo cs id: 3f71f093fcfbebcc47c981c847cd80c7d0bf063c5022aba53fab95244e4c4f1c (glob)
+  * target repo cs id: 3f71f093fcfbebcc47c981c847cd80c7d0bf063c5022aba53fab95244e4c4f1c, mapping version: TEST_VERSION_NAME (glob)
   * fetching filenode ids for * in * (glob)
   * fetching filenode ids for * in * (glob)
   * 8 moved source entries, 8 target entries (glob)

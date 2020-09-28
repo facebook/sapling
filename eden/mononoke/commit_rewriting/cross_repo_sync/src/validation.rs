@@ -9,7 +9,7 @@ use anyhow::{format_err, Error};
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use futures_old::{stream, Future, Stream};
 
-use super::{CommitSyncOutcome, CommitSyncer};
+use super::{CommitSyncConfigVersion, CommitSyncOutcome, CommitSyncer};
 use crate::types::{Source, Target};
 
 use blobrepo::BlobRepo;
@@ -46,8 +46,16 @@ pub async fn verify_working_copy<M: SyncedCommitMapping + Clone + 'static>(
     let source_repo = commit_syncer.get_source_repo();
     let target_repo = commit_syncer.get_target_repo();
 
-    let target_hash = get_synced_commit(ctx.clone(), &commit_syncer, source_hash).await?;
-    info!(ctx.logger(), "target repo cs id: {}", target_hash);
+    let (target_hash, maybe_version) =
+        get_synced_commit(ctx.clone(), &commit_syncer, source_hash).await?;
+    let version = match maybe_version {
+        Some(version) => version,
+        None => commit_syncer.get_current_version(&ctx)?,
+    };
+    info!(
+        ctx.logger(),
+        "target repo cs id: {}, mapping version: {}", target_hash, version
+    );
 
     verify_working_copy_inner(
         &ctx,
@@ -55,8 +63,8 @@ pub async fn verify_working_copy<M: SyncedCommitMapping + Clone + 'static>(
         Target::ref_cast(target_repo),
         Source(source_hash),
         Target(target_hash),
-        &commit_syncer.get_current_mover_DEPRECATED(&ctx)?,
-        &commit_syncer.get_current_reverse_mover_DEPRECATED(&ctx)?,
+        &commit_syncer.get_mover_by_version(&version)?,
+        &commit_syncer.get_reverse_mover_by_version(&version)?,
     )
     .await
 }
@@ -543,7 +551,7 @@ async fn get_synced_commit<M: SyncedCommitMapping + Clone + 'static>(
     ctx: CoreContext,
     commit_syncer: &CommitSyncer<M>,
     hash: ChangesetId,
-) -> Result<ChangesetId, Error> {
+) -> Result<(ChangesetId, Option<CommitSyncConfigVersion>), Error> {
     let maybe_sync_outcome = commit_syncer
         .get_commit_sync_outcome(ctx.clone(), hash)
         .await?;
@@ -558,8 +566,11 @@ async fn get_synced_commit<M: SyncedCommitMapping + Clone + 'static>(
         NotSyncCandidate => {
             return Err(format_err!("{} does not remap in small repo", hash).into());
         }
-        RewrittenAs(cs_id, _) | EquivalentWorkingCopyAncestor(cs_id, _) => Ok(cs_id),
-        Preserved => Ok(hash),
+        RewrittenAs(cs_id, maybe_mapping_version)
+        | EquivalentWorkingCopyAncestor(cs_id, maybe_mapping_version) => {
+            Ok((cs_id, maybe_mapping_version))
+        }
+        Preserved => Ok((hash, None)),
     }
 }
 

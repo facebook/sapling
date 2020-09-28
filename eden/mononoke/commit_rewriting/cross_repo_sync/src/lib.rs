@@ -516,6 +516,27 @@ where
         &self.mapping
     }
 
+    pub fn get_mover_by_version(&self, version: &CommitSyncConfigVersion) -> Result<Mover, Error> {
+        let (source_repo, target_repo) = self.get_source_target();
+        self.commit_sync_data_provider.get_mover(
+            version,
+            source_repo.get_repoid(),
+            target_repo.get_repoid(),
+        )
+    }
+
+    pub fn get_reverse_mover_by_version(
+        &self,
+        version: &CommitSyncConfigVersion,
+    ) -> Result<Mover, Error> {
+        let (source_repo, target_repo) = self.get_source_target();
+        self.commit_sync_data_provider.get_reverse_mover(
+            version,
+            source_repo.get_repoid(),
+            target_repo.get_repoid(),
+        )
+    }
+
     // TODO(stash): remove callers of this function
     #[allow(non_snake_case)]
     pub fn get_current_mover_DEPRECATED(&self, ctx: &CoreContext) -> Result<Mover, Error> {
