@@ -17,7 +17,7 @@ setup configuration
 
   $ register_hook limit_filesize <(
   >   cat <<CONF 
-  > bypass_commit_string="@allow_large_files"
+  > bypass_commit_string="@allow-large-files"
   > config_ints={filesizelimit=10}
   > CONF
   > )
@@ -107,9 +107,9 @@ Send large file
   [255]
 
 Bypass large file hook
-  $ hg amend -m '@allow_large_files'
+  $ hg amend -m '@allow-large-files'
   $ hgmn push -r . --to master_bookmark
-  pushing rev 51fea0e7527d to destination ssh://user@dummy/repo bookmark master_bookmark
+  pushing rev ba007efeea59 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
   adding changesets
   adding manifests
