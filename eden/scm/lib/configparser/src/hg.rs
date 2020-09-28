@@ -338,8 +338,7 @@ impl ConfigSetHgExt for ConfigSet {
                 // We need to know the repo name, but that's stored in the repository configs at
                 // the moment. In the long term we need to move that, but for now let's load the
                 // repo config ahead of time to read the name.
-                let mut repo_hgrc_path = repo_path.join(".hg");
-                repo_hgrc_path.push("hgrc");
+                let repo_hgrc_path = repo_path.join("hgrc");
                 if !temp_config.load_user(opts.clone()).is_empty() {
                     bail!("unable to read user config to get user name");
                 }
