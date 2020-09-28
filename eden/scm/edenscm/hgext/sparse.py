@@ -1927,6 +1927,10 @@ def _listprofiles(ui, repo, *pats, **opts):
     By default, `--without-field hidden` is implied unless you use the --verbose
     switch to include hidden profiles.
 
+    If `--rev` is given, show profiles available at that revision. The working copy
+    sparse configuration is ignored and no active profile information is
+    made available (all profiles are marked as 'inactive').
+
     """
     _checksparse(repo)
 
