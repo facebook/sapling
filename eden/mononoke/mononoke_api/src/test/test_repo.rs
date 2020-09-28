@@ -18,7 +18,7 @@ use chrono::{FixedOffset, TimeZone};
 use fbinit::FacebookInit;
 use fixtures::{branch_uneven, linear, many_files_dirs};
 use futures::stream::TryStreamExt;
-use maplit::btreeset;
+use maplit::{btreeset, hashmap};
 
 use crate::{
     BookmarkFreshness, ChangesetDiffItem, ChangesetId, ChangesetIdPrefix, ChangesetPathDiffContext,
@@ -26,6 +26,7 @@ use crate::{
     FileId, FileMetadata, FileType, HgChangesetId, HgChangesetIdPrefix, Mononoke, MononokePath,
     TreeEntry, TreeId,
 };
+use cross_repo_sync::{update_mapping_with_version, CommitSyncRepos, CommitSyncer};
 use cross_repo_sync_test_utils::init_small_large_repo;
 use live_commit_sync_config::TestLiveCommitSyncConfigSource;
 use metaconfig_types::{CommitSyncConfigVersion, DefaultSmallToLargeCommitSyncPathAction};
@@ -728,6 +729,7 @@ async fn xrepo_commit_lookup_config_changing_live(fb: FacebookInit) -> Result<()
         .repo(ctx.clone(), "largerepo")
         .await?
         .expect("repo exists");
+    let small_master_cs_id = resolve_cs_id(&ctx, smallrepo.blob_repo(), "master").await?;
     let large_master_cs_id = resolve_cs_id(&ctx, largerepo.blob_repo(), "master").await?;
 
     // Before config change
@@ -762,14 +764,44 @@ async fn xrepo_commit_lookup_config_changing_live(fb: FacebookInit) -> Result<()
         .unwrap()
         .default_action =
         DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(MPath::new("prefix2").unwrap());
-    cfg.version_name = CommitSyncConfigVersion("TEST_VERSION_NAME_2".to_string());
+    let new_version = CommitSyncConfigVersion("TEST_VERSION_NAME_2".to_string());
+    cfg.version_name = new_version.clone();
     cfg_src.add_config(cfg.clone());
     cfg_src.remove_current_version(&CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()));
-    cfg_src.add_current_version(cfg.version_name);
+    cfg_src.add_current_version(cfg.version_name.clone());
+
+    let change_mapping_small =
+        CreateCommitContext::new(&ctx, smallrepo.blob_repo(), vec![small_master_cs_id])
+            .commit()
+            .await?;
+    let change_mapping_large =
+        CreateCommitContext::new(&ctx, largerepo.blob_repo(), vec![large_master_cs_id])
+            .commit()
+            .await?;
+
+    let commit_sync_repos = CommitSyncRepos::new(
+        largerepo.blob_repo().clone(),
+        smallrepo.blob_repo().clone(),
+        &cfg,
+    )?;
+
+    let commit_syncer = CommitSyncer::new(
+        largerepo.synced_commit_mapping().clone(),
+        commit_sync_repos,
+        largerepo.live_commit_sync_config(),
+    );
+
+    update_mapping_with_version(
+        ctx.clone(),
+        hashmap! {change_mapping_large => change_mapping_small},
+        &commit_syncer,
+        &new_version,
+    )
+    .await?;
 
     // After config change
     let second_large =
-        CreateCommitContext::new(&ctx, largerepo.blob_repo(), vec![large_master_cs_id])
+        CreateCommitContext::new(&ctx, largerepo.blob_repo(), vec![change_mapping_large])
             .add_file("prefix2/remapped_after", "content1")
             .add_file("not_remapped", "content2")
             .commit()

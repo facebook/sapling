@@ -9,7 +9,7 @@
 
 #![deny(warnings)]
 
-use anyhow::{bail, Error};
+use anyhow::{anyhow, bail, Error};
 use ascii::AsciiString;
 use bytes::Bytes;
 use fbinit::FacebookInit;
@@ -23,11 +23,18 @@ use blobrepo_hg::BlobRepoHg;
 use blobstore::{Loadable, Storable};
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use context::CoreContext;
-use cross_repo_sync::{CommitSyncDataProvider, SyncData};
+use cross_repo_sync::{
+    update_mapping_with_version, validation::verify_working_copy, CommitSyncDataProvider,
+    CommitSyncOutcome, SyncData,
+};
 use cross_repo_sync_test_utils::rebase_root_on_master;
 use fixtures::{linear, many_files_dirs};
-use futures::compat::Future01CompatExt;
-use live_commit_sync_config::TestLiveCommitSyncConfig;
+use futures::{
+    compat::{Future01CompatExt, Stream01CompatExt},
+    TryStreamExt,
+};
+use live_commit_sync_config::{TestLiveCommitSyncConfig, TestLiveCommitSyncConfigSource};
+use manifest::ManifestOps;
 use maplit::{btreemap, hashmap};
 use mercurial_types::HgChangesetId;
 use metaconfig_types::{
@@ -45,6 +52,7 @@ use sql_ext::SqlConnections;
 use synced_commit_mapping::{
     SqlSyncedCommitMapping, SyncedCommitMapping, SyncedCommitMappingEntry,
 };
+use tests_utils::CreateCommitContext;
 
 use cross_repo_sync::{
     get_plural_commit_sync_outcome,
@@ -277,12 +285,18 @@ fn create_small_to_large_commit_syncer(
     Ok(CommitSyncer::new(mapping, repos, live_commit_sync_config))
 }
 
-fn create_large_to_small_commit_syncer(
+fn create_large_to_small_commit_syncer_and_config_source(
     small_repo: BlobRepo,
     large_repo: BlobRepo,
     prefix: &str,
     mapping: SqlSyncedCommitMapping,
-) -> Result<CommitSyncer<SqlSyncedCommitMapping>, Error> {
+) -> Result<
+    (
+        CommitSyncer<SqlSyncedCommitMapping>,
+        TestLiveCommitSyncConfigSource,
+    ),
+    Error,
+> {
     let small_repo_id = small_repo.get_repoid();
     let large_repo_id = large_repo.get_repoid();
 
@@ -294,7 +308,22 @@ fn create_large_to_small_commit_syncer(
     source.add_current_version(commit_sync_config.version_name);
 
     let live_commit_sync_config = Arc::new(sync_config);
-    Ok(CommitSyncer::new(mapping, repos, live_commit_sync_config))
+    Ok((
+        CommitSyncer::new(mapping, repos, live_commit_sync_config),
+        source,
+    ))
+}
+
+fn create_large_to_small_commit_syncer(
+    small_repo: BlobRepo,
+    large_repo: BlobRepo,
+    prefix: &str,
+    mapping: SqlSyncedCommitMapping,
+) -> Result<CommitSyncer<SqlSyncedCommitMapping>, Error> {
+    let (syncer, _) = create_large_to_small_commit_syncer_and_config_source(
+        small_repo, large_repo, prefix, mapping,
+    )?;
+    Ok(syncer)
 }
 
 #[fbinit::compat_test]
@@ -1332,5 +1361,220 @@ async fn test_sync_real_pushrebase_has_multiple_mappings(fb: FacebookInit) -> Re
         .await
         .expect("sync should have succeeded");
 
+    Ok(())
+}
+
+#[fbinit::compat_test]
+async fn test_sync_with_mapping_change(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let (small_repo, megarepo, mapping) = prepare_repos_and_mapping()?;
+    let (large_to_small_syncer, config_source) =
+        create_large_to_small_commit_syncer_and_config_source(
+            small_repo.clone(),
+            megarepo.clone(),
+            "prefix",
+            mapping,
+        )?;
+
+    let root_cs_id = CreateCommitContext::new_root(&ctx, &megarepo)
+        .add_file("tools/somefile", "somefile")
+        .add_file("prefix/tools/1.txt", "1")
+        .add_file("prefix/dir/file", "2")
+        .commit()
+        .await?;
+
+    let maybe_small_root_cs_id = large_to_small_syncer
+        .unsafe_always_rewrite_sync_commit(ctx.clone(), root_cs_id, None)
+        .await?;
+    assert!(maybe_small_root_cs_id.is_some());
+    let small_root_cs_id = maybe_small_root_cs_id.unwrap();
+
+    verify_working_copy(ctx.clone(), large_to_small_syncer.clone(), root_cs_id).await?;
+    assert_working_copy(
+        &ctx,
+        &small_repo,
+        small_root_cs_id,
+        vec!["tools/1.txt", "dir/file"],
+    )
+    .await?;
+
+    // Change the mapping - "tools" now doesn't change it's location after remapping!
+
+    let small_repo_id = small_repo.get_repoid();
+    let large_repo_id = megarepo.get_repoid();
+    let small_repo_config = SmallRepoCommitSyncConfig {
+        default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(MPath::new(
+            "prefix",
+        )?),
+        map: hashmap! {
+            MPath::new("tools")? => MPath::new("tools")?,
+        },
+        bookmark_prefix: AsciiString::new(),
+        direction: CommitSyncDirection::LargeToSmall,
+    };
+
+    let old_version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
+    let new_version = CommitSyncConfigVersion("TEST_VERSION_NAME2".to_string());
+    let commit_sync_config = CommitSyncConfig {
+        large_repo_id,
+        common_pushrebase_bookmarks: vec![],
+        small_repos: hashmap! {
+            small_repo_id => small_repo_config,
+        },
+        version_name: new_version.clone(),
+    };
+    config_source.remove_current_version(&old_version);
+    config_source.add_current_version(new_version.clone());
+    config_source.add_config(commit_sync_config);
+
+    // Create manual commit to change mapping
+    let new_mapping_large_cs_id = CreateCommitContext::new(&ctx, &megarepo, vec![root_cs_id])
+        .delete_file("prefix/tools/1.txt")
+        .add_file("tools/1.txt", "1")
+        .commit()
+        .await?;
+
+    let new_mapping_small_cs_id =
+        CreateCommitContext::new(&ctx, &small_repo, vec![small_root_cs_id])
+            .add_file("tools/somefile", "somefile")
+            .commit()
+            .await?;
+
+    update_mapping_with_version(
+        ctx.clone(),
+        hashmap! {new_mapping_large_cs_id => new_mapping_small_cs_id},
+        &large_to_small_syncer,
+        &new_version,
+    )
+    .await?;
+
+    verify_working_copy(
+        ctx.clone(),
+        large_to_small_syncer.clone(),
+        new_mapping_large_cs_id,
+    )
+    .await?;
+    assert_working_copy(
+        &ctx,
+        &small_repo,
+        new_mapping_small_cs_id,
+        vec!["tools/1.txt", "tools/somefile", "dir/file"],
+    )
+    .await?;
+
+    // Create a new commit on top of commit with new mapping.
+    let new_mapping_cs_id =
+        CreateCommitContext::new(&ctx, &megarepo, vec![new_mapping_large_cs_id])
+            .add_file("tools/newtool", "1")
+            .delete_file("tools/1.txt")
+            .add_file("tools/somefile", "somefile1")
+            .add_file("prefix/dir/file", "3")
+            .add_file("prefix/dir/newfile", "3")
+            .commit()
+            .await?;
+
+    let synced = large_to_small_syncer
+        .sync_commit(&ctx, new_mapping_cs_id, CandidateSelectionHint::Only)
+        .await?;
+    assert!(synced.is_some());
+    let new_mapping_small_cs_id = synced.unwrap();
+
+    verify_working_copy(
+        ctx.clone(),
+        large_to_small_syncer.clone(),
+        new_mapping_cs_id,
+    )
+    .await?;
+    assert_working_copy(
+        &ctx,
+        &small_repo,
+        new_mapping_small_cs_id,
+        vec!["tools/somefile", "tools/newtool", "dir/file", "dir/newfile"],
+    )
+    .await?;
+
+    let outcome = large_to_small_syncer
+        .get_commit_sync_outcome(ctx.clone(), new_mapping_cs_id)
+        .await?;
+
+    match outcome {
+        Some(CommitSyncOutcome::RewrittenAs(_, version)) => {
+            assert_eq!(version, Some(new_version));
+        }
+        _ => {
+            return Err(anyhow!("unexpected outcome: {:?}", outcome));
+        }
+    }
+
+    // Create a new commit on top of commit with old mapping.
+
+    let old_mapping_cs_id = CreateCommitContext::new(&ctx, &megarepo, vec![root_cs_id])
+        .add_file("tools/3.txt", "2")
+        .add_file("prefix/file", "2")
+        .commit()
+        .await?;
+    let synced = large_to_small_syncer
+        .sync_commit(&ctx, old_mapping_cs_id, CandidateSelectionHint::Only)
+        .await?;
+    assert!(synced.is_some());
+    let old_mapping_small_cs_id = synced.unwrap();
+
+    verify_working_copy(
+        ctx.clone(),
+        large_to_small_syncer.clone(),
+        old_mapping_cs_id,
+    )
+    .await?;
+    assert_working_copy(
+        &ctx,
+        &small_repo,
+        old_mapping_small_cs_id,
+        vec!["dir/file", "file", "tools/1.txt"],
+    )
+    .await?;
+
+
+    let outcome = large_to_small_syncer
+        .get_commit_sync_outcome(ctx.clone(), old_mapping_cs_id)
+        .await?;
+
+    match outcome {
+        Some(CommitSyncOutcome::RewrittenAs(_, version)) => {
+            assert_eq!(version, Some(old_version));
+        }
+        _ => {
+            return Err(anyhow!("unexpected outcome: {:?}", outcome));
+        }
+    }
+    Ok(())
+}
+
+async fn assert_working_copy(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    cs_id: ChangesetId,
+    expected_files: Vec<&str>,
+) -> Result<(), Error> {
+    let hg_cs_id = repo
+        .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
+        .compat()
+        .await?;
+
+    let hg_cs = hg_cs_id.load(ctx.clone(), repo.blobstore()).await?;
+    let mf_id = hg_cs.manifestid();
+    let mut actual_paths = mf_id
+        .list_leaf_entries(ctx.clone(), repo.get_blobstore())
+        .compat()
+        .map_ok(|(path, _)| path)
+        .try_collect::<Vec<_>>()
+        .await?;
+    actual_paths.sort();
+
+    let expected_paths: Result<Vec<_>, Error> =
+        expected_files.into_iter().map(MPath::new).collect();
+    let mut expected_paths = expected_paths?;
+    expected_paths.sort();
+
+    assert_eq!(actual_paths, expected_paths);
     Ok(())
 }

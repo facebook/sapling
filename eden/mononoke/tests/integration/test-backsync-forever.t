@@ -58,11 +58,22 @@ Before config change
 
 Config change
   $ update_commit_sync_map_first_option
-
 -- let LiveCommitSyncConfig pick up the changes
   $ sleep 2
 
-Backsync after the change
+  $ cd "$TESTTMP"/large-hg-client
+  $ REPONAME=large-mon hgmn up master_bookmark -q
+  $ echo 1 >> 1 && hg add 1 && hg ci -m 'change of mapping'
+  $ hg revert -r .^ 1
+  $ hg commit --amend
+  $ REPONAME=large-mon hgmn push -r . --to master_bookmark -q
+
+-- wait a second to give backsyncer some time to catch up
+  $ sleep 3
+  $ LARGE_MASTER_BONSAI=$(get_bonsai_bookmark $REPOIDLARGE master_bookmark)
+  $ SMALL_MASTER_BONSAI=$(get_bonsai_bookmark $REPOIDSMALL master_bookmark)
+  $ update_mapping_version "$REPOIDSMALL" "$SMALL_MASTER_BONSAI" "$REPOIDLARGE" "$LARGE_MASTER_BONSAI" "new_version"
+
 -- push to a large repo, using new path mapping
   $ cd "$TESTTMP"/large-hg-client
   $ REPONAME=large-mon hgmn up -q master_bookmark
@@ -72,7 +83,7 @@ Backsync after the change
   $ hg ci -Aqm "after config change"
   $ REPONAME=large-mon hgmn push -r . --to master_bookmark -q
   $ log -r master_bookmark
-  o  after config change [public;rev=6;*] default/master_bookmark (glob)
+  o  after config change [public;rev=*;*] default/master_bookmark (glob)
   |
   ~
 
@@ -84,7 +95,7 @@ Backsync after the change
   $ REPONAME=small-mon hgmn pull -q
   $ REPONAME=small-mon hgmn up -q master_bookmark
   $ log -r master_bookmark
-  @  after config change [public;rev=3;*] default/master_bookmark (glob)
+  @  after config change [public;rev=*;*] default/master_bookmark (glob)
   |
   ~
   $ hg log -r master_bookmark -T "{files % '{file}\n'}"

@@ -438,9 +438,20 @@ impl TestLiveCommitSyncConfigSource {
         repo_id: RepositoryId,
         version_name: &CommitSyncConfigVersion,
     ) -> Result<CommitSyncConfig> {
-        self.get_commit_sync_config_for_repo(repo_id).map_err(|_| {
-            ErrorKind::UnknownCommitSyncConfigVersion(repo_id, version_name.0.clone()).into()
-        })
+        let config = self
+            .0
+            .version_to_config
+            .lock()
+            .unwrap()
+            .get(version_name)
+            .cloned()
+            .ok_or_else(|| anyhow!("{} not found", version_name))?;
+
+        if Self::related_to_repo(&config, repo_id) {
+            Ok(config)
+        } else {
+            Err(anyhow!("{} not found", version_name))
+        }
     }
 
     fn related_to_repo(commit_sync_config: &CommitSyncConfig, repo_id: RepositoryId) -> bool {

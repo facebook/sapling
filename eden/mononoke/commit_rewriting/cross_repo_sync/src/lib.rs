@@ -991,7 +991,7 @@ where
         let source_cs_id = cs.get_changeset_id();
         let cs = cs.into_mut();
         let p = cs.parents[0];
-        let (source_repo, target_repo, rewrite_paths) = self.get_source_target_mover(&ctx)?;
+        let (source_repo, target_repo) = self.get_source_target();
 
         let maybe_parent_sync_outcome = self
             .get_commit_sync_outcome_with_hint(
@@ -1013,7 +1013,20 @@ where
                     .await?;
                 Ok(None)
             }
-            RewrittenAs(remapped_p, _) | EquivalentWorkingCopyAncestor(remapped_p, _) => {
+            RewrittenAs(remapped_p, maybe_version)
+            | EquivalentWorkingCopyAncestor(remapped_p, maybe_version) => {
+                let version = match maybe_version {
+                    Some(version) => version,
+                    None => {
+                        // TODO(stash): this case should go away:
+                        // RewrittenAs and EquivalentWorkingCopyAncestor should not store
+                        // optional mapping
+                        self.get_current_version(&ctx)?
+                    }
+                };
+
+                let rewrite_paths = self.get_mover_by_version(&version)?;
+
                 let mut remapped_parents = HashMap::new();
                 remapped_parents.insert(p, remapped_p);
                 let maybe_rewritten = rewrite_commit(
@@ -1037,15 +1050,18 @@ where
 
                         // update_mapping also updates working copy equivalence, so no need
                         // to do it separately
-                        update_mapping(
+                        update_mapping_with_version(
                             ctx.clone(),
                             hashmap! { source_cs_id => frozen.get_changeset_id() },
                             &self,
+                            &version,
                         )
                         .await?;
                         Ok(Some(frozen.get_changeset_id()))
                     }
                     None => {
+                        // TODO(stash, ikostia) - this should set the actual version that was used to
+                        // remap this commit
                         // Source commit doesn't rewrite to any target commits.
                         // In that case equivalent working copy is the equivalent working
                         // copy of the parent
@@ -1459,6 +1475,8 @@ pub fn update_mapping_compat<M: SyncedCommitMapping + Clone + 'static>(
         .compat()
 }
 
+// TODO(stash, ikostia) - replace all usages with update_mapping_with_version and
+// remove this function
 pub async fn update_mapping<'a, M: SyncedCommitMapping + Clone + 'static>(
     ctx: CoreContext,
     mapped: HashMap<ChangesetId, ChangesetId>,
@@ -1467,6 +1485,26 @@ pub async fn update_mapping<'a, M: SyncedCommitMapping + Clone + 'static>(
     // TODO(stash): we shouldn't always use current version, but rather pass the actual version
     // that was used to remap a commit
     let version_name = syncer.get_current_version(&ctx)?;
+    let entries: Vec<_> = mapped
+        .into_iter()
+        .map(|(from, to)| {
+            create_synced_commit_mapping_entry(from, to, &syncer.repos, &version_name)
+        })
+        .collect();
+    syncer
+        .mapping
+        .add_bulk(ctx.clone(), entries)
+        .compat()
+        .await?;
+    Ok(())
+}
+
+pub async fn update_mapping_with_version<'a, M: SyncedCommitMapping + Clone + 'static>(
+    ctx: CoreContext,
+    mapped: HashMap<ChangesetId, ChangesetId>,
+    syncer: &'a CommitSyncer<M>,
+    version_name: &CommitSyncConfigVersion,
+) -> Result<(), Error> {
     let entries: Vec<_> = mapped
         .into_iter()
         .map(|(from, to)| {

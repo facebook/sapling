@@ -183,12 +183,28 @@ Normal pushrebase with one commit
 Live change of the config, without Mononoke restart
   $ update_commit_sync_map_second_option
 
+-- let LiveCommitSyncConfig pick up the changes
+  $ sleep 2
+
+  $ cd "$TESTTMP"/small-hg-client-1
+  $ REPONAME=small-mon-1 hgmn up master_bookmark -q
+  $ echo 1 >> 1 && hg add 1 && hg ci -m 'change of mapping'
+  $ hg revert -r .^ 1
+  $ hg commit --amend
+  $ REPONAME=small-mon-1  hgmn push -r . --to master_bookmark -q
+
+-- wait a second to give backsyncer some time to catch up
+  $ LARGE_MASTER_BONSAI=$(get_bonsai_bookmark $REPOIDLARGE master_bookmark)
+  $ SMALL_MASTER_BONSAI=$(get_bonsai_bookmark $REPOIDSMALL1 master_bookmark)
+  $ update_mapping_version "$REPOIDSMALL1" "$SMALL_MASTER_BONSAI" "$REPOIDLARGE" "$LARGE_MASTER_BONSAI" "TEST_VERSION_NAME_LIVE_V2"
+
 -- sleep to ensure live_commit_sync_config had a chance to refresh
   $ sleep 1
 
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "SELECT small_repo_id, large_repo_id, sync_map_version_name FROM synced_commit_mapping";
   1|0|
   1|0|TEST_VERSION_NAME_LIVE_V1
+  1|0|TEST_VERSION_NAME_LIVE_V2
 
 Again, normal pushrebase with one commit
   $ cd "$TESTTMP/small-hg-client-1"
@@ -208,4 +224,5 @@ Again, normal pushrebase with one commit
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "SELECT small_repo_id, large_repo_id, sync_map_version_name FROM synced_commit_mapping";
   1|0|
   1|0|TEST_VERSION_NAME_LIVE_V1
+  1|0|TEST_VERSION_NAME_LIVE_V2
   1|0|TEST_VERSION_NAME_LIVE_V2

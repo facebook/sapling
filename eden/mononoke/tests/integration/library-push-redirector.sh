@@ -154,6 +154,20 @@ EOF
    "$REPOIDLARGE" "$LARGE_MASTER_BONSAI"
 }
 
+function update_mapping_version {
+  local small_repo_id large_repo_id small_bcs_id large_bcs_id version
+  small_repo_id="$1"
+  small_bcs_id="$2"
+  large_repo_id="$3"
+  large_bcs_id="$4"
+  version="$5"
+  sqlite3 "$TESTTMP/monsql/sqlite_dbs" <<EOF
+    REPLACE INTO synced_commit_mapping (small_repo_id, small_bcs_id, large_repo_id, large_bcs_id, sync_map_version_name)
+    VALUES ('$small_repo_id', X'$small_bcs_id', '$large_repo_id', X'$large_bcs_id', '$version');
+EOF
+
+}
+
 function update_commit_sync_map_first_option {
   cat > "$COMMIT_SYNC_CONF/current" << EOF
 {

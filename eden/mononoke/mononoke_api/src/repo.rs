@@ -647,7 +647,7 @@ impl RepoContext {
     }
 
     /// `LiveCommitSyncConfig` instance to query current state of sync configs.
-    pub(crate) fn live_commit_sync_config(&self) -> Arc<dyn LiveCommitSyncConfig> {
+    pub fn live_commit_sync_config(&self) -> Arc<dyn LiveCommitSyncConfig> {
         self.repo.live_commit_sync_config.clone()
     }
 
@@ -657,7 +657,7 @@ impl RepoContext {
     }
 
     /// The commit sync mapping for the referenced repository
-    pub(crate) fn synced_commit_mapping(&self) -> &Arc<dyn SyncedCommitMapping> {
+    pub fn synced_commit_mapping(&self) -> &Arc<dyn SyncedCommitMapping> {
         &self.repo.synced_commit_mapping
     }
 
