@@ -29,6 +29,7 @@ Run the heal
   Found 30 blobs to be healed... Doing it
   For 30 blobs did HealStats { queue_add: 0, queue_del: 90, put_success: 0, put_failure: 0 }
   Deleting 90 actioned queue entries
+  Iteration rows processed: * rows, *s; total: * rows, *s (glob)
   The last batch was not full size, waiting...
 
 Check that healer queue has drained
@@ -67,6 +68,7 @@ Run the heal, with write errors injected, simulating store still bad
   30 Adding source blobstores [BlobstoreId(1), BlobstoreId(2)] to the queue so that failed destination blob stores [BlobstoreId(0)] will be retried later
   1 For 30 blobs did HealStats { queue_add: 60, queue_del: 60, put_success: 60, put_failure: 30 }
   1 Deleting 60 actioned queue entries
+  1 Iteration rows processed: * rows, *s; total: * rows, *s (glob)
   1 The last batch was not full size, waiting...
 
 Check that healer queue still has the items, should not have drained
@@ -81,6 +83,7 @@ Healer run again now store recovered
   1 Found 30 blobs to be healed... Doing it
   1 For 30 blobs did HealStats { queue_add: 0, queue_del: 60, put_success: 30, put_failure: 0 }
   1 Deleting 60 actioned queue entries
+  1 Iteration rows processed: * rows, *s; total: * rows, *s (glob)
   1 The last batch was not full size, waiting...
 
 Check that healer queue has drained

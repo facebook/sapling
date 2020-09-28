@@ -138,7 +138,6 @@ synced_commit_mapping = { path = "commit_rewriting/synced_commit_mapping" }
 throttledblob = { path = "blobstore/throttledblob" }
 unodes = { path = "derived_data/unodes" }
 xdiff = { path = "../scm/lib/xdiff" }
-cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 cachelib = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
@@ -147,7 +146,6 @@ fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master"
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 lock_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 tracing = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

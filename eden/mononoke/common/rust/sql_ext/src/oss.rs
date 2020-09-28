@@ -5,9 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use crate::replication::{ReplicaLag, ReplicaLagMonitor};
 use crate::{facebook::*, *};
 
-use anyhow::Error;
+use anyhow::{Error, Result};
+use async_trait::async_trait;
 use fbinit::FacebookInit;
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::future::ok;
@@ -60,4 +62,28 @@ pub fn create_raw_xdb_connections(
     _: bool,
 ) -> BoxFuture<SqlConnections, Error> {
     fb_unimplemented!()
+}
+
+pub struct MyAdmin;
+pub struct MyAdminLagMonitor;
+
+impl MyAdmin {
+    pub fn new(_: FacebookInit) -> Result<Self> {
+        fb_unimplemented!()
+    }
+
+    pub fn single_shard_lag_monitor(&self, _: String) -> MyAdminLagMonitor {
+        fb_unimplemented!()
+    }
+
+    pub fn shardmap_lag_monitor(&self, _: String) -> MyAdminLagMonitor {
+        fb_unimplemented!()
+    }
+}
+
+#[async_trait]
+impl ReplicaLagMonitor for MyAdminLagMonitor {
+    async fn get_replica_lag(&self) -> Result<Vec<ReplicaLag>> {
+        fb_unimplemented!()
+    }
 }

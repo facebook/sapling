@@ -5,13 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{format_err, Context, Error, Result};
+use anyhow::Result;
 use async_trait::async_trait;
-use futures::compat::Future01CompatExt;
-use futures::future;
 use slog::{info, Logger};
-use sql::Connection;
-use sql_common::ext::ConnectionExt;
 use std::{fmt, time::Duration};
 use tokio::time;
 
@@ -130,117 +126,40 @@ impl<'a> WaitForReplicationConfig<'a> {
     }
 }
 
-// ---- Laggable ----
-
-#[async_trait]
-pub trait Laggable: Send + Sync {
-    async fn get_lag_secs(&self) -> Result<Option<u64>, Error>;
-}
-
-#[async_trait]
-impl Laggable for Connection {
-    async fn get_lag_secs(&self) -> Result<Option<u64>, Error> {
-        match self {
-            Connection::Sqlite(_) => Ok(Some(0)),
-            conn => match conn.show_replica_lag_secs().compat().await {
-                Ok(s) => Ok(s),
-                Err(e) => match e.downcast_ref::<sql::error::ServerError>() {
-                    Some(server_error) => {
-                        // 1918 is discovery failed (i.e. there is no server matching the
-                        // constraints). This is fine, that means we don't need to monitor it.
-                        if server_error.code == 1918 {
-                            Ok(Some(0))
-                        } else {
-                            Err(e)
-                        }
-                    }
-                    None => Err(e),
-                },
-            },
-        }
-    }
-}
-
-// Note. It is enough to have borrows to Laggable. Using owned Connection for convenience.
-pub struct LaggableCollectionMonitor<L: Laggable> {
-    laggables: Vec<(String, L)>,
-}
-
-impl<L: Laggable> LaggableCollectionMonitor<L> {
-    pub fn new(laggables: Vec<(String, L)>) -> Self {
-        // Note. An empty collection will result in queries returning no replication lag.
-        Self { laggables }
-    }
-}
-
-#[async_trait]
-impl<L: Laggable> ReplicaLagMonitor for LaggableCollectionMonitor<L> {
-    async fn get_replica_lag(&self) -> Result<Vec<ReplicaLag>> {
-        let futs = self.laggables.iter().map(|(region, conn)| async move {
-            let delay = conn
-                .get_lag_secs()
-                .await
-                .with_context(|| format!("While fetching replication lag for {}", region))?
-                .ok_or_else(|| {
-                    format_err!(
-                        "Could not fetch db replication lag for {}. Failing to avoid overloading db",
-                        region
-                    )
-                })?;
-
-
-            Result::<_, Error>::Ok(ReplicaLag::new(Duration::from_secs(delay), Some(region.to_string())))
-        });
-        Ok(future::try_join_all(futs).await?.into_iter().collect())
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
     use assert_matches::assert_matches;
 
-    struct TestConn {
-        lag: u64,
-    }
+    struct TestMonitor(u64);
 
     #[async_trait]
-    impl Laggable for TestConn {
-        async fn get_lag_secs(&self) -> Result<Option<u64>, Error> {
-            Ok(Some(self.lag))
-        }
-    }
-
-    struct BrokenTestCon;
-
-    #[async_trait]
-    impl Laggable for BrokenTestCon {
-        async fn get_lag_secs(&self) -> Result<Option<u64>, Error> {
-            Ok(None)
+    impl ReplicaLagMonitor for TestMonitor {
+        async fn get_replica_lag(&self) -> Result<Vec<ReplicaLag>> {
+            Ok((1..self.0)
+                .map(|lag| ReplicaLag::new(Duration::from_secs(lag), Some(format!("{}", lag))))
+                .collect())
         }
     }
 
     #[test]
-    fn test_max_requires_lag() {
+    fn test_no_replica_lag_monitor() {
         async_unit::tokio_unit_test(async move {
-            let conns = vec![("conn".to_string(), BrokenTestCon)];
-            let monitor = LaggableCollectionMonitor::new(conns);
+            let monitor = NoReplicaLagMonitor();
             let lag = monitor.get_max_replica_lag().await;
-            assert!(lag.is_err());
+            // Linter gets confused here, says that expected is not used.
+            let _expected = ReplicaLag::new(Duration::from_secs(0), None);
+            assert_matches!(lag, Ok(_expected));
         })
     }
 
     #[test]
     fn test_max_lag() {
         async_unit::tokio_unit_test(async move {
-            let conns = vec![
-                ("c1".to_string(), TestConn { lag: 1 }),
-                ("c2".to_string(), TestConn { lag: 2 }),
-            ];
-            let monitor = LaggableCollectionMonitor::new(conns);
+            let monitor = TestMonitor(5);
             let lag = monitor.get_max_replica_lag().await;
             // Linter gets confused here, says that expected is not used.
-            let _expected = ReplicaLag::new(Duration::from_secs(2), Some("c2".to_string()));
+            let _expected = ReplicaLag::new(Duration::from_secs(5), Some("5".to_string()));
             assert_matches!(lag, Ok(_expected));
         })
     }

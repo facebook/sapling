@@ -9,8 +9,6 @@
 #![feature(never_type)]
 
 mod dummy;
-#[cfg(fbcode_build)]
-mod facebook;
 mod healer;
 
 use anyhow::{bail, format_err, Context, Error, Result};
@@ -29,15 +27,15 @@ use fbinit::FacebookInit;
 use futures::{compat::Future01CompatExt, future};
 use healer::Healer;
 use lazy_static::lazy_static;
-use metaconfig_types::{BlobConfig, DatabaseConfig, LocalDatabaseConfig, StorageConfig};
+use metaconfig_types::{BlobConfig, DatabaseConfig, StorageConfig};
 use mononoke_types::DateTime;
 use slog::{info, o};
-use sql::Connection;
 use sql_construct::SqlConstructFromDatabaseConfig;
+#[cfg(fbcode_build)]
+use sql_ext::facebook::MyAdmin;
 use sql_ext::{
     facebook::{myrouter_ready, MysqlOptions},
-    open_sqlite_path,
-    replication::{LaggableCollectionMonitor, ReplicaLagMonitor, WaitForReplicationConfig},
+    replication::{NoReplicaLagMonitor, ReplicaLagMonitor, WaitForReplicationConfig},
 };
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -130,15 +128,13 @@ async fn maybe_schedule_healer_for_storage(
         .into_iter()
         .collect::<HashMap<_, _>>();
 
-    let regional_conns = match queue_db {
-        DatabaseConfig::Local(LocalDatabaseConfig { path }) => {
-            let c = open_sqlite_path(path.join("sqlite_dbs"), readonly_storage.0)?;
-            vec![("sqlite_region".to_string(), Connection::with_sqlite(c))]
-        }
+    let lag_monitor: Box<dyn ReplicaLagMonitor> = match queue_db {
+        DatabaseConfig::Local(_) => Box::new(NoReplicaLagMonitor()),
         DatabaseConfig::Remote(remote) => {
             #[cfg(fbcode_build)]
             {
-                facebook::open_remote_db(fb, &ctx, remote, mysql_options).await?
+                let myadmin = MyAdmin::new(fb)?;
+                Box::new(myadmin.single_shard_lag_monitor(remote.db_address))
             }
             #[cfg(not(fbcode_build))]
             {
@@ -158,26 +154,18 @@ async fn maybe_schedule_healer_for_storage(
         drain_only,
     );
 
-    schedule_healing(
-        ctx,
-        multiplex_healer,
-        regional_conns,
-        iter_limit,
-        heal_min_age,
-    )
-    .await
+    schedule_healing(ctx, multiplex_healer, lag_monitor, iter_limit, heal_min_age).await
 }
 
 // Pass None as iter_limit for never ending run
 async fn schedule_healing(
     ctx: &CoreContext,
     multiplex_healer: Healer,
-    conns: Vec<(String, Connection)>,
+    lag_monitor: Box<dyn ReplicaLagMonitor>,
     iter_limit: Option<u64>,
     heal_min_age: ChronoDuration,
 ) -> Result<(), Error> {
     let mut count = 0;
-    let replication_monitor = LaggableCollectionMonitor::new(conns);
     let wait_config = WaitForReplicationConfig::default().with_logger(ctx.logger());
     let healing_start_time = Instant::now();
     let mut total_deleted_rows = 0;
@@ -191,7 +179,7 @@ async fn schedule_healing(
             }
         }
 
-        replication_monitor
+        lag_monitor
             .wait_for_replication(&wait_config)
             .await
             .context("While waiting for replication")?;
@@ -204,16 +192,16 @@ async fn schedule_healing(
             .context("While healing")?;
 
         total_deleted_rows += deleted_rows;
-        let total_elapsed = healing_start_time.elapsed().as_secs();
-        let iteration_elapsed = iteration_start_time.elapsed().as_secs();
-        if total_elapsed != 0 && iteration_elapsed != 0 {
-            let iteration_speed = deleted_rows / iteration_elapsed;
-            let total_speed = total_deleted_rows / total_elapsed;
-            info!(
-                ctx.logger(),
-                "Iteration speed: {} rows/s, total speed: {} rows/s", iteration_speed, total_speed
-            );
-        }
+        let total_elapsed = healing_start_time.elapsed().as_secs_f32();
+        let iteration_elapsed = iteration_start_time.elapsed().as_secs_f32();
+        info!(
+            ctx.logger(),
+            "Iteration rows processed: {} rows, {}s; total: {} rows, {}s",
+            deleted_rows,
+            iteration_elapsed,
+            total_deleted_rows,
+            total_elapsed,
+        );
 
         // if last batch read was not full,  wait at least 1 second, to avoid busy looping as don't
         // want to hammer the database with thousands of reads a second.

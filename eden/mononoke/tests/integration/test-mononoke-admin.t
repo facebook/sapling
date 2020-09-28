@@ -25,6 +25,7 @@ Drain the healer queue
   Found 30 blobs to be healed... Doing it
   For 30 blobs did HealStats { queue_add: 0, queue_del: 60, put_success: 0, put_failure: 0 }
   Deleting 60 actioned queue entries
+  Iteration rows processed: * rows, *s; total: * rows, *s (glob)
   The last batch was not full size, waiting...
 
 Check bookmarks
