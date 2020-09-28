@@ -763,8 +763,9 @@ async fn xrepo_commit_lookup_config_changing_live(fb: FacebookInit) -> Result<()
         .default_action =
         DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(MPath::new("prefix2").unwrap());
     cfg.version_name = CommitSyncConfigVersion("TEST_VERSION_NAME_2".to_string());
-    cfg_src.set_commit_sync_config(small_repo_id, cfg.clone());
-    cfg_src.set_commit_sync_config(large_repo_id, cfg);
+    cfg_src.add_config(cfg.clone());
+    cfg_src.remove_current_version(&CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()));
+    cfg_src.add_current_version(cfg.version_name);
 
     // After config change
     let second_large =

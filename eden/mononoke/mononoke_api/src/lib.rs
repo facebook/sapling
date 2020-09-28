@@ -206,10 +206,8 @@ mod test_impl {
                     move |(name, repo, commit_sync_config, synced_commit_maping)| {
                         cloned!(ctx, lv_cfg, lv_cfg_src);
                         async move {
-                            lv_cfg_src.set_commit_sync_config(
-                                repo.get_repoid(),
-                                commit_sync_config.clone(),
-                            );
+                            lv_cfg_src.add_config(commit_sync_config.clone());
+                            lv_cfg_src.add_current_version(commit_sync_config.version_name);
                             Repo::new_test_xrepo(ctx.clone(), repo, lv_cfg, synced_commit_maping)
                                 .await
                                 .map(move |repo| (name, Arc::new(repo)))

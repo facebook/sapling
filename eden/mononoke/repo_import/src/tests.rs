@@ -540,9 +540,8 @@ mod tests {
     fn get_large_repo_live_commit_sync_config() -> Arc<dyn LiveCommitSyncConfig> {
         let commit_sync_config = get_large_repo_sync_config();
         let (sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
-        source.set_commit_sync_config(RepositoryId::new(0), commit_sync_config.clone());
-        source.set_commit_sync_config(RepositoryId::new(1), commit_sync_config.clone());
-        source.set_commit_sync_config(RepositoryId::new(2), commit_sync_config);
+        source.add_config(commit_sync_config.clone());
+        source.add_current_version(commit_sync_config.version_name);
 
         Arc::new(sync_config)
     }
