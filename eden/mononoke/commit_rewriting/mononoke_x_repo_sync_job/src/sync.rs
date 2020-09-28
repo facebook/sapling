@@ -378,7 +378,9 @@ async fn find_remapped_cs_id<M: SyncedCommitMapping + Clone + 'static>(
         .await?;
     use CommitSyncOutcome::*;
     match maybe_sync_outcome {
-        Some(RewrittenAs(cs_id, _)) | Some(EquivalentWorkingCopyAncestor(cs_id)) => Ok(Some(cs_id)),
+        Some(RewrittenAs(cs_id, _)) | Some(EquivalentWorkingCopyAncestor(cs_id, _)) => {
+            Ok(Some(cs_id))
+        }
         Some(Preserved) => Ok(Some(orig_cs_id)),
         Some(NotSyncCandidate) => Err(format_err!("unexpected NotSyncCandidate")),
         None => Ok(None),

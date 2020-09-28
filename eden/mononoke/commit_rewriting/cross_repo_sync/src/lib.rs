@@ -316,7 +316,7 @@ async fn remap_parents<'a, M: SyncedCommitMapping + Clone + 'static>(
 
         use CommitSyncOutcome::*;
         let remapped_parent = match sync_outcome {
-            RewrittenAs(cs_id, _) | EquivalentWorkingCopyAncestor(cs_id) => cs_id,
+            RewrittenAs(cs_id, _) | EquivalentWorkingCopyAncestor(cs_id, _) => cs_id,
             Preserved => *commit,
             NotSyncCandidate => {
                 return Err(ErrorKind::ParentNotSyncCandidate(*commit).into());
@@ -661,7 +661,7 @@ where
         use CommitSyncOutcome::*;
         let res = match commit_sync_outcome {
             NotSyncCandidate => None,
-            RewrittenAs(cs_id, _) | EquivalentWorkingCopyAncestor(cs_id) => Some(cs_id),
+            RewrittenAs(cs_id, _) | EquivalentWorkingCopyAncestor(cs_id, _) => Some(cs_id),
             Preserved => Some(source_cs_id),
         };
         Ok(res)
@@ -812,7 +812,7 @@ where
                     let (sync_outcome, parent) = &remapped_parents_outcome[0];
                     let wc_equivalence = match sync_outcome {
                         NotSyncCandidate => None,
-                        RewrittenAs(cs_id, _) | EquivalentWorkingCopyAncestor(cs_id) => {
+                        RewrittenAs(cs_id, _) | EquivalentWorkingCopyAncestor(cs_id, _) => {
                             Some(*cs_id)
                         }
                         Preserved => Some(*parent),
@@ -992,7 +992,7 @@ where
                     .await?;
                 Ok(None)
             }
-            RewrittenAs(remapped_p, _) | EquivalentWorkingCopyAncestor(remapped_p) => {
+            RewrittenAs(remapped_p, _) | EquivalentWorkingCopyAncestor(remapped_p, _) => {
                 let mut remapped_parents = HashMap::new();
                 remapped_parents.insert(p, remapped_p);
                 let maybe_rewritten = rewrite_commit(
@@ -1148,7 +1148,7 @@ where
             .filter_map(|(p, outcome)| {
                 use CommitSyncOutcome::*;
                 match outcome {
-                    EquivalentWorkingCopyAncestor(cs_id) | RewrittenAs(cs_id, _) => {
+                    EquivalentWorkingCopyAncestor(cs_id, _) | RewrittenAs(cs_id, _) => {
                         Some((*p, *cs_id))
                     }
                     Preserved => Some((*p, *p)),

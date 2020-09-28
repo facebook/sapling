@@ -198,7 +198,7 @@ impl ValidationHelper {
         Ok(match maybe_commit_sync_outcome {
             None
             | Some(NotSyncCandidate)
-            | Some(EquivalentWorkingCopyAncestor(_))
+            | Some(EquivalentWorkingCopyAncestor(_, _))
             | Some(Preserved) => None,
             Some(RewrittenAs(cs_id, None)) => {
                 return Err(format_err!(
@@ -941,7 +941,7 @@ async fn validate_topological_order<'a>(
                 use CommitSyncOutcome::*;
                 let remapping_of_small_parent = match commit_sync_outcome {
                     Preserved => small_parent,
-                    RewrittenAs(cs_id, _) | EquivalentWorkingCopyAncestor(cs_id) => cs_id,
+                    RewrittenAs(cs_id, _) | EquivalentWorkingCopyAncestor(cs_id, _) => cs_id,
                     NotSyncCandidate => {
                         return Err(format_err!(
                             "Parent of synced {} is NotSyncCandidate in {}->{}",

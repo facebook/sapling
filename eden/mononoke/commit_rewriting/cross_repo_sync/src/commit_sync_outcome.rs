@@ -33,7 +33,7 @@ pub enum CommitSyncOutcome {
     /// This commit is exactly identical in the target repo
     Preserved,
     /// This commit is removed by the sync process, and the commit with the given ID has same content
-    EquivalentWorkingCopyAncestor(ChangesetId),
+    EquivalentWorkingCopyAncestor(ChangesetId, Option<CommitSyncConfigVersion>),
 }
 
 /// The state of a source repo commit in a target repo, which
@@ -47,7 +47,7 @@ pub enum PluralCommitSyncOutcome {
     /// This commit is exactly identical in the target repo
     Preserved,
     /// This commit is removed by the sync process, and the commit with the given ID has same content
-    EquivalentWorkingCopyAncestor(ChangesetId),
+    EquivalentWorkingCopyAncestor(ChangesetId, Option<CommitSyncConfigVersion>),
 }
 
 /// A hint to the synced commit selection algorithm
@@ -230,15 +230,15 @@ pub async fn get_plural_commit_sync_outcome<'a, M: SyncedCommitMapping>(
 
     match maybe_wc_equivalence {
         None => Ok(None),
-        Some(WorkingCopyEquivalence::NoWorkingCopy(_mapping)) => {
+        Some(WorkingCopyEquivalence::NoWorkingCopy(_version)) => {
             Ok(Some(PluralCommitSyncOutcome::NotSyncCandidate))
         }
-        Some(WorkingCopyEquivalence::WorkingCopy(cs_id, _)) => {
+        Some(WorkingCopyEquivalence::WorkingCopy(cs_id, version)) => {
             if source_cs_id.0 == cs_id {
                 Ok(Some(PluralCommitSyncOutcome::Preserved))
             } else {
                 Ok(Some(
-                    PluralCommitSyncOutcome::EquivalentWorkingCopyAncestor(cs_id),
+                    PluralCommitSyncOutcome::EquivalentWorkingCopyAncestor(cs_id, version),
                 ))
             }
         }
@@ -574,9 +574,9 @@ impl PluralCommitSyncOutcome {
         match self {
             NotSyncCandidate => Ok(CommitSyncOutcome::NotSyncCandidate),
             Preserved => Ok(CommitSyncOutcome::Preserved),
-            EquivalentWorkingCopyAncestor(cs_id) => {
-                Ok(CommitSyncOutcome::EquivalentWorkingCopyAncestor(cs_id))
-            }
+            EquivalentWorkingCopyAncestor(cs_id, version) => Ok(
+                CommitSyncOutcome::EquivalentWorkingCopyAncestor(cs_id, version),
+            ),
             RewrittenAs(v) => {
                 let (cs_id, maybe_version) = selector(v).await?;
                 Ok(CommitSyncOutcome::RewrittenAs(cs_id, maybe_version))

@@ -320,7 +320,9 @@ async fn remap<M: SyncedCommitMapping + Clone + 'static>(
 
     match maybe_commit_sync_outcome {
         None | Some(NotSyncCandidate) => Ok(None),
-        Some(RewrittenAs(cs_id, _)) | Some(EquivalentWorkingCopyAncestor(cs_id)) => Ok(Some(cs_id)),
+        Some(RewrittenAs(cs_id, _)) | Some(EquivalentWorkingCopyAncestor(cs_id, _)) => {
+            Ok(Some(cs_id))
+        }
         Some(Preserved) => Ok(Some(*source_cs_id)),
     }
 }

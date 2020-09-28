@@ -70,7 +70,7 @@ fn extract_cs_id_from_sync_outcome(
         Some(Preserved) => Ok(Some(source_cs_id)),
         Some(RewrittenAs(cs_id, _)) => Ok(Some(cs_id)),
         Some(NotSyncCandidate) => Ok(None),
-        Some(EquivalentWorkingCopyAncestor(cs_id)) => Ok(Some(cs_id)),
+        Some(EquivalentWorkingCopyAncestor(cs_id, _)) => Ok(Some(cs_id)),
         None => Err(format_err!(
             "sync outcome is not available for {}",
             source_cs_id
