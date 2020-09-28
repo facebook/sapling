@@ -107,7 +107,6 @@ class threadedstderr(object):
         thread = threading.Thread(target=self.run)
         thread.daemon = True
         thread.start()
-        # pyre-fixme[8]: Attribute has type `None`; used as `Thread`.
         self._thread = thread
 
     def run(self):

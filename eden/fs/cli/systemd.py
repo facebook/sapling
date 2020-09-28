@@ -23,8 +23,6 @@ try:
     import pystemd.systemd1.manager
     import pystemd.systemd1.unit
 except ModuleNotFoundError as e:
-    # pyre-fixme[9]: pystemd_import_error has type `None`; used as
-    #  `ModuleNotFoundError`.
     pystemd_import_error = e
 
 
@@ -434,8 +432,6 @@ class SystemdUserBus:
 
     def __init__(self, xdg_runtime_dir: str) -> None:
         if pystemd_import_error is not None:
-            # pyre-fixme[48]: Expression `pystemd_import_error` has type `None` but
-            #  must extend BaseException.
             raise pystemd_import_error
 
         super().__init__()

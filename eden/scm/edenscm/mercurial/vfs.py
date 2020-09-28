@@ -517,8 +517,6 @@ class vfs(abstractvfs):
             if basename:
                 if atomictemp:
                     util.makedirs(dirname, self.createmode, notindexed)
-                    # pyre-fixme[45]: Cannot instantiate abstract class
-                    #  `atomictempfile`.
                     return util.atomictempfile(
                         f, mode, self.createmode, checkambig=checkambig
                     )

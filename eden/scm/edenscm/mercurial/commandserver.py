@@ -188,10 +188,8 @@ class server(object):
             global logfile
             if logpath == "-":
                 # write log on a special 'd' (debug) channel
-                # pyre-fixme[9]: logfile has type `None`; used as `channeledoutput`.
                 logfile = channeledoutput(fout, b"d")
             else:
-                # pyre-fixme[9]: logfile has type `None`; used as `TextIOWrapper`.
                 logfile = open(logpath, "a")
 
         if repo:
@@ -316,7 +314,6 @@ class server(object):
         # type: () -> int
         hellomsg = "capabilities: " + " ".join(sorted(self.capabilities))
         hellomsg += "\n"
-        # pyre-fixme[6]: `+` is not supported for operand types `str` and `None`.
         hellomsg += "encoding: " + encoding.encoding
         hellomsg += "\n"
         hellomsg += "pid: %d" % util.getpid()

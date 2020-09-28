@@ -299,9 +299,7 @@ class chgcmdserver(commandserver.server):
         except ValueError:
             raise ValueError("unexpected value in setenv request")
         _log("setenv: %r\n" % sorted(newenv.keys()))
-        # pyre-fixme[16]: `None` has no attribute `clear`.
         encoding.environ.clear()
-        # pyre-fixme[16]: `None` has no attribute `update`.
         encoding.environ.update(newenv)
         # Apply $TZ changes.
         hgtime.tzset()

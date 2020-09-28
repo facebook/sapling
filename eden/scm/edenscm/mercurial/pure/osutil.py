@@ -109,7 +109,7 @@ if not pycompat.iswindows:
             (u"cmsg_len", _cmsg_len_t),
             (u"cmsg_level", ctypes.c_int),
             (u"cmsg_type", ctypes.c_int),
-            # pyre-fixme[6]: `*` is not supported for operand types
+            # pyre-fixme[58]: `*` is not supported for operand types
             #  `Type[ctypes.c_ubyte]` and `int`.
             (u"cmsg_data", ctypes.c_ubyte * 0),
         ]

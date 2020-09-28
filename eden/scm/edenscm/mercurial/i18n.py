@@ -34,7 +34,6 @@ except NameError:
 _languages = None
 if (
     pycompat.iswindows
-    # pyre-fixme[16]: `None` has no attribute `__getitem__`.
     and "LANGUAGE" not in encoding.environ
     and "LC_ALL" not in encoding.environ
     and "LC_MESSAGES" not in encoding.environ
@@ -49,7 +48,6 @@ if (
 
         # pyre-fixme[16]: Module `ctypes` has no attribute `windll`.
         langid = ctypes.windll.kernel32.GetUserDefaultUILanguage()
-        # pyre-fixme[9]: _languages has type `None`; used as `List[typing.Any]`.
         _languages = [locale.windows_locale[langid]]
     except (ImportError, AttributeError, KeyError):
         # ctypes not found or unknown langid

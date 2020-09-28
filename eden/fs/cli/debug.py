@@ -214,6 +214,7 @@ class ProcessFetchCmd(Subcmd):
         )
 
     def run(self, args: argparse.Namespace) -> int:
+        # pyre-fixme[31]: Expression `Process())]` is not a valid type.
         processes: Dict[int, Process()] = {}
 
         header = ["PID", "FETCH COUNT", "CMD"]

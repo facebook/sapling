@@ -605,7 +605,6 @@ class filestore(object):
             if opener is None:
                 root = tempfile.mkdtemp(prefix="hg-patch-")
                 opener = vfsmod.vfs(root)
-                # pyre-fixme[8]: Attribute has type `None`; used as `vfs`.
                 self.opener = opener
             # Avoid filename issues with these simple names
             fn = str(self.created)
