@@ -43,6 +43,17 @@ pub fn create_myrouter_connections(
     fb_unimplemented!()
 }
 
+pub fn create_mysql_connections(
+    _fb: FacebookInit,
+    _tier: String,
+    _shard_id: Option<usize>,
+    _read_con_type: ReadConnectionType,
+    _pool_size_config: PoolSizeConfig,
+    _readonly: bool,
+) -> Result<SqlConnections, Error> {
+    fb_unimplemented!()
+}
+
 pub fn myrouter_ready(
     db_addr_opt: Option<String>,
     mysql_options: MysqlOptions,

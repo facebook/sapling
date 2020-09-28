@@ -44,15 +44,15 @@ pub mod facebook {
 
     #[cfg(fbcode_build)]
     pub use r#impl::{
-        create_myrouter_connections, create_raw_xdb_connections,
+        create_myrouter_connections, create_mysql_connections, create_raw_xdb_connections,
         myadmin::{MyAdmin, MyAdminLagMonitor},
         myrouter_ready,
     };
 
     #[cfg(not(fbcode_build))]
     pub use crate::oss::{
-        create_myrouter_connections, create_raw_xdb_connections, myrouter_ready, MyAdmin,
-        MyAdminLagMonitor,
+        create_myrouter_connections, create_mysql_connections, create_raw_xdb_connections,
+        myrouter_ready, MyAdmin, MyAdminLagMonitor,
     };
 
     #[derive(Copy, Clone, Debug)]
