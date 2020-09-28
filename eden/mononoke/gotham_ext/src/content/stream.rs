@@ -44,7 +44,8 @@ impl<'a> CompressedContentStream<'a> {
     {
         use std::io;
 
-        const YIELD_EVERY: usize = 4 * (2 ^ 20); // 4MiB, for LFS that's about once every content chunk.
+        // 2MiB, for LFS that's at least once every content chunk.
+        const YIELD_EVERY: usize = 2 * 1024 * 1024;
 
         let inner = inner.map_err(|e| io::Error::new(io::ErrorKind::Other, e));
         let inner = YieldStream::new(inner, YIELD_EVERY);
