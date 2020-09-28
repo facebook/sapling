@@ -346,5 +346,6 @@ Merge with preserved ancestors
   * target repo cs id: 3f71f093fcfbebcc47c981c847cd80c7d0bf063c5022aba53fab95244e4c4f1c (glob)
   * fetching filenode ids for * in * (glob)
   * fetching filenode ids for * in * (glob)
+  * 8 moved source entries, 8 target entries (glob)
   * found 0 filenodes that are different, checking content... (glob)
   * all is well! (glob)

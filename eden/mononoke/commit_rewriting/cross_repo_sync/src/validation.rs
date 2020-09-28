@@ -112,6 +112,12 @@ async fn verify_filenode_mapping_equivalence<'a>(
     target_repo_entries: &'a Target<PathToFileNodeIdMapping>,
     reverse_mover: &'a Mover,
 ) -> Result<(), Error> {
+    info!(
+        ctx.logger(),
+        "{} moved source entries, {} target entries",
+        moved_source_repo_entries.len(),
+        target_repo_entries.len()
+    );
     // If you are wondering, why the lifetime is needed,
     // in the function signature, see
     // https://github.com/rust-lang/rust/issues/63033
@@ -122,6 +128,28 @@ async fn verify_filenode_mapping_equivalence<'a>(
         source_hash,
     )
     .await?;
+
+    let mut extra_source_files_count = 0;
+    for path in moved_source_repo_entries.0.keys() {
+        if target_repo_entries.0.get(&path).is_none() {
+            error!(
+                ctx.logger(),
+                "{:?} is present in {}, but not in {}",
+                path,
+                source_repo.0.name(),
+                target_repo.0.name(),
+            );
+            extra_source_files_count += 1;
+        }
+    }
+    if extra_source_files_count > 0 {
+        return Err(format_err!(
+            "{} files are present in {}, but not in {}",
+            extra_source_files_count,
+            source_repo.0.name(),
+            target_repo.0.name(),
+        ));
+    }
 
     let mut extra_target_files_count = 0;
     for path in target_repo_entries.0.keys() {
@@ -801,6 +829,55 @@ mod test {
             }]
         );
         Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn test_verify_working_copy(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let source = blobrepo_factory::new_memblob_empty(None)?;
+        let source_cs_id = CreateCommitContext::new_root(&ctx, &source)
+            .add_file("prefix/file1", "1")
+            .add_file("prefix/file2", "2")
+            .commit()
+            .await?;
+
+        let target = blobrepo_factory::new_memblob_empty(None)?;
+        let target_cs_id = CreateCommitContext::new_root(&ctx, &target)
+            .add_file("file1", "1")
+            .commit()
+            .await?;
+
+        // Source is a large repo, hence reverse the movers
+        let mover: Mover = Arc::new(reverse_prefix_mover);
+        let reverse_mover: Mover = Arc::new(prefix_mover);
+        let res = verify_working_copy_inner(
+            &ctx,
+            &Source(source),
+            &Target(target),
+            Source(source_cs_id),
+            Target(target_cs_id),
+            &mover,
+            &reverse_mover,
+        )
+        .await;
+
+        assert!(res.is_err());
+
+        Ok(())
+    }
+
+    fn prefix_mover(v: &MPath) -> Result<Option<MPath>, Error> {
+        let prefix = MPath::new("prefix").unwrap();
+        Ok(Some(MPath::join(&prefix, v)))
+    }
+
+    fn reverse_prefix_mover(v: &MPath) -> Result<Option<MPath>, Error> {
+        let prefix = MPath::new("prefix").unwrap();
+        if prefix.is_prefix_of(v) {
+            Ok(v.remove_prefix_component(&prefix))
+        } else {
+            Ok(None)
+        }
     }
 
     async fn init(
