@@ -34,6 +34,7 @@ use types::hgid::HgId;
 #[derive(Clone, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[derive(Serialize, Deserialize)]
 pub struct CommitLocation {
+    #[serde(with = "types::serde_with::hgid::bytes")]
     pub known_descendant: HgId,
     pub distance_to_descendant: u64,
     pub count: u64,
@@ -92,6 +93,7 @@ pub struct CommitRevlogDataRequest {
 #[derive(Clone, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[derive(Serialize, Deserialize)]
 pub struct CommitRevlogData {
+    #[serde(with = "types::serde_with::hgid::bytes")]
     pub hgid: HgId,
     pub revlog_data: Bytes,
 }
