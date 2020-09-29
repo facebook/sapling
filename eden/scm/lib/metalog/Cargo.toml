@@ -12,6 +12,7 @@ mincode = { path = "../mincode" }
 minibytes = { path = "../minibytes" }
 serde_bytes = "0.11"
 serde = { version = "1", features = ["derive"] }
+types = { path = "../types" }
 zstore = { path = "../zstore" }
 
 [dev-dependencies]

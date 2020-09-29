@@ -6,6 +6,7 @@
  */
 
 use crate::metalog::load_root;
+use crate::metalog::SerId20;
 use crate::MetaLog;
 use crate::Result;
 use git2::Repository;
@@ -32,7 +33,7 @@ impl MetaLog {
             let root = load_root(&self.blobs, root_id)?;
 
             // Add blobs.
-            for (_key, value_id) in root.map.iter() {
+            for (_key, SerId20(value_id)) in root.map.iter() {
                 if blob_id_map.contains_key(value_id) {
                     continue;
                 }
@@ -49,7 +50,7 @@ impl MetaLog {
 
             // Add tree.
             let mut tree = repo.treebuilder(None)?;
-            for (key, value_id) in root.map.iter() {
+            for (key, SerId20(value_id)) in root.map.iter() {
                 let git_blob_id = blob_id_map.get(value_id).unwrap();
                 tree.insert(key, *git_blob_id, 0o100644)?;
             }

@@ -186,7 +186,7 @@ impl MetaLog {
     /// Lookup a blob by key.
     pub fn get(&self, name: &str) -> Result<Option<Bytes>> {
         match self.root.map.get(name) {
-            Some(&id) => Ok(self.blobs.get(id)?),
+            Some(SerId20(id)) => Ok(self.blobs.get(*id)?),
             None => Ok(None),
         }
     }
@@ -196,11 +196,11 @@ impl MetaLog {
     /// Changes are not flushed to disk. Use `flush` to write them.
     pub fn set(&mut self, name: &str, value: &[u8]) -> Result<Id20> {
         let delta_base_candidates = match self.root.map.get(name) {
-            Some(&id) => vec![id],
+            Some(SerId20(id)) => vec![*id],
             None => Vec::new(),
         };
         let new_id = self.blobs.insert(value, &delta_base_candidates)?;
-        self.root.map.insert(name.to_string(), new_id);
+        self.root.map.insert(name.to_string(), SerId20(new_id));
         Ok(new_id)
     }
 
@@ -357,15 +357,18 @@ impl Repair<()> for MetaLog {
         let good_root_ids: Vec<Id20> = root_ids
             .iter()
             .filter(|root_id| match load_root(&blobs, **root_id) {
-                Ok(root) => root.map.iter().all(|(key, id)| match blobs.get(*id) {
-                    Ok(Some(_)) => true,
-                    _ => {
-                        let desc = format!("Root {} ({})", root_id.to_hex(), root.message);
-                        message +=
-                            &format!("Key {:?} referred by {} cannot be read.\n", key, &desc);
-                        false
-                    }
-                }),
+                Ok(root) => root
+                    .map
+                    .iter()
+                    .all(|(key, SerId20(id))| match blobs.get(*id) {
+                        Ok(Some(_)) => true,
+                        _ => {
+                            let desc = format!("Root {} ({})", root_id.to_hex(), root.message);
+                            message +=
+                                &format!("Key {:?} referred by {} cannot be read.\n", key, &desc);
+                            false
+                        }
+                    }),
                 Err(_) => {
                     message += &format!("Root {} cannot be read.\n", root_id.to_hex());
                     false
@@ -461,10 +464,15 @@ lazy_static! {
 /// can be seen as file name - file content pairs.
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
 pub(crate) struct Root {
-    pub(crate) map: BTreeMap<String, Id20>,
+    pub(crate) map: BTreeMap<String, SerId20>,
     pub(crate) timestamp: u64,
     pub(crate) message: String,
 }
+
+/// Force "tuple" serialization for `Id20`.
+/// Practically with mincode, `SerId20` serializes to 20 bytes.
+#[derive(Serialize, Deserialize, Default, Clone, Debug)]
+pub(crate) struct SerId20(#[serde(with = "types::serde_with::hgid::tuple")] pub(crate) Id20);
 
 /// Predefined conflict resolutions.
 pub mod resolver {
@@ -476,9 +484,9 @@ pub mod resolver {
     pub fn fail(this: &mut MetaLog, other: &MetaLog, ancestor: &MetaLog) -> Result<()> {
         let mut conflicts = BTreeSet::new();
         for key in other.keys().iter().chain(this.keys().iter()) {
-            let ancestor_id = ancestor.root.map.get(&key.to_string());
-            let other_id = other.root.map.get(&key.to_string());
-            let this_id = this.root.map.get(&key.to_string());
+            let ancestor_id = ancestor.root.map.get(&key.to_string()).map(|t| t.0);
+            let other_id = other.root.map.get(&key.to_string()).map(|t| t.0);
+            let this_id = this.root.map.get(&key.to_string()).map(|t| t.0);
             let changed_description = match (
                 ancestor_id == this_id,
                 ancestor_id == other_id,
