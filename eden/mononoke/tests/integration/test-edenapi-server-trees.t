@@ -43,20 +43,26 @@ Create and send tree request.
   > EOF
   Reading from stdin
   Generated request: WireTreeRequest {
-      keys: [
-          WireKey {
-              path: WireRepoPathBuf(
-                  "",
-              ),
-              hgid: WireHgId("15024c4dc4a27b572d623db342ae6a08d7f7adec"),
-          },
-          WireKey {
-              path: WireRepoPathBuf(
-                  "",
-              ),
-              hgid: WireHgId("c8743b14e0789cc546125213c18a18d813862db5"),
-          },
-      ],
+      query: Some(
+          ByKeys(
+              WireTreeKeysQuery {
+                  keys: [
+                      WireKey {
+                          path: WireRepoPathBuf(
+                              "",
+                          ),
+                          hgid: WireHgId("15024c4dc4a27b572d623db342ae6a08d7f7adec"),
+                      },
+                      WireKey {
+                          path: WireRepoPathBuf(
+                              "",
+                          ),
+                          hgid: WireHgId("c8743b14e0789cc546125213c18a18d813862db5"),
+                      },
+                  ],
+              },
+          ),
+      ),
   }
   $ sslcurl -s "$EDENAPI_URI/repo/trees" -d@req.cbor > res.cbor
 

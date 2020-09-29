@@ -60,10 +60,24 @@ impl ToApi for WireTreeEntry {
     }
 }
 
+#[derive(Clone, Default, Debug, Serialize, Deserialize, Eq, PartialEq)]
+pub struct WireTreeKeysQuery {
+    pub keys: Vec<WireKey>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
+pub enum WireTreeQuery {
+    #[serde(rename = "1")]
+    ByKeys(WireTreeKeysQuery),
+
+    #[serde(other, rename = "0")]
+    Other,
+}
+
 #[derive(Clone, Debug, Default, Serialize, Deserialize, Eq, PartialEq)]
 pub struct WireTreeRequest {
     #[serde(rename = "0", default, skip_serializing_if = "is_default")]
-    pub keys: Vec<WireKey>,
+    query: Option<WireTreeQuery>,
 }
 
 impl ToWire for TreeRequest {
@@ -71,7 +85,9 @@ impl ToWire for TreeRequest {
 
     fn to_wire(self) -> Self::Wire {
         WireTreeRequest {
-            keys: self.keys.to_wire(),
+            query: Some(WireTreeQuery::ByKeys(WireTreeKeysQuery {
+                keys: self.keys.to_wire(),
+            })),
         }
     }
 }
@@ -82,7 +98,15 @@ impl ToApi for WireTreeRequest {
 
     fn to_api(self) -> Result<Self::Api, Self::Error> {
         Ok(TreeRequest {
-            keys: self.keys.to_api()?,
+            keys: match self.query {
+                Some(WireTreeQuery::ByKeys(kq)) => kq.keys.to_api()?,
+                Some(_) => {
+                    return Err(WireToApiConversionError::UnrecognizedEnumVariant);
+                }
+                None => {
+                    return Err(WireToApiConversionError::MissingRequiredField);
+                }
+            },
         })
     }
 }
@@ -101,10 +125,32 @@ impl Arbitrary for WireTreeEntry {
 }
 
 #[cfg(any(test, feature = "for-tests"))]
-impl Arbitrary for WireTreeRequest {
+impl Arbitrary for WireTreeKeysQuery {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
         Self {
             keys: Arbitrary::arbitrary(g),
+        }
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for WireTreeQuery {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        use rand::Rng;
+        let variant = g.gen_range(0, 2);
+        match variant {
+            0 => WireTreeQuery::Other,
+            1 => WireTreeQuery::ByKeys(Arbitrary::arbitrary(g)),
+            _ => unreachable!(),
+        }
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for WireTreeRequest {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        Self {
+            query: Arbitrary::arbitrary(g),
         }
     }
 }
@@ -118,16 +164,28 @@ mod tests {
     use quickcheck::quickcheck;
 
     quickcheck! {
+        // Wire serialize roundtrips
+
+        fn test_keys_query_roundtrip_serialize(v: WireTreeKeysQuery) -> bool {
+            check_serialize_roundtrip(v)
+        }
+
+        fn test_query_roundtrip_serialize(v: WireTreeQuery) -> bool {
+            check_serialize_roundtrip(v)
+        }
+
         fn test_request_roundtrip_serialize(v: WireTreeRequest) -> bool {
             check_serialize_roundtrip(v)
         }
 
-        fn test_request_roundtrip_wire(v: TreeRequest) -> bool {
-            check_wire_roundtrip(v)
-        }
-
         fn test_entry_roundtrip_serialize(v: WireTreeEntry) -> bool {
             check_serialize_roundtrip(v)
+        }
+
+        // API-Wire roundtrips
+
+        fn test_request_roundtrip_wire(v: TreeRequest) -> bool {
+            check_wire_roundtrip(v)
         }
 
         fn test_entry_roundtrip_wire(v: TreeEntry) -> bool {

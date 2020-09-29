@@ -59,6 +59,7 @@ use types::{path::ParseError as RepoPathParseError, HgId, Key, Parents, RepoPath
 #[error("Failed to convert from wire to API representation")]
 pub enum WireToApiConversionError {
     UnrecognizedEnumVariant,
+    MissingRequiredField,
     PathValidationError(RepoPathParseError),
 }
 
