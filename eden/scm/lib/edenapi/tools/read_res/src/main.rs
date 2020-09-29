@@ -232,6 +232,9 @@ fn cmd_tree_check(args: DataCheckArgs) -> Result<()> {
             Err(TreeError::Corrupt(e)) => {
                 println!("{} [Invalid hash] {}", entry.key(), e);
             }
+            Err(TreeError::MissingField(e)) => {
+                println!("{} [Missing field] {}", entry.key(), e);
+            }
         }
     }
     Ok(())

@@ -63,6 +63,13 @@ Create and send tree request.
               },
           ),
       ),
+      attributes: Some(
+          WireTreeAttributesRequest {
+              with_data: true,
+              with_parents: true,
+              with_metadata: true,
+          },
+      ),
   }
   $ sslcurl -s "$EDENAPI_URI/repo/trees" -d@req.cbor > res.cbor
 

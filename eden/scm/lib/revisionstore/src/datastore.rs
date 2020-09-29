@@ -80,7 +80,7 @@ pub trait HgIdMutableDeltaStore: HgIdDataStore + Send + Sync {
             base: None,
             key: entry.key().clone(),
         };
-        self.add(&delta, entry.metadata())
+        self.add(&delta, &entry.metadata())
     }
 }
 

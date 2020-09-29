@@ -21,16 +21,16 @@ use crate::{
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct WireTreeEntry {
     #[serde(rename = "0", default, skip_serializing_if = "is_default")]
-    key: WireKey,
+    key: Option<WireKey>,
 
     #[serde(rename = "1", default, skip_serializing_if = "is_default")]
-    data: Bytes,
+    data: Option<Bytes>,
 
     #[serde(rename = "2", default, skip_serializing_if = "is_default")]
-    parents: WireParents,
+    parents: Option<WireParents>,
 
     #[serde(rename = "3", default, skip_serializing_if = "is_default")]
-    metadata: WireRevisionstoreMetadata,
+    metadata: Option<WireRevisionstoreMetadata>,
 }
 
 impl ToWire for TreeEntry {
@@ -38,7 +38,7 @@ impl ToWire for TreeEntry {
 
     fn to_wire(self) -> Self::Wire {
         WireTreeEntry {
-            key: self.key.to_wire(),
+            key: Some(self.key.to_wire()),
             data: self.data,
             parents: self.parents.to_wire(),
             metadata: self.metadata.to_wire(),
@@ -52,7 +52,10 @@ impl ToApi for WireTreeEntry {
 
     fn to_api(self) -> Result<Self::Api, Self::Error> {
         Ok(TreeEntry {
-            key: self.key.to_api()?,
+            key: self
+                .key
+                .to_api()?
+                .ok_or(WireToApiConversionError::CannotPopulateRequiredField("key"))?,
             data: self.data,
             parents: self.parents.to_api()?,
             metadata: self.metadata.to_api()?,
@@ -74,10 +77,35 @@ pub enum WireTreeQuery {
     Other,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
+pub struct WireTreeAttributesRequest {
+    #[serde(rename = "0", default, skip_serializing_if = "is_default")]
+    with_data: bool,
+
+    #[serde(rename = "1", default, skip_serializing_if = "is_default")]
+    with_parents: bool,
+
+    #[serde(rename = "2", default, skip_serializing_if = "is_default")]
+    with_metadata: bool,
+}
+
+impl Default for WireTreeAttributesRequest {
+    fn default() -> Self {
+        WireTreeAttributesRequest {
+            with_data: true,
+            with_parents: true,
+            with_metadata: true,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Default, Serialize, Deserialize, Eq, PartialEq)]
 pub struct WireTreeRequest {
     #[serde(rename = "0", default, skip_serializing_if = "is_default")]
     query: Option<WireTreeQuery>,
+
+    #[serde(rename = "1", default, skip_serializing_if = "is_default")]
+    attributes: Option<WireTreeAttributesRequest>,
 }
 
 impl ToWire for TreeRequest {
@@ -88,6 +116,8 @@ impl ToWire for TreeRequest {
             query: Some(WireTreeQuery::ByKeys(WireTreeKeysQuery {
                 keys: self.keys.to_wire(),
             })),
+
+            attributes: Some(WireTreeAttributesRequest::default()),
         }
     }
 }
@@ -101,10 +131,14 @@ impl ToApi for WireTreeRequest {
             keys: match self.query {
                 Some(WireTreeQuery::ByKeys(kq)) => kq.keys.to_api()?,
                 Some(_) => {
-                    return Err(WireToApiConversionError::UnrecognizedEnumVariant);
+                    return Err(WireToApiConversionError::UnrecognizedEnumVariant(
+                        "WireTreeQuery",
+                    ));
                 }
                 None => {
-                    return Err(WireToApiConversionError::MissingRequiredField);
+                    return Err(WireToApiConversionError::CannotPopulateRequiredField(
+                        "keys",
+                    ));
                 }
             },
         })
@@ -114,12 +148,23 @@ impl ToApi for WireTreeRequest {
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireTreeEntry {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
-        let bytes: Vec<u8> = Arbitrary::arbitrary(g);
+        let bytes: Option<Vec<u8>> = Arbitrary::arbitrary(g);
         Self {
             key: Arbitrary::arbitrary(g),
-            data: Bytes::from(bytes),
+            data: bytes.map(|b| Bytes::from(b)),
             parents: Arbitrary::arbitrary(g),
             metadata: Arbitrary::arbitrary(g),
+        }
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for WireTreeAttributesRequest {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        Self {
+            with_data: Arbitrary::arbitrary(g),
+            with_parents: Arbitrary::arbitrary(g),
+            with_metadata: Arbitrary::arbitrary(g),
         }
     }
 }
@@ -151,6 +196,7 @@ impl Arbitrary for WireTreeRequest {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
         Self {
             query: Arbitrary::arbitrary(g),
+            ..Default::default()
         }
     }
 }
@@ -165,12 +211,15 @@ mod tests {
 
     quickcheck! {
         // Wire serialize roundtrips
-
         fn test_keys_query_roundtrip_serialize(v: WireTreeKeysQuery) -> bool {
             check_serialize_roundtrip(v)
         }
 
         fn test_query_roundtrip_serialize(v: WireTreeQuery) -> bool {
+            check_serialize_roundtrip(v)
+        }
+
+        fn test_attrs_roundtrip_serialize(v: WireTreeAttributesRequest) -> bool {
             check_serialize_roundtrip(v)
         }
 

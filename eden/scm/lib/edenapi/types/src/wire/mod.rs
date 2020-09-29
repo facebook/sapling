@@ -58,8 +58,8 @@ use types::{path::ParseError as RepoPathParseError, HgId, Key, Parents, RepoPath
 #[derive(Debug, Error)]
 #[error("Failed to convert from wire to API representation")]
 pub enum WireToApiConversionError {
-    UnrecognizedEnumVariant,
-    MissingRequiredField,
+    UnrecognizedEnumVariant(&'static str),
+    CannotPopulateRequiredField(&'static str),
     PathValidationError(RepoPathParseError),
 }
 
@@ -112,6 +112,23 @@ impl<W: ToApi> ToApi for Vec<W> {
             out.push(v.to_api()?)
         }
         Ok(out)
+    }
+}
+
+impl<A: ToWire> ToWire for Option<A> {
+    type Wire = Option<<A as ToWire>::Wire>;
+
+    fn to_wire(self) -> Self::Wire {
+        self.map(|a| a.to_wire())
+    }
+}
+
+impl<W: ToApi> ToApi for Option<W> {
+    type Api = Option<<W as ToApi>::Api>;
+    type Error = <W as ToApi>::Error;
+
+    fn to_api(self) -> Result<Self::Api, Self::Error> {
+        self.map(|w| w.to_api()).transpose()
     }
 }
 
@@ -251,7 +268,9 @@ impl ToApi for WireParents {
         use WireParents::*;
         Ok(match self {
             Unknown => {
-                return Err(WireToApiConversionError::UnrecognizedEnumVariant);
+                return Err(WireToApiConversionError::UnrecognizedEnumVariant(
+                    "WireParents",
+                ));
             }
             None => Parents::None,
             One(id) => Parents::One(id.to_api()?),

@@ -43,6 +43,7 @@ pub use crate::history::{
     HistoryEntry, HistoryRequest, HistoryResponse, HistoryResponseChunk, WireHistoryEntry,
 };
 pub use crate::tree::{TreeEntry, TreeError, TreeRequest};
+pub use crate::wire::{ToApi, ToWire};
 
 use thiserror::Error;
 
