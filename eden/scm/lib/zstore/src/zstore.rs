@@ -343,7 +343,6 @@ impl Zstore {
 /// Represent delta relationships.
 pub struct DebugDeltaTree {
     id: Id20,
-    len: usize,
     chain_len: usize,
     depth: usize,
     subchain_len: usize,
@@ -356,7 +355,6 @@ impl Zstore {
     fn debug_delta_tree(&self) -> crate::Result<DebugDeltaTree> {
         let mut root = DebugDeltaTree {
             id: *EMPTY_ID20,
-            len: 0,
             chain_len: 0,
             depth: 0,
             subchain_len: 0,
@@ -375,7 +373,6 @@ impl Zstore {
                 None => {
                     tree.children.push(DebugDeltaTree {
                         id: delta.id,
-                        len: delta.data.len(),
                         chain_len: tree.chain_len + 1,
                         depth: delta.depth,
                         subchain_len: delta.subchain_len,
@@ -416,15 +413,14 @@ impl fmt::Debug for DebugDeltaTree {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if self.id == *EMPTY_ID20 {
             // Write header.
-            write!(f, "Chain Len| Depth |Subchain Len| Bytes | Chain ID\n")?;
+            write!(f, "Chain Len| Depth |Subchain Len| Chain ID\n")?;
         }
         write!(
             f,
-            "{:8} | {:5} | {:10} | {:5} | {}{}\n",
+            "{:8} | {:5} | {:10} | {}{}\n",
             self.chain_len,
             self.depth,
             self.subchain_len,
-            self.len,
             " ".repeat(self.chain_len),
             &self.id.to_hex()[..6],
         )?;
@@ -725,50 +721,50 @@ mod tests {
             // `fbcode/experimental/quark/grep-rs/cargo-test-i.py --lib` from
             // the `src` directory to auto-update the test.
             r#"
-Chain Len| Depth |Subchain Len| Bytes | Chain ID
-       0 |     0 |          0 |     0 | da39a3
-       1 |     1 |          0 |  2072 |  12a9a7
-       2 |     2 |          0 |    23 |   d176e3
-       3 |     3 |          0 |    23 |    480cf2
-       4 |     3 |          1 |    23 |     7b2274
-       5 |     3 |          2 |    23 |      9195fa
-       3 |     2 |          1 |    23 |    68a44f
-       4 |     3 |          0 |    23 |     049af1
-       5 |     3 |          1 |    23 |      6be3a2
-       6 |     3 |          2 |    23 |       0565d7
-       4 |     2 |          2 |    23 |     fcf8f6
-       5 |     3 |          0 |    25 |      0a012d
-       6 |     3 |          1 |    24 |       316785
-       7 |     3 |          2 |    24 |        7c562e
-       2 |     1 |          1 |    25 |   5b8328
-       3 |     2 |          0 |    23 |    8802f4
-       4 |     3 |          0 |    24 |     35b10a
-       5 |     3 |          1 |    24 |      565d3f
-       6 |     3 |          2 |    24 |       c2a84a
-       4 |     2 |          1 |    24 |     aad27f
-       5 |     3 |          0 |    24 |      4ad6aa
-       6 |     3 |          1 |    25 |       dd14d5
-       7 |     3 |          2 |    25 |        aea69c
-       5 |     2 |          2 |    25 |      0c4075
-       6 |     3 |          0 |    25 |       ffa7b4
-       7 |     3 |          1 |    25 |        3cfff1
-       8 |     3 |          2 |    25 |         0c98c3
-       3 |     1 |          2 |    25 |    091e0d
-       4 |     2 |          0 |    25 |     98715e
-       5 |     3 |          0 |    25 |      47258d
-       6 |     3 |          1 |    25 |       7802ae
-       7 |     3 |          2 |    25 |        cec4d0
-       5 |     2 |          1 |    25 |      fa80d4
-       6 |     3 |          0 |    25 |       1ca3c5
-       7 |     3 |          1 |    25 |        5292f3
-       8 |     3 |          2 |    25 |         a2ff59
-       6 |     2 |          2 |    25 |       758c14
-       7 |     3 |          0 |    25 |        465a4a
-       8 |     3 |          1 |    25 |         3af16a
-       9 |     3 |          2 |    25 |          002504
-       1 |     1 |          0 |  2073 |  409bca
-       2 |     2 |          0 |    25 |   cca7b8
-       3 |     3 |          0 |    25 |    6972af
+Chain Len| Depth |Subchain Len| Chain ID
+       0 |     0 |          0 | da39a3
+       1 |     1 |          0 |  12a9a7
+       2 |     2 |          0 |   d176e3
+       3 |     3 |          0 |    480cf2
+       4 |     3 |          1 |     7b2274
+       5 |     3 |          2 |      9195fa
+       3 |     2 |          1 |    68a44f
+       4 |     3 |          0 |     049af1
+       5 |     3 |          1 |      6be3a2
+       6 |     3 |          2 |       0565d7
+       4 |     2 |          2 |     fcf8f6
+       5 |     3 |          0 |      0a012d
+       6 |     3 |          1 |       316785
+       7 |     3 |          2 |        7c562e
+       2 |     1 |          1 |   5b8328
+       3 |     2 |          0 |    8802f4
+       4 |     3 |          0 |     35b10a
+       5 |     3 |          1 |      565d3f
+       6 |     3 |          2 |       c2a84a
+       4 |     2 |          1 |     aad27f
+       5 |     3 |          0 |      4ad6aa
+       6 |     3 |          1 |       dd14d5
+       7 |     3 |          2 |        aea69c
+       5 |     2 |          2 |      0c4075
+       6 |     3 |          0 |       ffa7b4
+       7 |     3 |          1 |        3cfff1
+       8 |     3 |          2 |         0c98c3
+       3 |     1 |          2 |    091e0d
+       4 |     2 |          0 |     98715e
+       5 |     3 |          0 |      47258d
+       6 |     3 |          1 |       7802ae
+       7 |     3 |          2 |        cec4d0
+       5 |     2 |          1 |      fa80d4
+       6 |     3 |          0 |       1ca3c5
+       7 |     3 |          1 |        5292f3
+       8 |     3 |          2 |         a2ff59
+       6 |     2 |          2 |       758c14
+       7 |     3 |          0 |        465a4a
+       8 |     3 |          1 |         3af16a
+       9 |     3 |          2 |          002504
+       1 |     1 |          0 |  409bca
+       2 |     2 |          0 |   cca7b8
+       3 |     3 |          0 |    6972af
 "#
         );
 
@@ -779,13 +775,13 @@ Chain Len| Depth |Subchain Len| Bytes | Chain ID
                 opts.max_subchain_len = 0;
             }),
             r#"
-Chain Len| Depth |Subchain Len| Bytes | Chain ID
-       0 |     0 |          0 |     0 | da39a3
-       1 |     1 |          0 |  2072 |  12a9a7
-       1 |     1 |          0 |  2072 |  d176e3
-       1 |     1 |          0 |  2072 |  480cf2
-       1 |     1 |          0 |  2072 |  7b2274
-       1 |     1 |          0 |  2072 |  9195fa
+Chain Len| Depth |Subchain Len| Chain ID
+       0 |     0 |          0 | da39a3
+       1 |     1 |          0 |  12a9a7
+       1 |     1 |          0 |  d176e3
+       1 |     1 |          0 |  480cf2
+       1 |     1 |          0 |  7b2274
+       1 |     1 |          0 |  9195fa
 "#
         );
 
@@ -797,13 +793,13 @@ Chain Len| Depth |Subchain Len| Bytes | Chain ID
                 opts.max_subchain_len = 0;
             }),
             r#"
-Chain Len| Depth |Subchain Len| Bytes | Chain ID
-       0 |     0 |          0 |     0 | da39a3
-       1 |     1 |          0 |  2072 |  12a9a7
-       2 |     2 |          0 |    23 |   d176e3
-       3 |     3 |          0 |    23 |    480cf2
-       4 |     4 |          0 |    23 |     7b2274
-       5 |     5 |          0 |    23 |      9195fa
+Chain Len| Depth |Subchain Len| Chain ID
+       0 |     0 |          0 | da39a3
+       1 |     1 |          0 |  12a9a7
+       2 |     2 |          0 |   d176e3
+       3 |     3 |          0 |    480cf2
+       4 |     4 |          0 |     7b2274
+       5 |     5 |          0 |      9195fa
 "#
         );
         assert_eq!(
@@ -812,13 +808,13 @@ Chain Len| Depth |Subchain Len| Bytes | Chain ID
                 opts.max_subchain_len = 1000;
             }),
             r#"
-Chain Len| Depth |Subchain Len| Bytes | Chain ID
-       0 |     0 |          0 |     0 | da39a3
-       1 |     1 |          0 |  2072 |  12a9a7
-       2 |     1 |          1 |    23 |   d176e3
-       3 |     1 |          2 |    23 |    480cf2
-       4 |     1 |          3 |    23 |     7b2274
-       5 |     1 |          4 |    23 |      9195fa
+Chain Len| Depth |Subchain Len| Chain ID
+       0 |     0 |          0 | da39a3
+       1 |     1 |          0 |  12a9a7
+       2 |     1 |          1 |   d176e3
+       3 |     1 |          2 |    480cf2
+       4 |     1 |          3 |     7b2274
+       5 |     1 |          4 |      9195fa
 "#
         );
         assert_eq!(
@@ -827,13 +823,13 @@ Chain Len| Depth |Subchain Len| Bytes | Chain ID
                 opts.max_subchain_len = 1000;
             }),
             r#"
-Chain Len| Depth |Subchain Len| Bytes | Chain ID
-       0 |     0 |          0 |     0 | da39a3
-       1 |     1 |          0 |  2072 |  12a9a7
-       2 |     2 |          0 |    23 |   d176e3
-       3 |     3 |          0 |    23 |    480cf2
-       4 |     4 |          0 |    23 |     7b2274
-       5 |     5 |          0 |    23 |      9195fa
+Chain Len| Depth |Subchain Len| Chain ID
+       0 |     0 |          0 | da39a3
+       1 |     1 |          0 |  12a9a7
+       2 |     2 |          0 |   d176e3
+       3 |     3 |          0 |    480cf2
+       4 |     4 |          0 |     7b2274
+       5 |     5 |          0 |      9195fa
 "#
         );
 
@@ -843,18 +839,18 @@ Chain Len| Depth |Subchain Len| Bytes | Chain ID
                 opts.max_chain_bytes = 2120;
             }),
             r#"
-Chain Len| Depth |Subchain Len| Bytes | Chain ID
-       0 |     0 |          0 |     0 | da39a3
-       1 |     1 |          0 |  2072 |  12a9a7
-       2 |     2 |          0 |    23 |   d176e3
-       3 |     3 |          0 |    23 |    480cf2
-       1 |     1 |          0 |  2072 |  7b2274
-       2 |     2 |          0 |    23 |   9195fa
-       3 |     3 |          0 |    23 |    68a44f
-       1 |     1 |          0 |  2072 |  049af1
-       2 |     2 |          0 |    23 |   6be3a2
-       3 |     3 |          0 |    23 |    0565d7
-       1 |     1 |          0 |  2072 |  fcf8f6
+Chain Len| Depth |Subchain Len| Chain ID
+       0 |     0 |          0 | da39a3
+       1 |     1 |          0 |  12a9a7
+       2 |     2 |          0 |   d176e3
+       3 |     3 |          0 |    480cf2
+       1 |     1 |          0 |  7b2274
+       2 |     2 |          0 |   9195fa
+       3 |     3 |          0 |    68a44f
+       1 |     1 |          0 |  049af1
+       2 |     2 |          0 |   6be3a2
+       3 |     3 |          0 |    0565d7
+       1 |     1 |          0 |  fcf8f6
 "#
         );
 
@@ -868,11 +864,11 @@ Chain Len| Depth |Subchain Len| Bytes | Chain ID
                 }
             ),
             r#"
-Chain Len| Depth |Subchain Len| Bytes | Chain ID
-       0 |     0 |          0 |     0 | da39a3
-       1 |     1 |          0 |    81 |  ed1309
-       2 |     2 |          0 |    67 |   ab2eea
-       1 |     1 |          0 |    80 |  f4d55f
+Chain Len| Depth |Subchain Len| Chain ID
+       0 |     0 |          0 | da39a3
+       1 |     1 |          0 |  ed1309
+       2 |     2 |          0 |   ab2eea
+       1 |     1 |          0 |  f4d55f
 "#
         );
     }
@@ -890,10 +886,10 @@ Chain Len| Depth |Subchain Len| Bytes | Chain ID
         assert_eq!(
             format!("\n{:?}", zstore.debug_delta_tree().unwrap()),
             r#"
-Chain Len| Depth |Subchain Len| Bytes | Chain ID
-       0 |     0 |          0 |     0 | da39a3
-       1 |     1 |          0 |  1056 |  6e06bf
-       1 |     1 |          0 |  1545 |  4ccc52
+Chain Len| Depth |Subchain Len| Chain ID
+       0 |     0 |          0 | da39a3
+       1 |     1 |          0 |  6e06bf
+       1 |     1 |          0 |  4ccc52
 "#
         );
 
@@ -902,11 +898,11 @@ Chain Len| Depth |Subchain Len| Bytes | Chain ID
         assert_eq!(
             format!("\n{:?}", zstore.debug_delta_tree().unwrap()),
             r#"
-Chain Len| Depth |Subchain Len| Bytes | Chain ID
-       0 |     0 |          0 |     0 | da39a3
-       1 |     1 |          0 |  1056 |  6e06bf
-       1 |     1 |          0 |  1545 |  4ccc52
-       2 |     2 |          0 |   297 |   a078da
+Chain Len| Depth |Subchain Len| Chain ID
+       0 |     0 |          0 | da39a3
+       1 |     1 |          0 |  6e06bf
+       1 |     1 |          0 |  4ccc52
+       2 |     2 |          0 |   a078da
 "#
         );
     }
