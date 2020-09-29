@@ -37,3 +37,14 @@ risk, considering:
   then raise a serialization error later).
 - Fixing this would require a substantial and risky rework of Mercurial's
   scratch bookmarks handling, which we're deprecating.
+
+
+# Setup runbook
+
+To enable live sync of all the scratch bookmarks to from HG to Mononoke please
+use the following order of operations:
+
+1. Start the queue population on HG servers by setting the `infinitepush.replaybookmarks` to `True`
+2. Backfill the queue using `scripts/torozco/dump_bookmarkstonodes/`
+3. Start bookmark filller with `--backfill` and wait for it to finish.
+4. Start filller jobs without `--backfill`
