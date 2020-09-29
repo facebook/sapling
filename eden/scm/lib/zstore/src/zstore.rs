@@ -562,10 +562,13 @@ lazy_static! {
 #[derive(Serialize, Deserialize)]
 struct Delta<'a> {
     // ATTENTION: The 0..20 byte slice of mincode serialized Delta is expected to be the id.
+    // This also requires the hgid::tuple serialization strategy.
     /// Pre-calculated checksum of the full data.
+    #[serde(with = "types::serde_with::hgid::tuple")]
     id: Id20,
 
     /// Delta base Id. Use `EMPTY_ID20` if there is no real delta base.
+    #[serde(with = "types::serde_with::hgid::tuple")]
     base_id: Id20,
 
     /// Depth of the delta. See [`DeltaOptions`] for how this works.
