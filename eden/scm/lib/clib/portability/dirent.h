@@ -9,7 +9,7 @@
 #ifndef FBHGEXT_CLIB_PORTABILITY_DIRENT_H
 #define FBHGEXT_CLIB_PORTABILITY_DIRENT_H
 
-#if defined(_MSC_VER)
+#ifdef _WIN32
 #include "folly/portability/Dirent.h"
 #else
 #include <dirent.h>

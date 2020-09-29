@@ -24,6 +24,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <memory.h>
+#include <stdio.h>
 
 #define ntoh_data_offset ntohll
 
