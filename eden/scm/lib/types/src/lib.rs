@@ -15,6 +15,7 @@ pub mod node;
 pub mod nodeinfo;
 pub mod parents;
 pub mod path;
+pub mod serde_with;
 pub mod sha;
 
 pub use crate::hgid::HgId;

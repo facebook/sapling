@@ -31,6 +31,45 @@ struct HgIdError(String);
 
 /// A 20-byte identifier, often a hash. Nodes are used to uniquely identify
 /// commits, file versions, and many other things.
+///
+///
+/// # Serde Serialization
+///
+/// The `serde_with` module allows customization on `HgId` serialization:
+/// - `#[serde(with = "types::serde_with::hgid::bytes")]`
+/// - `#[serde(with = "types::serde_with::hgid::hex")]`
+/// - `#[serde(with = "types::serde_with::hgid::tuple")]` (current default)
+///
+/// Using them can change the size or the type of serialization result:
+///
+/// | lib \ serde_with | hgid::tuple         | hgid::bytes  | hgid::hex |
+/// |------------------|---------------------|--------------|-----------|
+/// | mincode          | 20 bytes            | 21 bytes     | 41 bytes  |
+/// | cbor             | 21 to 41 bytes  [1] | 21 bytes     | 42 bytes  |
+/// | json             | 41 to 81+ bytes [1] | invalid  [2] | 42 bytes  |
+/// | python           | Tuple[int]          | bytes        | str       |
+///
+/// In general,
+/// - `hgid::tuple` only works best for `mincode`.
+/// - `hgid::bytes` works best for cbor, python and probably should be the
+///   default.
+/// - `hgid::hex` is useful for `json`, or other text-only formats.
+///
+/// Compatibility note:
+/// - `hgid::tuple` cannot decode `hgid::bytes` or `hgid::hex` data.
+/// - `hgid::hex` can decode `hgid::bytes` data, or vice-versa. They share a
+///   same `deserialize` implementation.
+/// - `hgid::hex` or `hgid::bytes` might be able to decode `hgid::tuple` data,
+///   depending on how tuples are serialized. For example, mincode
+///   does not add framing for tuples, so `hgid::bytes` cannot decode
+///   `hgid::tuple` data; cbor adds framing for tuples, so `hgid::bytes`
+///   can decode `hgid::tuple` data.
+///
+/// NOTE: Consider switching the default from `hgid::tuple` to `hgid::bytes`,
+/// or dropping the default serialization implementation.
+///
+/// [1]: Depends on actual data of `HgId`.
+/// [2]: JSON only supports utf-8 data.
 #[derive(
     Clone,
     Copy,
@@ -101,6 +140,31 @@ impl HgId {
 
     pub fn to_hex(&self) -> String {
         to_hex(self.0.as_ref())
+    }
+
+    pub fn from_hex(hex: &[u8]) -> Result<Self> {
+        if hex.len() != Self::hex_len() {
+            let msg = format!("{:?} is not a hex string of {} chars", hex, Self::hex_len());
+            return Err(HgIdError(msg).into());
+        }
+        let mut bytes = [0u8; Self::len()];
+        for (i, byte) in hex.iter().enumerate() {
+            let value = match byte {
+                b'0'..=b'9' => byte - b'0',
+                b'a'..=b'f' => byte - b'a' + 10,
+                b'A'..=b'F' => byte - b'A' + 10,
+                _ => {
+                    let msg = format!("{:?} is not a hex character", *byte as char);
+                    return Err(HgIdError(msg).into());
+                }
+            };
+            if i & 1 == 0 {
+                bytes[i / 2] |= value << 4;
+            } else {
+                bytes[i / 2] |= value;
+            }
+        }
+        Ok(Self::from_byte_array(bytes))
     }
 
     #[cfg(any(test, feature = "for-tests"))]
@@ -270,6 +334,51 @@ mod tests {
     #[test]
     fn test_incorrect_length() {
         HgId::from_slice(&[0u8; 25]).expect_err("bad slice length");
+    }
+
+    #[test]
+    fn test_serde_with_using_cbor() {
+        // Note: this test is for CBOR. Other serializers like mincode
+        // or Thrift would have different backwards compatibility!
+        use serde_cbor::de::from_slice as decode;
+        use serde_cbor::ser::to_vec as encode;
+
+        #[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
+        struct Orig(#[serde(with = "crate::serde_with::hgid::tuple")] HgId);
+
+        #[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
+        struct Bytes(#[serde(with = "crate::serde_with::hgid::bytes")] HgId);
+
+        #[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
+        struct Hex(#[serde(with = "crate::serde_with::hgid::hex")] HgId);
+
+        let id: HgId = mocks::CS;
+        let orig = Orig(id);
+        let bytes = Bytes(id);
+        let hex = Hex(id);
+
+        let cbor_orig = encode(&orig).unwrap();
+        let cbor_bytes = encode(&bytes).unwrap();
+        let cbor_hex = encode(&hex).unwrap();
+
+        assert_eq!(cbor_orig.len(), 41);
+        assert_eq!(cbor_bytes.len(), 21);
+        assert_eq!(cbor_hex.len(), 42);
+
+        // Orig cannot decode bytes or hex.
+        assert_eq!(decode::<Orig>(&cbor_orig).unwrap().0, id);
+        decode::<Orig>(&cbor_bytes).unwrap_err();
+        decode::<Orig>(&cbor_hex).unwrap_err();
+
+        // Bytes can decode all 3 formats.
+        assert_eq!(decode::<Bytes>(&cbor_orig).unwrap().0, id);
+        assert_eq!(decode::<Bytes>(&cbor_bytes).unwrap().0, id);
+        assert_eq!(decode::<Bytes>(&cbor_hex).unwrap().0, id);
+
+        // Hex can decode all 3 formats.
+        assert_eq!(decode::<Hex>(&cbor_orig).unwrap().0, id);
+        assert_eq!(decode::<Hex>(&cbor_bytes).unwrap().0, id);
+        assert_eq!(decode::<Hex>(&cbor_hex).unwrap().0, id);
     }
 
     quickcheck! {
