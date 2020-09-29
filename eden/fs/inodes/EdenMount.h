@@ -37,7 +37,7 @@
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/inodes/OverlayFileAccess.h"
 #else
-#include "eden/fs/prjfs/FsChannel.h"
+#include "eden/fs/prjfs/PrjfsChannel.h"
 #endif
 
 DECLARE_string(edenfsctlPath);
@@ -264,20 +264,17 @@ class EdenMount {
         state == State::SHUTTING_DOWN);
   }
 
-#ifdef _WIN32
   /**
-   * Return the pointer to FsChannel on Windows
-   */
-  FsChannel* getFsChannel() const;
-#else
-  /**
-   * Get the FUSE channel for this mount point.
+   * Get the FUSE/Prjfs channel for this mount point.
    *
    * This should only be called after the mount point has been successfully
    * started.  (It is the caller's responsibility to perform proper
    * synchronization here with the mount start operation.  This method provides
    * no internal synchronization of its own.)
    */
+#ifdef _WIN32
+  PrjfsChannel* getPrjfsChannel() const;
+#else
   FuseChannel* getFuseChannel() const;
 #endif
 
@@ -778,8 +775,8 @@ class EdenMount {
   FOLLY_NODISCARD folly::Promise<folly::Unit>& beginMount();
 
 #ifdef _WIN32
-  using channelType = FsChannel*;
-  using ChannelStopData = FsChannel::StopData;
+  using channelType = PrjfsChannel*;
+  using ChannelStopData = PrjfsChannel::StopData;
 #else
   using channelType = folly::File;
   using ChannelStopData = FuseChannel::StopData;
@@ -970,7 +967,7 @@ class EdenMount {
   /**
    * This is the channel between ProjectedFS and rest of Eden.
    */
-  std::unique_ptr<FsChannel> fsChannel_;
+  std::unique_ptr<PrjfsChannel> channel_;
 #else
   /**
    * The associated fuse channel to the kernel.

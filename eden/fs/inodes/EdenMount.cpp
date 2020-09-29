@@ -628,7 +628,7 @@ folly::Future<folly::Unit> EdenMount::unmount() {
             return folly::makeFuture();
           }
 #ifdef _WIN32
-          fsChannel_->stop();
+          channel_->stop();
           return folly::makeFuture();
 #else
           return serverState_->getPrivHelper()->fuseUnmount(
@@ -661,8 +661,8 @@ FuseChannel* EdenMount::getFuseChannel() const {
   return channel_.get();
 }
 #else
-FsChannel* EdenMount::getFsChannel() const {
-  return fsChannel_.get();
+PrjfsChannel* EdenMount::getPrjfsChannel() const {
+  return channel_.get();
 }
 #endif
 
@@ -1214,7 +1214,7 @@ folly::Future<EdenMount::channelType> EdenMount::channelMount(bool readOnly) {
         return folly::makeFutureWith(
                    [this,
                     mountPath = std::move(mountPath),
-                    readOnly]() -> folly::Future<FsChannel*> {
+                    readOnly]() -> folly::Future<PrjfsChannel*> {
                      auto channel = new PrjfsChannel(
                          mountPath,
                          getDispatcher(),
@@ -1226,10 +1226,10 @@ folly::Future<EdenMount::channelType> EdenMount::channelMount(bool readOnly) {
                              ->prjfsUseNegativePathCaching.getValue());
                      return channel;
                    })
-            .thenTry([mountPromise](Try<FsChannel*>&& channel) {
+            .thenTry([mountPromise](Try<PrjfsChannel*>&& channel) {
               if (channel.hasException()) {
                 mountPromise->setException(channel.exception());
-                return makeFuture<FsChannel*>(channel.exception());
+                return makeFuture<PrjfsChannel*>(channel.exception());
               }
 
               // TODO(xavierd): similarly to the non-Windows code below, we
@@ -1282,7 +1282,7 @@ folly::Future<EdenMount::channelType> EdenMount::channelMount(bool readOnly) {
 
 void EdenMount::createChannel(EdenMount::channelType channel) {
 #if _WIN32
-  fsChannel_.reset(channel);
+  channel_.reset(channel);
 #else
   channel_.reset(new FuseChannel(
       std::move(channel),
@@ -1312,7 +1312,7 @@ folly::Future<folly::Unit> EdenMount::startChannel(bool readOnly) {
         .thenValue([this](EdenMount::channelType&& channel) {
           createChannel(std::move(channel));
 #ifdef _WIN32
-          channelInitSuccessful(fsChannel_->getStopFuture());
+          channelInitSuccessful(channel_->getStopFuture());
 #else
           return channel_->initialize(config_->getCaseSensitive())
               .thenValue([this](FuseChannel::StopFuture&& fuseCompleteFuture) {

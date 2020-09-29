@@ -75,7 +75,7 @@ Future<vector<CheckoutConflict>> CheckoutContext::finish(Hash newSnapshot) {
     });
   }
 #else
-  auto* channel = mount_->getFsChannel();
+  auto* channel = mount_->getPrjfsChannel();
   if (!isDryRun() && channel) {
     channel->flushNegativePathCache();
   }

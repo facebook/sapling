@@ -3010,7 +3010,7 @@ void TreeInode::invalidateChannelEntryCache(PathComponentPiece name) {
     fuseChannel->invalidateEntry(getNodeId(), name);
   }
 #else
-  if (auto* fsChannel = getMount()->getFsChannel()) {
+  if (auto* fsChannel = getMount()->getPrjfsChannel()) {
     const auto path = getPath();
     if (path.has_value()) {
       fsChannel->removeCachedFile(path.value() + name);
@@ -3028,7 +3028,7 @@ void TreeInode::invalidateChannelDirCache() {
     fuseChannel->invalidateInode(getNodeId(), 0, 0);
   }
 #else
-  if (auto* fsChannel = getMount()->getFsChannel()) {
+  if (auto* fsChannel = getMount()->getPrjfsChannel()) {
     const auto path = getPath();
     if (path.has_value()) {
       fsChannel->addDirectoryPlaceholder(path.value());

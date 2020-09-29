@@ -10,17 +10,17 @@
 #include "folly/portability/Windows.h"
 
 #include <ProjectedFSLib.h> // @manual
-#include "eden/fs/prjfs/FsChannel.h"
 #include "eden/fs/utils/Guid.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/ProcessAccessLog.h"
+#include "folly/futures/Future.h"
 
 namespace facebook {
 namespace eden {
 class EdenMount;
 class Dispatcher;
 
-class PrjfsChannel : public FsChannel {
+class PrjfsChannel {
  public:
   PrjfsChannel(const PrjfsChannel&) = delete;
   PrjfsChannel& operator=(const PrjfsChannel&) = delete;
@@ -36,17 +36,18 @@ class PrjfsChannel : public FsChannel {
   void start(bool readOnly, bool useNegativePathCaching);
   void stop();
 
-  folly::SemiFuture<FsChannel::StopData> getStopFuture() override;
+  struct StopData {};
+  folly::SemiFuture<StopData> getStopFuture();
 
   /**
    * Remove files from the Projected FS cache. removeCachedFile() doesn't care
    * about the file state and will remove file in any state.
    */
-  void removeCachedFile(RelativePathPiece path) override;
+  void removeCachedFile(RelativePathPiece path);
 
-  void addDirectoryPlaceholder(RelativePathPiece path) override;
+  void addDirectoryPlaceholder(RelativePathPiece path);
 
-  void flushNegativePathCache() override;
+  void flushNegativePathCache();
 
   Dispatcher* getDispatcher() {
     return dispatcher_;
@@ -77,7 +78,7 @@ class PrjfsChannel : public FsChannel {
   Guid mountId_;
   bool isRunning_{false};
   bool useNegativePathCaching_{true};
-  folly::Promise<FsChannel::StopData> stopPromise_;
+  folly::Promise<StopData> stopPromise_;
 
   ProcessAccessLog processAccessLog_;
 };

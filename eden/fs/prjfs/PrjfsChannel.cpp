@@ -604,12 +604,12 @@ void PrjfsChannel::stop() {
   XLOG(INFO) << "Stopping PrjfsChannel for: " << mountPath_;
   DCHECK(isRunning_);
   PrjStopVirtualizing(mountChannel_);
-  stopPromise_.setValue(FsChannel::StopData{});
+  stopPromise_.setValue(StopData{});
   isRunning_ = false;
   mountChannel_ = nullptr;
 }
 
-folly::SemiFuture<FsChannel::StopData> PrjfsChannel::getStopFuture() {
+folly::SemiFuture<PrjfsChannel::StopData> PrjfsChannel::getStopFuture() {
   return stopPromise_.getSemiFuture();
 }
 
