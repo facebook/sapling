@@ -647,14 +647,16 @@ class HgServer(object):
     def _fetch_tree_impl(self, path, manifest_node):
         # type: (str, bytes) -> None
         mfnodes = set([manifest_node])
-        if path:
-            # We have to call repo._prefetchtrees() directly if we have a path.
-            # We cannot compute the set of base nodes in this case.
-            self.repo._prefetchtrees(path, mfnodes, [], [], depth=self._treefetchdepth)
-        else:
-            # When querying the top-level node use repo.prefetchtrees()
-            # It will compute a reasonable set of base nodes to send in the query.
-            self.repo.prefetchtrees(mfnodes, depth=self._treefetchdepth)
+        depth = str(self._treefetchdepth)
+        with self.repo.ui.configoverride({("treemanifest", "fetchdepth"): depth}, "forcesinglefetch"):
+            if path:
+                # We have to call repo._prefetchtrees() directly if we have a path.
+                # We cannot compute the set of base nodes in this case.
+                self.repo._prefetchtrees(path, mfnodes, [], [])
+            else:
+                # When querying the top-level node use repo.prefetchtrees()
+                # It will compute a reasonable set of base nodes to send in the query.
+                self.repo.prefetchtrees(mfnodes)
 
     def send_chunk(self, request, *data, **kwargs):
         # type: (Request, bytes, Any) -> None
