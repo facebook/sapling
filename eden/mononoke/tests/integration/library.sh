@@ -23,7 +23,12 @@ fi
 
 REPOID=0
 REPONAME=${REPONAME:-repo}
+
 COMMON_ARGS=(--skip-caching --mysql-master-only --tunables-config "file:$TESTTMP/mononoke_tunables.json")
+if [[ -n "$MYSQL_CLIENT" ]]; then
+  COMMON_ARGS+=(--use-mysql-client)
+fi
+
 TEST_CERTDIR="${HGTEST_CERTDIR:-"$TEST_CERTS"}"
 
 case "$(uname -s)" in

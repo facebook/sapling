@@ -53,7 +53,7 @@ use repo_read_write_status::{RepoReadWriteFetcher, SqlRepoReadWriteStatus};
 use scuba_ext::ScubaSampleBuilder;
 use slog::{error, info};
 use sql_construct::{facebook::FbSqlConstruct, SqlConstruct};
-use sql_ext::facebook::{myrouter_ready, MysqlOptions};
+use sql_ext::facebook::{myrouter_ready, MysqlConnectionType, MysqlOptions};
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -216,6 +216,7 @@ fn build_reporting_handler(
 }
 
 fn get_read_write_fetcher(
+    fb: FacebookInit,
     mysql_options: MysqlOptions,
     repo_lock_db_addr: Option<&str>,
     hgsql_name: HgsqlName,
@@ -229,14 +230,24 @@ fn get_read_write_fetcher(
                 let path = Path::new(repo_lock_db_addr);
                 SqlRepoReadWriteStatus::with_sqlite_path(path, readonly_storage)
             } else {
-                match mysql_options.myrouter_port {
-                    Some(myrouter_port) => Ok(SqlRepoReadWriteStatus::with_myrouter(
+                match mysql_options.connection_type {
+                    MysqlConnectionType::Myrouter(port) => {
+                        Ok(SqlRepoReadWriteStatus::with_myrouter(
+                            repo_lock_db_addr.to_string(),
+                            port,
+                            mysql_options.read_connection_type(),
+                            readonly_storage,
+                        ))
+                    }
+                    MysqlConnectionType::Mysql => SqlRepoReadWriteStatus::with_mysql(
+                        fb,
                         repo_lock_db_addr.to_string(),
-                        myrouter_port,
                         mysql_options.read_connection_type(),
                         readonly_storage,
+                    ),
+                    MysqlConnectionType::RawXDB => Err(Error::msg(
+                        "neither myrouter_port nor use-mysql-client not specified in mysql mode",
                     )),
-                    None => Err(Error::msg("myrouter_port not specified in mysql mode")),
                 }
             };
             sql_repo_read_write_status.and_then(|connection| {
@@ -768,11 +779,19 @@ fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> BoxFuture<(), Error> {
     scuba_sample.add("repo", repo_id.id());
     scuba_sample.add("reponame", repo_name.clone());
 
-    let myrouter_ready_fut = myrouter_ready(
-        repo_config.primary_metadata_db_address(),
-        mysql_options,
-        ctx.logger().clone(),
-    );
+    let myrouter_ready_fut = if let MysqlConnectionType::Myrouter(_) = mysql_options.connection_type
+    {
+        // connection goes via Myrouter
+        myrouter_ready(
+            repo_config.primary_metadata_db_address(),
+            mysql_options,
+            ctx.logger().clone(),
+        )
+    } else {
+        // connection goes via Mysql client
+        ok(()).boxify()
+    };
+
     let bookmarks = args::open_sql::<SqlBookmarksBuilder>(ctx.fb, &matches);
 
     myrouter_ready_fut
@@ -787,6 +806,7 @@ fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> BoxFuture<(), Error> {
             );
 
             let repo_lockers = get_read_write_fetcher(
+                ctx.fb,
                 mysql_options,
                 try_boxfuture!(get_repo_sqldb_address(&ctx, &matches, &repo_config.hgsql_name)).as_deref(),
                 repo_config.hgsql_name.clone(),

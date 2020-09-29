@@ -44,6 +44,7 @@ const ARG_MANIFOLD_BUCKET: &str = "manifold-bucket";
 const ARG_SHARDMAP: &str = "shardmap";
 const ARG_SHARD_COUNT: &str = "shard-count";
 const ARG_MYROUTER_PORT: &str = "myrouter-port";
+const ARG_USE_MYSQL_CLIENT: &str = "use-mysql-client";
 const ARG_INPUT_CAPACITY: &str = "input-capacity";
 const ARG_CHUNK_SIZE: &str = "chunk-size";
 const ARG_CONCURRENCY: &str = "concurrency";
@@ -206,31 +207,38 @@ async fn get_blob<'a>(
         (CMD_XDB, Some(sub)) => {
             let shardmap = sub.value_of(ARG_SHARDMAP).unwrap().to_string();
             let shard_count = sub.value_of(ARG_SHARD_COUNT).unwrap().parse()?;
-            let blobstore = match sub.value_of(ARG_MYROUTER_PORT) {
-                Some(port) => {
-                    let port = port.parse()?;
-                    Sqlblob::with_myrouter(
-                        fb,
-                        shardmap,
-                        port,
-                        ReadConnectionType::Replica,
-                        shard_count,
-                        false,
-                    )
-                    .compat()
-                    .await?
-                }
-                None => {
-                    Sqlblob::with_raw_xdb_shardmap(
-                        fb,
-                        shardmap,
-                        ReadConnectionType::Replica,
-                        shard_count,
-                        false,
-                    )
-                    .compat()
-                    .await?
-                }
+            let blobstore = if let Some(port) = sub.value_of(ARG_MYROUTER_PORT) {
+                let port = port.parse()?;
+                Sqlblob::with_myrouter(
+                    fb,
+                    shardmap,
+                    port,
+                    ReadConnectionType::Replica,
+                    shard_count,
+                    false,
+                )
+                .compat()
+                .await?
+            } else if sub.is_present(ARG_USE_MYSQL_CLIENT) {
+                Sqlblob::with_mysql(
+                    fb,
+                    shardmap,
+                    shard_count,
+                    ReadConnectionType::Replica,
+                    false,
+                )
+                .compat()
+                .await?
+            } else {
+                Sqlblob::with_raw_xdb_shardmap(
+                    fb,
+                    shardmap,
+                    ReadConnectionType::Replica,
+                    shard_count,
+                    false,
+                )
+                .compat()
+                .await?
             };
             Arc::new(blobstore)
         }
@@ -315,6 +323,12 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .long("myrouter-port")
                 .takes_value(true)
                 .required(false),
+        )
+        .arg(
+            Arg::with_name(ARG_USE_MYSQL_CLIENT)
+                .long(ARG_USE_MYSQL_CLIENT)
+                .required(false)
+                .conflicts_with(ARG_MYROUTER_PORT),
         );
 
     let app = App::new(NAME)

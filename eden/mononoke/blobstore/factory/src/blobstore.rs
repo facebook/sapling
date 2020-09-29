@@ -27,7 +27,7 @@ use readonlyblob::ReadOnlyBlobstore;
 use scuba::ScubaSampleBuilder;
 use slog::Logger;
 use sql_construct::SqlConstructFromDatabaseConfig;
-use sql_ext::facebook::MysqlOptions;
+use sql_ext::facebook::{MysqlConnectionType, MysqlOptions};
 use sqlblob::Sqlblob;
 use std::num::{NonZeroU64, NonZeroUsize};
 use std::sync::Arc;
@@ -106,49 +106,78 @@ pub fn make_blobstore<'a>(
 
             Mysql { remote } => match remote {
                 ShardableRemoteDatabaseConfig::Unsharded(config) => {
-                    if let Some(myrouter_port) = mysql_options.myrouter_port {
-                        Sqlblob::with_myrouter_unsharded(
-                            fb,
-                            config.db_address,
-                            myrouter_port,
-                            mysql_options.read_connection_type(),
-                            readonly_storage.0,
-                        )
-                        .compat()
-                        .await
-                    } else {
-                        Sqlblob::with_raw_xdb_unsharded(
-                            fb,
-                            config.db_address,
-                            mysql_options.read_connection_type(),
-                            readonly_storage.0,
-                        )
-                        .compat()
-                        .await
+                    let read_conn_type = mysql_options.read_connection_type();
+                    match mysql_options.connection_type {
+                        MysqlConnectionType::Myrouter(myrouter_port) => {
+                            Sqlblob::with_myrouter_unsharded(
+                                fb,
+                                config.db_address,
+                                myrouter_port,
+                                read_conn_type,
+                                readonly_storage.0,
+                            )
+                            .compat()
+                            .await
+                        }
+                        MysqlConnectionType::Mysql => {
+                            Sqlblob::with_mysql_unsharded(
+                                fb,
+                                config.db_address,
+                                read_conn_type,
+                                readonly_storage.0,
+                            )
+                            .compat()
+                            .await
+                        }
+                        MysqlConnectionType::RawXDB => {
+                            Sqlblob::with_raw_xdb_unsharded(
+                                fb,
+                                config.db_address,
+                                read_conn_type,
+                                readonly_storage.0,
+                            )
+                            .compat()
+                            .await
+                        }
                     }
                 }
                 ShardableRemoteDatabaseConfig::Sharded(config) => {
-                    if let Some(myrouter_port) = mysql_options.myrouter_port {
-                        Sqlblob::with_myrouter(
-                            fb,
-                            config.shard_map.clone(),
-                            myrouter_port,
-                            mysql_options.read_connection_type(),
-                            config.shard_num,
-                            readonly_storage.0,
-                        )
-                        .compat()
-                        .await
-                    } else {
-                        Sqlblob::with_raw_xdb_shardmap(
-                            fb,
-                            config.shard_map.clone(),
-                            mysql_options.read_connection_type(),
-                            config.shard_num,
-                            readonly_storage.0,
-                        )
-                        .compat()
-                        .await
+                    let read_conn_type = mysql_options.read_connection_type();
+                    match mysql_options.connection_type {
+                        MysqlConnectionType::Myrouter(myrouter_port) => {
+                            Sqlblob::with_myrouter(
+                                fb,
+                                config.shard_map.clone(),
+                                myrouter_port,
+                                read_conn_type,
+                                config.shard_num,
+                                readonly_storage.0,
+                            )
+                            .compat()
+                            .await
+                        }
+                        MysqlConnectionType::Mysql => {
+                            Sqlblob::with_mysql(
+                                fb,
+                                config.shard_map.clone(),
+                                config.shard_num,
+                                read_conn_type,
+                                readonly_storage.0,
+                            )
+                            .compat()
+                            .await
+                        }
+                        MysqlConnectionType::RawXDB => {
+                            Sqlblob::with_raw_xdb_shardmap(
+                                fb,
+                                config.shard_map.clone(),
+                                read_conn_type,
+                                config.shard_num,
+                                readonly_storage.0,
+                            )
+                            .compat()
+                            .await
+                        }
                     }
                 }
             }

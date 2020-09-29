@@ -55,9 +55,17 @@ pub mod facebook {
         myrouter_ready, MyAdmin, MyAdminLagMonitor,
     };
 
+    /// Way to connect to the DB: via myrouter connections, raw xdb or Mysql client
+    #[derive(Copy, Clone, Debug)]
+    pub enum MysqlConnectionType {
+        Myrouter(u16),
+        RawXDB,
+        Mysql,
+    }
+
     #[derive(Copy, Clone, Debug)]
     pub struct MysqlOptions {
-        pub myrouter_port: Option<u16>,
+        pub connection_type: MysqlConnectionType,
         pub master_only: bool,
     }
 

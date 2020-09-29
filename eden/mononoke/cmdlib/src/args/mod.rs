@@ -46,7 +46,7 @@ use metaconfig_parser::{RepoConfigs, StorageConfigs};
 use metaconfig_types::{BlobConfig, CommonConfig, Redaction, RepoConfig, ScrubAction};
 use mononoke_types::RepositoryId;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
-use sql_ext::facebook::MysqlOptions;
+use sql_ext::facebook::{MysqlConnectionType, MysqlOptions};
 use tunables::init_tunables_worker;
 
 use crate::helpers::{
@@ -68,6 +68,7 @@ const TARGET_REPO_NAME: &str = "target-repo-name";
 const ENABLE_MCROUTER: &str = "enable-mcrouter";
 const MYSQL_MYROUTER_PORT: &str = "myrouter-port";
 const MYSQL_MASTER_ONLY: &str = "mysql-master-only";
+const MYSQL_USE_CLIENT: &str = "use-mysql-client";
 const RUNTIME_THREADS: &str = "runtime-threads";
 const TUNABLES_CONFIG: &str = "tunables-config";
 const DISABLE_TUNABLES: &str = "disable-tunables";
@@ -707,6 +708,13 @@ pub fn add_mysql_options_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
             .help("Connect to MySQL master only")
             .takes_value(false),
     )
+    .arg(
+        Arg::with_name(MYSQL_USE_CLIENT)
+            .long(MYSQL_USE_CLIENT)
+            .help("Connect via Mysql client")
+            .takes_value(false)
+            .conflicts_with(MYSQL_MYROUTER_PORT),
+    )
 }
 
 pub fn add_blobstore_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
@@ -1018,18 +1026,21 @@ pub fn parse_readonly_storage<'a>(matches: &ArgMatches<'a>) -> ReadOnlyStorage {
 }
 
 pub fn parse_mysql_options<'a>(matches: &ArgMatches<'a>) -> MysqlOptions {
-    let myrouter_port = match matches.value_of(MYSQL_MYROUTER_PORT) {
-        Some(port) => Some(
-            port.parse::<u16>()
-                .expect("Provided --myrouter-port is not u16"),
-        ),
-        None => None,
+    let connection_type = if let Some(port) = matches.value_of(MYSQL_MYROUTER_PORT) {
+        let port = port
+            .parse::<u16>()
+            .expect("Provided --myrouter-port is not u16");
+        MysqlConnectionType::Myrouter(port)
+    } else if matches.is_present(MYSQL_USE_CLIENT) {
+        MysqlConnectionType::Mysql
+    } else {
+        MysqlConnectionType::RawXDB
     };
 
     let master_only = matches.is_present(MYSQL_MASTER_ONLY);
 
     MysqlOptions {
-        myrouter_port,
+        connection_type,
         master_only,
     }
 }

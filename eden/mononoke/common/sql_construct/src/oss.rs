@@ -34,6 +34,10 @@ pub trait FbSqlConstruct: SqlConstruct + Sized + Send + Sync + 'static {
         fb_unimplemented!()
     }
 
+    fn with_mysql(_: FacebookInit, _: String, _: ReadConnectionType, _: bool) -> Result<Self> {
+        fb_unimplemented!()
+    }
+
     async fn with_xdb(_: FacebookInit, _: String, _: MysqlOptions, _: bool) -> Result<Self> {
         fb_unimplemented!()
     }
@@ -49,6 +53,16 @@ pub trait FbSqlShardedConstruct: SqlShardedConstruct + Sized + Send + Sync + 'st
     }
 
     async fn with_sharded_raw_xdb_tier(
+        _: FacebookInit,
+        _: String,
+        _: usize,
+        _: ReadConnectionType,
+        _: bool,
+    ) -> Result<Self> {
+        fb_unimplemented!()
+    }
+
+    fn with_sharded_mysql(
         _: FacebookInit,
         _: String,
         _: usize,

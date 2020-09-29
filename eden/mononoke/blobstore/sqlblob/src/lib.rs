@@ -41,7 +41,8 @@ use mononoke_types::{hash::Context as HashContext, BlobstoreBytes};
 use sql::{rusqlite::Connection as SqliteConnection, Connection};
 use sql_ext::{
     facebook::{
-        create_myrouter_connections, create_raw_xdb_connections, PoolSizeConfig, ReadConnectionType,
+        create_myrouter_connections, create_mysql_connections, create_raw_xdb_connections,
+        PoolSizeConfig, ReadConnectionType,
     },
     open_sqlite_in_memory, open_sqlite_path, SqlConnections,
 };
@@ -113,6 +114,54 @@ impl Sqlblob {
                     "blobstore".into(),
                     readonly,
                 ))
+                .into_future()
+                .boxify()
+            },
+        )
+    }
+
+    pub fn with_mysql(
+        fb: FacebookInit,
+        shardmap: String,
+        shard_num: NonZeroUsize,
+        read_con_type: ReadConnectionType,
+        readonly: bool,
+    ) -> BoxFuture01<CountedSqlblob, Error> {
+        let delay = try_boxfuture!(myadmin_delay::sharded(fb, shardmap.clone(), shard_num));
+        Self::with_connection_factory(delay, shardmap.clone(), shard_num, move |shard_id| {
+            create_mysql_connections(
+                fb,
+                shardmap.clone(),
+                Some(shard_id),
+                read_con_type,
+                PoolSizeConfig::for_sharded_connection(),
+                readonly,
+            )
+            .into_future()
+            .boxify()
+        })
+    }
+
+    pub fn with_mysql_unsharded(
+        fb: FacebookInit,
+        db_address: String,
+        read_con_type: ReadConnectionType,
+        readonly: bool,
+    ) -> BoxFuture01<CountedSqlblob, Error> {
+        let delay = try_boxfuture!(myadmin_delay::single(fb, db_address.clone()));
+        Self::with_connection_factory(
+            delay,
+            db_address.clone(),
+            NonZeroUsize::new(1).expect("One should be greater than zero"),
+            move |_shard_id| {
+                create_mysql_connections(
+                    fb,
+                    db_address.clone(),
+                    None,
+                    read_con_type,
+                    PoolSizeConfig::for_regular_connection(),
+                    readonly,
+                )
                 .into_future()
                 .boxify()
             },

@@ -30,7 +30,7 @@ use metaconfig_types::{
 };
 use mononoke_types::{BlobstoreBytes, DateTime, RepositoryId};
 use sql_construct::facebook::FbSqlConstruct;
-use sql_ext::facebook::ReadConnectionType;
+use sql_ext::facebook::{MysqlConnectionType, ReadConnectionType};
 
 /// Save manifold continuation token each once per `PRESERVE_STATE_RATIO` entries
 const PRESERVE_STATE_RATIO: usize = 10_000;
@@ -43,7 +43,7 @@ const FLAT_NAMESPACE_PREFIX: &str = "flat/";
 /// Configuration options
 struct Config {
     db_address: String,
-    myrouter_port: u16,
+    connection_type: MysqlConnectionType,
     blobstore_args: BlobConfig,
     repo_id: RepositoryId,
     src_blobstore_id: BlobstoreId,
@@ -228,16 +228,13 @@ fn parse_args(fb: FacebookInit) -> Result<Config, Error> {
         ))
         .and_then(|args| Ok(args.clone()))?;
 
-    let myrouter_port = args::parse_mysql_options(&matches)
-        .myrouter_port
-        .ok_or(Error::msg("myrouter-port must be specified"))?;
-
+    let connection_type = args::parse_mysql_options(&matches).connection_type;
     let readonly_storage = args::parse_readonly_storage(&matches);
 
     Ok(Config {
         repo_id,
         db_address: db_address.clone(),
-        myrouter_port,
+        connection_type,
         blobstore_args,
         src_blobstore_id,
         dst_blobstore_id,
@@ -395,13 +392,30 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let blobstore = make_key_source(fb, &config.blobstore_args);
     match blobstore {
         Ok(blobstore) => {
-            let queue: Arc<dyn BlobstoreSyncQueue> =
-                Arc::new(SqlBlobstoreSyncQueue::with_myrouter(
-                    config.db_address.clone(),
-                    config.myrouter_port,
-                    ReadConnectionType::Replica,
-                    config.readonly_storage,
-                ));
+            let queue: Arc<dyn BlobstoreSyncQueue> = match config.connection_type {
+                MysqlConnectionType::Myrouter(myrouter_port) => {
+                    Arc::new(SqlBlobstoreSyncQueue::with_myrouter(
+                        config.db_address.clone(),
+                        myrouter_port,
+                        ReadConnectionType::Replica,
+                        config.readonly_storage,
+                    ))
+                }
+                MysqlConnectionType::Mysql => {
+                    let queue = SqlBlobstoreSyncQueue::with_mysql(
+                        fb,
+                        config.db_address.clone(),
+                        ReadConnectionType::Replica,
+                        config.readonly_storage,
+                    )?;
+                    Arc::new(queue)
+                }
+                MysqlConnectionType::RawXDB => {
+                    return Err(Error::msg(
+                        "raw XDB connections are not supported, provide either myrouter port or use mysql client",
+                    ));
+                }
+            };
             let mut runtime = runtime::Runtime::new()?;
             runtime.block_on_std(populate_healer_queue(blobstore, queue, config))?;
             Ok(())

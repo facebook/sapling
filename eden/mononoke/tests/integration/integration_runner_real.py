@@ -356,10 +356,16 @@ def run_tests(
     "--simple-test-selector", default=None, help="select an individual test to run"
 )
 @click.option(
-    "--mysql",
+    "--mysql-client",
     default=False,
     is_flag=True,
-    help="Use Ephemeral DB or optionally devdb to run tests with MySQL",
+    help="Use Ephemeral DB or optionally devdb to run tests with MySQL using MySQL client",
+)
+@click.option(
+    "--mysql-raw-xdb",
+    default=False,
+    is_flag=True,
+    help="Use Ephemeral DB or optionally devdb to run tests with MySQL using raw XDB connections",
 )
 @click.option(
     "mysql_schemas",
@@ -393,7 +399,8 @@ def run(
     debug,
     simple_test_selector,
     keep_tmpdir,
-    mysql,
+    mysql_client,
+    mysql_raw_xdb,
     mysql_schemas,
     devdb,
     py3_skip_list,
@@ -413,8 +420,14 @@ def run(
 
     maybe_use_local_test_paths(manifest_env)
 
+    if mysql_client and mysql_raw_xdb:
+        raise click.BadParameter(
+            "Can't use both raw XDB connections and MySQL client, choose one", ctx
+        )
+
+    is_mysql = mysql_client or mysql_raw_xdb
     if dry_run:
-        return run_discover_tests(ctx, manifest_env, output, mysql, py3_skip_list)
+        return run_discover_tests(ctx, manifest_env, output, is_mysql, py3_skip_list)
 
     test_flags: TestFlags = TestFlags(
         interactive,
@@ -422,7 +435,7 @@ def run(
         debug,
         keep_tmpdir,
         disable_all_network_access=(
-            not mysql and "DISABLE_ALL_NETWORK_ACCESS" in manifest_env
+            not is_mysql and "DISABLE_ALL_NETWORK_ACCESS" in manifest_env
         ),  # NOTE: We need network to talk to MySQL
     )
 
@@ -446,8 +459,9 @@ def run(
     if is_libfb_present():
         from eden.mononoke.tests.integration.facebook.lib_runner import fb_test_context
 
+        mysql_type = "mysql" if mysql_client else "raw_xdb"
         with fb_test_context(
-            ctx, dry_run, mysql, mysql_schemas, devdb, selected_tests
+            ctx, dry_run, is_mysql, mysql_type, mysql_schemas, devdb, selected_tests
         ) as test_env:
             run_tests(ctx, manifest_env, output, selected_tests, test_flags, test_env)
     else:

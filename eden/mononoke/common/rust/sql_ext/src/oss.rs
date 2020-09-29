@@ -59,9 +59,16 @@ pub fn myrouter_ready(
     mysql_options: MysqlOptions,
     _: Logger,
 ) -> BoxFuture<(), Error> {
-    if db_addr_opt.is_none() || mysql_options.myrouter_port.is_none() {
+    if db_addr_opt.is_none() {
         return ok(()).boxify();
     };
+
+    match mysql_options.connection_type {
+        MysqlConnectionType::Myrouter(_) => {}
+        _ => {
+            return ok(()).boxify();
+        }
+    }
 
     fb_unimplemented!()
 }

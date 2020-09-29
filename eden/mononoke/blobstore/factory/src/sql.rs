@@ -23,8 +23,8 @@ use sql_construct::{
 };
 use sql_ext::{
     facebook::{
-        create_myrouter_connections, create_raw_xdb_connections, myrouter_ready, MysqlOptions,
-        PoolSizeConfig,
+        create_myrouter_connections, create_mysql_connections, create_raw_xdb_connections,
+        myrouter_ready, MysqlConnectionType, MysqlOptions, PoolSizeConfig,
     },
     open_sqlite_path, SqlConnections,
 };
@@ -104,18 +104,30 @@ impl MetadataSqlFactory {
                     .map(|conn| SqlConnections::new_single(Connection::with_sqlite(conn)))
                     .boxify()
             }
-            MetadataDatabaseConfig::Remote(config) => match self.mysql_options.myrouter_port {
-                Some(myrouter_port) => future::ok(create_myrouter_connections(
+            MetadataDatabaseConfig::Remote(config) => match self.mysql_options.connection_type {
+                MysqlConnectionType::Myrouter(myrouter_port) => {
+                    future::ok(create_myrouter_connections(
+                        config.primary.db_address.clone(),
+                        None,
+                        myrouter_port,
+                        self.mysql_options.read_connection_type(),
+                        PoolSizeConfig::for_regular_connection(),
+                        label,
+                        self.readonly.0,
+                    ))
+                    .boxify()
+                }
+                MysqlConnectionType::Mysql => create_mysql_connections(
+                    self.fb,
                     config.primary.db_address.clone(),
                     None,
-                    myrouter_port,
                     self.mysql_options.read_connection_type(),
                     PoolSizeConfig::for_regular_connection(),
-                    label,
                     self.readonly.0,
-                ))
+                )
+                .into_future()
                 .boxify(),
-                None => create_raw_xdb_connections(
+                MysqlConnectionType::RawXDB => create_raw_xdb_connections(
                     self.fb,
                     config.primary.db_address.clone(),
                     self.mysql_options.read_connection_type(),
