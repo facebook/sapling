@@ -648,7 +648,7 @@ void PrjfsChannel::addDirectoryPlaceholder(RelativePathPiece path) {
   auto fullPath = mountPath_ + path;
   auto winPath = fullPath.wide();
 
-  XLOGF(DBG6, "Adding a placeholder for: ", path);
+  XLOGF(DBG6, "Adding a placeholder for: {}", path);
   auto result = PrjMarkDirectoryAsPlaceholder(
       winMountPath.c_str(), winPath.c_str(), nullptr, mountId_);
   if (FAILED(result)) {
