@@ -27,7 +27,6 @@ import errno
 import json
 import os
 import stat
-import subprocess
 import time
 
 import bindings

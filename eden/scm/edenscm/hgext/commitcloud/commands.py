@@ -75,6 +75,18 @@ createopts = [
     )
 ]
 
+# The option could be useful if the current workspace is broken in some way
+switchopt = [
+    (
+        "",
+        "force",
+        None,
+        _(
+            "discard local changes, do not sync the current workspace when switch to another one (ADVANCED)"
+        ),
+    )
+]
+
 
 @command("cloud", [], "SUBCOMMAND ...")
 def cloud(ui, repo, **opts):
@@ -133,7 +145,8 @@ subcmd = cloud.subcommand(
     + createopts
     + workspace.workspaceopts
     + pullopts
-    + remoteopts,
+    + remoteopts
+    + switchopt,
 )
 def cloudjoin(ui, repo, **opts):
     """connect the local repository to a commit cloud workspace ('default' workspace with no arguments)
@@ -209,7 +222,8 @@ def cloudjoin(ui, repo, **opts):
 
         if switch:
             # sync all the current commits and bookmarks before switching
-            cloudsync(ui, repo, **opts)
+            if not opts.get("force"):
+                cloudsync(ui, repo, **opts)
             ui.status(
                 _(
                     "now this repository will be switched from the '%s' to the '%s' workspace\n"
@@ -300,7 +314,10 @@ def cloudjoin(ui, repo, **opts):
     cloudsync(ui, repo, **opts)
 
 
-@subcmd("switch", [] + createopts + workspace.workspaceopts + pullopts + remoteopts)
+@subcmd(
+    "switch",
+    [] + createopts + workspace.workspaceopts + pullopts + remoteopts + switchopt,
+)
 def switchworkspace(ui, repo, **opts):
     """switch the local repository to a different commit cloud workspace"""
     opts.update({"switch": True})
