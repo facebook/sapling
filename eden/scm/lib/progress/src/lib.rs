@@ -14,6 +14,10 @@
 
 use anyhow::Result;
 
+pub use null::NullProgressFactory;
+
+pub mod null;
+
 /// Factory interface for creating progress bars and spinners.
 pub trait ProgressFactory: Send + Sync + 'static {
     /// Start a progress bar.
