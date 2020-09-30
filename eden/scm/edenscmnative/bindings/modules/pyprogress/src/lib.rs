@@ -18,11 +18,15 @@ use cpython::*;
 
 pub use rust::PyProgressFactory;
 
+mod python;
 mod rust;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "progress"].join(".");
     let m = PyModule::new(py, &name)?;
+
+    m.add_class::<python::bar>(py)?;
+    m.add_class::<python::spinner>(py)?;
 
     Ok(m)
 }
