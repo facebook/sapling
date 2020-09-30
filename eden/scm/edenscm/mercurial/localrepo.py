@@ -1048,15 +1048,18 @@ class localrepository(object):
                 self.ui.log("features", feature="remove-svfs-dottmp")
 
             if "gitchangelog" in self.storerequirements:
+                self.ui.log("changelog_info", changelog_backend="git")
                 return changelog2.changelog.opengitsegments(
                     self.svfs, self.ui.uiconfig()
                 )
 
             if "doublewritechangelog" in self.storerequirements:
+                self.ui.log("changelog_info", changelog_backend="doublewrite")
                 return changelog2.changelog.opendoublewrite(
                     self.svfs, self.ui.uiconfig()
                 )
             if "segmentedchangelog" in self.storerequirements:
+                self.ui.log("changelog_info", changelog_backend="segments")
                 return changelog2.changelog.opensegments(self.svfs, self.ui.uiconfig())
 
             if (
@@ -1072,12 +1075,14 @@ class localrepository(object):
                 and "hgsql" not in self.requirements
                 and "pythonrevlogchangelog" not in self.storerequirements
             ):
+                self.ui.log("changelog_info", changelog_backend="rustrevlog")
                 return changelog2.changelog.openrevlog(self.svfs, self.ui.uiconfig())
 
             if "zstorecommitdata" in self.storerequirements:
                 zstore = bindings.zstore.zstore(self.svfs.join("hgcommits/v1"))
             else:
                 zstore = None
+            self.ui.log("changelog_info", changelog_backend="pythonrevlog")
             return changelog.changelog(
                 self.svfs,
                 uiconfig=self.ui.uiconfig(),
