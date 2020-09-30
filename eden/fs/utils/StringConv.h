@@ -19,6 +19,9 @@
 namespace facebook {
 namespace eden {
 
+/**
+ * Convert a wide string to a utf-8 encoded string.
+ */
 template <class MultiByteStringType>
 MultiByteStringType wideToMultibyteString(std::wstring_view wideCharPiece) {
   if (wideCharPiece.empty()) {
@@ -52,33 +55,9 @@ MultiByteStringType wideToMultibyteString(std::wstring_view wideCharPiece) {
 }
 
 /**
- * multibyteToWideString can take a multibyte char container like string,
- * string_view, folly::StringPiece and return a widechar string in std::wstring.
+ * Convert a utf-8 encoded string to a wide string.
  */
-
-static std::wstring multibyteToWideString(folly::StringPiece multiBytePiece) {
-  if (multiBytePiece.empty()) {
-    return L"";
-  }
-
-  int inputSize = folly::to_narrow(folly::to_signed(multiBytePiece.size()));
-
-  // To avoid extra copy or using max size buffers we should get the size
-  // first and allocate the right size buffer.
-  int size = MultiByteToWideChar(
-      CP_UTF8, 0, multiBytePiece.data(), inputSize, nullptr, 0);
-
-  if (size > 0) {
-    std::wstring wideString(size, 0);
-    int resultSize = MultiByteToWideChar(
-        CP_UTF8, 0, multiBytePiece.data(), inputSize, wideString.data(), size);
-    if (size == resultSize) {
-      return wideString;
-    }
-  }
-  throw makeWin32ErrorExplicit(
-      GetLastError(), "Failed to convert char to wide char");
-}
+std::wstring multibyteToWideString(folly::StringPiece multiBytePiece);
 
 } // namespace eden
 } // namespace facebook
