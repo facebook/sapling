@@ -16,7 +16,7 @@ use chg::maybe_call_chg;
 #[cfg(windows)]
 mod windows;
 #[cfg(windows)]
-use windows::disable_standard_handle_inheritability;
+use windows::{disable_standard_handle_inheritability, is_edenfs_stopped};
 
 #[cfg_attr(fbcode_build, fbinit::main)]
 fn main() {
@@ -27,6 +27,18 @@ fn main() {
             std::process::exit(255);
         }
     };
+
+    // On Windows we need to check if the repository is backed by EdenFS and abort if it is not
+    // running to avoid writing any files that may bring the repository into a bad state.
+    #[cfg(windows)]
+    {
+        if let Ok(cwd) = std::env::current_dir() {
+            if is_edenfs_stopped(&cwd) {
+                eprintln!("error: EdenFS is not running. Please start it with `edenfsctl start`");
+                std::process::exit(255);
+            }
+        }
+    }
 
     match full_args.get(0).map(AsRef::as_ref) {
         Some("buildinfo") => {

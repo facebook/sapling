@@ -6,6 +6,7 @@
  */
 
 use anyhow::{format_err, Error};
+use std::path::Path;
 use winapi::shared::minwindef::DWORD;
 use winapi::um::errhandlingapi::GetLastError;
 use winapi::um::handleapi::{SetHandleInformation, INVALID_HANDLE_VALUE};
@@ -44,4 +45,21 @@ pub fn disable_standard_handle_inheritability() -> Result<(), Error> {
     set_handle_inheritability(std_handle(STD_OUTPUT_HANDLE)?, false)?;
     set_handle_inheritability(std_handle(STD_ERROR_HANDLE)?, false)?;
     Ok(())
+}
+
+/// Test if the given path is backed by EdenFS on Windows and if EdenFS is currently stopped. This
+/// function will return false if the repository is not backed by EdenFS.
+pub fn is_edenfs_stopped(path: &Path) -> bool {
+    let check_dir = path.join(".EDEN_TEST_NON_EXISTENCE_PATH");
+
+    if let Err(err) = std::fs::read_dir(&check_dir) {
+        if let Some(code) = err.raw_os_error() {
+            // `ERROR_FILE_SYSTEM_VIRTUALIZATION_UNAVAILABLE`: unfortunately this is an
+            // undocumented error code. When EdenFS is not running, `readdir` will fail with this
+            // error code since ProjectedFS has nowhere to look for the directory information.
+            return code == 369;
+        }
+    }
+
+    false
 }
