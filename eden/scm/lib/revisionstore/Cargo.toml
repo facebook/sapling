@@ -33,6 +33,7 @@ minibytes = { path = "../minibytes" }
 mpatch = { path = "../mpatch" }
 lfs_protocol = { path = "../../../mononoke/lfs_protocol" }
 parking_lot = "0.9"
+progress = { path = "../progress" }
 rand = "0.7"
 regex = "1"
 revisionstore_types = { path = "types" }

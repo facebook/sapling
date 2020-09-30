@@ -12,6 +12,7 @@ use async_trait::async_trait;
 
 use edenapi::{EdenApi, EdenApiError, Fetch, ProgressCallback};
 use edenapi_types::{FileEntry, TreeEntry};
+use progress::{NullProgressFactory, ProgressFactory};
 use types::Key;
 
 use crate::{
@@ -42,6 +43,7 @@ pub type EdenApiTreeStore = EdenApiRemoteStore<Tree>;
 pub struct EdenApiRemoteStore<T> {
     client: Arc<dyn EdenApi>,
     repo: String,
+    progress: Arc<dyn ProgressFactory>,
     _phantom: PhantomData<T>,
 }
 
@@ -66,10 +68,15 @@ impl<T: EdenApiStoreKind> EdenApiRemoteStore<T> {
     /// ```rust,ignore
     /// let store = EdenApiStore::<File>::new(repo, edenapi);
     /// ```
-    pub fn new(repo: impl ToString, client: Arc<dyn EdenApi>) -> Arc<Self> {
+    pub fn new(
+        repo: impl ToString,
+        client: Arc<dyn EdenApi>,
+        progress: Option<Arc<dyn ProgressFactory>>,
+    ) -> Arc<Self> {
         Arc::new(Self {
             client,
             repo: repo.to_string(),
+            progress: progress.unwrap_or_else(|| NullProgressFactory::arc()),
             _phantom: PhantomData,
         })
     }

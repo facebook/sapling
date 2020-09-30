@@ -14,6 +14,7 @@ use cpython_async::TStream;
 use cpython_ext::{ExtractInner, ExtractInnerRef, PyPathBuf, ResultPyErrExt};
 use edenapi::{Builder, EdenApi};
 use pyconfigparser::config;
+use pyprogress::PyProgressFactory;
 use pyrevisionstore::{edenapifilestore, edenapitreestore};
 use revisionstore::{EdenApiFileStore, EdenApiTreeStore};
 
@@ -108,15 +109,27 @@ py_class!(pub class client |py| {
         self.inner(py).clone().commit_revlog_data_py(py, repo, nodes, progress)
     }
 
-    def filestore(&self, repo: String) -> PyResult<edenapifilestore> {
+    def filestore(
+        &self,
+        repo: String,
+        ui: Option<PyObject> = None
+    ) -> PyResult<edenapifilestore> {
         let edenapi = self.extract_inner(py);
-        let store = EdenApiFileStore::new(repo, edenapi);
+        let progress = ui.map(|ui| PyProgressFactory::arc(py, ui)).transpose()?;
+        let store = EdenApiFileStore::new(repo, edenapi, progress);
+
         edenapifilestore::new(py, store)
     }
 
-    def treestore(&self, repo: String) -> PyResult<edenapitreestore> {
+    def treestore(
+        &self,
+        repo: String,
+        ui: Option<PyObject> = None
+    ) -> PyResult<edenapitreestore> {
         let edenapi = self.extract_inner(py);
-        let store = EdenApiTreeStore::new(repo, edenapi);
+        let progress = ui.map(|ui| PyProgressFactory::arc(py, ui)).transpose()?;
+        let store = EdenApiTreeStore::new(repo, edenapi, progress);
+
         edenapitreestore::new(py, store)
     }
 });

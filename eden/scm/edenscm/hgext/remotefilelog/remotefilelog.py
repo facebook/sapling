@@ -524,7 +524,7 @@ class remotefileslog(filelog.fileslog):
 
     def edenapistore(self, repo):
         if repo.edenapi is not None and repo.ui.configbool("remotefilelog", "http"):
-            return repo.edenapi.filestore(repo.name)
+            return repo.edenapi.filestore(repo.name, repo.ui)
         return None
 
     def makesharedonlyruststore(self, repo):
