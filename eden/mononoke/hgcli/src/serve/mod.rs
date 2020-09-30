@@ -190,8 +190,7 @@ impl<'a> StdioRelay<'a> {
                     "Session with Mononoke started with uuid: {}", session_uuid
                 );
             } else {
-                eprintln!("server: https://fburl.com/mononoke");
-                eprintln!("session: {}", session_uuid);
+                eprintln!("mononoke session: {}", session_uuid);
             }
         }
 
