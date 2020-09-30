@@ -1618,11 +1618,9 @@ void EdenServiceHandler::getDaemonInfo(DaemonInfo& result) {
   *result.commandLine_ref() = originalCommandLine_;
   result.status_ref() = getStatus();
 
-#ifndef _WIN32
   float uptime = UnixClock::getElapsedTimeInNs(
       server_->getStartTime(), UnixClock().getRealtime());
   result.uptime_ref() = uptime;
-#endif // !_WIN32
 }
 
 int64_t EdenServiceHandler::getPid() {

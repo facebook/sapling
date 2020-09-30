@@ -319,11 +319,9 @@ class EdenServer : private TakeoverHandler {
     return serverState_;
   }
 
-#ifndef _WIN32
   const timespec getStartTime() const {
     return startTime_;
   }
-#endif // !_WIN32
 
   const std::string& getVersion() const {
     return version_;
@@ -601,12 +599,10 @@ class EdenServer : private TakeoverHandler {
    */
   const std::shared_ptr<ServerState> serverState_;
 
-#ifndef _WIN32
   /**
    * Start time of edenfs daemon
    */
   const timespec startTime_{UnixClock().getRealtime()};
-#endif // !_WIN32
 
   /**
    * Build package version
