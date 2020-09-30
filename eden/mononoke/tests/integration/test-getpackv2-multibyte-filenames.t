@@ -1,0 +1,54 @@
+# Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License found in the LICENSE file in the root
+# directory of this source tree.
+
+  $ . "${TEST_FIXTURES}/library.sh"
+
+  $ GIT_REPO="${TESTTMP}/repo-git"
+  $ HG_REPO="${TESTTMP}/repo-hg"
+  $ DIR='dir-multibyte-€'
+  $ NAME='file-multibyte-€'
+  $ BOOKMARK='book'
+
+  $ ENABLED_DERIVED_DATA='["git_trees", "filenodes", "hgchangesets"]' setup_common_config
+
+# THis is a bit clowntown. There is a bug in our tests right now that prevents
+# us from creating files using UTF-8 names on Mercurial Python 3, so we
+# instead, we ...  create the file using Git and then Gitimport it.
+
+  $ mkdir "$GIT_REPO"
+  $ cd "$GIT_REPO"
+  $ git init -q
+  $ mkdir "$DIR"
+  $ echo "foo" > "$NAME"
+  $ echo "bar" > "$DIR/$NAME"
+  $ git add "$NAME" "$DIR/$NAME"
+  $ git commit -qm "Add test file"
+  $ gitimport "$GIT_REPO" --derive-hg full-repo
+  * using repo "repo" repoid RepositoryId(0) (glob)
+  * Created * => ChangesetId(Blake2(*)) (glob)
+  * 1 bonsai changesets have been committed (glob)
+  * Ref: Some(*): Some(ChangesetId(Blake2(58e2e39ada0c915556ca3ff52fb45a213e09255c752164343ee01af7cd91a604))) (glob)
+  * Hg: *: HgManifestId(HgNodeHash(Sha1(*))) (glob)
+
+# Set test bookmark
+
+  $ quiet mononoke_admin bookmarks set "$BOOKMARK" 58e2e39ada0c915556ca3ff52fb45a213e09255c752164343ee01af7cd91a604
+
+# Start Mononoke
+
+  $ mononoke
+  $ wait_for_mononoke
+
+# Try to get the file from Mononoke. We can't do this by updating to the rev,
+# because that breaks over utf-8 characters as well.
+
+  $ cd "$TESTTMP"
+  $ hgmn_clone ssh://user@dummy/repo "$HG_REPO" --noupdate --config extensions.remotenames=
+  $ cd "$HG_REPO"
+  $ hgmn cat -r "$BOOKMARK" "$NAME"
+  foo
+  $ hgmn cat -r "$BOOKMARK" "$DIR/$NAME"
+  bar

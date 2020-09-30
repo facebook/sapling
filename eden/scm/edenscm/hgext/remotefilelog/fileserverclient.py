@@ -132,10 +132,10 @@ class getpackclient(object):
         # Issue request
         pipeo = shallowutil.trygetattr(remote, ("_pipeo", "pipeo"))
         for filename, nodes in pycompat.iteritems(grouped):
+            filename = pycompat.encodeutf8(filename)
             filenamelen = struct.pack(constants.FILENAMESTRUCT, len(filename))
             countlen = struct.pack(constants.PACKREQUESTCOUNTSTRUCT, len(nodes))
             rawnodes = b"".join(n for n in nodes)
-            filename = pycompat.encodeutf8(filename)
 
             pipeo.write(b"%s%s%s%s" % (filenamelen, filename, countlen, rawnodes))
             pipeo.flush()

@@ -41,8 +41,9 @@ def sendpackpart(filename, history, data, version=1):
                <delta len: 8 byte unsigned int>
                <delta>
     """
-    rawfilenamelen = struct.pack(constants.FILENAMESTRUCT, len(filename))
-    yield b"%s%s" % (rawfilenamelen, pycompat.encodeutf8(filename))
+    rawfilename = pycompat.encodeutf8(filename)
+    rawfilenamelen = struct.pack(constants.FILENAMESTRUCT, len(rawfilename))
+    yield b"%s%s" % (rawfilenamelen, rawfilename)
 
     # Serialize and send history
     historylen = struct.pack("!I", len(history))
