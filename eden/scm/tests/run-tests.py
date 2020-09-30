@@ -1747,6 +1747,15 @@ class PythonTest(Test):
             cmd += " --fix"
         vlog("# Running", cmd)
         normalizenewlines = os.name == "nt"
+        with open(self.path, "r") as f:
+            code = f.read()
+        for level in ("trace", "debug", "info", "warn", "error"):
+            comment = "# tracing-level: %s" % level
+            if comment in code:
+                env = env.copy()
+                env["EDENSCM_TRACE_LEVEL"] = level
+                vlog("# EDENSCM_TRACE_LEVEL=%s" % level)
+                break
         result = self._runcommand(cmd, env, normalizenewlines=normalizenewlines)
         if self._aborted:
             raise KeyboardInterrupt()

@@ -3,17 +3,17 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+# tracing-level: trace
+
 from __future__ import absolute_import
 
 import os
 
 from bindings import tracing
-from edenscm.mercurial import pycompat
 from testutil.autofix import eq
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-os.environ["EDENSCM_TRACE_LEVEL"] = "trace"
 idtopath = {}
 
 
