@@ -1618,9 +1618,9 @@ void EdenServiceHandler::getDaemonInfo(DaemonInfo& result) {
   *result.commandLine_ref() = originalCommandLine_;
   result.status_ref() = getStatus();
 
-  float uptime = UnixClock::getElapsedTimeInNs(
-      server_->getStartTime(), UnixClock().getRealtime());
-  result.uptime_ref() = uptime;
+  auto now = std::chrono::steady_clock::now();
+  std::chrono::duration<float> uptime = now - server_->getStartTime();
+  result.uptime_ref() = uptime.count();
 }
 
 int64_t EdenServiceHandler::getPid() {

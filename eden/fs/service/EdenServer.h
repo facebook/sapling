@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <chrono>
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -319,7 +320,8 @@ class EdenServer : private TakeoverHandler {
     return serverState_;
   }
 
-  const timespec getStartTime() const {
+  const std::chrono::time_point<std::chrono::steady_clock> getStartTime()
+      const {
     return startTime_;
   }
 
@@ -602,7 +604,8 @@ class EdenServer : private TakeoverHandler {
   /**
    * Start time of edenfs daemon
    */
-  const timespec startTime_{UnixClock().getRealtime()};
+  const std::chrono::time_point<std::chrono::steady_clock> startTime_{
+      std::chrono::steady_clock::now()};
 
   /**
    * Build package version
