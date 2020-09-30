@@ -617,6 +617,10 @@ folly::SemiFuture<PrjfsChannel::StopData> PrjfsChannel::getStopFuture() {
 // Eden from leaking into FS. This would come in soon.
 
 void PrjfsChannel::removeCachedFile(RelativePathPiece path) {
+  if (path.empty()) {
+    return;
+  }
+
   auto winPath = path.wide();
 
   XLOG(DBG6) << "Invalidating: " << path;
@@ -629,21 +633,28 @@ void PrjfsChannel::removeCachedFile(RelativePathPiece path) {
           PRJ_UPDATE_ALLOW_READ_ONLY | PRJ_UPDATE_ALLOW_TOMBSTONE,
       &failureReason);
   if (FAILED(result)) {
-    XLOGF(
-        DBG6,
-        "Failed to delete disk file {}, reason: {}, error: {:x}",
-        path,
-        failureReason,
-        static_cast<uint32_t>(result));
-    // We aren't maintainting the information about which files were created
-    // by the user vs through Eden backing store. The Projected FS will not
-    // create tombstones when the user created files are renamed or deleted.
-    // Until we have that information we cannot throw an exception on failure
-    // here.
+    if (result == HRESULT_FROM_WIN32(ERROR_REPARSE_POINT_ENCOUNTERED)) {
+      // We've attempted to call PrjDeleteFile on a directory. That isn't
+      // supported, let's just ignore.
+      return;
+    } else if (result == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND)) {
+      // The file is not cached, ignore.
+    } else {
+      throwHResultErrorExplicit(
+          result,
+          fmt::format(
+              FMT_STRING("Couldn't delete file {}: {:#x}"),
+              path,
+              static_cast<uint32_t>(result)));
+    }
   }
 }
 
 void PrjfsChannel::addDirectoryPlaceholder(RelativePathPiece path) {
+  if (path.empty()) {
+    return;
+  }
+
   auto winMountPath = mountPath_.wide();
   auto fullPath = mountPath_ + path;
   auto winPath = fullPath.wide();
@@ -652,11 +663,17 @@ void PrjfsChannel::addDirectoryPlaceholder(RelativePathPiece path) {
   auto result = PrjMarkDirectoryAsPlaceholder(
       winMountPath.c_str(), winPath.c_str(), nullptr, mountId_);
   if (FAILED(result)) {
-    XLOGF(
-        DBG6,
-        "Can't add a placeholder for {}: {:x}",
-        path,
-        static_cast<uint32_t>(result));
+    if (result == HRESULT_FROM_WIN32(ERROR_REPARSE_POINT_ENCOUNTERED)) {
+      // This is already a placeholder, not an error.
+      return;
+    } else {
+      throwHResultErrorExplicit(
+          result,
+          fmt::format(
+              FMT_STRING("Couldn't add a placeholder for {}: {:#x}"),
+              path,
+              static_cast<uint32_t>(result)));
+    }
   }
 }
 
