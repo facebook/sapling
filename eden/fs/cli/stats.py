@@ -396,11 +396,14 @@ def get_store_latency(counters: DiagInfoCounters, store: str) -> Table2D:
 class LocalStoreCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
         # (name, ephemeral)
+        # TODO: Retrieve this data via Thrift.
         column_families = [
             ("blob", True),
             ("blobmeta", True),
+            ("tree", True),
+            ("treemeta", True),
             ("hgcommit2tree", True),
-            ("tree", False),
+            ("scsproxyhash", True),
             ("hgproxyhash", False),
         ]
 
