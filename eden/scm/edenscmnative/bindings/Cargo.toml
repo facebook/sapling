@@ -41,6 +41,7 @@ pynodemap = { path = "modules/pynodemap" }
 pypager = { path = "modules/pypager" }
 pypathmatcher = { path = "modules/pypathmatcher" }
 pyprocess = { path = "modules/pyprocess" }
+pyprogress = { path = "modules/pyprogress" }
 pyregex = { path = "modules/pyregex" }
 pyrenderdag = { path = "modules/pyrenderdag" }
 pyrevisionstore = { path = "modules/pyrevisionstore" }
