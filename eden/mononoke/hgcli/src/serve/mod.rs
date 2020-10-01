@@ -127,6 +127,7 @@ impl<'a> StdioRelay<'a> {
     async fn run(self) -> Result<(), Error> {
         let mut scuba_logger =
             ScubaSampleBuilder::with_opt_table(self.fb, self.scuba_table.map(|v| v.to_owned()));
+        scuba_logger.add_common_server_data();
 
         let session_uuid = generate_session_id();
         let unix_username = if let Some(mock_username) = self.mock_username {
