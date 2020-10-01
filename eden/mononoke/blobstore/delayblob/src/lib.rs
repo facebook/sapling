@@ -76,20 +76,6 @@ impl<B: Blobstore> Blobstore for DelayedBlobstore<B> {
         }
         .boxed()
     }
-
-    fn assert_present(
-        &self,
-        ctx: CoreContext,
-        key: String,
-    ) -> BoxFuture<'static, Result<(), Error>> {
-        let delay = delay(self.get_dist);
-        let assert_present = self.inner.assert_present(ctx, key);
-        async move {
-            delay.await;
-            assert_present.await
-        }
-        .boxed()
-    }
 }
 
 async fn delay<D>(distribution: D)

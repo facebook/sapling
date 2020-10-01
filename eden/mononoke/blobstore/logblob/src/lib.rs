@@ -102,14 +102,4 @@ impl<B: Blobstore> Blobstore for LogBlob<B> {
             .increment_counter(PerfCounterType::BlobPresenceChecks);
         self.inner.is_present(ctx, key)
     }
-
-    fn assert_present(
-        &self,
-        ctx: CoreContext,
-        key: String,
-    ) -> BoxFuture<'static, Result<(), Error>> {
-        ctx.perf_counters()
-            .increment_counter(PerfCounterType::BlobPresenceChecks);
-        self.inner.assert_present(ctx, key)
-    }
 }

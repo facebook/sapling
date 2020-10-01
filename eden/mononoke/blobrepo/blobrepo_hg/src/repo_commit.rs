@@ -11,7 +11,7 @@ use cloned::cloned;
 use failure_ext::{Compat, FutureFailureErrorExt, StreamFailureErrorExt};
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
-    future::TryFutureExt,
+    future::{FutureExt, TryFutureExt},
     stream::{FuturesUnordered, StreamExt, TryStreamExt},
 };
 use futures_ext::{
@@ -32,7 +32,7 @@ use std::sync::{Arc, Mutex};
 
 use ::manifest::{find_intersection_of_diffs, Diff, Entry, Manifest, ManifestOps};
 pub use blobrepo_common::changed_files::compute_changed_files;
-use blobstore::{Blobstore, Loadable};
+use blobstore::{Blobstore, ErrorKind as BlobstoreError, Loadable};
 use context::CoreContext;
 use mercurial_types::{
     blobs::{ChangesetMetadata, HgBlobChangeset, HgBlobEntry, HgChangesetContent},
@@ -276,7 +276,17 @@ impl UploadEntries {
         } else {
             HgFileNodeId::new(node_id).blobstore_key()
         };
-        blobstore.assert_present(ctx, key).compat().boxify()
+
+        async move {
+            if blobstore.is_present(ctx, key.clone()).await? {
+                Ok(())
+            } else {
+                Err(BlobstoreError::NotFound(key).into())
+            }
+        }
+        .boxed()
+        .compat()
+        .boxify()
     }
 
     pub fn finalize(

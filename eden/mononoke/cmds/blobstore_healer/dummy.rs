@@ -57,14 +57,6 @@ impl<B: Blobstore> Blobstore for DummyBlobstore<B> {
     fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
         self.inner.is_present(ctx, key)
     }
-
-    fn assert_present(
-        &self,
-        ctx: CoreContext,
-        key: String,
-    ) -> BoxFuture<'static, Result<(), Error>> {
-        self.inner.assert_present(ctx, key)
-    }
 }
 
 pub struct DummyBlobstoreSyncQueue<Q> {

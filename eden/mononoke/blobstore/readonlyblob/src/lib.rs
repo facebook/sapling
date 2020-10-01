@@ -49,15 +49,6 @@ impl<T: Blobstore + Clone> Blobstore for ReadOnlyBlobstore<T> {
     fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
         self.blobstore.is_present(ctx, key)
     }
-
-    #[inline]
-    fn assert_present(
-        &self,
-        ctx: CoreContext,
-        key: String,
-    ) -> BoxFuture<'static, Result<(), Error>> {
-        self.blobstore.assert_present(ctx, key)
-    }
 }
 
 #[cfg(test)]

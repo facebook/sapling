@@ -71,15 +71,6 @@ impl<T: Blobstore + Clone> Blobstore for PrefixBlobstore<T> {
     fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
         self.blobstore.is_present(ctx, self.prepend(key))
     }
-
-    #[inline]
-    fn assert_present(
-        &self,
-        ctx: CoreContext,
-        key: String,
-    ) -> BoxFuture<'static, Result<(), Error>> {
-        self.blobstore.assert_present(ctx, self.prepend(key))
-    }
 }
 
 #[cfg(test)]

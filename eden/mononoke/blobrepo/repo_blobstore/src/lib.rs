@@ -71,13 +71,6 @@ where
     fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
         self.0.is_present(ctx, key)
     }
-    fn assert_present(
-        &self,
-        ctx: CoreContext,
-        key: String,
-    ) -> BoxFuture<'static, Result<(), Error>> {
-        self.0.assert_present(ctx, key)
-    }
 }
 
 pub type RepoBlobstore = AbstractRepoBlobstore<Arc<dyn Blobstore>>;

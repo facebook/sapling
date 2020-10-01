@@ -305,24 +305,6 @@ pub trait Blobstore: fmt::Debug + Send + Sync + 'static {
         }
         .boxed()
     }
-    /// Errors if a given `key` is not present in the blob store. Useful to abort a chained
-    /// future computation early if it cannot succeed unless the `key` is present
-    fn assert_present(
-        &self,
-        ctx: CoreContext,
-        key: String,
-    ) -> BoxFuture<'static, Result<(), Error>> {
-        let is_present = self.is_present(ctx, key.clone());
-        async move {
-            let present = is_present.await?;
-            if present {
-                Ok(())
-            } else {
-                Err(ErrorKind::NotFound(key).into())
-            }
-        }
-        .boxed()
-    }
 }
 
 /// Mixin trait for blobstores that support the `link()` operation

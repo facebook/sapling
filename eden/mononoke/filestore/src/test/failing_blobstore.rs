@@ -73,17 +73,4 @@ where
             future::err(FailingBlobstoreError.into()).boxed()
         }
     }
-
-    fn assert_present(
-        &self,
-        ctx: CoreContext,
-        key: String,
-    ) -> BoxFuture<'static, Result<(), Error>> {
-        let mut rng = thread_rng();
-        if rng.gen_bool(self.read_success_probability) {
-            self.inner.assert_present(ctx, key)
-        } else {
-            future::err(FailingBlobstoreError.into()).boxed()
-        }
-    }
 }

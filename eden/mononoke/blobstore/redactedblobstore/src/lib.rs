@@ -206,14 +206,6 @@ impl<T: Blobstore + Clone> Blobstore for RedactedBlobstoreInner<T> {
     fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
         self.blobstore.is_present(ctx, key)
     }
-
-    fn assert_present(
-        &self,
-        ctx: CoreContext,
-        key: String,
-    ) -> BoxFuture<'static, Result<(), Error>> {
-        self.blobstore.assert_present(ctx, key)
-    }
 }
 
 impl<B> Blobstore for RedactedBlobstore<B>
@@ -237,13 +229,6 @@ where
     }
     fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
         self.inner.is_present(ctx, key)
-    }
-    fn assert_present(
-        &self,
-        ctx: CoreContext,
-        key: String,
-    ) -> BoxFuture<'static, Result<(), Error>> {
-        self.inner.assert_present(ctx, key)
     }
 }
 

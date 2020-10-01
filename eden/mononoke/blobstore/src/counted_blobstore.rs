@@ -27,9 +27,6 @@ define_stats_struct! {
     is_present: timeseries(Rate, Sum),
     is_present_ok: timeseries(Rate, Sum),
     is_present_err: timeseries(Rate, Sum),
-    assert_present: timeseries(Rate, Sum),
-    assert_present_ok: timeseries(Rate, Sum),
-    assert_present_err: timeseries(Rate, Sum),
     link: timeseries(Rate, Sum),
     link_ok: timeseries(Rate, Sum),
     link_err: timeseries(Rate, Sum),
@@ -107,25 +104,6 @@ impl<T: Blobstore> Blobstore for CountedBlobstore<T> {
             match res {
                 Ok(_) => stats.is_present_ok.add_value(1),
                 Err(_) => stats.is_present_err.add_value(1),
-            }
-            res
-        }
-        .boxed()
-    }
-
-    fn assert_present(
-        &self,
-        ctx: CoreContext,
-        key: String,
-    ) -> BoxFuture<'static, Result<(), Error>> {
-        let stats = self.stats.clone();
-        stats.assert_present.add_value(1);
-        let assert_present = self.blobstore.assert_present(ctx, key);
-        async move {
-            let res = assert_present.await;
-            match res {
-                Ok(()) => stats.assert_present_ok.add_value(1),
-                Err(_) => stats.assert_present_err.add_value(1),
             }
             res
         }

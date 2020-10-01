@@ -107,20 +107,6 @@ impl<T: Blobstore + Clone> Blobstore for ThrottledBlob<T> {
         }
         .boxed()
     }
-
-    fn assert_present(
-        &self,
-        ctx: CoreContext,
-        key: String,
-    ) -> BoxFuture<'static, Result<(), Error>> {
-        let access = self.read_limiter.access();
-        let blobstore = self.blobstore.clone();
-        async move {
-            access.await?;
-            blobstore.assert_present(ctx, key).await
-        }
-        .boxed()
-    }
 }
 
 impl<T: Blobstore + Clone> fmt::Debug for ThrottledBlob<T> {
