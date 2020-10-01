@@ -25,7 +25,7 @@
 ///! waiting
 ///! TODO(T74221415): monitoring, signal handling
 use futures::future::Future;
-use futures::stream::{Stream, StreamExt};
+use futures::stream::{BoxStream, Stream, StreamExt};
 use once_cell::sync::Lazy;
 use parking_lot::Mutex;
 use tokio::runtime::{Builder as RuntimeBuilder, Runtime};
@@ -168,6 +168,25 @@ impl<T> Iterator for RunStream<T> {
     }
 }
 
+/// Convert a blocking iterator to an async stream.
+///
+/// Unlike `futures::stream::iter`, the iterator's `next()` function could be
+/// blocking.
+pub fn iter_to_stream<I: Send + 'static>(
+    iter: impl Iterator<Item = I> + Send + 'static,
+) -> BoxStream<'static, I> {
+    let stream = futures::stream::unfold(iter, |mut iter| async {
+        let (item, iter) = tokio::task::spawn_blocking(move || {
+            let item = iter.next();
+            (item, iter)
+        })
+        .await
+        .unwrap();
+        item.map(|item| (item, iter))
+    });
+    Box::pin(stream.fuse())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -261,5 +280,49 @@ mod tests {
             });
         let iter = stream_to_iter(stream);
         assert_eq!(iter.collect::<Vec<_>>(), vec![44, 34]);
+    }
+
+    #[tokio::test]
+    async fn test_iter_to_stream() {
+        let iter = vec![1u8, 10, 20].into_iter();
+        let mut stream = iter_to_stream(iter);
+        assert_eq!(stream.next().await, Some(1));
+        assert_eq!(stream.next().await, Some(10));
+        assert_eq!(stream.next().await, Some(20));
+        assert_eq!(stream.next().await, None);
+        assert_eq!(stream.next().await, None);
+    }
+
+    #[tokio::test]
+    async fn test_nested_blocking_iter_to_stream() {
+        let iter = nested_blocking_iter(3);
+        let mut stream = iter_to_stream(iter);
+        for _ in 0..6 {
+            assert_eq!(stream.next().await, Some(0));
+        }
+        assert_eq!(stream.next().await, None);
+        assert_eq!(stream.next().await, None);
+    }
+
+    #[tokio::test]
+    #[should_panic]
+    async fn test_nested_blocking_stream_iter() {
+        let iter = nested_blocking_iter(3);
+        let mut stream = futures::stream::iter(iter);
+        // panic in tokio runtime:
+        // "Cannot start a runtime from within a runtime. This happens because a
+        // function (like `block_on`) attempted to block the current thread
+        // while the thread is being used to drive asynchronous tasks."
+        stream.next().await;
+    }
+
+    fn nested_blocking_iter(level: usize) -> Box<dyn Iterator<Item = u8> + Send + 'static> {
+        if level == 0 {
+            Box::new(std::iter::once(0))
+        } else {
+            let iter = (0..level)
+                .flat_map(move |_| block_on_future(async { nested_blocking_iter(level - 1) }));
+            Box::new(iter)
+        }
     }
 }
