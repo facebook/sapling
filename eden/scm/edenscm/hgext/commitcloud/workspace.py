@@ -138,14 +138,7 @@ def currentworkspacewithlocallyownedinfo(repo):
     (current_workspace, locally_owned) = _get(
         repo, "current_workspace", "locally_owned"
     )
-
-    # populate existing workspaces with 'locally_owned' flag if it isn't set
-    # TODO: the code to be removed when all workspaces are populated
-    if current_workspace and locally_owned is None:
-        setworkspace(repo, current_workspace)
-        return (current_workspace, False)
-
-    return (current_workspace, bool(locally_owned))
+    return (current_workspace, eval(locally_owned) if locally_owned else False)
 
 
 def currentworkspacewithusernamecheck(repo):
