@@ -15,6 +15,7 @@ use futures::{
 use itertools::Itertools;
 use mercurial_types::{HgChangesetId, HgFileNodeId};
 use mononoke_types::{RepoPath, RepositoryId};
+use rand::{thread_rng, Rng};
 use scopeguard;
 use sql::{queries, Connection};
 use stats::prelude::*;
@@ -231,6 +232,15 @@ impl FilenodesReader {
             }
             Err(e) => {
                 return Err(e.into());
+            }
+        }
+
+        let ratio = tunables().get_filenodes_master_fallback_ratio();
+        if ratio > 0 {
+            let mut rng = thread_rng();
+            let n = rng.gen_range(0, ratio);
+            if n > 0 {
+                return Ok(FilenodeResult::Disabled);
             }
         }
 
