@@ -52,7 +52,7 @@ void getBlobBatchCallback(
       size,
       local,
       // We need to take address of the function, not to forward it.
-      // @lint-ignore HOWTOEVEN MissingStdForward
+      // @lint-ignore HOWTOEVEN CLANGTIDY
       &fn,
       [](void* fn, size_t index, RustCFallibleBase result) {
         (*static_cast<Fn*>(fn))(index, result);
