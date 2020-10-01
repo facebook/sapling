@@ -227,7 +227,7 @@ impl EdenApi for Client {
         keys: Vec<Key>,
         progress: Option<ProgressCallback>,
     ) -> Result<Fetch<FileEntry>, EdenApiError> {
-        tracing::info!("Requesting content for {} files", keys.len());
+        tracing::info!("Requesting content for {} file(s)", keys.len());
 
         if keys.is_empty() {
             return Err(EdenApiError::EmptyRequest);
@@ -248,7 +248,7 @@ impl EdenApi for Client {
         length: Option<u32>,
         progress: Option<ProgressCallback>,
     ) -> Result<Fetch<HistoryEntry>, EdenApiError> {
-        tracing::info!("Requesting history for {} files", keys.len());
+        tracing::info!("Requesting history for {} file(s)", keys.len());
 
         if keys.is_empty() {
             return Err(EdenApiError::EmptyRequest);
@@ -286,7 +286,7 @@ impl EdenApi for Client {
         keys: Vec<Key>,
         progress: Option<ProgressCallback>,
     ) -> Result<Fetch<TreeEntry>, EdenApiError> {
-        tracing::info!("Requesting content for {} files", keys.len());
+        tracing::info!("Requesting content for {} file(s)", keys.len());
 
         if keys.is_empty() {
             return Err(EdenApiError::EmptyRequest);
@@ -310,7 +310,7 @@ impl EdenApi for Client {
         progress: Option<ProgressCallback>,
     ) -> Result<Fetch<TreeEntry>, EdenApiError> {
         tracing::info!(
-            "Requesting {} complete trees for directory {}",
+            "Requesting {} complete tree(s) for directory '{}'",
             mfnodes.len(),
             &rootdir
         );
@@ -338,7 +338,7 @@ impl EdenApi for Client {
         hgids: Vec<HgId>,
         progress: Option<ProgressCallback>,
     ) -> Result<Fetch<CommitRevlogData>, EdenApiError> {
-        tracing::info!("Requesting revlog data for {} commits", hgids.len());
+        tracing::info!("Requesting revlog data for {} commit(s)", hgids.len());
 
         let url = self.url(paths::COMMIT_REVLOG_DATA, Some(&repo))?;
         let commit_revlog_data_req = CommitRevlogDataRequest { hgids };
