@@ -674,18 +674,16 @@ def wraprepo(repo):
             self, rootdir, mfnodes, basemfnodes, directories, depth=None
         ):
             dpack, _hpack = self.manifestlog.getmutablesharedpacks()
-            with progress.spinner(self.ui, "fetching complete trees over HTTP"):
-                stats = self.edenapi.complete_trees(
-                    dpack, self.name, rootdir, mfnodes, basemfnodes, depth
-                )
+            stats = self.edenapi.complete_trees(
+                dpack, self.name, rootdir, mfnodes, basemfnodes, depth
+            )
             if self._interactivedebug():
                 self.ui.write(str(stats) + "\n")
 
         @perftrace.tracefunc("HTTP On-Demand Fetch Trees")
         def _httpgetdesignatednodes(self, keys):
             dpack, _hpack = self.manifestlog.getmutablesharedpacks()
-            with progress.spinner(self.ui, "fetching tree nodes over HTTP"):
-                stats = self.edenapi.trees(dpack, self.name, keys)
+            stats = self.edenapi.trees(dpack, self.name, keys)
             if self._interactivedebug():
                 self.ui.write(str(stats) + "\n")
 

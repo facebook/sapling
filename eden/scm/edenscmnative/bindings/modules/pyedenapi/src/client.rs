@@ -13,6 +13,7 @@ use cpython_async::PyFuture;
 use cpython_async::TStream;
 use cpython_ext::{ExtractInner, ExtractInnerRef, PyPathBuf, ResultPyErrExt};
 use edenapi::{Builder, EdenApi};
+use progress::{NullProgressFactory, ProgressFactory};
 use pyconfigparser::config;
 use pyprogress::PyProgressFactory;
 use pyrevisionstore::{edenapifilestore, edenapitreestore};
@@ -29,14 +30,25 @@ use crate::stats::stats;
 // the `EdenApiPyExt` trait.
 py_class!(pub class client |py| {
     data inner: Arc<dyn EdenApi>;
+    data progress: Arc<dyn ProgressFactory>;
 
-    def __new__(_cls, config: config) -> PyResult<client> {
+    def __new__(
+        _cls,
+        config: config,
+        ui: Option<PyObject> = None
+    ) -> PyResult<client> {
         let config = config.get_cfg(py);
         let inner = Builder::from_config(&config)
             .map_pyerr(py)?
             .build()
             .map_pyerr(py)?;
-        client::create_instance(py, Arc::new(inner))
+
+        let progress = match ui {
+            Some(ui) => PyProgressFactory::arc(py, ui)?,
+            None => NullProgressFactory::arc(),
+        };
+
+        client::create_instance(py, Arc::new(inner), progress)
     }
 
     def health(&self) -> PyResult<PyDict> {
@@ -48,9 +60,10 @@ py_class!(pub class client |py| {
         store: PyObject,
         repo: String,
         keys: Vec<(PyPathBuf, PyBytes)>,
-        progress: Option<PyObject> = None
+        callback: Option<PyObject> = None
     ) -> PyResult<stats> {
-        self.inner(py).clone().files_py(py, store, repo, keys, progress)
+        let progress = self.progress(py).clone();
+        self.inner(py).clone().files_py(py, store, repo, keys, callback, progress)
     }
 
     def history(
@@ -59,9 +72,10 @@ py_class!(pub class client |py| {
         repo: String,
         keys: Vec<(PyPathBuf, PyBytes)>,
         length: Option<u32> = None,
-        progress: Option<PyObject> = None
+        callback: Option<PyObject> = None
     ) -> PyResult<stats> {
-        self.inner(py).clone().history_py(py, store, repo, keys, length, progress)
+        let progress = self.progress(py).clone();
+        self.inner(py).clone().history_py(py, store, repo, keys, length, callback, progress)
     }
 
     def trees(
@@ -69,9 +83,10 @@ py_class!(pub class client |py| {
         store: PyObject,
         repo: String,
         keys: Vec<(PyPathBuf, PyBytes)>,
-        progress: Option<PyObject> = None
+        callback: Option<PyObject> = None
     ) -> PyResult<stats> {
-        self.inner(py).clone().trees_py(py, store, repo, keys, progress)
+        let progress = self.progress(py).clone();
+        self.inner(py).clone().trees_py(py, store, repo, keys, callback, progress)
     }
 
     def complete_trees(
@@ -82,8 +97,9 @@ py_class!(pub class client |py| {
         mfnodes: Vec<PyBytes>,
         basemfnodes: Vec<PyBytes>,
         depth: Option<usize> = None,
-        progress: Option<PyObject> = None
+        callback: Option<PyObject> = None
     )  -> PyResult<stats> {
+        let progress = self.progress(py).clone();
         self.inner(py).clone().complete_trees_py(
             py,
             store,
@@ -92,6 +108,7 @@ py_class!(pub class client |py| {
             mfnodes,
             basemfnodes,
             depth,
+            callback,
             progress,
         )
     }
@@ -104,18 +121,17 @@ py_class!(pub class client |py| {
         &self,
         repo: String,
         nodes: Vec<PyBytes>,
-        progress: Option<PyObject> = None
+        callback: Option<PyObject> = None
     ) -> PyResult<(TStream<anyhow::Result<PyCommitRevlogData>>, PyFuture)> {
-        self.inner(py).clone().commit_revlog_data_py(py, repo, nodes, progress)
+        self.inner(py).clone().commit_revlog_data_py(py, repo, nodes, callback)
     }
 
     def filestore(
         &self,
-        repo: String,
-        ui: Option<PyObject> = None
+        repo: String
     ) -> PyResult<edenapifilestore> {
         let edenapi = self.extract_inner(py);
-        let progress = ui.map(|ui| PyProgressFactory::arc(py, ui)).transpose()?;
+        let progress = Some(self.progress(py).clone());
         let store = EdenApiFileStore::new(repo, edenapi, progress);
 
         edenapifilestore::new(py, store)
@@ -123,11 +139,10 @@ py_class!(pub class client |py| {
 
     def treestore(
         &self,
-        repo: String,
-        ui: Option<PyObject> = None
+        repo: String
     ) -> PyResult<edenapitreestore> {
         let edenapi = self.extract_inner(py);
-        let progress = ui.map(|ui| PyProgressFactory::arc(py, ui)).transpose()?;
+        let progress = Some(self.progress(py).clone());
         let store = EdenApiTreeStore::new(repo, edenapi, progress);
 
         edenapitreestore::new(py, store)

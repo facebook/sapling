@@ -16,6 +16,7 @@ use cpython_async::TStream;
 use cpython_ext::{PyPathBuf, ResultPyErrExt};
 use edenapi::{EdenApi, EdenApiBlocking, EdenApiError, Fetch, Stats};
 use edenapi_types::{FileEntry, HistoryEntry, TreeEntry};
+use progress::{ProgressBar, ProgressFactory, Unit};
 use revisionstore::{HgIdMutableDeltaStore, HgIdMutableHistoryStore};
 
 use crate::pytypes::PyCommitRevlogData;
@@ -42,17 +43,23 @@ pub trait EdenApiPyExt: EdenApi {
         store: PyObject,
         repo: String,
         keys: Vec<(PyPathBuf, PyBytes)>,
-        progress: Option<PyObject>,
+        callback: Option<PyObject>,
+        progress: Arc<dyn ProgressFactory>,
     ) -> PyResult<stats> {
         let keys = to_keys(py, &keys)?;
         let store = as_deltastore(py, store)?;
-        let progress = progress.map(wrap_callback);
+        let callback = callback.map(wrap_callback);
 
         let stats = py
             .allow_threads(|| {
                 block_on_future(async move {
-                    let response = self.files(repo, keys, progress).await?;
-                    write_file(response, store).await
+                    let prog = progress.bar(
+                        "Downloading files over HTTP",
+                        Some(keys.len() as u64),
+                        Unit::Named("files"),
+                    )?;
+                    let response = self.files(repo, keys, callback).await?;
+                    write_files(response, store, prog.as_ref()).await
                 })
             })
             .map_pyerr(py)?;
@@ -67,17 +74,23 @@ pub trait EdenApiPyExt: EdenApi {
         repo: String,
         keys: Vec<(PyPathBuf, PyBytes)>,
         length: Option<u32>,
-        progress: Option<PyObject>,
+        callback: Option<PyObject>,
+        progress: Arc<dyn ProgressFactory>,
     ) -> PyResult<stats> {
         let keys = to_keys(py, &keys)?;
         let store = as_historystore(py, store)?;
-        let progress = progress.map(wrap_callback);
+        let callback = callback.map(wrap_callback);
 
         let stats = py
             .allow_threads(|| {
                 block_on_future(async move {
-                    let response = self.history(repo, keys, length, progress).await?;
-                    write_history(response, store).await
+                    let prog = progress.bar(
+                        "Downloading file history over HTTP",
+                        Some(keys.len() as u64),
+                        Unit::Named("entries"),
+                    )?;
+                    let response = self.history(repo, keys, length, callback).await?;
+                    write_history(response, store, prog.as_ref()).await
                 })
             })
             .map_pyerr(py)?;
@@ -91,17 +104,23 @@ pub trait EdenApiPyExt: EdenApi {
         store: PyObject,
         repo: String,
         keys: Vec<(PyPathBuf, PyBytes)>,
-        progress: Option<PyObject>,
+        callback: Option<PyObject>,
+        progress: Arc<dyn ProgressFactory>,
     ) -> PyResult<stats> {
         let keys = to_keys(py, &keys)?;
         let store = as_deltastore(py, store)?;
-        let progress = progress.map(wrap_callback);
+        let callback = callback.map(wrap_callback);
 
         let stats = py
             .allow_threads(|| {
                 block_on_future(async move {
-                    let response = self.trees(repo, keys, progress).await?;
-                    write_tree(response, store).await
+                    let prog = progress.bar(
+                        "Downloading trees over HTTP",
+                        Some(keys.len() as u64),
+                        Unit::Named("trees"),
+                    )?;
+                    let response = self.trees(repo, keys, callback).await?;
+                    write_trees(response, store, prog.as_ref()).await
                 })
             })
             .map_pyerr(py)?;
@@ -118,21 +137,27 @@ pub trait EdenApiPyExt: EdenApi {
         mfnodes: Vec<PyBytes>,
         basemfnodes: Vec<PyBytes>,
         depth: Option<usize>,
-        progress: Option<PyObject>,
+        callback: Option<PyObject>,
+        progress: Arc<dyn ProgressFactory>,
     ) -> PyResult<stats> {
         let rootdir = to_path(py, &rootdir)?;
         let mfnodes = to_hgids(py, mfnodes);
         let basemfnodes = to_hgids(py, basemfnodes);
         let store = as_deltastore(py, store)?;
-        let progress = progress.map(wrap_callback);
+        let callback = callback.map(wrap_callback);
 
         let stats = py
             .allow_threads(|| {
                 block_on_future(async move {
+                    let prog = progress.bar(
+                        "Downloading complete trees over HTTP",
+                        None,
+                        Unit::Named("trees"),
+                    )?;
                     let response = self
-                        .complete_trees(repo, rootdir, mfnodes, basemfnodes, depth, progress)
+                        .complete_trees(repo, rootdir, mfnodes, basemfnodes, depth, callback)
                         .await?;
-                    write_tree(response, store).await
+                    write_trees(response, store, prog.as_ref()).await
                 })
             })
             .map_pyerr(py)?;
@@ -145,15 +170,15 @@ pub trait EdenApiPyExt: EdenApi {
         py: Python,
         repo: String,
         nodes: Vec<PyBytes>,
-        progress: Option<PyObject>,
+        callback: Option<PyObject>,
     ) -> PyResult<(TStream<anyhow::Result<PyCommitRevlogData>>, PyFuture)> {
         let nodes = to_hgids(py, nodes);
-        let progress = progress.map(wrap_callback);
+        let callback = callback.map(wrap_callback);
 
         let (commits, stats) = py
             .allow_threads(|| {
                 block_on_future(async move {
-                    let response = self.commit_revlog_data(repo, nodes, progress).await?;
+                    let response = self.commit_revlog_data(repo, nodes, callback).await?;
                     let commits = response.entries;
                     let stats = response.stats;
                     Ok::<_, EdenApiError>((commits, stats))
@@ -169,22 +194,26 @@ pub trait EdenApiPyExt: EdenApi {
 
 impl<T: EdenApi + ?Sized> EdenApiPyExt for T {}
 
-async fn write_file(
+async fn write_files(
     mut response: Fetch<FileEntry>,
     store: Arc<dyn HgIdMutableDeltaStore>,
+    prog: &dyn ProgressBar,
 ) -> Result<Stats, EdenApiError> {
     while let Some(entry) = response.entries.try_next().await? {
         store.add_file(&entry)?;
+        prog.increment(1)?;
     }
     response.stats.await
 }
 
-async fn write_tree(
+async fn write_trees(
     mut response: Fetch<TreeEntry>,
     store: Arc<dyn HgIdMutableDeltaStore>,
+    prog: &dyn ProgressBar,
 ) -> Result<Stats, EdenApiError> {
     while let Some(entry) = response.entries.try_next().await? {
         store.add_tree(&entry)?;
+        prog.increment(1)?;
     }
     response.stats.await
 }
@@ -192,9 +221,11 @@ async fn write_tree(
 async fn write_history(
     mut response: Fetch<HistoryEntry>,
     store: Arc<dyn HgIdMutableHistoryStore>,
+    prog: &dyn ProgressBar,
 ) -> Result<Stats, EdenApiError> {
     while let Some(entry) = response.entries.try_next().await? {
         store.add_entry(&entry)?;
+        prog.increment(1)?;
     }
     response.stats.await
 }

@@ -388,7 +388,7 @@ def setupclient(ui, repo):
 
     repo.edenapi = None
     if ui.config("edenapi", "url"):
-        repo.edenapi = edenapi.client(ui._rcfg._rcfg)
+        repo.edenapi = edenapi.client(ui._rcfg._rcfg, ui)
 
 
 clientonetime = False

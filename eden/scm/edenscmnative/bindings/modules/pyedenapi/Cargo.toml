@@ -13,6 +13,7 @@ cpython = { version = "0.5", default-features = false }
 edenapi = { path = "../../../../lib/edenapi" }
 edenapi_types = { path = "../../../../lib/edenapi/types" }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
+progress = { path = "../../../../lib/progress" }
 pyconfigparser = { path = "../pyconfigparser" }
 pyprogress = { path = "../pyprogress" }
 pyrevisionstore = { path = "../pyrevisionstore" }
