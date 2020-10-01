@@ -203,7 +203,7 @@ def extsetup(ui):
     localrepo.localrepository._wlockfreeprefix.add(obsmarkers._obsmarkerssyncing)
     localrepo.localrepository._wlockfreeprefix.add(backuplock.progressfilename)
     localrepo.localrepository._wlockfreeprefix.add(backupbookmarks._backupstateprefix)
-    localrepo.localrepository._wlockfreeprefix.add(backupstate.BackupState.prefix)
+    localrepo.localrepository._wlockfreeprefix.add(backupstate.BackupState.directory)
     localrepo.localrepository._wlockfreeprefix.add(background._autobackupstatefile)
     localrepo.localrepository._lockfreeprefix.add(syncstate.SyncState.prefix)
     localrepo.localrepository._lockfreeprefix.add(sync._syncstatusfile)
@@ -374,12 +374,12 @@ def missingcloudrevspull(repo, nodes):
 def backedup(repo, subset, x):
     """draft changesets that have been backed up to Commit Cloud"""
     unfi = repo
-    state = backupstate.BackupState(repo, ccutil.getremotepath(repo, None))
+    heads = backupstate.BackupState.readheadsfromallpaths(repo)
     cl = repo.changelog
     if cl.algorithmbackend == "segments":
-        backedup = repo.dageval(lambda: draft() & ancestors(state.heads))
+        backedup = repo.dageval(lambda: draft() & ancestors(heads))
         return subset & cl.torevset(backedup)
-    backedup = unfi.revs("not public() and ::%ln", state.heads)
+    backedup = unfi.revs("not public() and ::%ln", heads)
     return smartset.filteredset(subset & repo.revs("draft()"), lambda r: r in backedup)
 
 
@@ -387,12 +387,12 @@ def backedup(repo, subset, x):
 def notbackedup(repo, subset, x):
     """changesets that have not yet been backed up to Commit Cloud"""
     unfi = repo
-    state = backupstate.BackupState(repo, ccutil.getremotepath(repo, None))
+    heads = backupstate.BackupState.readheadsfromallpaths(repo)
     cl = repo.changelog
     if cl.algorithmbackend == "segments":
-        notbackedup = repo.dageval(lambda: draft() - ancestors(state.heads))
+        notbackedup = repo.dageval(lambda: draft() - ancestors(heads))
         return subset & cl.torevset(notbackedup)
-    backedup = unfi.revs("not public() and ::%ln", state.heads)
+    backedup = unfi.revs("not public() and ::%ln", heads)
     return smartset.filteredset(
         subset & repo.revs("not public() - hidden()"), lambda r: r not in backedup
     )
