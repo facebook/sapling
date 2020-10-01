@@ -53,15 +53,6 @@ DISABLE_ALL_NETWORK_ACCESS_SKIPLIST: Set[str] = {
 PY3_SKIPLIST: Set[str] = set()
 
 
-def is_mode_opt_buck_binary():
-    try:
-        import __manifest__
-
-        return __manifest__.fbmake["build_mode"] == "opt"
-    except ImportError:
-        return False
-
-
 def is_libfb_present():
     try:
         import libfb.py.log  # noqa: F401
@@ -174,18 +165,7 @@ def _hg_runner(
             *extra_args,
         ]
 
-        # The network void script breaks opt mode PAR binaries, so that
-        # breaks hg's run tests (that is because /tmp has the wrong owner,
-        # because we are running in a user namespace), so we don't enable it if
-        # we're running in opt. This is necessary ...  but it's also kinda meh
-        # for 2 reasons:
-        # - It means mode/opt tests can talk to the network. This is probably
-        # fine since running in mode/dev would probably catch problems first if
-        # any.
-        # - The fact that this binary was built in mode/opt does not
-        # necessarily mean that the hg run tests binary was. It's a decent
-        # approximation, though.
-        if disable_all_network_access and not is_mode_opt_buck_binary():
+        if disable_all_network_access:
             args.insert(0, manifest_env["DISABLE_ALL_NETWORK_ACCESS"])
 
         env = os.environ.copy()
