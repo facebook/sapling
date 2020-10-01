@@ -224,7 +224,7 @@ def uisetup(ui):
 
         e = revlog.indexformatng.unpack(entry)
         hexnode = hex(e[7])
-        data0 = data[0] or ""
+        data0 = data[0] or b""
         transaction.repo.pendingrevs.append(
             (self.indexfile, link, len(self) - 1, hexnode, entry, data0, data[1])
         )
@@ -2348,12 +2348,17 @@ def _parsecompressedrevision(data):
     indicator) and data1 (payload). Ideally we'd refactor revlog.decompress to
     have this logic be separate, but there are comments in the code about perf
     implications of the hotpath."""
-    t = data[0:1]
+    # The passed in value can be memoryviews or buffers, but we want to be able
+    # to slice out bytes so we can compare them. Since this code is only used
+    # for sqlrefill, let's just copy the bytes.
+    if not isinstance(data, bytes):
+        data = bytes(data)
 
-    if t == "u":
-        return "u", data[1:]
+    t = data[0:1]
+    if t == b"u":
+        return b"u", data[1:]
     else:
-        return "", data
+        return b"", data
 
 
 def _discoverrevisions(repo, startrev):
