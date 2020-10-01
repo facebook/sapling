@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use async_runtime::block_on_future;
+use async_runtime::block_on_exclusive as block_on_future;
 use edenapi_types::{CommitRevlogData, FileEntry, HistoryEntry, TreeEntry};
 use types::{HgId, Key, RepoPathBuf};
 

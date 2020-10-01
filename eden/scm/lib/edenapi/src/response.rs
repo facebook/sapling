@@ -10,7 +10,7 @@ use std::pin::Pin;
 use futures::prelude::*;
 use http::{HeaderMap, StatusCode, Version};
 
-use async_runtime::block_on_future;
+use async_runtime::block_on_exclusive as block_on_future;
 use http_client::{AsyncResponse, Response, Stats};
 
 use crate::errors::EdenApiError;

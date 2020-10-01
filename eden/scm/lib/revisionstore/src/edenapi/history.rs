@@ -10,7 +10,7 @@ use std::sync::Arc;
 use anyhow::Result;
 use futures::prelude::*;
 
-use async_runtime::block_on_future;
+use async_runtime::block_on_exclusive as block_on_future;
 use progress::Unit;
 use types::{Key, NodeInfo};
 

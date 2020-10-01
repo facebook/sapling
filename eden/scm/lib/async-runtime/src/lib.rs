@@ -21,8 +21,6 @@
 ///! wait for tasks to finish but requires some ceremony around the Runtime. Since we have no need
 ///! for that right now so that feature is skipped for now.
 ///!
-///! TODO(T73962890): allow threads to execute futures in parallel; now they hold a lock while
-///! waiting
 ///! TODO(T74221415): monitoring, signal handling
 use futures::future::Future;
 use futures::stream::{BoxStream, Stream, StreamExt};
@@ -44,12 +42,53 @@ pub static STREAM_BUFFER_SIZE: usize = 128;
 /// Blocks the current thread while waiting for the computation defined by the Future `f` to
 /// complete.
 ///
-/// If the async computation panics then the panic gets propagated up. At that point the mutex
-/// holding the runtime gets poisoned.
-pub fn block_on_future<F: Future>(f: F) -> F::Output {
-    // Should be replaced with `runtime.handle().block_on` after updating tokio, see T65261126.
-    // T73962890 tracks updating this code internally. Externally the issue is tracked under at
-    // https://github.com/tokio-rs/tokio/issues/2390
+/// The `'static` lifetime requirement is temporary until we upgrade tokio.
+pub fn block_on_future<F>(f: F) -> F::Output
+where
+    F::Output: Send,
+    F: Future + Send + 'static,
+{
+    // The channel is to workaround Runtime::block_on taking `&mut self`.
+    // The upstream provided `handle().block_on`, later removed `handle` and changed
+    // `Runtime::block_on` to take `&self` directly:
+    // https://github.com/tokio-rs/tokio/pull/2782
+    //
+    // However we cannot update tokio. See D24011447. It's blocked by a bug fix in
+    // futures. See: https://github.com/rust-lang/futures-rs/pull/2219.
+    //
+    // Once we upgraded tokio, the whole function can be just:
+    // `RUNTIME.handle().block_on(f)` or `RUNTIME.block_on(f)` and the mutex
+    // can be removed.
+    let (tx, rx) = std::sync::mpsc::channel();
+    async fn send<F>(f: F, tx: std::sync::mpsc::Sender<F::Output>)
+    where
+        F: Future + Send,
+        F::Output: Send,
+    {
+        let value = f.await;
+        // not blocking because the channel is unbounded
+        tx.send(value).unwrap();
+    }
+    let runtime = RUNTIME.lock();
+    runtime.spawn(send(f, tx));
+    // unlock
+    drop(runtime);
+    // block
+    rx.recv().expect("future panicked in block_on_future")
+}
+
+/// Blocks the current thread while waiting for the computation defined by the Future `f`.
+/// Also blocks other `block_on_future` calls.
+///
+/// This is intended to be used when `f` is not `'static` and cannot be used in
+/// `block_on_future`.
+///
+/// This is temporary and will be merged into `block_on_future` once tokio
+/// supports `Runtime::block_on` without taking `&mut sel`.
+pub fn block_on_exclusive<F>(f: F) -> F::Output
+where
+    F: Future,
+{
     let mut runtime = RUNTIME.lock();
     runtime.block_on(f)
 }
@@ -148,23 +187,30 @@ impl RunStreamOptions {
                 }
             })
         });
-        RunStream { rx }
+        RunStream { rx: Some(rx) }
     }
 }
 
 /// Blocking thread handler for receiving the results following processing a `Stream`.
 pub struct RunStream<T> {
-    rx: tokio::sync::mpsc::Receiver<T>,
+    // Option is used to workaround lifetime in Iterator::next.
+    rx: Option<tokio::sync::mpsc::Receiver<T>>,
 }
 
-impl<T> Iterator for RunStream<T> {
+impl<T: Send + 'static> Iterator for RunStream<T> {
     type Item = T;
 
     /// Returns the items extracted from processing the stream. Will return `None` when the stream's
     /// end is reached or when processing an item panics.
     /// See `stream_to_iter`.
     fn next(&mut self) -> Option<Self::Item> {
-        block_on_future(self.rx.recv())
+        let mut rx = self.rx.take().unwrap();
+        let (next, rx) = block_on_future(async {
+            let next = rx.recv().await;
+            (next, rx)
+        });
+        self.rx = Some(rx);
+        next
     }
 }
 
@@ -202,7 +248,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "hello future")]
+    #[should_panic]
     fn test_block_on_future_will_panic() {
         block_on_future(async {
             panic!("hello future");
@@ -236,16 +282,15 @@ mod tests {
         );
     }
 
-    // TODO(T73962890): allow threads to call block_on_future in paralel
-    // #[test]
-    // fn test_block_on_future_pseudo_parallelism() {
-    //     // This test will deadlock if threads can't schedule tasks while another thread
-    //     // is waiting for a result
-    //     let (mut tx, mut rx) = tokio::sync::mpsc::channel(1);
-    //     let th1 = thread::spawn(|| block_on_future(async move { rx.recv().await }));
-    //     let _th2 = thread::spawn(|| block_on_future(async move { tx.send(5).await }));
-    //     assert_eq!(th1.join().unwrap(), Some(5));
-    // }
+    #[test]
+    fn test_block_on_future_pseudo_parallelism() {
+        // This test will deadlock if threads can't schedule tasks while another thread
+        // is waiting for a result
+        let (mut tx, mut rx) = tokio::sync::mpsc::channel(1);
+        let th1 = thread::spawn(|| block_on_future(async move { rx.recv().await }));
+        let _th2 = thread::spawn(|| block_on_future(async move { tx.send(5).await }));
+        assert_eq!(th1.join().unwrap(), Some(5));
+    }
 
     #[test]
     fn test_stream_to_iter() {
@@ -305,15 +350,16 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic]
     async fn test_nested_blocking_stream_iter() {
         let iter = nested_blocking_iter(3);
         let mut stream = futures::stream::iter(iter);
-        // panic in tokio runtime:
-        // "Cannot start a runtime from within a runtime. This happens because a
-        // function (like `block_on`) attempted to block the current thread
-        // while the thread is being used to drive asynchronous tasks."
-        stream.next().await;
+        // No panic because `block_on_future` does not call `block_on` from
+        // `tokio` directly.
+        for _ in 0..6 {
+            assert_eq!(stream.next().await, Some(0));
+        }
+        assert_eq!(stream.next().await, None);
+        assert_eq!(stream.next().await, None);
     }
 
     fn nested_blocking_iter(level: usize) -> Box<dyn Iterator<Item = u8> + Send + 'static> {
@@ -321,7 +367,7 @@ mod tests {
             Box::new(std::iter::once(0))
         } else {
             let iter = (0..level)
-                .flat_map(move |_| block_on_future(async { nested_blocking_iter(level - 1) }));
+                .flat_map(move |_| block_on_future(async move { nested_blocking_iter(level - 1) }));
             Box::new(iter)
         }
     }

@@ -36,7 +36,7 @@ use tokio::{
 use tracing::info_span;
 use url::Url;
 
-use async_runtime::block_on_future;
+use async_runtime::block_on_exclusive as block_on_future;
 use auth::{Auth, AuthConfig};
 use configparser::{
     config::ConfigSet,
