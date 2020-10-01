@@ -1339,7 +1339,7 @@ def wraprepo(repo):
                             fullrevisions.append(chunks[0])
                         elif chunkcount == len(chunks):
                             fullchunk = list(chunks[0])
-                            data1 = ""
+                            data1 = b""
                             for i in range(0, chunkcount):
                                 data1 += chunks[i][6]
                             fullchunk[6] = data1
