@@ -421,7 +421,7 @@ class HgServer(object):
                 )
 
         try:
-            return self.repo.manifestlog.datastore.get("", manifest_node)
+            return self.repo.manifestlog.datastore.get(path, manifest_node)
         except Exception as ex:
             # Now we can raise.
             raise ResetRepoError(ex)
@@ -648,7 +648,9 @@ class HgServer(object):
         # type: (str, bytes) -> None
         mfnodes = set([manifest_node])
         depth = str(self._treefetchdepth)
-        with self.repo.ui.configoverride({("treemanifest", "fetchdepth"): depth}, "forcesinglefetch"):
+        with self.repo.ui.configoverride(
+            {("treemanifest", "fetchdepth"): depth}, "forcesinglefetch"
+        ):
             if path:
                 # We have to call repo._prefetchtrees() directly if we have a path.
                 # We cannot compute the set of base nodes in this case.
