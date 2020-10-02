@@ -712,7 +712,7 @@ def diff(context, mapping, args):
     ctx = mapping["ctx"]
     chunks = ctx.diff(match=ctx.match([], getpatterns(0), getpatterns(1)))
 
-    return pycompat.decodeutf8(b"".join(chunks))
+    return b"".join(chunks)
 
 
 @templatefunc("extdata(source)", argspec="source")
@@ -1447,6 +1447,7 @@ def expandaliases(tree, aliases):
 # template engine
 
 stringify = templatefilters.stringify
+byteify = templatefilters.byteify
 
 
 def _flatten(thing):
@@ -1454,15 +1455,13 @@ def _flatten(thing):
     """yield a single stream from a possibly nested set of iterators"""
     thing = templatekw.unwraphybrid(thing)
     if isinstance(thing, str):
-        yield thing
+        yield pycompat.encodeutf8(thing)
     elif isinstance(thing, bytes):
-        raise error.ProgrammingError(
-            "Mercurial IO including templates is done with str, not bytes"
-        )
+        yield thing
     elif thing is None:
         pass
     elif not util.safehasattr(thing, "__iter__"):
-        yield pycompat.bytestr(thing)
+        yield pycompat.encodeutf8(str(thing))
     else:
         for i in thing:
             for j in _flatten(i):

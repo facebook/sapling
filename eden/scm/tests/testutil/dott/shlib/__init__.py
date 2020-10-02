@@ -322,7 +322,7 @@ def _hg(*args, **kwargs):
         # Revert side effect of --cwd
         os.chdir(cwdbefore)
     buf = fout.getvalue().rstrip()
-    return (status, pycompat.decodeutf8(buf))
+    return (status, pycompat.decodeutf8(buf, errors="surrogateescape"))
 
 
 # utilities in tinit.sh

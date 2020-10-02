@@ -532,6 +532,7 @@ def getutf8char(s, pos):
 
 
 def toutf8b(s):
+    # type: bytes -> bytes
     """convert a local, possibly-binary string into UTF-8b
 
     This is intended as a generic method to preserve data when working
@@ -563,7 +564,7 @@ def toutf8b(s):
 
     if not isinstance(s, localstr) and isasciistr(s):
         return s
-    if "\xed" not in s:
+    if b"\xed" not in s:
         if isinstance(s, localstr):
             return s._utf8
         try:
@@ -572,21 +573,26 @@ def toutf8b(s):
         except UnicodeDecodeError:
             pass
 
-    s = pycompat.bytestr(s)
-    r = ""
+    r = b""
     pos = 0
     l = len(s)
     while pos < l:
         try:
             c = getutf8char(s, pos)
-            if "\xed\xb0\x80" <= c <= "\xed\xb3\xbf":
+            if b"\xed\xb0\x80" <= c <= b"\xed\xb3\xbf":
                 # have to re-escape existing U+DCxx characters
-                c = unichr(0xDC00 + ord(s[pos])).encode("utf-8", _utf8strict)
+                value = s[pos]
+                if sys.version_info[0] < 3:
+                    value = ord(value)
+                c = unichr(0xDC00 + value).encode("utf-8", _utf8strict)
                 pos += 1
             else:
                 pos += len(c)
         except UnicodeDecodeError:
-            c = unichr(0xDC00 + ord(s[pos])).encode("utf-8", _utf8strict)
+            value = s[pos]
+            if sys.version_info[0] < 3:
+                value = ord(value)
+            c = unichr(0xDC00 + value).encode("utf-8", _utf8strict)
             pos += 1
         r += c
     return r

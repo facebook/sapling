@@ -2257,7 +2257,7 @@ class changeset_templater(changeset_printer):
 
         # write changeset metadata, then patch if requested
         key = self._parts[self._tref]
-        self.ui.write(templater.stringify(self.t(key, **props)))
+        self.ui.writebytes(templater.byteify(self.t(key, **props)))
         self.showpatch(ctx, matchfn, hunksfilterfn=hunksfilterfn)
 
         if self._parts["footer"]:
@@ -3866,7 +3866,7 @@ def buildcommittemplate(repo, ctx, extramsg, ref):
 
     ui.pushbuffer()
     t.show(ctx, extramsg=extramsg)
-    return ui.popbuffer()
+    return pycompat.decodeutf8(ui.popbufferbytes(), errors="replace")
 
 
 def hgprefix(msg):

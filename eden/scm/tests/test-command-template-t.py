@@ -10,6 +10,7 @@ from __future__ import absolute_import
 
 import datetime
 import os
+import sys
 import warnings
 
 from edenscm.mercurial import pycompat
@@ -18,6 +19,7 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 from edenscm.mercurial import namespaces
 
+is_py3 = sys.version_info[0] >= 3
 
 sh % "setconfig 'extensions.treemanifest=!'"
 
@@ -197,7 +199,15 @@ sh % 'hg debugtemplate \'{("not", "an", "argument", "list")|separate}\'' == r"""
 # Second branch starting at nullrev:
 
 sh % "hg update null" == "0 files updated, 0 files merged, 4 files removed, 0 files unresolved"
-sh % "echo second" > "second"
+with open("second", "wb") as f:
+    # Valid utf-8 character
+    if is_py3:
+        f.write("🥈".encode("utf-8"))
+    else:
+        f.write("🥈")
+    # Invalid utf-8 character
+    f.write(b"\xe2\x28\xa1")
+    f.write(b"\n")
 sh % "hg add second"
 sh % "hg commit -m second -d '1000000 0' -u 'User Name <user@hostname>'"
 
@@ -305,8 +315,8 @@ changeset = ' {dict(rev, node|short)|json}'
 """ > "map-myjson"
 sh % "hg log -l2 -T./map-myjson" == r"""
     {
-     {"node": "95c24699272e", "rev": 8},
-     {"node": "29114dbae42b", "rev": 7}
+     {"node": "209edb6a1848", "rev": 8},
+     {"node": "88058a185da2", "rev": 7}
     }"""
 
 # Test docheader, docfooter and separator in [templates] section
@@ -321,8 +331,8 @@ myjson:separator = ',\n'
 """ >> ".hg/hgrc"
 sh % "hg log -l2 -Tmyjson" == r"""
     {
-     {"node": "95c24699272e", "rev": 8},
-     {"node": "29114dbae42b", "rev": 7}
+     {"node": "209edb6a1848", "rev": 8},
+     {"node": "88058a185da2", "rev": 7}
     }"""
 sh % "hg log -l1 '-T{rev}\\n'" == "8"
 
@@ -349,10 +359,10 @@ sh % "hg tip -v --template '\\n'"
 # Compact style works:
 
 sh % "hg log -Tcompact" == r"""
-    95c24699272e   2020-01-01 10:01 +0000   test
+    209edb6a1848   2020-01-01 10:01 +0000   test
       third
 
-       29114dbae42b   1970-01-12 13:46 +0000   user
+       88058a185da2   1970-01-12 13:46 +0000   user
       second
 
        f7e5795620e7   1970-01-18 08:40 +0000   person
@@ -377,10 +387,10 @@ sh % "hg log -Tcompact" == r"""
       line 1"""
 
 sh % "hg log -v --style compact" == r"""
-    95c24699272e   2020-01-01 10:01 +0000   test
+    209edb6a1848   2020-01-01 10:01 +0000   test
       third
 
-    29114dbae42b   1970-01-12 13:46 +0000   User Name <user@hostname>
+    88058a185da2   1970-01-12 13:46 +0000   User Name <user@hostname>
       second
 
     f7e5795620e7   1970-01-18 08:40 +0000   person
@@ -409,10 +419,10 @@ sh % "hg log -v --style compact" == r"""
     line 2"""
 
 sh % "hg log --debug --style compact" == r"""
-    95c24699272e   2020-01-01 10:01 +0000   test
+    209edb6a1848   2020-01-01 10:01 +0000   test
       third
 
-    29114dbae42b   1970-01-12 13:46 +0000   User Name <user@hostname>
+    88058a185da2   1970-01-12 13:46 +0000   User Name <user@hostname>
       second
 
     f7e5795620e7   1970-01-18 08:40 +0000   person
@@ -450,12 +460,12 @@ sh % "hg log --style xml -r 'not all()'" == r"""
 sh % "hg log --style xml" == r"""
     <?xml version="1.0"?>
     <log>
-    <logentry node="95c24699272ef57d062b8bccc32c878bf841784a">
+    <logentry node="209edb6a18483c1434e4006bca4c2b1ee5e7090a">
     <author email="test">test</author>
     <date>2020-01-01T10:01:00+00:00</date>
     <msg xml:space="preserve">third</msg>
     </logentry>
-    <logentry node="29114dbae42b9f078cf2714dbe3a86bba8ec7453">
+    <logentry node="88058a185da202d22e8ee0bb4d3515ff0ecb222b">
     <author email="user@hostname">User Name</author>
     <date>1970-01-12T13:46:40+00:00</date>
     <msg xml:space="preserve">second</msg>
@@ -505,7 +515,7 @@ sh % "hg log --style xml" == r"""
 sh % "hg log -v --style xml" == r"""
     <?xml version="1.0"?>
     <log>
-    <logentry node="95c24699272ef57d062b8bccc32c878bf841784a">
+    <logentry node="209edb6a18483c1434e4006bca4c2b1ee5e7090a">
     <author email="test">test</author>
     <date>2020-01-01T10:01:00+00:00</date>
     <msg xml:space="preserve">third</msg>
@@ -518,7 +528,7 @@ sh % "hg log -v --style xml" == r"""
     <copy source="second">fourth</copy>
     </copies>
     </logentry>
-    <logentry node="29114dbae42b9f078cf2714dbe3a86bba8ec7453">
+    <logentry node="88058a185da202d22e8ee0bb4d3515ff0ecb222b">
     <author email="user@hostname">User Name</author>
     <date>1970-01-12T13:46:40+00:00</date>
     <msg xml:space="preserve">second</msg>
@@ -590,7 +600,7 @@ sh % "hg log -v --style xml" == r"""
 sh % "hg log --debug --style xml" == r"""
     <?xml version="1.0"?>
     <log>
-    <logentry node="95c24699272ef57d062b8bccc32c878bf841784a">
+    <logentry node="209edb6a18483c1434e4006bca4c2b1ee5e7090a">
     <author email="test">test</author>
     <date>2020-01-01T10:01:00+00:00</date>
     <msg xml:space="preserve">third</msg>
@@ -604,7 +614,7 @@ sh % "hg log --debug --style xml" == r"""
     </copies>
     <extra key="branch">default</extra>
     </logentry>
-    <logentry node="29114dbae42b9f078cf2714dbe3a86bba8ec7453">
+    <logentry node="88058a185da202d22e8ee0bb4d3515ff0ecb222b">
     <author email="user@hostname">User Name</author>
     <date>1970-01-12T13:46:40+00:00</date>
     <msg xml:space="preserve">second</msg>
@@ -690,41 +700,47 @@ sh % "hg log -qr . -Tjson" == r"""
     [
      {
       "rev": 8,
-      "node": "95c24699272ef57d062b8bccc32c878bf841784a"
+      "node": "209edb6a18483c1434e4006bca4c2b1ee5e7090a"
      }
     ]"""
 
-sh % "hg log -vpr . -Tjson --stat" == r"""
+sh % "hg log -vpr . -Tjson --stat" == (
+    r"""
     [
      {
       "rev": 8,
-      "node": "95c24699272ef57d062b8bccc32c878bf841784a",
+      "node": "209edb6a18483c1434e4006bca4c2b1ee5e7090a",
       "branch": "default",
       "phase": "draft",
       "user": "test",
       "date": [1577872860, 0],
       "desc": "third",
       "bookmarks": [],
-      "parents": ["29114dbae42b9f078cf2714dbe3a86bba8ec7453"],
+      "parents": ["88058a185da202d22e8ee0bb4d3515ff0ecb222b"],
       "files": ["fourth", "second", "third"],
-      "diffstat": " fourth |  1 +\n second |  1 -\n third  |  1 +\n 3 files changed, 2 insertions(+), 1 deletions(-)\n",
-      "diff": "diff -r 29114dbae42b -r 95c24699272e fourth\n--- /dev/null\tThu Jan 01 00:00:00 1970 +0000\n+++ b/fourth\tWed Jan 01 10:01:00 2020 +0000\n@@ -0,0 +1,1 @@\n+second\ndiff -r 29114dbae42b -r 95c24699272e second\n--- a/second\tMon Jan 12 13:46:40 1970 +0000\n+++ /dev/null\tThu Jan 01 00:00:00 1970 +0000\n@@ -1,1 +0,0 @@\n-second\ndiff -r 29114dbae42b -r 95c24699272e third\n--- /dev/null\tThu Jan 01 00:00:00 1970 +0000\n+++ b/third\tWed Jan 01 10:01:00 2020 +0000\n@@ -0,0 +1,1 @@\n+third\n"
-     }
+      "diffstat": " fourth |  1 +\n second |  1 -\n third  |  1 +\n 3 files changed, 2 insertions(+), 1 deletions(-)\n",""" +
+(
+    '\n      "diff": "diff -r 88058a185da2 -r 209edb6a1848 fourth\\n--- /dev/null\\tThu Jan 01 00:00:00 1970 +0000\\n+++ b/fourth\\tWed Jan 01 10:01:00 2020 +0000\\n@@ -0,0 +1,1 @@\\n+🥈\udced\udcb3\udca2(\udced\udcb2\udca1\\ndiff -r 88058a185da2 -r 209edb6a1848 second\\n--- a/second\\tMon Jan 12 13:46:40 1970 +0000\\n+++ /dev/null\\tThu Jan 01 00:00:00 1970 +0000\\n@@ -1,1 +0,0 @@\\n-🥈\udced\udcb3\udca2(\udced\udcb2\udca1\\ndiff -r 88058a185da2 -r 209edb6a1848 third\\n--- /dev/null\\tThu Jan 01 00:00:00 1970 +0000\\n+++ b/third\\tWed Jan 01 10:01:00 2020 +0000\\n@@ -0,0 +1,1 @@\\n+third\\n"\n'
+if is_py3 else
+    '\n      "diff": "diff -r 88058a185da2 -r 209edb6a1848 fourth\\n--- /dev/null\\tThu Jan 01 00:00:00 1970 +0000\\n+++ b/fourth\\tWed Jan 01 10:01:00 2020 +0000\\n@@ -0,0 +1,1 @@\\n+🥈\xed\xb3\xa2(\xed\xb2\xa1\\ndiff -r 88058a185da2 -r 209edb6a1848 second\\n--- a/second\\tMon Jan 12 13:46:40 1970 +0000\\n+++ /dev/null\\tThu Jan 01 00:00:00 1970 +0000\\n@@ -1,1 +0,0 @@\\n-🥈\xed\xb3\xa2(\xed\xb2\xa1\\ndiff -r 88058a185da2 -r 209edb6a1848 third\\n--- /dev/null\\tThu Jan 01 00:00:00 1970 +0000\\n+++ b/third\\tWed Jan 01 10:01:00 2020 +0000\\n@@ -0,0 +1,1 @@\\n+third\\n"\n'
+) +
+    r"""     }
     ]"""
+)
 
 # honor --git but not format-breaking diffopts
 sh % "hg --config 'diff.noprefix=True' log --git -vpr . -Tjson" == r"""
     [
      {
       "rev": 8,
-      "node": "95c24699272ef57d062b8bccc32c878bf841784a",
+      "node": "209edb6a18483c1434e4006bca4c2b1ee5e7090a",
       "branch": "default",
       "phase": "draft",
       "user": "test",
       "date": [1577872860, 0],
       "desc": "third",
       "bookmarks": [],
-      "parents": ["29114dbae42b9f078cf2714dbe3a86bba8ec7453"],
+      "parents": ["88058a185da202d22e8ee0bb4d3515ff0ecb222b"],
       "files": ["fourth", "second", "third"],
       "diff": "diff --git a/second b/fourth\nrename from second\nrename to fourth\ndiff --git a/third b/third\nnew file mode 100644\n--- /dev/null\n+++ b/third\n@@ -0,0 +1,1 @@\n+third\n"
      }
@@ -734,18 +750,18 @@ sh % "hg log -T json" == r"""
     [
      {
       "rev": 8,
-      "node": "95c24699272ef57d062b8bccc32c878bf841784a",
+      "node": "209edb6a18483c1434e4006bca4c2b1ee5e7090a",
       "branch": "default",
       "phase": "draft",
       "user": "test",
       "date": [1577872860, 0],
       "desc": "third",
       "bookmarks": [],
-      "parents": ["29114dbae42b9f078cf2714dbe3a86bba8ec7453"]
+      "parents": ["88058a185da202d22e8ee0bb4d3515ff0ecb222b"]
      },
      {
       "rev": 7,
-      "node": "29114dbae42b9f078cf2714dbe3a86bba8ec7453",
+      "node": "88058a185da202d22e8ee0bb4d3515ff0ecb222b",
       "branch": "default",
       "phase": "draft",
       "user": "User Name <user@hostname>",
@@ -837,14 +853,14 @@ sh % "hg heads -v -Tjson" == r"""
     [
      {
       "rev": 8,
-      "node": "95c24699272ef57d062b8bccc32c878bf841784a",
+      "node": "209edb6a18483c1434e4006bca4c2b1ee5e7090a",
       "branch": "default",
       "phase": "draft",
       "user": "test",
       "date": [1577872860, 0],
       "desc": "third",
       "bookmarks": [],
-      "parents": ["29114dbae42b9f078cf2714dbe3a86bba8ec7453"],
+      "parents": ["88058a185da202d22e8ee0bb4d3515ff0ecb222b"],
       "files": ["fourth", "second", "third"]
      },
      {
@@ -865,15 +881,15 @@ sh % "hg log --debug -Tjson" == r"""
     [
      {
       "rev": 8,
-      "node": "95c24699272ef57d062b8bccc32c878bf841784a",
+      "node": "209edb6a18483c1434e4006bca4c2b1ee5e7090a",
       "branch": "default",
       "phase": "draft",
       "user": "test",
       "date": [1577872860, 0],
       "desc": "third",
       "bookmarks": [],
-      "parents": ["29114dbae42b9f078cf2714dbe3a86bba8ec7453"],
-      "manifest": "94961b75a2da554b4df6fb599e5bfc7d48de0c64",
+      "parents": ["88058a185da202d22e8ee0bb4d3515ff0ecb222b"],
+      "manifest": "102f85d6546830d0894e5420cdddaa12fe270c02",
       "extra": {"branch": "default"},
       "modified": [],
       "added": ["fourth", "third"],
@@ -881,7 +897,7 @@ sh % "hg log --debug -Tjson" == r"""
      },
      {
       "rev": 7,
-      "node": "29114dbae42b9f078cf2714dbe3a86bba8ec7453",
+      "node": "88058a185da202d22e8ee0bb4d3515ff0ecb222b",
       "branch": "default",
       "phase": "draft",
       "user": "User Name <user@hostname>",
@@ -889,7 +905,7 @@ sh % "hg log --debug -Tjson" == r"""
       "desc": "second",
       "bookmarks": [],
       "parents": ["0000000000000000000000000000000000000000"],
-      "manifest": "f2dbc354b94e5ec0b4f10680ee0cee816101d0bf",
+      "manifest": "e3aa144e25d914ea34006bd7b3c266b7eb283c61",
       "extra": {"branch": "default"},
       "modified": [],
       "added": ["second"],
@@ -1183,13 +1199,13 @@ sh % "cat changelog" == r"""
 
      * fourth, second, third:
      third
-     [95c24699272e]
+     [209edb6a1848]
 
     1970-01-12  User Name  <user@hostname>
 
      * second:
      second
-     [29114dbae42b]
+     [88058a185da2]
 
     1970-01-18  person  <person>
 
@@ -1238,7 +1254,7 @@ sh % "hg heads --style changelog" == r"""
 
      * fourth, second, third:
      third
-     [95c24699272e]
+     [209edb6a1848]
 
     1970-01-18  person  <person>
 
@@ -1567,8 +1583,8 @@ eq(
     files--debug: c
     files--debug: b
     files--debug: a
-    manifest: 94961b75a2da
-    manifest: f2dbc354b94e
+    manifest: 102f85d65468
+    manifest: e3aa144e25d9
     manifest: 4dc3def4f9b4
     manifest: 4dc3def4f9b4
     manifest: cb5a1327723b
@@ -1576,8 +1592,8 @@ eq(
     manifest: 6e0e82995c35
     manifest: 4e8d705b1e53
     manifest: a0c8bcbbb45c
-    manifest--verbose: 94961b75a2da
-    manifest--verbose: f2dbc354b94e
+    manifest--verbose: 102f85d65468
+    manifest--verbose: e3aa144e25d9
     manifest--verbose: 4dc3def4f9b4
     manifest--verbose: 4dc3def4f9b4
     manifest--verbose: cb5a1327723b
@@ -1585,8 +1601,8 @@ eq(
     manifest--verbose: 6e0e82995c35
     manifest--verbose: 4e8d705b1e53
     manifest--verbose: a0c8bcbbb45c
-    manifest--debug: 94961b75a2da554b4df6fb599e5bfc7d48de0c64
-    manifest--debug: f2dbc354b94e5ec0b4f10680ee0cee816101d0bf
+    manifest--debug: 102f85d6546830d0894e5420cdddaa12fe270c02
+    manifest--debug: e3aa144e25d914ea34006bd7b3c266b7eb283c61
     manifest--debug: 4dc3def4f9b4c6e8de820f6ee74737f91e96a216
     manifest--debug: 4dc3def4f9b4c6e8de820f6ee74737f91e96a216
     manifest--debug: cb5a1327723bada42f117e4c55a303246eaf9ccc
@@ -1594,8 +1610,8 @@ eq(
     manifest--debug: 6e0e82995c35d0d57a52aca8da4e56139e06b4b1
     manifest--debug: 4e8d705b1e53e3f9375e0e60dc7b525d8211fe55
     manifest--debug: a0c8bcbbb45c63b90b70ad007bf38961f64f2af0
-    node: 95c24699272ef57d062b8bccc32c878bf841784a
-    node: 29114dbae42b9f078cf2714dbe3a86bba8ec7453
+    node: 209edb6a18483c1434e4006bca4c2b1ee5e7090a
+    node: 88058a185da202d22e8ee0bb4d3515ff0ecb222b
     node: f7e5795620e78993ad76680c4306bb2da83907b3
     node: 13207e5a10d9fd28ec424934298e176197f2c67f
     node: 07fa1db1064879a32157227401eb44b322ae53ce
@@ -1603,8 +1619,8 @@ eq(
     node: 97054abb4ab824450e9164180baf491ae0078465
     node: b608e9d1a3f0273ccf70fb85fd6866b3482bf965
     node: 1e4e1b8f71e05681d422154f5421e385fec3454f
-    node--verbose: 95c24699272ef57d062b8bccc32c878bf841784a
-    node--verbose: 29114dbae42b9f078cf2714dbe3a86bba8ec7453
+    node--verbose: 209edb6a18483c1434e4006bca4c2b1ee5e7090a
+    node--verbose: 88058a185da202d22e8ee0bb4d3515ff0ecb222b
     node--verbose: f7e5795620e78993ad76680c4306bb2da83907b3
     node--verbose: 13207e5a10d9fd28ec424934298e176197f2c67f
     node--verbose: 07fa1db1064879a32157227401eb44b322ae53ce
@@ -1612,8 +1628,8 @@ eq(
     node--verbose: 97054abb4ab824450e9164180baf491ae0078465
     node--verbose: b608e9d1a3f0273ccf70fb85fd6866b3482bf965
     node--verbose: 1e4e1b8f71e05681d422154f5421e385fec3454f
-    node--debug: 95c24699272ef57d062b8bccc32c878bf841784a
-    node--debug: 29114dbae42b9f078cf2714dbe3a86bba8ec7453
+    node--debug: 209edb6a18483c1434e4006bca4c2b1ee5e7090a
+    node--debug: 88058a185da202d22e8ee0bb4d3515ff0ecb222b
     node--debug: f7e5795620e78993ad76680c4306bb2da83907b3
     node--debug: 13207e5a10d9fd28ec424934298e176197f2c67f
     node--debug: 07fa1db1064879a32157227401eb44b322ae53ce
@@ -1621,7 +1637,7 @@ eq(
     node--debug: 97054abb4ab824450e9164180baf491ae0078465
     node--debug: b608e9d1a3f0273ccf70fb85fd6866b3482bf965
     node--debug: 1e4e1b8f71e05681d422154f5421e385fec3454f
-    parents: 29114dbae42b
+    parents: 88058a185da2
     parents: 000000000000
     parents: 13207e5a10d9 07fa1db10648
     parents: 10e46f2dcbf4
@@ -1630,7 +1646,7 @@ eq(
     parents: b608e9d1a3f0
     parents: 1e4e1b8f71e0
     parents: 000000000000
-    parents--verbose: 29114dbae42b
+    parents--verbose: 88058a185da2
     parents--verbose: 000000000000
     parents--verbose: 13207e5a10d9 07fa1db10648
     parents--verbose: 10e46f2dcbf4
@@ -1639,7 +1655,7 @@ eq(
     parents--verbose: b608e9d1a3f0
     parents--verbose: 1e4e1b8f71e0
     parents--verbose: 000000000000
-    parents--debug: 29114dbae42b9f078cf2714dbe3a86bba8ec7453
+    parents--debug: 88058a185da202d22e8ee0bb4d3515ff0ecb222b
     parents--debug: 0000000000000000000000000000000000000000
     parents--debug: 13207e5a10d9fd28ec424934298e176197f2c67f 07fa1db1064879a32157227401eb44b322ae53ce
     parents--debug: 10e46f2dcbf4823578cf180f33ecf0b957964c47
@@ -1783,7 +1799,7 @@ eq(
     p2rev--debug: -1
     p2rev--debug: -1
     p2rev--debug: -1
-    p1node: 29114dbae42b9f078cf2714dbe3a86bba8ec7453
+    p1node: 88058a185da202d22e8ee0bb4d3515ff0ecb222b
     p1node: 0000000000000000000000000000000000000000
     p1node: 13207e5a10d9fd28ec424934298e176197f2c67f
     p1node: 10e46f2dcbf4823578cf180f33ecf0b957964c47
@@ -1792,7 +1808,7 @@ eq(
     p1node: b608e9d1a3f0273ccf70fb85fd6866b3482bf965
     p1node: 1e4e1b8f71e05681d422154f5421e385fec3454f
     p1node: 0000000000000000000000000000000000000000
-    p1node--verbose: 29114dbae42b9f078cf2714dbe3a86bba8ec7453
+    p1node--verbose: 88058a185da202d22e8ee0bb4d3515ff0ecb222b
     p1node--verbose: 0000000000000000000000000000000000000000
     p1node--verbose: 13207e5a10d9fd28ec424934298e176197f2c67f
     p1node--verbose: 10e46f2dcbf4823578cf180f33ecf0b957964c47
@@ -1801,7 +1817,7 @@ eq(
     p1node--verbose: b608e9d1a3f0273ccf70fb85fd6866b3482bf965
     p1node--verbose: 1e4e1b8f71e05681d422154f5421e385fec3454f
     p1node--verbose: 0000000000000000000000000000000000000000
-    p1node--debug: 29114dbae42b9f078cf2714dbe3a86bba8ec7453
+    p1node--debug: 88058a185da202d22e8ee0bb4d3515ff0ecb222b
     p1node--debug: 0000000000000000000000000000000000000000
     p1node--debug: 13207e5a10d9fd28ec424934298e176197f2c67f
     p1node--debug: 10e46f2dcbf4823578cf180f33ecf0b957964c47
@@ -1930,8 +1946,8 @@ sh % "hg log --template '{desc|firstline}\\n'" == r"""
     line 1"""
 
 sh % "hg log --template '{node|short}\\n'" == r"""
-    95c24699272e
-    29114dbae42b
+    209edb6a1848
+    88058a185da2
     f7e5795620e7
     13207e5a10d9
     07fa1db10648
@@ -1953,7 +1969,7 @@ sh % "hg log --template '<changeset author=\"{author|xmlescape}\"/>\n'" == r"""
 
 sh % "hg log --template '{rev}: {children}\\n'" == r"""
     8:  (trailing space)
-    7: 8:95c24699272e
+    7: 8:209edb6a1848
     6:  (trailing space)
     5: 6:f7e5795620e7
     4: 6:f7e5795620e7
@@ -2048,7 +2064,7 @@ color=
 """ >> "$HGRCPATH"
 
 sh % "hg log -T status -r 10" == r"""
-    commit:      0f9759ec227a
+    commit:      bc9dfec3b3bc
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     Modify, add, remove, rename
@@ -2059,7 +2075,7 @@ sh % "hg log -T status -r 10" == r"""
     R a
     R fourth"""
 sh % "hg log -T status -C -r 10" == r"""
-    commit:      0f9759ec227a
+    commit:      bc9dfec3b3bc
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     summary:     Modify, add, remove, rename
@@ -2071,7 +2087,7 @@ sh % "hg log -T status -C -r 10" == r"""
     R a
     R fourth"""
 sh % "hg log -T status -C -r 10 -v" == r"""
-    commit:      0f9759ec227a
+    commit:      bc9dfec3b3bc
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     description:
@@ -2085,9 +2101,9 @@ sh % "hg log -T status -C -r 10 -v" == r"""
     R a
     R fourth"""
 sh % "hg log -T status -C -r 10 --debug" == r"""
-    commit:      0f9759ec227a4859c2014a345cd8a859022b7c6c
+    commit:      bc9dfec3b3bcc43c41a22000f3226b0c1085d5c1
     phase:       draft
-    manifest:    89dd546f2de0a9d6d664f58d86097eb97baba567
+    manifest:    1685af69a14aa2346cfb01cf0e7f50ef176128b4
     user:        test
     date:        Thu Jan 01 00:00:00 1970 +0000
     extra:       branch=default
@@ -2101,9 +2117,9 @@ sh % "hg log -T status -C -r 10 --debug" == r"""
       fourth
     R a
     R fourth"""
-sh % "hg log -T status -C -r 10 --quiet" == "0f9759ec227a"
+sh % "hg log -T status -C -r 10 --quiet" == "bc9dfec3b3bc"
 sh % "hg '--color=debug' log -T status -r 10" == r"""
-    [log.changeset changeset.draft|commit:      0f9759ec227a]
+    [log.changeset changeset.draft|commit:      bc9dfec3b3bc]
     [log.user|user:        test]
     [log.date|date:        Thu Jan 01 00:00:00 1970 +0000]
     [log.summary|summary:     Modify, add, remove, rename]
@@ -2114,7 +2130,7 @@ sh % "hg '--color=debug' log -T status -r 10" == r"""
     [status.removed|R a]
     [status.removed|R fourth]"""
 sh % "hg '--color=debug' log -T status -C -r 10" == r"""
-    [log.changeset changeset.draft|commit:      0f9759ec227a]
+    [log.changeset changeset.draft|commit:      bc9dfec3b3bc]
     [log.user|user:        test]
     [log.date|date:        Thu Jan 01 00:00:00 1970 +0000]
     [log.summary|summary:     Modify, add, remove, rename]
@@ -2126,7 +2142,7 @@ sh % "hg '--color=debug' log -T status -C -r 10" == r"""
     [status.removed|R a]
     [status.removed|R fourth]"""
 sh % "hg '--color=debug' log -T status -C -r 10 -v" == r"""
-    [log.changeset changeset.draft|commit:      0f9759ec227a]
+    [log.changeset changeset.draft|commit:      bc9dfec3b3bc]
     [log.user|user:        test]
     [log.date|date:        Thu Jan 01 00:00:00 1970 +0000]
     [ui.note log.description|description:]
@@ -2140,9 +2156,9 @@ sh % "hg '--color=debug' log -T status -C -r 10 -v" == r"""
     [status.removed|R a]
     [status.removed|R fourth]"""
 sh % "hg '--color=debug' log -T status -C -r 10 --debug" == r"""
-    [log.changeset changeset.draft|commit:      0f9759ec227a4859c2014a345cd8a859022b7c6c]
+    [log.changeset changeset.draft|commit:      bc9dfec3b3bcc43c41a22000f3226b0c1085d5c1]
     [log.phase|phase:       draft]
-    [ui.debug log.manifest|manifest:    89dd546f2de0a9d6d664f58d86097eb97baba567]
+    [ui.debug log.manifest|manifest:    1685af69a14aa2346cfb01cf0e7f50ef176128b4]
     [log.user|user:        test]
     [log.date|date:        Thu Jan 01 00:00:00 1970 +0000]
     [ui.debug log.extra|extra:       branch=default]
@@ -2156,7 +2172,7 @@ sh % "hg '--color=debug' log -T status -C -r 10 --debug" == r"""
     [status.copied|  fourth]
     [status.removed|R a]
     [status.removed|R fourth]"""
-sh % "hg '--color=debug' log -T status -C -r 10 --quiet" == "[log.node|0f9759ec227a]"
+sh % "hg '--color=debug' log -T status -C -r 10 --quiet" == "[log.node|bc9dfec3b3bc]"
 
 # Check the bisect template
 
@@ -2529,65 +2545,87 @@ sh % "hg log -l 2 -T '{index + 10}{files % \" {index}:{file}\"}\\n'" == r"""
 
 # Test diff function:
 
-sh % "hg diff -c 8" == r"""
-    diff -r 29114dbae42b -r 95c24699272e fourth
+sh % "hg diff -c 8" == (
+    r"""
+    diff -r 88058a185da2 -r 209edb6a1848 fourth
     --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
     +++ b/fourth	Wed Jan 01 10:01:00 2020 +0000
     @@ -0,0 +1,1 @@
-    +second
-    diff -r 29114dbae42b -r 95c24699272e second
+"""
++ ("    +🥈\udce2(\udca1" if is_py3 else "    +🥈\xe2\x28\xa1") +
+    """
+    diff -r 88058a185da2 -r 209edb6a1848 second
     --- a/second	Mon Jan 12 13:46:40 1970 +0000
     +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
     @@ -1,1 +0,0 @@
-    -second
-    diff -r 29114dbae42b -r 95c24699272e third
+"""
++ ("    -🥈\udce2(\udca1" if is_py3 else "    -🥈\xe2\x28\xa1") +
+    """
+    diff -r 88058a185da2 -r 209edb6a1848 third
     --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
     +++ b/third	Wed Jan 01 10:01:00 2020 +0000
     @@ -0,0 +1,1 @@
     +third"""
+)
 
-sh % "hg log -r 8 -T '{diff()}'" == r"""
-    diff -r 29114dbae42b -r 95c24699272e fourth
+sh % "hg log -r 8 -T '{diff()}'" == (
+    r"""
+    diff -r 88058a185da2 -r 209edb6a1848 fourth
     --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
     +++ b/fourth	Wed Jan 01 10:01:00 2020 +0000
     @@ -0,0 +1,1 @@
-    +second
-    diff -r 29114dbae42b -r 95c24699272e second
+"""
++ ("    +🥈\udce2(\udca1" if is_py3 else "    +🥈\xe2\x28\xa1") +
+    """
+    diff -r 88058a185da2 -r 209edb6a1848 second
     --- a/second	Mon Jan 12 13:46:40 1970 +0000
     +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
     @@ -1,1 +0,0 @@
-    -second
-    diff -r 29114dbae42b -r 95c24699272e third
+"""
++ ("    -🥈\udce2(\udca1" if is_py3 else "    -🥈\xe2\x28\xa1") +
+    """
+    diff -r 88058a185da2 -r 209edb6a1848 third
     --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
     +++ b/third	Wed Jan 01 10:01:00 2020 +0000
     @@ -0,0 +1,1 @@
     +third"""
+)
 
-sh % "hg log -r 8 -T '{diff('\\''glob:f*'\\'')}'" == r"""
-    diff -r 29114dbae42b -r 95c24699272e fourth
+sh % "hg log -r 8 -T '{diff('\\''glob:f*'\\'')}'" == (
+    r"""
+    diff -r 88058a185da2 -r 209edb6a1848 fourth
     --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
     +++ b/fourth	Wed Jan 01 10:01:00 2020 +0000
     @@ -0,0 +1,1 @@
-    +second"""
+"""
++ ("    +🥈\udce2(\udca1" if is_py3 else "    +🥈\xe2\x28\xa1")
+)
 
-sh % "hg log -r 8 -T '{diff('\\'''\\'', '\\''glob:f*'\\'')}'" == r"""
-    diff -r 29114dbae42b -r 95c24699272e second
+sh % "hg log -r 8 -T '{diff('\\'''\\'', '\\''glob:f*'\\'')}'" == (
+    r"""
+    diff -r 88058a185da2 -r 209edb6a1848 second
     --- a/second	Mon Jan 12 13:46:40 1970 +0000
     +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
     @@ -1,1 +0,0 @@
-    -second
-    diff -r 29114dbae42b -r 95c24699272e third
+"""
++ ("    -🥈\udce2(\udca1" if is_py3 else "    -🥈\xe2\x28\xa1") +
+    """
+    diff -r 88058a185da2 -r 209edb6a1848 third
     --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
     +++ b/third	Wed Jan 01 10:01:00 2020 +0000
     @@ -0,0 +1,1 @@
     +third"""
+)
 
-sh % "hg log -r 8 -T '{diff('\\''FOURTH'\\''|lower)}'" == r"""
-    diff -r 29114dbae42b -r 95c24699272e fourth
+sh % "hg log -r 8 -T '{diff('\\''FOURTH'\\''|lower)}'" == (
+    r"""
+    diff -r 88058a185da2 -r 209edb6a1848 fourth
     --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
     +++ b/fourth	Wed Jan 01 10:01:00 2020 +0000
     @@ -0,0 +1,1 @@
-    +second"""
+"""
++ ("    +🥈\udce2(\udca1" if is_py3 else "    +🥈\xe2\x28\xa1")
+)
 
 # ui verbosity:
 
@@ -3039,8 +3077,8 @@ sh % 'hg log -R a -r 8 --template \'{join(files, ifeq(branch, "default", r"\\x5c
 # Test quotes in nested expression are evaluated just like a $(command)
 # substitution in POSIX shells:
 
-sh % 'hg log -R a -r 8 -T \'{"{"{rev}:{node|short}"}"}\\n\'' == "8:95c24699272e"
-sh % 'hg log -R a -r 8 -T \'{"{"\\{{rev}} \\"{node|short}\\""}"}\\n\'' == '{8} "95c24699272e"'
+sh % 'hg log -R a -r 8 -T \'{"{"{rev}:{node|short}"}"}\\n\'' == "8:209edb6a1848"
+sh % 'hg log -R a -r 8 -T \'{"{"\\{{rev}} \\"{node|short}\\""}"}\\n\'' == '{8} "209edb6a1848"'
 
 # Test recursive evaluation:
 

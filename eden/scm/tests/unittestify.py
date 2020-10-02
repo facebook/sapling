@@ -151,7 +151,7 @@ def gettestmethod(name, port):
                     reason = b"skipped by run-tests.py"
                 raise unittest.SkipTest(reason)
             elif returncode != 0:
-                raise self.failureException(message.decode("utf-8"))
+                raise self.failureException(message.decode("utf-8", errors="surrogateescape"))
 
     return runsingletest
 

@@ -399,11 +399,30 @@ def stringify(thing):
     text and concatenating them.
     """
     thing = templatekw.unwraphybrid(thing)
+    if isinstance(thing, bytes):
+        return pycompat.decodeutf8(thing)
     if util.safehasattr(thing, "__iter__") and not isinstance(thing, str):
         return "".join([stringify(t) for t in thing if t is not None])
     if thing is None:
         return ""
     return pycompat.bytestr(thing)
+
+
+def byteify(thing):
+    # type: Any -> bytes
+    """Any type. Turns the value into text by converting values into
+    text bytes and concatenating them.
+    """
+    thing = templatekw.unwraphybrid(thing)
+    if isinstance(thing, bytes):
+        return thing
+    if isinstance(thing, str):
+        return pycompat.encodeutf8(thing)
+    if util.safehasattr(thing, "__iter__"):
+        return b"".join([byteify(t) for t in thing if t is not None])
+    if thing is None:
+        return b""
+    return pycompat.encodeutf8(stringify(thing))
 
 
 @templatefilter("stripdir")

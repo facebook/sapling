@@ -1086,11 +1086,11 @@ def increasingchunks(source, min=1024, max=65536):
                     min = nmin
                 if min > max:
                     min = max
-            yield "".join(buf)
+            yield b"".join(buf)
             blen = 0
             buf = []
     if buf:
-        yield "".join(buf)
+        yield b"".join(buf)
 
 
 Abort = error.Abort
