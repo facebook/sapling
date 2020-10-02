@@ -145,22 +145,6 @@ ConstantStringRef unionStoreGet(
           (const char*)id.getBytes().data(),
           id.getBytes().size()));
 }
-
-// A helper function to avoid repeating noisy casts/conversions when
-// loading data from a UnionDatapackStore instance.  This variant will
-// ask the store to rescan and look for changed packs if it encounters
-// a missing key.
-ConstantStringRef unionStoreGetWithRefresh(
-    UnionDatapackStore& unionStore,
-    StringPiece name,
-    const Hash& id) {
-  try {
-    return unionStoreGet(unionStore, name, id);
-  } catch (const MissingKeyError&) {
-    unionStore.markForRefresh();
-    return unionStoreGet(unionStore, name, id);
-  }
-}
 } // namespace
 
 HgBackingStore::HgBackingStore(
@@ -332,18 +316,12 @@ HgBackingStore::fetchTreeFromHgCacheOrImporter(
     RelativePath path,
     const std::optional<Hash>& commitId) {
   auto writeBatch = localStore_->beginWrite();
-  try {
-    if (auto tree = datapackStore_.getTree(
-            path, manifestNode, edenTreeID, writeBatch.get(), commitId)) {
-      XLOG(DBG4) << "imported tree node=" << manifestNode << " path=" << path
-                 << " from Rust hgcache";
-      return folly::makeFuture(std::move(tree));
-    }
-    auto content = unionStoreGetWithRefresh(
-        *unionStore_->wlock(), path.stringPiece(), manifestNode);
-    return folly::makeFuture(processTree(
-        content, manifestNode, edenTreeID, path, commitId, writeBatch.get()));
-  } catch (const MissingKeyError&) {
+  if (auto tree = datapackStore_.getTree(
+          path, manifestNode, edenTreeID, writeBatch.get(), commitId)) {
+    XLOG(DBG4) << "imported tree node=" << manifestNode << " path=" << path
+               << " from Rust hgcache";
+    return folly::makeFuture(std::move(tree));
+  } else {
     // Data for this tree was not present locally.
     // Fall through and fetch the data from the server below.
     if (!FLAGS_hg_fetch_missing_trees) {
