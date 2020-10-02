@@ -66,8 +66,7 @@ use crate::setup::{
     get_scuba_sample, get_skiplist_index, get_sleep_secs, get_starting_commit, get_target_bookmark,
 };
 use crate::sync::{
-    is_already_synced, sync_commit_without_pushrebase, sync_commits_via_pushrebase,
-    sync_single_bookmark_update_log,
+    sync_commit_without_pushrebase, sync_commits_via_pushrebase, sync_single_bookmark_update_log,
 };
 
 fn print_error(ctx: CoreContext, error: &Error) {
@@ -87,11 +86,18 @@ async fn run_in_single_commit_mode<M: SyncedCommitMapping + Clone + 'static>(
     bookmark: BookmarkName,
     common_bookmarks: HashSet<BookmarkName>,
 ) -> Result<(), Error> {
-    let is_synced = is_already_synced(ctx.clone(), bcs.clone(), commit_syncer.clone())
-        .compat()
-        .await?;
-
-    if is_synced {
+    info!(
+        ctx.logger(),
+        "Checking if {} is already synced {}->{}",
+        bcs,
+        commit_syncer.repos.get_source_repo().get_repoid(),
+        commit_syncer.repos.get_target_repo().get_repoid()
+    );
+    if commit_syncer
+        .commit_sync_outcome_exists(ctx.clone(), Source(bcs))
+        .await?
+    {
+        info!(ctx.logger(), "{} is already synced", bcs);
         return Ok(());
     }
 

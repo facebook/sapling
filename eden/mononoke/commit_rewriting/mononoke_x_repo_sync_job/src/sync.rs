@@ -569,36 +569,6 @@ async fn move_or_create_bookmark(
     }
 }
 
-pub fn is_already_synced<M: SyncedCommitMapping + Clone + 'static>(
-    ctx: CoreContext,
-    cs_id: ChangesetId,
-    commit_syncer: CommitSyncer<M>,
-) -> impl Future<Item = bool, Error = Error> {
-    let source_repo_id = commit_syncer.get_source_repo().get_repoid();
-    let target_repo_id = commit_syncer.get_target_repo().get_repoid();
-    info!(
-        ctx.logger(),
-        "Checking if {} is already synced {}->{}",
-        cs_id,
-        source_repo_id.id(),
-        target_repo_id.id()
-    );
-    commit_syncer
-        .get_mapping()
-        .get_one(ctx.clone(), source_repo_id, cs_id.clone(), target_repo_id)
-        .map({
-            cloned!(ctx);
-            move |maybe_mapping| {
-                if maybe_mapping.is_some() {
-                    info!(ctx.logger(), "{} is already synced", cs_id);
-                    true
-                } else {
-                    false
-                }
-            }
-        })
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
