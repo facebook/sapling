@@ -14,9 +14,9 @@
 #include <list>
 #include <stdexcept>
 
-#include "edenscm/hgext/extlib/cstore/store.h"
 #include "edenscm/hgext/extlib/ctreemanifest/manifest_entry.h"
 #include "edenscm/hgext/extlib/ctreemanifest/manifest_ptr.h"
+#include "edenscm/hgext/extlib/ctreemanifest/store.h"
 #include "lib/clib/convert.h"
 
 class ManifestIterator;

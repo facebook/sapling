@@ -14,7 +14,7 @@
 #include <cstddef>
 #include <memory>
 
-#include "edenscm/hgext/extlib/cstore/key.h"
+#include "edenscm/hgext/extlib/ctreemanifest/key.h"
 
 class ConstantStringRef {
  private:
