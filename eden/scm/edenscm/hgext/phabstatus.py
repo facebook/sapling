@@ -263,8 +263,8 @@ class PeekaheadRevsetIter(Iterator):
     processing them one at a time as the logging code requests them.
     """
 
-    def __init__(self, revs, chunksize=30):
-        self.mainiter = iter(revs)
+    def __init__(self, revsiter, chunksize=30):
+        self.mainiter = revsiter
         # done is set to true once mainiter has thrown StopIteration
         self.done = False
 
@@ -313,25 +313,18 @@ def _getlogrevs(orig, repo, pats, opts):
     # Call the original function
     revs, expr, filematcher = orig(repo, pats, opts)
 
-    # Wrap the revs result so that iter(revs) returns a PeekaheadRevsetIter()
-    # the first time it is invoked, and sets repo._phabstatusrevs so that the
-    # phabstatus code will be able to peek ahead at the revs to be logged.
-    orig_type = revs.__class__
-
+    # Wrap the revs result so that iter(revs) returns a PeekaheadRevsetIter().
     class wrapped_class(type(revs)):
         def __iter__(self):
-            # The first time __iter__() is called, return a
-            # PeekaheadRevsetIter(), and assign it to repo._phabstatusrevs
-            revs.__class__ = orig_type
             # By default, peek ahead 30 revisions at a time
             peekahead = repo.ui.configint("phabstatus", "logpeekahead", 30)
-            repo._phabstatusrevs = PeekaheadRevsetIter(revs, peekahead)
+            revsiter = super(wrapped_class, self).__iter__()
+            # In case __iter__ is called multiple times, keep the last
+            # wrapped iter accessible for populateresponseforphab (via repo).
+            repo._phabstatusrevs = PeekaheadRevsetIter(revsiter, peekahead)
             return repo._phabstatusrevs
 
-        _is_phabstatus_wrapped = True
-
-    if not hgutil.safehasattr(revs, "_is_phabstatus_wrapped"):
-        revs.__class__ = wrapped_class
+    revs.__class__ = wrapped_class
 
     return revs, expr, filematcher
 
