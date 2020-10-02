@@ -997,6 +997,7 @@ function start_and_wait_for_scs_server {
   SCS_PORT=$(get_free_socket)
   GLOG_minloglevel=5 "$SCS_SERVER" "$@" \
     -p "$SCS_PORT" \
+    --log-level DEBUG \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
     --test-instance \
     --local-configerator-path="$TESTTMP/configerator" \
