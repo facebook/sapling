@@ -33,7 +33,6 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping lib/clib/buffer.h it has no-che?k-code (glob)
   Skipping lib/clib/convert.h it has no-che?k-code (glob)
   Skipping lib/clib/null_test.c it has no-che?k-code (glob)
-  Skipping lib/clib/portability/dirent.h it has no-che?k-code (glob)
   Skipping lib/clib/portability/inet.h it has no-che?k-code (glob)
   Skipping lib/clib/portability/mman.h it has no-che?k-code (glob)
   Skipping lib/clib/portability/portability.h it has no-che?k-code (glob)
