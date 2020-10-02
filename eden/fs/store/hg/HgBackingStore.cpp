@@ -41,7 +41,7 @@
 #include "eden/fs/utils/EnumValue.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 
-#include "edenscm/hgext/extlib/cstore/uniondatapackstore.h" // @manual=//eden/scm:datapack
+#include "edenscm/hgext/extlib/cstore/store.h" // @manual=//eden/scm:datapack
 #include "edenscm/hgext/extlib/ctreemanifest/treemanifest.h" // @manual=//eden/scm:datapack
 
 using folly::Future;
@@ -133,18 +133,6 @@ class HgImporterTestExecutor : public folly::InlineExecutor {
   }
 };
 
-// A helper function to avoid repeating noisy casts/conversions when
-// loading data from a UnionDatapackStore instance.
-ConstantStringRef unionStoreGet(
-    UnionDatapackStore& unionStore,
-    StringPiece name,
-    const Hash& id) {
-  return unionStore.get(
-      Key(name.data(),
-          name.size(),
-          (const char*)id.getBytes().data(),
-          id.getBytes().size()));
-}
 } // namespace
 
 HgBackingStore::HgBackingStore(
@@ -180,7 +168,6 @@ HgBackingStore::HgBackingStore(
           config->getEdenConfig()->useEdenApi.getValue()) {
   HgImporter importer(repository, stats);
   const auto& options = importer.getOptions();
-  initializeTreeManifestImport(options, repository);
   repoName_ = options.repoName;
   metadataImporter_ = metadataImporterFactory(config_, repoName_, localStore_);
 }
@@ -201,7 +188,6 @@ HgBackingStore::HgBackingStore(
       serverThreadPool_{importThreadPool_.get()},
       datapackStore_(repository, false) {
   const auto& options = importer->getOptions();
-  initializeTreeManifestImport(options, repository);
   repoName_ = options.repoName;
   metadataImporter_ =
       MetadataImporter::getMetadataImporterFactory<DefaultMetadataImporter>()(
@@ -209,30 +195,6 @@ HgBackingStore::HgBackingStore(
 }
 
 HgBackingStore::~HgBackingStore() {}
-
-void HgBackingStore::initializeTreeManifestImport(
-    const ImporterOptions& options,
-    AbsolutePathPiece repoPath) {
-  if (options.treeManifestPackPaths.empty()) {
-    throw std::runtime_error(folly::to<std::string>(
-        "treemanifest import not supported in repository ", repoPath));
-  }
-
-  std::vector<DataStore*> storePtrs;
-  for (const auto& path : options.treeManifestPackPaths) {
-    XLOG(DBG5) << "treemanifest pack path: " << path;
-    // Create a new DatapackStore for path.  Note that we enable removing
-    // dead pack files.  This is only guaranteed to be safe so long as we copy
-    // the relevant data out of the datapack objects before we issue a
-    // subsequent call into the unionStore_.
-    dataPackStores_.emplace_back(std::make_unique<DatapackStore>(path, true));
-    storePtrs.emplace_back(dataPackStores_.back().get());
-  }
-
-  unionStore_ = std::make_unique<folly::Synchronized<UnionDatapackStore>>(
-      folly::in_place, storePtrs);
-  XLOG(DBG2) << "treemanifest import enabled in repository " << repoPath;
-}
 
 SemiFuture<unique_ptr<Tree>> HgBackingStore::getTree(
     const Hash& id,
@@ -369,24 +331,13 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::fetchTreeFromImporter(
                    folly::Try<std::unique_ptr<IOBuf>> val) {
         // Note: the `value` call will throw if fetchTree threw an exception
         auto iobuf = std::move(val).value();
-        if (iobuf) {
-          // This copies the iobuf, since treemanifest are fairly small, this
-          // should be OK to do. Once the fallback path is removed, we can
-          // change processTree to take the IOBuf directly and remove this copy.
-          auto content = ConstantStringRef{
-              reinterpret_cast<const char*>(iobuf->data()), iobuf->length()};
-          return processTree(
-              content, node, treeID, ownedPath, commitId, batch.get());
-        } else {
-          // If fetchTree returns nullptr it indicates that the legacy
-          // CMD_FETCH_TREE was used and that it placed the tree in the store,
-          // so we should try loading it again
-          unionStore_->wlock()->markForRefresh();
-          auto content = unionStoreGet(
-              *unionStore_->wlock(), ownedPath.stringPiece(), node);
-          return processTree(
-              content, node, treeID, ownedPath, commitId, batch.get());
-        }
+        // This copies the iobuf, since treemanifest are fairly small, this
+        // should be OK to do. Once the fallback path is removed, we can
+        // change processTree to take the IOBuf directly and remove this copy.
+        auto content = ConstantStringRef{
+            reinterpret_cast<const char*>(iobuf->data()), iobuf->length()};
+        return processTree(
+            content, node, treeID, ownedPath, commitId, batch.get());
       });
 }
 
@@ -677,10 +628,6 @@ HgBackingStore::getLiveImportWatches(HgImportObject object) const {
 
 void HgBackingStore::periodicManagementTask() {
   datapackStore_.refresh();
-
-  if (unionStore_) {
-    unionStore_->wlock()->refresh();
-  }
 }
 
 } // namespace eden

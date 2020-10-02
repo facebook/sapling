@@ -228,9 +228,10 @@ ImporterOptions HgImporter::waitForHelperStart() {
     options.repoName = cursor.readFixedString(nameLength);
   }
 
-  if (flags & StartFlag::CAT_TREE_SUPPORTED) {
-    options.cat_tree_supported = true;
-    XLOG(DBG2) << "hg_import_helper supports CMD_CAT_TREE";
+  if (!(flags & StartFlag::CAT_TREE_SUPPORTED)) {
+    throw std::runtime_error(
+        "hg_import_helper indicated that CMD_CAT_TREE is not supported. "
+        "As EdenFS requires CMD_CAT_TREE, updating Mercurial is required.");
   }
 
   return options;
@@ -335,65 +336,48 @@ std::unique_ptr<IOBuf> HgImporter::fetchTree(
   XLOG(DBG1) << "fetching data for tree \"" << path << "\" at manifest node "
              << pathManifestNode;
 
-  if (getOptions().cat_tree_supported) {
-    auto requestID = sendFetchTreeRequest(
-        CMD_CAT_TREE, path, pathManifestNode, "CMD_CAT_TREE");
+  auto requestID = sendFetchTreeRequest(
+      CMD_CAT_TREE, path, pathManifestNode, "CMD_CAT_TREE");
 
-    ChunkHeader header;
-    header = readChunkHeader(requestID, "CMD_CAT_TREE");
+  ChunkHeader header;
+  header = readChunkHeader(requestID, "CMD_CAT_TREE");
 
-    auto buf = IOBuf::create(header.dataLength);
+  auto buf = IOBuf::create(header.dataLength);
 
-    readFromHelper(
-        buf->writableTail(), header.dataLength, "CMD_CAT_TREE response body");
-    buf->append(header.dataLength);
+  readFromHelper(
+      buf->writableTail(), header.dataLength, "CMD_CAT_TREE response body");
+  buf->append(header.dataLength);
 
-    // The last 8 bytes of the response are the body length.
-    // Ensure that this looks correct, and advance the buffer past this data to
-    // the start of the actual response body.
-    //
-    // This data doesn't really need to be present in the response.  It is only
-    // here so we can double-check that the response data appears valid.
-    buf->trimEnd(sizeof(uint64_t));
-    uint64_t bodyLength;
-    memcpy(&bodyLength, buf->tail(), sizeof(uint64_t));
-    bodyLength = Endian::big(bodyLength);
-    if (bodyLength != header.dataLength - sizeof(uint64_t)) {
-      auto msg = folly::to<string>(
-          "inconsistent body length received when importing tree ",
-          pathManifestNode,
-          " (",
-          path,
-          ", ",
-          pathManifestNode,
-          "): bodyLength=",
-          bodyLength,
-          " responseLength=",
-          header.dataLength);
-      XLOG(ERR) << msg;
-      throw std::runtime_error(std::move(msg));
-    }
-
-    XLOG(DBG4) << "imported tree " << pathManifestNode << " (" << path << ", "
-               << pathManifestNode << "); length=" << bodyLength;
-
-    return buf;
-  } else {
-    auto requestID = sendFetchTreeRequest(
-        CMD_FETCH_TREE, path, pathManifestNode, "CMD_FETCH_TREE");
-
-    ChunkHeader header;
-    header = readChunkHeader(requestID, "CMD_FETCH_TREE");
-
-    if (header.dataLength != 0) {
-      throw std::runtime_error(folly::to<string>(
-          "got unexpected length ",
-          header.dataLength,
-          " for FETCH_TREE response"));
-    }
-
-    return nullptr;
+  // The last 8 bytes of the response are the body length.
+  // Ensure that this looks correct, and advance the buffer past this data to
+  // the start of the actual response body.
+  //
+  // This data doesn't really need to be present in the response.  It is only
+  // here so we can double-check that the response data appears valid.
+  buf->trimEnd(sizeof(uint64_t));
+  uint64_t bodyLength;
+  memcpy(&bodyLength, buf->tail(), sizeof(uint64_t));
+  bodyLength = Endian::big(bodyLength);
+  if (bodyLength != header.dataLength - sizeof(uint64_t)) {
+    auto msg = folly::to<string>(
+        "inconsistent body length received when importing tree ",
+        pathManifestNode,
+        " (",
+        path,
+        ", ",
+        pathManifestNode,
+        "): bodyLength=",
+        bodyLength,
+        " responseLength=",
+        header.dataLength);
+    XLOG(ERR) << msg;
+    throw std::runtime_error(std::move(msg));
   }
+
+  XLOG(DBG4) << "imported tree " << pathManifestNode << " (" << path << ", "
+             << pathManifestNode << "); length=" << bodyLength;
+
+  return buf;
 }
 
 Hash HgImporter::resolveManifestNode(folly::StringPiece revName) {

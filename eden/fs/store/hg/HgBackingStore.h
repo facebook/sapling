@@ -26,8 +26,6 @@
 
 /* forward declare support classes from mercurial */
 class ConstantStringRef;
-class DatapackStore;
-class UnionDatapackStore;
 
 namespace facebook {
 namespace eden {
@@ -136,13 +134,6 @@ class HgBackingStore : public BackingStore {
   HgBackingStore(HgBackingStore const&) = delete;
   HgBackingStore& operator=(HgBackingStore const&) = delete;
 
-  /**
-   * Initialize the unionStore_ needed for treemanifest import support.
-   */
-  void initializeTreeManifestImport(
-      const ImporterOptions& options,
-      AbsolutePathPiece repoPath);
-
   folly::Future<std::unique_ptr<Tree>> getTreeForCommitImpl(Hash commitID);
 
   folly::Future<std::unique_ptr<Tree>> getTreeForRootTreeImpl(
@@ -188,12 +179,6 @@ class HgBackingStore : public BackingStore {
   // deadlock) or throw an exception when full (which would incorrectly fail the
   // load).
   folly::Executor* serverThreadPool_;
-
-  // These DatapackStore objects are never referenced once UnionDatapackStore
-  // is allocated. They are here solely so their lifetime persists while the
-  // UnionDatapackStore is alive.
-  std::vector<std::unique_ptr<DatapackStore>> dataPackStores_;
-  std::unique_ptr<folly::Synchronized<UnionDatapackStore>> unionStore_;
 
   std::string repoName_;
   HgDatapackStore datapackStore_;

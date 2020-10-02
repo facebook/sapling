@@ -20,10 +20,6 @@ namespace folly {
 class IOBuf;
 } // namespace folly
 
-/* forward declare support classes from mercurial */
-class DatapackStore;
-class UnionDatapackStore;
-
 namespace facebook {
 namespace eden {
 
@@ -52,8 +48,6 @@ struct ImporterOptions {
    * The name of the repo
    */
   std::string repoName;
-
-  bool cat_tree_supported{false};
 };
 
 class Importer {
