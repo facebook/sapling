@@ -269,40 +269,40 @@ async fn subcommand_map(
         .compat()
         .await?;
 
-    let mapped = mapping
-        .get_one(ctx.clone(), source_repo_id, source_hash, target_repo_id)
+    let mappings = mapping
+        .get(ctx.clone(), source_repo_id, source_hash, target_repo_id)
         .compat()
         .await?;
 
-    match mapped {
-        None => {
-            let exists = target_repo
-                .changeset_exists_by_bonsai(ctx, source_hash.clone())
-                .compat()
-                .await?;
+    if mappings.len() == 0 {
+        let exists = target_repo
+            .changeset_exists_by_bonsai(ctx, source_hash.clone())
+            .compat()
+            .await?;
 
-            if exists {
-                println!(
-                    "Hash {} not currently remapped (but present in target as-is)",
-                    source_hash
-                );
-            } else {
-                println!("Hash {} not currently remapped", source_hash);
+        if exists {
+            println!(
+                "Hash {} not currently remapped (but present in target as-is)",
+                source_hash
+            );
+        } else {
+            println!("Hash {} not currently remapped", source_hash);
+        }
+    } else {
+        for (target_hash, maybe_version_name) in mappings {
+            match maybe_version_name {
+                Some(version_name) => {
+                    println!(
+                        "Hash {} maps to {}, used {:?}",
+                        source_hash, target_hash, version_name
+                    );
+                }
+                None => {
+                    println!("Hash {} maps to {}", source_hash, target_hash);
+                }
             }
         }
-
-        Some((target_hash, maybe_version_name)) => match maybe_version_name {
-            Some(version_name) => {
-                println!(
-                    "Hash {} maps to {}, used {:?}",
-                    source_hash, target_hash, version_name
-                );
-            }
-            None => {
-                println!("Hash {} maps to {}", source_hash, target_hash);
-            }
-        },
-    };
+    }
 
     Ok(())
 }
@@ -429,8 +429,8 @@ async fn update_large_repo_bookmarks(
                 target_cs_id,
                 ..
             } => {
-                let maybe_large_cs_id = mapping
-                    .get_one(
+                let large_cs_ids = mapping
+                    .get(
                         ctx.clone(),
                         small_repo.get_repoid(),
                         *target_cs_id,
@@ -439,7 +439,14 @@ async fn update_large_repo_bookmarks(
                     .compat()
                     .await?;
 
-                if let Some((large_cs_id, _)) = maybe_large_cs_id {
+                if large_cs_ids.len() > 1 {
+                    return Err(format_err!(
+                        "multiple remappings of {} in {}: {:?}",
+                        *target_cs_id,
+                        large_repo.get_repoid(),
+                        large_cs_ids
+                    ));
+                } else if let Some((large_cs_id, _)) = large_cs_ids.into_iter().next() {
                     let reason = BookmarkUpdateReason::XRepoSync;
                     let large_bookmark = bookmark_renamer(&target_bookmark).ok_or(format_err!(
                         "small bookmark {} remaps to nothing",
