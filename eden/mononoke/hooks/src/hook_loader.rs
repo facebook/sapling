@@ -26,7 +26,7 @@ enum LoadedRustHook {
     FileHook(Box<dyn FileHook>),
 }
 
-pub fn load_hooks(
+pub async fn load_hooks(
     fb: FacebookInit,
     hook_manager: &mut HookManager,
     config: RepoConfig,
@@ -49,7 +49,9 @@ pub fn load_hooks(
                 &hook.name,
                 &hook.config,
                 hook_manager.get_reviewers_perm_checker(),
-            )? {
+            )
+            .await?
+            {
                 ChangesetHook(hook)
             } else if let Some(hook) = hook_name_to_file_hook(&hook.name, &hook.config)? {
                 FileHook(hook)

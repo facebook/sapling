@@ -72,7 +72,7 @@ impl Tailer {
         )
         .await?;
 
-        load_hooks(ctx.fb, &mut hook_manager, config, disabled_hooks)?;
+        load_hooks(ctx.fb, &mut hook_manager, config, disabled_hooks).await?;
 
         Ok(Tailer {
             ctx,

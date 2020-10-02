@@ -419,7 +419,7 @@ async fn do_main(
         .await?;
 
         info!(logger, "Loading hooks");
-        load_hooks(fb, &mut hook_manager, repo_config.clone(), &HashSet::new())?;
+        load_hooks(fb, &mut hook_manager, repo_config.clone(), &HashSet::new()).await?;
         Some(Arc::new(hook_manager))
     } else {
         None

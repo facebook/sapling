@@ -41,7 +41,7 @@ pub async fn make_hook_manager(
     )
     .await?;
 
-    load_hooks(ctx.fb, &mut hook_manager, config, disabled_hooks)?;
+    load_hooks(ctx.fb, &mut hook_manager, config, disabled_hooks).await?;
 
     Ok(hook_manager)
 }

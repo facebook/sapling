@@ -1165,6 +1165,7 @@ fn test_verify_integrity_fast_failure(fb: FacebookInit) {
 
         let mut hm = hook_manager_many_files_dirs_blobrepo(fb).await;
         load_hooks(fb, &mut hm, config, &hashset![])
+            .await
             .expect_err("`verify_integrity` hook loading should have failed");
     });
 }
@@ -1191,6 +1192,7 @@ fn test_load_hooks_bad_rust_hook(fb: FacebookInit) {
         let mut hm = hook_manager_many_files_dirs_blobrepo(fb).await;
 
         match load_hooks(fb, &mut hm, config, &hashset![])
+            .await
             .unwrap_err()
             .downcast::<ErrorKind>()
         {
@@ -1217,6 +1219,7 @@ fn test_load_disabled_hooks(fb: FacebookInit) {
         let mut hm = hook_manager_many_files_dirs_blobrepo(fb).await;
 
         load_hooks(fb, &mut hm, config, &hashset!["hook1".to_string()])
+            .await
             .expect("disabling a broken hook should allow loading to succeed");
     });
 }
@@ -1244,6 +1247,7 @@ fn test_load_disabled_hooks_referenced_by_bookmark(fb: FacebookInit) {
         let mut hm = hook_manager_many_files_dirs_blobrepo(fb).await;
 
         load_hooks(fb, &mut hm, config, &hashset!["hook1".to_string()])
+            .await
             .expect("disabling a broken hook should allow loading to succeed");
     });
 }
@@ -1259,6 +1263,7 @@ fn test_load_disabled_hooks_hook_does_not_exist(fb: FacebookInit) {
         let mut hm = hook_manager_many_files_dirs_blobrepo(fb).await;
 
         match load_hooks(fb, &mut hm, config, &hashset!["hook1".to_string()])
+            .await
             .unwrap_err()
             .downcast::<ErrorKind>()
         {

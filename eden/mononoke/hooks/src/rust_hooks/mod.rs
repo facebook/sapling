@@ -23,39 +23,45 @@ pub(crate) mod no_questionable_filenames;
 
 use anyhow::Result;
 use fbinit::FacebookInit;
+use futures::future::Future;
 use metaconfig_types::HookConfig;
 use permission_checker::ArcMembershipChecker;
 
 pub(crate) use self::lua_pattern::LuaPattern;
 use crate::{ChangesetHook, FileHook};
 
-pub fn hook_name_to_changeset_hook(
+fn b(t: impl ChangesetHook + 'static) -> Box<dyn ChangesetHook> {
+    Box::new(t)
+}
+
+// This function could be written using async/await syntactic sugar but it
+// had to be desugarised because of a bug: https://github.com/rust-lang/rust/issues/63033
+// It has to return impl Future to maintain compatibility with facebook implementation.
+pub fn hook_name_to_changeset_hook<'a>(
     _fb: FacebookInit,
-    name: &str,
-    config: &HookConfig,
+    name: &'a str,
+    config: &'a HookConfig,
     _reviewers_membership: ArcMembershipChecker,
-) -> Result<Option<Box<dyn ChangesetHook>>> {
-    Ok(match name {
-        "always_fail_changeset" => {
-            Some(Box::new(always_fail_changeset::AlwaysFailChangeset::new()))
-        }
-        "block_empty_commit" => Some(Box::new(block_empty_commit::BlockEmptyCommit::new())),
-        "limit_commit_message_length" => Some(Box::new(
-            limit_commit_message_length::LimitCommitMessageLength::new(config)?,
-        )),
-        "limit_commitsize" => Some(Box::new(
-            limit_commitsize::LimitCommitsize::builder()
+) -> impl Future<Output = Result<Option<Box<dyn ChangesetHook + 'static>>>> + 'a {
+    async move {
+        Ok(match name {
+            "always_fail_changeset" => Some(b(always_fail_changeset::AlwaysFailChangeset::new())),
+            "block_empty_commit" => Some(b(block_empty_commit::BlockEmptyCommit::new())),
+            "limit_commit_message_length" => Some(b(
+                limit_commit_message_length::LimitCommitMessageLength::new(config)?,
+            )),
+            "limit_commitsize" => Some(b(limit_commitsize::LimitCommitsize::builder()
                 .set_from_config(config)
-                .build()?,
-        )),
-        _ => None,
-    })
+                .build()?)),
+            _ => None,
+        })
+    }
 }
 
 pub fn hook_name_to_file_hook(
     name: &str,
     config: &HookConfig,
-) -> Result<Option<Box<dyn FileHook>>> {
+) -> Result<Option<Box<dyn FileHook + 'static>>> {
     Ok(match name {
         "check_nocommit" => Some(Box::new(check_nocommit::CheckNocommitHook::new(config)?)),
         "conflict_markers" => Some(Box::new(conflict_markers::ConflictMarkers::new())),
