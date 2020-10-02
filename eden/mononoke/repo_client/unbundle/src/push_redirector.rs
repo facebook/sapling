@@ -191,11 +191,7 @@ impl PushRedirector {
         large_to_small: HashMap<ChangesetId, ChangesetId>,
     ) -> Arc<dyn HookRejectionRemapper> {
         Arc::new({
-            let small_repo = self.small_to_large_commit_syncer.get_source_repo().clone();
-            let large_repo = self.small_to_large_commit_syncer.get_target_repo().clone();
-            let small_repo_id = self.small_to_large_commit_syncer.get_source_repo_id();
-            let large_repo_id = self.small_to_large_commit_syncer.get_target_repo_id();
-            let mapping = self.small_to_large_commit_syncer.mapping.clone();
+            let large_to_small_commit_syncer = self.large_to_small_commit_syncer.clone();
             move |
                 HookRejection {
                     hook_name,
@@ -203,24 +199,27 @@ impl PushRedirector {
                     reason,
                 },
             | {
-                cloned!(small_repo, large_repo, ctx, large_to_small, mapping);
+                cloned!(ctx, large_to_small_commit_syncer, large_to_small);
                 // For the benefit of the user seeing the error, remap the commit hash back
                 // to the small repo, so that while the error message may contain large repo
                 // paths, the commit hash is the one you have in your small repo
                 async move {
+                    let small_repo = large_to_small_commit_syncer.get_target_repo();
+                    let large_repo = large_to_small_commit_syncer.get_source_repo();
                     let (repo, cs_id) = match large_to_small.get(&cs_id) {
-                        Some(&small_cs_id) => (small_repo, small_cs_id),
-                        None => match mapping
-                            .get_one(ctx.clone(), large_repo_id, cs_id, small_repo_id)
-                            .compat()
+                        Some(&small_cs_id) => (small_repo.clone(), small_cs_id),
+                        None => match large_to_small_commit_syncer
+                            .get_commit_sync_outcome(ctx.clone(), cs_id)
                             .await?
                         {
-                            Some((small_cs_id, _)) => (small_repo, small_cs_id),
-                            None => {
+                            Some(CommitSyncOutcome::RewrittenAs(small_cs_id, _)) => {
+                                (small_repo.clone(), small_cs_id)
+                            }
+                            _ => {
                                 // The changeset doesn't map into the small
                                 // repo.  Just use the large repo's changeset
                                 // id.
-                                (large_repo, cs_id)
+                                (large_repo.clone(), cs_id)
                             }
                         },
                     };
