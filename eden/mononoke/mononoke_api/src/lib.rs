@@ -14,6 +14,7 @@ use std::sync::Arc;
 
 use anyhow::Error;
 use blobrepo_factory::{BlobstoreOptions, Caching, ReadOnlyStorage};
+pub use bookmarks::BookmarkName;
 use cached_config::ConfigStore;
 use cloned::cloned;
 use fbinit::FacebookInit;
@@ -37,6 +38,7 @@ pub mod repo;
 pub mod repo_write;
 pub mod specifiers;
 pub mod tree;
+mod xrepo;
 
 #[cfg(test)]
 mod test;
@@ -61,6 +63,7 @@ pub use crate::specifiers::{
     ChangesetSpecifierPrefixResolution, Globalrev, HgChangesetId, HgChangesetIdPrefix,
 };
 pub use crate::tree::{TreeContext, TreeEntry, TreeId, TreeSummary};
+pub use crate::xrepo::CandidateSelectionHintArgs;
 
 // Re-export types that are useful for clients.
 pub use context::{CoreContext, LoggingContainer, SessionContainer};

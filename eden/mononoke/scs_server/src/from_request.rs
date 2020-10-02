@@ -14,8 +14,9 @@ use chrono::{DateTime, FixedOffset, TimeZone};
 use faster_hex::hex_string;
 use mononoke_api::specifiers::{GitSha1, Globalrev};
 use mononoke_api::{
-    ChangesetId, ChangesetIdPrefix, ChangesetPrefixSpecifier, ChangesetSpecifier, CopyInfo,
-    CreateCopyInfo, FileId, FileType, HgChangesetId, HgChangesetIdPrefix, MononokePath, TreeId,
+    BookmarkName, CandidateSelectionHintArgs, ChangesetId, ChangesetIdPrefix,
+    ChangesetPrefixSpecifier, ChangesetSpecifier, CopyInfo, CreateCopyInfo, FileId, FileType,
+    HgChangesetId, HgChangesetIdPrefix, MononokePath, TreeId,
 };
 use mononoke_types::hash::{Sha1, Sha256};
 use source_control as thrift;
@@ -23,10 +24,59 @@ use source_control as thrift;
 use crate::commit_id::CommitIdExt;
 use crate::errors;
 
-pub(crate) trait FromRequest<T> {
+pub(crate) trait FromRequest<T: ?Sized> {
     fn from_request(t: &T) -> Result<Self, thrift::RequestError>
     where
         Self: Sized;
+}
+
+impl FromRequest<str> for BookmarkName {
+    fn from_request(bookmark: &str) -> Result<BookmarkName, thrift::RequestError> {
+        BookmarkName::new(bookmark).map_err(|e| {
+            errors::invalid_request(format!(
+                "failed parsing bookmark out of {}: {:?}",
+                bookmark, e
+            ))
+        })
+    }
+}
+
+impl FromRequest<thrift::CandidateSelectionHint> for CandidateSelectionHintArgs {
+    fn from_request(hint: &thrift::CandidateSelectionHint) -> Result<Self, thrift::RequestError> {
+        match hint {
+            thrift::CandidateSelectionHint::bookmark_ancestor(bookmark) => {
+                let bookmark = BookmarkName::from_request(bookmark)?;
+                Ok(CandidateSelectionHintArgs::OnlyOrAncestorOfBookmark(
+                    bookmark,
+                ))
+            }
+            thrift::CandidateSelectionHint::bookmark_descendant(bookmark) => {
+                let bookmark = BookmarkName::from_request(bookmark)?;
+                Ok(CandidateSelectionHintArgs::OnlyOrDescendantOfBookmark(
+                    bookmark,
+                ))
+            }
+            thrift::CandidateSelectionHint::commit_ancestor(commit) => {
+                let changeset_specifier = ChangesetSpecifier::from_request(commit)?;
+                Ok(CandidateSelectionHintArgs::OnlyOrAncestorOfCommit(
+                    changeset_specifier,
+                ))
+            }
+            thrift::CandidateSelectionHint::commit_descendant(commit) => {
+                let changeset_specifier = ChangesetSpecifier::from_request(commit)?;
+                Ok(CandidateSelectionHintArgs::OnlyOrDescendantOfCommit(
+                    changeset_specifier,
+                ))
+            }
+            thrift::CandidateSelectionHint::exact(commit) => {
+                let changeset_specifier = ChangesetSpecifier::from_request(commit)?;
+                Ok(CandidateSelectionHintArgs::Exact(changeset_specifier))
+            }
+            thrift::CandidateSelectionHint::UnknownField(f) => Err(errors::invalid_request(
+                format!("unsupported candidate selection hint: {:?}", f),
+            )),
+        }
+    }
 }
 
 impl FromRequest<thrift::CommitId> for ChangesetSpecifier {

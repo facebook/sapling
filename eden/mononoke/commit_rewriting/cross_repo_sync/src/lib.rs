@@ -36,7 +36,7 @@ use mononoke_types::{
 use movers::Mover;
 use pushrebase::{do_pushrebase_bonsai, PushrebaseError};
 use reachabilityindex::LeastCommonAncestorsHint;
-use slog::info;
+use slog::{debug, info};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 use std::{collections::VecDeque, fmt};
@@ -58,8 +58,9 @@ pub mod types;
 pub mod validation;
 
 pub use crate::commit_sync_outcome::{
-    get_commit_sync_outcome, get_commit_sync_outcome_with_hint, get_plural_commit_sync_outcome,
-    CandidateSelectionHint, CommitSyncOutcome, PluralCommitSyncOutcome,
+    commit_sync_outcome_exists, get_commit_sync_outcome, get_commit_sync_outcome_with_hint,
+    get_plural_commit_sync_outcome, CandidateSelectionHint, CommitSyncOutcome,
+    PluralCommitSyncOutcome,
 };
 pub use commit_sync_data_provider::{CommitSyncDataProvider, SyncData};
 
@@ -356,11 +357,11 @@ where
                 start_cs_id
             );
         }
-        let maybe_commit_sync_outcome = commit_syncer
-            .get_commit_sync_outcome(ctx.clone(), cs_id)
-            .await?;
 
-        if maybe_commit_sync_outcome.is_some() {
+        if commit_syncer
+            .commit_sync_outcome_exists(ctx.clone(), Source(cs_id))
+            .await?
+        {
             continue;
         } else {
             let parents = source_repo
@@ -608,6 +609,21 @@ where
         .await
     }
 
+    pub async fn commit_sync_outcome_exists(
+        &self,
+        ctx: CoreContext,
+        source_cs_id: Source<ChangesetId>,
+    ) -> Result<bool, Error> {
+        commit_sync_outcome_exists(
+            &ctx,
+            Source(self.repos.get_source_repo().get_repoid()),
+            Target(self.repos.get_target_repo().get_repoid()),
+            source_cs_id,
+            &self.mapping,
+        )
+        .await
+    }
+
     pub async fn get_commit_sync_outcome_with_hint(
         &self,
         ctx: CoreContext,
@@ -638,7 +654,7 @@ where
         &self,
         ctx: &CoreContext,
         source_cs_id: ChangesetId,
-        parent_selection_hint: CandidateSelectionHint,
+        ancestor_selection_hint: CandidateSelectionHint,
     ) -> Result<Option<ChangesetId>, Error> {
         let unsynced_ancestors =
             find_toposorted_unsynced_ancestors(&ctx, self, source_cs_id).await?;
@@ -668,7 +684,7 @@ where
         }
 
         for ancestor in unsynced_ancestors {
-            self.unsafe_sync_commit(ctx.clone(), ancestor, parent_selection_hint.clone())
+            self.unsafe_sync_commit(ctx.clone(), ancestor, ancestor_selection_hint.clone())
                 .await?;
         }
 
@@ -706,6 +722,14 @@ where
     ) -> Result<Option<ChangesetId>, Error> {
         // Take most of below function unsafe_sync_commit into here and delete. Leave pushrebase in next fn
         let (source_repo, _) = self.get_source_target();
+
+        debug!(
+            ctx.logger(),
+            "{:?}: unsafe_sync_commit called for {}, with hint: {:?}",
+            self,
+            source_cs_id,
+            parent_mapping_selection_hint
+        );
 
         let cs = source_cs_id
             .load(ctx.clone(), source_repo.blobstore())

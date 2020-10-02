@@ -586,7 +586,11 @@ async fn xrepo_commit_lookup_simple(fb: FacebookInit) -> Result<(), Error> {
     );
     // Confirm that a cross-repo lookup for an unsynced commit just fails
     let cs = smallrepo
-        .xrepo_commit_lookup(&largerepo, ChangesetSpecifier::Bonsai(small_master_cs_id))
+        .xrepo_commit_lookup(
+            &largerepo,
+            ChangesetSpecifier::Bonsai(small_master_cs_id),
+            None,
+        )
         .await?
         .expect("changeset should exist");
     let large_master_cs_id = resolve_cs_id(&ctx, largerepo.blob_repo(), "master").await?;
@@ -597,7 +601,11 @@ async fn xrepo_commit_lookup_simple(fb: FacebookInit) -> Result<(), Error> {
         "remapping {} from large to small", large_master_cs_id
     );
     let cs = largerepo
-        .xrepo_commit_lookup(&smallrepo, ChangesetSpecifier::Bonsai(large_master_cs_id))
+        .xrepo_commit_lookup(
+            &smallrepo,
+            ChangesetSpecifier::Bonsai(large_master_cs_id),
+            None,
+        )
         .await?
         .expect("changeset should exist");
     assert_eq!(cs.id(), small_master_cs_id);
@@ -628,7 +636,11 @@ async fn xrepo_commit_lookup_draft(fb: FacebookInit) -> Result<(), Error> {
             .await?;
 
     let cs = largerepo
-        .xrepo_commit_lookup(&smallrepo, ChangesetSpecifier::Bonsai(new_large_draft))
+        .xrepo_commit_lookup(
+            &smallrepo,
+            ChangesetSpecifier::Bonsai(new_large_draft),
+            None,
+        )
         .await?;
     assert!(cs.is_some());
     let bcs = cs
@@ -646,7 +658,11 @@ async fn xrepo_commit_lookup_draft(fb: FacebookInit) -> Result<(), Error> {
             .commit()
             .await?;
     let cs = smallrepo
-        .xrepo_commit_lookup(&largerepo, ChangesetSpecifier::Bonsai(new_small_draft))
+        .xrepo_commit_lookup(
+            &largerepo,
+            ChangesetSpecifier::Bonsai(new_small_draft),
+            None,
+        )
         .await?;
     assert!(cs.is_some());
     let bcs = cs
@@ -688,7 +704,11 @@ async fn xrepo_commit_lookup_public(fb: FacebookInit) -> Result<(), Error> {
         .await?;
 
     let cs = largerepo
-        .xrepo_commit_lookup(&smallrepo, ChangesetSpecifier::Bonsai(new_large_public))
+        .xrepo_commit_lookup(
+            &smallrepo,
+            ChangesetSpecifier::Bonsai(new_large_public),
+            None,
+        )
         .await?;
     assert!(cs.is_some());
     let bcs = cs
@@ -709,7 +729,11 @@ async fn xrepo_commit_lookup_public(fb: FacebookInit) -> Result<(), Error> {
         .set_to(new_small_public)
         .await?;
     let res = smallrepo
-        .xrepo_commit_lookup(&largerepo, ChangesetSpecifier::Bonsai(new_small_public))
+        .xrepo_commit_lookup(
+            &largerepo,
+            ChangesetSpecifier::Bonsai(new_small_public),
+            None,
+        )
         .await;
     assert!(res.is_err());
 
@@ -741,7 +765,7 @@ async fn xrepo_commit_lookup_config_changing_live(fb: FacebookInit) -> Result<()
             .await?;
 
     let first_small = largerepo
-        .xrepo_commit_lookup(&smallrepo, ChangesetSpecifier::Bonsai(first_large))
+        .xrepo_commit_lookup(&smallrepo, ChangesetSpecifier::Bonsai(first_large), None)
         .await?;
     let file_changes: Vec<_> = first_small
         .unwrap()
@@ -808,7 +832,7 @@ async fn xrepo_commit_lookup_config_changing_live(fb: FacebookInit) -> Result<()
             .await?;
 
     let second_small = largerepo
-        .xrepo_commit_lookup(&smallrepo, ChangesetSpecifier::Bonsai(second_large))
+        .xrepo_commit_lookup(&smallrepo, ChangesetSpecifier::Bonsai(second_large), None)
         .await?;
     let file_changes: Vec<_> = second_small
         .unwrap()

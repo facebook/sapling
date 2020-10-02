@@ -15,9 +15,9 @@ use futures::{future, try_join};
 use itertools::{Either, Itertools};
 use maplit::btreeset;
 use mononoke_api::{
-    unified_diff, ChangesetContext, ChangesetDiffItem, ChangesetHistoryOptions, ChangesetId,
-    ChangesetPathDiffContext, ChangesetSpecifier, CopyInfo, MononokeError, MononokePath,
-    UnifiedDiffMode,
+    unified_diff, CandidateSelectionHintArgs, ChangesetContext, ChangesetDiffItem,
+    ChangesetHistoryOptions, ChangesetId, ChangesetPathDiffContext, ChangesetSpecifier, CopyInfo,
+    MononokeError, MononokePath, UnifiedDiffMode,
 };
 use source_control as thrift;
 
@@ -603,8 +603,17 @@ impl SourceControlServiceImpl {
     ) -> Result<thrift::CommitLookupResponse, errors::ServiceError> {
         let repo = self.repo(ctx.clone(), &commit.repo).await?;
         let other_repo = self.repo(ctx, &params.other_repo).await?;
+        let candidate_selection_hint = match params.candidate_selection_hint {
+            Some(ref hint) => Some(CandidateSelectionHintArgs::from_request(hint)?),
+            None => None,
+        };
+
         match repo
-            .xrepo_commit_lookup(&other_repo, ChangesetSpecifier::from_request(&commit.id)?)
+            .xrepo_commit_lookup(
+                &other_repo,
+                ChangesetSpecifier::from_request(&commit.id)?,
+                candidate_selection_hint,
+            )
             .await?
         {
             Some(cs) => {

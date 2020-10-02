@@ -245,6 +245,25 @@ pub async fn get_plural_commit_sync_outcome<'a, M: SyncedCommitMapping>(
     }
 }
 
+/// Check if commit has been synced (or at least considered to be synced)
+/// between repos
+/// The confusing sentense above means that existing
+/// `EquivalentWorkingCopyAncestor` or `NotSyncCandidate` outcomes
+/// cause this fn to return true
+pub async fn commit_sync_outcome_exists<'a, M: SyncedCommitMapping>(
+    ctx: &'a CoreContext,
+    source_repo_id: Source<RepositoryId>,
+    target_repo_id: Target<RepositoryId>,
+    source_cs_id: Source<ChangesetId>,
+    mapping: &'a M,
+) -> Result<bool, Error> {
+    Ok(
+        get_plural_commit_sync_outcome(ctx, source_repo_id, target_repo_id, source_cs_id, mapping)
+            .await?
+            .is_some(),
+    )
+}
+
 /// Get `CommitSyncOutcome` for `source_cs_id`
 /// This function fails if `source_cs_id` has been rewritten
 /// into multiple different commits in the target repo.

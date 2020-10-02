@@ -22,7 +22,7 @@ use bookmarks::{BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, 
 use cached_config::ConfigStore;
 use changeset_info::ChangesetInfo;
 use context::CoreContext;
-use cross_repo_sync::{CandidateSelectionHint, CommitSyncRepos, CommitSyncer};
+use cross_repo_sync::{types::Target, CandidateSelectionHint, CommitSyncRepos, CommitSyncer};
 use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
 use filestore::{Alias, FetchKey};
@@ -48,6 +48,7 @@ use mononoke_types::{
 };
 use mutable_counters::SqlMutableCounters;
 use permission_checker::{ArcPermissionChecker, PermissionCheckerBuilder};
+use reachabilityindex::LeastCommonAncestorsHint;
 #[cfg(test)]
 use regex::Regex;
 use revset::AncestorsNodeStream;
@@ -75,6 +76,7 @@ use crate::specifiers::{
     HgChangesetId,
 };
 use crate::tree::{TreeContext, TreeId};
+use crate::xrepo::CandidateSelectionHintArgs;
 
 define_stats! {
     prefix = "mononoke.api";
@@ -1052,11 +1054,100 @@ impl RepoContext {
         FileContext::new_check_exists(self.clone(), FetchKey::Aliased(Alias::Sha256(hash))).await
     }
 
+    fn get_target_repo_and_lca_hint(
+        &self,
+    ) -> (Target<BlobRepo>, Target<Arc<dyn LeastCommonAncestorsHint>>) {
+        let blob_repo = self.blob_repo().clone();
+        // TODO(ikostia): get rid of cloning the underlying `SkiplistIndex` here
+        let lca_hint: Arc<dyn LeastCommonAncestorsHint> =
+            Arc::new((*self.repo.skiplist_index).clone());
+        (Target(blob_repo), Target(lca_hint))
+    }
+
+    async fn build_candidate_selection_hint(
+        &self,
+        maybe_args: Option<CandidateSelectionHintArgs>,
+        other_repo_context: &Self,
+    ) -> Result<CandidateSelectionHint, MononokeError> {
+        let args = match maybe_args {
+            None => return Ok(CandidateSelectionHint::Only),
+            Some(args) => args,
+        };
+
+        use CandidateSelectionHintArgs::*;
+        match args {
+            OnlyOrAncestorOfBookmark(bookmark) => {
+                let (blob_repo, lca_hint) = other_repo_context.get_target_repo_and_lca_hint();
+                Ok(CandidateSelectionHint::OnlyOrAncestorOfBookmark(
+                    Target(bookmark),
+                    blob_repo,
+                    lca_hint,
+                ))
+            }
+            OnlyOrDescendantOfBookmark(bookmark) => {
+                let (blob_repo, lca_hint) = other_repo_context.get_target_repo_and_lca_hint();
+                Ok(CandidateSelectionHint::OnlyOrDescendantOfBookmark(
+                    Target(bookmark),
+                    blob_repo,
+                    lca_hint,
+                ))
+            }
+            OnlyOrAncestorOfCommit(specifier) => {
+                let (blob_repo, lca_hint) = other_repo_context.get_target_repo_and_lca_hint();
+                let cs_id = other_repo_context
+                    .resolve_specifier(specifier)
+                    .await?
+                    .ok_or_else(|| {
+                        MononokeError::InvalidRequest(format!(
+                            "unknown commit specifier {}",
+                            specifier
+                        ))
+                    })?;
+                Ok(CandidateSelectionHint::OnlyOrAncestorOfCommit(
+                    Target(cs_id),
+                    blob_repo,
+                    lca_hint,
+                ))
+            }
+            OnlyOrDescendantOfCommit(specifier) => {
+                let (blob_repo, lca_hint) = other_repo_context.get_target_repo_and_lca_hint();
+                let cs_id = other_repo_context
+                    .resolve_specifier(specifier)
+                    .await?
+                    .ok_or_else(|| {
+                        MononokeError::InvalidRequest(format!(
+                            "unknown commit specifier {}",
+                            specifier
+                        ))
+                    })?;
+                Ok(CandidateSelectionHint::OnlyOrDescendantOfCommit(
+                    Target(cs_id),
+                    blob_repo,
+                    lca_hint,
+                ))
+            }
+            Exact(specifier) => {
+                let cs_id = other_repo_context
+                    .resolve_specifier(specifier)
+                    .await?
+                    .ok_or_else(|| {
+                        MononokeError::InvalidRequest(format!(
+                            "unknown commit specifier {}",
+                            specifier
+                        ))
+                    })?;
+                Ok(CandidateSelectionHint::Exact(Target(cs_id)))
+            }
+        }
+    }
+
+
     /// Get the equivalent changeset from another repo - it will sync it if needed
     pub async fn xrepo_commit_lookup(
         &self,
         other: &Self,
         specifier: ChangesetSpecifier,
+        maybe_candidate_selection_hint_args: Option<CandidateSelectionHintArgs>,
     ) -> Result<Option<ChangesetContext>, MononokeError> {
         let commit_sync_config = self
             .live_commit_sync_config()
@@ -1067,6 +1158,10 @@ impl RepoContext {
                     self.repo.name, e
                 ))
             })?;
+
+        let candidate_selection_hint: CandidateSelectionHint = self
+            .build_candidate_selection_hint(maybe_candidate_selection_hint_args, &other)
+            .await?;
 
         let commit_sync_repos = CommitSyncRepos::new(
             self.blob_repo().clone(),
@@ -1088,13 +1183,8 @@ impl RepoContext {
             self.live_commit_sync_config(),
         );
 
-        // TODO: `Only` should be the default option, but there
-        // needs to be a way to pass the hint from the client
-        // as it is going to be useful for manual resolution
-        let parent_selection_hint = CandidateSelectionHint::Only;
-
         let maybe_cs_id = commit_syncer
-            .sync_commit(&self.ctx, changeset, parent_selection_hint)
+            .sync_commit(&self.ctx, changeset, candidate_selection_hint)
             .await?;
         Ok(maybe_cs_id.map(|cs_id| ChangesetContext::new(other.clone(), cs_id)))
     }
