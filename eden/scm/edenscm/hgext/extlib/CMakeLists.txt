@@ -11,9 +11,15 @@ add_library(
     ctreemanifest/manifest_fetcher.cpp
     ctreemanifest/manifest_ptr.cpp
 )
+
 target_link_libraries(
   datapack
   PUBLIC
-    eden_mpatch
     OpenSSL::Crypto
+)
+
+target_include_directories(
+  datapack
+  PUBLIC
+    "${CMAKE_SOURCE_DIR}/eden/scm"
 )
