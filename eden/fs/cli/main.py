@@ -294,12 +294,34 @@ space by running:
             print("To perform automated cleanup, run `eden du --clean`\n")
 
     def du(self, path) -> int:
-        cp = subprocess.run(["du", "-skxc", path], stdout=subprocess.PIPE)
+        dev = os.stat(path).st_dev
 
-        if cp.returncode:
-            print(f"WARNING: `du` returned non-zero exit status {cp.returncode}")
+        def get_size(path) -> int:
+            total = 0
+            try:
+                for dirent in os.scandir(path):
+                    if dirent.is_dir(follow_symlinks=False):
+                        # Don't recurse onto different filesystems
+                        if (
+                            sys.platform == "win32"
+                            or dirent.stat(follow_symlinks=False).st_dev == dev
+                        ):
+                            total += get_size(dirent.path)
+                    else:
+                        stat = dirent.stat(follow_symlinks=False)
+                        if sys.platform == "win32":
+                            total += stat.st_size
+                        else:
+                            # Use st_blocks as this represent the actual amount of
+                            # disk space allocated by the file, not its apparent
+                            # size.
+                            total += stat.st_blocks * 512
+            except FileNotFoundError:
+                pass
 
-        return int(cp.stdout.decode("utf-8").split("\t")[0]) * 1024
+            return total
+
+        return get_size(path)
 
     def underlined(self, message) -> None:
         underline = "-" * len(message)
