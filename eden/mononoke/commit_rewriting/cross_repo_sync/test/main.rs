@@ -212,7 +212,7 @@ async fn check_mapping<M>(
     let mapping = config.get_mapping();
     assert_eq!(
         mapping
-            .get_one(
+            .get(
                 ctx.clone(),
                 source_repoid,
                 source_bcs_id,
@@ -221,6 +221,8 @@ async fn check_mapping<M>(
             .compat()
             .await
             .unwrap()
+            .into_iter()
+            .next()
             .map(|(cs, _maybe_version)| cs),
         expected_bcs_id
     );
@@ -228,7 +230,7 @@ async fn check_mapping<M>(
     if let Some(expected_bcs_id) = expected_bcs_id {
         assert_eq!(
             mapping
-                .get_one(
+                .get(
                     ctx.clone(),
                     destination_repoid,
                     expected_bcs_id,
@@ -237,6 +239,8 @@ async fn check_mapping<M>(
                 .compat()
                 .await
                 .unwrap()
+                .into_iter()
+                .next()
                 .map(|(cs, _maybe_version)| cs),
             Some(source_bcs_id)
         );
