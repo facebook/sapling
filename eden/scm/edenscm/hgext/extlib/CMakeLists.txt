@@ -16,5 +16,4 @@ target_link_libraries(
   PUBLIC
     eden_buffer
     eden_mpatch
-    eden_cdatapack
 )

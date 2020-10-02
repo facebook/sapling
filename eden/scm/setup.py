@@ -1662,16 +1662,6 @@ extmodules += cythonize(
 
 libraries = [
     (
-        "datapack",
-        {
-            "sources": ["lib/cdatapack/cdatapack.c"],
-            "depends": ["lib/cdatapack/cdatapack.h"],
-            "include_dirs": ["."] + include_dirs,
-            "libraries": ["lz4", SHA1_LIBRARY],
-            "extra_args": filter(None, [STDC99, WALL, WSTRICTPROTOTYPES] + cflags),
-        },
-    ),
-    (
         "sha1detectcoll",
         {
             "sources": [
