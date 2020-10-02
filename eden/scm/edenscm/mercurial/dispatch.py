@@ -300,7 +300,6 @@ def _preimportmodules():
         "remotenames",
         "reset",
         "sampling",
-        "schemes",
         "share",
         "shelve",
         "sigtrace",

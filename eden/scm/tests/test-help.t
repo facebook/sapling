@@ -361,7 +361,6 @@ Test extension help:
                      (no help text available)
        reset         reset the active bookmark and working copy to a desired
                      revision
-       schemes       extend schemes with shortcuts to repository swarms
        share         share a common history between several working directories
        shelve        save and restore changes to the working directory
        sigtrace      sigtrace - dump stack and memory traces on signal
@@ -1358,12 +1357,6 @@ Test -e / -c / -k combinations
    debugnetwork        test network connections to the server
    debugshell          a python shell with repo, changelog & manifest objects
   Extension Commands:
-  $ hg help -c schemes
-  abort: no such help topic: schemes
-  (try 'hg help --keyword schemes')
-  [255]
-  $ hg help -e schemes |head -1
-  schemes extension - extend schemes with shortcuts to repository swarms
   $ hg help -c -k dates |egrep '^(Topics|Extensions|Commands):'
   Commands:
   $ hg help -e -k a |egrep '^(Topics|Extensions|Commands):'

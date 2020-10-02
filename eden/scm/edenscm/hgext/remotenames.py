@@ -74,7 +74,6 @@ from edenscm.mercurial.bookmarks import (
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, hex, nullid, short
 
-from . import schemes
 from .convert import hg as converthg
 
 
@@ -1352,7 +1351,6 @@ def activepath(ui, remote):
 
     candidates = []
     for path, uri in ui.configitems("paths"):
-        uri = ui.expandpath(expandscheme(ui, uri))
         if local:
             uri = os.path.realpath(uri)
         else:
@@ -1403,27 +1401,6 @@ def _getrenames(ui):
             if k.startswith("rename."):
                 _renames[k[7:]] = v
     return _renames
-
-
-def expandscheme(ui, uri):
-    """For a given uri, expand the scheme for it"""
-    urischemes = [
-        s for s in pycompat.iterkeys(schemes.schemes) if uri.startswith("%s://" % s)
-    ]
-    for s in urischemes:
-        # TODO: refactor schemes so we don't
-        # duplicate this logic
-        ui.note(_("performing schemes expansion with " "scheme %s\n") % s)
-        scheme = hg.schemes[s]
-        parts = uri.split("://", 1)[1].split("/", scheme.parts)
-        if len(parts) > scheme.parts:
-            tail = parts[-1]
-            parts = parts[:-1]
-        else:
-            tail = ""
-        ctx = dict((str(i + 1), v) for i, v in enumerate(parts))
-        uri = "".join(scheme.templater.process(scheme.url, ctx)) + tail
-    return uri
 
 
 def shareawarecachevfs(repo):
@@ -1631,7 +1608,6 @@ def upstream(repo, subset, x):
 
     default_path = dict(repo.ui.configitems("paths")).get("default")
     if not upstream_names and default_path:
-        default_path = expandscheme(repo.ui, default_path)
         upstream_names = [activepath(repo.ui, default_path)]
 
     def filt(name):
