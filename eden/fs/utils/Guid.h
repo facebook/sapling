@@ -27,7 +27,7 @@ class Guid {
     return Guid{id};
   }
 
-  Guid() noexcept : guid_{0} {}
+  Guid() = default;
   Guid(const GUID& guid) noexcept : guid_{guid} {}
 
   Guid(const Guid& other) noexcept : guid_{other.guid_} {}
@@ -75,7 +75,7 @@ class Guid {
   }
 
  private:
-  GUID guid_;
+  GUID guid_{};
 };
 
 } // namespace eden
