@@ -29,8 +29,6 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping edenscm/mercurial/httpclient/__init__.py it has no-che?k-code (glob)
   Skipping edenscm/mercurial/httpclient/_readers.py it has no-che?k-code (glob)
   Skipping edenscm/mercurial/statprof.py it has no-che?k-code (glob)
-  Skipping lib/clib/buffer.c it has no-che?k-code (glob)
-  Skipping lib/clib/buffer.h it has no-che?k-code (glob)
   Skipping lib/clib/convert.h it has no-che?k-code (glob)
   Skipping lib/clib/null_test.c it has no-che?k-code (glob)
   Skipping lib/clib/portability/inet.h it has no-che?k-code (glob)

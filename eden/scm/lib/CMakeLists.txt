@@ -4,4 +4,3 @@
 # GNU General Public License version 2.
 
 add_subdirectory(backingstore)
-add_subdirectory(clib)

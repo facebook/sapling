@@ -14,6 +14,6 @@ add_library(
 target_link_libraries(
   datapack
   PUBLIC
-    eden_buffer
     eden_mpatch
+    OpenSSL::Crypto
 )
