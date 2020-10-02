@@ -14,7 +14,7 @@ target_link_libraries(
   eden_store_hg
   PUBLIC
     backingstore
-    datapack
+    manifest
     eden_config
     eden_model
     eden_store

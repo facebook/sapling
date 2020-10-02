@@ -4,7 +4,7 @@
 # GNU General Public License version 2.
 
 add_library(
-  datapack
+  manifest
   STATIC
     ctreemanifest/manifest.cpp
     ctreemanifest/manifest_entry.cpp
@@ -13,13 +13,13 @@ add_library(
 )
 
 target_link_libraries(
-  datapack
+  manifest
   PUBLIC
     OpenSSL::Crypto
 )
 
 target_include_directories(
-  datapack
+  manifest
   PUBLIC
     "${CMAKE_SOURCE_DIR}/eden/scm"
 )
