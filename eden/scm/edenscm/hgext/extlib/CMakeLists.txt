@@ -6,14 +6,10 @@
 add_library(
   datapack
   STATIC
-    cstore/datapackstore.cpp
-    cstore/deltachain.cpp
-    cstore/uniondatapackstore.cpp
     ctreemanifest/manifest.cpp
     ctreemanifest/manifest_entry.cpp
     ctreemanifest/manifest_fetcher.cpp
     ctreemanifest/manifest_ptr.cpp
-    ctreemanifest/treemanifest.cpp
 )
 target_link_libraries(
   datapack

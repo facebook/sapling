@@ -42,7 +42,7 @@
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 
 #include "edenscm/hgext/extlib/cstore/store.h" // @manual=//eden/scm:datapack
-#include "edenscm/hgext/extlib/ctreemanifest/treemanifest.h" // @manual=//eden/scm:datapack
+#include "edenscm/hgext/extlib/ctreemanifest/manifest.h" // @manual=//eden/scm:datapack
 
 using folly::Future;
 using folly::IOBuf;
