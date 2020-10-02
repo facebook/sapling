@@ -76,6 +76,16 @@ queries! {
         ) VALUES {values}"
     }
 
+    write UpdateData(id: &str, ctime: i64, chunk_id: &str, chunk_count: u32, chunking_method: ChunkingMethod) {
+        none,
+        "UPDATE data SET
+            creation_time = {ctime}
+            , chunk_id = {chunk_id}
+            , chunk_count = {chunk_count}
+            , chunking_method = {chunking_method}
+        WHERE id = {id}"
+    }
+
     write InsertChunk(values: (id: &str, chunk_num: u32, value: &[u8])) {
         insert_or_ignore,
         "{insert_or_ignore} INTO chunk (
@@ -177,12 +187,24 @@ impl DataSqlStore {
 
         self.delay.delay(shard_id).await;
 
-        InsertData::query(
+        let res = InsertData::query(
             &self.write_connection[shard_id],
             &[(&key, &ctime, &chunk_id, &chunk_count, &chunking_method)],
         )
         .compat()
         .await?;
+        if res.affected_rows() == 0 {
+            UpdateData::query(
+                &self.write_connection[shard_id],
+                &key,
+                &ctime,
+                &chunk_id,
+                &chunk_count,
+                &chunking_method,
+            )
+            .compat()
+            .await?;
+        }
         Ok(())
     }
 

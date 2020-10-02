@@ -78,6 +78,39 @@ async fn double_put(fb: FacebookInit) {
 }
 
 #[fbinit::compat_test]
+async fn overwrite(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    // Generate unique keys.
+    let suffix: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
+    let key = format!("manifoldblob_test_{}", suffix);
+
+    let bs = Arc::new(Sqlblob::with_sqlite_in_memory().unwrap());
+
+    let mut bytes_1 = [0u8; 64];
+    thread_rng().fill_bytes(&mut bytes_1);
+    let mut bytes_2 = [0u8; 32];
+    thread_rng().fill_bytes(&mut bytes_2);
+
+    let blobstore_bytes_1 = BlobstoreBytes::from_bytes(Bytes::copy_from_slice(&bytes_1));
+    let blobstore_bytes_2 = BlobstoreBytes::from_bytes(Bytes::copy_from_slice(&bytes_2));
+
+    // Write a fresh blob
+    bs.put(ctx.clone(), key.clone(), blobstore_bytes_1.clone())
+        .await?;
+    // Overwrite it
+    bs.put(ctx.clone(), key.clone(), blobstore_bytes_2.clone())
+        .await?;
+
+    assert_eq!(
+        bs.get(ctx.clone(), key.clone())
+            .await?
+            .map(|get| get.into_bytes()),
+        Some(blobstore_bytes_2),
+    );
+    Ok(())
+}
+
+#[fbinit::compat_test]
 async fn dedup(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     // Generate unique keys.
