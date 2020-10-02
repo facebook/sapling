@@ -518,7 +518,9 @@ class remotefileslog(filelog.fileslog):
     def memcachestore(self, repo):
         if self._memcachestore is None:
             if repo.ui.config("remotefilelog", "cachekey") is not None:
-                self._memcachestore = revisionstore.memcachestore(repo.ui._rcfg._rcfg)
+                self._memcachestore = revisionstore.memcachestore(
+                    repo.ui._rcfg._rcfg, repo.ui
+                )
 
         return self._memcachestore
 

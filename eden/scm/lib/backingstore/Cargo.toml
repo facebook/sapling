@@ -10,6 +10,7 @@ edenapi = { path = "../edenapi" }
 log = "0.4"
 manifest = { path = "../manifest" }
 manifest-tree = { path = "../manifest-tree" }
+progress = { path = "../progress" }
 revisionstore = { path = "../revisionstore" }
 types = { path = "../types" }
 anyhow = "1.0.20"

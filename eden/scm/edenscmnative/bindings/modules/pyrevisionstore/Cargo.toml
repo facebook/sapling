@@ -9,6 +9,8 @@ configparser = { path = "../../../../lib/configparser" }
 cpython-ext = { path = "../../../../lib/cpython-ext", default-features = false }
 cpython = { version = "0.5", default-features = false }
 parking_lot = "0.9.0"
+progress = { path = "../../../../lib/progress" }
+pyprogress = { path = "../pyprogress" }
 pyconfigparser = { path = "../pyconfigparser" }
 revisionstore = { path = "../../../../lib/revisionstore" }
 types = { path = "../../../../lib/types" }

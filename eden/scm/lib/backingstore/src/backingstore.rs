@@ -14,6 +14,7 @@ use edenapi::{Builder as EdenApiBuilder, EdenApi};
 use log::warn;
 use manifest::{List, Manifest};
 use manifest_tree::TreeManifest;
+use progress::null::NullProgressFactory;
 use revisionstore::{
     ContentStore, ContentStoreBuilder, EdenApiFileStore, EdenApiTreeStore, HgIdDataStore,
     LocalStore, MemcacheStore, RemoteDataStore, StoreKey, StoreResult,
@@ -38,7 +39,7 @@ impl BackingStore {
             .local_path(&store_path)
             .suffix(Path::new("manifests"));
 
-        match MemcacheStore::new(&config) {
+        match MemcacheStore::new(&config, NullProgressFactory::arc()) {
             Ok(memcache) => {
                 // XXX: Add the memcachestore for the treestore.
                 blobstore = blobstore.memcachestore(Arc::new(memcache));

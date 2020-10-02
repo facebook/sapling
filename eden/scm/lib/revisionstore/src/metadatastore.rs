@@ -564,6 +564,7 @@ mod tests {
         use super::*;
 
         use memcache::MockMemcache;
+        use progress::null::NullProgressFactory;
 
         use once_cell::sync::Lazy;
 
@@ -588,7 +589,7 @@ mod tests {
             let mut remotestore = FakeHgIdRemoteStore::new();
             remotestore.hist(map);
 
-            let memcache = Arc::new(MemcacheStore::new(&config)?);
+            let memcache = Arc::new(MemcacheStore::new(&config, NullProgressFactory::arc())?);
             let store = MetadataStoreBuilder::new(&config)
                 .local_path(&localdir)
                 .remotestore(Arc::new(remotestore))
@@ -600,6 +601,7 @@ mod tests {
             loop {
                 let memcache_nodeinfo = memcache
                     .get_hist_iter(&[k.clone()])
+                    .unwrap()
                     .collect::<Result<Vec<_>>>()?;
                 if !memcache_nodeinfo.is_empty() {
                     assert_eq!(memcache_nodeinfo[0].nodeinfo, nodeinfo);

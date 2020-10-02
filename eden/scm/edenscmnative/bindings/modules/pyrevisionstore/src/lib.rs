@@ -24,7 +24,9 @@ use configparser::config::ConfigSet;
 use cpython_ext::{
     ExtractInner, ExtractInnerRef, PyErr, PyNone, PyPath, PyPathBuf, ResultPyErrExt, Str,
 };
+use progress::null::NullProgressFactory;
 use pyconfigparser::config;
+use pyprogress::PyProgressFactory;
 use revisionstore::{
     repack, ContentStore, ContentStoreBuilder, CorruptionPolicy, DataPack, DataPackStore,
     DataPackVersion, Delta, EdenApiFileStore, EdenApiTreeStore, ExtStoredPolicy, HgIdDataStore,
@@ -1079,9 +1081,10 @@ impl ExtractInnerRef for metadatastore {
 py_class!(pub class memcachestore |py| {
     data memcache: Arc<MemcacheStore>;
 
-    def __new__(_cls, config: config) -> PyResult<memcachestore> {
+    def __new__(_cls, config: config, ui: Option<PyObject> = None) -> PyResult<memcachestore> {
         let config = config.get_cfg(py);
-        let memcache = Arc::new(MemcacheStore::new(&config).map_pyerr(py)?);
+        let progress = ui.map_or_else(|| Ok(NullProgressFactory::arc()), |ui| PyProgressFactory::arc(py, ui))?;
+        let memcache = Arc::new(MemcacheStore::new(&config, progress).map_pyerr(py)?);
         memcachestore::create_instance(py, memcache)
     }
 });

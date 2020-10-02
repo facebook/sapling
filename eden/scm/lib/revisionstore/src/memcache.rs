@@ -54,23 +54,30 @@ mod dummy {
     use std::iter::empty;
 
     use configparser::config::ConfigSet;
+    use progress::ProgressFactory;
 
     /// Dummy memcache client for when Mercurial is compiled outside of fbcode.
     pub struct MemcacheStore;
 
     impl MemcacheStore {
-        pub fn new(_config: &ConfigSet) -> Result<Self> {
+        pub fn new(_config: &ConfigSet, _progress: Arc<dyn ProgressFactory>) -> Result<Self> {
             Ok(MemcacheStore {})
         }
 
-        pub(super) fn get_data_iter(&self, _key: &[Key]) -> impl Iterator<Item = Result<McData>> {
-            empty()
+        pub(super) fn get_data_iter(
+            &self,
+            _key: &[Key],
+        ) -> Result<impl Iterator<Item = Result<McData>>> {
+            Ok(empty())
         }
 
         pub(super) fn add_data(&self, _delta: &Delta, _metadata: &Metadata) {}
 
-        pub(super) fn get_hist_iter(&self, _key: &[Key]) -> impl Iterator<Item = Result<McHist>> {
-            empty()
+        pub(super) fn get_hist_iter(
+            &self,
+            _key: &[Key],
+        ) -> Result<impl Iterator<Item = Result<McHist>>> {
+            Ok(empty())
         }
 
         pub(super) fn add_hist(&self, _key: &Key, _info: &NodeInfo) {}
@@ -209,7 +216,7 @@ impl RemoteDataStore for MemcacheHgIdDataStore {
             })
             .collect::<Vec<_>>();
 
-        for mcdata in self.memcache.get_data_iter(&hgidkeys) {
+        for mcdata in self.memcache.get_data_iter(&hgidkeys)? {
             if let Ok(mcdata) = mcdata {
                 let metadata = mcdata.metadata;
                 let delta = Delta {
@@ -287,7 +294,7 @@ impl RemoteHistoryStore for MemcacheHgIdHistoryStore {
         let mut hits = 0;
         let mut size = 0;
 
-        for mchist in self.memcache.get_hist_iter(&keys) {
+        for mchist in self.memcache.get_hist_iter(&keys)? {
             if let Ok(mchist) = mchist {
                 self.store.add(&mchist.key, &mchist.nodeinfo)?;
 

@@ -1183,6 +1183,7 @@ mod tests {
         use once_cell::sync::Lazy;
 
         use memcache::MockMemcache;
+        use progress::null::NullProgressFactory;
         use types::Sha256;
 
         static MOCK: Lazy<MockMemcache> = Lazy::new(|| MockMemcache::new());
@@ -1203,7 +1204,7 @@ mod tests {
             let mut remotestore = FakeHgIdRemoteStore::new();
             remotestore.data(map);
 
-            let memcache = Arc::new(MemcacheStore::new(&config)?);
+            let memcache = Arc::new(MemcacheStore::new(&config, NullProgressFactory::arc())?);
             let store = ContentStoreBuilder::new(&config)
                 .local_path(&localdir)
                 .remotestore(Arc::new(remotestore))
@@ -1215,6 +1216,7 @@ mod tests {
             loop {
                 let memcache_data = memcache
                     .get_data_iter(&[k.clone()])
+                    .unwrap()
                     .collect::<Result<Vec<_>>>()?;
                 if !memcache_data.is_empty() {
                     assert_eq!(memcache_data[0].data, data);
@@ -1244,7 +1246,7 @@ mod tests {
             let mut remotestore = FakeHgIdRemoteStore::new();
             remotestore.data(map);
 
-            let memcache = Arc::new(MemcacheStore::new(&config)?);
+            let memcache = Arc::new(MemcacheStore::new(&config, NullProgressFactory::arc())?);
             let store = ContentStoreBuilder::new(&config)
                 .local_path(&localdir)
                 .remotestore(Arc::new(remotestore))
@@ -1253,7 +1255,10 @@ mod tests {
             let data_get = store.get(StoreKey::hgid(k.clone()))?;
             assert_eq!(data_get, StoreResult::Found(data.as_ref().to_vec()));
 
-            let memcache_data = memcache.get_data_iter(&[k]).collect::<Result<Vec<_>>>()?;
+            let memcache_data = memcache
+                .get_data_iter(&[k])
+                .unwrap()
+                .collect::<Result<Vec<_>>>()?;
             assert_eq!(memcache_data, vec![]);
             Ok(())
         }
@@ -1280,7 +1285,7 @@ mod tests {
             let mut remotestore = FakeHgIdRemoteStore::new();
             remotestore.data(map);
 
-            let memcache = Arc::new(MemcacheStore::new(&config)?);
+            let memcache = Arc::new(MemcacheStore::new(&config, NullProgressFactory::arc())?);
             let store = ContentStoreBuilder::new(&config)
                 .local_path(&localdir)
                 .remotestore(Arc::new(remotestore))
@@ -1310,7 +1315,7 @@ mod tests {
             let mut remotestore = FakeHgIdRemoteStore::new();
             remotestore.data(map);
 
-            let memcache = Arc::new(MemcacheStore::new(&config)?);
+            let memcache = Arc::new(MemcacheStore::new(&config, NullProgressFactory::arc())?);
             let store = ContentStoreBuilder::new(&config)
                 .local_path(&localdir)
                 .remotestore(Arc::new(remotestore))
@@ -1325,6 +1330,7 @@ mod tests {
             loop {
                 let memcache_data = memcache
                     .get_data_iter(&[k.clone()])
+                    .unwrap()
                     .collect::<Result<Vec<_>>>()?;
                 if !memcache_data.is_empty() {
                     assert_eq!(memcache_data[0].data, data);
@@ -1378,7 +1384,7 @@ mod tests {
             remotestore.data(map);
             let remotestore = Arc::new(remotestore);
 
-            let memcache = Arc::new(MemcacheStore::new(&config)?);
+            let memcache = Arc::new(MemcacheStore::new(&config, NullProgressFactory::arc())?);
             let store = ContentStoreBuilder::new(&config)
                 .local_path(&localdir)
                 .remotestore(remotestore.clone())
@@ -1394,6 +1400,7 @@ mod tests {
             loop {
                 let memcache_data = memcache
                     .get_data_iter(&[k.clone()])
+                    .unwrap()
                     .collect::<Result<Vec<_>>>()?;
                 if !memcache_data.is_empty() {
                     assert_eq!(memcache_data[0].data, pointer_data);
