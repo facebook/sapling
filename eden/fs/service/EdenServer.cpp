@@ -1538,19 +1538,17 @@ shared_ptr<EdenMount> EdenServer::getMount(StringPiece mountPath) const {
 }
 
 shared_ptr<EdenMount> EdenServer::getMountUnsafe(StringPiece mountPath) const {
-#ifdef _WIN32
-  auto normalized = normalizeMountPoint(mountPath);
-  mountPath = normalized;
-#endif
+  const auto normalizedPath = normalizeMountPoint(mountPath);
+
   const auto mountPoints = mountPoints_.rlock();
-  const auto it = mountPoints->find(mountPath);
+  const auto it = mountPoints->find(normalizedPath);
   if (it == mountPoints->end()) {
     throw newEdenError(
         ENOENT,
         EdenErrorType::POSIX_ERROR,
         folly::to<string>(
             "mount point \"",
-            mountPath,
+            normalizedPath,
             "\" is not known to this eden instance"));
   }
   return it->second.edenMount;
