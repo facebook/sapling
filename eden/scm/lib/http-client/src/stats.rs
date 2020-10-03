@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::{fmt, time::Duration};
+use std::{fmt, mem, time::Duration};
 
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct Stats {
@@ -18,7 +18,7 @@ pub struct Stats {
 
 impl Stats {
     pub fn time_in_seconds(&self) -> f64 {
-        duration_to_seconds(self.time)
+        self.time.as_secs_f64()
     }
 
     pub fn bytes_per_second(&self) -> f64 {
@@ -28,49 +28,73 @@ impl Stats {
 
 impl fmt::Display for Stats {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let bytes_per_second = self.bytes_per_second();
         write!(
             f,
-            "Downloaded {} in {} over {} request{} ({:.2} Mbit/s, {:.2} MiB/s, latency: {})",
-            fmt_num_bytes(self.downloaded),
-            fmt_duration(self.time),
-            self.requests,
-            if self.requests == 1 { "" } else { "s" },
-            8.0 * bytes_per_second / 1_000_000.0,
-            bytes_per_second / (1024.0 * 1024.0),
-            fmt_duration(self.latency)
+            "Downloaded {amount} in {time:.time_prec$?} over {requests} \
+            request{plural} ({rate}, latency: {latency:.latency_prec$?})",
+            amount = byte_count(self.downloaded),
+            time = self.time,
+            time_prec = if self.time.as_secs() == 0 { 0 } else { 2 },
+            requests = self.requests,
+            plural = if self.requests == 1 { "" } else { "s" },
+            rate = bit_rate(self.bytes_per_second() * 8.0),
+            latency = self.latency,
+            latency_prec = if self.latency.as_secs() == 0 { 0 } else { 2 },
         )
     }
 }
 
-fn fmt_num_bytes(n: usize) -> String {
-    if n == 0 {
+/// Format a byte count using SI binary prefixes.
+fn byte_count(value: usize) -> String {
+    if value == 0 {
         return "0 B".into();
     }
-    // Calculate order of magnitude and shift
-    // value down accordingly.
-    let mut n = n as f64;
-    let i = (n.log10() / 3.0).floor() as usize;
-    n /= 1000f64.powi(i as i32);
 
-    // We don't actually expect to have sizes measured in
-    // exabytes, but floor(log10(2^64-1)/3) is 6, so this
-    // way it is not possible for the indexing to panic.
-    let units = ["B", "kB", "MB", "GB", "TB", "PB", "EB"];
-    let prec = if i > 0 { 2 } else { 0 };
+    // Compute the base-1024 log of the value (i.e., log2(value) / log2(2014)).
+    let log = ((8 * mem::size_of::<usize>()) - value.leading_zeros() as usize - 1) / 10;
 
-    format!("{:.*} {}", prec, n, units[i])
+    // Shift value down. (Use floating-point division to preserve decimals.)
+    let shifted = value as f64 / (1 << (log * 10)) as f64;
+
+    // Determine unit and precision to display.
+    let unit = ["B", "kiB", "MiB", "GiB", "TiB", "PiB", "EiB"][log];
+    let prec = if log > 1 { 2 } else { 0 };
+
+    format!("{:.*} {}", prec, shifted, unit)
 }
 
-fn fmt_duration(time: Duration) -> String {
-    let millis = time.as_millis();
-    if millis > 1000 {
-        format!("{:.2} s", duration_to_seconds(time))
-    } else {
-        format!("{} ms", millis)
+/// Format a bit rate using decimal prefixes.
+fn bit_rate(rate: f64) -> String {
+    if rate.floor() == 0.0 {
+        return "0 b/s".into();
     }
+
+    // Divide by the base-1000 log of the value to bring it under 1000.
+    let log = (rate.log10() / 3.0).floor() as usize;
+    let shifted = rate / 1000f64.powi(log as i32);
+
+    // Determine unit and precision to display.
+    let unit = ["b/s", "kb/s", "Mb/s", "Gb/s", "Tb/s", "Pb/s", "Eb/s"][log];
+    let prec = if log > 1 { 2 } else { 0 };
+
+    format!("{:.*} {}", prec, shifted, unit)
 }
 
-fn duration_to_seconds(time: Duration) -> f64 {
-    time.as_secs() as f64 + time.subsec_nanos() as f64 / 1_000_000_000.0
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_stats_formatting() {
+        let stats = Stats {
+            downloaded: 10 * 1024 * 1024 + 600 * 1024, // 10.586 MiB
+            uploaded: 1024,
+            requests: 5,
+            time: Duration::from_millis(12345),
+            latency: Duration::from_micros(123456),
+        };
+
+        let expected = "Downloaded 10.59 MiB in 12.35s over 5 requests (7.19 Mb/s, latency: 123ms)";
+        assert_eq!(expected, &stats.to_string());
+    }
 }
