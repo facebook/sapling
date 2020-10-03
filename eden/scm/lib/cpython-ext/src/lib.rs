@@ -8,6 +8,7 @@
 mod bytearrayobject;
 mod bytes;
 mod bytesobject;
+pub mod convert;
 pub mod error;
 mod extract;
 mod io;
