@@ -2729,10 +2729,7 @@ class remotetreestore(generatingdatastore):
         # back to here.
         if len(args) == 3:
             keys = args[2]
-            if self._repo.ui.configbool("treemanifest", "ondemandfetch"):
-                self._repo.getdesignatednodes(args[2])
-            else:
-                self._prefetchtrees(keys)
+            self._prefetchtrees(keys)
         else:
             keys = args[0]
             self.datastore.prefetch(keys)

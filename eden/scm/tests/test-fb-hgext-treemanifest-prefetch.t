@@ -525,6 +525,14 @@ also fetches 3 trees dealing with the tree manifest of the base revision 2.
   1 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
 
+Prefetching with treemanifest.ondemandfetch=True should fall back to normal
+fetch is the server doesn't support it.
+
+  $ rm -rf $CACHEDIR/master
+  $ hg prefetch --config treemanifest.ondemandfetch=True
+  fetching tree 'subdir' ddb35f099a648a43a997aef53123bce309c794fd
+  1 trees fetched over 0.00s
+
 Running prefetch in the master repository should exit gracefully
 
   $ cd ../master
