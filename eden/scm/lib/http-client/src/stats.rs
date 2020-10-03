@@ -50,7 +50,7 @@ fn byte_count(value: usize) -> String {
         return "0 B".into();
     }
 
-    // Compute the base-1024 log of the value (i.e., log2(value) / log2(2014)).
+    // Compute the base-1024 log of the value (i.e., log2(value) / log2(1024)).
     let log = ((8 * mem::size_of::<usize>()) - value.leading_zeros() as usize - 1) / 10;
 
     // Shift value down. (Use floating-point division to preserve decimals.)
