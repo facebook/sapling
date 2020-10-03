@@ -6,10 +6,14 @@
  */
 
 use cpython_ext::cpython::*;
+use cpython_ext::AnyhowResultExt;
+use cpython_ext::ResultPyErrExt;
+use cpython_ext::Str;
 use futures::stream::BoxStream;
+use futures::stream::TryStreamExt;
 use futures::Stream;
+use std::cell::RefCell;
 
-#[allow(clippy::needless_doctest_main)]
 /// `TStream` is a thin wrapper of `Stream` from async Rust to Python.
 ///
 /// `TStream` can be used as both input or output parameters in cpython binding
@@ -24,7 +28,7 @@ use futures::Stream;
 ///     Ok(futures::stream::once(async { Ok(vec![1]) }).into())
 /// }
 ///
-/// // Receive a stream from Python:
+/// // Receive a stream (iterable) from Python:
 /// fn map_reverse_stream(py: Python, tstream: S) -> PyResult<S> {
 ///     // Use `.stream()` to extract the pure Rust stream object
 ///     // that implements `Stream`.
@@ -34,7 +38,8 @@ use futures::Stream;
 /// }
 /// ```
 ///
-/// In Python, the stream can be passed around, or used as an iterator:
+/// In Python, the stream can be used as an iterator, functions accepting
+/// streams also accepts iterators:
 ///
 /// ```python,ignore
 /// stream = rustmod.produce_stream()
@@ -42,27 +47,6 @@ use futures::Stream;
 /// for value in stream:
 ///     print(value)
 /// ```
-///
-/// To implement `TStream` for a customized type `T`, first implement
-/// `ToPyObject` for `T`, then use the `py_stream_class` macro:
-///
-/// ```
-/// # use cpython_async::{*, cpython::*, futures::*};
-/// pub struct MyType(bool);
-/// impl ToPyObject for MyType {
-///     type ObjectType = PyBool;
-///     fn to_py_object(&self, py: Python) -> Self::ObjectType { self.0.to_py_object(py) }
-/// }
-///
-/// py_stream_class!(mod mypyclass { super::MyType });
-/// # fn main() { } // needed since 'mod' cannot be inside a function.
-/// ```
-///
-/// The Python types are defined in the `mypyclass` module.
-/// `TStream<T>` will be converted to or from those types automatically
-/// when crossing the Python / Rust boundary. There is no need to use
-/// the types in `mypyclass` directly in Rust, instead, just use
-/// `TStream<T>`.
 pub struct TStream<T>(BoxStream<'static, T>);
 
 impl<I> TStream<I> {
@@ -82,141 +66,222 @@ where
     }
 }
 
-/// Defines how to convert from a Python object to
-/// `TStream<anyhow::Result<Self>>`.
-///
-/// Implement this trait to make `TStream<anyhow::Result<Self>>` implement
-/// `FromPyObject`.
-///
-/// This trait exists as a workaround to Rust's orphan rule - foreign crates
-/// cannot implement `FromPyObject` for `TStream<ForeignType>` (E0117).
-pub trait PyStreamFromPy: Send {
-    /// Converts a Python object to TStream.
-    fn pyobj_to_tstream(py: Python, obj: &PyObject) -> PyResult<TStream<anyhow::Result<Self>>>
+mod pytypes {
+    use super::*;
+
+    // Convert from a Python iterable to TStream.
+    impl<'s, T> FromPyObject<'s> for TStream<anyhow::Result<T>>
     where
-        Self: Sized;
-}
-
-/// Defines how to convert `TStream<anyhow::Result<Self>>` to a Python object.
-///
-/// Implement this trait to make `TStream<anyhow::Result<Self>>` implement
-/// `ToPyObject`.
-///
-/// This trait exists as a workaround to Rust's orphan rule - foreign crates
-/// cannot implement `ToPyObject` for `TStream<ForeignType>` (E0117).
-pub trait PyStreamToPy: Send {
-    /// Converts TStream to a Python object.
-    fn tstream_to_pyobj(py: Python, tstream: TStream<anyhow::Result<Self>>) -> PyObject
-    where
-        Self: Sized;
-}
-
-impl<'s, T> FromPyObject<'s> for TStream<Result<T, anyhow::Error>>
-where
-    T: PyStreamFromPy,
-{
-    fn extract(py: Python, obj: &'s PyObject) -> PyResult<Self> {
-        PyStreamFromPy::pyobj_to_tstream(py, obj)
-    }
-}
-
-impl<T> ToPyObject for TStream<anyhow::Result<T>>
-where
-    T: PyStreamToPy,
-{
-    type ObjectType = PyObject;
-
-    fn to_py_object(&self, _py: Python) -> Self::ObjectType {
-        panic!("bug: TStream::to_py_object should not be used");
-    }
-
-    fn into_py_object(self, py: Python) -> Self::ObjectType {
-        PyStreamToPy::tstream_to_pyobj(py, self)
-    }
-}
-
-/// Macro to define Python classes for a concrete stream type. Macro is used
-/// because Python types do not support static type parameters and dynamic
-/// typed streams are harder to work with.
-///
-/// For example, `py_stream_class!(mod foomod { Foo })` defines two types in
-/// the `foomod` module:
-/// - `stream`: Python type that `TStream<anyhow::Result<Foo>>` converts to.
-/// - `streamiter`: Python type that `iter(stream)` returns.
-///
-/// The type (ex. `Foo`) needs to implement `ToPyObject` so the Python
-/// iterator can produce actual Python objects.
-///
-/// The defined types can be converted to `TStream` losslessly. In bindings
-/// code, just use `TStream` in function signatures. They are pure Rust and
-/// do not need `py`.
-#[macro_export]
-macro_rules! py_stream_class {
-    (mod $m:ident { $t:ty }) => {
-        mod $m {
-            use $crate::PyStreamFromPy;
-            use $crate::PyStreamToPy;
-            use $crate::TStream;
-            use cpython_ext::cpython::*;
-            use std::cell::RefCell;
-            use cpython_ext::ResultPyErrExt;
-            use cpython_ext::Str;
-            use cpython_ext::cpython::py_class;
-
-            type T = $t;
-            type E = $crate::anyhow::Error;
-
-            impl PyStreamFromPy for T {
-                fn pyobj_to_tstream(py: Python, obj: &PyObject) -> PyResult<TStream<anyhow::Result<Self>>> {
-                    let py_stream = obj.extract::<stream>(py)?;
-                    let mut state = None;
-                    std::mem::swap(&mut state, &mut py_stream.state(py).borrow_mut());
-                    match state {
-                        Some(stream) => Ok(stream),
-                        None => Err(PyErr::new::<exc::ValueError, _>(py, "stream was consumed")),
+        T: for<'b> FromPyObject<'b> + Send + 'static,
+    {
+        fn extract(py: Python, obj: &'s PyObject) -> PyResult<Self> {
+            let pyiter = obj.iter(py)?.into_object();
+            let iter = itertools::unfold(pyiter, |pyiter| {
+                let item = (|pyiter: &PyObject| -> PyResult<Option<T>> {
+                    let gil = Python::acquire_gil();
+                    let py = gil.python();
+                    let mut iter = pyiter.iter(py)?;
+                    if let Some(v) = iter.next() {
+                        Ok(Some(v?.extract::<T>(py)?))
+                    } else {
+                        Ok(None)
                     }
-                }
-            }
-
-            impl PyStreamToPy for T {
-                fn tstream_to_pyobj(py: Python, tstream: TStream<anyhow::Result<Self>>) -> PyObject {
-                    stream::create_instance(py, RefCell::new(Some(tstream)))
-                        .unwrap()
-                        .into_object()
-                }
-            }
-
-            py_class!(pub class stream |py| {
-                data state: RefCell<Option<TStream<Result<T, E>>>>;
-
-                def __iter__(&self) -> PyResult<streamiter> {
-                    let tstream: TStream<Result<T, E>> = self.clone_ref(py).into_object().extract(py)?;
-                    let iter = $crate::async_runtime::stream_to_iter(tstream.stream());
-                    streamiter::create_instance(py, RefCell::new(Box::new(iter)))
-                }
-
-                def typename(&self) -> PyResult<Str> {
-                    Ok(std::any::type_name::<T>().to_string().into())
-                }
+                })(&pyiter);
+                item.into_anyhow_result().transpose()
             });
-
-            py_class!(pub class streamiter |py| {
-                data iter: RefCell<Box<dyn Iterator<Item = Result<T, E>> + Send>>;
-
-                def __next__(&self) -> PyResult<Option<T>> {
-                    let mut iter = self.iter(py).borrow_mut();
-                    iter.next().transpose().map_pyerr(py)
-                }
-
-                def __iter__(&self) -> PyResult<Self> {
-                    Ok(self.clone_ref(py))
-                }
-            });
+            // async_runtime::iter_to_stream supports blocking `next` calls.
+            // futures::stream::iter doesn't. If futures::stream::iter is used,
+            // then test_nested_stream_to_and_from_python() will hang.
+            let stream = async_runtime::iter_to_stream(iter);
+            return Ok(stream.into());
         }
     }
+
+    // Convert TStream to a Python object.
+    impl<T> ToPyObject for TStream<anyhow::Result<T>>
+    where
+        T: ToPython,
+    {
+        type ObjectType = PyObject;
+
+        fn to_py_object(&self, _py: Python) -> Self::ObjectType {
+            panic!("bug: TStream::to_py_object should not be used");
+        }
+
+        fn into_py_object(self, py: Python) -> Self::ObjectType {
+            // Erase the type. Do not convert to PyObject directly to avoid GIL cost.
+            // ('py' cannot be used in the stream 'map' closure).
+            let inner = self.0.map_ok(|t| Box::new(t) as Box<dyn ToPython>);
+            let typename = std::any::type_name::<T>().to_string();
+            let result =
+                pytypes::stream::create_instance(py, RefCell::new(Some(Box::pin(inner))), typename);
+            result.unwrap().into_object()
+        }
+    }
+
+    /// Like `ToPyObject` but without `type Target`.
+    pub trait ToPython: Send + 'static {
+        fn to_py(&self, py: Python) -> PyObject;
+    }
+
+    impl<T: ToPyObject + Send + 'static> ToPython for T {
+        fn to_py(&self, py: Python) -> PyObject {
+            self.to_py_object(py).into_object()
+        }
+    }
+
+    py_class!(pub class stream |py| {
+        data state: RefCell<Option<BoxStream<'static, anyhow::Result<Box<dyn ToPython>>>>>;
+        data type_name: String;
+
+        def __iter__(&self) -> PyResult<streamiter> {
+            let state = self.state(py).borrow_mut().take();
+            match state {
+                Some(state) => {
+                    let iter = async_runtime::stream_to_iter(state);
+                    streamiter::create_instance(py, RefCell::new(Box::new(iter)))
+                }
+                None => {
+                    Err(PyErr::new::<exc::ValueError, _>(py, "stream was consumed"))
+                }
+            }
+        }
+
+        def typename(&self) -> PyResult<Str> {
+            Ok(self.type_name(py).clone().into())
+        }
+    });
+
+    py_class!(pub class streamiter |py| {
+        data iter: RefCell<Box<dyn Iterator<Item = anyhow::Result<Box<dyn ToPython>>> + Send>>;
+
+        def __next__(&self) -> PyResult<Option<PyObject>> {
+            // safety: py.allow_threads runs in the same thread.
+            // Its 'Send' requirement is just to disallow passing 'py'.
+            struct ForceSend<T>(T);
+            unsafe impl<T> Send for ForceSend<T> {}
+            let mut iter = ForceSend(self.iter(py).borrow_mut());
+            // py.allow_threads is needed because iter.next might take Python GIL.
+            let next = py.allow_threads(|| iter.0.next());
+            match next {
+                None => Ok(None),
+                Some(result) => {
+                    let v = result.map_pyerr(py)?;
+                    let obj = v.to_py(py);
+                    Ok(Some(obj))
+                }
+            }
+        }
+
+        def __iter__(&self) -> PyResult<Self> {
+            Ok(self.clone_ref(py))
+        }
+    });
 }
 
-// Define some common types.
-py_stream_class!(mod bytes { Vec<u8> });
-py_stream_class!(mod pybytes { PyBytes });
-py_stream_class!(mod string { String });
+// fbcode has a whitelist of python2 executables, not including tests here
+#[cfg(test)]
+#[cfg(not(all(fbcode_build, feature = "python2")))]
+mod tests {
+    use super::*;
+    use futures::stream::StreamExt;
+
+    #[tokio::test]
+    async fn test_stream_from_python() {
+        let tstream: TStream<anyhow::Result<usize>> = with_py(|py| {
+            let input = vec![3, 10, 20].into_py_object(py).into_object();
+            input.extract(py).unwrap()
+        });
+        let mut stream = tstream.stream();
+        assert_eq!(stream.next().await.transpose().unwrap(), Some(3));
+        assert_eq!(stream.next().await.transpose().unwrap(), Some(10));
+        assert_eq!(stream.next().await.transpose().unwrap(), Some(20));
+        assert_eq!(stream.next().await.transpose().unwrap(), None);
+        assert_eq!(stream.next().await.transpose().unwrap(), None);
+    }
+
+    #[test]
+    fn test_stream_to_python() {
+        let orig_vec = vec![5, 20, 10];
+        let stream = futures::stream::iter(orig_vec.clone());
+        let tstream: TStream<anyhow::Result<usize>> = stream.map(Ok).into();
+        let new_vec: Vec<usize> = with_py(|py| {
+            let pyobj = tstream.into_py_object(py);
+            let pyiter = pyobj.iter(py).unwrap();
+            pyiter
+                .map(|r| with_py(|py| r.unwrap().extract::<usize>(py).unwrap()))
+                .collect()
+        });
+        assert_eq!(new_vec, orig_vec);
+    }
+
+    #[tokio::test]
+    async fn test_nested_stream_to_and_from_python() {
+        let pyplus1 = with_py(|py| {
+            py.run(
+                r#"def plus1(stream):
+                       for item in stream:
+                           if item == 5:
+                               raise RuntimeError("dislike this number")
+                           yield item + 1"#,
+                None,
+                None,
+            )
+            .unwrap();
+            py.eval("plus1", None, None).unwrap()
+        });
+
+        let stream = futures::stream::iter((5..9).rev());
+        let tstream: TStream<anyhow::Result<usize>> = stream.map(Ok).into();
+
+        let plus1 = |tstream: TStream<anyhow::Result<usize>>| -> TStream<anyhow::Result<usize>> {
+            with_py(|py| {
+                // TStream -> PyObject
+                let arg = tstream.into_py_object(py);
+                let obj: PyObject = pyplus1.call(py, (arg,), None).unwrap();
+                // PyObject -> TStream
+                obj.extract(py).unwrap()
+            })
+        };
+
+        let tstream = plus1(tstream);
+        let tstream = plus1(tstream);
+        let tstream = plus1(tstream);
+
+        let mut stream = tstream.stream();
+        assert_eq!(stream.next().await.map(|v| v.unwrap()), Some(11));
+        assert_eq!(stream.next().await.map(|v| v.unwrap()), Some(10));
+        assert_eq!(stream.next().await.map(|v| v.unwrap()), Some(9));
+
+        let err = stream.next().await.unwrap().unwrap_err();
+        assert!(format!("{}", err).contains("dislike this number"));
+
+        // The traceback includes the nested (3) functions.
+        let traceback: String = with_py(|py| {
+            let pyerr = Err::<u8, _>(err).map_pyerr(py).unwrap_err();
+            let traceback: PyObject = pyerr.ptraceback.unwrap();
+            let formatted = py
+                .import("traceback")
+                .unwrap()
+                .call(py, "format_tb", (traceback,), None)
+                .unwrap();
+            formatted.extract::<Vec<String>>(py).unwrap().concat()
+        });
+        assert_eq!(
+            traceback,
+            r#"  File "<string>", line 2, in plus1
+  File "<string>", line 2, in plus1
+  File "<string>", line 4, in plus1
+"#
+        );
+
+        assert_eq!(stream.next().await.map(|v| v.unwrap()), None);
+        assert_eq!(stream.next().await.map(|v| v.unwrap()), None);
+    }
+
+    fn with_py<R>(f: impl FnOnce(Python) -> R) -> R {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+        f(py)
+    }
+}

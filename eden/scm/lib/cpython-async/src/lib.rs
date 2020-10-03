@@ -9,8 +9,8 @@
 
 //! Utilities to make async <-> Python integration easier.
 //!
-//! The `TStream` type provides easy, and lossless conversion between
-//! Rust `Stream` and Python objects.
+//! The `TStream` type provides easy conversion between Rust `Stream` and Python
+//! objects.
 //!
 //! The `PyFuture` type provides a way to export Rust `Future` to
 //! Python.
@@ -20,10 +20,6 @@ mod stream;
 
 pub use future::future as PyFuture;
 pub use stream::TStream;
-
-// Used by py_stream_class!.
-pub use stream::PyStreamFromPy;
-pub use stream::PyStreamToPy;
 
 // Re-export.
 pub use anyhow;

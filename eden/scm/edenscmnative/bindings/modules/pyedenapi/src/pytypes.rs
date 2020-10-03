@@ -8,7 +8,6 @@
 //! Python types that implements `ToPyObject`.
 
 use cpython::*;
-use cpython_async::py_stream_class;
 use edenapi::Stats;
 use edenapi_types::CommitRevlogData;
 
@@ -41,5 +40,3 @@ impl ToPyObject for PyCommitRevlogData {
         (id, data).to_py_object(py).into_object()
     }
 }
-
-py_stream_class!(mod commitrevlogdata { super::PyCommitRevlogData });

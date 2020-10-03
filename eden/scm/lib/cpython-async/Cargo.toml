@@ -8,6 +8,10 @@ anyhow = "1"
 async-runtime = { path = "../async-runtime" }
 cpython-ext = { path = "../cpython-ext", default-features = false }
 futures = "0.3"
+itertools = "0.8"
+
+[dev-dependencies]
+tokio = { version = "0.2", features = ["full"] }
 
 [features]
 default = ["python3"]
