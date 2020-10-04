@@ -115,12 +115,14 @@ MERGED_RESULT = split_lines(
      The two are the same,
      But after they are produced,
        they have different names.
-""" b"""<<<<<<< LAO
+"""
+    b"""<<<<<<< LAO
 =======
 
        -- The Way of Lao-Tzu, tr. Wing-tsit Chan
 
-""" b""">>>>>>> TAO
+"""
+    b""">>>>>>> TAO
 """
 )
 

@@ -8,8 +8,6 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-
-
 # Setup the repository
 
 sh % "hg init myrepo"

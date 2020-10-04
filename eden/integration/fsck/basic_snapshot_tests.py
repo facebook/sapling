@@ -434,7 +434,7 @@ class Basic20181121Test(SnapshotTestBase):
         self._verify_orphans_extracted(log_dir, expected_errors)
 
     def _truncate_main_dir(
-        self
+        self,
     ) -> Tuple[verify_mod.ExpectedFileSet, List[ExpectedError]]:
         # inode 4 is main/
         bad_main_data = b""

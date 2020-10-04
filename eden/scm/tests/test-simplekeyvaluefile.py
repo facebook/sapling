@@ -86,8 +86,11 @@ class testsimplekeyvaluefile(unittest.TestCase):
         dr = scmutil.simplekeyvaluefile(self.vfs, "fl").read(firstlinenonkeyval=True)
         self.assertEqual(dr, {"__firstline": "1.0", "key1": "value1"})
 
-if not hasattr(unittest.TestCase, 'assertRaisesRegex'):
-    unittest.TestCase.assertRaisesRegex = getattr(unittest.TestCase, 'assertRaisesRegexp')
+
+if not hasattr(unittest.TestCase, "assertRaisesRegex"):
+    unittest.TestCase.assertRaisesRegex = getattr(
+        unittest.TestCase, "assertRaisesRegexp"
+    )
 
 if __name__ == "__main__":
     silenttestrunner.main(__name__)

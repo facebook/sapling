@@ -78,7 +78,7 @@ class CorruptOverlayTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
             )
 
     def test_mount_possible_after_corrupt_directory_and_cached_next_inode_number(
-        self
+        self,
     ) -> None:
         test_dir_path = self.mount_path / "test_dir"
         test_dir_path.mkdir()

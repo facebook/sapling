@@ -718,13 +718,13 @@ sh % "hg log -vpr . -Tjson --stat" == (
       "bookmarks": [],
       "parents": ["88058a185da202d22e8ee0bb4d3515ff0ecb222b"],
       "files": ["fourth", "second", "third"],
-      "diffstat": " fourth |  1 +\n second |  1 -\n third  |  1 +\n 3 files changed, 2 insertions(+), 1 deletions(-)\n",""" +
-(
-    '\n      "diff": "diff -r 88058a185da2 -r 209edb6a1848 fourth\\n--- /dev/null\\tThu Jan 01 00:00:00 1970 +0000\\n+++ b/fourth\\tWed Jan 01 10:01:00 2020 +0000\\n@@ -0,0 +1,1 @@\\n+🥈\udced\udcb3\udca2(\udced\udcb2\udca1\\ndiff -r 88058a185da2 -r 209edb6a1848 second\\n--- a/second\\tMon Jan 12 13:46:40 1970 +0000\\n+++ /dev/null\\tThu Jan 01 00:00:00 1970 +0000\\n@@ -1,1 +0,0 @@\\n-🥈\udced\udcb3\udca2(\udced\udcb2\udca1\\ndiff -r 88058a185da2 -r 209edb6a1848 third\\n--- /dev/null\\tThu Jan 01 00:00:00 1970 +0000\\n+++ b/third\\tWed Jan 01 10:01:00 2020 +0000\\n@@ -0,0 +1,1 @@\\n+third\\n"\n'
-if is_py3 else
-    '\n      "diff": "diff -r 88058a185da2 -r 209edb6a1848 fourth\\n--- /dev/null\\tThu Jan 01 00:00:00 1970 +0000\\n+++ b/fourth\\tWed Jan 01 10:01:00 2020 +0000\\n@@ -0,0 +1,1 @@\\n+🥈\xed\xb3\xa2(\xed\xb2\xa1\\ndiff -r 88058a185da2 -r 209edb6a1848 second\\n--- a/second\\tMon Jan 12 13:46:40 1970 +0000\\n+++ /dev/null\\tThu Jan 01 00:00:00 1970 +0000\\n@@ -1,1 +0,0 @@\\n-🥈\xed\xb3\xa2(\xed\xb2\xa1\\ndiff -r 88058a185da2 -r 209edb6a1848 third\\n--- /dev/null\\tThu Jan 01 00:00:00 1970 +0000\\n+++ b/third\\tWed Jan 01 10:01:00 2020 +0000\\n@@ -0,0 +1,1 @@\\n+third\\n"\n'
-) +
-    r"""     }
+      "diffstat": " fourth |  1 +\n second |  1 -\n third  |  1 +\n 3 files changed, 2 insertions(+), 1 deletions(-)\n","""
+    + (
+        '\n      "diff": "diff -r 88058a185da2 -r 209edb6a1848 fourth\\n--- /dev/null\\tThu Jan 01 00:00:00 1970 +0000\\n+++ b/fourth\\tWed Jan 01 10:01:00 2020 +0000\\n@@ -0,0 +1,1 @@\\n+🥈\udced\udcb3\udca2(\udced\udcb2\udca1\\ndiff -r 88058a185da2 -r 209edb6a1848 second\\n--- a/second\\tMon Jan 12 13:46:40 1970 +0000\\n+++ /dev/null\\tThu Jan 01 00:00:00 1970 +0000\\n@@ -1,1 +0,0 @@\\n-🥈\udced\udcb3\udca2(\udced\udcb2\udca1\\ndiff -r 88058a185da2 -r 209edb6a1848 third\\n--- /dev/null\\tThu Jan 01 00:00:00 1970 +0000\\n+++ b/third\\tWed Jan 01 10:01:00 2020 +0000\\n@@ -0,0 +1,1 @@\\n+third\\n"\n'
+        if is_py3
+        else '\n      "diff": "diff -r 88058a185da2 -r 209edb6a1848 fourth\\n--- /dev/null\\tThu Jan 01 00:00:00 1970 +0000\\n+++ b/fourth\\tWed Jan 01 10:01:00 2020 +0000\\n@@ -0,0 +1,1 @@\\n+🥈\xed\xb3\xa2(\xed\xb2\xa1\\ndiff -r 88058a185da2 -r 209edb6a1848 second\\n--- a/second\\tMon Jan 12 13:46:40 1970 +0000\\n+++ /dev/null\\tThu Jan 01 00:00:00 1970 +0000\\n@@ -1,1 +0,0 @@\\n-🥈\xed\xb3\xa2(\xed\xb2\xa1\\ndiff -r 88058a185da2 -r 209edb6a1848 third\\n--- /dev/null\\tThu Jan 01 00:00:00 1970 +0000\\n+++ b/third\\tWed Jan 01 10:01:00 2020 +0000\\n@@ -0,0 +1,1 @@\\n+third\\n"\n'
+    )
+    + r"""     }
     ]"""
 )
 
@@ -2552,15 +2552,15 @@ sh % "hg diff -c 8" == (
     +++ b/fourth	Wed Jan 01 10:01:00 2020 +0000
     @@ -0,0 +1,1 @@
 """
-+ ("    +🥈\udce2(\udca1" if is_py3 else "    +🥈\xe2\x28\xa1") +
-    """
+    + ("    +🥈\udce2(\udca1" if is_py3 else "    +🥈\xe2\x28\xa1")
+    + """
     diff -r 88058a185da2 -r 209edb6a1848 second
     --- a/second	Mon Jan 12 13:46:40 1970 +0000
     +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
     @@ -1,1 +0,0 @@
 """
-+ ("    -🥈\udce2(\udca1" if is_py3 else "    -🥈\xe2\x28\xa1") +
-    """
+    + ("    -🥈\udce2(\udca1" if is_py3 else "    -🥈\xe2\x28\xa1")
+    + """
     diff -r 88058a185da2 -r 209edb6a1848 third
     --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
     +++ b/third	Wed Jan 01 10:01:00 2020 +0000
@@ -2575,15 +2575,15 @@ sh % "hg log -r 8 -T '{diff()}'" == (
     +++ b/fourth	Wed Jan 01 10:01:00 2020 +0000
     @@ -0,0 +1,1 @@
 """
-+ ("    +🥈\udce2(\udca1" if is_py3 else "    +🥈\xe2\x28\xa1") +
-    """
+    + ("    +🥈\udce2(\udca1" if is_py3 else "    +🥈\xe2\x28\xa1")
+    + """
     diff -r 88058a185da2 -r 209edb6a1848 second
     --- a/second	Mon Jan 12 13:46:40 1970 +0000
     +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
     @@ -1,1 +0,0 @@
 """
-+ ("    -🥈\udce2(\udca1" if is_py3 else "    -🥈\xe2\x28\xa1") +
-    """
+    + ("    -🥈\udce2(\udca1" if is_py3 else "    -🥈\xe2\x28\xa1")
+    + """
     diff -r 88058a185da2 -r 209edb6a1848 third
     --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
     +++ b/third	Wed Jan 01 10:01:00 2020 +0000
@@ -2598,7 +2598,7 @@ sh % "hg log -r 8 -T '{diff('\\''glob:f*'\\'')}'" == (
     +++ b/fourth	Wed Jan 01 10:01:00 2020 +0000
     @@ -0,0 +1,1 @@
 """
-+ ("    +🥈\udce2(\udca1" if is_py3 else "    +🥈\xe2\x28\xa1")
+    + ("    +🥈\udce2(\udca1" if is_py3 else "    +🥈\xe2\x28\xa1")
 )
 
 sh % "hg log -r 8 -T '{diff('\\'''\\'', '\\''glob:f*'\\'')}'" == (
@@ -2608,8 +2608,8 @@ sh % "hg log -r 8 -T '{diff('\\'''\\'', '\\''glob:f*'\\'')}'" == (
     +++ /dev/null	Thu Jan 01 00:00:00 1970 +0000
     @@ -1,1 +0,0 @@
 """
-+ ("    -🥈\udce2(\udca1" if is_py3 else "    -🥈\xe2\x28\xa1") +
-    """
+    + ("    -🥈\udce2(\udca1" if is_py3 else "    -🥈\xe2\x28\xa1")
+    + """
     diff -r 88058a185da2 -r 209edb6a1848 third
     --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
     +++ b/third	Wed Jan 01 10:01:00 2020 +0000
@@ -2624,7 +2624,7 @@ sh % "hg log -r 8 -T '{diff('\\''FOURTH'\\''|lower)}'" == (
     +++ b/fourth	Wed Jan 01 10:01:00 2020 +0000
     @@ -0,0 +1,1 @@
 """
-+ ("    +🥈\udce2(\udca1" if is_py3 else "    +🥈\xe2\x28\xa1")
+    + ("    +🥈\udce2(\udca1" if is_py3 else "    +🥈\xe2\x28\xa1")
 )
 
 # ui verbosity:

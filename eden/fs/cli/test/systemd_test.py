@@ -254,7 +254,7 @@ class SystemdEnvironmentFileLoadTest(unittest.TestCase):
         self.assertEqual(self.loads(b'my_variable=""').entries, [(b"my_variable", b"")])
 
     def test_multiple_variables_are_separated_by_newlines_or_carriage_returns(
-        self
+        self,
     ) -> None:
         self.assertEqual(
             self.loads(b"var1=value1\nvar2=value2\nvar3=value3\n").entries,
@@ -348,7 +348,7 @@ class SystemdEnvironmentFileLoadTest(unittest.TestCase):
         self.assertEqual(self.loads(b'''name='a'"b"''').entries, [(b"name", b"ab")])
 
     def test_quotes_in_values_are_included_verbatim_after_unquoted_nonwhitespace_characters(
-        self
+        self,
     ) -> None:
         self.assertEqual(
             self.loads(b"name=hello'world'").entries, [(b"name", b"hello'world'")]

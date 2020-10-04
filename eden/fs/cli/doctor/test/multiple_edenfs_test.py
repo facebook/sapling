@@ -187,7 +187,7 @@ kill -9 5678 9876
         self.assert_results(fixer, num_problems=1, num_manual_fixes=1)
 
     def test_when_differently_configured_edenfs_processes_running_with_rogue_pids(
-        self
+        self,
     ) -> None:
         proc_utils = self.make_proc_utils()
         proc_utils.add_edenfs(475203, "/tmp/config1/.eden")

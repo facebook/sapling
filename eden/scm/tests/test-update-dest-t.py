@@ -9,8 +9,6 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-
-
 sh % "setconfig 'extensions.treemanifest=!'"
 # Test update.requiredest
 sh % 'cd "$TESTTMP"'

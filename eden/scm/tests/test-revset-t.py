@@ -10,9 +10,8 @@ from __future__ import absolute_import
 import os
 import sys
 
-from testutil.dott import feature, sh, shlib, testtmp  # noqa: F401
-
 from edenscm.mercurial.pycompat import decodeutf8
+from testutil.dott import feature, sh, shlib, testtmp  # noqa: F401
 
 
 sh % "enable commitextras"
@@ -352,7 +351,9 @@ sh % "try -- -a-b-c--a" == r"""
     [255]"""
 
 if sys.version_info[0] >= 3:
-    sh % decodeutf8(b"try '\xc3\xa9'") == """
+    sh % decodeutf8(
+        b"try '\xc3\xa9'"
+    ) == """
         (symbol 'é')
         * set:
         <baseset [8]>
