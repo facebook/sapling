@@ -63,7 +63,7 @@ fn fail_on_path_conflicts(
                 .take(10)
                 .cloned()
                 .collect();
-            if intersection.len() > 0 {
+            if !intersection.is_empty() {
                 err(format_err!(
                     "There are paths present in both parents: {:?} ...",
                     intersection

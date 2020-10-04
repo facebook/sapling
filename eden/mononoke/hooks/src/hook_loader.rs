@@ -72,7 +72,7 @@ pub async fn load_hooks(
         hook_set.insert(hook.name.clone());
     }
 
-    if hooks_not_disabled.len() > 0 {
+    if !hooks_not_disabled.is_empty() {
         return Err(ErrorKind::NoSuchHookToDisable(hooks_not_disabled).into());
     }
 
@@ -85,7 +85,7 @@ pub async fn load_hooks(
             .collect();
         let bm_hook_set: HashSet<String> = hooks.clone().into_iter().collect();
         let diff: HashSet<_> = bm_hook_set.difference(&hook_set).collect();
-        if diff.len() != 0 {
+        if !diff.is_empty() {
             return Err(ErrorKind::NoSuchBookmarkHook(
                 bookmark,
                 diff.into_iter().cloned().collect(),

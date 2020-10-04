@@ -91,7 +91,7 @@ where
             //
             // - Our underlying stream was empty. In this case, we shouldn't return anything.
 
-            let out = if self.buff.len() > 0 || (self.had_data && !self.emitted) {
+            let out = if !self.buff.is_empty() || (self.had_data && !self.emitted) {
                 // We did have some buffered data. Emit that.
                 self.emitted = true;
                 let chunk = std::mem::replace(&mut self.buff, BytesMut::new()).freeze();
@@ -420,7 +420,7 @@ mod test {
         }
 
         // If there were no contents, then just return that.
-        if expected_bytes.len() == 0 {
+        if expected_bytes.is_empty() {
             return true;
         }
 

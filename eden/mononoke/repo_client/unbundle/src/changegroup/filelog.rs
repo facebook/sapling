@@ -334,7 +334,7 @@ impl Arbitrary for Filelog {
         }
 
         if let FilelogData::RawBytes(ref bytes) = self.data {
-            if bytes.len() != 0 {
+            if !bytes.is_empty() {
                 let mut f = self.clone();
                 f.data = FilelogData::RawBytes(Bytes::from(Vec::new()));
                 append(&mut result, f);

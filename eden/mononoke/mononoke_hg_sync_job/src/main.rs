@@ -175,7 +175,7 @@ fn build_reporting_handler(
         let fut = match log_entries {
             None => ok(()).right_future(),
             Some(log_entries) => {
-                if log_entries.len() == 0 {
+                if log_entries.is_empty() {
                     err(Error::msg("unexpected empty pipeline state")).right_future()
                 } else {
                     let duration = maybe_stats
@@ -941,7 +941,7 @@ fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> BoxFuture<(), Error> {
                                         move |_| ok(can_continue())
                                     })
                                     .filter_map(|entry_vec| {
-                                        if entry_vec.len() == 0 {
+                                        if entry_vec.is_empty() {
                                             None
                                         } else {
                                             Some(entry_vec)

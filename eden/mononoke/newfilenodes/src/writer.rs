@@ -210,7 +210,7 @@ async fn insert_filenodes(
             .await?;
     }
 
-    if copydata_rows.len() > 0 {
+    if !copydata_rows.is_empty() {
         InsertFixedcopyinfo::query(&write_conn, &copydata_rows[..])
             .compat()
             .await?;

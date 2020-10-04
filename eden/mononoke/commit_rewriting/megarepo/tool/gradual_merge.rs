@@ -707,7 +707,7 @@ mod test {
                 .compat()
                 .await?;
             let hg_cs = hg_cs_id.load(ctx.clone(), repo.blobstore()).await?;
-            assert_eq!(hg_cs.files().len(), 0);
+            assert!(hg_cs.files().is_empty());
         }
         Ok(())
     }

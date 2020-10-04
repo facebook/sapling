@@ -327,7 +327,7 @@ impl RevlogChangeset {
             let mut dofiles = true;
             for line in lines {
                 if dofiles {
-                    if line.len() == 0 {
+                    if line.is_empty() {
                         dofiles = false;
                         continue;
                     }

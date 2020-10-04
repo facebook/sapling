@@ -43,7 +43,7 @@ impl ChangesetMetadata {
             write!(meta, "{}", parent).expect("writes to memory don't fail");
         }
 
-        if meta.len() == 0 {
+        if meta.is_empty() {
             return;
         }
 

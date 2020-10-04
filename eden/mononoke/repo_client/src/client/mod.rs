@@ -301,7 +301,7 @@ fn bundle2caps() -> String {
 
     for &(ref key, ref value) in &caps {
         let encodedkey = key.to_string();
-        if value.len() > 0 {
+        if !value.is_empty() {
             let encodedvalue = value.join(",");
             encodedcaps.push([encodedkey, encodedvalue].join("="));
         } else {
@@ -2077,7 +2077,7 @@ pub fn gettreepack_entries(
         directories,
     } = params;
 
-    if fetchdepth == Some(1) && directories.len() > 0 {
+    if fetchdepth == Some(1) && !directories.is_empty() {
         if directories.len() != mfnodes.len() {
             let e = format_err!(
                 "invalid directories count ({}, expected {})",
@@ -2101,7 +2101,7 @@ pub fn gettreepack_entries(
             .into_iter()
             .zip(directories.into_iter())
             .map(|(node, path)| {
-                let path = if path.len() > 0 {
+                let path = if !path.is_empty() {
                     Some(MPath::new(path.as_ref())?)
                 } else {
                     None

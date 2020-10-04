@@ -67,7 +67,7 @@ impl ManifestContent {
         let mut files = BTreeMap::new();
 
         for line in data.split(|b| *b == b'\n') {
-            if line.len() == 0 {
+            if line.is_empty() {
                 break;
             }
 
@@ -216,7 +216,7 @@ impl Details {
 
         ensure!(flags.len() <= 1, "More than 1 flag: {:?}", flags);
 
-        let flag = if flags.len() == 0 {
+        let flag = if flags.is_empty() {
             Type::File(FileType::Regular)
         } else {
             match flags[0] {

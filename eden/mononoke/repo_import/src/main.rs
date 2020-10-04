@@ -460,7 +460,7 @@ async fn merge_imported_commit(
         .cloned()
         .collect();
 
-    if intersection.len() > 0 {
+    if !intersection.is_empty() {
         return Err(format_err!(
             "There are paths present in both parents: {:?} ...",
             intersection

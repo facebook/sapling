@@ -229,7 +229,7 @@ pub fn apply(text: &[u8], delta: &Delta) -> Result<Vec<u8>> {
                 )
             })?);
         }
-        if frag.content.len() > 0 {
+        if !frag.content.is_empty() {
             chunks.push(frag.content.as_ref())
         }
         off = frag.end;
@@ -259,7 +259,7 @@ pub fn apply_chain<I: IntoIterator<Item = Delta>>(text: &[u8], deltas: I) -> Res
 
     let (wrapped_deltas, data) = wrap_deltas(deltas);
 
-    if wrapped_deltas.len() == 0 {
+    if wrapped_deltas.is_empty() {
         Ok(res)
     } else {
         // fold all deltas into one delta using logarithmic algorithm

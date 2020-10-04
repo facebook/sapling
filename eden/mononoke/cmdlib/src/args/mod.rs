@@ -1197,7 +1197,7 @@ pub fn parse_disabled_hooks_with_repo_prefix(
             .or_insert(HashSet::new())
             .insert(hook.to_string());
     }
-    if res.len() > 0 {
+    if !res.is_empty() {
         warn!(logger, "The following Hooks were disabled: {:?}", res);
     }
     Ok(res)
@@ -1215,7 +1215,7 @@ pub fn parse_disabled_hooks_no_repo_prefix(
         .map(|s| s.to_string())
         .collect();
 
-    if disabled_hooks.len() > 0 {
+    if !disabled_hooks.is_empty() {
         warn!(
             logger,
             "The following Hooks were disabled: {:?}", disabled_hooks

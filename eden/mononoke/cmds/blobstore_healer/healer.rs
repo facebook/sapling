@@ -279,7 +279,7 @@ fn heal_blob<'out>(
     multiplex_id: MultiplexId,
     entries: &[BlobstoreSyncQueueEntry],
 ) -> Option<impl Future<Output = Result<HealStats>> + 'out> {
-    if entries.len() == 0 {
+    if entries.is_empty() {
         return None;
     }
     // This is needed as we load by key, and a given key may have entries both before and after

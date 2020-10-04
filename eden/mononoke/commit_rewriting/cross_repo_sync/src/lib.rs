@@ -850,7 +850,7 @@ where
                     remapped_parents_outcome.extend(maybe_commit_sync_outcome.into_iter());
                 }
 
-                if remapped_parents_outcome.len() == 0 {
+                if remapped_parents_outcome.is_empty() {
                     self.update_wc_equivalence(ctx.clone(), hash, None).await?;
                 } else if remapped_parents_outcome.len() == 1 {
                     use CommitSyncOutcome::*;
@@ -1219,7 +1219,7 @@ where
             .collect();
         let cs = self.strip_removed_parents(cs, new_parents.keys().collect())?;
 
-        if new_parents.len() >= 1 {
+        if !new_parents.is_empty() {
             match rewrite_commit(
                 ctx.clone(),
                 cs,

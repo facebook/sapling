@@ -21,12 +21,12 @@ pub fn parse_chunking_hint(hint: String) -> Result<Vec<Vec<MPath>>, Error> {
     hint.split('\n')
         .filter_map(|line| {
             let line = line.trim_matches(|c| c == ' ' || c == '\n');
-            if line.len() > 0 {
+            if !line.is_empty() {
                 let v: Result<Vec<MPath>, Error> = line
                     .split(',')
                     .filter_map(|prefix| {
                         let trimmed = prefix.trim_matches(|c| c == ' ' || c == '\n');
-                        if trimmed.len() > 0 {
+                        if !trimmed.is_empty() {
                             Some(MPath::new(trimmed))
                         } else {
                             None

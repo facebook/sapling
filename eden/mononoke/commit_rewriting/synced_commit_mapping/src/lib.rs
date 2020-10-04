@@ -432,7 +432,7 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
             &target_repo_id,
         )
         .and_then(move |rows| {
-            if rows.len() >= 1 {
+            if !rows.is_empty() {
                 future::ok(rows.get(0).cloned()).left_future()
             } else {
                 SelectWorkingCopyEquivalence::query(

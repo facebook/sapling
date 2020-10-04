@@ -355,7 +355,7 @@ impl BlobstoreSyncQueue for SqlBlobstoreSyncQueue {
             .map_err(|errs| format_err!("failed to receive result {:?}", errs))
             .await?;
         let errs: Vec<_> = results.into_iter().filter_map(|r| r.err()).collect();
-        if errs.len() > 0 {
+        if !errs.is_empty() {
             Err(format_err!("failed to receive result {:?}", errs))
         } else {
             Ok(())

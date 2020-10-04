@@ -57,7 +57,7 @@ impl ManifestContent {
         };
 
         for line in lines {
-            if line.len() == 0 {
+            if line.is_empty() {
                 break;
             }
 
@@ -314,7 +314,7 @@ fn parse_hg_entry(data: &[u8]) -> Result<HgEntryId> {
         .with_context(|| format!("malformed hash: {:?}", hash))?;
     ensure!(flags.len() <= 1, "More than 1 flag: {:?}", flags);
 
-    let hg_entry_id = if flags.len() == 0 {
+    let hg_entry_id = if flags.is_empty() {
         HgEntryId::File(FileType::Regular, HgFileNodeId::new(hash))
     } else {
         match flags[0] {

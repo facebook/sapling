@@ -136,7 +136,7 @@ async fn run_in_once_mode(
         .collect()
         .await;
 
-    if entries.len() == 0 {
+    if entries.is_empty() {
         return Err(format_err!(
             "No entries for {} with id >{}",
             blobrepo.get_repoid(),

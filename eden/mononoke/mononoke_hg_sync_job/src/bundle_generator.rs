@@ -271,7 +271,7 @@ fn create_bundle_impl(
                     .flatten_stream()
                     .boxify();
 
-                if commits_to_push.len() > 0 {
+                if !commits_to_push.is_empty() {
                     bundle2_parts.push(try_boxfuture!(parts::changegroup_part(
                         changelog_entries,
                         Some(filenode_entries),

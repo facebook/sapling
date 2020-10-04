@@ -394,7 +394,7 @@ fn redaction_list(
                         .map({
                             cloned!(logger);
                             move |mut res| {
-                                if res.len() == 0 {
+                                if res.is_empty() {
                                     info!(logger, "No files are redacted at this commit");
                                 } else {
                                     res.sort();

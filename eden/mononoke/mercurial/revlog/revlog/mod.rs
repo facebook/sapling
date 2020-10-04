@@ -376,7 +376,7 @@ impl RevlogInner {
                 Ok(Chunk::Literal(vec![]))
             } else {
                 match parser::literal(chunkdata) {
-                    IResult::Done(rest, _) if rest.len() != 0 => Err(ErrorKind::Revlog(format!(
+                    IResult::Done(rest, _) if !rest.is_empty() => Err(ErrorKind::Revlog(format!(
                         "Failed to unpack literal: {} remains, {:?}",
                         rest.len(),
                         &rest[..16]
@@ -390,7 +390,7 @@ impl RevlogInner {
             }
         } else {
             match parser::deltachunk(chunkdata) {
-                IResult::Done(rest, _) if rest.len() != 0 => Err(ErrorKind::Revlog(format!(
+                IResult::Done(rest, _) if !rest.is_empty() => Err(ErrorKind::Revlog(format!(
                     "Failed to unpack details: {} remains, {:?}",
                     rest.len(),
                     &rest[..16]

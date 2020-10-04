@@ -123,7 +123,7 @@ async fn missing<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {
         .compat()
         .await
         .expect("Failed to fetch missing changeset (should succeed with None instead)");
-    assert_eq!(result.len(), 0);
+    assert!(result.is_empty());
 }
 
 async fn equivalent_working_copy<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {

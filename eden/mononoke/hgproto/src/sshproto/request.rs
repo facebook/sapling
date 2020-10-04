@@ -282,7 +282,7 @@ named!(
 /// A comma-separated list of arbitrary values. The input is assumed to be
 /// complete and exact.
 fn commavalues(input: &[u8]) -> IResult<&[u8], Vec<Vec<u8>>> {
-    if input.len() == 0 {
+    if input.is_empty() {
         // Need to handle this separately because the below will return
         // vec![vec![]] on an empty input.
         IResult::Done(b"", vec![])

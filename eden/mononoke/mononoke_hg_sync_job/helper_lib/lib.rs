@@ -172,7 +172,7 @@ pub async fn merge_timestamp_files(
                 .read_to_end(&mut file_bytes)
                 .map_err(|e| format_err!("Failed reading timestamps file {:?}: {}", path, e));
             // let's safeguard ourselves from the missing last newline
-            if file_bytes.len() > 0 && file_bytes[file_bytes.len() - 1] != b'\n' {
+            if !file_bytes.is_empty() && file_bytes[file_bytes.len() - 1] != b'\n' {
                 file_bytes.push(b'\n');
             }
             read_result.map(|_sz| file_bytes)

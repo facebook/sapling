@@ -1257,7 +1257,7 @@ fn report_missing(
     where_present: &str,
     where_missing: &str,
 ) -> Result<(), Error> {
-    if missing_things.len() != 0 {
+    if !missing_things.is_empty() {
         for i in 0..min(missing_things.len(), 10) {
             debug!(
                 ctx.logger(),

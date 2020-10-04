@@ -31,7 +31,7 @@ pub fn apply(text: &[u8], deltas: &[Delta]) -> Vec<u8> {
         if off < d.start {
             chunks.push(snip(off, d.start, text));
         }
-        if d.content.len() > 0 {
+        if !d.content.is_empty() {
             chunks.push(d.content.as_ref())
         }
         off = d.end;

@@ -266,7 +266,7 @@ impl Decoder for SshDecoder {
 
     fn decode(&mut self, buf: &mut BytesMut) -> io::Result<Option<SshMsg>> {
         if let Some(mut data) = self.0.decode(buf).map_err(ioerr_cvt)? {
-            if data.len() == 0 {
+            if data.is_empty() {
                 return Ok(None);
             }
             match data.split_to(1)[0] {
@@ -330,7 +330,7 @@ impl Encoder for SshEncoder {
             }
             SshStream::Preamble(preamble) => {
                 // msg.1 is ignored in preamble
-                debug_assert!(msg.1.len() == 0, "preamble ignores additional bytes");
+                debug_assert!(msg.1.is_empty(), "preamble ignores additional bytes");
                 v.put_u8(3);
                 let preamble = serde_json::to_vec(&preamble)?;
                 v.extend_from_slice(&preamble);
