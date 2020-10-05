@@ -38,9 +38,7 @@ void BackingStoreLogger::logImport(
 
   std::optional<std::string> cmdline;
   if (pid) {
-#ifndef _WIN32
     cmdline = processNameCache_->getSpacedProcessName(pid.value());
-#endif
   }
 
   std::string cause_string = "<invalid>";

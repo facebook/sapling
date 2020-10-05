@@ -161,6 +161,8 @@ std::string readPidName(pid_t pid) {
   }
 
   return extractCommandLineFromProcArgs(procargs, len).str();
+#elif _WIN32
+  return "<NOT IMPLEMENTED>";
 #else
   char target[1024];
   const auto fd =

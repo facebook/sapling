@@ -26,7 +26,12 @@ class PrjfsRequestContext : public RequestContext {
       const PRJ_CALLBACK_DATA& prjfsData)
       : RequestContext(channel->getProcessAccessLog()),
         channel_(channel),
-        commandId_(prjfsData.CommandId) {}
+        commandId_(prjfsData.CommandId),
+        clientPid_(prjfsData.TriggeringProcessId) {}
+
+  std::optional<pid_t> getClientPid() const override {
+    return clientPid_;
+  }
 
   folly::Future<folly::Unit> catchErrors(folly::Future<folly::Unit>&& fut) {
     return std::move(fut).thenTryInline([this](folly::Try<folly::Unit>&& try_) {
@@ -59,6 +64,7 @@ class PrjfsRequestContext : public RequestContext {
  private:
   PrjfsChannel* channel_;
   int32_t commandId_;
+  pid_t clientPid_;
 };
 
 } // namespace facebook::eden

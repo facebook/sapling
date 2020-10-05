@@ -278,6 +278,14 @@ class EdenMount {
   FuseChannel* getFuseChannel() const;
 #endif
 
+  ProcessAccessLog& getProcessAccessLog() const {
+#ifdef _WIN32
+    return getPrjfsChannel()->getProcessAccessLog();
+#else
+    return getFuseChannel()->getProcessAccessLog();
+#endif
+  }
+
   /**
    * Return the path to the mount point.
    */

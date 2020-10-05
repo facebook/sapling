@@ -1275,27 +1275,18 @@ void EdenServiceHandler::debugGetInodePath(
 }
 
 void EdenServiceHandler::clearFetchCounts() {
-#ifndef _WIN32
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3);
 
   for (auto& mount : server_->getMountPoints()) {
     mount->getObjectStore()->clearFetchCounts();
   }
-#else
-  NOT_IMPLEMENTED();
-#endif // !_WIN32
 }
 
 void EdenServiceHandler::clearFetchCountsByMount(
     std::unique_ptr<std::string> mountPath) {
-#ifndef _WIN32
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3);
   auto mount = server_->getMount(*mountPath);
   mount->getObjectStore()->clearFetchCounts();
-
-#else
-  NOT_IMPLEMENTED();
-#endif // !_WIN32
 }
 
 void EdenServiceHandler::startRecordingBackingStoreFetch() {
@@ -1318,7 +1309,6 @@ void EdenServiceHandler::stopRecordingBackingStoreFetch(
 void EdenServiceHandler::getAccessCounts(
     GetAccessCountsResult& result,
     int64_t duration) {
-#ifndef _WIN32
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3);
 
   result.cmdsByPid_ref() =
@@ -1328,7 +1318,7 @@ void EdenServiceHandler::getAccessCounts(
 
   for (auto& mount : server_->getMountPoints()) {
     auto& mountStr = mount->getPath().value();
-    auto& pal = mount->getFuseChannel()->getProcessAccessLog();
+    auto& pal = mount->getProcessAccessLog();
 
     auto& pidFetches = mount->getObjectStore()->getPidFetches();
 
@@ -1341,9 +1331,6 @@ void EdenServiceHandler::getAccessCounts(
       ma.fetchCountsByPid_ref()[pid] = fetchCount;
     }
   }
-#else
-  NOT_IMPLEMENTED();
-#endif // !_WIN32
 }
 
 void EdenServiceHandler::clearAndCompactLocalStore() {
