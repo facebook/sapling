@@ -20,11 +20,21 @@ void checkSqliteResult(sqlite3* db, int result);
 /** A helper class for managing a handle to a sqlite database. */
 class SqliteDatabase {
  public:
+  constexpr static struct InMemory {
+  } inMemory{};
+
   /** Open a handle to the database at the specified path.
    * Will throw an exception if the database fails to open.
    * The database will be created if it didn't already exist.
    */
-  explicit SqliteDatabase(AbsolutePathPiece path);
+  explicit SqliteDatabase(AbsolutePathPiece path)
+      : SqliteDatabase(path.copy().c_str()) {}
+
+  /**
+   * Create a SQLite database in memory. It will throw an exception if the
+   * database fails to open. This should be only used in testing.
+   */
+  explicit SqliteDatabase(InMemory) : SqliteDatabase(":memory:") {}
 
   // Not copyable...
   SqliteDatabase(const SqliteDatabase&) = delete;
@@ -46,6 +56,8 @@ class SqliteDatabase {
   folly::Synchronized<sqlite3*>::LockedPtr lock();
 
  private:
+  explicit SqliteDatabase(const char* address);
+
   folly::Synchronized<sqlite3*> db_{nullptr};
 };
 

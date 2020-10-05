@@ -6,6 +6,9 @@
  */
 
 #include "eden/fs/sqlite/Sqlite.h"
+
+#include <folly/logging/xlog.h>
+
 using folly::StringPiece;
 using folly::Synchronized;
 using folly::to;
@@ -35,12 +38,10 @@ void checkSqliteResult(sqlite3* db, int result) {
       to<string>("sqlite error: ", result, ": ", sqlite3_errstr(result)));
 }
 
-SqliteDatabase::SqliteDatabase(AbsolutePathPiece path) {
+SqliteDatabase::SqliteDatabase(const char* addr) {
   sqlite3* db = nullptr;
-  auto result = sqlite3_open(path.copy().c_str(), &db);
+  auto result = sqlite3_open(addr, &db);
   if (result != SQLITE_OK) {
-    // On most error conditions sqlite3_open() does allocate the DB object,
-    // and it needs to be closed afterwards if it is non-null.
     sqlite3_close(db);
     checkSqliteResult(nullptr, result);
   }
@@ -67,6 +68,8 @@ SqliteStatement::SqliteStatement(
     folly::Synchronized<sqlite3*>::LockedPtr& db,
     folly::StringPiece query)
     : db_{*db} {
+  // debug logging to print every statment
+  XLOG(DBG9) << query;
   checkSqliteResult(
       db_,
       sqlite3_prepare_v2(
