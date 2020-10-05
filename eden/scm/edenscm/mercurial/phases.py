@@ -329,18 +329,7 @@ class phasecache(object):
 
         if self._draftrevs is None:
             cl = repo.changelog
-            if cl.userust("index2"):
-                publicheadnodes = repo.heads(includepublic=True, includedraft=False)
-                draftheadnodes = repo.heads(includepublic=False, includedraft=True)
-                draftnodes = cl.dag.only(draftheadnodes, publicheadnodes)
-                self._draftrevs = cl.torevset(draftnodes)
-            else:
-                publicheadrevs = repo.headrevs(includepublic=True, includedraft=False)
-                draftheadrevs = repo.headrevs(includepublic=False, includedraft=True)
-
-                self._publicrevs, self._draftrevs = cl.index2.phasesets(
-                    publicheadrevs, draftheadrevs
-                )
+            self.publicrevs(repo)
 
         return self._draftrevs
 
@@ -352,9 +341,15 @@ class phasecache(object):
 
         if self._publicrevs is None:
             cl = repo.changelog
+
             if cl.userust("index2"):
                 publicheadnodes = repo.heads(includepublic=True, includedraft=False)
-                self._publicrevs = cl.torevset(cl.dag.ancestors(publicheadnodes))
+                draftheadnodes = repo.heads(includepublic=False, includedraft=True)
+                draftnodes, publicnodes = cl.dag.onlyboth(
+                    draftheadnodes, publicheadnodes
+                )
+                self._publicrevs = cl.torevset(publicnodes)
+                self._draftrevs = cl.torevset(draftnodes)
             else:
                 publicheadrevs = repo.headrevs(includepublic=True, includedraft=False)
                 draftheadrevs = repo.headrevs(includepublic=False, includedraft=True)

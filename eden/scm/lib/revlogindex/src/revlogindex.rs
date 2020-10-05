@@ -15,7 +15,9 @@ use crate::Result;
 use bit_vec::BitVec;
 use byteorder::ReadBytesExt;
 use byteorder::BE;
+use dag::errors::DagError;
 use dag::nameset::hints::Flags;
+use dag::nameset::meta::MetaSet;
 use dag::ops::DagAddHeads;
 use dag::ops::DagAlgorithm;
 use dag::ops::IdConvert;
@@ -1344,15 +1346,160 @@ impl DagAlgorithm for RevlogIndex {
     fn only_both(&self, reachable: Set, unreachable: Set) -> dag::Result<(Set, Set)> {
         let reachable_ids = self.to_id_set(&reachable)?;
         let unreachable_ids = self.to_id_set(&unreachable)?;
-        let reachable_revs: Vec<u32> = reachable_ids.into_iter().map(|i| i.0 as u32).collect();
-        let unreachable_revs: Vec<u32> = unreachable_ids.into_iter().map(|i| i.0 as u32).collect();
-        // This is a same problem to head-based public/draft phase calculation.
-        let (result_unreachable_id_set, result_reachable_id_set) =
-            self.phasesets(unreachable_revs, reachable_revs)?;
-        let only = Set::from_spans_dag(result_reachable_id_set, self)?;
-        let ancestors = Set::from_spans_dag(result_unreachable_id_set, self)?;
-        ancestors.hints().add_flags(Flags::ANCESTORS);
-        Ok((only, ancestors))
+        let reachable_revs = reachable_ids.into_iter().map(|i| i.0 as u32);
+        let unreachable_revs = unreachable_ids.into_iter().map(|i| i.0 as u32);
+
+        // Used internally. Different from "phases.py".
+        #[repr(u8)]
+        #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
+        enum Phase {
+            Unspecified,
+            Draft,
+            Public,
+        }
+        impl Phase {
+            fn max(self, other: Phase) -> Phase {
+                if self > other { self } else { other }
+            }
+        }
+
+        struct OnlyBothState {
+            // Track the last_rev so we can resume from that location.
+            last_rev: u64,
+            // Track how many draft commits are remaining so we can stop processing after we've
+            // seen them. (Unless the limit rev indicates we should go farther).
+            remaining_draft: u64,
+            reachable_set: IdSet,
+            unreachable_set: IdSet,
+            phases: Vec<Phase>,
+            dag: Arc<RevlogIndex>,
+        }
+        let mut state = OnlyBothState {
+            last_rev: self.len() as u64,
+            remaining_draft: 0,
+            reachable_set: IdSet::empty(),
+            unreachable_set: IdSet::empty(),
+            phases: vec![Phase::Unspecified; self.len()],
+            dag: self.get_snapshot(),
+        };
+
+        for rev in reachable_revs {
+            state.phases[rev as usize] = Phase::Draft;
+            state.remaining_draft += 1;
+        }
+        for rev in unreachable_revs {
+            if state.phases[rev as usize] == Phase::Draft {
+                state.remaining_draft -= 1;
+            }
+            state.phases[rev as usize] = Phase::Public;
+        }
+
+        let arc_state = Arc::new(Mutex::new(state));
+
+        let evaluate = Arc::new(
+            move |limit_rev: u64| -> dag::Result<Arc<Mutex<OnlyBothState>>> {
+                let mut guard = arc_state.lock();
+                let state = &mut guard;
+
+                // If we've already processed the requested rev, and we don't have any draft
+                // commits remaining, exit early.
+                if limit_rev >= state.last_rev && state.remaining_draft == 0 {
+                    return Ok(arc_state.clone());
+                }
+
+                // Track the spans of public commits manually, instead of relying on constantly adding them
+                // to a span. This is a hotpath and this optimization can save 100+ms.
+                let mut start_public: i64 = -1;
+                for rev in (0..state.last_rev).rev() {
+                    state.last_rev = rev;
+
+                    let phase = state.phases[rev as usize];
+                    match phase {
+                        Phase::Public => {
+                            // Record the start of a public span.
+                            if start_public == -1 {
+                                start_public = rev as i64;
+                            }
+                        }
+                        _ => {
+                            // Record the end of a public span.
+                            if start_public != -1 {
+                                // Start is the end of the range because we're iterating in reverse order. So
+                                // start is the later revision.
+                                let span = Id(rev + 1)..=Id(start_public as u64);
+                                state.unreachable_set.push(span);
+                                start_public = -1;
+                            }
+                            if phase == Phase::Draft {
+                                state.remaining_draft -= 1;
+                                state.reachable_set.push(Id(rev));
+                            }
+                        }
+                    }
+                    for &parent_rev in state.dag.parent_revs(rev as u32)?.as_revs() {
+                        // Propagate phases from this rev to its parents, tracking changes to the number of
+                        // remaining drafts as we go.
+                        let old_parent_phase = state.phases[parent_rev as usize];
+                        let new_parent_phase = old_parent_phase.max(phase);
+                        if new_parent_phase == Phase::Draft && old_parent_phase != Phase::Draft {
+                            state.remaining_draft += 1;
+                        }
+                        if new_parent_phase == Phase::Public && old_parent_phase == Phase::Draft {
+                            state.remaining_draft -= 1;
+                        }
+                        state.phases[parent_rev as usize] = new_parent_phase;
+                    }
+
+                    if rev <= limit_rev && state.remaining_draft == 0 {
+                        break;
+                    }
+                }
+
+                // Record any final public spans
+                if start_public != -1 {
+                    let last_rev = state.last_rev;
+                    state
+                        .unreachable_set
+                        .push(Id(last_rev)..=Id(start_public as u64));
+                }
+
+                Ok(arc_state.clone())
+            },
+        );
+
+        let dag = self.get_snapshot();
+
+        // Kick off an initial evaluate to process all the draft commits.
+        let state = (evaluate)(self.len() as u64)?;
+        let reachable_set =
+            Set::from_spans_idmap_dag(state.lock().reachable_set.clone(), dag.clone(), dag.clone());
+
+        let eval_contains = evaluate.clone();
+        let is_public = move |_: &MetaSet, v: &Vertex| -> dag::Result<bool> {
+            let id = match dag.vertex_id(v.clone()) {
+                Ok(id) => id,
+                Err(DagError::VertexNotFound(_)) => return Ok(false),
+                Err(e) => {
+                    return Err(e);
+                }
+            };
+            Ok((eval_contains)(id.0)?.lock().phases[id.0 as usize] == Phase::Public)
+        };
+        let unreachable_set = Set::from_evaluate_contains(
+            move || {
+                let state = (evaluate)(0)?;
+                let guard = state.lock();
+
+                Ok(Set::from_spans_idmap_dag(
+                    guard.unreachable_set.clone(),
+                    guard.dag.clone(),
+                    guard.dag.clone(),
+                ))
+            },
+            is_public,
+        );
+        unreachable_set.hints().add_flags(Flags::ANCESTORS);
+        Ok((reachable_set, unreachable_set))
     }
 
     /// Calculates the descendants of the given set.
