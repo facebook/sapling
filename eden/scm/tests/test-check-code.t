@@ -13,8 +13,7 @@ New errors are not allowed. Warnings are strongly discouraged.
 
   $ NPROC=`hg debugsh -c 'import multiprocessing; ui.write(str(multiprocessing.cpu_count()))'`
   $ cat $TESTTMP/files.txt | PYTHONPATH= xargs -n64 -P $NPROC contrib/check-code.py --warnings --per-file=0 | LC_ALL=C sort
-  Skipping edenscm/hgext/extlib/cstore/key.h it has no-che?k-code (glob)
-  Skipping edenscm/hgext/extlib/cstore/store.h it has no-che?k-code (glob)
+  Skipping edenscm/hgext/extlib/ctreemanifest/key.h it has no-che?k-code (glob)
   Skipping edenscm/hgext/extlib/ctreemanifest/manifest.cpp it has no-che?k-code (glob)
   Skipping edenscm/hgext/extlib/ctreemanifest/manifest.h it has no-che?k-code (glob)
   Skipping edenscm/hgext/extlib/ctreemanifest/manifest_entry.cpp it has no-che?k-code (glob)
@@ -23,6 +22,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping edenscm/hgext/extlib/ctreemanifest/manifest_fetcher.h it has no-che?k-code (glob)
   Skipping edenscm/hgext/extlib/ctreemanifest/manifest_ptr.cpp it has no-che?k-code (glob)
   Skipping edenscm/hgext/extlib/ctreemanifest/manifest_ptr.h it has no-che?k-code (glob)
+  Skipping edenscm/hgext/extlib/ctreemanifest/store.h it has no-che?k-code (glob)
   Skipping edenscm/hgext/globalrevs.py it has no-che?k-code (glob)
   Skipping edenscm/hgext/hgsql.py it has no-che?k-code (glob)
   Skipping edenscm/mercurial/commands/eden.py it has no-che?k-code (glob)
