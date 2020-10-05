@@ -14,8 +14,6 @@ use http_client::{CertOrKeyMissing, HttpClientError};
 pub enum EdenApiError {
     #[error("Failed to serialize request: {0}")]
     RequestSerializationFailed(#[source] serde_cbor::Error),
-    #[error("Empty request")]
-    EmptyRequest,
     #[error(transparent)]
     BadConfig(#[from] ConfigError),
     #[error(transparent)]

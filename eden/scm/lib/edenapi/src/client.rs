@@ -228,7 +228,7 @@ impl EdenApi for Client {
         tracing::info!("Requesting content for {} file(s)", keys.len());
 
         if keys.is_empty() {
-            return Err(EdenApiError::EmptyRequest);
+            return Ok(Fetch::empty());
         }
 
         let url = self.url(paths::FILES, Some(&repo))?;
@@ -249,7 +249,7 @@ impl EdenApi for Client {
         tracing::info!("Requesting history for {} file(s)", keys.len());
 
         if keys.is_empty() {
-            return Err(EdenApiError::EmptyRequest);
+            return Ok(Fetch::empty());
         }
 
         let url = self.url(paths::HISTORY, Some(&repo))?;
@@ -287,7 +287,7 @@ impl EdenApi for Client {
         tracing::info!("Requesting content for {} file(s)", keys.len());
 
         if keys.is_empty() {
-            return Err(EdenApiError::EmptyRequest);
+            return Ok(Fetch::empty());
         }
 
         let url = self.url(paths::TREES, Some(&repo))?;

@@ -65,7 +65,8 @@ fn byte_count(value: usize) -> String {
 
 /// Format a bit rate using decimal prefixes.
 fn bit_rate(rate: f64) -> String {
-    if rate.floor() == 0.0 {
+    // Guard against zero, NaN, infinity, etc.
+    if !rate.is_normal() {
         return "0 b/s".into();
     }
 

@@ -45,6 +45,16 @@ pub struct Fetch<T> {
     pub stats: StatsFuture,
 }
 
+impl<T: Send + 'static> Fetch<T> {
+    pub fn empty() -> Self {
+        Self {
+            meta: Vec::new(),
+            entries: stream::empty().boxed(),
+            stats: future::ok(Stats::default()).boxed(),
+        }
+    }
+}
+
 /// Non-async version of `Fetch`.
 pub struct BlockingFetch<T> {
     pub meta: Vec<ResponseMeta>,
