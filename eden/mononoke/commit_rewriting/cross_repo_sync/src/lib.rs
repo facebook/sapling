@@ -1293,12 +1293,9 @@ where
         mut source_cs: BonsaiChangesetMut,
         new_source_parents: Vec<&ChangesetId>,
     ) -> Result<BonsaiChangesetMut, Error> {
-        source_cs.parents = source_cs
+        source_cs
             .parents
-            .clone()
-            .into_iter()
-            .filter(|p| new_source_parents.contains(&p))
-            .collect();
+            .retain(|p| new_source_parents.contains(&&*p));
 
         for (_, maybe_file_change) in source_cs.file_changes.iter_mut() {
             let new_file_change = if let Some(file_change) = maybe_file_change {
