@@ -10,6 +10,7 @@
 #include <optional>
 #include <vector>
 
+#include <fmt/format.h>
 #include <folly/FileUtil.h>
 #include <folly/MapUtil.h>
 #include <folly/system/ThreadName.h>
@@ -19,6 +20,11 @@
 #ifdef __APPLE__
 #include <libproc.h> // @manual
 #include <sys/sysctl.h> // @manual
+#endif
+
+#ifdef _WIN32
+#include "eden/fs/utils/Handle.h"
+#include "eden/fs/utils/StringConv.h"
 #endif
 
 namespace facebook::eden::detail {
@@ -162,7 +168,26 @@ std::string readPidName(pid_t pid) {
 
   return extractCommandLineFromProcArgs(procargs, len).str();
 #elif _WIN32
-  return "<NOT IMPLEMENTED>";
+  ProcessHandle handle{
+      OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid)};
+  if (!handle) {
+    auto err = GetLastError();
+    return fmt::format(FMT_STRING("<err:{}>"), win32ErrorToString(err));
+  }
+
+  // MAX_PATH on Windows is only 260 characters, but on recent Windows, this
+  // constant doesn't represent the actual maximum length of a path, since
+  // there is no exact value for it, and QueryFullProcessImageName doesn't
+  // appear to be helpful in giving us the actual size of the path, we just
+  // use a large enough value.
+  wchar_t path[SHRT_MAX];
+  DWORD size = SHRT_MAX;
+  if (QueryFullProcessImageNameW(handle.get(), 0, path, &size) == 0) {
+    auto err = GetLastError();
+    return fmt::format(FMT_STRING("<err:{}>"), win32ErrorToString(err));
+  }
+
+  return wideToMultibyteString<std::string>(path);
 #else
   char target[1024];
   const auto fd =

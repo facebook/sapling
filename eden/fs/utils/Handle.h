@@ -125,7 +125,22 @@ struct TokenHandleTraits {
   }
 };
 
+/*
+ * Process Handle traits. nullptr is defined as an invalid one.
+ */
+struct ProcessHandleTraits {
+  using Type = HANDLE;
+
+  static Type invalidHandleValue() noexcept {
+    return nullptr;
+  }
+  static void close(Type handle) noexcept {
+    CloseHandle(handle);
+  }
+};
+
 using TokenHandle = HandleBase<TokenHandleTraits>;
+using ProcessHandle = HandleBase<ProcessHandleTraits>;
 
 } // namespace eden
 } // namespace facebook
