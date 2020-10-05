@@ -42,6 +42,7 @@ pub type StatsFuture =
 pub struct HttpClient {
     pool: Pool,
     report_stats: Option<Arc<dyn Fn(&Stats) + Send + Sync + 'static>>,
+    verbose: bool,
 }
 
 impl HttpClient {
@@ -49,6 +50,7 @@ impl HttpClient {
         Self {
             pool: Pool::new(),
             report_stats: None,
+            verbose: false,
         }
     }
 
@@ -66,6 +68,10 @@ impl HttpClient {
             report_stats: Some(Arc::new(report_stats)),
             ..self
         }
+    }
+
+    pub fn verbose(self, verbose: bool) -> Self {
+        Self { verbose, ..self }
     }
 
     /// Perform multiple HTTP requests concurrently.
@@ -100,7 +106,7 @@ impl HttpClient {
         P: FnMut(Progress),
     {
         let multi = self.pool.multi();
-        let driver = MultiDriver::new(multi.get(), progress_cb);
+        let driver = MultiDriver::new(multi.get(), progress_cb, self.verbose);
 
         for request in requests {
             let handle: Easy2<Buffered> = request.try_into()?;
@@ -205,7 +211,7 @@ impl HttpClient {
         P: FnMut(Progress),
     {
         let multi = self.pool.multi();
-        let driver = MultiDriver::new(multi.get(), progress_cb);
+        let driver = MultiDriver::new(multi.get(), progress_cb, self.verbose);
 
         for request in requests {
             let handle: Easy2<Streaming<R>> = request.try_into()?;

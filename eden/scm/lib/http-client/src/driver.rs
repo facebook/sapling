@@ -59,6 +59,7 @@ where
     multi: &'a Multi,
     handles: RefCell<Vec<Option<Easy2Handle<H>>>>,
     progress: ProgressReporter<P>,
+    verbose: bool,
 }
 
 impl<'a, H, P> MultiDriver<'a, H, P>
@@ -66,11 +67,12 @@ where
     H: Configure,
     P: FnMut(Progress),
 {
-    pub(crate) fn new(multi: &'a Multi, progress_cb: P) -> Self {
+    pub(crate) fn new(multi: &'a Multi, progress_cb: P, verbose: bool) -> Self {
         Self {
             multi,
             handles: RefCell::new(Vec::new()),
             progress: ProgressReporter::with_callback(progress_cb),
+            verbose,
         }
     }
 
@@ -179,6 +181,9 @@ where
         };
 
         tracing::debug!("{}", &stats);
+        if self.verbose {
+            eprintln!("{}", &stats);
+        }
 
         Ok(stats)
     }

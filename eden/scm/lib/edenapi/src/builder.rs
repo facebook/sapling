@@ -30,6 +30,7 @@ pub struct Builder {
     max_trees: Option<usize>,
     max_history: Option<usize>,
     timeout: Option<Duration>,
+    debug: bool,
 }
 
 impl Builder {
@@ -81,6 +82,11 @@ impl Builder {
             .map_err(|e| ConfigError::Malformed("edenapi.timeout".into(), e))?
             .map(Duration::from_secs);
 
+        let debug = config
+            .get_opt("edenapi", "debug")
+            .map_err(|e| ConfigError::Malformed("edenapi.timeout".into(), e))?
+            .unwrap_or_default();
+
         Ok(Self {
             server_url: Some(server_url),
             client_creds,
@@ -90,6 +96,7 @@ impl Builder {
             max_trees,
             max_history,
             timeout,
+            debug,
         })
     }
 
@@ -181,6 +188,7 @@ pub(crate) struct Config {
     pub(crate) max_trees: Option<usize>,
     pub(crate) max_history: Option<usize>,
     pub(crate) timeout: Option<Duration>,
+    pub(crate) debug: bool,
 }
 
 impl TryFrom<Builder> for Config {
@@ -196,6 +204,7 @@ impl TryFrom<Builder> for Config {
             max_trees,
             max_history,
             timeout,
+            debug,
         } = builder;
 
         // Check for missing required fields.
@@ -215,6 +224,7 @@ impl TryFrom<Builder> for Config {
             max_trees,
             max_history,
             timeout,
+            debug,
         })
     }
 }

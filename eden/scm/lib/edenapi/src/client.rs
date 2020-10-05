@@ -49,10 +49,8 @@ pub struct Client {
 impl Client {
     /// Create an EdenAPI client with the given configuration.
     pub(crate) fn with_config(config: Config) -> Self {
-        Self {
-            config,
-            client: http_client("edenapi"),
-        }
+        let client = http_client("edenapi").verbose(config.debug);
+        Self { config, client }
     }
 
     /// Append a repo name and endpoint path onto the server's base URL.
