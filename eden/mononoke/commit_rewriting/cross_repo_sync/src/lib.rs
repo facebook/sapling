@@ -720,6 +720,39 @@ where
         source_cs_id: ChangesetId,
         parent_mapping_selection_hint: CandidateSelectionHint,
     ) -> Result<Option<ChangesetId>, Error> {
+        self.unsafe_sync_commit_impl(ctx, source_cs_id, parent_mapping_selection_hint, None)
+            .await
+    }
+
+    /// Same as `unsafe_commit_sync`, but with a version override
+    /// Normally commit sync logic would chose the `CommitSyncConfigVersion` to use
+    /// from the parent commits. In tests it's convenient to just force the use
+    /// of a different version instead of a lengthy crafting of "version boundary"
+    /// commits.
+    /// It is a dangerous override and should be used from tests.
+    pub async fn test_unsafe_sync_commit_with_version_override(
+        &self,
+        ctx: CoreContext,
+        source_cs_id: ChangesetId,
+        parent_mapping_selection_hint: CandidateSelectionHint,
+        sync_config_version_override: Option<CommitSyncConfigVersion>,
+    ) -> Result<Option<ChangesetId>, Error> {
+        self.unsafe_sync_commit_impl(
+            ctx,
+            source_cs_id,
+            parent_mapping_selection_hint,
+            sync_config_version_override,
+        )
+        .await
+    }
+
+    async fn unsafe_sync_commit_impl(
+        &self,
+        ctx: CoreContext,
+        source_cs_id: ChangesetId,
+        parent_mapping_selection_hint: CandidateSelectionHint,
+        sync_config_version_override: Option<CommitSyncConfigVersion>,
+    ) -> Result<Option<ChangesetId>, Error> {
         // Take most of below function unsafe_sync_commit into here and delete. Leave pushrebase in next fn
         let (source_repo, _) = self.get_source_target();
 
@@ -737,12 +770,19 @@ where
         let parents: Vec<_> = cs.parents().collect();
 
         if parents.is_empty() {
-            self.sync_commit_no_parents(ctx.clone(), cs).await
-        } else if parents.len() == 1 {
-            self.sync_commit_single_parent(ctx.clone(), cs, parent_mapping_selection_hint)
+            self.sync_commit_no_parents(ctx.clone(), cs, sync_config_version_override)
                 .await
+        } else if parents.len() == 1 {
+            self.sync_commit_single_parent(
+                ctx.clone(),
+                cs,
+                parent_mapping_selection_hint,
+                sync_config_version_override,
+            )
+            .await
         } else {
-            self.sync_merge(ctx.clone(), cs).await
+            self.sync_merge(ctx.clone(), cs, sync_config_version_override)
+                .await
         }
     }
 
@@ -965,15 +1005,23 @@ where
         &self,
         ctx: CoreContext,
         cs: BonsaiChangeset,
+        sync_config_version_override: Option<CommitSyncConfigVersion>,
     ) -> Result<Option<ChangesetId>, Error> {
         let source_cs_id = cs.get_changeset_id();
-        let (source_repo, target_repo, rewrite_paths) = self.get_source_target_mover(&ctx)?;
+        let (source_repo, target_repo, mover) = match sync_config_version_override {
+            None => self.get_source_target_mover(&ctx)?,
+            Some(version_override) => {
+                let (source_repo, target_repo) = self.get_source_target();
+                let mover = self.get_mover_by_version(&version_override)?;
+                (source_repo, target_repo, mover)
+            }
+        };
 
         match rewrite_commit(
             ctx.clone(),
             cs.into_mut(),
             &HashMap::new(),
-            rewrite_paths,
+            mover,
             source_repo.clone(),
         )
         .await?
@@ -1011,6 +1059,7 @@ where
         ctx: CoreContext,
         cs: BonsaiChangeset,
         parent_mapping_selection_hint: CandidateSelectionHint,
+        sync_config_version_override: Option<CommitSyncConfigVersion>,
     ) -> Result<Option<ChangesetId>, Error> {
         let source_cs_id = cs.get_changeset_id();
         let cs = cs.into_mut();
@@ -1039,9 +1088,10 @@ where
             }
             RewrittenAs(remapped_p, maybe_version)
             | EquivalentWorkingCopyAncestor(remapped_p, maybe_version) => {
-                let version = match maybe_version {
-                    Some(version) => version,
-                    None => {
+                let version = match (sync_config_version_override, maybe_version) {
+                    (Some(version_override), _) => version_override,
+                    (None, Some(version)) => version,
+                    (None, None) => {
                         // TODO(stash): this case should go away:
                         // RewrittenAs and EquivalentWorkingCopyAncestor should not store
                         // optional mapping
@@ -1127,6 +1177,7 @@ where
         &self,
         ctx: CoreContext,
         cs: BonsaiChangeset,
+        _sync_config_version_override: Option<CommitSyncConfigVersion>,
     ) -> Result<Option<ChangesetId>, Error> {
         if let CommitSyncRepos::SmallToLarge { .. } = self.repos {
             bail!("syncing merge commits is supported only in large to small direction");
