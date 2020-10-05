@@ -11,6 +11,7 @@ use anyhow::{anyhow, Error, Result};
 use cached_config::{ConfigHandle, ConfigStore};
 use commitsync::types::{RawCommitSyncAllVersions, RawCommitSyncCurrentVersions};
 use context::CoreContext;
+use iterhelpers::get_only_item;
 use metaconfig_parser::Convert;
 use metaconfig_types::{CommitSyncConfig, CommitSyncConfigVersion};
 use mononoke_types::RepositoryId;
@@ -158,23 +159,6 @@ impl CfgrLiveCommitSyncConfig {
                 .iter()
                 .any(|small_repo| small_repo.repoid == repo_id.id())
     }
-
-    /// Return a clone of the only item in an iterator
-    /// Error out otherwise
-    fn get_only_item<T: Clone, I: IntoIterator<Item = T>, N: Fn() -> Error, M: Fn() -> Error>(
-        items: I,
-        no_items_error: N,
-        many_items_error: M,
-    ) -> Result<T> {
-        let mut iter = items.into_iter();
-        let maybe_first = iter.next();
-        let maybe_second = iter.next();
-        match (maybe_first, maybe_second) {
-            (None, None) => Err(no_items_error()),
-            (Some(only_item), None) => Ok(only_item.clone()),
-            (_, _) => return Err(many_items_error()),
-        }
-    }
 }
 
 impl LiveCommitSyncConfig for CfgrLiveCommitSyncConfig {
@@ -222,12 +206,12 @@ impl LiveCommitSyncConfig for CfgrLiveCommitSyncConfig {
                 })
                 .map(|(_, commit_sync_config)| commit_sync_config);
 
-            Self::get_only_item(
+            let res: Result<_, Error> = get_only_item(
                 interesting_top_level_configs,
-                || ErrorKind::NotPartOfAnyCommitSyncConfig(repo_id).into(),
-                || ErrorKind::PartOfMultipleCommitSyncConfigs(repo_id).into(),
-            )?
-            .clone()
+                || ErrorKind::NotPartOfAnyCommitSyncConfig(repo_id),
+                |_, _| ErrorKind::PartOfMultipleCommitSyncConfigs(repo_id),
+            );
+            res?.clone()
         };
 
         let commit_sync_config = raw_commit_sync_config.convert()?;

@@ -252,6 +252,7 @@ members = [
     "common/async_limiter/examples/tokio_v2",
     "common/bounded_traversal",
     "common/dedupmap",
+    "common/iterhelpers",
     "common/rust/caching_ext",
     "common/rust/slog_ext",
     "common/rust/sql_ext",
