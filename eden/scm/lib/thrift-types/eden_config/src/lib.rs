@@ -72,14 +72,13 @@ pub mod types {
 
     impl ::std::fmt::Display for ConfigSource {
         fn fmt(&self, fmt: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-            let s: &::std::primitive::str = match *self {
-                ConfigSource::Default => "Default",
-                ConfigSource::SystemConfig => "SystemConfig",
-                ConfigSource::UserConfig => "UserConfig",
-                ConfigSource::CommandLine => "CommandLine",
-                ConfigSource(x) => return write!(fmt, "{}", x),
-            };
-            write!(fmt, "{}", s)
+            static VARIANTS_BY_NUMBER: &[(&::std::primitive::str, ::std::primitive::i32)] = &[
+                ("Default", 0),
+                ("SystemConfig", 1),
+                ("UserConfig", 2),
+                ("CommandLine", 3),
+            ];
+            ::fbthrift::help::enum_display(VARIANTS_BY_NUMBER, fmt, self.0)
         }
     }
 
@@ -93,13 +92,13 @@ pub mod types {
         type Err = ::anyhow::Error;
 
         fn from_str(string: &::std::primitive::str) -> ::std::result::Result<Self, Self::Err> {
-            match string {
-                "Default" => ::std::result::Result::Ok(ConfigSource::Default),
-                "SystemConfig" => ::std::result::Result::Ok(ConfigSource::SystemConfig),
-                "UserConfig" => ::std::result::Result::Ok(ConfigSource::UserConfig),
-                "CommandLine" => ::std::result::Result::Ok(ConfigSource::CommandLine),
-                _ => ::anyhow::bail!("Unable to parse {} as ConfigSource", string),
-            }
+            static VARIANTS_BY_NAME: &[(&::std::primitive::str, ::std::primitive::i32)] = &[
+                ("CommandLine", 3),
+                ("Default", 0),
+                ("SystemConfig", 1),
+                ("UserConfig", 2),
+            ];
+            ::fbthrift::help::enum_from_str(VARIANTS_BY_NAME, string, "ConfigSource").map(ConfigSource)
         }
     }
 
@@ -173,13 +172,12 @@ pub mod types {
 
     impl ::std::fmt::Display for ConfigReloadBehavior {
         fn fmt(&self, fmt: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-            let s: &::std::primitive::str = match *self {
-                ConfigReloadBehavior::AutoReload => "AutoReload",
-                ConfigReloadBehavior::NoReload => "NoReload",
-                ConfigReloadBehavior::ForceReload => "ForceReload",
-                ConfigReloadBehavior(x) => return write!(fmt, "{}", x),
-            };
-            write!(fmt, "{}", s)
+            static VARIANTS_BY_NUMBER: &[(&::std::primitive::str, ::std::primitive::i32)] = &[
+                ("AutoReload", 0),
+                ("NoReload", 1),
+                ("ForceReload", 2),
+            ];
+            ::fbthrift::help::enum_display(VARIANTS_BY_NUMBER, fmt, self.0)
         }
     }
 
@@ -193,12 +191,12 @@ pub mod types {
         type Err = ::anyhow::Error;
 
         fn from_str(string: &::std::primitive::str) -> ::std::result::Result<Self, Self::Err> {
-            match string {
-                "AutoReload" => ::std::result::Result::Ok(ConfigReloadBehavior::AutoReload),
-                "NoReload" => ::std::result::Result::Ok(ConfigReloadBehavior::NoReload),
-                "ForceReload" => ::std::result::Result::Ok(ConfigReloadBehavior::ForceReload),
-                _ => ::anyhow::bail!("Unable to parse {} as ConfigReloadBehavior", string),
-            }
+            static VARIANTS_BY_NAME: &[(&::std::primitive::str, ::std::primitive::i32)] = &[
+                ("AutoReload", 0),
+                ("ForceReload", 2),
+                ("NoReload", 1),
+            ];
+            ::fbthrift::help::enum_from_str(VARIANTS_BY_NAME, string, "ConfigReloadBehavior").map(ConfigReloadBehavior)
         }
     }
 
@@ -264,11 +262,15 @@ pub mod types {
         P: ::fbthrift::ProtocolReader,
     {
         fn read(p: &mut P) -> ::anyhow::Result<Self> {
+            static FIELDS: &[::fbthrift::Field] = &[
+                ::fbthrift::Field::new("parsedValue", ::fbthrift::TType::String, 1),
+                ::fbthrift::Field::new("source", ::fbthrift::TType::I32, 2),
+            ];
             let mut field_parsedValue = ::std::option::Option::None;
             let mut field_source = ::std::option::Option::None;
             let _ = p.read_struct_begin(|_| ())?;
             loop {
-                let (_, fty, fid) = p.read_field_begin(|_| ())?;
+                let (_, fty, fid) = p.read_field_begin(|_| (), FIELDS)?;
                 match (fty, fid as ::std::primitive::i32) {
                     (::fbthrift::TType::Stop, _) => break,
                     (::fbthrift::TType::String, 1) => field_parsedValue = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
@@ -320,10 +322,13 @@ pub mod types {
         P: ::fbthrift::ProtocolReader,
     {
         fn read(p: &mut P) -> ::anyhow::Result<Self> {
+            static FIELDS: &[::fbthrift::Field] = &[
+                ::fbthrift::Field::new("values", ::fbthrift::TType::Map, 1),
+            ];
             let mut field_values = ::std::option::Option::None;
             let _ = p.read_struct_begin(|_| ())?;
             loop {
-                let (_, fty, fid) = p.read_field_begin(|_| ())?;
+                let (_, fty, fid) = p.read_field_begin(|_| (), FIELDS)?;
                 match (fty, fid as ::std::primitive::i32) {
                     (::fbthrift::TType::Stop, _) => break,
                     (::fbthrift::TType::Map, 1) => field_values = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
