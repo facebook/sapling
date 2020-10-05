@@ -268,7 +268,7 @@ pub async fn do_pushrebase_bonsai(
 
     let (client_cf, client_bcs) = try_join(
         find_changed_files(&ctx, &repo, root, head),
-        fetch_bonsai_range(ctx, &repo, root, head),
+        fetch_bonsai_range_ancestor_not_included(ctx, &repo, root, head),
     )
     .await?;
 
@@ -339,7 +339,7 @@ async fn rebase_in_loop(
         let (hooks, bookmark_val) =
             try_join(hooks, get_bookmark_value(&ctx, &repo, onto_bookmark)).await?;
 
-        let server_bcs = fetch_bonsai_range(
+        let server_bcs = fetch_bonsai_range_ancestor_not_included(
             &ctx,
             &repo,
             latest_rebase_attempt,
@@ -682,7 +682,7 @@ async fn id_to_manifestid(
 }
 
 // from larger generation number to smaller
-async fn fetch_bonsai_range(
+async fn fetch_bonsai_range_ancestor_not_included(
     ctx: &CoreContext,
     repo: &BlobRepo,
     ancestor: ChangesetId,
@@ -697,11 +697,9 @@ async fn fetch_bonsai_range(
     .compat();
 
     let nodes = stream
+        .try_filter(|cs_id| future::ready(cs_id != &ancestor))
         .map(|res| async move {
-            match res {
-                Ok(bcs_id) => Ok(bcs_id.load(ctx.clone(), repo.blobstore()).await?),
-                Err(e) => Err(e),
-            }
+            Result::<_, Error>::Ok(res?.load(ctx.clone(), repo.blobstore()).await?)
         })
         .buffered(100)
         .try_collect::<Vec<_>>()
@@ -1190,13 +1188,9 @@ async fn find_rebased_set(
     root: ChangesetId,
     head: ChangesetId,
 ) -> Result<Vec<BonsaiChangeset>, PushrebaseError> {
-    let nodes = fetch_bonsai_range(&ctx, &repo, root, head).await?;
+    let nodes = fetch_bonsai_range_ancestor_not_included(&ctx, &repo, root, head).await?;
 
-    let nodes = nodes
-        .into_iter()
-        .filter(|node| node.get_changeset_id() != root)
-        .rev()
-        .collect();
+    let nodes = nodes.into_iter().rev().collect();
 
     Ok(nodes)
 }
