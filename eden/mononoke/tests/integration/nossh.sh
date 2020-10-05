@@ -9,7 +9,12 @@ REPONAME="${REPONAME:-"$(hg config | grep remotefilelog.reponame | cut -d "=" -f
 CA_PEM=${CA_PEM:-"${TEST_CERTS}/root-ca.crt"}
 PRIVATE_KEY=${PRIVATE_KEY:-"${TEST_CERTS}/localhost.key"}
 CERT=${CERT:-"${TEST_CERTS}/localhost.crt"}
-MONONOKE_PATH="[::]:${MONONOKE_SOCKET}"
+if [[ $LOCALIP == *":"* ]]; then
+  # it is ipv6, surround with brackets
+  MONONOKE_PATH="[$LOCALIP]:${MONONOKE_SOCKET}"
+else
+  MONONOKE_PATH="$LOCALIP:${MONONOKE_SOCKET}"
+fi
 COMMON_NAME="localhost"
 
 "$MONONOKE_HGCLI" -R "$REPONAME" serve --stdio --mononoke-path "$MONONOKE_PATH" \

@@ -56,6 +56,15 @@ function get_free_socket {
   "$GET_FREE_SOCKET"
 }
 
+function mononoke_address {
+  if [[ $LOCALIP == *":"* ]]; then
+    # ipv6, surround in brackets
+    echo -n "[$LOCALIP]:$MONONOKE_SOCKET"
+  else
+    echo -n "$LOCALIP:$MONONOKE_SOCKET"
+  fi
+}
+
 # return random value from [1, max_value]
 function random_int() {
   max_value=$1
@@ -98,7 +107,7 @@ function mononoke {
   --ssl-ticket-seeds "$TEST_CERTDIR/server.pem.seeds" \
   --debug \
   --test-instance \
-  --listening-host-port "[::1]:$MONONOKE_SOCKET" \
+  --listening-host-port "$(mononoke_address)" \
   --mononoke-config-path "$TESTTMP/mononoke-config" \
    "${COMMON_ARGS[@]}" >> "$TESTTMP/mononoke.out" 2>&1 &
   export MONONOKE_PID=$!
@@ -381,7 +390,15 @@ function wait_for_mononoke {
 
   if ! $SSLCURL 2>&1 | grep -q 'Empty reply'; then
     echo "Mononoke did not start" >&2
+
+    echo ""
+    echo "Results of curl invocation"
+    $SSLCURL -v
+
+    echo ""
+    echo "Log of Mononoke server"
     cat "$TESTTMP/mononoke.out"
+
     exit 1
   fi
 }
@@ -985,7 +1002,7 @@ function manual_scrub {
 
 function s_client {
     /usr/local/fbcode/platform007/bin/openssl s_client \
-        -connect localhost:$MONONOKE_SOCKET \
+        -connect "$(mononoke_address)" \
         -CAfile "${TEST_CERTDIR}/root-ca.crt" \
         -cert "${TEST_CERTDIR}/localhost.crt" \
         -key "${TEST_CERTDIR}/localhost.key" \
@@ -1041,7 +1058,7 @@ function start_edenapi_server {
   # server. The `sslcurl` function should help with this.
   GLOG_minloglevel=5 "$EDENAPI_SERVER" "$@" \
     --debug \
-    --listen-host 127.0.0.1 \
+    --listen-host "$LOCALIP" \
     --listen-port "$port" \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
     --test-instance \
@@ -1077,11 +1094,11 @@ function start_edenapi_server {
 }
 
 function edenapi_make_req {
-	"$EDENAPI_MAKE_REQ" "$@"
+  "$EDENAPI_MAKE_REQ" "$@"
 }
 
 function edenapi_read_res {
-	"$EDENAPI_READ_RES" "$@"
+  "$EDENAPI_READ_RES" "$@"
 }
 
 function lfs_server {
@@ -1094,7 +1111,7 @@ function lfs_server {
   opts=(
     "${COMMON_ARGS[@]}"
     --mononoke-config-path "$TESTTMP/mononoke-config"
-    --listen-host 127.0.0.1
+    --listen-host "$LOCALIP"
     --listen-port "$port"
     --test-friendly-logging
   )
@@ -1432,7 +1449,7 @@ function traffic_replay() {
     --loglevel warn \
     --testrun \
     --hgcli "$MONONOKE_HGCLI" \
-    --mononoke-address "[::1]:$MONONOKE_SOCKET" \
+    --mononoke-address "$(mononoke_address)" \
     --mononoke-server-common-name localhost
 }
 
@@ -1744,7 +1761,7 @@ function commitcloud_fill_one() {
   "$MONONOKE_COMMITCLOUD_FILLONE" \
     hg-to-mononoke \
     --hgcli "$MONONOKE_HGCLI" \
-    --mononoke-address "[::1]:$MONONOKE_SOCKET" \
+    --mononoke-address "$(mononoke_address)" \
     --mononoke-server-common-name localhost \
     --cert-override "$CERTDIR/localhost.crt" \
     --private-key-override "$CERTDIR/localhost.key" \
@@ -1784,7 +1801,7 @@ function commitcloud_forwardfiller_iteration() {
   "$MONONOKE_COMMITCLOUD_FORWARDFILLER" \
     --num-workers 1 \
     --hgcli "$MONONOKE_HGCLI" \
-    --mononoke-address "[::1]:$MONONOKE_SOCKET" \
+    --mononoke-address "$(mononoke_address)" \
     --mononoke-server-common-name localhost \
     --cert-override "$CERTDIR/localhost.crt" \
     --private-key-override "$CERTDIR/localhost.key" \
