@@ -62,6 +62,9 @@ class Hash : boost::totally_ordered<Hash> {
   /** @return 40-character [lowercase] hex representation of this hash. */
   std::string toString() const;
 
+  /** @return 20-character bytes of this hash. */
+  std::string toByteString() const;
+
   size_t getHashCode() const noexcept;
 
   bool operator==(const Hash&) const;

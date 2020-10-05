@@ -38,6 +38,10 @@ std::string Hash::toString() const {
   return result;
 }
 
+std::string Hash::toByteString() const {
+  return std::string(reinterpret_cast<const char*>(bytes_.data()), RAW_SIZE);
+}
+
 size_t Hash::getHashCode() const noexcept {
   static_assert(sizeof(size_t) <= RAW_SIZE, "crazy size_t type");
   size_t result;
