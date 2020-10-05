@@ -55,7 +55,7 @@ class MockServiceCacheIf : public ServiceCacheIf {
 
       const_cast<ServiceHosts*>(selection.hosts.get())
           ->push_back(std::make_shared<HostInfo>(
-              std::make_unique<HostInfoProperties>(), std::move(location)));
+              HostInfoProperties(), std::move(location)));
     }
 
     return selection;
