@@ -1134,13 +1134,16 @@ where
                         Ok(Some(frozen.get_changeset_id()))
                     }
                     None => {
-                        // TODO(stash, ikostia) - this should set the actual version that was used to
-                        // remap this commit
                         // Source commit doesn't rewrite to any target commits.
                         // In that case equivalent working copy is the equivalent working
                         // copy of the parent
-                        self.update_wc_equivalence(ctx.clone(), source_cs_id, Some(remapped_p))
-                            .await?;
+                        self.update_wc_equivalence_with_version(
+                            ctx.clone(),
+                            source_cs_id,
+                            Some(remapped_p),
+                            version,
+                        )
+                        .await?;
                         Ok(None)
                     }
                 }
@@ -1417,6 +1420,24 @@ where
         source_bcs_id: ChangesetId,
         maybe_target_bcs_id: Option<ChangesetId>,
     ) -> Result<(), Error> {
+        // TODO(stash, ikostia): use the real version that was used to remap a commit
+        let version_name = self.get_current_version(&ctx)?;
+        self.update_wc_equivalence_with_version(
+            ctx,
+            source_bcs_id,
+            maybe_target_bcs_id,
+            version_name,
+        )
+        .await
+    }
+
+    async fn update_wc_equivalence_with_version(
+        &self,
+        ctx: CoreContext,
+        source_bcs_id: ChangesetId,
+        maybe_target_bcs_id: Option<ChangesetId>,
+        version_name: CommitSyncConfigVersion,
+    ) -> Result<(), Error> {
         let CommitSyncer { repos, mapping, .. } = self.clone();
         let (source_repo, target_repo, source_is_large) = match repos {
             CommitSyncRepos::LargeToSmall {
@@ -1430,8 +1451,6 @@ where
                 ..
             } => (small_repo, large_repo, false),
         };
-        // TODO(stash): use the real version that was used to remap a commit
-        let version_name = self.get_current_version(&ctx)?;
 
         let source_repoid = source_repo.get_repoid();
         let target_repoid = target_repo.get_repoid();

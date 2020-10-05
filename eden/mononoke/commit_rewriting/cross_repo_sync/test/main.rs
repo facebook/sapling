@@ -1466,6 +1466,133 @@ async fn test_sync_with_mapping_change(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
+#[fbinit::compat_test]
+async fn test_sync_equivalent_wc_with_mapping_change(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let (old_version, new_version, large_to_small_syncer) =
+        prepare_commit_syncer_with_mapping_change(fb).await?;
+    let megarepo = large_to_small_syncer.get_source_repo();
+    let small_repo = large_to_small_syncer.get_target_repo();
+
+    println!("create commits with new mapping");
+    let new_mapping_large_cs_id = resolve_cs_id(&ctx, &megarepo, "new_mapping").await?;
+    // Create a stack of commits on top of commit with new mapping.
+    // First commit should not rewrite into a small repo, but second should
+
+    let does_not_rewrite_large_cs_id =
+        CreateCommitContext::new(&ctx, &megarepo, vec![new_mapping_large_cs_id])
+            .add_file("somerandomfile", "1")
+            .commit()
+            .await?;
+
+    let synced = large_to_small_syncer
+        .sync_commit(
+            &ctx,
+            does_not_rewrite_large_cs_id,
+            CandidateSelectionHint::Only,
+        )
+        .await?;
+    let parent_synced = large_to_small_syncer
+        .sync_commit(&ctx, new_mapping_large_cs_id, CandidateSelectionHint::Only)
+        .await?;
+    // does_not_rewrite_large_cs_id commit was rewritten out, so sync_commit
+    // should return the same changeset id as the parent
+    assert_eq!(synced, parent_synced);
+
+    let new_mapping_cs_id =
+        CreateCommitContext::new(&ctx, &megarepo, vec![does_not_rewrite_large_cs_id])
+            .add_file("tools/newtool", "1")
+            .delete_file("tools/1.txt")
+            .add_file("tools/somefile", "somefile1")
+            .add_file("prefix/dir/file", "3")
+            .add_file("prefix/dir/newfile", "3")
+            .commit()
+            .await?;
+
+    let synced = large_to_small_syncer
+        .sync_commit(&ctx, new_mapping_cs_id, CandidateSelectionHint::Only)
+        .await?;
+    assert!(synced.is_some());
+    let new_mapping_small_cs_id = synced.unwrap();
+
+    verify_working_copy(
+        ctx.clone(),
+        large_to_small_syncer.clone(),
+        new_mapping_cs_id,
+    )
+    .await?;
+    assert_working_copy(
+        &ctx,
+        &small_repo,
+        new_mapping_small_cs_id,
+        vec!["tools/somefile", "tools/newtool", "dir/file", "dir/newfile"],
+    )
+    .await?;
+
+    let outcome = large_to_small_syncer
+        .get_commit_sync_outcome(ctx.clone(), new_mapping_cs_id)
+        .await?;
+
+    match outcome {
+        Some(CommitSyncOutcome::RewrittenAs(_, version)) => {
+            assert_eq!(version, Some(new_version));
+        }
+        _ => {
+            return Err(anyhow!("unexpected outcome: {:?}", outcome));
+        }
+    }
+
+    // Create a new commit on top of commit with old mapping.
+    println!("create commits with old mapping");
+
+    let old_mapping_large_cs_id = resolve_cs_id(&ctx, &megarepo, "old_mapping").await?;
+    let does_not_rewrite_large_cs_id =
+        CreateCommitContext::new(&ctx, &megarepo, vec![old_mapping_large_cs_id])
+            .add_file("somerandomfile", "1")
+            .commit()
+            .await?;
+
+    let old_mapping_cs_id =
+        CreateCommitContext::new(&ctx, &megarepo, vec![does_not_rewrite_large_cs_id])
+            .add_file("tools/3.txt", "2")
+            .add_file("prefix/file", "2")
+            .commit()
+            .await?;
+    let synced = large_to_small_syncer
+        .sync_commit(&ctx, old_mapping_cs_id, CandidateSelectionHint::Only)
+        .await?;
+    assert!(synced.is_some());
+    let old_mapping_small_cs_id = synced.unwrap();
+
+    verify_working_copy(
+        ctx.clone(),
+        large_to_small_syncer.clone(),
+        old_mapping_cs_id,
+    )
+    .await?;
+    assert_working_copy(
+        &ctx,
+        &small_repo,
+        old_mapping_small_cs_id,
+        vec!["dir/file", "file", "tools/1.txt"],
+    )
+    .await?;
+
+    let outcome = large_to_small_syncer
+        .get_commit_sync_outcome(ctx.clone(), old_mapping_cs_id)
+        .await?;
+
+    match outcome {
+        Some(CommitSyncOutcome::RewrittenAs(_, version)) => {
+            assert_eq!(version, Some(old_version));
+        }
+        _ => {
+            return Err(anyhow!("unexpected outcome: {:?}", outcome));
+        }
+    }
+    Ok(())
+}
+
 async fn prepare_commit_syncer_with_mapping_change(
     fb: FacebookInit,
 ) -> Result<
