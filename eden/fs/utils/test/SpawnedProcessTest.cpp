@@ -41,11 +41,16 @@ TEST(SpawnedProcess, cwd_inherit) {
   auto outputs = proc.communicate();
   proc.wait();
 
+  auto stdout = outputs.first;
+
+  EXPECT_FALSE(stdout.empty());
+  EXPECT_EQ('\n', stdout[stdout.size() - 1]);
+  stdout = stdout.substr(0, stdout.size() - 1);
+
   char cwd[1024];
   getcwd(cwd, sizeof(cwd) - 1);
-  strcat(cwd, "\n");
 
-  EXPECT_EQ(cwd, outputs.first);
+  EXPECT_EQ(realpath(cwd), realpath(stdout));
 }
 #endif
 
