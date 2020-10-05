@@ -49,7 +49,9 @@ while host_index < len(sys.argv) and sys.argv[host_index].startswith("-"):
 if sys.argv[host_index] != "user@dummy":
     sys.exit(-1)
 
-os.environ["SSH_CLIENT"] = "%s 1 2" % os.environ.get("LOCALIP", "127.0.0.1")
+os.environ["SSH_CLIENT"] = "%s 1 2" % os.environ.get(
+    "SSH_IP_OVERRIDE", os.environ.get("LOCALIP", "127.0.0.1")
+)
 
 log = open("dummylog", "ab")
 log.write(b"Got arguments")
@@ -77,9 +79,13 @@ if "hgcli" in hgcmd:
     cert = os.path.join(certdir, "localhost.crt")
     capem = os.path.join(certdir, "root-ca.crt")
     privatekey = os.path.join(certdir, "localhost.key")
+    localip = os.environ.get("LOCALIP", "127.0.0.1")
+    if ":" in localip:
+        # this is ipv6, put it in brackets
+        localip = "[" + localip + "]"
 
     hgcmd += (
-        " --mononoke-path [::1]:"
+        (" --mononoke-path %s:" % localip)
         + os.getenv("MONONOKE_SOCKET")
         + (
             " --cert %s --ca-pem %s --private-key %s --common-name localhost"

@@ -32,7 +32,7 @@ start mononoke
   $ wait_for_mononoke
 
 pull from mononoke and log data
-  $ MOCK_USERNAME=foobar CLIENT_DEBUG=true LOCALIP="127.0.0.1" hgmn pull
+  $ MOCK_USERNAME=foobar CLIENT_DEBUG=true SSH_IP_OVERRIDE="$LOCALIP" hgmn pull
   pulling from ssh://user@dummy/repo
   remote: Metadata {
   remote:     session_id: SessionId(
