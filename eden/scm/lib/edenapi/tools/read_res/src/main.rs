@@ -268,11 +268,14 @@ fn cmd_file_check(args: DataCheckArgs) -> Result<()> {
     for entry in entries.into_iter().filter_map(to_api) {
         match entry.data() {
             Ok(_) => {}
+            Err(FileError::Corrupt(e)) => {
+                println!("{} [Invalid hash] {}", entry.key(), e);
+            }
             Err(FileError::Redacted(..)) => {
                 println!("{} [Contents redacted]", entry.key());
             }
-            Err(FileError::Corrupt(e)) => {
-                println!("{} [Invalid hash] {}", entry.key(), e);
+            Err(FileError::Lfs(..)) => {
+                println!("{} [LFS pointer]", entry.key());
             }
         }
     }

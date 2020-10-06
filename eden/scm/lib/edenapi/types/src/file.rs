@@ -33,6 +33,8 @@ pub enum FileError {
     /// redacted data.
     #[error("Content for {0} is redacted")]
     Redacted(Key, Bytes),
+    #[error("Can't validate filenode hash for {0} because it is an LFS pointer")]
+    Lfs(Key, Bytes),
 }
 
 impl FileError {
@@ -40,8 +42,9 @@ impl FileError {
     pub fn data(&self) -> Bytes {
         use FileError::*;
         match self {
-            Redacted(_, data) => data,
             Corrupt(InvalidHgId { data, .. }) => data,
+            Redacted(_, data) => data,
+            Lfs(_, data) => data,
         }
         .clone()
     }
@@ -73,20 +76,34 @@ impl FileEntry {
     }
 
     /// Get this entry's data. Checks data integrity but allows hash mismatches
-    /// if the content is redacted.
+    /// if the content is redacted or contains an LFS pointer.
     pub fn data(&self) -> Result<Bytes, FileError> {
         use FileError::*;
         self.data_checked().or_else(|e| match e {
             Corrupt(_) => Err(e),
             Redacted(..) => Ok(e.data()),
+            Lfs(..) => Ok(e.data()),
         })
     }
 
     /// Get this entry's data after verifying the hgid hash.
+    ///
+    /// This method will return an error if the computed hash doesn't match
+    /// the provided hash, regardless of the reason. Such mismatches are
+    /// sometimes expected (e.g., for redacted files or LFS pointers), so most
+    /// application logic should call `FileEntry::data` instead, which allows
+    /// these exceptions. `FileEntry::data_checked` should only be used when
+    /// strict filenode validation is required.
     pub fn data_checked(&self) -> Result<Bytes, FileError> {
         // TODO(T48685378): Handle redacted content in a less hacky way.
         if self.data.len() == REDACTED_TOMBSTONE.len() && self.data == REDACTED_TOMBSTONE {
             return Err(FileError::Redacted(self.key.clone(), self.data.clone()));
+        }
+
+        // We can't check the hash of an LFS blob since it is computed using the
+        // full file content, but the file entry only contains the LFS pointer.
+        if self.metadata.is_lfs() {
+            return Err(FileError::Lfs(self.key.clone(), self.data.clone()));
         }
 
         let computed = HgId::from_content(&self.data, self.parents);
