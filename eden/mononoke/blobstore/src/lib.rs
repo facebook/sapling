@@ -18,6 +18,7 @@ use std::ops::{Range, RangeFrom, RangeFull, RangeTo};
 use abomonation_derive::Abomonation;
 use anyhow::Error;
 use futures::future::{BoxFuture, FutureExt};
+use strum_macros::{Display, EnumIter, EnumString};
 
 use std::io::Cursor;
 use thiserror::Error;
@@ -299,17 +300,92 @@ pub trait Blobstore: fmt::Debug + Send + Sync + 'static {
     /// `false` if `get` would return `None`, and `true` if `get` would return `Some(_)`.
     fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
         let get = self.get(ctx, key);
-        async move {
-            let opt = get.await?;
-            Ok(opt.is_some())
+        async move { Ok(get.await?.is_some()) }.boxed()
+    }
+}
+
+/// Keep the status quo for now
+pub const DEFAULT_PUT_BEHAVIOUR: PutBehaviour = PutBehaviour::Overwrite;
+
+/// For blobstore implementors and advanced admin type users to control requested put behaviour
+#[derive(Clone, Copy, Debug, Display, EnumIter, EnumString, Eq, PartialEq)]
+pub enum PutBehaviour {
+    /// Blobstore::put will overwrite even if key is already present
+    Overwrite,
+    /// Blobstore::put will overwrite even if key is already present, plus log that and overwrite occured
+    OverwriteAndLog,
+    /// Blobstore::put will not overwrite if the key is already present.
+    /// NB due to underlying stores TOCTOU limitations some puts might overwrite when when racing another put.
+    /// This is expected, thus Blobstore::put() cannot reveal if the put wrote or not as behaviour other than
+    /// logging/metrics should not depend on it.
+    IfAbsent,
+}
+
+impl PutBehaviour {
+    // For use inside BlobstoreWithPutBehaviour::put_with_behaviour implementations
+    pub fn should_overwrite(&self) -> bool {
+        match self {
+            PutBehaviour::Overwrite | PutBehaviour::OverwriteAndLog => true,
+            PutBehaviour::IfAbsent => false,
         }
-        .boxed()
+    }
+
+    // For use inside OverwriteHandler::on_put_overwrite implementations
+    pub fn should_log(&self) -> bool {
+        match self {
+            PutBehaviour::Overwrite => false,
+            PutBehaviour::IfAbsent | PutBehaviour::OverwriteAndLog => true,
+        }
+    }
+}
+
+/// For use from logging blobstores so they can record the overwrite status
+/// `BlobstorePutOps::put_with_status`, and eventually `BlobstoreWithLink::link()` will return this.
+pub enum OverwriteStatus {
+    // We did not check if the key existed before writing it
+    NotChecked,
+    // This key did not exist before, therefore we did not overwrite
+    New,
+    // This did exist before, but we wrote over it
+    Overwrote,
+    // This did exist before, and the overwrite was prevented
+    Prevented,
+}
+
+/// Lower level blobstore put api used by blobstore implementors and admin tooling
+#[auto_impl(Arc, Box)]
+pub trait BlobstorePutOps {
+    /// Return the put behaviour configured for this store on construction
+    /// Used from `BlobstorePutOps::put` default impl.
+    fn put_behaviour(&self) -> PutBehaviour;
+
+    /// Adds ability to specify the put behaviour explicitly so that even if per process default was
+    /// IfAbsent  once could chose to OverwriteAndLog.  Expected to be used only in admin tools
+    fn put_explicit(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+        put_behaviour: PutBehaviour,
+    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>>;
+
+    /// Similar to `Blobstore::put`, but returns the OverwriteStatus as feedback rather than unit.
+    /// Its here rather so we don't reveal the OverwriteStatus to regular put users.
+    fn put_with_status(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+        self.put_explicit(ctx, key, value, self.put_behaviour())
     }
 }
 
 /// Mixin trait for blobstores that support the `link()` operation
+/// TODO(ahornby) rename to BlobstoreLinkOps for consistency with BlobstorePutOps
 #[auto_impl(Arc, Box)]
 pub trait BlobstoreWithLink: Blobstore {
+    // TODO(ahornby) return OverwriteStatus for logging
     fn link(
         &self,
         ctx: CoreContext,

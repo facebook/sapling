@@ -33,7 +33,7 @@ impl<T: Blobstore + Clone> MemWritesBlobstore<T> {
         }
     }
 
-    /// Writre all in-memory entries to unerlying blobstore.
+    /// Write all in-memory entries to underlying blobstore.
     ///
     /// NOTE: In case of error all pending changes will be lost.
     pub fn persist(&self, ctx: CoreContext) -> impl Future<Item = (), Error = Error> {
