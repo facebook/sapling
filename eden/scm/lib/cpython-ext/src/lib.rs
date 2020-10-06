@@ -9,6 +9,7 @@ mod bytearrayobject;
 mod bytes;
 mod bytesobject;
 pub mod convert;
+pub mod de;
 pub mod error;
 mod extract;
 mod io;
@@ -18,6 +19,10 @@ mod pybuf;
 mod pyset;
 pub mod ser;
 mod str;
+
+#[cfg(test)]
+#[cfg(not(all(fbcode_build, feature = "python2")))]
+mod tests;
 
 pub use crate::bytearrayobject::{boxed_slice_to_pyobj, vec_to_pyobj};
 pub use crate::bytesobject::allocate_pybytes;

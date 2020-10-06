@@ -6,8 +6,16 @@
  */
 
 use crate::PyErr as Error;
-use cpython::*;
+use cpython::PyBytes;
+use cpython::PyDict;
+use cpython::PyObject;
+use cpython::PyResult;
+use cpython::PyTuple;
+use cpython::Python;
+use cpython::PythonObject;
+use cpython::ToPyObject;
 use serde::{ser, Serialize};
+use std::marker::PhantomData;
 
 /// Serialize into Python object.
 pub fn to_object<T>(py: Python, value: &T) -> PyResult<PyObject>
@@ -15,7 +23,7 @@ where
     T: Serialize,
 {
     let serializer = Serializer { py };
-    value.serialize(&serializer).map_err(|e| e.into_inner())
+    value.serialize(&serializer).map_err(Into::into)
 }
 
 // ------- Serializer Types -------
@@ -26,60 +34,77 @@ struct Serializer<'a> {
     py: Python<'a>,
 }
 
-trait PyDefault<'a> {
-    fn default(py: Python<'a>) -> Self;
+trait PyCollectItems {
+    fn collect_items(py: Python, items: &[PyObject]) -> Result<PyObject>;
 }
 
-trait PyCollect<'a> {
-    fn collect(self) -> Result<PyObject>;
+trait PyBuildVariant {
+    fn build_variant(&self, py: Python, obj: PyObject) -> Result<PyObject>;
 }
 
-impl<'a> PyDefault<'a> for Serializer<'a> {
-    fn default(py: Python<'a>) -> Self {
-        Self { py }
-    }
+struct PyItems<'a, C, V> {
+    py: Python<'a>,
+    items: Vec<PyObject>,
+    collector: PhantomData<C>,
+    variant: V,
 }
 
-macro_rules! define_serializer {
-    ($name: tt) => {
-        struct $name<'a> {
-            py: Python<'a>,
-            items: Vec<PyObject>,
+impl<'a, C, V> PyItems<'a, C, V> {
+    fn new(py: Python<'a>, variant: V) -> Self {
+        Self {
+            py,
+            items: Default::default(),
+            collector: PhantomData,
+            variant,
         }
-
-        impl<'a> PyDefault<'a> for $name<'a> {
-            fn default(py: Python<'a>) -> Self {
-                Self {
-                    py,
-                    items: Vec::default(),
-                }
-            }
-        }
-    };
-}
-
-define_serializer!(ListSerializer);
-define_serializer!(MapSerializer);
-define_serializer!(TupleSerializer);
-
-impl<'a> PyCollect<'a> for ListSerializer<'a> {
-    fn collect(self) -> Result<PyObject> {
-        Ok(self.items.into_py_object(self.py).into_object())
     }
 }
 
-impl<'a> PyCollect<'a> for TupleSerializer<'a> {
-    fn collect(self) -> Result<PyObject> {
-        Ok(PyTuple::new(self.py, &self.items).into_object())
+impl<'a, C, V> PyItems<'a, C, V>
+where
+    C: PyCollectItems,
+    V: PyBuildVariant,
+{
+    fn collect(&self) -> Result<PyObject> {
+        let obj = C::collect_items(self.py, &self.items)?;
+        self.variant.build_variant(self.py, obj)
     }
 }
 
-impl<'a> PyCollect<'a> for MapSerializer<'a> {
-    fn collect(self) -> Result<PyObject> {
-        let dict = PyDict::new(self.py);
-        for chunk in self.items.chunks(2) {
+impl PyBuildVariant for &'static str {
+    fn build_variant(&self, py: Python, obj: PyObject) -> Result<PyObject> {
+        enum_variant(py, self, obj)
+    }
+}
+
+impl PyBuildVariant for () {
+    fn build_variant(&self, _py: Python, obj: PyObject) -> Result<PyObject> {
+        Ok(obj)
+    }
+}
+
+struct BuildList;
+struct BuildTuple;
+struct BuildDict;
+
+impl PyCollectItems for BuildList {
+    fn collect_items(py: Python, items: &[PyObject]) -> Result<PyObject> {
+        Ok(items.to_py_object(py).into_object())
+    }
+}
+
+impl PyCollectItems for BuildTuple {
+    fn collect_items(py: Python, items: &[PyObject]) -> Result<PyObject> {
+        Ok(PyTuple::new(py, items).into_object())
+    }
+}
+
+impl PyCollectItems for BuildDict {
+    fn collect_items(py: Python, items: &[PyObject]) -> Result<PyObject> {
+        let dict = PyDict::new(py);
+        for chunk in items.chunks(2) {
             if let [key, value] = chunk {
-                dict.set_item(self.py, key, value)?;
+                dict.set_item(py, key, value)?;
             }
         }
         Ok(dict.into_object())
@@ -103,13 +128,13 @@ impl<'a, 'b> ser::Serializer for &'a Serializer<'b> {
     type Ok = PyObject;
     type Error = Error;
 
-    type SerializeSeq = ListSerializer<'b>;
-    type SerializeTuple = TupleSerializer<'b>;
-    type SerializeTupleStruct = TupleSerializer<'b>;
-    type SerializeTupleVariant = TupleSerializer<'b>;
-    type SerializeMap = MapSerializer<'b>;
-    type SerializeStruct = MapSerializer<'b>;
-    type SerializeStructVariant = MapSerializer<'b>;
+    type SerializeSeq = PyItems<'b, BuildList, ()>;
+    type SerializeTuple = PyItems<'b, BuildTuple, ()>;
+    type SerializeTupleStruct = PyItems<'b, BuildTuple, ()>;
+    type SerializeTupleVariant = PyItems<'b, BuildTuple, &'static str>;
+    type SerializeMap = PyItems<'b, BuildDict, ()>;
+    type SerializeStruct = PyItems<'b, BuildDict, ()>;
+    type SerializeStructVariant = PyItems<'b, BuildDict, &'static str>;
 
     fn serialize_bool(self, v: bool) -> Result<PyObject> {
         self.serialize(v)
@@ -160,10 +185,11 @@ impl<'a, 'b> ser::Serializer for &'a Serializer<'b> {
     }
 
     fn serialize_str(self, v: &str) -> Result<PyObject> {
-        if cfg!(feature = "python2") {
+        if cfg!(feature = "python2-sys") {
+            // Use the 'str' (aka. 'bytes') type consistently on Python 2.
             Ok(PyBytes::new(self.py, v.as_bytes()).into_object())
         } else {
-            Ok(PyUnicode::new(self.py, v).into_object())
+            Ok(v.to_py_object(self.py).into_object())
         }
     }
 
@@ -216,21 +242,16 @@ impl<'a, 'b> ser::Serializer for &'a Serializer<'b> {
     where
         T: ?Sized + Serialize,
     {
-        // Serde JSON example serialize this into `{ NAME: VALUE }`.
-        // Do something similar.
-        let dict = PyDict::new(self.py);
-        let key = variant.serialize(self)?;
         let value = value.serialize(self)?;
-        dict.set_item(self.py, key, value)?;
-        Ok(dict.into_object())
+        enum_variant(self.py, variant, value)
     }
 
     fn serialize_seq(self, _len: Option<usize>) -> Result<Self::SerializeSeq> {
-        Ok(PyDefault::default(self.py))
+        Ok(Self::SerializeSeq::new(self.py, ()))
     }
 
     fn serialize_tuple(self, _len: usize) -> Result<Self::SerializeTuple> {
-        Ok(PyDefault::default(self.py))
+        Ok(Self::SerializeTuple::new(self.py, ()))
     }
 
     fn serialize_tuple_struct(
@@ -238,47 +259,45 @@ impl<'a, 'b> ser::Serializer for &'a Serializer<'b> {
         _name: &'static str,
         _len: usize,
     ) -> Result<Self::SerializeTupleStruct> {
-        Ok(PyDefault::default(self.py))
+        Ok(Self::SerializeTupleStruct::new(self.py, ()))
     }
 
     fn serialize_tuple_variant(
         self,
         _name: &'static str,
         _variant_index: u32,
-        _variant: &'static str,
+        variant: &'static str,
         _len: usize,
     ) -> Result<Self::SerializeTupleVariant> {
-        Ok(PyDefault::default(self.py))
+        Ok(Self::SerializeTupleVariant::new(self.py, variant))
     }
 
     fn serialize_map(self, _len: Option<usize>) -> Result<Self::SerializeMap> {
-        Ok(PyDefault::default(self.py))
+        Ok(Self::SerializeMap::new(self.py, ()))
     }
 
     fn serialize_struct(self, _name: &'static str, _len: usize) -> Result<Self::SerializeStruct> {
-        Ok(PyDefault::default(self.py))
+        Ok(Self::SerializeStruct::new(self.py, ()))
     }
 
     fn serialize_struct_variant(
         self,
         _name: &'static str,
         _variant_index: u32,
-        _variant: &'static str,
+        variant: &'static str,
         _len: usize,
     ) -> Result<Self::SerializeStructVariant> {
-        Ok(PyDefault::default(self.py))
+        Ok(Self::SerializeStructVariant::new(self.py, variant))
     }
 }
 
 macro_rules! impl_seq {
     ($trait: ty,  $name: tt) => {
-        impl_seq!($trait, $name, ListSerializer);
-        impl_seq!($trait, $name, TupleSerializer);
-        impl_seq!($trait, $name, MapSerializer);
-    };
-
-    ($trait: ty,  $name: tt, $type: tt) => {
-        impl<'a> $trait for $type<'_> {
+        impl<C, V> $trait for PyItems<'_, C, V>
+        where
+            C: PyCollectItems,
+            V: PyBuildVariant,
+        {
             type Ok = PyObject;
             type Error = Error;
 
@@ -292,7 +311,7 @@ macro_rules! impl_seq {
             }
 
             fn end(self) -> Result<PyObject> {
-                PyCollect::collect(self)
+                self.collect()
             }
         }
     };
@@ -303,7 +322,10 @@ impl_seq!(ser::SerializeTuple, serialize_element);
 impl_seq!(ser::SerializeTupleStruct, serialize_field);
 impl_seq!(ser::SerializeTupleVariant, serialize_field);
 
-impl<'a> ser::SerializeMap for MapSerializer<'_> {
+impl<V> ser::SerializeMap for PyItems<'_, BuildDict, V>
+where
+    V: PyBuildVariant,
+{
     type Ok = PyObject;
     type Error = Error;
 
@@ -326,11 +348,14 @@ impl<'a> ser::SerializeMap for MapSerializer<'_> {
     }
 
     fn end(self) -> Result<PyObject> {
-        PyCollect::collect(self)
+        self.collect()
     }
 }
 
-impl<'a> ser::SerializeStruct for MapSerializer<'_> {
+impl<V> ser::SerializeStruct for PyItems<'_, BuildDict, V>
+where
+    V: PyBuildVariant,
+{
     type Ok = PyObject;
     type Error = Error;
 
@@ -346,11 +371,14 @@ impl<'a> ser::SerializeStruct for MapSerializer<'_> {
     }
 
     fn end(self) -> Result<PyObject> {
-        PyCollect::collect(self)
+        self.collect()
     }
 }
 
-impl<'a> ser::SerializeStructVariant for MapSerializer<'_> {
+impl<V> ser::SerializeStructVariant for PyItems<'_, BuildDict, V>
+where
+    V: PyBuildVariant,
+{
     type Ok = PyObject;
     type Error = Error;
 
@@ -362,6 +390,15 @@ impl<'a> ser::SerializeStructVariant for MapSerializer<'_> {
     }
 
     fn end(self) -> Result<PyObject> {
-        PyCollect::collect(self)
+        self.collect()
     }
+}
+
+// ------- Utilities -------
+
+/// Convert `value` to `{key: value}` to represent an enum variant.
+fn enum_variant(py: Python, key: &'static str, value: PyObject) -> Result<PyObject> {
+    let dict = PyDict::new(py);
+    dict.set_item(py, key, value)?;
+    Ok(dict.into_object())
 }
