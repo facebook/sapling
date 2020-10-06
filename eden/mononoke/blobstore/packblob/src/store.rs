@@ -13,7 +13,7 @@ use blobstore::{Blobstore, BlobstoreGetData, BlobstoreWithLink};
 use bytes::Bytes;
 use context::CoreContext;
 use futures::{
-    future::{BoxFuture, FutureExt},
+    future::{self, BoxFuture, FutureExt},
     stream::{FuturesUnordered, TryStreamExt},
 };
 use mononoke_types::BlobstoreBytes;
@@ -34,13 +34,13 @@ impl PackOptions {
 }
 
 /// A layer over an existing blobstore that uses thrift blob wrappers to allow packing and compression
-#[derive(Clone, Debug)]
-pub struct PackBlob<T: Blobstore + Clone> {
+#[derive(Debug)]
+pub struct PackBlob<T: Blobstore> {
     inner: T,
     options: PackOptions,
 }
 
-impl<T: Blobstore + Clone> PackBlob<T> {
+impl<T: Blobstore> PackBlob<T> {
     pub fn new(inner: T, options: PackOptions) -> Self {
         Self { inner, options }
     }
@@ -60,7 +60,7 @@ fn compress_if_worthwhile(value: Bytes, zstd_level: i32) -> Result<SingleValue, 
 // differentiate keys just in case packblob is run in an existing unpacked store
 pub const ENVELOPE_SUFFIX: &str = ".pack";
 
-impl<T: Blobstore + Clone> Blobstore for PackBlob<T> {
+impl<T: Blobstore> Blobstore for PackBlob<T> {
     fn get(
         &self,
         ctx: CoreContext,
@@ -114,17 +114,18 @@ impl<T: Blobstore + Clone> Blobstore for PackBlob<T> {
             Ok(SingleValue::Raw(value.to_vec()))
         };
 
-        let inner = self.inner.clone();
 
-        async move {
-            // Wrap in thrift encoding
-            let envelope: PackEnvelope = PackEnvelope(StorageEnvelope {
-                storage: StorageFormat::Single(single?),
-            });
-            // pass through the put after wrapping
-            inner.put(ctx, key, envelope.into()).await
+        match single {
+            Ok(single) => {
+                // Wrap in thrift encoding
+                let envelope: PackEnvelope = PackEnvelope(StorageEnvelope {
+                    storage: StorageFormat::Single(single),
+                });
+                // pass through the put after wrapping
+                self.inner.put(ctx, key, envelope.into())
+            }
+            Err(e) => future::err(e).boxed(),
         }
-        .boxed()
     }
 
     fn is_present(
@@ -137,7 +138,7 @@ impl<T: Blobstore + Clone> Blobstore for PackBlob<T> {
     }
 }
 
-impl<T: Blobstore + BlobstoreWithLink + Clone> PackBlob<T> {
+impl<T: Blobstore + BlobstoreWithLink> PackBlob<T> {
     // Put packed content, returning the pack's key if successful.
     // `prefix` is in the control of the packer, e.g. if packing only
     // filecontent together packer can chose "repoXXXX.packed.file_content."
