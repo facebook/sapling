@@ -187,7 +187,7 @@ def unhide(ui, repo, *revs, **opts):
     commits will also become visible.
     """
     revs = list(revs) + opts.pop("rev", [])
-    with repo.lock():
+    with repo.wlock(), repo.lock():
         revs = set(scmutil.revrange(repo, revs))
         _dounhide(repo, revs)
 
