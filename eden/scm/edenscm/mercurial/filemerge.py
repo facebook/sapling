@@ -220,7 +220,12 @@ def _picktool(repo, ui, path, binary, symlink, changedelete):
             disabled.add(t)
     names = tools.keys()
     tools = sorted([(-p, tool) for tool, p in tools.items() if tool not in disabled])
-    uimerge = ui.config("ui", "merge")
+    interactive = ui.interactive() and ui.formatted
+    uimerge = None
+    if interactive:
+        uimerge = ui.config("ui", "merge:interactive")
+    if not uimerge:
+        uimerge = ui.config("ui", "merge")
     if uimerge:
         # external tools defined in uimerge won't be able to handle
         # change/delete conflicts

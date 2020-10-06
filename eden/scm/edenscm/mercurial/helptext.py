@@ -2492,6 +2492,10 @@ User interface controls.
     For more information on merge tools see :hg:`help merge-tools`.
     For configuring merge tools see the ``[merge-tools]`` section.
 
+``merge:interactive``
+    If set, override ``ui.merge`` in interactive mode (usually when both
+    stdin and stdout are ttys).
+
 ``mergemarkers``
     Sets the merge conflict marker label styling. The ``detailed``
     style uses the ``mergemarkertemplate`` setting to style the labels.

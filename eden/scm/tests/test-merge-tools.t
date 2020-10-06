@@ -1379,3 +1379,15 @@ specified file as expected
   couldn't find merge tool true (for pattern f)
   couldn't find merge tool true
   f = false
+
+test ui.merge:interactive
+
+  $ hg debugpickmergetool --config ui.formatted=false --config ui.interactive=false --config ui.merge=nonint --config ui.merge:interactive=int f
+  f = nonint
+  $ hg debugpickmergetool --config ui.formatted=false --config ui.interactive=true  --config ui.merge=nonint --config ui.merge:interactive=int f
+  f = nonint
+  $ hg debugpickmergetool --config ui.formatted=true  --config ui.interactive=false --config ui.merge=nonint --config ui.merge:interactive=int f
+  f = nonint
+  $ hg debugpickmergetool --config ui.formatted=true  --config ui.interactive=true  --config ui.merge=nonint --config ui.merge:interactive=int f
+  f = int
+
