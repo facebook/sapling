@@ -68,6 +68,7 @@ class TestFlags(NamedTuple):
     verbose: bool
     debug: bool
     keep_tmpdir: bool
+    tmpdir: Optional[str]
     disable_all_network_access: bool
 
     def runner_args(self) -> Args:
@@ -84,6 +85,9 @@ class TestFlags(NamedTuple):
 
         if self.keep_tmpdir:
             r.append("--keep-tmpdir")
+
+        if self.tmpdir:
+            r.extend(["--tmpdir", self.tmpdir])
 
         r.extend(["-j", "%d" % multiprocessing.cpu_count()])
 
@@ -334,6 +338,12 @@ def run_tests(
     help="keep temporary directory after running tests",
 )
 @click.option(
+    "--tmpdir",
+    default=None,
+    is_flag=False,
+    help="run tests in the given temporary directory (implies --keep-tmpdir)",
+)
+@click.option(
     "--simple-test-selector", default=None, help="select an individual test to run"
 )
 @click.option(
@@ -380,6 +390,7 @@ def run(
     debug,
     simple_test_selector,
     keep_tmpdir,
+    tmpdir,
     mysql_client,
     mysql_raw_xdb,
     mysql_schemas,
@@ -415,6 +426,7 @@ def run(
         verbose,
         debug,
         keep_tmpdir,
+        tmpdir,
         disable_all_network_access=(
             not is_mysql and "DISABLE_ALL_NETWORK_ACCESS" in manifest_env
         ),  # NOTE: We need network to talk to MySQL
