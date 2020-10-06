@@ -28,7 +28,7 @@ use types::{Key, Sha256};
     Clone
 )]
 pub enum ContentHash {
-    Sha256(Sha256),
+    Sha256(#[serde(with = "types::serde_with::sha256::tuple")] Sha256),
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash, Ord, PartialOrd)]

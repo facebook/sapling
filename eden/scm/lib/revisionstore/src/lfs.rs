@@ -156,9 +156,11 @@ enum ContentHashType {
 /// thus changes to this structure must be done in a backward and forward compatible fashion.
 #[derive(Serialize, Deserialize)]
 struct LfsPointersEntry {
+    #[serde(with = "types::serde_with::hgid::tuple")]
     hgid: HgId,
     size: u64,
     is_binary: bool,
+    #[serde(with = "types::serde_with::key::tuple")]
     copy_from: Option<Key>,
     /// The content_hashes will always contain at least a `ContentHashType::Sha256` entry.
     content_hashes: HashMap<ContentHashType, ContentHash>,
@@ -233,6 +235,7 @@ impl LfsPointersStore {
 
 #[derive(Serialize, Deserialize)]
 struct LfsIndexedLogBlobsEntry {
+    #[serde(with = "types::serde_with::sha256::tuple")]
     sha256: Sha256,
     range: Range<usize>,
     data: Bytes,

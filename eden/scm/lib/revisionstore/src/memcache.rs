@@ -32,6 +32,7 @@ use crate::{
 /// incompatibilities.
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub(crate) struct McData {
+    #[serde(with = "types::serde_with::key::tuple")]
     pub key: Key,
     pub data: Bytes,
     pub metadata: Metadata,
@@ -43,7 +44,9 @@ pub(crate) struct McData {
 /// incompatibilities.
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub(crate) struct McHist {
+    #[serde(with = "types::serde_with::key::tuple")]
     pub key: Key,
+    #[serde(with = "types::serde_with::nodeinfo::tuple")]
     pub nodeinfo: NodeInfo,
 }
 

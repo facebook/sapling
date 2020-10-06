@@ -30,7 +30,9 @@ use crate::{
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Delta {
     pub data: Bytes,
+    #[serde(with = "types::serde_with::key::tuple")]
     pub base: Option<Key>,
+    #[serde(with = "types::serde_with::key::tuple")]
     pub key: Key,
 }
 
