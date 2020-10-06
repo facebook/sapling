@@ -7,7 +7,7 @@
 
 //! No-op progress bar placeholders. Enables code that can optionally report
 //! progress to unconditionally update the progress bar rather than using
-//! conditionals at every callside.
+//! conditionals at every callsite.
 
 use std::sync::{
     atomic::{AtomicU64, Ordering},
