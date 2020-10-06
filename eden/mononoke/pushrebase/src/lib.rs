@@ -91,6 +91,8 @@ const MAX_REBASE_ATTEMPTS: usize = 100;
 
 pub const MUTATION_KEYS: &[&str] = &["mutpred", "mutuser", "mutdate", "mutop", "mutsplit"];
 
+pub const FAILUPUSHREBASE_EXTRA: &str = "failpushrebase";
+
 #[derive(Debug, Error)]
 pub enum PushrebaseInternalError {
     #[error("Bonsai not found for hg changeset: {0}")]
@@ -134,6 +136,10 @@ pub enum PushrebaseError {
         #[source]
         err: Error,
     },
+    #[error(
+        "Force failed pushrebase, please do a manual rebase. (Bonsai changeset id that triggered it is {0})"
+    )]
+    ForceFailPushrebase(ChangesetId),
     #[error(transparent)]
     Error(#[from] Error),
 }
@@ -347,6 +353,12 @@ async fn rebase_in_loop(
         )
         .await?;
 
+        for bcs in server_bcs.iter() {
+            if should_fail_pushrebase(bcs) {
+                return Err(PushrebaseError::ForceFailPushrebase(bcs.get_changeset_id()));
+            }
+        }
+
         if config.casefolding_check {
             let conflict =
                 check_case_conflicts(server_bcs.iter().rev().chain(client_bcs.iter().rev()));
@@ -393,6 +405,10 @@ async fn rebase_in_loop(
     }
 
     Err(PushrebaseInternalError::TooManyRebaseAttempts.into())
+}
+
+fn should_fail_pushrebase(bcs: &BonsaiChangeset) -> bool {
+    bcs.extra().any(|(key, _)| key == FAILUPUSHREBASE_EXTRA)
 }
 
 async fn do_rebase(
@@ -3450,6 +3466,76 @@ mod tests {
             Err(err) => Err(err.into()),
             Ok(_) => Err(format_err!("should have failed")),
         }
+    }
+
+    #[fbinit::compat_test]
+    async fn pushrebase_test_failpushrebase_extra(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = linear::getrepo(fb).await;
+
+        // Create one commit on top of latest commit in the linear repo
+        let before_head_commit = "79a13814c5ce7330173ec04d279bf95ab3f652fb";
+        let head_bcs_id = CreateCommitContext::new(&ctx, &repo, vec![before_head_commit])
+            .add_file("file", "content")
+            .add_extra(FAILUPUSHREBASE_EXTRA.to_string(), vec![])
+            .commit()
+            .await?;
+
+        bookmark(&ctx, &repo, "head").set_to(head_bcs_id).await?;
+
+        let bcs_id = CreateCommitContext::new(&ctx, &repo, vec![before_head_commit])
+            .add_file("file", "content2")
+            .commit()
+            .await?;
+
+        let hg_cs = repo
+            .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
+            .compat()
+            .await?;
+
+        let err = do_pushrebase(
+            &ctx,
+            &repo,
+            &Default::default(),
+            &BookmarkName::new("head")?,
+            &hashset![hg_cs],
+            None,
+        )
+        .await;
+
+        match err {
+            Err(PushrebaseError::ForceFailPushrebase(_)) => {}
+            _ => {
+                return Err(format_err!(
+                    "unexpected result: expected ForceFailPushrebase error, found {:?}",
+                    err
+                ));
+            }
+        };
+
+        // Now create the same commit on top of head commit - pushrebase should succeed
+        let bcs_id = CreateCommitContext::new(&ctx, &repo, vec![head_bcs_id])
+            .add_file("file", "content2")
+            .commit()
+            .await?;
+
+        let hg_cs = repo
+            .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
+            .compat()
+            .await?;
+
+        do_pushrebase(
+            &ctx,
+            &repo,
+            &Default::default(),
+            &BookmarkName::new("head")?,
+            &hashset![hg_cs],
+            None,
+        )
+        .map_err(|err| format_err!("{:?}", err))
+        .await?;
+
+        Ok(())
     }
 
     async fn ensure_content(
