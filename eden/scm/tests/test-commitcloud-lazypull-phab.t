@@ -158,7 +158,6 @@ Test for `hg diff --since-last-submit`
   +Hello feature2 update
 
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg diff --since-last-submit
-  pulling 'a8080066a666ffa51c0a171e87d5a0396ecb559a' from 'ssh://user@dummy/server'
   diff -r a8080066a666 -r 95847be64d6a feature2.body.txt
   --- a/feature2.body.txt	Thu Jan 01 00:00:00 1970 +0000
   +++ b/feature2.body.txt	Thu Jan 01 00:00:00 1970 +0000
@@ -189,5 +188,4 @@ Test for `hg diff --since-last-submit`
   a8080066a666ffa51c0a171e87d5a0396ecb559a Differential Revision: https://phabricator.fb.com/D1 (no-eol)
 
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log --hidden -r 'lastsubmitted(.)' -T '{node} {desc}'
-  pulling 'a8080066a666ffa51c0a171e87d5a0396ecb559a' from 'ssh://user@dummy/server'
   a8080066a666ffa51c0a171e87d5a0396ecb559a Differential Revision: https://phabricator.fb.com/D1 (no-eol)

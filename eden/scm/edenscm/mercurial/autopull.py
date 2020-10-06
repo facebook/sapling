@@ -120,9 +120,9 @@ def trypull(repo, xs):
 
     Return true if pull succeeded for all names. Does not raise.
     """
-    # Do not attempt to pull the same name twice.
+    # Do not attempt to pull the same name twice, or names in the repo.
     repo._autopulled = getattr(repo, "_autopulled", set())
-    xs = [x for x in xs if x not in repo._autopulled]
+    xs = [x for x in xs if x not in repo._autopulled and x not in repo]
     if not xs:
         return False
     repo._autopulled.update(xs)
