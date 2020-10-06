@@ -5,5 +5,6 @@
  * GNU General Public License version 2.
  */
 
-pub mod hgid;
-pub mod sha256;
+pub mod bytes;
+pub mod hex;
+pub mod tuple;

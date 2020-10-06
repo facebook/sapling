@@ -41,6 +41,35 @@ impl Sha256 {
         to_hex(self.0.as_ref())
     }
 
+    pub fn from_hex(hex: &[u8]) -> Result<Self> {
+        if hex.len() != Self::hex_len() {
+            let msg = format!("{:?} is not a hex string of {} chars", hex, Self::hex_len());
+            bail!(msg);
+        }
+        let mut bytes = [0u8; Self::len()];
+        for (i, byte) in hex.iter().enumerate() {
+            let value = match byte {
+                b'0'..=b'9' => byte - b'0',
+                b'a'..=b'f' => byte - b'a' + 10,
+                b'A'..=b'F' => byte - b'A' + 10,
+                _ => {
+                    let msg = format!("{:?} is not a hex character", *byte as char);
+                    bail!(msg);
+                }
+            };
+            if i & 1 == 0 {
+                bytes[i / 2] |= value << 4;
+            } else {
+                bytes[i / 2] |= value;
+            }
+        }
+        Ok(Self::from_byte_array(bytes))
+    }
+
+    pub fn from_byte_array(bytes: [u8; Self::len()]) -> Self {
+        Self(bytes)
+    }
+
     pub fn from_slice(bytes: &[u8]) -> Result<Self> {
         if bytes.len() != Sha256::len() {
             bail!("invalid sha256 length {:?}", bytes.len());
@@ -160,6 +189,64 @@ mod tests {
         Sha256::from_slice(&[0u8; 25]).expect_err("bad slice length");
     }
 
+    #[test]
+    fn test_from_hex() {
+        assert_eq!(
+            Sha256::from_hex(b"abcd").unwrap_err().to_string(),
+            "[97, 98, 99, 100] is not a hex string of 64 chars"
+        );
+        assert_eq!(
+            Sha256::from_hex(&[b'z'; 64]).unwrap_err().to_string(),
+            "\'z\' is not a hex character"
+        );
+        let hex = "434b1eeccd0fef2bad68f3c4f5dcbb2feb90b9465628a544cae3730ddf36310f";
+        assert_eq!(Sha256::from_hex(hex.as_bytes()).unwrap().to_hex(), hex);
+    }
+
+    #[test]
+    fn test_serde_with_using_cbor() {
+        // Note: this test is for CBOR. Other serializers like mincode
+        // or Thrift would have different backwards compatibility!
+        use serde_cbor::de::from_slice as decode;
+        use serde_cbor::ser::to_vec as encode;
+
+        #[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
+        struct Orig(#[serde(with = "crate::serde_with::sha256::tuple")] Sha256);
+
+        #[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
+        struct Bytes(#[serde(with = "crate::serde_with::sha256::bytes")] Sha256);
+
+        #[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
+        struct Hex(#[serde(with = "crate::serde_with::sha256::hex")] Sha256);
+
+        let id: Sha256 = Sha256([0xcc; Sha256::len()]);
+        let orig = Orig(id);
+        let bytes = Bytes(id);
+        let hex = Hex(id);
+
+        let cbor_orig = encode(&orig).unwrap();
+        let cbor_bytes = encode(&bytes).unwrap();
+        let cbor_hex = encode(&hex).unwrap();
+
+        assert_eq!(cbor_orig.len(), 66);
+        assert_eq!(cbor_bytes.len(), 34);
+        assert_eq!(cbor_hex.len(), 66);
+
+        // Orig cannot decode bytes or hex.
+        assert_eq!(decode::<Orig>(&cbor_orig).unwrap().0, id);
+        decode::<Orig>(&cbor_bytes).unwrap_err();
+        decode::<Orig>(&cbor_hex).unwrap_err();
+
+        // Bytes can decode all 3 formats.
+        assert_eq!(decode::<Bytes>(&cbor_orig).unwrap().0, id);
+        assert_eq!(decode::<Bytes>(&cbor_bytes).unwrap().0, id);
+        assert_eq!(decode::<Bytes>(&cbor_hex).unwrap().0, id);
+
+        // Hex can decode all 3 formats.
+        assert_eq!(decode::<Hex>(&cbor_orig).unwrap().0, id);
+        assert_eq!(decode::<Hex>(&cbor_bytes).unwrap().0, id);
+        assert_eq!(decode::<Hex>(&cbor_hex).unwrap().0, id);
+    }
     quickcheck! {
         fn test_from_slice(sha256: Sha256) -> bool {
             sha256 == Sha256::from_slice(sha256.as_ref()).expect("from_slice")
