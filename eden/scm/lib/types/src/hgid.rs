@@ -12,7 +12,7 @@ use std::{
 };
 
 use anyhow::Result;
-use serde_derive::{Deserialize, Serialize};
+use serde::{de::Deserializer, Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::parents::Parents;
@@ -70,18 +70,14 @@ struct HgIdError(String);
 ///
 /// [1]: Depends on actual data of `HgId`.
 /// [2]: JSON only supports utf-8 data.
-#[derive(
-    Clone,
-    Copy,
-    Eq,
-    Hash,
-    Ord,
-    PartialEq,
-    PartialOrd,
-    Serialize,
-    Deserialize
-)]
+#[derive(Clone, Copy, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 pub struct HgId([u8; HgId::len()]);
+
+impl<'de> Deserialize<'de> for HgId {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        crate::serde_with::hgid::bytes::deserialize(deserializer)
+    }
+}
 
 /// The nullid (0x00) is used throughout Mercurial to represent "None".
 /// (For example, a commit will have a nullid p2, if it has no second parent).
