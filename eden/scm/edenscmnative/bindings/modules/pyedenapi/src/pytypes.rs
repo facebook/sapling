@@ -9,7 +9,6 @@
 
 use cpython::*;
 use edenapi::Stats;
-use edenapi_types::CommitRevlogData;
 
 use crate::stats::stats;
 
@@ -25,18 +24,5 @@ impl ToPyObject for PyStats {
 
     fn into_py_object(self, py: Python) -> Self::ObjectType {
         stats::new(py, self.0).unwrap()
-    }
-}
-
-/// Converts `CommitRevlogData` to Python `(node: bytes, rawdata: bytes)`
-pub struct PyCommitRevlogData(pub CommitRevlogData);
-
-impl ToPyObject for PyCommitRevlogData {
-    type ObjectType = PyObject;
-
-    fn to_py_object(&self, py: Python) -> Self::ObjectType {
-        let id = PyBytes::new(py, self.0.hgid.as_ref());
-        let data = PyBytes::new(py, self.0.revlog_data.as_ref());
-        (id, data).to_py_object(py).into_object()
     }
 }

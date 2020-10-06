@@ -13,13 +13,13 @@ use futures::prelude::*;
 use async_runtime::block_on_future;
 use cpython_async::PyFuture;
 use cpython_async::TStream;
+use cpython_ext::convert::Serde;
 use cpython_ext::{PyPathBuf, ResultPyErrExt};
 use edenapi::{EdenApi, EdenApiBlocking, EdenApiError, Fetch, Stats};
-use edenapi_types::{FileEntry, HistoryEntry, TreeEntry};
+use edenapi_types::{CommitRevlogData, FileEntry, HistoryEntry, TreeEntry};
 use progress::{ProgressBar, ProgressFactory, Unit};
 use revisionstore::{HgIdMutableDeltaStore, HgIdMutableHistoryStore};
 
-use crate::pytypes::PyCommitRevlogData;
 use crate::pytypes::PyStats;
 use crate::stats::stats;
 use crate::util::{
@@ -171,7 +171,7 @@ pub trait EdenApiPyExt: EdenApi {
         repo: String,
         nodes: Vec<PyBytes>,
         callback: Option<PyObject>,
-    ) -> PyResult<(TStream<anyhow::Result<PyCommitRevlogData>>, PyFuture)> {
+    ) -> PyResult<(TStream<anyhow::Result<Serde<CommitRevlogData>>>, PyFuture)> {
         let nodes = to_hgids(py, nodes);
         let callback = callback.map(wrap_callback);
 
@@ -186,7 +186,7 @@ pub trait EdenApiPyExt: EdenApi {
             })
             .map_pyerr(py)?;
 
-        let commits_py = commits.map_ok(PyCommitRevlogData).map_err(Into::into);
+        let commits_py = commits.map_ok(Serde).map_err(Into::into);
         let stats_py = PyFuture::new(py, stats.map_ok(PyStats))?;
         Ok((commits_py.into(), stats_py))
     }
