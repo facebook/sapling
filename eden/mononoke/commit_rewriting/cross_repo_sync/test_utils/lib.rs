@@ -17,8 +17,10 @@ use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use cloned::cloned;
 use context::CoreContext;
 use cross_repo_sync::{
-    rewrite_commit, update_mapping, upload_commits, CommitSyncDataProvider, CommitSyncRepos,
-    CommitSyncer, SyncData, Syncers,
+    rewrite_commit,
+    types::{Source, Target},
+    update_mapping, upload_commits, CommitSyncDataProvider, CommitSyncRepos, CommitSyncer,
+    SyncData, Syncers,
 };
 use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt};
 use maplit::hashmap;
@@ -154,8 +156,11 @@ pub async fn init_small_large_repo(
     };
 
     let current_version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
-    let commit_sync_data_provider = CommitSyncDataProvider::Test {
-        map: hashmap! {
+    let commit_sync_data_provider = CommitSyncDataProvider::test_new(
+        current_version.clone(),
+        Source(repos.get_source_repo().get_repoid()),
+        Target(repos.get_target_repo().get_repoid()),
+        hashmap! {
             current_version.clone() => SyncData {
                 mover: Arc::new(prefix_mover),
                 reverse_mover: Arc::new(reverse_prefix_mover),
@@ -163,8 +168,7 @@ pub async fn init_small_large_repo(
                 reverse_bookmark_renamer: Arc::new(identity_renamer),
             }
         },
-        current_version: current_version.clone(),
-    };
+    );
 
     let small_to_large_commit_syncer = CommitSyncer {
         mapping: mapping.clone(),
@@ -177,17 +181,19 @@ pub async fn init_small_large_repo(
         large_repo: megarepo.clone(),
     };
 
-    let commit_sync_data_provider = CommitSyncDataProvider::Test {
-        map: hashmap! {
-            current_version.clone() => SyncData {
+    let commit_sync_data_provider = CommitSyncDataProvider::test_new(
+        current_version.clone(),
+        Source(repos.get_source_repo().get_repoid()),
+        Target(repos.get_target_repo().get_repoid()),
+        hashmap! {
+            current_version => SyncData {
                 mover: Arc::new(reverse_prefix_mover),
                 reverse_mover: Arc::new(prefix_mover),
                 bookmark_renamer: Arc::new(identity_renamer),
                 reverse_bookmark_renamer: Arc::new(identity_renamer),
             }
         },
-        current_version,
-    };
+    );
 
     let large_to_small_commit_syncer = CommitSyncer {
         mapping: mapping.clone(),

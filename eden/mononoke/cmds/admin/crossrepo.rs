@@ -602,7 +602,11 @@ fn get_large_to_small_commit_sync_repos(
 mod test {
     use super::*;
     use bookmarks::BookmarkName;
-    use cross_repo_sync::{validation::find_bookmark_diff, CommitSyncDataProvider, SyncData};
+    use cross_repo_sync::{
+        types::{Source, Target},
+        validation::find_bookmark_diff,
+        CommitSyncDataProvider, SyncData,
+    };
     use fixtures::{linear, set_bookmark};
     use futures_old::stream::Stream;
     use maplit::{hashmap, hashset};
@@ -801,17 +805,19 @@ mod test {
         };
 
         let current_version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
-        let commit_sync_data_provider = CommitSyncDataProvider::Test {
-            map: hashmap! {
-                current_version.clone() => SyncData {
+        let commit_sync_data_provider = CommitSyncDataProvider::test_new(
+            current_version.clone(),
+            Source(repos.get_source_repo().get_repoid()),
+            Target(repos.get_target_repo().get_repoid()),
+            hashmap! {
+                current_version => SyncData {
                     mover: Arc::new(identity_mover),
                     reverse_mover: Arc::new(identity_mover),
                     bookmark_renamer: Arc::new(noop_book_renamer),
                     reverse_bookmark_renamer: Arc::new(noop_book_renamer),
                 }
             },
-            current_version,
-        };
+        );
         Ok(CommitSyncer {
             mapping,
             repos,
