@@ -637,8 +637,10 @@ void PrjfsChannel::removeCachedFile(RelativePathPiece path) {
       // We've attempted to call PrjDeleteFile on a directory. That isn't
       // supported, let's just ignore.
       return;
-    } else if (result == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND)) {
-      // The file is not cached, ignore.
+    } else if (
+        result == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND) ||
+        result == HRESULT_FROM_WIN32(ERROR_PATH_NOT_FOUND)) {
+      // The file or a directory in the path is not cached, ignore.
     } else {
       throwHResultErrorExplicit(
           result,
