@@ -16,7 +16,7 @@ use futures_old::{Future, IntoFuture};
 use serde_derive::{Deserialize, Serialize};
 use tokio_compat::runtime;
 
-use blobstore::{Blobstore, BlobstoreKeyParam, BlobstoreKeySource};
+use blobstore::{Blobstore, BlobstoreKeyParam, BlobstoreKeySource, DEFAULT_PUT_BEHAVIOUR};
 use blobstore_sync_queue::{
     BlobstoreSyncQueue, BlobstoreSyncQueueEntry, OperationKey, SqlBlobstoreSyncQueue,
 };
@@ -380,7 +380,7 @@ fn make_key_source(
             Ok(res)
         }
         BlobConfig::Files { path } => {
-            let res = Arc::new(Fileblob::create(path)?);
+            let res = Arc::new(Fileblob::create(path, DEFAULT_PUT_BEHAVIOUR)?);
             Ok(res)
         }
         _ => Err(format_err!("Unsupported Blobstore type")),

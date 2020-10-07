@@ -19,11 +19,11 @@ use percent_encoding::{percent_encode, AsciiSet, CONTROLS};
 
 use blobstore::{
     Blobstore, BlobstoreEnumerationData, BlobstoreGetData, BlobstoreKeyParam, BlobstoreKeySource,
-    BlobstoreMetadata, BlobstoreWithLink,
+    BlobstoreMetadata, BlobstorePutOps, BlobstoreWithLink, OverwriteStatus, PutBehaviour,
 };
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
-use tempfile::NamedTempFile;
+use tempfile::{NamedTempFile, PersistError};
 use tokio::{
     fs::{hard_link, File},
     io::{self, AsyncReadExt, AsyncWriteExt},
@@ -40,10 +40,11 @@ const PATH: &AsciiSet = &FRAGMENT.add(b'#').add(b'?').add(b'{').add(b'}');
 #[derive(Debug, Clone)]
 pub struct Fileblob {
     base: PathBuf,
+    put_behaviour: PutBehaviour,
 }
 
 impl Fileblob {
-    pub fn open<P: AsRef<Path>>(base: P) -> Result<Self> {
+    pub fn open<P: AsRef<Path>>(base: P, put_behaviour: PutBehaviour) -> Result<Self> {
         let base = base.as_ref();
 
         if !base.is_dir() {
@@ -52,13 +53,14 @@ impl Fileblob {
 
         Ok(Self {
             base: base.to_owned(),
+            put_behaviour,
         })
     }
 
-    pub fn create<P: AsRef<Path>>(base: P) -> Result<Self> {
+    pub fn create<P: AsRef<Path>>(base: P, put_behaviour: PutBehaviour) -> Result<Self> {
         let base = base.as_ref();
         create_dir_all(base)?;
-        Self::open(base)
+        Self::open(base, put_behaviour)
     }
 
     fn path(&self, key: &String) -> PathBuf {
@@ -72,6 +74,55 @@ async fn ctime(file: &File) -> Option<i64> {
     let ctime = meta.modified().ok()?;
     let ctime_dur = ctime.duration_since(SystemTime::UNIX_EPOCH).ok()?;
     i64::try_from(ctime_dur.as_secs()).ok()
+}
+
+impl BlobstorePutOps for Fileblob {
+    fn put_explicit(
+        &self,
+        _ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+        put_behaviour: PutBehaviour,
+    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+        let p = self.path(&key);
+        async move {
+            // block_in_place on tempfile would be ideal here, but it interacts
+            // badly with tokio_compat
+            let tempfile = NamedTempFile::new()?;
+            let new_file = tempfile.as_file().try_clone()?;
+            let mut tokio_file = File::from_std(new_file);
+            tokio_file.write_all(value.as_bytes().as_ref()).await?;
+            let status = match put_behaviour {
+                PutBehaviour::Overwrite => {
+                    tempfile.persist(&p)?;
+                    OverwriteStatus::NotChecked
+                }
+                PutBehaviour::IfAbsent | PutBehaviour::OverwriteAndLog => {
+                    let temp_path = tempfile.path().to_owned();
+                    match tempfile.persist_noclobber(&p) {
+                        Ok(_) => OverwriteStatus::New,
+                        // Key already existed
+                        Err(PersistError { file: f, error: _ }) if f.path() == temp_path => {
+                            if put_behaviour.should_overwrite() {
+                                f.persist(&p)?;
+                                OverwriteStatus::Overwrote
+                            } else {
+                                OverwriteStatus::Prevented
+                            }
+                        }
+                        Err(e) => return Err(e.into()),
+                    }
+                }
+            };
+
+            Ok(status)
+        }
+        .boxed()
+    }
+
+    fn put_behaviour(&self) -> blobstore::PutBehaviour {
+        self.put_behaviour
+    }
 }
 
 impl Blobstore for Fileblob {
@@ -101,27 +152,6 @@ impl Blobstore for Fileblob {
         .boxed()
     }
 
-    fn put(
-        &self,
-        _ctx: CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> BoxFuture<'static, Result<(), Error>> {
-        let p = self.path(&key);
-
-        async move {
-            // block_in_place on tempfile would be ideal here, but it interacts
-            // badly with tokio_compat
-            let tempfile = NamedTempFile::new()?;
-            let new_file = tempfile.as_file().try_clone()?;
-            let mut tokio_file = File::from_std(new_file);
-            tokio_file.write_all(value.as_bytes().as_ref()).await?;
-            tempfile.persist(&p)?;
-            Ok(())
-        }
-        .boxed()
-    }
-
     fn is_present(
         &self,
         _ctx: CoreContext,
@@ -138,6 +168,17 @@ impl Blobstore for Fileblob {
             Ok(ret)
         }
         .boxed()
+    }
+
+    fn put(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> BoxFuture<'static, Result<(), Error>> {
+        BlobstorePutOps::put_with_status(self, ctx, key, value)
+            .map_ok(|_| ())
+            .boxed()
     }
 }
 

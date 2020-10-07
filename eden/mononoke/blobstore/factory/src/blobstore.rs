@@ -101,7 +101,7 @@ pub fn make_blobstore<'a>(
                 Arc::new(DisabledBlob::new("Disabled by configuration")) as Arc<dyn Blobstore>
             }
 
-            Files { path } => Fileblob::create(path.join("blobs"))
+            Files { path } => Fileblob::create(path.join("blobs"), blobstore_options.put_behaviour)
                 .context(ErrorKind::StateOpen)
                 .map(|store| Arc::new(store) as Arc<dyn Blobstore>)?,
 

@@ -15,13 +15,53 @@ use std::sync::Arc;
 use anyhow::Error;
 use bytes::Bytes;
 use fbinit::FacebookInit;
+use itertools::Either;
+use strum::IntoEnumIterator;
 use tempdir::TempDir;
 
-use blobstore::{Blobstore, BlobstoreWithLink};
+use blobstore::{Blobstore, BlobstoreWithLink, PutBehaviour};
 use context::CoreContext;
 use fileblob::Fileblob;
 use memblob::{EagerMemblob, LazyMemblob};
 use mononoke_types::BlobstoreBytes;
+
+async fn overwrite<B: BlobstoreWithLink>(
+    fb: FacebookInit,
+    blobstore: B,
+    has_ctime: bool,
+    put_behaviour: PutBehaviour,
+) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+
+    let key = "some_key".to_string() + &put_behaviour.to_string();
+    let value = BlobstoreBytes::from_bytes(Bytes::copy_from_slice(b"appleveldatav1"));
+
+    blobstore
+        .put(ctx.clone(), key.clone(), value.clone())
+        .await?;
+
+    let roundtrip1 = blobstore.get(ctx.clone(), key.clone()).await?.unwrap();
+
+    let ctime1 = roundtrip1.as_meta().ctime();
+
+    let value2 = BlobstoreBytes::from_bytes(Bytes::copy_from_slice(b"appleveldatav2"));
+
+    blobstore
+        .put(ctx.clone(), key.clone(), value2.clone())
+        .await?;
+
+    let roundtrip2 = blobstore.get(ctx.clone(), key.clone()).await?.unwrap();
+    let ctime2 = roundtrip2.as_meta().ctime();
+    if put_behaviour.should_overwrite() {
+        assert_eq!(ctime2.is_some(), has_ctime);
+        assert_eq!(value2, roundtrip2.into_bytes());
+    } else {
+        assert_eq!(ctime1, ctime2);
+        assert_eq!(value, roundtrip2.into_bytes());
+    }
+
+    Ok(())
+}
 
 async fn roundtrip_and_link<B: BlobstoreWithLink>(
     fb: FacebookInit,
@@ -82,23 +122,48 @@ macro_rules! blobstore_test_impl {
         new: $new_cb: expr,
         persistent: $persistent: expr,
         has_ctime: $has_ctime: expr,
+        honors_put_behaviour: $honors_put_behaviour: expr,
     }) => {
         mod $mod_name {
             use super::*;
+
+            #[fbinit::compat_test]
+            async fn test_overwrite(fb: FacebookInit) -> Result<(), Error> {
+                let state = $state;
+                let has_ctime = $has_ctime;
+                let honors_put_behaviour = $honors_put_behaviour;
+                let put_behaviours = if honors_put_behaviour {
+                    // try all variants
+                    Either::Left(PutBehaviour::iter())
+                } else {
+                    // only try one, as it store doesn't support them yet
+                    Either::Right(vec![PutBehaviour::Overwrite].into_iter())
+                };
+                let factory = $new_cb;
+                for b in put_behaviours {
+                    overwrite(fb, factory(state.clone(), b)?, has_ctime, b).await?
+                }
+                Ok(())
+            }
 
             #[fbinit::compat_test]
             async fn test_roundtrip_and_link(fb: FacebookInit) -> Result<(), Error> {
                 let state = $state;
                 let has_ctime = $has_ctime;
                 let factory = $new_cb;
-                roundtrip_and_link(fb, factory(state.clone())?, has_ctime).await
+                roundtrip_and_link(
+                    fb,
+                    factory(state.clone(), PutBehaviour::Overwrite)?,
+                    has_ctime,
+                )
+                .await
             }
 
             #[fbinit::compat_test]
             async fn test_missing(fb: FacebookInit) -> Result<(), Error> {
                 let state = $state;
                 let factory = $new_cb;
-                missing(fb, factory(state)?).await
+                missing(fb, factory(state, PutBehaviour::Overwrite)?).await
             }
 
             #[fbinit::compat_test]
@@ -106,7 +171,7 @@ macro_rules! blobstore_test_impl {
                 let state = $state;
                 let factory = $new_cb;
                 // This is really just checking that the constructed type is Sized
-                Box::new(factory(state)?);
+                Box::new(factory(state, PutBehaviour::Overwrite)?);
                 Ok(())
             }
         }
@@ -116,36 +181,40 @@ macro_rules! blobstore_test_impl {
 blobstore_test_impl! {
     eager_memblob_test => {
         state: (),
-        new: move |_| Ok::<_,Error>(EagerMemblob::new()),
+        new: move |_, _| Ok::<_,Error>(EagerMemblob::new()),
         persistent: false,
         has_ctime: false,
+        honors_put_behaviour: false,
     }
 }
 
 blobstore_test_impl! {
     box_blobstore_test => {
         state: (),
-        new: move |_| Ok::<_,Error>(Box::new(EagerMemblob::new())),
+        new: move |_, _| Ok::<_,Error>(Box::new(EagerMemblob::new())),
         persistent: false,
         has_ctime: false,
+        honors_put_behaviour: false,
     }
 }
 
 blobstore_test_impl! {
     lazy_memblob_test => {
         state: (),
-        new: move |_| Ok::<_,Error>(LazyMemblob::new()),
+        new: move |_, _| Ok::<_,Error>(LazyMemblob::new()),
         persistent: false,
         has_ctime: false,
+        honors_put_behaviour: false,
     }
 }
 
 blobstore_test_impl! {
     fileblob_test => {
         state: Arc::new(TempDir::new("fileblob_test").unwrap()),
-        new: move |dir: Arc<TempDir>| Fileblob::open(&*dir),
+        new: move |dir: Arc<TempDir>, put_behaviour,| Fileblob::open(&*dir, put_behaviour),
         persistent: true,
         has_ctime: true,
+        honors_put_behaviour: true,
     }
 }
 
