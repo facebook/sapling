@@ -19,8 +19,7 @@
 #include "eden/fs/service/gen-cpp2/StreamingEdenService.h"
 #include "eden/fs/telemetry/EdenStats.h"
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 /** Contains statistics about the current state of the journal */
 struct JournalStats {
@@ -60,19 +59,16 @@ struct JournalDeltaInfo {
  */
 class Journal {
  public:
-  explicit Journal(std::shared_ptr<EdenStats> edenStats)
-      : edenStats_{std::move(edenStats)} {
-    /** Add 0 so that this counter shows up in ODS */
-    edenStats_->getJournalStatsForCurrentThread().truncatedReads.addValue(0);
-  }
-
-  /// It is almost always a mistake to copy a Journal.
-  Journal(const Journal&) = delete;
-  Journal& operator=(const Journal&) = delete;
-
   using SequenceNumber = JournalDelta::SequenceNumber;
   using SubscriberId = uint64_t;
   using SubscriberCallback = std::function<void()>;
+
+  explicit Journal(std::shared_ptr<EdenStats> edenStats);
+
+  Journal(const Journal&) = delete;
+  Journal& operator=(const Journal&) = delete;
+
+  // Functions to record writes:
 
   void recordCreated(RelativePathPiece fileName);
   void recordRemoved(RelativePathPiece fileName);
@@ -106,22 +102,45 @@ class Journal {
   void recordUncleanPaths(
       Hash fromHash,
       Hash toHash,
-      std::unordered_set<RelativePath>&& uncleanPaths);
+      std::unordered_set<RelativePath> uncleanPaths);
 
-  /** Get a copy of the tip of the journal.
-   * Will return a nullopt if the journal is empty */
+  // Functions for reading the current state of the journal:
+
+  /**
+   * Returns a copy of the tip of the journal.
+   * Will return a nullopt if the journal is empty.
+   */
   std::optional<JournalDeltaInfo> getLatest() const;
 
-  /** Register a subscriber.
-   * A subscriber is just a callback that is called whenever the
-   * journal has changed.
-   * It is recommended that the subscriber callback do the minimal
-   * amount of work needed to schedule the real work to happen in
-   * some other context because journal updates are likely to happen
-   * in awkward contexts or in the middle of some batch of mutations
-   * where it is not appropriate to do any heavy lifting.
-   * The return value of registerSubscriber is an identifier than
-   * can be passed to cancelSubscriber to later remove the registration.
+  /**
+   * Returns an accumulation of all deltas with sequence number >= limitSequence
+   * merged. If limitSequence is further back than the Journal remembers,
+   * isTruncated will be set on the JournalDeltaSum.
+   *
+   * The default limit value indicates that all deltas should be summed.
+   *
+   * If the limitSequence means that no deltas will match, returns nullptr.
+   */
+  std::unique_ptr<JournalDeltaRange> accumulateRange(
+      SequenceNumber limitSequence = 1);
+
+  // Subscription functionality:
+
+  /**
+   * Registers a callback to be invoked when the journal has changed.
+   *
+   * The subscriber is called while the subscriber lock is held, so it
+   * is recommended the subscriber callback do the minimal amount of work needed
+   * to schedule the real work to happen in some other context, because journal
+   * updates are likely to happen in awkward contexts or in the middle of some
+   * batch of mutations where it is not appropriate to do any heavy lifting.
+   *
+   * To minimize notification traffic, the Journal may coalesce redundant
+   * modifications between subscriber notifications and calls to getLatest or
+   * accumulateRange.
+   *
+   * The return value of registerSubscriber is an identifier than can be passed
+   * to cancelSubscriber to later remove the registration.
    */
   SubscriberId registerSubscriber(SubscriberCallback&& callback);
   void cancelSubscriber(SubscriberId id);
@@ -129,20 +148,13 @@ class Journal {
   void cancelAllSubscribers();
   bool isSubscriberValid(SubscriberId id) const;
 
-  /** Returns an option that is nullopt if the Journal is empty or an option
-   * that contains valid JournalStats if the Journal is non-empty*/
-  std::optional<JournalStats> getStats();
+  // Statistics and debugging:
 
-  /** Gets the sum of the modifications done by the deltas with Sequence
-   * Numbers >= limitSequence, if the limitSequence is further back than the
-   * Journal remembers isTruncated will be set on the JournalDeltaSum
-   * The default limit value is 0 which is never assigned by the Journal
-   * and thus indicates that all deltas should be summed.
-   * If the limitSequence means that no deltas will match, returns nullptr.
-   * */
-  std::unique_ptr<JournalDeltaRange> accumulateRange(
-      SequenceNumber limitSequence);
-  std::unique_ptr<JournalDeltaRange> accumulateRange();
+  /**
+   * Returns an option that is nullopt if the Journal is empty or an option
+   * that contains valid JournalStats if the Journal is non-empty.
+   */
+  std::optional<JournalStats> getStats();
 
   /** Gets a vector of the modifications (newer deltas having lower indices)
    * done by the latest 'limit' deltas, if the
@@ -197,33 +209,11 @@ class Journal {
       return fileChangeDeltas.empty() && hashUpdateDeltas.empty();
     }
 
-    bool isFileChangeInFront() const {
-      bool isFileChangeEmpty = fileChangeDeltas.empty();
-      bool isHashUpdateEmpty = hashUpdateDeltas.empty();
-      if (!isFileChangeEmpty && !isHashUpdateEmpty) {
-        return fileChangeDeltas.front().sequenceID <
-            hashUpdateDeltas.front().sequenceID;
-      }
-      return !isFileChangeEmpty && isHashUpdateEmpty;
-    }
+    bool isFileChangeInFront() const;
+    bool isFileChangeInBack() const;
 
-    bool isFileChangeInBack() const {
-      bool isFileChangeEmpty = fileChangeDeltas.empty();
-      bool isHashUpdateEmpty = hashUpdateDeltas.empty();
-      if (!isFileChangeEmpty && !isHashUpdateEmpty) {
-        return fileChangeDeltas.back().sequenceID >
-            hashUpdateDeltas.back().sequenceID;
-      }
-      return !isFileChangeEmpty && isHashUpdateEmpty;
-    }
-
-    void appendDelta(FileChangeJournalDelta&& delta) {
-      fileChangeDeltas.emplace_back(std::move(delta));
-    }
-
-    void appendDelta(HashUpdateJournalDelta&& delta) {
-      hashUpdateDeltas.emplace_back(std::move(delta));
-    }
+    void appendDelta(FileChangeJournalDelta&& delta);
+    void appendDelta(HashUpdateJournalDelta&& delta);
 
     JournalDelta::SequenceNumber getFrontSequenceID() const {
       if (isFileChangeInFront()) {
@@ -235,12 +225,14 @@ class Journal {
   };
   folly::Synchronized<DeltaState> deltaState_;
 
-  /** Removes the oldest deltas until the memory usage of the journal is below
+  /**
+   * Removes the oldest deltas until the memory usage of the journal is below
    * the journal's memory limit.
    */
   void truncateIfNecessary(DeltaState& deltaState);
 
-  /** Tries to compact a new Journal Delta with an old one if possible,
+  /**
+   * Tries to compact a new Journal Delta with an old one if possible,
    * returning true if it did compact it and false if not
    */
   bool compact(FileChangeJournalDelta& delta, DeltaState& deltaState);
@@ -251,7 +243,8 @@ class Journal {
     std::unordered_map<SubscriberId, SubscriberCallback> subscribers;
   };
 
-  /** Add a delta to the journal without notifying subscribers.
+  /**
+   * Add a delta to the journal without notifying subscribers.
    * The delta will have a new sequence number and timestamp
    * applied. A lock to the deltaState must be held and passed to this
    * function.
@@ -259,14 +252,16 @@ class Journal {
   template <typename T>
   void addDeltaWithoutNotifying(T&& delta, DeltaState& deltaState);
 
-  /** Notify subscribers that a change has happened, should be called with no
-   * Journal locks held.
+  /**
+   * Notify subscribers that a change has happened. Must not be called while
+   * Journal locks are held.
    */
   void notifySubscribers() const;
 
   size_t estimateMemoryUsage(const DeltaState& deltaState) const;
 
-  /** Runs from the latest delta to the delta with sequence ID (if 'lengthLimit'
+  /**
+   * Runs from the latest delta to the delta with sequence ID (if 'lengthLimit'
    * is not nullopt then checks at most 'lengthLimit' entries) and runs
    * deltaActor on each entry encountered.
    * */
@@ -282,5 +277,4 @@ class Journal {
 
   std::shared_ptr<EdenStats> edenStats_;
 };
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

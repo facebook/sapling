@@ -7,55 +7,9 @@
 
 #include "Journal.h"
 #include <folly/logging/xlog.h>
+#include "eden/fs/journal/JournalDelta.h"
 
-namespace facebook {
-namespace eden {
-
-void Journal::recordCreated(RelativePathPiece fileName) {
-  addDelta(FileChangeJournalDelta(fileName, FileChangeJournalDelta::CREATED));
-}
-
-void Journal::recordRemoved(RelativePathPiece fileName) {
-  addDelta(FileChangeJournalDelta(fileName, FileChangeJournalDelta::REMOVED));
-}
-
-void Journal::recordChanged(RelativePathPiece fileName) {
-  addDelta(FileChangeJournalDelta(fileName, FileChangeJournalDelta::CHANGED));
-}
-
-void Journal::recordRenamed(
-    RelativePathPiece oldName,
-    RelativePathPiece newName) {
-  addDelta(FileChangeJournalDelta(
-      oldName, newName, FileChangeJournalDelta::RENAMED));
-}
-
-void Journal::recordReplaced(
-    RelativePathPiece oldName,
-    RelativePathPiece newName) {
-  addDelta(FileChangeJournalDelta(
-      oldName, newName, FileChangeJournalDelta::REPLACED));
-}
-
-void Journal::recordHashUpdate(Hash toHash) {
-  addDelta(HashUpdateJournalDelta{}, toHash);
-}
-
-void Journal::recordHashUpdate(Hash fromHash, Hash toHash) {
-  HashUpdateJournalDelta delta;
-  delta.fromHash = fromHash;
-  addDelta(std::move(delta), toHash);
-}
-
-void Journal::recordUncleanPaths(
-    Hash fromHash,
-    Hash toHash,
-    std::unordered_set<RelativePath>&& uncleanPaths) {
-  HashUpdateJournalDelta delta;
-  delta.fromHash = fromHash;
-  delta.uncleanPaths = std::move(uncleanPaths);
-  addDelta(std::move(delta), toHash);
-}
+namespace facebook::eden {
 
 JournalDeltaPtr Journal::DeltaState::frontPtr() noexcept {
   bool isFileChangeEmpty = fileChangeDeltas.empty();
@@ -112,6 +66,86 @@ JournalDeltaPtr Journal::DeltaState::backPtr() noexcept {
   } else {
     return nullptr;
   }
+}
+
+bool Journal::DeltaState::isFileChangeInFront() const {
+  bool isFileChangeEmpty = fileChangeDeltas.empty();
+  bool isHashUpdateEmpty = hashUpdateDeltas.empty();
+  if (!isFileChangeEmpty && !isHashUpdateEmpty) {
+    return fileChangeDeltas.front().sequenceID <
+        hashUpdateDeltas.front().sequenceID;
+  }
+  return !isFileChangeEmpty && isHashUpdateEmpty;
+}
+
+bool Journal::DeltaState::isFileChangeInBack() const {
+  bool isFileChangeEmpty = fileChangeDeltas.empty();
+  bool isHashUpdateEmpty = hashUpdateDeltas.empty();
+  if (!isFileChangeEmpty && !isHashUpdateEmpty) {
+    return fileChangeDeltas.back().sequenceID >
+        hashUpdateDeltas.back().sequenceID;
+  }
+  return !isFileChangeEmpty && isHashUpdateEmpty;
+}
+
+void Journal::DeltaState::appendDelta(FileChangeJournalDelta&& delta) {
+  fileChangeDeltas.emplace_back(std::move(delta));
+}
+
+void Journal::DeltaState::appendDelta(HashUpdateJournalDelta&& delta) {
+  hashUpdateDeltas.emplace_back(std::move(delta));
+}
+
+Journal::Journal(std::shared_ptr<EdenStats> edenStats)
+    : edenStats_{std::move(edenStats)} {
+  // Add 0 so that this counter shows up in ODS
+  edenStats_->getJournalStatsForCurrentThread().truncatedReads.addValue(0);
+}
+
+void Journal::recordCreated(RelativePathPiece fileName) {
+  addDelta(FileChangeJournalDelta(fileName, FileChangeJournalDelta::CREATED));
+}
+
+void Journal::recordRemoved(RelativePathPiece fileName) {
+  addDelta(FileChangeJournalDelta(fileName, FileChangeJournalDelta::REMOVED));
+}
+
+void Journal::recordChanged(RelativePathPiece fileName) {
+  addDelta(FileChangeJournalDelta(fileName, FileChangeJournalDelta::CHANGED));
+}
+
+void Journal::recordRenamed(
+    RelativePathPiece oldName,
+    RelativePathPiece newName) {
+  addDelta(FileChangeJournalDelta(
+      oldName, newName, FileChangeJournalDelta::RENAMED));
+}
+
+void Journal::recordReplaced(
+    RelativePathPiece oldName,
+    RelativePathPiece newName) {
+  addDelta(FileChangeJournalDelta(
+      oldName, newName, FileChangeJournalDelta::REPLACED));
+}
+
+void Journal::recordHashUpdate(Hash toHash) {
+  addDelta(HashUpdateJournalDelta{}, toHash);
+}
+
+void Journal::recordHashUpdate(Hash fromHash, Hash toHash) {
+  HashUpdateJournalDelta delta;
+  delta.fromHash = fromHash;
+  addDelta(std::move(delta), toHash);
+}
+
+void Journal::recordUncleanPaths(
+    Hash fromHash,
+    Hash toHash,
+    std::unordered_set<RelativePath> uncleanPaths) {
+  HashUpdateJournalDelta delta;
+  delta.fromHash = fromHash;
+  delta.uncleanPaths = std::move(uncleanPaths);
+  addDelta(std::move(delta), toHash);
 }
 
 void Journal::truncateIfNecessary(DeltaState& deltaState) {
@@ -339,10 +373,6 @@ void Journal::flush() {
   notifySubscribers();
 }
 
-std::unique_ptr<JournalDeltaRange> Journal::accumulateRange() {
-  return accumulateRange(1);
-}
-
 std::unique_ptr<JournalDeltaRange> Journal::accumulateRange(
     SequenceNumber from) {
   DCHECK(from > 0);
@@ -531,5 +561,4 @@ void Journal::forEachDelta(
     ++iters;
   }
 }
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden

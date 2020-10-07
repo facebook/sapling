@@ -11,9 +11,12 @@
 
 using namespace facebook::eden;
 
-TEST(Journal, accumulate_range_all_changes) {
-  Journal journal(std::make_shared<EdenStats>());
+struct JournalTest : ::testing::Test {
+  std::shared_ptr<EdenStats> edenStats{std::make_shared<EdenStats>()};
+  Journal journal{edenStats};
+};
 
+TEST_F(JournalTest, accumulate_range_all_changes) {
   // Empty journals have no rang to accumulate over
   EXPECT_FALSE(journal.getLatest());
   EXPECT_EQ(nullptr, journal.accumulateRange());
@@ -56,9 +59,7 @@ TEST(Journal, accumulate_range_all_changes) {
   EXPECT_EQ(2, summed->changedFilesInOverlay.size());
 }
 
-TEST(Journal, accumulateRangeRemoveCreateUpdate) {
-  Journal journal(std::make_shared<EdenStats>());
-
+TEST_F(JournalTest, accumulateRangeRemoveCreateUpdate) {
   // Remove test.txt
   journal.recordRemoved("test.txt"_relpath);
   // Create test.txt
@@ -141,9 +142,7 @@ void checkHashMatches(const Hash& from, const Hash& to, Journal& journal) {
   EXPECT_EQ(to, range->toHash);
 }
 
-TEST(Journal, accumulate_range_with_hash_updates) {
-  Journal journal(std::make_shared<EdenStats>());
-
+TEST_F(JournalTest, accumulate_range_with_hash_updates) {
   auto hash0 = kZeroHash;
   auto hash1 = Hash("1111111111111111111111111111111111111111");
   auto hash2 = Hash("2222222222222222222222222222222222222222");
@@ -178,9 +177,7 @@ TEST(Journal, accumulate_range_with_hash_updates) {
   checkHashMatches(hash1, hash1, journal);
 }
 
-TEST(Journal, debugRawJournalInfoRemoveCreateUpdate) {
-  Journal journal(std::make_shared<EdenStats>());
-
+TEST_F(JournalTest, debugRawJournalInfoRemoveCreateUpdate) {
   // Remove test.txt
   journal.recordRemoved("test.txt"_relpath);
   // Create test.txt
@@ -230,9 +227,7 @@ TEST(Journal, debugRawJournalInfoRemoveCreateUpdate) {
   ASSERT_EQ(0, debugDeltas.size());
 }
 
-TEST(Journal, debugRawJournalInfoHashUpdates) {
-  Journal journal(std::make_shared<EdenStats>());
-
+TEST_F(JournalTest, debugRawJournalInfoHashUpdates) {
   auto hash0 = kZeroHash;
   auto hash1 = Hash("1111111111111111111111111111111111111111");
   auto hash2 = Hash("2222222222222222222222222222222222222222");
@@ -282,8 +277,7 @@ TEST(Journal, debugRawJournalInfoHashUpdates) {
       *debugDeltas[2].toPosition_ref()->snapshotHash_ref(), thriftHash(hash1));
 }
 
-TEST(Journal, destruction_does_not_overflow_stack_on_long_chain) {
-  Journal journal(std::make_shared<EdenStats>());
+TEST_F(JournalTest, destruction_does_not_overflow_stack_on_long_chain) {
   size_t N =
 #ifdef NDEBUG
       200000 // Passes in under 200ms.
@@ -296,15 +290,12 @@ TEST(Journal, destruction_does_not_overflow_stack_on_long_chain) {
   }
 }
 
-TEST(Journal, empty_journal_returns_none_for_stats) {
-  // Empty journal returns None for stats
-  Journal journal(std::make_shared<EdenStats>());
+TEST_F(JournalTest, empty_journal_returns_none_for_stats) {
   auto stats = journal.getStats();
   ASSERT_FALSE(stats.has_value());
 }
 
-TEST(Journal, basic_journal_stats) {
-  Journal journal(std::make_shared<EdenStats>());
+TEST_F(JournalTest, basic_journal_stats) {
   // Journal with 1 entry
   journal.recordRemoved("test.txt"_relpath);
   ASSERT_TRUE(journal.getLatest());
@@ -327,11 +318,9 @@ TEST(Journal, basic_journal_stats) {
   ASSERT_EQ(to2, stats->latestTimestamp);
 }
 
-TEST(Journal, truncated_read_stats) {
+TEST_F(JournalTest, truncated_read_stats) {
   // Since each test is run on a single thread we can check that the stats of
   // this thread match up with what we would expect.
-  auto edenStats = std::make_shared<EdenStats>();
-  Journal journal(edenStats);
   journal.setMemoryLimit(0);
   journal.recordCreated("test1.txt"_relpath);
   journal.recordRemoved("test1.txt"_relpath);
@@ -356,11 +345,9 @@ TEST(Journal, truncated_read_stats) {
       2, edenStats->getJournalStatsForCurrentThread().truncatedReads.sum());
 }
 
-TEST(Journal, files_accumulated_stats) {
+TEST_F(JournalTest, files_accumulated_stats) {
   // Since each test is run on a single thread we can check that the stats of
   // this thread match up with what we would expect.
-  auto edenStats = std::make_shared<EdenStats>();
-  Journal journal(edenStats);
   journal.recordCreated("test1.txt"_relpath);
   journal.recordRemoved("test1.txt"_relpath);
   ASSERT_EQ(
@@ -385,8 +372,7 @@ TEST(Journal, files_accumulated_stats) {
   ASSERT_EQ(2, journal.getStats()->maxFilesAccumulated);
 }
 
-TEST(Journal, memory_usage) {
-  Journal journal(std::make_shared<EdenStats>());
+TEST_F(JournalTest, memory_usage) {
   auto stats = journal.getStats();
   uint64_t prevMem = journal.estimateMemoryUsage();
   for (int i = 0; i < 10; i++) {
@@ -402,8 +388,7 @@ TEST(Journal, memory_usage) {
   }
 }
 
-TEST(Journal, set_get_memory_limit) {
-  Journal journal(std::make_shared<EdenStats>());
+TEST_F(JournalTest, set_get_memory_limit) {
   journal.setMemoryLimit(500);
   ASSERT_EQ(500, journal.getMemoryLimit());
   journal.setMemoryLimit(333);
@@ -412,8 +397,7 @@ TEST(Journal, set_get_memory_limit) {
   ASSERT_EQ(0, journal.getMemoryLimit());
 }
 
-TEST(Journal, truncation_by_flush) {
-  Journal journal(std::make_shared<EdenStats>());
+TEST_F(JournalTest, truncation_by_flush) {
   journal.recordCreated("file1.txt"_relpath);
   journal.recordCreated("file2.txt"_relpath);
   journal.recordCreated("file3.txt"_relpath);
@@ -426,8 +410,7 @@ TEST(Journal, truncation_by_flush) {
   EXPECT_TRUE(summed->isTruncated);
 }
 
-TEST(Journal, limit_of_zero_holds_one_entry) {
-  Journal journal(std::make_shared<EdenStats>());
+TEST_F(JournalTest, limit_of_zero_holds_one_entry) {
   // Even though limit is 0, journal will always remember at least one entry
   journal.setMemoryLimit(0);
   // With 1 file we should be able to accumulate from anywhere without
@@ -440,8 +423,7 @@ TEST(Journal, limit_of_zero_holds_one_entry) {
   EXPECT_FALSE(summed);
 }
 
-TEST(Journal, limit_of_zero_truncates_after_one_entry) {
-  Journal journal(std::make_shared<EdenStats>());
+TEST_F(JournalTest, limit_of_zero_truncates_after_one_entry) {
   // Even though limit is 0, journal will always remember at least one entry
   journal.setMemoryLimit(0);
   // With 2 files but only one entry in the journal we can only accumulate from
@@ -459,8 +441,7 @@ TEST(Journal, limit_of_zero_truncates_after_one_entry) {
   EXPECT_FALSE(summed);
 }
 
-TEST(Journal, truncation_nonzero) {
-  Journal journal(std::make_shared<EdenStats>());
+TEST_F(JournalTest, truncation_nonzero) {
   // Set the journal to a size such that it can store a few entries
   journal.setMemoryLimit(1500);
   int totalEntries = 0;
@@ -499,9 +480,7 @@ TEST(Journal, truncation_nonzero) {
   } while (rememberedEntries + 5 > totalEntries);
 }
 
-TEST(Journal, compaction) {
-  Journal journal(std::make_shared<EdenStats>());
-
+TEST_F(JournalTest, compaction) {
   journal.recordCreated("file1.txt"_relpath);
   auto stats = journal.getStats();
   ASSERT_TRUE(stats.has_value());
