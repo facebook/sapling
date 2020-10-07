@@ -10,6 +10,7 @@ mod blobstore;
 mod facebook;
 mod sql;
 
+pub use ::blobstore::{PutBehaviour, DEFAULT_PUT_BEHAVIOUR};
 pub use cacheblob::CachelibBlobstoreOptions;
 pub use chaosblob::ChaosOptions;
 pub use packblob::PackOptions;

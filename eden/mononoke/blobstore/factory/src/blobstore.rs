@@ -6,7 +6,7 @@
  */
 
 use anyhow::{Context, Error};
-use blobstore::{Blobstore, DisabledBlob, ErrorKind};
+use blobstore::{Blobstore, DisabledBlob, ErrorKind, PutBehaviour, DEFAULT_PUT_BEHAVIOUR};
 use blobstore_sync_queue::SqlBlobstoreSyncQueue;
 use cacheblob::CachelibBlobstoreOptions;
 use chaosblob::{ChaosBlobstore, ChaosOptions};
@@ -42,6 +42,7 @@ pub struct BlobstoreOptions {
     pub manifold_api_key: Option<String>,
     pub pack_options: PackOptions,
     pub cachelib_options: CachelibBlobstoreOptions,
+    pub put_behaviour: PutBehaviour,
 }
 
 impl BlobstoreOptions {
@@ -51,6 +52,7 @@ impl BlobstoreOptions {
         manifold_api_key: Option<String>,
         pack_options: PackOptions,
         cachelib_options: CachelibBlobstoreOptions,
+        put_behaviour: Option<PutBehaviour>,
     ) -> Self {
         Self {
             chaos_options,
@@ -58,6 +60,8 @@ impl BlobstoreOptions {
             manifold_api_key,
             pack_options,
             cachelib_options,
+            // If not specified, maintain status quo, which is overwrite
+            put_behaviour: put_behaviour.unwrap_or(DEFAULT_PUT_BEHAVIOUR),
         }
     }
 }
@@ -70,6 +74,7 @@ impl Default for BlobstoreOptions {
             None,
             PackOptions::default(),
             CachelibBlobstoreOptions::default(),
+            None,
         )
     }
 }

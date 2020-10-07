@@ -1082,6 +1082,7 @@ pub fn parse_blobstore_options<'a>(matches: &ArgMatches<'a>) -> BlobstoreOptions
         manifold_api_key,
         PackOptions::new(write_zstd_level),
         CachelibBlobstoreOptions::new_lazy(attempt_zstd),
+        None,
     )
 }
 
