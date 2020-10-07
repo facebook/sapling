@@ -65,6 +65,7 @@ pub struct HgCommit {
 }
 
 /// Return type used by `stream_commit_raw_text`.
+#[derive(Serialize, Deserialize, Debug)]
 pub struct ParentlessHgCommit {
     pub vertex: Vertex,
     pub raw_text: Bytes,
