@@ -15,6 +15,7 @@ use cpython_async::futures;
 use cpython_async::TStream;
 use cpython_ext::convert::BytesLike;
 use cpython_ext::convert::Serde;
+use cpython_ext::ExtractInner;
 use cpython_ext::PyNone;
 use cpython_ext::PyPath;
 use cpython_ext::ResultPyErrExt;
@@ -33,12 +34,14 @@ use hgcommits::DoubleWriteCommits;
 use hgcommits::GitSegmentedCommits;
 use hgcommits::HgCommit;
 use hgcommits::HgCommits;
+use hgcommits::HybridCommits;
 use hgcommits::MemHgCommits;
 use hgcommits::ParentlessHgCommit;
 use hgcommits::ReadCommitText;
 use hgcommits::RevlogCommits;
 use hgcommits::StreamCommitText;
 use hgcommits::StripCommits;
+use pyedenapi::PyClient;
 use pymetalog::metalog as PyMetaLog;
 use std::cell::RefCell;
 
@@ -58,6 +61,7 @@ pub trait Commits:
 }
 
 impl Commits for HgCommits {}
+impl Commits for HybridCommits {}
 impl Commits for MemHgCommits {}
 impl Commits for RevlogCommits {}
 impl Commits for DoubleWriteCommits {}
@@ -200,6 +204,25 @@ py_class!(pub class commits |py| {
     @staticmethod
     def opendoublewrite(revlogdir: &PyPath, segmentsdir: &PyPath, commitsdir: &PyPath) -> PyResult<Self> {
         let inner = DoubleWriteCommits::new(revlogdir.as_path(), segmentsdir.as_path(), commitsdir.as_path()).map_pyerr(py)?;
+        Self::from_commits(py, inner)
+    }
+
+    /// Construct `commits` from a revlog + segmented changelog + hgcommits + edenapi hybrid.
+    ///
+    /// This is similar to doublewrite backend, except that commit text fallback is edenapi,
+    /// not revlog, despite the revlog might have the data.
+    @staticmethod
+    def openhybrid(
+        revlogdir: &PyPath, segmentsdir: &PyPath, commitsdir: &PyPath, edenapi: PyClient, reponame: String
+    ) -> PyResult<Self> {
+        let client = edenapi.extract_inner(py);
+        let inner = HybridCommits::new(
+            revlogdir.as_path(),
+            segmentsdir.as_path(),
+            commitsdir.as_path(),
+            client,
+            reponame,
+        ).map_pyerr(py)?;
         Self::from_commits(py, inner)
     }
 

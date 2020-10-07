@@ -18,6 +18,8 @@ mod pytypes;
 mod stats;
 mod util;
 
+pub use client::client as PyClient;
+
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "edenapi"].join(".");
     let m = PyModule::new(py, &name)?;
