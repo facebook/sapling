@@ -24,18 +24,20 @@ use dag::Vertex;
 use futures::stream::BoxStream;
 use futures::stream::StreamExt;
 use minibytes::Bytes;
+use parking_lot::RwLock;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::io;
 use std::io::Write;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::Arc;
 use zstore::Id20;
 use zstore::Zstore;
 
 /// Commits using the HG SHA1 hash function. Stored on disk.
 pub struct HgCommits {
-    commits: Zstore,
+    commits: Arc<RwLock<Zstore>>,
     pub(crate) commits_path: PathBuf,
     dag: Dag,
     pub(crate) dag_path: PathBuf,
@@ -46,7 +48,7 @@ impl HgCommits {
         let result = Self {
             dag: Dag::open(dag_path)?,
             dag_path: dag_path.to_path_buf(),
-            commits: Zstore::open(commits_path)?,
+            commits: Arc::new(RwLock::new(Zstore::open(commits_path)?)),
             commits_path: commits_path.to_path_buf(),
         };
         Ok(result)
@@ -57,6 +59,10 @@ impl HgCommits {
     pub fn import_dag(&mut self, other: impl DagAlgorithm, main: Set) -> Result<()> {
         self.dag.import_and_flush(&other, main)?;
         Ok(())
+    }
+
+    pub(crate) fn commit_data_store(&self) -> Arc<RwLock<Zstore>> {
+        self.commits.clone()
     }
 }
 
@@ -85,13 +91,15 @@ impl AppendCommits for HgCommits {
         }
 
         // Write commit data to zstore.
+        let mut zstore = self.commits.write();
         for commit in commits {
             let text = text_with_header(&commit.raw_text, &commit.parents)?;
-            let vertex = Vertex::copy_from(self.commits.insert(&text, &[])?.as_ref());
+            let vertex = Vertex::copy_from(zstore.insert(&text, &[])?.as_ref());
             if vertex != commit.vertex {
                 return Err(crate::Error::HashMismatch(vertex, commit.vertex.clone()));
             }
         }
+        drop(zstore);
 
         // Write commit graph to DAG.
         let commits: HashMap<Vertex, HgCommit> = commits
@@ -120,13 +128,14 @@ impl AppendCommits for HgCommits {
     }
 
     fn flush(&mut self, master_heads: &[Vertex]) -> Result<()> {
-        self.commits.flush()?;
+        self.flush_commit_data()?;
         self.dag.flush(master_heads)?;
         Ok(())
     }
 
     fn flush_commit_data(&mut self) -> Result<()> {
-        self.commits.flush()?;
+        let mut zstore = self.commits.write();
+        zstore.flush()?;
         Ok(())
     }
 }
@@ -134,7 +143,7 @@ impl AppendCommits for HgCommits {
 impl ReadCommitText for HgCommits {
     fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>> {
         let id = Id20::from_slice(vertex.as_ref())?;
-        match self.commits.get(id)? {
+        match self.commits.read().get(id)? {
             Some(bytes) => Ok(Some(bytes.slice(Id20::len() * 2..))),
             None => Ok(None),
         }

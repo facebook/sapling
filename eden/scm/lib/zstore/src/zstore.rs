@@ -13,10 +13,10 @@ use indexedlog::{log as ilog, DefaultOpenOptions};
 use lazy_static::lazy_static;
 use lru_cache::LruCache;
 use minibytes::Bytes;
+use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use sha1::{Digest, Sha1};
 use std::borrow::Cow;
-use std::cell::RefCell;
 use std::fmt;
 use std::path::{Path, PathBuf};
 use tracing::{debug_span, info_span, trace_span};
@@ -35,7 +35,7 @@ pub struct Zstore {
     dir: PathBuf,
     log: ilog::Log,
     pub delta_opts: DeltaOptions,
-    cache: RefCell<LruCache<Id20, Bytes>>,
+    cache: Mutex<LruCache<Id20, Bytes>>,
 }
 
 impl DefaultOpenOptions<ilog::OpenOptions> for Zstore {
@@ -94,7 +94,7 @@ impl OpenOptions {
             dir: dir.to_path_buf(),
             log,
             delta_opts: Default::default(),
-            cache: RefCell::new(LruCache::new(self.cache_size)),
+            cache: Mutex::new(LruCache::new(self.cache_size)),
         })
     }
 }
@@ -297,7 +297,7 @@ impl Zstore {
             return Ok(Bytes::from_static(b""));
         }
         {
-            let mut cache = self.cache.borrow_mut();
+            let mut cache = self.cache.lock();
             if let Some(content) = cache.get_mut(&delta.id) {
                 return Ok(content.clone());
             }
@@ -319,7 +319,7 @@ impl Zstore {
                     let base_bytes = self.resolve(base_delta)?;
                     let bytes = Bytes::from(zstdelta::apply(&base_bytes, &delta.data)?);
                     {
-                        let mut cache = self.cache.borrow_mut();
+                        let mut cache = self.cache.lock();
                         cache.insert(delta.id, bytes.clone());
                     }
                     Ok(bytes)

@@ -5,12 +5,19 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1"
+async-trait = "0.1"
 dag = { path = "../dag" }
+edenapi = { path = "../edenapi" }
+edenapi_types = { path = "../edenapi/types" }
 futures = "0.3"
 gitdag = { path = "../dag/gitdag" }
 metalog = { path = "../metalog" }
 minibytes = { path = "../minibytes" }
+parking_lot = "0.11"
 revlogindex = { path = "../revlogindex" }
 serde = { version = "1", features = ["derive"] }
+streams = { path = "../streams" }
 thiserror = "1"
+tracing = "0.1"
+tracing-futures = "0.2"
 zstore = { path = "../zstore" }
