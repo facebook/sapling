@@ -11,6 +11,10 @@ use crate::Names;
 use crate::Spans;
 use anyhow::Result;
 use cpython::*;
+use cpython_async::futures;
+use cpython_async::TStream;
+use cpython_ext::convert::BytesLike;
+use cpython_ext::convert::Serde;
 use cpython_ext::PyNone;
 use cpython_ext::PyPath;
 use cpython_ext::ResultPyErrExt;
@@ -21,6 +25,8 @@ use dag::ops::PrefixLookup;
 use dag::ops::ToIdSet;
 use dag::ops::ToSet;
 use dag::DagAlgorithm;
+use dag::Vertex;
+use futures::stream::TryStreamExt;
 use hgcommits::AppendCommits;
 use hgcommits::DescribeBackend;
 use hgcommits::DoubleWriteCommits;
@@ -28,8 +34,10 @@ use hgcommits::GitSegmentedCommits;
 use hgcommits::HgCommit;
 use hgcommits::HgCommits;
 use hgcommits::MemHgCommits;
+use hgcommits::ParentlessHgCommit;
 use hgcommits::ReadCommitText;
 use hgcommits::RevlogCommits;
+use hgcommits::StreamCommitText;
 use hgcommits::StripCommits;
 use pymetalog::metalog as PyMetaLog;
 use std::cell::RefCell;
@@ -42,6 +50,7 @@ pub trait Commits:
     + DescribeBackend
     + DagAlgorithm
     + IdConvert
+    + StreamCommitText
     + PrefixLookup
     + ToIdSet
     + ToSet
@@ -102,6 +111,17 @@ py_class!(pub class commits |py| {
         let inner = self.inner(py).borrow();
         let optional_bytes = inner.get_commit_raw_text(&vertex).map_pyerr(py)?;
         Ok(optional_bytes.map(|bytes| PyBytes::new(py, bytes.as_ref())))
+    }
+
+    /// Lookup the raw texts of a stream of binary commit hashes.
+    /// Return a stream of (node, rawtext).
+    def streamcommitrawtext(&self, stream: TStream<anyhow::Result<BytesLike<Vertex>>>)
+        -> PyResult<TStream<anyhow::Result<Serde<ParentlessHgCommit>>>>
+    {
+        let inner = self.inner(py).borrow();
+        let stream = Box::pin(stream.stream().map_ok(|bytes_like| bytes_like.0));
+        let output_stream = inner.stream_commit_raw_text(stream).map_pyerr(py)?;
+        Ok(output_stream.map_ok(Serde).into())
     }
 
     /// Convert Set to IdSet. For compatibility with legacy code only.
