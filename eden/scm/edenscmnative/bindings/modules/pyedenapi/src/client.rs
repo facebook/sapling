@@ -122,7 +122,7 @@ py_class!(pub class client |py| {
         &self,
         repo: String,
         nodes: Vec<PyBytes>,
-        progress: Option<PyObject> = None
+        callback: Option<PyObject> = None
     ) -> PyResult<(TStream<anyhow::Result<Serde<CommitRevlogData>>>, PyFuture)> {
         self.inner(py).clone().commit_revlog_data_py(py, repo, nodes, callback)
     }
