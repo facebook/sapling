@@ -199,10 +199,9 @@ fn main(fb: FacebookInit) -> Result<()> {
                     blobrepo.clone(),
                     logger.clone(),
                     infinitepush_namespace.clone(),
-                    &name,
-                    &hg_cs_id,
+                    name,
+                    hg_cs_id,
                 )
-                .compat()
             }
         };
 
