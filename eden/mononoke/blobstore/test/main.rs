@@ -15,7 +15,6 @@ use std::sync::Arc;
 use anyhow::Error;
 use bytes::Bytes;
 use fbinit::FacebookInit;
-use itertools::Either;
 use strum::IntoEnumIterator;
 use tempdir::TempDir;
 
@@ -122,7 +121,6 @@ macro_rules! blobstore_test_impl {
         new: $new_cb: expr,
         persistent: $persistent: expr,
         has_ctime: $has_ctime: expr,
-        honors_put_behaviour: $honors_put_behaviour: expr,
     }) => {
         mod $mod_name {
             use super::*;
@@ -131,16 +129,8 @@ macro_rules! blobstore_test_impl {
             async fn test_overwrite(fb: FacebookInit) -> Result<(), Error> {
                 let state = $state;
                 let has_ctime = $has_ctime;
-                let honors_put_behaviour = $honors_put_behaviour;
-                let put_behaviours = if honors_put_behaviour {
-                    // try all variants
-                    Either::Left(PutBehaviour::iter())
-                } else {
-                    // only try one, as it store doesn't support them yet
-                    Either::Right(vec![PutBehaviour::Overwrite].into_iter())
-                };
                 let factory = $new_cb;
-                for b in put_behaviours {
+                for b in PutBehaviour::iter() {
                     overwrite(fb, factory(state.clone(), b)?, has_ctime, b).await?
                 }
                 Ok(())
@@ -181,30 +171,27 @@ macro_rules! blobstore_test_impl {
 blobstore_test_impl! {
     eager_memblob_test => {
         state: (),
-        new: move |_, _| Ok::<_,Error>(EagerMemblob::new()),
+        new: move |_, put_behaviour| Ok::<_,Error>(EagerMemblob::new(put_behaviour)),
         persistent: false,
         has_ctime: false,
-        honors_put_behaviour: false,
     }
 }
 
 blobstore_test_impl! {
     box_blobstore_test => {
         state: (),
-        new: move |_, _| Ok::<_,Error>(Box::new(EagerMemblob::new())),
+        new: move |_, put_behaviour| Ok::<_,Error>(Box::new(EagerMemblob::new(put_behaviour))),
         persistent: false,
         has_ctime: false,
-        honors_put_behaviour: false,
     }
 }
 
 blobstore_test_impl! {
     lazy_memblob_test => {
         state: (),
-        new: move |_, _| Ok::<_,Error>(LazyMemblob::new()),
+        new: move |_, put_behaviour| Ok::<_,Error>(LazyMemblob::new(put_behaviour)),
         persistent: false,
         has_ctime: false,
-        honors_put_behaviour: false,
     }
 }
 
@@ -214,7 +201,6 @@ blobstore_test_impl! {
         new: move |dir: Arc<TempDir>, put_behaviour,| Fileblob::open(&*dir, put_behaviour),
         persistent: true,
         has_ctime: true,
-        honors_put_behaviour: true,
     }
 }
 
@@ -253,7 +239,7 @@ async fn cache_blob_tests(fb: FacebookInit, expect_zstd: bool) -> Result<(), Err
         20 * 1024 * 1024,
     )?);
 
-    let inner = Arc::new(LazyMemblob::new());
+    let inner = Arc::new(LazyMemblob::new(PutBehaviour::Overwrite));
     let cache_blob =
         cacheblob::new_cachelib_blobstore(inner.clone(), blob_pool.clone(), presence_pool, options);
 
