@@ -59,6 +59,16 @@ impl ClientIdentity {
         }
     }
 
+    // Extract the client's username from the identity set, if present.
+    pub fn username(&self) -> Option<&str> {
+        for id in self.identities.as_ref()? {
+            if id.id_type() == "USER" {
+                return Some(id.id_data());
+            }
+        }
+        None
+    }
+
     pub fn identities(&self) -> &Option<MononokeIdentitySet> {
         &self.identities
     }
