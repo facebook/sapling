@@ -11,6 +11,7 @@ import errno
 import inspect
 import json
 import os
+import shlex
 import signal
 import subprocess
 import sys
@@ -1637,7 +1638,7 @@ class RageCmd(Subcmd):
 
         proc: Optional[subprocess.Popen] = None
         if rage_processor and not args.stdout:
-            proc = subprocess.Popen(["sh", "-c", rage_processor], stdin=subprocess.PIPE)
+            proc = subprocess.Popen(shlex.split(rage_processor), stdin=subprocess.PIPE)
             sink = proc.stdin
         else:
             proc = None
