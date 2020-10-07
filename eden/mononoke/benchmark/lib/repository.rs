@@ -67,7 +67,7 @@ impl Default for DelaySettings {
 pub fn new_benchmark_repo(fb: FacebookInit, settings: DelaySettings) -> Result<BlobRepo> {
     let blobstore: Arc<dyn Blobstore> = {
         let delayed: Arc<dyn Blobstore> = Arc::new(DelayedBlobstore::new(
-            EagerMemblob::new(),
+            EagerMemblob::default(),
             settings.blobstore_get_dist,
             settings.blobstore_put_dist,
         ));

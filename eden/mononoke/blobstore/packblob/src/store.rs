@@ -195,7 +195,7 @@ mod tests {
     #[fbinit::compat_test]
     async fn simple_roundtrip_test(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let inner_blobstore = Arc::new(EagerMemblob::new());
+        let inner_blobstore = Arc::new(EagerMemblob::default());
         let packblob = PackBlob::new(inner_blobstore.clone(), PackOptions::default());
 
         let outer_key = "repo0000.randomkey".to_string();
@@ -207,7 +207,7 @@ mod tests {
     #[fbinit::compat_test]
     async fn compressible_roundtrip_test(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let innerblob = Arc::new(EagerMemblob::new());
+        let innerblob = Arc::new(EagerMemblob::default());
         let packblob = PackBlob::new(innerblob.clone(), PackOptions::new(Some(0)));
 
         let bytes_in = Bytes::from(vec![7u8; 65535]);
@@ -226,7 +226,7 @@ mod tests {
     #[fbinit::compat_test]
     async fn incompressible_roundtrip_test(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let innerblob = Arc::new(EagerMemblob::new());
+        let innerblob = Arc::new(EagerMemblob::default());
         let packblob = PackBlob::new(innerblob.clone(), PackOptions::new(Some(0)));
 
         let mut rng = XorShiftRng::seed_from_u64(0); // reproducable Rng
@@ -305,7 +305,7 @@ mod tests {
         }
 
         let ctx = CoreContext::test_mock(fb);
-        let inner_blobstore = EagerMemblob::new();
+        let inner_blobstore = EagerMemblob::default();
         let packblob = PackBlob::new(inner_blobstore.clone(), PackOptions::default());
 
         // put_packed, this will apply the thrift envelope and save to the inner store

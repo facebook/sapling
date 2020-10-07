@@ -158,7 +158,7 @@ mod test {
     #[fbinit::test]
     async fn test_sample_called(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let base = EagerMemblob::new();
+        let base = EagerMemblob::default();
         let sample_this = SamplingKey::new();
         let handler = Arc::new(TestSamplingHandler {
             sampled: AtomicBool::new(false),

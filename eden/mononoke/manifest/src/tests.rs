@@ -268,7 +268,7 @@ fn test_path_tree() -> Result<(), Error> {
 #[fbinit::test]
 fn test_derive_manifest(fb: FacebookInit) -> Result<(), Error> {
     let runtime = Arc::new(Mutex::new(Runtime::new()?));
-    let blobstore: Arc<dyn Blobstore> = Arc::new(LazyMemblob::new());
+    let blobstore: Arc<dyn Blobstore> = Arc::new(LazyMemblob::default());
     let ctx = CoreContext::test_mock(fb);
 
     // derive manifest
@@ -490,7 +490,7 @@ fn make_paths(paths_str: &[&str]) -> Result<BTreeSet<Option<MPath>>, Error> {
 #[fbinit::test]
 fn test_find_entries(fb: FacebookInit) -> Result<(), Error> {
     let rt = Arc::new(Mutex::new(Runtime::new()?));
-    let blobstore: Arc<dyn Blobstore> = Arc::new(LazyMemblob::new());
+    let blobstore: Arc<dyn Blobstore> = Arc::new(LazyMemblob::default());
     let ctx = CoreContext::test_mock(fb);
 
     // derive manifest
@@ -642,7 +642,7 @@ fn test_find_entries(fb: FacebookInit) -> Result<(), Error> {
 #[fbinit::test]
 fn test_diff(fb: FacebookInit) -> Result<(), Error> {
     let runtime = Arc::new(Mutex::new(Runtime::new()?));
-    let blobstore: Arc<dyn Blobstore> = Arc::new(LazyMemblob::new());
+    let blobstore: Arc<dyn Blobstore> = Arc::new(LazyMemblob::default());
     let ctx = CoreContext::test_mock(fb);
 
     // derive manifest
@@ -799,7 +799,7 @@ fn test_diff(fb: FacebookInit) -> Result<(), Error> {
 #[fbinit::test]
 fn test_find_intersection_of_diffs(fb: FacebookInit) -> Result<(), Error> {
     let runtime = Arc::new(Mutex::new(Runtime::new()?));
-    let blobstore: Arc<dyn Blobstore> = Arc::new(LazyMemblob::new());
+    let blobstore: Arc<dyn Blobstore> = Arc::new(LazyMemblob::default());
     let ctx = CoreContext::test_mock(fb);
 
     // derive manifest

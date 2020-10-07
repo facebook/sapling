@@ -94,7 +94,7 @@ mod test {
     #[fbinit::compat_test]
     async fn basic_read(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let inner = EagerMemblob::new();
+        let inner = EagerMemblob::default();
         let foo_key = "foo".to_string();
         inner
             .put(
@@ -127,7 +127,7 @@ mod test {
     #[fbinit::compat_test]
     async fn redirect_writes(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let inner = EagerMemblob::new();
+        let inner = EagerMemblob::default();
         let foo_key = "foo".to_string();
 
         let outer = MemWritesBlobstore::new(inner.clone());
@@ -171,7 +171,7 @@ mod test {
     async fn test_persist(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
 
-        let inner = EagerMemblob::new();
+        let inner = EagerMemblob::default();
         let outer = MemWritesBlobstore::new(inner.clone());
 
         let key = "key".to_string();

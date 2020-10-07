@@ -477,12 +477,12 @@ async fn multiplexed_operation_keys(fb: FacebookInit) -> Result<(), Error> {
     let queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory().unwrap());
 
     let bid0 = BlobstoreId::new(0);
-    let bs0 = Arc::new(LazyMemblob::new());
+    let bs0 = Arc::new(LazyMemblob::default());
     let bid1 = BlobstoreId::new(1);
-    let bs1 = Arc::new(LazyMemblob::new());
+    let bs1 = Arc::new(LazyMemblob::default());
     let bid2 = BlobstoreId::new(2);
     // we need writes to fail there so there's something on the queue
-    let bs2 = Arc::new(ReadOnlyBlobstore::new(LazyMemblob::new()));
+    let bs2 = Arc::new(ReadOnlyBlobstore::new(LazyMemblob::default()));
     let bs = MultiplexedBlobstore::new(
         MultiplexId::new(1),
         vec![

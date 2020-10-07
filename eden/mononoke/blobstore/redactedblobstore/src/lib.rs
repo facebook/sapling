@@ -257,7 +257,7 @@ mod test {
 
         let ctx = CoreContext::test_mock(fb);
 
-        let inner = EagerMemblob::new();
+        let inner = EagerMemblob::default();
         let redacted_pairs = hashmap! {
             redacted_key.clone() => RedactedMetadata {
                 task: redacted_task.clone(),
@@ -314,7 +314,7 @@ mod test {
 
         let ctx = CoreContext::test_mock(fb);
 
-        let inner = EagerMemblob::new();
+        let inner = EagerMemblob::default();
         let redacted_pairs = hashmap! {
             redacted_log_only_key.clone() => RedactedMetadata {
                 task: redacted_task.clone(),

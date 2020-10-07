@@ -61,7 +61,7 @@ mod test {
     #[fbinit::compat_test]
     async fn test_error_on_write(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let base = EagerMemblob::new();
+        let base = EagerMemblob::default();
         let wrapper = ReadOnlyBlobstore::new(base.clone());
         let key = "foobar".to_string();
 

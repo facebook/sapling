@@ -31,11 +31,11 @@ use mononoke_types::DateTime;
 use std::sync::Arc;
 
 pub fn get_empty_eager_repo() -> BlobRepo {
-    new_memblob_empty(Some(Arc::new(EagerMemblob::new()))).expect("cannot create empty repo")
+    new_memblob_empty(Some(Arc::new(EagerMemblob::default()))).expect("cannot create empty repo")
 }
 
 pub fn get_empty_lazy_repo() -> BlobRepo {
-    new_memblob_empty(Some(Arc::new(LazyMemblob::new()))).expect("cannot create empty repo")
+    new_memblob_empty(Some(Arc::new(LazyMemblob::default()))).expect("cannot create empty repo")
 }
 
 #[macro_export]

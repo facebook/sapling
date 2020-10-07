@@ -297,7 +297,7 @@ impl TestRepoBuilder {
     pub fn new() -> Self {
         Self {
             repo_id: RepositoryId::new(0),
-            blobstore: Arc::new(EagerMemblob::new()),
+            blobstore: Arc::new(EagerMemblob::default()),
             redacted: None,
         }
     }
@@ -445,7 +445,7 @@ pub fn new_memblob_with_connection_with_id(
     repo_id: RepositoryId,
 ) -> Result<(BlobRepo, Connection)> {
     let repo_blobstore_args = RepoBlobstoreArgs::new(
-        Arc::new(EagerMemblob::new()),
+        Arc::new(EagerMemblob::default()),
         None,
         repo_id,
         ScubaSampleBuilder::with_discard(),

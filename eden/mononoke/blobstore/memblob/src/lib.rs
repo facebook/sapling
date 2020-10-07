@@ -81,6 +81,12 @@ impl EagerMemblob {
     }
 }
 
+impl Default for EagerMemblob {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LazyMemblob {
     pub fn new() -> Self {
         Self {
@@ -96,6 +102,12 @@ impl LazyMemblob {
             Ok(inner.unlink(&key))
         })
         .boxed()
+    }
+}
+
+impl Default for LazyMemblob {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

@@ -61,7 +61,7 @@ async fn filestore_put_alias(fb: FacebookInit) -> Result<()> {
     let req = request(HELLO_WORLD);
     let content_id = canonical(HELLO_WORLD);
 
-    let blob = memblob::LazyMemblob::new();
+    let blob = memblob::LazyMemblob::default();
     let ctx = CoreContext::test_mock(fb);
 
     filestore::store(
@@ -99,7 +99,7 @@ async fn filestore_put_get_canon(fb: FacebookInit) -> Result<()> {
     let req = request(HELLO_WORLD);
     let content_id = canonical(HELLO_WORLD);
 
-    let blob = memblob::LazyMemblob::new();
+    let blob = memblob::LazyMemblob::default();
     let ctx = CoreContext::test_mock(fb);
 
     filestore::store(
@@ -128,7 +128,7 @@ async fn filestore_put_get_canon(fb: FacebookInit) -> Result<()> {
 async fn filestore_put_get_sha1(fb: FacebookInit) -> Result<()> {
     let req = request(HELLO_WORLD);
 
-    let blob = memblob::LazyMemblob::new();
+    let blob = memblob::LazyMemblob::default();
     let ctx = CoreContext::test_mock(fb);
 
     filestore::store(
@@ -160,7 +160,7 @@ async fn filestore_put_get_sha1(fb: FacebookInit) -> Result<()> {
 async fn filestore_put_get_git_sha1(fb: FacebookInit) -> Result<()> {
     let req = request(HELLO_WORLD);
 
-    let blob = memblob::LazyMemblob::new();
+    let blob = memblob::LazyMemblob::default();
     let ctx = CoreContext::test_mock(fb);
 
     filestore::store(
@@ -192,7 +192,7 @@ async fn filestore_put_get_git_sha1(fb: FacebookInit) -> Result<()> {
 async fn filestore_put_get_sha256(fb: FacebookInit) -> Result<()> {
     let req = request(HELLO_WORLD);
 
-    let blob = memblob::LazyMemblob::new();
+    let blob = memblob::LazyMemblob::default();
     let ctx = CoreContext::test_mock(fb);
 
     filestore::store(
@@ -225,7 +225,7 @@ async fn filestore_chunked_put_get(fb: FacebookInit) -> Result<()> {
     let req = request(HELLO_WORLD);
     let content_id = canonical(HELLO_WORLD);
 
-    let blob = memblob::LazyMemblob::new();
+    let blob = memblob::LazyMemblob::default();
     let config = FilestoreConfig {
         chunk_size: Some(1),
         concurrency: 5,
@@ -256,7 +256,7 @@ async fn filestore_chunked_put_get(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::compat_test]
 async fn filestore_chunked_put_get_nested(fb: FacebookInit) -> Result<()> {
-    let blob = memblob::LazyMemblob::new();
+    let blob = memblob::LazyMemblob::default();
 
     let small = FilestoreConfig {
         chunk_size: Some(1),
@@ -305,7 +305,7 @@ async fn filestore_chunked_put_get_nested(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::compat_test]
 async fn filestore_content_not_found(fb: FacebookInit) -> Result<()> {
-    let blob = memblob::LazyMemblob::new();
+    let blob = memblob::LazyMemblob::default();
     let ctx = CoreContext::test_mock(fb);
 
     // Missing content shouldn't throw an error
@@ -325,7 +325,7 @@ async fn filestore_content_not_found(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::compat_test]
 async fn filestore_chunk_not_found(fb: FacebookInit) -> Result<()> {
-    let blob = memblob::LazyMemblob::new();
+    let blob = memblob::LazyMemblob::default();
     let config = FilestoreConfig {
         chunk_size: Some(3),
         concurrency: 5,
@@ -369,7 +369,7 @@ async fn filestore_chunk_not_found(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::compat_test]
 async fn filestore_put_invalid_size(fb: FacebookInit) -> Result<()> {
-    let blob = memblob::LazyMemblob::new();
+    let blob = memblob::LazyMemblob::default();
     let config = FilestoreConfig {
         chunk_size: Some(3),
         concurrency: 5,
@@ -399,7 +399,7 @@ async fn filestore_put_invalid_size(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::compat_test]
 async fn filestore_put_content_id(fb: FacebookInit) -> Result<()> {
-    let blob = memblob::LazyMemblob::new();
+    let blob = memblob::LazyMemblob::default();
     let config = FilestoreConfig {
         chunk_size: Some(3),
         concurrency: 5,
@@ -444,7 +444,7 @@ async fn filestore_put_content_id(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::compat_test]
 async fn filestore_put_sha1(fb: FacebookInit) -> Result<()> {
-    let blob = memblob::LazyMemblob::new();
+    let blob = memblob::LazyMemblob::default();
     let config = FilestoreConfig {
         chunk_size: Some(3),
         concurrency: 5,
@@ -489,7 +489,7 @@ async fn filestore_put_sha1(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::compat_test]
 async fn filestore_put_git_sha1(fb: FacebookInit) -> Result<()> {
-    let blob = memblob::LazyMemblob::new();
+    let blob = memblob::LazyMemblob::default();
     let config = FilestoreConfig {
         chunk_size: Some(3),
         concurrency: 5,
@@ -537,7 +537,7 @@ async fn filestore_put_git_sha1(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::compat_test]
 async fn filestore_put_sha256(fb: FacebookInit) -> Result<()> {
-    let blob = memblob::LazyMemblob::new();
+    let blob = memblob::LazyMemblob::default();
     let config = FilestoreConfig {
         chunk_size: Some(3),
         concurrency: 5,
@@ -588,7 +588,7 @@ async fn filestore_get_range(fb: FacebookInit) -> Result<()> {
     let req = request(HELLO_WORLD);
     let content_id = canonical(HELLO_WORLD);
 
-    let blob = memblob::LazyMemblob::new();
+    let blob = memblob::LazyMemblob::default();
     let ctx = CoreContext::test_mock(fb);
 
     filestore::store(
@@ -631,7 +631,7 @@ async fn filestore_get_chunked_range(fb: FacebookInit) -> Result<()> {
         concurrency: 5,
     };
 
-    let blob = memblob::LazyMemblob::new();
+    let blob = memblob::LazyMemblob::default();
     let ctx = CoreContext::test_mock(fb);
 
     let full_data = &b"foobarbazquxxyz"[..];
@@ -686,7 +686,7 @@ async fn filestore_rebuild_metadata(fb: FacebookInit) -> Result<()> {
         sha256: *HELLO_WORLD_SHA256,
     });
 
-    let blob = memblob::LazyMemblob::new();
+    let blob = memblob::LazyMemblob::default();
     let ctx = CoreContext::test_mock(fb);
 
     filestore::store(
@@ -753,7 +753,7 @@ async fn filestore_rebuild_metadata(fb: FacebookInit) -> Result<()> {
 async fn filestore_test_missing_metadata(fb: FacebookInit) -> Result<()> {
     let content_id = canonical(HELLO_WORLD);
 
-    let blob = memblob::LazyMemblob::new();
+    let blob = memblob::LazyMemblob::default();
     let ctx = CoreContext::test_mock(fb);
 
     // No matter the Fetchkey, querying the metadata should return None.
@@ -802,7 +802,7 @@ async fn filestore_test_peek(fb: FacebookInit) -> Result<()> {
     let req = request(HELLO_WORLD);
     let content_id = canonical(HELLO_WORLD);
 
-    let blob = memblob::LazyMemblob::new();
+    let blob = memblob::LazyMemblob::default();
     let ctx = CoreContext::test_mock(fb);
 
     filestore::store(
@@ -837,7 +837,7 @@ async fn filestore_test_chunked_peek(fb: FacebookInit) -> Result<()> {
         concurrency: 5,
     };
 
-    let blob = memblob::LazyMemblob::new();
+    let blob = memblob::LazyMemblob::default();
     let ctx = CoreContext::test_mock(fb);
 
     filestore::store(
@@ -867,7 +867,7 @@ async fn filestore_test_short_peek(fb: FacebookInit) -> Result<()> {
     let req = request(HELLO_WORLD);
     let content_id = canonical(HELLO_WORLD);
 
-    let blob = memblob::LazyMemblob::new();
+    let blob = memblob::LazyMemblob::default();
     let ctx = CoreContext::test_mock(fb);
 
     filestore::store(
@@ -898,7 +898,7 @@ async fn filestore_test_empty_peek(fb: FacebookInit) -> Result<()> {
     let req = request(&bytes);
     let content_id = canonical(&bytes);
 
-    let blob = memblob::LazyMemblob::new();
+    let blob = memblob::LazyMemblob::default();
     let ctx = CoreContext::test_mock(fb);
 
     filestore::store(
@@ -924,7 +924,7 @@ async fn filestore_test_empty_peek(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::compat_test]
 async fn filestore_store_bytes(fb: FacebookInit) -> Result<()> {
-    let blob = memblob::LazyMemblob::new();
+    let blob = memblob::LazyMemblob::default();
 
     let ctx = CoreContext::test_mock(fb);
     let ((content_id, _size), fut) = filestore::store_bytes(
@@ -949,7 +949,7 @@ async fn filestore_store_bytes(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::compat_test]
 async fn filestore_store_error(fb: FacebookInit) -> Result<()> {
-    let memblob = memblob::LazyMemblob::new();
+    let memblob = memblob::LazyMemblob::default();
     let blob = FailingBlobstore::new(memblob.clone(), 1.0, 0.0); // Blobstore you can't write to.
 
     let config = FilestoreConfig {
@@ -977,7 +977,7 @@ async fn filestore_store_error(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::compat_test]
 async fn filestore_test_rechunk(fb: FacebookInit) -> Result<()> {
-    let blob = memblob::LazyMemblob::new();
+    let blob = memblob::LazyMemblob::default();
 
     let small = FilestoreConfig {
         chunk_size: Some(1),
@@ -1014,7 +1014,7 @@ async fn filestore_test_rechunk(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::compat_test]
 async fn filestore_test_rechunk_larger(fb: FacebookInit) -> Result<()> {
-    let blob = memblob::LazyMemblob::new();
+    let blob = memblob::LazyMemblob::default();
 
     let small = FilestoreConfig {
         chunk_size: Some(1),
@@ -1057,7 +1057,7 @@ async fn filestore_test_rechunk_larger(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::compat_test]
 async fn filestore_test_rechunk_unchunked(fb: FacebookInit) -> Result<()> {
-    let blob = memblob::LazyMemblob::new();
+    let blob = memblob::LazyMemblob::default();
 
     let small = FilestoreConfig {
         chunk_size: Some(1),
@@ -1093,7 +1093,7 @@ async fn filestore_test_rechunk_unchunked(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::compat_test]
 async fn filestore_test_rechunk_missing_content(fb: FacebookInit) -> Result<()> {
-    let blob = memblob::LazyMemblob::new();
+    let blob = memblob::LazyMemblob::default();
 
     let conf = FilestoreConfig {
         chunk_size: Some(1),
@@ -1121,7 +1121,7 @@ async fn filestore_chunked_put_get_with_size(fb: FacebookInit) -> Result<()> {
     let req = request(HELLO_WORLD);
     let content_id = canonical(HELLO_WORLD);
 
-    let blob = memblob::LazyMemblob::new();
+    let blob = memblob::LazyMemblob::default();
     let config = FilestoreConfig {
         chunk_size: Some(1),
         concurrency: 5,
@@ -1166,7 +1166,7 @@ async fn filestore_chunked_put_get_with_size(fb: FacebookInit) -> Result<()> {
 /// Test a case, where both old and new filestore config do not require
 /// chunking of the file (e.g. file size is smaller than a single chunk)
 async fn filestore_test_rechunk_if_needed_tiny_unchunked_file(fb: FacebookInit) -> Result<()> {
-    let blob = memblob::LazyMemblob::new();
+    let blob = memblob::LazyMemblob::default();
 
     let large1 = FilestoreConfig {
         chunk_size: Some(100),
@@ -1209,7 +1209,7 @@ async fn filestore_test_rechunk_if_needed_tiny_unchunked_file(fb: FacebookInit) 
 
 #[fbinit::compat_test]
 async fn filestore_test_rechunk_if_needed_large_unchunked_file(fb: FacebookInit) -> Result<()> {
-    let blob = memblob::LazyMemblob::new();
+    let blob = memblob::LazyMemblob::default();
 
     let large = FilestoreConfig {
         chunk_size: Some(100),
@@ -1248,7 +1248,7 @@ async fn filestore_test_rechunk_if_needed_large_unchunked_file(fb: FacebookInit)
 
 #[fbinit::compat_test]
 async fn filestore_test_rechunk_if_needed_large_chunks(fb: FacebookInit) -> Result<()> {
-    let blob = memblob::LazyMemblob::new();
+    let blob = memblob::LazyMemblob::default();
 
     let large = FilestoreConfig {
         chunk_size: Some(5),
@@ -1287,7 +1287,7 @@ async fn filestore_test_rechunk_if_needed_large_chunks(fb: FacebookInit) -> Resu
 
 #[fbinit::compat_test]
 async fn filestore_test_rechunk_if_needed_tiny_chunks(fb: FacebookInit) -> Result<()> {
-    let blob = memblob::LazyMemblob::new();
+    let blob = memblob::LazyMemblob::default();
 
     let large = FilestoreConfig {
         chunk_size: Some(4),

@@ -141,8 +141,8 @@ mod test {
     async fn test_copy_blob(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
 
-        let inner1 = Arc::new(EagerMemblob::new());
-        let inner2 = Arc::new(EagerMemblob::new());
+        let inner1 = Arc::new(EagerMemblob::default());
+        let inner2 = Arc::new(EagerMemblob::default());
 
         let bs1 = RepoBlobstoreArgs::new(
             inner1,
@@ -200,8 +200,8 @@ mod test {
     #[fbinit::compat_test]
     async fn test_copy_content(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let inner1 = Arc::new(EagerMemblob::new());
-        let inner2 = Arc::new(EagerMemblob::new());
+        let inner1 = Arc::new(EagerMemblob::default());
+        let inner2 = Arc::new(EagerMemblob::default());
 
         let bs1 = RepoBlobstoreArgs::new(
             inner1,

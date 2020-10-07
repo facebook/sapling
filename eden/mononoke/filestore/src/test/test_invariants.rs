@@ -92,7 +92,7 @@ fn test_invariants(fb: FacebookInit) -> Result<()> {
     let mut rt = tokio_compat::runtime::Runtime::new()?;
     let mut gen = StdGen::new(rand::thread_rng(), 128);
 
-    let memblob = Arc::new(memblob::LazyMemblob::new());
+    let memblob = Arc::new(memblob::LazyMemblob::default());
     let blob = FailingBlobstore::new(memblob.clone(), 0.75, 0.75);
     let config = FilestoreConfig {
         chunk_size: Some(16),
@@ -132,7 +132,7 @@ fn test_store_bytes_consistency(fb: FacebookInit) -> Result<(), Error> {
     async_unit::tokio_unit_test(async move {
         let mut gen = StdGen::new(rand::thread_rng(), 128);
 
-        let memblob = Arc::new(memblob::LazyMemblob::new());
+        let memblob = Arc::new(memblob::LazyMemblob::default());
         let ctx = CoreContext::test_mock(fb);
 
         for _ in 0..100usize {

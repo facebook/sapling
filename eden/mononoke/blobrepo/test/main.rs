@@ -1371,7 +1371,7 @@ fn save_reproducibility_under_load(fb: FacebookInit) -> Result<(), Error> {
 fn test_filenode_lookup(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
 
-    let memblob = LazyMemblob::new();
+    let memblob = LazyMemblob::default();
     let blobstore = Arc::new(TracingBlobstore::new(memblob));
 
     let repo = blobrepo_factory::new_memblob_empty(Some(blobstore.clone()))?;
