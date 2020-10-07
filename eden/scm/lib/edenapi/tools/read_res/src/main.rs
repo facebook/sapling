@@ -78,6 +78,8 @@ struct DataCatArgs {
     hgid: String,
     #[structopt(long, short, help = "Only look at the first N entries")]
     limit: Option<usize>,
+    #[structopt(long, short, help = "Debug print entire message instead of just data")]
+    debug: bool,
 }
 
 #[derive(Debug, StructOpt)]
@@ -218,7 +220,11 @@ fn cmd_tree_cat(args: DataCatArgs) -> Result<()> {
         .find(|entry| entry.key() == &key)
         .ok_or_else(|| anyhow!("Key not found"))?;
 
-    write_output(args.output, &entry.data()?)
+    if args.debug {
+        write_output(args.output, format!("{:?}\n", &entry))
+    } else {
+        write_output(args.output, &entry.data()?)
+    }
 }
 
 fn cmd_tree_check(args: DataCheckArgs) -> Result<()> {
@@ -260,7 +266,11 @@ fn cmd_file_cat(args: DataCatArgs) -> Result<()> {
         .find(|entry| entry.key() == &key)
         .ok_or_else(|| anyhow!("Key not found"))?;
 
-    write_output(args.output, &entry.data()?)
+    if args.debug {
+        write_output(args.output, format!("{:?}\n", &entry))
+    } else {
+        write_output(args.output, &entry.data()?)
+    }
 }
 
 fn cmd_file_check(args: DataCheckArgs) -> Result<()> {
@@ -445,15 +455,15 @@ fn to_api<T: ToApi>(entry: T) -> Option<T::Api> {
     }
 }
 
-fn write_output(path: Option<PathBuf>, content: &[u8]) -> Result<()> {
+fn write_output(path: Option<PathBuf>, content: impl AsRef<[u8]>) -> Result<()> {
     match path {
         Some(path) => {
             eprintln!("Writing to file: {:?}", &path);
             let mut file = File::create(&path)?;
-            file.write_all(content)?;
+            file.write_all(content.as_ref())?;
         }
         None => {
-            stdout().write_all(content)?;
+            stdout().write_all(content.as_ref())?;
         }
     }
     Ok(())

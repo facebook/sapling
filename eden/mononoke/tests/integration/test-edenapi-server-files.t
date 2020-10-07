@@ -75,6 +75,11 @@ Examine file data.
   Reading from file: "res.cbor"
   test content
 
+Examine entry structure.
+  $ edenapi_read_res file cat res.cbor --debug -p test.txt -h $TEST_FILENODE
+  Reading from file: "res.cbor"
+  FileEntry { key: Key { path: RepoPathBuf("test.txt"), hgid: HgId("186cafa3319c24956783383dc44c5cbc68c5a0ca") }, data: b"test content\n", parents: None, metadata: Metadata { size: None, flags: None } }
+
 Note that copyinfo header is present for the copied file.
   $ edenapi_read_res file cat res.cbor -p copy.txt -h $COPY_FILENODE
   Reading from file: "res.cbor"
