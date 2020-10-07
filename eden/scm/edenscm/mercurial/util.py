@@ -202,20 +202,6 @@ def safehasattr(thing, attr):
     return getattr(thing, attr, _notset) is not _notset
 
 
-def bytesinput(fin, fout, prompt):
-    sin, sout = sys.stdin, sys.stdout
-    try:
-        if sys.version_info[0] >= 3:
-            sys.stdin, sys.stdout = fin, fout
-            fout.write(prompt)
-            return encoding.strtolocal(pycompat.rawinput())
-        else:
-            sys.stdin, sys.stdout = encoding.strio(fin), encoding.strio(fout)
-            return encoding.strtolocal(pycompat.rawinput(prompt))
-    finally:
-        sys.stdin, sys.stdout = sin, sout
-
-
 def bitsfrom(container):
     bits = 0
     for bit in container:

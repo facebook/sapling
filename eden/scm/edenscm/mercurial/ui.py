@@ -1132,7 +1132,8 @@ class ui(object):
         return i
 
     def _readline(self, prompt=""):
-        if self._isatty(self.fin):
+        usereadline = self._isatty(self.fin) and self._isatty(self.fout)
+        if usereadline:
             try:
                 # magically add command line editing support, where
                 # available
@@ -1146,13 +1147,19 @@ class ui(object):
 
         # call write() so output goes through subclassed implementation
         # e.g. color extension on Windows
-        self.write(prompt, prompt=True)
+        self.write(prompt + " ", prompt=True)
         self.flush()
 
         # prompt ' ' must exist; otherwise readline may delete entire line
         # - http://bugs.python.org/issue12833
         with self.timeblockedsection("stdio"):
-            line = util.bytesinput(self.fin, self.fout, b" ")
+            if usereadline:
+                return pycompat.rawinput("")
+            else:
+                line = pycompat.decodeutf8(self.fin.readline())
+                if not line:
+                    raise EOFError
+                line = line.rstrip(pycompat.oslinesep)
 
         # When stdin is in binary mode on Windows, it can cause
         # raw_input() to emit an extra trailing carriage return
@@ -1169,7 +1176,7 @@ class ui(object):
             return default
         try:
             with progress.suspend(), util.traced("prompt", cat="blocked"):
-                r = decodeutf8(self._readline(self.label(msg, "ui.prompt")))
+                r = self._readline(self.label(msg, "ui.prompt"))
                 if not r:
                     r = default
                 if self.configbool("ui", "promptecho"):
