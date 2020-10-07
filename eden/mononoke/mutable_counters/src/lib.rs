@@ -13,7 +13,7 @@
 /// track of. Storing all of them in the same table makes maintenance easier and safer,
 /// for example, we can have conditional updates.
 use anyhow::Error;
-use context::CoreContext;
+use context::{CoreContext, PerfCounterType};
 use futures::{future, Future};
 use futures_ext::{BoxFuture, FutureExt};
 use mononoke_types::RepositoryId;
@@ -24,6 +24,13 @@ use sql_ext::{SqlConnections, TransactionResult};
 pub trait MutableCounters: Send + Sync + 'static {
     /// Get the current value of the counter
     fn get_counter(
+        &self,
+        ctx: CoreContext,
+        repoid: RepositoryId,
+        name: &str,
+    ) -> BoxFuture<Option<i64>, Error>;
+
+    fn get_maybe_stale_counter(
         &self,
         ctx: CoreContext,
         repoid: RepositoryId,
@@ -93,6 +100,7 @@ queries! {
 #[derive(Clone)]
 pub struct SqlMutableCounters {
     write_connection: Connection,
+    read_connection: Connection,
     read_master_connection: Connection,
 }
 
@@ -104,6 +112,7 @@ impl SqlConstruct for SqlMutableCounters {
     fn from_sql_connections(connections: SqlConnections) -> Self {
         Self {
             write_connection: connections.write_connection,
+            read_connection: connections.read_connection,
             read_master_connection: connections.read_master_connection,
         }
     }
@@ -114,11 +123,26 @@ impl SqlConstructFromMetadataDatabaseConfig for SqlMutableCounters {}
 impl MutableCounters for SqlMutableCounters {
     fn get_counter(
         &self,
-        _ctx: CoreContext,
+        ctx: CoreContext,
         repoid: RepositoryId,
         name: &str,
     ) -> BoxFuture<Option<i64>, Error> {
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsMaster);
         GetCounter::query(&self.read_master_connection, &repoid, &name)
+            .map(|counter| counter.first().map(|entry| entry.0))
+            .boxify()
+    }
+
+    fn get_maybe_stale_counter(
+        &self,
+        ctx: CoreContext,
+        repoid: RepositoryId,
+        name: &str,
+    ) -> BoxFuture<Option<i64>, Error> {
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsReplica);
+        GetCounter::query(&self.read_connection, &repoid, &name)
             .map(|counter| counter.first().map(|entry| entry.0))
             .boxify()
     }
@@ -146,9 +170,11 @@ impl MutableCounters for SqlMutableCounters {
 
     fn get_all_counters(
         &self,
-        _ctx: CoreContext,
+        ctx: CoreContext,
         repoid: RepositoryId,
     ) -> BoxFuture<Vec<(String, i64)>, Error> {
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsMaster);
         GetCountersForRepo::query(&self.read_master_connection, &repoid)
             .map(|counters| counters.into_iter().collect())
             .boxify()
@@ -157,13 +183,15 @@ impl MutableCounters for SqlMutableCounters {
 
 impl SqlMutableCounters {
     pub fn set_counter_on_txn(
-        _ctx: CoreContext,
+        ctx: CoreContext,
         repoid: RepositoryId,
         name: &str,
         value: i64,
         prev_value: Option<i64>,
         txn: SqlTransaction,
     ) -> BoxFuture<TransactionResult, Error> {
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlWrites);
         let f = match prev_value {
             Some(prev_value) => SetCounterConditionally::query_with_transaction(
                 txn,

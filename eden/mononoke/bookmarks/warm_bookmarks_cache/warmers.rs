@@ -86,8 +86,10 @@ async fn check_if_present_in_hg(
     repo: &BlobRepo,
     gen_num: Generation,
 ) -> Result<bool, Error> {
+    // Prefer reading stale counter (i.e. from replica) to avoid overloading sql
+    // leader
     let f = mutable_counters
-        .get_counter(ctx.clone(), repo.get_repoid(), HIGHEST_IMPORTED_GEN_NUM)
+        .get_maybe_stale_counter(ctx.clone(), repo.get_repoid(), HIGHEST_IMPORTED_GEN_NUM)
         .compat();
     let maybe_blobimport_gen_num = f.await?;
     if let Some(blobimport_gen_num) = maybe_blobimport_gen_num {
