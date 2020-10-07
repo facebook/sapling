@@ -90,8 +90,26 @@ int geteuid() {
 
 } // namespace
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
+
+void EdenMain::runServer(const EdenServer& server) {
+  // ThriftServer::serve() will drive the current thread's EventBase.
+  // Verify that we are being called from the expected thread, and will end up
+  // driving the EventBase returned by EdenServer::getMainEventBase().
+  CHECK_EQ(
+      server.getMainEventBase(),
+      folly::EventBaseManager::get()->getEventBase());
+
+  fb303::fbData->setExportedValue("build_package_name", EDEN_PACKAGE_NAME);
+  fb303::fbData->setExportedValue("build_package_version", EDEN_VERSION);
+  fb303::fbData->setExportedValue("build_package_release", EDEN_RELEASE);
+  fb303::fbData->setExportedValue("build_revision", EDEN_BUILD_REVISION);
+  fb303::fbData->setExportedValue(
+      "build_time_unix", folly::to<std::string>(EDEN_BUILD_TIME_UNIX));
+
+  fb303::withThriftFunctionStats(
+      kServiceName, server.getHandler().get(), [&] { server.serve(); });
+}
 
 std::string DefaultEdenMain::getEdenfsBuildName() {
   StringPiece version(EDEN_VERSION);
@@ -126,25 +144,6 @@ void DefaultEdenMain::prepare(const EdenServer& /*server*/) {
 MetadataImporterFactory DefaultEdenMain::getMetadataImporterFactory() {
   return MetadataImporter::getMetadataImporterFactory<
       DefaultMetadataImporter>();
-}
-
-void DefaultEdenMain::runServer(const EdenServer& server) {
-  // ThriftServer::serve() will drive the current thread's EventBase.
-  // Verify that we are being called from the expected thread, and will end up
-  // driving the EventBase returned by EdenServer::getMainEventBase().
-  CHECK_EQ(
-      server.getMainEventBase(),
-      folly::EventBaseManager::get()->getEventBase());
-
-  fb303::fbData->setExportedValue("build_package_name", EDEN_PACKAGE_NAME);
-  fb303::fbData->setExportedValue("build_package_version", EDEN_VERSION);
-  fb303::fbData->setExportedValue("build_package_release", EDEN_RELEASE);
-  fb303::fbData->setExportedValue("build_revision", EDEN_BUILD_REVISION);
-  fb303::fbData->setExportedValue(
-      "build_time_unix", folly::to<std::string>(EDEN_BUILD_TIME_UNIX));
-
-  fb303::withThriftFunctionStats(
-      kServiceName, server.getHandler().get(), [&] { server.serve(); });
 }
 
 int runEdenMain(EdenMain&& main, int argc, char** argv) {
@@ -325,5 +324,4 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
   return kExitCodeSuccess;
 }
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden
