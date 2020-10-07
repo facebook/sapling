@@ -5,9 +5,12 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+
 use blobrepo::BlobRepo;
 use bookmarks::{BookmarkUpdateReason, BundleReplay};
 use bookmarks_types::BookmarkName;
+use bytes::Bytes;
 use context::CoreContext;
 use metaconfig_types::{BookmarkAttrs, InfinitepushParams, SourceControlServiceParams};
 use mononoke_types::ChangesetId;
@@ -21,6 +24,7 @@ pub struct DeleteBookmarkOp<'op> {
     reason: BookmarkUpdateReason,
     auth: BookmarkMoveAuthorization<'op>,
     kind_restrictions: BookmarkKindRestrictions,
+    pushvars: Option<&'op HashMap<String, Bytes>>,
     bundle_replay: Option<&'op dyn BundleReplay>,
 }
 
@@ -37,6 +41,7 @@ impl<'op> DeleteBookmarkOp<'op> {
             reason,
             auth: BookmarkMoveAuthorization::User,
             kind_restrictions: BookmarkKindRestrictions::AnyKind,
+            pushvars: None,
             bundle_replay: None,
         }
     }
@@ -59,6 +64,11 @@ impl<'op> DeleteBookmarkOp<'op> {
 
     pub fn only_if_public(mut self) -> Self {
         self.kind_restrictions = BookmarkKindRestrictions::OnlyPublic;
+        self
+    }
+
+    pub fn with_pushvars(mut self, pushvars: Option<&'op HashMap<String, Bytes>>) -> Self {
+        self.pushvars = pushvars;
         self
     }
 

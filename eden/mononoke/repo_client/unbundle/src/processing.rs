@@ -707,6 +707,7 @@ async fn plain_push_bookmark(
         (Some(old_target), None) => {
             bookmarks_movement::DeleteBookmarkOp::new(&bookmark_push.name, old_target, reason)
                 .only_if_public()
+                .with_pushvars(maybe_pushvars)
                 .with_bundle_replay_data(bundle_replay_data)
                 .run(ctx, repo, infinitepush_params, bookmark_attrs)
                 .await
