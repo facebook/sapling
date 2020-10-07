@@ -349,6 +349,8 @@ class localrepository(object):
         "segmentedchangelog",
         # segmented changelog (full idmap, partial hgcommits) + revlog
         "doublewritechangelog",
+        # hybrid changelog (full idmap, partial hgcommits) + revlog + edenapi
+        "hybridchangelog",
         # git segments changelog
         "gitchangelog",
     }
@@ -1052,12 +1054,18 @@ class localrepository(object):
                 return changelog2.changelog.opengitsegments(
                     self.svfs, self.ui.uiconfig()
                 )
-
+            if "hybridchangelog" in self.storerequirements:
+                return changelog2.changelog.openhybrid(self)
             if "doublewritechangelog" in self.storerequirements:
-                self.ui.log("changelog_info", changelog_backend="doublewrite")
-                return changelog2.changelog.opendoublewrite(
-                    self.svfs, self.ui.uiconfig()
-                )
+                if self.ui.configbool("experimental", "lazy-commit-data"):
+                    # alias of hybridchangelog
+                    self.ui.log("changelog_info", changelog_backend="hybrid")
+                    return changelog2.changelog.openhybrid(self)
+                else:
+                    self.ui.log("changelog_info", changelog_backend="doublewrite")
+                    return changelog2.changelog.opendoublewrite(
+                        self.svfs, self.ui.uiconfig()
+                    )
             if "segmentedchangelog" in self.storerequirements:
                 self.ui.log("changelog_info", changelog_backend="segments")
                 return changelog2.changelog.opensegments(self.svfs, self.ui.uiconfig())

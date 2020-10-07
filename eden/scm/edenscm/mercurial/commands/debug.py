@@ -480,6 +480,12 @@ def debugchangelog(ui, repo, migrate=None):
       - Cheap to migrate back to revlog backend.
       - Migration can take a few minutes for a large repo.
 
+    - hybrid
+
+      - Similar to 'doublewrite'.
+      - Revlog is not used for fallback commit text reading. Instead, edenapi
+        client is used.
+
     - fullsegments
 
       - New segments backend for everything.
@@ -493,18 +499,7 @@ def debugchangelog(ui, repo, migrate=None):
     """
     cl = repo.changelog
     if migrate:
-        if migrate == "revlog":
-            changelog2.migratetorevlog(repo)
-        elif migrate == "rustrevlog":
-            changelog2.migratetorevlog(repo, rust=True)
-        elif migrate == "pythonrevlog":
-            changelog2.migratetorevlog(repo, python=True)
-        elif migrate == "doublewrite":
-            changelog2.migratetodoublewrite(repo)
-        elif migrate == "fullsegments":
-            changelog2.migratetosegments(repo)
-        else:
-            raise error.Abort(_("invalid changelog format: %s") % migrate)
+        changelog2.migrateto(repo, migrate)
         return
     if isinstance(cl, changelog2.changelog):
         ui.write(_("The changelog is backed by Rust. More backend information:\n"))

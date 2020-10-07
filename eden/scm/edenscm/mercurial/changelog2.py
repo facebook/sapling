@@ -92,6 +92,18 @@ class changelog(object):
         return cls(svfs, inner, uiconfig)
 
     @classmethod
+    def openhybrid(cls, repo):
+        svfs = repo.svfs
+        uiconfig = repo.ui.uiconfig()
+        revlogdir = svfs.join("")
+        segmentsdir = svfs.join(SEGMENTS_DIR)
+        hgcommitsdir = svfs.join(HGCOMMITS_DIR)
+        inner = bindings.dag.commits.openhybrid(
+            revlogdir, segmentsdir, hgcommitsdir, repo.edenapi, repo.name
+        )
+        return cls(svfs, inner, uiconfig)
+
+    @classmethod
     def opengitsegments(cls, svfs, uiconfig):
         segmentsdir = svfs.join(SEGMENTS_DIR)
         gitdir = svfs.readutf8(GIT_DIR_FILE)
@@ -389,6 +401,12 @@ class changelog(object):
         else:
             node = self.node(nodeorrev)
         text = self.inner.getcommitrawtext(node)
+        # Suboptimal 1-by-1 fetching via streamcommitrawtext.
+        if text is None:
+            for commit in self.inner.streamcommitrawtext([node]):
+                if commit["vertex"] == node:
+                    text = commit["raw_text"]
+                    break
         if text is None:
             raise error.LookupError(node, self.indexfile, _("no node"))
         # check HG SHA1 hash
@@ -596,13 +614,30 @@ class nodemap(object):
         pass
 
 
-def migratetodoublewrite(repo):
+def migrateto(repo, name):
+    if name == "revlog":
+        migratetorevlog(repo)
+    elif name == "rustrevlog":
+        migratetorevlog(repo, rust=True)
+    elif name == "pythonrevlog":
+        migratetorevlog(repo, python=True)
+    elif name == "doublewrite":
+        migratetodoublewrite(repo)
+    elif name == "hybrid":
+        migratetohybird(repo)
+    elif name == "fullsegments":
+        migratetosegments(repo)
+    else:
+        raise error.Abort(_("invalid changelog format: %s") % name)
+
+
+def migratetodoublewrite(repo, requirename="doublewritechangelog"):
     """Migrate to "double write" backend.
 
     Commit graph and IdMap use segments, commit text falls back to revlog.
     This can take about 1 minute for a large repo.
     """
-    if "doublewritechangelog" in repo.storerequirements:
+    if requirename in repo.storerequirements:
         return
     svfs = repo.svfs
     revlogdir = svfs.join("")
@@ -615,9 +650,17 @@ def migratetodoublewrite(repo):
                 revlogdir, segmentsdir, hgcommitsdir, master
             )
         _removechangelogrequirements(repo)
-        repo.storerequirements.add("doublewritechangelog")
+        repo.storerequirements.add(requirename)
         repo._writestorerequirements()
         repo.invalidatechangelog()
+
+
+def migratetohybird(repo):
+    """Mirate to "hybrid" backend.
+
+    The migration is similar to doublewrite.
+    """
+    migratetodoublewrite(repo, "hybridchangelog")
 
 
 def migratetosegments(repo):
@@ -721,6 +764,7 @@ def migratetorevlog(repo, python=False, rust=False):
 def _removechangelogrequirements(repo):
     repo.storerequirements.discard("doublewritechangelog")
     repo.storerequirements.discard("gitchangelog")
+    repo.storerequirements.discard("hybridchangelog")
     repo.storerequirements.discard("pythonrevlogchangelog")
     repo.storerequirements.discard("rustrevlogchangelog")
     repo.storerequirements.discard("segmentedchangelog")
