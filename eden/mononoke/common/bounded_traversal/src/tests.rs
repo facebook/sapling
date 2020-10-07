@@ -5,12 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use super::{bounded_traversal, bounded_traversal_dag, bounded_traversal_stream};
+use super::{
+    bounded_traversal, bounded_traversal_dag, bounded_traversal_stream, bounded_traversal_stream2,
+};
 use anyhow::Error;
 use futures::{
     channel::oneshot::{channel, Sender},
     future::{self, FutureExt},
-    stream::TryStreamExt,
+    stream::{self, TryStreamExt},
     Future,
 };
 use lock_ext::LockExt;
@@ -530,6 +532,66 @@ async fn test_bounded_traversal_stream() -> Result<(), Error> {
 
     tick.tick().await;
     reference.unfold(3, 4);
+    assert_eq!(log, reference);
+
+    assert_eq!(handle.await??, BTreeSet::from_iter(0..6));
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_bounded_traversal_stream2() -> Result<(), Error> {
+    // tree
+    //      0
+    //     / \
+    //    1   2
+    //   /   / \
+    //  5   3   4
+    let tree = Tree::new(
+        0,
+        vec![
+            Tree::new(1, vec![Tree::leaf(5)]),
+            Tree::new(2, vec![Tree::leaf(3), Tree::leaf(4)]),
+        ],
+    );
+
+    let tick = Tick::new();
+    let log: StateLog<BTreeSet<usize>> = StateLog::new();
+    let reference: StateLog<BTreeSet<usize>> = StateLog::new();
+
+    let traverse = bounded_traversal_stream2(2, Some(tree), {
+        let tick = tick.clone();
+        let log = log.clone();
+        move |Tree { id, children }| {
+            let log = log.clone();
+            tick.sleep(1).map(move |now| {
+                log.unfold(id, now);
+                Ok::<_, Error>((id, stream::iter(children.into_iter().map(Ok))))
+            })
+        }
+    })
+    .try_collect::<BTreeSet<usize>>()
+    .boxed();
+    let handle = tokio::spawn(traverse);
+
+    yield_now().await;
+    assert_eq!(log, reference);
+
+    tick.tick().await;
+    reference.unfold(0, 1);
+    assert_eq!(log, reference);
+
+    tick.tick().await;
+    reference.unfold(1, 2);
+    reference.unfold(2, 2);
+    assert_eq!(log, reference);
+
+    tick.tick().await;
+    reference.unfold(5, 3);
+    reference.unfold(3, 3);
+    assert_eq!(log, reference);
+
+    tick.tick().await;
+    reference.unfold(4, 4);
     assert_eq!(log, reference);
 
     assert_eq!(handle.await??, BTreeSet::from_iter(0..6));

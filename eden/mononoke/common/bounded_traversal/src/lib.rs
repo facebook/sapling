@@ -16,7 +16,7 @@ mod dag;
 pub use dag::bounded_traversal_dag;
 
 mod stream;
-pub use stream::bounded_traversal_stream;
+pub use stream::{bounded_traversal_stream, bounded_traversal_stream2};
 
 mod common;
 
