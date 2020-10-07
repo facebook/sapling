@@ -5,11 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use anyhow::Context;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use bookmarks_movement::{BookmarkUpdatePolicy, BookmarkUpdateTargets};
+use bytes::Bytes;
 use metaconfig_types::BookmarkAttrs;
 use mononoke_types::ChangesetId;
 use reachabilityindex::LeastCommonAncestorsHint;
@@ -25,6 +27,7 @@ impl RepoWriteContext {
         target: ChangesetId,
         old_target: Option<ChangesetId>,
         allow_non_fast_forward: bool,
+        pushvars: Option<&HashMap<String, Bytes>>,
     ) -> Result<(), MononokeError> {
         let bookmark = bookmark.as_ref();
         self.check_method_permitted("move_bookmark")?;
@@ -62,7 +65,8 @@ impl RepoWriteContext {
                 BookmarkUpdatePolicy::FastForwardOnly
             },
             BookmarkUpdateReason::ApiRequest,
-        );
+        )
+        .with_pushvars(pushvars);
 
         if let PermissionsModel::ServiceIdentity(service_identity) = &self.permissions_model {
             op = op.for_service(service_identity, &self.config().source_control_service);

@@ -5,9 +5,11 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
+use bytes::Bytes;
 use metaconfig_types::BookmarkAttrs;
 use mononoke_types::ChangesetId;
 use reachabilityindex::LeastCommonAncestorsHint;
@@ -21,6 +23,7 @@ impl RepoWriteContext {
         &self,
         bookmark: impl AsRef<str>,
         target: ChangesetId,
+        pushvars: Option<&HashMap<String, Bytes>>,
     ) -> Result<(), MononokeError> {
         let bookmark = bookmark.as_ref();
         self.check_method_permitted("create_bookmark")?;
@@ -35,7 +38,8 @@ impl RepoWriteContext {
             &bookmark,
             target,
             BookmarkUpdateReason::ApiRequest,
-        );
+        )
+        .with_pushvars(pushvars);
 
         if let PermissionsModel::ServiceIdentity(service_identity) = &self.permissions_model {
             op = op.for_service(service_identity, &self.config().source_control_service);

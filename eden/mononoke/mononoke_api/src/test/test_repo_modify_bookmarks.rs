@@ -51,7 +51,8 @@ async fn create_bookmark(fb: FacebookInit) -> Result<()> {
     let repo = repo.write().await?;
 
     // Can create public bookmarks on existing changesets (ancestors of trunk).
-    repo.create_bookmark("bookmark1", changesets["A"]).await?;
+    repo.create_bookmark("bookmark1", changesets["A"], None)
+        .await?;
     let bookmark1 = repo
         .resolve_bookmark("bookmark1", BookmarkFreshness::MostRecent)
         .await?
@@ -59,7 +60,8 @@ async fn create_bookmark(fb: FacebookInit) -> Result<()> {
     assert_eq!(bookmark1.id(), changesets["A"]);
 
     // Can create public bookmarks on other changesets (not ancestors of trunk).
-    repo.create_bookmark("bookmark2", changesets["F"]).await?;
+    repo.create_bookmark("bookmark2", changesets["F"], None)
+        .await?;
     let bookmark2 = repo
         .resolve_bookmark("bookmark2", BookmarkFreshness::MostRecent)
         .await?
@@ -67,7 +69,7 @@ async fn create_bookmark(fb: FacebookInit) -> Result<()> {
     assert_eq!(bookmark2.id(), changesets["F"]);
 
     // Can create scratch bookmarks.
-    repo.create_bookmark("scratch/bookmark3", changesets["G"])
+    repo.create_bookmark("scratch/bookmark3", changesets["G"], None)
         .await?;
     let bookmark3 = repo
         .resolve_bookmark("scratch/bookmark3", BookmarkFreshness::MostRecent)
@@ -89,7 +91,7 @@ async fn move_bookmark(fb: FacebookInit) -> Result<()> {
     let (repo, changesets) = init_repo(&ctx).await?;
     let repo = repo.write().await?;
 
-    repo.move_bookmark("trunk", changesets["E"], None, false)
+    repo.move_bookmark("trunk", changesets["E"], None, false, None)
         .await?;
     let trunk = repo
         .resolve_bookmark("trunk", BookmarkFreshness::MostRecent)
@@ -100,11 +102,11 @@ async fn move_bookmark(fb: FacebookInit) -> Result<()> {
     // Attempt to move to a non-descendant commit without allowing
     // non-fast-forward moves should fail.
     assert!(
-        repo.move_bookmark("trunk", changesets["G"], None, false)
+        repo.move_bookmark("trunk", changesets["G"], None, false, None)
             .await
             .is_err()
     );
-    repo.move_bookmark("trunk", changesets["G"], None, true)
+    repo.move_bookmark("trunk", changesets["G"], None, true, None)
         .await?;
     let trunk = repo
         .resolve_bookmark("trunk", BookmarkFreshness::MostRecent)
@@ -144,13 +146,15 @@ async fn delete_bookmark(fb: FacebookInit) -> Result<()> {
     let (repo, changesets) = init_repo(&ctx).await?;
     let repo = repo.write().await?;
 
-    repo.create_bookmark("bookmark1", changesets["A"]).await?;
-    repo.create_bookmark("bookmark2", changesets["F"]).await?;
-    repo.create_bookmark("scratch/bookmark3", changesets["G"])
+    repo.create_bookmark("bookmark1", changesets["A"], None)
+        .await?;
+    repo.create_bookmark("bookmark2", changesets["F"], None)
+        .await?;
+    repo.create_bookmark("scratch/bookmark3", changesets["G"], None)
         .await?;
 
     // Can delete public bookmarks.
-    repo.delete_bookmark("bookmark1", None).await?;
+    repo.delete_bookmark("bookmark1", None, None).await?;
     assert!(
         repo.resolve_bookmark("bookmark1", BookmarkFreshness::MostRecent)
             .await?
@@ -159,7 +163,7 @@ async fn delete_bookmark(fb: FacebookInit) -> Result<()> {
 
     // Deleting a bookmark with the wrong old-target fails.
     assert!(
-        repo.delete_bookmark("bookmark2", Some(changesets["E"]))
+        repo.delete_bookmark("bookmark2", Some(changesets["E"]), None)
             .await
             .is_err()
     );
@@ -170,7 +174,7 @@ async fn delete_bookmark(fb: FacebookInit) -> Result<()> {
     assert_eq!(bookmark2.id(), changesets["F"]);
 
     // But with the right old-target succeeds.
-    repo.delete_bookmark("bookmark2", Some(changesets["F"]))
+    repo.delete_bookmark("bookmark2", Some(changesets["F"]), None)
         .await?;
     assert!(
         repo.resolve_bookmark("bookmark1", BookmarkFreshness::MostRecent)
@@ -180,7 +184,7 @@ async fn delete_bookmark(fb: FacebookInit) -> Result<()> {
 
     // Can't delete scratch bookmarks.
     assert!(
-        repo.delete_bookmark("scratch/bookmark3", None)
+        repo.delete_bookmark("scratch/bookmark3", None, None)
             .await
             .is_err()
     );

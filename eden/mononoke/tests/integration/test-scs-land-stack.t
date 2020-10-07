@@ -144,8 +144,8 @@ attempt to land stack to G, hooks will fail
   error: SourceControlService::repo_land_stack failed with RequestError { kind: RequestErrorKind::INVALID_REQUEST, reason: "hooks failed:\n  limit_filesize for 6b5b61e224d26706b1eb361a3900f168042bd4f7f936c64cd91963e365aec4e9: File size limit is 10 bytes. You tried to push file glarge that is over the limit (14 bytes).  See https://fburl.com/landing_big_diffs for instructions." }
   [1]
 
-we don't have pushvars on the thrift interface yet, but services can bypass hooks
-  $ scsc land-stack -R repo --name trunk -i $G -i $A --service-id trunk-permitted-service
+bypass the hook to land the stack
+  $ scsc land-stack -R repo --name trunk -i $G -i $A --pushvar ALLOW_LARGE_FILES=true
   trunk updated to: f3be859b0ddb06d8c11c2bd43edd71528ff055a7
   1e82c5967442db2a0774744065e7f0f4ce810e9839897f81cc012959a783884b => a194cadd16930608adaa649035ad4c16930cbd0f
   6b5b61e224d26706b1eb361a3900f168042bd4f7f936c64cd91963e365aec4e9 => f3be859b0ddb06d8c11c2bd43edd71528ff055a7

@@ -150,8 +150,8 @@ try to move trunk over a commit that fails the hooks
   error: SourceControlService::repo_move_bookmark failed with RequestError { kind: RequestErrorKind::INVALID_REQUEST, reason: "hooks failed:\n  limit_filesize for 88dbd25ba00277e3dfdfc642d67f2c22c75ea4f8d94f011b7f526f07b6ecc345: File size limit is 10 bytes. You tried to push file dlarge that is over the limit (14 bytes).  See https://fburl.com/landing_big_diffs for instructions." }
   [1]
 
-there's no way to specify pushvars at the moment, however service writes can bypass hooks
-  $ scsc move-bookmark -R repo --name trunk -i $E --service-id trunk-permitted-service
+use a pushvar to bypass the hook
+  $ scsc move-bookmark -R repo --name trunk -i $E --pushvar ALLOW_LARGE_FILES=true
   $ wait_for_bookmark_update repo trunk $E
   $ scsc info -R repo -B trunk
   Commit: 6f95f2e47a180912e108a8dbfe9d45fc417834c3

@@ -5,11 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::{BTreeMap, HashMap};
 use std::convert::{TryFrom, TryInto};
 use std::fmt::{Debug, Display};
 use std::ops::RangeBounds;
 use std::str::FromStr;
 
+use bytes::Bytes;
 use chrono::{DateTime, FixedOffset, TimeZone};
 use faster_hex::hex_string;
 use mononoke_api::specifiers::{GitSha1, Globalrev};
@@ -282,4 +284,17 @@ pub(crate) fn validate_timestamp(
         }
         Some(ts) => Ok(Some(ts)),
     }
+}
+
+/// Convert a pushvars map from thrift's representation to the one used
+/// internally in mononoke.
+pub(crate) fn convert_pushvars(
+    pushvars: Option<BTreeMap<String, Vec<u8>>>,
+) -> Option<HashMap<String, Bytes>> {
+    pushvars.map(|pushvars| {
+        pushvars
+            .into_iter()
+            .map(|(name, value)| (name, Bytes::from(value)))
+            .collect()
+    })
 }

@@ -29,7 +29,7 @@ use source_control as thrift;
 
 use crate::commit_id::{map_commit_identities, map_commit_identity, CommitIdExt};
 use crate::errors;
-use crate::from_request::{check_range_and_convert, FromRequest};
+use crate::from_request::{check_range_and_convert, convert_pushvars, FromRequest};
 use crate::into_response::{AsyncIntoResponseWith, IntoResponse};
 use crate::source_control_impl::SourceControlServiceImpl;
 
@@ -450,8 +450,9 @@ impl SourceControlServiceImpl {
             .changeset(ChangesetSpecifier::from_request(target)?)
             .await?
             .ok_or_else(|| errors::commit_not_found(target.to_string()))?;
+        let pushvars = convert_pushvars(params.pushvars);
 
-        repo.create_bookmark(&params.bookmark, changeset.id())
+        repo.create_bookmark(&params.bookmark, changeset.id(), pushvars.as_ref())
             .await?;
         Ok(thrift::RepoCreateBookmarkResponse {})
     }
@@ -481,12 +482,14 @@ impl SourceControlServiceImpl {
             ),
             None => None,
         };
+        let pushvars = convert_pushvars(params.pushvars);
 
         repo.move_bookmark(
             &params.bookmark,
             changeset.id(),
             old_changeset_id,
             params.allow_non_fast_forward_move,
+            pushvars.as_ref(),
         )
         .await?;
         Ok(thrift::RepoMoveBookmarkResponse {})
@@ -512,8 +515,9 @@ impl SourceControlServiceImpl {
             ),
             None => None,
         };
+        let pushvars = convert_pushvars(params.pushvars);
 
-        repo.delete_bookmark(&params.bookmark, old_changeset_id)
+        repo.delete_bookmark(&params.bookmark, old_changeset_id, pushvars.as_ref())
             .await?;
         Ok(thrift::RepoDeleteBookmarkResponse {})
     }
@@ -538,9 +542,10 @@ impl SourceControlServiceImpl {
             .changeset(ChangesetSpecifier::from_request(base)?)
             .await?
             .ok_or_else(|| errors::commit_not_found(base.to_string()))?;
+        let pushvars = convert_pushvars(params.pushvars);
 
         let pushrebase_outcome = repo
-            .land_stack(&params.bookmark, head.id(), base.id())
+            .land_stack(&params.bookmark, head.id(), base.id(), pushvars.as_ref())
             .await?
             .into_response_with(&(
                 repo.clone(),
