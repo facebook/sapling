@@ -326,10 +326,17 @@ pub fn make_blobstore<'a>(
             } => {
                 #[cfg(fbcode_build)]
                 {
-                    ::s3blob::S3Blob::new(fb, bucket, keychain_group, region_name, endpoint)
-                        .await
-                        .context(ErrorKind::StateOpen)
-                        .map(|store| Arc::new(store) as Arc<dyn Blobstore>)?
+                    ::s3blob::S3Blob::new(
+                        fb,
+                        bucket,
+                        keychain_group,
+                        region_name,
+                        endpoint,
+                        blobstore_options.put_behaviour,
+                    )
+                    .await
+                    .context(ErrorKind::StateOpen)
+                    .map(|store| Arc::new(store) as Arc<dyn Blobstore>)?
                 }
                 #[cfg(not(fbcode_build))]
                 {
