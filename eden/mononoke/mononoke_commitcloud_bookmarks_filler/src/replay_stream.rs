@@ -10,7 +10,7 @@ use bookmarks::BookmarkName;
 use chrono::Local;
 use cloned::cloned;
 use futures::stream::{self, Stream, StreamExt};
-use futures::{compat::Future01CompatExt, Future};
+use futures::Future;
 use mercurial_types::HgChangesetId;
 use scuba_ext::ScubaSampleBuilder;
 use slog::{info, Logger};
@@ -70,10 +70,7 @@ where
     F: Future<Output = Result<(), ErrorKind>>,
     R: Fn(BookmarkName, HgChangesetId) -> F + Sized + Clone,
 {
-    let batch = queue
-        .fetch_batch(&repo_name, backfill, queue_limit)
-        .compat()
-        .await?;
+    let batch = queue.fetch_batch(&repo_name, backfill, queue_limit).await?;
 
     STATS::batch_loaded.add_value(batch.len() as i64);
     info!(logger, "Processing batch: {:?} entries", batch.len());
@@ -108,7 +105,7 @@ where
                         .log();
 
                     if let Ok(entries) = outcome {
-                        if let Err(e) = queue.release_entries(&entries).compat().await {
+                        if let Err(e) = queue.release_entries(&entries).await {
                             info!(logger, "Error while releasing queue entries: {:?}", e,);
                         }
                     };
@@ -212,7 +209,7 @@ mod test {
                 NOT_BACKFILL,
             ),
         ];
-        insert_entries_async(&queue, &entries).await?;
+        insert_entries(&queue, &entries).await?;
 
         process_replay_stream(
             &queue,
@@ -229,10 +226,7 @@ mod test {
         .await
         .unwrap()?;
 
-        let real = queue
-            .fetch_batch(&repo, NOT_BACKFILL, QUEUE_LIMIT)
-            .compat()
-            .await?;
+        let real = queue.fetch_batch(&repo, NOT_BACKFILL, QUEUE_LIMIT).await?;
         assert_eq!(real, hashmap! {});
 
         Ok(())
@@ -264,7 +258,7 @@ mod test {
                 NOT_BACKFILL,
             ),
         ];
-        insert_entries_async(&queue, &entries).await?;
+        insert_entries(&queue, &entries).await?;
 
         process_replay_stream(
             &queue,
@@ -285,10 +279,7 @@ mod test {
             book1 => batch(t0(), vec![(1 as i64, nodehash::ONES_CSID, t0())]),
             book2 => batch(t0(), vec![(2 as i64, nodehash::TWOS_CSID, t0())]),
         };
-        let real = queue
-            .fetch_batch(&repo, NOT_BACKFILL, QUEUE_LIMIT)
-            .compat()
-            .await?;
+        let real = queue.fetch_batch(&repo, NOT_BACKFILL, QUEUE_LIMIT).await?;
         assert_eq!(real, expected);
 
         Ok(())
@@ -327,7 +318,7 @@ mod test {
                 NOT_BACKFILL,
             ),
         ];
-        insert_entries_async(&queue, &entries).await?;
+        insert_entries(&queue, &entries).await?;
 
         process_replay_stream(
             &queue,
@@ -349,10 +340,7 @@ mod test {
             book1 => batch(t0(), vec![(3 as i64, nodehash::THREES_CSID, t0())]),
         };
 
-        let real = queue
-            .fetch_batch(&repo, NOT_BACKFILL, QUEUE_LIMIT)
-            .compat()
-            .await?;
+        let real = queue.fetch_batch(&repo, NOT_BACKFILL, QUEUE_LIMIT).await?;
         assert_eq!(real, expected);
 
         Ok(())

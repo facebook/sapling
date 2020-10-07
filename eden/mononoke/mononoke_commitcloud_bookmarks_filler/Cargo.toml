@@ -35,4 +35,3 @@ tokio = { version = "=0.2.13", features = ["full"] }
 [dev-dependencies]
 mercurial_types-mocks = { path = "../mercurial/types/mocks" }
 maplit = "1.0"
-tokio-compat = "0.1"

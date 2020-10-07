@@ -9,7 +9,7 @@ use anyhow::Error;
 use ascii::AsciiString;
 use bookmarks::BookmarkName;
 use chrono::naive::NaiveDateTime;
-use futures_old::future::Future;
+use futures::compat::Future01CompatExt;
 use mercurial_types::HgChangesetId;
 use sql::{queries, Connection};
 use sql_construct::SqlConstruct;
@@ -72,46 +72,49 @@ impl SqlConstruct for SqlReplayBookmarksQueue {
 }
 
 impl SqlReplayBookmarksQueue {
-    pub fn fetch_batch(
+    pub async fn fetch_batch(
         &self,
         repo_name: &String,
         backfill: Backfill,
         limit: QueueLimit,
-    ) -> impl Future<Item = Batch, Error = Error> {
-        FetchQueue::query(
+    ) -> Result<Batch, Error> {
+        let rows = FetchQueue::query(
             &self.read_master_connection,
             repo_name,
             &(if backfill.0 { 1 } else { 0 }),
             &limit.0,
         )
-        .and_then(|rows| {
-            let mut r = HashMap::new();
-            for (id, bookmark, hex_cs_id, dt) in rows.into_iter() {
-                let hex_cs_id = AsciiString::from_ascii(hex_cs_id)?;
-                let cs_id = HgChangesetId::from_ascii_str(&hex_cs_id)?;
+        .compat()
+        .await?;
+        let mut r = HashMap::new();
+        for (id, bookmark, hex_cs_id, dt) in rows.into_iter() {
+            let hex_cs_id = AsciiString::from_ascii(hex_cs_id)?;
+            let cs_id = HgChangesetId::from_ascii_str(&hex_cs_id)?;
 
-                // TODO: (torozco) T46163772 queries! macro doesn't support time. MySQL Async does
-                // support it, but we don't have it in SQLite, so I don't think we can expose a
-                // return value for the query that works for both. For now, considering we a) only
-                // use timestamps for logging and b) our local time is the same as the MySQL
-                // server's time (and this all appears to work properly), Naive dates should be OK.
-                let dt = NaiveDateTime::parse_from_str(&dt, DATE_TIME_FORMAT)?;
+            // TODO: (torozco) T46163772 queries! macro doesn't support time. MySQL Async does
+            // support it, but we don't have it in SQLite, so I don't think we can expose a
+            // return value for the query that works for both. For now, considering we a) only
+            // use timestamps for logging and b) our local time is the same as the MySQL
+            // server's time (and this all appears to work properly), Naive dates should be OK.
+            let dt = NaiveDateTime::parse_from_str(&dt, DATE_TIME_FORMAT)?;
 
-                r.entry(bookmark)
-                    .or_insert_with(|| BookmarkBatch {
-                        dt: dt.clone(),
-                        entries: vec![],
-                    })
-                    .entries
-                    .push((id, cs_id, dt));
-            }
-            Ok(r)
-        })
+            r.entry(bookmark)
+                .or_insert_with(|| BookmarkBatch {
+                    dt: dt.clone(),
+                    entries: vec![],
+                })
+                .entries
+                .push((id, cs_id, dt));
+        }
+        Ok(r)
     }
 
-    pub fn release_entries(&self, entries: &[Entry]) -> impl Future<Item = (), Error = Error> {
+    pub async fn release_entries(&self, entries: &[Entry]) -> Result<(), Error> {
         let ids: Vec<_> = entries.iter().map(|e| e.0).collect();
-        ReleaseEntries::query(&self.write_connection, &ids[..]).map(|_| ())
+        ReleaseEntries::query(&self.write_connection, &ids[..])
+            .compat()
+            .await?;
+        Ok(())
     }
 }
 
@@ -122,7 +125,6 @@ pub mod test_helpers {
     use anyhow::Result;
     use futures::compat::Future01CompatExt;
     use mercurial_types::hash::Sha1;
-    use tokio_compat::runtime::Runtime;
 
     pub const BACKFILL: Backfill = Backfill(true);
     pub const NOT_BACKFILL: Backfill = Backfill(false);
@@ -148,37 +150,7 @@ pub mod test_helpers {
         }
     }
 
-    pub fn insert_entries(
-        rt: &mut Runtime,
-        queue: &SqlReplayBookmarksQueue,
-        entries: &Vec<(i64, String, BookmarkName, Sha1, NaiveDateTime, Backfill)>,
-    ) -> Result<()> {
-        let rows: Vec<_> = entries
-            .iter()
-            .map(|(id, repo, bookmark, cs_id, t, backfill)| {
-                (
-                    id,
-                    repo,
-                    bookmark.to_string(),
-                    cs_id.to_string(),
-                    t.format(DATE_TIME_FORMAT).to_string(),
-                    (if backfill.0 { 1 } else { 0 }) as i64,
-                )
-            })
-            .collect();
-
-        // NOTE: we don't actually compute the bookmark_hash here because we don't use that yet.
-        let refs: Vec<_> = rows
-            .iter()
-            .map(|(id, repo, bookmark, cs_id, t, b)| (*id, *repo, bookmark, cs_id, bookmark, t, b))
-            .collect();
-
-        rt.block_on(InsertEntries::query(&queue.write_connection, &refs[..]))?;
-
-        Ok(())
-    }
-
-    pub async fn insert_entries_async(
+    pub async fn insert_entries(
         queue: &SqlReplayBookmarksQueue,
         entries: &[(i64, String, BookmarkName, Sha1, NaiveDateTime, Backfill)],
     ) -> Result<()> {
@@ -218,13 +190,11 @@ pub(crate) mod test {
     use anyhow::Result;
     use maplit::hashmap;
     use mercurial_types_mocks::{hash, nodehash};
-    use tokio_compat::runtime::Runtime;
 
     const QUEUE_LIMIT: QueueLimit = QueueLimit(10);
 
-    #[test]
-    fn test_fetch_basic_batch() -> Result<()> {
-        let mut rt = Runtime::new()?;
+    #[tokio::test]
+    async fn test_fetch_basic_batch() -> Result<()> {
         let queue = SqlReplayBookmarksQueue::with_sqlite_in_memory()?;
 
         let repo = "repo1".to_string();
@@ -249,9 +219,9 @@ pub(crate) mod test {
                 NOT_BACKFILL,
             ),
         ];
-        insert_entries(&mut rt, &queue, &entries)?;
+        insert_entries(&queue, &entries).await?;
 
-        let real = rt.block_on(queue.fetch_batch(&repo, NOT_BACKFILL, QUEUE_LIMIT))?;
+        let real = queue.fetch_batch(&repo, NOT_BACKFILL, QUEUE_LIMIT).await?;
 
         let expected = hashmap! {
             book1 => batch(t0(), vec![(1 as i64, nodehash::ONES_CSID, t0())]),
@@ -263,9 +233,8 @@ pub(crate) mod test {
         Ok(())
     }
 
-    #[test]
-    fn test_fetch_coalesced_batch() -> Result<()> {
-        let mut rt = Runtime::new()?;
+    #[tokio::test]
+    async fn test_fetch_coalesced_batch() -> Result<()> {
         let queue = SqlReplayBookmarksQueue::with_sqlite_in_memory()?;
 
         let repo = "repo1".to_string();
@@ -314,9 +283,9 @@ pub(crate) mod test {
                 NOT_BACKFILL,
             ),
         ];
-        insert_entries(&mut rt, &queue, &entries)?;
+        insert_entries(&queue, &entries).await?;
 
-        let real = rt.block_on(queue.fetch_batch(&repo, NOT_BACKFILL, QUEUE_LIMIT))?;
+        let real = queue.fetch_batch(&repo, NOT_BACKFILL, QUEUE_LIMIT).await?;
 
         let book1_entries = vec![
             (1 as i64, nodehash::ONES_CSID, t0()),
@@ -335,9 +304,8 @@ pub(crate) mod test {
         Ok(())
     }
 
-    #[test]
-    fn test_release_batch() -> Result<()> {
-        let mut rt = Runtime::new()?;
+    #[tokio::test]
+    async fn test_release_batch() -> Result<()> {
         let queue = SqlReplayBookmarksQueue::with_sqlite_in_memory()?;
 
         let repo = "repo1".to_string();
@@ -378,16 +346,16 @@ pub(crate) mod test {
                 NOT_BACKFILL,
             ),
         ];
-        insert_entries(&mut rt, &queue, &entries)?;
+        insert_entries(&queue, &entries).await?;
 
         let release = vec![
             (1 as i64, nodehash::ONES_CSID, t0()),
             (2 as i64, nodehash::TWOS_CSID, t0()),
         ];
 
-        rt.block_on(queue.release_entries(&release))?;
+        queue.release_entries(&release).await?;
 
-        let real = rt.block_on(queue.fetch_batch(&repo, NOT_BACKFILL, QUEUE_LIMIT))?;
+        let real = queue.fetch_batch(&repo, NOT_BACKFILL, QUEUE_LIMIT).await?;
 
         let expected = hashmap! {
             book1 => batch(t0(), vec![(3 as i64, nodehash::THREES_CSID, t0())]),
@@ -399,9 +367,8 @@ pub(crate) mod test {
         Ok(())
     }
 
-    #[test]
-    fn test_repo_filtering() -> Result<()> {
-        let mut rt = Runtime::new()?;
+    #[tokio::test]
+    async fn test_repo_filtering() -> Result<()> {
         let queue = SqlReplayBookmarksQueue::with_sqlite_in_memory()?;
 
         let repo1 = "repo1".to_string();
@@ -427,9 +394,9 @@ pub(crate) mod test {
                 NOT_BACKFILL,
             ),
         ];
-        insert_entries(&mut rt, &queue, &entries)?;
+        insert_entries(&queue, &entries).await?;
 
-        let real = rt.block_on(queue.fetch_batch(&repo1, NOT_BACKFILL, QUEUE_LIMIT))?;
+        let real = queue.fetch_batch(&repo1, NOT_BACKFILL, QUEUE_LIMIT).await?;
 
         let expected = hashmap! {
             book1 => batch(t0(), vec![(1 as i64, nodehash::ONES_CSID, t0())]),
@@ -440,9 +407,8 @@ pub(crate) mod test {
         Ok(())
     }
 
-    #[test]
-    fn test_batch_age() -> Result<()> {
-        let mut rt = Runtime::new()?;
+    #[tokio::test]
+    async fn test_batch_age() -> Result<()> {
         let queue = SqlReplayBookmarksQueue::with_sqlite_in_memory()?;
 
         let repo = "repo1".to_string();
@@ -466,9 +432,9 @@ pub(crate) mod test {
                 NOT_BACKFILL,
             ),
         ];
-        insert_entries(&mut rt, &queue, &entries)?;
+        insert_entries(&queue, &entries).await?;
 
-        let real = rt.block_on(queue.fetch_batch(&repo, NOT_BACKFILL, QUEUE_LIMIT))?;
+        let real = queue.fetch_batch(&repo, NOT_BACKFILL, QUEUE_LIMIT).await?;
 
         let entries = vec![
             (1 as i64, nodehash::ONES_CSID, t0()),
@@ -482,9 +448,8 @@ pub(crate) mod test {
         Ok(())
     }
 
-    #[test]
-    fn test_limit() -> Result<()> {
-        let mut rt = Runtime::new()?;
+    #[tokio::test]
+    async fn test_limit() -> Result<()> {
         let queue = SqlReplayBookmarksQueue::with_sqlite_in_memory()?;
 
         let repo = "repo1".to_string();
@@ -525,9 +490,11 @@ pub(crate) mod test {
                 NOT_BACKFILL,
             ),
         ];
-        insert_entries(&mut rt, &queue, &entries)?;
+        insert_entries(&queue, &entries).await?;
 
-        let real = rt.block_on(queue.fetch_batch(&repo, NOT_BACKFILL, QueueLimit(2)))?;
+        let real = queue
+            .fetch_batch(&repo, NOT_BACKFILL, QueueLimit(2))
+            .await?;
 
         let expected = hashmap! {
             book1 => batch(t0(), vec![(1 as i64, nodehash::ONES_CSID, t0())]),
@@ -539,9 +506,8 @@ pub(crate) mod test {
         Ok(())
     }
 
-    #[test]
-    fn test_backfill() -> Result<()> {
-        let mut rt = Runtime::new()?;
+    #[tokio::test]
+    async fn test_backfill() -> Result<()> {
         let queue = SqlReplayBookmarksQueue::with_sqlite_in_memory()?;
 
         let repo = "repo1".to_string();
@@ -565,10 +531,10 @@ pub(crate) mod test {
                 BACKFILL,
             ),
         ];
-        insert_entries(&mut rt, &queue, &entries)?;
+        insert_entries(&queue, &entries).await?;
 
-        let real_backfill = rt.block_on(queue.fetch_batch(&repo, BACKFILL, QUEUE_LIMIT))?;
-        let real_not_backfill = rt.block_on(queue.fetch_batch(&repo, NOT_BACKFILL, QUEUE_LIMIT))?;
+        let real_backfill = queue.fetch_batch(&repo, BACKFILL, QUEUE_LIMIT).await?;
+        let real_not_backfill = queue.fetch_batch(&repo, NOT_BACKFILL, QUEUE_LIMIT).await?;
 
         let expected_backfill = hashmap! {
             book1.clone() => batch(t0(), vec![(2 as i64, nodehash::TWOS_CSID, t0())])
