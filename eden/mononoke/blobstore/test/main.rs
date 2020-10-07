@@ -18,13 +18,13 @@ use fbinit::FacebookInit;
 use strum::IntoEnumIterator;
 use tempdir::TempDir;
 
-use blobstore::{Blobstore, BlobstoreWithLink, PutBehaviour};
+use blobstore::{Blobstore, BlobstorePutOps, BlobstoreWithLink, OverwriteStatus, PutBehaviour};
 use context::CoreContext;
 use fileblob::Fileblob;
 use memblob::{EagerMemblob, LazyMemblob};
 use mononoke_types::BlobstoreBytes;
 
-async fn overwrite<B: BlobstoreWithLink>(
+async fn overwrite<B: Blobstore + BlobstorePutOps>(
     fb: FacebookInit,
     blobstore: B,
     has_ctime: bool,
@@ -35,9 +35,19 @@ async fn overwrite<B: BlobstoreWithLink>(
     let key = "some_key".to_string() + &put_behaviour.to_string();
     let value = BlobstoreBytes::from_bytes(Bytes::copy_from_slice(b"appleveldatav1"));
 
-    blobstore
-        .put(ctx.clone(), key.clone(), value.clone())
+    let put_status1 = blobstore
+        .put_with_status(ctx.clone(), key.clone(), value.clone())
         .await?;
+    let expected_status1 = match put_behaviour {
+        PutBehaviour::Overwrite => OverwriteStatus::NotChecked,
+        PutBehaviour::OverwriteAndLog => OverwriteStatus::New,
+        PutBehaviour::IfAbsent => OverwriteStatus::New,
+    };
+    assert_eq!(
+        expected_status1, put_status1,
+        "checking new {:?}",
+        put_behaviour
+    );
 
     let roundtrip1 = blobstore.get(ctx.clone(), key.clone()).await?.unwrap();
 
@@ -45,8 +55,8 @@ async fn overwrite<B: BlobstoreWithLink>(
 
     let value2 = BlobstoreBytes::from_bytes(Bytes::copy_from_slice(b"appleveldatav2"));
 
-    blobstore
-        .put(ctx.clone(), key.clone(), value2.clone())
+    let put_status2 = blobstore
+        .put_with_status(ctx.clone(), key.clone(), value2.clone())
         .await?;
 
     let roundtrip2 = blobstore.get(ctx.clone(), key.clone()).await?.unwrap();
@@ -58,6 +68,17 @@ async fn overwrite<B: BlobstoreWithLink>(
         assert_eq!(ctime1, ctime2);
         assert_eq!(value, roundtrip2.into_bytes());
     }
+
+    let expected_status2 = match put_behaviour {
+        PutBehaviour::Overwrite => OverwriteStatus::NotChecked,
+        PutBehaviour::OverwriteAndLog => OverwriteStatus::Overwrote,
+        PutBehaviour::IfAbsent => OverwriteStatus::Prevented,
+    };
+    assert_eq!(
+        expected_status2, put_status2,
+        "checking overwrite {:?}",
+        put_behaviour
+    );
 
     Ok(())
 }

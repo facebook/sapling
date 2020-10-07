@@ -341,6 +341,7 @@ impl PutBehaviour {
 
 /// For use from logging blobstores so they can record the overwrite status
 /// `BlobstorePutOps::put_with_status`, and eventually `BlobstoreWithLink::link()` will return this.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum OverwriteStatus {
     // We did not check if the key existed before writing it
     NotChecked,
