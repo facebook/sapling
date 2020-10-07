@@ -92,7 +92,7 @@ Check trees in response.
 
   $ edenapi_read_res tree cat res.cbor --debug -p '' -h $ROOT_MFID_1
   Reading from file: "res.cbor"
-  TreeEntry { key: Key { path: RepoPathBuf(""), hgid: HgId("15024c4dc4a27b572d623db342ae6a08d7f7adec") }, data: Some(b"test.txt\0186cafa3319c24956783383dc44c5cbc68c5a0ca\n"), parents: Some(None), metadata: Some(Metadata { size: None, flags: None }) }
+  TreeEntry { key: Key { path: RepoPathBuf(""), hgid: HgId("15024c4dc4a27b572d623db342ae6a08d7f7adec") }, data: Some(b"test.txt\0186cafa3319c24956783383dc44c5cbc68c5a0ca\n"), parents: Some(None), file_metadata: None }
 
   $ edenapi_read_res tree cat res.cbor -p '' -h $ROOT_MFID_2
   Reading from file: "res.cbor"
