@@ -7,7 +7,7 @@
 
 use gotham::state::State;
 
-use gotham_ext::middleware::ScubaHandler;
+use gotham_ext::middleware::{ClientIdentity, ScubaHandler};
 use scuba::ScubaSampleBuilder;
 
 use crate::handlers::HandlerInfo;
@@ -17,6 +17,7 @@ use crate::middleware::RequestContext;
 pub enum EdenApiScubaKey {
     Repo,
     Method,
+    User,
 }
 
 impl AsRef<str> for EdenApiScubaKey {
@@ -24,6 +25,7 @@ impl AsRef<str> for EdenApiScubaKey {
         match self {
             Self::Repo => "repo",
             Self::Method => "method",
+            Self::User => "user",
         }
     }
 }
@@ -38,6 +40,7 @@ impl Into<String> for EdenApiScubaKey {
 pub struct EdenApiScubaHandler {
     request_context: Option<RequestContext>,
     handler_info: Option<HandlerInfo>,
+    client_username: Option<String>,
 }
 
 impl ScubaHandler for EdenApiScubaHandler {
@@ -45,10 +48,16 @@ impl ScubaHandler for EdenApiScubaHandler {
         Self {
             request_context: state.try_borrow::<RequestContext>().cloned(),
             handler_info: state.try_borrow::<HandlerInfo>().cloned(),
+            client_username: state
+                .try_borrow::<ClientIdentity>()
+                .and_then(|id| id.username())
+                .map(ToString::to_string),
         }
     }
 
     fn add_stats(self, scuba: &mut ScubaSampleBuilder) {
+        scuba.add_opt(EdenApiScubaKey::User, self.client_username);
+
         if let Some(info) = self.handler_info {
             scuba.add_opt(EdenApiScubaKey::Repo, info.repo.clone());
             scuba.add_opt(EdenApiScubaKey::Method, info.method.map(|m| m.to_string()));
