@@ -120,6 +120,7 @@ pub mod test_helpers {
     use super::*;
 
     use anyhow::Result;
+    use futures::compat::Future01CompatExt;
     use mercurial_types::hash::Sha1;
     use tokio_compat::runtime::Runtime;
 
@@ -173,6 +174,37 @@ pub mod test_helpers {
             .collect();
 
         rt.block_on(InsertEntries::query(&queue.write_connection, &refs[..]))?;
+
+        Ok(())
+    }
+
+    pub async fn insert_entries_async(
+        queue: &SqlReplayBookmarksQueue,
+        entries: &[(i64, String, BookmarkName, Sha1, NaiveDateTime, Backfill)],
+    ) -> Result<()> {
+        let rows: Vec<_> = entries
+            .iter()
+            .map(|(id, repo, bookmark, cs_id, t, backfill)| {
+                (
+                    id,
+                    repo,
+                    bookmark.to_string(),
+                    cs_id.to_string(),
+                    t.format(DATE_TIME_FORMAT).to_string(),
+                    (if backfill.0 { 1 } else { 0 }) as i64,
+                )
+            })
+            .collect();
+
+        // NOTE: we don't actually compute the bookmark_hash here because we don't use that yet.
+        let refs: Vec<_> = rows
+            .iter()
+            .map(|(id, repo, bookmark, cs_id, t, b)| (*id, *repo, bookmark, cs_id, bookmark, t, b))
+            .collect();
+
+        InsertEntries::query(&queue.write_connection, &refs[..])
+            .compat()
+            .await?;
 
         Ok(())
     }

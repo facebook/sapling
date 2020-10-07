@@ -6,6 +6,7 @@
  */
 
 #![feature(never_type)]
+#![feature(async_closure)]
 #![deny(warnings)]
 
 use anyhow::{format_err, Error, Result};
@@ -14,13 +15,7 @@ use clap::{Arg, ArgMatches};
 use cloned::cloned;
 use cmdlib::{args, helpers::block_execute};
 use fbinit::FacebookInit;
-use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
-    future,
-    stream::StreamExt,
-};
-use futures_ext::StreamExt as StreamExt2;
-use futures_old::stream::Stream;
+use futures::{compat::Future01CompatExt, future, stream::StreamExt};
 use mercurial_types::HgChangesetId;
 use metaconfig_types::RepoConfig;
 use scuba_ext::ScubaSampleBuilder;
@@ -175,7 +170,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         ARG_QUEUE_LIMIT,
         DEFAULT_QUEUE_LIMIT,
     ));
-    let maybe_max_iterations = args::get_u64_opt(&matches, ARG_MAX_ITERATIONS);
+    let maybe_max_iterations = args::get_usize_opt(&matches, ARG_MAX_ITERATIONS);
     let maybe_delay = args::get_u64_opt(&matches, ARG_DELAY);
 
     let mut status_scuba = match matches.value_of(ARG_STATUS_SCUBA_TABLE) {
@@ -198,20 +193,21 @@ fn main(fb: FacebookInit) -> Result<()> {
         let infinitepush_namespace = Arc::new(infinitepush_namespace);
         let do_replay = {
             cloned!(logger);
-            move |name: &BookmarkName, hg_cs_id: &HgChangesetId| {
+            move |name: BookmarkName, hg_cs_id: HgChangesetId| {
                 sync_bookmark::sync_bookmark(
                     fb,
                     blobrepo.clone(),
                     logger.clone(),
                     infinitepush_namespace.clone(),
-                    name,
-                    hg_cs_id,
+                    &name,
+                    &hg_cs_id,
                 )
+                .compat()
             }
         };
 
         let stream = replay_stream::process_replay_stream(
-            queue,
+            &queue,
             repo_name,
             backfill,
             buffer_size,
@@ -222,10 +218,9 @@ fn main(fb: FacebookInit) -> Result<()> {
         );
 
         let mut stream = match maybe_max_iterations {
-            Some(max_iterations) => stream.take(max_iterations).left_stream(),
-            None => stream.right_stream(),
-        }
-        .compat();
+            Some(max_iterations) => stream.take(max_iterations).boxed(),
+            None => stream.boxed(),
+        };
 
         while let Some(_) = stream.next().await {
             if let Some(delay) = maybe_delay {
