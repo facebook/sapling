@@ -256,7 +256,7 @@ mod tests {
         assert_eq!(
             meta,
             StoreResult::Found(Metadata {
-                size: Some(d.data.len() as u64),
+                size: None,
                 flags: None
             })
         );
@@ -268,7 +268,7 @@ mod tests {
         assert_eq!(
             meta,
             StoreResult::Found(Metadata {
-                size: Some(d.data.len() as u64),
+                size: None,
                 flags: None
             })
         );

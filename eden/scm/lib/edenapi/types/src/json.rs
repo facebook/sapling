@@ -31,6 +31,7 @@ use crate::commit::{CommitLocation, CommitLocationToHashRequest, CommitRevlogDat
 use crate::complete_tree::CompleteTreeRequest;
 use crate::file::FileRequest;
 use crate::history::HistoryRequest;
+use crate::metadata::{DirectoryMetadataRequest, FileMetadataRequest};
 use crate::tree::TreeRequest;
 
 /// Parse a `CommitRevlogDataRequest` from JSON.
@@ -140,9 +141,17 @@ pub fn parse_file_req(json: &Value) -> Result<FileRequest> {
 pub fn parse_tree_req(json: &Value) -> Result<TreeRequest> {
     let json = json.as_object().context("input must be a JSON object")?;
     let keys = json.get("keys").context("missing field: keys")?;
+    let with_file_metadata = json.get("with_file_metadata");
+    // let with_directory_metadata = json.get("with_directory_metadata");
 
     Ok(TreeRequest {
         keys: parse_keys(keys)?,
+        with_file_metadata: with_file_metadata
+            .map(parse_file_metadata_req)
+            .transpose()?,
+        // with_directory_metadata: with_directory_metadata
+        //     .map(parse_directory_metadata_req)
+        //     .transpose()?,
     })
 }
 
@@ -230,6 +239,25 @@ pub fn parse_complete_tree_req(value: &Value) -> Result<CompleteTreeRequest> {
         depth,
     })
 }
+
+pub fn parse_file_metadata_req(json: &Value) -> Result<FileMetadataRequest> {
+    let json = json.as_object().context("input must be a JSON object")?;
+    let with_revisionstore_flags = json
+        .get("with_revisionstore_flags")
+        .context("missing field: with_revisionstore_flags")?
+        .as_bool()
+        .context("with_revisionstore_flags field must be a bool")?;
+
+    Ok(FileMetadataRequest {
+        with_revisionstore_flags,
+    })
+}
+
+// pub fn parse_directory_metadata_req(json: &Value) -> Result<DirectoryMetadataRequest> {
+//     let _json = json.as_object().context("input must be a JSON object")?;
+//
+//     Ok(DirectoryMetadataRequest {})
+// }
 
 fn parse_keys(value: &Value) -> Result<Vec<Key>> {
     let arr = value.as_array().context("input must be a JSON array")?;
@@ -345,7 +373,17 @@ impl<T: ToJson> ToJson for Vec<T> {
 
 impl ToJson for TreeRequest {
     fn to_json(&self) -> Value {
-        json!({ "keys": self.keys.to_json() })
+        if let Some(file_metadata) = self.with_file_metadata {
+            json!({
+                "keys": self.keys.to_json(),
+                "with_file_metadata": file_metadata.to_json(),
+            })
+        // "with_directory_metadata": self.with_directory_metadata.map(|m| m.to_json())
+        } else {
+            json!({
+                "keys": self.keys.to_json(),
+            })
+        }
     }
 }
 
@@ -369,6 +407,18 @@ impl ToJson for CompleteTreeRequest {
             "basemfnodes": self.basemfnodes.to_json(),
             "depth": self.depth,
         })
+    }
+}
+
+impl ToJson for FileMetadataRequest {
+    fn to_json(&self) -> Value {
+        json!({ "with_revisionstore_flags": self.with_revisionstore_flags })
+    }
+}
+
+impl ToJson for DirectoryMetadataRequest {
+    fn to_json(&self) -> Value {
+        json!({})
     }
 }
 

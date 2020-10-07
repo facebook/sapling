@@ -247,7 +247,7 @@ impl FakeEdenApi {
                 let parents = Parents::default();
                 let metadata = Metadata {
                     flags: None,
-                    size: Some(data.len() as u64),
+                    size: None,
                 };
                 Some(Ok(TreeEntry::new(key, data, parents, metadata)))
             })

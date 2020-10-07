@@ -15,9 +15,10 @@ use serde::{de::DeserializeOwned, Serialize};
 use url::Url;
 
 use edenapi_types::{
-    wire::{ToApi, ToWire, WireFileEntry, WireTreeEntry},
-    CommitRevlogData, CommitRevlogDataRequest, CompleteTreeRequest, FileEntry, FileRequest,
-    HistoryEntry, HistoryRequest, HistoryResponseChunk, TreeEntry, TreeRequest,
+    wire::{WireFileEntry, WireTreeEntry},
+    CommitRevlogData, CommitRevlogDataRequest, CompleteTreeRequest, FileEntry, FileMetadataRequest,
+    FileRequest, HistoryEntry, HistoryRequest, HistoryResponseChunk, ToApi, ToWire, TreeEntry,
+    TreeRequest,
 };
 use hg_http::http_client;
 use http_client::{HttpClient, Request};
@@ -292,7 +293,14 @@ impl EdenApi for Client {
 
         let url = self.url(paths::TREES, Some(&repo))?;
         let requests = self.prepare(&url, keys, self.config.max_trees, |keys| {
-            TreeRequest { keys }.to_wire()
+            TreeRequest {
+                keys,
+                with_file_metadata: Some(FileMetadataRequest {
+                    with_revisionstore_flags: true,
+                }),
+                // with_directory_metadata: None,
+            }
+            .to_wire()
         })?;
 
         Ok(self.fetch::<WireTreeEntry>(requests, progress).await?)

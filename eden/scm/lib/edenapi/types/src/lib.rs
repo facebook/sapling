@@ -30,6 +30,7 @@ pub mod complete_tree;
 pub mod file;
 pub mod history;
 pub mod json;
+pub mod metadata;
 pub mod tree;
 pub mod wire;
 
@@ -42,8 +43,11 @@ pub use crate::file::{FileEntry, FileError, FileRequest};
 pub use crate::history::{
     HistoryEntry, HistoryRequest, HistoryResponse, HistoryResponseChunk, WireHistoryEntry,
 };
+pub use crate::metadata::{
+    DirectoryMetadata, DirectoryMetadataRequest, FileMetadata, FileMetadataRequest,
+};
 pub use crate::tree::{TreeEntry, TreeError, TreeRequest};
-pub use crate::wire::{ToApi, ToWire};
+pub use crate::wire::{ToApi, ToWire, WireToApiConversionError};
 
 use thiserror::Error;
 

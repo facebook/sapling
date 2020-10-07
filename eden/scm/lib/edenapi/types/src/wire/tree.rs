@@ -13,7 +13,7 @@ use serde_derive::{Deserialize, Serialize};
 use crate::{
     tree::{TreeEntry, TreeRequest},
     wire::{
-        is_default, ToApi, ToWire, WireKey, WireParents, WireRevisionstoreMetadata,
+        is_default, ToApi, ToWire, WireFileMetadata, WireFileMetadataRequest, WireKey, WireParents,
         WireToApiConversionError,
     },
 };
@@ -30,7 +30,9 @@ pub struct WireTreeEntry {
     parents: Option<WireParents>,
 
     #[serde(rename = "3", default, skip_serializing_if = "is_default")]
-    metadata: Option<WireRevisionstoreMetadata>,
+    file_metadata: Option<WireFileMetadata>,
+    // #[serde(rename = "4", default, skip_serializing_if = "is_default")]
+    // directory_metadata: Option<WireDirectoryMetadata>,
 }
 
 impl ToWire for TreeEntry {
@@ -41,7 +43,8 @@ impl ToWire for TreeEntry {
             key: Some(self.key.to_wire()),
             data: self.data,
             parents: self.parents.to_wire(),
-            metadata: self.metadata.to_wire(),
+            file_metadata: self.file_metadata.to_wire(),
+            // directory_metadata: self.directory_metadata.to_wire(),
         }
     }
 }
@@ -58,7 +61,8 @@ impl ToApi for WireTreeEntry {
                 .ok_or(WireToApiConversionError::CannotPopulateRequiredField("key"))?,
             data: self.data,
             parents: self.parents.to_api()?,
-            metadata: self.metadata.to_api()?,
+            file_metadata: self.file_metadata.to_api()?,
+            // directory_metadata: self.directory_metadata.to_api()?,
         })
     }
 }
@@ -86,17 +90,9 @@ pub struct WireTreeAttributesRequest {
     with_parents: bool,
 
     #[serde(rename = "2", default, skip_serializing_if = "is_default")]
-    with_metadata: bool,
-}
-
-impl Default for WireTreeAttributesRequest {
-    fn default() -> Self {
-        WireTreeAttributesRequest {
-            with_data: true,
-            with_parents: true,
-            with_metadata: true,
-        }
-    }
+    with_file_metadata: Option<WireFileMetadataRequest>,
+    // #[serde(rename = "3", default, skip_serializing_if = "is_default")]
+    // with_directory_metadata: Option<WireDirectoryMetadataRequest>,
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize, Eq, PartialEq)]
@@ -117,7 +113,12 @@ impl ToWire for TreeRequest {
                 keys: self.keys.to_wire(),
             })),
 
-            attributes: Some(WireTreeAttributesRequest::default()),
+            attributes: Some(WireTreeAttributesRequest {
+                with_data: true,
+                with_parents: true,
+                with_file_metadata: self.with_file_metadata.to_wire(),
+                // with_directory_metadata: self.with_directory_metadata.to_wire(),
+            }),
         }
     }
 }
@@ -141,6 +142,16 @@ impl ToApi for WireTreeRequest {
                     ));
                 }
             },
+            with_file_metadata: self
+                .attributes
+                .as_ref()
+                .and_then(|a| a.with_file_metadata)
+                .to_api()?,
+            // with_directory_metadata: self
+            //     .attributes
+            //     .as_ref()
+            //     .and_then(|a| a.with_directory_metadata)
+            //     .to_api()?,
         })
     }
 }
@@ -153,7 +164,8 @@ impl Arbitrary for WireTreeEntry {
             key: Arbitrary::arbitrary(g),
             data: bytes.map(|b| Bytes::from(b)),
             parents: Arbitrary::arbitrary(g),
-            metadata: Arbitrary::arbitrary(g),
+            file_metadata: Arbitrary::arbitrary(g),
+            // directory_metadata: Arbitrary::arbitrary(g),
         }
     }
 }
@@ -164,7 +176,8 @@ impl Arbitrary for WireTreeAttributesRequest {
         Self {
             with_data: Arbitrary::arbitrary(g),
             with_parents: Arbitrary::arbitrary(g),
-            with_metadata: Arbitrary::arbitrary(g),
+            with_file_metadata: Arbitrary::arbitrary(g),
+            // with_directory_metadata: Arbitrary::arbitrary(g),
         }
     }
 }
@@ -196,7 +209,7 @@ impl Arbitrary for WireTreeRequest {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
         Self {
             query: Arbitrary::arbitrary(g),
-            ..Default::default()
+            attributes: Arbitrary::arbitrary(g),
         }
     }
 }

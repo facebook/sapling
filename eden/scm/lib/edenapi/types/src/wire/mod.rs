@@ -36,11 +36,16 @@
 
 pub mod complete_tree;
 pub mod file;
+pub mod metadata;
 pub mod tree;
 
 pub use crate::wire::{
     complete_tree::WireCompleteTreeRequest,
     file::{WireFileEntry, WireFileRequest},
+    metadata::{
+        WireDirectoryMetadata, WireDirectoryMetadataRequest, WireFileMetadata,
+        WireFileMetadataRequest,
+    },
     tree::{WireTreeEntry, WireTreeRequest},
 };
 
@@ -386,36 +391,36 @@ pub mod tests {
             check_serialize_roundtrip(v)
         }
 
-        fn test_hgid_roundtrip_wire(v: HgId) -> bool {
-            check_wire_roundtrip(v)
-        }
-
         fn test_key_roundtrip_serialize(v: WireKey) -> bool {
             check_serialize_roundtrip(v)
-        }
-
-        fn test_key_roundtrip_wire(v: Key) -> bool {
-            check_wire_roundtrip(v)
         }
 
         fn test_path_roundtrip_serialize(v: WireRepoPathBuf) -> bool {
             check_serialize_roundtrip(v)
         }
 
-        fn test_path_roundtrip_wire(v: RepoPathBuf) -> bool {
-            check_wire_roundtrip(v)
-        }
-
         fn test_parents_roundtrip_serialize(v: WireParents) -> bool {
             check_serialize_roundtrip(v)
         }
 
-        fn test_parents_roundtrip_wire(v: Parents) -> bool {
+        fn test_meta_roundtrip_serialize(v: WireRevisionstoreMetadata) -> bool {
+            check_serialize_roundtrip(v)
+        }
+
+        fn test_hgid_roundtrip_wire(v: HgId) -> bool {
             check_wire_roundtrip(v)
         }
 
-        fn test_meta_roundtrip_serialize(v: WireRevisionstoreMetadata) -> bool {
-            check_serialize_roundtrip(v)
+        fn test_key_roundtrip_wire(v: Key) -> bool {
+            check_wire_roundtrip(v)
+        }
+
+        fn test_path_roundtrip_wire(v: RepoPathBuf) -> bool {
+            check_wire_roundtrip(v)
+        }
+
+        fn test_parents_roundtrip_wire(v: Parents) -> bool {
+            check_wire_roundtrip(v)
         }
 
         fn test_meta_roundtrip_wire(v: RevisionstoreMetadata) -> bool {

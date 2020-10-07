@@ -38,7 +38,10 @@ Create and send tree request.
   >   "keys": [
   >     ["", "$ROOT_MFID_1"],
   >     ["", "$ROOT_MFID_2"]
-  >   ]
+  >   ],
+  >   "with_file_metadata": {
+  >     "with_revisionstore_flags": true
+  >   }
   > }
   > EOF
   Reading from stdin
@@ -67,7 +70,11 @@ Create and send tree request.
           WireTreeAttributesRequest {
               with_data: true,
               with_parents: true,
-              with_metadata: true,
+              with_file_metadata: Some(
+                  WireFileMetadataRequest {
+                      with_revisionstore_flags: true,
+                  },
+              ),
           },
       ),
   }

@@ -15,7 +15,7 @@ use quickcheck::Arbitrary;
 use revisionstore_types::Metadata;
 use types::{hgid::HgId, key::Key, parents::Parents};
 
-use crate::InvalidHgId;
+use crate::{FileMetadata, FileMetadataRequest, InvalidHgId};
 
 #[derive(Debug, Error)]
 pub enum TreeError {
@@ -54,7 +54,8 @@ pub struct TreeEntry {
     pub key: Key,
     pub data: Option<Bytes>,
     pub parents: Option<Parents>,
-    pub metadata: Option<Metadata>,
+    pub file_metadata: Option<FileMetadata>,
+    // pub directory_metadata: Option<DirectoryMetadata>,
 }
 
 impl TreeEntry {
@@ -63,7 +64,10 @@ impl TreeEntry {
             key,
             data: Some(data),
             parents: Some(parents),
-            metadata: Some(metadata),
+            file_metadata: metadata.flags.map(|f| FileMetadata {
+                revisionstore_flags: Some(f),
+            }),
+            // directory_metadata: None,
         }
     }
 
@@ -117,12 +121,12 @@ impl TreeEntry {
         self.data.clone()
     }
 
-    /// Get this entry's metadata.
+    /// Get this entry's revisionstore metadata.
     pub fn metadata(&self) -> Metadata {
-        self.metadata.clone().unwrap_or(Metadata {
-            flags: None,
+        Metadata {
+            flags: self.file_metadata.and_then(|m| m.revisionstore_flags),
             size: None,
-        })
+        }
     }
 }
 
@@ -134,7 +138,8 @@ impl Arbitrary for TreeEntry {
             key: Arbitrary::arbitrary(g),
             data: bytes.map(|b| Bytes::from(b)),
             parents: Arbitrary::arbitrary(g),
-            metadata: Arbitrary::arbitrary(g),
+            file_metadata: Arbitrary::arbitrary(g),
+            // directory_metadata: Arbitrary::arbitrary(g),
         }
     }
 }
@@ -142,6 +147,8 @@ impl Arbitrary for TreeEntry {
 #[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq)]
 pub struct TreeRequest {
     pub keys: Vec<Key>,
+    pub with_file_metadata: Option<FileMetadataRequest>,
+    // pub with_directory_metadata: Option<DirectoryMetadataRequest>,
 }
 
 #[cfg(any(test, feature = "for-tests"))]
@@ -149,6 +156,8 @@ impl Arbitrary for TreeRequest {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
         Self {
             keys: Arbitrary::arbitrary(g),
+            with_file_metadata: Arbitrary::arbitrary(g),
+            // with_directory_metadata: Arbitrary::arbitrary(g),
         }
     }
 }
