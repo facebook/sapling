@@ -9,8 +9,10 @@ use crate::strip;
 use crate::AppendCommits;
 use crate::DescribeBackend;
 use crate::HgCommit;
+use crate::ParentlessHgCommit;
 use crate::ReadCommitText;
 use crate::Result;
+use crate::StreamCommitText;
 use crate::StripCommits;
 use dag::delegate;
 use dag::ops::DagAddHeads;
@@ -19,6 +21,8 @@ use dag::ops::DagPersistent;
 use dag::Dag;
 use dag::Set;
 use dag::Vertex;
+use futures::stream::BoxStream;
+use futures::stream::StreamExt;
 use minibytes::Bytes;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -134,6 +138,27 @@ impl ReadCommitText for HgCommits {
             Some(bytes) => Ok(Some(bytes.slice(Id20::len() * 2..))),
             None => Ok(None),
         }
+    }
+}
+
+impl StreamCommitText for HgCommits {
+    fn stream_commit_raw_text(
+        &self,
+        stream: BoxStream<'static, anyhow::Result<Vertex>>,
+    ) -> Result<BoxStream<'static, anyhow::Result<ParentlessHgCommit>>> {
+        let zstore = Zstore::open(&self.commits_path)?;
+        let stream = stream.map(move |item| {
+            let vertex = item?;
+            let id = Id20::from_slice(vertex.as_ref())?;
+            match zstore.get(id)? {
+                Some(raw_data) => {
+                    let raw_text = raw_data.slice(Id20::len() * 2..);
+                    Ok(ParentlessHgCommit { vertex, raw_text })
+                }
+                None => vertex.not_found().map_err(Into::into),
+            }
+        });
+        Ok(Box::pin(stream))
     }
 }
 

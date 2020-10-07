@@ -10,6 +10,7 @@
 //! Commits stored in HG format and backed by efficient `dag` structures.
 
 use dag::Vertex;
+use futures::stream::BoxStream;
 use minibytes::Bytes;
 use serde::Deserialize;
 use serde::Serialize;
@@ -18,6 +19,14 @@ use std::io;
 pub trait ReadCommitText {
     /// Read raw text for a commit.
     fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>>;
+}
+
+pub trait StreamCommitText {
+    /// Get commit raw text in a stream fashion.
+    fn stream_commit_raw_text(
+        &self,
+        stream: BoxStream<'static, anyhow::Result<Vertex>>,
+    ) -> Result<BoxStream<'static, anyhow::Result<ParentlessHgCommit>>>;
 }
 
 pub trait AppendCommits {
@@ -52,6 +61,12 @@ pub trait DescribeBackend {
 pub struct HgCommit {
     pub vertex: Vertex,
     pub parents: Vec<Vertex>,
+    pub raw_text: Bytes,
+}
+
+/// Return type used by `stream_commit_raw_text`.
+pub struct ParentlessHgCommit {
+    pub vertex: Vertex,
     pub raw_text: Bytes,
 }
 

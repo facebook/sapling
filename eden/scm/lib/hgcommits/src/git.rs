@@ -8,12 +8,16 @@
 use crate::AppendCommits;
 use crate::DescribeBackend;
 use crate::HgCommit;
+use crate::ParentlessHgCommit;
 use crate::ReadCommitText;
 use crate::Result;
+use crate::StreamCommitText;
 use crate::StripCommits;
 use dag::delegate;
 use dag::Set;
 use dag::Vertex;
+use futures::stream::BoxStream;
+use futures::stream::StreamExt;
 use gitdag::git2;
 use gitdag::GitDag;
 use metalog::MetaLog;
@@ -117,6 +121,26 @@ impl ReadCommitText for GitSegmentedCommits {
         let commit = self.git_repo.find_commit(oid)?;
         let text = to_hg_text(&commit);
         Ok(Some(text))
+    }
+}
+
+impl StreamCommitText for GitSegmentedCommits {
+    fn stream_commit_raw_text(
+        &self,
+        stream: BoxStream<'static, anyhow::Result<Vertex>>,
+    ) -> Result<BoxStream<'static, anyhow::Result<ParentlessHgCommit>>> {
+        let git_repo = git2::Repository::open(&self.git_path)?;
+        let stream = stream.map(move |item| {
+            let vertex = item?;
+            let oid = match git2::Oid::from_bytes(vertex.as_ref()) {
+                Ok(oid) => oid,
+                Err(_) => return vertex.not_found().map_err(Into::into),
+            };
+            let commit = git_repo.find_commit(oid)?;
+            let raw_text = to_hg_text(&commit);
+            Ok(ParentlessHgCommit { vertex, raw_text })
+        });
+        Ok(Box::pin(stream))
     }
 }
 

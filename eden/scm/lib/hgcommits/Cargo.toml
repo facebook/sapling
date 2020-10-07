@@ -6,6 +6,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1"
 dag = { path = "../dag" }
+futures = "0.3"
 gitdag = { path = "../dag/gitdag" }
 metalog = { path = "../metalog" }
 minibytes = { path = "../minibytes" }

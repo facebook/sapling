@@ -9,14 +9,18 @@ use crate::strip;
 use crate::AppendCommits;
 use crate::DescribeBackend;
 use crate::HgCommit;
+use crate::ParentlessHgCommit;
 use crate::ReadCommitText;
 use crate::Result;
+use crate::StreamCommitText;
 use crate::StripCommits;
 use dag::delegate;
 use dag::ops::DagAddHeads;
 use dag::MemDag;
 use dag::Set;
 use dag::Vertex;
+use futures::stream::BoxStream;
+use futures::stream::StreamExt;
 use minibytes::Bytes;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -84,6 +88,26 @@ impl AppendCommits for MemHgCommits {
 impl ReadCommitText for MemHgCommits {
     fn get_commit_raw_text(&self, vertex: &Vertex) -> Result<Option<Bytes>> {
         Ok(self.commits.get(vertex).cloned())
+    }
+}
+
+impl StreamCommitText for MemHgCommits {
+    fn stream_commit_raw_text(
+        &self,
+        stream: BoxStream<'static, anyhow::Result<Vertex>>,
+    ) -> Result<BoxStream<'static, anyhow::Result<ParentlessHgCommit>>> {
+        let commits = self.commits.clone();
+        let stream = stream.map(move |item| {
+            let vertex = item?;
+            match commits.get(&vertex) {
+                Some(raw_text) => {
+                    let raw_text = raw_text.clone();
+                    Ok(ParentlessHgCommit { vertex, raw_text })
+                }
+                None => vertex.not_found().map_err(Into::into),
+            }
+        });
+        Ok(Box::pin(stream))
     }
 }
 

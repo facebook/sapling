@@ -9,13 +9,16 @@ use crate::AppendCommits;
 use crate::DescribeBackend;
 use crate::HgCommit;
 use crate::HgCommits;
+use crate::ParentlessHgCommit;
 use crate::ReadCommitText;
 use crate::Result;
 use crate::RevlogCommits;
+use crate::StreamCommitText;
 use crate::StripCommits;
 use dag::delegate;
 use dag::Set;
 use dag::Vertex;
+use futures::stream::BoxStream;
 use minibytes::Bytes;
 use std::io;
 use std::path::Path;
@@ -63,6 +66,15 @@ impl ReadCommitText for DoubleWriteCommits {
             Ok(None) => self.revlog.get_commit_raw_text(vertex),
             result => result,
         }
+    }
+}
+
+impl StreamCommitText for DoubleWriteCommits {
+    fn stream_commit_raw_text(
+        &self,
+        stream: BoxStream<'static, anyhow::Result<Vertex>>,
+    ) -> Result<BoxStream<'static, anyhow::Result<ParentlessHgCommit>>> {
+        self.revlog.stream_commit_raw_text(stream)
     }
 }
 

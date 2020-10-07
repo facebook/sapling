@@ -9,14 +9,18 @@ use crate::strip;
 use crate::AppendCommits;
 use crate::DescribeBackend;
 use crate::HgCommit;
+use crate::ParentlessHgCommit;
 use crate::ReadCommitText;
 use crate::Result;
+use crate::StreamCommitText;
 use crate::StripCommits;
 use dag::delegate;
 use dag::ops::IdConvert;
 use dag::Group;
 use dag::Set;
 use dag::Vertex;
+use futures::stream::BoxStream;
+use futures::stream::StreamExt;
 use minibytes::Bytes;
 use revlogindex::RevlogIndex;
 use std::fs;
@@ -72,6 +76,26 @@ impl ReadCommitText for RevlogCommits {
             Some(id) => Ok(Some(self.revlog.raw_data(id.0 as u32)?)),
             None => Ok(None),
         }
+    }
+}
+
+impl StreamCommitText for RevlogCommits {
+    fn stream_commit_raw_text(
+        &self,
+        stream: BoxStream<'static, anyhow::Result<Vertex>>,
+    ) -> Result<BoxStream<'static, anyhow::Result<ParentlessHgCommit>>> {
+        let revlog = self.revlog.get_snapshot();
+        let stream = stream.map(move |item| {
+            let vertex = item?;
+            match revlog.vertex_id_with_max_group(&vertex, Group::NON_MASTER)? {
+                Some(id) => {
+                    let raw_text = revlog.raw_data(id.0 as u32)?;
+                    Ok(ParentlessHgCommit { vertex, raw_text })
+                }
+                None => vertex.not_found().map_err(Into::into),
+            }
+        });
+        Ok(Box::pin(stream))
     }
 }
 
