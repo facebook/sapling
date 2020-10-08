@@ -123,12 +123,12 @@ Test that --non-forward-move allows moving bookmark around arbitrarily
 
   $ hg book -r 'desc(b)' headb
   $ hg book -r 'desc(c)' headc
-  $ hg log -G -T '{rev} {desc} {bookmarks} {remotebookmarks}\n'
-  @  2 c headc
+  $ hg log -G -T '{desc} {bookmarks} {remotebookmarks}\n'
+  @  c headc
   |
-  | o  1 b headb default/@
+  | o  b headb default/@
   |/
-  o  0 a
+  o  a
   
   $ hg push --to @ -r headb
   pushing rev 1846eede8b68 to destination $TESTTMP/repo1 bookmark @
@@ -191,12 +191,12 @@ Test that local must have rev of remote to push --to without --non-forward-move
 Clean up repo1
 
   $ cd ../repo1
-  $ hg log -G -T '{rev} {desc} {bookmarks}\n'
-  o  2 c
+  $ hg log -G -T '{desc} {bookmarks}\n'
+  o  c
   |
-  | o  1 b @
+  | o  b @
   |/
-  o  0 a
+  o  a
   
   $ hg debugstrip 'desc(c)'
   $ cd ../repo2
@@ -216,12 +216,12 @@ Test that rebasing and pushing works as expected
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 1 files
-  $ hg log -G -T '{rev} {desc} {bookmarks} {remotebookmarks}\n'
-  o  2 b  default/@
+  $ hg log -G -T '{desc} {bookmarks} {remotebookmarks}\n'
+  o  b  default/@
   |
-  | o  1 c headc
+  | o  c headc
   |/
-  @  0 a
+  @  a
   
   $ hg --config extensions.rebase= rebase -d default/@ -s headc 2>&1 | grep -v "^warning:" | grep -v incomplete
   rebasing cc61aa6be3dc "c" (headc)
@@ -234,12 +234,12 @@ Test that rebasing and pushing works as expected
   (no more unresolved files)
   $ hg --config extensions.rebase= rebase --continue
   rebasing cc61aa6be3dc "c" (headc)
-  $ hg log -G -T '{rev} {desc} {bookmarks} {remotebookmarks}\n'
-  o  3 c headc
+  $ hg log -G -T '{desc} {bookmarks} {remotebookmarks}\n'
+  o  c headc
   |
-  o  2 b  default/@
+  o  b  default/@
   |
-  @  0 a
+  @  a
   
   $ hg up headc
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -252,11 +252,11 @@ Test that rebasing and pushing works as expected
   adding file changes
   added 1 changesets with 1 changes to 1 files
   updating bookmark @
-  $ hg log -G -T '{rev} {desc} {bookmarks} {remotebookmarks}\n'
-  @  3 c headc default/@
+  $ hg log -G -T '{desc} {bookmarks} {remotebookmarks}\n'
+  @  c headc default/@
   |
-  o  2 b
+  o  b
   |
-  o  0 a
+  o  a
   
 # Evolve related tests removed. see https://fburl.com/evolveeol

@@ -243,8 +243,8 @@ One file renamed multiple times:
   $ hg tip -q
   2ef727e684e8
 
-  $ hg log -vr. --template '{rev} {files} / {file_copies}\n'
-  10 rename2 rename3 rename3-2 / rename3 (rename2)rename3-2 (rename2)
+  $ hg log -vr. --template '{files} / {file_copies}\n'
+  rename2 rename3 rename3-2 / rename3 (rename2)rename3-2 (rename2)
 
   $ hg locate rename2 rename3 rename3-2
   rename3

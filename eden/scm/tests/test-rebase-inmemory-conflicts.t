@@ -67,20 +67,20 @@ Make conflicts halfway up the stack:
   already rebased 881eb15e0fdf "e" (e) as d82c41319fdd
   rebasing e692c3b32196 "f" (f)
   rebasing 2a19607ff85c "g" (g)
-  $ hg log -G -r 0:: -T '{desc} {rev} {node|short}'
-  o  g 12 24c12a3229e2
+  $ hg log -G -r 0:: -T '{desc} {node|short}'
+  o  g 24c12a3229e2
   |
-  @  f 11 c33e7f678afd
+  @  f c33e7f678afd
   |
-  o  e 10 d82c41319fdd
+  o  e d82c41319fdd
   |
-  o  d 9 32bb4413a7df
+  o  d 32bb4413a7df
   |
-  o  c 3 a82ac2b38757
+  o  c a82ac2b38757
   |
-  o  b 1 488e1b7e7341
+  o  b 488e1b7e7341
   |
-  o  a 0 b173517d0057
+  o  a b173517d0057
   
 
 Try it with uncommitted changes, ensure it aborts nicely:

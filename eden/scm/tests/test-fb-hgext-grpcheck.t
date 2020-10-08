@@ -57,9 +57,9 @@ warning does not affect write action (commit)
   $ touch a
   $ hg commit -A a -m a
   You should be in devs group.
-  $ hg log -T '{rev} {node}\n'
+  $ hg log -T '{node}\n'
   You should be in devs group.
-  0 3903775176ed42b1458a6281db4a0ccf4d9f287a
+  3903775176ed42b1458a6281db4a0ccf4d9f287a
 
 config overrides
 

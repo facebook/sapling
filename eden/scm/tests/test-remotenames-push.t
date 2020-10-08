@@ -89,12 +89,12 @@ remote or local repo
   remote: added 1 changesets with 1 changes to 1 files
 
 
-  $ hg log -G -T '{rev} {node|short} {bookmarks} {remotebookmarks}\n'
-  @  2 2d95304fed5d
+  $ hg log -G -T '{node|short} {bookmarks} {remotebookmarks}\n'
+  @  2d95304fed5d
   |
-  o  1 1846eede8b68
+  o  1846eede8b68
   |
-  o  0 cb9a9f314b8b
+  o  cb9a9f314b8b
   
   $ hg bookmark foo
   $ hg push -B foo
@@ -103,19 +103,19 @@ remote or local repo
   no changes found
   exporting bookmark foo
   [1]
-  $ hg log -G -T '{rev} {node|short} {bookmarks} {remotebookmarks}\n'
-  @  2 2d95304fed5d foo default/foo
+  $ hg log -G -T '{node|short} {bookmarks} {remotebookmarks}\n'
+  @  2d95304fed5d foo default/foo
   |
-  o  1 1846eede8b68
+  o  1846eede8b68
   |
-  o  0 cb9a9f314b8b
+  o  cb9a9f314b8b
   
   $ hg boo -d foo
   $ hg debugstrip . -q
-  $ hg log -G -T '{rev} {node|short} {bookmarks} {remotebookmarks}\n'
-  @  1 1846eede8b68
+  $ hg log -G -T '{node|short} {bookmarks} {remotebookmarks}\n'
+  @  1846eede8b68
   |
-  o  0 cb9a9f314b8b
+  o  cb9a9f314b8b
   
   $ hg push
   pushing to ssh://user@dummy/repo1

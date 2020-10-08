@@ -72,9 +72,9 @@ copy a to b
   $ echo 2 >> b
   $ hg ci -m 2
 
-  $ hg log -T '{rev}:{node|short} {desc}\n'
-  1:17b72129ab68 2
-  0:eff892de26ec 1
+  $ hg log -T '{node|short} {desc}\n'
+  17b72129ab68 2
+  eff892de26ec 1
 
   $ sedi 's/$/a/' a
   $ sedi 's/$/b/' b
@@ -102,9 +102,9 @@ copy b to a
   $ echo 2 >> a
   $ hg ci -m 2
 
-  $ hg log -T '{rev}:{node|short} {desc}\n'
-  1:e62c256d8b24 2
-  0:55105f940d5c 1
+  $ hg log -T '{node|short} {desc}\n'
+  e62c256d8b24 2
+  55105f940d5c 1
 
   $ sedi 's/$/a/' a
   $ sedi 's/$/a/' b
@@ -135,17 +135,17 @@ copy b to a
   $ echo 3 >> c
   $ hg commit -m cp
 
-  $ hg log -T '{rev}:{node|short} {desc}\n'
-  1:366daad8e679 cp
-  0:55105f940d5c 1
+  $ hg log -T '{node|short} {desc}\n'
+  366daad8e679 cp
+  55105f940d5c 1
 
   $ sedi 's/$/a/' a
   $ sedi 's/$/c/' c
 
   $ hg absorb -aq
 
-  $ hg log -G -p -T '{rev}:{node|short} {desc}\n'
-  @  3:70606019f91b cp
+  $ hg log -G -p -T '{node|short} {desc}\n'
+  @  70606019f91b cp
   |  diff --git a/b b/a
   |  rename from b
   |  rename to a
@@ -164,7 +164,7 @@ copy b to a
   |  +1
   |  +3c
   |
-  o  2:bfb67c3539c1 1
+  o  bfb67c3539c1 1
      diff --git a/b b/b
      new file mode 100644
      --- /dev/null
@@ -176,8 +176,8 @@ run absorb again would apply the change to c
 
   $ hg absorb -aq
 
-  $ hg log -G -p -T '{rev}:{node|short} {desc}\n'
-  @  4:8bd536cce368 cp
+  $ hg log -G -p -T '{node|short} {desc}\n'
+  @  8bd536cce368 cp
   |  diff --git a/b b/a
   |  rename from b
   |  rename to a
@@ -196,7 +196,7 @@ run absorb again would apply the change to c
   |  +1c
   |  +3c
   |
-  o  2:bfb67c3539c1 1
+  o  bfb67c3539c1 1
      diff --git a/b b/b
      new file mode 100644
      --- /dev/null
@@ -224,10 +224,10 @@ run absorb again would apply the change to c
   $ hg rm c
   $ hg commit -m mv
 
-  $ hg log -T '{rev}:{node|short} {desc}\n'
-  2:49911557c471 mv
-  1:7bc3d43ede83 cp
-  0:55105f940d5c 1
+  $ hg log -T '{node|short} {desc}\n'
+  49911557c471 mv
+  7bc3d43ede83 cp
+  55105f940d5c 1
 
   $ sedi 's/$/e/' e
   $ sedi 's/$/d/' d
@@ -243,8 +243,8 @@ run absorb again would apply the change to c
   +1e
    2e
 
-  $ hg log -G -p -T '{rev}:{node|short} {desc}\n'
-  @  5:34be9b0c786e mv
+  $ hg log -G -p -T '{node|short} {desc}\n'
+  @  34be9b0c786e mv
   |  diff --git a/c b/c
   |  deleted file mode 100644
   |  --- a/c
@@ -256,7 +256,7 @@ run absorb again would apply the change to c
   |  rename from a
   |  rename to e
   |
-  o  4:13e56db5948d cp
+  o  13e56db5948d cp
   |  diff --git a/b b/a
   |  rename from b
   |  rename to a
@@ -284,7 +284,7 @@ run absorb again would apply the change to c
   |   1d
   |  +4d
   |
-  o  3:0037613a5dc6 1
+  o  0037613a5dc6 1
      diff --git a/b b/b
      new file mode 100644
      --- /dev/null

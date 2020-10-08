@@ -62,7 +62,7 @@ editing a changeset without any actual change would corrupt the repository
   > {
   >     comment="${1:-log}"
   >     echo % "${comment}"
-  >     hg log -G --template '{rev} {node} \"{desc|firstline}\"\n'
+  >     hg log -G --template '{node} \"{desc|firstline}\"\n'
   > }
 
 
@@ -72,17 +72,17 @@ editing a changeset without any actual change would corrupt the repository
   $ cd r1
   $ graphlog "log before editing"
   % log before editing
-  @  5 652413bf663ef2a641cab26574e46d5f5a64a55a "f"
+  @  652413bf663ef2a641cab26574e46d5f5a64a55a "f"
   |
-  o  4 e860deea161a2f77de56603b340ebbb4536308ae "e"
+  o  e860deea161a2f77de56603b340ebbb4536308ae "e"
   |
-  o  3 055a42cdd88768532f9cf79daa407fc8d138de9b "d"
+  o  055a42cdd88768532f9cf79daa407fc8d138de9b "d"
   |
-  o  2 177f92b773850b59254aa5e923436f921b55483b "c"
+  o  177f92b773850b59254aa5e923436f921b55483b "c"
   |
-  o  1 d2ae7f538514cd87c17547b0de4cea71fe1af9fb "b"
+  o  d2ae7f538514cd87c17547b0de4cea71fe1af9fb "b"
   |
-  o  0 cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b "a"
+  o  cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b "a"
   
   $ startediting 2 3 "(not changing anything)" # edit the 2nd of 3 changesets
   % start editing the history (not changing anything)
@@ -102,17 +102,17 @@ check state of working copy
 
   $ graphlog "log after history editing"
   % log after history editing
-  @  7 794fe033d0a030f8df77c5de945fca35c9181c30 "f"
+  @  794fe033d0a030f8df77c5de945fca35c9181c30 "f"
   |
-  o  6 04d2fab980779f332dec458cc944f28de8b43435 "e"
+  o  04d2fab980779f332dec458cc944f28de8b43435 "e"
   |
-  o  3 055a42cdd88768532f9cf79daa407fc8d138de9b "d"
+  o  055a42cdd88768532f9cf79daa407fc8d138de9b "d"
   |
-  o  2 177f92b773850b59254aa5e923436f921b55483b "c"
+  o  177f92b773850b59254aa5e923436f921b55483b "c"
   |
-  o  1 d2ae7f538514cd87c17547b0de4cea71fe1af9fb "b"
+  o  d2ae7f538514cd87c17547b0de4cea71fe1af9fb "b"
   |
-  o  0 cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b "a"
+  o  cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b "a"
   
 
   $ cd ..
@@ -123,17 +123,17 @@ check state of working copy
   $ cd r2
   $ graphlog "log before editing"
   % log before editing
-  @  5 652413bf663ef2a641cab26574e46d5f5a64a55a "f"
+  @  652413bf663ef2a641cab26574e46d5f5a64a55a "f"
   |
-  o  4 e860deea161a2f77de56603b340ebbb4536308ae "e"
+  o  e860deea161a2f77de56603b340ebbb4536308ae "e"
   |
-  o  3 055a42cdd88768532f9cf79daa407fc8d138de9b "d"
+  o  055a42cdd88768532f9cf79daa407fc8d138de9b "d"
   |
-  o  2 177f92b773850b59254aa5e923436f921b55483b "c"
+  o  177f92b773850b59254aa5e923436f921b55483b "c"
   |
-  o  1 d2ae7f538514cd87c17547b0de4cea71fe1af9fb "b"
+  o  d2ae7f538514cd87c17547b0de4cea71fe1af9fb "b"
   |
-  o  0 cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b "a"
+  o  cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b "a"
   
   $ startediting 1,2 3 "(not changing anything)" # edit the 1st two of 3 changesets
   % start editing the history (not changing anything)
@@ -149,19 +149,19 @@ check state of working copy
   (hg histedit --continue to resume)
   $ graphlog "log after first edit"
   % log after first edit
-  @  6 e5ae3ca2f1ffdbd89ec41ebc273a231f7c3022f2 "d"
+  @  e5ae3ca2f1ffdbd89ec41ebc273a231f7c3022f2 "d"
   |
-  | o  5 652413bf663ef2a641cab26574e46d5f5a64a55a "f"
+  | o  652413bf663ef2a641cab26574e46d5f5a64a55a "f"
   | |
-  | o  4 e860deea161a2f77de56603b340ebbb4536308ae "e"
+  | o  e860deea161a2f77de56603b340ebbb4536308ae "e"
   | |
-  | x  3 055a42cdd88768532f9cf79daa407fc8d138de9b "d"
+  | x  055a42cdd88768532f9cf79daa407fc8d138de9b "d"
   |/
-  o  2 177f92b773850b59254aa5e923436f921b55483b "c"
+  o  177f92b773850b59254aa5e923436f921b55483b "c"
   |
-  o  1 d2ae7f538514cd87c17547b0de4cea71fe1af9fb "b"
+  o  d2ae7f538514cd87c17547b0de4cea71fe1af9fb "b"
   |
-  o  0 cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b "a"
+  o  cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b "a"
   
 
 abort editing session, after first forcibly updating away
@@ -189,17 +189,17 @@ modified files should survive the abort when we've moved away already
 
   $ graphlog "log after abort"
   % log after abort
-  o  5 652413bf663ef2a641cab26574e46d5f5a64a55a "f"
+  o  652413bf663ef2a641cab26574e46d5f5a64a55a "f"
   |
-  o  4 e860deea161a2f77de56603b340ebbb4536308ae "e"
+  o  e860deea161a2f77de56603b340ebbb4536308ae "e"
   |
-  o  3 055a42cdd88768532f9cf79daa407fc8d138de9b "d"
+  o  055a42cdd88768532f9cf79daa407fc8d138de9b "d"
   |
-  o  2 177f92b773850b59254aa5e923436f921b55483b "c"
+  o  177f92b773850b59254aa5e923436f921b55483b "c"
   |
-  o  1 d2ae7f538514cd87c17547b0de4cea71fe1af9fb "b"
+  o  d2ae7f538514cd87c17547b0de4cea71fe1af9fb "b"
   |
-  @  0 cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b "a"
+  @  cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b "a"
   
 aborting and not changing files can skip mentioning updating (no) files
   $ hg up

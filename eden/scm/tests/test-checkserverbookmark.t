@@ -10,7 +10,7 @@ Do some initial setup
 
 Setup helpers
   $ log() {
-  >   hg sl -T "{desc} [{phase};rev={rev};{node}] {bookmarks}" "$@"
+  >   hg sl -T "{desc} [{phase};{node}] {bookmarks}" "$@"
   > }
 
 Setup a server repo
@@ -20,11 +20,11 @@ Setup a server repo
   $ echo b > b && hg ci -qAm b
   $ echo c > c && hg ci -qAm c && hg book -i book2
   $ log -r "all()"
-  @  c [draft;rev=2;177f92b773850b59254aa5e923436f921b55483b] book2
+  @  c [draft;177f92b773850b59254aa5e923436f921b55483b] book2
   |
-  o  b [draft;rev=1;d2ae7f538514cd87c17547b0de4cea71fe1af9fb]
+  o  b [draft;d2ae7f538514cd87c17547b0de4cea71fe1af9fb]
   |
-  o  a [draft;rev=0;cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b] book1
+  o  a [draft;cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b] book1
   
 
 Verify bookmark locations while not being in a repo

@@ -152,12 +152,12 @@ set up symlink hell
   $ mkdir a
   $ touch a/poisoned
   $ hg commit -qAm 'file a/poisoned'
-  $ hg log -G -T '{rev}: {desc}\n'
-  @  2: file a/poisoned
+  $ hg log -G -T '{desc}\n'
+  @  file a/poisoned
   |
-  | o  1: symlink a -> ../merge-symlink-out
+  | o  symlink a -> ../merge-symlink-out
   |/
-  o  0: base
+  o  base
   
 
 try trivial merge
@@ -193,12 +193,12 @@ Test symlink traversal on update:
   $ hg rm a
   $ mkdir a && touch a/c
   $ hg ci -qAm 'rm a, file a/c'
-  $ hg log -G -T '{rev}: {desc}\n'
-  @  2: rm a, file a/c
+  $ hg log -G -T '{desc}\n'
+  @  rm a, file a/c
   |
-  | o  1: file a/b
+  | o  file a/b
   |/
-  o  0: symlink a -> ../update-symlink-out
+  o  symlink a -> ../update-symlink-out
   
 
 try linear update where symlink already exists:

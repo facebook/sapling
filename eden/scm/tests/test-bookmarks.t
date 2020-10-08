@@ -391,11 +391,11 @@ bookmark with a name that matches an ambiguous node id
   >   hg ci -qm $i
   > done
   $ hg up -q null
-  $ hg log -r0: -T '{rev}:{node}\n'
-  0:b4e73ffab476aa0ee32ed81ca51e07169844bc6a
-  1:c56256a09cd28e5764f32e8e2810d0f01e2e357a
-  2:c5623987d205cd6d9d8389bfc40fff9dbb670b48
-  3:c562ddd9c94164376c20b86b0b4991636a3bf84f
+  $ hg log -r0: -T '{node}\n'
+  b4e73ffab476aa0ee32ed81ca51e07169844bc6a
+  c56256a09cd28e5764f32e8e2810d0f01e2e357a
+  c5623987d205cd6d9d8389bfc40fff9dbb670b48
+  c562ddd9c94164376c20b86b0b4991636a3bf84f
 
   $ hg bookmark -r0 c562
   $ hg bookmarks
@@ -853,8 +853,8 @@ case)
   adding remote bookmark four
   adding remote bookmark should-end-on-two
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg -R ../cloned-bookmarks-update parents -T "{rev}:{node|short}\n"
-  3:125c9a1d6df6
+  $ hg -R ../cloned-bookmarks-update parents -T "{node|short}\n"
+  125c9a1d6df6
   $ hg -R ../cloned-bookmarks-update bookmarks | grep ' Y '
    * Y                         3:125c9a1d6df6
 
@@ -876,8 +876,8 @@ updates the working directory and current active bookmark)
   added 1 changesets with 1 changes to 1 files
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   updating bookmark Y
-  $ hg -R ../cloned-bookmarks-update parents -T "{rev}:{node|short}\n"
-  6:81dcce76aa0b
+  $ hg -R ../cloned-bookmarks-update parents -T "{node|short}\n"
+  81dcce76aa0b
   $ hg -R ../cloned-bookmarks-update bookmarks | grep ' Y '
    * Y                         6:81dcce76aa0b
 

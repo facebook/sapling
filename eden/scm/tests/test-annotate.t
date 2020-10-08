@@ -107,18 +107,18 @@ annotate multiple files (JSON)
 
 annotate multiple files (template)
 
-  $ hg annotate -T'== {abspath} ==\n{lines % "{rev}: {line}"}' a b
+  $ hg annotate -T'== {abspath} ==\n{lines % "{line}"}' a b
   == a ==
-  0: a
-  1: a
-  1: a
+  a
+  a
+  a
   == b ==
-  0: a
-  1: a
-  1: a
-  3: b4
-  3: b5
-  3: b6
+  a
+  a
+  a
+  b4
+  b5
+  b6
 
 annotate -n b
 
@@ -580,73 +580,73 @@ when they should.
 
   $ echo a >> foo
   $ hg ci -m 'foo: add a'
-  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 3:5)'
-  16: baz:0
-  19: baz:3
-  20: baz:4
-  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 3:5, startrev=20)'
-  16: baz:0
-  19: baz:3
-  20: baz:4
-  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 3:5, startrev=19)'
-  16: baz:0
-  19: baz:3
-  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 3:5, startrev=19, descend=True)'
-  19: baz:3
-  20: baz:4
+  $ hg log -T '{desc}\n' -r 'followlines(baz, 3:5)'
+  baz:0
+  baz:3
+  baz:4
+  $ hg log -T '{desc}\n' -r 'followlines(baz, 3:5, startrev=20)'
+  baz:0
+  baz:3
+  baz:4
+  $ hg log -T '{desc}\n' -r 'followlines(baz, 3:5, startrev=19)'
+  baz:0
+  baz:3
+  $ hg log -T '{desc}\n' -r 'followlines(baz, 3:5, startrev=19, descend=True)'
+  baz:3
+  baz:4
   $ printf "0\n0\n" | cat - baz > baz1
   $ mv baz1 baz
   $ hg ci -m 'added two lines with 0'
-  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 5:7)'
-  16: baz:0
-  19: baz:3
-  20: baz:4
-  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 3:5, descend=true, startrev=19)'
-  19: baz:3
-  20: baz:4
+  $ hg log -T '{desc}\n' -r 'followlines(baz, 5:7)'
+  baz:0
+  baz:3
+  baz:4
+  $ hg log -T '{desc}\n' -r 'followlines(baz, 3:5, descend=true, startrev=19)'
+  baz:3
+  baz:4
   $ echo 6 >> baz
   $ hg ci -m 'added line 8'
-  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 5:7)'
-  16: baz:0
-  19: baz:3
-  20: baz:4
-  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 3:5, startrev=19, descend=1)'
-  19: baz:3
-  20: baz:4
+  $ hg log -T '{desc}\n' -r 'followlines(baz, 5:7)'
+  baz:0
+  baz:3
+  baz:4
+  $ hg log -T '{desc}\n' -r 'followlines(baz, 3:5, startrev=19, descend=1)'
+  baz:3
+  baz:4
   $ sed 's/3/3+/' baz > baz.new
   $ mv baz.new baz
   $ hg ci -m 'baz:3->3+'
-  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 5:7, descend=0)'
-  16: baz:0
-  19: baz:3
-  20: baz:4
-  24: baz:3->3+
-  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 3:5, startrev=17, descend=True)'
-  19: baz:3
-  20: baz:4
-  24: baz:3->3+
-  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 1:2, descend=false)'
-  22: added two lines with 0
+  $ hg log -T '{desc}\n' -r 'followlines(baz, 5:7, descend=0)'
+  baz:0
+  baz:3
+  baz:4
+  baz:3->3+
+  $ hg log -T '{desc}\n' -r 'followlines(baz, 3:5, startrev=17, descend=True)'
+  baz:3
+  baz:4
+  baz:3->3+
+  $ hg log -T '{desc}\n' -r 'followlines(baz, 1:2, descend=false)'
+  added two lines with 0
 
 file patterns are okay
-  $ hg log -T '{rev}: {desc}\n' -r 'followlines("path:baz", 1:2)'
-  22: added two lines with 0
+  $ hg log -T '{desc}\n' -r 'followlines("path:baz", 1:2)'
+  added two lines with 0
 
 renames are followed
   $ hg mv baz qux
   $ sed 's/4/4+/' qux > qux.new
   $ mv qux.new qux
   $ hg ci -m 'qux:4->4+'
-  $ hg log -T '{rev}: {desc}\n' -r 'followlines(qux, 5:7)'
-  16: baz:0
-  19: baz:3
-  20: baz:4
-  24: baz:3->3+
-  25: qux:4->4+
+  $ hg log -T '{desc}\n' -r 'followlines(qux, 5:7)'
+  baz:0
+  baz:3
+  baz:4
+  baz:3->3+
+  qux:4->4+
 
 but are missed when following children
-  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 5:7, startrev=22, descend=True)'
-  24: baz:3->3+
+  $ hg log -T '{desc}\n' -r 'followlines(baz, 5:7, startrev=22, descend=True)'
+  baz:3->3+
 
 merge
   $ hg up 24 --quiet
@@ -655,64 +655,64 @@ merge
   $ sed 's/3+/3-/' baz > baz.new
   $ mv baz.new baz
   $ hg ci -m 'baz:3+->3-'
-  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 5:7)'
-  16: baz:0
-  19: baz:3
-  20: baz:4
-  24: baz:3->3+
-  27: baz:3+->3-
+  $ hg log -T '{desc}\n' -r 'followlines(baz, 5:7)'
+  baz:0
+  baz:3
+  baz:4
+  baz:3->3+
+  baz:3+->3-
   $ hg merge 25
   merging baz and qux to qux
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg ci -m merge
-  $ hg log -T '{rev}: {desc}\n' -r 'followlines(qux, 5:7)'
-  16: baz:0
-  19: baz:3
-  20: baz:4
-  24: baz:3->3+
-  25: qux:4->4+
-  27: baz:3+->3-
-  28: merge
+  $ hg log -T '{desc}\n' -r 'followlines(qux, 5:7)'
+  baz:0
+  baz:3
+  baz:4
+  baz:3->3+
+  qux:4->4+
+  baz:3+->3-
+  merge
   $ hg up 25 --quiet
   $ hg merge 27
   merging qux and baz to qux
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg ci -m 'merge from other side'
-  $ hg log -T '{rev}: {desc}\n' -r 'followlines(qux, 5:7)'
-  16: baz:0
-  19: baz:3
-  20: baz:4
-  24: baz:3->3+
-  25: qux:4->4+
-  27: baz:3+->3-
-  29: merge from other side
+  $ hg log -T '{desc}\n' -r 'followlines(qux, 5:7)'
+  baz:0
+  baz:3
+  baz:4
+  baz:3->3+
+  qux:4->4+
+  baz:3+->3-
+  merge from other side
   $ hg up 24 --quiet
 
 we are missing the branch with rename when following children
-  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 5:7, startrev=26, descend=True)'
-  27: baz:3+->3-
+  $ hg log -T '{desc}\n' -r 'followlines(baz, 5:7, startrev=26, descend=True)'
+  baz:3+->3-
 
 we follow all branches in descending direction
   $ hg up 23 --quiet
   $ sed 's/3/+3/' baz > baz.new
   $ mv baz.new baz
   $ hg ci -m 'baz:3->+3'
-  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 2:5, startrev=16, descend=True)' --graph
-  @  30: baz:3->+3
+  $ hg log -T '{desc}\n' -r 'followlines(baz, 2:5, startrev=16, descend=True)' --graph
+  @  baz:3->+3
   :
-  : o  27: baz:3+->3-
+  : o  baz:3+->3-
   : :
-  : o  24: baz:3->3+
+  : o  baz:3->3+
   :/
-  o    20: baz:4
+  o    baz:4
   |\
-  | o  19: baz:3
+  | o  baz:3
   |/
-  o  18: baz:2
+  o  baz:2
   :
-  o  16: baz:0
+  o  baz:0
   |
   ~
 
@@ -757,20 +757,20 @@ track of possible further descendants in specified range.
   > 6
   > EOF
   $ hg ci -m 'baz: narrow change (2->2+)'
-  $ hg log -T '{rev}: {desc}\n' -r 'followlines(baz, 3:4, startrev=20, descend=True)' --graph
-  @  33: baz: narrow change (2->2+)
+  $ hg log -T '{desc}\n' -r 'followlines(baz, 3:4, startrev=20, descend=True)' --graph
+  @  baz: narrow change (2->2+)
   |
-  o    32: merge forgetting about baz rewrite
+  o    merge forgetting about baz rewrite
   |\
-  | o  31: baz: mostly rewrite with some content from 24
+  | o  baz: mostly rewrite with some content from 24
   | :
-  | : o  30: baz:3->+3
+  | : o  baz:3->+3
   | :/
-  +---o  27: baz:3+->3-
+  +---o  baz:3+->3-
   | :
-  o :  24: baz:3->3+
+  o :  baz:3->3+
   :/
-  o    20: baz:4
+  o    baz:4
   |\
   ~ ~
 

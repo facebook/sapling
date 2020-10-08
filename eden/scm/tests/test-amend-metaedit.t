@@ -12,7 +12,7 @@
   > [phases]
   > publish = False
   > [alias]
-  > qlog = log --template='{rev} - {node|short} {desc} ({phase})\n'
+  > qlog = log --template='{node|short} {desc} ({phase})\n'
   > [diff]
   > git = 1
   > unified = 0
@@ -31,7 +31,7 @@
   > }
 
   $ glog() {
-  >   hg log -G -T '{rev}:{node|short}@{branch}({phase}) {desc|firstline}\n' "$@"
+  >   hg log -G -T '{node|short}@{branch}({phase}) {desc|firstline}\n' "$@"
   > }
 
   $ shaof() {
@@ -48,7 +48,7 @@ importing Parren test
 
   $ cat << EOF >> $HGRCPATH
   > [ui]
-  > logtemplate = "{rev}\t{bookmarks}: {desc|firstline} - {author|user}\n"
+  > logtemplate = "{bookmarks}: {desc|firstline} - {author|user}\n"
   > EOF
 
 HG METAEDIT
@@ -79,19 +79,19 @@ Test
 ----
 
   $ hg log -G
-  @  7	: F - test
+  @  : F - test
   |
-  o  6	: E - test
+  o  : E - test
   |
-  | o  5	: D2 - test
+  | o  : D2 - test
   |/
-  o  3	: C - test
+  o  : C - test
   |
-  | o  2	: B - test
+  | o  : B - test
   |/
-  o  1	: A - test
+  o  : A - test
   |
-  o  0	: ROOT - test
+  o  : ROOT - test
   
 
   $ hg update --clean .
@@ -114,11 +114,11 @@ Test
 
   $ hg metaedit --user foobar  -T "{nodechanges|json}\n"
   {"587528abfffe33d49f94f9d6223dbbd58d6197c6": ["212b2a2b87cdbae992f001e9baba64db389fbce7"]}
-  $ hg log --template '{rev}: {author}\n' -r 'desc(F):' --hidden
-  7: test
-  8: foobar
-  $ hg log --template '{rev}: {author}\n' -r .
-  8: foobar
+  $ hg log --template '{author}\n' -r 'desc(F):' --hidden
+  test
+  foobar
+  $ hg log --template '{author}\n' -r .
+  foobar
 
   $ HGEDITOR=cat hg metaedit '.^::.' --fold
   HG: This is a fold of 2 changesets.
@@ -149,7 +149,7 @@ Test
 
 
   $ glog -r .
-  @  9:a08d35fd7d9d@default(draft) E
+  @  a08d35fd7d9d@default(draft) E
   |
   ~
 
@@ -177,9 +177,9 @@ no new commit is created here because the date is the same
 
 
   $ glog -r '.^::.'
-  @  9:a08d35fd7d9d@default(draft) E
+  @  a08d35fd7d9d@default(draft) E
   |
-  o  3:3260958f1169@default(draft) C
+  o  3260958f1169@default(draft) C
   |
   ~
 
@@ -188,25 +188,25 @@ old commit (we add a default date with a value to show that metaedit is taking
 the current date to generate the hash, this way we still have a stable hash
 but highlight the bug)
   $ hg metaedit --config defaults.metaedit= --config devel.default-date="42 0"
-  $ hg log -r '.^::.' --template '{rev}: {desc|firstline}\n'
-  3: C
-  10: E
+  $ hg log -r '.^::.' --template '{desc|firstline}\n'
+  C
+  E
 
   $ hg up '.^'
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg metaedit --user foobar2 tip
-  $ hg log --template '{rev}: {author}\n' -r "user(foobar):" --hidden
-  8: foobar
-  9: test
-  10: test
-  11: foobar2
+  $ hg log --template '{author}\n' -r "user(foobar):" --hidden
+  foobar
+  test
+  test
+  foobar2
   $ hg diff -r "10" -r "11" --hidden
 
 'fold' one commit
   $ hg metaedit "desc(D2)" --fold --user foobar3 --hidden
   1 changesets folded
-  $ hg log -r "tip" --template '{rev}: {author}\n'
-  12: foobar3
+  $ hg log -r "tip" --template '{author}\n'
+  foobar3
 
 metaedit a commit in the middle of the stack:
 
@@ -218,28 +218,28 @@ metaedit a commit in the middle of the stack:
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ glog -r 'all()'
-  @  4:bebd167eb94d@default(draft) r4
+  @  bebd167eb94d@default(draft) r4
   |
-  o  3:2dc09a01254d@default(draft) r3
+  o  2dc09a01254d@default(draft) r3
   |
-  o  2:01241442b3c2@default(draft) r2
+  o  01241442b3c2@default(draft) r2
   |
-  o  1:66f7d451a68b@default(draft) r1
+  o  66f7d451a68b@default(draft) r1
   |
-  o  0:1ea73414a91b@default(draft) r0
+  o  1ea73414a91b@default(draft) r0
   
 
   $ hg metaedit -m "metaedit" -r 2
   $ glog -r 'all()'
-  @  7:8c1f124031e7@default(draft) r4
+  @  8c1f124031e7@default(draft) r4
   |
-  o  6:af1447d6a312@default(draft) r3
+  o  af1447d6a312@default(draft) r3
   |
-  o  5:1aed0f31debd@default(draft) metaedit
+  o  1aed0f31debd@default(draft) metaedit
   |
-  o  1:66f7d451a68b@default(draft) r1
+  o  66f7d451a68b@default(draft) r1
   |
-  o  0:1ea73414a91b@default(draft) r0
+  o  1ea73414a91b@default(draft) r0
   
 
   $ hg metaedit -m "metaedit" -r 1aed0f31debd
@@ -249,15 +249,15 @@ metaedit a commit in the middle of the stack:
 metaedit more than one commit at once without --fold
   $ hg metaedit -m "metaedit" -r 5::
   $ glog -r 'all()'
-  @  9:972f190d63f3@default(draft) metaedit
+  @  972f190d63f3@default(draft) metaedit
   |
-  o  8:a1c80e4c2636@default(draft) metaedit
+  o  a1c80e4c2636@default(draft) metaedit
   |
-  o  5:1aed0f31debd@default(draft) metaedit
+  o  1aed0f31debd@default(draft) metaedit
   |
-  o  1:66f7d451a68b@default(draft) r1
+  o  66f7d451a68b@default(draft) r1
   |
-  o  0:1ea73414a91b@default(draft) r0
+  o  1ea73414a91b@default(draft) r0
   
 
 make the top commit non-empty
@@ -265,15 +265,15 @@ make the top commit non-empty
   $ hg add xx
   $ hg amend
   $ glog -r 'all()'
-  @  10:90ef4d40a825@default(draft) metaedit
+  @  90ef4d40a825@default(draft) metaedit
   |
-  o  8:a1c80e4c2636@default(draft) metaedit
+  o  a1c80e4c2636@default(draft) metaedit
   |
-  o  5:1aed0f31debd@default(draft) metaedit
+  o  1aed0f31debd@default(draft) metaedit
   |
-  o  1:66f7d451a68b@default(draft) r1
+  o  66f7d451a68b@default(draft) r1
   |
-  o  0:1ea73414a91b@default(draft) r0
+  o  1ea73414a91b@default(draft) r0
   
 
 test histedit compat
@@ -311,13 +311,13 @@ test histedit compat
   a1c80e4c2636: skipping changeset (no changes)
 
   $ glog -r 'all()'
-  @  13:942d79297adf@default(draft) metaedit
+  @  942d79297adf@default(draft) metaedit
   |
-  o  12:b5e5d076151f@default(draft) message from exec
+  o  b5e5d076151f@default(draft) message from exec
   |
-  o  1:66f7d451a68b@default(draft) r1
+  o  66f7d451a68b@default(draft) r1
   |
-  o  0:1ea73414a91b@default(draft) r0
+  o  1ea73414a91b@default(draft) r0
   
 
 metaedit noncontinuous set of commits in the stack:
@@ -330,28 +330,28 @@ metaedit noncontinuous set of commits in the stack:
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ glog -r 'all()'
-  @  4:bebd167eb94d@default(draft) r4
+  @  bebd167eb94d@default(draft) r4
   |
-  o  3:2dc09a01254d@default(draft) r3
+  o  2dc09a01254d@default(draft) r3
   |
-  o  2:01241442b3c2@default(draft) r2
+  o  01241442b3c2@default(draft) r2
   |
-  o  1:66f7d451a68b@default(draft) r1
+  o  66f7d451a68b@default(draft) r1
   |
-  o  0:1ea73414a91b@default(draft) r0
+  o  1ea73414a91b@default(draft) r0
   
 
   $ hg metaedit -m "metaedit" 0 2 4
   $ glog -r 'all()'
-  @  9:2b037168acb5@default(draft) metaedit
+  @  2b037168acb5@default(draft) metaedit
   |
-  o  8:1a9c34db0e76@default(draft) r3
+  o  1a9c34db0e76@default(draft) r3
   |
-  o  7:4d7251aa2bec@default(draft) metaedit
+  o  4d7251aa2bec@default(draft) metaedit
   |
-  o  6:16ad2130f633@default(draft) r1
+  o  16ad2130f633@default(draft) r1
   |
-  o  5:e37e0d87697f@default(draft) metaedit
+  o  e37e0d87697f@default(draft) metaedit
   
 
 Test copying obsmarkers
@@ -370,15 +370,15 @@ Test copying obsmarkers
   > EOS
   $ hg metaedit -r $B -m B1
   $ glog -r 'all()'
-  o  8:52bc6136aa97@default(draft) D
+  o  52bc6136aa97@default(draft) D
   |
-  | o  7:1be7301b35ae@default(draft) C1
+  | o  1be7301b35ae@default(draft) C1
   | |
-  x |  6:19437442f9e4@default(draft) C
+  x |  19437442f9e4@default(draft) C
   |/
-  o  5:888bb4818188@default(draft) B1
+  o  888bb4818188@default(draft) B1
   |
-  o  0:426bada5c675@default(draft) A
+  o  426bada5c675@default(draft) A
   
 
   $ hg log -r 'successors(19437442f9e4)-19437442f9e4' -T '{node}\n'
@@ -413,15 +413,15 @@ Slightly more complex: with double amends
   > EOS
   $ hg metaedit -r $B -m B1
   $ glog -r 'all()'
-  o  9:1be7301b35ae@default(draft) C1
+  o  1be7301b35ae@default(draft) C1
   |
-  | o  8:52bc6136aa97@default(draft) D
+  | o  52bc6136aa97@default(draft) D
   | |
-  | x  7:19437442f9e4@default(draft) C
+  | x  19437442f9e4@default(draft) C
   |/
-  o  6:888bb4818188@default(draft) B1
+  o  888bb4818188@default(draft) B1
   |
-  o  0:426bada5c675@default(draft) A
+  o  426bada5c675@default(draft) A
   
 
   $ hg log -r 'successors(19437442f9e4)-19437442f9e4' -T '{node}\n'
@@ -448,17 +448,17 @@ Test empty commit
   $ hg commit --config ui.allowemptycommit=true -m empty
   $ hg metaedit -r ".^" -m "parent of empty commit"
   $ glog -r 'all()'
-  @  12:e582f22eefc0@default(draft) empty
+  @  e582f22eefc0@default(draft) empty
   |
-  o  11:539393debc47@default(draft) parent of empty commit
+  o  539393debc47@default(draft) parent of empty commit
   |
-  | o  8:52bc6136aa97@default(draft) D
+  | o  52bc6136aa97@default(draft) D
   | |
-  | x  7:19437442f9e4@default(draft) C
+  | x  19437442f9e4@default(draft) C
   |/
-  o  6:888bb4818188@default(draft) B1
+  o  888bb4818188@default(draft) B1
   |
-  o  0:426bada5c675@default(draft) A
+  o  426bada5c675@default(draft) A
   
 Create some commits for testing the editing of commits in batch using `--batch`
 option

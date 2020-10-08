@@ -35,56 +35,56 @@ time.
   >   hg commit -qAm "commit $i"
   > done
 
-  $ hg log -G -r 'all()' -T '{rev} {desc}'
-  @  24 commit 12
+  $ hg log -G -r 'all()' -T '{desc}'
+  @  commit 12
   |
-  | o  23 commit 12 branch
+  | o  commit 12 branch
   |/
-  o  22 commit 11
+  o  commit 11
   |
-  | o  21 commit 11 branch
+  | o  commit 11 branch
   |/
-  o  20 commit 10
+  o  commit 10
   |
-  | o  19 commit 10 branch
+  | o  commit 10 branch
   |/
-  o  18 commit 9
+  o  commit 9
   |
-  | o  17 commit 9 branch
+  | o  commit 9 branch
   |/
-  o  16 commit 8
+  o  commit 8
   |
-  | o  15 commit 8 branch
+  | o  commit 8 branch
   |/
-  o  14 commit 7
+  o  commit 7
   |
-  | o  13 commit 7 branch
+  | o  commit 7 branch
   |/
-  o  12 commit 6
+  o  commit 6
   |
-  | o  11 commit 6 branch
+  | o  commit 6 branch
   |/
-  o  10 commit 5
+  o  commit 5
   |
-  | o  9 commit 5 branch
+  | o  commit 5 branch
   |/
-  o  8 commit 4
+  o  commit 4
   |
-  | o  7 commit 4 branch
+  | o  commit 4 branch
   |/
-  o  6 commit 3
+  o  commit 3
   |
-  | o  5 commit 3 branch
+  | o  commit 3 branch
   |/
-  o  4 commit 2
+  o  commit 2
   |
-  | o  3 commit 2 branch
+  | o  commit 2 branch
   |/
-  o  2 commit 1
+  o  commit 1
   |
-  | o  1 commit 1 branch
+  | o  commit 1 branch
   |/
-  o  0 base
+  o  base
   
 Create a client
   $ hgcloneshallow ssh://user@dummy/master client -q

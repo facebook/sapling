@@ -11,14 +11,14 @@ Setup
   $ cd repo
   $ for ch in a b c d; do echo foo > $ch; hg commit -Aqm "Added "$ch; done
 
-  $ hg log -G -T "{rev}:{node|short} {desc}"
-  @  3:62615734edd5 Added d
+  $ hg log -G -T "{node|short} {desc}"
+  @  62615734edd5 Added d
   |
-  o  2:28ad74487de9 Added c
+  o  28ad74487de9 Added c
   |
-  o  1:29becc82797a Added b
+  o  29becc82797a Added b
   |
-  o  0:18d04c59bb5d Added a
+  o  18d04c59bb5d Added a
   
 Getting the JSON output for nodechanges
 
@@ -34,14 +34,14 @@ Getting the JSON output for nodechanges
    }
   ]
 
-  $ hg log -G -T "{rev}:{node|short} {desc}"
-  @  7:f5dcf3b4db23 Added b
+  $ hg log -G -T "{node|short} {desc}"
+  @  f5dcf3b4db23 Added b
   |
-  o  6:109f8ec89544 Added a
+  o  109f8ec89544 Added a
   |
-  o  5:201423b441c8 Added d
+  o  201423b441c8 Added d
   |
-  o  4:bff9e07c1807 Added c
+  o  bff9e07c1807 Added c
   
   $ hg histedit -T "{nodechanges|json}" --commands - 2>&1 <<EOF
   > pick bff9e07c1807 Added c

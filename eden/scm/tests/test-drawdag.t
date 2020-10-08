@@ -18,14 +18,14 @@ Test what said in drawdag.py docstring
   > a
   > EOS
 
-  $ hg log -G -T '{rev} {desc} ({bookmarks})'
-  o  3 d (d)
+  $ hg log -G -T '{desc} ({bookmarks})'
+  o  d (d)
   |
-  | o  2 c (c)
+  | o  c (c)
   |/
-  o  1 b (b)
+  o  b (b)
   |
-  o  0 a (a)
+  o  a (a)
   
   $ hg debugdrawdag <<'EOS'
   >  foo    bar       bar  foo

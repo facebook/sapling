@@ -240,8 +240,8 @@ Make a few public commits. Make sure we don't backup them
   $ mkcommit public1
   $ mkcommit public2
   $ hg debugmakepublic .
-  $ hg log -r tip -T '{rev}'
-  11 (no-eol)
+  $ hg log -r tip -T '{node}'
+  3446a384dd701da41cd83cbd9562805fc6412c0e (no-eol)
   $ hg push -r '.' -f --to master
   pushing rev 3446a384dd70 to destination ssh://user@dummy/repo bookmark master
   searching for changes

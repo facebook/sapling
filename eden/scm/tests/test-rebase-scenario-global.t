@@ -359,21 +359,21 @@ Check that temporary bundle doesn't lose phase when not using generaldelta
   $ echo c > c
   $ hg ci -Aqm c
   $ hg debugmakepublic .
-  $ hg log -G -T '{rev}:{node|shortest} {phase} {desc}\n'
-  @  2:d36c public c
+  $ hg log -G -T '{node|shortest} {phase} {desc}\n'
+  @  d36c public c
   |
-  | o  1:d2ae draft b
+  | o  d2ae draft b
   |/
-  o  0:cb9a public a
+  o  cb9a public a
   
   $ hg rebase -s 'desc(b)' -d 'desc(c)'
   rebasing d2ae7f538514 "b"
-  $ hg log -G -T '{rev}:{node|shortest} {phase} {desc}\n'
-  o  3:c882 draft b
+  $ hg log -G -T '{node|shortest} {phase} {desc}\n'
+  o  c882 draft b
   |
-  @  2:d36c public c
+  @  d36c public c
   |
-  o  0:cb9a public a
+  o  cb9a public a
   
   $ cd ..
 

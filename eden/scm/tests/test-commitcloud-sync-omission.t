@@ -444,22 +444,22 @@ Connect to commit cloud
   commitcloud: commits synchronized
   finished in * (glob)
 
-  $ hgfakedate 1990-03-05T12:00Z smartlog -T '{rev}: {node|short} {desc} {bookmarks}' --config infinitepushbackup.autobackup=true
-  o  7: 2b8dce7bd745 oldstack-mar4
+  $ hgfakedate 1990-03-05T12:00Z smartlog -T '{node|short} {desc} {bookmarks}' --config infinitepushbackup.autobackup=true
+  o  2b8dce7bd745 oldstack-mar4
   |
-  o  6: d16408588b2d oldstack-feb4
+  o  d16408588b2d oldstack-feb4
   |
-  o  5: 1f9ebd6d1390 oldstack-feb1 oldbook
+  o  1f9ebd6d1390 oldstack-feb1 oldbook
   |
-  | o  4: ff52de2f760c client2-feb28
+  | o  ff52de2f760c client2-feb28
   |/
-  | o  3: 46f8775ee5d4 newstack-feb28
+  | o  46f8775ee5d4 newstack-feb28
   | |
-  | o  2: 7f958333fe84 newstack-feb15
+  | o  7f958333fe84 newstack-feb15
   | |
-  | o  1: 56a352317b67 newstack-feb13 newbook
+  | o  56a352317b67 newstack-feb13 newbook
   |/
-  @  0: df4f53cec30a base
+  @  df4f53cec30a base
   
   hint[commitcloud-old-commits]: some older commits or bookmarks have not been synced to this repo
   (run 'hg cloud sl' to see all of the commits in your workspace)

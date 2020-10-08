@@ -30,14 +30,14 @@ Requiring dest should not break continue or other rebase options
   $ hg up 'desc(bb)' -q
   $ echo d >> c
   $ hg commit -qAm dc
-  $ hg log -G -T '{rev} {desc}'
-  @  8 dc
+  $ hg log -G -T '{desc}'
+  @  dc
   |
-  | o  7 cc
+  | o  cc
   |/
-  o  1 bb
+  o  bb
   |
-  o  0 aa
+  o  aa
   
   $ hg rebase -d 'desc(cc)'
   rebasing 0537f6b50def "dc"
@@ -102,7 +102,7 @@ Setup rebase with multiple destinations
   $ setglobalconfig extensions.maprevset="$TESTTMP/maprevset.py"
   $ readglobalconfig <<EOF
   > [alias]
-  > tglog = log -G --template "{rev}: {node|short} {desc} {instabilities}" -r 'sort(all(), topo)'
+  > tglog = log -G --template "{node|short} {desc} {instabilities}" -r 'sort(all(), topo)'
   > EOF
 
   $ rebasewithdag() {

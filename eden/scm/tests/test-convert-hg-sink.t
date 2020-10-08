@@ -44,12 +44,12 @@
   0 add foo/file
   updating bookmarks
   $ cd new
-  $ hg log -G --template '{rev} {node|short} ({phase}) "{desc}"\n'
-  o  2 ad681a868e44 (draft) "add foo/file"
+  $ hg log -G --template '{node|short} ({phase}) "{desc}"\n'
+  o  ad681a868e44 (draft) "add foo/file"
   |
-  o  1 cbba8ecc03b7 (draft) "remove foo"
+  o  cbba8ecc03b7 (draft) "remove foo"
   |
-  o  0 327daa9251fa (draft) "add foo and bar"
+  o  327daa9251fa (draft) "add foo and bar"
   
 
   $ hg out ../orig
@@ -111,7 +111,7 @@ Helper
 
   $ glog()
   > {
-  >     hg log -G --template '{rev} {node|short} ({phase}) "{desc}" files: {files}\n' $*
+  >     hg log -G --template '{node|short} ({phase}) "{desc}" files: {files}\n' $*
   > }
 
 Create a tricky source repo
@@ -152,19 +152,19 @@ Create a tricky source repo
   e
   $ hg bookmark main -r tip
   $ glog
-  @  6 0613c8e59a3d (draft) "6: change a" files: a
+  @  0613c8e59a3d (draft) "6: change a" files: a
   |
-  o    5 717e9b37cdb7 (draft) "5: merge 2 and 3, copy b to dir/d" files: dir/d e
+  o    717e9b37cdb7 (draft) "5: merge 2 and 3, copy b to dir/d" files: dir/d e
   |\
-  | o  4 86a55cb968d5 (draft) "4: change a" files: a
+  | o  86a55cb968d5 (draft) "4: change a" files: a
   | |
-  o |  3 0e6e235919dd (draft) "3: copy a to e, change b" files: b e
+  o |  0e6e235919dd (draft) "3: copy a to e, change b" files: b e
   | |
-  o |  2 0394b0d5e4f7 (draft) "2: add dir/c" files: dir/c
+  o |  0394b0d5e4f7 (draft) "2: add dir/c" files: dir/c
   |/
-  o  1 333546584845 (draft) "1: add a and dir/b" files: a dir/b
+  o  333546584845 (draft) "1: add a and dir/b" files: a dir/b
   |
-  o  0 d1a24e2ebd23 (draft) "0: add 0" files: 0
+  o  d1a24e2ebd23 (draft) "0: add 0" files: 0
   
   $ cd ..
 
@@ -190,15 +190,15 @@ Convert excluding rev 0 and dir/ (and thus rev2):
 Verify that conversion skipped rev 2:
 
   $ glog -R dest
-  o  4 78814e84a217 (draft) "6: change a" files: a
+  o  78814e84a217 (draft) "6: change a" files: a
   |
-  o    3 f7cff662c5e5 (draft) "5: merge 2 and 3, copy b to dir/d" files: e
+  o    f7cff662c5e5 (draft) "5: merge 2 and 3, copy b to dir/d" files: e
   |\
-  | o  2 ab40a95b0072 (draft) "4: change a" files: a
+  | o  ab40a95b0072 (draft) "4: change a" files: a
   | |
-  o |  1 bd51f17597bf (draft) "3: copy a to e, change b" files: b e
+  o |  bd51f17597bf (draft) "3: copy a to e, change b" files: b e
   |/
-  o  0 a4a1dae0fe35 (draft) "1: add a and dir/b" files: 0 a
+  o  a4a1dae0fe35 (draft) "1: add a and dir/b" files: 0 a
   
 
 Verify mapping correct in both directions:
@@ -322,17 +322,17 @@ More source changes
   e
 
   $ glog -r 6:
-  @  11 0c8927d1f7f4 (draft) "11: source change" files: a
+  @  0c8927d1f7f4 (draft) "11: source change" files: a
   |
-  o    10 9ccb7ee8d261 (draft) "10: source merge" files: a
+  o    9ccb7ee8d261 (draft) "10: source merge" files: a
   |\
-  | o  9 f131b1518dba (draft) "9: source second branch" files: a
+  | o  f131b1518dba (draft) "9: source second branch" files: a
   | |
-  o |  8 669cf0e74b50 (draft) "8: source first branch" files: a
+  o |  669cf0e74b50 (draft) "8: source first branch" files: a
   | |
-  | o  7 e6d364a69ff1 (draft) "change in dest" files: dest
+  | o  e6d364a69ff1 (draft) "change in dest" files: dest
   |/
-  o  6 0613c8e59a3d (draft) "6: change a" files: a
+  o  0613c8e59a3d (draft) "6: change a" files: a
   |
   ~
   $ cd ..
@@ -348,25 +348,25 @@ More source changes
   updating bookmarks
 
   $ glog -R dest
-  o  9 8432d597b263 (draft) "11: source change" files: a
+  o  8432d597b263 (draft) "11: source change" files: a
   |
-  o    8 632ffacdcd6f (draft) "10: source merge" files: a
+  o    632ffacdcd6f (draft) "10: source merge" files: a
   |\
-  | o  7 049cfee90ee6 (draft) "9: source second branch" files: a
+  | o  049cfee90ee6 (draft) "9: source second branch" files: a
   | |
-  o |  6 9b6845e036e5 (draft) "8: source first branch" files: a
+  o |  9b6845e036e5 (draft) "8: source first branch" files: a
   | |
-  | @  5 a2e0e3cc6d1d (draft) "change in dest" files: dest
+  | @  a2e0e3cc6d1d (draft) "change in dest" files: dest
   |/
-  o  4 78814e84a217 (draft) "6: change a" files: a
+  o  78814e84a217 (draft) "6: change a" files: a
   |
-  o    3 f7cff662c5e5 (draft) "5: merge 2 and 3, copy b to dir/d" files: e
+  o    f7cff662c5e5 (draft) "5: merge 2 and 3, copy b to dir/d" files: e
   |\
-  | o  2 ab40a95b0072 (draft) "4: change a" files: a
+  | o  ab40a95b0072 (draft) "4: change a" files: a
   | |
-  o |  1 bd51f17597bf (draft) "3: copy a to e, change b" files: b e
+  o |  bd51f17597bf (draft) "3: copy a to e, change b" files: b e
   |/
-  o  0 a4a1dae0fe35 (draft) "1: add a and dir/b" files: 0 a
+  o  a4a1dae0fe35 (draft) "1: add a and dir/b" files: 0 a
   
   $ cd ..
 
@@ -456,12 +456,12 @@ Two way tests
   converting...
   0 x
 
-  $ hg -R a log -G -T '{rev} {desc|firstline} ({files})\n'
-  o  2 x (f)
+  $ hg -R a log -G -T '{desc|firstline} ({files})\n'
+  o  x (f)
   |
-  @  1 a (f)
+  @  a (f)
   |
-  o  0 0 (a-only f)
+  o  0 (a-only f)
   
   $ hg -R a mani -r tip
   a-only
@@ -479,14 +479,14 @@ An additional round, demonstrating that unchanged files don't get converted
   converting...
   0 extra f+a-only change
 
-  $ hg -R a log -G -T '{rev} {desc|firstline} ({files})\n'
-  o  3 extra f+a-only change (f)
+  $ hg -R a log -G -T '{desc|firstline} ({files})\n'
+  o  extra f+a-only change (f)
   |
-  o  2 x (f)
+  o  x (f)
   |
-  @  1 a (f)
+  @  a (f)
   |
-  o  0 0 (a-only f)
+  o  0 (a-only f)
   
 
 Convert with --full adds and removes files that didn't change

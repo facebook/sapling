@@ -7,7 +7,7 @@
 
   $ glog()
   > {
-  >     hg -R "$1" log -G --template '{rev} "{desc}" files: {files}\n'
+  >     hg -R "$1" log -G --template '"{desc}" files: {files}\n'
   > }
 
   $ hg init source
@@ -51,17 +51,17 @@ Convert from null revision
   0 5: change a
 
   $ glog full
-  o  5 "5: change a" files: a
+  o  "5: change a" files: a
   |
-  o    4 "4: merge 2 and 3" files: e f
+  o    "4: merge 2 and 3" files: e f
   |\
-  | o  3 "3: change a" files: a
+  | o  "3: change a" files: a
   | |
-  o |  2 "2: copy e from a, change b" files: b e
+  o |  "2: copy e from a, change b" files: b e
   | |
-  o |  1 "1: add c, move f to d" files: c d f
+  o |  "1: add c, move f to d" files: c d f
   |/
-  o  0 "0: add a b f" files: a b f
+  o  "0: add a b f" files: a b f
   
   $ rm -Rf full
 
@@ -80,17 +80,17 @@ Convert from zero revision
   0 5: change a
 
   $ glog full
-  o  5 "5: change a" files: a
+  o  "5: change a" files: a
   |
-  o    4 "4: merge 2 and 3" files: e f
+  o    "4: merge 2 and 3" files: e f
   |\
-  | o  3 "3: change a" files: a
+  | o  "3: change a" files: a
   | |
-  o |  2 "2: copy e from a, change b" files: b e
+  o |  "2: copy e from a, change b" files: b e
   | |
-  o |  1 "1: add c, move f to d" files: c d f
+  o |  "1: add c, move f to d" files: c d f
   |/
-  o  0 "0: add a b f" files: a b f
+  o  "0: add a b f" files: a b f
   
 Convert from merge parent
 
@@ -105,13 +105,13 @@ Convert from merge parent
   0 5: change a
 
   $ glog conv1
-  o  3 "5: change a" files: a
+  o  "5: change a" files: a
   |
-  o  2 "4: merge 2 and 3" files: a e
+  o  "4: merge 2 and 3" files: a e
   |
-  o  1 "2: copy e from a, change b" files: b e
+  o  "2: copy e from a, change b" files: b e
   |
-  o  0 "1: add c, move f to d" files: a b c d
+  o  "1: add c, move f to d" files: a b c d
   
   $ cd conv1
   $ hg up -q
@@ -166,9 +166,9 @@ Convert from merge
   1 4: merge 2 and 3
   0 5: change a
   $ glog conv4
-  o  1 "5: change a" files: a
+  o  "5: change a" files: a
   |
-  o  0 "4: merge 2 and 3" files: a b c d e
+  o  "4: merge 2 and 3" files: a b c d e
   
   $ cd conv4
   $ hg up -C
@@ -194,11 +194,11 @@ Convert from revset in convert.hg.revs
   0 4: merge 2 and 3
 
   $ glog revsetrepo
-  o  2 "4: merge 2 and 3" files: b c d e f
+  o  "4: merge 2 and 3" files: b c d e f
   |
-  o  1 "3: change a" files: a
+  o  "3: change a" files: a
   |
-  o  0 "0: add a b f" files: a b f
+  o  "0: add a b f" files: a b f
   
 Convert from specified revs
 
@@ -212,13 +212,13 @@ Convert from specified revs
   1 2: copy e from a, change b
   0 3: change a
   $ glog multiplerevs
-  o  3 "3: change a" files: a
+  o  "3: change a" files: a
   |
-  | o  2 "2: copy e from a, change b" files: b e
+  | o  "2: copy e from a, change b" files: b e
   | |
-  | o  1 "1: add c, move f to d" files: c d f
+  | o  "1: add c, move f to d" files: c d f
   |/
-  o  0 "0: add a b f" files: a b f
+  o  "0: add a b f" files: a b f
   
 Convert in multiple steps that doesn't overlap - the link to the parent is
 preserved anyway
@@ -236,9 +236,9 @@ preserved anyway
   converting...
   0 2: copy e from a, change b
   $ glog multistep
-  o  2 "2: copy e from a, change b" files: b e
+  o  "2: copy e from a, change b" files: b e
   |
-  o  1 "1: add c, move f to d" files: c d f
+  o  "1: add c, move f to d" files: c d f
   |
-  o  0 "0: add a b f" files: a b f
+  o  "0: add a b f" files: a b f
   

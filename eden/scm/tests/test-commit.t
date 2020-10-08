@@ -40,9 +40,9 @@ commit date test
   $ hg commit -d '1901-12-13 20:45:52 +0000' -m commit-7-2
   $ echo foo >> foo
   $ hg commit -d '-2147483648 0' -m commit-7-3
-  $ hg log -T '{rev} {date|isodatesec}\n' -l2
-  3 1901-12-13 20:45:52 +0000
-  2 1901-12-13 20:45:52 +0000
+  $ hg log -T '{date|isodatesec}\n' -l2
+  1901-12-13 20:45:52 +0000
+  1901-12-13 20:45:52 +0000
   $ hg commit -d '1899-12-13 20:45:51 +0000' -m commit-7
   hg: parse error: invalid date: '1899-12-13 20:45:51 +0000'
   [255]

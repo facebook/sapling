@@ -28,15 +28,15 @@ TEST: handling no revision provided to drop
 
 TEST: aborting when drop called on root changeset
   $ hg debugbuilddag +1
-  $ hg log -G -T '{rev} {desc|firstline}'
-  o  0 r0
+  $ hg log -G -T '{desc|firstline}'
+  o  r0
   
   $ hg drop -r 0
   abort: root changeset cannot be dropped
   [255]
 
-  $ hg log -G -T '{rev} {desc|firstline}'
-  o  0 r0
+  $ hg log -G -T '{desc|firstline}'
+  o  r0
   
 RESET and SETUP
   $ reset
@@ -44,25 +44,25 @@ RESET and SETUP
 
 TEST: dropping changeset in the middle of the stack
   $ hg debugbuilddag +4 -m
-  $ hg log -G -T '{rev} {desc|firstline}'
-  o  3 r3
+  $ hg log -G -T '{desc|firstline}'
+  o  r3
   |
-  o  2 r2
+  o  r2
   |
-  o  1 r1
+  o  r1
   |
-  o  0 r0
+  o  r0
   
   $ hg drop -r 2
   Dropping changeset c175ba: r2
   rebasing c034855f2b01 "r3"
   merging mf
-  $ hg log -G -T '{rev} {desc|firstline}'
-  o  4 r3
+  $ hg log -G -T '{desc|firstline}'
+  o  r3
   |
-  o  1 r1
+  o  r1
   |
-  o  0 r0
+  o  r0
   
 TEST: abort when more than one revision provided
   $ hg drop -r 1 4
@@ -75,22 +75,22 @@ RESET and SETUP
 
 TEST: dropping a changest with child changesets
   $ hg debugbuilddag -m "+5 *3 +2"
-  $ hg log -G -T '{rev} {desc|firstline}'
-  o  7 r7
+  $ hg log -G -T '{desc|firstline}'
+  o  r7
   |
-  o  6 r6
+  o  r6
   |
-  o  5 r5
+  o  r5
   |
-  | o  4 r4
+  | o  r4
   | |
-  | o  3 r3
+  | o  r3
   |/
-  o  2 r2
+  o  r2
   |
-  o  1 r1
+  o  r1
   |
-  o  0 r0
+  o  r0
   
   $ hg drop 2
   Dropping changeset 37d4c1: r2
@@ -104,20 +104,20 @@ TEST: dropping a changest with child changesets
   merging mf
   rebasing 2c7cfba83429 "r7"
   merging mf
-  $ hg log -G -T '{rev} {desc|firstline}'
-  o  12 r7
+  $ hg log -G -T '{desc|firstline}'
+  o  r7
   |
-  o  11 r6
+  o  r6
   |
-  o  10 r5
+  o  r5
   |
-  | o  9 r4
+  | o  r4
   | |
-  | o  8 r3
+  | o  r3
   |/
-  o  1 r1
+  o  r1
   |
-  o  0 r0
+  o  r0
   
 TEST: aborting drop on merge changeset
 
@@ -128,22 +128,22 @@ TEST: aborting drop on merge changeset
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg commit -m "merge"
-  $ hg log -G -T '{rev} {desc|firstline}'
-  @    13 merge
+  $ hg log -G -T '{desc|firstline}'
+  @    merge
   |\
-  | o  12 r7
+  | o  r7
   | |
-  | o  11 r6
+  | o  r6
   | |
-  | o  10 r5
+  | o  r5
   | |
-  +---o  9 r4
+  +---o  r4
   | |
-  o |  8 r3
+  o |  r3
   |/
-  o  1 r1
+  o  r1
   |
-  o  0 r0
+  o  r0
   
   $ hg drop 13
   abort: merge changeset cannot be dropped
@@ -161,14 +161,14 @@ RESET and SETUP
 
 TEST: dropping a changeset with merge conflict
   $ hg debugbuilddag -o +4
-  $ hg log -G -T '{rev} {desc|firstline}'
-  o  3 r3
+  $ hg log -G -T '{desc|firstline}'
+  o  r3
   |
-  o  2 r2
+  o  r2
   |
-  o  1 r1
+  o  r1
   |
-  o  0 r0
+  o  r0
   
   $ hg drop 1
   Dropping changeset 2a8ed6: r1

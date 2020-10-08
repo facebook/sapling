@@ -5,7 +5,7 @@
 create test repo
   $ hg init repo
   $ cd repo
-  $ template="{rev}  {desc|firstline}  [{branch}]\n"
+  $ template="{desc|firstline}  [{branch}]\n"
 
 # we need to start out with two changesets on the default branch
 # in order to avoid the cute little optimization where transplant
@@ -34,13 +34,13 @@ commit bug fixes on bug fix branch
   $ echo fix2 >> file1
   $ hg ci -Am"fix 2"
   $ hg log -G --template="$template"
-  @  3  fix 2  [default]
+  @  fix 2  [default]
   |
-  o  2  fix 1  [default]
+  o  fix 1  [default]
   |
-  o  1  feature 2  [default]
+  o  feature 2  [default]
   |
-  o  0  feature 1  [default]
+  o  feature 1  [default]
   
 transplant bug fixes onto release branch
   $ hg update 0
@@ -50,17 +50,17 @@ transplant bug fixes onto release branch
   $ hg graft 3
   grafting a53b02101490 "fix 2"
   $ hg log -G --template="$template"
-  @  5  fix 2  [default]
+  @  fix 2  [default]
   |
-  o  4  fix 1  [default]
+  o  fix 1  [default]
   |
-  | o  3  fix 2  [default]
+  | o  fix 2  [default]
   | |
-  | o  2  fix 1  [default]
+  | o  fix 1  [default]
   | |
-  | o  1  feature 2  [default]
+  | o  feature 2  [default]
   |/
-  o  0  feature 1  [default]
+  o  feature 1  [default]
   
   $ hg status
   $ hg status --rev 0:4
@@ -115,9 +115,9 @@ Do a size-preserving modification outside of that process
   $ echo abcd > bugfix
   $ hg status
   M bugfix
-  $ hg log --template "{rev}  {desc}  {files}\n" -r5:
-  5  fix 2  bugfix file1
-  6  x  bugfix file1
-  7  y  file1
+  $ hg log --template "{desc}  {files}\n" -r5:
+  fix 2  bugfix file1
+  x  bugfix file1
+  y  file1
 
   $ cd ..

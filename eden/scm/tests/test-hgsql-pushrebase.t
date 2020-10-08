@@ -47,5 +47,5 @@ Test verify sql lock is not held during prelockrebase and txnclose hooks
   [255]
 
   $ cd ../master
-  $ hg log -T '{rev}\n'
-  0
+  $ hg log -T '{node}\n'
+  3903775176ed42b1458a6281db4a0ccf4d9f287a

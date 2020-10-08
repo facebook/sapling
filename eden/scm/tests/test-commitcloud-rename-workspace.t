@@ -3,7 +3,7 @@
   $ configure modern
   $ enable smartlog
   $ showgraph() {
-  >    hg log -G -T "{rev} {desc}: {phase} {bookmarks} {remotenames}" -r "all()"
+  >    hg log -G -T "{desc}: {phase} {bookmarks} {remotenames}" -r "all()"
   > }
 
   $ mkcommit() {
@@ -86,11 +86,11 @@ Smartlog and status should stay the same
   commitcloud: rename successful
 
   $ showgraph
-  @  2 B (W1): draft
+  @  B (W1): draft
   |
-  o  1 A (W1): draft
+  o  A (W1): draft
   |
-  o  0 base: public  remote/master
+  o  base: public  remote/master
   
   $ hg cloud sync --debug
   commitcloud: synchronizing 'server' with 'user/test/w3'
@@ -130,11 +130,11 @@ Move to the second client
   finished in * (glob)
 
   $ showgraph
-  @  2 B (W2): draft
+  @  B (W2): draft
   |
-  o  1 A (W2): draft
+  o  A (W2): draft
   |
-  o  0 base: public  remote/master
+  o  base: public  remote/master
   
 
   $ hg cloud rename --rehost -d testhost
@@ -171,11 +171,11 @@ Back to client1
   finished in * (glob)
 
   $ showgraph
-  o  4 B (W2): draft
+  o  B (W2): draft
   |
-  o  3 A (W2): draft
+  o  A (W2): draft
   |
-  @  0 base: public  remote/master
+  @  base: public  remote/master
   
  
 Try to rename an unknown workspace
@@ -208,8 +208,8 @@ Test reclaim workspace
   $ unset HGUSER
   $ setconfig ui.username='Jane Doe <jdoe@example.com>'
 
-  $ hg smartlog -T '{rev}: {desc}\n'
-  @  0: base
+  $ hg smartlog -T '{desc}\n'
+  @  base
   
   note: hiding 1 old heads without bookmarks
   (use --all to see them)

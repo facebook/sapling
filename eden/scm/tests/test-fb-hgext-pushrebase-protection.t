@@ -61,8 +61,8 @@ Bookmark pushes should not be affected by the block
   no changes found
   updating bookmark master
   [1]
-  $ hg -R ../server log -T '{rev} {bookmarks}' -G
-  o  1
+  $ hg -R ../server log -T '{bookmarks}' -G
+  o
   |
-  @  0 master
+  @  master
   

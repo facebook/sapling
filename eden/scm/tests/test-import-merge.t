@@ -2,7 +2,7 @@
 
   $ disable treemanifest
   $ tipparents() {
-  > hg parents --template "{rev}:{node|short} {desc|firstline}\n" -r tip
+  > hg parents --template "{node|short} {desc|firstline}\n" -r tip
   > }
 
 Test import and merge diffs
@@ -59,8 +59,8 @@ Test without --exact and diff.p1 == workingdir.p1
   applying ../merge.nomsg.diff
   HGEDITFORM=import.normal.merge
   $ tipparents
-  1:540395c44225 changea
-  3:102a90ea7b4a addb
+  540395c44225 changea
+  102a90ea7b4a addb
   $ hg debugstrip --no-backup tip
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
@@ -73,7 +73,7 @@ Test without --exact and diff.p1 != workingdir.p1
   warning: import the patch as a normal revision
   (use --exact to import the patch as a merge)
   $ tipparents
-  2:890ecaa90481 addc
+  890ecaa90481 addc
   $ hg debugstrip --no-backup tip
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
@@ -83,8 +83,8 @@ Test with --exact
   applying ../merge.diff
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ tipparents
-  1:540395c44225 changea
-  3:102a90ea7b4a addb
+  540395c44225 changea
+  102a90ea7b4a addb
   $ hg debugstrip --no-backup tip
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
@@ -95,8 +95,8 @@ Test with --bypass and diff.p1 == workingdir.p1
   $ hg import --bypass ../merge.diff
   applying ../merge.diff
   $ tipparents
-  1:540395c44225 changea
-  3:102a90ea7b4a addb
+  540395c44225 changea
+  102a90ea7b4a addb
   $ hg debugstrip --no-backup tip
 
 Test with --bypass and diff.p1 != workingdir.p1
@@ -108,7 +108,7 @@ Test with --bypass and diff.p1 != workingdir.p1
   warning: import the patch as a normal revision
   (use --exact to import the patch as a merge)
   $ tipparents
-  2:890ecaa90481 addc
+  890ecaa90481 addc
   $ hg debugstrip --no-backup tip
 
 Test with --bypass and --exact
@@ -116,8 +116,8 @@ Test with --bypass and --exact
   $ hg import --bypass --exact ../merge.diff
   applying ../merge.diff
   $ tipparents
-  1:540395c44225 changea
-  3:102a90ea7b4a addb
+  540395c44225 changea
+  102a90ea7b4a addb
   $ hg debugstrip --no-backup tip
 
   $ cd ..

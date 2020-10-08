@@ -31,12 +31,12 @@ Create a tracking bookmark
   $ hg add b
   $ hg commit -m b
   $ hg book b -t a
-  $ hg log -G -T '{rev} {desc} {bookmarks} {remotebookmarks}\n'
-  @  2 b b
+  $ hg log -G -T '{desc} {bookmarks} {remotebookmarks}\n'
+  @  b b
   |
-  | o  1 a2 a
+  | o  a2 a
   |/
-  o  0 a1
+  o  a1
   
   $ hg book -v
      a                         1:fdceb0e57656
@@ -50,12 +50,12 @@ Create a tracking bookmark
   (no more unresolved files)
   $ hg rebase --continue
   rebasing dea4e1d2ca0e "b" (b)
-  $ hg log -G -T '{rev} {desc} {bookmarks} {remotebookmarks}'
-  @  3 b b
+  $ hg log -G -T '{desc} {bookmarks} {remotebookmarks}'
+  @  b b
   |
-  o  1 a2 a
+  o  a2 a
   |
-  o  0 a1
+  o  a1
   
   $ hg book -v
      a                         1:fdceb0e57656
@@ -68,26 +68,26 @@ Test push tracking
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd repo2
-  $ hg log -G -T '{rev} {desc} {bookmarks} {remotebookmarks}\n'
-  @  3 b  default/b
+  $ hg log -G -T '{desc} {bookmarks} {remotebookmarks}\n'
+  @  b  default/b
   |
-  o  1 a2  default/a
+  o  a2  default/a
   |
-  o  0 a1
+  o  a1
   
 
   $ hg boo c -t default/b
   $ echo c > c
   $ hg add c
   $ hg commit -m c
-  $ hg log -G -T '{rev} {desc} {bookmarks} {remotebookmarks}\n'
-  @  4 c c
+  $ hg log -G -T '{desc} {bookmarks} {remotebookmarks}\n'
+  @  c c
   |
-  o  3 b  default/b
+  o  b  default/b
   |
-  o  1 a2  default/a
+  o  a2  default/a
   |
-  o  0 a1
+  o  a1
   
   $ hg push
   pushing rev e305ab9fea99 to destination $TESTTMP/repo1 bookmark b
@@ -97,14 +97,14 @@ Test push tracking
   adding file changes
   added 1 changesets with 1 changes to 1 files
   updating bookmark b
-  $ hg log -G -T '{rev} {desc} {bookmarks} {remotebookmarks}\n'
-  @  4 c c default/b
+  $ hg log -G -T '{desc} {bookmarks} {remotebookmarks}\n'
+  @  c c default/b
   |
-  o  3 b
+  o  b
   |
-  o  1 a2  default/a
+  o  a2  default/a
   |
-  o  0 a1
+  o  a1
   
 Test push with explicit default path
 
@@ -133,14 +133,14 @@ Test renaming a remote and tracking
   searching for changes
   no changes found
   $ hg book c -t remote/a
-  $ hg log -G -T '{rev} {desc} {bookmarks} {remotebookmarks}\n'
-  @  4 c c remote/b
+  $ hg log -G -T '{desc} {bookmarks} {remotebookmarks}\n'
+  @  c c remote/b
   |
-  o  3 b
+  o  b
   |
-  o  1 a2  remote/a
+  o  a2  remote/a
   |
-  o  0 a1
+  o  a1
   
   $ hg push
   pushing rev e305ab9fea99 to destination $TESTTMP/repo1 bookmark a
@@ -148,14 +148,14 @@ Test renaming a remote and tracking
   no changes found
   updating bookmark a
   [1]
-  $ hg log -G -T '{rev} {desc} {bookmarks} {remotebookmarks}\n'
-  @  4 c c remote/a remote/b
+  $ hg log -G -T '{desc} {bookmarks} {remotebookmarks}\n'
+  @  c c remote/a remote/b
   |
-  o  3 b
+  o  b
   |
-  o  1 a2
+  o  a2
   |
-  o  0 a1
+  o  a1
   
 
 Test untracking
@@ -179,18 +179,18 @@ Test that tracking isn't over-eager on rebase
   (activating bookmark c)
   $ touch d
   $ hg commit -qAm d
-  $ hg log -G -T '{rev} {node|short} {bookmarks} {remotebookmarks}\n'
-  @  6 ff58066d17c3 c
+  $ hg log -G -T '{node|short} {bookmarks} {remotebookmarks}\n'
+  @  ff58066d17c3 c
   |
-  | o  5 364e447d28f4
+  | o  364e447d28f4
   |/
-  | o  4 e305ab9fea99  remote/a remote/b
+  | o  e305ab9fea99  remote/a remote/b
   | |
-  | o  3 2623fce7de21
+  | o  2623fce7de21
   |/
-  o  1 fdceb0e57656
+  o  fdceb0e57656
   |
-  o  0 07199ae38cd5
+  o  07199ae38cd5
   
   $ hg bookmarks -v
    * c                         6:ff58066d17c3            [remote/a: 1 ahead, 2 behind]
@@ -198,50 +198,50 @@ Test that tracking isn't over-eager on rebase
   abort: no matching bookmark to rebase - please rebase to an explicit rev or bookmark
   (run 'hg heads' to see all heads)
   [255]
-  $ hg log -G -T '{rev} {node|short} {bookmarks} {remotebookmarks}\n'
-  @  6 ff58066d17c3 c
+  $ hg log -G -T '{node|short} {bookmarks} {remotebookmarks}\n'
+  @  ff58066d17c3 c
   |
-  | o  5 364e447d28f4
+  | o  364e447d28f4
   |/
-  | o  4 e305ab9fea99  remote/a remote/b
+  | o  e305ab9fea99  remote/a remote/b
   | |
-  | o  3 2623fce7de21
+  | o  2623fce7de21
   |/
-  o  1 fdceb0e57656
+  o  fdceb0e57656
   |
-  o  0 07199ae38cd5
+  o  07199ae38cd5
   
 Test implicit rebase destination
 
-  $ hg log -G -T '{rev} {node|short} {bookmarks} {remotebookmarks}\n'
-  @  6 ff58066d17c3 c
+  $ hg log -G -T '{node|short} {bookmarks} {remotebookmarks}\n'
+  @  ff58066d17c3 c
   |
-  | o  5 364e447d28f4
+  | o  364e447d28f4
   |/
-  | o  4 e305ab9fea99  remote/a remote/b
+  | o  e305ab9fea99  remote/a remote/b
   | |
-  | o  3 2623fce7de21
+  | o  2623fce7de21
   |/
-  o  1 fdceb0e57656
+  o  fdceb0e57656
   |
-  o  0 07199ae38cd5
+  o  07199ae38cd5
   
   $ hg bookmarks -v
    * c                         6:ff58066d17c3            [remote/a: 1 ahead, 2 behind]
   $ hg rebase
   rebasing ff58066d17c3 "d" (c)
-  $ hg log -G -T '{rev} {node|short} {bookmarks} {remotebookmarks}\n'
-  @  7 8d13dc14fef1 c
+  $ hg log -G -T '{node|short} {bookmarks} {remotebookmarks}\n'
+  @  8d13dc14fef1 c
   |
-  | o  5 364e447d28f4
+  | o  364e447d28f4
   | |
-  o |  4 e305ab9fea99  remote/a remote/b
+  o |  e305ab9fea99  remote/a remote/b
   | |
-  o |  3 2623fce7de21
+  o |  2623fce7de21
   |/
-  o  1 fdceb0e57656
+  o  fdceb0e57656
   |
-  o  0 07199ae38cd5
+  o  07199ae38cd5
   
 
 Test distance to tip calculation

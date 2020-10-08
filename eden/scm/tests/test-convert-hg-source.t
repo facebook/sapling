@@ -78,18 +78,18 @@ Test that redoing a convert results in an identical graph
   1 merge remote copy
   0 mark baz executable
   updating bookmarks
-  $ hg -R new log -G -T '{rev} {desc}'
-  o  5 mark baz executable
+  $ hg -R new log -G -T '{desc}'
+  o  mark baz executable
   |
-  o    4 merge remote copy
+  o    merge remote copy
   |\
-  +---o  3 merge local copy
+  +---o  merge local copy
   | |/
-  | o  2 make bar and baz copies of foo
+  | o  make bar and baz copies of foo
   | |
-  o |  1 change foo
+  o |  change foo
   |/
-  o  0 add foo bar
+  o  add foo bar
   
 
 check shamap LF and CRLF handling

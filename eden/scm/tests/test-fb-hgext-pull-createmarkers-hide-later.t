@@ -39,19 +39,19 @@ Set up a client repository, and work on 3 diffs
   $ mkcommit b 123 # 123 is the phabricator rev number (see function above)
   $ mkcommit c 124
   $ mkcommit d 131
-  $ hg log -G -T '{rev} "{desc}" {remotebookmarks}' -r 'all()'
-  @  4 "add d
+  $ hg log -G -T '"{desc}" {remotebookmarks}' -r 'all()'
+  @  "add d
   |
   |  Differential Revision: https://phabricator.fb.com/D131"
-  o  3 "add c
+  o  "add c
   |
   |  Differential Revision: https://phabricator.fb.com/D124"
-  o  2 "add b
+  o  "add b
   |
   |  Differential Revision: https://phabricator.fb.com/D123"
-  o  1 "add secondcommit" default/master
+  o  "add secondcommit" default/master
   |
-  o  0 "add initial"
+  o  "add initial"
   
 
 Now land the first two diff, but with amended commit messages, as would happen
@@ -89,32 +89,32 @@ hide them since there is a non-hidden successor.
   adding manifests
   adding file changes
   added 2 changesets with 0 changes to 2 files
-  $ hg log -G -T '{rev} "{desc}" {remotebookmarks}' -r 'all()'
-  o  7 "add c
+  $ hg log -G -T '"{desc}" {remotebookmarks}' -r 'all()'
+  o  "add c
   |
   |  Differential Revision: https://phabricator.fb.com/D124
   |  Reviewed By: someone" default/master
-  o  6 "add b
+  o  "add b
   |
   |  Differential Revision: https://phabricator.fb.com/D123
   |  Reviewed By: someone"
-  | o  4 "add d
+  | o  "add d
   | |
   | |  Differential Revision: https://phabricator.fb.com/D131"
-  | x  3 "add c
+  | x  "add c
   | |
   | |  Differential Revision: https://phabricator.fb.com/D124"
-  | x  2 "add b
+  | x  "add b
   |/
   |    Differential Revision: https://phabricator.fb.com/D123"
-  @  1 "add secondcommit"
+  @  "add secondcommit"
   |
-  o  0 "add initial"
+  o  "add initial"
   
-  $ hg log -T '{rev}\n' -r 'allsuccessors(948715751816b5aaf59c890f413d3b4c89008f12)'
-  6
-  $ hg log -T '{rev}\n' -r 'allsuccessors(0e229072f72376ff68c3ead4de01e8b8888e1e50)'
-  7
+  $ hg log -T '{node}\n' -r 'allsuccessors(948715751816b5aaf59c890f413d3b4c89008f12)'
+  e0672eeeb97c5767cc642e702951cfcfa73cdc82
+  $ hg log -T '{node}\n' -r 'allsuccessors(0e229072f72376ff68c3ead4de01e8b8888e1e50)'
+  cc68f5e5f8d6a0aa5683ff6fb1afd15aa95a08b8
 
 Now land the last diff.
 
@@ -147,20 +147,20 @@ until now had non-hidden successors.
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 1 files
-  $ hg log -G -T '{rev} "{desc}" {remotebookmarks}' -r 'all()'
-  o  9 "add d
+  $ hg log -G -T '"{desc}" {remotebookmarks}' -r 'all()'
+  o  "add d
   |
   |  Differential Revision: https://phabricator.fb.com/D131
   |  Reviewed By: someone" default/master
-  @  7 "add c
+  @  "add c
   |
   |  Differential Revision: https://phabricator.fb.com/D124
   |  Reviewed By: someone"
-  o  6 "add b
+  o  "add b
   |
   |  Differential Revision: https://phabricator.fb.com/D123
   |  Reviewed By: someone"
-  o  1 "add secondcommit"
+  o  "add secondcommit"
   |
-  o  0 "add initial"
+  o  "add initial"
   

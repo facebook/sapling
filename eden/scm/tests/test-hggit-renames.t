@@ -92,8 +92,8 @@ Remove the submodule and rename the file back:
   $ hg clone -q gitrepo hgrepo
   $ cd hgrepo
   $ hg book master -q
-  $ hg log -p --graph --template "{rev} {node} {desc|firstline}\n{join(extras, ' ')}\n\n"
-  @  8 144790f182a8d92e4134a20b0f8698854a9638b1 remove submodule and rename back
+  $ hg log -p --graph --template "{node} {desc|firstline}\n{join(extras, ' ')}\n\n"
+  @  144790f182a8d92e4134a20b0f8698854a9638b1 remove submodule and rename back
   |  branch=default convert_revision=50d116676a308b7c22935137d944e725d2296f2a hg-git-rename-source=git
   |
   |  diff --git a/.gitmodules b/.gitmodules
@@ -110,7 +110,7 @@ Remove the submodule and rename the file back:
   |  rename from gamma-new
   |  rename to gamma
   |
-  o  7 f49a0c6fd69faeac5e247b5b37b8e7ce1b443e04 rename and add submodule
+  o  f49a0c6fd69faeac5e247b5b37b8e7ce1b443e04 rename and add submodule
   |  branch=default convert_revision=59fb8e82ea18f79eab99196f588e8948089c134f hg-git-rename-source=git
   |
   |  diff --git a/.gitmodules b/.gitmodules
@@ -127,7 +127,7 @@ Remove the submodule and rename the file back:
   |  rename from gamma
   |  rename to gamma-new
   |
-  o  6 2d38f1131e0beb3b73451640bb27e0df3cf3684e beta renamed back
+  o  2d38f1131e0beb3b73451640bb27e0df3cf3684e beta renamed back
   |  branch=default convert_revision=f95497455dfa891b4cd9b524007eb9514c3ab654 hg-git-rename-source=git
   |
   |  diff --git a/beta b/beta
@@ -168,7 +168,7 @@ Remove the submodule and rename the file back:
   |  -11
   |  -12
   |
-  o  5 024a72621ccff3ace020e03019c323d49c718be8 beta renamed
+  o  024a72621ccff3ace020e03019c323d49c718be8 beta renamed
   |  branch=default convert_revision=055f482277da6cd3dd37c7093d06983bad68f782 hg-git-rename-source=git
   |
   |  diff --git a/beta b/beta
@@ -195,7 +195,7 @@ Remove the submodule and rename the file back:
   |  copy from beta
   |  copy to beta-new
   |
-  o  4 b48620502e8b403e9d92f8ff353ee139e4e22bf8 move submodule
+  o  b48620502e8b403e9d92f8ff353ee139e4e22bf8 move submodule
   |  branch=default convert_revision=d7f31298f27df8a9226eddb1e4feb96922c46fa5 hg-git-rename-source=git
   |
   |  diff --git a/.gitmodules b/.gitmodules
@@ -207,7 +207,7 @@ Remove the submodule and rename the file back:
   |  +	path = gitsubmodule2
   |   	url = ../gitsubmodule
   |
-  o  3 ea94d2142cbfdaceacb94bedfe29add896c49e47 add submodule
+  o  ea94d2142cbfdaceacb94bedfe29add896c49e47 add submodule
   |  branch=default convert_revision=c610256cb6959852d9e70d01902a06726317affc hg-git-rename-source=git
   |
   |  diff --git a/.gitmodules b/.gitmodules
@@ -219,7 +219,7 @@ Remove the submodule and rename the file back:
   |  +	path = gitsubmodule
   |  +	url = ../gitsubmodule
   |
-  o  2 e3e6b2083b5cc4382f611b16d23df93a40a19a00 gamma
+  o  e3e6b2083b5cc4382f611b16d23df93a40a19a00 gamma
   |  branch=default convert_revision=e1348449e0c3a417b086ed60fc13f068d4aa8b26 hg-git-rename-source=git
   |
   |  diff --git a/beta b/beta
@@ -241,7 +241,7 @@ Remove the submodule and rename the file back:
   |   11
   |  +13
   |
-  o  1 80be639891f44172f321d555badcbc3f9d11fa87 beta
+  o  80be639891f44172f321d555badcbc3f9d11fa87 beta
   |  branch=default convert_revision=cc83241f39927232f690d370894960b0d1943a0e hg-git-rename-source=git
   |
   |  diff --git a/alpha b/beta
@@ -255,7 +255,7 @@ Remove the submodule and rename the file back:
   |   10
   |  +11
   |
-  o  0 ff861f77355d7a6aba082ff95f2bc716cf192980 alpha
+  o  ff861f77355d7a6aba082ff95f2bc716cf192980 alpha
      branch=default convert_revision=938bb65bb322eb4a3558bec4cdc8a680c4d1794c hg-git-rename-source=git
   
      diff --git a/alpha b/alpha

@@ -46,22 +46,22 @@ Create a few more commits to test that cloud restorebackup preserves order
   $ sleep 1 # Resolution of the database is in seconds. This avoids test flakiness
   $ mkcommit anothercommit2 > /dev/null
   $ hg cloud backup -q
-  $ hg log -T '{rev}:{node}\n'
-  3:e1c1c1f2871f70bd24f941ebfec59f14adf7a13d
-  2:f0d24965f49e87fc581a603dee76196f433444ff
-  1:5ea4271ca0f0cda5477241ae95ffc1fa7056ee6f
-  0:67145f4663446a9580364f70034fea6e21293b6f
+  $ hg log -T '{node}\n'
+  e1c1c1f2871f70bd24f941ebfec59f14adf7a13d
+  f0d24965f49e87fc581a603dee76196f433444ff
+  5ea4271ca0f0cda5477241ae95ffc1fa7056ee6f
+  67145f4663446a9580364f70034fea6e21293b6f
 
 Pull backup and check that commits are in the same order
   $ cd ..
   $ hg clone -q ssh://user@dummy/server client2
   $ cd client2
   $ hg cloud restore -q
-  $ hg log -T '{rev}:{node}\n'
-  3:e1c1c1f2871f70bd24f941ebfec59f14adf7a13d
-  2:f0d24965f49e87fc581a603dee76196f433444ff
-  1:5ea4271ca0f0cda5477241ae95ffc1fa7056ee6f
-  0:67145f4663446a9580364f70034fea6e21293b6f
+  $ hg log -T '{node}\n'
+  e1c1c1f2871f70bd24f941ebfec59f14adf7a13d
+  f0d24965f49e87fc581a603dee76196f433444ff
+  5ea4271ca0f0cda5477241ae95ffc1fa7056ee6f
+  67145f4663446a9580364f70034fea6e21293b6f
 
 Create a server with different name that connects to the same db
   $ cd ..

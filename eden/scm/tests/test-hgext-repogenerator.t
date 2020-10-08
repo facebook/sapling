@@ -49,5 +49,5 @@ Set startcommit=0 and confirm it creates a commit off of 0.
   starting commit is: 0 (goal is 2)
   created 0, * sec elapsed (* commits/sec, * per hour, * per day) (glob)
   generated 1 commits; quitting
-  $ hg log -r tip~1+tip -T '{rev} '
-  0 3  (no-eol)
+  $ hg log -r tip~1+tip -T '{node} '
+  af3f7799efa33044a6588f81254cb7c85d7d4de2 22df286c492c87bc6af7d82e95073bc51fb5631f  (no-eol)

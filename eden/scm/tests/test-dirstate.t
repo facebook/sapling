@@ -81,8 +81,8 @@ coherent (issue4353)
   $ hg up 0
   abort: simulated error while recording dirstateupdates
   [255]
-  $ hg log -r . -T '{rev}\n'
-  1
+  $ hg log -r . -T '{node}\n'
+  dfda8c2e7522c4207035f267703c5f27af5a5bf7
   $ hg status
   ? a
   $ rm .hg/hgrc

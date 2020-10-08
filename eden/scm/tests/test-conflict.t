@@ -86,7 +86,7 @@ Verify custom conflict markers
   $ hg up -q --clean .
   $ cat <<EOF >> .hg/hgrc
   > [ui]
-  > mergemarkertemplate = '{author} {rev}'
+  > mergemarkertemplate = '{author} {node}'
   > EOF
 
   $ hg merge 1
@@ -101,13 +101,13 @@ Verify custom conflict markers
   1
   2
   3
-  <<<<<<< working copy: test 2
+  <<<<<<< working copy: test 6188087473610f9c9c11296d35620d7e0d35f796
   6
   8
   =======
   4
   5
-  >>>>>>> merge rev:    test 1
+  >>>>>>> merge rev:    test c0c68e4fe667f80c031c0e5871bcb12fae657a57
   Hop we are done.
 
 Verify line splitting of custom conflict marker which causes multiple lines
@@ -115,7 +115,7 @@ Verify line splitting of custom conflict marker which causes multiple lines
   $ hg up -q --clean .
   $ cat >> .hg/hgrc <<EOF
   > [ui]
-  > mergemarkertemplate={author} {rev}\nfoo\nbar\nbaz
+  > mergemarkertemplate={author} {node}\nfoo\nbar\nbaz
   > EOF
 
   $ hg -q merge 1
@@ -127,13 +127,13 @@ Verify line splitting of custom conflict marker which causes multiple lines
   1
   2
   3
-  <<<<<<< working copy: test 2
+  <<<<<<< working copy: test 6188087473610f9c9c11296d35620d7e0d35f796
   6
   8
   =======
   4
   5
-  >>>>>>> merge rev:    test 1
+  >>>>>>> merge rev:    test c0c68e4fe667f80c031c0e5871bcb12fae657a57
   Hop we are done.
 
 Verify line trimming of custom conflict marker using multi-byte characters

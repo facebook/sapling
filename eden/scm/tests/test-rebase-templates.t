@@ -11,40 +11,40 @@ Setup
   $ cd repo
   $ for ch in a b c d; do echo foo > $ch; hg commit -Aqm "Added "$ch; done
 
-  $ hg log -G -T "{rev}:{node|short} {desc}"
-  @  3:62615734edd5 Added d
+  $ hg log -G -T "{node|short} {desc}"
+  @  62615734edd5 Added d
   |
-  o  2:28ad74487de9 Added c
+  o  28ad74487de9 Added c
   |
-  o  1:29becc82797a Added b
+  o  29becc82797a Added b
   |
-  o  0:18d04c59bb5d Added a
+  o  18d04c59bb5d Added a
   
 Getting the JSON output for nodechanges
 
   $ hg rebase -s 2 -d 0 -q -Tjson
   json (no-eol)
 
-  $ hg log -G -T "{rev}:{node|short} {desc}"
-  @  5:df21b32134ba Added d
+  $ hg log -G -T "{node|short} {desc}"
+  @  df21b32134ba Added d
   |
-  o  4:849767420fd5 Added c
+  o  849767420fd5 Added c
   |
-  | o  1:29becc82797a Added b
+  | o  29becc82797a Added b
   |/
-  o  0:18d04c59bb5d Added a
+  o  18d04c59bb5d Added a
   
   $ hg rebase -s 1 -d 5 -q -T "{nodechanges|json}"
   {"29becc82797a4bc11ec8880b58eaecd2ab3e7760": ["d9d6773efc831c274eace04bc13e8e6412517139"]} (no-eol)
 
-  $ hg log -G -T "{rev}:{node|short} {desc}"
-  o  6:d9d6773efc83 Added b
+  $ hg log -G -T "{node|short} {desc}"
+  o  d9d6773efc83 Added b
   |
-  @  5:df21b32134ba Added d
+  @  df21b32134ba Added d
   |
-  o  4:849767420fd5 Added c
+  o  849767420fd5 Added c
   |
-  o  0:18d04c59bb5d Added a
+  o  18d04c59bb5d Added a
   
 
   $ hg rebase -s 6 -d 4 -q -T "{nodechanges % '{oldnode}:{newnodes % ' {newnode}'}'}"

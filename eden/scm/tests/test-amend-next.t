@@ -4,7 +4,7 @@ Set up test environment.
   $ configure mutation-norecord
   $ enable amend rebase
   $ showgraph() {
-  >   hg log --graph -T "{rev} {bookmarks} {desc|firstline}" | sed \$d
+  >   hg log --graph -T "{bookmarks} {desc|firstline}" | sed \$d
   > }
   $ newrepo
 
@@ -39,17 +39,17 @@ Create stack of commits and go to the bottom.
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg book bottom
   $ showgraph
-  o  5  r5
+  o   r5
   |
-  o  4  r4
+  o   r4
   |
-  o  3  r3
+  o   r3
   |
-  o  2  r2
+  o   r2
   |
-  o  1  r1
+  o   r1
   |
-  @  0 bottom r0
+  @  bottom r0
 
 Test invalid argument combinations.
   $ hg next --top 1
@@ -95,17 +95,17 @@ Test bookmark navigation.
   $ hg book -r 5 top
   $ hg book -r 3 bookmark
   $ showgraph
-  @  5 top r5
+  @  top r5
   |
-  o  4  r4
+  o   r4
   |
-  o  3 bookmark r3
+  o  bookmark r3
   |
-  o  2  r2
+  o   r2
   |
-  o  1  r1
+  o   r1
   |
-  o  0 bottom r0
+  o  bottom r0
   $ hg up bottom
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark bottom)
@@ -181,19 +181,19 @@ Test --newest flag.
   $ hg commit -m "test"
   $ hg book other
   $ showgraph
-  @  6 other test
+  @  other test
   |
-  | o  5 top r5
+  | o  top r5
   | |
-  | o  4  r4
+  | o   r4
   |/
-  o  3 bookmark r3
+  o  bookmark r3
   |
-  o  2  r2
+  o   r2
   |
-  o  1  r1
+  o   r1
   |
-  o  0 bottom r0
+  o  bottom r0
   $ hg up bottom
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (activating bookmark bottom)
@@ -222,19 +222,19 @@ Test --towards flag.
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (activating bookmark bottom)
   $ showgraph
-  o  6 other test
+  o  other test
   |
-  | o  5 top r5
+  | o  top r5
   | |
-  | o  4  r4
+  | o   r4
   |/
-  o  3 bookmark r3
+  o  bookmark r3
   |
-  o  2  r2
+  o   r2
   |
-  o  1  r1
+  o   r1
   |
-  @  0 bottom r0
+  @  bottom r0
   $ hg next 4 --towards 1
   changeset * has multiple children, namely: (glob)
   [*] r4 (glob)
@@ -257,19 +257,19 @@ Test next prefer draft commit.
   $ hg up 3
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ showgraph
-  o  6 other test
+  o  other test
   |
-  | o  5 top r5
+  | o  top r5
   | |
-  | o  4  r4
+  | o   r4
   |/
-  @  3 bookmark r3
+  @  bookmark r3
   |
-  o  2  r2
+  o   r2
   |
-  o  1  r1
+  o   r1
   |
-  o  0 bottom r0
+  o  bottom r0
 Here we have 2 draft children.
   $ hg next
   changeset * has multiple children, namely: (glob)

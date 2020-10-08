@@ -56,8 +56,9 @@
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
 
-  $ hg log -p -r ::tip -T '{rev}:{node} {desc}\n'
-  0:0d2948821b2b3b6e58505696145f2215cea2b2cd x-lfs
+  $ hg log -p -r ::tip -T '{node} {desc}\n'
+  * files fetched over * (glob) (?)
+  0d2948821b2b3b6e58505696145f2215cea2b2cd x-lfs
   diff --git a/x b/x
   new file mode 100644
   --- /dev/null
@@ -65,12 +66,12 @@
   @@ -0,0 +1,1 @@
   +THIS-IS-LFS-FILE
   
-  1:799bebfa53189a3db8424680f1a8f9806540e541 y-lfs
+  799bebfa53189a3db8424680f1a8f9806540e541 y-lfs
   diff --git a/x b/y
   rename from x
   rename to y
   
-  2:f3dec7f3610207dbf222ec2d7b68df16a5fde0f2 y-nonlfs
+  f3dec7f3610207dbf222ec2d7b68df16a5fde0f2 y-nonlfs
   diff --git a/y b/y
   --- a/y
   +++ b/y
@@ -78,12 +79,12 @@
   -THIS-IS-LFS-FILE
   +NOTLFS
   
-  3:c6cc0cd58884b847de39aa817ded71e6051caa9f x-nonlfs
+  c6cc0cd58884b847de39aa817ded71e6051caa9f x-nonlfs
   diff --git a/y b/x
   rename from y
   rename to x
   
-  4:042535657086a5b08463b9210a8f46dc270e51f9 x-lfs-again
+  042535657086a5b08463b9210a8f46dc270e51f9 x-lfs-again
   diff --git a/x b/x
   --- a/x
   +++ b/x
@@ -91,7 +92,6 @@
    NOTLFS
   +BECOME-LFS-AGAIN
   
-  * files fetched over * (glob) (?)
 
 # lfs content could be read after repack
 
@@ -107,8 +107,8 @@
 
   $ cp -R . ../shallow2
 
-  $ hg log -p -r ::tip -T '{rev}:{node} {desc}\n'
-  0:0d2948821b2b3b6e58505696145f2215cea2b2cd x-lfs
+  $ hg log -p -r ::tip -T '{node} {desc}\n'
+  0d2948821b2b3b6e58505696145f2215cea2b2cd x-lfs
   diff --git a/x b/x
   new file mode 100644
   --- /dev/null
@@ -116,12 +116,12 @@
   @@ -0,0 +1,1 @@
   +THIS-IS-LFS-FILE
   
-  1:799bebfa53189a3db8424680f1a8f9806540e541 y-lfs
+  799bebfa53189a3db8424680f1a8f9806540e541 y-lfs
   diff --git a/x b/y
   rename from x
   rename to y
   
-  2:f3dec7f3610207dbf222ec2d7b68df16a5fde0f2 y-nonlfs
+  f3dec7f3610207dbf222ec2d7b68df16a5fde0f2 y-nonlfs
   diff --git a/y b/y
   --- a/y
   +++ b/y
@@ -129,12 +129,12 @@
   -THIS-IS-LFS-FILE
   +NOTLFS
   
-  3:c6cc0cd58884b847de39aa817ded71e6051caa9f x-nonlfs
+  c6cc0cd58884b847de39aa817ded71e6051caa9f x-nonlfs
   diff --git a/y b/x
   rename from y
   rename to x
   
-  4:042535657086a5b08463b9210a8f46dc270e51f9 x-lfs-again
+  042535657086a5b08463b9210a8f46dc270e51f9 x-lfs-again
   diff --git a/x b/x
   --- a/x
   +++ b/x
@@ -191,8 +191,8 @@
   updating bookmark master
 
   $ cd ../master
-  $ hg log -p -r tip -T '{rev}:{node} {desc}\n'
-  5:515a4dfd2e0c4c963dcbf4bc48587b9747143598 shallow.lfs.commit
+  $ hg log -p -r tip -T '{node} {desc}\n'
+  515a4dfd2e0c4c963dcbf4bc48587b9747143598 shallow.lfs.commit
   diff --git a/x b/y
   rename from x
   rename to y
@@ -218,8 +218,8 @@
   $ hg update tip
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
-  $ hg log -p -r tip -T '{rev}:{node} {desc}\n'
-  5:515a4dfd2e0c4c963dcbf4bc48587b9747143598 shallow.lfs.commit
+  $ hg log -p -r tip -T '{node} {desc}\n'
+  515a4dfd2e0c4c963dcbf4bc48587b9747143598 shallow.lfs.commit
   diff --git a/x b/y
   rename from x
   rename to y
@@ -243,8 +243,8 @@
   $TESTTMP/hgcache/master/packs/bf634767241b49b174b18732f92c6653ff966751.histpack
   $TESTTMP/hgcache/master/packs/repacklock
 
-  $ hg log -p -r ::tip -T '{rev}:{node} {desc}\n'
-  0:0d2948821b2b3b6e58505696145f2215cea2b2cd x-lfs
+  $ hg log -p -r ::tip -T '{node} {desc}\n'
+  0d2948821b2b3b6e58505696145f2215cea2b2cd x-lfs
   diff --git a/x b/x
   new file mode 100644
   --- /dev/null
@@ -252,12 +252,12 @@
   @@ -0,0 +1,1 @@
   +THIS-IS-LFS-FILE
   
-  1:799bebfa53189a3db8424680f1a8f9806540e541 y-lfs
+  799bebfa53189a3db8424680f1a8f9806540e541 y-lfs
   diff --git a/x b/y
   rename from x
   rename to y
   
-  2:f3dec7f3610207dbf222ec2d7b68df16a5fde0f2 y-nonlfs
+  f3dec7f3610207dbf222ec2d7b68df16a5fde0f2 y-nonlfs
   diff --git a/y b/y
   --- a/y
   +++ b/y
@@ -265,12 +265,12 @@
   -THIS-IS-LFS-FILE
   +NOTLFS
   
-  3:c6cc0cd58884b847de39aa817ded71e6051caa9f x-nonlfs
+  c6cc0cd58884b847de39aa817ded71e6051caa9f x-nonlfs
   diff --git a/y b/x
   rename from y
   rename to x
   
-  4:042535657086a5b08463b9210a8f46dc270e51f9 x-lfs-again
+  042535657086a5b08463b9210a8f46dc270e51f9 x-lfs-again
   diff --git a/x b/x
   --- a/x
   +++ b/x
@@ -278,7 +278,7 @@
    NOTLFS
   +BECOME-LFS-AGAIN
   
-  5:515a4dfd2e0c4c963dcbf4bc48587b9747143598 shallow.lfs.commit
+  515a4dfd2e0c4c963dcbf4bc48587b9747143598 shallow.lfs.commit
   diff --git a/x b/y
   rename from x
   rename to y

@@ -3,7 +3,7 @@
   $ enable rebase
   $ readconfig <<EOF
   > [alias]
-  > tlog  = log --template "{rev}: {node|short} '{desc}' {branches}\n"
+  > tlog  = log --template "{node|short} '{desc}' {branches}\n"
   > EOF
 
 
@@ -44,7 +44,7 @@
 Rename is tracked:
 
   $ hg tlog -p --git -r tip
-  3: 73a3ee40125d 'rename A' 
+  73a3ee40125d 'rename A' 
   diff --git a/a b/a-renamed
   rename from a
   rename to a-renamed
@@ -73,7 +73,7 @@ Rebase the revision containing the rename:
 Rename is not lost:
 
   $ hg tlog -p --git -r tip
-  4: 032a9b75e83b 'rename A' 
+  032a9b75e83b 'rename A' 
   diff --git a/a b/a-renamed
   rename from a
   rename to a-renamed
@@ -136,7 +136,7 @@ Rebased revision does not contain information about b (issue3739)
 Copy is tracked:
 
   $ hg tlog -p --git -r tip
-  3: 0a8162ff18a8 'copy A' 
+  0a8162ff18a8 'copy A' 
   diff --git a/a b/a-copied
   copy from a
   copy to a-copied
@@ -159,7 +159,7 @@ Rebase the revision containing the copy:
 Copy is not lost:
 
   $ hg tlog -p --git -r tip
-  4: 98f6e6dbf45a 'copy A' 
+  98f6e6dbf45a 'copy A' 
   diff --git a/a b/a-copied
   copy from a
   copy to a-copied

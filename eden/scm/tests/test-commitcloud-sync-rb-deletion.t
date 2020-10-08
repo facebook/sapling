@@ -4,7 +4,7 @@
   $ setconfig infinitepush.branchpattern=re:scratch/.+
 
   $ showgraph() {
-  >    hg log -G -T "{rev} {desc}: {phase} {bookmarks} {remotenames}" -r "all()"
+  >    hg log -G -T "{desc}: {phase} {bookmarks} {remotenames}" -r "all()"
   > }
 
   $ newserver server
@@ -26,9 +26,9 @@
   $ hg up -q remote/master
   $ hg cloud sync -q
   $ showgraph
-  @  1 public1: public  remote/master
+  @  public1: public  remote/master
   |
-  o  0 base: public
+  o  base: public
   
 
   $ cd $TESTTMP
@@ -37,9 +37,9 @@
   $ hg up -q remote/master
   $ hg cloud sync -q
   $ showgraph
-  @  1 public1: public  remote/master
+  @  public1: public  remote/master
   |
-  o  0 base: public
+  o  base: public
   
 
   $ cd $TESTTMP
@@ -48,9 +48,9 @@
   $ hg up -q remote/master
   $ hg cloud sync -q
   $ showgraph
-  @  1 public1: public  remote/master
+  @  public1: public  remote/master
   |
-  o  0 base: public
+  o  base: public
   
 
   $ cd $TESTTMP
@@ -59,9 +59,9 @@
   $ hg up -q remote/master
   $ hg cloud sync -q
   $ showgraph
-  @  1 public1: public  remote/master
+  @  public1: public  remote/master
   |
-  o  0 base: public
+  o  base: public
   
 
 Pull the other bookmark so we have a subscription.
@@ -89,13 +89,13 @@ Push to a new public branch
      remote/master             1:9da34b1aa207
      remote/other              2:4c8ee072cf16
   $ showgraph
-  @  3 public3: draft
+  @  public3: draft
   |
-  | o  2 public2: public  remote/other
+  | o  public2: public  remote/other
   |/
-  | o  1 public1: public  remote/master
+  | o  public1: public  remote/master
   |/
-  o  0 base: public
+  o  base: public
   
 
 BUG! public3 is draft and 'created' is not subscribed to
@@ -105,13 +105,13 @@ Workaround this bug by pulling created
   pulling from ssh://user@dummy/server
   no changes found
   $ showgraph
-  @  3 public3: public  remote/created
+  @  public3: public  remote/created
   |
-  | o  2 public2: public  remote/other
+  | o  public2: public  remote/other
   |/
-  | o  1 public1: public  remote/master
+  | o  public1: public  remote/master
   |/
-  o  0 base: public
+  o  base: public
   
 
 Create a draft commit and push it to a scratch branch
@@ -126,15 +126,15 @@ Create a draft commit and push it to a scratch branch
   $ hg up 0
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ showgraph
-  o  4 draft1: draft  remote/scratch/draft1
+  o  draft1: draft  remote/scratch/draft1
   |
-  o  3 public3: public  remote/created
+  o  public3: public  remote/created
   |
-  | o  2 public2: public  remote/other
+  | o  public2: public  remote/other
   |/
-  | o  1 public1: public  remote/master
+  | o  public1: public  remote/master
   |/
-  @  0 base: public
+  @  base: public
   
   $ hg cloud sync -q
 
@@ -146,15 +146,15 @@ Create a draft commit and push it to a scratch branch
      remote/other              2:4c8ee072cf16
      remote/scratch/draft1     4:d860d2fc26c5
   $ showgraph
-  o  4 draft1: draft  remote/scratch/draft1
+  o  draft1: draft  remote/scratch/draft1
   |
-  o  3 public3: public  remote/created
+  o  public3: public  remote/created
   |
-  | o  2 public2: public  remote/other
+  | o  public2: public  remote/other
   |/
-  | @  1 public1: public  remote/master
+  | @  public1: public  remote/master
   |/
-  o  0 base: public
+  o  base: public
   
 
 Pull in this repo
@@ -162,13 +162,13 @@ Pull in this repo
   pulling from ssh://user@dummy/server
   no changes found
   $ showgraph
-  o  4 draft1: draft  remote/scratch/draft1
+  o  draft1: draft  remote/scratch/draft1
   |
-  o  3 public3: draft
+  o  public3: draft
   |
-  | @  1 public1: public  remote/master
+  | @  public1: public  remote/master
   |/
-  o  0 base: public
+  o  base: public
   
 BUG! our subscriptions have been lost
 
@@ -177,15 +177,15 @@ Work around this by pulling them by name
   pulling from ssh://user@dummy/server
   no changes found
   $ showgraph
-  o  4 draft1: draft  remote/scratch/draft1
+  o  draft1: draft  remote/scratch/draft1
   |
-  o  3 public3: public  remote/created
+  o  public3: public  remote/created
   |
-  | o  2 public2: public  remote/other
+  | o  public2: public  remote/other
   |/
-  | @  1 public1: public  remote/master
+  | @  public1: public  remote/master
   |/
-  o  0 base: public
+  o  base: public
   
 
 Sync in the third repo
@@ -197,15 +197,15 @@ Sync in the third repo
      remote/other              2:4c8ee072cf16
      remote/scratch/draft1     4:d860d2fc26c5
   $ showgraph
-  o  4 draft1: draft  remote/scratch/draft1
+  o  draft1: draft  remote/scratch/draft1
   |
-  o  3 public3: public  remote/created
+  o  public3: public  remote/created
   |
-  | o  2 public2: public  remote/other
+  | o  public2: public  remote/other
   |/
-  | @  1 public1: public  remote/master
+  | @  public1: public  remote/master
   |/
-  o  0 base: public
+  o  base: public
   
 
 Remove these remote bookmarks
@@ -216,9 +216,9 @@ Remove these remote bookmarks
 TODO: make this a command
   $ hg debugshell -c "with repo.wlock(), repo.lock(), repo.transaction(\"deleteremotebookmarks\"): repo._remotenames.applychanges({\"bookmarks\": {key: '0'*40 if key in {'remote/other', 'remote/created'} else edenscm.mercurial.node.hex(value[0]) for key, value in repo._remotenames[\"bookmarks\"].items() }})"
   $ showgraph
-  @  1 public1: public  remote/master
+  @  public1: public  remote/master
   |
-  o  0 base: public
+  o  base: public
   
   $ hg cloud sync -q
 
@@ -229,9 +229,9 @@ Sync in the first repo
      remote/master             1:9da34b1aa207
      remote/scratch/draft1     4:d860d2fc26c5
   $ showgraph
-  o  1 public1: public  remote/master
+  o  public1: public  remote/master
   |
-  @  0 base: public
+  @  base: public
   
 
 Make an unrelated change to the cloud workspace and sync again
@@ -245,9 +245,9 @@ Sync in the third repo again
      remote/master             1:9da34b1aa207
      remote/scratch/draft1     4:d860d2fc26c5
   $ showgraph
-  @  1 public1: public  remote/master
+  @  public1: public  remote/master
   |
-  o  0 base: public local
+  o  base: public local
   
   $ hg pull
   pulling from ssh://user@dummy/server
@@ -256,9 +256,9 @@ Sync in the third repo again
      remote/master             1:9da34b1aa207
      remote/scratch/draft1     4:d860d2fc26c5
   $ showgraph
-  @  1 public1: public  remote/master
+  @  public1: public  remote/master
   |
-  o  0 base: public local
+  o  base: public local
   
 
 Sync in the fourth repo
@@ -271,9 +271,9 @@ Sync in the fourth repo
   $ hg book --list-subs
      remote/master             1:9da34b1aa207
   $ showgraph
-  @  1 public1: public  remote/master
+  @  public1: public  remote/master
   |
-  o  0 base: public local
+  o  base: public local
   
 
 Sync in the second repo with one of the deleted bookmarks protected
@@ -284,20 +284,20 @@ Sync in the second repo with one of the deleted bookmarks protected
   commitcloud: commits synchronized
   finished in 0.00 sec
   $ showgraph
-  o  2 public2: public  remote/other
+  o  public2: public  remote/other
   |
-  | @  1 public1: public  remote/master
+  | @  public1: public  remote/master
   |/
-  o  0 base: public local
+  o  base: public local
   
 
 The other bookmark is now revived in the other repos
   $ cd $TESTTMP/client4
   $ hg cloud sync -q
   $ showgraph
-  o  2 public2: public  remote/other
+  o  public2: public  remote/other
   |
-  | @  1 public1: public  remote/master
+  | @  public1: public  remote/master
   |/
-  o  0 base: public local
+  o  base: public local
   

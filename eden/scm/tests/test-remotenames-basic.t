@@ -189,26 +189,26 @@ but configured, it'll do the expected thing:
 Test remotenames revset and keyword
 
   $ hg log -r 'remotenames()' \
-  >   --template '{rev}:{node|short} {remotenames}\n'
-  3:47d2a3944de8 beta/babar
+  >   --template '{node|short} {remotenames}\n'
+  47d2a3944de8 beta/babar
 
 Test remotebookmark revsets
 
   $ hg log -r 'remotebookmark()' \
-  >   --template '{rev}:{node|short} {remotebookmarks}\n'
-  3:47d2a3944de8 beta/babar
+  >   --template '{node|short} {remotebookmarks}\n'
+  47d2a3944de8 beta/babar
   $ hg log -r 'remotebookmark("beta/babar")' \
-  >   --template '{rev}:{node|short} {remotebookmarks}\n'
-  3:47d2a3944de8 beta/babar
+  >   --template '{node|short} {remotebookmarks}\n'
+  47d2a3944de8 beta/babar
   $ hg log -r 'remotebookmark("beta/stable")' \
-  >   --template '{rev}:{node|short} {remotebookmarks}\n'
+  >   --template '{node|short} {remotebookmarks}\n'
   abort: no remote bookmarks exist that match 'beta/stable'!
   [255]
   $ hg log -r 'remotebookmark("re:beta/.*")' \
-  >   --template '{rev}:{node|short} {remotebookmarks}\n'
-  3:47d2a3944de8 beta/babar
+  >   --template '{node|short} {remotebookmarks}\n'
+  47d2a3944de8 beta/babar
   $ hg log -r 'remotebookmark("re:gamma/.*")' \
-  >   --template '{rev}:{node|short} {remotebookmarks}\n'
+  >   --template '{node|short} {remotebookmarks}\n'
   abort: no remote bookmarks exist that match 're:gamma/.*'!
   [255]
 

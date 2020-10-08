@@ -53,9 +53,9 @@ Create a repo with non-ascii paths
   $ hg add . -q 2>/dev/null
   $ hg commit -m 'nonascii paths' -q
 
-  $ hg log -T '{rev}:{node} {desc}\n'
-  1:a03fe2c5c0c917d545f5026260290c25e311871f nonascii paths
-  0:c2d59fc1ca219a78013735473161145cb4d7d7fc tailing spaces
+  $ hg log -T '{node} {desc}\n'
+  a03fe2c5c0c917d545f5026260290c25e311871f nonascii paths
+  c2d59fc1ca219a78013735473161145cb4d7d7fc tailing spaces
 
   $ hg bookmark nonasciipath
   $ cd ..
@@ -66,9 +66,9 @@ Create the master repo
   $ cd master1
   $ hg pull -q ../client1
 
-  $ hg log -T '{rev}:{node} {desc}\n'
-  1:a03fe2c5c0c917d545f5026260290c25e311871f nonascii paths
-  0:c2d59fc1ca219a78013735473161145cb4d7d7fc tailing spaces
+  $ hg log -T '{node} {desc}\n'
+  a03fe2c5c0c917d545f5026260290c25e311871f nonascii paths
+  c2d59fc1ca219a78013735473161145cb4d7d7fc tailing spaces
 
   $ cd ..
 
@@ -76,9 +76,9 @@ Create another master repo, it should synchronize from the database
 
   $ initserver master2 sqlreponame
   $ cd master2
-  $ hg log -T '{rev}:{node} {desc}\n'
-  1:a03fe2c5c0c917d545f5026260290c25e311871f nonascii paths
-  0:c2d59fc1ca219a78013735473161145cb4d7d7fc tailing spaces
+  $ hg log -T '{node} {desc}\n'
+  a03fe2c5c0c917d545f5026260290c25e311871f nonascii paths
+  c2d59fc1ca219a78013735473161145cb4d7d7fc tailing spaces
 
   $ hg bookmark
      nonasciipath              1:a03fe2c5c0c9

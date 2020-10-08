@@ -241,14 +241,14 @@ rebase abort should not leave working copy in a merge state if tip-1 is public
   $ hg debugmakepublic -r .
   $ hg up -q foo
   $ echo C > c && hg ci -Aqm C
-  $ hg log -G --template "{rev} {desc} {bookmarks}"
-  @  3 C foo
+  $ hg log -G --template "{desc} {bookmarks}"
+  @  C foo
   |
-  | o  2 c master
+  | o  c master
   | |
-  o |  1 b
+  o |  b
   |/
-  o  0 a
+  o  a
   
 
   $ hg rebase -d master -r foo
@@ -259,14 +259,14 @@ rebase abort should not leave working copy in a merge state if tip-1 is public
   [1]
   $ hg rebase --abort
   rebase aborted
-  $ hg log -G --template "{rev} {desc} {bookmarks}"
-  @  3 C foo
+  $ hg log -G --template "{desc} {bookmarks}"
+  @  C foo
   |
-  | o  2 c master
+  | o  c master
   | |
-  o |  1 b
+  o |  b
   |/
-  o  0 a
+  o  a
   
   $ cd ..
 
@@ -340,20 +340,20 @@ test aborting an interrupted series (issue5084)
   $ hg commit -m no-a
   $ hg co 'desc(base)'
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg log -G --template "{rev} {desc} {bookmarks}"
-  o  6 no-a
+  $ hg log -G --template "{desc} {bookmarks}"
+  o  no-a
   |
-  | o  5 d
+  | o  d
   | |
-  | o  4 c
+  | o  c
   | |
-  | o  3 b
+  | o  b
   | |
-  | o  2 1
+  | o  1
   |/
-  o  1 a
+  o  a
   |
-  @  0 base
+  @  base
   
   $ hg --config extensions.n=$TESTDIR/failfilemerge.py rebase -s 'max(desc(b))' -d tip
   rebasing 3a71550954f1 "b"
@@ -362,20 +362,20 @@ test aborting an interrupted series (issue5084)
   [255]
   $ hg rebase --abort
   rebase aborted
-  $ hg log -G --template "{rev} {desc} {bookmarks}"
-  o  6 no-a
+  $ hg log -G --template "{desc} {bookmarks}"
+  o  no-a
   |
-  | o  5 d
+  | o  d
   | |
-  | o  4 c
+  | o  c
   | |
-  | o  3 b
+  | o  b
   | |
-  | o  2 1
+  | o  1
   |/
-  o  1 a
+  o  a
   |
-  @  0 base
+  @  base
   
   $ hg summary
   parent: 0:df4f53cec30a 

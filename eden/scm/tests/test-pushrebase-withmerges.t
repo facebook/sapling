@@ -15,7 +15,7 @@ Setup
   > }
 
   $ log() {
-  >   hg log -G -T "{desc} [{phase}:{rev}:{node|short}] {bookmarks}" "$@"
+  >   hg log -G -T "{desc} [{phase}:{node|short}] {bookmarks}" "$@"
   > }
 
 Set up server repository
@@ -52,17 +52,17 @@ Build commit graph to push in
   (branch merge, don't forget to commit)
   $ hg commit -m "merge alpha and beta"
   $ log
-  @    merge alpha and beta [draft:5:b41b83f633d8]
+  @    merge alpha and beta [draft:b41b83f633d8]
   |\
-  | o    merge beta [draft:4:45a8d60c53ab]
+  | o    merge beta [draft:45a8d60c53ab]
   | |\
-  | | o  beta [draft:3:4f90fdc3a1aa]
+  | | o  beta [draft:4f90fdc3a1aa]
   | |
-  o |  merge alpha [draft:2:0fcb170b6d84]
+  o |  merge alpha [draft:0fcb170b6d84]
   |\|
-  o |  alpha [draft:1:c85f9ce7b342]
+  o |  alpha [draft:c85f9ce7b342]
    /
-  o  base [public:0:d20a80d4def3]
+  o  base [public:d20a80d4def3]
   
 
 Add a commit in the server
@@ -70,9 +70,9 @@ Add a commit in the server
   $ cd ../server
   $ commit other
   $ log
-  @  other [draft:1:7fd651906bb3] @
+  @  other [draft:7fd651906bb3] @
   |
-  o  base [draft:0:d20a80d4def3]
+  o  base [draft:d20a80d4def3]
   
 
 Push in from the client.
@@ -95,18 +95,18 @@ Push in from the client.
   remote: 6 new changesets from the server will be downloaded
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ log
-  @    merge alpha and beta [public:9:8c1abab9fd04]
+  @    merge alpha and beta [public:8c1abab9fd04]
   |\
-  | o    merge beta [public:8:f71e1c3a925c]
+  | o    merge beta [public:f71e1c3a925c]
   | |\
-  o---+  merge alpha [public:7:a9138cc95bb3]
+  o---+  merge alpha [public:a9138cc95bb3]
   | | |
-  | | o  other [public:6:7fd651906bb3]
+  | | o  other [public:7fd651906bb3]
   | | |
-  | o |  beta [public:3:4f90fdc3a1aa]
+  | o |  beta [public:4f90fdc3a1aa]
   |  /
-  o /  alpha [public:1:c85f9ce7b342]
+  o /  alpha [public:c85f9ce7b342]
    /
-  o  base [public:0:d20a80d4def3]
+  o  base [public:d20a80d4def3]
   
   $ test -f other

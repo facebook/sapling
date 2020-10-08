@@ -31,8 +31,8 @@ Test that treemanifest backfill populates the database
   > [treemanifest]
   > server = True
   > EOF
-  $ hg log -r tip --forcesync -T '{rev}\n'
-  1
+  $ hg log -r tip --forcesync -T '{node}\n'
+  7b4cb4e1674c5469264add78a05260e436e8f400
 
   $ cd ../master
   $ cat >> .hg/hgrc <<EOF
@@ -54,8 +54,8 @@ Test that an empty repo syncs the tree revlogs
   > [treemanifest]
   > server = True
   > EOF
-  $ hg log -r tip --forcesync -T '{rev}\n'
-  1
+  $ hg log -r tip --forcesync -T '{node}\n'
+  7b4cb4e1674c5469264add78a05260e436e8f400
   $ ls .hg/store/meta/dir
   00manifest.i
 
@@ -91,12 +91,12 @@ Test that trees created during push are synced to the db
   remote:     c46827e4453c  c
 
   $ cd ../master-new
-  $ hg log -G -T '{rev} {desc}' --forcesync
-  o  2 c
+  $ hg log -G -T '{desc}' --forcesync
+  o  c
   |
-  o  1 b
+  o  b
   |
-  o  0 a
+  o  a
   
   $ hg debugdata .hg/store/meta/dir/00manifest.i 1
   b\x00b80de5d138758541c5f05265ad144ab9fa86d1db (esc)
@@ -117,16 +117,16 @@ Test that sqltreestrip deletes trees from history
   $ hg -R ../master-alreadysynced log -r tip --forcesync > /dev/null
 
   $ cd ../master
-  $ hg log -G -T '{rev} {desc}' --forcesync
-  o  4 d2
+  $ hg log -G -T '{desc}' --forcesync
+  o  d2
   |
-  o  3 d
+  o  d
   |
-  o  2 c
+  o  c
   |
-  @  1 b
+  @  b
   |
-  o  0 a
+  o  a
   
 
 # First strip just the root treemanifest

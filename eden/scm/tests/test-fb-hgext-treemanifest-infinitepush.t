@@ -112,8 +112,8 @@ Pull a treeonly scratch branch into a normal client
   added 2 changesets with 2 changes to 1 files
 - Verify no new manifest revlog entry was written
 - ...but we can still read the manifest
-  $ hg log -r 02c12aef64ff --stat -T '{rev}\n'
-  3
+  $ hg log -r 02c12aef64ff --stat -T '{node}\n'
+  02c12aef64ffa8bfcb6fe0054cb75084416dd43d
    subdir/a |  1 +
    1 files changed, 1 insertions(+), 0 deletions(-)
   

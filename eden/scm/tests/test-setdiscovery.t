@@ -464,10 +464,10 @@ use existing bundles:
 
 Set iteration order could cause wrong and unstable results - fixed in 73cfaa348650:
 
-  $ hg -R r1 outgoing r2 -T'{rev} '
+  $ hg -R r1 outgoing r2 -T'{node} '
   comparing with r2
   searching for changes
-  101 102 103 104 105 106 107 108 109 110  (no-eol)
+  8c13c0f3b370d03375827a937bec2844b6f434e9 c3a6f1768c0829c6976da63c5c0bdc016a6be8c6 9d20cf6fc2ba72590f2efb85f26bff15c9a52bc5 29c9cb4153153f48223ef411c8cf6c40715c73ec 39353d2949d7a5d5bd61023999816ac11d153f93 90422e1704db8531040213dfb7c6aafff8ec1006 e29d84ee6f815c4e986c041195c7f5ceba12f145 8344dae05a6d73599d11d4597111ffec5cd8a7e3 f9eccd0686ecec5da83fd8e11520fcaaf2dd0de7 5d0b986a083e0d91f116de4691e2aaa54d5bbec0  (no-eol)
 
 The case where all the 'initialsamplesize' samples already were common would
 give 'all remote heads known locally' without checking the remaining heads -
@@ -486,10 +486,10 @@ fixed in 86c35b7ae300:
   > EOF
 
   $ rm -rf r1/.hg/blackbox*
-  $ hg -R r1 outgoing r2 -T'{rev} '
+  $ hg -R r1 outgoing r2 -T'{node} '
   comparing with r2
   searching for changes
-  101 102 103 104 105 106 107 108 109 110  (no-eol)
+  8c13c0f3b370d03375827a937bec2844b6f434e9 c3a6f1768c0829c6976da63c5c0bdc016a6be8c6 9d20cf6fc2ba72590f2efb85f26bff15c9a52bc5 29c9cb4153153f48223ef411c8cf6c40715c73ec 39353d2949d7a5d5bd61023999816ac11d153f93 90422e1704db8531040213dfb7c6aafff8ec1006 e29d84ee6f815c4e986c041195c7f5ceba12f145 8344dae05a6d73599d11d4597111ffec5cd8a7e3 f9eccd0686ecec5da83fd8e11520fcaaf2dd0de7 5d0b986a083e0d91f116de4691e2aaa54d5bbec0  (no-eol)
   $ hg -R r1 blackbox --no-timestamp --no-sid --pattern '{"legacy_log":{"service":"discovery"}}'
   [legacy][discovery] found 101 common and 1 unknown server heads, 2 roundtrips in 0.0000s
   $ cd ..

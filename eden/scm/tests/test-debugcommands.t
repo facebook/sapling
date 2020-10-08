@@ -55,8 +55,8 @@ debugdelta chain basic output
       rev  chain# chainlen     prev   delta       size    rawsize  chainsize     ratio   lindist extradist extraratio
         0       1        1       -1    base         44         43         44   1.02326        44         0    0.00000
 
-  $ hg debugdeltachain -m -T '{rev} {chainid} {chainlen}\n'
-  0 1 1
+  $ hg debugdeltachain -m -T '{chainid} {chainlen}\n'
+  1 1
 
   $ hg debugdeltachain -m -Tjson
   [
@@ -86,8 +86,8 @@ debugdelta chain with sparse read enabled
       rev  chain# chainlen     prev   delta       size    rawsize  chainsize     ratio   lindist extradist extraratio   readsize largestblk rddensity
         0       1        1       -1    base         44         43         44   1.02326        44         0    0.00000         44         44   1.00000
 
-  $ hg debugdeltachain -m -T '{rev} {chainid} {chainlen} {readsize} {largestblock} {readdensity}\n'
-  0 1 1 44 44 1.0
+  $ hg debugdeltachain -m -T '{chainid} {chainlen} {readsize} {largestblock} {readdensity}\n'
+  1 1 44 44 1.0
 
   $ hg debugdeltachain -m -Tjson
   [

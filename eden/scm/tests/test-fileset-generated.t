@@ -69,14 +69,14 @@ Test status
 
 Test log
 
-  $ hg log -T '{rev}\n' --stat 'set:modified()'
-  1
+  $ hg log -T '{node}\n' --stat 'set:modified()'
+  48d96269e76586c74b3363aa443950c307e13588
    content1_content2_content1-tracked |  2 +-
    content1_content2_content3-tracked |  2 +-
    missing_content2_content3-tracked  |  1 +
    3 files changed, 3 insertions(+), 2 deletions(-)
   
-  0
+  d0570d654db594469ff73cfb433110307fc91e08
    content1_content1_content3-tracked |  1 +
    content1_content2_content1-tracked |  1 +
    content1_content2_content3-tracked |  1 +

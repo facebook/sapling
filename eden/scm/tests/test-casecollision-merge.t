@@ -134,7 +134,7 @@ target file is not 'a'/'A' but 'b'/'B' in this case.
   $ hg merge
   abort: case-folding collision between [aA] and [Aa] (re)
   [255]
-  $ hg parents --template '{rev}\n'
+  $ hg parents --template '{node}\n'
   4
   $ hg status -A
   C a
@@ -147,7 +147,7 @@ target file is not 'a'/'A' but 'b'/'B' in this case.
   $ hg merge
   abort: case-folding collision between [aA] and [Aa] (re)
   [255]
-  $ hg parents --template '{rev}\n'
+  $ hg parents --template '{node}\n'
   2
   $ hg status -A
   C A
@@ -269,7 +269,7 @@ test for rename awareness of case-folding collision check:
 
   $ hg update 0
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ hg parents --template '{rev}\n'
+  $ hg parents --template '{node}\n'
   0
   $ hg status -A
   C a
@@ -279,7 +279,7 @@ test for rename awareness of case-folding collision check:
 
   $ hg update --check 0
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ hg parents --template '{rev}\n'
+  $ hg parents --template '{node}\n'
   0
   $ hg status -A
   C a
@@ -288,7 +288,7 @@ test for rename awareness of case-folding collision check:
 
   $ hg update --clean 2
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ hg parents --template '{rev}\n'
+  $ hg parents --template '{node}\n'
   2
   $ hg status -A
   C A
@@ -324,7 +324,7 @@ test for rename awareness of case-folding collision check:
 
   $ hg update --clean
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ hg parents --template '{rev}\n'
+  $ hg parents --template '{node}\n'
   1
   $ hg status -A
   C b

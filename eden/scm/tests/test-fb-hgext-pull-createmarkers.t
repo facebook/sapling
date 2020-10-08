@@ -51,19 +51,19 @@ The first client works on several diffs while the second client lands one of her
   $ mkcommit c 123 # 123 is the phabricator rev number (see function above)
   $ mkcommit d 124 "https://phabricator.intern.facebook.com"
   $ mkcommit e 131
-  $ hg log -G -T '{rev} "{desc}" {remotebookmarks}'
-  @  4 "add e
+  $ hg log -G -T '"{desc}" {remotebookmarks}'
+  @  "add e
   |
   |  Differential Revision: https://phabricator.fb.com/D131"
-  o  3 "add d
+  o  "add d
   |
   |  Differential Revision: https://phabricator.intern.facebook.com/D124"
-  o  2 "add c
+  o  "add c
   |
   |  Differential Revision: https://phabricator.fb.com/D123"
-  o  1 "add secondcommit" default/master
+  o  "add secondcommit" default/master
   |
-  o  0 "add initial"
+  o  "add initial"
   
   $ hg push --to master
   pushing rev d5895ab36037 to destination ssh://user@dummy/server bookmark master
@@ -93,10 +93,10 @@ We update to commit 1 to avoid keeping 2, 3, and 4 visible with inhibit
 
 Here pull should mark 2, 3, and 4 as obsolete since they landed as 6, 7, 8 on
 the remote
-  $ hg log -G -T '{rev} "{desc}" {remotebookmarks}'
-  @  1 "add secondcommit"
+  $ hg log -G -T '"{desc}" {remotebookmarks}'
+  @  "add secondcommit"
   |
-  o  0 "add initial"
+  o  "add initial"
   
   $ hg pull
   pulling from ssh://user@dummy/server
@@ -105,21 +105,21 @@ the remote
   adding manifests
   adding file changes
   added 3 changesets with 0 changes to 3 files
-  $ hg log -G -T '{rev} "{desc}" {remotebookmarks}'
-  o  8 "add e
+  $ hg log -G -T '"{desc}" {remotebookmarks}'
+  o  "add e
   |
   |  Differential Revision: https://phabricator.fb.com/D131" default/master
-  o  7 "add d
+  o  "add d
   |
   |  Differential Revision: https://phabricator.intern.facebook.com/D124"
-  o  6 "add c
+  o  "add c
   |
   |  Differential Revision: https://phabricator.fb.com/D123"
-  o  5 "add b"
+  o  "add b"
   |
-  @  1 "add secondcommit"
+  @  "add secondcommit"
   |
-  o  0 "add initial"
+  o  "add initial"
   
 Rebasing a stack containing landed changesets should only rebase the non-landed
 changesets

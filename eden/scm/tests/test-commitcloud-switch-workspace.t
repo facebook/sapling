@@ -2,7 +2,7 @@
 
   $ configure modern
   $ showgraph() {
-  >    hg log -G -T "{rev} {desc}: {phase} {bookmarks} {remotenames}" -r "all()"
+  >    hg log -G -T "{desc}: {phase} {bookmarks} {remotenames}" -r "all()"
   > }
 
   $ mkcommit() {
@@ -97,11 +97,11 @@ Switch workspace from a draft commit
   please update your location to a public commit first
   [255]
   $ showgraph
-  @  2 B (W1): draft
+  @  B (W1): draft
   |
-  o  1 A (W1): draft
+  o  A (W1): draft
   |
-  o  0 base: public  remote/master
+  o  base: public  remote/master
   
 Switch workspace from a public commit 
   $ hg up d20a80d4def3
@@ -122,11 +122,11 @@ Switch workspace from a public commit
   commitcloud: commits synchronized
   finished in * (glob)
   $ showgraph
-  o  4 D (W2): draft
+  o  D (W2): draft
   |
-  o  3 C (W2): draft
+  o  C (W2): draft
   |
-  @  0 base: public  remote/master
+  @  base: public  remote/master
   
  
 Switch workspace using merge strategy
@@ -142,11 +142,11 @@ Switch workspace using merge strategy
   commitcloud: commits synchronized
   finished in * (glob)
   $ showgraph
-  o  4 D (W2): draft
+  o  D (W2): draft
   |
-  o  3 C (W2): draft
+  o  C (W2): draft
   |
-  @  0 base: public  remote/master
+  @  base: public  remote/master
   
 
 Switch workspace back
@@ -160,21 +160,21 @@ Switch workspace back
   commitcloud: commits synchronized
   finished in * (glob)
   $ showgraph
-  o  2 B (W1): draft
+  o  B (W1): draft
   |
-  o  1 A (W1): draft
+  o  A (W1): draft
   |
-  @  0 base: public  remote/master
+  @  base: public  remote/master
   
 
 Create a bookmark and switch workspace. The bookmark should be preserved in the original workspace
   $ hg bookmark "book (W1)" -r 2
   $ showgraph
-  o  2 B (W1): draft book (W1)
+  o  B (W1): draft book (W1)
   |
-  o  1 A (W1): draft
+  o  A (W1): draft
   |
-  @  0 base: public  remote/master
+  @  base: public  remote/master
   
   $ hg cloud join -w w2 --switch
   commitcloud: synchronizing 'server' with 'user/test/w1'
@@ -186,21 +186,21 @@ Create a bookmark and switch workspace. The bookmark should be preserved in the 
   commitcloud: commits synchronized
   finished in * (glob)
   $ showgraph
-  o  4 D (W2): draft
+  o  D (W2): draft
   |
-  o  3 C (W2): draft
+  o  C (W2): draft
   |
-  @  0 base: public  remote/master
+  @  base: public  remote/master
   
 
 Create a bookmark in w2 and switch workspace. The bookmark should be preserved in the w2. The w1 bookmark should appear.
   $ hg bookmark "book (W2)" -r 4
   $ showgraph
-  o  4 D (W2): draft book (W2)
+  o  D (W2): draft book (W2)
   |
-  o  3 C (W2): draft
+  o  C (W2): draft
   |
-  @  0 base: public  remote/master
+  @  base: public  remote/master
   
 
   $ hg cloud join -w w1 --switch
@@ -213,22 +213,22 @@ Create a bookmark in w2 and switch workspace. The bookmark should be preserved i
   commitcloud: commits synchronized
   finished in * (glob)
   $ showgraph
-  o  2 B (W1): draft book (W1)
+  o  B (W1): draft book (W1)
   |
-  o  1 A (W1): draft
+  o  A (W1): draft
   |
-  @  0 base: public  remote/master
+  @  base: public  remote/master
   
   $ cd ..
 
 Switch between workspaces w1 and w2 in client2
   $ cd client2
   $ showgraph
-  @  2 D (W2): draft
+  @  D (W2): draft
   |
-  o  1 C (W2): draft
+  o  C (W2): draft
   |
-  o  0 base: public  remote/master
+  o  base: public  remote/master
   
   $ hg up d20a80d4def3
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
@@ -248,11 +248,11 @@ Switch between workspaces w1 and w2 in client2
   commitcloud: commits synchronized
   finished in * (glob)
   $ showgraph
-  o  4 B (W1): draft book (W1)
+  o  B (W1): draft book (W1)
   |
-  o  3 A (W1): draft
+  o  A (W1): draft
   |
-  @  0 base: public  remote/master
+  @  base: public  remote/master
   
   $ hg cloud join -w w2 --switch
   commitcloud: synchronizing 'server' with 'user/test/w1'
@@ -264,11 +264,11 @@ Switch between workspaces w1 and w2 in client2
   commitcloud: commits synchronized
   finished in * (glob)
   $ showgraph
-  o  2 D (W2): draft book (W2)
+  o  D (W2): draft book (W2)
   |
-  o  1 C (W2): draft
+  o  C (W2): draft
   |
-  @  0 base: public  remote/master
+  @  base: public  remote/master
   
   $ hg cloud join -w w1 --switch
   commitcloud: synchronizing 'server' with 'user/test/w2'
@@ -280,11 +280,11 @@ Switch between workspaces w1 and w2 in client2
   commitcloud: commits synchronized
   finished in * (glob)
   $ showgraph
-  o  4 B (W1): draft book (W1)
+  o  B (W1): draft book (W1)
   |
-  o  3 A (W1): draft
+  o  A (W1): draft
   |
-  @  0 base: public  remote/master
+  @  base: public  remote/master
   
   $ cd ..
 
@@ -345,11 +345,11 @@ Commit changes to be able to switch
   commitcloud: commits synchronized
   finished in * (glob)
   $ showgraph
-  o  3 B (W1): draft book (W1)
+  o  B (W1): draft book (W1)
   |
-  o  2 A (W1): draft
+  o  A (W1): draft
   |
-  @  0 base: public  remote/master
+  @  base: public  remote/master
   
   $ cd ..
 
@@ -371,115 +371,115 @@ Testing switching workspace with different remote bookmarks
   $ hg pull -B feature -q
   $ hg pull -B master -q
   $ showgraph
-  o  6 M: public  remote/master
+  o  M: public  remote/master
   |
-  | o  5 F: public  remote/feature
+  | o  F: public  remote/feature
   |/
-  | o  2 B (W1): draft book (W1)
+  | o  B (W1): draft book (W1)
   | |
-  | o  1 A (W1): draft
+  | o  A (W1): draft
   |/
-  @  0 base: public
+  @  base: public
   
  
 Bookmark feature should disappear in w2 but master will stay as it is a protected bookmark in this configuration. 
   $ hg cloud join -w w2 --switch -q 
   $ showgraph
-  o  6 M: public  remote/master
+  o  M: public  remote/master
   |
-  | o  4 D (W2): draft book (W2)
+  | o  D (W2): draft book (W2)
   | |
-  | o  3 C (W2): draft
+  | o  C (W2): draft
   |/
-  @  0 base: public
+  @  base: public
   
 
   $ hg pull -B stable -q
   $ showgraph
-  o  7 S: public  remote/stable
+  o  S: public  remote/stable
   |
-  | o  6 M: public  remote/master
+  | o  M: public  remote/master
   |/
-  | o  4 D (W2): draft book (W2)
+  | o  D (W2): draft book (W2)
   | |
-  | o  3 C (W2): draft
+  | o  C (W2): draft
   |/
-  @  0 base: public
+  @  base: public
   
 
 Switch back. Bookmark stable should disappear.
   $ hg cloud join -w w1 --switch -q
   $ showgraph
-  o  6 M: public  remote/master
+  o  M: public  remote/master
   |
-  | o  5 F: public  remote/feature
+  | o  F: public  remote/feature
   |/
-  | o  2 B (W1): draft book (W1)
+  | o  B (W1): draft book (W1)
   | |
-  | o  1 A (W1): draft
+  | o  A (W1): draft
   |/
-  @  0 base: public
+  @  base: public
   
 
 Switch one more time. Bookmark stable should return and feature disappear.
   $ hg cloud join -w w2 --switch -q
   $ showgraph
-  o  7 S: public  remote/stable
+  o  S: public  remote/stable
   |
-  | o  6 M: public  remote/master
+  | o  M: public  remote/master
   |/
-  | o  4 D (W2): draft book (W2)
+  | o  D (W2): draft book (W2)
   | |
-  | o  3 C (W2): draft
+  | o  C (W2): draft
   |/
-  @  0 base: public
+  @  base: public
   
 
 Pull a commit from another workspace
   $ hg pull -r b624c739a2da -q
   $ showgraph
-  o  7 S: draft
+  o  S: draft
   |
-  | o  6 M: public  remote/master
+  | o  M: public  remote/master
   |/
-  | o  4 D (W2): draft book (W2)
+  | o  D (W2): draft book (W2)
   | |
-  | o  3 C (W2): draft
+  | o  C (W2): draft
   |/
-  | o  1 A (W1): draft
+  | o  A (W1): draft
   |/
-  @  0 base: public
+  @  base: public
   
 
 Switch back to W1
 
   $ hg cloud join -w w1 --switch -q
   $ showgraph
-  o  6 M: public  remote/master
+  o  M: public  remote/master
   |
-  | o  5 F: public  remote/feature
+  | o  F: public  remote/feature
   |/
-  | o  2 B (W1): draft book (W1)
+  | o  B (W1): draft book (W1)
   | |
-  | o  1 A (W1): draft
+  | o  A (W1): draft
   |/
-  @  0 base: public
+  @  base: public
   
 
 Switch back to W2 and check that the pulled commit is there.
   $ hg cloud join -w w2 --switch -q
   $ showgraph
-  o  7 S: draft
+  o  S: draft
   |
-  | o  6 M: public  remote/master
+  | o  M: public  remote/master
   |/
-  | o  4 D (W2): draft book (W2)
+  | o  D (W2): draft book (W2)
   | |
-  | o  3 C (W2): draft
+  | o  C (W2): draft
   |/
-  | o  1 A (W1): draft
+  | o  A (W1): draft
   |/
-  @  0 base: public
+  @  base: public
   
  
 
@@ -498,9 +498,9 @@ Test switch to non default non-existent workspace
   commitcloud: commits synchronized
   finished in * (glob)
   $ showgraph
-  o  6 M: public  remote/master
+  o  M: public  remote/master
   |
-  @  0 base: public
+  @  base: public
   
  
 

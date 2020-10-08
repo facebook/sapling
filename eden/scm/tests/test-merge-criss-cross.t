@@ -467,13 +467,13 @@ http://stackoverflow.com/questions/9350005/how-do-i-specify-a-merge-base-to-use-
 
 merge.preferancestor does not affect revsets
 
-  $ hg log -r 'ancestor(head())' --config merge.preferancestor=1 -T '{rev}\n'
-  2
-  $ hg log -r 'ancestor(head())' --config merge.preferancestor=2 -T '{rev}\n'
-  2
-  $ hg log -r 'ancestor(head())' --config merge.preferancestor=3 -T '{rev}\n'
-  2
-  $ hg log -r 'ancestor(head())' --config merge.preferancestor='1337 * - 2' -T '{rev}\n'
-  2
+  $ hg log -r 'ancestor(head())' --config merge.preferancestor=1 -T '{node}\n'
+  b211bbc6eb3cb30e4cbf0ad2d34159554dfb4ec8
+  $ hg log -r 'ancestor(head())' --config merge.preferancestor=2 -T '{node}\n'
+  b211bbc6eb3cb30e4cbf0ad2d34159554dfb4ec8
+  $ hg log -r 'ancestor(head())' --config merge.preferancestor=3 -T '{node}\n'
+  b211bbc6eb3cb30e4cbf0ad2d34159554dfb4ec8
+  $ hg log -r 'ancestor(head())' --config merge.preferancestor='1337 * - 2' -T '{node}\n'
+  b211bbc6eb3cb30e4cbf0ad2d34159554dfb4ec8
 
   $ cd ..

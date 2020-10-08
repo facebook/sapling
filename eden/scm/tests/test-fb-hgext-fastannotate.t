@@ -27,16 +27,16 @@ a simple merge case
   $ hg merge 2 -q
   $ echo 4 >> a
   $ hg commit -m merge
-  $ hg log -G -T '{rev}: {desc}'
-  @    4: merge
+  $ hg log -G -T '{desc}'
+  @    merge
   |\
-  | o  3: insert 0
+  | o  insert 0
   | |
-  o |  2: append 3
+  o |  append 3
   |/
-  o  1: append 2
+  o  append 2
   |
-  o  0: append 1
+  o  append 1
   
   $ hg fastannotate a
   3: 0

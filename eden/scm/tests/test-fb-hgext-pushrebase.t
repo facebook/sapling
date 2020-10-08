@@ -833,14 +833,14 @@ Test pushrebase on merge commit where master is on the p2 side
   added 2 changesets with 0 changes to 2 files
   updating bookmark master
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg -R ../p2mergeserver log -G -T '{rev}: {desc}'
-  o    3: merge b and c
+  $ hg -R ../p2mergeserver log -G -T '{desc}'
+  o    merge b and c
   |\
-  | o  2: add c
+  | o  add c
   |
-  o  1: add b
+  o  add b
   |
-  @  0: add a
+  @  add a
   
   $ hg -R ../p2mergeserver manifest -r 7c3bad9141dcb46ff89abf5f61856facd56e476c
   a
@@ -889,12 +889,12 @@ Test force pushes
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  $ hg log -G -T '{rev} {desc} {bookmarks}'
-  o  2 aa
+  $ hg log -G -T '{desc} {bookmarks}'
+  o  aa
   |
-  | @  1 b
+  | @  b
   |/
-  o  0 a
+  o  a
   
 Make sure that no hg-bundle-* files left
 (the '|| true' and '*' prefix is because ls has different behavior on linux

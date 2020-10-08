@@ -727,20 +727,20 @@ Use delayedstrip to strip inside a transaction
   $ hg testdelayedstrip --config extensions.t=$TESTTMP/delayedstrip.py
   warning: orphaned descendants detected, not stripping 08ebfeb61bac, 112478962961, 7fb047a69f22
 
-  $ hg log -G -T '{rev}:{node|short} {desc}' -r 'sort(all(), topo)'
-  @  6:2f2d51af6205 J
+  $ hg log -G -T '{node|short} {desc}' -r 'sort(all(), topo)'
+  @  2f2d51af6205 J
   |
-  o  3:08ebfeb61bac I
+  o  08ebfeb61bac I
   |
-  | o  5:64a8289d2492 F
+  | o  64a8289d2492 F
   | |
-  | o  2:7fb047a69f22 E
+  | o  7fb047a69f22 E
   |/
-  | o  4:26805aba1e60 C
+  | o  26805aba1e60 C
   | |
-  | o  1:112478962961 B
+  | o  112478962961 B
   |/
-  o  0:426bada5c675 A
+  o  426bada5c675 A
   
 Test high-level scmutil.cleanupnodes API
 
@@ -779,24 +779,24 @@ Test high-level scmutil.cleanupnodes API
   > EOF
   $ hg testnodescleanup --config extensions.t=$TESTTMP/scmutilcleanup.py
 
-  $ hg log -G -T '{rev}:{node|short} {desc} {bookmarks}' -r 'sort(all(), topo)'
-  o  12:1473d4b996d1 G2 G G2 b-F@divergent3 b-G
+  $ hg log -G -T '{node|short} {desc} {bookmarks}' -r 'sort(all(), topo)'
+  o  1473d4b996d1 G2 G G2 b-F@divergent3 b-G
   |
-  | o  11:d11b3456a873 F2 F F2 b-F
+  | o  d11b3456a873 F2 F F2 b-F
   | |
-  | o  8:5cb05ba470a7 H H
+  | o  5cb05ba470a7 H H
   |/|
-  | o  4:7fb047a69f22 E E b-F@divergent1
+  | o  7fb047a69f22 E E b-F@divergent1
   | |
-  | | o  10:7c78f703e465 D2 D D2 b-D
+  | | o  7c78f703e465 D2 D D2 b-D
   | | |
-  | | o  6:26805aba1e60 C
+  | | o  26805aba1e60 C
   | | |
-  | | o  3:112478962961 B
+  | | o  112478962961 B
   | |/
-  o |  1:1fc8102cda62 G
+  o |  1fc8102cda62 G
    /
-  o  0:426bada5c675 A A B C I b-B b-C b-I
+  o  426bada5c675 A A B C I b-B b-C b-I
   
   $ hg bookmark
      A                         0:426bada5c675
@@ -834,24 +834,24 @@ we have reusable code here
 
   $ hg testnodescleanup --config extensions.t=$TESTTMP/scmutilcleanup.py
 
-  $ hg log -G -T '{rev}:{node|short} {desc} {bookmarks}' -r 'sort(all(), topo)'
-  o  12:1473d4b996d1 G2 G G2 b-F@divergent3 b-G
+  $ hg log -G -T '{node|short} {desc} {bookmarks}' -r 'sort(all(), topo)'
+  o  1473d4b996d1 G2 G G2 b-F@divergent3 b-G
   |
-  | o  11:d11b3456a873 F2 F F2 b-F
+  | o  d11b3456a873 F2 F F2 b-F
   | |
-  | o  8:5cb05ba470a7 H H
+  | o  5cb05ba470a7 H H
   |/|
-  | o  4:7fb047a69f22 E E b-F@divergent1
+  | o  7fb047a69f22 E E b-F@divergent1
   | |
-  | | o  10:7c78f703e465 D2 D D2 b-D
+  | | o  7c78f703e465 D2 D D2 b-D
   | | |
-  | | o  6:26805aba1e60 C
+  | | o  26805aba1e60 C
   | | |
-  | | o  3:112478962961 B
+  | | o  112478962961 B
   | |/
-  x |  1:1fc8102cda62 G
+  x |  1fc8102cda62 G
    /
-  o  0:426bada5c675 A A B C I b-B b-C b-I
+  o  426bada5c675 A A B C I b-B b-C b-I
   
   $ hg debugobsolete
   $ cd ..

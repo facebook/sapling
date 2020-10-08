@@ -261,8 +261,8 @@ Verify strip -k resets dirstate correctly
   [exclude]
   hide*
   
-  $ hg log -r . -T '{rev}\n' --stat
-  1
+  $ hg log -r . -T '{node}\n' --stat
+  39278f7c08a90f4978d008dd6edffc97ec308350
    hide  |  2 +-
    hide2 |  1 +
    show  |  2 +-
@@ -282,10 +282,10 @@ Verify rebase succeeds if all changed files are in sparse checkout
 
 Verify log --sparse only shows commits that affect the sparse checkout
 
-  $ hg log -T '{rev} '
-  3 1 0  (no-eol)
-  $ hg log --sparse -T '{rev} '
-  3 0  (no-eol)
+  $ hg log -T '{node} '
+  042e19a4662d597f8f14a73aaaf368bc9c992960 b91df4f39e75c7b8fd8b1c7c7fe5ccdbd1d9a76c 6ef42ed31c865363d437a0a3455fed45f80b5dfd  (no-eol)
+  $ hg log --sparse -T '{node} '
+  042e19a4662d597f8f14a73aaaf368bc9c992960 6ef42ed31c865363d437a0a3455fed45f80b5dfd  (no-eol)
 
 Test status on a file in a subdir
 

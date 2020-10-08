@@ -85,14 +85,14 @@ https://bz.mercurial-scm.org/show_bug.cgi?id=4476
   $ hg graft --continue
   grafting 5974126fad84 "b1"
   warning: can't find ancestor for 'b' copied from 'a'!
-  $ hg log -f b -T 'changeset:   {rev}:{node|short}\nsummary:     {desc}\n\n'
-  changeset:   3:376d30ccffc0
+  $ hg log -f b -T 'changeset:   {node|short}\nsummary:     {desc}\n\n'
+  changeset:   376d30ccffc0
   summary:     b1
   
-  changeset:   2:416baaa2e5e4
+  changeset:   416baaa2e5e4
   summary:     b2
   
-  changeset:   0:3903775176ed
+  changeset:   3903775176ed
   summary:     a
   
 

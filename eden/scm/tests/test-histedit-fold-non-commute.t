@@ -35,17 +35,17 @@
 Initial generation of the command files
 
   $ EDITED="$TESTTMP/editedhistory"
-  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 092e4ce14829f4974399ce4316d59f64ef0b6725 >> $EDITED
-  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r ae78f4c9d74ffa4b6cb5045001c303fe9204e890 >> $EDITED
-  $ hg log --template 'fold {node|short} {rev} {desc}\n' -r 'desc(does)' >> $EDITED
-  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 7f3755409b009372829d4180bfecef5c5bb3a10e >> $EDITED
-  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 'desc(f)' >> $EDITED
+  $ hg log --template 'pick {node|short} {desc}\n' -r 092e4ce14829f4974399ce4316d59f64ef0b6725 >> $EDITED
+  $ hg log --template 'pick {node|short} {desc}\n' -r ae78f4c9d74ffa4b6cb5045001c303fe9204e890 >> $EDITED
+  $ hg log --template 'fold {node|short} {desc}\n' -r 'desc(does)' >> $EDITED
+  $ hg log --template 'pick {node|short} {desc}\n' -r 7f3755409b009372829d4180bfecef5c5bb3a10e >> $EDITED
+  $ hg log --template 'pick {node|short} {desc}\n' -r 'desc(f)' >> $EDITED
   $ cat $EDITED
-  pick 092e4ce14829 3 c
-  pick ae78f4c9d74f 4 d
-  fold 42abbb61bede 7 does not commute with e
-  pick 7f3755409b00 5 e
-  pick dd184f2faeb0 6 f
+  pick 092e4ce14829 c
+  pick ae78f4c9d74f d
+  fold 42abbb61bede does not commute with e
+  pick 7f3755409b00 e
+  pick dd184f2faeb0 f
 
 log before edit
   $ hg log --graph
@@ -188,17 +188,17 @@ Repeat test using "roll", not "fold". "roll" folds in changes but drops message 
 Initial generation of the command files
 
   $ EDITED="$TESTTMP/editedhistory.2"
-  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 092e4ce14829f4974399ce4316d59f64ef0b6725 >> $EDITED
-  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r ae78f4c9d74ffa4b6cb5045001c303fe9204e890 >> $EDITED
-  $ hg log --template 'roll {node|short} {rev} {desc}\n' -r 'desc(does)' >> $EDITED
-  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 7f3755409b009372829d4180bfecef5c5bb3a10e >> $EDITED
-  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 'desc(f)' >> $EDITED
+  $ hg log --template 'pick {node|short} {desc}\n' -r 092e4ce14829f4974399ce4316d59f64ef0b6725 >> $EDITED
+  $ hg log --template 'pick {node|short} {desc}\n' -r ae78f4c9d74ffa4b6cb5045001c303fe9204e890 >> $EDITED
+  $ hg log --template 'roll {node|short} {desc}\n' -r 'desc(does)' >> $EDITED
+  $ hg log --template 'pick {node|short} {desc}\n' -r 7f3755409b009372829d4180bfecef5c5bb3a10e >> $EDITED
+  $ hg log --template 'pick {node|short} {desc}\n' -r 'desc(f)' >> $EDITED
   $ cat $EDITED
-  pick 092e4ce14829 3 c
-  pick ae78f4c9d74f 4 d
-  roll 42abbb61bede 7 does not commute with e
-  pick 7f3755409b00 5 e
-  pick dd184f2faeb0 6 f
+  pick 092e4ce14829 c
+  pick ae78f4c9d74f d
+  roll 42abbb61bede does not commute with e
+  pick 7f3755409b00 e
+  pick dd184f2faeb0 f
 
 log before edit
   $ hg log --graph

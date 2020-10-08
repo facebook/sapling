@@ -46,8 +46,8 @@
   $ hg update
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-  $ hg log -p -r ::tip -T '{rev}:{node} {desc}\n' -G
-  @  4:042535657086a5b08463b9210a8f46dc270e51f9 x-lfs-again
+  $ hg log -p -r ::tip -T '{node} {desc}\n' -G
+  @  042535657086a5b08463b9210a8f46dc270e51f9 x-lfs-again
   |  diff --git a/x b/x
   |  --- a/x
   |  +++ b/x
@@ -55,12 +55,12 @@
   |   NOTLFS
   |  +BECOME-LFS-AGAIN
   |
-  o  3:c6cc0cd58884b847de39aa817ded71e6051caa9f x-nonlfs
+  o  c6cc0cd58884b847de39aa817ded71e6051caa9f x-nonlfs
   |  diff --git a/y b/x
   |  rename from y
   |  rename to x
   |
-  o  2:f3dec7f3610207dbf222ec2d7b68df16a5fde0f2 y-nonlfs
+  o  f3dec7f3610207dbf222ec2d7b68df16a5fde0f2 y-nonlfs
   |  diff --git a/y b/y
   |  --- a/y
   |  +++ b/y
@@ -68,12 +68,12 @@
   |  -THIS-IS-LFS-FILE
   |  +NOTLFS
   |
-  o  1:799bebfa53189a3db8424680f1a8f9806540e541 y-lfs
+  o  799bebfa53189a3db8424680f1a8f9806540e541 y-lfs
   |  diff --git a/x b/y
   |  rename from x
   |  rename to y
   |
-  o  0:0d2948821b2b3b6e58505696145f2215cea2b2cd x-lfs
+  o  0d2948821b2b3b6e58505696145f2215cea2b2cd x-lfs
      diff --git a/x b/x
      new file mode 100644
      --- /dev/null
@@ -174,8 +174,8 @@
 
 # Check content
   $ cd ../master
-  $ hg log -p -r tip -T '{rev}:{node} {desc}\n'
-  5:* shallow.lfs.commit (glob)
+  $ hg log -p -r tip -T '{node} {desc}\n'
+  b5d11a100365149f6276f32b895be1d509e00566 shallow.lfs.commit
   diff --git a/x b/y
   rename from x
   rename to y
@@ -187,18 +187,18 @@
   +ADD-A-LINE
   
 
-  $ hg log -T '{rev}:{node} {bookmarks} {desc}\n' -G
-  o  5:* shallow.lfs.commit (glob)
+  $ hg log -T '{node} {bookmarks} {desc}\n' -G
+  o  b5d11a100365149f6276f32b895be1d509e00566  shallow.lfs.commit
   |
-  @  4:042535657086a5b08463b9210a8f46dc270e51f9 master x-lfs-again
+  @  042535657086a5b08463b9210a8f46dc270e51f9 master x-lfs-again
   |
-  o  3:c6cc0cd58884b847de39aa817ded71e6051caa9f  x-nonlfs
+  o  c6cc0cd58884b847de39aa817ded71e6051caa9f  x-nonlfs
   |
-  o  2:f3dec7f3610207dbf222ec2d7b68df16a5fde0f2  y-nonlfs
+  o  f3dec7f3610207dbf222ec2d7b68df16a5fde0f2  y-nonlfs
   |
-  o  1:799bebfa53189a3db8424680f1a8f9806540e541  y-lfs
+  o  799bebfa53189a3db8424680f1a8f9806540e541  y-lfs
   |
-  o  0:0d2948821b2b3b6e58505696145f2215cea2b2cd  x-lfs
+  o  0d2948821b2b3b6e58505696145f2215cea2b2cd  x-lfs
   
 
 # Verify the server has lfs content after the pushrebase
@@ -268,8 +268,8 @@
   $ hg update tip
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
-  $ hg log -p -r tip -T '{rev}:{node} {desc}\n'
-  5:* shallow.lfs.commit (glob)
+  $ hg log -p -r tip -T '{node} {desc}\n'
+  b5d11a100365149f6276f32b895be1d509e00566 shallow.lfs.commit
   diff --git a/x b/y
   rename from x
   rename to y
@@ -281,17 +281,17 @@
   +ADD-A-LINE
   
 
-  $ hg log -T '{rev}:{node} {bookmarks} {desc}\n' -G
-  @  5:*  shallow.lfs.commit (glob)
+  $ hg log -T '{node} {bookmarks} {desc}\n' -G
+  @  b5d11a100365149f6276f32b895be1d509e00566  shallow.lfs.commit
   |
-  o  4:042535657086a5b08463b9210a8f46dc270e51f9 master x-lfs-again
+  o  042535657086a5b08463b9210a8f46dc270e51f9 master x-lfs-again
   |
-  o  3:c6cc0cd58884b847de39aa817ded71e6051caa9f  x-nonlfs
+  o  c6cc0cd58884b847de39aa817ded71e6051caa9f  x-nonlfs
   |
-  o  2:f3dec7f3610207dbf222ec2d7b68df16a5fde0f2  y-nonlfs
+  o  f3dec7f3610207dbf222ec2d7b68df16a5fde0f2  y-nonlfs
   |
-  o  1:799bebfa53189a3db8424680f1a8f9806540e541  y-lfs
+  o  799bebfa53189a3db8424680f1a8f9806540e541  y-lfs
   |
-  o  0:0d2948821b2b3b6e58505696145f2215cea2b2cd  x-lfs
+  o  0d2948821b2b3b6e58505696145f2215cea2b2cd  x-lfs
   
 #endif

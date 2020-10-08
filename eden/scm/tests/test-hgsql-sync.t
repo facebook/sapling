@@ -135,15 +135,15 @@
   $ hg commit -qAm a
   $ hg push -q ssh://user@dummy/master2
   $ cd ../master
-  $ hg log -l 1 --template '{rev} {desc}\n' &
+  $ hg log -l 1 --template '{desc}\n' &
   $ sleep 1
   [hgsql] getting 1 commits from database
-  $ hg log -l 1 --template '{rev} {desc}\n' --forcesync
+  $ hg log -l 1 --template '{desc}\n' --forcesync
   waiting for lock on working directory of $TESTTMP/master held by * (glob)
   (hint: run 'hg debugprocesstree *' to see related processes) (glob)
-  3 a
+  a
   got lock after * seconds (glob)
-  3 a
+  a
   $ cd ..
   $ cp backup.hgrc $HGRCPATH
 

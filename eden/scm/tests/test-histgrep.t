@@ -45,10 +45,10 @@ simple with color
 simple templated
 
   $ hg histgrep port \
-  > -T '{file}:{rev}:{node|short}:{texts % "{if(matched, text|upper, text)}"}\n'
-  port:4:914fa752cdea:exPORT
-  port:4:914fa752cdea:vaPORTight
-  port:4:914fa752cdea:imPORT/exPORT
+  > -T '{file}:{node|short}:{texts % "{if(matched, text|upper, text)}"}\n'
+  port:914fa752cdea:exPORT
+  port:914fa752cdea:vaPORTight
+  port:914fa752cdea:imPORT/exPORT
 
 simple JSON (no "change" field)
 

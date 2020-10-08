@@ -28,11 +28,11 @@ Test the extensions.afterloaded() function
   $ echo '[extensions]' >> .hg/hgrc
   $ echo "foo = $basepath/foo.py" >> .hg/hgrc
   $ echo "bar = $basepath/bar.py" >> .hg/hgrc
-  $ hg log -r. -T'{rev}\n'
+  $ hg log -r. -T'{node}\n'
   foo.uisetup
   foo: bar loaded: True
   bar.uisetup
-  0
+  c24b9ac61126c9cd86d5d684f8408cdc717005a4
 
 Test afterloaded with the opposite extension load order
 
@@ -46,11 +46,11 @@ Test afterloaded with the opposite extension load order
   $ echo '[extensions]' >> .hg/hgrc
   $ echo "bar = $basepath/bar.py" >> .hg/hgrc
   $ echo "foo = $basepath/foo.py" >> .hg/hgrc
-  $ hg log -r. -T'{rev}\n'
+  $ hg log -r. -T'{node}\n'
   bar.uisetup
   foo.uisetup
   foo: bar loaded: True
-  0
+  c24b9ac61126c9cd86d5d684f8408cdc717005a4
 
 Test the extensions.afterloaded() function when the requested extension is not
 loaded
@@ -64,10 +64,10 @@ loaded
 
   $ echo '[extensions]' >> .hg/hgrc
   $ echo "foo = $basepath/foo.py" >> .hg/hgrc
-  $ hg log -r. -T'{rev}\n'
+  $ hg log -r. -T'{node}\n'
   foo.uisetup
   foo: bar loaded: False
-  0
+  c24b9ac61126c9cd86d5d684f8408cdc717005a4
 
 Test the extensions.afterloaded() function when the requested extension is not
 configured but fails the minimum version check
@@ -88,11 +88,11 @@ configured but fails the minimum version check
   $ echo '[extensions]' >> .hg/hgrc
   $ echo "foo = $basepath/foo.py" >> .hg/hgrc
   $ echo "bar = $basepath/minvers.py" >> .hg/hgrc
-  $ hg log -r. -T'{rev}\n'
+  $ hg log -r. -T'{node}\n'
   (third party extension bar requires version 9999.9999 or newer of Mercurial; disabling)
   foo.uisetup
   foo: bar loaded: False
-  0
+  c24b9ac61126c9cd86d5d684f8408cdc717005a4
 
 Test the extensions.afterloaded() function when the requested extension is not
 configured but fails the minimum version check, using the opposite load order
@@ -108,8 +108,8 @@ for the two extensions.
   $ echo '[extensions]' >> .hg/hgrc
   $ echo "bar = $basepath/minvers.py" >> .hg/hgrc
   $ echo "foo = $basepath/foo.py" >> .hg/hgrc
-  $ hg log -r. -T'{rev}\n'
+  $ hg log -r. -T'{node}\n'
   (third party extension bar requires version 9999.9999 or newer of Mercurial; disabling)
   foo.uisetup
   foo: bar loaded: False
-  0
+  c24b9ac61126c9cd86d5d684f8408cdc717005a4

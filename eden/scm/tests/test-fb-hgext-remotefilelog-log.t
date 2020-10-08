@@ -107,8 +107,8 @@ Log on a file from inside a directory
   
 Log on a file via -fr
   $ cd ..
-  $ hg log -fr tip dir/ --template '{rev}\n'
-  1
+  $ hg log -fr tip dir/ --template '{node}\n'
+  79c51fb9642383579314de1dcd88e4dd7b1b518a
 
 Trace renames
   $ setconfig remotefilelog.localdatarepack=True

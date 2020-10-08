@@ -5,7 +5,7 @@
   $ setconfig phases.publish=false
   $ readconfig <<EOF
   > [alias]
-  > tglog = log -G --template "{rev}: {node|short} '{desc}' {branches}\n"
+  > tglog = log -G --template "{node|short} '{desc}' {branches}\n"
   > EOF
 
 

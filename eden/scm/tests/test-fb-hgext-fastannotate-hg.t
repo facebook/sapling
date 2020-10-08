@@ -185,10 +185,10 @@ annotate after merge
 annotate after merge with -l
 (fastannotate differs from annotate)
 
-  $ hg log -Gp -T '{rev}:{node}' -r '2..5'
-  @    5:64afcdf8e29e063c635be123d8d2fb160af00f7e
+  $ hg log -Gp -T '{node}' -r '2..5'
+  @    64afcdf8e29e063c635be123d8d2fb160af00f7e
   |\
-  | o  4:5fbdc1152d97597717021ad9e063061b200f146bdiff --git a/b b/b
+  | o  5fbdc1152d97597717021ad9e063061b200f146bdiff --git a/b b/b
   | |  --- a/b
   | |  +++ b/b
   | |  @@ -1,3 +1,6 @@
@@ -199,7 +199,7 @@ annotate after merge with -l
   | |  +c
   | |  +b5
   | |
-  o |  3:37ec9f5c3d1f99572d7075971cb4876e2139b52fdiff --git a/b b/b
+  o |  37ec9f5c3d1f99572d7075971cb4876e2139b52fdiff --git a/b b/b
   |/   --- a/b
   |    +++ b/b
   |    @@ -1,3 +1,6 @@
@@ -210,7 +210,7 @@ annotate after merge with -l
   |    +b5
   |    +b6
   |
-  o  2:3086dbafde1ce745abfc8d2d367847280aabae9ddiff --git a/a b/b
+  o  3086dbafde1ce745abfc8d2d367847280aabae9ddiff --git a/a b/b
   |  copy from a
   ~  copy to b
   
@@ -269,8 +269,10 @@ annotate after rename merge
 annotate after rename merge with -l
 (fastannotate differs from annotate)
 
-  $ hg log -Gp -T '{rev}:{node}' -r '0+1+6+7'
-  @    7:6284bb6c38fef984a929862a53bbc71ce9eafa81diff --git a/b b/b
+  $ hg log -Gp -T '{node}' -r '0+1+6+7'
+  :    -a (?)
+  :    -a (?)
+  @    6284bb6c38fef984a929862a53bbc71ce9eafa81diff --git a/b b/b
   |\   --- a/b
   | :  +++ b/b
   | :  @@ -1,3 +1,7 @@
@@ -282,19 +284,18 @@ annotate after rename merge with -l
   | :  +b5
   | :  +d
   | :
-  o :  6:b80e3e32f75a6a67cd4ac85496a11511e9112816diff --git a/a b/b
+  o :  b80e3e32f75a6a67cd4ac85496a11511e9112816diff --git a/a b/b
   :/   copy from a
   :    copy to b
   :    --- a/a
   :    +++ b/b
   :    @@ -1,3 +1,3 @@
-  :    -a (?)
   :     a
-  :    -a (?)
+  :    -a
   :    +z
   :     a
   :
-  o  1:762f04898e6684ff713415f7b8a8d53d33f96c92diff --git a/a b/a
+  o  762f04898e6684ff713415f7b8a8d53d33f96c92diff --git a/a b/a
   |  --- a/a
   |  +++ b/a
   |  @@ -1,1 +1,3 @@
@@ -302,7 +303,7 @@ annotate after rename merge with -l
   |  +a
   |  +a
   |
-  o  0:8435f90966e442695d2ded29fdade2bac5ad8065diff --git a/a b/a
+  o  8435f90966e442695d2ded29fdade2bac5ad8065diff --git a/a b/a
      new file mode 100644
      --- /dev/null
      +++ b/a

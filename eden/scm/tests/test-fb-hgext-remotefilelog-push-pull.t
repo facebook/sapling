@@ -224,16 +224,16 @@ the server supports our custom getfiles method.
   $ hg commit -qAm c2
   $ echo cc > c
   $ hg commit -qAm c22
-  $ hg log -G -T '{rev} {desc}\n'
-  @  4 c22
+  $ hg log -G -T '{desc}\n'
+  @  c22
   |
-  o  3 c2
+  o  c2
   |
-  | o  2 c1
+  | o  c1
   | |
-  | o  1 b
+  | o  b
   |/
-  o  0 a
+  o  a
   
 
   $ cd ../multimf-shallow2
@@ -253,6 +253,6 @@ the server supports our custom getfiles method.
                         write : { bytes : 618}}}}
 
   $ hg up -q 'desc(c22)'
-  $ hg log -f -T '{rev}\n' c
-  5
-  4
+  $ hg log -f -T '{node}\n' c
+  d8f06a4c6d38c9308d3dcbee10c27ae5a01ab93f
+  853b3dc5bcf912b088c60ccd3ec60f35e96b92bb

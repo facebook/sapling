@@ -2,8 +2,8 @@
 
   $ readconfig <<EOF
   > [alias]
-  > tlog = log --template "{rev}:{node|short}: '{desc}'\n"
-  > tout = out --template "{rev}:{node|short}: '{desc}'\n"
+  > tlog = log --template "{node|short}: '{desc}'\n"
+  > tout = out --template "{node|short}: '{desc}'\n"
   > EOF
 
   $ hg init a
@@ -72,22 +72,22 @@
   $ hg tout
   comparing with $TESTTMP/a
   searching for changes
-  3:5de9cb7d8f67: '3'
-  4:acadbdc73b28: '4'
+  5de9cb7d8f67: '3'
+  acadbdc73b28: '4'
 
   $ hg tlog -r 'outgoing()'
-  3:5de9cb7d8f67: '3'
-  4:acadbdc73b28: '4'
+  5de9cb7d8f67: '3'
+  acadbdc73b28: '4'
 
   $ hg tout ../a
   comparing with ../a
   searching for changes
-  3:5de9cb7d8f67: '3'
-  4:acadbdc73b28: '4'
+  5de9cb7d8f67: '3'
+  acadbdc73b28: '4'
 
   $ hg tlog -r 'outgoing("../a")'
-  3:5de9cb7d8f67: '3'
-  4:acadbdc73b28: '4'
+  5de9cb7d8f67: '3'
+  acadbdc73b28: '4'
 
   $ echo "green = ../a" >> .hg/hgrc
 

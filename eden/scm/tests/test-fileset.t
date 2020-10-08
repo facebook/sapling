@@ -221,16 +221,16 @@ There was a commit from subrepo here. Now subrepos are gone, insert a dummy comm
 Test with a revision
 
 
-  $ hg log -G --template '{rev} {desc}\n'
-  @  4 subrepo
+  $ hg log -G --template '{desc}\n'
+  @  subrepo
   |
-  o    3 merge
+  o    merge
   |\
-  | o  2 diverging
+  | o  diverging
   | |
-  o |  1 manychanges
+  o |  manychanges
   |/
-  o  0 addfiles
+  o  addfiles
   
   $ echo unknown > unknown
   $ fileset -r1 'modified()'

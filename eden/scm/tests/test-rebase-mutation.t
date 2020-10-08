@@ -6,9 +6,9 @@
   $ setconfig 'hint.ack=amend-restack'
   $ readconfig <<EOF
   > [ui]
-  > logtemplate= {rev}:{node|short} {desc|firstline}{if(obsolete,' {mutation_nodes}')}
+  > logtemplate= {node|short} {desc|firstline}{if(obsolete,' {mutation_nodes}')}
   > [templatealias]
-  > mutation_nodes = "{join(mutations % '(rewritten using {operation} as {join(successors % \'{rev}:{node|short}\', \', \')})', ' ')}"
+  > mutation_nodes = "{join(mutations % '(rewritten using {operation} as {join(successors % \'{node|short}\', \', \')})', ' ')}"
   > EOF
 
 Setup rebase canonical repo
@@ -23,21 +23,21 @@ Setup rebase canonical repo
   $ hg up tip
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G
-  @  7:02de42196ebe H
+  @  02de42196ebe H
   |
-  | o  6:eea13746799a G
+  | o  eea13746799a G
   |/|
-  o |  5:24b6387c8c8c F
+  o |  24b6387c8c8c F
   | |
-  | o  4:9520eea781bc E
+  | o  9520eea781bc E
   |/
-  | o  3:32af7686d403 D
+  | o  32af7686d403 D
   | |
-  | o  2:5fddd98957c8 C
+  | o  5fddd98957c8 C
   | |
-  | o  1:42ccdea3bb16 B
+  | o  42ccdea3bb16 B
   |/
-  o  0:cd010b8cd998 A
+  o  cd010b8cd998 A
   
   $ cd ..
 
@@ -55,44 +55,44 @@ simple rebase
   rebasing 5fddd98957c8 "C"
   rebasing 32af7686d403 "D"
   $ hg log -G
-  @  10:8eeb3c33ad33 D
+  @  8eeb3c33ad33 D
   |
-  o  9:2327fea05063 C
+  o  2327fea05063 C
   |
-  o  8:e4e5be0395b2 B
+  o  e4e5be0395b2 B
   |
-  | o  7:02de42196ebe H
+  | o  02de42196ebe H
   | |
-  o |  6:eea13746799a G
+  o |  eea13746799a G
   |\|
-  | o  5:24b6387c8c8c F
+  | o  24b6387c8c8c F
   | |
-  o |  4:9520eea781bc E
+  o |  9520eea781bc E
   |/
-  o  0:cd010b8cd998 A
+  o  cd010b8cd998 A
   
   $ hg log --hidden -G
-  @  10:8eeb3c33ad33 D
+  @  8eeb3c33ad33 D
   |
-  o  9:2327fea05063 C
+  o  2327fea05063 C
   |
-  o  8:e4e5be0395b2 B
+  o  e4e5be0395b2 B
   |
-  | o  7:02de42196ebe H
+  | o  02de42196ebe H
   | |
-  o |  6:eea13746799a G
+  o |  eea13746799a G
   |\|
-  | o  5:24b6387c8c8c F
+  | o  24b6387c8c8c F
   | |
-  o |  4:9520eea781bc E
+  o |  9520eea781bc E
   |/
-  | x  3:32af7686d403 D (rewritten using rebase as 10:8eeb3c33ad33)
+  | x  32af7686d403 D (rewritten using rebase as 8eeb3c33ad33)
   | |
-  | x  2:5fddd98957c8 C (rewritten using rebase as 9:2327fea05063)
+  | x  5fddd98957c8 C (rewritten using rebase as 2327fea05063)
   | |
-  | x  1:42ccdea3bb16 B (rewritten using rebase as 8:e4e5be0395b2)
+  | x  42ccdea3bb16 B (rewritten using rebase as e4e5be0395b2)
   |/
-  o  0:cd010b8cd998 A
+  o  cd010b8cd998 A
   
   $ hg debugmutation -r ::.
    *  cd010b8cd998f3981a5a8115f94f8da4ab506089
@@ -138,44 +138,44 @@ set.
   rebasing 32af7686d403 "D"
   note: rebase of 3:32af7686d403 created no changes to commit
   $ hg log -G
-  o  10:5ae4c968c6ac C
+  o  5ae4c968c6ac C
   |
-  @  9:08483444fef9 D
+  @  08483444fef9 D
   |
-  o  8:8877864f1edb B
+  o  8877864f1edb B
   |
-  | o  7:02de42196ebe H
+  | o  02de42196ebe H
   | |
-  o |  6:eea13746799a G
+  o |  eea13746799a G
   |\|
-  | o  5:24b6387c8c8c F
+  | o  24b6387c8c8c F
   | |
-  o |  4:9520eea781bc E
+  o |  9520eea781bc E
   |/
-  o  0:cd010b8cd998 A
+  o  cd010b8cd998 A
   
   $ hg log --hidden -G
-  o  10:5ae4c968c6ac C
+  o  5ae4c968c6ac C
   |
-  @  9:08483444fef9 D
+  @  08483444fef9 D
   |
-  o  8:8877864f1edb B
+  o  8877864f1edb B
   |
-  | o  7:02de42196ebe H
+  | o  02de42196ebe H
   | |
-  o |  6:eea13746799a G
+  o |  eea13746799a G
   |\|
-  | o  5:24b6387c8c8c F
+  | o  24b6387c8c8c F
   | |
-  o |  4:9520eea781bc E
+  o |  9520eea781bc E
   |/
-  | o  3:32af7686d403 D
+  | o  32af7686d403 D
   | |
-  | x  2:5fddd98957c8 C (rewritten using rebase as 10:5ae4c968c6ac)
+  | x  5fddd98957c8 C (rewritten using rebase as 5ae4c968c6ac)
   | |
-  | o  1:42ccdea3bb16 B
+  | o  42ccdea3bb16 B
   |/
-  o  0:cd010b8cd998 A
+  o  cd010b8cd998 A
   
   $ hg debugmutation -r 10
    *  5ae4c968c6aca831df823664e706c9d4aa34473d rebase by test at 1970-01-01T00:00:00 from:
@@ -191,23 +191,23 @@ More complex case where part of the rebase set were already rebased
       08483444fef91d6224f6655ee586a65d263ad34c
   
   $ hg log -G
-  @  11:4596109a6a43 D
+  @  4596109a6a43 D
   |
-  | o  10:5ae4c968c6ac C
+  | o  5ae4c968c6ac C
   | |
-  | x  9:08483444fef9 D (rewritten using rebase as 11:4596109a6a43)
+  | x  08483444fef9 D (rewritten using rebase as 4596109a6a43)
   | |
-  | o  8:8877864f1edb B
+  | o  8877864f1edb B
   | |
-  o |  7:02de42196ebe H
+  o |  02de42196ebe H
   | |
-  | o  6:eea13746799a G
+  | o  eea13746799a G
   |/|
-  o |  5:24b6387c8c8c F
+  o |  24b6387c8c8c F
   | |
-  | o  4:9520eea781bc E
+  | o  9520eea781bc E
   |/
-  o  0:cd010b8cd998 A
+  o  cd010b8cd998 A
   
   $ hg rebase --source 'desc(B)' --dest 'tip' --config experimental.rebaseskipobsolete=True
   rebasing 8877864f1edb "B"
@@ -225,21 +225,21 @@ More complex case where part of the rebase set were already rebased
       5fddd98957c8a54a4d436dfe1da9d87f21a1b97b
   
   $ hg log -G
-  o  13:98f6af4ee953 C
+  o  98f6af4ee953 C
   |
-  o  12:462a34d07e59 B
+  o  462a34d07e59 B
   |
-  @  11:4596109a6a43 D
+  @  4596109a6a43 D
   |
-  o  7:02de42196ebe H
+  o  02de42196ebe H
   |
-  | o  6:eea13746799a G
+  | o  eea13746799a G
   |/|
-  o |  5:24b6387c8c8c F
+  o |  24b6387c8c8c F
   | |
-  | o  4:9520eea781bc E
+  | o  9520eea781bc E
   |/
-  o  0:cd010b8cd998 A
+  o  cd010b8cd998 A
   
   $ hg log --style default --debug -r 4596109a6a4328c398bde3a4a3b6737cfade3003
   commit:      4596109a6a4328c398bde3a4a3b6737cfade3003
@@ -284,25 +284,25 @@ even though it is hidden (until we're moved there).
   $ hg rebase --rev 13 --dest 15
   rebasing 98f6af4ee953 "C"
   $ hg log -G
-  o  16:294a2b93eb4d C
+  o  294a2b93eb4d C
   |
-  o  15:627d46148090 D
+  o  627d46148090 D
   |
-  | o  12:462a34d07e59 B
+  | o  462a34d07e59 B
   | |
-  | o  11:4596109a6a43 D
+  | o  4596109a6a43 D
   | |
-  | o  7:02de42196ebe H
+  | o  02de42196ebe H
   | |
-  +---o  6:eea13746799a G
+  +---o  eea13746799a G
   | |/
-  | o  5:24b6387c8c8c F
+  | o  24b6387c8c8c F
   | |
-  o |  4:9520eea781bc E
+  o |  9520eea781bc E
   |/
-  | @  1:42ccdea3bb16 B
+  | @  42ccdea3bb16 B
   |/
-  o  0:cd010b8cd998 A
+  o  cd010b8cd998 A
   
 
   $ cd ..
@@ -318,36 +318,36 @@ collapse rebase
   rebasing 5fddd98957c8 "C"
   rebasing 32af7686d403 "D"
   $ hg log -G
-  o  8:4dc2197e807b Collapsed revision
+  o  4dc2197e807b Collapsed revision
   |
-  | @  7:02de42196ebe H
+  | @  02de42196ebe H
   | |
-  o |  6:eea13746799a G
+  o |  eea13746799a G
   |\|
-  | o  5:24b6387c8c8c F
+  | o  24b6387c8c8c F
   | |
-  o |  4:9520eea781bc E
+  o |  9520eea781bc E
   |/
-  o  0:cd010b8cd998 A
+  o  cd010b8cd998 A
   
   $ hg log --hidden -G
-  o  8:4dc2197e807b Collapsed revision
+  o  4dc2197e807b Collapsed revision
   |
-  | @  7:02de42196ebe H
+  | @  02de42196ebe H
   | |
-  o |  6:eea13746799a G
+  o |  eea13746799a G
   |\|
-  | o  5:24b6387c8c8c F
+  | o  24b6387c8c8c F
   | |
-  o |  4:9520eea781bc E
+  o |  9520eea781bc E
   |/
-  | x  3:32af7686d403 D (rewritten using rebase as 8:4dc2197e807b)
+  | x  32af7686d403 D (rewritten using rebase as 4dc2197e807b)
   | |
-  | x  2:5fddd98957c8 C (rewritten using rebase as 8:4dc2197e807b)
+  | x  5fddd98957c8 C (rewritten using rebase as 4dc2197e807b)
   | |
-  | x  1:42ccdea3bb16 B (rewritten using rebase as 8:4dc2197e807b)
+  | x  42ccdea3bb16 B (rewritten using rebase as 4dc2197e807b)
   |/
-  o  0:cd010b8cd998 A
+  o  cd010b8cd998 A
   
   $ hg id --debug -r tip
   4dc2197e807bae9817f09905b50ab288be2dbbcf
@@ -372,83 +372,83 @@ be rebased.
   $ cd hidden
   $ hg up -q 'desc(H)'
   $ hg log -G
-  @  7:02de42196ebe H
+  @  02de42196ebe H
   |
-  | o  6:eea13746799a G
+  | o  eea13746799a G
   |/|
-  o |  5:24b6387c8c8c F
+  o |  24b6387c8c8c F
   | |
-  | o  4:9520eea781bc E
+  | o  9520eea781bc E
   |/
-  | o  3:32af7686d403 D
+  | o  32af7686d403 D
   | |
-  | o  2:5fddd98957c8 C
+  | o  5fddd98957c8 C
   | |
-  | o  1:42ccdea3bb16 B
+  | o  42ccdea3bb16 B
   |/
-  o  0:cd010b8cd998 A
+  o  cd010b8cd998 A
   
   $ hg rebase -s 5fddd98957c8 -d eea13746799a
   rebasing 5fddd98957c8 "C"
   rebasing 32af7686d403 "D"
   $ hg log -G
-  o  9:cf44d2f5a9f4 D
+  o  cf44d2f5a9f4 D
   |
-  o  8:e273c5e7d2d2 C
+  o  e273c5e7d2d2 C
   |
-  | @  7:02de42196ebe H
+  | @  02de42196ebe H
   | |
-  o |  6:eea13746799a G
+  o |  eea13746799a G
   |\|
-  | o  5:24b6387c8c8c F
+  | o  24b6387c8c8c F
   | |
-  o |  4:9520eea781bc E
+  o |  9520eea781bc E
   |/
-  | o  1:42ccdea3bb16 B
+  | o  42ccdea3bb16 B
   |/
-  o  0:cd010b8cd998 A
+  o  cd010b8cd998 A
   
   $ hg rebase -s 42ccdea3bb16 -d 02de42196ebe
   rebasing 42ccdea3bb16 "B"
   $ hg log -G
-  o  10:7c6027df6a99 B
+  o  7c6027df6a99 B
   |
-  | o  9:cf44d2f5a9f4 D
+  | o  cf44d2f5a9f4 D
   | |
-  | o  8:e273c5e7d2d2 C
+  | o  e273c5e7d2d2 C
   | |
-  @ |  7:02de42196ebe H
+  @ |  02de42196ebe H
   | |
-  | o  6:eea13746799a G
+  | o  eea13746799a G
   |/|
-  o |  5:24b6387c8c8c F
+  o |  24b6387c8c8c F
   | |
-  | o  4:9520eea781bc E
+  | o  9520eea781bc E
   |/
-  o  0:cd010b8cd998 A
+  o  cd010b8cd998 A
   
   $ hg log --hidden -G
-  o  10:7c6027df6a99 B
+  o  7c6027df6a99 B
   |
-  | o  9:cf44d2f5a9f4 D
+  | o  cf44d2f5a9f4 D
   | |
-  | o  8:e273c5e7d2d2 C
+  | o  e273c5e7d2d2 C
   | |
-  @ |  7:02de42196ebe H
+  @ |  02de42196ebe H
   | |
-  | o  6:eea13746799a G
+  | o  eea13746799a G
   |/|
-  o |  5:24b6387c8c8c F
+  o |  24b6387c8c8c F
   | |
-  | o  4:9520eea781bc E
+  | o  9520eea781bc E
   |/
-  | x  3:32af7686d403 D (rewritten using rebase as 9:cf44d2f5a9f4)
+  | x  32af7686d403 D (rewritten using rebase as cf44d2f5a9f4)
   | |
-  | x  2:5fddd98957c8 C (rewritten using rebase as 8:e273c5e7d2d2)
+  | x  5fddd98957c8 C (rewritten using rebase as e273c5e7d2d2)
   | |
-  | x  1:42ccdea3bb16 B (rewritten using rebase as 10:7c6027df6a99)
+  | x  42ccdea3bb16 B (rewritten using rebase as 7c6027df6a99)
   |/
-  o  0:cd010b8cd998 A
+  o  cd010b8cd998 A
   
   $ hg debugmutation -r 8 -r 9 -r 10
    *  e273c5e7d2d29df783dce9f9eaa3ac4adc69c15d rebase by test at 1970-01-01T00:00:00 from:
@@ -465,27 +465,27 @@ Test that rewriting leaving instability behind is allowed
 ---------------------------------------------------------------------
 
   $ hg log -r 'children(8)'
-  9:cf44d2f5a9f4 D (no-eol)
+  cf44d2f5a9f4 D (no-eol)
   $ hg rebase -r 8
   rebasing e273c5e7d2d2 "C"
   $ hg log -G
-  o  11:0d8f238b634c C
+  o  0d8f238b634c C
   |
-  o  10:7c6027df6a99 B
+  o  7c6027df6a99 B
   |
-  | o  9:cf44d2f5a9f4 D
+  | o  cf44d2f5a9f4 D
   | |
-  | x  8:e273c5e7d2d2 C (rewritten using rebase as 11:0d8f238b634c)
+  | x  e273c5e7d2d2 C (rewritten using rebase as 0d8f238b634c)
   | |
-  @ |  7:02de42196ebe H
+  @ |  02de42196ebe H
   | |
-  | o  6:eea13746799a G
+  | o  eea13746799a G
   |/|
-  o |  5:24b6387c8c8c F
+  o |  24b6387c8c8c F
   | |
-  | o  4:9520eea781bc E
+  | o  9520eea781bc E
   |/
-  o  0:cd010b8cd998 A
+  o  cd010b8cd998 A
   
 
 
@@ -497,23 +497,23 @@ Test multiple root handling
   rebasing cf44d2f5a9f4 "D"
   rebasing 0d8f238b634c "C"
   $ hg log -G
-  o  14:1e8370e38cca C
+  o  1e8370e38cca C
   |
-  | o  13:102b4c1d889b D
+  | o  102b4c1d889b D
   | |
-  @ |  12:bfe264faf697 H
+  @ |  bfe264faf697 H
   |/
-  | o  10:7c6027df6a99 B
+  | o  7c6027df6a99 B
   | |
-  | x  7:02de42196ebe H (rewritten using rebase as 12:bfe264faf697)
+  | x  02de42196ebe H (rewritten using rebase as bfe264faf697)
   | |
-  +---o  6:eea13746799a G
+  +---o  eea13746799a G
   | |/
-  | o  5:24b6387c8c8c F
+  | o  24b6387c8c8c F
   | |
-  o |  4:9520eea781bc E
+  o |  9520eea781bc E
   |/
-  o  0:cd010b8cd998 A
+  o  cd010b8cd998 A
   
   $ cd ..
 
@@ -562,25 +562,25 @@ test on rebase dropping a merge
   $ hg add I
   $ hg ci -m I
   $ hg log -G
-  @  9:4bde274eefcf I
+  @  4bde274eefcf I
   |
-  o    8:53a6a128b2b7 M
+  o    53a6a128b2b7 M
   |\
-  | o  7:02de42196ebe H
+  | o  02de42196ebe H
   | |
-  | | o  6:eea13746799a G
+  | | o  eea13746799a G
   | |/|
-  | o |  5:24b6387c8c8c F
+  | o |  24b6387c8c8c F
   | | |
-  | | o  4:9520eea781bc E
+  | | o  9520eea781bc E
   | |/
-  o |  3:32af7686d403 D
+  o |  32af7686d403 D
   | |
-  o |  2:5fddd98957c8 C
+  o |  5fddd98957c8 C
   | |
-  o |  1:42ccdea3bb16 B
+  o |  42ccdea3bb16 B
   |/
-  o  0:cd010b8cd998 A
+  o  cd010b8cd998 A
   
 (actual test)
 
@@ -589,29 +589,29 @@ test on rebase dropping a merge
   rebasing 02de42196ebe "H"
   rebasing 4bde274eefcf "I"
   $ hg log -G
-  @  12:acd174b7ab39 I
+  @  acd174b7ab39 I
   |
-  o  11:6c11a6218c97 H
+  o  6c11a6218c97 H
   |
-  | o  10:b5313c85b22e D
+  | o  b5313c85b22e D
   |/
-  | o    8:53a6a128b2b7 M
+  | o    53a6a128b2b7 M
   | |\
-  | | x  7:02de42196ebe H (rewritten using rebase as 11:6c11a6218c97)
+  | | x  02de42196ebe H (rewritten using rebase as 6c11a6218c97)
   | | |
-  o---+  6:eea13746799a G
+  o---+  eea13746799a G
   | | |
-  | | o  5:24b6387c8c8c F
+  | | o  24b6387c8c8c F
   | | |
-  o---+  4:9520eea781bc E
+  o---+  9520eea781bc E
    / /
-  x |  3:32af7686d403 D (rewritten using rebase as 10:b5313c85b22e)
+  x |  32af7686d403 D (rewritten using rebase as b5313c85b22e)
   | |
-  o |  2:5fddd98957c8 C
+  o |  5fddd98957c8 C
   | |
-  o |  1:42ccdea3bb16 B
+  o |  42ccdea3bb16 B
   |/
-  o  0:cd010b8cd998 A
+  o  cd010b8cd998 A
   
 
 Test hidden changesets in the rebase set (issue4504)
@@ -628,33 +628,33 @@ Test hidden changesets in the rebase set (issue4504)
   rebasing 4bde274eefcf "I"
   rebasing 06edfc82198f "J"
   $ hg log -G
-  @  15:5ae8a643467b J
+  @  5ae8a643467b J
   |
-  o  14:9ad579b4a5de I
+  o  9ad579b4a5de I
   |
-  | o  12:acd174b7ab39 I
+  | o  acd174b7ab39 I
   | |
-  | o  11:6c11a6218c97 H
+  | o  6c11a6218c97 H
   | |
-  o |  10:b5313c85b22e D
+  o |  b5313c85b22e D
   |/
-  | o    8:53a6a128b2b7 M
+  | o    53a6a128b2b7 M
   | |\
-  | | x  7:02de42196ebe H (rewritten using rebase as 11:6c11a6218c97)
+  | | x  02de42196ebe H (rewritten using rebase as 6c11a6218c97)
   | | |
-  o---+  6:eea13746799a G
+  o---+  eea13746799a G
   | | |
-  | | o  5:24b6387c8c8c F
+  | | o  24b6387c8c8c F
   | | |
-  o---+  4:9520eea781bc E
+  o---+  9520eea781bc E
    / /
-  x |  3:32af7686d403 D (rewritten using rebase as 10:b5313c85b22e)
+  x |  32af7686d403 D (rewritten using rebase as b5313c85b22e)
   | |
-  o |  2:5fddd98957c8 C
+  o |  5fddd98957c8 C
   | |
-  o |  1:42ccdea3bb16 B
+  o |  42ccdea3bb16 B
   |/
-  o  0:cd010b8cd998 A
+  o  cd010b8cd998 A
   
   $ hg up 14 -C
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -670,39 +670,39 @@ Test hidden changesets in the rebase set (issue4504)
   $ hg add M
   $ hg commit --amend -m "M"
   $ hg log -G
-  @  18:bfaedf8eb73b M
+  @  bfaedf8eb73b M
   |
-  | o  17:97219452e4bd L
+  | o  97219452e4bd L
   | |
-  | x  16:fc37a630c901 K (rewritten using amend as 18:bfaedf8eb73b)
+  | x  fc37a630c901 K (rewritten using amend as bfaedf8eb73b)
   |/
-  | o  15:5ae8a643467b J
+  | o  5ae8a643467b J
   | |
-  | x  14:9ad579b4a5de I (rewritten using amend as 16:fc37a630c901)
+  | x  9ad579b4a5de I (rewritten using amend as fc37a630c901)
   |/
-  | o  12:acd174b7ab39 I
+  | o  acd174b7ab39 I
   | |
-  | o  11:6c11a6218c97 H
+  | o  6c11a6218c97 H
   | |
-  o |  10:b5313c85b22e D
+  o |  b5313c85b22e D
   |/
-  | o    8:53a6a128b2b7 M
+  | o    53a6a128b2b7 M
   | |\
-  | | x  7:02de42196ebe H (rewritten using rebase as 11:6c11a6218c97)
+  | | x  02de42196ebe H (rewritten using rebase as 6c11a6218c97)
   | | |
-  o---+  6:eea13746799a G
+  o---+  eea13746799a G
   | | |
-  | | o  5:24b6387c8c8c F
+  | | o  24b6387c8c8c F
   | | |
-  o---+  4:9520eea781bc E
+  o---+  9520eea781bc E
    / /
-  x |  3:32af7686d403 D (rewritten using rebase as 10:b5313c85b22e)
+  x |  32af7686d403 D (rewritten using rebase as b5313c85b22e)
   | |
-  o |  2:5fddd98957c8 C
+  o |  5fddd98957c8 C
   | |
-  o |  1:42ccdea3bb16 B
+  o |  42ccdea3bb16 B
   |/
-  o  0:cd010b8cd998 A
+  o  cd010b8cd998 A
   
   $ hg rebase -s 14 -d 17 --config experimental.rebaseskipobsolete=True
   note: not rebasing 9ad579b4a5de "I", already in destination as fc37a630c901 "K"
@@ -737,13 +737,13 @@ setup
   $ hg add C
   $ hg commit -m C
   $ hg log -G
-  @  4:212cb178bcbb C
+  @  212cb178bcbb C
   |
-  | o  3:261e70097290 B2
+  | o  261e70097290 B2
   | |
-  x |  1:a8b11f55fb19 B0 (rewritten using rewrite as 3:261e70097290)
+  x |  a8b11f55fb19 B0 (rewritten using rewrite as 261e70097290)
   |/
-  o  0:4a2df7238c3b A
+  o  4a2df7238c3b A
   
 
 Rebase finds its way in a chain of marker
@@ -766,15 +766,15 @@ XXX: rev 3 should remain hidden. (debugstrip is rarely used so this might be oka
   $ hg hide 3 -q --hidden
 
   $ hg log -G
-  @  5:1a79b7535141 D
+  @  1a79b7535141 D
   |
-  | o  4:ff2c4d47b71d C
+  | o  ff2c4d47b71d C
   | |
-  | o  2:261e70097290 B2
+  | o  261e70097290 B2
   | |
-  x |  1:a8b11f55fb19 B0 (rewritten using rewrite as 2:261e70097290)
+  x |  a8b11f55fb19 B0 (rewritten using rewrite as 261e70097290)
   |/
-  o  0:4a2df7238c3b A
+  o  4a2df7238c3b A
   
 
   $ hg rebase -d 'desc(B2)'
@@ -789,17 +789,17 @@ XXX: rev 3 should remain hidden. (debugstrip is rarely used so this might be oka
   $ hg add P
   $ hg commit -m P
   $ hg log -G
-  @  8:8d47583e023f P
+  @  8d47583e023f P
   |
-  o  7:360bbaa7d3ce O
+  o  360bbaa7d3ce O
   |
-  | o  6:9c48361117de D
+  | o  9c48361117de D
   | |
-  o |  4:ff2c4d47b71d C
+  o |  ff2c4d47b71d C
   |/
-  o  2:261e70097290 B2
+  o  261e70097290 B2
   |
-  o  0:4a2df7238c3b A
+  o  4a2df7238c3b A
   
   $ hg rebase -d 6 -r "4+8"
   rebasing ff2c4d47b71d "C"
@@ -812,29 +812,29 @@ If all the changeset to be rebased are obsolete and present in the destination, 
 should display a friendly error message
 
   $ hg log -G
-  @  10:121d9e3bc4c6 P
+  @  121d9e3bc4c6 P
   |
-  o  9:4be60e099a77 C
+  o  4be60e099a77 C
   |
-  o  6:9c48361117de D
+  o  9c48361117de D
   |
-  o  2:261e70097290 B2
+  o  261e70097290 B2
   |
-  o  0:4a2df7238c3b A
+  o  4a2df7238c3b A
   
 
 Rebases can create divergence
 
   $ hg log -G
-  @  10:121d9e3bc4c6 P
+  @  121d9e3bc4c6 P
   |
-  o  9:4be60e099a77 C
+  o  4be60e099a77 C
   |
-  o  6:9c48361117de D
+  o  9c48361117de D
   |
-  o  2:261e70097290 B2
+  o  261e70097290 B2
   |
-  o  0:4a2df7238c3b A
+  o  4a2df7238c3b A
   
 
   $ hg up 9
@@ -853,47 +853,47 @@ Rebases can create divergence
   $ hg add foo
   $ hg commit -m "bar foo"
   $ hg log -G
-  @  13:73568ab6879d bar foo
+  @  73568ab6879d bar foo
   |
-  | o  12:e75f87cd16c5 P-amended
+  | o  e75f87cd16c5 P-amended
   | |
-  | | o  11:3eb461388009 john doe
+  | | o  3eb461388009 john doe
   | |/
-  x |  10:121d9e3bc4c6 P (rewritten using amend as 12:e75f87cd16c5)
+  x |  121d9e3bc4c6 P (rewritten using amend as e75f87cd16c5)
   |/
-  o  9:4be60e099a77 C
+  o  4be60e099a77 C
   |
-  o  6:9c48361117de D
+  o  9c48361117de D
   |
-  o  2:261e70097290 B2
+  o  261e70097290 B2
   |
-  o  0:4a2df7238c3b A
+  o  4a2df7238c3b A
   
   $ hg rebase -s 10 -d 11
   rebasing 121d9e3bc4c6 "P"
   rebasing 73568ab6879d "bar foo"
   $ hg log -G
-  @  15:61bd55f69bc4 bar foo
+  @  61bd55f69bc4 bar foo
   |
-  o  14:5f53594f6882 P
+  o  5f53594f6882 P
   |
-  | o  12:e75f87cd16c5 P-amended
+  | o  e75f87cd16c5 P-amended
   | |
-  o |  11:3eb461388009 john doe
+  o |  3eb461388009 john doe
   |/
-  o  9:4be60e099a77 C
+  o  4be60e099a77 C
   |
-  o  6:9c48361117de D
+  o  9c48361117de D
   |
-  o  2:261e70097290 B2
+  o  261e70097290 B2
   |
-  o  0:4a2df7238c3b A
+  o  4a2df7238c3b A
   
 rebase --continue + skipped rev because their successors are in destination
 we make a change in trunk and work on conflicting changes to make rebase abort.
 
   $ hg log -G -r 15::
-  @  15:61bd55f69bc4 bar foo
+  @  61bd55f69bc4 bar foo
   |
   ~
 
@@ -917,17 +917,17 @@ Create the changes that we will rebase
   rebasing cab092d71c4b "dummy change 1"
 
   $ hg log -G -r 15::
-  o  20:59c6f3a91215 dummy change 1
+  o  59c6f3a91215 dummy change 1
   |
-  | @  19:ae4ed1351416 dummy change 2
+  | @  ae4ed1351416 dummy change 2
   | |
-  | x  18:cab092d71c4b dummy change 1 (rewritten using rebase as 20:59c6f3a91215)
+  | x  cab092d71c4b dummy change 1 (rewritten using rebase as 59c6f3a91215)
   | |
-  | o  17:b82fb57ea638 willconflict second version
+  | o  b82fb57ea638 willconflict second version
   | |
-  o |  16:357ddf1602d5 willconflict first version
+  o |  357ddf1602d5 willconflict first version
   |/
-  o  15:61bd55f69bc4 bar foo
+  o  61bd55f69bc4 bar foo
   |
   ~
   $ hg rebase -r ".^^ + .^ + ." -d 20
@@ -956,7 +956,7 @@ obsolete changeset which successor is in rebase set.
   $ cd divergence
   $ cat >> .hg/hgrc << EOF
   > [templates]
-  > instabilities = '{rev}:{node|short} {desc|firstline}{if(instabilities," ({instabilities})")}\n'
+  > instabilities = '{node|short} {desc|firstline}{if(instabilities," ({instabilities})")}\n'
   > EOF
 
   $ drawdag <<EOF
@@ -971,21 +971,21 @@ obsolete changeset which successor is in rebase set.
   >     a
   > EOF
   $ hg log -G -r $a::
-  o  7:493e1ea05b71 e
+  o  493e1ea05b71 e
   |
-  | o  6:1143e9adc121 f
+  | o  1143e9adc121 f
   | |
-  o |  5:447acf26a46a d2
+  o |  447acf26a46a d2
   | |
-  | x  4:76be324c128b d (rewritten using replace as 5:447acf26a46a)
+  | x  76be324c128b d (rewritten using replace as 447acf26a46a)
   |/
-  o  3:a82ac2b38757 c
+  o  a82ac2b38757 c
   |
-  | o  2:630d7c95eff7 x
+  | o  630d7c95eff7 x
   | |
-  o |  1:488e1b7e7341 b
+  o |  488e1b7e7341 b
   |/
-  o  0:b173517d0057 a
+  o  b173517d0057 a
   
 
 Changeset d and its descendants are excluded to avoid divergence of d, which
@@ -999,25 +999,25 @@ consequence f (descendant of d) is left behind.
   rebasing 447acf26a46a "d2"
   rebasing 493e1ea05b71 "e"
   $ hg log -G -r $a::
-  o  11:1ce56955f155 e
+  o  1ce56955f155 e
   |
-  o  10:885d062b1232 d2
+  o  885d062b1232 d2
   |
-  o  9:d008e6b4d3fd c
+  o  d008e6b4d3fd c
   |
-  o  8:67e8f4a16c49 b
+  o  67e8f4a16c49 b
   |
-  | o  6:1143e9adc121 f
+  | o  1143e9adc121 f
   | |
-  | x  4:76be324c128b d (rewritten using rewrite as 10:885d062b1232)
+  | x  76be324c128b d (rewritten using rewrite as 885d062b1232)
   | |
-  | x  3:a82ac2b38757 c (rewritten using rebase as 9:d008e6b4d3fd)
+  | x  a82ac2b38757 c (rewritten using rebase as d008e6b4d3fd)
   | |
-  o |  2:630d7c95eff7 x
+  o |  630d7c95eff7 x
   | |
-  | x  1:488e1b7e7341 b (rewritten using rebase as 8:67e8f4a16c49)
+  | x  488e1b7e7341 b (rewritten using rebase as 67e8f4a16c49)
   |/
-  o  0:b173517d0057 a
+  o  b173517d0057 a
   
 
   $ hg debugmutation -r "desc(d2) & $a::"
@@ -1036,23 +1036,23 @@ set and none in destination, then divergence is allowed.
   rebasing 76be324c128b "d"
   rebasing 1143e9adc121 "f"
   $ hg log -G -r $a::
-  o  10:e1744ea07510 f
+  o  e1744ea07510 f
   |
-  o  9:e2b36ea9a0a0 d
+  o  e2b36ea9a0a0 d
   |
-  o  8:6a0376de376e c
+  o  6a0376de376e c
   |
-  | o  7:493e1ea05b71 e
+  | o  493e1ea05b71 e
   | |
-  | o  5:447acf26a46a d2
+  | o  447acf26a46a d2
   | |
-  | x  3:a82ac2b38757 c (rewritten using rebase as 8:6a0376de376e)
+  | x  a82ac2b38757 c (rewritten using rebase as 6a0376de376e)
   | |
-  o |  2:630d7c95eff7 x
+  o |  630d7c95eff7 x
   | |
-  | o  1:488e1b7e7341 b
+  | o  488e1b7e7341 b
   |/
-  o  0:b173517d0057 a
+  o  b173517d0057 a
   
   $ hg debugstrip --no-backup -q -r 8:
 
@@ -1082,23 +1082,23 @@ Similar test on a more complex graph
   >     a
   > EOF
   $ hg log -G -r $a:
-  o  8:12df856f4e8e f
+  o  12df856f4e8e f
   |
-  | o  7:2876ce66c6eb g
+  | o  2876ce66c6eb g
   | |
-  o |  6:87682c149ad7 e2
+  o |  87682c149ad7 e2
   | |
-  | x  5:e36fae928aec e (rewritten using replace as 6:87682c149ad7)
+  | x  e36fae928aec e (rewritten using replace as 87682c149ad7)
   | |
-  | o  4:76be324c128b d
+  | o  76be324c128b d
   |/
-  o  3:a82ac2b38757 c
+  o  a82ac2b38757 c
   |
-  | o  2:630d7c95eff7 x
+  | o  630d7c95eff7 x
   | |
-  o |  1:488e1b7e7341 b
+  o |  488e1b7e7341 b
   |/
-  o  0:b173517d0057 a
+  o  b173517d0057 a
   
   $ hg rebase -b $f -d $x
   rebasing 488e1b7e7341 "b"
@@ -1110,33 +1110,33 @@ Similar test on a more complex graph
 
 FIXME: 121d9e3bc4c6 and 87682c149ad7 should be hidden.
   $ hg log -G -r "$a::(not obsolete())"
-  o  13:aa3f1f628d29 f
+  o  aa3f1f628d29 f
   |
-  o  12:2963fc7a5743 e2
+  o  2963fc7a5743 e2
   |
-  | o  11:a1707a5b7c2c d
+  | o  a1707a5b7c2c d
   |/
-  o  10:d008e6b4d3fd c
+  o  d008e6b4d3fd c
   |
-  o  9:67e8f4a16c49 b
+  o  67e8f4a16c49 b
   |
-  | o  8:12df856f4e8e f
+  | o  12df856f4e8e f
   | |
-  | | o  7:2876ce66c6eb g
+  | | o  2876ce66c6eb g
   | | |
-  | o |  6:87682c149ad7 e2
+  | o |  87682c149ad7 e2
   | | |
-  | | x  5:e36fae928aec e (rewritten using rewrite as 12:2963fc7a5743)
+  | | x  e36fae928aec e (rewritten using rewrite as 2963fc7a5743)
   | | |
-  | | x  4:76be324c128b d (rewritten using rebase as 11:a1707a5b7c2c)
+  | | x  76be324c128b d (rewritten using rebase as a1707a5b7c2c)
   | |/
-  | x  3:a82ac2b38757 c (rewritten using rebase as 10:d008e6b4d3fd)
+  | x  a82ac2b38757 c (rewritten using rebase as d008e6b4d3fd)
   | |
-  o |  2:630d7c95eff7 x
+  o |  630d7c95eff7 x
   | |
-  | x  1:488e1b7e7341 b (rewritten using rebase as 9:67e8f4a16c49)
+  | x  488e1b7e7341 b (rewritten using rebase as 67e8f4a16c49)
   |/
-  o  0:b173517d0057 a
+  o  b173517d0057 a
   
 
   $ cd ..
@@ -1158,13 +1158,13 @@ Rebase merge where successor of one parent is equal to destination (issue5198)
   note: not rebasing b18e25de2cf5 "D", already in destination as 112478962961 "B"
   rebasing 66f1a38021c9 "F"
   $ hg log -G
-  o    5:50e9d60b99c6 F
+  o    50e9d60b99c6 F
   |\
-  | o  3:112478962961 B
+  | o  112478962961 B
   | |
-  o |  2:7fb047a69f22 E
+  o |  7fb047a69f22 E
   |/
-  o  0:426bada5c675 A
+  o  426bada5c675 A
   
   $ cd ..
 
@@ -1185,13 +1185,13 @@ Rebase merge where successor of other parent is equal to destination
   note: not rebasing 7fb047a69f22 "E", already in destination as 112478962961 "B"
   rebasing 66f1a38021c9 "F"
   $ hg log -G
-  o    5:aae1787dacee F
+  o    aae1787dacee F
   |\
-  | o  3:112478962961 B
+  | o  112478962961 B
   | |
-  o |  1:b18e25de2cf5 D
+  o |  b18e25de2cf5 D
   |/
-  o  0:426bada5c675 A
+  o  426bada5c675 A
   
   $ cd ..
 
@@ -1213,15 +1213,15 @@ Rebase merge where successor of one parent is ancestor of destination
   rebasing 66f1a38021c9 "F"
 
   $ hg log -G
-  o    6:0913febf6439 F
+  o    0913febf6439 F
   |\
-  | o  5:26805aba1e60 C
+  | o  26805aba1e60 C
   | |
-  | o  3:112478962961 B
+  | o  112478962961 B
   | |
-  o |  2:7fb047a69f22 E
+  o |  7fb047a69f22 E
   |/
-  o  0:426bada5c675 A
+  o  426bada5c675 A
   
   $ cd ..
 
@@ -1242,15 +1242,15 @@ Rebase merge where successor of other parent is ancestor of destination
   note: not rebasing 7fb047a69f22 "E", already in destination as 112478962961 "B"
   rebasing 66f1a38021c9 "F"
   $ hg log -G
-  o    6:c6ab0cc6d220 F
+  o    c6ab0cc6d220 F
   |\
-  | o  5:26805aba1e60 C
+  | o  26805aba1e60 C
   | |
-  | o  3:112478962961 B
+  | o  112478962961 B
   | |
-  o |  1:b18e25de2cf5 D
+  o |  b18e25de2cf5 D
   |/
-  o  0:426bada5c675 A
+  o  426bada5c675 A
   
   $ cd ..
 
@@ -1273,13 +1273,13 @@ Rebase merge where successor of one parent is ancestor of destination
   rebasing 66f1a38021c9 "F"
   note: rebase of 4:66f1a38021c9 created no changes to commit
   $ hg log -G
-  o  6:8f47515dda15 D
+  o  8f47515dda15 D
   |
-  o  5:26805aba1e60 C
+  o  26805aba1e60 C
   |
-  o  3:112478962961 B
+  o  112478962961 B
   |
-  o  0:426bada5c675 A
+  o  426bada5c675 A
   
   $ cd ..
 
@@ -1303,13 +1303,13 @@ Rebase merge where successor of other parent is ancestor of destination
   note: rebase of 4:66f1a38021c9 created no changes to commit
 
   $ hg log -G
-  o  6:533690786a86 E
+  o  533690786a86 E
   |
-  o  5:26805aba1e60 C
+  o  26805aba1e60 C
   |
-  o  3:112478962961 B
+  o  112478962961 B
   |
-  o  0:426bada5c675 A
+  o  426bada5c675 A
   
   $ cd ..
 
@@ -1348,13 +1348,13 @@ parent moves as requested.
   rebasing b8ed089c80ad "D"
 
   $ hg log -G
-  o  6:e4f78693cc88 D
+  o  e4f78693cc88 D
   |
-  o  5:76840d832e98 B
+  o  76840d832e98 B
   |
-  o  4:50e41c1f3950 Z
+  o  50e41c1f3950 Z
   |
-  o  2:96cc3511f894 C
+  o  96cc3511f894 C
   
   $ hg files -r tip
   B
@@ -1377,13 +1377,13 @@ parent moves as requested.
   rebasing b8ed089c80ad "D"
 
   $ hg log -G
-  o  6:1b355ed94d82 D
+  o  1b355ed94d82 D
   |
-  o  5:a81a74d764a6 A
+  o  a81a74d764a6 A
   |
-  o  4:50e41c1f3950 Z
+  o  50e41c1f3950 Z
   |
-  o  2:96cc3511f894 C
+  o  96cc3511f894 C
   
   $ hg files -r tip
   A
@@ -1410,17 +1410,17 @@ equivalents in destination
   $ hg rebase -r 2 -d 1
   rebasing 1e9a3c00cbe9 "b"
   $ hg log -r .  # working dir is at rev 3 (successor of 2)
-  3:be1832deae9a b (no-eol)
+  be1832deae9a b (no-eol)
   $ hg book -r 2 mybook --hidden  # rev 2 has a bookmark on it now
   $ hg up 2 && hg log -r .  # working dir is at rev 2 again
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  2:1e9a3c00cbe9 b (rewritten using rebase as 3:be1832deae9a) (no-eol)
+  1e9a3c00cbe9 b (rewritten using rebase as be1832deae9a) (no-eol)
   $ hg rebase -r 2 -d 3 --config experimental.evolution.track-operation=1
   note: not rebasing 1e9a3c00cbe9 "b" (mybook), already in destination as be1832deae9a "b"
 Check that working directory and bookmark was updated to rev 3 although rev 2
 was skipped
   $ hg log -r .
-  3:be1832deae9a b (no-eol)
+  be1832deae9a b (no-eol)
   $ hg bookmarks
      mybook                    3:be1832deae9a
   $ hg debugobsolete --rev tip
@@ -1478,15 +1478,15 @@ Rebasing a merge with one of its parent having a hidden successor
   rebasing 9e62094e4d94 "D"
 
   $ hg log -G
-  o    7:a699d059adcf D
+  o    a699d059adcf D
   |\
-  | o  6:ecc93090a95c E
+  | o  ecc93090a95c E
   | |
-  | o  5:0dc878468a23 B3
+  | o  0dc878468a23 B3
   | |
-  o |  1:96cc3511f894 C
+  o |  96cc3511f894 C
    /
-  o  0:426bada5c675 A
+  o  426bada5c675 A
   
 For some reasons (--hidden, rebaseskipobsolete=0, directaccess, etc.),
 rebasestate may contain hidden hashes. "rebase --abort" should work regardless.
@@ -1515,11 +1515,11 @@ rebasestate may contain hidden hashes. "rebase --abort" should work regardless.
   $ cp -R . $TESTTMP/hidden-state2
 
   $ hg log -G
-  @  2:b18e25de2cf5 D
+  @  b18e25de2cf5 D
   |
-  | @  1:2ec65233581b B
+  | @  2ec65233581b B
   |/
-  o  0:426bada5c675 A
+  o  426bada5c675 A
   
   $ hg summary
   parent: 2:b18e25de2cf5 
@@ -1543,11 +1543,11 @@ Also test --continue for the above case
   rebasing 2ec65233581b "B"
   rebasing 7829726be4dc "C"
   $ hg log -G
-  @  5:1964d5d5b547 C
+  @  1964d5d5b547 C
   |
-  o  4:68deb90c12a2 B
+  o  68deb90c12a2 B
   |
-  o  2:b18e25de2cf5 D
+  o  b18e25de2cf5 D
   |
-  o  0:426bada5c675 A
+  o  426bada5c675 A
   

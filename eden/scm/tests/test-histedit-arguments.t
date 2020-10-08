@@ -118,12 +118,12 @@ created (and forgotten) by Mercurial earlier than 2.7. This emulates
 Mercurial earlier than 2.7 by renaming ".hg/histedit-state"
 temporarily.
 
-  $ hg log -G -T '{rev} {shortest(node)} {desc}\n' -r 'desc(three)'::
-  @  4 08d9 five
+  $ hg log -G -T '{shortest(node)} {desc}\n' -r 'desc(three)'::
+  @  08d9 five
   |
-  o  3 c8e6 four
+  o  c8e6 four
   |
-  o  2 eb57 three
+  o  eb57 three
   |
   ~
   $ HGEDITOR=cat hg histedit -r 'desc(five)' --commands - << EOF
@@ -146,12 +146,12 @@ temporarily.
   $ mv .hg/histedit-state.back .hg/histedit-state
 
   $ hg histedit --continue
-  $ hg log -G -T '{rev} {shortest(node)} {desc}\n' -r 'desc(three)'::
-  @  5 f5ed five
+  $ hg log -G -T '{shortest(node)} {desc}\n' -r 'desc(three)'::
+  @  f5ed five
   |
-  | o  3 c8e6 four
+  | o  c8e6 four
   |/
-  o  2 eb57 three
+  o  eb57 three
   |
   ~
 
@@ -318,21 +318,21 @@ Test --continue with --keep
   [1]
   $ echo edit >> alpha
   $ hg histedit -q --continue
-  $ hg log -G -T '{rev}:{node|short} {desc}'
-  @  9:8fda0c726bf2 x
+  $ hg log -G -T '{node|short} {desc}'
+  @  8fda0c726bf2 x
   |
-  o  8:63379946892c three
+  o  63379946892c three
   |
-  | x  7:f3cfcca30c44 x
+  | x  f3cfcca30c44 x
   | |
-  | | o  6:2a30f3cfee78 four
+  | | o  2a30f3cfee78 four
   | |/   ***
   | |    five
-  | x  2:eb57da33312f three
+  | x  eb57da33312f three
   |/
-  o  1:579e40513370 two
+  o  579e40513370 two
   |
-  o  0:6058cbb6cfd7 one
+  o  6058cbb6cfd7 one
   
 
 Test that abort fails gracefully on exception
@@ -396,32 +396,32 @@ Set up default base revision tests
   $ echo 12 > foo
   $ hg commit -m 'commit 2 after merge'
 
-  $ hg log -G -T '{rev}:{node|short} {phase} {desc}\n'
-  @  12:8cde254db839 draft commit 2 after merge
+  $ hg log -G -T '{node|short} {phase} {desc}\n'
+  @  8cde254db839 draft commit 2 after merge
   |
-  o  11:6f2f0241f119 draft commit 1 after merge
+  o  6f2f0241f119 draft commit 1 after merge
   |
-  o    10:90506cc76b00 draft merge head 3 into head 4
+  o    90506cc76b00 draft merge head 3 into head 4
   |\
-  | o  9:f8607a373a97 draft head 4
+  | o  f8607a373a97 draft head 4
   | |
-  o |  8:0da92be05148 draft head 3
+  o |  0da92be05148 draft head 3
   |/
-  | o  7:4c35cdf97d5e draft head 2 commit 2
+  | o  4c35cdf97d5e draft head 2 commit 2
   | |
-  | o  6:931820154288 draft head 2 commit 1
+  | o  931820154288 draft head 2 commit 1
   |/
-  | o  5:8cdc02b9bc63 draft head 1 draft 2
+  | o  8cdc02b9bc63 draft head 1 draft 2
   | |
-  | o  4:463b8c0d2973 draft head 1 draft 1
+  | o  463b8c0d2973 draft head 1 draft 1
   | |
-  | o  3:23a0c4eefcbf public head 1 public
+  | o  23a0c4eefcbf public head 1 public
   | |
-  o |  2:4117331c3abb draft draft after public
+  o |  4117331c3abb draft draft after public
   |/
-  o  1:4426d359ea59 public public 1
+  o  4426d359ea59 public public 1
   |
-  o  0:54136a8ddf32 public root
+  o  54136a8ddf32 public root
   
 
 Default base revision should stop at public changesets

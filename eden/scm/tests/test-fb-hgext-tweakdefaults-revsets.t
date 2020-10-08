@@ -17,35 +17,35 @@ Setup repo
 
 Test that warning is shown whenever ':' is used with singlecolonwarn set
 
-  $ hg log -T '{rev} ' -r '0:2' --config tweakdefaults.singlecolonwarn=1
+  $ hg log -T '{node} ' -r '0:2' --config tweakdefaults.singlecolonwarn=1
   warning: use of ':' is deprecated
-  0 1 2  (no-eol)
-  $ hg log -T '{rev} ' -r '0:2'
-  0 1 2  (no-eol)
-  $ hg log -T '{rev} ' -r ':2' --config tweakdefaults.singlecolonwarn=1
+  3903775176ed42b1458a6281db4a0ccf4d9f287a 7b4cb4e1674c5469264add78a05260e436e8f400 ae5108b653e2f2d15099970dec82ee0198e23d98  (no-eol)
+  $ hg log -T '{node} ' -r '0:2'
+  3903775176ed42b1458a6281db4a0ccf4d9f287a 7b4cb4e1674c5469264add78a05260e436e8f400 ae5108b653e2f2d15099970dec82ee0198e23d98  (no-eol)
+  $ hg log -T '{node} ' -r ':2' --config tweakdefaults.singlecolonwarn=1
   warning: use of ':' is deprecated
-  0 1 2  (no-eol)
-  $ hg log -T '{rev} ' -r ':2'
-  0 1 2  (no-eol)
-  $ hg log -T '{rev} ' -r '0:' --config tweakdefaults.singlecolonwarn=1
+  3903775176ed42b1458a6281db4a0ccf4d9f287a 7b4cb4e1674c5469264add78a05260e436e8f400 ae5108b653e2f2d15099970dec82ee0198e23d98  (no-eol)
+  $ hg log -T '{node} ' -r ':2'
+  3903775176ed42b1458a6281db4a0ccf4d9f287a 7b4cb4e1674c5469264add78a05260e436e8f400 ae5108b653e2f2d15099970dec82ee0198e23d98  (no-eol)
+  $ hg log -T '{node} ' -r '0:' --config tweakdefaults.singlecolonwarn=1
   warning: use of ':' is deprecated
-  0 1 2  (no-eol)
-  $ hg log -T '{rev} ' -r '0:'
-  0 1 2  (no-eol)
+  3903775176ed42b1458a6281db4a0ccf4d9f287a 7b4cb4e1674c5469264add78a05260e436e8f400 ae5108b653e2f2d15099970dec82ee0198e23d98  (no-eol)
+  $ hg log -T '{node} ' -r '0:'
+  3903775176ed42b1458a6281db4a0ccf4d9f287a 7b4cb4e1674c5469264add78a05260e436e8f400 ae5108b653e2f2d15099970dec82ee0198e23d98  (no-eol)
 
 In this testcase warning should not be shown
-  $ hg log -T '{rev} ' -r ':' --config tweakdefaults.singlecolonwarn=1
-  0 1 2  (no-eol)
+  $ hg log -T '{node} ' -r ':' --config tweakdefaults.singlecolonwarn=1
+  3903775176ed42b1458a6281db4a0ccf4d9f287a 7b4cb4e1674c5469264add78a05260e436e8f400 ae5108b653e2f2d15099970dec82ee0198e23d98  (no-eol)
 
 Check that the custom message can be used
-  $ hg log -T '{rev} ' -r '0:' --config tweakdefaults.singlecolonwarn=1 --config tweakdefaults.singlecolonmsg="hey stop that"
+  $ hg log -T '{node} ' -r '0:' --config tweakdefaults.singlecolonwarn=1 --config tweakdefaults.singlecolonmsg="hey stop that"
   warning: hey stop that
-  0 1 2  (no-eol)
+  3903775176ed42b1458a6281db4a0ccf4d9f287a 7b4cb4e1674c5469264add78a05260e436e8f400 ae5108b653e2f2d15099970dec82ee0198e23d98  (no-eol)
 
 Check that we can abort as well
-  $ hg log -T '{rev} ' -r '0:' --config tweakdefaults.singlecolonabort=1
+  $ hg log -T '{node} ' -r '0:' --config tweakdefaults.singlecolonabort=1
   abort: use of ':' is deprecated
   [255]
-  $ hg log -T '{rev} ' -r '0:' --config tweakdefaults.singlecolonabort=1 --config tweakdefaults.singlecolonmsg="no more colons"
+  $ hg log -T '{node} ' -r '0:' --config tweakdefaults.singlecolonabort=1 --config tweakdefaults.singlecolonmsg="no more colons"
   abort: no more colons
   [255]

@@ -22,8 +22,8 @@ no-check-code
   $ hg -R master pull -q client
 
   $ initserver master2 masterrepo
-  $ hg -R master2 log --template '{rev}\n'
-  0
+  $ hg -R master2 log --template '{node}\n'
+  b292c1e3311fd0f13ae83b409caae4a6d1fb348c
 
 # Verify that reads are not blocked by the repo syncing
 
@@ -35,18 +35,18 @@ no-check-code
 
   $ cd master2
   $ printf "[hooks]\npresyncdb.sleep = sleep 5\n" >> .hg/hgrc
-  $ hg log -l 2 --template "first:{rev}\n" --debug &
+  $ hg log -l 2 --template "first:{node}\n" --debug &
   $ sleep 3
   syncing with mysql
   getting 1 commits from database
   running hook presyncdb.sleep: sleep 5
-  $ hg log -l 2 --template "second:{rev}\n" --debug
+  $ hg log -l 2 --template "second:{node}\n" --debug
   locker is still running (full unique id: '*') (glob)
   skipping database sync because another process is already syncing
-  second:0
+  second:b292c1e3311fd0f13ae83b409caae4a6d1fb348c
   $ sleep 5
-  first:1
-  first:0
+  first:d34c38483be9d08f205eaae60c380a29b48e0189
+  first:b292c1e3311fd0f13ae83b409caae4a6d1fb348c
   $ sed -i '/hooks/d' .hg/hgrc
   $ sed -i '/sleep/d' .hg/hgrc
 
@@ -76,14 +76,14 @@ no-check-code
   $ hg push -R client -q ssh://user@dummy/master &
   $ sleep 0.2
   $ hg push -R client2 -q -f ssh://user@dummy/master2
-  $ hg log -R master -G --template '{rev} - {desc}\n'
-  o  3 - z2
+  $ hg log -R master -G --template '{desc}\n'
+  o  z2
   |
-  | o  2 - z1
+  | o  z1
   |/
-  o  1 - y
+  o  y
   |
-  o  0 - x
+  o  x
   
   $ sed -i '/hooks/d' master/.hg/hgrc
   $ sed -i '/sleep/d' master/.hg/hgrc

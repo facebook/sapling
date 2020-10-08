@@ -20,7 +20,7 @@
 
   $ readconfig <<EOF
   > [ui]
-  > logtemplate="{rev}:{node|short} ({phase}) [{tags} {bookmarks}] {desc|firstline}\n"
+  > logtemplate="{node|short} ({phase}) [{tags} {bookmarks}] {desc|firstline}\n"
   > [extensions]
   > dirstateparanoidcheck = $TESTDIR/../contrib/dirstatenonnormalcheck.py
   > [experimental]

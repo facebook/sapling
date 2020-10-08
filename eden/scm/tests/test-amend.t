@@ -19,8 +19,8 @@ Basic amend
   $ echo 2 >> B
 
   $ hg amend
-  $ hg log -p -G --hidden -T '{rev} {node|short} {desc}\n'
-  @  2 be169c7e8dbe B
+  $ hg log -p -G --hidden -T '{node|short} {desc}\n'
+  @  be169c7e8dbe B
   |  diff --git a/B b/B
   |  new file mode 100644
   |  --- /dev/null
@@ -28,7 +28,7 @@ Basic amend
   |  @@ -0,0 +1,1 @@
   |  +B2
   |
-  | x  1 112478962961 B
+  | x  112478962961 B
   |/   diff --git a/B b/B
   |    new file mode 100644
   |    --- /dev/null
@@ -37,7 +37,7 @@ Basic amend
   |    +B
   |    \ No newline at end of file
   |
-  o  0 426bada5c675 A
+  o  426bada5c675 A
      diff --git a/A b/A
      new file mode 100644
      --- /dev/null
@@ -135,14 +135,14 @@ Amend in the middle of a stack
   hint[amend-restack]: descendants of 112478962961 are left behind - use 'hg restack' to rebase them
   hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
 
-  $ hg log -T '{rev} {node|short} {desc}\n' -G
-  @  3 be169c7e8dbe B
+  $ hg log -T '{node|short} {desc}\n' -G
+  @  be169c7e8dbe B
   |
-  | o  2 26805aba1e60 C
+  | o  26805aba1e60 C
   | |
-  | x  1 112478962961 B
+  | x  112478962961 B
   |/
-  o  0 426bada5c675 A
+  o  426bada5c675 A
   
 Cannot amend public changeset
 

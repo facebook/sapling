@@ -28,17 +28,17 @@
 Initial generation of the command files
 
   $ EDITED="$TESTTMP/editedhistory"
-  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 65a9a84f33fdeb1ad5679b3941ec885d2b24027b >> $EDITED
-  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 00f1c53839651fa5c76d423606811ea5455a79d0 >> $EDITED
-  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 'desc(does)' >> $EDITED
-  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 7b4e2f4b7bcd98ffe5ea672d73b0a7bf7233f9f7 >> $EDITED
-  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 'desc(f)' >> $EDITED
+  $ hg log --template 'pick {node|short} {desc}\n' -r 65a9a84f33fdeb1ad5679b3941ec885d2b24027b >> $EDITED
+  $ hg log --template 'pick {node|short} {desc}\n' -r 00f1c53839651fa5c76d423606811ea5455a79d0 >> $EDITED
+  $ hg log --template 'pick {node|short} {desc}\n' -r 'desc(does)' >> $EDITED
+  $ hg log --template 'pick {node|short} {desc}\n' -r 7b4e2f4b7bcd98ffe5ea672d73b0a7bf7233f9f7 >> $EDITED
+  $ hg log --template 'pick {node|short} {desc}\n' -r 'desc(f)' >> $EDITED
   $ cat $EDITED
-  pick 65a9a84f33fd 3 c
-  pick 00f1c5383965 4 d
-  pick 39522b764e3d 7 does not commute with e
-  pick 7b4e2f4b7bcd 5 e
-  pick 500cac37a696 6 f
+  pick 65a9a84f33fd c
+  pick 00f1c5383965 d
+  pick 39522b764e3d does not commute with e
+  pick 7b4e2f4b7bcd e
+  pick 500cac37a696 f
 
 log before edit
   $ hg log --graph
@@ -220,17 +220,17 @@ start over
   $ initrepo r2
   $ cd r2
   $ rm $EDITED
-  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 65a9a84f33fdeb1ad5679b3941ec885d2b24027b >> $EDITED
-  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 00f1c53839651fa5c76d423606811ea5455a79d0 >> $EDITED
-  $ hg log --template 'mess {node|short} {rev} {desc}\n' -r 'desc(does)' >> $EDITED
-  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 7b4e2f4b7bcd98ffe5ea672d73b0a7bf7233f9f7 >> $EDITED
-  $ hg log --template 'pick {node|short} {rev} {desc}\n' -r 'desc(f)' >> $EDITED
+  $ hg log --template 'pick {node|short} {desc}\n' -r 65a9a84f33fdeb1ad5679b3941ec885d2b24027b >> $EDITED
+  $ hg log --template 'pick {node|short} {desc}\n' -r 00f1c53839651fa5c76d423606811ea5455a79d0 >> $EDITED
+  $ hg log --template 'mess {node|short} {desc}\n' -r 'desc(does)' >> $EDITED
+  $ hg log --template 'pick {node|short} {desc}\n' -r 7b4e2f4b7bcd98ffe5ea672d73b0a7bf7233f9f7 >> $EDITED
+  $ hg log --template 'pick {node|short} {desc}\n' -r 'desc(f)' >> $EDITED
   $ cat $EDITED
-  pick 65a9a84f33fd 3 c
-  pick 00f1c5383965 4 d
-  mess 39522b764e3d 7 does not commute with e
-  pick 7b4e2f4b7bcd 5 e
-  pick 500cac37a696 6 f
+  pick 65a9a84f33fd c
+  pick 00f1c5383965 d
+  mess 39522b764e3d does not commute with e
+  pick 7b4e2f4b7bcd e
+  pick 500cac37a696 f
 
 edit the history, this time with a fold action
   $ hg histedit 65a9a84f33fdeb1ad5679b3941ec885d2b24027b --commands $EDITED 2>&1 | fixbundle

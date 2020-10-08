@@ -59,18 +59,18 @@ commit.
   $ hg commit -Aqm merge
   $ echo c > c
   $ hg commit -Aqm c
-  $ hg log -G -T '{rev} {shortest(node)} {desc}'
-  @  5 ebb8 c
+  $ hg log -G -T '{shortest(node)} {desc}'
+  @  ebb8 c
   |
-  o    4 baf7 merge
+  o    baf7 merge
   |\
-  | o  3 a129 b
+  | o  a129 b
   | |
-  o |  2 958c xz
+  o |  958c xz
   | |
-  | o  1 f00c xy
+  | o  f00c xy
   |/
-  o  0 3903 a
+  o  3903 a
   
   $ cd ..
   $ hg init client --config format.generaldelta=false --config format.usegeneraldelta=false

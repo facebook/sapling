@@ -240,8 +240,8 @@ Test stripping merge commits where filelogs arent affected
   $ hg commit -Aqm two
   $ hg merge -q 'first(children(.^))'
   $ hg commit -m 'merge'
-  $ hg log -r . -T '{rev}\n'
-  4
+  $ hg log -r . -T '{node}\n'
+  9f5a7a12b9ffeb2d6a76715a1bd7f336c495bd61
   $ hg debugindex .hg/store/meta/subdir/00manifest.i
      rev    offset  length  delta linkrev nodeid       p1           p2
        0         0      44     -1       0 bc0c2c938b92 000000000000 000000000000

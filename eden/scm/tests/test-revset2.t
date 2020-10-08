@@ -30,7 +30,7 @@
   > }
 
   $ log() {
-  >   hg log --template '{rev}\n' -r "$1"
+  >   hg log --template '{node}\n' -r "$1"
   > }
 
   $ setbranch() {
@@ -106,15 +106,15 @@ these predicates use '\0' as a separator:
   $ setbranch a-b-c-
   $ commit -Aqm2 -u Bob
 
-  $ hg log -r "extra('branch', 'a-b-c-')" --template '{rev}\n'
-  2
-  $ hg log -r "extra('branch')" --template '{rev}\n'
-  0
-  1
-  2
-  $ hg log -r "extra('branch', 're:a')" --template '{rev} {branch}\n'
-  0 a
-  2 a-b-c-
+  $ hg log -r "extra('branch', 'a-b-c-')" --template '{node}\n'
+  5ed5505e9f1c21de2345daabdd7913fe53e4acd2
+  $ hg log -r "extra('branch')" --template '{node}\n'
+  2785f51eece5a23075c6f1d74702d8d9cb8bf0d4
+  d75937da8da0322d18c3771fb029ffd88b996c89
+  5ed5505e9f1c21de2345daabdd7913fe53e4acd2
+  $ hg log -r "extra('branch', 're:a')" --template '{branch}\n'
+  a
+  a-b-c-
 
   $ hg co 1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -162,50 +162,50 @@ these predicates use '\0' as a separator:
 test subtracting something from an addset
 
   $ log '(outgoing() or removes(a)) - removes(a)'
-  8
-  9
+  d5d0dcbdc4d9ff5dbb2d336f32f0bb561c1a532c
+  6a4f54cc779b5949146617ba046459baab4a496f
 
 test intersecting something with an addset
 
   $ log 'parents(outgoing() or removes(a))'
-  1
-  4
-  5
-  8
+  d75937da8da0322d18c3771fb029ffd88b996c89
+  2326846efdab34abffaf5ad2e7831f64a8ebb017
+  904fa392b9415cad2ad08ac82d39bed6cfbcaa1c
+  d5d0dcbdc4d9ff5dbb2d336f32f0bb561c1a532c
 
 test that `or` operation:
 order is no longer preserved with `idset`, which enforces DESC order internally.
 
   $ log '3:4 or 2:5'
-  2
-  3
-  4
-  5
+  5ed5505e9f1c21de2345daabdd7913fe53e4acd2
+  8528aa5637f252b36e034c373e36890ace37524c
+  2326846efdab34abffaf5ad2e7831f64a8ebb017
+  904fa392b9415cad2ad08ac82d39bed6cfbcaa1c
   $ log '3:4 or 5:2'
-  2
-  3
-  4
-  5
+  5ed5505e9f1c21de2345daabdd7913fe53e4acd2
+  8528aa5637f252b36e034c373e36890ace37524c
+  2326846efdab34abffaf5ad2e7831f64a8ebb017
+  904fa392b9415cad2ad08ac82d39bed6cfbcaa1c
   $ log 'sort(3:4 or 2:5)'
-  2
-  3
-  4
-  5
+  5ed5505e9f1c21de2345daabdd7913fe53e4acd2
+  8528aa5637f252b36e034c373e36890ace37524c
+  2326846efdab34abffaf5ad2e7831f64a8ebb017
+  904fa392b9415cad2ad08ac82d39bed6cfbcaa1c
   $ log 'sort(3:4 or 5:2)'
-  2
-  3
-  4
-  5
+  5ed5505e9f1c21de2345daabdd7913fe53e4acd2
+  8528aa5637f252b36e034c373e36890ace37524c
+  2326846efdab34abffaf5ad2e7831f64a8ebb017
+  904fa392b9415cad2ad08ac82d39bed6cfbcaa1c
 
 test that more than one `-r`s are combined in the right order and deduplicated:
 
-  $ hg log -T '{rev}\n' -r 3 -r 3 -r 4 -r 5:2 -r 'ancestors(4)'
-  3
-  4
-  5
-  2
-  0
-  1
+  $ hg log -T '{node}\n' -r 3 -r 3 -r 4 -r 5:2 -r 'ancestors(4)'
+  8528aa5637f252b36e034c373e36890ace37524c
+  2326846efdab34abffaf5ad2e7831f64a8ebb017
+  904fa392b9415cad2ad08ac82d39bed6cfbcaa1c
+  5ed5505e9f1c21de2345daabdd7913fe53e4acd2
+  2785f51eece5a23075c6f1d74702d8d9cb8bf0d4
+  d75937da8da0322d18c3771fb029ffd88b996c89
 
 test that `or` operation skips duplicated revisions from right-hand side
 
@@ -371,16 +371,16 @@ unoptimized `or` looks like this
 test that `_list` should be narrowed by provided `subset`
 
   $ log '0:2 and (null|1|2|3)'
-  1
-  2
+  d75937da8da0322d18c3771fb029ffd88b996c89
+  5ed5505e9f1c21de2345daabdd7913fe53e4acd2
 
 test that `_list` should remove duplicates
 
   $ log '0|1|2|1|2|-1|tip'
-  0
-  1
-  2
-  9
+  2785f51eece5a23075c6f1d74702d8d9cb8bf0d4
+  d75937da8da0322d18c3771fb029ffd88b996c89
+  5ed5505e9f1c21de2345daabdd7913fe53e4acd2
+  6a4f54cc779b5949146617ba046459baab4a496f
 
 test unknown revision in `_list`
 
@@ -391,8 +391,8 @@ test unknown revision in `_list`
 test integer range in `_list`
 
   $ log '-1|-10'
-  9
-  0
+  6a4f54cc779b5949146617ba046459baab4a496f
+  2785f51eece5a23075c6f1d74702d8d9cb8bf0d4
 
   $ log '-10|-11'
   abort: unknown revision '-11'!
@@ -405,8 +405,8 @@ test integer range in `_list`
 test '0000' != '0' in `_list`
 
   $ log '0|0000'
-  0
-  -1
+  2785f51eece5a23075c6f1d74702d8d9cb8bf0d4
+  0000000000000000000000000000000000000000
 
 test ',' in `_list`
   $ log '0,1'
@@ -470,16 +470,16 @@ no crash by empty group "()" while optimizing `or` operations
 test that chained `or` operations never eat up stack (issue4624)
 (uses `0:1` instead of `0` to avoid future optimization of trivial revisions)
 
-  $ hg log -T '{rev}\n' -r `hg debugsh -c "ui.write('+'.join(['0:1'] * 500))"`
-  0
-  1
+  $ hg log -T '{node}\n' -r `hg debugsh -c "ui.write('+'.join(['0:1'] * 500))"`
+  2785f51eece5a23075c6f1d74702d8d9cb8bf0d4
+  d75937da8da0322d18c3771fb029ffd88b996c89
 
 test that repeated `-r` options never eat up stack (issue4565)
 (uses `-r 0::1` to avoid possible optimization at old-style parser)
 
-  $ hg log -T '{rev}\n' `hg debugsh -c "for i in range(500): ui.write('-r 0::1 '),"`
-  0
-  1
+  $ hg log -T '{node}\n' `hg debugsh -c "for i in range(500): ui.write('-r 0::1 '),"`
+  2785f51eece5a23075c6f1d74702d8d9cb8bf0d4
+  d75937da8da0322d18c3771fb029ffd88b996c89
 
 check that conversion to only works
   $ try --optimize '::3 - ::1'
@@ -633,47 +633,47 @@ invalid function call should not be optimized to only()
   [255]
 
   $ log 'user(bob)'
-  2
+  5ed5505e9f1c21de2345daabdd7913fe53e4acd2
 
   $ log '4::8'
-  4
-  8
+  2326846efdab34abffaf5ad2e7831f64a8ebb017
+  d5d0dcbdc4d9ff5dbb2d336f32f0bb561c1a532c
   $ log '4:8'
-  4
-  5
-  6
-  7
-  8
+  2326846efdab34abffaf5ad2e7831f64a8ebb017
+  904fa392b9415cad2ad08ac82d39bed6cfbcaa1c
+  e0cc66ef77e8b6f711815af4e001a6594fde3ba5
+  013af1973af4a1932911a575960a876af6c02aaa
+  d5d0dcbdc4d9ff5dbb2d336f32f0bb561c1a532c
 
   $ log 'sort(!merge() & (modifies(b) | user(bob) | keyword(bug) | keyword(issue) & 1::9), "-date")'
-  4
-  2
-  5
+  2326846efdab34abffaf5ad2e7831f64a8ebb017
+  5ed5505e9f1c21de2345daabdd7913fe53e4acd2
+  904fa392b9415cad2ad08ac82d39bed6cfbcaa1c
 
   $ log 'not 0 and 0:2'
-  1
-  2
+  d75937da8da0322d18c3771fb029ffd88b996c89
+  5ed5505e9f1c21de2345daabdd7913fe53e4acd2
   $ log 'not 1 and 0:2'
-  0
-  2
+  2785f51eece5a23075c6f1d74702d8d9cb8bf0d4
+  5ed5505e9f1c21de2345daabdd7913fe53e4acd2
   $ log 'not 2 and 0:2'
-  0
-  1
+  2785f51eece5a23075c6f1d74702d8d9cb8bf0d4
+  d75937da8da0322d18c3771fb029ffd88b996c89
   $ log '(1 and 2)::'
   $ log '(1 and 2):'
   $ log '(1 and 2):3'
   $ log 'sort(head(), -rev)'
-  9
-  7
+  6a4f54cc779b5949146617ba046459baab4a496f
+  013af1973af4a1932911a575960a876af6c02aaa
   $ log '4::8 - 8'
-  4
+  2326846efdab34abffaf5ad2e7831f64a8ebb017
 
 matching() should preserve the order of the input set:
 
   $ log '(2 or 3 or 1) and matching(1 or 2 or 3)'
-  2
-  3
-  1
+  5ed5505e9f1c21de2345daabdd7913fe53e4acd2
+  8528aa5637f252b36e034c373e36890ace37524c
+  d75937da8da0322d18c3771fb029ffd88b996c89
 
   $ log 'named("unknown")'
   abort: namespace 'unknown' does not exist!
@@ -687,15 +687,15 @@ matching() should preserve the order of the input set:
 issue2437
 
   $ log '3 and p1(5)'
-  3
+  8528aa5637f252b36e034c373e36890ace37524c
   $ log '4 and p2(6)'
-  4
+  2326846efdab34abffaf5ad2e7831f64a8ebb017
   $ log '1 and parents(:2)'
-  1
+  d75937da8da0322d18c3771fb029ffd88b996c89
   $ log '2 and children(1:)'
-  2
+  5ed5505e9f1c21de2345daabdd7913fe53e4acd2
   $ log 'roots(all()) or roots(all())'
-  0
+  2785f51eece5a23075c6f1d74702d8d9cb8bf0d4
   $ hg debugrevspec 'roots(all()) or roots(all())'
   0
 
@@ -709,27 +709,27 @@ issue2654: report a parse error if the revset was not completely parsed
 
 or operator should preserve ordering:
   $ log 'reverse(2::4) or tip'
-  4
-  2
-  9
+  2326846efdab34abffaf5ad2e7831f64a8ebb017
+  5ed5505e9f1c21de2345daabdd7913fe53e4acd2
+  6a4f54cc779b5949146617ba046459baab4a496f
 
 parentrevspec
 
   $ log 'merge()^0'
-  6
+  e0cc66ef77e8b6f711815af4e001a6594fde3ba5
   $ log 'merge()^'
-  5
+  904fa392b9415cad2ad08ac82d39bed6cfbcaa1c
   $ log 'merge()^1'
-  5
+  904fa392b9415cad2ad08ac82d39bed6cfbcaa1c
   $ log 'merge()^2'
-  4
+  2326846efdab34abffaf5ad2e7831f64a8ebb017
   $ log '(not merge())^2'
   $ log 'merge()^^'
-  3
+  8528aa5637f252b36e034c373e36890ace37524c
   $ log 'merge()^1^'
-  3
+  8528aa5637f252b36e034c373e36890ace37524c
   $ log 'merge()^^^'
-  1
+  d75937da8da0322d18c3771fb029ffd88b996c89
 
   $ hg debugrevspec -s '(merge() | 0)~-1'
   * set:
@@ -737,25 +737,25 @@ parentrevspec
   1
   7
   $ log 'merge()~-1'
-  7
+  013af1973af4a1932911a575960a876af6c02aaa
   $ log 'tip~-1'
   $ log '(tip | merge())~-1'
-  7
+  013af1973af4a1932911a575960a876af6c02aaa
   $ log 'merge()~0'
-  6
+  e0cc66ef77e8b6f711815af4e001a6594fde3ba5
   $ log 'merge()~1'
-  5
+  904fa392b9415cad2ad08ac82d39bed6cfbcaa1c
   $ log 'merge()~2'
-  3
+  8528aa5637f252b36e034c373e36890ace37524c
   $ log 'merge()~2^1'
-  1
+  d75937da8da0322d18c3771fb029ffd88b996c89
   $ log 'merge()~3'
-  1
+  d75937da8da0322d18c3771fb029ffd88b996c89
 
   $ log '(-3:tip)^'
-  4
-  6
-  8
+  2326846efdab34abffaf5ad2e7831f64a8ebb017
+  e0cc66ef77e8b6f711815af4e001a6594fde3ba5
+  d5d0dcbdc4d9ff5dbb2d336f32f0bb561c1a532c
 
   $ log 'tip^foo'
   hg: parse error: ^ expects a number 0, 1, or 2
@@ -796,13 +796,13 @@ Undocumented functions aren't suggested as similar either
 multiple revspecs
 (idset does not preserve '+' order for optimization)
 
-  $ hg log -r 'tip~1:tip' -r 'tip~2:tip~1' --template '{rev}\n'
-  4
-  5
-  6
-  7
-  8
-  9
+  $ hg log -r 'tip~1:tip' -r 'tip~2:tip~1' --template '{node}\n'
+  2326846efdab34abffaf5ad2e7831f64a8ebb017
+  904fa392b9415cad2ad08ac82d39bed6cfbcaa1c
+  e0cc66ef77e8b6f711815af4e001a6594fde3ba5
+  013af1973af4a1932911a575960a876af6c02aaa
+  d5d0dcbdc4d9ff5dbb2d336f32f0bb561c1a532c
+  6a4f54cc779b5949146617ba046459baab4a496f
 
 test usage in revpair (with "+")
 
@@ -1368,41 +1368,41 @@ issue4289 - ordering of built-ins
 test revsets started with 40-chars hash (issue3669)
 
   $ ISSUE3669_TIP=`hg tip --template '{node}'`
-  $ hg log -r "${ISSUE3669_TIP}" --template '{rev}\n'
-  9
-  $ hg log -r "${ISSUE3669_TIP}^" --template '{rev}\n'
-  8
+  $ hg log -r "${ISSUE3669_TIP}" --template '{node}\n'
+  6a4f54cc779b5949146617ba046459baab4a496f
+  $ hg log -r "${ISSUE3669_TIP}^" --template '{node}\n'
+  d5d0dcbdc4d9ff5dbb2d336f32f0bb561c1a532c
 
 test or-ed indirect predicates (issue3775)
 
   $ log '6 or 6^1' | sort
-  5
-  6
+  904fa392b9415cad2ad08ac82d39bed6cfbcaa1c
+  e0cc66ef77e8b6f711815af4e001a6594fde3ba5
   $ log '6^1 or 6' | sort
-  5
-  6
+  904fa392b9415cad2ad08ac82d39bed6cfbcaa1c
+  e0cc66ef77e8b6f711815af4e001a6594fde3ba5
   $ log '4 or 4~1' | sort
-  2
-  4
+  2326846efdab34abffaf5ad2e7831f64a8ebb017
+  5ed5505e9f1c21de2345daabdd7913fe53e4acd2
   $ log '4~1 or 4' | sort
-  2
-  4
+  2326846efdab34abffaf5ad2e7831f64a8ebb017
+  5ed5505e9f1c21de2345daabdd7913fe53e4acd2
   $ log '(0 or 2):(4 or 6) or 0 or 6' | sort
-  0
-  1
-  2
-  3
-  4
-  5
-  6
+  2326846efdab34abffaf5ad2e7831f64a8ebb017
+  2785f51eece5a23075c6f1d74702d8d9cb8bf0d4
+  5ed5505e9f1c21de2345daabdd7913fe53e4acd2
+  8528aa5637f252b36e034c373e36890ace37524c
+  904fa392b9415cad2ad08ac82d39bed6cfbcaa1c
+  d75937da8da0322d18c3771fb029ffd88b996c89
+  e0cc66ef77e8b6f711815af4e001a6594fde3ba5
   $ log '0 or 6 or (0 or 2):(4 or 6)' | sort
-  0
-  1
-  2
-  3
-  4
-  5
-  6
+  2326846efdab34abffaf5ad2e7831f64a8ebb017
+  2785f51eece5a23075c6f1d74702d8d9cb8bf0d4
+  5ed5505e9f1c21de2345daabdd7913fe53e4acd2
+  8528aa5637f252b36e034c373e36890ace37524c
+  904fa392b9415cad2ad08ac82d39bed6cfbcaa1c
+  d75937da8da0322d18c3771fb029ffd88b996c89
+  e0cc66ef77e8b6f711815af4e001a6594fde3ba5
 
 tests for 'remote()' predicate:
 #.  (csets in remote) (id)            (remote)
@@ -1418,9 +1418,9 @@ tests for 'remote()' predicate:
   $ echo r > r
   $ hg ci -Aqm 10
   $ log 'remote()'
-  7
+  013af1973af4a1932911a575960a876af6c02aaa
   $ log 'remote("a-b-c-")'
-  2
+  5ed5505e9f1c21de2345daabdd7913fe53e4acd2
   $ cd ../repo
 
 tests for concatenation of strings/symbols by "##"
@@ -1467,14 +1467,14 @@ tests for concatenation of strings/symbols by "##"
   $ echo 'cat2($1, $2) = $1 ## $2' >> .hg/hgrc
   $ echo 'cat2x2($1, $2, $3, $4) = cat2($1 ## $2, $3 ## $4)' >> .hg/hgrc
   $ log "cat2x2(278, '5f5', 1ee, 'ce5')"
-  0
+  2785f51eece5a23075c6f1d74702d8d9cb8bf0d4
 
 (check operator priority)
 
   $ echo 'cat2n2($1, $2, $3, $4) = $1 ## $2 or $3 ## $4~2' >> .hg/hgrc
   $ log "cat2n2(2785f5, 1eece5, 6a4f54, cc779b)"
-  0
-  4
+  2785f51eece5a23075c6f1d74702d8d9cb8bf0d4
+  2326846efdab34abffaf5ad2e7831f64a8ebb017
 
   $ cd ..
 
@@ -1711,28 +1711,28 @@ Test `draft() & ::x` optimization
   > EOS
   $ hg debugmakepublic -r P5
   $ hg phase --force --secret -r S1+S2
-  $ hg log -G -T '{rev} {desc} {phase}' -r 'sort(all(), topo, topo.firstbranch=P5)'
-  o  8 P5 public
+  $ hg log -G -T '{desc} {phase}' -r 'sort(all(), topo, topo.firstbranch=P5)'
+  o  P5 public
   |
-  | o  10 S1 secret
+  | o  S1 secret
   | |
-  | o  7 D3 draft
+  | o  D3 draft
   |/
-  | o  9 S2 secret
+  | o  S2 secret
   |/
-  o  6 P4 public
+  o  P4 public
   |
-  o  5 P3 public
+  o  P3 public
   |
-  o  3 P2 public
+  o  P2 public
   |
-  | o  4 D2 draft
+  | o  D2 draft
   | |
-  | o  2 D1 draft
+  | o  D1 draft
   |/
-  o  1 P1 public
+  o  P1 public
   |
-  o  0 P0 public
+  o  P0 public
   
   $ hg debugrevspec --verify -p analyzed -p optimized 'draft() & ::(((S1+D1+P5)-D3)+S2)'
   * analyzed:

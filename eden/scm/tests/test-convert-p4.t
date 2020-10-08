@@ -81,10 +81,10 @@ convert
   2 initial
   1 change a
   0 change b/c
-  $ hg -R dst log --template 'rev={rev} desc="{desc}" tags="{tags}" files="{files}"\n'
-  rev=2 desc="change b/c" tags="" files="b/c"
-  rev=1 desc="change a" tags="" files="a"
-  rev=0 desc="initial" tags="" files="a b/c"
+  $ hg -R dst log --template 'desc="{desc}" tags="{tags}" files="{files}"\n'
+  desc="change b/c" tags="" files="b/c"
+  desc="change a" tags="" files="a"
+  desc="initial" tags="" files="a b/c"
 
 change some files
   $ p4 edit a b/c
@@ -108,11 +108,11 @@ convert again
   sorting...
   converting...
   0 change a b/c
-  $ hg -R dst log --template 'rev={rev} desc="{desc}" tags="{tags}" files="{files}"\n'
-  rev=3 desc="change a b/c" tags="" files="a b/c"
-  rev=2 desc="change b/c" tags="" files="b/c"
-  rev=1 desc="change a" tags="" files="a"
-  rev=0 desc="initial" tags="" files="a b/c"
+  $ hg -R dst log --template 'desc="{desc}" tags="{tags}" files="{files}"\n'
+  desc="change a b/c" tags="" files="a b/c"
+  desc="change b/c" tags="" files="b/c"
+  desc="change a" tags="" files="a"
+  desc="initial" tags="" files="a b/c"
 
 interesting names
   $ echo dddd > "d d"
@@ -137,12 +137,12 @@ convert again
   sorting...
   converting...
   0 add d e f
-  $ hg -R dst log --template 'rev={rev} desc="{desc}" tags="{tags}" files="{files}"\n'
-  rev=4 desc="add d e f" tags="" files=" e/ f d d"
-  rev=3 desc="change a b/c" tags="" files="a b/c"
-  rev=2 desc="change b/c" tags="" files="b/c"
-  rev=1 desc="change a" tags="" files="a"
-  rev=0 desc="initial" tags="" files="a b/c"
+  $ hg -R dst log --template 'desc="{desc}" tags="{tags}" files="{files}"\n'
+  desc="add d e f" tags="" files=" e/ f d d"
+  desc="change a b/c" tags="" files="a b/c"
+  desc="change b/c" tags="" files="b/c"
+  desc="change a" tags="" files="a"
+  desc="initial" tags="" files="a b/c"
 
 empty commit message
   $ p4 edit a

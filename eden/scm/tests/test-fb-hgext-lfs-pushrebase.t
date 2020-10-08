@@ -6,7 +6,7 @@
   $ . "$TESTDIR/library.sh"
 
   $ enable lfs pushrebase
-  $ setconfig diff.git=1 pushrebase.rewritedates=true
+  $ setconfig diff.git=1 pushrebase.rewritedates=false
   $ readconfig <<EOF
   > [lfs]
   > threshold=10B
@@ -48,8 +48,8 @@
   $ hg update
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-  $ hg log -p -r ::tip -T '{rev}:{node} {desc}\n' -G
-  @  4:042535657086a5b08463b9210a8f46dc270e51f9 x-lfs-again
+  $ hg log -p -r ::tip -T '{node} {desc}\n' -G
+  @  042535657086a5b08463b9210a8f46dc270e51f9 x-lfs-again
   |  diff --git a/x b/x
   |  --- a/x
   |  +++ b/x
@@ -57,12 +57,12 @@
   |   NOTLFS
   |  +BECOME-LFS-AGAIN
   |
-  o  3:c6cc0cd58884b847de39aa817ded71e6051caa9f x-nonlfs
+  o  c6cc0cd58884b847de39aa817ded71e6051caa9f x-nonlfs
   |  diff --git a/y b/x
   |  rename from y
   |  rename to x
   |
-  o  2:f3dec7f3610207dbf222ec2d7b68df16a5fde0f2 y-nonlfs
+  o  f3dec7f3610207dbf222ec2d7b68df16a5fde0f2 y-nonlfs
   |  diff --git a/y b/y
   |  --- a/y
   |  +++ b/y
@@ -70,12 +70,12 @@
   |  -THIS-IS-LFS-FILE
   |  +NOTLFS
   |
-  o  1:799bebfa53189a3db8424680f1a8f9806540e541 y-lfs
+  o  799bebfa53189a3db8424680f1a8f9806540e541 y-lfs
   |  diff --git a/x b/y
   |  rename from x
   |  rename to y
   |
-  o  0:0d2948821b2b3b6e58505696145f2215cea2b2cd x-lfs
+  o  0d2948821b2b3b6e58505696145f2215cea2b2cd x-lfs
      diff --git a/x b/x
      new file mode 100644
      --- /dev/null
@@ -113,36 +113,36 @@
 # Introduce conflict in x in master
 
   $ cd ../master
-  $ hg log -r master -T '{rev}:{node}\n'
-  4:042535657086a5b08463b9210a8f46dc270e51f9
+  $ hg log -r master -T '{node}\n'
+  042535657086a5b08463b9210a8f46dc270e51f9
 
   $ echo INTRODUCE-CONFLICT >> x
   $ hg commit -qm introduce-conflict
-  $ hg log -r master -T '{rev}:{node}\n'
-  5:949778ec92dd45fafbcc6ab7b8c843fdceb66e24
+  $ hg log -r master -T '{node}\n'
+  949778ec92dd45fafbcc6ab7b8c843fdceb66e24
   $ hg book conflict_master -r 949778ec92dd45fafbcc6ab7b8c843fdceb66e24
 
   $ hg update -q 042535657086a5b08463b9210a8f46dc270e51f9
   $ echo NEW-FILE >> z
   $ hg commit -qAm add-new-file
-  $ hg log -r tip -T '{rev}:{node}\n'
-  6:a5bcdd7fe9f0d300a2dbed2bd81d140547638856
+  $ hg log -r tip -T '{node}\n'
+  a5bcdd7fe9f0d300a2dbed2bd81d140547638856
   $ hg book -f -r a5bcdd7fe9f0d300a2dbed2bd81d140547638856 master
 
-  $ hg log -T '{rev}:{node} {bookmarks} {desc}\n' -G
-  @  6:a5bcdd7fe9f0d300a2dbed2bd81d140547638856 master add-new-file
+  $ hg log -T '{node} {bookmarks} {desc}\n' -G
+  @  a5bcdd7fe9f0d300a2dbed2bd81d140547638856 master add-new-file
   |
-  | o  5:949778ec92dd45fafbcc6ab7b8c843fdceb66e24 conflict_master introduce-conflict
+  | o  949778ec92dd45fafbcc6ab7b8c843fdceb66e24 conflict_master introduce-conflict
   |/
-  o  4:042535657086a5b08463b9210a8f46dc270e51f9  x-lfs-again
+  o  042535657086a5b08463b9210a8f46dc270e51f9  x-lfs-again
   |
-  o  3:c6cc0cd58884b847de39aa817ded71e6051caa9f  x-nonlfs
+  o  c6cc0cd58884b847de39aa817ded71e6051caa9f  x-nonlfs
   |
-  o  2:f3dec7f3610207dbf222ec2d7b68df16a5fde0f2  y-nonlfs
+  o  f3dec7f3610207dbf222ec2d7b68df16a5fde0f2  y-nonlfs
   |
-  o  1:799bebfa53189a3db8424680f1a8f9806540e541  y-lfs
+  o  799bebfa53189a3db8424680f1a8f9806540e541  y-lfs
   |
-  o  0:0d2948821b2b3b6e58505696145f2215cea2b2cd  x-lfs
+  o  0d2948821b2b3b6e58505696145f2215cea2b2cd  x-lfs
   
 
 # Push lfs content to server: conflict in x expected
@@ -181,25 +181,25 @@
 # Check content
 
   $ cd ../master
-  $ hg log -T '{rev}:{node} {bookmarks} {desc}\n' -G
-  o  7:* shallow.lfs.commit (glob)
+  $ hg log -T '{node} {bookmarks} {desc}\n' -G
+  o  b13138389e22bc6af15868704e6e7bcf502d2b3b  shallow.lfs.commit
   |
-  @  6:a5bcdd7fe9f0d300a2dbed2bd81d140547638856 master add-new-file
+  @  a5bcdd7fe9f0d300a2dbed2bd81d140547638856 master add-new-file
   |
-  | o  5:949778ec92dd45fafbcc6ab7b8c843fdceb66e24 conflict_master introduce-conflict
+  | o  949778ec92dd45fafbcc6ab7b8c843fdceb66e24 conflict_master introduce-conflict
   |/
-  o  4:042535657086a5b08463b9210a8f46dc270e51f9  x-lfs-again
+  o  042535657086a5b08463b9210a8f46dc270e51f9  x-lfs-again
   |
-  o  3:c6cc0cd58884b847de39aa817ded71e6051caa9f  x-nonlfs
+  o  c6cc0cd58884b847de39aa817ded71e6051caa9f  x-nonlfs
   |
-  o  2:f3dec7f3610207dbf222ec2d7b68df16a5fde0f2  y-nonlfs
+  o  f3dec7f3610207dbf222ec2d7b68df16a5fde0f2  y-nonlfs
   |
-  o  1:799bebfa53189a3db8424680f1a8f9806540e541  y-lfs
+  o  799bebfa53189a3db8424680f1a8f9806540e541  y-lfs
   |
-  o  0:0d2948821b2b3b6e58505696145f2215cea2b2cd  x-lfs
+  o  0d2948821b2b3b6e58505696145f2215cea2b2cd  x-lfs
   
-  $ hg log -p -r tip -T '{rev}:{node} {desc}\n'
-  7:* shallow.lfs.commit (glob)
+  $ hg log -p -r tip -T '{node} {desc}\n'
+  b13138389e22bc6af15868704e6e7bcf502d2b3b shallow.lfs.commit
   diff --git a/x b/y
   rename from x
   rename to y
@@ -265,24 +265,24 @@
 
   $ hg update tip
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ hg log -T '{rev}:{node} {bookmarks} {desc}\n' -G
-  @  6:* master shallow.lfs.commit (glob)
+  $ hg log -T '{node} {bookmarks} {desc}\n' -G
+  @  b13138389e22bc6af15868704e6e7bcf502d2b3b master shallow.lfs.commit
   |
-  o  5:a5bcdd7fe9f0d300a2dbed2bd81d140547638856  add-new-file
+  o  a5bcdd7fe9f0d300a2dbed2bd81d140547638856  add-new-file
   |
-  o  4:042535657086a5b08463b9210a8f46dc270e51f9  x-lfs-again
+  o  042535657086a5b08463b9210a8f46dc270e51f9  x-lfs-again
   |
-  o  3:c6cc0cd58884b847de39aa817ded71e6051caa9f  x-nonlfs
+  o  c6cc0cd58884b847de39aa817ded71e6051caa9f  x-nonlfs
   |
-  o  2:f3dec7f3610207dbf222ec2d7b68df16a5fde0f2  y-nonlfs
+  o  f3dec7f3610207dbf222ec2d7b68df16a5fde0f2  y-nonlfs
   |
-  o  1:799bebfa53189a3db8424680f1a8f9806540e541  y-lfs
+  o  799bebfa53189a3db8424680f1a8f9806540e541  y-lfs
   |
-  o  0:0d2948821b2b3b6e58505696145f2215cea2b2cd  x-lfs
+  o  0d2948821b2b3b6e58505696145f2215cea2b2cd  x-lfs
   
 
-  $ hg log -p -r tip -T '{rev}:{node} {desc}\n'
-  6:* shallow.lfs.commit (glob)
+  $ hg log -p -r tip -T '{node} {desc}\n'
+  b13138389e22bc6af15868704e6e7bcf502d2b3b shallow.lfs.commit
   diff --git a/x b/y
   rename from x
   rename to y

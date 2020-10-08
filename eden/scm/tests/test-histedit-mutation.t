@@ -7,7 +7,7 @@
   $ setconfig phases.publish=false
   $ readconfig <<EOF
   > [ui]
-  > logtemplate= {rev}:{node|short} {desc|firstline}
+  > logtemplate= {node|short} {desc|firstline}
   > EOF
 
 Test that histedit learns about obsolescence not stored in histedit state
@@ -39,11 +39,11 @@ Test that histedit learns about obsolescence not stored in histedit state
   $ hg commit --amend b
   $ hg histedit --continue
   $ hg log -G
-  @  5:a7c0e6970599 b
+  @  a7c0e6970599 b
   |
-  o  4:f6ad57c4d86d c
+  o  f6ad57c4d86d c
   |
-  o  0:cb9a9f314b8b a
+  o  cb9a9f314b8b a
   
 
 
@@ -83,11 +83,11 @@ With some node gone missing during the edit.
   $ hg --hidden debugstrip 'desc(XXXXXX)' --no-backup
   $ hg histedit --continue
   $ hg log -G
-  @  8:54f3bb7ec5b2 c
+  @  54f3bb7ec5b2 c
   |
-  o  7:12f834662cb1 b2
+  o  12f834662cb1 b2
   |
-  o  0:cb9a9f314b8b a
+  o  cb9a9f314b8b a
   
 
 
@@ -127,17 +127,17 @@ Base setup for the rest of the testing
   > done
 
   $ hg log --graph
-  @  5:652413bf663e f
+  @  652413bf663e f
   |
-  o  4:e860deea161a e
+  o  e860deea161a e
   |
-  o  3:055a42cdd887 d
+  o  055a42cdd887 d
   |
-  o  2:177f92b77385 c
+  o  177f92b77385 c
   |
-  o  1:d2ae7f538514 b
+  o  d2ae7f538514 b
   |
-  o  0:cb9a9f314b8b a
+  o  cb9a9f314b8b a
   
 
 
@@ -178,27 +178,27 @@ Base setup for the rest of the testing
   > EOF
   [1]
   $ hg log --graph --hidden
-  @  10:363adb0b332c f
+  @  363adb0b332c f
   |
-  o  9:e80cad0096a5 d
+  o  e80cad0096a5 d
   |
-  | o  8:7641852d682f fold-temp-revision e860deea161a
+  | o  7641852d682f fold-temp-revision e860deea161a
   | |
-  | x  7:c04b72554bfd d
+  | x  c04b72554bfd d
   |/
-  o  6:dfac7d6bf3bc c
+  o  dfac7d6bf3bc c
   |
-  | x  5:652413bf663e f
+  | x  652413bf663e f
   | |
-  | x  4:e860deea161a e
+  | x  e860deea161a e
   | |
-  | x  3:055a42cdd887 d
+  | x  055a42cdd887 d
   | |
-  | x  2:177f92b77385 c
+  | x  177f92b77385 c
   | |
-  | o  1:d2ae7f538514 b
+  | o  d2ae7f538514 b
   |/
-  o  0:cb9a9f314b8b a
+  o  cb9a9f314b8b a
   
 
 
@@ -238,11 +238,11 @@ create an hidden revision
   > pick 363adb0b332c 8 f
   > EOF
   $ hg log --graph
-  @  11:2a7423bdcce6 f
+  @  2a7423bdcce6 f
   |
-  o  6:dfac7d6bf3bc c
+  o  dfac7d6bf3bc c
   |
-  o  0:cb9a9f314b8b a
+  o  cb9a9f314b8b a
   
 
 check hidden revision are ignored (6 have hidden children 7 and 8)
@@ -260,7 +260,7 @@ Test that rewriting leaving instability behind is allowed
   $ hg up '.^'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg log -r 'children(.)'
-  11:2a7423bdcce6 f (no-eol)
+  2a7423bdcce6 f (no-eol)
   $ hg histedit -r '.' --commands - <<EOF
   > edit dfac7d6bf3bc 6 c
   > EOF
@@ -273,7 +273,7 @@ Test that rewriting leaving instability behind is allowed
   $ hg histedit --continue
 
   $ hg log -r '(obsolete()::) - obsolete()'
-  11:2a7423bdcce6 f (no-eol)
+  2a7423bdcce6 f (no-eol)
 
 stabilise
 
@@ -297,9 +297,9 @@ dropped changeset to be hidden.
   > drop c3accca457aa 13 f
   > EOF
   $ hg log -G
-  @  12:05d885d5bf7b c
+  @  05d885d5bf7b c
   |
-  o  0:cb9a9f314b8b a
+  o  cb9a9f314b8b a
   
 
 
@@ -317,11 +317,11 @@ With rewritten ancestors
   > drop c9ce38eda099 13 h
   > EOF
   $ hg log -G
-  @  17:14ea19c40480 c
+  @  14ea19c40480 c
   |
-  o  16:64f466521de4 g
+  o  64f466521de4 g
   |
-  o  0:cb9a9f314b8b a
+  o  cb9a9f314b8b a
   
 
   $ cd ../base
@@ -336,16 +336,16 @@ Check that histedit respect immutability
 
   $ cat >> $HGRCPATH << EOF
   > [ui]
-  > logtemplate= {rev}:{node|short} ({phase}) {desc|firstline}\n
+  > logtemplate= {node|short} ({phase}) {desc|firstline}\n
   > EOF
 
   $ hg debugmakepublic '.^'
   $ hg log -G
-  @  13:c3accca457aa (draft) f
+  @  c3accca457aa (draft) f
   |
-  o  12:05d885d5bf7b (public) c
+  o  05d885d5bf7b (public) c
   |
-  o  0:cb9a9f314b8b (public) a
+  o  cb9a9f314b8b (public) a
   
 
   $ hg histedit -r '.~2'
@@ -363,21 +363,21 @@ Prepare further testing
   >     hg ci -m $x
   > done
   $ hg log -G
-  @  18:4f4f997369d1 (draft) k
+  @  4f4f997369d1 (draft) k
   |
-  o  17:94556afb7287 (draft) j
+  o  94556afb7287 (draft) j
   |
-  o  16:af5689bd30fd (draft) i
+  o  af5689bd30fd (draft) i
   |
-  o  15:49605d76b1f7 (draft) h
+  o  49605d76b1f7 (draft) h
   |
-  o  14:bd6d43595d7e (draft) g
+  o  bd6d43595d7e (draft) g
   |
-  o  13:c3accca457aa (draft) f
+  o  c3accca457aa (draft) f
   |
-  o  12:05d885d5bf7b (public) c
+  o  05d885d5bf7b (public) c
   |
-  o  0:cb9a9f314b8b (public) a
+  o  cb9a9f314b8b (public) a
   
 
   $ cd ..
@@ -408,21 +408,21 @@ New-commit as draft (default)
   $ echo f >> f
   $ hg histedit --continue
   $ hg log -G
-  @  24:1313fc35db52 (draft) k
+  @  1313fc35db52 (draft) k
   |
-  o  23:b361034ee87c (draft) j
+  o  b361034ee87c (draft) j
   |
-  o  22:c17eeb2f6c3d (draft) i
+  o  c17eeb2f6c3d (draft) i
   |
-  o  21:5af825d0adbb (draft) h
+  o  5af825d0adbb (draft) h
   |
-  o  20:152765193a02 (draft) g
+  o  152765193a02 (draft) g
   |
-  o  19:6263e4f96392 (draft) f
+  o  6263e4f96392 (draft) f
   |
-  o  12:05d885d5bf7b (public) c
+  o  05d885d5bf7b (public) c
   |
-  o  0:cb9a9f314b8b (public) a
+  o  cb9a9f314b8b (public) a
   
 
   $ cd ..
@@ -452,21 +452,21 @@ attempted later.
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg log -G
-  @  18:4f4f997369d1 (draft) k
+  @  4f4f997369d1 (draft) k
   |
-  o  17:94556afb7287 (draft) j
+  o  94556afb7287 (draft) j
   |
-  o  16:af5689bd30fd (draft) i
+  o  af5689bd30fd (draft) i
   |
-  o  15:49605d76b1f7 (draft) h
+  o  49605d76b1f7 (draft) h
   |
-  o  14:bd6d43595d7e (draft) g
+  o  bd6d43595d7e (draft) g
   |
-  o  13:c3accca457aa (draft) f
+  o  c3accca457aa (draft) f
   |
-  o  12:05d885d5bf7b (public) c
+  o  05d885d5bf7b (public) c
   |
-  o  0:cb9a9f314b8b (public) a
+  o  cb9a9f314b8b (public) a
   
 
 
@@ -483,21 +483,21 @@ attempted later.
   [1]
   $ hg histedit --continue --config experimental.evolution.track-operation=1
   $ hg log -G
-  @  25:dd9cf9176a2d (draft) k
+  @  dd9cf9176a2d (draft) k
   |
-  o  24:1380d026a7bb (draft) j
+  o  1380d026a7bb (draft) j
   |
-  o  21:9f336d5d47c2 (draft) i
+  o  9f336d5d47c2 (draft) i
   |
-  o  20:55f4840bfff6 (draft) g
+  o  55f4840bfff6 (draft) g
   |
-  o  19:c679430403c0 (draft) h
+  o  c679430403c0 (draft) h
   |
-  o  13:c3accca457aa (draft) f
+  o  c3accca457aa (draft) f
   |
-  o  12:05d885d5bf7b (public) c
+  o  05d885d5bf7b (public) c
   |
-  o  0:cb9a9f314b8b (public) a
+  o  cb9a9f314b8b (public) a
   
 
   $ hg debugmutation

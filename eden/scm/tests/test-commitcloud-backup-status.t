@@ -61,16 +61,16 @@ Setup client
 
 Check hiding the backup head doesn't affect backed-up changesets
   $ hg up -q 2
-  $ hg log -T '{rev} {desc}\n' -r 'backedup()'
-  2 Backed up changeset
-  3 Backed up changeset 2
-  $ hg log -T '{rev} {desc}\n' -r 'notbackedup()'
+  $ hg log -T '{desc}\n' -r 'backedup()'
+  Backed up changeset
+  Backed up changeset 2
+  $ hg log -T '{desc}\n' -r 'notbackedup()'
   $ hg hide 3
   hiding commit * (glob)
   1 changeset hidden
-  $ hg log -T '{rev} {desc}\n' -r 'backedup()' --traceback
-  2 Backed up changeset
-  $ hg log -T '{rev} {desc}\n' -r 'notbackedup()'
+  $ hg log -T '{desc}\n' -r 'backedup()' --traceback
+  Backed up changeset
+  $ hg log -T '{desc}\n' -r 'notbackedup()'
   $ hg unhide 3
   $ hg up -q 3
 
@@ -83,29 +83,29 @@ Create some changesets that aren't backed up
   $ hg commit -d "$commit_time 0" -m "Backup pending changeset"
 
 Check backup status of commits
-  $ hg log -T '{rev} {desc}\n' -r 'backedup()'
-  2 Backed up changeset
-  3 Backed up changeset 2
-  $ hg log -T '{rev} {desc}\n' -r 'draft() - backedup()'
-  4 Not backed up changeset
-  5 Backup pending changeset
-  $ hg log -T '{rev} {desc}\n' -r 'notbackedup()'
-  4 Not backed up changeset
-  5 Backup pending changeset
+  $ hg log -T '{desc}\n' -r 'backedup()'
+  Backed up changeset
+  Backed up changeset 2
+  $ hg log -T '{desc}\n' -r 'draft() - backedup()'
+  Not backed up changeset
+  Backup pending changeset
+  $ hg log -T '{desc}\n' -r 'notbackedup()'
+  Not backed up changeset
+  Backup pending changeset
 
 Check smartlog output
-  $ hg smartlog -T '{rev}: {desc}\n' --config infinitepushbackup.autobackup=no
-  o  1: Public changeset 2
+  $ hg smartlog -T '{desc}\n' --config infinitepushbackup.autobackup=no
+  o  Public changeset 2
   |
-  | @  5: Backup pending changeset
+  | @  Backup pending changeset
   | |
-  | o  4: Not backed up changeset
+  | o  Not backed up changeset
   | |
-  | o  3: Backed up changeset 2
+  | o  Backed up changeset 2
   | |
-  | o  2: Backed up changeset
+  | o  Backed up changeset
   |/
-  o  0: Public changeset
+  o  Public changeset
   
   note: background backup is currently disabled so your commits are not being backed up.
   note: changeset * is not backed up. (glob)
@@ -113,18 +113,18 @@ Check smartlog output
   (if this fails, please report to the Source Control Team)
 
 Check smartlog summary can be suppressed
-  $ hg smartlog -T '{rev}: {desc}\n' --config infinitepushbackup.enablestatus=no
-  o  1: Public changeset 2
+  $ hg smartlog -T '{desc}\n' --config infinitepushbackup.enablestatus=no
+  o  Public changeset 2
   |
-  | @  5: Backup pending changeset
+  | @  Backup pending changeset
   | |
-  | o  4: Not backed up changeset
+  | o  Not backed up changeset
   | |
-  | o  3: Backed up changeset 2
+  | o  Backed up changeset 2
   | |
-  | o  2: Backed up changeset
+  | o  Backed up changeset
   |/
-  o  0: Public changeset
+  o  Public changeset
   
 Check smartlog summary with multiple unbacked up changesets
   $ hg up 2
@@ -132,20 +132,20 @@ Check smartlog summary with multiple unbacked up changesets
   $ echo b2 > file1
   $ commit_time=`expr $now - 11 \* 60`
   $ hg commit -d "$commit_time 0" -m "Not backed up changeset 2"
-  $ hg smartlog -T '{rev}: {desc}\n' --config infinitepushbackup.autobackup=yes
-  o  1: Public changeset 2
+  $ hg smartlog -T '{desc}\n' --config infinitepushbackup.autobackup=yes
+  o  Public changeset 2
   |
-  | @  6: Not backed up changeset 2
+  | @  Not backed up changeset 2
   | |
-  | | o  5: Backup pending changeset
+  | | o  Backup pending changeset
   | | |
-  | | o  4: Not backed up changeset
+  | | o  Not backed up changeset
   | | |
-  | | o  3: Backed up changeset 2
+  | | o  Backed up changeset 2
   | |/
-  | o  2: Backed up changeset
+  | o  Backed up changeset
   |/
-  o  0: Public changeset
+  o  Public changeset
   
   note: 2 changesets are not backed up.
   (run 'hg cloud backup' to perform a backup)
@@ -157,11 +157,11 @@ Check backup status with an unbacked up changeset that is disjoint from existing
   $ echo b > file2
   $ commit_time=`expr $now - 11 \* 60`
   $ hg commit -d "$commit_time 0" -m "Not backed up changeset 3"
-  $ hg log -T '{rev} {desc}\n' -r 'notbackedup()'
-  4 Not backed up changeset
-  5 Backup pending changeset
-  6 Not backed up changeset 2
-  7 Not backed up changeset 3
+  $ hg log -T '{desc}\n' -r 'notbackedup()'
+  Not backed up changeset
+  Backup pending changeset
+  Not backed up changeset 2
+  Not backed up changeset 3
 
 Test template keyword for when a backup is in progress
   $ hg log -T '{if(backingup,"Yes","No")}\n' -r .
@@ -188,22 +188,22 @@ Test for infinitepushbackup disable
   [255]
 
 Test sl when infinitepushbackup is disabled but disabling has been expired / not expired
-  $ hg sl -T '{rev} {desc}\n'
-  @  7 Not backed up changeset 3
+  $ hg sl -T '{desc}\n'
+  @  Not backed up changeset 3
   |
-  o  1 Public changeset 2
+  o  Public changeset 2
   |
-  | o  6 Not backed up changeset 2
+  | o  Not backed up changeset 2
   | |
-  | | o  5 Backup pending changeset
+  | | o  Backup pending changeset
   | | |
-  | | o  4 Not backed up changeset
+  | | o  Not backed up changeset
   | | |
-  | | o  3 Backed up changeset 2
+  | | o  Backed up changeset 2
   | |/
-  | o  2 Backed up changeset
+  | o  Backed up changeset
   |/
-  o  0 Public changeset
+  o  Public changeset
   
   note: background backup is currently disabled until * (glob)
   so your commits are not being backed up.
@@ -213,22 +213,22 @@ Test sl when infinitepushbackup is disabled but disabling has been expired / not
   (if this fails, please report to the Source Control Team)
 
 Advance time so that the disable has expired
-  $ hg sl --config fakedate.date="1452175000 0" -T '{rev} {desc}\n'
-  @  7 Not backed up changeset 3
+  $ hg sl --config fakedate.date="1452175000 0" -T '{desc}\n'
+  @  Not backed up changeset 3
   |
-  o  1 Public changeset 2
+  o  Public changeset 2
   |
-  | o  6 Not backed up changeset 2
+  | o  Not backed up changeset 2
   | |
-  | | o  5 Backup pending changeset
+  | | o  Backup pending changeset
   | | |
-  | | o  4 Not backed up changeset
+  | | o  Not backed up changeset
   | | |
-  | | o  3 Backed up changeset 2
+  | | o  Backed up changeset 2
   | |/
-  | o  2 Backed up changeset
+  | o  Backed up changeset
   |/
-  o  0 Public changeset
+  o  Public changeset
   
   note: 4 changesets are not backed up.
   (run 'hg cloud backup' to perform a backup)
@@ -243,30 +243,30 @@ show as backed up if '--hidden' is passed.
   $ commit_time=`expr $now - 11 \* 60`
   $ hg amend -d "$commit_time 0" -m "Not backed up changeset 3 (amended)"
   $ hg hide -q 3
-  $ hg log -T '{rev} {desc}\n' -r 'backedup()'
-  2 Backed up changeset
-  $ hg log -T '{rev} {desc}\n' -r 'backedup()' --hidden
-  2 Backed up changeset
-  3 Backed up changeset 2
-  $ hg log -T '{rev} {desc}\n' -r 'notbackedup()'
-  6 Not backed up changeset 2
-  8 Not backed up changeset 3 (amended)
-  $ hg log -T '{rev} {desc}\n' -r 'notbackedup()' --hidden
-  4 Not backed up changeset
-  5 Backup pending changeset
-  6 Not backed up changeset 2
-  7 Not backed up changeset 3
-  8 Not backed up changeset 3 (amended)
-  $ hg sl -T '{rev} {desc}\n'
-  @  8 Not backed up changeset 3 (amended)
+  $ hg log -T '{desc}\n' -r 'backedup()'
+  Backed up changeset
+  $ hg log -T '{desc}\n' -r 'backedup()' --hidden
+  Backed up changeset
+  Backed up changeset 2
+  $ hg log -T '{desc}\n' -r 'notbackedup()'
+  Not backed up changeset 2
+  Not backed up changeset 3 (amended)
+  $ hg log -T '{desc}\n' -r 'notbackedup()' --hidden
+  Not backed up changeset
+  Backup pending changeset
+  Not backed up changeset 2
+  Not backed up changeset 3
+  Not backed up changeset 3 (amended)
+  $ hg sl -T '{desc}\n'
+  @  Not backed up changeset 3 (amended)
   |
-  o  1 Public changeset 2
+  o  Public changeset 2
   |
-  | o  6 Not backed up changeset 2
+  | o  Not backed up changeset 2
   | |
-  | o  2 Backed up changeset
+  | o  Backed up changeset
   |/
-  o  0 Public changeset
+  o  Public changeset
   
   note: background backup is currently disabled until Thu Jan 07 13:00:00 2016 +0000
   so your commits are not being backed up.
@@ -276,24 +276,24 @@ show as backed up if '--hidden' is passed.
   (if this fails, please report to the Source Control Team)
 
 (3, 4, 5 do not have successors. They show up as 'o' not 'x' with --hidden)
-  $ hg sl -T '{rev} {desc}\n' --hidden
-  @  8 Not backed up changeset 3 (amended)
+  $ hg sl -T '{desc}\n' --hidden
+  @  Not backed up changeset 3 (amended)
   |
-  | x  7 Not backed up changeset 3
+  | x  Not backed up changeset 3
   |/
-  o  1 Public changeset 2
+  o  Public changeset 2
   |
-  | o  6 Not backed up changeset 2
+  | o  Not backed up changeset 2
   | |
-  | | o  5 Backup pending changeset
+  | | o  Backup pending changeset
   | | |
-  | | o  4 Not backed up changeset
+  | | o  Not backed up changeset
   | | |
-  | | o  3 Backed up changeset 2
+  | | o  Backed up changeset 2
   | |/
-  | o  2 Backed up changeset
+  | o  Backed up changeset
   |/
-  o  0 Public changeset
+  o  Public changeset
   
   note: background backup is currently disabled until Thu Jan 07 13:00:00 2016 +0000
   so your commits are not being backed up.

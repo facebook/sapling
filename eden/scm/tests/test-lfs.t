@@ -163,12 +163,12 @@
 
 # Test lfs_files template
 
-  $ hg log -r 'all()' -T '{rev} {join(lfs_files, ", ")}\n'
-  0 large
-  1 l
-  2 s
-  3 s
-  4 l
+  $ hg log -r 'all()' -T '{join(lfs_files, ", ")}\n'
+  large
+  l
+  s
+  s
+  l
 
 # Push and pull the above repo
 
@@ -251,17 +251,17 @@
   ...     _ = f.write(b'\1\nMETA\n')
   $ hg commit -m meta
   $ hg status
-  $ hg log -T '{rev}: {file_copies} | {file_dels} | {file_adds}\n'
-  2:  |  | 
-  1: a1 (a2)a2 (a1) |  | 
-  0:  |  | a1 a2
+  $ hg log -T '{file_copies} | {file_dels} | {file_adds}\n'
+   |  | 
+  a1 (a2)a2 (a1) |  | 
+   |  | a1 a2
 
 # Verify commit hashes include rename metadata
 
-  $ hg log -T '{rev}:{node|short} {desc}\n'
-  2:0fae949de7fa meta
-  1:9cd6bdffdac0 b
-  0:7f96794915f7 a
+  $ hg log -T '{node|short} {desc}\n'
+  0fae949de7fa meta
+  9cd6bdffdac0 b
+  7f96794915f7 a
 
   $ hg debugfilerev -r 'all()' -v
   7f96794915f7: a
@@ -318,8 +318,8 @@
    a: bin=0 lnk=0 flag=2000 size=14 copied='' chain=47910e2096f9
   8317d37315be: branching
    a: bin=0 lnk=0 flag=2000 size=20 copied='' chain=d55fa5808479
-  $ hg -R bundle.hg log -p -T '{rev} {desc}\n' a
-  5 branching
+  $ hg -R bundle.hg log -p -T '{desc}\n' a
+  branching
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -327,7 +327,7 @@
   -THIS-IS-LFS-two
   +THIS-IS-LFS-2-CHILD
   
-  4 a-4
+  a-4
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -335,7 +335,7 @@
   -THIS-IS-LFS-three
   +THIS-IS-LFS-4
   
-  3 a-three
+  a-three
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -343,7 +343,7 @@
   -THIS-IS-LFS-two
   +THIS-IS-LFS-three
   
-  2 a-two
+  a-two
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -351,7 +351,7 @@
   -THIS-IS-LFS-single
   +THIS-IS-LFS-two
   
-  1 a-single
+  a-single
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -359,7 +359,7 @@
   -THIS-IS-LFS-0
   +THIS-IS-LFS-single
   
-  0 a-0
+  a-0
   diff --git a/a b/a
   new file mode 100644
   --- /dev/null
@@ -368,8 +368,8 @@
   +THIS-IS-LFS-0
   
   $ hg bundle -R bundle.hg --base 045a1dfffcffc2f7f47eadef15b658a8402082b9 bundle-again.hg -q
-  $ hg -R bundle-again.hg log -p -T '{rev} {desc}\n' a
-  5 branching
+  $ hg -R bundle-again.hg log -p -T '{desc}\n' a
+  branching
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -377,7 +377,7 @@
   -THIS-IS-LFS-two
   +THIS-IS-LFS-2-CHILD
   
-  4 a-4
+  a-4
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -385,7 +385,7 @@
   -THIS-IS-LFS-three
   +THIS-IS-LFS-4
   
-  3 a-three
+  a-three
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -393,7 +393,7 @@
   -THIS-IS-LFS-two
   +THIS-IS-LFS-three
   
-  2 a-two
+  a-two
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -401,7 +401,7 @@
   -THIS-IS-LFS-single
   +THIS-IS-LFS-two
   
-  1 a-single
+  a-single
   diff --git a/a b/a
   --- a/a
   +++ b/a
@@ -409,7 +409,7 @@
   -THIS-IS-LFS-0
   +THIS-IS-LFS-single
   
-  0 a-0
+  a-0
   diff --git a/a b/a
   new file mode 100644
   --- /dev/null

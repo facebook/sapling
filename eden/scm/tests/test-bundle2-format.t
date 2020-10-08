@@ -231,7 +231,7 @@ Create an extension to test bundle2 API
   > [experimental]
   > evolution.createmarkers=True
   > [ui]
-  > logtemplate={rev}:{node|short} {phase} {author} {bookmarks} {desc|firstline}
+  > logtemplate={node|short} {phase} {author} {bookmarks} {desc|firstline}
   > [web]
   > push_ssl = false
   > allow_push = *
@@ -828,23 +828,23 @@ Support for changegroup
   added 8 changesets with 7 changes to 7 files
 
   $ hg log -G
-  o  8:02de42196ebe draft Nicolas Dumazet <nicdumz.commits@gmail.com>  H
+  o  02de42196ebe draft Nicolas Dumazet <nicdumz.commits@gmail.com>  H
   |
-  | o  7:eea13746799a draft Nicolas Dumazet <nicdumz.commits@gmail.com>  G
+  | o  eea13746799a draft Nicolas Dumazet <nicdumz.commits@gmail.com>  G
   |/|
-  o |  6:24b6387c8c8c draft Nicolas Dumazet <nicdumz.commits@gmail.com>  F
+  o |  24b6387c8c8c draft Nicolas Dumazet <nicdumz.commits@gmail.com>  F
   | |
-  | o  5:9520eea781bc draft Nicolas Dumazet <nicdumz.commits@gmail.com>  E
+  | o  9520eea781bc draft Nicolas Dumazet <nicdumz.commits@gmail.com>  E
   |/
-  | o  4:32af7686d403 draft Nicolas Dumazet <nicdumz.commits@gmail.com>  D
+  | o  32af7686d403 draft Nicolas Dumazet <nicdumz.commits@gmail.com>  D
   | |
-  | o  3:5fddd98957c8 draft Nicolas Dumazet <nicdumz.commits@gmail.com>  C
+  | o  5fddd98957c8 draft Nicolas Dumazet <nicdumz.commits@gmail.com>  C
   | |
-  | o  2:42ccdea3bb16 draft Nicolas Dumazet <nicdumz.commits@gmail.com>  B
+  | o  42ccdea3bb16 draft Nicolas Dumazet <nicdumz.commits@gmail.com>  B
   |/
-  o  1:cd010b8cd998 draft Nicolas Dumazet <nicdumz.commits@gmail.com>  A
+  o  cd010b8cd998 draft Nicolas Dumazet <nicdumz.commits@gmail.com>  A
   
-  @  0:3903775176ed draft test  a
+  @  3903775176ed draft test  a
   
 
   $ hg bundle2 --debug --config progress.debug=true --config devel.bundle2.debug=true --rev '8+7+5+4' ../rev.hg2

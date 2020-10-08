@@ -124,9 +124,9 @@
   $ rm -rf .hg/store/data/*
   $ echo x >> x
   $ hg commit -Aqm xx_local
-  $ hg log -f x --template '{rev}:{node|short}\n'
-  3:21847713771d
-  0:b292c1e3311f
+  $ hg log -f x --template '{node|short}\n'
+  21847713771d
+  b292c1e3311f
 
   $ cd ..
   $ rm -rf shallow

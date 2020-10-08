@@ -71,11 +71,11 @@ test template support:
 
 test template cache:
 
-  $ hg log -r:3 -T '{rev} "{extdata("notes")}" "{extdata("shelldata")}"\n'
-  0 "first post" ""
-  1 "this is buggy :(" ""
-  2 "this change is great!" "another comment on 2"
-  3 "" ""
+  $ hg log -r:3 -T '"{extdata("notes")}" "{extdata("shelldata")}"\n'
+  "first post" ""
+  "this is buggy :(" ""
+  "this change is great!" "another comment on 2"
+  "" ""
 
 test bad extdata() template source
 

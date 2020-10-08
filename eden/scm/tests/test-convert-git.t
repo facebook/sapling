@@ -132,7 +132,7 @@ Remove the directory, then try to replace it with a file (issue754)
   $ cd ..
   $ glog()
   > {
-  >     hg log -G --template '{rev} "{desc|firstline}" files: {files}\n' "$@"
+  >     hg log -G --template '"{desc|firstline}" files: {files}\n' "$@"
   > }
   $ splitrepo()
   > {
@@ -192,25 +192,25 @@ full conversion
   updating bookmarks
   $ hg up -q -R fullrepo
   $ glog -R fullrepo
-  @    9 "Discard change to foo" files: foo
+  @    "Discard change to foo" files: foo
   |\
-  | o  8 "change foo" files: foo
+  | o  "change foo" files: foo
   | |
-  o |  7 "change bar" files: bar
+  o |  "change bar" files: bar
   |/
-  o    6 "(octopus merge fixup)" files:
+  o    "(octopus merge fixup)" files:
   |\
-  | o    5 "Octopus merge" files: baz
+  | o    "Octopus merge" files: baz
   | |\
-  o | |  4 "add baz" files: baz
+  o | |  "add baz" files: baz
   | | |
-  +---o  3 "add bar" files: bar
+  +---o  "add bar" files: bar
   | |
-  o |  2 "add quux" files: quux
+  o |  "add quux" files: quux
   | |
-  | o  1 "change foo" files: foo
+  | o  "change foo" files: foo
   |/
-  o  0 "add foo" files: foo
+  o  "add foo" files: foo
   
   $ hg -R fullrepo manifest --debug
   245a3b8bc653999c2b22cdabd517ccb47aecafdf 644   bar
@@ -219,42 +219,42 @@ full conversion
   88dfeab657e8cf2cef3dec67b914f49791ae76b1 644   quux
   $ splitrepo 'octopus merge' 'foo bar baz'
   % foo bar baz: octopus merge
-  @    8 "Discard change to foo" files: foo
+  @    "Discard change to foo" files: foo
   |\
-  | o  7 "change foo" files: foo
+  | o  "change foo" files: foo
   | |
-  o |  6 "change bar" files: bar
+  o |  "change bar" files: bar
   |/
-  o    5 "(octopus merge fixup)" files:
+  o    "(octopus merge fixup)" files:
   |\
-  | o    4 "Octopus merge" files: baz
+  | o    "Octopus merge" files: baz
   | |\
-  o | |  3 "add baz" files: baz
+  o | |  "add baz" files: baz
   | | |
-  +---o  2 "add bar" files: bar
+  +---o  "add bar" files: bar
   | |
-  | o  1 "change foo" files: foo
+  | o  "change foo" files: foo
   |/
-  o  0 "add foo" files: foo
+  o  "add foo" files: foo
   
   245a3b8bc653999c2b22cdabd517ccb47aecafdf 644   bar
   354ae8da6e890359ef49ade27b68bbc361f3ca88 644   baz
   9277c9cc8dd4576fc01a17939b4351e5ada93466 644   foo
   $ splitrepo 'only some parents of an octopus merge; "discard" a head' 'foo baz quux'
   % foo baz quux: only some parents of an octopus merge; "discard" a head
-  @  6 "Discard change to foo" files: foo
+  @  "Discard change to foo" files: foo
   |
-  o  5 "change foo" files: foo
+  o  "change foo" files: foo
   |
-  o    4 "Octopus merge" files:
+  o    "Octopus merge" files:
   |\
-  | o  3 "add baz" files: baz
+  | o  "add baz" files: baz
   | |
-  | o  2 "add quux" files: quux
+  | o  "add quux" files: quux
   | |
-  o |  1 "change foo" files: foo
+  o |  "change foo" files: foo
   |/
-  o  0 "add foo" files: foo
+  o  "add foo" files: foo
   
   354ae8da6e890359ef49ade27b68bbc361f3ca88 644   baz
   9277c9cc8dd4576fc01a17939b4351e5ada93466 644   foo
@@ -636,12 +636,12 @@ test converting certain branches
   0 master commit
   updating bookmarks
   $ cd hg-testrevs
-  $ hg log -G -T '{rev} {bookmarks}'
-  o  2 master
+  $ hg log -G -T '{bookmarks}'
+  o  master
   |
-  | o  1 goodbranch
+  | o  goodbranch
   |/
-  o  0
+  o
   
   $ cd ..
 

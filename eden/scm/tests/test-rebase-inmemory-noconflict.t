@@ -62,12 +62,12 @@ Confirm that it rebases a three-way merge, but no conflict:
   $ hg up -q .~1
   $ $TESTDIR/seq.py 0 5 > a
   $ hg commit -q -m "prepend with 0"
-  $ hg log -G -r 0:: -T '{rev} {desc}'
-  @  2 prepend with 0
+  $ hg log -G -r 0:: -T '{desc}'
+  @  prepend with 0
   |
-  | o  1 extend to 10
+  | o  extend to 10
   |/
-  o  0 base
+  o  base
   
   $ hg up -qC 0
   $ hg rebase -r 1 -d 2 --noconflict

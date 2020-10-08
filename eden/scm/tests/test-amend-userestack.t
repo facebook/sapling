@@ -16,7 +16,7 @@ Set up test environment.
   >   cd userestack
   > }
   $ showgraph() {
-  >   hg log --graph -r '(::.)::' -T "{rev} {desc|firstline}" | sed \$d
+  >   hg log --graph -r '(::.)::' -T "{desc|firstline}" | sed \$d
   > }
   $ hg init userestack && cd userestack
 
@@ -35,28 +35,28 @@ Test that no preamend bookmark is created.
 
 Test hg amend --fixup.
   $ showgraph
-  @  4 amended
+  @  amended
   |
-  | o  3 add d
+  | o  add d
   | |
-  | o  2 add c
+  | o  add c
   | |
-  | x  1 add b
+  | x  add b
   |/
-  o  0 add a
+  o  add a
 
   $ hg amend --fixup
   warning: --fixup is deprecated and WILL BE REMOVED. use 'hg restack' instead.
   rebasing 4538525df7e2 "add c"
   rebasing 47d2a3944de8 "add d"
   $ showgraph
-  o  6 add d
+  o  add d
   |
-  o  5 add c
+  o  add c
   |
-  @  4 amended
+  @  amended
   |
-  o  0 add a
+  o  add a
 
 Test that the operation field on the metadata is correctly set.
   $ hg debugmutation -r "all()"
@@ -77,10 +77,10 @@ Test hg amend --rebase
   rebasing * "add c" (glob)
   rebasing * "add d" (glob)
   $ showgraph
-  o  9 add d
+  o  add d
   |
-  o  8 add c
+  o  add c
   |
-  @  7 amended again
+  @  amended again
   |
-  o  0 add a
+  o  add a

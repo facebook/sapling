@@ -34,20 +34,20 @@
   > changeset = my:changeset.txt
   > EOF
   $ cat > changeset.txt << EOF
-  > {{rev}} {{node}} {{author}}
+  > {{node}} {{author}}
   > EOF
   $ hg ci -Ama
   adding changeset.txt
   adding mymap
   $ hg log --style=./mymap
-  0 97e5f848f0936960273bbf75be6388cd0350a32b test
+  2f04b59c016f1d0c60862a585c7c0280bfde0a47 test
 
   $ cat > changeset.txt << EOF
   > {{p1rev}} {{p1node}} {{p2rev}} {{p2node}}
   > EOF
   $ hg ci -Ama
   $ hg log --style=./mymap
-  0 97e5f848f0936960273bbf75be6388cd0350a32b -1 0000000000000000000000000000000000000000
+  0 2f04b59c016f1d0c60862a585c7c0280bfde0a47 -1 0000000000000000000000000000000000000000
   -1 0000000000000000000000000000000000000000 -1 0000000000000000000000000000000000000000
 
 invalid engine type:

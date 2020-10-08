@@ -16,7 +16,7 @@
   > }
 
   $ log() {
-  >   hg log --template '{rev}\n' -r "$1"
+  >   hg log --template '{node}\n' -r "$1"
   > }
 
   $ hg init repo
@@ -50,10 +50,10 @@ working dir with a single parent
   $ echo a > a
   $ hg ci -Aqm0
   $ log 'p1()'
-  0
+  f7b1eb17ad24730a1651fccd46c43826d1bbc2ac
   $ log 'p2()'
   $ log 'parents()'
-  0
+  f7b1eb17ad24730a1651fccd46c43826d1bbc2ac
 
 merge in progress
   $ echo b > b
@@ -63,11 +63,11 @@ merge in progress
   $ hg ci -Aqm2
   $ hg merge -q
   $ log 'p1()'
-  2
+  db815d6d32e69058eadefc8cffbad37675707975
   $ log 'p2()'
-  1
+  925d80f479bb026b0fb3deb27503780b13f74123
   $ log 'parents()'
-  1
-  2
+  925d80f479bb026b0fb3deb27503780b13f74123
+  db815d6d32e69058eadefc8cffbad37675707975
 
   $ cd ..

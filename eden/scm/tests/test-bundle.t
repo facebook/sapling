@@ -223,7 +223,7 @@ Rollback empty
 
 Log -R bundle:empty+full.hg (broken with Rust code path)
 
-  $ hg -R bundle:empty+full.hg log --template="{rev} "; echo ""
+  $ hg -R bundle:empty+full.hg log --template="{node} "; echo ""
   abort: repository bundle:empty+full.hg not found!
   
 

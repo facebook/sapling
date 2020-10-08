@@ -18,14 +18,14 @@ Rebasing D onto B detaching from C (one commit):
   $ hg rebase -s $D -d $B
   rebasing e7b3f00ed42e "D"
 
-  $ hg log -G --template "{rev}:{phase} '{desc}' {branches}\n"
-  o  4:draft 'D'
+  $ hg log -G --template "{phase} '{desc}' {branches}\n"
+  o  draft 'D'
   |
-  | o  2:draft 'C'
+  | o  draft 'C'
   | |
-  o |  1:draft 'B'
+  o |  draft 'B'
   |/
-  o  0:draft 'A'
+  o  draft 'A'
   
   $ hg manifest --rev tip
   A
@@ -127,15 +127,15 @@ Rebasing D onto B detaching from C and collapsing:
   rebasing e7b3f00ed42e "D"
   rebasing 69a34c08022a "E"
 
-  $ hg  log -G --template "{rev}:{phase} '{desc}' {branches}\n"
-  o  5:draft 'Collapsed revision
+  $ hg  log -G --template "{phase} '{desc}' {branches}\n"
+  o  draft 'Collapsed revision
   |  * D
   |  * E'
-  | o  2:draft 'C'
+  | o  draft 'C'
   | |
-  o |  1:draft 'B'
+  o |  draft 'B'
   |/
-  o  0:draft 'A'
+  o  draft 'A'
   
   $ hg manifest --rev tip
   A
@@ -288,12 +288,12 @@ Ensure --continue restores a correct state (issue3046) and phase:
   $ hg rebase -c
   rebasing 17b4880d2402 "B2"
   note: rebase of 3:17b4880d2402 created no changes to commit
-  $ hg  log -G --template "{rev}:{phase} '{desc}' {branches}\n"
-  o  2:draft 'C'
+  $ hg  log -G --template "{phase} '{desc}' {branches}\n"
+  o  draft 'C'
   |
-  | @  1:draft 'B'
+  | @  draft 'B'
   |/
-  o  0:draft 'A'
+  o  draft 'A'
   
 
   $ cd ..

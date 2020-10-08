@@ -19,23 +19,23 @@ Set up repo
 
 Testing update -B feature
 
-  $ hg log -G -T '{rev} {bookmarks} {remotebookmarks}'
-  @  2
+  $ hg log -G -T '{bookmarks} {remotebookmarks}'
+  @
   |
-  o  1 foo
+  o  foo
   |
-  o  0
+  o
   
 
   $ hg update -B bar foo
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (activating bookmark foo)
-  $ hg log -G -T '{rev} {bookmarks} {remotebookmarks}'
-  o  2
+  $ hg log -G -T '{bookmarks} {remotebookmarks}'
+  o
   |
-  @  1 bar foo
+  @  bar foo
   |
-  o  0
+  o
   
   $ hg bookmarks -v
    * bar                       1:661086655130            [foo]
@@ -51,10 +51,10 @@ Test that a bare update no long moves the active bookmark
   updating to active bookmark bar
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-  $ hg log -G -T '{rev} {bookmarks} {remotebookmarks}'
-  o  2
+  $ hg log -G -T '{bookmarks} {remotebookmarks}'
+  o
   |
-  @  1 bar foo
+  @  bar foo
   |
-  o  0
+  o
   

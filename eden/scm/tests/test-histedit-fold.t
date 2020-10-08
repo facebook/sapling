@@ -14,7 +14,7 @@ Initialization
   $ enable histedit
   $ readconfig <<EOF
   > [alias]
-  > logt = log --template '{rev}:{node|short} {desc|firstline}\n'
+  > logt = log --template '{node|short} {desc|firstline}\n'
   > EOF
 
 
@@ -43,17 +43,17 @@ Simple folding
 
 log before edit
   $ hg logt --graph
-  @  5:178e35e0ce73 f
+  @  178e35e0ce73 f
   |
-  o  4:1ddb6c90f2ee e
+  o  1ddb6c90f2ee e
   |
-  o  3:532247a8969b d
+  o  532247a8969b d
   |
-  o  2:ff2c9fa2018b c
+  o  ff2c9fa2018b c
   |
-  o  1:97d72e5f12c7 b
+  o  97d72e5f12c7 b
   |
-  o  0:8580ff50825a a
+  o  8580ff50825a a
   
 
   $ hg histedit ff2c9fa2018b --commands - 2>&1 <<EOF | fixbundle
@@ -65,15 +65,15 @@ log before edit
 
 log after edit
   $ hg logt --graph
-  @  10:c4d7f3def76d d
+  @  c4d7f3def76d d
   |
-  o  9:575228819b7e f
+  o  575228819b7e f
   |
-  o  6:505a591af19e e
+  o  505a591af19e e
   |
-  o  1:97d72e5f12c7 b
+  o  97d72e5f12c7 b
   |
-  o  0:8580ff50825a a
+  o  8580ff50825a a
   
 
 post-fold manifest
@@ -119,13 +119,13 @@ rollup will fold without preserving the folded commit's message or date
 
 log after edit
   $ hg logt --graph
-  @  14:bab801520cec d
+  @  bab801520cec d
   |
-  o  13:58c8f2bfc151 f
+  o  58c8f2bfc151 f
   |
-  o  12:5d939c56c72e b
+  o  5d939c56c72e b
   |
-  o  0:8580ff50825a a
+  o  8580ff50825a a
   
 
 description is taken from rollup target commit
@@ -265,13 +265,13 @@ folded content is dropped during a merge. The folded commit should properly disa
   $ echo 6 >> file
   $ hg commit -m '+6'
   $ hg logt --graph
-  @  3:251d831eeec5 +6
+  @  251d831eeec5 +6
   |
-  o  2:888f9082bf99 +5
+  o  888f9082bf99 +5
   |
-  o  1:617f94f13c0f +4
+  o  617f94f13c0f +4
   |
-  o  0:0189ba417d34 1+2+3
+  o  0189ba417d34 1+2+3
   
 
   $ hg histedit 617f94f13c0faff2ff307641901637b91cbd7c7b --commands - << EOF
@@ -311,9 +311,9 @@ should effectively drop the changes from +6.
   $ hg histedit --continue
   251d831eeec5: empty changeset
   $ hg logt --graph
-  @  1:617f94f13c0f +4
+  @  617f94f13c0f +4
   |
-  o  0:0189ba417d34 1+2+3
+  o  0189ba417d34 1+2+3
   
 
   $ cd ..
@@ -339,13 +339,13 @@ dropped revision.
   $ echo 6 >> file
   $ hg commit -m '+6'
   $ hg logt -G
-  @  3:251d831eeec5 +6
+  @  251d831eeec5 +6
   |
-  o  2:888f9082bf99 +5
+  o  888f9082bf99 +5
   |
-  o  1:617f94f13c0f +4
+  o  617f94f13c0f +4
   |
-  o  0:0189ba417d34 1+2+3
+  o  0189ba417d34 1+2+3
   
   $ hg histedit 617f94f13c0faff2ff307641901637b91cbd7c7b --commands -  << EOF
   > pick 617f94f13c0f 1 +4
@@ -386,9 +386,9 @@ dropped revision.
   HG: branch 'default'
   HG: changed file
   $ hg logt -G
-  @  6:10c647b2cdd5 +4
+  @  10c647b2cdd5 +4
   |
-  o  0:0189ba417d34 1+2+3
+  o  0189ba417d34 1+2+3
   
   $ hg export tip
   # HG changeset patch
@@ -430,9 +430,9 @@ Folding with initial rename (issue3729)
   $ hg commit -m b
 
   $ hg logt --follow b.txt
-  2:e0371e0426bc b
-  1:1c4f440a8085 rename
-  0:6c795aa153cb a
+  e0371e0426bc b
+  1c4f440a8085 rename
+  6c795aa153cb a
 
   $ hg histedit 1c4f440a8085 --commands - 2>&1 << EOF | fixbundle
   > pick 1c4f440a8085 rename
@@ -440,8 +440,8 @@ Folding with initial rename (issue3729)
   > EOF
 
   $ hg logt --follow b.txt
-  4:cf858d235c76 rename
-  0:6c795aa153cb a
+  cf858d235c76 rename
+  6c795aa153cb a
 
   $ cd ..
 
@@ -464,9 +464,9 @@ This is an excuse to test hook with histedit temporary commit (issue4422)
   $ hg commit -m c
 
   $ hg logt
-  2:a1a953ffb4b0 c
-  1:199b6bb90248 b
-  0:6c795aa153cb a
+  a1a953ffb4b0 c
+  199b6bb90248 b
+  6c795aa153cb a
 
 Setup the proper environment variable symbol for the platform, to be subbed
 into the hook command.
@@ -485,8 +485,8 @@ into the hook command.
   commit 9599899f62c05f4377548c32bf1c9f1a39634b0c
 
   $ hg logt
-  6:9599899f62c0 a
-  5:79b99e9c8e49 b
+  9599899f62c0 a
+  79b99e9c8e49 b
 
   $ echo "foo" > amended.txt
   $ hg add amended.txt
@@ -503,11 +503,11 @@ editors.
   $ echo foo >> foo
   $ hg ci -m foo3
   $ hg logt
-  10:21679ff7675c foo3
-  9:b7389cc4d66e foo2
-  8:0e01aeef5fa8 foo1
-  7:578c7455730c a
-  5:79b99e9c8e49 b
+  21679ff7675c foo3
+  b7389cc4d66e foo2
+  0e01aeef5fa8 foo1
+  578c7455730c a
+  79b99e9c8e49 b
   $ cat > "$TESTTMP/editor.sh" <<EOF
   > echo ran editor >> "$TESTTMP/editorlog.txt"
   > cat \$1 >> "$TESTTMP/editorlog.txt"
@@ -521,9 +521,9 @@ editors.
   > fold 21679ff7675c 4 foo3
   > EOF
   $ hg logt
-  14:e8bedbda72c1 merged foos
-  7:578c7455730c a
-  5:79b99e9c8e49 b
+  e8bedbda72c1 merged foos
+  578c7455730c a
+  79b99e9c8e49 b
 Editor should have run only once
   $ cat $TESTTMP/editorlog.txt
   ran editor

@@ -3,7 +3,7 @@
   $ configure mutation-norecord dummyssh
   $ enable amend crdump remotenames
   $ showgraph() {
-  >   hg log --graph --hidden -T "{rev} {desc|firstline}" | sed \$d
+  >   hg log --graph --hidden -T "{desc|firstline}" | sed \$d
   > }
 
 Create repo
@@ -30,9 +30,9 @@ Create repo
   > $revision"
 
   $ showgraph
-  @  1 b
+  @  b
   |
-  o  0 a
+  o  a
 
 Test obsolete markers
 
@@ -40,11 +40,11 @@ Test obsolete markers
   $ hg amend -m "b'
   > $revision"
   $ showgraph
-  @  2 b'
+  @  b'
   |
-  | x  1 b
+  | x  b
   |/
-  o  0 a
+  o  a
   $ hg debugcrdump -U 1 -r . --obsolete --traceback
   {
       "commits": [

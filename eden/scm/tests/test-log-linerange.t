@@ -175,11 +175,11 @@ Add some changes with two diff hunks
 
 With --template.
 
-  $ hg log -f -L foo,5:7 -T '{rev}:{node|short} {desc|firstline}\n'
-  5:cfdf972b3971 foo: 3 -> 3+ and 11+ -> 11-; bar: a -> a+
-  4:eaec41c1a0c9 11 -> 11+; leading space before "1"
-  2:63a884426fd0 2 -> 2+; added bar
-  0:5ae1f82b9a00 init
+  $ hg log -f -L foo,5:7 -T '{node|short} {desc|firstline}\n'
+  cfdf972b3971 foo: 3 -> 3+ and 11+ -> 11-; bar: a -> a+
+  eaec41c1a0c9 11 -> 11+; leading space before "1"
+  63a884426fd0 2 -> 2+; added bar
+  5ae1f82b9a00 init
   $ hg log -f -L foo,5:7 -T json
   [
    {

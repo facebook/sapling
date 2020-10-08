@@ -33,26 +33,26 @@
 
 log before rebase
 
-  $ hg log -G -T '{rev}:{node|short} {desc|firstline}\n'
-  @  9:8d0611d6e5f2 conflict f
+  $ hg log -G -T '{node|short} {desc|firstline}\n'
+  @  8d0611d6e5f2 conflict f
   |
-  | o  8:cf7e1bc6a982 i
+  | o  cf7e1bc6a982 i
   | |
-  | o  7:7523912c6e49 h
+  | o  7523912c6e49 h
   | |
-  | o  6:0ba40a7dd69a g
+  | o  0ba40a7dd69a g
   |/
-  | o  5:652413bf663e f
+  | o  652413bf663e f
   | |
-  | o  4:e860deea161a e
+  | o  e860deea161a e
   | |
-  | o  3:055a42cdd887 d
+  | o  055a42cdd887 d
   | |
-  | o  2:177f92b77385 c
+  | o  177f92b77385 c
   |/
-  o  1:d2ae7f538514 b
+  o  d2ae7f538514 b
   |
-  o  0:cb9a9f314b8b a
+  o  cb9a9f314b8b a
   
 Simple rebase with -s and -d
 
@@ -60,26 +60,26 @@ Simple rebase with -s and -d
   3 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ HGEDITOR=true hg rebase -i -s 8 -d 5
 
-  $ hg log -G -T '{rev}:{node|short} {desc|firstline}\n'
-  @  10:bb8affa27bd8 i
+  $ hg log -G -T '{node|short} {desc|firstline}\n'
+  @  bb8affa27bd8 i
   |
-  | o  9:8d0611d6e5f2 conflict f
+  | o  8d0611d6e5f2 conflict f
   | |
-  | | o  7:7523912c6e49 h
+  | | o  7523912c6e49 h
   | | |
-  | | o  6:0ba40a7dd69a g
+  | | o  0ba40a7dd69a g
   | |/
-  o |  5:652413bf663e f
+  o |  652413bf663e f
   | |
-  o |  4:e860deea161a e
+  o |  e860deea161a e
   | |
-  o |  3:055a42cdd887 d
+  o |  055a42cdd887 d
   | |
-  o |  2:177f92b77385 c
+  o |  177f92b77385 c
   |/
-  o  1:d2ae7f538514 b
+  o  d2ae7f538514 b
   |
-  o  0:cb9a9f314b8b a
+  o  cb9a9f314b8b a
   
 
 Try to rebase with conflict (also check -d without -s)
@@ -99,52 +99,52 @@ Try to rebase with conflict (also check -d without -s)
   continue: hg histedit --continue
   $ hg histedit --continue
 
-  $ hg log -G -T '{rev}:{node|short} {desc|firstline}\n'
-  @  11:b6ca70f8129d conflict f
+  $ hg log -G -T '{node|short} {desc|firstline}\n'
+  @  b6ca70f8129d conflict f
   |
-  o  10:bb8affa27bd8 i
+  o  bb8affa27bd8 i
   |
-  | o  7:7523912c6e49 h
+  | o  7523912c6e49 h
   | |
-  | o  6:0ba40a7dd69a g
+  | o  0ba40a7dd69a g
   | |
-  o |  5:652413bf663e f
+  o |  652413bf663e f
   | |
-  o |  4:e860deea161a e
+  o |  e860deea161a e
   | |
-  o |  3:055a42cdd887 d
+  o |  055a42cdd887 d
   | |
-  o |  2:177f92b77385 c
+  o |  177f92b77385 c
   |/
-  o  1:d2ae7f538514 b
+  o  d2ae7f538514 b
   |
-  o  0:cb9a9f314b8b a
+  o  cb9a9f314b8b a
   
 
 Rebase with base
   $ hg update 'desc(h)'
   2 files updated, 0 files merged, 5 files removed, 0 files unresolved
   $ HGEDITOR=true hg rebase -i -b . -d 'desc(conflict)'
-  $ hg log -G -T '{rev}:{node|short} {desc|firstline}\n'
-  @  13:50cf975d06ef h
+  $ hg log -G -T '{node|short} {desc|firstline}\n'
+  @  50cf975d06ef h
   |
-  o  12:ba6932766227 g
+  o  ba6932766227 g
   |
-  o  11:b6ca70f8129d conflict f
+  o  b6ca70f8129d conflict f
   |
-  o  10:bb8affa27bd8 i
+  o  bb8affa27bd8 i
   |
-  o  5:652413bf663e f
+  o  652413bf663e f
   |
-  o  4:e860deea161a e
+  o  e860deea161a e
   |
-  o  3:055a42cdd887 d
+  o  055a42cdd887 d
   |
-  o  2:177f92b77385 c
+  o  177f92b77385 c
   |
-  o  1:d2ae7f538514 b
+  o  d2ae7f538514 b
   |
-  o  0:cb9a9f314b8b a
+  o  cb9a9f314b8b a
   
 Rebase with -s and -d and checked out to something that is not a child of
 either the source or destination.  This unfortunately is rejected since the
@@ -156,32 +156,32 @@ current working directory parent.
   $ addcommits x y z
   $ hg update 'desc(f) - desc(conflict)'
   0 files updated, 0 files merged, 4 files removed, 0 files unresolved
-  $ hg log -G -T '{rev}:{node|short} {desc|firstline}\n'
-  o  16:70ff95fe5c79 z
+  $ hg log -G -T '{node|short} {desc|firstline}\n'
+  o  70ff95fe5c79 z
   |
-  o  15:9843e524084d y
+  o  9843e524084d y
   |
-  o  14:a5ae87083656 x
+  o  a5ae87083656 x
   |
-  | o  13:50cf975d06ef h
+  | o  50cf975d06ef h
   | |
-  | o  12:ba6932766227 g
+  | o  ba6932766227 g
   | |
-  | o  11:b6ca70f8129d conflict f
+  | o  b6ca70f8129d conflict f
   |/
-  o  10:bb8affa27bd8 i
+  o  bb8affa27bd8 i
   |
-  @  5:652413bf663e f
+  @  652413bf663e f
   |
-  o  4:e860deea161a e
+  o  e860deea161a e
   |
-  o  3:055a42cdd887 d
+  o  055a42cdd887 d
   |
-  o  2:177f92b77385 c
+  o  177f92b77385 c
   |
-  o  1:d2ae7f538514 b
+  o  d2ae7f538514 b
   |
-  o  0:cb9a9f314b8b a
+  o  cb9a9f314b8b a
   
   $ HGEDITOR=true hg rebase -i -s 'desc(y)' -d 'desc(g)'
   abort: source revision (-s) must be an ancestor of the working directory for interactive rebase

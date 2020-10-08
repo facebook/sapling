@@ -42,9 +42,9 @@
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  $ hg log --template '{rev} {desc}\n'
-  1 y
-  0 x
+  $ hg log --template '{desc}\n'
+  y
+  x
 
 # Verify local bookmark pull
 
@@ -87,8 +87,8 @@
   adding file changes
   added 1 changesets with 1 changes to 1 files
   updating bookmark foo
-  $ hg log -l 1 --template '{rev} {bookmarks}\n'
-  2 foo
+  $ hg log -l 1 --template '{bookmarks}\n'
+  foo
 
 # Push from hgsql to other repo
 
@@ -120,16 +120,16 @@
   adding file changes
   added 1 changesets with 1 changes to 1 files
   exporting bookmark bar
-  $ hg log -R ../master -T '{rev} {bookmarks}\n' -G
-  o  4 bar
+  $ hg log -R ../master -T '{bookmarks}\n' -G
+  o  bar
   |
-  | @  3
+  | @
   | |
-  | o  2 foo
+  | o  foo
   | |
-  | o  1
+  | o
   |/
-  o  0
+  o
   
 # Verify syncing with hg-ssh --readonly works
   $ cd ../
@@ -158,8 +158,8 @@
   > [hooks]
   > pretxnclose.abort=exit 1
   > EOF
-  $ hg log -r tip -T '{rev}\n'
-  5
+  $ hg log -r tip -T '{node}\n'
+  9fe3ddedfc8fc6a0addae4490e2e933123765ec0
   $ hg debugstrip -q -r tip --config hgsql.bypass=True --config hooks.pretxnclose.abort=
 
 # Verify hooks still run, even after sync disabled them temporarily

@@ -29,16 +29,16 @@
   $ echo "Second conflicted version, F2" > F2
   $ hg commit -m "second version, b"
   $ hg bookmark b
-  $ hg log -G -T '({rev}) {desc}\nbookmark: {bookmarks}\nfiles: {files}\n\n'
-  @  (2) second version, b
+  $ hg log -G -T '({node}) {desc}\nbookmark: {bookmarks}\nfiles: {files}\n\n'
+  @  (13124abb51b9fbac518b2b8722df68e012ecfc58) second version, b
   |  bookmark: b
   |  files: F1 F2
   |
-  | o  (1) first version, a
+  | o  (6dd692b7db4a573115a661237cb90b506bccc45d) first version, a
   |/   bookmark: a
   |    files: F1 F2
   |
-  o  (0) initial commit
+  o  (fd428402857cd43d472566f429df85e40be9cb2a) initial commit
      bookmark:
      files: F1 F2
   
@@ -110,7 +110,7 @@ Setup
   >   hg commit -Aqm "base"
   > }
   $ logg() {
-  >   hg log -G -T '({rev}) {desc}\naffected: {files}\ndeleted: {file_dels}\n\n'
+  >   hg log -G -T '({node}) {desc}\naffected: {files}\ndeleted: {file_dels}\n\n'
   > }
 
 Test case 0: A merge of just contents conflicts (not usually a corner case),
@@ -125,15 +125,15 @@ tldr: Since we can premerge, the working copy is backed up to an origfile.
   $ hg commit -Aqm "source"
   $ hg up -q 1
   $ logg
-  o  (2) source
+  o  (9b65ba2922f0e466c10e5344d8691afa631e353b) source
   |  affected: file
   |  deleted:
   |
-  | @  (1) dest
+  | @  (fd7d10c36158e4f6e713ca1c40ddebce2b55a868) dest
   |/   affected: file
   |    deleted:
   |
-  o  (0) base
+  o  (01813a66ce08dcc7d684f337c68bd61a4982de10) base
      affected: file
      deleted:
   
@@ -167,15 +167,15 @@ tldr: Since we couldn't premerge, the working copy is left alone.
   $ hg commit -Aqm "source"
   $ hg up -q 1
   $ logg
-  o  (2) source
+  o  (25c2ef28f4c763dd5068d3aa96cafa1342fe5280) source
   |  affected: file
   |  deleted: file
   |
-  | @  (1) dest
+  | @  (fd7d10c36158e4f6e713ca1c40ddebce2b55a868) dest
   |/   affected: file
   |    deleted:
   |
-  o  (0) base
+  o  (01813a66ce08dcc7d684f337c68bd61a4982de10) base
      affected: file
      deleted:
   
@@ -207,15 +207,15 @@ Test case 1: Source deleted, dest changed
   $ hg commit -Aqm "source"
   $ hg up -q 1
   $ logg
-  o  (2) source
+  o  (25c2ef28f4c763dd5068d3aa96cafa1342fe5280) source
   |  affected: file
   |  deleted: file
   |
-  | @  (1) dest
+  | @  (fd7d10c36158e4f6e713ca1c40ddebce2b55a868) dest
   |/   affected: file
   |    deleted:
   |
-  o  (0) base
+  o  (01813a66ce08dcc7d684f337c68bd61a4982de10) base
      affected: file
      deleted:
   
@@ -244,15 +244,15 @@ Test case 1b: Like #1 but with a merge, with local changes
   $ hg commit -Aqm "source"
   $ hg up -q 1
   $ logg
-  o  (2) source
+  o  (25c2ef28f4c763dd5068d3aa96cafa1342fe5280) source
   |  affected: file
   |  deleted: file
   |
-  | @  (1) dest
+  | @  (fd7d10c36158e4f6e713ca1c40ddebce2b55a868) dest
   |/   affected: file
   |    deleted:
   |
-  o  (0) base
+  o  (01813a66ce08dcc7d684f337c68bd61a4982de10) base
      affected: file
      deleted:
   
@@ -283,15 +283,15 @@ Test case 2: Source changed, dest deleted
   $ hg commit -Aqm "dest"
   $ hg up --q 2
   $ logg
-  @  (2) dest
+  @  (66a38a15024ce5297f27bab5b7f17870de6d0d96) dest
   |  affected: file
   |  deleted: file
   |
-  | o  (1) source
+  | o  (ec87889f5f908dd874cf31122628f081037e4bf5) source
   |/   affected: file
   |    deleted:
   |
-  o  (0) base
+  o  (01813a66ce08dcc7d684f337c68bd61a4982de10) base
      affected: file
      deleted:
   
@@ -321,15 +321,15 @@ Test case 3: Source changed, dest moved
   $ hg commit -Aqm "dest"
   $ hg up -q 2
   $ logg
-  @  (2) dest
+  @  (d168768b462ba7bdf7d27a2c2e317362498a0a65) dest
   |  affected: file file_newloc
   |  deleted: file
   |
-  | o  (1) source
+  | o  (ec87889f5f908dd874cf31122628f081037e4bf5) source
   |/   affected: file
   |    deleted:
   |
-  o  (0) base
+  o  (01813a66ce08dcc7d684f337c68bd61a4982de10) base
      affected: file
      deleted:
   
@@ -358,15 +358,15 @@ Test case 4: Source changed, dest moved (w/o copytracing)
   $ hg commit -Aqm "dest"
   $ hg up -q 2
   $ logg
-  @  (2) dest
+  @  (d168768b462ba7bdf7d27a2c2e317362498a0a65) dest
   |  affected: file file_newloc
   |  deleted: file
   |
-  | o  (1) source
+  | o  (ec87889f5f908dd874cf31122628f081037e4bf5) source
   |/   affected: file
   |    deleted:
   |
-  o  (0) base
+  o  (01813a66ce08dcc7d684f337c68bd61a4982de10) base
      affected: file
      deleted:
   
@@ -396,15 +396,15 @@ Test case 5: Source moved, dest changed
   $ hg commit -Aqm "dest"
   $ hg up -q 2
   $ logg
-  @  (2) dest
+  @  (fd7d10c36158e4f6e713ca1c40ddebce2b55a868) dest
   |  affected: file
   |  deleted:
   |
-  | o  (1) source
+  | o  (e6e7483a895027a7b6f8146011cce3b46ef5d8d6) source
   |/   affected: file file_newloc
   |    deleted: file
   |
-  o  (0) base
+  o  (01813a66ce08dcc7d684f337c68bd61a4982de10) base
      affected: file
      deleted:
   
@@ -434,15 +434,15 @@ Test case 6: Source moved, dest changed (w/o copytracing)
   $ hg commit -Aqm "dest"
   $ hg up -q 2
   $ logg
-  @  (2) dest
+  @  (fd7d10c36158e4f6e713ca1c40ddebce2b55a868) dest
   |  affected: file
   |  deleted:
   |
-  | o  (1) source
+  | o  (e6e7483a895027a7b6f8146011cce3b46ef5d8d6) source
   |/   affected: file file_newloc
   |    deleted: file
   |
-  o  (0) base
+  o  (01813a66ce08dcc7d684f337c68bd61a4982de10) base
      affected: file
      deleted:
   
@@ -474,15 +474,15 @@ Test case 7: Source is a directory, dest is a file (base is still a file)
   $ hg commit -Aqm "dest"
   $ hg up -q 2
   $ logg
-  @  (2) dest
+  @  (fd7d10c36158e4f6e713ca1c40ddebce2b55a868) dest
   |  affected: file
   |  deleted:
   |
-  | o  (1) source
+  | o  (ed93aeac6b3ccfb747e62017791e7996f20106d3) source
   |/   affected: file file/subfile
   |    deleted: file
   |
-  o  (0) base
+  o  (01813a66ce08dcc7d684f337c68bd61a4982de10) base
      affected: file
      deleted:
   
@@ -506,15 +506,15 @@ Test case 8: Source is a file, dest is a directory (base is still a file)
   $ hg commit -Aqm "dest"
   $ hg up -q 2
   $ logg
-  @  (2) dest
+  @  (c7fd9e6dc48312b276e2cea6edc92fb1fbd24cf3) dest
   |  affected: file file/subfile
   |  deleted: file
   |
-  | o  (1) source
+  | o  (ec87889f5f908dd874cf31122628f081037e4bf5) source
   |/   affected: file
   |    deleted:
   |
-  o  (0) base
+  o  (01813a66ce08dcc7d684f337c68bd61a4982de10) base
      affected: file
      deleted:
   
@@ -542,15 +542,15 @@ Test case 9: Source is a binary file, dest is a file (base is still a file)
   $ hg commit -Aqm "dest"
   $ hg up -q 2
   $ logg
-  @  (2) dest
+  @  (fd7d10c36158e4f6e713ca1c40ddebce2b55a868) dest
   |  affected: file
   |  deleted:
   |
-  | o  (1) source
+  | o  (b6e55a03a5dc98e4ce5ef82f8f967f2188b32608) source
   |/   affected: file
   |    deleted:
   |
-  o  (0) base
+  o  (01813a66ce08dcc7d684f337c68bd61a4982de10) base
      affected: file
      deleted:
   
@@ -583,15 +583,15 @@ Test case 10: Source is a file, dest is a binary file (base is still a file)
   $ hg commit -Aqm "dest"
   $ hg up -q 2
   $ logg
-  @  (2) dest
+  @  (48fb032ebb6733fb9b62d0a11c1b4a538c4840a1) dest
   |  affected: file
   |  deleted:
   |
-  | o  (1) source
+  | o  (ec87889f5f908dd874cf31122628f081037e4bf5) source
   |/   affected: file
   |    deleted:
   |
-  o  (0) base
+  o  (01813a66ce08dcc7d684f337c68bd61a4982de10) base
      affected: file
      deleted:
   
@@ -625,15 +625,15 @@ Test case 11: Source is a symlink, dest is a file (base is still a file)
   $ hg commit -Aqm "dest"
   $ hg up -q 2
   $ logg
-  @  (2) dest
+  @  (fd7d10c36158e4f6e713ca1c40ddebce2b55a868) dest
   |  affected: file
   |  deleted:
   |
-  | o  (1) source
+  | o  (06aece48b59fc832b921a114492f962a5b358b22) source
   |/   affected: file
   |    deleted:
   |
-  o  (0) base
+  o  (01813a66ce08dcc7d684f337c68bd61a4982de10) base
      affected: file
      deleted:
   
@@ -667,15 +667,15 @@ Test case 12: Source is a file, dest is a symlink (base is still a file)
   $ hg commit -Aqm "dest"
   $ hg up -q 2
   $ logg
-  @  (2) dest
+  @  (c4bbf66fc0d73a7b05e64344fa86a678e19c35a2) dest
   |  affected: file
   |  deleted:
   |
-  | o  (1) source
+  | o  (ec87889f5f908dd874cf31122628f081037e4bf5) source
   |/   affected: file
   |    deleted:
   |
-  o  (0) base
+  o  (01813a66ce08dcc7d684f337c68bd61a4982de10) base
      affected: file
      deleted:
   

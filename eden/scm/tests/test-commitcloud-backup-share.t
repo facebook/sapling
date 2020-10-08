@@ -44,13 +44,13 @@ Make sure that backup state is saved only on the "main" repo
 Make sure that cloud check references the main repo
   $ hg cloud check -r :
   b75a450e74d5a7708da8c3144fbeb4ac88694044 backed up
-  $ hg log -T '{rev}:{node} "{desc}"\n' -r 'notbackedup()'
+  $ hg log -T '{node} "{desc}"\n' -r 'notbackedup()'
 
 Make another commit that is not backed up and check that too
   $ mkcommit second
   $ hg cloud check -r :
   b75a450e74d5a7708da8c3144fbeb4ac88694044 backed up
   bc64f6a267a06b03e9e0f96a6deae37ae89a832e not backed up
-  $ hg log -T '{rev}:{node} "{desc}"\n' -r 'notbackedup()'
-  1:bc64f6a267a06b03e9e0f96a6deae37ae89a832e "second"
+  $ hg log -T '{node} "{desc}"\n' -r 'notbackedup()'
+  bc64f6a267a06b03e9e0f96a6deae37ae89a832e "second"
 

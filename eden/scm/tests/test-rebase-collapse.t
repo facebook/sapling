@@ -441,10 +441,10 @@ Test collapsing changes that add then remove a file
   $ hg rebase -d 0 -r "1::2" --collapse -m collapsed
   rebasing 6d8d9f24eec3 "a"
   rebasing 1cc73eca5ecc "b" (foo)
-  $ hg log -G --template "{rev}: '{desc}' {bookmarks}"
-  @  3: 'collapsed' foo
+  $ hg log -G --template "'{desc}' {bookmarks}"
+  @  'collapsed' foo
   |
-  o  0: 'base'
+  o  'base'
   
   $ hg manifest --rev tip
   b

@@ -22,12 +22,12 @@ Tests JSON Input support for histedit
 
 log before edit
 
-  $ hg log --graph -T "{rev}:{node|short} {desc}"
-  @  2:177f92b77385 c
+  $ hg log --graph -T "{node|short} {desc}"
+  @  177f92b77385 c
   |
-  o  1:d2ae7f538514 b
+  o  d2ae7f538514 b
   |
-  o  0:cb9a9f314b8b a
+  o  cb9a9f314b8b a
   
 
 passing a json with invalid format
@@ -169,12 +169,12 @@ running histedit with a valid json file
 
 log after histedit
 
-  $ hg log --graph -T "{rev}:{node|short} {desc}"
-  @  4:503d1c1b4668 b
+  $ hg log --graph -T "{node|short} {desc}"
+  @  503d1c1b4668 b
   |
-  o  3:b346ab9a313d c
+  o  b346ab9a313d c
   |
-  o  0:cb9a9f314b8b a
+  o  cb9a9f314b8b a
   
 testing with abbreviated/small verbs
 
@@ -190,12 +190,12 @@ testing with abbreviated/small verbs
 
   $ hg histedit --commands small
 
-  $ hg log --graph -T "{rev}:{node} {desc}"
-  @  6:573a8c672aaf44d2cf3f9467e5463f51f7414084 c
+  $ hg log --graph -T "{node} {desc}"
+  @  573a8c672aaf44d2cf3f9467e5463f51f7414084 c
   |
-  o  5:85032a8e4f13e773c4075d7c006e0f1bc1c63967 b
+  o  85032a8e4f13e773c4075d7c006e0f1bc1c63967 b
   |
-  o  0:cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b a
+  o  cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b a
   
 more testing with full hashes
 
@@ -211,8 +211,8 @@ more testing with full hashes
 
   $ hg histedit --commands b.json
 
-  $ hg log --graph -T "{rev}:{node|short} {desc}"
-  @  8:04e1eac0d294 b
+  $ hg log --graph -T "{node|short} {desc}"
+  @  04e1eac0d294 b
   |
-  o  0:cb9a9f314b8b a
+  o  cb9a9f314b8b a
   

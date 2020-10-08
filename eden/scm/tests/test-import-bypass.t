@@ -2,7 +2,7 @@
 
 
   $ shortlog() {
-  >     hg log -G --template '{rev}:{node|short} {author} {date|hgdate} - {desc|firstline}\n'
+  >     hg log -G --template '{node|short} {author} {date|hgdate} - {desc|firstline}\n'
   > }
   $ enable amend
 
@@ -29,9 +29,9 @@ and '--edit')
   $ hg import --bypass --exact ../test.diff
   applying ../test.diff
   $ shortlog
-  o  1:540395c44225 test 0 0 - changea
+  o  540395c44225 test 0 0 - changea
   |
-  o  0:07f494440405 test 0 0 - adda
+  o  07f494440405 test 0 0 - adda
   
 
 Test failure without --exact
@@ -44,9 +44,9 @@ Test failure without --exact
   [255]
   $ hg st
   $ shortlog
-  o  1:540395c44225 test 0 0 - changea
+  o  540395c44225 test 0 0 - changea
   |
-  o  0:07f494440405 test 0 0 - adda
+  o  07f494440405 test 0 0 - adda
   
 
 Test --user, --date and --message
@@ -58,11 +58,11 @@ Test --user, --date and --message
   $ cat .hg/last-message.txt
   patch2 (no-eol)
   $ shortlog
-  o  2:2e127d1da504 test2 1 0 - patch2
+  o  2e127d1da504 test2 1 0 - patch2
   |
-  | o  1:540395c44225 test 0 0 - changea
+  | o  540395c44225 test 0 0 - changea
   |/
-  @  0:07f494440405 test 0 0 - adda
+  @  07f494440405 test 0 0 - adda
   
   $ hg hide -q tip
 
@@ -97,11 +97,11 @@ Test --strip with --bypass
   adding dir/dir2/b
   adding dir/dir2/c
   $ shortlog
-  @  3:d805bc8236b6 test 0 0 - addabcd
+  @  d805bc8236b6 test 0 0 - addabcd
   |
-  | o  1:540395c44225 test 0 0 - changea
+  | o  540395c44225 test 0 0 - changea
   |/
-  o  0:07f494440405 test 0 0 - adda
+  o  07f494440405 test 0 0 - adda
   
   $ hg import --bypass --strip 2 --prefix dir/ - <<EOF
   > # HG changeset patch
@@ -134,13 +134,13 @@ Test --strip with --bypass
   applying patch from stdin
 
   $ shortlog
-  o  4:5bd46886ca3e test 0 0 - changeabcd
+  o  5bd46886ca3e test 0 0 - changeabcd
   |
-  @  3:d805bc8236b6 test 0 0 - addabcd
+  @  d805bc8236b6 test 0 0 - addabcd
   |
-  | o  1:540395c44225 test 0 0 - changea
+  | o  540395c44225 test 0 0 - changea
   |/
-  o  0:07f494440405 test 0 0 - adda
+  o  07f494440405 test 0 0 - adda
   
   $ hg diff --change 'desc(changeabcd)' --git
   diff --git a/dir/a b/dir/a
@@ -219,13 +219,13 @@ commit message is explicitly specified, regardless of '--edit')
   $ hg --config patch.eol=auto import -d '0 0' -m 'test patch.eol' --bypass ../test.diff
   applying ../test.diff
   $ shortlog
-  o  4:c606edafba99 test 0 0 - test patch.eol
+  o  c606edafba99 test 0 0 - test patch.eol
   |
-  @  3:872023de769d test 0 0 - makeacrlf
+  @  872023de769d test 0 0 - makeacrlf
   |
-  | o  1:540395c44225 test 0 0 - changea
+  | o  540395c44225 test 0 0 - changea
   |/
-  o  0:07f494440405 test 0 0 - adda
+  o  07f494440405 test 0 0 - adda
   
 
 Test applying multiple patches
@@ -255,13 +255,13 @@ Test applying multiple patches
   applying ../patch1.diff
   applying ../patch2.diff
   $ shortlog
-  o  3:bc8ca3f8a7c4 test 0 0 - addf
+  o  bc8ca3f8a7c4 test 0 0 - addf
   |
-  o  2:16581080145e test 0 0 - adde
+  o  16581080145e test 0 0 - adde
   |
-  | o  1:540395c44225 test 0 0 - changea
+  | o  540395c44225 test 0 0 - changea
   |/
-  @  0:07f494440405 test 0 0 - adda
+  @  07f494440405 test 0 0 - adda
   
 
 Test applying multiple patches with --exact
@@ -279,13 +279,13 @@ Test applying multiple patches with --exact
   applying ../patch1.diff
   applying ../patch2.diff
   $ shortlog
-  o  3:f24ac4984bef test 0 0 - addf
+  o  f24ac4984bef test 0 0 - addf
   |
-  | o  2:16581080145e test 0 0 - adde
+  | o  16581080145e test 0 0 - adde
   | |
-  @ |  1:540395c44225 test 0 0 - changea
+  @ |  540395c44225 test 0 0 - changea
   |/
-  o  0:07f494440405 test 0 0 - adda
+  o  07f494440405 test 0 0 - adda
   
 
   $ cd ..
@@ -354,9 +354,9 @@ The patch should have matched the exported revision and generated no additional
 data. If not, diff both heads to debug it.
 
   $ shortlog
-  o  1:2978fd5c8aa4 test 0 0 - patch
+  o  2978fd5c8aa4 test 0 0 - patch
   |
-  o  0:a0e19e636a43 test 0 0 - t
+  o  a0e19e636a43 test 0 0 - t
   
 #endif
 

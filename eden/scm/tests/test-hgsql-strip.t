@@ -27,12 +27,12 @@ Create two masters
   $ hg pull -q ../client
 
   $ cd ../master2
-  $ hg log -G -T '{rev} {desc} {bookmarks}\n'
-  o  2 z foo
+  $ hg log -G -T '{desc} {bookmarks}\n'
+  o  z foo
   |
-  | o  1 y
+  | o  y
   |/
-  o  0 x
+  o  x
   
 
 Stripping normally should fail
@@ -81,12 +81,12 @@ Repull, and then strip without a backup
   checking files
   3 files, 3 changesets, 3 total revisions
 
-  $ hg log -G -T '{rev} {desc} {bookmarks}\n'
-  o  2 z foo
+  $ hg log -G -T '{desc} {bookmarks}\n'
+  o  z foo
   |
-  | o  1 y
+  | o  y
   |/
-  o  0 x
+  o  x
   
   $ hg sqlstrip --i-know-what-i-am-doing 1 --no-backup-permanent-data-loss
   *** YOU ARE ABOUT TO DELETE HISTORY (MANDATORY 5 SECOND WAIT) ***
@@ -106,8 +106,8 @@ Verify master2 is stripped
   crosschecking files in changesets and manifests
   checking files
   1 files, 1 changesets, 1 total revisions
-  $ hg log -G -T '{rev} {desc} {bookmarks}\n'
-  o  0 x foo
+  $ hg log -G -T '{desc} {bookmarks}\n'
+  o  x foo
   
 Verify master is broken
 
@@ -130,8 +130,8 @@ Run sqlstrip on master as well
   crosschecking files in changesets and manifests
   checking files
   1 files, 1 changesets, 1 total revisions
-  $ hg log -G -T '{rev} {desc} {bookmarks}\n'
-  o  0 x foo
+  $ hg log -G -T '{desc} {bookmarks}\n'
+  o  x foo
   
 Commit after the strip
 
@@ -140,10 +140,10 @@ Commit after the strip
   $ hg commit -qAm z
 
   $ cd ../master2
-  $ hg log -G -T '{rev} {desc} {bookmarks}\n'
-  o  1 z
+  $ hg log -G -T '{desc} {bookmarks}\n'
+  o  z
   |
-  o  0 x foo
+  o  x foo
   
 Attempt to strip a non-existant rev
 

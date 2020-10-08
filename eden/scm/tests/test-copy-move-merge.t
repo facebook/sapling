@@ -111,21 +111,21 @@ Verify disabling copy tracing still keeps copies from rebase source
   $ hg up -q 'max(desc(add))'
   $ touch z
   $ hg ci -Aqm 'add z'
-  $ hg log -G -T '{rev} {desc}\n'
-  @  3 add z
+  $ hg log -G -T '{desc}\n'
+  @  add z
   |
-  | o  2 copy b->x
+  | o  copy b->x
   |/
-  o  1 add b, c
+  o  add b, c
   |
-  o  0 add a
+  o  add a
   
   $ hg rebase -d . -b 'desc(copy)' --config extensions.rebase= --config experimental.copytrace=off
   rebasing 6adcf8c12e7d "copy b->x"
   $ hg up -q 'max(desc(copy))'
-  $ hg log -f x -T '{rev} {desc}\n'
-  4 copy b->x
-  1 add b, c
+  $ hg log -f x -T '{desc}\n'
+  copy b->x
+  add b, c
 
   $ cd ../
 
@@ -143,14 +143,14 @@ Verify we duplicate existing copies, instead of detecting them
   $ hg cp a b
   $ echo b >> b
   $ hg ci -Aqm 'copy a->b (2)'
-  $ hg log -G -T '{rev} {desc}\n'
-  @  3 copy a->b (2)
+  $ hg log -G -T '{desc}\n'
+  @  copy a->b (2)
   |
-  | o  2 move b->c
+  | o  move b->c
   | |
-  | o  1 copy a->b
+  | o  copy a->b
   |/
-  o  0 add a
+  o  add a
   
   $ hg rebase -d 'desc(move)' -s 'max(desc(copy))' --config extensions.rebase= --config experimental.copytrace=off
   rebasing 47e1a9e6273b "copy a->b (2)"

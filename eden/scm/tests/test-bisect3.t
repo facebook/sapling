@@ -84,38 +84,38 @@ mark changesets
 
 test template
 
-  $ hg log --template '{rev}:{node|short} {bisect}\n'
-  14:cbf2f3105bbf 
-  13:e07efca37c43 
-  12:98c6b56349c0 bad
-  11:03f491376e63 bad (implicit)
-  10:c012b15e2409 bad
-  9:2197c557e14c untested
-  8:e74a86251f58 untested
-  7:a5f87041c899 skipped
-  6:7d997bedcd8d good
-  5:2dd1875f1028 good (implicit)
-  4:2a1daef14cd4 good
-  3:8417d459b90c ignored
-  2:e1355ee1f23e ignored
-  1:ce7c85e06a9f good (implicit)
-  0:b4e73ffab476 good (implicit)
-  $ hg log --template '{bisect|shortbisect} {rev}:{node|short}\n'
-    14:cbf2f3105bbf
-    13:e07efca37c43
-  B 12:98c6b56349c0
-  B 11:03f491376e63
-  B 10:c012b15e2409
-  U 9:2197c557e14c
-  U 8:e74a86251f58
-  S 7:a5f87041c899
-  G 6:7d997bedcd8d
-  G 5:2dd1875f1028
-  G 4:2a1daef14cd4
-  I 3:8417d459b90c
-  I 2:e1355ee1f23e
-  G 1:ce7c85e06a9f
-  G 0:b4e73ffab476
+  $ hg log --template '{node|short} {bisect}\n'
+  cbf2f3105bbf 
+  e07efca37c43 
+  98c6b56349c0 bad
+  03f491376e63 bad (implicit)
+  c012b15e2409 bad
+  2197c557e14c untested
+  e74a86251f58 untested
+  a5f87041c899 skipped
+  7d997bedcd8d good
+  2dd1875f1028 good (implicit)
+  2a1daef14cd4 good
+  8417d459b90c ignored
+  e1355ee1f23e ignored
+  ce7c85e06a9f good (implicit)
+  b4e73ffab476 good (implicit)
+  $ hg log --template '{bisect|shortbisect} {node|short}\n'
+    cbf2f3105bbf
+    e07efca37c43
+  B 98c6b56349c0
+  B 03f491376e63
+  B c012b15e2409
+  U 2197c557e14c
+  U e74a86251f58
+  S a5f87041c899
+  G 7d997bedcd8d
+  G 2dd1875f1028
+  G 2a1daef14cd4
+  I 8417d459b90c
+  I e1355ee1f23e
+  G ce7c85e06a9f
+  G b4e73ffab476
 
 test style
 

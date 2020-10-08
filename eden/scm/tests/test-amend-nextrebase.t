@@ -16,7 +16,7 @@ Set up test environment.
   >   cd nextrebase
   > }
   $ showgraph() {
-  >   hg log --graph -T "{rev} {desc|firstline}"
+  >   hg log --graph -T "{desc|firstline}"
   > }
   $ hg init nextrebase && cd nextrebase
 
@@ -35,15 +35,15 @@ Build dag with instablility
 
 Check the next behaviour in case of ambiguity between obsolete and non-obsolete
   $ showgraph
-  @  4 amended
+  @  amended
   |
-  | o  3 r3
+  | o  r3
   | |
-  | o  2 r2
+  | o  r2
   | |
-  | x  1 r1
+  | x  r1
   |/
-  o  0 r0
+  o  r0
   
   $ hg prev
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -65,17 +65,17 @@ Rebasing single changeset.
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   [8fb200] r2
   $ showgraph
-  @  5 r2
+  @  r2
   |
-  o  4 amended
+  o  amended
   |
-  | o  3 r3
+  | o  r3
   | |
-  | x  2 r2
+  | x  r2
   | |
-  | x  1 r1
+  | x  r1
   |/
-  o  0 r0
+  o  r0
   
 Test --clean flag.
   $ touch foo
@@ -93,13 +93,13 @@ Test --clean flag.
   $ hg status
   ? foo
   $ showgraph
-  @  6 r3
+  @  r3
   |
-  o  5 r2
+  o  r2
   |
-  o  4 amended
+  o  amended
   |
-  o  0 r0
+  o  r0
   
 
 Rebasing multiple changesets at once.
@@ -117,15 +117,15 @@ Rebasing multiple changesets at once.
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   [d25685] r4
   $ showgraph
-  @  8 r4
+  @  r4
   |
-  o  7 r3
+  o  r3
   |
-  o  6 r2
+  o  r2
   |
-  o  5 amended
+  o  amended
   |
-  o  0 r0
+  o  r0
   
 
 Rebasing a stack one changeset at a time.
@@ -145,21 +145,21 @@ Rebasing a stack one changeset at a time.
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   [f12433] r3
   $ showgraph
-  @  7 r3
+  @  r3
   |
-  o  6 r2
+  o  r2
   |
-  o  5 amended
+  o  amended
   |
-  | o  4 r4
+  | o  r4
   | |
-  | x  3 r3
+  | x  r3
   | |
-  | x  2 r2
+  | x  r2
   | |
-  | x  1 r1
+  | x  r1
   |/
-  o  0 r0
+  o  r0
   
 
   $ hg next --rebase
@@ -167,15 +167,15 @@ Rebasing a stack one changeset at a time.
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   [d25685] r4
   $ showgraph
-  @  8 r4
+  @  r4
   |
-  o  7 r3
+  o  r3
   |
-  o  6 r2
+  o  r2
   |
-  o  5 amended
+  o  amended
   |
-  o  0 r0
+  o  r0
   
 
 Rebasing a stack two changesets at a time.
@@ -192,23 +192,23 @@ Rebasing a stack two changesets at a time.
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   [f12433] r3
   $ showgraph
-  @  8 r3
+  @  r3
   |
-  o  7 r2
+  o  r2
   |
-  o  6 amended
+  o  amended
   |
-  | o  5 r5
+  | o  r5
   | |
-  | o  4 r4
+  | o  r4
   | |
-  | x  3 r3
+  | x  r3
   | |
-  | x  2 r2
+  | x  r2
   | |
-  | x  1 r1
+  | x  r1
   |/
-  o  0 r0
+  o  r0
   
   $ hg next --rebase 2
   rebasing daa37004f338 "r4"
@@ -216,17 +216,17 @@ Rebasing a stack two changesets at a time.
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   [dd153e] r5
   $ showgraph
-  @  10 r5
+  @  r5
   |
-  o  9 r4
+  o  r4
   |
-  o  8 r3
+  o  r3
   |
-  o  7 r2
+  o  r2
   |
-  o  6 amended
+  o  amended
   |
-  o  0 r0
+  o  r0
   
 
 Rebasing after multiple amends.
@@ -240,17 +240,17 @@ Rebasing after multiple amends.
   $ hg amend -m "amend 2"
   $ hg amend -m "amend 3"
   $ showgraph
-  @  7 amend 3
+  @  amend 3
   |
-  | o  4 r4
+  | o  r4
   | |
-  | o  3 r3
+  | o  r3
   | |
-  | o  2 r2
+  | o  r2
   | |
-  | x  1 r1
+  | x  r1
   |/
-  o  0 r0
+  o  r0
   
   $ hg next --rebase --top
   rebasing 776c07fa2b12 "r2"
@@ -259,15 +259,15 @@ Rebasing after multiple amends.
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   [5d31c6] r4
   $ showgraph
-  @  10 r4
+  @  r4
   |
-  o  9 r3
+  o  r3
   |
-  o  8 r2
+  o  r2
   |
-  o  7 amend 3
+  o  amend 3
   |
-  o  0 r0
+  o  r0
   
 
 Rebasing from below the amended changeset with the --newest flag.
@@ -281,19 +281,19 @@ Rebasing from below the amended changeset with the --newest flag.
   $ hg up 0
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ showgraph
-  o  6 amended
+  o  amended
   |
-  | o  5 r5
+  | o  r5
   | |
-  | o  4 r4
+  | o  r4
   | |
-  | o  3 r3
+  | o  r3
   | |
-  | x  2 r2
+  | x  r2
   |/
-  o  1 r1
+  o  r1
   |
-  @  0 r0
+  @  r0
   
   $ hg next --rebase --top --newest
   rebasing 137d867d71d5 "r3"
@@ -302,17 +302,17 @@ Rebasing from below the amended changeset with the --newest flag.
   5 files updated, 0 files merged, 0 files removed, 0 files unresolved
   [2d8122] r5
   $ showgraph
-  @  9 r5
+  @  r5
   |
-  o  8 r4
+  o  r4
   |
-  o  7 r3
+  o  r3
   |
-  o  6 amended
+  o  amended
   |
-  o  1 r1
+  o  r1
   |
-  o  0 r0
+  o  r0
   
 
 Test aborting due to ambiguity caused by a rebase. The rebase should be
@@ -329,21 +329,21 @@ rolled back and the final state should be as it was before `hg next --rebase`.
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   [f03405] amended
   $ showgraph
-  o  7 add a
+  o  add a
   |
-  @  6 amended
+  @  amended
   |
-  | o  5 r5
+  | o  r5
   | |
-  | o  4 r4
+  | o  r4
   | |
-  | o  3 r3
+  | o  r3
   | |
-  | o  2 r2
+  | o  r2
   | |
-  | x  1 r1
+  | x  r1
   |/
-  o  0 r0
+  o  r0
   
   $ hg next --rebase
   rebasing 776c07fa2b12 "r2"
@@ -356,21 +356,21 @@ rolled back and the final state should be as it was before `hg next --rebase`.
   (use the --newest or --towards flags to specify which child to pick)
   [255]
   $ showgraph
-  o  7 add a
+  o  add a
   |
-  @  6 amended
+  @  amended
   |
-  | o  5 r5
+  | o  r5
   | |
-  | o  4 r4
+  | o  r4
   | |
-  | o  3 r3
+  | o  r3
   | |
-  | o  2 r2
+  | o  r2
   | |
-  | x  1 r1
+  | x  r1
   |/
-  o  0 r0
+  o  r0
   
 
 Test a situation where there is a conflict.
@@ -387,15 +387,15 @@ Test a situation where there is a conflict.
   hint[amend-restack]: descendants of 7c3bad9141dc are left behind - use 'hg restack' to rebase them
   hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ showgraph
-  @  4 amended to add c
+  @  amended to add c
   |
-  | o  3 add d
+  | o  add d
   | |
-  | o  2 add c
+  | o  add c
   | |
-  | x  1 add b
+  | x  add b
   |/
-  o  0 add a
+  o  add a
   
   $ hg next --rebase --top
   rebasing 4538525df7e2 "add c"
@@ -404,15 +404,15 @@ Test a situation where there is a conflict.
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ showgraph
-  @  4 amended to add c
+  @  amended to add c
   |
-  | o  3 add d
+  | o  add d
   | |
-  | @  2 add c
+  | @  add c
   | |
-  | x  1 add b
+  | x  add b
   |/
-  o  0 add a
+  o  add a
   
 In this mid-rebase state, we can't use `hg previous` or `hg next`:
   $ hg previous
@@ -428,17 +428,17 @@ Now resolve the conflict and resume the rebase.
   $ hg rebase --continue
   rebasing 4538525df7e2 "add c"
   $ showgraph
-  o  5 add c
+  o  add c
   |
-  @  4 amended to add c
+  @  amended to add c
   |
-  | o  3 add d
+  | o  add d
   | |
-  | x  2 add c
+  | x  add c
   | |
-  | x  1 add b
+  | x  add b
   |/
-  o  0 add a
+  o  add a
   
 Rebase when other predecessors are still visible
   $ reset
@@ -459,34 +459,34 @@ Rebase when other predecessors are still visible
   hint[amend-restack]: descendants of 80573e6618ae are left behind - use 'hg restack' to rebase them
   hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ showgraph
-  @  6 amended 2
+  @  amended 2
   |
-  | o  5 r2
+  | o  r2
   | |
-  | x  4 amended 1
+  | x  amended 1
   |/
-  | o  3 r3
+  | o  r3
   | |
-  | x  2 r2
+  | x  r2
   | |
-  | x  1 r1
+  | x  r1
   |/
-  o  0 r0
+  o  r0
   
   $ hg next --rebase
   rebasing bd2075358087 "r2"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   [88a893] r2
   $ showgraph
-  @  7 r2
+  @  r2
   |
-  o  6 amended 2
+  o  amended 2
   |
-  | o  3 r3
+  | o  r3
   | |
-  | x  2 r2
+  | x  r2
   | |
-  | x  1 r1
+  | x  r1
   |/
-  o  0 r0
+  o  r0
   

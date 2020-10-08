@@ -1577,16 +1577,16 @@ test for case where we didn't look sufficiently far back to find rename ancestor
   $ hg ci -qmf=f
   $ hg merge -q
   $ hg ci -mmerge
-  $ hg log -G --template '{rev}  {desc}'
-  @    4  merge
+  $ hg log -G --template '{desc}'
+  @    merge
   |\
-  | o  3  f=f
+  | o  f=f
   | |
-  | o  2  x
+  | o  x
   | |
-  o |  1  f->g
+  o |  f->g
   |/
-  o  0  f
+  o  f
   
   $ hg diff --git -r 2
   diff --git a/f b/g
@@ -1634,16 +1634,16 @@ faulty linkrev is not the "start" commit to ensure the linkrev will be used.
   $ hg mv f renamed
   $ hg ci -m renamed
 
-  $ hg log -G -T '{rev} {desc}'
-  @  4 renamed
+  $ hg log -G -T '{desc}'
+  @  renamed
   |
-  o  3 change f
+  o  change f
   |
-  o  2 dev
+  o  dev
   |
-  | o  1 change f
+  | o  change f
   |/
-  o  0 empty f
+  o  empty f
   
 
 The copy tracking should still reach rev 2 (branch creation).

@@ -60,12 +60,12 @@ Revert the content change from rev 2:
   $ echo line1 > bar
   $ hg ci -m '4: revert content change from rev 2'
 
-  $ hg log --template '{rev}:{node|short} {parents}\n'
-  4:2263c1be0967 0f2ff26688b9 
-  3:0555950ead28 0f2ff26688b9 5cd961e4045d 
-  2:0f2ff26688b9 2665aaee66e9 
-  1:5cd961e4045d 2665aaee66e9 
-  0:2665aaee66e9 000000000000 
+  $ hg log --template '{node|short} {parents}\n'
+  2263c1be0967 0f2ff26688b9 
+  0555950ead28 0f2ff26688b9 5cd961e4045d 
+  0f2ff26688b9 2665aaee66e9 
+  5cd961e4045d 2665aaee66e9 
+  2665aaee66e9 000000000000 
 
 This should use bar@rev2 as the ancestor:
 
@@ -149,12 +149,12 @@ Revert the content change from rev 2:
   $ echo line1 > bar
   $ hg ci -m '4: revert content change from rev 2'
 
-  $ hg log --template '{rev}:{node|short} {parents}\n'
-  4:2263c1be0967 0f2ff26688b9 
-  3:3ffa6b9e35f0 5cd961e4045d 0f2ff26688b9 
-  2:0f2ff26688b9 2665aaee66e9 
-  1:5cd961e4045d 2665aaee66e9 
-  0:2665aaee66e9 000000000000 
+  $ hg log --template '{node|short} {parents}\n'
+  2263c1be0967 0f2ff26688b9 
+  3ffa6b9e35f0 5cd961e4045d 0f2ff26688b9 
+  0f2ff26688b9 2665aaee66e9 
+  5cd961e4045d 2665aaee66e9 
+  2665aaee66e9 000000000000 
 
 This should use bar@rev2 as the ancestor:
 

@@ -35,11 +35,11 @@ Load commonly used test logic
   > }
   $ hgstate()
   > {
-  >     hg log --template "  {rev} {node|short} \"{desc}\" bookmarks: [{bookmarks}]\n" $@
+  >     hg log --template "  {node|short} \"{desc}\" bookmarks: [{bookmarks}]\n" $@
   > }
   $ hggitstate()
   > {
-  >     hg log --template "  {rev} {node|short} {gitnode|short} \"{desc}\" bookmarks: [{bookmarks}]\n" $@
+  >     hg log --template "  {node|short} {gitnode|short} \"{desc}\" bookmarks: [{bookmarks}]\n" $@
   > }
 
 Initialize remote hg and git repos with equivalent initial contents
@@ -51,10 +51,10 @@ Initialize remote hg and git repos with equivalent initial contents
   > done
   $ hg bookmark -r 1 b1
   $ hgstate
-    3 fc2664cac217 "add delta" bookmarks: [master]
-    2 d85ced7ae9d6 "add gamma" bookmarks: []
-    1 7bcd915dc873 "add beta" bookmarks: [b1]
-    0 3442585be8a6 "add alpha" bookmarks: []
+    fc2664cac217 "add delta" bookmarks: [master]
+    d85ced7ae9d6 "add gamma" bookmarks: []
+    7bcd915dc873 "add beta" bookmarks: [b1]
+    3442585be8a6 "add alpha" bookmarks: []
   $ cd ..
   $ git init -q gitremoterepo
   $ cd gitremoterepo
@@ -73,18 +73,18 @@ Cloning transfers all bookmarks from remote to local
   $ hg clone -q hgremoterepo purehglocalrepo
   $ cd purehglocalrepo
   $ hgstate
-    3 fc2664cac217 "add delta" bookmarks: [master]
-    2 d85ced7ae9d6 "add gamma" bookmarks: []
-    1 7bcd915dc873 "add beta" bookmarks: [b1]
-    0 3442585be8a6 "add alpha" bookmarks: []
+    fc2664cac217 "add delta" bookmarks: [master]
+    d85ced7ae9d6 "add gamma" bookmarks: []
+    7bcd915dc873 "add beta" bookmarks: [b1]
+    3442585be8a6 "add alpha" bookmarks: []
   $ cd ..
   $ hg clone -q gitremoterepo hggitlocalrepo --config hggit.usephases=True
   $ cd hggitlocalrepo
   $ hggitstate
-    3 3783f3cdb535 55b133e1d558 "add delta" bookmarks: [master]
-    2 1221213928d3 d338971a96e2 "add gamma" bookmarks: []
-    1 3bb02b6794dd 9497a4ee62e1 "add beta" bookmarks: [b1]
-    0 69982ec78c6d 7eeab2ea75ec "add alpha" bookmarks: []
+    3783f3cdb535 55b133e1d558 "add delta" bookmarks: [master]
+    1221213928d3 d338971a96e2 "add gamma" bookmarks: []
+    3bb02b6794dd 9497a4ee62e1 "add beta" bookmarks: [b1]
+    69982ec78c6d 7eeab2ea75ec "add alpha" bookmarks: []
 
 TODO: Write remotenames instead of local bookmarks to fix phase handling.
   $ hg phase -r master
@@ -148,20 +148,20 @@ Bookmarks on new revs
   $ hg update -q b4
   $ echo epsilon > epsilon; hg add epsilon; hgcommit -m 'add epsilon'
   $ hgstate
-    4 d979bb8e0fbb "add epsilon" bookmarks: [b4]
-    3 fc2664cac217 "add delta" bookmarks: [b3 master]
-    2 d85ced7ae9d6 "add gamma" bookmarks: []
-    1 7bcd915dc873 "add beta" bookmarks: [b1]
-    0 3442585be8a6 "add alpha" bookmarks: []
+    d979bb8e0fbb "add epsilon" bookmarks: [b4]
+    fc2664cac217 "add delta" bookmarks: [b3 master]
+    d85ced7ae9d6 "add gamma" bookmarks: []
+    7bcd915dc873 "add beta" bookmarks: [b1]
+    3442585be8a6 "add alpha" bookmarks: []
   $ cd ..
   $ cd purehglocalrepo
   $ hg bookmark -fr 2 b1
   $ hg bookmark -r 0 b2
   $ hgstate
-    3 fc2664cac217 "add delta" bookmarks: [master]
-    2 d85ced7ae9d6 "add gamma" bookmarks: [b1]
-    1 7bcd915dc873 "add beta" bookmarks: []
-    0 3442585be8a6 "add alpha" bookmarks: [b2]
+    fc2664cac217 "add delta" bookmarks: [master]
+    d85ced7ae9d6 "add gamma" bookmarks: [b1]
+    7bcd915dc873 "add beta" bookmarks: []
+    3442585be8a6 "add alpha" bookmarks: [b2]
   $ hg incoming -B
   comparing with $TESTTMP/hgremoterepo
   searching for changed bookmarks
@@ -199,10 +199,10 @@ This changed in 3.4 to start showing changed and deleted bookmarks again.
   $ hg bookmark -fr 2 b1
   $ hg bookmark -r 0 b2
   $ hgstate
-    3 3783f3cdb535 "add delta" bookmarks: [master]
-    2 1221213928d3 "add gamma" bookmarks: [b1]
-    1 3bb02b6794dd "add beta" bookmarks: []
-    0 69982ec78c6d "add alpha" bookmarks: [b2]
+    3783f3cdb535 "add delta" bookmarks: [master]
+    1221213928d3 "add gamma" bookmarks: [b1]
+    3bb02b6794dd "add beta" bookmarks: []
+    69982ec78c6d "add alpha" bookmarks: [b2]
   $ hg incoming -B
   comparing with $TESTTMP/gitremoterepo
   searching for changed bookmarks

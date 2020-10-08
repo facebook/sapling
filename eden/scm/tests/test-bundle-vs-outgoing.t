@@ -79,24 +79,24 @@ back to "second branch" to make another head
 
 the story so far
 
-  $ hg log -G --template "{rev}\n"
-  @  8
+  $ hg log -G --template "{node}\n"
+  @  5f52be4fcfe9ac3202b79e6beb8804d871b98e10
   |
-  | o  7
+  | o  de61c22a80e9fbe65e3f207212eb55d9c56e491b
   | |
-  | o  6
+  | o  a1e3db6b8fc126320c3bffd4c4b163c0d7f5038f
   |/|
-  o |  5
+  o |  ee67ca2f52ac8c7904cc477b8cf04da764fea594
   | |
-  o |  4
+  o |  4afa705929a3d9af58f4b035944e8ee600c7b571
   | |
-  | o  3
+  | o  478f191e53f84ddec1d358da2ed34eb796b3ac6f
   | |
-  | o  2
+  | o  c20e19c90a429c37cf2b85b397ebd3f3639ae890
   |/
-  o  1
+  o  6a9ac14c32e0502be005fee0023b823698e3ce41
   |
-  o  0
+  o  6ae4cca4e39a527c4158d3b0fd73882b50e45484
   
 
 check that "hg outgoing" really does the right thing
@@ -113,14 +113,14 @@ sanity check of outgoing: expect revs 4 5 6 7 8
 
 this should (and does) report 5 outgoing revisions: 4 5 6 7 8
 
-  $ hg outgoing --template "{rev}\n" ../repo2
+  $ hg outgoing --template "{node}\n" ../repo2
   comparing with ../repo2
   searching for changes
-  4
-  5
-  6
-  7
-  8
+  4afa705929a3d9af58f4b035944e8ee600c7b571
+  ee67ca2f52ac8c7904cc477b8cf04da764fea594
+  a1e3db6b8fc126320c3bffd4c4b163c0d7f5038f
+  de61c22a80e9fbe65e3f207212eb55d9c56e491b
+  5f52be4fcfe9ac3202b79e6beb8804d871b98e10
 
 test bundle (destination repo): expect 5 revisions
 

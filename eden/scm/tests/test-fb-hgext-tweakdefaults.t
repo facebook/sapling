@@ -34,17 +34,17 @@ Updating to a specific date isn't blocked by our extensions'
 
 Log is -f by default
 
-  $ hg log -G -T '{rev} {desc}\n'
-  @  1 b
+  $ hg log -G -T '{desc}\n'
+  @  b
   |
-  o  0 a
+  o  a
   
-  $ hg log -G -T '{rev} {desc}\n' --all
-  o  2 a2
+  $ hg log -G -T '{desc}\n' --all
+  o  a2
   |
-  | @  1 b
+  | @  b
   |/
-  o  0 a
+  o  a
   
 Dirty update to different rev fails with --check
 
@@ -68,11 +68,11 @@ Dirty update allowed to same rev, with no conflicts, and --clean
 
 Log on dir's works
 
-  $ hg log -T '{rev} {desc}\n' dir
-  1 b
+  $ hg log -T '{desc}\n' dir
+  b
 
-  $ hg log -T '{rev} {desc}\n' -I 'dir/*'
-  1 b
+  $ hg log -T '{desc}\n' -I 'dir/*'
+  b
 
 Empty rebase fails
 
@@ -91,42 +91,42 @@ Rebase fast forwards bookmark
 
   $ hg book -r 'desc(a2)' mybook
   $ hg up -q mybook
-  $ hg log -G -T '{rev} {desc} {bookmarks}\n'
-  @  2 a2 mybook
+  $ hg log -G -T '{desc} {bookmarks}\n'
+  @  a2 mybook
   |
-  o  0 a
+  o  a
   
   $ hg rebase -d 'desc(b)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-  $ hg log -G -T '{rev} {desc} {bookmarks}\n'
-  @  3 b mybook
+  $ hg log -G -T '{desc} {bookmarks}\n'
+  @  b mybook
   |
-  o  2 a2
+  o  a2
   |
-  o  0 a
+  o  a
   
 Rebase works with hyphens
 
   $ hg book -r 'desc(a2)' hyphen-book
   $ hg book -r 'desc(b)' hyphen-dest
   $ hg up -q hyphen-book
-  $ hg log --all -G -T '{rev} {desc} {bookmarks}\n'
-  o  3 b hyphen-dest mybook
+  $ hg log --all -G -T '{desc} {bookmarks}\n'
+  o  b hyphen-dest mybook
   |
-  @  2 a2 hyphen-book
+  @  a2 hyphen-book
   |
-  o  0 a
+  o  a
   
   $ hg rebase -d hyphen-dest
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-  $ hg log --all -G -T '{rev} {desc} {bookmarks}\n'
-  @  3 b hyphen-book hyphen-dest mybook
+  $ hg log --all -G -T '{desc} {bookmarks}\n'
+  @  b hyphen-book hyphen-dest mybook
   |
-  o  2 a2
+  o  a2
   |
-  o  0 a
+  o  a
   
 Rebase is blocked if you have conflicting changes
 
@@ -264,20 +264,20 @@ Test graft date when tweakdefaults.graftkeepdate is not set
   $ hg revert -a -q
   $ hg up -q 'desc(a2)'
   $ hg graft -q 'desc(b) & mybook'
-  $ hg log -T "{rev}\n" -d "yesterday to today"
-  5
+  $ hg log -T "{desc}\n" -d "yesterday to today"
+  b
 
 Test graft date when tweakdefaults.graftkeepdate is not set and --date is provided
   $ hg up -q 'desc(a2)'
   $ hg graft -q 'desc(b) & mybook' --date "1 1"
-  $ hg log -l 1 -T "{date} {rev}\n"
-  1.01 6
+  $ hg log -l 1 -T "{date} {desc}\n"
+  1.01 b
 
 Test graft date when tweakdefaults.graftkeepdate is set
   $ hg up -q 'desc(a2)'
   $ hg graft -q 'max(desc(b))' --config tweakdefaults.graftkeepdate=True
-  $ hg log -l 1 -T "{date} {rev}\n"
-  1.01 7
+  $ hg log -l 1 -T "{date} {desc}\n"
+  1.01 b
 
 Test amend date when tweakdefaults.amendkeepdate is not set
   $ hg up -q 'desc(a2)'
@@ -285,37 +285,37 @@ Test amend date when tweakdefaults.amendkeepdate is not set
   $ hg commit -Aqm "commit for amend"
   $ echo x > a
   $ hg amend -q -m "amended message"
-  $ hg log -T "{rev}\n" -d "yesterday to today"
-  9
+  $ hg log -T "{desc}\n" -d "yesterday to today"
+  amended message
 
 Test amend date when tweakdefaults.amendkeepdate is set
   $ touch new_file
   $ hg commit -d "0 0" -Aqm "commit for amend"
   $ echo x > new_file
   $ hg amend -q -m "amended message" --config tweakdefaults.amendkeepdate=True
-  $ hg log -l 1 -T "{date} {rev}\n"
-  0.00 11
+  $ hg log -l 1 -T "{date} {desc}\n"
+  0.00 amended message
 
 Test amend --to doesn't give a flag error when tweakdefaults.amendkeepdate is set
   $ echo q > new_file
-  $ hg log -l 1 -T "{date} {rev}\n"
-  0.00 11
+  $ hg log -l 1 -T "{date} {desc}\n"
+  0.00 amended message
 
 Test commit --amend date when tweakdefaults.amendkeepdate is set
   $ echo a >> new_file
   $ hg commit -d "0 0" -Aqm "commit for amend"
   $ echo x > new_file
   $ hg commit -q --amend -m "amended message" --config tweakdefaults.amendkeepdate=True
-  $ hg log -l 1 -T "{date} {rev}\n"
-  0.00 13
+  $ hg log -l 1 -T "{date} {desc}\n"
+  0.00 amended message
 
 Test commit --amend date when tweakdefaults.amendkeepdate is not set and --date is provided
   $ echo xxx > a
   $ hg commit -d "0 0" -Aqm "commit for amend"
   $ echo x > a
   $ hg commit -q --amend -m "amended message" --date "1 1"
-  $ hg log -l 1 -T "{date} {rev}\n"
-  1.01 15
+  $ hg log -l 1 -T "{date} {desc}\n"
+  1.01 amended message
 
 Test rebase date when tweakdefaults.rebasekeepdate is not set
   $ echo test_1 > rebase_dest
@@ -328,8 +328,8 @@ Test rebase date when tweakdefaults.rebasekeepdate is not set
   $ hg commit --date "1 1" -Aqm "source commit for rebase"
   $ hg bookmark rebase_source_test_1
   $ hg rebase -q -s rebase_source_test_1 -d rebase_dest_test_1
-  $ hg log -l 1 -T "{rev}\n" -d "yesterday to today"
-  18
+  $ hg log -l 1 -T "{desc}\n" -d "yesterday to today"
+  source commit for rebase
 
 Test rebase date when tweakdefaults.rebasekeepdate is set
   $ echo test_2 > rebase_dest
@@ -342,9 +342,9 @@ Test rebase date when tweakdefaults.rebasekeepdate is set
   $ hg commit -Aqm "source commit for rebase"
   $ hg bookmark rebase_source_test_2
   $ hg rebase -q -s rebase_source_test_2 -d rebase_dest_test_2 --config tweakdefaults.rebasekeepdate=True
-  $ hg log -l 2 -T "{date} {rev}\n"
-  0.00 21
-  0.00 19
+  $ hg log -l 2 -T "{date} {desc}\n"
+  0.00 source commit for rebase
+  0.00 dest commit for rebase
 
 Test histedit date when tweakdefaults.histeditkeepdate is set
   $ hg bookmark histedit_test
@@ -359,10 +359,10 @@ Test histedit date when tweakdefaults.histeditkeepdate is set
   > pick 24
   > pick 23
   > EOF
-  $ hg log -l 3 -T "{date} {rev} {desc}\n"
-  0.00 26 commit 2 for histedit
-  0.00 25 commit 3 for histedit
-  0.00 22 commit 1 for histedit
+  $ hg log -l 3 -T "{date} {desc}\n"
+  0.00 commit 2 for histedit
+  0.00 commit 3 for histedit
+  0.00 commit 1 for histedit
 
 Test histedit date when tweakdefaults.histeditkeepdate is not set
   $ hg histedit "desc('commit 1 for histedit')" --commands - 2>&1 <<EOF| fixbundle
@@ -370,9 +370,9 @@ Test histedit date when tweakdefaults.histeditkeepdate is not set
   > pick 26
   > pick 25
   > EOF
-  $ hg log -l 2 -T "{rev} {desc}\n" -d "yesterday to today"
-  28 commit 3 for histedit
-  27 commit 2 for histedit
+  $ hg log -l 2 -T "{desc}\n" -d "yesterday to today"
+  commit 3 for histedit
+  commit 2 for histedit
 
 Test diff --per-file-stat
   $ echo a >> a
@@ -395,12 +395,12 @@ Test rebase with showupdated=True
   $ touch b && hg commit -Aqm b
   $ hg up -q 'desc(a)'
   $ touch c && hg commit -Aqm c
-  $ hg log -G -T '{node} {rev} {bookmarks}' -r 'all()'
-  @  d5e255ef74f8ec83b3a2a3f3254c699451c89e29 2
+  $ hg log -G -T '{node} {bookmarks}' -r 'all()'
+  @  d5e255ef74f8ec83b3a2a3f3254c699451c89e29
   |
-  | o  0e067c57feba1a5694ca4844f05588bb1bf82342 1
+  | o  0e067c57feba1a5694ca4844f05588bb1bf82342
   |/
-  o  3903775176ed42b1458a6281db4a0ccf4d9f287a 0
+  o  3903775176ed42b1458a6281db4a0ccf4d9f287a
   
   $ hg rebase -r 'desc(b)' -d 'desc(c)'
   rebasing 0e067c57feba "b"

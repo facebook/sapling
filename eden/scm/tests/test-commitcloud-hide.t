@@ -3,7 +3,7 @@
   $ configure modern
 
   $ showgraph() {
-  >    hg log -G -T "{rev} {desc}: {phase} {bookmarks} {remotenames}" -r "all()"
+  >    hg log -G -T "{desc}: {phase} {bookmarks} {remotenames}" -r "all()"
   > }
 
 hg cloud hide uses the smartlog data from the cloud service.  We must generate this
@@ -60,39 +60,39 @@ manually.
   $ hg book -r $B b-bookmark
   $ hg cloud sync -q
   $ showgraph
-  o  16 S: draft
+  o  S: draft
   |
-  | o  15 F: draft
+  | o  F: draft
   | |
-  o |  14 R: draft
+  o |  R: draft
   | |
-  | | o  13 O: draft o-bookmark
+  | | o  O: draft o-bookmark
   | | |
-  | o |  12 E: draft
+  | o |  E: draft
   | | |
-  | +---o  11 D: draft d-bookmark d-bookmark2 d-bookmark3
+  | +---o  D: draft d-bookmark d-bookmark2 d-bookmark3
   | | |
-  | +---o  10 C: draft
+  | +---o  C: draft
   | | |
-  o | |  9 Q: draft
+  o | |  Q: draft
   | | |
-  | | o  8 N: draft n-bookmark n-bookmark2
+  | | o  N: draft n-bookmark n-bookmark2
   | | |
-  | o |  7 B: draft b-bookmark
+  | o |  B: draft b-bookmark
   | | |
-  o | |  6 P: draft
+  o | |  P: draft
   | | |
-  +---o  5 M: draft
+  +---o  M: draft
   | |
-  | o  4 A: draft
+  | o  A: draft
   | |
-  | o  3 W: public  remote/master
+  | o  W: public  remote/master
   | |
-  @ |  2 Y: public  remote/other
+  @ |  Y: public  remote/other
   | |
-  | o  1 X: public x-bookmark
+  | o  X: public x-bookmark
   |/
-  o  0 Z: public
+  o  Z: public
   
 
 Remove by hash with two related commits removes both of them
@@ -102,31 +102,31 @@ Remove by hash with two related commits removes both of them
       0d5fa5021fb8  S
   $ hg cloud sync -q
   $ showgraph
-  o  15 F: draft
+  o  F: draft
   |
-  | o  13 O: draft o-bookmark
+  | o  O: draft o-bookmark
   | |
-  o |  12 E: draft
+  o |  E: draft
   | |
-  +---o  11 D: draft d-bookmark d-bookmark2 d-bookmark3
+  +---o  D: draft d-bookmark d-bookmark2 d-bookmark3
   | |
-  +---o  10 C: draft
+  +---o  C: draft
   | |
-  | o  8 N: draft n-bookmark n-bookmark2
+  | o  N: draft n-bookmark n-bookmark2
   | |
-  o |  7 B: draft b-bookmark
+  o |  B: draft b-bookmark
   | |
-  | o  5 M: draft
+  | o  M: draft
   | |
-  o |  4 A: draft
+  o |  A: draft
   | |
-  o |  3 W: public  remote/master
+  o |  W: public  remote/master
   | |
-  | @  2 Y: public  remote/other
+  | @  Y: public  remote/other
   | |
-  o |  1 X: public x-bookmark
+  o |  X: public x-bookmark
   |/
-  o  0 Z: public
+  o  Z: public
   
 
 Remove by hash removes commit, all descendants and their bookmarks
@@ -142,27 +142,27 @@ Remove by hash removes commit, all descendants and their bookmarks
       o-bookmark: 7f49e3f0c6cd
   $ hg cloud sync -q
   $ showgraph
-  o  15 F: draft
+  o  F: draft
   |
-  o  12 E: draft
+  o  E: draft
   |
-  | o  11 D: draft d-bookmark d-bookmark2 d-bookmark3
+  | o  D: draft d-bookmark d-bookmark2 d-bookmark3
   |/
-  | o  10 C: draft
+  | o  C: draft
   |/
-  o  7 B: draft b-bookmark
+  o  B: draft b-bookmark
   |
-  | o  5 M: draft
+  | o  M: draft
   | |
-  o |  4 A: draft
+  o |  A: draft
   | |
-  o |  3 W: public  remote/master
+  o |  W: public  remote/master
   | |
-  | @  2 Y: public  remote/other
+  | @  Y: public  remote/other
   | |
-  o |  1 X: public x-bookmark
+  o |  X: public x-bookmark
   |/
-  o  0 Z: public
+  o  Z: public
   
 
 Remove when other heads keep ancestors alive, removing it just removes the head
@@ -172,25 +172,25 @@ Remove when other heads keep ancestors alive, removing it just removes the head
       f6a18bc998c9  C
   $ hg cloud sync -q
   $ showgraph
-  o  15 F: draft
+  o  F: draft
   |
-  o  12 E: draft
+  o  E: draft
   |
-  | o  11 D: draft d-bookmark d-bookmark2 d-bookmark3
+  | o  D: draft d-bookmark d-bookmark2 d-bookmark3
   |/
-  o  7 B: draft b-bookmark
+  o  B: draft b-bookmark
   |
-  | o  5 M: draft
+  | o  M: draft
   | |
-  o |  4 A: draft
+  o |  A: draft
   | |
-  o |  3 W: public  remote/master
+  o |  W: public  remote/master
   | |
-  | @  2 Y: public  remote/other
+  | @  Y: public  remote/other
   | |
-  o |  1 X: public x-bookmark
+  o |  X: public x-bookmark
   |/
-  o  0 Z: public
+  o  Z: public
   
 
 Remove by bookmark leaves commits alone if there are other bookmarks
@@ -200,25 +200,25 @@ Remove by bookmark leaves commits alone if there are other bookmarks
       d-bookmark: fa9d7a2f38d1
   $ hg cloud sync -q
   $ showgraph
-  o  15 F: draft
+  o  F: draft
   |
-  o  12 E: draft
+  o  E: draft
   |
-  | o  11 D: draft d-bookmark2 d-bookmark3
+  | o  D: draft d-bookmark2 d-bookmark3
   |/
-  o  7 B: draft b-bookmark
+  o  B: draft b-bookmark
   |
-  | o  5 M: draft
+  | o  M: draft
   | |
-  o |  4 A: draft
+  o |  A: draft
   | |
-  o |  3 W: public  remote/master
+  o |  W: public  remote/master
   | |
-  | @  2 Y: public  remote/other
+  | @  Y: public  remote/other
   | |
-  o |  1 X: public x-bookmark
+  o |  X: public x-bookmark
   |/
-  o  0 Z: public
+  o  Z: public
   
 
 But removing all of the bookmarks pointing to a head removes the head
@@ -231,23 +231,23 @@ But removing all of the bookmarks pointing to a head removes the head
       d-bookmark3: fa9d7a2f38d1
   $ hg cloud sync -q
   $ showgraph
-  o  15 F: draft
+  o  F: draft
   |
-  o  12 E: draft
+  o  E: draft
   |
-  o  7 B: draft b-bookmark
+  o  B: draft b-bookmark
   |
-  | o  5 M: draft
+  | o  M: draft
   | |
-  o |  4 A: draft
+  o |  A: draft
   | |
-  o |  3 W: public  remote/master
+  o |  W: public  remote/master
   | |
-  | @  2 Y: public  remote/other
+  | @  Y: public  remote/other
   | |
-  o |  1 X: public x-bookmark
+  o |  X: public x-bookmark
   |/
-  o  0 Z: public
+  o  Z: public
   
 
 Removing a bookmark in the stack doesn't hide the commit
@@ -257,23 +257,23 @@ Removing a bookmark in the stack doesn't hide the commit
       b-bookmark: 9272e7e427bf
   $ hg cloud sync -q
   $ showgraph
-  o  15 F: draft
+  o  F: draft
   |
-  o  12 E: draft
+  o  E: draft
   |
-  o  7 B: draft
+  o  B: draft
   |
-  | o  5 M: draft
+  | o  M: draft
   | |
-  o |  4 A: draft
+  o |  A: draft
   | |
-  o |  3 W: public  remote/master
+  o |  W: public  remote/master
   | |
-  | @  2 Y: public  remote/other
+  | @  Y: public  remote/other
   | |
-  o |  1 X: public x-bookmark
+  o |  X: public x-bookmark
   |/
-  o  0 Z: public
+  o  Z: public
   
 
 Removing a bookmark on a public commit just removes it
@@ -283,23 +283,23 @@ Removing a bookmark on a public commit just removes it
       x-bookmark: 8a0aebad5927
   $ hg cloud sync -q
   $ showgraph
-  o  15 F: draft
+  o  F: draft
   |
-  o  12 E: draft
+  o  E: draft
   |
-  o  7 B: draft
+  o  B: draft
   |
-  | o  5 M: draft
+  | o  M: draft
   | |
-  o |  4 A: draft
+  o |  A: draft
   | |
-  o |  3 W: public  remote/master
+  o |  W: public  remote/master
   | |
-  | @  2 Y: public  remote/other
+  | @  Y: public  remote/other
   | |
-  o |  1 X: public
+  o |  X: public
   |/
-  o  0 Z: public
+  o  Z: public
   
 
 Removing a lone commit just removes that head
@@ -309,21 +309,21 @@ Removing a lone commit just removes that head
       9c4fc22fed7c  M
   $ hg cloud sync -q
   $ showgraph
-  o  15 F: draft
+  o  F: draft
   |
-  o  12 E: draft
+  o  E: draft
   |
-  o  7 B: draft
+  o  B: draft
   |
-  o  4 A: draft
+  o  A: draft
   |
-  o  3 W: public  remote/master
+  o  W: public  remote/master
   |
-  | @  2 Y: public  remote/other
+  | @  Y: public  remote/other
   | |
-  o |  1 X: public
+  o |  X: public
   |/
-  o  0 Z: public
+  o  Z: public
   
 
 Removing a remote bookmark works
@@ -333,21 +333,21 @@ Removing a remote bookmark works
       remote/other: 1cab361770de
   $ hg cloud sync -q
   $ showgraph
-  o  15 F: draft
+  o  F: draft
   |
-  o  12 E: draft
+  o  E: draft
   |
-  o  7 B: draft
+  o  B: draft
   |
-  o  4 A: draft
+  o  A: draft
   |
-  o  3 W: public  remote/master
+  o  W: public  remote/master
   |
-  | @  2 Y: draft
+  | @  Y: draft
   | |
-  o |  1 X: public
+  o |  X: public
   |/
-  o  0 Z: public
+  o  Z: public
   
 
 BUG! Commit Y is now draft - it should've been hidden
@@ -364,25 +364,25 @@ Merge commits can be removed
   > EOS
   $ hg cloud sync -q
   $ showgraph
-  o    18 H: draft
+  o    H: draft
   |\
-  | o  17 G: draft
+  | o  G: draft
   | |
-  o |  15 F: draft
+  o |  F: draft
   | |
-  o |  12 E: draft
+  o |  E: draft
   | |
-  o |  7 B: draft
+  o |  B: draft
   |/
-  o  4 A: draft
+  o  A: draft
   |
-  o  3 W: public  remote/master
+  o  W: public  remote/master
   |
-  | @  2 Y: draft
+  | @  Y: draft
   | |
-  o |  1 X: public
+  o |  X: public
   |/
-  o  0 Z: public
+  o  Z: public
   
 
   $ gensmartlogdata
@@ -394,22 +394,22 @@ Merge commits can be removed
       e59c81d53e06  G
   $ hg cloud sync -q
   $ showgraph
-  o  17 G: draft
+  o  G: draft
   |
-  | o  15 F: draft
+  | o  F: draft
   | |
-  | o  12 E: draft
+  | o  E: draft
   | |
-  | o  7 B: draft
+  | o  B: draft
   |/
-  o  4 A: draft
+  o  A: draft
   |
-  o  3 W: public  remote/master
+  o  W: public  remote/master
   |
-  | @  2 Y: draft
+  | @  Y: draft
   | |
-  o |  1 X: public
+  o |  X: public
   |/
-  o  0 Z: public
+  o  Z: public
   
 
