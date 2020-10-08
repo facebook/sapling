@@ -8,6 +8,7 @@
 use std::sync::Arc;
 
 use anyhow::{format_err, Result};
+use blobstore::Blobstore;
 use changeset_fetcher::ChangesetFetcher;
 use dag::InProcessIdDag;
 use mononoke_types::RepositoryId;
@@ -17,7 +18,7 @@ use sql_ext::SqlConnections;
 
 use crate::bundle::SqlBundleStore;
 use crate::dag::{Dag, OnDemandUpdateDag};
-use crate::iddag::SqlIdDagVersionStore;
+use crate::iddag::{IdDagSaveStore, SqlIdDagVersionStore};
 use crate::idmap::{SqlIdMap, SqlIdMapVersionStore};
 use crate::types::IdMapVersion;
 use crate::DisabledSegmentedChangelog;
@@ -37,6 +38,7 @@ pub struct SegmentedChangelogBuilder {
     idmap_version: Option<IdMapVersion>,
     replica_lag_monitor: Option<Arc<dyn ReplicaLagMonitor>>,
     changeset_fetcher: Option<Arc<dyn ChangesetFetcher>>,
+    blobstore: Option<Arc<dyn Blobstore>>,
 }
 
 impl SqlConstruct for SegmentedChangelogBuilder {
@@ -51,6 +53,7 @@ impl SqlConstruct for SegmentedChangelogBuilder {
             idmap_version: None,
             replica_lag_monitor: None,
             changeset_fetcher: None,
+            blobstore: None,
         }
     }
 }
@@ -87,6 +90,11 @@ impl SegmentedChangelogBuilder {
 
     pub fn with_changeset_fetcher(mut self, changeset_fetcher: Arc<dyn ChangesetFetcher>) -> Self {
         self.changeset_fetcher = Some(changeset_fetcher);
+        self
+    }
+
+    pub fn with_blobstore(mut self, blobstore: Arc<dyn Blobstore>) -> Self {
+        self.blobstore = Some(blobstore);
         self
     }
 
@@ -145,6 +153,13 @@ impl SegmentedChangelogBuilder {
         Ok(SqlBundleStore::new(connections, repo_id))
     }
 
+    // public to go around unused
+    pub fn build_iddag_save_store(&mut self) -> Result<IdDagSaveStore> {
+        let blobstore = self.blobstore()?;
+        let repo_id = self.repo_id()?;
+        Ok(IdDagSaveStore::new(repo_id, blobstore))
+    }
+
     fn repo_id(&self) -> Result<RepositoryId> {
         self.repo_id.ok_or_else(|| {
             format_err!("SegmentedChangelog cannot be built without RepositoryId being specified.")
@@ -184,5 +199,11 @@ impl SegmentedChangelogBuilder {
             )
         })?;
         Ok(connections.clone())
+    }
+
+    fn blobstore(&mut self) -> Result<Arc<dyn Blobstore>> {
+        self.blobstore.take().ok_or_else(|| {
+            format_err!("SegmentedChangelog cannot be built without Blobstore being specified.")
+        })
     }
 }

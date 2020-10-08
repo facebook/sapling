@@ -24,12 +24,11 @@ mod dag;
 mod iddag;
 mod idmap;
 mod sql_types;
+#[cfg(test)]
+mod tests;
 mod types;
 
 pub use crate::builder::SegmentedChangelogBuilder;
-
-#[derive(Copy, Clone, Default)]
-pub(crate) struct IdMapVersion(pub u32);
 
 // TODO(T74420661): use `thiserror` to represent error case
 

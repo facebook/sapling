@@ -356,74 +356,72 @@ impl StartState {
 }
 
 #[cfg(test)]
+use crate::builder::SegmentedChangelogBuilder;
+#[cfg(test)]
+use blobrepo::BlobRepo;
+#[cfg(test)]
+use sql_construct::SqlConstruct;
+
+#[cfg(test)]
+impl Dag {
+    pub async fn build_all_from_blobrepo(
+        &mut self,
+        ctx: &CoreContext,
+        blobrepo: &BlobRepo,
+        head: ChangesetId,
+    ) -> Result<()> {
+        let changesets = blobrepo.get_changesets_object();
+        let sql_changesets = changesets.get_sql_changesets();
+        let phases = blobrepo.get_phases();
+        let sql_phases = phases.get_sql_phases();
+        self.build_all_graph(ctx, sql_changesets, sql_phases, head)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn build_incremental_from_blobrepo(
+        &mut self,
+        ctx: &CoreContext,
+        blobrepo: &BlobRepo,
+        head: ChangesetId,
+    ) -> Result<()> {
+        let changeset_fetcher = blobrepo.get_changeset_fetcher();
+        self.build_incremental(ctx, &*changeset_fetcher, head)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn new_build_all_from_blobrepo(
+        ctx: &CoreContext,
+        blobrepo: &BlobRepo,
+        head: ChangesetId,
+    ) -> Result<Dag> {
+        let mut dag = Self::new_in_process(blobrepo.get_repoid())?;
+        dag.build_all_from_blobrepo(ctx, blobrepo, head).await?;
+        Ok(dag)
+    }
+
+    pub fn new_in_process(repo_id: RepositoryId) -> Result<Dag> {
+        SegmentedChangelogBuilder::with_sqlite_in_memory()?
+            .with_repo_id(repo_id)
+            .build_read_only()
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
 
     use fbinit::FacebookInit;
 
-    use blobrepo::BlobRepo;
     use fixtures::{linear, merge_even, merge_uneven, unshared_merge_even};
     use futures::compat::{Future01CompatExt, Stream01CompatExt};
     use futures::future::try_join_all;
     use futures::StreamExt;
-    use phases::mark_reachable_as_public;
     use revset::AncestorsNodeStream;
-    use sql_construct::SqlConstruct;
     use tests_utils::resolve_cs_id;
 
-    use crate::builder::SegmentedChangelogBuilder;
-
-    impl Dag {
-        async fn build_all_from_blobrepo(
-            &mut self,
-            ctx: &CoreContext,
-            blobrepo: &BlobRepo,
-            head: ChangesetId,
-        ) -> Result<()> {
-            let changesets = blobrepo.get_changesets_object();
-            let sql_changesets = changesets.get_sql_changesets();
-            let phases = blobrepo.get_phases();
-            let sql_phases = phases.get_sql_phases();
-            self.build_all_graph(ctx, sql_changesets, sql_phases, head)
-                .await?;
-            Ok(())
-        }
-
-        async fn build_incremental_from_blobrepo(
-            &mut self,
-            ctx: &CoreContext,
-            blobrepo: &BlobRepo,
-            head: ChangesetId,
-        ) -> Result<()> {
-            let changeset_fetcher = blobrepo.get_changeset_fetcher();
-            self.build_incremental(ctx, &*changeset_fetcher, head)
-                .await?;
-            Ok(())
-        }
-
-        async fn new_build_all_from_blobrepo(
-            ctx: &CoreContext,
-            blobrepo: &BlobRepo,
-            head: ChangesetId,
-        ) -> Result<Dag> {
-            let mut dag = Self::new_in_process(blobrepo.get_repoid())?;
-            dag.build_all_from_blobrepo(ctx, blobrepo, head).await?;
-            Ok(dag)
-        }
-
-        pub fn new_in_process(repo_id: RepositoryId) -> Result<Dag> {
-            SegmentedChangelogBuilder::with_sqlite_in_memory()?
-                .with_repo_id(repo_id)
-                .build_read_only()
-        }
-    }
-
-    async fn setup_phases(ctx: &CoreContext, blobrepo: &BlobRepo, head: ChangesetId) -> Result<()> {
-        let phases = blobrepo.get_phases();
-        let sql_phases = phases.get_sql_phases();
-        mark_reachable_as_public(&ctx, sql_phases, &[head], false).await?;
-        Ok(())
-    }
+    use crate::tests::setup_phases;
 
     async fn validate_build_idmap(
         ctx: CoreContext,
