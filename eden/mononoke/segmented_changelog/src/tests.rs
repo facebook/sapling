@@ -74,7 +74,7 @@ pub async fn new_build_all_from_blobrepo(
     let seeder = SegmentedChangelogBuilder::with_sqlite_in_memory()?
         .with_repo_id(repo_id)
         .with_changeset_bulk_fetch(Arc::new(bulk_fetch))
-        .with_blobstore(Arc::new(memblob::LazyMemblob::new()))
+        .with_blobstore(Arc::new(memblob::LazyMemblob::default()))
         .build_seeder(ctx)
         .await?;
 
@@ -108,7 +108,7 @@ async fn test_iddag_save_store(fb: FacebookInit) -> Result<()> {
         resolve_cs_id(&ctx, &blobrepo, "3e0e761030db6e479a7fb58b12881883f9f8c63f").await?;
     assert_eq!(answer, expected_cs);
 
-    let blobstore = memblob::LazyMemblob::new();
+    let blobstore = memblob::LazyMemblob::default();
     let iddag_save_store = IdDagSaveStore::new(repo_id, Arc::new(blobstore));
     iddag_save_store
         .save(&ctx, IdDagVersion(1), &dag.iddag)
