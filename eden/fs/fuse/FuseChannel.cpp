@@ -19,6 +19,7 @@
 #include "eden/fs/fuse/Dispatcher.h"
 #include "eden/fs/fuse/FuseRequestContext.h"
 #include "eden/fs/utils/Bug.h"
+#include "eden/fs/utils/IDGen.h"
 #include "eden/fs/utils/Synchronized.h"
 #include "eden/fs/utils/SystemError.h"
 #include "eden/fs/utils/Thread.h"
@@ -30,6 +31,13 @@ namespace facebook {
 namespace eden {
 
 namespace {
+
+// These static asserts exist to make explicit the memory usage of the per-mount
+// FUSE TraceBus. TraceBus uses 2 * capacity * sizeof(TraceEvent) memory usage,
+// so limit total memory usage to 4 MB per mount.
+constexpr size_t kTraceBusCapacity = 25000;
+static_assert(sizeof(FuseTraceEvent) == 72);
+static_assert(kTraceBusCapacity * sizeof(FuseTraceEvent) == 1800000);
 
 // This is the minimum size used by libfuse so we use it too!
 constexpr size_t MIN_BUFSIZE = 0x21000;
@@ -483,12 +491,37 @@ FuseChannel::FuseChannel(
       requestTimeout_(requestTimeout),
       notifications_(notifications),
       fuseDevice_(std::move(fuseDevice)),
-      processAccessLog_(std::move(processNameCache)) {
+      processAccessLog_(std::move(processNameCache)),
+      traceBus_(TraceBus<FuseTraceEvent>::create(
+          "FuseTrace" + mountPath.stringPiece().str(),
+          kTraceBusCapacity)) {
   CHECK_GE(numThreads_, 1);
   installSignalHandler();
+
+  traceSubscriptionHandles_.push_back(traceBus_->subscribeFunction(
+      "FuseChannel request tracking", [this](const FuseTraceEvent& event) {
+        switch (event.type) {
+          case FuseTraceEvent::START: {
+            auto state = telemetryState_.wlock();
+            auto [iter, inserted] =
+                state->requests.emplace(event.unique, event.request);
+            XCHECK(inserted) << "duplicate fuse start event";
+            break;
+          }
+          case FuseTraceEvent::FINISH: {
+            auto state = telemetryState_.wlock();
+            auto erased = state->requests.erase(event.unique);
+            XCHECK(erased) << "duplicate fuse finish event";
+            break;
+          }
+        }
+      }));
 }
 
-FuseChannel::~FuseChannel() {}
+FuseChannel::~FuseChannel() {
+  CHECK_EQ(1, traceBus_.use_count())
+      << "This shared_ptr should not be copied; see attached comment.";
+}
 
 Future<FuseChannel::StopFuture> FuseChannel::initialize(bool caseSensitive) {
   // Start one worker thread which will perform the initialization,
@@ -566,7 +599,7 @@ void FuseChannel::destroy() {
   bool allDone = false;
   {
     auto state = state_.wlock();
-    if (state->requests.empty()) {
+    if (state->pendingRequests == 0) {
       allDone = true;
     } else {
       state->destroyPending = true;
@@ -764,11 +797,9 @@ void FuseChannel::sendInvalidateEntry(
 }
 
 std::vector<fuse_in_header> FuseChannel::getOutstandingRequests() {
-  auto state = state_.wlock();
-  const auto& requests = state->requests;
   std::vector<fuse_in_header> outstandingCalls;
 
-  for (const auto& entry : requests) {
+  for (const auto& entry : telemetryState_.rlock()->requests) {
     outstandingCalls.push_back(entry.second);
   }
   return outstandingCalls;
@@ -880,7 +911,7 @@ void FuseChannel::fuseWorkerThread() noexcept {
     // but there are still outstanding requests we will invoke
     // sessionComplete() when we process the final stage of the request
     // processing for the last request.
-    if (state->stoppedThreads == numThreads_ && state->requests.empty()) {
+    if (state->stoppedThreads == numThreads_ && state->pendingRequests == 0) {
       sessionComplete(std::move(state));
     }
   }
@@ -1293,22 +1324,18 @@ void FuseChannel::processSession() {
 
       default: {
         if (handlerEntry && handlerEntry->handler) {
+          auto requestId = generateUniqueID();
+          traceBus_->publish(
+              FuseTraceEvent{FuseTraceEvent::START, requestId, *header});
+
           // This is a shared_ptr because, due to timeouts, the internal request
           // lifetime may not match the FUSE request lifetime, so we capture it
           // in both. I'm sure this could be improved with some cleverness.
           auto request = std::make_shared<FuseRequestContext>(this, *header);
-          uint64_t requestId;
-          {
-            // Save a weak reference to this new request context.
-            // We use this to enable getOutstandingRequests() for debugging
-            // purposes, as well as to determine when all requests are done.
-            // We allocate our own request Id for this purpose, as the
-            // kernel may recycle `unique` values more quickly than the
-            // lifecycle of our state here.
-            auto state = state_.wlock();
-            requestId = state->nextRequestId++;
-            state->requests.emplace(requestId, *header);
-          }
+
+          ++state_.wlock()->pendingRequests;
+
+          auto headerCopy = *header;
 
           request
               ->catchErrors(
@@ -1323,15 +1350,16 @@ void FuseChannel::processSession() {
                       .ensure([request] {})
                       .within(requestTimeout_),
                   notifications_)
-              .ensure([this, requestId, request] {
-                auto state = state_.wlock();
-
-                // Remove the request from the map
-                state->requests.erase(requestId);
+              .ensure([this, request, requestId, headerCopy] {
+                traceBus_->publish(FuseTraceEvent{
+                    FuseTraceEvent::FINISH, requestId, headerCopy});
 
                 // We may be complete; check to see if all requests are
                 // done and whether there are any threads remaining.
-                if (state->requests.empty() &&
+                auto state = state_.wlock();
+                XCHECK_NE(state->pendingRequests, 0u)
+                    << "pendingRequests double decrement";
+                if (--state->pendingRequests == 0 &&
                     state->stoppedThreads == numThreads_) {
                   sessionComplete(std::move(state));
                 }

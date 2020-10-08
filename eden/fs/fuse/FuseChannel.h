@@ -27,6 +27,7 @@
 #include "eden/fs/fuse/FuseTypes.h"
 #include "eden/fs/inodes/InodeNumber.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
+#include "eden/fs/telemetry/TraceBus.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/ProcessAccessLog.h"
 
@@ -40,6 +41,30 @@ namespace eden {
 class Dispatcher;
 class Notifications;
 class FuseRequestContext;
+
+struct FuseTraceEvent : TraceEventBase {
+  enum Type {
+    START,
+    FINISH,
+  };
+
+  FuseTraceEvent(Type type, uint64_t unique, const fuse_in_header& request)
+      : type{type}, unique{unique}, request{request} {}
+
+  Type type;
+
+  /**
+   * FUSE generates its own unique ID per request, but it reuses them often, so
+   * include our own permanently-unique IDs too.
+   */
+  uint64_t unique;
+
+  /**
+   * Not all of these fields are necessary, but it's simpler to just include
+   * them all.
+   */
+  fuse_in_header request;
+};
 
 class FuseChannel {
  public:
@@ -304,9 +329,18 @@ class FuseChannel {
   }
 
   /**
-   * Function to get outstanding fuse requests.
+   * Returns the approximate number of outstanding FUSE requests. Since
+   * telemetry is tracked on a background thread, this number may very slightly
+   * lag reality.
+   *
+   * As another option, Linux kernel maintains a count, accessible via
+   * /sys/fs/fuse/connections/${conn_id}/waiting
    */
   std::vector<fuse_in_header> getOutstandingRequests();
+
+  TraceBus<FuseTraceEvent>& getTraceBus() {
+    return *traceBus_;
+  }
 
   ProcessAccessLog& getProcessAccessLog() {
     return processAccessLog_;
@@ -324,11 +358,15 @@ class FuseChannel {
    * and therefore requires synchronization.
    */
   struct State {
-    uint64_t nextRequestId{1};
-    std::unordered_map<uint64_t, fuse_in_header> requests;
     std::vector<std::thread> workerThreads;
 
-    /*
+    /**
+     * We count live requests to avoid shutting down the session while responses
+     * are pending.
+     */
+    size_t pendingRequests{0};
+
+    /**
      * We track the number of stopped threads, to know when we are done and can
      * signal sessionCompletePromise_.  We only want to signal
      * sessionCompletePromise_ after initialization is successful and then all
@@ -353,6 +391,13 @@ class FuseChannel {
      * or running.
      */
     StopReason stopReason{StopReason::RUNNING};
+  };
+
+  /**
+   * Only written by the TraceBus thread, but must be synchronized for readers.
+   */
+  struct TelemetryState {
+    std::unordered_map<uint64_t, fuse_in_header> requests;
   };
 
   struct DataRange {
@@ -620,6 +665,8 @@ class FuseChannel {
   folly::Promise<StopFuture> initPromise_;
   folly::Promise<StopData> sessionCompletePromise_;
 
+  folly::Synchronized<TelemetryState> telemetryState_;
+
   // To prevent logging unsupported opcodes twice.
   folly::Synchronized<std::unordered_set<FuseOpcode>> unhandledOpcodes_;
 
@@ -642,6 +689,15 @@ class FuseChannel {
       std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>,
       ThreadLocalTag>
       liveRequestWatches_;
+
+  std::vector<TraceSubscriptionHandle<FuseTraceEvent>>
+      traceSubscriptionHandles_;
+
+  // This should be the last field, as subscriber functions close over [this],
+  // and it's not until TraceBus is destroyed that it's guaranteed that
+  // subscriber functions will no longer run.
+  // This shared_ptr will never be copied.
+  std::shared_ptr<TraceBus<FuseTraceEvent>> traceBus_;
 };
 
 /**

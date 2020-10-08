@@ -329,36 +329,6 @@ TEST_F(FuseChannelTest, testDestroyWithPendingRequests) {
   std::move(completeFuture).get(kTimeout);
 }
 
-// Test for getOutstandingRequest().
-// It will generate few fuse request and verify the output of
-// getOutstandingRequests() against them.
-TEST_F(FuseChannelTest, getOutstandingRequests) {
-  auto channel = createChannel();
-  auto completeFuture = performInit(channel.get());
-
-  // Send several lookup requests
-  auto id1 = fuse_.sendLookup(FUSE_ROOT_ID, "foobar");
-  auto id2 = fuse_.sendLookup(FUSE_ROOT_ID, "some_file.txt");
-  auto id3 = fuse_.sendLookup(FUSE_ROOT_ID, "main.c");
-
-  std::unordered_set<unsigned int> requestIds = {id1, id2, id3};
-
-  auto req1 = dispatcher_.waitForLookup(id1);
-  auto req2 = dispatcher_.waitForLookup(id2);
-  auto req3 = dispatcher_.waitForLookup(id3);
-
-  std::vector<fuse_in_header> outstandingCalls =
-      channel->getOutstandingRequests();
-
-  EXPECT_EQ(outstandingCalls.size(), 3);
-
-  for (const auto& call : outstandingCalls) {
-    EXPECT_EQ(FUSE_ROOT_ID, call.nodeid);
-    EXPECT_EQ(FUSE_LOOKUP, call.opcode);
-    EXPECT_EQ(1, requestIds.count(call.unique));
-  }
-}
-
 TEST_F(FuseChannelTest, interruptLookups) {
   auto channel = createChannel();
   auto completeFuture = performInit(channel.get());
