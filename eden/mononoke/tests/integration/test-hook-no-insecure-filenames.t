@@ -7,7 +7,9 @@
   $ . "${TEST_FIXTURES}/library.sh"
   $ export LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8 LANGUAGE=en_US.UTF-8
 
-  $ hook_test_setup no_insecure_filenames
+  $ hook_test_setup no_insecure_filenames <( \
+  >   echo 'bypass_pushvar="TEST_ONLY_ALLOW_INSECURE_FILENAMES=true"'
+  > )
 
 Add a .hg(sub|tags|substate) file
   $ hg up -q 0
@@ -238,3 +240,17 @@ Add a file with an ignorable unicode char in it
   remote:     "hooks failed:\nno_insecure_filenames for 673dc62e3d09668ca2ef53b04d2527dd3c8e0b2e: ABORT: Illegal insecure name: test/.git\u{200c}"
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
+
+
+Check that we can delete insecure filenames
+--add a normally prohibited filename with a pushvar
+  $ hg up -q 0
+  $ echo "bad" > .hgtags
+  $ hg ci -Aqm insequre_filename
+  $ hgmn push -qr . --to master_bookmark --pushvars TEST_ONLY_ALLOW_INSECURE_FILENAMES=true
+
+-- delete just-added insecure filename
+  $ hgmn up -q master_bookmark
+  $ hg rm .hgtags
+  $ hg ci -qm "remove tags"
+  $ hgmn push -qr . --to master_bookmark

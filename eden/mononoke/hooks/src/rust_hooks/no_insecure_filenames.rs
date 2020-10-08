@@ -50,9 +50,13 @@ impl FileHook for NoInsecureFilenames {
         &'this self,
         _ctx: &'ctx CoreContext,
         _content_fetcher: &'fetcher dyn FileContentFetcher,
-        _change: Option<&'change FileChange>,
+        change: Option<&'change FileChange>,
         path: &'path MPath,
     ) -> Result<HookExecution, Error> {
+        if change.is_none() {
+            return Ok(HookExecution::Accepted);
+        }
+
         let path = format!("{}", path);
         let lower_path = path.to_lowercase();
         if self.illegal_regex.is_match(&lower_path) {
