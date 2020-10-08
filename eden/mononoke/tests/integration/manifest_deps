@@ -29,6 +29,7 @@ MONONOKE_BINS = {
     "MONONOKE_RECHUNKER": "rechunker",
     "MONONOKE_REGENERATE_HG_FILENODES": "regenerate_hg_filenodes",
     "MONONOKE_REPO_IMPORT": "repo_import",
+    "MONONOKE_SEGMENTED_CHANGELOG_SEEDER": "segmented_changelog_seeder",
     "MONONOKE_SERVER": "mononoke",
     "MONONOKE_UNBUNDLE_REPLAY": "unbundle_replay",
     "MONONOKE_WALKER": "walker",

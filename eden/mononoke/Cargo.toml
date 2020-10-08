@@ -4,7 +4,7 @@ edition = "2018"
 version = "0.1.0"
 authors = ['Facebook']
 license = "GPLv2+"
-include = ["cmds/admin/**/*.rs", "cmds/aliasverify.rs", "cmds/backfill_derived_data/**/*.rs", "cmds/backfill_git_mapping.rs", "cmds/benchmark_filestore.rs", "cmds/benchmark_storage_config/**/*.rs", "cmds/blobimport.rs", "cmds/blobstore_healer/**/*.rs", "cmds/bonsai_verify/**/*.rs", "cmds/configlint.rs", "cmds/dumprev.rs", "cmds/idxdump.rs", "cmds/lfs_import.rs", "cmds/manual_scrub/**/*.rs", "cmds/rechunker.rs", "cmds/revlogrepo.rs", "cmds/statistics_collector.rs", "cmds/streaming_clone_warmup/**/*.rs", "cmds/upload_globalrevs.rs"]
+include = ["cmds/admin/**/*.rs", "cmds/aliasverify.rs", "cmds/backfill_derived_data/**/*.rs", "cmds/backfill_git_mapping.rs", "cmds/benchmark_filestore.rs", "cmds/benchmark_storage_config/**/*.rs", "cmds/blobimport.rs", "cmds/blobstore_healer/**/*.rs", "cmds/bonsai_verify/**/*.rs", "cmds/configlint.rs", "cmds/dumprev.rs", "cmds/idxdump.rs", "cmds/lfs_import.rs", "cmds/manual_scrub/**/*.rs", "cmds/rechunker.rs", "cmds/revlogrepo.rs", "cmds/segmented_changelog_seeder.rs", "cmds/statistics_collector.rs", "cmds/streaming_clone_warmup/**/*.rs", "cmds/upload_globalrevs.rs"]
 
 [[bin]]
 name = "admin"
@@ -71,6 +71,10 @@ name = "revlogrepo"
 path = "cmds/revlogrepo.rs"
 
 [[bin]]
+name = "segmented_changelog_seeder"
+path = "cmds/segmented_changelog_seeder.rs"
+
+[[bin]]
 name = "statistics_collector"
 path = "cmds/statistics_collector.rs"
 
@@ -129,6 +133,7 @@ prefixblob = { path = "blobstore/prefixblob" }
 redactedblobstore = { path = "blobstore/redactedblobstore" }
 revset = { path = "revset" }
 scuba_ext = { path = "common/scuba_ext" }
+segmented_changelog = { path = "segmented_changelog" }
 skiplist = { path = "reachabilityindex/skiplist" }
 sql_construct = { path = "common/sql_construct" }
 sql_ext = { path = "common/rust/sql_ext" }

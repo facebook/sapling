@@ -11,6 +11,7 @@ use anyhow::{format_err, Result};
 use async_trait::async_trait;
 use futures::stream::{self, StreamExt, TryStreamExt};
 use maplit::hashset;
+use slog::{debug, trace};
 
 use dag::{self, Id as Vertex, InProcessIdDag};
 use stats::prelude::*;
@@ -121,6 +122,12 @@ impl Dag {
                 Todo::Assign(cs_id) => {
                     let vertex = low_vertex + mem_idmap.len() as u64;
                     mem_idmap.insert(vertex, cs_id);
+                    trace!(
+                        ctx.logger(),
+                        "assigning vertex id '{}' to changeset id '{}'",
+                        vertex,
+                        cs_id
+                    );
                 }
             }
         }
@@ -129,9 +136,15 @@ impl Dag {
             .find_vertex(head)
             .ok_or_else(|| format_err!("error building IdMap; failed to assign head {}", head))?;
 
+        debug!(
+            ctx.logger(),
+            "inserting {} entries into the IdMap",
+            mem_idmap.len()
+        );
         self.idmap
             .insert_many(ctx, mem_idmap.iter().collect::<Vec<_>>())
             .await?;
+        debug!(ctx.logger(), "successully inserted entries to IdMap");
 
         let get_vertex_parents = |vertex: Vertex| -> dag::Result<Vec<Vertex>> {
             let cs_id = match mem_idmap.find_changeset_id(vertex) {
@@ -163,8 +176,13 @@ impl Dag {
         };
 
         // TODO(sfilip, T67731559): Prefetch parents for IdDag from last processed Vertex
+        debug!(ctx.logger(), "building iddag");
         self.iddag
             .build_segments_volatile(head_vertex, &get_vertex_parents)?;
+        debug!(
+            ctx.logger(),
+            "successfully finished building building iddag"
+        );
 
         Ok(head_vertex)
     }

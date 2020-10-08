@@ -1703,6 +1703,14 @@ function regenerate_hg_filenodes() {
     "$@"
 }
 
+function segmented_changelog_seeder() {
+  "$MONONOKE_SEGMENTED_CHANGELOG_SEEDER" \
+    "${COMMON_ARGS[@]}" \
+    --repo-id "$REPOID" \
+    --mononoke-config-path "${TESTTMP}/mononoke-config" \
+    "$@"
+}
+
 function fastreplay() {
   "$MONONOKE_FASTREPLAY" \
     "${COMMON_ARGS[@]}" \
