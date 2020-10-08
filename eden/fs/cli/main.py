@@ -1917,14 +1917,7 @@ Please run "cd / && cd -" to update your shell's working directory."""
     return None
 
 
-# TODO: Remove when we can rely on Python 3.7 everywhere.
-try:
-    asyncio_run = asyncio.run
-except AttributeError:
-    asyncio_run = asyncio.get_event_loop().run_until_complete
-
-
-def main() -> int:
+async def async_main() -> int:
     # Before doing anything else check that the current working directory is valid.
     # This helps catch the case where a user is trying to run the Eden CLI inside
     # a stale eden mount point.
@@ -1939,12 +1932,12 @@ def main() -> int:
     if getattr(args, "func", None) is None:
         parser.print_help()
         return EX_OK
+
     try:
         result = args.func(args)
         if inspect.isawaitable(result):
-            return_code: int = asyncio_run(result)
-        else:
-            return_code: int = result
+            result = await result
+        return result
     except subcmd_mod.CmdError as ex:
         print(f"error: {ex}", file=sys.stderr)
         return EX_SOFTWARE
@@ -1954,7 +1947,28 @@ def main() -> int:
     except config_mod.UsageError as ex:
         print(f"error: {ex}", file=sys.stderr)
         return EX_USAGE
-    return return_code
+
+
+# TODO: Remove when we can rely on Python 3.7 everywhere.
+try:
+    asyncio_run = asyncio.run
+except AttributeError:
+    asyncio_run = asyncio.get_event_loop().run_until_complete
+
+
+def main() -> int:
+    try:
+        return asyncio_run(async_main())
+    except KeyboardInterrupt:
+        # If a Thrift stream is interrupted, Folly EventBus/NotificationQueue
+        # gets into a wonky state, and attempting to garbage collect the
+        # corresponding Python objects will hang the process. Flush output
+        # streams and skip the rest of process shutdown.
+        sys.stdout.flush()
+        sys.stderr.flush()
+        os._exit(130)
+        # Pyre doesn't understand that os._exit is noreturn.
+        return 130
 
 
 def zipapp_main() -> None:
