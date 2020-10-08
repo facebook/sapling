@@ -225,7 +225,7 @@ fn main(fb: FacebookInit) -> Result<()> {
             backfill,
             buffer_size,
             queue_limit,
-            status_scuba,
+            &status_scuba,
             &logger,
             replay_fn,
         );

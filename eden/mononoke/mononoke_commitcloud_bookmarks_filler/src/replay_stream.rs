@@ -71,7 +71,7 @@ async fn process_replay_single_batch<'a, R: ReplayFn>(
     backfill: Backfill,
     buffer_size: BufferSize,
     queue_limit: QueueLimit,
-    status_scuba: ScubaSampleBuilder,
+    status_scuba: &ScubaSampleBuilder,
     logger: &Logger,
     replay: R,
 ) -> Result<(), Error> {
@@ -84,9 +84,8 @@ async fn process_replay_single_batch<'a, R: ReplayFn>(
 
     stream::iter(batch.into_iter())
         .for_each_concurrent(buffer_size.0, {
-            cloned!(logger, mut status_scuba, queue);
             move |((repo, bookmark), BookmarkBatch { dt, entries })| {
-                cloned!(logger, mut status_scuba, queue);
+                cloned!(mut status_scuba);
                 async move {
                     cloned!(queue);
                     let (repo_name, bookmark, outcome, history) =
@@ -131,13 +130,12 @@ pub fn process_replay_stream<'a, R: ReplayFn + 'a>(
     backfill: Backfill,
     buffer_size: BufferSize,
     queue_limit: QueueLimit,
-    status_scuba: ScubaSampleBuilder,
+    status_scuba: &'a ScubaSampleBuilder,
     logger: &'a Logger,
     replay: R,
 ) -> impl Stream<Item = Result<(), Error>> + 'a {
     stream::repeat(()).then({
         move |_| {
-            cloned!(status_scuba);
             process_replay_single_batch(
                 queue,
                 enabled_repo_names,
@@ -252,7 +250,7 @@ mod test {
             NOT_BACKFILL,
             BUFFER_SIZE,
             QUEUE_LIMIT,
-            scuba(),
+            &scuba(),
             &logger(),
             ReplaySuccess,
         )
@@ -303,7 +301,7 @@ mod test {
             NOT_BACKFILL,
             BUFFER_SIZE,
             QUEUE_LIMIT,
-            scuba(),
+            &scuba(),
             &logger(),
             ReplayFail,
         )
@@ -365,7 +363,7 @@ mod test {
             NOT_BACKFILL,
             BUFFER_SIZE,
             QUEUE_LIMIT,
-            scuba(),
+            &scuba(),
             &logger(),
             ReplayTwos,
         )
