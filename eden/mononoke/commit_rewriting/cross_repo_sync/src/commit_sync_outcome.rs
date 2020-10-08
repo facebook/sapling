@@ -211,8 +211,7 @@ pub async fn get_plural_commit_sync_outcome<'a, M: SyncedCommitMapping>(
         )
         .compat()
         .await?;
-
-    if remapped.len() == 1 && remapped[0].0 == source_cs_id.0 {
+    if remapped.len() == 1 && remapped[0].0 == source_cs_id.0 && remapped[0].1.is_none() {
         return Ok(Some(PluralCommitSyncOutcome::Preserved));
     } else if !remapped.is_empty() {
         return Ok(Some(PluralCommitSyncOutcome::RewrittenAs(remapped)));

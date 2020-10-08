@@ -635,12 +635,21 @@ async fn verify_bookmarks(
                     .await?;
                 let commit_sync_outcome = commit_sync_outcome.expect("unsynced commit");
 
+                println!(
+                    "verify_bookmarks. calling compare_contents: source_bcs_id: {}, outcome: {:?}",
+                    source_bcs_id, commit_sync_outcome
+                );
+
                 use CommitSyncOutcome::*;
                 let mover = match commit_sync_outcome {
                     NotSyncCandidate => {
                         panic!("commit should not point to NotSyncCandidate");
                     }
-                    EquivalentWorkingCopyAncestor(..) | RewrittenAs(..) => mover.clone(),
+                    EquivalentWorkingCopyAncestor(_, Some(version))
+                    | RewrittenAs(_, Some(version)) => {
+                        commit_syncer.get_mover_by_version(&version)?
+                    }
+                    EquivalentWorkingCopyAncestor(_, None) | RewrittenAs(_, None) => mover.clone(),
                     Preserved => Arc::new(identity_mover),
                 };
 
@@ -1247,7 +1256,7 @@ async fn init_merged_repos(
             .await,
         )
         .await;
-        println!("small repo cs id: {}", small_repo_cs_id);
+        println!("small repo cs id w/o parents: {}", small_repo_cs_id);
 
         small_repos.push((small_repo.clone(), small_repo_cs_id.clone()));
 
@@ -1287,7 +1296,7 @@ async fn init_merged_repos(
             },
         )
         .await;
-        println!("moved cs id: {}", moved_cs_id);
+        println!("large repo moved cs id: {}", moved_cs_id);
         moved_cs_ids.push(moved_cs_id);
     }
 
@@ -1300,7 +1309,7 @@ async fn init_merged_repos(
     )
     .await;
 
-    println!("merge cs id: {}", merge_cs_id);
+    println!("large repo merge cs id: {}", merge_cs_id);
     // Create an empty commit on top of a merge commit and sync it to all small repos
     let empty: BTreeMap<_, Option<&str>> = BTreeMap::new();
     // Create empty commit in the large repo, and sync it to all small repos
@@ -1322,7 +1331,11 @@ async fn init_merged_repos(
         )
         .await;
 
-        println!("empty commit: {}", small_repo_first_after_merge);
+        println!(
+            "empty commit in {}: {}",
+            small_repo.get_repoid(),
+            small_repo_first_after_merge
+        );
         let entry = SyncedCommitMappingEntry::new(
             large_repo.get_repoid(),
             first_after_merge_commit,
@@ -1353,7 +1366,7 @@ async fn init_merged_repos(
             )
             .await;
 
-            println!("new commits in large repo: {}", new_commit);
+            println!("new commit in large repo: {}", new_commit);
             latest_log_id += 1;
             move_bookmark(ctx.clone(), large_repo.clone(), &master, new_commit).await?;
             prev_master = Some(new_commit);
@@ -1408,6 +1421,7 @@ async fn init_merged_repos(
             .await,
         )
         .await;
+        println!("large_repo newcommit: {}", new_commit);
 
         latest_log_id += 1;
         move_bookmark(ctx.clone(), large_repo.clone(), &master, new_commit).await?;
@@ -1429,6 +1443,7 @@ async fn init_merged_repos(
             .await,
         )
         .await;
+        println!("smallrepo1 newcommit: {}", new_commit);
 
         latest_log_id += 1;
         move_bookmark(ctx.clone(), large_repo.clone(), &premerge_book, new_commit).await?;
@@ -1454,6 +1469,14 @@ async fn preserve_premerge_commit(
     bcs_id: ChangesetId,
     mapping: &SqlSyncedCommitMapping,
 ) -> Result<(), Error> {
+    println!(
+        "preserve_premerge_commit called. large_repo: {}; small_repo: {}, another_small_repo_ids: {:?}, bcs_id: {}",
+        large_repo.get_repoid(),
+        small_repo.get_repoid(),
+        another_small_repo_ids,
+        bcs_id
+    );
+
     // Doesn't matter what mover to use - we are going to preserve the commit anyway
     let bookmark_renamer = Arc::new(noop_book_renamer);
     let small_to_large_sync_config = {

@@ -65,6 +65,10 @@ fn identity_renamer(b: &BookmarkName) -> Option<BookmarkName> {
     Some(b.clone())
 }
 
+fn identity_mover(mpath: &MPath) -> Result<Option<MPath>, Error> {
+    Ok(Some(mpath.clone()))
+}
+
 fn mpath(p: &str) -> MPath {
     MPath::new(p).unwrap()
 }
@@ -1746,4 +1750,88 @@ async fn assert_working_copy(
 
     assert_eq!(actual_paths, expected_paths);
     Ok(())
+}
+
+async fn test_no_accidental_preserved_roots(
+    ctx: CoreContext,
+    commit_sync_repos: CommitSyncRepos,
+    mapping: SqlSyncedCommitMapping,
+) -> Result<(), Error> {
+    let current_version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
+    let commit_syncer = {
+        use CommitSyncRepos::*;
+        let mut commit_syncer = match &commit_sync_repos {
+            LargeToSmall {
+                small_repo,
+                large_repo,
+            } => create_large_to_small_commit_syncer(
+                small_repo.clone(),
+                large_repo.clone(),
+                "ignored",
+                mapping.clone(),
+            )?,
+            SmallToLarge {
+                small_repo,
+                large_repo,
+            } => create_small_to_large_commit_syncer(
+                small_repo.clone(),
+                large_repo.clone(),
+                "ignored",
+                mapping.clone(),
+            )?,
+        };
+
+        let commit_sync_data_provider = CommitSyncDataProvider::test_new(
+            current_version.clone(),
+            Source(commit_sync_repos.get_source_repo().get_repoid()),
+            Target(commit_sync_repos.get_target_repo().get_repoid()),
+            hashmap! {
+                current_version.clone() => SyncData {
+                    mover: Arc::new(identity_mover),
+                    reverse_mover: Arc::new(identity_mover),
+                    bookmark_renamer: Arc::new(identity_renamer),
+                    reverse_bookmark_renamer: Arc::new(identity_renamer),
+                }
+            },
+        );
+        commit_syncer.commit_sync_data_provider = commit_sync_data_provider;
+        commit_syncer.repos = commit_sync_repos.clone();
+
+        commit_syncer
+    };
+
+    let root_commit = create_initial_commit(ctx.clone(), commit_sync_repos.get_source_repo()).await;
+    commit_syncer
+        .unsafe_sync_commit(ctx.clone(), root_commit, CandidateSelectionHint::Only)
+        .await?;
+    let outcome = commit_syncer
+        .get_commit_sync_outcome(ctx, root_commit)
+        .await?;
+    assert!(
+        matches!(outcome, Some(CommitSyncOutcome::RewrittenAs(_, version)) if version == Some(current_version))
+    );
+
+    Ok(())
+}
+
+#[fbinit::compat_test]
+async fn test_no_accidental_preserved_roots_large_to_small(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let (small_repo, large_repo, mapping) = prepare_repos_and_mapping().unwrap();
+    let commit_sync_repos = CommitSyncRepos::LargeToSmall {
+        small_repo: small_repo.clone(),
+        large_repo: large_repo.clone(),
+    };
+    test_no_accidental_preserved_roots(ctx, commit_sync_repos, mapping).await
+}
+
+#[fbinit::compat_test]
+async fn test_no_accidental_preserved_roots_small_to_large(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let (small_repo, large_repo, mapping) = prepare_repos_and_mapping().unwrap();
+    let commit_sync_repos = CommitSyncRepos::SmallToLarge {
+        small_repo: small_repo.clone(),
+        large_repo: large_repo.clone(),
+    };
+    test_no_accidental_preserved_roots(ctx, commit_sync_repos, mapping).await
 }

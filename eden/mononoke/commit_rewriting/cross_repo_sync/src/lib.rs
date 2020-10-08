@@ -20,7 +20,7 @@ use context::CoreContext;
 use futures::future::try_join_all;
 use futures::{
     compat::Future01CompatExt,
-    future::{self, FutureExt, TryFutureExt},
+    future::{self, TryFutureExt},
     stream::{self, futures_unordered::FuturesUnordered, StreamExt, TryStreamExt},
 };
 use futures_old::Future;
@@ -993,7 +993,7 @@ where
 
         // update_mapping also updates working copy equivalence, so no need
         // to do it separately
-        update_mapping(
+        update_mapping_no_version_deprecated(
             ctx.clone(),
             hashmap! { source_cs_id => source_cs_id },
             &self,
@@ -1008,12 +1008,16 @@ where
         sync_config_version_override: Option<CommitSyncConfigVersion>,
     ) -> Result<Option<ChangesetId>, Error> {
         let source_cs_id = cs.get_changeset_id();
-        let (source_repo, target_repo, mover) = match sync_config_version_override {
-            None => self.get_source_target_mover(&ctx)?,
+        let (source_repo, target_repo, mover, version) = match sync_config_version_override {
+            None => {
+                let version = self.get_current_version(&ctx)?;
+                let (sr, tr, mv) = self.get_source_target_mover(&ctx)?;
+                (sr, tr, mv, version)
+            }
             Some(version_override) => {
                 let (source_repo, target_repo) = self.get_source_target();
                 let mover = self.get_mover_by_version(&version_override)?;
-                (source_repo, target_repo, mover)
+                (source_repo, target_repo, mover, version_override)
             }
         };
 
@@ -1038,16 +1042,17 @@ where
 
                 // update_mapping also updates working copy equivalence, so no need
                 // to do it separately
-                update_mapping(
+                update_mapping_with_version(
                     ctx.clone(),
                     hashmap! { source_cs_id => frozen.get_changeset_id() },
                     &self,
+                    &version,
                 )
                 .await?;
                 Ok(Some(frozen.get_changeset_id()))
             }
             None => {
-                self.update_wc_equivalence(ctx.clone(), source_cs_id, None)
+                self.update_wc_equivalence_with_version(ctx.clone(), source_cs_id, None, version)
                     .await?;
                 Ok(None)
             }
@@ -1160,7 +1165,7 @@ where
 
                 // update_mapping also updates working copy equivalence, so no need
                 // to do it separately
-                update_mapping(
+                update_mapping_no_version_deprecated(
                     ctx.clone(),
                     hashmap! { source_cs_id => source_cs_id },
                     &self,
@@ -1556,14 +1561,23 @@ pub async fn upload_commits(
     Ok(())
 }
 
-pub fn update_mapping_compat<M: SyncedCommitMapping + Clone + 'static>(
+async fn update_mapping_no_version_deprecated<'a, M: SyncedCommitMapping + Clone + 'static>(
     ctx: CoreContext,
     mapped: HashMap<ChangesetId, ChangesetId>,
-    config: CommitSyncer<M>,
-) -> impl Future<Item = (), Error = Error> {
-    async move { update_mapping(ctx, mapped, &config).await }
-        .boxed()
+    syncer: &'a CommitSyncer<M>,
+) -> Result<(), Error> {
+    // TODO(stash, ikostia) kill this fn when Preserved is fully dead
+    let entries: Vec<_> = mapped
+        .into_iter()
+        .map(|(from, to)| create_synced_commit_mapping_entry(from, to, &syncer.repos, None))
+        .collect();
+
+    syncer
+        .mapping
+        .add_bulk(ctx.clone(), entries)
         .compat()
+        .await?;
+    Ok(())
 }
 
 // TODO(stash, ikostia) - replace all usages with update_mapping_with_version and
@@ -1579,7 +1593,8 @@ pub async fn update_mapping<'a, M: SyncedCommitMapping + Clone + 'static>(
     let entries: Vec<_> = mapped
         .into_iter()
         .map(|(from, to)| {
-            create_synced_commit_mapping_entry(from, to, &syncer.repos, &version_name)
+            cloned!(version_name);
+            create_synced_commit_mapping_entry(from, to, &syncer.repos, Some(version_name))
         })
         .collect();
     syncer
@@ -1599,7 +1614,7 @@ pub async fn update_mapping_with_version<'a, M: SyncedCommitMapping + Clone + 's
     let entries: Vec<_> = mapped
         .into_iter()
         .map(|(from, to)| {
-            create_synced_commit_mapping_entry(from, to, &syncer.repos, &version_name)
+            create_synced_commit_mapping_entry(from, to, &syncer.repos, Some(version_name.clone()))
         })
         .collect();
     syncer
@@ -1614,7 +1629,7 @@ pub fn create_synced_commit_mapping_entry(
     from: ChangesetId,
     to: ChangesetId,
     repos: &CommitSyncRepos,
-    version_name: &CommitSyncConfigVersion,
+    version_name: Option<CommitSyncConfigVersion>,
 ) -> SyncedCommitMappingEntry {
     let (source_repo, target_repo, source_is_large) = match repos {
         CommitSyncRepos::LargeToSmall {
@@ -1631,14 +1646,6 @@ pub fn create_synced_commit_mapping_entry(
 
     let source_repoid = source_repo.get_repoid();
     let target_repoid = target_repo.get_repoid();
-    let version_name: Option<CommitSyncConfigVersion> = if from == to {
-        // For preserved commits we explicitly avoid writing down
-        // version_name, as it it makes no difference which commit
-        // sync config is used, when the commit is preserved
-        None
-    } else {
-        Some(version_name.clone())
-    };
 
     if source_is_large {
         SyncedCommitMappingEntry::new(source_repoid, from, target_repoid, to, version_name)

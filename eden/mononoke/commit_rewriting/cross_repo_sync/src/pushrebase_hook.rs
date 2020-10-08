@@ -66,7 +66,7 @@ impl PushrebaseCommitHook for CrossRepoSyncPushrebaseHook {
                     self.cs_id,
                     *new_cs_id,
                     &self.repos,
-                    &self.version_name,
+                    Some(self.version_name.clone()),
                 );
                 Ok(Box::new(CrossRepoSyncTransactionHook { entry })
                     as Box<dyn PushrebaseTransactionHook>)
