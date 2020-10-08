@@ -12,10 +12,11 @@ use crate::id::{Group, Id};
 use crate::segment::Segment;
 use crate::Level;
 use crate::Result;
+use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 use std::iter;
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct InProcessStore {
     master_segments: Vec<Segment>,
     non_master_segments: Vec<Segment>,

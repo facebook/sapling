@@ -20,6 +20,7 @@ use std::ops;
 /// An integer [`Id`] representing a node in the graph.
 /// [`Id`]s are topologically sorted.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Serialize, Deserialize)]
 pub struct Id(pub u64);
 
 /// Name of a vertex in the graph.
@@ -108,6 +109,7 @@ impl fmt::Debug for VertexName {
 ///
 /// `(Group, Id)` are also topologically sorted.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Serialize, Deserialize)]
 pub struct Group(pub(crate) usize);
 
 impl Group {

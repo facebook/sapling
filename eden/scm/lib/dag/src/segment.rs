@@ -22,6 +22,7 @@ use crate::Result;
 use bitflags::bitflags;
 use byteorder::{BigEndian, ByteOrder, WriteBytesExt};
 use minibytes::Bytes;
+use serde::{Deserialize, Serialize};
 use std::fmt::{self, Debug, Formatter};
 use std::io::Cursor;
 use vlqencoding::{VLQDecode, VLQDecodeAt, VLQEncode};
@@ -29,7 +30,7 @@ use vlqencoding::{VLQDecode, VLQDecodeAt, VLQEncode};
 /// [`Segment`] represents a range of [`Id`]s in an [`IdDag`] graph.
 /// It provides methods to access properties of the segments, including the range itself,
 /// parents, and level information.
-#[derive(Clone, Eq)]
+#[derive(Clone, Eq, Serialize, Deserialize)]
 pub struct Segment(pub(crate) Bytes);
 
 // Serialization format for Segment:

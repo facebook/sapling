@@ -9,6 +9,7 @@ use crate::id::{Group, Id};
 use crate::segment::{Segment, SegmentFlags};
 use crate::Level;
 use crate::Result;
+use serde::{Deserialize, Serialize};
 
 mod in_process_store;
 mod indexedlog_store;
@@ -97,6 +98,7 @@ pub trait GetLock {
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Serialize, Deserialize)]
 enum StoreId {
     Master(usize),
     NonMaster(usize),

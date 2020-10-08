@@ -16,6 +16,7 @@ use crate::Error::Programming;
 use crate::Level;
 use crate::Result;
 use indexmap::set::IndexSet;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::collections::{BTreeSet, BinaryHeap};
@@ -39,7 +40,7 @@ use tracing::{debug_span, field, trace};
 /// [`IdDag`] is often used together with [`IdMap`] to allow customized names
 /// on vertexes. The [`NameDag`] type provides an easy-to-use interface to
 /// keep [`IdDag`] and [`IdMap`] in sync.
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct IdDag<Store> {
     store: Store,
     max_level: Level,
