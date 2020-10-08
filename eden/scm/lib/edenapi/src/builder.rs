@@ -25,7 +25,7 @@ pub struct Builder {
     server_url: Option<Url>,
     client_creds: Option<ClientCreds>,
     ca_bundle: Option<PathBuf>,
-    headers: Vec<(String, String)>,
+    headers: HashMap<String, String>,
     max_files: Option<usize>,
     max_trees: Option<usize>,
     max_history: Option<usize>,
@@ -126,8 +126,16 @@ impl Builder {
     }
 
     /// Extra HTTP headers that should be sent with each request.
-    pub fn headers(mut self, headers: Vec<(String, String)>) -> Self {
-        self.headers = headers;
+    pub fn headers<T, K, V>(mut self, headers: T) -> Self
+    where
+        T: IntoIterator<Item = (K, V)>,
+        K: ToString,
+        V: ToString,
+    {
+        let headers = headers
+            .into_iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()));
+        self.headers.extend(headers);
         self
     }
 
@@ -183,7 +191,7 @@ pub(crate) struct Config {
     pub(crate) server_url: Url,
     pub(crate) client_creds: Option<ClientCreds>,
     pub(crate) ca_bundle: Option<PathBuf>,
-    pub(crate) headers: Vec<(String, String)>,
+    pub(crate) headers: HashMap<String, String>,
     pub(crate) max_files: Option<usize>,
     pub(crate) max_trees: Option<usize>,
     pub(crate) max_history: Option<usize>,
@@ -230,9 +238,7 @@ impl TryFrom<Builder> for Config {
 }
 
 /// Parse headers from a JSON object.
-fn parse_headers(headers: impl AsRef<str>) -> Result<Vec<(String, String)>, Error> {
-    let headers = headers.as_ref();
-    let map: HashMap<&str, &str> =
-        serde_json::from_str(headers).context(format!("Not a valid JSON object: {:?}", headers))?;
-    Ok(map.into_iter().map(|(k, v)| (k.into(), v.into())).collect())
+fn parse_headers(headers: impl AsRef<str>) -> Result<HashMap<String, String>, Error> {
+    Ok(serde_json::from_str(headers.as_ref())
+        .context(format!("Not a valid JSON object: {:?}", headers.as_ref()))?)
 }
