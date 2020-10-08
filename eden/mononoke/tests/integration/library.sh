@@ -241,9 +241,10 @@ function mononoke_bookmarks_filler {
 
   GLOG_minloglevel=5 "$MONONOKE_BOOKMARKS_FILLER" \
     "${COMMON_ARGS[@]}" \
-    --repo-id $REPOID \
     --mononoke-config-path "$TESTTMP"/mononoke-config \
-    "$@" "$sql_source" "$sql_name"
+    --test-instance \
+    --local-configerator-path="$TESTTMP/configerator" \
+    "$@" "$sql_source" "$sql_name"  2>&1 | grep mononoke_commitcloud_bookmarks_filler
 }
 
 function create_mutable_counters_sqlite3_db {
@@ -932,6 +933,7 @@ function write_infinitepush_config {
 allow_writes = ${INFINITEPUSH_ALLOW_WRITES:-true}
 hydrate_getbundle_response = ${INFINITEPUSH_HYDRATE_GETBUNDLE_RESPONSE:-false}
 populate_reverse_filler_queue = ${INFINITEPUSH_POPULATE_REVERSE_FILLER_QUEUE:-false}
+bookmarks_filler = 2
 ${namespace}
 CONFIG
   fi

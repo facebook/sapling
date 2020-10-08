@@ -6,11 +6,11 @@
  */
 
 use anyhow::{format_err, Error, Result};
+use async_trait::async_trait;
 use bookmarks::BookmarkName;
 use chrono::Local;
 use cloned::cloned;
 use futures::stream::{self, Stream, StreamExt};
-use futures::Future;
 use mercurial_types::HgChangesetId;
 use scuba_ext::ScubaSampleBuilder;
 use slog::{info, Logger};
@@ -19,7 +19,7 @@ use std::fmt::Debug;
 
 use crate::errors::ErrorKind;
 use crate::sql_replay_bookmarks_queue::{
-    Backfill, BookmarkBatch, Entry, QueueLimit, SqlReplayBookmarksQueue,
+    Backfill, BookmarkBatch, Entry, QueueLimit, RepoName, SqlReplayBookmarksQueue,
 };
 
 define_stats! {
@@ -32,62 +32,70 @@ type History = Vec<Result<(), ErrorKind>>;
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 pub struct BufferSize(pub usize);
 
-async fn replay_one_bookmark<F, R>(
+#[async_trait]
+pub trait ReplayFn: Copy {
+    async fn replay(
+        &self,
+        repo: RepoName,
+        bookmark_name: BookmarkName,
+        hg_cs_id: HgChangesetId,
+    ) -> Result<(), ErrorKind>;
+}
+
+async fn replay_one_bookmark<'a, R: ReplayFn>(
+    repo_name: RepoName,
     bookmark: BookmarkName,
     mut entries: Vec<Entry>,
-    do_replay: R,
-) -> (BookmarkName, Result<Vec<Entry>>, History)
-where
-    F: Future<Output = Result<(), ErrorKind>>,
-    R: Fn(BookmarkName, HgChangesetId) -> F + Sized + Clone,
-{
+    replay: R,
+) -> (RepoName, BookmarkName, Result<Vec<Entry>>, History) {
     let mut history = vec![];
     while let Some((_id, hg_cs_id, _timestamp)) = entries.last() {
-        let ret = do_replay(bookmark.clone(), hg_cs_id.clone()).await;
+        let ret = replay
+            .replay(repo_name.clone(), bookmark.clone(), hg_cs_id.clone())
+            .await;
         let ok = ret.is_ok();
         history.push(ret);
 
         if ok {
-            return (bookmark, Ok(entries), history);
+            return (repo_name, bookmark, Ok(entries), history);
         }
         entries.pop();
     }
     let e = format_err!("No valid changeset to replay for bookmark: {:?}", bookmark);
-    (bookmark, Err(e), history)
+    (repo_name, bookmark, Err(e), history)
 }
 
-async fn process_replay_single_batch<F, R>(
-    queue: &SqlReplayBookmarksQueue,
-    repo_name: String,
+async fn process_replay_single_batch<'a, R: ReplayFn>(
+    queue: &'a SqlReplayBookmarksQueue,
+    enabled_repo_names: &'a [String],
     backfill: Backfill,
     buffer_size: BufferSize,
     queue_limit: QueueLimit,
     status_scuba: ScubaSampleBuilder,
-    logger: Logger,
-    do_replay: R,
-) -> Result<(), Error>
-where
-    F: Future<Output = Result<(), ErrorKind>>,
-    R: Fn(BookmarkName, HgChangesetId) -> F + Sized + Clone,
-{
-    let batch = queue.fetch_batch(&repo_name, backfill, queue_limit).await?;
+    logger: &Logger,
+    replay: R,
+) -> Result<(), Error> {
+    let batch = queue
+        .fetch_batch(enabled_repo_names, backfill, queue_limit)
+        .await?;
 
     STATS::batch_loaded.add_value(batch.len() as i64);
     info!(logger, "Processing batch: {:?} entries", batch.len());
 
     stream::iter(batch.into_iter())
         .for_each_concurrent(buffer_size.0, {
-            cloned!(logger, mut status_scuba, queue, do_replay);
-            move |(bookmark, BookmarkBatch { dt, entries })| {
-                cloned!(logger, mut status_scuba, queue, do_replay);
+            cloned!(logger, mut status_scuba, queue);
+            move |((repo, bookmark), BookmarkBatch { dt, entries })| {
+                cloned!(logger, mut status_scuba, queue);
                 async move {
-                    cloned!(queue, do_replay);
-                    let (bookmark, outcome, history) =
-                        replay_one_bookmark(bookmark, entries, do_replay).await;
+                    cloned!(queue);
+                    let (repo_name, bookmark, outcome, history) =
+                        replay_one_bookmark(repo, bookmark, entries, replay).await;
 
                     info!(
                         logger,
-                        "Outcome: bookmark: {:?}: success: {:?}",
+                        "Outcome: repo: {:?}: bookmark: {:?}: success: {:?}",
+                        repo_name,
                         bookmark,
                         outcome.is_ok()
                     );
@@ -98,6 +106,7 @@ where
                         .num_milliseconds();
 
                     status_scuba
+                        .add("reponame", repo_name)
                         .add("bookmark", bookmark.into_string())
                         .add("history", format!("{:?}", history))
                         .add("success", outcome.is_ok())
@@ -116,32 +125,28 @@ where
     Ok(())
 }
 
-pub fn process_replay_stream<'a, F, R>(
+pub fn process_replay_stream<'a, R: ReplayFn + 'a>(
     queue: &'a SqlReplayBookmarksQueue,
-    repo_name: String,
+    enabled_repo_names: &'a [String],
     backfill: Backfill,
     buffer_size: BufferSize,
     queue_limit: QueueLimit,
     status_scuba: ScubaSampleBuilder,
-    logger: Logger,
-    do_replay: R,
-) -> impl Stream<Item = Result<(), Error>> + 'a
-where
-    F: Future<Output = Result<(), ErrorKind>> + 'a,
-    R: Fn(BookmarkName, HgChangesetId) -> F + Sized + Clone + 'a,
-{
+    logger: &'a Logger,
+    replay: R,
+) -> impl Stream<Item = Result<(), Error>> + 'a {
     stream::repeat(()).then({
         move |_| {
-            cloned!(logger, status_scuba, repo_name, do_replay);
+            cloned!(status_scuba);
             process_replay_single_batch(
                 queue,
-                repo_name,
+                enabled_repo_names,
                 backfill,
                 buffer_size,
                 queue_limit,
                 status_scuba,
                 logger,
-                do_replay,
+                replay,
             )
         }
     })
@@ -159,19 +164,49 @@ mod test {
     const BUFFER_SIZE: BufferSize = BufferSize(10);
     const QUEUE_LIMIT: QueueLimit = QueueLimit(10);
 
-    async fn replay_success(_name: BookmarkName, _cs_id: HgChangesetId) -> Result<(), ErrorKind> {
-        Ok(())
-    }
-
-    async fn replay_fail(_name: BookmarkName, _cs_id: HgChangesetId) -> Result<(), ErrorKind> {
-        Err(ErrorKind::BlobRepoError(Error::msg("err")))
-    }
-
-    async fn replay_twos(_name: BookmarkName, cs_id: HgChangesetId) -> Result<(), ErrorKind> {
-        if cs_id == nodehash::TWOS_CSID {
+    #[derive(Copy, Clone)]
+    struct ReplaySuccess;
+    #[async_trait]
+    impl ReplayFn for ReplaySuccess {
+        async fn replay(
+            &self,
+            _repo: RepoName,
+            _name: BookmarkName,
+            _cs_id: HgChangesetId,
+        ) -> Result<(), ErrorKind> {
             Ok(())
-        } else {
+        }
+    }
+
+    #[derive(Copy, Clone)]
+    struct ReplayFail;
+    #[async_trait]
+    impl ReplayFn for ReplayFail {
+        async fn replay(
+            &self,
+            _repo: RepoName,
+            _name: BookmarkName,
+            _cs_id: HgChangesetId,
+        ) -> Result<(), ErrorKind> {
             Err(ErrorKind::BlobRepoError(Error::msg("err")))
+        }
+    }
+
+    #[derive(Copy, Clone)]
+    struct ReplayTwos;
+    #[async_trait]
+    impl ReplayFn for ReplayTwos {
+        async fn replay(
+            &self,
+            _repo: RepoName,
+            _name: BookmarkName,
+            cs_id: HgChangesetId,
+        ) -> Result<(), ErrorKind> {
+            if cs_id == nodehash::TWOS_CSID {
+                Ok(())
+            } else {
+                Err(ErrorKind::BlobRepoError(Error::msg("err")))
+            }
         }
     }
 
@@ -213,20 +248,22 @@ mod test {
 
         process_replay_stream(
             &queue,
-            repo.clone(),
+            vec![repo.clone()].as_slice(),
             NOT_BACKFILL,
             BUFFER_SIZE,
             QUEUE_LIMIT,
             scuba(),
-            logger(),
-            replay_success,
+            &logger(),
+            ReplaySuccess,
         )
         .boxed()
         .next()
         .await
         .unwrap()?;
 
-        let real = queue.fetch_batch(&repo, NOT_BACKFILL, QUEUE_LIMIT).await?;
+        let real = queue
+            .fetch_batch(vec![repo.clone()].as_slice(), NOT_BACKFILL, QUEUE_LIMIT)
+            .await?;
         assert_eq!(real, hashmap! {});
 
         Ok(())
@@ -262,13 +299,13 @@ mod test {
 
         process_replay_stream(
             &queue,
-            repo.clone(),
+            vec![repo.clone()].as_slice(),
             NOT_BACKFILL,
             BUFFER_SIZE,
             QUEUE_LIMIT,
             scuba(),
-            logger(),
-            replay_fail,
+            &logger(),
+            ReplayFail,
         )
         .boxed()
         .next()
@@ -276,10 +313,12 @@ mod test {
         .unwrap()?;
 
         let expected = hashmap! {
-            book1 => batch(t0(), vec![(1 as i64, nodehash::ONES_CSID, t0())]),
-            book2 => batch(t0(), vec![(2 as i64, nodehash::TWOS_CSID, t0())]),
+            (repo.clone(), book1) => batch(t0(), vec![(1 as i64, nodehash::ONES_CSID, t0())]),
+            (repo.clone(), book2) => batch(t0(), vec![(2 as i64, nodehash::TWOS_CSID, t0())]),
         };
-        let real = queue.fetch_batch(&repo, NOT_BACKFILL, QUEUE_LIMIT).await?;
+        let real = queue
+            .fetch_batch(vec![repo.clone()].as_slice(), NOT_BACKFILL, QUEUE_LIMIT)
+            .await?;
         assert_eq!(real, expected);
 
         Ok(())
@@ -322,13 +361,13 @@ mod test {
 
         process_replay_stream(
             &queue,
-            repo.clone(),
+            vec![repo.clone()].as_slice(),
             NOT_BACKFILL,
             BUFFER_SIZE,
             QUEUE_LIMIT,
             scuba(),
-            logger(),
-            replay_twos,
+            &logger(),
+            ReplayTwos,
         )
         .boxed()
         .next()
@@ -337,10 +376,12 @@ mod test {
 
 
         let expected = hashmap! {
-            book1 => batch(t0(), vec![(3 as i64, nodehash::THREES_CSID, t0())]),
+            (repo.clone(), book1) => batch(t0(), vec![(3 as i64, nodehash::THREES_CSID, t0())]),
         };
 
-        let real = queue.fetch_batch(&repo, NOT_BACKFILL, QUEUE_LIMIT).await?;
+        let real = queue
+            .fetch_batch(vec![repo.clone()].as_slice(), NOT_BACKFILL, QUEUE_LIMIT)
+            .await?;
         assert_eq!(real, expected);
 
         Ok(())

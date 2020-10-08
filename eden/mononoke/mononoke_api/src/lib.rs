@@ -12,7 +12,7 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use anyhow::Error;
+use anyhow::{Context, Error};
 use blobrepo_factory::{BlobstoreOptions, Caching, ReadOnlyStorage};
 pub use bookmarks::BookmarkName;
 use cached_config::ConfigStore;
@@ -87,7 +87,7 @@ impl Mononoke {
         disabled_hooks: HashMap<String, HashSet<String>>,
     ) -> Result<Self, Error> {
         let common_config = configs.common;
-        let repos = future::join_all(
+        let repos = future::try_join_all(
             configs
                 .repos
                 .into_iter()
@@ -112,14 +112,14 @@ impl Mononoke {
                                 disabled_hooks,
                             )
                             .await
-                            .expect("failed to initialize repo");
+                            .with_context(|| format!("could not initialize repo '{}'", &name))?;
                             debug!(logger, "Initialized {}", &name);
-                            (name, Arc::new(repo))
+                            Ok::<_, Error>((name, Arc::new(repo)))
                         }
                     }
                 }),
         )
-        .await
+        .await?
         .into_iter()
         .collect();
         Ok(Self { repos })

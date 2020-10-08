@@ -22,7 +22,8 @@ pub struct BookmarkBatch {
     pub dt: NaiveDateTime,
     pub entries: Vec<Entry>,
 }
-pub type Batch = HashMap<BookmarkName, BookmarkBatch>;
+pub type RepoName = String;
+pub type Batch = HashMap<(RepoName, BookmarkName), BookmarkBatch>;
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 pub struct QueueLimit(pub usize);
@@ -37,11 +38,11 @@ queries! {
     // this, and wouldn't want to have a bad batch of bookmarks at the bottom of the queue block
     // the rest. If that becomes a problem, we can a) shard on BookmarkName, and b) update this
     // code to have a limit, as long as we coalesce bookmarks we failed to sync in some way.
-    read FetchQueue(repo_name: String, backfill: i64, limit: usize) -> (i64, BookmarkName, String, String) {
-        "SELECT id, bookmark, node, created_at
+    read FetchQueue(backfill: i64, limit: usize, >list enabled_repo_names: String) -> (i64, BookmarkName, String, String, RepoName) {
+        "SELECT id, bookmark, node, created_at, reponame
          FROM replaybookmarksqueue
-         WHERE reponame = {repo_name} AND synced = 0 AND backfill = {backfill}
-         ORDER BY id ASC
+         WHERE reponame IN {enabled_repo_names} AND synced = 0 AND backfill = {backfill}
+         ORDER BY reponame, id ASC
          LIMIT {limit}"
     }
 
@@ -74,20 +75,20 @@ impl SqlConstruct for SqlReplayBookmarksQueue {
 impl SqlReplayBookmarksQueue {
     pub async fn fetch_batch(
         &self,
-        repo_name: &String,
+        enabled_repo_names: &[String],
         backfill: Backfill,
         limit: QueueLimit,
     ) -> Result<Batch, Error> {
         let rows = FetchQueue::query(
             &self.read_master_connection,
-            repo_name,
             &(if backfill.0 { 1 } else { 0 }),
             &limit.0,
+            enabled_repo_names,
         )
         .compat()
         .await?;
         let mut r = HashMap::new();
-        for (id, bookmark, hex_cs_id, dt) in rows.into_iter() {
+        for (id, bookmark, hex_cs_id, dt, repo_name) in rows.into_iter() {
             let hex_cs_id = AsciiString::from_ascii(hex_cs_id)?;
             let cs_id = HgChangesetId::from_ascii_str(&hex_cs_id)?;
 
@@ -98,7 +99,7 @@ impl SqlReplayBookmarksQueue {
             // server's time (and this all appears to work properly), Naive dates should be OK.
             let dt = NaiveDateTime::parse_from_str(&dt, DATE_TIME_FORMAT)?;
 
-            r.entry(bookmark)
+            r.entry((repo_name, bookmark))
                 .or_insert_with(|| BookmarkBatch {
                     dt: dt.clone(),
                     entries: vec![],
@@ -221,11 +222,13 @@ pub(crate) mod test {
         ];
         insert_entries(&queue, &entries).await?;
 
-        let real = queue.fetch_batch(&repo, NOT_BACKFILL, QUEUE_LIMIT).await?;
+        let real = queue
+            .fetch_batch(vec![repo.clone()].as_slice(), NOT_BACKFILL, QUEUE_LIMIT)
+            .await?;
 
         let expected = hashmap! {
-            book1 => batch(t0(), vec![(1 as i64, nodehash::ONES_CSID, t0())]),
-            book2 => batch(t0(), vec![(2 as i64, nodehash::TWOS_CSID, t0())]),
+            (repo.clone(), book1) => batch(t0(), vec![(1 as i64, nodehash::ONES_CSID, t0())]),
+            (repo, book2) => batch(t0(), vec![(2 as i64, nodehash::TWOS_CSID, t0())]),
         };
 
         assert_eq!(real, expected);
@@ -285,7 +288,9 @@ pub(crate) mod test {
         ];
         insert_entries(&queue, &entries).await?;
 
-        let real = queue.fetch_batch(&repo, NOT_BACKFILL, QUEUE_LIMIT).await?;
+        let real = queue
+            .fetch_batch(vec![repo.clone()].as_slice(), NOT_BACKFILL, QUEUE_LIMIT)
+            .await?;
 
         let book1_entries = vec![
             (1 as i64, nodehash::ONES_CSID, t0()),
@@ -295,8 +300,8 @@ pub(crate) mod test {
         ];
 
         let expected = hashmap! {
-            book1 => batch(t0(), book1_entries),
-            book2 => batch(t0(), vec![(2 as i64, nodehash::TWOS_CSID, t0())]),
+            (repo.clone(), book1) => batch(t0(), book1_entries),
+            (repo, book2) => batch(t0(), vec![(2 as i64, nodehash::TWOS_CSID, t0())]),
         };
 
         assert_eq!(real, expected);
@@ -355,11 +360,13 @@ pub(crate) mod test {
 
         queue.release_entries(&release).await?;
 
-        let real = queue.fetch_batch(&repo, NOT_BACKFILL, QUEUE_LIMIT).await?;
+        let real = queue
+            .fetch_batch(vec![repo.clone()].as_slice(), NOT_BACKFILL, QUEUE_LIMIT)
+            .await?;
 
         let expected = hashmap! {
-            book1 => batch(t0(), vec![(3 as i64, nodehash::THREES_CSID, t0())]),
-            book2 => batch(t0(), vec![(4 as i64, nodehash::FOURS_CSID, t0())]),
+            (repo.clone(), book1) => batch(t0(), vec![(3 as i64, nodehash::THREES_CSID, t0())]),
+            (repo, book2) => batch(t0(), vec![(4 as i64, nodehash::FOURS_CSID, t0())]),
         };
 
         assert_eq!(real, expected);
@@ -396,10 +403,12 @@ pub(crate) mod test {
         ];
         insert_entries(&queue, &entries).await?;
 
-        let real = queue.fetch_batch(&repo1, NOT_BACKFILL, QUEUE_LIMIT).await?;
+        let real = queue
+            .fetch_batch(vec![repo1.clone()].as_slice(), NOT_BACKFILL, QUEUE_LIMIT)
+            .await?;
 
         let expected = hashmap! {
-            book1 => batch(t0(), vec![(1 as i64, nodehash::ONES_CSID, t0())]),
+            (repo1.clone(), book1) => batch(t0(), vec![(1 as i64, nodehash::ONES_CSID, t0())]),
         };
 
         assert_eq!(real, expected);
@@ -434,14 +443,16 @@ pub(crate) mod test {
         ];
         insert_entries(&queue, &entries).await?;
 
-        let real = queue.fetch_batch(&repo, NOT_BACKFILL, QUEUE_LIMIT).await?;
+        let real = queue
+            .fetch_batch(vec![repo.clone()].as_slice(), NOT_BACKFILL, QUEUE_LIMIT)
+            .await?;
 
         let entries = vec![
             (1 as i64, nodehash::ONES_CSID, t0()),
             (2 as i64, nodehash::TWOS_CSID, t1()),
         ];
 
-        let expected = hashmap! { book1 => batch(t0(), entries) };
+        let expected = hashmap! { (repo.clone(), book1) => batch(t0(), entries) };
 
         assert_eq!(real, expected);
 
@@ -493,12 +504,12 @@ pub(crate) mod test {
         insert_entries(&queue, &entries).await?;
 
         let real = queue
-            .fetch_batch(&repo, NOT_BACKFILL, QueueLimit(2))
+            .fetch_batch(vec![repo.clone()].as_slice(), NOT_BACKFILL, QueueLimit(2))
             .await?;
 
         let expected = hashmap! {
-            book1 => batch(t0(), vec![(1 as i64, nodehash::ONES_CSID, t0())]),
-            book2 => batch(t0(), vec![(2 as i64, nodehash::TWOS_CSID, t0())]),
+            (repo.clone(), book1) => batch(t0(), vec![(1 as i64, nodehash::ONES_CSID, t0())]),
+            (repo.clone(), book2) => batch(t0(), vec![(2 as i64, nodehash::TWOS_CSID, t0())]),
         };
 
         assert_eq!(real, expected);
@@ -533,15 +544,19 @@ pub(crate) mod test {
         ];
         insert_entries(&queue, &entries).await?;
 
-        let real_backfill = queue.fetch_batch(&repo, BACKFILL, QUEUE_LIMIT).await?;
-        let real_not_backfill = queue.fetch_batch(&repo, NOT_BACKFILL, QUEUE_LIMIT).await?;
+        let real_backfill = queue
+            .fetch_batch(vec![repo.clone()].as_slice(), BACKFILL, QUEUE_LIMIT)
+            .await?;
+        let real_not_backfill = queue
+            .fetch_batch(vec![repo.clone()].as_slice(), NOT_BACKFILL, QUEUE_LIMIT)
+            .await?;
 
         let expected_backfill = hashmap! {
-            book1.clone() => batch(t0(), vec![(2 as i64, nodehash::TWOS_CSID, t0())])
+            (repo.to_string(), book1.clone()) => batch(t0(), vec![(2 as i64, nodehash::TWOS_CSID, t0())])
         };
 
         let expected_not_backfill = hashmap! {
-            book1.clone() => batch(t0(), vec![(1 as i64, nodehash::ONES_CSID, t0())])
+            (repo.to_string(), book1.clone()) => batch(t0(), vec![(1 as i64, nodehash::ONES_CSID, t0())])
         };
 
         assert_eq!(real_backfill, expected_backfill);

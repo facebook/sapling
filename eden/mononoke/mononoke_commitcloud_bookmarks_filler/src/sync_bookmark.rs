@@ -5,19 +5,17 @@
  * GNU General Public License version 2.
  */
 
-use blobrepo::BlobRepo;
-use blobrepo_hg::BlobRepoHg;
+use crate::replay_stream::ReplayFn;
+use anyhow::format_err;
+use async_trait::async_trait;
 use bookmarks::BookmarkName;
 use cloned::cloned;
-use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::compat::Future01CompatExt;
 use futures::try_join;
 use mercurial_types::HgChangesetId;
-use metaconfig_types::InfinitepushNamespace;
+use mononoke_api::{BookmarkFreshness, ChangesetSpecifier, CoreContext, Mononoke};
 use slog::{info, Logger};
 use stats::prelude::*;
-use std::sync::Arc;
 
 use crate::errors::ErrorKind;
 
@@ -30,68 +28,108 @@ define_stats! {
     total: timeseries(Rate, Sum),
 }
 
-pub async fn sync_bookmark(
-    fb: FacebookInit,
-    blobrepo: BlobRepo,
-    logger: Logger,
-    infinitepush_namespace: Arc<InfinitepushNamespace>,
-    name: BookmarkName,
-    hg_cs_id: HgChangesetId,
-) -> Result<(), ErrorKind> {
-    if !infinitepush_namespace.matches_bookmark(&name) {
-        return Err(ErrorKind::InvalidBookmarkForNamespace(name.clone()));
-    }
+pub struct SyncBookmark<'a, 'b, 'c> {
+    fb: &'a FacebookInit,
+    mononoke: &'b Mononoke,
+    logger: &'c Logger,
+}
 
-    let ctx = CoreContext::new_with_logger(fb, logger.clone());
-
-    let (maybe_new_cs_id, maybe_old_cs_id) = try_join!(
-        blobrepo.get_bonsai_from_hg(ctx.clone(), hg_cs_id).compat(),
-        blobrepo.get_bonsai_bookmark(ctx.clone(), &name).compat()
-    )
-    .map_err(ErrorKind::BlobRepoError)?;
-
-    let res = async {
-        let new_cs_id = match maybe_new_cs_id {
-            Some(new_cs_id) => new_cs_id,
-            None => return Err(ErrorKind::HgChangesetDoesNotExist(hg_cs_id)),
-        };
-        cloned!(blobrepo, ctx, logger);
-        info!(
+impl<'a, 'b, 'c> SyncBookmark<'a, 'b, 'c> {
+    pub fn new(fb: &'a FacebookInit, mononoke: &'b Mononoke, logger: &'c Logger) -> Self {
+        SyncBookmark {
+            fb,
+            mononoke,
             logger,
-            "Updating bookmark {:?}: {:?} -> {:?}",
-            name.clone(),
-            maybe_old_cs_id,
-            new_cs_id
-        );
-
-        let mut txn = blobrepo.update_bookmark_transaction(ctx);
-
-        match maybe_old_cs_id {
-            Some(old_cs_id) => {
-                STATS::update.add_value(1);
-                txn.update_scratch(&name, new_cs_id, old_cs_id)
-            }
-            None => {
-                STATS::create.add_value(1);
-                txn.create_scratch(&name, new_cs_id)
-            }
         }
-        .map_err(ErrorKind::BlobRepoError)?;
+    }
+}
 
-        let success = txn.commit().await.map_err(ErrorKind::BlobRepoError)?;
+#[async_trait]
+impl<'a, 'b, 'c> ReplayFn for &SyncBookmark<'a, 'b, 'c> {
+    async fn replay(
+        &self,
+        repo_name: String,
+        bookmark_name: BookmarkName,
+        hg_cs_id: HgChangesetId,
+    ) -> Result<(), ErrorKind> {
+        let ctx = CoreContext::new_with_logger(self.fb.clone(), self.logger.clone());
 
-        if !success {
-            return Err(ErrorKind::BookmarkTransactionFailed);
+        let repo = self
+            .mononoke
+            .repo(ctx.clone(), &repo_name)
+            .await
+            .map_err(|e| ErrorKind::BlobRepoError(e.into()))?
+            .ok_or_else(|| format_err!("repo doesn't exist: {:?}", repo_name))
+            .map_err(ErrorKind::BlobRepoError)?;
+
+        let infinitepush_namespace = repo
+            .config()
+            .infinitepush
+            .namespace
+            .as_ref()
+            .ok_or_else(|| format_err!("Infinitepush is not enabled in repository {:?}", repo_name))
+            .map_err(ErrorKind::BlobRepoError)?;
+
+        if !infinitepush_namespace.matches_bookmark(&bookmark_name) {
+            return Err(ErrorKind::InvalidBookmarkForNamespace(
+                bookmark_name.clone(),
+            ));
         }
-        Ok(())
-    }
-    .await;
-    STATS::total.add_value(1);
 
-    if res.is_ok() {
-        STATS::success.add_value(1);
-    } else {
-        STATS::failure.add_value(1);
+
+        let (maybe_new_cs_id, maybe_old_cs) = try_join!(
+            repo.resolve_specifier(ChangesetSpecifier::Hg(hg_cs_id)),
+            repo.resolve_bookmark(bookmark_name.as_str(), BookmarkFreshness::MostRecent)
+        )
+        .map_err(|e| ErrorKind::BlobRepoError(e.into()))?;
+
+        let maybe_old_cs_id = maybe_old_cs.map(|cs| cs.id());
+
+        let res = async {
+            let new_cs_id = match maybe_new_cs_id {
+                Some(new_cs_id) => new_cs_id,
+                None => return Err(ErrorKind::HgChangesetDoesNotExist(hg_cs_id)),
+            };
+            cloned!(ctx, self.logger);
+            info!(
+                logger,
+                "Updating repo: {:?} {:?}: {:?} -> {:?}",
+                repo_name.clone(),
+                bookmark_name.clone(),
+                maybe_old_cs_id,
+                new_cs_id
+            );
+
+            let blobrepo = repo.blob_repo();
+            let mut txn = blobrepo.update_bookmark_transaction(ctx);
+
+            match maybe_old_cs_id {
+                Some(old_cs_id) => {
+                    STATS::update.add_value(1);
+                    txn.update_scratch(&bookmark_name, new_cs_id, old_cs_id)
+                }
+                None => {
+                    STATS::create.add_value(1);
+                    txn.create_scratch(&bookmark_name, new_cs_id)
+                }
+            }
+            .map_err(ErrorKind::BlobRepoError)?;
+
+            let success = txn.commit().await.map_err(ErrorKind::BlobRepoError)?;
+
+            if !success {
+                return Err(ErrorKind::BookmarkTransactionFailed);
+            }
+            Ok(())
+        }
+        .await;
+        STATS::total.add_value(1);
+
+        if res.is_ok() {
+            STATS::success.add_value(1);
+        } else {
+            STATS::failure.add_value(1);
+        }
+        res
     }
-    res
 }

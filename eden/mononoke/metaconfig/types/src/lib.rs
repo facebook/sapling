@@ -975,6 +975,23 @@ impl InfinitepushNamespace {
     }
 }
 
+/// Commit cloud bookmark filler operation mode for the repo.
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum CommitcloudBookmarksFillerMode {
+    /// No filling.
+    DISABLED = 0,
+    /// Backfill old entries.
+    BACKFILL = 1,
+    /// Fill the entries forward.
+    FORWARDFILL = 2,
+}
+
+impl Default for CommitcloudBookmarksFillerMode {
+    fn default() -> Self {
+        CommitcloudBookmarksFillerMode::DISABLED
+    }
+}
+
 /// Infinitepush configuration. Note that it is legal to not allow Infinitepush (server = false),
 /// while still providing a namespace. Doing so will prevent regular pushes to the namespace, as
 /// well as allow the creation of Infinitepush scratchbookmarks through e.g. replicating them from
@@ -997,6 +1014,9 @@ pub struct InfinitepushParams {
 
     /// Scribe category we log new commits to
     pub commit_scribe_category: Option<String>,
+
+    /// Bookmarks filler operation mode
+    pub bookmarks_filler: CommitcloudBookmarksFillerMode,
 }
 
 impl Default for InfinitepushParams {
@@ -1007,6 +1027,7 @@ impl Default for InfinitepushParams {
             hydrate_getbundle_response: false,
             populate_reverse_filler_queue: false,
             commit_scribe_category: None,
+            bookmarks_filler: Default::default(),
         }
     }
 }

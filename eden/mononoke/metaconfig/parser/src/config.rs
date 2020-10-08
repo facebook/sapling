@@ -970,6 +970,7 @@ mod test {
             [infinitepush]
             allow_writes = true
             namespace_pattern = "foobar/.+"
+            bookmarks_filler = 0
 
             [filestore]
             chunk_size = 768
@@ -1180,6 +1181,7 @@ mod test {
                     hydrate_getbundle_response: false,
                     populate_reverse_filler_queue: false,
                     commit_scribe_category: None,
+                    bookmarks_filler: Default::default(),
                 },
                 list_keys_patterns_max: 123,
                 hook_max_file_size: 456,

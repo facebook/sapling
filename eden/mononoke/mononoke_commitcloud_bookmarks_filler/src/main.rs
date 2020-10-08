@@ -9,19 +9,17 @@
 #![feature(async_closure)]
 #![deny(warnings)]
 
-use anyhow::{format_err, Error, Result};
-use bookmarks::BookmarkName;
+use anyhow::{Error, Result};
 use clap::{Arg, ArgMatches};
-use cloned::cloned;
 use cmdlib::{args, helpers::block_execute};
 use fbinit::FacebookInit;
-use futures::{compat::Future01CompatExt, future, stream::StreamExt};
-use mercurial_types::HgChangesetId;
-use metaconfig_types::RepoConfig;
+use futures::{future, stream::StreamExt};
+use metaconfig_parser::load_repo_configs;
+use metaconfig_types::CommitcloudBookmarksFillerMode;
+use mononoke_api::Mononoke;
 use scuba_ext::ScubaSampleBuilder;
 use sql_construct::{facebook::FbSqlConstruct, SqlConstruct};
 use std::path::PathBuf;
-use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::delay_for;
 
@@ -86,6 +84,8 @@ fn main(fb: FacebookInit) -> Result<()> {
     let app = args::MononokeApp::new("Replay bookmarks from Mercurial into Mononoke")
         .with_advanced_args_hidden()
         .with_fb303_args()
+        .with_test_args()
+        .with_all_repos()
         .build()
         .arg(
             Arg::with_name(ARG_CTX_SCUBA_TABLE)
@@ -152,14 +152,51 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     let matches = app.get_matches();
     let readonly_storage = args::parse_readonly_storage(&matches);
-    args::init_cachelib(fb, &matches, None);
+    let caching = args::init_cachelib(fb, &matches, None);
 
     let logger = args::init_logging(fb, &matches);
     let queue = open_sql(fb, &matches, readonly_storage.0);
-    let (repo_name, RepoConfig { infinitepush, .. }) = args::get_config(fb, &matches)?;
-    let blobrepo = args::open_repo(fb, &logger, &matches);
+
+    let config_path = matches
+        .value_of("mononoke-config-path")
+        .expect("must set config path");
+
+    let repo_configs = load_repo_configs(fb, config_path)?;
 
     let backfill = Backfill(matches.is_present(ARG_BACKFILL));
+
+    let mode = if backfill.0 {
+        CommitcloudBookmarksFillerMode::BACKFILL
+    } else {
+        CommitcloudBookmarksFillerMode::FORWARDFILL
+    };
+    let repo_names: Vec<_> = repo_configs
+        .repos
+        .iter()
+        .filter_map(|(name, config)| {
+            if config.infinitepush.bookmarks_filler == mode {
+                Some(name.clone())
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    let config_store = args::maybe_init_config_store(fb, &logger, &matches)
+        .expect("failed to instantiate ConfigStore");
+
+    let mononoke = Mononoke::new(
+        fb,
+        logger.clone(),
+        repo_configs,
+        args::parse_mysql_options(&matches),
+        caching,
+        args::parse_readonly_storage(&matches),
+        args::parse_blobstore_options(&matches),
+        config_store,
+        args::parse_disabled_hooks_with_repo_prefix(&matches, &logger)?,
+    );
+
     let buffer_size = BufferSize(args::get_usize(
         &matches,
         ARG_BUFFER_SIZE,
@@ -173,47 +210,24 @@ fn main(fb: FacebookInit) -> Result<()> {
     let maybe_max_iterations = args::get_usize_opt(&matches, ARG_MAX_ITERATIONS);
     let maybe_delay = args::get_u64_opt(&matches, ARG_DELAY);
 
-    let mut status_scuba = match matches.value_of(ARG_STATUS_SCUBA_TABLE) {
+    let status_scuba = match matches.value_of(ARG_STATUS_SCUBA_TABLE) {
         Some(table) => ScubaSampleBuilder::new(fb, table),
         None => ScubaSampleBuilder::with_discard(),
     };
 
-    status_scuba
-        .add_common_server_data()
-        .add("reponame", repo_name.as_ref());
-
-    let infinitepush_namespace = infinitepush.namespace.ok_or(format_err!(
-        "Infinitepush is not enabled in repository {:?}",
-        repo_name
-    ))?;
-
     let main = async {
-        let (queue, blobrepo) = future::try_join(queue, blobrepo.compat()).await?;
+        let (queue, mononoke) = future::try_join(queue, mononoke).await?;
 
-        let infinitepush_namespace = Arc::new(infinitepush_namespace);
-        let do_replay = {
-            cloned!(logger);
-            move |name: BookmarkName, hg_cs_id: HgChangesetId| {
-                sync_bookmark::sync_bookmark(
-                    fb,
-                    blobrepo.clone(),
-                    logger.clone(),
-                    infinitepush_namespace.clone(),
-                    name,
-                    hg_cs_id,
-                )
-            }
-        };
-
+        let replay_fn = &sync_bookmark::SyncBookmark::new(&fb, &mononoke, &logger);
         let stream = replay_stream::process_replay_stream(
             &queue,
-            repo_name,
+            &repo_names,
             backfill,
             buffer_size,
             queue_limit,
             status_scuba,
-            logger.clone(),
-            do_replay,
+            &logger,
+            replay_fn,
         );
 
         let mut stream = match maybe_max_iterations {

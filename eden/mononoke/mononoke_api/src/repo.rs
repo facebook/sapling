@@ -674,7 +674,7 @@ impl RepoContext {
     }
 
     /// The configuration for the referenced repository.
-    pub(crate) fn config(&self) -> &RepoConfig {
+    pub fn config(&self) -> &RepoConfig {
         &self.repo.config
     }
 
