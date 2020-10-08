@@ -14,7 +14,7 @@ use crate::errors::MononokeError;
 
 // Define a wrapper around `Option<MPath>` to make it more convenient to
 // use in the API.
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct MononokePath(Option<MPath>);
 
 impl MononokePath {

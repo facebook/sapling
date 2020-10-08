@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
 use std::convert::{TryFrom, TryInto};
 use std::sync::Arc;
 
@@ -204,6 +204,10 @@ impl SourceControlServiceImpl {
         )?;
 
         // Resolve the path into ChangesetPathContext
+        // To make it more efficient we do a batch request
+        // to resolve all paths into path contexts
+        let mut base_commit_paths = vec![];
+        let mut other_commit_paths = vec![];
         let paths = params
             .paths
             .into_iter()
@@ -215,16 +219,74 @@ impl SourceControlServiceImpl {
                 };
                 Ok((
                     match path_pair.base_path {
-                        Some(path) => Some(base_commit.path(&path)?),
+                        Some(path) => {
+                            let mpath = MononokePath::try_from(&path)?;
+                            base_commit_paths.push(mpath.clone());
+                            Some(mpath)
+                        }
                         None => None,
                     },
                     match path_pair.other_path {
-                        Some(path) => Some(other_commit.path(&path)?),
+                        Some(path) => {
+                            let mpath = MononokePath::try_from(&path)?;
+                            other_commit_paths.push(mpath.clone());
+                            Some(mpath)
+                        }
                         None => None,
                     },
                     CopyInfo::from_request(&path_pair.copy_info)?,
                     mode,
                 ))
+            })
+            .collect::<Result<Vec<_>, errors::ServiceError>>()?;
+
+        let (base_commit_paths, other_commit_paths) = try_join!(
+            base_commit.paths(base_commit_paths.into_iter()),
+            other_commit.paths(other_commit_paths.into_iter())
+        )?;
+        let (base_commit_contexts, other_commit_contexts) = try_join!(
+            base_commit_paths
+                .map_ok(|path_context| (path_context.path().clone(), path_context))
+                .try_collect::<HashMap<_, _>>(),
+            other_commit_paths
+                .map_ok(|path_context| (path_context.path().clone(), path_context))
+                .try_collect::<HashMap<_, _>>()
+        )?;
+
+        let paths = paths
+            .into_iter()
+            .map(|(base_path, other_path, copy_info, mode)| {
+                let base_path = match base_path {
+                    Some(base_path) => Some(
+                        base_commit_contexts
+                            .get(&base_path)
+                            .cloned()
+                            .ok_or_else(|| {
+                                errors::invalid_request(format!(
+                                    "{} not found in {:?}",
+                                    base_path, commit
+                                ))
+                            })?,
+                    ),
+                    None => None,
+                };
+
+                let other_path = match other_path {
+                    Some(other_path) => Some(
+                        other_commit_contexts
+                            .get(&other_path)
+                            .cloned()
+                            .ok_or_else(|| {
+                                errors::invalid_request(format!(
+                                    "{} not found in {:?}",
+                                    other_path, other_commit
+                                ))
+                            })?,
+                    ),
+                    None => None,
+                };
+
+                Ok((base_path, other_path, copy_info, mode))
             })
             .collect::<Result<Vec<_>, errors::ServiceError>>()?;
 
