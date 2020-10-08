@@ -676,9 +676,10 @@ impl<Store: IdDagStore> IdDag<Store> {
 
             // A flat segment contains information to calculate
             // parents(subset of the segment).
-            let seg = self.find_flat_segment_including_id(head)?.expect(
-                "logic error: flat segments are expected to cover everything but they do not",
-            );
+            let seg = match self.find_flat_segment_including_id(head)? {
+                Some(seg) => seg,
+                None => return head.not_found(),
+            };
             let seg_span = seg.span()?;
             let seg_low = seg_span.low;
             let seg_set: SpanSet = seg_span.into();
@@ -712,9 +713,10 @@ impl<Store: IdDagStore> IdDag<Store> {
 
     /// Get parents of a single `id`. Preserve the order.
     pub fn parent_ids(&self, id: Id) -> Result<Vec<Id>> {
-        let seg = self
-            .find_flat_segment_including_id(id)?
-            .expect("logic error: flat segments are expected to cover everything but they do not");
+        let seg = match self.find_flat_segment_including_id(id)? {
+            Some(seg) => seg,
+            None => return id.not_found(),
+        };
         let span = seg.span()?;
         if id == span.low {
             Ok(seg.parents()?)
