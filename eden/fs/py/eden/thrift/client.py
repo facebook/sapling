@@ -7,8 +7,9 @@
 import os
 from typing import Optional
 
-from eden.fs.service.eden.clients import EdenService
+from eden.fs.service.streamingeden.clients import StreamingEdenService
 from thrift.py3 import get_client
+from thrift.py3.client import ClientType
 from thrift.py3.exceptions import TransportError, TransportErrorType
 
 
@@ -23,7 +24,7 @@ class EdenNotRunningError(Exception):
         self.socket_path = socket_path
 
 
-class EdenClient(EdenService):
+class EdenClient(StreamingEdenService):
     """
     EdenClient is a subclass of EdenService that provides
     some conveniences and helps deal with evolving Thrift APIs.
@@ -65,6 +66,11 @@ def create_thrift_client(
         # just leave the client with no timeout, unless one is given.
         timeout = 0
 
-    client = get_client(EdenClient, path=socket_path, timeout=timeout)
+    client = get_client(
+        EdenClient,
+        path=socket_path,
+        timeout=timeout,
+        client_type=ClientType.THRIFT_ROCKET_CLIENT_TYPE,
+    )
     client.socket_path = socket_path
     return client
