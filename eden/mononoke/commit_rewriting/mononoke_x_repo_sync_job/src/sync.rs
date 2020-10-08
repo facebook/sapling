@@ -85,7 +85,34 @@ pub async fn sync_single_bookmark_update_log<M: SyncedCommitMapping + Clone + 's
         }
     };
 
-    // Find commits that needs syncing
+    sync_commit_and_ancestors(
+        ctx,
+        commit_syncer,
+        entry.from_changeset_id,
+        to_cs_id,
+        bookmark,
+        source_skiplist_index,
+        target_skiplist_index,
+        common_pushrebase_bookmarks,
+        scuba_sample,
+    )
+    .await
+
+    // TODO(stash): test with other movers
+    // Note: counter update might fail after a successful sync
+}
+
+async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static>(
+    ctx: &CoreContext,
+    commit_syncer: &CommitSyncer<M>,
+    from_cs_id: Option<ChangesetId>,
+    to_cs_id: ChangesetId,
+    bookmark: BookmarkName,
+    source_skiplist_index: &Source<Arc<SkiplistIndex>>,
+    target_skiplist_index: &Target<Arc<SkiplistIndex>>,
+    common_pushrebase_bookmarks: &HashSet<BookmarkName>,
+    scuba_sample: ScubaSampleBuilder,
+) -> Result<Vec<ChangesetId>, Error> {
     let unsynced_ancestors =
         find_toposorted_unsynced_ancestors(&ctx, &commit_syncer, to_cs_id.clone()).await?;
     let len = unsynced_ancestors.len();
@@ -94,7 +121,7 @@ pub async fn sync_single_bookmark_update_log<M: SyncedCommitMapping + Clone + 's
     if common_pushrebase_bookmarks.contains(&bookmark) {
         // This is a commit that was introduced by common pushrebase bookmark (e.g. "master").
         // Use pushrebase to sync a commit.
-        if let Some(from_cs_id) = entry.from_changeset_id {
+        if let Some(from_cs_id) = from_cs_id {
             check_forward_move(
                 ctx,
                 commit_syncer,
@@ -143,8 +170,6 @@ pub async fn sync_single_bookmark_update_log<M: SyncedCommitMapping + Clone + 's
         .await?;
         Ok(res)
     }
-    // TODO(stash): test with other movers
-    // Note: counter update might fail after a successful sync
 }
 
 /// This function syncs commits via pushrebase with a caveat - some commits shouldn't be
