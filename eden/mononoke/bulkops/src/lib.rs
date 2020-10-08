@@ -11,19 +11,52 @@
 ///!
 ///! Utiltities for handling data in bulk.
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use anyhow::{Error, Result};
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
     future::{try_join, TryFutureExt},
-    stream::{self, StreamExt, TryStreamExt},
+    stream::{self, BoxStream, StreamExt, TryStreamExt},
     Stream,
 };
 
 use changesets::{ChangesetEntry, Changesets, SqlChangesets};
 use context::CoreContext;
 use mononoke_types::RepositoryId;
-use phases::SqlPhases;
+use phases::{Phases, SqlPhases};
+
+pub trait ChangesetBulkFetch: Send + Sync {
+    fn fetch<'a>(&'a self, ctx: &'a CoreContext) -> BoxStream<'a, Result<ChangesetEntry, Error>>;
+}
+
+pub struct PublicChangesetBulkFetch {
+    repo_id: RepositoryId,
+    changesets: Arc<dyn Changesets>,
+    phases: Arc<dyn Phases>,
+}
+
+impl ChangesetBulkFetch for PublicChangesetBulkFetch {
+    fn fetch<'a>(&'a self, ctx: &'a CoreContext) -> BoxStream<'a, Result<ChangesetEntry, Error>> {
+        let sql_changesets = self.changesets.get_sql_changesets();
+        let sql_phases = self.phases.get_sql_phases();
+        fetch_all_public_changesets(ctx, self.repo_id, sql_changesets, sql_phases).boxed()
+    }
+}
+
+impl PublicChangesetBulkFetch {
+    pub fn new(
+        repo_id: RepositoryId,
+        changesets: Arc<dyn Changesets>,
+        phases: Arc<dyn Phases>,
+    ) -> Self {
+        Self {
+            repo_id,
+            changesets,
+            phases,
+        }
+    }
+}
 
 // This function is not optimal since it could be made faster by doing more processing
 // on XDB side, but for the puprpose of this binary it is good enough
