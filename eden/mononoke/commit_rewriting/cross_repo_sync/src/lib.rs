@@ -8,7 +8,7 @@
 #![deny(warnings)]
 #![feature(trait_alias)]
 
-use anyhow::{bail, format_err, Error};
+use anyhow::{bail, format_err, Context, Error};
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
@@ -37,9 +37,9 @@ use movers::Mover;
 use pushrebase::{do_pushrebase_bonsai, PushrebaseError};
 use reachabilityindex::LeastCommonAncestorsHint;
 use slog::{debug, info};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, VecDeque};
+use std::fmt;
 use std::sync::Arc;
-use std::{collections::VecDeque, fmt};
 use synced_commit_mapping::{
     EquivalentWorkingCopyEntry, SyncedCommitMapping, SyncedCommitMappingEntry,
 };
@@ -47,12 +47,14 @@ use thiserror::Error;
 use topo_sort::sort_topological;
 
 pub use commit_syncer_args::CommitSyncerArgs;
+use merge_utils::get_version_for_merge;
 use pushrebase_hook::CrossRepoSyncPushrebaseHook;
 use types::{Source, Target};
 
 mod commit_sync_data_provider;
 pub mod commit_sync_outcome;
 mod commit_syncer_args;
+mod merge_utils;
 mod pushrebase_hook;
 pub mod types;
 pub mod validation;
@@ -1176,6 +1178,33 @@ where
         }
     }
 
+
+    /// Get `CommitSyncConfigVersion` to use while remapping a
+    /// merge commit (`source_cs_id`)
+    /// The idea is to derive this version from the `parent_outcomes`
+    /// according to the following rules:
+    /// - all `NotSyncCandidate` parents are ignored
+    /// - `Preserved` parents are prohibited (sync fails), and it
+    ///   is expected that such cases are handled by the caller in a
+    ///   separate flow
+    /// - all `RewrittenAs` and `EquivalentWorkingCopyAncestor`
+    ///   parents have the same (non-None) version associated
+    async fn get_mover_to_use_for_merge<'a>(
+        &'a self,
+        ctx: &CoreContext,
+        source_cs_id: ChangesetId,
+        parent_outcomes: impl IntoIterator<Item = &'a CommitSyncOutcome>,
+    ) -> Result<(Mover, CommitSyncConfigVersion), Error> {
+        let version = get_version_for_merge(
+            source_cs_id,
+            parent_outcomes,
+            self.get_current_version(ctx)?,
+        )?;
+
+        let mover = self.get_mover_by_version(&version)?;
+        Ok((mover, version))
+    }
+
     // See more details about the algorithm in https://fb.quip.com/s8fYAOxEohtJ
     // A few important notes:
     // 1) Merges are synced only in LARGE -> SMALL direction.
@@ -1193,7 +1222,6 @@ where
 
         let source_cs_id = cs.get_changeset_id();
         let cs = cs.into_mut();
-        let (_, _, rewrite_paths) = self.get_source_target_mover(&ctx)?;
 
         let parent_outcomes = stream::iter(cs.parents.clone().into_iter().map(|p| {
             self.get_commit_sync_outcome(ctx.clone(), p)
@@ -1247,7 +1275,7 @@ where
             return Ok(None);
         }
 
-        // At this point we know that there's at least parent after big merge. However we still
+        // At this point we know that there's at least one parent after big merge. However we still
         // might have a parent that's NotSyncCandidate
         //
         //   B
@@ -1276,21 +1304,36 @@ where
                 }
             })
             .collect();
+
         let cs = self.strip_removed_parents(cs, new_parents.keys().collect())?;
 
         if !new_parents.is_empty() {
+            let (mover, version) = self
+                .get_mover_to_use_for_merge(
+                    &ctx,
+                    source_cs_id,
+                    sync_outcomes.iter().map(|(_, outcome)| outcome),
+                )
+                .await
+                .context("failed getting a mover to use for merge rewriting")?;
+
             match rewrite_commit(
                 ctx.clone(),
                 cs,
                 &new_parents,
-                rewrite_paths,
+                mover,
                 self.get_source_repo().clone(),
             )
             .await?
             {
                 Some(rewritten) => {
                     let target_cs_id = self
-                        .upload_rewritten_and_update_mapping(ctx.clone(), source_cs_id, rewritten)
+                        .upload_rewritten_and_update_mapping(
+                            ctx.clone(),
+                            source_cs_id,
+                            rewritten,
+                            version,
+                        )
                         .await?;
                     Ok(Some(target_cs_id))
                 }
@@ -1321,6 +1364,7 @@ where
         ctx: CoreContext,
         source_cs_id: ChangesetId,
         rewritten: BonsaiChangesetMut,
+        version: CommitSyncConfigVersion,
     ) -> Result<ChangesetId, Error> {
         let (source_repo, target_repo, _) = self.get_source_target_mover(&ctx)?;
 
@@ -1336,10 +1380,11 @@ where
 
         // update_mapping also updates working copy equivalence, so no need
         // to do it separately
-        update_mapping(
+        update_mapping_with_version(
             ctx.clone(),
             hashmap! { source_cs_id =>  target_cs_id},
             &self,
+            &version,
         )
         .await?;
         return Ok(target_cs_id);
