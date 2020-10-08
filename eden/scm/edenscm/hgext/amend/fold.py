@@ -131,8 +131,8 @@ def fold(ui, repo, *revs, **opts):
             else:
                 msgs = ["HG: This is a fold of %d changesets." % len(allctx)]
                 msgs += [
-                    "HG: Commit message of changeset %s.\n\n%s\n"
-                    % (c.rev(), c.description())
+                    "HG: Commit message of %s.\n\n%s\n"
+                    % (node.short(c.node()), c.description())
                     for c in allctx
                 ]
                 commitopts["message"] = "\n".join(msgs)

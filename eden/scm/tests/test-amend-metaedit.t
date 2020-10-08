@@ -122,11 +122,11 @@ Test
 
   $ HGEDITOR=cat hg metaedit '.^::.' --fold
   HG: This is a fold of 2 changesets.
-  HG: Commit message of changeset 6.
+  HG: Commit message of c2bd843aa246.
   
   E
   
-  HG: Commit message of changeset 8.
+  HG: Commit message of 212b2a2b87cd.
   
   F
   

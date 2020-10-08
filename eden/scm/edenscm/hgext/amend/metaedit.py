@@ -181,8 +181,8 @@ def metaedit(ui, repo, templ, *revs, **opts):
                 if opts["fold"]:
                     msgs = [_("HG: This is a fold of %d changesets.") % len(allctx)]
                     msgs += [
-                        _("HG: Commit message of changeset %s.\n\n%s\n")
-                        % (c.rev(), c.description())
+                        _("HG: Commit message of %s.\n\n%s\n")
+                        % (nodemod.short(c.node()), c.description())
                         for c in allctx
                     ]
                 else:
