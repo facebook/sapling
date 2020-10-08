@@ -8,7 +8,7 @@
 #![deny(warnings)]
 
 use anyhow::{format_err, Error};
-use blobstore::Blobstore;
+use blobstore::{Blobstore, PutBehaviour, DEFAULT_PUT_BEHAVIOUR};
 use bytes::{Bytes, BytesMut};
 use cacheblob::new_memcache_blobstore_no_lease;
 use clap::{App, Arg, ArgMatches, SubCommand};
@@ -183,6 +183,7 @@ async fn run_benchmark_filestore<'a>(
 async fn get_blob<'a>(
     fb: FacebookInit,
     matches: &'a ArgMatches<'a>,
+    put_behaviour: PutBehaviour,
 ) -> Result<Arc<dyn Blobstore>, Error> {
     let blob: Arc<dyn Blobstore> = match matches.subcommand() {
         (CMD_MANIFOLD, Some(sub)) => {
@@ -216,6 +217,7 @@ async fn get_blob<'a>(
                     ReadConnectionType::Replica,
                     shard_count,
                     false,
+                    put_behaviour,
                 )
                 .compat()
                 .await?
@@ -226,6 +228,7 @@ async fn get_blob<'a>(
                     shard_count,
                     ReadConnectionType::Replica,
                     false,
+                    put_behaviour,
                 )
                 .compat()
                 .await?
@@ -236,6 +239,7 @@ async fn get_blob<'a>(
                     ReadConnectionType::Replica,
                     shard_count,
                     false,
+                    put_behaviour,
                 )
                 .compat()
                 .await?
@@ -401,7 +405,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let mut runtime = tokio_compat::runtime::Runtime::new().map_err(Error::from)?;
 
-    let blob = runtime.block_on_std(get_blob(fb, &matches))?;
+    let blob = runtime.block_on_std(get_blob(fb, &matches, DEFAULT_PUT_BEHAVIOUR))?;
 
     runtime.block_on_std(run_benchmark_filestore(&ctx, &matches, blob))?;
 

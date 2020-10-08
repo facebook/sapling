@@ -24,14 +24,15 @@ use crate::myadmin_delay_dummy as myadmin_delay;
 use crate::store::{ChunkSqlStore, ChunkingMethod, DataSqlStore};
 use anyhow::{format_err, Error, Result};
 use blobstore::{
-    Blobstore, BlobstoreGetData, BlobstoreMetadata, BlobstoreWithLink, CountedBlobstore,
+    Blobstore, BlobstoreGetData, BlobstoreMetadata, BlobstorePutOps, BlobstoreWithLink,
+    CountedBlobstore, OverwriteStatus, PutBehaviour, DEFAULT_PUT_BEHAVIOUR,
 };
 use bytes::BytesMut;
 use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{
-    future::{self, BoxFuture, FutureExt},
+    future::{self, BoxFuture, FutureExt, TryFutureExt},
     stream::{FuturesOrdered, TryStreamExt},
 };
 use futures_ext::{try_boxfuture, BoxFuture as BoxFuture01, FutureExt as _};
@@ -65,6 +66,7 @@ pub type CountedSqlblob = CountedBlobstore<Sqlblob>;
 pub struct Sqlblob {
     data_store: Arc<DataSqlStore>,
     chunk_store: Arc<ChunkSqlStore>,
+    put_behaviour: PutBehaviour,
 }
 
 impl Sqlblob {
@@ -75,21 +77,28 @@ impl Sqlblob {
         read_con_type: ReadConnectionType,
         shard_num: NonZeroUsize,
         readonly: bool,
+        put_behaviour: PutBehaviour,
     ) -> BoxFuture01<CountedSqlblob, Error> {
         let delay = try_boxfuture!(myadmin_delay::sharded(fb, shardmap.clone(), shard_num));
-        Self::with_connection_factory(delay, shardmap.clone(), shard_num, move |shard_id| {
-            Ok(create_myrouter_connections(
-                shardmap.clone(),
-                Some(shard_id),
-                port,
-                read_con_type,
-                PoolSizeConfig::for_sharded_connection(),
-                "blobstore".into(),
-                readonly,
-            ))
-            .into_future()
-            .boxify()
-        })
+        Self::with_connection_factory(
+            delay,
+            shardmap.clone(),
+            shard_num,
+            put_behaviour,
+            move |shard_id| {
+                Ok(create_myrouter_connections(
+                    shardmap.clone(),
+                    Some(shard_id),
+                    port,
+                    read_con_type,
+                    PoolSizeConfig::for_sharded_connection(),
+                    "blobstore".into(),
+                    readonly,
+                ))
+                .into_future()
+                .boxify()
+            },
+        )
     }
 
     pub fn with_myrouter_unsharded(
@@ -98,12 +107,14 @@ impl Sqlblob {
         port: u16,
         read_con_type: ReadConnectionType,
         readonly: bool,
+        put_behaviour: PutBehaviour,
     ) -> BoxFuture01<CountedSqlblob, Error> {
         let delay = try_boxfuture!(myadmin_delay::single(fb, db_address.clone()));
         Self::with_connection_factory(
             delay,
             db_address.clone(),
             NonZeroUsize::new(1).expect("One should be greater than zero"),
+            put_behaviour,
             move |_shard_id| {
                 Ok(create_myrouter_connections(
                     db_address.clone(),
@@ -126,20 +137,27 @@ impl Sqlblob {
         shard_num: NonZeroUsize,
         read_con_type: ReadConnectionType,
         readonly: bool,
+        put_behaviour: PutBehaviour,
     ) -> BoxFuture01<CountedSqlblob, Error> {
         let delay = try_boxfuture!(myadmin_delay::sharded(fb, shardmap.clone(), shard_num));
-        Self::with_connection_factory(delay, shardmap.clone(), shard_num, move |shard_id| {
-            create_mysql_connections(
-                fb,
-                shardmap.clone(),
-                Some(shard_id),
-                read_con_type,
-                PoolSizeConfig::for_sharded_connection(),
-                readonly,
-            )
-            .into_future()
-            .boxify()
-        })
+        Self::with_connection_factory(
+            delay,
+            shardmap.clone(),
+            shard_num,
+            put_behaviour,
+            move |shard_id| {
+                create_mysql_connections(
+                    fb,
+                    shardmap.clone(),
+                    Some(shard_id),
+                    read_con_type,
+                    PoolSizeConfig::for_sharded_connection(),
+                    readonly,
+                )
+                .into_future()
+                .boxify()
+            },
+        )
     }
 
     pub fn with_mysql_unsharded(
@@ -147,12 +165,14 @@ impl Sqlblob {
         db_address: String,
         read_con_type: ReadConnectionType,
         readonly: bool,
+        put_behaviour: PutBehaviour,
     ) -> BoxFuture01<CountedSqlblob, Error> {
         let delay = try_boxfuture!(myadmin_delay::single(fb, db_address.clone()));
         Self::with_connection_factory(
             delay,
             db_address.clone(),
             NonZeroUsize::new(1).expect("One should be greater than zero"),
+            put_behaviour,
             move |_shard_id| {
                 create_mysql_connections(
                     fb,
@@ -174,17 +194,24 @@ impl Sqlblob {
         read_con_type: ReadConnectionType,
         shard_num: NonZeroUsize,
         readonly: bool,
+        put_behaviour: PutBehaviour,
     ) -> BoxFuture01<CountedSqlblob, Error> {
         let delay = try_boxfuture!(myadmin_delay::sharded(fb, shardmap.clone(), shard_num));
-        Self::with_connection_factory(delay, shardmap.clone(), shard_num, move |shard_id| {
-            create_raw_xdb_connections(
-                fb,
-                format!("{}.{}", shardmap, shard_id),
-                read_con_type,
-                readonly,
-            )
-            .boxify()
-        })
+        Self::with_connection_factory(
+            delay,
+            shardmap.clone(),
+            shard_num,
+            put_behaviour,
+            move |shard_id| {
+                create_raw_xdb_connections(
+                    fb,
+                    format!("{}.{}", shardmap, shard_id),
+                    read_con_type,
+                    readonly,
+                )
+                .boxify()
+            },
+        )
     }
 
     pub fn with_raw_xdb_unsharded(
@@ -192,12 +219,14 @@ impl Sqlblob {
         db_address: String,
         read_con_type: ReadConnectionType,
         readonly: bool,
+        put_behaviour: PutBehaviour,
     ) -> BoxFuture01<CountedSqlblob, Error> {
         let delay = try_boxfuture!(myadmin_delay::single(fb, db_address.clone()));
         Self::with_connection_factory(
             delay,
             db_address.clone(),
             NonZeroUsize::new(1).expect("One should be greater than zero"),
+            put_behaviour,
             move |_shard_id| {
                 create_raw_xdb_connections(fb, db_address.clone(), read_con_type, readonly).boxify()
             },
@@ -208,6 +237,7 @@ impl Sqlblob {
         delay: BlobDelay,
         label: String,
         shard_num: NonZeroUsize,
+        put_behaviour: PutBehaviour,
         connection_factory: impl Fn(usize) -> BoxFuture01<SqlConnections, Error>,
     ) -> BoxFuture01<CountedSqlblob, Error> {
         let shard_count = shard_num.get();
@@ -249,6 +279,7 @@ impl Sqlblob {
                             read_master_connections,
                             delay,
                         )),
+                        put_behaviour,
                     },
                     label,
                 )
@@ -257,7 +288,7 @@ impl Sqlblob {
     }
 
     pub fn with_sqlite_in_memory() -> Result<CountedSqlblob> {
-        Self::with_sqlite(|_| {
+        Self::with_sqlite(DEFAULT_PUT_BEHAVIOUR, |_| {
             let con = open_sqlite_in_memory()?;
             con.execute_batch(Self::CREATION_QUERY)?;
             Ok(con)
@@ -267,9 +298,10 @@ impl Sqlblob {
     pub fn with_sqlite_path<P: Into<PathBuf>>(
         path: P,
         readonly_storage: bool,
+        put_behaviour: PutBehaviour,
     ) -> Result<CountedSqlblob> {
         let pathbuf = path.into();
-        Self::with_sqlite(move |shard_id| {
+        Self::with_sqlite(put_behaviour, move |shard_id| {
             let con = open_sqlite_path(
                 &pathbuf.join(format!("shard_{}.sqlite", shard_id)),
                 readonly_storage,
@@ -281,7 +313,7 @@ impl Sqlblob {
         })
     }
 
-    fn with_sqlite<F>(mut constructor: F) -> Result<CountedSqlblob>
+    fn with_sqlite<F>(put_behaviour: PutBehaviour, mut constructor: F) -> Result<CountedSqlblob>
     where
         F: FnMut(usize) -> Result<SqliteConnection>,
     {
@@ -309,6 +341,7 @@ impl Sqlblob {
                     cons,
                     BlobDelay::dummy(SQLITE_SHARD_NUM),
                 )),
+                put_behaviour,
             },
             "sqlite".into(),
         ))
@@ -361,12 +394,35 @@ impl Blobstore for Sqlblob {
         .boxed()
     }
 
-    fn put(
+    fn is_present(
         &self,
         _ctx: CoreContext,
         key: String,
+    ) -> BoxFuture<'static, Result<bool, Error>> {
+        cloned!(self.data_store);
+        async move { data_store.is_present(&key).await }.boxed()
+    }
+
+    fn put(
+        &self,
+        ctx: CoreContext,
+        key: String,
         value: BlobstoreBytes,
     ) -> BoxFuture<'static, Result<(), Error>> {
+        BlobstorePutOps::put_with_status(self, ctx, key, value)
+            .map_ok(|_| ())
+            .boxed()
+    }
+}
+
+impl BlobstorePutOps for Sqlblob {
+    fn put_explicit(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+        put_behaviour: PutBehaviour,
+    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
         if key.as_bytes().len() > MAX_KEY_SIZE {
             return future::err(format_err!(
                 "Key {} exceeded max key size {}",
@@ -384,45 +440,67 @@ impl Blobstore for Sqlblob {
         };
 
         cloned!(self.data_store, self.chunk_store);
-        async move {
-            let chunks = value.as_bytes().chunks(CHUNK_SIZE);
-            let chunk_count = chunks.len().try_into()?;
-            for (chunk_num, value) in chunks.enumerate() {
-                chunk_store
-                    .put(
-                        chunk_key.as_str(),
-                        chunk_num.try_into()?,
-                        chunking_method,
-                        value,
-                    )
-                    .await?;
-            }
-            let ctime = {
-                match SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
-                    Ok(offset) => offset.as_secs().try_into(),
-                    Err(negative) => negative.duration().as_secs().try_into().map(|v: i64| -v),
+        let put_fut = {
+            cloned!(key);
+            async move {
+                let chunks = value.as_bytes().chunks(CHUNK_SIZE);
+                let chunk_count = chunks.len().try_into()?;
+                for (chunk_num, value) in chunks.enumerate() {
+                    chunk_store
+                        .put(
+                            chunk_key.as_str(),
+                            chunk_num.try_into()?,
+                            chunking_method,
+                            value,
+                        )
+                        .await?;
                 }
-            }?;
-            data_store
-                .put(
-                    &key,
-                    ctime,
-                    chunk_key.as_str(),
-                    chunk_count,
-                    chunking_method,
-                )
-                .await
+                let ctime = {
+                    match SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
+                        Ok(offset) => offset.as_secs().try_into(),
+                        Err(negative) => negative.duration().as_secs().try_into().map(|v: i64| -v),
+                    }
+                }?;
+                let res = data_store
+                    .put(
+                        &key,
+                        ctime,
+                        chunk_key.as_str(),
+                        chunk_count,
+                        chunking_method,
+                    )
+                    .await;
+                res.map(|()| OverwriteStatus::NotChecked)
+            }
+            .boxed()
+        };
+
+        match put_behaviour {
+            PutBehaviour::Overwrite => put_fut,
+            PutBehaviour::IfAbsent | PutBehaviour::OverwriteAndLog => {
+                let exists = self.is_present(ctx, key);
+                async move {
+                    if exists.await? {
+                        if put_behaviour.should_overwrite() {
+                            put_fut.await?;
+                            Ok(OverwriteStatus::Overwrote)
+                        } else {
+                            // discard the put
+                            let _ = put_fut;
+                            Ok(OverwriteStatus::Prevented)
+                        }
+                    } else {
+                        put_fut.await?;
+                        Ok(OverwriteStatus::New)
+                    }
+                }
+                .boxed()
+            }
         }
-        .boxed()
     }
 
-    fn is_present(
-        &self,
-        _ctx: CoreContext,
-        key: String,
-    ) -> BoxFuture<'static, Result<bool, Error>> {
-        cloned!(self.data_store);
-        async move { data_store.is_present(&key).await }.boxed()
+    fn put_behaviour(&self) -> PutBehaviour {
+        self.put_behaviour
     }
 }
 

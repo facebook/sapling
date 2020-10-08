@@ -105,9 +105,13 @@ pub fn make_blobstore<'a>(
                 .context(ErrorKind::StateOpen)
                 .map(|store| Arc::new(store) as Arc<dyn Blobstore>)?,
 
-            Sqlite { path } => Sqlblob::with_sqlite_path(path.join("blobs"), readonly_storage.0)
-                .context(ErrorKind::StateOpen)
-                .map(|store| Arc::new(store) as Arc<dyn Blobstore>)?,
+            Sqlite { path } => Sqlblob::with_sqlite_path(
+                path.join("blobs"),
+                readonly_storage.0,
+                blobstore_options.put_behaviour,
+            )
+            .context(ErrorKind::StateOpen)
+            .map(|store| Arc::new(store) as Arc<dyn Blobstore>)?,
 
             Mysql { remote } => match remote {
                 ShardableRemoteDatabaseConfig::Unsharded(config) => {
@@ -120,6 +124,7 @@ pub fn make_blobstore<'a>(
                                 myrouter_port,
                                 read_conn_type,
                                 readonly_storage.0,
+                                blobstore_options.put_behaviour,
                             )
                             .compat()
                             .await
@@ -130,6 +135,7 @@ pub fn make_blobstore<'a>(
                                 config.db_address,
                                 read_conn_type,
                                 readonly_storage.0,
+                                blobstore_options.put_behaviour,
                             )
                             .compat()
                             .await
@@ -140,6 +146,7 @@ pub fn make_blobstore<'a>(
                                 config.db_address,
                                 read_conn_type,
                                 readonly_storage.0,
+                                blobstore_options.put_behaviour,
                             )
                             .compat()
                             .await
@@ -157,6 +164,7 @@ pub fn make_blobstore<'a>(
                                 read_conn_type,
                                 config.shard_num,
                                 readonly_storage.0,
+                                blobstore_options.put_behaviour,
                             )
                             .compat()
                             .await
@@ -168,6 +176,7 @@ pub fn make_blobstore<'a>(
                                 config.shard_num,
                                 read_conn_type,
                                 readonly_storage.0,
+                                blobstore_options.put_behaviour,
                             )
                             .compat()
                             .await
@@ -179,6 +188,7 @@ pub fn make_blobstore<'a>(
                                 read_conn_type,
                                 config.shard_num,
                                 readonly_storage.0,
+                                blobstore_options.put_behaviour,
                             )
                             .compat()
                             .await
