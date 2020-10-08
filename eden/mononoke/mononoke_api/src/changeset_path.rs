@@ -562,15 +562,15 @@ pub enum UnifiedDiffMode {
 /// generates a placeholder diff that says that files differ.
 pub async fn unified_diff(
     // The diff applied to old_path with produce new_path
-    old_path: &Option<ChangesetPathContext>,
-    new_path: &Option<ChangesetPathContext>,
+    old_path: Option<&ChangesetPathContext>,
+    new_path: Option<&ChangesetPathContext>,
     copy_info: CopyInfo,
     context_lines: usize,
     mode: UnifiedDiffMode,
 ) -> Result<UnifiedDiff, MononokeError> {
     // Helper for getting file information.
     async fn get_file_data(
-        path: &Option<ChangesetPathContext>,
+        path: Option<&ChangesetPathContext>,
         mode: UnifiedDiffMode,
     ) -> Result<Option<xdiff::DiffFile<String, Bytes>>, MononokeError> {
         match path {
@@ -609,10 +609,8 @@ pub async fn unified_diff(
         }
     }
 
-    let (old_diff_file, new_diff_file) = try_join!(
-        get_file_data(&old_path, mode),
-        get_file_data(&new_path, mode)
-    )?;
+    let (old_diff_file, new_diff_file) =
+        try_join!(get_file_data(old_path, mode), get_file_data(new_path, mode))?;
     let is_binary = xdiff::file_is_binary(&old_diff_file) || xdiff::file_is_binary(&new_diff_file);
     let copy_info = match copy_info {
         CopyInfo::None => xdiff::CopyInfo::None,

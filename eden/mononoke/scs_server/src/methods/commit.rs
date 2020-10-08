@@ -257,32 +257,26 @@ impl SourceControlServiceImpl {
             .into_iter()
             .map(|(base_path, other_path, copy_info, mode)| {
                 let base_path = match base_path {
-                    Some(base_path) => Some(
-                        base_commit_contexts
-                            .get(&base_path)
-                            .cloned()
-                            .ok_or_else(|| {
-                                errors::invalid_request(format!(
-                                    "{} not found in {:?}",
-                                    base_path, commit
-                                ))
-                            })?,
-                    ),
+                    Some(base_path) => {
+                        Some(base_commit_contexts.get(&base_path).ok_or_else(|| {
+                            errors::invalid_request(format!(
+                                "{} not found in {:?}",
+                                base_path, commit
+                            ))
+                        })?)
+                    }
                     None => None,
                 };
 
                 let other_path = match other_path {
-                    Some(other_path) => Some(
-                        other_commit_contexts
-                            .get(&other_path)
-                            .cloned()
-                            .ok_or_else(|| {
-                                errors::invalid_request(format!(
-                                    "{} not found in {:?}",
-                                    other_path, other_commit
-                                ))
-                            })?,
-                    ),
+                    Some(other_path) => {
+                        Some(other_commit_contexts.get(&other_path).ok_or_else(|| {
+                            errors::invalid_request(format!(
+                                "{} not found in {:?}",
+                                other_path, other_commit
+                            ))
+                        })?)
+                    }
                     None => None,
                 };
 
@@ -318,7 +312,7 @@ impl SourceControlServiceImpl {
         let path_diffs = future::try_join_all(paths.into_iter().map(
             |(base_path, other_path, copy_info, mode)| async move {
                 let diff =
-                    unified_diff(&other_path, &base_path, copy_info, context_lines, mode).await?;
+                    unified_diff(other_path, base_path, copy_info, context_lines, mode).await?;
                 let r: Result<_, errors::ServiceError> =
                     Ok(thrift::CommitFileDiffsResponseElement {
                         base_path: base_path.map(|p| p.path().to_string()),
