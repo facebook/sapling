@@ -114,7 +114,7 @@ class bmstore(dict):
                             # - bookmarks are loaded
                             #
                             # Try to mitigate by reloading changelog.
-                            repo.invalidate(clearfilecache=True)
+                            repo.invalidate()
                             nm = repo.changelog.nodemap
                             if node in nm:
                                 refspec = encoding.tolocal(refspec)
