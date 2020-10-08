@@ -193,7 +193,7 @@
   $ hg debugfilerev -r $A
   267e8be81b24: A
    A: bin=0 lnk=0 flag=2000 size=11 copied='' chain=7d8ad6217b8a
-  $ hg debugfilerev -r 1
+  $ hg debugfilerev -r 'desc(Move)'
   1c06a42dc98f: Move A -> B
    B: bin=0 lnk=0 flag=2000 size=11 copied='A' chain=bf5e569e3cba
   $ hg log -f B -G -T '{desc}\n'

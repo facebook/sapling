@@ -78,7 +78,7 @@ While that is getting started, create a new commit locally.
   visibility: read 1 heads: df4f53cec30a
   visibility: removed 1 heads [df4f53cec30a]; added 1 heads [1292cc1f1c17]
   visibility: wrote 1 heads: 1292cc1f1c17
-  $ hg up -q 0
+  $ hg up -q 'desc(base)'
   visibility: read 1 heads: 1292cc1f1c17
   $ tglogp
   visibility: read 1 heads: 1292cc1f1c17

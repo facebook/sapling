@@ -33,11 +33,11 @@
   > EOF
 
 # Test repacking shared manifest packs
-  $ hg up -q -r 0
+  $ hg up -q -r 1f0dee641bb7258c56bd60e93edfa2405381c41e
   fetching tree '' a0c8bcbbb45c63b90b70ad007bf38961f64f2af0, found via 1f0dee641bb7
   1 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
-  $ hg up -q -r 1
+  $ hg up -q -r 'max(desc(add))'
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   fetching tree '' 1832e0765de95635a71dc8f6ed96a1adb824ae13, found via 8e83608cbe60
   2 trees fetched over * (glob)
@@ -120,7 +120,7 @@
   23226e7a252c  000000000000  000000000000  8e83608cbe60  
 
 # Test repacking local manifest packs
-  $ hg up -q 1
+  $ hg up -q 'max(desc(add))'
   $ echo a >> a && hg commit -Aqm 'modify a'
   $ echo b >> dir/b && hg commit -Aqm 'modify dir/b'
   $ ls_l .hg/store/packs/manifests | grep datapack

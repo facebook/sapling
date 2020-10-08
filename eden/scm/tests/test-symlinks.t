@@ -148,7 +148,7 @@ import git symlink diff
   $ hg commit -m'remove link'
   $ hg import ../sl.diff
   applying ../sl.diff
-  $ hg diff --git -r 1:tip
+  $ hg diff --git -r 'desc(remove)':tip
   diff --git a/a/b/c/demo b/a/b/c/demo
   new file mode 120000
   --- /dev/null
@@ -245,7 +245,7 @@ modifying link
 
 reverting to rev 0:
 
-  $ hg revert -r 0 -a
+  $ hg revert -r 'desc(add)' -a
   reverting dangling
   $ readlink.py dangling
   dangling -> nothing

@@ -44,11 +44,11 @@
   1 trees fetched over * (glob)
 
 # Pack a mix of packfiles and loosefiles into one packfile
-  $ hg prefetch -r 0
+  $ hg prefetch -r b292c1e3311fd0f13ae83b409caae4a6d1fb348c
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   fetching tree '' bc0c2c938b929f98b1c31a8c5994396ebb096bf0, found via 5b09780a1d28
   1 trees fetched over * (glob)
-  $ hg prefetch -r 2
+  $ hg prefetch -r 'desc(x3)'
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   fetching tree '' 615617b8ad27e7af719356339ad7447262cd80e9, found via 5b09780a1d28
   1 trees fetched over * (glob)

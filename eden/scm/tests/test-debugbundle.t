@@ -9,14 +9,14 @@ Create a test repository:
   $ touch a ; hg add a ; hg ci -ma
   $ touch b ; hg add b ; hg ci -mb
   $ touch c ; hg add c ; hg ci -mc
-  $ hg bundle --base 0 --rev tip bundle.hg -v
+  $ hg bundle --base 'desc(a)' --rev tip bundle.hg -v
   2 changesets found
   uncompressed size of bundle content:
        344 (changelog)
        322 (manifests)
        113  b
        113  c
-  $ hg bundle --base 0 --rev tip bundle2.hg -v --type none-v2
+  $ hg bundle --base 'desc(a)' --rev tip bundle2.hg -v --type none-v2
   2 changesets found
   uncompressed size of bundle content:
        344 (changelog)

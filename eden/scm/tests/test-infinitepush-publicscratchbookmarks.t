@@ -63,7 +63,7 @@ Check the server data is correct.
 
 Make another public scratch bookmark on an older commit.
 
-  $ hg up -q 0
+  $ hg up -q 'desc(base)'
   $ hg push --to scratch/other --create -r .
   pushing to ssh://user@dummy/server
   searching for changes
@@ -113,11 +113,11 @@ Try again with --non-forward-move.
 
 Move the two bookmarks back to a public commit.
 
-  $ hg push --to scratch/public --non-forward-move -r 0
+  $ hg push --to scratch/public --non-forward-move -r 'desc(base)'
   pushing to ssh://user@dummy/server
   searching for changes
   remote: pushing 0 commits:
-  $ hg push --to scratch/other --non-forward-move -r 1
+  $ hg push --to scratch/other --non-forward-move -r 'desc(commit1)'
   pushing to ssh://user@dummy/server
   searching for changes
   remote: pushing 0 commits:

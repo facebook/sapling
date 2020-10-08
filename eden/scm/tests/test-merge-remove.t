@@ -12,7 +12,7 @@
   $ echo bleh > bar
   $ hg ci -m 'change foo bar'
 
-  $ hg up -qC 0
+  $ hg up -qC 'desc(add)'
   $ hg mv foo foo1
   $ echo foo1 > foo1
   $ hg cat foo >> foo1

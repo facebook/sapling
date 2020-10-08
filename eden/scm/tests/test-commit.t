@@ -317,7 +317,7 @@ Issue1049: Hg permits partial commit of merge without warning
   adding a
   $ echo a >> a
   $ hg ci -mb
-  $ hg up 0
+  $ hg up 'desc(a)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo b >> a
   $ hg ci -mc

@@ -78,7 +78,7 @@ coherent (issue4353)
   $ hg commit -m 'rm a'
   $ echo "[extensions]" >> .hg/hgrc
   $ echo "dirstateex=../dirstateexception.py" >> .hg/hgrc
-  $ hg up 0
+  $ hg up 'desc(1)'
   abort: simulated error while recording dirstateupdates
   [255]
   $ hg log -r . -T '{node}\n'

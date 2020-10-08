@@ -143,7 +143,7 @@ Test checkheadshook alias
 We can fix the head and push again
 
   $ cp -R $TESTTMP/main $TESTTMP/main2
-  $ hg up 6
+  $ hg up 'max(desc(CRLF))'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ printf "first\nsecond" > b.txt
   $ hg ci -m "remove CRLF from b.txt"
@@ -176,7 +176,7 @@ Test it still fails with checkallhook
 
 But we can push the clean head
 
-  $ hg push -r7 -f ../main
+  $ hg push -r30c39c63b167239abaa458e80faa966631b089d6 -f ../main
   pushing to ../main
   searching for changes
   adding changesets

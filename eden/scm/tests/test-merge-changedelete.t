@@ -44,7 +44,7 @@ Make sure HGMERGE doesn't interfere with the test
   $ echo changed1 >> file3
   $ hg ci -m 'removed file1, changed file2, changed file3'
 
-  $ hg co 0
+  $ hg co 'desc(added)'
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ echo changed >> file1
@@ -748,11 +748,11 @@ invocations.)
 
 Non-interactive linear update
 
-  $ hg co -C 0
+  $ hg co -C 'desc(added)'
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo changed >> file1
   $ hg rm file2
-  $ hg update 1 -y
+  $ hg update 10f9a0a634e82080907e62f075ab119cbc565ea6 -y
   local [working copy] changed file1 which other [destination] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? u
   other [destination] changed file2 which local [working copy] deleted
@@ -797,11 +797,11 @@ Non-interactive linear update
 
 Choose local versions of files
 
-  $ hg co -C 0
+  $ hg co -C 'desc(added)'
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo changed >> file1
   $ hg rm file2
-  $ hg update 1 --tool :local
+  $ hg update 10f9a0a634e82080907e62f075ab119cbc565ea6 --tool :local
   1 files updated, 2 files merged, 0 files removed, 0 files unresolved
   $ status 2>&1 | tee $TESTTMP/local.status
   --- status ---
@@ -838,11 +838,11 @@ Choose local versions of files
 
 Choose other versions of files
 
-  $ hg co -C 0
+  $ hg co -C 'desc(added)'
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo changed >> file1
   $ hg rm file2
-  $ hg update 1 --tool :other
+  $ hg update 10f9a0a634e82080907e62f075ab119cbc565ea6 --tool :other
   1 files updated, 1 files merged, 1 files removed, 0 files unresolved
   $ status 2>&1 | tee $TESTTMP/other.status
   --- status ---
@@ -879,11 +879,11 @@ Choose other versions of files
 
 Fail
 
-  $ hg co -C 0
+  $ hg co -C 'desc(added)'
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo changed >> file1
   $ hg rm file2
-  $ hg update 1 --tool :fail
+  $ hg update 10f9a0a634e82080907e62f075ab119cbc565ea6 --tool :fail
   1 files updated, 0 files merged, 0 files removed, 2 files unresolved
   use 'hg resolve' to retry unresolved file merges
   [1]
@@ -924,11 +924,11 @@ Fail
 
 Force prompts with no input
 
-  $ hg co -C 0
+  $ hg co -C 'desc(added)'
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo changed >> file1
   $ hg rm file2
-  $ hg update 1 --config ui.interactive=True --tool :prompt
+  $ hg update 10f9a0a634e82080907e62f075ab119cbc565ea6 --config ui.interactive=True --tool :prompt
   local [working copy] changed file1 which other [destination] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? 
   other [destination] changed file2 which local [working copy] deleted
@@ -974,11 +974,11 @@ Force prompts with no input
 
 Choose to merge all files
 
-  $ hg co -C 0
+  $ hg co -C 'desc(added)'
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo changed >> file1
   $ hg rm file2
-  $ hg update 1 --tool :merge3
+  $ hg update 10f9a0a634e82080907e62f075ab119cbc565ea6 --tool :merge3
   local [working copy] changed file1 which other [destination] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? u
   other [destination] changed file2 which local [working copy] deleted

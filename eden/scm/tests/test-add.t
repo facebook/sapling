@@ -95,7 +95,7 @@ should fail
 
   $ echo aa > a
   $ hg ci -m 1
-  $ hg up 0
+  $ hg up 'desc(0)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo aaa > a
   $ hg ci -m 2

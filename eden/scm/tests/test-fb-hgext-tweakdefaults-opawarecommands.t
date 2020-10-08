@@ -17,7 +17,7 @@ Check amend metadata
 
 Check rebase metadata
   $ hg book -r . destination
-  $ hg up 0
+  $ hg up 'desc(root)'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo b > b && hg ci -Am b
   adding b

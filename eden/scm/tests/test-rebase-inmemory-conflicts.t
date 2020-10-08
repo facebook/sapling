@@ -31,7 +31,7 @@ Make conflicts halfway up the stack:
   $ hg amend -q
   $ hg rebase -q -s g -d .
   rebasing in-memory!
-  $ hg log -G -r 0:: -T '{desc}'
+  $ hg log -G -r 'desc(a)':: -T '{desc}'
   o  g
   |
   @  f
@@ -67,7 +67,7 @@ Make conflicts halfway up the stack:
   already rebased 881eb15e0fdf "e" (e) as d82c41319fdd
   rebasing e692c3b32196 "f" (f)
   rebasing 2a19607ff85c "g" (g)
-  $ hg log -G -r 0:: -T '{desc} {node|short}'
+  $ hg log -G -r 'desc(a)':: -T '{desc} {node|short}'
   o  g 24c12a3229e2
   |
   @  f c33e7f678afd

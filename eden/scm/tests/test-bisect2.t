@@ -47,7 +47,7 @@ committing changes
 
 create branch
 
-  $ hg up -r 2
+  $ hg up -r 'desc(2)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo '5' >> b
   $ hg add b
@@ -62,7 +62,7 @@ merge
 
 create branch
 
-  $ hg up -r 4
+  $ hg up -r 5c668c22234f28603c6fabce397f632adfbd3d21
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo '7' > c
   $ hg add c
@@ -70,7 +70,7 @@ create branch
 
 create branch
 
-  $ hg up -r 1
+  $ hg up -r 'desc(1)'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo '8' > d
   $ hg add d
@@ -80,14 +80,14 @@ create branch
 
 merge
 
-  $ hg merge -r 6
+  $ hg merge -r 'desc(merge)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg ci -m "merge 6,9" -d "10 0"
 
 create branch
 
-  $ hg up -r 8
+  $ hg up -r 'desc(8)'
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo '11' > e
   $ hg add e
@@ -99,7 +99,7 @@ create branch
 
 create branch
 
-  $ hg up -r 11
+  $ hg up -r 'desc(11)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo '14' > f
   $ hg add f
@@ -107,9 +107,9 @@ create branch
 
 merge
 
-  $ hg up -r 13 -C
+  $ hg up -r 'desc(13)' -C
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ hg merge -r 10
+  $ hg merge -r 'max(desc(merge))'
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg ci -m "merge 10,13" -d "15 0"
@@ -120,7 +120,7 @@ merge
 
 create branch
 
-  $ hg up -r 15
+  $ hg up -r 'max(desc(merge))'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo '18' >> e
   $ hg ci -m "18" -d "18 0"
@@ -234,8 +234,8 @@ hg up -C
 complex bisect test 1  # first bad rev is 9
 
   $ hg bisect -r
-  $ hg bisect -g 0
-  $ hg bisect -b 17   # -> update to rev 6
+  $ hg bisect -g 33b1f9bc8bc58c05855524ce9c1a69d916ac05f2
+  $ hg bisect -b 'desc(17)'   # -> update to rev 6
   Testing changeset a214d5d3811a (15 changesets remaining, ~3 tests)
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg log -q -r 'bisect(pruned)'
@@ -332,8 +332,8 @@ complex bisect test 1  # first bad rev is 9
 complex bisect test 2  # first good rev is 13
 
   $ hg bisect -r
-  $ hg bisect -g 18
-  $ hg bisect -b 1    # -> update to rev 6
+  $ hg bisect -g 'desc(18)'
+  $ hg bisect -b 4ca5088da21701957c69801038a68cbf7b5e8dad    # -> update to rev 6
   Testing changeset a214d5d3811a (13 changesets remaining, ~3 tests)
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg bisect -s      # -> update to rev 10
@@ -396,8 +396,8 @@ first bad rev is 15
 10,9,13 are skipped an might be the first bad revisions as well
 
   $ hg bisect -r
-  $ hg bisect -g 1
-  $ hg bisect -b 16   # -> update to rev 6
+  $ hg bisect -g 4ca5088da21701957c69801038a68cbf7b5e8dad
+  $ hg bisect -b 'desc(16)'   # -> update to rev 6
   Testing changeset a214d5d3811a (13 changesets remaining, ~3 tests)
   2 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg log -q -r 'bisect(pruned)'
@@ -478,8 +478,8 @@ first good revision is 17
 15,16 are skipped an might be the first good revisions as well
 
   $ hg bisect -r
-  $ hg bisect -g 17
-  $ hg bisect -b 8    # -> update to rev 10
+  $ hg bisect -g 'desc(17)'
+  $ hg bisect -b dab8161ac8fcc3eb808566eaf0641410a54606a8    # -> update to rev 10
   Testing changeset b0a32c86eb31 (8 changesets remaining, ~3 tests)
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg bisect -b      # -> update to rev 13
@@ -570,8 +570,8 @@ first good revision is 17
 test unrelated revs:
 
   $ hg bisect --reset
-  $ hg bisect -b 7
-  $ hg bisect -g 14
+  $ hg bisect -b 50c76098bbf264a3c9408288f17423717fab2745
+  $ hg bisect -g 'desc(14)'
   abort: starting revisions are not directly related
   [255]
   $ hg log -q -r 'bisect(range)'
@@ -588,8 +588,8 @@ test unrelated revs:
 end at merge: 17 bad, 11 good (but 9 is first bad)
 
   $ hg bisect -r
-  $ hg bisect -b 17
-  $ hg bisect -g 11
+  $ hg bisect -b 'desc(17)'
+  $ hg bisect -g 'desc(11)'
   Testing changeset b0a32c86eb31 (5 changesets remaining, ~2 tests)
   3 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg log -q -r 'bisect(ignored)'
@@ -731,14 +731,14 @@ end at merge: 17 bad, 11 good (but 9 is first bad)
 user adds irrelevant but consistent information (here: -g 2) to bisect state
 
   $ hg bisect -r
-  $ hg bisect -b 13
-  $ hg bisect -g 8
+  $ hg bisect -b b0a32c86eb31bca576abd0b987b80b03a460a940
+  $ hg bisect -g dab8161ac8fcc3eb808566eaf0641410a54606a8
   Testing changeset 82ca6f06eccd (3 changesets remaining, ~1 tests)
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -q -r 'bisect(untested)'
   82ca6f06eccd
   9f259202bbe7
-  $ hg bisect -g 2
+  $ hg bisect -g 051e12f87bf18d19c780aadf5a08554100cfa07a
   Testing changeset 82ca6f06eccd (3 changesets remaining, ~1 tests)
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -q -r 'bisect(untested)'

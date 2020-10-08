@@ -82,7 +82,7 @@ Check singlepublicbase
   $ hg log -r . --template "{singlepublicbase}\n"
   
 
-  $ hg debugmakepublic -r ::2
+  $ hg debugmakepublic -r ::2480b7b497e0af879a40a0d4d960ceb748d27085
 
   $ hg log -r . --template "{singlepublicbase}\n"
   2480b7b497e0af879a40a0d4d960ceb748d27085

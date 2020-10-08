@@ -28,12 +28,12 @@
   $ hg ci -d '1 0' -qAm '1: add bar quux; copy foo to copied'
   $ echo >> foo
   $ hg ci -d '2 0' -m '2: change foo'
-  $ hg up -qC 1
+  $ hg up -qC 61e22ca76c3b3e93df20338c4e02ce286898e825
   $ echo >> bar
   $ echo >> quux
   $ hg ci -d '3 0' -m '3: change bar quux'
-  $ hg up -qC 2
-  $ hg merge -qr 3
+  $ hg up -qC 59e1ab45c888289513b7354484dac8a88217beab
+  $ hg merge -qr af455ce4166b3c9c88e6309c2b9332171dcea595
   $ echo >> bar
   $ echo >> baz
   $ hg ci -d '4 0' -m '4: first merge; change bar baz'
@@ -41,12 +41,12 @@
   $ echo 1 >> baz
   $ echo >> quux
   $ hg ci -d '5 0' -m '5: change bar baz quux'
-  $ hg up -qC 4
+  $ hg up -qC cf908b3eeedc301c9272ebae931da966d5b326c7
   $ echo >> foo
   $ echo 2 >> baz
   $ hg ci -d '6 0' -m '6: change foo baz'
-  $ hg up -qC 5
-  $ hg merge -qr 6
+  $ hg up -qC 34a3d65699bfbc2d97d2c85929e1798ea6cebc62
+  $ hg merge -qr df0642fe0a049507246c5572234aebb5b1b8356a
   $ echo >> bar
   $ hg ci -d '7 0' -m '7: second merge; change bar'
   $ echo >> foo
@@ -399,11 +399,11 @@ test anonymous branch pruning
   adding b
   $ echo a >> a
   $ hg ci -m changea
-  $ hg up 0
+  $ hg up 'desc(add)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo b >> b
   $ hg ci -m changeb
-  $ hg up 1
+  $ hg up 'desc(changea)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg merge
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -481,7 +481,7 @@ test converting merges into a repo that contains other files
   $ cd merge-test1
   $ touch a && hg commit -Aqm 'add a'
   $ echo a > a && hg commit -Aqm 'edit a'
-  $ hg up -q 0
+  $ hg up -q 'desc(add)'
   $ touch b && hg commit -Aqm 'add b'
   $ hg merge -q 1 && hg commit -qm 'merge a & b'
 
@@ -551,7 +551,7 @@ example because filemap changed.
   $ cd cleanp2
   $ touch f f1 f2 && hg ci -Aqm '0'
   $ echo f1 > f1 && echo >> f && hg ci -m '1'
-  $ hg up -qr0 && echo f2 > f2 && echo >> f && hg ci -qm '2'
+  $ hg up -qr'desc(0)' && echo f2 > f2 && echo >> f && hg ci -qm '2'
   $ echo "include f" > filemap
   $ hg convert --filemap filemap .
   assuming destination .-hg

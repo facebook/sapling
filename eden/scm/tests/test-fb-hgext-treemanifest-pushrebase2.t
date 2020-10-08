@@ -93,7 +93,7 @@ Push treeonly merge commit to a treeonly server
   $ mkdir -p mydir/subdir
   $ echo X >> mydir/subdir/file2
   $ hg commit -Aqm "Edit file2"
-  $ hg merge -q 5
+  $ hg merge -q a1d68bae23eec4b7da0c641c0564dee472c8dbf3
   $ hg commit -m "Merge 2"
   $ hg push --to foo ssh://user@dummy/server 2>&1
   pushing rev b634a5228cef to destination ssh://user@dummy/server bookmark foo

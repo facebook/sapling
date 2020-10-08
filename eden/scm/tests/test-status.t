@@ -363,7 +363,7 @@ Assert flag1 flag2 [0-same | 1-different]
 
 hg status --change 1:
 
-  $ hg status --change 1
+  $ hg status --change 'desc(test)'
   M modified
   A added
   A copied
@@ -371,11 +371,11 @@ hg status --change 1:
 
 hg status --change 1 unrelated:
 
-  $ hg status --change 1 unrelated
+  $ hg status --change 'desc(test)' unrelated
 
 hg status -C --change 1 added modified copied removed deleted:
 
-  $ hg status -C --change 1 added modified copied removed deleted
+  $ hg status -C --change 'desc(test)' added modified copied removed deleted
   M modified
   A added
   A copied
@@ -406,19 +406,19 @@ hg status with --rev and reverted changes:
 
 reverted file should appear clean
 
-  $ hg revert -r 0 .
+  $ hg revert -r 'desc(a)' .
   reverting file
-  $ hg status -A --rev 0
+  $ hg status -A --rev 'desc(a)'
   C file
 
 #if execbit
 reverted file with changed flag should appear modified
 
   $ chmod +x file
-  $ hg status -A --rev 0
+  $ hg status -A --rev 'desc(a)'
   M file
 
-  $ hg revert -r 0 .
+  $ hg revert -r 'desc(a)' .
   reverting file
 
 reverted and committed file with changed flag should appear modified
@@ -448,12 +448,12 @@ hg status of binary file starting with '\1\n', a separator for metadata:
   $ hg status -A
   M 010a
   $ hg ci -q -m 'modify 010a'
-  $ hg status -A --rev 0:1
+  $ hg status -A --rev 'desc(initial)':'desc(modify)'
   M 010a
 
   $ touch empty
   $ hg ci -q -A -m 'add another file'
-  $ hg status -A --rev 1:2 010a
+  $ hg status -A --rev 'desc(modify)':'desc(add)' 010a
   C 010a
 
   $ cd ..
@@ -472,7 +472,7 @@ only known on target revision.
   $ hg add 1/2/3/4/5/b.txt
   $ hg commit -m '#1'
 
-  $ hg update -C 0 > /dev/null
+  $ hg update -C 10edc5093fbb6ac8a9eea22a09d22f54188ab09b > /dev/null
   $ hg status -A
   C a.txt
 
@@ -481,16 +481,16 @@ because directory existence prevents 'dirstate.walk()' from showing
 warning message about such pattern.
 
   $ test ! -d 1
-  $ hg status -A --rev 1 1/2/3/4/5/b.txt
+  $ hg status -A --rev ee72294a8de6a26660665d7de06754da195b361c 1/2/3/4/5/b.txt
   R 1/2/3/4/5/b.txt
-  $ hg status -A --rev 1 1/2/3/4/5
+  $ hg status -A --rev ee72294a8de6a26660665d7de06754da195b361c 1/2/3/4/5
   R 1/2/3/4/5/b.txt
-  $ hg status -A --rev 1 1/2/3
+  $ hg status -A --rev ee72294a8de6a26660665d7de06754da195b361c 1/2/3
   R 1/2/3/4/5/b.txt
-  $ hg status -A --rev 1 1
+  $ hg status -A --rev ee72294a8de6a26660665d7de06754da195b361c 1
   R 1/2/3/4/5/b.txt
 
-  $ hg status --config ui.formatdebug=True --rev 1 1
+  $ hg status --config ui.formatdebug=True --rev ee72294a8de6a26660665d7de06754da195b361c 1
   status = [
       {*'path': '1/2/3/4/5/b.txt'*}, (glob)
   ]

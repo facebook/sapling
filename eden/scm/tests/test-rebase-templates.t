@@ -22,7 +22,7 @@ Setup
   
 Getting the JSON output for nodechanges
 
-  $ hg rebase -s 2 -d 0 -q -Tjson
+  $ hg rebase -s 28ad74487de9599d00d81085be739c61fc340652 -d 18d04c59bb5d2d4090ad9a5b59bd6274adb63add -q -Tjson
   json (no-eol)
 
   $ hg log -G -T "{node|short} {desc}"
@@ -34,7 +34,7 @@ Getting the JSON output for nodechanges
   |/
   o  18d04c59bb5d Added a
   
-  $ hg rebase -s 1 -d 5 -q -T "{nodechanges|json}"
+  $ hg rebase -s 29becc82797a4bc11ec8880b58eaecd2ab3e7760 -d 'max(desc(Added))' -q -T "{nodechanges|json}"
   {"29becc82797a4bc11ec8880b58eaecd2ab3e7760": ["d9d6773efc831c274eace04bc13e8e6412517139"]} (no-eol)
 
   $ hg log -G -T "{node|short} {desc}"
@@ -47,10 +47,10 @@ Getting the JSON output for nodechanges
   o  18d04c59bb5d Added a
   
 
-  $ hg rebase -s 6 -d 4 -q -T "{nodechanges % '{oldnode}:{newnodes % ' {newnode}'}'}"
+  $ hg rebase -s 'max(desc(Added))' -d 849767420fd5519cf0026232411a943ed03cc9fb -q -T "{nodechanges % '{oldnode}:{newnodes % ' {newnode}'}'}"
   d9d6773efc831c274eace04bc13e8e6412517139: f48cd65c6dc3d2acb55da54402a5b029546e546f (no-eol)
 
-  $ hg rebase -s 4 -d 4 -q -T "{nodechanges}"
+  $ hg rebase -s 849767420fd5519cf0026232411a943ed03cc9fb -d 849767420fd5519cf0026232411a943ed03cc9fb -q -T "{nodechanges}"
   abort: source and destination form a cycle
   [255]
 

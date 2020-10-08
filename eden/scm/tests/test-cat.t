@@ -15,14 +15,14 @@
   $ echo 1 > b
   $ hg ci -m m
   $ echo 2 > b
-  $ hg cat -r 0 a
+  $ hg cat -r 9e16845058722867cade99889e97fc5ef64ddf5a a
   0
-  $ hg cat -r 0 b
+  $ hg cat -r 9e16845058722867cade99889e97fc5ef64ddf5a b
   0
-  $ hg cat -r 1 a
+  $ hg cat -r 'max(desc(m))' a
   a: no such file in rev 7040230c159c
   [1]
-  $ hg cat -r 1 b
+  $ hg cat -r 'max(desc(m))' b
   1
 
 Test multiple files

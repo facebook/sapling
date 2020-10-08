@@ -19,7 +19,7 @@ Turn it on for this test.
   $ echo 2 > a/b
   $ hg commit -m "file2"
   $ hg bookmark -i file2
-  $ hg up 0
+  $ hg up 'desc(base)'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkdir a
 #if symlink
@@ -30,7 +30,7 @@ Turn it on for this test.
   $ hg add a/b
   $ hg commit -m "link"
   $ hg bookmark -i link
-  $ hg up 0
+  $ hg up 'desc(base)'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkdir -p a/b/c
   $ echo 2 > a/b/c/d
@@ -40,7 +40,7 @@ Turn it on for this test.
 
 Update - local file conflicts with remote directory:
 
-  $ hg up -q 0
+  $ hg up -q 'desc(base)'
   $ mkdir a
   $ echo 9 > a/b
   $ hg up dir
@@ -57,7 +57,7 @@ Update - local file conflicts with remote directory:
 
 Update - local symlink conflicts with remote directory:
 
-  $ hg up -q 0
+  $ hg up -q 'desc(base)'
   $ mkdir a
 #if symlink
   $ ln -s x a/b
@@ -80,7 +80,7 @@ Update - local symlink conflicts with remote directory:
 
 Update - local directory conflicts with remote file
 
-  $ hg up -q 0
+  $ hg up -q 'desc(base)'
   $ mkdir -p a/b/c
   $ echo 9 > a/b/c/d
   $ hg up file
@@ -98,7 +98,7 @@ Update - local directory conflicts with remote file
 
 Update - local directory conflicts with remote symlink
 
-  $ hg up -q 0
+  $ hg up -q 'desc(base)'
   $ mkdir -p a/b/c
   $ echo 9 > a/b/c/d
   $ hg up link
@@ -118,7 +118,7 @@ Update - local directory conflicts with remote symlink
 
 Update - local renamed file conflicts with remote directory
 
-  $ hg up -q 0
+  $ hg up -q 'desc(base)'
   $ hg mv base a
   $ hg status -C
   A a
@@ -141,7 +141,7 @@ Update - local renamed file conflicts with remote directory
   R base
   $ hg resolve --list
   P a
-  $ hg up --clean -q 0
+  $ hg up --clean -q 'desc(base)'
 
 Update clean - local directory conflicts with changed remote file
 

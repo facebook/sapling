@@ -29,7 +29,7 @@ branch 2-3
 
 branch 4-8
 
-  $ hg up -r 1
+  $ hg up -r 'desc(1)'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo '4' >c
   $ hg add c
@@ -45,7 +45,7 @@ branch 4-8
 
 merge
 
-  $ hg merge -r 3
+  $ hg merge -r 'desc(3)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg ci -u test -d '9 0' -m '9=8+3'
@@ -59,7 +59,7 @@ merge
 
 unrelated branch
 
-  $ hg up -r 3
+  $ hg up -r 8417d459b90c8ff7a70033ab503fab3b1524a8ed
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo '13' >d
   $ hg add d
@@ -70,15 +70,15 @@ unrelated branch
 mark changesets
 
   $ hg bisect --reset
-  $ hg bisect --good 4
-  $ hg bisect --good 6
-  $ hg bisect --bad 12
+  $ hg bisect --good 2a1daef14cd4f3d2dd2ca4d90fc67561ed148a24
+  $ hg bisect --good 'desc(6)'
+  $ hg bisect --bad 'desc(12)'
   Testing changeset 2197c557e14c (6 changesets remaining, ~2 tests)
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ hg bisect --bad 10
+  $ hg bisect --bad 'desc(10)'
   Testing changeset e74a86251f58 (4 changesets remaining, ~2 tests)
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ hg bisect --skip 7
+  $ hg bisect --skip 'desc(7)'
   Testing changeset e74a86251f58 (4 changesets remaining, ~2 tests)
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

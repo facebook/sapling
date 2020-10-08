@@ -13,12 +13,12 @@ Load commonly used test logic
   $ echo C > afile
   $ hg ci -m "B->C"
 
-  $ hg up -r0
+  $ hg up -r'desc(origin)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo C > afile
   $ hg ci -m "A->C"
 
-  $ hg merge -r2
+  $ hg merge -r0dbe4ac1a7586d1642016eea4781390285b7b536
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg ci -m "merge"
@@ -46,7 +46,7 @@ Load commonly used test logic
   Initialized empty Git repository in $TESTTMP/gitrepo/
 
   $ cd hgrepo1
-  $ hg bookmark -r4 master
+  $ hg bookmark -r'desc(merge)' master
   $ hg push -r master ../gitrepo
   pushing to ../gitrepo
   searching for changes

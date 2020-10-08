@@ -14,7 +14,7 @@ copy foo to bar and change both files
 
 in another branch, change foo in a way that doesn't conflict with
 the other changes
-  $ hg up -qC 0
+  $ hg up -qC 'desc(add)'
   $ echo line 0 > foo
   $ hg cat foo >> foo
   $ hg ci -m 'change foo'

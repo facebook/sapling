@@ -19,14 +19,14 @@ revision 1
   $ echo "revision 1" > f
   $ echo "space" >> f
   $ hg commit -Am "revision 1"
-  $ hg update 0 > /dev/null
+  $ hg update ffd2bda21d6ef8cb02e27e3d7f96f8ac8d196821 > /dev/null
 
 revision 2
 
   $ echo "revision 2" > f
   $ echo "space" >> f
   $ hg commit -Am "revision 2"
-  $ hg update 0 > /dev/null
+  $ hg update ffd2bda21d6ef8cb02e27e3d7f96f8ac8d196821 > /dev/null
 
 revision 3 - simple to merge
 
@@ -35,7 +35,7 @@ revision 3 - simple to merge
 
 revision 4 - hard to merge
 
-  $ hg update 0 > /dev/null
+  $ hg update ffd2bda21d6ef8cb02e27e3d7f96f8ac8d196821 > /dev/null
   $ echo "revision 4" > f
   $ hg commit -Am "revision 4"
 
@@ -67,7 +67,7 @@ default is internal merge:
 hg merge -r 2
 override $PATH to ensure hgmerge not visible
 
-  $ PATH="$TMPBINDIR:$BINDIR:/usr/sbin:/usr/bin" hg merge -r 2
+  $ PATH="$TMPBINDIR:$BINDIR:/usr/sbin:/usr/bin" hg merge -r 0185f4e0cf024bb0ed9694d1cbdea347ecce96d9
   merging f
   warning: 1 conflicts while merging f! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
@@ -94,7 +94,7 @@ simplest hgrc using false for merge:
   [merge-tools]
   false.whatever=
   # hg update -C 1
-  $ hg merge -r 2
+  $ hg merge -r 0185f4e0cf024bb0ed9694d1cbdea347ecce96d9
   merging f
   merging f failed!
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
@@ -119,8 +119,8 @@ unexecutable file in $PATH shouldn't be found:
   > false2.whatever=
   > EOF
   $ echo "echo fail" > false2
-  $ hg up -qC 1
-  $ PATH="`pwd`:$TMPBINDIR:$BINDIR:/usr/sbin:/usr/bin" hg merge -r 2
+  $ hg up -qC ef83787e2614c6fef8e58c9739cd5b46240ad4f0
+  $ PATH="`pwd`:$TMPBINDIR:$BINDIR:/usr/sbin:/usr/bin" hg merge -r 0185f4e0cf024bb0ed9694d1cbdea347ecce96d9
   merging f
   warning: 1 conflicts while merging f! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
@@ -133,8 +133,8 @@ unexecutable file in $PATH shouldn't be found:
 executable directory in $PATH shouldn't be found:
 
   $ mkdir false2
-  $ hg up -qC 1
-  $ PATH="`pwd`:$TMPBINDIR:$BINDIR:/usr/sbin:/usr/bin" hg merge -r 2
+  $ hg up -qC ef83787e2614c6fef8e58c9739cd5b46240ad4f0
+  $ PATH="`pwd`:$TMPBINDIR:$BINDIR:/usr/sbin:/usr/bin" hg merge -r 0185f4e0cf024bb0ed9694d1cbdea347ecce96d9
   merging f
   warning: 1 conflicts while merging f! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
@@ -155,7 +155,7 @@ true with higher .priority gets precedence:
   false.whatever=
   true.priority=1
   # hg update -C 1
-  $ hg merge -r 2
+  $ hg merge -r 0185f4e0cf024bb0ed9694d1cbdea347ecce96d9
   merging f
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -175,7 +175,7 @@ unless lowered on command line:
   false.whatever=
   true.priority=1
   # hg update -C 1
-  $ hg merge -r 2 --config merge-tools.true.priority=-7
+  $ hg merge -r 0185f4e0cf024bb0ed9694d1cbdea347ecce96d9 --config merge-tools.true.priority=-7
   merging f
   merging f failed!
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
@@ -198,7 +198,7 @@ or false set higher on command line:
   false.whatever=
   true.priority=1
   # hg update -C 1
-  $ hg merge -r 2 --config merge-tools.false.priority=117
+  $ hg merge -r 0185f4e0cf024bb0ed9694d1cbdea347ecce96d9 --config merge-tools.false.priority=117
   merging f
   merging f failed!
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
@@ -220,7 +220,7 @@ or true set to disabled:
   false.whatever=
   true.priority=1
   # hg update -C 1
-  $ hg merge -r 2 --config merge-tools.true.disabled=yes
+  $ hg merge -r 0185f4e0cf024bb0ed9694d1cbdea347ecce96d9 --config merge-tools.true.disabled=yes
   merging f
   merging f failed!
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
@@ -243,7 +243,7 @@ or true.executable not found in PATH:
   false.whatever=
   true.priority=1
   # hg update -C 1
-  $ hg merge -r 2 --config merge-tools.true.executable=nonexistentmergetool
+  $ hg merge -r 0185f4e0cf024bb0ed9694d1cbdea347ecce96d9 --config merge-tools.true.executable=nonexistentmergetool
   merging f
   merging f failed!
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
@@ -266,7 +266,7 @@ or true.executable with bogus path:
   false.whatever=
   true.priority=1
   # hg update -C 1
-  $ hg merge -r 2 --config merge-tools.true.executable=/nonexistent/mergetool
+  $ hg merge -r 0185f4e0cf024bb0ed9694d1cbdea347ecce96d9 --config merge-tools.true.executable=/nonexistent/mergetool
   merging f
   merging f failed!
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
@@ -291,7 +291,7 @@ but true.executable set to cat found in PATH works:
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  $ hg merge -r 2
+  $ hg merge -r 0185f4e0cf024bb0ed9694d1cbdea347ecce96d9
   merging f
   revision 1
   space
@@ -318,7 +318,7 @@ and true.executable set to cat with path works:
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  $ hg merge -r 2 --config merge-tools.true.executable=cat
+  $ hg merge -r 0185f4e0cf024bb0ed9694d1cbdea347ecce96d9 --config merge-tools.true.executable=cat
   merging f
   revision 1
   space
@@ -376,7 +376,7 @@ merge-patterns specifies new tool false:
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  $ hg merge -r 2 --config merge-patterns.f=false
+  $ hg merge -r 0185f4e0cf024bb0ed9694d1cbdea347ecce96d9 --config merge-patterns.f=false
   merging f
   merging f failed!
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
@@ -400,7 +400,7 @@ merge-patterns specifies executable not found in PATH and gets warning:
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  $ hg merge -r 2 --config merge-patterns.f=true --config merge-tools.true.executable=nonexistentmergetool
+  $ hg merge -r 0185f4e0cf024bb0ed9694d1cbdea347ecce96d9 --config merge-patterns.f=true --config merge-tools.true.executable=nonexistentmergetool
   couldn't find merge tool true (for pattern f)
   merging f
   couldn't find merge tool true (for pattern f)
@@ -426,7 +426,7 @@ merge-patterns specifies executable with bogus path and gets warning:
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  $ hg merge -r 2 --config merge-patterns.f=true --config merge-tools.true.executable=/nonexistent/mergetool
+  $ hg merge -r 0185f4e0cf024bb0ed9694d1cbdea347ecce96d9 --config merge-patterns.f=true --config merge-tools.true.executable=/nonexistent/mergetool
   couldn't find merge tool true (for pattern f)
   merging f
   couldn't find merge tool true (for pattern f)
@@ -454,7 +454,7 @@ ui.merge specifies false:
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  $ hg merge -r 2 --config ui.merge=false
+  $ hg merge -r 0185f4e0cf024bb0ed9694d1cbdea347ecce96d9 --config ui.merge=false
   merging f
   merging f failed!
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
@@ -478,7 +478,7 @@ ui.merge specifies internal:fail:
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  $ hg merge -r 2 --config ui.merge=internal:fail
+  $ hg merge -r 0185f4e0cf024bb0ed9694d1cbdea347ecce96d9 --config ui.merge=internal:fail
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -499,7 +499,7 @@ ui.merge specifies :local (without internal prefix):
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  $ hg merge -r 2 --config ui.merge=:local
+  $ hg merge -r 0185f4e0cf024bb0ed9694d1cbdea347ecce96d9 --config ui.merge=:local
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ aftermerge
@@ -519,7 +519,7 @@ ui.merge specifies internal:other:
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  $ hg merge -r 2 --config ui.merge=internal:other
+  $ hg merge -r 0185f4e0cf024bb0ed9694d1cbdea347ecce96d9 --config ui.merge=internal:other
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ aftermerge
@@ -539,7 +539,7 @@ ui.merge specifies internal:prompt:
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  $ hg merge -r 2 --config ui.merge=internal:prompt
+  $ hg merge -r 0185f4e0cf024bb0ed9694d1cbdea347ecce96d9 --config ui.merge=internal:prompt
   keep (l)ocal [working copy], take (o)ther [merge rev], or leave (u)nresolved for f? u
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
@@ -561,7 +561,7 @@ ui.merge specifies :prompt, with 'leave unresolved' chosen
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  $ hg merge -r 2 --config ui.merge=:prompt --config ui.interactive=True << EOF
+  $ hg merge -r 0185f4e0cf024bb0ed9694d1cbdea347ecce96d9 --config ui.merge=:prompt --config ui.interactive=True << EOF
   > u
   > EOF
   keep (l)ocal [working copy], take (o)ther [merge rev], or leave (u)nresolved for f? u
@@ -585,7 +585,7 @@ prompt with EOF
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  $ hg merge -r 2 --config ui.merge=internal:prompt --config ui.interactive=true
+  $ hg merge -r 0185f4e0cf024bb0ed9694d1cbdea347ecce96d9 --config ui.merge=internal:prompt --config ui.interactive=true
   keep (l)ocal [working copy], take (o)ther [merge rev], or leave (u)nresolved for f? 
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
@@ -643,7 +643,7 @@ ui.merge specifies internal:dump:
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  $ hg merge -r 2 --config ui.merge=internal:dump
+  $ hg merge -r 0185f4e0cf024bb0ed9694d1cbdea347ecce96d9 --config ui.merge=internal:dump
   merging f
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
@@ -689,7 +689,7 @@ successfully
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  $ hg merge -r 3 --config ui.merge=internal:dump
+  $ hg merge -r edce46a272756e7e892533c95e8e6fe3f064939a --config ui.merge=internal:dump
   merging f
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -713,7 +713,7 @@ be merged easily
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  $ hg merge -r 3 --config ui.merge=internal:forcedump
+  $ hg merge -r edce46a272756e7e892533c95e8e6fe3f064939a --config ui.merge=internal:forcedump
   merging f
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
@@ -754,7 +754,7 @@ ui.merge specifies internal:other but is overruled by pattern for false:
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  $ hg merge -r 2 --config ui.merge=internal:other --config merge-patterns.f=false
+  $ hg merge -r 0185f4e0cf024bb0ed9694d1cbdea347ecce96d9 --config ui.merge=internal:other --config merge-patterns.f=false
   merging f
   merging f failed!
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
@@ -780,7 +780,7 @@ ui.merge specifies internal:other but is overruled by --tool=false
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  $ hg merge -r 2 --config ui.merge=internal:other --tool=false
+  $ hg merge -r 0185f4e0cf024bb0ed9694d1cbdea347ecce96d9 --config ui.merge=internal:other --tool=false
   merging f
   merging f failed!
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
@@ -805,7 +805,7 @@ HGMERGE specifies internal:other but is overruled by --tool=false
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  $ hg merge -r 2 --tool=false
+  $ hg merge -r 0185f4e0cf024bb0ed9694d1cbdea347ecce96d9 --tool=false
   merging f
   merging f failed!
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
@@ -842,7 +842,7 @@ changed on the filesystem (see also issue4583))
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  $ hg update -q 0
+  $ hg update -q ffd2bda21d6ef8cb02e27e3d7f96f8ac8d196821
   $ f -s f
   f: size=17
   $ touch -t 200001010000 f
@@ -851,7 +851,7 @@ changed on the filesystem (see also issue4583))
   > [extensions]
   > fakedirstatewritetime = $TESTDIR/fakedirstatewritetime.py
   > EOF
-  $ hg revert -q -r 1 .
+  $ hg revert -q -r ef83787e2614c6fef8e58c9739cd5b46240ad4f0 .
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > fakedirstatewritetime = !
@@ -861,7 +861,7 @@ changed on the filesystem (see also issue4583))
   $ touch -t 200001010000 f
   $ hg status f
   M f
-  $ hg update -r 2
+  $ hg update -r 0185f4e0cf024bb0ed9694d1cbdea347ecce96d9
   merging f
   revision 1
   space
@@ -887,7 +887,7 @@ update should also have --tool
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  $ hg update -q 0
+  $ hg update -q ffd2bda21d6ef8cb02e27e3d7f96f8ac8d196821
   $ f -s f
   f: size=17
   $ touch -t 200001010000 f
@@ -896,7 +896,7 @@ update should also have --tool
   > [extensions]
   > fakedirstatewritetime = $TESTDIR/fakedirstatewritetime.py
   > EOF
-  $ hg revert -q -r 1 .
+  $ hg revert -q -r ef83787e2614c6fef8e58c9739cd5b46240ad4f0 .
   $ cat >> $HGRCPATH <<EOF
   > [extensions]
   > fakedirstatewritetime = !
@@ -906,7 +906,7 @@ update should also have --tool
   $ touch -t 200001010000 f
   $ hg status f
   M f
-  $ hg update -r 2 --tool false
+  $ hg update -r 0185f4e0cf024bb0ed9694d1cbdea347ecce96d9 --tool false
   merging f
   merging f failed!
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
@@ -930,7 +930,7 @@ Default is silent simplemerge:
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  $ hg merge -r 3
+  $ hg merge -r edce46a272756e7e892533c95e8e6fe3f064939a
   merging f
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -952,7 +952,7 @@ Default is silent simplemerge:
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  $ hg merge -r 3 --config merge-tools.true.premerge=True
+  $ hg merge -r edce46a272756e7e892533c95e8e6fe3f064939a --config merge-tools.true.premerge=True
   merging f
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -974,7 +974,7 @@ Default is silent simplemerge:
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  $ hg merge -r 3 --config merge-tools.true.premerge=False
+  $ hg merge -r edce46a272756e7e892533c95e8e6fe3f064939a --config merge-tools.true.premerge=False
   merging f
   revision 1
   space
@@ -1002,7 +1002,7 @@ premerge=keep keeps conflict markers in:
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  $ hg merge -r 4 --config merge-tools.true.premerge=keep
+  $ hg merge -r 'max(desc(revision))' --config merge-tools.true.premerge=keep
   merging f
   <<<<<<< working copy: ef83787e2614 - test: revision 1
   revision 1
@@ -1036,7 +1036,7 @@ premerge=keep-merge3 keeps conflict markers with base content:
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  $ hg merge -r 4 --config merge-tools.true.premerge=keep-merge3
+  $ hg merge -r 'max(desc(revision))' --config merge-tools.true.premerge=keep-merge3
   merging f
   <<<<<<< working copy: ef83787e2614 - test: revision 1
   revision 1
@@ -1079,7 +1079,7 @@ set tools.args explicit to include $base $local $other $output:
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  $ hg merge -r 2 --config merge-tools.true.executable=head --config merge-tools.true.args='$base $local $other $output' \
+  $ hg merge -r 0185f4e0cf024bb0ed9694d1cbdea347ecce96d9 --config merge-tools.true.executable=head --config merge-tools.true.args='$base $local $other $output' \
   >   | sed 's,==> .* <==,==> ... <==,g'
   merging f
   ==> ... <==
@@ -1116,7 +1116,7 @@ Merge with "echo mergeresult > $local":
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  $ hg merge -r 2 --config merge-tools.true.executable=echo --config merge-tools.true.args='mergeresult > $local'
+  $ hg merge -r 0185f4e0cf024bb0ed9694d1cbdea347ecce96d9 --config merge-tools.true.executable=echo --config merge-tools.true.args='mergeresult > $local'
   merging f
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -1136,7 +1136,7 @@ Merge with "echo mergeresult > $local":
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  $ hg merge -r 2 --config merge-tools.true.executable=echo --config merge-tools.true.args='mergeresult > f'
+  $ hg merge -r 0185f4e0cf024bb0ed9694d1cbdea347ecce96d9 --config merge-tools.true.executable=echo --config merge-tools.true.args='mergeresult > f'
   merging f
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -1160,7 +1160,7 @@ Relative path in merge tool executable searches for tool inside repo before look
   $ chmod +x hello_world.sh
   $ hg stat
   ? hello_world.sh
-  $ hg merge -r 2 --config merge-tools.true.executable='hello_world.sh' --config merge-tools.true.args='> f'
+  $ hg merge -r 0185f4e0cf024bb0ed9694d1cbdea347ecce96d9 --config merge-tools.true.executable='hello_world.sh' --config merge-tools.true.args='> f'
   merging f
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -1181,7 +1181,7 @@ Merge with "echo mergeresult > $output" - the variable is a bit magic:
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  $ hg merge -r 2 --config merge-tools.true.executable=echo --config merge-tools.true.args='mergeresult > $output'
+  $ hg merge -r 0185f4e0cf024bb0ed9694d1cbdea347ecce96d9 --config merge-tools.true.executable=echo --config merge-tools.true.args='mergeresult > $output'
   merging f
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -1239,16 +1239,16 @@ for Unix-like permission)
   $ hg commit -Am "revision 5"
   adding "; exit 1; echo "
   warning: filename contains '"', which is reserved on Windows: '"; exit 1; echo "'
-  $ hg update -C 1 > /dev/null
+  $ hg update -C ef83787e2614c6fef8e58c9739cd5b46240ad4f0 > /dev/null
   $ echo "revision 6" > '"; exit 1; echo "'
   $ hg commit -Am "revision 6"
   adding "; exit 1; echo "
   warning: filename contains '"', which is reserved on Windows: '"; exit 1; echo "'
-  $ hg merge --config merge-tools.true.executable="true" -r 5
+  $ hg merge --config merge-tools.true.executable="true" -r 10f0eb7f76ea9770c110b7161c9ac2b0cc7f7846
   merging "; exit 1; echo "
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
-  $ hg update -C 1 > /dev/null
+  $ hg update -C ef83787e2614c6fef8e58c9739cd5b46240ad4f0 > /dev/null
 #endif
 
 Merge post-processing
@@ -1261,7 +1261,7 @@ cat is a bad merge-tool and doesn't change:
   true.priority=1
   true.executable=cat
   # hg update -C 1
-  $ hg merge -y -r 2 --config merge-tools.true.checkchanged=1
+  $ hg merge -y -r 0185f4e0cf024bb0ed9694d1cbdea347ecce96d9 --config merge-tools.true.checkchanged=1
   merging f
   revision 1
   space
@@ -1289,11 +1289,11 @@ cat is a bad merge-tool and doesn't change:
 
 internal merge cannot handle symlinks and shouldn't try:
 
-  $ hg update -q -C 1
+  $ hg update -q -C ef83787e2614c6fef8e58c9739cd5b46240ad4f0
   $ rm f
   $ ln -s symlink f
   $ hg commit -qm 'f is symlink'
-  $ hg merge -r 2 --tool internal:merge
+  $ hg merge -r 0185f4e0cf024bb0ed9694d1cbdea347ecce96d9 --tool internal:merge
   merging f
   warning: internal :merge cannot merge symlinks for f
   warning: 1 conflicts while merging f! (edit, then use 'hg resolve --mark')
@@ -1305,10 +1305,10 @@ internal merge cannot handle symlinks and shouldn't try:
 
 Verify naming of temporary files and that extension is preserved:
 
-  $ hg update -q -C 1
+  $ hg update -q -C ef83787e2614c6fef8e58c9739cd5b46240ad4f0
   $ hg mv f f.txt
   $ hg ci -qm "f.txt"
-  $ hg update -q -C 2
+  $ hg update -q -C 0185f4e0cf024bb0ed9694d1cbdea347ecce96d9
   $ hg merge -y -r tip --tool echo --config merge-tools.echo.args='$base $local $other $output'
   merging f and f.txt to f.txt
   */f~base* $TESTTMP/f.txt.orig */f~other.*txt $TESTTMP/f.txt (glob)

@@ -219,7 +219,7 @@ Verify mapping correct in both directions:
 
 Verify meta data converted correctly:
 
-  $ hg -R dest log -r 1 --debug -p --git
+  $ hg -R dest log -r bd51f17597bf32268e68a560b206898c3960cda2 --debug -p --git
   commit:      bd51f17597bf32268e68a560b206898c3960cda2
   phase:       draft
   manifest:    040c72ed9b101773c24ac314776bfc846943781f
@@ -445,7 +445,7 @@ Two way tests
   sorting...
   converting...
 
-  $ hg -R 0 up -r1
+  $ hg -R 0 up -r'desc(a)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo f >> 0/f
   $ hg -R 0 ci -mx

@@ -182,7 +182,7 @@ Set up a rebase situation for issue5581.
   $ hg commit -m c2
   $ echo c3 >> a
   $ hg commit -m c3
-  $ hg update 2
+  $ hg update 'desc(c2)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo c4 >> a
   $ echo c4 >> b
@@ -208,7 +208,7 @@ the merge tool goes to /dev/null because we're more interested in the results of
   > test.args=$TESTTMP/mergetool-race.sh \$output
   > EOF
 
-  $ hg rebase -s . -d 3 --tool test
+  $ hg rebase -s . -d 'desc(c3)' --tool test
   rebasing b08445fd6b2a "c4"
   merging a
   custom merge tool

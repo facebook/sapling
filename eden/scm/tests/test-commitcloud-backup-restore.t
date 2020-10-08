@@ -173,7 +173,7 @@ Check that correct path is used in restorebackup
 Backup and restore two commits
   $ cd backupsource
   $ mkcommit firstinbatch
-  $ hg up 0
+  $ hg up 'desc(firstcommit)'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (leaving bookmark book/bookmarksbookmarks/somebook)
   $ mkcommit secondinbatch

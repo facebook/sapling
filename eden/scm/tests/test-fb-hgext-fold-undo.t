@@ -30,7 +30,7 @@ Set up repo.
   o  1 f177fbb9e8d1 r1
   |
   o  0 93cbaf5e6529 r0
-  $ hg up 7
+  $ hg up 'desc(r7)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Do a fold

@@ -112,10 +112,10 @@ Windows needs a leading slash to make a URL that passes all of the checks
   $ cat >> .hg/hgrc << EOF
   > default:pushrev = .
   > EOF
-  $ hg -q up -r 0
+  $ hg -q up -r cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b
   $ echo head1 > foo
   $ hg -q commit -A -m head1
-  $ hg -q up -r 0
+  $ hg -q up -r cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b
   $ echo head2 > foo
   $ hg -q commit -A -m head2
   $ hg push -f

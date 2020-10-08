@@ -21,7 +21,7 @@ manifest of p2:
   bar
   foo
 
-  $ hg up -qC 0
+  $ hg up -qC bbd179dfa0a71671c253b3ae0aa1513b60d199fa
   $ echo >> foo
   $ hg ci -m 'change foo'
 

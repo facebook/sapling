@@ -126,7 +126,7 @@ Start a simple HTTP server to serve bundles
 
 Test a pull with an remote-changegroup
 
-  $ hg bundle -R repo --type v1 --base '0:4' -r '5:7' bundle.hg
+  $ hg bundle -R repo --type v1 --base 'desc(A):desc(E)' -r 'desc(F):desc(H)' bundle.hg
   devel-warn: using deprecated bundlev1 format
    at: */changegroup.py:* (makechangegroup) (glob)
   3 changesets found
@@ -169,7 +169,7 @@ Test a pull with an remote-changegroup
 
 Test a pull with an remote-changegroup and a following changegroup
 
-  $ hg bundle -R repo --type v1 --base 2 -r '3:4' bundle2.hg
+  $ hg bundle -R repo --type v1 --base 'desc(C)' -r 'desc(D):desc(E)' bundle2.hg
   devel-warn: using deprecated bundlev1 format
    at: */changegroup.py:* (makechangegroup) (glob)
   2 changesets found
@@ -218,7 +218,7 @@ Test a pull with an remote-changegroup and a following changegroup
 
 Test a pull with a changegroup followed by an remote-changegroup
 
-  $ hg bundle -R repo --type v1 --base '0:4' -r '5:7' bundle3.hg
+  $ hg bundle -R repo --type v1 --base 'desc(A):desc(E)' -r 'desc(F):desc(H)' bundle3.hg
   devel-warn: using deprecated bundlev1 format
    at: */changegroup.py:* (makechangegroup) (glob)
   3 changesets found
@@ -267,11 +267,11 @@ Test a pull with a changegroup followed by an remote-changegroup
 
 Test a pull with two remote-changegroups and a changegroup
 
-  $ hg bundle -R repo --type v1 --base 2 -r '3:4' bundle4.hg
+  $ hg bundle -R repo --type v1 --base 'desc(C)' -r 'desc(D):desc(E)' bundle4.hg
   devel-warn: using deprecated bundlev1 format
    at: */changegroup.py:* (makechangegroup) (glob)
   2 changesets found
-  $ hg bundle -R repo --type v1 --base '3:4' -r '5:6' bundle5.hg
+  $ hg bundle -R repo --type v1 --base 'desc(D):desc(E)' -r 'desc(F):desc(G)' bundle5.hg
   devel-warn: using deprecated bundlev1 format
    at: */changegroup.py:* (makechangegroup) (glob)
   2 changesets found

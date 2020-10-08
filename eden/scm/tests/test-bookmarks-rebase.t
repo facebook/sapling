@@ -16,7 +16,7 @@ initialize repository
   $ hg ci -A -m "1"
   adding b
 
-  $ hg up 0
+  $ hg up 'desc(0)'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo 'c' > c
   $ hg ci -A -m "2"
@@ -26,8 +26,8 @@ initialize repository
   $ hg ci -A -m "3"
   adding d
 
-  $ hg bookmark -r 1 one
-  $ hg bookmark -r 3 two
+  $ hg bookmark -r 'desc(1)' one
+  $ hg bookmark -r 'desc(3)' two
   $ hg up -q two
 
 bookmark list
@@ -66,7 +66,7 @@ rebase
   
 aborted rebase should restore active bookmark.
 
-  $ hg up 1
+  $ hg up 'desc(1)'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (leaving bookmark two)
   $ echo 'e' > d

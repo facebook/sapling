@@ -7,7 +7,7 @@
   $ hg ci -qAm 'add foo'
   $ echo >> foo
   $ hg ci -m 'change foo'
-  $ hg up -qC 0
+  $ hg up -qC 'desc(add)'
   $ echo bar > bar
   $ hg ci -qAm 'add bar'
 
@@ -34,7 +34,7 @@ don't show "(+1 heads)" message when pulling closed head
   $ hg clone -q repo repo2
   $ hg clone -q repo2 repo3
   $ cd repo2
-  $ hg up -q 0
+  $ hg up -q bbd179dfa0a71671c253b3ae0aa1513b60d199fa
   $ echo hello >> foo
   $ hg ci -mx1
   $ hg ci -mx2 --config ui.allowemptycommit=1

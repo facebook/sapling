@@ -200,7 +200,7 @@ test pushkeys and bookmarks
   bookmarks	
   namespaces	
   phases	
-  $ hg book foo -r 0
+  $ hg book foo -r 'desc(init)'
   $ hg out -B
   comparing with ssh://user@dummy/remote
   searching for changed bookmarks
@@ -225,7 +225,7 @@ test pushkeys and bookmarks
   comparing with ssh://user@dummy/remote
   searching for changed bookmarks
      foo                       a28a9d1a809c
-  $ hg book -f -r 0 foo
+  $ hg book -f -r 'desc(init)' foo
   $ hg pull -B foo
   pulling from ssh://user@dummy/remote
   no changes found

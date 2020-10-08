@@ -298,11 +298,11 @@ Test that rebasing applies the same change to both
   $ echo x > unrelated
   $ hg commit -Am "add unrelated"
   adding unrelated
-  $ hg up 0
+  $ hg up 9eb46ceb8af3f2dc30310f918cfd0f963439f382
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo b > dir1/a
   $ hg commit --config extensions.dirsync=! -m "edit dir1/a with sync on"
-  $ hg rebase --config extensions.rebase= -d 1
+  $ hg rebase --config extensions.rebase= -d 'max(desc(add))'
   rebasing 70b4edc7f658 "edit dir1/a with sync on"
   mirrored changes in 'dir1/a' to 'dir2/a'
   $ hg diff --git -r ".^" -r .

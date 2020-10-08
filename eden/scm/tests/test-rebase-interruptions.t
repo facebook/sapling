@@ -16,7 +16,7 @@
   $ echo C >> A
   $ hg ci -m C
 
-  $ hg up -q -C 0
+  $ hg up -q -C 'desc(A)'
 
   $ echo D >> A
   $ hg ci -m D
@@ -46,7 +46,7 @@ Changes during an interruption - continue:
   
 Rebasing B onto E:
 
-  $ hg rebase -s 1 -d 4
+  $ hg rebase -s 'desc(B)' -d 'desc(E)'
   rebasing 27547f69f254 "B"
   rebasing 965c486023db "C"
   merging A
@@ -56,7 +56,7 @@ Rebasing B onto E:
 
 Force a commit on C during the interruption:
 
-  $ hg up -q -C 2 --config 'extensions.rebase=!'
+  $ hg up -q -C 'desc(C)' --config 'extensions.rebase=!'
 
   $ echo 'Extra' > Extra
   $ hg add Extra
@@ -137,7 +137,7 @@ Changes during an interruption - abort:
   
 Rebasing B onto E:
 
-  $ hg rebase -s 1 -d 4
+  $ hg rebase -s 'desc(B)' -d 'desc(E)'
   rebasing 27547f69f254 "B"
   rebasing 965c486023db "C"
   merging A
@@ -147,7 +147,7 @@ Rebasing B onto E:
 
 Force a commit on B' during the interruption:
 
-  $ hg up -q -C 5 --config 'extensions.rebase=!'
+  $ hg up -q -C 'max(desc(B))' --config 'extensions.rebase=!'
 
   $ echo 'Extra' > Extra
   $ hg add Extra
@@ -209,7 +209,7 @@ Changes during an interruption - abort (again):
   
 Rebasing B onto E:
 
-  $ hg rebase -s 1 -d 4
+  $ hg rebase -s 'desc(B)' -d 'desc(E)'
   rebasing 27547f69f254 "B"
   rebasing 965c486023db "C"
   merging A
@@ -219,7 +219,7 @@ Rebasing B onto E:
 
 Change phase on B and B'
 
-  $ hg up -q -C 5 --config 'extensions.rebase=!'
+  $ hg up -q -C 'max(desc(B))' --config 'extensions.rebase=!'
   $ hg debugmakepublic 'desc(B)'
 
   $ tglogp
@@ -256,7 +256,7 @@ Abort the rebasing:
   
 Test rebase interrupted by hooks
 
-  $ hg up 2
+  $ hg up 'desc(C)'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo F > F
   $ hg add F
@@ -268,7 +268,7 @@ Test rebase interrupted by hooks
 
   $ cp -R a3 hook-precommit
   $ cd hook-precommit
-  $ hg rebase --source 2 --dest 5 --tool internal:other --config 'hooks.precommit=hg status | grep "M A"'
+  $ hg rebase --source 'desc(C)' --dest 'max(desc(B))' --tool internal:other --config 'hooks.precommit=hg status | grep "M A"'
   rebasing 965c486023db "C"
   M A
   rebasing a0b2430ebfb8 "F"
@@ -320,7 +320,7 @@ Test rebase interrupted by hooks
 #else
   $ NODE="\$HG_NODE"
 #endif
-  $ hg rebase --source 2 --dest 5 --tool internal:other --config "hooks.pretxncommit=hg log -r $NODE | grep \"summary:     C\""
+  $ hg rebase --source 'desc(C)' --dest 'max(desc(B))' --tool internal:other --config "hooks.pretxncommit=hg log -r $NODE | grep \"summary:     C\""
   rebasing 965c486023db "C"
   summary:     C
   rebasing a0b2430ebfb8 "F"
@@ -367,7 +367,7 @@ Test rebase interrupted by hooks
 
   $ cp -R a3 hook-pretxnclose
   $ cd hook-pretxnclose
-  $ hg rebase --source 2 --dest 5 --tool internal:other --config 'hooks.pretxnclose=hg log -r tip | grep "summary:     C"'
+  $ hg rebase --source 'desc(C)' --dest 'max(desc(B))' --tool internal:other --config 'hooks.pretxnclose=hg log -r tip | grep "summary:     C"'
   rebasing 965c486023db "C"
   summary:     C
   rebasing a0b2430ebfb8 "F"
@@ -423,7 +423,7 @@ Make sure merge state is cleaned up after a no-op rebase merge (issue5494)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo c >> a
   $ hg commit -qm c
-  $ hg rebase -s 1 -d 2 --noninteractive
+  $ hg rebase -s 'max(desc(b))' -d 'desc(c)' --noninteractive
   rebasing fdaca8533b86 "b"
   merging a
   warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')

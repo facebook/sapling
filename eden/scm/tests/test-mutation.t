@@ -44,9 +44,9 @@ Rebase
   $ hg commit -Aqm c2
   $ echo "a" > file3
   $ hg commit -Aqm c3
-  $ hg rebase -q -s ".^" -d 0
-  $ hg rebase -q -s ".^" -d 1 --hidden
-  $ hg rebase -q -s ".^" -d 8 --hidden
+  $ hg rebase -q -s ".^" -d 'desc(base)'
+  $ hg rebase -q -s ".^" -d c5d0fa8770bdde6ef311cc640a78a2f686be28b4 --hidden
+  $ hg rebase -q -s ".^" -d 'max(desc(c1))' --hidden
   $ hg debugmutation -r ".^::."
    *  33ca17be2228dc288194daade1265b5de0222653 rebase by test at 1970-01-01T00:00:00 from:
       30184ea7dbf74f751464657e167173d1d531e700 rebase by test at 1970-01-01T00:00:00 from:
@@ -313,7 +313,7 @@ Histedit
   |
   o  base d20a80d4def3 draft
   
-  $ hg histedit 8 --commands - 2>&1 <<EOF | fixbundle
+  $ hg histedit 'max(desc(c1))' --commands - 2>&1 <<EOF | fixbundle
   > pick cc809964b024
   > pick f05234144e37
   > fold 7d383d1b236d
@@ -343,7 +343,7 @@ Histedit
   |
   o  base d20a80d4def3 draft
   
-  $ hg debugmutation -r 8::tip
+  $ hg debugmutation -r cc809964b02448cb4c84c772b9beba99d4159cff::tip
    *  cc809964b02448cb4c84c772b9beba99d4159cff amend by test at 1970-01-01T00:00:00 from:
       8b2e1bbf6c0bea98beb5615f7b1c49b8dc38a593 amend by test at 1970-01-01T00:00:00 from:
       4c454f4e96edd98561fa548e4c24acdcd11b4f75 amend by test at 1970-01-01T00:00:00 from:
@@ -517,7 +517,7 @@ Histedit with exec that amends in between folds
   >   echo $i >> file
   >   hg commit -Aqm "commit $i"
   > done
-  $ hg histedit 0 --commands - 2>&1 <<EOF | fixbundle
+  $ hg histedit c2a29f8b7d7a23d58e698384280df426802a1465 --commands - 2>&1 <<EOF | fixbundle
   > pick c2a29f8b7d7a
   > pick 08d8367dafb9
   > fold 15a208dbcdc5
@@ -572,7 +572,7 @@ Histedit with stop, extra commit, and fold
   >   echo $i >> file
   >   hg commit -Aqm "commit $i"
   > done
-  $ hg histedit 0 --commands - 2>&1 <<EOF | fixbundle
+  $ hg histedit c2a29f8b7d7a23d58e698384280df426802a1465 --commands - 2>&1 <<EOF | fixbundle
   > pick c2a29f8b7d7a
   > pick 08d8367dafb9
   > stop 15a208dbcdc5
@@ -692,18 +692,18 @@ Revsets obey visibility rules
       2cb21a570bd242eb1225414c6634ed29cc9cfe93 amend by test at 1970-01-01T00:00:00 from:
       112478962961147124edd43549aedd1a335e44bf
   
-  $ hg log -T '{node} {desc}\n' -r "successors(1)"
+  $ hg log -T '{node} {desc}\n' -r "successors(desc(B))"
   112478962961147124edd43549aedd1a335e44bf B
   2cb21a570bd242eb1225414c6634ed29cc9cfe93 C
-  $ hg log -T '{node} {desc}\n' -r "successors(1)" --hidden
+  $ hg log -T '{node} {desc}\n' -r "successors(desc(B))" --hidden
   112478962961147124edd43549aedd1a335e44bf B
   2cb21a570bd242eb1225414c6634ed29cc9cfe93 C
   82b1bbd9d7bb25fa8b9354ca7f6cfd007a6291af D
-  $ hg log -T '{node} {desc}\n' -r "predecessors(2)"
+  $ hg log -T '{node} {desc}\n' -r "predecessors(desc(C))"
   112478962961147124edd43549aedd1a335e44bf B
   2cb21a570bd242eb1225414c6634ed29cc9cfe93 C
-  $ hg hide -q 1
-  $ hg log -T '{node} {desc}\n' -r "predecessors(2)"
+  $ hg hide -q 'desc(B)'
+  $ hg log -T '{node} {desc}\n' -r "predecessors(desc(C))"
   112478962961147124edd43549aedd1a335e44bf B
   2cb21a570bd242eb1225414c6634ed29cc9cfe93 C
 
@@ -1304,7 +1304,7 @@ Simulate pushrebase happening remotely and stripping the mutation information.
 
 If we unhide B, we don't know that it was landed.
 
-  $ hg unhide 3
+  $ hg unhide 'desc(B)'
   $ hg log -G -r "all()" -T "{desc} {mutation_descs}\n"
   o  X
   |

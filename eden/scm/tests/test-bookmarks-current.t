@@ -151,8 +151,8 @@ bare update moves the active bookmark forward and clear the divergent bookmarks
   adding a
   $ echo b >> a
   $ hg ci -Am2
-  $ hg bookmark X@1 -r 1
-  $ hg bookmark X@2 -r 2
+  $ hg bookmark X@1 -r 'desc(1)'
+  $ hg bookmark X@2 -r 'desc(2)'
   $ hg update X
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (activating bookmark X)
@@ -182,7 +182,7 @@ set and then unset it
   $ hg up -q X
   $ test -f .hg/bookmarks.current
 
-  $ hg up -q 1
+  $ hg up -q 'desc(1)'
   $ test -f .hg/bookmarks.current
   [1]
 

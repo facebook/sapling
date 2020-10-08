@@ -247,7 +247,7 @@ Make a commit from the second client and sync it
 
 On the first client, make a bookmark, then sync - the bookmark and new commit should be synced
   $ cd client1
-  $ hg bookmark -r 0 bookmark1
+  $ hg bookmark -r 'desc(base)' bookmark1
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   pulling 02f6fc2b7154 from ssh://user@dummy/server
@@ -281,7 +281,7 @@ Sync the bookmark back to the second client
   o  0: d20a80d4def3 'base' bookmark1
   
 Move the bookmark on the second client, and then sync it
-  $ hg bookmark -r 2 -f bookmark1
+  $ hg bookmark -r 'desc(commit2)' -f bookmark1
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   commitcloud: commits synchronized
@@ -291,7 +291,7 @@ Move the bookmark on the second client, and then sync it
 
 Move the bookmark also on the first client, it should be forked in the sync
   $ cd client1
-  $ hg bookmark -r 1 -f bookmark1
+  $ hg bookmark -r 'desc(commit1)' -f bookmark1
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   bookmark1 changed locally and remotely, local bookmark renamed to bookmark1-testhost
@@ -993,19 +993,19 @@ And the commits should now be availble in the other client.
   
 Clean up
 
-  $ hg up -q -r 0
+  $ hg up -q -r d20a80d4def38df63a4b330b7fb688f3d4cae1e3
   $ hg hide -q 4b4f26511f8b
   $ cd ..
   $ fullsync client1 client2
   $ cd client2
-  $ hg up -q -r 0
+  $ hg up -q -r d20a80d4def38df63a4b330b7fb688f3d4cae1e3
   $ cd ../client1
 
 Make two stacks
 
   $ mkcommit 'stack 1 first'
   $ mkcommit 'stack 1 second'
-  $ hg up -q -r 0
+  $ hg up -q -r d20a80d4def38df63a4b330b7fb688f3d4cae1e3
   $ mkcommit 'stack 2 first'
   $ mkcommit 'stack 2 second'
   $ tglog

@@ -892,7 +892,7 @@ Expected result:
   $ hg rm 8/f
   $ for x in */*; do echo m1 > $x; done
   $ hg ci -Aqm "m1"
-  $ hg up -qr0
+  $ hg up -qr'desc(a)'
   $ mkdir 0 7
   $ touch 0/f 7/f
   $ hg mv 1/f 1/g
@@ -900,11 +900,11 @@ Expected result:
   $ hg mv 4/f 4/g
   $ for x in */*; do echo m2 > $x; done
   $ hg ci -Aqm "m2"
-  $ hg up -qr1
+  $ hg up -qr'desc(m1)'
   $ mkdir 7 8
   $ echo m > 7/f
   $ echo m > 8/f
-  $ hg merge -f --tool internal:dump -v --debug -r2 | sed '/^resolving manifests/,$d' 2> /dev/null
+  $ hg merge -f --tool internal:dump -v --debug -r'desc(m2)' | sed '/^resolving manifests/,$d' 2> /dev/null
     searching for copies back to rev 1
     unmatched files in local:
      5/g

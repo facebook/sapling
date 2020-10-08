@@ -24,7 +24,7 @@
   $ chmod +x a
   $ hg ci -mexecutable
 
-  $ hg up -q 0
+  $ hg up -q 'desc(add)'
   $ rm a
   $ ln -s symlink a
   $ hg ci -msymlink
@@ -61,7 +61,7 @@ Symlink is local parent, executable is other:
 
 Symlink is other parent, executable is local:
 
-  $ hg update -C 1
+  $ hg update -C 'desc(executable)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg merge --debug --tool :union
@@ -84,7 +84,7 @@ Symlink is other parent, executable is local:
   a is an executable file with content:
   a
 
-  $ hg update -C 1
+  $ hg update -C 'desc(executable)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg merge --debug --tool :merge3
@@ -107,7 +107,7 @@ Symlink is other parent, executable is local:
   a is an executable file with content:
   a
 
-  $ hg update -C 1
+  $ hg update -C 'desc(executable)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg merge --debug --tool :merge-local
@@ -129,7 +129,7 @@ Symlink is other parent, executable is local:
   a is an executable file with content:
   a
 
-  $ hg update -C 1
+  $ hg update -C 'desc(executable)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg merge --debug --tool :merge-other
@@ -153,7 +153,7 @@ Symlink is other parent, executable is local:
 
 Update to link without local change should get us a symlink (issue3316):
 
-  $ hg up -C 0
+  $ hg up -C 'desc(add)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg up
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -164,7 +164,7 @@ Update to link without local change should get us a symlink (issue3316):
 
 Update to link with local change should cause a merge prompt (issue3200):
 
-  $ hg up -Cq 0
+  $ hg up -Cq 'desc(add)'
   $ echo data > a
   $ HGMERGE= hg up -y --debug
     searching for copies back to rev 2
@@ -204,7 +204,7 @@ where that was what happened.
   $ echo file > f
   $ echo content >> f
   $ hg ci -qm1
-  $ hg up -qr0
+  $ hg up -qr'desc(0)'
   $ rm f
   $ ln -s base f
   $ hg ci -qm2
@@ -219,7 +219,7 @@ where that was what happened.
   f is a symlink:
   f -> base
 
-  $ hg up -Cqr1
+  $ hg up -Cqr'desc(1)'
   $ hg merge
   merging f
   warning: internal :merge cannot merge symlinks for f
@@ -243,7 +243,7 @@ Test removed 'x' flag merged with change to symlink
   $ hg ci -Aqm0
   $ chmod -x f
   $ hg ci -qm1
-  $ hg up -qr0
+  $ hg up -qr'desc(0)'
   $ rm f
   $ ln -s dangling f
   $ hg ci -qm2
@@ -258,7 +258,7 @@ Test removed 'x' flag merged with change to symlink
   f is a symlink:
   f -> dangling
 
-  $ hg up -Cqr1
+  $ hg up -Cqr'desc(1)'
   $ hg merge
   merging f
   warning: internal :merge cannot merge symlinks for f
@@ -272,18 +272,18 @@ Test removed 'x' flag merged with change to symlink
 
 Test removed 'x' flag merged with content change - both ways
 
-  $ hg up -Cqr0
+  $ hg up -Cqr'desc(0)'
   $ echo change > f
   $ hg ci -qm3
-  $ hg merge -r1
+  $ hg merge -r'desc(1)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ tellmeabout f
   f is a plain file with content:
   change
 
-  $ hg up -qCr1
-  $ hg merge -r3
+  $ hg up -qCr'desc(1)'
+  $ hg merge -r'desc(3)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ tellmeabout f
@@ -324,7 +324,7 @@ h: l vs l, different
   $ ln -s 1 h
   $ hg ci -qAm1
 
-  $ hg up -qr0
+  $ hg up -qr'desc(0)'
   $ echo 2 > a
   $ echo 2 > b
   $ echo 2 > bx
@@ -398,7 +398,7 @@ h: l vs l, different
   h is a symlink:
   h -> 2
 
-  $ hg up -Cqr1
+  $ hg up -Cqr'desc(1)'
   $ hg merge
   merging a
   warning: cannot merge flags for b without common ancestor - keeping local flags

@@ -21,12 +21,12 @@ onto the newest successor of their parent.
   $ hg amend -m "successor 1" --no-rebase
   hint[amend-restack]: descendants of 7c3bad9141dc are left behind - use 'hg restack' to rebase them
   hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
-  $ hg up 1
+  $ hg up 7c3bad9141dcb46ff89abf5f61856facd56e476c
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg amend -m "successor 2" --no-rebase
   hint[amend-restack]: descendants of 7c3bad9141dc are left behind - use 'hg restack' to rebase them
   hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
-  $ hg up 1
+  $ hg up 7c3bad9141dcb46ff89abf5f61856facd56e476c
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ showgraph
   o  4 cef323f40828 successor 2
@@ -71,7 +71,7 @@ since the successor is obsolete.
   | x  1 7c3bad9141dc add b
   |/
   o  0 1f0dee641bb7 add a
-  $ hg up 1
+  $ hg up 7c3bad9141dcb46ff89abf5f61856facd56e476c
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo c >> b
   $ hg amend
@@ -88,7 +88,7 @@ since the successor is obsolete.
   |/
   o  0 1f0dee641bb7 add a
   $ hg unamend
-  $ hg up -C 3
+  $ hg up -C c54ee8acf83d47ec674bca5bb6ba7be56227bd89
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ showgraph
   @  3 c54ee8acf83d add b

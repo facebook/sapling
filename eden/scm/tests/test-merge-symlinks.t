@@ -36,7 +36,7 @@ a file, once as a link. Bundle was generated with:
   $ hg init t
   $ cd t
   $ hg -q pull "$TESTDIR/bundles/test-merge-symlinks.hg"
-  $ hg up -C 3
+  $ hg up -C 'desc(t3)'
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Merge them and display *_ISLINK vars
@@ -55,10 +55,10 @@ Test working directory symlink bit calculation wrt copies,
 especially on non-supporting systems.
 merge working directory
 
-  $ hg up -C 2
+  $ hg up -C 'desc(t2)'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg copy l l2
-  $ HGMERGE="$PYTHON ../echo.py" hg up 3
+  $ HGMERGE="$PYTHON ../echo.py" hg up 'desc(t3)'
   merging l2
   HG_FILE l2
   HG_MY_ISLINK 1

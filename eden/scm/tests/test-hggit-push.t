@@ -27,7 +27,7 @@ Load commonly used test logic
   $ hg add gamma
   $ fn_hg_commit -m 'add gamma'
 
-  $ hg book -r 1 beta
+  $ hg book -r 574e2d660a7d7bbaf97251f694c8c8327f0db957 beta
   $ hg push -r beta
   pushing to $TESTTMP/gitrepo
   searching for changes

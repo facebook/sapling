@@ -21,12 +21,12 @@ no working directory
   $ echo c > c
   $ hg ci -Amc -d '3 0'
   adding c
-  $ hg up -C 1
+  $ hg up -C 'max(desc(a))'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo d > c
   $ hg ci -Amc2 -d '4 0'
   adding c
-  $ hg up -C 3
+  $ hg up -C 02d851b7e5492177dac50bd773450067cb1747b6
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 
@@ -53,25 +53,25 @@ hg parents c, single revision
   summary:     c
   
 
-  $ hg parents -r 3 c
+  $ hg parents -r 02d851b7e5492177dac50bd773450067cb1747b6 c
   abort: 'c' not found in manifest!
   [255]
 
-  $ hg parents -r 2
+  $ hg parents -r 'max(desc(b))'
   commit:      d786049f033a
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     a
   
 
-  $ hg parents -r 2 a
+  $ hg parents -r 'max(desc(b))' a
   commit:      d786049f033a
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     a
   
 
-  $ hg parents -r 2 ../a
+  $ hg parents -r 'max(desc(b))' ../a
   abort: ../a not under root '$TESTTMP/repo'
   [255]
 
@@ -80,13 +80,13 @@ cd dir; hg parents -r 2 ../a
 
   $ mkdir dir
   $ cd dir
-  $ hg parents -r 2 ../a
+  $ hg parents -r 'max(desc(b))' ../a
   commit:      d786049f033a
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
   summary:     a
   
-  $ hg parents -r 2 path:a
+  $ hg parents -r 'max(desc(b))' path:a
   commit:      d786049f033a
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
@@ -94,7 +94,7 @@ cd dir; hg parents -r 2 ../a
   
   $ cd ..
 
-  $ hg parents -r 2 glob:a
+  $ hg parents -r 'max(desc(b))' glob:a
   commit:      d786049f033a
   user:        test
   date:        Thu Jan 01 00:00:01 1970 +0000
@@ -123,9 +123,9 @@ merge working dir with 2 parents, hg parents c
 
 merge working dir with 1 parent, hg parents
 
-  $ hg up -C 2
+  $ hg up -C 'max(desc(b))'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ HGMERGE=true hg merge -r 4
+  $ HGMERGE=true hg merge -r 'desc(c2)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg parents

@@ -142,7 +142,7 @@ Check --stat
 
 
 
-  $ hg show --stat 0
+  $ hg show --stat 'desc(x)'
   commit:      852a8d467a01
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -356,7 +356,7 @@ Check --git and -g
   
 
 
-  $ hg show -g 0
+  $ hg show -g 2a575d662478590c06bc0cb3988882b46c0b2fee
   commit:      2a575d662478
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000

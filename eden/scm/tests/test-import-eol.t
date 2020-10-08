@@ -60,7 +60,7 @@ force LF
 
 force CRLF
 
-  $ hg up -C 0
+  $ hg up -C 'desc(adda)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg --traceback --config patch.eol='CRLF' import eol.diff
   applying eol.diff
@@ -76,7 +76,7 @@ force CRLF
 
 auto EOL on LF file
 
-  $ hg up -C 0
+  $ hg up -C 'desc(adda)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg --traceback --config patch.eol='auto' import eol.diff
   applying eol.diff

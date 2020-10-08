@@ -10,21 +10,21 @@
   adding a/a
   adding a/b
 
-  $ hg co -C 0
+  $ hg co -C 'desc(0)'
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg mv a b
   moving a/a to b/a
   moving a/b to b/b
   $ hg ci -m "1 mv a/ b/"
 
-  $ hg co -C 0
+  $ hg co -C 'desc(0)'
   2 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ echo baz > a/c
   $ echo quux > a/d
   $ hg add a/c
   $ hg ci -m "2 add a/c"
 
-  $ hg merge --debug 1
+  $ hg merge --debug 'desc(1)'
     searching for copies back to rev 1
     unmatched files in local:
      a/c
@@ -68,9 +68,9 @@
   $ hg debugrename b/c
   b/c renamed from a/c:354ae8da6e890359ef49ade27b68bbc361f3ca88
 
-  $ hg co -C 1
+  $ hg co -C 397f8b00a740232a6f2e63d649be60d17ecb4162
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ hg merge --debug 2
+  $ hg merge --debug ce36d17b18fb966cd0791a8fe289abfe7dc298bc
     searching for copies back to rev 1
     unmatched files in local:
      b/a
@@ -104,17 +104,17 @@
 Local directory rename with conflicting file added in remote source directory
 and untracked in local target directory.
 
-  $ hg co -qC 1
+  $ hg co -qC 397f8b00a740232a6f2e63d649be60d17ecb4162
   $ echo target > b/c
-  $ hg merge 2
+  $ hg merge ce36d17b18fb966cd0791a8fe289abfe7dc298bc
   b/c: untracked file differs
   abort: untracked files in working directory differ from files in requested revision
   [255]
   $ cat b/c
   target
 but it should succeed if the content matches
-  $ hg cat -r 2 a/c > b/c
-  $ hg merge 2
+  $ hg cat -r ce36d17b18fb966cd0791a8fe289abfe7dc298bc a/c > b/c
+  $ hg merge ce36d17b18fb966cd0791a8fe289abfe7dc298bc
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg st -C
@@ -125,11 +125,11 @@ but it should succeed if the content matches
 Local directory rename with conflicting file added in remote source directory
 and committed in local target directory.
 
-  $ hg co -qC 1
+  $ hg co -qC 397f8b00a740232a6f2e63d649be60d17ecb4162
   $ echo target > b/c
   $ hg add b/c
   $ hg commit -qm 'new file in target directory'
-  $ hg merge 2
+  $ hg merge ce36d17b18fb966cd0791a8fe289abfe7dc298bc
   merging b/c and a/c to b/c
   warning: 1 conflicts while merging b/c! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
@@ -153,13 +153,13 @@ and committed in local target directory.
 Remote directory rename with conflicting file added in remote target directory
 and committed in local source directory.
 
-  $ hg co -qC 2
+  $ hg co -qC ce36d17b18fb966cd0791a8fe289abfe7dc298bc
   $ hg st -A
   ? a/d
   C a/a
   C a/b
   C a/c
-  $ hg merge 5
+  $ hg merge 'desc(new)'
   merging a/c and b/c to b/c
   warning: 1 conflicts while merging b/c! (edit, then use 'hg resolve --mark')
   2 files updated, 0 files merged, 2 files removed, 1 files unresolved
@@ -252,7 +252,7 @@ Add more files
 
 Do moves on a branch
 
-  $ hg up 0
+  $ hg up 'desc(0)'
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ mkdir s
   $ mkdir t
@@ -279,7 +279,7 @@ Merge shouldn't move s2, t2
 Try the merge in the other direction. It may or may not be appropriate for
 status to list copies here.
 
-  $ hg up -C 1
+  $ hg up -C 'desc(1)'
   4 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg merge
   2 files updated, 0 files merged, 2 files removed, 0 files unresolved

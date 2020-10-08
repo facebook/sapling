@@ -21,7 +21,7 @@ revision.
   reverting foo
   changeset 2:9eaf049ccce4 backs out changeset 1:b515023e500e
 
-  $ hg up -C 0
+  $ hg up -C 'desc(add)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ touch bar

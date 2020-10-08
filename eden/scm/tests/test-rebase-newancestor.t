@@ -24,7 +24,7 @@
   $ echo >> a
   $ hg ci -m C
 
-  $ hg up -q -C 0
+  $ hg up -q -C 'desc(A)'
 
   $ echo D >> a
   $ hg ci -Am AD
@@ -38,7 +38,7 @@
   |/
   o  0: 1e635d440a73 'A'
   
-  $ hg rebase -s 1 -d 3
+  $ hg rebase -s 'desc(B)' -d 'desc(AD)'
   rebasing 0f4f7cb4f549 "B"
   merging a
   rebasing 30ae917c0e4f "C"
@@ -159,10 +159,10 @@ Test order of parents of rebased merged with un-rebased changes as p1.
   $ hg ci -Aqm change
   $ touch target
   $ hg ci -Aqm target
-  $ hg up -qr 0
+  $ hg up -qr 'desc(common)'
   $ touch outside
   $ hg ci -Aqm outside
-  $ hg merge -qr 1
+  $ hg merge -qr 'desc(change)'
   $ hg ci -m 'merge p1 3=outside p2 1=ancestor'
   $ hg par
   commit:      6990226659be
@@ -170,8 +170,8 @@ Test order of parents of rebased merged with un-rebased changes as p1.
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     merge p1 3=outside p2 1=ancestor
   
-  $ hg up -qr 1
-  $ hg merge -qr 3
+  $ hg up -qr 'desc(change)'
+  $ hg merge -qr f59da8fc0fcf04d44bb0390e824516ed9979b69f
   $ hg ci -qm 'merge p1 1=ancestor p2 3=outside'
   $ hg par
   commit:      a57575f79074

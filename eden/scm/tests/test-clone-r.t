@@ -17,7 +17,7 @@
   $ echo 3 >> afile
   $ hg commit -m "0.3"
 
-  $ hg update -C 0
+  $ hg update -C 'desc(0.0)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ echo 1 >> afile
@@ -33,7 +33,7 @@
   $ hg mv afile adifferentfile
   $ hg commit -m "1.3m"
 
-  $ hg update -C 3
+  $ hg update -C 'desc(0.3)'
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
 
   $ hg mv afile anotherfile

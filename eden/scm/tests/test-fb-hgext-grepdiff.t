@@ -91,7 +91,7 @@ Perform an "add" grepdiff over the whole repo
   
 
 Perform a "delta" grepdiff over the whole repo with another revset used
-  $ hg log --rev "(4:0) and grepdiff('delta:string')" -p
+  $ hg log --rev "(desc(int):66a661e5ba18d30421a634ea43371c34ee8a8677) and grepdiff('delta:string')" -p
   commit:      0173332b5f0e
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000

@@ -233,7 +233,7 @@ Ensure if we rebase the WCP, we still require the working copy to be clean up
 front:
   $ echo 'd' > i
   $ hg add i
-  $ hg rebase -r . -d 0
+  $ hg rebase -r . -d 'desc(a)'
   abort: uncommitted changes
   [255]
   $ hg up -Cq .

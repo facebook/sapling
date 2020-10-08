@@ -17,22 +17,22 @@ test that a commit clears the merge state.
 
 create a second head with conflicting edits
 
-  $ hg up -C 0
+  $ hg up -C 'desc(add)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo baz >> file1
   $ echo baz >> file2
   $ hg commit -Am 'append baz to files'
 
 create a third head with no conflicting edits
-  $ hg up -qC 0
+  $ hg up -qC 'desc(add)'
   $ echo foo > file3
   $ hg commit -Am 'add non-conflicting file'
   adding file3
 
 failing merge
 
-  $ hg up -qC 2
-  $ hg merge --tool=internal:fail 1
+  $ hg up -qC 'max(desc(append))'
+  $ hg merge --tool=internal:fail dc77451844e37f03f5c559e3b8529b2b48d381d1
   0 files updated, 0 files merged, 0 files removed, 2 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -203,28 +203,28 @@ resolve -m should abort when no merge in progress
 
 can not update or merge when there are unresolved conflicts
 
-  $ hg up -qC 0
+  $ hg up -qC 99726c03216e233810a2564cbc0adfe395007eac
   $ echo quux >> file1
-  $ hg up 1
+  $ hg up dc77451844e37f03f5c559e3b8529b2b48d381d1
   merging file1
   warning: 1 conflicts while merging file1! (edit, then use 'hg resolve --mark')
   1 files updated, 0 files merged, 0 files removed, 1 files unresolved
   use 'hg resolve' to retry unresolved file merges
   [1]
-  $ hg up 0
+  $ hg up 99726c03216e233810a2564cbc0adfe395007eac
   abort: outstanding merge conflicts
   [255]
-  $ hg merge 2
+  $ hg merge 'max(desc(append))'
   abort: outstanding merge conflicts
   [255]
-  $ hg merge --force 2
+  $ hg merge --force 'max(desc(append))'
   abort: outstanding merge conflicts
   [255]
 
 set up conflict-free merge
 
-  $ hg up -qC 3
-  $ hg merge 1
+  $ hg up -qC 'max(desc(add))'
+  $ hg merge dc77451844e37f03f5c559e3b8529b2b48d381d1
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 
@@ -239,8 +239,8 @@ resolve -m should do nothing in merge without conflicts
 
 get back to conflicting state
 
-  $ hg up -qC 2
-  $ hg merge --tool=internal:fail 1
+  $ hg up -qC 'max(desc(append))'
+  $ hg merge --tool=internal:fail dc77451844e37f03f5c559e3b8529b2b48d381d1
   0 files updated, 0 files merged, 0 files removed, 2 files unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
@@ -367,7 +367,7 @@ insert unsupported mandatory merge record
 
 update --clean shouldn't abort on unsupported records
 
-  $ hg up -qC 1
+  $ hg up -qC dc77451844e37f03f5c559e3b8529b2b48d381d1
   $ hg debugmergestate
   no merge state found
 

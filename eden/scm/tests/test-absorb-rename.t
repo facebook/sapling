@@ -44,7 +44,7 @@ rename a to b, then b to a
 
 when the first changeset is public
 
-  $ hg debugmakepublic -r 3
+  $ hg debugmakepublic -r 'max(desc(1))'
 
   $ sedi 's/a/A/' a
 

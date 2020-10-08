@@ -324,7 +324,7 @@ test 'resolve -l'
   $ echo "file a change 1" > a
   $ echo "file b change 1" > b
   $ hg commit -m "head 1"
-  $ hg update 0
+  $ hg update 'desc(initial)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo "file a change 2" > a
   $ echo "file b change 2" > b

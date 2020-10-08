@@ -27,7 +27,7 @@ Check filename heuristics (same dirname and same basename)
   $ hg clone -q server repo
   $ initclient repo
   $ cd repo
-  $ hg up -q 0
+  $ hg up -q 'desc(initial)'
   $ echo b > a
   $ echo b > dir/file.txt
   $ hg ci -qm 'mod a, mod dir/file.txt'
@@ -40,7 +40,7 @@ Check filename heuristics (same dirname and same basename)
   o  changeset: 3c482b16e54596fed340d05ffaf155f156cda7ee
       desc: initial, phase: public
 
-  $ hg rebase -s . -d 1
+  $ hg rebase -s . -d 'desc(mv)'
   rebasing 557f403c0afd "mod a, mod dir/file.txt"
   merging b and a to b
   merging dir2/file.txt and dir/file.txt to dir2/file.txt
@@ -63,7 +63,7 @@ Make sure filename heuristics do not when they are not related
   $ hg clone -q server repo
   $ initclient repo
   $ cd repo
-  $ hg up -q 0
+  $ hg up -q 'desc(initial)'
   $ printf 'somecontent\nmoarcontent' > a
   $ hg ci -qm 'mode a'
 
@@ -75,7 +75,7 @@ Make sure filename heuristics do not when they are not related
   o  changeset: e5b71fb099c29d9172ef4a23485aaffd497e4cc0
       desc: initial, phase: public
 
-  $ hg rebase -s . -d 1
+  $ hg rebase -s . -d 'desc(rm)'
   rebasing d526312210b9 "mode a"
   other [source] changed a which local [dest] deleted
   hint: if this is due to a renamed file, you can manually input the renamed path, or re-run the command using --config=experimental.copytrace=on to make hg figure out renamed path automatically (which is very slow, and you will need to be patient)
@@ -102,7 +102,7 @@ Test when lca didn't modified the file that was moved
   $ hg clone -q server repo
   $ initclient repo
   $ cd repo
-  $ hg up -q 1
+  $ hg up -q 'desc(randomcommit)'
   $ echo b > a
   $ hg ci -qm 'mod a'
 
@@ -116,7 +116,7 @@ Test when lca didn't modified the file that was moved
   o  changeset: e5b71fb099c29d9172ef4a23485aaffd497e4cc0
       desc: initial, phase: public
 
-  $ hg rebase -s . -d 2
+  $ hg rebase -s . -d 'desc(mv)'
   rebasing 9d5cf99c3d9f "mod a"
   merging b and a to b
   $ cd ..
@@ -139,7 +139,7 @@ Rebase "backwards"
   $ hg clone -q server repo
   $ initclient repo
   $ cd repo
-  $ hg up -q 2
+  $ hg up -q 'desc(mv)'
   $ echo b > b
   $ hg ci -qm 'mod b'
 
@@ -153,7 +153,7 @@ Rebase "backwards"
   o  changeset: e5b71fb099c29d9172ef4a23485aaffd497e4cc0
       desc: initial, phase: public
 
-  $ hg rebase -s . -d 0
+  $ hg rebase -s . -d 'desc(initial)'
   rebasing fbe97126b396 "mod b"
   merging a and b to a
   $ cd ..
@@ -181,7 +181,7 @@ Rebase draft commit on top of draft commit
   o  changeset: e5b71fb099c29d9172ef4a23485aaffd497e4cc0
       desc: initial, phase: draft
 
-  $ hg rebase -s . -d 1
+  $ hg rebase -s . -d 'desc(mv)'
   rebasing 5268f05aa168 "mod a"
   merging b and a to b
   $ cd ..
@@ -207,7 +207,7 @@ Check a few potential move candidates
   $ hg clone -q server repo
   $ initclient repo
   $ cd repo
-  $ hg up -q 0
+  $ hg up -q 'desc(initial)'
   $ echo b > dir/a
   $ hg ci -qm 'mod dir/a'
 
@@ -221,7 +221,7 @@ Check a few potential move candidates
   o  changeset: 36859b8907c513a3a87ae34ba5b1e7eea8c20944
       desc: initial, phase: public
 
-  $ hg rebase -s . -d 2
+  $ hg rebase -s . -d 'desc(create)'
   rebasing 6b2f4cece40f "mod dir/a"
   merging dir/b and dir/a to dir/b
   $ cd ..
@@ -254,7 +254,7 @@ Move file in one branch and delete it in another
   o  changeset: 1451231c87572a7d3f92fc210b4b35711c949a98
       desc: initial, phase: public
 
-  $ hg rebase -s 1 -d 2
+  $ hg rebase -s 'desc(mv)' -d 'desc(del)'
   rebasing 472e38d57782 "mv a b"
   $ hg up -q c492ed3c7e35dcd1dc938053b8adf56e2cfbd062
   $ ls
@@ -301,7 +301,7 @@ Too many move candidates
   o  changeset: 1451231c87572a7d3f92fc210b4b35711c949a98
       desc: initial, phase: public
 
-  $ hg rebase -s 2 -d 1
+  $ hg rebase -s 'desc(mod)' -d 'desc(rm)'
   rebasing ef716627c70b "mod a"
   other [source] changed a which local [dest] deleted
   hint: if this is due to a renamed file, you can manually input the renamed path, or re-run the command using --config=experimental.copytrace=on to make hg figure out renamed path automatically (which is very slow, and you will need to be patient)
@@ -339,7 +339,7 @@ Move a directory in draft branch
   o  changeset: 36859b8907c513a3a87ae34ba5b1e7eea8c20944
       desc: initial, phase: public
 
-  $ hg rebase -s . -d 1
+  $ hg rebase -s . -d 'desc(mod)'
   rebasing a33d80b6e352 "mv dir/ dir2/"
   merging dir/a and dir2/a to dir2/a
   $ cd ..
@@ -362,7 +362,7 @@ Move file twice and rebase mod on top of moves
   $ hg clone -q server repo
   $ initclient repo
   $ cd repo
-  $ hg up -q 0
+  $ hg up -q 'desc(initial)'
   $ echo c > a
   $ hg ci -m 'mod a'
   $ hg log -G -T 'changeset: {node}\n desc: {desc}, phase: {phase}\n'
@@ -374,7 +374,7 @@ Move file twice and rebase mod on top of moves
   |/    desc: mv a b, phase: public
   o  changeset: 1451231c87572a7d3f92fc210b4b35711c949a98
       desc: initial, phase: public
-  $ hg rebase -s . -d 2
+  $ hg rebase -s . -d 'max(desc(mv))'
   rebasing d41316942216 "mod a"
   merging c and a to c
 
@@ -398,7 +398,7 @@ Move file twice and rebase moves on top of mods
   $ hg ci -m 'mv a b'
   $ hg mv b c
   $ hg ci -m 'mv b c'
-  $ hg up -q 0
+  $ hg up -q 'desc(initial)'
   $ echo c > a
   $ hg ci -m 'mod a'
   $ hg log -G -T 'changeset: {node}\n desc: {desc}, phase: {phase}\n'
@@ -410,7 +410,7 @@ Move file twice and rebase moves on top of mods
   |/    desc: mv a b, phase: draft
   o  changeset: 1451231c87572a7d3f92fc210b4b35711c949a98
       desc: initial, phase: public
-  $ hg rebase -s 1 -d .
+  $ hg rebase -s 472e38d57782172f6c6abed82a94ca0d998c3a22 -d .
   rebasing 472e38d57782 "mv a b"
   merging a and b to b
   rebasing d3efd280421d "mv b c"
@@ -437,7 +437,7 @@ Move one file and add another file in the same folder in one branch, modify file
   $ hg clone -q server repo
   $ initclient repo
   $ cd repo
-  $ hg up -q 0
+  $ hg up -q 'desc(initial)'
   $ echo b > a
   $ hg ci -m 'mod a'
 
@@ -451,7 +451,7 @@ Move one file and add another file in the same folder in one branch, modify file
   o  changeset: 1451231c87572a7d3f92fc210b4b35711c949a98
       desc: initial, phase: public
 
-  $ hg rebase -s . -d 2
+  $ hg rebase -s . -d 'desc(add)'
   rebasing ef716627c70b "mod a"
   merging b and a to b
   $ ls
@@ -469,7 +469,7 @@ Merge test
   $ echo b > a
   $ hg ci -m 'modify a'
   $ hg bookmark book1
-  $ hg up -q 0
+  $ hg up -q 'desc(initial)'
   $ hg mv a b
   $ hg ci -m 'mv a b'
   $ hg bookmark book2
@@ -477,7 +477,7 @@ Merge test
   $ hg clone -q server repo
   $ initclient repo
   $ cd repo
-  $ hg up -q 2
+  $ hg up -q 'desc(mv)'
 
   $ hg log -G -T 'changeset: {node}\n desc: {desc}, phase: {phase}\n'
   @  changeset: 472e38d57782172f6c6abed82a94ca0d998c3a22
@@ -487,7 +487,7 @@ Merge test
   o  changeset: 1451231c87572a7d3f92fc210b4b35711c949a98
       desc: initial, phase: public
 
-  $ hg merge 1
+  $ hg merge 'desc(modify)'
   merging b and a to b
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -513,7 +513,7 @@ Copy and move file
   $ hg clone -q server repo
   $ initclient repo
   $ cd repo
-  $ hg up -q 0
+  $ hg up -q 'desc(initial)'
   $ echo b > a
   $ hg ci -m 'mod a'
 
@@ -525,7 +525,7 @@ Copy and move file
   o  changeset: 1451231c87572a7d3f92fc210b4b35711c949a98
       desc: initial, phase: public
 
-  $ hg rebase -s . -d 1
+  $ hg rebase -s . -d 'desc(cp)'
   rebasing ef716627c70b "mod a"
   merging b and a to b
   merging c and a to c
@@ -559,7 +559,7 @@ Do a merge commit with many consequent moves in one branch
   $ hg ci -qm 'mv a b'
   $ hg mv b c
   $ hg ci -qm 'mv b c'
-  $ hg up -q 1
+  $ hg up -q 'desc(mod)'
   $ hg log -G -T 'changeset: {node}\n desc: {desc}, phase: {phase}\n'
   o  changeset: d3efd280421d24f9f229997c19e654761c942a71
   |   desc: mv b c, phase: draft
@@ -570,7 +570,7 @@ Do a merge commit with many consequent moves in one branch
   o  changeset: 1451231c87572a7d3f92fc210b4b35711c949a98
       desc: initial, phase: public
 
-  $ hg merge 3
+  $ hg merge 'max(desc(mv))'
   merging a and c to c
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -656,7 +656,7 @@ changed in same move
   o  changeset 81973cd24b58db2fdf18ce3d64fb2cc3284e9ab3
       desc initial, phase: draft
 
-  $ hg rebase -s . -d 1 --config=experimental.copytrace=on
+  $ hg rebase -s . -d 'desc(mv)' --config=experimental.copytrace=on
   rebasing 6207d2d318e7 "mod a"
   merging dir2/b and dir1/a to dir2/b
   $ cat dir2/b
@@ -693,7 +693,7 @@ while adding file to original directory in other merge parent. File moved on reb
   o  changeset a235dcce55dcf42034c4e374cb200662d0bb4a13
       desc initial, phase: draft
 
-  $ hg rebase -s . -d 1 --config=experimental.copytrace=on
+  $ hg rebase -s . -d 'desc(hg)' --config=experimental.copytrace=on
   rebasing e8919e7df8d0 "mv dir1 dir2"
   $ ls dir2
   a

@@ -151,7 +151,7 @@ final manifest in git is just beta
   
 
 make sure alpha is not in this manifest
-  $ hg manifest -r 3
+  $ hg manifest -r ac85e2bfa8eee8aa65b7a49f11ab1a8d917558a7
   beta
   foo/bar
 

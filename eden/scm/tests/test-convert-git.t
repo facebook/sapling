@@ -956,7 +956,7 @@ convert will not retain custom metadata keys by default
   0 message with extras
   updating bookmarks
 
-  $ hg -R hgextras1 log --debug -r 1
+  $ hg -R hgextras1 log --debug -r 'desc(message)'
   commit:      e13a39880f68479127b2a80fa0b448cc8524aa09
   bookmark:    master
   phase:       draft
@@ -988,7 +988,7 @@ Converting a specific extra works
   0 message with extras
   updating bookmarks
 
-  $ hg -R hgextras2 log --debug -r 1
+  $ hg -R hgextras2 log --debug -r 'desc(message)'
   commit:      d40fb205d58597e6ecfd55b16f198be5bf436391
   bookmark:    master
   phase:       draft
@@ -1014,7 +1014,7 @@ Converting multiple extras works
   0 message with extras
   updating bookmarks
 
-  $ hg -R hgextras3 log --debug -r 1
+  $ hg -R hgextras3 log --debug -r 'desc(message)'
   commit:      0105af33379e7b6491501fd34141b7af700fe125
   bookmark:    master
   phase:       draft
@@ -1041,7 +1041,7 @@ convert.git.saverev can be disabled to prevent convert_revision from being writt
   0 message with extras
   updating bookmarks
 
-  $ hg -R hgextras4 log --debug -r 1
+  $ hg -R hgextras4 log --debug -r 'desc(message)'
   commit:      1dcaf4ffe5bee43fa86db2800821f6f0af212c5c
   bookmark:    master
   phase:       draft
@@ -1066,7 +1066,7 @@ convert_revision from source
   0 message with extras
   updating bookmarks
 
-  $ hg -R hgextras5 log --debug -r 1
+  $ hg -R hgextras5 log --debug -r 'desc(message)'
   commit:      574d85931544d4542007664fee3747360e85ee28
   bookmark:    master
   phase:       draft

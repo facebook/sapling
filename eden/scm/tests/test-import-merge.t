@@ -17,14 +17,14 @@ Test import and merge diffs
   $ echo c > c
   $ hg ci -Am addc
   adding c
-  $ hg up 0
+  $ hg up 'desc(adda)'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo b > b
   $ hg ci -Am addb
   adding b
-  $ hg up 1
+  $ hg up 'desc(changea)'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ hg merge 3
+  $ hg merge 'desc(addb)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg ci -m merge
@@ -49,7 +49,7 @@ Test import and merge diffs
 
 Test without --exact and diff.p1 == workingdir.p1
 
-  $ hg up 1
+  $ hg up 'desc(changea)'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ cat > $TESTTMP/editor.sh <<EOF
   > env | grep HGEDITFORM
@@ -66,7 +66,7 @@ Test without --exact and diff.p1 == workingdir.p1
 
 Test without --exact and diff.p1 != workingdir.p1
 
-  $ hg up 2
+  $ hg up 'desc(addc)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg import ../merge.diff
   applying ../merge.diff
@@ -90,7 +90,7 @@ Test with --exact
 
 Test with --bypass and diff.p1 == workingdir.p1
 
-  $ hg up 1
+  $ hg up 'desc(changea)'
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg import --bypass ../merge.diff
   applying ../merge.diff
@@ -101,7 +101,7 @@ Test with --bypass and diff.p1 == workingdir.p1
 
 Test with --bypass and diff.p1 != workingdir.p1
 
-  $ hg up 2
+  $ hg up 'desc(addc)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg import --bypass ../merge.diff
   applying ../merge.diff
@@ -136,7 +136,7 @@ Test that --exact on a bad header doesn't corrupt the repo (issue3616)
   $ echo b>>a
   $ echo a>>a
   $ hg ci -m3
-  $ hg export 2 | head -7 > ../a.patch
+  $ hg export 'desc(2)' | head -7 > ../a.patch
   $ hg export tip > out
   >>> apatch = open("../a.patch", "ab")
   >>> _ = apatch.write(b"".join(open("out", "rb").readlines()[7:]))

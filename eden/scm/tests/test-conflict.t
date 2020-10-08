@@ -23,7 +23,7 @@
   > Hop we are done.
   > EOF
   $ hg commit -m branch1
-  $ hg co 0
+  $ hg co 'desc(ancestor)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat << EOF > a
   > Small Mathematical Series.
@@ -36,7 +36,7 @@
   > EOF
   $ hg commit -m branch2
 
-  $ hg merge 1
+  $ hg merge 'desc(branch1)'
   merging a
   warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
@@ -89,7 +89,7 @@ Verify custom conflict markers
   > mergemarkertemplate = '{author} {node}'
   > EOF
 
-  $ hg merge 1
+  $ hg merge 'desc(branch1)'
   merging a
   warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
@@ -118,7 +118,7 @@ Verify line splitting of custom conflict marker which causes multiple lines
   > mergemarkertemplate={author} {node}\nfoo\nbar\nbaz
   > EOF
 
-  $ hg -q merge 1
+  $ hg -q merge 'desc(branch1)'
   warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
   [1]
 
@@ -157,7 +157,7 @@ Verify line trimming of custom conflict marker using multi-byte characters
   > mergemarkertemplate={desc|firstline}
   > EOF
 
-  $ hg -q --encoding utf-8 merge 1
+  $ hg -q --encoding utf-8 merge 'desc(branch1)'
   warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
   [1]
 
@@ -177,10 +177,10 @@ Verify line trimming of custom conflict marker using multi-byte characters
 
 Verify basic conflict markers
 
-  $ hg up -q --clean 2
+  $ hg up -q --clean 'desc(branch2)'
   $ printf "\n[ui]\nmergemarkers=basic\n" >> .hg/hgrc
 
-  $ hg merge 1
+  $ hg merge 'desc(branch1)'
   merging a
   warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
@@ -205,7 +205,7 @@ internal:merge3
 
   $ hg up -q --clean .
 
-  $ hg merge 1 --tool internal:merge3
+  $ hg merge 'desc(branch1)' --tool internal:merge3
   merging a
   warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
@@ -243,7 +243,7 @@ are merging, unlike :local and :other
   1 other heads for branch "default"
   $ printf "\n\nEnd of file\n" >> a
   $ hg ci -m "Add some stuff at the end"
-  $ hg up -r 1
+  $ hg up -r 'desc(branch1)'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ printf "Start of file\n\n\n" > tmp
   $ cat a >> tmp

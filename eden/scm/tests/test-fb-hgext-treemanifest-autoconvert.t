@@ -36,8 +36,8 @@ Test auto creating trees for merge commit
   $ hg up -q null
   $ echo z >> z
   $ hg commit -qAm 'add z'
-  $ hg up -q 0
-  $ hg merge -q -r 1
+  $ hg up -q 085784c01c08984ae3b6f4e4a6e553035d58380b
+  $ hg merge -q -r 'max(desc(add))'
   $ hg commit -qAm 'merge'
 
   $ cd ../client

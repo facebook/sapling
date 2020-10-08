@@ -299,7 +299,7 @@ revision with renamed files.
 
 Used to crash here
 
-  $ hg histgrep -r 1 octarine
+  $ hg histgrep -r 'desc(rename)' octarine
   colour:efd8f9e6d7a7:octarine
   $ cd ..
 
@@ -317,12 +317,12 @@ of just using revision numbers.
   $ echo red > color
   $ hg commit -A -m "1 red"
 
-  $ hg update 0
+  $ hg update 'desc(0)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo black > color
   $ hg commit -A -m "2 black"
 
-  $ hg update --clean 1
+  $ hg update --clean 'desc(1)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo blue > color
   $ hg commit -A -m "3 blue"

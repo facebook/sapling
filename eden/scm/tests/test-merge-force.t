@@ -25,7 +25,7 @@ Create remote changeset
 
 Create local changeset
 
-  $ hg update -q 0
+  $ hg update -q 'desc(base)'
   $ $PYTHON $TESTDIR/generateworkingcopystates.py state 3 3
   $ hg addremove -q --similarity 0
   $ hg commit -qm 'local'
@@ -780,7 +780,7 @@ Re-resolve and check status
 
 Set up working directory again
 
-  $ hg -q update --clean 2
+  $ hg -q update --clean 'desc(local)'
   $ hg purge
   $ $PYTHON $TESTDIR/generateworkingcopystates.py state 3 wc
   $ hg addremove -q --similarity 0

@@ -75,7 +75,7 @@ Rebase with conflict resolution
   commit_info (author=test checkoutidentifier=0000000000000006 node=27fd2733660ce0233ef4603cebe6328681aa598d)
   $ hg debugcheckoutidentifier
   0000000000000007
-  $ hg rebase -s 6 -d 5
+  $ hg rebase -s 'desc(2z)' -d e911dd548c90906d9f6733aa1612274865a7dfd2
   rebasing 78930e916793 "2z"
   merging 2
   warning: 1 conflicts while merging 2! (edit, then use 'hg resolve --mark')

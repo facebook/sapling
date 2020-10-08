@@ -30,14 +30,14 @@ Turn it on for this test.
   $ echo 2 > a/b
   $ hg commit -m "file2"
   $ hg bookmark -i file2
-  $ hg up 0
+  $ hg up 'desc(base)'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkdir a
   $ ln -s c a/b
   $ hg add a/b
   $ hg commit -m "link"
   $ hg bookmark -i link
-  $ hg up 0
+  $ hg up 'desc(base)'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkdir -p a/b/c
   $ echo 2 > a/b/c/d

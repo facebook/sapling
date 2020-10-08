@@ -53,7 +53,7 @@ These fail:
   $ hg clone -q -u . a a0
   $ cd a0
 
-  $ hg rebase -s 8 -d 7
+  $ hg rebase -s 'desc(I)' -d 'desc(H)'
   nothing to rebase
 
   $ hg rebase --continue --abort
@@ -79,35 +79,35 @@ These fail:
   abort: cannot specify both a revision and a base
   [255]
 
-  $ hg rebase --base 6
+  $ hg rebase --base 'desc(G)'
   abort: branch 'default' has 3 heads - please rebase to an explicit rev
   (run 'hg heads .' to see heads)
   [255]
 
-  $ hg rebase --rev '1 & !1' --dest 8
+  $ hg rebase --rev 'desc(B) & !desc(B)' --dest 8
   empty "rev" revision set - nothing to rebase
 
-  $ hg rebase --source '1 & !1' --dest 8
+  $ hg rebase --source 'desc(B) & !desc(B)' --dest 8
   empty "source" revision set - nothing to rebase
 
-  $ hg rebase --base '1 & !1' --dest 8
+  $ hg rebase --base 'desc(B) & !desc(B)' --dest 8
   empty "base" revision set - can't compute rebase set
 
-  $ hg rebase --dest 8
+  $ hg rebase --dest 'desc(I)'
   nothing to rebase - working directory parent is also destination
 
-  $ hg rebase -b . --dest 8
+  $ hg rebase -b . --dest 'desc(I)'
   nothing to rebase - e7ec4e813ba6 is both "base" and destination
 
-  $ hg up -q 7
+  $ hg up -q 'desc(H)'
 
-  $ hg rebase --dest 8 --traceback
+  $ hg rebase --dest 'desc(I)' --traceback
   nothing to rebase - working directory parent is already an ancestor of destination e7ec4e813ba6
 
-  $ hg rebase --dest 8 -b.
+  $ hg rebase --dest 'desc(I)' -b.
   nothing to rebase - "base" 02de42196ebe is already an ancestor of destination e7ec4e813ba6
 
-  $ hg rebase --dest '1 & !1'
+  $ hg rebase --dest 'desc(B) & !desc(B)'
   abort: empty revision set
   [255]
 
@@ -118,7 +118,7 @@ Rebase with no arguments (from 3 onto 8):
   $ cd ..
   $ hg clone -q -u . a2heads a1
   $ cd a1
-  $ hg up -q -C 3
+  $ hg up -q -C 'desc(D)'
 
   $ hg rebase
   rebasing 42ccdea3bb16 "B"
@@ -234,7 +234,7 @@ Specify only dest (from 3 onto 6):
   $ hg clone -q -u 3 a a5
   $ cd a5
 
-  $ hg rebase --dest 6
+  $ hg rebase --dest 'desc(G)'
   rebasing 42ccdea3bb16 "B"
   rebasing 5fddd98957c8 "C"
   rebasing 32af7686d403 "D"
@@ -294,7 +294,7 @@ Specify source and dest (from 2 onto 7):
   $ hg clone -q -u . a a7
   $ cd a7
 
-  $ hg rebase --source 2 --dest 7
+  $ hg rebase --source 'desc(C)' --dest 'desc(H)'
   rebasing 5fddd98957c8 "C"
   rebasing 32af7686d403 "D"
 
@@ -325,7 +325,7 @@ Specify base and dest (from 1 onto 7):
   $ hg clone -q -u . a a8
   $ cd a8
 
-  $ hg rebase --base 3 --dest 7
+  $ hg rebase --base 'desc(D)' --dest 'desc(H)'
   rebasing 42ccdea3bb16 "B"
   rebasing 5fddd98957c8 "C"
   rebasing 32af7686d403 "D"
@@ -382,7 +382,7 @@ Rebasing both a single revision and a merge in one command
 
   $ hg clone -q -u . a aX
   $ cd aX
-  $ hg rebase -r 3 -r 6 --dest 8
+  $ hg rebase -r 32af7686d403cf45b5d95f2d70cebea587ac806a -r 6 --dest 'desc(I)'
   rebasing 32af7686d403 "D"
   rebasing eea13746799a "G"
   $ cd ..
@@ -400,7 +400,7 @@ Test --tool parameter:
   $ hg ci -Am c2
   adding c2
 
-  $ hg up -q 0
+  $ hg up -q 'desc(c1)'
   $ echo c2b > c2
   $ hg ci -Am c2b
   adding c2
@@ -410,7 +410,7 @@ Test --tool parameter:
   $ hg clone -q -u . b b1
   $ cd b1
 
-  $ hg rebase -s 2 -d 1 --tool internal:local
+  $ hg rebase -s 'desc(c2b)' -d 56daeba07f4b2d0735ba0d40955813b42b4e4a4b --tool internal:local
   rebasing e4e3f3546619 "c2b"
   note: rebase of 2:e4e3f3546619 created no changes to commit
 
@@ -423,7 +423,7 @@ Test --tool parameter:
   $ hg clone -q -u . b b2
   $ cd b2
 
-  $ hg rebase -s 2 -d 1 --tool internal:other
+  $ hg rebase -s 'desc(c2b)' -d 56daeba07f4b2d0735ba0d40955813b42b4e4a4b --tool internal:other
   rebasing e4e3f3546619 "c2b"
 
   $ hg cat c2
@@ -435,7 +435,7 @@ Test --tool parameter:
   $ hg clone -q -u . b b3
   $ cd b3
 
-  $ hg rebase -s 2 -d 1 --tool internal:fail
+  $ hg rebase -s 'desc(c2b)' -d 56daeba07f4b2d0735ba0d40955813b42b4e4a4b --tool internal:fail
   rebasing e4e3f3546619 "c2b"
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
@@ -482,6 +482,6 @@ No common ancestor
   $ hg up -q null
   $ touch b
   $ hg commit -Aqm b
-  $ hg rebase -d 0
+  $ hg rebase -d 'desc(a)'
   nothing to rebase from d7486e00c6f1 to 3903775176ed
   $ cd ..

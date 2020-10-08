@@ -15,7 +15,7 @@
   $ echo foo >> a
   $ hg ci -Aqm1
 
-  $ hg up -q 0
+  $ hg up -q 'desc(0)'
 
   $ echo bar >> a
   $ hg ci -qm2

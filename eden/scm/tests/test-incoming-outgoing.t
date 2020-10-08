@@ -452,7 +452,7 @@ limit to 3 changesets
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     13
   
-  $ hg -R test-dev outgoing -r 11 ssh://user@dummy/test
+  $ hg -R test-dev outgoing -r 'desc(11)' ssh://user@dummy/test
   comparing with ssh://user@dummy/test (glob)
   searching for changes
   commit:      d89d4abea5bc

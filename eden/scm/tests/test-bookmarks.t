@@ -165,7 +165,7 @@ bookmarks X and X2 moved to rev 1, Y at rev -1
 
 bookmark rev 0 again
 
-  $ hg bookmark -r 0 Z
+  $ hg bookmark -r 'desc(0)' Z
 
   $ hg update X
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -391,13 +391,13 @@ bookmark with a name that matches an ambiguous node id
   >   hg ci -qm $i
   > done
   $ hg up -q null
-  $ hg log -r0: -T '{node}\n'
+  $ hg log -rb4e73ffab476aa0ee32ed81ca51e07169844bc6a: -T '{node}\n'
   b4e73ffab476aa0ee32ed81ca51e07169844bc6a
   c56256a09cd28e5764f32e8e2810d0f01e2e357a
   c5623987d205cd6d9d8389bfc40fff9dbb670b48
   c562ddd9c94164376c20b86b0b4991636a3bf84f
 
-  $ hg bookmark -r0 c562
+  $ hg bookmark -rb4e73ffab476aa0ee32ed81ca51e07169844bc6a c562
   $ hg bookmarks
      c562                      0:b4e73ffab476
 
@@ -426,7 +426,7 @@ force bookmark with existing name
 
 force bookmark back to where it was, should deactivate it
 
-  $ hg bookmark -fr1 X2
+  $ hg bookmark -fr'desc(1)' X2
   $ hg bookmarks
      X2                        1:925d80f479bb
      Y                         2:db815d6d32e6
@@ -506,8 +506,8 @@ activate bookmark on working dir parent without --force
 
 test clone
 
-  $ hg bookmark -r 2 -i @
-  $ hg bookmark -r 2 -i a@
+  $ hg bookmark -r 'desc(2)' -i @
+  $ hg bookmark -r 'desc(2)' -i a@
   $ hg bookmarks
      @                         2:db815d6d32e6
      X2                        1:925d80f479bb
@@ -550,7 +550,7 @@ delete multiple bookmarks at once
 
 test clone with a bookmark named "default" (issue3677)
 
-  $ hg bookmark -r 1 -f -i default
+  $ hg bookmark -r 'desc(1)' -f -i default
   $ hg clone . cloned-bookmark-default
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -632,7 +632,7 @@ working directory of current repository)
 
 pull --update works the same as pull && update
 
-  $ hg bookmark -r3 Y
+  $ hg bookmark -r'desc(x)' Y
   moving bookmark 'Y' forward from db815d6d32e6
   $ cp -R ../cloned-bookmarks-update ../cloned-bookmarks-manual-update
   $ cp -R ../cloned-bookmarks-update ../cloned-bookmarks-manual-update-with-divergence
@@ -737,11 +737,11 @@ test stripping a non-checked-out but bookmarked revision
      summary:     0
   
   $ hg book should-end-on-two
-  $ hg co --clean 4
+  $ hg co --clean 'desc(y)'
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (leaving bookmark should-end-on-two)
   $ hg book four
-  $ hg debugstrip 3
+  $ hg debugstrip 'desc(x)'
 should-end-on-two should end up pointing to revision 2, as that's the
 tipmost surviving ancestor of the stripped revision.
   $ hg log --graph
@@ -790,10 +790,10 @@ working directory of current repository)
 
 test clearing divergent bookmarks of linear ancestors
 
-  $ hg bookmark Z -r 0
-  $ hg bookmark Z@1 -r 1
-  $ hg bookmark Z@2 -r 2
-  $ hg bookmark Z@3 -r 3
+  $ hg bookmark Z -r 'desc(0)'
+  $ hg bookmark Z@1 -r 'desc(1)'
+  $ hg bookmark Z@2 -r 'desc(2)'
+  $ hg bookmark Z@3 -r 'desc(y)'
   $ hg book
      Z                         0:f7b1eb17ad24
      Z@1                       1:925d80f479bb
@@ -811,10 +811,10 @@ test clearing divergent bookmarks of linear ancestors
 
 test clearing only a single divergent bookmark across branches
 
-  $ hg book foo -r 1
-  $ hg book foo@1 -r 0
-  $ hg book foo@2 -r 2
-  $ hg book foo@3 -r 3
+  $ hg book foo -r 'desc(1)'
+  $ hg book foo@1 -r 'desc(0)'
+  $ hg book foo@2 -r 'desc(2)'
+  $ hg book foo@3 -r 'desc(y)'
   $ hg book foo -r foo@3
   $ hg book
    * Z                         3:9c404beeabc2

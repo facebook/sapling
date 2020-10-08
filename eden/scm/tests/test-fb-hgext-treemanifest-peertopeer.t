@@ -111,7 +111,7 @@ Pushing p2p with sendtrees=True puts the received packs in the local pack store
 Pulling between peers should send local trees but not remote trees
 # Strip back one server commit and one draft commit, so we can pull them again
   $ cd ../client2
-  $ hg debugstrip -r 2 --no-backup
+  $ hg debugstrip -r 'max(desc(modify))' --no-backup
 # Delete the old local tree data from the draft commit, so we can verify it is
 # downloaded again during pull.
   $ rm -rf .hg/store/packs/*

@@ -20,7 +20,7 @@ Make a dir named b that contains a file, and a file named d
 
 Peform an update that causes b/c to be backed up
 
-  $ hg up -q 0
+  $ hg up -q 'desc(base)'
   $ mkdir -p b
   $ echo c2 > b/c
   $ hg up --verbose c1
@@ -35,7 +35,7 @@ Peform an update that causes b/c to be backed up
 
 Make files named b and d
 
-  $ hg up -q 0
+  $ hg up -q 'desc(base)'
   $ echo b1 > b
   $ echo d2 > d
   $ hg add b d
@@ -44,7 +44,7 @@ Make files named b and d
 
 Perform an update that causes b to be backed up - it should replace the backup b dir
 
-  $ hg up -q 0
+  $ hg up -q 'desc(base)'
   $ echo b2 > b
   $ hg up --verbose b1
   resolving manifests
@@ -58,7 +58,7 @@ Perform an update that causes b to be backed up - it should replace the backup b
 
 Perform an update the causes b/c to be backed up again - it should replace the backup b file
 
-  $ hg up -q 0
+  $ hg up -q 'desc(base)'
   $ mkdir b
   $ echo c3 > b/c
   $ hg up --verbose c1
@@ -74,7 +74,7 @@ Perform an update the causes b/c to be backed up again - it should replace the b
 
 Cause two symlinks to be backed up that points to a valid location from the backup dir
 
-  $ hg up -q 0
+  $ hg up -q 'desc(base)'
   $ mkdir ../sym-link-target
 #if symlink
   $ ln -s ../../../sym-link-target b
@@ -94,7 +94,7 @@ Cause two symlinks to be backed up that points to a valid location from the back
 
 Perform an update that causes b/c and d to be backed up again - b/c should not go into the target dir
 
-  $ hg up -q 0
+  $ hg up -q 'desc(base)'
   $ mkdir b
   $ echo c4 > b/c
   $ echo d3 > d
@@ -117,7 +117,7 @@ Perform an update that causes b/c and d to be backed up again - b/c should not g
 Incorrectly configure origbackuppath to be under a file
 
   $ echo data > .hg/badorigbackups
-  $ hg up -q 0
+  $ hg up -q 'desc(base)'
   $ mkdir b
   $ echo c5 > b/c
   $ hg up --verbose c1 --config ui.origbackuppath=.hg/badorigbackups

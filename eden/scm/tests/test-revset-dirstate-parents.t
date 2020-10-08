@@ -58,7 +58,7 @@ working dir with a single parent
 merge in progress
   $ echo b > b
   $ hg ci -Aqm1
-  $ hg up -q 0
+  $ hg up -q 'desc(0)'
   $ echo c > c
   $ hg ci -Aqm2
   $ hg merge -q

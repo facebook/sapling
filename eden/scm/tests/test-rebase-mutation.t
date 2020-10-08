@@ -177,7 +177,7 @@ set.
   |/
   o  cd010b8cd998 A
   
-  $ hg debugmutation -r 10
+  $ hg debugmutation -r 'max(desc(C))'
    *  5ae4c968c6aca831df823664e706c9d4aa34473d rebase by test at 1970-01-01T00:00:00 from:
       5fddd98957c8a54a4d436dfe1da9d87f21a1b97b
   
@@ -186,7 +186,7 @@ More complex case where part of the rebase set were already rebased
 
   $ hg rebase --rev 'desc(D) & ::.' --dest 'desc(H)'
   rebasing 08483444fef9 "D"
-  $ hg debugmutation -r 11
+  $ hg debugmutation -r 'max(desc(D))'
    *  4596109a6a4328c398bde3a4a3b6737cfade3003 rebase by test at 1970-01-01T00:00:00 from:
       08483444fef91d6224f6655ee586a65d263ad34c
   
@@ -213,7 +213,7 @@ More complex case where part of the rebase set were already rebased
   rebasing 8877864f1edb "B"
   note: not rebasing 08483444fef9 "D", already in destination as 4596109a6a43 "D"
   rebasing 5ae4c968c6ac "C"
-  $ hg debugmutation -r 11::13
+  $ hg debugmutation -r 'max(desc(D))'::'max(desc(C))'
    *  4596109a6a4328c398bde3a4a3b6737cfade3003 rebase by test at 1970-01-01T00:00:00 from:
       08483444fef91d6224f6655ee586a65d263ad34c
   
@@ -280,8 +280,8 @@ Start rebase from a commit that is obsolete but not hidden only because it's
 a working copy parent. We should be moved back to the starting commit as usual
 even though it is hidden (until we're moved there).
 
-  $ hg up 1 -q
-  $ hg rebase --rev 13 --dest 15
+  $ hg up 42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 -q
+  $ hg rebase --rev 'max(desc(C))' --dest 'max(desc(D))'
   rebasing 98f6af4ee953 "C"
   $ hg log -G
   o  294a2b93eb4d C
@@ -464,9 +464,9 @@ be rebased.
 Test that rewriting leaving instability behind is allowed
 ---------------------------------------------------------------------
 
-  $ hg log -r 'children(8)'
+  $ hg log -r 'children(max(desc(C)))'
   cf44d2f5a9f4 D (no-eol)
-  $ hg rebase -r 8
+  $ hg rebase -r 'max(desc(C))'
   rebasing e273c5e7d2d2 "C"
   $ hg log -G
   o  0d8f238b634c C
@@ -492,7 +492,7 @@ Test that rewriting leaving instability behind is allowed
 Test multiple root handling
 ------------------------------------
 
-  $ hg rebase --dest 4 --rev '7+11+9'
+  $ hg rebase --dest 'desc(E)' --rev '02de42196ebee42ef284b6780a87cdc96e8eaab6+11+9'
   rebasing 02de42196ebe "H"
   rebasing cf44d2f5a9f4 "D"
   rebasing 0d8f238b634c "C"
@@ -552,9 +552,9 @@ test on rebase dropping a merge
   adding manifests
   adding file changes
   added 8 changesets with 7 changes to 7 files
-  $ hg up 3
+  $ hg up 'desc(D)'
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg merge 7
+  $ hg merge 'desc(H)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg ci -m 'M'
@@ -584,7 +584,7 @@ test on rebase dropping a merge
   
 (actual test)
 
-  $ hg rebase --dest 6 --rev '((desc(H) + desc(D))::) - desc(M)'
+  $ hg rebase --dest 'desc(G)' --rev '((desc(H) + desc(D))::) - desc(M)'
   rebasing 32af7686d403 "D"
   rebasing 02de42196ebe "H"
   rebasing 4bde274eefcf "I"
@@ -616,7 +616,7 @@ test on rebase dropping a merge
 
 Test hidden changesets in the rebase set (issue4504)
 
-  $ hg up --hidden 9
+  $ hg up --hidden 4bde274eefcf17e1d90d28db054f8a448ec4d3c9
   3 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo J > J
   $ hg add J
@@ -656,7 +656,7 @@ Test hidden changesets in the rebase set (issue4504)
   |/
   o  cd010b8cd998 A
   
-  $ hg up 14 -C
+  $ hg up 'max(desc(I))' -C
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo "K" > K
   $ hg add K
@@ -704,7 +704,7 @@ Test hidden changesets in the rebase set (issue4504)
   |/
   o  cd010b8cd998 A
   
-  $ hg rebase -s 14 -d 17 --config experimental.rebaseskipobsolete=True
+  $ hg rebase -s 'max(desc(I))' -d 'desc(L)' --config experimental.rebaseskipobsolete=True
   note: not rebasing 9ad579b4a5de "I", already in destination as fc37a630c901 "K"
   rebasing 5ae8a643467b "J"
 
@@ -763,7 +763,7 @@ Even when the chain include missing node
 
 XXX: rev 3 should remain hidden. (debugstrip is rarely used so this might be okay)
   $ enable amend
-  $ hg hide 3 -q --hidden
+  $ hg hide 212cb178bcbb8916f22a2bf937232f368b64ace7 -q --hidden
 
   $ hg log -G
   @  1a79b7535141 D
@@ -780,7 +780,7 @@ XXX: rev 3 should remain hidden. (debugstrip is rarely used so this might be oka
   $ hg rebase -d 'desc(B2)'
   note: not rebasing a8b11f55fb19 "B0", already in destination as 261e70097290 "B2"
   rebasing 1a79b7535141 "D"
-  $ hg up 4
+  $ hg up 'max(desc(C))'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo "O" > O
   $ hg add O
@@ -801,10 +801,10 @@ XXX: rev 3 should remain hidden. (debugstrip is rarely used so this might be oka
   |
   o  4a2df7238c3b A
   
-  $ hg rebase -d 6 -r "4+8"
+  $ hg rebase -d 'max(desc(D))' -r "ff2c4d47b71d942eb1f1914b2cb5fe3a328f1ba9+8"
   rebasing ff2c4d47b71d "C"
   rebasing 8d47583e023f "P"
-  $ hg hide 7 --config extensions.amend=
+  $ hg hide 'desc(O)' --config extensions.amend=
   hiding commit 360bbaa7d3ce "O"
   1 changeset hidden
 
@@ -837,17 +837,17 @@ Rebases can create divergence
   o  4a2df7238c3b A
   
 
-  $ hg up 9
+  $ hg up 'max(desc(C))'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo "john" > doe
   $ hg add doe
   $ hg commit -m "john doe"
-  $ hg up 10
+  $ hg up 'max(desc(P))'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo "foo" > bar
   $ hg add bar
   $ hg commit --amend -m "P-amended"
-  $ hg up 10 --hidden
+  $ hg up 121d9e3bc4c60bd1c9c007e7de31d6796b882a45 --hidden
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo "bar" > foo
   $ hg add foo
@@ -869,7 +869,7 @@ Rebases can create divergence
   |
   o  4a2df7238c3b A
   
-  $ hg rebase -s 10 -d 11
+  $ hg rebase -s 121d9e3bc4c60bd1c9c007e7de31d6796b882a45 -d 'desc(john)'
   rebasing 121d9e3bc4c6 "P"
   rebasing 73568ab6879d "bar foo"
   $ hg log -G
@@ -892,7 +892,7 @@ Rebases can create divergence
 rebase --continue + skipped rev because their successors are in destination
 we make a change in trunk and work on conflicting changes to make rebase abort.
 
-  $ hg log -G -r 15::
+  $ hg log -G -r 'max(desc(bar))'::
   @  61bd55f69bc4 bar foo
   |
   ~
@@ -903,7 +903,7 @@ Create a change in trunk
   $ hg commit -m "willconflict first version"
 
 Create the changes that we will rebase
-  $ hg update -C 15 -q
+  $ hg update -C 'max(desc(bar))' -q
   $ printf "b" > willconflict
   $ hg add willconflict
   $ hg commit -m "willconflict second version"
@@ -913,10 +913,10 @@ Create the changes that we will rebase
   $ printf "dummy" > L
   $ hg add L
   $ hg commit -m "dummy change 2"
-  $ hg rebase -r 18 -d 16
+  $ hg rebase -r cab092d71c4b6b4c735990a4c35f9bf949c73b12 -d 357ddf1602d5a49a02a6d216eeb0d5cc37a1f036
   rebasing cab092d71c4b "dummy change 1"
 
-  $ hg log -G -r 15::
+  $ hg log -G -r 'max(desc(bar))'::
   o  59c6f3a91215 dummy change 1
   |
   | @  ae4ed1351416 dummy change 2
@@ -930,7 +930,7 @@ Create the changes that we will rebase
   o  61bd55f69bc4 bar foo
   |
   ~
-  $ hg rebase -r ".^^ + .^ + ." -d 20
+  $ hg rebase -r ".^^ + .^ + ." -d 'max(desc(dummy))'
   rebasing b82fb57ea638 "willconflict second version"
   merging willconflict
   warning: 1 conflicts while merging willconflict! (edit, then use 'hg resolve --mark')
@@ -1025,7 +1025,7 @@ consequence f (descendant of d) is left behind.
       447acf26a46a3399a7d18e2bd63f0762b7198405 replace by test at 1970-01-01T00:00:00 from:
       76be324c128b88631d4bff1b65a6cfe23096d1f6
   
-  $ hg debugstrip --no-backup -q -r 8:
+  $ hg debugstrip --no-backup -q -r 'max(desc(b))':
 
 If the rebase set has an obsolete (d) with a successor (d2) outside the rebase
 set and none in destination, then divergence is allowed.
@@ -1054,7 +1054,7 @@ set and none in destination, then divergence is allowed.
   |/
   o  b173517d0057 a
   
-  $ hg debugstrip --no-backup -q -r 8:
+  $ hg debugstrip --no-backup -q -r 'max(desc(c))':
 
 (Not skipping obsoletes means that divergence is allowed.)
 
@@ -1064,7 +1064,7 @@ set and none in destination, then divergence is allowed.
   rebasing 76be324c128b "d"
   rebasing 1143e9adc121 "f"
 
-  $ hg debugstrip --no-backup -q -r 0:
+  $ hg debugstrip --no-backup -q -r 'desc(a)':
 
 Similar test on a more complex graph
 
@@ -1403,19 +1403,19 @@ equivalents in destination
   adding root
   $ echo a > a && hg ci -Am a
   adding a
-  $ hg up 0
+  $ hg up 'desc(root)'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo b > b && hg ci -Am b
   adding b
-  $ hg rebase -r 2 -d 1
+  $ hg rebase -r 'desc(b)' -d 'desc(a)'
   rebasing 1e9a3c00cbe9 "b"
   $ hg log -r .  # working dir is at rev 3 (successor of 2)
   be1832deae9a b (no-eol)
-  $ hg book -r 2 mybook --hidden  # rev 2 has a bookmark on it now
-  $ hg up 2 && hg log -r .  # working dir is at rev 2 again
+  $ hg book -r 1e9a3c00cbe90d236ac05ef61efcc5e40b7412bc mybook --hidden  # rev 1e9a3c00cbe90d236ac05ef61efcc5e40b7412bc has a bookmark on it now
+  $ hg up 1e9a3c00cbe90d236ac05ef61efcc5e40b7412bc && hg log -r .  # working dir is at rev 1e9a3c00cbe90d236ac05ef61efcc5e40b7412bc again
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   1e9a3c00cbe9 b (rewritten using rebase as be1832deae9a) (no-eol)
-  $ hg rebase -r 2 -d 3 --config experimental.evolution.track-operation=1
+  $ hg rebase -r 1e9a3c00cbe90d236ac05ef61efcc5e40b7412bc -d 'max(desc(b))' --config experimental.evolution.track-operation=1
   note: not rebasing 1e9a3c00cbe9 "b" (mybook), already in destination as be1832deae9a "b"
 Check that working directory and bookmark was updated to rev 3 although rev 2
 was skipped

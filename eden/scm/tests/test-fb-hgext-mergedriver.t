@@ -21,7 +21,7 @@ basic merge driver: just lists out files and contents, doesn't resolve any files
   $ echo bfoo >> foo.txt
   $ echo bbar >> bar.txt
   $ hg commit -mb
-  $ hg up 0
+  $ hg up 'desc(a)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo cfoo >> foo.txt
   $ echo cbar >> bar.txt
@@ -30,7 +30,7 @@ basic merge driver: just lists out files and contents, doesn't resolve any files
   > [experimental]
   > mergedriver = python:$TESTTMP/mergedriver-list.py
   > EOF
-  $ hg merge 1
+  $ hg merge 'desc(b)'
   U bar.txt
   U foo.txt
   merging bar.txt
@@ -73,9 +73,9 @@ merge driver that always takes other versions
   > [experimental]
   > mergedriver = python:$TESTTMP/mergedriver-other.py
   > EOF
-  $ hg up --clean 2
+  $ hg up --clean 'desc(c)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg merge 1
+  $ hg merge 'desc(b)'
   * version 2 records
   local: ede3d67b8d0fb0052854c85fb16823c825d21060
   other: e0cfe070a2bbd0b727903026b7026cb0917e63b3
@@ -109,13 +109,13 @@ mark a file driver-resolved, and leave others unresolved
   >     util.copyfile(repo.wjoin('bar.txt'), repo.wjoin('foo.txt'))
   >     mergestate.mark('foo.txt', 'r')
   > EOF
-  $ hg up --clean 2
+  $ hg up --clean 'desc(c)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat >> $HGRCPATH << EOF
   > [experimental]
   > mergedriver=python:$TESTTMP/mergedriver-auto1.py
   > EOF
-  $ hg merge 1
+  $ hg merge 'desc(b)'
   * preprocess called
   merging bar.txt
   warning: 1 conflicts while merging bar.txt! (edit, then use 'hg resolve --mark')
@@ -187,9 +187,9 @@ mark a file driver-resolved, and leave others unresolved
 
 mark a file driver-resolved, and leave others unresolved (but skip merge driver)
 (r = False, unresolved = y, driver-resolved = y)
-  $ hg update --clean 2
+  $ hg update --clean 'desc(c)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg merge 1
+  $ hg merge 'desc(b)'
   * preprocess called
   merging bar.txt
   warning: 1 conflicts while merging bar.txt! (edit, then use 'hg resolve --mark')
@@ -237,9 +237,9 @@ implicitly makes them resolved
   > [experimental]
   > mergedriver = python:$TESTTMP/mergedriver-driveronly.py
   > EOF
-  $ hg update --clean 2
+  $ hg update --clean 'desc(c)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg merge 1
+  $ hg merge 'desc(b)'
   * preprocess called
   * conclude called
   * version 2 records
@@ -288,10 +288,10 @@ indicate merge driver is necessary at commit
   > [experimental]
   > mergedriver = python:$TESTTMP/mergedriver-special.py
   > EOF
-  $ hg update --clean 2
+  $ hg update --clean 'desc(c)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 XXX shouldn't output a warning
-  $ hg merge 1
+  $ hg merge 'desc(b)'
   * preprocess called
   warning: preprocess hook failed
   * conclude called
@@ -332,10 +332,10 @@ make sure this works sensibly when files are unresolved
   > [experimental]
   > mergedriver = python:$TESTTMP/mergedriver-exit.py
   > EOF
-  $ hg update --clean 2
+  $ hg update --clean 'desc(c)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 XXX shouldn't output a warning
-  $ hg merge 1
+  $ hg merge 'desc(b)'
   * preprocess called
   warning: preprocess hook failed
   merging bar.txt
@@ -366,13 +366,13 @@ XXX shouldn't output a warning
   $ hg commit -m 'merged'
   abort: unresolved merge conflicts (see 'hg help resolve')
   [255]
-  $ hg update 2
+  $ hg update 'desc(c)'
   abort: outstanding uncommitted merge
   [255]
 
 raise an error
 
-  $ hg update --clean 2
+  $ hg update --clean 'desc(c)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat > ../mergedriver-mark-and-raise.py << EOF
   > from edenscm.mercurial import error
@@ -391,7 +391,7 @@ raise an error
   > mergedriver = python:$TESTTMP/mergedriver-mark-and-raise.py
   > EOF
 
-  $ hg merge 1
+  $ hg merge 'desc(b)'
   * preprocess called
   error: preprocess hook failed: foo
   (run with --traceback for stack trace)
@@ -453,10 +453,10 @@ subsequent resolves shouldn't trigger the merge driver at all
 this should go through at this point
   $ hg commit -m merged
 
-  $ hg update --clean 2
+  $ hg update --clean 'desc(c)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-  $ hg merge 1
+  $ hg merge 'desc(b)'
   * preprocess called
   error: preprocess hook failed: foo
   (run with --traceback for stack trace)
@@ -500,29 +500,29 @@ this should go through
   $ hg commit -m merged
 
 this shouldn't invoke the merge driver
-  $ hg update --clean 2
+  $ hg update --clean 'desc(c)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 nor should this no-op update
-  $ hg update 2
+  $ hg update 'desc(c)'
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 nor should this update with no working copy changes
-  $ hg update 1
+  $ hg update 'desc(b)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 test some other failure modes
 
-  $ hg update --clean 2
+  $ hg update --clean 'desc(c)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-  $ hg merge 1 --config experimental.mergedriver=fail
+  $ hg merge 'desc(b)' --config experimental.mergedriver=fail
   abort: merge driver must be a python hook
   [255]
-  $ hg update --clean 2
+  $ hg update --clean 'desc(c)'
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 this should proceed as if there's no merge driver
-  $ hg merge 1 --config experimental.mergedriver=python:fail
+  $ hg merge 'desc(b)' --config experimental.mergedriver=python:fail
   loading preprocess hook failed: [Errno 2] $ENOENT$: '$TESTTMP/repo1/fail'
   merging bar.txt
   merging foo.txt
@@ -533,11 +533,11 @@ this should proceed as if there's no merge driver
   [1]
   $ hg debugmergestate | grep 'merge driver:'
   merge driver: python:fail (state "s")
-  $ hg update --clean 2
+  $ hg update --clean 'desc(c)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ..
 ensure the right path to load the merge driver hook
-  $ hg -R repo1 merge 1 --config experimental.mergedriver=python:fail
+  $ hg -R repo1 merge 'desc(b)' --config experimental.mergedriver=python:fail
   loading preprocess hook failed: [Errno 2] $ENOENT$: '$TESTTMP/repo1/fail'
   merging repo1/bar.txt
   merging repo1/foo.txt
@@ -588,7 +588,7 @@ verify behavior with different merge driver
 
 this should invoke the merge driver
   $ cd repo1
-  $ hg update --clean 2
+  $ hg update --clean 'desc(c)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat > ../mergedriver-raise.py << EOF
   > from edenscm.mercurial import error
@@ -648,11 +648,11 @@ test merge with automatic commit afterwards -- e.g. graft
   > [experimental]
   > mergedriver = python:$TESTTMP/mergedriver-other.py
   > EOF
-  $ hg update --clean 2
+  $ hg update --clean 'desc(c)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg debugmergestate
   no merge state found
-  $ hg graft 1
+  $ hg graft 'desc(b)'
   grafting e0cfe070a2bb "b"
   * version 2 records
   local: ede3d67b8d0fb0052854c85fb16823c825d21060
@@ -697,13 +697,13 @@ test merge with automatic commit afterwards -- e.g. graft
 
 graft with failing merge
 
-  $ hg update --clean 2
+  $ hg update --clean 'desc(c)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat >> $HGRCPATH << EOF
   > [experimental]
   > mergedriver = python:$TESTTMP/mergedriver-auto1.py
   > EOF
-  $ hg graft 1
+  $ hg graft e0cfe070a2bbd0b727903026b7026cb0917e63b3
   grafting e0cfe070a2bb "b"
   * preprocess called
   merging bar.txt
@@ -762,7 +762,7 @@ XXX hg resolve --unmark --all doesn't cause the merge driver to be rerun
 
 delete all the files
 
-  $ hg update --clean 2
+  $ hg update --clean 'desc(c)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat > ../mergedriver-delete.py << EOF
   > import os
@@ -780,7 +780,7 @@ delete all the files
   > [experimental]
   > mergedriver = python:$TESTTMP/mergedriver-delete.py
   > EOF
-  $ hg graft 1
+  $ hg graft e0cfe070a2bbd0b727903026b7026cb0917e63b3
   grafting e0cfe070a2bb "b"
   * preprocess called
   * conclude called

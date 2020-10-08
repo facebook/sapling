@@ -16,7 +16,7 @@
 Test that local removed/deleted, remote removed works with flags
   $ hg rm toremove
   $ rm todelete
-  $ hg co -q 0
+  $ hg co -q 'desc(0)'
 
   $ echo dirty > foo
   $ hg up -c
@@ -32,13 +32,13 @@ Test that local removed/deleted, remote removed works with flags
 
 Validate update of standalone execute bit change:
 
-  $ hg up -C 0
+  $ hg up -C 'desc(0)'
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ chmod -x foo
   $ hg ci -m removeexec
   nothing changed
   [1]
-  $ hg up -C 0
+  $ hg up -C 'desc(0)'
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg up
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved

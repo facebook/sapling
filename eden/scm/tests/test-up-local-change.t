@@ -67,7 +67,7 @@
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     2
   
-  $ hg --debug up 0
+  $ hg --debug up 'desc(1)'
     searching for copies back to rev 0
     unmatched files in local (from topological common ancestor):
      b
@@ -148,7 +148,7 @@
 create a second head
 
   $ cd ../r1
-  $ hg up 0
+  $ hg up 'desc(1)'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo b2 > b
   $ echo a3 > a
@@ -173,11 +173,11 @@ create a second head
 
 test conflicting untracked files
 
-  $ hg up -qC 0
+  $ hg up -qC 'desc(1)'
   $ echo untracked > b
   $ hg st
   ? b
-  $ hg up 1
+  $ hg up 'desc(2)'
   b: untracked file differs
   abort: untracked files in working directory differ from files in requested revision
   [255]
@@ -185,7 +185,7 @@ test conflicting untracked files
 
 test conflicting untracked ignored file
 
-  $ hg up -qC 0
+  $ hg up -qC 'desc(1)'
   $ echo ignored > .gitignore
   $ hg add .gitignore
   $ hg ci -m 'add .gitignore'
@@ -227,7 +227,7 @@ test updating backwards through a rename
   $ hg mv a b
   $ hg ci -m b
   $ echo b > b
-  $ hg up -q 0
+  $ hg up -q 'desc(a)'
   $ hg st
   M a
   $ hg diff --nodates
@@ -243,6 +243,6 @@ test for superfluous filemerge of clean files renamed in the past
   $ hg up -qC tip
   $ echo c > c
   $ hg add c
-  $ hg up -qt:fail 0
+  $ hg up -qt:fail 'desc(a)'
 
   $ cd ..

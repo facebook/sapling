@@ -23,7 +23,7 @@
   $ hg copy a e
   $ echo b >> b
   $ hg ci -d '2 0' -qAm '2: copy e from a, change b'
-  $ hg up -C 0
+  $ hg up -C 549482415e72464f9af14d1db506f81039c18890
   2 files updated, 0 files merged, 3 files removed, 0 files unresolved
   $ echo a >> a
   $ hg ci -d '3 0' -qAm '3: change a'
@@ -118,12 +118,12 @@ Convert from merge parent
 
 Check copy preservation
 
-  $ hg st -C --change 2 e
+  $ hg st -C --change 82bbac3d2cf4d360038b5fb550ab170c8f1f60c2 e
   M e
-  $ hg st -C --change 1 e
+  $ hg st -C --change 143f9787b8c5e6b657a6d24bb9edec877b96c567 e
   A e
     a
-  $ hg st -C --change 0 a
+  $ hg st -C --change 23c3be426dcecbd0521e128135940eebd0a47a89 a
   A a
 
 (It seems like a bug in log that the following doesn't show rev 1.)
@@ -184,7 +184,7 @@ Convert from merge
 
 Convert from revset in convert.hg.revs
 
-  $ hg convert --config convert.hg.revs='3:4+0' source revsetrepo
+  $ hg convert --config convert.hg.revs='6d9d663bfccff77b86c7951691ffaf0098c91488:320d539978e4acaf4cb8d1227d0ccf423164131e+549482415e72464f9af14d1db506f81039c18890' source revsetrepo
   initializing destination revsetrepo repository
   scanning source...
   sorting...
@@ -223,7 +223,7 @@ Convert from specified revs
 Convert in multiple steps that doesn't overlap - the link to the parent is
 preserved anyway
 
-  $ hg convert --config convert.hg.revs=::1 source multistep
+  $ hg convert --config convert.hg.revs=::d564b8910c2120a6b4cf55c7a033c40a54690730 source multistep
   initializing destination multistep repository
   scanning source...
   sorting...

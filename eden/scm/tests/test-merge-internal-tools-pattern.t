@@ -33,7 +33,7 @@ Branch 1: editing line 1:
 
 Branch 2: editing line 3:
 
-  $ hg update 0
+  $ hg update 'desc(revision)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ sed 's/line 3/third line/' f > f.new
   $ mv f.new f
@@ -59,7 +59,7 @@ Merge using internal:fail tool:
 
 Merge using internal:local tool:
 
-  $ hg update -C 2
+  $ hg update -C 'max(desc(edited))'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ sed 's/internal:fail/internal:local/' .hg/hgrc > .hg/hgrc.new
   $ mv .hg/hgrc.new .hg/hgrc
@@ -78,7 +78,7 @@ Merge using internal:local tool:
 
 Merge using internal:other tool:
 
-  $ hg update -C 2
+  $ hg update -C 'max(desc(edited))'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ sed 's/internal:local/internal:other/' .hg/hgrc > .hg/hgrc.new
   $ mv .hg/hgrc.new .hg/hgrc
@@ -97,7 +97,7 @@ Merge using internal:other tool:
 
 Merge using default tool:
 
-  $ hg update -C 2
+  $ hg update -C 'max(desc(edited))'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm .hg/hgrc
 
@@ -116,12 +116,12 @@ Merge using default tool:
 
 Merge using internal:union tool:
 
-  $ hg update -C 2
+  $ hg update -C 'max(desc(edited))'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ echo "line 4a" >>f
   $ hg ci -Am "Adding fourth line (commit 4)"
-  $ hg update 2
+  $ hg update 'max(desc(edited))'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ echo "line 4b" >>f
@@ -130,7 +130,7 @@ Merge using internal:union tool:
   $ echo "[merge-patterns]" > .hg/hgrc
   $ echo "* = internal:union" >> .hg/hgrc
 
-  $ hg merge 3
+  $ hg merge 2e6ee5e3ca9741adb8dea438cf4481288efd73c3
   merging f
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)

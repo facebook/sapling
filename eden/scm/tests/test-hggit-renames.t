@@ -438,7 +438,7 @@ Clone without findcopiesharder does not find copies from unmodified files
   importing git objects into hg
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg -R hgnocopyharder export 1::2
+  $ hg -R hgnocopyharder export 'desc(file1)'::'desc(file2)'
   # HG changeset patch
   # User test <test@example.org>
   # Date 1167609621 0
@@ -483,7 +483,7 @@ findcopiesharder finds copies from unmodified files if similarity is met
   importing git objects into hg
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg -R hgcopyharder0 export 1::2
+  $ hg -R hgcopyharder0 export 'desc(file1)'::'desc(file2)'
   # HG changeset patch
   # User test <test@example.org>
   # Date 1167609621 0
@@ -518,7 +518,7 @@ findcopiesharder finds copies from unmodified files if similarity is met
   importing git objects into hg
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg -R hgcopyharder1 export 1::2
+  $ hg -R hgcopyharder1 export 'desc(file1)'::'desc(file2)'
   # HG changeset patch
   # User test <test@example.org>
   # Date 1167609621 0

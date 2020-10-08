@@ -51,7 +51,7 @@ Test rebasing a single commit that changes flags:
      summary:     base
   
 
-  $ hg rebase -r 1 -d .
+  $ hg rebase -r 'desc(move)' -d .
   rebasing 5f41048406b0 "move"
   merging foo and foo_newloc to foo_newloc
   $ hg up tip

@@ -13,7 +13,7 @@
   $ hg ci -qAm 'add foo bar' -d '0 0'
   $ echo >> foo
   $ hg ci -m 'change foo' -d '1 0'
-  $ hg up -qC 0
+  $ hg up -qC 'desc(add)'
   $ hg copy --after --force foo bar
   $ hg copy foo baz
   $ hg ci -m 'make bar and baz copies of foo' -d '2 0'
@@ -24,16 +24,16 @@ Test that template can print all file copies (issue4362)
    File: baz (foo)
 
   $ hg bookmark premerge1
-  $ hg merge -r 1
+  $ hg merge -r 'desc(change)'
   merging baz and foo to baz
   1 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg ci -m 'merge local copy' -d '3 0'
-  $ hg up -C 1
+  $ hg up -C 'desc(change)'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (leaving bookmark premerge1)
   $ hg bookmark premerge2
-  $ hg merge 2
+  $ hg merge 'desc(make)'
   merging foo and baz to baz
   1 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -103,10 +103,10 @@ check shamap LF and CRLF handling
   > EOF
   $ $PYTHON rewrite.py new/.hg/shamap
   $ cd orig
-  $ hg up -qC 1
+  $ hg up -qC 'desc(change)'
   $ echo foo >> foo
   $ hg ci -qm 'change foo again'
-  $ hg up -qC 2
+  $ hg up -qC 'desc(make)'
   $ echo foo >> foo
   $ hg ci -qm 'change foo again again'
   $ cd ..
@@ -129,7 +129,7 @@ init broken repository
   $ echo b >> b
   $ hg copy b c
   $ hg ci -qAm changeall
-  $ hg up -qC 0
+  $ hg up -qC 'desc(init)'
   $ echo bc >> b
   $ hg ci -m changebagain
   $ HGMERGE=internal:local hg -q merge
@@ -161,7 +161,7 @@ break it
 
 manifest -r 0
 
-  $ hg -R fixed manifest -r 0
+  $ hg -R fixed manifest -r 'desc(init)'
   a
 
 manifest -r tip

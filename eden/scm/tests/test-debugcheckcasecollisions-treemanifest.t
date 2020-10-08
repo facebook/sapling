@@ -54,7 +54,7 @@ Check self-conflicts
   [1]
 
 Check against a particular revision
-  $ hg debugcheckcasecollisions -r 0 FILE4
+  $ hg debugcheckcasecollisions -r 'desc(base)' FILE4
   FILE4 conflicts with file4
   [1]
 

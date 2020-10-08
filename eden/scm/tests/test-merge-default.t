@@ -13,17 +13,17 @@
   $ echo c >> a
   $ hg commit -mc
 
-  $ hg up 1
+  $ hg up 'desc(b)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo d >> a
   $ hg commit -md
 
-  $ hg up 1
+  $ hg up 'desc(b)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo e >> a
   $ hg commit -me
 
-  $ hg up 1
+  $ hg up 'desc(b)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Should fail because not at a head:
@@ -48,7 +48,7 @@ Should fail because > 2 heads:
 
 Should succeed:
 
-  $ hg merge 2
+  $ hg merge 'desc(c)'
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg id -Tjson
@@ -76,7 +76,7 @@ Should succeed - 2 heads:
   (branch merge, don't forget to commit)
   $ hg commit -mm2
 
-  $ hg id -r 1 -Tjson
+  $ hg id -r 'desc(b)' -Tjson
   [
    {
     "bookmarks": [],
@@ -91,7 +91,7 @@ Should fail because at tip:
   abort: nothing to merge
   [255]
 
-  $ hg up 0
+  $ hg up 'desc(a)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Should fail because there is only one head:
@@ -101,7 +101,7 @@ Should fail because there is only one head:
   (use 'hg update' instead)
   [255]
 
-  $ hg up 3
+  $ hg up 'desc(d)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Test for issue2043: ensure that 'merge -P' shows ancestors of 6 that
@@ -109,7 +109,7 @@ are not ancestors of 7, regardless of where their common ancestors are.
 
 Merge preview not affected by common ancestor:
 
-  $ hg merge -q -P 6
+  $ hg merge -q -P 'desc(m2)'
   2d95304fed5d
   f25cbe84d8b3
   a431fabd6039

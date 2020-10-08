@@ -47,7 +47,7 @@ Build commit graph to push in
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg commit -m "merge beta"
-  $ hg merge 2
+  $ hg merge 0fcb170b6d8413eccdcba882f30260c80a99ad19
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg commit -m "merge alpha and beta"

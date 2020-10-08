@@ -144,7 +144,7 @@ annotate -nlf b
   3 b:5: b5
   3 b:6: b6
 
-  $ hg up -C 2
+  $ hg up -C 3086dbafde1ce745abfc8d2d367847280aabae9d
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat <<EOF >> b
   > b4
@@ -185,7 +185,7 @@ annotate after merge
 annotate after merge with -l
 (fastannotate differs from annotate)
 
-  $ hg log -Gp -T '{node}' -r '2..5'
+  $ hg log -Gp -T '{node}' -r '3086dbafde1ce745abfc8d2d367847280aabae9d..desc(mergeb)'
   @    64afcdf8e29e063c635be123d8d2fb160af00f7e
   |\
   | o  5fbdc1152d97597717021ad9e063061b200f146bdiff --git a/b b/b
@@ -234,7 +234,7 @@ annotate after merge with -l
   4 b:5: c
   4 b:6: b5
 
-  $ hg up -C 1
+  $ hg up -C 'desc(a1)'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg cp a b
   $ cat <<EOF > b
@@ -484,7 +484,7 @@ and its ancestor by overriding "repo._filecommit".
   > 4
   > 5
   > EOF
-  $ hg debugsetparents 17 17
+  $ hg debugsetparents 933981f264573acb5782b58f8f6fba0f5c815ac7 933981f264573acb5782b58f8f6fba0f5c815ac7
   $ hg --config extensions.legacyrepo=../legacyrepo.py  commit -m "baz:2"
   $ hg debugindexdot .hg/store/data/baz.i
   digraph G {
@@ -516,7 +516,7 @@ and its ancestor by overriding "repo._filecommit".
   > 4 baz:4
   > 5
   > EOF
-  $ hg debugsetparents 19 18
+  $ hg debugsetparents b94c9d8986533962f0ee2d1a8f1e244f839b6868 5d14c328cf75b0994b39f667b9a453cc4d050663
   $ hg --config extensions.legacyrepo=../legacyrepo.py  commit -m "baz:4"
   $ hg debugindexdot .hg/store/data/baz.i
   digraph G {
@@ -730,7 +730,7 @@ Annotate should list ancestor of starting revision only
 
 Even when the starting revision is the linkrev-shadowed one:
 
-  $ hg annotate a -r 3
+  $ hg annotate a -r 'max(desc(contentB))'
   0: A
   3: B
 
@@ -749,7 +749,7 @@ Issue5360: Deleted chunk in p1 of a merge changeset
   $ hg update '.^' -q
   $ echo 3 >> a
   $ hg commit -m 3 -q
-  $ hg merge 2 -q
+  $ hg merge 'desc(a)' -q
   $ cat > a << EOF
   > b
   > 1

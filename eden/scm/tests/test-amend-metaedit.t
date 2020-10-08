@@ -96,13 +96,13 @@ Test
 
   $ hg update --clean .
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg metaedit -r 0
+  $ hg metaedit -r 'desc(ROOT)'
   abort: cannot edit commit information for public revisions
   [255]
   $ hg metaedit --fold
   abort: revisions must be specified with --fold
   [255]
-  $ hg metaedit -r 0 --fold
+  $ hg metaedit -r 'desc(ROOT)' --fold
   abort: cannot fold public revisions
   [255]
   $ hg metaedit 'desc(C) + desc(F)' --fold
@@ -229,7 +229,7 @@ metaedit a commit in the middle of the stack:
   o  1ea73414a91b@default(draft) r0
   
 
-  $ hg metaedit -m "metaedit" -r 2
+  $ hg metaedit -m "metaedit" -r 'desc(r2)'
   $ glog -r 'all()'
   @  8c1f124031e7@default(draft) r4
   |
@@ -247,7 +247,7 @@ metaedit a commit in the middle of the stack:
   [1]
 
 metaedit more than one commit at once without --fold
-  $ hg metaedit -m "metaedit" -r 5::
+  $ hg metaedit -m "metaedit" -r 'desc(metaedit)'::
   $ glog -r 'all()'
   @  972f190d63f3@default(draft) metaedit
   |

@@ -56,9 +56,9 @@ log before rebase
   
 Simple rebase with -s and -d
 
-  $ hg update 8
+  $ hg update cf7e1bc6a982390237dd47e096c15bca92fe2237
   3 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ HGEDITOR=true hg rebase -i -s 8 -d 5
+  $ HGEDITOR=true hg rebase -i -s cf7e1bc6a982390237dd47e096c15bca92fe2237 -d 652413bf663ef2a641cab26574e46d5f5a64a55a
 
   $ hg log -G -T '{node|short} {desc|firstline}\n'
   @  bb8affa27bd8 i

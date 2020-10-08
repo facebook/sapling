@@ -62,25 +62,25 @@ Should diff cloned directories:
 
 Should diff cloned files directly:
 
-  $ hg falabala -r 0:1
+  $ hg falabala -r 'desc(test1)':'desc(test2)'
   diffing "*\\extdiff.*\\a.8a5febb7f867\\a" "a.34eed99112ab\\a" (glob) (windows !)
   diffing */extdiff.*/a.8a5febb7f867/a a.34eed99112ab/a (glob) (no-windows !)
   [1]
 
 Specifying an empty revision should abort.
 
-  $ hg extdiff -p diff --patch --rev 'ancestor()' --rev 1
+  $ hg extdiff -p diff --patch --rev 'ancestor()' --rev 'desc(test2)'
   abort: empty revision on one side of range
   [255]
 
 Test diff during merge:
 
-  $ hg update -C 0
+  $ hg update -C 'desc(test1)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo c >> c
   $ hg add c
   $ hg ci -m "new branch" -d '1 0'
-  $ hg merge 1
+  $ hg merge 'desc(test2)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 
@@ -96,14 +96,14 @@ Test --change option:
 
   $ hg ci -d '2 0' -mtest3
 
-  $ hg falabala -c 1
+  $ hg falabala -c 'desc(test2)'
   diffing "*\\extdiff.*\\a.8a5febb7f867\\a" "a.34eed99112ab\\a" (glob) (windows !)
   diffing */extdiff.*/a.8a5febb7f867/a a.34eed99112ab/a (glob) (no-windows !)
   [1]
 
 Check diff are made from the first parent:
 
-  $ hg falabala -c 3 || echo "diff-like tools yield a non-zero exit code"
+  $ hg falabala -c 'desc(test3)' || echo "diff-like tools yield a non-zero exit code"
   diffing "*\\extdiff.*\\a.2a13a4d2da36\\a" "a.46c0e4daeb72\\a" (glob) (windows !)
   diffing */extdiff.*/a.2a13a4d2da36/a a.46c0e4daeb72/a (glob) (no-windows !)
   diff-like tools yield a non-zero exit code
@@ -117,7 +117,7 @@ issue4463: usage of command line configuration without additional quoting
   > 4463b = echo b-naked 'single quoted' "double quoted"
   > echo =
   > EOF
-  $ hg update -q -C 0
+  $ hg update -q -C 'desc(test1)'
   $ echo a >> a
 
   $ hg --debug 4463a | grep '^running'
@@ -190,14 +190,14 @@ Empty argument must be quoted
   > kdiff3.diffargs=--L1 \$plabel1 --L2 \$clabel \$parent \$child
   > EOF
 
-  $ hg --debug kdiff3 -r0 | grep '^running'
+  $ hg --debug kdiff3 -r'desc(test1)' | grep '^running'
   running 'echo --L1 "@0" --L2 "" a.8a5febb7f867 a' in * (glob) (windows !)
   running "echo --L1 '@0' --L2 '' a.8a5febb7f867 a" in * (glob) (no-windows !)
 
 
 Test extdiff of multiple files in tmp dir:
 
-  $ hg update -C 0 > /dev/null
+  $ hg update -C 'desc(test1)' > /dev/null
   $ echo changed > a
   $ echo changed > b
 #if execbit
@@ -275,24 +275,24 @@ Diff in working directory, after:
 
 Test extdiff with --option:
 
-  $ hg extdiff -p echo -o this -c 1
+  $ hg extdiff -p echo -o this -c 'desc(test2)'
   this "*\\a.8a5febb7f867\\a" "a.34eed99112ab\\a" (glob) (windows !)
   this */extdiff.*/a.8a5febb7f867/a a.34eed99112ab/a (glob) (no-windows !)
   [1]
 
-  $ hg falabala -o this -c 1
+  $ hg falabala -o this -c 'desc(test2)'
   diffing this "*\\a.8a5febb7f867\\a" "a.34eed99112ab\\a" (glob) (windows !)
   diffing this */extdiff.*/a.8a5febb7f867/a a.34eed99112ab/a (glob) (no-windows !)
   [1]
 
 Test extdiff's handling of options with spaces in them:
 
-  $ hg edspace -c 1
+  $ hg edspace -c 'desc(test2)'
   "name  <user@example.com>" "*\\a.8a5febb7f867\\a" "a.34eed99112ab\\a" (glob) (windows !)
   name  <user@example.com> */extdiff.*/a.8a5febb7f867/a a.34eed99112ab/a (glob) (no-windows !)
   [1]
 
-  $ hg extdiff -p echo -o "name  <user@example.com>" -c 1
+  $ hg extdiff -p echo -o "name  <user@example.com>" -c 'desc(test2)'
   "name  <user@example.com>" "*\\a.8a5febb7f867\\a" "a.34eed99112ab\\a" (glob) (windows !)
   name  <user@example.com> */extdiff.*/a.8a5febb7f867/a a.34eed99112ab/a (glob) (no-windows !)
   [1]
@@ -304,7 +304,7 @@ Test with revsets:
   */extdiff.*/a.8a5febb7f867/a a.34eed99112ab/a (glob) (no-windows !)
   [1]
 
-  $ hg extdif -p echo -r "0::1"
+  $ hg extdif -p echo -r "desc(test1)::desc(test2)"
   "*\\a.8a5febb7f867\\a" "a.34eed99112ab\\a" (glob) (windows !)
   */extdiff.*/a.8a5febb7f867/a a.34eed99112ab/a (glob) (no-windows !)
   [1]
@@ -394,7 +394,7 @@ Test symlinks handling (issue1909)
   $ echo a >> a
   $ ln -s missing linka
   $ hg add linka
-  $ hg falabala -r 0 --traceback
+  $ hg falabala -r 'desc(adda)' --traceback
   diffing testsymlinks.07f494440405 testsymlinks
   [1]
   $ cd ..

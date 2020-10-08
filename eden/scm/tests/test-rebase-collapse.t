@@ -438,7 +438,7 @@ Test collapsing changes that add then remove a file
   $ hg commit -Am b
   adding b
   $ hg book foo
-  $ hg rebase -d 0 -r "1::2" --collapse -m collapsed
+  $ hg rebase -d 'desc(base)' -r "max(desc(a))::max(desc(b))" --collapse -m collapsed
   rebasing 6d8d9f24eec3 "a"
   rebasing 1cc73eca5ecc "b" (foo)
   $ hg log -G --template "'{desc}' {bookmarks}"
@@ -462,11 +462,11 @@ running into merge conflict and invoking rebase --continue.
   $ hg commit -m "a"
   $ echo "a-default" > a
   $ hg commit -m "a-default"
-  $ hg update -r 0
+  $ hg update -r 3903775176ed42b1458a6281db4a0ccf4d9f287a
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo "a-dev" > a
   $ hg commit -m "a-dev"
-  $ hg rebase --collapse -m "a-default-dev" -d 1
+  $ hg rebase --collapse -m "a-default-dev" -d 3c8db56a44bcb7c2afe3a7b368ecdd09efaff115
   rebasing 1fb04abbc715 "a-dev"
   merging a
   warning: 1 conflicts while merging a! (edit, then use 'hg resolve --mark')

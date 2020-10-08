@@ -52,9 +52,9 @@
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
 
 3 gen1 packs, 1 gen0 pack - packs 3 gen1 into 1
-  $ hg prefetch -r 0
+  $ hg prefetch -r b292c1e3311fd0f13ae83b409caae4a6d1fb348c
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
-  $ hg prefetch -r 2
+  $ hg prefetch -r 'desc(x3)'
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ find $CACHEDIR/master/packs | sort
   $TESTTMP/hgcache/master/packs

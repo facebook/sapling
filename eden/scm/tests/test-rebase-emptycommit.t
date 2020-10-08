@@ -49,7 +49,7 @@
   
 With --keep, bookmark should move
 
-  $ hg rebase -r 3+4 -d 7 --keep
+  $ hg rebase -r e7b3f00ed42ef8977173765eccff8a861809549b+4 -d 'max(desc(E))' --keep
   rebasing e7b3f00ed42e "D" (BOOK-D)
   note: rebase of 3:e7b3f00ed42e created no changes to commit
   rebasing 69a34c08022a "E" (BOOK-E)
@@ -73,15 +73,15 @@ With --keep, bookmark should move
   
 Move D and E back for the next test
 
-  $ hg bookmark BOOK-D -fqir 3
-  $ hg bookmark BOOK-E -fqir 4
+  $ hg bookmark BOOK-D -fqir e7b3f00ed42ef8977173765eccff8a861809549b
+  $ hg bookmark BOOK-E -fqir 69a34c08022af689d8a6e9be8d266f91f0cc79ec
 
 Bookmark is usually an indication of a head. For changes that are introduced by
 an ancestor of bookmark B, after moving B to B-NEW, the changes are ideally
 still introduced by an ancestor of changeset on B-NEW. In the below case,
 "BOOK-D", and "BOOK-E" include changes introduced by "C".
 
-  $ hg rebase -s 2 -d 7
+  $ hg rebase -s 'desc(C)' -d 'max(desc(E))'
   rebasing dc0947a82db8 "C" (BOOK-C)
   rebasing e7b3f00ed42e "D" (BOOK-D)
   note: rebase of 3:e7b3f00ed42e created no changes to commit
@@ -129,7 +129,7 @@ Merge and its ancestors all become empty
   > EOS
   $ hg book -d A B C D E
 
-  $ hg rebase -r '(0::)-(1::)-0' -d 7
+  $ hg rebase -r '(desc(A)::)-(desc(B)::)-desc(A)' -d 'desc(H)'
   rebasing b18e25de2cf5 "D" (BOOK-D)
   note: rebase of 3:b18e25de2cf5 created no changes to commit
   rebasing dc0947a82db8 "C" (BOOK-C)
@@ -178,7 +178,7 @@ Part of ancestors of a merge become empty
   > EOS
   $ hg book -d A B C D E F G H
 
-  $ hg rebase -r '(0::)-(1::)-0' -d 9
+  $ hg rebase -r '(desc(A)::)-(desc(B)::)-desc(A)' -d 'desc(H)'
   rebasing dc0947a82db8 "C" (BOOK-C)
   note: rebase of 2:dc0947a82db8 created no changes to commit
   rebasing 03ca77807e91 "E" (BOOK-E)

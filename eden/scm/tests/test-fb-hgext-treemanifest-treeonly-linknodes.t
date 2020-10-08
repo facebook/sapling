@@ -60,8 +60,8 @@ Repack - this discards the linknode for the original commit
   $ hg repack
 
 Push commit 1 to the server
-  $ hg hide 'successors(1)' -q
-  $ hg push -r 1 --allow-anon
+  $ hg hide 'successors(5ee5c65bfee26d54c1fb59cf411fd5a81a328b83)' -q
+  $ hg push -r 5ee5c65bfee26d54c1fb59cf411fd5a81a328b83 --allow-anon
   pushing to ssh://user@dummy/master
   searching for changes
   remote: adding changesets
@@ -70,8 +70,8 @@ Push commit 1 to the server
   remote: added 1 changesets with 1 changes to 1 files
 
 Works ok with pushrebase.
-  $ hg unhide 2
-  $ hg push -r 2 --to test --create
+  $ hg unhide 'desc(x2a)'
+  $ hg push -r 'desc(x2a)' --to test --create
   pushing rev e0ce6fd597a7 to destination ssh://user@dummy/master bookmark test
   searching for changes
   exporting bookmark test

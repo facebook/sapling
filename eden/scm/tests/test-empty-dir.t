@@ -15,7 +15,7 @@
   $ cat sub/b
   321
 
-  $ hg co 0
+  $ hg co 'desc(first)'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
   $ cat sub/b 2>/dev/null || echo "sub/b not present"

@@ -235,11 +235,11 @@
   x-hg-copy x
   x-hg-copyrev d33b2f7888d4f6f9112256d0f1c625af6d188fde
   x-is-binary 0
-  $ hg cat -r 1 y
+  $ hg cat -r 799bebfa53189a3db8424680f1a8f9806540e541 y
   THIS-IS-LFS-FILE
-  $ hg cat -r 2 y
+  $ hg cat -r f3dec7f3610207dbf222ec2d7b68df16a5fde0f2 y
   NOTLFS
-  $ hg cat -r 7 y
+  $ hg cat -r 'desc(shallow.lfs.commit)' y
   NOTLFS
   BECOME-LFS-AGAIN
   ADD-A-LINE

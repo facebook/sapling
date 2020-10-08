@@ -76,7 +76,7 @@ file while none of them belong to the second parent was broken
   $ hg ci -Am changea
   adding b1
   adding b2
-  $ hg up -C 0
+  $ hg up -C 'desc(adda)'
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ echo c1 > c1
   $ echo c2 > c2

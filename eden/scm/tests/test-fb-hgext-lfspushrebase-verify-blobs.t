@@ -5,7 +5,7 @@
   $ . "$TESTDIR/library.sh"
 
   $ enable lfs pushrebase
-  $ setconfig diff.git=1 pushrebase.rewritedates=true
+  $ setconfig diff.git=1 pushrebase.rewritedates=false
   $ readconfig <<EOF
   > [lfs]
   > threshold=10B
@@ -142,12 +142,6 @@
   searching for changes
   pushing 1 changeset:
       515a4dfd2e0c  shallow.lfs.commit
-  1 new changeset from the server will be downloaded
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 0 changes to 1 files
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ cd $TESTTMP/client
 
@@ -164,18 +158,12 @@
   searching for changes
   pushing 1 changeset:
       515a4dfd2e0c  shallow.lfs.commit
-  1 new changeset from the server will be downloaded
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 0 changes to 1 files
-  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 
 # Check content
   $ cd ../master
   $ hg log -p -r tip -T '{node} {desc}\n'
-  b5d11a100365149f6276f32b895be1d509e00566 shallow.lfs.commit
+  515a4dfd2e0c4c963dcbf4bc48587b9747143598 shallow.lfs.commit
   diff --git a/x b/y
   rename from x
   rename to y
@@ -188,7 +176,7 @@
   
 
   $ hg log -T '{node} {bookmarks} {desc}\n' -G
-  o  b5d11a100365149f6276f32b895be1d509e00566  shallow.lfs.commit
+  o  515a4dfd2e0c4c963dcbf4bc48587b9747143598  shallow.lfs.commit
   |
   @  042535657086a5b08463b9210a8f46dc270e51f9 master x-lfs-again
   |
@@ -223,11 +211,11 @@
   x-hg-copy x
   x-hg-copyrev d33b2f7888d4f6f9112256d0f1c625af6d188fde
   x-is-binary 0
-  $ hg cat -r 1 y
+  $ hg cat -r 799bebfa53189a3db8424680f1a8f9806540e541 y
   THIS-IS-LFS-FILE
-  $ hg cat -r 2 y
+  $ hg cat -r f3dec7f3610207dbf222ec2d7b68df16a5fde0f2 y
   NOTLFS
-  $ hg cat -r 5 y
+  $ hg cat -r 'desc(shallow.lfs.commit)' y
   NOTLFS
   BECOME-LFS-AGAIN
   ADD-A-LINE
@@ -269,7 +257,7 @@
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
   $ hg log -p -r tip -T '{node} {desc}\n'
-  b5d11a100365149f6276f32b895be1d509e00566 shallow.lfs.commit
+  515a4dfd2e0c4c963dcbf4bc48587b9747143598 shallow.lfs.commit
   diff --git a/x b/y
   rename from x
   rename to y
@@ -282,7 +270,7 @@
   
 
   $ hg log -T '{node} {bookmarks} {desc}\n' -G
-  @  b5d11a100365149f6276f32b895be1d509e00566  shallow.lfs.commit
+  @  515a4dfd2e0c4c963dcbf4bc48587b9747143598  shallow.lfs.commit
   |
   o  042535657086a5b08463b9210a8f46dc270e51f9 master x-lfs-again
   |

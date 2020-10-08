@@ -35,7 +35,7 @@ Check help text for new options and removal of unsupported options.
 
 Create stack of commits and go to the bottom.
   $ hg debugbuilddag --mergeable-file +6
-  $ hg up 0
+  $ hg up 'desc(r0)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg book bottom
   $ showgraph
@@ -92,8 +92,8 @@ Test --top flag.
   [*] r5 (glob)
 
 Test bookmark navigation.
-  $ hg book -r 5 top
-  $ hg book -r 3 bookmark
+  $ hg book -r 'desc(r5)' top
+  $ hg book -r 'desc(r3)' bookmark
   $ showgraph
   @  top r5
   |
@@ -174,7 +174,7 @@ Test dirty working copy and --merge.
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Test --newest flag.
-  $ hg up 3
+  $ hg up 'desc(r3)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ touch test
   $ hg add test
@@ -235,7 +235,7 @@ Test --towards flag.
   o   r1
   |
   @  bottom r0
-  $ hg next 4 --towards 1
+  $ hg next 4 --towards 'desc(r1)'
   changeset * has multiple children, namely: (glob)
   [*] r4 (glob)
   [*] (other) test (glob)
@@ -254,7 +254,7 @@ Test --towards flag.
   [255]
 
 Test next prefer draft commit.
-  $ hg up 3
+  $ hg up 'desc(r3)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ showgraph
   o  other test

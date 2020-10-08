@@ -65,10 +65,10 @@ test bisect-sparse
 
 verify bisect skips empty sparse commits (2,3)
 
-  $ hg up -r 0
+  $ hg up -r a75e20cc7b2a2582473ff9b3ca5abcb67e095734
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bisect --good
-  $ hg up 9
+  $ hg up 'max(desc(bad))'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bisect --bad
   Skipping changeset 4:e116419d642b as there are no changes inside
@@ -88,8 +88,8 @@ verify bisect skips empty sparse commits (2,3)
 check --nosparseskip flag
 
   $ hg bisect --reset
-  $ hg bisect -g 0
-  $ hg bisect -b 9 -S
+  $ hg bisect -g a75e20cc7b2a2582473ff9b3ca5abcb67e095734
+  $ hg bisect -b 'max(desc(bad))' -S
   Testing changeset e116419d642b (9 changesets remaining, ~3 tests)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bisect --good --nosparseskip
@@ -120,8 +120,8 @@ verify skipping works with --command flag
   $ chmod +x script.py
 
   $ hg bisect --reset
-  $ hg bisect -g 0
-  $ hg up 9
+  $ hg bisect -g a75e20cc7b2a2582473ff9b3ca5abcb67e095734
+  $ hg up 'max(desc(bad))'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bisect --command "hg debugpython -- script.py"
   changeset 9:d910e57b873b: bad
@@ -160,7 +160,7 @@ verify skipping works with --command flag
 New test set
 
   $ hg bisect --reset
-  $ hg up 7
+  $ hg up 94c6ab768effbbaded05574a85dea765cebf25b4
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ echo r > sparse-included-file
@@ -176,7 +176,7 @@ New test set
   $ echo z > sparse-excluded-file
   $ hg ci -Aqm '12'
 
-  $ hg merge -r 9
+  $ hg merge -r 'max(desc(bad))'
   temporarily included 1 file(s) in the sparse checkout for merging
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -186,8 +186,8 @@ New test set
   $ echo v > sparse-excluded-file
   $ hg ci -Aqm '14'
 
-  $ hg bisect -g 8
-  $ hg bisect -b 14
+  $ hg bisect -g a6b1a23ad56a41a184666a5c633a51117fec5208
+  $ hg bisect -b 'desc(14)'
   Skipping changeset 9:d910e57b873b as there are no changes inside
   the sparse profile from the known good changeset 8:a6b1a23ad56a
   Testing changeset a41c9f2666a8 (2 changesets remaining, ~1 tests)
@@ -263,7 +263,7 @@ Empty case with --command flag: all commits are skipped
   $ hg sparse exclude sparse-new-excluded-file
 
   $ hg bisect --reset
-  $ hg bisect -g 15
+  $ hg bisect -g 6e74f05c0613d7861ac62eefb6974abf63ecce4f
   $ hg bisect -c "test $(hg log -r . -T '{rev}') -lt 17"
   changeset 18:ddea298cfd5a: bad
   Skipping changeset 16:8654dd939818 as there are no changes inside

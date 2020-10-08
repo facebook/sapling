@@ -17,7 +17,7 @@
   $ echo "C" >> A
   $ commit "C" 2
 
-  $ hg update -C 0
+  $ hg update -C 'desc(A)'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo "D" >> A
   $ commit "D" 3
@@ -49,7 +49,7 @@ Test that if a file is removed but not marked resolved, the commit still fails
 
   $ hg up ".^"
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  $ hg merge 2
+  $ hg merge 'desc(C)'
   merging A
   warning: 1 conflicts while merging A! (edit, then use 'hg resolve --mark')
   1 files updated, 0 files merged, 0 files removed, 1 files unresolved

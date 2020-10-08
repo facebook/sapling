@@ -15,7 +15,7 @@
   $ echo c3 >>common
   $ hg ci -m C3
 
-  $ hg up -q -C 1
+  $ hg up -q -C 'desc(C2)'
 
   $ echo l1 >>extra
   $ hg add extra

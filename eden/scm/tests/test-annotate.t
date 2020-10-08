@@ -170,7 +170,7 @@ annotate -nlf b
   3 b:5: b5
   3 b:6: b6
 
-  $ hg up -C 2
+  $ hg up -C 3086dbafde1ce745abfc8d2d367847280aabae9d
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cat <<EOF >> b
   > b4
@@ -204,7 +204,7 @@ annotate after merge with -l
   4 b:5: c
   3 b:5: b5
 
-  $ hg up -C 1
+  $ hg up -C 'desc(a1)'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg cp a b
   $ cat <<EOF > b
@@ -249,7 +249,7 @@ annotate after rename merge with -l
 
 --skip nothing (should be the same as no --skip at all)
 
-  $ hg annotate -nlf b --skip '1::0'
+  $ hg annotate -nlf b --skip 'desc(a1)::desc(test)'
   0 a:1: a
   6 b:2: z
   1 a:3: a
@@ -261,7 +261,7 @@ annotate after rename merge with -l
 --skip a modified line. Note a slight behavior difference in pure - this is
 because the pure code comes up with slightly different deltas internally.
 
-  $ hg annotate -nlf b --skip 6
+  $ hg annotate -nlf b --skip 'desc(c)'
   0 a:1: a
   1 a:2* z
   1 a:3: a
@@ -272,7 +272,7 @@ because the pure code comes up with slightly different deltas internally.
 
 --skip added lines (and test multiple skip)
 
-  $ hg annotate -nlf b --skip 3
+  $ hg annotate -nlf b --skip 37ec9f5c3d1f99572d7075971cb4876e2139b52f
   0 a:1: a
   6 b:2: z
   1 a:3: a
@@ -281,7 +281,7 @@ because the pure code comes up with slightly different deltas internally.
   1 a:3* b5
   7 b:7: d
 
-  $ hg annotate -nlf b --skip 4
+  $ hg annotate -nlf b --skip 'desc(b2.1)'
   0 a:1: a
   6 b:2: z
   1 a:3: a
@@ -450,7 +450,7 @@ and its ancestor by overriding "repo._filecommit".
   > 4
   > 5
   > EOF
-  $ hg debugsetparents 17 17
+  $ hg debugsetparents 933981f264573acb5782b58f8f6fba0f5c815ac7 933981f264573acb5782b58f8f6fba0f5c815ac7
   $ hg --config extensions.legacyrepo=../legacyrepo.py  commit -m "baz:2"
   $ hg debugindexdot .hg/store/data/baz.i
   digraph G {
@@ -482,7 +482,7 @@ and its ancestor by overriding "repo._filecommit".
   > 4 baz:4
   > 5
   > EOF
-  $ hg debugsetparents 19 18
+  $ hg debugsetparents b94c9d8986533962f0ee2d1a8f1e244f839b6868 5d14c328cf75b0994b39f667b9a453cc4d050663
   $ hg --config extensions.legacyrepo=../legacyrepo.py  commit -m "baz:4"
   $ hg debugindexdot .hg/store/data/baz.i
   digraph G {
@@ -649,7 +649,7 @@ but are missed when following children
   baz:3->3+
 
 merge
-  $ hg up 24 --quiet
+  $ hg up 56fc739c091f342d6390b46cd18746150b93704d --quiet
   $ echo 7 >> baz
   $ hg ci -m 'one more line, out of line range'
   $ sed 's/3+/3-/' baz > baz.new
@@ -661,7 +661,7 @@ merge
   baz:4
   baz:3->3+
   baz:3+->3-
-  $ hg merge 25
+  $ hg merge cb8df70ae185fe89071f42cf82ef69b76a1febc9
   merging baz and qux to qux
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -674,8 +674,8 @@ merge
   qux:4->4+
   baz:3+->3-
   merge
-  $ hg up 25 --quiet
-  $ hg merge 27
+  $ hg up cb8df70ae185fe89071f42cf82ef69b76a1febc9 --quiet
+  $ hg merge 863de62655efc922cffffb8edf65f8940c5f524f
   merging qux and baz to qux
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -688,14 +688,14 @@ merge
   qux:4->4+
   baz:3+->3-
   merge from other side
-  $ hg up 24 --quiet
+  $ hg up 56fc739c091f342d6390b46cd18746150b93704d --quiet
 
 we are missing the branch with rename when following children
   $ hg log -T '{desc}\n' -r 'followlines(baz, 5:7, startrev=26, descend=True)'
   baz:3+->3-
 
 we follow all branches in descending direction
-  $ hg up 23 --quiet
+  $ hg up 'max(desc(added))' --quiet
   $ sed 's/3/+3/' baz > baz.new
   $ mv baz.new baz
   $ hg ci -m 'baz:3->+3'
@@ -720,8 +720,8 @@ Issue5595: on a merge changeset with different line ranges depending on
 parent, be conservative and use the surrounding interval to avoid loosing
 track of possible further descendants in specified range.
 
-  $ hg up 23 --quiet
-  $ hg cat baz -r 24
+  $ hg up 'max(desc(added))' --quiet
+  $ hg cat baz -r 56fc739c091f342d6390b46cd18746150b93704d
   0
   0
   1 baz:1
@@ -741,7 +741,7 @@ track of possible further descendants in specified range.
   > z
   > EOF
   $ hg ci -m 'baz: mostly rewrite with some content from 24'
-  $ hg merge --tool :merge-other 24
+  $ hg merge --tool :merge-other 56fc739c091f342d6390b46cd18746150b93704d
   merging baz
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -775,7 +775,7 @@ track of possible further descendants in specified range.
   ~ ~
 
 check error cases
-  $ hg up 24 --quiet
+  $ hg up 56fc739c091f342d6390b46cd18746150b93704d --quiet
   $ hg log -r 'followlines()'
   hg: parse error: followlines takes at least 1 positional arguments
   [255]
@@ -958,7 +958,7 @@ Annotate should list ancestor of starting revision only
 
 Even when the starting revision is the linkrev-shadowed one:
 
-  $ hg annotate a -r 3
+  $ hg annotate a -r 'max(desc(contentB))'
   0: A
   3: B
 
@@ -977,7 +977,7 @@ Issue5360: Deleted chunk in p1 of a merge changeset
   $ hg update '.^' -q
   $ echo 3 >> a
   $ hg commit -m 3 -q
-  $ hg merge 2 -q
+  $ hg merge 'desc(a)' -q
   $ cat > a << EOF
   > b
   > 1

@@ -149,7 +149,7 @@ Hide and unhide
   $ hg debugvisibleheads
   96b7359a7ee5350b94be6e5c5dd480751a031498 draft1 amend1
   5dabc7b08ef934b9e6720285205b2c17695f6491 draft3
-  $ hg hide 2 6
+  $ hg hide 'desc(public2)' 'desc(amend1)'
   hiding commit 4f416a252ac8 "public2"
   hiding commit 96b7359a7ee5 "draft1 amend1"
   hiding commit af54c09bb37d "draft2a"

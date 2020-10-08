@@ -72,7 +72,7 @@ Pull the other bookmark so we have a subscription.
   $ hg book --list-subs
      remote/master             1:9da34b1aa207
      remote/other              2:4c8ee072cf16
-  $ hg up -q 0
+  $ hg up -q 'desc(base)'
 
 Push to a new public branch
   $ echo 3 > public3
@@ -123,7 +123,7 @@ Create a draft commit and push it to a scratch branch
   remote: pushing 1 commit:
   remote:     d860d2fc26c5  draft1
   $ hg cloud sync -q
-  $ hg up 0
+  $ hg up 'desc(base)'
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ showgraph
   o  draft1: draft  remote/scratch/draft1

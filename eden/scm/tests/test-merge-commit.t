@@ -14,7 +14,7 @@ Test with the merge on 3 having the rename on the local parent
   $ echo line2 >> foo
   $ hg ci -m '1: change foo'
 
-  $ hg up -C 0
+  $ hg up -C 2665aaee66e9fc1bb2da7f5779ba24c07a077f9c
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg mv foo bar
@@ -23,7 +23,7 @@ Test with the merge on 3 having the rename on the local parent
   $ echo line1 >> bar
   $ hg ci -m '2: mv foo bar; change bar'
 
-  $ hg merge 1
+  $ hg merge 5cd961e4045d633bfcbba1c42fc0850c08ea708c
   merging bar and foo to bar
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -54,7 +54,7 @@ Test with the merge on 3 having the rename on the local parent
 
 Revert the content change from rev 2:
 
-  $ hg up -C 2
+  $ hg up -C 0f2ff26688b9cebd8fe05c5f24d4b9fbc623e823
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm bar
   $ echo line1 > bar
@@ -69,7 +69,7 @@ Revert the content change from rev 2:
 
 This should use bar@rev2 as the ancestor:
 
-  $ hg --debug merge 3
+  $ hg --debug merge 0555950ead287c667df4449c8b3e25d20f99d55b
     searching for copies back to rev 1
   resolving manifests
    branchmerge: True, force: False, partial: False
@@ -109,10 +109,10 @@ on the remote parent:
   added 3 changesets with 3 changes to 2 files
   $ cd b
 
-  $ hg up -C 1
+  $ hg up -C 5cd961e4045d633bfcbba1c42fc0850c08ea708c
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
-  $ hg merge 2
+  $ hg merge 0f2ff26688b9cebd8fe05c5f24d4b9fbc623e823
   merging foo and bar to bar
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -143,7 +143,7 @@ on the remote parent:
 
 Revert the content change from rev 2:
 
-  $ hg up -C 2
+  $ hg up -C 0f2ff26688b9cebd8fe05c5f24d4b9fbc623e823
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ rm bar
   $ echo line1 > bar
@@ -158,7 +158,7 @@ Revert the content change from rev 2:
 
 This should use bar@rev2 as the ancestor:
 
-  $ hg --debug merge 3
+  $ hg --debug merge 3ffa6b9e35f066d97cfa87e58fa169bce5415826
     searching for copies back to rev 1
   resolving manifests
    branchmerge: True, force: False, partial: False

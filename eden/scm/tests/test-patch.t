@@ -59,7 +59,7 @@ Prepare source repo and patch:
   > # User lines looks like this - but it _is_ just a comment
   > eof
   $ hg ci -l log -d '0 0'
-  $ hg export -o p 1
+  $ hg export -o p 'desc(first)'
   $ cd ..
 
 Clone and apply patch:
@@ -74,7 +74,7 @@ Clone and apply patch:
   $ cd d
   $ hg import ../c/p
   applying ../c/p
-  $ hg log -v -r 1
+  $ hg log -v -r 'desc(first)'
   commit:      cd0bde79c428
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000

@@ -9,7 +9,7 @@ https://bz.mercurial-scm.org/1877
   $ hg ci -m 'a'
   $ echo b > a
   $ hg ci -m'b'
-  $ hg up 0
+  $ hg up 'desc(a)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg book main
   $ hg book

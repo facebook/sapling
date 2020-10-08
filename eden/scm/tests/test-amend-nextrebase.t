@@ -27,7 +27,7 @@ Cannot --rebase and --merge.
 
 Build dag with instablility
   $ hg debugbuilddag -n +4
-  $ hg up 1
+  $ hg up 'desc(r1)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg amend -m "amended" --no-rebase
   hint[amend-restack]: descendants of e8ec16b776b6 are left behind - use 'hg restack' to rebase them
@@ -105,7 +105,7 @@ Test --clean flag.
 Rebasing multiple changesets at once.
   $ reset
   $ hg debugbuilddag -n +5
-  $ hg up 1
+  $ hg up 'desc(r1)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg amend -m "amended" --no-rebase
   hint[amend-restack]: descendants of e8ec16b776b6 are left behind - use 'hg restack' to rebase them
@@ -131,7 +131,7 @@ Rebasing multiple changesets at once.
 Rebasing a stack one changeset at a time.
   $ reset
   $ hg debugbuilddag -n +5
-  $ hg up 1
+  $ hg up 'desc(r1)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg amend -m "amended" --no-rebase
   hint[amend-restack]: descendants of e8ec16b776b6 are left behind - use 'hg restack' to rebase them
@@ -181,7 +181,7 @@ Rebasing a stack one changeset at a time.
 Rebasing a stack two changesets at a time.
   $ reset
   $ hg debugbuilddag -n +6
-  $ hg up 1
+  $ hg up 'desc(r1)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg amend -m "amended" --no-rebase
   hint[amend-restack]: descendants of e8ec16b776b6 are left behind - use 'hg restack' to rebase them
@@ -232,7 +232,7 @@ Rebasing a stack two changesets at a time.
 Rebasing after multiple amends.
   $ reset
   $ hg debugbuilddag -n +5
-  $ hg up 1
+  $ hg up 'desc(r1)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg amend -m "amend 1" --no-rebase
   hint[amend-restack]: descendants of e8ec16b776b6 are left behind - use 'hg restack' to rebase them
@@ -273,12 +273,12 @@ Rebasing after multiple amends.
 Rebasing from below the amended changeset with the --newest flag.
   $ reset
   $ hg debugbuilddag -n +6
-  $ hg up 2
+  $ hg up 'desc(r2)'
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg amend -m "amended" --no-rebase
   hint[amend-restack]: descendants of 776c07fa2b12 are left behind - use 'hg restack' to rebase them
   hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
-  $ hg up 0
+  $ hg up 'desc(r0)'
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ showgraph
   o  amended
@@ -319,7 +319,7 @@ Test aborting due to ambiguity caused by a rebase. The rebase should be
 rolled back and the final state should be as it was before `hg next --rebase`.
   $ reset
   $ hg debugbuilddag -n +6
-  $ hg up 1
+  $ hg up 'desc(r1)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg amend -m "amended" --no-rebase
   hint[amend-restack]: descendants of e8ec16b776b6 are left behind - use 'hg restack' to rebase them
@@ -379,7 +379,7 @@ Test a situation where there is a conflict.
   $ mkcommit b
   $ mkcommit c
   $ mkcommit d
-  $ hg up 1
+  $ hg up 7c3bad9141dcb46ff89abf5f61856facd56e476c
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ echo "conflict" > c
   $ hg add c
@@ -443,7 +443,7 @@ Now resolve the conflict and resume the rebase.
 Rebase when other predecessors are still visible
   $ reset
   $ hg debugbuilddag -n +4
-  $ hg up 1
+  $ hg up 'desc(r1)'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg amend -m "amended 1" --no-rebase
   hint[amend-restack]: descendants of e8ec16b776b6 are left behind - use 'hg restack' to rebase them

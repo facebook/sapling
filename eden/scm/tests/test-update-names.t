@@ -17,7 +17,7 @@ Update with local changes across a file rename
   $ echo b > b
   $ hg ci -m change
 
-  $ hg up -q 0
+  $ hg up -q cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b
 
   $ echo c > a
 
@@ -35,23 +35,23 @@ tracked file in a commit we are updating to
   adding root
   $ echo text > name && hg ci -Am "name is a file"  # rev 1
   adding name
-  $ hg up 0
+  $ hg up 'desc(root)'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkdir name
-  $ hg up 1
+  $ hg up 'desc(name)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Test update when local untracked directory exists with some files in it and has
 the same name a tracked file in a commit we are updating to. In future this
 should be updated to give an friendlier error message, but now we should just
 make sure that this does not erase untracked data
-  $ hg up 0
+  $ hg up 'desc(root)'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ mkdir name
   $ echo text > name/file
   $ hg st
   ? name/file
-  $ hg up 1
+  $ hg up 'desc(name)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ..
 
@@ -68,7 +68,7 @@ Test update when two commits have symlinks that point to different folders
   $ rm folder
   $ ln -s folder2 folder
   $ hg ci -Am "symlink to folder2"
-  $ hg up 1
+  $ hg up baf33104e0bc1162a796504d4eecd1159f3a6e93
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd ..
 

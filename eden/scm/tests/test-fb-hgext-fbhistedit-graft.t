@@ -15,7 +15,7 @@
   >   hg add $x
   >   hg commit -m $x
   > done
-  $ hg up -q 0
+  $ hg up -q 'desc(base)'
   $ for x in d e f ; do
   >   echo $x > $x
   >   hg add $x
@@ -38,8 +38,8 @@
   
 Use histedit to graft an extra commit into current history
 
-  $ hg up -q 3
-  $ hg histedit 1 --commands - 2>&1 << EOF | fixbundle
+  $ hg up -q 'desc(c)'
+  $ hg histedit 'max(desc(a))' --commands - 2>&1 << EOF | fixbundle
   > pick c604726e05fb
   > pick c87fe1ae405f
   > graft 581a2eefdc84
@@ -65,7 +65,7 @@ Use histedit to graft an extra commit into current history
   
 Try to use histedit to graft a non-existent commit
 
-  $ hg histedit 1 --commands - 2>&1 << EOF | fixbundle
+  $ hg histedit 'max(desc(a))' --commands - 2>&1 << EOF | fixbundle
   > pick c604726e05fb
   > pick c87fe1ae405f
   > graft abcdefabcdef
@@ -76,7 +76,7 @@ Try to use histedit to graft a non-existent commit
 
 Try to use histedit to graft a commit from the set of commits being edited
 
-  $ hg histedit 1 --commands - 2>&1 << EOF | fixbundle
+  $ hg histedit 'max(desc(a))' --commands - 2>&1 << EOF | fixbundle
   > pick c604726e05fb
   > pick c87fe1ae405f
   > graft fc9a25c1b8af

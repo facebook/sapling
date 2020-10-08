@@ -108,17 +108,17 @@ Add more changesets with multiple heads to the original repository
   $ cd ../repo
   $ echo D > D
   $ hg commit -A -m D -q
-  $ hg up -r 1
+  $ hg up -r 'desc(B)'
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ echo E > E
   $ hg commit -A -m E -q
   $ echo F > F
   $ hg commit -A -m F -q
-  $ hg up -r 1
+  $ hg up -r 'desc(B)'
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ echo G > G
   $ hg commit -A -m G -q
-  $ hg up -r 3
+  $ hg up -r 'desc(D)'
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo H > H
   $ hg commit -A -m H -q
@@ -181,7 +181,7 @@ pullop.cgresult
 Removing a head from the original repository by merging it
 
   $ cd ../repo
-  $ hg merge -r 6 -q
+  $ hg merge -r 'desc(G)' -q
   $ hg commit -m Merge
   $ echo I > I
   $ hg commit -A -m H -q

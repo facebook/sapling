@@ -78,7 +78,7 @@ Copy and removing x bit:
   2:0efdaa8e3bf3
 #endif
 
-  $ hg up -qCr1
+  $ hg up -qCr'desc(empty)'
 
 Copy (like above but independent of execbit):
 

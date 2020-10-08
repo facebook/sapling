@@ -16,7 +16,7 @@ Setting up test
   $ hg commit -m "0.2"
   $ echo 3 >> afile
   $ hg commit -m "0.3"
-  $ hg update -C 0
+  $ hg update -C 'desc(0.0)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo 1 >> afile
   $ hg commit -m "1.1"
@@ -28,7 +28,7 @@ Setting up test
   $ hg commit -m "1.3"
   $ hg mv afile adifferentfile
   $ hg commit -m "1.3m"
-  $ hg update -C 3
+  $ hg update -C 'desc(0.3)'
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg mv afile anotherfile
   $ hg commit -m "0.3m"
@@ -95,7 +95,7 @@ Pull full.hg into empty (using --cwd)
 
 Rollback empty
 
-  $ hg -R empty debugstrip 0 --no-backup
+  $ hg -R empty debugstrip 'desc(0.0)' --no-backup
 
 Pull full.hg into empty again (using --cwd)
 
@@ -123,7 +123,7 @@ Pull full.hg into empty (using -R)
 
 Rollback empty
 
-  $ hg -R empty debugstrip 0 --no-backup
+  $ hg -R empty debugstrip 'desc(0.0)' --no-backup
 
 Pull full.hg into empty again (using -R)
 
@@ -218,7 +218,7 @@ hg -R ../full.hg verify
 
 Rollback empty
 
-  $ hg debugstrip 0 --no-backup
+  $ hg debugstrip 'desc(0.0)' --no-backup
   $ cd ..
 
 Log -R bundle:empty+full.hg (broken with Rust code path)
@@ -528,9 +528,9 @@ Unbundle incremental bundles into fresh empty in one go
 
   $ rm -r empty
   $ hg init empty
-  $ hg -R test bundle --base null -r 0 ../0.hg
+  $ hg -R test bundle --base null -r 'desc(0.0)' ../0.hg
   1 changesets found
-  $ hg -R test bundle --base 0    -r 1 ../1.hg
+  $ hg -R test bundle --base 'desc(0.0)'    -r 'desc(0.1)' ../1.hg
   1 changesets found
   $ hg -R empty unbundle -u ../0.hg ../1.hg
   adding changesets
@@ -544,7 +544,7 @@ Unbundle incremental bundles into fresh empty in one go
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 View full contents of the bundle
-  $ hg -R test bundle --base null -r 3  ../partial.hg
+  $ hg -R test bundle --base null -r eebf5a27f8ca9b92ade529321141c1561cc4a9c2  ../partial.hg
   4 changesets found
   $ cd test
   $ hg -R ../../partial.hg log -r "bundle()"
@@ -674,7 +674,7 @@ bundle single branch
   $ echo c1 >c1
   $ hg ci -Amc1
   adding c1
-  $ hg up 0
+  $ hg up 'desc(a)'
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ echo b >b
   $ hg ci -Amb
@@ -754,12 +754,12 @@ directory does not exist
   $ echo "ccc" >> c
   $ hg commit -A -m 2
   adding c
-  $ hg update -r 1
+  $ hg update -r 'desc(1)'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo "ddd" >> d
   $ hg commit -A -m 3
   adding d
-  $ hg update -r 2
+  $ hg update -r 'desc(2)'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg log -G
   o  commit:      8bd3e1f196af
@@ -782,10 +782,10 @@ directory does not exist
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     0
   
-  $ hg bundle --base 1 -r 3 ../update2bundled.hg
+  $ hg bundle --base 'desc(1)' -r 'desc(3)' ../update2bundled.hg
   1 changesets found
-  $ hg debugstrip -r 3
-  $ hg merge -R ../update2bundled.hg -r 3
+  $ hg debugstrip -r 'desc(3)'
+  $ hg merge -R ../update2bundled.hg -r 'desc(3)'
   setting parent to node 8bd3e1f196af289b2b121be08031e76d7ae92098 that only exists in the bundle
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -793,12 +793,12 @@ directory does not exist
 When user updates to the revision existing only in the bundle,
 it should show warning
 
-  $ hg update -R ../update2bundled.hg --clean -r 3
+  $ hg update -R ../update2bundled.hg --clean -r 'desc(3)'
   setting parent to node 8bd3e1f196af289b2b121be08031e76d7ae92098 that only exists in the bundle
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
 When user updates to the revision existing in the local repository
 the warning shouldn't be emitted
 
-  $ hg update -R ../update2bundled.hg -r 0
+  $ hg update -R ../update2bundled.hg -r 'desc(0)'
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved

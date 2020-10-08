@@ -21,7 +21,7 @@ Turn it on for this test.
   $ echo 2 > a
   $ hg commit -m "file2"
   $ hg bookmark -i file2
-  $ hg up -q 0
+  $ hg up -q 'desc(base)'
   $ mkdir a
   $ echo 2 > a/b
   $ hg add a/b
@@ -48,7 +48,7 @@ Basic merge - local file conflicts with remote directory
 
 Basic update - local directory conflicts with remote file
 
-  $ hg up -q 0
+  $ hg up -q 'desc(base)'
   $ mkdir a
   $ echo 3 > a/b
   $ hg up file
@@ -70,7 +70,7 @@ Repo state is ok
 
 Basic update - untracked file conflicts with remote directory
 
-  $ hg up -q 0
+  $ hg up -q 'desc(base)'
   $ echo untracked > a
   $ hg up --config merge.checkunknown=warn dir
   a: replacing untracked file

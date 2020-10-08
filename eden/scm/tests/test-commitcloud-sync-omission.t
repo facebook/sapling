@@ -72,7 +72,7 @@ Connect the first client
 Make some stacks with various dates.  We will use Feb 1990 for these tests.
 
 - Old stack
-  $ hg up -q 0
+  $ hg up -q 'desc(base)'
   $ touch oldstack-feb1
   $ hg commit -Aqm oldstack-feb1 --config devel.default-date="1990-02-01T00:00Z"
   $ hg book -i oldbook
@@ -80,7 +80,7 @@ Make some stacks with various dates.  We will use Feb 1990 for these tests.
   $ hg commit -Aqm oldstack-feb4 --config devel.default-date="1990-02-04T12:00Z"
 
 - Middle stack
-  $ hg up -q 0
+  $ hg up -q 'desc(base)'
   $ touch midstack-feb7
   $ hg commit -Aqm midstack-feb7 --config devel.default-date="1990-02-07T00:00Z"
   $ hg book -i midbook
@@ -88,7 +88,7 @@ Make some stacks with various dates.  We will use Feb 1990 for these tests.
   $ hg commit -Aqm midstack-feb9 --config devel.default-date="1990-02-09T12:00Z"
 
 - New stack
-  $ hg up -q 0
+  $ hg up -q 'desc(base)'
   $ touch newstack-feb13
   $ hg commit -Aqm newstack-feb13 --config devel.default-date="1990-02-13T00:00Z"
   $ hg book -i newbook
@@ -185,7 +185,7 @@ Connect to commit cloud
   
 
 Create a new commit
-  $ hg up 0
+  $ hg up 'desc(base)'
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ touch client2-file1
   $ hg commit -Aqm client2-feb28 --config devel.default-date="1990-02-28T01:00Z"
@@ -338,7 +338,7 @@ Commit cloud keeps infinitepush backup state up-to-date.  Ensure it hasn't inclu
 
 First client add a new commit to the old stack
   $ cd ../client1
-  $ hg up 2
+  $ hg up d16408588b2d047410f99c45e425bf97923e28f2
   2 files updated, 0 files merged, 3 files removed, 0 files unresolved
 
   $ touch oldstack-mar4
@@ -470,7 +470,7 @@ Connect to commit cloud
 Move one of these bookmarks in the first client.
 
   $ cd ../client1
-  $ hg book -f -r 4 oldbook
+  $ hg book -f -r d133b886da6874fe25998d26ae1b2b8528b07c59 oldbook
   $ hgfakedate 1990-03-05T12:01Z cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   commitcloud: commits synchronized
@@ -505,7 +505,7 @@ Do a sync in the new client - the bookmark is left where it was
   
 Move the bookmark locally - this still gets synced ok.
 
-  $ hg book -f -r 3 oldbook
+  $ hg book -f -r 46f8775ee5d479eed945b5186929bd046f116176 oldbook
   $ tglogp
   o  7: 2b8dce7bd745 draft 'oldstack-mar4'
   |
@@ -755,7 +755,7 @@ Sync in client2.  It should match.
   o  0: df4f53cec30a 'base'
   
 Hide some uninteresting commits and sync everywhere
-  $ hg hide -r 1:: -r 3:: -r 5::
+  $ hg hide -r 1c1b7955142cd8a3beec705c9cca9d775ecb0fa8:: -r 56a352317b67ae3d5abd5f6c71ec0df3aa98fe97:: -r ff52de2f760c67fa6f89273ca7f770396a3c81c4::
   hiding commit 1c1b7955142c "midstack-feb7"
   hiding commit d133b886da68 "midstack-feb9"
   hiding commit 56a352317b67 "newstack-feb13"
@@ -786,7 +786,7 @@ Pull this into client1
   added 1 changesets with 1 changes to 1 files
 
 Move midbook to the public commit.
-  $ hg book -fr 11 midbook
+  $ hg book -fr 'desc(public1)' midbook
   $ hg cloud sync -q
 
 Sync in client 2.  It doesn't have the new destination of midbook, so should omit it.

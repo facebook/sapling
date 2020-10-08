@@ -10,7 +10,7 @@
   $ touch main
   $ hg add main
   $ hg commit -m "Added main"
-  $ hg checkout 0
+  $ hg checkout c2eda428b523117ba9bbdfbbef034bb4bc8fead9
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
 'main' should be gone:
@@ -63,7 +63,7 @@
   side1
   side2
 
-  $ hg update --debug -C 1
+  $ hg update --debug -C 71a760306cafb582ff672db4d4beb9625f34022d
   resolving manifests
    branchmerge: False, force: True, partial: False
    ancestor: 91ebc10ed028+, local: 91ebc10ed028+, remote: 71a760306caf

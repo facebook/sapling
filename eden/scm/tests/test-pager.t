@@ -28,7 +28,7 @@ fake pager that lets us see when the pager was running.
 
 By default diff and log are paged, but id is not:
 
-  $ hg diff -c 2 --pager=yes
+  $ hg diff -c bce2655495562347d8ef11e2ffe1e0e6f9fdbbf2 --pager=yes
   paged! 'diff -r f4be7687d414 -r bce265549556 a\n'
   paged! '--- a/a\tThu Jan 01 00:00:00 1970 +0000\n'
   paged! '+++ b/a\tThu Jan 01 00:00:00 1970 +0000\n'
@@ -107,7 +107,7 @@ BROKEN: should be paged
 
 Setting attend-$COMMAND to a false value works, even with pager in
 core:
-  $ hg --config pager.attend-diff=no diff -c 2
+  $ hg --config pager.attend-diff=no diff -c bce2655495562347d8ef11e2ffe1e0e6f9fdbbf2
   diff -r f4be7687d414 -r bce265549556 a
   --- a/a	Thu Jan 01 00:00:00 1970 +0000
   +++ b/a	Thu Jan 01 00:00:00 1970 +0000
@@ -301,11 +301,11 @@ explicit flags work too:
 
 A command with --output option:
 
-  $ hg cat -r0 a
+  $ hg cat -r'desc(add)' a
   paged! 'a\n'
-  $ hg cat -r0 a --output=-
+  $ hg cat -r'desc(add)' a --output=-
   paged! 'a\n'
-  $ hg cat -r0 a --output=out
+  $ hg cat -r'desc(add)' a --output=out
   $ rm out
 
 Put annotate in the ignore list for pager:

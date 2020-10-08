@@ -20,13 +20,13 @@ https://bz.mercurial-scm.org/672
   $ hg rename 1 1a
   $ hg commit -m rename # 1
 
-  $ hg co -C 0
+  $ hg co -C 'desc(init)'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
   $ echo unrelated >> 2
   $ hg ci -m unrelated1 # 2
 
-  $ hg merge --debug 1
+  $ hg merge --debug 'desc(rename)'
     searching for copies back to rev 1
     unmatched files in other:
      1a
@@ -45,16 +45,16 @@ https://bz.mercurial-scm.org/672
 
   $ hg ci -m merge1 # 3
 
-  $ hg co -C 2
+  $ hg co -C 'desc(unrelated1)'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
   $ echo hello >> 1
   $ hg ci -m unrelated2 # 4
 
-  $ hg co -C 3
+  $ hg co -C 'desc(merge1)'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
-  $ hg merge -y --debug 4
+  $ hg merge -y --debug 'desc(unrelated2)'
     searching for copies back to rev 1
     unmatched files in local:
      1a
@@ -73,10 +73,10 @@ https://bz.mercurial-scm.org/672
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 
-  $ hg co -C 4
+  $ hg co -C 'desc(unrelated2)'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
-  $ hg merge -y --debug 3
+  $ hg merge -y --debug 'desc(merge1)'
     searching for copies back to rev 1
     unmatched files in other:
      1a

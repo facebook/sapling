@@ -61,7 +61,7 @@ happens even if the client has more commits
 
   $ echo 5 >> a
   $ hg commit -m 5
-  $ hg bookmark -r 3 @ -f
+  $ hg bookmark -r 'desc(4)' @ -f
   $ hg fastannotate a --debug
   0: 1
   1: 2
@@ -74,7 +74,7 @@ of the server, the server can detect things are unchanged and does not return
 full contents (not that there is no "writing ... to fastannotate"), but the
 client can also build things up on its own (causing diverge)
 
-  $ hg bookmark -r 4 @ -f
+  $ hg bookmark -r 'desc(5)' @ -f
   $ hg fastannotate a --debug
   running * (glob)
   sending hello command
@@ -110,7 +110,7 @@ define fastannotate on-disk paths
 
 revert bookmark change so the client is behind the server
 
-  $ hg bookmark -r 2 @ -f
+  $ hg bookmark -r 'desc(3)' @ -f
 
 in the "fctx" mode with the "annotate" command, the client also downloads the
 cache. but not in the (default) "fastannotate" mode.

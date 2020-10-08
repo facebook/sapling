@@ -9,7 +9,7 @@
   $ echo >> binfile.bin
   $ hg ci -m 'change binfile.bin'
 
-  $ hg revert -r 0 binfile.bin
+  $ hg revert -r 'desc(add)' binfile.bin
   $ hg ci -m 'revert binfile.bin'
   $ hg cp binfile.bin nonbinfile
   $ echo text > nonbinfile

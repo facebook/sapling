@@ -49,25 +49,25 @@ when we try to append to it.
 "fastannotate" should deal with file corruption as well
 
   $ rm -rf .hg/fastannotate
-  $ hg fastannotate --debug -r 0 a
+  $ hg fastannotate --debug -r 'desc(0)' a
   fastannotate: a: 1 new changesets in the main branch
   0: 0
 
   $ echo 'CORRUPT!' >> .hg/fastannotate/default/a.m
-  $ hg fastannotate --debug -r 0 a
+  $ hg fastannotate --debug -r 'desc(0)' a
   fastannotate: a: cache broken and deleted
   fastannotate: a: 1 new changesets in the main branch
   0: 0
 
   $ echo 'CORRUPT!' > .hg/fastannotate/default/a.l
-  $ hg fastannotate --debug -r 1 a
+  $ hg fastannotate --debug -r 'desc(1)' a
   fastannotate: a: cache broken and deleted
   fastannotate: a: 2 new changesets in the main branch
   0: 0
   1: 1
 
   $ rm .hg/fastannotate/default/a.l
-  $ hg fastannotate --debug -r 1 a
+  $ hg fastannotate --debug -r 'desc(1)' a
   fastannotate: a: using fast path (resolved fctx: True)
   fastannotate: a: cache broken and deleted
   fastannotate: a: 2 new changesets in the main branch
@@ -75,7 +75,7 @@ when we try to append to it.
   1: 1
 
   $ rm .hg/fastannotate/default/a.m
-  $ hg fastannotate --debug -r 2 a
+  $ hg fastannotate --debug -r 'desc(2)' a
   fastannotate: a: cache broken and deleted
   fastannotate: a: 3 new changesets in the main branch
   0: 0

@@ -21,7 +21,7 @@
 
 Testing on-failure=continue
   $ echo on-failure=continue >> $HGRCPATH
-  $ hg rebase -s 1 -d 2 --tool false
+  $ hg rebase -s 'desc(c)' -d 'desc(d)' --tool false
   rebasing 1f28a51c3c9b "c"
   merging a
   merging b
@@ -39,7 +39,7 @@ Testing on-failure=continue
 
 Testing on-failure=halt
   $ echo on-failure=halt >> $HGRCPATH
-  $ hg rebase -s 1 -d 2 --tool false
+  $ hg rebase -s 'desc(c)' -d 'desc(d)' --tool false
   rebasing 1f28a51c3c9b "c"
   merging a
   merging b
@@ -61,7 +61,7 @@ Testing on-failure=prompt
   > [ui]
   > interactive=1
   > EOS
-  $ cat <<EOS | hg rebase -s 1 -d 2 --tool false
+  $ cat <<EOS | hg rebase -s 'desc(c)' -d 'desc(d)' --tool false
   > y
   > n
   > EOS
@@ -82,7 +82,7 @@ Testing on-failure=prompt
   $ hg rebase --abort
   rebase aborted
 
-  $ cat <<EOS | hg rebase -s 1 -d 2 --tool false
+  $ cat <<EOS | hg rebase -s 'desc(c)' -d 'desc(d)' --tool false
   > a
   > EOS
   rebasing 1f28a51c3c9b "c"
@@ -106,7 +106,7 @@ Check that successful tool with failed post-check halts the merge
   > [merge-tools]
   > true.check=changed
   > EOS
-  $ cat <<EOS | hg rebase -s 1 -d 2 --tool true
+  $ cat <<EOS | hg rebase -s 'desc(c)' -d 'desc(d)' --tool true
   > y
   > n
   > n
@@ -138,7 +138,7 @@ Check that conflicts with conflict check also halts the merge
   > [merge]
   > on-failure=halt
   > EOS
-  $ hg rebase -s 1 -d 2 --tool true
+  $ hg rebase -s 'desc(c)' -d 'desc(d)' --tool true
   rebasing 1f28a51c3c9b "c"
   merging a
   merging b
@@ -154,7 +154,7 @@ Check that conflicts with conflict check also halts the merge
   rebase aborted
 
 Check that always-prompt also can halt the merge
-  $ cat <<EOS | hg rebase -s 1 -d 2 --tool true --config merge-tools.true.check=prompt
+  $ cat <<EOS | hg rebase -s 'desc(c)' -d 'desc(d)' --tool true --config merge-tools.true.check=prompt
   > y
   > n
   > EOS
@@ -175,7 +175,7 @@ Check that always-prompt also can halt the merge
   rebase aborted
 
 Check that successful tool otherwise allows the merge to continue
-  $ hg rebase -s 1 -d 2 --tool echo --keep --config merge-tools.echo.premerge=keep
+  $ hg rebase -s 'desc(c)' -d 'desc(d)' --tool echo --keep --config merge-tools.echo.premerge=keep
   rebasing 1f28a51c3c9b "c"
   merging a
   merging b

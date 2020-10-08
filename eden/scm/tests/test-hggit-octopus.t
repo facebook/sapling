@@ -97,9 +97,9 @@ Load commonly used test logic
   o     69982ec78c6d   2007-01-01 00:00 +0000   test
        add alpha
   
-  $ hg gverify -r 9
+  $ hg gverify -r 'max(desc(Merge))'
   verifying rev 49ab838a9c6d against git commit b32ff845df61df998206b630e4370a44f9b36845
-  $ hg gverify -r 8
+  $ hg gverify -r 772137582d44293df8e61e0f3b99ced712235bba
   abort: no git commit found for rev 772137582d44
   (if this is an octopus merge, verify against the last rev)
   [255]

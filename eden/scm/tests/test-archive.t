@@ -83,7 +83,7 @@ rename them afterwards.
   [255]
   $ hg archive -t zip -p very/../bad test.zip
 
-  $ hg archive --config ui.archivemeta=false -t zip -r 2 test.zip
+  $ hg archive --config ui.archivemeta=false -t zip -r 'desc(3)' test.zip
   $ unzip -t test.zip
   Archive:  test.zip
       testing: test/bar*OK (glob)
@@ -97,7 +97,7 @@ rename them afterwards.
   test-2c0277f05ed4/baz/bletch
   test-2c0277f05ed4/foo
 
-  $ hg archive -r 0 -t tar rev-%r.tar
+  $ hg archive -r 'desc(1)' -t tar rev-%r.tar
   $ [ -f rev-0.tar ]
 
 test .hg_archival.txt
@@ -107,7 +107,7 @@ test .hg_archival.txt
   repo: daa7f7c60e0a224faa4ff77ca41b2760562af264
   node: 2c0277f05ed49d1c8328fb9ba92fba7a5ebcb33e
   branch: default
-  $ hg archive -r 2 ../test-lasttag
+  $ hg archive -r 'desc(3)' ../test-lasttag
   $ cat ../test-lasttag/.hg_archival.txt
   repo: daa7f7c60e0a224faa4ff77ca41b2760562af264
   node: 2c0277f05ed49d1c8328fb9ba92fba7a5ebcb33e

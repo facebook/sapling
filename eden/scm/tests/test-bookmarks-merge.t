@@ -10,15 +10,15 @@
   $ echo b > b
   $ hg add b
   $ hg commit -m'b'
-  $ hg up -C 0
+  $ hg up -C 'desc(a)'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo c > c
   $ hg add c
   $ hg commit -m'c'
 
 # test merging of diverged bookmarks
-  $ hg bookmark -r 1 "c@diverge"
-  $ hg bookmark -r 1 b
+  $ hg bookmark -r 'desc(b)' "c@diverge"
+  $ hg bookmark -r 'desc(b)' b
   $ hg bookmark c
   $ hg bookmarks
      b                         1:d2ae7f538514
@@ -32,19 +32,19 @@
      b                         1:d2ae7f538514
    * c                         3:b8f96cf4688b
 
-  $ hg up -C 3
+  $ hg up -C 'desc(merge)'
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (leaving bookmark c)
   $ echo d > d
   $ hg add d
   $ hg commit -m'd'
 
-  $ hg up -C 3
+  $ hg up -C 'desc(merge)'
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo e > e
   $ hg add e
   $ hg commit -m'e'
-  $ hg up -C 5
+  $ hg up -C 'max(desc(e))'
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bookmark e
   $ hg bookmarks
@@ -54,7 +54,7 @@
 
 # the picked side is bookmarked
 
-  $ hg up -C 4
+  $ hg up -C 'desc(d)'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (leaving bookmark e)
   $ hg merge
@@ -74,13 +74,13 @@
 
 # merge bookmark heads
 
-  $ hg up -C 4
+  $ hg up -C 'desc(d)'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (leaving bookmark e)
   $ echo f > f
   $ hg commit -Am "f"
   adding f
-  $ hg bookmarks -r 4 "e@diverged"
+  $ hg bookmarks -r 'desc(d)' "e@diverged"
   $ hg up -q -C "e@diverged"
   $ hg merge
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -117,7 +117,7 @@
 
 # test warning when all heads are inactive bookmarks
 
-  $ hg up -C 6
+  $ hg up -C 'desc(f)'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (leaving bookmark e)
   $ echo g > g

@@ -25,9 +25,9 @@ Test that histedit learns about obsolescence not stored in histedit state
   $ echo a > d
   $ hg ci -Am c
   adding d
-  $ echo "pick `hg log -r 0 -T '{node|short}'`" > plan
-  $ echo "pick `hg log -r 2 -T '{node|short}'`" >> plan
-  $ echo "edit `hg log -r 1 -T '{node|short}'`" >> plan
+  $ echo "pick `hg log -r 'desc(a)' -T '{node|short}'`" > plan
+  $ echo "pick `hg log -r 'desc(c)' -T '{node|short}'`" >> plan
+  $ echo "edit `hg log -r 'desc(b)' -T '{node|short}'`" >> plan
   $ hg histedit -r 'all()' --commands plan
   Editing (1b2d564fad96), you may commit or record as needed now.
   (hg histedit --continue to resume)
@@ -67,9 +67,9 @@ Test that histedit learns about obsolescence not stored in histedit state
 
 With some node gone missing during the edit.
 
-  $ echo "pick `hg log -r 0 -T '{node|short}'`" > plan
-  $ echo "pick `hg log -r 5 -T '{node|short}'`" >> plan
-  $ echo "edit `hg log -r 4 -T '{node|short}'`" >> plan
+  $ echo "pick `hg log -r 'desc(a)' -T '{node|short}'`" > plan
+  $ echo "pick `hg log -r 'max(desc(b))' -T '{node|short}'`" >> plan
+  $ echo "edit `hg log -r 'max(desc(c))' -T '{node|short}'`" >> plan
   $ hg histedit -r 'all()' --commands plan
   Editing (f6ad57c4d86d), you may commit or record as needed now.
   (hg histedit --continue to resume)
@@ -143,7 +143,7 @@ Base setup for the rest of the testing
 
 
 
-  $ HGEDITOR=cat hg histedit 1
+  $ HGEDITOR=cat hg histedit 'desc(b)'
   pick d2ae7f538514 b
   pick 177f92b77385 c
   pick 055a42cdd887 d
@@ -169,7 +169,7 @@ Base setup for the rest of the testing
 
 
 
-  $ hg histedit 1 --commands - --verbose <<EOF | grep histedit
+  $ hg histedit 'desc(b)' --commands - --verbose <<EOF | grep histedit
   > pick 177f92b77385 2 c
   > drop d2ae7f538514 1 b
   > pick 055a42cdd887 3 d
@@ -232,7 +232,7 @@ Ensure hidden revision does not prevent histedit
 
 create an hidden revision
 
-  $ hg histedit 6 --commands - << EOF
+  $ hg histedit 'max(desc(c))' --commands - << EOF
   > pick dfac7d6bf3bc 6 c
   > drop e80cad0096a5 7 d
   > pick 363adb0b332c 8 f
@@ -247,7 +247,7 @@ create an hidden revision
 
 check hidden revision are ignored (6 have hidden children 7 and 8)
 
-  $ hg histedit 6 --commands - << EOF
+  $ hg histedit 'max(desc(c))' --commands - << EOF
   > pick dfac7d6bf3bc 6 c
   > pick 2a7423bdcce6 8 f
   > EOF

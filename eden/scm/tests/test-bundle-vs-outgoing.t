@@ -48,7 +48,7 @@ first branch
 
 back to rev 1 to create second branch
 
-  $ hg up -r1
+  $ hg up -r6a9ac14c32e0502be005fee0023b823698e3ce41
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ mkrev 4
   rev 4
@@ -57,7 +57,7 @@ back to rev 1 to create second branch
 
 merge first branch to second branch
 
-  $ hg up -C -r5
+  $ hg up -C -r'max(desc(rev))'
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ HGMERGE=internal:local hg merge
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
@@ -72,7 +72,7 @@ one more commit following the merge
 
 back to "second branch" to make another head
 
-  $ hg up -r5
+  $ hg up -ree67ca2f52ac8c7904cc477b8cf04da764fea594
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ mkrev 8
   rev 8
@@ -138,7 +138,7 @@ this should (and does) give exactly the same result as bundle
 
 with a destination repo... i.e. it's wrong too
 
-  $ hg bundle --base 3 foo.bundle
+  $ hg bundle --base 478f191e53f84ddec1d358da2ed34eb796b3ac6f foo.bundle
   5 changesets found
 
   $ cd ..

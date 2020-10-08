@@ -36,7 +36,7 @@ Revision 1:
 
 Local changes to revision 0:
 
-  $ hg co 0
+  $ hg co c929647821fa73cdd20aa068da4153b2182c2731
   4 files updated, 0 files merged, 3 files removed, 0 files unresolved
   $ echo "new last line" >> zzz1_merge_ok
   $ echo "another last line" >> zzz2_merge_bad
@@ -66,7 +66,7 @@ Local merge with bad merge tool:
   $ hg resolve -m
   (no more unresolved files)
 
-  $ hg co 0
+  $ hg co c929647821fa73cdd20aa068da4153b2182c2731
   merging zzz1_merge_ok
   merging zzz2_merge_bad
   warning: 1 conflicts while merging zzz2_merge_bad! (edit, then use 'hg resolve --mark')
@@ -104,7 +104,7 @@ Local merge with conflicts:
   $ hg resolve -m
   (no more unresolved files)
 
-  $ hg co 0 --config 'ui.origbackuppath=.hg/origbackups'
+  $ hg co c929647821fa73cdd20aa068da4153b2182c2731 --config 'ui.origbackuppath=.hg/origbackups'
   merging zzz1_merge_ok
   merging zzz2_merge_bad
   warning: 1 conflicts while merging zzz2_merge_bad! (edit, then use 'hg resolve --mark')

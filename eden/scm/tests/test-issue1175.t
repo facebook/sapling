@@ -11,7 +11,7 @@ https://bz.mercurial-scm.org/1175
   $ hg mv a a1
   $ hg ci -m1
 
-  $ hg co 0
+  $ hg co 'desc(0)'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
   $ hg mv a a2
@@ -65,12 +65,12 @@ https://bz.mercurial-scm.org/show_bug.cgi?id=4476
   $ hg mv a b
   $ echo b1 >> b
   $ hg ci -Aqm b1
-  $ hg up 0
+  $ hg up 'desc(a)'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg mv a b
   $ echo b2 >> b
   $ hg ci -Aqm b2
-  $ hg graft 1
+  $ hg graft 'desc(b1)'
   grafting 5974126fad84 "b1"
   merging b
   warning: 1 conflicts while merging b! (edit, then use 'hg resolve --mark')

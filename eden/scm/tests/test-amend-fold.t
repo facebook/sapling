@@ -31,12 +31,12 @@ Set up repo.
   o  0 93cbaf5e6529 r0
 
 Test that a fold works correctly on error.
-  $ hg fold --exact 7 7
+  $ hg fold --exact 'desc(r7)' 'desc(r7)'
   single revision specified, nothing to fold
   [1]
 
 Test simple case of folding a head. Should work normally.
-  $ hg up 7
+  $ hg up 'desc(r7)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg fold --from '.^'
   2 changesets folded
@@ -57,7 +57,7 @@ Test simple case of folding a head. Should work normally.
   o  0 93cbaf5e6529 r0
 
 Test rebasing of stack after fold.
-  $ hg up 3
+  $ hg up 'desc(r3)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg fold --from '.^'
   2 changesets folded
@@ -78,7 +78,7 @@ Test rebasing of stack after fold.
   o  0 93cbaf5e6529 r0
 
 Test rebasing of multiple children
-  $ hg up 1
+  $ hg up 'desc(r1)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg fold --from '.^'
   2 changesets folded
@@ -124,9 +124,9 @@ rebase is not on the topmost folded commit.
   |
   o  0 93cbaf5e6529 r0
 
-  $ hg up 0
+  $ hg up 'desc(r0)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg fold --from 2
+  $ hg fold --from 'desc(r2)'
   3 changesets folded
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   rebasing a422badec216 "r3"
@@ -201,9 +201,9 @@ Test --no-rebase flag.
 Test that bookmarks are correctly moved.
   $ reset
   $ hg debugbuilddag +3
-  $ hg bookmarks -r 1 test1
-  $ hg bookmarks -r 2 test2_1
-  $ hg bookmarks -r 2 test2_2
+  $ hg bookmarks -r 'desc(r1)' test1
+  $ hg bookmarks -r 'desc(r2)' test2_1
+  $ hg bookmarks -r 'desc(r2)' test2_2
   $ hg bookmarks
      test1                     1:* (glob)
      test2_1                   2:* (glob)
@@ -218,7 +218,7 @@ Test that bookmarks are correctly moved.
 Test JSON output
   $ reset
   $ hg debugbuilddag -m +6
-  $ hg up 5
+  $ hg up 'desc(r5)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ showgraph
   @  5 f2987ebe5838 r5
@@ -256,7 +256,7 @@ When rebase is not involved
 
 XXX: maybe we also want the rebase nodechanges here.
 When rebase is involved
-  $ hg fold --exact 1 2 -Tjson -q
+  $ hg fold --exact 1 f07e66f449d06b214d0a8a9b1a6fa8af2f5f79a5 -Tjson -q
   [
    {
     "count": 2,
@@ -264,5 +264,5 @@ When rebase is involved
    }
   ]
 
-  $ hg fold --exact 0 8 -T '{nodechanges|json}' -q
+  $ hg fold --exact 0 d65bf110c68ee2cf0a0ba076da90df3fcf76229b -T '{nodechanges|json}' -q
   {"d65bf110c68ee2cf0a0ba076da90df3fcf76229b": ["785c10c9aad58fba814a235f074a79bdc5535083"], "fdaccbb26270c9a42503babe11fd846d7300df0b": ["785c10c9aad58fba814a235f074a79bdc5535083"]} (no-eol)

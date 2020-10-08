@@ -132,7 +132,7 @@ Test splicemap and conversion order
   $ hg ci -Am changea
   $ echo a >> a
   $ hg ci -Am changeaagain
-  $ hg up 0
+  $ hg up 'desc(adda)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo b > b
   $ hg ci -Am addb

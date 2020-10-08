@@ -120,10 +120,10 @@ tldr: Since we can premerge, the working copy is backed up to an origfile.
   $ reset
   $ echo "change" > file
   $ hg commit -Aqm "dest"
-  $ hg up -q 0
+  $ hg up -q 'desc(base)'
   $ echo "other change" > file
   $ hg commit -Aqm "source"
-  $ hg up -q 1
+  $ hg up -q 'desc(dest)'
   $ logg
   o  (9b65ba2922f0e466c10e5344d8691afa631e353b) source
   |  affected: file
@@ -138,7 +138,7 @@ tldr: Since we can premerge, the working copy is backed up to an origfile.
      deleted:
   
   $ echo "some local changes" > file
-  $ hg merge 2 -f
+  $ hg merge 'desc(source)' -f
   merging file
   warning: 1 conflicts while merging file! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
@@ -162,10 +162,10 @@ tldr: Since we couldn't premerge, the working copy is left alone.
   $ reset
   $ echo "change" > file
   $ hg commit -Aqm "dest"
-  $ hg up -q 0
+  $ hg up -q 'desc(base)'
   $ hg rm file
   $ hg commit -Aqm "source"
-  $ hg up -q 1
+  $ hg up -q 'desc(dest)'
   $ logg
   o  (25c2ef28f4c763dd5068d3aa96cafa1342fe5280) source
   |  affected: file
@@ -181,7 +181,7 @@ tldr: Since we couldn't premerge, the working copy is left alone.
   
   $ echo "some local changes" > file
   $ chmod +x file
-  $ hg merge 2 -f
+  $ hg merge 'desc(source)' -f
   local [working copy] changed file which other [merge rev] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? u
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
@@ -202,10 +202,10 @@ Test case 1: Source deleted, dest changed
   $ reset
   $ echo "change" > file
   $ hg commit -Aqm "dest"
-  $ hg up -q 0
+  $ hg up -q 'desc(base)'
   $ hg rm file
   $ hg commit -Aqm "source"
-  $ hg up -q 1
+  $ hg up -q 'desc(dest)'
   $ logg
   o  (25c2ef28f4c763dd5068d3aa96cafa1342fe5280) source
   |  affected: file
@@ -220,7 +220,7 @@ Test case 1: Source deleted, dest changed
      deleted:
   
 
-  $ hg rebase -d 1 -s 2
+  $ hg rebase -d 'desc(dest)' -s 'desc(source)'
   rebasing 25c2ef28f4c7 "source"
   local [dest] changed file which other [source] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? u
@@ -239,10 +239,10 @@ Test case 1b: Like #1 but with a merge, with local changes
   $ reset
   $ echo "change" > file
   $ hg commit -Aqm "dest"
-  $ hg up -q 0
+  $ hg up -q 'desc(base)'
   $ hg rm file
   $ hg commit -Aqm "source"
-  $ hg up -q 1
+  $ hg up -q 'desc(dest)'
   $ logg
   o  (25c2ef28f4c763dd5068d3aa96cafa1342fe5280) source
   |  affected: file
@@ -257,7 +257,7 @@ Test case 1b: Like #1 but with a merge, with local changes
      deleted:
   
   $ echo "some local changes" > file
-  $ hg merge 2 -f
+  $ hg merge 'desc(source)' -f
   local [working copy] changed file which other [merge rev] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? u
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved
@@ -278,10 +278,10 @@ Test case 2: Source changed, dest deleted
   $ reset
   $ echo "change" > file
   $ hg commit -Aqm "source"
-  $ hg up -q 0
+  $ hg up -q 'desc(base)'
   $ hg rm file
   $ hg commit -Aqm "dest"
-  $ hg up --q 2
+  $ hg up --q 'desc(dest)'
   $ logg
   @  (66a38a15024ce5297f27bab5b7f17870de6d0d96) dest
   |  affected: file
@@ -296,7 +296,7 @@ Test case 2: Source changed, dest deleted
      deleted:
   
 
-  $ hg rebase -d 2 -s 1
+  $ hg rebase -d 'desc(dest)' -s 'desc(source)'
   rebasing ec87889f5f90 "source"
   other [source] changed file which local [dest] deleted
   use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
@@ -316,10 +316,10 @@ Test case 3: Source changed, dest moved
   $ reset
   $ echo "change" > file
   $ hg commit -Aqm "source"
-  $ hg up -q 0
+  $ hg up -q 'desc(base)'
   $ hg mv file file_newloc
   $ hg commit -Aqm "dest"
-  $ hg up -q 2
+  $ hg up -q 'desc(dest)'
   $ logg
   @  (d168768b462ba7bdf7d27a2c2e317362498a0a65) dest
   |  affected: file file_newloc
@@ -334,7 +334,7 @@ Test case 3: Source changed, dest moved
      deleted:
   
 
-  $ hg rebase -d 2 -s 1
+  $ hg rebase -d 'desc(dest)' -s 'desc(source)'
   rebasing ec87889f5f90 "source"
   merging file_newloc and file to file_newloc
   $ hg up -q 'desc(source)' # source
@@ -353,10 +353,10 @@ Test case 4: Source changed, dest moved (w/o copytracing)
   $ reset
   $ echo "change" > file
   $ hg commit -Aqm "source"
-  $ hg up -q 0
+  $ hg up -q 'desc(base)'
   $ hg mv file file_newloc
   $ hg commit -Aqm "dest"
-  $ hg up -q 2
+  $ hg up -q 'desc(dest)'
   $ logg
   @  (d168768b462ba7bdf7d27a2c2e317362498a0a65) dest
   |  affected: file file_newloc
@@ -371,7 +371,7 @@ Test case 4: Source changed, dest moved (w/o copytracing)
      deleted:
   
 
-  $ hg rebase -d 2 -s 1 --config experimental.copytrace=off
+  $ hg rebase -d 'desc(dest)' -s 'desc(source)' --config experimental.copytrace=off
   rebasing ec87889f5f90 "source"
   other [source] changed file which local [dest] deleted
   use (c)hanged version, leave (d)eleted, leave (u)nresolved, or input (r)enamed path? u
@@ -391,10 +391,10 @@ Test case 5: Source moved, dest changed
   $ reset
   $ hg mv file file_newloc
   $ hg commit -Aqm "source"
-  $ hg up -q 0
+  $ hg up -q 'desc(base)'
   $ echo "change" > file
   $ hg commit -Aqm "dest"
-  $ hg up -q 2
+  $ hg up -q 'desc(dest)'
   $ logg
   @  (fd7d10c36158e4f6e713ca1c40ddebce2b55a868) dest
   |  affected: file
@@ -409,7 +409,7 @@ Test case 5: Source moved, dest changed
      deleted:
   
 
-  $ hg rebase -d 2 -s 1
+  $ hg rebase -d 'desc(dest)' -s 'desc(source)'
   rebasing e6e7483a8950 "source"
   merging file and file_newloc to file_newloc
   $ hg up 'desc(source)'
@@ -429,10 +429,10 @@ Test case 6: Source moved, dest changed (w/o copytracing)
   $ reset
   $ hg mv file file_newloc
   $ hg commit -Aqm "source"
-  $ hg up -q 0
+  $ hg up -q 'desc(base)'
   $ echo "change" > file
   $ hg commit -Aqm "dest"
-  $ hg up -q 2
+  $ hg up -q 'desc(dest)'
   $ logg
   @  (fd7d10c36158e4f6e713ca1c40ddebce2b55a868) dest
   |  affected: file
@@ -447,7 +447,7 @@ Test case 6: Source moved, dest changed (w/o copytracing)
      deleted:
   
 
-  $ hg rebase -d 2 -s 1 --config experimental.copytrace=off
+  $ hg rebase -d 'desc(dest)' -s 'desc(source)' --config experimental.copytrace=off
   rebasing e6e7483a8950 "source"
   local [dest] changed file which other [source] deleted
   use (c)hanged version, (d)elete, or leave (u)nresolved? u
@@ -469,10 +469,10 @@ Test case 7: Source is a directory, dest is a file (base is still a file)
   $ mkdir file # "file" is a stretch
   $ echo "this will cause problems" >> file/subfile
   $ hg commit -Aqm "source"
-  $ hg up -q 0
+  $ hg up -q 'desc(base)'
   $ echo "change" > file
   $ hg commit -Aqm "dest"
-  $ hg up -q 2
+  $ hg up -q 'desc(dest)'
   $ logg
   @  (fd7d10c36158e4f6e713ca1c40ddebce2b55a868) dest
   |  affected: file
@@ -487,7 +487,7 @@ Test case 7: Source is a directory, dest is a file (base is still a file)
      deleted:
   
 
-  $ hg rebase -d 2 -s 1
+  $ hg rebase -d 'desc(dest)' -s 'desc(source)'
   rebasing ed93aeac6b3c "source"
   abort:*: $TESTTMP/cornercases/foo/foo/foo/foo/file (glob)
   [255]
@@ -499,12 +499,12 @@ Test case 8: Source is a file, dest is a directory (base is still a file)
   $ reset
   $ echo "change" > file
   $ hg commit -Aqm "source"
-  $ hg up -q 0
+  $ hg up -q 'desc(base)'
   $ hg rm file
   $ mkdir file # "file"
   $ echo "this will cause problems" >> file/subfile
   $ hg commit -Aqm "dest"
-  $ hg up -q 2
+  $ hg up -q 'desc(dest)'
   $ logg
   @  (c7fd9e6dc48312b276e2cea6edc92fb1fbd24cf3) dest
   |  affected: file file/subfile
@@ -519,7 +519,7 @@ Test case 8: Source is a file, dest is a directory (base is still a file)
      deleted:
   
 
-  $ hg rebase -d 2 -s 1
+  $ hg rebase -d 'desc(dest)' -s 'desc(source)'
   rebasing ec87889f5f90 "source"
   abort:*: $TESTTMP/cornercases/foo/foo/foo/foo/file (glob)
   [255]
@@ -537,10 +537,10 @@ Test case 9: Source is a binary file, dest is a file (base is still a file)
   $ reset
   $ printf '\0' > file
   $ hg commit -Aqm "source"
-  $ hg up -q 0
+  $ hg up -q 'desc(base)'
   $ echo "change" > file
   $ hg commit -Aqm "dest"
-  $ hg up -q 2
+  $ hg up -q 'desc(dest)'
   $ logg
   @  (fd7d10c36158e4f6e713ca1c40ddebce2b55a868) dest
   |  affected: file
@@ -555,7 +555,7 @@ Test case 9: Source is a binary file, dest is a file (base is still a file)
      deleted:
   
 
-  $ hg rebase -d 2 -s 1
+  $ hg rebase -d 'desc(dest)' -s 'desc(source)'
   rebasing b6e55a03a5dc "source"
   merging file
   warning: ([^\s]+) looks like a binary file. (re)
@@ -578,10 +578,10 @@ Test case 10: Source is a file, dest is a binary file (base is still a file)
   $ reset
   $ echo "change" > file
   $ hg commit -Aqm "source"
-  $ hg up -q 0
+  $ hg up -q 'desc(base)'
   $ printf '\0' > file
   $ hg commit -Aqm "dest"
-  $ hg up -q 2
+  $ hg up -q 'desc(dest)'
   $ logg
   @  (48fb032ebb6733fb9b62d0a11c1b4a538c4840a1) dest
   |  affected: file
@@ -596,7 +596,7 @@ Test case 10: Source is a file, dest is a binary file (base is still a file)
      deleted:
   
 
-  $ hg rebase -d 2 -s 1
+  $ hg rebase -d 'desc(dest)' -s 'desc(source)'
   rebasing ec87889f5f90 "source"
   merging file
   warning: ([^\s]+) looks like a binary file. (re)
@@ -620,10 +620,10 @@ Test case 11: Source is a symlink, dest is a file (base is still a file)
   $ rm file
   $ ln -s somepath file
   $ hg commit -Aqm "source"
-  $ hg up -q 0
+  $ hg up -q 'desc(base)'
   $ echo "change" > file
   $ hg commit -Aqm "dest"
-  $ hg up -q 2
+  $ hg up -q 'desc(dest)'
   $ logg
   @  (fd7d10c36158e4f6e713ca1c40ddebce2b55a868) dest
   |  affected: file
@@ -638,7 +638,7 @@ Test case 11: Source is a symlink, dest is a file (base is still a file)
      deleted:
   
 
-  $ hg rebase -d 2 -s 1
+  $ hg rebase -d 'desc(dest)' -s 'desc(source)'
   rebasing 06aece48b59f "source"
   merging file
   warning: internal :merge cannot merge symlinks for file
@@ -661,11 +661,11 @@ Test case 12: Source is a file, dest is a symlink (base is still a file)
   $ reset
   $ echo "change" > file
   $ hg commit -Aqm "source"
-  $ hg up -q 0
+  $ hg up -q 'desc(base)'
   $ rm file
   $ ln -s somepath file
   $ hg commit -Aqm "dest"
-  $ hg up -q 2
+  $ hg up -q 'desc(dest)'
   $ logg
   @  (c4bbf66fc0d73a7b05e64344fa86a678e19c35a2) dest
   |  affected: file
@@ -680,7 +680,7 @@ Test case 12: Source is a file, dest is a symlink (base is still a file)
      deleted:
   
 
-  $ hg rebase -d 2 -s 1
+  $ hg rebase -d 'desc(dest)' -s 'desc(source)'
   rebasing ec87889f5f90 "source"
   merging file
   warning: internal :merge cannot merge symlinks for file

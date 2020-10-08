@@ -603,19 +603,19 @@ Create repositories to test auto sharing functionality
   $ echo 1a > foo
   $ hg commit -m 1a
   $ cd ../source1b
-  $ hg -q up -r 0
+  $ hg -q up -r 'desc(initial)'
   $ echo head1 > foo
   $ hg commit -m head1
   $ hg bookmark head1
-  $ hg -q up -r 0
+  $ hg -q up -r 'desc(initial)'
   $ echo head2 > foo
   $ hg commit -m head2
   $ hg bookmark head2
-  $ hg -q up -r 0
+  $ hg -q up -r 'desc(initial)'
   $ hg bookmark branch1
   $ echo branch1 > foo
   $ hg commit -m branch1
-  $ hg -q up -r 0
+  $ hg -q up -r 'desc(initial)'
   $ hg bookmark branch2
   $ echo branch2 > foo
   $ hg commit -m branch2

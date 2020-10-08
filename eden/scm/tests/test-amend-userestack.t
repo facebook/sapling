@@ -25,7 +25,7 @@ Test that no preamend bookmark is created.
   $ mkcommit b
   $ mkcommit c
   $ mkcommit d
-  $ hg up 1
+  $ hg up 7c3bad9141dcb46ff89abf5f61856facd56e476c
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg amend -m "amended" --no-rebase
   hint[amend-restack]: descendants of 7c3bad9141dc are left behind - use 'hg restack' to rebase them

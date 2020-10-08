@@ -44,7 +44,7 @@ Setup client
   remote: adding manifests
   remote: adding file changes
   remote: added 2 changesets with 2 changes to 2 files
-  $ hg up 0
+  $ hg up 00e8a1efc6e28bc6f64a6e5f365f5ad0a2cebb11
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo a > file1
   $ changeset_time=`expr $now - 13 \* 60`
@@ -60,19 +60,19 @@ Setup client
   remote:     *  Backed up changeset 2 (glob)
 
 Check hiding the backup head doesn't affect backed-up changesets
-  $ hg up -q 2
+  $ hg up -q 6a37606e3792afff17078859861bbbbdb1227bc2
   $ hg log -T '{desc}\n' -r 'backedup()'
   Backed up changeset
   Backed up changeset 2
   $ hg log -T '{desc}\n' -r 'notbackedup()'
-  $ hg hide 3
+  $ hg hide 'max(desc(Backed))'
   hiding commit * (glob)
   1 changeset hidden
   $ hg log -T '{desc}\n' -r 'backedup()' --traceback
   Backed up changeset
   $ hg log -T '{desc}\n' -r 'notbackedup()'
-  $ hg unhide 3
-  $ hg up -q 3
+  $ hg unhide 'max(desc(Backed))'
+  $ hg up -q 'max(desc(Backed))'
 
 Create some changesets that aren't backed up
   $ echo b > file1
@@ -127,7 +127,7 @@ Check smartlog summary can be suppressed
   o  Public changeset
   
 Check smartlog summary with multiple unbacked up changesets
-  $ hg up 2
+  $ hg up 6a37606e3792afff17078859861bbbbdb1227bc2
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo b2 > file1
   $ commit_time=`expr $now - 11 \* 60`
@@ -152,7 +152,7 @@ Check smartlog summary with multiple unbacked up changesets
   (if this fails, please report to the Source Control Team)
 
 Check backup status with an unbacked up changeset that is disjoint from existing backups
-  $ hg up 1
+  $ hg up 'max(desc(Public))'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo b > file2
   $ commit_time=`expr $now - 11 \* 60`
@@ -242,7 +242,7 @@ show as backed up if '--hidden' is passed.
   $ echo c > file2
   $ commit_time=`expr $now - 11 \* 60`
   $ hg amend -d "$commit_time 0" -m "Not backed up changeset 3 (amended)"
-  $ hg hide -q 3
+  $ hg hide -q 9d434400bf7f325460bd0b304582414f2848ae03
   $ hg log -T '{desc}\n' -r 'backedup()'
   Backed up changeset
   $ hg log -T '{desc}\n' -r 'backedup()' --hidden

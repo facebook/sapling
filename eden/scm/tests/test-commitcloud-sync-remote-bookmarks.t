@@ -228,7 +228,7 @@ check that copy with disabled remote bookmarks sync doesn't affect the other cop
 sync and create a new commit on top of the draft-3
   $ cd ../client3
   $ hg cloud sync -q
-  $ hg up 8 -q
+  $ hg up dc05efd94c6626ddd820e8d98b745ad6b50b82fc -q
   $ echo check >> check
   $ hg commit -qAm "draft-4"
   $ showgraph

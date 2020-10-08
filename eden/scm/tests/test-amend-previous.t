@@ -74,8 +74,8 @@ Test --bottom flag.
   [*] r0 (glob)
 
 Test bookmark navigation.
-  $ hg book -r 0 root
-  $ hg book -r 2 bookmark
+  $ hg book -r 'desc(r0)' root
+  $ hg book -r 'desc(r2)' bookmark
   $ hg up top
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark top)

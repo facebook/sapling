@@ -13,7 +13,7 @@
 
 reverting to rev 0
 
-  $ hg revert -a -r 0
+  $ hg revert -a -r 'desc(644)'
   reverting foo
   $ hg st
   M foo

@@ -317,7 +317,7 @@ abort on a failing command, e.g an unknown commit
 
 test 'execr' executing in the current directory
 
-  $ hg up 5
+  $ hg up 'desc(f)'
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ mkdir subdir
   $ cd subdir

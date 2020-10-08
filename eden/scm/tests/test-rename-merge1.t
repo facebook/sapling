@@ -14,7 +14,7 @@
   $ hg mv a2 b2
   $ hg ci -m "rename"
 
-  $ hg co 0
+  $ hg co 'desc(start)'
   2 files updated, 0 files merged, 2 files removed, 0 files unresolved
 
   $ echo blahblah > a
@@ -108,11 +108,11 @@ Check for issue2642
   $ hg mv f1 f2
   $ hg ci -qm2
 
-  $ hg up 0 -q
-  $ hg merge 1 -q --tool internal:local
+  $ hg up 'desc(0)' -q
+  $ hg merge 'desc(1)' -q --tool internal:local
   $ hg ci -qm3
 
-  $ hg merge 2
+  $ hg merge 'desc(2)'
   merging f1 and f2 to f2
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -134,17 +134,17 @@ Check for issue2089
   $ echo c1 > f1
   $ hg ci -Aqm1
 
-  $ hg up 0 -q
-  $ hg merge 1 -q --tool internal:local
+  $ hg up 'desc(0)' -q
+  $ hg merge 'desc(1)' -q --tool internal:local
   $ echo c2 > f1
   $ hg ci -qm2
 
-  $ hg up 1 -q
+  $ hg up 'desc(1)' -q
   $ hg mv f1 f2
   $ hg ci -Aqm3
 
-  $ hg up 2 -q
-  $ hg merge 3
+  $ hg up 'desc(2)' -q
+  $ hg merge 'desc(3)'
   merging f1 and f2 to f2
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -163,7 +163,7 @@ Check for issue3074
   $ hg commit -m "added file"
   $ hg mv file newfile
   $ hg commit -m "renamed file"
-  $ hg update 0
+  $ hg update 'desc(added)'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg rm file
   $ hg commit -m "deleted file"

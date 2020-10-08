@@ -534,7 +534,7 @@ rebase subset with multiple head
 
   $ hg clone -q -u . ah ah4
   $ cd ah4
-  $ hg rebase -r 'desc(D)::(7+desc(F))' -d 'desc(B)' --keep
+  $ hg rebase -r 'desc(D)::(desc(H)+desc(F))' -d 'desc(B)' --keep
   rebasing ffd453c31098 "D"
   rebasing c01897464e7f "E"
   rebasing 41bfcc75ed73 "F"

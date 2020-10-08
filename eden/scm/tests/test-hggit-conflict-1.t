@@ -10,12 +10,12 @@ Load commonly used test logic
   $ echo B > afile
   $ hg ci -m "A->B"
 
-  $ hg up -r0
+  $ hg up -r'desc(origin)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo C > afile
   $ hg ci -m "A->C"
 
-  $ hg merge -r1
+  $ hg merge -r7205e83b5a3fb01334c76fef35a69c912f5b2ba3
   merging afile
   warning: 1 conflicts while merging afile! (edit, then use 'hg resolve --mark')
   0 files updated, 0 files merged, 0 files removed, 1 files unresolved

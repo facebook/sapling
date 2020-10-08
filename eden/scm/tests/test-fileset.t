@@ -101,7 +101,7 @@ Test files status in different revisions
   A c1
   $ fileset -r0 'revs("wdir()", added())'
   c1
-  $ hg status --change 0 -a
+  $ hg status --change 'desc(addfiles)' -a
   A a1
   A a2
   A b1
@@ -191,7 +191,7 @@ Test files properties
 Test merge states
 
   $ hg ci -m manychanges
-  $ hg up -C 0
+  $ hg up -C 'desc(addfiles)'
   * files updated, 0 files merged, * files removed, 0 files unresolved (glob)
   $ echo c >> b2
   $ hg ci -m diverging b2
@@ -356,12 +356,12 @@ small reminder of the repository state
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     addfiles
   
-  $ hg status --change 0
+  $ hg status --change 'desc(addfiles)'
   A a1
   A a2
   A b1
   A b2
-  $ hg status --change 1
+  $ hg status --change 'desc(manychanges)'
   M b2
   A 1k
   A 2k
@@ -370,9 +370,9 @@ small reminder of the repository state
   A c1
   A con.xml (no-windows !)
   R a2
-  $ hg status --change 2
+  $ hg status --change 'desc(diverging)'
   M b2
-  $ hg status --change 3
+  $ hg status --change 'desc(merge)'
   M b2
   A 1k
   A 2k
@@ -381,7 +381,7 @@ small reminder of the repository state
   A c1
   A con.xml (no-windows !)
   R a2
-  $ hg status --change 4
+  $ hg status --change 'desc(subrepo)'
   $ hg status
   A dos
   A mac
@@ -466,12 +466,12 @@ use rev to restrict matched file
 check wdir()
 ------------
 
-  $ hg status --removed  --rev 4
+  $ hg status --removed  --rev 'desc(subrepo)'
   R con.xml (no-windows !)
   $ fileset "status(4, 'wdir()', removed())"
   con.xml (no-windows !)
 
-  $ hg status --removed --rev 2
+  $ hg status --removed --rev 'desc(diverging)'
   R a2
   $ fileset "status('2', 'wdir()', removed())"
   a2
@@ -496,7 +496,7 @@ test cross branch status
 
 test with multi revs revset
 ---------------------------
-  $ hg status --added --rev 0:1 --rev 3:4
+  $ hg status --added --rev 'desc(addfiles)':'desc(manychanges)' --rev 'desc(merge)':'desc(subrepo)'
   A 1k
   A 2k
   A b2link (no-windows !)

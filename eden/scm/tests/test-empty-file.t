@@ -10,7 +10,7 @@
   $ hg add empty2
   $ hg commit -m 'add empty2'
 
-  $ hg up -C 0
+  $ hg up -C 1e1d9c4e5b64028c36a7955c906c9a549cd0f523
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ touch empty3
   $ hg add empty3
@@ -28,7 +28,7 @@
   summary:     add empty2
   
 
-  $ hg merge 1
+  $ hg merge 097d2b0e17f6a1d7bfe479e1992ca2a243d22563
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 

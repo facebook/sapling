@@ -73,15 +73,15 @@ Filename with spaces git diffstat:
 
 Filename without "a/" or "b/" (issue5759):
 
-  $ hg diff --config 'diff.noprefix=1' -c1 --stat --git
+  $ hg diff --config 'diff.noprefix=1' -c'desc(appenda)' --stat --git
    a |  3 +++
    1 files changed, 3 insertions(+), 0 deletions(-)
-  $ hg diff --config 'diff.noprefix=1' -c2 --stat --git
+  $ hg diff --config 'diff.noprefix=1' -c'desc(createb)' --stat --git
    c |  Bin 
    d |    0 
    2 files changed, 0 insertions(+), 0 deletions(-)
 
-  $ hg log --config 'diff.noprefix=1' -r '1:' -p --stat --git
+  $ hg log --config 'diff.noprefix=1' -r 'desc(appenda):' -p --stat --git
   commit:      3a95b07bb77f
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000

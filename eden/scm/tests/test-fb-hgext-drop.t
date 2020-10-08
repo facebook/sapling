@@ -31,7 +31,7 @@ TEST: aborting when drop called on root changeset
   $ hg log -G -T '{desc|firstline}'
   o  r0
   
-  $ hg drop -r 0
+  $ hg drop -r 'desc(r0)'
   abort: root changeset cannot be dropped
   [255]
 
@@ -53,7 +53,7 @@ TEST: dropping changeset in the middle of the stack
   |
   o  r0
   
-  $ hg drop -r 2
+  $ hg drop -r 'desc(r2)'
   Dropping changeset c175ba: r2
   rebasing c034855f2b01 "r3"
   merging mf
@@ -92,7 +92,7 @@ TEST: dropping a changest with child changesets
   |
   o  r0
   
-  $ hg drop 2
+  $ hg drop 'desc(r2)'
   Dropping changeset 37d4c1: r2
   rebasing a422badec216 "r3"
   merging mf
@@ -121,9 +121,9 @@ TEST: dropping a changest with child changesets
   
 TEST: aborting drop on merge changeset
 
-  $ hg checkout 8
+  $ hg checkout 'max(desc(r3))'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ hg merge 12
+  $ hg merge 'max(desc(r7))'
   merging mf
   0 files updated, 1 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
@@ -145,13 +145,13 @@ TEST: aborting drop on merge changeset
   |
   o  r0
   
-  $ hg drop 13
+  $ hg drop 'desc(merge)'
   abort: merge changeset cannot be dropped
   [255]
 
 TEST: abort when dropping a public changeset
-  $ hg debugmakepublic -r 1
-  $ hg drop 1
+  $ hg debugmakepublic -r 'desc(r1)'
+  $ hg drop 'desc(r1)'
   abort: public changeset which landed cannot be dropped
   [255]
 
@@ -170,7 +170,7 @@ TEST: dropping a changeset with merge conflict
   |
   o  r0
   
-  $ hg drop 1
+  $ hg drop 'desc(r1)'
   Dropping changeset 2a8ed6: r1
   rebasing 3d69e4d36b46 "r2"
   merging of

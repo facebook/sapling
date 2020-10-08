@@ -12,7 +12,7 @@ Criss cross merging
   $ echo '1 first change' > f1
   $ hg ci -m '1 first change f1'
 
-  $ hg up -qr0
+  $ hg up -qr'desc(0)'
   $ echo '2 first change' > f2
   $ mkdir d1
   $ echo '0 base' > d1/f3
@@ -20,19 +20,19 @@ Criss cross merging
   $ hg add -q d1
   $ hg ci -qm '2 first change f2'
 
-  $ hg merge -qr 1
+  $ hg merge -qr 'desc(1)'
   $ hg rm d1/f3
   $ hg mv -q d1 d2
   $ hg ci -m '3 merge'
 
-  $ hg up -qr2
-  $ hg merge -qr1
+  $ hg up -qr'desc(2)'
+  $ hg merge -qr'desc(1)'
   $ hg ci -qm '4 merge'
 
   $ echo '5 second change' > f1
   $ hg ci -m '5 second change f1'
 
-  $ hg up -r3
+  $ hg up -r'desc(3)'
   2 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ echo '6 second change' > f2
   $ hg ci -m '6 second change f2'
@@ -74,7 +74,7 @@ Criss cross merging
      summary:     0 base
   
 
-  $ hg merge -v --debug --tool internal:dump 5 --config merge.preferancestor='!'
+  $ hg merge -v --debug --tool internal:dump 'desc(5)' --config merge.preferancestor='!'
   note: using d1d156401c1b as ancestor of 6373bbfdae1d and e673248094b1
         alternatively, use --config merge.preferancestor=0f6b37dbe527
     searching for copies back to rev 3
@@ -131,7 +131,7 @@ Criss cross merging
   <<<
 
   $ hg up -qC .
-  $ hg merge -v --tool internal:dump 5 --config merge.preferancestor="null 40663881 3b08d"
+  $ hg merge -v --tool internal:dump 'desc(5)' --config merge.preferancestor="null 40663881 3b08d"
   note: using d1d156401c1b as ancestor of 6373bbfdae1d and e673248094b1
         alternatively, use --config merge.preferancestor=0f6b37dbe527
   resolving manifests
@@ -144,7 +144,7 @@ Redo merge with merge.preferancestor="*" to enable bid merge
 
   $ rm f*
   $ hg up -qC .
-  $ hg merge -v --debug --tool internal:dump 5 --config merge.preferancestor="*"
+  $ hg merge -v --debug --tool internal:dump 'desc(5)' --config merge.preferancestor="*"
   note: merging 6373bbfdae1d+ and e673248094b1 using bids from ancestors 0f6b37dbe527 and d1d156401c1b
   
   calculating bids for ancestor 0f6b37dbe527
@@ -221,7 +221,7 @@ Redo merge with merge.preferancestor="*" to enable bid merge
 
 The other way around:
 
-  $ hg up -C -r5
+  $ hg up -C -r'desc(5)'
   4 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg merge -v --debug --config merge.preferancestor="*"
   note: merging e673248094b1+ and 6373bbfdae1d using bids from ancestors 0f6b37dbe527 and d1d156401c1b
@@ -397,18 +397,18 @@ http://stackoverflow.com/questions/9350005/how-do-i-specify-a-merge-base-to-use-
   $ cd ancestor-merging
   $ echo a > x
   $ hg commit -A -m a x
-  $ hg update -q 0
+  $ hg update -q 'desc(a)'
   $ echo b >> x
   $ hg commit -m b
-  $ hg update -q 0
+  $ hg update -q 'desc(a)'
   $ echo c >> x
   $ hg commit -qm c
-  $ hg update -q 1
-  $ hg merge -q --tool internal:local 2
+  $ hg update -q 'desc(b)'
+  $ hg merge -q --tool internal:local 'desc(c)'
   $ echo c >> x
   $ hg commit -m bc
-  $ hg update -q 2
-  $ hg merge -q --tool internal:local 1
+  $ hg update -q b211bbc6eb3cb30e4cbf0ad2d34159554dfb4ec8
+  $ hg merge -q --tool internal:local 70008a2163f6ed1dec3130b2fd23f815019a6c85
   $ echo b >> x
   $ hg commit -qm cb
 

@@ -43,11 +43,11 @@ commit bug fixes on bug fix branch
   o  feature 1  [default]
   
 transplant bug fixes onto release branch
-  $ hg update 0
+  $ hg update 23224ffa3bb0b0d891aeadc0bd225327c05426ca
   1 files updated, 0 files merged, 2 files removed, 0 files unresolved
-  $ hg graft 2
+  $ hg graft 1f6b59d373ef839c739a0f64390ef31d3bf14c21
   grafting 1f6b59d373ef "fix 1"
-  $ hg graft 3
+  $ hg graft a53b0210149009b7d475a30645c468cf3678a442
   grafting a53b02101490 "fix 2"
   $ hg log -G --template="$template"
   @  fix 2  [default]
@@ -63,10 +63,10 @@ transplant bug fixes onto release branch
   o  feature 1  [default]
   
   $ hg status
-  $ hg status --rev 0:4
+  $ hg status --rev 23224ffa3bb0b0d891aeadc0bd225327c05426ca:17595d510ef52376aeb0436ad9a0593d626bbbec
   M file1
   A bugfix
-  $ hg status --rev 4:5
+  $ hg status --rev 17595d510ef52376aeb0436ad9a0593d626bbbec:'max(desc(fix))'
   M bugfix
   M file1
 
@@ -115,7 +115,7 @@ Do a size-preserving modification outside of that process
   $ echo abcd > bugfix
   $ hg status
   M bugfix
-  $ hg log --template "{desc}  {files}\n" -r5:
+  $ hg log --template "{desc}  {files}\n" -r'max(desc(fix))':
   fix 2  bugfix file1
   x  bugfix file1
   y  file1

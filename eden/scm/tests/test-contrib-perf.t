@@ -23,12 +23,12 @@ Prepare repo:
   $ echo adding more to file a >> a
   $ hg commit -m third
 
-  $ hg up -r 0
+  $ hg up -r 'desc(first)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo merge-this >> a
   $ hg commit -m merge-able
 
-  $ hg up -r 2
+  $ hg up -r 'desc(third)'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 perfstatus
@@ -43,7 +43,7 @@ perfstatus
   > EOF
   $ hg perfaddremove
   $ hg perfancestors
-  $ hg perfancestorset 2
+  $ hg perfancestorset 'desc(third)'
   $ hg perfannotate a
   $ hg perfbookmarks
   $ hg perfcca
@@ -64,10 +64,10 @@ perfstatus
   $ hg perflog
   $ hg perflookup 2
   $ hg perflrucache
-  $ hg perfmanifest 2
-  $ hg perfmergecalculate -r 3
+  $ hg perfmanifest 'desc(third)'
+  $ hg perfmergecalculate -r 8401ab48b23f93e6592bba6c753148a61f35d5c9
   $ hg perfnodelookup 2
-  $ hg perfpathcopies 1 2
+  $ hg perfpathcopies 'desc(second)' 'desc(third)'
   $ hg perfrawfiles 2
   $ hg perfrevrange
   $ hg perfrevset 'all()'

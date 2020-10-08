@@ -335,7 +335,7 @@ Create some history
   $ touch a
   $ hg add a
   $ for i in 1 2 3; do echo $i > a; hg commit -m "a $i"; done
-  $ hg checkout 0
+  $ hg checkout ea4e33293d4d274a2ba73150733c2612231f398c
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ touch b
   $ hg add b
@@ -356,7 +356,7 @@ Create some history
 
 Add and expect uncommit to fail on both merge working dir and merge changeset
 
-  $ hg merge 2
+  $ hg merge 'max(desc(a))'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
 

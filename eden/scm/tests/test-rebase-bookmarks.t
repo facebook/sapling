@@ -21,7 +21,7 @@ Create a repo with several bookmarks
   adding c
   $ hg book 'Z'
 
-  $ hg up -q 0
+  $ hg up -q 'desc(A)'
 
   $ echo d > d
   $ hg ci -Am D
@@ -49,12 +49,12 @@ Move only rebased bookmarks
 
 Test deleting divergent bookmarks from dest (issue3685)
 
-  $ hg book -r 3 Z@diverge
+  $ hg book -r 'desc(D)' Z@diverge
 
 ... and also test that bookmarks not on dest or not being moved aren't deleted
 
-  $ hg book -r 3 X@diverge
-  $ hg book -r 0 Y@diverge
+  $ hg book -r 'desc(D)' X@diverge
+  $ hg book -r 'desc(A)' Y@diverge
 
   $ tglog
   o  3: 41acb9dca9eb 'D' W X@diverge Z@diverge
@@ -65,7 +65,7 @@ Test deleting divergent bookmarks from dest (issue3685)
   |/
   o  0: 1994f17a630e 'A' Y@diverge
   
-  $ hg rebase -s Y -d 3
+  $ hg rebase -s Y -d 'desc(D)'
   rebasing 49cb3485fa0c "C" (Y Z)
 
   $ tglog
@@ -83,7 +83,7 @@ Do not try to keep active but deleted divergent bookmark
   $ hg clone -q a a4
 
   $ cd a4
-  $ hg up -q 2
+  $ hg up -q 'desc(C)'
   $ hg book W@diverge
 
   $ hg rebase -s W -d .
@@ -103,7 +103,7 @@ Keep bookmarks to the correct rebased changeset
   $ cd a2
   $ hg up -q Z
 
-  $ hg rebase -s 1 -d 3
+  $ hg rebase -s 'desc(B)' -d 'desc(D)'
   rebasing 6c81ed0049f8 "B" (X)
   rebasing 49cb3485fa0c "C" (Y Z)
 
