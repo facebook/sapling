@@ -5,5 +5,47 @@
  * GNU General Public License version 2.
  */
 
-#[derive(Copy, Clone, Default)]
-pub struct IdMapVersion(pub u32);
+use std::fmt;
+
+use sql::mysql;
+
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(mysql::OptTryFromRowField)]
+pub struct IdMapVersion(pub u64);
+
+impl fmt::Display for IdMapVersion {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(mysql::OptTryFromRowField)]
+pub struct IdDagVersion(pub u64);
+
+impl fmt::Display for IdDagVersion {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd)]
+pub struct DagBundle {
+    pub iddag_version: IdDagVersion,
+    pub idmap_version: IdMapVersion,
+}
+
+impl DagBundle {
+    pub fn new(iddag_version: IdDagVersion, idmap_version: IdMapVersion) -> Self {
+        Self {
+            iddag_version,
+            idmap_version,
+        }
+    }
+}
+
+impl From<(IdDagVersion, IdMapVersion)> for DagBundle {
+    fn from(t: (IdDagVersion, IdMapVersion)) -> Self {
+        DagBundle::new(t.0, t.1)
+    }
+}

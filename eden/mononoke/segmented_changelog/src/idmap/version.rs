@@ -1,0 +1,163 @@
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License version 2.
+ */
+
+use anyhow::{Context, Result};
+use futures::compat::Future01CompatExt;
+use sql::queries;
+use sql_ext::SqlConnections;
+
+use stats::prelude::*;
+
+use context::{CoreContext, PerfCounterType};
+use mononoke_types::RepositoryId;
+
+use crate::types::IdMapVersion;
+
+define_stats! {
+    prefix = "mononoke.segmented_changelog.idmap.version";
+    set: timeseries(Sum),
+    get: timeseries(Sum),
+}
+
+/// Describes the latest IdMap version for an given repository.
+/// The seeder process has the job of constructing a new IdMap version. The seeder process will
+/// insert entries for a new version and in the end it will set a new entry for a given repository.
+/// Serving processes will use bundles under normal circumstances. Tailing processes will read the
+/// latest version for a repository to incrementally build (tailers may or may not use bundles).
+pub struct SqlIdMapVersionStore {
+    connections: SqlConnections,
+    repo_id: RepositoryId,
+}
+
+impl SqlIdMapVersionStore {
+    pub fn new(connections: SqlConnections, repo_id: RepositoryId) -> Self {
+        Self {
+            connections,
+            repo_id,
+        }
+    }
+
+    pub async fn set(&self, ctx: &CoreContext, version: IdMapVersion) -> Result<()> {
+        STATS::set.add_value(1);
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlWrites);
+        let transaction = self
+            .connections
+            .write_connection
+            .start_transaction()
+            .compat()
+            .await
+            .context("creating segmented changelog idmap version set transaction")?;
+        let (transaction, _insert_version_result) =
+            InsertVersion::query_with_transaction(transaction, &[(&self.repo_id, &version)])
+                .compat()
+                .await
+                .context("inserting segmented changelog idmap version")?;
+        let (transaction, _insert_version_log_result) =
+            InsertVersionLog::query_with_transaction(transaction, &[(&self.repo_id, &version)])
+                .compat()
+                .await
+                .context("inserting segmented changelog idmap version log entry")?;
+        transaction
+            .commit()
+            .compat()
+            .await
+            .context("committing segmented changelog idmap version")?;
+        Ok(())
+    }
+
+    pub async fn get(&self, ctx: &CoreContext) -> Result<Option<IdMapVersion>> {
+        STATS::get.add_value(1);
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsReplica);
+        let rows = SelectVersion::query(&self.connections.read_connection, &self.repo_id)
+            .compat()
+            .await?;
+        Ok(rows.into_iter().next().map(|(v,)| v))
+    }
+}
+
+queries! {
+    write InsertVersion(values: (repo_id: RepositoryId, version: IdMapVersion)) {
+        none,
+        "
+        REPLACE INTO segmented_changelog_idmap_version (repo_id, version)
+        VALUES {values}
+        "
+    }
+
+    write InsertVersionLog(values: (repo_id: RepositoryId, version: IdMapVersion)) {
+        none,
+        "
+        INSERT INTO segmented_changelog_idmap_version_log (repo_id, version)
+        VALUES {values}
+        "
+    }
+
+    read SelectVersion(repo_id: RepositoryId) -> (IdMapVersion) {
+        "
+        SELECT version
+        FROM segmented_changelog_idmap_version
+        WHERE repo_id = {repo_id}
+        "
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fbinit::FacebookInit;
+
+    use sql_construct::SqlConstruct;
+
+    use crate::builder::SegmentedChangelogBuilder;
+
+    #[fbinit::compat_test]
+    async fn test_get_set_get(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo_id = RepositoryId::new(0);
+        let builder = SegmentedChangelogBuilder::with_sqlite_in_memory()?.with_repo_id(repo_id);
+        let version = builder.build_sql_idmap_version_store()?;
+
+        assert_eq!(version.get(&ctx).await?, None);
+        version.set(&ctx, IdMapVersion(1)).await?;
+        assert_eq!(version.get(&ctx).await?, Some(IdMapVersion(1)));
+        version.set(&ctx, IdMapVersion(3)).await?;
+        assert_eq!(version.get(&ctx).await?, Some(IdMapVersion(3)));
+
+        Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn test_more_than_one_repo(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let builder = SegmentedChangelogBuilder::with_sqlite_in_memory()?;
+        let build_version = |id| {
+            builder
+                .clone()
+                .with_repo_id(RepositoryId::new(id))
+                .build_sql_idmap_version_store()
+        };
+        let version_repo1 = build_version(1)?;
+        let version_repo2 = build_version(2)?;
+
+        assert_eq!(version_repo1.get(&ctx).await?, None);
+        assert_eq!(version_repo2.get(&ctx).await?, None);
+        version_repo1.set(&ctx, IdMapVersion(1)).await?;
+        assert_eq!(version_repo1.get(&ctx).await?, Some(IdMapVersion(1)));
+        assert_eq!(version_repo2.get(&ctx).await?, None);
+        version_repo2.set(&ctx, IdMapVersion(1)).await?;
+        assert_eq!(version_repo1.get(&ctx).await?, Some(IdMapVersion(1)));
+        assert_eq!(version_repo2.get(&ctx).await?, Some(IdMapVersion(1)));
+        version_repo2.set(&ctx, IdMapVersion(2)).await?;
+        assert_eq!(version_repo1.get(&ctx).await?, Some(IdMapVersion(1)));
+        assert_eq!(version_repo2.get(&ctx).await?, Some(IdMapVersion(2)));
+
+        Ok(())
+    }
+}

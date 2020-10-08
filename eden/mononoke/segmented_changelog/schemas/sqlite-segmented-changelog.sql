@@ -13,3 +13,36 @@ CREATE TABLE segmented_changelog_idmap (
   PRIMARY KEY (repo_id, version, vertex),
   UNIQUE (repo_id, version, cs_id)
 );
+
+CREATE TABLE segmented_changelog_idmap_version (
+  repo_id INTEGER PRIMARY KEY,
+  version INTEGER NOT NULL
+);
+
+CREATE TABLE segmented_changelog_idmap_version_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+  repo_id INTEGER NOT NULL,
+  version INTEGER NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE segmented_changelog_iddag_version_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+  repo_id INTEGER NOT NULL,
+  idmap_version INTEGER NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE segmented_changelog_bundle (
+  repo_id INTEGER PRIMARY KEY,
+  iddag_version INTEGER NOT NULL,
+  idmap_version INTEGER NOT NULL
+);
+
+CREATE TABLE segmented_changelog_bundle_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+  repo_id INTEGER NOT NULL,
+  iddag_version INTEGER NOT NULL,
+  idmap_version INTEGER NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);

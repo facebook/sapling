@@ -19,8 +19,11 @@ use context::CoreContext;
 use mononoke_types::ChangesetId;
 
 mod builder;
+mod bundle;
 mod dag;
+mod iddag;
 mod idmap;
+mod sql_types;
 mod types;
 
 pub use crate::builder::SegmentedChangelogBuilder;

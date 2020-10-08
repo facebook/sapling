@@ -7,9 +7,11 @@
 
 mod mem;
 mod sql;
+mod version;
 
 pub use self::mem::MemIdMap;
 pub use self::sql::SqlIdMap;
+pub use self::version::SqlIdMapVersionStore;
 
 use std::collections::HashMap;
 

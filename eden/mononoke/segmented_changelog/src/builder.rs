@@ -15,8 +15,10 @@ use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
 use sql_ext::replication::{NoReplicaLagMonitor, ReplicaLagMonitor};
 use sql_ext::SqlConnections;
 
+use crate::bundle::SqlBundleStore;
 use crate::dag::{Dag, OnDemandUpdateDag};
-use crate::idmap::SqlIdMap;
+use crate::iddag::SqlIdDagVersionStore;
+use crate::idmap::{SqlIdMap, SqlIdMapVersionStore};
 use crate::types::IdMapVersion;
 use crate::DisabledSegmentedChangelog;
 
@@ -70,7 +72,7 @@ impl SegmentedChangelogBuilder {
         self
     }
 
-    pub fn with_idmap_version(mut self, version: u32) -> Self {
+    pub fn with_idmap_version(mut self, version: u64) -> Self {
         self.idmap_version = Some(IdMapVersion(version));
         self
     }
@@ -122,6 +124,27 @@ impl SegmentedChangelogBuilder {
         ))
     }
 
+    // public to go around unused
+    pub fn build_sql_idmap_version_store(&self) -> Result<SqlIdMapVersionStore> {
+        let connections = self.connections_clone()?;
+        let repo_id = self.repo_id()?;
+        Ok(SqlIdMapVersionStore::new(connections, repo_id))
+    }
+
+    // public to go around unused
+    pub fn build_sql_iddag_version_store(&self) -> Result<SqlIdDagVersionStore> {
+        let connections = self.connections_clone()?;
+        let repo_id = self.repo_id()?;
+        Ok(SqlIdDagVersionStore::new(connections, repo_id))
+    }
+
+    // public to go around unused
+    pub fn build_sql_bundle_store(&self) -> Result<SqlBundleStore> {
+        let connections = self.connections_clone()?;
+        let repo_id = self.repo_id()?;
+        Ok(SqlBundleStore::new(connections, repo_id))
+    }
+
     fn repo_id(&self) -> Result<RepositoryId> {
         self.repo_id.ok_or_else(|| {
             format_err!("SegmentedChangelog cannot be built without RepositoryId being specified.")
@@ -152,5 +175,14 @@ impl SegmentedChangelogBuilder {
                 "SegmentedChangelog cannot be built without SqlConnections being specified."
             )
         })
+    }
+
+    fn connections_clone(&self) -> Result<SqlConnections> {
+        let connections = self.connections.as_ref().ok_or_else(|| {
+            format_err!(
+                "SegmentedChangelog cannot be built without SqlConnections being specified."
+            )
+        })?;
+        Ok(connections.clone())
     }
 }

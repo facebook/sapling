@@ -45,7 +45,7 @@ pub struct SqlIdMap {
 
 queries! {
     write InsertIdMapEntry(
-        values: (repo_id: RepositoryId, version: u32, vertex: u64, cs_id: ChangesetId)
+        values: (repo_id: RepositoryId, version: IdMapVersion, vertex: u64, cs_id: ChangesetId)
     ) {
         insert_or_ignore,
         "
@@ -54,7 +54,11 @@ queries! {
         "
     }
 
-    read SelectChangesetId(repo_id: RepositoryId, version: u32, vertex: u64) -> (ChangesetId) {
+    read SelectChangesetId(
+        repo_id: RepositoryId,
+        version: IdMapVersion,
+        vertex: u64
+    ) -> (ChangesetId) {
         "
         SELECT idmap.cs_id as cs_id
         FROM segmented_changelog_idmap AS idmap
@@ -64,7 +68,7 @@ queries! {
 
     read SelectManyChangesetIds(
         repo_id: RepositoryId,
-        version: u32,
+        version: IdMapVersion,
         >list vertex: u64
     ) -> (u64, ChangesetId) {
         "
@@ -74,7 +78,7 @@ queries! {
         "
     }
 
-    read SelectVertex(repo_id: RepositoryId, version: u32, cs_id: ChangesetId) -> (u64) {
+    read SelectVertex(repo_id: RepositoryId, version: IdMapVersion, cs_id: ChangesetId) -> (u64) {
         "
         SELECT idmap.vertex as vertex
         FROM segmented_changelog_idmap AS idmap
@@ -82,7 +86,7 @@ queries! {
         "
     }
 
-    read SelectLastEntry(repo_id: RepositoryId, version: u32) -> (u64, ChangesetId) {
+    read SelectLastEntry(repo_id: RepositoryId, version: IdMapVersion) -> (u64, ChangesetId) {
         "
         SELECT idmap.vertex as vertex, idmap.cs_id as cs_id
         FROM segmented_changelog_idmap AS idmap
@@ -129,7 +133,7 @@ impl IdMap for SqlIdMap {
             }
             let mut to_insert = Vec::with_capacity(chunk.len());
             for (vertex, cs_id) in chunk {
-                to_insert.push((&self.repo_id, &self.version.0, &vertex.0, cs_id));
+                to_insert.push((&self.repo_id, &self.version, &vertex.0, cs_id));
             }
             ctx.perf_counters()
                 .increment_counter(PerfCounterType::SqlWrites);
@@ -157,7 +161,7 @@ impl IdMap for SqlIdMap {
                         let (t, rows) = SelectManyChangesetIds::query_with_transaction(
                             transaction,
                             &self.repo_id,
-                            &self.version.0,
+                            &self.version,
                             &to_select[..],
                         )
                         .compat()
@@ -206,7 +210,7 @@ impl IdMap for SqlIdMap {
         vertexes: Vec<Vertex>,
     ) -> Result<HashMap<Vertex, ChangesetId>> {
         let select_vertexes = |connection: &Connection, vertexes: &[u64]| {
-            SelectManyChangesetIds::query(connection, &self.repo_id, &self.version.0, vertexes)
+            SelectManyChangesetIds::query(connection, &self.repo_id, &self.version, vertexes)
                 .compat()
                 .and_then(|rows| {
                     future::ok(
@@ -244,7 +248,7 @@ impl IdMap for SqlIdMap {
     async fn find_vertex(&self, ctx: &CoreContext, cs_id: ChangesetId) -> Result<Option<Vertex>> {
         STATS::find_vertex.add_value(1);
         let select = |connection| async move {
-            let rows = SelectVertex::query(connection, &self.repo_id, &self.version.0, &cs_id)
+            let rows = SelectVertex::query(connection, &self.repo_id, &self.version, &cs_id)
                 .compat()
                 .await?;
             Ok(rows.into_iter().next().map(|r| Vertex(r.0)))
@@ -268,7 +272,7 @@ impl IdMap for SqlIdMap {
         let rows = SelectLastEntry::query(
             &self.connections.read_connection,
             &self.repo_id,
-            &self.version.0,
+            &self.version,
         )
         .compat()
         .await?;
