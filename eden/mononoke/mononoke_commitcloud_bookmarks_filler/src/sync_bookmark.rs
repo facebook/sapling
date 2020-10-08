@@ -6,7 +6,7 @@
  */
 
 use crate::replay_stream::ReplayFn;
-use anyhow::format_err;
+use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use bookmarks::BookmarkName;
 use cloned::cloned;
@@ -59,16 +59,16 @@ impl<'a, 'b, 'c> ReplayFn for &SyncBookmark<'a, 'b, 'c> {
             .repo(ctx.clone(), &repo_name)
             .await
             .map_err(|e| ErrorKind::BlobRepoError(e.into()))?
-            .ok_or_else(|| format_err!("repo doesn't exist: {:?}", repo_name))
-            .map_err(ErrorKind::BlobRepoError)?;
+            .ok_or_else(|| format_err!("repo doesn't exist: {:?}", repo_name))?;
 
-        let infinitepush_namespace = repo
-            .config()
-            .infinitepush
-            .namespace
-            .as_ref()
-            .ok_or_else(|| format_err!("Infinitepush is not enabled in repository {:?}", repo_name))
-            .map_err(ErrorKind::BlobRepoError)?;
+        let infinitepush_namespace =
+            repo.config()
+                .infinitepush
+                .namespace
+                .as_ref()
+                .ok_or_else(|| {
+                    format_err!("Infinitepush is not enabled in repository {:?}", repo_name)
+                })?;
 
         if !infinitepush_namespace.matches_bookmark(&bookmark_name) {
             return Err(ErrorKind::InvalidBookmarkForNamespace(
@@ -81,7 +81,7 @@ impl<'a, 'b, 'c> ReplayFn for &SyncBookmark<'a, 'b, 'c> {
             repo.resolve_specifier(ChangesetSpecifier::Hg(hg_cs_id)),
             repo.resolve_bookmark(bookmark_name.as_str(), BookmarkFreshness::MostRecent)
         )
-        .map_err(|e| ErrorKind::BlobRepoError(e.into()))?;
+        .map_err(Error::from)?;
 
         let maybe_old_cs_id = maybe_old_cs.map(|cs| cs.id());
 
@@ -112,10 +112,9 @@ impl<'a, 'b, 'c> ReplayFn for &SyncBookmark<'a, 'b, 'c> {
                     STATS::create.add_value(1);
                     txn.create_scratch(&bookmark_name, new_cs_id)
                 }
-            }
-            .map_err(ErrorKind::BlobRepoError)?;
+            }?;
 
-            let success = txn.commit().await.map_err(ErrorKind::BlobRepoError)?;
+            let success = txn.commit().await?;
 
             if !success {
                 return Err(ErrorKind::BookmarkTransactionFailed);

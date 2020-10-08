@@ -22,5 +22,5 @@ pub enum ErrorKind {
     HgChangesetDoesNotExist(HgChangesetId),
 
     #[error("An error ocurred interacting with the blob repo")]
-    BlobRepoError(#[source] Error),
+    BlobRepoError(#[from] Error),
 }
