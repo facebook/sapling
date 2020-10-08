@@ -90,7 +90,7 @@ pub async fn sync_single_bookmark_update_log<M: SyncedCommitMapping + Clone + 's
         commit_syncer,
         entry.from_changeset_id,
         to_cs_id,
-        bookmark,
+        Some(bookmark),
         source_skiplist_index,
         target_skiplist_index,
         common_pushrebase_bookmarks,
@@ -107,7 +107,7 @@ async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static>(
     commit_syncer: &CommitSyncer<M>,
     from_cs_id: Option<ChangesetId>,
     to_cs_id: ChangesetId,
-    bookmark: BookmarkName,
+    maybe_bookmark: Option<BookmarkName>,
     source_skiplist_index: &Source<Arc<SkiplistIndex>>,
     target_skiplist_index: &Target<Arc<SkiplistIndex>>,
     common_pushrebase_bookmarks: &HashSet<BookmarkName>,
@@ -118,49 +118,53 @@ async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static>(
     let len = unsynced_ancestors.len();
     info!(ctx.logger(), "{} unsynced ancestors of {}", len, to_cs_id);
 
-    if common_pushrebase_bookmarks.contains(&bookmark) {
-        // This is a commit that was introduced by common pushrebase bookmark (e.g. "master").
-        // Use pushrebase to sync a commit.
-        if let Some(from_cs_id) = from_cs_id {
-            check_forward_move(
-                ctx,
-                commit_syncer,
-                &source_skiplist_index.0,
-                to_cs_id,
-                from_cs_id,
-            )
-            .await?;
-        }
+    if let Some(bookmark) = &maybe_bookmark {
+        if common_pushrebase_bookmarks.contains(bookmark) {
+            // This is a commit that was introduced by common pushrebase bookmark (e.g. "master").
+            // Use pushrebase to sync a commit.
+            if let Some(from_cs_id) = from_cs_id {
+                check_forward_move(
+                    ctx,
+                    commit_syncer,
+                    &source_skiplist_index.0,
+                    to_cs_id,
+                    from_cs_id,
+                )
+                .await?;
+            }
 
-        sync_commits_via_pushrebase(
-            &ctx,
-            &commit_syncer,
-            &source_skiplist_index,
-            &target_skiplist_index,
-            &bookmark,
-            &common_pushrebase_bookmarks,
-            scuba_sample.clone(),
-            unsynced_ancestors,
-        )
-        .await
-    } else {
-        // Use a normal sync since a bookmark is not a common pushrebase bookmark
-        let mut res = vec![];
-        for cs_id in unsynced_ancestors {
-            let synced = sync_commit_without_pushrebase(
+            return sync_commits_via_pushrebase(
                 &ctx,
                 &commit_syncer,
+                &source_skiplist_index,
                 &target_skiplist_index,
-                scuba_sample.clone(),
-                cs_id,
+                bookmark,
                 &common_pushrebase_bookmarks,
+                scuba_sample.clone(),
+                unsynced_ancestors,
             )
-            .await?;
-            res.extend(synced);
+            .await;
         }
-        let maybe_remapped_cs_id = find_remapped_cs_id(ctx, commit_syncer, to_cs_id).await?;
-        let remapped_cs_id =
-            maybe_remapped_cs_id.ok_or(format_err!("unknown sync outcome for {}", to_cs_id))?;
+    }
+
+    // Use a normal sync since a bookmark is not a common pushrebase bookmark
+    let mut res = vec![];
+    for cs_id in unsynced_ancestors {
+        let synced = sync_commit_without_pushrebase(
+            &ctx,
+            &commit_syncer,
+            &target_skiplist_index,
+            scuba_sample.clone(),
+            cs_id,
+            &common_pushrebase_bookmarks,
+        )
+        .await?;
+        res.extend(synced);
+    }
+    let maybe_remapped_cs_id = find_remapped_cs_id(ctx, commit_syncer, to_cs_id).await?;
+    let remapped_cs_id =
+        maybe_remapped_cs_id.ok_or_else(|| format_err!("unknown sync outcome for {}", to_cs_id))?;
+    if let Some(bookmark) = maybe_bookmark {
         move_or_create_bookmark(
             &ctx,
             &commit_syncer.get_target_repo(),
@@ -168,8 +172,8 @@ async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static>(
             remapped_cs_id,
         )
         .await?;
-        Ok(res)
     }
+    Ok(res)
 }
 
 /// This function syncs commits via pushrebase with a caveat - some commits shouldn't be
