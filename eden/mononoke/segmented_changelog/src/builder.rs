@@ -7,9 +7,11 @@
 
 use std::sync::Arc;
 
-use anyhow::{format_err, Result};
+use anyhow::{format_err, Context, Result};
 use blobstore::Blobstore;
+use bulkops::ChangesetBulkFetch;
 use changeset_fetcher::ChangesetFetcher;
+use context::CoreContext;
 use dag::InProcessIdDag;
 use mononoke_types::RepositoryId;
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
@@ -17,9 +19,11 @@ use sql_ext::replication::{NoReplicaLagMonitor, ReplicaLagMonitor};
 use sql_ext::SqlConnections;
 
 use crate::bundle::SqlBundleStore;
-use crate::dag::{Dag, OnDemandUpdateDag};
+use crate::dag::Dag;
 use crate::iddag::{IdDagSaveStore, SqlIdDagVersionStore};
 use crate::idmap::{SqlIdMap, SqlIdMapVersionStore};
+use crate::on_demand::OnDemandUpdateDag;
+use crate::seeder::SegmentedChangelogSeeder;
 use crate::types::IdMapVersion;
 use crate::DisabledSegmentedChangelog;
 
@@ -38,6 +42,7 @@ pub struct SegmentedChangelogBuilder {
     idmap_version: Option<IdMapVersion>,
     replica_lag_monitor: Option<Arc<dyn ReplicaLagMonitor>>,
     changeset_fetcher: Option<Arc<dyn ChangesetFetcher>>,
+    changeset_bulk_fetch: Option<Arc<dyn ChangesetBulkFetch>>,
     blobstore: Option<Arc<dyn Blobstore>>,
 }
 
@@ -53,6 +58,7 @@ impl SqlConstruct for SegmentedChangelogBuilder {
             idmap_version: None,
             replica_lag_monitor: None,
             changeset_fetcher: None,
+            changeset_bulk_fetch: None,
             blobstore: None,
         }
     }
@@ -93,6 +99,14 @@ impl SegmentedChangelogBuilder {
         self
     }
 
+    pub fn with_changeset_bulk_fetch(
+        mut self,
+        changeset_bulk_fetch: Arc<dyn ChangesetBulkFetch>,
+    ) -> Self {
+        self.changeset_bulk_fetch = Some(changeset_bulk_fetch);
+        self
+    }
+
     pub fn with_blobstore(mut self, blobstore: Arc<dyn Blobstore>) -> Self {
         self.blobstore = Some(blobstore);
         self
@@ -114,13 +128,12 @@ impl SegmentedChangelogBuilder {
 
     pub fn build_dag(&mut self) -> Result<Dag> {
         let iddag = InProcessIdDag::new_in_process();
-        let repo_id = self.repo_id()?;
         let idmap = Arc::new(self.build_sql_idmap()?);
-        Ok(Dag::new(repo_id, iddag, idmap))
+        Ok(Dag::new(iddag, idmap))
     }
 
     pub(crate) fn build_sql_idmap(&mut self) -> Result<SqlIdMap> {
-        let connections = self.connections()?;
+        let connections = self.connections_clone()?;
         let replica_lag_monitor = self.replica_lag_monitor();
         let repo_id = self.repo_id()?;
         let idmap_version = self.idmap_version();
@@ -132,32 +145,53 @@ impl SegmentedChangelogBuilder {
         ))
     }
 
-    // public to go around unused
-    pub fn build_sql_idmap_version_store(&self) -> Result<SqlIdMapVersionStore> {
+    pub(crate) fn build_sql_idmap_version_store(&self) -> Result<SqlIdMapVersionStore> {
         let connections = self.connections_clone()?;
         let repo_id = self.repo_id()?;
         Ok(SqlIdMapVersionStore::new(connections, repo_id))
     }
 
-    // public to go around unused
-    pub fn build_sql_iddag_version_store(&self) -> Result<SqlIdDagVersionStore> {
+    pub(crate) fn build_sql_iddag_version_store(&self) -> Result<SqlIdDagVersionStore> {
         let connections = self.connections_clone()?;
         let repo_id = self.repo_id()?;
         Ok(SqlIdDagVersionStore::new(connections, repo_id))
     }
 
-    // public to go around unused
-    pub fn build_sql_bundle_store(&self) -> Result<SqlBundleStore> {
+    pub(crate) fn build_sql_bundle_store(&self) -> Result<SqlBundleStore> {
         let connections = self.connections_clone()?;
         let repo_id = self.repo_id()?;
         Ok(SqlBundleStore::new(connections, repo_id))
     }
 
-    // public to go around unused
-    pub fn build_iddag_save_store(&mut self) -> Result<IdDagSaveStore> {
+    pub(crate) fn build_iddag_save_store(&mut self) -> Result<IdDagSaveStore> {
         let blobstore = self.blobstore()?;
         let repo_id = self.repo_id()?;
         Ok(IdDagSaveStore::new(repo_id, blobstore))
+    }
+
+    pub async fn build_seeder(&mut self, ctx: &CoreContext) -> Result<SegmentedChangelogSeeder> {
+        let idmap_version_store = self.build_sql_idmap_version_store()?;
+        if self.idmap_version.is_none() {
+            let version = match idmap_version_store
+                .get(&ctx)
+                .await
+                .context("getting idmap version from store")?
+            {
+                Some(v) => v.0 + 1,
+                None => 1,
+            };
+            self.idmap_version = Some(IdMapVersion(version));
+        }
+        let seeder = SegmentedChangelogSeeder::new(
+            Arc::new(self.build_sql_idmap()?),
+            self.idmap_version(),
+            idmap_version_store,
+            self.build_sql_iddag_version_store()?,
+            self.build_iddag_save_store()?,
+            self.build_sql_bundle_store()?,
+            self.changeset_bulk_fetch()?,
+        );
+        Ok(seeder)
     }
 
     fn repo_id(&self) -> Result<RepositoryId> {
@@ -184,10 +218,10 @@ impl SegmentedChangelogBuilder {
         })
     }
 
-    fn connections(&mut self) -> Result<SqlConnections> {
-        self.connections.take().ok_or_else(|| {
+    fn changeset_bulk_fetch(&mut self) -> Result<Arc<dyn ChangesetBulkFetch>> {
+        self.changeset_bulk_fetch.take().ok_or_else(|| {
             format_err!(
-                "SegmentedChangelog cannot be built without SqlConnections being specified."
+                "SegmentedChangelog cannot be built without ChangesetBulkFetch being specified."
             )
         })
     }

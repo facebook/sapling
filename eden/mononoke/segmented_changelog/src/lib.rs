@@ -23,10 +23,13 @@ mod bundle;
 mod dag;
 mod iddag;
 mod idmap;
+mod on_demand;
+mod seeder;
 mod sql_types;
+mod types;
+
 #[cfg(test)]
 mod tests;
-mod types;
 
 pub use crate::builder::SegmentedChangelogBuilder;
 

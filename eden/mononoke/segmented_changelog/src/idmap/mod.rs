@@ -14,6 +14,7 @@ pub use self::sql::SqlIdMap;
 pub use self::version::SqlIdMapVersionStore;
 
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use anyhow::{format_err, Result};
 use async_trait::async_trait;
@@ -66,5 +67,32 @@ pub trait IdMap: Send + Sync {
         self.find_vertex(ctx, cs_id)
             .await?
             .ok_or_else(|| format_err!("Failed to find find changeset id {} in IdMap", cs_id))
+    }
+}
+
+#[async_trait]
+impl IdMap for Arc<dyn IdMap> {
+    async fn insert_many(
+        &self,
+        ctx: &CoreContext,
+        mappings: Vec<(Vertex, ChangesetId)>,
+    ) -> Result<()> {
+        (**self).insert_many(ctx, mappings).await
+    }
+
+    async fn find_many_changeset_ids(
+        &self,
+        ctx: &CoreContext,
+        vertexes: Vec<Vertex>,
+    ) -> Result<HashMap<Vertex, ChangesetId>> {
+        (**self).find_many_changeset_ids(ctx, vertexes).await
+    }
+
+    async fn find_vertex(&self, ctx: &CoreContext, cs_id: ChangesetId) -> Result<Option<Vertex>> {
+        (**self).find_vertex(ctx, cs_id).await
+    }
+
+    async fn get_last_entry(&self, ctx: &CoreContext) -> Result<Option<(Vertex, ChangesetId)>> {
+        (**self).get_last_entry(ctx).await
     }
 }

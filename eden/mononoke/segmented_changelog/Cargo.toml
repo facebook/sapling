@@ -15,7 +15,6 @@ context = { path = "../server/context" }
 dag = { path = "../../scm/lib/dag" }
 mincode = { path = "../../scm/lib/mincode" }
 mononoke_types = { path = "../mononoke_types" }
-phases = { path = "../phases" }
 sql_construct = { path = "../common/sql_construct" }
 sql_ext = { path = "../common/rust/sql_ext" }
 sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
@@ -24,6 +23,7 @@ anyhow = "1.0"
 async-trait = "0.1.29"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 maplit = "1.0"
+slog = { version = "2.5", features = ["max_level_debug"] }
 tokio = { version = "=0.2.13", features = ["full"] }
 
 [dev-dependencies]
@@ -31,6 +31,7 @@ blobrepo = { path = "../blobrepo" }
 fixtures = { path = "../tests/fixtures" }
 memblob = { path = "../blobstore/memblob" }
 mononoke_types-mocks = { path = "../mononoke_types/mocks" }
+phases = { path = "../phases" }
 revset = { path = "../revset" }
 tests_utils = { path = "../tests/utils" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
