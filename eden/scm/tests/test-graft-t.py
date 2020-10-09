@@ -89,21 +89,21 @@ sh % "hg graft -r '2::1'" == r"""
 # Can't graft ancestor:
 
 sh % "hg graft 1 2" == r"""
-    skipping ancestor revision 1:5d205f8b35b6
-    skipping ancestor revision 2:5c095ad7e90f
+    skipping ancestor revision 5d205f8b35b6
+    skipping ancestor revision 5c095ad7e90f
     [255]"""
 
 # Specify revisions with -r:
 
 sh % "hg graft -r 1 -r 2" == r"""
-    skipping ancestor revision 1:5d205f8b35b6
-    skipping ancestor revision 2:5c095ad7e90f
+    skipping ancestor revision 5d205f8b35b6
+    skipping ancestor revision 5c095ad7e90f
     [255]"""
 
 sh % "hg graft -r 1 2" == r"""
     warning: inconsistent use of --rev might give unexpected revision ordering!
-    skipping ancestor revision 2:5c095ad7e90f
-    skipping ancestor revision 1:5d205f8b35b6
+    skipping ancestor revision 5c095ad7e90f
+    skipping ancestor revision 5d205f8b35b6
     [255]"""
 
 # Can't graft with dirty wd:
@@ -167,7 +167,7 @@ sh % "hg log --debug -r tip" == r"""
 
 sh % "hg graft 1 5 4 3 'merge()' 2 -n" == r'''
     skipping ungraftable merge revision 6
-    skipping revision 2:5c095ad7e90f (already grafted to 7:ef0ef43d49e7)
+    skipping 5c095ad7e90f (already grafted to ef0ef43d49e7)
     grafting 5d205f8b35b6 "1"
     grafting 5345cd5c0f38 "5"
     grafting 9c233e8e184d "4"
@@ -176,7 +176,7 @@ sh % "hg graft 1 5 4 3 'merge()' 2 -n" == r'''
 sh % "'HGEDITOR=cat' hg graft 1 5 'merge()' 2 --debug --config worker.backgroundclose=False" == r"""
     skipping ungraftable merge revision 6
     scanning for duplicate grafts
-    skipping revision 2:5c095ad7e90f (already grafted to 7:ef0ef43d49e7)
+    skipping 5c095ad7e90f (already grafted to ef0ef43d49e7)
     grafting 5d205f8b35b6 "1"
       searching for copies back to rev 1
       unmatched files in local:
@@ -282,9 +282,9 @@ sh % "hg debugstrip ." == "1 files updated, 0 files merged, 0 files removed, 0 f
 
 sh % "hg graft 1 5 4 3 'merge()' 2" == r"""
     skipping ungraftable merge revision 6
-    skipping revision 2:5c095ad7e90f (already grafted to 7:ef0ef43d49e7)
-    skipping revision 1:5d205f8b35b6 (already grafted to 8:6b9e5368ca4e)
-    skipping revision 5:5345cd5c0f38 (already grafted to 9:9436191a062e)
+    skipping 5c095ad7e90f (already grafted to ef0ef43d49e7)
+    skipping 5d205f8b35b6 (already grafted to 6b9e5368ca4e)
+    skipping 5345cd5c0f38 (already grafted to 9436191a062e)
     grafting 9c233e8e184d "4"
     merging e
     warning: 1 conflicts while merging e! (edit, then use 'hg resolve --mark')
@@ -400,7 +400,7 @@ sh % "hg log --debug -r tip" == r"""
 # Disallow grafting an already grafted cset onto its original branch
 sh % "hg up -q 6"
 sh % "hg graft 7" == r"""
-    skipping already grafted revision 7:ef0ef43d49e7 (was grafted from 2:5c095ad7e90f)
+    skipping already grafted revision ef0ef43d49e7 (was grafted from 5c095ad7e90f)
     [255]"""
 
 sh % "hg diff -r 2 -r 13" == r"""
@@ -421,18 +421,18 @@ sh % "hg diff -r 2 -r 13 -X ." == ""
 # Disallow grafting already grafted csets with the same origin onto each other
 sh % "hg up -q 13" == ""
 sh % "hg graft 2" == r"""
-    skipping revision 2:5c095ad7e90f (already grafted to 13:7a4785234d87)
+    skipping 5c095ad7e90f (already grafted to 7a4785234d87)
     [255]"""
 sh % "hg graft 7" == r"""
-    skipping already grafted revision 7:ef0ef43d49e7 (13:7a4785234d87 also has origin 2:5c095ad7e90f)
+    skipping already grafted revision ef0ef43d49e7 (7a4785234d87 also has origin 5c095ad7e90f)
     [255]"""
 
 sh % "hg up -q 7"
 sh % "hg graft 2" == r"""
-    skipping revision 2:5c095ad7e90f (already grafted to 7:ef0ef43d49e7)
+    skipping 5c095ad7e90f (already grafted to ef0ef43d49e7)
     [255]"""
 sh % "hg graft tip" == r"""
-    skipping already grafted revision 13:7a4785234d87 (7:ef0ef43d49e7 also has origin 2:5c095ad7e90f)
+    skipping already grafted revision 7a4785234d87 (ef0ef43d49e7 also has origin 5c095ad7e90f)
     [255]"""
 
 # Graft with --log
@@ -530,8 +530,8 @@ sh % "hg rm A B C"
 sh % "hg commit -m remove-all"
 sh % "hg graft $B $A $D" == r"""
     skipping ungraftable merge revision 3
-    skipping ancestor revision 0:426bada5c675
-    skipping revision 1:fc2b737bb2e5 (already grafted to 4:bd8a7a0a7392)
+    skipping ancestor revision 426bada5c675
+    skipping fc2b737bb2e5 (already grafted to bd8a7a0a7392)
     [255]"""
 sh % "hg graft $B $A $D --force" == r'''
     skipping ungraftable merge revision 3
@@ -547,7 +547,7 @@ sh % "hg backout to-backout" == r"""
     reverting A
     changeset 14707ec2ae63 backs out changeset b2fde3ce6adf"""
 sh % "hg graft to-backout" == r"""
-    skipping ancestor revision 8:b2fde3ce6adf
+    skipping ancestor revision b2fde3ce6adf
     [255]"""
 sh % "hg graft to-backout --force" == r"""
     grafting b2fde3ce6adf "to-backout" (to-backout)
@@ -577,7 +577,7 @@ A  B  # B/A=A
 sh % "hg up -qr $B"
 sh % "hg graft $A" == r"""
     grafting 426bada5c675 "A"
-    note: graft of 0:426bada5c675 created no changes to commit"""
+    note: graft of 426bada5c675 created no changes to commit"""
 
 # Graft to duplicate a commit
 
@@ -1088,8 +1088,8 @@ sh % "hg log -G -T '{rev} {desc|firstline}'" == r"""
 
 sh % "hg up -qCr 4"
 sh % "hg graft --tool ':local' -r '2::5'" == r'''
-    skipping already grafted revision 3:ca093ca2f1d9 (was grafted from 1:13ec5badbf2a)
-    skipping already grafted revision 5:43e9eb70dab0 (was grafted from 4:6c9a1289e5f1)
+    skipping already grafted revision ca093ca2f1d9 (was grafted from 13ec5badbf2a)
+    skipping already grafted revision 43e9eb70dab0 (was grafted from 6c9a1289e5f1)
     grafting 42127f193bcd "b"'''
 
 # Extending the graft range to include a (skipped) merge of 3 will not prevent us from
@@ -1098,10 +1098,10 @@ sh % "hg graft --tool ':local' -r '2::5'" == r'''
 sh % "hg up -qCr 4"
 sh % "hg graft --tool ':local' -r '2::7'" == r"""
     skipping ungraftable merge revision 6
-    skipping already grafted revision 3:ca093ca2f1d9 (was grafted from 1:13ec5badbf2a)
-    skipping already grafted revision 5:43e9eb70dab0 (was grafted from 4:6c9a1289e5f1)
+    skipping already grafted revision ca093ca2f1d9 (was grafted from 13ec5badbf2a)
+    skipping already grafted revision 43e9eb70dab0 (was grafted from 6c9a1289e5f1)
     grafting 42127f193bcd "b"
     grafting d3c3f2b38ecc "xx"
-    note: graft of 7:d3c3f2b38ecc created no changes to commit"""
+    note: graft of d3c3f2b38ecc created no changes to commit"""
 
 sh % "cd .."

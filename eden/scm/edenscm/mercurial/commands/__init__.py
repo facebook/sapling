@@ -2476,7 +2476,7 @@ def _dograft(ui, repo, *revs, **opts):
         # don't mutate while iterating, create a copy
         for rev in list(revs):
             if rev in ancestors:
-                ui.warn(_("skipping ancestor revision %d:%s\n") % (rev, repo[rev]))
+                ui.warn(_("skipping ancestor revision %s\n") % (repo[rev]))
                 # XXX remove on list is slow
                 revs.remove(rev)
         if not revs:
@@ -2504,37 +2504,31 @@ def _dograft(ui, repo, *revs, **opts):
                 except error.RepoLookupError:
                     r = None
                 if r in revs:
-                    ui.warn(
-                        _("skipping revision %d:%s " "(already grafted to %d:%s)\n")
-                        % (r, repo[r], rev, ctx)
-                    )
+                    ui.warn(_("skipping %s (already grafted to %s)\n") % (repo[r], ctx))
                     revs.remove(r)
                 elif ids[n] in revs:
                     if r is None:
                         ui.warn(
                             _(
-                                "skipping already grafted revision %d:%s "
-                                "(%d:%s also has unknown origin %s)\n"
+                                "skipping already grafted revision %s "
+                                "(%s also has unknown origin %s)\n"
                             )
-                            % (ids[n], repo[ids[n]], rev, ctx, n[:12])
+                            % (repo[ids[n]], ctx, n[:12])
                         )
                     else:
                         ui.warn(
                             _(
-                                "skipping already grafted revision %d:%s "
-                                "(%d:%s also has origin %d:%s)\n"
+                                "skipping already grafted revision %s "
+                                "(%s also has origin %s)\n"
                             )
-                            % (ids[n], repo[ids[n]], rev, ctx, r, n[:12])
+                            % (repo[ids[n]], ctx, n[:12])
                         )
                     revs.remove(ids[n])
             elif ctx.hex() in ids:
                 r = ids[ctx.hex()]
                 ui.warn(
-                    _(
-                        "skipping already grafted revision %d:%s "
-                        "(was grafted from %d:%s)\n"
-                    )
-                    % (r, repo[r], rev, ctx)
+                    _("skipping already grafted revision %s (was grafted from %s)\n")
+                    % (repo[r], ctx)
                 )
                 revs.remove(r)
         if not revs:
@@ -2597,10 +2591,7 @@ def _dograft(ui, repo, *revs, **opts):
             text=message, user=user, date=date, extra=extra, editor=editor
         )
         if node is None:
-            ui.warn(
-                _("note: graft of %d:%s created no changes to commit\n")
-                % (ctx.rev(), ctx)
-            )
+            ui.warn(_("note: graft of %s created no changes to commit\n") % (ctx))
 
     # remove state when we complete successfully
     if not opts.get("dry_run"):
