@@ -294,7 +294,7 @@ def _dosign(ui, repo, *revs, **opts):
 
     for n in nodes:
         hexnode = hgnode.hex(n)
-        ui.write(_("signing %d:%s\n") % (repo.changelog.rev(n), hgnode.short(n)))
+        ui.write(_("signing %s\n") % (hgnode.short(n)))
         # build data
         data = node2txt(repo, n, sigver)
         sig = mygpg.sign(data)
