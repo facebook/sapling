@@ -210,11 +210,15 @@ class manifestrevlogstore(object):
     def getnodeinfo(self, name, node):
         assert isinstance(name, str)
         assert isinstance(node, bytes)
-        cl = self.repo.changelog
         rl = self._revlog(name)
         parents = rl.parents(node)
-        linkrev = rl.linkrev(rl.rev(node))
-        return (parents[0], parents[1], cl.node(linkrev), None)
+        if "invalidatelinkrev" in self.repo.storerequirements:
+            linknode = nullid
+        else:
+            cl = self.repo.changelog
+            linkrev = rl.linkrev(rl.rev(node))
+            linknode = cl.node(linkrev)
+        return (parents[0], parents[1], linknode, None)
 
     def add(self, *args):
         raise RuntimeError("cannot add to a revlog store")

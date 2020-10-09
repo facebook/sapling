@@ -280,12 +280,12 @@ Single pack - repack does nothing
   $ ls_l $TESTTMP/hgcache/master/packs/ | grep datapack
   -r--r--r--      63 2d66e09c3bf8a000428af1630d978127182e496e.datapack
   $ ls_l $TESTTMP/hgcache/master/packs/ | grep histpack
-  -r--r--r--      90 c3399b56e035f73c3295276ed098235a08a0ed8c.histpack
+  -r--r--r--      90 b6b3154993cad4c2f5335bd43d96da57dc942de0.histpack
   $ hg repack --incremental
   $ ls_l $TESTTMP/hgcache/master/packs/ | grep datapack
   -r--r--r--      63 2d66e09c3bf8a000428af1630d978127182e496e.datapack
   $ ls_l $TESTTMP/hgcache/master/packs/ | grep histpack
-  -r--r--r--      90 c3399b56e035f73c3295276ed098235a08a0ed8c.histpack
+  -r--r--r--      90 b6b3154993cad4c2f5335bd43d96da57dc942de0.histpack
 
 3 gen1 packs, 1 gen0 pack - packs 3 gen1 into 1
   $ hg prefetch -r 'desc(x2)'
@@ -300,22 +300,22 @@ Single pack - repack does nothing
   -r--r--r--      67 384bdd4f40c2a4fc8f60ab4612381b9052ebe917.datapack
   -r--r--r--      65 887690f1138ae5b99c50d754ed02262874bf8ecb.datapack
   $ ls_l $TESTTMP/hgcache/master/packs/ | grep histpack
-  -r--r--r--     254 077e7ce5dfe862dc40cc8f3c9742d96a056865f2.histpack
-  -r--r--r--     336 094b530486dad4427a0faf6bcbc031571b99ca24.histpack
-  -r--r--r--     172 276d308429d0303762befa376788300f0310f90e.histpack
-  -r--r--r--      90 c3399b56e035f73c3295276ed098235a08a0ed8c.histpack
+  -r--r--r--     336 5d6262f212403636b919bd00c1c4e605e4838f64.histpack
+  -r--r--r--      90 b6b3154993cad4c2f5335bd43d96da57dc942de0.histpack
+  -r--r--r--     172 bd49a1b041fe7e7ef5db58dc7b0b0cc60a8644fd.histpack
+  -r--r--r--     254 bde16a8c8d6731dc786b491225897d416f75b55f.histpack
   $ hg repack --incremental
   $ ls_l $TESTTMP/hgcache/master/packs/ | grep datapack
   -r--r--r--     261 c155d24742424ff6f6eec6c54d232c3f550b6922.datapack
   $ ls_l $TESTTMP/hgcache/master/packs/ | grep histpack
-  -r--r--r--     336 094b530486dad4427a0faf6bcbc031571b99ca24.histpack
+  -r--r--r--     336 5d6262f212403636b919bd00c1c4e605e4838f64.histpack
 
 1 gen3 pack, 1 gen0 pack - does nothing
   $ hg repack --incremental
   $ ls_l $TESTTMP/hgcache/master/packs/ | grep datapack
   -r--r--r--     261 c155d24742424ff6f6eec6c54d232c3f550b6922.datapack
   $ ls_l $TESTTMP/hgcache/master/packs/ | grep histpack
-  -r--r--r--     336 094b530486dad4427a0faf6bcbc031571b99ca24.histpack
+  -r--r--r--     336 5d6262f212403636b919bd00c1c4e605e4838f64.histpack
 
 Pull should run background repack
   $ cat >> .hg/hgrc <<EOF
@@ -337,10 +337,10 @@ Pull should run background repack
   -r--r--r--      67 384bdd4f40c2a4fc8f60ab4612381b9052ebe917.datapack
   -r--r--r--      65 887690f1138ae5b99c50d754ed02262874bf8ecb.datapack
   $ ls_l $TESTTMP/hgcache/master/packs/ | grep histpack
-  -r--r--r--     254 077e7ce5dfe862dc40cc8f3c9742d96a056865f2.histpack
-  -r--r--r--     336 094b530486dad4427a0faf6bcbc031571b99ca24.histpack
-  -r--r--r--     172 276d308429d0303762befa376788300f0310f90e.histpack
-  -r--r--r--      90 c3399b56e035f73c3295276ed098235a08a0ed8c.histpack
+  -r--r--r--     336 5d6262f212403636b919bd00c1c4e605e4838f64.histpack
+  -r--r--r--      90 b6b3154993cad4c2f5335bd43d96da57dc942de0.histpack
+  -r--r--r--     172 bd49a1b041fe7e7ef5db58dc7b0b0cc60a8644fd.histpack
+  -r--r--r--     254 bde16a8c8d6731dc786b491225897d416f75b55f.histpack
 
   $ hg pull
   pulling from ssh://user@dummy/master
@@ -352,7 +352,7 @@ Pull should run background repack
   $ ls_l $TESTTMP/hgcache/master/packs/ | grep datapack
   -r--r--r--     261 c155d24742424ff6f6eec6c54d232c3f550b6922.datapack
   $ ls_l $TESTTMP/hgcache/master/packs/ | grep histpack
-  -r--r--r--     336 094b530486dad4427a0faf6bcbc031571b99ca24.histpack
+  -r--r--r--     336 5d6262f212403636b919bd00c1c4e605e4838f64.histpack
 
 Test environment variable resolution
   $ CACHEPATH=$TESTTMP/envcache hg prefetch --config 'remotefilelog.cachepath=$CACHEPATH'

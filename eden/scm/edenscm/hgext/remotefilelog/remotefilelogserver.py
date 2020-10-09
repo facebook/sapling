@@ -442,6 +442,8 @@ def getpack(repo, proto, args, version=1):
         responselen = 0
         starttime = time.time()
 
+        invalidatelinkrev = "invalidatelinkrev" in repo.storerequirements
+
         # Sort the files by name, so we provide deterministic results
         for filename, nodes in sorted(pycompat.iteritems(files)):
             filename = pycompat.decodeutf8(filename)
@@ -455,7 +457,10 @@ def getpack(repo, proto, args, version=1):
                 copyfrom = ""
                 p1node = fl.node(p1)
                 p2node = fl.node(p2)
-                linknode = repo.changelog.node(linkrev)
+                if invalidatelinkrev:
+                    linknode = nullid
+                else:
+                    linknode = repo.changelog.node(linkrev)
                 if p1node == nullid:
                     copydata = fl.renamed(node)
                     if copydata:
