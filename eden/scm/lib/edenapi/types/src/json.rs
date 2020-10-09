@@ -142,16 +142,12 @@ pub fn parse_tree_req(json: &Value) -> Result<TreeRequest> {
     let json = json.as_object().context("input must be a JSON object")?;
     let keys = json.get("keys").context("missing field: keys")?;
     let with_file_metadata = json.get("with_file_metadata");
-    // let with_directory_metadata = json.get("with_directory_metadata");
 
     Ok(TreeRequest {
         keys: parse_keys(keys)?,
         with_file_metadata: with_file_metadata
             .map(parse_file_metadata_req)
             .transpose()?,
-        // with_directory_metadata: with_directory_metadata
-        //     .map(parse_directory_metadata_req)
-        //     .transpose()?,
     })
 }
 
@@ -252,12 +248,6 @@ pub fn parse_file_metadata_req(json: &Value) -> Result<FileMetadataRequest> {
         with_revisionstore_flags,
     })
 }
-
-// pub fn parse_directory_metadata_req(json: &Value) -> Result<DirectoryMetadataRequest> {
-//     let _json = json.as_object().context("input must be a JSON object")?;
-//
-//     Ok(DirectoryMetadataRequest {})
-// }
 
 fn parse_keys(value: &Value) -> Result<Vec<Key>> {
     let arr = value.as_array().context("input must be a JSON array")?;
@@ -378,7 +368,6 @@ impl ToJson for TreeRequest {
                 "keys": self.keys.to_json(),
                 "with_file_metadata": file_metadata.to_json(),
             })
-        // "with_directory_metadata": self.with_directory_metadata.map(|m| m.to_json())
         } else {
             json!({
                 "keys": self.keys.to_json(),

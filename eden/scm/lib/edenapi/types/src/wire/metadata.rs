@@ -153,14 +153,6 @@ mod tests {
 
     quickcheck! {
         // Wire serialize roundtrips
-        // fn test_dir_meta_roundtrip_serialize(v: WireDirectoryMetadata) -> bool {
-        //     check_serialize_roundtrip(v)
-        // }
-
-        // fn test_dir_meta_req_roundtrip_serialize(v: WireDirectoryMetadataRequest) -> bool {
-        //     check_serialize_roundtrip(v)
-        // }
-
         fn test_file_meta_roundtrip_serialize(v: WireFileMetadata) -> bool {
             check_serialize_roundtrip(v)
         }
@@ -170,15 +162,6 @@ mod tests {
         }
 
         // API-Wire roundtrips
-
-        // fn test_dir_meta_roundtrip_wire(v: DirectoryMetadata) -> bool {
-        //     check_wire_roundtrip(v)
-        // }
-
-        // fn test_dir_meta_req_roundtrip_wire(v: DirectoryMetadataRequest) -> bool {
-        //     check_wire_roundtrip(v)
-        // }
-
         fn test_file_meta_roundtrip_wire(v: FileMetadata) -> bool {
             check_wire_roundtrip(v)
         }

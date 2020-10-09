@@ -314,7 +314,6 @@ impl EdenApi for Client {
                 with_file_metadata: Some(FileMetadataRequest {
                     with_revisionstore_flags: true,
                 }),
-                // with_directory_metadata: None,
             }
             .to_wire()
         })?;

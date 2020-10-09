@@ -55,7 +55,6 @@ pub struct TreeEntry {
     pub data: Option<Bytes>,
     pub parents: Option<Parents>,
     pub file_metadata: Option<FileMetadata>,
-    // pub directory_metadata: Option<DirectoryMetadata>,
 }
 
 impl TreeEntry {
@@ -67,7 +66,6 @@ impl TreeEntry {
             file_metadata: metadata.flags.map(|f| FileMetadata {
                 revisionstore_flags: Some(f),
             }),
-            // directory_metadata: None,
         }
     }
 
@@ -139,7 +137,6 @@ impl Arbitrary for TreeEntry {
             data: bytes.map(|b| Bytes::from(b)),
             parents: Arbitrary::arbitrary(g),
             file_metadata: Arbitrary::arbitrary(g),
-            // directory_metadata: Arbitrary::arbitrary(g),
         }
     }
 }
@@ -148,7 +145,6 @@ impl Arbitrary for TreeEntry {
 pub struct TreeRequest {
     pub keys: Vec<Key>,
     pub with_file_metadata: Option<FileMetadataRequest>,
-    // pub with_directory_metadata: Option<DirectoryMetadataRequest>,
 }
 
 #[cfg(any(test, feature = "for-tests"))]
@@ -157,7 +153,6 @@ impl Arbitrary for TreeRequest {
         Self {
             keys: Arbitrary::arbitrary(g),
             with_file_metadata: Arbitrary::arbitrary(g),
-            // with_directory_metadata: Arbitrary::arbitrary(g),
         }
     }
 }
