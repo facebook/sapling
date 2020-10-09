@@ -981,18 +981,9 @@ def bisect(
         nodestate = hbisect.checksparsebisectskip(repo, node, badnode, goodnode)
         while nodestate != "check":
             basenode = goodnode if nodestate == "good" else badnode
-            skipsparsed = "Skipping changeset %d:%s as there are no changes inside\n\
-the sparse profile from the known %s changeset %d:%s\n"
-            ui.write(
-                _(skipsparsed)
-                % (
-                    repo.changelog.rev(node),
-                    short(node),
-                    nodestate,
-                    repo.changelog.rev(basenode),
-                    short(basenode),
-                )
-            )
+            skipsparsed = "Skipping changeset %s as there are no changes inside\n\
+the sparse profile from the known %s changeset %s\n"
+            ui.write(_(skipsparsed) % (short(node), nodestate, short(basenode)))
 
             state[nodestate].append(node)
 
@@ -1050,7 +1041,7 @@ the sparse profile from the known %s changeset %d:%s\n"
                     transition = "bad"
                 state[transition].append(node)
                 ctx = repo[node]
-                ui.status(_("changeset %d:%s: %s\n") % (ctx, ctx, transition))
+                ui.status(_("changeset %s: %s\n") % (ctx, transition))
                 hbisect.checkstate(state)
                 # bisect
                 nodes, changesets, bgood, badnode, goodnode = hbisect.bisect(
@@ -1093,12 +1084,10 @@ the sparse profile from the known %s changeset %d:%s\n"
         if not changesets:
             extendnode = hbisect.extendrange(repo, state, nodes, good)
             if extendnode is not None:
-                extnode, extrev = extendnode.node(), extendnode.rev()
+                extnode = extendnode.node()
                 state["current"] = [extnode]
                 hbisect.save_state(repo, state)
-                ui.write(
-                    _("Extending search to changeset %d:%s\n") % (extrev, extendnode)
-                )
+                ui.write(_("Extending search to changeset %s\n") % extendnode)
 
                 if not nosparseskip:
                     node, changesets, good = sparseskip(

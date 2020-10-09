@@ -641,7 +641,7 @@ end at merge: 17 bad, 11 good (but 9 is first bad)
   3c77083deb4a
   429fcd26f52d
   $ hg bisect --extend
-  Extending search to changeset 8:dab8161ac8fc
+  Extending search to changeset dab8161ac8fc
   2 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg log -q -r 'bisect(untested)'
   $ hg log -q -r 'bisect(ignored)'

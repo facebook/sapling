@@ -71,10 +71,10 @@ verify bisect skips empty sparse commits (2,3)
   $ hg up 'max(desc(bad))'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bisect --bad
-  Skipping changeset 4:e116419d642b as there are no changes inside
-  the sparse profile from the known good changeset 0:a75e20cc7b2a
-  Skipping changeset 6:6b9461e31152 as there are no changes inside
-  the sparse profile from the known bad changeset 9:d910e57b873b
+  Skipping changeset e116419d642b as there are no changes inside
+  the sparse profile from the known good changeset a75e20cc7b2a
+  Skipping changeset 6b9461e31152 as there are no changes inside
+  the sparse profile from the known bad changeset d910e57b873b
   Testing changeset 2ecc2db0df15 (2 changesets remaining, ~1 tests)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bisect --good
@@ -124,12 +124,12 @@ verify skipping works with --command flag
   $ hg up 'max(desc(bad))'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bisect --command "hg debugpython -- script.py"
-  changeset 9:d910e57b873b: bad
-  Skipping changeset 4:e116419d642b as there are no changes inside
-  the sparse profile from the known good changeset 0:a75e20cc7b2a
-  Skipping changeset 6:6b9461e31152 as there are no changes inside
-  the sparse profile from the known bad changeset 9:d910e57b873b
-  changeset 5:2ecc2db0df15: good
+  changeset d910e57b873b: bad
+  Skipping changeset e116419d642b as there are no changes inside
+  the sparse profile from the known good changeset a75e20cc7b2a
+  Skipping changeset 6b9461e31152 as there are no changes inside
+  the sparse profile from the known bad changeset d910e57b873b
+  changeset 2ecc2db0df15: good
   The first bad revision is:
   commit:      6b9461e31152
   user:        test
@@ -188,8 +188,8 @@ New test set
 
   $ hg bisect -g a6b1a23ad56a41a184666a5c633a51117fec5208
   $ hg bisect -b 'desc(14)'
-  Skipping changeset 9:d910e57b873b as there are no changes inside
-  the sparse profile from the known good changeset 8:a6b1a23ad56a
+  Skipping changeset d910e57b873b as there are no changes inside
+  the sparse profile from the known good changeset a6b1a23ad56a
   Testing changeset a41c9f2666a8 (2 changesets remaining, ~1 tests)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bisect --bad
@@ -208,14 +208,14 @@ New test set
 
 
   $ hg bisect --extend
-  Extending search to changeset 7:94c6ab768eff
-  Skipping changeset 7:94c6ab768eff as there are no changes inside
-  the sparse profile from the known good changeset 9:d910e57b873b
+  Extending search to changeset 94c6ab768eff
+  Skipping changeset 94c6ab768eff as there are no changes inside
+  the sparse profile from the known good changeset d910e57b873b
   Testing changeset 7038c7a4f757 (4 changesets remaining, ~2 tests)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bisect --good
-  Skipping changeset 12:e694d9484bb8 as there are no changes inside
-  the sparse profile from the known bad changeset 13:a41c9f2666a8
+  Skipping changeset e694d9484bb8 as there are no changes inside
+  the sparse profile from the known bad changeset a41c9f2666a8
   The first bad revision is:
   commit:      e694d9484bb8
   user:        test
@@ -265,11 +265,11 @@ Empty case with --command flag: all commits are skipped
   $ hg bisect --reset
   $ hg bisect -g 6e74f05c0613d7861ac62eefb6974abf63ecce4f
   $ hg bisect -c "test $(hg log -r . -T '{rev}') -lt 17"
-  changeset 18:ddea298cfd5a: bad
-  Skipping changeset 16:8654dd939818 as there are no changes inside
-  the sparse profile from the known good changeset 15:6e74f05c0613
-  Skipping changeset 17:9ca8d13c5161 as there are no changes inside
-  the sparse profile from the known bad changeset 18:ddea298cfd5a
+  changeset ddea298cfd5a: bad
+  Skipping changeset 8654dd939818 as there are no changes inside
+  the sparse profile from the known good changeset 6e74f05c0613
+  Skipping changeset 9ca8d13c5161 as there are no changes inside
+  the sparse profile from the known bad changeset ddea298cfd5a
   The first bad revision is:
   commit:      9ca8d13c5161
   user:        test

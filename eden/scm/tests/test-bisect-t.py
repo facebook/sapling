@@ -454,7 +454,7 @@ sh % """
 hg bisect --command \
 \"hg debugshell -c \\\"sys.exit(1 if (repo['.'].rev() < 6) else 0)\\\"\"
 """ == r"""
-    changeset 31:58c80a7c8a40: good
+    changeset 58c80a7c8a40: good
     abort: cannot bisect (no known bad revisions)
     [255]"""
 sh % "hg up -qr 0"
@@ -462,12 +462,12 @@ sh % """
 hg bisect --command \
 \"hg debugshell -c \\\"sys.exit(1 if (repo['.'].rev() < 6) else 0)\\\"\"
 """ == r"""
-    changeset 0:b99c7b9c8e11: bad
-    changeset 15:e7fa0811edb0: good
-    changeset 7:03750880c6b5: good
-    changeset 3:b53bea5e2fcb: bad
-    changeset 5:7874a09ea728: bad
-    changeset 6:a3d5c6fdf0d3: good
+    changeset b99c7b9c8e11: bad
+    changeset e7fa0811edb0: good
+    changeset 03750880c6b5: good
+    changeset b53bea5e2fcb: bad
+    changeset 7874a09ea728: bad
+    changeset a3d5c6fdf0d3: good
     The first good revision is:
     commit:      a3d5c6fdf0d3
     user:        test
@@ -493,11 +493,11 @@ sh % "hg bisect -r"
 sh % "hg bisect --good tip --noupdate"
 sh % "hg bisect --bad 0 --noupdate" == "Testing changeset e7fa0811edb0 (31 changesets remaining, ~4 tests)"
 sh % "hg bisect --command 'sh script.sh and some params' --noupdate" == r"""
-    changeset 15:e7fa0811edb0: good
-    changeset 7:03750880c6b5: good
-    changeset 3:b53bea5e2fcb: bad
-    changeset 5:7874a09ea728: bad
-    changeset 6:a3d5c6fdf0d3: good
+    changeset e7fa0811edb0: good
+    changeset 03750880c6b5: good
+    changeset b53bea5e2fcb: bad
+    changeset 7874a09ea728: bad
+    changeset a3d5c6fdf0d3: good
     The first good revision is:
     commit:      a3d5c6fdf0d3
     user:        test
@@ -523,17 +523,17 @@ sh % "chmod +x script.sh"
 sh % "hg bisect -r"
 sh % "hg up -qr tip"
 sh % "hg bisect --command 'sh script.sh and some params'" == r"""
-    changeset 31:58c80a7c8a40: good
+    changeset 58c80a7c8a40: good
     abort: cannot bisect (no known bad revisions)
     [255]"""
 sh % "hg up -qr 0"
 sh % "hg bisect --command 'sh script.sh and some params'" == r"""
-    changeset 0:b99c7b9c8e11: bad
-    changeset 15:e7fa0811edb0: good
-    changeset 7:03750880c6b5: good
-    changeset 3:b53bea5e2fcb: bad
-    changeset 5:7874a09ea728: bad
-    changeset 6:a3d5c6fdf0d3: good
+    changeset b99c7b9c8e11: bad
+    changeset e7fa0811edb0: good
+    changeset 03750880c6b5: good
+    changeset b53bea5e2fcb: bad
+    changeset 7874a09ea728: bad
+    changeset a3d5c6fdf0d3: good
     The first good revision is:
     commit:      a3d5c6fdf0d3
     user:        test
@@ -566,10 +566,10 @@ sh % "hg bisect --bad 30" == r"""
     Testing changeset 06c7993750ce (15 changesets remaining, ~3 tests)
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "hg bisect --command true" == r"""
-    changeset 22:06c7993750ce: good
-    changeset 26:3efc6fd51aeb: good
-    changeset 28:8e0c2264c8af: good
-    changeset 29:b5bd63375ab9: good
+    changeset 06c7993750ce: good
+    changeset 3efc6fd51aeb: good
+    changeset 8e0c2264c8af: good
+    changeset b5bd63375ab9: good
     The first bad revision is:
     commit:      ed2d2f24b11c
     user:        test
@@ -588,8 +588,8 @@ sh % "hg bisect --bad 25" == r"""
     Testing changeset 8e0c2264c8af (6 changesets remaining, ~2 tests)
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "hg bisect --command true" == r"""
-    changeset 28:8e0c2264c8af: good
-    changeset 26:3efc6fd51aeb: good
+    changeset 8e0c2264c8af: good
+    changeset 3efc6fd51aeb: good
     The first good revision is:
     commit:      3efc6fd51aeb
     user:        test
