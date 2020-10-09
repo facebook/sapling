@@ -17,7 +17,7 @@ use cloned::cloned;
 use context::CoreContext;
 use cross_repo_sync::types::{Source, Target};
 use cross_repo_sync::{rewrite_commit, upload_commits, CommitSyncOutcome, CommitSyncer};
-use cross_repo_sync::{CommitSyncDataProvider, CommitSyncRepos, SyncData};
+use cross_repo_sync::{CandidateSelectionHint, CommitSyncDataProvider, CommitSyncRepos, SyncData};
 use dbbookmarks::SqlBookmarksBuilder;
 use fbinit::FacebookInit;
 use fixtures::linear;
@@ -511,7 +511,6 @@ async fn verify_mapping_and_all_wc(
 ) -> Result<(), Error> {
     let source_repo = commit_syncer.get_source_repo();
     let target_repo = commit_syncer.get_target_repo();
-    let mover = commit_syncer.get_current_mover_DEPRECATED(&ctx)?;
 
     verify_bookmarks(ctx.clone(), commit_syncer.clone()).await?;
 
@@ -521,6 +520,7 @@ async fn verify_mapping_and_all_wc(
         .compat()
         .await?;
 
+    println!("checking all source commits");
     let all_source_commits = DifferenceOfUnionsOfAncestorsNodeStream::new_union(
         ctx.clone(),
         &source_repo.get_changeset_fetcher(),
@@ -542,14 +542,17 @@ async fn verify_mapping_and_all_wc(
             .await?;
         let outcome = outcome.expect(&format!("commit has not been synced {}", source_cs_id));
         use CommitSyncOutcome::*;
-        let (target_cs_id, mover_to_use): (_, Mover) = match outcome {
-            EquivalentWorkingCopyAncestor(cs_id, _) | RewrittenAs(cs_id, _) => {
-                (cs_id, mover.clone())
-            }
-            Preserved => (source_cs_id, Arc::new(identity_mover)),
+
+        let (target_cs_id, mover_to_use) = match outcome {
             NotSyncCandidate => {
                 continue;
             }
+            EquivalentWorkingCopyAncestor(target_cs_id, ref version)
+            | RewrittenAs(target_cs_id, ref version) => {
+                println!("using mover for {:?}", version);
+                (target_cs_id, commit_syncer.get_mover_by_version(version)?)
+            }
+            Preserved => (source_cs_id, Arc::new(identity_mover) as Mover),
         };
 
         // Empty commits should always be synced, except for merges
@@ -645,6 +648,7 @@ async fn verify_bookmarks(
                         panic!("commit should not point to NotSyncCandidate");
                     }
                     EquivalentWorkingCopyAncestor(_, version) | RewrittenAs(_, version) => {
+                        println!("using mover for {:?}", version);
                         commit_syncer.get_mover_by_version(&version)?
                     }
                     Preserved => Arc::new(identity_mover),
@@ -687,6 +691,10 @@ async fn compare_contents(
     let target_content =
         list_content(ctx, target_hg_cs_id, commit_syncer.get_target_repo()).await?;
 
+    println!(
+        "source content: {:?}, target content {:?}",
+        source_content, target_content
+    );
     let filtered_source_content = source_content
         .into_iter()
         .filter_map(|(key, value)| {
@@ -1219,6 +1227,7 @@ async fn init_merged_repos(
             small_repo: small_repo.clone(),
         };
         let current_version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
+        let noop_version = CommitSyncConfigVersion("noop".to_string());
         let commit_sync_data_provider = CommitSyncDataProvider::test_new(
             current_version.clone(),
             Source(large_repo.get_repoid()),
@@ -1227,6 +1236,12 @@ async fn init_merged_repos(
                 current_version => SyncData {
                     mover: mover_type.get_reverse_mover(),
                     reverse_mover: mover_type.get_mover(),
+                    bookmark_renamer: bookmark_renamer.clone(),
+                    reverse_bookmark_renamer: reverse_bookmark_renamer.clone(),
+                },
+                noop_version => SyncData {
+                    mover: Arc::new(identity_mover),
+                    reverse_mover: Arc::new(identity_mover),
                     bookmark_renamer: bookmark_renamer,
                     reverse_bookmark_renamer: reverse_bookmark_renamer,
                 }
@@ -1482,13 +1497,13 @@ async fn preserve_premerge_commit(
             small_repo: small_repo.clone(),
         };
 
-        let current_version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
+        let noop_version = CommitSyncConfigVersion("noop".to_string());
         let commit_sync_data_provider = CommitSyncDataProvider::test_new(
-            current_version.clone(),
+            noop_version.clone(),
             Source(small_repo.get_repoid()),
             Target(large_repo.get_repoid()),
             hashmap! {
-                current_version => SyncData {
+                noop_version => SyncData {
                     mover: Arc::new(identity_mover),
                     reverse_mover: Arc::new(identity_mover),
                     bookmark_renamer: bookmark_renamer.clone(),
@@ -1504,7 +1519,7 @@ async fn preserve_premerge_commit(
     };
 
     small_to_large_sync_config
-        .unsafe_preserve_commit(ctx.clone(), bcs_id)
+        .unsafe_sync_commit(ctx.clone(), bcs_id, CandidateSelectionHint::Only)
         .await?;
 
     for another_repo_id in another_small_repo_ids {
@@ -1516,7 +1531,7 @@ async fn preserve_premerge_commit(
                     large_bcs_id: bcs_id,
                     small_repo_id: another_repo_id,
                     small_bcs_id: None,
-                    version_name: Some(CommitSyncConfigVersion("TEST_VERSION_NAME".to_string())),
+                    version_name: None,
                 },
             )
             .compat()
