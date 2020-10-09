@@ -1201,7 +1201,9 @@ where
             self.get_current_version(ctx)?,
         )?;
 
-        let mover = self.get_mover_by_version(&version)?;
+        let mover = self
+            .get_mover_by_version(&version)
+            .with_context(|| format!("failed getting a mover of version {}", version))?;
         Ok((mover, version))
     }
 

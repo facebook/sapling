@@ -13,7 +13,7 @@ use anyhow::{anyhow, bail, Error};
 use ascii::AsciiString;
 use bytes::Bytes;
 use fbinit::FacebookInit;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::str::FromStr;
 use std::sync::Arc;
 
@@ -22,6 +22,7 @@ use blobrepo_factory;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::{Loadable, Storable};
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
+use cloned::cloned;
 use context::CoreContext;
 use cross_repo_sync::{
     update_mapping_with_version, validation::verify_working_copy, CommitSyncDataProvider,
@@ -31,6 +32,7 @@ use cross_repo_sync_test_utils::rebase_root_on_master;
 use fixtures::{linear, many_files_dirs};
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
+    future::join_all,
     TryStreamExt,
 };
 use live_commit_sync_config::{TestLiveCommitSyncConfig, TestLiveCommitSyncConfigSource};
@@ -91,15 +93,42 @@ async fn get_bookmark(ctx: &CoreContext, repo: &BlobRepo, bookmark: &str) -> Cha
 }
 
 async fn create_initial_commit(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId {
+    create_initial_commit_with_contents(
+        ctx,
+        repo,
+        btreemap! { "master_file" => Some(b"123" as &[u8]) },
+    )
+    .await
+}
+
+async fn create_initial_commit_with_contents<'a>(
+    ctx: CoreContext,
+    repo: &'a BlobRepo,
+    file_changes: BTreeMap<&'static str, Option<impl Into<Bytes>>>,
+) -> ChangesetId {
     let bookmark = BookmarkName::new("master").unwrap();
 
-    let content = FileContents::new_bytes(Bytes::from(b"123" as &[u8]));
-    let content_id = content
-        .into_blob()
-        .store(ctx.clone(), repo.blobstore())
-        .await
-        .unwrap();
-    let file_change = FileChange::new(content_id, FileType::Regular, 3, None);
+    let file_changes: Vec<(_, _)> = join_all(file_changes.into_iter().map(|(path, contents)| {
+        cloned!(ctx);
+        async move {
+            let path = mpath(path);
+            let file_change = match contents {
+                Some(contents) => {
+                    let contents = FileContents::new_bytes(contents.into());
+                    let content_id = contents
+                        .into_blob()
+                        .store(ctx.clone(), repo.blobstore())
+                        .await
+                        .unwrap();
+                    Some(FileChange::new(content_id, FileType::Regular, 3, None))
+                }
+                None => None,
+            };
+            (path, file_change)
+        }
+    }))
+    .await;
+    let file_changes: BTreeMap<_, _> = file_changes.into_iter().collect();
 
     let bcs = BonsaiChangesetMut {
         parents: vec![],
@@ -109,7 +138,7 @@ async fn create_initial_commit(ctx: CoreContext, repo: &BlobRepo) -> ChangesetId
         committer_date: None,
         message: "Initial commit to get going".to_string(),
         extra: btreemap! {},
-        file_changes: btreemap! {mpath("master_file") => Some(file_change)},
+        file_changes,
     }
     .freeze()
     .unwrap();
@@ -1720,6 +1749,298 @@ async fn prepare_commit_syncer_with_mapping_change(
     .await?;
 
     Ok((old_version, new_version, large_to_small_syncer))
+}
+
+/// Build a test CommitSyncDataProvider for merge
+/// testing purposes.
+fn get_merge_sync_data_provider(
+    source_repo_id: RepositoryId,
+    target_repo_id: RepositoryId,
+) -> CommitSyncDataProvider {
+    let v1 = CommitSyncConfigVersion("v1".to_string());
+    let v2 = CommitSyncConfigVersion("v2".to_string());
+    let idrn = Arc::new(identity_renamer);
+    CommitSyncDataProvider::test_new(
+        v1.clone(),
+        Source(source_repo_id),
+        Target(target_repo_id),
+        hashmap! {
+            v1 => SyncData {
+                mover: Arc::new(identity_mover),
+                reverse_mover: Arc::new(identity_mover),
+                bookmark_renamer: idrn.clone(),
+                reverse_bookmark_renamer: idrn.clone(),
+            },
+            v2 => SyncData {
+                mover: Arc::new(identity_mover),
+                reverse_mover: Arc::new(identity_mover),
+                bookmark_renamer: idrn.clone(),
+                reverse_bookmark_renamer: idrn,
+            }
+        },
+    )
+}
+
+/// This function sets up scene for syncing merges
+/// Main goal is to return mergeable commits in the large repo
+/// with a convenient grouping of which versions were used to
+/// sync these commits to the small repo.
+/// More concretely, this function returns:
+/// - a context object
+/// - a large-to-small syncer
+/// - a map of version-to-changesets-list, where all the changesets
+///   in the list are synced with that mapping
+async fn merge_test_setup(
+    fb: FacebookInit,
+) -> Result<
+    (
+        CoreContext,
+        CommitSyncer<SqlSyncedCommitMapping>,
+        HashMap<Option<CommitSyncConfigVersion>, Vec<ChangesetId>>,
+    ),
+    Error,
+> {
+    let ctx = CoreContext::test_mock(fb);
+    // Set up various structures
+    let large_repo = blobrepo_factory::new_memblob_empty_with_id(None, RepositoryId::new(0))?;
+    let small_repo = blobrepo_factory::new_memblob_empty_with_id(None, RepositoryId::new(1))?;
+    let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
+    let v1 = CommitSyncConfigVersion("v1".to_string());
+    let v2 = CommitSyncConfigVersion("v2".to_string());
+
+    let lts_syncer = {
+        let mut lts_syncer = create_large_to_small_commit_syncer(
+            small_repo.clone(),
+            large_repo.clone(),
+            // This is ignored
+            "_",
+            mapping.clone(),
+        )?;
+        lts_syncer.repos = CommitSyncRepos::LargeToSmall {
+            small_repo: small_repo.clone(),
+            large_repo: large_repo.clone(),
+        };
+        lts_syncer.commit_sync_data_provider =
+            get_merge_sync_data_provider(large_repo.get_repoid(), small_repo.get_repoid());
+        lts_syncer
+    };
+
+    let c1 = create_initial_commit_with_contents(
+        ctx.clone(),
+        &large_repo,
+        btreemap! { "f1" => Some(b"1" as &[u8]) },
+    )
+    .await;
+    let c2 = create_initial_commit_with_contents(
+        ctx.clone(),
+        &large_repo,
+        btreemap! { "f2" => Some(b"2" as &[u8]) },
+    )
+    .await;
+    let c3 = create_initial_commit_with_contents(
+        ctx.clone(),
+        &large_repo,
+        btreemap! { "f3" => Some(b"3" as &[u8]) },
+    )
+    .await;
+    let c4 = create_initial_commit_with_contents(
+        ctx.clone(),
+        &large_repo,
+        btreemap! { "f4" => Some(b"4" as &[u8]) },
+    )
+    .await;
+    let c5 = create_initial_commit_with_contents(
+        ctx.clone(),
+        &large_repo,
+        btreemap! { "f5" => Some(b"5" as &[u8]) },
+    )
+    .await;
+    let c6 = create_initial_commit_with_contents(
+        ctx.clone(),
+        &large_repo,
+        btreemap! { "f6" => Some(b"6" as &[u8]) },
+    )
+    .await;
+
+    lts_syncer
+        .test_unsafe_sync_commit_with_version_override(
+            ctx.clone(),
+            c1,
+            CandidateSelectionHint::Only,
+            Some(v1.clone()),
+        )
+        .await?;
+    lts_syncer
+        .test_unsafe_sync_commit_with_version_override(
+            ctx.clone(),
+            c2,
+            CandidateSelectionHint::Only,
+            Some(v1.clone()),
+        )
+        .await?;
+    lts_syncer
+        .test_unsafe_sync_commit_with_version_override(
+            ctx.clone(),
+            c3,
+            CandidateSelectionHint::Only,
+            Some(v2.clone()),
+        )
+        .await?;
+    lts_syncer
+        .test_unsafe_sync_commit_with_version_override(
+            ctx.clone(),
+            c4,
+            CandidateSelectionHint::Only,
+            Some(v2.clone()),
+        )
+        .await?;
+    lts_syncer.unsafe_preserve_commit(ctx.clone(), c5).await?;
+    lts_syncer.unsafe_preserve_commit(ctx.clone(), c6).await?;
+
+    let heads_with_versions = hashmap! {
+        Some(v1) => vec![c1, c2],
+        Some(v2) => vec![c3, c4],
+        None => vec![c5, c6],
+    };
+
+    Ok((ctx, lts_syncer, heads_with_versions))
+}
+
+async fn create_merge(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    parents: Vec<ChangesetId>,
+) -> ChangesetId {
+    let bcs = BonsaiChangesetMut {
+        parents,
+        author: "Test User <test@fb.com>".to_string(),
+        author_date: DateTime::from_timestamp(1504040001, 0).unwrap(),
+        committer: None,
+        committer_date: None,
+        message: "Never gonna give you up".to_string(),
+        extra: btreemap! {},
+        file_changes: btreemap! {},
+    }
+    .freeze()
+    .unwrap();
+
+    let bcs_id = bcs.get_changeset_id();
+    save_bonsai_changesets(vec![bcs], ctx.clone(), repo.clone())
+        .compat()
+        .await
+        .unwrap();
+
+    bcs_id
+}
+
+#[fbinit::compat_test]
+async fn test_sync_merge_gets_version_from_parents_1(fb: FacebookInit) -> Result<(), Error> {
+    let v1 = CommitSyncConfigVersion("v1".to_string());
+    let (ctx, lts_syncer, heads_with_versions) = merge_test_setup(fb).await?;
+    let heads = heads_with_versions[&Some(v1.clone())].clone();
+    let merge_bcs_id = create_merge(&ctx, lts_syncer.get_source_repo(), heads).await;
+    assert_eq!(lts_syncer.get_current_version(&ctx)?, v1);
+    println!(
+        "merge sync outcome: {:?}",
+        lts_syncer
+            .sync_commit(&ctx, merge_bcs_id, CandidateSelectionHint::Only)
+            .await?
+    );
+    let outcome = lts_syncer
+        .get_commit_sync_outcome(ctx.clone(), merge_bcs_id)
+        .await?
+        .expect("merge syncing outcome is missing");
+    if let CommitSyncOutcome::RewrittenAs(_, merge_version) = outcome {
+        assert_eq!(Some(v1), merge_version);
+    } else {
+        panic!(
+            "unexpected outcome after syncing a merge commit: {:?}",
+            outcome
+        );
+    }
+    Ok(())
+}
+
+#[fbinit::compat_test]
+async fn test_sync_merge_gets_version_from_parents_2(fb: FacebookInit) -> Result<(), Error> {
+    let v2 = CommitSyncConfigVersion("v2".to_string());
+    let (ctx, lts_syncer, heads_with_versions) = merge_test_setup(fb).await?;
+    let heads = heads_with_versions[&Some(v2.clone())].clone();
+    let merge_bcs_id = create_merge(&ctx, lts_syncer.get_source_repo(), heads).await;
+    assert_ne!(lts_syncer.get_current_version(&ctx)?, v2);
+    lts_syncer
+        .sync_commit(&ctx, merge_bcs_id, CandidateSelectionHint::Only)
+        .await?
+        .unwrap();
+    let outcome = lts_syncer
+        .get_commit_sync_outcome(ctx.clone(), merge_bcs_id)
+        .await?
+        .expect("merge syncing outcome is missing");
+    if let CommitSyncOutcome::RewrittenAs(_, merge_version) = outcome {
+        assert_eq!(Some(v2), merge_version);
+    } else {
+        panic!(
+            "unexpected outcome after syncing a merge commit: {:?}",
+            outcome
+        );
+    }
+    Ok(())
+}
+
+#[fbinit::compat_test]
+async fn test_sync_merge_fails_when_parents_have_different_versions(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    let v1 = CommitSyncConfigVersion("v1".to_string());
+    let v2 = CommitSyncConfigVersion("v2".to_string());
+    let (ctx, lts_syncer, heads_with_versions) = merge_test_setup(fb).await?;
+    let heads_0 = heads_with_versions[&Some(v1)].clone();
+    let heads_1 = heads_with_versions[&Some(v2)].clone();
+    let merge_heads = [heads_0[0], heads_1[0]].to_vec();
+    let merge_bcs_id = create_merge(&ctx, lts_syncer.get_source_repo(), merge_heads).await;
+    let e = lts_syncer
+        .sync_commit(&ctx, merge_bcs_id, CandidateSelectionHint::Only)
+        .await
+        .expect_err("syncing a merge with differently-remapped parents must fail");
+    assert!(format!("{}", e).contains("failed getting a mover to use for merge rewriting"));
+    Ok(())
+}
+
+#[fbinit::compat_test]
+async fn test_sync_merge_is_preserved_if_parents_are_preserved(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    let (ctx, lts_syncer, heads_with_versions) = merge_test_setup(fb).await?;
+    let heads = heads_with_versions[&None].clone();
+    let merge_bcs_id = create_merge(&ctx, lts_syncer.get_source_repo(), heads).await;
+    lts_syncer
+        .sync_commit(&ctx, merge_bcs_id, CandidateSelectionHint::Only)
+        .await
+        .expect("syncing a merge of preserved commits should succeed");
+    let outcome = lts_syncer
+        .get_commit_sync_outcome(ctx.clone(), merge_bcs_id)
+        .await?
+        .expect("missing outcome for merge");
+    assert!(matches!(outcome, CommitSyncOutcome::Preserved));
+    Ok(())
+}
+
+#[fbinit::compat_test]
+async fn test_sync_merge_with_one_preserved_parent_should_fail(
+    fb: FacebookInit,
+) -> Result<(), Error> {
+    let v1 = CommitSyncConfigVersion("v1".to_string());
+    let (ctx, lts_syncer, heads_with_versions) = merge_test_setup(fb).await?;
+    let heads_0 = heads_with_versions[&Some(v1)].clone();
+    let heads_1 = heads_with_versions[&None].clone();
+    let merge_heads = vec![heads_0[0], heads_1[0]];
+    let merge_bcs_id = create_merge(&ctx, lts_syncer.get_source_repo(), merge_heads).await;
+    let e = lts_syncer
+        .sync_commit(&ctx, merge_bcs_id, CandidateSelectionHint::Only)
+        .await
+        .expect_err("syncing a merge with only one preserved parent should fail");
+    assert!(format!("{}", e).contains("failed getting a mover to use for merge rewriting"));
+    Ok(())
 }
 
 async fn assert_working_copy(
