@@ -15,6 +15,7 @@ use stats::prelude::*;
 use context::{CoreContext, PerfCounterType};
 use mononoke_types::RepositoryId;
 
+use crate::logging::log_new_bundle;
 use crate::types::{DagBundle, IdDagVersion, IdMapVersion};
 
 define_stats! {
@@ -43,32 +44,14 @@ impl SqlBundleStore {
         STATS::set.add_value(1);
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
-        let transaction = self
-            .connections
-            .write_connection
-            .start_transaction()
-            .compat()
-            .await
-            .context("creating segmented changelog bundle set transaction")?;
-        let (transaction, _insert_result) = InsertBundle::query_with_transaction(
-            transaction,
+        InsertBundle::query(
+            &self.connections.write_connection,
             &[(&self.repo_id, &bundle.iddag_version, &bundle.idmap_version)],
         )
         .compat()
         .await
-        .context("inserting segmented changelog bundle entry")?;
-        let (transaction, _insert_log_result) = InsertBundleLog::query_with_transaction(
-            transaction,
-            &[(&self.repo_id, &bundle.iddag_version, &bundle.idmap_version)],
-        )
-        .compat()
-        .await
-        .context("inserting segmented changelog bundle log entry")?;
-        transaction
-            .commit()
-            .compat()
-            .await
-            .context("committing segmented changelog bundle")?;
+        .context("inserting segmented changelog bundle")?;
+        log_new_bundle(ctx, self.repo_id, bundle);
         Ok(())
     }
 
@@ -90,16 +73,6 @@ queries! {
         none,
         "
         REPLACE INTO segmented_changelog_bundle (repo_id, iddag_version, idmap_version)
-        VALUES {values}
-        "
-    }
-
-    write InsertBundleLog(
-        values: (repo_id: RepositoryId, iddag_version: IdDagVersion, idmap_version: IdMapVersion)
-    ) {
-        none,
-        "
-        INSERT INTO segmented_changelog_bundle_log (repo_id, iddag_version, idmap_version)
         VALUES {values}
         "
     }

@@ -19,14 +19,7 @@ CREATE TABLE segmented_changelog_idmap_version (
   version INTEGER NOT NULL
 );
 
-CREATE TABLE segmented_changelog_idmap_version_log (
-  id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-  repo_id INTEGER NOT NULL,
-  version INTEGER NOT NULL,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE segmented_changelog_iddag_version_log (
+CREATE TABLE segmented_changelog_iddag_version (
   id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
   repo_id INTEGER NOT NULL,
   idmap_version INTEGER NOT NULL,
@@ -39,10 +32,3 @@ CREATE TABLE segmented_changelog_bundle (
   idmap_version INTEGER NOT NULL
 );
 
-CREATE TABLE segmented_changelog_bundle_log (
-  id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-  repo_id INTEGER NOT NULL,
-  iddag_version INTEGER NOT NULL,
-  idmap_version INTEGER NOT NULL,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-);

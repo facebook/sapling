@@ -15,6 +15,7 @@ use stats::prelude::*;
 use context::{CoreContext, PerfCounterType};
 use mononoke_types::RepositoryId;
 
+use crate::logging::log_new_iddag_version;
 use crate::types::{IdDagVersion, IdMapVersion};
 
 define_stats! {
@@ -59,7 +60,11 @@ impl SqlIdDagVersionStore {
         let last_id = result.last_insert_id().ok_or_else(|| {
             format_err!("no rows inserted in segmented changelog iddag version log")
         })?;
-        Ok(IdDagVersion(last_id))
+        let iddag_version = IdDagVersion(last_id);
+
+        log_new_iddag_version(ctx, self.repo_id, iddag_version);
+
+        Ok(iddag_version)
     }
 }
 
@@ -67,7 +72,7 @@ queries! {
     write InsertVersionLog(values: (repo_id: RepositoryId, idmap_version: IdMapVersion)) {
         none,
         "
-        INSERT INTO segmented_changelog_iddag_version_log (repo_id, idmap_version)
+        INSERT INTO segmented_changelog_iddag_version (repo_id, idmap_version)
         VALUES {values}
         "
     }

@@ -15,6 +15,7 @@ use stats::prelude::*;
 use context::{CoreContext, PerfCounterType};
 use mononoke_types::RepositoryId;
 
+use crate::logging::log_new_idmap_version;
 use crate::types::IdMapVersion;
 
 define_stats! {
@@ -41,32 +42,20 @@ impl SqlIdMapVersionStore {
         }
     }
 
-    pub async fn set(&self, ctx: &CoreContext, version: IdMapVersion) -> Result<()> {
+    pub async fn set(&self, ctx: &CoreContext, idmap_version: IdMapVersion) -> Result<()> {
         STATS::set.add_value(1);
         ctx.perf_counters()
             .increment_counter(PerfCounterType::SqlWrites);
-        let transaction = self
-            .connections
-            .write_connection
-            .start_transaction()
-            .compat()
-            .await
-            .context("creating segmented changelog idmap version set transaction")?;
-        let (transaction, _insert_version_result) =
-            InsertVersion::query_with_transaction(transaction, &[(&self.repo_id, &version)])
-                .compat()
-                .await
-                .context("inserting segmented changelog idmap version")?;
-        let (transaction, _insert_version_log_result) =
-            InsertVersionLog::query_with_transaction(transaction, &[(&self.repo_id, &version)])
-                .compat()
-                .await
-                .context("inserting segmented changelog idmap version log entry")?;
-        transaction
-            .commit()
-            .compat()
-            .await
-            .context("committing segmented changelog idmap version")?;
+        InsertVersion::query(
+            &self.connections.write_connection,
+            &[(&self.repo_id, &idmap_version)],
+        )
+        .compat()
+        .await
+        .context("inserting segmented changelog idmap version")?;
+
+        log_new_idmap_version(ctx, self.repo_id, idmap_version);
+
         Ok(())
     }
 
@@ -86,14 +75,6 @@ queries! {
         none,
         "
         REPLACE INTO segmented_changelog_idmap_version (repo_id, version)
-        VALUES {values}
-        "
-    }
-
-    write InsertVersionLog(values: (repo_id: RepositoryId, version: IdMapVersion)) {
-        none,
-        "
-        INSERT INTO segmented_changelog_idmap_version_log (repo_id, version)
         VALUES {values}
         "
     }

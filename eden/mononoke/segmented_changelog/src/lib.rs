@@ -23,6 +23,7 @@ mod bundle;
 mod dag;
 mod iddag;
 mod idmap;
+mod logging;
 mod on_demand;
 mod seeder;
 mod sql_types;
