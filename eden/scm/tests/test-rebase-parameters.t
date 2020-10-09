@@ -412,7 +412,7 @@ Test --tool parameter:
 
   $ hg rebase -s 'desc(c2b)' -d 56daeba07f4b2d0735ba0d40955813b42b4e4a4b --tool internal:local
   rebasing e4e3f3546619 "c2b"
-  note: rebase of 2:e4e3f3546619 created no changes to commit
+  note: rebase of e4e3f3546619 created no changes to commit
 
   $ hg cat c2
   c2
@@ -461,7 +461,7 @@ Test --tool parameter:
   [255]
   $ hg rebase -c --tool internal:fail
   rebasing e4e3f3546619 "c2b"
-  note: rebase of 2:e4e3f3546619 created no changes to commit
+  note: rebase of e4e3f3546619 created no changes to commit
 
   $ hg rebase -i
   abort: interactive history editing is supported by the 'histedit' extension (see "hg --config extensions.histedit= help -e histedit")

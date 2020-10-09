@@ -418,9 +418,9 @@ sh % "'HGMERGE=true' hg unshelve" == r"""
     unshelving change 'default'
     temporarily committing pending changes (restore with 'hg unshelve --abort')
     rebasing shelved changes
-    rebasing .* "shelve changes to: second" (re)
+    rebasing * "shelve changes to: second" (glob)
     merging a/a
-    note: rebase of 18:056f8c92b111 created no changes to commit"""
+    note: rebase of * created no changes to commit (glob)"""
 sh % "hg shelve -l"
 sh % "hg status" == r"""
     M a/a
@@ -706,8 +706,8 @@ sh % "hg resolve -m a/a" == r"""
     (no more unresolved files)
     continue: hg unshelve --continue"""
 sh % "hg unshelve -c" == r"""
-    rebasing * "shelve changes to: second" (glob)
-    note: rebase of 23:f3b9a2b33e15 created no changes to commit
+    rebasing f3b9a2b33e15 "shelve changes to: second"
+    note: rebase of f3b9a2b33e15 created no changes to commit
     unshelve of 'default' complete"""
 sh % "hg bookmark" == " * test                      * (glob)"
 sh % "hg diff"

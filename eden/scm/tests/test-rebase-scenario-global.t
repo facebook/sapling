@@ -125,7 +125,7 @@ if they have the same contents)
   $ hg rebase -s 'desc(E)' -d 'desc(H)'
   rebasing 9520eea781bc "E"
   rebasing eea13746799a "G"
-  note: rebase of 6:eea13746799a created no changes to commit
+  note: rebase of eea13746799a created no changes to commit
   $ f E.orig
   E.orig: file not found
 
@@ -155,7 +155,7 @@ F onto E - rebase of a branching point (skip G):
   $ hg rebase -s 'desc(F)' -d 'desc(E)'
   rebasing 24b6387c8c8c "F"
   rebasing eea13746799a "G"
-  note: rebase of 6:eea13746799a created no changes to commit
+  note: rebase of eea13746799a created no changes to commit
   rebasing 02de42196ebe "H"
 
   $ tglog
@@ -254,7 +254,7 @@ G onto B - merge revision with both parents not in ancestors of target:
 
   $ hg rebase -s 'desc(G)' -d 'desc(B)'
   rebasing eea13746799a "G"
-  abort: cannot rebase 6:eea13746799a without moving at least one of its parents
+  abort: cannot rebase eea13746799a without moving at least one of its parents
   [255]
   $ hg rebase --abort
   rebase aborted

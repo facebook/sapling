@@ -287,7 +287,7 @@ Ensure --continue restores a correct state (issue3046) and phase:
   continue: hg rebase --continue
   $ hg rebase -c
   rebasing 17b4880d2402 "B2"
-  note: rebase of 3:17b4880d2402 created no changes to commit
+  note: rebase of 17b4880d2402 created no changes to commit
   $ hg  log -G --template "{phase} '{desc}' {branches}\n"
   o  draft 'C'
   |

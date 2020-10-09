@@ -105,9 +105,9 @@ Full rebase all the way back from branching point:
   rebasing 1e48f4172d62 "dev1"
   rebasing aeae94a564c6 "dev2"
   rebasing da5b1609fcb1 "devmerge1"
-  note: rebase of 6:da5b1609fcb1 created no changes to commit
+  note: rebase of da5b1609fcb1 created no changes to commit
   rebasing bea5bcfda5f9 "devmerge2"
-  note: rebase of 7:bea5bcfda5f9 created no changes to commit
+  note: rebase of bea5bcfda5f9 created no changes to commit
   $ tglog
   o  f66b059fae0f 'dev2'
   |
@@ -130,9 +130,9 @@ Grafty cherry picking rebasing:
   > EOF
   rebasing aeae94a564c6 "dev2"
   rebasing da5b1609fcb1 "devmerge1"
-  note: rebase of 6:da5b1609fcb1 created no changes to commit
+  note: rebase of da5b1609fcb1 created no changes to commit
   rebasing bea5bcfda5f9 "devmerge2"
-  note: rebase of 7:bea5bcfda5f9 created no changes to commit
+  note: rebase of bea5bcfda5f9 created no changes to commit
   $ tglog
   o  9cdc50ee9a9d 'dev2'
   |
@@ -285,7 +285,7 @@ may include unwanted content:
   rebasing 5f2c926dfecf "D" (D)
   rebasing b296604d9846 "E" (E)
   rebasing caa9781e507d "F" (F)
-  abort: rebasing 7:caa9781e507d will include unwanted changes from 4:d6003a550c2c or 3:c1e6b162678d
+  abort: rebasing caa9781e507d will include unwanted changes from d6003a550c2c or c1e6b162678d
   [255]
 
 The warning does not get printed if there is no unwanted change detected:

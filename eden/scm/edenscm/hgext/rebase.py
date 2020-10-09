@@ -553,7 +553,7 @@ class rebaseruntime(object):
                 self.state[rev] = dest
             elif self.state[rev] == revtodo:
                 pos += 1
-                prog.value = (pos, "%d:%s" % (rev, ctx))
+                prog.value = (pos, "%s" % (ctx))
                 try:
                     self._performrebaseone(rev, ctx, desc, tr, dest)
                     inmemoryerror = None
@@ -717,10 +717,7 @@ class rebaseruntime(object):
             ui.debug("rebased as %s\n" % short(newnode))
         else:
             if not self.collapsef:
-                ui.warn(
-                    _("note: rebase of %d:%s created no changes " "to commit\n")
-                    % (rev, ctx)
-                )
+                ui.warn(_("note: rebase of %s created no changes to commit\n") % (ctx))
                 self.skipped.add(rev)
             self.state[rev] = p1
             ui.debug("next revision set to %s\n" % p1)
@@ -1479,7 +1476,7 @@ def rebasenode(repo, rev, p1, base, state, collapse, dest, wctx):
         wctx.setbase(repo[p1])
     else:
         if repo["."].rev() != p1:
-            repo.ui.debug(" update to %d:%s\n" % (p1, repo[p1]))
+            repo.ui.debug(" update to %s\n" % (repo[p1]))
             mergemod.update(repo, p1, False, True)
         else:
             repo.ui.debug(" already in destination\n")
@@ -1487,9 +1484,9 @@ def rebasenode(repo, rev, p1, base, state, collapse, dest, wctx):
         # as well as other data we litter on it in other places.
         wctx = repo[None]
         repo.dirstate.write(repo.currenttransaction())
-    repo.ui.debug(" merge against %d:%s\n" % (rev, repo[rev]))
+    repo.ui.debug(" merge against %s\n" % (repo[rev]))
     if base is not None:
-        repo.ui.debug("   detach base %d:%s\n" % (base, repo[base]))
+        repo.ui.debug("   detach base %s\n" % (repo[base]))
     # When collapsing in-place, the parent is the common ancestor, we
     # have to allow merging with it.
     stats = mergemod.update(
@@ -1732,8 +1729,8 @@ def defineparents(repo, rev, destmap, state, skipped, obsskipped):
         #   A B D
         if set(newps) == set(oldps) and dest not in newps:
             raise error.Abort(
-                _("cannot rebase %d:%s without " "moving at least one of its parents")
-                % (rev, repo[rev])
+                _("cannot rebase %s without moving at least one of its parents")
+                % (repo[rev])
             )
 
     # Source should not be ancestor of dest. The check here guarantees it's
@@ -1801,14 +1798,14 @@ def defineparents(repo, rev, destmap, state, skipped, obsskipped):
         if l > 0:
             unwanteddesc = _(" or ").join(
                 (
-                    ", ".join("%d:%s" % (r, repo[r]) for r in revs)
+                    ", ".join("%s" % (repo[r]) for r in revs)
                     for revs in unwanted
                     if revs is not None
                 )
             )
             raise error.Abort(
-                _("rebasing %d:%s will include unwanted changes from %s")
-                % (rev, repo[rev], unwanteddesc)
+                _("rebasing %s will include unwanted changes from %s")
+                % (repo[rev], unwanteddesc)
             )
 
     repo.ui.debug(" future parents are %d and %d\n" % tuple(newps))

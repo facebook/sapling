@@ -218,7 +218,7 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
   rebasing e31216eec445 "more changes to f1"
    future parents are 2 and -1
   rebase status stored
-   update to 2:4bc80088dc6b
+   update to 4bc80088dc6b
   resolving manifests
    branchmerge: False, force: True, partial: False
    ancestor: d79e2059b5c0+, local: d79e2059b5c0+, remote: 4bc80088dc6b
@@ -226,8 +226,8 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
   removing f2.txt
    f1.txt: remote created -> g
   getting f1.txt
-   merge against 9:e31216eec445
-     detach base 8:8e4e2c1a07ae
+   merge against e31216eec445
+     detach base 8e4e2c1a07ae
     searching for copies back to rev 3
     unmatched files in other (from topological common ancestor):
      f2.txt
@@ -245,8 +245,8 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
    future parents are 11 and 7
   rebase status stored
    already in destination
-   merge against 10:2f2496ddf49d
-     detach base 9:e31216eec445
+   merge against 2f2496ddf49d
+     detach base e31216eec445
     searching for copies back to rev 3
     unmatched files in other (from topological common ancestor):
      f2.txt

@@ -108,7 +108,7 @@
   $ hg pull -q
   $ hg rebase -d tip
   rebasing 4549721d828f "xx2"
-  note: rebase of 1:4549721d828f created no changes to commit
+  note: rebase of 4549721d828f created no changes to commit
   rebasing 5ef6d97e851c "xxy"
   $ hg log -f x --template '{node|short}\n'
   4ae8e31c85ef

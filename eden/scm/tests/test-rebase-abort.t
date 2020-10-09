@@ -192,7 +192,7 @@ Rebase and abort without generating new changesets:
   
   $ hg rebase -b 'desc(C1)' -d 49cb3485fa0c1934763ac434487005741b74316f
   rebasing a6484957d6b9 "B bis"
-  note: rebase of 3:a6484957d6b9 created no changes to commit
+  note: rebase of a6484957d6b9 created no changes to commit
   rebasing 145842775fec "C1"
   merging c
   warning: 1 conflicts while merging c! (edit, then use 'hg resolve --mark')
@@ -442,7 +442,7 @@ commit will cause merge conflict on rebase
   $ hg commit -m 'add content draft' -q
 
   $ hg rebase -d 'public()' --tool :merge -q
-  note: rebase of 3:0682fd3dabf5 created no changes to commit
+  note: rebase of 0682fd3dabf5 created no changes to commit
   warning: 1 conflicts while merging root! (edit, then use 'hg resolve --mark')
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]

@@ -133,10 +133,10 @@ set.
   grafting 32af7686d403 "D"
   $ hg rebase  -s 42ccdea3bb16 -d .
   rebasing 42ccdea3bb16 "B"
-  note: rebase of 1:42ccdea3bb16 created no changes to commit
+  note: rebase of 42ccdea3bb16 created no changes to commit
   rebasing 5fddd98957c8 "C"
   rebasing 32af7686d403 "D"
-  note: rebase of 3:32af7686d403 created no changes to commit
+  note: rebase of 32af7686d403 created no changes to commit
   $ hg log -G
   o  5ae4c968c6ac C
   |
@@ -536,7 +536,7 @@ Detach both parents
   rebasing 112478962961 "B"
   rebasing b18e25de2cf5 "D"
   rebasing f15c3adaf214 "F"
-  abort: cannot rebase 6:f15c3adaf214 without moving at least one of its parents
+  abort: cannot rebase f15c3adaf214 without moving at least one of its parents
   [255]
 
   $ cd ..
@@ -1271,7 +1271,7 @@ Rebase merge where successor of one parent is ancestor of destination
   note: not rebasing 7fb047a69f22 "E", already in destination as 112478962961 "B"
   rebasing b18e25de2cf5 "D"
   rebasing 66f1a38021c9 "F"
-  note: rebase of 4:66f1a38021c9 created no changes to commit
+  note: rebase of 66f1a38021c9 created no changes to commit
   $ hg log -G
   o  8f47515dda15 D
   |
@@ -1300,7 +1300,7 @@ Rebase merge where successor of other parent is ancestor of destination
   rebasing 7fb047a69f22 "E"
   note: not rebasing b18e25de2cf5 "D", already in destination as 112478962961 "B"
   rebasing 66f1a38021c9 "F"
-  note: rebase of 4:66f1a38021c9 created no changes to commit
+  note: rebase of 66f1a38021c9 created no changes to commit
 
   $ hg log -G
   o  533690786a86 E
@@ -1328,7 +1328,7 @@ Rebase merge where both parents have successors in destination
   note: not rebasing a3d17304151f "A", already in destination as 96cc3511f894 "C"
   note: not rebasing b23a2cc00842 "B", already in destination as 058c1e1fb10a "D"
   rebasing dac5d11c5a7d "E"
-  abort: rebasing 6:dac5d11c5a7d will include unwanted changes from 1:59c792af609c, 3:b23a2cc00842 or 0:ba2b7fa7166d, 2:a3d17304151f
+  abort: rebasing dac5d11c5a7d will include unwanted changes from 59c792af609c, b23a2cc00842 or ba2b7fa7166d, a3d17304151f
   [255]
   $ cd ..
 

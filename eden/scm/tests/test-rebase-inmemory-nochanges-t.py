@@ -43,7 +43,7 @@ sh.cp("-R", ".", reponame)
 sh % "hg rebase -r b -d a" == r"""
     rebasing in-memory!
     rebasing 811ec875201f "b" (b)
-    note: rebase of 2:811ec875201f created no changes to commit"""
+    note: rebase of 811ec875201f created no changes to commit"""
 
 # Without IMM, this behavior is semi-broken: the commit is not rebased out and the
 # created commit is empty. (D8676355)

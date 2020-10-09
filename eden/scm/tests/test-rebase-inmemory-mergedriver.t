@@ -95,5 +95,5 @@ we expect to see "generators version = NEW".
   rebasing 83615e50cada "prefix FILE with 0" (base_1)
   generators version = NEW
   new_required_arg = new_required
-  note: rebase of 2:* created no changes to commit (glob)
+  note: rebase of 83615e50cada created no changes to commit
 
