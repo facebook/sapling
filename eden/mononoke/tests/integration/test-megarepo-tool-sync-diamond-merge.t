@@ -95,12 +95,12 @@ Create marker commits, so that we don't have to add $WITH_MERGE_C1 and $MEGAREPO
 insert sync mapping entry
   $ ANOTHER_C1=$(get_bonsai_bookmark 2 another_master)
   $ MEGAREPO_MERGE=$(get_bonsai_bookmark 0 master_bookmark)
-  $ add_synced_commit_mapping_entry 2 $ANOTHER_C1 0 $MEGAREPO_MERGE
-  $ add_synced_commit_mapping_entry 1 $WITH_MERGE_MARKER 0 $MEGAREPO_MARKER
+  $ add_synced_commit_mapping_entry 2 $ANOTHER_C1 0 $MEGAREPO_MERGE TEST_VERSION_NAME
+  $ add_synced_commit_mapping_entry 1 $WITH_MERGE_MARKER 0 $MEGAREPO_MARKER TEST_VERSION_NAME
 
 Preserve commits from with_merge
-  $ add_synced_commit_mapping_entry 1 $WITH_MERGE_C1 0 $WITH_MERGE_C1
-  $ add_synced_commit_mapping_entry 1 $WITH_MERGE_PRE_MERGE_PRESERVED 0 $WITH_MERGE_PRE_MERGE_PRESERVED
+  $ add_synced_commit_mapping_entry 1 $WITH_MERGE_C1 0 $WITH_MERGE_C1 TEST_VERSION_NAME
+  $ add_synced_commit_mapping_entry 1 $WITH_MERGE_PRE_MERGE_PRESERVED 0 $WITH_MERGE_PRE_MERGE_PRESERVED TEST_VERSION_NAME
 
 Do a test pull
   $ cd "$TESTTMP"/meg_hg
@@ -257,7 +257,7 @@ Merge with preserved ancestors
   * using repo "with_merge_mon" repoid RepositoryId(1) (glob)
   * using repo "meg_mon" repoid RepositoryId(0) (glob)
   * changeset resolved as: ChangesetId(Blake2(d27a299389c7bedbe3e4dc01b7d4e7ac2162d935401c5d8462b7e1663dfee0e4)) (glob)
-  Hash d27a299389c7bedbe3e4dc01b7d4e7ac2162d935401c5d8462b7e1663dfee0e4 maps to d27a299389c7bedbe3e4dc01b7d4e7ac2162d935401c5d8462b7e1663dfee0e4
+  Hash d27a299389c7bedbe3e4dc01b7d4e7ac2162d935401c5d8462b7e1663dfee0e4 maps to d27a299389c7bedbe3e4dc01b7d4e7ac2162d935401c5d8462b7e1663dfee0e4, used CommitSyncConfigVersion("TEST_VERSION_NAME")
 
 -- create a p2, based on a pre-merge commit
   $ REPONAME=with_merge_mon hgmn up with_merge_pre_big_merge -q
@@ -325,7 +325,7 @@ Merge with preserved ancestors
   * using repo "with_merge_mon" repoid RepositoryId(1) (glob)
   * using repo "meg_mon" repoid RepositoryId(0) (glob)
   * changeset resolved as: ChangesetId(Blake2(89c0603366c60ae4bf8d8dca6da7581c741b7e89a6fcc3f49a44fdd248de3b1d)) (glob)
-  Hash 89c0603366c60ae4bf8d8dca6da7581c741b7e89a6fcc3f49a44fdd248de3b1d maps to 89c0603366c60ae4bf8d8dca6da7581c741b7e89a6fcc3f49a44fdd248de3b1d
+  Hash 89c0603366c60ae4bf8d8dca6da7581c741b7e89a6fcc3f49a44fdd248de3b1d maps to 89c0603366c60ae4bf8d8dca6da7581c741b7e89a6fcc3f49a44fdd248de3b1d, used CommitSyncConfigVersion("TEST_VERSION_NAME")
 
 -- check that merge was synced
   $ mononoke_admin_source_target 1 0 crossrepo map with_merge_master

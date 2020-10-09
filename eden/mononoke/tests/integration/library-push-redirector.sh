@@ -66,7 +66,8 @@ EOF
             "non_path_shifting": "non_path_shifting"
           }
         }
-      ]
+      ],
+      "version_name": "test_version"
     }
   }
 }
@@ -92,10 +93,10 @@ EOF
               }
             }
           ],
-          "version_name": ""
+          "version_name": "test_version"
         }
       ],
-      "current_version": ""
+      "current_version": "test_version"
     }
   }
 }
@@ -151,7 +152,7 @@ EOF
 
   echo "Adding synced mapping entry"
   add_synced_commit_mapping_entry "$REPOIDSMALL" "$SMALL_MASTER_BONSAI" \
-   "$REPOIDLARGE" "$LARGE_MASTER_BONSAI"
+   "$REPOIDLARGE" "$LARGE_MASTER_BONSAI" "test_version"
 }
 
 function update_mapping_version {
@@ -213,7 +214,7 @@ EOF
               }
             }
           ],
-          "version_name": ""
+          "version_name": "test_version"
         },
       {
         "large_repo_id": 0,

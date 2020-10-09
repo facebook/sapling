@@ -103,8 +103,8 @@ Setup commit sync mapping
   $ MEGAREPO_MERGE_BONSAI=$(get_bonsai_bookmark $MEG_REPOID master_bookmark)
 
 -- insert sync mapping entry
-  $ add_synced_commit_mapping_entry $FBS_REPOID $FBSOURCE_MASTER_BONSAI $MEG_REPOID $MEGAREPO_MERGE_BONSAI
-  $ add_synced_commit_mapping_entry $OVR_REPOID $OVRSOURCE_MASTER_BONSAI $MEG_REPOID $MEGAREPO_MERGE_BONSAI
+  $ add_synced_commit_mapping_entry $FBS_REPOID $FBSOURCE_MASTER_BONSAI $MEG_REPOID $MEGAREPO_MERGE_BONSAI TEST_VERSION_NAME
+  $ add_synced_commit_mapping_entry $OVR_REPOID $OVRSOURCE_MASTER_BONSAI $MEG_REPOID $MEGAREPO_MERGE_BONSAI TEST_VERSION_NAME
 -- tell backsyncer that we're all caught up in ovrsource
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "INSERT INTO mutable_counters (repo_id, name, value) VALUES ($OVR_REPOID, 'backsync_from_$MEG_REPOID', 3)";
 
@@ -312,9 +312,9 @@ Set working copy equivalence between ovrsource master and fbsource master
   $ OVRSOURCE_MASTER_BONSAI=$(get_bonsai_bookmark $OVR_REPOID master_bookmark)
   $ sqlite3 $TESTTMP/monsql/sqlite_dbs \
   > "INSERT INTO synced_working_copy_equivalence \
-  >    (small_repo_id, small_bcs_id, large_repo_id, large_bcs_id) \
+  >    (small_repo_id, small_bcs_id, large_repo_id, large_bcs_id, sync_map_version_name) \
   >  VALUES \
-  >    ($OVR_REPOID, X'$OVRSOURCE_MASTER_BONSAI', $FBS_REPOID, X'$FBSOURCE_MASTER_BONSAI')"
+  >    ($OVR_REPOID, X'$OVRSOURCE_MASTER_BONSAI', $FBS_REPOID, X'$FBSOURCE_MASTER_BONSAI', 'TEST_VERSION_NAME_FLIPPED')"
 
 Set current version of CommitSyncConfig to be push-redirecting ovrsource
 into fbsource

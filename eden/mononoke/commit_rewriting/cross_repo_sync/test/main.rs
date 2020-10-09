@@ -928,7 +928,7 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
         Source(commit_sync_repos.get_source_repo().get_repoid()),
         Target(commit_sync_repos.get_target_repo().get_repoid()),
         hashmap! {
-            current_version => SyncData {
+            current_version.clone() => SyncData {
                 mover,
                 reverse_mover,
                 bookmark_renamer: Arc::new(identity_renamer),
@@ -953,7 +953,7 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
         megarepo_initial_bcs_id,
         repo.get_repoid(),
         repo_initial_bcs_id,
-        None,
+        Some(current_version),
     );
     mapping.add(ctx.clone(), entry).compat().await?;
 
@@ -1187,6 +1187,7 @@ async fn get_multiple_master_mapping_setup(
     let megarepo_master_cs_id = get_bookmark(&ctx, &megarepo, "master").await;
     let small_repo_master_cs_id = get_bookmark(&ctx, &small_repo, "master").await;
     // Masters map to each other before we even do any syncs
+    let current_version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
     mapping
         .add(
             ctx.clone(),
@@ -1195,7 +1196,7 @@ async fn get_multiple_master_mapping_setup(
                 megarepo_master_cs_id,
                 small_repo.get_repoid(),
                 small_repo_master_cs_id,
-                None,
+                Some(current_version),
             ),
         )
         .compat()
@@ -1455,7 +1456,7 @@ async fn test_sync_with_mapping_change(fb: FacebookInit) -> Result<(), Error> {
 
     match outcome {
         Some(CommitSyncOutcome::RewrittenAs(_, version)) => {
-            assert_eq!(version, Some(new_version));
+            assert_eq!(version, new_version);
         }
         _ => {
             return Err(anyhow!("unexpected outcome: {:?}", outcome));
@@ -1498,7 +1499,7 @@ async fn test_sync_with_mapping_change(fb: FacebookInit) -> Result<(), Error> {
 
     match outcome {
         Some(CommitSyncOutcome::RewrittenAs(_, version)) => {
-            assert_eq!(version, Some(old_version));
+            assert_eq!(version, old_version);
         }
         _ => {
             return Err(anyhow!("unexpected outcome: {:?}", outcome));
@@ -1576,7 +1577,7 @@ async fn test_sync_equivalent_wc_with_mapping_change(fb: FacebookInit) -> Result
 
     match outcome {
         Some(CommitSyncOutcome::RewrittenAs(_, version)) => {
-            assert_eq!(version, Some(new_version));
+            assert_eq!(version, new_version);
         }
         _ => {
             return Err(anyhow!("unexpected outcome: {:?}", outcome));
@@ -1625,7 +1626,7 @@ async fn test_sync_equivalent_wc_with_mapping_change(fb: FacebookInit) -> Result
 
     match outcome {
         Some(CommitSyncOutcome::RewrittenAs(_, version)) => {
-            assert_eq!(version, Some(old_version));
+            assert_eq!(version, old_version);
         }
         _ => {
             return Err(anyhow!("unexpected outcome: {:?}", outcome));
@@ -1951,7 +1952,7 @@ async fn test_sync_merge_gets_version_from_parents_1(fb: FacebookInit) -> Result
         .await?
         .expect("merge syncing outcome is missing");
     if let CommitSyncOutcome::RewrittenAs(_, merge_version) = outcome {
-        assert_eq!(Some(v1), merge_version);
+        assert_eq!(v1, merge_version);
     } else {
         panic!(
             "unexpected outcome after syncing a merge commit: {:?}",
@@ -1977,7 +1978,7 @@ async fn test_sync_merge_gets_version_from_parents_2(fb: FacebookInit) -> Result
         .await?
         .expect("merge syncing outcome is missing");
     if let CommitSyncOutcome::RewrittenAs(_, merge_version) = outcome {
-        assert_eq!(Some(v2), merge_version);
+        assert_eq!(v2, merge_version);
     } else {
         panic!(
             "unexpected outcome after syncing a merge commit: {:?}",
@@ -2129,7 +2130,7 @@ async fn test_no_accidental_preserved_roots(
         .get_commit_sync_outcome(ctx, root_commit)
         .await?;
     assert!(
-        matches!(outcome, Some(CommitSyncOutcome::RewrittenAs(_, version)) if version == Some(current_version))
+        matches!(outcome, Some(CommitSyncOutcome::RewrittenAs(_, version)) if version == current_version)
     );
 
     Ok(())

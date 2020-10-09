@@ -200,16 +200,7 @@ impl ValidationHelper {
             | Some(NotSyncCandidate)
             | Some(EquivalentWorkingCopyAncestor(_, _))
             | Some(Preserved) => None,
-            Some(RewrittenAs(cs_id, None)) => {
-                return Err(format_err!(
-                    "{} was synced {}->{} as {}, but without version",
-                    hash,
-                    large_repo_id,
-                    small_repo_id,
-                    cs_id
-                ));
-            }
-            Some(RewrittenAs(cs_id, Some(version_name))) => Some((Small(cs_id), version_name)),
+            Some(RewrittenAs(cs_id, version_name)) => Some((Small(cs_id), version_name)),
         })
     }
 

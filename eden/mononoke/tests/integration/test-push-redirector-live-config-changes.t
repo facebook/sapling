@@ -153,7 +153,7 @@ start mononoke server
   $ wait_for_mononoke
 
 Make sure mapping is set up and we know what we don't have to sync initial entries
-  $ add_synced_commit_mapping_entry $REPOIDSMALL1 $SMALL1_MASTER_BONSAI $REPOIDLARGE $LARGE_MASTER_BONSAI
+  $ add_synced_commit_mapping_entry $REPOIDSMALL1 $SMALL1_MASTER_BONSAI $REPOIDLARGE $LARGE_MASTER_BONSAI TEST_VERSION_NAME_LIVE_V1
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "INSERT INTO mutable_counters (repo_id, name, value) VALUES ($REPOIDSMALL1, 'backsync_from_$REPOIDLARGE', 2)";
 
 Normal pushrebase with one commit
@@ -202,7 +202,7 @@ Live change of the config, without Mononoke restart
   $ sleep 1
 
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "SELECT small_repo_id, large_repo_id, sync_map_version_name FROM synced_commit_mapping";
-  1|0|
+  1|0|TEST_VERSION_NAME_LIVE_V1
   1|0|TEST_VERSION_NAME_LIVE_V1
   1|0|TEST_VERSION_NAME_LIVE_V2
 
@@ -222,7 +222,7 @@ Again, normal pushrebase with one commit
   specialsmallrepofolder_after_change/f
 
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "SELECT small_repo_id, large_repo_id, sync_map_version_name FROM synced_commit_mapping";
-  1|0|
+  1|0|TEST_VERSION_NAME_LIVE_V1
   1|0|TEST_VERSION_NAME_LIVE_V1
   1|0|TEST_VERSION_NAME_LIVE_V2
   1|0|TEST_VERSION_NAME_LIVE_V2

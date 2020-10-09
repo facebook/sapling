@@ -82,7 +82,7 @@ run the sync, expected to fail, as parent of the synced commit is not present in
   * Parent commit 3478f726ba230a5071ed5fc3ff32fb99738365cdf1a335830576e3c2664706c1 hasn't been remapped (glob)
 
 insert sync mapping entry
-  $ add_synced_commit_mapping_entry 1 $FBSOURCE_C1_BONSAI 0 $MEGAREPO_MERGE_BONSAI
+  $ add_synced_commit_mapping_entry 1 $FBSOURCE_C1_BONSAI 0 $MEGAREPO_MERGE_BONSAI test_version
 
 run the sync again
   $ mononoke_x_repo_sync 1 0 once --target-bookmark bookmarktomerge --commit "$TOMERGE" |& grep -v "using repo"

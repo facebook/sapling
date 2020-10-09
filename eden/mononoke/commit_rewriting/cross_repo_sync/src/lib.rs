@@ -1093,19 +1093,9 @@ where
                     .await?;
                 Ok(None)
             }
-            RewrittenAs(remapped_p, maybe_version)
-            | EquivalentWorkingCopyAncestor(remapped_p, maybe_version) => {
-                let version = match (sync_config_version_override, maybe_version) {
-                    (Some(version_override), _) => version_override,
-                    (None, Some(version)) => version,
-                    (None, None) => {
-                        // TODO(stash): this case should go away:
-                        // RewrittenAs and EquivalentWorkingCopyAncestor should not store
-                        // optional mapping
-                        self.get_current_version(&ctx)?
-                    }
-                };
-
+            RewrittenAs(remapped_p, version)
+            | EquivalentWorkingCopyAncestor(remapped_p, version) => {
+                let version = sync_config_version_override.unwrap_or(version);
                 let rewrite_paths = self.get_mover_by_version(&version)?;
 
                 let mut remapped_parents = HashMap::new();
@@ -1191,15 +1181,10 @@ where
     ///   parents have the same (non-None) version associated
     async fn get_mover_to_use_for_merge<'a>(
         &'a self,
-        ctx: &CoreContext,
         source_cs_id: ChangesetId,
         parent_outcomes: impl IntoIterator<Item = &'a CommitSyncOutcome>,
     ) -> Result<(Mover, CommitSyncConfigVersion), Error> {
-        let version = get_version_for_merge(
-            source_cs_id,
-            parent_outcomes,
-            self.get_current_version(ctx)?,
-        )?;
+        let version = get_version_for_merge(source_cs_id, parent_outcomes)?;
 
         let mover = self
             .get_mover_by_version(&version)
@@ -1312,7 +1297,6 @@ where
         if !new_parents.is_empty() {
             let (mover, version) = self
                 .get_mover_to_use_for_merge(
-                    &ctx,
                     source_cs_id,
                     sync_outcomes.iter().map(|(_, outcome)| outcome),
                 )

@@ -592,7 +592,6 @@ async fn verify_bookmarks(
 ) -> Result<(), Error> {
     let source_repo = commit_syncer.get_source_repo();
     let target_repo = commit_syncer.get_target_repo();
-    let mover = commit_syncer.get_current_mover_DEPRECATED(&ctx)?;
     let bookmark_renamer = commit_syncer.get_bookmark_renamer(&ctx)?;
 
     let bookmarks = source_repo
@@ -645,11 +644,9 @@ async fn verify_bookmarks(
                     NotSyncCandidate => {
                         panic!("commit should not point to NotSyncCandidate");
                     }
-                    EquivalentWorkingCopyAncestor(_, Some(version))
-                    | RewrittenAs(_, Some(version)) => {
+                    EquivalentWorkingCopyAncestor(_, version) | RewrittenAs(_, version) => {
                         commit_syncer.get_mover_by_version(&version)?
                     }
-                    EquivalentWorkingCopyAncestor(_, None) | RewrittenAs(_, None) => mover.clone(),
                     Preserved => Arc::new(identity_mover),
                 };
 

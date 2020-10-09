@@ -29,11 +29,11 @@ pub enum CommitSyncOutcome {
     /// Not suitable for syncing to this repo
     NotSyncCandidate,
     /// This commit is a 1:1 semantic mapping, but sync process rewrote it to a new ID.
-    RewrittenAs(ChangesetId, Option<CommitSyncConfigVersion>),
+    RewrittenAs(ChangesetId, CommitSyncConfigVersion),
     /// This commit is exactly identical in the target repo
     Preserved,
     /// This commit is removed by the sync process, and the commit with the given ID has same content
-    EquivalentWorkingCopyAncestor(ChangesetId, Option<CommitSyncConfigVersion>),
+    EquivalentWorkingCopyAncestor(ChangesetId, CommitSyncConfigVersion),
 }
 
 /// The state of a source repo commit in a target repo, which
@@ -43,11 +43,11 @@ pub enum PluralCommitSyncOutcome {
     /// Not suitable for syncing to this repo
     NotSyncCandidate,
     /// This commit maps to several other commits in the target repo
-    RewrittenAs(Vec<(ChangesetId, Option<CommitSyncConfigVersion>)>),
+    RewrittenAs(Vec<(ChangesetId, CommitSyncConfigVersion)>),
     /// This commit is exactly identical in the target repo
     Preserved,
     /// This commit is removed by the sync process, and the commit with the given ID has same content
-    EquivalentWorkingCopyAncestor(ChangesetId, Option<CommitSyncConfigVersion>),
+    EquivalentWorkingCopyAncestor(ChangesetId, CommitSyncConfigVersion),
 }
 
 /// A hint to the synced commit selection algorithm
@@ -214,6 +214,21 @@ pub async fn get_plural_commit_sync_outcome<'a, M: SyncedCommitMapping>(
     if remapped.len() == 1 && remapped[0].0 == source_cs_id.0 && remapped[0].1.is_none() {
         return Ok(Some(PluralCommitSyncOutcome::Preserved));
     } else if !remapped.is_empty() {
+        let remapped: Result<Vec<_>, Error> = remapped.into_iter()
+            .map(|(cs_id, maybe_version)| {
+                let version = maybe_version.ok_or_else(||
+                    anyhow!(
+                        "no sync commit version specified for remapping of {} -> {} (source repo {}, target repo {})",
+                        source_cs_id.0, cs_id,
+                        source_repo_id,
+                        target_repo_id,
+                    )
+                )?;
+
+                Ok((cs_id, version))
+            })
+            .collect();
+        let remapped = remapped?;
         return Ok(Some(PluralCommitSyncOutcome::RewrittenAs(remapped)));
     }
 
@@ -232,10 +247,18 @@ pub async fn get_plural_commit_sync_outcome<'a, M: SyncedCommitMapping>(
         Some(WorkingCopyEquivalence::NoWorkingCopy(_version)) => {
             Ok(Some(PluralCommitSyncOutcome::NotSyncCandidate))
         }
-        Some(WorkingCopyEquivalence::WorkingCopy(cs_id, version)) => {
-            if source_cs_id.0 == cs_id && version.is_none() {
+        Some(WorkingCopyEquivalence::WorkingCopy(cs_id, maybe_version)) => {
+            if source_cs_id.0 == cs_id && maybe_version.is_none() {
                 Ok(Some(PluralCommitSyncOutcome::Preserved))
             } else {
+                let version = maybe_version.ok_or_else(|| {
+                    anyhow!(
+                        "no sync commit version specified for equivalent working copy {} -> {} (source repo {}, target repo {})",
+                        source_cs_id.0, cs_id,
+                        source_repo_id,
+                        target_repo_id,
+                    )
+                })?;
                 Ok(Some(
                     PluralCommitSyncOutcome::EquivalentWorkingCopyAncestor(cs_id, version),
                 ))
@@ -352,11 +375,11 @@ pub async fn get_commit_sync_outcome_with_hint<'a, M: SyncedCommitMapping>(
 }
 
 trait SelectedCandidateFuture =
-    Future<Output = Result<(ChangesetId, Option<CommitSyncConfigVersion>), Error>>;
+    Future<Output = Result<(ChangesetId, CommitSyncConfigVersion), Error>>;
 
 /// An async fn to return one out of many `(cs_id, maybe_version)` candidates
 trait CandidateSelector<'a> = FnOnce(
-    Vec<(ChangesetId, Option<CommitSyncConfigVersion>)>,
+    Vec<(ChangesetId, CommitSyncConfigVersion)>,
 ) -> Pin<Box<dyn SelectedCandidateFuture + 'a + Send>>;
 
 /// Get a `CandidateSelector` which either produces the only candidate item
@@ -364,14 +387,14 @@ trait CandidateSelector<'a> = FnOnce(
 fn get_only_item_selector<'a>(
     original_source_cs_id: Source<ChangesetId>,
 ) -> impl CandidateSelector<'a> {
-    let inner = move |v: Vec<(ChangesetId, Option<CommitSyncConfigVersion>)>| async move {
+    let inner = move |v: Vec<(ChangesetId, CommitSyncConfigVersion)>| async move {
         let mut v = v.into_iter();
         match (v.next(), v.next()) {
             (None, None) => Err(anyhow!(
                 "ProgrammingError: PluralCommitSyncOutcome::RewrittenAs has 0-sized payload for {}",
                 original_source_cs_id
             )),
-            (Some((cs_id, maybe_version)), None) => Ok((cs_id, maybe_version)),
+            (Some((cs_id, version)), None) => Ok((cs_id, version)),
             (Some((first, _)), Some((second, _))) => Err(anyhow!(
                 "Too many rewritten candidates for {}: {}, {} (may be more)",
                 original_source_cs_id,
@@ -535,14 +558,14 @@ fn get_only_or_in_desired_relationship_selector<'a>(
     target_repo_id: Target<RepositoryId>,
     desired_relationship: DesiredRelationship,
 ) -> impl CandidateSelector<'a> {
-    let inner = move |v: Vec<(ChangesetId, Option<CommitSyncConfigVersion>)>| async move {
+    let inner = move |v: Vec<(ChangesetId, CommitSyncConfigVersion)>| async move {
         if v.len() == 1 {
             let first = v.into_iter().next().unwrap();
             return Ok(first);
         }
 
         // A list of candidate items, which are in correct relationship
-        let candidates: Vec<Option<(ChangesetId, Option<CommitSyncConfigVersion>)>> =
+        let candidates: Vec<Option<(ChangesetId, CommitSyncConfigVersion)>> =
             try_join_all(v.into_iter().map(|(cs_id, maybe_version)| {
                 let desired_relationship = &desired_relationship;
                 async move {
@@ -596,8 +619,8 @@ impl PluralCommitSyncOutcome {
                 CommitSyncOutcome::EquivalentWorkingCopyAncestor(cs_id, version),
             ),
             RewrittenAs(v) => {
-                let (cs_id, maybe_version) = selector(v).await?;
-                Ok(CommitSyncOutcome::RewrittenAs(cs_id, maybe_version))
+                let (cs_id, version) = selector(v).await?;
+                Ok(CommitSyncOutcome::RewrittenAs(cs_id, version))
             }
         }
     }
@@ -649,6 +672,10 @@ mod tests {
     const SMALL_REPO_ID: RepositoryId = RepositoryId::new(0);
     const LARGE_REPO_ID: RepositoryId = RepositoryId::new(1);
 
+    fn test_version() -> CommitSyncConfigVersion {
+        CommitSyncConfigVersion("test_version".to_string())
+    }
+
     /// Get a new instance of mapping with `entries` inserted
     /// (left: small cs, right: large cs)
     async fn get_new_mapping(
@@ -669,7 +696,7 @@ mod tests {
                     large_bcs_id,
                     small_repo_id,
                     small_bcs_id,
-                    None,
+                    Some(test_version()),
                 ),
             )
             .compat()
@@ -710,7 +737,7 @@ mod tests {
             outcome,
             Some(CommitSyncOutcome::RewrittenAs(
                 expected_selected_candidate,
-                None
+                test_version(),
             ))
         );
         Ok(())

@@ -1550,14 +1550,15 @@ fi
 }
 
 function add_synced_commit_mapping_entry() {
-  local small_repo_id large_repo_id small_bcs_id large_bcs_id
+  local small_repo_id large_repo_id small_bcs_id large_bcs_id version
   small_repo_id="$1"
   small_bcs_id="$2"
   large_repo_id="$3"
   large_bcs_id="$4"
+  version="$5"
   sqlite3 "$TESTTMP/monsql/sqlite_dbs" <<EOF
-    INSERT INTO synced_commit_mapping (small_repo_id, small_bcs_id, large_repo_id, large_bcs_id)
-    VALUES ('$small_repo_id', X'$small_bcs_id', '$large_repo_id', X'$large_bcs_id');
+    INSERT INTO synced_commit_mapping (small_repo_id, small_bcs_id, large_repo_id, large_bcs_id, sync_map_version_name)
+    VALUES ('$small_repo_id', X'$small_bcs_id', '$large_repo_id', X'$large_bcs_id', '$version');
 EOF
 }
 

@@ -18,7 +18,6 @@ use crate::commit_sync_outcome::CommitSyncOutcome;
 pub fn get_version_for_merge<'a>(
     source_cs_id: ChangesetId,
     parent_outcomes: impl IntoIterator<Item = &'a CommitSyncOutcome>,
-    current_version: CommitSyncConfigVersion,
 ) -> Result<CommitSyncConfigVersion, Error> {
     let unique_versions = {
         let mut versions = HashSet::new();
@@ -29,12 +28,7 @@ pub fn get_version_for_merge<'a>(
                 Preserved => {
                     bail!("cannot syncs merges of rewritten and preserved commits");
                 }
-                RewrittenAs(_, None) | EquivalentWorkingCopyAncestor(_, None) => {
-                    // TODO: in the future we need to bail here, for now let's
-                    //       do a hacky thing and get a current version
-                    versions.insert(current_version.clone());
-                }
-                RewrittenAs(_, Some(version)) | EquivalentWorkingCopyAncestor(_, Some(version)) => {
+                RewrittenAs(_, version) | EquivalentWorkingCopyAncestor(_, version) => {
                     versions.insert(version.clone());
                 }
             }
@@ -78,13 +72,12 @@ mod tests {
         // Mover version should succeed
         use CommitSyncOutcome::*;
         let v1 = CommitSyncConfigVersion("TEST_VERSION_1".to_string());
-        let v2 = CommitSyncConfigVersion("TEST_VERSION_2".to_string());
         let parent_outcomes = [
             NotSyncCandidate,
-            RewrittenAs(bonsai::FOURS_CSID, Some(v1.clone())),
+            RewrittenAs(bonsai::FOURS_CSID, v1.clone()),
         ];
 
-        let rv = get_version_for_merge(bonsai::ONES_CSID, &parent_outcomes, v2).unwrap();
+        let rv = get_version_for_merge(bonsai::ONES_CSID, &parent_outcomes).unwrap();
         assert_eq!(rv, v1);
     }
 
@@ -94,13 +87,12 @@ mod tests {
         // version. Determining Mover version should succeed
         use CommitSyncOutcome::*;
         let v1 = CommitSyncConfigVersion("TEST_VERSION_1".to_string());
-        let v2 = CommitSyncConfigVersion("TEST_VERSION_2".to_string());
         let parent_outcomes = [
-            RewrittenAs(bonsai::FOURS_CSID, Some(v1.clone())),
-            RewrittenAs(bonsai::THREES_CSID, Some(v1.clone())),
+            RewrittenAs(bonsai::FOURS_CSID, v1.clone()),
+            RewrittenAs(bonsai::THREES_CSID, v1.clone()),
         ];
 
-        let rv = get_version_for_merge(bonsai::ONES_CSID, &parent_outcomes, v2).unwrap();
+        let rv = get_version_for_merge(bonsai::ONES_CSID, &parent_outcomes).unwrap();
         assert_eq!(rv, v1);
     }
 
@@ -112,76 +104,23 @@ mod tests {
         let v1 = CommitSyncConfigVersion("TEST_VERSION_1".to_string());
         let v2 = CommitSyncConfigVersion("TEST_VERSION_2".to_string());
         let parent_outcomes = [
-            RewrittenAs(bonsai::FOURS_CSID, Some(v1)),
-            RewrittenAs(bonsai::THREES_CSID, Some(v2.clone())),
+            RewrittenAs(bonsai::FOURS_CSID, v1),
+            RewrittenAs(bonsai::THREES_CSID, v2),
         ];
 
-        let e = get_version_for_merge(bonsai::ONES_CSID, &parent_outcomes, v2).unwrap_err();
+        let e = get_version_for_merge(bonsai::ONES_CSID, &parent_outcomes).unwrap_err();
         assert!(
             format!("{}", e).contains("too many CommitSyncConfig versions used to remap parents")
         );
-    }
-
-    #[fbinit::test]
-    fn test_merge_version_determinator_failure_current_version(_fb: FacebookInit) {
-        // There are two rewritten parents, one with a version, another without
-        // Our hack uses current version as filling for a missing one, and current version
-        // does not equal the version used on the other parent. Determining
-        // Mover version should fail.
-        use CommitSyncOutcome::*;
-        let v1 = CommitSyncConfigVersion("TEST_VERSION_1".to_string());
-        let v2 = CommitSyncConfigVersion("TEST_VERSION_2".to_string());
-        let parent_outcomes = [
-            RewrittenAs(bonsai::FOURS_CSID, Some(v1)),
-            RewrittenAs(bonsai::THREES_CSID, None),
-        ];
-
-        let e = get_version_for_merge(bonsai::ONES_CSID, &parent_outcomes, v2).unwrap_err();
-        assert!(
-            format!("{}", e).contains("too many CommitSyncConfig versions used to remap parents")
-        );
-    }
-
-    #[fbinit::test]
-    fn test_merge_version_determinator_success_current_version(_fb: FacebookInit) {
-        // There are two rewritten parents, one with a version, another without
-        // Our hack uses current version as filling for a missing one, and current version
-        // equals the version used on the other parent. Determining
-        // Mover version should succeed.
-        use CommitSyncOutcome::*;
-        let v1 = CommitSyncConfigVersion("TEST_VERSION_1".to_string());
-        let parent_outcomes = [
-            RewrittenAs(bonsai::FOURS_CSID, Some(v1.clone())),
-            RewrittenAs(bonsai::THREES_CSID, None),
-        ];
-
-        let rv = get_version_for_merge(bonsai::ONES_CSID, &parent_outcomes, v1.clone()).unwrap();
-        assert_eq!(rv, v1);
-    }
-
-    #[fbinit::test]
-    fn test_merge_version_determinator_success_current_version_2(_fb: FacebookInit) {
-        // Both rewritten parents are missing a version. Our hack uses current
-        // version as a fill, so determining Mover version should succeed
-        use CommitSyncOutcome::*;
-        let v1 = CommitSyncConfigVersion("TEST_VERSION_1".to_string());
-        let parent_outcomes = [
-            RewrittenAs(bonsai::FOURS_CSID, None),
-            RewrittenAs(bonsai::THREES_CSID, None),
-        ];
-
-        let rv = get_version_for_merge(bonsai::ONES_CSID, &parent_outcomes, v1.clone()).unwrap();
-        assert_eq!(rv, v1);
     }
 
     #[fbinit::test]
     fn test_merge_version_determinator_failure_all_not_candidates(_fb: FacebookInit) {
         // All parents are preserved, this function should not have been called
         use CommitSyncOutcome::*;
-        let v2 = CommitSyncConfigVersion("TEST_VERSION_2".to_string());
         let parent_outcomes = [NotSyncCandidate, NotSyncCandidate];
 
-        let e = get_version_for_merge(bonsai::ONES_CSID, &parent_outcomes, v2).unwrap_err();
+        let e = get_version_for_merge(bonsai::ONES_CSID, &parent_outcomes).unwrap_err();
         assert!(format!("{}", e).contains("unexpected absence of rewritten parents"));
     }
 }
