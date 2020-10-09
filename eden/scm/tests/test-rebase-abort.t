@@ -9,7 +9,7 @@
 
   $ touch .hg/rebasestate
   $ hg sum
-  parent: -1:000000000000  (empty repository)
+  parent: 000000000000  (empty repository)
   commit: (clean)
   abort: .hg/rebasestate is incomplete
   [255]
@@ -378,7 +378,7 @@ test aborting an interrupted series (issue5084)
   @  base
   
   $ hg summary
-  parent: 0:df4f53cec30a 
+  parent: df4f53cec30a 
    base
   commit: (clean)
   phases: 7 draft
@@ -410,7 +410,7 @@ during a rebase (issue4661)
   $ hg rebase --abort
   rebase aborted
   $ hg summary
-  parent: 3:b16646383533 
+  parent: b16646383533 
    conflicting 2
   commit: (clean)
   phases: 4 draft

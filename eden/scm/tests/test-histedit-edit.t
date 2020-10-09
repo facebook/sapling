@@ -195,7 +195,7 @@ check histedit_source
   A f
 
   $ hg summary
-  parent: 8:a5e1ba2f7afb 
+  parent: a5e1ba2f7afb 
    foobaz
   commit: 1 added
   phases: 7 draft

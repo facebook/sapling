@@ -483,7 +483,7 @@ the bookmark extension should be ignored now that it is part of core
 test summary
 
   $ hg summary
-  parent: 2:db815d6d32e6 
+  parent: db815d6d32e6 
    2
   bookmarks: *Z Y x  y
   commit: (clean)
@@ -613,7 +613,7 @@ this test scenario, cloned-bookmark-default and tobundle exist in the
 working directory of current repository)
 
   $ hg summary
-  parent: 2:db815d6d32e6 
+  parent: db815d6d32e6 
    2
   bookmarks: *Z Y x  y
   commit: * unknown* (glob)
@@ -779,7 +779,7 @@ working directory of current repository)
   $ hg up
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg sum
-  parent: 3:9c404beeabc2 
+  parent: 9c404beeabc2 
    y
   bookmarks: *four should-end-on-two
   commit: 2 unknown (clean)

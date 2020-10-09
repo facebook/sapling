@@ -545,7 +545,7 @@ abort with no error hint when there is a ssh problem when pulling
 
   $ hg pull ssh://brokenrepository -e "$(dummysshcmd)"
   pulling from ssh://brokenrepository/
-  abort: no suitable response from remote hg!
+  abort: no suitable response from remote hg* (glob)
   [255]
 
 abort with configured error hint when there is a ssh problem when pulling
@@ -553,7 +553,7 @@ abort with configured error hint when there is a ssh problem when pulling
   $ hg pull ssh://brokenrepository \
   > --config ui.ssherrorhint="Please see http://company/internalwiki/ssh.html"
   pulling from ssh://brokenrepository/
-  abort: no suitable response from remote hg!
+  abort: no suitable response from remote hg* (glob)
   (Please see http://company/internalwiki/ssh.html)
   [255]
 

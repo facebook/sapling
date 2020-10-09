@@ -174,7 +174,7 @@ abort editing session, after first forcibly updating away
   0 files updated, 0 files merged, 3 files removed, 0 files unresolved
   $ mv .hg/histedit-state-ignore .hg/histedit-state
   $ hg sum
-  parent: 0:cb9a9f314b8b 
+  parent: cb9a9f314b8b 
    a
   commit: 1 added, 1 unknown
   phases: 7 draft

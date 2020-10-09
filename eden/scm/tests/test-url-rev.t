@@ -83,7 +83,7 @@ Changing original repo:
   7d4251d04d20
   ad4513930219
   $ hg summary --remote --config paths.default='../clone'
-  parent: 3:ad4513930219 
+  parent: ad4513930219 
    add bar
   commit: (clean)
   phases: 4 draft
@@ -91,7 +91,7 @@ Changing original repo:
   $ hg -q outgoing '../clone#foo'
   7d4251d04d20
   $ hg summary --remote --config paths.default='../clone#foo'
-  parent: 3:ad4513930219 
+  parent: ad4513930219 
    add bar
   commit: (clean)
   phases: 4 draft
@@ -100,7 +100,7 @@ Changing original repo:
   $ hg -q --cwd ../clone incoming '../repo#foo'
   7d4251d04d20
   $ hg --cwd ../clone summary --remote --config paths.default='../repo#foo'
-  parent: 1:17d330177ee9 
+  parent: 17d330177ee9 
    change a
   bookmarks: foo
   commit: (clean)
@@ -118,7 +118,7 @@ Changing original repo:
   
   $ hg -q --cwd ../clone incoming '../repo#foo'
   $ hg --cwd ../clone summary --remote --config paths.default='../repo#foo'
-  parent: 1:17d330177ee9 
+  parent: 17d330177ee9 
    change a
   commit: (clean)
   phases: 3 draft
@@ -226,14 +226,14 @@ Test handling common incoming revisions between "default" and
   44b4e0c07491
 
   $ hg summary --remote --config paths.default='../clone#foo' --config paths.default-push='../clone'
-  parent: 4:44b4e0c07491 
+  parent: 44b4e0c07491 
    new head to push current default head
   commit: (clean)
   phases: 5 draft
   remote: 1 outgoing
 
   $ hg summary --remote --config paths.default='../clone' --config paths.default-push='../clone#foo'
-  parent: 4:44b4e0c07491 
+  parent: 44b4e0c07491 
    new head to push current default head
   commit: (clean)
   phases: 5 draft

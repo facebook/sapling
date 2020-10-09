@@ -28,6 +28,7 @@ Broken by deleting the tree
   warning: failed to inspect working copy parent
   warning: failed to inspect working copy parent
   warning: failed to inspect working copy parent
+  warning: failed to inspect working copy parent (?)
   $ hg log -r . -T '{desc}\n'
   B
 

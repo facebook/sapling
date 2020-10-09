@@ -810,7 +810,7 @@ new mode 100755
 if feature.check(["execbit"]):
 
     sh % "hg sum" == r"""
-        parent: 1:d59915696727 
+        parent: d59915696727 
          help management of empty pkg and lib directories in perforce
         commit: (clean)
         phases: 2 draft"""

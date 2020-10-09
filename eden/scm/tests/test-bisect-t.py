@@ -197,7 +197,7 @@ sh % "hg status -v" == r"""
     # To abort:                      hg bisect --reset"""
 sh % "hg status -v --config 'commands.status.skipstates=bisect'"
 sh % "hg summary" == r"""
-    parent: 31:58c80a7c8a40 
+    parent: 58c80a7c8a40 
      msg 31
     commit: (clean)
     phases: 32 draft"""

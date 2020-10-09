@@ -20,7 +20,7 @@
   $ hg status
   A b
   $ hg sum
-  parent: 0:c19d34741b0a 
+  parent: c19d34741b0a 
    1
   commit: 1 copied
   phases: 1 draft

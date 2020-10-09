@@ -1,4 +1,5 @@
 #chg-compatible
+#require no-windows
 
 test merging things outside of the sparse checkout
 

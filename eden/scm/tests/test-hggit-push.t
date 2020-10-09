@@ -166,7 +166,7 @@ The remote repo is empty and the local one doesn't have any bookmarks/tags
   added 1 commits with 1 trees and 1 blobs
 (the phases line was added in Mercurial 3.5)
   $ hg summary | grep -Ev '^phases:'
-  parent: -1:000000000000  (no revision checked out)
+  parent: 000000000000  (no revision checked out)
   commit: (clean)
 Only one bookmark 'master' should be created
   $ hg bookmarks

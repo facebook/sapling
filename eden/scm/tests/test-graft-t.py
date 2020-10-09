@@ -237,7 +237,7 @@ sh % "'HGEDITOR=cat' hg graft 4 3 --log --debug" == r"""
 # Summary should mention graft:
 
 sh % "hg summary" == r"""
-    parent: 9:9436191a062e 
+    parent: 9436191a062e 
      5
     commit: 2 modified, 2 unknown, 1 unresolved (graft in progress)
     phases: 6 draft"""

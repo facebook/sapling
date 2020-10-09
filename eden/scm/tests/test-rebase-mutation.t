@@ -1522,9 +1522,9 @@ rebasestate may contain hidden hashes. "rebase --abort" should work regardless.
   o  426bada5c675 A
   
   $ hg summary
-  parent: 2:b18e25de2cf5 
+  parent: b18e25de2cf5 
    D
-  parent: 1:2ec65233581b 
+  parent: 2ec65233581b 
    B
   commit: 2 modified, 1 unknown, 1 unresolved (merge)
   phases: 3 draft

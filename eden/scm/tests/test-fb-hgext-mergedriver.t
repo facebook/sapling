@@ -123,9 +123,9 @@ mark a file driver-resolved, and leave others unresolved
   use 'hg resolve' to retry unresolved file merges or 'hg update -C .' to abandon
   [1]
   $ hg summary
-  parent: 2:ede3d67b8d0f 
+  parent: ede3d67b8d0f 
    c
-  parent: 1:e0cfe070a2bb 
+  parent: e0cfe070a2bb 
    b
   commit: 2 modified, 2 unknown, 1 unresolved (merge)
   phases: 4 draft

@@ -441,9 +441,9 @@ Test --tool parameter:
   [1]
 
   $ hg summary
-  parent: 1:56daeba07f4b 
+  parent: 56daeba07f4b 
    c2
-  parent: 2:e4e3f3546619 
+  parent: e4e3f3546619 
    c2b
   commit: 1 modified, 1 unresolved (merge)
   phases: 3 draft

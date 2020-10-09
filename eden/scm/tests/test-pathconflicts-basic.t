@@ -62,7 +62,7 @@ Basic update - local directory conflicts with remote file
 Repo state is ok
 
   $ hg sum
-  parent: 1:853701544ac3 
+  parent: 853701544ac3 
    file
   bookmarks: *file
   commit: (clean)
@@ -96,7 +96,7 @@ Basic clean update - local directory conflicts with changed remote file
 Repo state is ok
 
   $ hg sum
-  parent: 2:f64e09fac717 
+  parent: f64e09fac717 
    file2
   bookmarks: *file2
   commit: (clean)

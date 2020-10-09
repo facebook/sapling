@@ -87,7 +87,7 @@ Record empty file
 Summary shows we updated to the new cset
 
   $ hg summary
-  parent: 0:c0708cf4e46e 
+  parent: c0708cf4e46e 
    empty
   commit: (clean)
   phases: 1 draft

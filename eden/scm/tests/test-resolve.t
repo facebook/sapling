@@ -358,9 +358,9 @@ insert unsupported mandatory merge record
   [255]
   $ hg summary
   warning: merge state has unsupported record types: X
-  parent: 2:57653b9f834a 
+  parent: 57653b9f834a 
    append baz to files
-  parent: 1:dc77451844e3 
+  parent: dc77451844e3 
    append bar to files
   commit: 2 modified, 2 unknown (merge)
   phases: 5 draft
