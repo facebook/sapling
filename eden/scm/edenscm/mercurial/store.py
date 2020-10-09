@@ -24,7 +24,7 @@ from edenscmnative import parsers
 from . import encoding, error, hintutil, pycompat, util, vfs as vfsmod
 from .i18n import _
 from .node import bin
-from .pycompat import decodeutf8, encodeutf8, range
+from .pycompat import decodeutf8, encodeutf8, inttobyte, range
 
 
 # This avoids a collision between a file named foo and a dir named
@@ -144,14 +144,14 @@ def _buildencodefun(forfncache):
     """
     e = "_"
     xchr = pycompat.bytechr
-    asciistr = list(map(xchr, range(127)))
+    asciistr = list(map(inttobyte, range(127)))
     capitals = list(range(ord("A"), ord("Z") + 1))
 
     cmap = dict((x, x) for x in asciistr)
     for x in _reserved():
-        cmap[xchr(x)] = "~%02x" % x
+        cmap[inttobyte(x)] = encodeutf8("~%02x" % x)
     for x in capitals + [ord(e)]:
-        cmap[xchr(x)] = e + xchr(x).lower()
+        cmap[inttobyte(x)] = encodeutf8(e + xchr(x).lower())
 
     dmap = {}
     for k, v in cmap.items():
@@ -161,28 +161,33 @@ def _buildencodefun(forfncache):
         cmaplong = cmap.copy()
 
         for i in capitals:
-            c = chr(i)
+            c = inttobyte(i)
             cmaplong[c] = c
             assert c not in dmap
             dmap[c] = c
 
         cmapverylong = cmaplong.copy()
-        cmapverylong["_"] = ":"
-        assert ":" not in dmap
-        dmap[":"] = "_"
+        cmapverylong[b"_"] = b":"
+        assert b":" not in dmap
+        dmap[b":"] = b"_"
 
         def encodecomp(comp):
-            encoded = "".join(cmap[c] for c in comp)
+            assert isinstance(comp, str), "encodecomp accepts str paths"
+            comp = encodeutf8(comp)
+            comp = [comp[i : i + 1] for i in range(len(comp))]
+            encoded = b"".join(cmap[c] for c in comp)
             if len(encoded) > 255:
-                encoded = "".join(cmaplong[c] for c in comp)
+                encoded = b"".join(cmaplong[c] for c in comp)
             if len(encoded) > 255:
-                encoded = "".join(cmapverylong[c] for c in comp)
-            return encoded
+                encoded = b"".join(cmapverylong[c] for c in comp)
+            return decodeutf8(encoded)
 
         def encodemaybelong(path):
+            assert isinstance(path, str), "encodemaybelong accepts str paths"
             return "/".join(map(encodecomp, path.split("/")))
 
     def decode(s):
+        assert isinstance(s, bytes), "decode accepts bytes paths"
         i = 0
         while i < len(s):
             for l in range(1, 4):
@@ -196,12 +201,18 @@ def _buildencodefun(forfncache):
                 raise KeyError
 
     if forfncache:
-        return (
-            lambda s: "".join([cmap[s[c : c + 1]] for c in range(len(s))]),
-            lambda s: "".join(list(decode(s))),
-        )
+
+        def encode(s):
+            assert isinstance(s, str), "encode accepts str paths"
+            s = encodeutf8(s)
+            return decodeutf8(b"".join([cmap[s[c : c + 1]] for c in range(len(s))]))
+
+        return (encode, lambda s: decodeutf8(b"".join(list(decode(s)))))
     else:
-        return (encodemaybelong, lambda s: "".join(list(decode(s))))
+        return (
+            encodemaybelong,
+            lambda s: decodeutf8(b"".join(list(decode(encodeutf8(s))))),
+        )
 
 
 _encodefname, _decodefname = _buildencodefun(True)
@@ -239,14 +250,15 @@ def _buildlowerencodefun():
     'the~07quick~adshot'
     """
     xchr = pycompat.bytechr
-    cmap = dict([(xchr(x), xchr(x)) for x in range(127)])
+    cmap = dict([(inttobyte(x), inttobyte(x)) for x in range(127)])
     for x in _reserved():
-        cmap[xchr(x)] = "~%02x" % x
+        cmap[inttobyte(x)] = encodeutf8("~%02x" % x)
     for x in range(ord("A"), ord("Z") + 1):
-        cmap[xchr(x)] = xchr(x).lower()
+        cmap[inttobyte(x)] = encodeutf8(xchr(x).lower())
 
     def lowerencode(s):
-        return "".join([cmap[c] for c in iter(s)])
+        s = encodeutf8(s)
+        return decodeutf8(b"".join([cmap[c] for c in iter(s)]))
 
     return lowerencode
 

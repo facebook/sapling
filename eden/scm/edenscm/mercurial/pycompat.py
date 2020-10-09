@@ -150,6 +150,9 @@ if sys.version_info[0] >= 3:
         # type: (str) -> str
         return value
 
+    def inttobyte(value):
+        return bytes([value])
+
     def parse_email(fp):
         # Rarely used, so let's lazy load it
         import email.parser
@@ -252,6 +255,9 @@ else:
     def toutf8lossy(value):
         # type: (str) -> str
         return value.decode("utf-8", "replace").encode("utf-8")
+
+    def inttobyte(value):
+        return chr(value)
 
     def parse_email(fp):
         import email.parser
