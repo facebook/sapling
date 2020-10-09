@@ -214,6 +214,13 @@ def debugbuilddag(
         atbranch = "default"
         nodeids = []
         id = 0
+
+        def tonode(rev):
+            if rev >= 0:
+                return nodeids[rev]
+            else:
+                return nullid
+
         with progress.bar(ui, _("building"), _("revisions"), total) as prog:
             for type, data in dagparser.parsedag(text):
                 if type == "n":
@@ -226,9 +233,9 @@ def debugbuilddag(
                     p2 = None
                     if mergeable_file:
                         fn = "mf"
-                        p1 = repo[ps[0]]
+                        p1 = repo[tonode(ps[0])]
                         if len(ps) > 1:
-                            p2 = repo[ps[1]]
+                            p2 = repo[tonode(ps[1])]
                             pa = p1.ancestor(p2)
                             base, local, other = [x[fn].data() for x in (pa, p1, p2)]
                             m3 = simplemerge.Merge3Text(base, local, other)
@@ -258,7 +265,7 @@ def debugbuilddag(
                         filecontent[fn] = "r%i\n" % id
                         if len(ps) > 1:
                             if not p2:
-                                p2 = repo[ps[1]]
+                                p2 = repo[tonode(ps[1])]
                             for fn in p2:
                                 if fn.startswith("nf"):
                                     files.append(fn)
@@ -294,12 +301,7 @@ def debugbuilddag(
                     id, name = data
                     ui.note(_x("bookmark %s\n" % name))
                     bookmarks.addbookmarks(
-                        repo,
-                        tr,
-                        [name],
-                        rev=hex(repo.changelog.node(id)),
-                        force=True,
-                        inactive=True,
+                        repo, tr, [name], rev=hex(tonode(id)), force=True, inactive=True
                     )
                 elif type == "a":
                     ui.note(_x("branch %s\n" % data))
