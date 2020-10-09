@@ -439,9 +439,12 @@ class changectx(basectx):
                 r = int(changeid)
                 if "%d" % r != changeid:
                     raise ValueError
-                l = len(repo.changelog)
-                if r < 0:
-                    r += l
+                if r < 0 and r != wdirrev:
+                    if -r > len(repo):
+                        raise ValueError
+                    r = repo.revs("first(sort(_all(), -rev), %d)", -r).last()
+                    if r is None:
+                        raise ValueError
                 if r < 0 and r != wdirrev:
                     raise ValueError
                 node = repo.changelog.node(r)
