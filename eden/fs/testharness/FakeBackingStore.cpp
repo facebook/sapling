@@ -22,7 +22,6 @@
 #include "eden/fs/utils/EnumValue.h"
 
 using folly::ByteRange;
-using folly::Future;
 using folly::IOBuf;
 using folly::makeFuture;
 using folly::SemiFuture;

@@ -18,7 +18,6 @@
 #include "eden/fs/testharness/TempFile.h"
 
 namespace fs = boost::filesystem;
-using namespace facebook::eden;
 using namespace std::chrono_literals;
 using folly::StringPiece;
 using std::make_shared;

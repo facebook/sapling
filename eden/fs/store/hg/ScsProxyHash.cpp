@@ -20,11 +20,9 @@
 #include "eden/fs/store/StoreResult.h"
 
 using folly::ByteRange;
-using folly::Endian;
 using folly::IOBuf;
 using folly::StringPiece;
 using folly::io::Appender;
-using std::string;
 
 namespace facebook {
 namespace eden {

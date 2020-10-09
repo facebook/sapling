@@ -16,7 +16,6 @@
 #include "eden/fs/utils/SystemError.h"
 
 using namespace folly;
-using namespace std::chrono;
 
 namespace facebook {
 namespace eden {

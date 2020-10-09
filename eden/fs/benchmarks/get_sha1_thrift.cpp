@@ -11,7 +11,6 @@
 #include <folly/container/Array.h>
 #include <folly/init/Init.h>
 #include <folly/io/async/AsyncSocket.h>
-#include <folly/net/NetworkSocket.h>
 #include <folly/synchronization/test/Barrier.h>
 #include <thrift/lib/cpp2/async/HeaderClientChannel.h>
 #include <iostream>

@@ -20,7 +20,6 @@
 using folly::ByteRange;
 using folly::IOBuf;
 using folly::StringPiece;
-using std::string;
 
 namespace {
 // TOML config file for the individual client.

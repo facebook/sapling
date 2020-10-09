@@ -21,8 +21,6 @@ namespace facebook {
 namespace eden {
 
 using folly::ByteRange;
-using folly::StringPiece;
-using std::string;
 
 constexpr folly::StringPiece kInodeTable = "Inode";
 constexpr folly::StringPiece kConfigTable = "Config";

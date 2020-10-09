@@ -15,7 +15,6 @@
 #include "eden/fs/utils/PathFuncs.h"
 
 using namespace facebook::eden;
-using Environment = SpawnedProcess::Environment;
 using Options = SpawnedProcess::Options;
 
 #ifndef _WIN32

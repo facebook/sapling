@@ -7,7 +7,6 @@
 
 #include "eden/fs/model/TreeEntry.h"
 
-#include "eden/fs/utils/DirType.h"
 #include "eden/fs/utils/EnumValue.h"
 
 #include <folly/Conv.h>

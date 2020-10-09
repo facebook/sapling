@@ -37,8 +37,6 @@
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/SpawnedProcess.h"
-#include "eden/fs/utils/TimeUtil.h"
-#include "eden/fs/utils/WinError.h"
 
 using folly::Endian;
 using folly::IOBuf;

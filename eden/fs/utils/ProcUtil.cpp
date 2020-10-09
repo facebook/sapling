@@ -31,8 +31,9 @@
 using folly::StringPiece;
 using std::optional;
 
+namespace facebook::eden::proc_util {
+
 namespace {
-using namespace facebook::eden::proc_util;
 #ifdef __APPLE__
 optional<MemoryStats> readMemoryStatsApple() {
   mach_task_basic_info_data_t taskinfo{};
@@ -76,10 +77,6 @@ optional<MemoryStats> readMemoryStatsWin() {
 }
 #endif
 } // namespace
-
-namespace facebook {
-namespace eden {
-namespace proc_util {
 
 optional<MemoryStats> readMemoryStats() {
 #ifdef __APPLE__
@@ -236,6 +233,4 @@ std::optional<size_t> calculatePrivateBytes() {
   return std::nullopt;
 #endif
 }
-} // namespace proc_util
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden::proc_util

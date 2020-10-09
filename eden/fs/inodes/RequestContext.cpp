@@ -13,7 +13,6 @@
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/utils/SystemError.h"
 
-using namespace folly;
 using namespace std::chrono;
 
 namespace facebook::eden {

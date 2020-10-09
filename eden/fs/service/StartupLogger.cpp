@@ -8,7 +8,6 @@
 #include "eden/fs/service/StartupLogger.h"
 #include "eden/fs/service/EdenInit.h"
 #include "eden/fs/service/Systemd.h"
-#include "eden/fs/utils/WinError.h"
 
 #include <folly/Exception.h>
 #include <folly/FileUtil.h>

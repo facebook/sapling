@@ -27,7 +27,6 @@ using folly::Unit;
 using std::make_unique;
 using std::shared_ptr;
 using std::unique_ptr;
-using std::vector;
 
 namespace facebook {
 namespace eden {
