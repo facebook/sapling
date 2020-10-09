@@ -2063,6 +2063,14 @@ class revlog(object):
             l = len(data[1]) + len(data[0])
             base = chainbase = curr
 
+        # Segmented changelog might use u64 ids, that cannot be packed as i32.
+        # Change them so indexformatng_pack(*entry) won't error out like:
+        # error: 'i' format requires -2147483648 <= number <= 2147483647
+        # Segmented changelog repos in tests have "invalidatelinkrev"
+        # requirement set, and won't respect the linkrevs stored in revlogs.
+        if link > 2147483647:
+            link = -1
+
         e = (offset_type(offset, flags), l, textlen, base, link, p1r, p2r, node)
         if self.index is not None:
             self.index.insert(-1, e)
