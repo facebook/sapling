@@ -39,7 +39,7 @@ sh % "hg commit -Am 'Adding a and b'" == r"""
     dir2/subdir/b
     committing manifest
     committing changelog
-    committed changeset 0:32bc2a06fd26"""
+    committed 32bc2a06fd26"""
 sh % "hg diff --git -r null -r ." == r"""
     diff --git a/dir1/a b/dir1/a
     new file mode 100644
@@ -79,7 +79,7 @@ sh % "hg commit --amend -I dir1/a" == r"""
     dir2/subdir/b
     committing manifest
     committing changelog
-    committed changeset 1:e9cce3b53a7c"""
+    committed e9cce3b53a7c"""
 
 sh % "hg diff --git -r null -r ." == r"""
     diff --git a/dir1/a b/dir1/a
@@ -120,7 +120,7 @@ sh % "hg commit --amend dir1/b" == r"""
     dir2/subdir/b
     committing manifest
     committing changelog
-    committed changeset 2:a70e8a6cacdd"""
+    committed a70e8a6cacdd"""
 
 sh % "hg diff --git -r null -r ." == r"""
     diff --git a/dir1/a b/dir1/a
@@ -164,7 +164,7 @@ sh % "hg commit --amend -X dir1/a" == r"""
     dir2/subdir/b
     committing manifest
     committing changelog
-    committed changeset 3:4af805a433df"""
+    committed 4af805a433df"""
 sh % "hg diff --git -r null -r ." == r"""
     diff --git a/dir1/a b/dir1/a
     new file mode 100644
@@ -213,7 +213,7 @@ sh % "hg commit --amend -A" == r"""
     dir2/subdir/c
     committing manifest
     committing changelog
-    committed changeset 4:55c6a18e7d57"""
+    committed 55c6a18e7d57"""
 
 sh % "hg diff --git -r null -r ." == r"""
     diff --git a/dir1/b b/dir1/b

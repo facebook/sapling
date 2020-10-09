@@ -3914,9 +3914,9 @@ def commitstatus(repo, node, branch, opts=None):
                 repo.ui.status(_("reopening closed branch head %d\n") % r)
 
     if repo.ui.debugflag:
-        repo.ui.write(_("committed changeset %d:%s\n") % (int(ctx), ctx.hex()))
+        repo.ui.write(_("committed %s\n") % (ctx.hex()))
     elif repo.ui.verbose:
-        repo.ui.write(_("committed changeset %d:%s\n") % (int(ctx), ctx))
+        repo.ui.write(_("committed %s\n") % (ctx))
 
 
 def postcommitstatus(repo, pats, opts):

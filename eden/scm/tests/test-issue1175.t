@@ -36,7 +36,7 @@ https://bz.mercurial-scm.org/1175
   warning: can't find ancestor for 'b' copied from 'a'!
   committing manifest
   committing changelog
-  committed changeset 5:83a687e8a97c80992ba385bbfd766be181bfb1d1
+  committed 83a687e8a97c80992ba385bbfd766be181bfb1d1
 
   $ hg verify
   checking changesets

@@ -73,7 +73,7 @@ commit added file that has been deleted
   dir/file
   committing manifest
   committing changelog
-  committed changeset 4:1957363f1ced
+  committed 1957363f1ced
 
   $ echo > dir.file
   $ hg add
@@ -97,7 +97,7 @@ commit added file that has been deleted
   dir/file
   committing manifest
   committing changelog
-  committed changeset 5:a31d8f87544a
+  committed a31d8f87544a
   $ cd ..
 
   $ hg commit -m commit-14 does-not-exist
@@ -122,7 +122,7 @@ commit added file that has been deleted
   dir/file
   committing manifest
   committing changelog
-  committed changeset 6:32d054c9d085
+  committed 32d054c9d085
 
 An empty date was interpreted as epoch origin
 

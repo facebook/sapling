@@ -599,7 +599,7 @@ make sure --traceback works
   foo
   committing manifest
   committing changelog
-  committed changeset 1:52998019f6252a2b893452765fcb0a47351a5708
+  committed 52998019f6252a2b893452765fcb0a47351a5708
   calling hook commit.auto: edenscm_hgext_hookext.autohook
   Automatically installed hook
 

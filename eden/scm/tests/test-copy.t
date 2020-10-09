@@ -30,7 +30,7 @@
    b: copy a:b789fdd96dc2f3bd229c1dd8eedf0fc60e2b68e3
   committing manifest
   committing changelog
-  committed changeset 1:93580a2c28a50a56f63526fb305067e6fbf739c4
+  committed 93580a2c28a50a56f63526fb305067e6fbf739c4
 
 we should see two history entries
 

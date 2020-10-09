@@ -24,7 +24,7 @@ Test mirroring a simple add
   dir2/subdir/a
   committing manifest
   committing changelog
-  committed changeset 0:c1796664bada
+  committed c1796664bada
   $ hg diff --git -r null -r .
   diff --git a/dir1/a b/dir1/a
   new file mode 100644
@@ -48,7 +48,7 @@ Test mirroring a simple modification
   dir2/subdir/a
   committing manifest
   committing changelog
-  committed changeset 1:c84f345b5796
+  committed c84f345b5796
   $ hg diff --git -r ".^" -r .
   diff --git a/dir1/a b/dir1/a
   --- a/dir1/a
@@ -71,7 +71,7 @@ Test mirroring a simple delete
   committing files:
   committing manifest
   committing changelog
-  committed changeset 2:3cc3197052c1
+  committed 3cc3197052c1
   $ hg diff --git -r ".^" -r .
   diff --git a/dir1/a b/dir1/a
   deleted file mode 100644
@@ -111,7 +111,7 @@ Test non-conflicting edits
   dir2/subdir/a
   committing manifest
   committing changelog
-  committed changeset 3:787a1ee839ea
+  committed 787a1ee839ea
   $ hg diff --git -r ".^" -r .
   diff --git a/dir1/a b/dir1/a
   new file mode 100644
@@ -136,7 +136,7 @@ Test non-conflicting deletes
   committing files:
   committing manifest
   committing changelog
-  committed changeset 4:20868a046ae1
+  committed 20868a046ae1
   $ hg diff --git -r ".^" -r .
   diff --git a/dir1/a b/dir1/a
   deleted file mode 100644
@@ -162,7 +162,7 @@ Test non-conflicting deletes
   dir2/subdir/a
   committing manifest
   committing changelog
-  committed changeset 5:4cc69952853e
+  committed 4cc69952853e
 
 Test syncing a edit + rename
   $ echo b > dir1/a
@@ -176,7 +176,7 @@ Test syncing a edit + rename
   dir2/subdir/b
   committing manifest
   committing changelog
-  committed changeset 6:a6e4f018e982
+  committed a6e4f018e982
   $ hg diff --git -r ".^" -r .
   diff --git a/dir1/a b/dir1/b
   rename from dir1/a
@@ -205,7 +205,7 @@ Test amending a change where there has already been a sync before
   dir2/subdir/b
   committing manifest
   committing changelog
-  committed changeset 7:a9fa97a5457f
+  committed a9fa97a5457f
   $ hg diff --git -r ".^" -r .
   diff --git a/dir1/a b/dir1/b
   rename from dir1/a
@@ -405,7 +405,7 @@ Test quiet non-conflicting edits
   dir2/a
   committing manifest
   committing changelog
-  committed changeset 4:10f8197f7e02
+  committed 10f8197f7e02
   $ echo aaa > dir1/a
   $ echo aaa > dir2/a
   $ hg commit -m "add non-conflicting changes" --config ui.verbose=False

@@ -103,7 +103,7 @@
   file
   committing manifest
   committing changelog
-  committed changeset 4:dc68270aa18f
+  committed dc68270aa18f
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over *s (glob) (?)
 
 # don't need fetch anything if the pack files format is used
@@ -114,7 +114,7 @@
   file
   committing manifest
   committing changelog
-  committed changeset 5:ef28949d25cb
+  committed ef28949d25cb
   $ ls $CACHEDIR/master/packs
 
 
