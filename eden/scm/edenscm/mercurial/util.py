@@ -1841,9 +1841,6 @@ class atomictempfile(BinaryIO):
     def close(self):
         # type: () -> None
         if not self._fp.closed:
-            # flush and force write to the disk
-            syncfile(self._fp)
-
             self._fp.close()
             filename = localpath(self.__name)
             oldstat = self._checkambig and filestat.frompath(filename)
