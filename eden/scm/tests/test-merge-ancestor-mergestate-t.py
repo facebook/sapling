@@ -49,21 +49,21 @@ sh % "hg rebase -s A -d 0" == r"""
     rebasing dc7f2675f9ab "D" (D)
     rebasing 5eb863826611 "E" (E)"""
 sh % "showgraph" == r"""
-    o  13 e71547946f82 E
+    o  e71547946f82 E
     |
-    o  12 264c021e8fc6 D
+    o  264c021e8fc6 D
     |
-    o  11 34e41e21cd9d C
+    o  34e41e21cd9d C
     |
-    | o  10 aa431a9572c1 F
+    | o  aa431a9572c1 F
     |/
-    o  9 01ba3ad89eb7 B
+    o  01ba3ad89eb7 B
     |
-    o  8 622e2d864a27 A
+    o  622e2d864a27 A
     |
-    | o  2 520a9f665f6e b
+    | o  520a9f665f6e b
     |
-    @  0 9309aa3b805a driver"""
+    @  9309aa3b805a driver"""
 sh % "hg rebase -r aa431a9572c1 -d e71547946f82" == r"""
     rebasing aa431a9572c1 "F" (F)
     ancestor nodes = ['01ba3ad89eb70070d81f052c0c40a3877c2ba5d8']

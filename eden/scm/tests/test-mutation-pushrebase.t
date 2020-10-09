@@ -43,11 +43,11 @@ Pushrebase some commits from the client
   $ echo 6a > f
   $ hg amend -qm "c2 (amended)"
   $ tglogp
-  @  3: e52ebff26308 draft 'c2 (amended)'
+  @  e52ebff26308 draft 'c2 (amended)'
   |
-  o  1: b0c40d8745c8 draft 'c1'
+  o  b0c40d8745c8 draft 'c1'
   |
-  o  0: a7d6a32ae4ec public 'base'
+  o  a7d6a32ae4ec public 'base'
   
   $ hg push --to master
   pushing rev e52ebff26308 to destination ssh://user@dummy/server bookmark master
@@ -63,15 +63,15 @@ Pushrebase some commits from the client
   remote: 4 new changesets from the server will be downloaded
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ tglogp
-  @  7: bc165ecd11df public 'c2 (amended)'
+  @  bc165ecd11df public 'c2 (amended)'
   |
-  o  6: 466bbcaf803c public 'c1'
+  o  466bbcaf803c public 'c1'
   |
-  o  5: 1f850c9f0d59 public 's2'
+  o  1f850c9f0d59 public 's2'
   |
-  o  4: 06569a64c141 public 's1'
+  o  06569a64c141 public 's1'
   |
-  o  0: a7d6a32ae4ec public 'base'
+  o  a7d6a32ae4ec public 'base'
   
   $ hg debugmutation -r ::tip
    *  a7d6a32ae4ecf473d6f934e731f1868dda4d3fc9
@@ -90,15 +90,15 @@ Pushrebase some commits from the client
 
   $ cd ../server
   $ tglogp
-  o  4: bc165ecd11df public 'c2 (amended)' master
+  o  bc165ecd11df public 'c2 (amended)' master
   |
-  o  3: 466bbcaf803c public 'c1'
+  o  466bbcaf803c public 'c1'
   |
-  @  2: 1f850c9f0d59 public 's2'
+  @  1f850c9f0d59 public 's2'
   |
-  o  1: 06569a64c141 public 's1'
+  o  06569a64c141 public 's1'
   |
-  o  0: a7d6a32ae4ec public 'base'
+  o  a7d6a32ae4ec public 'base'
   
   $ hg debugmutation -r ::tip
    *  a7d6a32ae4ecf473d6f934e731f1868dda4d3fc9
@@ -157,19 +157,19 @@ Add another commit on the client.
   $ echo 10a > j
   $ hg amend -qm "c4 (amended)"
   $ tglogp
-  @  10: 254a42c0dcef draft 'c4 (amended)'
+  @  254a42c0dcef draft 'c4 (amended)'
   |
-  o  8: 5cfa12ac15ac public 'c3'
+  o  5cfa12ac15ac public 'c3'
   |
-  o  7: bc165ecd11df public 'c2 (amended)'
+  o  bc165ecd11df public 'c2 (amended)'
   |
-  o  6: 466bbcaf803c public 'c1'
+  o  466bbcaf803c public 'c1'
   |
-  o  5: 1f850c9f0d59 public 's2'
+  o  1f850c9f0d59 public 's2'
   |
-  o  4: 06569a64c141 public 's1'
+  o  06569a64c141 public 's1'
   |
-  o  0: a7d6a32ae4ec public 'base'
+  o  a7d6a32ae4ec public 'base'
   
 Push this commit to the server.  We should create local mutation information.
 

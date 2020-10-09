@@ -460,25 +460,25 @@ Unhide some old commits and show their mutations in the log
   $ hg unhide -q 6d60953c6009fdd3d6bd870ad37c7f48ea6d1311
   $ hg unhide -q c5d0fa8770bdde6ef311cc640a78a2f686be28b4
   $ tglogm
-  @  45: 3c3b86a5a351 'c9'
+  @  3c3b86a5a351 'c9'
   |
-  o  44: dd5d0e1bc12e 'c6'
+  o  dd5d0e1bc12e 'c6'
   |
-  o  39: 1851fa2d6ef0 'c2'
+  o  1851fa2d6ef0 'c2'
   |
-  | x  35: 5dbe0bac3aa7 'c2'  (Rewritten using rewrite into 1851fa2d6ef0)
+  | x  5dbe0bac3aa7 'c2'  (Rewritten using rewrite into 1851fa2d6ef0)
   |/
-  | x  19: 07f94070ed09 'c4'  (Rewritten using rewrite into 5dbe0bac3aa7)
+  | x  07f94070ed09 'c4'  (Rewritten using rewrite into 5dbe0bac3aa7)
   | |
-  | x  18: f05234144e37 'c2'  (Rewritten using rewrite into 5dbe0bac3aa7)
+  | x  f05234144e37 'c2'  (Rewritten using rewrite into 5dbe0bac3aa7)
   |/
-  o  8: cc809964b024 'c1 (amended 8)'
+  o  cc809964b024 'c1 (amended 8)'
   |
-  | x  2: 6d60953c6009 'c1 (amended 2)'  (Rewritten using rewrite into cc809964b024)
+  | x  6d60953c6009 'c1 (amended 2)'  (Rewritten using rewrite into cc809964b024)
   |/
-  | x  1: c5d0fa8770bd 'c1'  (Rewritten using amend into 6d60953c6009)
+  | x  c5d0fa8770bd 'c1'  (Rewritten using amend into 6d60953c6009)
   |/
-  o  0: d20a80d4def3 'base'
+  o  d20a80d4def3 'base'
   
 Debugmutatation looking forward
   $ hg debugmutation -s -r c4484fcb5ac0f15058c6595a56d239d4ed707bee --hidden
@@ -526,10 +526,10 @@ Histedit with exec that amends in between folds
   > EOF
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ tglog
-  @  8: a2235e1011a0 'commit 3 amended
+  @  a2235e1011a0 'commit 3 amended
   |  ***
   |  commit 4'
-  o  0: c2a29f8b7d7a 'commit 1'
+  o  c2a29f8b7d7a 'commit 1'
   
   $ hg debugmutation -r "all()" --hidden
    *  c2a29f8b7d7a23d58e698384280df426802a1465
@@ -584,14 +584,14 @@ Histedit with stop, extra commit, and fold
   $ hg commit -Aqm "extra commit"
   $ hg histedit --continue | fixbundle
   $ tglog
-  @  7: d313be93f9b7 'extra commit
+  @  d313be93f9b7 'extra commit
   |  ***
   |  commit 4'
-  o  4: f8ba6373a87e 'commit 3'
+  o  f8ba6373a87e 'commit 3'
   |
-  o  1: 08d8367dafb9 'commit 2'
+  o  08d8367dafb9 'commit 2'
   |
-  o  0: c2a29f8b7d7a 'commit 1'
+  o  c2a29f8b7d7a 'commit 1'
   
   $ hg debugmutation -r "all()" --hidden
    *  c2a29f8b7d7a23d58e698384280df426802a1465
@@ -630,17 +630,17 @@ Drawdag
   > EOS
 
   $ tglogm
-  o  8: b2faf047aa50 'I' I
+  o  b2faf047aa50 'I' I
   |
-  o  7: a1093b439e1b 'H' H
+  o  a1093b439e1b 'H' H
   |
-  | o  6: dd319aacbb51 'G' G
+  | o  dd319aacbb51 'G' G
   | |
-  | o  5: 64a8289d2492 'F' F
+  | o  64a8289d2492 'F' F
   | |
-  | o  3: 7fb047a69f22 'E' E
+  | o  7fb047a69f22 'E' E
   |/
-  o  0: 426bada5c675 'A' A
+  o  426bada5c675 'A' A
   
   $ hg debugmutation -r "all()" --hidden
    *  426bada5c67598ca65036d57d9e4b64b0c1ce7a0
@@ -1261,26 +1261,26 @@ Absorb
   2 of 2 chunks applied
   $ 
   $ tglogm
-  @  7: 426a0380e890 'E'
+  @  426a0380e890 'E'
   |
-  o  6: d36b27fd01db 'D'
+  o  d36b27fd01db 'D'
   |
-  o  5: fe174cefb48c 'C'
+  o  fe174cefb48c 'C'
   |
-  o  1: 112478962961 'B'
+  o  112478962961 'B'
   |
-  o  0: 426bada5c675 'A'
+  o  426bada5c675 'A'
   
   $ tglogm
-  @  7: 426a0380e890 'E'
+  @  426a0380e890 'E'
   |
-  o  6: d36b27fd01db 'D'
+  o  d36b27fd01db 'D'
   |
-  o  5: fe174cefb48c 'C'
+  o  fe174cefb48c 'C'
   |
-  o  1: 112478962961 'B'
+  o  112478962961 'B'
   |
-  o  0: 426bada5c675 'A'
+  o  426bada5c675 'A'
   
 
 Landing

@@ -53,11 +53,11 @@ pushrebase it directly onto master - it will be rewritten without the mutation e
   updating bookmark master
 
   $ tglog
-  o  3: a05b3505b7d1 '1a'
+  o  a05b3505b7d1 '1a'
   |
-  | @  2: 6ad95cdc8ab9 '1a'
+  | @  6ad95cdc8ab9 '1a'
   |/
-  o  0: d20a80d4def3 'base'
+  o  d20a80d4def3 'base'
   
   $ hg debugmutation -r master
    *  a05b3505b7d1aac5fd90b09a5f014822647ec205
@@ -82,15 +82,15 @@ pushrebase it onto master - it will be rebased and rewritten without the mutatio
   updating bookmark master
 
   $ tglog
-  o  6: 7042a534cddc '2a'
+  o  7042a534cddc '2a'
   |
-  | @  5: fd935a5d42c4 '2a'
+  | @  fd935a5d42c4 '2a'
   | |
-  o |  3: a05b3505b7d1 '1a'
+  o |  a05b3505b7d1 '1a'
   |/
-  | o  2: 6ad95cdc8ab9 '1a'
+  | o  6ad95cdc8ab9 '1a'
   |/
-  o  0: d20a80d4def3 'base'
+  o  d20a80d4def3 'base'
   
   $ hg debugmutation -r master
    *  7042a534cddcd761aeea38446ce39590634568e8

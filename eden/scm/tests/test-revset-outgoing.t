@@ -21,11 +21,11 @@
   $ hg ci -qm2
 
   $ tglog
-  @  2: a578af2cfd0c '2'
+  @  a578af2cfd0c '2'
   |
-  | o  1: 3560197d8331 '1'
+  | o  3560197d8331 '1'
   |/
-  o  0: f7b1eb17ad24 '0'
+  o  f7b1eb17ad24 '0'
   
 
   $ cd ..
@@ -58,15 +58,15 @@
   $ hg ci -qm4
 
   $ tglog
-  @  4: acadbdc73b28 '4'
+  @  acadbdc73b28 '4'
   |
-  o  3: 5de9cb7d8f67 '3'
+  o  5de9cb7d8f67 '3'
   |
-  o  2: a578af2cfd0c '2'
+  o  a578af2cfd0c '2'
   |
-  | o  1: 3560197d8331 '1'
+  | o  3560197d8331 '1'
   |/
-  o  0: f7b1eb17ad24 '0'
+  o  f7b1eb17ad24 '0'
   
 
   $ hg tout

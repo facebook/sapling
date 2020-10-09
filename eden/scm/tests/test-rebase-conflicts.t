@@ -31,17 +31,17 @@
   $ hg bookmark mybook
 
   $ tglogp
-  @  5: 8029388f38dc draft 'L3' mybook
+  @  8029388f38dc draft 'L3' mybook
   |
-  o  4: 46f0b057b5c0 draft 'L2'
+  o  46f0b057b5c0 draft 'L2'
   |
-  o  3: 3163e20567cc draft 'L1'
+  o  3163e20567cc draft 'L1'
   |
-  | o  2: a9ce13b75fb5 draft 'C3'
+  | o  a9ce13b75fb5 draft 'C3'
   |/
-  o  1: 11eb9c356adf draft 'C2'
+  o  11eb9c356adf draft 'C2'
   |
-  o  0: 178f1774564f draft 'C1'
+  o  178f1774564f draft 'C1'
   
 Try to call --continue:
 
@@ -92,17 +92,17 @@ Conclude rebase:
   rebasing 8029388f38dc "L3" (mybook)
 
   $ tglogp
-  @  8: d67b21408fc0 draft 'L3' mybook
+  @  d67b21408fc0 draft 'L3' mybook
   |
-  o  7: 5e5bd08c7e60 draft 'L2'
+  o  5e5bd08c7e60 draft 'L2'
   |
-  o  6: 3e046f2ecedb draft 'L1'
+  o  3e046f2ecedb draft 'L1'
   |
-  o  2: a9ce13b75fb5 draft 'C3'
+  o  a9ce13b75fb5 draft 'C3'
   |
-  o  1: 11eb9c356adf draft 'C2'
+  o  11eb9c356adf draft 'C2'
   |
-  o  0: 178f1774564f draft 'C1'
+  o  178f1774564f draft 'C1'
   
 Check correctness:
 
@@ -357,15 +357,15 @@ Test rebase with obsstore turned on and off (issue5606)
   rebasing f585351a92f8 "D" (D)
 
   $ tglogp
-  o  7: c5f6f5f52dbd draft 'D' D
+  o  c5f6f5f52dbd draft 'D' D
   |
-  o  6: a8990ee99807 draft 'B' B
+  o  a8990ee99807 draft 'B' B
   |
-  @  5: b2867df0c236 draft 'E' E
+  @  b2867df0c236 draft 'E' E
   |
-  | o  3: 26805aba1e60 draft 'C' C
+  | o  26805aba1e60 draft 'C' C
   | |
-  | x  1: 112478962961 draft 'B'
+  | x  112478962961 draft 'B'
   |/
-  o  0: 426bada5c675 draft 'A' A
+  o  426bada5c675 draft 'A' A
   

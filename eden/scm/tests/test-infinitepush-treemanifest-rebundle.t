@@ -43,15 +43,15 @@ Push a bundle with four commits
   $ echo 4 > dir2/bundled
   $ hg commit -Aqm bundled4
   $ tglog
-  @  4: d1944cedf06c 'bundled4'
+  @  d1944cedf06c 'bundled4'
   |
-  o  3: 916baec915e2 'bundled3'
+  o  916baec915e2 'bundled3'
   |
-  o  2: 9494660bae92 'bundled2'
+  o  9494660bae92 'bundled2'
   |
-  o  1: f570e0648bfb 'bundled1'
+  o  f570e0648bfb 'bundled1'
   |
-  o  0: f7e449aab27f 'base'
+  o  f7e449aab27f 'base'
   
 
   $ hg push -r . --to scratch/bundled --create

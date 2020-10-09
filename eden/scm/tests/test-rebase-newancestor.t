@@ -30,13 +30,13 @@
   $ hg ci -Am AD
 
   $ tglog
-  @  3: 3878212183bd 'AD'
+  @  3878212183bd 'AD'
   |
-  | o  2: 30ae917c0e4f 'C'
+  | o  30ae917c0e4f 'C'
   | |
-  | o  1: 0f4f7cb4f549 'B'
+  | o  0f4f7cb4f549 'B'
   |/
-  o  0: 1e635d440a73 'A'
+  o  1e635d440a73 'A'
   
   $ hg rebase -s 'desc(B)' -d 'desc(AD)'
   rebasing 0f4f7cb4f549 "B"
@@ -45,13 +45,13 @@
   merging a
 
   $ tglog
-  o  5: 25773bc4b4b0 'C'
+  o  25773bc4b4b0 'C'
   |
-  o  4: c09015405f75 'B'
+  o  c09015405f75 'B'
   |
-  @  3: 3878212183bd 'AD'
+  @  3878212183bd 'AD'
   |
-  o  0: 1e635d440a73 'A'
+  o  1e635d440a73 'A'
   
 
   $ cd ..
@@ -109,17 +109,17 @@ Full rebase all the way back from branching point:
   rebasing bea5bcfda5f9 "devmerge2"
   note: rebase of 7:bea5bcfda5f9 created no changes to commit
   $ tglog
-  o  9: f66b059fae0f 'dev2'
+  o  f66b059fae0f 'dev2'
   |
-  o  8: 1073bfc4c1ed 'dev1'
+  o  1073bfc4c1ed 'dev1'
   |
-  o  5: 22e5a3eb70f1 'default4'
+  o  22e5a3eb70f1 'default4'
   |
-  o  3: a51061c4b2cb 'default3'
+  o  a51061c4b2cb 'default3'
   |
-  o  1: dfbdae6572c4 'default2'
+  o  dfbdae6572c4 'default2'
   |
-  o  0: 6ee4113c6616 'default1'
+  o  6ee4113c6616 'default1'
   
 Grafty cherry picking rebasing:
 
@@ -134,17 +134,17 @@ Grafty cherry picking rebasing:
   rebasing bea5bcfda5f9 "devmerge2"
   note: rebase of 7:bea5bcfda5f9 created no changes to commit
   $ tglog
-  o  8: 9cdc50ee9a9d 'dev2'
+  o  9cdc50ee9a9d 'dev2'
   |
-  o  5: 22e5a3eb70f1 'default4'
+  o  22e5a3eb70f1 'default4'
   |
-  o  3: a51061c4b2cb 'default3'
+  o  a51061c4b2cb 'default3'
   |
-  | o  2: 1e48f4172d62 'dev1'
+  | o  1e48f4172d62 'dev1'
   | |
-  o |  1: dfbdae6572c4 'default2'
+  o |  dfbdae6572c4 'default2'
   |/
-  o  0: 6ee4113c6616 'default1'
+  o  6ee4113c6616 'default1'
   
   $ cd ..
 
@@ -180,17 +180,17 @@ Test order of parents of rebased merged with un-rebased changes as p1.
   summary:     merge p1 1=ancestor p2 3=outside
   
   $ tglog
-  @    5: a57575f79074 'merge p1 1=ancestor p2 3=outside'
+  @    a57575f79074 'merge p1 1=ancestor p2 3=outside'
   |\
-  +---o  4: 6990226659be 'merge p1 3=outside p2 1=ancestor'
+  +---o  6990226659be 'merge p1 3=outside p2 1=ancestor'
   | |/
-  | o  3: f59da8fc0fcf 'outside'
+  | o  f59da8fc0fcf 'outside'
   | |
-  +---o  2: a60552eb93fb 'target'
+  +---o  a60552eb93fb 'target'
   | |
-  o |  1: dd40c13f7a6f 'change'
+  o |  dd40c13f7a6f 'change'
   |/
-  o  0: 02f0f58d5300 'common'
+  o  02f0f58d5300 'common'
   
   $ hg rebase -r 'desc("p1 3=outside")' -d 'desc(target)'
   rebasing 6990226659be "merge p1 3=outside p2 1=ancestor"
@@ -209,17 +209,17 @@ Test order of parents of rebased merged with un-rebased changes as p1.
   summary:     merge p1 1=ancestor p2 3=outside
   
   $ tglog
-  @    7: f9daf77ffe76 'merge p1 1=ancestor p2 3=outside'
+  @    f9daf77ffe76 'merge p1 1=ancestor p2 3=outside'
   |\
-  +---o  6: cca50676b1c5 'merge p1 3=outside p2 1=ancestor'
+  +---o  cca50676b1c5 'merge p1 3=outside p2 1=ancestor'
   | |/
-  | o  3: f59da8fc0fcf 'outside'
+  | o  f59da8fc0fcf 'outside'
   | |
-  o |  2: a60552eb93fb 'target'
+  o |  a60552eb93fb 'target'
   | |
-  o |  1: dd40c13f7a6f 'change'
+  o |  dd40c13f7a6f 'change'
   |/
-  o  0: 02f0f58d5300 'common'
+  o  02f0f58d5300 'common'
   
 rebase of merge of ancestors
 
@@ -251,19 +251,19 @@ rebase of merge of ancestors
   rebase merging completed
   rebase completed
   $ tglog
-  @  9: 113755df812b 'merge rebase ancestors'
+  @  113755df812b 'merge rebase ancestors'
   |
-  o    7: f9daf77ffe76 'merge p1 1=ancestor p2 3=outside'
+  o    f9daf77ffe76 'merge p1 1=ancestor p2 3=outside'
   |\
-  +---o  6: cca50676b1c5 'merge p1 3=outside p2 1=ancestor'
+  +---o  cca50676b1c5 'merge p1 3=outside p2 1=ancestor'
   | |/
-  | o  3: f59da8fc0fcf 'outside'
+  | o  f59da8fc0fcf 'outside'
   | |
-  o |  2: a60552eb93fb 'target'
+  o |  a60552eb93fb 'target'
   | |
-  o |  1: dd40c13f7a6f 'change'
+  o |  dd40c13f7a6f 'change'
   |/
-  o  0: 02f0f58d5300 'common'
+  o  02f0f58d5300 'common'
   
 Due to the limitation of 3-way merge algorithm (1 merge base), rebasing a merge
 may include unwanted content:

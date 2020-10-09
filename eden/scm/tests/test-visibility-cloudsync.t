@@ -39,15 +39,15 @@ Create a client with some initial commits and sync them to the cloud workspace.
   > d20a80d4def3
   > EOS
   $ tglogm
-  o  6: c70a9bd6bfd1 'E'
+  o  c70a9bd6bfd1 'E'
   |
-  | o  5: 6ba5de8abe43 'D'
+  | o  6ba5de8abe43 'D'
   | |
-  | x  4: 2d0f0af04f18 'C'  (Rewritten using amend into c70a9bd6bfd1)
+  | x  2d0f0af04f18 'C'  (Rewritten using amend into c70a9bd6bfd1)
   |/
-  o  1: dae3b312bb78 'Z'
+  o  dae3b312bb78 'Z'
   |
-  @  0: d20a80d4def3 'base'
+  @  d20a80d4def3 'base'
   
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
@@ -82,15 +82,15 @@ Create another client and use it to modify the commits and create some new ones.
   commitcloud: commits synchronized
   finished in * sec (glob)
   $ tglogm
-  o  4: c70a9bd6bfd1 'E'
+  o  c70a9bd6bfd1 'E'
   |
-  | o  3: 6ba5de8abe43 'D'
+  | o  6ba5de8abe43 'D'
   | |
-  | x  2: 2d0f0af04f18 'C'  (Rewritten using amend into c70a9bd6bfd1)
+  | x  2d0f0af04f18 'C'  (Rewritten using amend into c70a9bd6bfd1)
   |/
-  o  1: dae3b312bb78 'Z'
+  o  dae3b312bb78 'Z'
   |
-  @  0: d20a80d4def3 'base'
+  @  d20a80d4def3 'base'
   
 
   $ hg rebase -r $D -d $E
@@ -99,15 +99,15 @@ Create another client and use it to modify the commits and create some new ones.
   $ echo X > X
   $ hg commit -Aqm X
   $ tglogm
-  @  6: dd114d9b2f9e 'X'
+  @  dd114d9b2f9e 'X'
   |
-  | o  5: d8fc5ae9b7ef 'D'
+  | o  d8fc5ae9b7ef 'D'
   | |
-  | o  4: c70a9bd6bfd1 'E'
+  | o  c70a9bd6bfd1 'E'
   |/
-  o  1: dae3b312bb78 'Z'
+  o  dae3b312bb78 'Z'
   |
-  o  0: d20a80d4def3 'base'
+  o  d20a80d4def3 'base'
   
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
@@ -135,15 +135,15 @@ Also introduce some divergence by rebasing the same commit
 Now cloud sync.  The sets of commits should be merged.
 
   $ tglogm
-  o  8: 6caded0e9807 'D'
+  o  6caded0e9807 'D'
   |
-  | @  7: ba83c5428cb2 'F'
+  | @  ba83c5428cb2 'F'
   | |
-  | o  6: c70a9bd6bfd1 'E'
+  | o  c70a9bd6bfd1 'E'
   |/
-  o  1: dae3b312bb78 'Z'
+  o  dae3b312bb78 'Z'
   |
-  o  0: d20a80d4def3 'base'
+  o  d20a80d4def3 'base'
   
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
@@ -166,19 +166,19 @@ Now cloud sync.  The sets of commits should be merged.
   commitcloud: commits synchronized
   finished in * sec (glob)
   $ tglogm
-  o  10: dd114d9b2f9e 'X'
+  o  dd114d9b2f9e 'X'
   |
-  | o  9: d8fc5ae9b7ef 'D'
+  | o  d8fc5ae9b7ef 'D'
   | |
-  +---o  8: 6caded0e9807 'D'
+  +---o  6caded0e9807 'D'
   | |
-  | | @  7: ba83c5428cb2 'F'
+  | | @  ba83c5428cb2 'F'
   | |/
-  | o  6: c70a9bd6bfd1 'E'
+  | o  c70a9bd6bfd1 'E'
   |/
-  o  1: dae3b312bb78 'Z'
+  o  dae3b312bb78 'Z'
   |
-  o  0: d20a80d4def3 'base'
+  o  d20a80d4def3 'base'
   
 
 Cloud sync back to the other client, it should get the same smartlog (apart from ordering).
@@ -199,38 +199,38 @@ Cloud sync back to the other client, it should get the same smartlog (apart from
   commitcloud: commits synchronized
   finished in * sec (glob)
   $ tglogm
-  o  8: ba83c5428cb2 'F'
+  o  ba83c5428cb2 'F'
   |
-  | o  7: 6caded0e9807 'D'
+  | o  6caded0e9807 'D'
   | |
-  | | @  6: dd114d9b2f9e 'X'
+  | | @  dd114d9b2f9e 'X'
   | |/
-  +---o  5: d8fc5ae9b7ef 'D'
+  +---o  d8fc5ae9b7ef 'D'
   | |
-  o |  4: c70a9bd6bfd1 'E'
+  o |  c70a9bd6bfd1 'E'
   |/
-  o  1: dae3b312bb78 'Z'
+  o  dae3b312bb78 'Z'
   |
-  o  0: d20a80d4def3 'base'
+  o  d20a80d4def3 'base'
   
 It should also have mutations made on both sides visible.
 
   $ tglogm -r 'predecessors(all())'
-  o  8: ba83c5428cb2 'F'
+  o  ba83c5428cb2 'F'
   |
-  | o  7: 6caded0e9807 'D'
+  | o  6caded0e9807 'D'
   | |
-  | | @  6: dd114d9b2f9e 'X'
+  | | @  dd114d9b2f9e 'X'
   | |/
-  +---o  5: d8fc5ae9b7ef 'D'
+  +---o  d8fc5ae9b7ef 'D'
   | |
-  o |  4: c70a9bd6bfd1 'E'
+  o |  c70a9bd6bfd1 'E'
   |/
-  | x  3: 6ba5de8abe43 'D'  (Rewritten using rebase into 6caded0e9807) (Rewritten using rebase into d8fc5ae9b7ef)
+  | x  6ba5de8abe43 'D'  (Rewritten using rebase into 6caded0e9807) (Rewritten using rebase into d8fc5ae9b7ef)
   | |
-  | x  2: 2d0f0af04f18 'C'  (Rewritten using amend into c70a9bd6bfd1)
+  | x  2d0f0af04f18 'C'  (Rewritten using amend into c70a9bd6bfd1)
   |/
-  o  1: dae3b312bb78 'Z'
+  o  dae3b312bb78 'Z'
   |
-  o  0: d20a80d4def3 'base'
+  o  d20a80d4def3 'base'
   

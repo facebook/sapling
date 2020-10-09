@@ -61,26 +61,26 @@ sh % "hg amend" == r"""
     hint[amend-restack]: descendants of 7c3bad9141dc are left behind - use 'hg restack' to rebase them
     hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints"""
 sh % "showgraph" == r"""
-    @  4 743396f58c5c add b
+    @  743396f58c5c add b
     |
-    | o  3 47d2a3944de8 add d
+    | o  47d2a3944de8 add d
     | |
-    | o  2 4538525df7e2 add c
+    | o  4538525df7e2 add c
     | |
-    | x  1 7c3bad9141dc add b
+    | x  7c3bad9141dc add b
     |/
-    o  0 1f0dee641bb7 add a"""
+    o  1f0dee641bb7 add a"""
 sh % "hg rebase --restack" == r'''
     rebasing 4538525df7e2 "add c"
     rebasing 47d2a3944de8 "add d"'''
 sh % "showgraph" == r"""
-    o  6 228a9d754739 add d
+    o  228a9d754739 add d
     |
-    o  5 6d61804ea72c add c
+    o  6d61804ea72c add c
     |
-    @  4 743396f58c5c add b
+    @  743396f58c5c add b
     |
-    o  0 1f0dee641bb7 add a"""
+    o  1f0dee641bb7 add a"""
 
 # Test multiple amends of same commit.
 sh % "newrepo"
@@ -89,11 +89,11 @@ sh % "mkcommit b"
 sh % "mkcommit c"
 sh % "hg up 1" == "0 files updated, 0 files merged, 1 files removed, 0 files unresolved"
 sh % "showgraph" == r"""
-    o  2 4538525df7e2 add c
+    o  4538525df7e2 add c
     |
-    @  1 7c3bad9141dc add b
+    @  7c3bad9141dc add b
     |
-    o  0 1f0dee641bb7 add a"""
+    o  1f0dee641bb7 add a"""
 
 sh % "echo b" >> "b"
 sh % "hg amend" == r"""
@@ -102,20 +102,20 @@ sh % "hg amend" == r"""
 sh % "echo b" >> "b"
 sh % "hg amend"
 sh % "showgraph" == r"""
-    @  4 af408d76932d add b
+    @  af408d76932d add b
     |
-    | o  2 4538525df7e2 add c
+    | o  4538525df7e2 add c
     | |
-    | x  1 7c3bad9141dc add b
+    | x  7c3bad9141dc add b
     |/
-    o  0 1f0dee641bb7 add a"""
+    o  1f0dee641bb7 add a"""
 sh % "hg rebase --restack" == 'rebasing 4538525df7e2 "add c"'
 sh % "showgraph" == r"""
-    o  5 e5f1b912c5fa add c
+    o  e5f1b912c5fa add c
     |
-    @  4 af408d76932d add b
+    @  af408d76932d add b
     |
-    o  0 1f0dee641bb7 add a"""
+    o  1f0dee641bb7 add a"""
 
 # Test conflict during rebasing.
 sh % "newrepo"
@@ -131,17 +131,17 @@ sh % "hg amend" == r"""
     hint[amend-restack]: descendants of 7c3bad9141dc are left behind - use 'hg restack' to rebase them
     hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints"""
 sh % "showgraph" == r"""
-    @  5 e067a66b3532 add b
+    @  e067a66b3532 add b
     |
-    | o  4 9d206ffc875e add e
+    | o  9d206ffc875e add e
     | |
-    | o  3 47d2a3944de8 add d
+    | o  47d2a3944de8 add d
     | |
-    | o  2 4538525df7e2 add c
+    | o  4538525df7e2 add c
     | |
-    | x  1 7c3bad9141dc add b
+    | x  7c3bad9141dc add b
     |/
-    o  0 1f0dee641bb7 add a"""
+    o  1f0dee641bb7 add a"""
 sh % "hg rebase --restack" == r"""
     rebasing 4538525df7e2 "add c"
     rebasing 47d2a3944de8 "add d"
@@ -162,15 +162,15 @@ sh % "hg rebase --continue" == r'''
     rebasing 47d2a3944de8 "add d"
     rebasing 9d206ffc875e "add e"'''
 sh % "showgraph" == r"""
-    o  8 b706583c96e3 add e
+    o  b706583c96e3 add e
     |
-    o  7 e247890f1a49 add d
+    o  e247890f1a49 add d
     |
-    o  6 217450801891 add c
+    o  217450801891 add c
     |
-    @  5 e067a66b3532 add b
+    @  e067a66b3532 add b
     |
-    o  0 1f0dee641bb7 add a"""
+    o  1f0dee641bb7 add a"""
 
 # Test finding a stable base commit from within the old stack.
 sh % "newrepo"
@@ -185,26 +185,26 @@ sh % "hg amend" == r"""
     hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints"""
 sh % "hg up 3" == "3 files updated, 0 files merged, 0 files removed, 0 files unresolved"
 sh % "showgraph" == r"""
-    o  4 743396f58c5c add b
+    o  743396f58c5c add b
     |
-    | @  3 47d2a3944de8 add d
+    | @  47d2a3944de8 add d
     | |
-    | o  2 4538525df7e2 add c
+    | o  4538525df7e2 add c
     | |
-    | x  1 7c3bad9141dc add b
+    | x  7c3bad9141dc add b
     |/
-    o  0 1f0dee641bb7 add a"""
+    o  1f0dee641bb7 add a"""
 sh % "hg rebase --restack" == r'''
     rebasing 4538525df7e2 "add c"
     rebasing 47d2a3944de8 "add d"'''
 sh % "showgraph" == r"""
-    @  6 228a9d754739 add d
+    @  228a9d754739 add d
     |
-    o  5 6d61804ea72c add c
+    o  6d61804ea72c add c
     |
-    o  4 743396f58c5c add b
+    o  743396f58c5c add b
     |
-    o  0 1f0dee641bb7 add a"""
+    o  1f0dee641bb7 add a"""
 
 # Test finding a stable base commit from a new child of the amended commit.
 sh % "newrepo"
@@ -219,30 +219,30 @@ sh % "hg amend" == r"""
     hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints"""
 sh % "mkcommit e"
 sh % "showgraph" == r"""
-    @  5 58e16e5d23eb add e
+    @  58e16e5d23eb add e
     |
-    o  4 743396f58c5c add b
+    o  743396f58c5c add b
     |
-    | o  3 47d2a3944de8 add d
+    | o  47d2a3944de8 add d
     | |
-    | o  2 4538525df7e2 add c
+    | o  4538525df7e2 add c
     | |
-    | x  1 7c3bad9141dc add b
+    | x  7c3bad9141dc add b
     |/
-    o  0 1f0dee641bb7 add a"""
+    o  1f0dee641bb7 add a"""
 sh % "hg rebase --restack" == r'''
     rebasing 4538525df7e2 "add c"
     rebasing 47d2a3944de8 "add d"'''
 sh % "showgraph" == r"""
-    o  7 228a9d754739 add d
+    o  228a9d754739 add d
     |
-    o  6 6d61804ea72c add c
+    o  6d61804ea72c add c
     |
-    | @  5 58e16e5d23eb add e
+    | @  58e16e5d23eb add e
     |/
-    o  4 743396f58c5c add b
+    o  743396f58c5c add b
     |
-    o  0 1f0dee641bb7 add a"""
+    o  1f0dee641bb7 add a"""
 
 # Test finding a stable base commit when there are multiple amends and
 # a commit on top of one of the obsolete intermediate commits.
@@ -266,33 +266,33 @@ sh % "hg amend" == r"""
     hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints"""
 sh % "hg up 5" == "2 files updated, 0 files merged, 0 files removed, 0 files unresolved"
 sh % "showgraph" == r"""
-    o  6 af408d76932d add b
+    o  af408d76932d add b
     |
-    | @  5 58e16e5d23eb add e
+    | @  58e16e5d23eb add e
     | |
-    | x  4 743396f58c5c add b
+    | x  743396f58c5c add b
     |/
-    | o  3 47d2a3944de8 add d
+    | o  47d2a3944de8 add d
     | |
-    | o  2 4538525df7e2 add c
+    | o  4538525df7e2 add c
     | |
-    | x  1 7c3bad9141dc add b
+    | x  7c3bad9141dc add b
     |/
-    o  0 1f0dee641bb7 add a"""
+    o  1f0dee641bb7 add a"""
 sh % "hg rebase --restack" == r'''
     rebasing 4538525df7e2 "add c"
     rebasing 47d2a3944de8 "add d"
     rebasing 58e16e5d23eb "add e"'''
 sh % "showgraph" == r"""
-    @  9 2220f78c83d8 add e
+    @  2220f78c83d8 add e
     |
-    | o  8 d61d8c7f922c add d
+    | o  d61d8c7f922c add d
     | |
-    | o  7 e5f1b912c5fa add c
+    | o  e5f1b912c5fa add c
     |/
-    o  6 af408d76932d add b
+    o  af408d76932d add b
     |
-    o  0 1f0dee641bb7 add a"""
+    o  1f0dee641bb7 add a"""
 
 # Test that we start from the bottom of the stack. (Previously, restack would
 # only repair the unstable children closest to the current changeset. This
@@ -314,28 +314,28 @@ sh % "hg amend" == r"""
     hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints"""
 sh % "hg up 3" == "2 files updated, 0 files merged, 0 files removed, 0 files unresolved"
 sh % "showgraph" == r"""
-    o  5 dd2a887139a3 add c
+    o  dd2a887139a3 add c
     |
-    | o  4 743396f58c5c add b
+    | o  743396f58c5c add b
     | |
-    | | @  3 47d2a3944de8 add d
+    | | @  47d2a3944de8 add d
     | | |
-    +---x  2 4538525df7e2 add c
+    +---x  4538525df7e2 add c
     | |
-    x |  1 7c3bad9141dc add b
+    x |  7c3bad9141dc add b
     |/
-    o  0 1f0dee641bb7 add a"""
+    o  1f0dee641bb7 add a"""
 sh % "hg rebase --restack" == r'''
     rebasing dd2a887139a3 "add c"
     rebasing 47d2a3944de8 "add d"'''
 sh % "showgraph" == r"""
-    @  7 4e2bc7d6cfea add d
+    @  4e2bc7d6cfea add d
     |
-    o  6 afa76d04eaa3 add c
+    o  afa76d04eaa3 add c
     |
-    o  4 743396f58c5c add b
+    o  743396f58c5c add b
     |
-    o  0 1f0dee641bb7 add a"""
+    o  1f0dee641bb7 add a"""
 
 # Test what happens if there is no base commit found. The command should
 # fix up everything above the current commit, leaving other commits
@@ -355,32 +355,32 @@ sh % "hg up 0" == "0 files updated, 0 files merged, 3 files removed, 0 files unr
 sh % "mkcommit f"
 sh % "hg up 1" == "1 files updated, 0 files merged, 1 files removed, 0 files unresolved"
 sh % "showgraph" == r"""
-    o  6 79bfbab36011 add f
+    o  79bfbab36011 add f
     |
-    | o  5 f2bf14e1d387 add d
+    | o  f2bf14e1d387 add d
     | |
-    | | o  4 9d206ffc875e add e
+    | | o  9d206ffc875e add e
     | | |
-    | | x  3 47d2a3944de8 add d
+    | | x  47d2a3944de8 add d
     | |/
-    | o  2 4538525df7e2 add c
+    | o  4538525df7e2 add c
     | |
-    | @  1 7c3bad9141dc add b
+    | @  7c3bad9141dc add b
     |/
-    o  0 1f0dee641bb7 add a"""
+    o  1f0dee641bb7 add a"""
 sh % "hg rebase --restack" == 'rebasing 9d206ffc875e "add e"'
 sh % "showgraph" == r"""
-    o  7 a660256c6d2a add e
+    o  a660256c6d2a add e
     |
-    | o  6 79bfbab36011 add f
+    | o  79bfbab36011 add f
     | |
-    o |  5 f2bf14e1d387 add d
+    o |  f2bf14e1d387 add d
     | |
-    o |  2 4538525df7e2 add c
+    o |  4538525df7e2 add c
     | |
-    @ |  1 7c3bad9141dc add b
+    @ |  7c3bad9141dc add b
     |/
-    o  0 1f0dee641bb7 add a"""
+    o  1f0dee641bb7 add a"""
 
 # Test having an unamended commit.
 sh % "newrepo"
@@ -399,24 +399,24 @@ sh % "hg amend -m Unamended"
 sh % "hg unamend"
 sh % "hg up -C 1" == "1 files updated, 0 files merged, 0 files removed, 0 files unresolved"
 sh % "showgraph" == r"""
-    o  3 173e12a9f067 Amended
+    o  173e12a9f067 Amended
     |
-    | o  2 4538525df7e2 add c
+    | o  4538525df7e2 add c
     | |
-    | @  1 7c3bad9141dc add b
+    | @  7c3bad9141dc add b
     |/
-    o  0 1f0dee641bb7 add a"""
+    o  1f0dee641bb7 add a"""
 sh % "hg rebase --restack" == r"""
     rebasing 4538525df7e2 "add c"
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "showgraph" == r"""
-    o  5 b7aa69de00bb add c
+    o  b7aa69de00bb add c
     |
-    @  4 4d1e27c9f82b Unamended
+    @  4d1e27c9f82b Unamended
     |
-    | x  3 173e12a9f067 Amended
+    | x  173e12a9f067 Amended
     |/
-    o  0 1f0dee641bb7 add a"""
+    o  1f0dee641bb7 add a"""
 
 # Revision 2 "add c" is already stable (not orphaned) so restack does nothing:
 
@@ -440,29 +440,29 @@ sh % "hg amend" == r"""
     hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints"""
 sh % "hg up 1" == "0 files updated, 0 files merged, 1 files removed, 0 files unresolved"
 sh % "showgraph" == r"""
-    o  5 dd2a887139a3 add c
+    o  dd2a887139a3 add c
     |
-    | o  4 743396f58c5c add b
+    | o  743396f58c5c add b
     | |
-    | | o  3 47d2a3944de8 add d
+    | | o  47d2a3944de8 add d
     | | |
-    +---x  2 4538525df7e2 add c
+    +---x  4538525df7e2 add c
     | |
-    @ |  1 7c3bad9141dc add b
+    @ |  7c3bad9141dc add b
     |/
-    o  0 1f0dee641bb7 add a"""
+    o  1f0dee641bb7 add a"""
 sh % "hg rebase --restack" == r"""
     rebasing dd2a887139a3 "add c"
     rebasing 47d2a3944de8 "add d"
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "showgraph" == r"""
-    o  7 4e2bc7d6cfea add d
+    o  4e2bc7d6cfea add d
     |
-    o  6 afa76d04eaa3 add c
+    o  afa76d04eaa3 add c
     |
-    @  4 743396f58c5c add b
+    @  743396f58c5c add b
     |
-    o  0 1f0dee641bb7 add a"""
+    o  1f0dee641bb7 add a"""
 
 # Test recursive restacking -- more complex case. This test is designed to
 # to check for a bug encountered if rebasing is performed naively from the
@@ -503,29 +503,29 @@ sh % "hg amend" == r"""
     hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints"""
 sh % "hg up 1" == "0 files updated, 0 files merged, 2 files removed, 0 files unresolved"
 sh % "showgraph" == r"""
-    o  11 8282a17a7483 add g
+    o  8282a17a7483 add g
     |
-    | o  10 e86422ad5d0e add h
+    | o  e86422ad5d0e add h
     | |
-    | x  9 a063c2736716 add g
+    | x  a063c2736716 add g
     |/
-    o  8 dd2a887139a3 add c
+    o  dd2a887139a3 add c
     |
-    | o  7 e429b2ca5d8b add e
+    | o  e429b2ca5d8b add e
     | |
-    | | o  6 849d5cce0019 add f
+    | | o  849d5cce0019 add f
     | | |
-    | | x  5 58e16e5d23eb add e
+    | | x  58e16e5d23eb add e
     | |/
-    | o  4 743396f58c5c add b
+    | o  743396f58c5c add b
     | |
-    | | o  3 47d2a3944de8 add d
+    | | o  47d2a3944de8 add d
     | | |
-    +---x  2 4538525df7e2 add c
+    +---x  4538525df7e2 add c
     | |
-    @ |  1 7c3bad9141dc add b
+    @ |  7c3bad9141dc add b
     |/
-    o  0 1f0dee641bb7 add a"""
+    o  1f0dee641bb7 add a"""
 sh % "hg rebase --restack" == r"""
     rebasing 849d5cce0019 "add f"
     rebasing dd2a887139a3 "add c"
@@ -534,18 +534,18 @@ sh % "hg rebase --restack" == r"""
     rebasing e86422ad5d0e "add h"
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "showgraph" == r"""
-    o  16 5bc29b84815f add h
+    o  5bc29b84815f add h
     |
-    | o  15 4e2bc7d6cfea add d
+    | o  4e2bc7d6cfea add d
     | |
-    o |  14 c7fc06907e30 add g
+    o |  c7fc06907e30 add g
     |/
-    o  13 afa76d04eaa3 add c
+    o  afa76d04eaa3 add c
     |
-    | o  12 6aaca8e17a00 add f
+    | o  6aaca8e17a00 add f
     | |
-    | o  7 e429b2ca5d8b add e
+    | o  e429b2ca5d8b add e
     |/
-    @  4 743396f58c5c add b
+    @  743396f58c5c add b
     |
-    o  0 1f0dee641bb7 add a"""
+    o  1f0dee641bb7 add a"""

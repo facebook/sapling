@@ -58,17 +58,17 @@ sh % "hg clone -q -u . a a1"
 sh % "cd a1"
 
 sh % "tglogp" == r"""
-    @  5: 3225f3ea730a draft 'F'
+    @  3225f3ea730a draft 'F'
     |
-    | o  4: ae36e8e3dfd7 draft 'E'
+    | o  ae36e8e3dfd7 draft 'E'
     | |
-    | o  3: 46b37eabc604 draft 'D'
+    | o  46b37eabc604 draft 'D'
     |/
-    | o  2: 965c486023db draft 'C'
+    | o  965c486023db draft 'C'
     | |
-    | o  1: 27547f69f254 draft 'B'
+    | o  27547f69f254 draft 'B'
     |/
-    o  0: 4a2df7238c3b draft 'A'"""
+    o  4a2df7238c3b draft 'A'"""
 sh % "hg rebase -s 1 -d 4 --keep" == r"""
     rebasing 27547f69f254 "B"
     rebasing 965c486023db "C"
@@ -89,21 +89,21 @@ sh % "hg rebase --continue" == r'''
     rebasing 965c486023db "C"'''
 
 sh % "tglogp" == r"""
-    o  7: d2d25e26288e draft 'C'
+    o  d2d25e26288e draft 'C'
     |
-    o  6: 45396c49d53b draft 'B'
+    o  45396c49d53b draft 'B'
     |
-    | @  5: 3225f3ea730a draft 'F'
+    | @  3225f3ea730a draft 'F'
     | |
-    o |  4: ae36e8e3dfd7 draft 'E'
+    o |  ae36e8e3dfd7 draft 'E'
     | |
-    o |  3: 46b37eabc604 draft 'D'
+    o |  46b37eabc604 draft 'D'
     |/
-    | o  2: 965c486023db draft 'C'
+    | o  965c486023db draft 'C'
     | |
-    | o  1: 27547f69f254 draft 'B'
+    | o  27547f69f254 draft 'B'
     |/
-    o  0: 4a2df7238c3b draft 'A'"""
+    o  4a2df7238c3b draft 'A'"""
 sh % "cd .."
 
 
@@ -113,17 +113,17 @@ sh % "hg clone -q -u . a a2"
 sh % "cd a2"
 
 sh % "tglogp" == r"""
-    @  5: 3225f3ea730a draft 'F'
+    @  3225f3ea730a draft 'F'
     |
-    | o  4: ae36e8e3dfd7 draft 'E'
+    | o  ae36e8e3dfd7 draft 'E'
     | |
-    | o  3: 46b37eabc604 draft 'D'
+    | o  46b37eabc604 draft 'D'
     |/
-    | o  2: 965c486023db draft 'C'
+    | o  965c486023db draft 'C'
     | |
-    | o  1: 27547f69f254 draft 'B'
+    | o  27547f69f254 draft 'B'
     |/
-    o  0: 4a2df7238c3b draft 'A'"""
+    o  4a2df7238c3b draft 'A'"""
 sh % "hg rebase -s 5 -d 4" == r"""
     rebasing 3225f3ea730a "F"
     merging A
@@ -141,16 +141,16 @@ sh % "hg resolve -m A" == r"""
 sh % "hg rebase --continue" == 'rebasing 3225f3ea730a "F"'
 
 sh % "tglogp" == r"""
-    @  6: 530bc6058bd0 draft 'F'
+    @  530bc6058bd0 draft 'F'
     |
-    o  4: ae36e8e3dfd7 draft 'E'
+    o  ae36e8e3dfd7 draft 'E'
     |
-    o  3: 46b37eabc604 draft 'D'
+    o  46b37eabc604 draft 'D'
     |
-    | o  2: 965c486023db draft 'C'
+    | o  965c486023db draft 'C'
     | |
-    | o  1: 27547f69f254 draft 'B'
+    | o  27547f69f254 draft 'B'
     |/
-    o  0: 4a2df7238c3b draft 'A'"""
+    o  4a2df7238c3b draft 'A'"""
 
 sh % "cd .."

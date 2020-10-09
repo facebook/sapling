@@ -24,23 +24,23 @@
   adding I
 
   $ tglog
-  @  8: e7ec4e813ba6 'I'
+  @  e7ec4e813ba6 'I'
   |
-  o  7: 02de42196ebe 'H'
+  o  02de42196ebe 'H'
   |
-  | o  6: eea13746799a 'G'
+  | o  eea13746799a 'G'
   |/|
-  o |  5: 24b6387c8c8c 'F'
+  o |  24b6387c8c8c 'F'
   | |
-  | o  4: 9520eea781bc 'E'
+  | o  9520eea781bc 'E'
   |/
-  | o  3: 32af7686d403 'D'
+  | o  32af7686d403 'D'
   | |
-  | o  2: 5fddd98957c8 'C'
+  | o  5fddd98957c8 'C'
   | |
-  | o  1: 42ccdea3bb16 'B'
+  | o  42ccdea3bb16 'B'
   |/
-  o  0: cd010b8cd998 'A'
+  o  cd010b8cd998 'A'
   
   $ cd ..
 
@@ -126,19 +126,19 @@ Rebase with no arguments (from 3 onto 8):
   rebasing 32af7686d403 "D"
 
   $ tglog
-  @  9: ed65089c18f8 'D'
+  @  ed65089c18f8 'D'
   |
-  o  8: 7621bf1a2f17 'C'
+  o  7621bf1a2f17 'C'
   |
-  o  7: 9430a62369c6 'B'
+  o  9430a62369c6 'B'
   |
-  o  6: e7ec4e813ba6 'I'
+  o  e7ec4e813ba6 'I'
   |
-  o  5: 02de42196ebe 'H'
+  o  02de42196ebe 'H'
   |
-  o  4: 24b6387c8c8c 'F'
+  o  24b6387c8c8c 'F'
   |
-  o  0: cd010b8cd998 'A'
+  o  cd010b8cd998 'A'
   
   $ cd ..
 
@@ -153,19 +153,19 @@ Rebase with base == '.' => same as no arguments (from 3 onto 8):
   rebasing 32af7686d403 "D"
 
   $ tglog
-  @  9: ed65089c18f8 'D'
+  @  ed65089c18f8 'D'
   |
-  o  8: 7621bf1a2f17 'C'
+  o  7621bf1a2f17 'C'
   |
-  o  7: 9430a62369c6 'B'
+  o  9430a62369c6 'B'
   |
-  o  6: e7ec4e813ba6 'I'
+  o  e7ec4e813ba6 'I'
   |
-  o  5: 02de42196ebe 'H'
+  o  02de42196ebe 'H'
   |
-  o  4: 24b6387c8c8c 'F'
+  o  24b6387c8c8c 'F'
   |
-  o  0: cd010b8cd998 'A'
+  o  cd010b8cd998 'A'
   
   $ cd ..
 
@@ -181,23 +181,23 @@ Rebase with dest == branch(.) => same as no arguments (from 3 onto 8):
   rebasing 32af7686d403 "D"
 
   $ tglog
-  @  11: ed65089c18f8 'D'
+  @  ed65089c18f8 'D'
   |
-  o  10: 7621bf1a2f17 'C'
+  o  7621bf1a2f17 'C'
   |
-  o  9: 9430a62369c6 'B'
+  o  9430a62369c6 'B'
   |
-  o  8: e7ec4e813ba6 'I'
+  o  e7ec4e813ba6 'I'
   |
-  o  7: 02de42196ebe 'H'
+  o  02de42196ebe 'H'
   |
-  | o  6: eea13746799a 'G'
+  | o  eea13746799a 'G'
   |/|
-  o |  5: 24b6387c8c8c 'F'
+  o |  24b6387c8c8c 'F'
   | |
-  | o  4: 9520eea781bc 'E'
+  | o  9520eea781bc 'E'
   |/
-  o  0: cd010b8cd998 'A'
+  o  cd010b8cd998 'A'
   
   $ cd ..
 
@@ -212,19 +212,19 @@ Specify only source (from 2 onto 8):
   rebasing 32af7686d403 "D"
 
   $ tglog
-  o  8: 7726e9fd58f7 'D'
+  o  7726e9fd58f7 'D'
   |
-  o  7: 72c8333623d0 'C'
+  o  72c8333623d0 'C'
   |
-  @  6: e7ec4e813ba6 'I'
+  @  e7ec4e813ba6 'I'
   |
-  o  5: 02de42196ebe 'H'
+  o  02de42196ebe 'H'
   |
-  o  4: 24b6387c8c8c 'F'
+  o  24b6387c8c8c 'F'
   |
-  | o  1: 42ccdea3bb16 'B'
+  | o  42ccdea3bb16 'B'
   |/
-  o  0: cd010b8cd998 'A'
+  o  cd010b8cd998 'A'
   
   $ cd ..
 
@@ -240,23 +240,23 @@ Specify only dest (from 3 onto 6):
   rebasing 32af7686d403 "D"
 
   $ tglog
-  @  11: 8eeb3c33ad33 'D'
+  @  8eeb3c33ad33 'D'
   |
-  o  10: 2327fea05063 'C'
+  o  2327fea05063 'C'
   |
-  o  9: e4e5be0395b2 'B'
+  o  e4e5be0395b2 'B'
   |
-  | o  8: e7ec4e813ba6 'I'
+  | o  e7ec4e813ba6 'I'
   | |
-  | o  7: 02de42196ebe 'H'
+  | o  02de42196ebe 'H'
   | |
-  o |  6: eea13746799a 'G'
+  o |  eea13746799a 'G'
   |\|
-  | o  5: 24b6387c8c8c 'F'
+  | o  24b6387c8c8c 'F'
   | |
-  o |  4: 9520eea781bc 'E'
+  o |  9520eea781bc 'E'
   |/
-  o  0: cd010b8cd998 'A'
+  o  cd010b8cd998 'A'
   
   $ cd ..
 
@@ -272,19 +272,19 @@ Specify only base (from 1 onto 8):
   rebasing 32af7686d403 "D"
 
   $ tglog
-  o  9: ed65089c18f8 'D'
+  o  ed65089c18f8 'D'
   |
-  o  8: 7621bf1a2f17 'C'
+  o  7621bf1a2f17 'C'
   |
-  o  7: 9430a62369c6 'B'
+  o  9430a62369c6 'B'
   |
-  @  6: e7ec4e813ba6 'I'
+  @  e7ec4e813ba6 'I'
   |
-  o  5: 02de42196ebe 'H'
+  o  02de42196ebe 'H'
   |
-  o  4: 24b6387c8c8c 'F'
+  o  24b6387c8c8c 'F'
   |
-  o  0: cd010b8cd998 'A'
+  o  cd010b8cd998 'A'
   
   $ cd ..
 
@@ -299,23 +299,23 @@ Specify source and dest (from 2 onto 7):
   rebasing 32af7686d403 "D"
 
   $ tglog
-  o  10: 668acadedd30 'D'
+  o  668acadedd30 'D'
   |
-  o  9: 09eb682ba906 'C'
+  o  09eb682ba906 'C'
   |
-  | @  8: e7ec4e813ba6 'I'
+  | @  e7ec4e813ba6 'I'
   |/
-  o  7: 02de42196ebe 'H'
+  o  02de42196ebe 'H'
   |
-  | o  6: eea13746799a 'G'
+  | o  eea13746799a 'G'
   |/|
-  o |  5: 24b6387c8c8c 'F'
+  o |  24b6387c8c8c 'F'
   | |
-  | o  4: 9520eea781bc 'E'
+  | o  9520eea781bc 'E'
   |/
-  | o  1: 42ccdea3bb16 'B'
+  | o  42ccdea3bb16 'B'
   |/
-  o  0: cd010b8cd998 'A'
+  o  cd010b8cd998 'A'
   
   $ cd ..
 
@@ -331,23 +331,23 @@ Specify base and dest (from 1 onto 7):
   rebasing 32af7686d403 "D"
 
   $ tglog
-  o  11: 287cc92ba5a4 'D'
+  o  287cc92ba5a4 'D'
   |
-  o  10: 6824f610a250 'C'
+  o  6824f610a250 'C'
   |
-  o  9: 7c6027df6a99 'B'
+  o  7c6027df6a99 'B'
   |
-  | @  8: e7ec4e813ba6 'I'
+  | @  e7ec4e813ba6 'I'
   |/
-  o  7: 02de42196ebe 'H'
+  o  02de42196ebe 'H'
   |
-  | o  6: eea13746799a 'G'
+  | o  eea13746799a 'G'
   |/|
-  o |  5: 24b6387c8c8c 'F'
+  o |  24b6387c8c8c 'F'
   | |
-  | o  4: 9520eea781bc 'E'
+  | o  9520eea781bc 'E'
   |/
-  o  0: cd010b8cd998 'A'
+  o  cd010b8cd998 'A'
   
   $ cd ..
 
@@ -362,19 +362,19 @@ Specify only revs (from 2 onto 8)
   rebasing 32af7686d403 "D"
 
   $ tglog
-  o  8: 7726e9fd58f7 'D'
+  o  7726e9fd58f7 'D'
   |
-  o  7: 72c8333623d0 'C'
+  o  72c8333623d0 'C'
   |
-  @  6: e7ec4e813ba6 'I'
+  @  e7ec4e813ba6 'I'
   |
-  o  5: 02de42196ebe 'H'
+  o  02de42196ebe 'H'
   |
-  o  4: 24b6387c8c8c 'F'
+  o  24b6387c8c8c 'F'
   |
-  | o  1: 42ccdea3bb16 'B'
+  | o  42ccdea3bb16 'B'
   |/
-  o  0: cd010b8cd998 'A'
+  o  cd010b8cd998 'A'
   
   $ cd ..
 

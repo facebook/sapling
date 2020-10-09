@@ -25,7 +25,7 @@ setup repo
   $ touch base
   $ hg commit -Aqm base
   $ tglogp
-  @  0: df4f53cec30a draft 'base'
+  @  df4f53cec30a draft 'base'
   
 
 create master bookmark

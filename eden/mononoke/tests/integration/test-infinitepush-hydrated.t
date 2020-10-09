@@ -95,11 +95,11 @@ Do infinitepush (aka commit cloud) push
   received listkey for "bookmarks": 57 bytes
 
   $ tglogp
-  @  2: c5564d074f73 draft 'new2'
+  @  c5564d074f73 draft 'new2'
   |
-  o  1: 895414f853ef draft 'new1'
+  o  895414f853ef draft 'new1'
   |
-  o  0: 3903775176ed public 'a'
+  o  3903775176ed public 'a'
   
 
 check unhydrated infinitepush pulls

@@ -32,7 +32,7 @@ setup repo
   $ touch base
   $ hg commit -Aqm base
   $ tglogp
-  @  0: df4f53cec30a draft 'base'
+  @  df4f53cec30a draft 'base'
   
 
 create master bookmark
@@ -70,11 +70,11 @@ Do initial infinitepush of a small stack
   $ echo 1 > B
   $ hg commit -Aqm B1
   $ tglogp
-  @  2: f99c737e05b5 draft 'B1'
+  @  f99c737e05b5 draft 'B1'
   |
-  o  1: 9b5a540873ab draft 'A1'
+  o  9b5a540873ab draft 'A1'
   |
-  o  0: df4f53cec30a public 'base'
+  o  df4f53cec30a public 'base'
   
   $ hgmn push ssh://user@dummy/repo -r . --bundle-store --allow-anon
   pushing to ssh://user@dummy/repo
@@ -90,11 +90,11 @@ Amend the bottom commit
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   [a24671] B1
   $ tglogp
-  @  4: a24671c3bce2 draft 'B1'
+  @  a24671c3bce2 draft 'B1'
   |
-  o  3: a8543df036f1 draft 'A2'
+  o  a8543df036f1 draft 'A2'
   |
-  o  0: df4f53cec30a public 'base'
+  o  df4f53cec30a public 'base'
   
   $ hgmn push ssh://user@dummy/repo -r . --bundle-store --allow-anon
   pushing to ssh://user@dummy/repo
@@ -116,11 +116,11 @@ Pull the amended stack to the other repo
   adding file changes
   added 2 changesets with 0 changes to 0 files
   $ tglogp
-  o  2: a24671c3bce2 draft 'B1'
+  o  a24671c3bce2 draft 'B1'
   |
-  o  1: a8543df036f1 draft 'A2'
+  o  a8543df036f1 draft 'A2'
   |
-  o  0: df4f53cec30a public 'base'
+  o  df4f53cec30a public 'base'
   
 
 Check mutation metadata.
@@ -155,15 +155,15 @@ Pull the amended stack to the other repo.
   adding file changes
   added 2 changesets with 0 changes to 0 files
   $ tglogm
-  o  4: 6473983c899c 'B1'
+  o  6473983c899c 'B1'
   |
-  o  3: 5326b832c149 'A3'
+  o  5326b832c149 'A3'
   |
-  | x  2: a24671c3bce2 'B1'  (Rewritten using rebase into 6473983c899c)
+  | x  a24671c3bce2 'B1'  (Rewritten using rebase into 6473983c899c)
   | |
-  | x  1: a8543df036f1 'A2'  (Rewritten using amend into 5326b832c149)
+  | x  a8543df036f1 'A2'  (Rewritten using amend into 5326b832c149)
   |/
-  o  0: df4f53cec30a 'base'
+  o  df4f53cec30a 'base'
   
 
 Do some more complicated mutations
@@ -185,11 +185,11 @@ Do some more complicated mutations
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   [853e5b] B1
   $ tglogm
-  @  11: 853e5ba9bd35 'B1'
+  @  853e5ba9bd35 'B1'
   |
-  o  10: cdf849fe4126 'A3'
+  o  cdf849fe4126 'A3'
   |
-  o  0: df4f53cec30a 'base'
+  o  df4f53cec30a 'base'
   
   $ hgmn push ssh://user@dummy/repo -r . --bundle-store --allow-anon
   pushing to ssh://user@dummy/repo
@@ -205,17 +205,17 @@ Pull the modified stack to the other repo.
   adding file changes
   added 2 changesets with 0 changes to 0 files
   $ tglogm
-  o  6: 853e5ba9bd35 'B1'
+  o  853e5ba9bd35 'B1'
   |
-  o  5: cdf849fe4126 'A3'
+  o  cdf849fe4126 'A3'
   |
-  | x  4: 6473983c899c 'B1'  (Rewritten using rebase into 853e5ba9bd35)
+  | x  6473983c899c 'B1'  (Rewritten using rebase into 853e5ba9bd35)
   | |
-  | x  3: 5326b832c149 'A3'  (Rewritten using fold into cdf849fe4126)
+  | x  5326b832c149 'A3'  (Rewritten using fold into cdf849fe4126)
   |/
-  | x  2: a24671c3bce2 'B1'  (Rewritten using rebase into 6473983c899c)
+  | x  a24671c3bce2 'B1'  (Rewritten using rebase into 6473983c899c)
   | |
-  | x  1: a8543df036f1 'A2'  (Rewritten using amend into 5326b832c149)
+  | x  a8543df036f1 'A2'  (Rewritten using amend into 5326b832c149)
   |/
-  o  0: df4f53cec30a 'base'
+  o  df4f53cec30a 'base'
   

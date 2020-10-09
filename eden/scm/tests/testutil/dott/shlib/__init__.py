@@ -393,23 +393,15 @@ def drawdag(*args, **kwargs):
 
 
 def showgraph():
-    return hg("log", "-G", "-T", "{rev} {node|short} {desc|firstline}")
+    return hg("log", "-G", "-T", "{node|short} {desc|firstline}")
 
 
 def tglog(*args):
-    return hg(
-        "log", "-G", "-T", "{rev}: {node|short} '{desc}' {bookmarks} {branches}", *args
-    )
+    return hg("log", "-G", "-T", "{node|short} '{desc}' {bookmarks}", *args)
 
 
 def tglogp(*args):
-    return hg(
-        "log",
-        "-G",
-        "-T",
-        "{rev}: {node|short} {phase} '{desc}' {bookmarks} {branches}",
-        *args
-    )
+    return hg("log", "-G", "-T", "{node|short} {phase} '{desc}' {bookmarks}", *args)
 
 
 def tglogm(*args):
@@ -417,7 +409,7 @@ def tglogm(*args):
         "log",
         "-G",
         "-T",
-        "{rev}: {node|short} '{desc|firstline}' {bookmarks} {join(mutations % '(Rewritten using {operation} into {join(successors % '{node|short}', ', ')})', ' ')}",
+        "{node|short} '{desc|firstline}' {bookmarks} {join(mutations % '(Rewritten using {operation} into {join(successors % '{node|short}', ', ')})', ' ')}",
         *args
     )
 

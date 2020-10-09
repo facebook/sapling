@@ -36,15 +36,15 @@
   $ hg ci -m L2
 
   $ tglogp
-  @  4: 46f0b057b5c0 draft 'L2'
+  @  46f0b057b5c0 draft 'L2'
   |
-  o  3: 3163e20567cc draft 'L1'
+  o  3163e20567cc draft 'L1'
   |
-  | o  2: a9ce13b75fb5 draft 'C3'
+  | o  a9ce13b75fb5 draft 'C3'
   |/
-  o  1: 11eb9c356adf draft 'C2'
+  o  11eb9c356adf draft 'C2'
   |
-  o  0: 178f1774564f draft 'C1'
+  o  178f1774564f draft 'C1'
   
 
 Conflicting rebase:
@@ -109,15 +109,15 @@ Abort (should clear out unsupported merge state):
   no merge state found
 
   $ tglogp
-  @  4: 46f0b057b5c0 draft 'L2'
+  @  46f0b057b5c0 draft 'L2'
   |
-  o  3: 3163e20567cc draft 'L1'
+  o  3163e20567cc draft 'L1'
   |
-  | o  2: a9ce13b75fb5 draft 'C3'
+  | o  a9ce13b75fb5 draft 'C3'
   |/
-  o  1: 11eb9c356adf draft 'C2'
+  o  11eb9c356adf draft 'C2'
   |
-  o  0: 178f1774564f draft 'C1'
+  o  178f1774564f draft 'C1'
   
 Test safety for inconsistent rebase state, which may be created (and
 forgotten) by Mercurial earlier than 2.7. This emulates Mercurial
@@ -180,15 +180,15 @@ Construct new repo:
 Rebase and abort without generating new changesets:
 
   $ tglogp
-  @  4: 145842775fec draft 'C1'
+  @  145842775fec draft 'C1'
   |
-  o  3: a6484957d6b9 draft 'B bis'
+  o  a6484957d6b9 draft 'B bis'
   |
-  | o  2: 49cb3485fa0c draft 'C'
+  | o  49cb3485fa0c draft 'C'
   | |
-  | o  1: 6c81ed0049f8 public 'B'
+  | o  6c81ed0049f8 public 'B'
   |/
-  o  0: 1994f17a630e public 'A'
+  o  1994f17a630e public 'A'
   
   $ hg rebase -b 'desc(C1)' -d 49cb3485fa0c1934763ac434487005741b74316f
   rebasing a6484957d6b9 "B bis"
@@ -200,29 +200,29 @@ Rebase and abort without generating new changesets:
   [1]
 
   $ tglogp
-  @  4: 145842775fec draft 'C1'
+  @  145842775fec draft 'C1'
   |
-  o  3: a6484957d6b9 draft 'B bis'
+  o  a6484957d6b9 draft 'B bis'
   |
-  | @  2: 49cb3485fa0c draft 'C'
+  | @  49cb3485fa0c draft 'C'
   | |
-  | o  1: 6c81ed0049f8 public 'B'
+  | o  6c81ed0049f8 public 'B'
   |/
-  o  0: 1994f17a630e public 'A'
+  o  1994f17a630e public 'A'
   
   $ hg rebase -a
   rebase aborted
 
   $ tglogp
-  @  4: 145842775fec draft 'C1'
+  @  145842775fec draft 'C1'
   |
-  o  3: a6484957d6b9 draft 'B bis'
+  o  a6484957d6b9 draft 'B bis'
   |
-  | o  2: 49cb3485fa0c draft 'C'
+  | o  49cb3485fa0c draft 'C'
   | |
-  | o  1: 6c81ed0049f8 public 'B'
+  | o  6c81ed0049f8 public 'B'
   |/
-  o  0: 1994f17a630e public 'A'
+  o  1994f17a630e public 'A'
   
 
   $ cd ..

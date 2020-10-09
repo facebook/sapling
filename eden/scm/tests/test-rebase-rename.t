@@ -32,13 +32,13 @@
   $ hg ci -m 'rename A'
 
   $ tglog
-  @  3: 73a3ee40125d 'rename A'
+  @  73a3ee40125d 'rename A'
   |
-  | o  2: 220d0626d185 'rename B'
+  | o  220d0626d185 'rename B'
   |/
-  o  1: 3ab5da9a5c01 'B'
+  o  3ab5da9a5c01 'B'
   |
-  o  0: 1994f17a630e 'A'
+  o  1994f17a630e 'A'
   
 
 Rename is tracked:
@@ -61,13 +61,13 @@ Rebase the revision containing the rename:
   rebasing 73a3ee40125d "rename A"
 
   $ tglog
-  @  4: 032a9b75e83b 'rename A'
+  @  032a9b75e83b 'rename A'
   |
-  o  2: 220d0626d185 'rename B'
+  o  220d0626d185 'rename B'
   |
-  o  1: 3ab5da9a5c01 'B'
+  o  3ab5da9a5c01 'B'
   |
-  o  0: 1994f17a630e 'A'
+  o  1994f17a630e 'A'
   
 
 Rename is not lost:
@@ -125,13 +125,13 @@ Rebased revision does not contain information about b (issue3739)
   $ hg ci -m 'copy A'
 
   $ tglog
-  @  3: 0a8162ff18a8 'copy A'
+  @  0a8162ff18a8 'copy A'
   |
-  | o  2: 39e588434882 'copy B'
+  | o  39e588434882 'copy B'
   |/
-  o  1: 6c81ed0049f8 'B'
+  o  6c81ed0049f8 'B'
   |
-  o  0: 1994f17a630e 'A'
+  o  1994f17a630e 'A'
   
 Copy is tracked:
 
@@ -147,13 +147,13 @@ Rebase the revision containing the copy:
   rebasing 0a8162ff18a8 "copy A"
 
   $ tglog
-  @  4: 98f6e6dbf45a 'copy A'
+  @  98f6e6dbf45a 'copy A'
   |
-  o  2: 39e588434882 'copy B'
+  o  39e588434882 'copy B'
   |
-  o  1: 6c81ed0049f8 'B'
+  o  6c81ed0049f8 'B'
   |
-  o  0: 1994f17a630e 'A'
+  o  1994f17a630e 'A'
   
 
 Copy is not lost:
@@ -211,15 +211,15 @@ Test rebase across repeating renames:
   $ hg ci -m "Another unrelated change"
 
   $ tglog
-  @  4: b918d683b091 'Another unrelated change'
+  @  b918d683b091 'Another unrelated change'
   |
-  | o  3: 1ac17e43d8aa 'Rename file2 back to file1'
+  | o  1ac17e43d8aa 'Rename file2 back to file1'
   |/
-  o  2: 480101d66d8d 'Unrelated change'
+  o  480101d66d8d 'Unrelated change'
   |
-  o  1: be44c61debd2 'Rename file1 to file2'
+  o  be44c61debd2 'Rename file1 to file2'
   |
-  o  0: 8ce9a346991d 'Adding file1'
+  o  8ce9a346991d 'Adding file1'
   
 
   $ hg rebase -s 'desc(Another)' -d 'max(desc(Rename))'
@@ -250,13 +250,13 @@ Verify that copies get preserved (issue4192).
 
 Note that there are four entries in the log for d
   $ tglog --follow d
-  @  3: 421b7e82bb85 'File d created as copy of c and modified'
+  @  421b7e82bb85 'File d created as copy of c and modified'
   |
-  o  2: 327f772bc074 'File c created as copy of b and modified'
+  o  327f772bc074 'File c created as copy of b and modified'
   |
-  o  1: 79d255d24ad2 'File b created as copy of a and modified'
+  o  79d255d24ad2 'File b created as copy of a and modified'
   |
-  o  0: b220cd6d2326 'File a created'
+  o  b220cd6d2326 'File a created'
   
 Update back to before we performed copies, and inject an unrelated change.
   $ hg update b220cd6d23263f59a707389fdbe7cef2ce3947ad
@@ -278,13 +278,13 @@ Rebase the copies on top of the unrelated change.
 
 There should still be four entries in the log for d
   $ tglog --follow d
-  @  7: dbb9ba033561 'File d created as copy of c and modified'
+  @  dbb9ba033561 'File d created as copy of c and modified'
   |
-  o  6: af74b229bc02 'File c created as copy of b and modified'
+  o  af74b229bc02 'File c created as copy of b and modified'
   |
-  o  5: 68bf06433839 'File b created as copy of a and modified'
+  o  68bf06433839 'File b created as copy of a and modified'
   :
-  o  0: b220cd6d2326 'File a created'
+  o  b220cd6d2326 'File a created'
   
 Same steps as above, but with --collapse on rebase to make sure the
 copy records collapse correctly.
@@ -305,11 +305,11 @@ This should show both revision 3 and 0 since 'd' was transitively a
 copy of 'a'.
 
   $ tglog --follow d
-  @  9: 5a46b94210e5 'Collapsed revision
+  @  5a46b94210e5 'Collapsed revision
   :  * File b created as copy of a and modified
   :  * File c created as copy of b and modified
   :  * File d created as copy of c and modified'
-  o  0: b220cd6d2326 'File a created'
+  o  b220cd6d2326 'File a created'
   
 
   $ cd ..

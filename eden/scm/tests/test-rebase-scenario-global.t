@@ -23,21 +23,21 @@ can abort or warn for colliding untracked files)
   $ cd a1
 
   $ tglog
-  @  7: 02de42196ebe 'H'
+  @  02de42196ebe 'H'
   |
-  | o  6: eea13746799a 'G'
+  | o  eea13746799a 'G'
   |/|
-  o |  5: 24b6387c8c8c 'F'
+  o |  24b6387c8c8c 'F'
   | |
-  | o  4: 9520eea781bc 'E'
+  | o  9520eea781bc 'E'
   |/
-  | o  3: 32af7686d403 'D'
+  | o  32af7686d403 'D'
   | |
-  | o  2: 5fddd98957c8 'C'
+  | o  5fddd98957c8 'C'
   | |
-  | o  1: 42ccdea3bb16 'B'
+  | o  42ccdea3bb16 'B'
   |/
-  o  0: cd010b8cd998 'A'
+  o  cd010b8cd998 'A'
   
 
   $ hg status --rev "desc(D)^1" --rev 'desc(D)'
@@ -60,21 +60,21 @@ can abort or warn for colliding untracked files)
   $ rm D.orig
 
   $ tglog
-  o  8: 1619f02ff7dd 'D'
+  o  1619f02ff7dd 'D'
   |
-  @  7: 02de42196ebe 'H'
+  @  02de42196ebe 'H'
   |
-  | o  6: eea13746799a 'G'
+  | o  eea13746799a 'G'
   |/|
-  o |  5: 24b6387c8c8c 'F'
+  o |  24b6387c8c8c 'F'
   | |
-  | o  4: 9520eea781bc 'E'
+  | o  9520eea781bc 'E'
   |/
-  | o  2: 5fddd98957c8 'C'
+  | o  5fddd98957c8 'C'
   | |
-  | o  1: 42ccdea3bb16 'B'
+  | o  42ccdea3bb16 'B'
   |/
-  o  0: cd010b8cd998 'A'
+  o  cd010b8cd998 'A'
   
   $ cd ..
 
@@ -94,21 +94,21 @@ that we can ignore for colliding untracked files)
   $ rm D.orig
 
   $ tglog
-  o  8: 2107530e74ab 'D'
+  o  2107530e74ab 'D'
   |
-  | @  7: 02de42196ebe 'H'
+  | @  02de42196ebe 'H'
   |/
-  | o  6: eea13746799a 'G'
+  | o  eea13746799a 'G'
   |/|
-  o |  5: 24b6387c8c8c 'F'
+  o |  24b6387c8c8c 'F'
   | |
-  | o  4: 9520eea781bc 'E'
+  | o  9520eea781bc 'E'
   |/
-  | o  2: 5fddd98957c8 'C'
+  | o  5fddd98957c8 'C'
   | |
-  | o  1: 42ccdea3bb16 'B'
+  | o  42ccdea3bb16 'B'
   |/
-  o  0: cd010b8cd998 'A'
+  o  cd010b8cd998 'A'
   
   $ cd ..
 
@@ -130,19 +130,19 @@ if they have the same contents)
   E.orig: file not found
 
   $ tglog
-  o  8: 9f8b8ec77260 'E'
+  o  9f8b8ec77260 'E'
   |
-  @  7: 02de42196ebe 'H'
+  @  02de42196ebe 'H'
   |
-  o  5: 24b6387c8c8c 'F'
+  o  24b6387c8c8c 'F'
   |
-  | o  3: 32af7686d403 'D'
+  | o  32af7686d403 'D'
   | |
-  | o  2: 5fddd98957c8 'C'
+  | o  5fddd98957c8 'C'
   | |
-  | o  1: 42ccdea3bb16 'B'
+  | o  42ccdea3bb16 'B'
   |/
-  o  0: cd010b8cd998 'A'
+  o  cd010b8cd998 'A'
   
   $ cd ..
 
@@ -159,19 +159,19 @@ F onto E - rebase of a branching point (skip G):
   rebasing 02de42196ebe "H"
 
   $ tglog
-  @  9: e9240aeaa6ad 'H'
+  @  e9240aeaa6ad 'H'
   |
-  o  8: 5d0ccadb6e3e 'F'
+  o  5d0ccadb6e3e 'F'
   |
-  o  4: 9520eea781bc 'E'
+  o  9520eea781bc 'E'
   |
-  | o  3: 32af7686d403 'D'
+  | o  32af7686d403 'D'
   | |
-  | o  2: 5fddd98957c8 'C'
+  | o  5fddd98957c8 'C'
   | |
-  | o  1: 42ccdea3bb16 'B'
+  | o  42ccdea3bb16 'B'
   |/
-  o  0: cd010b8cd998 'A'
+  o  cd010b8cd998 'A'
   
   $ cd ..
 
@@ -185,21 +185,21 @@ G onto H - merged revision having a parent in ancestors of target:
   rebasing eea13746799a "G"
 
   $ tglog
-  o    8: 397834907a90 'G'
+  o    397834907a90 'G'
   |\
-  | @  7: 02de42196ebe 'H'
+  | @  02de42196ebe 'H'
   | |
-  | o  5: 24b6387c8c8c 'F'
+  | o  24b6387c8c8c 'F'
   | |
-  o |  4: 9520eea781bc 'E'
+  o |  9520eea781bc 'E'
   |/
-  | o  3: 32af7686d403 'D'
+  | o  32af7686d403 'D'
   | |
-  | o  2: 5fddd98957c8 'C'
+  | o  5fddd98957c8 'C'
   | |
-  | o  1: 42ccdea3bb16 'B'
+  | o  42ccdea3bb16 'B'
   |/
-  o  0: cd010b8cd998 'A'
+  o  cd010b8cd998 'A'
   
   $ cd ..
 
@@ -215,21 +215,21 @@ F onto B - G maintains E as parent:
   rebasing 02de42196ebe "H"
 
   $ tglog
-  @  10: c87be72f9641 'H'
+  @  c87be72f9641 'H'
   |
-  | o  9: 17badd73d4f1 'G'
+  | o  17badd73d4f1 'G'
   |/|
-  o |  8: 74fb9ed646c4 'F'
+  o |  74fb9ed646c4 'F'
   | |
-  | o  4: 9520eea781bc 'E'
+  | o  9520eea781bc 'E'
   | |
-  | | o  3: 32af7686d403 'D'
+  | | o  32af7686d403 'D'
   | | |
-  +---o  2: 5fddd98957c8 'C'
+  +---o  5fddd98957c8 'C'
   | |
-  o |  1: 42ccdea3bb16 'B'
+  o |  42ccdea3bb16 'B'
   |/
-  o  0: cd010b8cd998 'A'
+  o  cd010b8cd998 'A'
   
   $ cd ..
 
@@ -282,21 +282,21 @@ C onto A - rebase onto an ancestor:
   rebasing 5fddd98957c8 "C"
   rebasing 32af7686d403 "D"
   $ tglog
-  o  9: c9659aac0000 'D'
+  o  c9659aac0000 'D'
   |
-  o  8: e1c4361dd923 'C'
+  o  e1c4361dd923 'C'
   |
-  | @  7: 02de42196ebe 'H'
+  | @  02de42196ebe 'H'
   | |
-  | | o  6: eea13746799a 'G'
+  | | o  eea13746799a 'G'
   | |/|
-  | o |  5: 24b6387c8c8c 'F'
+  | o |  24b6387c8c8c 'F'
   |/ /
-  | o  4: 9520eea781bc 'E'
+  | o  9520eea781bc 'E'
   |/
-  | o  1: 42ccdea3bb16 'B'
+  | o  42ccdea3bb16 'B'
   |/
-  o  0: cd010b8cd998 'A'
+  o  cd010b8cd998 'A'
   
 
 Check rebasing public changeset
@@ -390,23 +390,23 @@ All destination are B
   adding file changes
   added 9 changesets with 9 changes to 9 files
   $ tglog
-  o  8: 479ddb54a924 'I'
+  o  479ddb54a924 'I'
   |
-  o  7: 72434a4e60b0 'H'
+  o  72434a4e60b0 'H'
   |
-  o  6: 3d8a618087a7 'G'
+  o  3d8a618087a7 'G'
   |
-  | o  5: 41bfcc75ed73 'F'
+  | o  41bfcc75ed73 'F'
   | |
-  | o  4: c01897464e7f 'E'
+  | o  c01897464e7f 'E'
   |/
-  o  3: ffd453c31098 'D'
+  o  ffd453c31098 'D'
   |
-  o  2: c9e50f6cdc55 'C'
+  o  c9e50f6cdc55 'C'
   |
-  | o  1: 8fd0f7e49f53 'B'
+  | o  8fd0f7e49f53 'B'
   |/
-  o  0: 9ae2ed22e576 'A'
+  o  9ae2ed22e576 'A'
   
   $ cd ..
 
@@ -424,33 +424,33 @@ Source on have two descendant heads but ask for one
   rebasing 72434a4e60b0 "H"
   rebasing 479ddb54a924 "I"
   $ tglog
-  o  13: 9bf1d9358a90 'I'
+  o  9bf1d9358a90 'I'
   |
-  o  12: 274623a778d4 'H'
+  o  274623a778d4 'H'
   |
-  o  11: ab8c8617c8e8 'G'
+  o  ab8c8617c8e8 'G'
   |
-  o  10: c8cbf59f70da 'D'
+  o  c8cbf59f70da 'D'
   |
-  o  9: 563e4faab485 'C'
+  o  563e4faab485 'C'
   |
-  | o  8: 479ddb54a924 'I'
+  | o  479ddb54a924 'I'
   | |
-  | o  7: 72434a4e60b0 'H'
+  | o  72434a4e60b0 'H'
   | |
-  | o  6: 3d8a618087a7 'G'
+  | o  3d8a618087a7 'G'
   | |
-  | | o  5: 41bfcc75ed73 'F'
+  | | o  41bfcc75ed73 'F'
   | | |
-  | | o  4: c01897464e7f 'E'
+  | | o  c01897464e7f 'E'
   | |/
-  | o  3: ffd453c31098 'D'
+  | o  ffd453c31098 'D'
   | |
-  | o  2: c9e50f6cdc55 'C'
+  | o  c9e50f6cdc55 'C'
   | |
-  o |  1: 8fd0f7e49f53 'B'
+  o |  8fd0f7e49f53 'B'
   |/
-  o  0: 9ae2ed22e576 'A'
+  o  9ae2ed22e576 'A'
   
 
   $ cd ..
@@ -465,31 +465,31 @@ Base on have one descendant heads we ask for but common ancestor have two
   rebasing 72434a4e60b0 "H"
   rebasing 479ddb54a924 "I"
   $ tglog
-  o  12: 9d7da0053b1c 'I'
+  o  9d7da0053b1c 'I'
   |
-  o  11: 8fbd00952cbc 'H'
+  o  8fbd00952cbc 'H'
   |
-  o  10: 51d434a615ee 'G'
+  o  51d434a615ee 'G'
   |
-  o  9: a9c125634b0b 'D'
+  o  a9c125634b0b 'D'
   |
-  | o  8: 479ddb54a924 'I'
+  | o  479ddb54a924 'I'
   | |
-  | o  7: 72434a4e60b0 'H'
+  | o  72434a4e60b0 'H'
   | |
-  | o  6: 3d8a618087a7 'G'
+  | o  3d8a618087a7 'G'
   | |
-  | | o  5: 41bfcc75ed73 'F'
+  | | o  41bfcc75ed73 'F'
   | | |
-  | | o  4: c01897464e7f 'E'
+  | | o  c01897464e7f 'E'
   | |/
-  | o  3: ffd453c31098 'D'
+  | o  ffd453c31098 'D'
   | |
-  | o  2: c9e50f6cdc55 'C'
+  | o  c9e50f6cdc55 'C'
   | |
-  o |  1: 8fd0f7e49f53 'B'
+  o |  8fd0f7e49f53 'B'
   |/
-  o  0: 9ae2ed22e576 'A'
+  o  9ae2ed22e576 'A'
   
 
   $ cd ..
@@ -503,29 +503,29 @@ rebase subset
   rebasing 3d8a618087a7 "G"
   rebasing 72434a4e60b0 "H"
   $ tglog
-  o  11: 8fbd00952cbc 'H'
+  o  8fbd00952cbc 'H'
   |
-  o  10: 51d434a615ee 'G'
+  o  51d434a615ee 'G'
   |
-  o  9: a9c125634b0b 'D'
+  o  a9c125634b0b 'D'
   |
-  | o  8: 479ddb54a924 'I'
+  | o  479ddb54a924 'I'
   | |
-  | o  7: 72434a4e60b0 'H'
+  | o  72434a4e60b0 'H'
   | |
-  | o  6: 3d8a618087a7 'G'
+  | o  3d8a618087a7 'G'
   | |
-  | | o  5: 41bfcc75ed73 'F'
+  | | o  41bfcc75ed73 'F'
   | | |
-  | | o  4: c01897464e7f 'E'
+  | | o  c01897464e7f 'E'
   | |/
-  | o  3: ffd453c31098 'D'
+  | o  ffd453c31098 'D'
   | |
-  | o  2: c9e50f6cdc55 'C'
+  | o  c9e50f6cdc55 'C'
   | |
-  o |  1: 8fd0f7e49f53 'B'
+  o |  8fd0f7e49f53 'B'
   |/
-  o  0: 9ae2ed22e576 'A'
+  o  9ae2ed22e576 'A'
   
 
   $ cd ..
@@ -541,33 +541,33 @@ rebase subset with multiple head
   rebasing 3d8a618087a7 "G"
   rebasing 72434a4e60b0 "H"
   $ tglog
-  o  13: 8fbd00952cbc 'H'
+  o  8fbd00952cbc 'H'
   |
-  o  12: 51d434a615ee 'G'
+  o  51d434a615ee 'G'
   |
-  | o  11: df23d8bda0b7 'F'
+  | o  df23d8bda0b7 'F'
   | |
-  | o  10: 47b7889448ff 'E'
+  | o  47b7889448ff 'E'
   |/
-  o  9: a9c125634b0b 'D'
+  o  a9c125634b0b 'D'
   |
-  | o  8: 479ddb54a924 'I'
+  | o  479ddb54a924 'I'
   | |
-  | o  7: 72434a4e60b0 'H'
+  | o  72434a4e60b0 'H'
   | |
-  | o  6: 3d8a618087a7 'G'
+  | o  3d8a618087a7 'G'
   | |
-  | | o  5: 41bfcc75ed73 'F'
+  | | o  41bfcc75ed73 'F'
   | | |
-  | | o  4: c01897464e7f 'E'
+  | | o  c01897464e7f 'E'
   | |/
-  | o  3: ffd453c31098 'D'
+  | o  ffd453c31098 'D'
   | |
-  | o  2: c9e50f6cdc55 'C'
+  | o  c9e50f6cdc55 'C'
   | |
-  o |  1: 8fd0f7e49f53 'B'
+  o |  8fd0f7e49f53 'B'
   |/
-  o  0: 9ae2ed22e576 'A'
+  o  9ae2ed22e576 'A'
   
 
   $ cd ..
@@ -583,23 +583,23 @@ rebase on ancestor with revset
   rebasing 72434a4e60b0 "H"
   rebasing 479ddb54a924 "I"
   $ tglog
-  o  11: fcb52e68a694 'I'
+  o  fcb52e68a694 'I'
   |
-  o  10: 77bd65cd7600 'H'
+  o  77bd65cd7600 'H'
   |
-  o  9: 12d0e738fb18 'G'
+  o  12d0e738fb18 'G'
   |
-  | o  5: 41bfcc75ed73 'F'
+  | o  41bfcc75ed73 'F'
   | |
-  | o  4: c01897464e7f 'E'
+  | o  c01897464e7f 'E'
   | |
-  | o  3: ffd453c31098 'D'
+  | o  ffd453c31098 'D'
   |/
-  o  2: c9e50f6cdc55 'C'
+  o  c9e50f6cdc55 'C'
   |
-  | o  1: 8fd0f7e49f53 'B'
+  | o  8fd0f7e49f53 'B'
   |/
-  o  0: 9ae2ed22e576 'A'
+  o  9ae2ed22e576 'A'
   
   $ cd ..
 
@@ -617,23 +617,23 @@ We would expect heads are I, F if it was supported
   rebasing 72434a4e60b0 "H"
   rebasing 479ddb54a924 "I"
   $ tglog
-  o  13: 9136df9a87cf 'I'
+  o  9136df9a87cf 'I'
   |
-  o  12: 23e8f30da832 'H'
+  o  23e8f30da832 'H'
   |
-  o  11: b0efe8534e8b 'G'
+  o  b0efe8534e8b 'G'
   |
-  | o  10: 6eb5b496ab79 'F'
+  | o  6eb5b496ab79 'F'
   | |
-  | o  9: d15eade9b0b1 'E'
+  | o  d15eade9b0b1 'E'
   |/
-  | o  3: ffd453c31098 'D'
+  | o  ffd453c31098 'D'
   | |
-  | o  2: c9e50f6cdc55 'C'
+  | o  c9e50f6cdc55 'C'
   | |
-  o |  1: 8fd0f7e49f53 'B'
+  o |  8fd0f7e49f53 'B'
   |/
-  o  0: 9ae2ed22e576 'A'
+  o  9ae2ed22e576 'A'
   
   $ cd ..
 
@@ -656,27 +656,27 @@ each root have a different common ancestor with the destination and this is a de
   $ hg add K
   $ hg commit -m K
   $ tglog
-  @  10: 23a4ace37988 'K'
+  @  23a4ace37988 'K'
   |
-  o  9: 1301922eeb0c 'J'
+  o  1301922eeb0c 'J'
   |
-  | o  8: e7ec4e813ba6 'I'
+  | o  e7ec4e813ba6 'I'
   | |
-  | o  7: 02de42196ebe 'H'
+  | o  02de42196ebe 'H'
   | |
-  +---o  6: eea13746799a 'G'
+  +---o  eea13746799a 'G'
   | |/
-  | o  5: 24b6387c8c8c 'F'
+  | o  24b6387c8c8c 'F'
   | |
-  o |  4: 9520eea781bc 'E'
+  o |  9520eea781bc 'E'
   |/
-  | o  3: 32af7686d403 'D'
+  | o  32af7686d403 'D'
   | |
-  | o  2: 5fddd98957c8 'C'
+  | o  5fddd98957c8 'C'
   | |
-  | o  1: 42ccdea3bb16 'B'
+  | o  42ccdea3bb16 'B'
   |/
-  o  0: cd010b8cd998 'A'
+  o  cd010b8cd998 'A'
   
 (actual test)
 
@@ -695,27 +695,27 @@ each root have a different common ancestor with the destination and this is a de
   summary:     K
   
   $ tglog
-  @  12: 882431a34a0e 'K'
+  @  882431a34a0e 'K'
   |
-  | o  11: adb617877056 'I'
+  | o  adb617877056 'I'
   |/
-  | o  9: 1301922eeb0c 'J'
+  | o  1301922eeb0c 'J'
   | |
-  | | o  7: 02de42196ebe 'H'
+  | | o  02de42196ebe 'H'
   | | |
-  o---+  6: eea13746799a 'G'
+  o---+  eea13746799a 'G'
   |/ /
-  | o  5: 24b6387c8c8c 'F'
+  | o  24b6387c8c8c 'F'
   | |
-  o |  4: 9520eea781bc 'E'
+  o |  9520eea781bc 'E'
   |/
-  | o  3: 32af7686d403 'D'
+  | o  32af7686d403 'D'
   | |
-  | o  2: 5fddd98957c8 'C'
+  | o  5fddd98957c8 'C'
   | |
-  | o  1: 42ccdea3bb16 'B'
+  | o  42ccdea3bb16 'B'
   |/
-  o  0: cd010b8cd998 'A'
+  o  cd010b8cd998 'A'
   
 
 Test that rebase is not confused by $CWD disappearing during rebase (issue4121)
@@ -772,19 +772,19 @@ Test that rebase is done in topo order (issue5370)
   $ touch g && hg add g && hg ci -m G
 
   $ tglog
-  @  6: 124bb27b6f28 'G'
+  @  124bb27b6f28 'G'
   |
-  | o  5: 412b391de760 'F'
+  | o  412b391de760 'F'
   | |
-  | | o  4: 82ae8dc7a9b7 'E'
+  | | o  82ae8dc7a9b7 'E'
   | | |
-  | o |  3: ab709c9f7171 'D'
+  | o |  ab709c9f7171 'D'
   | | |
-  | | o  2: d84f5cfaaf14 'C'
+  | | o  d84f5cfaaf14 'C'
   | |/
-  | o  1: 76035bbd54bd 'B'
+  | o  76035bbd54bd 'B'
   |/
-  o  0: 216878401574 'A'
+  o  216878401574 'A'
   
 
   $ hg rebase -s 'desc(B)' -d 'desc(G)'
@@ -795,19 +795,19 @@ Test that rebase is done in topo order (issue5370)
   rebasing 412b391de760 "F"
 
   $ tglog
-  o  11: 31884cfb735e 'F'
+  o  31884cfb735e 'F'
   |
-  o  10: 6d89fa5b0909 'D'
+  o  6d89fa5b0909 'D'
   |
-  | o  9: de64d97c697b 'E'
+  | o  de64d97c697b 'E'
   | |
-  | o  8: b18e4d2d0aa1 'C'
+  | o  b18e4d2d0aa1 'C'
   |/
-  o  7: 0983daf9ff6a 'B'
+  o  0983daf9ff6a 'B'
   |
-  @  6: 124bb27b6f28 'G'
+  @  124bb27b6f28 'G'
   |
-  o  0: 216878401574 'A'
+  o  216878401574 'A'
   
 
 Test experimental revset

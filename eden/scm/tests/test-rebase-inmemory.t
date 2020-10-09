@@ -21,13 +21,13 @@ Rebase a simple DAG:
   $ hg up -C $a
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ tglog
-  o  3: 814f6bd05178 'c'
+  o  814f6bd05178 'c'
   |
-  | o  2: db0e82a16a62 'b'
+  | o  db0e82a16a62 'b'
   |/
-  o  1: 02952614a83d 'd'
+  o  02952614a83d 'd'
   |
-  @  0: b173517d0057 'a'
+  @  b173517d0057 'a'
   
   $ hg cat -r $c c
   c (no-eol)
@@ -37,13 +37,13 @@ Rebase a simple DAG:
   rebasing in-memory
   rebasing db0e82a16a62 "b"
   $ tglog
-  o  4: ca58782ad1e4 'b'
+  o  ca58782ad1e4 'b'
   |
-  o  3: 814f6bd05178 'c'
+  o  814f6bd05178 'c'
   |
-  o  1: 02952614a83d 'd'
+  o  02952614a83d 'd'
   |
-  @  0: b173517d0057 'a'
+  @  b173517d0057 'a'
   
   $ hg cat -r $b b
   b (no-eol)
@@ -78,13 +78,13 @@ Write files to the working copy, and ensure they're still there after the rebase
   $ echo "jkl" > d
   $ echo "mno" > e
   $ tglog
-  o  4: f56b71190a8f 'c'
+  o  f56b71190a8f 'c'
   |
-  | o  2: db0e82a16a62 'b'
+  | o  db0e82a16a62 'b'
   |/
-  o  1: 02952614a83d 'd'
+  o  02952614a83d 'd'
   |
-  @  0: b173517d0057 'a'
+  @  b173517d0057 'a'
   
   $ hg cat -r 'desc(c)' c
   c (no-eol)
@@ -96,13 +96,13 @@ Write files to the working copy, and ensure they're still there after the rebase
   rebasing in-memory
   rebasing db0e82a16a62 "b"
   $ tglog
-  o  5: fc055c3b4d33 'b'
+  o  fc055c3b4d33 'b'
   |
-  | o  4: f56b71190a8f 'c'
+  | o  f56b71190a8f 'c'
   | |
-  | o  1: 02952614a83d 'd'
+  | o  02952614a83d 'd'
   |/
-  @  0: b173517d0057 'a'
+  @  b173517d0057 'a'
   
   $ hg cat -r 'desc(c)' c
   c (no-eol)
@@ -113,13 +113,13 @@ Write files to the working copy, and ensure they're still there after the rebase
   rebasing 02952614a83d "d"
   rebasing f56b71190a8f "c"
   $ tglog
-  o  7: 753feb6fd12a 'c'
+  o  753feb6fd12a 'c'
   |
-  o  6: 09c044d2cb43 'd'
+  o  09c044d2cb43 'd'
   |
-  o  5: fc055c3b4d33 'b'
+  o  fc055c3b4d33 'b'
   |
-  @  0: b173517d0057 'a'
+  @  b173517d0057 'a'
   
 Ensure working copy files are still there:
   $ cat a
@@ -144,13 +144,13 @@ cleanly.
   6 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd repo3
   $ tglog
-  @  7: 753feb6fd12a 'c'
+  @  753feb6fd12a 'c'
   |
-  o  6: 09c044d2cb43 'd'
+  o  09c044d2cb43 'd'
   |
-  o  5: fc055c3b4d33 'b'
+  o  fc055c3b4d33 'b'
   |
-  o  0: b173517d0057 'a'
+  o  b173517d0057 'a'
   
   $ chmod +x a
   $ hg commit -m "change a's flags"
@@ -171,13 +171,13 @@ Rebase the working copy parent:
   rebasing in-memory
   rebasing 753feb6fd12a "c"
   $ tglog
-  @  8: 844a7de3e617 'c'
+  @  844a7de3e617 'c'
   |
-  | o  6: 09c044d2cb43 'd'
+  | o  09c044d2cb43 'd'
   | |
-  | o  5: fc055c3b4d33 'b'
+  | o  fc055c3b4d33 'b'
   |/
-  o  0: b173517d0057 'a'
+  o  b173517d0057 'a'
   
 Rerun with merge conflicts, demonstrating switching to on-disk merge:
   $ hg up 'desc(d)'
@@ -189,15 +189,15 @@ Rerun with merge conflicts, demonstrating switching to on-disk merge:
   $ hg up 'desc(b)'
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ tglog
-  o  9: 6af061510c70 'e -> c'
+  o  6af061510c70 'e -> c'
   |
-  | o  8: 844a7de3e617 'c'
+  | o  844a7de3e617 'c'
   | |
-  o |  6: 09c044d2cb43 'd'
+  o |  09c044d2cb43 'd'
   | |
-  @ |  5: fc055c3b4d33 'b'
+  @ |  fc055c3b4d33 'b'
   |/
-  o  0: b173517d0057 'a'
+  o  b173517d0057 'a'
   
   $ hg rebase -r 844a7de3e617 -d 'desc(e)'
   rebasing 844a7de3e617 "c"
@@ -218,15 +218,15 @@ Allow the working copy parent to be rebased with IMM:
   rebasing in-memory!
   rebasing 844a7de3e617 "c"
   $ tglog
-  @  10: 6f55b7035492 'c'
+  @  6f55b7035492 'c'
   |
-  | o  9: 6af061510c70 'e -> c'
+  | o  6af061510c70 'e -> c'
   |/
-  o  6: 09c044d2cb43 'd'
+  o  09c044d2cb43 'd'
   |
-  o  5: fc055c3b4d33 'b'
+  o  fc055c3b4d33 'b'
   |
-  o  0: b173517d0057 'a'
+  o  b173517d0057 'a'
   
 
 Ensure if we rebase the WCP, we still require the working copy to be clean up

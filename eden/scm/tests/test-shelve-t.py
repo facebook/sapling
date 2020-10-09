@@ -1274,7 +1274,7 @@ sh % "echo 2" > "file2"
 
 
 sh % "cat file2" == "2"
-sh % "tglog" == "@  0: 6408d34d8180 'commit1'"
+sh % "tglog" == "@  6408d34d8180 'commit1'"
 
 
 def update(orig, repo, *args, **kwargs):
@@ -1290,7 +1290,7 @@ with extensions.wrappedfunction(hg, "update", update):
         [255]"""
 
 sh % "cat file2" == "2"
-sh % "tglog" == "@  0: 6408d34d8180 'commit1'"
+sh % "tglog" == "@  6408d34d8180 'commit1'"
 sh % "hg update --clean --quiet ."
 sh % "hg shelve --list" == "default * shelve changes to: commit1 (glob)"
 sh % "hg unshelve" == "unshelving change 'default'"
@@ -1302,7 +1302,7 @@ with extensions.wrappedfunction(hg, "update", update):
         interrupted!
         [255]"""
 sh % "cat file2" == "1"
-sh % "tglog" == "@  0: 6408d34d8180 'commit1'"
+sh % "tglog" == "@  6408d34d8180 'commit1'"
 sh % "hg shelve --list" == "default * shelve changes to: commit1 (glob)"
 sh % 'hg log --hidden -r tip -T \'{node|short} "{shelvename}" "{desc}"\\n\'' == 'f70d92a087e8 "default" "shelve changes to: commit1"'
 sh % "hg unshelve" == "unshelving change 'default'"

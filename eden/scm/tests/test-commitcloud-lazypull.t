@@ -94,9 +94,9 @@ Sync from the second client and `hg unamend` there
   finished in * (glob)
 
   $ tglog
-  o  1: b68dd726c6c6 'feature1 renamed'
+  o  b68dd726c6c6 'feature1 renamed'
   |
-  @  0: d20a80d4def3 'base'
+  @  d20a80d4def3 'base'
   
 
   $ hg up b68dd726c6c6
@@ -107,9 +107,9 @@ Sync from the second client and `hg unamend` there
   pulling '1cf4a5a0e8fc41ef1289e833ebdb22d754c080ac' from 'ssh://user@dummy/server'
 
   $ tglog
-  @  2: 1cf4a5a0e8fc 'feature1'
+  @  1cf4a5a0e8fc 'feature1'
   |
-  o  0: d20a80d4def3 'base'
+  o  d20a80d4def3 'base'
   
 
 (with mutation and visibility, it's not possible to undo the relationship of
@@ -128,11 +128,11 @@ amend, therefore the "has been replaced" message)
   commitcloud: commits synchronized
   finished in * (glob)
   $ tglog
-  @  2: b68dd726c6c6 'feature1 renamed'
+  @  b68dd726c6c6 'feature1 renamed'
   |
-  | x  1: 1cf4a5a0e8fc 'feature1'
+  | x  1cf4a5a0e8fc 'feature1'
   |/
-  o  0: d20a80d4def3 'base'
+  o  d20a80d4def3 'base'
   
 Amend twice, unamend, then unhide
   $ hg up -q 1cf4a5a0e8fc
@@ -141,11 +141,11 @@ Amend twice, unamend, then unhide
   $ hg unamend
   $ hg unhide 74b668b6b779
   $ tglog
-  o  4: 74b668b6b779 'feature1 renamed3'
+  o  74b668b6b779 'feature1 renamed3'
   |
-  | @  3: cb45bbd0ae75 'feature1 renamed2'
+  | @  cb45bbd0ae75 'feature1 renamed2'
   |/
-  o  0: d20a80d4def3 'base'
+  o  d20a80d4def3 'base'
   
   $ P=1 hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'

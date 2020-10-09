@@ -33,17 +33,17 @@ Simple creation and amending of draft commits
   bc066ca12b451d14668c7a3e38757449b7d6a104 draft1 amend1
   $ mkcommit draft2
   $ tglogp --hidden
-  @  5: 467d8aa13aef draft 'draft2'
+  @  467d8aa13aef draft 'draft2'
   |
-  o  4: bc066ca12b45 draft 'draft1 amend1'
+  o  bc066ca12b45 draft 'draft1 amend1'
   |
-  | x  3: ca9d66205aca draft 'draft1'
+  | x  ca9d66205aca draft 'draft1'
   |/
-  o  2: 4f416a252ac8 public 'public2'
+  o  4f416a252ac8 public 'public2'
   |
-  o  1: 175dbab47dcc public 'public1'
+  o  175dbab47dcc public 'public1'
   |
-  o  0: 1e4be0697311 public 'root'
+  o  1e4be0697311 public 'root'
   
   $ hg debugvisibleheads
   467d8aa13aef105d18160ea682d5cf20d8941d06 draft2
@@ -51,15 +51,15 @@ Simple creation and amending of draft commits
   $ hg debugstrip -r . --config amend.safestrip=False
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ tglogp --hidden
-  @  4: bc066ca12b45 draft 'draft1 amend1'
+  @  bc066ca12b45 draft 'draft1 amend1'
   |
-  | x  3: ca9d66205aca draft 'draft1'
+  | x  ca9d66205aca draft 'draft1'
   |/
-  o  2: 4f416a252ac8 public 'public2'
+  o  4f416a252ac8 public 'public2'
   |
-  o  1: 175dbab47dcc public 'public1'
+  o  175dbab47dcc public 'public1'
   |
-  o  0: 1e4be0697311 public 'root'
+  o  1e4be0697311 public 'root'
   
   $ hg debugvisibleheads
   bc066ca12b451d14668c7a3e38757449b7d6a104 draft1 amend1
@@ -69,30 +69,30 @@ Simple creation and amending of draft commits
   rebasing bc066ca12b45 "draft1 amend1"
   rebasing 2ccd7cddaa94 "draft2a"
   $ tglogp
-  @  7: ecfc0c412bb8 draft 'draft2a'
+  @  ecfc0c412bb8 draft 'draft2a'
   |
-  o  6: 96b7359a7ee5 draft 'draft1 amend1'
+  o  96b7359a7ee5 draft 'draft1 amend1'
   |
-  | o  2: 4f416a252ac8 public 'public2'
+  | o  4f416a252ac8 public 'public2'
   |/
-  o  1: 175dbab47dcc public 'public1'
+  o  175dbab47dcc public 'public1'
   |
-  o  0: 1e4be0697311 public 'root'
+  o  1e4be0697311 public 'root'
   
   $ hg debugvisibleheads
   ecfc0c412bb878c3e7b1b3468cae773b473fd3ec draft2a
   $ hg rebase -s . -d 'desc(public2)'
   rebasing ecfc0c412bb8 "draft2a"
   $ tglogp
-  @  8: af54c09bb37d draft 'draft2a'
+  @  af54c09bb37d draft 'draft2a'
   |
-  | o  6: 96b7359a7ee5 draft 'draft1 amend1'
+  | o  96b7359a7ee5 draft 'draft1 amend1'
   | |
-  o |  2: 4f416a252ac8 public 'public2'
+  o |  4f416a252ac8 public 'public2'
   |/
-  o  1: 175dbab47dcc public 'public1'
+  o  175dbab47dcc public 'public1'
   |
-  o  0: 1e4be0697311 public 'root'
+  o  1e4be0697311 public 'root'
   
   $ hg debugvisibleheads
   af54c09bb37da36975b8d482f660f62f95697a35 draft2a
@@ -110,23 +110,23 @@ Add more commits
   $ hg debugmakepublic 'desc(root)'
 
   $ tglogp
-  @    12: 8a541e4b5b52 draft 'merge2'
+  @    8a541e4b5b52 draft 'merge2'
   |\
-  +---o  11: 00c8b0f0741e draft 'merge1'
+  +---o  00c8b0f0741e draft 'merge1'
   | |/
-  | o  10: f3f5679a1c9c draft 'draft4'
+  | o  f3f5679a1c9c draft 'draft4'
   | |
-  | o  9: 5dabc7b08ef9 draft 'draft3'
+  | o  5dabc7b08ef9 draft 'draft3'
   | |
-  | o  8: af54c09bb37d draft 'draft2a'
+  | o  af54c09bb37d draft 'draft2a'
   | |
-  o |  6: 96b7359a7ee5 draft 'draft1 amend1'
+  o |  96b7359a7ee5 draft 'draft1 amend1'
   | |
-  | o  2: 4f416a252ac8 draft 'public2'
+  | o  4f416a252ac8 draft 'public2'
   |/
-  o  1: 175dbab47dcc draft 'public1'
+  o  175dbab47dcc draft 'public1'
   |
-  o  0: 1e4be0697311 public 'root'
+  o  1e4be0697311 public 'root'
   
 Hide and unhide
 
@@ -193,72 +193,72 @@ Stack navigation and rebases
   hint[amend-restack]: descendants of 112478962961 are left behind - use 'hg restack' to rebase them
   hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ tglogm
-  @  5: e60094faeb72 'B amended'
+  @  e60094faeb72 'B amended'
   |
-  | o  4: 9bc730a19041 'E'
+  | o  9bc730a19041 'E'
   | |
-  | o  3: f585351a92f8 'D'
+  | o  f585351a92f8 'D'
   | |
-  | o  2: 26805aba1e60 'C'
+  | o  26805aba1e60 'C'
   | |
-  | x  1: 112478962961 'B'  (Rewritten using amend into e60094faeb72)
+  | x  112478962961 'B'  (Rewritten using amend into e60094faeb72)
   |/
-  o  0: 426bada5c675 'A'
+  o  426bada5c675 'A'
   
   $ hg next --rebase
   rebasing 26805aba1e60 "C"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   [23910a] C
   $ tglogm
-  @  6: 23910a6fe564 'C'
+  @  23910a6fe564 'C'
   |
-  o  5: e60094faeb72 'B amended'
+  o  e60094faeb72 'B amended'
   |
-  | o  4: 9bc730a19041 'E'
+  | o  9bc730a19041 'E'
   | |
-  | o  3: f585351a92f8 'D'
+  | o  f585351a92f8 'D'
   | |
-  | x  2: 26805aba1e60 'C'  (Rewritten using rebase into 23910a6fe564)
+  | x  26805aba1e60 'C'  (Rewritten using rebase into 23910a6fe564)
   | |
-  | x  1: 112478962961 'B'  (Rewritten using amend into e60094faeb72)
+  | x  112478962961 'B'  (Rewritten using amend into e60094faeb72)
   |/
-  o  0: 426bada5c675 'A'
+  o  426bada5c675 'A'
   
   $ hg next --rebase
   rebasing f585351a92f8 "D"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   [1d30cc] D
   $ tglogm
-  @  7: 1d30cc995ea7 'D'
+  @  1d30cc995ea7 'D'
   |
-  o  6: 23910a6fe564 'C'
+  o  23910a6fe564 'C'
   |
-  o  5: e60094faeb72 'B amended'
+  o  e60094faeb72 'B amended'
   |
-  | o  4: 9bc730a19041 'E'
+  | o  9bc730a19041 'E'
   | |
-  | x  3: f585351a92f8 'D'  (Rewritten using rebase into 1d30cc995ea7)
+  | x  f585351a92f8 'D'  (Rewritten using rebase into 1d30cc995ea7)
   | |
-  | x  2: 26805aba1e60 'C'  (Rewritten using rebase into 23910a6fe564)
+  | x  26805aba1e60 'C'  (Rewritten using rebase into 23910a6fe564)
   | |
-  | x  1: 112478962961 'B'  (Rewritten using amend into e60094faeb72)
+  | x  112478962961 'B'  (Rewritten using amend into e60094faeb72)
   |/
-  o  0: 426bada5c675 'A'
+  o  426bada5c675 'A'
   
   $ hg next --rebase
   rebasing 9bc730a19041 "E"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   [ec992f] E
   $ tglogm
-  @  8: ec992ff1fd78 'E'
+  @  ec992ff1fd78 'E'
   |
-  o  7: 1d30cc995ea7 'D'
+  o  1d30cc995ea7 'D'
   |
-  o  6: 23910a6fe564 'C'
+  o  23910a6fe564 'C'
   |
-  o  5: e60094faeb72 'B amended'
+  o  e60094faeb72 'B amended'
   |
-  o  0: 426bada5c675 'A'
+  o  426bada5c675 'A'
   
 
 Undo
@@ -266,67 +266,67 @@ Undo
   $ hg undo
   undone to *, before next --rebase (glob)
   $ tglogm
-  @  7: 1d30cc995ea7 'D'
+  @  1d30cc995ea7 'D'
   |
-  o  6: 23910a6fe564 'C'
+  o  23910a6fe564 'C'
   |
-  o  5: e60094faeb72 'B amended'
+  o  e60094faeb72 'B amended'
   |
-  | o  4: 9bc730a19041 'E'
+  | o  9bc730a19041 'E'
   | |
-  | x  3: f585351a92f8 'D'  (Rewritten using rebase into 1d30cc995ea7)
+  | x  f585351a92f8 'D'  (Rewritten using rebase into 1d30cc995ea7)
   | |
-  | x  2: 26805aba1e60 'C'  (Rewritten using rebase into 23910a6fe564)
+  | x  26805aba1e60 'C'  (Rewritten using rebase into 23910a6fe564)
   | |
-  | x  1: 112478962961 'B'  (Rewritten using amend into e60094faeb72)
+  | x  112478962961 'B'  (Rewritten using amend into e60094faeb72)
   |/
-  o  0: 426bada5c675 'A'
+  o  426bada5c675 'A'
   
   $ hg undo
   undone to *, before next --rebase (glob)
   $ tglogm
-  @  6: 23910a6fe564 'C'
+  @  23910a6fe564 'C'
   |
-  o  5: e60094faeb72 'B amended'
+  o  e60094faeb72 'B amended'
   |
-  | o  4: 9bc730a19041 'E'
+  | o  9bc730a19041 'E'
   | |
-  | o  3: f585351a92f8 'D'
+  | o  f585351a92f8 'D'
   | |
-  | x  2: 26805aba1e60 'C'  (Rewritten using rebase into 23910a6fe564)
+  | x  26805aba1e60 'C'  (Rewritten using rebase into 23910a6fe564)
   | |
-  | x  1: 112478962961 'B'  (Rewritten using amend into e60094faeb72)
+  | x  112478962961 'B'  (Rewritten using amend into e60094faeb72)
   |/
-  o  0: 426bada5c675 'A'
+  o  426bada5c675 'A'
   
   $ hg undo
   undone to *, before next --rebase (glob)
   $ tglogm
-  @  5: e60094faeb72 'B amended'
+  @  e60094faeb72 'B amended'
   |
-  | o  4: 9bc730a19041 'E'
+  | o  9bc730a19041 'E'
   | |
-  | o  3: f585351a92f8 'D'
+  | o  f585351a92f8 'D'
   | |
-  | o  2: 26805aba1e60 'C'
+  | o  26805aba1e60 'C'
   | |
-  | x  1: 112478962961 'B'  (Rewritten using amend into e60094faeb72)
+  | x  112478962961 'B'  (Rewritten using amend into e60094faeb72)
   |/
-  o  0: 426bada5c675 'A'
+  o  426bada5c675 'A'
   
 Also check the obsolete revset is consistent.
   $ tglogm -r "obsolete()"
-  x  1: 112478962961 'B'  (Rewritten using amend into e60094faeb72)
+  x  112478962961 'B'  (Rewritten using amend into e60094faeb72)
   |
   ~
   $ tglogm --hidden -r "obsolete()"
-  x  4: 9bc730a19041 'E'  (Rewritten using rebase into ec992ff1fd78)
+  x  9bc730a19041 'E'  (Rewritten using rebase into ec992ff1fd78)
   |
-  x  3: f585351a92f8 'D'  (Rewritten using rebase into 1d30cc995ea7)
+  x  f585351a92f8 'D'  (Rewritten using rebase into 1d30cc995ea7)
   |
-  x  2: 26805aba1e60 'C'  (Rewritten using rebase into 23910a6fe564)
+  x  26805aba1e60 'C'  (Rewritten using rebase into 23910a6fe564)
   |
-  x  1: 112478962961 'B'  (Rewritten using amend into e60094faeb72)
+  x  112478962961 'B'  (Rewritten using amend into e60094faeb72)
   |
   ~
 
@@ -334,23 +334,23 @@ Unhiding them reveals them as new commits and now the old ones show their relati
 to the new ones.
   $ hg unhide ec992ff1fd78
   $ tglogm
-  o  8: ec992ff1fd78 'E'
+  o  ec992ff1fd78 'E'
   |
-  o  7: 1d30cc995ea7 'D'
+  o  1d30cc995ea7 'D'
   |
-  o  6: 23910a6fe564 'C'
+  o  23910a6fe564 'C'
   |
-  @  5: e60094faeb72 'B amended'
+  @  e60094faeb72 'B amended'
   |
-  | x  4: 9bc730a19041 'E'  (Rewritten using rebase into ec992ff1fd78)
+  | x  9bc730a19041 'E'  (Rewritten using rebase into ec992ff1fd78)
   | |
-  | x  3: f585351a92f8 'D'  (Rewritten using rebase into 1d30cc995ea7)
+  | x  f585351a92f8 'D'  (Rewritten using rebase into 1d30cc995ea7)
   | |
-  | x  2: 26805aba1e60 'C'  (Rewritten using rebase into 23910a6fe564)
+  | x  26805aba1e60 'C'  (Rewritten using rebase into 23910a6fe564)
   | |
-  | x  1: 112478962961 'B'  (Rewritten using amend into e60094faeb72)
+  | x  112478962961 'B'  (Rewritten using amend into e60094faeb72)
   |/
-  o  0: 426bada5c675 'A'
+  o  426bada5c675 'A'
   
 Test that hiddenoverride has no effect on pinning hidden revisions.
   $ cd $TESTTMP
@@ -363,31 +363,31 @@ Test that hiddenoverride has no effect on pinning hidden revisions.
   >   Z
   > EOS
   $ tglogm
-  o  6: a77c932a84af 'F'
+  o  a77c932a84af 'F'
   |
-  o  5: 05eb30556340 'E'
+  o  05eb30556340 'E'
   |
-  o  0: 48b9aae0607f 'Z'
+  o  48b9aae0607f 'Z'
   
   $ hg up -q 917a077edb8d # Update to B
   $ tglogm
-  o  6: a77c932a84af 'F'
+  o  a77c932a84af 'F'
   |
-  o  5: 05eb30556340 'E'
+  o  05eb30556340 'E'
   |
-  | @  2: 917a077edb8d 'B'  (Rewritten using rewrite into a77c932a84af)
+  | @  917a077edb8d 'B'  (Rewritten using rewrite into a77c932a84af)
   | |
-  | x  1: ac2f7407182b 'A'  (Rewritten using rewrite into 05eb30556340)
+  | x  ac2f7407182b 'A'  (Rewritten using rewrite into 05eb30556340)
   |/
-  o  0: 48b9aae0607f 'Z'
+  o  48b9aae0607f 'Z'
   
   $ hg up -q $F
   $ tglogm
-  @  6: a77c932a84af 'F'
+  @  a77c932a84af 'F'
   |
-  o  5: 05eb30556340 'E'
+  o  05eb30556340 'E'
   |
-  o  0: 48b9aae0607f 'Z'
+  o  48b9aae0607f 'Z'
   
 Test that shelve and unshelve work
   $ echo more > file
@@ -399,11 +399,11 @@ Test that shelve and unshelve work
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg st
   $ tglogm
-  @  6: a77c932a84af 'F'
+  @  a77c932a84af 'F'
   |
-  o  5: 05eb30556340 'E'
+  o  05eb30556340 'E'
   |
-  o  0: 48b9aae0607f 'Z'
+  o  48b9aae0607f 'Z'
   
   $ hg prev
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -415,11 +415,11 @@ Test that shelve and unshelve work
   $ hg st
   A file
   $ tglogm
-  o  6: a77c932a84af 'F'
+  o  a77c932a84af 'F'
   |
-  @  5: 05eb30556340 'E'
+  @  05eb30556340 'E'
   |
-  o  0: 48b9aae0607f 'Z'
+  o  48b9aae0607f 'Z'
   
   $ hg prev --clean
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -438,11 +438,11 @@ Test that shelve and unshelve work
   A file
   A other
   $ tglogm
-  o  6: a77c932a84af 'F'
+  o  a77c932a84af 'F'
   |
-  o  5: 05eb30556340 'E'
+  o  05eb30556340 'E'
   |
-  @  0: 48b9aae0607f 'Z'
+  @  48b9aae0607f 'Z'
   
 Test undo of split
   $ cd $TESTTMP
@@ -499,20 +499,20 @@ Test undo of split
   
   Done splitting? [yN] y
   $ tglogm
-  @  4: a30320c497f0 'to-split'
+  @  a30320c497f0 'to-split'
   |
-  o  3: 0a2500cbe503 'to-split'
+  o  0a2500cbe503 'to-split'
   |
-  o  2: 06e40e6ae08c 'to-split'
+  o  06e40e6ae08c 'to-split'
   |
-  o  0: d20a80d4def3 'base'
+  o  d20a80d4def3 'base'
   
   $ hg undo
   undone to *, before split --config ui.interactive=true (glob)
   $ tglogm
-  @  1: 9a8c420e44f2 'to-split'
+  @  9a8c420e44f2 'to-split'
   |
-  o  0: d20a80d4def3 'base'
+  o  d20a80d4def3 'base'
   
 Unamend and Uncommit
   $ cd $TESTTMP
@@ -524,37 +524,37 @@ Unamend and Uncommit
   $ echo 2 > file
   $ hg amend -m commit2
   $ tglogm --hidden
-  @  2: 8e8ec65c0bb7 'commit2'
+  @  8e8ec65c0bb7 'commit2'
   |
-  | x  1: 4c5b9b3e14b9 'commit1'  (Rewritten using amend into 8e8ec65c0bb7)
+  | x  4c5b9b3e14b9 'commit1'  (Rewritten using amend into 8e8ec65c0bb7)
   |/
-  o  0: df4f53cec30a 'base'
+  o  df4f53cec30a 'base'
   
 
   $ hg unamend
   $ tglogm
-  @  1: 4c5b9b3e14b9 'commit1'
+  @  4c5b9b3e14b9 'commit1'
   |
-  o  0: df4f53cec30a 'base'
+  o  df4f53cec30a 'base'
   
   $ tglogm --hidden
-  o  2: 8e8ec65c0bb7 'commit2'
+  o  8e8ec65c0bb7 'commit2'
   |
-  | @  1: 4c5b9b3e14b9 'commit1'  (Rewritten using amend into 8e8ec65c0bb7)
+  | @  4c5b9b3e14b9 'commit1'  (Rewritten using amend into 8e8ec65c0bb7)
   |/
-  o  0: df4f53cec30a 'base'
+  o  df4f53cec30a 'base'
   
 
   $ hg uncommit
   $ tglogm
-  @  0: df4f53cec30a 'base'
+  @  df4f53cec30a 'base'
   
   $ tglogm --hidden
-  o  2: 8e8ec65c0bb7 'commit2'
+  o  8e8ec65c0bb7 'commit2'
   |
-  | x  1: 4c5b9b3e14b9 'commit1'  (Rewritten using amend into 8e8ec65c0bb7)
+  | x  4c5b9b3e14b9 'commit1'  (Rewritten using amend into 8e8ec65c0bb7)
   |/
-  @  0: df4f53cec30a 'base'
+  @  df4f53cec30a 'base'
   
 
 Migration down

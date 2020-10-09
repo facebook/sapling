@@ -262,17 +262,17 @@ newext() {
 }
 
 showgraph() {
-  hg log --graph -T "{rev} {node|short} {desc|firstline}" | sed \$d
+  hg log --graph -T "{node|short} {desc|firstline}" | sed \$d
 }
 
 tglog() {
-  hg log -G -T "{rev}: {node|short} '{desc}' {bookmarks} {branches}" "$@"
+  hg log -G -T "{node|short} '{desc}' {bookmarks}" "$@"
 }
 
 tglogp() {
-  hg log -G -T "{rev}: {node|short} {phase} '{desc}' {bookmarks} {branches}" "$@"
+  hg log -G -T "{node|short} {phase} '{desc}' {bookmarks}" "$@"
 }
 
 tglogm() {
-  hg log -G -T "{rev}: {node|short} '{desc|firstline}' {bookmarks} {join(mutations % '(Rewritten using {operation} into {join(successors % \'{node|short}\', \', \')})', ' ')}" "$@"
+  hg log -G -T "{node|short} '{desc|firstline}' {bookmarks} {join(mutations % '(Rewritten using {operation} into {join(successors % \'{node|short}\', \', \')})', ' ')}" "$@"
 }

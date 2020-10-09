@@ -41,15 +41,15 @@ sh % "echo r2" > "r2"
 sh % "hg ci -Am r2" == "adding r2"
 
 sh % "tglog" == r"""
-    @  4: 225af64d03e6 'r2'
+    @  225af64d03e6 'r2'
     |
-    o  3: 8d0a8c99b309 'r1'
+    o  8d0a8c99b309 'r1'
     |
-    | o  2: 87c180a611f2 'l1'
+    | o  87c180a611f2 'l1'
     |/
-    o  1: 56daeba07f4b 'c2'
+    o  56daeba07f4b 'c2'
     |
-    o  0: e8faad3d03ff 'c1'"""
+    o  e8faad3d03ff 'c1'"""
 # Rebase with no arguments - single revision in source branch:
 
 sh % "hg up -q -C 2"
@@ -57,15 +57,15 @@ sh % "hg up -q -C 2"
 sh % "hg rebase" == 'rebasing 87c180a611f2 "l1"'
 
 sh % "tglog" == r"""
-    @  5: b1152cc99655 'l1'
+    @  b1152cc99655 'l1'
     |
-    o  4: 225af64d03e6 'r2'
+    o  225af64d03e6 'r2'
     |
-    o  3: 8d0a8c99b309 'r1'
+    o  8d0a8c99b309 'r1'
     |
-    o  1: 56daeba07f4b 'c2'
+    o  56daeba07f4b 'c2'
     |
-    o  0: e8faad3d03ff 'c1'"""
+    o  e8faad3d03ff 'c1'"""
 sh % "cd .."
 
 
@@ -90,15 +90,15 @@ sh % "echo r1" > "r1"
 sh % "hg ci -Am r1" == "adding r1"
 
 sh % "tglog" == r"""
-    @  4: 8d0a8c99b309 'r1'
+    @  8d0a8c99b309 'r1'
     |
-    | o  3: 1ac923b736ef 'l2'
+    | o  1ac923b736ef 'l2'
     | |
-    | o  2: 87c180a611f2 'l1'
+    | o  87c180a611f2 'l1'
     |/
-    o  1: 56daeba07f4b 'c2'
+    o  56daeba07f4b 'c2'
     |
-    o  0: e8faad3d03ff 'c1'"""
+    o  e8faad3d03ff 'c1'"""
 # Rebase with no arguments - single revision in target branch:
 
 sh % "hg up -q -C 3"
@@ -108,14 +108,14 @@ sh % "hg rebase" == r'''
     rebasing 1ac923b736ef "l2"'''
 
 sh % "tglog" == r"""
-    @  6: 023181307ed0 'l2'
+    @  023181307ed0 'l2'
     |
-    o  5: 913ab52b43b4 'l1'
+    o  913ab52b43b4 'l1'
     |
-    o  4: 8d0a8c99b309 'r1'
+    o  8d0a8c99b309 'r1'
     |
-    o  1: 56daeba07f4b 'c2'
+    o  56daeba07f4b 'c2'
     |
-    o  0: e8faad3d03ff 'c1'"""
+    o  e8faad3d03ff 'c1'"""
 
 sh % "cd .."

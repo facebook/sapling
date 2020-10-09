@@ -104,13 +104,13 @@ Make commits in the first client, and sync it
   finished in * (glob)
 
   $ tglogp
-  @  3: 44641a2b1a42 draft 'commit3'
+  @  44641a2b1a42 draft 'commit3'
   |
-  o  2: eba3648c3275 draft 'commit2'
+  o  eba3648c3275 draft 'commit2'
   |
-  o  1: 660cb078da57 draft 'commit1'
+  o  660cb078da57 draft 'commit1'
   |
-  o  0: 8b2dca0c8a72 public 'base_commit'
+  o  8b2dca0c8a72 public 'base_commit'
   
 Make sure these commits end up in reversefillerqueue
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "SELECT bundle FROM reversefillerqueue"
@@ -130,13 +130,13 @@ Sync from the second client - the commits should appear
   finished in * (glob)
 
   $ tglogp
-  o  3: 44641a2b1a42 draft 'commit3'
+  o  44641a2b1a42 draft 'commit3'
   |
-  o  2: eba3648c3275 draft 'commit2'
+  o  eba3648c3275 draft 'commit2'
   |
-  o  1: 660cb078da57 draft 'commit1'
+  o  660cb078da57 draft 'commit1'
   |
-  @  0: 8b2dca0c8a72 public 'base_commit'
+  @  8b2dca0c8a72 public 'base_commit'
   
 
 Make commits from the second client and sync it
@@ -165,19 +165,19 @@ On the first client, make a bookmark, then sync - the bookmark and the new commi
   finished in * (glob)
 
   $ tglogp
-  o  6: 58508421158d draft 'commit6'
+  o  58508421158d draft 'commit6'
   |
-  o  5: a1806767adaa draft 'commit5'
+  o  a1806767adaa draft 'commit5'
   |
-  o  4: 15f040cf571c draft 'commit4'
+  o  15f040cf571c draft 'commit4'
   |
-  | @  3: 44641a2b1a42 draft 'commit3'
+  | @  44641a2b1a42 draft 'commit3'
   | |
-  | o  2: eba3648c3275 draft 'commit2'
+  | o  eba3648c3275 draft 'commit2'
   | |
-  | o  1: 660cb078da57 draft 'commit1'
+  | o  660cb078da57 draft 'commit1'
   |/
-  o  0: 8b2dca0c8a72 public 'base_commit' bookmark1
+  o  8b2dca0c8a72 public 'base_commit' bookmark1
   
  
 On the first client rebase the stack
@@ -209,19 +209,19 @@ On the second client sync it
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ tglogp
-  @  9: 8e3f03f8d9db draft 'commit6'
+  @  8e3f03f8d9db draft 'commit6'
   |
-  o  8: fc9e76452973 draft 'commit5'
+  o  fc9e76452973 draft 'commit5'
   |
-  o  7: f0345b3976c9 draft 'commit4'
+  o  f0345b3976c9 draft 'commit4'
   |
-  o  3: 44641a2b1a42 draft 'commit3'
+  o  44641a2b1a42 draft 'commit3'
   |
-  o  2: eba3648c3275 draft 'commit2'
+  o  eba3648c3275 draft 'commit2'
   |
-  o  1: 660cb078da57 draft 'commit1'
+  o  660cb078da57 draft 'commit1'
   |
-  o  0: 8b2dca0c8a72 public 'base_commit' bookmark1
+  o  8b2dca0c8a72 public 'base_commit' bookmark1
   
 
 On the second client hide all draft commits
@@ -242,7 +242,7 @@ On the second client hide all draft commits
   $ hgmn up master_bookmark -q
 
   $ tglogp
-  @  0: 8b2dca0c8a72 public 'base_commit' bookmark1
+  @  8b2dca0c8a72 public 'base_commit' bookmark1
   
 
 On the first client check that all commits were hidden
@@ -254,7 +254,7 @@ On the first client check that all commits were hidden
   $ hgmn up master_bookmark -q
 
   $ tglogp
-  @  0: 8b2dca0c8a72 public 'base_commit' bookmark1
+  @  8b2dca0c8a72 public 'base_commit' bookmark1
   
  
 On the first client make 2 stacks
@@ -265,15 +265,15 @@ On the first client make 2 stacks
   $ mkcommit 'stack 2 second'
 
   $ tglogp
-  @  13: 88d416aed919 draft 'stack 2 second'
+  @  88d416aed919 draft 'stack 2 second'
   |
-  o  12: 77a917e6c3a5 draft 'stack 2 first'
+  o  77a917e6c3a5 draft 'stack 2 first'
   |
-  | o  11: ec61bf312a03 draft 'stack 1 second'
+  | o  ec61bf312a03 draft 'stack 1 second'
   | |
-  | o  10: 8d621fa11677 draft 'stack 1 first'
+  | o  8d621fa11677 draft 'stack 1 first'
   |/
-  o  0: 8b2dca0c8a72 public 'base_commit' bookmark1
+  o  8b2dca0c8a72 public 'base_commit' bookmark1
   
 Make one of the commits public when it shouldn't be.
   $ hgmn debugmakepublic 8d621fa11677
@@ -328,5 +328,5 @@ Clean up
   $ hgmn cloud sync -q
 
   $ tglogp
-  @  0: 8b2dca0c8a72 public 'base_commit' bookmark1
+  @  8b2dca0c8a72 public 'base_commit' bookmark1
   

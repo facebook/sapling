@@ -28,30 +28,30 @@ Restack does topological sort and only rebases "D" once:
   $ hg commit --amend -m B3 -q --no-rebase 2>/dev/null
   $ B3=`hg log -r . -T '{node}'`
   $ showgraph
-  @  6 da1d4fe88e84 B3
+  @  da1d4fe88e84 B3
   |
-  | o  5 ca53c8ceb284 C
+  | o  ca53c8ceb284 C
   | |
-  | x  4 fdcbd16a7d51 B2
+  | x  fdcbd16a7d51 B2
   |/
-  | o  3 f585351a92f8 D
+  | o  f585351a92f8 D
   | |
-  | x  2 26805aba1e60 C
+  | x  26805aba1e60 C
   | |
-  | x  1 112478962961 B
+  | x  112478962961 B
   |/
-  o  0 426bada5c675 A
+  o  426bada5c675 A
   $ hg rebase --restack
   rebasing ca53c8ceb284 "C"
   rebasing f585351a92f8 "D"
   $ showgraph
-  o  8 981f3734c126 D
+  o  981f3734c126 D
   |
-  o  7 bab9c1b0a249 C
+  o  bab9c1b0a249 C
   |
-  @  6 da1d4fe88e84 B3
+  @  da1d4fe88e84 B3
   |
-  o  0 426bada5c675 A
+  o  426bada5c675 A
 
 Restack will only restack the "current" stack and leave other stacks untouched.
 
@@ -84,25 +84,25 @@ Restack will only restack the "current" stack and leave other stacks untouched.
   rebasing 59760668f0e1 "K"
 
   $ showgraph
-  o  15 c97827ce80f6 K
+  o  c97827ce80f6 K
   |
-  | o  14 47528c67632b H
+  | o  47528c67632b H
   | |
-  | | o  13 5cb8c357af9e D
+  | | o  5cb8c357af9e D
   | | |
-  o | |  12 a975bfef72d2 L
+  o | |  a975bfef72d2 L
   | | |
-  | o |  9 889f49cd29f6 G
+  | o |  889f49cd29f6 G
   | | |
-  | | o  7 dc0947a82db8 C
+  | | o  dc0947a82db8 C
   | | |
-  | | | o  3 48b9aae0607f Z
+  | | | o  48b9aae0607f Z
   | | |
-  @ | |  2 02a9ac6a13a6 I
+  @ | |  02a9ac6a13a6 I
    / /
-  o /  1 e8e0a81d950f E
+  o /  e8e0a81d950f E
    /
-  o  0 426bada5c675 A
+  o  426bada5c675 A
 
 
 Restack could resume after resolving merge conflicts.
@@ -147,13 +147,13 @@ Restack could resume after resolving merge conflicts.
   rebasing 4d1ef7d890c5 "G"
 
   $ showgraph
-  o  8 3b00517bf275 G
+  o  3b00517bf275 G
   |
-  | @  7 2282fe522d5c F
+  | @  2282fe522d5c F
   | |
-  o |  4 7fb047a69f22 E
+  o |  7fb047a69f22 E
   | |
-  | o  3 dc0947a82db8 C
+  | o  dc0947a82db8 C
   |/
-  o  0 426bada5c675 A
+  o  426bada5c675 A
 

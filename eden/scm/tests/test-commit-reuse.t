@@ -13,11 +13,11 @@ Test the flag to reuse another commit's message (-M):
   $ hg add afile
   $ hg commit -M $B
   $ tglog
-  @  2: 1c3d011e7c74 'B'
+  @  1c3d011e7c74 'B'
   |
-  o  1: 112478962961 'B'
+  o  112478962961 'B'
   |
-  o  0: 426bada5c675 'A'
+  o  426bada5c675 'A'
   
 Ensure it's incompatible with other flags:
   $ echo 'canada rocks, eh?' > afile

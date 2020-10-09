@@ -83,9 +83,9 @@ Do infinitepush (aka commit cloud) push
   [255]
 
   $ tglogp
-  @  1: 47da8b81097c draft 'new'
+  @  47da8b81097c draft 'new'
   |
-  o  0: 3903775176ed public 'a'
+  o  3903775176ed public 'a'
   
 
 Bookmark push should have been ignored

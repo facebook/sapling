@@ -30,13 +30,13 @@ Create a repo with several bookmarks
   $ hg book W
 
   $ tglog
-  @  3: 41acb9dca9eb 'D' W
+  @  41acb9dca9eb 'D' W
   |
-  | o  2: 49cb3485fa0c 'C' Y Z
+  | o  49cb3485fa0c 'C' Y Z
   | |
-  | o  1: 6c81ed0049f8 'B' X
+  | o  6c81ed0049f8 'B' X
   |/
-  o  0: 1994f17a630e 'A'
+  o  1994f17a630e 'A'
   
 
 Move only rebased bookmarks
@@ -57,25 +57,25 @@ Test deleting divergent bookmarks from dest (issue3685)
   $ hg book -r 'desc(A)' Y@diverge
 
   $ tglog
-  o  3: 41acb9dca9eb 'D' W X@diverge Z@diverge
+  o  41acb9dca9eb 'D' W X@diverge Z@diverge
   |
-  | @  2: 49cb3485fa0c 'C' Y Z
+  | @  49cb3485fa0c 'C' Y Z
   | |
-  | o  1: 6c81ed0049f8 'B' X
+  | o  6c81ed0049f8 'B' X
   |/
-  o  0: 1994f17a630e 'A' Y@diverge
+  o  1994f17a630e 'A' Y@diverge
   
   $ hg rebase -s Y -d 'desc(D)'
   rebasing 49cb3485fa0c "C" (Y Z)
 
   $ tglog
-  @  4: 17fb3faba63c 'C' Y Z
+  @  17fb3faba63c 'C' Y Z
   |
-  o  3: 41acb9dca9eb 'D' W X@diverge
+  o  41acb9dca9eb 'D' W X@diverge
   |
-  | o  1: 6c81ed0049f8 'B' X
+  | o  6c81ed0049f8 'B' X
   |/
-  o  0: 1994f17a630e 'A' Y@diverge
+  o  1994f17a630e 'A' Y@diverge
   
 Do not try to keep active but deleted divergent bookmark
 
@@ -108,13 +108,13 @@ Keep bookmarks to the correct rebased changeset
   rebasing 49cb3485fa0c "C" (Y Z)
 
   $ tglog
-  @  5: 3d5fa227f4b5 'C' Y Z
+  @  3d5fa227f4b5 'C' Y Z
   |
-  o  4: e926fccfa8ec 'B' X
+  o  e926fccfa8ec 'B' X
   |
-  o  3: 41acb9dca9eb 'D' W
+  o  41acb9dca9eb 'D' W
   |
-  o  0: 1994f17a630e 'A'
+  o  1994f17a630e 'A'
   
 
 Keep active bookmark on the correct changeset
@@ -130,13 +130,13 @@ Keep active bookmark on the correct changeset
   rebasing 49cb3485fa0c "C" (Y Z)
 
   $ tglog
-  o  5: 3d5fa227f4b5 'C' Y Z
+  o  3d5fa227f4b5 'C' Y Z
   |
-  @  4: e926fccfa8ec 'B' X
+  @  e926fccfa8ec 'B' X
   |
-  o  3: 41acb9dca9eb 'D' W
+  o  41acb9dca9eb 'D' W
   |
-  o  0: 1994f17a630e 'A'
+  o  1994f17a630e 'A'
   
   $ hg bookmarks
      W                         3:41acb9dca9eb
@@ -167,15 +167,15 @@ rebase --continue with bookmarks present (issue3802)
   $ hg rebase --continue
   rebasing 3d5fa227f4b5 "C" (Y Z)
   $ tglog
-  @  7: 45c0f0ec1203 'C' Y Z
+  @  45c0f0ec1203 'C' Y Z
   |
-  o  6: b0e10b7175fd 'other C'
+  o  b0e10b7175fd 'other C'
   |
-  o  4: e926fccfa8ec 'B' X
+  o  e926fccfa8ec 'B' X
   |
-  o  3: 41acb9dca9eb 'D' W
+  o  41acb9dca9eb 'D' W
   |
-  o  0: 1994f17a630e 'A'
+  o  1994f17a630e 'A'
   
 
 ensure that bookmarks given the names of revset functions can be used
@@ -207,21 +207,21 @@ Bookmark and working parent get moved even if --keep is set (issue5682)
   > EOS
   $ hg up -q $B
   $ tglog
-  o  2: dc0947a82db8 'C'
+  o  dc0947a82db8 'C'
   |
-  | @  1: 112478962961 'B'
+  | @  112478962961 'B'
   |/
-  o  0: 426bada5c675 'A'
+  o  426bada5c675 'A'
   
   $ hg rebase -r $B -d $C --keep
   rebasing 112478962961 "B"
   $ tglog
-  @  3: 9769fc65c4c5 'B'
+  @  9769fc65c4c5 'B'
   |
-  o  2: dc0947a82db8 'C'
+  o  dc0947a82db8 'C'
   |
-  | o  1: 112478962961 'B'
+  | o  112478962961 'B'
   |/
-  o  0: 426bada5c675 'A'
+  o  426bada5c675 'A'
   
 

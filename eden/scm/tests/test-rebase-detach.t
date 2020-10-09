@@ -55,15 +55,15 @@ Rebasing D onto B detaching from C (two commits):
   rebasing 69a34c08022a "E"
 
   $ tglog
-  o  6: ee79e0744528 'E'
+  o  ee79e0744528 'E'
   |
-  o  5: 10530e1d72d9 'D'
+  o  10530e1d72d9 'D'
   |
-  | o  2: dc0947a82db8 'C'
+  | o  dc0947a82db8 'C'
   | |
-  o |  1: 112478962961 'B'
+  o |  112478962961 'B'
   |/
-  o  0: 426bada5c675 'A'
+  o  426bada5c675 'A'
   
   $ hg manifest --rev tip
   A
@@ -91,13 +91,13 @@ Rebasing C onto B using detach (same as not using it):
   rebasing e7b3f00ed42e "D"
 
   $ tglog
-  o  5: 7375f3dbfb0f 'D'
+  o  7375f3dbfb0f 'D'
   |
-  o  4: bbfdd6cb49aa 'C'
+  o  bbfdd6cb49aa 'C'
   |
-  o  1: 112478962961 'B'
+  o  112478962961 'B'
   |
-  o  0: 426bada5c675 'A'
+  o  426bada5c675 'A'
   
   $ hg manifest --rev tip
   A
@@ -165,29 +165,29 @@ Rebasing across null as ancestor
   rebasing 69a34c08022a "E"
 
   $ tglog
-  o  7: e3d0c70d606d 'E'
+  o  e3d0c70d606d 'E'
   |
-  o  6: e9153d36a1af 'D'
+  o  e9153d36a1af 'D'
   |
-  o  5: a7ac28b870a8 'C'
+  o  a7ac28b870a8 'C'
   |
-  o  1: fc2b737bb2e5 'B'
+  o  fc2b737bb2e5 'B'
   
-  o  0: 426bada5c675 'A'
+  o  426bada5c675 'A'
   
   $ hg rebase -d 'desc(B)' -s 'desc(D)'
   rebasing e9153d36a1af "D"
   rebasing e3d0c70d606d "E"
   $ tglog
-  o  9: 2c24e540eccd 'E'
+  o  2c24e540eccd 'E'
   |
-  o  8: 73f786ed52ff 'D'
+  o  73f786ed52ff 'D'
   |
-  | o  5: a7ac28b870a8 'C'
+  | o  a7ac28b870a8 'C'
   |/
-  o  1: fc2b737bb2e5 'B'
+  o  fc2b737bb2e5 'B'
   
-  o  0: 426bada5c675 'A'
+  o  426bada5c675 'A'
   
   $ cd ..
 
@@ -216,21 +216,21 @@ Verify that target is not selected as external rev (issue3085)
   $ echo "J" >> F
   $ hg ci -m "J"
   $ tglog
-  @  7: c6aaf0d259c0 'J'
+  @  c6aaf0d259c0 'J'
   |
-  o    6: 0cfbc7e8faaf 'Merge'
+  o    0cfbc7e8faaf 'Merge'
   |\
-  | o  5: b92d164ad3cb 'I'
+  | o  b92d164ad3cb 'I'
   | |
-  o |  4: 4ea5b230dea3 'H'
+  o |  4ea5b230dea3 'H'
   | |
-  | o  3: c6001eacfde5 'G'
+  | o  c6001eacfde5 'G'
   |/|
-  o |  2: 8908a377a434 'F'
+  o |  8908a377a434 'F'
   | |
-  | o  1: 7fb047a69f22 'E'
+  | o  7fb047a69f22 'E'
   |/
-  o  0: 426bada5c675 'A'
+  o  426bada5c675 'A'
   
   $ hg rebase -s $I -d $H --collapse --config ui.merge=internal:other
   rebasing b92d164ad3cb "I"
@@ -238,19 +238,19 @@ Verify that target is not selected as external rev (issue3085)
   rebasing c6aaf0d259c0 "J"
 
   $ tglog
-  @  8: 65079693dac4 'Collapsed revision
+  @  65079693dac4 'Collapsed revision
   |  * I
   |  * Merge
   |  * J'
-  o  4: 4ea5b230dea3 'H'
+  o  4ea5b230dea3 'H'
   |
-  | o  3: c6001eacfde5 'G'
+  | o  c6001eacfde5 'G'
   |/|
-  o |  2: 8908a377a434 'F'
+  o |  8908a377a434 'F'
   | |
-  | o  1: 7fb047a69f22 'E'
+  | o  7fb047a69f22 'E'
   |/
-  o  0: 426bada5c675 'A'
+  o  426bada5c675 'A'
   
 
   $ hg log --rev tip

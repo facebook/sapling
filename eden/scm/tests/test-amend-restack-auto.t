@@ -154,11 +154,11 @@ amend.autorestack=no-conflict, and mergeable changes (expect restack)
   rebasing ca039b450ae0 "C" (C)
   merging file
   $ showgraph
-  o  4 7ed7d67ad7bf C
+  o  7ed7d67ad7bf C
   |
-  @  3 767372f778c5 B
+  @  767372f778c5 B
   |
-  o  0 426bada5c675 A
+  o  426bada5c675 A
   $ cat file
   0
   1
@@ -225,15 +225,15 @@ amend.autorestack=no-conflict, and conflicting changes (expect cancelled restack
   restacking would create conflicts (hit merge conflicts in file), so you must run it manually
   (run `hg restack` manually to restack this commit's children)
   $ showgraph
-  @  4 3000de962fa1 B
+  @  3000de962fa1 B
   |
-  | o  3 02cc3cc1d010 D
+  | o  02cc3cc1d010 D
   | |
-  | o  2 b6c0d35dc9e9 C
+  | o  b6c0d35dc9e9 C
   | |
-  | x  1 fe14e2b67b65 B
+  | x  fe14e2b67b65 B
   |/
-  o  0 426bada5c675 A
+  o  426bada5c675 A
   $ cat file
   unmergeable!
 
@@ -266,15 +266,15 @@ amend.autorestack=always, and conflicting changes (expect restack)
   $ cat file
   unmergeable!
   $ showgraph
-  @  4 3000de962fa1 B
+  @  3000de962fa1 B
   |
-  | o  3 02cc3cc1d010 D
+  | o  02cc3cc1d010 D
   | |
-  | o  2 b6c0d35dc9e9 C
+  | o  b6c0d35dc9e9 C
   | |
-  | x  1 fe14e2b67b65 B
+  | x  fe14e2b67b65 B
   |/
-  o  0 426bada5c675 A
+  o  426bada5c675 A
 
 Test rebasing children with obsolete children themselves needing a restack.
   $ newrepo
@@ -298,15 +298,15 @@ Test rebasing children with obsolete children themselves needing a restack.
   rebasing ff9eba5e2480 "C2" (C2)
   rebasing 01f26f1a10b2 "D" (D)
   $ showgraph
-  o  9 0a75af8fc6e3 D
+  o  0a75af8fc6e3 D
   |
-  o  8 84f362759e03 C2
+  o  84f362759e03 C2
   |
-  o  7 23018262b14e B
+  o  23018262b14e B
   |
-  @  6 21006be03678 A
+  @  21006be03678 A
   |
-  o  0 48b9aae0607f Z
+  o  48b9aae0607f Z
 
 Test not rebasing unrelated changes. When rebasing X, only X:: are expected to be rebased.
 Rebasing commits outside X:: can be surprising and more easily cause conflicts.
@@ -328,17 +328,17 @@ Rebasing commits outside X:: can be surprising and more easily cause conflicts.
   restacking children automatically (unless they conflict)
   rebasing afb1812f5f28 "D" (D)
   $ showgraph
-  o  7 c9dfcf01df0b D
+  o  c9dfcf01df0b D
   |
-  @  6 1c28c4186c15 B3
+  @  1c28c4186c15 B3
   |
-  | o  4 dbe6ebcaec86 C
+  | o  dbe6ebcaec86 C
   | |
-  | x  2 588f87b965af B1
+  | x  588f87b965af B1
   |/
-  o  1 ac2f7407182b A
+  o  ac2f7407182b A
   |
-  o  0 48b9aae0607f Z
+  o  48b9aae0607f Z
 
 
 Test that invisible children do not trigger auto restack.

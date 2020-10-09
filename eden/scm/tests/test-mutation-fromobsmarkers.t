@@ -51,19 +51,19 @@ The successors and predecessors information should be correct.
 
   $ hg unhide $B
   $ tglogm
-  o  15: 11164ffef7a9 'O'
+  o  11164ffef7a9 'O'
   |
-  o  10: e1beb503e4fb 'G'
+  o  e1beb503e4fb 'G'
   |
-  | x  7: 917a077edb8d 'B'  (Rewritten using rewrite into 69a19cab35b2) (Rewritten using split into e1beb503e4fb, 11164ffef7a9)
+  | x  917a077edb8d 'B'  (Rewritten using rewrite into 69a19cab35b2) (Rewritten using split into e1beb503e4fb, 11164ffef7a9)
   | |
-  | | o  6: 69a19cab35b2 'N'
+  | | o  69a19cab35b2 'N'
   | | |
-  o---+  3: 847007ced9a7 'F'
+  o---+  847007ced9a7 'F'
    / /
-  x /  1: ac2f7407182b 'A'  (Rewritten using rewrite into 69a19cab35b2) (Rewritten using rewrite into 847007ced9a7)
+  x /  ac2f7407182b 'A'  (Rewritten using rewrite into 69a19cab35b2) (Rewritten using rewrite into 847007ced9a7)
   |/
-  o  0: 48b9aae0607f 'Z'
+  o  48b9aae0607f 'Z'
   
   $ hg debugmutation -r $O
    *  11164ffef7a9840cc182930dae0e032875937b6a split by test at 1970-01-01T00:00:01 (split into this and: e1beb503e4fb1cec5df43ac57edfcff177d705ec) from:

@@ -14,11 +14,11 @@
   $ echo 2 > file
   $ hg amend -Aqm commit1-amended
   $ tglogm --hidden
-  @  2: f9719601f84a 'commit1-amended'
+  @  f9719601f84a 'commit1-amended'
   |
-  | x  1: e6c779c67aa9 'commit1'  (Rewritten using amend into f9719601f84a)
+  | x  e6c779c67aa9 'commit1'  (Rewritten using amend into f9719601f84a)
   |/
-  o  0: d20a80d4def3 'base'
+  o  d20a80d4def3 'base'
   
   $ hg log -r 'successors(e6c779c67aa947c951f334f4f312bd2b21d27e55)' -T '{node} {desc}\n' --hidden
   e6c779c67aa947c951f334f4f312bd2b21d27e55 commit1
@@ -32,11 +32,11 @@ Set the phase of the obsolete commit to public, simulating the older version bei
 
 The commit should no longer show up as amended.
   $ tglogm --hidden
-  @  2: f9719601f84a 'commit1-amended'
+  @  f9719601f84a 'commit1-amended'
   |
-  | o  1: e6c779c67aa9 'commit1'
+  | o  e6c779c67aa9 'commit1'
   |/
-  o  0: d20a80d4def3 'base'
+  o  d20a80d4def3 'base'
   
 The predecessor and successor relationship has been removed.
   $ hg log -r 'successors(e6c779c67aa947c951f334f4f312bd2b21d27e55)' -T '{node} {desc}\n' --hidden

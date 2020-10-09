@@ -92,9 +92,9 @@ Do infinitepush (aka commit cloud) push
   received listkey for "bookmarks": 57 bytes
 
   $ tglogp
-  @  1: 47da8b81097c draft 'new'
+  @  47da8b81097c draft 'new'
   |
-  o  0: 3903775176ed public 'a'
+  o  3903775176ed public 'a'
   
 
   $ cd ../repo-pull
@@ -117,9 +117,9 @@ Do infinitepush (aka commit cloud) push
   new
 
   $ tglogp
-  @  1: 47da8b81097c draft 'new'
+  @  47da8b81097c draft 'new'
   |
-  o  0: 3903775176ed public 'a'
+  o  3903775176ed public 'a'
   
 
 Do infinitepush (aka commit cloud) push, to a bookmark
@@ -154,11 +154,11 @@ Do infinitepush (aka commit cloud) push, to a bookmark
   pushing to ssh://user@dummy/repo
   searching for changes
   $ tglogp
-  @  2: 007299f6399f draft 'new2'
+  @  007299f6399f draft 'new2'
   |
-  o  1: 47da8b81097c draft 'new'
+  o  47da8b81097c draft 'new'
   |
-  o  0: 3903775176ed public 'a'
+  o  3903775176ed public 'a'
   
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" 'SELECT name, hg_kind, HEX(changeset_id) FROM bookmarks;'
   master_bookmark|pull_default|E10EC6CD13B1CBCFE2384F64BD37FC71B4BF9CFE21487D2EAF5064C1B3C0B793
@@ -253,11 +253,11 @@ Do infinitepush (aka commit cloud) push, to a bookmark
   new2
 
   $ tglogp
-  @  2: 007299f6399f draft 'new2'
+  @  007299f6399f draft 'new2'
   |
-  o  1: 47da8b81097c draft 'new'
+  o  47da8b81097c draft 'new'
   |
-  o  0: 3903775176ed public 'a'
+  o  3903775176ed public 'a'
   
   $ hg book --remote
      default/master_bookmark   0:3903775176ed
@@ -300,13 +300,13 @@ Pushbackup also works
   commitcloud: backed up 1 commit
 
   $ tglogp
-  @  3: 2cfeca6399fd draft 'newrepo'
+  @  2cfeca6399fd draft 'newrepo'
   |
-  o  2: 007299f6399f draft 'new2'
+  o  007299f6399f draft 'new2'
   |
-  o  1: 47da8b81097c draft 'new'
+  o  47da8b81097c draft 'new'
   |
-  o  0: 3903775176ed public 'a'
+  o  3903775176ed public 'a'
   
 
   $ cd ../repo-pull
@@ -322,13 +322,13 @@ Pushbackup also works
   aa
 
   $ tglogp
-  @  3: 2cfeca6399fd draft 'newrepo'
+  @  2cfeca6399fd draft 'newrepo'
   |
-  o  2: 007299f6399f draft 'new2'
+  o  007299f6399f draft 'new2'
   |
-  o  1: 47da8b81097c draft 'new'
+  o  47da8b81097c draft 'new'
   |
-  o  0: 3903775176ed public 'a'
+  o  3903775176ed public 'a'
   
 
 Pushbackup that pushes only bookmarks
@@ -350,13 +350,13 @@ Pushbackup that pushes only bookmarks
   nothing to back up
 
   $ tglogp
-  @  3: 2cfeca6399fd draft 'newrepo' newbook
+  @  2cfeca6399fd draft 'newrepo' newbook
   |
-  o  2: 007299f6399f draft 'new2'
+  o  007299f6399f draft 'new2'
   |
-  o  1: 47da8b81097c draft 'new'
+  o  47da8b81097c draft 'new'
   |
-  o  0: 3903775176ed public 'a'
+  o  3903775176ed public 'a'
   
 
 Finally, try to push existing commit to a public bookmark
@@ -366,13 +366,13 @@ Finally, try to push existing commit to a public bookmark
   updating bookmark master_bookmark
 
   $ tglogp
-  @  3: 2cfeca6399fd public 'newrepo' newbook
+  @  2cfeca6399fd public 'newrepo' newbook
   |
-  o  2: 007299f6399f public 'new2'
+  o  007299f6399f public 'new2'
   |
-  o  1: 47da8b81097c public 'new'
+  o  47da8b81097c public 'new'
   |
-  o  0: 3903775176ed public 'a'
+  o  3903775176ed public 'a'
   
 
 
@@ -388,13 +388,13 @@ Check phases on another side (for pull command and pull -r)
   added 0 changesets with 0 changes to 0 files
 
   $ tglogp
-  @  3: 2cfeca6399fd public 'newrepo'
+  @  2cfeca6399fd public 'newrepo'
   |
-  o  2: 007299f6399f public 'new2'
+  o  007299f6399f public 'new2'
   |
-  o  1: 47da8b81097c public 'new'
+  o  47da8b81097c public 'new'
   |
-  o  0: 3903775176ed public 'a'
+  o  3903775176ed public 'a'
   
 
   $ hgmn pull
@@ -408,13 +408,13 @@ Check phases on another side (for pull command and pull -r)
   added 0 changesets with 0 changes to 0 files
 
   $ tglogp
-  @  3: 2cfeca6399fd public 'newrepo'
+  @  2cfeca6399fd public 'newrepo'
   |
-  o  2: 007299f6399f public 'new2'
+  o  007299f6399f public 'new2'
   |
-  o  1: 47da8b81097c public 'new'
+  o  47da8b81097c public 'new'
   |
-  o  0: 3903775176ed public 'a'
+  o  3903775176ed public 'a'
   
 
 # Test phases a for stack that is partially public
@@ -438,17 +438,17 @@ Check phases on another side (for pull command and pull -r)
   commitcloud: backed up 1 commit
 
   $ tglogp
-  @  5: eca836c7c651 draft 'change on top of the release'
+  @  eca836c7c651 draft 'change on top of the release'
   |
-  o  4: 500658c138a4 public 'feature release'
+  o  500658c138a4 public 'feature release'
   |
-  | o  3: 2cfeca6399fd public 'newrepo' newbook
+  | o  2cfeca6399fd public 'newrepo' newbook
   | |
-  | o  2: 007299f6399f public 'new2'
+  | o  007299f6399f public 'new2'
   | |
-  | o  1: 47da8b81097c public 'new'
+  | o  47da8b81097c public 'new'
   |/
-  o  0: 3903775176ed public 'a'
+  o  3903775176ed public 'a'
   
  
   $ hg log -r . -T '{node}\n'
@@ -464,17 +464,17 @@ Check phases on another side (for pull command and pull -r)
   added 2 changesets with 0 changes to 0 files
 
   $ tglogp
-  o  5: eca836c7c651 draft 'change on top of the release'
+  o  eca836c7c651 draft 'change on top of the release'
   |
-  o  4: 500658c138a4 public 'feature release'
+  o  500658c138a4 public 'feature release'
   |
-  | @  3: 2cfeca6399fd public 'newrepo'
+  | @  2cfeca6399fd public 'newrepo'
   | |
-  | o  2: 007299f6399f public 'new2'
+  | o  007299f6399f public 'new2'
   | |
-  | o  1: 47da8b81097c public 'new'
+  | o  47da8b81097c public 'new'
   |/
-  o  0: 3903775176ed public 'a'
+  o  3903775176ed public 'a'
   
 
   $ hgmn pull -r test_release_1.0.0
@@ -487,17 +487,17 @@ Check phases on another side (for pull command and pull -r)
   added 0 changesets with 0 changes to 0 files
 
   $ tglogp
-  o  5: eca836c7c651 draft 'change on top of the release'
+  o  eca836c7c651 draft 'change on top of the release'
   |
-  o  4: 500658c138a4 public 'feature release'
+  o  500658c138a4 public 'feature release'
   |
-  | @  3: 2cfeca6399fd public 'newrepo'
+  | @  2cfeca6399fd public 'newrepo'
   | |
-  | o  2: 007299f6399f public 'new2'
+  | o  007299f6399f public 'new2'
   | |
-  | o  1: 47da8b81097c public 'new'
+  | o  47da8b81097c public 'new'
   |/
-  o  0: 3903775176ed public 'a'
+  o  3903775176ed public 'a'
   
  
 
@@ -521,21 +521,21 @@ Test phases with pushrebase
   updating bookmark master_bookmark
 
   $ tglogp
-  o  7: 1708c61178dd public 'new feature on top of master'
+  o  1708c61178dd public 'new feature on top of master'
   |
-  | @  6: f9e4cd522499 draft 'new feature on top of master'
+  | @  f9e4cd522499 draft 'new feature on top of master'
   | |
-  | | o  5: eca836c7c651 draft 'change on top of the release'
+  | | o  eca836c7c651 draft 'change on top of the release'
   | | |
-  | | o  4: 500658c138a4 public 'feature release'
+  | | o  500658c138a4 public 'feature release'
   | |/
-  o |  3: 2cfeca6399fd public 'newrepo' newbook
+  o |  2cfeca6399fd public 'newrepo' newbook
   | |
-  o |  2: 007299f6399f public 'new2'
+  o |  007299f6399f public 'new2'
   | |
-  o |  1: 47da8b81097c public 'new'
+  o |  47da8b81097c public 'new'
   |/
-  o  0: 3903775176ed public 'a'
+  o  3903775176ed public 'a'
   
 
 Repos clean up
@@ -590,49 +590,49 @@ More sophisticated test for phases
   5e59ac0f4dd00fd4d751f9f3663be99df0f4765d backed up
 
   $ tglogp
-  @  23: b9f080ea9500 public 'zzzzz'
+  @  b9f080ea9500 public 'zzzzz'
   |
-  o  22: 6e068f112af8 public 'yyyyy'
+  o  6e068f112af8 public 'yyyyy'
   |
-  o  21: 0ff6f97758ae public 'xxxxx'
+  o  0ff6f97758ae public 'xxxxx'
   |
-  o  20: 8be205326fcf public 'wwwww'
+  o  8be205326fcf public 'wwwww'
   |
-  | o  19: 7d67c7248d48 draft 'zzzz'
+  | o  7d67c7248d48 draft 'zzzz'
   | |
-  | o  18: 859e9fdde968 public 'yyyy'
+  | o  859e9fdde968 public 'yyyy'
   | |
-  | o  17: abe01677f4a6 public 'xxxx'
+  | o  abe01677f4a6 public 'xxxx'
   | |
-  | o  16: 4710fc0238de public 'wwww'
+  | o  4710fc0238de public 'wwww'
   |/
-  | o  15: bf677f20a49d draft 'zzz'
+  | o  bf677f20a49d draft 'zzz'
   | |
-  | o  14: 43db2471732d draft 'yyy'
+  | o  43db2471732d draft 'yyy'
   | |
-  | o  13: f743965444d9 public 'xxx'
+  | o  f743965444d9 public 'xxx'
   | |
-  | o  12: 83da839eb4d2 public 'www'
+  | o  83da839eb4d2 public 'www'
   |/
-  | o  11: 5e59ac0f4dd0 draft 'zz'
+  | o  5e59ac0f4dd0 draft 'zz'
   | |
-  | o  10: 1a4fd3035391 draft 'yy'
+  | o  1a4fd3035391 draft 'yy'
   | |
-  | o  9: c2234433b092 draft 'xx'
+  | o  c2234433b092 draft 'xx'
   | |
-  | o  8: 2ba1f5f6cccd public 'ww'
+  | o  2ba1f5f6cccd public 'ww'
   |/
-  o  7: 1708c61178dd public 'new feature on top of master'
+  o  1708c61178dd public 'new feature on top of master'
   |
-  | o  4: 500658c138a4 public 'feature release'
+  | o  500658c138a4 public 'feature release'
   | |
-  o |  3: 2cfeca6399fd public 'newrepo' newbook
+  o |  2cfeca6399fd public 'newrepo' newbook
   | |
-  o |  2: 007299f6399f public 'new2'
+  o |  007299f6399f public 'new2'
   | |
-  o |  1: 47da8b81097c public 'new'
+  o |  47da8b81097c public 'new'
   |/
-  o  0: 3903775176ed public 'a'
+  o  3903775176ed public 'a'
   
 
   $ cd ../repo-pull

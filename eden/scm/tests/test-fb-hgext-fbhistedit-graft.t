@@ -22,19 +22,19 @@
   >   hg commit -m $x
   > done
   $ tglogp
-  @  6: 1eb7eda15cd7 draft 'f'
+  @  1eb7eda15cd7 draft 'f'
   |
-  o  5: 581a2eefdc84 draft 'e'
+  o  581a2eefdc84 draft 'e'
   |
-  o  4: 331acda6ee00 draft 'd'
+  o  331acda6ee00 draft 'd'
   |
-  | o  3: f9d2e574dc58 draft 'c'
+  | o  f9d2e574dc58 draft 'c'
   | |
-  | o  2: c87fe1ae405f draft 'b'
+  | o  c87fe1ae405f draft 'b'
   | |
-  | o  1: c604726e05fb draft 'a'
+  | o  c604726e05fb draft 'a'
   |/
-  o  0: d20a80d4def3 draft 'base'
+  o  d20a80d4def3 draft 'base'
   
 Use histedit to graft an extra commit into current history
 
@@ -47,21 +47,21 @@ Use histedit to graft an extra commit into current history
   > EOF
 
   $ tglogp
-  @  8: fc9a25c1b8af draft 'c'
+  @  fc9a25c1b8af draft 'c'
   |
-  o  7: efc3ff9af0d1 draft 'e'
+  o  efc3ff9af0d1 draft 'e'
   |
-  | o  6: 1eb7eda15cd7 draft 'f'
+  | o  1eb7eda15cd7 draft 'f'
   | |
-  | x  5: 581a2eefdc84 draft 'e'
+  | x  581a2eefdc84 draft 'e'
   | |
-  | o  4: 331acda6ee00 draft 'd'
+  | o  331acda6ee00 draft 'd'
   | |
-  o |  2: c87fe1ae405f draft 'b'
+  o |  c87fe1ae405f draft 'b'
   | |
-  o |  1: c604726e05fb draft 'a'
+  o |  c604726e05fb draft 'a'
   |/
-  o  0: d20a80d4def3 draft 'base'
+  o  d20a80d4def3 draft 'base'
   
 Try to use histedit to graft a non-existent commit
 
