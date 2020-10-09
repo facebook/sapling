@@ -545,7 +545,7 @@ sh % "hg ci -m to-backout"
 sh % "hg bookmark -i to-backout"
 sh % "hg backout to-backout" == r"""
     reverting A
-    changeset 9:14707ec2ae63 backs out changeset 8:b2fde3ce6adf"""
+    changeset 14707ec2ae63 backs out changeset b2fde3ce6adf"""
 sh % "hg graft to-backout" == r"""
     skipping ancestor revision 8:b2fde3ce6adf
     [255]"""

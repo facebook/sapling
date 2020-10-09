@@ -29,7 +29,7 @@ basic operation
 
   $ hg backout -d '1000 +0800' $C --no-edit
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  changeset 5:d2f56590172c backs out changeset 2:2e4218cf3ee0
+  changeset d2f56590172c backs out changeset 2e4218cf3ee0
 
 backout of backout is as if nothing happened
 
@@ -37,7 +37,7 @@ backout of backout is as if nothing happened
   removing A
   reverting B
   adding C
-  changeset 6:6916acf22814 backs out changeset 5:d2f56590172c
+  changeset 6916acf22814 backs out changeset d2f56590172c
 
 check the changes
 

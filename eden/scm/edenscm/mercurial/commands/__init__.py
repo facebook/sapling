@@ -783,9 +783,7 @@ def _dobackout(ui, repo, node=None, rev=None, **opts):
         return 1
     cmdutil.commitstatus(repo, newnode, branch)
 
-    def nice(node):
-        return "%d:%s" % (repo.changelog.rev(node), short(node))
-
+    nice = short
     ui.status(
         _("changeset %s backs out changeset %s\n")
         % (nice(repo.changelog.tip()), nice(node))
