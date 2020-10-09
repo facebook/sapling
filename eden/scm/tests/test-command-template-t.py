@@ -1969,14 +1969,14 @@ sh % "hg log --template '<changeset author=\"{author|xmlescape}\"/>\n'" == r"""
 
 sh % "hg log --template '{rev}: {children}\\n'" == r"""
     8:  (trailing space)
-    7: 8:209edb6a1848
+    7: 209edb6a1848
     6:  (trailing space)
-    5: 6:f7e5795620e7
-    4: 6:f7e5795620e7
-    3: 4:07fa1db10648 5:13207e5a10d9
-    2: 3:10e46f2dcbf4
-    1: 2:97054abb4ab8
-    0: 1:b608e9d1a3f0"""
+    5: f7e5795620e7
+    4: f7e5795620e7
+    3: 07fa1db10648 13207e5a10d9
+    2: 10e46f2dcbf4
+    1: 97054abb4ab8
+    0: b608e9d1a3f0"""
 
 # Formatnode filter works:
 

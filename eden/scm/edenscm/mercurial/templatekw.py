@@ -377,7 +377,10 @@ def showchildren(**args):
     """List of strings. The children of the changeset."""
     args = args
     ctx = args["ctx"]
-    childrevs = ["%d:%s" % (cctx, cctx) for cctx in ctx.children()]
+    if ctx._repo.ui.plain():
+        childrevs = ["%d:%s" % (cctx, cctx) for cctx in ctx.children()]
+    else:
+        childrevs = ["%s" % cctx for cctx in ctx.children()]
     return showlist("children", childrevs, args, element="child")
 
 
