@@ -27,7 +27,7 @@ test case collision on rename (issue750)
   a
   committing manifest
   committing changelog
-  committed changeset 0:07f4944404050f47db2e5c5071e0e84e7a27bba9
+  committed 07f4944404050f47db2e5c5071e0e84e7a27bba9
 
 Case-changing renames should work:
 
