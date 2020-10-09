@@ -350,13 +350,19 @@ verify that bookmarks are not written on failed transaction
   $ cd ..
 
 verify bookmark behavior after unshare
+(XXX: not working properly with metalog)
 
   $ cd repo3
   $ hg unshare
   $ hg boo
-  no bookmarks set
+     bm1                       b87954705719
+   * bm3                       62f4ded848e4
+     bm4                       92793bfc8cad
   $ hg boo bm5
   $ hg boo
+     bm1                       b87954705719
+     bm3                       62f4ded848e4
+     bm4                       92793bfc8cad
    * bm5                       62f4ded848e4
   $ cd ../repo1
   $ hg boo

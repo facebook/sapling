@@ -424,6 +424,7 @@ def _calcmode(vfs):
 _data = (
     "data meta 00manifest.d 00manifest.i 00changelog.d 00changelog.i"
     " phaseroots obsstore visibleheads"
+    " segments hgcommits mutation metalog"
 )
 
 
@@ -760,6 +761,7 @@ class fncachestore(basicstore):
         d = (
             "data meta dh fncache phaseroots obsstore visibleheads"
             " 00manifest.d 00manifest.i 00changelog.d 00changelog.i"
+            " segments hgcommits mutation metalog"
         )
         return ["requires", "00changelog.i", "store/requires"] + [
             "store/" + f for f in d.split()
