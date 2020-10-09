@@ -354,7 +354,7 @@ where
         if traversed_num % 100 == 0 {
             info!(
                 ctx.logger(),
-                "traversed {} commits while backsyncing, starting from {}",
+                "traversed {} commits while listing unsynced ancestors, starting from {}",
                 traversed_num,
                 start_cs_id
             );
