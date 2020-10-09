@@ -205,15 +205,15 @@ Test that bookmarks are correctly moved.
   $ hg bookmarks -r 'desc(r2)' test2_1
   $ hg bookmarks -r 'desc(r2)' test2_2
   $ hg bookmarks
-     test1                     1:* (glob)
-     test2_1                   2:* (glob)
-     test2_2                   2:* (glob)
+     test1                     66f7d451a68b
+     test2_1                   01241442b3c2
+     test2_2                   01241442b3c2
   $ hg fold --exact 1 2
   2 changesets folded
   $ hg bookmarks
-     test1                     3:* (glob)
-     test2_1                   3:* (glob)
-     test2_2                   3:* (glob)
+     test1                     ea7cac362d6c
+     test2_1                   ea7cac362d6c
+     test2_2                   ea7cac362d6c
 
 Test JSON output
   $ reset

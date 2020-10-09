@@ -313,8 +313,8 @@ Test that bookmarks are correctly moved.
   $ hg book test1
   $ hg book test2
   $ hg bookmarks
-     test1                     0:* (glob)
-   * test2                     0:* (glob)
+     test1                     c20cc4d302fc
+   * test2                     c20cc4d302fc
   $ hg split << EOF
   > y
   > y
@@ -344,8 +344,8 @@ Test that bookmarks are correctly moved.
   |
   o  5a5595e342b1 add a1 and a2
   $ hg bookmarks
-     test1                     2:* (glob)
-   * test2                     2:* (glob)
+     test1                     a265b3c6c419
+   * test2                     a265b3c6c419
 
 Test the hint for Phabricator Diffs being duplicated
   $ cd ..

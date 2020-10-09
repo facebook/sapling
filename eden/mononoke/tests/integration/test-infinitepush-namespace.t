@@ -221,9 +221,9 @@ Check everything is as expected
   adding file changes
   added 1 changesets with 0 changes to 0 files
   $ hg bookmarks --remote
-     default/master_bookmark   0:3903775176ed
-     default/plain/123         1:47da8b81097c
-     default/plain/456         1:47da8b81097c
+     default/master_bookmark   3903775176ed
+     default/plain/123         47da8b81097c
+     default/plain/456         47da8b81097c
   $ hgmn bookmarks --list-remote "*"
      infinitepush1/123         47da8b81097c5534f3eb7947a8764dd323cffe3d
      infinitepush1/456         47da8b81097c5534f3eb7947a8764dd323cffe3d

@@ -13,12 +13,12 @@ https://bz.mercurial-scm.org/1877
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg book main
   $ hg book
-   * main                      0:cb9a9f314b8b
+   * main                      cb9a9f314b8b
   $ echo c > c
   $ hg add c
   $ hg ci -m'c'
   $ hg book
-   * main                      2:d36c0562f908
+   * main                      d36c0562f908
   $ hg heads
   commit:      d36c0562f908
   bookmark:    main
@@ -38,9 +38,9 @@ https://bz.mercurial-scm.org/1877
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg book
-     main                      2:d36c0562f908
+     main                      d36c0562f908
   $ hg ci -m'merge'
   $ hg book
-     main                      2:d36c0562f908
+     main                      d36c0562f908
 
   $ cd ..

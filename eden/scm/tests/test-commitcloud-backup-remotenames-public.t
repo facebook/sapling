@@ -79,8 +79,8 @@ Pull to get remote names
   searching for changes
   no changes found
   $ hg book --remote
-     default/master            3:05fb75d88dcd
-     default/remotebook        0:b75a450e74d5
+     default/master            05fb75d88dcd
+     default/remotebook        b75a450e74d5
 
 Strip public commits from the repo, otherwise fastheaddiscovery heuristic will
 be skipped
@@ -102,8 +102,8 @@ Download scratch commit. It also downloads a few public commits
   o  first
   
   $ hg book --remote
-     default/master            3:05fb75d88dcd
-     default/remotebook        0:b75a450e74d5
+     default/master            05fb75d88dcd
+     default/remotebook        b75a450e74d5
 
 Run cloud backup and make sure only scratch commits are backed up.
   $ hg cloud backup

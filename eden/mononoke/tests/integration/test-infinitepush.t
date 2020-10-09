@@ -260,8 +260,8 @@ Do infinitepush (aka commit cloud) push, to a bookmark
   o  3903775176ed public 'a'
   
   $ hg book --remote
-     default/master_bookmark   0:3903775176ed
-     default/scratch/123       2:007299f6399f
+     default/master_bookmark   3903775176ed
+     default/scratch/123       007299f6399f
 
 Pushbackup also works
   $ cd ../repo-push

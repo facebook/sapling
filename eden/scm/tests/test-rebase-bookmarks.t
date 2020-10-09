@@ -90,10 +90,10 @@ Do not try to keep active but deleted divergent bookmark
   rebasing 41acb9dca9eb "D" (W)
 
   $ hg bookmarks
-     W                         4:0d3554f74897
-     X                         1:6c81ed0049f8
-     Y                         2:49cb3485fa0c
-     Z                         2:49cb3485fa0c
+     W                         0d3554f74897
+     X                         6c81ed0049f8
+     Y                         49cb3485fa0c
+     Z                         49cb3485fa0c
 
 Keep bookmarks to the correct rebased changeset
 
@@ -139,10 +139,10 @@ Keep active bookmark on the correct changeset
   o  1994f17a630e 'A'
   
   $ hg bookmarks
-     W                         3:41acb9dca9eb
-   * X                         4:e926fccfa8ec
-     Y                         5:3d5fa227f4b5
-     Z                         5:3d5fa227f4b5
+     W                         41acb9dca9eb
+   * X                         e926fccfa8ec
+     Y                         3d5fa227f4b5
+     Z                         3d5fa227f4b5
 
 rebase --continue with bookmarks present (issue3802)
 

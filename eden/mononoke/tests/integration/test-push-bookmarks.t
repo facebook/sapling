@@ -56,8 +56,8 @@ Pull the bookmark
 
   $ hgmn pull -q
   $ hg book --remote
-     default/master_bookmark   0:0e7ec5675652
-     default/withbook          1:11f53bbd855a
+     default/master_bookmark   0e7ec5675652
+     default/withbook          11f53bbd855a
 
 Update the bookmark
   $ cd ../repo-push
@@ -70,8 +70,8 @@ Update the bookmark
   $ cd ../repo-pull
   $ hgmn pull -q
   $ hg book --remote
-     default/master_bookmark   0:0e7ec5675652
-     default/withbook          2:66b9c137712a
+     default/master_bookmark   0e7ec5675652
+     default/withbook          66b9c137712a
 
 Try non fastforward moves (backwards and across branches)
   $ cd ../repo-push
@@ -156,8 +156,8 @@ Try non fastforward moves (backwards and across branches)
   $ cd ../repo-pull
   $ hgmn pull -q
   $ hg book --remote
-     default/master_bookmark   3:a075b5221b92
-     default/withbook          0:0e7ec5675652
+     default/master_bookmark   a075b5221b92
+     default/withbook          0e7ec5675652
 
 Try non fastfoward moves on regex bookmark
   $ hgmn push -r a075b5221b92 --to ffonly_bookmark --create -q
@@ -240,5 +240,5 @@ Delete the bookmark
   $ hgmn pull -q
   devel-warn: applied empty changegroup * (glob)
   $ hg book --remote
-     default/ffonly_bookmark   3:a075b5221b92
-     default/master_bookmark   3:a075b5221b92
+     default/ffonly_bookmark   a075b5221b92
+     default/master_bookmark   a075b5221b92

@@ -261,7 +261,7 @@ clone bookmarks
 
   $ hg -R local bookmark test
   $ hg -R local bookmarks
-   * test                      0:08b9e9f63b32
+   * test                      08b9e9f63b32
   $ hg clone local ssh://user@dummy/remote-bookmarks
   searching for changes
   exporting bookmark test
@@ -270,4 +270,4 @@ clone bookmarks
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
   $ hg -R remote-bookmarks bookmarks
-     test                      0:08b9e9f63b32
+     test                      08b9e9f63b32

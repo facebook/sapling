@@ -3878,7 +3878,7 @@ sh % "hg log -r0 --style ./tmpl" == "nothing expanded:"
 
 # Aliases in formatter:
 
-sh % "hg bookmarks -T '{pad(bookmark, 7)} {rn}\\n'" == "foo     4:07fa1db10648"
+sh % "hg bookmarks -T '{pad(bookmark, 7)} {rn}\\n'" == "foo     :07fa1db10648"
 
 # Aliases should honor HGPLAIN:
 

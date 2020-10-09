@@ -21,10 +21,10 @@ sh % "hg bookmark -r 7db39547e641 test"
 sh % "hg update test" == r"""
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved
     (activating bookmark test)"""
-sh % "hg bookmarks" == " * test                      5:7db39547e641"
+sh % "hg bookmarks" == " * test                      7db39547e641"
 sh % "hg bookmark -i test"
 sh % "hg update --inactive test" == "0 files updated, 0 files merged, 0 files removed, 0 files unresolved"
-sh % "hg bookmarks" == "   test                      5:7db39547e641"
+sh % "hg bookmarks" == "   test                      7db39547e641"
 sh % "hg bookmark -r 09bb8c08de89 test2"
 sh % "hg update test" == r"""
     0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -33,9 +33,9 @@ sh % "hg update --inactive test2" == r"""
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved
     (leaving bookmark test)"""
 sh % "hg bookmarks" == r"""
-       test                      5:7db39547e641
-       test2                     1:09bb8c08de89"""
+    test                      7db39547e641
+    test2                     09bb8c08de89"""
 sh % "hg update --inactive test" == "1 files updated, 0 files merged, 0 files removed, 0 files unresolved"
 sh % "hg bookmarks" == r"""
-       test                      5:7db39547e641
-       test2                     1:09bb8c08de89"""
+    test                      7db39547e641
+    test2                     09bb8c08de89"""

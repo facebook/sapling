@@ -116,8 +116,8 @@ test bookmark support
   $ hg bookmark Y
   $ hg bookmark Z
   $ hg bookmarks
-     Y                         0:cb9a9f314b8b
-   * Z                         0:cb9a9f314b8b
+     Y                         cb9a9f314b8b
+   * Z                         cb9a9f314b8b
   $ hg id
   cb9a9f314b8b+ Y/Z
   $ hg id --bookmarks

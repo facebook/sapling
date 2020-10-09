@@ -189,16 +189,16 @@ sh % "hg bookmark -r '.^' b1" == ""
 sh % "hg bookmark -r '.' b2" == ""
 sh % "hg bookmark ba"
 sh % "hg bookmarks" == r"""
-    b1                        13:b35060a57a50
-      b2                        14:946e4bc87915
-    * ba                        14:946e4bc87915"""
+    b1                        b35060a57a50
+      b2                        946e4bc87915
+    * ba                        946e4bc87915"""
 sh % "sedi s/insert/INSERT/ a"
 sh % "hg absorb -aq"
 sh % "hg status"
 sh % "hg bookmarks" == r"""
-    b1                        15:a4183e9b3d31
-      b2                        16:c9b20c925790
-    * ba                        16:c9b20c925790"""
+    b1                        a4183e9b3d31
+      b2                        c9b20c925790
+    * ba                        c9b20c925790"""
 
 # Non-mofified files are ignored:
 

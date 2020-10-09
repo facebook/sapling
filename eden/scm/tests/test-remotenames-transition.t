@@ -70,16 +70,16 @@ Test transition bookmark deletion
   $ hg book notdeleted
   $ hg book master
   $ hg bookmarks
-   * master                    1:d2ae7f538514
-     notdeleted                1:d2ae7f538514
-     stable                    0:cb9a9f314b8b
+   * master                    d2ae7f538514
+     notdeleted                d2ae7f538514
+     stable                    cb9a9f314b8b
   $ setglobalconfig remotenames.transitionbookmarks="master, stable, other"
   $ hg pull
   pulling from $TESTTMP/repo1 (glob)
   searching for changes
   no changes found
   $ hg bookmarks
-     notdeleted                1:d2ae7f538514
+     notdeleted                d2ae7f538514
 
 Test message
   $ hg dbsh -c 'with repo.lock(), repo.transaction("tr"): repo.svfs.writeutf8("remotenames","")'

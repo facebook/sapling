@@ -36,7 +36,7 @@ Clone server and enable remotenames
   $ cd client
   $ enable remotenames
   $ hg book --remote
-     default/scratch/serverbook 0:ac312cb08db5
+     default/scratch/serverbook ac312cb08db5
 
 Push scratch commit and scratch bookmark
   $ mkcommit scratchcommitwithremotenames
@@ -46,8 +46,8 @@ Push scratch commit and scratch bookmark
   remote: pushing 1 commit:
   remote:     620472ff5c0c  scratchcommitwithremotenames
   $ hg book --remote
-     default/scratch/mybranch  1:620472ff5c0c
-     default/scratch/serverbook 0:ac312cb08db5
+     default/scratch/mybranch  620472ff5c0c
+     default/scratch/serverbook ac312cb08db5
   $ hg book
   no bookmarks set
   $ hg -R ../repo log -G
@@ -68,7 +68,7 @@ Clone server one more time and pull scratch bookmark. Make sure it is remote
   $ cd client2
   $ enable remotenames
   $ hg book --remote
-     default/scratch/serverbook 0:ac312cb08db5
+     default/scratch/serverbook ac312cb08db5
   $ hg pull -B scratch/mybranch
   pulling from ssh://user@dummy/repo
   searching for changes
@@ -77,8 +77,8 @@ Clone server one more time and pull scratch bookmark. Make sure it is remote
   adding file changes
   added 1 changesets with 1 changes to 1 files
   $ hg book --remote
-     default/scratch/mybranch  1:620472ff5c0c
-     default/scratch/serverbook 0:ac312cb08db5
+     default/scratch/mybranch  620472ff5c0c
+     default/scratch/serverbook ac312cb08db5
   $ hg book
   no bookmarks set
 
@@ -88,8 +88,8 @@ Make sure that next non-scratch pull doesn't override remote scratch bookmarks
   searching for changes
   no changes found
   $ hg book --remote
-     default/scratch/mybranch  1:620472ff5c0c
-     default/scratch/serverbook 0:ac312cb08db5
+     default/scratch/mybranch  620472ff5c0c
+     default/scratch/serverbook ac312cb08db5
   $ cd ..
 
 Create one more branch head on the server
@@ -146,9 +146,9 @@ Push from another client, make sure that push doesn't override scratch bookmarks
   remote: pushing 1 commit:
   remote:     36667a3f76e4  newscratch
   $ hg book --remote
-     default/scratch/mybranch  1:620472ff5c0c
-     default/scratch/secondbranch 2:36667a3f76e4
-     default/scratch/serverbook 0:ac312cb08db5
+     default/scratch/mybranch  620472ff5c0c
+     default/scratch/secondbranch 36667a3f76e4
+     default/scratch/serverbook ac312cb08db5
   $ hg book
   no bookmarks set
 

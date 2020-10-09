@@ -57,16 +57,16 @@ Bookmark-only pushrebase (Create a new bookmark, do not push commits)
   exporting bookmark master_bookmark_2
   $ hg book --all
   no bookmarks set
-     default/master_bookmark   2:ce81c7d38286
-     default/master_bookmark_2 1:11f848659bfc
+     default/master_bookmark   ce81c7d38286
+     default/master_bookmark_2 11f848659bfc
 -- this is not a `common_pushrebase_bookmark`, so should be prefixed
   $ cd "$TESTTMP/large-hg-client"
   $ REPONAME=large-mon hgmn pull -q
   devel-warn: applied empty changegroup at: * (glob)
   $ hg book --all
   no bookmarks set
-     default/bookprefix/master_bookmark_2 2:bfcfb674663c
-     default/master_bookmark   3:819e91b238b7
+     default/bookprefix/master_bookmark_2 bfcfb674663c
+     default/master_bookmark   819e91b238b7
 - compare the working copies
   $ verify_wc bookprefix/master_bookmark_2
 
@@ -76,13 +76,13 @@ Delete a bookmark
   deleting remote bookmark master_bookmark_2
   $ hg book --all
   no bookmarks set
-     default/master_bookmark   2:ce81c7d38286
+     default/master_bookmark   ce81c7d38286
   $ cd "$TESTTMP/large-hg-client"
   $ REPONAME=large-mon hgmn pull -q
   devel-warn: applied empty changegroup at: * (glob)
   $ hg book --all
   no bookmarks set
-     default/master_bookmark   3:819e91b238b7
+     default/master_bookmark   819e91b238b7
 
 Normal pushrebase with many commits
   $ cd "$TESTTMP/small-hg-client"

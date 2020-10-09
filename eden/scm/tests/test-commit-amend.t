@@ -241,8 +241,8 @@ Moving bookmarks, preserve active bookmark:
   $ hg book
    transaction abort! (?)
    rollback completed (?)
-   * book1                     1:919d9f835a8e
-     book2                     1:919d9f835a8e
+   * book1                     919d9f835a8e
+     book2                     919d9f835a8e
 
 abort does not loose bookmarks
 (note: with fsmonitor, transaction started before checking commit message)

@@ -33,8 +33,8 @@ initialize repository
 bookmark list
 
   $ hg bookmark
-     one                       1:925d80f479bb
-   * two                       3:2ae46b1d99a7
+     one                       925d80f479bb
+   * two                       2ae46b1d99a7
 
 rebase
 
@@ -82,9 +82,9 @@ aborted rebase should restore active bookmark.
   $ hg rebase --abort
   rebase aborted
   $ hg bookmark
-     one                       1:925d80f479bb
-   * three                     5:dd7c838e8362
-     two                       4:42e5ed2cdcf4
+     one                       925d80f479bb
+   * three                     dd7c838e8362
+     two                       42e5ed2cdcf4
 
 after aborted rebase, restoring a bookmark that has been removed should not fail
 
@@ -98,5 +98,5 @@ after aborted rebase, restoring a bookmark that has been removed should not fail
   $ hg rebase --abort
   rebase aborted
   $ hg bookmark
-     one                       1:925d80f479bb
-     two                       4:42e5ed2cdcf4
+     one                       925d80f479bb
+     two                       42e5ed2cdcf4

@@ -131,7 +131,7 @@ Check correctness:
 
 Bookmark stays active after --continue
   $ hg bookmarks
-   * mybook                    8:d67b21408fc0
+   * mybook                    d67b21408fc0
 
   $ cd ..
 

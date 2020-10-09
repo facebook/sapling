@@ -149,7 +149,7 @@ Set up client repo
   $ cd rnclient
   $ hg book --all
   no bookmarks set
-     default/rbook             0:1f0dee641bb7
+     default/rbook             1f0dee641bb7
   $ cd ..
 
 Advance a server bookmark to an unknown commit and create a new server bookmark
@@ -161,8 +161,8 @@ creation of a new one (locally unknonw).
   moving bookmark 'rbook' forward from 1f0dee641bb7
   $ hg book -r 'max(desc(add))' rbook2
   $ hg book
-     rbook                     1:7c3bad9141dc
-     rbook2                    1:7c3bad9141dc
+     rbook                     7c3bad9141dc
+     rbook2                    7c3bad9141dc
   $ cd ..
 
 Force client to get data about new bookmarks without getting commits
@@ -174,7 +174,7 @@ Force client to get data about new bookmarks without getting commits
   [1]
   $ hg book --all
   no bookmarks set
-     default/rbook             0:1f0dee641bb7
+     default/rbook             1f0dee641bb7
   $ hg update rbook
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

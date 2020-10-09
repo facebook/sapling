@@ -936,14 +936,17 @@ def _printbookmarks(ui, repo, bmarks, **opts):
             fm.plain(" %s " % prefix, label=label)
         fm.write("bookmark", "%s", bmark, label=label)
         pad = " " * (25 - encoding.colwidth(bmark))
-        fm.condwrite(
-            not ui.quiet,
-            "rev node",
-            pad + " %d:%s",
-            repo.changelog.rev(n),
-            hexfn(n),
-            label=label,
-        )
+        if ui.plain():
+            fm.condwrite(
+                not ui.quiet,
+                "rev node",
+                pad + " %d:%s",
+                repo.changelog.rev(n),
+                hexfn(n),
+                label=label,
+            )
+        else:
+            fm.condwrite(not ui.quiet, "node", pad + " %s", hexfn(n), label=label)
         fm.data(active=(activebookmarklabel in label))
         fm.plain("\n")
     fm.end()

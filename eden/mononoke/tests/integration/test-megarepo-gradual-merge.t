@@ -59,9 +59,9 @@ setup hg server repo
   o  426bada5c675 A
   
   $ hg book
-     head_bookmark             2:26805aba1e60
-     last_deletion_commit      7:c5d76fe4f0c0
-     pre_deletion_commit       5:0069ba24938a
+     head_bookmark             26805aba1e60
+     last_deletion_commit      c5d76fe4f0c0
+     pre_deletion_commit       0069ba24938a
 
   $ cd .. 
   $ blobimport repo-hg/.hg repo

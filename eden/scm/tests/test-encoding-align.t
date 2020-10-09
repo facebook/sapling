@@ -122,6 +122,6 @@ add bookmarks
 check alignment of bookmarks
 
   $ hg book
-     MIDDLE_                   2:64a70663cee8
-     \xe7\x9f\xad\xe5\x90\x8d                      2:64a70663cee8 (esc)
-   * \xe9\x95\xb7\xe3\x81\x84\xe9\x95\xb7\xe3\x81\x84\xe5\x90\x8d\xe5\x89\x8d              2:64a70663cee8 (esc)
+     MIDDLE_                   64a70663cee8
+     \xe7\x9f\xad\xe5\x90\x8d                      64a70663cee8 (esc)
+   * \xe9\x95\xb7\xe3\x81\x84\xe9\x95\xb7\xe3\x81\x84\xe5\x90\x8d\xe5\x89\x8d              64a70663cee8 (esc)

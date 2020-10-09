@@ -275,18 +275,18 @@ Bookmark-only pushrebase (Create a new bookmark, do not push commits)
   exporting bookmark master_bookmark_2
   $ hg book --all
   no bookmarks set
-     default/master_bookmark   2:6989db12d1e5
-     default/master_bookmark_2 1:680aaf36d7a2
-     default/master_bookmark_non_fast_forward 3:161addaa86c7
+     default/master_bookmark   6989db12d1e5
+     default/master_bookmark_2 680aaf36d7a2
+     default/master_bookmark_non_fast_forward 161addaa86c7
 -- this is not a `common_pushrebase_bookmark`, so should be prefixed
   $ cd "$TESTTMP/large-hg-client"
   $ REPONAME=large-mon hgmn pull -q
   devel-warn: applied empty changegroup at: * (glob)
   $ hg book --all
   no bookmarks set
-     default/bookprefix1/master_bookmark_2 3:bca7e9574548
-     default/bookprefix1/master_bookmark_non_fast_forward 5:6b6a308437bb
-     default/master_bookmark   6:bf8e8d65212d
+     default/bookprefix1/master_bookmark_2 bca7e9574548
+     default/bookprefix1/master_bookmark_non_fast_forward 6b6a308437bb
+     default/master_bookmark   bf8e8d65212d
 - compare the working copies
   $ verify_wc bookprefix1/master_bookmark_2
 
@@ -296,12 +296,12 @@ Delete a bookmark
   deleting remote bookmark master_bookmark_2
   $ hg book --all
   no bookmarks set
-     default/master_bookmark   2:6989db12d1e5
-     default/master_bookmark_non_fast_forward 3:161addaa86c7
+     default/master_bookmark   6989db12d1e5
+     default/master_bookmark_non_fast_forward 161addaa86c7
   $ cd "$TESTTMP/large-hg-client"
   $ REPONAME=large-mon hgmn pull -q
   devel-warn: applied empty changegroup at: * (glob)
   $ hg book --all
   no bookmarks set
-     default/bookprefix1/master_bookmark_non_fast_forward 5:6b6a308437bb
-     default/master_bookmark   6:bf8e8d65212d
+     default/bookprefix1/master_bookmark_non_fast_forward 6b6a308437bb
+     default/master_bookmark   bf8e8d65212d

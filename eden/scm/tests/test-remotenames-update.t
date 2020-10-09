@@ -38,8 +38,8 @@ Testing update -B feature
   o
   
   $ hg bookmarks -v
-   * bar                       1:661086655130            [foo]
-     foo                       1:661086655130
+   * bar                       661086655130            [foo]
+     foo                       661086655130
 
   $ hg update -B foo bar
   abort: bookmark 'foo' already exists

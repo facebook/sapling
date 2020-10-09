@@ -51,7 +51,7 @@ Push scratch bookmark
   remote: pushing 1 commit:
   remote:     45f7b362ad7c  scratchcommit1
   $ hg book --remote
-     default/scratch/test1     1:45f7b362ad7c
+     default/scratch/test1     45f7b362ad7c
 
 Delete scratch bookmark
   $ hg book -d scratch/test1
@@ -60,7 +60,7 @@ Delete scratch bookmark
 Check regular deletion still works
   $ hg book testlocal1
   $ hg book
-   * testlocal1                1:45f7b362ad7c
+   * testlocal1                45f7b362ad7c
   $ hg book -d testlocal1
   $ hg book
   no bookmarks set
@@ -73,8 +73,8 @@ Test deleting both regular and scratch
   remote:     45f7b362ad7c  scratchcommit1
   $ hg book testlocal2
   $ hg book -a
-   * testlocal2                1:45f7b362ad7c
-     default/scratch/test2     1:45f7b362ad7c
+   * testlocal2                45f7b362ad7c
+     default/scratch/test2     45f7b362ad7c
   $ hg book -d testlocal2 scratch/test2
   $ hg book -a
   no bookmarks set
@@ -100,7 +100,7 @@ Test deleting a nonexistent bookmark with an existing tag that has the right nam
 Test deleting a local bookmark that has a scratch-like name
   $ hg book scratch/thisisalocalbm
   $ hg book
-   * scratch/thisisalocalbm    1:45f7b362ad7c
+   * scratch/thisisalocalbm    45f7b362ad7c
   $ hg book --remote
   $ hg book -d scratch/thisisalocalbm
   $ hg book
@@ -130,7 +130,7 @@ Test scratch bookmarks still pullable
   added 1 changesets with 1 changes to 1 files
   $ hg book -a
   no bookmarks set
-     default/scratch/test1     1:45f7b362ad7c
+     default/scratch/test1     45f7b362ad7c
   $ hg up scratch/test1
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ ls -a
@@ -155,24 +155,24 @@ Create some bookmarks on remote2
   remote:     7601bbca65fd  r2c
   $ hg book local2
   $ hg book -a
-   * local2                    2:7601bbca65fd
-     default/scratch/test1     1:45f7b362ad7c
-     remote2/scratch/realscratch2 2:7601bbca65fd
+   * local2                    7601bbca65fd
+     default/scratch/test1     45f7b362ad7c
+     remote2/scratch/realscratch2 7601bbca65fd
 
 Delete all the things !
   $ hg book -d --remote-path default scratch/test1
   $ hg book -a
-   * local2                    2:7601bbca65fd
-     remote2/scratch/realscratch2 2:7601bbca65fd
+   * local2                    7601bbca65fd
+     remote2/scratch/realscratch2 7601bbca65fd
   $ hg book -d --remote-path nosuchremote scratch/realscratch2
   abort: repository nosuchremote does not exist!
   [255]
   $ hg book -a
-   * local2                    2:7601bbca65fd
-     remote2/scratch/realscratch2 2:7601bbca65fd
+   * local2                    7601bbca65fd
+     remote2/scratch/realscratch2 7601bbca65fd
   $ hg book -d --remote-path remote2 scratch/realscratch2
   $ hg book -a
-   * local2                    2:7601bbca65fd
+   * local2                    7601bbca65fd
   $ hg book -d local2
   $ hg book -a
   no bookmarks set

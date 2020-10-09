@@ -29,8 +29,8 @@ Prepare the client repo
 Verify the commits
 
   $ hg bookmarks --remote
-     remote/master             1:112478962961
-     remote/stable             0:426bada5c675
+     remote/master             112478962961
+     remote/stable             426bada5c675
 
 Revsets after the initial clone
 

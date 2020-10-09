@@ -70,8 +70,8 @@ Pull the other bookmark so we have a subscription.
   pulling from ssh://user@dummy/server
   no changes found
   $ hg book --list-subs
-     remote/master             1:9da34b1aa207
-     remote/other              2:4c8ee072cf16
+     remote/master             9da34b1aa207
+     remote/other              4c8ee072cf16
   $ hg up -q 'desc(base)'
 
 Push to a new public branch
@@ -86,8 +86,8 @@ Push to a new public branch
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
   $ hg book --list-subs
-     remote/master             1:9da34b1aa207
-     remote/other              2:4c8ee072cf16
+     remote/master             9da34b1aa207
+     remote/other              4c8ee072cf16
   $ showgraph
   @  public3: draft
   |
@@ -141,10 +141,10 @@ Create a draft commit and push it to a scratch branch
   $ cd $TESTTMP/client2
   $ hg cloud sync -q
   $ hg book --list-subs
-     remote/created            3:ec1dff19c429
-     remote/master             1:9da34b1aa207
-     remote/other              2:4c8ee072cf16
-     remote/scratch/draft1     4:d860d2fc26c5
+     remote/created            ec1dff19c429
+     remote/master             9da34b1aa207
+     remote/other              4c8ee072cf16
+     remote/scratch/draft1     d860d2fc26c5
   $ showgraph
   o  draft1: draft  remote/scratch/draft1
   |
@@ -192,10 +192,10 @@ Sync in the third repo
   $ cd $TESTTMP/client3
   $ hg cloud sync -q
   $ hg book --list-subs
-     remote/created            3:ec1dff19c429
-     remote/master             1:9da34b1aa207
-     remote/other              2:4c8ee072cf16
-     remote/scratch/draft1     4:d860d2fc26c5
+     remote/created            ec1dff19c429
+     remote/master             9da34b1aa207
+     remote/other              4c8ee072cf16
+     remote/scratch/draft1     d860d2fc26c5
   $ showgraph
   o  draft1: draft  remote/scratch/draft1
   |
@@ -226,8 +226,8 @@ Sync in the first repo
   $ cd $TESTTMP/client1
   $ hg cloud sync -q
   $ hg book --list-subs
-     remote/master             1:9da34b1aa207
-     remote/scratch/draft1     4:d860d2fc26c5
+     remote/master             9da34b1aa207
+     remote/scratch/draft1     d860d2fc26c5
   $ showgraph
   o  public1: public  remote/master
   |
@@ -242,8 +242,8 @@ Sync in the third repo again
   $ cd $TESTTMP/client3
   $ hg cloud sync -q
   $ hg book --list-subs
-     remote/master             1:9da34b1aa207
-     remote/scratch/draft1     4:d860d2fc26c5
+     remote/master             9da34b1aa207
+     remote/scratch/draft1     d860d2fc26c5
   $ showgraph
   @  public1: public  remote/master
   |
@@ -253,8 +253,8 @@ Sync in the third repo again
   pulling from ssh://user@dummy/server
   no changes found
   $ hg book --list-subs
-     remote/master             1:9da34b1aa207
-     remote/scratch/draft1     4:d860d2fc26c5
+     remote/master             9da34b1aa207
+     remote/scratch/draft1     d860d2fc26c5
   $ showgraph
   @  public1: public  remote/master
   |
@@ -269,7 +269,7 @@ Sync in the fourth repo
   finished in * sec (glob)
 
   $ hg book --list-subs
-     remote/master             1:9da34b1aa207
+     remote/master             9da34b1aa207
   $ showgraph
   @  public1: public  remote/master
   |

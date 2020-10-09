@@ -39,8 +39,8 @@ Create a tracking bookmark
   o  a1
   
   $ hg book -v
-     a                         1:fdceb0e57656
-   * b                         2:dea4e1d2ca0e            [a: 1 ahead, 1 behind]
+     a                         fdceb0e57656
+   * b                         dea4e1d2ca0e            [a: 1 ahead, 1 behind]
   $ hg rebase --tool :fail
   rebasing dea4e1d2ca0e "b" (b)
   unresolved conflicts (see hg resolve, then hg rebase --continue)
@@ -58,8 +58,8 @@ Create a tracking bookmark
   o  a1
   
   $ hg book -v
-     a                         1:fdceb0e57656
-   * b                         3:2623fce7de21            [a: 1 ahead, 0 behind]
+     a                         fdceb0e57656
+   * b                         2623fce7de21            [a: 1 ahead, 0 behind]
 
 Test push tracking
 
@@ -161,10 +161,10 @@ Test renaming a remote and tracking
 Test untracking
 
   $ hg book -v
-   * c                         4:e305ab9fea99            [remote/a]
+   * c                         e305ab9fea99            [remote/a]
   $ hg book -u c
   $ hg book -v
-   * c                         4:e305ab9fea99
+   * c                         e305ab9fea99
 
 Test that tracking isn't over-eager on rebase
 
@@ -193,7 +193,7 @@ Test that tracking isn't over-eager on rebase
   o  07199ae38cd5
   
   $ hg bookmarks -v
-   * c                         6:ff58066d17c3            [remote/a: 1 ahead, 2 behind]
+   * c                         ff58066d17c3            [remote/a: 1 ahead, 2 behind]
   $ hg rebase -s .
   abort: no matching bookmark to rebase - please rebase to an explicit rev or bookmark
   (run 'hg heads' to see all heads)
@@ -227,7 +227,7 @@ Test implicit rebase destination
   o  07199ae38cd5
   
   $ hg bookmarks -v
-   * c                         6:ff58066d17c3            [remote/a: 1 ahead, 2 behind]
+   * c                         ff58066d17c3            [remote/a: 1 ahead, 2 behind]
   $ hg rebase
   rebasing ff58066d17c3 "d" (c)
   $ hg log -G -T '{node|short} {bookmarks} {remotebookmarks}\n'
@@ -268,29 +268,29 @@ Test distance to tip calculation
 Test when a local bookmark that was tracking goes missing
 
   $ hg book -v
-   * c                         7:8d13dc14fef1            [remote/a: 1 ahead, 0 behind]
+   * c                         8d13dc14fef1            [remote/a: 1 ahead, 0 behind]
   $ hg book -d c
   $ hg book d
   $ hg book -v
-   * d                         7:8d13dc14fef1
+   * d                         8d13dc14fef1
 
 Test renaming a bookmark with tracking
 
   $ hg book d -t remote/a
   $ hg book -v
-   * d                         7:8d13dc14fef1            [remote/a: 1 ahead, 0 behind]
+   * d                         8d13dc14fef1            [remote/a: 1 ahead, 0 behind]
   $ hg book -m d x
   $ hg book -v
-   * x                         7:8d13dc14fef1            [remote/a: 1 ahead, 0 behind]
+   * x                         8d13dc14fef1            [remote/a: 1 ahead, 0 behind]
 
 Test renaming a bookmark without tracking
 
   $ hg book -u x
   $ hg book -v
-   * x                         7:8d13dc14fef1
+   * x                         8d13dc14fef1
   $ hg book -m x d
   $ hg book -v
-   * d                         7:8d13dc14fef1
+   * d                         8d13dc14fef1
   $ hg book -d d
 
 Test bookmarks with difficult characters
@@ -299,12 +299,12 @@ Test bookmarks with difficult characters
   $ hg book -t remote/b "with	tab too"
   $ hg book -t remote/a "bookmark/with/slashes"
   $ hg book -v
-     bookmark with spaces      7:8d13dc14fef1
-   * bookmark/with/slashes     7:8d13dc14fef1            [remote/a: 1 ahead, 0 behind]
-     with	tab too              7:8d13dc14fef1
+     bookmark with spaces      8d13dc14fef1
+   * bookmark/with/slashes     8d13dc14fef1            [remote/a: 1 ahead, 0 behind]
+     with	tab too              8d13dc14fef1
   $ hg update bookmark/with/slashes
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg book -v
-     bookmark with spaces      7:8d13dc14fef1
-   * bookmark/with/slashes     7:8d13dc14fef1            [remote/a: 1 ahead, 0 behind]
-     with	tab too              7:8d13dc14fef1
+     bookmark with spaces      8d13dc14fef1
+   * bookmark/with/slashes     8d13dc14fef1            [remote/a: 1 ahead, 0 behind]
+     with	tab too              8d13dc14fef1

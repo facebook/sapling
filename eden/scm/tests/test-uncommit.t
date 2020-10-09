@@ -83,13 +83,13 @@ Create some commits
 Simple uncommit off the top, also moves bookmark
 
   $ hg bookmark
-   * foo                       4:6c4fd43ed714
+   * foo                       6c4fd43ed714
   $ hg uncommit
   $ hg status
   M files
   A file-abcde
   $ hg bookmark
-   * foo                       3:6db330d65db4
+   * foo                       6db330d65db4
 
   $ hg log -G -T '{node} {desc}' --hidden
   o  6c4fd43ed714e7fcd8adbaa7b16c953c2e985b60 added file-abcde
@@ -123,12 +123,12 @@ Uncommit of non-existent and unchanged files has no effect
 Try partial uncommit, also moves bookmark
 
   $ hg bookmark
-   * foo                       5:0c07a3ccda77
+   * foo                       0c07a3ccda77
   $ hg uncommit files
   $ hg status
   M files
   $ hg bookmark
-   * foo                       6:3727deee06f7
+   * foo                       3727deee06f7
   $ hg heads -T '{node} {desc}'
   3727deee06f72f5ffa8db792ee299cf39e3e190b new change abcde (no-eol)
   $ hg log -r . -p -T '{node} {desc}'
@@ -200,7 +200,7 @@ Uncommit in the middle of a stack, does not move bookmark
   +abc
   
   $ hg bookmark
-     foo                       9:48e5bd7cd583
+     foo                       48e5bd7cd583
   $ hg uncommit
   $ hg status
   M files
@@ -208,7 +208,7 @@ Uncommit in the middle of a stack, does not move bookmark
   $ hg heads -T '{node} {desc}'
   48e5bd7cd583eb24164ef8b89185819c84c96ed7 files abcde + foo (no-eol)
   $ hg bookmark
-     foo                       9:48e5bd7cd583
+     foo                       48e5bd7cd583
   $ hg commit -m 'new abc'
 
 Partial uncommit in the middle, does not move bookmark
@@ -229,7 +229,7 @@ Partial uncommit in the middle, does not move bookmark
   +ab
   
   $ hg bookmark
-     foo                       9:48e5bd7cd583
+     foo                       48e5bd7cd583
   $ hg uncommit file-ab
   $ hg status
   A file-ab
@@ -240,7 +240,7 @@ Partial uncommit in the middle, does not move bookmark
   48e5bd7cd583eb24164ef8b89185819c84c96ed7 files abcde + foo
 
   $ hg bookmark
-     foo                       9:48e5bd7cd583
+     foo                       48e5bd7cd583
   $ hg commit -m 'update ab'
   $ hg status
   $ hg heads -T '{node} {desc}\n'

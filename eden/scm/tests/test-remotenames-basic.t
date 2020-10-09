@@ -88,24 +88,23 @@ make sure we can list remote bookmarks with --all
 
   $ hg bookmarks --all
   no bookmarks set
-     beta/babar                3:47d2a3944de8
+     beta/babar                47d2a3944de8
 
   $ hg bookmarks --all -T json
   [
    {
     "node": "47d2a3944de8b013de3be9578e8e344ea2e6c097",
-    "remotebookmark": "beta/babar",
-    "rev": 3
+    "remotebookmark": "beta/babar"
    }
   ]
   $ hg bookmarks --remote
-     beta/babar                3:47d2a3944de8
+     beta/babar                47d2a3944de8
 
 Verify missing node doesnt break remotenames
 
   $ echo "18f8e0f8ba54270bf158734c781327581cf43634 bookmarks beta/foo" >> .hg/store/remotenames
   $ hg book --remote --config remotenames.resolvenodes=False
-     beta/babar                3:47d2a3944de8
+     beta/babar                47d2a3944de8
 
 make sure bogus revisions in .hg/store/remotenames do not break hg
   $ echo deadbeefdeadbeefdeadbeefdeadbeefdeadbeef default/default >> \
@@ -223,9 +222,9 @@ Test clone --mirror
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd mirror
   $ hg book
-     bar                       2:4538525df7e2
-     baz                       2:4538525df7e2
-     foo                       2:4538525df7e2
+     bar                       4538525df7e2
+     baz                       4538525df7e2
+     foo                       4538525df7e2
 
 Test custom paths dont override default
   $ cd ..
@@ -241,9 +240,9 @@ Test custom paths dont override default
   adding file changes
   added 3 changesets with 3 changes to 3 files
   $ hg book --remote
-     default/bar               2:4538525df7e2
-     default/baz               2:4538525df7e2
-     default/foo               2:4538525df7e2
+     default/bar               4538525df7e2
+     default/baz               4538525df7e2
+     default/foo               4538525df7e2
 
 
 Test json formatted bookmarks with tracking data
@@ -257,9 +256,8 @@ Test json formatted bookmarks with tracking data
     "active": true,
     "bookmark": "mimimi",
     "node": "0000000000000000000000000000000000000000",
-    "rev": -1,
     "tracking": "lalala"
    }
   ]
   $ hg book -v
-   * mimimi                    -1:000000000000           [lalala]
+   * mimimi                    000000000000           [lalala]

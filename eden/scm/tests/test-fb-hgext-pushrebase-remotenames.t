@@ -121,8 +121,8 @@ Test pushing a new bookmark
   exporting bookmark newbook
   [1]
   $ hg -R server book
-   * master                    2:98d6f1036c3b
-     newbook                   2:98d6f1036c3b
+   * master                    98d6f1036c3b
+     newbook                   98d6f1036c3b
   $ hg -R server log -G -T '"{desc}" {bookmarks}'
   o  "client's commit" master newbook
   |

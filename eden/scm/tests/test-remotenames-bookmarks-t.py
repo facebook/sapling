@@ -25,13 +25,13 @@ sh % "hg commit -m a"
 sh % "hg bookmark a"
 sh % "hg bookmark b"
 sh % "hg bookmark -v" == r"""
-       a                         0:2dcb9139ea49
-     * b                         0:2dcb9139ea49"""
+    a                         2dcb9139ea49
+    * b                         2dcb9139ea49"""
 sh % "hg bookmark --track a"
 sh % "hg bookmark -v" == r"""
-       a                         0:2dcb9139ea49
-     * b                         0:2dcb9139ea49            [a]"""
+    a                         2dcb9139ea49
+    * b                         2dcb9139ea49            [a]"""
 sh % "hg bookmark --untrack"
 sh % "hg bookmark -v" == r"""
-       a                         0:2dcb9139ea49
-     * b                         0:2dcb9139ea49"""
+    a                         2dcb9139ea49
+    * b                         2dcb9139ea49"""

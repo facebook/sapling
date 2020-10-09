@@ -450,12 +450,12 @@ test hg debugstrip -B bookmark
   $ hg id -ir d62d843c9a01
   d62d843c9a01
   $ hg bookmarks
-     B                         9:ff43616e5d0f
-     delete                    6:2702dd0c91e7
-     multipledelete1           11:e46a4836065c
-     multipledelete2           12:b4594d867745
-     singlenode1               13:43227190fef8
-     singlenode2               13:43227190fef8
+     B                         ff43616e5d0f
+     delete                    2702dd0c91e7
+     multipledelete1           e46a4836065c
+     multipledelete2           b4594d867745
+     singlenode1               43227190fef8
+     singlenode2               43227190fef8
   $ hg debugstrip -B multipledelete1 -B multipledelete2
   bookmark 'multipledelete1' deleted
   bookmark 'multipledelete2' deleted
@@ -494,7 +494,7 @@ test hg debugstrip -B bookmark
   abort: local changes found
   [255]
   $ hg bookmarks
-   * B                         6:ff43616e5d0f
+   * B                         ff43616e5d0f
 
 Make sure no one adds back a -b option:
 
@@ -799,28 +799,28 @@ Test high-level scmutil.cleanupnodes API
   o  426bada5c675 A A B C I b-B b-C b-I
   
   $ hg bookmark
-     A                         0:426bada5c675
-     B                         0:426bada5c675
-     C                         0:426bada5c675
-     D                         10:7c78f703e465
-     D2                        10:7c78f703e465
-     E                         4:7fb047a69f22
-     F                         11:d11b3456a873
-     F2                        11:d11b3456a873
-     G                         12:1473d4b996d1
-     G2                        12:1473d4b996d1
-     H                         8:5cb05ba470a7
-     I                         0:426bada5c675
-     Z                         -1:000000000000
-     b-B                       0:426bada5c675
-     b-C                       0:426bada5c675
-     b-D                       10:7c78f703e465
-     b-F                       11:d11b3456a873
-     b-F@divergent1            4:7fb047a69f22
-     b-F@divergent3            12:1473d4b996d1
-     b-G                       12:1473d4b996d1
-     b-I                       0:426bada5c675
-     b-Z                       -1:000000000000
+     A                         426bada5c675
+     B                         426bada5c675
+     C                         426bada5c675
+     D                         7c78f703e465
+     D2                        7c78f703e465
+     E                         7fb047a69f22
+     F                         d11b3456a873
+     F2                        d11b3456a873
+     G                         1473d4b996d1
+     G2                        1473d4b996d1
+     H                         5cb05ba470a7
+     I                         426bada5c675
+     Z                         000000000000
+     b-B                       426bada5c675
+     b-C                       426bada5c675
+     b-D                       7c78f703e465
+     b-F                       d11b3456a873
+     b-F@divergent1            7fb047a69f22
+     b-F@divergent3            1473d4b996d1
+     b-G                       1473d4b996d1
+     b-I                       426bada5c675
+     b-Z                       000000000000
 
 Test the above using obsstore "by the way". Not directly related to strip, but
 we have reusable code here

@@ -170,7 +170,7 @@ The remote repo is empty and the local one doesn't have any bookmarks/tags
   commit: (clean)
 Only one bookmark 'master' should be created
   $ hg bookmarks
-   * master                    0:8aded40be5af
+   * master                    8aded40be5af
 
 test for ssh vulnerability
 

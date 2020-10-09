@@ -84,10 +84,10 @@ Check used remote bookmarks tracking
 
   $ hg pull -q
   $ hg book --list-subscriptions
-     default/A_bookmark        2:01c036b602a8
-     default/B_bookmark        3:5b252c992f6d
-     default/C_bookmark        4:d91e2f962bff
-     default/master            1:206754acf7d8
+     default/A_bookmark        01c036b602a8
+     default/B_bookmark        5b252c992f6d
+     default/C_bookmark        d91e2f962bff
+     default/master            206754acf7d8
 
 ('master' is accessed by changelog to de-fragment the "main branch")
   $ checkaccessedbookmarks
@@ -125,12 +125,12 @@ Add second remote to the paths and update to the first master
   $ setglobalconfig paths.secondremote=ssh://user@dummy/secondremoterepo
   $ hg pull secondremote -q
   $ hg book --list-subscriptions
-     default/A_bookmark        2:01c036b602a8
-     default/B_bookmark        3:5b252c992f6d
-     default/C_bookmark        4:d91e2f962bff
-     default/master            1:206754acf7d8
-     secondremote/D_bookmark   6:a1b1b44a131d
-     secondremote/master       5:a6b4ed81a38e
+     default/A_bookmark        01c036b602a8
+     default/B_bookmark        5b252c992f6d
+     default/C_bookmark        d91e2f962bff
+     default/master            206754acf7d8
+     secondremote/D_bookmark   a1b1b44a131d
+     secondremote/master       a6b4ed81a38e
 
   $ checkaccessedbookmarks
   01c036b602a86df67ef1a00e4b0266d23c8fafee bookmarks default/A_bookmark
@@ -242,12 +242,12 @@ Check selective pull setup using accessed bookmarks
   d91e2f962bffb715a380162e945e6df13bf7aa3c bookmarks default/C_bookmark
   accessedremotenames_totalnum : 1
   $ hg book --list-subs
-     default/A_bookmark        2:01c036b602a8
-     default/B_bookmark        3:5b252c992f6d
-     default/C_bookmark        4:d91e2f962bff
-     default/master            1:206754acf7d8
-     secondremote/D_bookmark   6:a1b1b44a131d
-     secondremote/master       5:a6b4ed81a38e
+     default/A_bookmark        01c036b602a8
+     default/B_bookmark        5b252c992f6d
+     default/C_bookmark        d91e2f962bff
+     default/master            206754acf7d8
+     secondremote/D_bookmark   a1b1b44a131d
+     secondremote/master       a6b4ed81a38e
 
   $ setconfig remotenames.selectivepull=True remotenames.selectivepulldefault=master
   $ hg pull
@@ -258,10 +258,10 @@ Check selective pull setup using accessed bookmarks
   adding file changes
   added 1 changesets with 1 changes to 1 files
   $ hg book --list-subs
-     default/C_bookmark        7:d65ac0c5f8c9
-     default/master            1:206754acf7d8
-     secondremote/D_bookmark   6:a1b1b44a131d
-     secondremote/master       5:a6b4ed81a38e
+     default/C_bookmark        d65ac0c5f8c9
+     default/master            206754acf7d8
+     secondremote/D_bookmark   a1b1b44a131d
+     secondremote/master       a6b4ed81a38e
   $ sort .hg/selectivepullenabled
   default
 
@@ -270,9 +270,9 @@ pulling from the secondremote
   pulling from ssh://user@dummy/secondremoterepo
   no changes found
   $ hg book --list-subs
-     default/C_bookmark        7:d65ac0c5f8c9
-     default/master            1:206754acf7d8
-     secondremote/master       5:a6b4ed81a38e
+     default/C_bookmark        d65ac0c5f8c9
+     default/master            206754acf7d8
+     secondremote/master       a6b4ed81a38e
   $ sort .hg/selectivepullenabled
   default
   secondremote

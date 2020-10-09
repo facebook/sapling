@@ -31,7 +31,7 @@ Load commonly used test logic
 
 we should have some bookmarks
   $ hg -R hgrepo book
-   * master                    1:3bb02b6794dd
+   * master                    3bb02b6794dd
   $ hg -R hgrepo gverify
   verifying rev 3bb02b6794dd against git commit 9497a4ee62e16ee641860d7677cdb2589ea15554
 

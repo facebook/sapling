@@ -103,7 +103,7 @@ sh % "cd ../tt"
 # (1) activating by --rev BOOKMARK
 
 sh % "hg bookmark -f active-before-pull"
-sh % "hg bookmarks" == " * active-before-pull        3:483b76ad4309"
+sh % "hg bookmarks" == " * active-before-pull        483b76ad4309"
 
 sh % "cp -R . $TESTTMP/tt-1"
 sh % "cd $TESTTMP/tt-1"
@@ -121,8 +121,8 @@ sh % "hg pull -u -r active-after-pull" == r"""
 
 sh % "hg parents -q" == "f815b3da6163"
 sh % "hg bookmarks" == r"""
-     * active-after-pull         4:f815b3da6163
-       active-before-pull        3:483b76ad4309"""
+    * active-after-pull         f815b3da6163
+      active-before-pull        483b76ad4309"""
 
 # (discard pulled changes)
 
@@ -131,7 +131,7 @@ sh % "cd $TESTTMP/tt"
 # (2) activating by URL#BOOKMARK
 
 sh % "hg bookmark -f active-before-pull" == ""
-sh % "hg bookmarks" == " * active-before-pull        3:483b76ad4309"
+sh % "hg bookmarks" == " * active-before-pull        483b76ad4309"
 
 sh % "cp -R . $TESTTMP/tt-2"
 sh % "cd $TESTTMP/tt-2"
@@ -149,8 +149,8 @@ sh % "hg pull -u '$TESTTMP/t#active-after-pull'" == r"""
 
 sh % "hg parents -q" == "f815b3da6163"
 sh % "hg bookmarks" == r"""
-     * active-after-pull         4:f815b3da6163
-       active-before-pull        3:483b76ad4309"""
+    * active-after-pull         f815b3da6163
+      active-before-pull        483b76ad4309"""
 
 # (discard pulled changes)
 
@@ -169,7 +169,7 @@ sh % "cd ../tt"
 # (1) deactivating by --rev REV
 
 sh % "hg bookmark -f active-before-pull" == ""
-sh % "hg bookmarks" == " * active-before-pull        3:483b76ad4309"
+sh % "hg bookmarks" == " * active-before-pull        483b76ad4309"
 
 sh % "hg pull -u -r f815b3da6163" == r"""
     pulling from $TESTTMP/t
@@ -182,7 +182,7 @@ sh % "hg pull -u -r f815b3da6163" == r"""
     (leaving bookmark active-before-pull)"""
 
 sh % "hg parents -q" == "f815b3da6163"
-sh % "hg bookmarks" == "   active-before-pull        3:483b76ad4309"
+sh % "hg bookmarks" == "   active-before-pull        483b76ad4309"
 
 # (discard pulled changes)
 

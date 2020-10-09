@@ -1051,29 +1051,29 @@ share =
 [experimnetal]
 evolution=createmarkers
 """ >> "$HGRCPATH"
-sh % "hg bookmarks -R obsrepo" == "   test                      19:a72d63c69876"
+sh % "hg bookmarks -R obsrepo" == "   test                      a72d63c69876"
 sh % "hg share -B obsrepo obsshare" == r"""
     updating working directory
     6 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "cd obsshare"
 
-sh % "hg bookmarks" == "   test                      19:a72d63c69876"
+sh % "hg bookmarks" == "   test                      a72d63c69876"
 sh % "hg bookmarks foo"
 sh % "hg bookmarks" == r"""
-    * foo                       29:47f190a8b2e0
-      test                      19:a72d63c69876"""
+    * foo                       47f190a8b2e0
+      test                      a72d63c69876"""
 sh % "echo x" >> "x"
 sh % "hg shelve" == r"""
     shelved as foo
     1 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "hg bookmarks" == r"""
-    * foo                       29:47f190a8b2e0
-      test                      19:a72d63c69876"""
+    * foo                       47f190a8b2e0
+      test                      a72d63c69876"""
 
 sh % "hg unshelve" == "unshelving change 'foo'"
 sh % "hg bookmarks" == r"""
-    * foo                       29:47f190a8b2e0
-      test                      19:a72d63c69876"""
+    * foo                       47f190a8b2e0
+      test                      a72d63c69876"""
 
 sh % "cd .."
 

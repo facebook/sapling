@@ -149,9 +149,9 @@ Subscribe to a new remote bookmark
   o  root: public
   
   $ hg book --list-subscriptions
-     default/master            5:1b6e90080435
-     default/stable            2:b2bfab231667
-     default/warm              1:b8063fc7de93
+     default/master            1b6e90080435
+     default/stable            b2bfab231667
+     default/warm              b8063fc7de93
 
 the other client should be subscribed to this bookmark as well
   $ cd ../client2
@@ -172,9 +172,9 @@ the other client should be subscribed to this bookmark as well
   o  root: public
   
   $ hg book --list-subscriptions
-     default/master            5:1b6e90080435
-     default/stable            2:b2bfab231667
-     default/warm              1:b8063fc7de93
+     default/master            1b6e90080435
+     default/stable            b2bfab231667
+     default/warm              b8063fc7de93
 
 try to create a commit on top of the default/stable
   $ cd ../client1

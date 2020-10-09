@@ -71,7 +71,7 @@ get things back to hg
   
 gimport should have updated the bookmarks as well
   $ hg bookmarks
-     master                    1:d294862c083a
+     master                    d294862c083a
 
 gimport support for git.mindate
   $ cat >> .hg/hgrc << EOF

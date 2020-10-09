@@ -61,8 +61,8 @@ Test that template can print all file copies (issue4362)
   no changes found
   [1]
   $ hg bookmarks
-     premerge1                 3:973ef48a98a4
-     premerge2                 5:13d9b87cf8f8
+     premerge1                 973ef48a98a4
+     premerge2                 13d9b87cf8f8
 
 Test that redoing a convert results in an identical graph
   $ cd ../

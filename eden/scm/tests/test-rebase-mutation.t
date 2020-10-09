@@ -1422,7 +1422,7 @@ was skipped
   $ hg log -r .
   be1832deae9a b (no-eol)
   $ hg bookmarks
-     mybook                    3:be1832deae9a
+     mybook                    be1832deae9a
   $ hg debugobsolete --rev tip
 
 Obsoleted working parent and bookmark could be moved if an ancestor of working

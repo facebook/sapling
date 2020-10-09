@@ -1225,7 +1225,10 @@ def displaylocalbookmarks(ui, repo, opts, fm):
         pad = " " * (25 - encoding.colwidth(bmark))
         rev = repo.changelog.rev(n)
         h = hexfn(n)
-        fm.condwrite(nq, "rev node", pad + " %d:%s", rev, h, label=label)
+        if ui.plain():
+            fm.condwrite(nq, "rev node", pad + " %d:%s", rev, h, label=label)
+        else:
+            fm.condwrite(nq, "node", pad + " %s", h, label=label)
         if ui.verbose and bmark in tracking:
             tracked = tracking[bmark]
             if bmark in distances:
@@ -1278,15 +1281,24 @@ def displayremotebookmarks(ui, repo, opts, fm):
             fm.plain("   ")
 
         padsize = max(25 - encoding.colwidth(name), 0)
-        fmt = " " * padsize + " %d:%s"
 
         tmplabel = label
         if useformatted and ctx.obsolete():
             tmplabel = tmplabel + " changeset.obsolete"
         fm.write(color, "%s", name, label=label)
-        fm.condwrite(
-            not ui.quiet, "rev node", fmt, ctx.rev(), fm.hexfunc(node), label=tmplabel
-        )
+        if ui.plain():
+            fmt = " " * padsize + " %d:%s"
+            fm.condwrite(
+                not ui.quiet,
+                "rev node",
+                fmt,
+                ctx.rev(),
+                fm.hexfunc(node),
+                label=tmplabel,
+            )
+        else:
+            fmt = " " * padsize + " %s"
+            fm.condwrite(not ui.quiet, "node", fmt, fm.hexfunc(node), label=tmplabel)
         fm.plain("\n")
 
 

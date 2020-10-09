@@ -73,7 +73,7 @@ clone bookmarks via stream
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd stream2
   $ hg book
-     mybook                    0:1160648e36ce
+     mybook                    1160648e36ce
   $ cd ..
   $ rm -rf local-stream stream2
 
@@ -287,7 +287,7 @@ clone bookmarks
 
   $ hg -R ../remote bookmark test
   $ hg -R ../remote bookmarks
-   * test                      2:6c0482d977a3
+   * test                      6c0482d977a3
   $ hg clone ssh://user@dummy/remote local-bookmarks
   requesting all changes
   adding changesets
@@ -297,7 +297,7 @@ clone bookmarks
   updating to branch default
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R local-bookmarks bookmarks
-     test                      2:6c0482d977a3
+     test                      6c0482d977a3
 
 passwords in ssh urls are not supported
 (we use a glob here because different Python versions give different

@@ -149,8 +149,8 @@ Test merge
 Test out-of-date bookmark
   $ echo rebase > .hg/bookmarks.current
   $ cmd hg book
-     active                    2:4b6cc7d5194b
-     rebase                    1:775bfdddc842
+     active                    4b6cc7d5194b
+     rebase                    775bfdddc842
   (rebase|UPDATE_NEEDED)
   $ hg up -q .
 

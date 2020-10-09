@@ -21,16 +21,16 @@
   $ hg bookmark -r 'desc(b)' b
   $ hg bookmark c
   $ hg bookmarks
-     b                         1:d2ae7f538514
-   * c                         2:d36c0562f908
-     c@diverge                 1:d2ae7f538514
+     b                         d2ae7f538514
+   * c                         d36c0562f908
+     c@diverge                 d2ae7f538514
   $ hg merge "c@diverge"
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg commit -m'merge'
   $ hg bookmarks
-     b                         1:d2ae7f538514
-   * c                         3:b8f96cf4688b
+     b                         d2ae7f538514
+   * c                         b8f96cf4688b
 
   $ hg up -C 'desc(merge)'
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -48,9 +48,9 @@
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg bookmark e
   $ hg bookmarks
-     b                         1:d2ae7f538514
-     c                         3:b8f96cf4688b
-   * e                         5:26bee9c5bcf3
+     b                         d2ae7f538514
+     c                         b8f96cf4688b
+   * e                         26bee9c5bcf3
 
 # the picked side is bookmarked
 
@@ -102,18 +102,18 @@
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   (activating bookmark e)
   $ hg bookmarks
-     b                         1:d2ae7f538514
-     c                         3:b8f96cf4688b
-   * e                         5:26bee9c5bcf3
-     e@diverged                4:a0546fcfe0fb
+     b                         d2ae7f538514
+     c                         b8f96cf4688b
+   * e                         26bee9c5bcf3
+     e@diverged                a0546fcfe0fb
   $ hg merge
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (branch merge, don't forget to commit)
   $ hg commit -m'merge'
   $ hg bookmarks
-     b                         1:d2ae7f538514
-     c                         3:b8f96cf4688b
-   * e                         7:ca784329f0ba
+     b                         d2ae7f538514
+     c                         b8f96cf4688b
+   * e                         ca784329f0ba
 
 # test warning when all heads are inactive bookmarks
 
@@ -125,10 +125,10 @@
   adding g
   $ hg bookmark -i g
   $ hg bookmarks
-     b                         1:d2ae7f538514
-     c                         3:b8f96cf4688b
-     e                         7:ca784329f0ba
-     g                         8:04dd21731d95
+     b                         d2ae7f538514
+     c                         b8f96cf4688b
+     e                         ca784329f0ba
+     g                         04dd21731d95
   $ hg heads
   commit:      04dd21731d95
   bookmark:    g

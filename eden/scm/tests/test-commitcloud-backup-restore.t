@@ -47,7 +47,7 @@ Restore
   o  firstcommit
   
   $ hg book
-     abook                     0:89ecc969c0ac
+     abook                     89ecc969c0ac
   $ cd ..
 
 Check that autobackup doesn't happen on restorebackup. Logs should be empty and backupstate should be correct
@@ -109,10 +109,10 @@ Check bookmarks escaping
   adding file changes
   added 1 changesets with 1 changes to 1 files
   $ hg book
-     abook                     1:89ecc969c0ac
-     book/bookmarks/somebook   1:89ecc969c0ac
-     book/bookmarksbookmarks/somebook 1:89ecc969c0ac
-     secondbook                0:c1bfda8efb6e
+     abook                     89ecc969c0ac
+     book/bookmarks/somebook   89ecc969c0ac
+     book/bookmarksbookmarks/somebook 89ecc969c0ac
+     secondbook                c1bfda8efb6e
   $ cd ..
 
 Create a repo with `/bookmarks/` in path
@@ -137,11 +137,11 @@ Create a repo with `/bookmarks/` in path
   adding file changes
   added 1 changesets with 1 changes to 1 files
   $ hg book
-     abook                     1:89ecc969c0ac
-     book/bookmarks/somebook   1:89ecc969c0ac
-     book/bookmarksbookmarks/somebook 1:89ecc969c0ac
-     bookbackupsource3         2:a2a9ae518b62
-     secondbook                0:c1bfda8efb6e
+     abook                     89ecc969c0ac
+     book/bookmarks/somebook   89ecc969c0ac
+     book/bookmarksbookmarks/somebook 89ecc969c0ac
+     bookbackupsource3         a2a9ae518b62
+     secondbook                c1bfda8efb6e
 
 Check that correct path is used in pushbackup
   $ cd ../backupsource

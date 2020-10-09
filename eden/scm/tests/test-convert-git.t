@@ -828,8 +828,8 @@ a block, so do this for now.
   0 commit a
   updating bookmarks
   $ hg -R hg-repo7 bookmarks
-     master                    0:03bf38caa4c6
-     origin/master             0:03bf38caa4c6
+     master                    03bf38caa4c6
+     origin/master             03bf38caa4c6
 
 Run convert when the remote branches have changed
 (there was an old bug where the local convert read branches from the server)
@@ -847,8 +847,8 @@ Run convert when the remote branches have changed
   0 commit a
   updating bookmarks
   $ hg -R hg-repo7 bookmarks
-     master                    0:03bf38caa4c6
-     origin/master             0:03bf38caa4c6
+     master                    03bf38caa4c6
+     origin/master             03bf38caa4c6
 
 damaged git repository tests:
 In case the hard-coded hashes change, the following commands can be used to

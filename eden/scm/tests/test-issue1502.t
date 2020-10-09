@@ -24,7 +24,7 @@ Initialize repository
 
   $ hg -R foo1 book branchy
   $ hg -R foo1 book
-   * branchy                   1:e3e522925eff
+   * branchy                   e3e522925eff
 
 Pull. Bookmark should not jump to new head.
 
@@ -38,4 +38,4 @@ Pull. Bookmark should not jump to new head.
   added 1 changesets with 1 changes to 1 files
 
   $ hg -R foo1 book
-   * branchy                   1:e3e522925eff
+   * branchy                   e3e522925eff

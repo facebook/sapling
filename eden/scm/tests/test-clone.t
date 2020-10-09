@@ -432,8 +432,8 @@ Test clone with special '@' bookmark:
 
   $ hg bookmark -f -r stable @
   $ hg bookmarks
-     @                         13:4f44d5743f52
-     stable                    13:4f44d5743f52
+     @                         4f44d5743f52
+     stable                    4f44d5743f52
   $ hg clone . ../i
   updating to bookmark @
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved

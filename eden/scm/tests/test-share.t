@@ -126,22 +126,22 @@ test sharing bookmarks
   $ cd repo1
   $ hg bookmark bm1
   $ hg bookmarks
-   * bm1                       2:c2e0ac586386
+   * bm1                       c2e0ac586386
   $ cd ../repo2
   $ hg book bm2
   $ hg bookmarks
-   * bm2                       3:0e6e70d1d5f1
+   * bm2                       0e6e70d1d5f1
   $ cd ../repo3
   $ hg bookmarks
-     bm1                       2:c2e0ac586386
+     bm1                       c2e0ac586386
   $ hg book bm3
   $ hg bookmarks
-     bm1                       2:c2e0ac586386
-   * bm3                       2:c2e0ac586386
+     bm1                       c2e0ac586386
+   * bm3                       c2e0ac586386
   $ cd ../repo1
   $ hg bookmarks
-   * bm1                       2:c2e0ac586386
-     bm3                       2:c2e0ac586386
+   * bm1                       c2e0ac586386
+     bm3                       c2e0ac586386
 
 check whether HG_PENDING makes pending changes only in related
 repositories visible to an external hook.
@@ -166,14 +166,14 @@ Therefore, this test scenario ignores checking visibility of
   $ cd ../repo1
   $ hg --config hooks.pretxnclose="sh $TESTTMP/checkbookmarks.sh" -q book bmX
   @repo1
-     bm1                       2:c2e0ac586386
-     bm3                       2:c2e0ac586386
-   * bmX                       2:c2e0ac586386
+     bm1                       c2e0ac586386
+     bm3                       c2e0ac586386
+   * bmX                       c2e0ac586386
   @repo2
-   * bm2                       3:0e6e70d1d5f1
+   * bm2                       0e6e70d1d5f1
   @repo3
-     bm1                       2:c2e0ac586386
-   * bm3                       2:c2e0ac586386
+     bm1                       c2e0ac586386
+   * bm3                       c2e0ac586386
   transaction abort!
   rollback completed
   abort: pretxnclose hook exited with status 1
@@ -186,14 +186,14 @@ In the unshared case, a bookmark being added in repo2 is not visible in repo1.
   $ cd ../repo2
   $ hg --config hooks.pretxnclose="sh $TESTTMP/checkbookmarks.sh" -q book bmX
   @repo1
-   * bm1                       2:c2e0ac586386
-     bm3                       2:c2e0ac586386
+   * bm1                       c2e0ac586386
+     bm3                       c2e0ac586386
   @repo2
-     bm2                       3:0e6e70d1d5f1
-   * bmX                       3:0e6e70d1d5f1
+     bm2                       0e6e70d1d5f1
+   * bmX                       0e6e70d1d5f1
   @repo3
-     bm1                       2:c2e0ac586386
-   * bm3                       2:c2e0ac586386
+     bm1                       c2e0ac586386
+   * bm3                       c2e0ac586386
   transaction abort!
   rollback completed
   abort: pretxnclose hook exited with status 1
@@ -206,15 +206,15 @@ because HG_SHAREDPENDING refers to repo1.
   $ cd ../repo3
   $ hg --config hooks.pretxnclose="sh $TESTTMP/checkbookmarks.sh" -q book bmX
   @repo1
-   * bm1                       2:c2e0ac586386
-     bm3                       2:c2e0ac586386
-     bmX                       2:c2e0ac586386
+   * bm1                       c2e0ac586386
+     bm3                       c2e0ac586386
+     bmX                       c2e0ac586386
   @repo2
-   * bm2                       3:0e6e70d1d5f1
+   * bm2                       0e6e70d1d5f1
   @repo3
-     bm1                       2:c2e0ac586386
-     bm3                       2:c2e0ac586386
-   * bmX                       2:c2e0ac586386
+     bm1                       c2e0ac586386
+     bm3                       c2e0ac586386
+   * bmX                       c2e0ac586386
   transaction abort!
   rollback completed
   abort: pretxnclose hook exited with status 1
@@ -228,21 +228,21 @@ test that commits work
   $ echo 'shared bookmarks' > a
   $ hg commit -m 'testing shared bookmarks'
   $ hg bookmarks
-   * bm1                       3:b87954705719
-     bm3                       2:c2e0ac586386
+   * bm1                       b87954705719
+     bm3                       c2e0ac586386
   $ cd ../repo3
   $ hg bookmarks
-     bm1                       3:b87954705719
-   * bm3                       2:c2e0ac586386
+     bm1                       b87954705719
+   * bm3                       c2e0ac586386
   $ echo 'more shared bookmarks' > a
   $ hg commit -m 'testing shared bookmarks'
   $ hg bookmarks
-     bm1                       3:b87954705719
-   * bm3                       4:62f4ded848e4
+     bm1                       b87954705719
+   * bm3                       62f4ded848e4
   $ cd ../repo1
   $ hg bookmarks
-   * bm1                       3:b87954705719
-     bm3                       4:62f4ded848e4
+   * bm1                       b87954705719
+     bm3                       62f4ded848e4
   $ cd ..
 
 test pushing bookmarks works
@@ -255,9 +255,9 @@ test pushing bookmarks works
   $ echo foo > b
   $ hg commit -m 'foo in b'
   $ hg boo
-     bm1                       3:b87954705719
-     bm3                       4:62f4ded848e4
-   * bm4                       5:92793bfc8cad
+     bm1                       b87954705719
+     bm3                       62f4ded848e4
+   * bm4                       92793bfc8cad
   $ hg push -B bm4
   pushing to $TESTTMP/repo3
   searching for changes
@@ -268,14 +268,14 @@ test pushing bookmarks works
   exporting bookmark bm4
   $ cd ../repo1
   $ hg bookmarks
-   * bm1                       3:b87954705719
-     bm3                       4:62f4ded848e4
-     bm4                       5:92793bfc8cad
+   * bm1                       b87954705719
+     bm3                       62f4ded848e4
+     bm4                       92793bfc8cad
   $ cd ../repo3
   $ hg bookmarks
-     bm1                       3:b87954705719
-   * bm3                       4:62f4ded848e4
-     bm4                       5:92793bfc8cad
+     bm1                       b87954705719
+   * bm3                       62f4ded848e4
+     bm4                       92793bfc8cad
   $ cd ..
 
 test behavior when sharing a shared repo
@@ -285,9 +285,9 @@ test behavior when sharing a shared repo
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd repo5
   $ hg book
-     bm1                       3:b87954705719
-     bm3                       4:62f4ded848e4
-     bm4                       5:92793bfc8cad
+     bm1                       b87954705719
+     bm3                       62f4ded848e4
+     bm4                       92793bfc8cad
   $ cd ..
 
 test what happens when an active bookmark is deleted
@@ -295,12 +295,12 @@ test what happens when an active bookmark is deleted
   $ cd repo1
   $ hg boo -d bm3
   $ hg boo
-   * bm1                       3:b87954705719
-     bm4                       5:92793bfc8cad
+   * bm1                       b87954705719
+     bm4                       92793bfc8cad
   $ cd ../repo3
   $ hg boo
-     bm1                       3:b87954705719
-     bm4                       5:92793bfc8cad
+     bm1                       b87954705719
+     bm4                       92793bfc8cad
   $ cd ..
 
 verify that bookmarks are not written on failed transaction
@@ -321,13 +321,13 @@ verify that bookmarks are not written on failed transaction
   > EOF
   $ cd repo4
   $ hg boo
-     bm1                       3:b87954705719
-     bm3                       4:62f4ded848e4
-   * bm4                       5:92793bfc8cad
+     bm1                       b87954705719
+     bm3                       62f4ded848e4
+   * bm4                       92793bfc8cad
   $ cd ../repo3
   $ hg boo
-     bm1                       3:b87954705719
-     bm4                       5:92793bfc8cad
+     bm1                       b87954705719
+     bm4                       92793bfc8cad
   $ hg --config "extensions.failpullbookmarks=$TESTTMP/failpullbookmarks.py" pull $TESTTMP/repo4
   pulling from $TESTTMP/repo4
   searching for changes
@@ -336,17 +336,17 @@ verify that bookmarks are not written on failed transaction
   abort: forced failure by extension
   [255]
   $ hg boo
-     bm1                       3:b87954705719
-     bm4                       5:92793bfc8cad
+     bm1                       b87954705719
+     bm4                       92793bfc8cad
   $ hg pull $TESTTMP/repo4
   pulling from $TESTTMP/repo4
   searching for changes
   no changes found
   adding remote bookmark bm3
   $ hg boo
-     bm1                       3:b87954705719
-   * bm3                       4:62f4ded848e4
-     bm4                       5:92793bfc8cad
+     bm1                       b87954705719
+   * bm3                       62f4ded848e4
+     bm4                       92793bfc8cad
   $ cd ..
 
 verify bookmark behavior after unshare
@@ -357,12 +357,12 @@ verify bookmark behavior after unshare
   no bookmarks set
   $ hg boo bm5
   $ hg boo
-   * bm5                       4:62f4ded848e4
+   * bm5                       62f4ded848e4
   $ cd ../repo1
   $ hg boo
-   * bm1                       3:b87954705719
-     bm3                       4:62f4ded848e4
-     bm4                       5:92793bfc8cad
+   * bm1                       b87954705719
+     bm3                       62f4ded848e4
+     bm4                       92793bfc8cad
   $ cd ..
 
 test shared clones using relative paths work

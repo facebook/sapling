@@ -201,10 +201,10 @@ the bookmarks have all moved
   $ hgmn pull -q
   devel-warn: applied empty changegroup * (glob)
   $ hg bookmark --remote
-     default/newgolf           2:6fa3874a3b67
-     default/newindigo         6:5477b0d87a7c
-     default/newkilo           10:9ff3b7f32280
-     default/trunk             7:6f95f2e47a18
+     default/newgolf           6fa3874a3b67
+     default/newindigo         5477b0d87a7c
+     default/newkilo           9ff3b7f32280
+     default/trunk             6f95f2e47a18
 
 create a commit with a git SHA:
   $ hg checkout -q $F
@@ -300,6 +300,6 @@ hg_sync_job can replay all these bookmark moves onto the original repo
 
   $ cd repo-hg
   $ hg bookmark
-     newgolf                   2:6fa3874a3b67
-     other                     10:9ff3b7f32280
-     trunk                     11:b4de048b489b
+     newgolf                   6fa3874a3b67
+     other                     9ff3b7f32280
+     trunk                     b4de048b489b

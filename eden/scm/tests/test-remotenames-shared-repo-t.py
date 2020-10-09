@@ -53,6 +53,6 @@ sh % "hg log --graph" == r"""
 
 # Check that tracking is also shared
 sh % "hg book local -t default/mainline"
-sh % "hg book -v" == " * local                     0:d26a60f4f448            [default/mainline]"
+sh % "hg book -v" == " * local                     d26a60f4f448            [default/mainline]"
 sh % "cd ../primary"
-sh % "hg book -v" == "   local                     0:d26a60f4f448            [default/mainline]"
+sh % "hg book -v" == "   local                     d26a60f4f448            [default/mainline]"

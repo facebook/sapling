@@ -107,7 +107,7 @@ Now try to restore it from different client. Make sure bookmark
   pulling from ssh://user@dummy/repo
   no changes found
   $ hg book
-     goodbooktobackup          0:22ea264ff89d
+     goodbooktobackup          22ea264ff89d
 
 Create a commit which deletes a file. Make sure it is backed up correctly
   $ cd ../client

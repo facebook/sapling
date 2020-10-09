@@ -28,7 +28,7 @@ remotenames
   pulling from ssh://user@dummy/master
   no changes found
   $ hg book --remote
-     default/master            0:cb9a9f314b8b
+     default/master            cb9a9f314b8b
   $ hg dbsh -c 'ui.write(repo.svfs.readutf8("remotenames"))'
   cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b bookmarks default/master
 

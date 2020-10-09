@@ -30,7 +30,7 @@ sh % "hg clone repo1 repo2" == r"""
 
 # Test colors
 
-sh % "hg -R repo2 bookmark --remote" == "   default/bm2               0:cb9a9f314b8b"
+sh % "hg -R repo2 bookmark --remote" == "   default/bm2               cb9a9f314b8b"
 sh % "hg convert repo2 repo3" == r"""
     initializing destination repo3 repository
     scanning source...
@@ -38,4 +38,4 @@ sh % "hg convert repo2 repo3" == r"""
     converting...
     0 a
     updating bookmarks"""
-sh % "hg -R repo3 bookmark" == "   default/bm2               0:cb9a9f314b8b"
+sh % "hg -R repo3 bookmark" == "   default/bm2               cb9a9f314b8b"

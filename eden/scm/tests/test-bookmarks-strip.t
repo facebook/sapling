@@ -44,8 +44,8 @@ commit new head
 bookmarks updated?
 
   $ hg book
-     test                      1:25e1ee7a0081
-     test2                     1:25e1ee7a0081
+     test                      25e1ee7a0081
+     test2                     25e1ee7a0081
 
 strip to revision 1
 

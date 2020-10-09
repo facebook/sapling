@@ -25,13 +25,13 @@ bookmark rev -1
 list bookmarks
 
   $ hg bookmarks
-   * X                         -1:000000000000
+   * X                         000000000000
 
 list bookmarks with color
 
   $ hg --config extensions.color= --config color.mode=ansi \
   >    bookmarks --color=always
-  \x1b[0;32m * \x1b[0m\x1b[0;32mX\x1b[0m\x1b[0;32m                         -1:000000000000\x1b[0m (esc)
+  \x1b[0;32m * \x1b[0m\x1b[0;32mX\x1b[0m\x1b[0;32m                         000000000000\x1b[0m (esc)
 
   $ echo a > a
   $ hg add a
@@ -41,7 +41,7 @@ list bookmarks with color
 bookmark X moved to rev 0
 
   $ hg bookmarks
-   * X                         0:f7b1eb17ad24
+   * X                         f7b1eb17ad24
 
 look up bookmark
 
@@ -65,9 +65,9 @@ bookmark rev -1 again
 list bookmarks
 
   $ hg bookmarks
-     X                         0:f7b1eb17ad24
-   * X2                        0:f7b1eb17ad24
-     Y                         -1:000000000000
+     X                         f7b1eb17ad24
+   * X2                        f7b1eb17ad24
+     Y                         000000000000
 
   $ echo b > b
   $ hg add b
@@ -79,20 +79,17 @@ list bookmarks
    {
     "active": false,
     "bookmark": "X",
-    "node": "f7b1eb17ad24730a1651fccd46c43826d1bbc2ac",
-    "rev": 0
+    "node": "f7b1eb17ad24730a1651fccd46c43826d1bbc2ac"
    },
    {
     "active": true,
     "bookmark": "X2",
-    "node": "925d80f479bb026b0fb3deb27503780b13f74123",
-    "rev": 1
+    "node": "925d80f479bb026b0fb3deb27503780b13f74123"
    },
    {
     "active": false,
     "bookmark": "Y",
-    "node": "0000000000000000000000000000000000000000",
-    "rev": -1
+    "node": "0000000000000000000000000000000000000000"
    }
   ]
 
@@ -159,9 +156,9 @@ bookmarks revset
 bookmarks X and X2 moved to rev 1, Y at rev -1
 
   $ hg bookmarks
-     X                         0:f7b1eb17ad24
-   * X2                        1:925d80f479bb
-     Y                         -1:000000000000
+     X                         f7b1eb17ad24
+   * X2                        925d80f479bb
+     Y                         000000000000
 
 bookmark rev 0 again
 
@@ -177,10 +174,10 @@ bookmark rev 0 again
 bookmarks X moved to rev 2, Y at rev -1, Z at rev 0
 
   $ hg bookmarks
-   * X                         2:db815d6d32e6
-     X2                        1:925d80f479bb
-     Y                         -1:000000000000
-     Z                         0:f7b1eb17ad24
+   * X                         db815d6d32e6
+     X2                        925d80f479bb
+     Y                         000000000000
+     Z                         f7b1eb17ad24
 
 rename nonexistent bookmark
 
@@ -205,10 +202,10 @@ rename bookmark using .
   test-hook-bookmark: rename-me:  db815d6d32e69058eadefc8cffbad37675707975 -> 
   test-hook-bookmark: renamed:   -> db815d6d32e69058eadefc8cffbad37675707975
   $ hg bookmark
-     X2                        1:925d80f479bb
-     Y                         2:db815d6d32e6
-     Z                         0:f7b1eb17ad24
-   * renamed                   2:db815d6d32e6
+     X2                        925d80f479bb
+     Y                         db815d6d32e6
+     Z                         f7b1eb17ad24
+   * renamed                   db815d6d32e6
   $ hg up -q Y
   $ hg book -d renamed --config "$TESTHOOK"
   test-hook-bookmark: renamed:  db815d6d32e69058eadefc8cffbad37675707975 -> 
@@ -228,9 +225,9 @@ delete bookmark using .
   $ hg book delete-me
   $ hg book -d .
   $ hg bookmark
-     X2                        1:925d80f479bb
-     Y                         2:db815d6d32e6
-     Z                         0:f7b1eb17ad24
+     X2                        925d80f479bb
+     Y                         db815d6d32e6
+     Z                         f7b1eb17ad24
   $ hg up -q Y
 
 delete bookmark using . with no active bookmark
@@ -246,20 +243,20 @@ delete bookmark using . with no active bookmark
 list bookmarks
 
   $ hg bookmark
-     X2                        1:925d80f479bb
-   * Y                         2:db815d6d32e6
-     Z                         0:f7b1eb17ad24
+     X2                        925d80f479bb
+   * Y                         db815d6d32e6
+     Z                         f7b1eb17ad24
 
 bookmarks from a revset
   $ hg bookmark -r '.^1' REVSET
   $ hg bookmark -r ':tip' TIP
   $ hg up -q TIP
   $ hg bookmarks
-     REVSET                    0:f7b1eb17ad24
-   * TIP                       2:db815d6d32e6
-     X2                        1:925d80f479bb
-     Y                         2:db815d6d32e6
-     Z                         0:f7b1eb17ad24
+     REVSET                    f7b1eb17ad24
+   * TIP                       db815d6d32e6
+     X2                        925d80f479bb
+     Y                         db815d6d32e6
+     Z                         f7b1eb17ad24
 
   $ hg bookmark -d REVSET
   $ hg bookmark -d TIP
@@ -296,10 +293,10 @@ bookmark name with spaces should be stripped
 list bookmarks
 
   $ hg bookmarks
-     X2                        1:925d80f479bb
-     Y                         2:db815d6d32e6
-     Z                         0:f7b1eb17ad24
-   * x  y                      2:db815d6d32e6
+     X2                        925d80f479bb
+     Y                         db815d6d32e6
+     Z                         f7b1eb17ad24
+   * x  y                      db815d6d32e6
 
 look up stripped bookmark name
 
@@ -399,7 +396,7 @@ bookmark with a name that matches an ambiguous node id
 
   $ hg bookmark -rb4e73ffab476aa0ee32ed81ca51e07169844bc6a c562
   $ hg bookmarks
-     c562                      0:b4e73ffab476
+     c562                      b4e73ffab476
 
   $ cd ..
 
@@ -428,10 +425,10 @@ force bookmark back to where it was, should deactivate it
 
   $ hg bookmark -fr'desc(1)' X2
   $ hg bookmarks
-     X2                        1:925d80f479bb
-     Y                         2:db815d6d32e6
-     Z                         0:f7b1eb17ad24
-     x  y                      2:db815d6d32e6
+     X2                        925d80f479bb
+     Y                         db815d6d32e6
+     Z                         f7b1eb17ad24
+     x  y                      db815d6d32e6
 
 forward bookmark to descendant without --force
 
@@ -441,10 +438,10 @@ forward bookmark to descendant without --force
 list bookmarks
 
   $ hg bookmark
-     X2                        1:925d80f479bb
-     Y                         2:db815d6d32e6
-   * Z                         2:db815d6d32e6
-     x  y                      2:db815d6d32e6
+     X2                        925d80f479bb
+     Y                         db815d6d32e6
+   * Z                         db815d6d32e6
+     x  y                      db815d6d32e6
 
 revision but no bookmark name
 
@@ -478,10 +475,10 @@ the bookmark extension should be ignored now that it is part of core
   $ echo "[extensions]" >> $HGRCPATH
   $ echo "bookmarks=" >> $HGRCPATH
   $ hg bookmarks
-     X2                        1:925d80f479bb
-     Y                         2:db815d6d32e6
-   * Z                         2:db815d6d32e6
-     x  y                      2:db815d6d32e6
+     X2                        925d80f479bb
+     Y                         db815d6d32e6
+   * Z                         db815d6d32e6
+     x  y                      db815d6d32e6
 
 test summary
 
@@ -509,22 +506,22 @@ test clone
   $ hg bookmark -r 'desc(2)' -i @
   $ hg bookmark -r 'desc(2)' -i a@
   $ hg bookmarks
-     @                         2:db815d6d32e6
-     X2                        1:925d80f479bb
-     Y                         2:db815d6d32e6
-   * Z                         2:db815d6d32e6
-     a@                        2:db815d6d32e6
-     x  y                      2:db815d6d32e6
+     @                         db815d6d32e6
+     X2                        925d80f479bb
+     Y                         db815d6d32e6
+   * Z                         db815d6d32e6
+     a@                        db815d6d32e6
+     x  y                      db815d6d32e6
   $ hg clone . cloned-bookmarks
   updating to bookmark @
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R cloned-bookmarks bookmarks
-   * @                         2:db815d6d32e6
-     X2                        1:925d80f479bb
-     Y                         2:db815d6d32e6
-     Z                         2:db815d6d32e6
-     a@                        2:db815d6d32e6
-     x  y                      2:db815d6d32e6
+   * @                         db815d6d32e6
+     X2                        925d80f479bb
+     Y                         db815d6d32e6
+     Z                         db815d6d32e6
+     a@                        db815d6d32e6
+     x  y                      db815d6d32e6
 
 test clone with pull protocol
 
@@ -537,12 +534,12 @@ test clone with pull protocol
   updating to bookmark @
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R cloned-bookmarks-pull bookmarks
-   * @                         2:db815d6d32e6
-     X2                        1:925d80f479bb
-     Y                         2:db815d6d32e6
-     Z                         2:db815d6d32e6
-     a@                        2:db815d6d32e6
-     x  y                      2:db815d6d32e6
+   * @                         db815d6d32e6
+     X2                        925d80f479bb
+     Y                         db815d6d32e6
+     Z                         db815d6d32e6
+     a@                        db815d6d32e6
+     x  y                      db815d6d32e6
 
 delete multiple bookmarks at once
 
@@ -555,11 +552,11 @@ test clone with a bookmark named "default" (issue3677)
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R cloned-bookmark-default bookmarks
-     X2                        1:925d80f479bb
-     Y                         2:db815d6d32e6
-     Z                         2:db815d6d32e6
-     default                   1:925d80f479bb
-     x  y                      2:db815d6d32e6
+     X2                        925d80f479bb
+     Y                         db815d6d32e6
+     Z                         db815d6d32e6
+     default                   925d80f479bb
+     x  y                      db815d6d32e6
   $ hg -R cloned-bookmark-default parents -q
   db815d6d32e6
   $ hg bookmark -d default
@@ -574,7 +571,7 @@ test clone with a specific revision
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R cloned-bookmarks-rev bookmarks
-     X2                        1:925d80f479bb
+     X2                        925d80f479bb
 
 test clone with update to a bookmark
 
@@ -582,10 +579,10 @@ test clone with update to a bookmark
   updating to branch default
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R ../cloned-bookmarks-update bookmarks
-     X2                        1:925d80f479bb
-     Y                         2:db815d6d32e6
-   * Z                         2:db815d6d32e6
-     x  y                      2:db815d6d32e6
+     X2                        925d80f479bb
+     Y                         db815d6d32e6
+   * Z                         db815d6d32e6
+     x  y                      db815d6d32e6
 
 create bundle with two heads
 
@@ -625,10 +622,10 @@ working directory of current repository)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   updating bookmark Z
   $ hg bookmarks
-     X2                        1:925d80f479bb
-     Y                         2:db815d6d32e6
-   * Z                         4:9c404beeabc2
-     x  y                      2:db815d6d32e6
+     X2                        925d80f479bb
+     Y                         db815d6d32e6
+   * Z                         9c404beeabc2
+     x  y                      db815d6d32e6
 
 pull --update works the same as pull && update
 
@@ -685,11 +682,11 @@ We warn about divergent during bare update to the active bookmark
   (activating bookmark Y)
   $ hg -R ../cloned-bookmarks-manual-update-with-divergence bookmarks -r X2 Y@1
   $ hg -R ../cloned-bookmarks-manual-update-with-divergence bookmarks
-     X2                        1:925d80f479bb
-   * Y                         2:db815d6d32e6
-     Y@1                       1:925d80f479bb
-     Z                         2:db815d6d32e6
-     x  y                      2:db815d6d32e6
+     X2                        925d80f479bb
+   * Y                         db815d6d32e6
+     Y@1                       925d80f479bb
+     Z                         db815d6d32e6
+     x  y                      db815d6d32e6
   $ hg -R ../cloned-bookmarks-manual-update-with-divergence pull
   pulling from $TESTTMP/repo
   searching for changes
@@ -775,8 +772,8 @@ this test scenario, cloned-bookmark-default and tobundle exist in the
 working directory of current repository)
 
   $ hg bookmarks
-   * four                      3:9c404beeabc2
-     should-end-on-two         3:9c404beeabc2
+   * four                      9c404beeabc2
+     should-end-on-two         9c404beeabc2
   $ hg up four
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg up
@@ -795,19 +792,19 @@ test clearing divergent bookmarks of linear ancestors
   $ hg bookmark Z@2 -r 'desc(2)'
   $ hg bookmark Z@3 -r 'desc(y)'
   $ hg book
-     Z                         0:f7b1eb17ad24
-     Z@1                       1:925d80f479bb
-     Z@2                       2:db815d6d32e6
-     Z@3                       3:9c404beeabc2
-   * four                      3:9c404beeabc2
-     should-end-on-two         3:9c404beeabc2
+     Z                         f7b1eb17ad24
+     Z@1                       925d80f479bb
+     Z@2                       db815d6d32e6
+     Z@3                       9c404beeabc2
+   * four                      9c404beeabc2
+     should-end-on-two         9c404beeabc2
   $ hg bookmark Z
   moving bookmark 'Z' forward from f7b1eb17ad24
   $ hg book
-   * Z                         3:9c404beeabc2
-     Z@1                       1:925d80f479bb
-     four                      3:9c404beeabc2
-     should-end-on-two         3:9c404beeabc2
+   * Z                         9c404beeabc2
+     Z@1                       925d80f479bb
+     four                      9c404beeabc2
+     should-end-on-two         9c404beeabc2
 
 test clearing only a single divergent bookmark across branches
 
@@ -817,13 +814,13 @@ test clearing only a single divergent bookmark across branches
   $ hg book foo@3 -r 'desc(y)'
   $ hg book foo -r foo@3
   $ hg book
-   * Z                         3:9c404beeabc2
-     Z@1                       1:925d80f479bb
-     foo                       3:9c404beeabc2
-     foo@1                     0:f7b1eb17ad24
-     foo@2                     2:db815d6d32e6
-     four                      3:9c404beeabc2
-     should-end-on-two         3:9c404beeabc2
+   * Z                         9c404beeabc2
+     Z@1                       925d80f479bb
+     foo                       9c404beeabc2
+     foo@1                     f7b1eb17ad24
+     foo@2                     db815d6d32e6
+     four                      9c404beeabc2
+     should-end-on-two         9c404beeabc2
 
 pull --update works the same as pull && update (case #2)
 
@@ -840,7 +837,7 @@ case)
   $ hg commit -m yy
 
   $ hg -R ../cloned-bookmarks-update bookmarks | grep ' Y '
-   * Y                         3:125c9a1d6df6
+   * Y                         125c9a1d6df6
   $ hg -R ../cloned-bookmarks-update pull . --update
   pulling from .
   searching for changes
@@ -856,7 +853,7 @@ case)
   $ hg -R ../cloned-bookmarks-update parents -T "{node|short}\n"
   125c9a1d6df6
   $ hg -R ../cloned-bookmarks-update bookmarks | grep ' Y '
-   * Y                         3:125c9a1d6df6
+   * Y                         125c9a1d6df6
 
 (pulling revision on current named/topological branch with --update
 updates the working directory and current active bookmark)
@@ -866,7 +863,7 @@ updates the working directory and current active bookmark)
   $ hg commit -m xx
 
   $ hg -R ../cloned-bookmarks-update bookmarks | grep ' Y '
-   * Y                         3:125c9a1d6df6
+   * Y                         125c9a1d6df6
   $ hg -R ../cloned-bookmarks-update pull . --update
   pulling from .
   searching for changes
@@ -879,7 +876,7 @@ updates the working directory and current active bookmark)
   $ hg -R ../cloned-bookmarks-update parents -T "{node|short}\n"
   81dcce76aa0b
   $ hg -R ../cloned-bookmarks-update bookmarks | grep ' Y '
-   * Y                         6:81dcce76aa0b
+   * Y                         81dcce76aa0b
 
   $ cd ..
 
@@ -926,7 +923,7 @@ ensure changelog is written before bookmarks
   summary:     one
   
   $ hg bookmarks
-   * mybook                    0:867bc5792c8c
+   * mybook                    867bc5792c8c
   $ touch $TESTTMP/unpause
 
   $ cd ..
@@ -967,17 +964,17 @@ repositories visible to an external hook.
   $ cd ../repo
   $ hg --config hooks.pretxnclose="sh $TESTTMP/checkpending.sh" bookmarks NEW
   @repo
-   * NEW                       6:81dcce76aa0b
-     X2                        1:925d80f479bb
-     Y                         4:125c9a1d6df6
-     Z                         5:f047c86095b7
-     Z@1                       1:925d80f479bb
-     foo                       3:9c404beeabc2
-     foo@1                     0:f7b1eb17ad24
-     foo@2                     2:db815d6d32e6
-     four                      3:9c404beeabc2
-     should-end-on-two         3:9c404beeabc2
-     x  y                      2:db815d6d32e6
+   * NEW                       81dcce76aa0b
+     X2                        925d80f479bb
+     Y                         125c9a1d6df6
+     Z                         f047c86095b7
+     Z@1                       925d80f479bb
+     foo                       9c404beeabc2
+     foo@1                     f7b1eb17ad24
+     foo@2                     db815d6d32e6
+     four                      9c404beeabc2
+     should-end-on-two         9c404beeabc2
+     x  y                      db815d6d32e6
   @unrelated
   no bookmarks set
   transaction abort!
