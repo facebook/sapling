@@ -1850,18 +1850,6 @@ async fn merge_test_setup(
         btreemap! { "f4" => Some(b"4" as &[u8]) },
     )
     .await;
-    let c5 = create_initial_commit_with_contents(
-        ctx.clone(),
-        &large_repo,
-        btreemap! { "f5" => Some(b"5" as &[u8]) },
-    )
-    .await;
-    let c6 = create_initial_commit_with_contents(
-        ctx.clone(),
-        &large_repo,
-        btreemap! { "f6" => Some(b"6" as &[u8]) },
-    )
-    .await;
 
     lts_syncer
         .test_unsafe_sync_commit_with_version_override(
@@ -1895,13 +1883,10 @@ async fn merge_test_setup(
             Some(v2.clone()),
         )
         .await?;
-    lts_syncer.unsafe_preserve_commit(ctx.clone(), c5).await?;
-    lts_syncer.unsafe_preserve_commit(ctx.clone(), c6).await?;
 
     let heads_with_versions = hashmap! {
         Some(v1) => vec![c1, c2],
         Some(v2) => vec![c3, c4],
-        None => vec![c5, c6],
     };
 
     Ok((ctx, lts_syncer, heads_with_versions))
@@ -2003,43 +1988,6 @@ async fn test_sync_merge_fails_when_parents_have_different_versions(
         .sync_commit(&ctx, merge_bcs_id, CandidateSelectionHint::Only)
         .await
         .expect_err("syncing a merge with differently-remapped parents must fail");
-    assert!(format!("{}", e).contains("failed getting a mover to use for merge rewriting"));
-    Ok(())
-}
-
-#[fbinit::compat_test]
-async fn test_sync_merge_is_preserved_if_parents_are_preserved(
-    fb: FacebookInit,
-) -> Result<(), Error> {
-    let (ctx, lts_syncer, heads_with_versions) = merge_test_setup(fb).await?;
-    let heads = heads_with_versions[&None].clone();
-    let merge_bcs_id = create_merge(&ctx, lts_syncer.get_source_repo(), heads).await;
-    lts_syncer
-        .sync_commit(&ctx, merge_bcs_id, CandidateSelectionHint::Only)
-        .await
-        .expect("syncing a merge of preserved commits should succeed");
-    let outcome = lts_syncer
-        .get_commit_sync_outcome(ctx.clone(), merge_bcs_id)
-        .await?
-        .expect("missing outcome for merge");
-    assert!(matches!(outcome, CommitSyncOutcome::Preserved));
-    Ok(())
-}
-
-#[fbinit::compat_test]
-async fn test_sync_merge_with_one_preserved_parent_should_fail(
-    fb: FacebookInit,
-) -> Result<(), Error> {
-    let v1 = CommitSyncConfigVersion("v1".to_string());
-    let (ctx, lts_syncer, heads_with_versions) = merge_test_setup(fb).await?;
-    let heads_0 = heads_with_versions[&Some(v1)].clone();
-    let heads_1 = heads_with_versions[&None].clone();
-    let merge_heads = vec![heads_0[0], heads_1[0]];
-    let merge_bcs_id = create_merge(&ctx, lts_syncer.get_source_repo(), merge_heads).await;
-    let e = lts_syncer
-        .sync_commit(&ctx, merge_bcs_id, CandidateSelectionHint::Only)
-        .await
-        .expect_err("syncing a merge with only one preserved parent should fail");
     assert!(format!("{}", e).contains("failed getting a mover to use for merge rewriting"));
     Ok(())
 }
