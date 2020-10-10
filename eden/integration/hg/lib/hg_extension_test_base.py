@@ -411,6 +411,9 @@ class JournalEntry(object):
         return True
 
     def _strip_profiling_args(self, command: str) -> str:
+        if command.startswith("--traceback "):
+            command = command[len("--traceback ") :]
+
         # The hg wrapper randomly decides to profile a percentage of hg commands,
         # so it adds --profile and several other --config flags to the start of the
         # command arguments.

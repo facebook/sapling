@@ -127,8 +127,9 @@ class HgRepository(repobase.Repository):
         hgeditor: Optional[str] = None,
         cwd: Optional[str] = None,
         check: bool = True,
+        traceback: bool = True,
     ) -> subprocess.CompletedProcess:
-        cmd = [self.hg_bin] + list(args)
+        cmd = [self.hg_bin] + (["--traceback"] if traceback else []) + list(args)
         env = self.hg_environment
         if hgeditor is not None:
             env = dict(env)

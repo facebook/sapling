@@ -364,7 +364,9 @@ class UpdateTest(EdenHgTestCase):
             "--config",
             "experimental.updatecheck=noconflict",
             check=False,
+            traceback=False,
         )
+        self.maxDiff = None
         self.assertEqual(
             "abort: conflicting changes:\n"
             "  foo/new_file.txt\n"
