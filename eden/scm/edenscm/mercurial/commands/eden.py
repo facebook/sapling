@@ -100,6 +100,7 @@ PROTOCOL_VERSION = 1
 START_FLAGS_TREEMANIFEST_SUPPORTED = 0x01
 START_FLAGS_MONONOKE_SUPPORTED = 0x02
 START_FLAGS_CAT_TREE_SUPPORTED = 0x04
+START_FLAGS_FLUSH_STORE_SUPPORTED = 0x08
 
 #
 # Message types.
@@ -117,6 +118,7 @@ CMD_PREFETCH_FILES = 6
 CMD_CAT_FILE = 7
 CMD_GET_FILE_SIZE = 8
 CMD_CAT_TREE = 9
+CMD_FLUSH_STORE = 10
 
 #
 # Flag values.
@@ -300,6 +302,7 @@ class HgServer(object):
             flags |= START_FLAGS_MONONOKE_SUPPORTED
 
         flags |= START_FLAGS_CAT_TREE_SUPPORTED
+        flags |= START_FLAGS_FLUSH_STORE_SUPPORTED
 
         # Options format:
         # - Protocol version number
@@ -605,6 +608,15 @@ class HgServer(object):
             return
 
         self.send_chunk(request, node)
+
+    # pyre-fixme[56]: While applying decorator
+    #  `edenscm.mercurial.commands.eden.cmd(...)`: Expected `(Request) -> None` for 1st
+    #  param but got `(self: HgServer, request: Request) -> None`.
+    @cmd(CMD_FLUSH_STORE)
+    def cmd_flush_store(self, request):
+        # type: (Request) -> None
+        self.repo.commitpending()
+        self.send_chunk(request, b"")
 
     # pyre-fixme[56]: While applying decorator
     #  `edenscm.mercurial.commands.eden.cmd(...)`: Expected `(Request) -> None` for 1st
