@@ -19,8 +19,8 @@ use context::CoreContext;
 use cross_repo_sync::{
     rewrite_commit,
     types::{Source, Target},
-    update_mapping, upload_commits, CommitSyncDataProvider, CommitSyncRepos, CommitSyncer,
-    SyncData, Syncers,
+    update_mapping, upload_commits, CandidateSelectionHint, CommitSyncDataProvider,
+    CommitSyncRepos, CommitSyncer, SyncData, Syncers,
 };
 use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt};
 use maplit::hashmap;
@@ -135,6 +135,10 @@ where
     Ok(target_bcs.get_changeset_id())
 }
 
+fn identity_mover(p: &MPath) -> Result<Option<MPath>, Error> {
+    Ok(Some(p.clone()))
+}
+
 pub async fn init_small_large_repo(
     ctx: &CoreContext,
 ) -> Result<(Syncers<SqlSyncedCommitMapping>, CommitSyncConfig), Error> {
@@ -156,11 +160,18 @@ pub async fn init_small_large_repo(
     };
 
     let current_version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
+    let noop_version = CommitSyncConfigVersion("noop".to_string());
     let commit_sync_data_provider = CommitSyncDataProvider::test_new(
         current_version.clone(),
         Source(repos.get_source_repo().get_repoid()),
         Target(repos.get_target_repo().get_repoid()),
         hashmap! {
+            noop_version.clone() => SyncData {
+                mover: Arc::new(identity_mover),
+                reverse_mover: Arc::new(identity_mover),
+                bookmark_renamer: Arc::new(identity_renamer),
+                reverse_bookmark_renamer: Arc::new(identity_renamer),
+            },
             current_version.clone() => SyncData {
                 mover: Arc::new(prefix_mover),
                 reverse_mover: Arc::new(reverse_prefix_mover),
@@ -186,6 +197,12 @@ pub async fn init_small_large_repo(
         Source(repos.get_source_repo().get_repoid()),
         Target(repos.get_target_repo().get_repoid()),
         hashmap! {
+            noop_version.clone() =>  SyncData {
+                mover: Arc::new(identity_mover),
+                reverse_mover: Arc::new(identity_mover),
+                bookmark_renamer: Arc::new(identity_renamer),
+                reverse_bookmark_renamer: Arc::new(identity_renamer),
+            },
             current_version => SyncData {
                 mover: Arc::new(reverse_prefix_mover),
                 reverse_mover: Arc::new(prefix_mover),
@@ -211,10 +228,20 @@ pub async fn init_small_large_repo(
         .await?;
 
     small_to_large_commit_syncer
-        .unsafe_preserve_commit(ctx.clone(), first_bcs_id)
+        .test_unsafe_sync_commit_with_version_override(
+            ctx.clone(),
+            first_bcs_id,
+            CandidateSelectionHint::Only,
+            Some(noop_version.clone()),
+        )
         .await?;
     small_to_large_commit_syncer
-        .unsafe_preserve_commit(ctx.clone(), second_bcs_id)
+        .test_unsafe_sync_commit_with_version_override(
+            ctx.clone(),
+            second_bcs_id,
+            CandidateSelectionHint::Only,
+            Some(noop_version.clone()),
+        )
         .await?;
     bookmark(&ctx, &smallrepo, "premove")
         .set_to(second_bcs_id)

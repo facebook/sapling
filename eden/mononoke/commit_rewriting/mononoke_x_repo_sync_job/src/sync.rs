@@ -607,6 +607,7 @@ mod test {
     use fbinit::FacebookInit;
     use futures_old::stream::Stream;
     use maplit::hashset;
+    use metaconfig_types::CommitSyncConfigVersion;
     use mutable_counters::MutableCounters;
     use tests_utils::{bookmark, resolve_cs_id, CreateCommitContext};
 
@@ -661,8 +662,8 @@ mod test {
                 .set_to(second_in_stack)
                 .await?;
 
-            // Create a commit that should NOT be rewritten because it's based on a pre-move
-            // commit
+            // Create a commit that's based on commit rewritten with noop mapping
+            // - it should NOT be rewritten
             let premove = CreateCommitContext::new(&ctx, &smallrepo, vec!["premove"])
                 .add_file("premove", "premovecontent")
                 .commit()
@@ -680,7 +681,15 @@ mod test {
                 .get_commit_sync_outcome(ctx.clone(), premove)
                 .await?
                 .ok_or(format_err!("commit sync outcome not set"))?;
-            assert_eq!(commit_sync_outcome, CommitSyncOutcome::Preserved);
+            match commit_sync_outcome {
+                CommitSyncOutcome::RewrittenAs(cs_id, version) => {
+                    assert_eq!(version, CommitSyncConfigVersion("noop".to_string()));
+                    assert_eq!(cs_id, premove);
+                }
+                _ => {
+                    return Err(format_err!("unexpected outcome"));
+                }
+            };
 
             // Delete bookmarks
             bookmark(&ctx, &smallrepo, "newpremove").delete().await?;
