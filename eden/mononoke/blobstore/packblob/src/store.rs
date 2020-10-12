@@ -9,7 +9,9 @@ use crate::envelope::PackEnvelope;
 use crate::pack;
 
 use anyhow::{format_err, Context, Error};
-use blobstore::{Blobstore, BlobstoreGetData, BlobstoreWithLink};
+use blobstore::{
+    Blobstore, BlobstoreGetData, BlobstorePutOps, BlobstoreWithLink, OverwriteStatus, PutBehaviour,
+};
 use bytes::Bytes;
 use context::CoreContext;
 use futures::{
@@ -34,13 +36,13 @@ impl PackOptions {
 }
 
 /// A layer over an existing blobstore that uses thrift blob wrappers to allow packing and compression
-#[derive(Debug)]
-pub struct PackBlob<T: Blobstore> {
+#[derive(Clone, Debug)]
+pub struct PackBlob<T> {
     inner: T,
     options: PackOptions,
 }
 
-impl<T: Blobstore> PackBlob<T> {
+impl<T> PackBlob<T> {
     pub fn new(inner: T, options: PackOptions) -> Self {
         Self { inner, options }
     }
@@ -98,12 +100,25 @@ impl<T: Blobstore> Blobstore for PackBlob<T> {
         .boxed()
     }
 
+    fn is_present(
+        &self,
+        ctx: CoreContext,
+        mut key: String,
+    ) -> BoxFuture<'static, Result<bool, Error>> {
+        key.push_str(ENVELOPE_SUFFIX);
+        self.inner.is_present(ctx, key)
+    }
+
     fn put(
         &self,
         ctx: CoreContext,
         mut key: String,
         value: BlobstoreBytes,
     ) -> BoxFuture<'static, Result<(), Error>> {
+        // TODO(ahornby) once factory is BlobstorePutOps aware
+        // BlobstorePutOps::put_with_status(self, ctx, key, value)
+        //         .map_ok(|_| ())
+        //         .boxed()
         key.push_str(ENVELOPE_SUFFIX);
 
         let value = value.into_bytes();
@@ -113,7 +128,6 @@ impl<T: Blobstore> Blobstore for PackBlob<T> {
         } else {
             Ok(SingleValue::Raw(value.to_vec()))
         };
-
 
         match single {
             Ok(single) => {
@@ -127,14 +141,42 @@ impl<T: Blobstore> Blobstore for PackBlob<T> {
             Err(e) => future::err(e).boxed(),
         }
     }
+}
 
-    fn is_present(
+impl<T: BlobstorePutOps> BlobstorePutOps for PackBlob<T> {
+    fn put_explicit(
         &self,
         ctx: CoreContext,
         mut key: String,
-    ) -> BoxFuture<'static, Result<bool, Error>> {
+        value: BlobstoreBytes,
+        put_behaviour: PutBehaviour,
+    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
         key.push_str(ENVELOPE_SUFFIX);
-        self.inner.is_present(ctx, key)
+
+        let value = value.into_bytes();
+
+        let single = if let Some(zstd_level) = self.options.put_compress_level {
+            compress_if_worthwhile(value, zstd_level)
+        } else {
+            Ok(SingleValue::Raw(value.to_vec()))
+        };
+
+        match single {
+            Ok(single) => {
+                // Wrap in thrift encoding
+                let envelope: PackEnvelope = PackEnvelope(StorageEnvelope {
+                    storage: StorageFormat::Single(single),
+                });
+                // pass through the put after wrapping
+                self.inner
+                    .put_explicit(ctx, key, envelope.into(), put_behaviour)
+            }
+            Err(e) => future::err(e).boxed(),
+        }
+    }
+
+    fn put_behaviour(&self) -> PutBehaviour {
+        self.inner.put_behaviour()
     }
 }
 
