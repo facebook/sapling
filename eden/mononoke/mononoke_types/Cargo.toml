@@ -9,6 +9,7 @@ include = ["src/**/*.rs"]
 [dependencies]
 blobstore = { path = "../blobstore" }
 context = { path = "../server/context" }
+edenapi_types = { path = "../../scm/lib/edenapi/types" }
 mononoke_types-thrift = { path = "if" }
 xdiff = { path = "../../scm/lib/xdiff" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

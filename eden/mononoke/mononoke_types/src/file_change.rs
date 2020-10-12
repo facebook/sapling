@@ -8,6 +8,7 @@
 use std::fmt;
 
 use anyhow::{bail, Context, Result};
+use edenapi_types::FileType as EdenapiFileType;
 use quickcheck::{empty_shrinker, single_shrinker, Arbitrary, Gen};
 use rand::{seq::SliceRandom, Rng};
 use serde_derive::Serialize;
@@ -210,6 +211,28 @@ impl FileType {
             FileType::Regular => thrift::FileType::Regular,
             FileType::Executable => thrift::FileType::Executable,
             FileType::Symlink => thrift::FileType::Symlink,
+        }
+    }
+}
+
+impl From<FileType> for EdenapiFileType {
+    fn from(v: FileType) -> Self {
+        use EdenapiFileType::*;
+        match v {
+            FileType::Regular => Regular,
+            FileType::Executable => Executable,
+            FileType::Symlink => Symlink,
+        }
+    }
+}
+
+impl From<EdenapiFileType> for FileType {
+    fn from(v: EdenapiFileType) -> Self {
+        use EdenapiFileType::*;
+        match v {
+            Regular => FileType::Regular,
+            Executable => FileType::Executable,
+            Symlink => FileType::Symlink,
         }
     }
 }

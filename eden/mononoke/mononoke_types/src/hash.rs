@@ -16,6 +16,7 @@ use blake2::{
     digest::{Input, VariableOutput},
     VarBlake2b,
 };
+use edenapi_types::{Sha1 as EdenapiSha1, Sha256 as EdenapiSha256};
 use faster_hex::{hex_decode, hex_encode};
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
 use serde_derive::{Deserialize, Serialize};
@@ -125,6 +126,11 @@ impl Blake2 {
         let mut bytes: [u8; 8] = [0; 8];
         bytes.copy_from_slice(&self.0[0..8]);
         u64::from_le_bytes(bytes)
+    }
+
+    #[inline]
+    pub fn into_inner(self) -> [u8; BLAKE2_HASH_LENGTH_BYTES] {
+        self.0
     }
 }
 
@@ -507,11 +513,35 @@ impl Arbitrary for GitSha1 {
     }
 }
 
+impl From<Sha1> for EdenapiSha1 {
+    fn from(v: Sha1) -> Self {
+        EdenapiSha1(v.0)
+    }
+}
+
+impl From<EdenapiSha1> for Sha1 {
+    fn from(v: EdenapiSha1) -> Self {
+        Sha1::from_byte_array(v.0)
+    }
+}
+
 impl Arbitrary for Sha1 {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         let mut bytes = [0; 20];
         g.fill_bytes(&mut bytes);
         Sha1(bytes)
+    }
+}
+
+impl From<Sha256> for EdenapiSha256 {
+    fn from(v: Sha256) -> Self {
+        EdenapiSha256(v.0)
+    }
+}
+
+impl From<EdenapiSha256> for Sha256 {
+    fn from(v: EdenapiSha256) -> Self {
+        Sha256::from_byte_array(v.0)
     }
 }
 

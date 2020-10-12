@@ -33,6 +33,17 @@
 //! empty, such as `Vec`. If an empty container has special semantics (other
 //! than ignoring the field), please wrap that field in an `Option` as well to
 //! distinguish between "empty" and "not present".
+//!
+//! Things to update when making a change to a wire type:
+//!
+//! 1. The Wire type definition.
+//! 2. If applicable, the API type definition.
+//! 3. The `ToWire` and `ToApi` implementations for the wire type.
+//! 4. If the API type has changed, the `json` module.
+//! 5. The `Arbitrary` implementations for the modified types.
+//! 6. If a new type is introduced, add a quickcheck serialize round trip test.
+//! 7. If the type has a corresponding API type, add a quickcheck wire-API round
+//! trip test.
 
 pub mod complete_tree;
 pub mod file;
@@ -387,6 +398,7 @@ pub mod tests {
     }
 
     quickcheck! {
+        // Wire serialize roundtrips
         fn test_hgid_roundtrip_serialize(v: WireHgId) -> bool {
             check_serialize_roundtrip(v)
         }
@@ -407,6 +419,7 @@ pub mod tests {
             check_serialize_roundtrip(v)
         }
 
+        // API-Wire roundtrips
         fn test_hgid_roundtrip_wire(v: HgId) -> bool {
             check_wire_roundtrip(v)
         }

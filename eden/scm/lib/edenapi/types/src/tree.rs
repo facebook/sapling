@@ -15,7 +15,9 @@ use quickcheck::Arbitrary;
 use revisionstore_types::Metadata;
 use types::{hgid::HgId, key::Key, parents::Parents};
 
-use crate::{FileMetadata, FileMetadataRequest, InvalidHgId};
+use crate::{
+    DirectoryMetadata, DirectoryMetadataRequest, FileMetadata, FileMetadataRequest, InvalidHgId,
+};
 
 #[derive(Debug, Error)]
 pub enum TreeError {
@@ -49,12 +51,14 @@ impl TreeError {
 /// Structure representing source control tree entry on the wire.
 /// Includes the information required to add the data to a mutable store,
 /// along with the parents for hash validation.
-#[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct TreeEntry {
     pub key: Key,
     pub data: Option<Bytes>,
     pub parents: Option<Parents>,
     pub file_metadata: Option<FileMetadata>,
+    pub directory_metadata: Option<DirectoryMetadata>,
+    pub children: Option<Vec<TreeEntry>>,
 }
 
 impl TreeEntry {
@@ -65,7 +69,10 @@ impl TreeEntry {
             parents: Some(parents),
             file_metadata: metadata.flags.map(|f| FileMetadata {
                 revisionstore_flags: Some(f),
+                ..Default::default()
             }),
+            directory_metadata: None,
+            children: None,
         }
     }
 
@@ -137,6 +144,9 @@ impl Arbitrary for TreeEntry {
             data: bytes.map(|b| Bytes::from(b)),
             parents: Arbitrary::arbitrary(g),
             file_metadata: Arbitrary::arbitrary(g),
+            directory_metadata: Arbitrary::arbitrary(g),
+            // Recursive TreeEntry in children causes stack overflow in QuickCheck
+            children: None,
         }
     }
 }
@@ -145,6 +155,7 @@ impl Arbitrary for TreeEntry {
 pub struct TreeRequest {
     pub keys: Vec<Key>,
     pub with_file_metadata: Option<FileMetadataRequest>,
+    pub with_directory_metadata: Option<DirectoryMetadataRequest>,
 }
 
 #[cfg(any(test, feature = "for-tests"))]
@@ -153,6 +164,7 @@ impl Arbitrary for TreeRequest {
         Self {
             keys: Arbitrary::arbitrary(g),
             with_file_metadata: Arbitrary::arbitrary(g),
+            with_directory_metadata: Arbitrary::arbitrary(g),
         }
     }
 }

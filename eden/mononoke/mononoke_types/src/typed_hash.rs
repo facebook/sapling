@@ -13,6 +13,7 @@ use anyhow::{bail, Error, Result};
 use ascii::{AsciiStr, AsciiString};
 use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use context::CoreContext;
+use edenapi_types::{ContentId as EdenapiContentId, FsnodeId as EdenapiFsnodeId};
 use futures::future::{BoxFuture, FutureExt};
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
 use sql::mysql;
@@ -379,6 +380,18 @@ impl_typed_hash! {
     context_key => "content",
 }
 
+impl From<ContentId> for EdenapiContentId {
+    fn from(v: ContentId) -> Self {
+        EdenapiContentId(v.0.into_inner())
+    }
+}
+
+impl From<EdenapiContentId> for ContentId {
+    fn from(v: EdenapiContentId) -> Self {
+        ContentId::new(Blake2::from_byte_array(v.0))
+    }
+}
+
 impl_typed_hash! {
     hash_type => ContentChunkId,
     value_type => ContentChunk,
@@ -419,6 +432,18 @@ impl_typed_hash! {
     value_type => Fsnode,
     context_type => FsnodeIdContext,
     context_key => "fsnode",
+}
+
+impl From<FsnodeId> for EdenapiFsnodeId {
+    fn from(v: FsnodeId) -> Self {
+        EdenapiFsnodeId(v.0.into_inner())
+    }
+}
+
+impl From<EdenapiFsnodeId> for FsnodeId {
+    fn from(v: EdenapiFsnodeId) -> Self {
+        FsnodeId::new(Blake2::from_byte_array(v.0))
+    }
 }
 
 impl_typed_hash_no_context! {

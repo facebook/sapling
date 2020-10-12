@@ -44,7 +44,8 @@ pub use crate::history::{
     HistoryEntry, HistoryRequest, HistoryResponse, HistoryResponseChunk, WireHistoryEntry,
 };
 pub use crate::metadata::{
-    DirectoryMetadata, DirectoryMetadataRequest, FileMetadata, FileMetadataRequest,
+    ContentId, DirectoryMetadata, DirectoryMetadataRequest, FileMetadata, FileMetadataRequest,
+    FileType, FsnodeId, Sha1, Sha256,
 };
 pub use crate::tree::{TreeEntry, TreeError, TreeRequest};
 pub use crate::wire::{ToApi, ToWire, WireToApiConversionError};

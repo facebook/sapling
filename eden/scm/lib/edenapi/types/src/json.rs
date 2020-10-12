@@ -23,7 +23,7 @@ use std::convert::TryFrom;
 use std::str::FromStr;
 
 use anyhow::{ensure, Context, Result};
-use serde_json::{json, Value};
+use serde_json::{json, Map, Value};
 
 use types::{HgId, Key, RepoPathBuf};
 
@@ -142,11 +142,15 @@ pub fn parse_tree_req(json: &Value) -> Result<TreeRequest> {
     let json = json.as_object().context("input must be a JSON object")?;
     let keys = json.get("keys").context("missing field: keys")?;
     let with_file_metadata = json.get("with_file_metadata");
+    let with_directory_metadata = json.get("with_directory_metadata");
 
     Ok(TreeRequest {
         keys: parse_keys(keys)?,
         with_file_metadata: with_file_metadata
             .map(parse_file_metadata_req)
+            .transpose()?,
+        with_directory_metadata: with_directory_metadata
+            .map(parse_directory_metadata_req)
             .transpose()?,
     })
 }
@@ -238,14 +242,46 @@ pub fn parse_complete_tree_req(value: &Value) -> Result<CompleteTreeRequest> {
 
 pub fn parse_file_metadata_req(json: &Value) -> Result<FileMetadataRequest> {
     let json = json.as_object().context("input must be a JSON object")?;
-    let with_revisionstore_flags = json
-        .get("with_revisionstore_flags")
-        .context("missing field: with_revisionstore_flags")?
-        .as_bool()
-        .context("with_revisionstore_flags field must be a bool")?;
+
+    let with_revisionstore_flags = optional_bool_field(json, "with_revisionstore_flags")?;
+    let with_content_id = optional_bool_field(json, "with_content_id")?;
+    let with_file_type = optional_bool_field(json, "with_file_type")?;
+    let with_size = optional_bool_field(json, "with_size")?;
+    let with_content_sha1 = optional_bool_field(json, "with_content_sha1")?;
+    let with_content_sha256 = optional_bool_field(json, "with_content_sha256")?;
 
     Ok(FileMetadataRequest {
         with_revisionstore_flags,
+        with_content_id,
+        with_file_type,
+        with_size,
+        with_content_sha1,
+        with_content_sha256,
+    })
+}
+
+pub fn parse_directory_metadata_req(json: &Value) -> Result<DirectoryMetadataRequest> {
+    let json = json.as_object().context("input must be a JSON object")?;
+
+    let with_fsnode_id = optional_bool_field(json, "with_fsnode_id")?;
+    let with_simple_format_sha1 = optional_bool_field(json, "with_simple_format_sha1")?;
+    let with_simple_format_sha256 = optional_bool_field(json, "with_simple_format_sha256")?;
+    let with_child_files_count = optional_bool_field(json, "with_child_files_count")?;
+    let with_child_files_total_size = optional_bool_field(json, "with_child_files_total_size")?;
+    let with_child_dirs_count = optional_bool_field(json, "with_child_dirs_count")?;
+    let with_descendant_files_count = optional_bool_field(json, "with_descendant_files_count")?;
+    let with_descendant_files_total_size =
+        optional_bool_field(json, "with_descendant_files_total_size")?;
+
+    Ok(DirectoryMetadataRequest {
+        with_fsnode_id,
+        with_simple_format_sha1,
+        with_simple_format_sha256,
+        with_child_files_count,
+        with_child_files_total_size,
+        with_child_dirs_count,
+        with_descendant_files_count,
+        with_descendant_files_total_size,
     })
 }
 
@@ -297,6 +333,17 @@ fn make_key(path: &str, hash: &str) -> Result<Key> {
     };
     let hgid = HgId::from_str(hash)?;
     Ok(Key::new(path, hgid))
+}
+
+fn optional_bool_field(json: &Map<String, Value>, field: &str) -> Result<bool> {
+    Ok(json
+        .get(field)
+        .map(|w| {
+            w.as_bool()
+                .context(format!("{} {}", field, "field must be a bool"))
+        })
+        .transpose()?
+        .unwrap_or_default())
 }
 
 pub trait FromJson: Sized {
@@ -363,16 +410,16 @@ impl<T: ToJson> ToJson for Vec<T> {
 
 impl ToJson for TreeRequest {
     fn to_json(&self) -> Value {
+        let mut json = json!({
+            "keys": self.keys.to_json()
+        });
         if let Some(file_metadata) = self.with_file_metadata {
-            json!({
-                "keys": self.keys.to_json(),
-                "with_file_metadata": file_metadata.to_json(),
-            })
-        } else {
-            json!({
-                "keys": self.keys.to_json(),
-            })
+            json["with_file_metadata"] = file_metadata.to_json();
         }
+        if let Some(dir_metadata) = self.with_directory_metadata {
+            json["with_directory_metadata"] = dir_metadata.to_json();
+        }
+        json
     }
 }
 
@@ -401,13 +448,29 @@ impl ToJson for CompleteTreeRequest {
 
 impl ToJson for FileMetadataRequest {
     fn to_json(&self) -> Value {
-        json!({ "with_revisionstore_flags": self.with_revisionstore_flags })
+        json!({
+            "with_revisionstore_flags": self.with_revisionstore_flags,
+            "with_content_id": self.with_content_id,
+            "with_file_type": self.with_file_type,
+            "with_size": self.with_size,
+            "with_content_sha1": self.with_content_sha1,
+            "with_content_sha256": self.with_content_sha256,
+        })
     }
 }
 
 impl ToJson for DirectoryMetadataRequest {
     fn to_json(&self) -> Value {
-        json!({})
+        json!({
+            "with_fsnode_id": self.with_fsnode_id,
+            "with_simple_format_sha1": self.with_simple_format_sha1,
+            "with_simple_format_sha256": self.with_simple_format_sha256,
+            "with_child_files_count": self.with_child_files_count,
+            "with_child_files_total_size": self.with_child_files_total_size,
+            "with_child_dirs_count": self.with_child_dirs_count,
+            "with_descendant_files_count": self.with_descendant_files_count,
+            "with_descendant_files_total_size": self.with_descendant_files_total_size,
+        })
     }
 }
 

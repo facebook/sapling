@@ -13,8 +13,8 @@ use serde_derive::{Deserialize, Serialize};
 use crate::{
     tree::{TreeEntry, TreeRequest},
     wire::{
-        is_default, ToApi, ToWire, WireFileMetadata, WireFileMetadataRequest, WireKey, WireParents,
-        WireToApiConversionError,
+        is_default, ToApi, ToWire, WireDirectoryMetadata, WireDirectoryMetadataRequest,
+        WireFileMetadata, WireFileMetadataRequest, WireKey, WireParents, WireToApiConversionError,
     },
 };
 
@@ -31,6 +31,12 @@ pub struct WireTreeEntry {
 
     #[serde(rename = "3", default, skip_serializing_if = "is_default")]
     file_metadata: Option<WireFileMetadata>,
+
+    #[serde(rename = "4", default, skip_serializing_if = "is_default")]
+    directory_metadata: Option<WireDirectoryMetadata>,
+
+    #[serde(rename = "5", default, skip_serializing_if = "is_default")]
+    children: Option<Vec<WireTreeEntry>>,
 }
 
 impl ToWire for TreeEntry {
@@ -42,6 +48,8 @@ impl ToWire for TreeEntry {
             data: self.data,
             parents: self.parents.to_wire(),
             file_metadata: self.file_metadata.to_wire(),
+            directory_metadata: self.directory_metadata.to_wire(),
+            children: self.children.to_wire(),
         }
     }
 }
@@ -59,7 +67,8 @@ impl ToApi for WireTreeEntry {
             data: self.data,
             parents: self.parents.to_api()?,
             file_metadata: self.file_metadata.to_api()?,
-            // directory_metadata: self.directory_metadata.to_api()?,
+            directory_metadata: self.directory_metadata.to_api()?,
+            children: self.children.to_api()?,
         })
     }
 }
@@ -88,6 +97,12 @@ pub struct WireTreeAttributesRequest {
 
     #[serde(rename = "2", default, skip_serializing_if = "is_default")]
     with_file_metadata: Option<WireFileMetadataRequest>,
+
+    #[serde(rename = "3", default, skip_serializing_if = "is_default")]
+    with_directory_metadata: Option<WireDirectoryMetadataRequest>,
+
+    #[serde(rename = "4", default, skip_serializing_if = "is_default")]
+    with_children: bool,
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize, Eq, PartialEq)]
@@ -112,6 +127,8 @@ impl ToWire for TreeRequest {
                 with_data: true,
                 with_parents: true,
                 with_file_metadata: self.with_file_metadata.to_wire(),
+                with_directory_metadata: self.with_directory_metadata.to_wire(),
+                with_children: true,
             }),
         }
     }
@@ -141,6 +158,11 @@ impl ToApi for WireTreeRequest {
                 .as_ref()
                 .and_then(|a| a.with_file_metadata)
                 .to_api()?,
+            with_directory_metadata: self
+                .attributes
+                .as_ref()
+                .and_then(|a| a.with_directory_metadata)
+                .to_api()?,
         })
     }
 }
@@ -154,6 +176,9 @@ impl Arbitrary for WireTreeEntry {
             data: bytes.map(|b| Bytes::from(b)),
             parents: Arbitrary::arbitrary(g),
             file_metadata: Arbitrary::arbitrary(g),
+            directory_metadata: Arbitrary::arbitrary(g),
+            // Not recursing here because it causes Quickcheck to overflow the stack
+            children: None,
         }
     }
 }
@@ -165,6 +190,8 @@ impl Arbitrary for WireTreeAttributesRequest {
             with_data: Arbitrary::arbitrary(g),
             with_parents: Arbitrary::arbitrary(g),
             with_file_metadata: Arbitrary::arbitrary(g),
+            with_directory_metadata: Arbitrary::arbitrary(g),
+            with_children: Arbitrary::arbitrary(g),
         }
     }
 }
@@ -232,6 +259,7 @@ mod tests {
         }
 
         // API-Wire roundtrips
+
         fn test_request_roundtrip_wire(v: TreeRequest) -> bool {
             check_wire_roundtrip(v)
         }

@@ -73,8 +73,15 @@ Create and send tree request.
               with_file_metadata: Some(
                   WireFileMetadataRequest {
                       with_revisionstore_flags: true,
+                      with_content_id: false,
+                      with_file_type: false,
+                      with_size: false,
+                      with_content_sha1: false,
+                      with_content_sha256: false,
                   },
               ),
+              with_directory_metadata: None,
+              with_children: true,
           },
       ),
   }
@@ -92,7 +99,7 @@ Check trees in response.
 
   $ edenapi_read_res tree cat res.cbor --debug -p '' -h $ROOT_MFID_1
   Reading from file: "res.cbor"
-  TreeEntry { key: Key { path: RepoPathBuf(""), hgid: HgId("15024c4dc4a27b572d623db342ae6a08d7f7adec") }, data: Some(b"test.txt\0186cafa3319c24956783383dc44c5cbc68c5a0ca\n"), parents: Some(None), file_metadata: None }
+  TreeEntry { key: Key { path: RepoPathBuf(""), hgid: HgId("15024c4dc4a27b572d623db342ae6a08d7f7adec") }, data: Some(b"test.txt\0186cafa3319c24956783383dc44c5cbc68c5a0ca\n"), parents: Some(None), file_metadata: None, directory_metadata: None, children: None }
 
   $ edenapi_read_res tree cat res.cbor -p '' -h $ROOT_MFID_2
   Reading from file: "res.cbor"

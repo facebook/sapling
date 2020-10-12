@@ -16,9 +16,9 @@ use url::Url;
 
 use edenapi_types::{
     wire::{WireFileEntry, WireTreeEntry},
-    CommitRevlogData, CommitRevlogDataRequest, CompleteTreeRequest, FileEntry, FileMetadataRequest,
-    FileRequest, HistoryEntry, HistoryRequest, HistoryResponseChunk, ToApi, ToWire, TreeEntry,
-    TreeRequest,
+    CommitRevlogData, CommitRevlogDataRequest, CompleteTreeRequest, DirectoryMetadataRequest,
+    FileEntry, FileMetadataRequest, FileRequest, HistoryEntry, HistoryRequest,
+    HistoryResponseChunk, ToApi, ToWire, TreeEntry, TreeRequest,
 };
 use hg_http::http_client;
 use http_client::{HttpClient, Request};
@@ -313,6 +313,21 @@ impl EdenApi for Client {
                 keys,
                 with_file_metadata: Some(FileMetadataRequest {
                     with_revisionstore_flags: true,
+                    with_content_id: true,
+                    with_file_type: true,
+                    with_size: true,
+                    with_content_sha1: true,
+                    with_content_sha256: true,
+                }),
+                with_directory_metadata: Some(DirectoryMetadataRequest {
+                    with_fsnode_id: true,
+                    with_simple_format_sha1: true,
+                    with_simple_format_sha256: true,
+                    with_child_files_count: true,
+                    with_child_files_total_size: true,
+                    with_child_dirs_count: true,
+                    with_descendant_files_count: true,
+                    with_descendant_files_total_size: true,
                 }),
             }
             .to_wire()
