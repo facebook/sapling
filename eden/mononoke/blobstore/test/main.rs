@@ -23,6 +23,7 @@ use context::CoreContext;
 use fileblob::Fileblob;
 use memblob::{EagerMemblob, LazyMemblob};
 use mononoke_types::BlobstoreBytes;
+use sqlblob::Sqlblob;
 
 async fn overwrite<B: Blobstore + BlobstorePutOps>(
     fb: FacebookInit,
@@ -63,10 +64,20 @@ async fn overwrite<B: Blobstore + BlobstorePutOps>(
     let ctime2 = roundtrip2.as_meta().ctime();
     if put_behaviour.should_overwrite() {
         assert_eq!(ctime2.is_some(), has_ctime);
-        assert_eq!(value2, roundtrip2.into_bytes());
+        assert_eq!(
+            value2,
+            roundtrip2.into_bytes(),
+            "checking overwrite value {:?}",
+            put_behaviour
+        );
     } else {
         assert_eq!(ctime1, ctime2);
-        assert_eq!(value, roundtrip2.into_bytes());
+        assert_eq!(
+            value,
+            roundtrip2.into_bytes(),
+            "checking overwrite value {:?}",
+            put_behaviour
+        );
     }
 
     let expected_status2 = match put_behaviour {
@@ -220,6 +231,15 @@ blobstore_test_impl! {
     fileblob_test => {
         state: Arc::new(TempDir::new("fileblob_test").unwrap()),
         new: move |dir: Arc<TempDir>, put_behaviour,| Fileblob::open(&*dir, put_behaviour),
+        persistent: true,
+        has_ctime: true,
+    }
+}
+
+blobstore_test_impl! {
+    sqlblob_test => {
+        state: (),
+        new: move |_, put_behaviour,| Sqlblob::with_sqlite_in_memory(put_behaviour),
         persistent: true,
         has_ctime: true,
     }

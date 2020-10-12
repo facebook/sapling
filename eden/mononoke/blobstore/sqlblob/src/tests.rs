@@ -6,6 +6,7 @@
  */
 
 use super::*;
+use blobstore::DEFAULT_PUT_BEHAVIOUR;
 use bytes::Bytes;
 use fbinit::FacebookInit;
 use rand::{distributions::Alphanumeric, thread_rng, Rng, RngCore};
@@ -17,7 +18,7 @@ async fn read_write(fb: FacebookInit) {
     let suffix: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
     let key = format!("manifoldblob_test_{}", suffix);
 
-    let bs = Arc::new(Sqlblob::with_sqlite_in_memory().unwrap());
+    let bs = Arc::new(Sqlblob::with_sqlite_in_memory(DEFAULT_PUT_BEHAVIOUR).unwrap());
 
     let mut bytes_in = [0u8; 64];
     thread_rng().fill_bytes(&mut bytes_in);
@@ -50,7 +51,7 @@ async fn double_put(fb: FacebookInit) {
     let suffix: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
     let key = format!("manifoldblob_test_{}", suffix);
 
-    let bs = Arc::new(Sqlblob::with_sqlite_in_memory().unwrap());
+    let bs = Arc::new(Sqlblob::with_sqlite_in_memory(DEFAULT_PUT_BEHAVIOUR).unwrap());
 
     let mut bytes_in = [0u8; 64];
     thread_rng().fill_bytes(&mut bytes_in);
@@ -84,7 +85,7 @@ async fn overwrite(fb: FacebookInit) -> Result<()> {
     let suffix: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
     let key = format!("manifoldblob_test_{}", suffix);
 
-    let bs = Arc::new(Sqlblob::with_sqlite_in_memory().unwrap());
+    let bs = Arc::new(Sqlblob::with_sqlite_in_memory(PutBehaviour::Overwrite).unwrap());
 
     let mut bytes_1 = [0u8; 64];
     thread_rng().fill_bytes(&mut bytes_1);
@@ -119,7 +120,7 @@ async fn dedup(fb: FacebookInit) {
     let suffix: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
     let key2 = format!("manifoldblob_test_{}", suffix);
 
-    let bs = Arc::new(Sqlblob::with_sqlite_in_memory().unwrap());
+    let bs = Arc::new(Sqlblob::with_sqlite_in_memory(DEFAULT_PUT_BEHAVIOUR).unwrap());
 
     let mut bytes_in = [0u8; 64];
     thread_rng().fill_bytes(&mut bytes_in);
@@ -174,7 +175,7 @@ async fn link(fb: FacebookInit) {
     let suffix: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
     let key2 = format!("manifoldblob_test_{}", suffix);
 
-    let bs = Arc::new(Sqlblob::with_sqlite_in_memory().unwrap());
+    let bs = Arc::new(Sqlblob::with_sqlite_in_memory(DEFAULT_PUT_BEHAVIOUR).unwrap());
 
     let mut bytes_in = [0u8; 64];
     thread_rng().fill_bytes(&mut bytes_in);

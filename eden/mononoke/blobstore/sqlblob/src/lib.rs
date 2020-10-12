@@ -25,7 +25,7 @@ use crate::store::{ChunkSqlStore, ChunkingMethod, DataSqlStore};
 use anyhow::{format_err, Error, Result};
 use blobstore::{
     Blobstore, BlobstoreGetData, BlobstoreMetadata, BlobstorePutOps, BlobstoreWithLink,
-    CountedBlobstore, OverwriteStatus, PutBehaviour, DEFAULT_PUT_BEHAVIOUR,
+    CountedBlobstore, OverwriteStatus, PutBehaviour,
 };
 use bytes::BytesMut;
 use cloned::cloned;
@@ -287,8 +287,8 @@ impl Sqlblob {
             .boxify()
     }
 
-    pub fn with_sqlite_in_memory() -> Result<CountedSqlblob> {
-        Self::with_sqlite(DEFAULT_PUT_BEHAVIOUR, |_| {
+    pub fn with_sqlite_in_memory(put_behaviour: PutBehaviour) -> Result<CountedSqlblob> {
+        Self::with_sqlite(put_behaviour, |_| {
             let con = open_sqlite_in_memory()?;
             con.execute_batch(Self::CREATION_QUERY)?;
             Ok(con)

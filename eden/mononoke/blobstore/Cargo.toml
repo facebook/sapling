@@ -35,6 +35,7 @@ cacheblob = { path = "cacheblob" }
 fileblob = { path = "fileblob" }
 memblob = { path = "memblob" }
 mononoke_types = { path = "../mononoke_types" }
+sqlblob = { path = "sqlblob" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 tempdir = "0.3"
 tokio-compat = "0.1"
