@@ -376,7 +376,10 @@ fn make_key_source(
 ) -> Result<Arc<dyn BlobstoreKeySource>, Error> {
     match args {
         BlobConfig::Manifold { bucket, .. } => {
-            let res = Arc::new(ThriftManifoldBlob::new(fb, bucket.clone(), None)?.into_inner());
+            let res = Arc::new(
+                ThriftManifoldBlob::new(fb, bucket.clone(), None, DEFAULT_PUT_BEHAVIOUR)?
+                    .into_inner(),
+            );
             Ok(res)
         }
         BlobConfig::Files { path } => {

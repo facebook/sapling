@@ -281,6 +281,7 @@ pub fn make_blobstore<'a>(
                         bucket.clone(),
                         None,
                         blobstore_options.manifold_api_key.clone(),
+                        blobstore_options.put_behaviour,
                     )
                     .compat()
                     .await?
@@ -304,6 +305,7 @@ pub fn make_blobstore<'a>(
                         bucket.clone(),
                         Some(ttl),
                         blobstore_options.manifold_api_key.clone(),
+                        blobstore_options.put_behaviour,
                     )
                     .compat()
                     .await?
