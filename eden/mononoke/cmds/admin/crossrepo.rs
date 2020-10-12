@@ -350,6 +350,8 @@ async fn subcommand_verify_bookmarks(
 
             Ok(())
         } else {
+            let source_repo = commit_syncer.get_source_repo();
+            let target_repo = commit_syncer.get_target_repo();
             for d in &diff {
                 use BookmarkDiff::*;
                 match d {
@@ -360,9 +362,11 @@ async fn subcommand_verify_bookmarks(
                     } => {
                         warn!(
                             ctx.logger(),
-                            "inconsistent value of {}: target repo has {}, but source repo bookmark points to {:?}",
+                            "inconsistent value of {}: '{}' has {}, but '{}' bookmark points to {:?}",
                             target_bookmark,
+                            target_repo.name(),
                             target_cs_id,
+                            source_repo.name(),
                             source_cs_id,
                         );
                     }
@@ -372,18 +376,22 @@ async fn subcommand_verify_bookmarks(
                     } => {
                         warn!(
                             ctx.logger(),
-                            "target repo doesn't have bookmark {} but source repo has it and it points to {}",
+                            "'{}' doesn't have bookmark {} but '{}' has it and it points to {}",
+                            target_repo.name(),
                             target_bookmark,
+                            source_repo.name(),
                             source_cs_id,
                         );
                     }
                     NoSyncOutcome { target_bookmark } => {
                         warn!(
                             ctx.logger(),
-                            "target repo has a bookmark {} but it points to a commit that has no \
-                             equivalent in source repo. If it's a shared bookmark (e.g. master) \
+                            "'{}' has a bookmark {} but it points to a commit that has no \
+                             equivalent in '{}'. If it's a shared bookmark (e.g. master) \
                              that might mean that it points to a commit from another repository",
+                            target_repo.name(),
                             target_bookmark,
+                            source_repo.name(),
                         );
                     }
                 }
