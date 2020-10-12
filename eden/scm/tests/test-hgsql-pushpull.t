@@ -51,11 +51,11 @@
   $ cd ../master
   $ hg book foo -r 'desc(x)'
   $ hg book
-     foo                       0:b292c1e3311f
+     foo                       b292c1e3311f
   $ cd ../client
   $ hg pull -q ../master
   $ hg book
-     foo                       0:b292c1e3311f
+     foo                       b292c1e3311f
 
 # Verify local bookmark push
 
@@ -68,7 +68,7 @@
   updating bookmark foo
   [1]
   $ hg book -R ../master
-     foo                       1:d34c38483be9
+     foo                       d34c38483be9
 
 # Verify explicit bookmark pulls work
 

@@ -137,6 +137,9 @@ class lockinfo(object):
         ) % (self.pid,)
         return msg + hintmsg
 
+    def __str__(self):
+        return _("process %r on host %r") % (self.pid, self.host)
+
 
 def trylock(ui, vfs, lockname, timeout, warntimeout, *args, **kwargs):
     """return an acquired lock or raise an a LockHeld exception

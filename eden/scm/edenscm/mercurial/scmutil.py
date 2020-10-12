@@ -164,7 +164,7 @@ def callcatch(ui, func):
     # Mercurial-specific first, followed by built-in and library exceptions
     except error.LockHeld as inst:
         if inst.errno == errno.ETIMEDOUT:
-            reason = _("timed out waiting for lock held by %r") % inst.lockinfo
+            reason = _("timed out waiting for lock held by %s") % inst.lockinfo
         else:
             reason = _("lock held by %r") % inst.lockinfo
         ui.warn(_("%s: %s\n") % (inst.desc or inst.filename, reason), error=_("abort"))

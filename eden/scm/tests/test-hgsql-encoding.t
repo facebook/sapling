@@ -81,7 +81,7 @@ Create another master repo, it should synchronize from the database
   c2d59fc1ca219a78013735473161145cb4d7d7fc tailing spaces
 
   $ hg bookmark
-     nonasciipath              1:a03fe2c5c0c9
+     nonasciipath              a03fe2c5c0c9
 
   $ hg up nonasciipath -q
   $ [[ -f 'a    ' ]] && echo good

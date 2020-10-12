@@ -52,7 +52,7 @@
   [255]
   $ mv ../master/.hg/hgrc_good ../master/.hg/hgrc
   $ hg -R ../master bookmarks
-     mybook                    0:b292c1e3311f
+     mybook                    b292c1e3311f
 
   $ cd ..
 

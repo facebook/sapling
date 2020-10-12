@@ -81,7 +81,7 @@
   $ cd ../master2
   $ hg book
   [hgsql] getting 0 commits from database
-     mybook                    1:b62091368546
+     mybook                    b62091368546
 
 # Pull commit and bookmark to one master, verify in the other
 
@@ -111,15 +111,15 @@
   $ cd ../master
   $ hg book
   [hgsql] getting 0 commits from database
-     book1                     -1:000000000000
-     mybook                    2:f3a7cb746fa9
+     book1                     000000000000
+     mybook                    f3a7cb746fa9
   $ hg book -d book1
   [hgsql] got lock after * seconds (read 1 rows) (glob)
   [hgsql] held lock for * seconds (read 7 rows; write 1 rows) (glob)
   $ cd ../master2
   $ hg book
   [hgsql] getting 0 commits from database
-     mybook                    2:f3a7cb746fa9
+     mybook                    f3a7cb746fa9
 
 # Verify that --forcesync works
 
