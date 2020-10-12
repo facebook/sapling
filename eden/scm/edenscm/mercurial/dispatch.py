@@ -412,6 +412,9 @@ def dispatch(req):
         _formatparse(ferr.write, inst)
         return -1
 
+    if req.ui.configbool("ui", "threaded"):
+        util.preregistersighandlers()
+
     cmdmsg = _formatargs(req.args)
     starttime = util.timer()
     ret = None

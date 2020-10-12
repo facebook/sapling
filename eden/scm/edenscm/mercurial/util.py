@@ -4781,6 +4781,7 @@ def spawndetached(args, cwd=None, env=None):
     return cmd.spawndetached().id()
 
 
+_handlersregistered = False
 _sighandlers = {}
 
 
@@ -4789,14 +4790,17 @@ def signal(signum, handler):
 
     Unlike the stdlib signal.signal, this can work from non-main thread.
     """
-    oldhandler = _sighandlers.get(signum)
-    if signum not in _sighandlers:
-        raise error.ProgrammingError(
-            "signal %d cannot be registered - add it in _preregistersighandlers first"
-            % signum
-        )
-    _sighandlers[signum] = handler
-    return oldhandler
+    if _handlersregistered:
+        oldhandler = _sighandlers.get(signum)
+        if signum not in _sighandlers:
+            raise error.ProgrammingError(
+                "signal %d cannot be registered - add it in preregistersighandlers first"
+                % signum
+            )
+        _sighandlers[signum] = handler
+        return oldhandler
+    else:
+        return signalmod.signal(signum, handler)
 
 
 def getsignal(signum):
@@ -4805,10 +4809,13 @@ def getsignal(signum):
     Note: if 'util' gets reloaded, the returned function might be a wrapper
     (specialsighandler) instead of what's set by 'util.signal'.
     """
-    return _sighandlers.get(signum)
+    if _handlersregistered:
+        return _sighandlers.get(signum)
+    else:
+        return signalmod.getsignal(signum)
 
 
-def _preregistersighandlers():
+def preregistersighandlers():
     """Pre-register signal handlers so 'util.signal' can work.
 
     This works by registering a special signal handler that reads
@@ -4816,6 +4823,11 @@ def _preregistersighandlers():
     '_sighandlers' via 'util.signal' to control what the signal
     handler does.
     """
+    global _handlersregistered
+    if _handlersregistered:
+        return
+
+    _handlersregistered = True
 
     def term(signum, frame):
         raise error.SignalInterrupt
@@ -4865,6 +4877,3 @@ def _preregistersighandlers():
         except ValueError:
             # Not all signals are supported on Windows.
             pass
-
-
-_preregistersighandlers()
