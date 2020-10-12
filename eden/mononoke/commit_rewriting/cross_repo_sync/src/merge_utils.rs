@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{bail, format_err, Error};
+use anyhow::{format_err, Error};
 use iterhelpers::get_only_item;
 use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types::ChangesetId;
@@ -25,9 +25,6 @@ pub fn get_version_for_merge<'a>(
             use CommitSyncOutcome::*;
             match parent_outcome {
                 NotSyncCandidate => continue,
-                Preserved => {
-                    bail!("cannot syncs merges of rewritten and preserved commits");
-                }
                 RewrittenAs(_, version) | EquivalentWorkingCopyAncestor(_, version) => {
                     versions.insert(version.clone());
                 }

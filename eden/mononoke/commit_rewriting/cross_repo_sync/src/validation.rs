@@ -570,7 +570,6 @@ async fn get_synced_commit<M: SyncedCommitMapping + Clone + 'static>(
         | EquivalentWorkingCopyAncestor(cs_id, mapping_version) => {
             Ok((cs_id, Some(mapping_version)))
         }
-        Preserved => Ok((hash, None)),
     }
 }
 
@@ -645,7 +644,6 @@ async fn rename_and_remap_bookmarks<M: SyncedCommitMapping + Clone + 'static>(
                     let maybe_sync_outcome = maybe_sync_outcome?;
                     use CommitSyncOutcome::*;
                     let maybe_remapped_cs_id = match maybe_sync_outcome {
-                        Some(Preserved) => Some(cs_id),
                         Some(RewrittenAs(cs_id, _))
                         | Some(EquivalentWorkingCopyAncestor(cs_id, _)) => Some(cs_id),
                         Some(NotSyncCandidate) => {
@@ -914,6 +912,7 @@ mod test {
                 .compat()
                 .await?;
 
+        let current_version = CommitSyncConfigVersion("noop".to_string());
         let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap();
         for cs_id in changesets {
             mapping
@@ -924,7 +923,7 @@ mod test {
                         small_repo_id: small_repo.get_repoid(),
                         small_bcs_id: cs_id,
                         large_bcs_id: cs_id,
-                        version_name: None,
+                        version_name: Some(current_version.clone()),
                     },
                 )
                 .compat()
@@ -942,7 +941,6 @@ mod test {
             },
         };
 
-        let current_version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
         let commit_sync_data_provider = CommitSyncDataProvider::test_new(
             current_version.clone(),
             Source(repos.get_source_repo().get_repoid()),

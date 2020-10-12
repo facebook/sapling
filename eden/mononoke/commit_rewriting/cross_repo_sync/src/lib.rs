@@ -320,7 +320,6 @@ async fn remap_parents<'a, M: SyncedCommitMapping + Clone + 'static>(
         use CommitSyncOutcome::*;
         let remapped_parent = match sync_outcome {
             RewrittenAs(cs_id, _) | EquivalentWorkingCopyAncestor(cs_id, _) => cs_id,
-            Preserved => *commit,
             NotSyncCandidate => {
                 return Err(ErrorKind::ParentNotSyncCandidate(*commit).into());
             }
@@ -701,7 +700,6 @@ where
         let res = match commit_sync_outcome {
             NotSyncCandidate => None,
             RewrittenAs(cs_id, _) | EquivalentWorkingCopyAncestor(cs_id, _) => Some(cs_id),
-            Preserved => Some(source_cs_id),
         };
         Ok(res)
     }
@@ -896,13 +894,12 @@ where
                     self.update_wc_equivalence(ctx.clone(), hash, None).await?;
                 } else if remapped_parents_outcome.len() == 1 {
                     use CommitSyncOutcome::*;
-                    let (sync_outcome, parent) = &remapped_parents_outcome[0];
+                    let (sync_outcome, _) = &remapped_parents_outcome[0];
                     let wc_equivalence = match sync_outcome {
                         NotSyncCandidate => None,
                         RewrittenAs(cs_id, _) | EquivalentWorkingCopyAncestor(cs_id, _) => {
                             Some(*cs_id)
                         }
-                        Preserved => Some(*parent),
                     };
 
                     self.update_wc_equivalence(ctx.clone(), hash, wc_equivalence)
@@ -957,50 +954,6 @@ where
                 Ok(Some(pushrebased_changeset))
             }
         }
-    }
-
-    /// The difference between `unsafe_sync_commit()` and `unsafe_preserve_commit()` is that `unsafe_preserve_commit()`
-    /// doesn't do any commit rewriting, and it requires all it's parents to be preserved.
-    /// It's prefixed with "unsafe_" because it doesn't apply any path rewriting.
-    pub async fn unsafe_preserve_commit(
-        &self,
-        ctx: CoreContext,
-        source_cs_id: ChangesetId,
-    ) -> Result<(), Error> {
-        let (source_repo, target_repo) = self.get_source_target();
-        let cs = source_cs_id
-            .load(ctx.clone(), source_repo.blobstore())
-            .await?;
-
-        for p in cs.parents() {
-            let maybe_outcome = self.get_commit_sync_outcome(ctx.clone(), p).await?;
-            let sync_outcome =
-                maybe_outcome.ok_or(format_err!("Parent commit {} is not synced yet", p))?;
-
-            if sync_outcome != CommitSyncOutcome::Preserved {
-                bail!(
-                    "trying to preserve a commit, but parent {} is not preserved",
-                    p
-                );
-            }
-        }
-
-        upload_commits(
-            ctx.clone(),
-            vec![cs],
-            source_repo.clone(),
-            target_repo.clone(),
-        )
-        .await?;
-
-        // update_mapping also updates working copy equivalence, so no need
-        // to do it separately
-        update_mapping_no_version_deprecated(
-            ctx.clone(),
-            hashmap! { source_cs_id => source_cs_id },
-            &self,
-        )
-        .await
     }
 
     async fn sync_commit_no_parents(
@@ -1145,26 +1098,6 @@ where
                     }
                 }
             }
-            Preserved => {
-                let frozen = cs.freeze()?;
-                upload_commits(
-                    ctx.clone(),
-                    vec![frozen],
-                    source_repo.clone(),
-                    target_repo.clone(),
-                )
-                .await?;
-
-                // update_mapping also updates working copy equivalence, so no need
-                // to do it separately
-                update_mapping_no_version_deprecated(
-                    ctx.clone(),
-                    hashmap! { source_cs_id => source_cs_id },
-                    &self,
-                )
-                .await?;
-                Ok(Some(source_cs_id))
-            }
         }
     }
 
@@ -1174,9 +1107,6 @@ where
     /// The idea is to derive this version from the `parent_outcomes`
     /// according to the following rules:
     /// - all `NotSyncCandidate` parents are ignored
-    /// - `Preserved` parents are prohibited (sync fails), and it
-    ///   is expected that such cases are handled by the caller in a
-    ///   separate flow
     /// - all `RewrittenAs` and `EquivalentWorkingCopyAncestor`
     ///   parents have the same (non-None) version associated
     async fn get_mover_to_use_for_merge<'a>(
@@ -1225,38 +1155,11 @@ where
             .try_collect::<Vec<_>>()
             .await?;
 
+        // If all parents are NotSyncedCandidate then this is NotSyncCandidate as well
         if sync_outcomes
             .iter()
-            .all(|(_, outcome)| outcome == &CommitSyncOutcome::Preserved)
+            .all(|(_, outcome)| outcome == &CommitSyncOutcome::NotSyncCandidate)
         {
-            // All parents being `Preserved` means that merge happens
-            // purely in the pre-big-merge area of the repo, so it can
-            // just be safely preserved.
-            self.unsafe_preserve_commit(ctx.clone(), source_cs_id)
-                .await?;
-            return Ok(Some(source_cs_id));
-        }
-
-        // We can have both NotSyncCandidate and Preserved, see example below
-        //
-        // "X" - NotSyncCandidate
-        // "P", "R" - already synced commits (preserved or rewritten)
-        // "A", "B" - new commits to sync
-        //
-        //   R
-        //   |
-        //   BM  <- Big merge
-        //  / \
-        // P  X   B <- Merge commit, has NotSyncCandidate and Preserved
-        //    | / |
-        //    X   A <- this commit can be preserved (e.g. if it touches shared directory)
-        //
-        //
-        // In the case like that let's mark a commit as NotSyncCandidate
-        if sync_outcomes.iter().all(|(_, outcome)| {
-            outcome == &CommitSyncOutcome::Preserved
-                || outcome == &CommitSyncOutcome::NotSyncCandidate
-        }) {
             self.update_wc_equivalence(ctx.clone(), source_cs_id, None)
                 .await?;
             return Ok(None);
@@ -1286,7 +1189,6 @@ where
                     EquivalentWorkingCopyAncestor(cs_id, _) | RewrittenAs(cs_id, _) => {
                         Some((*p, *cs_id))
                     }
-                    Preserved => Some((*p, *p)),
                     NotSyncCandidate => None,
                 }
             })
@@ -1587,25 +1489,6 @@ pub async fn upload_commits(
         .collect();
     uploader.try_for_each_concurrent(100, identity).await?;
     save_bonsai_changesets(rewritten_list.clone(), ctx.clone(), target_repo.clone())
-        .compat()
-        .await?;
-    Ok(())
-}
-
-async fn update_mapping_no_version_deprecated<'a, M: SyncedCommitMapping + Clone + 'static>(
-    ctx: CoreContext,
-    mapped: HashMap<ChangesetId, ChangesetId>,
-    syncer: &'a CommitSyncer<M>,
-) -> Result<(), Error> {
-    // TODO(stash, ikostia) kill this fn when Preserved is fully dead
-    let entries: Vec<_> = mapped
-        .into_iter()
-        .map(|(from, to)| create_synced_commit_mapping_entry(from, to, &syncer.repos, None))
-        .collect();
-
-    syncer
-        .mapping
-        .add_bulk(ctx.clone(), entries)
         .compat()
         .await?;
     Ok(())

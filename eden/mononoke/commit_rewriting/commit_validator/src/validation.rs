@@ -196,10 +196,7 @@ impl ValidationHelper {
 
         use CommitSyncOutcome::*;
         Ok(match maybe_commit_sync_outcome {
-            None
-            | Some(NotSyncCandidate)
-            | Some(EquivalentWorkingCopyAncestor(_, _))
-            | Some(Preserved) => None,
+            None | Some(NotSyncCandidate) | Some(EquivalentWorkingCopyAncestor(_, _)) => None,
             Some(RewrittenAs(cs_id, version_name)) => Some((Small(cs_id), version_name)),
         })
     }
@@ -931,7 +928,6 @@ async fn validate_topological_order<'a>(
 
                 use CommitSyncOutcome::*;
                 let remapping_of_small_parent = match commit_sync_outcome {
-                    Preserved => small_parent,
                     RewrittenAs(cs_id, _) | EquivalentWorkingCopyAncestor(cs_id, _) => cs_id,
                     NotSyncCandidate => {
                         return Err(format_err!(

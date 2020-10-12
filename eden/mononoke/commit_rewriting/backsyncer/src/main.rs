@@ -67,7 +67,6 @@ fn extract_cs_id_from_sync_outcome(
     use CommitSyncOutcome::*;
 
     match maybe_sync_outcome {
-        Some(Preserved) => Ok(Some(source_cs_id)),
         Some(RewrittenAs(cs_id, _)) => Ok(Some(cs_id)),
         Some(NotSyncCandidate) => Ok(None),
         Some(EquivalentWorkingCopyAncestor(cs_id, _)) => Ok(Some(cs_id)),

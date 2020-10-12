@@ -30,8 +30,6 @@ pub enum CommitSyncOutcome {
     NotSyncCandidate,
     /// This commit is a 1:1 semantic mapping, but sync process rewrote it to a new ID.
     RewrittenAs(ChangesetId, CommitSyncConfigVersion),
-    /// This commit is exactly identical in the target repo
-    Preserved,
     /// This commit is removed by the sync process, and the commit with the given ID has same content
     EquivalentWorkingCopyAncestor(ChangesetId, CommitSyncConfigVersion),
 }
@@ -44,8 +42,6 @@ pub enum PluralCommitSyncOutcome {
     NotSyncCandidate,
     /// This commit maps to several other commits in the target repo
     RewrittenAs(Vec<(ChangesetId, CommitSyncConfigVersion)>),
-    /// This commit is exactly identical in the target repo
-    Preserved,
     /// This commit is removed by the sync process, and the commit with the given ID has same content
     EquivalentWorkingCopyAncestor(ChangesetId, CommitSyncConfigVersion),
 }
@@ -211,9 +207,7 @@ pub async fn get_plural_commit_sync_outcome<'a, M: SyncedCommitMapping>(
         )
         .compat()
         .await?;
-    if remapped.len() == 1 && remapped[0].0 == source_cs_id.0 && remapped[0].1.is_none() {
-        return Ok(Some(PluralCommitSyncOutcome::Preserved));
-    } else if !remapped.is_empty() {
+    if !remapped.is_empty() {
         let remapped: Result<Vec<_>, Error> = remapped.into_iter()
             .map(|(cs_id, maybe_version)| {
                 let version = maybe_version.ok_or_else(||
@@ -248,21 +242,17 @@ pub async fn get_plural_commit_sync_outcome<'a, M: SyncedCommitMapping>(
             Ok(Some(PluralCommitSyncOutcome::NotSyncCandidate))
         }
         Some(WorkingCopyEquivalence::WorkingCopy(cs_id, maybe_version)) => {
-            if source_cs_id.0 == cs_id && maybe_version.is_none() {
-                Ok(Some(PluralCommitSyncOutcome::Preserved))
-            } else {
-                let version = maybe_version.ok_or_else(|| {
-                    anyhow!(
-                        "no sync commit version specified for equivalent working copy {} -> {} (source repo {}, target repo {})",
-                        source_cs_id.0, cs_id,
-                        source_repo_id,
-                        target_repo_id,
-                    )
-                })?;
-                Ok(Some(
-                    PluralCommitSyncOutcome::EquivalentWorkingCopyAncestor(cs_id, version),
-                ))
-            }
+            let version = maybe_version.ok_or_else(|| {
+                anyhow!(
+                    "no sync commit version specified for equivalent working copy {} -> {} (source repo {}, target repo {})",
+                    source_cs_id.0, cs_id,
+                    source_repo_id,
+                    target_repo_id,
+                )
+            })?;
+            Ok(Some(
+                PluralCommitSyncOutcome::EquivalentWorkingCopyAncestor(cs_id, version),
+            ))
         }
     }
 }
@@ -614,7 +604,6 @@ impl PluralCommitSyncOutcome {
         use PluralCommitSyncOutcome::*;
         match self {
             NotSyncCandidate => Ok(CommitSyncOutcome::NotSyncCandidate),
-            Preserved => Ok(CommitSyncOutcome::Preserved),
             EquivalentWorkingCopyAncestor(cs_id, version) => Ok(
                 CommitSyncOutcome::EquivalentWorkingCopyAncestor(cs_id, version),
             ),

@@ -268,7 +268,6 @@ where
                     RewrittenAs(cs_id, _) | EquivalentWorkingCopyAncestor(cs_id, _) => {
                         Ok(Some(cs_id))
                     }
-                    Preserved => Ok(Some(cs_id)),
                 }
             }
             None => Ok(None),

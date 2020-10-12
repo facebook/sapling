@@ -552,7 +552,6 @@ async fn verify_mapping_and_all_wc(
                 println!("using mover for {:?}", version);
                 (target_cs_id, commit_syncer.get_mover_by_version(version)?)
             }
-            Preserved => (source_cs_id, Arc::new(identity_mover) as Mover),
         };
 
         // Empty commits should always be synced, except for merges
@@ -561,7 +560,7 @@ async fn verify_mapping_and_all_wc(
             .await?;
         if bcs.file_changes().collect::<Vec<_>>().is_empty() && !bcs.is_merge() {
             match outcome {
-                RewrittenAs(..) | Preserved => {}
+                RewrittenAs(..) => {}
                 _ => {
                     panic!("empty commit should always be remapped {:?}", outcome);
                 }
@@ -651,7 +650,6 @@ async fn verify_bookmarks(
                         println!("using mover for {:?}", version);
                         commit_syncer.get_mover_by_version(&version)?
                     }
-                    Preserved => Arc::new(identity_mover),
                 };
 
                 compare_contents(

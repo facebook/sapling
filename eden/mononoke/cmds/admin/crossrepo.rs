@@ -784,6 +784,7 @@ mod test {
                 .compat()
                 .await?;
 
+        let current_version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
         let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
         for cs_id in changesets {
             mapping
@@ -794,7 +795,7 @@ mod test {
                         small_repo_id: small_repo.get_repoid(),
                         small_bcs_id: cs_id,
                         large_bcs_id: cs_id,
-                        version_name: None,
+                        version_name: Some(current_version.clone()),
                     },
                 )
                 .compat()
@@ -812,7 +813,6 @@ mod test {
             },
         };
 
-        let current_version = CommitSyncConfigVersion("TEST_VERSION_NAME".to_string());
         let commit_sync_data_provider = CommitSyncDataProvider::test_new(
             current_version.clone(),
             Source(repos.get_source_repo().get_repoid()),

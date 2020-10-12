@@ -655,7 +655,7 @@ impl PushRedirector {
     }
 
     /// Query the changeset mapping from the provided `syncer`
-    /// Error out if the `CommitSyncOutcome` is not `RewrittenAs` or `Preserved`
+    /// Error out if the `CommitSyncOutcome` is not `RewrittenAs`
     /// The logic of this method is to express an expectation that `cs_id`
     /// from the source repo MUST be properly present in the target repo,
     /// either with paths moved, or preserved. What is unacceptable is that
@@ -675,7 +675,6 @@ impl PushRedirector {
                 syncer
             ))
             .and_then(|commit_sync_outcome| match commit_sync_outcome {
-                CommitSyncOutcome::Preserved => Ok(cs_id),
                 CommitSyncOutcome::RewrittenAs(rewritten, _) => Ok(rewritten),
                 cso => Err(format_err!(
                     "Unexpected CommitSyncOutcome for {} in {:?}: {:?}",

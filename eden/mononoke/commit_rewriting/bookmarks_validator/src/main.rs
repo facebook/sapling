@@ -323,7 +323,6 @@ async fn remap<M: SyncedCommitMapping + Clone + 'static>(
         Some(RewrittenAs(cs_id, _)) | Some(EquivalentWorkingCopyAncestor(cs_id, _)) => {
             Ok(Some(cs_id))
         }
-        Some(Preserved) => Ok(Some(*source_cs_id)),
     }
 }
 

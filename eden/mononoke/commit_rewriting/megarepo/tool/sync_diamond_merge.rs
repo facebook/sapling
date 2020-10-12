@@ -300,7 +300,6 @@ async fn remap_commit(
     use CommitSyncOutcome::*;
     match sync_outcome {
         RewrittenAs(ref cs_id, _) => Ok(*cs_id),
-        Preserved => Ok(cs_id),
         _ => Err(format_err!(
             "unexpected commit sync outcome for root, got {:?}",
             sync_outcome

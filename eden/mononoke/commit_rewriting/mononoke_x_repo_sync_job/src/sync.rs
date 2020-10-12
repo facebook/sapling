@@ -410,7 +410,6 @@ async fn find_remapped_cs_id<M: SyncedCommitMapping + Clone + 'static>(
         Some(RewrittenAs(cs_id, _)) | Some(EquivalentWorkingCopyAncestor(cs_id, _)) => {
             Ok(Some(cs_id))
         }
-        Some(Preserved) => Ok(Some(orig_cs_id)),
         Some(NotSyncCandidate) => Err(format_err!("unexpected NotSyncCandidate")),
         None => Ok(None),
     }
