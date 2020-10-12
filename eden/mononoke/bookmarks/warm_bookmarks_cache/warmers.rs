@@ -38,12 +38,17 @@ pub fn blobimport_changeset_warmer(
                 async move {
                     let gen_num = fetch_generation_number(&ctx, &repo, cs_id).await?;
 
+                    let log_rate = 60;
+                    let mut i = 0;
                     let duration = Duration::from_secs(1);
                     while !check_if_present_in_hg(&ctx, &mutable_counters, &repo, gen_num).await? {
-                        info!(
-                            ctx.logger(),
-                            "not moving a bookmark to {} because it's not present in hg", cs_id
-                        );
+                        i += 1;
+                        if i % log_rate == 0 {
+                            info!(
+                                ctx.logger(),
+                                "not moving a bookmark to {} because it's not present in hg", cs_id
+                            );
+                        }
                         tokio::time::delay_for(duration).await;
                     }
 
