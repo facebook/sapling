@@ -6,7 +6,7 @@
  */
 
 use anyhow::Error;
-use blobstore::{Blobstore, BlobstoreGetData};
+use blobstore::{Blobstore, BlobstoreGetData, BlobstorePutOps, OverwriteStatus, PutBehaviour};
 use context::CoreContext;
 use futures::future::{BoxFuture, FutureExt};
 use mononoke_types::BlobstoreBytes;
@@ -45,7 +45,7 @@ impl ChaosOptions {
 
 /// A layer over an existing blobstore that errors randomly
 #[derive(Clone, Debug)]
-pub struct ChaosBlobstore<T: Blobstore + Clone> {
+pub struct ChaosBlobstore<T> {
     blobstore: T,
     sample_threshold_read: f32,
     sample_threshold_write: f32,
@@ -65,7 +65,7 @@ fn derive_threshold(sample_rate: Option<NonZeroU32>) -> f32 {
         .unwrap_or(NEVER_CHAOS_THRESHOLD)
 }
 
-impl<T: Blobstore + Clone> ChaosBlobstore<T> {
+impl<T> ChaosBlobstore<T> {
     pub fn new(blobstore: T, options: ChaosOptions) -> Self {
         let sample_threshold_read = derive_threshold(options.error_sample_read);
         let sample_threshold_write = derive_threshold(options.error_sample_write);
@@ -78,7 +78,7 @@ impl<T: Blobstore + Clone> ChaosBlobstore<T> {
     }
 }
 
-impl<T: Blobstore + Clone> Blobstore for ChaosBlobstore<T> {
+impl<T: Blobstore> Blobstore for ChaosBlobstore<T> {
     #[inline]
     fn get(
         &self,
@@ -134,6 +134,37 @@ impl<T: Blobstore + Clone> Blobstore for ChaosBlobstore<T> {
     }
 }
 
+impl<T: BlobstorePutOps> BlobstorePutOps for ChaosBlobstore<T> {
+    fn put_explicit(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+        put_behaviour: PutBehaviour,
+    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+        let should_error = thread_rng().gen::<f32>() > self.sample_threshold_write;
+        let put = if should_error {
+            None
+        } else {
+            Some(
+                self.blobstore
+                    .put_explicit(ctx, key.clone(), value, put_behaviour),
+            )
+        };
+        async move {
+            match put {
+                None => Err(ErrorKind::InjectedChaosPut(key).into()),
+                Some(put) => put.await,
+            }
+        }
+        .boxed()
+    }
+
+    fn put_behaviour(&self) -> PutBehaviour {
+        self.blobstore.put_behaviour()
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -151,6 +182,26 @@ mod test {
 
         let r = wrapper
             .put(
+                ctx.clone(),
+                key.clone(),
+                BlobstoreBytes::from_bytes("test foobar"),
+            )
+            .await;
+        assert!(!r.is_ok());
+        let base_present = base.is_present(ctx, key.clone()).await.unwrap();
+        assert!(!base_present);
+    }
+
+    #[fbinit::compat_test]
+    async fn test_error_on_write_with_status(fb: FacebookInit) {
+        let ctx = CoreContext::test_mock(fb);
+        let base = EagerMemblob::default();
+        let wrapper =
+            ChaosBlobstore::new(base.clone(), ChaosOptions::new(None, NonZeroU32::new(1)));
+        let key = "foobar".to_string();
+
+        let r = wrapper
+            .put_with_status(
                 ctx.clone(),
                 key.clone(),
                 BlobstoreBytes::from_bytes("test foobar"),
