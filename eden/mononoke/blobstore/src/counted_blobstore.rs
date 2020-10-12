@@ -14,7 +14,10 @@ use stats::prelude::*;
 
 use context::CoreContext;
 
-use crate::{Blobstore, BlobstoreBytes, BlobstoreGetData, BlobstoreWithLink};
+use crate::{
+    Blobstore, BlobstoreBytes, BlobstoreGetData, BlobstorePutOps, BlobstoreWithLink,
+    OverwriteStatus, PutBehaviour,
+};
 
 define_stats_struct! {
     CountedBlobstoreStats("mononoke.blobstore.{}", prefix: String),
@@ -33,12 +36,12 @@ define_stats_struct! {
 }
 
 #[derive(Clone, Debug)]
-pub struct CountedBlobstore<T: Blobstore> {
+pub struct CountedBlobstore<T> {
     blobstore: T,
     stats: Arc<CountedBlobstoreStats>,
 }
 
-impl<T: Blobstore> CountedBlobstore<T> {
+impl<T> CountedBlobstore<T> {
     pub fn new(name: String, blobstore: T) -> Self {
         Self {
             blobstore,
@@ -108,6 +111,33 @@ impl<T: Blobstore> Blobstore for CountedBlobstore<T> {
             res
         }
         .boxed()
+    }
+}
+
+impl<T: BlobstorePutOps> BlobstorePutOps for CountedBlobstore<T> {
+    fn put_explicit(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+        put_behaviour: PutBehaviour,
+    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+        let stats = self.stats.clone();
+        stats.put.add_value(1);
+        let put = self.blobstore.put_explicit(ctx, key, value, put_behaviour);
+        async move {
+            let res = put.await;
+            match res {
+                Ok(_) => stats.put_ok.add_value(1),
+                Err(_) => stats.put_err.add_value(1),
+            }
+            res
+        }
+        .boxed()
+    }
+
+    fn put_behaviour(&self) -> PutBehaviour {
+        self.blobstore.put_behaviour()
     }
 }
 
