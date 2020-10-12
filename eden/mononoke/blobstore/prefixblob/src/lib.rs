@@ -14,7 +14,7 @@ use futures::future::BoxFuture;
 
 use context::CoreContext;
 
-use blobstore::{Blobstore, BlobstoreGetData};
+use blobstore::{Blobstore, BlobstoreGetData, BlobstorePutOps, OverwriteStatus, PutBehaviour};
 use mononoke_types::BlobstoreBytes;
 
 /// A layer over an existing blobstore that prepends a fixed string to each get and put.
@@ -35,7 +35,7 @@ impl<T> PrefixBlobstore<T> {
     }
 }
 
-impl<T: Blobstore + Clone> PrefixBlobstore<T> {
+impl<T: Clone> PrefixBlobstore<T> {
     pub fn new<S: Into<InlinableString>>(blobstore: T, prefix: S) -> Self {
         let prefix = prefix.into();
         Self { prefix, blobstore }
@@ -70,6 +70,23 @@ impl<T: Blobstore + Clone> Blobstore for PrefixBlobstore<T> {
     #[inline]
     fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
         self.blobstore.is_present(ctx, self.prepend(key))
+    }
+}
+
+impl<T: BlobstorePutOps + Clone> BlobstorePutOps for PrefixBlobstore<T> {
+    fn put_explicit(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+        put_behaviour: PutBehaviour,
+    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+        self.blobstore
+            .put_explicit(ctx, self.prepend(key), value, put_behaviour)
+    }
+
+    fn put_behaviour(&self) -> PutBehaviour {
+        self.blobstore.put_behaviour()
     }
 }
 
