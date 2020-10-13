@@ -6,13 +6,13 @@
  */
 
 use anyhow::{anyhow, Error};
-use blobstore::{Blobstore, BlobstoreGetData, BlobstorePutOps};
+use blobstore::{Blobstore, BlobstoreGetData, BlobstorePutOps, OverwriteStatus, PutBehaviour};
 use blobstore_stats::{record_get_stats, record_put_stats, OperationType};
 use blobstore_sync_queue::OperationKey;
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType, SessionClass};
 use futures::{
-    future::{join_all, select, BoxFuture, Either as FutureEither, FutureExt},
+    future::{join_all, select, BoxFuture, Either as FutureEither, FutureExt, TryFutureExt},
     stream::{FuturesUnordered, StreamExt, TryStreamExt},
 };
 use futures_stats::TimedFutureExt;
@@ -238,11 +238,16 @@ pub async fn inner_put(
     blobstore: &dyn BlobstorePutOps,
     key: String,
     value: BlobstoreBytes,
-) -> (BlobstoreId, Result<(), Error>) {
+    put_behaviour: Option<PutBehaviour>,
+) -> (BlobstoreId, Result<OverwriteStatus, Error>) {
     let size = value.len();
     let (stats, timeout_or_res) = timeout(
         REQUEST_TIMEOUT,
-        blobstore.put_with_status(ctx.clone(), key.clone(), value),
+        if let Some(put_behaviour) = put_behaviour {
+            blobstore.put_explicit(ctx.clone(), key.clone(), value, put_behaviour)
+        } else {
+            blobstore.put_with_status(ctx.clone(), key.clone(), value)
+        },
     )
     .timed()
     .await;
@@ -258,7 +263,7 @@ pub async fn inner_put(
         Some(blobstore_id),
         Some(write_order.fetch_add(1, Ordering::Relaxed) + 1),
     );
-    (blobstore_id, result.map(|_status| ()))
+    (blobstore_id, result)
 }
 
 // Workaround for Blobstore returning a static lifetime future
@@ -392,138 +397,6 @@ impl Blobstore for MultiplexedBlobstoreBase {
             .boxed()
     }
 
-    fn put(
-        &self,
-        ctx: CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> BoxFuture<'static, Result<(), Error>> {
-        let write_order = Arc::new(AtomicUsize::new(0));
-        let operation_key = OperationKey::gen();
-        let mut needed_handlers: usize = self.minimum_successful_writes.into();
-        let run_handlers_on_success = match ctx.session().session_class() {
-            SessionClass::UserWaiting => true,
-            SessionClass::Background => false,
-        };
-
-        let mut puts: FuturesUnordered<_> = self
-            .blobstores
-            .iter()
-            .chain(self.write_mostly_blobstores.iter())
-            .cloned()
-            .map({
-                |(blobstore_id, blobstore)| {
-                    cloned!(
-                        self.handler,
-                        self.multiplex_id,
-                        self.scuba,
-                        ctx,
-                        write_order,
-                        key,
-                        value,
-                        operation_key
-                    );
-                    async move {
-                        let (blobstore_id, res) = inner_put(
-                            &ctx,
-                            scuba,
-                            write_order.as_ref(),
-                            blobstore_id,
-                            blobstore.as_ref(),
-                            key.clone(),
-                            value,
-                        )
-                        .await;
-                        res.map_err(|err| (blobstore_id, err))?;
-                        // Return the on_put handler
-                        Ok(async move {
-                            let res = handler
-                                .on_put(&ctx, blobstore_id, multiplex_id, &operation_key, &key)
-                                .await;
-                            res.map_err(|err| (blobstore_id, err))
-                        })
-                    }
-                }
-            })
-            .collect();
-
-        async move {
-            if needed_handlers > puts.len() {
-                return Err(anyhow!(
-                    "Not enough blobstores for configured put needs. Have {}, need {}",
-                    puts.len(),
-                    needed_handlers
-                ));
-            }
-            let (stats, result) = {
-                let ctx = &ctx;
-                async move {
-                    ctx.perf_counters()
-                        .increment_counter(PerfCounterType::BlobPuts);
-
-                    let mut put_errors = HashMap::new();
-                    let mut handlers = FuturesUnordered::new();
-
-                    while let Some(result) = select_next(
-                        &mut puts,
-                        &mut handlers,
-                        run_handlers_on_success || !put_errors.is_empty(),
-                    )
-                    .await
-                    {
-                        use Either::*;
-                        match result {
-                            Left(Ok(handler)) => {
-                                handlers.push(handler);
-                                // All puts have succeeded, no errors - we're done
-                                if puts.is_empty() && put_errors.is_empty() {
-                                    if run_handlers_on_success {
-                                        // Spawn off the handlers to ensure that all writes are logged.
-                                        spawn_stream_completion(handlers);
-                                    }
-                                    return Ok(());
-                                }
-                            }
-                            Left(Err((blobstore_id, e))) => {
-                                put_errors.insert(blobstore_id, e);
-                            }
-                            Right(Ok(())) => {
-                                needed_handlers = needed_handlers.saturating_sub(1);
-                                // Can only get here if at least one handler has been run, therefore need to ensure all handlers
-                                // run.
-                                if needed_handlers == 0 {
-                                    // Handlers were successful. Spawn off remaining puts and handler
-                                    // writes, then done
-                                    spawn_stream_completion(puts.and_then(|handler| handler));
-                                    spawn_stream_completion(handlers);
-                                    return Ok(());
-                                }
-                            }
-                            Right(Err((blobstore_id, e))) => {
-                                put_errors.insert(blobstore_id, e);
-                            }
-                        }
-                    }
-                    if put_errors.len() == 1 {
-                        let (_, put_error) = put_errors.drain().next().unwrap();
-                        Err(put_error)
-                    } else {
-                        Err(ErrorKind::MultiplePutFailures(Arc::new(put_errors)).into())
-                    }
-                }
-                .timed()
-                .await
-            };
-
-            ctx.perf_counters().set_max_counter(
-                PerfCounterType::BlobPutsMaxLatency,
-                stats.completion_time.as_millis_unchecked() as i64,
-            );
-            result
-        }
-        .boxed()
-    }
-
     fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
         let blobstores_count = self.blobstores.len() + self.write_mostly_blobstores.len();
 
@@ -588,6 +461,184 @@ impl Blobstore for MultiplexedBlobstoreBase {
             Ok(result?)
         }
         .boxed()
+    }
+
+    fn put(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> BoxFuture<'static, Result<(), Error>> {
+        BlobstorePutOps::put_with_status(self, ctx, key, value)
+            .map_ok(|_| ())
+            .boxed()
+    }
+}
+
+impl MultiplexedBlobstoreBase {
+    // If put_behaviour is None, we we call inner BlobstorePutOps::put_with_status()
+    // If put_behaviour is Some, we we call inner BlobstorePutOps::put_explicit()
+    fn put_impl(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+        put_behaviour: Option<PutBehaviour>,
+    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+        let write_order = Arc::new(AtomicUsize::new(0));
+        let operation_key = OperationKey::gen();
+        let mut needed_handlers: usize = self.minimum_successful_writes.into();
+        let run_handlers_on_success = match ctx.session().session_class() {
+            SessionClass::UserWaiting => true,
+            SessionClass::Background => false,
+        };
+
+        let mut puts: FuturesUnordered<_> = self
+            .blobstores
+            .iter()
+            .chain(self.write_mostly_blobstores.iter())
+            .cloned()
+            .map({
+                |(blobstore_id, blobstore)| {
+                    cloned!(
+                        self.handler,
+                        self.multiplex_id,
+                        self.scuba,
+                        ctx,
+                        write_order,
+                        key,
+                        value,
+                        operation_key
+                    );
+                    async move {
+                        let (blobstore_id, res) = inner_put(
+                            &ctx,
+                            scuba,
+                            write_order.as_ref(),
+                            blobstore_id,
+                            blobstore.as_ref(),
+                            key.clone(),
+                            value,
+                            put_behaviour,
+                        )
+                        .await;
+                        res.map_err(|err| (blobstore_id, err))?;
+                        // Return the on_put handler
+                        Ok(async move {
+                            let res = handler
+                                .on_put(&ctx, blobstore_id, multiplex_id, &operation_key, &key)
+                                .await;
+                            res.map_err(|err| (blobstore_id, err))
+                        })
+                    }
+                }
+            })
+            .collect();
+
+        async move {
+            if needed_handlers > puts.len() {
+                return Err(anyhow!(
+                    "Not enough blobstores for configured put needs. Have {}, need {}",
+                    puts.len(),
+                    needed_handlers
+                ));
+            }
+            let (stats, result) = {
+                let ctx = &ctx;
+                async move {
+                    ctx.perf_counters()
+                        .increment_counter(PerfCounterType::BlobPuts);
+
+                    let mut put_errors = HashMap::new();
+                    let mut handlers = FuturesUnordered::new();
+
+                    while let Some(result) = select_next(
+                        &mut puts,
+                        &mut handlers,
+                        run_handlers_on_success || !put_errors.is_empty(),
+                    )
+                    .await
+                    {
+                        use Either::*;
+                        match result {
+                            Left(Ok(handler)) => {
+                                handlers.push(handler);
+                                // All puts have succeeded, no errors - we're done
+                                if puts.is_empty() && put_errors.is_empty() {
+                                    if run_handlers_on_success {
+                                        // Spawn off the handlers to ensure that all writes are logged.
+                                        spawn_stream_completion(handlers);
+                                    }
+                                    // Inner statuses can differ, don't attempt to return them
+                                    return Ok(OverwriteStatus::NotChecked);
+                                }
+                            }
+                            Left(Err((blobstore_id, e))) => {
+                                put_errors.insert(blobstore_id, e);
+                            }
+                            Right(Ok(())) => {
+                                needed_handlers = needed_handlers.saturating_sub(1);
+                                // Can only get here if at least one handler has been run, therefore need to ensure all handlers
+                                // run.
+                                if needed_handlers == 0 {
+                                    // Handlers were successful. Spawn off remaining puts and handler
+                                    // writes, then done
+                                    spawn_stream_completion(puts.and_then(|handler| handler));
+                                    spawn_stream_completion(handlers);
+                                    // Inner statuses can differ, don't attempt to return them
+                                    return Ok(OverwriteStatus::NotChecked);
+                                }
+                            }
+                            Right(Err((blobstore_id, e))) => {
+                                put_errors.insert(blobstore_id, e);
+                            }
+                        }
+                    }
+                    if put_errors.len() == 1 {
+                        let (_, put_error) = put_errors.drain().next().unwrap();
+                        Err(put_error)
+                    } else {
+                        Err(ErrorKind::MultiplePutFailures(Arc::new(put_errors)).into())
+                    }
+                }
+                .timed()
+                .await
+            };
+
+            ctx.perf_counters().set_max_counter(
+                PerfCounterType::BlobPutsMaxLatency,
+                stats.completion_time.as_millis_unchecked() as i64,
+            );
+            result
+        }
+        .boxed()
+    }
+}
+
+impl BlobstorePutOps for MultiplexedBlobstoreBase {
+    fn put_explicit(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+        put_behaviour: PutBehaviour,
+    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+        self.put_impl(ctx, key, value, Some(put_behaviour))
+    }
+
+    fn put_with_status(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+        self.put_impl(ctx, key, value, None)
+    }
+
+    fn put_behaviour(&self) -> PutBehaviour {
+        // TODO(ahornby), planning to delete this method from the BlobstorePutOps trait
+        // in next in stack as doesn't make sense for multiplex
+        PutBehaviour::Overwrite
     }
 }
 

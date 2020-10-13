@@ -10,7 +10,7 @@ use crate::validate::{CHECK_FAIL, CHECK_TYPE, NODE_KEY, REPO};
 use anyhow::{format_err, Error};
 use blobstore::{Blobstore, BlobstoreMetadata};
 use blobstore_factory::{
-    make_blobstore, make_blobstore_multiplexed, BlobstoreOptions, ReadOnlyStorage,
+    make_blobstore_multiplexed, make_blobstore_put_ops, BlobstoreOptions, ReadOnlyStorage,
 };
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -231,7 +231,7 @@ pub async fn open_blobstore(
             .await?
         }
         (None, blobconfig) => {
-            make_blobstore(
+            make_blobstore_put_ops(
                 fb,
                 blobconfig,
                 mysql_options,
@@ -249,7 +249,7 @@ pub async fn open_blobstore(
     let blobstore = match blobstore_sampler {
         Some(blobstore_sampler) => Arc::new(SamplingBlobstore::new(blobstore, blobstore_sampler))
             as Arc<dyn blobstore::Blobstore>,
-        None => blobstore,
+        None => Arc::new(blobstore) as Arc<dyn blobstore::Blobstore>,
     };
 
     if let Some(prefix) = prefix {

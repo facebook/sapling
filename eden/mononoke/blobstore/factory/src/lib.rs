@@ -16,7 +16,9 @@ pub use chaosblob::ChaosOptions;
 pub use packblob::PackOptions;
 pub use throttledblob::ThrottleOptions;
 
-pub use crate::blobstore::{make_blobstore, make_blobstore_multiplexed, BlobstoreOptions};
+pub use crate::blobstore::{
+    make_blobstore, make_blobstore_multiplexed, make_blobstore_put_ops, BlobstoreOptions,
+};
 pub use crate::sql::{make_metadata_sql_factory, MetadataSqlFactory};
 
 #[derive(Copy, Clone, PartialEq)]

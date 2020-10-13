@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{format_err, Context, Error};
+use anyhow::{Context, Error};
 use blobstore::{
     Blobstore, BlobstorePutOps, DisabledBlob, ErrorKind, PutBehaviour, DEFAULT_PUT_BEHAVIOUR,
 };
@@ -93,10 +93,38 @@ pub fn make_blobstore<'a>(
     blobstore_options: &'a BlobstoreOptions,
     logger: &'a Logger,
 ) -> BoxFuture<'a, Result<Arc<dyn Blobstore>, Error>> {
+    async move {
+        let store = make_blobstore_put_ops(
+            fb,
+            blobconfig,
+            mysql_options,
+            readonly_storage,
+            blobstore_options,
+            logger,
+        )
+        .await?;
+        // Workaround for trait A {} trait B:A {} but Arc<dyn B> is not a Arc<dyn A>
+        // See https://github.com/rust-lang/rfcs/issues/2765 if interested
+        Ok(Arc::new(store) as Arc<dyn Blobstore>)
+    }
+    .boxed()
+}
+
+// Constructs the BlobstorePutOps store implementations for apps needing low level blobsore access
+// most users should use `make_blobstore`
+pub fn make_blobstore_put_ops<'a>(
+    fb: FacebookInit,
+    blobconfig: BlobConfig,
+    mysql_options: MysqlOptions,
+    readonly_storage: ReadOnlyStorage,
+    blobstore_options: &'a BlobstoreOptions,
+    logger: &'a Logger,
+) -> BoxFuture<'a, Result<Arc<dyn BlobstorePutOps>, Error>> {
     // NOTE: This needs to return a BoxFuture because it recurses.
     async move {
         use BlobConfig::*;
-        let mut already_wrapped = false;
+
+        let mut has_components = false;
         let store = match blobconfig {
             Multiplexed {
                 multiplex_id,
@@ -106,6 +134,7 @@ pub fn make_blobstore<'a>(
                 minimum_successful_writes,
                 queue_db,
             } => {
+                has_components = true;
                 make_blobstore_multiplexed(
                     fb,
                     multiplex_id,
@@ -131,6 +160,7 @@ pub fn make_blobstore<'a>(
                 scrub_action,
                 queue_db,
             } => {
+                has_components = true;
                 make_blobstore_multiplexed(
                     fb,
                     multiplex_id,
@@ -150,65 +180,6 @@ pub fn make_blobstore<'a>(
                 )
                 .await?
             }
-            _ => {
-                already_wrapped = true;
-                let store = make_blobstore_put_ops(
-                    fb,
-                    blobconfig,
-                    mysql_options,
-                    readonly_storage,
-                    blobstore_options,
-                    logger,
-                )
-                .await?;
-                // Workaround for trait A {} trait B:A {} but Arc<dyn B> is not a Arc<dyn A>
-                // See https://github.com/rust-lang/rfcs/issues/2765 if interested
-                Arc::new(store) as Arc<dyn Blobstore>
-            }
-        };
-
-        let store = if !already_wrapped {
-            let store = if readonly_storage.0 {
-                Arc::new(ReadOnlyBlobstore::new(store)) as Arc<dyn Blobstore>
-            } else {
-                store
-            };
-
-            if blobstore_options.throttle_options.has_throttle() {
-                Arc::new(
-                    ThrottledBlob::new(store, blobstore_options.throttle_options.clone()).await,
-                ) as Arc<dyn Blobstore>
-            } else {
-                store
-            }
-        } else {
-            store
-        };
-
-        // NOTE: Do not add wrappers here that should only be added once per repository, since this
-        // function will get called recursively for each member of a Multiplex! For those, use
-        // RepoBlobstoreArgs::new instead.
-
-        Ok(store)
-    }
-    .boxed()
-}
-
-// Constructs the BlobstorePutOps store implementations
-fn make_blobstore_put_ops<'a>(
-    fb: FacebookInit,
-    blobconfig: BlobConfig,
-    mysql_options: MysqlOptions,
-    readonly_storage: ReadOnlyStorage,
-    blobstore_options: &'a BlobstoreOptions,
-    logger: &'a Logger,
-) -> BoxFuture<'a, Result<Arc<dyn BlobstorePutOps>, Error>> {
-    // NOTE: This needs to return a BoxFuture because it recurses.
-    async move {
-        use BlobConfig::*;
-
-        let has_components = false;
-        let store = match blobconfig {
             Disabled => {
                 Arc::new(DisabledBlob::new("Disabled by configuration")) as Arc<dyn BlobstorePutOps>
             }
@@ -414,12 +385,6 @@ fn make_blobstore_put_ops<'a>(
                     unimplemented!("This is implemented only for fbcode_build")
                 }
             }
-            _ => {
-                return Err(format_err!(
-                    "make_blobstore_put_ops: unknown blobconfig {:?}",
-                    blobstore_options
-                ));
-            }
         };
 
         let store = if readonly_storage.0 {
@@ -465,7 +430,7 @@ pub fn make_blobstore_multiplexed<'a>(
     readonly_storage: ReadOnlyStorage,
     blobstore_options: &'a BlobstoreOptions,
     logger: &'a Logger,
-) -> impl Future<Output = Result<Arc<dyn Blobstore>, Error>> + 'a {
+) -> impl Future<Output = Result<Arc<dyn BlobstorePutOps>, Error>> + 'a {
     async move {
         let component_readonly = match &scrub_args {
             // Need to write to components to repair them.
@@ -543,7 +508,7 @@ pub fn make_blobstore_multiplexed<'a>(
                 scuba_sample_rate,
                 scrub_handler,
                 scrub_action,
-            )) as Arc<dyn Blobstore>,
+            )) as Arc<dyn BlobstorePutOps>,
             None => Arc::new(MultiplexedBlobstore::new(
                 multiplex_id,
                 normal_components,
@@ -554,7 +519,7 @@ pub fn make_blobstore_multiplexed<'a>(
                     ScubaSampleBuilder::new(fb, table)
                 }),
                 scuba_sample_rate,
-            )) as Arc<dyn Blobstore>,
+            )) as Arc<dyn BlobstorePutOps>,
         };
 
         Ok(blobstore)

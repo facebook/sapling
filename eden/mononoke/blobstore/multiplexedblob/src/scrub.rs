@@ -11,13 +11,15 @@ use crate::{
 };
 
 use anyhow::Error;
-use blobstore::{Blobstore, BlobstoreGetData, BlobstoreMetadata, BlobstorePutOps};
+use blobstore::{
+    Blobstore, BlobstoreGetData, BlobstoreMetadata, BlobstorePutOps, OverwriteStatus, PutBehaviour,
+};
 use blobstore_sync_queue::BlobstoreSyncQueue;
 use chrono::Duration as ChronoDuration;
 use cloned::cloned;
 use context::CoreContext;
 use futures::{
-    future::{BoxFuture, FutureExt},
+    future::{BoxFuture, FutureExt, TryFutureExt},
     stream::{FuturesUnordered, TryStreamExt},
 };
 use metaconfig_types::{BlobstoreId, MultiplexId, ScrubAction};
@@ -154,10 +156,13 @@ async fn put_and_mark_repaired(
         store,
         key.clone(),
         value.as_bytes().clone(),
+        // We are repairing, overwrite is right thing to do as
+        // bad keys may be is_present, but not retrievable.
+        Some(PutBehaviour::Overwrite),
     )
     .await;
     scrub_handler.on_repair(&ctx, id, &key, res.is_ok(), value.as_meta());
-    res
+    res.map(|_status| ())
 }
 
 // Workaround for Blobstore returning a static lifetime future
@@ -281,16 +286,43 @@ impl Blobstore for ScrubBlobstore {
         .boxed()
     }
 
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
+        self.inner.is_present(ctx, key)
+    }
+
     fn put(
         &self,
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
     ) -> BoxFuture<'static, Result<(), Error>> {
-        self.inner.put(ctx, key, value)
+        BlobstorePutOps::put_with_status(self, ctx, key, value)
+            .map_ok(|_| ())
+            .boxed()
+    }
+}
+
+impl BlobstorePutOps for ScrubBlobstore {
+    fn put_explicit(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+        put_behaviour: PutBehaviour,
+    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+        self.inner.put_explicit(ctx, key, value, put_behaviour)
     }
 
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
-        self.inner.is_present(ctx, key)
+    fn put_behaviour(&self) -> PutBehaviour {
+        self.inner.put_behaviour()
+    }
+
+    fn put_with_status(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+        self.inner.put_with_status(ctx, key, value)
     }
 }

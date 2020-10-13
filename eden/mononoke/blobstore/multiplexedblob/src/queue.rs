@@ -7,7 +7,7 @@
 
 use crate::base::{ErrorKind, MultiplexedBlobstoreBase, MultiplexedBlobstorePutHandler};
 use anyhow::Error;
-use blobstore::{Blobstore, BlobstoreGetData, BlobstorePutOps};
+use blobstore::{Blobstore, BlobstoreGetData, BlobstorePutOps, OverwriteStatus, PutBehaviour};
 use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry, OperationKey};
 use cloned::cloned;
 use context::CoreContext;
@@ -152,5 +152,30 @@ impl Blobstore for MultiplexedBlobstore {
             }
         }
         .boxed()
+    }
+}
+
+impl BlobstorePutOps for MultiplexedBlobstore {
+    fn put_explicit(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+        put_behaviour: PutBehaviour,
+    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+        self.blobstore.put_explicit(ctx, key, value, put_behaviour)
+    }
+
+    fn put_behaviour(&self) -> PutBehaviour {
+        self.blobstore.put_behaviour()
+    }
+
+    fn put_with_status(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+        self.blobstore.put_with_status(ctx, key, value)
     }
 }
