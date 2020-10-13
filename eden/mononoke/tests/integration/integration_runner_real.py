@@ -167,6 +167,11 @@ def _hg_runner(
             "--chg",
             "--outputdir",
             output_dir,
+            # The eden/scm/test/features.py lists tests by name and doesn't
+            # make the distinction between eden/scm and eden/mononoke tests.
+            # Disabling this will prevent from accidental enabling of features
+            # for Mononoke tests.
+            "--nofeatures",
             *extra_args,
         ]
 

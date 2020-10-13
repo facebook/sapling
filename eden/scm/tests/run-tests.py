@@ -480,6 +480,11 @@ def getparser():
         "--showchannels", action="store_true", help="show scheduling channels"
     )
     harness.add_argument(
+        "--nofeatures",
+        action="store_true",
+        help="do not enable extra features from features.py",
+    )
+    harness.add_argument(
         "--noprogress", action="store_true", help="do not show progress"
     )
     harness.add_argument(
@@ -1271,7 +1276,7 @@ class Test(unittest.TestCase):
         self._daemonpids.append(env["DAEMON_PIDS"])
         hgrcpath = env["HGRCPATH"].rsplit(os.pathsep.encode("utf-8"), 1)[-1]
         self._createhgrc(hgrcpath)
-        if features:
+        if features and not self._options.nofeatures:
             features.setup(self.name.split()[0], hgrcpath)
 
         vlog("# Test", self.name)
