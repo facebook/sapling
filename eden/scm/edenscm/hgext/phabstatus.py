@@ -4,6 +4,7 @@
 # GNU General Public License version 2.
 
 import os
+import socket
 import ssl
 import sys
 
@@ -102,7 +103,7 @@ def getdiffstatus(repo, *diffid):
         hint = _("Error info: %s\n") % str(ex)
         ret = _fail(repo, diffid, msg, hint)
         return ret
-    except (graphql.ClientError, ssl.SSLError) as ex:
+    except (graphql.ClientError, ssl.SSLError, socket.timeout) as ex:
         msg = _("Error talking to phabricator. No diff information can be provided.\n")
         hint = _("Error info: %s\n") % str(ex)
         ret = _fail(repo, diffid, msg, hint)
