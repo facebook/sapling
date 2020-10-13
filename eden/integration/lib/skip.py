@@ -130,12 +130,12 @@ if sys.platform == "win32":
             "test_truncation_upon_open_modifies_file",
         ],
         "hg.symlink_test.SymlinkTestTreeOnly": True,
-        "hg.update_test.UpdateCacheInvalidationTestTreeOnly": True,
+        "hg.update_test.UpdateCacheInvalidationTestTreeOnly": [
+            "test_changing_file_contents_creates_new_inode_and_flushes_dcache"
+        ],
         "hg.update_test.UpdateTestTreeOnly": [
-            # TODO: HGPLAIN=1 hg status uses forward slashes
-            "test_dir_locking",
             # TODO: A \r\n is used
-            "test_mount_state_during_unmount_with_in_progress_checkout",
+            "test_mount_state_during_unmount_with_in_progress_checkout"
         ],
     }
 elif sys.platform.startswith("linux") and not os.path.exists("/etc/redhat-release"):

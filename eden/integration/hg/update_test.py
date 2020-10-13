@@ -540,10 +540,7 @@ class UpdateTest(EdenHgTestCase):
         # Assert that the status is empty other than the ignored files
         # created by the rename threads
         self.assert_status(
-            {
-                os.path.join("foo", "_%d.log" % thread_id): "I"
-                for thread_id in range(num_rename_threads)
-            }
+            {f"foo/_{thread_id}.log": "I" for thread_id in range(num_rename_threads)}
         )
 
 
