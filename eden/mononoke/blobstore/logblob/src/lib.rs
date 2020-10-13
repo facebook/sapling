@@ -9,7 +9,7 @@
 use std::num::NonZeroU64;
 
 use anyhow::Error;
-use futures::future::{BoxFuture, FutureExt};
+use futures::future::{BoxFuture, FutureExt, TryFutureExt};
 use futures_stats::TimedFutureExt;
 use scuba::ScubaSampleBuilder;
 
@@ -36,7 +36,7 @@ impl<B> LogBlob<B> {
     }
 }
 
-impl<B: Blobstore> Blobstore for LogBlob<B> {
+impl<B: Blobstore + BlobstorePutOps> Blobstore for LogBlob<B> {
     fn get(
         &self,
         ctx: CoreContext,
@@ -78,33 +78,9 @@ impl<B: Blobstore> Blobstore for LogBlob<B> {
         key: String,
         value: BlobstoreBytes,
     ) -> BoxFuture<'static, Result<(), Error>> {
-        // TODO(ahornby) once factory is BlobstorePutOps aware
-        // BlobstorePutOps::put_with_status(self, ctx, key, value)
-        //         .map_ok(|_| ())
-        //         .boxed()
-        let mut scuba = self.scuba.clone();
-        let size = value.len();
-
-        ctx.perf_counters()
-            .increment_counter(PerfCounterType::BlobPuts);
-
-        let put = self.inner.put(ctx.clone(), key.clone(), value);
-        async move {
-            let (stats, result) = put.timed().await;
-            record_put_stats(
-                &mut scuba,
-                stats,
-                result.as_ref().map(|()| &OverwriteStatus::NotChecked),
-                key,
-                ctx.metadata().session_id().to_string(),
-                OperationType::Put,
-                size,
-                None,
-                None,
-            );
-            result
-        }
-        .boxed()
+        BlobstorePutOps::put_with_status(self, ctx, key, value)
+            .map_ok(|_| ())
+            .boxed()
     }
 }
 
