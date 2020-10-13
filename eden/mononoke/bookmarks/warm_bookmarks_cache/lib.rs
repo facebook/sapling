@@ -404,6 +404,7 @@ fn spawn_bookmarks_coordinator(
                     Err(err) => {
                         STATS::bookmarks_fetch_failures.add_value(1);
                         warn!(ctx.logger(), "failed to fetch bookmarks {:?}", err);
+                        tokio::time::delay_for(loop_sleep).await;
                         continue;
                     }
                 };
