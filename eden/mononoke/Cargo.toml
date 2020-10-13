@@ -313,7 +313,6 @@ members = [
     "microwave/builder",
     "microwave/if",
     "mononoke_api",
-    "mononoke_commitcloud_bookmarks_filler",
     "mononoke_hg_sync_job",
     "mononoke_types",
     "mononoke_types/if",
