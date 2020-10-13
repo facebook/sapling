@@ -46,7 +46,7 @@ Initially, enable the killswitch This will fail, because we don't have certs.
 
   $ setconfig "lfs.use-client-certs=false"
   $ hgmn up master -q 2>&1 | grep -i 'ssl'
-  * SSL peer certificate or SSH remote key was not OK * (glob)
+  * (SSL certificate problem: self signed certificate in certificate chain)* (glob)
   $ ! test -f large
 
 Now, remove the killswitch. This will work
