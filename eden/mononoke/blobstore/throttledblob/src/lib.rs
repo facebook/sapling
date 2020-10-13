@@ -15,7 +15,7 @@ use async_limiter::AsyncLimiter;
 use futures::future::{BoxFuture, FutureExt};
 use ratelimit_meter::{algorithms::LeakyBucket, example_algorithms::Allower, DirectRateLimiter};
 
-use blobstore::{Blobstore, BlobstoreGetData};
+use blobstore::{Blobstore, BlobstoreGetData, BlobstorePutOps, OverwriteStatus, PutBehaviour};
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 
@@ -40,7 +40,7 @@ impl ThrottleOptions {
 
 /// A Blobstore that rate limits the number of read and write operations.
 #[derive(Clone)]
-pub struct ThrottledBlob<T: Blobstore + Clone> {
+pub struct ThrottledBlob<T: Clone + fmt::Debug> {
     blobstore: T,
     read_limiter: AsyncLimiter,
     write_limiter: AsyncLimiter,
@@ -55,7 +55,7 @@ async fn limiter(qps: Option<NonZeroU32>) -> AsyncLimiter {
     }
 }
 
-impl<T: Blobstore + Clone> ThrottledBlob<T> {
+impl<T: Clone + fmt::Debug> ThrottledBlob<T> {
     pub async fn new(blobstore: T, options: ThrottleOptions) -> Self {
         Self {
             blobstore,
@@ -109,7 +109,29 @@ impl<T: Blobstore + Clone> Blobstore for ThrottledBlob<T> {
     }
 }
 
-impl<T: Blobstore + Clone> fmt::Debug for ThrottledBlob<T> {
+impl<T: BlobstorePutOps + Clone + Send + Sync + 'static> BlobstorePutOps for ThrottledBlob<T> {
+    fn put_explicit(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+        put_behaviour: PutBehaviour,
+    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+        let access = self.write_limiter.access();
+        let blobstore = self.blobstore.clone();
+        async move {
+            access.await?;
+            blobstore.put_explicit(ctx, key, value, put_behaviour).await
+        }
+        .boxed()
+    }
+
+    fn put_behaviour(&self) -> PutBehaviour {
+        self.blobstore.put_behaviour()
+    }
+}
+
+impl<T: Clone + fmt::Debug> fmt::Debug for ThrottledBlob<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ThrottledBlob")
             .field("blobstore", &self.blobstore)
