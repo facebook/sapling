@@ -8,7 +8,7 @@
 use anyhow::Error;
 use blobstore::{Blobstore, BlobstoreGetData, BlobstorePutOps, OverwriteStatus, PutBehaviour};
 use context::CoreContext;
-use futures::future::{BoxFuture, FutureExt};
+use futures::future::{BoxFuture, FutureExt, TryFutureExt};
 use mononoke_types::BlobstoreBytes;
 use rand::{thread_rng, Rng};
 use std::num::NonZeroU32;
@@ -78,7 +78,7 @@ impl<T> ChaosBlobstore<T> {
     }
 }
 
-impl<T: Blobstore> Blobstore for ChaosBlobstore<T> {
+impl<T: Blobstore + BlobstorePutOps> Blobstore for ChaosBlobstore<T> {
     #[inline]
     fn get(
         &self,
@@ -104,19 +104,7 @@ impl<T: Blobstore> Blobstore for ChaosBlobstore<T> {
         key: String,
         value: BlobstoreBytes,
     ) -> BoxFuture<'static, Result<(), Error>> {
-        let should_error = thread_rng().gen::<f32>() > self.sample_threshold_write;
-        let put = if should_error {
-            None
-        } else {
-            Some(self.blobstore.put(ctx, key.clone(), value))
-        };
-        async move {
-            match put {
-                None => Err(ErrorKind::InjectedChaosPut(key).into()),
-                Some(put) => put.await,
-            }
-        }
-        .boxed()
+        self.put_impl(ctx, key, value, None).map_ok(|_| ()).boxed()
     }
 
     #[inline]
