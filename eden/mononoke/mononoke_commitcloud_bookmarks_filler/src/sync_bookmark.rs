@@ -56,7 +56,7 @@ impl<'a, 'b, 'c> ReplayFn for &SyncBookmark<'a, 'b, 'c> {
 
         let repo = self
             .mononoke
-            .repo(ctx.clone(), &repo_name)
+            .repo_bypass_acl_check(ctx.clone(), &repo_name)
             .await
             .map_err(|e| ErrorKind::BlobRepoError(e.into()))?
             .ok_or_else(|| format_err!("repo doesn't exist: {:?}", repo_name))?;

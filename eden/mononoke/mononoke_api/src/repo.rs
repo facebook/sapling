@@ -628,6 +628,17 @@ impl RepoContext {
         Ok(Self { repo, ctx })
     }
 
+    /// Initializes the repo without the ACL check.
+    ///
+    /// Should be used in the internal services that don't serve user queries so all operations are
+    /// trusted.
+    pub(crate) async fn new_bypass_acl_check(
+        ctx: CoreContext,
+        repo: Arc<Repo>,
+    ) -> Result<Self, MononokeError> {
+        Ok(Self { repo, ctx })
+    }
+
     /// The context for this query.
     pub(crate) fn ctx(&self) -> &CoreContext {
         &self.ctx
