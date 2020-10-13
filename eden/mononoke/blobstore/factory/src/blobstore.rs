@@ -5,8 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Context, Error};
-use blobstore::{Blobstore, DisabledBlob, ErrorKind, PutBehaviour, DEFAULT_PUT_BEHAVIOUR};
+use anyhow::{format_err, Context, Error};
+use blobstore::{
+    Blobstore, BlobstorePutOps, DisabledBlob, ErrorKind, PutBehaviour, DEFAULT_PUT_BEHAVIOUR,
+};
 use blobstore_sync_queue::SqlBlobstoreSyncQueue;
 use cacheblob::CachelibBlobstoreOptions;
 use chaosblob::{ChaosBlobstore, ChaosOptions};
@@ -94,16 +96,126 @@ pub fn make_blobstore<'a>(
     // NOTE: This needs to return a BoxFuture because it recurses.
     async move {
         use BlobConfig::*;
+        let mut already_wrapped = false;
+        let store = match blobconfig {
+            Multiplexed {
+                multiplex_id,
+                scuba_table,
+                scuba_sample_rate,
+                blobstores,
+                minimum_successful_writes,
+                queue_db,
+            } => {
+                make_blobstore_multiplexed(
+                    fb,
+                    multiplex_id,
+                    queue_db,
+                    scuba_table,
+                    scuba_sample_rate,
+                    blobstores,
+                    minimum_successful_writes,
+                    None,
+                    mysql_options,
+                    readonly_storage,
+                    blobstore_options,
+                    logger,
+                )
+                .await?
+            }
+            Scrub {
+                multiplex_id,
+                scuba_table,
+                scuba_sample_rate,
+                blobstores,
+                minimum_successful_writes,
+                scrub_action,
+                queue_db,
+            } => {
+                make_blobstore_multiplexed(
+                    fb,
+                    multiplex_id,
+                    queue_db,
+                    scuba_table,
+                    scuba_sample_rate,
+                    blobstores,
+                    minimum_successful_writes,
+                    Some((
+                        Arc::new(LoggingScrubHandler::new(false)) as Arc<dyn ScrubHandler>,
+                        scrub_action,
+                    )),
+                    mysql_options,
+                    readonly_storage,
+                    blobstore_options,
+                    logger,
+                )
+                .await?
+            }
+            _ => {
+                already_wrapped = true;
+                let store = make_blobstore_put_ops(
+                    fb,
+                    blobconfig,
+                    mysql_options,
+                    readonly_storage,
+                    blobstore_options,
+                    logger,
+                )
+                .await?;
+                // Workaround for trait A {} trait B:A {} but Arc<dyn B> is not a Arc<dyn A>
+                // See https://github.com/rust-lang/rfcs/issues/2765 if interested
+                Arc::new(store) as Arc<dyn Blobstore>
+            }
+        };
 
-        let mut has_components = false;
+        let store = if !already_wrapped {
+            let store = if readonly_storage.0 {
+                Arc::new(ReadOnlyBlobstore::new(store)) as Arc<dyn Blobstore>
+            } else {
+                store
+            };
+
+            if blobstore_options.throttle_options.has_throttle() {
+                Arc::new(
+                    ThrottledBlob::new(store, blobstore_options.throttle_options.clone()).await,
+                ) as Arc<dyn Blobstore>
+            } else {
+                store
+            }
+        } else {
+            store
+        };
+
+        // NOTE: Do not add wrappers here that should only be added once per repository, since this
+        // function will get called recursively for each member of a Multiplex! For those, use
+        // RepoBlobstoreArgs::new instead.
+
+        Ok(store)
+    }
+    .boxed()
+}
+
+// Constructs the BlobstorePutOps store implementations
+fn make_blobstore_put_ops<'a>(
+    fb: FacebookInit,
+    blobconfig: BlobConfig,
+    mysql_options: MysqlOptions,
+    readonly_storage: ReadOnlyStorage,
+    blobstore_options: &'a BlobstoreOptions,
+    logger: &'a Logger,
+) -> BoxFuture<'a, Result<Arc<dyn BlobstorePutOps>, Error>> {
+    // NOTE: This needs to return a BoxFuture because it recurses.
+    async move {
+        use BlobConfig::*;
+
+        let has_components = false;
         let store = match blobconfig {
             Disabled => {
-                Arc::new(DisabledBlob::new("Disabled by configuration")) as Arc<dyn Blobstore>
+                Arc::new(DisabledBlob::new("Disabled by configuration")) as Arc<dyn BlobstorePutOps>
             }
 
             Files { path } => Fileblob::create(path.join("blobs"), blobstore_options.put_behaviour)
                 .context(ErrorKind::StateOpen)
-                .map(|store| Arc::new(store) as Arc<dyn Blobstore>)?,
+                .map(|store| Arc::new(store) as Arc<dyn BlobstorePutOps>)?,
 
             Sqlite { path } => Sqlblob::with_sqlite_path(
                 path.join("blobs"),
@@ -111,7 +223,7 @@ pub fn make_blobstore<'a>(
                 blobstore_options.put_behaviour,
             )
             .context(ErrorKind::StateOpen)
-            .map(|store| Arc::new(store) as Arc<dyn Blobstore>)?,
+            .map(|store| Arc::new(store) as Arc<dyn BlobstorePutOps>)?,
 
             Mysql { remote } => match remote {
                 ShardableRemoteDatabaseConfig::Unsharded(config) => {
@@ -196,61 +308,7 @@ pub fn make_blobstore<'a>(
                     }
                 }
             }
-            .map(|store| Arc::new(store) as Arc<dyn Blobstore>)?,
-            Multiplexed {
-                multiplex_id,
-                scuba_table,
-                scuba_sample_rate,
-                blobstores,
-                minimum_successful_writes,
-                queue_db,
-            } => {
-                has_components = true;
-                make_blobstore_multiplexed(
-                    fb,
-                    multiplex_id,
-                    queue_db,
-                    scuba_table,
-                    scuba_sample_rate,
-                    blobstores,
-                    minimum_successful_writes,
-                    None,
-                    mysql_options,
-                    readonly_storage,
-                    blobstore_options,
-                    logger,
-                )
-                .await?
-            }
-            Scrub {
-                multiplex_id,
-                scuba_table,
-                scuba_sample_rate,
-                blobstores,
-                minimum_successful_writes,
-                scrub_action,
-                queue_db,
-            } => {
-                has_components = true;
-                make_blobstore_multiplexed(
-                    fb,
-                    multiplex_id,
-                    queue_db,
-                    scuba_table,
-                    scuba_sample_rate,
-                    blobstores,
-                    minimum_successful_writes,
-                    Some((
-                        Arc::new(LoggingScrubHandler::new(false)) as Arc<dyn ScrubHandler>,
-                        scrub_action,
-                    )),
-                    mysql_options,
-                    readonly_storage,
-                    blobstore_options,
-                    logger,
-                )
-                .await?
-            }
+            .map(|store| Arc::new(store) as Arc<dyn BlobstorePutOps>)?,
             Logging {
                 blobconfig,
                 scuba_table,
@@ -260,7 +318,7 @@ pub fn make_blobstore<'a>(
                     ScubaSampleBuilder::new(fb, table)
                 });
 
-                let store = make_blobstore(
+                let store = make_blobstore_put_ops(
                     fb,
                     *blobconfig,
                     mysql_options,
@@ -270,7 +328,7 @@ pub fn make_blobstore<'a>(
                 )
                 .await?;
 
-                Arc::new(LogBlob::new(store, scuba, scuba_sample_rate)) as Arc<dyn Blobstore>
+                Arc::new(LogBlob::new(store, scuba, scuba_sample_rate)) as Arc<dyn BlobstorePutOps>
             }
             Manifold { bucket, prefix } => {
                 #[cfg(fbcode_build)]
@@ -317,7 +375,7 @@ pub fn make_blobstore<'a>(
                 }
             }
             Pack { blobconfig } => {
-                let store = make_blobstore(
+                let store = make_blobstore_put_ops(
                     fb,
                     *blobconfig,
                     mysql_options,
@@ -328,7 +386,7 @@ pub fn make_blobstore<'a>(
                 .await?;
 
                 Arc::new(PackBlob::new(store, blobstore_options.pack_options.clone()))
-                    as Arc<dyn Blobstore>
+                    as Arc<dyn BlobstorePutOps>
             }
             S3 {
                 bucket,
@@ -348,7 +406,7 @@ pub fn make_blobstore<'a>(
                     )
                     .await
                     .context(ErrorKind::StateOpen)
-                    .map(|store| Arc::new(store) as Arc<dyn Blobstore>)?
+                    .map(|store| Arc::new(store) as Arc<dyn BlobstorePutOps>)?
                 }
                 #[cfg(not(fbcode_build))]
                 {
@@ -356,17 +414,23 @@ pub fn make_blobstore<'a>(
                     unimplemented!("This is implemented only for fbcode_build")
                 }
             }
+            _ => {
+                return Err(format_err!(
+                    "make_blobstore_put_ops: unknown blobconfig {:?}",
+                    blobstore_options
+                ));
+            }
         };
 
         let store = if readonly_storage.0 {
-            Arc::new(ReadOnlyBlobstore::new(store)) as Arc<dyn Blobstore>
+            Arc::new(ReadOnlyBlobstore::new(store)) as Arc<dyn BlobstorePutOps>
         } else {
             store
         };
 
         let store = if blobstore_options.throttle_options.has_throttle() {
             Arc::new(ThrottledBlob::new(store, blobstore_options.throttle_options.clone()).await)
-                as Arc<dyn Blobstore>
+                as Arc<dyn BlobstorePutOps>
         } else {
             store
         };
@@ -374,7 +438,7 @@ pub fn make_blobstore<'a>(
         // For stores with components only set chaos on their components
         let store = if !has_components && blobstore_options.chaos_options.has_chaos() {
             Arc::new(ChaosBlobstore::new(store, blobstore_options.chaos_options))
-                as Arc<dyn Blobstore>
+                as Arc<dyn BlobstorePutOps>
         } else {
             store
         };

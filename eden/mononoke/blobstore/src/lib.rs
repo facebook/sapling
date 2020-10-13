@@ -355,7 +355,7 @@ pub enum OverwriteStatus {
 
 /// Lower level blobstore put api used by blobstore implementors and admin tooling
 #[auto_impl(Arc, Box)]
-pub trait BlobstorePutOps: fmt::Debug {
+pub trait BlobstorePutOps: Blobstore {
     /// Return the put behaviour configured for this store on construction
     /// Used from `BlobstorePutOps::put` default impl.
     fn put_behaviour(&self) -> PutBehaviour;
