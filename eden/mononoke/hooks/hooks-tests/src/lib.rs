@@ -1130,8 +1130,7 @@ async fn hook_manager_many_files_dirs_blobrepo(fb: FacebookInit) -> HookManager 
 }
 
 fn to_mpath(string: &str) -> MPath {
-    // Please... avert your eyes
-    MPath::new(string.to_string().as_bytes().to_vec()).unwrap()
+    MPath::new(string).unwrap()
 }
 
 async fn hook_manager_inmem(fb: FacebookInit) -> HookManager {
