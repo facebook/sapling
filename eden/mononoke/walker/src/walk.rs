@@ -251,23 +251,26 @@ async fn bonsai_changeset_step<V: VisitOne>(
     // Get the data, and add direct file data for this bonsai changeset
     let bcs = bcs_id.load(ctx.clone(), repo.blobstore()).await?;
 
+    // Build edges, from mostly queue expansion to least
     let mut edges = vec![];
 
-    // Parents deliberately first to resolve dependent reads as early as possible
+    // Parents expand 1:[0|1|2] and then the same as all below
     for parent_id in bcs.parents() {
         checker.add_edge(&mut edges, EdgeType::BonsaiChangesetToBonsaiParent, || {
             Node::BonsaiChangeset(parent_id)
         });
     }
-    // Allow Hg based lookup
+    // Fs node mapping is 1:1 but from their expands considerably
+    checker.add_edge(
+        &mut edges,
+        EdgeType::BonsaiChangesetToBonsaiFsnodeMapping,
+        || Node::BonsaiFsnodeMapping(*bcs_id),
+    );
+    // Allow Hg based lookup which is 1:[1|0], may expand a lot from that
     checker.add_edge(&mut edges, EdgeType::BonsaiChangesetToBonsaiHgMapping, || {
         Node::BonsaiHgMapping(*bcs_id)
     });
-    checker.add_edge(
-        &mut edges,
-        EdgeType::BonsaiChangesetToBonsaiPhaseMapping,
-        || Node::BonsaiPhaseMapping(*bcs_id),
-    );
+    // File content expands just to meta+aliases 1:~5, with no further steps
     for (mpath, fc) in bcs.file_changes() {
         if let Some(fc) = fc {
             checker.add_edge_with_path(
@@ -278,11 +281,13 @@ async fn bonsai_changeset_step<V: VisitOne>(
             );
         }
     }
+    // Phase mapping is 1:[0|1]
     checker.add_edge(
         &mut edges,
-        EdgeType::BonsaiChangesetToBonsaiFsnodeMapping,
-        || Node::BonsaiFsnodeMapping(*bcs_id),
+        EdgeType::BonsaiChangesetToBonsaiPhaseMapping,
+        || Node::BonsaiPhaseMapping(*bcs_id),
     );
+
     Ok(StepOutput(
         checker.step_data(NodeType::BonsaiChangeset, || NodeData::BonsaiChangeset(bcs)),
         edges,
@@ -481,9 +486,11 @@ fn hg_changeset_step<'a, V: VisitOne>(
         .map_err(Error::from)
         .map_ok(move |hgchangeset| {
             let mut edges = vec![];
+            // 1:1 but will then expand a lot, usually
             checker.add_edge(&mut edges, EdgeType::HgChangesetToHgManifest, || {
                 Node::HgManifest((WrappedPath::Root, hgchangeset.manifestid()))
             });
+            // Mostly 1:1, can be 1:2, with further expansion
             for p in hgchangeset.parents().into_iter() {
                 checker.add_edge(&mut edges, EdgeType::HgChangesetToHgParent, || {
                     Node::HgChangeset(HgChangesetId::new(p))
@@ -611,22 +618,31 @@ fn hg_manifest_step<'a, V: VisitOne>(
                     }
                 });
             let mut edges = vec![];
-            for (full_path, hg_file_node_id) in filenodes {
-                checker.add_edge_with_path(
-                    &mut edges,
-                    EdgeType::HgManifestToHgFileEnvelope,
-                    || Node::HgFileEnvelope(hg_file_node_id),
-                    || Some(full_path.clone()),
-                );
-                checker.add_edge(&mut edges, EdgeType::HgManifestToHgFileNode, || {
-                    Node::HgFileNode((full_path, hg_file_node_id))
-                });
-            }
+            // Manifests expand as a tree so 1:N
             for (full_path, hg_child_manifest_id) in manifests {
                 checker.add_edge(&mut edges, EdgeType::HgManifestToChildHgManifest, || {
                     Node::HgManifest((full_path, hg_child_manifest_id))
                 })
             }
+
+            let mut filenode_edges = vec![];
+            let mut envelope_edges = vec![];
+            for (full_path, hg_file_node_id) in filenodes {
+                checker.add_edge_with_path(
+                    &mut envelope_edges,
+                    EdgeType::HgManifestToHgFileEnvelope,
+                    || Node::HgFileEnvelope(hg_file_node_id),
+                    || Some(full_path.clone()),
+                );
+                checker.add_edge(&mut filenode_edges, EdgeType::HgManifestToHgFileNode, || {
+                    Node::HgFileNode((full_path, hg_file_node_id))
+                });
+            }
+            // File nodes can expand a lot into history via linknodes
+            edges.append(&mut filenode_edges);
+            // Envelopes expand 1:1 to file content
+            edges.append(&mut envelope_edges);
+
             StepOutput(
                 checker.step_data(NodeType::HgManifest, || NodeData::HgManifest(hgmanifest)),
                 edges,
@@ -731,12 +747,12 @@ async fn fsnode_step<V: VisitOne>(
         }
     }
 
-    // Output content then dir edges, as content edges will drain from queue without recurising too much
-    content_edges.append(&mut dir_edges);
+    // Ordering to reduce queue depth
+    dir_edges.append(&mut content_edges);
 
     Ok(StepOutput(
         checker.step_data(NodeType::Fsnode, || NodeData::Fsnode(fsnode)),
-        content_edges,
+        dir_edges,
     ))
 }
 
