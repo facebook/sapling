@@ -18,7 +18,7 @@ use context::CoreContext;
 use futures::compat::Stream01CompatExt;
 use futures::future;
 use futures::stream::{self, StreamExt, TryStreamExt};
-use hooks::HookManager;
+use hooks::{CrossRepoPushSource, HookManager};
 use metaconfig_types::BookmarkAttrs;
 use mononoke_types::{BonsaiChangeset, ChangesetId};
 use reachabilityindex::LeastCommonAncestorsHint;
@@ -211,6 +211,7 @@ impl AffectedChangesets {
         kind: BookmarkKind,
         auth: &BookmarkMoveAuthorization<'_>,
         additional_changesets: AdditionalChangesets,
+        cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<(), BookmarkMovementError> {
         match auth {
             BookmarkMoveAuthorization::User => {
@@ -246,6 +247,7 @@ impl AffectedChangesets {
                             bookmark,
                             self.iter().chain(additional_changesets.iter()),
                             pushvars,
+                            cross_repo_push_source,
                         )
                         .await?;
                     }

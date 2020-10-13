@@ -161,6 +161,7 @@ impl HookManager {
         changesets: impl Iterator<Item = &BonsaiChangeset> + Clone + itertools::Itertools,
         bookmark: &BookmarkName,
         maybe_pushvars: Option<&HashMap<String, Bytes>>,
+        cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<Vec<HookOutcome>, Error> {
         debug!(ctx.logger(), "Running hooks for bookmark {:?}", bookmark);
 
@@ -192,9 +193,15 @@ impl HookManager {
             let mut scuba = scuba.clone();
             scuba.add("hook", hook_name.to_string());
 
-            for future in
-                hook.get_futures(ctx, bookmark, &*self.content_fetcher, hook_name, cs, scuba)
-            {
+            for future in hook.get_futures(
+                ctx,
+                bookmark,
+                &*self.content_fetcher,
+                hook_name,
+                cs,
+                scuba,
+                cross_repo_push_source,
+            ) {
                 futs.push(future);
             }
         }
@@ -227,6 +234,24 @@ fn is_hook_bypassed(
     })
 }
 
+/// An enum to represent the origin of the changeset
+/// In the push-redirection scenario the changeset
+/// is initially pushed to a small repo and then
+/// redirected to a large one. An opposite of this
+/// is a changeset, native to the large repo, which
+/// does not go through the push-redirection.
+/// We want hooks to be able to distinguish the two.
+/// Note: this functionality is rarely needed. You
+///       should always strive to write hooks that
+///       ignore this information.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CrossRepoPushSource {
+    /// Cahngeset pushed directly to the large repo
+    NativeToThisRepo,
+    /// Changeset, push-redirected from the small repo
+    PushRedirected,
+}
+
 enum Hook {
     Changeset(Box<dyn ChangesetHook>, HookConfig),
     File(Box<dyn FileHook>, HookConfig),
@@ -247,10 +272,11 @@ impl<'a> HookInstance<'a> {
         mut scuba: ScubaSampleBuilder,
         cs: &BonsaiChangeset,
         cs_id: ChangesetId,
+        cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookOutcome, Error> {
         let (stats, result) = match self {
             Self::Changeset(hook) => {
-                hook.run(ctx, bookmark, cs, content_fetcher)
+                hook.run(ctx, bookmark, cs, content_fetcher, cross_repo_push_source)
                     .map_ok(|exec| {
                         HookOutcome::ChangesetHook(
                             ChangesetHookExecutionID {
@@ -264,7 +290,7 @@ impl<'a> HookInstance<'a> {
                     .await
             }
             Self::File(hook, path, change) => {
-                hook.run(ctx, content_fetcher, change, path)
+                hook.run(ctx, content_fetcher, change, path, cross_repo_push_source)
                     .map_ok(|exec| {
                         HookOutcome::FileHook(
                             FileHookExecutionID {
@@ -338,6 +364,7 @@ impl Hook {
         hook_name: &'cs str,
         cs: &'cs BonsaiChangeset,
         scuba: ScubaSampleBuilder,
+        cross_repo_push_source: CrossRepoPushSource,
     ) -> impl Iterator<Item = impl Future<Output = Result<HookOutcome, Error>> + 'cs> + 'cs {
         let mut futures = Vec::new();
 
@@ -352,6 +379,7 @@ impl Hook {
                 scuba,
                 cs,
                 cs_id,
+                cross_repo_push_source,
             )),
             Self::File(hook, _) => futures.extend(cs.file_changes().map(move |(path, change)| {
                 HookInstance::File(&**hook, path, change).run(
@@ -362,6 +390,7 @@ impl Hook {
                     scuba.clone(),
                     cs,
                     cs_id,
+                    cross_repo_push_source,
                 )
             })),
         };
@@ -377,6 +406,7 @@ pub trait ChangesetHook: Send + Sync {
         bookmark: &BookmarkName,
         changeset: &'cs BonsaiChangeset,
         content_fetcher: &'fetcher dyn FileContentFetcher,
+        cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution, Error>;
 }
 
@@ -388,6 +418,7 @@ pub trait FileHook: Send + Sync {
         content_fetcher: &'fetcher dyn FileContentFetcher,
         change: Option<&'change FileChange>,
         path: &'path MPath,
+        cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution, Error>;
 }
 

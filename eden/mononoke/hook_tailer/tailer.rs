@@ -19,7 +19,7 @@ use futures::{
     stream::{self, Stream, StreamExt, TryStreamExt},
 };
 use futures_stats::{FutureStats, TimedFutureExt};
-use hooks::{hook_loader::load_hooks, HookManager, HookOutcome};
+use hooks::{hook_loader::load_hooks, CrossRepoPushSource, HookManager, HookOutcome};
 use hooks_content_stores::blobrepo_text_only_fetcher;
 use metaconfig_types::RepoConfig;
 use mononoke_types::ChangesetId;
@@ -194,8 +194,15 @@ async fn run_hooks_for_changeset(
 
     let file_count = cs.file_changes_map().len();
 
+    // TODO(ikostia): is it ok to have this cross-repo push source here?
     let (stats, outcomes) = hm
-        .run_hooks_for_bookmark(ctx, vec![cs].iter(), bm, None)
+        .run_hooks_for_bookmark(
+            ctx,
+            vec![cs].iter(),
+            bm,
+            None,
+            CrossRepoPushSource::NativeToThisRepo,
+        )
         .timed()
         .await;
 

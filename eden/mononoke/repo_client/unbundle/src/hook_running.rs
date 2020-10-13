@@ -15,7 +15,7 @@ use context::CoreContext;
 use futures::compat::Future01CompatExt;
 use futures::future::{BoxFuture, FutureExt};
 use futures::stream::{self, StreamExt, TryStreamExt};
-use hooks::{HookManager, HookRejection};
+use hooks::{CrossRepoPushSource, HookManager, HookRejection};
 
 use crate::resolver::{HgHookRejection, PostResolveAction, PostResolvePushRebase};
 use crate::BundleResolverError;
@@ -74,6 +74,7 @@ pub async fn run_hooks(
     repo: &BlobRepo,
     hook_manager: &HookManager,
     action: &PostResolveAction,
+    cross_repo_push_source: CrossRepoPushSource,
 ) -> Result<(), BundleResolverError> {
     match action {
         // TODO: Need to run hooks on Push, not just Pushrebase
@@ -81,7 +82,7 @@ pub async fn run_hooks(
         PostResolveAction::InfinitePush(_) => Ok(()),
         PostResolveAction::BookmarkOnlyPushRebase(_) => Ok(()),
         PostResolveAction::PushRebase(action) => {
-            run_pushrebase_hooks(ctx, repo, hook_manager, action).await
+            run_pushrebase_hooks(ctx, repo, hook_manager, action, cross_repo_push_source).await
         }
     }
 }
@@ -91,6 +92,7 @@ async fn run_pushrebase_hooks(
     repo: &BlobRepo,
     hook_manager: &HookManager,
     action: &PostResolvePushRebase,
+    cross_repo_push_source: CrossRepoPushSource,
 ) -> Result<(), BundleResolverError> {
     match bookmarks_movement::run_hooks(
         ctx,
@@ -98,6 +100,7 @@ async fn run_pushrebase_hooks(
         action.bookmark_spec.get_bookmark_name(),
         action.uploaded_bonsais.iter(),
         action.maybe_pushvars.as_ref(),
+        cross_repo_push_source,
     )
     .await
     {

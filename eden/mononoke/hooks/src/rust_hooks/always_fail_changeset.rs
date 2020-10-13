@@ -5,7 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use crate::{ChangesetHook, FileContentFetcher, HookExecution, HookRejectionInfo};
+use crate::{
+    ChangesetHook, CrossRepoPushSource, FileContentFetcher, HookExecution, HookRejectionInfo,
+};
 use anyhow::Error;
 use async_trait::async_trait;
 use bookmarks::BookmarkName;
@@ -29,6 +31,7 @@ impl ChangesetHook for AlwaysFailChangeset {
         _bookmark: &BookmarkName,
         _changeset: &'cs BonsaiChangeset,
         _content_fetcher: &'fetcher dyn FileContentFetcher,
+        _cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution, Error> {
         Ok(HookExecution::Rejected(HookRejectionInfo::new(
             "This hook always fails",

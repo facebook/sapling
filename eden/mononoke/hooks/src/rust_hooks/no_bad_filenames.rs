@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use crate::{FileContentFetcher, FileHook, HookExecution, HookRejectionInfo};
+use crate::{CrossRepoPushSource, FileContentFetcher, FileHook, HookExecution, HookRejectionInfo};
 
 use anyhow::{anyhow, Context, Result};
 use async_trait::async_trait;
@@ -90,6 +90,7 @@ impl FileHook for NoBadFilenames {
         _content_fetcher: &'fetcher dyn FileContentFetcher,
         change: Option<&'change FileChange>,
         path: &'path MPath,
+        _cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution> {
         if change.is_none() {
             return Ok(HookExecution::Accepted);

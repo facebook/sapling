@@ -5,7 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use crate::{ChangesetHook, FileContentFetcher, HookConfig, HookExecution, HookRejectionInfo};
+use crate::{
+    ChangesetHook, CrossRepoPushSource, FileContentFetcher, HookConfig, HookExecution,
+    HookRejectionInfo,
+};
 
 use anyhow::{anyhow, Context, Result};
 use async_trait::async_trait;
@@ -77,6 +80,7 @@ impl ChangesetHook for LimitCommitsize {
         _bookmark: &BookmarkName,
         changeset: &'cs BonsaiChangeset,
         _content_fetcher: &'fetcher dyn FileContentFetcher,
+        _cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution> {
         let mut totalsize = 0;
         for (path, file_change) in changeset.file_changes() {

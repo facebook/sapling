@@ -14,7 +14,7 @@ use bookmarks::{BookmarkUpdateReason, BundleReplay};
 use bookmarks_types::BookmarkName;
 use bytes::Bytes;
 use context::CoreContext;
-use hooks::HookManager;
+use hooks::{CrossRepoPushSource, HookManager};
 use metaconfig_types::{
     BookmarkAttrs, InfinitepushParams, PushrebaseParams, SourceControlServiceParams,
 };
@@ -81,6 +81,7 @@ pub struct UpdateBookmarkOp<'op> {
     reason: BookmarkUpdateReason,
     auth: BookmarkMoveAuthorization<'op>,
     kind_restrictions: BookmarkKindRestrictions,
+    cross_repo_push_source: CrossRepoPushSource,
     affected_changesets: AffectedChangesets,
     pushvars: Option<&'op HashMap<String, Bytes>>,
     bundle_replay: Option<&'op dyn BundleReplay>,
@@ -101,6 +102,7 @@ impl<'op> UpdateBookmarkOp<'op> {
             reason,
             auth: BookmarkMoveAuthorization::User,
             kind_restrictions: BookmarkKindRestrictions::AnyKind,
+            cross_repo_push_source: CrossRepoPushSource::NativeToThisRepo,
             affected_changesets: AffectedChangesets::new(),
             pushvars: None,
             bundle_replay: None,
@@ -148,6 +150,11 @@ impl<'op> UpdateBookmarkOp<'op> {
         self
     }
 
+    pub fn with_push_source(mut self, cross_repo_push_source: CrossRepoPushSource) -> Self {
+        self.cross_repo_push_source = cross_repo_push_source;
+        self
+    }
+
     pub async fn run(
         mut self,
         ctx: &'op CoreContext,
@@ -192,6 +199,7 @@ impl<'op> UpdateBookmarkOp<'op> {
                     head: self.targets.new,
                     base: self.targets.old,
                 },
+                self.cross_repo_push_source,
             )
             .await?;
         let mut txn = repo.update_bookmark_transaction(ctx.clone());

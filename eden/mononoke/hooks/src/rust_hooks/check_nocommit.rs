@@ -5,7 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use crate::{FileContentFetcher, FileHook, HookConfig, HookExecution, HookRejectionInfo};
+use crate::{
+    CrossRepoPushSource, FileContentFetcher, FileHook, HookConfig, HookExecution, HookRejectionInfo,
+};
 use anyhow::Error;
 use async_trait::async_trait;
 use context::CoreContext;
@@ -49,6 +51,7 @@ impl FileHook for CheckNocommitHook {
         content_fetcher: &'fetcher dyn FileContentFetcher,
         change: Option<&'change FileChange>,
         path: &'path MPath,
+        _cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution, Error> {
         let maybe_text = match change {
             None => None,

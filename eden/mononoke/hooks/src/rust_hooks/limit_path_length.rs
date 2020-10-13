@@ -5,7 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use crate::{FileContentFetcher, FileHook, HookConfig, HookExecution, HookRejectionInfo};
+use crate::{
+    CrossRepoPushSource, FileContentFetcher, FileHook, HookConfig, HookExecution, HookRejectionInfo,
+};
 use anyhow::{anyhow, Context, Error};
 use async_trait::async_trait;
 use context::CoreContext;
@@ -41,6 +43,7 @@ impl FileHook for LimitPathLengthHook {
         _content_fetcher: &'fetcher dyn FileContentFetcher,
         change: Option<&'change FileChange>,
         path: &'path MPath,
+        _cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution, Error> {
         if change.is_none() {
             // You can always delete paths

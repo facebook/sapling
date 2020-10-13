@@ -45,8 +45,8 @@ use std::time::Duration;
 use time_ext::DurationExt;
 use tokio::{task, time};
 use unbundle::{
-    self, get_pushrebase_hooks, run_hooks, PostResolveAction, PostResolvePushRebase,
-    PushrebaseBookmarkSpec,
+    self, get_pushrebase_hooks, run_hooks, CrossRepoPushSource, PostResolveAction,
+    PostResolvePushRebase, PushrebaseBookmarkSpec,
 };
 
 use crate::hg_recording::HgRecordingClient;
@@ -280,9 +280,19 @@ async fn maybe_unbundle(
 
     let hooks_outcome = match hook_manager {
         Some(hook_manager) => {
-            let (hook_stats, hooks_outcome) = run_hooks(ctx, repo, hook_manager, &resolution)
-                .timed()
-                .await;
+            // Note: the use of `NativeToThisRepo` below means that we don't
+            //       support `unbundle_replay` in repos with push-redirection,
+            //       as these might have accepted push-redirected commits, which
+            //       would've been rejected by the `NativeToThisRepo` hooks
+            let (hook_stats, hooks_outcome) = run_hooks(
+                ctx,
+                repo,
+                hook_manager,
+                &resolution,
+                CrossRepoPushSource::NativeToThisRepo,
+            )
+            .timed()
+            .await;
 
             Some((hook_stats, hooks_outcome.err().map(Error::from)))
         }

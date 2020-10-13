@@ -17,7 +17,7 @@ use context::CoreContext;
 use futures_stats::TimedFutureExt;
 use git_mapping_pushrebase_hook::GitMappingPushrebaseHook;
 use globalrev_pushrebase_hook::GlobalrevPushrebaseHook;
-use hooks::HookManager;
+use hooks::{CrossRepoPushSource, HookManager};
 use metaconfig_types::{
     BookmarkAttrs, InfinitepushParams, PushrebaseParams, SourceControlServiceParams,
 };
@@ -34,6 +34,7 @@ pub struct PushrebaseOntoBookmarkOp<'op> {
     affected_changesets: AffectedChangesets,
     auth: BookmarkMoveAuthorization<'op>,
     kind_restrictions: BookmarkKindRestrictions,
+    cross_repo_push_source: CrossRepoPushSource,
     pushvars: Option<&'op HashMap<String, Bytes>>,
     hg_replay: Option<&'op pushrebase::HgReplayData>,
 }
@@ -49,6 +50,7 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
             affected_changesets: AffectedChangesets::with_source_changesets(changesets),
             auth: BookmarkMoveAuthorization::User,
             kind_restrictions: BookmarkKindRestrictions::AnyKind,
+            cross_repo_push_source: CrossRepoPushSource::NativeToThisRepo,
             pushvars: None,
             hg_replay: None,
         }
@@ -82,6 +84,11 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
 
     pub fn with_hg_replay_data(mut self, hg_replay: Option<&'op pushrebase::HgReplayData>) -> Self {
         self.hg_replay = hg_replay;
+        self
+    }
+
+    pub fn with_push_source(mut self, cross_repo_push_source: CrossRepoPushSource) -> Self {
+        self.cross_repo_push_source = cross_repo_push_source;
         self
     }
 
@@ -131,6 +138,7 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
                 kind,
                 &self.auth,
                 AdditionalChangesets::None,
+                self.cross_repo_push_source,
             )
             .await?;
 

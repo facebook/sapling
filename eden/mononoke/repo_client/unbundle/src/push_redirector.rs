@@ -39,7 +39,7 @@ use futures::{
     try_join,
 };
 use futures_ext::{try_boxfuture, FutureExt as OldFutureExt};
-use hooks::HookRejection;
+use hooks::{CrossRepoPushSource, HookRejection};
 use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use metaconfig_types::CommitSyncConfig;
 use mononoke_repo::MononokeRepo;
@@ -178,6 +178,7 @@ impl PushRedirector {
             self.repo.hook_manager().as_ref(),
             self.repo.maybe_reverse_filler_queue(),
             large_repo_action,
+            CrossRepoPushSource::PushRedirected,
         )
         .await?;
         self.convert_unbundle_response(ctx.clone(), large_repo_response)

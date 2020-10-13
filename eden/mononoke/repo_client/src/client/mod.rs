@@ -8,7 +8,8 @@
 use crate::errors::ErrorKind;
 
 use unbundle::{
-    run_hooks, run_post_resolve_action, BundleResolverError, PushRedirector, PushRedirectorArgs,
+    run_hooks, run_post_resolve_action, BundleResolverError, CrossRepoPushSource, PushRedirector,
+    PushRedirectorArgs,
 };
 
 use anyhow::{format_err, Error, Result};
@@ -1628,6 +1629,7 @@ impl HgCommands for RepoClient {
                                                 &blobrepo,
                                                 hook_manager.as_ref(),
                                                 &action,
+                                                CrossRepoPushSource::NativeToThisRepo,
                                             )
                                             .await?;
 
@@ -1664,6 +1666,7 @@ impl HgCommands for RepoClient {
                                                 hook_manager.as_ref(),
                                                 maybe_reverse_filler_queue,
                                                 action,
+                                                CrossRepoPushSource::NativeToThisRepo,
                                             )
                                             .await
                                         }

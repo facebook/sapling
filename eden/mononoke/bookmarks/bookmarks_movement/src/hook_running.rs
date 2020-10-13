@@ -12,7 +12,7 @@ use bookmarks_types::BookmarkName;
 use bytes::Bytes;
 use context::CoreContext;
 use futures_stats::TimedFutureExt;
-use hooks::{HookManager, HookOutcome};
+use hooks::{CrossRepoPushSource, HookManager, HookOutcome};
 use mononoke_types::BonsaiChangeset;
 use scuba_ext::ScubaSampleBuilderExt;
 
@@ -24,9 +24,10 @@ pub async fn run_hooks(
     bookmark: &BookmarkName,
     changesets: impl Iterator<Item = &BonsaiChangeset> + Clone,
     pushvars: Option<&HashMap<String, Bytes>>,
+    cross_repo_push_source: CrossRepoPushSource,
 ) -> Result<(), BookmarkMovementError> {
     let (stats, outcomes) = hook_manager
-        .run_hooks_for_bookmark(&ctx, changesets, bookmark, pushvars)
+        .run_hooks_for_bookmark(&ctx, changesets, bookmark, pushvars, cross_repo_push_source)
         .timed()
         .await;
     let outcomes = outcomes.with_context(|| format!("Failed to run hooks for {}", bookmark))?;

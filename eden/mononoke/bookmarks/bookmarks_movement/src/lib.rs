@@ -23,7 +23,7 @@ mod pushrebase_onto;
 mod restrictions;
 mod update;
 
-pub use hooks::HookRejection;
+pub use hooks::{CrossRepoPushSource, HookRejection};
 pub use pushrebase::PushrebaseOutcome;
 
 pub use crate::create::CreateBookmarkOp;

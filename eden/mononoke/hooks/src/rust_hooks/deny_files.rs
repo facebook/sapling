@@ -14,7 +14,7 @@ use metaconfig_types::HookConfig;
 use mononoke_types::{FileChange, MPath};
 
 use super::LuaPattern;
-use crate::{FileContentFetcher, FileHook, HookExecution, HookRejectionInfo};
+use crate::{CrossRepoPushSource, FileContentFetcher, FileHook, HookExecution, HookRejectionInfo};
 
 #[derive(Default)]
 pub struct DenyFilesBuilder {
@@ -65,6 +65,7 @@ impl FileHook for DenyFiles {
         _content_fetcher: &'fetcher dyn FileContentFetcher,
         change: Option<&'change FileChange>,
         path: &'path MPath,
+        _cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution> {
         if change.is_none() {
             // It is acceptable to delete any file

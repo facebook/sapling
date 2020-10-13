@@ -17,8 +17,8 @@ use fbinit::FacebookInit;
 use futures::future;
 use futures::stream::{futures_unordered, TryStreamExt};
 use hooks::{
-    hook_loader::load_hooks, ChangesetHook, ErrorKind, FileHook, HookExecution, HookManager,
-    HookRejectionInfo,
+    hook_loader::load_hooks, ChangesetHook, CrossRepoPushSource, ErrorKind, FileHook,
+    HookExecution, HookManager, HookRejectionInfo,
 };
 use hooks_content_stores::{
     BlobRepoFileContentFetcher, FileContentFetcher, InMemoryFileContentFetcher,
@@ -52,6 +52,7 @@ impl ChangesetHook for FnChangesetHook {
         _bookmark: &BookmarkName,
         _changeset: &'cs BonsaiChangeset,
         _content_fetcher: &'fetcher dyn FileContentFetcher,
+        _cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution, Error> {
         Ok((self.f)())
     }
@@ -80,6 +81,7 @@ impl ChangesetHook for FileContentMatchingChangesetHook {
         _bookmark: &BookmarkName,
         changeset: &'cs BonsaiChangeset,
         content_fetcher: &'fetcher dyn FileContentFetcher,
+        _cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution, Error> {
         let futs = futures_unordered::FuturesUnordered::new();
 
@@ -154,6 +156,7 @@ impl ChangesetHook for LengthMatchingChangesetHook {
         _bookmark: &BookmarkName,
         changeset: &'cs BonsaiChangeset,
         content_fetcher: &'fetcher dyn FileContentFetcher,
+        _cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution, Error> {
         let futs = futures_unordered::FuturesUnordered::new();
         for (path, change) in changeset.file_changes() {
@@ -212,6 +215,7 @@ impl FileHook for FnFileHook {
         _content_fetcher: &'fetcher dyn FileContentFetcher,
         _change: Option<&'change FileChange>,
         _path: &'path MPath,
+        _cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution, Error> {
         Ok((self.f)())
     }
@@ -240,6 +244,7 @@ impl FileHook for PathMatchingFileHook {
         _content_fetcher: &'fetcher dyn FileContentFetcher,
         _change: Option<&'change FileChange>,
         path: &'path MPath,
+        _cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution, Error> {
         Ok(if self.paths.contains(&path) {
             HookExecution::Accepted
@@ -266,6 +271,7 @@ impl FileHook for FileContentMatchingFileHook {
         content_fetcher: &'fetcher dyn FileContentFetcher,
         change: Option<&'change FileChange>,
         _path: &'path MPath,
+        _cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution, Error> {
         match change {
             Some(change) => {
@@ -308,6 +314,7 @@ impl FileHook for IsSymLinkMatchingFileHook {
         _content_fetcher: &'fetcher dyn FileContentFetcher,
         change: Option<&'change FileChange>,
         _path: &'path MPath,
+        _cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution, Error> {
         let is_symlink = match change {
             Some(change) => change.file_type() == FileType::Symlink,
@@ -338,6 +345,7 @@ impl FileHook for LengthMatchingFileHook {
         content_fetcher: &'fetcher dyn FileContentFetcher,
         change: Option<&'change FileChange>,
         _path: &'path MPath,
+        _cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution, Error> {
         let length = match change {
             Some(change) => {
@@ -961,6 +969,7 @@ async fn run_changeset_hooks_with_mgr(
             vec![default_changeset()].iter(),
             &BookmarkName::new(bookmark_name).unwrap(),
             None,
+            CrossRepoPushSource::NativeToThisRepo,
         )
         .await
         .unwrap();
@@ -1042,6 +1051,7 @@ async fn run_file_hooks_with_mgr(
             vec![cs].iter(),
             &BookmarkName::new(bookmark_name).unwrap(),
             None,
+            CrossRepoPushSource::NativeToThisRepo,
         )
         .await
         .unwrap();

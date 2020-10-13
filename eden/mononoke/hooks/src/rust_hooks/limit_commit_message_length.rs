@@ -5,7 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use crate::{ChangesetHook, FileContentFetcher, HookConfig, HookExecution, HookRejectionInfo};
+use crate::{
+    ChangesetHook, CrossRepoPushSource, FileContentFetcher, HookConfig, HookExecution,
+    HookRejectionInfo,
+};
 use anyhow::{Context, Error};
 use async_trait::async_trait;
 use bookmarks::BookmarkName;
@@ -51,6 +54,7 @@ impl ChangesetHook for LimitCommitMessageLength {
         _bookmark: &BookmarkName,
         changeset: &'cs BonsaiChangeset,
         _content_fetcher: &'fetcher dyn FileContentFetcher,
+        _cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution, Error> {
         let message = changeset.message();
         let len = message.len();
