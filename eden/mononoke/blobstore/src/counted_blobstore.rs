@@ -114,17 +114,21 @@ impl<T: Blobstore> Blobstore for CountedBlobstore<T> {
     }
 }
 
-impl<T: BlobstorePutOps> BlobstorePutOps for CountedBlobstore<T> {
-    fn put_explicit(
+impl<T: BlobstorePutOps> CountedBlobstore<T> {
+    fn put_impl(
         &self,
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-        put_behaviour: PutBehaviour,
+        put_behaviour: Option<PutBehaviour>,
     ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
         let stats = self.stats.clone();
         stats.put.add_value(1);
-        let put = self.blobstore.put_explicit(ctx, key, value, put_behaviour);
+        let put = if let Some(put_behaviour) = put_behaviour {
+            self.blobstore.put_explicit(ctx, key, value, put_behaviour)
+        } else {
+            self.blobstore.put_with_status(ctx, key, value)
+        };
         async move {
             let res = put.await;
             match res {
@@ -135,9 +139,26 @@ impl<T: BlobstorePutOps> BlobstorePutOps for CountedBlobstore<T> {
         }
         .boxed()
     }
+}
 
-    fn put_behaviour(&self) -> PutBehaviour {
-        self.blobstore.put_behaviour()
+impl<T: BlobstorePutOps> BlobstorePutOps for CountedBlobstore<T> {
+    fn put_explicit(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+        put_behaviour: PutBehaviour,
+    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+        self.put_impl(ctx, key, value, Some(put_behaviour))
+    }
+
+    fn put_with_status(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+        self.put_impl(ctx, key, value, None)
     }
 }
 

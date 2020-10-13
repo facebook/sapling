@@ -134,22 +134,25 @@ impl<T: Blobstore> Blobstore for ChaosBlobstore<T> {
     }
 }
 
-impl<T: BlobstorePutOps> BlobstorePutOps for ChaosBlobstore<T> {
-    fn put_explicit(
+impl<T: BlobstorePutOps> ChaosBlobstore<T> {
+    fn put_impl(
         &self,
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-        put_behaviour: PutBehaviour,
+        put_behaviour: Option<PutBehaviour>,
     ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
         let should_error = thread_rng().gen::<f32>() > self.sample_threshold_write;
         let put = if should_error {
             None
         } else {
-            Some(
+            let put = if let Some(put_behaviour) = put_behaviour {
                 self.blobstore
-                    .put_explicit(ctx, key.clone(), value, put_behaviour),
-            )
+                    .put_explicit(ctx, key.clone(), value, put_behaviour)
+            } else {
+                self.blobstore.put_with_status(ctx, key.clone(), value)
+            };
+            Some(put)
         };
         async move {
             match put {
@@ -159,9 +162,26 @@ impl<T: BlobstorePutOps> BlobstorePutOps for ChaosBlobstore<T> {
         }
         .boxed()
     }
+}
 
-    fn put_behaviour(&self) -> PutBehaviour {
-        self.blobstore.put_behaviour()
+impl<T: BlobstorePutOps> BlobstorePutOps for ChaosBlobstore<T> {
+    fn put_explicit(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+        put_behaviour: PutBehaviour,
+    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+        self.put_impl(ctx, key, value, Some(put_behaviour))
+    }
+
+    fn put_with_status(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+        self.put_impl(ctx, key, value, None)
     }
 }
 

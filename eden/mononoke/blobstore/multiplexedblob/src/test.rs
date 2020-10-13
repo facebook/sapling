@@ -142,8 +142,13 @@ impl BlobstorePutOps for Tickable<BlobstoreBytes> {
         .boxed()
     }
 
-    fn put_behaviour(&self) -> PutBehaviour {
-        PutBehaviour::Overwrite
+    fn put_with_status(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+        self.put_explicit(ctx, key, value, PutBehaviour::Overwrite)
     }
 }
 

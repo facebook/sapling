@@ -11,7 +11,6 @@ use futures::future::{err, BoxFuture, FutureExt, TryFutureExt};
 
 use super::{
     Blobstore, BlobstoreBytes, BlobstoreGetData, BlobstorePutOps, OverwriteStatus, PutBehaviour,
-    DEFAULT_PUT_BEHAVIOUR,
 };
 
 /// Disabled blobstore which fails all operations with a reason. Primarily used as a
@@ -61,8 +60,13 @@ impl BlobstorePutOps for DisabledBlob {
         err(format_err!("Blobstore disabled: {}", self.reason)).boxed()
     }
 
-    fn put_behaviour(&self) -> PutBehaviour {
-        DEFAULT_PUT_BEHAVIOUR
+    fn put_with_status(
+        &self,
+        _ctx: CoreContext,
+        _key: String,
+        _value: BlobstoreBytes,
+    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+        err(format_err!("Blobstore disabled: {}", self.reason)).boxed()
     }
 }
 

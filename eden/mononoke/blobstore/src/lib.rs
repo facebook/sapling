@@ -356,10 +356,6 @@ pub enum OverwriteStatus {
 /// Lower level blobstore put api used by blobstore implementors and admin tooling
 #[auto_impl(Arc, Box)]
 pub trait BlobstorePutOps: Blobstore {
-    /// Return the put behaviour configured for this store on construction
-    /// Used from `BlobstorePutOps::put` default impl.
-    fn put_behaviour(&self) -> PutBehaviour;
-
     /// Adds ability to specify the put behaviour explicitly so that even if per process default was
     /// IfAbsent  once could chose to OverwriteAndLog.  Expected to be used only in admin tools
     fn put_explicit(
@@ -377,9 +373,7 @@ pub trait BlobstorePutOps: Blobstore {
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
-        self.put_explicit(ctx, key, value, self.put_behaviour())
-    }
+    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>>;
 }
 
 /// Mixin trait for blobstores that support the `link()` operation

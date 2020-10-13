@@ -121,13 +121,13 @@ impl<T: Blobstore + BlobstorePutOps> Blobstore for PackBlob<T> {
     }
 }
 
-impl<T: BlobstorePutOps> BlobstorePutOps for PackBlob<T> {
-    fn put_explicit(
+impl<T: BlobstorePutOps> PackBlob<T> {
+    fn put_impl(
         &self,
         ctx: CoreContext,
         mut key: String,
         value: BlobstoreBytes,
-        put_behaviour: PutBehaviour,
+        put_behaviour: Option<PutBehaviour>,
     ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
         key.push_str(ENVELOPE_SUFFIX);
 
@@ -146,15 +146,36 @@ impl<T: BlobstorePutOps> BlobstorePutOps for PackBlob<T> {
                     storage: StorageFormat::Single(single),
                 });
                 // pass through the put after wrapping
-                self.inner
-                    .put_explicit(ctx, key, envelope.into(), put_behaviour)
+                if let Some(put_behaviour) = put_behaviour {
+                    self.inner
+                        .put_explicit(ctx, key, envelope.into(), put_behaviour)
+                } else {
+                    self.inner.put_with_status(ctx, key, envelope.into())
+                }
             }
             Err(e) => future::err(e).boxed(),
         }
     }
+}
 
-    fn put_behaviour(&self) -> PutBehaviour {
-        self.inner.put_behaviour()
+impl<B: BlobstorePutOps> BlobstorePutOps for PackBlob<B> {
+    fn put_explicit(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+        put_behaviour: PutBehaviour,
+    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+        self.put_impl(ctx, key, value, Some(put_behaviour))
+    }
+
+    fn put_with_status(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+        self.put_impl(ctx, key, value, None)
     }
 }
 

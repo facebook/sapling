@@ -62,8 +62,13 @@ impl<T: BlobstorePutOps + Clone> BlobstorePutOps for ReadOnlyBlobstore<T> {
         future::err(ErrorKind::ReadOnlyPut(key).into()).boxed()
     }
 
-    fn put_behaviour(&self) -> PutBehaviour {
-        self.blobstore.put_behaviour()
+    fn put_with_status(
+        &self,
+        _ctx: CoreContext,
+        key: String,
+        _value: BlobstoreBytes,
+    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+        future::err(ErrorKind::ReadOnlyPut(key).into()).boxed()
     }
 }
 

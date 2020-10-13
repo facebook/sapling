@@ -85,8 +85,14 @@ impl<T: BlobstorePutOps + Clone> BlobstorePutOps for PrefixBlobstore<T> {
             .put_explicit(ctx, self.prepend(key), value, put_behaviour)
     }
 
-    fn put_behaviour(&self) -> PutBehaviour {
-        self.blobstore.put_behaviour()
+    fn put_with_status(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+        self.blobstore
+            .put_with_status(ctx, self.prepend(key), value)
     }
 }
 

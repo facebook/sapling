@@ -154,8 +154,13 @@ impl BlobstorePutOps for EagerMemblob {
         future::ok(inner.put(key, value, put_behaviour)).boxed()
     }
 
-    fn put_behaviour(&self) -> PutBehaviour {
-        self.put_behaviour
+    fn put_with_status(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+        self.put_explicit(ctx, key, value, self.put_behaviour)
     }
 }
 
@@ -210,8 +215,13 @@ impl BlobstorePutOps for LazyMemblob {
         .boxed()
     }
 
-    fn put_behaviour(&self) -> PutBehaviour {
-        self.put_behaviour
+    fn put_with_status(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+        self.put_explicit(ctx, key, value, self.put_behaviour)
     }
 }
 

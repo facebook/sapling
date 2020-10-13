@@ -84,13 +84,13 @@ impl<B: Blobstore + BlobstorePutOps> Blobstore for LogBlob<B> {
     }
 }
 
-impl<B: BlobstorePutOps> BlobstorePutOps for LogBlob<B> {
-    fn put_explicit(
+impl<B: BlobstorePutOps> LogBlob<B> {
+    fn put_impl(
         &self,
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-        put_behaviour: PutBehaviour,
+        put_behaviour: Option<PutBehaviour>,
     ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
         let mut scuba = self.scuba.clone();
         let size = value.len();
@@ -98,9 +98,12 @@ impl<B: BlobstorePutOps> BlobstorePutOps for LogBlob<B> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::BlobPuts);
 
-        let put = self
-            .inner
-            .put_explicit(ctx.clone(), key.clone(), value, put_behaviour);
+        let put = if let Some(put_behaviour) = put_behaviour {
+            self.inner
+                .put_explicit(ctx.clone(), key.clone(), value, put_behaviour)
+        } else {
+            self.inner.put_with_status(ctx.clone(), key.clone(), value)
+        };
         async move {
             let (stats, result) = put.timed().await;
             record_put_stats(
@@ -118,8 +121,25 @@ impl<B: BlobstorePutOps> BlobstorePutOps for LogBlob<B> {
         }
         .boxed()
     }
+}
 
-    fn put_behaviour(&self) -> PutBehaviour {
-        self.inner.put_behaviour()
+impl<B: BlobstorePutOps> BlobstorePutOps for LogBlob<B> {
+    fn put_explicit(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+        put_behaviour: PutBehaviour,
+    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+        self.put_impl(ctx, key, value, Some(put_behaviour))
+    }
+
+    fn put_with_status(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+        self.put_impl(ctx, key, value, None)
     }
 }

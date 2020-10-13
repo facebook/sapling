@@ -499,8 +499,13 @@ impl BlobstorePutOps for Sqlblob {
         }
     }
 
-    fn put_behaviour(&self) -> PutBehaviour {
-        self.put_behaviour
+    fn put_with_status(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+        self.put_explicit(ctx, key, value, self.put_behaviour)
     }
 }
 

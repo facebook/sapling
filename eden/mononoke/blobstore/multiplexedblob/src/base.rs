@@ -634,12 +634,6 @@ impl BlobstorePutOps for MultiplexedBlobstoreBase {
     ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
         self.put_impl(ctx, key, value, None)
     }
-
-    fn put_behaviour(&self) -> PutBehaviour {
-        // TODO(ahornby), planning to delete this method from the BlobstorePutOps trait
-        // in next in stack as doesn't make sense for multiplex
-        PutBehaviour::Overwrite
-    }
 }
 
 impl fmt::Debug for MultiplexedBlobstoreBase {

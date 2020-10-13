@@ -109,6 +109,29 @@ impl<T: Blobstore + Clone> Blobstore for ThrottledBlob<T> {
     }
 }
 
+impl<T: BlobstorePutOps + Clone + Send + Sync + 'static> ThrottledBlob<T> {
+    fn put_impl(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+        put_behaviour: Option<PutBehaviour>,
+    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+        let access = self.write_limiter.access();
+        let blobstore = self.blobstore.clone();
+        async move {
+            access.await?;
+            let put = if let Some(put_behaviour) = put_behaviour {
+                blobstore.put_explicit(ctx, key, value, put_behaviour)
+            } else {
+                blobstore.put_with_status(ctx, key, value)
+            };
+            put.await
+        }
+        .boxed()
+    }
+}
+
 impl<T: BlobstorePutOps + Clone + Send + Sync + 'static> BlobstorePutOps for ThrottledBlob<T> {
     fn put_explicit(
         &self,
@@ -117,17 +140,16 @@ impl<T: BlobstorePutOps + Clone + Send + Sync + 'static> BlobstorePutOps for Thr
         value: BlobstoreBytes,
         put_behaviour: PutBehaviour,
     ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
-        let access = self.write_limiter.access();
-        let blobstore = self.blobstore.clone();
-        async move {
-            access.await?;
-            blobstore.put_explicit(ctx, key, value, put_behaviour).await
-        }
-        .boxed()
+        self.put_impl(ctx, key, value, Some(put_behaviour))
     }
 
-    fn put_behaviour(&self) -> PutBehaviour {
-        self.blobstore.put_behaviour()
+    fn put_with_status(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+        self.put_impl(ctx, key, value, None)
     }
 }
 

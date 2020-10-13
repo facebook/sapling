@@ -166,10 +166,6 @@ impl BlobstorePutOps for MultiplexedBlobstore {
         self.blobstore.put_explicit(ctx, key, value, put_behaviour)
     }
 
-    fn put_behaviour(&self) -> PutBehaviour {
-        self.blobstore.put_behaviour()
-    }
-
     fn put_with_status(
         &self,
         ctx: CoreContext,
