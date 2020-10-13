@@ -227,8 +227,13 @@ def callcatch(ui, func):
     except error.RustError as inst:
         if ui.config("ui", "traceback") and inst.args[0].has_metadata():
             fault = inst.args[0].fault()
+            transience = inst.args[0].transience()
+            category = inst.args[0].category()
             typename = inst.args[0].typename()
-            ui.warn(_("error has type name %s and fault %s\n") % (typename, fault))
+            ui.warn(
+                _("error has type name %s, category %s, transience %s, and fault %s\n")
+                % (typename, category, transience, fault)
+            )
         raise
     except error.RevisionstoreError as inst:
         ui.warn(_("%s\n") % inst, error=_("abort"))

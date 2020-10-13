@@ -39,10 +39,128 @@ pub enum Fault {
 
 impl Display for Fault {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
-        match *self {
-            Fault::Request => write!(f, "error is request issue"),
-            Fault::Internal => write!(f, "error is internal issue"),
-            Fault::Dependency => write!(f, "error is dependency issue"),
+        use Fault::*;
+        write!(
+            f,
+            "{}",
+            match *self {
+                Request => "request",
+                Internal => "internal",
+                Dependency => "dependency",
+            }
+        )
+    }
+}
+
+#[derive(Copy, Clone, Hash, Debug)]
+#[repr(u8)]
+/// Error Transience
+///
+/// If present, indicates whether the caller should expect the same error when
+/// repeating the same request, for a given configuration (version, environment
+/// variables, etc).
+pub enum Transience {
+    /// Indicates the error is retryable. Retrying the request should at least
+    /// have a chance of succeeding, even if the specifics of the issue might
+    /// mean it might not. For example, a timeout error received from a
+    /// dependency should probably be marked as transient, even if the request
+    /// could conceivably be causing a deadlock or other issue that would
+    /// prevent retries from ever succeeding.
+    Transient,
+
+    /// Indicates the error is not retryable. Retrying the request should not
+    /// be expected to give a different result. Mark errors as permanent with
+    /// the understanding that consumers of the metadata might use it to
+    /// prevent unnecessary retries; if you're not sure, leave transience unset.
+    Permanent,
+}
+
+impl Display for Transience {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+        use Transience::*;
+        write!(
+            f,
+            "{}",
+            match *self {
+                Transient => "transient",
+                Permanent => "permanent",
+            }
+        )
+    }
+}
+
+/// A coarse error category.
+///
+/// These categories are for the purpose of analysis / metrics, and thus should
+/// be as actionable as possible from a high level perspective. If nothing
+/// applies, just leave Category unset.
+#[derive(Copy, Clone, Hash, Debug)]
+#[non_exhaustive]
+#[repr(u8)]
+pub enum Category {
+    /// Generic networking error.
+    Network,
+
+    /// Specifically a timeout, both network and local operations.
+    Timeout,
+
+    /// Permissions issue, can be local or remote.
+    Permission,
+
+    /// Malformed or otherwise invalid input.
+    InvalidInput,
+
+    /// Generic error for unexpected internal error. A programming error or bug.
+    Programming,
+
+    /// Data corruption, prefer InvalidInput where error is not necessarily corruption.
+    Corruption,
+}
+
+impl Display for Category {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+        use Category::*;
+        write!(
+            f,
+            "{}",
+            match *self {
+                Network => "network",
+                Timeout => "timeout",
+                Permission => "permission",
+                InvalidInput => "invalid input",
+                Programming => "programming",
+                Corruption => "corruption",
+            }
+        )
+    }
+}
+
+impl From<Category> for Option<Fault> {
+    fn from(category: Category) -> Self {
+        use Category::*;
+        use Fault::*;
+        match category {
+            Network => Some(Dependency),
+            Timeout => Some(Dependency),
+            Permission => None,
+            InvalidInput => Some(Request),
+            Programming => Some(Internal),
+            Corruption => None,
+        }
+    }
+}
+
+impl From<Category> for Option<Transience> {
+    fn from(category: Category) -> Self {
+        use Category::*;
+        use Transience::*;
+        match category {
+            Network => Some(Transient),
+            Timeout => Some(Transient),
+            Permission => None,
+            InvalidInput => Some(Permanent),
+            Programming => Some(Permanent),
+            Corruption => None,
         }
     }
 }
@@ -64,25 +182,41 @@ impl TypeName {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Default)]
 /// Common error metadata
 pub struct CommonMetadata {
-    pub fault: Option<Fault>,
-    pub type_name: Option<TypeName>,
+    fault: Option<Fault>,
+    transience: Option<Transience>,
+    category: Option<Category>,
+    type_name: Option<TypeName>,
 }
 
 impl Display for CommonMetadata {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         let mut prev = false;
-        if let Some(type_name) = self.type_name {
+        if let Some(type_name) = self.type_name() {
             write!(f, "{}", type_name)?;
             prev = true;
         }
-        if let Some(fault) = self.fault {
+        if let Some(fault) = self.fault() {
             if prev {
                 write!(f, ", ")?;
             }
-            write!(f, "{}", fault)?;
+            write!(f, "error is {} issue", fault)?;
+            prev = true;
+        }
+        if let Some(transience) = self.transience() {
+            if prev {
+                write!(f, ", ")?;
+            }
+            write!(f, "error is {}", transience)?;
+            prev = true;
+        }
+        if let Some(category) = self.category() {
+            if prev {
+                write!(f, ", ")?;
+            }
+            write!(f, "error is {} issue", category)?;
             prev = true;
         }
         if !prev {
@@ -92,25 +226,42 @@ impl Display for CommonMetadata {
     }
 }
 
-impl Default for CommonMetadata {
-    fn default() -> Self {
-        CommonMetadata {
-            fault: None,
-            type_name: None,
-        }
-    }
-}
-
 impl CommonMetadata {
     pub fn new<T>() -> Self {
         CommonMetadata {
-            fault: None,
             type_name: Some(TypeName::new::<T>()),
+            ..Default::default()
         }
+    }
+
+    pub fn fault(&self) -> Option<Fault> {
+        self.fault.or(self.category().and_then(|c| c.into()))
+    }
+
+    pub fn transience(&self) -> Option<Transience> {
+        self.transience.or(self.category().and_then(|c| c.into()))
+    }
+
+    pub fn category(&self) -> Option<Category> {
+        self.category
+    }
+
+    pub fn type_name(&self) -> Option<TypeName> {
+        self.type_name
     }
 
     pub fn with_fault(mut self, fault: Fault) -> Self {
         self.fault = Some(fault);
+        self
+    }
+
+    pub fn with_transience(mut self, transience: Transience) -> Self {
+        self.transience = Some(transience);
+        self
+    }
+
+    pub fn with_category(mut self, category: Category) -> Self {
+        self.category = Some(category);
         self
     }
 
@@ -122,14 +273,22 @@ impl CommonMetadata {
     /// Returns true if all CommonMetadata fields are filled, such that
     /// traversing the error tree will not provide any additional information.
     pub fn complete(&self) -> bool {
-        self.fault.is_some() && self.type_name.is_some()
+        self.category().is_some()
+            && self.transience().is_some()
+            && self.fault.is_some()
+            && self.type_name.is_some()
     }
 
     pub fn empty(&self) -> bool {
-        self.fault.is_none() && self.type_name.is_none()
+        self.category().is_none()
+            && self.transience().is_none()
+            && self.fault.is_none()
+            && self.type_name.is_none()
     }
 
     pub fn merge(&mut self, other: &CommonMetadata) {
+        self.category = self.category.or(other.category);
+        self.transience = self.transience.or(other.transience);
         self.fault = self.fault.or(other.fault);
         self.type_name = self.type_name.or(other.type_name);
     }
@@ -137,6 +296,8 @@ impl CommonMetadata {
 
 pub trait AnyhowExt {
     fn with_fault(self, fault: Fault) -> Self;
+    fn with_transience(self, transience: Transience) -> Self;
+    fn with_category(self, category: Category) -> Self;
     fn with_type_name(self, type_name: TypeName) -> Self;
     fn with_metadata(self, metadata: CommonMetadata) -> Self;
 
@@ -147,6 +308,14 @@ pub trait AnyhowExt {
 impl AnyhowExt for anyhow::Error {
     fn with_fault(self, fault: Fault) -> Self {
         TaggedError::new(self, CommonMetadata::default().with_fault(fault)).wrapped()
+    }
+
+    fn with_transience(self, transience: Transience) -> Self {
+        TaggedError::new(self, CommonMetadata::default().with_transience(transience)).wrapped()
+    }
+
+    fn with_category(self, category: Category) -> Self {
+        TaggedError::new(self, CommonMetadata::default().with_category(category)).wrapped()
     }
 
     fn with_type_name(self, typename: TypeName) -> Self {
@@ -176,6 +345,14 @@ impl AnyhowExt for anyhow::Error {
 impl<T> AnyhowExt for anyhow::Result<T> {
     fn with_fault(self, fault: Fault) -> Self {
         self.map_err(|e| e.with_fault(fault))
+    }
+
+    fn with_transience(self, transience: Transience) -> Self {
+        self.map_err(|e| e.with_transience(transience))
+    }
+
+    fn with_category(self, category: Category) -> Self {
+        self.map_err(|e| e.with_category(category))
     }
 
     fn with_type_name(self, typename: TypeName) -> Self {
@@ -239,7 +416,11 @@ pub struct IntentionalError(String);
 impl Tagged for IntentionalError {
     fn metadata(&self) -> CommonMetadata {
         // CommonMetadata::new::<Self>() attaches typename
+        // Transience is implied by Category::Programming
+        // Fault::Request overrides the default fault set by the category
         CommonMetadata::new::<Self>()
+            .with_category(Category::Programming)
+            .with_fault(Fault::Request)
     }
 }
 
@@ -255,6 +436,7 @@ pub fn intentional_error(tagged: bool) -> anyhow::Result<u8> {
 
 pub fn intentional_bail() -> anyhow::Result<u8> {
     bail!(
+        Category::Programming,
         fault = Fault::Request,
         TypeName("taggederror::FakeTypeNameForTesting"),
         "intentional bail with {}",
@@ -316,12 +498,24 @@ macro_rules! bail {
     (@metadata $meta:expr, Fault::$fault:ident, $($tail:tt)+) => {
         bail!(@metadata CommonMetadata::with_fault($meta, Fault::$fault), $($tail)+)
     };
+    (@metadata $meta:expr, Transience::$transience:ident, $($tail:tt)+) => {
+        bail!(@metadata CommonMetadata::with_transience($meta, Transience::$transience), $($tail)+)
+    };
+    (@metadata $meta:expr, Category::$category:ident, $($tail:tt)+) => {
+        bail!(@metadata CommonMetadata::with_category($meta, Category::$category), $($tail)+)
+    };
     (@metadata $meta:expr, TypeName($type_name:expr), $($tail:tt)+) => {
         bail!(@metadata CommonMetadata::with_type_name($meta, TypeName($type_name)), $($tail)+)
     };
     // More verbose key=value syntax for metadata expressions
     (@metadata $meta:expr, fault=$fault:expr, $($tail:tt)+) => {
         bail!(@metadata CommonMetadata::with_fault($meta, $fault), $($tail)+)
+    };
+    (@metadata $meta:expr, transience=$transience:expr, $($tail:tt)+) => {
+        bail!(@metadata CommonMetadata::with_transience($meta, $transience), $($tail)+)
+    };
+    (@metadata $meta:expr, category=$category:expr, $($tail:tt)+) => {
+        bail!(@metadata CommonMetadata::with_category($meta, $category), $($tail)+)
     };
     (@metadata $meta:expr, type_name=$type_name:expr, $($tail:tt)+) => {
         bail!(@metadata CommonMetadata::with_type_name($meta, $type_name), $($tail)+)
@@ -336,11 +530,23 @@ macro_rules! bail {
     (Fault::$fault:ident, $($tail:tt)+) => {
         bail!(@metadata CommonMetadata::default().with_fault(Fault::$fault), $($tail)+)
     };
+    (Transience::$transience:ident, $($tail:tt)+) => {
+        bail!(@metadata CommonMetadata::default().with_transience(Transinece::$transience), $($tail)+)
+    };
+    (Category::$category:ident, $($tail:tt)+) => {
+        bail!(@metadata CommonMetadata::default().with_category(Category::$category), $($tail)+)
+    };
     (TypeName($type_name:expr), $($tail:tt)+) => {
         bail!(@metadata CommonMetadata::default().with_type_name(TypeName($type_name)), $($tail)+)
     };
     (fault=$fault:expr, $($tail:tt)+) => {
         bail!(@metadata CommonMetadata::default().with_fault($fault), $($tail)+)
+    };
+    (transience=$transience:expr, $($tail:tt)+) => {
+        bail!(@metadata CommonMetadata::default().with_transience($transience), $($tail)+)
+    };
+    (category=$category:expr, $($tail:tt)+) => {
+        bail!(@metadata CommonMetadata::default().with_category($category), $($tail)+)
     };
     (type_name=$type_name:expr, $($tail:tt)+) => {
         bail!(@metadata CommonMetadata::default().with_type_name($type_name), $($tail)+)

@@ -95,19 +95,81 @@ class Component(object):
         super(Component, self).__init__(*args, **kwargs)
 
 
+# Please keep these types in sync with taggederror
+class Category(enum.Enum):
+    network = "network"
+    timeout = "timeout"
+    permission = "permission"
+    invalidinput = "invalid input"
+    programming = "programming"
+    corruption = "corruption"
+
+    def fault(self):
+        return {
+            Category.network: Fault.dependency,
+            Category.timeout: Fault.dependency,
+            Category.invalidinput: Fault.request,
+            Category.programming: Fault.internal,
+        }.get(self)
+
+    def transience(self):
+        return {
+            Category.network: Transience.transient,
+            Category.timeout: Transience.transient,
+            Category.invalidinput: Transience.permanent,
+            Category.programming: Transience.permanent,
+        }.get(self)
+
+
 class Fault(enum.Enum):
-    Request = "request"
-    Internal = "internal"
-    Dependency = "dependency"
+    request = "request"
+    internal = "internal"
+    dependency = "dependency"
+
+
+class Transience(enum.Enum):
+    transient = "transient"
+    permanent = "permanent"
 
 
 class Tagged(object):
     """Mix-in to provide metadata tags for an error"""
 
     def __init__(self, *args, **kwargs):
-        # Explicitly passed value overrides class default
-        self.fault = Fault(kwargs.pop(r"fault", getattr(self.__class__, "fault", None)))
+        # Explicitly passed kwarg values override class defaults.
+        category = kwargs.pop(r"category", getattr(self.__class__, "_category", None))
+        if category is not None:
+            self.category = Category(category)
+        else:
+            self.category = None
+
+        fault = kwargs.pop(r"fault", getattr(self.__class__, "_fault", None))
+        if fault is not None:
+            self._fault = Fault(fault)
+        else:
+            self._fault = None
+
+        transience = kwargs.pop(
+            r"transience", getattr(self.__class__, "_transience", None)
+        )
+        if transience is not None:
+            self._transience = Transience(transience)
+        else:
+            self._transience = None
+
         super(Tagged, self).__init__(*args, **kwargs)
+
+    @property
+    def fault(self):
+        if self._fault is None and self.category is not None:
+            return self.category.fault()
+        return self._fault
+
+    @property
+    def transience(self):
+        if self._transience is None and self.category is not None:
+            return self.category.transience()
+        return self._transience
 
 
 class RevlogError(Hint, Context, Exception):
@@ -389,7 +451,8 @@ class IntentionalError(Tagged, Hint, Context, RuntimeError):
     """Raised intentionally to test error handling"""
 
     __bytes__ = _tobytes
-    fault = Fault.Request
+    _fault = Fault.request
+    _category = Category.programming
 
 
 class ForeignImportError(ProgrammingError):

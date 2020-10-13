@@ -134,11 +134,13 @@ Test exception logging:
   ...     if entry["category"] == "exceptions":
   ...         for k in sorted(entry["data"].keys()):
   ...             print("%s: %s" % (k, entry["data"][k]))
+  category: programming
   exception_msg: intentional error for debugging with message 'intentional_error'
   exception_type: RustError
-  fault: None
+  fault: request
   metrics_type: exceptions
   rust_error_type: taggederror::IntentionalError
+  transience: permanent
 
   $ > $LOGDIR/samplingpath.txt
   $ hg debugthrowrustbail 2>&1 | egrep -v '^  '
@@ -154,11 +156,13 @@ Test exception logging:
   ...     if entry["category"] == "exceptions":
   ...         for k in sorted(entry["data"].keys()):
   ...             print("%s: %s" % (k, entry["data"][k]))
+  category: programming
   exception_msg: intentional bail with format params
   exception_type: RustError
   fault: request
   metrics_type: exceptions
   rust_error_type: taggederror::FakeTypeNameForTesting
+  transience: permanent
 
   $ > $LOGDIR/samplingpath.txt
   $ hg debugthrowexception 2>&1 | egrep -v '^  '
@@ -174,11 +178,13 @@ Test exception logging:
   ...     if entry["category"] == "exceptions":
   ...         for k in sorted(entry["data"].keys()):
   ...             print("%s: %s" % (k, entry["data"][k]))
+  category: programming
   exception_msg: intentional failure in debugthrowexception
   exception_type: IntentionalError
   fault: request
   metrics_type: exceptions
   rust_error_type: None
+  transience: permanent
 
   $ > $LOGDIR/samplingpath.txt
   $ enable rebase histedit
@@ -199,11 +205,13 @@ Note: Errors raised by the dispatch logic aren't logged here:
   ...     if entry["category"] == "exceptions":
   ...         for k in sorted(entry["data"].keys()):
   ...             print("%s: %s" % (k, entry["data"][k]))
+  category: None
   exception_msg: nothing to rebase
   exception_type: NoMergeDestAbort
   fault: None
   metrics_type: exceptions
   rust_error_type: None
+  transience: None
 
 Test ui.metrics.gauge API
   $ cat > $TESTTMP/a.py << EOF

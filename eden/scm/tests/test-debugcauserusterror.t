@@ -8,5 +8,5 @@ Test debugcauserusterror error formatting
   $ hg debugcauserusterror --traceback
   abort: intentional error for debugging with message 'intentional_error'
   
-  error tags: error has type name "taggederror::IntentionalError", error is request issue
+  error tags: error has type name "taggederror::IntentionalError", error is request issue, error is permanent, error is programming issue
   [255]

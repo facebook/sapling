@@ -25,17 +25,29 @@ py_class!(pub class TaggedExceptionData |py| {
         TaggedExceptionData::create_instance(py, CommonMetadata::default(), String::new())
     }
 
-    def fault(&self) -> PyResult<Option<&'static str>> {
-        Ok(match self.metadata(py).fault {
-            Some(Fault::Request) => Some("request"),
-            Some(Fault::Internal) => Some("internal"),
-            Some(Fault::Dependency) => Some("dependency"),
+    def fault(&self) -> PyResult<Option<String>> {
+        Ok(match self.metadata(py).fault() {
+            Some(fault) => Some(format!("{}", fault)),
+            None => None,
+        })
+    }
+
+    def transience(&self) -> PyResult<Option<String>> {
+        Ok(match self.metadata(py).transience() {
+            Some(transience) => Some(format!("{}", transience)),
+            None => None,
+        })
+    }
+
+    def category(&self) -> PyResult<Option<String>> {
+        Ok(match self.metadata(py).category() {
+            Some(category) => Some(format!("{}", category)),
             None => None,
         })
     }
 
     def typename(&self) -> PyResult<Option<&'static str>> {
-        Ok(self.metadata(py).type_name.map(|v| v.0))
+        Ok(self.metadata(py).type_name().map(|v| v.0))
     }
 
     def has_metadata(&self) -> PyResult<bool> {
