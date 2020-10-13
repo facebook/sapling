@@ -1630,6 +1630,11 @@ class RageCmd(Subcmd):
             action="store_true",
             help="Print the rage report to stdout: ignore reporter.",
         )
+        parser.add_argument(
+            "--stderr",
+            action="store_true",
+            help="Print the rage report to stderr: ignore reporter.",
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
@@ -1637,9 +1642,12 @@ class RageCmd(Subcmd):
         rage_processor = instance.get_config_value("rage.reporter", default="")
 
         proc: Optional[subprocess.Popen] = None
-        if rage_processor and not args.stdout:
+        if rage_processor and not args.stdout and not args.stderr:
             proc = subprocess.Popen(shlex.split(rage_processor), stdin=subprocess.PIPE)
             sink = proc.stdin
+        elif args.stderr:
+            proc = None
+            sink = sys.stderr.buffer
         else:
             proc = None
             sink = sys.stdout.buffer
