@@ -39,7 +39,7 @@ use slog_glog_fmt::{kv_categorizer::FacebookCategorizer, kv_defaults::FacebookKV
 use blobrepo::BlobRepo;
 use blobrepo_factory::{BlobrepoBuilder, Caching, ReadOnlyStorage};
 use blobstore_factory::{
-    BlobstoreOptions, CachelibBlobstoreOptions, ChaosOptions, PackOptions, Scrubbing,
+    BlobstoreOptions, CachelibBlobstoreOptions, ChaosOptions, PackOptions, PutBehaviour, Scrubbing,
     ThrottleOptions,
 };
 use metaconfig_parser::{RepoConfigs, StorageConfigs};
@@ -82,6 +82,7 @@ const WRITE_CHAOS_ARG: &str = "blobstore-write-chaos-rate";
 const WRITE_ZSTD_ARG: &str = "blobstore-write-zstd-level";
 const MANIFOLD_API_KEY_ARG: &str = "manifold-api-key";
 const CACHELIB_ATTEMPT_ZSTD_ARG: &str = "blobstore-cachelib-attempt-zstd";
+const BLOBSTORE_PUT_BEHAVIOUR_ARG: &str = "blobstore-put-behaviour";
 const TEST_INSTANCE_ARG: &str = "test-instance";
 const LOCAL_CONFIGERATOR_PATH_ARG: &str = "local-configerator-path";
 
@@ -767,6 +768,13 @@ pub fn add_blobstore_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
             .required(false)
             .help("Whether to attempt zstd compression when blobstore is putting things into cachelib over threshold size.  Default is true."),
     )
+    .arg(
+        Arg::with_name(BLOBSTORE_PUT_BEHAVIOUR_ARG)
+            .long(BLOBSTORE_PUT_BEHAVIOUR_ARG)
+            .takes_value(true)
+            .required(false)
+            .help("Whether blobstore put unconditionally attempts to write even if key already present.  Default is Overwrite."),
+    )
 }
 
 pub fn add_mcrouter_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
@@ -1076,13 +1084,20 @@ pub fn parse_blobstore_options<'a>(matches: &ArgMatches<'a>) -> BlobstoreOptions
             .expect("Provided blobstore-cachelib-attempt-zstd is not bool")
     });
 
+
+    let blobstore_put_behaviour: Option<PutBehaviour> =
+        matches.value_of(BLOBSTORE_PUT_BEHAVIOUR_ARG).map(|v| {
+            v.parse()
+                .expect("Provided blobstore-put-behaviour is not PutBehaviour")
+        });
+
     BlobstoreOptions::new(
         ChaosOptions::new(read_chaos, write_chaos),
         ThrottleOptions::new(read_qps, write_qps),
         manifold_api_key,
         PackOptions::new(write_zstd_level),
         CachelibBlobstoreOptions::new_lazy(attempt_zstd),
-        None,
+        blobstore_put_behaviour,
     )
 }
 
