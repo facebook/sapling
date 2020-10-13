@@ -7,7 +7,7 @@
 
 use crate::base::{ErrorKind, MultiplexedBlobstoreBase, MultiplexedBlobstorePutHandler};
 use anyhow::Error;
-use blobstore::{Blobstore, BlobstoreGetData};
+use blobstore::{Blobstore, BlobstoreGetData, BlobstorePutOps};
 use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry, OperationKey};
 use cloned::cloned;
 use context::CoreContext;
@@ -28,8 +28,8 @@ pub struct MultiplexedBlobstore {
 impl MultiplexedBlobstore {
     pub fn new(
         multiplex_id: MultiplexId,
-        blobstores: Vec<(BlobstoreId, Arc<dyn Blobstore>)>,
-        write_mostly_blobstores: Vec<(BlobstoreId, Arc<dyn Blobstore>)>,
+        blobstores: Vec<(BlobstoreId, Arc<dyn BlobstorePutOps>)>,
+        write_mostly_blobstores: Vec<(BlobstoreId, Arc<dyn BlobstorePutOps>)>,
         minimum_successful_writes: NonZeroUsize,
         queue: Arc<dyn BlobstoreSyncQueue>,
         scuba: ScubaSampleBuilder,

@@ -6,7 +6,7 @@
  */
 
 use anyhow::{anyhow, Error};
-use blobstore::{Blobstore, BlobstoreGetData, OverwriteStatus};
+use blobstore::{Blobstore, BlobstoreGetData, BlobstorePutOps};
 use blobstore_stats::{record_get_stats, record_put_stats, OperationType};
 use blobstore_sync_queue::OperationKey;
 use cloned::cloned;
@@ -81,7 +81,7 @@ pub struct MultiplexedBlobstoreBase {
     multiplex_id: MultiplexId,
     /// These are the "normal" blobstores, which are read from on `get`, and written to on `put`
     /// as part of normal operation. No special treatment is applied.
-    blobstores: Arc<[(BlobstoreId, Arc<dyn Blobstore>)]>,
+    blobstores: Arc<[(BlobstoreId, Arc<dyn BlobstorePutOps>)]>,
     /// Write-mostly blobstores are not normally read from on `get`, but take part in writes
     /// like a normal blobstore.
     ///
@@ -91,7 +91,7 @@ pub struct MultiplexedBlobstoreBase {
     ///    during a `put` operation.
     /// 2. When we're recording blobstore stats to Scuba on a `get` - in this case, the read executes
     ///    solely to gather statistics, and the result is discarded
-    write_mostly_blobstores: Arc<[(BlobstoreId, Arc<dyn Blobstore>)]>,
+    write_mostly_blobstores: Arc<[(BlobstoreId, Arc<dyn BlobstorePutOps>)]>,
     /// At least this many `put` and `on_put` pairs have to succeed before we consider a `put` successful
     /// This is meant to ensure that `put` fails if the data could end up lost (e.g. if a buggy experimental
     /// blobstore wins the `put` race).
@@ -103,7 +103,7 @@ pub struct MultiplexedBlobstoreBase {
 }
 
 fn write_mostly_error(
-    blobstores: &[(BlobstoreId, Arc<dyn Blobstore>)],
+    blobstores: &[(BlobstoreId, Arc<dyn BlobstorePutOps>)],
     errors: HashMap<BlobstoreId, Error>,
 ) -> ErrorKind {
     let main_blobstore_ids: HashSet<BlobstoreId, RandomState> =
@@ -120,8 +120,8 @@ fn write_mostly_error(
 impl MultiplexedBlobstoreBase {
     pub fn new(
         multiplex_id: MultiplexId,
-        blobstores: Vec<(BlobstoreId, Arc<dyn Blobstore>)>,
-        write_mostly_blobstores: Vec<(BlobstoreId, Arc<dyn Blobstore>)>,
+        blobstores: Vec<(BlobstoreId, Arc<dyn BlobstorePutOps>)>,
+        write_mostly_blobstores: Vec<(BlobstoreId, Arc<dyn BlobstorePutOps>)>,
         minimum_successful_writes: NonZeroUsize,
         handler: Arc<dyn MultiplexedBlobstorePutHandler>,
         mut scuba: ScubaSampleBuilder,
@@ -235,14 +235,14 @@ pub async fn inner_put(
     mut scuba: ScubaSampleBuilder,
     write_order: &AtomicUsize,
     blobstore_id: BlobstoreId,
-    blobstore: &dyn Blobstore,
+    blobstore: &dyn BlobstorePutOps,
     key: String,
     value: BlobstoreBytes,
 ) -> (BlobstoreId, Result<(), Error>) {
     let size = value.len();
     let (stats, timeout_or_res) = timeout(
         REQUEST_TIMEOUT,
-        blobstore.put(ctx.clone(), key.clone(), value),
+        blobstore.put_with_status(ctx.clone(), key.clone(), value),
     )
     .timed()
     .await;
@@ -250,8 +250,7 @@ pub async fn inner_put(
     record_put_stats(
         &mut scuba,
         stats,
-        // TODO(ahornby) check inner OverwriteStatus in multiplexblob
-        result.as_ref().map(|()| &OverwriteStatus::NotChecked),
+        result.as_ref(),
         key,
         ctx.metadata().session_id().to_string(),
         OperationType::Put,
@@ -259,14 +258,14 @@ pub async fn inner_put(
         Some(blobstore_id),
         Some(write_order.fetch_add(1, Ordering::Relaxed) + 1),
     );
-    (blobstore_id, result)
+    (blobstore_id, result.map(|_status| ()))
 }
 
 // Workaround for Blobstore returning a static lifetime future
 async fn blobstore_get(
     ctx: CoreContext,
-    blobstores: Arc<[(BlobstoreId, Arc<dyn Blobstore>)]>,
-    write_mostly_blobstores: Arc<[(BlobstoreId, Arc<dyn Blobstore>)]>,
+    blobstores: Arc<[(BlobstoreId, Arc<dyn BlobstorePutOps>)]>,
+    write_mostly_blobstores: Arc<[(BlobstoreId, Arc<dyn BlobstorePutOps>)]>,
     key: String,
     scuba: ScubaSampleBuilder,
 ) -> Result<Option<BlobstoreGetData>, Error> {
@@ -607,7 +606,7 @@ impl fmt::Debug for MultiplexedBlobstoreBase {
 
 async fn multiplexed_get_one(
     ctx: impl Borrow<CoreContext>,
-    blobstore: Arc<dyn Blobstore>,
+    blobstore: Arc<dyn BlobstorePutOps>,
     blobstore_id: BlobstoreId,
     key: String,
     operation: OperationType,
@@ -634,7 +633,7 @@ async fn multiplexed_get_one(
 
 fn multiplexed_get<'fut: 'iter, 'iter>(
     ctx: impl Borrow<CoreContext> + Clone + 'fut,
-    blobstores: &'iter [(BlobstoreId, Arc<dyn Blobstore>)],
+    blobstores: &'iter [(BlobstoreId, Arc<dyn BlobstorePutOps>)],
     key: &'iter String,
     operation: OperationType,
     scuba: ScubaSampleBuilder,

@@ -17,7 +17,7 @@ use crate::base::{MultiplexedBlobstoreBase, MultiplexedBlobstorePutHandler};
 use crate::queue::MultiplexedBlobstore;
 use crate::scrub::{LoggingScrubHandler, ScrubBlobstore, ScrubHandler};
 use anyhow::{bail, Error};
-use blobstore::{Blobstore, BlobstoreGetData};
+use blobstore::{Blobstore, BlobstoreGetData, BlobstorePutOps, OverwriteStatus, PutBehaviour};
 use blobstore_sync_queue::{
     BlobstoreSyncQueue, BlobstoreSyncQueueEntry, OperationKey, SqlBlobstoreSyncQueue,
 };
@@ -111,20 +111,39 @@ impl Blobstore for Tickable<BlobstoreBytes> {
 
     fn put(
         &self,
-        _ctx: CoreContext,
+        ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
     ) -> BoxFuture<'static, Result<(), Error>> {
+        BlobstorePutOps::put_with_status(self, ctx, key, value)
+            .map_ok(|_| ())
+            .boxed()
+    }
+}
+
+impl BlobstorePutOps for Tickable<BlobstoreBytes> {
+    fn put_explicit(
+        &self,
+        _ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+        _put_behaviour: PutBehaviour,
+    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
         let storage = self.storage.clone();
         let on_tick = self.on_tick();
 
         async move {
             on_tick.await?;
-            Ok(storage.with(|s| {
+            storage.with(|s| {
                 s.insert(key, value);
-            }))
+            });
+            Ok(OverwriteStatus::NotChecked)
         }
         .boxed()
+    }
+
+    fn put_behaviour(&self) -> PutBehaviour {
+        PutBehaviour::Overwrite
     }
 }
 

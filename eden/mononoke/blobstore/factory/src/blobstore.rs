@@ -491,7 +491,7 @@ pub fn make_blobstore_multiplexed<'a>(
                 }
 
                 async move {
-                    let store = make_blobstore(
+                    let store = make_blobstore_put_ops(
                         fb,
                         config,
                         mysql_options,

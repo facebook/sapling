@@ -11,7 +11,7 @@ use crate::{
 };
 
 use anyhow::Error;
-use blobstore::{Blobstore, BlobstoreGetData, BlobstoreMetadata};
+use blobstore::{Blobstore, BlobstoreGetData, BlobstoreMetadata, BlobstorePutOps};
 use blobstore_sync_queue::BlobstoreSyncQueue;
 use chrono::Duration as ChronoDuration;
 use cloned::cloned;
@@ -86,15 +86,15 @@ pub struct ScrubBlobstore {
     scrub_handler: Arc<dyn ScrubHandler>,
     scrub_action: ScrubAction,
     scuba: ScubaSampleBuilder,
-    scrub_stores: Arc<HashMap<BlobstoreId, Arc<dyn Blobstore>>>,
+    scrub_stores: Arc<HashMap<BlobstoreId, Arc<dyn BlobstorePutOps>>>,
     queue: Arc<dyn BlobstoreSyncQueue>,
 }
 
 impl ScrubBlobstore {
     pub fn new(
         multiplex_id: MultiplexId,
-        blobstores: Vec<(BlobstoreId, Arc<dyn Blobstore>)>,
-        write_mostly_blobstores: Vec<(BlobstoreId, Arc<dyn Blobstore>)>,
+        blobstores: Vec<(BlobstoreId, Arc<dyn BlobstorePutOps>)>,
+        write_mostly_blobstores: Vec<(BlobstoreId, Arc<dyn BlobstorePutOps>)>,
         minimum_successful_writes: NonZeroUsize,
         queue: Arc<dyn BlobstoreSyncQueue>,
         scuba: ScubaSampleBuilder,
@@ -120,7 +120,7 @@ impl ScrubBlobstore {
                 blobstores
                     .into_iter()
                     .chain(write_mostly_blobstores.into_iter())
-                    .collect::<HashMap<BlobstoreId, Arc<dyn Blobstore>>>(),
+                    .collect::<HashMap<BlobstoreId, Arc<dyn BlobstorePutOps>>>(),
             ),
             queue,
         }
@@ -141,7 +141,7 @@ async fn put_and_mark_repaired(
     scuba: &ScubaSampleBuilder,
     order: &AtomicUsize,
     id: BlobstoreId,
-    store: &dyn Blobstore,
+    store: &dyn BlobstorePutOps,
     key: &String,
     value: &BlobstoreGetData,
     scrub_handler: &dyn ScrubHandler,
@@ -166,7 +166,7 @@ async fn blobstore_get(
     ctx: &CoreContext,
     key: String,
     queue: &dyn BlobstoreSyncQueue,
-    scrub_stores: &HashMap<BlobstoreId, Arc<dyn Blobstore>>,
+    scrub_stores: &HashMap<BlobstoreId, Arc<dyn BlobstorePutOps>>,
     scrub_handler: &dyn ScrubHandler,
     scrub_action: ScrubAction,
     scuba: ScubaSampleBuilder,
@@ -204,7 +204,7 @@ async fn blobstore_get(
                 } else {
                     vec![]
                 };
-                let mut needs_repair: HashMap<BlobstoreId, &dyn Blobstore> = HashMap::new();
+                let mut needs_repair: HashMap<BlobstoreId, &dyn BlobstorePutOps> = HashMap::new();
 
                 for k in missing_reads.iter() {
                     match scrub_stores.get(k) {
