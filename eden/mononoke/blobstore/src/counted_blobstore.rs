@@ -27,6 +27,10 @@ define_stats_struct! {
     put: timeseries(Rate, Sum),
     put_ok: timeseries(Rate, Sum),
     put_err: timeseries(Rate, Sum),
+    put_not_checked: timeseries(Rate, Sum),
+    put_new: timeseries(Rate, Sum),
+    put_overwrote: timeseries(Rate, Sum),
+    put_prevented: timeseries(Rate, Sum),
     is_present: timeseries(Rate, Sum),
     is_present_ok: timeseries(Rate, Sum),
     is_present_err: timeseries(Rate, Sum),
@@ -132,7 +136,15 @@ impl<T: BlobstorePutOps> CountedBlobstore<T> {
         async move {
             let res = put.await;
             match res {
-                Ok(_) => stats.put_ok.add_value(1),
+                Ok(status) => {
+                    stats.put_ok.add_value(1);
+                    match status {
+                        OverwriteStatus::NotChecked => stats.put_not_checked.add_value(1),
+                        OverwriteStatus::New => stats.put_new.add_value(1),
+                        OverwriteStatus::Overwrote => stats.put_overwrote.add_value(1),
+                        OverwriteStatus::Prevented => stats.put_prevented.add_value(1),
+                    };
+                }
                 Err(_) => stats.put_err.add_value(1),
             }
             res
