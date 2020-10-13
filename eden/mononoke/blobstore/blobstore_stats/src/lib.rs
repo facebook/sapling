@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::convert::AsRef;
 use std::time::Duration;
 
 use anyhow::Error;
@@ -12,7 +13,7 @@ use futures_stats::FutureStats;
 use scuba::{ScubaSampleBuilder, ScubaValue};
 use time_ext::DurationExt;
 
-use blobstore::BlobstoreGetData;
+use blobstore::{BlobstoreGetData, OverwriteStatus};
 use metaconfig_types::BlobstoreId;
 
 const SLOW_REQUEST_THRESHOLD: Duration = Duration::from_secs(5);
@@ -25,6 +26,8 @@ const OPERATION: &str = "operation";
 const SESSION: &str = "session";
 const SIZE: &str = "size";
 const WRITE_ORDER: &str = "write_order";
+
+const OVERWRITE_STATUS: &str = "overwrite_status";
 
 #[derive(Clone, Copy)]
 pub enum OperationType {
@@ -94,7 +97,7 @@ pub fn record_get_stats(
 pub fn record_put_stats(
     scuba: &mut ScubaSampleBuilder,
     stats: FutureStats,
-    result: Result<&(), &Error>,
+    result: Result<&OverwriteStatus, &Error>,
     key: String,
     session: String,
     operation: OperationType,
@@ -106,7 +109,8 @@ pub fn record_put_stats(
     scuba.add(SIZE, size);
 
     match result {
-        Ok(_) => {
+        Ok(overwrite_status) => {
+            scuba.add(OVERWRITE_STATUS, overwrite_status.as_ref());
             if let Some(write_order) = write_order {
                 scuba.add(WRITE_ORDER, write_order);
             }

@@ -18,7 +18,7 @@ use std::ops::{Range, RangeFrom, RangeFull, RangeTo};
 use abomonation_derive::Abomonation;
 use anyhow::Error;
 use futures::future::{BoxFuture, FutureExt};
-use strum_macros::{Display, EnumIter, EnumString};
+use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
 
 use std::io::Cursor;
 use thiserror::Error;
@@ -341,7 +341,7 @@ impl PutBehaviour {
 
 /// For use from logging blobstores so they can record the overwrite status
 /// `BlobstorePutOps::put_with_status`, and eventually `BlobstoreWithLink::link()` will return this.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(AsRefStr, Clone, Copy, Debug, Eq, PartialEq)]
 pub enum OverwriteStatus {
     // We did not check if the key existed before writing it
     NotChecked,

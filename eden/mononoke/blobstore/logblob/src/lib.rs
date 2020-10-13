@@ -13,7 +13,7 @@ use futures::future::{BoxFuture, FutureExt};
 use futures_stats::TimedFutureExt;
 use scuba::ScubaSampleBuilder;
 
-use blobstore::{Blobstore, BlobstoreGetData};
+use blobstore::{Blobstore, BlobstoreGetData, BlobstorePutOps, OverwriteStatus, PutBehaviour};
 use blobstore_stats::{record_get_stats, record_put_stats, OperationType};
 use context::{CoreContext, PerfCounterType};
 use mononoke_types::BlobstoreBytes;
@@ -25,7 +25,7 @@ pub struct LogBlob<B> {
     scuba_sample_rate: NonZeroU64,
 }
 
-impl<B: Blobstore> LogBlob<B> {
+impl<B> LogBlob<B> {
     pub fn new(inner: B, mut scuba: ScubaSampleBuilder, scuba_sample_rate: NonZeroU64) -> Self {
         scuba.add_common_server_data();
         Self {
@@ -66,12 +66,22 @@ impl<B: Blobstore> Blobstore for LogBlob<B> {
         .boxed()
     }
 
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::BlobPresenceChecks);
+        self.inner.is_present(ctx, key)
+    }
+
     fn put(
         &self,
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
     ) -> BoxFuture<'static, Result<(), Error>> {
+        // TODO(ahornby) once factory is BlobstorePutOps aware
+        // BlobstorePutOps::put_with_status(self, ctx, key, value)
+        //         .map_ok(|_| ())
+        //         .boxed()
         let mut scuba = self.scuba.clone();
         let size = value.len();
 
@@ -79,6 +89,42 @@ impl<B: Blobstore> Blobstore for LogBlob<B> {
             .increment_counter(PerfCounterType::BlobPuts);
 
         let put = self.inner.put(ctx.clone(), key.clone(), value);
+        async move {
+            let (stats, result) = put.timed().await;
+            record_put_stats(
+                &mut scuba,
+                stats,
+                result.as_ref().map(|()| &OverwriteStatus::NotChecked),
+                key,
+                ctx.metadata().session_id().to_string(),
+                OperationType::Put,
+                size,
+                None,
+                None,
+            );
+            result
+        }
+        .boxed()
+    }
+}
+
+impl<B: BlobstorePutOps> BlobstorePutOps for LogBlob<B> {
+    fn put_explicit(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: BlobstoreBytes,
+        put_behaviour: PutBehaviour,
+    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+        let mut scuba = self.scuba.clone();
+        let size = value.len();
+
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::BlobPuts);
+
+        let put = self
+            .inner
+            .put_explicit(ctx.clone(), key.clone(), value, put_behaviour);
         async move {
             let (stats, result) = put.timed().await;
             record_put_stats(
@@ -97,9 +143,7 @@ impl<B: Blobstore> Blobstore for LogBlob<B> {
         .boxed()
     }
 
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
-        ctx.perf_counters()
-            .increment_counter(PerfCounterType::BlobPresenceChecks);
-        self.inner.is_present(ctx, key)
+    fn put_behaviour(&self) -> PutBehaviour {
+        self.inner.put_behaviour()
     }
 }

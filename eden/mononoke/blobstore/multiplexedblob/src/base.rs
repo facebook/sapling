@@ -6,7 +6,7 @@
  */
 
 use anyhow::{anyhow, Error};
-use blobstore::{Blobstore, BlobstoreGetData};
+use blobstore::{Blobstore, BlobstoreGetData, OverwriteStatus};
 use blobstore_stats::{record_get_stats, record_put_stats, OperationType};
 use blobstore_sync_queue::OperationKey;
 use cloned::cloned;
@@ -250,7 +250,8 @@ pub async fn inner_put(
     record_put_stats(
         &mut scuba,
         stats,
-        result.as_ref(),
+        // TODO(ahornby) check inner OverwriteStatus in multiplexblob
+        result.as_ref().map(|()| &OverwriteStatus::NotChecked),
         key,
         ctx.metadata().session_id().to_string(),
         OperationType::Put,
