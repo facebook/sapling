@@ -15,7 +15,7 @@ use blobstore::{
 use bytes::Bytes;
 use context::CoreContext;
 use futures::{
-    future::{self, BoxFuture, FutureExt},
+    future::{self, BoxFuture, FutureExt, TryFutureExt},
     stream::{FuturesUnordered, TryStreamExt},
 };
 use mononoke_types::BlobstoreBytes;
@@ -62,7 +62,7 @@ fn compress_if_worthwhile(value: Bytes, zstd_level: i32) -> Result<SingleValue, 
 // differentiate keys just in case packblob is run in an existing unpacked store
 pub const ENVELOPE_SUFFIX: &str = ".pack";
 
-impl<T: Blobstore> Blobstore for PackBlob<T> {
+impl<T: Blobstore + BlobstorePutOps> Blobstore for PackBlob<T> {
     fn get(
         &self,
         ctx: CoreContext,
@@ -112,34 +112,12 @@ impl<T: Blobstore> Blobstore for PackBlob<T> {
     fn put(
         &self,
         ctx: CoreContext,
-        mut key: String,
+        key: String,
         value: BlobstoreBytes,
     ) -> BoxFuture<'static, Result<(), Error>> {
-        // TODO(ahornby) once factory is BlobstorePutOps aware
-        // BlobstorePutOps::put_with_status(self, ctx, key, value)
-        //         .map_ok(|_| ())
-        //         .boxed()
-        key.push_str(ENVELOPE_SUFFIX);
-
-        let value = value.into_bytes();
-
-        let single = if let Some(zstd_level) = self.options.put_compress_level {
-            compress_if_worthwhile(value, zstd_level)
-        } else {
-            Ok(SingleValue::Raw(value.to_vec()))
-        };
-
-        match single {
-            Ok(single) => {
-                // Wrap in thrift encoding
-                let envelope: PackEnvelope = PackEnvelope(StorageEnvelope {
-                    storage: StorageFormat::Single(single),
-                });
-                // pass through the put after wrapping
-                self.inner.put(ctx, key, envelope.into())
-            }
-            Err(e) => future::err(e).boxed(),
-        }
+        BlobstorePutOps::put_with_status(self, ctx, key, value)
+            .map_ok(|_| ())
+            .boxed()
     }
 }
 
