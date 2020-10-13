@@ -80,6 +80,10 @@ impl Client {
             req = req.header(k, v);
         }
 
+        if let Some(ref correlator) = self.config.correlator {
+            req = req.header("X-Client-Correlator", correlator);
+        }
+
         if let Some(timeout) = self.config.timeout {
             req = req.timeout(timeout);
         }

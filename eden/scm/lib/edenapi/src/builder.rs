@@ -31,6 +31,7 @@ pub struct Builder {
     max_history: Option<usize>,
     timeout: Option<Duration>,
     debug: bool,
+    correlator: Option<String>,
 }
 
 impl Builder {
@@ -97,6 +98,7 @@ impl Builder {
             max_history,
             timeout,
             debug,
+            correlator: None,
         })
     }
 
@@ -165,6 +167,15 @@ impl Builder {
         self.timeout = Some(timeout);
         self
     }
+
+    /// Unique identifier that will be logged by both the client and server for
+    /// every request, allowing log entries on both sides to be correlated. Also
+    /// allows correlating multiple requests that were made by the same instance
+    /// of the client.
+    pub fn correlator(mut self, correlator: Option<impl ToString>) -> Self {
+        self.correlator = correlator.map(|s| s.to_string());
+        self
+    }
 }
 
 /// Client certificate and private key paths for TLS mutual authentication.
@@ -197,6 +208,7 @@ pub(crate) struct Config {
     pub(crate) max_history: Option<usize>,
     pub(crate) timeout: Option<Duration>,
     pub(crate) debug: bool,
+    pub(crate) correlator: Option<String>,
 }
 
 impl TryFrom<Builder> for Config {
@@ -213,6 +225,7 @@ impl TryFrom<Builder> for Config {
             max_history,
             timeout,
             debug,
+            correlator,
         } = builder;
 
         // Check for missing required fields.
@@ -233,6 +246,7 @@ impl TryFrom<Builder> for Config {
             max_history,
             timeout,
             debug,
+            correlator,
         })
     }
 }

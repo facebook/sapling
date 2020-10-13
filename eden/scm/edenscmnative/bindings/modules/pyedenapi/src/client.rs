@@ -36,11 +36,13 @@ py_class!(pub class client |py| {
     def __new__(
         _cls,
         config: config,
-        ui: Option<PyObject> = None
+        ui: Option<PyObject> = None,
+        correlator: Option<String> = None
     ) -> PyResult<client> {
         let config = config.get_cfg(py);
         let inner = Builder::from_config(&config)
             .map_pyerr(py)?
+            .correlator(correlator)
             .build()
             .map_pyerr(py)?;
 

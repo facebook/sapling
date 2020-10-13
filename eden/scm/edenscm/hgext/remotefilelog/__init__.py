@@ -169,6 +169,7 @@ from edenscm.mercurial.extensions import wrapfunction
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import hex, nullrev
 
+from .. import clienttelemetry
 from . import (
     debugcommands,
     fileserverclient,
@@ -388,7 +389,8 @@ def setupclient(ui, repo):
 
     repo.edenapi = None
     if ui.config("edenapi", "url"):
-        repo.edenapi = edenapi.client(ui._rcfg._rcfg, ui)
+        correlator = clienttelemetry.correlator(ui)
+        repo.edenapi = edenapi.client(ui._rcfg._rcfg, ui, correlator)
 
 
 clientonetime = False
