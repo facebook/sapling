@@ -20,9 +20,6 @@ from edenscm.mercurial import pycompat, store
 from hghave import require
 
 
-require(["py2"])
-
-
 try:
     xrange
 except NameError:

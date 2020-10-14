@@ -6,9 +6,6 @@ from edenscm.mercurial import minirst
 from hghave import require
 
 
-require(["py2"])
-
-
 def debugformat(text, form, **kwargs):
     if form == "html":
         print("html format:")

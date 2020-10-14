@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
   $ disable treemanifest
@@ -494,6 +493,9 @@ Inaccessible destination
   $ cd b
   $ hg clone . ../a
   abort: Permission denied: ../a
+  (current process runs with uid 42) (?)
+  (../a: mode 0o52, uid 42, gid 42) (?)
+  (..: mode 0o52, uid 42, gid 42) (?)
   [255]
   $ cd ..
   $ chmod 700 a

@@ -8,19 +8,19 @@ from __future__ import absolute_import
 
 import sys
 
-from .. import error, hg, util
+from .. import error, hg, pycompat, util
 from ..i18n import _
 from .cmdtable import command
 
 
 def getunbundlecontents():
-    return util.chunkbuffer([sys.stdin.read()])
+    return util.chunkbuffer([pycompat.stdin.read()])
 
 
 def rununbundle(ui, remote, stream):
     returncode = 0
     try:
-        reply = remote.unbundle(stream, ["force"], remote.url())
+        reply = remote.unbundle(stream, [b"force"], remote.url())
     except Exception as e:
         raise error.Abort("unbunble exception: %s" % (e,))
 

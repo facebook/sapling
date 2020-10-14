@@ -726,7 +726,7 @@ def logwireprotorequest(repo, ui, start_time, command, serializedargs, res):
     duration = int((time.time() - start_time) * 1000)
     if isinstance(res, streamres):
         wrapstreamres(res, logger, start_time)
-    elif isinstance(res, str):
+    elif isinstance(res, bytes) or isinstance(res, str):
         logger(duration=duration, responselen=len(res))
     elif isinstance(res, ooberror):
         logger(duration=duration, error=res.message)
