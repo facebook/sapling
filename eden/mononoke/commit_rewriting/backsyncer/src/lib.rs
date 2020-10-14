@@ -444,6 +444,6 @@ pub async fn open_backsyncer_dbs(
     })
 }
 
-pub fn format_counter(source_repo_id: &RepositoryId) -> String {
-    format!("backsync_from_{}", source_repo_id.id())
+pub fn format_counter(repo_to_backsync_from: &RepositoryId) -> String {
+    format!("backsync_from_{}", repo_to_backsync_from.id())
 }
