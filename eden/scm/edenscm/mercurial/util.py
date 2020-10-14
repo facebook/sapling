@@ -4877,3 +4877,15 @@ def preregistersighandlers():
         except ValueError:
             # Not all signals are supported on Windows.
             pass
+
+
+# see https://ruby-doc.org/core-2.2.0/Enumerable.html#method-i-each_slice
+def eachslice(iterable, n):
+    buf = []
+    for value in iterable:
+        buf.append(value)
+        if len(buf) == n:
+            yield buf
+            buf = []
+    if buf:
+        yield buf

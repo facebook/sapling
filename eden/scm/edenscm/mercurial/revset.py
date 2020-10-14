@@ -453,17 +453,6 @@ def ancestor(repo, subset, x):
             else:
                 return baseset()
 
-    # see https://ruby-doc.org/core-2.2.0/Enumerable.html#method-i-each_slice
-    def eachslice(iterable, n):
-        buf = []
-        for value in iterable:
-            buf.append(value)
-            if len(buf) == n:
-                yield buf
-                buf = []
-        if buf:
-            yield buf
-
     it = yieldrevs(repo, rl, l)
     ancestors = repo.changelog.index.ancestors
 
@@ -473,7 +462,7 @@ def ancestor(repo, subset, x):
     except StopIteration:
         return baseset()
 
-    for revs in eachslice(it, 23):
+    for revs in util.eachslice(it, 23):
         ancrevs = ancestors(anc, *revs)
         if ancrevs:
             anc = ancrevs[0]
