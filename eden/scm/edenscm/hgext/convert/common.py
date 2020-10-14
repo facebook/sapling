@@ -387,14 +387,14 @@ class commandline(object):
         p = self._run(cmd, *args, **kwargs)
         output = p.stdout.readlines()
         p.wait()
-        self.ui.debug("".join(output))
+        self.ui.debug(pycompat.decodeutf8(b"".join(output), errors="replace"))
         return output, p.returncode
 
     def checkexit(self, status, output=""):
         if status:
             if output:
                 self.ui.warn(_("%s error:\n") % self.command)
-                self.ui.warn(output)
+                self.ui.warn(pycompat.decodeutf8(output, errors="replace"))
             msg = util.explainexit(status)[0]
             raise error.Abort("%s %s" % (self.command, msg))
 
@@ -405,7 +405,7 @@ class commandline(object):
 
     def runlines0(self, cmd, *args, **kwargs):
         output, status = self.runlines(cmd, *args, **kwargs)
-        self.checkexit(status, "".join(output))
+        self.checkexit(status, b"".join(output))
         return output
 
     @propertycache

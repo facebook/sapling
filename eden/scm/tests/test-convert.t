@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
 
@@ -352,6 +351,9 @@ conversion to dir without permissions should fail
 
   $ hg convert a bogusdir
   abort: Permission denied: bogusdir
+  (current process runs with uid 42) (?)
+  (bogusdir: mode 0o52, uid 42, gid 42) (?)
+  (: mode 0o52, uid 42, gid 42) (?)
   [255]
 
 user permissions should succeed

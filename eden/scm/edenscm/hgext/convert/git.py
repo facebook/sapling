@@ -15,6 +15,7 @@ import os
 
 from edenscm.mercurial import config, error, node as nodemod
 from edenscm.mercurial.i18n import _
+from edenscm.mercurial.pycompat import decodeutf8, encodeutf8
 
 from . import common
 
@@ -168,6 +169,7 @@ class convert_git(common.converter_source, common.commandline):
     def getheads(self):
         if not self.revs:
             output, status = self.gitrun("rev-parse", "--branches", "--remotes")
+            output = decodeutf8(output)
             heads = output.splitlines()
             if status:
                 raise error.Abort(_("cannot retrieve git heads"))
@@ -175,24 +177,30 @@ class convert_git(common.converter_source, common.commandline):
             heads = []
             for rev in self.revs:
                 rawhead, ret = self.gitrun("rev-parse", "--verify", rev)
+                rawhead = decodeutf8(rawhead)
                 heads.append(rawhead[:-1])
                 if ret:
                     raise error.Abort(_('cannot retrieve git head "%s"') % rev)
         return heads
 
     def catfile(self, rev, type):
+        rev = encodeutf8(rev)
+        type = encodeutf8(type)
         if rev == nodemod.nullhex:
             raise IOError
-        self.catfilepipe[0].write(rev + "\n")
+        self.catfilepipe[0].write(rev + b"\n")
         self.catfilepipe[0].flush()
         info = self.catfilepipe[1].readline().split()
         if info[1] != type:
-            raise error.Abort(_("cannot read %r object at %s") % (type, rev))
+            raise error.Abort(
+                _("cannot read %r object at %s") % (decodeutf8(type), decodeutf8(rev))
+            )
         size = int(info[2])
         data = self.catfilepipe[1].read(size)
         if len(data) < size:
             raise error.Abort(
-                _("cannot read %r object at %s: unexpected size") % (type, rev)
+                _("cannot read %r object at %s: unexpected size")
+                % (decodeutf8(type), decodeutf8(rev))
             )
         # read the trailing newline
         self.catfilepipe[1].read(1)
@@ -224,6 +232,7 @@ class convert_git(common.converter_source, common.commandline):
         self.submodules = []
         c = config.config()
         # Each item in .gitmodules starts with whitespace that cant be parsed
+        content = decodeutf8(content)
         c.parse(".gitmodules", "\n".join(line.strip() for line in content.split("\n")))
         for sec in c.sections():
             s = c[sec]
@@ -250,7 +259,7 @@ class convert_git(common.converter_source, common.commandline):
             node, ret = self.gitrun("rev-parse", "%s:%s" % (version, m.path))
             if ret:
                 continue
-            m.node = node.strip()
+            m.node = decodeutf8(node.strip())
 
     def getchanges(self, version, full):
         if full:
@@ -264,7 +273,7 @@ class convert_git(common.converter_source, common.commandline):
         copies = {}
         seen = set()
         entry = None
-        difftree = output.split("\x00")
+        difftree = output.split(b"\x00")
         lcount = len(difftree)
         i = 0
 
@@ -272,16 +281,16 @@ class convert_git(common.converter_source, common.commandline):
 
         def add(entry, f, isdest):
             seen.add(f)
-            h = entry[3]
-            p = entry[1] == "100755"
-            s = entry[1] == "120000"
-            renamesource = not isdest and entry[4][0] == "R"
+            h = decodeutf8(entry[3])
+            p = entry[1] == b"100755"
+            s = entry[1] == b"120000"
+            renamesource = not isdest and entry[4][0:1] == b"R"
 
             if f == ".gitmodules":
                 if skipsubmodules:
                     return
                 raise error.Abort(_("gitmodules are not supported"))
-            elif entry[1] == "160000" or entry[0] == ":160000":
+            elif entry[1] == b"160000" or entry[0] == b":160000":
                 if not skipsubmodules:
                     raise error.Abort(_("gitmodules are not supported"))
             else:
@@ -294,14 +303,14 @@ class convert_git(common.converter_source, common.commandline):
             l = difftree[i]
             i += 1
             if not entry:
-                if not l.startswith(":"):
+                if not l.startswith(b":"):
                     continue
                 entry = l.split()
                 continue
-            f = l
-            if entry[4][0] == "C":
+            f = decodeutf8(l)
+            if entry[4][0:1] == b"C":
                 copysrc = f
-                copydest = difftree[i]
+                copydest = decodeutf8(difftree[i])
                 i += 1
                 f = copydest
                 copies[copydest] = copysrc
@@ -309,9 +318,9 @@ class convert_git(common.converter_source, common.commandline):
                 add(entry, f, False)
             # A file can be copied multiple times, or modified and copied
             # simultaneously. So f can be repeated even if fdest isn't.
-            if entry[4][0] == "R":
+            if entry[4][0:1] == b"R":
                 # rename: next line is the destination
-                fdest = difftree[i]
+                fdest = decodeutf8(difftree[i])
                 i += 1
                 if fdest not in seen:
                     add(entry, fdest, True)
@@ -325,33 +334,33 @@ class convert_git(common.converter_source, common.commandline):
 
     def getcommit(self, version):
         c = self.catfile(version, "commit")  # read the commit hash
-        end = c.find("\n\n")
+        end = c.find(b"\n\n")
         message = c[end + 2 :]
-        message = self.recode(message)
+        message = decodeutf8(self.recode(message))
         l = c[:end].splitlines()
         parents = []
         author = committer = None
         extra = {}
         for e in l[1:]:
-            n, v = e.split(" ", 1)
-            if n == "author":
+            n, v = e.split(b" ", 1)
+            if n == b"author":
                 p = v.split()
                 tm, tz = p[-2:]
-                author = " ".join(p[:-2])
-                if author[0] == "<":
+                author = b" ".join(p[:-2])
+                if author[0:1] == b"<":
                     author = author[1:-1]
-                author = self.recode(author)
-            if n == "committer":
+                author = decodeutf8(self.recode(author))
+            if n == b"committer":
                 p = v.split()
                 tm, tz = p[-2:]
-                committer = " ".join(p[:-2])
-                if committer[0] == "<":
+                committer = b" ".join(p[:-2])
+                if committer[0:1] == b"<":
                     committer = committer[1:-1]
-                committer = self.recode(committer)
-            if n == "parent":
-                parents.append(v)
-            if n in self.copyextrakeys:
-                extra[n] = v
+                committer = decodeutf8(self.recode(committer))
+            if n == b"parent":
+                parents.append(decodeutf8(v))
+            if decodeutf8(n) in self.copyextrakeys:
+                extra[decodeutf8(n)] = decodeutf8(v)
 
         if self.committeractions["dropcommitter"]:
             committer = None
@@ -366,6 +375,8 @@ class convert_git(common.converter_source, common.commandline):
             elif messagedifferent and author != committer:
                 message += "\n%s %s\n" % (messagedifferent, committer)
 
+        tm = decodeutf8(tm)
+        tz = decodeutf8(tz)
         tzs, tzh, tzm = tz[-5:-4] + "1", tz[-4:-2], tz[-2:]
         tz = -int(tzs) * (int(tzh) * 3600 + int(tzm))
         date = tm + " " + str(tz)
@@ -397,10 +408,10 @@ class convert_git(common.converter_source, common.commandline):
             if status:
                 raise error.Abort(_("cannot read changes in %s") % version)
             for l in output:
-                if "\t" not in l:
+                if b"\t" not in l:
                     continue
-                m, f = l[:-1].split("\t")
-                changes.append(f)
+                m, f = l[:-1].split(b"\t")
+                changes.append(decodeutf8(f))
         else:
             output, status = self.gitrunlines(
                 "diff-tree",
@@ -413,7 +424,7 @@ class convert_git(common.converter_source, common.commandline):
             )
             if status:
                 raise error.Abort(_("cannot read changes in %s") % version)
-            changes = [f.rstrip("\n") for f in output]
+            changes = [decodeutf8(f).rstrip("\n") for f in output]
 
         return changes
 
@@ -435,6 +446,8 @@ class convert_git(common.converter_source, common.commandline):
             for line in output:
                 line = line.strip()
                 rev, name = line.split(None, 1)
+                rev = decodeutf8(rev)
+                name = decodeutf8(name)
                 # Process each type of branch
                 for gitprefix, hgprefix in reftypes:
                     if not name.startswith(gitprefix) or name in exclude:
