@@ -44,6 +44,7 @@ use futures_old::stream::Stream as OldStream;
 use metaconfig_types::MetadataDatabaseConfig;
 use mononoke_types::{ChangesetId, RepositoryId};
 use mutable_counters::{MutableCounters, SqlMutableCounters};
+use scuba_ext::ScubaSampleBuilderExt;
 use slog::debug;
 use sql::Transaction;
 use sql_construct::SqlConstruct;
@@ -172,7 +173,7 @@ where
             u64::try_from(start_instant.elapsed().as_millis()).unwrap_or(u64::max_value()),
         );
         scuba_sample.add("backsync_previously_done", !success);
-        scuba_sample.log();
+        scuba_sample.log_with_msg("Backsyncing", None);
 
         if success {
             counter = new_counter;

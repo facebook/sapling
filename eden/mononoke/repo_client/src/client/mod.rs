@@ -488,7 +488,7 @@ impl RepoClient {
 
         let mut scuba = self.logging.scuba().clone();
         scuba.add("command", command);
-        scuba.log_with_msg("Start processing", None);
+        scuba.clone().log_with_msg("Start processing", None);
 
         let ctx =
             self.session
