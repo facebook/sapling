@@ -18,18 +18,27 @@ use fbinit::FacebookInit;
 use futures::{
     compat::Future01CompatExt,
     future::{try_join, try_join3, try_join_all},
+    stream, StreamExt, TryStreamExt,
 };
 use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
+use metaconfig_types::MetadataDatabaseConfig;
 use metaconfig_types::RepoConfig;
 use mononoke_types::RepositoryId;
 use movers::get_small_to_large_mover;
 use regex::Regex;
 use skiplist::fetch_skiplist_index;
-use slog::info;
+use slog::{info, warn};
+#[cfg(fbcode_build)]
+use sql_ext::facebook::MyAdmin;
+use sql_ext::replication::{NoReplicaLagMonitor, ReplicaLagMonitor, WaitForReplicationConfig};
 use std::collections::BTreeMap;
+use std::fs::File;
+use std::io::{BufRead, BufReader};
 use std::num::NonZeroU64;
 use std::sync::Arc;
-use synced_commit_mapping::SqlSyncedCommitMapping;
+use synced_commit_mapping::{
+    EquivalentWorkingCopyEntry, SqlSyncedCommitMapping, SyncedCommitMapping,
+};
 
 mod catchup;
 mod cli;
@@ -44,9 +53,10 @@ use crate::cli::{
     BASE_COMMIT_HASH, BONSAI_MERGE, BONSAI_MERGE_P1, BONSAI_MERGE_P2, CATCHUP_DELETE_HEAD,
     CATCHUP_VALIDATE_COMMAND, CHANGESET, CHUNKING_HINT_FILE, COMMIT_BOOKMARK, COMMIT_HASH,
     DELETION_CHUNK_SIZE, DRY_RUN, EVEN_CHUNK_SIZE, FIRST_PARENT, GRADUAL_MERGE,
-    GRADUAL_MERGE_PROGRESS, HEAD_BOOKMARK, LAST_DELETION_COMMIT, LIMIT, MANUAL_COMMIT_SYNC,
-    MAX_NUM_OF_MOVES_IN_COMMIT, MERGE, MOVE, ORIGIN_REPO, PARENTS, PATH_REGEX, PRE_DELETION_COMMIT,
-    PRE_MERGE_DELETE, SECOND_PARENT, SYNC_DIAMOND_MERGE, TO_MERGE_CS_ID, WAIT_SECS,
+    GRADUAL_MERGE_PROGRESS, HEAD_BOOKMARK, INPUT_FILE, LAST_DELETION_COMMIT, LIMIT,
+    MANUAL_COMMIT_SYNC, MARK_NOT_SYNCED_COMMAND, MAX_NUM_OF_MOVES_IN_COMMIT, MERGE, MOVE,
+    ORIGIN_REPO, PARENTS, PATH_REGEX, PRE_DELETION_COMMIT, PRE_MERGE_DELETE, SECOND_PARENT,
+    SYNC_DIAMOND_MERGE, TO_MERGE_CS_ID, WAIT_SECS,
 };
 use crate::merging::perform_merge;
 use megarepolib::chunking::{
@@ -531,6 +541,129 @@ async fn run_catchup_validate<'a>(
     Ok(())
 }
 
+async fn run_mark_not_synced<'a>(
+    ctx: CoreContext,
+    matches: &ArgMatches<'a>,
+    sub_m: &ArgMatches<'a>,
+) -> Result<(), Error> {
+    let target_repo_id = args::get_target_repo_id(ctx.fb, &matches)?;
+    let config_store = args::maybe_init_config_store(ctx.fb, ctx.logger(), &matches)
+        .ok_or_else(|| format_err!("Failed initializing ConfigStore"))?;
+    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &config_store)?;
+    let commit_syncer_args =
+        create_commit_syncer_args_from_matches(ctx.fb, ctx.logger(), &matches).await?;
+    let commit_sync_config =
+        live_commit_sync_config.get_current_commit_sync_config(&ctx, target_repo_id)?;
+    let commit_syncer = commit_syncer_args
+        .try_into_commit_syncer(&commit_sync_config, Arc::new(live_commit_sync_config))?;
+
+    let small_repo = commit_syncer.get_small_repo();
+    let large_repo = commit_syncer.get_large_repo();
+    let mapping = commit_syncer.get_mapping();
+
+    let input_file = sub_m
+        .value_of(INPUT_FILE)
+        .ok_or_else(|| format_err!("input-file is not specified"))?;
+    let inputfile = File::open(input_file)?;
+    let inputfile = BufReader::new(&inputfile);
+
+    let (_, small_repo_config) =
+        args::get_config_by_repoid(ctx.fb, matches, small_repo.get_repoid())?;
+    let (_, large_repo_config) =
+        args::get_config_by_repoid(ctx.fb, matches, large_repo.get_repoid())?;
+    if small_repo_config.storage_config != large_repo_config.storage_config {
+        return Err(format_err!(
+            "{} and {} have differrent storage configs: {:?} vs {:?}",
+            small_repo.name(),
+            large_repo.name(),
+            small_repo_config.storage_config,
+            large_repo_config.storage_config,
+        ));
+    }
+    let storage_config = small_repo_config.storage_config;
+
+    let db_address = match &storage_config.metadata {
+        MetadataDatabaseConfig::Local(_) => None,
+        MetadataDatabaseConfig::Remote(remote_config) => {
+            Some(remote_config.primary.db_address.clone())
+        }
+    };
+
+    let ctx = &ctx;
+    let mut s = stream::iter(inputfile.lines())
+        .map_err(Error::from)
+        .map_ok(move |line| async move {
+            let cs_id = helpers::csid_resolve(ctx.clone(), large_repo.clone(), line)
+                .compat()
+                .await?;
+            let mappings = mapping
+                .get(
+                    ctx.clone(),
+                    large_repo.get_repoid(),
+                    cs_id,
+                    small_repo.get_repoid(),
+                )
+                .compat()
+                .await?;
+            if mappings.is_empty() {
+                let wc_entry = EquivalentWorkingCopyEntry {
+                    large_repo_id: large_repo.get_repoid(),
+                    large_bcs_id: cs_id,
+                    small_repo_id: small_repo.get_repoid(),
+                    small_bcs_id: None,
+                    version_name: None,
+                };
+                let res = mapping
+                    .insert_equivalent_working_copy(ctx.clone(), wc_entry)
+                    .compat()
+                    .await?;
+                if !res {
+                    warn!(
+                        ctx.logger(),
+                        "failed to insert NotSyncedMapping entry for {}", cs_id
+                    );
+                }
+            } else {
+                info!(ctx.logger(), "{} already have mapping", cs_id);
+            }
+
+            Ok(cs_id)
+        })
+        .try_buffer_unordered(100);
+
+    let wait_config = WaitForReplicationConfig::default().with_logger(ctx.logger());
+    let replica_lag_monitor: Arc<dyn ReplicaLagMonitor> = match db_address {
+        None => Arc::new(NoReplicaLagMonitor()),
+        Some(address) => {
+            #[cfg(fbcode_build)]
+            {
+                use anyhow::Context;
+                let my_admin = MyAdmin::new(ctx.fb).context("building myadmin client")?;
+                Arc::new(my_admin.single_shard_lag_monitor(address))
+            }
+            #[cfg(not(fbcode_build))]
+            {
+                let _address = address;
+                Arc::new(NoReplicaLagMonitor())
+            }
+        }
+    };
+
+    let mut total = 0;
+    while let Some(item) = s.next().await {
+        item?;
+        total += 1;
+        if total % 100 == 0 {
+            info!(ctx.logger(), "processes {} changesets", total);
+            replica_lag_monitor
+                .wait_for_replication(&wait_config)
+                .await?;
+        }
+    }
+
+    Ok(())
+}
+
 fn get_and_verify_repo_config<'a>(
     fb: FacebookInit,
     matches: &ArgMatches<'a>,
@@ -582,6 +715,9 @@ fn main(fb: FacebookInit) -> Result<()> {
             }
             (CATCHUP_VALIDATE_COMMAND, Some(sub_m)) => {
                 run_catchup_validate(ctx, &matches, sub_m).await
+            }
+            (MARK_NOT_SYNCED_COMMAND, Some(sub_m)) => {
+                run_mark_not_synced(ctx, &matches, sub_m).await
             }
             _ => bail!("oh no, wrong arguments provided!"),
         }

@@ -34,6 +34,7 @@ pushrebase = { path = "../../pushrebase" }
 reachabilityindex = { path = "../../reachabilityindex" }
 revset = { path = "../../revset" }
 skiplist = { path = "../../reachabilityindex/skiplist" }
+sql_ext = { path = "../../common/rust/sql_ext" }
 synced_commit_mapping = { path = "../synced_commit_mapping" }
 unodes = { path = "../../derived_data/unodes" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

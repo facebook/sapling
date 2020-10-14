@@ -50,6 +50,8 @@ pub const PATH_REGEX: &str = "path-regex";
 pub const DELETION_CHUNK_SIZE: &str = "deletion-chunk-size";
 pub const WAIT_SECS: &str = "wait-secs";
 pub const CATCHUP_VALIDATE_COMMAND: &str = "catchup-validate";
+pub const MARK_NOT_SYNCED_COMMAND: &str = "mark-not-synced";
+pub const INPUT_FILE: &str = "input-file";
 
 pub fn cs_args_from_matches<'a>(sub_m: &ArgMatches<'a>) -> BoxFuture<ChangesetArgs, Error> {
     let message = try_boxfuture!(
@@ -469,6 +471,16 @@ pub fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .required(true),
         );
 
+    let mark_not_synced_candidate = SubCommand::with_name(MARK_NOT_SYNCED_COMMAND)
+        .about("mark all commits that do not have any mapping as not synced candidate, but leave those that have the mapping alone")
+        .arg(
+            Arg::with_name(INPUT_FILE)
+                .long(INPUT_FILE)
+                .help("list of large repo commit hashes that should be considered to be marked as not sync candidate")
+                .takes_value(true)
+                .required(true)
+        );
+
 
     args::MononokeApp::new("megarepo preparation tool")
         .with_advanced_args_hidden()
@@ -487,4 +499,5 @@ pub fn setup_app<'a, 'b>() -> App<'a, 'b> {
             catchup_delete_head_subcommand,
         ))
         .subcommand(catchup_validate_subcommand)
+        .subcommand(mark_not_synced_candidate)
 }
