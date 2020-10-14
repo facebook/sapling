@@ -712,7 +712,7 @@ def diff(context, mapping, args):
     ctx = mapping["ctx"]
     chunks = ctx.diff(match=ctx.match([], getpatterns(0), getpatterns(1)))
 
-    return b"".join(chunks)
+    return pycompat.decodeutf8(b"".join(chunks), errors="surrogateescape")
 
 
 @templatefunc("extdata(source)", argspec="source")
@@ -1455,7 +1455,7 @@ def _flatten(thing):
     """yield a single stream from a possibly nested set of iterators"""
     thing = templatekw.unwraphybrid(thing)
     if isinstance(thing, str):
-        yield pycompat.encodeutf8(thing)
+        yield pycompat.encodeutf8(thing, errors="surrogateescape")
     elif isinstance(thing, bytes):
         yield thing
     elif thing is None:

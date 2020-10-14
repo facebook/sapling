@@ -2627,6 +2627,9 @@ sh % "hg log -r 8 -T '{diff('\\''FOURTH'\\''|lower)}'" == (
     + ("    +🥈\udce2(\udca1" if is_py3 else "    +🥈\xe2\x28\xa1")
 )
 
+sh % "hg log -r 8 -T '{diff()|json}'" == '"diff -r 88058a185da2 -r 209edb6a1848 fourth\\n--- /dev/null\\tThu Jan 01 00:00:00 1970 +0000\\n+++ b/fourth\\tWed Jan 01 10:01:00 2020 +0000\\n@@ -0,0 +1,1 @@\\n+\\ud83e\\udd48\\udce2(\\udca1\\ndiff -r 88058a185da2 -r 209edb6a1848 second\\n--- a/second\\tMon Jan 12 13:46:40 1970 +0000\\n+++ /dev/null\\tThu Jan 01 00:00:00 1970 +0000\\n@@ -1,1 +0,0 @@\\n-\\ud83e\\udd48\\udce2(\\udca1\\ndiff -r 88058a185da2 -r 209edb6a1848 third\\n--- /dev/null\\tThu Jan 01 00:00:00 1970 +0000\\n+++ b/third\\tWed Jan 01 10:01:00 2020 +0000\\n@@ -0,0 +1,1 @@\\n+third\\n"'
+
+
 # ui verbosity:
 
 sh % "hg log -l1 -T '{verbosity}\\n'"
