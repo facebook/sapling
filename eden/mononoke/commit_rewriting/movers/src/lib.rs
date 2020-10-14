@@ -8,7 +8,6 @@
 #![deny(warnings)]
 
 use anyhow::{Context, Error, Result};
-use itertools::Itertools;
 use mercurial_types::{MPath, MPathElement};
 use metaconfig_types::{
     CommitSyncConfig, CommitSyncDirection, DefaultSmallToLargeCommitSyncPathAction,
@@ -142,30 +141,6 @@ fn get_path_action<'a, I: IntoIterator<Item = &'a MPathElement>>(
     }
 }
 
-/// Check if no element of this vector is a prefix of another element
-fn fail_if_not_prefix_free<'a, I>(paths: I) -> Result<()>
-where
-    I: IntoIterator<Item = &'a MPath>,
-    <I as IntoIterator>::IntoIter: Itertools + Clone,
-    <<I as IntoIterator>::IntoIter as Iterator>::Item: Clone,
-{
-    let r: Result<Vec<()>> = paths
-        .into_iter()
-        .tuple_combinations::<(_, _)>()
-        .map(|(p1, p2): (&MPath, &MPath)| {
-            if p1.is_prefix_of(p2) || p2.is_prefix_of(p1) {
-                Err(Error::from(ErrorKind::NonPrefixFreeMap(
-                    p1.clone(),
-                    p2.clone(),
-                )))
-            } else {
-                Ok(())
-            }
-        })
-        .collect();
-    r.map(|_| ())
-}
-
 /// Create a `Mover`, given a path prefix map and a default action
 pub fn mover_factory(
     prefix_map: HashMap<MPath, PrefixAction>,
@@ -249,9 +224,6 @@ pub fn get_small_to_large_mover(
         .map(|(k, v)| (k, PrefixAction::Change(v)))
         .collect();
 
-    // Note: once we allow non-prefix free prefix maps, this can be removed
-    fail_if_not_prefix_free(prefix_map.iter().map(|(k, _)| k))?;
-
     mover_factory(prefix_map, default_action)
 }
 
@@ -316,9 +288,6 @@ pub fn get_large_to_small_mover(
             DefaultAction::DoNotSync
         }
     };
-
-    // Note: once we allow non-prefix free prefix maps, this can be removed
-    fail_if_not_prefix_free(prefix_map.iter().map(|(k, _)| k))?;
 
     mover_factory(prefix_map, default_action)
 }
@@ -727,5 +696,57 @@ mod test {
         let prefix_only = mp("shifted2");
         assert!(mover_2(&prefix_only).is_err());
         assert_eq!(mover_1(&prefix_only).unwrap(), None);
+    }
+
+    fn get_small_repo_sync_config_non_prefix_free() -> SmallRepoCommitSyncConfig {
+        SmallRepoCommitSyncConfig {
+            default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(mp("shifted2")),
+            map: hashmap! {
+                mp("preserved2") => mp("preserved2"),
+                mp("sub1") => mp("repo2-rest/sub1"),
+                mp("sub1/preserved") => mp("sub1/preserved"),
+            },
+            bookmark_prefix: AsciiString::from_ascii("b2".to_string()).unwrap(),
+            direction: CommitSyncDirection::LargeToSmall,
+        }
+    }
+
+    fn get_large_repo_sync_config_non_prefix_free() -> CommitSyncConfig {
+        CommitSyncConfig {
+            large_repo_id: RepositoryId::new(2),
+            common_pushrebase_bookmarks: vec![],
+            small_repos: hashmap! {
+                RepositoryId::new(1) => get_small_repo_sync_config_non_prefix_free(),
+            },
+            version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
+        }
+    }
+
+    #[test]
+    fn test_get_large_to_small_mover_non_prefix_free() -> Result<()> {
+        let mover = get_large_to_small_mover(
+            &get_large_repo_sync_config_non_prefix_free(),
+            RepositoryId::new(1),
+        )?;
+
+        // `preserved2` is an identical directory, we should replay changes
+        // to it to both small repos
+        let f = mp("preserved2/f");
+        assert_eq!(mover(&f)?, Some(mp("preserved2/f")));
+
+        // This file is not from small repo, so should be remapped to None
+        let f = mp("randomefile");
+        assert_eq!(mover(&f)?, None);
+
+        // Any changes to large repo's `sub1` dir could only come from repo 1
+        let f = mp("repo2-rest/sub1/f");
+        assert_eq!(mover(&f)?, Some(mp("sub1/f")));
+
+        // This is an subtree of sub1, but this subtree is preserved. Make
+        // sure path doesnt' change
+        let f = mp("sub1/preserved");
+        assert_eq!(mover(&f)?, Some(mp("sub1/preserved")));
+
+        Ok(())
     }
 }
