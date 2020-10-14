@@ -1267,8 +1267,7 @@ class localrepository(object):
         Revset aliases from the configuration are not expanded. To expand
         user aliases, consider calling ``scmutil.revrange()``.
         """
-        for r in self.revs(expr, *args):
-            yield self[r]
+        return self.revs(expr, *args).iterctx(self)
 
     def nodes(self, expr, *args):
         """Find revisions matching a revset and emit their nodes.

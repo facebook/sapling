@@ -62,6 +62,11 @@ class abstractsmartset(object):
         """iterate the set in the order it is supposed to be iterated"""
         raise NotImplementedError()
 
+    def iterctx(self, repo):
+        """iterate the set using contexes"""
+        for rev in iter(self):
+            yield repo[rev]
+
     # Attributes containing a function to perform a fast iteration in a given
     # direction. A smartset can have none, one, or both defined.
     #
@@ -667,13 +672,21 @@ class nameset(abstractsmartset):
         return None
 
     def __iter__(self):
-        if self._reversed:
-            it = self._set.iterrev()
-        else:
-            it = self._set.iter()
+        it = self._iternode()
         torev = self._torev
         for node in it:
             yield torev(node)
+
+    def _iternode(self):
+        """iterate the set using nodes"""
+        if self._reversed:
+            return self._set.iterrev()
+        else:
+            return self._set.iter()
+
+    def iterctx(self, repo):
+        for n in self._iternode():
+            yield repo[n]
 
     def __contains__(self, rev):
         try:
