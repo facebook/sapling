@@ -1768,8 +1768,8 @@ def wraprepo(repo):
     repo.__class__ = sqllocalrepo
 
     class CustomConverter(mysql.connector.conversion.MySQLConverter):
-        """Ensure that all values being returned are returned as python string
-        (versus the default byte arrays)."""
+        """Ensure that all values being returned are returned as bytes and not
+        as strings."""
 
         def _STRING_to_python(self, value, dsc=None):
             return bytes(value)
