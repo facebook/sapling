@@ -85,13 +85,14 @@ def mcget(key, ui):
     if type(key) != str:
         raise ValueError("Key must be a string")
 
-    key = "cca.hg.%s" % key
+    key = pycompat.encodeutf8(key)
+    key = b"cca.hg.%s" % key
 
     try:
-        mcroutersocket.sendall("get %s\r\n" % key)
+        mcroutersocket.sendall(b"get %s\r\n" % key)
     except (socket.error, error.SignalInterrupt):
         mcroutersocket.connect(gethostport(ui))
-        mcroutersocket.sendall("get %s\r\n" % key)
+        mcroutersocket.sendall(b"get %s\r\n" % key)
 
     meta = []
     value = None
@@ -101,17 +102,17 @@ def mcget(key, ui):
         # No data was received, potentially due to a closed connection, let's
         # consider this a cache-miss and return.
         # XXX: We may want to raise an exception instead.
-        if char == "":
+        if char == b"":
             break
 
-        if char != "\r":
+        if char != b"\r":
             meta.append(char)
         else:
-            meta = "".join(meta)
-            if meta == "END":
+            meta = b"".join(meta)
+            if meta == b"END":
                 break
             char = mcroutersocket.recv(1)  # throw away newline
-            _, key, flags, sz = "".join(meta).strip().split(" ")
+            _, key, flags, sz = b"".join(meta).strip().split(b" ")
             value = mcroutersocket.recv(int(sz))
             mcroutersocket.recv(7)  # throw away \r\nEND\r\n
 
@@ -128,12 +129,12 @@ def mcset(key, value, ui):
     """
     if type(key) != str:
         raise ValueError("Key must be a string")
-    if type(value) != str:
-        raise ValueError("Value must be a string")
+    if type(value) != bytes:
+        raise ValueError("Value must be bytes")
 
-    key = "cca.hg.%s" % key
+    key = pycompat.encodeutf8("cca.hg.%s" % key)
     sz = len(value)
-    tmpl = "set %s 0 0 %d\r\n%s\r\n"
+    tmpl = b"set %s 0 0 %d\r\n%s\r\n"
 
     try:
         mcroutersocket.sendall(tmpl % (key, sz, value))
@@ -147,14 +148,14 @@ def mcset(key, value, ui):
 
         # No data was received, potentially due to a closed connection, let's
         # just return.
-        if char == "":
+        if char == b"":
             return False
 
-        if char not in "\r\n":
+        if char not in b"\r\n":
             data.append(char)
         else:
             break
-    return "".join(data) == "STORED"
+    return b"".join(data) == b"STORED"
 
 
 class jsonserializer(object):
@@ -166,11 +167,11 @@ class jsonserializer(object):
 
     @classmethod
     def serialize(cls, input):
-        return json.dumps(input)
+        return pycompat.encodeutf8(json.dumps(input))
 
     @classmethod
     def deserialize(cls, string):
-        return json.loads(string)
+        return json.loads(pycompat.decodeutf8(string))
 
 
 class pathcopiesserializer(jsonserializer):
@@ -276,13 +277,13 @@ class stringserializer(object):
     def serialize(input):
         if type(input) is not str:
             raise TypeError("stringserializer can only be used with strings")
-        return input
+        return pycompat.encodeutf8(input)
 
     @staticmethod
     def deserialize(string):
-        if type(string) is not str:
+        if type(string) is not bytes:
             raise TypeError("stringserializer can only be used with strings")
-        return string
+        return pycompat.decodeutf8(string)
 
 
 def localpath(key, ui):
@@ -295,21 +296,27 @@ def localpath(key, ui):
 
 
 def localget(key, ui):
+    if type(key) != str:
+        raise ValueError("Key must be a string")
     try:
         path = localpath(key, ui)
-        with open(path) as f:
+        with open(path, "rb") as f:
             return f.read()
     except Exception:
         return None
 
 
 def localset(key, value, ui):
+    if type(key) != str:
+        raise ValueError("Key must be a string")
+    if type(value) != bytes:
+        raise ValueError("Value must be bytes")
     try:
         path = localpath(key, ui)
         dirname = os.path.dirname(path)
         if not os.path.exists(dirname):
             os.makedirs(dirname)
-        with open(path, "w") as f:
+        with open(path, "wb") as f:
             f.write(value)
 
         # If too many entries in cache, delete some.
@@ -387,10 +394,9 @@ def cacheset(key, value, serializer, ui, _adjusted=False):
 
 def checksum(key, value):
     key = pycompat.encodeutf8(key)
-    value = pycompat.encodeutf8(value)
     s = hashlib.sha1(key)
     s.update(value)
-    return node.hex(s.digest())
+    return pycompat.encodeutf8(node.hex(s.digest()))
 
 
 def addchecksum(key, value):
