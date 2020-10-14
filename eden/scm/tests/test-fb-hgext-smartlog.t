@@ -94,7 +94,7 @@ With --master
   |
 
 Specific revs
-  $ hg smartlog -T '{node|short} {bookmarks} {desc}' -r 'desc(b)' -r 'desc(c2)'
+  $ hg smartlog -T '{node|short} {bookmarks} {desc}' -r 'desc(b)' -r 'desc(c2)' --master null
   o  49cdb4091aca feature1 b
   |
   | o  38d85b506754 master c2
@@ -103,11 +103,11 @@ Specific revs
   |
 
   $ hg smartlog -T '{node|short} {bookmarks} {desc}' -r 'smartlog()' -r 'desc(a1)'
-  o  49cdb4091aca feature1 b
+  @  05d10250273e feature2 d
   |
-  | @  05d10250273e feature2 d
-  | |
-  | o  38d85b506754 master c2
+  o  38d85b506754 master c2
+  .
+  | o  49cdb4091aca feature1 b
   |/
   o  b68836a6e2ca  a2
   |
@@ -189,6 +189,8 @@ Test with weird bookmark names
   $ hg book -r 'desc(b)' foo-bar
   $ hg smartlog -r 'foo-bar + .' -T '{node|short} {bookmarks} {desc}'
   @  05d10250273e feature2 d
+  |
+  o  38d85b506754 master c2
   .
   | o  49cdb4091aca feature1 foo-bar b
   |/

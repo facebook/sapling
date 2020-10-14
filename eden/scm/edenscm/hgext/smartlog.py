@@ -630,10 +630,7 @@ def getrevs(ui, repo, masterstring, **opts):
 
 
 def _smartlog(ui, repo, *pats, **opts):
-    if opts.get("rev"):
-        masterfallback = "null"
-    else:
-        masterfallback = "interestingmaster()"
+    masterfallback = "interestingmaster()"
 
     masterstring = (
         opts.get("master") or ui.config("smartlog", "master") or masterfallback
