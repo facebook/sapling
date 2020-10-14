@@ -15,6 +15,7 @@ use futures::{
     stream::Stream,
     task::{Context, Poll},
 };
+use pin_project::{pin_project, pinned_drop};
 
 pub trait Sizeable {
     fn size(&self) -> u64;
@@ -30,7 +31,9 @@ impl Sizeable for Bytes {
 
 /// A stream that will fire to the sender associated upon completing or being dropped. The Sender
 /// will receive the amount of data that passed through the stream.
+#[pin_project(PinnedDrop)]
 pub struct SignalStream<S> {
+    #[pin]
     stream: S,
     sender: Option<Sender<u64>>,
     size_sent: u64,
@@ -44,21 +47,6 @@ impl<S> SignalStream<S> {
             size_sent: 0,
         }
     }
-
-    fn pin_get_parts(self: Pin<&mut Self>) -> (Pin<&mut S>, &mut Option<Sender<u64>>, &mut u64) {
-        // Pinning is structural for stream, non-structural for sender and size_sent.
-        let this = unsafe { self.get_unchecked_mut() };
-        let stream = unsafe { Pin::new_unchecked(&mut this.stream) };
-        (stream, &mut this.sender, &mut this.size_sent)
-    }
-
-    fn pin_drop(self: Pin<&mut Self>) {
-        let (_, sender, size_sent) = self.pin_get_parts();
-
-        if let Some(sender) = sender.take() {
-            let _ = sender.send(*size_sent);
-        }
-    }
 }
 
 impl<S, T> Stream for SignalStream<S>
@@ -69,17 +57,17 @@ where
     type Item = T;
 
     fn poll_next(self: Pin<&mut Self>, ctx: &mut Context) -> Poll<Option<Self::Item>> {
-        let (stream, sender, size_sent) = self.pin_get_parts();
+        let this = self.project();
 
-        let poll = ready!(stream.poll_next(ctx));
+        let poll = ready!(this.stream.poll_next(ctx));
 
         match poll {
             // We have an item: increment the amount of data we sent.
-            Some(ref item) => *size_sent += item.size(),
+            Some(ref item) => *this.size_sent += item.size(),
             // No items left: signal our receiver.
             None => {
-                if let Some(sender) = sender.take() {
-                    let _ = sender.send(*size_sent);
+                if let Some(sender) = this.sender.take() {
+                    let _ = sender.send(*this.size_sent);
                 }
             }
         }
@@ -88,10 +76,13 @@ where
     }
 }
 
-impl<S> Drop for SignalStream<S> {
-    fn drop(&mut self) {
-        // `new_unchecked` is okay because we know this value is never used again after being
-        // dropped.
-        unsafe { Pin::new_unchecked(self) }.pin_drop();
+#[pinned_drop]
+impl<S> PinnedDrop for SignalStream<S> {
+    fn drop(self: Pin<&mut Self>) {
+        let this = self.project();
+
+        if let Some(sender) = this.sender.take() {
+            let _ = sender.send(*this.size_sent);
+        }
     }
 }
