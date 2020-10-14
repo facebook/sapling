@@ -10,6 +10,7 @@ use std::pin::Pin;
 use futures::{
     prelude::*,
     ready,
+    stream::FusedStream,
     task::{Context, Poll},
 };
 use pin_project::pin_project;
@@ -38,6 +39,19 @@ pub trait GothamTryStreamExt: TryStream {
         Self: Sized,
     {
         EndOnErr::new(self, f)
+    }
+
+    /// Fuse the `TryStream` upon encountering an error.
+    ///
+    /// The stream will yield the error and then immediately end. Subseqent
+    /// polls will not poll the underlying stream, even if there are more items
+    /// available. This is also the case if the stream finishes without errors,
+    /// in which case this behaves like `StreamExt::fuse`.
+    fn fuse_on_err(self) -> FuseOnErr<Self>
+    where
+        Self: Sized,
+    {
+        FuseOnErr::new(self)
     }
 }
 
@@ -196,6 +210,53 @@ where
     }
 }
 
+#[pin_project]
+pub struct FuseOnErr<S> {
+    #[pin]
+    stream: S,
+    fused: bool,
+}
+
+impl<S> FuseOnErr<S> {
+    pub fn new(stream: S) -> Self {
+        Self {
+            stream,
+            fused: false,
+        }
+    }
+
+    pub fn get_ref(&self) -> &S {
+        &self.stream
+    }
+}
+
+impl<S: TryStream> FusedStream for FuseOnErr<S> {
+    fn is_terminated(&self) -> bool {
+        self.fused
+    }
+}
+
+impl<S: TryStream> Stream for FuseOnErr<S> {
+    type Item = Result<S::Ok, S::Error>;
+
+    fn poll_next(self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        let this = self.project();
+
+        if *this.fused {
+            return Poll::Ready(None);
+        }
+
+        let item = ready!(this.stream.try_poll_next(ctx));
+        match item {
+            Some(Ok(_)) => {}
+            Some(Err(_)) | None => {
+                *this.fused = true;
+            }
+        }
+        Poll::Ready(item)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -230,5 +291,19 @@ mod tests {
 
         assert_eq!(&items, &["hello", "world"]);
         assert_eq!(&errors, &["error"]);
+    }
+
+    #[tokio::test]
+    async fn test_fuse_on_err() {
+        let s = stream::iter(vec![
+            Ok("hello"),
+            Ok("world"),
+            Err("error"),
+            Ok("foo"),
+            Err("bar"),
+        ]);
+
+        let items = s.fuse_on_err().collect::<Vec<_>>().await;
+        assert_eq!(&items, &[Ok("hello"), Ok("world"), Err("error")]);
     }
 }

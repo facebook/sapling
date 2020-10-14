@@ -16,7 +16,7 @@ use futures::{
 };
 use pin_project::pin_project;
 
-use crate::stream_ext::{EndOnErr, ForwardErr};
+use crate::stream_ext::{EndOnErr, ForwardErr, FuseOnErr};
 
 use super::encoding::{ContentCompression, ContentEncoding};
 
@@ -194,6 +194,24 @@ where
 
     fn content_encoding(&self) -> ContentEncoding {
         // end_on_err doesn't change the data's encoding.
+        self.get_ref().content_encoding()
+    }
+}
+
+impl<S> ContentMeta for FuseOnErr<S>
+where
+    S: ContentMeta,
+{
+    fn content_length(&self) -> Option<u64> {
+        // If an error occurs, the stream will end prematurely, so the content
+        // length here may not be correct. However, this should be OK as it
+        // would allow the client to detect an incomplete response and raise
+        // an appropriate error.
+        self.get_ref().content_length()
+    }
+
+    fn content_encoding(&self) -> ContentEncoding {
+        // fuse_on_err doesn't change the data's encoding.
         self.get_ref().content_encoding()
     }
 }
