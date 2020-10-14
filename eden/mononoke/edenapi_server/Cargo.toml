@@ -12,6 +12,7 @@ cmdlib = { path = "../cmdlib" }
 context = { path = "../server/context" }
 edenapi_types = { path = "../../scm/lib/edenapi/types" }
 gotham_ext = { path = "../gotham_ext" }
+manifest = { path = "../manifest" }
 mercurial_types = { path = "../mercurial/types" }
 mononoke_api = { path = "../mononoke_api" }
 mononoke_types = { path = "../mononoke_types" }

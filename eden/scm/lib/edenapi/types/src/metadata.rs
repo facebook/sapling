@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::fmt;
+
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
 use serde_derive::{Deserialize, Serialize};
@@ -55,14 +57,74 @@ pub struct FileMetadataRequest {
     pub with_content_sha256: bool,
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Sha1(pub [u8; 20]);
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+impl fmt::Display for Sha1 {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "Sha1(\"")?;
+        for d in &self.0 {
+            write!(fmt, "{:02x}", d)?;
+        }
+        write!(fmt, "\")")
+    }
+}
+
+impl fmt::Debug for Sha1 {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "Sha1(\"")?;
+        for d in &self.0 {
+            write!(fmt, "{:02x}", d)?;
+        }
+        write!(fmt, "\")")
+    }
+}
+
+#[derive(Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Sha256(pub [u8; 32]);
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+impl fmt::Display for Sha256 {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "Sha256(\"")?;
+        for d in &self.0 {
+            write!(fmt, "{:02x}", d)?;
+        }
+        write!(fmt, "\")")
+    }
+}
+
+impl fmt::Debug for Sha256 {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "Sha256(\"")?;
+        for d in &self.0 {
+            write!(fmt, "{:02x}", d)?;
+        }
+        write!(fmt, "\")")
+    }
+}
+
+#[derive(Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ContentId(pub [u8; 32]);
+
+impl fmt::Display for ContentId {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "ContentId(\"")?;
+        for d in &self.0 {
+            write!(fmt, "{:02x}", d)?;
+        }
+        write!(fmt, "\")")
+    }
+}
+
+impl fmt::Debug for ContentId {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "ContentId(\"")?;
+        for d in &self.0 {
+            write!(fmt, "{:02x}", d)?;
+        }
+        write!(fmt, "\")")
+    }
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum FileType {
@@ -71,8 +133,28 @@ pub enum FileType {
     Symlink,
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FsnodeId(pub [u8; 32]);
+
+impl fmt::Display for FsnodeId {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "FsnodeId(\"")?;
+        for d in &self.0 {
+            write!(fmt, "{:02x}", d)?;
+        }
+        write!(fmt, "\")")
+    }
+}
+
+impl fmt::Debug for FsnodeId {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "FsnodeId(\"")?;
+        for d in &self.0 {
+            write!(fmt, "{:02x}", d)?;
+        }
+        write!(fmt, "\")")
+    }
+}
 
 #[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for DirectoryMetadata {

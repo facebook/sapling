@@ -9,10 +9,12 @@ use async_trait::async_trait;
 use bytes::Bytes;
 use futures::compat::Future01CompatExt;
 
+use manifest::{Entry, Manifest};
 use mercurial_types::{
-    fetch_manifest_envelope, fetch_manifest_envelope_opt, HgBlobEnvelope, HgManifestEnvelope,
-    HgManifestId, HgNodeHash, HgParents,
+    fetch_manifest_envelope, fetch_manifest_envelope_opt, HgBlobEnvelope, HgFileNodeId,
+    HgManifestEnvelope, HgManifestId, HgNodeHash, HgParents,
 };
+use mononoke_types::{file_change::FileType, path::MPathElement};
 use revisionstore_types::Metadata;
 
 use crate::errors::MononokeError;
@@ -63,6 +65,14 @@ impl HgTreeContext {
     pub fn into_blob_manifest(self) -> anyhow::Result<mercurial_types::blobs::BlobManifest> {
         let blobstore = self.repo.blob_repo().blobstore().boxed();
         mercurial_types::blobs::BlobManifest::parse(blobstore, self.envelope)
+    }
+
+    pub fn entries(
+        &self,
+    ) -> anyhow::Result<
+        impl Iterator<Item = (MPathElement, Entry<HgManifestId, (FileType, HgFileNodeId)>)>,
+    > {
+        Ok(self.clone().into_blob_manifest()?.list())
     }
 }
 

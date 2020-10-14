@@ -76,6 +76,26 @@ impl TreeEntry {
         }
     }
 
+    pub fn new_file_entry(key: Key, metadata: FileMetadata) -> Self {
+        Self {
+            key,
+            file_metadata: Some(metadata),
+            ..Default::default()
+        }
+    }
+
+    pub fn new_directory_entry(key: Key) -> Self {
+        Self {
+            key,
+            ..Default::default()
+        }
+    }
+
+    pub fn with_children<'a>(&'a mut self, children: Option<Vec<TreeEntry>>) -> &'a mut Self {
+        self.children = children;
+        self
+    }
+
     pub fn key(&self) -> &Key {
         &self.key
     }

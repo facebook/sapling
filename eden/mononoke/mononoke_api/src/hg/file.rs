@@ -15,9 +15,9 @@ use futures::{
 };
 use getbundle_response::SessionLfsParams;
 use mercurial_types::{
-    envelope::HgFileEnvelope, HgFileHistoryEntry, HgFileNodeId, HgNodeHash, HgParents,
+    envelope::HgFileEnvelope, FileType, HgFileHistoryEntry, HgFileNodeId, HgNodeHash, HgParents,
 };
-use mononoke_types::MPath;
+use mononoke_types::{fsnode::FsnodeFile, MPath};
 use remotefilelog::create_getpack_v2_blob;
 use revisionstore_types::Metadata;
 
@@ -92,6 +92,37 @@ impl HgFileContext {
         )
         .compat()
         .map_err(MononokeError::from)
+    }
+
+    /// Fetches the metadata that would be present in this file's corresponding FsNode, returning
+    /// it with the FsNode type, but without actually fetching the FsNode.
+    ///
+    /// Instead, this method separately reads the `ContentId`, uses that to fetch the size, Sha1,
+    /// and Sha256, and combines that with the FileType, which the user must be provide (available
+    /// in the parent tree manifest).
+    pub async fn fetch_fsnode_data(
+        &self,
+        file_type: FileType,
+    ) -> Result<FsnodeFile, MononokeError> {
+        let content_id = self.envelope.content_id();
+        let fetch_key = filestore::FetchKey::Canonical(content_id);
+        let blobstore = self.repo.blob_repo().blobstore();
+        let metadata = filestore::get_metadata(blobstore, self.repo.ctx().clone(), &fetch_key)
+            .compat()
+            .await?
+            .ok_or_else(|| {
+                MononokeError::NotAvailable(format!(
+                    "metadata not found for content id {}",
+                    content_id
+                ))
+            })?;
+        Ok(FsnodeFile::new(
+            content_id,
+            file_type,
+            metadata.total_size,
+            metadata.sha1,
+            metadata.sha256,
+        ))
     }
 }
 
