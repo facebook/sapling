@@ -1777,16 +1777,18 @@ function commitcloud_fill_one() {
     --cert-override "$CERTDIR/localhost.crt" \
     --private-key-override "$CERTDIR/localhost.key" \
     --ca-pem-override "$CERTDIR/root-ca.crt" \
-    --reponame $REPONAME \
+    --reponame "$REPONAME" \
     --rebundler-path "$MONONOKE_COMMITCLOUD_INFINITEPUSHREBUNDLE/infinitepushrebundle.py" \
+    --skip-record-pushed-commits \
     --debug "$@"
 }
 
 function commitcloud_reverse_fill_one() {
   "$MONONOKE_COMMITCLOUD_FILLONE" \
     mononoke-to-hg \
-    --reponame $REPONAME \
+    --reponame "$REPONAME" \
     --rebundler-path "$MONONOKE_COMMITCLOUD_INFINITEPUSHREBUNDLE/infinitepushrebundle.py" \
+    --skip-record-pushed-commits \
     --debug "$@"
 }
 
@@ -1798,8 +1800,8 @@ function commitcloud_reversefiller_iteration() {
     --identity "testfiller" \
     --reponame "$REPONAME" \
     --rebundler-path "$MONONOKE_COMMITCLOUD_INFINITEPUSHREBUNDLE/infinitepushrebundle.py" \
-    --stop-after-n-iterations=10 \
     --with-sqlite-db="$sqlitedb" \
+    --skip-record-pushed-commits \
     --debug "$@"
 }
 
@@ -1820,7 +1822,7 @@ function commitcloud_forwardfiller_iteration() {
     --identity "testfiller" \
     --reponame "$REPONAME" \
     --rebundler-path "$MONONOKE_COMMITCLOUD_INFINITEPUSHREBUNDLE/infinitepushrebundle.py" \
-    --stop-after-n-iterations=10 \
+    --skip-record-pushed-commits \
     --debug "$@"
 }
 
