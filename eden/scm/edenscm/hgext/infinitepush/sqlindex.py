@@ -444,12 +444,18 @@ class CustomConverter(mysql.connector.conversion.MySQLConverter):
     (versus the default byte arrays)."""
 
     def _STRING_to_python(self, value, dsc=None):
+        if isinstance(value, bytearray):
+            value = bytes(value)
         return pycompat.decodeutf8(value)
 
     def _VAR_STRING_to_python(self, value, dsc=None):
+        if isinstance(value, bytearray):
+            value = bytes(value)
         return pycompat.decodeutf8(value)
 
     def _BLOB_to_python(self, value, dsc=None):
+        if isinstance(value, bytearray):
+            value = bytes(value)
         return pycompat.decodeutf8(value)
 
     # localstr is Mercurial-specific. See encoding.py
