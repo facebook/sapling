@@ -922,12 +922,16 @@ impl LfsRemoteInner {
     ) -> Result<Option<Bytes>> {
         let mut backoff = backoff_times.into_iter();
         let mut rng = thread_rng();
+        let mut attempt = 0;
 
         loop {
+            attempt += 1;
+
             let mut req = Request::new(url.clone(), method)
                 .header("Accept", "application/vnd.git-lfs+json")
                 .header("Content-Type", "application/vnd.git-lfs+json")
-                .header("User-Agent", &user_agent);
+                .header("User-Agent", &user_agent)
+                .header("X-Attempt", attempt.to_string());
 
             if accept_zstd {
                 req = req.header("Accept-Encoding", "zstd");
@@ -991,16 +995,7 @@ impl LfsRemoteInner {
                 return Ok(Some(result));
             }
 
-            if status.is_server_error() {
-                if status.as_u16() == StatusCode::SERVICE_UNAVAILABLE {
-                    // No need to retry, the server is down.
-                    if method == Method::Get {
-                        return Ok(None);
-                    } else {
-                        return Err(FetchError::Http(status, url, method).into());
-                    }
-                }
-
+            if should_retry(status) {
                 if let Some(backoff_time) = backoff.next() {
                     let sleep_time = Duration::from_secs_f32(rng.gen_range(0.0, backoff_time));
                     delay_for(sleep_time).await;
@@ -1600,6 +1595,22 @@ impl LocalStore for LfsFallbackRemoteStore {
     fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         self.0.get_missing(keys)
     }
+}
+
+fn should_retry(status: StatusCode) -> bool {
+    if status == StatusCode::SERVICE_UNAVAILABLE {
+        return false;
+    }
+
+    if status == StatusCode::TOO_MANY_REQUESTS {
+        return true;
+    }
+
+    if status.is_server_error() {
+        return true;
+    }
+
+    false
 }
 
 #[cfg(test)]
@@ -2661,5 +2672,20 @@ mod tests {
         assert!(resp.is_ok());
 
         Ok(())
+    }
+
+    #[test]
+    fn test_should_retry() {
+        assert!(!should_retry(StatusCode::CONTINUE));
+        assert!(!should_retry(StatusCode::OK));
+        assert!(!should_retry(StatusCode::MOVED_PERMANENTLY));
+        assert!(!should_retry(StatusCode::BAD_REQUEST));
+        assert!(!should_retry(StatusCode::NOT_ACCEPTABLE));
+        assert!(!should_retry(StatusCode::SERVICE_UNAVAILABLE));
+
+        assert!(should_retry(StatusCode::INTERNAL_SERVER_ERROR));
+        assert!(should_retry(StatusCode::BAD_GATEWAY));
+
+        assert!(should_retry(StatusCode::TOO_MANY_REQUESTS));
     }
 }
