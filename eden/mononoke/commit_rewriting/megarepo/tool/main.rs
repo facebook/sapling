@@ -14,6 +14,7 @@ use clap::ArgMatches;
 use cmdlib::{args, helpers};
 use cmdlib_x_repo::create_commit_syncer_args_from_matches;
 use context::CoreContext;
+use cross_repo_sync::CommitSyncer;
 use fbinit::FacebookInit;
 use futures::{
     compat::Future01CompatExt,
@@ -417,16 +418,7 @@ async fn run_manual_commit_sync<'a>(
     matches: &ArgMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let target_repo_id = args::get_target_repo_id(ctx.fb, &matches)?;
-    let config_store = args::maybe_init_config_store(ctx.fb, ctx.logger(), &matches)
-        .ok_or_else(|| format_err!("Failed initializing ConfigStore"))?;
-    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &config_store)?;
-    let commit_syncer_args =
-        create_commit_syncer_args_from_matches(ctx.fb, ctx.logger(), &matches).await?;
-    let commit_sync_config =
-        live_commit_sync_config.get_current_commit_sync_config(&ctx, target_repo_id)?;
-    let commit_syncer = commit_syncer_args
-        .try_into_commit_syncer(&commit_sync_config, Arc::new(live_commit_sync_config))?;
+    let commit_syncer = get_commit_syncer(&ctx, matches).await?;
 
     let target_repo = commit_syncer.get_target_repo();
     let target_repo_parents = sub_m.values_of(PARENTS);
@@ -546,16 +538,7 @@ async fn run_mark_not_synced<'a>(
     matches: &ArgMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let target_repo_id = args::get_target_repo_id(ctx.fb, &matches)?;
-    let config_store = args::maybe_init_config_store(ctx.fb, ctx.logger(), &matches)
-        .ok_or_else(|| format_err!("Failed initializing ConfigStore"))?;
-    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &config_store)?;
-    let commit_syncer_args =
-        create_commit_syncer_args_from_matches(ctx.fb, ctx.logger(), &matches).await?;
-    let commit_sync_config =
-        live_commit_sync_config.get_current_commit_sync_config(&ctx, target_repo_id)?;
-    let commit_syncer = commit_syncer_args
-        .try_into_commit_syncer(&commit_sync_config, Arc::new(live_commit_sync_config))?;
+    let commit_syncer = get_commit_syncer(&ctx, matches).await?;
 
     let small_repo = commit_syncer.get_small_repo();
     let large_repo = commit_syncer.get_large_repo();
@@ -662,6 +645,22 @@ async fn run_mark_not_synced<'a>(
     }
 
     Ok(())
+}
+
+async fn get_commit_syncer(
+    ctx: &CoreContext,
+    matches: &ArgMatches<'_>,
+) -> Result<CommitSyncer<SqlSyncedCommitMapping>> {
+    let target_repo_id = args::get_target_repo_id(ctx.fb, &matches)?;
+    let config_store = args::maybe_init_config_store(ctx.fb, ctx.logger(), &matches)
+        .ok_or_else(|| format_err!("Failed initializing ConfigStore"))?;
+    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &config_store)?;
+    let commit_syncer_args =
+        create_commit_syncer_args_from_matches(ctx.fb, ctx.logger(), &matches).await?;
+    let commit_sync_config =
+        live_commit_sync_config.get_current_commit_sync_config(&ctx, target_repo_id)?;
+    commit_syncer_args
+        .try_into_commit_syncer(&commit_sync_config, Arc::new(live_commit_sync_config))
 }
 
 fn get_and_verify_repo_config<'a>(
