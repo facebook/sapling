@@ -363,7 +363,7 @@ async fn rebase_in_loop(
             let conflict =
                 check_case_conflicts(server_bcs.iter().rev().chain(client_bcs.iter().rev()));
             if let Some(conflict) = conflict {
-                return Err(PushrebaseError::PotentialCaseConflict(conflict));
+                return Err(PushrebaseError::PotentialCaseConflict(conflict.1));
             }
         }
 

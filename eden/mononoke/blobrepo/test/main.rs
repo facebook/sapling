@@ -2055,7 +2055,7 @@ mod case_conflicts {
 
         assert_matches!(
             res.unwrap_err().downcast_ref::<ErrorKind>(),
-            Some(ErrorKind::InternalCaseConflict(_))
+            Some(ErrorKind::InternalCaseConflict(..))
         );
 
         Ok(())

@@ -450,7 +450,7 @@ pub async fn check_case_conflicts(
         .await?;
 
     if let Some(conflict) = mononoke_types::check_case_conflicts(added_files.iter()) {
-        return Err(ErrorKind::InternalCaseConflict(conflict).into());
+        return Err(ErrorKind::InternalCaseConflict(conflict.0, conflict.1).into());
     }
 
     let parent_root_mf = match parent_root_mf {

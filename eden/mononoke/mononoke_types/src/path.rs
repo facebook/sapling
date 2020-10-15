@@ -7,7 +7,7 @@
 
 use ascii::AsciiString;
 use std::cmp;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::convert::{From, TryFrom, TryInto};
 use std::fmt::{self, Display};
 use std::io::{self, Write};
@@ -994,14 +994,14 @@ impl FromIterator<Option<MPath>> for PrefixTrie {
 
 pub struct CaseConflictTrie {
     children: HashMap<MPathElement, CaseConflictTrie>,
-    lowercase: HashSet<String>,
+    lowercase_to_original: HashMap<String, MPathElement>,
 }
 
 impl CaseConflictTrie {
     fn new() -> CaseConflictTrie {
         CaseConflictTrie {
             children: HashMap::new(),
-            lowercase: HashSet::new(),
+            lowercase_to_original: HashMap::new(),
         }
     }
 
@@ -1011,21 +1011,28 @@ impl CaseConflictTrie {
 
     /// Returns `true` if element was added successfully, or `false`
     /// if trie already contains case conflicting entry.
-    fn add<'p, P: IntoIterator<Item = &'p MPathElement>>(&mut self, path: P) -> bool {
+    fn add<'p, P: IntoIterator<Item = &'p MPathElement>>(
+        &mut self,
+        path: P,
+    ) -> Result<(), ReverseMPath> {
         let mut iter = path.into_iter();
         match iter.next() {
-            None => true,
+            None => Ok(()),
             Some(element) => {
                 if let Some(child) = self.children.get_mut(&element) {
-                    return child.add(iter);
+                    return child.add(iter).map_err(|mut e| {
+                        e.elements.push(element.clone());
+                        e
+                    });
                 }
 
-                if let Ok(ref element) = String::from_utf8(Vec::from(element.as_ref())) {
-                    let element_lower = element.to_lowercase();
-                    if self.lowercase.contains(&element_lower) {
-                        return false;
+                if let Ok(lower) = lowercase_mpath_element(&element) {
+                    if let Some(conflict) = self.lowercase_to_original.get(&lower) {
+                        return Err(ReverseMPath {
+                            elements: vec![conflict.clone()],
+                        });
                     } else {
-                        self.lowercase.insert(element_lower);
+                        self.lowercase_to_original.insert(lower, element.clone());
                     }
                 }
 
@@ -1051,8 +1058,9 @@ impl CaseConflictTrie {
                 };
                 if remove {
                     self.children.remove(&element);
-                    if let Ok(ref element) = String::from_utf8(Vec::from(element.as_ref())) {
-                        self.lowercase.remove(&element.to_lowercase());
+
+                    if let Ok(lower) = lowercase_mpath_element(&element) {
+                        self.lowercase_to_original.remove(&lower);
                     }
                 }
                 found
@@ -1061,32 +1069,45 @@ impl CaseConflictTrie {
     }
 }
 
+struct ReverseMPath {
+    /// Elements that are found to conflict. This is in reverse order.
+    elements: Vec<MPathElement>,
+}
+
+impl ReverseMPath {
+    pub fn into_mpath(self) -> MPath {
+        let Self { mut elements } = self;
+        elements.reverse();
+        MPath { elements }
+    }
+}
+
 pub trait CaseConflictTrieUpdate {
-    fn apply(self, trie: &mut CaseConflictTrie) -> Option<MPath>;
+    /// Add this to the CaseConflictTrie. If this results in a case conflict, report the two paths
+    /// that conflicted, in the order in which they were added to the CaseConflictTrie.
+    fn apply(self, trie: &mut CaseConflictTrie) -> Option<(MPath, MPath)>;
 }
 
 impl<'a> CaseConflictTrieUpdate for &'a MPath {
-    fn apply(self, trie: &mut CaseConflictTrie) -> Option<MPath> {
-        if !trie.add(self) {
-            return Some(self.clone());
-        } else {
-            None
+    fn apply(self, trie: &mut CaseConflictTrie) -> Option<(MPath, MPath)> {
+        match trie.add(self) {
+            Ok(()) => None,
+            Err(conflict) => Some((conflict.into_mpath(), self.clone())),
         }
     }
 }
 
 impl CaseConflictTrieUpdate for MPath {
-    fn apply(self, trie: &mut CaseConflictTrie) -> Option<MPath> {
-        if !trie.add(&self) {
-            return Some(self);
-        } else {
-            None
+    fn apply(self, trie: &mut CaseConflictTrie) -> Option<(MPath, MPath)> {
+        match trie.add(&self) {
+            Ok(()) => None,
+            Err(conflict) => Some((conflict.into_mpath(), self)),
         }
     }
 }
 
 impl<'a> CaseConflictTrieUpdate for &'a BonsaiChangeset {
-    fn apply(self, trie: &mut CaseConflictTrie) -> Option<MPath> {
+    fn apply(self, trie: &mut CaseConflictTrie) -> Option<(MPath, MPath)> {
         // we need apply deletion first
         for (path, change) in self.file_changes() {
             if change.is_none() {
@@ -1095,8 +1116,8 @@ impl<'a> CaseConflictTrieUpdate for &'a BonsaiChangeset {
         }
         for (path, change) in self.file_changes() {
             if change.is_some() {
-                if !trie.add(path) {
-                    return Some(path.clone());
+                if let Some(conflict) = path.apply(trie) {
+                    return Some(conflict);
                 }
             }
         }
@@ -1104,8 +1125,9 @@ impl<'a> CaseConflictTrieUpdate for &'a BonsaiChangeset {
     }
 }
 
-/// Returns first path that would introduce a case-conflict, if any
-pub fn check_case_conflicts<P, I>(iter: I) -> Option<MPath>
+/// Returns first path pair that would introduce a case-conflict, if any. The first element is the
+/// first one that was added into the Trie, and the second is the last.
+pub fn check_case_conflicts<P, I>(iter: I) -> Option<(MPath, MPath)>
 where
     P: CaseConflictTrieUpdate,
     I: IntoIterator<Item = P>,
@@ -1120,6 +1142,7 @@ where
     None
 }
 
+// TODO: Do we need this? Why?
 impl<P> FromIterator<P> for CaseConflictTrie
 where
     P: CaseConflictTrieUpdate,
@@ -1127,10 +1150,16 @@ where
     fn from_iter<I: IntoIterator<Item = P>>(iter: I) -> Self {
         let mut trie = CaseConflictTrie::new();
         for update in iter {
-            update.apply(&mut trie);
+            let _ = update.apply(&mut trie);
         }
         trie
     }
+}
+
+pub fn lowercase_mpath_element(e: &MPathElement) -> Result<String, Error> {
+    let s = std::str::from_utf8(e.as_ref())?;
+    let s = s.to_lowercase();
+    Ok(s)
 }
 
 #[cfg(test)]
@@ -1389,31 +1418,35 @@ mod test {
 
     #[test]
     fn case_conflicts() {
+        fn m(mpath: &str) -> MPath {
+            MPath::new(mpath).unwrap()
+        }
+
         let mut trie: CaseConflictTrie = vec!["a/b/c", "a/d", "c/d/a"]
             .into_iter()
-            .map(|p| MPath::new(p).unwrap())
+            .map(|p| m(p))
             .collect();
 
-        assert!(trie.add(&MPath::new("a/b/c").unwrap()));
-        assert!(trie.add(&MPath::new("a/B/d").unwrap()) == false);
-        assert!(trie.add(&MPath::new("a/b/C").unwrap()) == false);
-        assert!(trie.remove(&MPath::new("a/b/c").unwrap()));
-        assert!(trie.add(&MPath::new("a/B/c").unwrap()));
+        assert!(trie.add(&m("a/b/c")).is_ok());
+        assert!(trie.add(&m("a/B/d")).is_err());
+        assert!(trie.add(&m("a/b/C")).is_err());
+        assert!(trie.remove(&m("a/b/c")));
+        assert!(trie.add(&m("a/B/c")).is_ok());
 
         let paths = vec![
-            MPath::new("a/b/c").unwrap(),
-            MPath::new("a/b/c").unwrap(), // not a case conflict
-            MPath::new("a/d").unwrap(),
-            MPath::new("a/B/d").unwrap(),
-            MPath::new("a/c").unwrap(),
+            m("a/b/c"),
+            m("a/b/c"), // not a case conflict
+            m("a/d"),
+            m("a/B/d"),
+            m("a/c"),
         ];
         assert_eq!(
             check_case_conflicts(paths.iter()), // works from &MPath
-            Some(MPath::new("a/B/d").unwrap()),
+            Some((m("a/b"), m("a/B/d"))),
         );
         assert_eq!(
             check_case_conflicts(paths.into_iter()), // works from MPath
-            Some(MPath::new("a/B/d").unwrap()),
+            Some((m("a/b"), m("a/B/d"))),
         );
     }
 
