@@ -52,6 +52,9 @@ pub const WAIT_SECS: &str = "wait-secs";
 pub const CATCHUP_VALIDATE_COMMAND: &str = "catchup-validate";
 pub const MARK_NOT_SYNCED_COMMAND: &str = "mark-not-synced";
 pub const INPUT_FILE: &str = "input-file";
+pub const VERSION: &str = "version";
+pub const RUN_MOVER: &str = "run-mover";
+pub const PATH: &str = "path";
 
 pub fn cs_args_from_matches<'a>(sub_m: &ArgMatches<'a>) -> BoxFuture<ChangesetArgs, Error> {
     let message = try_boxfuture!(
@@ -481,6 +484,20 @@ pub fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .required(true)
         );
 
+    let run_mover_subcommand = SubCommand::with_name(RUN_MOVER)
+        .about("run mover of a given version to remap paths between source and target repos")
+        .arg(
+            Arg::with_name(VERSION)
+                .help("a version to use")
+                .takes_value(true)
+                .required(true),
+        )
+        .arg(
+            Arg::with_name(PATH)
+                .help("a path to remap")
+                .takes_value(true)
+                .required(true),
+        );
 
     args::MononokeApp::new("megarepo preparation tool")
         .with_advanced_args_hidden()
@@ -500,4 +517,5 @@ pub fn setup_app<'a, 'b>() -> App<'a, 'b> {
         ))
         .subcommand(catchup_validate_subcommand)
         .subcommand(mark_not_synced_candidate)
+        .subcommand(run_mover_subcommand)
 }

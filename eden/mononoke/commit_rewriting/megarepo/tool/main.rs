@@ -23,8 +23,8 @@ use futures::{
 };
 use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use metaconfig_types::MetadataDatabaseConfig;
-use metaconfig_types::RepoConfig;
-use mononoke_types::RepositoryId;
+use metaconfig_types::{CommitSyncConfigVersion, RepoConfig};
+use mononoke_types::{MPath, RepositoryId};
 use movers::get_small_to_large_mover;
 use regex::Regex;
 use skiplist::fetch_skiplist_index;
@@ -56,8 +56,8 @@ use crate::cli::{
     DELETION_CHUNK_SIZE, DRY_RUN, EVEN_CHUNK_SIZE, FIRST_PARENT, GRADUAL_MERGE,
     GRADUAL_MERGE_PROGRESS, HEAD_BOOKMARK, INPUT_FILE, LAST_DELETION_COMMIT, LIMIT,
     MANUAL_COMMIT_SYNC, MARK_NOT_SYNCED_COMMAND, MAX_NUM_OF_MOVES_IN_COMMIT, MERGE, MOVE,
-    ORIGIN_REPO, PARENTS, PATH_REGEX, PRE_DELETION_COMMIT, PRE_MERGE_DELETE, SECOND_PARENT,
-    SYNC_DIAMOND_MERGE, TO_MERGE_CS_ID, WAIT_SECS,
+    ORIGIN_REPO, PARENTS, PATH, PATH_REGEX, PRE_DELETION_COMMIT, PRE_MERGE_DELETE, RUN_MOVER,
+    SECOND_PARENT, SYNC_DIAMOND_MERGE, TO_MERGE_CS_ID, VERSION, WAIT_SECS,
 };
 use crate::merging::perform_merge;
 use megarepolib::chunking::{
@@ -502,6 +502,22 @@ async fn run_catchup_delete_head<'a>(
     Ok(())
 }
 
+async fn run_mover<'a>(
+    ctx: CoreContext,
+    matches: &ArgMatches<'a>,
+    sub_m: &ArgMatches<'a>,
+) -> Result<(), Error> {
+    let commit_syncer = get_commit_syncer(&ctx, matches).await?;
+    let version = get_version(sub_m)?;
+    let mover = commit_syncer.get_mover_by_version(&version)?;
+    let path = sub_m
+        .value_of(PATH)
+        .ok_or_else(|| format_err!("{} not set", PATH))?;
+    let path = MPath::new(path)?;
+    println!("{:?}", mover(&path));
+    Ok(())
+}
+
 async fn run_catchup_validate<'a>(
     ctx: CoreContext,
     matches: &ArgMatches<'a>,
@@ -663,6 +679,15 @@ async fn get_commit_syncer(
         .try_into_commit_syncer(&commit_sync_config, Arc::new(live_commit_sync_config))
 }
 
+fn get_version(matches: &ArgMatches<'_>) -> Result<CommitSyncConfigVersion> {
+    Ok(CommitSyncConfigVersion(
+        matches
+            .value_of(VERSION)
+            .ok_or_else(|| format_err!("{} not set", VERSION))?
+            .to_string(),
+    ))
+}
+
 fn get_and_verify_repo_config<'a>(
     fb: FacebookInit,
     matches: &ArgMatches<'a>,
@@ -718,6 +743,7 @@ fn main(fb: FacebookInit) -> Result<()> {
             (MARK_NOT_SYNCED_COMMAND, Some(sub_m)) => {
                 run_mark_not_synced(ctx, &matches, sub_m).await
             }
+            (RUN_MOVER, Some(sub_m)) => run_mover(ctx, &matches, sub_m).await,
             _ => bail!("oh no, wrong arguments provided!"),
         }
     };
