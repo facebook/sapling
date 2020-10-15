@@ -279,7 +279,7 @@ pub fn get_large_to_small_mover(
         });
 
     // If small-to-large default action was not `Preserve`, we should
-    // not sycn this path, as `PrependPrefix` needs to be represented
+    // not sync this path, as `PrependPrefix` needs to be represented
     // by an individual `RemovePrefix` action in the map
     let default_action = match &target_repo_config.default_action {
         DefaultSmallToLargeCommitSyncPathAction::Preserve => DefaultAction::Preserve,
@@ -289,7 +289,43 @@ pub fn get_large_to_small_mover(
         }
     };
 
-    mover_factory(prefix_map, default_action)
+    // default_large_to_small_mover is a mover that's built from the prefix_map and
+    // default_action we've just constructed. However it doesn't work correctly for all edge
+    // cases.
+    //
+    // In particular, there might be multiple large repo paths that remap to the same
+    // small repo path.
+    // Consider this config
+    // default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(mp("shifted")),
+    // map: hashmap! {
+    //     mp("preserved") => mp("preserved"),
+    //     mp("preserved/excluded") => mp("shifted/preserved/excluded"),
+    // },
+    //
+    // Now if we try to use default_large_to_small_mover to remap path shifted/preserved/1.txt,
+    // then it will be remapped to preserved/1.txt, but this is incorrect, since preserved/1.txt
+    // from small repo maps to preserved/1.txt in large repo.
+    // To fix this issue we do the following: we take corresponding small_to_large mover
+    // and remap back the path we got from applying default_large_to_small_mover.
+    // If this path is equal to the original path then we consider that default_large_to_small_mover
+    // returns correct path, otherwise we return None (i.e. a path from large repo doesn't remap
+    // to a path from small repo).
+    let default_large_to_small_mover = mover_factory(prefix_map, default_action)?;
+
+    let small_to_large_mover = get_small_to_large_mover(commit_sync_config, small_repo_id)?;
+    Ok(Arc::new(move |path: &MPath| -> Result<Option<MPath>> {
+        let moved_large_to_small = default_large_to_small_mover(path)?;
+        match moved_large_to_small {
+            Some(moved_large_to_small) => {
+                if small_to_large_mover(&moved_large_to_small)?.as_ref() == Some(&path) {
+                    Ok(Some(moved_large_to_small))
+                } else {
+                    Ok(None)
+                }
+            }
+            None => Ok(None),
+        }
+    }))
 }
 
 /// Get a forward and a reverse `Mover`, stored in the `Movers` struct
@@ -746,6 +782,51 @@ mod test {
         // sure path doesnt' change
         let f = mp("sub1/preserved");
         assert_eq!(mover(&f)?, Some(mp("sub1/preserved")));
+
+        Ok(())
+    }
+
+    fn get_small_repo_sync_config_with_excludes() -> SmallRepoCommitSyncConfig {
+        SmallRepoCommitSyncConfig {
+            default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(mp("shifted")),
+            map: hashmap! {
+                mp("preserved") => mp("preserved"),
+                mp("preserved/excluded") => mp("shifted/preserved/excluded"),
+            },
+            bookmark_prefix: AsciiString::from_ascii("b2".to_string()).unwrap(),
+            direction: CommitSyncDirection::LargeToSmall,
+        }
+    }
+
+    fn get_large_repo_sync_config_with_exludes() -> CommitSyncConfig {
+        CommitSyncConfig {
+            large_repo_id: RepositoryId::new(2),
+            common_pushrebase_bookmarks: vec![],
+            small_repos: hashmap! {
+                RepositoryId::new(1) => get_small_repo_sync_config_with_excludes(),
+            },
+            version_name: CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
+        }
+    }
+
+    #[test]
+    fn test_get_large_to_small_mover_with_excludes() -> Result<()> {
+        let mover = get_large_to_small_mover(
+            &get_large_repo_sync_config_with_exludes(),
+            RepositoryId::new(1),
+        )?;
+
+        let f = mp("shifted/f");
+        assert_eq!(mover(&f)?, Some(mp("f")));
+
+        let f = mp("shifted/preserved/1.txt");
+        assert_eq!(mover(&f)?, None);
+
+        let f = mp("shifted/preserved/excluded/1");
+        assert_eq!(mover(&f)?, Some(mp("preserved/excluded/1")));
+
+        let f = mp("preserved/excluded/1");
+        assert_eq!(mover(&f)?, None);
 
         Ok(())
     }
