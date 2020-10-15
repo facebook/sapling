@@ -433,7 +433,7 @@ def onetimeclientsetup(ui):
             for f, args, msg in actions["g"]:
                 files.append((f, hex(manifest[f])))
             # batch fetch the needed files from the server
-            repo.fileservice.prefetch(files)
+            repo.fileservice.prefetch(files, fetchhistory=False)
         return orig(
             repo, actions, wctx, mctx, overwrite, labels=labels, ancestors=ancestors
         )
@@ -454,7 +454,7 @@ def onetimeclientsetup(ui):
                     f2 = actionargs[0]
                     files.append((f2, hex(mctx.filenode(f2))))
             # batch fetch the needed files from the server
-            repo.fileservice.prefetch(files)
+            repo.fileservice.prefetch(files, fetchhistory=False)
         return orig(repo, wctx, mctx, force, actions, *args, **kwargs)
 
     wrapfunction(merge, "_checkunknownfiles", checkunknownfiles)

@@ -302,7 +302,10 @@ class physicalfilesystem(object):
         if util.safehasattr(repo, "fileservice"):
             p1 = self.dirstate.parents()[0]
             p1mf = repo[p1].manifest()
-            repo.fileservice.prefetch((f, hex(p1mf[f])) for f in lookups if f in p1mf)
+            repo.fileservice.prefetch(
+                list((f, hex(p1mf[f])) for f in lookups if f in p1mf),
+                fetchhistory=False,
+            )
 
         # Sort so we get deterministic ordering. This is important for tests.
         for fn in sorted(lookups):

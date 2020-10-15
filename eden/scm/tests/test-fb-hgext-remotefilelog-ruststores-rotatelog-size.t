@@ -9,11 +9,11 @@
   $ clone master shallow --noupdate
   $ cd shallow
 
-  $ echo zzzzzzzzzzz > u
+  $ echo uuuuuuuuuuu > u
   $ hg commit -qAm u
-  $ echo zzzzzzzzzzz > v
+  $ echo vvvvvvvvvvv > v
   $ hg commit -qAm v
-  $ echo zzzzzzzzzzz > w
+  $ echo wwwwwwwwwww > w
   $ hg commit -qAm w
   $ echo xxxxxxxxxxx > x
   $ hg commit -qAm x
