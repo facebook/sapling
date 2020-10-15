@@ -97,6 +97,7 @@ pub struct MononokeTunables {
     repo_client_default_timeout_secs: AtomicI64,
     repo_client_getbundle_timeout_secs: AtomicI64,
     repo_client_getpack_timeout_secs: AtomicI64,
+    derived_data_slow_derivation_threshold_secs: AtomicI64,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {

@@ -26,6 +26,7 @@ use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::debug;
 use slog::warn;
 use stats::prelude::*;
+use std::convert::TryInto;
 use std::{
     collections::HashSet,
     sync::{Arc, Mutex},
@@ -43,7 +44,6 @@ define_stats! {
         dynamic_timeseries("{}.{}.derived_data_disabled", (repo_id: i32, derived_data_type: &'static str); Count),
 }
 
-const DERIVE_TRACE_THRESHOLD: Duration = Duration::from_secs(3);
 const LEASE_WARNING_THRESHOLD: Duration = Duration::from_secs(60);
 
 /// Actual implementation of `BonsaiDerived::derive`, which recursively generates derivations.
@@ -125,7 +125,8 @@ pub fn derive_impl<
             Ok(ref count) => *count,
             Err(_) => 0,
         };
-        if stats.completion_time > DERIVE_TRACE_THRESHOLD {
+
+        if should_log_slow_derivation(stats.completion_time) {
             warn!(
                 ctx.logger(),
                 "slow derivation of {} {} for {}, took {:?}: mononoke_prod/flat/{}.trace",
@@ -153,6 +154,15 @@ pub fn derive_impl<
     }
     .boxed()
     .compat()
+}
+
+fn should_log_slow_derivation(duration: Duration) -> bool {
+    let threshold = tunables::tunables().get_derived_data_slow_derivation_threshold_secs();
+    let threshold = match threshold.try_into() {
+        Ok(t) if t > 0 => t,
+        _ => return false,
+    };
+    duration > Duration::from_secs(threshold)
 }
 
 fn fail_if_disabled<Derived: BonsaiDerived>(repo: &BlobRepo) -> Result<(), DeriveError> {
@@ -570,6 +580,7 @@ mod test {
     };
     use tests_utils::resolve_cs_id;
     use tokio_compat::runtime::Runtime;
+    use tunables::{with_tunables, MononokeTunables};
 
     lazy_static! {
         static ref MAPPINGS: Mutex<HashMap<SessionId, TestMapping>> = Mutex::new(HashMap::new());
@@ -1007,5 +1018,40 @@ mod test {
         );
 
         Ok(())
+    }
+
+    #[test]
+    fn test_should_log_slow_derivation() {
+        let d10 = Duration::from_secs(10);
+        let d20 = Duration::from_secs(20);
+
+        let tunables = MononokeTunables::default();
+        with_tunables(tunables, || {
+            assert!(!should_log_slow_derivation(d10));
+            assert!(!should_log_slow_derivation(d20));
+        });
+
+        let tunables = MononokeTunables::default();
+        tunables
+            .update_ints(&hashmap! {"derived_data_slow_derivation_threshold_secs".into() => -1});
+        with_tunables(tunables, || {
+            assert!(!should_log_slow_derivation(d10));
+            assert!(!should_log_slow_derivation(d20));
+        });
+
+        let tunables = MononokeTunables::default();
+        tunables.update_ints(&hashmap! {"derived_data_slow_derivation_threshold_secs".into() => 0});
+        with_tunables(tunables, || {
+            assert!(!should_log_slow_derivation(d10));
+            assert!(!should_log_slow_derivation(d20));
+        });
+
+        let tunables = MononokeTunables::default();
+        tunables
+            .update_ints(&hashmap! {"derived_data_slow_derivation_threshold_secs".into() => 15});
+        with_tunables(tunables, || {
+            assert!(!should_log_slow_derivation(d10));
+            assert!(should_log_slow_derivation(d20));
+        });
     }
 }
