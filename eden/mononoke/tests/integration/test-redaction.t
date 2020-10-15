@@ -401,7 +401,7 @@ Update to log_only commit
 
 Check logging
   $ wait_for_json_record_count "$TESTTMP/censored_scuba.json" 4
-  $ jq -S < "$TESTTMP/censored_scuba.json"
+  $ jq -S . < "$TESTTMP/censored_scuba.json"
   {
     "int": {
       "time": * (glob)
