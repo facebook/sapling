@@ -6,19 +6,19 @@
  */
 
 use crate::BlobRepoHg;
-use anyhow::{format_err, Error, Result};
+use anyhow::{format_err, Context, Error, Result};
 use cloned::cloned;
 use failure_ext::{Compat, FutureFailureErrorExt, StreamFailureErrorExt};
 use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
+    compat::Stream01CompatExt,
     future::{FutureExt, TryFutureExt},
-    stream::{FuturesUnordered, StreamExt, TryStreamExt},
+    stream::{self, TryStreamExt},
 };
 use futures_ext::{
     BoxFuture as OldBoxFuture, BoxStream as OldBoxStream, FutureExt as OldFutureExt,
 };
 use futures_old::future::{
-    self as old_future, loop_fn, result, Future as OldFuture, Loop, Shared, SharedError, SharedItem,
+    self as old_future, result, Future as OldFuture, Shared, SharedError, SharedItem,
 };
 use futures_old::stream::Stream as OldStream;
 use futures_old::sync::oneshot;
@@ -40,7 +40,7 @@ use mercurial_types::{
     nodehash::{HgFileNodeId, HgManifestId},
     HgChangesetId, HgNodeHash, HgNodeKey, HgParents, MPath, RepoPath, NULL_HASH,
 };
-use mononoke_types::{self, BonsaiChangeset, ChangesetId, FileType};
+use mononoke_types::{self, BonsaiChangeset, ChangesetId};
 
 use crate::errors::*;
 use crate::BlobRepo;
@@ -402,91 +402,6 @@ impl UploadEntries {
     }
 }
 
-async fn compute_files_with_status(
-    ctx: &CoreContext,
-    repo: &BlobRepo,
-    child: HgManifestId,
-    parent: Option<HgManifestId>,
-    filter_map: impl Fn(Diff<Entry<HgManifestId, (FileType, HgFileNodeId)>>) -> Option<MPath>,
-) -> Result<Vec<MPath>, Error> {
-    let s = match parent {
-        Some(parent) => parent
-            .diff(ctx.clone(), repo.get_blobstore(), child)
-            .compat()
-            .left_stream(),
-        None => child
-            .list_all_entries(ctx.clone(), repo.get_blobstore())
-            .map(|(path, entry)| Diff::Added(path, entry))
-            .compat()
-            .right_stream(),
-    };
-
-    s.try_filter_map(|e| async { Ok(filter_map(e)) })
-        .try_collect()
-        .await
-}
-
-/// Checks if new commit (or to be precise, it's manifest) introduces any new case conflicts
-/// It does it in three stages:
-/// 1) Checks that there are no case conflicts between added files
-/// 2) Checks that added files do not create new case conflicts with already existing files
-pub async fn check_case_conflicts(
-    ctx: &CoreContext,
-    repo: &BlobRepo,
-    child_root_mf: HgManifestId,
-    parent_root_mf: Option<HgManifestId>,
-) -> Result<(), Error> {
-    let added_files =
-        compute_files_with_status(
-            ctx,
-            repo,
-            child_root_mf,
-            parent_root_mf,
-            |diff| match diff {
-                Diff::Added(path, _entry) => path,
-                _ => None,
-            },
-        )
-        .await?;
-
-    if let Some(conflict) = mononoke_types::check_case_conflicts(added_files.iter()) {
-        return Err(ErrorKind::InternalCaseConflict(conflict.0, conflict.1).into());
-    }
-
-    let parent_root_mf = match parent_root_mf {
-        Some(parent_root_mf) => parent_root_mf,
-        None => {
-            return Ok(());
-        }
-    };
-
-    let mut case_conflict_checks = added_files
-        .into_iter()
-        .map(|path| async move {
-            let conflicting = check_case_conflict_in_manifest(
-                repo.clone(),
-                ctx.clone(),
-                parent_root_mf,
-                child_root_mf,
-                path.clone(),
-            )
-            .compat()
-            .await?;
-
-            Result::<_, Error>::Ok((path, conflicting))
-        })
-        .collect::<FuturesUnordered<_>>();
-
-    while let Some(element) = case_conflict_checks.next().await {
-        let (path, conflicting) = element?;
-        if let Some(conflicting) = conflicting {
-            return Err(ErrorKind::ExternalCaseConflict(path, conflicting).into());
-        }
-    }
-
-    Ok(())
-}
-
 pub fn process_entries(
     ctx: CoreContext,
     entry_processor: &UploadEntries,
@@ -679,85 +594,163 @@ pub fn make_new_changeset(
     HgBlobChangeset::new(changeset)
 }
 
-/// Check if adding a single path to manifest would cause case-conflict
+/// Checks if new commit (or to be precise, its manifest) introduces any new case conflicts. It
+/// does so in three stages:
 ///
-/// Implementation traverses manifest and checks if correspoinding path element is present,
-/// if path element is not present, it lowercases current path element and checks if it
-/// collides with any existing elements inside manifest. if so it also needs to check that
-/// child manifest contains this entry, because it might have been removed.
-pub fn check_case_conflict_in_manifest(
-    repo: BlobRepo,
-    ctx: CoreContext,
-    parent_mf_id: HgManifestId,
-    child_mf_id: HgManifestId,
-    path: MPath,
-) -> impl OldFuture<Item = Option<MPath>, Error = Error> {
-    let child_mf_id = child_mf_id.clone();
-    parent_mf_id
-        .load(ctx.clone(), &repo.get_blobstore())
-        .compat()
-        .from_err()
-        .and_then(move |mf| {
-            loop_fn(
-                (None, mf, path.into_iter()),
-                move |(cur_path, mf, mut elements): (Option<MPath>, _, _)| {
-                    let element = match elements.next() {
-                        None => return old_future::ok(Loop::Break(None)).boxify(),
-                        Some(element) => element,
-                    };
+/// - First, if there is no parent, we only check the manifest being added for conflicts.
+/// - Second, we build a tree of lower cased paths, then visit the parent's manifest for branches
+/// that overlap with this tree, and collect all the paths that do.
+/// - Third, we check if there are any case conflicts in the union of the files added by this
+/// change and all those paths we found in step 2 (minus those paths that were removed).
+///
+/// Note that this assumes there are no path conflicts in the parent_root_mf, if any is provided.
+/// If there are path conflicts there, this function may report those path conflicts if any file
+/// that is touched in one of the directories (case insensitively) with conflicts.
+pub async fn check_case_conflicts(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    child_root_mf: HgManifestId,
+    parent_root_mf: Option<HgManifestId>,
+) -> Result<(), Error> {
+    let parent_root_mf = match parent_root_mf {
+        Some(parent_root_mf) => parent_root_mf,
+        None => {
+            // We don't have a parent, just check for internal case conflicts here.
+            let paths = child_root_mf
+                .list_leaf_entries(ctx.clone(), repo.get_blobstore())
+                .compat()
+                .map_ok(|(path, _)| path)
+                .try_collect::<Vec<_>>()
+                .await
+                .with_context(|| "Error loading manifest")?;
 
-                    match mf.lookup(&element) {
-                        Some(entry) => {
-                            let cur_path = MPath::join_opt_element(cur_path.as_ref(), &element);
-                            match entry {
-                                Entry::Leaf(..) => old_future::ok(Loop::Break(None)).boxify(),
-                                Entry::Tree(manifest_id) => manifest_id
-                                    .load(ctx.clone(), repo.blobstore())
-                                    .compat()
-                                    .from_err()
-                                    .map(move |mf| Loop::Continue((Some(cur_path), mf, elements)))
-                                    .boxify(),
-                            }
-                        }
-                        None => {
-                            let element_utf8 = String::from_utf8(Vec::from(element.as_ref()));
-                            let mut potential_conflicts = vec![];
-                            // Find all entries in the manifests that can potentially be a conflict.
-                            // Entry can potentially be a conflict if its lowercased version
-                            // is the same as lowercased version of the current element
+            if let Some(conflict) = mononoke_types::check_case_conflicts(&paths) {
+                return Err(ErrorKind::InternalCaseConflict(conflict.0, conflict.1).into());
+            }
 
-                            for (basename, _) in mf.list() {
-                                let path =
-                                    MPath::join_element_opt(cur_path.as_ref(), Some(&basename));
-                                match (&element_utf8, std::str::from_utf8(basename.as_ref())) {
-                                    (Ok(ref element), Ok(ref basename)) => {
-                                        if basename.to_lowercase() == element.to_lowercase() {
-                                            potential_conflicts.extend(path);
-                                        }
-                                    }
-                                    _ => {}
-                                }
-                            }
+            return Ok(());
+        }
+    };
 
-                            // For each potential conflict we need to check if it's present in
-                            // child manifest. If it is, then we've got a conflict, otherwise
-                            // this has been deleted and it's no longer a conflict.
-                            child_mf_id
-                                .find_entries(
-                                    ctx.clone(),
-                                    repo.get_blobstore(),
-                                    potential_conflicts,
-                                )
-                                .collect()
-                                .map(|entries| {
-                                    // NOTE: We flatten here because we cannot have a conflict
-                                    // at the root.
-                                    Loop::Break(entries.into_iter().next().and_then(|x| x.0))
-                                })
-                                .boxify()
-                        }
+    let mut added = Vec::new();
+    let mut deleted = HashSet::new();
+
+    let mut diff = parent_root_mf
+        .diff(ctx.clone(), repo.get_blobstore(), child_root_mf)
+        .compat();
+
+    while let Some(diff) = diff
+        .try_next()
+        .await
+        .with_context(|| "Error loading diff")?
+    {
+        match diff {
+            Diff::Added(Some(path), _) => {
+                added.push(path);
+            }
+            Diff::Removed(Some(path), _) => {
+                deleted.insert(path);
+            }
+            _ => {}
+        };
+    }
+
+
+    // Check if there any conflicts internal to the change being landed. Past this point, the
+    // conflicts we'll report are external (i.e. they are dependent on the parent commit).
+    if let Some(conflict) = mononoke_types::check_case_conflicts(added.iter()) {
+        return Err(ErrorKind::InternalCaseConflict(conflict.0, conflict.1).into());
+    }
+
+    fn lowercase_mpath(e: &MPath) -> Option<Vec<String>> {
+        e.into_iter()
+            .map(|e| mononoke_types::path::lowercase_mpath_element(e))
+            .collect()
+    }
+
+    let mut path_tree_builder = PathTreeBuilder::default();
+
+    for path in added.iter() {
+        let path = match lowercase_mpath(&path) {
+            Some(path) => path,
+            None => continue, // We ignore non-UTF8 paths
+        };
+        path_tree_builder.insert(path);
+    }
+
+    let path_tree = Arc::new(path_tree_builder.freeze());
+
+    let candidates = bounded_traversal::bounded_traversal_stream(
+        256,
+        Some((parent_root_mf, path_tree, None)),
+        |(mf_id, path_tree, path)| async move {
+            let mf = mf_id.load(ctx.clone(), repo.blobstore()).await?;
+            let mut output = vec![];
+            let mut recurse = vec![];
+
+            for (name, entry) in mf.list() {
+                let lowered_el = match mononoke_types::path::lowercase_mpath_element(&name) {
+                    Some(lowered_el) => lowered_el,
+                    None => continue,
+                };
+
+                if let Some(subtree) = path_tree.as_ref().subentries.get(&lowered_el) {
+                    let path = MPath::join_opt_element(path.as_ref(), &name);
+
+                    if let Entry::Tree(sub_mf_id) = entry {
+                        recurse.push((sub_mf_id, subtree.clone(), Some(path.clone())));
                     }
-                },
-            )
-        })
+
+                    output.push(path);
+                };
+            }
+
+            Result::<_, Error>::Ok((output, recurse))
+        },
+    )
+    .map_ok(|entries| stream::iter(entries.into_iter().map(Result::<_, Error>::Ok)))
+    .try_flatten()
+    .try_collect::<Vec<_>>()
+    .await
+    .with_context(|| "Error scanning for conflicting paths")?;
+
+    let files = added
+        .iter()
+        .chain(candidates.iter().filter(|c| !deleted.contains(c)));
+
+    if let Some((child, parent)) = mononoke_types::check_case_conflicts(files) {
+        return Err(ErrorKind::ExternalCaseConflict(child, parent).into());
+    }
+
+
+    Ok(())
+}
+
+#[derive(Default)]
+struct PathTreeBuilder {
+    pub subentries: HashMap<String, Self>,
+}
+
+impl PathTreeBuilder {
+    pub fn insert(&mut self, path: Vec<String>) {
+        path.into_iter().fold(self, |node, element| {
+            node.subentries
+                .entry(element)
+                .or_insert_with(Default::default)
+        });
+    }
+
+    pub fn freeze(self) -> PathTree {
+        let subentries = self
+            .subentries
+            .into_iter()
+            .map(|(el, t)| (el, Arc::new(t.freeze())))
+            .collect();
+
+        PathTree { subentries }
+    }
+}
+
+struct PathTree {
+    pub subentries: HashMap<String, Arc<Self>>,
 }

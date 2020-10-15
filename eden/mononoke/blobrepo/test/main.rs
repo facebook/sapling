@@ -17,8 +17,7 @@ use assert_matches::assert_matches;
 use blobrepo::BlobRepo;
 use blobrepo_errors::ErrorKind;
 use blobrepo_hg::{
-    check_case_conflict_in_manifest,
-    repo_commit::{compute_changed_files, UploadEntries},
+    repo_commit::{check_case_conflicts, compute_changed_files, UploadEntries},
     BlobRepoHg,
 };
 use blobstore::{Loadable, Storable};
@@ -850,7 +849,7 @@ fn test_case_conflict_in_manifest(fb: FacebookInit) {
             .unwrap()
             .unwrap();
 
-        for (path, result) in &[
+        for (path, expect_conflict) in &[
             ("dir1/file_1_in_dir1", false),
             ("dir1/file_1_IN_dir1", true),
             ("DiR1/file_1_in_dir1", true),
@@ -878,23 +877,18 @@ fn test_case_conflict_in_manifest(fb: FacebookInit) {
                 .await
                 .unwrap()
                 .manifestid();
-            assert_eq!(
-                (check_case_conflict_in_manifest(
-                    repo.clone(),
-                    ctx.clone(),
-                    mf,
-                    child_mf,
-                    MPath::new(path).unwrap()
-                ))
-                .compat()
-                .await
-                .unwrap()
-                .is_some(),
-                *result,
-                "{} expected to {} cause conflict",
-                path,
-                if *result { "" } else { "not" },
-            );
+
+            let conflicts = check_case_conflicts(&ctx, &repo, child_mf, Some(mf)).await;
+            if *expect_conflict {
+                assert_matches!(
+                    conflicts
+                        .as_ref()
+                        .map_err(|e| e.downcast_ref::<ErrorKind>()),
+                    Err(Some(ErrorKind::ExternalCaseConflict(..)))
+                );
+            } else {
+                assert_matches!(conflicts, Ok(()));
+            }
         }
     });
 }

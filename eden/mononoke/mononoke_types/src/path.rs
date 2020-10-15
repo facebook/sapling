@@ -1026,7 +1026,7 @@ impl CaseConflictTrie {
                     });
                 }
 
-                if let Ok(lower) = lowercase_mpath_element(&element) {
+                if let Some(lower) = lowercase_mpath_element(&element) {
                     if let Some(conflict) = self.lowercase_to_original.get(&lower) {
                         return Err(ReverseMPath {
                             elements: vec![conflict.clone()],
@@ -1059,7 +1059,7 @@ impl CaseConflictTrie {
                 if remove {
                     self.children.remove(&element);
 
-                    if let Ok(lower) = lowercase_mpath_element(&element) {
+                    if let Some(lower) = lowercase_mpath_element(&element) {
                         self.lowercase_to_original.remove(&lower);
                     }
                 }
@@ -1156,10 +1156,10 @@ where
     }
 }
 
-pub fn lowercase_mpath_element(e: &MPathElement) -> Result<String, Error> {
-    let s = std::str::from_utf8(e.as_ref())?;
+pub fn lowercase_mpath_element(e: &MPathElement) -> Option<String> {
+    let s = std::str::from_utf8(e.as_ref()).ok()?;
     let s = s.to_lowercase();
-    Ok(s)
+    Some(s)
 }
 
 #[cfg(test)]

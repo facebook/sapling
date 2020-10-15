@@ -13,9 +13,7 @@ pub mod repo_commit;
 pub use crate::repo_commit::ChangesetHandle;
 pub use changeset_fetcher::ChangesetFetcher;
 // TODO: This is exported for testing - is this the right place for it?
-pub use crate::repo_commit::{
-    check_case_conflict_in_manifest, check_case_conflicts, compute_changed_files, UploadEntries,
-};
+pub use crate::repo_commit::{check_case_conflicts, compute_changed_files, UploadEntries};
 pub mod errors {
     pub use blobrepo_errors::*;
 }
