@@ -250,7 +250,7 @@ mod test {
     use crate::hash::Blake2;
     use context::CoreContext;
     use fbinit::FacebookInit;
-    use fixtures::linear;
+    use memblob::EagerMemblob;
     use pretty_assertions::assert_eq;
     use quickcheck::{quickcheck, TestResult};
     use tokio_compat::runtime::Runtime;
@@ -258,7 +258,7 @@ mod test {
     #[fbinit::test]
     fn test_fastlog_batch_empty(fb: FacebookInit) -> Result<()> {
         let mut rt = Runtime::new().unwrap();
-        let blobstore = Arc::new(rt.block_on_std(linear::getrepo(fb)).get_blobstore());
+        let blobstore = Arc::new(EagerMemblob::default());
         let ctx = CoreContext::test_mock(fb);
 
         let list = VecDeque::new();
@@ -273,7 +273,7 @@ mod test {
     #[fbinit::test]
     fn test_fastlog_batch_single(fb: FacebookInit) -> Result<()> {
         let mut rt = Runtime::new().unwrap();
-        let blobstore = Arc::new(rt.block_on_std(linear::getrepo(fb)).get_blobstore());
+        let blobstore = Arc::new(EagerMemblob::default());
         let ctx = CoreContext::test_mock(fb);
 
         let mut list = VecDeque::new();
@@ -290,7 +290,7 @@ mod test {
     #[fbinit::test]
     fn test_fastlog_batch_large(fb: FacebookInit) -> Result<()> {
         let mut rt = Runtime::new().unwrap();
-        let blobstore = Arc::new(rt.block_on_std(linear::getrepo(fb)).get_blobstore());
+        let blobstore = Arc::new(EagerMemblob::default());
         let ctx = CoreContext::test_mock(fb);
 
         let mut list = VecDeque::new();
@@ -313,7 +313,7 @@ mod test {
     #[fbinit::test]
     fn test_fastlog_batch_overflow(fb: FacebookInit) -> Result<()> {
         let mut rt = Runtime::new().unwrap();
-        let blobstore = Arc::new(rt.block_on_std(linear::getrepo(fb)).get_blobstore());
+        let blobstore = Arc::new(EagerMemblob::default());
         let ctx = CoreContext::test_mock(fb);
 
         let mut list = VecDeque::new();
@@ -338,7 +338,7 @@ mod test {
         fn fastlog_roundtrip(fb: FacebookInit, hashes: Vec<(ChangesetId, i32)>) -> TestResult {
 
             let mut rt = Runtime::new().unwrap();
-            let blobstore = Arc::new(rt.block_on_std(linear::getrepo(fb)).get_blobstore());
+        let blobstore = Arc::new(EagerMemblob::default());
             let ctx = CoreContext::test_mock(fb);
 
             let mut raw_list = VecDeque::new();
