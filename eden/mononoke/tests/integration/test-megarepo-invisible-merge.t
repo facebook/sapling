@@ -213,8 +213,9 @@ Prepare for the invisible merge
   $ mkdir arvr-legacy .ovrsource-rest
   $ hg mv fbcode .ovrsource-rest/
   moving fbcode/fbcodefile_ovrsource to .ovrsource-rest/fbcode/fbcodefile_ovrsource
-  $ hg mv arvr otherfile_ovrsource pushredirected_1 pushredirected_2 Research arvr-legacy/
-  moving arvr/arvrfile_ovrsource to arvr-legacy/arvr/arvrfile_ovrsource
+  $ hg mv arvr .ovrsource-rest/arvr
+  moving arvr/arvrfile_ovrsource to .ovrsource-rest/arvr/arvrfile_ovrsource
+  $ hg mv otherfile_ovrsource pushredirected_1 pushredirected_2 Research arvr-legacy/
   moving Research/researchfile_ovrsource to arvr-legacy/Research/researchfile_ovrsource
   $ REPONAME=fbs-mon hgmn ci -m "move ovrsource files into place"
   $ REPONAME=fbs-mon hgmn -q push --to ovrsource/moved_master --create
@@ -227,10 +228,12 @@ Prepare for the invisible merge
   >  author "merge preparation" \
   >  --even-chunk-size 2 \
   > --commit-date-rfc3339 "$COMMIT_DATE"
-  96c5d4ac7927effbb86cc5cc1048651a6f37caf5d47666287120e1f33700c5ad
-  6fad885af2b0655d790af5445143b58bff4558e1c3bbf027d16b03fd377479b8
+  69cb4dfdec92e3b84ee1c5b064c33ac3fb980bdae0d6fba7a2a75cb0670af599
+  15f0ba01db155d0431552defe999ca51e5b8a0a632bc323cc2faeeddc4064cc1
+  $ get_bonsai_bookmark $FBS_REPOID ovrsource/moved_master
+  0b114e8a3d0d62a31ff8f99b8894603cf37cdb6edc070d744a7a457bd360fc0a
 -- a list of commits we want to merge also includes the pre-delete commit
-  $ TOMERGES=(96c5d4ac7927effbb86cc5cc1048651a6f37caf5d47666287120e1f33700c5ad 6fad885af2b0655d790af5445143b58bff4558e1c3bbf027d16b03fd377479b8 7f5e9b8381acf8700510064e07abd84b3d6ce4fc7e6fab856825fe0e8ed2e69f)
+  $ TOMERGES=(69cb4dfdec92e3b84ee1c5b064c33ac3fb980bdae0d6fba7a2a75cb0670af599 15f0ba01db155d0431552defe999ca51e5b8a0a632bc323cc2faeeddc4064cc1 0b114e8a3d0d62a31ff8f99b8894603cf37cdb6edc070d744a7a457bd360fc0a)
 -- calculate to-merge working copy sizes, they should be gradually increasing
   $ cd "$TESTTMP/fbs-hg-cnt"
   $ for TOMERGE in "${TOMERGES[@]}"; do
@@ -239,10 +242,9 @@ Prepare for the invisible merge
   >  FILECOUNT=$(find . -path ./.hg -prune -o -type f -print | wc -l)
   >  echo "$HGHASH: $FILECOUNT files"
   > done
-  dd96f681ce82f3fda524178888e34707647f1465: 2 files
-  32d48855146d243f170429ced87f41f80be9440f: 4 files
-  da4ae8f4415fdf04bb05ed946f9638879dad74fa: 6 files
-
+  0bcd370350f8ffa50b01a71ebde58685eb8a48c4: 2 files
+  7ed84adf14359250fce47e358e02da84a69432d3: 4 files
+  1bb93fce182b04f42c237baaea017ed96becdc72: 6 files
 
 Do the invisible merge by gradually merging TOMERGES into master
   $ cd "$TESTTMP/fbs-hg-cnt"
@@ -267,19 +269,19 @@ Do the invisible merge by gradually merging TOMERGES into master
   >  REPONAME=fbs-mon hgmn push -q --to master_bookmark
   > done
   Current: cb536a1a0bd5e1e5226a09530ab95ae790b717d7
-  To merge: 96c5d4ac7927effbb86cc5cc1048651a6f37caf5d47666287120e1f33700c5ad
-  Merged as (bonsai): 6fe1e00b3e16c34436bdcba8014ede14407d250acf6426ecf74726f87b1a416a
-  Merged as (hg): 569337bca1df19dd9a1c1224c34577304fb1637f
+  To merge: 69cb4dfdec92e3b84ee1c5b064c33ac3fb980bdae0d6fba7a2a75cb0670af599
+  Merged as (bonsai): 69cc63c9e59f7cc7b6daa0c36832489632674e722a9364ff2712919af93109d7
+  Merged as (hg): 91d643697945d5bb502a2c1c2f75ec36b855f308
   file count is: 2
-  Current: 7fdc0628cdab039b45aac6f335217fc8c156e218
-  To merge: 6fad885af2b0655d790af5445143b58bff4558e1c3bbf027d16b03fd377479b8
-  Merged as (bonsai): 6c928f74d3c2f14e91b60da58e7b9b382f100caca2a3168724acb4e8e6314756
-  Merged as (hg): b9bdf53b26f4213a50f724942dad9be7b0b8bd0f
+  Current: 51c49b0bd6828234ce57148769ca56f254e463bd
+  To merge: 15f0ba01db155d0431552defe999ca51e5b8a0a632bc323cc2faeeddc4064cc1
+  Merged as (bonsai): e0d0f35215c77449e9e63807cbec7f09368ebd0591f11adb53a133a53add4a7a
+  Merged as (hg): a2da597439baf0918aaf1d6153ce85a7066bee9d
   file count is: 4
-  Current: 40bc30e1b51ba4ebb545e231803a0e0c7b0ffdfc
-  To merge: 7f5e9b8381acf8700510064e07abd84b3d6ce4fc7e6fab856825fe0e8ed2e69f
-  Merged as (bonsai): dd2fd320ef5e6b28eff0071f42df538b10d6c656fa6098d25b7a39bcfd8557ea
-  Merged as (hg): 2b7f7638e7303188954c50e79a68c93340abd01e
+  Current: 537d8dc759cb6c028c6907e51bf01217f6e748bf
+  To merge: 0b114e8a3d0d62a31ff8f99b8894603cf37cdb6edc070d744a7a457bd360fc0a
+  Merged as (bonsai): 9e0bfdd3a6cd0a41697e67f00baf3d060e0e7660f7e2b0e2be34c3f5c5691984
+  Merged as (hg): 00ee43db03b2bd0ed0e9ad806f23f042dd3ddff8
   file count is: 6
   $ REPONAME=fbs-mon hgmn pull -q |& grep -v 'devel-warn'
   [1]
@@ -344,7 +346,7 @@ Perform ovrsource pushrebase, make sure it is push-redirected into Fbsource
   $ cd "$TESTTMP"/fbs-hg-cnt
   $ REPONAME=fbs-mon hgmn pull -q
   $ log -r master_bookmark
-  o  pushredirected_3 [public;rev=14;4fa1e867d4ae] default/master_bookmark
+  o  pushredirected_3 [public;rev=14;a272f72e81b3] default/master_bookmark
   |
   ~
 -- ensure that ovrsource root path ends up in megarepo's arvr-legacy
