@@ -501,9 +501,9 @@ impl DeriveGraph {
                             .compat()
                             .await?;
                         if let (Some(first), Some(last)) = (node.csids.first(), node.csids.last()) {
-                            slog::debug!(
+                            slog::info!(
                                 ctx.logger(),
-                                "[{}:{}] count:{} start:{:?} end:{:?}",
+                                "[{}:{}] count:{} start:{} end:{}",
                                 deriver.name(),
                                 node.id,
                                 node.csids.len(),
@@ -613,10 +613,28 @@ pub async fn build_derive_graph(
     let mut underived_dag = HashMap::new();
     let mut underived_stream =
         find_underived_many(ctx.clone(), repo.clone(), csids, derivers.clone(), thin_out);
+    let mut found_changesets = 0usize;
+    let start = std::time::Instant::now();
+    slog::info!(ctx.logger(), "searching for underived changesets");
     while let Some((csid, parents, derivers)) = underived_stream.try_next().await? {
         underived_dag.insert(csid, parents);
         underived_to_derivers.insert(csid, derivers);
+        found_changesets += 1;
+        if found_changesets % 1000 == 0 {
+            slog::info!(
+                ctx.logger(),
+                "found changsets: {} {:.3}/s",
+                found_changesets,
+                found_changesets as f32 / start.elapsed().as_secs_f32(),
+            );
+        }
     }
+    slog::info!(
+        ctx.logger(),
+        "found changsets: {} {:.3}/s",
+        found_changesets,
+        found_changesets as f32 / start.elapsed().as_secs_f32(),
+    );
 
     // topologically sort changeset
     let underived_ordered = sort_topological(&underived_dag).expect("commit graph has cycles!");

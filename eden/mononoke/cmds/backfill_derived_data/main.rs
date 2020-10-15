@@ -23,12 +23,12 @@ use cmdlib::{args, helpers};
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use derived_data_utils::{
-    derived_data_utils, derived_data_utils_unsafe, DerivedUtils, POSSIBLE_DERIVED_TYPES,
+    derived_data_utils, derived_data_utils_unsafe, DerivedUtils, ThinOut, POSSIBLE_DERIVED_TYPES,
 };
 use fbinit::FacebookInit;
 use fsnodes::RootFsnodeId;
 use futures::{
-    compat::Future01CompatExt,
+    compat::{Future01CompatExt, Stream01CompatExt},
     future::{self, try_join},
     stream::{self, StreamExt, TryStreamExt},
 };
@@ -40,7 +40,13 @@ use metaconfig_types::DerivedDataConfig;
 use mononoke_types::{ChangesetId, DateTime};
 use slog::{info, Logger};
 use stats::prelude::*;
-use std::{collections::HashMap, fs, path::Path, sync::Arc, time::Duration};
+use std::{
+    collections::{BTreeSet, HashMap},
+    fs,
+    path::Path,
+    sync::Arc,
+    time::Duration,
+};
 use time_ext::DurationExt;
 
 mod warmup;
@@ -65,6 +71,7 @@ const ARG_CHANGESET: &str = "changeset";
 const ARG_USE_SHARED_LEASES: &str = "use-shared-leases";
 
 const SUBCOMMAND_BACKFILL: &str = "backfill";
+const SUBCOMMAND_BACKFILL_ALL: &str = "backfill-all";
 const SUBCOMMAND_TAIL: &str = "tail";
 const SUBCOMMAND_PREFETCH_COMMITS: &str = "prefetch-commits";
 const SUBCOMMAND_SINGLE: &str = "single";
@@ -214,6 +221,18 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                         .possible_values(POSSIBLE_DERIVED_TYPES)
                         .help("derived data type for which backfill will be run"),
                 ),
+        )
+        .subcommand(
+            SubCommand::with_name(SUBCOMMAND_BACKFILL_ALL)
+                .about("backfill all/many derived data types at once")
+                .arg(
+                    Arg::with_name(ARG_DERIVED_DATA_TYPE)
+                        .possible_values(POSSIBLE_DERIVED_TYPES)
+                        .required(false)
+                        .takes_value(true)
+                        .multiple(true)
+                        .help("derived data type for which backfill will be run, all enabled if not specified"),
+                )
         );
     let matches = app.get_matches();
     args::init_cachelib(fb, &matches, None);
@@ -238,6 +257,16 @@ async fn run_subcmd<'a>(
     matches: &'a ArgMatches<'a>,
 ) -> Result<(), Error> {
     match matches.subcommand() {
+        (SUBCOMMAND_BACKFILL_ALL, Some(sub_m)) => {
+            let repo = args::open_repo_unredacted(fb, logger, matches)
+                .compat()
+                .await?;
+            let derived_data_types = sub_m.values_of(ARG_DERIVED_DATA_TYPE).map_or_else(
+                || repo.get_derived_data_config().derived_data_types.clone(),
+                |names| names.map(ToString::to_string).collect(),
+            );
+            subcommand_backfill_all(&ctx, &repo, derived_data_types).await
+        }
         (SUBCOMMAND_BACKFILL, Some(sub_m)) => {
             let derived_data_type = sub_m
                 .value_of(ARG_DERIVED_DATA_TYPE)
@@ -414,6 +443,38 @@ async fn run_subcmd<'a>(
 fn parse_serialized_commits<P: AsRef<Path>>(file: P) -> Result<Vec<ChangesetEntry>, Error> {
     let data = fs::read(file).map_err(Error::from)?;
     deserialize_cs_entries(&Bytes::from(data))
+}
+
+async fn subcommand_backfill_all(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    derived_data_types: BTreeSet<String>,
+) -> Result<(), Error> {
+    info!(ctx.logger(), "derived data types: {:?}", derived_data_types);
+    let derivers = derived_data_types
+        .iter()
+        .map(|name| derived_data_utils_unsafe(repo.clone(), name.clone()))
+        .collect::<Result<Vec<_>, _>>()?;
+    let heads: Vec<_> = repo
+        .get_bonsai_heads_maybe_stale(ctx.clone())
+        .compat()
+        .try_collect()
+        .await?;
+    info!(ctx.logger(), "heads count: {}", heads.len());
+    info!(ctx.logger(), "building derived data graph",);
+    let derive_graph = derived_data_utils::build_derive_graph(
+        ctx,
+        repo,
+        heads,
+        derivers,
+        CHUNK_SIZE,
+        // This means that for 1000 commits it will inspect all changesets for underived data
+        // after 1000 commits in 1000 * 1.5 commits, then 1000 in 1000 * 1.5 ^ 2 ... 1000 in 1000 * 1.5 ^ n
+        ThinOut::new(1000.0, 1.5),
+    )
+    .await?;
+    info!(ctx.logger(), "deriving data",);
+    derive_graph.derive(ctx.clone(), repo.clone()).await
 }
 
 async fn subcommand_backfill(
