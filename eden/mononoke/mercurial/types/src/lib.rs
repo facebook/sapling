@@ -65,7 +65,7 @@ pub mod remotefilelog;
 pub mod sql_types;
 pub mod utils;
 
-pub use self::manifest::{HgEntry, HgManifest, Type};
+pub use self::manifest::Type;
 pub use blob::HgBlob;
 pub use blobnode::{calculate_hg_node_id, calculate_hg_node_id_stream, HgBlobNode, HgParents};
 pub use blobs::{

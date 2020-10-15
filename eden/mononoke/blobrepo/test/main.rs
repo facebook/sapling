@@ -23,14 +23,13 @@ use blobrepo_hg::{
 };
 use blobstore::{Loadable, Storable};
 use bytes::Bytes;
-use bytes::BytesMut;
 use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use fixtures::{create_bonsai_changeset, many_files_dirs, merge_uneven};
 use futures::{compat::Future01CompatExt, future::TryFutureExt};
 use futures_ext::{BoxFuture, FutureExt};
-use futures_old::{Future, Stream};
+use futures_old::Future;
 use maplit::btreemap;
 use memblob::LazyMemblob;
 use mercurial_derived_data::get_manifest_from_bonsai;
@@ -39,8 +38,8 @@ use mercurial_types::{
         BlobManifest, ContentBlobMeta, File, HgBlobChangeset, UploadHgFileContents,
         UploadHgFileEntry, UploadHgNodeHash,
     },
-    manifest, FileType, HgChangesetId, HgEntry, HgFileEnvelope, HgFileNodeId, HgManifest,
-    HgManifestId, HgParents, MPath, MPathElement, RepoPath,
+    manifest, FileType, HgChangesetId, HgFileEnvelope, HgFileNodeId, HgManifestId, HgNodeHash,
+    HgParents, MPath, MPathElement, RepoPath,
 };
 use mercurial_types_mocks::nodehash::ONES_FNID;
 use mononoke_types::bonsai_changeset::BonsaiChangesetMut;
@@ -98,21 +97,6 @@ async fn upload_blob_no_parents(fb: FacebookInit, repo: BlobRepo) {
         entry.get_name() == Some(&MPathElement::new("file".into()).expect("valid MPathElement"))
     );
 
-    let content = entry.get_content(ctx.clone()).compat().await.unwrap();
-    let stream = match content {
-        manifest::Content::File(stream) => stream,
-        _ => panic!(),
-    };
-    let bytes = stream
-        .fold(BytesMut::new(), |mut buff, file_bytes| {
-            buff.extend_from_slice(file_bytes.as_bytes().as_ref());
-            Result::<_, Error>::Ok(buff)
-        })
-        .compat()
-        .await
-        .unwrap();
-    assert_eq!(bytes.as_ref(), &b"blob"[..]);
-
     // And the blob now exists
     let bytes = get_content(ctx, &repo, expected_hash).await.unwrap();
     assert!(bytes.as_ref() == &b"blob"[..]);
@@ -156,21 +140,6 @@ async fn upload_blob_one_parent(fb: FacebookInit, repo: BlobRepo) {
     assert!(
         entry.get_name() == Some(&MPathElement::new("file".into()).expect("valid MPathElement"))
     );
-
-    let content = entry.get_content(ctx.clone()).compat().await.unwrap();
-    let stream = match content {
-        manifest::Content::File(stream) => stream,
-        _ => panic!(),
-    };
-    let bytes = stream
-        .fold(BytesMut::new(), |mut buff, file_bytes| {
-            buff.extend_from_slice(file_bytes.as_bytes().as_ref());
-            Result::<_, Error>::Ok(buff)
-        })
-        .compat()
-        .await
-        .unwrap();
-    assert_eq!(bytes.as_ref(), &b"blob"[..]);
 
     // And the blob now exists
     let bytes = get_content(ctx.clone(), &repo, expected_hash)
@@ -685,22 +654,68 @@ fn make_file_change(
         .map(move |content_id| FileChange::new(content_id, FileType::Regular, content_size, None))
 }
 
+fn entry_nodehash(e: &Entry<HgManifestId, (FileType, HgFileNodeId)>) -> HgNodeHash {
+    match e {
+        Entry::Leaf((_, id)) => id.into_nodehash(),
+        Entry::Tree(id) => id.into_nodehash(),
+    }
+}
+
+async fn entry_content(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    e: &Entry<HgManifestId, (FileType, HgFileNodeId)>,
+) -> Result<Bytes, Error> {
+    let ret = match e {
+        Entry::Leaf((_, id)) => {
+            let envelope = id.load(ctx.clone(), repo.blobstore()).await?;
+            filestore::fetch_concat(&repo.get_blobstore(), ctx.clone(), envelope.content_id())
+                .compat()
+                .await?
+        }
+        Entry::Tree(..) => {
+            return Err(Error::msg("entry_content was called on a Tree"));
+        }
+    };
+
+    Ok(ret)
+}
+
+async fn entry_parents(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    e: &Entry<HgManifestId, (FileType, HgFileNodeId)>,
+) -> Result<HgParents, Error> {
+    let ret = match e {
+        Entry::Leaf((_, id)) => {
+            let envelope = id.load(ctx.clone(), repo.blobstore()).await?;
+            envelope.hg_parents()
+        }
+        Entry::Tree(id) => {
+            let manifest = id.load(ctx.clone(), repo.blobstore()).await?;
+            manifest.hg_parents()
+        }
+    };
+
+    Ok(ret)
+}
+
 #[fbinit::test]
 fn test_get_manifest_from_bonsai(fb: FacebookInit) {
     async_unit::tokio_unit_test(async move {
         let ctx = CoreContext::test_mock(fb);
         let repo = merge_uneven::getrepo(fb).await;
+
         let get_entries = {
             cloned!(ctx, repo);
-            move |ms_hash: HgManifestId| -> BoxFuture<HashMap<String, Box<dyn HgEntry + Sync>>, Error> {
+            move |ms_hash: HgManifestId| -> BoxFuture<HashMap<String, Entry<HgManifestId, (FileType, HgFileNodeId)>>, Error> {
                 ms_hash.load(ctx.clone(), repo.blobstore())
                     .compat()
                     .from_err()
                     .map(|ms| {
-                        HgManifest::list(&ms)
-                            .map(|e| {
-                                let name = e.get_name().unwrap().as_ref().to_owned();
-                                (String::from_utf8(name).unwrap(), e)
+                        Manifest::list(&ms)
+                            .map(|(name, entry)| {
+                                (String::from_utf8(Vec::from(name.as_ref())).unwrap(), entry)
                             })
                             .collect::<HashMap<_, _>>()
                     })
@@ -779,24 +794,11 @@ fn test_get_manifest_from_bonsai(fb: FacebookInit) {
                 .await
                 .unwrap();
             let mut br_expected_parents = HashSet::new();
-            br_expected_parents.insert(
-                ms1_entries
-                    .get("branch")
-                    .unwrap()
-                    .get_hash()
-                    .into_nodehash(),
-            );
-            br_expected_parents.insert(
-                ms2_entries
-                    .get("branch")
-                    .unwrap()
-                    .get_hash()
-                    .into_nodehash(),
-            );
+            br_expected_parents.insert(entry_nodehash(ms1_entries.get("branch").unwrap()));
+            br_expected_parents.insert(entry_nodehash(ms2_entries.get("branch").unwrap()));
 
             let br = entries.get("branch").expect("trivial merge should succeed");
-            let br_parents = (br.get_parents(ctx.clone()))
-                .compat()
+            let br_parents = entry_parents(&ctx, &repo, br)
                 .await
                 .unwrap()
                 .into_iter()
@@ -818,21 +820,10 @@ fn test_get_manifest_from_bonsai(fb: FacebookInit) {
                 .expect("adding new file should not produce coflict");
             let entries = (get_entries(ms_hash)).compat().await.unwrap();
             let new = entries.get("new").expect("new file should be in entries");
-            let stream = match (new.get_content(ctx.clone())).compat().await.unwrap() {
-                manifest::Content::File(stream) => stream,
-                _ => panic!("content type mismatch"),
-            };
-            let bytes = stream
-                .fold(BytesMut::new(), |mut buff, file_bytes| {
-                    buff.extend_from_slice(file_bytes.as_bytes().as_ref());
-                    Result::<_, Error>::Ok(buff)
-                })
-                .compat()
-                .await
-                .unwrap();
+            let bytes = entry_content(&ctx, &repo, new).await.unwrap();
             assert_eq!(bytes.as_ref(), content_expected.as_ref());
 
-            let new_parents = (new.get_parents(ctx.clone())).compat().await.unwrap();
+            let new_parents = (entry_parents(&ctx, &repo, new)).await.unwrap();
             assert_eq!(new_parents, HgParents::None);
         }
     });

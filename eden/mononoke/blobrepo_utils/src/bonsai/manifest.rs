@@ -220,11 +220,8 @@ impl ChangesetVisitor for BonsaiMFVerifyVisitor {
         let bonsai_diff_fut = future::join_all(parents).and_then({
             cloned!(ctx, repo);
             move |parents| {
-                let root_mf_fut = BlobManifest::load(
-                    ctx.clone(),
-                    repo.get_blobstore().boxed(),
-                    changeset.manifestid(),
-                );
+                let root_mf_fut =
+                    BlobManifest::load(ctx.clone(), repo.blobstore(), changeset.manifestid());
 
                 bonsai_diff(
                     ctx.clone(),

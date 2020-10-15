@@ -21,6 +21,7 @@ derived_data_filenodes = { path = "../derived_data/filenodes" }
 filenodes = { path = "../filenodes" }
 filestore = { path = "../filestore" }
 fsnodes = { path = "../derived_data/fsnodes" }
+manifest = { path = "../manifest" }
 mercurial_types = { path = "../mercurial/types" }
 metaconfig_types = { path = "../metaconfig/types" }
 mononoke_types = { path = "../mononoke_types" }

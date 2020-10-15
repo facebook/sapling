@@ -38,7 +38,7 @@ use mercurial_types::{
     blobs::{ChangesetMetadata, HgBlobChangeset, HgBlobEntry, HgChangesetContent},
     manifest,
     nodehash::{HgFileNodeId, HgManifestId},
-    HgChangesetId, HgEntry, HgNodeHash, HgNodeKey, HgParents, MPath, RepoPath, NULL_HASH,
+    HgChangesetId, HgNodeHash, HgNodeKey, HgParents, MPath, RepoPath, NULL_HASH,
 };
 use mononoke_types::{self, BonsaiChangeset, ChangesetId, FileType};
 

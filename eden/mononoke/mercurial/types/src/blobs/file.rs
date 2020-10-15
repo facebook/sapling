@@ -9,26 +9,18 @@
 
 use super::envelope::HgBlobEnvelope;
 use super::errors::ErrorKind;
-use super::manifest::{fetch_manifest_envelope, fetch_raw_manifest_bytes, BlobManifest};
+use super::manifest::fetch_manifest_envelope;
 use crate::{
-    calculate_hg_node_id,
-    manifest::{Content, HgEntry, HgManifest, Type},
-    nodehash::HgEntryId,
-    FileBytes, FileType, HgBlob, HgBlobNode, HgFileEnvelope, HgFileNodeId, HgManifestId,
-    HgNodeHash, HgParents, MPath, MPathElement,
+    manifest::Type, nodehash::HgEntryId, FileBytes, HgBlob, HgBlobNode, HgFileEnvelope,
+    HgFileNodeId, HgManifestId, HgNodeHash, HgParents, MPath, MPathElement,
 };
 use anyhow::{Error, Result};
 use blobstore::{Blobstore, Loadable, LoadableError};
-use bytes::{Bytes, BytesMut};
+use bytes::Bytes;
 use context::CoreContext;
-use failure_ext::{FutureFailureErrorExt, StreamFailureErrorExt};
-use filestore;
 use futures::future::{BoxFuture, FutureExt, TryFutureExt};
-use futures_ext::{BoxFuture as BoxFuture01, FutureExt as _, StreamExt as _};
-use futures_old::{
-    future::{lazy, Future},
-    stream::Stream,
-};
+use futures_ext::{BoxFuture as BoxFuture01, FutureExt as _};
+use futures_old::future::Future;
 use itertools::Itertools;
 use mononoke_types::hash::Sha256;
 use std::{
@@ -52,72 +44,6 @@ impl PartialEq for HgBlobEntry {
 }
 
 impl Eq for HgBlobEntry {}
-
-pub fn fetch_raw_filenode_bytes(
-    ctx: CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
-    node_id: HgFileNodeId,
-    validate_hash: bool,
-) -> BoxFuture01<HgBlob, Error> {
-    node_id
-        .load(ctx.clone(), blobstore)
-        .compat()
-        .from_err()
-        .and_then({
-            let blobstore = blobstore.clone();
-            move |envelope| {
-                let envelope = envelope.into_mut();
-                let content_id = envelope.content_id;
-
-                // TODO (T47717165): Avoid buffering here.
-                let file_bytes_fut = filestore::fetch_concat(&blobstore, ctx, content_id)
-                    .map(FileBytes)
-                    .context("While fetching content blob");
-
-                let metadata = envelope.metadata;
-                let f = if metadata.is_empty() {
-                    file_bytes_fut
-                        .map(|contents| contents.into_bytes())
-                        .left_future()
-                } else {
-                    file_bytes_fut
-                        .map(move |contents| {
-                            // The copy info and the blob have to be joined together.
-                            // TODO (T30456231): avoid the copy
-                            let contents = contents.into_bytes();
-                            let mut buff = BytesMut::with_capacity(metadata.len() + contents.len());
-                            buff.extend_from_slice(&metadata);
-                            buff.extend_from_slice(&contents);
-                            buff.freeze()
-                        })
-                        .right_future()
-                };
-
-                let p1 = envelope.p1.map(|p| p.into_nodehash());
-                let p2 = envelope.p2.map(|p| p.into_nodehash());
-                f.and_then(move |content| {
-                    if validate_hash {
-                        let actual = HgFileNodeId::new(calculate_hg_node_id(
-                            &content,
-                            &HgParents::new(p1, p2),
-                        ));
-
-                        if actual != node_id {
-                            return Err(ErrorKind::CorruptHgFileNode {
-                                expected: node_id,
-                                actual,
-                            }
-                            .into());
-                        }
-                    }
-                    Ok(content)
-                })
-                .map(HgBlob::from)
-            }
-        })
-        .from_err()
-        .boxify()
-}
 
 impl Loadable for HgFileNodeId {
     type Value = HgFileEnvelope;
@@ -166,19 +92,20 @@ impl HgBlobEntry {
         }
     }
 
-    fn get_raw_content_inner(&self, ctx: CoreContext) -> BoxFuture01<HgBlob, Error> {
-        let validate_hash = false;
-        match self.id {
-            HgEntryId::Manifest(manifest_id) => {
-                fetch_raw_manifest_bytes(ctx, &self.blobstore, manifest_id)
-            }
-            HgEntryId::File(_, filenode_id) => {
-                // TODO (torozco) T48791324: Identify if get_raw_content is being used at all on
-                // filenodes, and remove callers so we can remove it. As-is, if called, this could
-                // try to access arbitrarily large files.
-                fetch_raw_filenode_bytes(ctx, &self.blobstore, filenode_id, validate_hash)
-            }
-        }
+    pub fn get_type(&self) -> Type {
+        self.id.get_type()
+    }
+
+    pub fn get_hash(&self) -> HgEntryId {
+        self.id
+    }
+
+    pub fn get_parents(&self, ctx: CoreContext) -> BoxFuture01<HgParents, Error> {
+        self.get_envelope(ctx).map(|e| e.get_parents()).boxify()
+    }
+
+    pub fn get_name(&self) -> Option<&MPathElement> {
+        self.name.as_ref()
     }
 
     pub fn get_envelope(&self, ctx: CoreContext) -> BoxFuture01<Box<dyn HgBlobEnvelope>, Error> {
@@ -194,89 +121,6 @@ impl HgBlobEntry {
                 .right_future(),
         }
         .boxify()
-    }
-}
-
-impl HgEntry for HgBlobEntry {
-    fn get_type(&self) -> Type {
-        self.id.get_type()
-    }
-
-    fn get_parents(&self, ctx: CoreContext) -> BoxFuture01<HgParents, Error> {
-        self.get_envelope(ctx).map(|e| e.get_parents()).boxify()
-    }
-
-    fn get_raw_content(&self, ctx: CoreContext) -> BoxFuture01<HgBlob, Error> {
-        self.get_raw_content_inner(ctx)
-    }
-
-    fn get_content(&self, ctx: CoreContext) -> BoxFuture01<Content, Error> {
-        let blobstore = self.blobstore.clone();
-
-        let id = self.id.clone();
-        let name = self.name.clone();
-        // Note: do not remove `lazy(|| ...)` below! It helps with memory usage on serving
-        // gettreepack requests.
-        match self.id {
-            HgEntryId::Manifest(manifest_id) => lazy(move || {
-                BlobManifest::load(ctx, blobstore, manifest_id)
-                    .and_then({
-                        move |blob_manifest| {
-                            let manifest = blob_manifest.ok_or(ErrorKind::HgContentMissing(
-                                id.into_nodehash(),
-                                Type::Tree,
-                            ))?;
-                            Ok(Content::Tree(manifest.boxed()))
-                        }
-                    })
-                    .context(format!(
-                        "While HgBlobEntry::get_content for id {}, name {:?}",
-                        id, name,
-                    ))
-                    .from_err()
-            })
-            .boxify(),
-            HgEntryId::File(file_type, filenode_id) => lazy(move || {
-                filenode_id
-                    .load(ctx.clone(), &blobstore)
-                    .compat()
-                    .from_err()
-                    .map(move |envelope| {
-                        let envelope = envelope.into_mut();
-                        let content_id = envelope.content_id;
-
-                        let stream = filestore::fetch_stream(&blobstore, ctx, content_id)
-                            .map(FileBytes)
-                            .context("While fetching content blob")
-                            .from_err()
-                            .boxify();
-
-                        match file_type {
-                            FileType::Regular => Content::File(stream),
-                            FileType::Executable => Content::Executable(stream),
-                            FileType::Symlink => Content::Symlink(stream),
-                        }
-                    })
-                    .context(format!(
-                        "While HgBlobEntry::get_content for id {}, name {:?}",
-                        id, name
-                    ))
-                    .from_err()
-            })
-            .boxify(),
-        }
-    }
-
-    fn get_size(&self, ctx: CoreContext) -> BoxFuture01<Option<u64>, Error> {
-        self.get_envelope(ctx).map(|e| e.get_size()).boxify()
-    }
-
-    fn get_hash(&self) -> HgEntryId {
-        self.id
-    }
-
-    fn get_name(&self) -> Option<&MPathElement> {
-        self.name.as_ref()
     }
 }
 

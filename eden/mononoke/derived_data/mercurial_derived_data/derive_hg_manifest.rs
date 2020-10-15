@@ -23,7 +23,7 @@ use mercurial_types::{
         ContentBlobMeta, HgBlobEntry, UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash,
         UploadHgTreeEntry,
     },
-    HgEntry, HgEntryId, HgFileNodeId, HgManifestId,
+    HgEntryId, HgFileNodeId, HgManifestId,
 };
 use mononoke_types::{FileType, MPath, RepoPath};
 use std::{io::Write, sync::Arc};

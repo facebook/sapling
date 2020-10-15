@@ -1099,7 +1099,7 @@ mod tests {
 
             let mf_fut = BlobManifest::load(
                 ctx.clone(),
-                repo.get_blobstore().boxed(),
+                repo.blobstore(),
                 HgManifestId::new(filenode_id.into_nodehash()),
             );
 

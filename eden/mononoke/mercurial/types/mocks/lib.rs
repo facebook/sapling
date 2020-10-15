@@ -10,7 +10,6 @@
 
 pub mod errors;
 pub mod hash;
-pub mod manifest;
 pub mod nodehash;
 
 pub mod globalrev {

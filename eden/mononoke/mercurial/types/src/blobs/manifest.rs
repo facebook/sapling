@@ -8,11 +8,10 @@
 //! Root manifest, tree nodes
 
 use super::errors::ErrorKind;
-use super::file::HgBlobEntry;
 use crate::{
     nodehash::{HgNodeHash, NULL_HASH},
-    FileType, HgBlob, HgEntry, HgEntryId, HgFileNodeId, HgManifest, HgManifestEnvelope,
-    HgManifestId, MPathElement, Type,
+    FileType, HgBlob, HgEntryId, HgFileNodeId, HgManifestEnvelope, HgManifestId, HgParents,
+    MPathElement, Type,
 };
 use anyhow::{bail, ensure, Context, Error, Result};
 use blobstore::{Blobstore, Loadable, LoadableError};
@@ -26,7 +25,7 @@ use futures_ext::{BoxFuture as BoxFuture01, FutureExt as _};
 use futures_old::future::{self, Future};
 use manifest::{Entry, Manifest};
 use sorted_vector_map::SortedVectorMap;
-use std::{str, sync::Arc};
+use std::str;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct ManifestContent {
@@ -151,7 +150,6 @@ pub fn fetch_manifest_envelope_opt<B: Blobstore>(
 }
 
 pub struct BlobManifest {
-    blobstore: Arc<dyn Blobstore>,
     node_id: HgNodeHash,
     p1: Option<HgNodeHash>,
     p2: Option<HgNodeHash>,
@@ -161,14 +159,13 @@ pub struct BlobManifest {
 }
 
 impl BlobManifest {
-    pub fn load(
+    pub fn load<B: Blobstore>(
         ctx: CoreContext,
-        blobstore: Arc<dyn Blobstore>,
+        blobstore: &B,
         manifestid: HgManifestId,
     ) -> impl Future<Item = Option<Self>, Error = Error> {
         if manifestid.clone().into_nodehash() == NULL_HASH {
             future::ok(Some(BlobManifest {
-                blobstore,
                 node_id: NULL_HASH,
                 p1: None,
                 p2: None,
@@ -177,10 +174,10 @@ impl BlobManifest {
             }))
             .left_future()
         } else {
-            fetch_manifest_envelope_opt(ctx, &blobstore, manifestid)
+            fetch_manifest_envelope_opt(ctx, blobstore, manifestid)
                 .and_then({
                     move |envelope| match envelope {
-                        Some(envelope) => Ok(Some(Self::parse(blobstore, envelope)?)),
+                        Some(envelope) => Ok(Some(Self::parse(envelope)?)),
                         None => Ok(None),
                     }
                 })
@@ -193,7 +190,7 @@ impl BlobManifest {
         }
     }
 
-    pub fn parse(blobstore: Arc<dyn Blobstore>, envelope: HgManifestEnvelope) -> Result<Self> {
+    pub fn parse(envelope: HgManifestEnvelope) -> Result<Self> {
         let envelope = envelope.into_mut();
         let content = ManifestContent::parse(envelope.contents.as_ref()).with_context(|| {
             format!(
@@ -202,7 +199,6 @@ impl BlobManifest {
             )
         })?;
         Ok(BlobManifest {
-            blobstore,
             node_id: envelope.node_id,
             p1: envelope.p1,
             p2: envelope.p2,
@@ -227,6 +223,11 @@ impl BlobManifest {
     }
 
     #[inline]
+    pub fn hg_parents(&self) -> HgParents {
+        HgParents::new(self.p1, self.p2)
+    }
+
+    #[inline]
     pub fn computed_node_id(&self) -> HgNodeHash {
         self.computed_node_id
     }
@@ -240,7 +241,6 @@ impl Loadable for HgManifestId {
         ctx: CoreContext,
         blobstore: &B,
     ) -> BoxFuture<'static, Result<Self::Value, LoadableError>> {
-        let blobstore: Arc<dyn Blobstore> = Arc::new(blobstore.clone());
         let id = *self;
         let value = BlobManifest::load(ctx, blobstore, id).compat();
 
@@ -269,38 +269,6 @@ impl Manifest for BlobManifest {
             .into_iter()
             .map(|(name, hg_entry_id)| (name, Entry::from(hg_entry_id)));
         Box::new(iter)
-    }
-}
-
-impl HgManifest for BlobManifest {
-    fn lookup(&self, path: &MPathElement) -> Option<Box<dyn HgEntry + Sync>> {
-        self.content.files.get(path).map({
-            move |entry_id| {
-                HgBlobEntry::new(
-                    self.blobstore.clone(),
-                    path.clone(),
-                    entry_id.clone().into_nodehash(),
-                    entry_id.get_type(),
-                )
-                .boxed()
-            }
-        })
-    }
-
-    fn list(&self) -> Box<dyn Iterator<Item = Box<dyn HgEntry + Sync>> + Send> {
-        let list_iter = self.content.files.clone().into_iter().map({
-            let blobstore = self.blobstore.clone();
-            move |(path, entry_id)| {
-                HgBlobEntry::new(
-                    blobstore.clone(),
-                    path,
-                    entry_id.clone().into_nodehash(),
-                    entry_id.get_type(),
-                )
-                .boxed()
-            }
-        });
-        Box::new(list_iter)
     }
 }
 

@@ -28,9 +28,8 @@ use futures::{
 use futures_ext::FutureExt as Future01Ext;
 use futures_old::{future as old_future, Future as Future01, Stream as Stream01};
 use itertools::{Either, Itertools};
-use mercurial_types::{
-    FileBytes, HgChangesetId, HgEntryId, HgFileNodeId, HgManifest, HgManifestId, RepoPath,
-};
+use manifest::{Entry, Manifest};
+use mercurial_types::{FileBytes, HgChangesetId, HgFileNodeId, HgManifestId, RepoPath};
 use mononoke_types::{fsnode::FsnodeEntry, ChangesetId, ContentId, FsnodeId, MPath};
 use phases::{HeadsFetcher, Phase, Phases};
 use scuba_ext::ScubaSampleBuilder;
@@ -609,12 +608,12 @@ fn hg_manifest_step<'a, V: VisitOne>(
         .map_err(Error::from)
         .map_ok(move |hgmanifest| {
             let (manifests, filenodes): (Vec<_>, Vec<_>) =
-                hgmanifest.list().partition_map(|child| {
+                hgmanifest.list().partition_map(|(name, entry)| {
                     let path_opt =
-                        WrappedPath::from(MPath::join_element_opt(path.as_ref(), child.get_name()));
-                    match child.get_hash() {
-                        HgEntryId::File(_, filenode_id) => Either::Right((path_opt, filenode_id)),
-                        HgEntryId::Manifest(manifest_id) => Either::Left((path_opt, manifest_id)),
+                        WrappedPath::from(Some(MPath::join_opt_element(path.as_ref(), &name)));
+                    match entry {
+                        Entry::Leaf((_, filenode_id)) => Either::Right((path_opt, filenode_id)),
+                        Entry::Tree(manifest_id) => Either::Left((path_opt, manifest_id)),
                     }
                 });
             let mut edges = vec![];
