@@ -34,6 +34,7 @@
   $ curl -fsSL -o /dev/null "${lfs_root}/config?foo=bar"
 
 # Check that Scuba logs are present
+  $ wait_for_json_record_count "$SCUBA" 5
   $ jq -S . < "$SCUBA"
   {
     "int": {
