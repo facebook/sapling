@@ -7,6 +7,7 @@
 from __future__ import absolute_import
 
 import struct
+import time
 from collections import defaultdict
 from typing import IO, Dict, Generator, Iterable, List, Optional, Sequence, Tuple, cast
 
@@ -90,6 +91,7 @@ def receivepack(ui, fh, dpack, hpack, version=1):
     receivedhistory = []
 
     size = 0
+    start = time.time()
     with progress.bar(ui, _("receiving pack")) as prog:
         while True:
             filename = readpath(fh)
@@ -113,6 +115,15 @@ def receivepack(ui, fh, dpack, hpack, version=1):
                 break
             prog.value += 1
     perftrace.tracebytes("Received Pack Size", size)
+    duration = time.time() - start
+    megabytes = float(size) / 1024 / 1024
+    if ui.configbool("remotefilelog", "debug-fetches") and (
+        duration > 1 or len(receiveddata) > 100 or megabytes > 1
+    ):
+        ui.warn(
+            _("Receive pack: %s entries, %.2f MB, %.2f seconds (%0.2f MBps)\n")
+            % (len(receiveddata), megabytes, duration, megabytes / duration)
+        )
 
     return receiveddata, receivedhistory
 
