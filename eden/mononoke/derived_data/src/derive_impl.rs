@@ -13,12 +13,12 @@ use cacheblob::LeaseOps;
 use context::CoreContext;
 use futures::{
     compat::Future01CompatExt,
-    future::{try_join, try_join_all, FutureExt as NewFutureExt, TryFutureExt},
+    future::{try_join, try_join_all, FutureExt, TryFutureExt},
     TryStreamExt,
 };
-use futures_ext::FutureExt;
-use futures_old::sync::oneshot;
-use futures_old::Future;
+use futures_ext::FutureExt as FutureExt01;
+use futures_old::sync::oneshot as oneshot01;
+use futures_old::Future as Future01;
 use futures_stats::{futures03::TimedFutureExt, FutureStats};
 use metaconfig_types::DerivedDataConfig;
 use mononoke_types::ChangesetId;
@@ -80,7 +80,7 @@ pub fn derive_impl<
     derived_mapping: Mapping,
     start_csid: ChangesetId,
     mode: Mode,
-) -> impl Future<Item = Derived, Error = DeriveError> {
+) -> impl Future01<Item = Derived, Error = DeriveError> {
     async move {
         let derivation = async {
             let all_csids = find_topo_sorted_underived(
@@ -387,7 +387,7 @@ where
                         res
                     };
 
-                    let (sender, receiver) = oneshot::channel();
+                    let (sender, receiver) = oneshot01::channel();
                     lease.renew_lease_until(
                         ctx.clone(),
                         &lease_key,
@@ -563,8 +563,8 @@ mod test {
         merge_even, merge_uneven, unshared_merge_even, unshared_merge_uneven,
     };
     use futures::compat::Future01CompatExt;
-    use futures_ext::BoxFuture;
-    use futures_old::{future, Stream};
+    use futures_ext::BoxFuture as BoxFuture01;
+    use futures_old::{future as future01, Stream as Stream01};
     use lazy_static::lazy_static;
     use lock_ext::LockExt;
     use maplit::hashmap;
@@ -603,10 +603,10 @@ mod test {
             _repo: BlobRepo,
             bonsai: BonsaiChangeset,
             parents: Vec<Self>,
-        ) -> BoxFuture<Self, Error> {
+        ) -> BoxFuture01<Self, Error> {
             let parent_commits = parents.iter().map(|x| x.1).collect();
 
-            future::ok(Self(
+            future01::ok(Self(
                 parents.into_iter().max().map(|x| x.0).unwrap_or(0) + 1,
                 bonsai.get_changeset_id(),
                 parent_commits,
@@ -639,7 +639,7 @@ mod test {
             &self,
             _ctx: CoreContext,
             csids: Vec<ChangesetId>,
-        ) -> BoxFuture<HashMap<ChangesetId, Self::Value>, Error> {
+        ) -> BoxFuture01<HashMap<ChangesetId, Self::Value>, Error> {
             let mut res = hashmap! {};
             {
                 let mapping = self.mapping.lock().unwrap();
@@ -650,7 +650,7 @@ mod test {
                 }
             }
 
-            future::ok(res).boxify()
+            future01::ok(res).boxify()
         }
 
         fn put(
@@ -658,12 +658,12 @@ mod test {
             _ctx: CoreContext,
             csid: ChangesetId,
             id: Self::Value,
-        ) -> BoxFuture<(), Error> {
+        ) -> BoxFuture01<(), Error> {
             {
                 let mut mapping = self.mapping.lock().unwrap();
                 mapping.insert(csid, id);
             }
-            future::ok(()).boxify()
+            future01::ok(()).boxify()
         }
     }
 
@@ -966,18 +966,18 @@ mod test {
     struct FailingLease;
 
     impl LeaseOps for FailingLease {
-        fn try_add_put_lease(&self, _key: &str) -> BoxFuture<bool, ()> {
-            future::err(()).boxify()
+        fn try_add_put_lease(&self, _key: &str) -> BoxFuture01<bool, ()> {
+            future01::err(()).boxify()
         }
 
-        fn renew_lease_until(&self, _ctx: CoreContext, _key: &str, _done: BoxFuture<(), ()>) {}
+        fn renew_lease_until(&self, _ctx: CoreContext, _key: &str, _done: BoxFuture01<(), ()>) {}
 
-        fn wait_for_other_leases(&self, _key: &str) -> BoxFuture<(), ()> {
-            future::err(()).boxify()
+        fn wait_for_other_leases(&self, _key: &str) -> BoxFuture01<(), ()> {
+            future01::err(()).boxify()
         }
 
-        fn release_lease(&self, _key: &str) -> BoxFuture<(), ()> {
-            future::err(()).boxify()
+        fn release_lease(&self, _key: &str) -> BoxFuture01<(), ()> {
+            future01::err(()).boxify()
         }
     }
 

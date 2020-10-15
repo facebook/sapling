@@ -12,7 +12,7 @@ use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use context::CoreContext;
 use futures::{compat::Future01CompatExt, stream, StreamExt, TryStreamExt};
-use futures_ext::{BoxFuture, FutureExt as OldFutureExt};
+use futures_ext::{BoxFuture as BoxFuture01, FutureExt as _};
 use lock_ext::LockExt;
 use mononoke_types::{BonsaiChangeset, ChangesetId, RepositoryId};
 use std::{
@@ -68,14 +68,18 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
         repo: BlobRepo,
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
-    ) -> BoxFuture<Self, Error>;
+    ) -> BoxFuture01<Self, Error>;
 
     /// This function is the entrypoint for changeset derivation, it converts
     /// bonsai representation to derived one by calling derive_from_parents(), and saves mapping
     /// from csid -> BonsaiDerived in BonsaiDerivedMapping
     ///
     /// This function fails immediately if this type of derived data is not enabled for this repo.
-    fn derive(ctx: CoreContext, repo: BlobRepo, csid: ChangesetId) -> BoxFuture<Self, DeriveError> {
+    fn derive(
+        ctx: CoreContext,
+        repo: BlobRepo,
+        csid: ChangesetId,
+    ) -> BoxFuture01<Self, DeriveError> {
         let mapping = Self::mapping(&ctx, &repo);
         derive_impl::derive_impl::<Self, Self::Mapping>(
             ctx,
@@ -94,7 +98,7 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
         repo: BlobRepo,
         csid: ChangesetId,
         mode: Mode,
-    ) -> BoxFuture<Self, DeriveError> {
+    ) -> BoxFuture01<Self, DeriveError> {
         let mapping = Self::mapping(&ctx, &repo);
         derive_impl::derive_impl::<Self, Self::Mapping>(ctx, repo, mapping, csid, mode).boxify()
     }
@@ -187,10 +191,10 @@ pub trait BonsaiDerivedMapping: Send + Sync + Clone {
         &self,
         ctx: CoreContext,
         csids: Vec<ChangesetId>,
-    ) -> BoxFuture<HashMap<ChangesetId, Self::Value>, Error>;
+    ) -> BoxFuture01<HashMap<ChangesetId, Self::Value>, Error>;
 
     /// Saves mapping between bonsai changeset and derived data id
-    fn put(&self, ctx: CoreContext, csid: ChangesetId, id: Self::Value) -> BoxFuture<(), Error>;
+    fn put(&self, ctx: CoreContext, csid: ChangesetId, id: Self::Value) -> BoxFuture01<(), Error>;
 }
 
 impl<Mapping: BonsaiDerivedMapping> BonsaiDerivedMapping for Arc<Mapping> {
@@ -200,11 +204,11 @@ impl<Mapping: BonsaiDerivedMapping> BonsaiDerivedMapping for Arc<Mapping> {
         &self,
         ctx: CoreContext,
         csids: Vec<ChangesetId>,
-    ) -> BoxFuture<HashMap<ChangesetId, Self::Value>, Error> {
+    ) -> BoxFuture01<HashMap<ChangesetId, Self::Value>, Error> {
         (**self).get(ctx, csids)
     }
 
-    fn put(&self, ctx: CoreContext, csid: ChangesetId, id: Self::Value) -> BoxFuture<(), Error> {
+    fn put(&self, ctx: CoreContext, csid: ChangesetId, id: Self::Value) -> BoxFuture01<(), Error> {
         (**self).put(ctx, csid, id)
     }
 }
@@ -241,13 +245,13 @@ where
         &self,
         ctx: CoreContext,
         mut csids: Vec<ChangesetId>,
-    ) -> BoxFuture<HashMap<ChangesetId, Self::Value>, Error> {
+    ) -> BoxFuture01<HashMap<ChangesetId, Self::Value>, Error> {
         self.regenerate
             .with(|regenerate| csids.retain(|id| !regenerate.contains(&id)));
         self.base.get(ctx, csids)
     }
 
-    fn put(&self, ctx: CoreContext, csid: ChangesetId, id: Self::Value) -> BoxFuture<(), Error> {
+    fn put(&self, ctx: CoreContext, csid: ChangesetId, id: Self::Value) -> BoxFuture01<(), Error> {
         self.regenerate.with(|regenerate| regenerate.remove(&csid));
         self.base.put(ctx, csid, id)
     }
