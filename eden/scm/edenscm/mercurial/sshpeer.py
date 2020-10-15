@@ -49,8 +49,7 @@ def _writessherror(ui, s):
 
 
 class countingpipe(object):
-    """Wraps a pipe that count the number of bytes read/written to it
-    """
+    """Wraps a pipe that count the number of bytes read/written to it"""
 
     def __init__(self, ui, pipe):
         self._ui = ui

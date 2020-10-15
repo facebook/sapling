@@ -849,8 +849,11 @@ def _exchangesetup():
                     # Prevent that. An alternative fix is to pass "::bundle() % onto"
                     # to pushrequest.fromrevset. But that's more expensive and adds
                     # other complexities.
-                    if ontoctx.node() != pushrequest.stackparentnode and op.repo.changelog.isancestor(
-                        ontoctx.node(), pushrequest.stackparentnode
+                    if (
+                        ontoctx.node() != pushrequest.stackparentnode
+                        and op.repo.changelog.isancestor(
+                            ontoctx.node(), pushrequest.stackparentnode
+                        )
                     ):
                         if verbose:
                             ui.write_err(
@@ -1244,7 +1247,7 @@ def _graft(op, rev, mapping, lastdestnode, getcommitdate):
 
 
 def _commit(repo, parents, desc, files, filectx, user, date, extras, loginfo, mutinfo):
-    """ Make a commit as defined by the passed in parameters in the repository.
+    """Make a commit as defined by the passed in parameters in the repository.
     All the commits created by the pushrebase extension should ideally go
     through this method.
 

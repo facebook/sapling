@@ -44,8 +44,7 @@ def levelchecker(level, msgidpat):
 
 
 def match(checker, pe):
-    """Examine whether POEntry "pe" is target of specified checker or not
-    """
+    """Examine whether POEntry "pe" is target of specified checker or not"""
     if not checker.match(pe.msgid):
         return
     # examine suppression by translator comment

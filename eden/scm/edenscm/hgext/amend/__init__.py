@@ -518,8 +518,7 @@ def fixupamend(ui, repo, noconflict=None, noconflictmsg=None):
 
 
 def amendtocommit(ui, repo, commitspec):
-    """amend to a specific commit
-    """
+    """amend to a specific commit"""
     with repo.wlock(), repo.lock():
         originalcommits = list(repo.set("::. - public()"))
         try:
@@ -570,9 +569,9 @@ def amendtocommit(ui, repo, commitspec):
 
 def wraprebase(orig, ui, repo, *pats, **opts):
     """Wrapper around `hg rebase` adding the `--restack` option, which rebases
-       all "unstable" descendants of an obsolete changeset onto the latest
-       version of that changeset. This is similar to (and intended as a
-       replacement for) the `hg evolve --all` command.
+    all "unstable" descendants of an obsolete changeset onto the latest
+    version of that changeset. This is similar to (and intended as a
+    replacement for) the `hg evolve --all` command.
     """
     if opts["restack"]:
         # We can't abort if --dest is passed because some extensions

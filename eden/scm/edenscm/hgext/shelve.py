@@ -352,8 +352,7 @@ def _restoreactivebookmark(repo, mark):
 
 
 def _aborttransaction(repo):
-    """Abort current transaction for shelve/unshelve, but keep dirstate
-    """
+    """Abort current transaction for shelve/unshelve, but keep dirstate"""
     tr = repo.currenttransaction()
     repo.dirstate.savebackup(tr, "dirstate.shelve")
     tr.abort()

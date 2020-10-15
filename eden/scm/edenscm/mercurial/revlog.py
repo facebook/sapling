@@ -169,8 +169,7 @@ def textwithheader(text, p1, p2):
 
 
 def _trimchunk(revlog, revs, startidx, endidx=None):
-    """returns revs[startidx:endidx] without empty trailing revs
-    """
+    """returns revs[startidx:endidx] without empty trailing revs"""
     length = revlog.length
 
     if endidx is None:
@@ -1224,8 +1223,8 @@ class revlog(object):
     def lookup(self, id):
         # type: (Union[int, str, bytes]) -> bytes
         """locate a node based on:
-            - revision number or str(revision number)
-            - nodeid or subset of hex nodeid
+        - revision number or str(revision number)
+        - nodeid or subset of hex nodeid
         """
         n = self._match(id)
         if n is not None:

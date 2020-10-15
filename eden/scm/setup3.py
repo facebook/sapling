@@ -634,14 +634,14 @@ class asset(object):
 
 
 class fbsourcepylibrary(asset):
-    """ An asset available from inside fbsource only.
+    """An asset available from inside fbsource only.
     This is used to pull in python libraries from fbsource
     and process them to fit our installation requirements.
     "name" specifies the python package name for the library.
     "path" is its location relative to the current location
     in fbsource.
     "excludes" is a list of paths relative to "path" that should
-    be excluded from the installation image. """
+    be excluded from the installation image."""
 
     def __init__(self, name, path, excludes=None):
         assert (
@@ -676,8 +676,8 @@ class fbsourcepylibrary(asset):
 
 
 class edenpythrift(asset):
-    """ In this context, we are only interested in the `py/` subdir,
-    so we extract only that dir """
+    """In this context, we are only interested in the `py/` subdir,
+    so we extract only that dir"""
 
     def _extract(self):
         destdir = self.destdir

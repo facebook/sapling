@@ -137,8 +137,7 @@ def _dagwalker(orig, repo, revs):
 
 
 def _updaterepo(orig, repo, node, overwrite, **opts):
-    """prevents the repo from updating onto a snapshot node
-    """
+    """prevents the repo from updating onto a snapshot node"""
     allowsnapshots = repo.ui.configbool("ui", "allow-checkout-snapshot")
     unfi = repo
     if not allowsnapshots and node in unfi:
@@ -155,8 +154,7 @@ def _updaterepo(orig, repo, node, overwrite, **opts):
 
 
 def _updateheads(orig, self, repo, newheads, tr):
-    """ensures that we don't try to make the snapshot nodes visible
-    """
+    """ensures that we don't try to make the snapshot nodes visible"""
     unfi = repo
     heads = []
     for h in newheads:
@@ -210,8 +208,7 @@ def _smartlogrevset(orig, repo, subset, x):
 
 
 def _dounhide(orig, repo, revs):
-    """prevents the snapshot nodes from being visible
-    """
+    """prevents the snapshot nodes from being visible"""
     unfi = repo
     revs = [r for r in revs if "snapshotmetadataid" not in unfi[r].extra()]
     if len(revs) > 0:

@@ -560,7 +560,7 @@ class cachestat(object):
 
 
 def lookupreg(key, valname=None, scope=None):
-    """ Look up a key/value name in the Windows registry.
+    """Look up a key/value name in the Windows registry.
 
     valname: value name. If unspecified, the default value for the key
     is used.

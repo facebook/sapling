@@ -1257,7 +1257,7 @@ def startswith(context, mapping, args):
 def truncate(context, mapping, args):
     """Truncate text to no more than "maxlines" in length. If "suffix" is
     supplied, then it replaces the last line if, and only if, the text was
-    truncated. """
+    truncated."""
     if not (2 <= len(args) <= 3):
         # i18n: "truncate" is a keyword
         raise error.ParseError(
@@ -1292,7 +1292,7 @@ def truncate(context, mapping, args):
 def truncatelonglines(context, mapping, args):
     """Truncate lines in text to no more than "maxwidth" in width. If "suffix"
     is supplied, then it replaces the last characters on the line if, and only
-    if, the lines was truncated. """
+    if, the lines was truncated."""
     if not (2 <= len(args) <= 3):
         # i18n: "truncatelonglines" is a keyword
         raise error.ParseError(
@@ -1766,8 +1766,7 @@ def stylemap(styles, paths=None):
 
 
 def loadfunction(ui, extname, registrarobj):
-    """Load template function from specified registrarobj
-    """
+    """Load template function from specified registrarobj"""
     for name, func in pycompat.iteritems(registrarobj._table):
         funcs[name] = func
 

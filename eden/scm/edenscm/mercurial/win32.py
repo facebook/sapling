@@ -465,11 +465,11 @@ def getprocstarttime(pid):
 
 def checkcertificatechain(cert, build=True):
     """Tests the given certificate to see if there is a complete chain to a
-       trusted root certificate.  As a side effect, missing certificates are
-       downloaded and installed unless ``build=False``.  True is returned if a
-       chain to a trusted root exists (even if built on the fly), otherwise
-       False.  NB: A chain to a trusted root does NOT imply that the certificate
-       is valid.
+    trusted root certificate.  As a side effect, missing certificates are
+    downloaded and installed unless ``build=False``.  True is returned if a
+    chain to a trusted root exists (even if built on the fly), otherwise
+    False.  NB: A chain to a trusted root does NOT imply that the certificate
+    is valid.
     """
 
     chainctxptr = ctypes.POINTER(CERT_CHAIN_CONTEXT)

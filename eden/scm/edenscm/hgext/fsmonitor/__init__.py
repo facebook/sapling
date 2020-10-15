@@ -1100,8 +1100,8 @@ def extsetup(ui):
 
 
 def wrapsymlink(orig, source, link_name):
-    """ if we create a dangling symlink, also touch the parent dir
-    to encourage fsevents notifications to work more correctly """
+    """if we create a dangling symlink, also touch the parent dir
+    to encourage fsevents notifications to work more correctly"""
     try:
         return orig(source, link_name)
     finally:

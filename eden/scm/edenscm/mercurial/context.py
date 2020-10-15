@@ -1222,13 +1222,13 @@ def _annotatepair(parents, childfctx, child, skipchild, diffopts):
 
 class filectx(basefilectx):
     """A filecontext object makes access to data related to a particular
-       filerevision convenient."""
+    filerevision convenient."""
 
     def __init__(
         self, repo, path, changeid=None, fileid=None, filelog=None, changectx=None
     ):
         """changeid can be a changeset revision or node.
-           fileid can be a file revision or node."""
+        fileid can be a file revision or node."""
         self._repo = repo
         self._path = path
 
@@ -1912,7 +1912,7 @@ class committablefilectx(basefilectx):
 
 class workingfilectx(committablefilectx):
     """A workingfilectx object makes access to data related to a particular
-       file in the working directory convenient."""
+    file in the working directory convenient."""
 
     def __init__(self, repo, path, filelog=None, workingctx=None):
         super(workingfilectx, self).__init__(repo, path, filelog, workingctx)
@@ -2411,8 +2411,7 @@ class workingcommitctx(workingctx):
 
     @propertycache
     def _changedset(self):
-        """Return the set of files changed in this context
-        """
+        """Return the set of files changed in this context"""
         changed = set(self._status.modified)
         changed.update(self._status.added)
         changed.update(self._status.removed)
@@ -2593,8 +2592,7 @@ class memctx(committablectx):
 
     @propertycache
     def _status(self):
-        """Calculate exact status from ``files`` specified at construction
-        """
+        """Calculate exact status from ``files`` specified at construction"""
         man1 = self.p1().manifest()
         p2 = self._parents[1]
         # "1 < len(self._parents)" can't be used for checking

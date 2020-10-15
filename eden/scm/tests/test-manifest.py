@@ -335,8 +335,7 @@ class basemanifesttests(object):
         self.assertEqual([], m2.keys())
 
     def testMatchesExactLarge(self):
-        """Tests matches() for files matching a large list of exact files.
-        """
+        """Tests matches() for files matching a large list of exact files."""
         m = self.parsemanifest(A_HUGE_MANIFEST)
 
         flist = m.keys()[80:300]

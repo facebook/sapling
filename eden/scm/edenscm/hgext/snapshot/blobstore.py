@@ -11,8 +11,7 @@ from edenscm.mercurial import blobstore, vfs as vfsmod
 
 
 class local(blobstore.localblobstore):
-    """Local blobstore for snapshot metadata contents.
-    """
+    """Local blobstore for snapshot metadata contents."""
 
     def __init__(self, repo):
         fullpath = repo.svfs.join("snapshots/objects")

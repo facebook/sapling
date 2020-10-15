@@ -45,7 +45,7 @@ class TokenLocator(object):
 
     def _gettokenosx(self):
         """On macOS tokens are stored in keychain
-           this function fetches token from keychain
+        this function fetches token from keychain
         """
         try:
             args = [
@@ -98,7 +98,7 @@ class TokenLocator(object):
 
     def _settokenosx(self, token):
         """On macOS tokens are stored in keychain
-           this function puts the token to keychain
+        this function puts the token to keychain
         """
         try:
             args = [
@@ -150,10 +150,10 @@ class TokenLocator(object):
     @property
     def token(self):
         """Public API
-            get token
-                returns None if token is not found
-                'faketoken' is token is not enforced
-                it can throw only in case of unexpected error
+        get token
+            returns None if token is not found
+            'faketoken' is token is not enforced
+            it can throw only in case of unexpected error
         """
         if not self.tokenenforced:
             return self.faketoken
@@ -171,8 +171,8 @@ class TokenLocator(object):
 
     def settoken(self, token):
         """Public API
-            set token
-                it can throw only in case of unexpected error
+        set token
+            it can throw only in case of unexpected error
         """
         # Ensure token doesn't have any extraneous whitespace around it.
         if token is not None:

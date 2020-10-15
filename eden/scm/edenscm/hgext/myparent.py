@@ -48,7 +48,7 @@ templatekeyword = registrar.templatekeyword()
 @templatekeyword("myparentdiff")
 def showmyparentdiff(repo, ctx, templ, **args):
     """Show the differential revision of the commit's parent, if it has the
-       same author as this commit.
+    same author as this commit.
     """
     return extract_from_parent(ctx, "Differential Revision:.*/(D\d+)")
 
@@ -56,7 +56,7 @@ def showmyparentdiff(repo, ctx, templ, **args):
 @templatekeyword("myparentreviewers")
 def showmyparentreviewers(repo, ctx, templ, **args):
     """Show the reviewers of the commit's parent, if it has the
-       same author as this commit.
+    same author as this commit.
     """
     return extract_from_parent(ctx, "\s*Reviewers: (.*)")
 
@@ -64,7 +64,7 @@ def showmyparentreviewers(repo, ctx, templ, **args):
 @templatekeyword("myparentsubscribers")
 def showmyparentsubscribers(repo, ctx, templ, **args):
     """Show the subscribers of the commit's parent, if it has the
-       same author as this commit.
+    same author as this commit.
     """
     return extract_from_parent(ctx, "\s*Subscribers: (.*)")
 
@@ -72,7 +72,7 @@ def showmyparentsubscribers(repo, ctx, templ, **args):
 @templatekeyword("myparenttasks")
 def showmyparenttasks(repo, ctx, templ, **args):
     """Show the tasks from the commit's parent, if it has the
-       same author as this commit.
+    same author as this commit.
     """
     return extract_from_parent(ctx, "\s*(?:Tasks|Task ID): (.*)")
 
@@ -80,7 +80,7 @@ def showmyparenttasks(repo, ctx, templ, **args):
 @templatekeyword("myparenttitleprefix")
 def showmyparenttitleprefix(repo, ctx, templ, **args):
     """Show the title prefix of the commit's parent, if it has the
-       same author as this commit.
+    same author as this commit.
     """
     if not p1_is_same_user(ctx):
         return ""

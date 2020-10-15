@@ -105,8 +105,8 @@ class converter_source(object):
         self.encoding = "utf-8"
 
     def checkhexformat(self, revstr, mapname="splicemap"):
-        """ fails if revstr is not a 40 byte hex. mercurial and git both uses
-            such format for their revision numbering
+        """fails if revstr is not a 40 byte hex. mercurial and git both uses
+        such format for their revision numbering
         """
         if not re.match(r"[0-9a-fA-F]{40,40}$", revstr):
             raise error.Abort(
@@ -207,8 +207,7 @@ class converter_source(object):
         return False
 
     def hasnativeclose(self):
-        """Return true if this source has ability to close branch.
-        """
+        """Return true if this source has ability to close branch."""
         return False
 
     def lookuprev(self, rev):
@@ -227,8 +226,8 @@ class converter_source(object):
 
     def checkrevformat(self, revstr, mapname="splicemap"):
         """revstr is a string that describes a revision in the given
-           source control system.  Return true if revstr has correct
-           format.
+        source control system.  Return true if revstr has correct
+        format.
         """
         return True
 

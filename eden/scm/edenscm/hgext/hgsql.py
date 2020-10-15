@@ -1466,8 +1466,7 @@ def wraprepo(repo):
             )
 
         def committodb(self, tr):
-            """Commits all pending revisions to the database
-            """
+            """Commits all pending revisions to the database"""
             if self.disablesync:
                 return
 
@@ -2255,8 +2254,7 @@ def sqlrecover(ui, *args, **opts):
     _("hg sqltreestrip REV"),
 )
 def sqltreestrip(ui, repo, rev, *args, **opts):
-    """Strips trees from local and sql history
-    """
+    """Strips trees from local and sql history"""
     try:
         treemfmod = extensions.find("treemanifest")
     except KeyError:
@@ -2424,8 +2422,7 @@ def _discoverrevisions(repo, startrev):
     norepo=True,
 )
 def sqlrefill(ui, startrev, **opts):
-    """Inserts the given revs into the database
-    """
+    """Inserts the given revs into the database"""
     if not opts.get("i_know_what_i_am_doing"):
 
         raise util.Abort(

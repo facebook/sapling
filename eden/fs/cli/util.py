@@ -114,8 +114,7 @@ def poll_until(
 
 
 def get_pid_using_lockfile(config_dir: Path) -> int:
-    """Read the pid from the Eden lockfile, throwing an exception upon failure.
-    """
+    """Read the pid from the Eden lockfile, throwing an exception upon failure."""
     if sys.platform == "win32":
         # On Windows read the separate pid file.  We will not be able to read the
         # lock file if EdenFS is running and holding the lock.

@@ -615,8 +615,7 @@ class wirepeer(repository.legacypeer):
         raise NotImplementedError()
 
     def _abort(self, exception):
-        """clearly abort the wire protocol connection and raise the exception
-        """
+        """clearly abort the wire protocol connection and raise the exception"""
         raise NotImplementedError()
 
 

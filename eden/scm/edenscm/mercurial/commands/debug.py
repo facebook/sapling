@@ -993,7 +993,7 @@ def debugstate(ui, repo, **opts):
 )
 def debugdifftree(ui, repo, *pats, **opts):
     """diff two trees
-    
+
     Print changed paths.
     """
     revs = scmutil.revrange(repo, opts.get("rev"))
@@ -2947,7 +2947,7 @@ def debugsetparents(ui, repo, rev1, rev2=None):
 )
 def debugsmallcommitmetadata(ui, repo, value="", **opts):
     """store string metadata for a commit
-    
+
     Stores local-only, size-limited string metadata for a commit with a string
     category. Newly added entries replace older ones. This store is intended
     for temporary, non-critical information; anything you add may be removed

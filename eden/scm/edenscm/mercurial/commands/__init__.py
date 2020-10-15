@@ -6573,8 +6573,7 @@ def version_(ui, **opts):
 
 
 def loadcmdtable(ui, name, cmdtable):
-    """Load command functions from specified cmdtable
-    """
+    """Load command functions from specified cmdtable"""
     overrides = [cmd for cmd in cmdtable if cmd in table]
     if overrides:
         ui.warn(

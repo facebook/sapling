@@ -290,8 +290,7 @@ class _LocalService(baseservice.BaseService):
             )
 
     def updateworkspacearchive(self, reponame, workspace, archived):
-        """Archive or Restore the given workspace
-        """
+        """Archive or Restore the given workspace"""
         allworkspaces = self.getworkspaces(reponame, None)
         found = next(
             (winfo for winfo in allworkspaces if winfo.name == workspace), None
@@ -310,8 +309,7 @@ class _LocalService(baseservice.BaseService):
             raise error.Abort(_("unknown workspace: %s") % workspace)
 
     def renameworkspace(self, reponame, workspace, new_workspace):
-        """Rename the given workspace
-        """
+        """Rename the given workspace"""
         allworkspaces = self.getworkspaces(reponame, None)
         if next(
             (winfo for winfo in allworkspaces if winfo.name == new_workspace), None

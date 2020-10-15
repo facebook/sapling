@@ -1670,8 +1670,7 @@ def bundle2caps(remote):
 
 def obsmarkersversion(caps):
     # type (Dict[str, Tuple[str, ...]]) -> Iterable[int]
-    """extract the list of supported obsmarkers versions from a bundle2caps dict
-    """
+    """extract the list of supported obsmarkers versions from a bundle2caps dict"""
     obscaps = caps.get("obsmarkers", ())
     return [int(c[1:]) for c in obscaps if c.startswith("V")]
 

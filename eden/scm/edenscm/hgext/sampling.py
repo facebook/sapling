@@ -43,8 +43,8 @@ def getrelativecwd(repo):
 
 def gettopdir(repo):
     """Returns the first component of the current directory, if it's in the
-     working copy.
-     """
+    working copy.
+    """
     reldir = getrelativecwd(repo)
     if reldir:
         components = reldir.split(pycompat.ossep)

@@ -16,8 +16,7 @@ from . import constants, shallowutil
 
 
 class ChainIndicies(object):
-    """A static class for easy reference to the delta chain indicies.
-    """
+    """A static class for easy reference to the delta chain indicies."""
 
     # The filename of this revision delta
     NAME = 0
@@ -70,8 +69,7 @@ class unioncontentstore(object):
         return text
 
     def getdelta(self, name, node):
-        """Return the single delta entry for the given name/node pair.
-        """
+        """Return the single delta entry for the given name/node pair."""
         assert isinstance(name, str)
         assert isinstance(node, bytes)
         for store in self.stores:

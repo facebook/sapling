@@ -2404,8 +2404,7 @@ def localgettreepack(remote, rootdir, mfnodes, basemfnodes, directories, depth):
 
 
 def servergettreepack(repo, proto, args):
-    """A server api for requesting a pack of tree information.
-    """
+    """A server api for requesting a pack of tree information."""
     if shallowrepo.requirement in repo.requirements:
         raise error.Abort(_("cannot fetch remote files from shallow repo"))
     if not isinstance(proto, sshserver.sshserver):

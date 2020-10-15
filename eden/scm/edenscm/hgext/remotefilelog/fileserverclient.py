@@ -226,8 +226,7 @@ class getpackclient(object):
 
 
 class fileserverclient(object):
-    """A client for requesting files from the remote file server.
-    """
+    """A client for requesting files from the remote file server."""
 
     def __init__(self, repo):
         ui = repo.ui
@@ -236,8 +235,7 @@ class fileserverclient(object):
 
     @perftrace.tracefunc("Prefetch Files")
     def prefetch(self, fileids, force=False, fetchdata=True, fetchhistory=True):
-        """downloads the given file versions to the cache
-        """
+        """downloads the given file versions to the cache"""
         repo = self.repo
         idstocheck = set()
         for file, id in fileids:

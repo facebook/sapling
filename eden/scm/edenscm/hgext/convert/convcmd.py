@@ -172,14 +172,14 @@ class converter(object):
         self.branchmap = mapfile(ui, opts.get("branchmap"))
 
     def parsesplicemap(self, path):
-        """ check and validate the splicemap format and
-            return a child/parents dictionary.
-            Format checking has two parts.
-            1. generic format which is same across all source types
-            2. specific format checking which may be different for
-               different source type.  This logic is implemented in
-               checkrevformat function in source files like
-               hg.py, subversion.py etc.
+        """check and validate the splicemap format and
+        return a child/parents dictionary.
+        Format checking has two parts.
+        1. generic format which is same across all source types
+        2. specific format checking which may be different for
+           different source type.  This logic is implemented in
+           checkrevformat function in source files like
+           hg.py, subversion.py etc.
         """
 
         if not path:

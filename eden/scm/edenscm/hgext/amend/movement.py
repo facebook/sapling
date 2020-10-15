@@ -96,14 +96,14 @@ def next_(ui, repo, *args, **opts):
 
 def _moverelative(ui, repo, args, opts, reverse=False):
     """Update to a changeset relative to the current changeset.
-       Implements both `hg previous` and `hg next`.
+    Implements both `hg previous` and `hg next`.
 
-       Takes in a list of positional arguments and a dict of command line
-       options. (See help for `hg previous` and `hg next` to see which
-       arguments and flags are supported.)
+    Takes in a list of positional arguments and a dict of command line
+    options. (See help for `hg previous` and `hg next` to see which
+    arguments and flags are supported.)
 
-       Moves forward through history by default -- the behavior of `hg next`.
-       Setting reverse=True will change the behavior to that of `hg previous`.
+    Moves forward through history by default -- the behavior of `hg next`.
+    Setting reverse=True will change the behavior to that of `hg previous`.
     """
     # Parse positional argument.
     try:
@@ -183,8 +183,8 @@ def _moverelative(ui, repo, args, opts, reverse=False):
 
 def _findtarget(ui, repo, n, opts, reverse):
     """Find the appropriate target changeset for `hg previous` and
-       `hg next` based on the provided options. May rebase the traversed
-       changesets if the rebase option is given in the opts dict.
+    `hg next` based on the provided options. May rebase the traversed
+    changesets if the rebase option is given in the opts dict.
     """
     towards = opts.get("towards")
     newest = opts.get("newest", False)
@@ -210,8 +210,8 @@ def _findtarget(ui, repo, n, opts, reverse):
 
 def _findprevtarget(ui, repo, n=None, bookmark=False, newest=False):
     """Get the revision n levels down the stack from the current revision.
-       If newest is True, if a changeset has multiple parents the newest
-       will always be chosen. Otherwise, throws an exception.
+    If newest is True, if a changeset has multiple parents the newest
+    will always be chosen. Otherwise, throws an exception.
     """
     ctx = repo["."]
 
@@ -270,10 +270,10 @@ def _findnexttarget(
     preferdraft=False,
 ):
     """Get the revision n levels up the stack from the current revision.
-       If newest is True, if a changeset has multiple children the newest
-       will always be chosen. Otherwise, throws an exception. If the rebase
-       option is specified, potentially rebase unstable children as we
-       walk up the stack.
+    If newest is True, if a changeset has multiple children the newest
+    will always be chosen. Otherwise, throws an exception. If the rebase
+    option is specified, potentially rebase unstable children as we
+    walk up the stack.
     """
     node = repo["."].node()
 
@@ -388,8 +388,8 @@ def _findstackbottom(ui, repo):
 
 def _showchangesets(ui, repo, contexts=None, revs=None, nodes=None):
     """Pretty print a list of changesets. Can take a list of
-       change contexts, a list of revision numbers, or a list of
-       commit hashes.
+    change contexts, a list of revision numbers, or a list of
+    commit hashes.
     """
     if contexts is None:
         contexts = []
@@ -413,8 +413,7 @@ def _setbookmark(repo, tr, bookmark, node):
 
 
 def _activate(ui, repo, node):
-    """Activate the bookmark on the given revision if it only has one bookmark.
-    """
+    """Activate the bookmark on the given revision if it only has one bookmark."""
     marks = repo.nodebookmarks(node)
     if len(marks) == 1:
         b = ui.label(marks[0], "bookmarks.active")

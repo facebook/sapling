@@ -553,10 +553,10 @@ def afterloaded(extension, callback):
 def bind(func, *args):
     """Partial function application
 
-      Returns a new function that is the partial application of args and kwargs
-      to func.  For example,
+    Returns a new function that is the partial application of args and kwargs
+    to func.  For example,
 
-          f(1, 2, bar=3) === bind(f, 1)(2, bar=3)"""
+        f(1, 2, bar=3) === bind(f, 1)(2, bar=3)"""
     assert callable(func)
 
     def closure(*a, **kw):

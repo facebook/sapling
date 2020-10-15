@@ -551,8 +551,7 @@ def expandaliases(tree, aliases, warn=None):
 
 
 def foldconcat(tree):
-    """Fold elements to be concatenated by `##`
-    """
+    """Fold elements to be concatenated by `##`"""
     if not isinstance(tree, tuple) or tree[0] in ("string", "symbol"):
         return tree
     if tree[0] == "_concat":

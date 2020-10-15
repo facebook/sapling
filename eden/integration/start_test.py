@@ -105,8 +105,7 @@ class StartTest(testcase.EdenTestCase):
 
 @testcase.eden_repo_test
 class StartWithRepoTest(testcase.EdenRepoTest):
-    """Test 'eden start' with a repo and checkout already configured.
-    """
+    """Test 'eden start' with a repo and checkout already configured."""
 
     def test_eden_start_mounts_checkouts(self) -> None:
         self.eden.shutdown()

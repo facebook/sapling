@@ -50,8 +50,7 @@ onetime = False
 
 
 def onetimesetup(ui):
-    """Configures the wireprotocol for both clients and servers.
-    """
+    """Configures the wireprotocol for both clients and servers."""
     global onetime
     if onetime:
         return
@@ -260,8 +259,7 @@ def _loadfileblob(repo, path, node):
 
 
 def getflogheads(repo, proto, path):
-    """A server api for requesting a filelog's heads
-    """
+    """A server api for requesting a filelog's heads"""
     flog = repo.file(path)
     heads = flog.heads()
     return "\n".join((hex(head) for head in heads if head != nullid))
@@ -285,8 +283,7 @@ def getfile(repo, proto, file, node):
 
 
 def getfiles(repo, proto):
-    """A server api for requesting particular versions of particular files.
-    """
+    """A server api for requesting particular versions of particular files."""
     if shallowrepo.requirement in repo.requirements:
         raise error.Abort(_("cannot fetch remote files from shallow repo"))
     if not isinstance(proto, sshserver.sshserver):
@@ -401,8 +398,7 @@ def getpackv2(repo, proto, args):
 
 
 def getpack(repo, proto, args, version=1):
-    """A server api for requesting a pack of file information.
-    """
+    """A server api for requesting a pack of file information."""
     if shallowrepo.requirement in repo.requirements:
         raise error.Abort(_("cannot fetch remote files from shallow repo"))
     if not isinstance(proto, sshserver.sshserver):
@@ -520,8 +516,7 @@ def _receivepackrequest(stream):
 
 
 def _getdeltachain(fl, nodes, version):
-    """Collect the full-text for all the given nodes.
-    """
+    """Collect the full-text for all the given nodes."""
     chain = []
 
     seen = set()

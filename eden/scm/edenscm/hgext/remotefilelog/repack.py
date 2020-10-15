@@ -25,8 +25,7 @@ class RepackAlreadyRunning(error.Abort):
 
 
 def domaintenancerepack(repo):
-    """Perform a background repack if necessary.
-    """
+    """Perform a background repack if necessary."""
 
     backgroundrepack(repo, incremental=True)
 

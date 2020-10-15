@@ -297,7 +297,7 @@ def filterchunks(ui, originalhunks, usecurses, testfile, operation=None):
 
 
 def recordfilter(ui, originalhunks, operation=None):
-    """ Prompts the user to filter the originalhunks and return a list of
+    """Prompts the user to filter the originalhunks and return a list of
     selected hunks.
     *operation* is used for to build ui messages to indicate the user what
     kind of filtering they are doing: reverting, committing, shelving, etc.
@@ -909,7 +909,7 @@ def uncommittedchanges(repo):
 
 
 def bailifchanged(repo, merge=True, hint=None):
-    """ enforce the precondition that working directory must be clean.
+    """enforce the precondition that working directory must be clean.
 
     'merge' can be set to false if a pending uncommitted merge should be
     ignored (such as when 'update --check' runs).
@@ -2017,8 +2017,7 @@ class changeset_printer(object):
         self.showpatch(ctx, matchfn, hunksfilterfn=hunksfilterfn)
 
     def _exthook(self, ctx):
-        """empty method used by extension as a hook point
-        """
+        """empty method used by extension as a hook point"""
 
     def showpatch(self, ctx, matchfn, hunksfilterfn=None):
         if not matchfn:

@@ -164,8 +164,7 @@ predicate = registrar.filesetpredicate()
 
 @predicate("modified()", callstatus=True)
 def modified(mctx, x):
-    """File that is modified according to :hg:`status`.
-    """
+    """File that is modified according to :hg:`status`."""
     # i18n: "modified" is a keyword
     getargs(x, 0, 0, _("modified takes no arguments"))
     s = set(mctx.status().modified)
@@ -174,8 +173,7 @@ def modified(mctx, x):
 
 @predicate("added()", callstatus=True)
 def added(mctx, x):
-    """File that is added according to :hg:`status`.
-    """
+    """File that is added according to :hg:`status`."""
     # i18n: "added" is a keyword
     getargs(x, 0, 0, _("added takes no arguments"))
     s = set(mctx.status().added)
@@ -184,8 +182,7 @@ def added(mctx, x):
 
 @predicate("removed()", callstatus=True)
 def removed(mctx, x):
-    """File that is removed according to :hg:`status`.
-    """
+    """File that is removed according to :hg:`status`."""
     # i18n: "removed" is a keyword
     getargs(x, 0, 0, _("removed takes no arguments"))
     s = set(mctx.status().removed)
@@ -194,8 +191,7 @@ def removed(mctx, x):
 
 @predicate("deleted()", callstatus=True)
 def deleted(mctx, x):
-    """Alias for ``missing()``.
-    """
+    """Alias for ``missing()``."""
     # i18n: "deleted" is a keyword
     getargs(x, 0, 0, _("deleted takes no arguments"))
     s = set(mctx.status().deleted)
@@ -204,8 +200,7 @@ def deleted(mctx, x):
 
 @predicate("missing()", callstatus=True)
 def missing(mctx, x):
-    """File that is missing according to :hg:`status`.
-    """
+    """File that is missing according to :hg:`status`."""
     # i18n: "missing" is a keyword
     getargs(x, 0, 0, _("missing takes no arguments"))
     s = set(mctx.status().deleted)
@@ -236,8 +231,7 @@ def ignored(mctx, x):
 
 @predicate("clean()", callstatus=True)
 def clean(mctx, x):
-    """File that is clean according to :hg:`status`.
-    """
+    """File that is clean according to :hg:`status`."""
     # i18n: "clean" is a keyword
     getargs(x, 0, 0, _("clean takes no arguments"))
     s = set(mctx.status().clean)
@@ -277,8 +271,7 @@ def getargs(x, min, max, err):
 
 @predicate("binary()", callexisting=True)
 def binary(mctx, x):
-    """File that appears to be binary (contains NUL bytes).
-    """
+    """File that appears to be binary (contains NUL bytes)."""
     # i18n: "binary" is a keyword
     getargs(x, 0, 0, _("binary takes no arguments"))
     return [f for f in mctx.existing() if mctx.ctx[f].isbinary()]
@@ -286,8 +279,7 @@ def binary(mctx, x):
 
 @predicate("exec()", callexisting=True)
 def exec_(mctx, x):
-    """File that is marked as executable.
-    """
+    """File that is marked as executable."""
     # i18n: "exec" is a keyword
     getargs(x, 0, 0, _("exec takes no arguments"))
     return [f for f in mctx.existing() if mctx.ctx.flags(f) == "x"]
@@ -295,8 +287,7 @@ def exec_(mctx, x):
 
 @predicate("symlink()", callexisting=True)
 def symlink(mctx, x):
-    """File that is marked as a symlink.
-    """
+    """File that is marked as a symlink."""
     # i18n: "symlink" is a keyword
     getargs(x, 0, 0, _("symlink takes no arguments"))
     return [f for f in mctx.existing() if mctx.ctx.flags(f) == "l"]
@@ -304,8 +295,7 @@ def symlink(mctx, x):
 
 @predicate("resolved()")
 def resolved(mctx, x):
-    """File that is marked resolved according to :hg:`resolve -l`.
-    """
+    """File that is marked resolved according to :hg:`resolve -l`."""
     # i18n: "resolved" is a keyword
     getargs(x, 0, 0, _("resolved takes no arguments"))
     if mctx.ctx.rev() is not None:
@@ -316,8 +306,7 @@ def resolved(mctx, x):
 
 @predicate("unresolved()")
 def unresolved(mctx, x):
-    """File that is marked unresolved according to :hg:`resolve -l`.
-    """
+    """File that is marked unresolved according to :hg:`resolve -l`."""
     # i18n: "unresolved" is a keyword
     getargs(x, 0, 0, _("unresolved takes no arguments"))
     if mctx.ctx.rev() is not None:
@@ -328,8 +317,7 @@ def unresolved(mctx, x):
 
 @predicate("hgignore()")
 def hgignore(mctx, x):
-    """File that matches the active .hgignore pattern. (DEPRECATED)
-    """
+    """File that matches the active .hgignore pattern. (DEPRECATED)"""
     # i18n: "hgignore" is a keyword
     getargs(x, 0, 0, _("hgignore takes no arguments"))
     repo = mctx.ctx.repo()
@@ -342,8 +330,7 @@ def hgignore(mctx, x):
 
 @predicate("gitignore()")
 def gitignore(mctx, x):
-    """File that matches the active .gitignore pattern.
-    """
+    """File that matches the active .gitignore pattern."""
     # i18n: "gitignore" is a keyword
     getargs(x, 0, 0, _("gitignore takes no arguments"))
     repo = mctx.ctx.repo()
@@ -364,8 +351,7 @@ def portable(mctx, x):
 
 @predicate("grep(regex)", callexisting=True)
 def grep(mctx, x):
-    """File contains the given regular expression.
-    """
+    """File contains the given regular expression."""
     try:
         # i18n: "grep" is a keyword
         r = re.compile(pycompat.encodeutf8(getstring(x, _("grep requires a pattern"))))
@@ -482,8 +468,7 @@ def eol(mctx, x):
 
 @predicate("copied()")
 def copied(mctx, x):
-    """File that is recorded as being copied.
-    """
+    """File that is recorded as being copied."""
     # i18n: "copied" is a keyword
     getargs(x, 0, 0, _("copied takes no arguments"))
     s = []
@@ -669,8 +654,7 @@ def prettyformat(tree):
 
 
 def loadpredicate(ui, extname, registrarobj):
-    """Load fileset predicates from specified registrarobj
-    """
+    """Load fileset predicates from specified registrarobj"""
     for name, func in registrarobj._table.items():
         symbols[name] = func
         if func._callstatus:

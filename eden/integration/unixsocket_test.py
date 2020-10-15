@@ -24,8 +24,8 @@ class UnixSocketTest(testcase.EdenRepoTest):
 
     def test_unixsock(self) -> None:
         """Create a UNIX domain socket in EdenFS and verify that a client
-           can connect and write, and that the server side can accept
-           and read data from it."""
+        can connect and write, and that the server side can accept
+        and read data from it."""
 
         filename = os.path.join(self.mount, "example.sock")
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)

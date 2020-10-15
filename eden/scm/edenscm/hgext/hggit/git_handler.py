@@ -1664,9 +1664,9 @@ class GitHandler(object):
     def parse_gitmodules(self, tree_obj):
         """Parse .gitmodules from a git tree specified by tree_obj
 
-           :return: list of tuples (submodule path, url, name),
-           where name is quoted part of the section's name, or
-           empty list if nothing found
+        :return: list of tuples (submodule path, url, name),
+        where name is quoted part of the section's name, or
+        empty list if nothing found
         """
         rv = []
         try:
@@ -1687,7 +1687,7 @@ class GitHandler(object):
     def git_file_readlines(self, tree_obj, fname):
         """Read content of a named entry from the git commit tree
 
-           :return: list of lines
+        :return: list of lines
         """
         if fname in tree_obj:
             unused_mode, sha = tree_obj[fname]

@@ -288,7 +288,7 @@ else:
             """mimics the read-only attributes of Python file objects
             by raising 'TypeError: readonly attribute' if someone tries:
               f = posixfile('foo.txt')
-              f.name = 'bla'  """
+              f.name = 'bla'"""
             return self._file.__setattr__(name, value)
 
         def __enter__(self):

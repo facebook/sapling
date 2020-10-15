@@ -135,11 +135,11 @@ class BaseService(pycompat.ABC):
     def _makereferences(self, data):
         """Makes a References object from JSON data
 
-            JSON data must represent json serialization of
-            //scm/commitcloud/if/CommitCloudService.thrift
-            struct ReferencesData
+        JSON data must represent json serialization of
+        //scm/commitcloud/if/CommitCloudService.thrift
+        struct ReferencesData
 
-            Result represents struct References from this module
+        Result represents struct References from this module
         """
         version = data["version"]
         newheads = [h for h in data.get("heads", [])]
@@ -253,35 +253,29 @@ class BaseService(pycompat.ABC):
 
     @abstractmethod
     def getreferences(self, reponame, workspace, baseversion):
-        """Gets the current references if they differ from the base version
-        """
+        """Gets the current references if they differ from the base version"""
 
     @abstractmethod
     def getsmartlog(self, reponame, workspace, repo, flags=[]):
-        """Gets the workspace smartlog
-        """
+        """Gets the workspace smartlog"""
 
     @abstractmethod
     def getsmartlogbyversion(
         self, reponame, workspace, repo, date, version, limit, flags=[]
     ):
-        """Gets the workspace smartlog by version
-        """
+        """Gets the workspace smartlog by version"""
 
     @abstractmethod
     def getworkspaces(self, reponame, prefix):
-        """Gets the list of workspaces for the given prefix
-        """
+        """Gets the list of workspaces for the given prefix"""
 
     @abstractmethod
     def updateworkspacearchive(self, reponame, workspace, archive):
-        """Archive or Restore the given workspace
-        """
+        """Archive or Restore the given workspace"""
 
     @abstractmethod
     def renameworkspace(self, reponame, workspace, new_workspace):
-        """Rename the given workspace
-        """
+        """Rename the given workspace"""
 
     @staticmethod
     def _makesmartloginfo(data):

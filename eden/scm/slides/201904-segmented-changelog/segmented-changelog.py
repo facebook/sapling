@@ -307,10 +307,13 @@ def drawsegs(segs, y="-1.3cm", highlighted=None, segoverride=None):
                 line2 = "ps="
             else:
                 line2 = "parents="
-        text = r"{\setstretch{0.6} \begin{tabular}{c} %s \\ \tiny{%s%s} \end{tabular}}" % (
-            line1,
-            line2,
-            tt(str(sorted(prevs))),
+        text = (
+            r"{\setstretch{0.6} \begin{tabular}{c} %s \\ \tiny{%s%s} \end{tabular}}"
+            % (
+                line1,
+                line2,
+                tt(str(sorted(prevs))),
+            )
         )
         yield r"\coordinate  (%s) at ($ (n%s) - (0.3, 0) $);" % (leftname, start)
         yield r"\coordinate  (%s) at ($ (n%s) + (0.3, 0) $);" % (rightname, end)

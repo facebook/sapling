@@ -203,7 +203,7 @@ def _sqllocalrepowrapper(orig, repo):
                 )
 
         def nextrevisionnumber(self):
-            """ get the next strictly increasing revision number for this
+            """get the next strictly increasing revision number for this
             repository.
             """
 
@@ -361,8 +361,7 @@ def _getnamespace(_repo):
 
 @revsetpredicate("globalrev(number)", safe=True, weight=10)
 def _revsetglobalrev(repo, subset, x):
-    """Changesets with given global revision number.
-    """
+    """Changesets with given global revision number."""
     args = revset.getargs(x, 1, 1, "globalrev takes one argument")
     globalrev = revset.getinteger(
         args[0], "the argument to globalrev() must be a number"
@@ -375,8 +374,7 @@ def _revsetglobalrev(repo, subset, x):
 
 @revsetpredicate("svnrev(number)", safe=True, weight=10)
 def _revsetsvnrev(repo, subset, x):
-    """Changesets with given Subversion revision number.
-    """
+    """Changesets with given Subversion revision number."""
     args = revset.getargs(x, 1, 1, "svnrev takes one argument")
     svnrev = revset.getinteger(args[0], "the argument to svnrev() must be a number")
 
@@ -478,7 +476,7 @@ def globalrev(ui, repo, *args, **opts):
     _("hg initglobalrev START"),
 )
 def initglobalrev(ui, repo, start, *args, **opts):
-    """ initializes the global revision number for a particular repository by
+    """initializes the global revision number for a particular repository by
     writing it to the database.
     """
 

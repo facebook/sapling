@@ -248,7 +248,7 @@ internalactions = set()
 
 
 def geteditcomment(ui, first, last):
-    """ construct the editor comment
+    """construct the editor comment
     The comment includes::
      - an intro
      - sorted primary commands
@@ -444,8 +444,7 @@ class histeditaction(object):
 
     @classmethod
     def fromrule(cls, state, rule):
-        """Parses the given rule, returning an instance of the histeditaction.
-        """
+        """Parses the given rule, returning an instance of the histeditaction."""
         rulehash = rule.strip().split(" ", 1)[0]
         try:
             rev = node.bin(rulehash)
@@ -495,7 +494,7 @@ class histeditaction(object):
 
     def tostate(self):
         """Print an action in format used by histedit state files
-           (the first line is a verb, the remainder is the second)
+        (the first line is a verb, the remainder is the second)
         """
         return "%s\n%s" % (self.verb, node.hex(self.node))
 

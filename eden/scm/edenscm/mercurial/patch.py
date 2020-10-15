@@ -899,8 +899,7 @@ class patchfile(object):
 
 
 class header(object):
-    """patch header
-    """
+    """patch header"""
 
     diffgit_re = re.compile(b"diff --git a/(.*) b/(.*)$")
     diff_re = re.compile(b"diff -r .* (.*)$")

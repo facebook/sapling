@@ -73,8 +73,8 @@ def _readdrafts(repo):
 def _tryreadtextp1p2(node, zstore, revlog):
     """Attempt to read (text, p1, p2) from multiple sources, including:
 
-        - changelog revlog
-        - zstore (used by Rust segments backend)
+    - changelog revlog
+    - zstore (used by Rust segments backend)
     """
     try:
         text = revlog.revision(node)

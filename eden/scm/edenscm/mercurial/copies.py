@@ -394,7 +394,7 @@ def mergecopies(repo, c1, c2, base):
 
 
 def _isfullcopytraceable(repo, c1, base):
-    """ Checks that if base, source and destination are all no-public branches,
+    """Checks that if base, source and destination are all no-public branches,
     if yes let's use the full copytrace algorithm for increased capabilities
     since it will be fast enough.
 
@@ -414,7 +414,7 @@ def _isfullcopytraceable(repo, c1, base):
 
 
 def _fullcopytracing(repo, c1, c2, base):
-    """ The full copytracing algorithm which finds all the new files that were
+    """The full copytracing algorithm which finds all the new files that were
     added from merge base up to the top commit and for each file it checks if
     this file was copied from another file.
 
@@ -658,7 +658,7 @@ def _fullcopytracing(repo, c1, c2, base):
 
 
 def _heuristicscopytracing(repo, c1, c2, base):
-    """ Fast copytracing using filename heuristics
+    """Fast copytracing using filename heuristics
 
     Assumes that moves or renames are of following two types:
 

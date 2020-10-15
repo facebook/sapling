@@ -115,8 +115,7 @@ def wraprepo(repo):
         def backgroundprefetch(
             self, revs, base=None, repack=False, pats=None, opts=None
         ):
-            """Runs prefetch in background with optional repack
-            """
+            """Runs prefetch in background with optional repack"""
             cmd = [util.hgexecutable(), "-R", self.origroot, "prefetch"]
             if repack:
                 cmd.append("--repack")

@@ -504,8 +504,8 @@ def _tryhoist(ui, remotebookmark):
 
 
 def _addpartsfromopts(orig, ui, repo, bundler, *args, **kwargs):
-    """ adds a stream level part to bundle2 storing whether this is an
-    infinitepush bundle or not """
+    """adds a stream level part to bundle2 storing whether this is an
+    infinitepush bundle or not"""
     if ui.configbool("infinitepush", "bundle-stream", False):
         bundler.addparam("infinitepush", True)
     return orig(ui, repo, bundler, *args, **kwargs)

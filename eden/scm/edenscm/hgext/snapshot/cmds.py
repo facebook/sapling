@@ -70,8 +70,7 @@ subcmd = snapshot.subcommand(
     inferrepo=True,
 )
 def snapshotcreate(ui, repo, *args, **opts):
-    """creates a snapshot of the working copy
-    """
+    """creates a snapshot of the working copy"""
 
     def removesnapshotfiles(ui, repo, metadata):
         match = scmutil.match(repo[None])
@@ -145,8 +144,7 @@ def getsnapshotctx(ui, repo, args):
 
 @subcmd("show", cmdutil.logopts, _("REV"), cmdtype=registrar.command.readonly)
 def snapshotshow(ui, repo, *args, **opts):
-    """show the snapshot contents, given its revision id
-    """
+    """show the snapshot contents, given its revision id"""
     cctx = getsnapshotctx(ui, repo, args)
     rev = cctx.hex()
     opts["rev"] = [rev]
@@ -241,8 +239,7 @@ def _show(orig, self, ctx, *args):
     inferrepo=True,
 )
 def snapshotcheckout(ui, repo, *args, **opts):
-    """checks out the working copy to the snapshot state, given its revision id
-    """
+    """checks out the working copy to the snapshot state, given its revision id"""
     cctx = getsnapshotctx(ui, repo, args)
     clean = opts.get("clean")
     # This is a temporary safety check that WC is clean.
@@ -301,15 +298,13 @@ def checkouttosnapshotmetadata(ui, repo, snapmetadata, clean=True):
 
 @subcmd("list", cmdutil.formatteropts)
 def snapshotlistcmd(ui, repo, *args, **opts):
-    """list the local snapshots
-    """
+    """list the local snapshots"""
     repo.snapshotlist.printsnapshots(ui, repo, **opts)
 
 
 @subcmd("hide", [], _("REV"))
 def snapshothide(ui, repo, *args, **opts):
-    """hide a snapshot: remove it from the snapshot list
-    """
+    """hide a snapshot: remove it from the snapshot list"""
     cctx = getsnapshotctx(ui, repo, args)
     with repo.lock(), repo.transaction("hide-snapshot") as tr:
         repo.snapshotlist.update(tr, removenodes=[cctx.hex()])
@@ -317,8 +312,7 @@ def snapshothide(ui, repo, *args, **opts):
 
 @subcmd("unhide", [], _("REV"))
 def snapshotunhide(ui, repo, *args, **opts):
-    """unhide a snapshot: add it to the snapshot list
-    """
+    """unhide a snapshot: add it to the snapshot list"""
     cctx = getsnapshotctx(ui, repo, args)
     with repo.lock(), repo.transaction("unhide-snapshot") as tr:
         repo.snapshotlist.update(tr, addnodes=[cctx.hex()])

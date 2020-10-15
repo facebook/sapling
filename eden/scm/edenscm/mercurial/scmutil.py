@@ -56,7 +56,7 @@ termsize = scmplatform.termsize
 # pyre-fixme[39]: `Tuple[Any, ...]` is not a valid parent class.
 class status(tuple):
     """Named tuple with a list of files per status. The 'deleted', 'unknown'
-       and 'ignored' properties are only relevant to the working copy.
+    and 'ignored' properties are only relevant to the working copy.
     """
 
     __slots__ = ()
@@ -91,7 +91,7 @@ class status(tuple):
     @property
     def deleted(self):
         """files that are in the dirstate, but have been deleted from the
-           working copy (aka "missing")
+        working copy (aka "missing")
         """
         return self[3]
 
@@ -1263,8 +1263,7 @@ def wlocksub(repo, cmd, *args, **kwargs):
 
 
 def gdinitconfig(ui):
-    """helper function to know if a repo should be created as general delta
-    """
+    """helper function to know if a repo should be created as general delta"""
     # experimental config: format.generaldelta
     return ui.configbool("format", "generaldelta") or ui.configbool(
         "format", "usegeneraldelta"
@@ -1272,8 +1271,7 @@ def gdinitconfig(ui):
 
 
 def gddeltaconfig(ui):
-    """helper function to know if incoming delta should be optimised
-    """
+    """helper function to know if incoming delta should be optimised"""
     # experimental config: format.generaldelta
     return ui.configbool("format", "generaldelta")
 

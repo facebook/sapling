@@ -130,7 +130,7 @@ def getdiffstatus(repo, *diffid):
 
 def populateresponseforphab(repo, diffnum):
     """:populateresponse: Runs the memoization function
-        for use of phabstatus and sync status
+    for use of phabstatus and sync status
     """
     if not hgutil.safehasattr(repo, "_phabstatusrevs"):
         return
@@ -161,8 +161,7 @@ templatekeyword = registrar.templatekeyword()
 
 @templatekeyword("phabstatus")
 def showphabstatus(repo, ctx, templ, **args):
-    """String. Return the diff approval status for a given hg rev
-    """
+    """String. Return the diff approval status for a given hg rev"""
     diffnum = getdiffnum(repo, ctx)
     if diffnum is None:
         return None
@@ -180,8 +179,7 @@ def showphabstatus(repo, ctx, templ, **args):
 
 @templatekeyword("phabsignalstatus")
 def showphabsignalstatus(repo, ctx, templ, **args):
-    """String. Return the diff Signal status for a given hg rev
-    """
+    """String. Return the diff Signal status for a given hg rev"""
     diffnum = getdiffnum(repo, ctx)
     if diffnum is None:
         return None
@@ -211,7 +209,7 @@ don't say anything. All good.
 @templatekeyword("syncstatus")
 def showsyncstatus(repo, ctx, templ, **args):
     """String. Return whether the local revision is in sync
-        with the remote (phabricator) revision
+    with the remote (phabricator) revision
     """
     diffnum = getdiffnum(repo, ctx)
     if diffnum is None:

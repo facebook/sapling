@@ -46,7 +46,7 @@ MAX_CONNECT_RETRIES = 2
 
 class _HttpsCommitCloudService(baseservice.BaseService):
     """Commit Cloud Client uses http endpoint to communicate with
-       the commit cloud service
+    the commit cloud service
     """
 
     def __init__(self, ui, token=None):
@@ -449,8 +449,7 @@ class _HttpsCommitCloudService(baseservice.BaseService):
 
     @perftrace.tracefunc("Get Commit Cloud Workspaces")
     def getworkspaces(self, reponame, prefix):
-        """Fetch Commit Cloud workspaces for the given prefix
-        """
+        """Fetch Commit Cloud workspaces for the given prefix"""
         self.ui.debug("sending 'get_workspaces' request\n", component="commitcloud")
         path = "/commit_cloud/get_workspaces"
         data = {"repo_name": reponame, "prefix": prefix}
@@ -460,8 +459,7 @@ class _HttpsCommitCloudService(baseservice.BaseService):
 
     @perftrace.tracefunc("Archive/Restore Workspace")
     def updateworkspacearchive(self, reponame, workspace, archived):
-        """Archive or Restore the given workspace
-        """
+        """Archive or Restore the given workspace"""
         self.ui.debug(
             "sending 'update_workspace_archive' request\n", component="commitcloud"
         )
@@ -471,8 +469,7 @@ class _HttpsCommitCloudService(baseservice.BaseService):
 
     @perftrace.tracefunc("Rename Workspace")
     def renameworkspace(self, reponame, workspace, new_workspace):
-        """Rename the given workspace
-        """
+        """Rename the given workspace"""
         self.ui.debug("sending 'rename_workspace' request\n", component="commitcloud")
         path = "/commit_cloud/rename_workspace"
         data = {

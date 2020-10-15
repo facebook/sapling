@@ -1059,8 +1059,8 @@ class DebugJournalCmd(Subcmd):
 def _print_raw_journal_deltas(
     deltas: Iterator[DebugJournalDelta], pattern: Optional[Pattern[bytes]]
 ) -> None:
-    matcher: Callable[[bytes], bool] = (lambda x: True) if pattern is None else cast(
-        Any, pattern.match
+    matcher: Callable[[bytes], bool] = (
+        (lambda x: True) if pattern is None else cast(Any, pattern.match)
     )
 
     labels = {

@@ -1370,7 +1370,7 @@ def manifestmerge(
 
 def _resolvetrivial(repo, wctx, mctx, ancestor, actions):
     """Resolves false conflicts where the nodeid changed but the content
-       remained the same."""
+    remained the same."""
 
     for f, (m, args, msg) in pycompat.listitems(actions):
         if m == "cd" and f in ancestor and not wctx[f].cmp(ancestor[f]):

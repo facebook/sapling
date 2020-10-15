@@ -187,12 +187,12 @@ class EdenInstance:
         return self._user_config_path
 
     def _loadConfig(self) -> configutil.EdenConfigParser:
-        """ to facilitate templatizing a centrally deployed config, we
-            allow a limited set of env vars to be expanded.
-            ${HOME} will be replaced by the user's home dir,
-            ${USER} will be replaced by the user's login name.
-            These are coupled with the equivalent code in
-            eden/fs/config/CheckoutConfig.cpp and must be kept in sync.
+        """to facilitate templatizing a centrally deployed config, we
+        allow a limited set of env vars to be expanded.
+        ${HOME} will be replaced by the user's home dir,
+        ${USER} will be replaced by the user's login name.
+        These are coupled with the equivalent code in
+        eden/fs/config/CheckoutConfig.cpp and must be kept in sync.
         """
         parser = configutil.EdenConfigParser(
             interpolation=configinterpolator.EdenConfigInterpolator(

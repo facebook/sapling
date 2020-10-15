@@ -99,8 +99,7 @@ class memlocal(object):
 
 
 class unionstore(object):
-    """A store which offers uniform access to in-memory store and local on-disk store.
-    """
+    """A store which offers uniform access to in-memory store and local on-disk store."""
 
     def __init__(self, diskstore, memstore):
         self.diskstore = diskstore

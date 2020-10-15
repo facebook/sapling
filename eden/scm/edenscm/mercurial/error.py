@@ -366,8 +366,7 @@ class UnsupportedMergeRecords(Abort):
 
 
 class UnknownVersion(Abort):
-    """generic exception for aborting from an encounter with an unknown version
-    """
+    """generic exception for aborting from an encounter with an unknown version"""
 
     def __init__(self, msg, hint=None, version=None):
         self.version = version

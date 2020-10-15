@@ -22,16 +22,14 @@ def uisetup(ui):
 
 
 def appendsnapshotmetadatabundlepart(repo, revs, parts):
-    """construct the bundlepart and append it to the list
-    """
+    """construct the bundlepart and append it to the list"""
     data = getmetadatafromrevs(repo, revs)
     if data:
         parts.append(bundle2.bundlepart(snapshotmetadataparttype, data=data))
 
 
 def getmetadatafromrevs(repo, revs):
-    """get binary representation of snapshot metadata by a list of revs
-    """
+    """get binary representation of snapshot metadata by a list of revs"""
     metadataids = set()
     unfi = repo
     for rev in revs:
@@ -50,8 +48,7 @@ def getmetadatafromrevs(repo, revs):
 def _bundlesetup():
     @bundle2.parthandler(snapshotmetadataparttype)
     def handlemetadata(op, inpart):
-        """unpack metadata for snapshots
-        """
+        """unpack metadata for snapshots"""
         store = op.repo.svfs.snapshotstore
         for oid, data in binarydecode(inpart):
             store.write(oid, data)

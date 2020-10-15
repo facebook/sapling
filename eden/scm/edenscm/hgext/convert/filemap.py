@@ -40,8 +40,8 @@ def rpairs(path):
 
 
 def normalize(path):
-    """ We use posixpath.normpath to support cross-platform path format.
-    However, it doesn't handle None input. So we wrap it up. """
+    """We use posixpath.normpath to support cross-platform path format.
+    However, it doesn't handle None input. So we wrap it up."""
     if path is None:
         return None
     return posixpath.normpath(path)

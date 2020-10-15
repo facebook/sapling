@@ -77,8 +77,7 @@ class datapacktestsbase(object):
         return self.datapackreader(path)
 
     def _testAddSingle(self, content):
-        """Test putting a simple blob into a pack and reading it out.
-        """
+        """Test putting a simple blob into a pack and reading it out."""
         filename = "foo"
         node = self.getHash(content)
 
@@ -115,8 +114,7 @@ class datapacktestsbase(object):
             self.assertEqual(content, chain[0][4])
 
     def testGetMissing(self):
-        """Test the getmissing() api.
-        """
+        """Test the getmissing() api."""
         revisions = []
         filename = "foo"
         lastnode = nullid

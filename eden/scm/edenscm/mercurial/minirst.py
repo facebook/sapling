@@ -326,7 +326,7 @@ _sectionre = re.compile(r"""^([-=`:.'"~^_*+#])\1+$""")
 def findtables(blocks):
     """Find simple tables
 
-       Only simple one-line table elements are supported
+    Only simple one-line table elements are supported
     """
 
     for block in blocks:

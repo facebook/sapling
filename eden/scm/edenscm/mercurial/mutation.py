@@ -673,8 +673,7 @@ def unbundle(repo, bundledata):
 
 
 def entriesforbundle(repo, nodes):
-    """Generate mutation entries for the given nodes
-    """
+    """Generate mutation entries for the given nodes"""
     nodes = set(nodes)
     remaining = set(nodes)
     seen = set()
@@ -700,8 +699,7 @@ def bundleentries(entries):
 
 
 def bundle(repo, nodes):
-    """Generate bundled mutation data for bundling alongside the given nodes.
-    """
+    """Generate bundled mutation data for bundling alongside the given nodes."""
     entries = entriesforbundle(repo, nodes)
     return bundleentries(entries)
 

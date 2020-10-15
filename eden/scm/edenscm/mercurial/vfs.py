@@ -301,8 +301,7 @@ class abstractvfs(pycompat.ABC):
 
     def removedirs(self, path=None):
         # type: (Optional[str]) -> None
-        """Remove a leaf directory and all empty intermediate ones
-        """
+        """Remove a leaf directory and all empty intermediate ones"""
         return util.removedirs(self.join(path))
 
     def rmtree(self, path=None, ignore_errors=False, forcibly=False):

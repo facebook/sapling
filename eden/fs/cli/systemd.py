@@ -461,8 +461,7 @@ class SystemdUserBus:
                 break
 
     async def get_unit_active_state_async(self, unit_name: bytes) -> DBusString:
-        """Query org.freedesktop.systemd1.Unit.ActiveState.
-        """
+        """Query org.freedesktop.systemd1.Unit.ActiveState."""
 
         def go() -> DBusString:
             unit = pystemd.systemd1.unit.Unit(unit_name, bus=self._dbus)
@@ -474,8 +473,7 @@ class SystemdUserBus:
         return await self._run_in_executor_async(go)
 
     async def get_service_result_async(self, service_name: bytes) -> DBusString:
-        """Query org.freedesktop.systemd1.Service.Result.
-        """
+        """Query org.freedesktop.systemd1.Service.Result."""
 
         def go() -> DBusString:
             unit = pystemd.systemd1.unit.Unit(service_name, bus=self._dbus)
@@ -541,8 +539,7 @@ class SystemdUserBus:
     async def start_unit_async(
         self, name: DBusString, mode: DBusString
     ) -> DBusObjectPath:
-        """Call org.freedesktop.systemd1.Manager.StartUnit.
-        """
+        """Call org.freedesktop.systemd1.Manager.StartUnit."""
 
         def go() -> DBusObjectPath:
             path = _pystemd_dynamic(self._manager).Manager.StartUnit(name, mode)
@@ -554,8 +551,7 @@ class SystemdUserBus:
     async def subscribe_to_job_removed_async(
         self,
     ) -> "SystemdSignalSubscription[JobRemovedSignal]":
-        """Subscribe to org.freedesktop.systemd1.Manager.JobRemoved.
-        """
+        """Subscribe to org.freedesktop.systemd1.Manager.JobRemoved."""
         event_loop = asyncio.get_running_loop()
         subscription: SystemdSignalSubscription[
             JobRemovedSignal
@@ -581,8 +577,7 @@ class SystemdUserBus:
         error: typing.Optional[Exception],
         userdata: typing.Any,
     ) -> None:
-        """Handle a org.freedesktop.systemd1.Manager.JobRemoved signal.
-        """
+        """Handle a org.freedesktop.systemd1.Manager.JobRemoved signal."""
         (subscription, event_loop) = userdata
         assert isinstance(subscription, DBusSignalSubscription)
         assert isinstance(event_loop, asyncio.AbstractEventLoop)
@@ -603,8 +598,7 @@ class SystemdUserBus:
             event_loop.create_task(subscription.post_exception_async(e))
 
     async def _subscribe_async(self) -> None:
-        """Call org.freedesktop.systemd1.Manager.Subscribe.
-        """
+        """Call org.freedesktop.systemd1.Manager.Subscribe."""
 
         def go() -> None:
             _pystemd_dynamic(self._manager).Manager.Subscribe()

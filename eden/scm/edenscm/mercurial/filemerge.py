@@ -1070,8 +1070,7 @@ def filemerge(repo, wctx, mynode, orig, fcd, fco, fca, labels=None):
 
 
 def loadinternalmerge(ui, extname, registrarobj):
-    """Load internal merge tool from specified registrarobj
-    """
+    """Load internal merge tool from specified registrarobj"""
     for name, func in registrarobj._table.items():
         fullname = ":" + name
         internals[fullname] = func

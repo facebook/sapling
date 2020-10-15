@@ -383,8 +383,7 @@ class Client(object):
         return infos
 
     def getmirroredrev(self, fromrepo, fromtype, torepo, totype, rev, timeout=15):
-        """Transale a single rev to other repo/type
-        """
+        """Transale a single rev to other repo/type"""
         query = self._getmirroredrevsquery()
         params = {
             "params": {

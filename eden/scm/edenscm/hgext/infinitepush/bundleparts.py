@@ -204,8 +204,8 @@ def _handlelfs(repo, missing):
 def _bundlesetup():
     @bundle2.b2streamparamhandler("infinitepush")
     def processinfinitepush(unbundler, param, value):
-        """ process the bundle2 stream level parameter containing whether this push
-        is an infinitepush or not. """
+        """process the bundle2 stream level parameter containing whether this push
+        is an infinitepush or not."""
         if value and unbundler.ui.configbool("infinitepush", "bundle-stream", False):
             pass
 
@@ -241,8 +241,7 @@ def _bundlesetup():
 
     @bundle2.parthandler(constants.scratchbookmarksparttype)
     def bundle2scratchbookmarks(op, part):
-        """Handler deletes bookmarks first then adds new bookmarks.
-        """
+        """Handler deletes bookmarks first then adds new bookmarks."""
         index = op.repo.bundlestore.index
         decodedbookmarks = bookmarks.decodebookmarks(part)
         toinsert = {}

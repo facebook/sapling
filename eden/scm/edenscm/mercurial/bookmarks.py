@@ -168,8 +168,7 @@ class bmstore(dict):
         return dict.__delitem__(self, key)
 
     def applychanges(self, repo, tr, changes):
-        """Apply a list of changes to bookmarks
-        """
+        """Apply a list of changes to bookmarks"""
         bmchanges = tr.changes.get("bookmarks")
         for name, node in changes:
             old = self.get(name)
@@ -709,8 +708,7 @@ def updatefromremote(ui, repo, remotemarks, path, trfunc, explicit=()):
 
 
 def incoming(ui, repo, other):
-    """Show bookmarks incoming from other to repo
-    """
+    """Show bookmarks incoming from other to repo"""
     ui.status(_("searching for changed bookmarks\n"))
 
     remotemarks = unhexlifybookmarks(other.listkeys("bookmarks"))
@@ -756,8 +754,7 @@ def incoming(ui, repo, other):
 
 
 def outgoing(ui, repo, other):
-    """Show bookmarks outgoing from repo to other
-    """
+    """Show bookmarks outgoing from repo to other"""
     ui.status(_("searching for changed bookmarks\n"))
 
     remotemarks = unhexlifybookmarks(other.listkeys("bookmarks"))

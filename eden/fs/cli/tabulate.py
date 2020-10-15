@@ -12,7 +12,7 @@ def tabulate(
     rows: List[Dict[str, str]],
     header_labels: Optional[Dict[str, str]] = None,
 ) -> str:
-    """ Tabulate some data so that it renders reasonably.
+    """Tabulate some data so that it renders reasonably.
     rows - is a list of data that is to be rendered
     headers - is a list of the dictionary keys of the row data to
               be rendered and specifies the order of the fields.

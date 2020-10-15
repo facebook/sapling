@@ -39,7 +39,7 @@ WINDOWS_SCRATCH_DIR = Path("c:\\open\\scratch")
 
 def have_apfs_helper() -> bool:
     """Determine if the APFS volume helper is installed with appropriate
-    permissions such that we can use it to mount things """
+    permissions such that we can use it to mount things"""
     try:
         st = os.lstat(APFS_HELPER)
         return (st.st_mode & stat.S_ISUID) != 0
@@ -563,9 +563,9 @@ def file_size(path: Path) -> int:
 
 
 def run_cmd_quietly(args, check=True) -> int:
-    """ Quietly run a command; if successful then its output is entirely suppressed.
+    """Quietly run a command; if successful then its output is entirely suppressed.
     If it fails then raise an exception containing the output/error streams.
-    If check=False then print the output and return the exit status """
+    If check=False then print the output and return the exit status"""
     formatted_args = []
     for a in args:
         if isinstance(a, Path):

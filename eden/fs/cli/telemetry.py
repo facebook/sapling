@@ -118,8 +118,7 @@ class TelemetrySample(abc.ABC):
 
 
 class TelemetryLogger(abc.ABC):
-    """TelemetryLogger provides an interface for logging structured log events.
-    """
+    """TelemetryLogger provides an interface for logging structured log events."""
 
     session_id: int
     user: str
@@ -226,8 +225,7 @@ class BaseJsonTelemetryLogger(TelemetryLogger):
 
 
 class ExternalTelemetryLogger(BaseJsonTelemetryLogger):
-    """A TelemetryLogger that uses an external process to log samples.
-    """
+    """A TelemetryLogger that uses an external process to log samples."""
 
     cmd: List[str]
 
@@ -309,8 +307,7 @@ class NullTelemetrySample(TelemetrySample):
 
 
 class NullTelemetryLogger(TelemetryLogger):
-    """A TelemetryLogger that discards all samples.
-    """
+    """A TelemetryLogger that discards all samples."""
 
     def _create_sample(self) -> TelemetrySample:
         return NullTelemetrySample()

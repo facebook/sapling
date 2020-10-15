@@ -1419,7 +1419,7 @@ class localrepository(object):
 
     def filectx(self, path, changeid=None, fileid=None):
         """changeid can be a changeset revision or node.
-           fileid can be a file revision or node."""
+        fileid can be a file revision or node."""
         return context.filectx(self, path, changeid, fileid)
 
     def getcwd(self):
@@ -1658,8 +1658,7 @@ class localrepository(object):
         tr.addfinalize("flush-fncache", self.store.write)
 
         def txnclosehook(tr2):
-            """To be run if transaction is successful, will schedule a hook run
-            """
+            """To be run if transaction is successful, will schedule a hook run"""
             # Don't reference tr2 in hook() so we don't hold a reference.
             # This reduces memory consumption when there are multiple
             # transactions per lock. This can likely go away if issue5045
@@ -1694,8 +1693,7 @@ class localrepository(object):
         tr.addpostclose("warms-cache", self._buildcacheupdater(tr))
 
         def txnaborthook(tr2):
-            """To be run if transaction is aborted
-            """
+            """To be run if transaction is aborted"""
             reporef().hook("txnabort", throw=False, txnname=desc, **tr2.hookargs)
 
         tr.addabort("txnabort-hook", txnaborthook)

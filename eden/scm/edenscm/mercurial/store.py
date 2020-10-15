@@ -69,7 +69,7 @@ def decodedir(path):
 
 
 def _reserved():
-    """ characters that are problematic for filesystems
+    """characters that are problematic for filesystems
 
     * ascii escapes (0..31)
     * ascii hi (126..255)

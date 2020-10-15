@@ -78,8 +78,7 @@ def defineactions():
 
         @classmethod
         def fromrule(cls, state, rule):
-            """Parses the given rule, returns an instance of the histeditaction.
-            """
+            """Parses the given rule, returns an instance of the histeditaction."""
             command = rule
             return cls(state, command)
 

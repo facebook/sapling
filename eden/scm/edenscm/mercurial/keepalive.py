@@ -113,7 +113,7 @@ class ConnectionManager(object):
     """
     The connection manager must be able to:
       * keep track of all existing
-      """
+    """
 
     def __init__(self):
         self._lock = threading.Lock()
@@ -616,8 +616,7 @@ def safesend(self, str):
 
 
 def wrapgetresponse(cls):
-    """Wraps getresponse in cls with a broken-pipe sane version.
-    """
+    """Wraps getresponse in cls with a broken-pipe sane version."""
 
     def safegetresponse(self):
         # In safesend() we might set the _broken_pipe_resp

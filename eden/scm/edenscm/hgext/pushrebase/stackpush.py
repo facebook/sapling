@@ -179,8 +179,7 @@ class pushrequest(object):
 
     @staticmethod
     def _calculatefileconditions(parentctx, examinepaths):
-        """calculate 'fileconditions' - filenodes in the signal parent commit
-        """
+        """calculate 'fileconditions' - filenodes in the signal parent commit"""
         parentmanifest = parentctx.manifestctx()
         fileconditions = {}
         for path in examinepaths:

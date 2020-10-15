@@ -1086,8 +1086,7 @@ class ui(object):
         return i
 
     def termwidth(self):
-        """how wide is the terminal in columns?
-        """
+        """how wide is the terminal in columns?"""
         if "COLUMNS" in encoding.environ:
             try:
                 return int(encoding.environ["COLUMNS"])

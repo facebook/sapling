@@ -399,8 +399,7 @@ class bundlerepository(localrepo.localrepository):
         self._cgunpacker = changegroup.getunbundler(version, cgstream, "UN")
 
     def _writetempbundle(self, readfn, suffix, header=""):
-        """Write a temporary file to disk
-        """
+        """Write a temporary file to disk"""
         fdtemp, temp = self.localvfs.mkstemp(prefix="hg-bundle-", suffix=suffix)
         self.tempfile = temp
 

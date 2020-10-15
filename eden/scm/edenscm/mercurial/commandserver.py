@@ -248,8 +248,8 @@ class server(object):
             return []
 
     def runcommand(self):
-        """ reads a list of \0 terminated arguments, executes
-        and writes the return code to the result channel """
+        """reads a list of \0 terminated arguments, executes
+        and writes the return code to the result channel"""
         from . import dispatch  # avoid cycle
 
         args = self._readlist()

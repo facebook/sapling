@@ -22,15 +22,15 @@ def serialize(paramsdict):
     # type (Dict[str, Any]) -> bytes
     """serialized data is formatted as follows:
 
-        <json len: 4 byte unsigned int>
-        <json>
-        <fileinfo list len: 4 byte unsigned int>
-        [<fileinfo>, ...]
+    <json len: 4 byte unsigned int>
+    <json>
+    <fileinfo list len: 4 byte unsigned int>
+    [<fileinfo>, ...]
 
-        fileinfo = <filepath len: 4 byte unsigned int>
-                   <filepath>
-                   <file content len: 4 byte unsigned int>
-                   <file content>
+    fileinfo = <filepath len: 4 byte unsigned int>
+               <filepath>
+               <file content len: 4 byte unsigned int>
+               <file content>
     """
 
     def packunsignedint(i):
@@ -68,8 +68,7 @@ def serialize(paramsdict):
 
 def deserialize(inputstream):
     # type: (BinaryIO) -> Dict[str, Any]
-    """ deserialize inputstream to dictionary representing memcommit parameters
-    """
+    """deserialize inputstream to dictionary representing memcommit parameters"""
 
     def readexactly(stream, n):
         # type: (BinaryIO, int) -> bytes

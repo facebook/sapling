@@ -225,8 +225,7 @@ def gettimer(ui, opts=None):
         from edenscm.mercurial import node
 
         class defaultformatter(object):
-            """Minimized composition of baseformatter and plainformatter
-            """
+            """Minimized composition of baseformatter and plainformatter"""
 
             def __init__(self, ui, topic, opts):
                 self._ui = ui
@@ -364,8 +363,7 @@ def safeattrsetter(obj, name, ignoremissing=False):
 
 
 def getsvfs(repo):
-    """Return appropriate object to access files under .hg/store
-    """
+    """Return appropriate object to access files under .hg/store"""
     # for "historical portability":
     # repo.svfs has been available since 2.3 (or 7034365089bf)
     svfs = getattr(repo, "svfs", None)
@@ -376,8 +374,7 @@ def getsvfs(repo):
 
 
 def getvfs(repo):
-    """Return appropriate object to access files under .hg
-    """
+    """Return appropriate object to access files under .hg"""
     # for "historical portability":
     # repo.vfs has been available since 2.3 (or 7034365089bf)
     vfs = getattr(repo, "vfs", None)
@@ -1170,8 +1167,7 @@ def perflrucache(
 
 @command("perfwrite", formatteropts)
 def perfwrite(ui, repo, **opts):
-    """microbenchmark ui.write
-    """
+    """microbenchmark ui.write"""
     timer, fm = gettimer(ui, opts)
 
     def write():

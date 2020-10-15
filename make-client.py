@@ -79,10 +79,10 @@ def generate_thrift_code(thrift_compiler, oss_dir, fb303_dir, gen_dir):
 
 
 def copy_py(src_dir, instdir, dest_prefix):
-    """ Workhorse for processing the mapping from source tree to
+    """Workhorse for processing the mapping from source tree to
     installation image.  This function copies only python files
     from the source and places them under an alternative directory
-    structure in the destination """
+    structure in the destination"""
     for root, _dirs, files in os.walk(src_dir):
         rel_root = os.path.relpath(root, src_dir)
         for f in files:
@@ -107,9 +107,9 @@ def find_site_packages(instdir):
 
 
 def move_site_packages_to_root(instdir):
-    """ To reduce pythonpath headaches, after install packages from pip we
+    """To reduce pythonpath headaches, after install packages from pip we
     sweep them out of site-packages dirs and move them up to the root so
-    that they are reachable by the entrypoint in the zipapp """
+    that they are reachable by the entrypoint in the zipapp"""
     for sp in find_site_packages(instdir):
         for child in os.listdir(sp):
             os.rename(os.path.join(sp, child), os.path.join(instdir, child))

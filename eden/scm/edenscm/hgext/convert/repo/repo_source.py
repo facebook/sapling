@@ -61,8 +61,7 @@ class gitutil(object):
 
     @classmethod
     def getfilemodestr(cls, mode):
-        """return value: the string representing the file's mode
-        """
+        """return value: the string representing the file's mode"""
         if cls.islinkfilemode(mode):
             return cls.FILE_MODE_LINK
 
@@ -365,16 +364,14 @@ class gitutil(object):
 
     @classmethod
     def _getdifftreepipe(cls, ui, path):
-        """
-        """
+        """"""
         if path not in cls.difftreepipes:
             cls.difftreepipes[path] = cls._createdifftreepipe(ui, path)
         return cls.difftreepipes[path]
 
     @classmethod
     def difftree(cls, ui, projectpath, treeishhash):
-        """ Executes git diff-tree on a git project
-        """
+        """Executes git diff-tree on a git project"""
         pipein, pipeout, pipeerr = cls._getdifftreepipe(ui, projectpath)
         pipein.write(treeishhash)
         # Diff-tree in stdin mode doesn't use a clear way of separating the responses

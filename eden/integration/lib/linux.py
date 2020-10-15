@@ -98,8 +98,7 @@ def is_cgroup_v2_mounted() -> bool:
 
 
 class _StatfsType:
-    """statfs.f_type constants for Linux. See the statfs(2) man page.
-    """
+    """statfs.f_type constants for Linux. See the statfs(2) man page."""
 
     CGROUP2_SUPER_MAGIC = 0x63677270
 

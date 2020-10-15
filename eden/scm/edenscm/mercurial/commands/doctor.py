@@ -399,8 +399,7 @@ def checklaggingremotename(repo, master=None, source="default"):
 
 
 def checktoomanynames(repo, source="default"):
-    """Check if there are too many remotenames.
-    """
+    """Check if there are too many remotenames."""
     ui = repo.ui
     threshold = ui.configint("doctor", "check-too-many-names-threshold")
     count = len(repo.svfs.read("remotenames").splitlines())

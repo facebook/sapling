@@ -580,16 +580,16 @@ def smartdate(context, mapping, args):
 def smartlog(ui, repo, *pats, **opts):
     """show a graph of the commits that are relevant to you
 
-Includes:
+    Includes:
 
-- Your local commits
-- The master bookmark for your repository
-- Any commits with local bookmarks
+    - Your local commits
+    - The master bookmark for your repository
+    - Any commits with local bookmarks
 
-Excludes:
+    Excludes:
 
-- All commits under master that aren't related to your commits
-- Your local commits that are older than a specified date"""
+    - All commits under master that aren't related to your commits
+    - Your local commits that are older than a specified date"""
     return _smartlog(ui, repo, *pats, **opts)
 
 

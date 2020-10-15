@@ -77,8 +77,7 @@ class _funcregistrarbase(object):
         return func
 
     def _parsefuncdecl(self, decl):
-        """Parse function declaration and return the name of function in it
-        """
+        """Parse function declaration and return the name of function in it"""
         i = decl.find("(")
         if i >= 0:
             return decl[:i]
@@ -103,8 +102,7 @@ class _funcregistrarbase(object):
         return self._docformat % (decl, doc)
 
     def _extrasetup(self, name, func):
-        """Execute exra setup for registered function, if needed
-        """
+        """Execute exra setup for registered function, if needed"""
 
 
 class command(_funcregistrarbase):
@@ -377,8 +375,7 @@ class filesetpredicate(_funcregistrarbase):
 
 
 class _templateregistrarbase(_funcregistrarbase):
-    """Base of decorator to register functions as template specific one
-    """
+    """Base of decorator to register functions as template specific one"""
 
     _docformat = ":%s: %s"
 

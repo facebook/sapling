@@ -25,8 +25,8 @@ from edenscm.mercurial.node import nullid
 
 def getchildrelationships(repo, nodes):
     """Build a defaultdict of child relationships between all descendants of
-       nodes. This information will prevent us from having to repeatedly
-       perform children that reconstruct these relationships each time.
+    nodes. This information will prevent us from having to repeatedly
+    perform children that reconstruct these relationships each time.
     """
     cl = repo.changelog
     children = defaultdict(set)
@@ -47,13 +47,13 @@ def restackonce(
     noconflictmsg=None,
 ):
     """Rebase all descendants of precursors of rev onto rev, thereby
-       stabilzing any non-obsolete descendants of those precursors.
-       Takes in an optional dict of options for the rebase command.
-       If childrenonly is True, only rebases direct children of precursors
-       of rev rather than all descendants of those precursors.
+    stabilzing any non-obsolete descendants of those precursors.
+    Takes in an optional dict of options for the rebase command.
+    If childrenonly is True, only rebases direct children of precursors
+    of rev rather than all descendants of those precursors.
 
-       NOTE(phillco): This function shouldn't be used; prefer restack.restack
-       or a custom rebase using `-d _destrestack(SRC)`.
+    NOTE(phillco): This function shouldn't be used; prefer restack.restack
+    or a custom rebase using `-d _destrestack(SRC)`.
     """
     # Get visible, non-obsolete descendants of precusors of rev.
     allpredecessors = repo.revs("predecessors(%d) - (%d)", rev, rev)
@@ -102,8 +102,8 @@ def restackonce(
 
 def latest(repo, rev):
     """Find the "latest version" of the given revision -- either the
-       latest visible successor, or the revision itself if it has no
-       visible successors.
+    latest visible successor, or the revision itself if it has no
+    visible successors.
     """
     latest = repo.revs("successors(%d)", rev).last()
     return latest if latest is not None else rev

@@ -843,8 +843,7 @@ def openrepo(ui, repopath):
 
 @command("gc", [], _("hg gc"), optionalrepo=True)
 def gc(ui, repo, *args, **opts):
-    """garbage collect the client caches
-    """
+    """garbage collect the client caches"""
 
     if not repo:
         ui.warn(_("hg gc needs to be called in a repo\n"))

@@ -238,13 +238,13 @@ def calcdistance(repo, oldnode, newnode):
 
 
 class state_update(object):
-    """ This context manager is responsible for dispatching the state-enter
-        and state-leave signals to the watchman service. The enter and leave
-        methods can be invoked manually (for scenarios where context manager
-        semantics are not possible). If parameters oldnode and newnode are None,
-        they will be populated based on current working copy in enter and
-        leave, respectively. Similarly, if the distance is none, it will be
-        calculated based on the oldnode and newnode in the leave method."""
+    """This context manager is responsible for dispatching the state-enter
+    and state-leave signals to the watchman service. The enter and leave
+    methods can be invoked manually (for scenarios where context manager
+    semantics are not possible). If parameters oldnode and newnode are None,
+    they will be populated based on current working copy in enter and
+    leave, respectively. Similarly, if the distance is none, it will be
+    calculated based on the oldnode and newnode in the leave method."""
 
     def __init__(
         self,

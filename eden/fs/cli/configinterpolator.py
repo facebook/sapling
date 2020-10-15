@@ -9,14 +9,14 @@ from typing import Dict
 
 
 class EdenConfigInterpolator(configparser.Interpolation):
-    """ Python provides a couple of interpolation options but neither
-        of them quite match the simplicity that we want.  This class
-        will interpolate the keys of the provided map and replace
-        those tokens with the values from the map.  There is no
-        recursion or referencing of values from other sections of
-        the config.
-        Limiting the scope interpolation makes it easier to replicate
-        this approach in the C++ implementation of the parser.
+    """Python provides a couple of interpolation options but neither
+    of them quite match the simplicity that we want.  This class
+    will interpolate the keys of the provided map and replace
+    those tokens with the values from the map.  There is no
+    recursion or referencing of values from other sections of
+    the config.
+    Limiting the scope interpolation makes it easier to replicate
+    this approach in the C++ implementation of the parser.
     """
 
     def __init__(self, defaults) -> None:
@@ -28,8 +28,8 @@ class EdenConfigInterpolator(configparser.Interpolation):
             self._defaults["${" + k + "}"] = v
 
     def _interpolate(self, value: str) -> str:
-        """ simple brute force replacement using the defaults that were
-            provided to us during construction """
+        """simple brute force replacement using the defaults that were
+        provided to us during construction"""
         for k, v in self._defaults.items():
             value = value.replace(k, v)
         return value

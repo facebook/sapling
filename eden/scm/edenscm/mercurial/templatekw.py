@@ -923,8 +923,7 @@ def remotenameskw(**args):
 
 
 def loadkeyword(ui, extname, registrarobj):
-    """Load template keyword from specified registrarobj
-    """
+    """Load template keyword from specified registrarobj"""
     for name, func in pycompat.iteritems(registrarobj._table):
         keywords[name] = func
 

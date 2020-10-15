@@ -379,7 +379,7 @@ try:
     inspect.signature
 
     def _handlesarg(func, arg):
-        """ Try to determine if func accepts arg
+        """Try to determine if func accepts arg
 
         If it takes arg, return True
         If it happens to take **args, then it could do anything:
@@ -402,7 +402,7 @@ try:
 except AttributeError:
 
     def _handlesarg(func, arg):
-        """ Try to determine if func accepts arg
+        """Try to determine if func accepts arg
 
         If it takes arg, return True
         If it happens to take **args, then it could do anything:

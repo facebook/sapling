@@ -16,8 +16,7 @@ from .start_test import run_eden_start_with_real_daemon
 
 
 class ServiceLogTestBase(ServiceTestCaseBase):
-    """Test how the EdenFS service stores its logs.
-    """
+    """Test how the EdenFS service stores its logs."""
 
     def setUp(self) -> None:
         super().setUp()

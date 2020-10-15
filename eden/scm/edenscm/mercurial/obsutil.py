@@ -104,8 +104,7 @@ def closestpredecessors(repo, nodeid):
 
 
 def allprecursors(*args, **kwargs):
-    """ (DEPRECATED)
-    """
+    """(DEPRECATED)"""
     msg = "'obsutil.allprecursors' is deprecated, " "use 'obsutil.allpredecessors'"
     util.nouideprecwarn(msg, "4.4")
 
@@ -640,7 +639,7 @@ def successorsandmarkers(repo, ctx):
 
 
 def obsfateverb(successorset, markers):
-    """ Return the verb summarizing the successorset and potentially using
+    """Return the verb summarizing the successorset and potentially using
     information from the markers
     """
     if not successorset:
@@ -653,14 +652,12 @@ def obsfateverb(successorset, markers):
 
 
 def markersdates(markers):
-    """returns the list of dates for a list of markers
-    """
+    """returns the list of dates for a list of markers"""
     return [m[4] for m in markers]
 
 
 def markersusers(markers):
-    """ Returns a sorted list of markers users without duplicates
-    """
+    """Returns a sorted list of markers users without duplicates"""
     markersmeta = [dict(m[3]) for m in markers]
     users = set(meta.get("user") for meta in markersmeta if meta.get("user"))
 
@@ -668,8 +665,7 @@ def markersusers(markers):
 
 
 def markersoperations(markers):
-    """ Returns a sorted list of markers operations without duplicates
-    """
+    """Returns a sorted list of markers operations without duplicates"""
     markersmeta = [dict(m[3]) for m in markers]
     operations = set(
         meta.get("operation") for meta in markersmeta if meta.get("operation")
@@ -679,7 +675,7 @@ def markersoperations(markers):
 
 
 def obsfateprinter(successors, markers, ui):
-    """ Build a obsfate string for a single successorset using all obsfate
+    """Build a obsfate string for a single successorset using all obsfate
     related function defined in obsutil
     """
     quiet = ui.quiet

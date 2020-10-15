@@ -415,8 +415,8 @@ operational history and to give a preview of how undo will behave.
     ],
 )
 def debugundohistory(ui, repo, *args, **opts):
-    """ Print operational history
-        0 is the most recent operation
+    """Print operational history
+    0 is the most recent operation
     """
     if repo is not None:
         if opts.get("list"):

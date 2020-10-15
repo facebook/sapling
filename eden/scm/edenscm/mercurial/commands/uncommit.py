@@ -160,7 +160,7 @@ def commitfilteredctx(repo, ctx, match, allowempty):
 
 
 def fixdirstate(repo, oldctx, newctx, status):
-    """ fix the dirstate after switching the working directory from oldctx to
+    """fix the dirstate after switching the working directory from oldctx to
     newctx which can be result of either unamend or uncommit.
     """
     ds = repo.dirstate

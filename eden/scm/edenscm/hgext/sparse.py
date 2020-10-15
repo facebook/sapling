@@ -288,8 +288,7 @@ def _setupupdates(ui):
     def _calculateupdates(
         orig, repo, wctx, mctx, ancestors, branchmerge, *arg, **kwargs
     ):
-        """Filter updates to only lay out files that match the sparse rules.
-        """
+        """Filter updates to only lay out files that match the sparse rules."""
         actions, diverge, renamedelete = orig(
             repo, wctx, mctx, ancestors, branchmerge, *arg, **kwargs
         )
@@ -416,8 +415,7 @@ def _setupupdates(ui):
 
 def _setupcommit(ui):
     def _refreshoncommit(orig, self, node):
-        """Refresh the checkout when commits touch .hgsparse
-        """
+        """Refresh the checkout when commits touch .hgsparse"""
         orig(self, node)
 
         # Use unfiltered to avoid computing hidden commits
@@ -2747,7 +2745,7 @@ def _verbose_output(
 
 
 def _cwdlist(repo):
-    """ List the contents in the current directory. Annotate
+    """List the contents in the current directory. Annotate
     the files in the sparse profile.
     """
     _checksparse(repo)

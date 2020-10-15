@@ -21,8 +21,7 @@ stringio = pycompat.stringio
 
 
 class mpatchError(Exception):
-    """error raised when a delta cannot be decoded
-    """
+    """error raised when a delta cannot be decoded"""
 
 
 # This attempts to apply a series of patches in time proportional to

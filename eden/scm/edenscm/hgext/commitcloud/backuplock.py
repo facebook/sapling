@@ -77,7 +77,7 @@ def _getprogressstep(repo):
 
 def _getprocessetime(locker):
     """return etime in seconds for the process that is
-     holding the lock
+    holding the lock
     """
     # TODO: support windows
     if not pycompat.isposix:

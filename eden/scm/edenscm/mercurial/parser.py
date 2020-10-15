@@ -405,8 +405,7 @@ def matchtree(pattern, tree, placeholder=None, incompletenodes=()):
 
 
 def parseerrordetail(inst):
-    """Compose error message from specified ParseError object
-    """
+    """Compose error message from specified ParseError object"""
     if len(inst.args) > 1:
         return _("at %d: %s") % (inst.args[1], inst.args[0])
     else:

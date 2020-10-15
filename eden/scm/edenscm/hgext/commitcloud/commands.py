@@ -1414,8 +1414,7 @@ def clouddeletebackup(ui, repo, dest=None, **opts):
 
 @subcmd("sync", scmdaemon.scmdaemonsyncopts + pullopts + remoteopts)
 def cloudsync(ui, repo, cloudrefs=None, dest=None, **opts):
-    """backup and synchronize commits with the commit cloud service
-    """
+    """backup and synchronize commits with the commit cloud service"""
     repo.ignoreautobackup = True
     full = opts.get("full")
 

@@ -275,7 +275,7 @@ class UnixProcUtils(ProcUtils):
         # We compute system idleness for now just by looking to at the most recent time
         # that any of the TTYs have received input.  If there has been no activity
         # within the specified idle interval we consider the system idle.
-        max_idle_time: float = (time.time() - tty_idle_timeout.total_seconds())
+        max_idle_time: float = time.time() - tty_idle_timeout.total_seconds()
         dev_path = root_path / "dev"
 
         def is_tty_busy(tty_path: Path) -> bool:
