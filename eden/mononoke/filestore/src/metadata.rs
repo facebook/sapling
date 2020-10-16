@@ -25,7 +25,7 @@ pub enum RebuildBackmappingError {
     NotFound(ContentId),
 
     #[error("Error computing metadata for {0:?}: {1:?}")]
-    InternalError(ContentId, Error),
+    InternalError(ContentId, #[source] Error),
 }
 
 /// Finds the metadata for a ContentId. Returns None if the content does not exist, and returns
