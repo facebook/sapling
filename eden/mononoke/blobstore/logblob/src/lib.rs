@@ -39,7 +39,7 @@ impl<B> LogBlob<B> {
 impl<B: Blobstore + BlobstorePutOps> Blobstore for LogBlob<B> {
     fn get(
         &self,
-        ctx: CoreContext,
+        mut ctx: CoreContext,
         key: String,
     ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
         let mut scuba = self.scuba.clone();
@@ -48,12 +48,15 @@ impl<B: Blobstore + BlobstorePutOps> Blobstore for LogBlob<B> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::BlobGets);
 
+        let pc = ctx.fork_perf_counters();
+
         let get = self.inner.get(ctx.clone(), key.clone());
         let session_id = ctx.metadata().session_id().to_string();
         async move {
             let (stats, result) = get.timed().await;
             record_get_stats(
                 &mut scuba,
+                &pc,
                 stats,
                 result.as_ref(),
                 key,
@@ -87,7 +90,7 @@ impl<B: Blobstore + BlobstorePutOps> Blobstore for LogBlob<B> {
 impl<B: BlobstorePutOps> LogBlob<B> {
     fn put_impl(
         &self,
-        ctx: CoreContext,
+        mut ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
         put_behaviour: Option<PutBehaviour>,
@@ -97,6 +100,8 @@ impl<B: BlobstorePutOps> LogBlob<B> {
 
         ctx.perf_counters()
             .increment_counter(PerfCounterType::BlobPuts);
+
+        let pc = ctx.fork_perf_counters();
 
         let put = if let Some(put_behaviour) = put_behaviour {
             self.inner
@@ -108,6 +113,7 @@ impl<B: BlobstorePutOps> LogBlob<B> {
             let (stats, result) = put.timed().await;
             record_put_stats(
                 &mut scuba,
+                &pc,
                 stats,
                 result.as_ref(),
                 key,

@@ -14,6 +14,7 @@ use scuba::{ScubaSampleBuilder, ScubaValue};
 use time_ext::DurationExt;
 
 use blobstore::{BlobstoreGetData, OverwriteStatus};
+use context::PerfCounters;
 use metaconfig_types::BlobstoreId;
 
 const SLOW_REQUEST_THRESHOLD: Duration = Duration::from_secs(5);
@@ -48,6 +49,7 @@ impl From<OperationType> for ScubaValue {
 
 fn add_common_values(
     scuba: &mut ScubaSampleBuilder,
+    pc: &PerfCounters,
     key: String,
     session: String,
     stats: FutureStats,
@@ -58,6 +60,8 @@ fn add_common_values(
         .add(KEY, key)
         .add(OPERATION, operation)
         .add(COMPLETION_TIME, stats.completion_time.as_micros_unchecked());
+
+    pc.insert_nonzero_perf_counters(scuba);
 
     if let Some(blobstore_id) = blobstore_id {
         scuba.add(BLOBSTORE_ID, blobstore_id);
@@ -70,6 +74,7 @@ fn add_common_values(
 
 pub fn record_get_stats(
     scuba: &mut ScubaSampleBuilder,
+    pc: &PerfCounters,
     stats: FutureStats,
     result: Result<&Option<BlobstoreGetData>, &Error>,
     key: String,
@@ -77,7 +82,7 @@ pub fn record_get_stats(
     operation: OperationType,
     blobstore_id: Option<BlobstoreId>,
 ) {
-    add_common_values(scuba, key, session, stats, operation, blobstore_id);
+    add_common_values(scuba, pc, key, session, stats, operation, blobstore_id);
 
     match result {
         Ok(Some(data)) => {
@@ -96,6 +101,7 @@ pub fn record_get_stats(
 
 pub fn record_put_stats(
     scuba: &mut ScubaSampleBuilder,
+    pc: &PerfCounters,
     stats: FutureStats,
     result: Result<&OverwriteStatus, &Error>,
     key: String,
@@ -105,7 +111,7 @@ pub fn record_put_stats(
     blobstore_id: Option<BlobstoreId>,
     write_order: Option<usize>,
 ) {
-    add_common_values(scuba, key, session, stats, operation, blobstore_id);
+    add_common_values(scuba, pc, key, session, stats, operation, blobstore_id);
     scuba.add(SIZE, size);
 
     match result {

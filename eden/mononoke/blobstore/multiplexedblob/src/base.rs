@@ -241,19 +241,25 @@ pub async fn inner_put(
     put_behaviour: Option<PutBehaviour>,
 ) -> (BlobstoreId, Result<OverwriteStatus, Error>) {
     let size = value.len();
-    let (stats, timeout_or_res) = timeout(
-        REQUEST_TIMEOUT,
-        if let Some(put_behaviour) = put_behaviour {
-            blobstore.put_explicit(ctx.clone(), key.clone(), value, put_behaviour)
-        } else {
-            blobstore.put_with_status(ctx.clone(), key.clone(), value)
-        },
-    )
-    .timed()
-    .await;
+    let (pc, (stats, timeout_or_res)) = {
+        let mut ctx = ctx.clone();
+        let pc = ctx.fork_perf_counters();
+        let ret = timeout(
+            REQUEST_TIMEOUT,
+            if let Some(put_behaviour) = put_behaviour {
+                blobstore.put_explicit(ctx, key.clone(), value, put_behaviour)
+            } else {
+                blobstore.put_with_status(ctx, key.clone(), value)
+            },
+        )
+        .timed()
+        .await;
+        (pc, ret)
+    };
     let result = remap_timeout_result(timeout_or_res);
     record_put_stats(
         &mut scuba,
+        &pc,
         stats,
         result.as_ref(),
         key,
@@ -657,15 +663,18 @@ async fn multiplexed_get_one(
     operation: OperationType,
     mut scuba: ScubaSampleBuilder,
 ) -> (BlobstoreId, Result<Option<BlobstoreGetData>, Error>) {
-    let (stats, timeout_or_res) = timeout(
-        REQUEST_TIMEOUT,
-        blobstore.get(ctx.borrow().clone(), key.clone()),
-    )
-    .timed()
-    .await;
+    let (pc, (stats, timeout_or_res)) = {
+        let mut ctx = ctx.borrow().clone();
+        let pc = ctx.fork_perf_counters();
+        let ret = timeout(REQUEST_TIMEOUT, blobstore.get(ctx, key.clone()))
+            .timed()
+            .await;
+        (pc, ret)
+    };
     let result = remap_timeout_result(timeout_or_res);
     record_get_stats(
         &mut scuba,
+        &pc,
         stats,
         result.as_ref(),
         key,

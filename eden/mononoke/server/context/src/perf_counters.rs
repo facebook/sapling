@@ -159,6 +159,15 @@ impl PerfCounters {
         self.get_counter_atomic(counter).load(Ordering::Relaxed)
     }
 
+    pub fn insert_nonzero_perf_counters(&self, builder: &mut ScubaSampleBuilder) {
+        for key in PERF_COUNTERS.iter() {
+            let value = self.get_counter(*key);
+            if value != 0 {
+                builder.add(key.name(), value);
+            }
+        }
+    }
+
     pub fn insert_perf_counters(&self, builder: &mut ScubaSampleBuilder) {
         // NOTE: we log 0 mainly so that we can distinguish
         // nulls i.e. "not logged" and 0 as in "zero calls to blobstore".
