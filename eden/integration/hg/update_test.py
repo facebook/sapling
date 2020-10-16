@@ -6,6 +6,7 @@
 
 import logging
 import os
+import sys
 import threading
 import unittest
 from multiprocessing import Process
@@ -22,6 +23,10 @@ from facebook.eden.ttypes import (
     GetScmStatusParams,
     UnblockFaultArg,
 )
+
+
+if sys.platform == "win32":
+    from eden.fs.cli.proc_utils_win import Handle
 
 
 @hg_test
@@ -651,3 +656,61 @@ class UpdateCacheInvalidationTest(EdenHgTestCase):
         self.assert_dirstate_empty()
 
         self.assertEqual({"file1", "file2"}, self._list_contents("dir"))
+
+    if sys.platform == "win32":
+
+        def _open_locked(self, path: str, directory: bool = False) -> Handle:
+            import ctypes
+            from ctypes.wintypes import (
+                DWORD as _DWORD,
+                HANDLE as _HANDLE,
+                LPCWSTR as _LPCWSTR,
+            )
+
+            win32 = ctypes.windll.kernel32
+            win32.CreateFileW.argtypes = [
+                _LPCWSTR,
+                _DWORD,
+                _DWORD,
+                ctypes.c_void_p,
+                _DWORD,
+                _DWORD,
+                ctypes.c_void_p,
+            ]
+            win32.CreateFileW.restype = _HANDLE
+
+            GENERIC_READ = 0x80000000
+            OPEN_EXISTING = 3
+            FILE_ATTRIBUTE_NORMAL = 0x80
+            FILE_FLAG_BACKUP_SEMANTICS = 0x02000000
+            INVALID_HANDLE_VALUE = ctypes.c_void_p(-1).value
+
+            path = self.get_path(path)
+
+            flags = FILE_ATTRIBUTE_NORMAL
+            if directory:
+                flags |= FILE_FLAG_BACKUP_SEMANTICS
+            fhandle = win32.CreateFileW(
+                path, GENERIC_READ, 0, None, OPEN_EXISTING, flags, None
+            )
+            self.assertNotEqual(fhandle, INVALID_HANDLE_VALUE)
+            return Handle(fhandle)
+
+        def test_file_locked_change_content(self) -> None:
+            self.repo.update(self.commit1)
+
+            with self._open_locked("dir/file2"):
+                with self.assertRaises(hgrepo.HgError):
+                    self.repo.update(self.commit4)
+
+            self.assertEqual(self.read_file("dir/file2"), "two")
+            self.assert_status({"dir/file2": "M"})
+
+        def test_file_locked_removal(self) -> None:
+            self.repo.update(self.commit3)
+            with self._open_locked("dir/file3"):
+                with self.assertRaises(hgrepo.HgError):
+                    self.repo.update(self.commit4)
+
+            self.assertEqual(self.read_file("dir/file3"), "three")
+            self.assert_status({"dir/file3": "?"})

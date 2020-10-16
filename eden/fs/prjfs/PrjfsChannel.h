@@ -40,12 +40,23 @@ class PrjfsChannel {
   folly::SemiFuture<StopData> getStopFuture();
 
   /**
-   * Remove files from the Projected FS cache. removeCachedFile() doesn't care
-   * about the file state and will remove file in any state.
+   * Remove a file that has been cached on disk by ProjectedFS. This should be
+   * called when the content of a materialized file has changed, typically
+   * called during on an `update` operation.
+   *
+   * This can fail when the underlying file cannot be evicted from ProjectedFS,
+   * one example is when the user has locked the file.
    */
-  void removeCachedFile(RelativePathPiece path);
+  FOLLY_NODISCARD folly::Try<void> removeCachedFile(RelativePathPiece path);
 
-  void addDirectoryPlaceholder(RelativePathPiece path);
+  /**
+   * Ensure that the directory is a placeholder so that ProjectedFS will always
+   * invoke the opendir/readdir callbacks when the user is listing files in it.
+   * This particularly matters for directories that were created by the user to
+   * later be committed.
+   */
+  FOLLY_NODISCARD folly::Try<void> addDirectoryPlaceholder(
+      RelativePathPiece path);
 
   void flushNegativePathCache();
 

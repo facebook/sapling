@@ -657,7 +657,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    */
   std::unique_ptr<CheckoutAction> processCheckoutEntry(
       CheckoutContext* ctx,
-      DirContents& contents,
+      TreeInodeState& contents,
       const TreeEntry* oldScmEntry,
       const TreeEntry* newScmEntry,
       std::vector<IncompleteInodeLoad>& pendingLoads,
@@ -667,10 +667,14 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   /**
    * Send a request to the kernel to invalidate its directory cache for this
    * inode.  This is required when the child entry list has changed.
-   * invalidateChannelEntryCache(name) only works if the entry name is known to
-   * the channel (FUSE, PrjFS), which is not true for new entries.
+   * invalidateChannelEntryCache(state, name) only works if the entry name is
+   * known to the channel (FUSE, PrjFS), which is not true for new entries.
+   *
+   * A TreeInodeState is required as a way to ensure that contents_ lock is
+   * being held to avoid races between invalidation during checkout and use
+   * lookups.
    */
-  void invalidateChannelDirCache();
+  FOLLY_NODISCARD folly::Try<void> invalidateChannelDirCache(TreeInodeState&);
 
   /**
    * Send a request to the kernel to invalidate its cache for the given child
@@ -682,11 +686,13 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * Invalidating upon removal is required because the kernel maintains a
    * negative cache on lookup failures on Unices.
    *
-   * This is safe to call while holding the contents_ lock, but it is not
-   * required.  Calling it without the contents_ lock held is preferable when
-   * possible.
+   * A TreeInodeState is required as a way to ensure that contents_ lock is
+   * being held to avoid races between invalidation during checkout and use
+   * lookups.
    */
-  void invalidateChannelEntryCache(PathComponentPiece name);
+  FOLLY_NODISCARD folly::Try<void> invalidateChannelEntryCache(
+      TreeInodeState&,
+      PathComponentPiece name);
 
   /**
    * Attempt to remove an empty directory during a checkout operation.

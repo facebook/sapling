@@ -982,8 +982,8 @@ FileInodePtr TreeInode::createImpl(
   }
 
   if (InvalidationRequired::Yes == invalidate) {
-    invalidateChannelEntryCache(name);
-    invalidateChannelDirCache();
+    invalidateChannelEntryCache(*contents, name).throwIfFailed();
+    invalidateChannelDirCache(*contents).throwIfFailed();
   }
 
   getMount()->getJournal().recordCreated(targetName);
@@ -1080,6 +1080,11 @@ TreeInodePtr TreeInode::mkdir(
       throw InodeError(EEXIST, this->inodePtrFromThis(), name);
     }
 
+    if (InvalidationRequired::Yes == invalidate) {
+      invalidateChannelEntryCache(*contents, name).throwIfFailed();
+      invalidateChannelDirCache(*contents).throwIfFailed();
+    }
+
     // Allocate an inode number
     auto childNumber = getOverlay()->allocateInodeNumber();
 
@@ -1117,10 +1122,6 @@ TreeInodePtr TreeInode::mkdir(
     saveOverlayDir(contents->entries);
   }
 
-  if (InvalidationRequired::Yes == invalidate) {
-    invalidateChannelEntryCache(name);
-    invalidateChannelDirCache();
-  }
   getMount()->getJournal().recordCreated(targetName);
 
   return newChild;
@@ -1298,6 +1299,21 @@ int TreeInode::tryRemoveChild(
       return checkError;
     }
 
+    // Flush the kernel cache for this entry if requested.
+    // Since invalidation can fail on ProjectedFS, do it while holding the
+    // TreeInode write lock and before updating the contents.
+    if (InvalidationRequired::Yes == invalidate) {
+      auto success = invalidateChannelDirCache(*contents);
+      if (success.hasException()) {
+        return EIO;
+      }
+
+      success = invalidateChannelEntryCache(*contents, name);
+      if (success.hasException()) {
+        return EIO;
+      }
+    }
+
     // Inform the child it is now unlinked
     deletedInode = child->markUnlinked(this, name, renameLock);
 
@@ -1314,12 +1330,6 @@ int TreeInode::tryRemoveChild(
   deletedInode.reset();
 
   // We have successfully removed the entry.
-  // Flush the kernel cache for this entry if requested.
-  if (InvalidationRequired::Yes == invalidate) {
-    invalidateChannelDirCache();
-    invalidateChannelEntryCache(name);
-  }
-
   return 0;
 }
 
@@ -1378,6 +1388,14 @@ class TreeInode::TreeRenameLocks {
 
   DirContents* destContents() {
     return destContents_;
+  }
+
+  TreeInodeState& srcInodeState() {
+    return *srcContentsLock_;
+  }
+
+  TreeInodeState& dstInodeState() {
+    return *destContentsLock_;
   }
 
   const PathMap<DirEntry>::iterator& destChildIter() const {
@@ -1617,6 +1635,19 @@ Future<Unit> TreeInode::doRename(
     }
   }
 
+  // If the rename occurred outside of a FUSE request (unlikely), make sure to
+  // invalidate the kernel caches.
+  if (InvalidationRequired::Yes == invalidate) {
+    invalidateChannelDirCache(locks.srcInodeState()).throwIfFailed();
+    if (destParent.get() != this) {
+      destParent->invalidateChannelDirCache(locks.dstInodeState())
+          .throwIfFailed();
+    }
+    invalidateChannelEntryCache(locks.srcInodeState(), srcName).throwIfFailed();
+    destParent->invalidateChannelEntryCache(locks.dstInodeState(), destName)
+        .throwIfFailed();
+  }
+
   // Success.
   // Update the destination with the source data (this copies in the hash if
   // it happens to be set).
@@ -1685,17 +1716,6 @@ Future<Unit> TreeInode::doRename(
   // inode (if it exists).
   locks.reset();
   deletedInode.reset();
-
-  // If the rename occurred outside of a FUSE request (unlikely), make sure to
-  // invalidate the kernel caches.
-  if (InvalidationRequired::Yes == invalidate) {
-    invalidateChannelDirCache();
-    if (destParent.get() != this) {
-      destParent->invalidateChannelDirCache();
-    }
-    invalidateChannelEntryCache(srcName);
-    destParent->invalidateChannelEntryCache(destName);
-  }
 
   return folly::unit;
 }
@@ -2512,7 +2532,17 @@ Future<Unit> TreeInode::checkout(
             }
 
             if (wasDirectoryListModified) {
-              self->invalidateChannelDirCache();
+              // TODO(xavierd): In theory, this should be done before running
+              // the futures, while holding the contents lock all the way. The
+              // reason is that we in theory need to rollback what was done in
+              // case we can't invalidate.
+              auto contents = self->contents_.wlock();
+              auto success = self->invalidateChannelDirCache(*contents);
+              if (success.hasException()) {
+                auto location = self->getLocationInfo(ctx->renameLock());
+                ctx->addError(
+                    location.parent.get(), location.name, success.exception());
+              }
             }
 
             // Update our state in the overlay
@@ -2610,7 +2640,7 @@ void TreeInode::computeCheckoutActions(
       // This entry is present in the new tree but not the old one.
       action = processCheckoutEntry(
           ctx,
-          contents->entries,
+          *contents,
           nullptr,
           &newEntries[newIdx],
           pendingLoads,
@@ -2620,7 +2650,7 @@ void TreeInode::computeCheckoutActions(
       // This entry is present in the old tree but not the old one.
       action = processCheckoutEntry(
           ctx,
-          contents->entries,
+          *contents,
           &oldEntries[oldIdx],
           nullptr,
           pendingLoads,
@@ -2629,7 +2659,7 @@ void TreeInode::computeCheckoutActions(
     } else if (oldEntries[oldIdx].getName() < newEntries[newIdx].getName()) {
       action = processCheckoutEntry(
           ctx,
-          contents->entries,
+          *contents,
           &oldEntries[oldIdx],
           nullptr,
           pendingLoads,
@@ -2638,7 +2668,7 @@ void TreeInode::computeCheckoutActions(
     } else if (oldEntries[oldIdx].getName() > newEntries[newIdx].getName()) {
       action = processCheckoutEntry(
           ctx,
-          contents->entries,
+          *contents,
           nullptr,
           &newEntries[newIdx],
           pendingLoads,
@@ -2647,7 +2677,7 @@ void TreeInode::computeCheckoutActions(
     } else {
       action = processCheckoutEntry(
           ctx,
-          contents->entries,
+          *contents,
           &oldEntries[oldIdx],
           &newEntries[newIdx],
           pendingLoads,
@@ -2664,7 +2694,7 @@ void TreeInode::computeCheckoutActions(
 
 unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
     CheckoutContext* ctx,
-    DirContents& contents,
+    TreeInodeState& state,
     const TreeEntry* oldScmEntry,
     const TreeEntry* newScmEntry,
     vector<IncompleteInodeLoad>& pendingLoads,
@@ -2694,6 +2724,7 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
   bool contentsUpdated = false;
   const auto& name =
       oldScmEntry ? oldScmEntry->getName() : newScmEntry->getName();
+  auto& contents = state.entries;
   auto it = contents.find(name);
   if (it == contents.end()) {
     if (!oldScmEntry) {
@@ -2701,11 +2732,6 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
       // and does not currently exist in the filesystem.  Go ahead and add it
       // now.
       if (!ctx->isDryRun()) {
-        contents.emplace(
-            newScmEntry->getName(),
-            modeFromTreeEntryType(newScmEntry->getType()),
-            getOverlay()->allocateInodeNumber(),
-            newScmEntry->getHash());
         contentsUpdated = true;
       }
     } else if (!newScmEntry) {
@@ -2722,11 +2748,6 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
           ConflictType::REMOVED_MODIFIED, this, oldScmEntry->getName());
       if (ctx->forceUpdate()) {
         DCHECK(!ctx->isDryRun());
-        contents.emplace(
-            newScmEntry->getName(),
-            modeFromTreeEntryType(newScmEntry->getType()),
-            getOverlay()->allocateInodeNumber(),
-            newScmEntry->getHash());
         contentsUpdated = true;
       }
     }
@@ -2738,7 +2759,17 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
       // after this inode processes all of its checkout actions. But we
       // do want to invalidate the kernel's dcache and inode caches.
       wasDirectoryListModified = true;
-      invalidateChannelEntryCache(name);
+
+      auto success = invalidateChannelEntryCache(state, name);
+      if (success.hasValue()) {
+        contents.emplace(
+            newScmEntry->getName(),
+            modeFromTreeEntryType(newScmEntry->getType()),
+            getOverlay()->allocateInodeNumber(),
+            newScmEntry->getHash());
+      } else {
+        ctx->addError(this, name, success.exception());
+      }
     }
 
     // Nothing else to do when there is no local inode.
@@ -2820,6 +2851,14 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
 
   auto oldEntryInodeNumber = entry.getInodeNumber();
 
+  // We are removing or replacing an entry - attempt to invalidate it while the
+  // write lock is held and before the contents are updated.
+  auto success = invalidateChannelEntryCache(state, name);
+  if (success.hasException()) {
+    ctx->addError(this, name, success.exception());
+    return nullptr;
+  }
+
   // Update the entry
   if (!newScmEntry) {
     // TODO: remove entry.getInodeNumber() from both the overlay and the
@@ -2854,9 +2893,6 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
   // TODO: contents have changed: we probably should propagate
   // this information up to our caller so it can mark us
   // materialized if necessary.
-
-  // We removed or replaced an entry - invalidate it.
-  invalidateChannelEntryCache(name);
 
   return nullptr;
 }
@@ -2897,6 +2933,13 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
             << inode->getLogPath();
       }
 
+      // Tell the OS to invalidate its cache for this entry.
+      auto success = invalidateChannelEntryCache(*contents, name);
+      if (success.hasException()) {
+        ctx->addError(this, name, success.exception());
+        return InvalidationRequired::No;
+      }
+
       // This is a file, so we can simply unlink it, and replace/remove the
       // entry as desired.
       deletedInode = inode->markUnlinked(this, name, ctx->renameLock());
@@ -2910,9 +2953,6 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
         contents->entries.erase(it);
       }
     }
-
-    // Tell the OS to invalidate its cache for this entry.
-    invalidateChannelEntryCache(name);
 
     // We don't save our own overlay data right now:
     // we'll wait to do that until the checkout operation finishes touching all
@@ -2970,6 +3010,15 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
             {
               auto contents = parentInode->contents_.wlock();
               DCHECK(!newScmEntry->isTree());
+
+              // This code is running asynchronously during checkout, so
+              // flush the readdir cache right here.
+              auto success = parentInode->invalidateChannelDirCache(*contents);
+              if (success.hasException()) {
+                ctx->addError(parentInode.get(), name, success.exception());
+                return InvalidationRequired::No;
+              }
+
               auto ret = contents->entries.emplace(
                   name,
                   modeFromTreeEntryType(newScmEntry->getType()),
@@ -2977,9 +3026,6 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
                   newScmEntry->getHash());
               inserted = ret.second;
             }
-            // This code is running asynchronously during checkout, so
-            // flush the readdir cache right here.
-            parentInode->invalidateChannelDirCache();
 
             if (!inserted) {
               // Hmm.  Someone else already created a new entry in this location
@@ -3004,7 +3050,9 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
           });
 }
 
-void TreeInode::invalidateChannelEntryCache(PathComponentPiece name) {
+folly::Try<void> TreeInode::invalidateChannelEntryCache(
+    TreeInodeState&,
+    PathComponentPiece name) {
 #ifndef _WIN32
   if (auto* fuseChannel = getMount()->getFuseChannel()) {
     fuseChannel->invalidateEntry(getNodeId(), name);
@@ -3013,13 +3061,15 @@ void TreeInode::invalidateChannelEntryCache(PathComponentPiece name) {
   if (auto* fsChannel = getMount()->getPrjfsChannel()) {
     const auto path = getPath();
     if (path.has_value()) {
-      fsChannel->removeCachedFile(path.value() + name);
+      return fsChannel->removeCachedFile(path.value() + name);
     }
   }
 #endif
+
+  return folly::Try<void>{};
 }
 
-void TreeInode::invalidateChannelDirCache() {
+folly::Try<void> TreeInode::invalidateChannelDirCache(TreeInodeState&) {
 #ifndef _WIN32
   if (auto* fuseChannel = getMount()->getFuseChannel()) {
     // FUSE_NOTIFY_INVAL_ENTRY is the appropriate invalidation function
@@ -3031,10 +3081,12 @@ void TreeInode::invalidateChannelDirCache() {
   if (auto* fsChannel = getMount()->getPrjfsChannel()) {
     const auto path = getPath();
     if (path.has_value()) {
-      fsChannel->addDirectoryPlaceholder(path.value());
+      return fsChannel->addDirectoryPlaceholder(path.value());
     }
   }
 #endif
+
+  return folly::Try<void>{};
 }
 
 void TreeInode::saveOverlayPostCheckout(

@@ -616,9 +616,9 @@ folly::SemiFuture<PrjfsChannel::StopData> PrjfsChannel::getStopFuture() {
 // TODO: We need to add an extra layer to absorb all the exceptions generated in
 // Eden from leaking into FS. This would come in soon.
 
-void PrjfsChannel::removeCachedFile(RelativePathPiece path) {
+folly::Try<void> PrjfsChannel::removeCachedFile(RelativePathPiece path) {
   if (path.empty()) {
-    return;
+    return folly::Try<void>{};
   }
 
   auto winPath = path.wide();
@@ -636,25 +636,26 @@ void PrjfsChannel::removeCachedFile(RelativePathPiece path) {
     if (result == HRESULT_FROM_WIN32(ERROR_REPARSE_POINT_ENCOUNTERED)) {
       // We've attempted to call PrjDeleteFile on a directory. That isn't
       // supported, let's just ignore.
-      return;
     } else if (
         result == HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND) ||
         result == HRESULT_FROM_WIN32(ERROR_PATH_NOT_FOUND)) {
       // The file or a directory in the path is not cached, ignore.
     } else {
-      throwHResultErrorExplicit(
+      return folly::Try<void>{makeHResultErrorExplicit(
           result,
           fmt::format(
               FMT_STRING("Couldn't delete file {}: {:#x}"),
               path,
-              static_cast<uint32_t>(result)));
+              static_cast<uint32_t>(result)))};
     }
   }
+
+  return folly::Try<void>{};
 }
 
-void PrjfsChannel::addDirectoryPlaceholder(RelativePathPiece path) {
+folly::Try<void> PrjfsChannel::addDirectoryPlaceholder(RelativePathPiece path) {
   if (path.empty()) {
-    return;
+    return folly::Try<void>{};
   }
 
   auto winMountPath = mountPath_.wide();
@@ -667,16 +668,17 @@ void PrjfsChannel::addDirectoryPlaceholder(RelativePathPiece path) {
   if (FAILED(result)) {
     if (result == HRESULT_FROM_WIN32(ERROR_REPARSE_POINT_ENCOUNTERED)) {
       // This is already a placeholder, not an error.
-      return;
     } else {
-      throwHResultErrorExplicit(
+      return folly::Try<void>{makeHResultErrorExplicit(
           result,
           fmt::format(
               FMT_STRING("Couldn't add a placeholder for {}: {:#x}"),
               path,
-              static_cast<uint32_t>(result)));
+              static_cast<uint32_t>(result)))};
     }
   }
+
+  return folly::Try<void>{};
 }
 
 void PrjfsChannel::flushNegativePathCache() {
