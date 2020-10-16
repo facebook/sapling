@@ -48,15 +48,6 @@ fn check_no_duplicate_small_repos(small_repos: &[RawCommitSyncSmallRepoConfig]) 
 
 /// Validate the commit sync config
 ///
-/// - Check that all the prefixes in the large repo (target prefixes in a map and prefixes
-/// from `DefaultSmallToLargeCommitSyncPathAction::PrependPrefix`) are independent, e.g. aren't prefixes
-/// of each other, if the sync direction is small-to-large. This is not allowed, because
-/// otherwise there is no way to prevent path conflicts. For example, if one repo maps
-/// `p1 => foo/bar` and the other maps `p2 => foo`, both repos can accept commits that
-/// change `foo` and these commits can contain path conflicts. Given that the repos have
-/// already replied successfully to their clients, it's too late to reject these commits.
-/// To avoid this problem, we remove the possiblity of path conflicts altogether.
-///
 /// - Check that no two small repos use the same bookmark prefix. If they did, this would
 /// mean potentail bookmark name collisions.
 ///
@@ -72,50 +63,11 @@ fn validate_commit_sync_config(commit_sync_config: &CommitSyncConfig) -> Result<
         ));
     }
 
-    let all_prefixes_with_direction: Vec<(&MPath, CommitSyncDirection)> = commit_sync_config
-        .small_repos
-        .values()
-        .flat_map(|small_repo_sync_config| {
-            let SmallRepoCommitSyncConfig {
-                default_action,
-                map,
-                direction,
-                ..
-            } = small_repo_sync_config;
-            let all_prefixes = map.values();
-            match default_action {
-                DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(prefix) => {
-                    all_prefixes.chain(vec![prefix].into_iter())
-                }
-                DefaultSmallToLargeCommitSyncPathAction::Preserve => {
-                    all_prefixes.chain(vec![].into_iter())
-                }
-            }
-            .map(move |prefix| (prefix, direction.clone()))
-        })
-        .collect();
-
     let bookmark_prefixes: Vec<&AsciiString> = commit_sync_config
         .small_repos
         .iter()
         .map(|(_, sr)| &sr.bookmark_prefix)
         .collect();
-
-    for ((first_prefix, first_direction), (second_prefix, second_direction)) in
-        all_prefixes_with_direction
-            .iter()
-            .tuple_combinations::<(_, _)>()
-    {
-        if first_prefix == second_prefix
-            && *first_direction == CommitSyncDirection::LargeToSmall
-            && *second_direction == CommitSyncDirection::LargeToSmall
-        {
-            // when syncing large-to-small, it is allowed to have identical prefixes,
-            // but not prefixes that are proper prefixes of other prefixes
-            continue;
-        }
-        validate_mpath_prefixes(first_prefix, second_prefix)?;
-    }
 
     // No two small repos can have the same bookmark prefix
     for (first_prefix, second_prefix) in bookmark_prefixes.iter().tuple_combinations::<(_, _)>() {
@@ -130,25 +82,6 @@ fn validate_commit_sync_config(commit_sync_config: &CommitSyncConfig) -> Result<
         }
     }
 
-    Ok(())
-}
-
-/// Verify that two mpaths are not a prefix of each other
-fn validate_mpath_prefixes(first_prefix: &MPath, second_prefix: &MPath) -> Result<()> {
-    if first_prefix.is_prefix_of(second_prefix) {
-        return Err(anyhow!(
-            "{:?} is a prefix of {:?}, which is disallowed",
-            first_prefix,
-            second_prefix
-        ));
-    }
-    if second_prefix.is_prefix_of(first_prefix) {
-        return Err(anyhow!(
-            "{:?} is a prefix of {:?}, which is disallowed",
-            second_prefix,
-            first_prefix
-        ));
-    }
     Ok(())
 }
 
