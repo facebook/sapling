@@ -59,15 +59,11 @@ mod sync;
 
 use crate::cli::{
     create_app, ARG_BACKSYNC_BACKPRESSURE_REPOS_IDS, ARG_BOOKMARK_REGEX, ARG_CATCH_UP_ONCE,
-    ARG_DERIVED_DATA_TYPES, ARG_HG_SYNC_BACKPRESSURE, ARG_ONCE, ARG_TAIL,
+    ARG_DERIVED_DATA_TYPES, ARG_HG_SYNC_BACKPRESSURE, ARG_ONCE, ARG_TAIL, ARG_TARGET_BOOKMARK,
 };
 use crate::reporting::{add_common_fields, log_bookmark_update_result, log_noop_iteration};
-use crate::setup::{
-    get_scuba_sample, get_skiplist_index, get_sleep_secs, get_starting_commit, get_target_bookmark,
-};
-use crate::sync::{
-    sync_commit_without_pushrebase, sync_commits_via_pushrebase, sync_single_bookmark_update_log,
-};
+use crate::setup::{get_scuba_sample, get_skiplist_index, get_sleep_secs, get_starting_commit};
+use crate::sync::{sync_commit_and_ancestors, sync_single_bookmark_update_log};
 
 fn print_error(ctx: CoreContext, error: &Error) {
     error!(ctx.logger(), "{}", error);
@@ -83,7 +79,7 @@ async fn run_in_single_commit_mode<M: SyncedCommitMapping + Clone + 'static>(
     scuba_sample: ScubaSampleBuilder,
     source_skiplist_index: Source<Arc<SkiplistIndex>>,
     target_skiplist_index: Target<Arc<SkiplistIndex>>,
-    bookmark: BookmarkName,
+    maybe_bookmark: Option<BookmarkName>,
     common_bookmarks: HashSet<BookmarkName>,
 ) -> Result<(), Error> {
     info!(
@@ -101,31 +97,19 @@ async fn run_in_single_commit_mode<M: SyncedCommitMapping + Clone + 'static>(
         return Ok(());
     }
 
-    let res = if common_bookmarks.contains(&bookmark) {
-        info!(ctx.logger(), "syncing via pushrebase");
-        sync_commits_via_pushrebase(
-            &ctx,
-            &commit_syncer,
-            &source_skiplist_index,
-            &target_skiplist_index,
-            &bookmark,
-            &common_bookmarks,
-            scuba_sample,
-            vec![bcs],
-        )
-        .await
-    } else {
-        info!(ctx.logger(), "syncing without pushrebase");
-        sync_commit_without_pushrebase(
-            &ctx,
-            &commit_syncer,
-            &target_skiplist_index,
-            scuba_sample,
-            bcs,
-            &common_bookmarks,
-        )
-        .await
-    };
+    let res = sync_commit_and_ancestors(
+        ctx,
+        &commit_syncer,
+        None, // from_cs_id,
+        bcs,
+        maybe_bookmark,
+        &source_skiplist_index,
+        &target_skiplist_index,
+        &common_bookmarks,
+        scuba_sample,
+    )
+    .await;
+
     if res.is_ok() {
         info!(ctx.logger(), "successful sync");
     }
@@ -453,7 +437,10 @@ async fn run(
     match matches.subcommand() {
         (ARG_ONCE, Some(sub_m)) => {
             add_common_fields(&mut scuba_sample, &commit_syncer_args);
-            let target_bookmark = get_target_bookmark(&sub_m)?;
+            let maybe_target_bookmark = sub_m
+                .value_of(ARG_TARGET_BOOKMARK)
+                .map(BookmarkName::new)
+                .transpose()?;
             let (bcs, source_skiplist_index, target_skiplist_index) = try_join3(
                 get_starting_commit(ctx.clone(), &sub_m, source_repo.clone()).compat(),
                 source_skiplist,
@@ -468,7 +455,7 @@ async fn run(
                 scuba_sample,
                 source_skiplist_index,
                 target_skiplist_index,
-                target_bookmark,
+                maybe_target_bookmark,
                 common_bookmarks,
             )
             .await

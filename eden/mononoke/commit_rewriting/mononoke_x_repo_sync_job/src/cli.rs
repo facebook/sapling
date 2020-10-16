@@ -40,7 +40,7 @@ pub fn create_app<'a, 'b>() -> App<'a, 'b> {
             Arg::with_name(ARG_TARGET_BOOKMARK)
                 .long(ARG_TARGET_BOOKMARK)
                 .takes_value(true)
-                .required(true)
+                .required(false)
                 .help("A bookmark in the target repo to sync to"),
         )
         .arg(

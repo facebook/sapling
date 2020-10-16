@@ -69,28 +69,16 @@ start mononoke server
   $ mononoke
   $ wait_for_mononoke
 
-run the sync, expected to fail, as parent of the synced commit is not present in the mapping
-  $ mononoke_x_repo_sync 1 0 once --target-bookmark master_bookamrk --commit fbsource_master |& grep -v "using repo"
-  * Initializing CfgrLiveCommitSyncConfig (glob)
-  * Done initializing CfgrLiveCommitSyncConfig (glob)
-  * changeset resolved as: ChangesetId(Blake2(*)) (glob)
-  * Checking if * is already synced 1->0 (glob)
-  * syncing without pushrebase (glob)
-  * syncing 85b7d7910b3858629737adff1f3e2c4aa9f16b6239f115507cce6e91c8665df8 (glob)
-  * Parent commit 3478f726ba230a5071ed5fc3ff32fb99738365cdf1a335830576e3c2664706c1 hasn't been remapped (glob)
-  * Parent commit 3478f726ba230a5071ed5fc3ff32fb99738365cdf1a335830576e3c2664706c1 hasn't been remapped (glob)
-  * Parent commit 3478f726ba230a5071ed5fc3ff32fb99738365cdf1a335830576e3c2664706c1 hasn't been remapped (glob)
-
 insert sync mapping entry
   $ add_synced_commit_mapping_entry 1 $FBSOURCE_C1_BONSAI 0 $MEGAREPO_MERGE_BONSAI test_version
 
 run the sync again
-  $ mononoke_x_repo_sync 1 0 once --target-bookmark bookmarktomerge --commit "$TOMERGE" |& grep -v "using repo"
+  $ mononoke_x_repo_sync 1 0 once --commit "$TOMERGE" |& grep -v "using repo"
   * Initializing CfgrLiveCommitSyncConfig (glob)
   * Done initializing CfgrLiveCommitSyncConfig (glob)
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
   * Checking if 6d7f84d613e4cccb4ec27259b7b59335573cdd65ee5dc78887056a5eeb6e6a47 is already synced 1->0 (glob)
-  * syncing without pushrebase (glob)
+  * 1 unsynced ancestors of 6d7f84d613e4cccb4ec27259b7b59335573cdd65ee5dc78887056a5eeb6e6a47 (glob)
   * syncing 6d7f84d613e4cccb4ec27259b7b59335573cdd65ee5dc78887056a5eeb6e6a47 (glob)
   * changeset 6d7f84d613e4cccb4ec27259b7b59335573cdd65ee5dc78887056a5eeb6e6a47 synced as fa8f65693524f78f5e0a40099d10acdc3001d6d472c62baabf03231e51b109c7 in * (glob)
   * successful sync (glob)
@@ -99,7 +87,7 @@ run the sync again
   * Done initializing CfgrLiveCommitSyncConfig (glob)
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
   * Checking if * is already synced 1->0 (glob)
-  * syncing via pushrebase (glob)
+  * 1 unsynced ancestors of 85b7d7910b3858629737adff1f3e2c4aa9f16b6239f115507cce6e91c8665df8 (glob)
   * syncing 85b7d7910b3858629737adff1f3e2c4aa9f16b6239f115507cce6e91c8665df8 via pushrebase for master_bookmark (glob)
   * synced as * in *ms (glob)
   * successful sync (glob)
@@ -128,3 +116,4 @@ check that the changes are synced
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     megarepo commit 1
   
+ 

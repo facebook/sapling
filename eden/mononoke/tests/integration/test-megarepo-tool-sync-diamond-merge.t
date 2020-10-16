@@ -291,7 +291,7 @@ Merge with preserved ancestors
   * Done initializing CfgrLiveCommitSyncConfig (glob)
   * changeset resolved as: ChangesetId(Blake2(87924512f63d088d5b6bb5368bfef8016246e59927fe9d06d8ea657bc94e993d)) (glob)
   * Checking if 87924512f63d088d5b6bb5368bfef8016246e59927fe9d06d8ea657bc94e993d is already synced 1->0 (glob)
-  * syncing via pushrebase (glob)
+  * 1 unsynced ancestors of 87924512f63d088d5b6bb5368bfef8016246e59927fe9d06d8ea657bc94e993d (glob)
   * syncing 87924512f63d088d5b6bb5368bfef8016246e59927fe9d06d8ea657bc94e993d via pushrebase for master_bookmark (glob)
   * changeset 87924512f63d088d5b6bb5368bfef8016246e59927fe9d06d8ea657bc94e993d synced as 283f929b3e2c7d299920a8ee18b0928191fb3f5d9cc530f9fb7c0eb578e45d70 in * (glob)
   * successful sync (glob)

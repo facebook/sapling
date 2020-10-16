@@ -102,7 +102,7 @@ pub async fn sync_single_bookmark_update_log<M: SyncedCommitMapping + Clone + 's
     // Note: counter update might fail after a successful sync
 }
 
-async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static>(
+pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static>(
     ctx: &CoreContext,
     commit_syncer: &CommitSyncer<M>,
     from_cs_id: Option<ChangesetId>,

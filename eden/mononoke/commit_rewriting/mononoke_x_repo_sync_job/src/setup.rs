@@ -7,7 +7,6 @@
 
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
-use bookmarks::BookmarkName;
 use clap::ArgMatches;
 use cmdlib::helpers;
 use context::CoreContext;
@@ -19,7 +18,7 @@ use metaconfig_types::RepoConfig;
 use scuba_ext::ScubaSampleBuilder;
 use skiplist::{fetch_skiplist_index, SkiplistIndex};
 
-use crate::cli::{ARG_COMMIT, ARG_LOG_TO_SCUBA, ARG_SLEEP_SECS, ARG_TARGET_BOOKMARK};
+use crate::cli::{ARG_COMMIT, ARG_LOG_TO_SCUBA, ARG_SLEEP_SECS};
 use crate::reporting::SCUBA_TABLE;
 
 const DEFAULT_SLEEP_SECS: u64 = 10;
@@ -48,15 +47,6 @@ pub fn get_starting_commit<'a>(
         .map(|s| s.to_owned())
         .into_future()
         .and_then(move |str_value| helpers::csid_resolve(ctx, blobrepo, str_value))
-}
-
-pub fn get_target_bookmark<'a>(matches: &ArgMatches<'a>) -> Result<BookmarkName, Error> {
-    let name = matches
-        .value_of(ARG_TARGET_BOOKMARK)
-        .ok_or_else(|| format_err!("{} argument is required", ARG_TARGET_BOOKMARK))
-        .map(|s| s.to_owned())?;
-
-    BookmarkName::new(name)
 }
 
 pub fn get_scuba_sample<'a>(ctx: CoreContext, matches: &ArgMatches<'a>) -> ScubaSampleBuilder {
