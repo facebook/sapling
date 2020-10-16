@@ -548,6 +548,24 @@ class UpdateTest(EdenHgTestCase):
             {f"foo/_{thread_id}.log": "I" for thread_id in range(num_rename_threads)}
         )
 
+    if sys.platform == "win32":
+
+        def test_remove_materialized_while_stopped(self) -> None:
+            # Materialize the file so it's present on disk and will stay there when EdenFS is stopped
+            self.repo.write_file("foo/bar.txt", "Materialized\n")
+
+            # When EdenFS is stopped, materialized files can be modified,
+            # causing the working copy to differ from EdenFS view of what it
+            # should be.
+            self.eden.shutdown()
+            os.unlink(self.get_path("foo/bar.txt"))
+            self.eden.start()
+
+            self.assert_status({"foo/bar.txt": "M"})
+            self.repo.update(".", clean=True)
+            self.assert_status_empty()
+            self.assertEqual(self.read_file("foo/bar.txt"), "updated in commit 3\n")
+
 
 @hg_test
 # pyre-ignore[13]: T62487924

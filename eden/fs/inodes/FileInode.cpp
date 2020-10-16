@@ -538,8 +538,15 @@ folly::Future<bool> FileInode::isSameAs(
   }
 
   auto blobSha1 = Hash::sha1(blob.getContents());
-  return getSha1(fetchContext).thenValue([blobSha1](const Hash& sha1) {
-    return sha1 == blobSha1;
+  return getSha1(fetchContext).thenTry([blobSha1](folly::Try<Hash>&& try_) {
+    if (try_.hasException()) {
+      XLOG(DBG2) << "Assuming changed: "
+                 << folly::exceptionStr(
+                        try_.tryGetExceptionObject<std::exception>());
+      return false;
+    } else {
+      return try_.value() == blobSha1;
+    }
   });
 }
 
@@ -554,9 +561,17 @@ folly::Future<bool> FileInode::isSameAs(
 
   auto f1 = getSha1(fetchContext);
   auto f2 = getMount()->getObjectStore()->getBlobSha1(blobID, fetchContext);
-  return folly::collectUnsafe(f1, f2).thenValue(
-      [](std::tuple<Hash, Hash>&& result) {
-        return std::get<0>(result) == std::get<1>(result);
+  return folly::collectUnsafe(f1, f2).thenTry(
+      [](folly::Try<std::tuple<Hash, Hash>>&& try_) {
+        if (try_.hasException()) {
+          XLOG(DBG2) << "Assuming changed: "
+                     << folly::exceptionStr(
+                            try_.tryGetExceptionObject<std::exception>());
+          return false;
+        } else {
+          auto hashes = std::move(try_).value();
+          return std::get<0>(hashes) == std::get<1>(hashes);
+        }
       });
 }
 
@@ -637,7 +652,8 @@ Future<Hash> FileInode::getSha1(ObjectFetchContext& fetchContext) {
       return getObjectStore()->getBlobSha1(state->hash.value(), fetchContext);
     case State::MATERIALIZED_IN_OVERLAY:
 #ifdef _WIN32
-      return getFileSha1(getMaterializedFilePath());
+      return folly::makeFutureWith(
+          [this] { return getFileSha1(getMaterializedFilePath()); });
 #else
       return getOverlayFileAccess(state)->getSha1(*this);
 #endif // _WIN32
