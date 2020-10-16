@@ -77,8 +77,13 @@ impl FileHook for LimitFilesize {
         content_fetcher: &'fetcher dyn FileContentFetcher,
         change: Option<&'change FileChange>,
         path: &'path MPath,
-        _cross_repo_push_source: CrossRepoPushSource,
+        cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution> {
+        if cross_repo_push_source == CrossRepoPushSource::PushRedirected {
+            // For push-redirected commits, we rely on running source-repo hooks
+            return Ok(HookExecution::Accepted);
+        }
+
         let path = format!("{}", path);
         if self
             .ignore_path_regexes

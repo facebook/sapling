@@ -81,8 +81,13 @@ impl FileHook for NoQuestionableFilenames {
         _content_fetcher: &'fetcher dyn FileContentFetcher,
         change: Option<&'change FileChange>,
         path: &'path MPath,
-        _cross_repo_push_source: CrossRepoPushSource,
+        cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution> {
+        if cross_repo_push_source == CrossRepoPushSource::PushRedirected {
+            // For push-redirected pushes we rely on the hook
+            // running in the original repo
+            return Ok(HookExecution::Accepted);
+        }
         if change.is_none() {
             return Ok(HookExecution::Accepted);
         }

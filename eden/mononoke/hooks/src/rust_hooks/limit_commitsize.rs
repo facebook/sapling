@@ -80,8 +80,13 @@ impl ChangesetHook for LimitCommitsize {
         _bookmark: &BookmarkName,
         changeset: &'cs BonsaiChangeset,
         _content_fetcher: &'fetcher dyn FileContentFetcher,
-        _cross_repo_push_source: CrossRepoPushSource,
+        cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<HookExecution> {
+        if cross_repo_push_source == CrossRepoPushSource::PushRedirected {
+            // For push-redirected commits, we rely on running source-repo hooks
+            return Ok(HookExecution::Accepted);
+        }
+
         let mut totalsize = 0;
         for (path, file_change) in changeset.file_changes() {
             let file = match file_change {
