@@ -338,6 +338,7 @@ async fn compare_contents(
     // or a `HgFileNodeId` for different sets
     let mut different_filenodes = HashSet::new();
     let mut different_filetypes = HashSet::new();
+    let mut exists_in_target_but_not_source = HashSet::new();
     for (path, (target_file_type, target_filenode_id)) in &target_filenodes.0 {
         let maybe_source_type_and_filenode_id = &source_filenodes.0.get(&path);
         let (maybe_source_file_type, maybe_source_filenode_id) =
@@ -358,12 +359,7 @@ async fn compare_contents(
                     ));
                 }
                 None => {
-                    return Err(format_err!(
-                        "{:?} exists in {} but not in {}",
-                        path,
-                        target_repo.0.name(),
-                        source_repo.0.name(),
-                    ));
+                    exists_in_target_but_not_source.insert(path);
                 }
             }
         }
@@ -378,17 +374,40 @@ async fn compare_contents(
                     ));
                 }
                 None => {
-                    // This should really be unreachable, as we should've early
-                    // exited on the previous iteration
-                    return Err(format_err!(
-                        "{:?} exists in {} but not in {}",
-                        path,
-                        target_repo.0.name(),
-                        source_repo.0.name(),
-                    ));
+                    exists_in_target_but_not_source.insert(path);
                 }
             };
         }
+    }
+
+    if exists_in_target_but_not_source.len() > 0 {
+        for path in &exists_in_target_but_not_source {
+            debug!(
+                ctx.logger(),
+                "{:?} exists in {} but not in {}",
+                path,
+                target_repo.0.name(),
+                source_repo.0.name(),
+            )
+        }
+        info!(
+            ctx.logger(),
+            "{} files exist in {} but not in {}",
+            exists_in_target_but_not_source.len(),
+            target_repo.0.name(),
+            source_repo.0.name(),
+        );
+        let path = exists_in_target_but_not_source
+            .into_iter()
+            .next()
+            .expect("just checked that the set wasn't empty");
+
+        return Err(format_err!(
+            "{:?} exists in {} but not in {}",
+            path,
+            target_repo.0.name(),
+            source_repo.0.name(),
+        ));
     }
 
     report_different(
@@ -505,8 +524,7 @@ pub fn report_different<
             target_thing
         );
 
-        let mut rest_of_different_things = different_things.take(9);
-        while let Some((mpath, source_thing, target_thing)) = rest_of_different_things.next() {
+        while let Some((mpath, source_thing, target_thing)) = different_things.next() {
             debug!(
                 ctx.logger(),
                 "Different {} for path {:?}: {}: {:?} {}: {:?}",
