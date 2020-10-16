@@ -1153,7 +1153,7 @@ class ui(object):
         # - http://bugs.python.org/issue12833
         with self.timeblockedsection("stdio"):
             if usereadline:
-                return pycompat.rawinput("")
+                line = pycompat.rawinput("")
             else:
                 line = pycompat.decodeutf8(self.fin.readline())
                 if not line:
