@@ -518,6 +518,11 @@ where
         &self.mapping
     }
 
+    pub fn version_exists(&self, version: &CommitSyncConfigVersion) -> Result<bool, Error> {
+        self.commit_sync_data_provider
+            .version_exists(self.get_target_repo_id(), version)
+    }
+
     pub fn get_mover_by_version(&self, version: &CommitSyncConfigVersion) -> Result<Mover, Error> {
         let (source_repo, target_repo) = self.get_source_target();
         self.commit_sync_data_provider.get_mover(

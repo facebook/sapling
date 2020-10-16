@@ -55,6 +55,8 @@ pub const INPUT_FILE: &str = "input-file";
 pub const VERSION: &str = "version";
 pub const RUN_MOVER: &str = "run-mover";
 pub const PATH: &str = "path";
+pub const BACKFILL_NOOP_MAPPING: &str = "backfill-noop-mapping";
+pub const MAPPING_VERSION_NAME: &str = "mapping-version-name";
 
 pub fn cs_args_from_matches<'a>(sub_m: &ArgMatches<'a>) -> BoxFuture<ChangesetArgs, Error> {
     let message = try_boxfuture!(
@@ -499,6 +501,32 @@ pub fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .required(true),
         );
 
+    let backfill_noop_mapping = SubCommand::with_name(BACKFILL_NOOP_MAPPING)
+        .about(
+            "
+            Given the list of commit identifiers resolve them to bonsai hashes in source \
+            and target repo and insert a sync commit mapping with specified version name. \
+            This is useful for initial backfill to mark commits that are identical between \
+            repositories. \
+            Input file can contain any commit identifier (e.g. bookmark name) \
+            but the safest approach is to use commit hashes (bonsai or hg).
+        ",
+        )
+        .arg(
+            Arg::with_name(INPUT_FILE)
+                .long(INPUT_FILE)
+                .help("list of commit hashes which are remapped with noop mapping")
+                .takes_value(true)
+                .required(true),
+        )
+        .arg(
+            Arg::with_name(MAPPING_VERSION_NAME)
+                .long(MAPPING_VERSION_NAME)
+                .help("name of the noop mapping that will be inserted")
+                .takes_value(true)
+                .required(true),
+        );
+
     args::MononokeApp::new("megarepo preparation tool")
         .with_advanced_args_hidden()
         .with_source_and_target_repos()
@@ -518,4 +546,5 @@ pub fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .subcommand(catchup_validate_subcommand)
         .subcommand(mark_not_synced_candidate)
         .subcommand(run_mover_subcommand)
+        .subcommand(backfill_noop_mapping)
 }

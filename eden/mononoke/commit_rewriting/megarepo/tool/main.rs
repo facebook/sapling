@@ -8,8 +8,9 @@
 #![deny(warnings)]
 #![feature(process_exitcode_placeholder)]
 
-use anyhow::{bail, format_err, Error, Result};
+use anyhow::{bail, format_err, Context, Error, Result};
 use bookmarks::BookmarkName;
+use borrowed::borrowed;
 use clap::ArgMatches;
 use cmdlib::{args, helpers};
 use cmdlib_x_repo::create_commit_syncer_args_from_matches;
@@ -19,11 +20,11 @@ use fbinit::FacebookInit;
 use futures::{
     compat::Future01CompatExt,
     future::{try_join, try_join3, try_join_all},
-    stream, Stream, StreamExt, TryStreamExt,
+    Stream, StreamExt, TryStreamExt,
 };
 use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
-use metaconfig_types::MetadataDatabaseConfig;
-use metaconfig_types::{CommitSyncConfigVersion, RepoConfig};
+use metaconfig_types::RepoConfig;
+use metaconfig_types::{CommitSyncConfigVersion, MetadataDatabaseConfig};
 use mononoke_types::{MPath, RepositoryId};
 use movers::get_small_to_large_mover;
 use regex::Regex;
@@ -33,12 +34,15 @@ use slog::{info, warn};
 use sql_ext::facebook::MyAdmin;
 use sql_ext::replication::{NoReplicaLagMonitor, ReplicaLagMonitor, WaitForReplicationConfig};
 use std::collections::BTreeMap;
-use std::fs::File;
-use std::io::{BufRead, BufReader};
 use std::num::NonZeroU64;
 use std::sync::Arc;
 use synced_commit_mapping::{
     EquivalentWorkingCopyEntry, SqlSyncedCommitMapping, SyncedCommitMapping,
+    SyncedCommitMappingEntry,
+};
+use tokio::{
+    fs::File,
+    io::{AsyncBufReadExt, BufReader},
 };
 
 mod catchup;
@@ -51,13 +55,13 @@ mod sync_diamond_merge;
 use crate::cli::{
     cs_args_from_matches, get_catchup_head_delete_commits_cs_args_factory,
     get_delete_commits_cs_args_factory, get_gradual_merge_commits_cs_args_factory, setup_app,
-    BASE_COMMIT_HASH, BONSAI_MERGE, BONSAI_MERGE_P1, BONSAI_MERGE_P2, CATCHUP_DELETE_HEAD,
-    CATCHUP_VALIDATE_COMMAND, CHANGESET, CHUNKING_HINT_FILE, COMMIT_BOOKMARK, COMMIT_HASH,
-    DELETION_CHUNK_SIZE, DRY_RUN, EVEN_CHUNK_SIZE, FIRST_PARENT, GRADUAL_MERGE,
+    BACKFILL_NOOP_MAPPING, BASE_COMMIT_HASH, BONSAI_MERGE, BONSAI_MERGE_P1, BONSAI_MERGE_P2,
+    CATCHUP_DELETE_HEAD, CATCHUP_VALIDATE_COMMAND, CHANGESET, CHUNKING_HINT_FILE, COMMIT_BOOKMARK,
+    COMMIT_HASH, DELETION_CHUNK_SIZE, DRY_RUN, EVEN_CHUNK_SIZE, FIRST_PARENT, GRADUAL_MERGE,
     GRADUAL_MERGE_PROGRESS, HEAD_BOOKMARK, INPUT_FILE, LAST_DELETION_COMMIT, LIMIT,
-    MANUAL_COMMIT_SYNC, MARK_NOT_SYNCED_COMMAND, MAX_NUM_OF_MOVES_IN_COMMIT, MERGE, MOVE,
-    ORIGIN_REPO, PARENTS, PATH, PATH_REGEX, PRE_DELETION_COMMIT, PRE_MERGE_DELETE, RUN_MOVER,
-    SECOND_PARENT, SYNC_DIAMOND_MERGE, TO_MERGE_CS_ID, VERSION, WAIT_SECS,
+    MANUAL_COMMIT_SYNC, MAPPING_VERSION_NAME, MARK_NOT_SYNCED_COMMAND, MAX_NUM_OF_MOVES_IN_COMMIT,
+    MERGE, MOVE, ORIGIN_REPO, PARENTS, PATH, PATH_REGEX, PRE_DELETION_COMMIT, PRE_MERGE_DELETE,
+    RUN_MOVER, SECOND_PARENT, SYNC_DIAMOND_MERGE, TO_MERGE_CS_ID, VERSION, WAIT_SECS,
 };
 use crate::merging::perform_merge;
 use megarepolib::chunking::{
@@ -563,11 +567,14 @@ async fn run_mark_not_synced<'a>(
     let input_file = sub_m
         .value_of(INPUT_FILE)
         .ok_or_else(|| format_err!("input-file is not specified"))?;
-    let inputfile = File::open(input_file)?;
-    let inputfile = BufReader::new(&inputfile);
+    let inputfile = File::open(&input_file)
+        .await
+        .with_context(|| format!("Failed to open {}", input_file))?;
+    let reader = BufReader::new(inputfile);
 
     let ctx = &ctx;
-    let s = stream::iter(inputfile.lines())
+    let s = reader
+        .lines()
         .map_err(Error::from)
         .map_ok(move |line| async move {
             let cs_id = helpers::csid_resolve(ctx.clone(), large_repo.clone(), line)
@@ -604,9 +611,87 @@ async fn run_mark_not_synced<'a>(
                 info!(ctx.logger(), "{} already have mapping", cs_id);
             }
 
-            Ok(())
+            // Processed a single entry
+            Ok(1)
         })
         .try_buffer_unordered(100);
+
+    process_stream_and_wait_for_replication(&ctx, matches, &commit_syncer, s).await?;
+
+    Ok(())
+}
+
+async fn run_backfill_noop_mapping<'a>(
+    ctx: CoreContext,
+    matches: &ArgMatches<'a>,
+    sub_m: &ArgMatches<'a>,
+) -> Result<(), Error> {
+    let commit_syncer = get_commit_syncer(&ctx, matches).await?;
+
+    let small_repo = commit_syncer.get_small_repo();
+    let large_repo = commit_syncer.get_large_repo();
+
+    info!(
+        ctx.logger(),
+        "small repo: {}, large repo: {}",
+        small_repo.name(),
+        large_repo.name(),
+    );
+    let mapping_version_name = sub_m
+        .value_of(MAPPING_VERSION_NAME)
+        .ok_or_else(|| format_err!("mapping-version-name is not specified"))?;
+    let mapping_version_name = CommitSyncConfigVersion(mapping_version_name.to_string());
+    if !commit_syncer.version_exists(&mapping_version_name)? {
+        return Err(format_err!("{} version is not found", mapping_version_name));
+    }
+
+    let input_file = sub_m
+        .value_of(INPUT_FILE)
+        .ok_or_else(|| format_err!("input-file is not specified"))?;
+
+    let inputfile = File::open(&input_file)
+        .await
+        .with_context(|| format!("Failed to open {}", input_file))?;
+    let reader = BufReader::new(inputfile);
+
+    let s = reader
+        .lines()
+        .map_err(Error::from)
+        .map_ok({
+            borrowed!(ctx, mapping_version_name);
+            move |cs_id| async move {
+                let small_cs_id =
+                    helpers::csid_resolve(ctx.clone(), small_repo.clone(), cs_id.clone()).compat();
+
+                let large_cs_id =
+                    helpers::csid_resolve(ctx.clone(), large_repo.clone(), cs_id).compat();
+
+                let (small_cs_id, large_cs_id) = try_join(small_cs_id, large_cs_id).await?;
+
+                let entry = SyncedCommitMappingEntry {
+                    large_repo_id: large_repo.get_repoid(),
+                    large_bcs_id: large_cs_id,
+                    small_repo_id: small_repo.get_repoid(),
+                    small_bcs_id: small_cs_id,
+                    version_name: Some(mapping_version_name.clone()),
+                };
+                Ok(entry)
+            }
+        })
+        .try_buffer_unordered(100)
+        .chunks(100)
+        .then({
+            borrowed!(commit_syncer, ctx);
+            move |chunk| async move {
+                let mapping = &commit_syncer.mapping;
+                let chunk: Result<Vec<_>, Error> = chunk.into_iter().collect();
+                let chunk = chunk?;
+                let len = chunk.len();
+                mapping.add_bulk(ctx.clone(), chunk).compat().await?;
+                Result::<_, Error>::Ok(len as u64)
+            }
+        })
+        .boxed();
 
     process_stream_and_wait_for_replication(&ctx, matches, &commit_syncer, s).await?;
 
@@ -617,7 +702,7 @@ async fn process_stream_and_wait_for_replication<'a>(
     ctx: &CoreContext,
     matches: &ArgMatches<'a>,
     commit_syncer: &CommitSyncer<SqlSyncedCommitMapping>,
-    mut s: impl Stream<Item = Result<()>> + std::marker::Unpin,
+    mut s: impl Stream<Item = Result<u64>> + std::marker::Unpin,
 ) -> Result<(), Error> {
     let small_repo = commit_syncer.get_small_repo();
     let large_repo = commit_syncer.get_large_repo();
@@ -626,13 +711,13 @@ async fn process_stream_and_wait_for_replication<'a>(
         args::get_config_by_repoid(ctx.fb, matches, small_repo.get_repoid())?;
     let (_, large_repo_config) =
         args::get_config_by_repoid(ctx.fb, matches, large_repo.get_repoid())?;
-    if small_repo_config.storage_config != large_repo_config.storage_config {
+    if small_repo_config.storage_config.metadata != large_repo_config.storage_config.metadata {
         return Err(format_err!(
-            "{} and {} have differrent storage configs: {:?} vs {:?}",
+            "{} and {} have different db metadata configs: {:?} vs {:?}",
             small_repo.name(),
             large_repo.name(),
-            small_repo_config.storage_config,
-            large_repo_config.storage_config,
+            small_repo_config.storage_config.metadata,
+            large_repo_config.storage_config.metadata,
         ));
     }
     let storage_config = small_repo_config.storage_config;
@@ -650,7 +735,6 @@ async fn process_stream_and_wait_for_replication<'a>(
         Some(address) => {
             #[cfg(fbcode_build)]
             {
-                use anyhow::Context;
                 let my_admin = MyAdmin::new(ctx.fb).context("building myadmin client")?;
                 Arc::new(my_admin.single_shard_lag_monitor(address))
             }
@@ -663,15 +747,19 @@ async fn process_stream_and_wait_for_replication<'a>(
     };
 
     let mut total = 0;
-    while let Some(item) = s.next().await {
-        item?;
-        total += 1;
-        if total % 100 == 0 {
-            info!(ctx.logger(), "processes {} changesets", total);
-            replica_lag_monitor
-                .wait_for_replication(&wait_config)
-                .await?;
+    let mut batch = 0;
+    while let Some(chunk_size) = s.try_next().await? {
+        total += chunk_size;
+
+        batch += chunk_size;
+        if batch < 100 {
+            continue;
         }
+        info!(ctx.logger(), "processed {} changesets", total);
+        batch %= 100;
+        replica_lag_monitor
+            .wait_for_replication(&wait_config)
+            .await?;
     }
 
     Ok(())
@@ -758,6 +846,9 @@ fn main(fb: FacebookInit) -> Result<()> {
                 run_mark_not_synced(ctx, &matches, sub_m).await
             }
             (RUN_MOVER, Some(sub_m)) => run_mover(ctx, &matches, sub_m).await,
+            (BACKFILL_NOOP_MAPPING, Some(sub_m)) => {
+                run_backfill_noop_mapping(ctx, &matches, sub_m).await
+            }
             _ => bail!("oh no, wrong arguments provided!"),
         }
     };

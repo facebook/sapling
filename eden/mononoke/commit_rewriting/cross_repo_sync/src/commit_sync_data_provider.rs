@@ -245,6 +245,21 @@ impl CommitSyncDataProvider {
             }
         }
     }
+
+    pub fn version_exists(
+        &self,
+        repo_id: RepositoryId,
+        version: &CommitSyncConfigVersion,
+    ) -> Result<bool, Error> {
+        match self {
+            Self::Live(live_commit_sync_config) => {
+                let versions =
+                    live_commit_sync_config.get_all_commit_sync_config_versions(repo_id)?;
+                Ok(versions.contains_key(version))
+            }
+            Self::Test { map, .. } => Ok(map.contains_key(version)),
+        }
+    }
 }
 
 fn get_movers_from_config(
