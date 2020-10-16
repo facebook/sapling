@@ -18,11 +18,6 @@ to the user.
     # move the top non-public stack to the second column
     indentnonpublic = True
 
-    # Data. Hide draft commits before "hide-before".
-    # This is used to migrate away from the "recent days" behavior and
-    # eventually show all visible commits.
-    hide-before = 2019-2-22
-
     # Default parameter for master
     master = remote/master
 
@@ -71,7 +66,6 @@ revsetpredicate = registrar.revsetpredicate()
 
 testedwith = "ships-with-fb-hgext"
 commit_info = False
-hiddenchanges = 0
 
 # Remove unsupported --limit option.
 logopts = [opt for opt in commands.logopts if opt[1] != "limit"]
@@ -594,9 +588,6 @@ def smartlog(ui, repo, *pats, **opts):
 
 
 def getrevs(ui, repo, masterstring, **opts):
-    global hiddenchanges
-    hiddenchanges = 0
-
     global commit_info
     commit_info = opts.get("commit_info")
 
@@ -604,23 +595,7 @@ def getrevs(ui, repo, masterstring, **opts):
     if headrevs:
         headspec = revsetlang.formatspec("%lr", headrevs)
     else:
-        if opts.get("all"):
-            datefilter = "_all()"
-        else:
-            before = ui.config("smartlog", "hide-before")
-            if before:
-                datefilter = revsetlang.formatspec("date(%s)", ">%s" % before)
-            else:
-                # last 2 weeks
-                datefilter = "date(-14)"
-            # Calculate hiddenchanges
-            allheads = repo.revs("heads(draft()) - . - interestingbookmarks()")
-            visibleheads = repo.revs("%ld & %r", allheads, datefilter)
-            hiddenchanges = len(allheads) - len(visibleheads)
-
-        headspec = revsetlang.formatspec(
-            "interestingbookmarks() + (heads(draft()) & %r) + .", datefilter
-        )
+        headspec = "interestingbookmarks() + heads(draft()) + ."
 
     revstring = revsetlang.formatspec(
         "smartlog(heads=%r, master=%r)", headspec, masterstring
@@ -673,11 +648,3 @@ def _smartlog(ui, repo, *pats, **opts):
     except IOError:
         # No write access. No big deal.
         pass
-
-    global hiddenchanges
-    if hiddenchanges:
-        ui.warn(
-            _("hiding %s old heads without bookmarks\n") % hiddenchanges,
-            notice=_("note"),
-        )
-        ui.warn(_("(use --all to see them)\n"))

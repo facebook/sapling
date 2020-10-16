@@ -209,10 +209,12 @@ Test reclaim workspace
   $ setconfig ui.username='Jane Doe <jdoe@example.com>'
 
   $ hg smartlog -T '{desc}\n'
+  o  B (W2)
+  |
+  o  A (W2)
+  |
   @  base
   
-  note: hiding 1 old heads without bookmarks
-  (use --all to see them)
   note: background backup is currently disabled so your commits are not being backed up.
   hint[commitcloud-username-migration]: username configuration has been changed
   please, run `hg cloud reclaim` to migrate your commit cloud workspaces
