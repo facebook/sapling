@@ -151,6 +151,51 @@ as running ``hg histedit 836302820282``. If you need plan to push to a
 repository that Mercurial does not detect to be related to the source
 repo, you can add a ``--force`` option.
 
+Autoverb
+--------
+Autoverb is an experimental feature that uses the first lines of commit
+messages to pre-construct your histedit plan. An autoverb commit message
+begins with a four-letter command from the list above, then !, then
+optionally the first line of another commit message to set order.
+
+For example, given the following history:
+
+ @  3[tip]   7c2fd3b9020c   2009-04-27 18:04 -0500   durin42
+ |    roll! Add beta
+ |
+ o  2   030b686bedc4   2009-04-27 18:04 -0500   durin42
+ |    mess! Add gamma
+ |
+ o  1   c561b4e977df   2009-04-27 18:04 -0500   durin42
+ |    Add beta
+ |
+ o  0   d8d2fcd0e319   2009-04-27 18:04 -0500   durin42
+      Add alpha
+
+``hg histedit c561b4e977df`` would construct the histedit plan below and
+present it to you for final fixes before you close the editor:
+
+ pick c561b4e977df Add beta
+ roll 7c2fd3b9020c roll! Add beta
+ mess 030b686bedc4 mess! Add gamma
+
+ # Edit history between c561b4e977df and 7c2fd3b9020c
+ #
+ # Commits are listed from least to most recent
+ #
+ # Commands:
+ #  p, pick = use commit
+ #  e, edit = use commit, but stop for amending
+ #  f, fold = use commit, but combine it with the one above
+ #  r, roll = like fold, but discard this commit's description and date
+ #  d, drop = remove commit from history
+ #  m, mess = edit commit message without changing commit content
+ #  b, base = checkout changeset and apply further changesets from there
+ #
+
+This lets you use ordinary ``hg commit`` commands to build up a set of changes
+to histedit into place, then ``hg histedit`` when you are done.
+
 Config
 ------
 
@@ -183,6 +228,11 @@ unexpectedly::
 
   [histedit]
   singletransaction = True
+
+If you wish to use autoverb, you will need to enable it:
+
+  [experimental]
+  histedit.autoverb = True
 
 """
 
