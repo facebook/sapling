@@ -2192,10 +2192,12 @@ mod tests {
     #[cfg(feature = "fb")]
     mod fb_test {
         use super::*;
+        use parking_lot::Mutex;
         use std::env::set_var;
 
         #[test]
-        fn test_lfs_non_present() -> Result<()> {
+        fn test_lfs_proxy_non_present() -> Result<()> {
+            let _env_lock = crate::env_lock();
             let cachedir = TempDir::new()?;
             let lfsdir = TempDir::new()?;
             let config = make_lfs_config(&cachedir);
@@ -2225,6 +2227,8 @@ mod tests {
         #[test]
         #[cfg(not(windows))]
         fn test_lfs_proxy_no_http() -> Result<()> {
+            let _env_lock = crate::env_lock();
+
             let cachedir = TempDir::new()?;
             let lfsdir = TempDir::new()?;
             let config = make_lfs_config(&cachedir);
@@ -2244,7 +2248,9 @@ mod tests {
 
             let objs = [(blob.0, blob.1)].iter().cloned().collect::<HashSet<_>>();
             let resp = remote.batch_fetch(&objs, |_, _| unreachable!());
-            assert!(resp.unwrap_err().to_string().contains("Proxy"));
+            // ex. [56] Failure when receiving data from the peer (Proxy CONNECT aborted)
+            // But not necessarily that message in all cases.
+            assert!(resp.is_err());
 
             Ok(())
         }
@@ -2252,6 +2258,8 @@ mod tests {
         #[test]
         #[cfg(not(windows))]
         fn test_lfs_proxy_http() -> Result<()> {
+            let _env_lock = crate::env_lock();
+
             let cachedir = TempDir::new()?;
             let lfsdir = TempDir::new()?;
             let config = make_lfs_config(&cachedir);
@@ -2271,13 +2279,15 @@ mod tests {
 
             let objs = [(blob.0, blob.1)].iter().cloned().collect::<HashSet<_>>();
             let resp = remote.batch_fetch(&objs, |_, _| unreachable!());
-            assert!(resp.unwrap_err().to_string().contains("Proxy"));
+            assert!(resp.is_err());
 
             Ok(())
         }
 
         #[test]
         fn test_lfs_no_proxy() -> Result<()> {
+            let _env_lock = crate::env_lock();
+
             let cachedir = TempDir::new()?;
             let lfsdir = TempDir::new()?;
             let config = make_lfs_config(&cachedir);
@@ -2312,6 +2322,8 @@ mod tests {
 
         #[test]
         fn test_lfs_no_proxy_suffix() -> Result<()> {
+            let _env_lock = crate::env_lock();
+
             let cachedir = TempDir::new()?;
             let lfsdir = TempDir::new()?;
             let config = make_lfs_config(&cachedir);
@@ -2343,6 +2355,8 @@ mod tests {
 
         #[test]
         fn test_lfs_remote() -> Result<()> {
+            let _env_lock = crate::env_lock();
+
             let cachedir = TempDir::new()?;
             let lfsdir = TempDir::new()?;
             let config = make_lfs_config(&cachedir);
@@ -2389,6 +2403,8 @@ mod tests {
 
         #[test]
         fn test_lfs_request_timeout() -> Result<()> {
+            let _env_lock = crate::env_lock();
+
             let cachedir = TempDir::new()?;
             let lfsdir = TempDir::new()?;
             let mut config = make_lfs_config(&cachedir);
@@ -2415,6 +2431,8 @@ mod tests {
 
         #[test]
         fn test_lfs_remote_datastore() -> Result<()> {
+            let _env_lock = crate::env_lock();
+
             let cachedir = TempDir::new()?;
             let lfsdir = TempDir::new()?;
             let config = make_lfs_config(&cachedir);
@@ -2463,6 +2481,8 @@ mod tests {
 
     #[test]
     fn test_lfs_remote_file() -> Result<()> {
+        let _env_lock = crate::env_lock();
+
         let cachedir = TempDir::new()?;
         let mut config = make_lfs_config(&cachedir);
 
@@ -2516,6 +2536,8 @@ mod tests {
 
     #[test]
     fn test_lfs_upload_remote_file() -> Result<()> {
+        let _env_lock = crate::env_lock();
+
         let cachedir = TempDir::new()?;
         let mut config = make_lfs_config(&cachedir);
 
@@ -2560,6 +2582,8 @@ mod tests {
 
     #[test]
     fn test_lfs_upload_move_to_shared() -> Result<()> {
+        let _env_lock = crate::env_lock();
+
         let cachedir = TempDir::new()?;
         let mut config = make_lfs_config(&cachedir);
 

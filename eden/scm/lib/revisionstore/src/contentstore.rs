@@ -1028,6 +1028,8 @@ mod tests {
 
         #[test]
         fn test_lfs_remote() -> Result<()> {
+            let _env_lock = crate::env_lock();
+
             let cachedir = TempDir::new()?;
             let localdir = TempDir::new()?;
             let config = make_lfs_config(&cachedir);
@@ -1136,6 +1138,8 @@ mod tests {
 
         #[test]
         fn test_lfs_prefetch_once() -> Result<()> {
+            let _env_lock = crate::env_lock();
+
             let cachedir = TempDir::new()?;
             let localdir = TempDir::new()?;
             let config = make_lfs_config(&cachedir);

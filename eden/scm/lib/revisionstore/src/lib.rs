@@ -191,3 +191,30 @@ pub use revisionstore_types::*;
 
 #[cfg(any(test, feature = "for-tests"))]
 pub mod testutil;
+
+#[cfg(test)]
+mod env_lock {
+    use lazy_static::lazy_static;
+    use parking_lot::Mutex;
+
+    lazy_static! {
+        pub static ref ENV_LOCK: Mutex<()> = Mutex::new(());
+    }
+
+    fn env_reset() {
+        for name in ["https_proxy", "http_proxy", "NO_PROXY"].iter() {
+            if std::env::var_os(name).is_some() {
+                std::env::remove_var(name)
+            }
+        }
+    }
+
+    pub(crate) fn env_lock() -> impl Drop {
+        let lock = ENV_LOCK.lock();
+        env_reset();
+        lock
+    }
+}
+
+#[cfg(test)]
+pub(crate) use env_lock::env_lock;
