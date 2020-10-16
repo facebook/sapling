@@ -19,7 +19,7 @@ use fbinit::FacebookInit;
 use futures::{
     compat::Future01CompatExt,
     future::{try_join, try_join3, try_join_all},
-    stream, StreamExt, TryStreamExt,
+    stream, Stream, StreamExt, TryStreamExt,
 };
 use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use metaconfig_types::MetadataDatabaseConfig;
@@ -566,30 +566,8 @@ async fn run_mark_not_synced<'a>(
     let inputfile = File::open(input_file)?;
     let inputfile = BufReader::new(&inputfile);
 
-    let (_, small_repo_config) =
-        args::get_config_by_repoid(ctx.fb, matches, small_repo.get_repoid())?;
-    let (_, large_repo_config) =
-        args::get_config_by_repoid(ctx.fb, matches, large_repo.get_repoid())?;
-    if small_repo_config.storage_config != large_repo_config.storage_config {
-        return Err(format_err!(
-            "{} and {} have differrent storage configs: {:?} vs {:?}",
-            small_repo.name(),
-            large_repo.name(),
-            small_repo_config.storage_config,
-            large_repo_config.storage_config,
-        ));
-    }
-    let storage_config = small_repo_config.storage_config;
-
-    let db_address = match &storage_config.metadata {
-        MetadataDatabaseConfig::Local(_) => None,
-        MetadataDatabaseConfig::Remote(remote_config) => {
-            Some(remote_config.primary.db_address.clone())
-        }
-    };
-
     let ctx = &ctx;
-    let mut s = stream::iter(inputfile.lines())
+    let s = stream::iter(inputfile.lines())
         .map_err(Error::from)
         .map_ok(move |line| async move {
             let cs_id = helpers::csid_resolve(ctx.clone(), large_repo.clone(), line)
@@ -626,9 +604,45 @@ async fn run_mark_not_synced<'a>(
                 info!(ctx.logger(), "{} already have mapping", cs_id);
             }
 
-            Ok(cs_id)
+            Ok(())
         })
         .try_buffer_unordered(100);
+
+    process_stream_and_wait_for_replication(&ctx, matches, &commit_syncer, s).await?;
+
+    Ok(())
+}
+
+async fn process_stream_and_wait_for_replication<'a>(
+    ctx: &CoreContext,
+    matches: &ArgMatches<'a>,
+    commit_syncer: &CommitSyncer<SqlSyncedCommitMapping>,
+    mut s: impl Stream<Item = Result<()>> + std::marker::Unpin,
+) -> Result<(), Error> {
+    let small_repo = commit_syncer.get_small_repo();
+    let large_repo = commit_syncer.get_large_repo();
+
+    let (_, small_repo_config) =
+        args::get_config_by_repoid(ctx.fb, matches, small_repo.get_repoid())?;
+    let (_, large_repo_config) =
+        args::get_config_by_repoid(ctx.fb, matches, large_repo.get_repoid())?;
+    if small_repo_config.storage_config != large_repo_config.storage_config {
+        return Err(format_err!(
+            "{} and {} have differrent storage configs: {:?} vs {:?}",
+            small_repo.name(),
+            large_repo.name(),
+            small_repo_config.storage_config,
+            large_repo_config.storage_config,
+        ));
+    }
+    let storage_config = small_repo_config.storage_config;
+
+    let db_address = match &storage_config.metadata {
+        MetadataDatabaseConfig::Local(_) => None,
+        MetadataDatabaseConfig::Remote(remote_config) => {
+            Some(remote_config.primary.db_address.clone())
+        }
+    };
 
     let wait_config = WaitForReplicationConfig::default().with_logger(ctx.logger());
     let replica_lag_monitor: Arc<dyn ReplicaLagMonitor> = match db_address {
