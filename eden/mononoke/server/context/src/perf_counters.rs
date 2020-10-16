@@ -96,6 +96,9 @@ define_perf_counters! {
         SqlWrites,
         SumManifoldPollTime,
         UndesiredTreeFetch,
+        ManifoldBlobSumDelay,
+        ManifoldBlobRetries,
+        ManifoldBlobConflicts,
     }
 }
 

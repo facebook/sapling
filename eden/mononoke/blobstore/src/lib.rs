@@ -394,6 +394,7 @@ pub trait BlobstoreWithLink: Blobstore {
 pub trait BlobstoreKeySource: Blobstore {
     fn enumerate(
         &self,
+        ctx: CoreContext,
         range: BlobstoreKeyParam,
     ) -> BoxFuture<'static, Result<BlobstoreEnumerationData, Error>>;
 }

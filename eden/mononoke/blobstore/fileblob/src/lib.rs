@@ -206,6 +206,7 @@ impl BlobstoreWithLink for Fileblob {
 impl BlobstoreKeySource for Fileblob {
     fn enumerate(
         &self,
+        _ctx: CoreContext,
         range: BlobstoreKeyParam,
     ) -> BoxFuture<'static, Result<BlobstoreEnumerationData, Error>> {
         match range {

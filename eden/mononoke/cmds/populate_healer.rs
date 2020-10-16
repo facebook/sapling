@@ -340,7 +340,9 @@ async fn populate_healer_queue(
     let mut state = get_resume_state(blobstore.clone(), &config).await?;
     let mut token = state.current_range.clone();
     loop {
-        let entries = blobstore.enumerate((*state.current_range).clone()).await?;
+        let entries = blobstore
+            .enumerate(config.ctx.clone(), (*state.current_range).clone())
+            .await?;
         state = state.with_current_many(token, entries.keys.len());
         if !config.dry_run {
             let src_blobstore_id = config.src_blobstore_id;
