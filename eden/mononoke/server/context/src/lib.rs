@@ -26,4 +26,5 @@ mod logging;
 #[cfg(not(fbcode_build))]
 mod oss;
 mod perf_counters;
+mod perf_counters_stack;
 mod session;

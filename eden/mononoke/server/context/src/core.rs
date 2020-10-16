@@ -11,10 +11,12 @@ use scuba_ext::ScubaSampleBuilder;
 use slog::{o, Drain, Level, Logger};
 use slog_glog_fmt::default_drain;
 use sshrelay::Metadata;
+use std::sync::Arc;
 use tracing::TraceContext;
 
 use crate::logging::{LoggingContainer, SamplingKey};
 use crate::perf_counters::PerfCounters;
+use crate::perf_counters_stack::PerfCountersStack;
 use crate::session::{SessionClass, SessionContainer};
 
 #[derive(Clone)]
@@ -105,7 +107,7 @@ impl CoreContext {
         &self.logging.scuba()
     }
 
-    pub fn perf_counters(&self) -> &PerfCounters {
+    pub fn perf_counters(&self) -> &PerfCountersStack {
         &self.logging.perf_counters()
     }
 
@@ -123,5 +125,9 @@ impl CoreContext {
 
     pub fn scribe(&self) -> &Scribe {
         self.logging.scribe()
+    }
+
+    pub fn fork_perf_counters(&mut self) -> Arc<PerfCounters> {
+        self.logging.fork_perf_counters()
     }
 }

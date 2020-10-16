@@ -14,6 +14,7 @@ use std::sync::{
 };
 
 use crate::perf_counters::PerfCounters;
+use crate::perf_counters_stack::PerfCountersStack;
 use scribe_ext::Scribe;
 
 /// Used to correlation a high level action on a CoreContext
@@ -41,7 +42,7 @@ impl SamplingKey {
 pub struct LoggingContainer {
     logger: Logger,
     scuba: Arc<ScubaSampleBuilder>,
-    perf_counters: Arc<PerfCounters>,
+    perf_counters: PerfCountersStack,
     sampling_key: Option<SamplingKey>,
     scribe: Scribe,
 }
@@ -51,10 +52,16 @@ impl LoggingContainer {
         Self {
             logger,
             scuba: Arc::new(scuba),
-            perf_counters: Arc::new(PerfCounters::default()),
+            perf_counters: Default::default(),
             sampling_key: None,
             scribe: Scribe::new(fb),
         }
+    }
+
+    pub fn fork_perf_counters(&mut self) -> Arc<PerfCounters> {
+        let (perf_counters, ret) = self.perf_counters.fork();
+        self.perf_counters = perf_counters;
+        ret
     }
 
     pub fn clone_and_sample(&self, sampling_key: SamplingKey) -> Self {
@@ -80,7 +87,7 @@ impl LoggingContainer {
         &self.scuba
     }
 
-    pub fn perf_counters(&self) -> &PerfCounters {
+    pub fn perf_counters(&self) -> &PerfCountersStack {
         &self.perf_counters
     }
 
