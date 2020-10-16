@@ -160,7 +160,6 @@ async fn check_derived_data_exists(
 
     let pending = derived_utils
         .pending(ctx.clone(), repo.clone(), cs_ids.clone())
-        .compat()
         .await?;
 
     for cs_id in cs_ids {

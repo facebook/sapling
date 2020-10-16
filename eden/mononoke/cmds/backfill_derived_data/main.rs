@@ -34,7 +34,6 @@ use futures::{
 };
 use futures_ext::FutureExt as OldFutureExt;
 use futures_old::Future as OldFuture;
-use futures_stats::Timed;
 use futures_stats::TimedFutureExt;
 use metaconfig_types::DerivedDataConfig;
 use mononoke_types::{ChangesetId, DateTime};
@@ -494,7 +493,7 @@ async fn subcommand_backfill(
     );
 
     let total_count = changesets.len();
-    let mut generated_count = 0;
+    let mut generated_count = 0usize;
     let mut total_duration = Duration::from_secs(0);
 
     if regenerate {
@@ -505,7 +504,6 @@ async fn subcommand_backfill(
         let (stats, chunk_size) = async {
             let chunk = derived_utils
                 .pending(ctx.clone(), repo.clone(), chunk.to_vec())
-                .compat()
                 .await?;
             let chunk_size = chunk.len();
 
@@ -513,7 +511,6 @@ async fn subcommand_backfill(
 
             derived_utils
                 .backfill_batch_dangerous(ctx.clone(), repo.clone(), chunk)
-                .compat()
                 .await?;
             Result::<_, Error>::Ok(chunk_size)
         }
@@ -604,10 +601,7 @@ async fn tail_one_iteration(
                 async move {
                     // create new context so each derivation would have its own trace
                     let ctx = CoreContext::new_with_logger(ctx.fb, ctx.logger().clone());
-                    let pending = derive
-                        .pending(ctx.clone(), repo.clone(), heads)
-                        .compat()
-                        .await?;
+                    let pending = derive.pending(ctx.clone(), repo.clone(), heads).await?;
 
                     let oldest_underived =
                         derive.find_oldest_underived(&ctx, &repo, &pending).await?;
@@ -634,7 +628,7 @@ async fn tail_one_iteration(
     let pending_futs = pending.into_iter().map(|(derive, pending, _)| {
         pending
             .into_iter()
-            .map(|csid| derive.derive(ctx.clone(), repo.clone(), csid).compat())
+            .map(|csid| derive.derive(ctx.clone(), repo.clone(), csid))
             .collect::<Vec<_>>()
     });
 
@@ -682,23 +676,21 @@ async fn subcommand_single(
     stream::iter(derived_utils)
         .map(Ok)
         .try_for_each_concurrent(100, |derived_utils| {
-            derived_utils
-                .derive(ctx.clone(), repo.clone(), csid)
-                .timed({
-                    cloned!(ctx);
-                    move |stats, result| {
-                        info!(
-                            ctx.logger(),
-                            "derived {} in {:?}: {:?}",
-                            derived_utils.name(),
-                            stats.completion_time,
-                            result
-                        );
-                        Ok(())
-                    }
-                })
-                .map(|_| ())
-                .compat()
+            cloned!(ctx, repo);
+            async move {
+                let (stats, result) = derived_utils
+                    .derive(ctx.clone(), repo.clone(), csid)
+                    .timed()
+                    .await;
+                info!(
+                    ctx.logger(),
+                    "derived {} in {:?}: {:?}",
+                    derived_utils.name(),
+                    stats.completion_time,
+                    result
+                );
+                Ok(())
+            }
         })
         .await
 }
@@ -716,7 +708,6 @@ mod tests {
         sync::atomic::{AtomicUsize, Ordering},
     };
     use tests_utils::resolve_cs_id;
-    use tokio_compat::runtime::Runtime;
     use unodes::RootUnodeManifestId;
 
     #[fbinit::compat_test]
@@ -766,29 +757,30 @@ mod tests {
         Ok(())
     }
 
-    #[fbinit::test]
-    fn test_backfill_data_latest(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = Runtime::new()?;
-
+    #[fbinit::compat_test]
+    async fn test_backfill_data_latest(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = runtime.block_on_std(linear::getrepo(fb));
+        let repo = linear::getrepo(fb).await;
 
         let hg_cs_id = HgChangesetId::from_str("79a13814c5ce7330173ec04d279bf95ab3f652fb")?;
-        let maybe_bcs_id = runtime.block_on(repo.get_bonsai_from_hg(ctx.clone(), hg_cs_id))?;
+        let maybe_bcs_id = repo
+            .get_bonsai_from_hg(ctx.clone(), hg_cs_id)
+            .compat()
+            .await?;
         let bcs_id = maybe_bcs_id.unwrap();
 
         let derived_utils = derived_data_utils(repo.clone(), RootUnodeManifestId::NAME)?;
-        runtime.block_on(derived_utils.backfill_batch_dangerous(ctx, repo, vec![bcs_id]))?;
+        derived_utils
+            .backfill_batch_dangerous(ctx, repo, vec![bcs_id])
+            .await?;
 
         Ok(())
     }
 
-    #[fbinit::test]
-    fn test_backfill_data_batch(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = Runtime::new()?;
-
+    #[fbinit::compat_test]
+    async fn test_backfill_data_batch(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = runtime.block_on_std(linear::getrepo(fb));
+        let repo = linear::getrepo(fb).await;
 
         let mut batch = vec![];
         let hg_cs_ids = vec![
@@ -799,50 +791,50 @@ mod tests {
         ];
         for hg_cs_id in &hg_cs_ids {
             let hg_cs_id = HgChangesetId::from_str(hg_cs_id)?;
-            let maybe_bcs_id = runtime.block_on(repo.get_bonsai_from_hg(ctx.clone(), hg_cs_id))?;
+            let maybe_bcs_id = repo
+                .get_bonsai_from_hg(ctx.clone(), hg_cs_id)
+                .compat()
+                .await?;
             batch.push(maybe_bcs_id.unwrap());
         }
 
         let derived_utils = derived_data_utils(repo.clone(), RootUnodeManifestId::NAME)?;
-        let pending =
-            runtime.block_on(derived_utils.pending(ctx.clone(), repo.clone(), batch.clone()))?;
+        let pending = derived_utils
+            .pending(ctx.clone(), repo.clone(), batch.clone())
+            .await?;
         assert_eq!(pending.len(), hg_cs_ids.len());
-        runtime.block_on(derived_utils.backfill_batch_dangerous(
-            ctx.clone(),
-            repo.clone(),
-            batch.clone(),
-        ))?;
-        let pending = runtime.block_on(derived_utils.pending(ctx, repo, batch))?;
+        derived_utils
+            .backfill_batch_dangerous(ctx.clone(), repo.clone(), batch.clone())
+            .await?;
+        let pending = derived_utils.pending(ctx, repo, batch).await?;
         assert_eq!(pending.len(), 0);
 
         Ok(())
     }
 
-    #[fbinit::test]
-    fn test_backfill_data_failing_blobstore(fb: FacebookInit) -> Result<(), Error> {
+    #[fbinit::compat_test]
+    async fn test_backfill_data_failing_blobstore(fb: FacebookInit) -> Result<(), Error> {
         // The test exercises that derived data mapping entries are written only after
         // all other blobstore writes were successful i.e. mapping entry shouldn't exist
         // if any of the corresponding blobs weren't successfully saved
-        let mut runtime = Runtime::new()?;
-
         let ctx = CoreContext::test_mock(fb);
-        let origrepo = runtime.block_on_std(linear::getrepo(fb));
+        let origrepo = linear::getrepo(fb).await;
 
         let repo = origrepo.dangerous_override(|blobstore| -> Arc<dyn Blobstore> {
             Arc::new(FailingBlobstore::new("manifest".to_string(), blobstore))
         });
 
         let first_hg_cs_id = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
-        let maybe_bcs_id =
-            runtime.block_on(repo.get_bonsai_from_hg(ctx.clone(), first_hg_cs_id))?;
+        let maybe_bcs_id = repo
+            .get_bonsai_from_hg(ctx.clone(), first_hg_cs_id)
+            .compat()
+            .await?;
         let bcs_id = maybe_bcs_id.unwrap();
 
         let derived_utils = derived_data_utils(repo.clone(), RootUnodeManifestId::NAME)?;
-        let res = runtime.block_on(derived_utils.backfill_batch_dangerous(
-            ctx.clone(),
-            repo.clone(),
-            vec![bcs_id],
-        ));
+        let res = derived_utils
+            .backfill_batch_dangerous(ctx.clone(), repo.clone(), vec![bcs_id])
+            .await;
         // Deriving should fail because blobstore writes fail
         assert!(res.is_err());
 
@@ -851,10 +843,14 @@ mod tests {
         // is now safe
         let repo = origrepo;
         let second_hg_cs_id = HgChangesetId::from_str("3e0e761030db6e479a7fb58b12881883f9f8c63f")?;
-        let maybe_bcs_id =
-            runtime.block_on(repo.get_bonsai_from_hg(ctx.clone(), second_hg_cs_id))?;
+        let maybe_bcs_id = repo
+            .get_bonsai_from_hg(ctx.clone(), second_hg_cs_id)
+            .compat()
+            .await?;
         let bcs_id = maybe_bcs_id.unwrap();
-        runtime.block_on(derived_utils.backfill_batch_dangerous(ctx, repo, vec![bcs_id]))?;
+        derived_utils
+            .backfill_batch_dangerous(ctx, repo, vec![bcs_id])
+            .await?;
 
         Ok(())
     }

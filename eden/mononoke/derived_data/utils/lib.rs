@@ -27,14 +27,12 @@ use fastlog::{RootFastlog, RootFastlogMapping};
 use fsnodes::{RootFsnodeId, RootFsnodeMapping};
 use futures::{
     compat::Future01CompatExt,
-    future::{self, ready, try_join_all},
+    future::{self, ready, try_join_all, BoxFuture, FutureExt},
     stream::{self, futures_unordered::FuturesUnordered},
-    Future, Stream, StreamExt, TryStreamExt,
+    Future, Stream, StreamExt, TryFutureExt, TryStreamExt,
 };
-use futures_ext::{BoxFuture, FutureExt as OldFutureExt};
-use futures_old::{
-    future as future_old, stream as stream_old, Future as OldFuture, Stream as OldStream,
-};
+use futures_ext::{BoxFuture as BoxFutureOld, FutureExt as OldFutureExt};
+use futures_old::{future as future_old, Future as OldFuture};
 use lazy_static::lazy_static;
 use lock_ext::LockExt;
 use mercurial_derived_data::{HgChangesetIdMapping, MappedHgChangesetId};
@@ -108,8 +106,7 @@ pub fn derive_data_for_csids(
         for csid in &csids {
             let fut = derived_utils
                 .derive(ctx.clone(), repo.clone(), *csid)
-                .map(|_| ())
-                .compat();
+                .map_ok(|_| ());
             futs.push(fut);
         }
 
@@ -137,22 +134,22 @@ pub trait DerivedUtils: Send + Sync + 'static {
         ctx: CoreContext,
         repo: BlobRepo,
         csid: ChangesetId,
-    ) -> BoxFuture<String, Error>;
+    ) -> BoxFuture<'static, Result<String, Error>>;
 
     fn backfill_batch_dangerous(
         &self,
         ctx: CoreContext,
         repo: BlobRepo,
         csids: Vec<ChangesetId>,
-    ) -> BoxFuture<(), Error>;
+    ) -> BoxFuture<'static, Result<(), Error>>;
 
     /// Find pending changeset (changesets for which data have not been derived)
-    fn pending(
+    async fn pending(
         &self,
         ctx: CoreContext,
         repo: BlobRepo,
         csids: Vec<ChangesetId>,
-    ) -> BoxFuture<Vec<ChangesetId>, Error>;
+    ) -> Result<Vec<ChangesetId>, Error>;
 
     /// Regenerate derived data for specified set of commits
     fn regenerate(&self, csids: &Vec<ChangesetId>);
@@ -192,15 +189,19 @@ where
         ctx: CoreContext,
         repo: BlobRepo,
         csid: ChangesetId,
-    ) -> BoxFuture<String, Error> {
+    ) -> BoxFuture<'static, Result<String, Error>> {
         // We call derive_impl directly so that we can pass
         // `self.mapping` there. This will allow us to
         // e.g. regenerate derived data for the commit
         // even if it was already generated (see RegenerateMapping call).
-        derive_impl::<M::Value, _>(ctx, repo, self.mapping.clone(), csid, self.mode)
-            .map(|result| format!("{:?}", result))
-            .from_err()
-            .boxify()
+        cloned!(self.mapping, self.mode);
+        async move {
+            let result = derive_impl::<M::Value, _>(ctx, repo, mapping, csid, mode)
+                .compat()
+                .await?;
+            Ok(format!("{:?}", result))
+        }
+        .boxed()
     }
 
     /// !!!!This function is dangerous and should be used with care!!!!
@@ -219,7 +220,7 @@ where
         ctx: CoreContext,
         repo: BlobRepo,
         csids: Vec<ChangesetId>,
-    ) -> BoxFuture<(), Error> {
+    ) -> BoxFuture<'static, Result<(), Error>> {
         let orig_mapping = self.mapping.clone();
         // With InMemoryMapping we can ensure that mapping entries are written only after
         // all corresponding blobs were successfully saved
@@ -237,52 +238,51 @@ where
             });
         let memblobstore = memblobstore.expect("memblobstore should have been updated");
 
-        stream_old::iter_ok(csids)
-            .for_each({
-                cloned!(ctx, in_memory_mapping, repo);
-                move |csid| {
-                    // create new context so each derivation would have its own trace
-                    let ctx = CoreContext::new_with_logger(ctx.fb, ctx.logger().clone());
-                    derive_impl::<M::Value, _>(
-                        ctx.clone(),
-                        repo.clone(),
-                        in_memory_mapping.clone(),
-                        csid,
-                        DeriveMode::Unsafe,
-                    )
-                    .map(|_| ())
-                    .from_err()
-                }
-            })
-            .and_then({
-                cloned!(ctx, memblobstore);
-                move |_| memblobstore.persist(ctx)
-            })
-            .and_then(move |_| {
+        async move {
+            for csid in csids {
+                // create new context so each derivation would have its own trace
+                let ctx = CoreContext::new_with_logger(ctx.fb, ctx.logger().clone());
+                derive_impl::<M::Value, _>(
+                    ctx.clone(),
+                    repo.clone(),
+                    in_memory_mapping.clone(),
+                    csid,
+                    DeriveMode::Unsafe,
+                )
+                .compat()
+                .await?;
+            }
+
+            // flush blobstore
+            memblobstore.persist(ctx.clone()).compat().await?;
+            // flush mapping
+            let futs = FuturesUnordered::new();
+            {
                 let buffer = in_memory_mapping.into_buffer();
                 let buffer = buffer.lock().unwrap();
-                let mut futs = vec![];
                 for (cs_id, value) in buffer.iter() {
-                    futs.push(orig_mapping.put(ctx.clone(), *cs_id, value.clone()));
+                    futs.push(
+                        orig_mapping
+                            .put(ctx.clone(), *cs_id, value.clone())
+                            .compat(),
+                    );
                 }
-                stream_old::futures_unordered(futs).for_each(|_| Ok(()))
-            })
-            .boxify()
+            }
+            futs.try_for_each(|_| future::ok(())).await?;
+            Ok(())
+        }
+        .boxed()
     }
 
-    fn pending(
+    async fn pending(
         &self,
         ctx: CoreContext,
         _repo: BlobRepo,
         mut csids: Vec<ChangesetId>,
-    ) -> BoxFuture<Vec<ChangesetId>, Error> {
-        self.mapping
-            .get(ctx, csids.clone())
-            .map(move |derived| {
-                csids.retain(|csid| !derived.contains_key(&csid));
-                csids
-            })
-            .boxify()
+    ) -> Result<Vec<ChangesetId>, Error> {
+        let derived = self.mapping.get(ctx, csids.clone()).compat().await?;
+        csids.retain(|csid| !derived.contains_key(&csid));
+        Ok(csids)
     }
 
     async fn find_oldest_underived<'a>(
@@ -369,7 +369,7 @@ where
         &self,
         ctx: CoreContext,
         mut csids: Vec<ChangesetId>,
-    ) -> BoxFuture<HashMap<ChangesetId, Self::Value>, Error> {
+    ) -> BoxFutureOld<HashMap<ChangesetId, Self::Value>, Error> {
         let buffer = self.buffer.lock().unwrap();
         let mut ans = HashMap::new();
         csids.retain(|cs_id| {
@@ -387,7 +387,12 @@ where
             .boxify()
     }
 
-    fn put(&self, _ctx: CoreContext, csid: ChangesetId, id: Self::Value) -> BoxFuture<(), Error> {
+    fn put(
+        &self,
+        _ctx: CoreContext,
+        csid: ChangesetId,
+        id: Self::Value,
+    ) -> BoxFutureOld<(), Error> {
         let mut buffer = self.buffer.lock().unwrap();
         buffer.insert(csid, id);
         future_old::ok(()).boxify()
@@ -498,7 +503,6 @@ impl DeriveGraph {
                     if let Some(deriver) = &node.deriver {
                         deriver
                             .backfill_batch_dangerous(ctx.clone(), repo, node.csids.clone())
-                            .compat()
                             .await?;
                         if let (Some(first), Some(last)) = (node.csids.first(), node.csids.last()) {
                             slog::info!(
@@ -785,7 +789,6 @@ pub fn find_underived_many(
                     let derivers = derivers.iter().map(|deriver| async move {
                         if deriver
                             .pending(ctx.clone(), repo.clone(), vec![csid])
-                            .compat()
                             .await?
                             .is_empty()
                         {
@@ -994,7 +997,7 @@ mod tests {
             ctx: CoreContext,
             repo: BlobRepo,
             csid: ChangesetId,
-        ) -> BoxFuture<String, Error> {
+        ) -> BoxFuture<'static, Result<String, Error>> {
             self.deriver.derive(ctx, repo, csid)
         }
 
@@ -1003,18 +1006,18 @@ mod tests {
             ctx: CoreContext,
             repo: BlobRepo,
             csids: Vec<ChangesetId>,
-        ) -> BoxFuture<(), Error> {
+        ) -> BoxFuture<'static, Result<(), Error>> {
             self.deriver.backfill_batch_dangerous(ctx, repo, csids)
         }
 
-        fn pending(
+        async fn pending(
             &self,
             ctx: CoreContext,
             repo: BlobRepo,
             csids: Vec<ChangesetId>,
-        ) -> BoxFuture<Vec<ChangesetId>, Error> {
+        ) -> Result<Vec<ChangesetId>, Error> {
             self.count.fetch_add(1, Ordering::SeqCst);
-            self.deriver.pending(ctx, repo, csids)
+            self.deriver.pending(ctx, repo, csids).await
         }
 
         fn regenerate(&self, _csids: &Vec<ChangesetId>) {
@@ -1075,14 +1078,8 @@ mod tests {
             }
         );
 
-        unodes_deriver
-            .derive(ctx.clone(), repo.clone(), b)
-            .compat()
-            .await?;
-        blame_deriver
-            .derive(ctx.clone(), repo.clone(), a)
-            .compat()
-            .await?;
+        unodes_deriver.derive(ctx.clone(), repo.clone(), b).await?;
+        blame_deriver.derive(ctx.clone(), repo.clone(), a).await?;
 
         let entries: BTreeMap<_, _> = find_underived_many(
             ctx.clone(),

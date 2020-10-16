@@ -255,7 +255,6 @@ async fn derive_bonsais_single_repo(
             for csid in bcs_ids {
                 derived_util
                     .derive(ctx.clone(), repo.clone(), csid.clone())
-                    .compat()
                     .map_ok(|_| ())
                     .await?;
             }
@@ -748,7 +747,8 @@ where
         "Bookmark {:?} unexpectedly dropped in {:?} when trying to generate large_dest_bookmark",
         dest_bookmark,
         commit_syncer
-    )})?;
+    )
+        })?;
     info!(
         ctx.logger(),
         "Set large repo's destination bookmark to {}", large_dest_bookmark

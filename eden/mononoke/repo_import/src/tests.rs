@@ -731,7 +731,6 @@ mod tests {
             let derived_utils = derived_data_utils(repo.clone(), derived_data_type)?;
             let pending = derived_utils
                 .pending(ctx.clone(), repo.clone(), cs_ids.to_vec())
-                .compat()
                 .await?;
             assert!(pending.is_empty());
         }
