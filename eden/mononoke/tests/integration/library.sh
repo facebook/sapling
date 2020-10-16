@@ -959,6 +959,20 @@ CONFIG
   ) >> "repos/$REPONAME/server.toml"
 }
 
+function register_hook_limit_filesize_global_limit {
+global_limit=$1
+shift 1
+
+register_hook limit_filesize <(
+cat <<CONF
+config_string_lists={filesize_limits_regexes=[".*"]}
+config_int_lists={filesize_limits_values=[$global_limit]}
+$@
+CONF
+)
+
+}
+
 function backfill_git_mapping {
   GLOG_minloglevel=5 "$MONONOKE_BACKFILL_GIT_MAPPING" --repo_id "$REPOID" \
   --mononoke-config-path "$TESTTMP/mononoke-config" "${COMMON_ARGS[@]}" "$@"

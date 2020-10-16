@@ -13,54 +13,62 @@ use async_trait::async_trait;
 use context::CoreContext;
 use mononoke_types::{FileChange, MPath};
 use regex::Regex;
+use std::convert::TryInto;
 
 #[derive(Default)]
 pub struct LimitFilesizeBuilder {
-    file_size_limit: Option<u64>,
-    ignore_path_regexes: Option<Vec<String>>,
+    path_regexes: Option<Vec<String>>,
+    limits: Option<Vec<i32>>,
 }
 
 impl LimitFilesizeBuilder {
     pub fn set_from_config(mut self, config: &HookConfig) -> Self {
-        if let Some(v) = config.ints.get("filesizelimit") {
-            self = self.file_size_limit(*v as u64)
+        if let Some(v) = config.string_lists.get("filesize_limits_regexes") {
+            self = self.filesize_limits_regexes(v)
         }
-        if let Some(v) = config.string_lists.get("ignore_path_regexes") {
-            self = self.ignore_path_regexes(v)
+
+        if let Some(v) = config.int_lists.get("filesize_limits_values") {
+            self.limits = Some(v.clone())
         }
+
         self
     }
 
-    pub fn file_size_limit(mut self, limit: u64) -> Self {
-        self.file_size_limit = Some(limit);
-        self
-    }
-
-    pub fn ignore_path_regexes(mut self, strs: impl IntoIterator<Item = impl AsRef<str>>) -> Self {
-        self.ignore_path_regexes =
-            Some(strs.into_iter().map(|s| String::from(s.as_ref())).collect());
+    pub fn filesize_limits_regexes(
+        mut self,
+        strs: impl IntoIterator<Item = impl AsRef<str>>,
+    ) -> Self {
+        self.path_regexes = Some(strs.into_iter().map(|s| String::from(s.as_ref())).collect());
         self
     }
 
     pub fn build(self) -> Result<LimitFilesize> {
-        Ok(LimitFilesize {
-            file_size_limit: self
-                .file_size_limit
-                .ok_or_else(|| anyhow!("Missing filesizelimit config"))?,
-            ignore_path_regexes: self
-                .ignore_path_regexes
-                .unwrap_or_else(Vec::new)
+        if let (Some(regexes_str), Some(limits)) = (self.path_regexes, self.limits) {
+            if regexes_str.is_empty() || limits.is_empty() {
+                return Err(anyhow!(
+                    "Failed to initialize limit_filesize hook. Either 'filesize_limits_regexes' or 'filesize_limits_values' list is empty."
+                ));
+            }
+            let regexes = regexes_str
                 .into_iter()
                 .map(|s| Regex::new(&s))
                 .collect::<Result<Vec<_>, _>>()
-                .context("Failed to create regex for ignore_path_regex")?,
-        })
+                .context("Failed to create regex for path_regexes")?;
+
+            let limits: Vec<Option<u64>> = limits.into_iter().map(|n| n.try_into().ok()).collect();
+
+            return Ok(LimitFilesize {
+                path_regexes_with_limits: regexes.into_iter().zip(limits.into_iter()).collect(),
+            });
+        }
+        Err(anyhow!(
+            "Failed to initialize limit_filesize hook. Either 'filesize_limits_regexes' or 'filesize_limits_values' option is missing."
+        ))
     }
 }
 
 pub struct LimitFilesize {
-    file_size_limit: u64,
-    ignore_path_regexes: Vec<Regex>,
+    path_regexes_with_limits: Vec<(Regex, Option<u64>)>,
 }
 
 impl LimitFilesize {
@@ -85,27 +93,30 @@ impl FileHook for LimitFilesize {
         }
 
         let path = format!("{}", path);
-        if self
-            .ignore_path_regexes
-            .iter()
-            .any(|regex| regex.is_match(&path))
-        {
-            return Ok(HookExecution::Accepted);
-        }
+        let change = match change {
+            Some(c) => c,
+            None => return Ok(HookExecution::Accepted),
+        };
 
-        if let Some(change) = change {
-            let len = content_fetcher
-                .get_file_size(ctx, change.content_id())
-                .await?;
-            if len > self.file_size_limit {
-                return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
-                    "File too large",
-                    format!(
-                        "File size limit is {} bytes. \
-You tried to push file {} that is over the limit ({} bytes).  See https://fburl.com/landing_big_diffs for instructions.",
-                        self.file_size_limit, path, len
-                    ),
-                )));
+        let len = content_fetcher
+            .get_file_size(ctx, change.content_id())
+            .await?;
+        for (regex, maybe_limit) in &self.path_regexes_with_limits {
+            if !regex.is_match(&path) {
+                continue;
+            }
+            match maybe_limit {
+                None => return Ok(HookExecution::Accepted),
+                Some(limit) if len <= *limit => return Ok(HookExecution::Accepted),
+                Some(limit) => {
+                    return Ok(HookExecution::Rejected(HookRejectionInfo::new_long(
+                        "File too large",
+                        format!(
+                            "File size limit is {} bytes. You tried to push file {} that is over the limit ({} bytes).  See https://fburl.com/landing_big_diffs for instructions.",
+                            limit, path, len
+                        ),
+                    )));
+                }
             }
         }
         Ok(HookExecution::Accepted)

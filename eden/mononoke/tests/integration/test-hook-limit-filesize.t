@@ -10,7 +10,8 @@
   > limit_filesize <(
   >   cat <<CONF
   > bypass_commit_string="@allow-large-files"
-  > config_ints={filesizelimit=10}
+  > config_int_lists={filesize_limits_values=[10]}
+  > config_string_lists={filesize_limits_regexes=[".*"]}
   > CONF
   > )
 

@@ -53,12 +53,8 @@ Setup config repo:
   > regex=".*"
   > hooks_skip_ancestors_of=["trunk"]
   > EOF
-  $ register_hook limit_filesize <(
-  >  cat <<CONF
-  > bypass_pushvar="ALLOW_LARGE_FILES=true"
-  > config_ints={filesizelimit=10}
-  > CONF
-  > )
+
+  $ register_hook_limit_filesize_global_limit 10 'bypass_pushvar="ALLOW_LARGE_FILES=true"'
 
   $ cat > $TESTTMP/mononoke_tunables.json <<EOF
   > {

@@ -15,12 +15,7 @@ setup configuration
   > name="master_bookmark"
   > CONFIG
 
-  $ register_hook limit_filesize <(
-  >   cat <<CONF 
-  > bypass_commit_string="@allow-large-files"
-  > config_ints={filesizelimit=10}
-  > CONF
-  > )
+  $ register_hook_limit_filesize_global_limit 10 'bypass_commit_string="@allow-large-files"'
 
   $ setup_common_hg_configs
   $ cd $TESTTMP
