@@ -330,13 +330,11 @@ pub async fn get_commit_sync_outcome_with_hint<'a, M: SyncedCommitMapping>(
     );
     let maybe_commit_sync_outcome = match maybe_plural_commit_sync_outcome {
         Some(plural_commit_sync_outcome) => match hint.try_into_desired_relationship(ctx).await? {
-            None => {
-                Some(
-                    plural_commit_sync_outcome
-                        .try_into_commit_sync_outcome(source_cs_id)
-                        .await?,
-                )
-            }
+            None => Some(
+                plural_commit_sync_outcome
+                    .try_into_commit_sync_outcome(source_cs_id)
+                    .await?,
+            ),
             Some(desired_relationship) => {
                 debug!(
                     ctx.logger(),
