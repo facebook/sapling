@@ -25,13 +25,9 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: '2.7'
-    - name: Install Python 2 dependencies
+    - name: Install curl-openssl
       run: |
-        python -m pip install --upgrade pip
-        pip install "dulwich==0.18.6"
-    - name: Install Brew dependencies
-      run: |
-        brew install bash coreutils curl-openssl gnu-sed grep jq nmap tree
+        brew install curl-openssl
     - name: Install system deps
       run: >-
         export PATH="/usr/local/opt/curl-openssl/bin:$PATH";
@@ -39,7 +35,7 @@ jobs:
         --allow-system-packages
         install-system-deps
         --recursive
-        eden_scm
+        mononoke_integration
     - name: Build eden_scm dependencies
       run: >-
         export PATH="/usr/local/opt/curl-openssl/bin:$PATH";
@@ -47,6 +43,7 @@ jobs:
         --allow-system-packages
         --scratch-path /tmp/build
         --only-deps
+        --no-tests
         --src-dir=.
         eden_scm
     - name: Build eden_scm
@@ -56,6 +53,7 @@ jobs:
         --allow-system-packages
         --scratch-path /tmp/build
         --no-deps
+        --no-tests
         --src-dir=.
         eden_scm
     - name: Build eden_scm_lib_edenapi_tools
@@ -64,7 +62,7 @@ jobs:
         python3 build/fbcode_builder/getdeps.py build
         --allow-system-packages
         --scratch-path /tmp/build
-        --no-deps
+        --no-tests
         --src-dir=.
         eden_scm_lib_edenapi_tools
     - name: Build mononoke dependencies
@@ -74,6 +72,7 @@ jobs:
         --allow-system-packages
         --scratch-path /tmp/build
         --only-deps
+        --no-tests
         --src-dir=.
         mononoke
     - name: Build mononoke
@@ -83,33 +82,57 @@ jobs:
         --allow-system-packages
         --scratch-path /tmp/build
         --no-deps
+        --no-tests
         --src-dir=.
         mononoke
     - name: Install Python 3.7
       uses: actions/setup-python@v2
       with:
         python-version: '3.7'
-    - name: Install Python 3 dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install click
     - name: Check space
       run: df -h
-    - name: Run Monononke integration tests
+    - name: Build mononoke_integration dependencies
+      # This is a way of getting all the dependencies of mononoke_integration
+      # which were not covered by the dependencies of the previous 3 projects.
+      # We have to do this unfortunately to avoid rebuilding the previous
+      # project as they have been built with "--src-dir=." option.
       run: >-
         export PATH="/usr/local/opt/curl-openssl/bin:$PATH";
-        PYTHONPATH="$PYTHONPATH:/opt/hostedtoolcache/Python/2.7.18/x64/lib/python2.7/site-packages"
-        python3
-        eden/mononoke/tests/integration/run_tests_getdeps.py
-        /tmp/build/installed
-        /tmp/build/build/mononoke_integration_test
-      continue-on-error: true
-    - name: Rerun failed Monononke integration tests (reduce flakiness)
+        for x in $(
+        sort
+        <(python3 build/fbcode_builder/getdeps.py list-deps mononoke_integration)
+        <(python3 build/fbcode_builder/getdeps.py list-deps mononoke)
+        <(python3 build/fbcode_builder/getdeps.py list-deps mononoke)
+        <(python3 build/fbcode_builder/getdeps.py list-deps eden_scm)
+        <(python3 build/fbcode_builder/getdeps.py list-deps eden_scm)
+        <(python3 build/fbcode_builder/getdeps.py list-deps eden_scm_lib_edenapi_tools)
+        <(python3 build/fbcode_builder/getdeps.py list-deps eden_scm_lib_edenapi_tools)
+        <(echo mononoke_integration)
+        | uniq -u
+        )
+        ;do
+        python3 build/fbcode_builder/getdeps.py build
+        --allow-system-packages
+        --scratch-path /tmp/build
+        --no-tests
+        "$x"
+        ;done
+    - name: Build mononoke_integration
       run: >-
-        cat eden/mononoke/tests/integration/.test* || true;
         export PATH="/usr/local/opt/curl-openssl/bin:$PATH";
-        PYTHONPATH="$PYTHONPATH:/opt/hostedtoolcache/Python/2.7.18/x64/lib/python2.7/site-packages"
-        python3
-        eden/mononoke/tests/integration/run_tests_getdeps.py
-        /tmp/build/installed /tmp/build/build/mononoke_integration_test
-        --rerun-failed
+        python3 build/fbcode_builder/getdeps.py build
+        --allow-system-packages
+        --scratch-path /tmp/build
+        --no-deps
+        --src-dir=.
+        mononoke_integration
+    - name: Test mononoke_integration
+      run: >-
+        export PATH="/usr/local/opt/curl-openssl/bin:$PATH";
+        python3 build/fbcode_builder/getdeps.py test
+        --allow-system-packages
+        --scratch-path /tmp/build
+        --src-dir=.
+        mononoke_integration
+    - name: Check space after running tests
+      run: df -h

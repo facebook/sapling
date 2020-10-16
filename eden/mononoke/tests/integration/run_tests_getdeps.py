@@ -28,51 +28,107 @@ class TestGroup(Enum):
         return self.value
 
 
+def script_dir():
+    return dirname(abspath(__file__))
+
+
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Run Mononoke integration tests from getdeps.py build"
     )
-    parser.add_argument(
-        "install_dir",
-        help="Location of getdeps.py install dir (With installed mononoke and eden_scm projects)",
+    subs = parser.add_subparsers()
+
+    local_parser = subs.add_parser(
+        "local",
+        help=(
+            "Command to run tests from the current checkout of repo assuming that"
+            " the required dependencies were already installed by getdeps"
+            " (getdeps.py build mononoke_integration)."
+        ),
     )
-    parser.add_argument(
-        "build_dir", help="Location where to put generated manifest.json file"
+    local_parser.set_defaults(func=local_cmd)
+
+    getdeps_parser = subs.add_parser(
+        "getdeps",
+        help=(
+            "Command that is invoked by getdeps, you probably don't want to call it"
+            " directly."
+        ),
     )
-    parser.add_argument(
-        "tests",
-        nargs="*",
-        help="Optional list of tests to run. If provided the --tests default is None",
-    )
-    parser.add_argument(
-        "-t",
-        "--test-groups",
-        type=TestGroup,
-        nargs="*",
-        choices=list(TestGroup),
-        help=f"Choose groups of tests to run, default: [{TestGroup.PASSING}]",
-    )
-    parser.add_argument(
-        "-r",
-        "--rerun-failed",
+    getdeps_parser.set_defaults(func=getdeps_cmd)
+    getdeps_parser.add_argument(
+        "--generate_manifest",
+        help="Generate manifest.json file in build directory and don't run tests",
         action="store_true",
-        help="Rerun failed tests based on '.testfailed' file",
     )
+
+    for p in (local_parser, getdeps_parser):
+        p.add_argument("getdeps_install_dir", help="Location of getdeps.py install dir")
+        p.add_argument(
+            "tests",
+            nargs="*",
+            help="Optional list of tests to run. If provided the --test-groups default is None",
+        )
+        p.add_argument(
+            "-t",
+            "--test-groups",
+            type=TestGroup,
+            nargs="*",
+            choices=list(TestGroup),
+            help=f"Choose groups of tests to run, default: [{TestGroup.PASSING}]",
+        )
+        p.add_argument(
+            "-r",
+            "--rerun-failed",
+            action="store_true",
+            help="Rerun failed tests based on '.testfailed' file",
+        )
+        p.add_argument(
+            "--dry-run",
+            action="store_true",
+            help="Just print which tests will be run without running them",
+        )
+        p.add_argument(
+            "--keep-tmpdir",
+            action="store_true",
+            help="Keep temporary directory after running tests",
+        )
+
     return parser.parse_args()
 
 
-def prepare_manifest_deps(install_dir, build_dir, repo_root):
+def local_cmd(args):
+    install_dir = args.getdeps_install_dir
+    repo_root = dirname(dirname(dirname(dirname(script_dir()))))
+
+    if not args.dry_run:
+        prepare_manifest_deps(install_dir, repo_root)
+    run_tests(args, join(install_dir, "../build/mononoke_integration"))
+
+
+def getdeps_cmd(args):
+    install_dir = args.getdeps_install_dir
+    mononoke_repo_root = join(install_dir, "mononoke/source")
+
+    if args.generate_manifest:
+        prepare_manifest_deps(install_dir, mononoke_repo_root)
+    else:
+        run_tests(args, join(install_dir, "mononoke_integration"))
+
+
+def prepare_manifest_deps(install_dir, mononoke_repo_root):
+    build_dir = join(install_dir, "../build/mononoke_integration")
+    manifest_deps_path = join(script_dir(), "manifest_deps")
+
     exec(
         "global OSS_DEPS; global MONONOKE_BINS; global EDENSCM_BINS; global EDENSCMLIBEDENAPITOOLS_BINS; "
-        + open(
-            join(repo_root, "eden/mononoke/tests/integration/manifest_deps"), "r"
-        ).read()
+        + open(manifest_deps_path, "r").read()
     )
 
     MANIFEST_DEPS = {}
     for k, v in OSS_DEPS.items():  # noqa: F821
         if v.startswith("//"):
-            MANIFEST_DEPS[k] = join(repo_root, v[2:])
+            MANIFEST_DEPS[k] = join(mononoke_repo_root, v[2:])
         else:
             MANIFEST_DEPS[k] = v
     for k, v in MONONOKE_BINS.items():  # noqa: F821
@@ -87,7 +143,7 @@ def prepare_manifest_deps(install_dir, build_dir, repo_root):
         f.write(json.dumps(MANIFEST_DEPS, sort_keys=True, indent=4))
 
 
-def get_test_groups(repo_root):
+def get_test_groups():
     test_groups = {
         TestGroup.TIMING_OUT: {
             "test-blobimport-lfs.t",
@@ -137,8 +193,7 @@ def get_test_groups(repo_root):
     assert not not_unique, f"The test groups contain not unique tests: {not_unique}"
 
     test_groups[TestGroup.ALL] = all_tests = {
-        basename(p)
-        for p in iglob(join(repo_root, "eden/mononoke/tests/integration/*.t"))
+        basename(p) for p in iglob(join(script_dir(), "*.t"))
     }
 
     not_existing = manual_groups - all_tests
@@ -156,8 +211,8 @@ def get_test_groups(repo_root):
     return test_groups
 
 
-def get_tests_to_run(repo_root, tests, groups_to_run, rerun_failed):
-    test_groups = get_test_groups(repo_root)
+def get_tests_to_run(tests, groups_to_run, rerun_failed, test_root_public):
+    test_groups = get_test_groups()
 
     groups_to_run = set(
         groups_to_run or ([TestGroup.PASSING] if not (tests or rerun_failed) else [])
@@ -173,51 +228,67 @@ def get_tests_to_run(repo_root, tests, groups_to_run, rerun_failed):
     if rerun_failed:
         # Based on eden/scm/tests/run-tests.py
         for title in ("failed", "errored"):
-            failed = Path(repo_root) / "eden/mononoke/tests/integration/.test{}".format(
-                title
-            )
+            failed = Path(test_root_public) / ".test{}".format(title)
             if failed.is_file():
                 tests_to_run.update(t for t in failed.read_text().splitlines() if t)
 
     return tests_to_run
 
 
-def main():
-    args = parse_args()
-    install_dir = args.install_dir
-    build_dir = args.build_dir
-    repo_root = dirname(dirname(dirname(dirname(dirname(abspath(__file__))))))
+def get_pythonpath(getdeps_install_dir):
+    paths = [join(getdeps_install_dir, "eden_scm/lib/python2.7/site-packages")]
 
-    prepare_manifest_deps(install_dir, build_dir, repo_root)
+    _, installed, _ = next(os.walk(getdeps_install_dir))
+
+    packages = ["click", "dulwich"]
+
+    for package in packages:
+        candidates = [i for i in installed if i.startswith(f"python-{package}-")]
+        if len(candidates) == 0:
+            raise Exception(
+                f"Failed to find 'python-{package}' in installed directory,"
+                " did you run getdeps?"
+            )
+        if len(candidates) > 1:
+            raise Exception(
+                f"Found more than one 'python-{package}' package in installed"
+                "directory, try cleaning the install dir and rerunning getdeps"
+            )
+        paths.append(
+            join(getdeps_install_dir, candidates[0], f"lib/fb-py-libs/python-{package}")
+        )
+
+    pythonpath = os.environ.get("PYTHONPATH")
+    return ":".join(paths) + (":{}".format(pythonpath) if pythonpath else "")
+
+
+def run_tests(args, manifest_json_dir):
+    manifest_json_path = join(manifest_json_dir, "manifest.json")
+    with open(manifest_json_path) as json_file:
+        manifest = json.load(json_file)
+        test_root_public = manifest["TEST_ROOT_PUBLIC"]
 
     tests_to_run = get_tests_to_run(
-        repo_root, args.tests, args.test_groups, args.rerun_failed
+        args.tests, args.test_groups, args.rerun_failed, test_root_public
     )
 
     env = dict(os.environ.items())
     env["NO_LOCAL_PATHS"] = "1"
-    eden_scm_packages = join(install_dir, "eden_scm/lib/python2.7/site-packages")
-    pythonpath = env.get("PYTHONPATH")
-    env["PYTHONPATH"] = eden_scm_packages + (
-        ":{}".format(pythonpath) if pythonpath else ""
-    )
+    env["PYTHONPATH"] = get_pythonpath(args.getdeps_install_dir)
 
-    if tests_to_run:
-        sys.exit(
-            subprocess.run(
-                [
-                    sys.executable,
-                    join(
-                        repo_root,
-                        "eden/mononoke/tests/integration/integration_runner_real.py",
-                    ),
-                    join(build_dir, "manifest.json"),
-                ]
-                + list(tests_to_run),
-                env=env,
-            ).returncode
-        )
+    if args.dry_run:
+        print("\n".join(tests_to_run))
+    elif tests_to_run:
+        cmd = [
+            sys.executable,
+            join(script_dir(), "integration_runner_real.py"),
+            manifest_json_path,
+        ]
+        if args.keep_tmpdir:
+            cmd.append("--keep-tmpdir")
+        sys.exit(subprocess.run(cmd + list(tests_to_run), env=env).returncode)
 
 
 if __name__ == "__main__":
-    main()
+    args = parse_args()
+    args.func(args)
