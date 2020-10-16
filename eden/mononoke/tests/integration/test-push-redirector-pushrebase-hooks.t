@@ -91,3 +91,23 @@ Note that the node is from the small repo, even though the hook is in the large 
   remote:     "hooks failed:\ndeny_files for 6e6a22d48eb51db1e7b8af685d9c99c0d7f10f70: Denied filename \'smallrepofolder/f/.git/HEAD\' matched name pattern \'/[.]git/\'. Rename or remove this file and try again."
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
+
+Let's check that disabling running pushredirected hooks work
+  $ cat > $TESTTMP/mononoke_tunables.json <<EOF
+  > {
+  >   "killswitches": {
+  >     "disable_running_hooks_in_pushredirected_repo": true
+  >   }
+  > }
+  > EOF
+
+Give a chance for tunable change to propagate
+  $ sleep 5
+  $ REPONAME=small-mon hgmn push -r . --to master_bookmark
+  pushing rev 6e6a22d48eb5 to destination ssh://user@dummy/small-mon bookmark master_bookmark
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 0 changesets with 0 changes to 0 files
+  updating bookmark master_bookmark
