@@ -5,10 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{format_err, Error};
+use anyhow::{anyhow, format_err, Error};
+use backsyncer::format_counter as format_backsyncer_counter;
 use blobrepo::BlobRepo;
 use bookmark_renaming::get_small_to_large_renamer;
-use bookmarks::BookmarkUpdateReason;
+use bookmarks::{BookmarkUpdateLog, BookmarkUpdateReason, Freshness};
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cmdlib::{args, helpers};
 use context::CoreContext;
@@ -16,6 +17,7 @@ use cross_repo_sync::{
     validation::{self, BookmarkDiff},
     CommitSyncRepos, CommitSyncer,
 };
+use failure_ext::FutureFailureErrorExt;
 use fbinit::FacebookInit;
 use futures::{compat::Future01CompatExt, try_join};
 use futures_ext::FutureExt;
@@ -24,7 +26,9 @@ use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::{CommitSyncConfig, RepoConfig};
 use mononoke_types::RepositoryId;
+use mutable_counters::{MutableCounters, SqlMutableCounters};
 use slog::{info, warn, Logger};
+use std::convert::TryInto;
 use std::sync::Arc;
 use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
 
@@ -32,6 +36,8 @@ use crate::error::SubcommandError;
 
 pub const CROSSREPO: &str = "crossrepo";
 const MAP_SUBCOMMAND: &str = "map";
+const PREPARE_ROLLOUT_SUBCOMMAND: &str = "prepare-rollout";
+const PUSHREDIRECTION_SUBCOMMAND: &str = "pushredirection";
 const VERIFY_WC_SUBCOMMAND: &str = "verify-wc";
 const VERIFY_BOOKMARKS_SUBCOMMAND: &str = "verify-bookmarks";
 const HASH_ARG: &str = "HASH";
@@ -117,6 +123,10 @@ pub async fn subcommand_crossrepo<'a>(
         (SUBCOMMAND_CONFIG, Some(sub_sub_m)) => {
             run_config_sub_subcommand(fb, ctx, matches, sub_sub_m, live_commit_sync_config).await
         }
+        (PUSHREDIRECTION_SUBCOMMAND, Some(sub_sub_m)) => {
+            run_pushredirection_subcommand(fb, ctx, matches, sub_sub_m, live_commit_sync_config)
+                .await
+        }
         _ => Err(SubcommandError::InvalidArgs),
     }
 }
@@ -148,6 +158,82 @@ async fn run_config_sub_subcommand<'a>(
             subcommand_list(repo_id, live_commit_sync_config, with_contents)
                 .await
                 .map_err(|e| e.into())
+        }
+        _ => Err(SubcommandError::InvalidArgs),
+    }
+}
+
+async fn run_pushredirection_subcommand<'a>(
+    fb: FacebookInit,
+    ctx: CoreContext,
+    matches: &'a ArgMatches<'_>,
+    config_subcommand_matches: &'a ArgMatches<'a>,
+    live_commit_sync_config: CfgrLiveCommitSyncConfig,
+) -> Result<(), SubcommandError> {
+    let (source_repo, target_repo, mapping) =
+        get_source_target_repos_and_mapping(fb, ctx.logger().clone(), matches).await?;
+
+    let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> = Arc::new(live_commit_sync_config);
+    match config_subcommand_matches.subcommand() {
+        (PREPARE_ROLLOUT_SUBCOMMAND, Some(_sub_m)) => {
+            let commit_syncer = {
+                let commit_sync_repos = get_large_to_small_commit_sync_repos(
+                    &ctx,
+                    source_repo,
+                    target_repo,
+                    &live_commit_sync_config,
+                )?;
+                CommitSyncer::new(mapping, commit_sync_repos, live_commit_sync_config.clone())
+            };
+
+            if live_commit_sync_config
+                .push_redirector_enabled_for_public(commit_syncer.get_small_repo().get_repoid())
+            {
+                return Err(format_err!(
+                    "not allowed to run {} if pushredirection is enabled",
+                    PREPARE_ROLLOUT_SUBCOMMAND
+                )
+                .into());
+            }
+
+            let small_repo = commit_syncer.get_small_repo();
+            let large_repo = commit_syncer.get_large_repo();
+            let largest_id = large_repo
+                .attribute_expected::<dyn BookmarkUpdateLog>()
+                .get_largest_log_id(ctx.clone(), Freshness::MostRecent)
+                .await?
+                .ok_or_else(|| anyhow!("No bookmarks update log entries for large repo"))?;
+
+            let mutable_counters = args::open_source_sql::<SqlMutableCounters>(fb, &matches)
+                .context("While opening SqlMutableCounters")
+                .compat()
+                .await?;
+
+            let counter = format_backsyncer_counter(&large_repo.get_repoid());
+            info!(
+                ctx.logger(),
+                "setting value {} to counter {} for repo {}",
+                largest_id,
+                counter,
+                small_repo.get_repoid()
+            );
+            let res = mutable_counters
+                .set_counter(
+                    ctx.clone(),
+                    small_repo.get_repoid(),
+                    &counter,
+                    largest_id.try_into().unwrap(),
+                    None, // prev_value
+                )
+                .compat()
+                .await?;
+
+            if !res {
+                return Err(anyhow!("failed to set backsyncer counter").into());
+            }
+            info!(ctx.logger(), "successfully updated the counter");
+
+            Ok(())
         }
         _ => Err(SubcommandError::InvalidArgs),
     }
@@ -564,11 +650,20 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
             .subcommand(by_version_subcommand)
     };
 
+    let prepare_rollout_subcommand = SubCommand::with_name(PREPARE_ROLLOUT_SUBCOMMAND)
+        .about("command to prepare rollout of pushredirection");
+
+    let pushredirection_subcommand = SubCommand::with_name(PUSHREDIRECTION_SUBCOMMAND)
+        .about("helper commands to enable/disable pushredirection")
+        .subcommand(prepare_rollout_subcommand);
+
+
     SubCommand::with_name(CROSSREPO)
         .subcommand(map_subcommand)
         .subcommand(verify_wc_subcommand)
         .subcommand(verify_bookmarks_subcommand)
         .subcommand(commit_sync_config_subcommand)
+        .subcommand(pushredirection_subcommand)
 }
 
 fn get_large_to_small_commit_sync_repos(
