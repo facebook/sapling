@@ -19,6 +19,7 @@ pyprogress = { path = "../pyprogress" }
 pyrevisionstore = { path = "../pyrevisionstore" }
 revisionstore = { path = "../../../../lib/revisionstore" }
 types = { path = "../../../../lib/types" }
+version = { path = "../../../../lib/version" }
 
 [features]
 default = []

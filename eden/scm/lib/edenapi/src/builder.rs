@@ -141,6 +141,12 @@ impl Builder {
         self
     }
 
+    /// Add an extra HTTP header that should be sent with each request.
+    pub fn header(mut self, name: impl ToString, value: impl ToString) -> Self {
+        self.headers.insert(name.to_string(), value.to_string());
+        self
+    }
+
     /// Maximum number of keys per file request. Larger requests will be
     /// split up into concurrently-sent batches.
     pub fn max_files(mut self, size: Option<usize>) -> Self {

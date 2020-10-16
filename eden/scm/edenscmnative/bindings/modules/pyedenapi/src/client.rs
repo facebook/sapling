@@ -43,6 +43,7 @@ py_class!(pub class client |py| {
         let inner = Builder::from_config(&config)
             .map_pyerr(py)?
             .correlator(correlator)
+            .header("User-Agent", format!("EdenSCM/{}", version::VERSION))
             .build()
             .map_pyerr(py)?;
 
