@@ -412,6 +412,50 @@ impl ConfigSetHgExt for ConfigSet {
     }
 
     fn load_user(&mut self, opts: Options) -> Vec<Error> {
+        // If HGRCPATH is set, don't load user configs
+        let mut paths = Vec::new();
+        if env::var("HGRCPATH").is_err() {
+            if let Some(home_dir) = dirs::home_dir() {
+                paths.push(home_dir.join(".hgrc"));
+
+                #[cfg(windows)]
+                {
+                    paths.push(home_dir.join("mercurial.ini"));
+                }
+            }
+            if let Some(config_dir) = dirs::config_dir() {
+                paths.push(config_dir.join("hg/hgrc"))
+            }
+        }
+        self.load_user_internal(&paths, opts)
+    }
+
+    fn load_repo(&mut self, repo_path: &Path, opts: Options) -> Vec<Error> {
+        let mut errors = Vec::new();
+
+        let opts = opts.source("repo").process_hgplain();
+
+        let hgrc_path = repo_path.join("hgrc");
+        errors.append(&mut self.load_path(hgrc_path, &opts));
+
+        errors
+    }
+
+    fn load_hgrc(&mut self, path: impl AsRef<Path>, source: &'static str) -> Vec<Error> {
+        let opts = Options::new().source(source).process_hgplain();
+        self.load_path(path, &opts)
+    }
+
+    fn get_opt<T: FromConfigValue>(&self, section: &str, name: &str) -> Result<Option<T>> {
+        ConfigSet::get(self, section, name)
+            .map(|bytes| T::try_from_str(&bytes))
+            .transpose()
+    }
+}
+
+impl ConfigSet {
+    // For easier testing.
+    pub(crate) fn load_user_internal(&mut self, paths: &[PathBuf], opts: Options) -> Vec<Error> {
         let mut errors = Vec::new();
 
         // Covert "$VISUAL", "$EDITOR" to "ui.editor".
@@ -443,44 +487,11 @@ impl ConfigSetHgExt for ConfigSet {
 
         let opts = opts.source("user").process_hgplain();
 
-        // If HGRCPATH is set, don't load user configs
-        if env::var("HGRCPATH").is_err() {
-            if let Some(home_dir) = dirs::home_dir() {
-                errors.append(&mut self.load_path(home_dir.join(".hgrc"), &opts));
-
-                #[cfg(windows)]
-                {
-                    errors.append(&mut self.load_path(home_dir.join("mercurial.ini"), &opts));
-                }
-            }
-            if let Some(config_dir) = dirs::config_dir() {
-                errors.append(&mut self.load_path(config_dir.join("hg/hgrc"), &opts));
-            }
+        for path in paths {
+            errors.append(&mut self.load_path(path, &opts));
         }
 
         errors
-    }
-
-    fn load_repo(&mut self, repo_path: &Path, opts: Options) -> Vec<Error> {
-        let mut errors = Vec::new();
-
-        let opts = opts.source("repo").process_hgplain();
-
-        let hgrc_path = repo_path.join("hgrc");
-        errors.append(&mut self.load_path(hgrc_path, &opts));
-
-        errors
-    }
-
-    fn load_hgrc(&mut self, path: impl AsRef<Path>, source: &'static str) -> Vec<Error> {
-        let opts = Options::new().source(source).process_hgplain();
-        self.load_path(path, &opts)
-    }
-
-    fn get_opt<T: FromConfigValue>(&self, section: &str, name: &str) -> Result<Option<T>> {
-        ConfigSet::get(self, section, name)
-            .map(|bytes| T::try_from_str(&bytes))
-            .transpose()
     }
 }
 
@@ -1030,6 +1041,21 @@ mod tests {
         cfg.load_system(Options::new());
         assert_eq!(cfg.get("x", "a"), Some("1".into()));
         assert_eq!(cfg.get("y", "b"), Some("2".into()));
+    }
+
+    #[test]
+    fn test_load_user() {
+        let _guard = ENV_LOCK.lock();
+        let dir = TempDir::new("test_hgrcpath").unwrap();
+        let path = dir.path().join("1.rc");
+
+        write_file(path.clone(), "[ui]\nmerge=x");
+
+        let mut cfg = ConfigSet::new();
+        cfg.load_user_internal(&[path.clone()], Options::new());
+        assert_eq!(cfg.get("ui", "merge").unwrap(), "x");
+
+        drop(path);
     }
 
     #[test]
