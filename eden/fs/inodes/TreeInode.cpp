@@ -3454,15 +3454,13 @@ size_t TreeInode::unloadChildrenLastAccessedBefore(const timespec& cutoff) {
 }
 #endif
 
-void TreeInode::getDebugStatus(vector<TreeInodeDebugInfo>& results) const {
+void TreeInode::getDebugStatus(
+    vector<TreeInodeDebugInfo>& results,
+    const RelativePath& myPath) const {
   TreeInodeDebugInfo info;
   *info.inodeNumber_ref() = getNodeId().get();
   *info.refcount_ref() = debugGetFuseRefcount();
-
-  auto myPath = getPath();
-  if (myPath.has_value()) {
-    *info.path_ref() = myPath.value().stringPiece().str();
-  }
+  *info.path_ref() = myPath.stringPiece().str();
 
   vector<std::pair<PathComponent, InodePtr>> childInodes;
   {
@@ -3548,10 +3546,10 @@ void TreeInode::getDebugStatus(vector<TreeInodeDebugInfo>& results) const {
   // results.  We do this separately from the loop above just to order the
   // results nicely: parents appear before their children, and children
   // are sorted alphabetically (since contents_.entries are sorted).
-  for (const auto& childData : childInodes) {
-    auto childTree = childData.second.asTreePtrOrNull();
+  for (const auto& [childName, childInode] : childInodes) {
+    auto childTree = childInode.asTreePtrOrNull();
     if (childTree) {
-      childTree->getDebugStatus(results);
+      childTree->getDebugStatus(results, myPath + childName);
     }
   }
 }

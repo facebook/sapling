@@ -1223,7 +1223,7 @@ void EdenServiceHandler::debugInodeStatus(
   auto edenMount = server_->getMount(*mountPoint);
 
   auto inode = inodeFromUserPath(*edenMount, *path).asTreePtr();
-  inode->getDebugStatus(inodeInfo);
+  inode->getDebugStatus(inodeInfo, RelativePath{*path});
 }
 
 void EdenServiceHandler::debugOutstandingFuseCalls(
