@@ -240,7 +240,7 @@ class EdenInstance:
             rc_entries = []
 
         for name in rc_entries:
-            if name.endswith(".toml"):
+            if not name.startswith(".") and name.endswith(".toml"):
                 result.append(config_d / name)
         result.sort()
         result.append(self._system_config_path)
