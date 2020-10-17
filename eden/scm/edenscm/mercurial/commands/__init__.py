@@ -1904,6 +1904,8 @@ def continuecmd(ui, repo):
     for name, cmd in cmdutil.afterresolvedstates:
         if repo.localvfs.exists(name):
             args = shlex.split(cmd)
+            if not ui.interactive():
+                args.append("--noninteractive")
             return bindings.commands.run(args, ui.fin, ui.fout, ui.ferr)
     else:
         ms = mergemod.mergestate.read(repo)

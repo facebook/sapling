@@ -499,6 +499,11 @@ impl ConfigSet {
             .last()
             .map(|s| s.source().as_ref())
             != Some("user")
+            && self
+                .get_sources("ui", "merge")
+                .last()
+                .map(|s| s.source().as_ref())
+                == Some("user")
         {
             if let Some(merge) = self.get("ui", "merge") {
                 self.set("ui", "merge:interactive", Some(merge), &opts);
@@ -1082,6 +1087,18 @@ mod tests {
         write_file(path.clone(), "[ui]\nmerge=x\nmerge:interactive=y\n");
         cfg.load_user_internal(&[path.clone()], Options::new());
         assert_eq!(cfg.get("ui", "merge").unwrap(), "x");
+        assert_eq!(cfg.get("ui", "merge:interactive").unwrap(), "y");
+
+        let mut cfg = ConfigSet::new();
+        cfg.set("ui", "merge", Some("a"), &"system".into());
+        cfg.set("ui", "merge:interactive", Some("b"), &"system".into());
+        write_file(path.clone(), "");
+        cfg.load_user_internal(&[path.clone()], Options::new());
+        assert_eq!(cfg.get("ui", "merge").unwrap(), "a");
+        assert_eq!(cfg.get("ui", "merge:interactive").unwrap(), "b");
+        write_file(path.clone(), "[ui]\nmerge:interactive=y\n");
+        cfg.load_user_internal(&[path.clone()], Options::new());
+        assert_eq!(cfg.get("ui", "merge").unwrap(), "a");
         assert_eq!(cfg.get("ui", "merge:interactive").unwrap(), "y");
 
         drop(path);
