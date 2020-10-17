@@ -491,6 +491,20 @@ impl ConfigSet {
             errors.append(&mut self.load_path(path, &opts));
         }
 
+        // Override ui.merge:interactive (source != user) with ui.merge
+        // (source == user). This makes ui.merge in user hgrc effective,
+        // even if ui.merge:interactive is not set.
+        if self
+            .get_sources("ui", "merge:interactive")
+            .last()
+            .map(|s| s.source().as_ref())
+            != Some("user")
+        {
+            if let Some(merge) = self.get("ui", "merge") {
+                self.set("ui", "merge:interactive", Some(merge), &opts);
+            }
+        }
+
         errors
     }
 }
@@ -1054,6 +1068,21 @@ mod tests {
         let mut cfg = ConfigSet::new();
         cfg.load_user_internal(&[path.clone()], Options::new());
         assert_eq!(cfg.get("ui", "merge").unwrap(), "x");
+        assert_eq!(cfg.get("ui", "merge:interactive").unwrap(), "x");
+
+        let mut cfg = ConfigSet::new();
+        cfg.set("ui", "merge", Some("foo"), &"system".into());
+        cfg.set("ui", "merge:interactive", Some("foo"), &"system".into());
+        cfg.load_user_internal(&[path.clone()], Options::new());
+        assert_eq!(cfg.get("ui", "merge").unwrap(), "x");
+        assert_eq!(cfg.get("ui", "merge:interactive").unwrap(), "x");
+
+        let mut cfg = ConfigSet::new();
+        cfg.set("ui", "merge:interactive", Some("foo"), &"system".into());
+        write_file(path.clone(), "[ui]\nmerge=x\nmerge:interactive=y\n");
+        cfg.load_user_internal(&[path.clone()], Options::new());
+        assert_eq!(cfg.get("ui", "merge").unwrap(), "x");
+        assert_eq!(cfg.get("ui", "merge:interactive").unwrap(), "y");
 
         drop(path);
     }
