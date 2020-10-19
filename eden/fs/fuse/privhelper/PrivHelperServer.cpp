@@ -389,7 +389,9 @@ folly::File PrivHelperServer::fuseMount(const char* mountPath, bool readOnly) {
     mountFlags |= MS_RDONLY;
   }
   const char* type = "fuse";
-  int rc = mount("edenfs", mountPath, type, mountFlags, mountOpts.c_str());
+  // The colon indicates to coreutils/gnulib that this is a remote
+  // mount so it will not be displayed by `df --local`.
+  int rc = mount("edenfs:", mountPath, type, mountFlags, mountOpts.c_str());
   checkUnixError(rc, "failed to mount");
   return fuseDev;
 #endif
