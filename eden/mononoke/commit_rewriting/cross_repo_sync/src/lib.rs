@@ -845,10 +845,12 @@ where
                 let frozen_cs_id = frozen.get_changeset_id();
                 upload_commits(ctx.clone(), vec![frozen], source_repo, target_repo.clone()).await?;
 
-                update_mapping(
+                let version_name = self.get_current_version(&ctx)?;
+                update_mapping_with_version(
                     ctx.clone(),
                     hashmap! { source_cs_id => frozen_cs_id },
                     &self,
+                    &version_name,
                 )
                 .await?;
                 Ok(Some(frozen_cs_id))
@@ -1494,31 +1496,6 @@ pub async fn upload_commits(
         .collect();
     uploader.try_for_each_concurrent(100, identity).await?;
     save_bonsai_changesets(rewritten_list.clone(), ctx.clone(), target_repo.clone())
-        .compat()
-        .await?;
-    Ok(())
-}
-
-// TODO(stash, ikostia) - replace all usages with update_mapping_with_version and
-// remove this function
-pub async fn update_mapping<'a, M: SyncedCommitMapping + Clone + 'static>(
-    ctx: CoreContext,
-    mapped: HashMap<ChangesetId, ChangesetId>,
-    syncer: &'a CommitSyncer<M>,
-) -> Result<(), Error> {
-    // TODO(stash): we shouldn't always use current version, but rather pass the actual version
-    // that was used to remap a commit
-    let version_name = syncer.get_current_version(&ctx)?;
-    let entries: Vec<_> = mapped
-        .into_iter()
-        .map(|(from, to)| {
-            cloned!(version_name);
-            create_synced_commit_mapping_entry(from, to, &syncer.repos, Some(version_name))
-        })
-        .collect();
-    syncer
-        .mapping
-        .add_bulk(ctx.clone(), entries)
         .compat()
         .await?;
     Ok(())

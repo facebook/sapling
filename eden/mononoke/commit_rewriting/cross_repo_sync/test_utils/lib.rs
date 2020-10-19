@@ -19,7 +19,7 @@ use context::CoreContext;
 use cross_repo_sync::{
     rewrite_commit,
     types::{Source, Target},
-    update_mapping, upload_commits, CandidateSelectionHint, CommitSyncDataProvider,
+    update_mapping_with_version, upload_commits, CandidateSelectionHint, CommitSyncDataProvider,
     CommitSyncRepos, CommitSyncer, SyncData, Syncers,
 };
 use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt};
@@ -299,10 +299,11 @@ pub async fn init_small_large_repo(
         .set_to(large_master_bcs_id)
         .await?;
 
-    update_mapping(
+    update_mapping_with_version(
         ctx.clone(),
         hashmap! { small_master_bcs_id => large_master_bcs_id},
         &small_to_large_commit_syncer,
+        &small_to_large_commit_syncer.get_current_version(&ctx)?,
     )
     .await?;
 

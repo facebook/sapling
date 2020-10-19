@@ -1399,7 +1399,7 @@ pub async fn validate_entry(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cross_repo_sync::update_mapping;
+    use cross_repo_sync::update_mapping_with_version;
     use cross_repo_sync_test_utils::init_small_large_repo;
     use fbinit::FacebookInit;
     use maplit::hashmap;
@@ -1462,7 +1462,13 @@ mod tests {
             })
             .collect();
 
-        update_mapping(ctx.clone(), commit_mapping, &small_to_large_commit_syncer).await?;
+        update_mapping_with_version(
+            ctx.clone(),
+            commit_mapping,
+            &small_to_large_commit_syncer,
+            &small_to_large_commit_syncer.get_current_version(&ctx)?,
+        )
+        .await?;
         let large_repo = Large(large_repo.clone());
         let small_repo = Small(small_repo.clone());
 

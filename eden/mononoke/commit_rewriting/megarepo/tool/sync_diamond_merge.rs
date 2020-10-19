@@ -19,8 +19,8 @@ use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use cloned::cloned;
 use context::CoreContext;
 use cross_repo_sync::{
-    create_commit_syncers, rewrite_commit, update_mapping, upload_commits, CandidateSelectionHint,
-    CommitSyncOutcome, CommitSyncer, Syncers,
+    create_commit_syncers, rewrite_commit, update_mapping_with_version, upload_commits,
+    CandidateSelectionHint, CommitSyncOutcome, CommitSyncer, Syncers,
 };
 use futures::{
     compat::Future01CompatExt,
@@ -167,10 +167,11 @@ pub async fn do_sync_diamond_merge(
     info!(ctx.logger(), "uploading merge commit {}", new_merge_cs_id);
     upload_commits(ctx.clone(), vec![rewritten], small_repo, large_repo.clone()).await?;
 
-    update_mapping(
+    update_mapping_with_version(
         ctx.clone(),
         hashmap! {small_merge_cs_id => new_merge_cs_id},
         &syncers.small_to_large,
+        &syncers.small_to_large.get_current_version(&ctx)?,
     )
     .await?;
 
