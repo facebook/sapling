@@ -52,11 +52,14 @@ pub const WAIT_SECS: &str = "wait-secs";
 pub const CATCHUP_VALIDATE_COMMAND: &str = "catchup-validate";
 pub const MARK_NOT_SYNCED_COMMAND: &str = "mark-not-synced";
 pub const INPUT_FILE: &str = "input-file";
+pub const CHECK_PUSH_REDIRECTION_PREREQS: &str = "check-push-redirection-prereqs";
 pub const VERSION: &str = "version";
 pub const RUN_MOVER: &str = "run-mover";
 pub const PATH: &str = "path";
 pub const BACKFILL_NOOP_MAPPING: &str = "backfill-noop-mapping";
 pub const MAPPING_VERSION_NAME: &str = "mapping-version-name";
+pub const SOURCE_CHANGESET: &str = "source-changeset";
+pub const TARGET_CHANGESET: &str = "target-changeset";
 
 pub fn cs_args_from_matches<'a>(sub_m: &ArgMatches<'a>) -> BoxFuture<ChangesetArgs, Error> {
     let message = try_boxfuture!(
@@ -493,6 +496,27 @@ pub fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .required(true)
         );
 
+    let check_push_redirection_prereqs_subcommand = SubCommand::with_name(CHECK_PUSH_REDIRECTION_PREREQS)
+        .about("check the prerequisites of enabling push-redirection at a given commit with a given CommitSyncConfig version")
+        .arg(
+            Arg::with_name(SOURCE_CHANGESET)
+                .help("a source changeset hash or bookmark to check")
+                .takes_value(true)
+                .required(true),
+        )
+        .arg(
+            Arg::with_name(TARGET_CHANGESET)
+                .help("a target changeset hash or bookmark to check")
+                .takes_value(true)
+                .required(true),
+        )
+        .arg(
+            Arg::with_name(VERSION)
+                .help("a version to use")
+                .takes_value(true)
+                .required(true),
+        );
+
     let run_mover_subcommand = SubCommand::with_name(RUN_MOVER)
         .about("run mover of a given version to remap paths between source and target repos")
         .arg(
@@ -552,6 +576,7 @@ pub fn setup_app<'a, 'b>() -> App<'a, 'b> {
         ))
         .subcommand(catchup_validate_subcommand)
         .subcommand(mark_not_synced_candidate)
+        .subcommand(check_push_redirection_prereqs_subcommand)
         .subcommand(run_mover_subcommand)
         .subcommand(backfill_noop_mapping)
 }

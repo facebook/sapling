@@ -16,6 +16,10 @@ use cmdlib::{args, helpers};
 use cmdlib_x_repo::create_commit_syncer_args_from_matches;
 use context::CoreContext;
 use cross_repo_sync::CommitSyncer;
+use cross_repo_sync::{
+    types::{Source, Target},
+    validation::verify_working_copy_inner,
+};
 use fbinit::FacebookInit;
 use futures::{
     compat::Future01CompatExt,
@@ -27,6 +31,7 @@ use metaconfig_types::RepoConfig;
 use metaconfig_types::{CommitSyncConfigVersion, MetadataDatabaseConfig};
 use mononoke_types::{MPath, RepositoryId};
 use movers::get_small_to_large_mover;
+use ref_cast::RefCast;
 use regex::Regex;
 use skiplist::fetch_skiplist_index;
 use slog::{info, warn};
@@ -56,12 +61,13 @@ use crate::cli::{
     cs_args_from_matches, get_catchup_head_delete_commits_cs_args_factory,
     get_delete_commits_cs_args_factory, get_gradual_merge_commits_cs_args_factory, setup_app,
     BACKFILL_NOOP_MAPPING, BASE_COMMIT_HASH, BONSAI_MERGE, BONSAI_MERGE_P1, BONSAI_MERGE_P2,
-    CATCHUP_DELETE_HEAD, CATCHUP_VALIDATE_COMMAND, CHANGESET, CHUNKING_HINT_FILE, COMMIT_BOOKMARK,
-    COMMIT_HASH, DELETION_CHUNK_SIZE, DRY_RUN, EVEN_CHUNK_SIZE, FIRST_PARENT, GRADUAL_MERGE,
-    GRADUAL_MERGE_PROGRESS, HEAD_BOOKMARK, INPUT_FILE, LAST_DELETION_COMMIT, LIMIT,
-    MANUAL_COMMIT_SYNC, MAPPING_VERSION_NAME, MARK_NOT_SYNCED_COMMAND, MAX_NUM_OF_MOVES_IN_COMMIT,
-    MERGE, MOVE, ORIGIN_REPO, PARENTS, PATH, PATH_REGEX, PRE_DELETION_COMMIT, PRE_MERGE_DELETE,
-    RUN_MOVER, SECOND_PARENT, SYNC_DIAMOND_MERGE, TO_MERGE_CS_ID, VERSION, WAIT_SECS,
+    CATCHUP_DELETE_HEAD, CATCHUP_VALIDATE_COMMAND, CHANGESET, CHECK_PUSH_REDIRECTION_PREREQS,
+    CHUNKING_HINT_FILE, COMMIT_BOOKMARK, COMMIT_HASH, DELETION_CHUNK_SIZE, DRY_RUN,
+    EVEN_CHUNK_SIZE, FIRST_PARENT, GRADUAL_MERGE, GRADUAL_MERGE_PROGRESS, HEAD_BOOKMARK,
+    INPUT_FILE, LAST_DELETION_COMMIT, LIMIT, MANUAL_COMMIT_SYNC, MAPPING_VERSION_NAME,
+    MARK_NOT_SYNCED_COMMAND, MAX_NUM_OF_MOVES_IN_COMMIT, MERGE, MOVE, ORIGIN_REPO, PARENTS, PATH,
+    PATH_REGEX, PRE_DELETION_COMMIT, PRE_MERGE_DELETE, RUN_MOVER, SECOND_PARENT, SOURCE_CHANGESET,
+    SYNC_DIAMOND_MERGE, TARGET_CHANGESET, TO_MERGE_CS_ID, VERSION, WAIT_SECS,
 };
 use crate::merging::perform_merge;
 use megarepolib::chunking::{
@@ -462,6 +468,87 @@ async fn run_manual_commit_sync<'a>(
     Ok(())
 }
 
+async fn run_check_push_redirection_prereqs<'a>(
+    ctx: CoreContext,
+    matches: &ArgMatches<'a>,
+    sub_m: &ArgMatches<'a>,
+) -> Result<(), Error> {
+    let target_repo_id = args::get_target_repo_id(ctx.fb, &matches)?;
+    let config_store = args::maybe_init_config_store(ctx.fb, ctx.logger(), &matches)
+        .ok_or_else(|| format_err!("Failed initializing ConfigStore"))?;
+    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &config_store)?;
+    let commit_syncer_args =
+        create_commit_syncer_args_from_matches(ctx.fb, ctx.logger(), &matches).await?;
+    let commit_sync_config =
+        live_commit_sync_config.get_current_commit_sync_config(&ctx, target_repo_id)?;
+    let commit_syncer = commit_syncer_args
+        .try_into_commit_syncer(&commit_sync_config, Arc::new(live_commit_sync_config))?;
+
+    let target_repo = commit_syncer.get_target_repo();
+    let source_repo = commit_syncer.get_source_repo();
+
+    info!(
+        ctx.logger(),
+        "Resolving source chageset in {}",
+        source_repo.name()
+    );
+    let source_cs_id = helpers::csid_resolve(
+        ctx.clone(),
+        source_repo.clone(),
+        sub_m
+            .value_of(SOURCE_CHANGESET)
+            .ok_or_else(|| format_err!("{} not set", SOURCE_CHANGESET))?,
+    )
+    .compat()
+    .await?;
+
+    info!(
+        ctx.logger(),
+        "Resolving taregt chageset in {}",
+        target_repo.name()
+    );
+    let target_cs_id = helpers::csid_resolve(
+        ctx.clone(),
+        target_repo.clone(),
+        sub_m
+            .value_of(TARGET_CHANGESET)
+            .ok_or_else(|| format_err!("{} not set", TARGET_CHANGESET))?,
+    )
+    .compat()
+    .await?;
+
+    let version = CommitSyncConfigVersion(
+        sub_m
+            .value_of(VERSION)
+            .ok_or_else(|| format_err!("{} not set", VERSION))?
+            .to_string(),
+    );
+
+    let mover = commit_syncer.get_mover_by_version(&version)?;
+    let reverse_mover = commit_syncer.get_reverse_mover_by_version(&version)?;
+
+    info!(
+        ctx.logger(),
+        "Checking push-redirection prerequisites for {}({})->{}({}), {:?}",
+        source_cs_id,
+        source_repo.name(),
+        target_cs_id,
+        target_repo.name(),
+        version,
+    );
+
+    verify_working_copy_inner(
+        &ctx,
+        Source::ref_cast(commit_syncer.get_source_repo()),
+        Target::ref_cast(commit_syncer.get_target_repo()),
+        Source(source_cs_id),
+        Target(target_cs_id),
+        &mover,
+        &reverse_mover,
+    )
+    .await
+}
+
 async fn run_catchup_delete_head<'a>(
     ctx: CoreContext,
     matches: &ArgMatches<'a>,
@@ -849,6 +936,9 @@ fn main(fb: FacebookInit) -> Result<()> {
             }
             (MARK_NOT_SYNCED_COMMAND, Some(sub_m)) => {
                 run_mark_not_synced(ctx, &matches, sub_m).await
+            }
+            (CHECK_PUSH_REDIRECTION_PREREQS, Some(sub_m)) => {
+                run_check_push_redirection_prereqs(ctx, &matches, sub_m).await
             }
             (RUN_MOVER, Some(sub_m)) => run_mover(ctx, &matches, sub_m).await,
             (BACKFILL_NOOP_MAPPING, Some(sub_m)) => {
