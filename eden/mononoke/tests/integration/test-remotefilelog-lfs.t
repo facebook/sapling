@@ -30,7 +30,7 @@ Start Mononoke with LFS enabled.
   $ wait_for_mononoke
 
 Start Mononoke API server, to serve LFS blobs
-  $ lfs_uri="$(lfs_server)/repo"
+  $ lfs_uri="$(lfs_server --scuba-log-file "$TESTTMP/scuba.json")/repo"
 
 Create a new client repository. Enable LFS there.
   $ hgclone_treemanifest ssh://user@dummy/repo-hg-nolfs repo-hg-lfs --noupdate --config extensions.remotenames=
@@ -68,6 +68,13 @@ Perform LFS push
   adding file changes
   added 0 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
+
+# Check LFS logs
+  $ wait_for_json_record_count "$TESTTMP/scuba.json" 3
+  $ jq .int.client_attempt < "$TESTTMP/scuba.json"
+  1
+  1
+  1
 
 # Rename a file
   $ hg mv lfs-largefile-for-rename lfs-largefile-renamed

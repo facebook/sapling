@@ -62,6 +62,7 @@ mod popularity;
 mod scuba;
 mod service;
 mod upload;
+mod util;
 
 const ARG_SELF_URL: &str = "self-url";
 const ARG_UPSTREAM_URL: &str = "upstream-url";

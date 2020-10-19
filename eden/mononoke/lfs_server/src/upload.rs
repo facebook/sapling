@@ -18,7 +18,7 @@ use futures::{
 use futures_util::try_join;
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
-use http::header::{HeaderMap, CONTENT_LENGTH};
+use http::header::CONTENT_LENGTH;
 use hyper::{Body, Request};
 use serde::Deserialize;
 use stats::prelude::*;
@@ -39,6 +39,7 @@ use crate::errors::ErrorKind;
 use crate::lfs_server_context::RepositoryRequestContext;
 use crate::middleware::LfsMethod;
 use crate::scuba::LfsScubaKey;
+use crate::util::read_header_value;
 
 define_stats! {
     prefix ="mononoke.lfs.upload";
@@ -362,15 +363,6 @@ async fn sync_internal_and_upstream(
     Ok(())
 }
 
-fn read_content_length(state: &State) -> Option<Result<u64, Error>> {
-    let headers = HeaderMap::try_borrow_from(&state)?;
-    let val = headers.get(CONTENT_LENGTH)?;
-    let size = str::from_utf8(val.as_bytes())
-        .map_err(Error::from)
-        .and_then(|val| val.parse().map_err(Error::from));
-    Some(size)
-}
-
 pub async fn upload(state: &mut State) -> Result<impl TryIntoResponse, HttpError> {
     let UploadParams {
         repository,
@@ -383,7 +375,7 @@ pub async fn upload(state: &mut State) -> Result<impl TryIntoResponse, HttpError
 
     let oid = Sha256::from_str(&oid).map_err(HttpError::e400)?;
     let size = size.parse().map_err(Error::from).map_err(HttpError::e400)?;
-    let content_length = read_content_length(state)
+    let content_length: Option<u64> = read_header_value(state, CONTENT_LENGTH)
         .transpose()
         .map_err(HttpError::e400)?;
 

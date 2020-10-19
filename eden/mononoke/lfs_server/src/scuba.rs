@@ -11,6 +11,7 @@ use gotham_ext::middleware::ScubaHandler;
 use scuba::ScubaSampleBuilder;
 
 use crate::middleware::RequestContext;
+use crate::util::read_header_value;
 
 #[derive(Copy, Clone, Debug)]
 pub enum LfsScubaKey {
@@ -35,6 +36,8 @@ pub enum LfsScubaKey {
     UploadSync,
     /// The actual size of the content being sent
     DownloadContentSize,
+    /// The attempt reported by the client
+    ClientAttempt,
 }
 
 impl AsRef<str> for LfsScubaKey {
@@ -54,6 +57,7 @@ impl AsRef<str> for LfsScubaKey {
             BatchResponseReadyUs => "batch_response_ready_us",
             UploadSync => "upload_sync",
             DownloadContentSize => "download_content_size",
+            ClientAttempt => "client_attempt",
         }
     }
 }
@@ -67,16 +71,24 @@ impl Into<String> for LfsScubaKey {
 #[derive(Clone)]
 pub struct LfsScubaHandler {
     ctx: Option<RequestContext>,
+    client_attempt: Option<u64>,
 }
 
 impl ScubaHandler for LfsScubaHandler {
     fn from_state(state: &State) -> Self {
+        let client_attempt = read_header_value(state, "X-Attempt")
+            .map(|r| r.ok())
+            .flatten();
+
         Self {
             ctx: state.try_borrow::<RequestContext>().cloned(),
+            client_attempt,
         }
     }
 
     fn add_stats(self, scuba: &mut ScubaSampleBuilder) {
+        scuba.add_opt(LfsScubaKey::ClientAttempt, self.client_attempt);
+
         if let Some(ctx) = self.ctx {
             if let Some(repository) = ctx.repository {
                 scuba.add(LfsScubaKey::Repository, repository.as_ref());
