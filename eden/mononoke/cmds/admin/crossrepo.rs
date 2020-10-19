@@ -7,13 +7,14 @@
 
 use anyhow::{anyhow, format_err, Error};
 use backsyncer::format_counter as format_backsyncer_counter;
-use blobrepo::BlobRepo;
+use blobrepo::{save_bonsai_changesets, BlobRepo};
 use bookmark_renaming::get_small_to_large_renamer;
-use bookmarks::{BookmarkUpdateLog, BookmarkUpdateReason, Freshness};
+use bookmarks::{BookmarkName, BookmarkUpdateLog, BookmarkUpdateReason, Freshness};
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cmdlib::{args, helpers};
 use context::CoreContext;
 use cross_repo_sync::{
+    types::{Large, Small},
     validation::{self, BookmarkDiff},
     CommitSyncRepos, CommitSyncer,
 };
@@ -23,10 +24,12 @@ use futures::{compat::Future01CompatExt, try_join};
 use futures_ext::FutureExt;
 use itertools::Itertools;
 use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
+use maplit::{btreemap, hashmap};
 use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::{CommitSyncConfig, RepoConfig};
-use mononoke_types::RepositoryId;
+use mononoke_types::{BonsaiChangesetMut, ChangesetId, DateTime, RepositoryId};
 use mutable_counters::{MutableCounters, SqlMutableCounters};
+use pushrebase::FAILUPUSHREBASE_EXTRA;
 use slog::{info, warn, Logger};
 use std::convert::TryInto;
 use std::sync::Arc;
@@ -35,6 +38,7 @@ use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
 use crate::error::SubcommandError;
 
 pub const CROSSREPO: &str = "crossrepo";
+const AUTHOR_ARG: &str = "author";
 const MAP_SUBCOMMAND: &str = "map";
 const PREPARE_ROLLOUT_SUBCOMMAND: &str = "prepare-rollout";
 const PUSHREDIRECTION_SUBCOMMAND: &str = "pushredirection";
@@ -43,6 +47,9 @@ const VERIFY_BOOKMARKS_SUBCOMMAND: &str = "verify-bookmarks";
 const HASH_ARG: &str = "HASH";
 const LARGE_REPO_HASH_ARG: &str = "LARGE_REPO_HASH";
 const UPDATE_LARGE_REPO_BOOKMARKS: &str = "update-large-repo-bookmarks";
+const LARGE_REPO_BOOKMARK_ARG: &str = "large-repo-bookmark";
+const MAPPING_VERSION_ARG: &str = "mapping-version";
+const CHANGE_MAPPING_VERSION_SUBCOMMAND: &str = "change-mapping-version";
 
 const SUBCOMMAND_CONFIG: &str = "config";
 const SUBCOMMAND_BY_VERSION: &str = "by-version";
@@ -231,7 +238,190 @@ async fn run_pushredirection_subcommand<'a>(
 
             Ok(())
         }
+        (CHANGE_MAPPING_VERSION_SUBCOMMAND, Some(sub_m)) => {
+            let commit_syncer = get_large_to_small_commit_syncer(
+                &ctx,
+                source_repo,
+                target_repo,
+                live_commit_sync_config.clone(),
+                mapping,
+            )?;
+
+            if live_commit_sync_config
+                .push_redirector_enabled_for_public(commit_syncer.get_small_repo().get_repoid())
+            {
+                return Err(format_err!(
+                    "not allowed to run {} if pushredirection is enabled",
+                    CHANGE_MAPPING_VERSION_SUBCOMMAND
+                )
+                .into());
+            }
+
+            let large_bookmark = Large(
+                sub_m
+                    .value_of(LARGE_REPO_BOOKMARK_ARG)
+                    .map(BookmarkName::new)
+                    .transpose()?
+                    .ok_or_else(|| format_err!("{} is not specified", LARGE_REPO_BOOKMARK_ARG))?,
+            );
+            let small_bookmark = Small(
+                commit_syncer.get_bookmark_renamer(&ctx)?(&large_bookmark).ok_or_else(|| {
+                    format_err!("{} bookmark doesn't remap to small repo", large_bookmark)
+                })?,
+            );
+
+            let large_repo = Large(commit_syncer.get_large_repo());
+            let small_repo = Small(commit_syncer.get_small_repo());
+            let large_bookmark_value =
+                Large(get_bookmark_value(&ctx, &large_repo, &large_bookmark).await?);
+            let small_bookmark_value =
+                Small(get_bookmark_value(&ctx, &small_repo, &small_bookmark).await?);
+
+            let mapping_version = sub_m
+                .value_of(MAPPING_VERSION_ARG)
+                .ok_or_else(|| format_err!("{} is not specified", MAPPING_VERSION_ARG))?;
+            let mapping_version = CommitSyncConfigVersion(mapping_version.to_string());
+            if !commit_syncer.version_exists(&mapping_version)? {
+                return Err(format_err!("{} version does not exist", mapping_version).into());
+            }
+
+            let large_cs_id = create_empty_commit_for_mapping_change(
+                &ctx,
+                sub_m,
+                &large_repo,
+                &small_repo,
+                &large_bookmark_value,
+                &mapping_version,
+            )
+            .await?;
+
+            let maybe_rewritten_small_cs_id = commit_syncer
+                .unsafe_always_rewrite_sync_commit(
+                    ctx.clone(),
+                    large_cs_id.0,
+                    Some(hashmap! {
+                      large_bookmark_value.0.clone() => small_bookmark_value.0.clone(),
+                    }),
+                    &mapping_version,
+                )
+                .await?;
+
+            let rewritten_small_cs_id = Small(maybe_rewritten_small_cs_id.ok_or_else(|| {
+                format_err!("{} was rewritten into non-existent commit", large_cs_id)
+            })?);
+
+            let f1 = move_bookmark(
+                &ctx,
+                &large_repo,
+                &large_bookmark,
+                *large_bookmark_value,
+                *large_cs_id,
+            );
+
+            let f2 = move_bookmark(
+                &ctx,
+                &small_repo,
+                &small_bookmark,
+                *small_bookmark_value,
+                *rewritten_small_cs_id,
+            );
+
+            try_join!(f1, f2)?;
+
+            Ok(())
+        }
         _ => Err(SubcommandError::InvalidArgs),
+    }
+}
+
+async fn create_empty_commit_for_mapping_change(
+    ctx: &CoreContext,
+    sub_m: &ArgMatches<'_>,
+    large_repo: &Large<&BlobRepo>,
+    small_repo: &Small<&BlobRepo>,
+    parent: &Large<ChangesetId>,
+    mapping_version: &CommitSyncConfigVersion,
+) -> Result<Large<ChangesetId>, Error> {
+    let author = sub_m
+        .value_of(AUTHOR_ARG)
+        .ok_or_else(|| format_err!("{} is not specified", AUTHOR_ARG))?;
+
+    let commit_msg = format!(
+        "Changing synced mapping version to {} for {}->{} sync",
+        mapping_version,
+        large_repo.name(),
+        small_repo.name(),
+    );
+    // Create an empty commit on top of large bookmark
+    let bcs = BonsaiChangesetMut {
+        parents: vec![parent.0.clone()],
+        author: author.to_string(),
+        author_date: DateTime::now(),
+        committer: None,
+        committer_date: None,
+        message: commit_msg,
+        extra: btreemap! {
+            FAILUPUSHREBASE_EXTRA.to_string() => b"1".to_vec(),
+        },
+        file_changes: btreemap! {},
+    }
+    .freeze()?;
+
+    let large_cs_id = bcs.get_changeset_id();
+    save_bonsai_changesets(vec![bcs], ctx.clone(), large_repo.0.clone())
+        .compat()
+        .await?;
+
+    Ok(Large(large_cs_id))
+}
+
+async fn get_bookmark_value(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    bookmark: &BookmarkName,
+) -> Result<ChangesetId, Error> {
+    let maybe_bookmark_value = repo
+        .get_bonsai_bookmark(ctx.clone(), &bookmark)
+        .compat()
+        .await?;
+
+    maybe_bookmark_value.ok_or_else(|| format_err!("{} is not found in {}", bookmark, repo.name()))
+}
+
+async fn move_bookmark(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    bookmark: &BookmarkName,
+    prev_value: ChangesetId,
+    new_value: ChangesetId,
+) -> Result<(), Error> {
+    let mut book_txn = repo.update_bookmark_transaction(ctx.clone());
+
+    info!(
+        ctx.logger(),
+        "moving {} to {} in {}",
+        bookmark,
+        new_value,
+        repo.name()
+    );
+    book_txn.update(
+        &bookmark,
+        new_value,
+        prev_value,
+        BookmarkUpdateReason::ManualMove,
+        None,
+    )?;
+
+    let res = book_txn.commit().await?;
+
+    if res {
+        Ok(())
+    } else {
+        Err(format_err!(
+            "failed to move bookmark {} in {}",
+            bookmark,
+            repo.name()
+        ))
     }
 }
 
@@ -648,9 +838,38 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
     let prepare_rollout_subcommand = SubCommand::with_name(PREPARE_ROLLOUT_SUBCOMMAND)
         .about("command to prepare rollout of pushredirection");
 
+    let change_mapping_version = SubCommand::with_name(CHANGE_MAPPING_VERSION_SUBCOMMAND)
+        .about(
+            "a command to change mapping version for a given bookmark. \
+        Note that this command doesn't check that the working copies of source and target repo \
+        are equivalent according to the new mapping. This needs to ensured before calling this command",
+        )
+        .arg(
+            Arg::with_name(AUTHOR_ARG)
+                .long(AUTHOR_ARG)
+                .required(true)
+                .takes_value(true)
+                .help("Author of the commit that will change the mapping"),
+        )
+        .arg(
+            Arg::with_name(LARGE_REPO_BOOKMARK_ARG)
+                .long(LARGE_REPO_BOOKMARK_ARG)
+                .required(true)
+                .takes_value(true)
+                .help("bookmark in the large repo"),
+        )
+        .arg(
+            Arg::with_name(MAPPING_VERSION_ARG)
+                .long(MAPPING_VERSION_ARG)
+                .required(true)
+                .takes_value(true)
+                .help("mapping version to change to"),
+        );
+
     let pushredirection_subcommand = SubCommand::with_name(PUSHREDIRECTION_SUBCOMMAND)
         .about("helper commands to enable/disable pushredirection")
-        .subcommand(prepare_rollout_subcommand);
+        .subcommand(prepare_rollout_subcommand)
+        .subcommand(change_mapping_version);
 
 
     SubCommand::with_name(CROSSREPO)

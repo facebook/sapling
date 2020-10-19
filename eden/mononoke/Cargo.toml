@@ -132,6 +132,7 @@ mononoke_hg_sync_job_helper_lib = { path = "mononoke_hg_sync_job" }
 mononoke_types = { path = "mononoke_types" }
 mutable_counters = { path = "mutable_counters" }
 prefixblob = { path = "blobstore/prefixblob" }
+pushrebase = { path = "pushrebase" }
 redactedblobstore = { path = "blobstore/redactedblobstore" }
 revset = { path = "revset" }
 scuba_ext = { path = "common/scuba_ext" }
@@ -168,6 +169,7 @@ futures-old = { package = "futures", version = "0.1" }
 futures-util = "0.3"
 itertools = "0.8"
 lazy_static = "1.0"
+maplit = "1.0"
 rand = { version = "0.7", features = ["small_rng"] }
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_derive = "1.0"
@@ -185,7 +187,6 @@ toml = "=0.5.6"
 [dev-dependencies]
 fixtures = { path = "tests/fixtures" }
 tests_utils = { path = "tests/utils" }
-maplit = "1.0"
 
 [workspace]
 
