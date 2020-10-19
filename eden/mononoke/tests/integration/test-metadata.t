@@ -48,9 +48,7 @@ pull from mononoke and log data
   remote:     priority: Default,
   remote:     client_debug: true,
   remote:     client_ip: Some(
-  remote:         V4(
-  remote:             $LOCALIP,
-  remote:         ),
+  remote:         $LOCALIP,
   remote:     ),
   remote:     client_hostname: Some(
   remote:         "localhost",
