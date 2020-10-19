@@ -813,8 +813,10 @@ where
         ctx: CoreContext,
         source_cs_id: ChangesetId,
         maybe_parents: Option<HashMap<ChangesetId, ChangesetId>>,
+        sync_config_version: &CommitSyncConfigVersion,
     ) -> Result<Option<ChangesetId>, Error> {
-        let (source_repo, target_repo, mover) = self.get_source_target_mover(&ctx)?;
+        let (source_repo, target_repo) = self.get_source_target();
+        let mover = self.get_mover_by_version(sync_config_version)?;
         let source_cs = source_cs_id
             .load(ctx.clone(), source_repo.blobstore())
             .await?;
@@ -845,12 +847,11 @@ where
                 let frozen_cs_id = frozen.get_changeset_id();
                 upload_commits(ctx.clone(), vec![frozen], source_repo, target_repo.clone()).await?;
 
-                let version_name = self.get_current_version(&ctx)?;
                 update_mapping_with_version(
                     ctx.clone(),
                     hashmap! { source_cs_id => frozen_cs_id },
                     &self,
-                    &version_name,
+                    sync_config_version,
                 )
                 .await?;
                 Ok(Some(frozen_cs_id))

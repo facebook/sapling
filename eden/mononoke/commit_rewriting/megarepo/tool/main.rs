@@ -446,11 +446,16 @@ async fn run_manual_commit_sync<'a>(
         .compat()
         .await?;
 
+    let mapping_version_name = sub_m
+        .value_of(MAPPING_VERSION_NAME)
+        .ok_or_else(|| format_err!("mapping-version-name is not specified"))?;
+
     let target_cs_id = manual_commit_sync::manual_commit_sync(
         &ctx,
         &commit_syncer,
         source_cs_id,
         target_repo_parents,
+        CommitSyncConfigVersion(mapping_version_name.to_string()),
     )
     .await?;
     info!(ctx.logger(), "target cs id is {:?}", target_cs_id);

@@ -1666,8 +1666,9 @@ async fn prepare_commit_syncer_with_mapping_change(
         .set_to(root_cs_id)
         .await?;
 
+    let current_version = large_to_small_syncer.get_current_version(&ctx)?;
     let maybe_small_root_cs_id = large_to_small_syncer
-        .unsafe_always_rewrite_sync_commit(ctx.clone(), root_cs_id, None)
+        .unsafe_always_rewrite_sync_commit(ctx.clone(), root_cs_id, None, &current_version)
         .await?;
     assert!(maybe_small_root_cs_id.is_some());
     let small_root_cs_id = maybe_small_root_cs_id.unwrap();

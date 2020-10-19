@@ -323,8 +323,10 @@ pub async fn sync_commit_without_pushrebase<M: SyncedCommitMapping + Clone + 'st
         // Merge is from a branch completely independent from common_pushrebase_bookmark -
         // it's fine to sync it.
         if maybe_independent_branch.is_some() {
+            // TODO(stash, ikostia) - T77836390. fix how merges are processed by x-repo sync job
+            let current_version = commit_syncer.get_current_version(&ctx)?;
             commit_syncer
-                .unsafe_always_rewrite_sync_commit(ctx.clone(), cs_id, None)
+                .unsafe_always_rewrite_sync_commit(ctx.clone(), cs_id, None, &current_version)
                 .timed()
                 .await
         } else {

@@ -9,6 +9,7 @@ use anyhow::{anyhow, Error};
 use blobstore::Loadable;
 use context::CoreContext;
 use cross_repo_sync::CommitSyncer;
+use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types::ChangesetId;
 use std::collections::HashMap;
 use synced_commit_mapping::SyncedCommitMapping;
@@ -33,6 +34,7 @@ pub async fn manual_commit_sync<M: SyncedCommitMapping + Clone + 'static>(
     commit_syncer: &CommitSyncer<M>,
     source_cs_id: ChangesetId,
     target_repo_parents: Vec<ChangesetId>,
+    mapping_version: CommitSyncConfigVersion,
 ) -> Result<Option<ChangesetId>, Error> {
     let source_repo = commit_syncer.get_source_repo();
     let source_cs = source_cs_id
@@ -53,7 +55,12 @@ pub async fn manual_commit_sync<M: SyncedCommitMapping + Clone + 'static>(
         .collect::<HashMap<_, _>>();
 
     let res = commit_syncer
-        .unsafe_always_rewrite_sync_commit(ctx.clone(), source_cs_id, Some(remapped_parents))
+        .unsafe_always_rewrite_sync_commit(
+            ctx.clone(),
+            source_cs_id,
+            Some(remapped_parents),
+            &mapping_version,
+        )
         .await?;
 
     Ok(res)
@@ -106,8 +113,14 @@ mod test {
 
         let bigmove = resolve_cs_id(&ctx, &large_repo, "megarepo_start").await?;
 
-        let maybe_synced_commit =
-            manual_commit_sync(&ctx, &small_to_large, commit_to_sync, vec![bigmove]).await?;
+        let maybe_synced_commit = manual_commit_sync(
+            &ctx,
+            &small_to_large,
+            commit_to_sync,
+            vec![bigmove],
+            small_to_large.get_current_version(&ctx)?,
+        )
+        .await?;
 
         let synced_commit = maybe_synced_commit.ok_or(anyhow!("commit was not synced"))?;
         let wc = list_working_copy_utf8(&ctx, &large_repo, synced_commit).await?;

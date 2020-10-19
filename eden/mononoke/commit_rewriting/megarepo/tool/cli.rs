@@ -392,6 +392,13 @@ pub fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .takes_value(true)
                 .multiple(true)
                 .required(true),
+        )
+        .arg(
+            Arg::with_name(MAPPING_VERSION_NAME)
+                .long(MAPPING_VERSION_NAME)
+                .help("name of the noop mapping that will be inserted")
+                .takes_value(true)
+                .required(true),
         );
 
     let catchup_delete_head_subcommand = SubCommand::with_name(CATCHUP_DELETE_HEAD)
