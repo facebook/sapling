@@ -445,12 +445,13 @@ class changelog(object):
             yield rev
 
     def findcommonmissing(self, common, heads):
-        """Return (torevs(::common), (::heads) - (::common))"""
+        """Return (torevset(::common), (::heads) - (::common))"""
         # "::heads - ::common" is "heads % common", aka. the "only"
         # operation.
         onlyheads, commonancestors = self.dag.onlyboth(heads, common)
-        # commonancestors can be large, do not convert to list
-        return self.torevs(commonancestors), list(onlyheads.iterrev())
+        # commonancestors can be lazy (revlog backend), use torevset instead of
+        # torevs.
+        return self.torevset(commonancestors), list(onlyheads.iterrev())
 
     def findmissing(self, common, heads):
         """Return 'heads % common'"""
