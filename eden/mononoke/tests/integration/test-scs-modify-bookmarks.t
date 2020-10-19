@@ -143,7 +143,7 @@ but work if you get it right
 
 try to move trunk over a commit that fails the hooks
   $ scsc move-bookmark -R repo --name trunk -i $E
-  error: SourceControlService::repo_move_bookmark failed with RequestError { kind: RequestErrorKind::INVALID_REQUEST, reason: "hooks failed:\n  limit_filesize for 88dbd25ba00277e3dfdfc642d67f2c22c75ea4f8d94f011b7f526f07b6ecc345: File size limit is 10 bytes. You tried to push file dlarge that is over the limit (14 bytes).  See https://fburl.com/landing_big_diffs for instructions." }
+  error: SourceControlService::repo_move_bookmark failed with RequestError { kind: RequestErrorKind::INVALID_REQUEST, reason: "hooks failed:\n  limit_filesize for 88dbd25ba00277e3dfdfc642d67f2c22c75ea4f8d94f011b7f526f07b6ecc345: File size limit is 10 bytes. You tried to push file dlarge that is over the limit (14 bytes). This limit is enforced for files matching the following regex: \".*\". See https://fburl.com/landing_big_diffs for instructions." }
   [1]
 
 use a pushvar to bypass the hook
@@ -171,7 +171,7 @@ create a bookmark
 
 create a bookmark over a commit that fails the hooks
   $ scsc create-bookmark -R repo --name newindigo -i $I
-  error: SourceControlService::repo_create_bookmark failed with RequestError { kind: RequestErrorKind::INVALID_REQUEST, reason: "hooks failed:\n  limit_filesize for f896e9afb959c420bb576a31f8e001851410acbf656371a7e59477c6214b6080: File size limit is 10 bytes. You tried to push file hlarge that is over the limit (14 bytes).  See https://fburl.com/landing_big_diffs for instructions." }
+  error: SourceControlService::repo_create_bookmark failed with RequestError { kind: RequestErrorKind::INVALID_REQUEST, reason: "hooks failed:\n  limit_filesize for f896e9afb959c420bb576a31f8e001851410acbf656371a7e59477c6214b6080: File size limit is 10 bytes. You tried to push file hlarge that is over the limit (14 bytes). This limit is enforced for files matching the following regex: \".*\". See https://fburl.com/landing_big_diffs for instructions." }
   [1]
 
 scratch bookmarks don't require hooks to pass

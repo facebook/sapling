@@ -137,7 +137,7 @@ land stack to E
 
 attempt to land stack to G, hooks will fail
   $ scsc land-stack -R repo --name trunk -i $G -i $A
-  error: SourceControlService::repo_land_stack failed with RequestError { kind: RequestErrorKind::INVALID_REQUEST, reason: "hooks failed:\n  limit_filesize for 6b5b61e224d26706b1eb361a3900f168042bd4f7f936c64cd91963e365aec4e9: File size limit is 10 bytes. You tried to push file glarge that is over the limit (14 bytes).  See https://fburl.com/landing_big_diffs for instructions." }
+  error: SourceControlService::repo_land_stack failed with RequestError { kind: RequestErrorKind::INVALID_REQUEST, reason: "hooks failed:\n  limit_filesize for 6b5b61e224d26706b1eb361a3900f168042bd4f7f936c64cd91963e365aec4e9: File size limit is 10 bytes. You tried to push file glarge that is over the limit (14 bytes). This limit is enforced for files matching the following regex: \".*\". See https://fburl.com/landing_big_diffs for instructions." }
   [1]
 
 bypass the hook to land the stack

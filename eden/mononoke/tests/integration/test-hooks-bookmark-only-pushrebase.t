@@ -84,14 +84,14 @@ fast-forward the bookmark over a commit that fails the hook
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     limit_filesize for 5e6585e50f1bf5a236028609e131851379bb311a: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes).  See https://fburl.com/landing_big_diffs for instructions.
+  remote:     limit_filesize for 5e6585e50f1bf5a236028609e131851379bb311a: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
   remote: 
   remote:   Root cause:
   remote:     hooks failed:
-  remote:     limit_filesize for 5e6585e50f1bf5a236028609e131851379bb311a: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes).  See https://fburl.com/landing_big_diffs for instructions.
+  remote:     limit_filesize for 5e6585e50f1bf5a236028609e131851379bb311a: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
   remote: 
   remote:   Debug context:
-  remote:     "hooks failed:\nlimit_filesize for 5e6585e50f1bf5a236028609e131851379bb311a: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes).  See https://fburl.com/landing_big_diffs for instructions."
+  remote:     "hooks failed:\nlimit_filesize for 5e6585e50f1bf5a236028609e131851379bb311a: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: \".*\". See https://fburl.com/landing_big_diffs for instructions."
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
 
@@ -147,14 +147,14 @@ specify the pushvar to allow the non-fast-forward move.
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     limit_filesize for 18c1f749e0296aca8bbb023822506c1eff9bc8a9: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes).  See https://fburl.com/landing_big_diffs for instructions.
+  remote:     limit_filesize for 18c1f749e0296aca8bbb023822506c1eff9bc8a9: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
   remote: 
   remote:   Root cause:
   remote:     hooks failed:
-  remote:     limit_filesize for 18c1f749e0296aca8bbb023822506c1eff9bc8a9: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes).  See https://fburl.com/landing_big_diffs for instructions.
+  remote:     limit_filesize for 18c1f749e0296aca8bbb023822506c1eff9bc8a9: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
   remote: 
   remote:   Debug context:
-  remote:     "hooks failed:\nlimit_filesize for 18c1f749e0296aca8bbb023822506c1eff9bc8a9: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes).  See https://fburl.com/landing_big_diffs for instructions."
+  remote:     "hooks failed:\nlimit_filesize for 18c1f749e0296aca8bbb023822506c1eff9bc8a9: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: \".*\". See https://fburl.com/landing_big_diffs for instructions."
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
 
@@ -176,14 +176,14 @@ fails the hook
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     limit_filesize for 1cb9b9c4b7dd2e82083766050d166fffe209df6a: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes).  See https://fburl.com/landing_big_diffs for instructions.
+  remote:     limit_filesize for 1cb9b9c4b7dd2e82083766050d166fffe209df6a: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
   remote: 
   remote:   Root cause:
   remote:     hooks failed:
-  remote:     limit_filesize for 1cb9b9c4b7dd2e82083766050d166fffe209df6a: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes).  See https://fburl.com/landing_big_diffs for instructions.
+  remote:     limit_filesize for 1cb9b9c4b7dd2e82083766050d166fffe209df6a: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
   remote: 
   remote:   Debug context:
-  remote:     "hooks failed:\nlimit_filesize for 1cb9b9c4b7dd2e82083766050d166fffe209df6a: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes).  See https://fburl.com/landing_big_diffs for instructions."
+  remote:     "hooks failed:\nlimit_filesize for 1cb9b9c4b7dd2e82083766050d166fffe209df6a: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: \".*\". See https://fburl.com/landing_big_diffs for instructions."
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
 
@@ -220,14 +220,14 @@ but pushing to another commit will run the hook
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     limit_filesize for 5e6585e50f1bf5a236028609e131851379bb311a: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes).  See https://fburl.com/landing_big_diffs for instructions.
+  remote:     limit_filesize for 5e6585e50f1bf5a236028609e131851379bb311a: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
   remote: 
   remote:   Root cause:
   remote:     hooks failed:
-  remote:     limit_filesize for 5e6585e50f1bf5a236028609e131851379bb311a: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes).  See https://fburl.com/landing_big_diffs for instructions.
+  remote:     limit_filesize for 5e6585e50f1bf5a236028609e131851379bb311a: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
   remote: 
   remote:   Debug context:
-  remote:     "hooks failed:\nlimit_filesize for 5e6585e50f1bf5a236028609e131851379bb311a: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes).  See https://fburl.com/landing_big_diffs for instructions."
+  remote:     "hooks failed:\nlimit_filesize for 5e6585e50f1bf5a236028609e131851379bb311a: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: \".*\". See https://fburl.com/landing_big_diffs for instructions."
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
 
@@ -256,14 +256,14 @@ create a new bookmark at this location - it should fail because of the hook
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     limit_filesize for 5e6585e50f1bf5a236028609e131851379bb311a: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes).  See https://fburl.com/landing_big_diffs for instructions.
+  remote:     limit_filesize for 5e6585e50f1bf5a236028609e131851379bb311a: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
   remote: 
   remote:   Root cause:
   remote:     hooks failed:
-  remote:     limit_filesize for 5e6585e50f1bf5a236028609e131851379bb311a: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes).  See https://fburl.com/landing_big_diffs for instructions.
+  remote:     limit_filesize for 5e6585e50f1bf5a236028609e131851379bb311a: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: ".*". See https://fburl.com/landing_big_diffs for instructions.
   remote: 
   remote:   Debug context:
-  remote:     "hooks failed:\nlimit_filesize for 5e6585e50f1bf5a236028609e131851379bb311a: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes).  See https://fburl.com/landing_big_diffs for instructions."
+  remote:     "hooks failed:\nlimit_filesize for 5e6585e50f1bf5a236028609e131851379bb311a: File size limit is 10 bytes. You tried to push file large that is over the limit (14 bytes). This limit is enforced for files matching the following regex: \".*\". See https://fburl.com/landing_big_diffs for instructions."
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
 
