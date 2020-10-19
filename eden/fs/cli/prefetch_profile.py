@@ -22,7 +22,7 @@ prefetch_profile_cmd = subcmd_mod.Decorator()
 def get_contents_for_profile(
     checkout: EdenCheckout, profile: str, silent: bool
 ) -> Set[str]:
-    k_relative_profiles_location = "tools/scm/prefetch_profiles/profiles"
+    k_relative_profiles_location = "xplat/scm/prefetch_profiles/profiles"
 
     profile_path = checkout.path / k_relative_profiles_location / profile
 
