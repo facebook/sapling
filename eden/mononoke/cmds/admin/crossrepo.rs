@@ -77,15 +77,13 @@ pub async fn subcommand_crossrepo<'a>(
 
             let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> =
                 Arc::new(live_commit_sync_config);
-            let commit_syncer = {
-                let commit_sync_repos = get_large_to_small_commit_sync_repos(
-                    &ctx,
-                    source_repo,
-                    target_repo,
-                    &live_commit_sync_config,
-                )?;
-                CommitSyncer::new(mapping, commit_sync_repos, live_commit_sync_config)
-            };
+            let commit_syncer = get_large_to_small_commit_syncer(
+                &ctx,
+                source_repo,
+                target_repo,
+                live_commit_sync_config,
+                mapping,
+            )?;
 
             let large_hash = {
                 let large_hash = sub_sub_m.value_of(LARGE_REPO_HASH_ARG).unwrap().to_owned();
@@ -176,15 +174,13 @@ async fn run_pushredirection_subcommand<'a>(
     let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> = Arc::new(live_commit_sync_config);
     match config_subcommand_matches.subcommand() {
         (PREPARE_ROLLOUT_SUBCOMMAND, Some(_sub_m)) => {
-            let commit_syncer = {
-                let commit_sync_repos = get_large_to_small_commit_sync_repos(
-                    &ctx,
-                    source_repo,
-                    target_repo,
-                    &live_commit_sync_config,
-                )?;
-                CommitSyncer::new(mapping, commit_sync_repos, live_commit_sync_config.clone())
-            };
+            let commit_syncer = get_large_to_small_commit_syncer(
+                &ctx,
+                source_repo,
+                target_repo,
+                live_commit_sync_config.clone(),
+                mapping,
+            )?;
 
             if live_commit_sync_config
                 .push_redirector_enabled_for_public(commit_syncer.get_small_repo().get_repoid())
@@ -402,14 +398,13 @@ async fn subcommand_verify_bookmarks(
     should_update_large_repo_bookmarks: bool,
     live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
 ) -> Result<(), SubcommandError> {
-    let commit_sync_repos = get_large_to_small_commit_sync_repos(
+    let commit_syncer = get_large_to_small_commit_syncer(
         &ctx,
-        source_repo.clone(),
-        target_repo.clone(),
-        &live_commit_sync_config,
+        source_repo,
+        target_repo,
+        live_commit_sync_config,
+        mapping.clone(),
     )?;
-    let commit_syncer =
-        CommitSyncer::new(mapping.clone(), commit_sync_repos, live_commit_sync_config);
 
     let large_repo = commit_syncer.get_large_repo();
     let small_repo = commit_syncer.get_small_repo();
@@ -666,12 +661,13 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
         .subcommand(pushredirection_subcommand)
 }
 
-fn get_large_to_small_commit_sync_repos(
+fn get_large_to_small_commit_syncer(
     ctx: &CoreContext,
     source_repo: BlobRepo,
     target_repo: BlobRepo,
-    live_commit_sync_config: &Arc<dyn LiveCommitSyncConfig>,
-) -> Result<CommitSyncRepos, Error> {
+    live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
+    mapping: SqlSyncedCommitMapping,
+) -> Result<CommitSyncer<SqlSyncedCommitMapping>, Error> {
     let commit_sync_config =
         live_commit_sync_config.get_current_commit_sync_config(ctx, source_repo.get_repoid())?;
 
@@ -695,10 +691,16 @@ fn get_large_to_small_commit_sync_repos(
         ));
     };
 
-    Ok(CommitSyncRepos::LargeToSmall {
+    let commit_sync_repos = CommitSyncRepos::LargeToSmall {
         large_repo,
         small_repo,
-    })
+    };
+
+    Ok(CommitSyncer::new(
+        mapping,
+        commit_sync_repos,
+        live_commit_sync_config,
+    ))
 }
 
 #[cfg(test)]
