@@ -35,7 +35,7 @@ const PREFETCH_UNODE_TYPES: &[&str] = &[RootFastlog::NAME, RootDeletedManifestId
 pub(crate) async fn warmup(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    derived_data_type: &String,
+    derived_data_type: &str,
     chunk: &Vec<ChangesetId>,
 ) -> Result<(), Error> {
     // Warmup bonsai changesets unconditionally because
@@ -55,21 +55,21 @@ pub(crate) async fn warmup(
     };
 
     let content_warmup = async {
-        if PREFETCH_CONTENT_TYPES.contains(&derived_data_type.as_ref()) {
+        if PREFETCH_CONTENT_TYPES.contains(&derived_data_type) {
             content_warmup(ctx, repo, chunk).await?
         }
         Ok(())
     };
 
     let metadata_warmup = async {
-        if PREFETCH_CONTENT_METADATA_TYPES.contains(&derived_data_type.as_ref()) {
+        if PREFETCH_CONTENT_METADATA_TYPES.contains(&derived_data_type) {
             content_metadata_warmup(ctx, repo, chunk).await?
         }
         Ok(())
     };
 
     let unode_warmup = async {
-        if PREFETCH_UNODE_TYPES.contains(&derived_data_type.as_ref()) {
+        if PREFETCH_UNODE_TYPES.contains(&derived_data_type) {
             unode_warmup(ctx, repo, chunk).await?
         }
         Ok(())

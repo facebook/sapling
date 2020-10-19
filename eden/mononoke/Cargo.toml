@@ -101,6 +101,7 @@ blobstore_sync_queue = { path = "blobstore_sync_queue" }
 bonsai_globalrev_mapping = { path = "bonsai_globalrev_mapping" }
 bookmark_renaming = { path = "commit_rewriting/bookmark_renaming" }
 bookmarks = { path = "bookmarks" }
+bounded_traversal = { path = "common/bounded_traversal" }
 bulkops = { path = "bulkops" }
 cacheblob = { path = "blobstore/cacheblob" }
 changeset_fetcher = { path = "blobrepo/changeset_fetcher" }

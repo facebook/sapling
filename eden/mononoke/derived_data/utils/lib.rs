@@ -40,6 +40,7 @@ use mononoke_types::{BonsaiChangeset, ChangesetId};
 use std::{
     collections::{HashMap, HashSet},
     hash::{Hash, Hasher},
+    io::Write,
     sync::{Arc, Mutex},
 };
 use topo_sort::sort_topological;
@@ -459,7 +460,7 @@ fn derived_data_utils_impl(
 }
 
 pub struct DeriveGraphInner {
-    id: usize,
+    pub id: usize,
     // deriver can be None only for the root element, and csids for this element is empty.
     pub deriver: Option<Arc<dyn DerivedUtils>>,
     pub csids: Vec<ChangesetId>,
@@ -489,6 +490,27 @@ impl DeriveGraph {
         }
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.size() == 0
+    }
+
+    /// Number of derivation to be carried out by this graph
+    pub fn size(&self) -> usize {
+        let mut stack = vec![self];
+        let mut visited = HashSet::new();
+        let mut count = 0;
+        while let Some(node) = stack.pop() {
+            count += node.csids.len();
+            for dep in node.dependencies.iter() {
+                if visited.insert(dep.id) {
+                    stack.push(dep);
+                }
+            }
+        }
+        count
+    }
+
+    /// Derive all data in the graph
     pub async fn derive(&self, ctx: CoreContext, repo: BlobRepo) -> Result<(), Error> {
         bounded_traversal::bounded_traversal_dag(
             100,
@@ -527,14 +549,20 @@ impl DeriveGraph {
     // render derive graph as digraph that can be rendered with graphviz
     // for debugging purposes.
     // $ dot -Tpng <outout> -o <image>
-    pub fn digraph(&self, w: &mut dyn std::io::Write) -> std::io::Result<()> {
+    pub fn digraph(&self, w: &mut dyn Write) -> std::io::Result<()> {
         writeln!(w, "digraph DeriveGraph {{")?;
 
         let mut stack = vec![self];
         let mut visited = HashSet::new();
         while let Some(node) = stack.pop() {
             let deriver = node.deriver.as_ref().map_or_else(|| "root", |d| d.name());
-            writeln!(w, " {0} [label=\"{1}:{0}\"]", node.id, deriver)?;
+            writeln!(
+                w,
+                " {0} [label=\"[{1}] id:{0} csids:{2}\"]",
+                node.id,
+                deriver,
+                node.csids.len()
+            )?;
             for dep in node.dependencies.iter() {
                 writeln!(w, " {} -> {}", node.id, dep.id)?;
                 if visited.insert(dep.id) {
@@ -619,7 +647,6 @@ pub async fn build_derive_graph(
         find_underived_many(ctx.clone(), repo.clone(), csids, derivers.clone(), thin_out);
     let mut found_changesets = 0usize;
     let start = std::time::Instant::now();
-    slog::info!(ctx.logger(), "searching for underived changesets");
     while let Some((csid, parents, derivers)) = underived_stream.try_next().await? {
         underived_dag.insert(csid, parents);
         underived_to_derivers.insert(csid, derivers);
@@ -633,12 +660,14 @@ pub async fn build_derive_graph(
             );
         }
     }
-    slog::info!(
-        ctx.logger(),
-        "found changsets: {} {:.3}/s",
-        found_changesets,
-        found_changesets as f32 / start.elapsed().as_secs_f32(),
-    );
+    if found_changesets > 0 {
+        slog::info!(
+            ctx.logger(),
+            "found changsets: {} {:.3}/s",
+            found_changesets,
+            found_changesets as f32 / start.elapsed().as_secs_f32(),
+        );
+    }
 
     // topologically sort changeset
     let underived_ordered = sort_topological(&underived_dag).expect("commit graph has cycles!");
@@ -902,6 +931,7 @@ mod tests {
             thin_out,
         )
         .await?;
+        assert_eq!(graph.size(), 16);
         let (graph_ids, nodes) = derive_graph_unpack(&graph);
         assert_eq!(
             graph_ids,
@@ -941,9 +971,7 @@ mod tests {
             thin_out,
         )
         .await?;
-        let (_, nodes) = derive_graph_unpack(&graph);
-        assert_eq!(nodes.len(), 1);
-        assert!(nodes[0].dependencies.is_empty());
+        assert!(graph.is_empty());
 
         Ok::<_, Error>(())
     }

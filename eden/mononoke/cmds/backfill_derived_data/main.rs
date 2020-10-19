@@ -28,7 +28,7 @@ use derived_data_utils::{
 use fbinit::FacebookInit;
 use fsnodes::RootFsnodeId;
 use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
+    compat::Future01CompatExt,
     future::{self, try_join},
     stream::{self, StreamExt, TryStreamExt},
 };
@@ -44,7 +44,7 @@ use std::{
     fs,
     path::Path,
     sync::Arc,
-    time::Duration,
+    time::{Duration, Instant},
 };
 use time_ext::DurationExt;
 
@@ -68,6 +68,7 @@ const ARG_REGENERATE: &str = "regenerate";
 const ARG_PREFETCHED_COMMITS_PATH: &str = "prefetched-commits-path";
 const ARG_CHANGESET: &str = "changeset";
 const ARG_USE_SHARED_LEASES: &str = "use-shared-leases";
+const ARG_BATCHED: &str = "batched";
 
 const SUBCOMMAND_BACKFILL: &str = "backfill";
 const SUBCOMMAND_BACKFILL_ALL: &str = "backfill-all";
@@ -183,6 +184,13 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                              for derived data lease with other mononoke services and start deriving only if the lock \
                              is taken"
                         ),
+                )
+                .arg(
+                    Arg::with_name(ARG_BATCHED)
+                        .long(ARG_BATCHED)
+                        .takes_value(false)
+                        .required(false)
+                        .help("Use batched deriver instead of calling `::derive` periodically")
                 ),
         )
         .subcommand(
@@ -365,7 +373,8 @@ async fn run_subcmd<'a>(
                 .compat()
                 .await?;
             let use_shared_leases = sub_m.is_present(ARG_USE_SHARED_LEASES);
-            subcommand_tail(&ctx, unredacted_repo, use_shared_leases).await
+            let batched = sub_m.is_present(ARG_BATCHED);
+            subcommand_tail(&ctx, unredacted_repo, use_shared_leases, batched).await
         }
         (SUBCOMMAND_PREFETCH_COMMITS, Some(sub_m)) => {
             let out_filename = sub_m
@@ -454,26 +463,7 @@ async fn subcommand_backfill_all(
         .iter()
         .map(|name| derived_data_utils_unsafe(repo.clone(), name.clone()))
         .collect::<Result<Vec<_>, _>>()?;
-    let heads: Vec<_> = repo
-        .get_bonsai_heads_maybe_stale(ctx.clone())
-        .compat()
-        .try_collect()
-        .await?;
-    info!(ctx.logger(), "heads count: {}", heads.len());
-    info!(ctx.logger(), "building derived data graph",);
-    let derive_graph = derived_data_utils::build_derive_graph(
-        ctx,
-        repo,
-        heads,
-        derivers,
-        CHUNK_SIZE,
-        // This means that for 1000 commits it will inspect all changesets for underived data
-        // after 1000 commits in 1000 * 1.5 commits, then 1000 in 1000 * 1.5 ^ 2 ... 1000 in 1000 * 1.5 ^ n
-        ThinOut::new(1000.0, 1.5),
-    )
-    .await?;
-    info!(ctx.logger(), "deriving data",);
-    derive_graph.derive(ctx.clone(), repo.clone()).await
+    tail_batch_iteration(ctx, repo, derivers.as_ref()).await
 }
 
 async fn subcommand_backfill(
@@ -507,7 +497,7 @@ async fn subcommand_backfill(
                 .await?;
             let chunk_size = chunk.len();
 
-            warmup::warmup(ctx, repo, derived_data_type, &chunk).await?;
+            warmup::warmup(ctx, repo, derived_data_type.as_ref(), &chunk).await?;
 
             derived_utils
                 .backfill_batch_dangerous(ctx.clone(), repo.clone(), chunk)
@@ -546,6 +536,7 @@ async fn subcommand_tail(
     ctx: &CoreContext,
     unredacted_repo: BlobRepo,
     use_shared_leases: bool,
+    batched: bool,
 ) -> Result<(), Error> {
     let unredacted_repo = if use_shared_leases {
         // "shared" leases are the default - so we don't need to do anything.
@@ -567,19 +558,34 @@ async fn subcommand_tail(
         .into_iter()
         .map(|name| derived_data_utils(unredacted_repo.clone(), name))
         .collect::<Result<_, Error>>()?;
+    slog::info!(
+        ctx.logger(),
+        "[{}] derived data: {:?}",
+        unredacted_repo.name(),
+        derive_utils
+            .iter()
+            .map(|d| d.name())
+            .collect::<BTreeSet<_>>(),
+    );
 
-    loop {
-        tail_one_iteration(ctx, &unredacted_repo, &derive_utils).await?;
+    if batched {
+        info!(ctx.logger(), "using batched deriver");
+        loop {
+            tail_batch_iteration(ctx, &unredacted_repo, &derive_utils).await?;
+        }
+    } else {
+        info!(ctx.logger(), "using simple deriver");
+        loop {
+            tail_one_iteration(ctx, &unredacted_repo, &derive_utils).await?;
+        }
     }
 }
 
-async fn tail_one_iteration(
+async fn get_most_recent_heads(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    derive_utils: &[Arc<dyn DerivedUtils>],
-) -> Result<(), Error> {
-    let heads = repo
-        .bookmarks()
+) -> Result<Vec<ChangesetId>, Error> {
+    repo.bookmarks()
         .list(
             ctx.clone(),
             Freshness::MostRecent,
@@ -590,7 +596,80 @@ async fn tail_one_iteration(
         )
         .map_ok(|(_name, csid)| csid)
         .try_collect::<Vec<_>>()
-        .await?;
+        .await
+}
+
+async fn tail_batch_iteration(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    derive_utils: &[Arc<dyn DerivedUtils>],
+) -> Result<(), Error> {
+    let heads = get_most_recent_heads(ctx, repo).await?;
+    let derive_graph = derived_data_utils::build_derive_graph(
+        ctx,
+        repo,
+        heads,
+        derive_utils.to_vec(),
+        CHUNK_SIZE,
+        // This means that for 1000 commits it will inspect all changesets for underived data
+        // after 1000 commits in 1000 * 1.5 commits, then 1000 in 1000 * 1.5 ^ 2 ... 1000 in 1000 * 1.5 ^ n
+        ThinOut::new(1000.0, 1.5),
+    )
+    .await?;
+
+    let size = derive_graph.size();
+    if size == 0 {
+        tokio::time::delay_for(Duration::from_millis(250)).await;
+    } else {
+        info!(ctx.logger(), "deriving data {}", size);
+        // We are using `bounded_traversal_dag` directly instead of `DeriveGraph::derive`
+        // so we could use `warmup::warmup` on each node.
+        bounded_traversal::bounded_traversal_dag(
+            100,
+            derive_graph,
+            |node| async move {
+                let deps = node.dependencies.clone();
+                Ok((node, deps))
+            },
+            move |node, _| {
+                cloned!(ctx, repo);
+                async move {
+                    if let Some(deriver) = &node.deriver {
+                        warmup::warmup(&ctx, &repo, deriver.name(), &node.csids).await?;
+                        let timestamp = Instant::now();
+                        deriver
+                            .backfill_batch_dangerous(ctx.clone(), repo, node.csids.clone())
+                            .await?;
+                        if let (Some(first), Some(last)) = (node.csids.first(), node.csids.last()) {
+                            slog::info!(
+                                ctx.logger(),
+                                "[{}:{}] count:{} time:{:?} start:{} end:{}",
+                                deriver.name(),
+                                node.id,
+                                node.csids.len(),
+                                timestamp.elapsed(),
+                                first,
+                                last
+                            );
+                        }
+                    }
+                    Ok::<_, Error>(())
+                }
+            },
+        )
+        .await?
+        .ok_or_else(|| anyhow!("derive graph contains a cycle"))?;
+    }
+
+    Ok(())
+}
+
+async fn tail_one_iteration(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    derive_utils: &[Arc<dyn DerivedUtils>],
+) -> Result<(), Error> {
+    let heads = get_most_recent_heads(ctx, repo).await?;
 
     // Find heads that needs derivation and find their oldest underived ancestor
     let find_pending_futs: Vec<_> = derive_utils
