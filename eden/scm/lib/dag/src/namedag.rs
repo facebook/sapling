@@ -719,7 +719,7 @@ where
             outcome.verify(&parent_ids_func);
         }
 
-        dag.build_segments_persistent_from_assign_head_outcome(&outcome)?;
+        dag.build_segments_volatile_from_assign_head_outcome(&outcome)?;
     }
 
     // Rebuild non-master ids and segments.

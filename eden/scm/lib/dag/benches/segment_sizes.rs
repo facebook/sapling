@@ -50,7 +50,7 @@ fn main() {
                 dag.set_new_segment_size(segment_size);
                 let mut syncable = dag.prepare_filesystem_sync().unwrap();
                 let segment_len = syncable
-                    .build_segments_persistent(head_id, &parents_by_id)
+                    .build_segments_volatile(head_id, &parents_by_id)
                     .unwrap();
                 syncable.sync().unwrap();
                 let log_len = dag_dir.path().join("log").metadata().unwrap().len();

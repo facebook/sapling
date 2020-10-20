@@ -71,7 +71,7 @@ fn bench_with_iddag<S: IdDagStore + GetLock>(get_empty_iddag: impl Fn() -> IdDag
     let mut dag = get_empty_iddag();
     let mut syncable = dag.prepare_filesystem_sync().unwrap();
     syncable
-        .build_segments_persistent(head_id, &parents_by_id)
+        .build_segments_volatile(head_id, &parents_by_id)
         .unwrap();
     syncable.sync().unwrap();
 

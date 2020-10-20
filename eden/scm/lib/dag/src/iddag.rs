@@ -21,6 +21,8 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::collections::{BTreeSet, BinaryHeap};
 use std::fmt::{self, Debug, Formatter};
+use std::ops::Deref;
+use std::ops::DerefMut;
 use std::path::Path;
 use tracing::{debug_span, field, trace};
 
@@ -219,8 +221,8 @@ impl<Store: IdDagStore> IdDag<Store> {
     ///
     /// This is often used together with [`crate::idmap::IdMap`].
     ///
-    /// Content inserted by this function *will not* be written to disk.
-    /// For example, [`IdDag::prepare_filesystem_sync`] will drop them.
+    /// Note: [`IdDag::prepare_filesystem_sync`] drops pending changes.
+    /// Call this on a [`SyncableIdDag`] struct for it to hit disk.
     pub fn build_segments_volatile<F>(&mut self, high: Id, get_parents: &F) -> Result<usize>
     where
         F: Fn(Id) -> Result<Vec<Id>>,
@@ -1277,35 +1279,6 @@ pub enum FirstAncestorConstraint {
 }
 
 impl<Store: IdDagStore + GetLock> SyncableIdDag<'_, Store> {
-    /// Make sure the [`SyncableIdDag`] contains the given id (and all ids smaller
-    /// than `high`) by building up segments on demand.
-    ///
-    /// This is similar to [`IdDag::build_segments_volatile`]. However, the build
-    /// result is intended to be written to the filesystem. Therefore high-level
-    /// segments are intentionally made lagging to reduce fragmentation.
-    pub fn build_segments_persistent<F>(&mut self, high: Id, get_parents: &F) -> Result<usize>
-    where
-        F: Fn(Id) -> Result<Vec<Id>>,
-    {
-        let mut count = 0;
-        count += self.dag.build_flat_segments(high, get_parents, 0)?;
-        count += self.dag.build_all_high_level_segments(Level::MAX)?;
-        Ok(count)
-    }
-
-    /// Similar to `build_segments_persistent`, but takes `AssignHeadOutcome` instead
-    /// of `get_parents`.
-    pub fn build_segments_persistent_from_assign_head_outcome(
-        &mut self,
-        outcome: &AssignHeadOutcome,
-    ) -> Result<usize> {
-        let mut count = self
-            .dag
-            .build_flat_segments_from_assign_head_outcome(outcome)?;
-        count += self.dag.build_all_high_level_segments(Level::MAX)?;
-        Ok(count)
-    }
-
     /// Write pending changes to disk. Release the exclusive lock.
     ///
     /// The newly written entries can be fetched by [`IdDag::reload`].
@@ -1336,6 +1309,20 @@ impl<Store: IdDagStore + GetLock> SyncableIdDag<'_, Store> {
     /// Remove all non master Group identifiers from the DAG.
     pub fn remove_non_master(&mut self) -> Result<()> {
         self.dag.store.remove_non_master()
+    }
+}
+
+impl<Store: GetLock> Deref for SyncableIdDag<'_, Store> {
+    type Target = IdDag<Store>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.dag
+    }
+}
+
+impl<Store: GetLock> DerefMut for SyncableIdDag<'_, Store> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.dag
     }
 }
 
@@ -1494,7 +1481,7 @@ mod tests {
 
         let mut syncable = dag.prepare_filesystem_sync().unwrap();
         syncable
-            .build_segments_persistent(Id(1001), &get_parents)
+            .build_segments_volatile(Id(1001), &get_parents)
             .unwrap();
 
         syncable.sync().unwrap();
