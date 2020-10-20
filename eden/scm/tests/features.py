@@ -605,6 +605,7 @@ segmentedchangelogcompatiblelist = """
     test-visibility.t
 
     test-rebase-abort.t
+    test-rebase-brute-force.t
 """
 
 

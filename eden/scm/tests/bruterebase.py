@@ -31,10 +31,11 @@ def debugbruterebase(ui, repo, source, dest):
     with repo.wlock(), repo.lock():
         repolen = len(repo)
         cl = repo.changelog
+        newrevs = []
 
         def getdesc(rev):
             result = cl.changelogrevision(rev).description
-            if rev >= repolen:
+            if rev in newrevs:
                 result += "'"
             return result
 
