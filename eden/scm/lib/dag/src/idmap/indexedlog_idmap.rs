@@ -12,6 +12,7 @@ use crate::id::{Group, Id, VertexName};
 use crate::ops::IdConvert;
 use crate::ops::Persist;
 use crate::ops::PrefixLookup;
+use crate::ops::TryClone;
 use crate::Result;
 use byteorder::{BigEndian, ReadBytesExt};
 use fs2::FileExt;
@@ -53,8 +54,10 @@ impl IdMap {
         let log = Self::log_open_options().open(path)?;
         Self::open_from_log(log)
     }
+}
 
-    pub(crate) fn try_clone(&self) -> Result<Self> {
+impl TryClone for IdMap {
+    fn try_clone(&self) -> Result<Self> {
         let result = Self {
             log: self.log.try_clone()?,
             path: self.path.clone(),
@@ -63,7 +66,9 @@ impl IdMap {
         };
         Ok(result)
     }
+}
 
+impl IdMap {
     pub(crate) fn open_from_log(log: log::Log) -> Result<Self> {
         let path = log.path().as_opt_path().unwrap().to_path_buf();
         Ok(Self {

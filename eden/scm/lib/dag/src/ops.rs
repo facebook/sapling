@@ -317,6 +317,19 @@ pub trait Persist {
     }
 }
 
+/// Faillible clone.
+pub trait TryClone {
+    fn try_clone(&self) -> Result<Self>
+    where
+        Self: Sized;
+}
+
+impl<T: Clone> TryClone for T {
+    fn try_clone(&self) -> Result<Self> {
+        Ok(self.clone())
+    }
+}
+
 impl<T: IdConvert + IdMapSnapshot> ToIdSet for T {
     /// Converts [`NameSet`] to [`IdSet`].
     fn to_id_set(&self, set: &NameSet) -> Result<IdSet> {

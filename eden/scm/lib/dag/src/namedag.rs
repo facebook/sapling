@@ -36,6 +36,7 @@ use crate::ops::IdConvert;
 use crate::ops::IdMapSnapshot;
 use crate::ops::Persist;
 use crate::ops::ToIdSet;
+use crate::ops::TryClone;
 use crate::segment::SegmentFlags;
 use crate::spanset::SpanSet;
 use crate::Result;

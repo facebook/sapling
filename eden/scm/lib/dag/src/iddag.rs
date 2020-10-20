@@ -11,6 +11,7 @@ use crate::iddagstore::{IdDagStore, InProcessStore, IndexedLogStore};
 use crate::idmap::AssignHeadOutcome;
 use crate::locked::Locked;
 use crate::ops::Persist;
+use crate::ops::TryClone;
 use crate::segment::{Segment, SegmentFlags};
 use crate::spanset::Span;
 use crate::spanset::SpanSet;
@@ -81,9 +82,11 @@ impl IdDag<IndexedLogStore> {
     pub(crate) fn get_new_segment_size(&self) -> usize {
         self.new_seg_size
     }
+}
 
+impl TryClone for IdDag<IndexedLogStore> {
     /// Attempt to clone the `IdDag`.
-    pub fn try_clone(&self) -> Result<Self> {
+    fn try_clone(&self) -> Result<Self> {
         let store = self.store.try_clone()?;
         Ok(Self {
             store,
