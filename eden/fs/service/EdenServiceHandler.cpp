@@ -615,30 +615,16 @@ EdenServiceHandler::subscribeStreamTemporary(
   auto stream = std::make_shared<Publisher>(
       std::move(streamAndPublisher.second), std::move(disconnected));
 
-  // This is called each time the journal is updated
-  auto onJournalChange = [weakMount, stream = std::move(stream)]() mutable {
-    auto mount = weakMount.lock();
-    if (mount) {
-      auto& journal = mount->getJournal();
-      JournalPosition pos;
-
-      auto latest = journal.getLatest();
-      if (latest) {
-        pos.sequenceNumber_ref() = latest->sequenceID;
-        pos.snapshotHash_ref() = StringPiece(latest->toHash.getBytes()).str();
-      } else {
-        pos.sequenceNumber_ref() = 0;
-        pos.snapshotHash_ref() = StringPiece(kZeroHash.getBytes()).str();
-      }
-      pos.mountGeneration_ref() = mount->getMountGeneration();
-      stream->publisher.next(pos);
-    }
-  };
-
   // Register onJournalChange with the journal subsystem, and assign
   // the subscriber id into the handle so that the callbacks can consume it.
-  handle->emplace(
-      edenMount->getJournal().registerSubscriber(std::move(onJournalChange)));
+  handle->emplace(edenMount->getJournal().registerSubscriber(
+      [stream = std::move(stream)]() mutable {
+        JournalPosition pos;
+        // The value is intentionally undefined and should not be used. Instead,
+        // the subscriber should call getCurrentJournalPosition or
+        // getFilesChangedSince.
+        stream->publisher.next(pos);
+      }));
 
   return std::move(streamAndPublisher.first);
 }
