@@ -499,6 +499,11 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             params: thrift::FileContentChunkParams,
         ) -> Result<thrift::FileChunk, service::FileContentChunkExn>;
 
+        async fn file_diff(
+            file: thrift::FileSpecifier,
+            params: thrift::FileDiffParams,
+        ) -> Result<thrift::FileDiffResponse, service::FileDiffExn>;
+
         async fn repo_create_commit(
             repo: thrift::RepoSpecifier,
             params: thrift::RepoCreateCommitParams,

@@ -13,8 +13,9 @@ use futures::try_join;
 use itertools::Itertools;
 use maplit::btreemap;
 use mononoke_api::{
-    ChangesetContext, ChangesetId, ChangesetPathContext, FileMetadata, FileType, MononokeError,
-    PushrebaseOutcome, RepoContext, TreeEntry, TreeId, TreeSummary, UnifiedDiff,
+    ChangesetContext, ChangesetId, ChangesetPathContext, FileMetadata, FileType,
+    HeaderlessUnifiedDiff, MononokeError, PushrebaseOutcome, RepoContext, TreeEntry, TreeId,
+    TreeSummary, UnifiedDiff,
 };
 use source_control as thrift;
 use std::collections::{BTreeMap, BTreeSet};
@@ -122,6 +123,15 @@ impl IntoResponse<thrift::TreeInfo> for (TreeId, TreeSummary) {
 }
 
 impl IntoResponse<thrift::Diff> for UnifiedDiff {
+    fn into_response(self) -> thrift::Diff {
+        thrift::Diff::raw_diff(thrift::RawDiff {
+            raw_diff: Some(self.raw_diff),
+            is_binary: self.is_binary,
+        })
+    }
+}
+
+impl IntoResponse<thrift::Diff> for HeaderlessUnifiedDiff {
     fn into_response(self) -> thrift::Diff {
         thrift::Diff::raw_diff(thrift::RawDiff {
             raw_diff: Some(self.raw_diff),

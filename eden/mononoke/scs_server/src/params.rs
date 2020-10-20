@@ -243,6 +243,17 @@ impl AddScubaParams for thrift::FileExistsParams {}
 
 impl AddScubaParams for thrift::FileInfoParams {}
 
+impl AddScubaParams for thrift::FileDiffParams {
+    fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
+        scuba.add(
+            "other_file",
+            faster_hex::hex_string(&self.other_file_id).expect("hex_string should never fail"),
+        );
+        scuba.add("param_format", self.format.to_string());
+        scuba.add("param_context", self.context);
+    }
+}
+
 impl AddScubaParams for thrift::TreeListParams {
     fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
         scuba.add("param_offset", self.offset);

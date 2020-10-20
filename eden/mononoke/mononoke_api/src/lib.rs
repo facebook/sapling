@@ -52,7 +52,9 @@ pub use crate::changeset_path::{
 };
 pub use crate::changeset_path_diff::ChangesetPathDiffContext;
 pub use crate::errors::MononokeError;
-pub use crate::file::{FileContext, FileId, FileMetadata, FileType};
+pub use crate::file::{
+    headerless_unified_diff, FileContext, FileId, FileMetadata, FileType, HeaderlessUnifiedDiff,
+};
 pub use crate::path::MononokePath;
 pub use crate::repo::{BookmarkFreshness, RepoContext};
 pub use crate::repo_write::create_changeset::{CreateChange, CreateCopyInfo};

@@ -18,6 +18,7 @@ use filestore::{self, get_metadata, FetchKey};
 use futures::compat::{Future01CompatExt, Stream01CompatExt};
 use futures::future::{FutureExt, Shared};
 use futures::stream::TryStreamExt;
+use futures::try_join;
 
 use crate::errors::MononokeError;
 use crate::repo::RepoContext;
@@ -191,6 +192,36 @@ impl FileContext {
             Err(e) => Err(MononokeError::from(e)),
         }
     }
+}
+
+/// A diff between two files in headerless unified diff format
+pub struct HeaderlessUnifiedDiff {
+    /// Raw diff as bytes.
+    pub raw_diff: Vec<u8>,
+    /// One of the diffed files is binary, raw diff contains just a placeholder.
+    pub is_binary: bool,
+}
+
+pub async fn headerless_unified_diff(
+    old_file: &FileContext,
+    new_file: &FileContext,
+    context_lines: usize,
+) -> Result<HeaderlessUnifiedDiff, MononokeError> {
+    let (old_diff_file, new_diff_file) =
+        try_join!(old_file.content_concat(), new_file.content_concat(),)?;
+    let is_binary = old_diff_file.contains(&0) || new_diff_file.contains(&0);
+    let raw_diff = if is_binary {
+        b"Binary files differ".to_vec()
+    } else {
+        let opts = xdiff::HeaderlessDiffOpts {
+            context: context_lines,
+        };
+        xdiff::diff_unified_headerless(&old_diff_file, &new_diff_file, opts)
+    };
+    Ok(HeaderlessUnifiedDiff {
+        raw_diff,
+        is_binary,
+    })
 }
 
 /// File contexts should only exist for files that are known to be in the

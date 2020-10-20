@@ -123,6 +123,7 @@ impl_into_thrift_error!(service::TreeListExn);
 impl_into_thrift_error!(service::FileExistsExn);
 impl_into_thrift_error!(service::FileInfoExn);
 impl_into_thrift_error!(service::FileContentChunkExn);
+impl_into_thrift_error!(service::FileDiffExn);
 impl_into_thrift_error!(service::CommitLookupXrepoExn);
 impl_into_thrift_error!(service::RepoListHgManifestExn);
 
