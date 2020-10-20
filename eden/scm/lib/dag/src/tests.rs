@@ -299,23 +299,23 @@ fn test_mem_namedag() {
         r#"Max Level: 0
  Level 0
   Group Master:
-   Next Free Id: 12
-   Segments: 12
-    L+11 : L+11 [K+10] OnlyHead
-    K+10 : K+10 [H+7, J+9] OnlyHead
-    J+9 : J+9 [I+8]
-    I+8 : I+8 [G+6]
-    H+7 : H+7 [G+6] OnlyHead
-    G+6 : G+6 [F+5] OnlyHead
-    F+5 : F+5 [E+4] OnlyHead
-    E+4 : E+4 [B+1, D+3] OnlyHead
-    D+3 : D+3 [C+2]
-    C+2 : C+2 [] Root
-    B+1 : B+1 [A+0] OnlyHead
-    A+0 : A+0 [] Root OnlyHead
-  Group Non-Master:
-   Next Free Id: N0
+   Next Free Id: 0
    Segments: 0
+  Group Non-Master:
+   Next Free Id: N12
+   Segments: 12
+    L+N11 : L+N11 [K+N10]
+    K+N10 : K+N10 [H+N7, J+N9]
+    J+N9 : J+N9 [I+N8]
+    I+N8 : I+N8 [G+N6]
+    H+N7 : H+N7 [G+N6]
+    G+N6 : G+N6 [F+N5]
+    F+N5 : F+N5 [E+N4]
+    E+N4 : E+N4 [B+N1, D+N3]
+    D+N3 : D+N3 [C+N2]
+    C+N2 : C+N2 [] Root
+    B+N1 : B+N1 [A+N0]
+    A+N0 : A+N0 [] Root
 "#
     );
 }
