@@ -608,6 +608,7 @@ segmentedchangelogcompatiblelist = """
     test-rebase-abort.t
     test-rebase-brute-force.t
     test-rebase-check-restore-t.py
+    test-rebase-emptycommit.t
 """
 
 

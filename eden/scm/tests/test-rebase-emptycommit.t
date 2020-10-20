@@ -49,7 +49,7 @@
   
 With --keep, bookmark should move
 
-  $ hg rebase -r e7b3f00ed42ef8977173765eccff8a861809549b+4 -d 'max(desc(E))' --keep
+  $ hg rebase -r 'e7b3f00ed42ef8977173765eccff8a861809549b+"BOOK-E"' -d 'max(desc(E))' --keep
   rebasing e7b3f00ed42e "D" (BOOK-D)
   note: rebase of e7b3f00ed42e created no changes to commit
   rebasing 69a34c08022a "E" (BOOK-E)
