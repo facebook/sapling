@@ -119,8 +119,7 @@ To full segments:
      Segments: 0
     Group Non-Master:
      Next Free Id: N4
-     Segments: 2
-      112478962961+N3 : 112478962961+N3 [426bada5c675+N1]
+     Segments: 1
       058c1e1fb10a+N0 : 417dca1c740d+N2 [] Root
    Level 0
     Group Master:
