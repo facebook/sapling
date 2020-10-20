@@ -265,6 +265,18 @@ def parse(tmpl):
     return _unnesttemplatelist(("template", parsed))
 
 
+def parseexpandaliases(repo, tmpl):
+    """Parse template string into AST with aliases expanded
+
+    Return () if the template is empty.
+    """
+    if not tmpl:
+        return ()
+    aliases = repo.ui.configitems("templatealias")
+    tree = parse(tmpl)
+    return expandaliases(tree, aliases)
+
+
 def _parseexpr(expr):
     """Parse a template expression into tree
 
