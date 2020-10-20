@@ -159,13 +159,16 @@ impl StreamCommitText for HgCommits {
         let stream = stream.map(move |item| {
             let vertex = item?;
             let id = Id20::from_slice(vertex.as_ref())?;
-            match zstore.get(id)? {
-                Some(raw_data) => {
-                    let raw_text = raw_data.slice(Id20::len() * 2..);
-                    Ok(ParentlessHgCommit { vertex, raw_text })
+            // Mercurial hard-coded special-case that does not match SHA1.
+            let raw_text = if id.is_null() || id.is_wdir() {
+                Default::default()
+            } else {
+                match zstore.get(id)? {
+                    Some(raw_data) => raw_data.slice(Id20::len() * 2..),
+                    None => return vertex.not_found().map_err(Into::into),
                 }
-                None => vertex.not_found().map_err(Into::into),
-            }
+            };
+            Ok(ParentlessHgCommit { vertex, raw_text })
         });
         Ok(Box::pin(stream))
     }

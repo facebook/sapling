@@ -83,6 +83,9 @@ impl<'de> Deserialize<'de> for HgId {
 /// (For example, a commit will have a nullid p2, if it has no second parent).
 pub const NULL_ID: HgId = HgId([0; HgId::len()]);
 
+/// The hard-coded 'working copy parent' Mercurial id.
+pub const WDIR_ID: HgId = HgId([0xff; HgId::len()]);
+
 impl HgId {
     pub fn null_id() -> &'static Self {
         &NULL_ID
@@ -90,6 +93,14 @@ impl HgId {
 
     pub fn is_null(&self) -> bool {
         self == &NULL_ID
+    }
+
+    pub const fn wdir_id() -> &'static Self {
+        &WDIR_ID
+    }
+
+    pub fn is_wdir(&self) -> bool {
+        self == &WDIR_ID
     }
 
     pub const fn len() -> usize {

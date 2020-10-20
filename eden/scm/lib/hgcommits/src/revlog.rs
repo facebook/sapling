@@ -27,6 +27,7 @@ use std::fs;
 use std::io;
 use std::path::Path;
 use std::path::PathBuf;
+use zstore::Id20;
 
 /// HG commits stored on disk using the revlog format.
 pub struct RevlogCommits {
@@ -87,6 +88,15 @@ impl StreamCommitText for RevlogCommits {
         let revlog = self.revlog.get_snapshot();
         let stream = stream.map(move |item| {
             let vertex = item?;
+            // Mercurial hard-coded special-case that does not match SHA1.
+            if vertex.as_ref() == Id20::null_id().as_ref()
+                || vertex.as_ref() == Id20::wdir_id().as_ref()
+            {
+                return Ok(ParentlessHgCommit {
+                    vertex,
+                    raw_text: Default::default(),
+                });
+            }
             match revlog.vertex_id_with_max_group(&vertex, Group::NON_MASTER)? {
                 Some(id) => {
                     let raw_text = revlog.raw_data(id.0 as u32)?;
