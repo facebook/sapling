@@ -83,14 +83,18 @@ pub async fn verify_working_copy_inner<'a>(
         &source_repo,
         *source_hash,
         if *source_hash != *target_hash {
-            Some(mover)
+            Some(GetMaybeMovedFilenodesPolicy::ActuallyMove(mover))
         } else {
             // No need to move any paths, because this commit was preserved as is
             None
         },
     );
-    let target_repo_entries =
-        get_maybe_moved_filenode_ids(ctx.clone(), &target_repo, *target_hash, None);
+    let target_repo_entries = get_maybe_moved_filenode_ids(
+        ctx.clone(),
+        &target_repo,
+        *target_hash,
+        Some(GetMaybeMovedFilenodesPolicy::CheckThatRewritesIntoSomeButDontMove(reverse_mover)),
+    );
 
     let (moved_source_repo_entries, target_repo_entries) =
         try_join!(moved_source_repo_entries, target_repo_entries)?;
@@ -188,22 +192,35 @@ async fn verify_filenode_mapping_equivalence<'a>(
     Ok(())
 }
 
+/// Whether to move paths or just check that they don't disappear
+enum GetMaybeMovedFilenodesPolicy<'a> {
+    /// Actually apply the provided mover to the paths
+    ActuallyMove(&'a Mover),
+    /// Only check that the provided mover does not rewrite
+    /// the paths into None
+    CheckThatRewritesIntoSomeButDontMove(&'a Mover),
+}
+
 /// Get all the file filenode ids for a given commit,
 /// potentially applying a `Mover` to all file paths
-pub async fn get_maybe_moved_filenode_ids(
+async fn get_maybe_moved_filenode_ids<'a>(
     ctx: CoreContext,
-    repo: &BlobRepo,
+    repo: &'a BlobRepo,
     hash: ChangesetId,
-    maybe_mover: Option<&Mover>,
+    maybe_mover_policy: Option<GetMaybeMovedFilenodesPolicy<'a>>,
 ) -> Result<PathToFileNodeIdMapping, Error> {
     let root_mf_id = fetch_root_mf_id(ctx.clone(), repo, hash).await?;
     let repo_entries = list_all_filenode_ids(ctx, repo, root_mf_id)
         .compat()
         .await?;
-    if let Some(mover) = maybe_mover {
-        move_all_paths(&repo_entries, mover)
-    } else {
-        Ok(repo_entries)
+    match maybe_mover_policy {
+        None => Ok(repo_entries),
+        Some(GetMaybeMovedFilenodesPolicy::ActuallyMove(mover)) => {
+            move_all_paths(&repo_entries, mover)
+        }
+        Some(GetMaybeMovedFilenodesPolicy::CheckThatRewritesIntoSomeButDontMove(mover)) => {
+            keep_movable_paths(&repo_entries, mover)
+        }
     }
 }
 
@@ -554,15 +571,30 @@ pub fn move_all_paths(
     filenodes: &PathToFileNodeIdMapping,
     mover: &Mover,
 ) -> Result<PathToFileNodeIdMapping, Error> {
-    let mut moved_large_repo_entries = HashMap::new();
+    let mut moved_entries = HashMap::new();
     for (path, filenode_id) in filenodes {
         let moved_path = mover(&path)?;
         if let Some(moved_path) = moved_path {
-            moved_large_repo_entries.insert(moved_path, filenode_id.clone());
+            moved_entries.insert(moved_path, filenode_id.clone());
         }
     }
 
-    Ok(moved_large_repo_entries)
+    Ok(moved_entries)
+}
+
+// Drop all paths which `mover` rewrites into `None`
+fn keep_movable_paths(
+    filenodes: &PathToFileNodeIdMapping,
+    mover: &Mover,
+) -> Result<PathToFileNodeIdMapping, Error> {
+    let mut res = HashMap::new();
+    for (path, filenode_id) in filenodes {
+        if mover(&path)?.is_some() {
+            res.insert(path.clone(), filenode_id.clone());
+        }
+    }
+
+    Ok(res)
 }
 
 async fn get_synced_commit<M: SyncedCommitMapping + Clone + 'static>(
