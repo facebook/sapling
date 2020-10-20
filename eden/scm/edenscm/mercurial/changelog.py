@@ -545,7 +545,11 @@ class changelog(revlog.revlog):
         """Remove the 00changelog.len metadata used by the Rust revlog.
         Call this function whenever the revlog is changed by Python.
         """
-        self._realopener.tryunlink("00changelog.len")
+        svfs = self._realopener
+        svfs.tryunlink("00changelog.len")
+        # Reset 'tip'
+        if util.safehasattr(svfs, "metalog"):
+            svfs.metalog.remove("tip")
 
     def branchinfo(self, rev):
         """return the branch name and open/close state of a revision

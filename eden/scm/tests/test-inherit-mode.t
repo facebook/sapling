@@ -103,6 +103,7 @@ new directories are setgid
   00664 ./.hg/store/metalog/roots/log
   00664 ./.hg/store/metalog/roots/meta
   00600 ./.hg/store/requires
+  00600 ./.hg/store/tip
   00660 ./.hg/store/undo
   00660 ./.hg/store/undo.backupfiles
   00660 ./.hg/store/undo.bookmarks
@@ -170,6 +171,7 @@ XXX: treestate and allheads do not really respect this rule
   00664 ../push/.hg/store/metalog/roots/log
   00664 ../push/.hg/store/metalog/roots/meta
   00660 ../push/.hg/store/requires
+  00600 ../push/.hg/store/tip
   00660 ../push/.hg/store/undo
   00660 ../push/.hg/store/undo.backupfiles
   00660 ../push/.hg/store/undo.bookmarks

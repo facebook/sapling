@@ -367,7 +367,7 @@ Test rebase interrupted by hooks
 
   $ cp -R a3 hook-pretxnclose
   $ cd hook-pretxnclose
-  $ hg rebase --source 'desc(C)' --dest 'max(desc(B))' --tool internal:other --config 'hooks.pretxnclose=hg log -r tip | grep "summary:     C"'
+  $ hg rebase --source 'desc(C)' --dest 'max(desc(B))' --tool internal:other --config 'hooks.pretxnclose=hg log -r "max(_all())" | grep "summary:     C"'
   rebasing 965c486023db "C"
   summary:     C
   rebasing a0b2430ebfb8 "F"

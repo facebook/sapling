@@ -212,6 +212,9 @@ class changelog(object):
 
     def tip(self):
         # type: () -> bytes
+        tip = self.svfs.tryread("tip")
+        if tip and self.hasnode(tip):
+            return tip
         return self.dag.all().first() or nullid
 
     def __contains__(self, rev):
@@ -339,6 +342,8 @@ class changelog(object):
         btext = encodeutf8(text)
         node = revlog.hash(btext, p1, p2)
         parents = [p for p in (p1, p2) if p != nullid]
+        if node not in self.nodemap:
+            self.svfs.write("tip", node)
         self.inner.addcommits([(node, parents, btext)])
         nodes = transaction.changes.get("nodes")
         if nodes is not None:
@@ -350,12 +355,16 @@ class changelog(object):
         textmap = {}  # {node: btext}
         commits = []
         buffersize = self._groupbuffersize
+        nodemap = self.nodemap
+        tip = None
         for node, p1, p2, linknode, deltabase, delta, flags in deltas:
             assert flags == 0, "changelog flags cannot be non-zero"
             parents = [p for p in (p1, p2) if p != nullid]
             basetext = textmap.get(deltabase) or self.revision(deltabase)
             rawtext = bytes(mdiff.patch(basetext, delta))
             textmap[node] = rawtext
+            if node not in nodemap:
+                tip = node
             commits.append((node, parents, rawtext))
             # Attempt to make memory usage bound for large pulls.
             if len(commits) > buffersize:
@@ -382,6 +391,8 @@ class changelog(object):
         trnodes = transaction.changes.get("nodes")
         if trnodes is not None:
             trnodes += nodes
+        if tip is not None:
+            self.svfs.write("tip", tip)
         return nodes
 
     def branchinfo(self, rev):

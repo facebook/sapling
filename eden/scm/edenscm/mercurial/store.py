@@ -815,6 +815,7 @@ def store(requirements, path, vfstype, uiconfig=None):
                     "visibleheads",
                     "bookmarks",
                     "config",
+                    "tip",
                 }
             return store
         return encodedstore(path, vfstype)
