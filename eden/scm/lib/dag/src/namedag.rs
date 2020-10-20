@@ -211,7 +211,13 @@ impl DagPersistent for NameDag {
     }
 }
 
-impl DagAddHeads for NameDag {
+impl<IS, M, S> DagAddHeads for AbstractNameDag<IdDag<IS>, M, S>
+where
+    IS: IdDagStore,
+    IdDag<IS>: TryClone,
+    M: TryClone + IdMapAssignHead,
+    S: TryClone,
+{
     /// Add vertexes and their ancestors to the in-memory DAG.
     ///
     /// This does not write to disk. Use `add_heads_and_flush` to add heads
@@ -244,7 +250,7 @@ impl DagAddHeads for NameDag {
         // Update IdMap. Keep track of what heads are added.
         let mut outcome = AssignHeadOutcome::default();
         for head in heads.iter() {
-            if self.map.find_id_by_name(head.as_ref())?.is_none() {
+            if !self.map.contains_vertex_name(head)? {
                 outcome.merge(self.map.assign_head(head.clone(), &parents, group)?);
                 self.pending_heads.push(head.clone());
             }
@@ -266,7 +272,13 @@ impl DagAddHeads for NameDag {
     }
 }
 
-impl NameDag {
+impl<IS, M, S> AbstractNameDag<IdDag<IS>, M, S>
+where
+    IS: IdDagStore,
+    IdDag<IS>: TryClone,
+    M: TryClone,
+    S: TryClone,
+{
     /// Invalidate cached content. Call this after changing the graph.
     fn invalidate_snapshot(&mut self) {
         *self.snapshot.write() = None;
@@ -287,16 +299,23 @@ impl NameDag {
                     map: self.map.try_clone()?,
                     snapshot: Default::default(),
                     pending_heads: self.pending_heads.clone(),
-                    state: NameDagState {
-                        path: self.state.path.clone(),
-                        mlog: None,
-                    },
+                    state: self.state.try_clone()?,
                 };
                 let result = Arc::new(cloned);
                 *snapshot = Some(result.clone());
                 Ok(result)
             }
         }
+    }
+}
+
+impl TryClone for NameDagState {
+    fn try_clone(&self) -> Result<Self> {
+        Ok(Self {
+            path: self.path.clone(),
+            // mlog cannot be cloned.
+            mlog: None,
+        })
     }
 }
 
