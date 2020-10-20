@@ -61,17 +61,6 @@ pub struct NameDag {
     pub(crate) dag: IdDag<IndexedLogStore>,
     pub(crate) map: IdMap,
 
-    /// A read-only snapshot of the `IdMap` that will be shared in `NameSet`s.
-    ///
-    /// This also serves as a way to test whether two `NameSet`s are using a
-    /// compatible (same) `IdMap` by testing `Arc::ptr_eq`.
-    ///
-    /// In theory we can also just clone `self.map` every time and get an
-    /// `Arc::ptr_eq` equivalent by using some sort of internal version number
-    /// that gets bumped when `map` gets changed. However that might be more
-    /// expensive.
-    pub(crate) snapshot_map: Arc<dyn IdConvert + Send + Sync>,
-
     /// A read-only snapshot of the `NameDag`.
     /// Lazily calculated.
     snapshot: RwLock<Option<Arc<NameDag>>>,
@@ -91,7 +80,6 @@ pub struct NameDag {
 pub struct MemNameDag {
     dag: IdDag<InProcessStore>,
     map: MemIdMap,
-    snapshot_map: Arc<dyn IdConvert + Send + Sync>,
     snapshot: RwLock<Option<Arc<MemNameDag>>>,
 }
 
@@ -108,12 +96,10 @@ impl NameDag {
         let map_log = logs.pop().unwrap();
         let map = IdMap::open_from_log(map_log)?;
         let dag = IdDag::open_from_store(IndexedLogStore::open_from_log(dag_log))?;
-        let snapshot_map = Arc::new(map.try_clone()?);
         Ok(Self {
             path: path.to_path_buf(),
             dag,
             map,
-            snapshot_map,
             snapshot: Default::default(),
             mlog: Some(mlog),
             pending_heads: Default::default(),
@@ -180,8 +166,6 @@ impl DagPersistent for NameDag {
         dag.sync()?;
         mlog.write_meta(&lock)?;
 
-        // Update snapshot_map.
-        self.snapshot_map = Arc::new(self.map.try_clone()?);
         self.invalidate_snapshot();
         Ok(())
     }
@@ -265,8 +249,6 @@ impl DagAddHeads for NameDag {
         self.dag
             .build_segments_volatile_from_assign_head_outcome(&outcome)?;
 
-        // Update snapshot_map so the changes become visible to queries.
-        self.snapshot_map = Arc::new(self.map.try_clone()?);
         self.invalidate_snapshot();
 
         Ok(())
@@ -293,7 +275,6 @@ impl NameDag {
                     path: self.path.clone(),
                     dag: self.dag.try_clone()?,
                     map: self.map.try_clone()?,
-                    snapshot_map: self.snapshot_map.clone(),
                     snapshot: Default::default(),
                     mlog: None,
                     pending_heads: self.pending_heads.clone(),
@@ -312,7 +293,6 @@ impl MemNameDag {
         Self {
             dag: IdDag::new_in_process(),
             map: MemIdMap::new(),
-            snapshot_map: Arc::new(MemIdMap::new()),
             snapshot: Default::default(),
         }
     }
@@ -335,7 +315,6 @@ impl MemNameDag {
                 let cloned = Self {
                     dag: self.dag.clone(),
                     map: self.map.clone(),
-                    snapshot_map: self.snapshot_map.clone(),
                     snapshot: Default::default(),
                 };
                 let result = Arc::new(cloned);
@@ -370,7 +349,6 @@ impl DagAddHeads for MemNameDag {
 
         self.dag
             .build_segments_volatile_from_assign_head_outcome(&outcome)?;
-        self.snapshot_map = Arc::new(self.map.clone());
         self.invalidate_snapshot();
         Ok(())
     }
@@ -749,9 +727,6 @@ pub trait NameDagStorage {
     /// The IdMap storage.
     fn map(&self) -> &Self::IdMap;
 
-    /// (Cheaply) clone the map.
-    fn clone_map(&self) -> Arc<dyn IdConvert + Send + Sync>;
-
     /// (Relatively cheaply) clone the dag.
     fn storage_dag_snapshot(&self) -> Result<Arc<dyn DagAlgorithm + Send + Sync>>;
 }
@@ -765,9 +740,6 @@ impl NameDagStorage for NameDag {
     }
     fn map(&self) -> &Self::IdMap {
         &self.map
-    }
-    fn clone_map(&self) -> Arc<dyn IdConvert + Send + Sync> {
-        self.snapshot_map.clone()
     }
     fn storage_dag_snapshot(&self) -> Result<Arc<dyn DagAlgorithm + Send + Sync>> {
         Ok(self.try_snapshot()? as Arc<dyn DagAlgorithm + Send + Sync>)
@@ -784,9 +756,6 @@ impl NameDagStorage for MemNameDag {
     fn map(&self) -> &Self::IdMap {
         &self.map
     }
-    fn clone_map(&self) -> Arc<dyn IdConvert + Send + Sync> {
-        self.snapshot_map.clone()
-    }
     fn storage_dag_snapshot(&self) -> Result<Arc<dyn DagAlgorithm + Send + Sync>> {
         Ok(self.snapshot() as Arc<dyn DagAlgorithm + Send + Sync>)
     }
@@ -794,13 +763,13 @@ impl NameDagStorage for MemNameDag {
 
 impl IdMapSnapshot for NameDag {
     fn id_map_snapshot(&self) -> Result<Arc<dyn IdConvert + Send + Sync>> {
-        Ok(Arc::clone(&self.snapshot_map))
+        Ok(self.try_snapshot()? as Arc<dyn IdConvert + Send + Sync>)
     }
 }
 
 impl IdMapSnapshot for MemNameDag {
     fn id_map_snapshot(&self) -> Result<Arc<dyn IdConvert + Send + Sync>> {
-        Ok(Arc::clone(&self.snapshot_map))
+        Ok(self.snapshot() as Arc<dyn IdConvert + Send + Sync>)
     }
 }
 
