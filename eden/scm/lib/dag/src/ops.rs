@@ -11,6 +11,7 @@ use crate::default_impl;
 use crate::id::Group;
 use crate::id::Id;
 use crate::id::VertexName;
+use crate::locked::Locked;
 use crate::namedag::MemNameDag;
 use crate::nameset::id_lazy::IdLazySet;
 use crate::nameset::id_static::IdStaticSet;
@@ -307,6 +308,17 @@ pub trait Persist {
     ///
     /// This requires a lock.
     fn persist(&mut self, _lock: &Self::Lock) -> Result<()>;
+
+    /// Return a [`Locked`] instance that provides race-free filesytem read and
+    /// write access by taking an exclusive lock.
+    fn prepare_filesystem_sync(&mut self) -> Result<Locked<Self>>
+    where
+        Self: Sized,
+    {
+        let lock = self.lock()?;
+        self.reload(&lock)?;
+        Ok(Locked { inner: self, lock })
+    }
 }
 
 impl<T: IdConvert + IdMapEq> ToIdSet for T {

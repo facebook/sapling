@@ -6,7 +6,6 @@
  */
 
 use super::IdMapWrite;
-use super::SyncableIdMap;
 use crate::errors::bug;
 use crate::errors::programming;
 use crate::id::{Group, Id, VertexName};
@@ -109,30 +108,6 @@ impl IdMap {
             .flush_filter(Some(|_, _| {
                 panic!("programming error: idmap changed by other process")
             }))
-    }
-
-    /// Return a [`SyncableIdMap`] instance that provides race-free
-    /// filesytem read and write access by taking an exclusive lock.
-    ///
-    /// The [`SyncableIdMap`] instance provides a `sync` method that
-    /// actually writes changes to disk.
-    ///
-    /// Block if another instance is taking the lock.
-    pub fn prepare_filesystem_sync(&mut self) -> Result<SyncableIdMap> {
-        if self.log.iter_dirty().next().is_some() {
-            return programming(
-                "prepare_filesystem_sync must be called without dirty in-memory entries",
-            );
-        }
-
-        // Take a filesystem lock. The file name 'lock' is taken by indexedlog
-        // running on Windows, so we choose another file name here.
-        let lock = self.lock()?;
-
-        // Reload. So we get latest data.
-        self.reload(&lock)?;
-
-        Ok(SyncableIdMap { inner: self, lock })
     }
 
     /// Find name by a specified integer id.
@@ -372,6 +347,9 @@ impl Persist for IdMap {
     type Lock = File;
 
     fn lock(&self) -> Result<Self::Lock> {
+        if self.log.iter_dirty().next().is_some() {
+            return programming("lock() must be called without dirty in-memory entries");
+        }
         let lock_file = {
             let mut path = self.path.clone();
             path.push("wlock");
