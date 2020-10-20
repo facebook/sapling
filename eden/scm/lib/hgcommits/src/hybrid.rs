@@ -106,7 +106,8 @@ impl StreamCommitText for HybridCommits {
             reponame,
         };
         let buffer_size = 5000;
-        let stream = HybridStream::new(input, resolver, buffer_size);
+        let retry_limit = 0;
+        let stream = HybridStream::new(input, resolver, buffer_size, retry_limit);
         let stream = stream.map_ok(|(vertex, raw_text)| ParentlessHgCommit { vertex, raw_text });
         Ok(Box::pin(stream))
     }
@@ -176,6 +177,10 @@ impl HybridResolver<Vertex, Bytes, anyhow::Error> for Resolver {
             Ok(input_output)
         });
         Ok(Box::pin(commits) as BoxStream<'_, _>)
+    }
+
+    fn retry_error(&self, _attempt: usize, input: &[Vertex]) -> anyhow::Error {
+        anyhow::format_err!("cannot resolve {:?} remotely", input)
     }
 }
 
