@@ -139,8 +139,10 @@ def _tracefile(fctx, am, limit=-1):
     for f in fctx.topologicalancestors():
         if am.get(f.path(), None) == f.filenode():
             return f
+        if invalidatelinkrev:
+            continue
         lkr = f.linkrev()
-        if not invalidatelinkrev and lkr is None:
+        if lkr is None:
             continue
         if limit >= 0 and lkr is not None and lkr < limit and f.rev() < limit:
             return None

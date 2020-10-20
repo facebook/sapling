@@ -858,13 +858,17 @@ impl<Store: IdDagStore> IdDag<Store> {
                 // `range` is all valid. If a high-level segment misses it, try
                 // a lower level one.
                 if span.high < range.high {
-                    let missing_range = Span::from((span.high + 1)..=range.high);
+                    let low_id = (span.high + 1).max(range.low);
+                    if low_id >= range.high {
+                        return Ok(());
+                    }
+                    let missing_range = Span::from(low_id..=range.high);
                     if level > 0 {
                         visit_segments(ctx, missing_range, level - 1)?;
                     } else {
                         return bug(format!(
-                            "flat segments should have covered: {:?} returned by all()",
-                            missing_range
+                            "flat segments should have covered: {:?} returned by all() (range: {:?})",
+                            missing_range, range,
                         ));
                     }
                 }
