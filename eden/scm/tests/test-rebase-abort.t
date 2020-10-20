@@ -244,9 +244,9 @@ rebase abort should not leave working copy in a merge state if tip-1 is public
   $ hg log -G --template "{desc} {bookmarks}"
   @  C foo
   │
+  o  b
+  │
   │ o  c master
-  │ │
-  o │  b
   ├─╯
   o  a
   
@@ -262,9 +262,9 @@ rebase abort should not leave working copy in a merge state if tip-1 is public
   $ hg log -G --template "{desc} {bookmarks}"
   @  C foo
   │
+  o  b
+  │
   │ o  c master
-  │ │
-  o │  b
   ├─╯
   o  a
   

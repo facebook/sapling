@@ -603,6 +603,8 @@ segmentedchangelogcompatiblelist = """
     test-visibility-bundle.t
     test-visibility-cloudsync.t
     test-visibility.t
+
+    test-rebase-abort.t
 """
 
 
