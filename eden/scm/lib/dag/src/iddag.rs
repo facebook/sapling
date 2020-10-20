@@ -54,7 +54,7 @@ pub struct IdDag<Store> {
 /// - The in-memory high-level segments are not lagging, but might be
 ///   fragmented because the last segment per level might not cover
 ///   as many lower-level segments as it can.
-///   Some DAG algorithms (children_set, range_old, descendants_old)
+///   Some DAG algorithms (children_set)
 ///   assume high-level segments are not lagging.
 /// - The on-disk data has lagging high-level segment. This is helpful
 ///   because the Index backend is not good at (cheaply) deleting data
@@ -66,8 +66,7 @@ pub struct IdDag<Store> {
 ///   This is done by calling `build_all_high_level_segments()` at
 ///   `SyncableIdDag::sync()`.
 ///
-/// (Consider making `children_set` not rely on the property, and
-/// removing `*_old` to simplify things)
+/// (Consider making `children_set` not rely on the property)
 pub struct SyncableIdDag<'a, Store: GetLock> {
     dag: &'a mut IdDag<Store>,
     lock: <Store as GetLock>::LockT,
@@ -1076,8 +1075,6 @@ impl<Store: IdDagStore> IdDag<Store> {
         if heads.is_empty() {
             return Ok(SpanSet::empty());
         }
-        #[cfg(test)]
-        let result_old = self.range_old(roots.clone(), heads.clone())?;
 
         // Remove uninteresting heads. Make `ancestors(heads)` a bit easier.
         let min_root_id = roots.min().unwrap();
@@ -1094,147 +1091,8 @@ impl<Store: IdDagStore> IdDag<Store> {
         {
             let intersection = ancestors_of_heads.intersection(&result);
             assert_eq!(result.as_spans(), intersection.as_spans());
-            assert_eq!(result.as_spans(), result_old.as_spans());
         }
         Ok(result)
-    }
-
-    #[cfg(test)]
-    fn range_old(&self, roots: impl Into<SpanSet>, heads: impl Into<SpanSet>) -> Result<SpanSet> {
-        // Pre-calculate ancestors.
-        let heads = heads.into();
-        let roots = roots.into();
-
-        let tracing_span = debug_span!(
-            "range",
-            result = "",
-            roots = field::debug(&roots),
-            heads = field::debug(&heads),
-        );
-        let _scope = tracing_span.enter();
-
-        let ancestors = self.ancestors(heads)?;
-        if ancestors.is_empty() || roots.is_empty() {
-            return Ok(SpanSet::empty());
-        }
-
-        // The problem then becomes:
-        // Given `roots`, find `ancestors & descendants(roots)`.
-        //
-        // The algorithm is divide and conquer:
-        // - Iterate through level N segments [1].
-        // - Considering a level N segment S:
-        //   Can we ignore the entire segment and go check next?
-        //      - Is `intersect(S, ancestors)` empty?
-        //      - Are `roots` unreachable from `S.head`?
-        //        (i.e. `interact(ancestors(S.head), roots)` is empty)
-        //      If either is "yes", then skip and continue.
-        //   Can we add the entire segment to result?
-        //      - Is S.head part of `ancestors`?
-        //      - Is S rootless, and all of `S.parents` can reach `roots`?
-        //      If both are "yes", then take S and continue.
-        //   If above fast paths do not work, then go deeper:
-        //     - Iterate through level N-1 segments covered by S.
-
-        struct Context<'a, Store> {
-            this: &'a IdDag<Store>,
-            roots: SpanSet,
-            ancestors: SpanSet,
-            roots_min: Id,
-            ancestors_max: Id,
-            result: SpanSet,
-        }
-
-        fn visit_segments<S: IdDagStore>(
-            ctx: &mut Context<S>,
-            range: Span,
-            level: Level,
-        ) -> Result<()> {
-            trace!("range: visit {:?}", &range);
-            for seg in ctx.this.iter_segments_descending(range.high, level)? {
-                let seg = seg?;
-                let span = seg.span()?;
-                if span.low < range.low {
-                    break;
-                }
-
-                // Skip this segment entirely?
-                let intersection = ctx.ancestors.intersection(&span.into());
-                if span.low > ctx.ancestors_max
-                    || span.high < ctx.roots_min
-                    || intersection.is_empty()
-                    || ctx
-                        .this
-                        .ancestors(span.high)?
-                        .intersection(&ctx.roots)
-                        .is_empty()
-                {
-                    continue;
-                }
-
-                // Include the entire segment?
-                let parents = seg.parents()?;
-                let mut overlapped_parents = LazyPredicate::new(parents, |p| {
-                    Ok(!ctx.this.ancestors(p)?.intersection(&ctx.roots).is_empty())
-                });
-
-                if !seg.has_root()?
-                    && ctx.ancestors.contains(span.high)
-                    && overlapped_parents.all()?
-                {
-                    trace!("range: push lv{} {:?}", level, &span);
-                    ctx.result.push_span(span);
-                    continue;
-                }
-
-                if level == 0 {
-                    // Figure out what subset of this flat segment to be added to `result`.
-                    let span_low = if overlapped_parents.any()? {
-                        span.low
-                    } else {
-                        // Because
-                        // - This is a flat segment.
-                        //   i.e. only span.low has parents outside span.
-                        // - Tested above: ancestors(seg.head).intersection(roots) is not empty.
-                        //   i.e. descendants(roots).intersection(seg.head) is not empty.
-                        // - Tested just now: no parents reach any of roots.
-                        // Therefore: intersect(roots, span) cannot be empty.
-                        ctx.roots.intersection(&span.into()).min().unwrap()
-                    };
-                    let span_high = intersection.max().unwrap();
-                    if span_high >= span_low {
-                        let span = Span::from(span_low..=span_high);
-                        trace!("range: push lv0 {:?}", &span);
-                        ctx.result.push_span(span);
-                    }
-                } else {
-                    // Go deeper.
-                    visit_segments(ctx, span, level - 1)?;
-                }
-            }
-            Ok(())
-        }
-
-        let roots_min = roots.min().unwrap();
-        let ancestors_max = ancestors.max().unwrap();
-        let mut ctx = Context {
-            this: self,
-            roots,
-            ancestors,
-            roots_min,
-            ancestors_max,
-            result: SpanSet::empty(),
-        };
-
-        if ctx.roots_min <= ctx.ancestors_max {
-            visit_segments(&mut ctx, (Id::MIN..=Id::MAX).into(), self.max_level)?;
-        }
-
-        if !tracing_span.is_disabled() {
-            tracing_span.record("result", &field::debug(&ctx.result));
-        }
-
-        Ok(ctx.result)
     }
 
     /// Calculate the descendants of the given set.
@@ -1245,102 +1103,7 @@ impl<Store: IdDagStore> IdDag<Store> {
     pub fn descendants(&self, set: impl Into<SpanSet>) -> Result<SpanSet> {
         let roots = set.into();
         let result = self.descendants_intersection(&roots, &self.all()?)?;
-
-        #[cfg(test)]
-        {
-            let result_old = self.descendants_old(roots)?;
-            assert_eq!(result.as_spans(), result_old.as_spans());
-        }
-
         Ok(result)
-    }
-
-    #[cfg(test)]
-    fn descendants_old(&self, set: impl Into<SpanSet>) -> Result<SpanSet> {
-        // The algorithm is a manually "inlined" version of `range` where `ancestors`
-        // is known to be `all()`.
-
-        let roots = set.into();
-        let tracing_span = debug_span!("descendants", result = "", set = field::debug(&roots),);
-        let _scope = tracing_span.enter();
-
-        if roots.is_empty() {
-            return Ok(SpanSet::empty());
-        }
-
-        struct Context<'a, Store> {
-            this: &'a IdDag<Store>,
-            roots: SpanSet,
-            roots_min: Id,
-            result: SpanSet,
-        }
-
-        fn visit_segments<S: IdDagStore>(
-            ctx: &mut Context<S>,
-            range: Span,
-            level: Level,
-        ) -> Result<()> {
-            for seg in ctx.this.iter_segments_descending(range.high, level)? {
-                let seg = seg?;
-                let span = seg.span()?;
-                if span.low < range.low || span.high < ctx.roots_min {
-                    break;
-                }
-
-                // Skip this segment entirely?
-                if ctx
-                    .this
-                    .ancestors(span.high)?
-                    .intersection(&ctx.roots)
-                    .is_empty()
-                {
-                    continue;
-                }
-
-                // Include the entire segment?
-                let parents = seg.parents()?;
-                let mut overlapped_parents = LazyPredicate::new(parents, |p| {
-                    Ok(!ctx.this.ancestors(p)?.intersection(&ctx.roots).is_empty())
-                });
-                if !seg.has_root()? && overlapped_parents.all()? {
-                    trace!("range: push lv{} {:?}", level, &span);
-                    ctx.result.push_span(span);
-                    continue;
-                }
-
-                if level == 0 {
-                    let span_low = if overlapped_parents.any()? {
-                        span.low
-                    } else {
-                        ctx.roots.intersection(&span.into()).min().unwrap()
-                    };
-                    let span_high = span.high;
-                    if span_high >= span_low {
-                        trace!("range: push lv0 {:?}", &span);
-                        ctx.result.push_span(Span::from(span_low..=span_high));
-                    }
-                } else {
-                    // Go deeper.
-                    visit_segments(ctx, span, level - 1)?;
-                }
-            }
-            Ok(())
-        }
-
-        let roots_min: Id = roots.min().unwrap();
-        let mut ctx = Context {
-            this: self,
-            roots,
-            roots_min,
-            result: SpanSet::empty(),
-        };
-
-        visit_segments(&mut ctx, (Id::MIN..=Id::MAX).into(), self.max_level)?;
-
-        if !tracing_span.is_disabled() {
-            tracing_span.record("result", &field::debug(&ctx.result));
-        }
-        Ok(ctx.result)
     }
 
     /// Calculate (descendants(roots) & ancestors).
