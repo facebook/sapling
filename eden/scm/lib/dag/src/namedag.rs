@@ -1103,7 +1103,11 @@ impl IdMapSnapshot for MemNameDag {
     }
 }
 
-impl fmt::Debug for NameDag {
+impl<IS, M, P, S> fmt::Debug for AbstractNameDag<IdDag<IS>, M, P, S>
+where
+    IS: IdDagStore,
+    M: IdConvert,
+{
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         debug(&self.dag, &self.map, f)
     }
