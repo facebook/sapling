@@ -1,15 +1,6 @@
 #chg-compatible
 
-#chg-compatible
-
 #require symlink
-#testcases treestate-on treestate-off
-
-#if treestate-on
-  $ setconfig format.dirstate=2
-#else
-  $ setconfig format.dirstate=1
-#endif
 
 == tests added in 0.7 ==
 

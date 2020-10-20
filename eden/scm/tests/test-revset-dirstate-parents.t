@@ -1,12 +1,6 @@
 #chg-compatible
 
-#testcases treestate-on treestate-off
-
-#if treestate-on
   $ setconfig format.dirstate=2
-#else
-  $ setconfig format.dirstate=1
-#endif
 
   $ HGENCODING=utf-8
   $ export HGENCODING

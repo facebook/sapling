@@ -10,43 +10,32 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 feature.require(["symlink"])
 
-for testcase in ["v0", "v1", "v2"]:
+sh % "cd $TESTTMP"
 
-    sh % "cd $TESTTMP"
+sh % "newrepo"
+sh % "mkdir a b"
+sh % "touch a/x"
 
-    if feature.check(["v0"]):
-        sh % "setconfig 'format.dirstate=0'"
+sh % "hg ci -m init -A a/x"
 
-    if feature.check(["v1"]):
-        sh % "setconfig 'format.dirstate=1'"
+# Replace the directory with a symlink
 
-    if feature.check(["v2"]):
-        sh % "setconfig 'format.dirstate=2'"
+sh % "mv a/x b/x"
+sh % "rmdir a"
+sh % "ln -s b a"
 
-    sh % "newrepo"
-    sh % "mkdir a b"
-    sh % "touch a/x"
+# "! a/x" should be shown, as it is implicitly removed
 
-    sh % "hg ci -m init -A a/x"
+sh % "hg status" == r"""
+    ! a/x
+    ? a
+    ? b/x"""
 
-    # Replace the directory with a symlink
+sh % "hg ci -m rename -A ." == r"""
+    adding a
+    removing a/x
+    adding b/x"""
 
-    sh % "mv a/x b/x"
-    sh % "rmdir a"
-    sh % "ln -s b a"
+# "a/x" should not show up in "hg status", even if it exists
 
-    # "! a/x" should be shown, as it is implicitly removed
-
-    sh % "hg status" == r"""
-        ! a/x
-        ? a
-        ? b/x"""
-
-    sh % "hg ci -m rename -A ." == r"""
-        adding a
-        removing a/x
-        adding b/x"""
-
-    # "a/x" should not show up in "hg status", even if it exists
-
-    sh % "hg status"
+sh % "hg status"

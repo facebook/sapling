@@ -1,15 +1,6 @@
 #chg-compatible
 
-#chg-compatible
-
 #require no-icasefs
-#testcases treestate-on treestate-off
-
-#if treestate-on
-  $ setconfig format.dirstate=2
-#else
-  $ setconfig format.dirstate=1
-#endif
 
 test file addition with colliding case
 

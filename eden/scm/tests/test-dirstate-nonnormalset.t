@@ -1,23 +1,5 @@
 #chg-compatible
 
-#chg-compatible
-
-#chg-compatible
-
-#testcases v0 v1 v2
-
-#if v0
-  $ setconfig format.dirstate=0
-#endif
-
-#if v1
-  $ setconfig format.dirstate=1
-#endif
-
-#if v2
-  $ setconfig format.dirstate=2
-#endif
-
   $ readconfig <<EOF
   > [ui]
   > logtemplate="{node|short} ({phase}) [{tags} {bookmarks}] {desc|firstline}\n"
