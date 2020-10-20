@@ -197,8 +197,8 @@ std::string batchforget(FuseArg arg) {
 // FUSE TraceBus. TraceBus uses 2 * capacity * sizeof(TraceEvent) memory usage,
 // so limit total memory usage to 4 MB per mount.
 constexpr size_t kTraceBusCapacity = 25000;
-static_assert(sizeof(FuseTraceEvent) == 72);
-static_assert(kTraceBusCapacity * sizeof(FuseTraceEvent) == 1800000);
+static_assert(sizeof(FuseTraceEvent) == 80);
+static_assert(kTraceBusCapacity * sizeof(FuseTraceEvent) == 2000000);
 
 // This is the minimum size used by libfuse so we use it too!
 constexpr size_t MIN_BUFSIZE = 0x21000;
@@ -730,6 +730,7 @@ FuseChannel::FuseChannel(
       notifications_(notifications),
       fuseDevice_(std::move(fuseDevice)),
       processAccessLog_(std::move(processNameCache)),
+      traceDetailedArguments_(std::make_shared<std::atomic<size_t>>(0)),
       traceBus_(TraceBus<FuseTraceEvent>::create(
           "FuseTrace" + mountPath.stringPiece().str(),
           kTraceBusCapacity)) {
@@ -1042,6 +1043,19 @@ std::vector<fuse_in_header> FuseChannel::getOutstandingRequests() {
   }
   return outstandingCalls;
 }
+
+TraceDetailedArgumentsHandle FuseChannel::traceDetailedArguments() const {
+  // We could implement something fancier here that just copies the shared_ptr
+  // into a handle struct that increments upon taking ownership and decrements
+  // on destruction, but this code path is quite rare, so do the expedient
+  // thing.
+  auto handle =
+      std::shared_ptr<void>(nullptr, [copy = traceDetailedArguments_](void*) {
+        copy->fetch_sub(1, std::memory_order_acq_rel);
+      });
+  traceDetailedArguments_->fetch_add(1, std::memory_order_acq_rel);
+  return handle;
+};
 
 void FuseChannel::requestSessionExit(StopReason reason) {
   requestSessionExit(state_.wlock(), reason);
@@ -1565,8 +1579,13 @@ void FuseChannel::processSession() {
       default: {
         if (handlerEntry && handlerEntry->handler) {
           auto requestId = generateUniqueID();
-          traceBus_->publish(
-              FuseTraceEvent{FuseTraceEvent::START, requestId, *header});
+          if (handlerEntry->argRenderer &&
+              traceDetailedArguments_->load(std::memory_order_acquire)) {
+            traceBus_->publish(FuseTraceEvent::start(
+                requestId, *header, handlerEntry->argRenderer(arg)));
+          } else {
+            traceBus_->publish(FuseTraceEvent::start(requestId, *header));
+          }
 
           // This is a shared_ptr because, due to timeouts, the internal request
           // lifetime may not match the FUSE request lifetime, so we capture it
@@ -1604,8 +1623,8 @@ void FuseChannel::processSession() {
                       .within(requestTimeout_),
                   notifications_)
               .ensure([this, request, requestId, headerCopy] {
-                traceBus_->publish(FuseTraceEvent{
-                    FuseTraceEvent::FINISH, requestId, headerCopy});
+                traceBus_->publish(
+                    FuseTraceEvent::finish(requestId, headerCopy));
 
                 // We may be complete; check to see if all requests are
                 // done and whether there are any threads remaining.

@@ -42,14 +42,33 @@ class Dispatcher;
 class Notifications;
 class FuseRequestContext;
 
+using TraceDetailedArgumentsHandle = std::shared_ptr<void>;
+
 struct FuseTraceEvent : TraceEventBase {
   enum Type {
     START,
     FINISH,
   };
 
-  FuseTraceEvent(Type type, uint64_t unique, const fuse_in_header& request)
-      : type{type}, unique{unique}, request{request} {}
+  FuseTraceEvent() = delete;
+
+  static FuseTraceEvent start(uint64_t unique, const fuse_in_header& request) {
+    return FuseTraceEvent{
+        Type::START, unique, request, std::unique_ptr<std::string>{}};
+  }
+
+  static FuseTraceEvent
+  start(uint64_t unique, const fuse_in_header& request, std::string arguments) {
+    return FuseTraceEvent{Type::START,
+                          unique,
+                          request,
+                          std::make_unique<std::string>(std::move(arguments))};
+  }
+
+  static FuseTraceEvent finish(uint64_t unique, const fuse_in_header& request) {
+    return FuseTraceEvent{
+        Type::FINISH, unique, request, std::unique_ptr<std::string>{}};
+  }
 
   Type type;
 
@@ -59,11 +78,29 @@ struct FuseTraceEvent : TraceEventBase {
    */
   uint64_t unique;
 
-  /**
-   * Not all of these fields are necessary, but it's simpler to just include
-   * them all.
-   */
+  // Not all of these fields are necessary.
   fuse_in_header request;
+
+  /**
+   * If detailed trace arguments have been requested, this field contains a
+   * human-readable representation of the FUSE request arguments.
+   *
+   * It is heap-allocated
+   * TODO: 32 bytes for an optional, immutable argument string is excessive.
+   * fbstring would be better, but this could fit in something smaller too.
+   */
+  std::unique_ptr<std::string> arguments;
+
+ private:
+  FuseTraceEvent(
+      Type type,
+      uint64_t unique,
+      const fuse_in_header& request,
+      std::unique_ptr<std::string> arguments)
+      : type{type},
+        unique{unique},
+        request{request},
+        arguments{std::move(arguments)} {}
 };
 
 class FuseChannel {
@@ -338,6 +375,12 @@ class FuseChannel {
    * /sys/fs/fuse/connections/${conn_id}/waiting
    */
   std::vector<fuse_in_header> getOutstandingRequests();
+
+  /**
+   * While the returned handle is alive, FuseTraceEvents published on the
+   * TraceBus will have detailed argument strings.
+   */
+  TraceDetailedArgumentsHandle traceDetailedArguments() const;
 
   TraceBus<FuseTraceEvent>& getTraceBus() {
     return *traceBus_;
@@ -694,6 +737,16 @@ class FuseChannel {
 
   std::vector<TraceSubscriptionHandle<FuseTraceEvent>>
       traceSubscriptionHandles_;
+
+  /*
+   * TraceBus subscribers can indicate they would like detailed argument strings
+   * for FUSE requests. These are relatively expensive to compute, so argument
+   * strings in FuseTraceEvent are empty when zero.
+   *
+   * It's a bit ridiculous to heap-allocate an int, but subscribers may outlive
+   * the FuseChannel.
+   */
+  std::shared_ptr<std::atomic<size_t>> traceDetailedArguments_;
 
   // This should be the last field, as subscriber functions close over [this],
   // and it's not until TraceBus is destroyed that it's guaranteed that
