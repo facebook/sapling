@@ -37,7 +37,7 @@ sh % "hg ci -m B"
 sh % "echo C" >> "A"
 sh % "hg ci -m C"
 
-sh % "hg up -q -C 0"
+sh % "hg up -q -C min(_all())"
 
 sh % "echo D" >> "A"
 sh % "hg ci -m D"
@@ -46,7 +46,7 @@ sh % "echo E" > "E"
 sh % "hg add E"
 sh % "hg ci -m E"
 
-sh % "hg up -q -C 0"
+sh % "hg up -q -C min(_all())"
 
 sh % "echo F" >> "A"
 sh % "hg ci -m F"
@@ -71,7 +71,7 @@ sh % "tglogp" == r"""
     │ o  27547f69f254 draft 'B'
     ├─╯
     o  4a2df7238c3b draft 'A'"""
-sh % "hg rebase -s 1 -d 4 --keep" == r"""
+sh % "hg rebase -s desc(B) -d desc(E) --keep" == r"""
     rebasing 27547f69f254 "B"
     rebasing 965c486023db "C"
     merging A
@@ -126,7 +126,7 @@ sh % "tglogp" == r"""
     │ o  27547f69f254 draft 'B'
     ├─╯
     o  4a2df7238c3b draft 'A'"""
-sh % "hg rebase -s 5 -d 4" == r"""
+sh % "hg rebase -s desc(F) -d desc(E)" == r"""
     rebasing 3225f3ea730a "F"
     merging A
     warning: 1 conflicts while merging A! (edit, then use 'hg resolve --mark')
