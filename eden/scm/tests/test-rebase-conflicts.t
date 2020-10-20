@@ -166,17 +166,17 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
   │ │ │  date:        Thu Sep 05 12:57:59 2013 -0400
   │ │ │  summary:     bad merge
   │ │ │
+  │ │ o  commit:      400110238667
+  │ │ │  branch:      f2
+  │ │ │  user:        szhang
+  │ │ │  date:        Tue Sep 03 13:58:02 2013 -0400
+  │ │ │  summary:     changed f2 on f2
+  │ │ │
   o │ │  commit:      4c9fbe56a16f
   ├─╯ │  branch:      f1
   │   │  user:        szhang
   │   │  date:        Thu Sep 05 12:54:00 2013 -0400
   │   │  summary:     changed f1
-  │   │
-  │   o  commit:      400110238667
-  │   │  branch:      f2
-  │   │  user:        szhang
-  │   │  date:        Tue Sep 03 13:58:02 2013 -0400
-  │   │  summary:     changed f2 on f2
   │   │
   │ @ │  commit:      d79e2059b5c0
   │ │ │  user:        szhang

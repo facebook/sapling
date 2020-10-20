@@ -557,6 +557,7 @@ segmentedchangelogcompatiblelist = """
     test-pushvars-t.py
     test-rebase-bookmarks.t
     test-rebase-collapse.t
+    test-rebase-conflicts.t
     test-rebase-dest.t
     test-rebase-detach.t
     test-rebase-flags.t
