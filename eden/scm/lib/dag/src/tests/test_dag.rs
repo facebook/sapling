@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use crate::namedag::NameDagStorage;
 use crate::ops::DagAddHeads;
 use crate::ops::DagAlgorithm;
 use crate::ops::DagPersistent;
@@ -78,7 +77,7 @@ impl TestDag {
 
     /// Render the segments.
     pub fn render_segments(&self) -> String {
-        format!("{:?}", &self.dag.dag())
+        format!("{:?}", &self.dag.dag)
     }
 
     /// Render the graph.

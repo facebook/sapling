@@ -6,7 +6,6 @@
  */
 
 use crate::{parse_bindag, ParentRevs};
-use dag::namedag::NameDagStorage;
 use dag::ops::DagAlgorithm;
 use dag::ops::IdConvert;
 use dag::OnDiskIdDag;

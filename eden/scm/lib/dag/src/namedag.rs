@@ -17,12 +17,8 @@ use crate::id::Id;
 use crate::id::VertexName;
 use crate::iddag::IdDag;
 use crate::iddagstore::IdDagStore;
-use crate::iddagstore::InProcessStore;
-use crate::iddagstore::IndexedLogStore;
 use crate::idmap::AssignHeadOutcome;
-use crate::idmap::IdMap;
 use crate::idmap::IdMapAssignHead;
-use crate::idmap::MemIdMap;
 use crate::locked::Locked;
 use crate::nameset::hints::Flags;
 use crate::nameset::hints::Hints;
@@ -269,11 +265,11 @@ where
         }
     }
 
-    fn dag(&self) -> &IdDag<IS> {
+    pub fn dag(&self) -> &IdDag<IS> {
         &self.dag
     }
 
-    fn map(&self) -> &M {
+    pub fn map(&self) -> &M {
         &self.map
     }
 }
@@ -650,51 +646,6 @@ fn is_ok_some<T>(value: Result<Option<T>>) -> bool {
     match value {
         Ok(Some(_)) => true,
         _ => false,
-    }
-}
-
-/// IdMap + IdDag backend for DagAlgorithm.
-pub trait NameDagStorage {
-    type IdDagStore: IdDagStore;
-    type IdMap: IdConvert;
-
-    /// The IdDag storage.
-    fn dag(&self) -> &IdDag<Self::IdDagStore>;
-
-    /// The IdMap storage.
-    fn map(&self) -> &Self::IdMap;
-
-    /// (Relatively cheaply) clone the dag.
-    fn storage_dag_snapshot(&self) -> Result<Arc<dyn DagAlgorithm + Send + Sync>>;
-}
-
-impl NameDagStorage for NameDag {
-    type IdDagStore = IndexedLogStore;
-    type IdMap = IdMap;
-
-    fn dag(&self) -> &IdDag<Self::IdDagStore> {
-        &self.dag
-    }
-    fn map(&self) -> &Self::IdMap {
-        &self.map
-    }
-    fn storage_dag_snapshot(&self) -> Result<Arc<dyn DagAlgorithm + Send + Sync>> {
-        Ok(self.try_snapshot()? as Arc<dyn DagAlgorithm + Send + Sync>)
-    }
-}
-
-impl NameDagStorage for MemNameDag {
-    type IdDagStore = InProcessStore;
-    type IdMap = MemIdMap;
-
-    fn dag(&self) -> &IdDag<Self::IdDagStore> {
-        &self.dag
-    }
-    fn map(&self) -> &Self::IdMap {
-        &self.map
-    }
-    fn storage_dag_snapshot(&self) -> Result<Arc<dyn DagAlgorithm + Send + Sync>> {
-        Ok(self.try_snapshot()? as Arc<dyn DagAlgorithm + Send + Sync>)
     }
 }
 
