@@ -71,11 +71,6 @@ pub trait LiveCommitSyncConfig: Send + Sync {
         let commit_sync_config = self.get_current_commit_sync_config(ctx, repo_id)?;
 
         let version_name = commit_sync_config.version_name;
-        debug!(
-            ctx.logger(),
-            "Fetched current commit sync config version: {:?}", version_name
-        );
-
         Ok(version_name)
     }
 
@@ -193,7 +188,7 @@ impl LiveCommitSyncConfig for CfgrLiveCommitSyncConfig {
     ///       as this queries  config source
     fn get_current_commit_sync_config(
         &self,
-        ctx: &CoreContext,
+        _ctx: &CoreContext,
         repo_id: RepositoryId,
     ) -> Result<CommitSyncConfig> {
         let config = self.config_handle_for_current_versions.get();
@@ -215,12 +210,6 @@ impl LiveCommitSyncConfig for CfgrLiveCommitSyncConfig {
         };
 
         let commit_sync_config = raw_commit_sync_config.convert()?;
-
-        debug!(
-            ctx.logger(),
-            "Fetched current commit sync configs: {:?}", commit_sync_config
-        );
-
         Ok(commit_sync_config)
     }
 
