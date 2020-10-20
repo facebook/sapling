@@ -16,7 +16,23 @@ else()
   file(GLOB INODES_SRCS "*.cpp")
 endif()
 
-list(REMOVE_ITEM INODES_SRCS ${CMAKE_CURRENT_SOURCE_DIR}/RequestContext.cpp)
+list(
+  REMOVE_ITEM
+  INODES_SRCS
+  ${CMAKE_CURRENT_SOURCE_DIR}/RequestContext.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/InodeNumber.cpp
+)
+
+add_library(
+  eden_inodes_inodenumber STATIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/InodeNumber.cpp
+)
+
+target_link_libraries(
+  eden_inodes_inodenumber
+  PUBLIC
+    Folly::folly
+)
 
 add_library(
   eden_inodes STATIC

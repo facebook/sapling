@@ -27,6 +27,8 @@ using std::unique_ptr;
 
 namespace {
 
+folly::Logger straceLogger{"eden.strace"};
+
 // Most of the tests wait on Futures to complete.
 // Define a timeout just to make sure the tests don't hang if there's a problem
 // and a future never completes.  1 second seems to be long enough for the tests
@@ -69,6 +71,7 @@ class FuseChannelTest : public ::testing::Test {
         mountPath_,
         numThreads,
         &dispatcher_,
+        &straceLogger,
         std::make_shared<ProcessNameCache>()));
   }
 

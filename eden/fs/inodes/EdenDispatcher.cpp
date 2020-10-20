@@ -73,16 +73,15 @@ Dispatcher::Attr attrForInodeWithCorruptOverlay(InodeNumber ino) noexcept {
 folly::Future<Dispatcher::Attr> EdenDispatcher::getattr(
     InodeNumber ino,
     ObjectFetchContext& context) {
-  FB_LOGF(mount_->getStraceLogger(), DBG7, "getattr({})", ino);
   return inodeMap_->lookupInode(ino)
       .thenValue(
           [&context](const InodePtr& inode) { return inode->stat(context); })
       .thenValue([](const struct stat& st) { return Dispatcher::Attr{st}; });
 }
 
-folly::Future<uint64_t> EdenDispatcher::opendir(InodeNumber ino, int flags) {
-  FB_LOGF(
-      mount_->getStraceLogger(), DBG7, "opendir({}, flags={:x})", ino, flags);
+folly::Future<uint64_t> EdenDispatcher::opendir(
+    InodeNumber /*ino*/,
+    int /*flags*/) {
 #ifdef FUSE_NO_OPENDIR_SUPPORT
   if (getConnInfo().flags & FUSE_NO_OPENDIR_SUPPORT) {
     // If the kernel understands FUSE_NO_OPENDIR_SUPPORT, then returning ENOSYS
@@ -96,9 +95,8 @@ folly::Future<uint64_t> EdenDispatcher::opendir(InodeNumber ino, int flags) {
 }
 
 folly::Future<folly::Unit> EdenDispatcher::releasedir(
-    InodeNumber ino,
-    uint64_t fh) {
-  FB_LOGF(mount_->getStraceLogger(), DBG7, "releasedir({}, {})", ino, fh);
+    InodeNumber /*ino*/,
+    uint64_t /*fh*/) {
   return folly::unit;
 }
 
@@ -107,7 +105,6 @@ folly::Future<fuse_entry_out> EdenDispatcher::lookup(
     InodeNumber parent,
     PathComponentPiece namepiece,
     ObjectFetchContext& context) {
-  FB_LOGF(mount_->getStraceLogger(), DBG7, "lookup({}, {})", parent, namepiece);
   return inodeMap_->lookupTreeInode(parent)
       .thenValue([name = PathComponent(namepiece),
                   &context](const TreeInodePtr& tree) {
@@ -163,8 +160,6 @@ folly::Future<fuse_entry_out> EdenDispatcher::lookup(
 folly::Future<Dispatcher::Attr> EdenDispatcher::setattr(
     InodeNumber ino,
     const fuse_setattr_in& attr) {
-  FB_LOGF(mount_->getStraceLogger(), DBG7, "setattr({})", ino);
-
   // Even though mounts are created with the nosuid flag, explicitly disallow
   // setting suid, sgid, and sticky bits on any inodes. This lets us avoid
   // explicitly clearing these bits on writes() which is required for correct
@@ -179,12 +174,12 @@ folly::Future<Dispatcher::Attr> EdenDispatcher::setattr(
 }
 
 void EdenDispatcher::forget(InodeNumber ino, unsigned long nlookup) {
-  FB_LOGF(mount_->getStraceLogger(), DBG7, "forget({}, {})", ino, nlookup);
   inodeMap_->decFuseRefcount(ino, nlookup);
 }
 
-folly::Future<uint64_t> EdenDispatcher::open(InodeNumber ino, int flags) {
-  FB_LOGF(mount_->getStraceLogger(), DBG7, "open({}, flags={:x})", ino, flags);
+folly::Future<uint64_t> EdenDispatcher::open(
+    InodeNumber /*ino*/,
+    int /*flags*/) {
 #ifdef FUSE_NO_OPEN_SUPPORT
   if (getConnInfo().flags & FUSE_NO_OPEN_SUPPORT) {
     // If the kernel understands FUSE_NO_OPEN_SUPPORT, then returning ENOSYS
@@ -200,15 +195,7 @@ folly::Future<fuse_entry_out> EdenDispatcher::create(
     InodeNumber parent,
     PathComponentPiece name,
     mode_t mode,
-    int flags) {
-  FB_LOGF(
-      mount_->getStraceLogger(),
-      DBG7,
-      "create({}, {}, {:#x}, {:#x})",
-      parent,
-      name,
-      mode,
-      flags);
+    int /*flags*/) {
   // force 'mode' to be regular file, in which case rdev arg to mknod is ignored
   // (and thus can be zero)
   mode = S_IFREG | (07777 & mode);
@@ -231,13 +218,6 @@ folly::Future<BufVec> EdenDispatcher::read(
     size_t size,
     off_t off,
     ObjectFetchContext& context) {
-  FB_LOGF(
-      mount_->getStraceLogger(),
-      DBG7,
-      "read({}, off={}, len={})",
-      ino,
-      off,
-      size);
   return inodeMap_->lookupFileInode(ino).thenValue(
       [&context, size, off](FileInodePtr&& inode) {
         return inode->read(size, off, context);
@@ -246,13 +226,6 @@ folly::Future<BufVec> EdenDispatcher::read(
 
 folly::Future<size_t>
 EdenDispatcher::write(InodeNumber ino, folly::StringPiece data, off_t off) {
-  FB_LOGF(
-      mount_->getStraceLogger(),
-      DBG7,
-      "write({}, off={}, len={})",
-      ino,
-      off,
-      data.size());
   return inodeMap_->lookupFileInode(ino).thenValue(
       [copy = data.str(), off](FileInodePtr&& inode) {
         return inode->write(copy, off);
@@ -270,7 +243,6 @@ Future<Unit> EdenDispatcher::flush(
 folly::Future<folly::Unit> EdenDispatcher::fsync(
     InodeNumber ino,
     bool datasync) {
-  FB_LOGF(mount_->getStraceLogger(), DBG7, "fsync({})", ino);
   return inodeMap_->lookupFileInode(ino).thenValue(
       [datasync](FileInodePtr inode) { return inode->fsync(datasync); });
 }
@@ -291,7 +263,6 @@ folly::Future<std::string> EdenDispatcher::readlink(
     bool kernelCachesReadlink) {
   static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
       "EdenDispatcher::readlink");
-  FB_LOGF(mount_->getStraceLogger(), DBG7, "readlink({})", ino);
   return inodeMap_->lookupFileInode(ino).thenValue(
       [kernelCachesReadlink](const FileInodePtr& inode) {
         // Only release the symlink blob after it's loaded if we can assume the
@@ -309,7 +280,6 @@ folly::Future<DirList> EdenDispatcher::readdir(
     off_t offset,
     uint64_t /*fh*/,
     ObjectFetchContext& context) {
-  FB_LOGF(mount_->getStraceLogger(), DBG7, "readdir({}, {})", ino, offset);
   return inodeMap_->lookupTreeInode(ino).thenValue(
       [dirList = std::move(dirList), offset, &context](
           TreeInodePtr inode) mutable {
@@ -322,14 +292,6 @@ folly::Future<fuse_entry_out> EdenDispatcher::mknod(
     PathComponentPiece name,
     mode_t mode,
     dev_t rdev) {
-  FB_LOGF(
-      mount_->getStraceLogger(),
-      DBG7,
-      "mknod({}, {}, {:#x}, {:#x})",
-      parent,
-      name,
-      mode,
-      rdev);
   static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
       "EdenDispatcher::mknod");
   return inodeMap_->lookupTreeInode(parent).thenValue(
@@ -348,13 +310,6 @@ folly::Future<fuse_entry_out> EdenDispatcher::mkdir(
     InodeNumber parent,
     PathComponentPiece name,
     mode_t mode) {
-  FB_LOGF(
-      mount_->getStraceLogger(),
-      DBG7,
-      "mkdir({}, {}, {:#x})",
-      parent,
-      name,
-      mode);
   static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
       "EdenDispatcher::mkdir");
   return inodeMap_->lookupTreeInode(parent).thenValue(
@@ -370,7 +325,6 @@ folly::Future<fuse_entry_out> EdenDispatcher::mkdir(
 folly::Future<folly::Unit> EdenDispatcher::unlink(
     InodeNumber parent,
     PathComponentPiece name) {
-  FB_LOGF(mount_->getStraceLogger(), DBG7, "unlink({}, {})", parent, name);
   return inodeMap_->lookupTreeInode(parent).thenValue(
       [childName = PathComponent{name}](const TreeInodePtr& inode) {
         // No need to flush the kernel cache because FUSE will do that for us.
@@ -381,7 +335,6 @@ folly::Future<folly::Unit> EdenDispatcher::unlink(
 folly::Future<folly::Unit> EdenDispatcher::rmdir(
     InodeNumber parent,
     PathComponentPiece name) {
-  FB_LOGF(mount_->getStraceLogger(), DBG7, "rmdir({}, {})", parent, name);
   return inodeMap_->lookupTreeInode(parent).thenValue(
       [childName = PathComponent{name}](const TreeInodePtr& inode) {
         // No need to flush the kernel cache because FUSE will do that for us.
@@ -393,13 +346,6 @@ folly::Future<fuse_entry_out> EdenDispatcher::symlink(
     InodeNumber parent,
     PathComponentPiece name,
     StringPiece link) {
-  FB_LOGF(
-      mount_->getStraceLogger(),
-      DBG7,
-      "symlink({}, {}, {})",
-      parent,
-      name,
-      link);
   static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
       "EdenDispatcher::symlink");
   return inodeMap_->lookupTreeInode(parent).thenValue(
@@ -420,14 +366,6 @@ folly::Future<folly::Unit> EdenDispatcher::rename(
     PathComponentPiece namePiece,
     InodeNumber newParent,
     PathComponentPiece newNamePiece) {
-  FB_LOGF(
-      mount_->getStraceLogger(),
-      DBG7,
-      "rename({}, {}, {}, {})",
-      parent,
-      namePiece,
-      newParent,
-      newNamePiece);
   // Start looking up both parents
   auto parentFuture = inodeMap_->lookupTreeInode(parent);
   auto newParentFuture = inodeMap_->lookupTreeInode(newParent);
@@ -446,17 +384,9 @@ folly::Future<folly::Unit> EdenDispatcher::rename(
 }
 
 folly::Future<fuse_entry_out> EdenDispatcher::link(
-    InodeNumber ino,
-    InodeNumber newParent,
+    InodeNumber /*ino*/,
+    InodeNumber /*newParent*/,
     PathComponentPiece newName) {
-  FB_LOGF(
-      mount_->getStraceLogger(),
-      DBG7,
-      "link({}, {}, {})",
-      ino,
-      newParent,
-      newName);
-
   validatePathComponentLength(newName);
 
   // We intentionally do not support hard links.
@@ -467,7 +397,6 @@ folly::Future<fuse_entry_out> EdenDispatcher::link(
 }
 
 Future<string> EdenDispatcher::getxattr(InodeNumber ino, StringPiece name) {
-  FB_LOGF(mount_->getStraceLogger(), DBG7, "getxattr({}, {})", ino, name);
   return inodeMap_->lookupInode(ino).thenValue(
       [attrName = name.str()](const InodePtr& inode) {
         return inode->getxattr(attrName);
@@ -475,7 +404,6 @@ Future<string> EdenDispatcher::getxattr(InodeNumber ino, StringPiece name) {
 }
 
 Future<vector<string>> EdenDispatcher::listxattr(InodeNumber ino) {
-  FB_LOGF(mount_->getStraceLogger(), DBG7, "listxattr({})", ino);
   return inodeMap_->lookupInode(ino).thenValue(
       [](const InodePtr& inode) { return inode->listxattr(); });
 }
@@ -550,8 +478,6 @@ folly::Future<folly::Unit> EdenDispatcher::opendir(
     RelativePathPiece path,
     const Guid guid,
     ObjectFetchContext& context) {
-  FB_LOGF(mount_->getStraceLogger(), DBG7, "opendir({}, guid={})", path, guid);
-
   return mount_->getInode(path, context)
       .thenValue([&context](const InodePtr inode) {
         auto treePtr = inode.asTreePtr();
@@ -567,8 +493,6 @@ folly::Future<folly::Unit> EdenDispatcher::opendir(
 }
 
 void EdenDispatcher::closedir(const Guid& guid) {
-  FB_LOGF(mount_->getStraceLogger(), DBG7, "closedir({})", guid);
-
   auto erasedCount = enumSessions_.wlock()->erase(guid);
   DCHECK(erasedCount == 1);
 }
@@ -580,14 +504,6 @@ HRESULT EdenDispatcher::getEnumerationData(
     PRJ_DIR_ENTRY_BUFFER_HANDLE bufferHandle) noexcept {
   try {
     auto guid = Guid(enumerationId);
-    FB_LOGF(
-        mount_->getStraceLogger(),
-        DBG7,
-        "readdir({}, searchExpression={})",
-        guid,
-        searchExpression == nullptr
-            ? "<nullptr>"
-            : wideToMultibyteString<std::string>(searchExpression));
 
     auto lockedSessions = enumSessions_.rlock();
     auto sessionIterator = lockedSessions->find(guid);
@@ -651,8 +567,6 @@ HRESULT EdenDispatcher::getEnumerationData(
 folly::Future<std::optional<InodeMetadata>> EdenDispatcher::lookup(
     RelativePath path,
     ObjectFetchContext& context) {
-  FB_LOGF(mount_->getStraceLogger(), DBG7, "lookup({})", path);
-
   return mount_->getInode(path, context)
       .thenValue(
           [&context](const InodePtr inode) mutable
@@ -686,8 +600,6 @@ folly::Future<std::optional<InodeMetadata>> EdenDispatcher::lookup(
 folly::Future<bool> EdenDispatcher::access(
     RelativePath path,
     ObjectFetchContext& context) {
-  FB_LOGF(mount_->getStraceLogger(), DBG7, "access({})", path);
-
   return mount_->getInode(path, context)
       .thenValue([](const InodePtr) { return true; })
       .thenError(
@@ -708,14 +620,6 @@ folly::Future<std::string> EdenDispatcher::read(
     uint64_t byteOffset,
     uint32_t length,
     ObjectFetchContext& context) {
-  FB_LOGF(
-      mount_->getStraceLogger(),
-      DBG7,
-      "read({}, off={}, len={})",
-      path,
-      byteOffset,
-      length);
-
   return mount_->getInode(path, context)
       .thenValue([&context](const InodePtr inode) {
         auto fileInode = inode.asFilePtr();
@@ -879,6 +783,7 @@ folly::Future<folly::Unit> EdenDispatcher::newFileCreated(
     RelativePathPiece destPath,
     bool isDirectory,
     ObjectFetchContext& context) {
+  // TODO: Move this Windows-specific call logging into PrjfsChannel.
   FB_LOGF(
       mount_->getStraceLogger(),
       DBG7,
@@ -893,6 +798,7 @@ folly::Future<folly::Unit> EdenDispatcher::fileOverwritten(
     RelativePathPiece destPath,
     bool isDirectory,
     ObjectFetchContext& context) {
+  // TODO: Move this Windows-specific call logging into PrjfsChannel.
   FB_LOGF(mount_->getStraceLogger(), DBG7, "overwrite({})", relPath);
   return materializeFile(*mount_, relPath, context);
 }
@@ -902,6 +808,7 @@ folly::Future<folly::Unit> EdenDispatcher::fileHandleClosedFileModified(
     RelativePathPiece destPath,
     bool isDirectory,
     ObjectFetchContext& context) {
+  // TODO: Move this Windows-specific call logging into PrjfsChannel.
   FB_LOGF(mount_->getStraceLogger(), DBG7, "modified({})", relPath);
   return materializeFile(*mount_, relPath, context);
 }
@@ -911,6 +818,7 @@ folly::Future<folly::Unit> EdenDispatcher::fileRenamed(
     RelativePathPiece newPath,
     bool isDirectory,
     ObjectFetchContext& context) {
+  // TODO: Move this Windows-specific call logging into PrjfsChannel.
   FB_LOGF(
       mount_->getStraceLogger(), DBG7, "rename({} -> {})", oldPath, newPath);
 
@@ -930,6 +838,7 @@ folly::Future<folly::Unit> EdenDispatcher::preRename(
     RelativePathPiece newPath,
     bool isDirectory,
     ObjectFetchContext& context) {
+  // TODO: Move this Windows-specific call logging into PrjfsChannel.
   FB_LOGF(
       mount_->getStraceLogger(), DBG7, "prerename({} -> {})", oldPath, newPath);
   return folly::unit;
@@ -940,6 +849,7 @@ folly::Future<folly::Unit> EdenDispatcher::fileHandleClosedFileDeleted(
     RelativePathPiece destPath,
     bool isDirectory,
     ObjectFetchContext& context) {
+  // TODO: Move this Windows-specific call logging into PrjfsChannel.
   FB_LOGF(
       mount_->getStraceLogger(),
       DBG7,
@@ -954,12 +864,13 @@ folly::Future<folly::Unit> EdenDispatcher::preSetHardlink(
     RelativePathPiece destPath,
     bool isDirectory,
     ObjectFetchContext& context) {
+  // TODO: Move this Windows-specific call logging into PrjfsChannel.
   FB_LOGF(mount_->getStraceLogger(), DBG7, "link({})", relPath);
   return folly::makeFuture<folly::Unit>(makeHResultErrorExplicit(
       HRESULT_FROM_WIN32(ERROR_ACCESS_DENIED),
       fmt::format(FMT_STRING("Hardlinks are not supported: {}"), relPath)));
 }
-#endif
+#endif // _WIN32
 
 } // namespace eden
 } // namespace facebook

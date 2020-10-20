@@ -1218,6 +1218,7 @@ folly::Future<EdenMount::channelType> EdenMount::channelMount(bool readOnly) {
                      auto channel = new PrjfsChannel(
                          mountPath,
                          getDispatcher(),
+                         &getStraceLogger(),
                          serverState_->getProcessNameCache());
                      channel->start(
                          readOnly,
@@ -1289,6 +1290,7 @@ void EdenMount::createChannel(EdenMount::channelType channel) {
       getPath(),
       FLAGS_fuseNumThreads,
       dispatcher_.get(),
+      &straceLogger_,
       serverState_->getProcessNameCache(),
       std::chrono::duration_cast<folly::Duration>(
           serverState_->getReloadableConfig()

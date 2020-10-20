@@ -15,6 +15,7 @@
 #include "eden/fs/utils/Guid.h"
 #include "eden/fs/utils/NotImplemented.h"
 #include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/StringConv.h"
 #include "eden/fs/utils/WinError.h"
 
 namespace {
@@ -31,6 +32,7 @@ using facebook::eden::PrjfsRequestContext;
 using facebook::eden::RelativePath;
 using facebook::eden::RelativePathPiece;
 using facebook::eden::RequestMetricsScope;
+using facebook::eden::wideToMultibyteString;
 using facebook::eden::win32ErrorToString;
 
 #define BAIL_ON_RECURSIVE_CALL(callbackData)                               \
@@ -64,7 +66,8 @@ HRESULT startEnumeration(
 
     context
         ->catchErrors(folly::makeFutureWith([context = context.get(),
-                                             dispatcher = dispatcher,
+                                             channel,
+                                             dispatcher,
                                              guid = std::move(guid),
                                              path = std::move(path)] {
           auto requestWatch =
@@ -74,6 +77,12 @@ HRESULT startEnumeration(
           context->startRequest(
               dispatcher->getStats(), histogram, requestWatch);
 
+          FB_LOGF(
+              channel->getStraceLogger(),
+              DBG7,
+              "opendir({}, guid={})",
+              path,
+              guid);
           return dispatcher->opendir(path, std::move(guid), *context)
               .thenValue(
                   [context = context](auto&&) { context->sendSuccess(); });
@@ -93,8 +102,9 @@ HRESULT endEnumeration(
 
   try {
     auto guid = Guid(*enumerationId);
-
-    getChannel(callbackData)->getDispatcher()->closedir(guid);
+    auto* channel = getChannel(callbackData);
+    FB_LOGF(channel->getStraceLogger(), DBG7, "closedir({})", guid);
+    channel->getDispatcher()->closedir(guid);
 
     return S_OK;
   } catch (const std::exception& ex) {
@@ -108,13 +118,17 @@ HRESULT getEnumerationData(
     PCWSTR searchExpression,
     PRJ_DIR_ENTRY_BUFFER_HANDLE dirEntryBufferHandle) noexcept {
   BAIL_ON_RECURSIVE_CALL(callbackData);
-  return getChannel(callbackData)
-      ->getDispatcher()
-      ->getEnumerationData(
-          *callbackData,
-          *enumerationId,
-          searchExpression,
-          dirEntryBufferHandle);
+  auto* channel = getChannel(callbackData);
+  FB_LOGF(
+      channel->getStraceLogger(),
+      DBG7,
+      "readdir({}, searchExpression={})",
+      Guid{*enumerationId},
+      searchExpression == nullptr
+          ? "<nullptr>"
+          : wideToMultibyteString<std::string>(searchExpression));
+  return channel->getDispatcher()->getEnumerationData(
+      *callbackData, *enumerationId, searchExpression, dirEntryBufferHandle);
 }
 
 HRESULT getPlaceholderInfo(const PRJ_CALLBACK_DATA* callbackData) noexcept {
@@ -131,10 +145,10 @@ HRESULT getPlaceholderInfo(const PRJ_CALLBACK_DATA* callbackData) noexcept {
 
     context
         ->catchErrors(folly::makeFutureWith([context = context.get(),
-                                             dispatcher = dispatcher,
+                                             channel,
+                                             dispatcher,
                                              path = std::move(path),
-                                             virtualizationContext =
-                                                 virtualizationContext] {
+                                             virtualizationContext] {
           auto requestWatch =
               std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(
                   nullptr);
@@ -142,6 +156,7 @@ HRESULT getPlaceholderInfo(const PRJ_CALLBACK_DATA* callbackData) noexcept {
           context->startRequest(
               dispatcher->getStats(), histogram, requestWatch);
 
+          FB_LOGF(channel->getStraceLogger(), DBG7, "lookup({})", path);
           return dispatcher->lookup(std::move(path), *context)
               .thenValue([context = context,
                           virtualizationContext = virtualizationContext](
@@ -197,7 +212,8 @@ HRESULT queryFileName(const PRJ_CALLBACK_DATA* callbackData) noexcept {
 
     context
         ->catchErrors(folly::makeFutureWith([context = context.get(),
-                                             dispatcher = dispatcher,
+                                             channel,
+                                             dispatcher,
                                              path = std::move(path)] {
           auto requestWatch =
               std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(
@@ -205,7 +221,7 @@ HRESULT queryFileName(const PRJ_CALLBACK_DATA* callbackData) noexcept {
           auto histogram = &ChannelThreadStats::access;
           context->startRequest(
               dispatcher->getStats(), histogram, requestWatch);
-
+          FB_LOGF(channel->getStraceLogger(), DBG7, "access({})", path);
           return dispatcher->access(std::move(path), *context)
               .thenValue([context = context](bool present) {
                 if (present) {
@@ -315,13 +331,14 @@ HRESULT getFileData(
     context
         ->catchErrors(folly::makeFutureWith(
             [context = context.get(),
-             dispatcher = dispatcher,
+             channel,
+             dispatcher,
              path = RelativePath(callbackData->FilePathName),
              virtualizationContext =
                  callbackData->NamespaceVirtualizationContext,
              dataStreamId = Guid(callbackData->DataStreamId),
-             byteOffset = byteOffset,
-             length = length] {
+             byteOffset,
+             length] {
               auto requestWatch =
                   std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(
                       nullptr);
@@ -329,6 +346,13 @@ HRESULT getFileData(
               context->startRequest(
                   dispatcher->getStats(), histogram, requestWatch);
 
+              FB_LOGF(
+                  channel->getStraceLogger(),
+                  DBG7,
+                  "read({}, off={}, len={})",
+                  path,
+                  byteOffset,
+                  length);
               return dispatcher
                   ->read(std::move(path), byteOffset, length, *context)
                   .thenValue([context = context,
@@ -527,9 +551,11 @@ namespace eden {
 PrjfsChannel::PrjfsChannel(
     AbsolutePathPiece mountPath,
     Dispatcher* const dispatcher,
+    const folly::Logger* straceLogger,
     std::shared_ptr<ProcessNameCache> processNameCache)
     : mountPath_(mountPath),
       dispatcher_(dispatcher),
+      straceLogger_(straceLogger),
       mountId_(Guid::generate()),
       processAccessLog_(std::move(processNameCache)) {}
 

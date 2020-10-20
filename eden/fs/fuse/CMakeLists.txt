@@ -13,6 +13,7 @@ if(NOT WIN32)
     eden_fuse
     PUBLIC
       eden_fuse_privhelper
+      eden_inodes_inodenumber
       eden_notifications
       eden_request_context
       eden_telemetry

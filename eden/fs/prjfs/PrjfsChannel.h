@@ -30,6 +30,7 @@ class PrjfsChannel {
   PrjfsChannel(
       AbsolutePathPiece mountPath,
       Dispatcher* const dispatcher,
+      const folly::Logger* straceLogger,
       std::shared_ptr<ProcessNameCache> processNameCache);
   ~PrjfsChannel();
 
@@ -64,6 +65,10 @@ class PrjfsChannel {
     return dispatcher_;
   }
 
+  const folly::Logger& getStraceLogger() const {
+    return *straceLogger_;
+  }
+
   ProcessAccessLog& getProcessAccessLog() {
     return processAccessLog_;
   }
@@ -86,6 +91,7 @@ class PrjfsChannel {
 
   const AbsolutePath mountPath_;
   Dispatcher* const dispatcher_{nullptr};
+  const folly::Logger* const straceLogger_{nullptr};
   Guid mountId_;
   bool isRunning_{false};
   bool useNegativePathCaching_{true};

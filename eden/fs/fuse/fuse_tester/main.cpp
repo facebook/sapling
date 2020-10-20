@@ -122,11 +122,14 @@ int main(int argc, char** argv) {
   EdenStats stats;
   TestDispatcher dispatcher(&stats, identity);
 
+  folly::Logger straceLogger{"eden.strace"};
+
   std::unique_ptr<FuseChannel, FuseChannelDeleter> channel(new FuseChannel(
       std::move(fuseDevice),
       mountPath,
       FLAGS_numFuseThreads,
       &dispatcher,
+      &straceLogger,
       std::make_shared<ProcessNameCache>()));
 
   XLOG(INFO) << "Starting FUSE...";

@@ -480,13 +480,15 @@ FuseChannel::FuseChannel(
     folly::File&& fuseDevice,
     AbsolutePathPiece mountPath,
     size_t numThreads,
-    Dispatcher* const dispatcher,
+    Dispatcher* dispatcher,
+    folly::Logger* straceLogger,
     std::shared_ptr<ProcessNameCache> processNameCache,
     folly::Duration requestTimeout,
     Notifications* notifications)
     : bufferSize_(std::max(size_t(getpagesize()) + 0x1000, MIN_BUFSIZE)),
       numThreads_(numThreads),
       dispatcher_(dispatcher),
+      straceLogger_(straceLogger),
       mountPath_(mountPath),
       requestTimeout_(requestTimeout),
       notifications_(notifications),
@@ -1435,6 +1437,13 @@ folly::Future<folly::Unit> FuseChannel::fuseRead(
   XLOG(DBG7) << "FUSE_READ";
 
   auto ino = InodeNumber{header->nodeid};
+  FB_LOGF(
+      *straceLogger_,
+      DBG7,
+      "read({}, off={}, len={})",
+      ino,
+      read->offset,
+      read->size);
   return dispatcher_->read(ino, read->size, read->offset, request)
       .thenValue([&request](BufVec&& buf) { request.sendReply(*buf); });
 }
@@ -1451,6 +1460,13 @@ folly::Future<folly::Unit> FuseChannel::fuseWrite(
   XLOG(DBG7) << "FUSE_WRITE " << write->size << " @" << write->offset;
 
   auto ino = InodeNumber{header->nodeid};
+  FB_LOGF(
+      *straceLogger_,
+      DBG7,
+      "write({}, off={}, len={})",
+      ino,
+      write->offset,
+      write->size);
   return dispatcher_
       ->write(ino, folly::StringPiece{bufPtr, write->size}, write->offset)
       .thenValue([&request](size_t written) {
@@ -1469,6 +1485,7 @@ folly::Future<folly::Unit> FuseChannel::fuseLookup(
 
   XLOG(DBG7) << "FUSE_LOOKUP parent=" << parent << " name=" << name;
 
+  FB_LOGF(*straceLogger_, DBG7, "lookup({}, {})", parent, name);
   return dispatcher_->lookup(header->unique, parent, name, request)
       .thenValue(
           [&request](fuse_entry_out param) { request.sendReply(param); });
@@ -1518,8 +1535,9 @@ folly::Future<folly::Unit> FuseChannel::fuseReadLink(
 #ifdef FUSE_CACHE_SYMLINKS
   kernelCachesReadlink = connInfo_->flags & FUSE_CACHE_SYMLINKS;
 #endif
-  return dispatcher_
-      ->readlink(InodeNumber{header->nodeid}, kernelCachesReadlink)
+  InodeNumber ino{header->nodeid};
+  FB_LOGF(*straceLogger_, DBG7, "readlink({})", ino);
+  return dispatcher_->readlink(ino, kernelCachesReadlink)
       .thenValue([&request](std::string&& str) {
         request.sendReply(folly::StringPiece(str));
       });
@@ -1534,7 +1552,9 @@ folly::Future<folly::Unit> FuseChannel::fuseSymlink(
   const PathComponentPiece name{nameStr};
   const StringPiece link{nameStr + name.stringPiece().size() + 1};
 
-  return dispatcher_->symlink(InodeNumber{header->nodeid}, name, link)
+  InodeNumber parent{header->nodeid};
+  FB_LOGF(*straceLogger_, DBG7, "symlink({}, {}, {})", parent, name, link);
+  return dispatcher_->symlink(parent, name, link)
       .thenValue(
           [&request](fuse_entry_out param) { request.sendReply(param); });
 }
@@ -1558,8 +1578,16 @@ folly::Future<folly::Unit> FuseChannel::fuseMknod(
   const PathComponentPiece name{nameStr};
   XLOG(DBG7) << "FUSE_MKNOD " << name;
 
-  return dispatcher_
-      ->mknod(InodeNumber{header->nodeid}, name, nod->mode, nod->rdev)
+  InodeNumber parent{header->nodeid};
+  FB_LOGF(
+      *straceLogger_,
+      DBG7,
+      "mknod({}, {}, {:#x}, {:#x})",
+      parent,
+      name,
+      nod->mode,
+      nod->rdev);
+  return dispatcher_->mknod(parent, name, nod->mode, nod->rdev)
       .thenValue(
           [&request](fuse_entry_out entry) { request.sendReply(entry); });
 }
@@ -1580,8 +1608,10 @@ folly::Future<folly::Unit> FuseChannel::fuseMkdir(
 
   XLOG(DBG7) << "mode = " << dir->mode << "; umask = " << dir->umask;
 
-  return dispatcher_
-      ->mkdir(InodeNumber{header->nodeid}, name, dir->mode & ~dir->umask)
+  InodeNumber parent{header->nodeid};
+  mode_t mode = dir->mode & ~dir->umask;
+  FB_LOGF(*straceLogger_, DBG7, "mkdir({}, {}, {:#x})", parent, name, mode);
+  return dispatcher_->mkdir(parent, name, mode)
       .thenValue(
           [&request](fuse_entry_out entry) { request.sendReply(entry); });
 }
@@ -1595,8 +1625,11 @@ folly::Future<folly::Unit> FuseChannel::fuseUnlink(
 
   XLOG(DBG7) << "FUSE_UNLINK " << name;
 
-  return dispatcher_->unlink(InodeNumber{header->nodeid}, name)
-      .thenValue([&request](auto&&) { request.replyError(0); });
+  InodeNumber parent{header->nodeid};
+  FB_LOGF(*straceLogger_, DBG7, "unlink({}, {})", parent, name);
+  return dispatcher_->unlink(parent, name).thenValue([&request](auto&&) {
+    request.replyError(0);
+  });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseRmdir(
@@ -1607,9 +1640,11 @@ folly::Future<folly::Unit> FuseChannel::fuseRmdir(
   const PathComponentPiece name{nameStr};
 
   XLOG(DBG7) << "FUSE_RMDIR " << name;
-
-  return dispatcher_->rmdir(InodeNumber{header->nodeid}, name)
-      .thenValue([&request](auto&&) { request.replyError(0); });
+  InodeNumber parent{header->nodeid};
+  FB_LOGF(*straceLogger_, DBG7, "rmdir({}, {})", parent, name);
+  return dispatcher_->rmdir(parent, name).thenValue([&request](auto&&) {
+    request.replyError(0);
+  });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseRename(
@@ -1622,13 +1657,18 @@ folly::Future<folly::Unit> FuseChannel::fuseRename(
   const PathComponentPiece newName{oldNameStr + oldName.stringPiece().size() +
                                    1};
 
+  InodeNumber parent{header->nodeid};
+  InodeNumber newParent{rename->newdir};
   XLOG(DBG7) << "FUSE_RENAME " << oldName << " -> " << newName;
-  return dispatcher_
-      ->rename(
-          InodeNumber{header->nodeid},
-          oldName,
-          InodeNumber{rename->newdir},
-          newName)
+  FB_LOGF(
+      *straceLogger_,
+      DBG7,
+      "rename({}, {}, {}, {})",
+      parent,
+      oldName,
+      newParent,
+      newName);
+  return dispatcher_->rename(parent, oldName, newParent, newName)
       .thenValue([&request](auto&&) { request.replyError(0); });
 }
 
@@ -1642,8 +1682,10 @@ folly::Future<folly::Unit> FuseChannel::fuseLink(
 
   XLOG(DBG7) << "FUSE_LINK " << newName;
 
-  return dispatcher_
-      ->link(InodeNumber{link->oldnodeid}, InodeNumber{header->nodeid}, newName)
+  InodeNumber ino{link->oldnodeid};
+  InodeNumber newParent{header->nodeid};
+  FB_LOGF(*straceLogger_, DBG7, "link({}, {}, {})", ino, newParent, newName);
+  return dispatcher_->link(ino, newParent, newName)
       .thenValue(
           [&request](fuse_entry_out param) { request.sendReply(param); });
 }
@@ -1698,6 +1740,7 @@ folly::Future<folly::Unit> FuseChannel::fuseFsync(
   XLOG(DBG7) << "FUSE_FSYNC";
 
   auto ino = InodeNumber{header->nodeid};
+  FB_LOGF(*straceLogger_, DBG7, "fsync({})", ino);
   return dispatcher_->fsync(ino, datasync).thenValue([&request](auto&&) {
     request.replyError(0);
   });
@@ -1728,7 +1771,9 @@ folly::Future<folly::Unit> FuseChannel::fuseGetXAttr(
   const auto nameStr = reinterpret_cast<const char*>(getxattr + 1);
   const StringPiece attrName{nameStr};
   XLOG(DBG7) << "FUSE_GETXATTR";
-  return dispatcher_->getxattr(InodeNumber{header->nodeid}, attrName)
+  InodeNumber ino{header->nodeid};
+  FB_LOGF(*straceLogger_, DBG7, "getxattr({}, {})", ino, attrName);
+  return dispatcher_->getxattr(ino, attrName)
       .thenValue([&request, size = getxattr->size](const std::string& attr) {
         if (size == 0) {
           fuse_getxattr_out out = {};
@@ -1748,36 +1793,37 @@ folly::Future<folly::Unit> FuseChannel::fuseListXAttr(
     const uint8_t* arg) {
   const auto listattr = reinterpret_cast<const fuse_getxattr_in*>(arg);
   XLOG(DBG7) << "FUSE_LISTXATTR";
-  return dispatcher_->listxattr(InodeNumber{header->nodeid})
-      .thenValue(
-          [&request, size = listattr->size](std::vector<std::string> attrs) {
-            // Initialize count to include the \0 for each
-            // entry.
-            size_t count = attrs.size();
-            for (const auto& attr : attrs) {
-              count += attr.size();
-            }
+  InodeNumber ino{header->nodeid};
+  FB_LOGF(*straceLogger_, DBG7, "listxattr({})", ino);
+  return dispatcher_->listxattr(ino).thenValue(
+      [&request, size = listattr->size](std::vector<std::string> attrs) {
+        // Initialize count to include the \0 for each
+        // entry.
+        size_t count = attrs.size();
+        for (const auto& attr : attrs) {
+          count += attr.size();
+        }
 
-            if (size == 0) {
-              // caller is asking for the overall size
-              fuse_getxattr_out out = {};
-              out.size = count;
-              request.sendReply(out);
-            } else if (size < count) {
-              XLOG(DBG7) << "LISTXATTR input size is " << size
-                         << " and count is " << count;
-              request.replyError(ERANGE);
-            } else {
-              std::string buf;
-              buf.reserve(count);
-              for (const auto& attr : attrs) {
-                buf.append(attr);
-                buf.push_back(0);
-              }
-              XLOG(DBG7) << "LISTXATTR: " << buf;
-              request.sendReply(folly::StringPiece(buf));
-            }
-          });
+        if (size == 0) {
+          // caller is asking for the overall size
+          fuse_getxattr_out out = {};
+          out.size = count;
+          request.sendReply(out);
+        } else if (size < count) {
+          XLOG(DBG7) << "LISTXATTR input size is " << size << " and count is "
+                     << count;
+          request.replyError(ERANGE);
+        } else {
+          std::string buf;
+          buf.reserve(count);
+          for (const auto& attr : attrs) {
+            buf.append(attr);
+            buf.push_back(0);
+          }
+          XLOG(DBG7) << "LISTXATTR: " << buf;
+          request.sendReply(folly::StringPiece(buf));
+        }
+      });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseRemoveXAttr(
@@ -1834,6 +1880,7 @@ folly::Future<folly::Unit> FuseChannel::fuseReadDir(
   auto read = reinterpret_cast<const fuse_read_in*>(arg);
   XLOG(DBG7) << "FUSE_READDIR";
   auto ino = InodeNumber{header->nodeid};
+  FB_LOGF(*straceLogger_, DBG7, "readdir({}, {})", ino, read->offset);
   return dispatcher_
       ->readdir(ino, DirList{read->size}, read->offset, read->fh, request)
       .thenValue([&request](DirList&& list) {
@@ -1875,8 +1922,11 @@ folly::Future<folly::Unit> FuseChannel::fuseAccess(
     const uint8_t* arg) {
   const auto access = reinterpret_cast<const fuse_access_in*>(arg);
   XLOG(DBG7) << "FUSE_ACCESS";
-  return dispatcher_->access(InodeNumber{header->nodeid}, access->mask)
-      .thenValue([&request](auto&&) { request.replyError(0); });
+  InodeNumber ino{header->nodeid};
+  FB_LOGF(*straceLogger_, DBG7, "access({}, {})", ino, access->mask);
+  return dispatcher_->access(ino, access->mask).thenValue([&request](auto&&) {
+    request.replyError(0);
+  });
 }
 
 folly::Future<folly::Unit> FuseChannel::fuseCreate(
