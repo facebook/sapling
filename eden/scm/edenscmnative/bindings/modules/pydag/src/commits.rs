@@ -14,7 +14,6 @@ use cpython::*;
 use cpython_async::futures;
 use cpython_async::TStream;
 use cpython_ext::convert::BytesLike;
-use cpython_ext::convert::Serde;
 use cpython_ext::ExtractInner;
 use cpython_ext::PyNone;
 use cpython_ext::PyPath;
@@ -36,11 +35,11 @@ use hgcommits::HgCommit;
 use hgcommits::HgCommits;
 use hgcommits::HybridCommits;
 use hgcommits::MemHgCommits;
-use hgcommits::ParentlessHgCommit;
 use hgcommits::ReadCommitText;
 use hgcommits::RevlogCommits;
 use hgcommits::StreamCommitText;
 use hgcommits::StripCommits;
+use minibytes::Bytes;
 use pyedenapi::PyClient;
 use pymetalog::metalog as PyMetaLog;
 use std::cell::RefCell;
@@ -120,12 +119,12 @@ py_class!(pub class commits |py| {
     /// Lookup the raw texts of a stream of binary commit hashes.
     /// Return a stream of (node, rawtext).
     def streamcommitrawtext(&self, stream: TStream<anyhow::Result<BytesLike<Vertex>>>)
-        -> PyResult<TStream<anyhow::Result<Serde<ParentlessHgCommit>>>>
+        -> PyResult<TStream<anyhow::Result<(BytesLike<Vertex>, BytesLike<Bytes>)>>>
     {
         let inner = self.inner(py).borrow();
         let stream = Box::pin(stream.stream().map_ok(|bytes_like| bytes_like.0));
         let output_stream = inner.stream_commit_raw_text(stream).map_pyerr(py)?;
-        Ok(output_stream.map_ok(Serde).into())
+        Ok(output_stream.map_ok(|c| (BytesLike(c.vertex), BytesLike(c.raw_text))).into())
     }
 
     /// Convert Set to IdSet. For compatibility with legacy code only.

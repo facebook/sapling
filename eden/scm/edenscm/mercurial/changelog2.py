@@ -403,9 +403,9 @@ class changelog(object):
         text = self.inner.getcommitrawtext(node)
         # Suboptimal 1-by-1 fetching via streamcommitrawtext.
         if text is None:
-            for commit in self.inner.streamcommitrawtext([node]):
-                if commit["vertex"] == node:
-                    text = commit["raw_text"]
+            for v, t in self.inner.streamcommitrawtext([node]):
+                if v == node:
+                    text = t
                     break
         if text is None:
             raise error.LookupError(node, self.indexfile, _("no node"))
