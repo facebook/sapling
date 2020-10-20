@@ -32,7 +32,7 @@
 Symlink is local parent, executable is other:
 
   $ hg merge --debug
-    searching for copies back to rev 1
+    searching for copies back to 3574f3e69b1c
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: c334dc3be0da, local: 521a1e40188f+, remote: 3574f3e69b1c
@@ -65,7 +65,7 @@ Symlink is other parent, executable is local:
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg merge --debug --tool :union
-    searching for copies back to rev 1
+    searching for copies back to 3574f3e69b1c
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: c334dc3be0da, local: 3574f3e69b1c+, remote: 521a1e40188f
@@ -88,7 +88,7 @@ Symlink is other parent, executable is local:
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg merge --debug --tool :merge3
-    searching for copies back to rev 1
+    searching for copies back to 3574f3e69b1c
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: c334dc3be0da, local: 3574f3e69b1c+, remote: 521a1e40188f
@@ -111,7 +111,7 @@ Symlink is other parent, executable is local:
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg merge --debug --tool :merge-local
-    searching for copies back to rev 1
+    searching for copies back to 3574f3e69b1c
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: c334dc3be0da, local: 3574f3e69b1c+, remote: 521a1e40188f
@@ -133,7 +133,7 @@ Symlink is other parent, executable is local:
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg merge --debug --tool :merge-other
-    searching for copies back to rev 1
+    searching for copies back to 3574f3e69b1c
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: c334dc3be0da, local: 3574f3e69b1c+, remote: 521a1e40188f
@@ -167,7 +167,7 @@ Update to link with local change should cause a merge prompt (issue3200):
   $ hg up -Cq 'desc(add)'
   $ echo data > a
   $ HGMERGE= hg up -y --debug
-    searching for copies back to rev 2
+    searching for copies back to 521a1e40188f
   resolving manifests
    branchmerge: False, force: False, partial: False
    ancestor: c334dc3be0da, local: c334dc3be0da+, remote: 521a1e40188f

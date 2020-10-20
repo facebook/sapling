@@ -446,7 +446,8 @@ def _fullcopytracing(repo, c1, c2, base):
     if limit is None:
         # no common ancestor, no copies
         return {}, {}, {}, {}, {}
-    repo.ui.debug("  searching for copies back to rev %d\n" % limit)
+    if limit in repo:
+        repo.ui.debug("  searching for copies back to %s\n" % repo[limit])
 
     m1 = c1.manifest()
     m2 = c2.manifest()

@@ -23,7 +23,7 @@
   $ hg ci -m "modify"
 
   $ hg merge -y --debug
-    searching for copies back to rev 1
+    searching for copies back to 85c198ef2f6c
     unmatched files in local:
      c2
     unmatched files in other:
@@ -168,7 +168,7 @@ Check for issue3074
   $ hg rm file
   $ hg commit -m "deleted file"
   $ hg merge --debug
-    searching for copies back to rev 1
+    searching for copies back to 5d32493049f0
     unmatched files in other:
      newfile
     all copies found (* = to merge, ! = divergent, % = renamed and deleted):

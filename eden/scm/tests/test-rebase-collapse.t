@@ -191,7 +191,7 @@ Rebase and collapse - more than one external (fail):
   $ cd b1
 
   $ hg rebase -s $C --dest $H --collapse
-  abort: unable to collapse on top of 3, there is more than one external parent: 1, 6
+  abort: unable to collapse on top of 575c4b5ec114, there is more than one external parent: 112478962961, 11abe3fb10b8
   [255]
 
 Rebase and collapse - E onto H:

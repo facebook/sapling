@@ -77,7 +77,7 @@ $4 = expected result
   --------------
   test L:up a   R:nc a b W:       - 1  get local a to b
   --------------
-    searching for copies back to rev 1
+    searching for copies back to 4ce40f5aca24
     unmatched files in other:
      b
     all copies found (* = to merge, ! = divergent, % = renamed and deleted):
@@ -114,7 +114,7 @@ $4 = expected result
   --------------
   test L:nc a b R:up a   W:       - 2  get rem change to a and b
   --------------
-    searching for copies back to rev 1
+    searching for copies back to f4db7e329e71
     unmatched files in local:
      b
     all copies found (* = to merge, ! = divergent, % = renamed and deleted):
@@ -153,7 +153,7 @@ $4 = expected result
   --------------
   test L:up a   R:nm a b W:       - 3  get local a change to b, remove a
   --------------
-    searching for copies back to rev 1
+    searching for copies back to bdb19105162a
     unmatched files in other:
      b
     all copies found (* = to merge, ! = divergent, % = renamed and deleted):
@@ -190,7 +190,7 @@ $4 = expected result
   --------------
   test L:nm a b R:up a   W:       - 4  get remote change to b
   --------------
-    searching for copies back to rev 1
+    searching for copies back to f4db7e329e71
     unmatched files in local:
      b
     all copies found (* = to merge, ! = divergent, % = renamed and deleted):
@@ -226,7 +226,7 @@ $4 = expected result
   --------------
   test L:       R:nc a b W:       - 5  get b
   --------------
-    searching for copies back to rev 1
+    searching for copies back to 4ce40f5aca24
     unmatched files in other:
      b
     all copies found (* = to merge, ! = divergent, % = renamed and deleted):
@@ -258,7 +258,7 @@ $4 = expected result
   --------------
   test L:nc a b R:       W:       - 6  nothing
   --------------
-    searching for copies back to rev 1
+    searching for copies back to 97c705ade336
     unmatched files in local:
      b
     all copies found (* = to merge, ! = divergent, % = renamed and deleted):
@@ -288,7 +288,7 @@ $4 = expected result
   --------------
   test L:       R:nm a b W:       - 7  get b
   --------------
-    searching for copies back to rev 1
+    searching for copies back to bdb19105162a
     unmatched files in other:
      b
     all copies found (* = to merge, ! = divergent, % = renamed and deleted):
@@ -321,7 +321,7 @@ $4 = expected result
   --------------
   test L:nm a b R:       W:       - 8  nothing
   --------------
-    searching for copies back to rev 1
+    searching for copies back to 97c705ade336
     unmatched files in local:
      b
     all copies found (* = to merge, ! = divergent, % = renamed and deleted):
@@ -350,7 +350,7 @@ $4 = expected result
   --------------
   test L:um a b R:um a b W:       - 9  do merge with ancestor in a
   --------------
-    searching for copies back to rev 1
+    searching for copies back to 49b6d8032493
     unmatched files new in both:
      b
   resolving manifests
@@ -389,7 +389,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
   test L:nm a b R:nm a c W:       - 11 get c, keep b
   --------------
-    searching for copies back to rev 1
+    searching for copies back to fe905ef2c33e
     unmatched files in local:
      b
     unmatched files in other:
@@ -427,7 +427,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
   test L:nc a b R:up b   W:       - 12 merge b no ancestor
   --------------
-    searching for copies back to rev 1
+    searching for copies back to af30c7647fc7
     unmatched files new in both:
      b
   resolving manifests
@@ -464,7 +464,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
   test L:up b   R:nm a b W:       - 13 merge b no ancestor
   --------------
-    searching for copies back to rev 1
+    searching for copies back to bdb19105162a
     unmatched files new in both:
      b
   resolving manifests
@@ -502,7 +502,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
   test L:nc a b R:up a b W:       - 14 merge b no ancestor
   --------------
-    searching for copies back to rev 1
+    searching for copies back to 8dbce441892a
     unmatched files new in both:
      b
   resolving manifests
@@ -541,7 +541,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
   test L:up b   R:nm a b W:       - 15 merge b no ancestor, remove a
   --------------
-    searching for copies back to rev 1
+    searching for copies back to bdb19105162a
     unmatched files new in both:
      b
   resolving manifests
@@ -579,7 +579,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
   test L:nc a b R:up a b W:       - 16 get a, merge b no ancestor
   --------------
-    searching for copies back to rev 1
+    searching for copies back to 8dbce441892a
     unmatched files new in both:
      b
   resolving manifests
@@ -618,7 +618,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
   test L:up a b R:nc a b W:       - 17 keep a, merge b no ancestor
   --------------
-    searching for copies back to rev 1
+    searching for copies back to 4ce40f5aca24
     unmatched files new in both:
      b
   resolving manifests
@@ -655,7 +655,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
   test L:nm a b R:up a b W:       - 18 merge b no ancestor
   --------------
-    searching for copies back to rev 1
+    searching for copies back to 8dbce441892a
     unmatched files new in both:
      b
   resolving manifests
@@ -697,7 +697,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
   test L:up a b R:nm a b W:       - 19 merge b no ancestor, prompt remove a
   --------------
-    searching for copies back to rev 1
+    searching for copies back to bdb19105162a
     unmatched files new in both:
      b
   resolving manifests
@@ -740,7 +740,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
   test L:up a   R:um a b W:       - 20 merge a and b to b, remove a
   --------------
-    searching for copies back to rev 1
+    searching for copies back to 49b6d8032493
     unmatched files in other:
      b
     all copies found (* = to merge, ! = divergent, % = renamed and deleted):
@@ -781,7 +781,7 @@ m "um a c" "um x c" "      " "10 do merge with no ancestor"
   --------------
   test L:um a b R:up a   W:       - 21 merge a and b to b
   --------------
-    searching for copies back to rev 1
+    searching for copies back to f4db7e329e71
     unmatched files in local:
      b
     all copies found (* = to merge, ! = divergent, % = renamed and deleted):
@@ -824,7 +824,7 @@ m "nm a b" "um x a" "      " "22 get a, keep b"
   --------------
   test L:nm a b R:up a c W:       - 23 get c, keep b
   --------------
-    searching for copies back to rev 1
+    searching for copies back to 2b958612230f
     unmatched files in local:
      b
     unmatched files in other:
@@ -905,7 +905,7 @@ Expected result:
   $ echo m > 7/f
   $ echo m > 8/f
   $ hg merge -f --tool internal:dump -v --debug -r'desc(m2)' | sed '/^resolving manifests/,$d' 2> /dev/null
-    searching for copies back to rev 1
+    searching for copies back to ec44bf929ab5
     unmatched files in local:
      5/g
      6/g

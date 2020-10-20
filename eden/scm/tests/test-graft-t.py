@@ -182,7 +182,7 @@ sh % "'HGEDITOR=cat' hg graft 1 5 'merge()' 2 --debug --config worker.background
     scanning for duplicate grafts
     skipping 5c095ad7e90f (already grafted to ef0ef43d49e7)
     grafting 5d205f8b35b6 "1"
-      searching for copies back to rev 1
+      searching for copies back to 5d205f8b35b6
       unmatched files in local:
        b
       all copies found (* = to merge, ! = divergent, % = renamed and deleted):
@@ -202,7 +202,7 @@ sh % "'HGEDITOR=cat' hg graft 1 5 'merge()' 2 --debug --config worker.background
     committing manifest
     committing changelog
     grafting 5345cd5c0f38 "5"
-      searching for copies back to rev 1
+      searching for copies back to 5d205f8b35b6
       unmatched files in other (from topological common ancestor):
        c
     resolving manifests
@@ -217,7 +217,7 @@ sh % "'HGEDITOR=cat' hg graft 1 5 'merge()' 2 --debug --config worker.background
 sh % "'HGEDITOR=cat' hg graft 4 3 --log --debug" == r"""
     scanning for duplicate grafts
     grafting 9c233e8e184d "4"
-      searching for copies back to rev 1
+      searching for copies back to 5d205f8b35b6
       unmatched files in other (from topological common ancestor):
        c
     resolving manifests

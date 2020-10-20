@@ -25,7 +25,7 @@
   $ hg ci -m "2 add a/c"
 
   $ hg merge --debug 'desc(1)'
-    searching for copies back to rev 1
+    searching for copies back to 397f8b00a740
     unmatched files in local:
      a/c
     unmatched files in other:
@@ -71,7 +71,7 @@
   $ hg co -C 397f8b00a740232a6f2e63d649be60d17ecb4162
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg merge --debug ce36d17b18fb966cd0791a8fe289abfe7dc298bc
-    searching for copies back to rev 1
+    searching for copies back to 397f8b00a740
     unmatched files in local:
      b/a
      b/b

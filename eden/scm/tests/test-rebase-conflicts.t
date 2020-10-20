@@ -216,7 +216,7 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
   rebasing on disk
   rebase status stored
   rebasing e31216eec445 "more changes to f1"
-   future parents are 2 and -1
+   future parents are 4bc80088dc6b and 000000000000
   rebase status stored
    update to 4bc80088dc6b
   resolving manifests
@@ -228,7 +228,7 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
   getting f1.txt
    merge against e31216eec445
      detach base 8e4e2c1a07ae
-    searching for copies back to rev 3
+    searching for copies back to 8a951942e016
     unmatched files in other (from topological common ancestor):
      f2.txt
   resolving manifests
@@ -242,12 +242,12 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
   committing changelog
   rebased as 19c888675e13
   rebasing 2f2496ddf49d "merge"
-   future parents are 11 and 7
+   future parents are 19c888675e13 and 4c9fbe56a16f
   rebase status stored
    already in destination
    merge against 2f2496ddf49d
      detach base e31216eec445
-    searching for copies back to rev 3
+    searching for copies back to 8a951942e016
     unmatched files in other (from topological common ancestor):
      f2.txt
   resolving manifests

@@ -42,7 +42,7 @@
   summary:     1
   
   $ hg --debug up
-    searching for copies back to rev 1
+    searching for copies back to 1e71731e6fbb
     unmatched files in other:
      b
   resolving manifests
@@ -68,7 +68,7 @@
   summary:     2
   
   $ hg --debug up 'desc(1)'
-    searching for copies back to rev 0
+    searching for copies back to c19d34741b0a
     unmatched files in local (from topological common ancestor):
      b
   resolving manifests
@@ -94,7 +94,7 @@
   summary:     1
   
   $ hg --debug up
-    searching for copies back to rev 1
+    searching for copies back to 1e71731e6fbb
     unmatched files in other:
      b
   resolving manifests

@@ -27,7 +27,7 @@ https://bz.mercurial-scm.org/672
   $ hg ci -m unrelated1 # 2
 
   $ hg merge --debug 'desc(rename)'
-    searching for copies back to rev 1
+    searching for copies back to c12dcd37c90a
     unmatched files in other:
      1a
     all copies found (* = to merge, ! = divergent, % = renamed and deleted):
@@ -55,7 +55,7 @@ https://bz.mercurial-scm.org/672
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
   $ hg merge -y --debug 'desc(unrelated2)'
-    searching for copies back to rev 1
+    searching for copies back to c12dcd37c90a
     unmatched files in local:
      1a
     all copies found (* = to merge, ! = divergent, % = renamed and deleted):
@@ -77,7 +77,7 @@ https://bz.mercurial-scm.org/672
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
   $ hg merge -y --debug 'desc(merge1)'
-    searching for copies back to rev 1
+    searching for copies back to c12dcd37c90a
     unmatched files in other:
      1a
     all copies found (* = to merge, ! = divergent, % = renamed and deleted):

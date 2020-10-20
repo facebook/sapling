@@ -1346,7 +1346,7 @@ def externalparent(repo, state, destancestors):
             "unable to collapse on top of %s, there is more "
             "than one external parent: %s"
         )
-        % (max(destancestors), ", ".join(str(p) for p in sorted(parents)))
+        % (repo[max(destancestors)], ", ".join(str(repo[p]) for p in sorted(parents)))
     )
 
 
@@ -1808,7 +1808,7 @@ def defineparents(repo, rev, destmap, state, skipped, obsskipped):
                 % (repo[rev], unwanteddesc)
             )
 
-    repo.ui.debug(" future parents are %d and %d\n" % tuple(newps))
+    repo.ui.debug(" future parents are %s and %s\n" % tuple(repo[p] for p in newps))
 
     return newps[0], newps[1], base
 

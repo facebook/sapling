@@ -79,7 +79,7 @@ pull and merge from test-a again
   adding file changes
   added 1 changesets with 1 changes to 1 files
   $ hg merge --debug
-    searching for copies back to rev 1
+    searching for copies back to d1e159716d41
   resolving manifests
    branchmerge: True, force: False, partial: False
    ancestor: 96b70246a118, local: 50c3a7e29886+, remote: 40d11a4173a8

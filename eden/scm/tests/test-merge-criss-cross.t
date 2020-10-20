@@ -77,7 +77,7 @@ Criss cross merging
   $ hg merge -v --debug --tool internal:dump 'desc(5)' --config merge.preferancestor='!'
   note: using d1d156401c1b as ancestor of 6373bbfdae1d and e673248094b1
         alternatively, use --config merge.preferancestor=0f6b37dbe527
-    searching for copies back to rev 3
+    searching for copies back to c202c8af058d
     unmatched files in local:
      d2/f4
     all copies found (* = to merge, ! = divergent, % = renamed and deleted):
@@ -148,7 +148,7 @@ Redo merge with merge.preferancestor="*" to enable bid merge
   note: merging 6373bbfdae1d+ and e673248094b1 using bids from ancestors 0f6b37dbe527 and d1d156401c1b
   
   calculating bids for ancestor 0f6b37dbe527
-    searching for copies back to rev 3
+    searching for copies back to c202c8af058d
     unmatched files in local:
      d2/f4
     unmatched files in other:
@@ -169,7 +169,7 @@ Redo merge with merge.preferancestor="*" to enable bid merge
    f2: versions differ -> m
   
   calculating bids for ancestor d1d156401c1b
-    searching for copies back to rev 3
+    searching for copies back to c202c8af058d
     unmatched files in local:
      d2/f4
     all copies found (* = to merge, ! = divergent, % = renamed and deleted):
@@ -227,7 +227,7 @@ The other way around:
   note: merging e673248094b1+ and 6373bbfdae1d using bids from ancestors 0f6b37dbe527 and d1d156401c1b
   
   calculating bids for ancestor 0f6b37dbe527
-    searching for copies back to rev 3
+    searching for copies back to c202c8af058d
     unmatched files in local:
      d1/f3
      d1/f4
@@ -248,7 +248,7 @@ The other way around:
    f2: versions differ -> m
   
   calculating bids for ancestor d1d156401c1b
-    searching for copies back to rev 3
+    searching for copies back to c202c8af058d
     unmatched files in other:
      d2/f4
     all copies found (* = to merge, ! = divergent, % = renamed and deleted):
@@ -338,7 +338,7 @@ Verify how the output looks and how verbose it is:
   note: merging 6373bbfdae1d+ and e673248094b1 using bids from ancestors 0f6b37dbe527 and d1d156401c1b
   
   calculating bids for ancestor 0f6b37dbe527
-    searching for copies back to rev 3
+    searching for copies back to c202c8af058d
     unmatched files in local:
      d2/f4
     unmatched files in other:
@@ -359,7 +359,7 @@ Verify how the output looks and how verbose it is:
    f2: versions differ -> m
   
   calculating bids for ancestor d1d156401c1b
-    searching for copies back to rev 3
+    searching for copies back to c202c8af058d
     unmatched files in local:
      d2/f4
     all copies found (* = to merge, ! = divergent, % = renamed and deleted):
