@@ -409,9 +409,11 @@ class changectx(basectx):
                     self._node = repo.dirstate.p1()
                     return
             except Exception:
-                self._repo.ui.warn(
-                    _("warning: failed to inspect working copy parent\n")
-                )
+                if not getattr(self._repo, "_warnedworkdir", False):
+                    self._repo.ui.warn(
+                        _("warning: failed to inspect working copy parent\n")
+                    )
+                    self._repo._warnedworkdir = True
                 # we failed on our optimization pass
                 # this can happen when dirstate is broken
                 pass

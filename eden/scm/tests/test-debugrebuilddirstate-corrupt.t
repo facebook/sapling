@@ -23,5 +23,3 @@ Deliberately corrupt the dirstate.
   $ dd if=/dev/zero bs=4096 count=1 of=.hg/dirstate 2> /dev/null
   $ hg debugrebuilddirstate
   warning: failed to inspect working copy parent
-  warning: failed to inspect working copy parent
-  warning: failed to inspect working copy parent

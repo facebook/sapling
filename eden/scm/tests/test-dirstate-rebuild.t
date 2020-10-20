@@ -26,8 +26,6 @@ Broken by deleting the tree
   $ rm -rf .hg/treestate
   $ hg debugrebuilddirstate
   warning: failed to inspect working copy parent
-  warning: failed to inspect working copy parent
-  warning: failed to inspect working copy parent
   warning: failed to inspect working copy parent (?)
   $ hg log -r . -T '{desc}\n'
   B
