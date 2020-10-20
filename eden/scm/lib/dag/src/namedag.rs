@@ -40,17 +40,19 @@ use crate::ops::TryClone;
 use crate::segment::SegmentFlags;
 use crate::spanset::SpanSet;
 use crate::Result;
-use indexedlog::multi;
 use parking_lot::RwLock;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::ops::Deref;
-use std::path::Path;
-use std::path::PathBuf;
 use std::sync::Arc;
 
 #[cfg(test)]
 use crate::idmap::IdMapBuildParents;
+
+mod indexedlog_namedag;
+
+pub use indexedlog_namedag::IndexedLogNameDagPath;
+pub use indexedlog_namedag::NameDag;
 
 pub struct AbstractNameDag<I, M, P, S> {
     pub(crate) dag: I,
@@ -70,19 +72,6 @@ pub struct AbstractNameDag<I, M, P, S> {
     state: S,
 }
 
-/// A DAG that uses VertexName instead of ids as vertexes.
-///
-/// A high-level wrapper structure. Combination of [`IdMap`] and [`Dag`].
-/// Maintains consistency of dag and map internally.
-pub type NameDag =
-    AbstractNameDag<IdDag<IndexedLogStore>, IdMap, IndexedLogNameDagPath, NameDagState>;
-
-pub struct NameDagState {
-    /// `MultiLog` controls on-disk metadata.
-    /// `None` for read-only `NameDag`,
-    mlog: Option<multi::MultiLog>,
-}
-
 /// In-memory version of [`NameDag`].
 ///
 /// Does not support loading from or saving to the filesystem.
@@ -91,45 +80,6 @@ pub struct MemNameDag {
     dag: IdDag<InProcessStore>,
     map: MemIdMap,
     snapshot: RwLock<Option<Arc<MemNameDag>>>,
-}
-
-/// Address to on-disk NameDag based on indexedlog.
-#[derive(Debug, Clone)]
-pub struct IndexedLogNameDagPath(pub PathBuf);
-
-impl Open for IndexedLogNameDagPath {
-    type OpenTarget = NameDag;
-
-    fn open(&self) -> Result<Self::OpenTarget> {
-        let path = &self.0;
-        let opts = multi::OpenOptions::from_name_opts(vec![
-            ("idmap2", IdMap::log_open_options()),
-            ("iddag", IndexedLogStore::log_open_options()),
-        ]);
-        let mut mlog = opts.open(path)?;
-        let mut logs = mlog.detach_logs();
-        let dag_log = logs.pop().unwrap();
-        let map_log = logs.pop().unwrap();
-        let map = IdMap::open_from_log(map_log)?;
-        let dag = IdDag::open_from_store(IndexedLogStore::open_from_log(dag_log))?;
-        let state = NameDagState { mlog: Some(mlog) };
-        Ok(AbstractNameDag {
-            dag,
-            map,
-            path: self.clone(),
-            snapshot: Default::default(),
-            pending_heads: Default::default(),
-            state,
-        })
-    }
-}
-
-impl NameDag {
-    pub fn open(path: impl AsRef<Path>) -> Result<Self> {
-        let path = path.as_ref().to_path_buf();
-        let path = IndexedLogNameDagPath(path);
-        path.open()
-    }
 }
 
 impl<IS, M, P, S> DagPersistent for AbstractNameDag<IdDag<IS>, M, P, S>
@@ -222,28 +172,6 @@ where
         new_name_dag.dag.set_new_segment_size(seg_size);
         new_name_dag.add_heads_and_flush(&parents, master_heads, non_master_heads)?;
         *self = new_name_dag;
-        Ok(())
-    }
-}
-
-impl Persist for NameDagState {
-    type Lock = indexedlog::multi::LockGuard;
-
-    fn lock(&mut self) -> Result<Self::Lock> {
-        if self.mlog.is_none() {
-            return bug("MultiLog should be Some for read-write NameDag");
-        }
-        let mlog = self.mlog.as_mut().unwrap();
-        Ok(mlog.lock()?)
-    }
-
-    fn reload(&mut self, _lock: &Self::Lock) -> Result<()> {
-        // mlog does reload internally
-        Ok(())
-    }
-
-    fn persist(&mut self, lock: &Self::Lock) -> Result<()> {
-        self.mlog.as_mut().unwrap().write_meta(&lock)?;
         Ok(())
     }
 }
@@ -354,15 +282,6 @@ where
 
     fn map(&self) -> &M {
         &self.map
-    }
-}
-
-impl TryClone for NameDagState {
-    fn try_clone(&self) -> Result<Self> {
-        Ok(Self {
-            // mlog cannot be cloned.
-            mlog: None,
-        })
     }
 }
 
