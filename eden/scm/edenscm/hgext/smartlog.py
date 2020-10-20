@@ -76,33 +76,8 @@ configitem = registrar.configitem(configtable)
 configitem("smartlog", "collapse-obsolete", default=True)
 
 
-def _drawendinglines(orig, lines, extra, edgemap, seen):
-    # if we are going to have only one single column, draw the missing '|'s
-    # and restore everything to normal. see comment in 'ascii' below for an
-    # example of what will be changed. note: we do not respect 'graphstyle'
-    # but always draw '|' here, for simplicity.
-    if len(seen) == 1 or any(l[0:2] != [" ", " "] for l in lines):
-        # draw '|' from bottom to top in the 1st column to connect to
-        # something, like a '/' in the 2nd column, or a '+' in the 1st column.
-        for line in reversed(lines):
-            if line[0:2] != [" ", " "]:
-                break
-            line[0] = "|"
-        # undo the wrapfunction
-        extensions.unwrapfunction(graphmod, "_drawendinglines", _drawendinglines)
-        # restore the space to '|'
-        for k, v in pycompat.iteritems(edgemap):
-            if v == " ":
-                edgemap[k] = "|"
-    orig(lines, extra, edgemap, seen)
-
-
 def uisetup(ui):
-    # Hide output for fake nodes
     def show(orig, self, ctx, *args):
-        if ctx.node() == "...":
-            self.ui.write("\n\n\n")
-            return
         res = orig(self, ctx, *args)
 
         if commit_info and ctx == self.repo["."]:
@@ -127,30 +102,6 @@ def uisetup(ui):
 
     extensions.wrapfunction(cmdutil.changeset_printer, "_show", show)
     extensions.wrapfunction(cmdutil.changeset_templater, "_show", show)
-
-    def ascii(orig, ui, state, type, char, text, coldata):
-        if type == "F":
-            # the fake node is used to move draft changesets to the 2nd column.
-            # there can be at most one fake node, which should also be at the
-            # top of the graph.
-            # we should not draw the fake node and its edges, so change its
-            # edge style to a space, and return directly.
-            # these are very hacky but it seems to work well and it seems there
-            # is no other easy choice for now.
-            edgemap = state["edges"]
-            for k in pycompat.iterkeys(edgemap):
-                edgemap[k] = " "
-            # also we need to hack _drawendinglines to draw the missing '|'s:
-            #    (before)      (after)
-            #     o draft       o draft
-            #    /             /
-            #                 |
-            #   o             o
-            extensions.wrapfunction(graphmod, "_drawendinglines", _drawendinglines)
-            return
-        orig(ui, state, type, char, text, coldata)
-
-    extensions.wrapfunction(graphmod, "ascii", ascii)
 
 
 templatekeyword = registrar.templatekeyword()
@@ -327,42 +278,6 @@ def getdag(ui, repo, revs, master):
                 reserved.append(prev)
 
     return results, reserved
-
-
-def addfakerev(results, prev):
-    # Fake ctx that we stick in the dag so we can special case it later
-    class fakectx(object):
-        def __init__(self, rev):
-            self._rev = rev
-
-        def node(self):
-            return "..."
-
-        def obsolete(self):
-            return False
-
-        def invisible(self):
-            return False
-
-        def phase(self):
-            return None
-
-        def rev(self):
-            return self._rev
-
-        def files(self):
-            return []
-
-        def extra(self):
-            return {}
-
-        def closesbranch(self):
-            return False
-
-    # append the fake node to occupy the first column
-    rev = results[0][0]
-    fakerev = rev + 1
-    results.insert(0, (fakerev, "F", fakectx(fakerev), [("P", prev)]))
 
 
 def _reposnames(ui):
@@ -624,27 +539,13 @@ def _smartlog(ui, repo, *pats, **opts):
     revdag, reserved = getdag(ui, repo, sorted(revs, reverse=True), masterrev)
     displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
     ui.pager("smartlog")
-    if ui.config("experimental", "graph.renderer") == "legacy":
-        overrides = {}
-        if ui.config("experimental", "graphstyle.grandparent", "2.") == "|":
-            overrides[("experimental", "graphstyle.grandparent")] = "2."
-        with ui.configoverride(overrides, "smartlog"):
-            if reserved:
-                for prev in reserved:
-                    addfakerev(revdag, prev)
-            cmdutil.displaygraph(
-                ui, repo, revdag, displayer, graphmod.asciiedges, None, None
-            )
-    else:
-        cmdutil.rustdisplaygraph(ui, repo, revdag, displayer, reserved=reserved)
+    cmdutil.rustdisplaygraph(ui, repo, revdag, displayer, reserved=reserved)
 
     try:
         with open(repo.localvfs.join("completionhints"), "w+") as f:
             for rev in revdag:
                 commit_hash = rev[2].node()
-                # Skip fakectxt nodes
-                if commit_hash != "...":
-                    f.write(nodemod.short(commit_hash) + "\n")
+                f.write(nodemod.short(commit_hash) + "\n")
     except IOError:
         # No write access. No big deal.
         pass
