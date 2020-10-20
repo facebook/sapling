@@ -9,8 +9,8 @@
 
 #[macro_export]
 macro_rules! delegate {
-    (IdConvert, $type:ty => self.$($t:tt)*) => {
-        impl $crate::ops::IdConvert for $type {
+    {IdConvert { impl $($impl:tt)* } => self.$($t:tt)*} => {
+        impl $($impl)* {
             fn vertex_id(&self, name: $crate::Vertex) -> $crate::Result<$crate::Id> {
                 self.$($t)*.vertex_id(name)
             }
@@ -29,12 +29,20 @@ macro_rules! delegate {
         }
     };
 
-    (PrefixLookup, $type:ty => self.$($t:tt)*) => {
-        impl $crate::ops::PrefixLookup for $type {
+    (IdConvert, $type:ty => self.$($t:tt)*) => {
+        delegate! { IdConvert { impl $crate::ops::IdConvert for $type } => self.$($t)* }
+    };
+
+    {PrefixLookup { impl $($impl:tt)* } => self.$($t:tt)*} => {
+        impl $($impl)* {
             fn vertexes_by_hex_prefix(&self, hex_prefix: &[u8], limit: usize) -> $crate::Result<Vec<$crate::Vertex>> {
                 self.$($t)*.vertexes_by_hex_prefix(hex_prefix, limit)
             }
         }
+    };
+
+    (PrefixLookup, $type:ty => self.$($t:tt)*) => {
+        delegate! { PrefixLookup { impl $crate::ops::PrefixLookup for $type } => self.$($t)* }
     };
 
     (ToIdSet, $type:ty => self.$($t:tt)*) => {

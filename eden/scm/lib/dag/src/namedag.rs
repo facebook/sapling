@@ -35,6 +35,7 @@ use crate::ops::DagPersistent;
 use crate::ops::IdConvert;
 use crate::ops::IdMapSnapshot;
 use crate::ops::Persist;
+use crate::ops::PrefixLookup;
 use crate::ops::ToIdSet;
 use crate::ops::TryClone;
 use crate::segment::SegmentFlags;
@@ -633,7 +634,16 @@ fn extract_ancestor_flag_if_compatible(
     }
 }
 
-delegate!(PrefixLookup | IdConvert, NameDag => self.map());
+delegate! {
+    PrefixLookup {
+        impl<I, M: PrefixLookup, S> PrefixLookup for AbstractNameDag<I, M, S>
+    } => self.map
+}
+delegate! {
+    IdConvert {
+        impl<I, M: IdConvert, S> IdConvert for AbstractNameDag<I, M, S>
+    } => self.map
+}
 delegate!(PrefixLookup | IdConvert, MemNameDag => self.map());
 
 /// Export non-master DAG as parent_names_func on HashMap.
