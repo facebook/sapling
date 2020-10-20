@@ -499,7 +499,7 @@ class changelog(object):
         matched = self.idmap.hexprefixmatch(hexprefix)
         if len(matched) > 1:
             # TODO: Add hints about possible matches.
-            raise error.LookupError(
+            raise error.RepoLookupError(
                 hexprefix, self.indexfile, _("ambiguous identifier")
             )
         elif len(matched) == 1:
@@ -523,6 +523,8 @@ class changelog(object):
                     return False
                 except ValueError:
                     return True
+            except error.RepoLookupError:
+                return False
             except error.RevlogError:
                 return False
             except error.WdirUnsupported:

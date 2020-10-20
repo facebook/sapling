@@ -1193,7 +1193,7 @@ class revlog(object):
         except RevlogError:
             # parsers.c radix tree lookup gave multiple matches
             # fast path: for unfiltered changelog, radix tree is accurate
-            raise LookupError(id, self.indexfile, _("ambiguous identifier"))
+            raise error.RepoLookupError(id, self.indexfile, _("ambiguous identifier"))
             # fall through to slow path that filters hidden revisions
         except (AttributeError, ValueError):
             # we are pure python, or key was too short to search radix tree
@@ -1256,6 +1256,8 @@ class revlog(object):
                     return False
                 except ValueError:
                     return True
+            except error.RepoLookupError:
+                return False
             except error.RevlogError:
                 return False
             except error.WdirUnsupported:
