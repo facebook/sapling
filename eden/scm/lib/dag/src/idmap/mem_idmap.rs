@@ -102,7 +102,7 @@ impl IdMapWrite for MemIdMap {
 impl Persist for MemIdMap {
     type Lock = ();
 
-    fn lock(&self) -> Result<Self::Lock> {
+    fn lock(&mut self) -> Result<Self::Lock> {
         Ok(())
     }
 

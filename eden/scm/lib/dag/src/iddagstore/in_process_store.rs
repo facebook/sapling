@@ -195,7 +195,7 @@ impl IdDagStore for InProcessStore {
 impl Persist for InProcessStore {
     type Lock = ();
 
-    fn lock(&self) -> Result<()> {
+    fn lock(&mut self) -> Result<()> {
         Ok(())
     }
 

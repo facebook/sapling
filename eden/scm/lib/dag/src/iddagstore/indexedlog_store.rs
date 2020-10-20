@@ -231,7 +231,7 @@ impl IdDagStore for IndexedLogStore {
 impl Persist for IndexedLogStore {
     type Lock = File;
 
-    fn lock(&self) -> Result<File> {
+    fn lock(&mut self) -> Result<File> {
         // Take a filesystem lock. The file name 'lock' is taken by indexedlog
         // running on Windows, so we choose another file name here.
         let lock_file = {

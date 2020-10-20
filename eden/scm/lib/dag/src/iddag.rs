@@ -1289,7 +1289,7 @@ impl<Store: IdDagStore + Persist> SyncableIdDag<'_, Store> {
 impl<Store: Persist> Persist for IdDag<Store> {
     type Lock = <Store as Persist>::Lock;
 
-    fn lock(&self) -> Result<Self::Lock> {
+    fn lock(&mut self) -> Result<Self::Lock> {
         self.store.lock()
     }
 

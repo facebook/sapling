@@ -351,7 +351,7 @@ impl IdMapWrite for IdMap {
 impl Persist for IdMap {
     type Lock = File;
 
-    fn lock(&self) -> Result<Self::Lock> {
+    fn lock(&mut self) -> Result<Self::Lock> {
         if self.log.iter_dirty().next().is_some() {
             return programming("lock() must be called without dirty in-memory entries");
         }

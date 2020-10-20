@@ -293,7 +293,7 @@ pub trait Persist {
 
     /// Obtain an exclusive lock for writing.
     /// This should prevent other writers.
-    fn lock(&self) -> Result<Self::Lock>;
+    fn lock(&mut self) -> Result<Self::Lock>;
 
     /// Reload from the source of truth. Drop pending changes.
     ///
