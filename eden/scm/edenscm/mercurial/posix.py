@@ -136,8 +136,8 @@ def _issymlinklockstale(oldinfo, newinfo):
     return not testpid(pid)
 
 
-def makelock(info, pathname):
-    # type: (str, str) -> Optional[int]
+def makelock(info, pathname, checkdeadlock=True):
+    # type: (str, str, bool) -> Optional[int]
     """Try to make a lock at given path. Write info inside it.
 
     Stale non-symlink or symlink locks are removed automatically. Symlink locks
@@ -201,6 +201,10 @@ def makelock(info, pathname):
     #     the flock. So it knows nobody else has the lock. Therefore it can do
     #     the unlink without extra locking.
     dirname = os.path.dirname(pathname)
+    if pathname in _processlocks and checkdeadlock:
+        raise error.ProgrammingError(
+            "deadlock: %s was locked in the same process" % pathname
+        )
     with _locked(dirname or "."):
         # Check and remove stale lock
         try:
@@ -263,6 +267,7 @@ def makelock(info, pathname):
                 fcntl.flock(fd, fcntl.LOCK_NB | fcntl.LOCK_EX)
                 os.write(fd, infobytes)
                 os.rename(tmppath, pathname)
+                _processlocks[pathname] = fd
                 return fd
             except Exception:
                 unlink(tmppath)
@@ -295,9 +300,15 @@ def releaselock(lockfd, pathname):
     # Explicitly unlock. This avoids issues when a
     # forked process inherits the flock.
     assert lockfd is not None
+    fd = _processlocks.get(pathname, None)
+    assert fd == lockfd
     fcntl.flock(lockfd, fcntl.LOCK_UN)
+    del _processlocks[pathname]
     os.close(lockfd)
     os.unlink(pathname)
+
+
+_processlocks = {}  # {path: fd}
 
 
 def islocked(pathname):

@@ -316,8 +316,11 @@ class lock(object):
 
         while not self.held and retry:
             retry -= 1
+            checkdeadlock = not bool(self.parentlock)
             try:
-                self._lockfd = self.vfs.makelock(self._getlockname(), self.f)
+                self._lockfd = self.vfs.makelock(
+                    self._getlockname(), self.f, checkdeadlock=checkdeadlock
+                )
                 self.held = 1
             except (OSError, IOError) as why:
                 # EEXIST: lockfile exists (Windows)

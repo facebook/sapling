@@ -623,8 +623,8 @@ def _cleanuptemplockfiles(dirname, basename):
             pass
 
 
-def makelock(info, pathname):
-    # type: (str, str) -> Optional[int]
+def makelock(info, pathname, checkdeadlock=True):
+    # type: (str, str, bool) -> Optional[int]
     dirname = os.path.dirname(pathname)
     basename = os.path.basename(pathname)
     _cleanuptemplockfiles(dirname, basename)

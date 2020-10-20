@@ -300,10 +300,10 @@ class testlock(unittest.TestCase):
         d = tempfile.mkdtemp(dir=os.getcwd())
         state = teststate(self, d)
 
-        def emulatefrequentlock(*args):
+        def emulatefrequentlock(*args, **kwargs):
             raise OSError(errno.EEXIST, "File exists")
 
-        def emulatefrequentunlock(*args):
+        def emulatefrequentunlock(*args, **kwargs):
             raise OSError(errno.ENOENT, "No such file or directory")
 
         state.vfs.makelock = emulatefrequentlock
