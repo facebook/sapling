@@ -1,3 +1,5 @@
+# coding=utf-8
+
 # Copyright (c) Facebook, Inc. and its affiliates.
 # Copyright (c) Mercurial Contributors.
 #
@@ -139,20 +141,20 @@ sh % "hg annotate a" == r"""
     12: 4d"""
 sh % "hg log -T '{rev} {desc}\\n' -Gp" == r"""
     @  12 commit 4
-    |  diff -r 1cae118c7ed8 -r 58a62bade1c6 a
-    |  --- a/a Thu Jan 01 00:00:00 1970 +0000
-    |  +++ b/a Thu Jan 01 00:00:00 1970 +0000
-    |  @@ -1,1 +1,2 @@
-    |   2b
-    |  +4d
-    |
+    │  diff -r 1cae118c7ed8 -r 58a62bade1c6 a
+    │  --- a/a Thu Jan 01 00:00:00 1970 +0000
+    │  +++ b/a Thu Jan 01 00:00:00 1970 +0000
+    │  @@ -1,1 +1,2 @@
+    │   2b
+    │  +4d
+    │
     o  11 commit 2
-    |  diff -r 84add69aeac0 -r 1cae118c7ed8 a
-    |  --- a/a Thu Jan 01 00:00:00 1970 +0000
-    |  +++ b/a Thu Jan 01 00:00:00 1970 +0000
-    |  @@ -0,0 +1,1 @@
-    |  +2b
-    |
+    │  diff -r 84add69aeac0 -r 1cae118c7ed8 a
+    │  --- a/a Thu Jan 01 00:00:00 1970 +0000
+    │  +++ b/a Thu Jan 01 00:00:00 1970 +0000
+    │  @@ -0,0 +1,1 @@
+    │  +2b
+    │
     o  10 commit 1"""
 
 # Non 1:1 map changes will be ignored:
@@ -288,17 +290,17 @@ sh % "hg commit -m merge"
 sh % "hg bookmark -d m1"
 sh % "hg log -G -T '{rev} {desc} {phase}\\n'" == r"""
     @    25 merge draft
-    |\
-    | o  24 m2 draft
-    | |
-    o |  23 m1 draft
-    |/
+    ├─╮
+    │ o  24 m2 draft
+    │ │
+    o │  23 m1 draft
+    ├─╯
     o  22 b draft
-    |
+    │
     o  21 commit 4 draft
-    |
+    │
     o  18 commit 2 public
-    |
+    │
     o  10 commit 1 public"""
 sh % "echo 2" >> "m1"
 sh % "echo 2" >> "m2"
@@ -559,13 +561,13 @@ sh % "hg absorb -av" | "grep became" == r"""
     a393a58b9a85: became empty and was dropped"""
 sh % "hg log -T '{rev} {desc}\\n' -Gp" == r"""
     @  5 b12
-    |  diff --git a/b b/b
-    |  new file mode 100644
-    |  --- /dev/null
-    |  +++ b/b
-    |  @@ -0,0 +1,1 @@
-    |  +1
-    |
+    │  diff --git a/b b/b
+    │  new file mode 100644
+    │  --- /dev/null
+    │  +++ b/b
+    │  @@ -0,0 +1,1 @@
+    │  +1
+    │
     o  4 a12
        diff --git a/a b/a
        new file mode 100644

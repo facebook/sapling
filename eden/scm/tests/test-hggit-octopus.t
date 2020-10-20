@@ -68,32 +68,32 @@ Load commonly used test logic
   $ cd hgrepo
   $ hg log --graph --style compact
   @    [master]   49ab838a9c6d   2007-01-01 00:00 +0000   test
-  |\     Merge branches 'branch3' and 'branch4'
-  | |
-  | o       772137582d44   2007-01-01 00:00 +0000   test
-  | |\     Merge branches 'branch3' and 'branch4'
-  | | |
-  o | |       605318eb3cbf   2007-01-01 00:00 +0000   test
-  |\ \ \     Merge branches 'branch1' and 'branch2'
-  | | | |
-  | o | |       c37d2773086b   2007-01-01 00:00 +0000   test
-  | |\ \ \     Merge branches 'branch1' and 'branch2'
-  | | | | |
-  o | | | |     e70767a0294a   2007-01-01 00:00 +0000   test
-  | | | | |    add delta
-  | | | | |
-  +-------o  [branch4]   8b150650bbba   2007-01-01 00:00 +0000   test
-  | | | |      add zeta
-  | | | |
-  +-----o  [branch3]   b869fdf3e852   2007-01-01 00:00 +0000   test
-  | | |      add epsilon
-  | | |
-  +---o  [branch2]   328de8a94600   2007-01-01 00:00 +0000   test
-  | |      add gamma
-  | |
-  | o  [branch1]   3bb02b6794dd   2007-01-01 00:00 +0000   test
-  |/     add beta
-  |
+  ├─╮    Merge branches 'branch3' and 'branch4'
+  │ │
+  │ o       772137582d44   2007-01-01 00:00 +0000   test
+  │ ├─╮    Merge branches 'branch3' and 'branch4'
+  │ │ │
+  o │ │       605318eb3cbf   2007-01-01 00:00 +0000   test
+  ├─────╮    Merge branches 'branch1' and 'branch2'
+  │ │ │ │
+  │ │ │ o       c37d2773086b   2007-01-01 00:00 +0000   test
+  │ │ │ ├─╮    Merge branches 'branch1' and 'branch2'
+  │ │ │ │ │
+  o │ │ │ │     e70767a0294a   2007-01-01 00:00 +0000   test
+  │ │ │ │ │    add delta
+  │ │ │ │ │
+  │ │ o │ │  [branch4]   8b150650bbba   2007-01-01 00:00 +0000   test
+  ├───╯ │ │    add zeta
+  │ │   │ │
+  │ o   │ │  [branch3]   b869fdf3e852   2007-01-01 00:00 +0000   test
+  ├─╯   │ │    add epsilon
+  │     │ │
+  │     │ o  [branch2]   328de8a94600   2007-01-01 00:00 +0000   test
+  ├───────╯    add gamma
+  │     │
+  │     o  [branch1]   3bb02b6794dd   2007-01-01 00:00 +0000   test
+  ├─────╯    add beta
+  │
   o     69982ec78c6d   2007-01-01 00:00 +0000   test
        add alpha
   

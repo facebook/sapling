@@ -35,46 +35,46 @@ The warning message changed in Git 1.8.0
 
   $ HGENCODING=utf-8 hg log --graph --debug | grep -v 'phase:' | grep -v ': *author=' | grep -v ': *message='
   @  commit:      3c284d9743de7c02ac66b8b5ce10d39efd38d7bc
-  |  bookmark:    master
-  |  manifest:    ea49f93388380ead5601c8fcbfa187516e7c2ed8
-  |  user:        tést èncödîng <test@example.org>
-  |  date:        Mon Jan 01 00:00:13 2007 +0000
-  |  files+:      delta
-  |  extra:       branch=default
-  |  extra:       committer=test <test@example.org> 1167609613 0
-  |  extra:       convert_revision=51c509c1c7eeb8f0a5b20aa3e894e8823f39171f
-  |  extra:       encoding=latin-1
-  |  extra:       hg-git-rename-source=git
-  |  description:
-  |  add d\xc3\xa9lt\xc3\xa0 (esc)
-  |
-  |
+  │  bookmark:    master
+  │  manifest:    ea49f93388380ead5601c8fcbfa187516e7c2ed8
+  │  user:        tést èncödîng <test@example.org>
+  │  date:        Mon Jan 01 00:00:13 2007 +0000
+  │  files+:      delta
+  │  extra:       branch=default
+  │  extra:       committer=test <test@example.org> 1167609613 0
+  │  extra:       convert_revision=51c509c1c7eeb8f0a5b20aa3e894e8823f39171f
+  │  extra:       encoding=latin-1
+  │  extra:       hg-git-rename-source=git
+  │  description:
+  │  add déltà
+  │
+  │
   o  commit:      727e37c486803fce561d97a80721324febade37e
-  |  manifest:    f580e7da3673c137370da2b931a1dee83590d7b4
-  |  user:        t\xc3\xa9st \xc3\xa8nc\xc3\xb6d\xc3\xaeng <test@example.org> (esc)
-  |  date:        Mon Jan 01 00:00:12 2007 +0000
-  |  files+:      gamma
-  |  extra:       branch=default
-  |  extra:       committer=test <test@example.org> 1167609612 0
-  |  extra:       convert_revision=bd576458238cbda49ffcfbafef5242e103f1bc24
-  |  extra:       hg-git-rename-source=git
-  |  description:
-  |  add g\xc3\xa4mm\xc3\xa2 (esc)
-  |
-  |
+  │  manifest:    f580e7da3673c137370da2b931a1dee83590d7b4
+  │  user:        tést èncödîng <test@example.org>
+  │  date:        Mon Jan 01 00:00:12 2007 +0000
+  │  files+:      gamma
+  │  extra:       branch=default
+  │  extra:       committer=test <test@example.org> 1167609612 0
+  │  extra:       convert_revision=bd576458238cbda49ffcfbafef5242e103f1bc24
+  │  extra:       hg-git-rename-source=git
+  │  description:
+  │  add gämmâ
+  │
+  │
   o  commit:      5408f831a4d1a1d6ecccdddbe04c5a8b888a33c1
-  |  manifest:    f0bd6fbafbaebe4bb59c35108428f6fce152431d
-  |  user:        t\xc3\xa9st \xc3\xa8nc\xc3\xb6d\xc3\xaeng <test@example.org> (esc)
-  |  date:        Mon Jan 01 00:00:11 2007 +0000
-  |  files+:      beta
-  |  extra:       branch=default
-  |  extra:       committer=test <test@example.org> 1167609611 0
-  |  extra:       convert_revision=7a7e86fc1b24db03109c9fe5da28b352de59ce90
-  |  extra:       hg-git-rename-source=git
-  |  description:
-  |  add beta
-  |
-  |
+  │  manifest:    f0bd6fbafbaebe4bb59c35108428f6fce152431d
+  │  user:        tést èncödîng <test@example.org>
+  │  date:        Mon Jan 01 00:00:11 2007 +0000
+  │  files+:      beta
+  │  extra:       branch=default
+  │  extra:       committer=test <test@example.org> 1167609611 0
+  │  extra:       convert_revision=7a7e86fc1b24db03109c9fe5da28b352de59ce90
+  │  extra:       hg-git-rename-source=git
+  │  description:
+  │  add beta
+  │
+  │
   o  commit:      b1884a2b1964e4881e235f33485aebc34ee61b90
      manifest:    8b8a0e87dfd7a0706c0524afa8ba67e20544cbf0
      user:        test <test@example.org>

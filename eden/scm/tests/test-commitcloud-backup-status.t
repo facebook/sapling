@@ -96,15 +96,15 @@ Check backup status of commits
 Check smartlog output
   $ hg smartlog -T '{desc}\n' --config infinitepushbackup.autobackup=no
   o  Public changeset 2
-  |
-  | @  Backup pending changeset
-  | |
-  | o  Not backed up changeset
-  | |
-  | o  Backed up changeset 2
-  | |
-  | o  Backed up changeset
-  |/
+  │
+  │ @  Backup pending changeset
+  │ │
+  │ o  Not backed up changeset
+  │ │
+  │ o  Backed up changeset 2
+  │ │
+  │ o  Backed up changeset
+  ├─╯
   o  Public changeset
   
   note: background backup is currently disabled so your commits are not being backed up.
@@ -115,15 +115,15 @@ Check smartlog output
 Check smartlog summary can be suppressed
   $ hg smartlog -T '{desc}\n' --config infinitepushbackup.enablestatus=no
   o  Public changeset 2
-  |
-  | @  Backup pending changeset
-  | |
-  | o  Not backed up changeset
-  | |
-  | o  Backed up changeset 2
-  | |
-  | o  Backed up changeset
-  |/
+  │
+  │ @  Backup pending changeset
+  │ │
+  │ o  Not backed up changeset
+  │ │
+  │ o  Backed up changeset 2
+  │ │
+  │ o  Backed up changeset
+  ├─╯
   o  Public changeset
   
 Check smartlog summary with multiple unbacked up changesets
@@ -134,17 +134,17 @@ Check smartlog summary with multiple unbacked up changesets
   $ hg commit -d "$commit_time 0" -m "Not backed up changeset 2"
   $ hg smartlog -T '{desc}\n' --config infinitepushbackup.autobackup=yes
   o  Public changeset 2
-  |
-  | @  Not backed up changeset 2
-  | |
-  | | o  Backup pending changeset
-  | | |
-  | | o  Not backed up changeset
-  | | |
-  | | o  Backed up changeset 2
-  | |/
-  | o  Backed up changeset
-  |/
+  │
+  │ @  Not backed up changeset 2
+  │ │
+  │ │ o  Backup pending changeset
+  │ │ │
+  │ │ o  Not backed up changeset
+  │ │ │
+  │ │ o  Backed up changeset 2
+  │ ├─╯
+  │ o  Backed up changeset
+  ├─╯
   o  Public changeset
   
   note: 2 changesets are not backed up.
@@ -190,19 +190,19 @@ Test for infinitepushbackup disable
 Test sl when infinitepushbackup is disabled but disabling has been expired / not expired
   $ hg sl -T '{desc}\n'
   @  Not backed up changeset 3
-  |
+  │
   o  Public changeset 2
-  |
-  | o  Not backed up changeset 2
-  | |
-  | | o  Backup pending changeset
-  | | |
-  | | o  Not backed up changeset
-  | | |
-  | | o  Backed up changeset 2
-  | |/
-  | o  Backed up changeset
-  |/
+  │
+  │ o  Not backed up changeset 2
+  │ │
+  │ │ o  Backup pending changeset
+  │ │ │
+  │ │ o  Not backed up changeset
+  │ │ │
+  │ │ o  Backed up changeset 2
+  │ ├─╯
+  │ o  Backed up changeset
+  ├─╯
   o  Public changeset
   
   note: background backup is currently disabled until * (glob)
@@ -215,19 +215,19 @@ Test sl when infinitepushbackup is disabled but disabling has been expired / not
 Advance time so that the disable has expired
   $ hg sl --config fakedate.date="1452175000 0" -T '{desc}\n'
   @  Not backed up changeset 3
-  |
+  │
   o  Public changeset 2
-  |
-  | o  Not backed up changeset 2
-  | |
-  | | o  Backup pending changeset
-  | | |
-  | | o  Not backed up changeset
-  | | |
-  | | o  Backed up changeset 2
-  | |/
-  | o  Backed up changeset
-  |/
+  │
+  │ o  Not backed up changeset 2
+  │ │
+  │ │ o  Backup pending changeset
+  │ │ │
+  │ │ o  Not backed up changeset
+  │ │ │
+  │ │ o  Backed up changeset 2
+  │ ├─╯
+  │ o  Backed up changeset
+  ├─╯
   o  Public changeset
   
   note: 4 changesets are not backed up.
@@ -259,13 +259,13 @@ show as backed up if '--hidden' is passed.
   Not backed up changeset 3 (amended)
   $ hg sl -T '{desc}\n'
   @  Not backed up changeset 3 (amended)
-  |
+  │
   o  Public changeset 2
-  |
-  | o  Not backed up changeset 2
-  | |
-  | o  Backed up changeset
-  |/
+  │
+  │ o  Not backed up changeset 2
+  │ │
+  │ o  Backed up changeset
+  ├─╯
   o  Public changeset
   
   note: background backup is currently disabled until Thu Jan 07 13:00:00 2016 +0000
@@ -278,21 +278,21 @@ show as backed up if '--hidden' is passed.
 (3, 4, 5 do not have successors. They show up as 'o' not 'x' with --hidden)
   $ hg sl -T '{desc}\n' --hidden
   @  Not backed up changeset 3 (amended)
-  |
-  | x  Not backed up changeset 3
-  |/
+  │
+  │ x  Not backed up changeset 3
+  ├─╯
   o  Public changeset 2
-  |
-  | o  Not backed up changeset 2
-  | |
-  | | o  Backup pending changeset
-  | | |
-  | | o  Not backed up changeset
-  | | |
-  | | o  Backed up changeset 2
-  | |/
-  | o  Backed up changeset
-  |/
+  │
+  │ o  Not backed up changeset 2
+  │ │
+  │ │ o  Backup pending changeset
+  │ │ │
+  │ │ o  Not backed up changeset
+  │ │ │
+  │ │ o  Backed up changeset 2
+  │ ├─╯
+  │ o  Backed up changeset
+  ├─╯
   o  Public changeset
   
   note: background backup is currently disabled until Thu Jan 07 13:00:00 2016 +0000

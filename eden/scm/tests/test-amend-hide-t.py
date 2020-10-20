@@ -1,3 +1,5 @@
+# coding=utf-8
+
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
@@ -40,13 +42,13 @@ sh % "hg update 0" == "1 files updated, 0 files merged, 0 files removed, 0 files
 
 sh % "hg log -G -T '{rev} {desc} {bookmarks}\\n'" == r"""
     o  4 E
-    |
-    | o  3 D
-    | |
-    o |  2 C cat
-    |/
+    │
+    │ o  3 D
+    │ │
+    o │  2 C cat
+    ├─╯
     o  1 B dog
-    |
+    │
     @  0 A"""
 
 # Hide a single commit
@@ -57,11 +59,11 @@ sh % "hg hide 3" == r"""
     hint[hint-ack]: use 'hg hint --ack undo' to silence these hints"""
 sh % "hg log -G -T '{rev} {desc} {bookmarks}\\n'" == r"""
     o  4 E
-    |
+    │
     o  2 C cat
-    |
+    │
     o  1 B dog
-    |
+    │
     @  0 A"""
 
 # Hide multiple commits with bookmarks on them, hide wc parent
@@ -84,20 +86,20 @@ sh % "hg log -G -T '{rev} {desc} {bookmarks}\\n'" == "@  0 A"
 sh % "hg unhide 2"
 sh % "hg log -G -T '{rev} {desc} {bookmarks}\\n'" == r"""
     o  2 C
-    |
+    │
     o  1 B
-    |
+    │
     @  0 A"""
 sh % "hg unhide -r 4 -r 3"
 sh % "hg log -G -T '{rev} {desc} {bookmarks}\\n'" == r"""
     o  4 E
-    |
-    | o  3 D
-    | |
-    o |  2 C
-    |/
+    │
+    │ o  3 D
+    │ │
+    o │  2 C
+    ├─╯
     o  1 B
-    |
+    │
     @  0 A"""
 
 # hg hide --cleanup tests
@@ -111,17 +113,17 @@ sh % "hg amend --no-rebase -m E2 -d '0 0'" == r"""
     hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints"""
 sh % "hg log -G -T '{rev} {desc} {bookmarks}\\n'" == r"""
     @  6 E2
-    |
-    | o  5 F
-    | |
-    | x  4 E
-    |/
-    | o  3 D
-    | |
-    o |  2 C
-    |/
+    │
+    │ o  5 F
+    │ │
+    │ x  4 E
+    ├─╯
+    │ o  3 D
+    │ │
+    o │  2 C
+    ├─╯
     o  1 B
-    |
+    │
     o  0 A"""
 sh % "hg hide -c" == r"""
     abort: nothing to hide
@@ -133,19 +135,19 @@ sh % "hg --config 'extensions.rebase=' rebase -s 5 -d 6" == 'rebasing 1f7934a9b4
 sh % "hg book -r 5 alive --hidden"
 sh % "hg log -G -T '{rev} {desc} {bookmarks}\\n'" == r"""
     o  7 F
-    |
+    │
     @  6 E2
-    |
-    | x  5 F alive
-    | |
-    | x  4 E
-    |/
-    | o  3 D
-    | |
-    o |  2 C
-    |/
+    │
+    │ x  5 F alive
+    │ │
+    │ x  4 E
+    ├─╯
+    │ o  3 D
+    │ │
+    o │  2 C
+    ├─╯
     o  1 B
-    |
+    │
     o  0 A"""
 sh % "hg hide --cleanup" == r"""
     hiding commit 78d2dca436b2 "E"
@@ -157,15 +159,15 @@ sh % "hg hide --cleanup" == r"""
     hint[hint-ack]: use 'hg hint --ack undo' to silence these hints"""
 sh % "hg log -G -T '{rev} {desc} {bookmarks}\\n'" == r"""
     o  7 F
-    |
+    │
     @  6 E2
-    |
-    | o  3 D
-    | |
-    o |  2 C
-    |/
+    │
+    │ o  3 D
+    │ │
+    o │  2 C
+    ├─╯
     o  1 B
-    |
+    │
     o  0 A"""
 # Hiding the head bookmark of a stack hides the stack.
 sh % "hg book -r 3 somebookmark"
@@ -178,13 +180,13 @@ sh % "hg hide -B somebookmark" == r"""
     hint[hint-ack]: use 'hg hint --ack undo' to silence these hints"""
 sh % "hg log -G -T '{rev} {desc} {bookmarks}\\n'" == r"""
     o  7 F
-    |
+    │
     @  6 E2
-    |
+    │
     o  2 C
-    |
+    │
     o  1 B
-    |
+    │
     o  0 A"""
 # Hiding a bookmark in the middle of a stack just deletes the bookmark.
 sh % "hg book -r 2 stackmidbookmark"
@@ -193,11 +195,11 @@ sh % "hg hide -B stackmidbookmark" == r"""
     1 bookmark removed"""
 sh % "hg log -G -T '{rev} {desc} {bookmarks}\\n'" == r"""
     o  7 F
-    |
+    │
     @  6 E2
-    |
+    │
     o  2 C
-    |
+    │
     o  1 B
-    |
+    │
     o  0 A"""

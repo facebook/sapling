@@ -20,30 +20,30 @@
 log before edit
   $ hg log --graph
   @  commit:      652413bf663e
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     f
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     f
+  │
   o  commit:      e860deea161a
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     e
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     e
+  │
   o  commit:      055a42cdd887
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     d
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     d
+  │
   o  commit:      177f92b77385
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     c
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     c
+  │
   o  commit:      d2ae7f538514
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     b
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     b
+  │
   o  commit:      cb9a9f314b8b
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
@@ -109,30 +109,30 @@ rules should end up in .hg/histedit-last-edit.txt:
 log after edit
   $ hg log --graph
   @  commit:      07114f51870f
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     d
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     d
+  │
   o  commit:      8ade9693061e
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     f
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     f
+  │
   o  commit:      d8249471110a
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     e
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     e
+  │
   o  commit:      177f92b77385
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     c
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     c
+  │
   o  commit:      d2ae7f538514
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     b
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     b
+  │
   o  commit:      cb9a9f314b8b
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
@@ -150,30 +150,30 @@ put things back
 
   $ hg log --graph
   @  commit:      7eca9b5b1148
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     f
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     f
+  │
   o  commit:      915da888f2de
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     e
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     e
+  │
   o  commit:      10517e47bbbb
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     d
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     d
+  │
   o  commit:      177f92b77385
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     c
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     c
+  │
   o  commit:      d2ae7f538514
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     b
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     b
+  │
   o  commit:      cb9a9f314b8b
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
@@ -190,30 +190,30 @@ slightly different this time
   > EOF
   $ hg log --graph
   @  commit:      38b92f448761
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     c
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     c
+  │
   o  commit:      de71b079d9ce
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     e
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     e
+  │
   o  commit:      be9ae3a309c6
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     f
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     f
+  │
   o  commit:      799205341b6b
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     d
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     d
+  │
   o  commit:      d2ae7f538514
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     b
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     b
+  │
   o  commit:      cb9a9f314b8b
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
@@ -229,40 +229,40 @@ keep prevents stripping dead revs
   > EOF
   $ hg log --graph
   @  commit:      803ef1c6fcfd
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     e
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     e
+  │
   o  commit:      ece0b8d93dda
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     c
-  |
-  | x  commit:      38b92f448761
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     c
-  | |
-  | x  commit:      de71b079d9ce
-  |/   user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     e
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     c
+  │
+  │ x  commit:      38b92f448761
+  │ │  user:        test
+  │ │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │ │  summary:     c
+  │ │
+  │ x  commit:      de71b079d9ce
+  ├─╯  user:        test
+  │    date:        Thu Jan 01 00:00:00 1970 +0000
+  │    summary:     e
+  │
   o  commit:      be9ae3a309c6
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     f
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     f
+  │
   o  commit:      799205341b6b
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     d
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     d
+  │
   o  commit:      d2ae7f538514
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     b
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     b
+  │
   o  commit:      cb9a9f314b8b
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
@@ -278,40 +278,40 @@ try with --rev
   (only use listed changesets)
   $ hg log --graph
   @  commit:      803ef1c6fcfd
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     e
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     e
+  │
   o  commit:      ece0b8d93dda
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     c
-  |
-  | x  commit:      38b92f448761
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     c
-  | |
-  | x  commit:      de71b079d9ce
-  |/   user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     e
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     c
+  │
+  │ x  commit:      38b92f448761
+  │ │  user:        test
+  │ │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │ │  summary:     c
+  │ │
+  │ x  commit:      de71b079d9ce
+  ├─╯  user:        test
+  │    date:        Thu Jan 01 00:00:00 1970 +0000
+  │    summary:     e
+  │
   o  commit:      be9ae3a309c6
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     f
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     f
+  │
   o  commit:      799205341b6b
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     d
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     d
+  │
   o  commit:      d2ae7f538514
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     b
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     b
+  │
   o  commit:      cb9a9f314b8b
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
@@ -359,14 +359,14 @@ should also work if a commit message is missing
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log --graph
   @  commit:      bd22688093b3
-  |  user:        Robert Altman <robert.altman@telventDTN.com>
-  |  date:        Mon Nov 28 16:40:04 2011 +0000
-  |  summary:     Update file.
-  |
+  │  user:        Robert Altman <robert.altman@telventDTN.com>
+  │  date:        Mon Nov 28 16:40:04 2011 +0000
+  │  summary:     Update file.
+  │
   o  commit:      3b3e956f9171
-  |  user:        Robert Altman <robert.altman@telventDTN.com>
-  |  date:        Mon Nov 28 16:37:57 2011 +0000
-  |
+  │  user:        Robert Altman <robert.altman@telventDTN.com>
+  │  date:        Mon Nov 28 16:37:57 2011 +0000
+  │
   o  commit:      141947992243
      user:        Robert Altman <robert.altman@telventDTN.com>
      date:        Mon Nov 28 16:35:28 2011 +0000

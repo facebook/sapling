@@ -1,3 +1,5 @@
+# coding=utf-8
+
 # Copyright (c) Facebook, Inc. and its affiliates.
 # Copyright (c) Mercurial Contributors.
 #
@@ -59,15 +61,15 @@ sh % "cd a1"
 
 sh % "tglogp" == r"""
     @  3225f3ea730a draft 'F'
-    |
-    | o  ae36e8e3dfd7 draft 'E'
-    | |
-    | o  46b37eabc604 draft 'D'
-    |/
-    | o  965c486023db draft 'C'
-    | |
-    | o  27547f69f254 draft 'B'
-    |/
+    │
+    │ o  ae36e8e3dfd7 draft 'E'
+    │ │
+    │ o  46b37eabc604 draft 'D'
+    ├─╯
+    │ o  965c486023db draft 'C'
+    │ │
+    │ o  27547f69f254 draft 'B'
+    ├─╯
     o  4a2df7238c3b draft 'A'"""
 sh % "hg rebase -s 1 -d 4 --keep" == r"""
     rebasing 27547f69f254 "B"
@@ -90,19 +92,19 @@ sh % "hg rebase --continue" == r'''
 
 sh % "tglogp" == r"""
     o  d2d25e26288e draft 'C'
-    |
+    │
     o  45396c49d53b draft 'B'
-    |
-    | @  3225f3ea730a draft 'F'
-    | |
-    o |  ae36e8e3dfd7 draft 'E'
-    | |
-    o |  46b37eabc604 draft 'D'
-    |/
-    | o  965c486023db draft 'C'
-    | |
-    | o  27547f69f254 draft 'B'
-    |/
+    │
+    │ @  3225f3ea730a draft 'F'
+    │ │
+    o │  ae36e8e3dfd7 draft 'E'
+    │ │
+    o │  46b37eabc604 draft 'D'
+    ├─╯
+    │ o  965c486023db draft 'C'
+    │ │
+    │ o  27547f69f254 draft 'B'
+    ├─╯
     o  4a2df7238c3b draft 'A'"""
 sh % "cd .."
 
@@ -114,15 +116,15 @@ sh % "cd a2"
 
 sh % "tglogp" == r"""
     @  3225f3ea730a draft 'F'
-    |
-    | o  ae36e8e3dfd7 draft 'E'
-    | |
-    | o  46b37eabc604 draft 'D'
-    |/
-    | o  965c486023db draft 'C'
-    | |
-    | o  27547f69f254 draft 'B'
-    |/
+    │
+    │ o  ae36e8e3dfd7 draft 'E'
+    │ │
+    │ o  46b37eabc604 draft 'D'
+    ├─╯
+    │ o  965c486023db draft 'C'
+    │ │
+    │ o  27547f69f254 draft 'B'
+    ├─╯
     o  4a2df7238c3b draft 'A'"""
 sh % "hg rebase -s 5 -d 4" == r"""
     rebasing 3225f3ea730a "F"
@@ -142,15 +144,15 @@ sh % "hg rebase --continue" == 'rebasing 3225f3ea730a "F"'
 
 sh % "tglogp" == r"""
     @  530bc6058bd0 draft 'F'
-    |
+    │
     o  ae36e8e3dfd7 draft 'E'
-    |
+    │
     o  46b37eabc604 draft 'D'
-    |
-    | o  965c486023db draft 'C'
-    | |
-    | o  27547f69f254 draft 'B'
-    |/
+    │
+    │ o  965c486023db draft 'C'
+    │ │
+    │ o  27547f69f254 draft 'B'
+    ├─╯
     o  4a2df7238c3b draft 'A'"""
 
 sh % "cd .."

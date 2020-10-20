@@ -101,7 +101,7 @@ Restart mononoke
 
   $ tglogpnr
   @  14961831bd3a public 'add b'  default/master_bookmark
-  |
+  │
   o  ac82d8b1f7c4 public 'add a' master_bookmark
   
 
@@ -123,7 +123,7 @@ Restart mononoke and disable redaction verification
 
   $ tglogpnr
   @  14961831bd3a public 'add b'  default/master_bookmark
-  |
+  │
   o  ac82d8b1f7c4 public 'add a' master_bookmark
   
 

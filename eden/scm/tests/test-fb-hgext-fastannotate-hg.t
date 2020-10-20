@@ -187,31 +187,31 @@ annotate after merge with -l
 
   $ hg log -Gp -T '{node}' -r '3086dbafde1ce745abfc8d2d367847280aabae9d..desc(mergeb)'
   @    64afcdf8e29e063c635be123d8d2fb160af00f7e
-  |\
-  | o  5fbdc1152d97597717021ad9e063061b200f146bdiff --git a/b b/b
-  | |  --- a/b
-  | |  +++ b/b
-  | |  @@ -1,3 +1,6 @@
-  | |   a
-  | |   a
-  | |   a
-  | |  +b4
-  | |  +c
-  | |  +b5
-  | |
-  o |  37ec9f5c3d1f99572d7075971cb4876e2139b52fdiff --git a/b b/b
-  |/   --- a/b
-  |    +++ b/b
-  |    @@ -1,3 +1,6 @@
-  |     a
-  |     a
-  |     a
-  |    +b4
-  |    +b5
-  |    +b6
-  |
+  ├─╮
+  │ o  5fbdc1152d97597717021ad9e063061b200f146bdiff --git a/b b/b
+  │ │  --- a/b
+  │ │  +++ b/b
+  │ │  @@ -1,3 +1,6 @@
+  │ │   a
+  │ │   a
+  │ │   a
+  │ │  +b4
+  │ │  +c
+  │ │  +b5
+  │ │
+  o │  37ec9f5c3d1f99572d7075971cb4876e2139b52fdiff --git a/b b/b
+  ├─╯  --- a/b
+  │    +++ b/b
+  │    @@ -1,3 +1,6 @@
+  │     a
+  │     a
+  │     a
+  │    +b4
+  │    +b5
+  │    +b6
+  │
   o  3086dbafde1ce745abfc8d2d367847280aabae9ddiff --git a/a b/b
-  |  copy from a
+  │  copy from a
   ~  copy to b
   
 
@@ -273,36 +273,36 @@ annotate after rename merge with -l
   :    -a (?)
   :    -a (?)
   @    6284bb6c38fef984a929862a53bbc71ce9eafa81diff --git a/b b/b
-  |\   --- a/b
-  | :  +++ b/b
-  | :  @@ -1,3 +1,7 @@
-  | :   a
-  | :   z
-  | :   a
-  | :  +b4
-  | :  +c
-  | :  +b5
-  | :  +d
-  | :
-  o :  b80e3e32f75a6a67cd4ac85496a11511e9112816diff --git a/a b/b
-  :/   copy from a
-  :    copy to b
-  :    --- a/a
-  :    +++ b/b
-  :    @@ -1,3 +1,3 @@
-  :     a
-  :    -a
-  :    +z
-  :     a
-  :
+  ├─╮  --- a/b
+  │ ╷  +++ b/b
+  │ ╷  @@ -1,3 +1,7 @@
+  │ ╷   a
+  │ ╷   z
+  │ ╷   a
+  │ ╷  +b4
+  │ ╷  +c
+  │ ╷  +b5
+  │ ╷  +d
+  │ ╷
+  o ╷  b80e3e32f75a6a67cd4ac85496a11511e9112816diff --git a/a b/b
+  ├─╯  copy from a
+  │    copy to b
+  │    --- a/a
+  │    +++ b/b
+  │    @@ -1,3 +1,3 @@
+  │     a
+  │    -a
+  │    +z
+  │     a
+  │
   o  762f04898e6684ff713415f7b8a8d53d33f96c92diff --git a/a b/a
-  |  --- a/a
-  |  +++ b/a
-  |  @@ -1,1 +1,3 @@
-  |   a
-  |  +a
-  |  +a
-  |
+  │  --- a/a
+  │  +++ b/a
+  │  @@ -1,1 +1,3 @@
+  │   a
+  │  +a
+  │  +a
+  │
   o  8435f90966e442695d2ded29fdade2bac5ad8065diff --git a/a b/a
      new file mode 100644
      --- /dev/null
@@ -690,25 +690,25 @@ create history with a filerev whose linkrev points to another branch
   $ echo W >> a
   $ hg log -G
   @  commit:      072f1e8df249
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     contentC
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     contentC
+  │
   o  commit:      ff38df03cc4b
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     contentB
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     contentB
+  │
   o  commit:      62aaf3f6fc06
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     unrelated
-  |
-  | o  commit:      fd27c222e3e6
-  |/   user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     contentB
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     unrelated
+  │
+  │ o  commit:      fd27c222e3e6
+  ├─╯  user:        test
+  │    date:        Thu Jan 01 00:00:00 1970 +0000
+  │    summary:     contentB
+  │
   o  commit:      f0932f74827e
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000

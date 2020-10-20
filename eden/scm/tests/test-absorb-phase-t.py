@@ -1,3 +1,5 @@
+# coding=utf-8
+
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
@@ -32,7 +34,7 @@ sh % "hg absorb -aq"
 
 sh % "hg log -G -T '{desc} {phase}'" == r"""
     @  C draft
-    |
+    │
     o  B draft
-    |
+    │
     o  A public"""

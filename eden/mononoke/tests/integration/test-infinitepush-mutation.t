@@ -71,9 +71,9 @@ Do initial infinitepush of a small stack
   $ hg commit -Aqm B1
   $ tglogp
   @  f99c737e05b5 draft 'B1'
-  |
+  │
   o  9b5a540873ab draft 'A1'
-  |
+  │
   o  df4f53cec30a public 'base'
   
   $ hgmn push ssh://user@dummy/repo -r . --bundle-store --allow-anon
@@ -91,9 +91,9 @@ Amend the bottom commit
   [a24671] B1
   $ tglogp
   @  a24671c3bce2 draft 'B1'
-  |
+  │
   o  a8543df036f1 draft 'A2'
-  |
+  │
   o  df4f53cec30a public 'base'
   
   $ hgmn push ssh://user@dummy/repo -r . --bundle-store --allow-anon
@@ -117,9 +117,9 @@ Pull the amended stack to the other repo
   added 2 changesets with 0 changes to 0 files
   $ tglogp
   o  a24671c3bce2 draft 'B1'
-  |
+  │
   o  a8543df036f1 draft 'A2'
-  |
+  │
   o  df4f53cec30a public 'base'
   
 
@@ -156,13 +156,13 @@ Pull the amended stack to the other repo.
   added 2 changesets with 0 changes to 0 files
   $ tglogm
   o  6473983c899c 'B1'
-  |
+  │
   o  5326b832c149 'A3'
-  |
-  | x  a24671c3bce2 'B1'  (Rewritten using rebase into 6473983c899c)
-  | |
-  | x  a8543df036f1 'A2'  (Rewritten using amend into 5326b832c149)
-  |/
+  │
+  │ x  a24671c3bce2 'B1'  (Rewritten using rebase into 6473983c899c)
+  │ │
+  │ x  a8543df036f1 'A2'  (Rewritten using amend into 5326b832c149)
+  ├─╯
   o  df4f53cec30a 'base'
   
 
@@ -186,9 +186,9 @@ Do some more complicated mutations
   [853e5b] B1
   $ tglogm
   @  853e5ba9bd35 'B1'
-  |
+  │
   o  cdf849fe4126 'A3'
-  |
+  │
   o  df4f53cec30a 'base'
   
   $ hgmn push ssh://user@dummy/repo -r . --bundle-store --allow-anon
@@ -206,16 +206,16 @@ Pull the modified stack to the other repo.
   added 2 changesets with 0 changes to 0 files
   $ tglogm
   o  853e5ba9bd35 'B1'
-  |
+  │
   o  cdf849fe4126 'A3'
-  |
-  | x  6473983c899c 'B1'  (Rewritten using rebase into 853e5ba9bd35)
-  | |
-  | x  5326b832c149 'A3'  (Rewritten using fold into cdf849fe4126)
-  |/
-  | x  a24671c3bce2 'B1'  (Rewritten using rebase into 6473983c899c)
-  | |
-  | x  a8543df036f1 'A2'  (Rewritten using amend into 5326b832c149)
-  |/
+  │
+  │ x  6473983c899c 'B1'  (Rewritten using rebase into 853e5ba9bd35)
+  │ │
+  │ x  5326b832c149 'A3'  (Rewritten using fold into cdf849fe4126)
+  ├─╯
+  │ x  a24671c3bce2 'B1'  (Rewritten using rebase into 6473983c899c)
+  │ │
+  │ x  a8543df036f1 'A2'  (Rewritten using amend into 5326b832c149)
+  ├─╯
   o  df4f53cec30a 'base'
   

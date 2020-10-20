@@ -32,19 +32,19 @@
 
   $ hg log -G -T '{desc} {bookmarks}'
   o  E
-  |
+  │
   o  D
-  |
-  | o  F BOOK-F
-  | |
-  | o  E BOOK-E
-  | |
-  | o  D BOOK-D
-  | |
-  | o  C BOOK-C
-  | |
-  o |  B
-  |/
+  │
+  │ o  F BOOK-F
+  │ │
+  │ o  E BOOK-E
+  │ │
+  │ o  D BOOK-D
+  │ │
+  │ o  C BOOK-C
+  │ │
+  o │  B
+  ├─╯
   o  A
   
 With --keep, bookmark should move
@@ -56,19 +56,19 @@ With --keep, bookmark should move
   note: rebase of 69a34c08022a created no changes to commit
   $ hg log -G -T '{desc} {bookmarks}'
   o  E BOOK-D BOOK-E
-  |
+  │
   o  D
-  |
-  | o  F BOOK-F
-  | |
-  | o  E
-  | |
-  | o  D
-  | |
-  | o  C BOOK-C
-  | |
-  o |  B
-  |/
+  │
+  │ o  F BOOK-F
+  │ │
+  │ o  E
+  │ │
+  │ o  D
+  │ │
+  │ o  C BOOK-C
+  │ │
+  o │  B
+  ├─╯
   o  A
   
 Move D and E back for the next test
@@ -90,15 +90,15 @@ still introduced by an ancestor of changeset on B-NEW. In the below case,
   rebasing 6b2aeab91270 "F" (BOOK-F)
   $ hg log -G -T '{desc} {bookmarks}'
   o  F BOOK-F
-  |
+  │
   o  C BOOK-C BOOK-D BOOK-E
-  |
+  │
   o  E
-  |
+  │
   o  D
-  |
+  │
   o  B
-  |
+  │
   o  A
   
 Merge and its ancestors all become empty
@@ -139,13 +139,13 @@ Merge and its ancestors all become empty
 
   $ hg log -G -T '{desc} {bookmarks}'
   o  H BOOK-C BOOK-D BOOK-E H
-  |
+  │
   o  D
-  |
+  │
   o  C
-  |
+  │
   o  B
-  |
+  │
   o  A
   
 Part of ancestors of a merge become empty
@@ -189,18 +189,18 @@ Part of ancestors of a merge become empty
 
   $ hg log -G -T '{desc} {bookmarks}'
   o    G BOOK-G
-  |\
-  | o  D BOOK-D BOOK-F
-  | |
-  o |  E BOOK-E
-  |/
+  ├─╮
+  │ o  D BOOK-D BOOK-F
+  │ │
+  o │  E BOOK-E
+  ├─╯
   o  H BOOK-C
-  |
+  │
   o  F
-  |
+  │
   o  C
-  |
+  │
   o  B
-  |
+  │
   o  A
   

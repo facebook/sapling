@@ -41,9 +41,9 @@ Create remote changes
   $ mkcommit untrackedremotecommit
   $ printdag
   @  untrackedremotecommit |  |
-  |
-  | o  trackedremotecommit | bookmarkonremote |
-  |/
+  │
+  │ o  trackedremotecommit | bookmarkonremote |
+  ├─╯
   o  root |  |
   
 
@@ -53,18 +53,18 @@ Create local changes and checkout tracking bookmark
   $ mkcommit localcommit
   $ printdag
   @  localcommit | bmtrackingremote |
-  |
+  │
   o  root |  | default/bookmarkonremote
   
 Pull remote changes and rebase local changes with tracked bookmark onto them
   $ hg pull -q --rebase
   $ printdag
   @  localcommit | bmtrackingremote |
-  |
-  | o  untrackedremotecommit |  |
-  | |
-  o |  trackedremotecommit |  | default/bookmarkonremote
-  |/
+  │
+  │ o  untrackedremotecommit |  |
+  │ │
+  o │  trackedremotecommit |  | default/bookmarkonremote
+  ├─╯
   o  root |  |
   
 Tests 'hg pull --rebase' defaults to original (rebase->pullrebase) behaviour when using non-tracking bookmark
@@ -74,9 +74,9 @@ Tests 'hg pull --rebase' defaults to original (rebase->pullrebase) behaviour whe
   $ mkcommit localcommit
   $ printdag
   @  localcommit | bmnottracking |
-  |
-  | o  untrackedremotecommit |  |
-  |/
+  │
+  │ o  untrackedremotecommit |  |
+  ├─╯
   o  root |  |
   
   $ hg pull --rebase
@@ -92,11 +92,11 @@ Tests 'hg pull --rebase' defaults to original (rebase->pullrebase) behaviour whe
   rebasing 6a7c7fb59c1e "localcommit" (bmnottracking)
   $ printdag
   @  localcommit | bmnottracking |
-  |
-  | o  trackedremotecommit |  | default/bookmarkonremote
-  | |
-  o |  untrackedremotecommit |  |
-  |/
+  │
+  │ o  trackedremotecommit |  | default/bookmarkonremote
+  │ │
+  o │  untrackedremotecommit |  |
+  ├─╯
   o  root |  |
   
 Tests the behavior of a pull followed by a pull --rebase
@@ -167,17 +167,17 @@ Test pull with --rebase and --tool
   $ mkcommit somelocalchanges
   $ printdag
   @  somelocalchanges | tracking2 |
-  |
+  │
   o  between_pull |  | default/bookmarkonremote
-  |
+  │
   o  foo |  |
-  |
-  | o  localcommit | bmnottracking tracking |
-  | |
-  o |  trackedremotecommit |  |
-  | |
-  | o  untrackedremotecommit |  | public/4557926d216642d06949776e29c30bb2a54e7b6d
-  |/
+  │
+  │ o  localcommit | bmnottracking tracking |
+  │ │
+  o │  trackedremotecommit |  |
+  │ │
+  │ o  untrackedremotecommit |  | public/4557926d216642d06949776e29c30bb2a54e7b6d
+  ├─╯
   o  root |  |
   
   $ hg pull --rebase --tool internal:union
@@ -191,19 +191,19 @@ Test pull with --rebase and --tool
   merging editedbyboth
   $ printdag
   @  somelocalchanges | tracking2 |
-  |
+  │
   o  remotecommit |  | default/bookmarkonremote
-  |
+  │
   o  between_pull |  |
-  |
+  │
   o  foo |  |
-  |
-  | o  localcommit | bmnottracking tracking |
-  | |
-  o |  trackedremotecommit |  |
-  | |
-  | o  untrackedremotecommit |  | public/4557926d216642d06949776e29c30bb2a54e7b6d
-  |/
+  │
+  │ o  localcommit | bmnottracking tracking |
+  │ │
+  o │  trackedremotecommit |  |
+  │ │
+  │ o  untrackedremotecommit |  | public/4557926d216642d06949776e29c30bb2a54e7b6d
+  ├─╯
   o  root |  |
   
   $ cat editedbyboth

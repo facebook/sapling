@@ -21,9 +21,9 @@ Set up
 Test that hg pull --rebase aborts without --dest
   $ hg log -G --all -T '{node|short} {bookmarks} {remotenames}'
   @  083f922fc4a9  default/three
-  |
+  │
   o  301d76bdc3ae  default/two
-  |
+  │
   o  8f0162e483d0  default/one
   
   $ hg up -q default/one
@@ -70,11 +70,11 @@ Test that setting a defaultdest allows --update and --rebase to work
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G --all -T '{node|short} {bookmarks} {remotenames}'
   o  5413b62180b7 bm
-  |
+  │
   o  083f922fc4a9  default/three
-  |
+  │
   @  301d76bdc3ae  default/two
-  |
+  │
   o  8f0162e483d0  default/one
   
   $ echo d > d
@@ -86,13 +86,13 @@ Test that setting a defaultdest allows --update and --rebase to work
   rebasing 50f3f60b4841 "d"
   $ hg log -G --all -T '{node|short} {bookmarks} {remotenames}'
   @  ba0f83735c95
-  |
-  | o  5413b62180b7 bm
-  |/
+  │
+  │ o  5413b62180b7 bm
+  ├─╯
   o  083f922fc4a9  default/three
-  |
+  │
   o  301d76bdc3ae  default/two
-  |
+  │
   o  8f0162e483d0  default/one
   
 Test that hg pull --rebase also works with a --tool argument
@@ -110,15 +110,15 @@ Test that hg pull --rebase also works with a --tool argument
   merging d
   $ hg log -G --all -T '{node|short} {bookmarks} {remotenames}'
   @  d6553cf01770
-  |
+  │
   o  e8aa3bc9f3f0  default/three
-  |
-  | o  5413b62180b7 bm
-  |/
+  │
+  │ o  5413b62180b7 bm
+  ├─╯
   o  083f922fc4a9
-  |
+  │
   o  301d76bdc3ae  default/two
-  |
+  │
   o  8f0162e483d0  default/one
   
   $ cat d

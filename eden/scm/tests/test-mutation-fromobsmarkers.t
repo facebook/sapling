@@ -52,17 +52,17 @@ The successors and predecessors information should be correct.
   $ hg unhide $B
   $ tglogm
   o  11164ffef7a9 'O'
-  |
+  │
   o  e1beb503e4fb 'G'
-  |
-  | x  917a077edb8d 'B'  (Rewritten using rewrite into 69a19cab35b2) (Rewritten using split into e1beb503e4fb, 11164ffef7a9)
-  | |
-  | | o  69a19cab35b2 'N'
-  | | |
-  o---+  847007ced9a7 'F'
-   / /
-  x /  ac2f7407182b 'A'  (Rewritten using rewrite into 69a19cab35b2) (Rewritten using rewrite into 847007ced9a7)
-  |/
+  │
+  │ x  917a077edb8d 'B'  (Rewritten using rewrite into 69a19cab35b2) (Rewritten using split into e1beb503e4fb, 11164ffef7a9)
+  │ │
+  │ │ o  69a19cab35b2 'N'
+  │ │ │
+  o │ │  847007ced9a7 'F'
+  ├───╯
+  │ x  ac2f7407182b 'A'  (Rewritten using rewrite into 69a19cab35b2) (Rewritten using rewrite into 847007ced9a7)
+  ├─╯
   o  48b9aae0607f 'Z'
   
   $ hg debugmutation -r $O

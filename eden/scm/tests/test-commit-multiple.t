@@ -35,11 +35,11 @@ commit bug fixes on bug fix branch
   $ hg ci -Am"fix 2"
   $ hg log -G --template="$template"
   @  fix 2  [default]
-  |
+  │
   o  fix 1  [default]
-  |
+  │
   o  feature 2  [default]
-  |
+  │
   o  feature 1  [default]
   
 transplant bug fixes onto release branch
@@ -51,15 +51,15 @@ transplant bug fixes onto release branch
   grafting a53b02101490 "fix 2"
   $ hg log -G --template="$template"
   @  fix 2  [default]
-  |
+  │
   o  fix 1  [default]
-  |
-  | o  fix 2  [default]
-  | |
-  | o  fix 1  [default]
-  | |
-  | o  feature 2  [default]
-  |/
+  │
+  │ o  fix 2  [default]
+  │ │
+  │ o  fix 1  [default]
+  │ │
+  │ o  feature 2  [default]
+  ├─╯
   o  feature 1  [default]
   
   $ hg status

@@ -94,11 +94,11 @@ Make a push from the client
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ log
   @  client push [public:a8078509f8d1]
-  |
+  │
   o  server commit [public:bb4844f92c89]
-  |
-  | x  client push [draft:772868146114]
-  |/
+  │
+  │ x  client push [draft:772868146114]
+  ├─╯
   o  initial [public:2bb9d20e471c]
   
 Apply a bundle on the second server via the command line
@@ -165,15 +165,15 @@ Push a stack
   $ mkcommit 'stack push 2'
   $ log
   @  stack push 2 [draft:b01ae7689fd2]
-  |
+  │
   o  stack push 1 [draft:c661726b7d93]
-  |
+  │
   o  client push [public:a8078509f8d1]
-  |
+  │
   o  server commit [public:bb4844f92c89]
-  |
-  | x  client push [draft:772868146114]
-  |/
+  │
+  │ x  client push [draft:772868146114]
+  ├─╯
   o  initial [public:2bb9d20e471c]
   
   $ hg log -r '.^::.' -T '{node}\n'
@@ -192,13 +192,13 @@ Apply stack
   $ hg unbundle $TESTTMP/bundle --config pushrebase.commitdatesfile=$TESTTMP/commitdatesfile
   $ log
   o  stack push 2 [public:143d91ad57b2]
-  |
+  │
   o  stack push 1 [public:b5e2b8071144]
-  |
+  │
   o  client push [public:a8078509f8d1]
-  |
+  │
   @  server commit [public:bb4844f92c89]
-  |
+  │
   o  initial [public:2bb9d20e471c]
   
   $ hg log -r 143d91ad57b2

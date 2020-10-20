@@ -37,7 +37,7 @@ Add a submodule (gitlink) and move it to a different spot:
   $ cd ../gitrepo
 
   $ git submodule add ../gitsubmodule
-  Cloning into '$TESTTMP/gitrepo/gitsubmodule'...
+  Cloning into * (glob)
   done.
   $ fn_git_commit -m 'add submodule'
   $ sed -e 's/path = gitsubmodule/path = gitsubmodule2/' .gitmodules > .gitmodules-new
@@ -70,7 +70,7 @@ Rename a file elsewhere and replace it with a submodule:
 
   $ git mv gamma gamma-new
   $ git submodule add ../gitsubmodule gamma 2>&1
-  Cloning into '$TESTTMP/gitrepo/gamma'...
+  Cloning into * (glob)
   done.
   $ fn_git_commit -m 'rename and add submodule'
 
@@ -94,167 +94,167 @@ Remove the submodule and rename the file back:
   $ hg book master -q
   $ hg log -p --graph --template "{node} {desc|firstline}\n{join(extras, ' ')}\n\n"
   @  144790f182a8d92e4134a20b0f8698854a9638b1 remove submodule and rename back
-  |  branch=default convert_revision=50d116676a308b7c22935137d944e725d2296f2a hg-git-rename-source=git
-  |
-  |  diff --git a/.gitmodules b/.gitmodules
-  |  --- a/.gitmodules
-  |  +++ b/.gitmodules
-  |  @@ -1,6 +1,3 @@
-  |   [submodule "gitsubmodule"]
-  |   	path = gitsubmodule2
-  |   	url = ../gitsubmodule
-  |  -[submodule "gamma"]
-  |  -	path = gamma
-  |  -	url = ../gitsubmodule
-  |  diff --git a/gamma-new b/gamma
-  |  rename from gamma-new
-  |  rename to gamma
-  |
+  │  branch=default convert_revision=50d116676a308b7c22935137d944e725d2296f2a hg-git-rename-source=git
+  │
+  │  diff --git a/.gitmodules b/.gitmodules
+  │  --- a/.gitmodules
+  │  +++ b/.gitmodules
+  │  @@ -1,6 +1,3 @@
+  │   [submodule "gitsubmodule"]
+  │   	path = gitsubmodule2
+  │   	url = ../gitsubmodule
+  │  -[submodule "gamma"]
+  │  -	path = gamma
+  │  -	url = ../gitsubmodule
+  │  diff --git a/gamma-new b/gamma
+  │  rename from gamma-new
+  │  rename to gamma
+  │
   o  f49a0c6fd69faeac5e247b5b37b8e7ce1b443e04 rename and add submodule
-  |  branch=default convert_revision=59fb8e82ea18f79eab99196f588e8948089c134f hg-git-rename-source=git
-  |
-  |  diff --git a/.gitmodules b/.gitmodules
-  |  --- a/.gitmodules
-  |  +++ b/.gitmodules
-  |  @@ -1,3 +1,6 @@
-  |   [submodule "gitsubmodule"]
-  |   	path = gitsubmodule2
-  |   	url = ../gitsubmodule
-  |  +[submodule "gamma"]
-  |  +	path = gamma
-  |  +	url = ../gitsubmodule
-  |  diff --git a/gamma b/gamma-new
-  |  rename from gamma
-  |  rename to gamma-new
-  |
+  │  branch=default convert_revision=59fb8e82ea18f79eab99196f588e8948089c134f hg-git-rename-source=git
+  │
+  │  diff --git a/.gitmodules b/.gitmodules
+  │  --- a/.gitmodules
+  │  +++ b/.gitmodules
+  │  @@ -1,3 +1,6 @@
+  │   [submodule "gitsubmodule"]
+  │   	path = gitsubmodule2
+  │   	url = ../gitsubmodule
+  │  +[submodule "gamma"]
+  │  +	path = gamma
+  │  +	url = ../gitsubmodule
+  │  diff --git a/gamma b/gamma-new
+  │  rename from gamma
+  │  rename to gamma-new
+  │
   o  2d38f1131e0beb3b73451640bb27e0df3cf3684e beta renamed back
-  |  branch=default convert_revision=f95497455dfa891b4cd9b524007eb9514c3ab654 hg-git-rename-source=git
-  |
-  |  diff --git a/beta b/beta
-  |  old mode 120000
-  |  new mode 100644
-  |  --- a/beta
-  |  +++ b/beta
-  |  @@ -1,1 +1,12 @@
-  |  -beta-new
-  |  \ No newline at end of file
-  |  +1
-  |  +2
-  |  +3
-  |  +4
-  |  +5
-  |  +6
-  |  +7
-  |  +8
-  |  +9
-  |  +10
-  |  +11
-  |  +12
-  |  diff --git a/beta-new b/beta-new
-  |  deleted file mode 100644
-  |  --- a/beta-new
-  |  +++ /dev/null
-  |  @@ -1,12 +0,0 @@
-  |  -1
-  |  -2
-  |  -3
-  |  -4
-  |  -5
-  |  -6
-  |  -7
-  |  -8
-  |  -9
-  |  -10
-  |  -11
-  |  -12
-  |
+  │  branch=default convert_revision=f95497455dfa891b4cd9b524007eb9514c3ab654 hg-git-rename-source=git
+  │
+  │  diff --git a/beta b/beta
+  │  old mode 120000
+  │  new mode 100644
+  │  --- a/beta
+  │  +++ b/beta
+  │  @@ -1,1 +1,12 @@
+  │  -beta-new
+  │  \ No newline at end of file
+  │  +1
+  │  +2
+  │  +3
+  │  +4
+  │  +5
+  │  +6
+  │  +7
+  │  +8
+  │  +9
+  │  +10
+  │  +11
+  │  +12
+  │  diff --git a/beta-new b/beta-new
+  │  deleted file mode 100644
+  │  --- a/beta-new
+  │  +++ /dev/null
+  │  @@ -1,12 +0,0 @@
+  │  -1
+  │  -2
+  │  -3
+  │  -4
+  │  -5
+  │  -6
+  │  -7
+  │  -8
+  │  -9
+  │  -10
+  │  -11
+  │  -12
+  │
   o  024a72621ccff3ace020e03019c323d49c718be8 beta renamed
-  |  branch=default convert_revision=055f482277da6cd3dd37c7093d06983bad68f782 hg-git-rename-source=git
-  |
-  |  diff --git a/beta b/beta
-  |  old mode 100644
-  |  new mode 120000
-  |  --- a/beta
-  |  +++ b/beta
-  |  @@ -1,12 +1,1 @@
-  |  -1
-  |  -2
-  |  -3
-  |  -4
-  |  -5
-  |  -6
-  |  -7
-  |  -8
-  |  -9
-  |  -10
-  |  -11
-  |  -12
-  |  +beta-new
-  |  \ No newline at end of file
-  |  diff --git a/beta b/beta-new
-  |  copy from beta
-  |  copy to beta-new
-  |
+  │  branch=default convert_revision=055f482277da6cd3dd37c7093d06983bad68f782 hg-git-rename-source=git
+  │
+  │  diff --git a/beta b/beta
+  │  old mode 100644
+  │  new mode 120000
+  │  --- a/beta
+  │  +++ b/beta
+  │  @@ -1,12 +1,1 @@
+  │  -1
+  │  -2
+  │  -3
+  │  -4
+  │  -5
+  │  -6
+  │  -7
+  │  -8
+  │  -9
+  │  -10
+  │  -11
+  │  -12
+  │  +beta-new
+  │  \ No newline at end of file
+  │  diff --git a/beta b/beta-new
+  │  copy from beta
+  │  copy to beta-new
+  │
   o  b48620502e8b403e9d92f8ff353ee139e4e22bf8 move submodule
-  |  branch=default convert_revision=d7f31298f27df8a9226eddb1e4feb96922c46fa5 hg-git-rename-source=git
-  |
-  |  diff --git a/.gitmodules b/.gitmodules
-  |  --- a/.gitmodules
-  |  +++ b/.gitmodules
-  |  @@ -1,3 +1,3 @@
-  |   [submodule "gitsubmodule"]
-  |  -	path = gitsubmodule
-  |  +	path = gitsubmodule2
-  |   	url = ../gitsubmodule
-  |
+  │  branch=default convert_revision=d7f31298f27df8a9226eddb1e4feb96922c46fa5 hg-git-rename-source=git
+  │
+  │  diff --git a/.gitmodules b/.gitmodules
+  │  --- a/.gitmodules
+  │  +++ b/.gitmodules
+  │  @@ -1,3 +1,3 @@
+  │   [submodule "gitsubmodule"]
+  │  -	path = gitsubmodule
+  │  +	path = gitsubmodule2
+  │   	url = ../gitsubmodule
+  │
   o  ea94d2142cbfdaceacb94bedfe29add896c49e47 add submodule
-  |  branch=default convert_revision=c610256cb6959852d9e70d01902a06726317affc hg-git-rename-source=git
-  |
-  |  diff --git a/.gitmodules b/.gitmodules
-  |  new file mode 100644
-  |  --- /dev/null
-  |  +++ b/.gitmodules
-  |  @@ -0,0 +1,3 @@
-  |  +[submodule "gitsubmodule"]
-  |  +	path = gitsubmodule
-  |  +	url = ../gitsubmodule
-  |
+  │  branch=default convert_revision=c610256cb6959852d9e70d01902a06726317affc hg-git-rename-source=git
+  │
+  │  diff --git a/.gitmodules b/.gitmodules
+  │  new file mode 100644
+  │  --- /dev/null
+  │  +++ b/.gitmodules
+  │  @@ -0,0 +1,3 @@
+  │  +[submodule "gitsubmodule"]
+  │  +	path = gitsubmodule
+  │  +	url = ../gitsubmodule
+  │
   o  e3e6b2083b5cc4382f611b16d23df93a40a19a00 gamma
-  |  branch=default convert_revision=e1348449e0c3a417b086ed60fc13f068d4aa8b26 hg-git-rename-source=git
-  |
-  |  diff --git a/beta b/beta
-  |  --- a/beta
-  |  +++ b/beta
-  |  @@ -9,3 +9,4 @@
-  |   9
-  |   10
-  |   11
-  |  +12
-  |  diff --git a/beta b/gamma
-  |  copy from beta
-  |  copy to gamma
-  |  --- a/beta
-  |  +++ b/gamma
-  |  @@ -9,3 +9,4 @@
-  |   9
-  |   10
-  |   11
-  |  +13
-  |
+  │  branch=default convert_revision=e1348449e0c3a417b086ed60fc13f068d4aa8b26 hg-git-rename-source=git
+  │
+  │  diff --git a/beta b/beta
+  │  --- a/beta
+  │  +++ b/beta
+  │  @@ -9,3 +9,4 @@
+  │   9
+  │   10
+  │   11
+  │  +12
+  │  diff --git a/beta b/gamma
+  │  copy from beta
+  │  copy to gamma
+  │  --- a/beta
+  │  +++ b/gamma
+  │  @@ -9,3 +9,4 @@
+  │   9
+  │   10
+  │   11
+  │  +13
+  │
   o  80be639891f44172f321d555badcbc3f9d11fa87 beta
-  |  branch=default convert_revision=cc83241f39927232f690d370894960b0d1943a0e hg-git-rename-source=git
-  |
-  |  diff --git a/alpha b/beta
-  |  rename from alpha
-  |  rename to beta
-  |  --- a/alpha
-  |  +++ b/beta
-  |  @@ -8,3 +8,4 @@
-  |   8
-  |   9
-  |   10
-  |  +11
-  |
+  │  branch=default convert_revision=cc83241f39927232f690d370894960b0d1943a0e hg-git-rename-source=git
+  │
+  │  diff --git a/alpha b/beta
+  │  rename from alpha
+  │  rename to beta
+  │  --- a/alpha
+  │  +++ b/beta
+  │  @@ -8,3 +8,4 @@
+  │   8
+  │   9
+  │   10
+  │  +11
+  │
   o  ff861f77355d7a6aba082ff95f2bc716cf192980 alpha
      branch=default convert_revision=938bb65bb322eb4a3558bec4cdc8a680c4d1794c hg-git-rename-source=git
   

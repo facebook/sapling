@@ -37,14 +37,14 @@ Add a commit with multiple extra fields
   $ fn_hg_commitextra --field zzzzzzz=datazzz --field aaaaaaa=dataaaa
   $ hg log --graph --template "{node} {desc|firstline}\n{join(extras, ' ')}\n\n"
   @  f85ec44c632713d6fa812de1bf18a530e1dd6551
-  |  aaaaaaa=dataaaa branch=default zzzzzzz=datazzz
-  |
+  │  aaaaaaa=dataaaa branch=default zzzzzzz=datazzz
+  │
   o  f3c80cf66a137d4862c82e4df65a7c952aad36af b
-  |  branch=default rebase_source=26b80d272c9a2d4455e269005f4f250adc4c05b8
-  |
+  │  branch=default rebase_source=26b80d272c9a2d4455e269005f4f250adc4c05b8
+  │
   o  907635da058b4bd98a9594843a3bb7c61baed082 c
-  |  branch=default
-  |
+  │  branch=default
+  │
   o  5b699970cd13b5f95f6af5f32781d80cfa2e813b a
      branch=default convert_revision=ad4fd0de4cb839a7d2d1c2497f8a2c230a2726e9 hg-git-rename-source=git
   
@@ -71,14 +71,14 @@ Test some nutty filenames
   $ fn_hg_commit -m 'test filename with arrow 2'
   $ hg log --graph --template "{node} {desc|firstline}\n{join(extras, ' ')}\n\n" -l 3 --config "experimental.graphstyle.missing=|"
   @  decbc0c79131e24c0f01a480f068af7f0957872e test filename with arrow 2
-  |  branch=default
-  |
+  │  branch=default
+  │
   o  30e7f0dfaf1aa9bc81fe995415900b76021df952 test filename with arrow
-  |  branch=default
-  |
+  │  branch=default
+  │
   o  256d56838c39ba60599eb69373038b88403ba2e4
-  |  bbbbbbb=databbb branch=default yyyyyyy=datayyy
-  |
+  │  bbbbbbb=databbb branch=default yyyyyyy=datayyy
+  ~
   $ hg push -r b2 -r b3
   pushing to $TESTTMP/gitrepo
   searching for changes
@@ -167,26 +167,26 @@ lets you do that, though.
   $ hg up -q 'desc("arrow 2")'
   $ hg log --graph --template "{node} {desc|firstline}\n{join(extras, ' ')}\n\n"
   @  193fc708cfa16eb942a0dde3017d52c6743a43ae test filename with arrow 2
-  |  branch=default convert_revision=fb079f663e17f780a63855d7116b0b4f867b2371
-  |
+  │  branch=default convert_revision=fb079f663e17f780a63855d7116b0b4f867b2371
+  │
   o  1cc3fc4cf203075484b5dbb141d4eb91bd205dc1 test filename with arrow
-  |  branch=default convert_revision=e16d81cc6d51456f445ddcd159b25361473d659c
-  |
+  │  branch=default convert_revision=e16d81cc6d51456f445ddcd159b25361473d659c
+  │
   o  f1aecb2ae22f40a9369287f87d5f987eeae1f25e
-  |  bbbbbbb=databbb branch=default convert_revision=acd860f8f036a235465c7d5e003ce9f28383b5f2 yyyyyyy=datayyy
-  |
-  | o  0d9e73e512aa715e73f9f37be9c4dec4224d2615 extra commit
-  |/   GIT0-zzz%3Azzz=data%3Azzz GIT1-aaa%3Aaaa=data%3Aaaa branch=default convert_revision=0f7316e5c44bf7af9199e8c728938ba3daf058cb hgaaa=dataaaa hgzzz=datazzz
-  |
+  │  bbbbbbb=databbb branch=default convert_revision=acd860f8f036a235465c7d5e003ce9f28383b5f2 yyyyyyy=datayyy
+  │
+  │ o  0d9e73e512aa715e73f9f37be9c4dec4224d2615 extra commit
+  ├─╯  GIT0-zzz%3Azzz=data%3Azzz GIT1-aaa%3Aaaa=data%3Aaaa branch=default convert_revision=0f7316e5c44bf7af9199e8c728938ba3daf058cb hgaaa=dataaaa hgzzz=datazzz
+  │
   o  f9541591947764cf1c54ec8331b0618b710807bc
-  |  aaaaaaa=dataaaa branch=default convert_revision=f554f3e7146694b2197fd3c853eef527ba264ae7 zzzzzzz=datazzz
-  |
+  │  aaaaaaa=dataaaa branch=default convert_revision=f554f3e7146694b2197fd3c853eef527ba264ae7 zzzzzzz=datazzz
+  │
   o  4e11085eb947c77f6de15ee7a64d2752cb12b399 b
-  |  branch=default convert_revision=2ab6104c03f0d6e0885470a7cc1bcd9b26f70bad rebase_source=26b80d272c9a2d4455e269005f4f250adc4c05b8
-  |
+  │  branch=default convert_revision=2ab6104c03f0d6e0885470a7cc1bcd9b26f70bad rebase_source=26b80d272c9a2d4455e269005f4f250adc4c05b8
+  │
   o  1ec8735a89979fc3cb5e8edf1c03d6b61de3176b c
-  |  branch=default convert_revision=8728d16f575a12b85c99ddf5763972c3740515d9 hg-git-rename-source=git
-  |
+  │  branch=default convert_revision=8728d16f575a12b85c99ddf5763972c3740515d9 hg-git-rename-source=git
+  │
   o  5b699970cd13b5f95f6af5f32781d80cfa2e813b a
      branch=default convert_revision=ad4fd0de4cb839a7d2d1c2497f8a2c230a2726e9 hg-git-rename-source=git
   

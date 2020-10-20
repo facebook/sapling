@@ -1,3 +1,7 @@
+# coding=utf-8
+
+# coding=utf-8
+
 # Copyright (c) Facebook, Inc. and its affiliates.
 # Copyright (c) Mercurial Contributors.
 #
@@ -62,25 +66,25 @@ sh % "hg rebase --continue" == r"""
 
 sh % "hg log -G -T '{rev}:{node|short} {desc}\\n'" == r"""
     o  14:721b8da0a708 H
-    |
+    │
     o  13:9d65695ec3c2 G
-    |
-    | o  12:fc52970345e8 D
-    | |
-    | o  11:eac96551b107 B
-    | |
-    o |  10:21c8397a5d68 E
-    |/
-    | o  6:bd5548558fcf C
-    | |
-    | | o  5:aeba276fcb7d F
-    | | |
-    | x |  4:c1e6b162678d B
-    | | |
-    o | |  3:f424eb6a8c01 Z
-    | | |
-    +---x  2:de008c61a447 E
-    | |
-    | o  1:21a6c4502885 A
-    |/
+    │
+    │ o  12:fc52970345e8 D
+    │ │
+    │ o  11:eac96551b107 B
+    │ │
+    o │  10:21c8397a5d68 E
+    ├─╯
+    │ o  6:bd5548558fcf C
+    │ │
+    │ │ o  5:aeba276fcb7d F
+    │ │ │
+    │ x │  4:c1e6b162678d B
+    │ │ │
+    o │ │  3:f424eb6a8c01 Z
+    │ │ │
+    │ │ x  2:de008c61a447 E
+    ├───╯
+    │ o  1:21a6c4502885 A
+    ├─╯
     o  0:b41ce7760717 R"""

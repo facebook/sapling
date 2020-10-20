@@ -21,22 +21,22 @@ Basic amend
   $ hg amend
   $ hg log -p -G --hidden -T '{node|short} {desc}\n'
   @  be169c7e8dbe B
-  |  diff --git a/B b/B
-  |  new file mode 100644
-  |  --- /dev/null
-  |  +++ b/B
-  |  @@ -0,0 +1,1 @@
-  |  +B2
-  |
-  | x  112478962961 B
-  |/   diff --git a/B b/B
-  |    new file mode 100644
-  |    --- /dev/null
-  |    +++ b/B
-  |    @@ -0,0 +1,1 @@
-  |    +B
-  |    \ No newline at end of file
-  |
+  │  diff --git a/B b/B
+  │  new file mode 100644
+  │  --- /dev/null
+  │  +++ b/B
+  │  @@ -0,0 +1,1 @@
+  │  +B2
+  │
+  │ x  112478962961 B
+  ├─╯  diff --git a/B b/B
+  │    new file mode 100644
+  │    --- /dev/null
+  │    +++ b/B
+  │    @@ -0,0 +1,1 @@
+  │    +B
+  │    \ No newline at end of file
+  │
   o  426bada5c675 A
      diff --git a/A b/A
      new file mode 100644
@@ -137,11 +137,11 @@ Amend in the middle of a stack
 
   $ hg log -T '{node|short} {desc}\n' -G
   @  be169c7e8dbe B
-  |
-  | o  26805aba1e60 C
-  | |
-  | x  112478962961 B
-  |/
+  │
+  │ o  26805aba1e60 C
+  │ │
+  │ x  112478962961 B
+  ├─╯
   o  426bada5c675 A
   
 Cannot amend public changeset
@@ -165,9 +165,9 @@ Amend a merge changeset
   $ hg amend -m FOO
   $ hg log -G -T '{desc}\n'
   @    FOO
-  |\
-  | o  B
-  |
+  ├─╮
+  │ o  B
+  │
   o  A
   
 

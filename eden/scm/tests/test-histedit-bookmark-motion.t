@@ -21,36 +21,36 @@
   $ hg book -r tip five
   $ hg log --graph
   @  commit:      652413bf663e
-  |  bookmark:    five
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     f
-  |
+  │  bookmark:    five
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     f
+  │
   o  commit:      e860deea161a
-  |  bookmark:    four
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     e
-  |
+  │  bookmark:    four
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     e
+  │
   o  commit:      055a42cdd887
-  |  bookmark:    three
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     d
-  |
+  │  bookmark:    three
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     d
+  │
   o  commit:      177f92b77385
-  |  bookmark:    also-two
-  |  bookmark:    two
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     c
-  |
+  │  bookmark:    also-two
+  │  bookmark:    two
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     c
+  │
   o  commit:      d2ae7f538514
-  |  bookmark:    will-move-backwards
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     b
-  |
+  │  bookmark:    will-move-backwards
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     b
+  │
   o  commit:      cb9a9f314b8b
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
@@ -89,25 +89,25 @@
   [1]
   $ hg log --graph
   @  commit:      cacdfd884a93
-  |  bookmark:    five
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     f
-  |
+  │  bookmark:    five
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     f
+  │
   o  commit:      59d9f330561f
-  |  bookmark:    four
-  |  bookmark:    three
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     d
-  |
+  │  bookmark:    four
+  │  bookmark:    three
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     d
+  │
   o  commit:      b346ab9a313d
-  |  bookmark:    also-two
-  |  bookmark:    two
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     c
-  |
+  │  bookmark:    also-two
+  │  bookmark:    two
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     c
+  │
   o  commit:      cb9a9f314b8b
      bookmark:    will-move-backwards
      user:        test
@@ -147,25 +147,25 @@ likely the useful signal.
 
   $ hg log --graph
   @  commit:      c04e50810e4b
-  |  bookmark:    five
-  |  bookmark:    four
-  |  bookmark:    three
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     d
-  |
+  │  bookmark:    five
+  │  bookmark:    four
+  │  bookmark:    three
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     d
+  │
   o  commit:      c13eb81022ca
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     f
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     f
+  │
   o  commit:      b346ab9a313d
-  |  bookmark:    also-two
-  |  bookmark:    two
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     c
-  |
+  │  bookmark:    also-two
+  │  bookmark:    two
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     c
+  │
   o  commit:      cb9a9f314b8b
      bookmark:    will-move-backwards
      user:        test

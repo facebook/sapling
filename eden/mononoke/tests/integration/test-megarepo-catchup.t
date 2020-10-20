@@ -65,42 +65,42 @@
 
   $ hg log -G
   @  commit:      f910c17f2a72
-  |  bookmark:    small_repo_head_bookmark
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     change files
-  |
+  │  bookmark:    small_repo_head_bookmark
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     change files
+  │
   o  commit:      83c4b83dcc37
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     move files in small repo
-  |
-  | o  commit:      b662a919caea
-  | |  bookmark:    head_bookmark
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     new commit in large repo
-  | |
-  | o  commit:      8eb1f2b968a3
-  |/|  user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     invisible merge
-  | |
-  o |  commit:      70b0bf7fe816
-   /   user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     small repo first commit
-  |
-  o  commit:      78a7e5a52cc8
-  |  bookmark:    pre_merge_head_bookmark
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     large repo second commit
-  |
-  o  commit:      63d5c6ae8a3d
-     user:        test
-     date:        Thu Jan 01 00:00:00 1970 +0000
-     summary:     large repo first commit
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     move files in small repo
+  │
+  │ o  commit:      b662a919caea
+  │ │  bookmark:    head_bookmark
+  │ │  user:        test
+  │ │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │ │  summary:     new commit in large repo
+  │ │
+  │ o  commit:      8eb1f2b968a3
+  ╭─┤  user:        test
+  │ │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │ │  summary:     invisible merge
+  │ │
+  o │  commit:      70b0bf7fe816
+    │  user:        test
+    │  date:        Thu Jan 01 00:00:00 1970 +0000
+    │  summary:     small repo first commit
+    │
+    o  commit:      78a7e5a52cc8
+    │  bookmark:    pre_merge_head_bookmark
+    │  user:        test
+    │  date:        Thu Jan 01 00:00:00 1970 +0000
+    │  summary:     large repo second commit
+    │
+    o  commit:      63d5c6ae8a3d
+       user:        test
+       date:        Thu Jan 01 00:00:00 1970 +0000
+       summary:     large repo first commit
   
 
   $ cd "$TESTTMP"
@@ -149,51 +149,51 @@ blobimport
   unchanged_files
   $ hg log -G
   @  commit:      * (glob)
-  |  bookmark:    head_bookmark
-  |  user:        user
-  |  date:        * (glob)
-  |  summary:     [MEGAREPO CATCHUP DELETE] deletion commit (1)
-  |
+  │  bookmark:    head_bookmark
+  │  user:        user
+  │  date:        * (glob)
+  │  summary:     [MEGAREPO CATCHUP DELETE] deletion commit (1)
+  │
   o  commit:      * (glob)
-  |  user:        user
-  |  date:        * (glob)
-  |  summary:     [MEGAREPO CATCHUP DELETE] deletion commit (0)
-  |
-  | o  commit:      f910c17f2a72
-  | |  bookmark:    small_repo_head_bookmark
-  | |  bookmark:    default/small_repo_head_bookmark
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     change files
-  | |
-  | o  commit:      83c4b83dcc37
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     move files in small repo
-  | |
-  o |  commit:      b662a919caea
-  | |  bookmark:    default/head_bookmark
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     new commit in large repo
-  | |
-  o |  commit:      8eb1f2b968a3
-  |\|  user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     invisible merge
-  | |
-  | o  commit:      70b0bf7fe816
-  |    user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     small repo first commit
-  |
+  │  user:        user
+  │  date:        * (glob)
+  │  summary:     [MEGAREPO CATCHUP DELETE] deletion commit (0)
+  │
+  │ o  commit:      f910c17f2a72
+  │ │  bookmark:    small_repo_head_bookmark
+  │ │  bookmark:    default/small_repo_head_bookmark
+  │ │  user:        test
+  │ │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │ │  summary:     change files
+  │ │
+  │ o  commit:      83c4b83dcc37
+  │ │  user:        test
+  │ │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │ │  summary:     move files in small repo
+  │ │
+  o │  commit:      b662a919caea
+  │ │  bookmark:    default/head_bookmark
+  │ │  user:        test
+  │ │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │ │  summary:     new commit in large repo
+  │ │
+  o │  commit:      8eb1f2b968a3
+  ├─╮  user:        test
+  │ │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │ │  summary:     invisible merge
+  │ │
+  │ o  commit:      70b0bf7fe816
+  │    user:        test
+  │    date:        Thu Jan 01 00:00:00 1970 +0000
+  │    summary:     small repo first commit
+  │
   o  commit:      * (glob)
-  |  bookmark:    pre_merge_head_bookmark
-  |  bookmark:    default/pre_merge_head_bookmark
-  |  user:        test
-  |  date:        * (glob)
-  |  summary:     large repo second commit
-  |
+  │  bookmark:    pre_merge_head_bookmark
+  │  bookmark:    default/pre_merge_head_bookmark
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     large repo second commit
+  │
   o  commit:      * (glob)
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000

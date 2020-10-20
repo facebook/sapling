@@ -78,7 +78,7 @@ Sync from the second client - the commit should appear
   $ hg up -q tip
   $ tglog
   @  fa5d62c46fd7 'commit1'
-  |
+  │
   o  d20a80d4def3 'base'
   
 

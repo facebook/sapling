@@ -29,9 +29,9 @@ Create two masters
   $ cd ../master2
   $ hg log -G -T '{desc} {bookmarks}\n'
   o  z foo
-  |
-  | o  y
-  |/
+  │
+  │ o  y
+  ├─╯
   o  x
   
 
@@ -83,9 +83,9 @@ Repull, and then strip without a backup
 
   $ hg log -G -T '{desc} {bookmarks}\n'
   o  z foo
-  |
-  | o  y
-  |/
+  │
+  │ o  y
+  ├─╯
   o  x
   
   $ hg sqlstrip --i-know-what-i-am-doing 1 --no-backup-permanent-data-loss
@@ -142,7 +142,7 @@ Commit after the strip
   $ cd ../master2
   $ hg log -G -T '{desc} {bookmarks}\n'
   o  z
-  |
+  │
   o  x foo
   
 Attempt to strip a non-existant rev

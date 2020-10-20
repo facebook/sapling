@@ -39,7 +39,7 @@ Before config change
   $ REPONAME=large-mon hgmn push -r . --to master_bookmark -q
   $ log -r master_bookmark
   o  before config change [public;rev=4;*] default/master_bookmark (glob)
-  |
+  │
   ~
 
 -- wait a second to give backsyncer some time to catch up
@@ -51,7 +51,7 @@ Before config change
   $ REPONAME=small-mon hgmn up -q master_bookmark
   $ log -r master_bookmark
   @  before config change [public;rev=2;*] default/master_bookmark (glob)
-  |
+  │
   ~
   $ hg log -r master_bookmark -T "{files % '{file}\n'}"
   bla
@@ -84,7 +84,7 @@ Config change
   $ REPONAME=large-mon hgmn push -r . --to master_bookmark -q
   $ log -r master_bookmark
   o  after config change [public;rev=*;*] default/master_bookmark (glob)
-  |
+  │
   ~
 
 -- wait a second to give backsyncer some time to catch up
@@ -96,7 +96,7 @@ Config change
   $ REPONAME=small-mon hgmn up -q master_bookmark
   $ log -r master_bookmark
   @  after config change [public;rev=*;*] default/master_bookmark (glob)
-  |
+  │
   ~
   $ hg log -r master_bookmark -T "{files % '{file}\n'}"
   baz

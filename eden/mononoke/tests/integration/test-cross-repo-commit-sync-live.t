@@ -41,7 +41,7 @@ Before the change
   $ REPONAME=small-mon hgmn push -r . --to master_bookmark -q
   $ log -r master_bookmark
   @  before config change [public;rev=2;bc6a206054d0] default/master_bookmark
-  |
+  │
   ~
 
 -- wait a little to give sync job some time to catch up
@@ -53,7 +53,7 @@ Before the change
   $ REPONAME=large-mon hgmn up -q master_bookmark
   $ log -r master_bookmark
   @  before config change [public;rev=3;c76f6510b5c1] default/master_bookmark
-  |
+  │
   ~
   $ REPONAME=large-mon hgmn log -r master_bookmark -T "{files % '{file}\n'}"
   non_path_shifting/bar
@@ -75,7 +75,7 @@ After the change
   $ REPONAME=small-mon hgmn push -r . --to master_bookmark -q
   $ log -r master_bookmark
   @  after config change [public;rev=3;6b8e5fe49ff9] default/master_bookmark
-  |
+  │
   ~
 
 -- wait a little to give sync job some time to catch up
@@ -87,7 +87,7 @@ After the change
   $ REPONAME=large-mon hgmn up -q master_bookmark
   $ log -r master_bookmark
   @  after config change [public;rev=4;f73b39d6fa97] default/master_bookmark
-  |
+  │
   ~
   $ REPONAME=large-mon hgmn log -r master_bookmark -T "{files % '{file}\n'}"
   non_path_shifting/baz

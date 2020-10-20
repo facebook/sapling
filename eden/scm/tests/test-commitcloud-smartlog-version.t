@@ -54,29 +54,29 @@ Tests for hg cloud sl --date "2019-06-23 19:34:39"
   synced at 2019-07-09 16:46:27
   
     o  773bd8  Test User 2018-07-25 13:31 +0000 somebookmark
-   /   some commit
-  |
+  ╭─╯  some commit
+  │
   o  c609e6 (public)  2018-07-23 10:36 +0000
-  .  some commit
-  .
-  . o  685a62  Test User 2018-07-12 15:20 +0000
-  . |  some commit
-  . |
-  . o  aa84f0  Test User 2018-07-10 18:56 +0000
-  ./   some commit
-  |
+  ╷  some commit
+  ╷
+  ╷ o  685a62  Test User 2018-07-12 15:20 +0000
+  ╷ │  some commit
+  ╷ │
+  ╷ o  aa84f0  Test User 2018-07-10 18:56 +0000
+  ╭─╯  some commit
+  │
   o  99d5fb (public)  2018-07-10 13:39 +0000
-  .  some commit
-  .
-  . o  717dcc  Test User 2018-06-20 21:02 +0000
-  ./   some commit
-  |
+  ╷  some commit
+  ╷
+  ╷ o  717dcc  Test User 2018-06-20 21:02 +0000
+  ╭─╯  some commit
+  │
   o  30443c (public)  2018-06-20 16:21 +0000
-  .  some commit
-  .
-  . o  0067e4  Test User 2018-05-29 20:36 +0000
-  ./   some commit
-  |
+  ╷  some commit
+  ╷
+  ╷ o  0067e4  Test User 2018-05-29 20:36 +0000
+  ╭─╯  some commit
+  │
   o  4b1141 (public)  2018-05-29 20:23 +0000
      some commit
   
@@ -120,29 +120,29 @@ Tests for hg cloud sl --workspace-version
   synced at 2019-07-09 16:46:27
   
     o  773bd8  Test User 2018-07-25 13:31 +0000 somebookmark
-   /   some commit
-  |
+  ╭─╯  some commit
+  │
   o  c609e6 (public)  2018-07-23 10:36 +0000
-  .  some commit
-  .
-  . o  685a62  Test User 2018-07-12 15:20 +0000
-  . |  some commit
-  . |
-  . o  aa84f0  Test User 2018-07-10 18:56 +0000
-  ./   some commit
-  |
+  ╷  some commit
+  ╷
+  ╷ o  685a62  Test User 2018-07-12 15:20 +0000
+  ╷ │  some commit
+  ╷ │
+  ╷ o  aa84f0  Test User 2018-07-10 18:56 +0000
+  ╭─╯  some commit
+  │
   o  99d5fb (public)  2018-07-10 13:39 +0000
-  .  some commit
-  .
-  . o  717dcc  Test User 2018-06-20 21:02 +0000
-  ./   some commit
-  |
+  ╷  some commit
+  ╷
+  ╷ o  717dcc  Test User 2018-06-20 21:02 +0000
+  ╭─╯  some commit
+  │
   o  30443c (public)  2018-06-20 16:21 +0000
-  .  some commit
-  .
-  . o  0067e4  Test User 2018-05-29 20:36 +0000
-  ./   some commit
-  |
+  ╷  some commit
+  ╷
+  ╷ o  0067e4  Test User 2018-05-29 20:36 +0000
+  ╭─╯  some commit
+  │
   o  4b1141 (public)  2018-05-29 20:23 +0000
      some commit
   

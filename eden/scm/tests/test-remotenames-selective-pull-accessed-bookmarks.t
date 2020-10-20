@@ -209,26 +209,26 @@ Check selective pull setup using accessed bookmarks
   $ mkcommit new_C
   $ hg log -G -T "'{desc}' {bookmarks} {remotenames}"
   @  'commit new_C' C_bookmark
-  |
+  │
   o  'commit C'
-  |
-  | o  'commit B' B_bookmark
-  |/
-  | o  'commit A' A_bookmark
-  |/
-  | o  'commit master' master
-  |/
+  │
+  │ o  'commit B' B_bookmark
+  ├─╯
+  │ o  'commit A' A_bookmark
+  ├─╯
+  │ o  'commit master' master
+  ├─╯
   o  'commit BASE'
   
 
   $ cd ../secondremoterepo
   $ hg log -G -T "'{desc}' {bookmarks} {remotenames}"
   @  'commit D' D_bookmark
-  |
-  | o  'commit new_master' master
-  |/
+  │
+  │ o  'commit new_master' master
+  ├─╯
   o  'commit master'  default/master
-  |
+  │
   o  'commit BASE'
   
 

@@ -31,11 +31,11 @@
 
   $ tglog
   @  3878212183bd 'AD'
-  |
-  | o  30ae917c0e4f 'C'
-  | |
-  | o  0f4f7cb4f549 'B'
-  |/
+  │
+  │ o  30ae917c0e4f 'C'
+  │ │
+  │ o  0f4f7cb4f549 'B'
+  ├─╯
   o  1e635d440a73 'A'
   
   $ hg rebase -s 'desc(B)' -d 'desc(AD)'
@@ -46,11 +46,11 @@
 
   $ tglog
   o  25773bc4b4b0 'C'
-  |
+  │
   o  c09015405f75 'B'
-  |
+  │
   @  3878212183bd 'AD'
-  |
+  │
   o  1e635d440a73 'A'
   
 
@@ -110,15 +110,15 @@ Full rebase all the way back from branching point:
   note: rebase of bea5bcfda5f9 created no changes to commit
   $ tglog
   o  f66b059fae0f 'dev2'
-  |
+  │
   o  1073bfc4c1ed 'dev1'
-  |
+  │
   o  22e5a3eb70f1 'default4'
-  |
+  │
   o  a51061c4b2cb 'default3'
-  |
+  │
   o  dfbdae6572c4 'default2'
-  |
+  │
   o  6ee4113c6616 'default1'
   
 Grafty cherry picking rebasing:
@@ -135,15 +135,15 @@ Grafty cherry picking rebasing:
   note: rebase of bea5bcfda5f9 created no changes to commit
   $ tglog
   o  9cdc50ee9a9d 'dev2'
-  |
+  │
   o  22e5a3eb70f1 'default4'
-  |
+  │
   o  a51061c4b2cb 'default3'
-  |
-  | o  1e48f4172d62 'dev1'
-  | |
-  o |  dfbdae6572c4 'default2'
-  |/
+  │
+  │ o  1e48f4172d62 'dev1'
+  │ │
+  o │  dfbdae6572c4 'default2'
+  ├─╯
   o  6ee4113c6616 'default1'
   
   $ cd ..
@@ -181,15 +181,15 @@ Test order of parents of rebased merged with un-rebased changes as p1.
   
   $ tglog
   @    a57575f79074 'merge p1 1=ancestor p2 3=outside'
-  |\
-  +---o  6990226659be 'merge p1 3=outside p2 1=ancestor'
-  | |/
-  | o  f59da8fc0fcf 'outside'
-  | |
-  +---o  a60552eb93fb 'target'
-  | |
-  o |  dd40c13f7a6f 'change'
-  |/
+  ├─╮
+  │ │ o  6990226659be 'merge p1 3=outside p2 1=ancestor'
+  ╭─┬─╯
+  │ o  f59da8fc0fcf 'outside'
+  │ │
+  │ │ o  a60552eb93fb 'target'
+  ├───╯
+  o │  dd40c13f7a6f 'change'
+  ├─╯
   o  02f0f58d5300 'common'
   
   $ hg rebase -r 'desc("p1 3=outside")' -d 'desc(target)'
@@ -210,15 +210,15 @@ Test order of parents of rebased merged with un-rebased changes as p1.
   
   $ tglog
   @    f9daf77ffe76 'merge p1 1=ancestor p2 3=outside'
-  |\
-  +---o  cca50676b1c5 'merge p1 3=outside p2 1=ancestor'
-  | |/
-  | o  f59da8fc0fcf 'outside'
-  | |
-  o |  a60552eb93fb 'target'
-  | |
-  o |  dd40c13f7a6f 'change'
-  |/
+  ├─╮
+  │ │ o  cca50676b1c5 'merge p1 3=outside p2 1=ancestor'
+  ╭─┬─╯
+  │ o  f59da8fc0fcf 'outside'
+  │ │
+  o │  a60552eb93fb 'target'
+  │ │
+  o │  dd40c13f7a6f 'change'
+  ├─╯
   o  02f0f58d5300 'common'
   
 rebase of merge of ancestors
@@ -252,17 +252,17 @@ rebase of merge of ancestors
   rebase completed
   $ tglog
   @  113755df812b 'merge rebase ancestors'
-  |
+  │
   o    f9daf77ffe76 'merge p1 1=ancestor p2 3=outside'
-  |\
-  +---o  cca50676b1c5 'merge p1 3=outside p2 1=ancestor'
-  | |/
-  | o  f59da8fc0fcf 'outside'
-  | |
-  o |  a60552eb93fb 'target'
-  | |
-  o |  dd40c13f7a6f 'change'
-  |/
+  ├─╮
+  │ │ o  cca50676b1c5 'merge p1 3=outside p2 1=ancestor'
+  ╭─┬─╯
+  │ o  f59da8fc0fcf 'outside'
+  │ │
+  o │  a60552eb93fb 'target'
+  │ │
+  o │  dd40c13f7a6f 'change'
+  ├─╯
   o  02f0f58d5300 'common'
   
 Due to the limitation of 3-way merge algorithm (1 merge base), rebasing a merge

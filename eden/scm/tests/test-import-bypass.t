@@ -30,7 +30,7 @@ and '--edit')
   applying ../test.diff
   $ shortlog
   o  540395c44225 test 0 0 - changea
-  |
+  │
   o  07f494440405 test 0 0 - adda
   
 
@@ -45,7 +45,7 @@ Test failure without --exact
   $ hg st
   $ shortlog
   o  540395c44225 test 0 0 - changea
-  |
+  │
   o  07f494440405 test 0 0 - adda
   
 
@@ -59,9 +59,9 @@ Test --user, --date and --message
   patch2 (no-eol)
   $ shortlog
   o  2e127d1da504 test2 1 0 - patch2
-  |
-  | o  540395c44225 test 0 0 - changea
-  |/
+  │
+  │ o  540395c44225 test 0 0 - changea
+  ├─╯
   @  07f494440405 test 0 0 - adda
   
   $ hg hide -q tip
@@ -98,9 +98,9 @@ Test --strip with --bypass
   adding dir/dir2/c
   $ shortlog
   @  d805bc8236b6 test 0 0 - addabcd
-  |
-  | o  540395c44225 test 0 0 - changea
-  |/
+  │
+  │ o  540395c44225 test 0 0 - changea
+  ├─╯
   o  07f494440405 test 0 0 - adda
   
   $ hg import --bypass --strip 2 --prefix dir/ - <<EOF
@@ -135,11 +135,11 @@ Test --strip with --bypass
 
   $ shortlog
   o  5bd46886ca3e test 0 0 - changeabcd
-  |
+  │
   @  d805bc8236b6 test 0 0 - addabcd
-  |
-  | o  540395c44225 test 0 0 - changea
-  |/
+  │
+  │ o  540395c44225 test 0 0 - changea
+  ├─╯
   o  07f494440405 test 0 0 - adda
   
   $ hg diff --change 'desc(changeabcd)' --git
@@ -220,11 +220,11 @@ commit message is explicitly specified, regardless of '--edit')
   applying ../test.diff
   $ shortlog
   o  c606edafba99 test 0 0 - test patch.eol
-  |
+  │
   @  872023de769d test 0 0 - makeacrlf
-  |
-  | o  540395c44225 test 0 0 - changea
-  |/
+  │
+  │ o  540395c44225 test 0 0 - changea
+  ├─╯
   o  07f494440405 test 0 0 - adda
   
 
@@ -256,11 +256,11 @@ Test applying multiple patches
   applying ../patch2.diff
   $ shortlog
   o  bc8ca3f8a7c4 test 0 0 - addf
-  |
+  │
   o  16581080145e test 0 0 - adde
-  |
-  | o  540395c44225 test 0 0 - changea
-  |/
+  │
+  │ o  540395c44225 test 0 0 - changea
+  ├─╯
   @  07f494440405 test 0 0 - adda
   
 
@@ -280,11 +280,11 @@ Test applying multiple patches with --exact
   applying ../patch2.diff
   $ shortlog
   o  f24ac4984bef test 0 0 - addf
-  |
-  | o  16581080145e test 0 0 - adde
-  | |
-  @ |  540395c44225 test 0 0 - changea
-  |/
+  │
+  │ o  16581080145e test 0 0 - adde
+  │ │
+  @ │  540395c44225 test 0 0 - changea
+  ├─╯
   o  07f494440405 test 0 0 - adda
   
 
@@ -355,7 +355,7 @@ data. If not, diff both heads to debug it.
 
   $ shortlog
   o  2978fd5c8aa4 test 0 0 - patch
-  |
+  │
   o  a0e19e636a43 test 0 0 - t
   
 #endif

@@ -214,9 +214,9 @@ Test histedit treeonly commits
   > EOF
   $ hg log -l 2 -G -T '{desc}'
   @  hybrid flat+tree commit
-  |
+  │
   o  add y
-  |
+  │
   ~
 
 Test {manifest} template
@@ -271,18 +271,18 @@ Test peer-to-peer push/pull of tree only commits
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G -l 3 -T '{desc}\n' --stat
   @  hybrid flat+tree commit
-  |   subdir/x |  1 +
-  |   1 files changed, 1 insertions(+), 0 deletions(-)
-  |
-  o  add y
-  |   y |  1 +
-  |   1 files changed, 1 insertions(+), 0 deletions(-)
-  |
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
+  │   subdir/x |  1 +
+  │   1 files changed, 1 insertions(+), 0 deletions(-)
+  │
+  o  add y
+  │   y |  1 +
+  │   1 files changed, 1 insertions(+), 0 deletions(-)
+  │
   fetching tree '' 5fbe397e5ac6cb7ee263c5c67613c4665306d143, found via d618f764f9a1
   2 trees fetched over * (glob)
   o  modify subdir/x
-  |   subdir/x |  1 +
+  │   subdir/x |  1 +
   ~   1 files changed, 1 insertions(+), 0 deletions(-)
   
 
@@ -312,11 +312,11 @@ Test bundling
   added 3 changesets with 3 changes to 2 files
   $ hg log -r 'tip^::tip' -G -T "{desc}\n" --stat
   o  modify y
-  |   y |  1 +
-  |   1 files changed, 1 insertions(+), 0 deletions(-)
-  |
+  │   y |  1 +
+  │   1 files changed, 1 insertions(+), 0 deletions(-)
+  │
   o  hybrid flat+tree commit
-  |   subdir/x |  1 +
+  │   subdir/x |  1 +
   ~   1 files changed, 1 insertions(+), 0 deletions(-)
   
 Test pushing to a hybrid server w/ pushrebase w/ hooks
@@ -413,13 +413,13 @@ Test converting server to treeonly
 - Move the flat manifest away so we guarantee its not read
   $ hg log -G -T "{desc}\n" --stat
   o  extra head commit
-  |   extrahead |  1 +
-  |   1 files changed, 1 insertions(+), 0 deletions(-)
-  |
-  | @  modify subdir/x
-  |/    subdir/x |  1 +
-  |     1 files changed, 1 insertions(+), 0 deletions(-)
-  |
+  │   extrahead |  1 +
+  │   1 files changed, 1 insertions(+), 0 deletions(-)
+  │
+  │ @  modify subdir/x
+  ├─╯   subdir/x |  1 +
+  │     1 files changed, 1 insertions(+), 0 deletions(-)
+  │
   o  add subdir/x
       subdir/x |  1 +
       1 files changed, 1 insertions(+), 0 deletions(-)
@@ -467,13 +467,13 @@ Test pushing from a treeonly client to a treeonly server *without* pushrebase
 
   $ hg log -Gf -l 4 -T '{shortest(node)} {manifest|short} {remotenames} {bookmarks}\n'
   @  5f0b c760d8ba4646
-  |
+  │
   o  06f5 13c9facfa409
-  |
+  │
   o  77ec 5f15f80c2b54
-  |
+  │
   o  41bd 14bce01d0d73
-  |
+  │
   ~
   $ hg push -r . --config extensions.pushrebase=! -f
   pushing to ssh://user@dummy/master
@@ -514,19 +514,19 @@ Test pushing from a public treeonly client to a treeonly server *with* pushrebas
 (it should send tree data, versus p2p pushes which wouldnt)
   $ hg log -T '{desc} {remotenames} {bookmarks}\n' -G
   @  pushable treeonly commit
-  |
-  | o  modify subdir/x again
-  | |
-  | o  extra head commit
-  | |
-  o |  modify y
-  | |
-  o |  hybrid flat+tree commit
-  | |
-  o |  add y
-  | |
-  o |  modify subdir/x
-  |/
+  │
+  │ o  modify subdir/x again
+  │ │
+  │ o  extra head commit
+  │ │
+  o │  modify y
+  │ │
+  o │  hybrid flat+tree commit
+  │ │
+  o │  add y
+  │ │
+  o │  modify subdir/x
+  ├─╯
   o  add subdir/x
   
   $ hg debugmakepublic -r .~2
@@ -555,19 +555,19 @@ Test pushing from a treeonly client to a treeonly server *with* pushrebase
 
   $ hg log -T '{desc} {remotenames} {bookmarks}\n' -G
   @  pushable treeonly commit
-  |
-  | o  modify subdir/x again
-  | |
-  | o  extra head commit
-  | |
-  o |  modify y
-  | |
-  o |  hybrid flat+tree commit
-  | |
-  o |  add y
-  | |
-  o |  modify subdir/x
-  |/
+  │
+  │ o  modify subdir/x again
+  │ │
+  │ o  extra head commit
+  │ │
+  o │  modify y
+  │ │
+  o │  hybrid flat+tree commit
+  │ │
+  o │  add y
+  │ │
+  o │  modify subdir/x
+  ├─╯
   o  add subdir/x
   
   $ hg push --to master
@@ -581,19 +581,19 @@ Test pushing from a treeonly client to a treeonly server *with* pushrebase
   remote:     5f0bc1aaff22  pushable treeonly commit
   $ hg -R ../master log -l 4 -T '{desc}\n' -G --stat
   o  pushable treeonly commit
-  |   subdir/x |  1 +
-  |   1 files changed, 1 insertions(+), 0 deletions(-)
-  |
+  │   subdir/x |  1 +
+  │   1 files changed, 1 insertions(+), 0 deletions(-)
+  │
   o  modify y
-  |   y |  1 +
-  |   1 files changed, 1 insertions(+), 0 deletions(-)
-  |
+  │   y |  1 +
+  │   1 files changed, 1 insertions(+), 0 deletions(-)
+  │
   o  hybrid flat+tree commit
-  |   subdir/x |  1 +
-  |   1 files changed, 1 insertions(+), 0 deletions(-)
-  |
+  │   subdir/x |  1 +
+  │   1 files changed, 1 insertions(+), 0 deletions(-)
+  │
   o  add y
-  |   y |  1 +
+  │   y |  1 +
   ~   1 files changed, 1 insertions(+), 0 deletions(-)
   
 Strip the pushed commits + the recently made commit from the server
@@ -745,17 +745,17 @@ old repository into another repo.
 
   $ hg log -G -T '{node}'
   @  0a0cac7a2bb2ff6613da8280f7f356863cee022b
-  |
+  │
   o  03e23940cb22c80ad0d5abf1d4dc8f31dec3b945
   
   $ hg -R ../master log -G -T '{node}'
   o  0a0cac7a2bb2ff6613da8280f7f356863cee022b
-  |
+  │
   o  03e23940cb22c80ad0d5abf1d4dc8f31dec3b945
   
   o  dad1be7841274c8bc9fe4772c99e52833240f715
-  |
-  | @  098a163f13ea73eb83a2bd8b426560575e1e91eb
-  |/
+  │
+  │ @  098a163f13ea73eb83a2bd8b426560575e1e91eb
+  ├─╯
   o  d618f764f9a11819b57268f02604ec1d311afc4c
   

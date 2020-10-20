@@ -20,16 +20,16 @@ With simplify-grandparents disabled:
 
   $ hg smartlog -T '{desc} {bookmarks}' --config extensions.smartlog=
   o    E v3
-  :\
-  : o  B v2
-  :/
+  ├─╮
+  ╷ o  B v2
+  ╭─╯
   o  A v1
   
   $ hg log -Gr 'bookmark()' -T '{desc} {bookmarks}'
   o    E v3
-  :\
-  : o  B v2
-  :/
+  ├─╮
+  ╷ o  B v2
+  ╭─╯
   o  A v1
   
 With simplify-grandparents enabled:
@@ -38,16 +38,16 @@ With simplify-grandparents enabled:
 
   $ hg smartlog -T '{desc} {bookmarks}' --config extensions.smartlog=
   o  E v3
-  :
+  ╷
   o  B v2
-  |
+  │
   o  A v1
   
 
   $ hg log -Gr 'bookmark()' -T '{desc} {bookmarks}'
   o  E v3
-  :
+  ╷
   o  B v2
-  |
+  │
   o  A v1
   

@@ -52,13 +52,13 @@ Create scratch commit and back it up.
   ce87a066ebc28045311cd1272f5edc0ed80d5b1c
   $ hg log --graph -T '{desc}'
   @  scratch
-  |
-  | o  fourth
-  |/
+  │
+  │ o  fourth
+  ├─╯
   o  third
-  |
+  │
   o  second
-  |
+  │
   o  first
   
   $ hg cloud backup
@@ -92,13 +92,13 @@ Download scratch commit. It also downloads a few public commits
   $ hg up -q ce87a066ebc28045311cd1272f5edc0ed80d5b1c
   $ hg log --graph -T '{desc}'
   @  scratch
-  |
-  | o  fourth
-  |/
+  │
+  │ o  fourth
+  ├─╯
   o  third
-  |
+  │
   o  second
-  |
+  │
   o  first
   
   $ hg book --remote

@@ -50,31 +50,31 @@
 
   $ hg log -p -r ::tip -T '{node} {desc}\n' -G
   @  042535657086a5b08463b9210a8f46dc270e51f9 x-lfs-again
-  |  diff --git a/x b/x
-  |  --- a/x
-  |  +++ b/x
-  |  @@ -1,1 +1,2 @@
-  |   NOTLFS
-  |  +BECOME-LFS-AGAIN
-  |
+  │  diff --git a/x b/x
+  │  --- a/x
+  │  +++ b/x
+  │  @@ -1,1 +1,2 @@
+  │   NOTLFS
+  │  +BECOME-LFS-AGAIN
+  │
   o  c6cc0cd58884b847de39aa817ded71e6051caa9f x-nonlfs
-  |  diff --git a/y b/x
-  |  rename from y
-  |  rename to x
-  |
+  │  diff --git a/y b/x
+  │  rename from y
+  │  rename to x
+  │
   o  f3dec7f3610207dbf222ec2d7b68df16a5fde0f2 y-nonlfs
-  |  diff --git a/y b/y
-  |  --- a/y
-  |  +++ b/y
-  |  @@ -1,1 +1,1 @@
-  |  -THIS-IS-LFS-FILE
-  |  +NOTLFS
-  |
+  │  diff --git a/y b/y
+  │  --- a/y
+  │  +++ b/y
+  │  @@ -1,1 +1,1 @@
+  │  -THIS-IS-LFS-FILE
+  │  +NOTLFS
+  │
   o  799bebfa53189a3db8424680f1a8f9806540e541 y-lfs
-  |  diff --git a/x b/y
-  |  rename from x
-  |  rename to y
-  |
+  │  diff --git a/x b/y
+  │  rename from x
+  │  rename to y
+  │
   o  0d2948821b2b3b6e58505696145f2215cea2b2cd x-lfs
      diff --git a/x b/x
      new file mode 100644
@@ -131,17 +131,17 @@
 
   $ hg log -T '{node} {bookmarks} {desc}\n' -G
   @  a5bcdd7fe9f0d300a2dbed2bd81d140547638856 master add-new-file
-  |
-  | o  949778ec92dd45fafbcc6ab7b8c843fdceb66e24 conflict_master introduce-conflict
-  |/
+  │
+  │ o  949778ec92dd45fafbcc6ab7b8c843fdceb66e24 conflict_master introduce-conflict
+  ├─╯
   o  042535657086a5b08463b9210a8f46dc270e51f9  x-lfs-again
-  |
+  │
   o  c6cc0cd58884b847de39aa817ded71e6051caa9f  x-nonlfs
-  |
+  │
   o  f3dec7f3610207dbf222ec2d7b68df16a5fde0f2  y-nonlfs
-  |
+  │
   o  799bebfa53189a3db8424680f1a8f9806540e541  y-lfs
-  |
+  │
   o  0d2948821b2b3b6e58505696145f2215cea2b2cd  x-lfs
   
 
@@ -183,19 +183,19 @@
   $ cd ../master
   $ hg log -T '{node} {bookmarks} {desc}\n' -G
   o  b13138389e22bc6af15868704e6e7bcf502d2b3b  shallow.lfs.commit
-  |
+  │
   @  a5bcdd7fe9f0d300a2dbed2bd81d140547638856 master add-new-file
-  |
-  | o  949778ec92dd45fafbcc6ab7b8c843fdceb66e24 conflict_master introduce-conflict
-  |/
+  │
+  │ o  949778ec92dd45fafbcc6ab7b8c843fdceb66e24 conflict_master introduce-conflict
+  ├─╯
   o  042535657086a5b08463b9210a8f46dc270e51f9  x-lfs-again
-  |
+  │
   o  c6cc0cd58884b847de39aa817ded71e6051caa9f  x-nonlfs
-  |
+  │
   o  f3dec7f3610207dbf222ec2d7b68df16a5fde0f2  y-nonlfs
-  |
+  │
   o  799bebfa53189a3db8424680f1a8f9806540e541  y-lfs
-  |
+  │
   o  0d2948821b2b3b6e58505696145f2215cea2b2cd  x-lfs
   
   $ hg log -p -r tip -T '{node} {desc}\n'
@@ -267,17 +267,17 @@
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg log -T '{node} {bookmarks} {desc}\n' -G
   @  b13138389e22bc6af15868704e6e7bcf502d2b3b master shallow.lfs.commit
-  |
+  │
   o  a5bcdd7fe9f0d300a2dbed2bd81d140547638856  add-new-file
-  |
+  │
   o  042535657086a5b08463b9210a8f46dc270e51f9  x-lfs-again
-  |
+  │
   o  c6cc0cd58884b847de39aa817ded71e6051caa9f  x-nonlfs
-  |
+  │
   o  f3dec7f3610207dbf222ec2d7b68df16a5fde0f2  y-nonlfs
-  |
+  │
   o  799bebfa53189a3db8424680f1a8f9806540e541  y-lfs
-  |
+  │
   o  0d2948821b2b3b6e58505696145f2215cea2b2cd  x-lfs
   
 

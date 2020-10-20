@@ -95,7 +95,7 @@ Sync from the second client and `hg unamend` there
 
   $ tglog
   o  b68dd726c6c6 'feature1 renamed'
-  |
+  │
   @  d20a80d4def3 'base'
   
 
@@ -108,7 +108,7 @@ Sync from the second client and `hg unamend` there
 
   $ tglog
   @  1cf4a5a0e8fc 'feature1'
-  |
+  │
   o  d20a80d4def3 'base'
   
 
@@ -129,9 +129,9 @@ amend, therefore the "has been replaced" message)
   finished in * (glob)
   $ tglog
   @  b68dd726c6c6 'feature1 renamed'
-  |
-  | x  1cf4a5a0e8fc 'feature1'
-  |/
+  │
+  │ x  1cf4a5a0e8fc 'feature1'
+  ├─╯
   o  d20a80d4def3 'base'
   
 Amend twice, unamend, then unhide
@@ -142,9 +142,9 @@ Amend twice, unamend, then unhide
   $ hg unhide 74b668b6b779
   $ tglog
   o  74b668b6b779 'feature1 renamed3'
-  |
-  | @  cb45bbd0ae75 'feature1 renamed2'
-  |/
+  │
+  │ @  cb45bbd0ae75 'feature1 renamed2'
+  ├─╯
   o  d20a80d4def3 'base'
   
   $ P=1 hg cloud sync

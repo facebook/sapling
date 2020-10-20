@@ -36,9 +36,9 @@ Verify smartlog shows only the configured data
   177f92b77385 ccategory: 'cvalue'
   $ hg sl
   @  177f92b7
-  |
+  │
   o  d2ae7f53
-  |
+  │
   o  cb9a9f31
      stable
   

@@ -80,15 +80,15 @@ Test that redoing a convert results in an identical graph
   updating bookmarks
   $ hg -R new log -G -T '{desc}'
   o  mark baz executable
-  |
+  │
   o    merge remote copy
-  |\
-  +---o  merge local copy
-  | |/
-  | o  make bar and baz copies of foo
-  | |
-  o |  change foo
-  |/
+  ├─╮
+  │ │ o  merge local copy
+  ╭─┬─╯
+  │ o  make bar and baz copies of foo
+  │ │
+  o │  change foo
+  ├─╯
   o  add foo bar
   
 

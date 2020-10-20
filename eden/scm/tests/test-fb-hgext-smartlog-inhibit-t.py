@@ -1,3 +1,5 @@
+# coding=utf-8
+
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
@@ -27,20 +29,20 @@ sh % "hg amend -m amended --no-rebase" == r"""
     hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints"""
 sh % "hg smartlog -T '{rev} {bookmarks}'" == r"""
     @  4
-    |
-    | o  3 test
-    | |
-    | o  2
-    | |
-    | x  1
-    |/
+    │
+    │ o  3 test
+    │ │
+    │ o  2
+    │ │
+    │ x  1
+    ├─╯
     o  0"""
 sh % "hg unamend"
 sh % "hg up 2" == "0 files updated, 0 files merged, 0 files removed, 0 files unresolved"
 sh % "hg debugmakepublic -r ."
 sh % "hg smartlog -T '{rev} {bookmarks}'" == r"""
     o  3 test
-    |
+    │
     @  2
-    |
+    │
     ~"""

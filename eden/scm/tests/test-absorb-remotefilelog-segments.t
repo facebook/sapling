@@ -39,22 +39,22 @@ Check result
 
   $ hg log -Gpr 'all()' --config diff.git=1 -T '{desc}\n'
   @  C
-  |  diff --git a/C b/C
-  |  new file mode 100644
-  |  --- /dev/null
-  |  +++ b/C
-  |  @@ -0,0 +1,1 @@
-  |  +C
-  |  \ No newline at end of file
-  |
+  │  diff --git a/C b/C
+  │  new file mode 100644
+  │  --- /dev/null
+  │  +++ b/C
+  │  @@ -0,0 +1,1 @@
+  │  +C
+  │  \ No newline at end of file
+  │
   o  B
-  |  diff --git a/B b/B
-  |  new file mode 100644
-  |  --- /dev/null
-  |  +++ b/B
-  |  @@ -0,0 +1,1 @@
-  |  +B2
-  |
+  │  diff --git a/B b/B
+  │  new file mode 100644
+  │  --- /dev/null
+  │  +++ b/B
+  │  @@ -0,0 +1,1 @@
+  │  +B2
+  │
   o  A
      diff --git a/A b/A
      new file mode 100644

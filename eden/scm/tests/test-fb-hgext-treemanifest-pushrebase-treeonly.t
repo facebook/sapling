@@ -57,8 +57,8 @@ Make server treeonly and push trees to it
 
   $ tglog --stat -l 2
   @  d9ee86e3acc1 'D'  sub/C |  1 +
-  |   1 files changed, 1 insertions(+), 0 deletions(-)
-  |
+  │   1 files changed, 1 insertions(+), 0 deletions(-)
+  │
   o  4197fbd39b1b 'C'  sub/C |  1 +
-  |   1 files changed, 1 insertions(+), 0 deletions(-)
+  │   1 files changed, 1 insertions(+), 0 deletions(-)
   ~

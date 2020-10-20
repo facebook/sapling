@@ -829,19 +829,19 @@ Support for changegroup
 
   $ hg log -G
   o  02de42196ebe draft Nicolas Dumazet <nicdumz.commits@gmail.com>  H
-  |
-  | o  eea13746799a draft Nicolas Dumazet <nicdumz.commits@gmail.com>  G
-  |/|
-  o |  24b6387c8c8c draft Nicolas Dumazet <nicdumz.commits@gmail.com>  F
-  | |
-  | o  9520eea781bc draft Nicolas Dumazet <nicdumz.commits@gmail.com>  E
-  |/
-  | o  32af7686d403 draft Nicolas Dumazet <nicdumz.commits@gmail.com>  D
-  | |
-  | o  5fddd98957c8 draft Nicolas Dumazet <nicdumz.commits@gmail.com>  C
-  | |
-  | o  42ccdea3bb16 draft Nicolas Dumazet <nicdumz.commits@gmail.com>  B
-  |/
+  │
+  │ o  eea13746799a draft Nicolas Dumazet <nicdumz.commits@gmail.com>  G
+  ╭─┤
+  o │  24b6387c8c8c draft Nicolas Dumazet <nicdumz.commits@gmail.com>  F
+  │ │
+  │ o  9520eea781bc draft Nicolas Dumazet <nicdumz.commits@gmail.com>  E
+  ├─╯
+  │ o  32af7686d403 draft Nicolas Dumazet <nicdumz.commits@gmail.com>  D
+  │ │
+  │ o  5fddd98957c8 draft Nicolas Dumazet <nicdumz.commits@gmail.com>  C
+  │ │
+  │ o  42ccdea3bb16 draft Nicolas Dumazet <nicdumz.commits@gmail.com>  B
+  ├─╯
   o  cd010b8cd998 draft Nicolas Dumazet <nicdumz.commits@gmail.com>  A
   
   @  3903775176ed draft test  a

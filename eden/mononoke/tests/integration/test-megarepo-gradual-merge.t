@@ -43,19 +43,19 @@ setup hg server repo
   $ hg book -r 26805aba1e60 head_bookmark
   $ hg log -G -T '{node|short} {desc|firstline}\n'
   @  c5d76fe4f0c0 rm E
-  |
+  │
   o  99cd22e92467 rm F
-  |
+  │
   o  0069ba24938a F
-  |
+  │
   o  cd488e83d208 E
-  |
+  │
   o  058c1e1fb10a D
   
   o  26805aba1e60 C
-  |
+  │
   o  112478962961 B
-  |
+  │
   o  426bada5c675 A
   
   $ hg book
@@ -97,26 +97,26 @@ setup hg server repo
   updating bookmark head_bookmark
   $ hg log -G -T '{node|short} {desc|firstline}\n'
   o    * [MEGAREPO GRADUAL MERGE] gradual merge (2) (glob)
-  |\
-  | o    * [MEGAREPO GRADUAL MERGE] gradual merge (1) (glob)
-  | |\
-  | | o    * [MEGAREPO GRADUAL MERGE] gradual merge (0) (glob)
-  | | |\
-  | +---o  c5d76fe4f0c0 rm E
-  | | |
-  | o |  99cd22e92467 rm F
-  |/ /
-  o |  0069ba24938a F
-  | |
-  o |  cd488e83d208 E
-  | |
-  o |  058c1e1fb10a D
-   /
-  o  26805aba1e60 C
-  |
-  o  112478962961 B
-  |
-  o  426bada5c675 A
+  ├─╮
+  │ o    * [MEGAREPO GRADUAL MERGE] gradual merge (1) (glob)
+  │ ├─╮
+  │ │ o    * [MEGAREPO GRADUAL MERGE] gradual merge (0) (glob)
+  │ │ ├─╮
+  │ │ │ o  c5d76fe4f0c0 rm E
+  │ ├───╯
+  │ o │  99cd22e92467 rm F
+  ├─╯ │
+  o   │  0069ba24938a F
+  │   │
+  o   │  cd488e83d208 E
+  │   │
+  o   │  058c1e1fb10a D
+      │
+      o  26805aba1e60 C
+      │
+      o  112478962961 B
+      │
+      o  426bada5c675 A
   
   $ hgmn up head_bookmark
   6 files updated, 0 files merged, 0 files removed, 0 files unresolved

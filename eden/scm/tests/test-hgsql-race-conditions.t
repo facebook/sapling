@@ -78,11 +78,11 @@ no-check-code
   $ hg push -R client2 -q -f ssh://user@dummy/master2
   $ hg log -R master -G --template '{desc}\n'
   o  z2
-  |
-  | o  z1
-  |/
+  │
+  │ o  z1
+  ├─╯
   o  y
-  |
+  │
   o  x
   
   $ sed -i '/hooks/d' master/.hg/hgrc

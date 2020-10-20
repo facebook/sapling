@@ -1,3 +1,5 @@
+# coding=utf-8
+
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
@@ -50,19 +52,19 @@ sh % "hg rebase -s A -d 0" == r"""
     rebasing 5eb863826611 "E" (E)"""
 sh % "showgraph" == r"""
     o  e71547946f82 E
-    |
+    │
     o  264c021e8fc6 D
-    |
+    │
     o  34e41e21cd9d C
-    |
-    | o  aa431a9572c1 F
-    |/
+    │
+    │ o  aa431a9572c1 F
+    ├─╯
     o  01ba3ad89eb7 B
-    |
+    │
     o  622e2d864a27 A
-    |
-    | o  520a9f665f6e b
-    |
+    │
+    │ o  520a9f665f6e b
+    │
     @  9309aa3b805a driver"""
 sh % "hg rebase -r aa431a9572c1 -d e71547946f82" == r"""
     rebasing aa431a9572c1 "F" (F)

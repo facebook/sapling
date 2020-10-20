@@ -54,9 +54,9 @@ pushrebase it directly onto master - it will be rewritten without the mutation e
 
   $ tglog
   o  a05b3505b7d1 '1a'
-  |
-  | @  6ad95cdc8ab9 '1a'
-  |/
+  │
+  │ @  6ad95cdc8ab9 '1a'
+  ├─╯
   o  d20a80d4def3 'base'
   
   $ hg debugmutation -r master
@@ -83,13 +83,13 @@ pushrebase it onto master - it will be rebased and rewritten without the mutatio
 
   $ tglog
   o  7042a534cddc '2a'
-  |
-  | @  fd935a5d42c4 '2a'
-  | |
-  o |  a05b3505b7d1 '1a'
-  |/
-  | o  6ad95cdc8ab9 '1a'
-  |/
+  │
+  │ @  fd935a5d42c4 '2a'
+  │ │
+  o │  a05b3505b7d1 '1a'
+  ├─╯
+  │ o  6ad95cdc8ab9 '1a'
+  ├─╯
   o  d20a80d4def3 'base'
   
   $ hg debugmutation -r master

@@ -90,23 +90,23 @@ setup repo2
   > EOS
   $ hg log --graph -T '{node|short} {desc}'
   o    e635b24c95f7 D
-  |\
-  | o  d351044ef463 C
-  | |
-  o |  9a827afb7e25 B
-  |/
+  ├─╮
+  │ o  d351044ef463 C
+  │ │
+  o │  9a827afb7e25 B
+  ├─╯
   o  af6aa0dfdf3d A
    (re)
   @  28468743616e rename
-  |
+  │
   o  329b10223740 modify file
-  |
+  │
   o  a42a44555d7c new directory
-  |
+  │
   o  3e19bf519e9a c
-  |
+  │
   o  0e067c57feba b
-  |
+  │
   o  3903775176ed a
    (re)
 
@@ -140,13 +140,13 @@ Pull the rest
 
   $ hg log -r '3903775176ed::329b10223740' --graph  -T '{node|short} {desc}'
   o  329b10223740 modify file
-  |
+  │
   o  a42a44555d7c new directory
-  |
+  │
   o  3e19bf519e9a c
-  |
+  │
   o  0e067c57feba b
-  |
+  │
   @  3903775176ed a
    (re)
   $ ls

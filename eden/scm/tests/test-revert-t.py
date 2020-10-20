@@ -1,3 +1,5 @@
+# coding=utf-8
+
 # Copyright (c) Facebook, Inc. and its affiliates.
 # Copyright (c) Mercurial Contributors.
 #
@@ -1450,11 +1452,11 @@ sh % "hg ci -qAm C3"
 sh % "hg status --rev 'ancestor(.,2)' --rev 2" == "A A"
 sh % "hg log -G -T '{rev} ({files})\\n'" == r"""
     @  3 (B)
-    |
-    | o  2 (A)
-    | |
-    | o  1 (A)
-    |/
+    │
+    │ o  2 (A)
+    │ │
+    │ o  1 (A)
+    ├─╯
     o  0 (.gitignore root)"""
 
 # actual tests: reverting to something else than a merge parent

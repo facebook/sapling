@@ -17,8 +17,8 @@
   $ cd hgrepo
   $ hg log -G -T '{extras % "{extra}\n"}'
   @  branch=default
-  |  convert_revision=9da56a563fafade1a5b50ae0c01292f91cd4ce34
-  |  hg-git-rename-source=git
+  │  convert_revision=9da56a563fafade1a5b50ae0c01292f91cd4ce34
+  │  hg-git-rename-source=git
   o  branch=default
      convert_revision=ad4fd0de4cb839a7d2d1c2497f8a2c230a2726e9
      hg-git-rename-source=git

@@ -20,11 +20,11 @@ Test what said in drawdag.py docstring
 
   $ hg log -G -T '{desc} ({bookmarks})'
   o  d (d)
-  |
-  | o  c (c)
-  |/
+  │
+  │ o  c (c)
+  ├─╯
   o  b (b)
-  |
+  │
   o  a (a)
   
   $ hg debugdrawdag <<'EOS'
@@ -35,17 +35,17 @@ Test what said in drawdag.py docstring
 
   $ hg log -G -T '{desc}'
   o    foo
-  |\
-  +---o  bar
-  | | |
-  | o |  baz
-  |  /
-  +---o  d
-  | |
-  +---o  c
-  | |
-  o |  b
-  |/
+  ├─╮
+  │ │ o  bar
+  ╭───┤
+  │ o │  baz
+  │   │
+  │ o │  d
+  ├─╯ │
+  │ o │  c
+  ├─╯ │
+  o   │  b
+  ├───╯
   o  a
   
   $ reinit
@@ -68,18 +68,18 @@ Test what said in drawdag.py docstring
 
   $ hg log -G -T '{desc}'
   o    foo
-  |\
-  | | o  d
-  | |/
-  | | o  c
-  | |/
-  | | o  bar
-  | |/|
-  | o |  b
-  | |/
-  o /  baz
-   /
-  o  a
+  ├─╮
+  │ │ o  d
+  │ ├─╯
+  │ │ o  c
+  │ ├─╯
+  │ │ o  bar
+  │ ╭─┤
+  │ o │  b
+  │ ├─╯
+  o │  baz
+    │
+    o  a
   
   $ reinit
 
@@ -101,18 +101,18 @@ Test what said in drawdag.py docstring
 
   $ hg log -G -T '{desc}'
   o    foo
-  |\
-  | | o  d
-  | |/
-  | | o  c
-  | |/
-  | | o  bar
-  | |/|
-  | o |  b
-  | |/
-  o /  baz
-   /
-  o  a
+  ├─╮
+  │ │ o  d
+  │ ├─╯
+  │ │ o  c
+  │ ├─╯
+  │ │ o  bar
+  │ ╭─┤
+  │ o │  b
+  │ ├─╯
+  o │  baz
+    │
+    o  a
   
   $ hg manifest -r a
   a
@@ -138,9 +138,9 @@ Edges existed in repo are no-ops
 
   $ hg log -G -T '{desc}'
   o    C
-  |\
-  | o  B
-  |/
+  ├─╮
+  │ o  B
+  ├─╯
   o  A
   
 
@@ -152,11 +152,11 @@ Edges existed in repo are no-ops
 
   $ hg log -G -T '{desc}'
   o  D
-  |
-  | o  C
-  |/|
-  o |  B
-  |/
+  │
+  │ o  C
+  ╭─┤
+  o │  B
+  ├─╯
   o  A
   
 
@@ -206,29 +206,29 @@ Create obsmarkers via comments
 
   $ hg log -r 'sort(all(), topo)' -G --hidden -T '{desc} {node}'
   o  I 58e6b987bf7045fcd9c54f496396ca1d1fc81047
-  |
+  │
   o  H 575c4b5ec114d64b681d33f8792853568bfb2b2c
-  |
-  | o  G 711f53bbef0bebd12eb6f0511d5e2e998b984846
-  | |
-  | o  F 64a8289d249234b9886244d379f15e6b650b28e3
-  | |
-  | o  E 7fb047a69f220c21711122dfd94305a9efb60cba
-  |/
-  | x  L 12ac214c2132ccaa5b97fa70b25570496f86853c
-  | |
-  | x  K 623037570ba0971f93c31b1b90fa8a1b82307329
-  | |
-  | x  J a0a5005cec670cc22e984711855473e8ba07230a
-  |/
-  | x  D be0ef73c17ade3fc89dc41701eb9fc3a91b58282
-  | |
-  | | x  C 26805aba1e600a82e93661149f2313866a221a7b
-  | |/
-  | x  B 112478962961147124edd43549aedd1a335e44bf
-  |/
-  | o  M 699bc4b6fa2207ae482508d19836281c02008d1e
-  |/
+  │
+  │ o  G 711f53bbef0bebd12eb6f0511d5e2e998b984846
+  │ │
+  │ o  F 64a8289d249234b9886244d379f15e6b650b28e3
+  │ │
+  │ o  E 7fb047a69f220c21711122dfd94305a9efb60cba
+  ├─╯
+  │ x  L 12ac214c2132ccaa5b97fa70b25570496f86853c
+  │ │
+  │ x  K 623037570ba0971f93c31b1b90fa8a1b82307329
+  │ │
+  │ x  J a0a5005cec670cc22e984711855473e8ba07230a
+  ├─╯
+  │ x  D be0ef73c17ade3fc89dc41701eb9fc3a91b58282
+  │ │
+  │ │ x  C 26805aba1e600a82e93661149f2313866a221a7b
+  │ ├─╯
+  │ x  B 112478962961147124edd43549aedd1a335e44bf
+  ├─╯
+  │ o  M 699bc4b6fa2207ae482508d19836281c02008d1e
+  ├─╯
   o  A 426bada5c67598ca65036d57d9e4b64b0c1ce7a0
   
   $ hg debugmutation -r 'all()'
@@ -271,9 +271,9 @@ Change file contents via comments
 
   $ hg log -G -T '{desc} {files}'
   o    C A B dir1/c dir2/c
-  |\
-  | o  B B dir2/b
-  |
+  ├─╮
+  │ o  B B dir2/b
+  │
   o  A A dir1/a
   
   $ for f in `hg files -r C`; do
@@ -316,32 +316,32 @@ Special comments: "(removed)", "(copied from X)", "(renamed from X)"
 
   $ hg log -p -G -r 'all()' --config diff.git=1 -T '{desc}\n'
   o  C
-  |  diff --git a/X1 b/X1
-  |  deleted file mode 100644
-  |  --- a/X1
-  |  +++ /dev/null
-  |  @@ -1,2 +0,0 @@
-  |  -X
-  |  -1
-  |
+  │  diff --git a/X1 b/X1
+  │  deleted file mode 100644
+  │  --- a/X1
+  │  +++ /dev/null
+  │  @@ -1,2 +0,0 @@
+  │  -X
+  │  -1
+  │
   o  B
-  |  diff --git a/X b/X1
-  |  rename from X
-  |  rename to X1
-  |  --- a/X
-  |  +++ b/X1
-  |  @@ -1,1 +1,2 @@
-  |   X
-  |  +1
-  |  diff --git a/Y b/Y1
-  |  copy from Y
-  |  copy to Y1
-  |  --- a/Y
-  |  +++ b/Y1
-  |  @@ -1,1 +1,2 @@
-  |   Y
-  |  +1
-  |
+  │  diff --git a/X b/X1
+  │  rename from X
+  │  rename to X1
+  │  --- a/X
+  │  +++ b/X1
+  │  @@ -1,1 +1,2 @@
+  │   X
+  │  +1
+  │  diff --git a/Y b/Y1
+  │  copy from Y
+  │  copy to Y1
+  │  --- a/Y
+  │  +++ b/Y1
+  │  @@ -1,1 +1,2 @@
+  │   Y
+  │  +1
+  │
   o  A
      diff --git a/X b/X
      new file mode 100644

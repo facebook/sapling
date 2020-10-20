@@ -44,9 +44,9 @@ Pushrebase some commits from the client
   $ hg amend -qm "c2 (amended)"
   $ tglogp
   @  e52ebff26308 draft 'c2 (amended)'
-  |
+  │
   o  b0c40d8745c8 draft 'c1'
-  |
+  │
   o  a7d6a32ae4ec public 'base'
   
   $ hg push --to master
@@ -64,13 +64,13 @@ Pushrebase some commits from the client
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ tglogp
   @  bc165ecd11df public 'c2 (amended)'
-  |
+  │
   o  466bbcaf803c public 'c1'
-  |
+  │
   o  1f850c9f0d59 public 's2'
-  |
+  │
   o  06569a64c141 public 's1'
-  |
+  │
   o  a7d6a32ae4ec public 'base'
   
   $ hg debugmutation -r ::tip
@@ -91,13 +91,13 @@ Pushrebase some commits from the client
   $ cd ../server
   $ tglogp
   o  bc165ecd11df public 'c2 (amended)' master
-  |
+  │
   o  466bbcaf803c public 'c1'
-  |
+  │
   @  1f850c9f0d59 public 's2'
-  |
+  │
   o  06569a64c141 public 's1'
-  |
+  │
   o  a7d6a32ae4ec public 'base'
   
   $ hg debugmutation -r ::tip
@@ -158,17 +158,17 @@ Add another commit on the client.
   $ hg amend -qm "c4 (amended)"
   $ tglogp
   @  254a42c0dcef draft 'c4 (amended)'
-  |
+  │
   o  5cfa12ac15ac public 'c3'
-  |
+  │
   o  bc165ecd11df public 'c2 (amended)'
-  |
+  │
   o  466bbcaf803c public 'c1'
-  |
+  │
   o  1f850c9f0d59 public 's2'
-  |
+  │
   o  06569a64c141 public 's1'
-  |
+  │
   o  a7d6a32ae4ec public 'base'
   
 Push this commit to the server.  We should create local mutation information.

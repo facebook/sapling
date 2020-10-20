@@ -35,23 +35,23 @@ log before rebase
 
   $ hg log -G -T '{node|short} {desc|firstline}\n'
   @  8d0611d6e5f2 conflict f
-  |
-  | o  cf7e1bc6a982 i
-  | |
-  | o  7523912c6e49 h
-  | |
-  | o  0ba40a7dd69a g
-  |/
-  | o  652413bf663e f
-  | |
-  | o  e860deea161a e
-  | |
-  | o  055a42cdd887 d
-  | |
-  | o  177f92b77385 c
-  |/
+  │
+  │ o  cf7e1bc6a982 i
+  │ │
+  │ o  7523912c6e49 h
+  │ │
+  │ o  0ba40a7dd69a g
+  ├─╯
+  │ o  652413bf663e f
+  │ │
+  │ o  e860deea161a e
+  │ │
+  │ o  055a42cdd887 d
+  │ │
+  │ o  177f92b77385 c
+  ├─╯
   o  d2ae7f538514 b
-  |
+  │
   o  cb9a9f314b8b a
   
 Simple rebase with -s and -d
@@ -62,23 +62,23 @@ Simple rebase with -s and -d
 
   $ hg log -G -T '{node|short} {desc|firstline}\n'
   @  bb8affa27bd8 i
-  |
-  | o  8d0611d6e5f2 conflict f
-  | |
-  | | o  7523912c6e49 h
-  | | |
-  | | o  0ba40a7dd69a g
-  | |/
-  o |  652413bf663e f
-  | |
-  o |  e860deea161a e
-  | |
-  o |  055a42cdd887 d
-  | |
-  o |  177f92b77385 c
-  |/
+  │
+  │ o  8d0611d6e5f2 conflict f
+  │ │
+  │ │ o  7523912c6e49 h
+  │ │ │
+  │ │ o  0ba40a7dd69a g
+  │ ├─╯
+  o │  652413bf663e f
+  │ │
+  o │  e860deea161a e
+  │ │
+  o │  055a42cdd887 d
+  │ │
+  o │  177f92b77385 c
+  ├─╯
   o  d2ae7f538514 b
-  |
+  │
   o  cb9a9f314b8b a
   
 
@@ -101,23 +101,23 @@ Try to rebase with conflict (also check -d without -s)
 
   $ hg log -G -T '{node|short} {desc|firstline}\n'
   @  b6ca70f8129d conflict f
-  |
+  │
   o  bb8affa27bd8 i
-  |
-  | o  7523912c6e49 h
-  | |
-  | o  0ba40a7dd69a g
-  | |
-  o |  652413bf663e f
-  | |
-  o |  e860deea161a e
-  | |
-  o |  055a42cdd887 d
-  | |
-  o |  177f92b77385 c
-  |/
+  │
+  │ o  7523912c6e49 h
+  │ │
+  │ o  0ba40a7dd69a g
+  │ │
+  o │  652413bf663e f
+  │ │
+  o │  e860deea161a e
+  │ │
+  o │  055a42cdd887 d
+  │ │
+  o │  177f92b77385 c
+  ├─╯
   o  d2ae7f538514 b
-  |
+  │
   o  cb9a9f314b8b a
   
 
@@ -127,23 +127,23 @@ Rebase with base
   $ HGEDITOR=true hg rebase -i -b . -d 'desc(conflict)'
   $ hg log -G -T '{node|short} {desc|firstline}\n'
   @  50cf975d06ef h
-  |
+  │
   o  ba6932766227 g
-  |
+  │
   o  b6ca70f8129d conflict f
-  |
+  │
   o  bb8affa27bd8 i
-  |
+  │
   o  652413bf663e f
-  |
+  │
   o  e860deea161a e
-  |
+  │
   o  055a42cdd887 d
-  |
+  │
   o  177f92b77385 c
-  |
+  │
   o  d2ae7f538514 b
-  |
+  │
   o  cb9a9f314b8b a
   
 Rebase with -s and -d and checked out to something that is not a child of
@@ -158,29 +158,29 @@ current working directory parent.
   0 files updated, 0 files merged, 4 files removed, 0 files unresolved
   $ hg log -G -T '{node|short} {desc|firstline}\n'
   o  70ff95fe5c79 z
-  |
+  │
   o  9843e524084d y
-  |
+  │
   o  a5ae87083656 x
-  |
-  | o  50cf975d06ef h
-  | |
-  | o  ba6932766227 g
-  | |
-  | o  b6ca70f8129d conflict f
-  |/
+  │
+  │ o  50cf975d06ef h
+  │ │
+  │ o  ba6932766227 g
+  │ │
+  │ o  b6ca70f8129d conflict f
+  ├─╯
   o  bb8affa27bd8 i
-  |
+  │
   @  652413bf663e f
-  |
+  │
   o  e860deea161a e
-  |
+  │
   o  055a42cdd887 d
-  |
+  │
   o  177f92b77385 c
-  |
+  │
   o  d2ae7f538514 b
-  |
+  │
   o  cb9a9f314b8b a
   
   $ HGEDITOR=true hg rebase -i -s 'desc(y)' -d 'desc(g)'

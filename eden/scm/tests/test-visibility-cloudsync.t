@@ -40,13 +40,13 @@ Create a client with some initial commits and sync them to the cloud workspace.
   > EOS
   $ tglogm
   o  c70a9bd6bfd1 'E'
-  |
-  | o  6ba5de8abe43 'D'
-  | |
-  | x  2d0f0af04f18 'C'  (Rewritten using amend into c70a9bd6bfd1)
-  |/
+  │
+  │ o  6ba5de8abe43 'D'
+  │ │
+  │ x  2d0f0af04f18 'C'  (Rewritten using amend into c70a9bd6bfd1)
+  ├─╯
   o  dae3b312bb78 'Z'
-  |
+  │
   @  d20a80d4def3 'base'
   
   $ hg cloud sync
@@ -83,13 +83,13 @@ Create another client and use it to modify the commits and create some new ones.
   finished in * sec (glob)
   $ tglogm
   o  c70a9bd6bfd1 'E'
-  |
-  | o  6ba5de8abe43 'D'
-  | |
-  | x  2d0f0af04f18 'C'  (Rewritten using amend into c70a9bd6bfd1)
-  |/
+  │
+  │ o  6ba5de8abe43 'D'
+  │ │
+  │ x  2d0f0af04f18 'C'  (Rewritten using amend into c70a9bd6bfd1)
+  ├─╯
   o  dae3b312bb78 'Z'
-  |
+  │
   @  d20a80d4def3 'base'
   
 
@@ -100,13 +100,13 @@ Create another client and use it to modify the commits and create some new ones.
   $ hg commit -Aqm X
   $ tglogm
   @  dd114d9b2f9e 'X'
-  |
-  | o  d8fc5ae9b7ef 'D'
-  | |
-  | o  c70a9bd6bfd1 'E'
-  |/
+  │
+  │ o  d8fc5ae9b7ef 'D'
+  │ │
+  │ o  c70a9bd6bfd1 'E'
+  ├─╯
   o  dae3b312bb78 'Z'
-  |
+  │
   o  d20a80d4def3 'base'
   
   $ hg cloud sync
@@ -136,13 +136,13 @@ Now cloud sync.  The sets of commits should be merged.
 
   $ tglogm
   o  6caded0e9807 'D'
-  |
-  | @  ba83c5428cb2 'F'
-  | |
-  | o  c70a9bd6bfd1 'E'
-  |/
+  │
+  │ @  ba83c5428cb2 'F'
+  │ │
+  │ o  c70a9bd6bfd1 'E'
+  ├─╯
   o  dae3b312bb78 'Z'
-  |
+  │
   o  d20a80d4def3 'base'
   
   $ hg cloud sync
@@ -167,17 +167,17 @@ Now cloud sync.  The sets of commits should be merged.
   finished in * sec (glob)
   $ tglogm
   o  dd114d9b2f9e 'X'
-  |
-  | o  d8fc5ae9b7ef 'D'
-  | |
-  +---o  6caded0e9807 'D'
-  | |
-  | | @  ba83c5428cb2 'F'
-  | |/
-  | o  c70a9bd6bfd1 'E'
-  |/
+  │
+  │ o  d8fc5ae9b7ef 'D'
+  │ │
+  │ │ o  6caded0e9807 'D'
+  ├───╯
+  │ │ @  ba83c5428cb2 'F'
+  │ ├─╯
+  │ o  c70a9bd6bfd1 'E'
+  ├─╯
   o  dae3b312bb78 'Z'
-  |
+  │
   o  d20a80d4def3 'base'
   
 
@@ -200,37 +200,37 @@ Cloud sync back to the other client, it should get the same smartlog (apart from
   finished in * sec (glob)
   $ tglogm
   o  ba83c5428cb2 'F'
-  |
-  | o  6caded0e9807 'D'
-  | |
-  | | @  dd114d9b2f9e 'X'
-  | |/
-  +---o  d8fc5ae9b7ef 'D'
-  | |
-  o |  c70a9bd6bfd1 'E'
-  |/
+  │
+  │ o  6caded0e9807 'D'
+  │ │
+  │ │ @  dd114d9b2f9e 'X'
+  │ ├─╯
+  │ │ o  d8fc5ae9b7ef 'D'
+  ├───╯
+  o │  c70a9bd6bfd1 'E'
+  ├─╯
   o  dae3b312bb78 'Z'
-  |
+  │
   o  d20a80d4def3 'base'
   
 It should also have mutations made on both sides visible.
 
   $ tglogm -r 'predecessors(all())'
   o  ba83c5428cb2 'F'
-  |
-  | o  6caded0e9807 'D'
-  | |
-  | | @  dd114d9b2f9e 'X'
-  | |/
-  +---o  d8fc5ae9b7ef 'D'
-  | |
-  o |  c70a9bd6bfd1 'E'
-  |/
-  | x  6ba5de8abe43 'D'  (Rewritten using rebase into 6caded0e9807) (Rewritten using rebase into d8fc5ae9b7ef)
-  | |
-  | x  2d0f0af04f18 'C'  (Rewritten using amend into c70a9bd6bfd1)
-  |/
+  │
+  │ o  6caded0e9807 'D'
+  │ │
+  │ │ @  dd114d9b2f9e 'X'
+  │ ├─╯
+  │ │ o  d8fc5ae9b7ef 'D'
+  ├───╯
+  o │  c70a9bd6bfd1 'E'
+  ├─╯
+  │ x  6ba5de8abe43 'D'  (Rewritten using rebase into 6caded0e9807) (Rewritten using rebase into d8fc5ae9b7ef)
+  │ │
+  │ x  2d0f0af04f18 'C'  (Rewritten using amend into c70a9bd6bfd1)
+  ├─╯
   o  dae3b312bb78 'Z'
-  |
+  │
   o  d20a80d4def3 'base'
   

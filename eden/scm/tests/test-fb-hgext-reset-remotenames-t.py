@@ -1,3 +1,5 @@
+# coding=utf-8
+
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
@@ -35,5 +37,5 @@ sh % "hg book bar"
 sh % "hg reset --clean 'default/foo^'"
 sh % "hg log -G -T '{node|short} {bookmarks} {remotebookmarks}\\n'" == r"""
     o  a89d614e2364  default/foo
-    |
+    │
     @  b292c1e3311f bar"""

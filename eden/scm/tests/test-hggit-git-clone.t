@@ -18,11 +18,11 @@ Load commonly used test logic
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R hgrepo log --graph
   @  commit:      3bb02b6794dd
-  |  bookmark:    master
-  |  user:        test <test@example.org>
-  |  date:        Mon Jan 01 00:00:11 2007 +0000
-  |  summary:     add beta
-  |
+  │  bookmark:    master
+  │  user:        test <test@example.org>
+  │  date:        Mon Jan 01 00:00:11 2007 +0000
+  │  summary:     add beta
+  │
   o  commit:      69982ec78c6d
      user:        test <test@example.org>
      date:        Mon Jan 01 00:00:10 2007 +0000

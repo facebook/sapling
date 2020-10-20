@@ -78,14 +78,14 @@ Check the repo is usable again:
 
   $ hg log -GpT '{desc}\n'
   o  C
-  |  diff --git a/C b/C
-  |  new file mode 100644
-  |  --- /dev/null
-  |  +++ b/C
-  |  @@ -0,0 +1,1 @@
-  |  +C
-  |  \ No newline at end of file
-  |
+  │  diff --git a/C b/C
+  │  new file mode 100644
+  │  --- /dev/null
+  │  +++ b/C
+  │  @@ -0,0 +1,1 @@
+  │  +C
+  │  \ No newline at end of file
+  │
   o  A
      diff --git a/A b/A
      new file mode 100644
@@ -119,7 +119,7 @@ Check changelog repiar:
   checking commit references
   $ hg log -Gr 'all()' -T '{desc}'
   o  B
-  |
+  │
   o  A
   
 

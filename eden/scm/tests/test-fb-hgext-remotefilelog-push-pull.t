@@ -226,13 +226,13 @@ the server supports our custom getfiles method.
   $ hg commit -qAm c22
   $ hg log -G -T '{desc}\n'
   @  c22
-  |
+  │
   o  c2
-  |
-  | o  c1
-  | |
-  | o  b
-  |/
+  │
+  │ o  c1
+  │ │
+  │ o  b
+  ├─╯
   o  a
   
 

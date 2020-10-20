@@ -18,39 +18,39 @@ Create a test repository:
   $ hg debugbuilddag -n -m '+2 :fork +5 :p1 *fork +6 :p2 /p1 :m1 +3' > /dev/null
   $ hg log -G --template '{node}\n'
   o  10c14a2cc935e1d8c31f9e98587dcf27fb08a6da
-  |
+  │
   o  4801a72e5d88cb515b0c7e40fae34180f3f837f2
-  |
+  │
   o  0b2f73f04880d9cb6a5cd8a757f0db0ad01e32c3
-  |
+  │
   o    8365676dbab05860ce0d9110f2af51368b961bbd
-  |\
-  | o  5686dbbd9fc46cb806599c878d02fe1cb56b83d3
-  | |
-  | o  13c0170174366b441dc68e8e33757232fa744458
-  | |
-  | o  63476832d8ec6558cf9bbe3cbe0c757e5cf18043
-  | |
-  | o  700b7e19db54103633c4bf4a6a6b6d55f4d50c03
-  | |
-  | o  928b5f94cdb278bb536eba552de348a4e92ef24d
-  | |
-  | o  f34414c64173e0ecb61b25dc55e116dbbcc89bee
-  | |
-  | o  8931463777131cd73923e560b760061f2aa8a4bc
-  | |
-  o |  6621d79f61b23ec74cf4b69464343d9e0980ec8b
-  | |
-  o |  bac16991d12ff45f9dc43c52da1946dfadb83e80
-  | |
-  o |  ff42371d57168345fdf1a3aac66a51f6a45d41d2
-  | |
-  o |  d5f6e1ea452285324836a49d7d3c2a63cfed1d31
-  | |
-  o |  713346a995c363120712aed1aee7e04afd867638
-  |/
+  ├─╮
+  │ o  5686dbbd9fc46cb806599c878d02fe1cb56b83d3
+  │ │
+  │ o  13c0170174366b441dc68e8e33757232fa744458
+  │ │
+  │ o  63476832d8ec6558cf9bbe3cbe0c757e5cf18043
+  │ │
+  │ o  700b7e19db54103633c4bf4a6a6b6d55f4d50c03
+  │ │
+  │ o  928b5f94cdb278bb536eba552de348a4e92ef24d
+  │ │
+  │ o  f34414c64173e0ecb61b25dc55e116dbbcc89bee
+  │ │
+  │ o  8931463777131cd73923e560b760061f2aa8a4bc
+  │ │
+  o │  6621d79f61b23ec74cf4b69464343d9e0980ec8b
+  │ │
+  o │  bac16991d12ff45f9dc43c52da1946dfadb83e80
+  │ │
+  o │  ff42371d57168345fdf1a3aac66a51f6a45d41d2
+  │ │
+  o │  d5f6e1ea452285324836a49d7d3c2a63cfed1d31
+  │ │
+  o │  713346a995c363120712aed1aee7e04afd867638
+  ├─╯
   o  29a4d1f17bd3f0779ca0525bebb1cfb51067c738
-  |
+  │
   o  7704483d56b2a7b5db54dcee7c62378ac629b348
   
   $ cd ..

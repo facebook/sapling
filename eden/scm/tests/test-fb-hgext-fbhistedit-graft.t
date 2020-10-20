@@ -23,17 +23,17 @@
   > done
   $ tglogp
   @  1eb7eda15cd7 draft 'f'
-  |
+  │
   o  581a2eefdc84 draft 'e'
-  |
+  │
   o  331acda6ee00 draft 'd'
-  |
-  | o  f9d2e574dc58 draft 'c'
-  | |
-  | o  c87fe1ae405f draft 'b'
-  | |
-  | o  c604726e05fb draft 'a'
-  |/
+  │
+  │ o  f9d2e574dc58 draft 'c'
+  │ │
+  │ o  c87fe1ae405f draft 'b'
+  │ │
+  │ o  c604726e05fb draft 'a'
+  ├─╯
   o  d20a80d4def3 draft 'base'
   
 Use histedit to graft an extra commit into current history
@@ -48,19 +48,19 @@ Use histedit to graft an extra commit into current history
 
   $ tglogp
   @  fc9a25c1b8af draft 'c'
-  |
+  │
   o  efc3ff9af0d1 draft 'e'
-  |
-  | o  1eb7eda15cd7 draft 'f'
-  | |
-  | x  581a2eefdc84 draft 'e'
-  | |
-  | o  331acda6ee00 draft 'd'
-  | |
-  o |  c87fe1ae405f draft 'b'
-  | |
-  o |  c604726e05fb draft 'a'
-  |/
+  │
+  │ o  1eb7eda15cd7 draft 'f'
+  │ │
+  │ x  581a2eefdc84 draft 'e'
+  │ │
+  │ o  331acda6ee00 draft 'd'
+  │ │
+  o │  c87fe1ae405f draft 'b'
+  │ │
+  o │  c604726e05fb draft 'a'
+  ├─╯
   o  d20a80d4def3 draft 'base'
   
 Try to use histedit to graft a non-existent commit

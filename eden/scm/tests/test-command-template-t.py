@@ -1135,21 +1135,21 @@ parent = ' {rev} ({phase})'
 sh % "hg debugmakepublic 5"
 sh % "hg log --debug -G --style ./parentphase" == r"""
     @  8 (draft): 7 (draft)
-    |
+    │
     o  7 (draft): -1 (public)
 
     o    6 (draft): 5 (public) 4 (draft)
-    |\
-    | o  5 (public): 3 (public)
-    | |
-    o |  4 (draft): 3 (public)
-    |/
+    ├─╮
+    │ o  5 (public): 3 (public)
+    │ │
+    o │  4 (draft): 3 (public)
+    ├─╯
     o  3 (public): 2 (public)
-    |
+    │
     o  2 (public): 1 (public)
-    |
+    │
     o  1 (public): 0 (public)
-    |
+    │
     o  0 (public): -1 (public)"""
 
 # Missing non-standard names give no error (backward compatibility):
@@ -2020,23 +2020,23 @@ sh % 'hg log -l1 --template \'{revset("null^")|count} {revset(".")|count} {revse
 
 sh % "hg log -G --template '{rev}: children: {children|count}, file_adds: {file_adds|count}, ancestors: {revset(\"ancestors(%s)\", rev)|count}'" == r"""
     @  9: children: 0, file_adds: 1, ancestors: 3
-    |
+    │
     o  8: children: 1, file_adds: 2, ancestors: 2
-    |
+    │
     o  7: children: 1, file_adds: 1, ancestors: 1
 
     o    6: children: 0, file_adds: 0, ancestors: 7
-    |\
-    | o  5: children: 1, file_adds: 1, ancestors: 5
-    | |
-    o |  4: children: 1, file_adds: 0, ancestors: 5
-    |/
+    ├─╮
+    │ o  5: children: 1, file_adds: 1, ancestors: 5
+    │ │
+    o │  4: children: 1, file_adds: 0, ancestors: 5
+    ├─╯
     o  3: children: 2, file_adds: 0, ancestors: 4
-    |
+    │
     o  2: children: 1, file_adds: 1, ancestors: 3
-    |
+    │
     o  1: children: 1, file_adds: 1, ancestors: 2
-    |
+    │
     o  0: children: 1, file_adds: 1, ancestors: 1"""
 
 # Upper/lower filters:
@@ -3619,27 +3619,27 @@ sh % 'hg log -R a -r 8 --template \'{strip(if("1", if("1", "-abc-")), if("1", if
 
 sh % "hg log -Gv -R a --template '{splitlines(desc) % '\\''foo {line}\\n'\\''}'" == r"""
     @  foo Modify, add, remove, rename
-    |
+    │
     o  foo future
-    |
+    │
     o  foo third
-    |
+    │
     o  foo second
 
     o    foo merge
-    |\
-    | o  foo new head
-    | |
-    o |  foo new branch
-    |/
+    ├─╮
+    │ o  foo new head
+    │ │
+    o │  foo new branch
+    ├─╯
     o  foo no user, no domain
-    |
+    │
     o  foo no person
-    |
+    │
     o  foo other 1
-    |  foo other 2
-    |  foo
-    |  foo other 3
+    │  foo other 2
+    │  foo
+    │  foo other 3
     o  foo line 1
        foo line 2"""
 
@@ -3653,25 +3653,25 @@ sh % "hg log -Gv -R a --template '{startswith(desc)}'" == r"""
 
 sh % "hg log -Gv -R a --template '{startswith('\\''line'\\'', desc)}'" == r"""
     @
-    |
+    │
     o
-    |
+    │
     o
-    |
+    │
     o
 
     o
-    |\
-    | o
-    | |
-    o |
-    |/
+    ├─╮
+    │ o
+    │ │
+    o │
+    ├─╯
     o
-    |
+    │
     o
-    |
+    │
     o
-    |
+    │
     o  line 1
        line 2"""
 
@@ -3685,50 +3685,50 @@ sh % "hg log -Gv -R a --template '{desc|user()}'" == r"""
 
 sh % "hg log -Gv -R a --template '{word('\\''1'\\'', desc)}'" == r"""
     @  add,
-    |
+    │
     o
-    |
+    │
     o
-    |
+    │
     o
 
     o
-    |\
-    | o  head
-    | |
-    o |  branch
-    |/
+    ├─╮
+    │ o  head
+    │ │
+    o │  branch
+    ├─╯
     o  user,
-    |
+    │
     o  person
-    |
+    │
     o  1
-    |
+    │
     o  1"""
 
 # Test word third parameter used as splitter
 
 sh % "hg log -Gv -R a --template '{word('\\''0'\\'', desc, '\\''o'\\'')}'" == r"""
     @  M
-    |
+    │
     o  future
-    |
+    │
     o  third
-    |
+    │
     o  sec
 
     o    merge
-    |\
-    | o  new head
-    | |
-    o |  new branch
-    |/
+    ├─╮
+    │ o  new head
+    │ │
+    o │  new branch
+    ├─╯
     o  n
-    |
+    │
     o  n
-    |
+    │
     o
-    |
+    │
     o  line 1
        line 2"""
 
@@ -3987,19 +3987,19 @@ sh % "hg merge" == r"""
 
 sh % "hg log --graph -T '{graphwidth}'" == r"""
     @  3
-    |
-    | @  5
-    |/
+    │
+    │ @  5
+    ├─╯
     o  3"""
 sh % 'hg commit -m "$wrappabletext"'
 
 sh % "hg log --graph -T '{graphwidth}'" == r"""
     @    5
-    |\
-    | o  5
-    | |
-    o |  5
-    |/
+    ├─╮
+    │ o  5
+    │ │
+    o │  5
+    ├─╯
     o  3"""
 
 sh % "hg checkout 0" == "1 files updated, 0 files merged, 0 files removed, 0 files unresolved"
@@ -4008,23 +4008,24 @@ sh % 'hg commit -m "$wrappabletext"'
 
 sh % "hg log --graph -T '{graphwidth}'" == r"""
     @  3
-    |
-    | o    7
-    | |\
-    +---o  7
-    | |
-    | o  5
-    |/
+    │
+    │ o    7
+    │ ├─╮
+    │ │ o  7
+    ├───╯
+    │ o  5
+    ├─╯
     o  3"""
 
 sh % "hg log --graph -T '{graphwidth}' -r 3" == r"""
     o    5
-    |\
+    ├─╮
+    │ │
     ~ ~"""
 
 sh % "hg log --graph -T '{graphwidth}' -r 1" == r"""
     o  3
-    |
+    │
     ~"""
 
 sh % "hg merge" == r"""
@@ -4037,17 +4038,17 @@ sh % 'hg commit -m "$wrappabletext"'
 
 sh % "hg log --graph -T '{graphwidth}'" == r"""
     @  3
-    |
+    │
     o    5
-    |\
-    | o  5
-    | |
-    o |    7
-    |\ \
-    | o |  7
-    | |/
-    o /  5
-    |/
+    ├─╮
+    │ o  5
+    │ │
+    o │    7
+    ├───╮
+    │ │ o  7
+    │ ├─╯
+    o │  5
+    ├─╯
     o  3"""
 
 # The point of graphwidth is to allow wrapping that accounts for the space taken
@@ -4055,32 +4056,32 @@ sh % "hg log --graph -T '{graphwidth}'" == r"""
 
 sh % "'COLUMNS=10' hg log --graph -T '{fill(desc, termwidth - graphwidth)}'" == r"""
     @  a a a a
-    |  a a a a
-    |  a a a a
+    │  a a a a
+    │  a a a a
     o    a a a
-    |\   a a a
-    | |  a a a
-    | |  a a a
-    | o  a a a
-    | |  a a a
-    | |  a a a
-    | |  a a a
-    o |    a a
-    |\ \   a a
-    | | |  a a
-    | | |  a a
-    | | |  a a
-    | | |  a a
-    | o |  a a
-    | |/   a a
-    | |    a a
-    | |    a a
-    | |    a a
-    | |    a a
-    o |  a a a
-    |/   a a a
-    |    a a a
-    |    a a a
+    ├─╮  a a a
+    │ │  a a a
+    │ │  a a a
+    │ o  a a a
+    │ │  a a a
+    │ │  a a a
+    │ │  a a a
+    o │    a a
+    ├───╮  a a
+    │ │ │  a a
+    │ │ │  a a
+    │ │ │  a a
+    │ │ │  a a
+    │ │ o  a a
+    │ ├─╯  a a
+    │ │    a a
+    │ │    a a
+    │ │    a a
+    │ │    a a
+    o │  a a a
+    ├─╯  a a a
+    │    a a a
+    │    a a a
     o  a a a a
        a a a a
        a a a a"""
@@ -4090,14 +4091,12 @@ sh % "'COLUMNS=10' hg log --graph -T '{fill(desc, termwidth - graphwidth)}'" == 
 # one column. The remaining columns are added in between the nodes.
 
 sh % "hg log --graph -T '{graphwidth}' -r '0|2|4|5'" == r"""
-    o    5
-    |\
-    | \
-    | :\
-    o : :  7
-    :/ /
-    : o  5
-    :/
+    o      7
+    ├─┬─╮
+    o ╷ ╷  7
+    ├─╯ ╷
+    │   o  7
+    ├───╯
     o  3"""
 
 sh % "cd .."

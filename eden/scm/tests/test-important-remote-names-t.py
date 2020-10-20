@@ -1,3 +1,5 @@
+# coding=utf-8
+
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
@@ -47,7 +49,7 @@ sh % "hg pull -r $C" == r"""
 
 sh % "hg log -Gr 'all()' -T '{desc} {remotenames}'" == r"""
     o  C
-    |
-    | o  B default/master
-    |/
+    │
+    │ o  B default/master
+    ├─╯
     o  A"""

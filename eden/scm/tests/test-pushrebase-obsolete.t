@@ -19,11 +19,11 @@ Push with obsoleted commits with successors not in the destination.
 
   $ hg log -Gr "all()" -T '{desc}\n'
   o  D
-  |
-  | o  C
-  | |
-  x |  B
-  |/
+  │
+  │ o  C
+  │ │
+  x │  B
+  ├─╯
   o  A
   
 

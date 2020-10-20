@@ -154,9 +154,9 @@ set up symlink hell
   $ hg commit -qAm 'file a/poisoned'
   $ hg log -G -T '{desc}\n'
   @  file a/poisoned
-  |
-  | o  symlink a -> ../merge-symlink-out
-  |/
+  │
+  │ o  symlink a -> ../merge-symlink-out
+  ├─╯
   o  base
   
 
@@ -195,9 +195,9 @@ Test symlink traversal on update:
   $ hg ci -qAm 'rm a, file a/c'
   $ hg log -G -T '{desc}\n'
   @  rm a, file a/c
-  |
-  | o  file a/b
-  |/
+  │
+  │ o  file a/b
+  ├─╯
   o  symlink a -> ../update-symlink-out
   
 

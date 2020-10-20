@@ -60,7 +60,7 @@ Push files
 
   $ tglogpnr
   @  2cc2702dde1d public 'add b,c,d and e'  default/master_bookmark
-  |
+  │
   o  ac82d8b1f7c4 public 'add a' master_bookmark
   
 

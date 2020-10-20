@@ -118,14 +118,14 @@ Perform ovrsource pushrebase, make sure it is push-redirected into Megarepo
 -- pushredirected_1 was correctly pushed to master_bookmark in ovrsource
   $ log -r master_bookmark
   @  pushredirected_1 [public;rev=1;bb12ff0dc64f] default/master_bookmark
-  |
+  │
   ~
 -- pushredirected_1 is also present in megarepo
   $ cd "$TESTTMP"/meg-hg-cnt
   $ REPONAME=meg-mon hgmn pull -q
   $ log -r master_bookmark
   o  pushredirected_1 [public;rev=1;4358fa9b678c] default/master_bookmark
-  |
+  │
   ~
 -- ensure that ovrsource root path ends up in megarepo's arvr-legacy
   $ REPONAME=meg-mon hgmn up master_bookmark -q
@@ -147,14 +147,14 @@ in "all" configs does not cause any undesired effects for push-rebases
 -- pushredirected_2 was correctly pushed to master_bookmark
   $ log -r master_bookmark
   @  pushredirected_2 [public;rev=2;2d72ff1821dd] default/master_bookmark
-  |
+  │
   ~
 -- pushredirected_2 is also present in the megarepo
   $ cd "$TESTTMP"/meg-hg-cnt
   $ REPONAME=meg-mon hgmn pull -q
   $ log -r master_bookmark
   o  pushredirected_2 [public;rev=2;538143697725] default/master_bookmark
-  |
+  │
   ~
 -- let's see what's where in megarepo
   $ REPONAME=meg-mon hgmn up master_bookmark -q
@@ -340,14 +340,14 @@ Perform ovrsource pushrebase, make sure it is push-redirected into Fbsource
 -- pushredirected_3 was correctly pushed to master_bookmark in ovrsource
   $ log -r master_bookmark
   @  pushredirected_3 [public;rev=4;4355e6b9eafb] default/master_bookmark
-  |
+  │
   ~
 -- pushredirected_3 is also present in megarepo
   $ cd "$TESTTMP"/fbs-hg-cnt
   $ REPONAME=fbs-mon hgmn pull -q
   $ log -r master_bookmark
   o  pushredirected_3 [public;rev=14;a272f72e81b3] default/master_bookmark
-  |
+  │
   ~
 -- ensure that ovrsource root path ends up in megarepo's arvr-legacy
   $ REPONAME=fbs-mon hgmn up master_bookmark -q

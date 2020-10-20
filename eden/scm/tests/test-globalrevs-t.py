@@ -1,3 +1,5 @@
+# coding=utf-8
+
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
@@ -155,17 +157,17 @@ sh % "hg push -qr. 'ssh://user@dummy/master' --to master"
 
 sh % "hg log -GT '{globalrev} {desc}\\n'" == r"""
     @  5001 c
-    |
+    │
     o  5000 b
-    |
+    │
     o   a"""
 
 sh % "cd ../master"
 sh % "hg log -GT '{globalrev} {desc}\\n'" == r"""
     o  5001 c
-    |
+    │
     o  5000 b
-    |
+    │
     @   a"""
 
 
@@ -223,25 +225,25 @@ sh % "hg push -qr. 'ssh://user@dummy/master' --to master"
 
 sh % "hg log -GT '{globalrev} {desc}\\n'" == r"""
     @  5003 e
-    |
+    │
     o  5002 d
-    |
+    │
     o  5001 c
-    |
+    │
     o  5000 b
-    |
+    │
     o   a"""
 
 sh % "cd ../master"
 sh % "hg log -GT '{globalrev} {desc}\\n'" == r"""
     o  5003 e
-    |
+    │
     o  5002 d
-    |
+    │
     o  5001 c
-    |
+    │
     o  5000 b
-    |
+    │
     @   a"""
 sh % "hg bookmark -fr master oldmaster"
 sh % "hg bookmark -fr 'desc(d)' master"
@@ -270,33 +272,33 @@ sh % "hg push -qr. 'ssh://user@dummy/master' --to master"
 
 sh % "hg log -GT '{globalrev} {desc}\\n'" == r"""
     @  5005 g
-    |
+    │
     o  5004 f
-    |
-    | o  5003 e
-    |/
+    │
+    │ o  5003 e
+    ├─╯
     o  5002 d
-    |
+    │
     o  5001 c
-    |
+    │
     o  5000 b
-    |
+    │
     o   a"""
 
 sh % "cd ../master"
 sh % "hg log -GT '{globalrev} {desc}\\n'" == r"""
     o  5005 g
-    |
+    │
     o  5004 f
-    |
-    | o  5003 e
-    |/
+    │
+    │ o  5003 e
+    ├─╯
     o  5002 d
-    |
+    │
     o  5001 c
-    |
+    │
     o  5000 b
-    |
+    │
     @   a"""
 sh % "hg bookmark -r master oldmaster2"
 sh % "hg bookmark -fr 'desc(e)' master"
@@ -316,19 +318,19 @@ sh % "hg rebase -qk -d 'max(desc(\"e\"))' -r 'max(desc(g))' --collapse -m g1 --c
 
 sh % "hg log -GT '{globalrev} {desc}\\n'" == r"""
     @   g1
-    |
-    | o  5005 g
-    | |
-    | o  5004 f
-    | |
-    o |  5003 e
-    |/
+    │
+    │ o  5005 g
+    │ │
+    │ o  5004 f
+    │ │
+    o │  5003 e
+    ├─╯
     o  5002 d
-    |
+    │
     o  5001 c
-    |
+    │
     o  5000 b
-    |
+    │
     o   a"""
 
 # - Push the commits to the server.
@@ -341,37 +343,37 @@ sh % "hg push -qr. 'ssh://user@dummy/master' --to master"
 
 sh % "hg log -GT '{globalrev} {desc}\\n'" == r"""
     @  5006 g1
-    |
-    | o  5005 g
-    | |
-    | o  5004 f
-    | |
-    o |  5003 e
-    |/
+    │
+    │ o  5005 g
+    │ │
+    │ o  5004 f
+    │ │
+    o │  5003 e
+    ├─╯
     o  5002 d
-    |
+    │
     o  5001 c
-    |
+    │
     o  5000 b
-    |
+    │
     o   a"""
 
 sh % "cd ../master"
 sh % "hg log -GT '{globalrev} {desc}\\n'" == r"""
     o  5006 g1
-    |
-    | o  5005 g
-    | |
-    | o  5004 f
-    | |
-    o |  5003 e
-    |/
+    │
+    │ o  5005 g
+    │ │
+    │ o  5004 f
+    │ │
+    o │  5003 e
+    ├─╯
     o  5002 d
-    |
+    │
     o  5001 c
-    |
+    │
     o  5000 b
-    |
+    │
     @   a"""
 
 
@@ -733,15 +735,15 @@ sh % "getglobalrev 'globalrev(-1)'"
 
 sh % "hg log -G -r m5007 -T 'svnrev:{svnrev} globalrev:{globalrev}\\n'" == r"""
     o  svnrev:5007 globalrev:5007
-    |
+    │
     ~"""
 
 sh % "hg log -G -r r5007 -T 'svnrev:{svnrev} globalrev:{globalrev}\\n'" == r"""
     o  svnrev:5007 globalrev:5007
-    |
+    │
     ~"""
 
 sh % "hg log -G -r 'svnrev(5007)' -T 'svnrev:{svnrev} globalrev:{globalrev}\\n'" == r"""
     o  svnrev:5007 globalrev:5007
-    |
+    │
     ~"""

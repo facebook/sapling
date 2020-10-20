@@ -38,15 +38,15 @@ Populate test repo
   $ COMMIT_M1=$(hg log -r . -T '{node}')
   $ hg log -G -T '{node} {desc}\n' -r "all()"
   @  b5bc5249412595662f15a1aca5ae50fec4a93628 add test3.txt
-  |
+  │
   o    ce33edd793793f108fbe78aa90f3fedbeae09082 merge commit!!!
-  |\
-  | o  b6f0fa5a73b54553c0d4b6f483c8ef18efb3bde2 update test.txt
-  | |
-  o |  45a08a9d95ee1053cf34273c8a427973d4ffd11a update test2.txt
-  |/
+  ├─╮
+  │ o  b6f0fa5a73b54553c0d4b6f483c8ef18efb3bde2 update test.txt
+  │ │
+  o │  45a08a9d95ee1053cf34273c8a427973d4ffd11a update test2.txt
+  ├─╯
   o  c7dcf24fab3a8ab956273fa40d5cc44bc26ec655 copy test.txt to test2.txt
-  |
+  │
   o  e83645968c8f2954b97a3c79ce5a6b90a464c54d add test.txt
   
 

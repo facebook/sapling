@@ -1,3 +1,5 @@
+# coding=utf-8
+
 # -*- coding: utf-8 -*-
 # Copyright (c) Facebook, Inc. and its affiliates.
 # Copyright (c) Mercurial Contributors.
@@ -1019,14 +1021,14 @@ sh % "log 'ancestor(1,2,3,4,5)'" == "1"
 sh % "hg log -G -T '{rev}\\n' --config 'experimental.graphshorten=True'" == r"""
     @  9
     o  8
-    | o  7
-    | o  6
-    |/|
-    | o  5
-    o |  4
-    | o  3
-    o |  2
-    |/
+    │ o  7
+    │ o  6
+    ╭─┤
+    │ o  5
+    o │  4
+    │ o  3
+    o │  2
+    ├─╯
     o  1
     o  0"""
 
@@ -1112,14 +1114,14 @@ sh % "log 'ancestors(., depth=foo)'" == r"""
 sh % "hg log -G -T '{rev}\\n' --config 'experimental.graphshorten=True'" == r"""
     @  9
     o  8
-    | o  7
-    | o  6
-    |/|
-    | o  5
-    o |  4
-    | o  3
-    o |  2
-    |/
+    │ o  7
+    │ o  6
+    ╭─┤
+    │ o  5
+    o │  4
+    │ o  3
+    o │  2
+    ├─╯
     o  1
     o  0"""
 

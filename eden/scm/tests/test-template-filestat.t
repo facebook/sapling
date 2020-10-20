@@ -14,16 +14,16 @@
 
   $ hg log --graph -T '{filestat}'
   @  2 filestats
-  |
+  │
   o  2 filestats
-  |
+  │
   o  1 filestat
   
   $ hg log --graph -T '{filestat|json}'
   @  [{"name": "other", "op": "M", "size": 13, "type": "n"}, {"name": "base", "op": "R", "size": 0, "type": "r"}]
-  |
+  │
   o  [{"name": "base", "op": "M", "size": 9, "type": "n"}, {"name": "other", "op": "A", "size": 0, "type": "n"}]
-  |
+  │
   o  [{"name": "base", "op": "A", "size": 0, "type": "n"}]
   
   $ hg log -T '{filestat % "{node|short} {op} {type} {size} {name}\n"}'
@@ -39,20 +39,20 @@
   adding link
   $ hg log --graph -T '{filestat}'
   @  2 filestats
-  |
+  │
   o  2 filestats
-  |
+  │
   o  2 filestats
-  |
+  │
   o  1 filestat
   
   $ hg log --graph -T '{filestat|json}'
   @  [{"name": "other", "op": "M", "size": 13, "type": "x"}, {"name": "link", "op": "A", "size": 5, "type": "l"}]
-  |
+  │
   o  [{"name": "other", "op": "M", "size": 13, "type": "n"}, {"name": "base", "op": "R", "size": 0, "type": "r"}]
-  |
+  │
   o  [{"name": "base", "op": "M", "size": 9, "type": "n"}, {"name": "other", "op": "A", "size": 0, "type": "n"}]
-  |
+  │
   o  [{"name": "base", "op": "A", "size": 0, "type": "n"}]
   
   $ hg log -T '{filestat % "{node|short} {op} {type} {size} {name}\n"}'

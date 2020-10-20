@@ -35,13 +35,13 @@ Changes during an interruption - continue:
 
   $ tglog
   @  ae36e8e3dfd7 'E'
-  |
+  │
   o  46b37eabc604 'D'
-  |
-  | o  965c486023db 'C'
-  | |
-  | o  27547f69f254 'B'
-  |/
+  │
+  │ o  965c486023db 'C'
+  │ │
+  │ o  27547f69f254 'B'
+  ├─╯
   o  4a2df7238c3b 'A'
   
 Rebasing B onto E:
@@ -64,17 +64,17 @@ Force a commit on C during the interruption:
 
   $ tglogp
   @  deb5d2f93d8b draft 'Extra'
-  |
-  | o  45396c49d53b draft 'B'
-  | |
-  | o  ae36e8e3dfd7 draft 'E'
-  | |
-  | o  46b37eabc604 draft 'D'
-  | |
-  o |  965c486023db draft 'C'
-  | |
-  x |  27547f69f254 draft 'B'
-  |/
+  │
+  │ o  45396c49d53b draft 'B'
+  │ │
+  │ o  ae36e8e3dfd7 draft 'E'
+  │ │
+  │ o  46b37eabc604 draft 'D'
+  │ │
+  o │  965c486023db draft 'C'
+  │ │
+  x │  27547f69f254 draft 'B'
+  ├─╯
   o  4a2df7238c3b draft 'A'
   
 Resume the rebasing:
@@ -101,19 +101,19 @@ Solve the conflict and go on:
 
   $ tglogp
   o  d2d25e26288e draft 'C'
-  |
-  | o  deb5d2f93d8b draft 'Extra'
-  | |
-  o |  45396c49d53b draft 'B'
-  | |
-  @ |  ae36e8e3dfd7 draft 'E'
-  | |
-  o |  46b37eabc604 draft 'D'
-  | |
-  | x  965c486023db draft 'C'
-  | |
-  | x  27547f69f254 draft 'B'
-  |/
+  │
+  │ o  deb5d2f93d8b draft 'Extra'
+  │ │
+  o │  45396c49d53b draft 'B'
+  │ │
+  @ │  ae36e8e3dfd7 draft 'E'
+  │ │
+  o │  46b37eabc604 draft 'D'
+  │ │
+  │ x  965c486023db draft 'C'
+  │ │
+  │ x  27547f69f254 draft 'B'
+  ├─╯
   o  4a2df7238c3b draft 'A'
   
   $ cd ..
@@ -126,13 +126,13 @@ Changes during an interruption - abort:
 
   $ tglog
   @  ae36e8e3dfd7 'E'
-  |
+  │
   o  46b37eabc604 'D'
-  |
-  | o  965c486023db 'C'
-  | |
-  | o  27547f69f254 'B'
-  |/
+  │
+  │ o  965c486023db 'C'
+  │ │
+  │ o  27547f69f254 'B'
+  ├─╯
   o  4a2df7238c3b 'A'
   
 Rebasing B onto E:
@@ -155,17 +155,17 @@ Force a commit on B' during the interruption:
 
   $ tglog
   @  402ee3642b59 'Extra'
-  |
+  │
   o  45396c49d53b 'B'
-  |
+  │
   o  ae36e8e3dfd7 'E'
-  |
+  │
   o  46b37eabc604 'D'
-  |
-  | o  965c486023db 'C'
-  | |
-  | x  27547f69f254 'B'
-  |/
+  │
+  │ o  965c486023db 'C'
+  │ │
+  │ x  27547f69f254 'B'
+  ├─╯
   o  4a2df7238c3b 'A'
   
 Abort the rebasing:
@@ -176,17 +176,17 @@ Abort the rebasing:
 
   $ tglog
   @  402ee3642b59 'Extra'
-  |
+  │
   o  45396c49d53b 'B'
-  |
+  │
   o  ae36e8e3dfd7 'E'
-  |
+  │
   o  46b37eabc604 'D'
-  |
-  | o  965c486023db 'C'
-  | |
-  | x  27547f69f254 'B'
-  |/
+  │
+  │ o  965c486023db 'C'
+  │ │
+  │ x  27547f69f254 'B'
+  ├─╯
   o  4a2df7238c3b 'A'
   
   $ cd ..
@@ -198,13 +198,13 @@ Changes during an interruption - abort (again):
 
   $ tglogp
   @  ae36e8e3dfd7 draft 'E'
-  |
+  │
   o  46b37eabc604 draft 'D'
-  |
-  | o  965c486023db draft 'C'
-  | |
-  | o  27547f69f254 draft 'B'
-  |/
+  │
+  │ o  965c486023db draft 'C'
+  │ │
+  │ o  27547f69f254 draft 'B'
+  ├─╯
   o  4a2df7238c3b draft 'A'
   
 Rebasing B onto E:
@@ -224,15 +224,15 @@ Change phase on B and B'
 
   $ tglogp
   @  45396c49d53b public 'B'
-  |
+  │
   o  ae36e8e3dfd7 public 'E'
-  |
+  │
   o  46b37eabc604 public 'D'
-  |
-  | o  965c486023db draft 'C'
-  | |
-  | o  27547f69f254 public 'B'
-  |/
+  │
+  │ o  965c486023db draft 'C'
+  │ │
+  │ o  27547f69f254 public 'B'
+  ├─╯
   o  4a2df7238c3b public 'A'
   
 Abort the rebasing:
@@ -243,15 +243,15 @@ Abort the rebasing:
 
   $ tglogp
   @  45396c49d53b public 'B'
-  |
+  │
   o  ae36e8e3dfd7 public 'E'
-  |
+  │
   o  46b37eabc604 public 'D'
-  |
-  | o  965c486023db draft 'C'
-  | |
-  | o  27547f69f254 public 'B'
-  |/
+  │
+  │ o  965c486023db draft 'C'
+  │ │
+  │ o  27547f69f254 public 'B'
+  ├─╯
   o  4a2df7238c3b public 'A'
   
 Test rebase interrupted by hooks
@@ -276,19 +276,19 @@ Test rebase interrupted by hooks
   [255]
   $ tglogp
   @  401ccec5e39f draft 'C'
-  |
-  | @  a0b2430ebfb8 draft 'F'
-  | |
-  o |  45396c49d53b public 'B'
-  | |
-  o |  ae36e8e3dfd7 public 'E'
-  | |
-  o |  46b37eabc604 public 'D'
-  | |
-  | x  965c486023db draft 'C'
-  | |
-  | o  27547f69f254 public 'B'
-  |/
+  │
+  │ @  a0b2430ebfb8 draft 'F'
+  │ │
+  o │  45396c49d53b public 'B'
+  │ │
+  o │  ae36e8e3dfd7 public 'E'
+  │ │
+  o │  46b37eabc604 public 'D'
+  │ │
+  │ x  965c486023db draft 'C'
+  │ │
+  │ o  27547f69f254 public 'B'
+  ├─╯
   o  4a2df7238c3b public 'A'
   
   $ hg rebase --continue
@@ -296,17 +296,17 @@ Test rebase interrupted by hooks
   rebasing a0b2430ebfb8 "F"
   $ tglogp
   @  6e92a149ac6b draft 'F'
-  |
+  │
   o  401ccec5e39f draft 'C'
-  |
+  │
   o  45396c49d53b public 'B'
-  |
+  │
   o  ae36e8e3dfd7 public 'E'
-  |
+  │
   o  46b37eabc604 public 'D'
-  |
-  | o  27547f69f254 public 'B'
-  |/
+  │
+  │ o  27547f69f254 public 'B'
+  ├─╯
   o  4a2df7238c3b public 'A'
   
   $ cd ..
@@ -328,19 +328,19 @@ Test rebase interrupted by hooks
   [255]
   $ tglogp
   @  401ccec5e39f draft 'C'
-  |
-  | @  a0b2430ebfb8 draft 'F'
-  | |
-  o |  45396c49d53b public 'B'
-  | |
-  o |  ae36e8e3dfd7 public 'E'
-  | |
-  o |  46b37eabc604 public 'D'
-  | |
-  | x  965c486023db draft 'C'
-  | |
-  | o  27547f69f254 public 'B'
-  |/
+  │
+  │ @  a0b2430ebfb8 draft 'F'
+  │ │
+  o │  45396c49d53b public 'B'
+  │ │
+  o │  ae36e8e3dfd7 public 'E'
+  │ │
+  o │  46b37eabc604 public 'D'
+  │ │
+  │ x  965c486023db draft 'C'
+  │ │
+  │ o  27547f69f254 public 'B'
+  ├─╯
   o  4a2df7238c3b public 'A'
   
   $ hg rebase --continue
@@ -348,17 +348,17 @@ Test rebase interrupted by hooks
   rebasing a0b2430ebfb8 "F"
   $ tglogp
   @  6e92a149ac6b draft 'F'
-  |
+  │
   o  401ccec5e39f draft 'C'
-  |
+  │
   o  45396c49d53b public 'B'
-  |
+  │
   o  ae36e8e3dfd7 public 'E'
-  |
+  │
   o  46b37eabc604 public 'D'
-  |
-  | o  27547f69f254 public 'B'
-  |/
+  │
+  │ o  27547f69f254 public 'B'
+  ├─╯
   o  4a2df7238c3b public 'A'
   
   $ cd ..
@@ -377,19 +377,19 @@ Test rebase interrupted by hooks
   [255]
   $ tglogp
   @  401ccec5e39f draft 'C'
-  |
-  | @  a0b2430ebfb8 draft 'F'
-  | |
-  o |  45396c49d53b public 'B'
-  | |
-  o |  ae36e8e3dfd7 public 'E'
-  | |
-  o |  46b37eabc604 public 'D'
-  | |
-  | x  965c486023db draft 'C'
-  | |
-  | o  27547f69f254 public 'B'
-  |/
+  │
+  │ @  a0b2430ebfb8 draft 'F'
+  │ │
+  o │  45396c49d53b public 'B'
+  │ │
+  o │  ae36e8e3dfd7 public 'E'
+  │ │
+  o │  46b37eabc604 public 'D'
+  │ │
+  │ x  965c486023db draft 'C'
+  │ │
+  │ o  27547f69f254 public 'B'
+  ├─╯
   o  4a2df7238c3b public 'A'
   
   $ hg rebase --continue
@@ -397,17 +397,17 @@ Test rebase interrupted by hooks
   rebasing a0b2430ebfb8 "F"
   $ tglogp
   @  6e92a149ac6b draft 'F'
-  |
+  │
   o  401ccec5e39f draft 'C'
-  |
+  │
   o  45396c49d53b public 'B'
-  |
+  │
   o  ae36e8e3dfd7 public 'E'
-  |
+  │
   o  46b37eabc604 public 'D'
-  |
-  | o  27547f69f254 public 'B'
-  |/
+  │
+  │ o  27547f69f254 public 'B'
+  ├─╯
   o  4a2df7238c3b public 'A'
   
   $ cd ..

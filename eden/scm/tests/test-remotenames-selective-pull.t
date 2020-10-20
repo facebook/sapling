@@ -325,9 +325,9 @@ Check the repo.pull API
   $ hg debugpull -B master
   $ hg log -Gr 'all()' -T '{node} {desc} {remotenames}'
   o  a81520e7283a6967ec1d82620b75ab92f5478638 push commit default/master
-  |
+  │
   o  0238718db2b174d2622ae9c4c75d61745eb12b25 Move master bookmark
-  |
+  │
   o  1449e7934ec1c4d0c2eefb1194c1cb70e78ba232 First
   
 - Pull by hash + name + prefix
@@ -336,7 +336,7 @@ Check the repo.pull API
   $ hg debugpull -B thirdbook -r 0238718db2b174d2622ae9c4c75d61745eb12b25 -r 1449e7934ec1c
   $ hg log -Gr 'all()' -T '{node} {desc} {remotenames}'
   o  0238718db2b174d2622ae9c4c75d61745eb12b25 Move master bookmark
-  |
+  │
   o  1449e7934ec1c4d0c2eefb1194c1cb70e78ba232 First default/thirdbook
   
 - Auto pull in revset resolution

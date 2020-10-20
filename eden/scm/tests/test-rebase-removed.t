@@ -28,25 +28,25 @@
 
   $ hg log -Gr 'all()'
   @  commit:      27652fba03b2
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     B
-  |
-  | @  commit:      2f1af6263db7
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     A1
-  | |
-  | x  commit:      c84328973e26
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     B
-  | |
-  | o  commit:      9cfaa5b6d3e1
-  |/   user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     A
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     B
+  │
+  │ @  commit:      2f1af6263db7
+  │ │  user:        test
+  │ │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │ │  summary:     A1
+  │ │
+  │ x  commit:      c84328973e26
+  │ │  user:        test
+  │ │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │ │  summary:     B
+  │ │
+  │ o  commit:      9cfaa5b6d3e1
+  ├─╯  user:        test
+  │    date:        Thu Jan 01 00:00:00 1970 +0000
+  │    summary:     A
+  │
   o  commit:      96cc3511f894
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
@@ -65,20 +65,20 @@
 
   $ hg log -Gr 'all()'
   o  commit:      8bbb642d1454
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     A1
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     A1
+  │
   o  commit:      27652fba03b2
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     B
-  |
-  | o  commit:      9cfaa5b6d3e1
-  |/   user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     A
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     B
+  │
+  │ o  commit:      9cfaa5b6d3e1
+  ├─╯  user:        test
+  │    date:        Thu Jan 01 00:00:00 1970 +0000
+  │    summary:     A
+  │
   o  commit:      96cc3511f894
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000

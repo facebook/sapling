@@ -27,7 +27,7 @@ Init an hg repo using the git changelog backend:
 
   $ hg log -Gr 'all()' -T '{node} {desc}'
   o  3f5848713286c67b8a71a450e98c7fa66787bde2 beta
-  |
+  │
   o  b6c31add3e60ded7a9c9c803641edffb1dccd251 alpha
   
   $ hg debugchangelog
@@ -49,7 +49,7 @@ Migrate to revlog changelog format:
   $ hg debugchangelog --migrate rustrevlog
   $ hg log -Gr 'all()' -T '{node} {desc}'
   o  3f5848713286c67b8a71a450e98c7fa66787bde2 beta
-  |
+  │
   o  b6c31add3e60ded7a9c9c803641edffb1dccd251 alpha
   
   $ hg debugchangelog

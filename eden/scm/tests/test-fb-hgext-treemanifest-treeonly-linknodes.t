@@ -48,11 +48,11 @@ Create a commit, and then amend the message twice.  All three should share a man
   $ hg amend -m x2b
   $ hg log -G -r 'all()' --hidden -T '{node} {manifest} {desc}'
   @  426667c0eafcfb0836d7a5a55f66b2b8f20c9842 4921ba8b088dda769331d6cf5c70f349b7c5c6c8 x2b
-  |
-  | x  e0ce6fd597a73d4b7d1fda2cbe6337636f94d3dd 4921ba8b088dda769331d6cf5c70f349b7c5c6c8 x2a
-  |/
-  | x  5ee5c65bfee26d54c1fb59cf411fd5a81a328b83 4921ba8b088dda769331d6cf5c70f349b7c5c6c8 x2
-  |/
+  │
+  │ x  e0ce6fd597a73d4b7d1fda2cbe6337636f94d3dd 4921ba8b088dda769331d6cf5c70f349b7c5c6c8 x2a
+  ├─╯
+  │ x  5ee5c65bfee26d54c1fb59cf411fd5a81a328b83 4921ba8b088dda769331d6cf5c70f349b7c5c6c8 x2
+  ├─╯
   o  203f57bcaf7c8ad8dd3bb2ba85343f072905c086 2e4a95dcb6b42bbf0034f84d293bd9c71b19de64 x1
   
 

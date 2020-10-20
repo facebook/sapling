@@ -75,13 +75,13 @@ Non-conflicting commit should be accepted
 
   $ log
   @  a => bar [draft:add0c792bfce]
-  |
+  │
   o  initial [draft:2bb9d20e471c]
    (re)
   $ cd ../client
   $ log
   @  b => xxx [draft:46a2df24e272]
-  |
+  │
   o  initial [public:2bb9d20e471c]
    (re)
   $ hg log -r . -T '{node}\n'
@@ -130,7 +130,7 @@ unbundle method to make sure that bundle is valid
   $ cd ../server2
   $ log
   o  b => xxx [public:46a2df24e272]
-  |
+  │
   @  initial [public:2bb9d20e471c]
    (re)
 
@@ -166,9 +166,9 @@ Create two commits and push them
   $ echo stack2 > stack2 && hg add stack2 && hg ci -m stack2
   $ log -r '.^::.'
   @  stack2 [draft:359a44f39821]
-  |
+  │
   o  stack1 [draft:36638495eb5c]
-  |
+  │
   ~
   $ hg push -r . --to default -q
   $ mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER $DBPASSOPT -e 'select timestamps from pushrebaserecording' | grep 359a44f39821 | wc -l

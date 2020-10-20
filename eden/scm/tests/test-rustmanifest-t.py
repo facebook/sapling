@@ -1,3 +1,5 @@
+# coding=utf-8
+
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
@@ -160,15 +162,15 @@ sh % "cd $TESTTMP/serverpushrebasemerge"
 sh % "hg log -G -T {desc}" << r"""
 """ == r"""
     o  F
-    |
+    │
     o    E
-    |\
-    | o  D
-    | |
-    o |  C
-    |/
+    ├─╮
+    │ o  D
+    │ │
+    o │  C
+    ├─╯
     o  B
-    |
+    │
     o  A"""
 
 eq(
@@ -238,23 +240,23 @@ sh % "hg push --to=master -r $J" == r"""
 sh % "cd $TESTTMP/serverpushrebasemerge"
 sh % "hg log -G -T '{desc} {bookmarks}'" == r"""
     o    J master
-    |\
-    | o  I
-    | |
-    o |  H
-    |/
+    ├─╮
+    │ o  I
+    │ │
+    o │  H
+    ├─╯
     o  G
-    |
+    │
     o  F
-    |
+    │
     o    E
-    |\
-    | o  D
-    | |
-    o |  C
-    |/
+    ├─╮
+    │ o  D
+    │ │
+    o │  C
+    ├─╯
     o  B
-    |
+    │
     o  A"""
 eq(
     listcommitandmanifesthashes("38d281aaf22d::"),

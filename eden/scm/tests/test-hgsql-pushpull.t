@@ -122,13 +122,13 @@
   exporting bookmark bar
   $ hg log -R ../master -T '{bookmarks}\n' -G
   o  bar
-  |
-  | @
-  | |
-  | o  foo
-  | |
-  | o
-  |/
+  │
+  │ @
+  │ │
+  │ o  foo
+  │ │
+  │ o
+  ├─╯
   o
   
 # Verify syncing with hg-ssh --readonly works

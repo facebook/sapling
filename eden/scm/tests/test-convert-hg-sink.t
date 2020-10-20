@@ -45,9 +45,9 @@
   $ cd new
   $ hg log -G --template '{node|short} ({phase}) "{desc}"\n'
   o  ad681a868e44 (draft) "add foo/file"
-  |
+  │
   o  cbba8ecc03b7 (draft) "remove foo"
-  |
+  │
   o  327daa9251fa (draft) "add foo and bar"
   
 
@@ -152,17 +152,17 @@ Create a tricky source repo
   $ hg bookmark main -r tip
   $ glog
   @  0613c8e59a3d (draft) "6: change a" files: a
-  |
+  │
   o    717e9b37cdb7 (draft) "5: merge 2 and 3, copy b to dir/d" files: dir/d e
-  |\
-  | o  86a55cb968d5 (draft) "4: change a" files: a
-  | |
-  o |  0e6e235919dd (draft) "3: copy a to e, change b" files: b e
-  | |
-  o |  0394b0d5e4f7 (draft) "2: add dir/c" files: dir/c
-  |/
+  ├─╮
+  │ o  86a55cb968d5 (draft) "4: change a" files: a
+  │ │
+  o │  0e6e235919dd (draft) "3: copy a to e, change b" files: b e
+  │ │
+  o │  0394b0d5e4f7 (draft) "2: add dir/c" files: dir/c
+  ├─╯
   o  333546584845 (draft) "1: add a and dir/b" files: a dir/b
-  |
+  │
   o  d1a24e2ebd23 (draft) "0: add 0" files: 0
   
   $ cd ..
@@ -190,13 +190,13 @@ Verify that conversion skipped rev 2:
 
   $ glog -R dest
   o  78814e84a217 (draft) "6: change a" files: a
-  |
+  │
   o    f7cff662c5e5 (draft) "5: merge 2 and 3, copy b to dir/d" files: e
-  |\
-  | o  ab40a95b0072 (draft) "4: change a" files: a
-  | |
-  o |  bd51f17597bf (draft) "3: copy a to e, change b" files: b e
-  |/
+  ├─╮
+  │ o  ab40a95b0072 (draft) "4: change a" files: a
+  │ │
+  o │  bd51f17597bf (draft) "3: copy a to e, change b" files: b e
+  ├─╯
   o  a4a1dae0fe35 (draft) "1: add a and dir/b" files: 0 a
   
 
@@ -322,17 +322,17 @@ More source changes
 
   $ glog -r 6:
   @  0c8927d1f7f4 (draft) "11: source change" files: a
-  |
+  │
   o    9ccb7ee8d261 (draft) "10: source merge" files: a
-  |\
-  | o  f131b1518dba (draft) "9: source second branch" files: a
-  | |
-  o |  669cf0e74b50 (draft) "8: source first branch" files: a
-  | |
-  | o  e6d364a69ff1 (draft) "change in dest" files: dest
-  |/
+  ├─╮
+  │ o  f131b1518dba (draft) "9: source second branch" files: a
+  │ │
+  o │  669cf0e74b50 (draft) "8: source first branch" files: a
+  │ │
+  │ o  e6d364a69ff1 (draft) "change in dest" files: dest
+  ├─╯
   o  0613c8e59a3d (draft) "6: change a" files: a
-  |
+  │
   ~
   $ cd ..
 
@@ -348,23 +348,23 @@ More source changes
 
   $ glog -R dest
   o  8432d597b263 (draft) "11: source change" files: a
-  |
+  │
   o    632ffacdcd6f (draft) "10: source merge" files: a
-  |\
-  | o  049cfee90ee6 (draft) "9: source second branch" files: a
-  | |
-  o |  9b6845e036e5 (draft) "8: source first branch" files: a
-  | |
-  | @  a2e0e3cc6d1d (draft) "change in dest" files: dest
-  |/
+  ├─╮
+  │ o  049cfee90ee6 (draft) "9: source second branch" files: a
+  │ │
+  o │  9b6845e036e5 (draft) "8: source first branch" files: a
+  │ │
+  │ @  a2e0e3cc6d1d (draft) "change in dest" files: dest
+  ├─╯
   o  78814e84a217 (draft) "6: change a" files: a
-  |
+  │
   o    f7cff662c5e5 (draft) "5: merge 2 and 3, copy b to dir/d" files: e
-  |\
-  | o  ab40a95b0072 (draft) "4: change a" files: a
-  | |
-  o |  bd51f17597bf (draft) "3: copy a to e, change b" files: b e
-  |/
+  ├─╮
+  │ o  ab40a95b0072 (draft) "4: change a" files: a
+  │ │
+  o │  bd51f17597bf (draft) "3: copy a to e, change b" files: b e
+  ├─╯
   o  a4a1dae0fe35 (draft) "1: add a and dir/b" files: 0 a
   
   $ cd ..
@@ -425,15 +425,15 @@ Two way tests
 
   $ hg -R 0 log -G
   o  commit:      637fbbbe96b6
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     b
-  |
-  | o  commit:      ec7b9c96e692
-  |/   user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     a
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     b
+  │
+  │ o  commit:      ec7b9c96e692
+  ├─╯  user:        test
+  │    date:        Thu Jan 01 00:00:00 1970 +0000
+  │    summary:     a
+  │
   @  commit:      8a028c7c77f6
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
@@ -457,9 +457,9 @@ Two way tests
 
   $ hg -R a log -G -T '{desc|firstline} ({files})\n'
   o  x (f)
-  |
+  │
   @  a (f)
-  |
+  │
   o  0 (a-only f)
   
   $ hg -R a mani -r tip
@@ -480,11 +480,11 @@ An additional round, demonstrating that unchanged files don't get converted
 
   $ hg -R a log -G -T '{desc|firstline} ({files})\n'
   o  extra f+a-only change (f)
-  |
+  │
   o  x (f)
-  |
+  │
   @  a (f)
-  |
+  │
   o  0 (a-only f)
   
 

@@ -36,12 +36,12 @@ Revsets after the initial clone
 
   $ hg log -Gr 'all()' -T '{desc} {remotenames} {phase}'
   @  B remote/master public
-  |
+  │
   o  A remote/stable public
   
   $ hg log -Gr 'head()' -T '{desc} {remotenames}'
   @  B remote/master
-  |
+  │
   ~
 
 Make some client-side commits based on A
@@ -63,10 +63,11 @@ head() should include one 'D' commit, and one 'B'
 
   $ hg log -Gr 'head()' -T '{desc}'
   o  D
-  |
+  │
   ~
+  
   o  B
-  |
+  │
   ~
 
 all() should not show C
@@ -74,58 +75,60 @@ Commits under ::master should be public
 
   $ hg log -Gr 'all()' -T '{desc} {phase} {remotebookmarks}'
   o  D draft
-  |
+  │
   @  C2 draft
-  |
-  | o  B public remote/master
-  |/
+  │
+  │ o  B public remote/master
+  ├─╯
   o  A public remote/stable
   
 draft() should not show C
 
   $ hg log -Gr 'draft()' -T '{desc}'
   o  D
-  |
+  │
   @  C2
-  |
+  │
   ~
 not public() should not show C
 
   $ hg log -Gr 'not public()' -T '{desc}'
   o  D
-  |
+  │
   @  C2
-  |
+  │
   ~
 A:: should not show C
 
   $ hg log -Gr "$A::" -T '{desc}'
   o  D
-  |
+  │
   @  C2
-  |
-  | o  B
-  |/
+  │
+  │ o  B
+  ├─╯
   o  A
   
 children(A) should not show C
 
   $ hg log -Gr "children($A)" -T '{desc}'
   @  C2
-  |
+  │
   ~
+  
   o  B
-  |
+  │
   ~
 
 predecessors(C2) should include C
 
   $ hg log -Gr "predecessors(desc('C2'))" -T '{desc}'
   @  C2
-  |
+  │
   ~
+  
   x  C
-  |
+  │
   ~
 
 Using commit hash to access C should be allowed
@@ -182,20 +185,21 @@ Visible heads got out of sync with "." or bookmarks
  (Both C and D should show up since they are working parents and bookmarked)
   $ hg log -Gr 'all()' -T '{desc} {phase}'
   o  M public
-  |
-  | o  D draft
-  |/
-  | @  C draft
-  |/
+  │
+  │ o  D draft
+  ├─╯
+  │ @  C draft
+  ├─╯
   o  A public
   
  (Both C and D should show up here, too)
   $ hg log -Gr 'draft()' -T '{desc} {phase}'
   o  D draft
-  |
+  │
   ~
+  
   @  C draft
-  |
+  │
   ~
 
 

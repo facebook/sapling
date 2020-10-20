@@ -93,9 +93,9 @@ Test that trees created during push are synced to the db
   $ cd ../master-new
   $ hg log -G -T '{desc}' --forcesync
   o  c
-  |
+  │
   o  b
-  |
+  │
   o  a
   
   $ hg debugdata .hg/store/meta/dir/00manifest.i 1
@@ -119,13 +119,13 @@ Test that sqltreestrip deletes trees from history
   $ cd ../master
   $ hg log -G -T '{desc}' --forcesync
   o  d2
-  |
+  │
   o  d
-  |
+  │
   o  c
-  |
+  │
   @  b
-  |
+  │
   o  a
   
 

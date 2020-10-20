@@ -33,9 +33,9 @@ Create a tracking bookmark
   $ hg book b -t a
   $ hg log -G -T '{desc} {bookmarks} {remotebookmarks}\n'
   @  b b
-  |
-  | o  a2 a
-  |/
+  │
+  │ o  a2 a
+  ├─╯
   o  a1
   
   $ hg book -v
@@ -52,9 +52,9 @@ Create a tracking bookmark
   rebasing dea4e1d2ca0e "b" (b)
   $ hg log -G -T '{desc} {bookmarks} {remotebookmarks}'
   @  b b
-  |
+  │
   o  a2 a
-  |
+  │
   o  a1
   
   $ hg book -v
@@ -70,9 +70,9 @@ Test push tracking
   $ cd repo2
   $ hg log -G -T '{desc} {bookmarks} {remotebookmarks}\n'
   @  b  default/b
-  |
+  │
   o  a2  default/a
-  |
+  │
   o  a1
   
 
@@ -82,11 +82,11 @@ Test push tracking
   $ hg commit -m c
   $ hg log -G -T '{desc} {bookmarks} {remotebookmarks}\n'
   @  c c
-  |
+  │
   o  b  default/b
-  |
+  │
   o  a2  default/a
-  |
+  │
   o  a1
   
   $ hg push
@@ -99,11 +99,11 @@ Test push tracking
   updating bookmark b
   $ hg log -G -T '{desc} {bookmarks} {remotebookmarks}\n'
   @  c c default/b
-  |
+  │
   o  b
-  |
+  │
   o  a2  default/a
-  |
+  │
   o  a1
   
 Test push with explicit default path
@@ -135,11 +135,11 @@ Test renaming a remote and tracking
   $ hg book c -t remote/a
   $ hg log -G -T '{desc} {bookmarks} {remotebookmarks}\n'
   @  c c remote/b
-  |
+  │
   o  b
-  |
+  │
   o  a2  remote/a
-  |
+  │
   o  a1
   
   $ hg push
@@ -150,11 +150,11 @@ Test renaming a remote and tracking
   [1]
   $ hg log -G -T '{desc} {bookmarks} {remotebookmarks}\n'
   @  c c remote/a remote/b
-  |
+  │
   o  b
-  |
+  │
   o  a2
-  |
+  │
   o  a1
   
 
@@ -181,15 +181,15 @@ Test that tracking isn't over-eager on rebase
   $ hg commit -qAm d
   $ hg log -G -T '{node|short} {bookmarks} {remotebookmarks}\n'
   @  ff58066d17c3 c
-  |
-  | o  364e447d28f4
-  |/
-  | o  e305ab9fea99  remote/a remote/b
-  | |
-  | o  2623fce7de21
-  |/
+  │
+  │ o  364e447d28f4
+  ├─╯
+  │ o  e305ab9fea99  remote/a remote/b
+  │ │
+  │ o  2623fce7de21
+  ├─╯
   o  fdceb0e57656
-  |
+  │
   o  07199ae38cd5
   
   $ hg bookmarks -v
@@ -200,30 +200,30 @@ Test that tracking isn't over-eager on rebase
   [255]
   $ hg log -G -T '{node|short} {bookmarks} {remotebookmarks}\n'
   @  ff58066d17c3 c
-  |
-  | o  364e447d28f4
-  |/
-  | o  e305ab9fea99  remote/a remote/b
-  | |
-  | o  2623fce7de21
-  |/
+  │
+  │ o  364e447d28f4
+  ├─╯
+  │ o  e305ab9fea99  remote/a remote/b
+  │ │
+  │ o  2623fce7de21
+  ├─╯
   o  fdceb0e57656
-  |
+  │
   o  07199ae38cd5
   
 Test implicit rebase destination
 
   $ hg log -G -T '{node|short} {bookmarks} {remotebookmarks}\n'
   @  ff58066d17c3 c
-  |
-  | o  364e447d28f4
-  |/
-  | o  e305ab9fea99  remote/a remote/b
-  | |
-  | o  2623fce7de21
-  |/
+  │
+  │ o  364e447d28f4
+  ├─╯
+  │ o  e305ab9fea99  remote/a remote/b
+  │ │
+  │ o  2623fce7de21
+  ├─╯
   o  fdceb0e57656
-  |
+  │
   o  07199ae38cd5
   
   $ hg bookmarks -v
@@ -232,15 +232,15 @@ Test implicit rebase destination
   rebasing ff58066d17c3 "d" (c)
   $ hg log -G -T '{node|short} {bookmarks} {remotebookmarks}\n'
   @  8d13dc14fef1 c
-  |
-  | o  364e447d28f4
-  | |
-  o |  e305ab9fea99  remote/a remote/b
-  | |
-  o |  2623fce7de21
-  |/
+  │
+  │ o  364e447d28f4
+  │ │
+  o │  e305ab9fea99  remote/a remote/b
+  │ │
+  o │  2623fce7de21
+  ├─╯
   o  fdceb0e57656
-  |
+  │
   o  07199ae38cd5
   
 

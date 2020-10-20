@@ -25,15 +25,15 @@ C -> C2 relation is copied with singletransaction.
   rebasing 039c3379aaa9 "C2"
   $ hg log -G -T '{node|short} {desc}'
   o  b97425e89b0c C2
-  |
-  | o  f7f4f5b9173a D
-  | |
-  | x  e709467ba6ed C
-  |/
+  │
+  │ o  f7f4f5b9173a D
+  │ │
+  │ x  e709467ba6ed C
+  ├─╯
   o  d74d19e598c8 B
-  |
+  │
   o  262e37e34f63 Z
-  |
+  │
   o  426bada5c675 A
   
 FIXME: This does not quite work yet without singletransaction.
@@ -46,14 +46,14 @@ FIXME: This does not quite work yet without singletransaction.
   rebasing 039c3379aaa9 "C2"
   $ hg log -G -T '{node|short} {desc}'
   o  b97425e89b0c C2
-  |
-  | o  f7f4f5b9173a D
-  | |
-  | o  e709467ba6ed C
-  |/
+  │
+  │ o  f7f4f5b9173a D
+  │ │
+  │ o  e709467ba6ed C
+  ├─╯
   o  d74d19e598c8 B
-  |
+  │
   o  262e37e34f63 Z
-  |
+  │
   o  426bada5c675 A
   

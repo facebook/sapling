@@ -71,13 +71,13 @@ Create some commits
 
   $ hg log -G -T '{node} {desc}' --hidden
   @  6c4fd43ed714e7fcd8adbaa7b16c953c2e985b60 added file-abcde
-  |
+  │
   o  6db330d65db434145c0b59d291853e9a84719b24 added file-abcd
-  |
+  │
   o  abf2df566fc193b3ac34d946e63c1583e4d4732b added file-abc
-  |
+  │
   o  69a232e754b08d568c4899475faf2eb44b857802 added file-ab
-  |
+  │
   o  3004d2d9b50883c1538fc754a3aeb55f1b4084f6 added file-a
   
 Simple uncommit off the top, also moves bookmark
@@ -93,13 +93,13 @@ Simple uncommit off the top, also moves bookmark
 
   $ hg log -G -T '{node} {desc}' --hidden
   o  6c4fd43ed714e7fcd8adbaa7b16c953c2e985b60 added file-abcde
-  |
+  │
   @  6db330d65db434145c0b59d291853e9a84719b24 added file-abcd
-  |
+  │
   o  abf2df566fc193b3ac34d946e63c1583e4d4732b added file-abc
-  |
+  │
   o  69a232e754b08d568c4899475faf2eb44b857802 added file-ab
-  |
+  │
   o  3004d2d9b50883c1538fc754a3aeb55f1b4084f6 added file-a
   
 
@@ -140,17 +140,17 @@ Try partial uncommit, also moves bookmark
   
   $ hg log -G -T '{node} {desc}' --hidden
   @  3727deee06f72f5ffa8db792ee299cf39e3e190b new change abcde
-  |
-  | o  0c07a3ccda771b25f1cb1edbd02e683723344ef1 new change abcde
-  |/
-  | o  6c4fd43ed714e7fcd8adbaa7b16c953c2e985b60 added file-abcde
-  |/
+  │
+  │ o  0c07a3ccda771b25f1cb1edbd02e683723344ef1 new change abcde
+  ├─╯
+  │ o  6c4fd43ed714e7fcd8adbaa7b16c953c2e985b60 added file-abcde
+  ├─╯
   o  6db330d65db434145c0b59d291853e9a84719b24 added file-abcd
-  |
+  │
   o  abf2df566fc193b3ac34d946e63c1583e4d4732b added file-abc
-  |
+  │
   o  69a232e754b08d568c4899475faf2eb44b857802 added file-ab
-  |
+  │
   o  3004d2d9b50883c1538fc754a3aeb55f1b4084f6 added file-a
   
   $ hg commit -m 'update files for abcde'
@@ -250,29 +250,29 @@ Partial uncommit in the middle, does not move bookmark
 
   $ hg log -G -T '{node} {desc}' --hidden
   @  f21039c59242b085491bb58f591afc4ed1c04c09 update ab
-  |
+  │
   o  8eb87968f2edb7f27f27fe676316e179de65fff6 added file-ab
-  |
-  | o  5dc89ca4486f8a88716c5797fa9f498d13d7c2e1 new abc
-  | |
-  | | o  48e5bd7cd583eb24164ef8b89185819c84c96ed7 files abcde + foo
-  | | |
-  | | | o  83815831694b1271e9f207cb1b79b2b19275edcb files abcde + foo
-  | | |/
-  | | | o  0977fa602c2fd7d8427ed4e7ee15ea13b84c9173 update files for abcde
-  | | |/
-  | | o  3727deee06f72f5ffa8db792ee299cf39e3e190b new change abcde
-  | | |
-  | | | o  0c07a3ccda771b25f1cb1edbd02e683723344ef1 new change abcde
-  | | |/
-  | | | o  6c4fd43ed714e7fcd8adbaa7b16c953c2e985b60 added file-abcde
-  | | |/
-  | | o  6db330d65db434145c0b59d291853e9a84719b24 added file-abcd
-  | | |
-  | | o  abf2df566fc193b3ac34d946e63c1583e4d4732b added file-abc
-  | |/
-  | o  69a232e754b08d568c4899475faf2eb44b857802 added file-ab
-  |/
+  │
+  │ o  5dc89ca4486f8a88716c5797fa9f498d13d7c2e1 new abc
+  │ │
+  │ │ o  48e5bd7cd583eb24164ef8b89185819c84c96ed7 files abcde + foo
+  │ │ │
+  │ │ │ o  83815831694b1271e9f207cb1b79b2b19275edcb files abcde + foo
+  │ │ ├─╯
+  │ │ │ o  0977fa602c2fd7d8427ed4e7ee15ea13b84c9173 update files for abcde
+  │ │ ├─╯
+  │ │ o  3727deee06f72f5ffa8db792ee299cf39e3e190b new change abcde
+  │ │ │
+  │ │ │ o  0c07a3ccda771b25f1cb1edbd02e683723344ef1 new change abcde
+  │ │ ├─╯
+  │ │ │ o  6c4fd43ed714e7fcd8adbaa7b16c953c2e985b60 added file-abcde
+  │ │ ├─╯
+  │ │ o  6db330d65db434145c0b59d291853e9a84719b24 added file-abcd
+  │ │ │
+  │ │ o  abf2df566fc193b3ac34d946e63c1583e4d4732b added file-abc
+  │ ├─╯
+  │ o  69a232e754b08d568c4899475faf2eb44b857802 added file-ab
+  ├─╯
   o  3004d2d9b50883c1538fc754a3aeb55f1b4084f6 added file-a
   
 Uncommit with draft parent
@@ -316,7 +316,7 @@ Uncommit leaving an empty changeset
   $ hg uncommit --keep
   $ hg log -G -T '{desc} FILES: {files}'
   @  Q FILES:
-  |
+  │
   o  P FILES: P
   
   $ hg status
@@ -342,15 +342,15 @@ Create some history
   $ for i in 1 2 3; do echo $i > b; hg commit -m "b $i"; done
   $ hg log -G -T '{node} {desc}' --hidden
   @  2cd56cdde163ded2fbb16ba2f918c96046ab0bf2 b 3
-  |
+  │
   o  c3a0d5bb3b15834ffd2ef9ef603e93ec65cf2037 b 2
-  |
+  │
   o  49bb009ca26078726b8870f1edb29fae8f7618f5 b 1
-  |
-  | o  990982b7384266e691f1bc08ca36177adcd1c8a9 a 3
-  | |
-  | o  24d38e3cf160c7b6f5ffe82179332229886a6d34 a 2
-  |/
+  │
+  │ o  990982b7384266e691f1bc08ca36177adcd1c8a9 a 3
+  │ │
+  │ o  24d38e3cf160c7b6f5ffe82179332229886a6d34 a 2
+  ├─╯
   o  ea4e33293d4d274a2ba73150733c2612231f398c a 1
   
 
@@ -379,17 +379,17 @@ Add and expect uncommit to fail on both merge working dir and merge changeset
   $ hg status
   $ hg log -G -T '{node} {desc}' --hidden
   @    c03b9c37bc67bf504d4912061cfb527b47a63c6e merge a and b
-  |\
-  | o  2cd56cdde163ded2fbb16ba2f918c96046ab0bf2 b 3
-  | |
-  | o  c3a0d5bb3b15834ffd2ef9ef603e93ec65cf2037 b 2
-  | |
-  | o  49bb009ca26078726b8870f1edb29fae8f7618f5 b 1
-  | |
-  o |  990982b7384266e691f1bc08ca36177adcd1c8a9 a 3
-  | |
-  o |  24d38e3cf160c7b6f5ffe82179332229886a6d34 a 2
-  |/
+  ├─╮
+  │ o  2cd56cdde163ded2fbb16ba2f918c96046ab0bf2 b 3
+  │ │
+  │ o  c3a0d5bb3b15834ffd2ef9ef603e93ec65cf2037 b 2
+  │ │
+  │ o  49bb009ca26078726b8870f1edb29fae8f7618f5 b 1
+  │ │
+  o │  990982b7384266e691f1bc08ca36177adcd1c8a9 a 3
+  │ │
+  o │  24d38e3cf160c7b6f5ffe82179332229886a6d34 a 2
+  ├─╯
   o  ea4e33293d4d274a2ba73150733c2612231f398c a 1
   
 Recover added / deleted files

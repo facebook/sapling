@@ -1,3 +1,5 @@
+# coding=utf-8
+
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
@@ -24,17 +26,17 @@ sh % "hg bookmark -i -r 5 feature1"
 sh % "hg bookmark -i -r 6 feature2"
 sh % "hg log -G -T '{rev} {bookmarks}' -r 'all()'" == r"""
     o  6 feature2
-    |
-    | o  5 feature1
-    | |
-    o |  4
-    | |
-    | o  3
-    |/
+    │
+    │ o  5 feature1
+    │ │
+    o │  4
+    │ │
+    │ o  3
+    ├─╯
     o  2
-    |
+    │
     o  1 master
-    |
+    │
     o  0"""
 sh % "hg bookmark -D feature1" == r"""
     bookmark 'feature1' deleted
@@ -43,15 +45,15 @@ sh % "hg bookmark -D feature1" == r"""
     hint[hint-ack]: use 'hg hint --ack strip-hide' to silence these hints"""
 sh % "hg log -G -T '{rev} {bookmarks}' -r 'all()' --hidden" == r"""
     o  6 feature2
-    |
-    | o  5
-    | |
-    o |  4
-    | |
-    | o  3
-    |/
+    │
+    │ o  5
+    │ │
+    o │  4
+    │ │
+    │ o  3
+    ├─╯
     o  2
-    |
+    │
     o  1 master
-    |
+    │
     o  0"""

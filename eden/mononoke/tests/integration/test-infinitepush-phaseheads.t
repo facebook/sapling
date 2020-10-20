@@ -71,11 +71,11 @@ push some draft commits
 
   $ graphlog
   @  fc8f2fba9ac9 draft 'draft2'
-  |
+  │
   o  48337b947baa draft 'draft1'
-  |
+  │
   o  f2f073d106b0 public 'public1'  default/master_bookmark
-  |
+  │
   o  df4f53cec30a public 'base'
   
 
@@ -98,11 +98,11 @@ pull these draft commits
 
   $ graphlog
   o  fc8f2fba9ac9 draft 'draft2'
-  |
+  │
   o  48337b947baa draft 'draft1'
-  |
+  │
   o  f2f073d106b0 public 'public1'  default/master_bookmark
-  |
+  │
   o  df4f53cec30a public 'base'
   
 
@@ -141,19 +141,19 @@ add some draft commits to the branch
 
   $ graphlog
   @  3e86159717e8 draft 'branch3'
-  |
+  │
   o  0bf099b792a8 draft 'branch2'
-  |
+  │
   o  eaf82af99127 public 'branch1'  default/branch_bookmark
-  |
-  | o  09b17e5ff090 draft 'draft3'
-  | |
-  | o  fc8f2fba9ac9 draft 'draft2'
-  | |
-  | o  48337b947baa public 'draft1'  default/master_bookmark
-  | |
-  | o  f2f073d106b0 public 'public1'
-  |/
+  │
+  │ o  09b17e5ff090 draft 'draft3'
+  │ │
+  │ o  fc8f2fba9ac9 draft 'draft2'
+  │ │
+  │ o  48337b947baa public 'draft1'  default/master_bookmark
+  │ │
+  │ o  f2f073d106b0 public 'public1'
+  ├─╯
   o  df4f53cec30a public 'base'
   
 
@@ -171,19 +171,19 @@ the server will have returned phaseheads information that makes 'draft1' and
 'branch1' public, and everything else draft
   $ graphlog
   o  09b17e5ff090 draft 'draft3'
-  |
-  | o  3e86159717e8 draft 'branch3'
-  | |
-  | o  0bf099b792a8 draft 'branch2'
-  | |
-  | o  eaf82af99127 public 'branch1'  default/branch_bookmark
-  | |
-  o |  fc8f2fba9ac9 draft 'draft2'
-  | |
-  o |  48337b947baa public 'draft1'  default/master_bookmark
-  | |
-  o |  f2f073d106b0 public 'public1'
-  |/
+  │
+  │ o  3e86159717e8 draft 'branch3'
+  │ │
+  │ o  0bf099b792a8 draft 'branch2'
+  │ │
+  │ o  eaf82af99127 public 'branch1'  default/branch_bookmark
+  │ │
+  o │  fc8f2fba9ac9 draft 'draft2'
+  │ │
+  o │  48337b947baa public 'draft1'  default/master_bookmark
+  │ │
+  o │  f2f073d106b0 public 'public1'
+  ├─╯
   o  df4f53cec30a public 'base'
   
 

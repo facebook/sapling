@@ -37,7 +37,7 @@ Prepare the hg repo:
   $ setconfig gitlookup.useindex=True gitlookup.mapfile=$TESTTMP/hgrepo/.hg/git-mapfile
   $ hg log -Gr 'all()' -T '{node} {gitnode} {bookmarks}'
   @  3bb02b6794ddc0b498cdc15f59f2e6724cabfa2f 9497a4ee62e16ee641860d7677cdb2589ea15554 beta
-  |
+  │
   o  69982ec78c6dd2f24b3b62f3e2baaa79ab48ed93 7eeab2ea75ec1ac0ff3d500b5b6f8a3447dd7c03 master
   
 The gitlookup interface is exposed at the wireproto layer. Use another repo to test it:
@@ -76,9 +76,9 @@ Sync git to hg:
   importing git objects into hg
   $ hg log -Gr 'all()' -T '{node} {gitnode} {bookmarks}'
   o  146e4a0c333d21c93eefe6bf5c01a8d51c5918ab b6d676108afa31dc39efc9c5eb57f19ecbad837b beta
-  |
+  │
   @  3bb02b6794ddc0b498cdc15f59f2e6724cabfa2f 9497a4ee62e16ee641860d7677cdb2589ea15554
-  |
+  │
   o  69982ec78c6dd2f24b3b62f3e2baaa79ab48ed93 7eeab2ea75ec1ac0ff3d500b5b6f8a3447dd7c03 master
   
 

@@ -46,11 +46,11 @@ TEST: dropping changeset in the middle of the stack
   $ hg debugbuilddag +4 -m
   $ hg log -G -T '{desc|firstline}'
   o  r3
-  |
+  │
   o  r2
-  |
+  │
   o  r1
-  |
+  │
   o  r0
   
   $ hg drop -r 'desc(r2)'
@@ -59,9 +59,9 @@ TEST: dropping changeset in the middle of the stack
   merging mf
   $ hg log -G -T '{desc|firstline}'
   o  r3
-  |
+  │
   o  r1
-  |
+  │
   o  r0
   
 TEST: abort when more than one revision provided
@@ -77,19 +77,19 @@ TEST: dropping a changest with child changesets
   $ hg debugbuilddag -m "+5 *3 +2"
   $ hg log -G -T '{desc|firstline}'
   o  r7
-  |
+  │
   o  r6
-  |
+  │
   o  r5
-  |
-  | o  r4
-  | |
-  | o  r3
-  |/
+  │
+  │ o  r4
+  │ │
+  │ o  r3
+  ├─╯
   o  r2
-  |
+  │
   o  r1
-  |
+  │
   o  r0
   
   $ hg drop 'desc(r2)'
@@ -106,17 +106,17 @@ TEST: dropping a changest with child changesets
   merging mf
   $ hg log -G -T '{desc|firstline}'
   o  r7
-  |
+  │
   o  r6
-  |
+  │
   o  r5
-  |
-  | o  r4
-  | |
-  | o  r3
-  |/
+  │
+  │ o  r4
+  │ │
+  │ o  r3
+  ├─╯
   o  r1
-  |
+  │
   o  r0
   
 TEST: aborting drop on merge changeset
@@ -130,19 +130,19 @@ TEST: aborting drop on merge changeset
   $ hg commit -m "merge"
   $ hg log -G -T '{desc|firstline}'
   @    merge
-  |\
-  | o  r7
-  | |
-  | o  r6
-  | |
-  | o  r5
-  | |
-  +---o  r4
-  | |
-  o |  r3
-  |/
+  ├─╮
+  │ o  r7
+  │ │
+  │ o  r6
+  │ │
+  │ o  r5
+  │ │
+  │ │ o  r4
+  ├───╯
+  o │  r3
+  ├─╯
   o  r1
-  |
+  │
   o  r0
   
   $ hg drop 'desc(merge)'
@@ -163,11 +163,11 @@ TEST: dropping a changeset with merge conflict
   $ hg debugbuilddag -o +4
   $ hg log -G -T '{desc|firstline}'
   o  r3
-  |
+  │
   o  r2
-  |
+  │
   o  r1
-  |
+  │
   o  r0
   
   $ hg drop 'desc(r1)'

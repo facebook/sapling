@@ -63,7 +63,7 @@ Add a new commit to server2 (as if we stripped in server1):
   [hgsql] held lock for * seconds (read 5 rows; write 1 rows) (glob)
   $ log
   @  first [draft:8585ef078134] master
-  |
+  │
   o  base [draft:4ced94c0a443]
   
 Stop syncs in server1 so it doesn't pick up the new commit:
@@ -100,26 +100,26 @@ Create a _third_ draft commit, push to the (behind) server1:
 
   $ log
   @  third commit [public:87df66bba286] master
-  |
+  │
   o  first [public:8585ef078134]  default/master
-  |
+  │
   o  base [public:4ced94c0a443]
   
   $ cd ../server1
   $ log
   [hgsql] skipping database sync because another process is already syncing
   o  third commit [public:87df66bba286] master
-  |
+  │
   o  first [public:8585ef078134]
-  |
+  │
   @  base [public:4ced94c0a443]
   
   $ cd ../server2
   $ log
   [hgsql] getting 1 commits from database
   o  third commit [draft:87df66bba286] master
-  |
+  │
   @  first [draft:8585ef078134]
-  |
+  │
   o  base [draft:4ced94c0a443]
   

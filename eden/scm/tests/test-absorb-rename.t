@@ -146,24 +146,24 @@ copy b to a
 
   $ hg log -G -p -T '{node|short} {desc}\n'
   @  70606019f91b cp
-  |  diff --git a/b b/a
-  |  rename from b
-  |  rename to a
-  |  --- a/b
-  |  +++ b/a
-  |  @@ -1,1 +1,2 @@
-  |   1a
-  |  +2a
-  |  diff --git a/b b/c
-  |  copy from b
-  |  copy to c
-  |  --- a/b
-  |  +++ b/c
-  |  @@ -1,1 +1,2 @@
-  |  -1a
-  |  +1
-  |  +3c
-  |
+  │  diff --git a/b b/a
+  │  rename from b
+  │  rename to a
+  │  --- a/b
+  │  +++ b/a
+  │  @@ -1,1 +1,2 @@
+  │   1a
+  │  +2a
+  │  diff --git a/b b/c
+  │  copy from b
+  │  copy to c
+  │  --- a/b
+  │  +++ b/c
+  │  @@ -1,1 +1,2 @@
+  │  -1a
+  │  +1
+  │  +3c
+  │
   o  bfb67c3539c1 1
      diff --git a/b b/b
      new file mode 100644
@@ -178,24 +178,24 @@ run absorb again would apply the change to c
 
   $ hg log -G -p -T '{node|short} {desc}\n'
   @  8bd536cce368 cp
-  |  diff --git a/b b/a
-  |  rename from b
-  |  rename to a
-  |  --- a/b
-  |  +++ b/a
-  |  @@ -1,1 +1,2 @@
-  |   1a
-  |  +2a
-  |  diff --git a/b b/c
-  |  copy from b
-  |  copy to c
-  |  --- a/b
-  |  +++ b/c
-  |  @@ -1,1 +1,2 @@
-  |  -1a
-  |  +1c
-  |  +3c
-  |
+  │  diff --git a/b b/a
+  │  rename from b
+  │  rename to a
+  │  --- a/b
+  │  +++ b/a
+  │  @@ -1,1 +1,2 @@
+  │   1a
+  │  +2a
+  │  diff --git a/b b/c
+  │  copy from b
+  │  copy to c
+  │  --- a/b
+  │  +++ b/c
+  │  @@ -1,1 +1,2 @@
+  │  -1a
+  │  +1c
+  │  +3c
+  │
   o  bfb67c3539c1 1
      diff --git a/b b/b
      new file mode 100644
@@ -245,45 +245,45 @@ run absorb again would apply the change to c
 
   $ hg log -G -p -T '{node|short} {desc}\n'
   @  34be9b0c786e mv
-  |  diff --git a/c b/c
-  |  deleted file mode 100644
-  |  --- a/c
-  |  +++ /dev/null
-  |  @@ -1,2 +0,0 @@
-  |  -1
-  |  -3
-  |  diff --git a/a b/e
-  |  rename from a
-  |  rename to e
-  |
+  │  diff --git a/c b/c
+  │  deleted file mode 100644
+  │  --- a/c
+  │  +++ /dev/null
+  │  @@ -1,2 +0,0 @@
+  │  -1
+  │  -3
+  │  diff --git a/a b/e
+  │  rename from a
+  │  rename to e
+  │
   o  13e56db5948d cp
-  |  diff --git a/b b/a
-  |  rename from b
-  |  rename to a
-  |  --- a/b
-  |  +++ b/a
-  |  @@ -1,1 +1,2 @@
-  |  -1d
-  |  +1
-  |  +2e
-  |  diff --git a/b b/c
-  |  copy from b
-  |  copy to c
-  |  --- a/b
-  |  +++ b/c
-  |  @@ -1,1 +1,2 @@
-  |  -1d
-  |  +1
-  |  +3
-  |  diff --git a/b b/d
-  |  copy from b
-  |  copy to d
-  |  --- a/b
-  |  +++ b/d
-  |  @@ -1,1 +1,2 @@
-  |   1d
-  |  +4d
-  |
+  │  diff --git a/b b/a
+  │  rename from b
+  │  rename to a
+  │  --- a/b
+  │  +++ b/a
+  │  @@ -1,1 +1,2 @@
+  │  -1d
+  │  +1
+  │  +2e
+  │  diff --git a/b b/c
+  │  copy from b
+  │  copy to c
+  │  --- a/b
+  │  +++ b/c
+  │  @@ -1,1 +1,2 @@
+  │  -1d
+  │  +1
+  │  +3
+  │  diff --git a/b b/d
+  │  copy from b
+  │  copy to d
+  │  --- a/b
+  │  +++ b/d
+  │  @@ -1,1 +1,2 @@
+  │   1d
+  │  +4d
+  │
   o  0037613a5dc6 1
      diff --git a/b b/b
      new file mode 100644

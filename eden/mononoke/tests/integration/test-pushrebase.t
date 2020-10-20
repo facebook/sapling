@@ -8,9 +8,9 @@
   $ BLOB_TYPE="blob_files" default_setup
   hg repo
   o  C [draft;rev=2;26805aba1e60]
-  |
+  │
   o  B [draft;rev=1;112478962961]
-  |
+  │
   o  A [draft;rev=0;426bada5c675]
   $
   blobimporting
@@ -34,13 +34,13 @@ Pushrebase commit 1
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ log -r "all()"
   @  1 [public;rev=4;c2e526aacb51] default/master_bookmark
-  |
-  | o  1 [draft;rev=3;a0c9c5791058]
-  | |
-  o |  C [public;rev=2;26805aba1e60]
-  | |
-  o |  B [public;rev=1;112478962961]
-  |/
+  │
+  │ o  1 [draft;rev=3;a0c9c5791058]
+  │ │
+  o │  C [public;rev=2;26805aba1e60]
+  │ │
+  o │  B [public;rev=1;112478962961]
+  ├─╯
   o  A [public;rev=0;426bada5c675]
   $
 
@@ -126,15 +126,15 @@ Push stack
   $ hgmn up -q master_bookmark
   $ log -r "all()"
   @  4 [public;rev=11;4f5a4463b24b] default/master_bookmark
-  |
+  │
   o  3 [public;rev=10;7796136324ad]
-  |
+  │
   o  1 [public;rev=4;c2e526aacb51]
-  |
+  │
   o  C [public;rev=2;26805aba1e60]
-  |
+  │
   o  B [public;rev=1;112478962961]
-  |
+  │
   o  A [public;rev=0;426bada5c675]
   $
 
@@ -152,17 +152,17 @@ Push fast-forward
   updating bookmark master_bookmark
   $ log -r "all()"
   @  5 [public;rev=12;59e5396444cf] default/master_bookmark
-  |
+  │
   o  4 [public;rev=11;4f5a4463b24b]
-  |
+  │
   o  3 [public;rev=10;7796136324ad]
-  |
+  │
   o  1 [public;rev=4;c2e526aacb51]
-  |
+  │
   o  C [public;rev=2;26805aba1e60]
-  |
+  │
   o  B [public;rev=1;112478962961]
-  |
+  │
   o  A [public;rev=0;426bada5c675]
   $
 
@@ -176,7 +176,7 @@ Push with no new commits
   [1]
   $ log -r "."
   @  5 [public;rev=12;59e5396444cf] default/master_bookmark
-  |
+  │
   ~
 
 Push a merge commit with both parents not ancestors of destination bookmark
@@ -187,23 +187,23 @@ Push a merge commit with both parents not ancestors of destination bookmark
   $ hg merge -q -r 13 && hg ci -m "merge 6 and 7"
   $ log -r "all()"
   @    merge 6 and 7 [draft;rev=15;fad460d85200]
-  |\
-  | o  7 [draft;rev=14;299aa3fbbd3f]
-  | |
-  o |  6 [draft;rev=13;55337b4265b3]
-  |/
-  | o  5 [public;rev=12;59e5396444cf] default/master_bookmark
-  | |
-  | o  4 [public;rev=11;4f5a4463b24b]
-  | |
-  | o  3 [public;rev=10;7796136324ad]
-  | |
-  | o  1 [public;rev=4;c2e526aacb51]
-  | |
-  | o  C [public;rev=2;26805aba1e60]
-  |/
+  ├─╮
+  │ o  7 [draft;rev=14;299aa3fbbd3f]
+  │ │
+  o │  6 [draft;rev=13;55337b4265b3]
+  ├─╯
+  │ o  5 [public;rev=12;59e5396444cf] default/master_bookmark
+  │ │
+  │ o  4 [public;rev=11;4f5a4463b24b]
+  │ │
+  │ o  3 [public;rev=10;7796136324ad]
+  │ │
+  │ o  1 [public;rev=4;c2e526aacb51]
+  │ │
+  │ o  C [public;rev=2;26805aba1e60]
+  ├─╯
   o  B [public;rev=1;112478962961]
-  |
+  │
   o  A [public;rev=0;426bada5c675]
   $
 
@@ -218,23 +218,23 @@ Push a merge commit with both parents not ancestors of destination bookmark
   $ hgmn up master_bookmark -q && hg hide -r "13+14+15" -q
   $ log -r "all()"
   @    merge 6 and 7 [public;rev=18;4a0002072071] default/master_bookmark
-  |\
-  \| o  (6|7) \[public;rev=17;.*\] (re)
-  | |
-  o \|  (7|6) \[public;rev=16;.*\] (re)
-  |/
+  ├─╮
+  * (glob)
+  │ │
+  * (glob)
+  ├─╯
   o  5 [public;rev=12;59e5396444cf]
-  |
+  │
   o  4 [public;rev=11;4f5a4463b24b]
-  |
+  │
   o  3 [public;rev=10;7796136324ad]
-  |
+  │
   o  1 [public;rev=4;c2e526aacb51]
-  |
+  │
   o  C [public;rev=2;26805aba1e60]
-  |
+  │
   o  B [public;rev=1;112478962961]
-  |
+  │
   o  A [public;rev=0;426bada5c675]
   $
 
@@ -285,30 +285,30 @@ Test creating a bookmark on a public commit
   [1]
   $ log -r "20::"
   @    merge 10 and 12 [public;rev=25;eb388b759fde] default/master_bookmark default/master_bookmark_2
-  |\
-  | o  12 [public;rev=23;cd5aac4439e5]
-  | |
-  o |  11 [public;rev=22;589551466f25]
-  | |
-  o |  10 [public;rev=21;c573a92e1179]
-  |/
+  ├─╮
+  │ o  12 [public;rev=23;cd5aac4439e5]
+  │ │
+  o │  11 [public;rev=22;589551466f25]
+  │ │
+  o │  10 [public;rev=21;c573a92e1179]
+  ├─╯
   o  9 [public;rev=20;2f7cc50dc4e5]
-  |
+  │
   ~
 
 Test a non-forward push
   $ hgmn up 22 -q
   $ log -r "20::"
   o    merge 10 and 12 [public;rev=25;eb388b759fde] default/master_bookmark default/master_bookmark_2
-  |\
-  | o  12 [public;rev=23;cd5aac4439e5]
-  | |
-  @ |  11 [public;rev=22;589551466f25]
-  | |
-  o |  10 [public;rev=21;c573a92e1179]
-  |/
+  ├─╮
+  │ o  12 [public;rev=23;cd5aac4439e5]
+  │ │
+  @ │  11 [public;rev=22;589551466f25]
+  │ │
+  o │  10 [public;rev=21;c573a92e1179]
+  ├─╯
   o  9 [public;rev=20;2f7cc50dc4e5]
-  |
+  │
   ~
   $ hgmn push --force -r . --to master_bookmark_2 --non-forward-move --pushvar NON_FAST_FORWARD=true
   pushing rev 589551466f25 to destination ssh://user@dummy/repo bookmark master_bookmark_2
@@ -318,15 +318,15 @@ Test a non-forward push
   [1]
   $ log -r "20::"
   o    merge 10 and 12 [public;rev=25;eb388b759fde] default/master_bookmark
-  |\
-  | o  12 [public;rev=23;cd5aac4439e5]
-  | |
-  @ |  11 [public;rev=22;589551466f25] default/master_bookmark_2
-  | |
-  o |  10 [public;rev=21;c573a92e1179]
-  |/
+  ├─╮
+  │ o  12 [public;rev=23;cd5aac4439e5]
+  │ │
+  @ │  11 [public;rev=22;589551466f25] default/master_bookmark_2
+  │ │
+  o │  10 [public;rev=21;c573a92e1179]
+  ├─╯
   o  9 [public;rev=20;2f7cc50dc4e5]
-  |
+  │
   ~
 
 Test deleting a bookmark
@@ -338,15 +338,15 @@ Test deleting a bookmark
   [1]
   $ log -r "20::"
   o    merge 10 and 12 [public;rev=25;eb388b759fde] default/master_bookmark
-  |\
-  | o  12 [public;rev=23;cd5aac4439e5]
-  | |
-  @ |  11 [public;rev=22;589551466f25]
-  | |
-  o |  10 [public;rev=21;c573a92e1179]
-  |/
+  ├─╮
+  │ o  12 [public;rev=23;cd5aac4439e5]
+  │ │
+  @ │  11 [public;rev=22;589551466f25]
+  │ │
+  o │  10 [public;rev=21;c573a92e1179]
+  ├─╯
   o  9 [public;rev=20;2f7cc50dc4e5]
-  |
+  │
   ~
 
 Test creating a bookmark and new head
@@ -365,19 +365,19 @@ Test non-fast-forward force pushrebase
   $ echo Aeneas > was_a_lively_fellow && hg ci -qAm 26
   $ log -r "20::"
   @  26 [draft;rev=27;4899f9112d9b]
-  |
-  | o  draft [public;rev=26;7a037594e202] default/newbook
-  | |
-  | | o  merge 10 and 12 [public;rev=25;eb388b759fde] default/master_bookmark
-  | |/|
-  +---o  12 [public;rev=23;cd5aac4439e5]
-  | |
-  | o  11 [public;rev=22;589551466f25]
-  | |
-  | o  10 [public;rev=21;c573a92e1179]
-  |/
+  │
+  │ o  draft [public;rev=26;7a037594e202] default/newbook
+  │ │
+  │ │ o  merge 10 and 12 [public;rev=25;eb388b759fde] default/master_bookmark
+  │ ╭─┤
+  │ │ o  12 [public;rev=23;cd5aac4439e5]
+  ├───╯
+  │ o  11 [public;rev=22;589551466f25]
+  │ │
+  │ o  10 [public;rev=21;c573a92e1179]
+  ├─╯
   o  9 [public;rev=20;2f7cc50dc4e5]
-  |
+  │
   ~
 -- we don't need to pass --pushvar NON_FAST_FORWARD if we're doing a force pushrebase
   $ hgmn push -r . -f --to newbook
@@ -391,17 +391,17 @@ Test non-fast-forward force pushrebase
 -- "20 draft newbook" gets moved to 26 and 20 gets hidden.
   $ log -r "20::"
   @  26 [public;rev=27;4899f9112d9b] default/newbook
-  |
-  | o    merge 10 and 12 [public;rev=25;eb388b759fde] default/master_bookmark
-  | |\
-  +---o  12 [public;rev=23;cd5aac4439e5]
-  | |
-  | o  11 [public;rev=22;589551466f25]
-  | |
-  | o  10 [public;rev=21;c573a92e1179]
-  |/
+  │
+  │ o    merge 10 and 12 [public;rev=25;eb388b759fde] default/master_bookmark
+  │ ├─╮
+  │ │ o  12 [public;rev=23;cd5aac4439e5]
+  ├───╯
+  │ o  11 [public;rev=22;589551466f25]
+  │ │
+  │ o  10 [public;rev=21;c573a92e1179]
+  ├─╯
   o  9 [public;rev=20;2f7cc50dc4e5]
-  |
+  │
   ~
 
 -- Check that pulling a force pushrebase has good linknodes.
@@ -462,6 +462,6 @@ Check that we can replace a file with a directory
   hello
   $ log -r "30"
   @  replace a file with a dir [public;rev=30;4e5fec14573f] default/newbook
-  |
+  │
   ~
 

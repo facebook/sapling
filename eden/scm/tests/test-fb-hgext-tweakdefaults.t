@@ -36,14 +36,14 @@ Log is -f by default
 
   $ hg log -G -T '{desc}\n'
   @  b
-  |
+  │
   o  a
   
   $ hg log -G -T '{desc}\n' --all
   o  a2
-  |
-  | @  b
-  |/
+  │
+  │ @  b
+  ├─╯
   o  a
   
 Dirty update to different rev fails with --check
@@ -93,7 +93,7 @@ Rebase fast forwards bookmark
   $ hg up -q mybook
   $ hg log -G -T '{desc} {bookmarks}\n'
   @  a2 mybook
-  |
+  │
   o  a
   
   $ hg rebase -d 'desc(b)'
@@ -101,9 +101,9 @@ Rebase fast forwards bookmark
 
   $ hg log -G -T '{desc} {bookmarks}\n'
   @  b mybook
-  |
+  │
   o  a2
-  |
+  │
   o  a
   
 Rebase works with hyphens
@@ -113,9 +113,9 @@ Rebase works with hyphens
   $ hg up -q hyphen-book
   $ hg log --all -G -T '{desc} {bookmarks}\n'
   o  b hyphen-dest mybook
-  |
+  │
   @  a2 hyphen-book
-  |
+  │
   o  a
   
   $ hg rebase -d hyphen-dest
@@ -123,9 +123,9 @@ Rebase works with hyphens
 
   $ hg log --all -G -T '{desc} {bookmarks}\n'
   @  b hyphen-book hyphen-dest mybook
-  |
+  │
   o  a2
-  |
+  │
   o  a
   
 Rebase is blocked if you have conflicting changes
@@ -397,9 +397,9 @@ Test rebase with showupdated=True
   $ touch c && hg commit -Aqm c
   $ hg log -G -T '{node} {bookmarks}' -r 'all()'
   @  d5e255ef74f8ec83b3a2a3f3254c699451c89e29
-  |
-  | o  0e067c57feba1a5694ca4844f05588bb1bf82342
-  |/
+  │
+  │ o  0e067c57feba1a5694ca4844f05588bb1bf82342
+  ├─╯
   o  3903775176ed42b1458a6281db4a0ccf4d9f287a
   
   $ hg rebase -r 'desc(b)' -d 'desc(c)'

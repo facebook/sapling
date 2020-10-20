@@ -233,76 +233,76 @@
 # 3) Show them in ssl
   $ hg smartlog -T default
   s    commit:      be6e4139c42c
-  |\   user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     snapshot
-  | |
-  +---s  commit:      bcda34b7ba8a
-  | |/   user:        test
-  | |    date:        Thu Jan 01 00:00:00 1970 +0000
-  | |    summary:     snapshot
-  | |
-  | o  commit:      fdf2c0326bba
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     merge #2
-  | |
-  o |  commit:      9d3ebf4630d3
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     merge #1
-  | |
-  o |  commit:      8e676f2ef130
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     draft2
-  | |
-  o |  commit:      d521223a2fb5
-  |/   user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     draft1 amend2
-  |
-  | s  commit:      03d785189d28
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     snapshot
-  | |
-  | x  commit:      ffb8db6e9ac3
-  |/   user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     draft1
-  |
+  ├─╮  user:        test
+  │ │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │ │  summary:     snapshot
+  │ │
+  │ │ s  commit:      bcda34b7ba8a
+  ╭─┬─╯  user:        test
+  │ │    date:        Thu Jan 01 00:00:00 1970 +0000
+  │ │    summary:     snapshot
+  │ │
+  │ o  commit:      fdf2c0326bba
+  │ │  user:        test
+  │ │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │ │  summary:     merge #2
+  │ │
+  o │  commit:      9d3ebf4630d3
+  │ │  user:        test
+  │ │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │ │  summary:     merge #1
+  │ │
+  o │  commit:      8e676f2ef130
+  │ │  user:        test
+  │ │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │ │  summary:     draft2
+  │ │
+  o │  commit:      d521223a2fb5
+  ├─╯  user:        test
+  │    date:        Thu Jan 01 00:00:00 1970 +0000
+  │    summary:     draft1 amend2
+  │
+  │ s  commit:      03d785189d28
+  │ │  user:        test
+  │ │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │ │  summary:     snapshot
+  │ │
+  │ x  commit:      ffb8db6e9ac3
+  ├─╯  user:        test
+  │    date:        Thu Jan 01 00:00:00 1970 +0000
+  │    summary:     draft1
+  │
   @  commit:      fa948fa73a59
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     add some files
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     add some files
+  │
   o  commit:      175dbab47dcc
-  |  user:        test
+  │  user:        test
   ~  date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     public1
   
   $ hg log -Gr 'smartlog()' -T '[{graphnode}] {node|short} {author|emailuser}\n{desc|firstline}'
   s  [s] 03d785189d28 test
-  |  snapshot
-  | s    [s] be6e4139c42c test
-  | |\   snapshot
-  | +---s  [s] bcda34b7ba8a test
-  | | |/   snapshot
-  | | o  [o] fdf2c0326bba test
-  | | |  merge #2
-  | o |  [o] 9d3ebf4630d3 test
-  | | |  merge #1
-  | o |  [o] 8e676f2ef130 test
-  | | |  draft2
-  | o |  [o] d521223a2fb5 test
-  | |/   draft1 amend2
-  x /  [x] ffb8db6e9ac3 test
-  |/   draft1
+  │  snapshot
+  │ s    [s] be6e4139c42c test
+  │ ├─╮  snapshot
+  │ │ │ s  [s] bcda34b7ba8a test
+  │ ╭─┬─╯  snapshot
+  │ │ o  [o] fdf2c0326bba test
+  │ │ │  merge #2
+  │ o │  [o] 9d3ebf4630d3 test
+  │ │ │  merge #1
+  │ o │  [o] 8e676f2ef130 test
+  │ │ │  draft2
+  │ o │  [o] d521223a2fb5 test
+  │ ├─╯  draft1 amend2
+  x │  [x] ffb8db6e9ac3 test
+  ├─╯  draft1
   @  [@] fa948fa73a59 test
-  |  add some files
+  │  add some files
   o  [o] 175dbab47dcc test
-  |  public1
+  │  public1
   ~
 
 
@@ -310,37 +310,37 @@
   $ setconfig extensions.snapshot=!
   $ hg smartlog -T default
   o  commit:      fdf2c0326bba
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     merge #2
-  |
-  | o  commit:      9d3ebf4630d3
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     merge #1
-  | |
-  | o  commit:      8e676f2ef130
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     draft2
-  | |
-  | o  commit:      d521223a2fb5
-  |/   user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     draft1 amend2
-  |
-  | x  commit:      ffb8db6e9ac3
-  |/   user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     draft1
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     merge #2
+  │
+  │ o  commit:      9d3ebf4630d3
+  │ │  user:        test
+  │ │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │ │  summary:     merge #1
+  │ │
+  │ o  commit:      8e676f2ef130
+  │ │  user:        test
+  │ │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │ │  summary:     draft2
+  │ │
+  │ o  commit:      d521223a2fb5
+  ├─╯  user:        test
+  │    date:        Thu Jan 01 00:00:00 1970 +0000
+  │    summary:     draft1 amend2
+  │
+  │ x  commit:      ffb8db6e9ac3
+  ├─╯  user:        test
+  │    date:        Thu Jan 01 00:00:00 1970 +0000
+  │    summary:     draft1
+  │
   @  commit:      fa948fa73a59
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     add some files
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     add some files
+  │
   o  commit:      175dbab47dcc
-  |  user:        test
+  │  user:        test
   ~  date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     public1
   
@@ -354,47 +354,47 @@
   03d785189d28 snapshot
   $ hg smartlog -T default
   s    commit:      bcda34b7ba8a
-  |\   user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     snapshot
-  | |
-  | o  commit:      fdf2c0326bba
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     merge #2
-  | |
-  o |  commit:      9d3ebf4630d3
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     merge #1
-  | |
-  o |  commit:      8e676f2ef130
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     draft2
-  | |
-  o |  commit:      d521223a2fb5
-  |/   user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     draft1 amend2
-  |
-  | s  commit:      03d785189d28
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     snapshot
-  | |
-  | x  commit:      ffb8db6e9ac3
-  |/   user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     draft1
-  |
+  ├─╮  user:        test
+  │ │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │ │  summary:     snapshot
+  │ │
+  │ o  commit:      fdf2c0326bba
+  │ │  user:        test
+  │ │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │ │  summary:     merge #2
+  │ │
+  o │  commit:      9d3ebf4630d3
+  │ │  user:        test
+  │ │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │ │  summary:     merge #1
+  │ │
+  o │  commit:      8e676f2ef130
+  │ │  user:        test
+  │ │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │ │  summary:     draft2
+  │ │
+  o │  commit:      d521223a2fb5
+  ├─╯  user:        test
+  │    date:        Thu Jan 01 00:00:00 1970 +0000
+  │    summary:     draft1 amend2
+  │
+  │ s  commit:      03d785189d28
+  │ │  user:        test
+  │ │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │ │  summary:     snapshot
+  │ │
+  │ x  commit:      ffb8db6e9ac3
+  ├─╯  user:        test
+  │    date:        Thu Jan 01 00:00:00 1970 +0000
+  │    summary:     draft1
+  │
   @  commit:      fa948fa73a59
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     add some files
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     add some files
+  │
   o  commit:      175dbab47dcc
-  |  user:        test
+  │  user:        test
   ~  date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     public1
   

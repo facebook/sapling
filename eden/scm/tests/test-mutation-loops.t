@@ -28,15 +28,15 @@ obsmarker graphs.  Create a fake one to check behaviour.
   $ hg debugsh -c "with repo.lock(): m.mutation.recordentries(repo, [m.mutation.createsyntheticentry(repo, [m.node.bin(\"e6c779c67aa947c951f334f4f312bd2b21d27e55\"), m.node.bin(\"672a4910c364d425231d2dd2fb0486f32a2d88f4\")], m.node.bin(\"932f02c9fad3fa46e55b62560c88eb67528b02f0\"), \"loop\")], skipexisting=False)"
   $ tglogm --hidden
   @  21c93100b04c 'commit5'
-  |
-  | x  672a4910c364 'commit4'  (Rewritten using amend into 21c93100b04c) (Rewritten using loop into 932f02c9fad3)
-  |/
-  | x  d3c8fd338cf4 'commit3'  (Rewritten using amend into 672a4910c364)
-  |/
-  | x  932f02c9fad3 'commit2'  (Rewritten using amend into d3c8fd338cf4)
-  |/
-  | x  e6c779c67aa9 'commit1'  (Rewritten using loop into 932f02c9fad3)
-  |/
+  │
+  │ x  672a4910c364 'commit4'  (Rewritten using amend into 21c93100b04c) (Rewritten using loop into 932f02c9fad3)
+  ├─╯
+  │ x  d3c8fd338cf4 'commit3'  (Rewritten using amend into 672a4910c364)
+  ├─╯
+  │ x  932f02c9fad3 'commit2'  (Rewritten using amend into d3c8fd338cf4)
+  ├─╯
+  │ x  e6c779c67aa9 'commit1'  (Rewritten using loop into 932f02c9fad3)
+  ├─╯
   o  d20a80d4def3 'base'
   
 
@@ -58,9 +58,9 @@ continuously cycles round the commit2 to commit4 loop.
 
   $ tglogm
   @  21c93100b04c 'commit5'
-  |
-  | x  e6c779c67aa9 'commit1'  (Rewritten using rewrite into 21c93100b04c)
-  |/
+  │
+  │ x  e6c779c67aa9 'commit1'  (Rewritten using rewrite into 21c93100b04c)
+  ├─╯
   o  d20a80d4def3 'base'
   
 Similarly, check that predecessorsset is also safe.

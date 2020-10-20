@@ -84,7 +84,7 @@ Do infinitepush (aka commit cloud) push
 
   $ tglogp
   @  47da8b81097c draft 'new'
-  |
+  │
   o  3903775176ed public 'a'
   
 

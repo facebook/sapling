@@ -128,19 +128,19 @@ Create a branch merge in a small repo
 
   $ hg log -G -T '{node|short}'
   o    62dba675d1b3
-  |\
-  | o  23aa3f5a6de2
-  | |
-  o |  be5140c7bfcc
-  | |
-  o |  7a7632995e68
-  |/
+  ├─╮
+  │ o  23aa3f5a6de2
+  │ │
+  o │  be5140c7bfcc
+  │ │
+  o │  7a7632995e68
+  ├─╯
   o  68360e2c98f0
-  |
+  │
   @  a35acba7f331
-  |
-  | o  9aaf98d9f7d2
-  |/
+  │
+  │ o  9aaf98d9f7d2
+  ├─╯
   o  2fa76efd599c
   
 

@@ -1,3 +1,7 @@
+# coding=utf-8
+
+# coding=utf-8
+
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
@@ -31,22 +35,22 @@ sh % "hg log -T '{desc}\\n' -f x" == r"""
 sh % "cd x"
 sh % "hg log -G -T '{desc}\\n' -f ." == r"""
     @  C
-    :
+    ╷
     o  A"""
 
 # Using the follow revset, which is related to repo root:
 
 sh % "hg log -G -T '{desc}\\n' -r 'follow(\"x\")'" == r"""
     @  C
-    :
+    ╷
     o  A"""
 sh % "hg log -G -T '{desc}\\n' -r 'follow(\".\")'" == r"""
     @  C
-    |
+    │
     o  B
-    |
+    │
     o  A"""
 sh % "hg log -G -T '{desc}\\n' -r 'follow(\"relpath:.\")'" == r"""
     @  C
-    :
+    ╷
     o  A"""

@@ -49,14 +49,14 @@ Rebuild:
 
   $ hg log -r 'all()' --git -T '{desc}' -G
   o  E
-  |
-  | o  F
-  | |
-  o |  D
-  | |
-  @ |  C
-  |/
+  │
+  │ o  F
+  │ │
+  o │  D
+  │ │
+  @ │  C
+  ├─╯
   o  B
-  |
+  │
   o  A
   

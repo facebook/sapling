@@ -60,13 +60,13 @@ although the second one became non-merge commit
   $ REPONAME=small-mon hgmn pull -q
   $ log -r :
   o  merge commit no new files [public;rev=4;534a740cd266] default/master_bookmark
-  |
+  │
   o    merge commit from large repo [public;rev=3;246c2e616e99]
-  |\
-  | o  newrepo [public;rev=2;64d197011743]
-  |
+  ├─╮
+  │ o  newrepo [public;rev=2;64d197011743]
+  │
   o  first post-move commit [public;rev=1;11f848659bfc]
-  |
+  │
   o  pre-move commit [public;rev=0;fc7ae591de0e]
   $
   $ REPONAME=small-mon hgmn up -q master_bookmark

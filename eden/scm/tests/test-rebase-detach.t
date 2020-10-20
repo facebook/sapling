@@ -20,11 +20,11 @@ Rebasing D onto B detaching from C (one commit):
 
   $ hg log -G --template "{phase} '{desc}' {branches}\n"
   o  draft 'D'
-  |
-  | o  draft 'C'
-  | |
-  o |  draft 'B'
-  |/
+  │
+  │ o  draft 'C'
+  │ │
+  o │  draft 'B'
+  ├─╯
   o  draft 'A'
   
   $ hg manifest --rev tip
@@ -56,13 +56,13 @@ Rebasing D onto B detaching from C (two commits):
 
   $ tglog
   o  ee79e0744528 'E'
-  |
+  │
   o  10530e1d72d9 'D'
-  |
-  | o  dc0947a82db8 'C'
-  | |
-  o |  112478962961 'B'
-  |/
+  │
+  │ o  dc0947a82db8 'C'
+  │ │
+  o │  112478962961 'B'
+  ├─╯
   o  426bada5c675 'A'
   
   $ hg manifest --rev tip
@@ -92,11 +92,11 @@ Rebasing C onto B using detach (same as not using it):
 
   $ tglog
   o  7375f3dbfb0f 'D'
-  |
+  │
   o  bbfdd6cb49aa 'C'
-  |
+  │
   o  112478962961 'B'
-  |
+  │
   o  426bada5c675 'A'
   
   $ hg manifest --rev tip
@@ -129,12 +129,12 @@ Rebasing D onto B detaching from C and collapsing:
 
   $ hg  log -G --template "{phase} '{desc}' {branches}\n"
   o  draft 'Collapsed revision
-  |  * D
-  |  * E'
-  | o  draft 'C'
-  | |
-  o |  draft 'B'
-  |/
+  │  * D
+  │  * E'
+  │ o  draft 'C'
+  │ │
+  o │  draft 'B'
+  ├─╯
   o  draft 'A'
   
   $ hg manifest --rev tip
@@ -166,11 +166,11 @@ Rebasing across null as ancestor
 
   $ tglog
   o  e3d0c70d606d 'E'
-  |
+  │
   o  e9153d36a1af 'D'
-  |
+  │
   o  a7ac28b870a8 'C'
-  |
+  │
   o  fc2b737bb2e5 'B'
   
   o  426bada5c675 'A'
@@ -180,11 +180,11 @@ Rebasing across null as ancestor
   rebasing e3d0c70d606d "E"
   $ tglog
   o  2c24e540eccd 'E'
-  |
+  │
   o  73f786ed52ff 'D'
-  |
-  | o  a7ac28b870a8 'C'
-  |/
+  │
+  │ o  a7ac28b870a8 'C'
+  ├─╯
   o  fc2b737bb2e5 'B'
   
   o  426bada5c675 'A'
@@ -217,19 +217,19 @@ Verify that target is not selected as external rev (issue3085)
   $ hg ci -m "J"
   $ tglog
   @  c6aaf0d259c0 'J'
-  |
+  │
   o    0cfbc7e8faaf 'Merge'
-  |\
-  | o  b92d164ad3cb 'I'
-  | |
-  o |  4ea5b230dea3 'H'
-  | |
-  | o  c6001eacfde5 'G'
-  |/|
-  o |  8908a377a434 'F'
-  | |
-  | o  7fb047a69f22 'E'
-  |/
+  ├─╮
+  │ o  b92d164ad3cb 'I'
+  │ │
+  o │  4ea5b230dea3 'H'
+  │ │
+  │ o  c6001eacfde5 'G'
+  ╭─┤
+  o │  8908a377a434 'F'
+  │ │
+  │ o  7fb047a69f22 'E'
+  ├─╯
   o  426bada5c675 'A'
   
   $ hg rebase -s $I -d $H --collapse --config ui.merge=internal:other
@@ -239,17 +239,17 @@ Verify that target is not selected as external rev (issue3085)
 
   $ tglog
   @  65079693dac4 'Collapsed revision
-  |  * I
-  |  * Merge
-  |  * J'
+  │  * I
+  │  * Merge
+  │  * J'
   o  4ea5b230dea3 'H'
-  |
-  | o  c6001eacfde5 'G'
-  |/|
-  o |  8908a377a434 'F'
-  | |
-  | o  7fb047a69f22 'E'
-  |/
+  │
+  │ o  c6001eacfde5 'G'
+  ╭─┤
+  o │  8908a377a434 'F'
+  │ │
+  │ o  7fb047a69f22 'E'
+  ├─╯
   o  426bada5c675 'A'
   
 
@@ -290,9 +290,9 @@ Ensure --continue restores a correct state (issue3046) and phase:
   note: rebase of 17b4880d2402 created no changes to commit
   $ hg  log -G --template "{phase} '{desc}' {branches}\n"
   o  draft 'C'
-  |
-  | @  draft 'B'
-  |/
+  │
+  │ @  draft 'B'
+  ├─╯
   o  draft 'A'
   
 

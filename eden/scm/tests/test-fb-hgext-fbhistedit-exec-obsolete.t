@@ -22,30 +22,30 @@ log before edit
 
   $ hg log --graph
   @  commit:      652413bf663e
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     f
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     f
+  │
   o  commit:      e860deea161a
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     e
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     e
+  │
   o  commit:      055a42cdd887
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     d
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     d
+  │
   o  commit:      177f92b77385
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     c
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     c
+  │
   o  commit:      d2ae7f538514
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     b
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     b
+  │
   o  commit:      cb9a9f314b8b
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
@@ -69,30 +69,30 @@ exec & continue should not preserve hashes
 
   $ hg log --graph
   @  commit:      652413bf663e
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     f
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     f
+  │
   o  commit:      e860deea161a
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     e
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     e
+  │
   o  commit:      055a42cdd887
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     d
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     d
+  │
   o  commit:      177f92b77385
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     c
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     c
+  │
   o  commit:      d2ae7f538514
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     b
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     b
+  │
   o  commit:      cb9a9f314b8b
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
@@ -126,15 +126,15 @@ continue should work
 
   $ hg log --template '{node|short} {desc}' --graph
   @  652413bf663e f
-  |
+  │
   o  e860deea161a e
-  |
+  │
   o  055a42cdd887 d
-  |
+  │
   o  177f92b77385 c
-  |
+  │
   o  d2ae7f538514 b
-  |
+  │
   o  cb9a9f314b8b a
   
 
@@ -155,15 +155,15 @@ abort should work
 
   $ hg log --template '{node|short} {desc}' --graph
   @  652413bf663e f
-  |
+  │
   o  e860deea161a e
-  |
+  │
   o  055a42cdd887 d
-  |
+  │
   o  177f92b77385 c
-  |
+  │
   o  d2ae7f538514 b
-  |
+  │
   o  cb9a9f314b8b a
   
 
@@ -186,15 +186,15 @@ Multiple exec commands must work
 
   $ hg log --template '{node|short} {desc}' --graph
   @  652413bf663e f
-  |
+  │
   o  e860deea161a e
-  |
+  │
   o  055a42cdd887 d
-  |
+  │
   o  177f92b77385 c
-  |
+  │
   o  d2ae7f538514 b
-  |
+  │
   o  cb9a9f314b8b a
   
 
@@ -211,14 +211,14 @@ amend should just work fine
 
   $ hg log --template '{node|short} {files} {desc}' --graph
   @  3cc63bf64c8d f f
-  |
+  │
   o  8a564dc5ed88 NEW e e
-  |
+  │
   o  055a42cdd887 d d
-  |
+  │
   o  177f92b77385 c c
-  |
+  │
   o  d2ae7f538514 b b
-  |
+  │
   o  cb9a9f314b8b a a
   

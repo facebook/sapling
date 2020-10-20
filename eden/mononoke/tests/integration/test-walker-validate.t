@@ -10,9 +10,9 @@ setup configuration
   $ default_setup_blobimport "blob_files"
   hg repo
   o  C [draft;rev=2;26805aba1e60]
-  |
+  │
   o  B [draft;rev=1;112478962961]
-  |
+  │
   o  A [draft;rev=0;426bada5c675]
   $
   blobimporting

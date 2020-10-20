@@ -10,15 +10,15 @@
   created *, * sec elapsed (* commits/sec, * per hour, * per day) (glob)
   $ hg log -G -r ::tip
   o  commit:      26c418a67612
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     memory commit
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     memory commit
+  │
   o  commit:      331925392347
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     memory commit
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     memory commit
+  │
   o  commit:      af3f7799efa3
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000

@@ -25,17 +25,17 @@ Load commonly used test logic
 
   $ hg log --graph --style compact
   @       eaa21d002113   1970-01-01 00:00 +0000   test
-  |\     merge
-  | |
-  | o     ea82b67264a1   1970-01-01 00:00 +0000   test
-  | |    A->C
-  | |
-  o |     0dbe4ac1a758   1970-01-01 00:00 +0000   test
-  | |    B->C
-  | |
-  o |     7205e83b5a3f   1970-01-01 00:00 +0000   test
-  |/     A->B
-  |
+  ├─╮    merge
+  │ │
+  │ o     ea82b67264a1   1970-01-01 00:00 +0000   test
+  │ │    A->C
+  │ │
+  o │     0dbe4ac1a758   1970-01-01 00:00 +0000   test
+  │ │    B->C
+  │ │
+  o │     7205e83b5a3f   1970-01-01 00:00 +0000   test
+  ├─╯    A->B
+  │
   o     5d1a6b64f9d0   1970-01-01 00:00 +0000   test
        origin
   
@@ -60,17 +60,17 @@ Load commonly used test logic
 expect the same revision ids as above
   $ hg -R hgrepo2 log --graph --style compact
   @    [master]   b08a922386d5   1970-01-01 00:00 +0000   test
-  |\     merge
-  | |
-  | o     8bfd72bff163   1970-01-01 00:00 +0000   test
-  | |    B->C
-  | |
-  | o     47fc555571b8   1970-01-01 00:00 +0000   test
-  | |    A->B
-  | |
-  o |     8ec5b459b86e   1970-01-01 00:00 +0000   test
-  |/     A->C
-  |
+  ├─╮    merge
+  │ │
+  │ o     8bfd72bff163   1970-01-01 00:00 +0000   test
+  │ │    B->C
+  │ │
+  │ o     47fc555571b8   1970-01-01 00:00 +0000   test
+  │ │    A->B
+  │ │
+  o │     8ec5b459b86e   1970-01-01 00:00 +0000   test
+  ├─╯    A->C
+  │
   o     fd5eb788c3a1   1970-01-01 00:00 +0000   test
        origin
   

@@ -24,9 +24,9 @@ log before edit
 
   $ hg log --graph -T "{node|short} {desc}"
   @  177f92b77385 c
-  |
+  │
   o  d2ae7f538514 b
-  |
+  │
   o  cb9a9f314b8b a
   
 
@@ -171,9 +171,9 @@ log after histedit
 
   $ hg log --graph -T "{node|short} {desc}"
   @  503d1c1b4668 b
-  |
+  │
   o  b346ab9a313d c
-  |
+  │
   o  cb9a9f314b8b a
   
 testing with abbreviated/small verbs
@@ -192,9 +192,9 @@ testing with abbreviated/small verbs
 
   $ hg log --graph -T "{node} {desc}"
   @  573a8c672aaf44d2cf3f9467e5463f51f7414084 c
-  |
+  │
   o  85032a8e4f13e773c4075d7c006e0f1bc1c63967 b
-  |
+  │
   o  cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b a
   
 more testing with full hashes
@@ -213,6 +213,6 @@ more testing with full hashes
 
   $ hg log --graph -T "{node|short} {desc}"
   @  04e1eac0d294 b
-  |
+  │
   o  cb9a9f314b8b a
   

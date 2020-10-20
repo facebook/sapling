@@ -38,19 +38,19 @@ Commit B, C, D are rebased. Bookmarks are moved.
 
   $ hg log -r 'all()' -G -T '{desc} {bookmarks}'
   o  D D
-  |
+  │
   o  C C
-  |
+  │
   @  B B
-  |
-  | o  E E
-  | |
-  | x  D
-  | |
-  | x  C
-  | |
-  | x  B
-  |/
+  │
+  │ o  E E
+  │ │
+  │ x  D
+  │ │
+  │ x  C
+  │ │
+  │ x  B
+  ├─╯
   o  A A
   
 Start restacking the rest (E):
@@ -75,12 +75,12 @@ All rebased bookmarks are moved:
 
   $ hg log -r 'all()' -G -T '{desc} {bookmarks}'
   o  E E
-  |
+  │
   o  D D
-  |
+  │
   o  C C
-  |
+  │
   @  B B
-  |
+  │
   o  A A
   

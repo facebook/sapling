@@ -1,3 +1,5 @@
+# coding=utf-8
+
 # Copyright (c) Facebook, Inc. and its affiliates.
 # Copyright (c) Mercurial Contributors.
 #
@@ -29,7 +31,7 @@ sh % "echo y" >> "x"
 sh % "hg commit -qAm y"
 sh % "hg log -G -T '{node|short} {bookmarks}\\n'" == r"""
     @  66ee28d0328c foo
-    |
+    │
     o  b292c1e3311f"""
 sh % "hg reset '.^'" == "1 changeset hidden"
 sh % "hg log -G -T '{node|short} {bookmarks}\\n'" == "@  b292c1e3311f foo"
@@ -55,7 +57,7 @@ sh % "hg debugmakepublic b292c1e3311f"
 sh % "hg reset --clean 66ee28d0328c" == ""
 sh % "hg log -G -T '{node|short} {bookmarks} {phase}\\n'" == r"""
     @  66ee28d0328c foo draft
-    |
+    │
     o  b292c1e3311f  public"""
 
 # Reset should not strip reachable commits
@@ -64,7 +66,7 @@ sh % "hg book bar"
 sh % "hg reset --clean '.^'"
 sh % "hg log -G -T '{node|short} {bookmarks}\\n'" == r"""
     o  66ee28d0328c foo
-    |
+    │
     @  b292c1e3311f bar"""
 
 sh % "hg book -d bar"
@@ -93,7 +95,7 @@ sh % "rm y"
 sh % "hg reset --keep '.^'"
 sh % "hg log -G -T '{node|short} {bookmarks}\\n'" == r"""
     o  66ee28d0328c
-    |
+    │
     @  b292c1e3311f foo"""
 # Reset without a bookmark
 
@@ -141,9 +143,9 @@ sh % "touch a"
 sh % "hg commit -Aqm a"
 sh % "hg log -G -T '{node|short} {bookmarks}\\n'" == r"""
     @  7f3a02b3e388 foo
-    |
+    │
     o  66ee28d0328c
-    |
+    │
     o  b292c1e3311f"""
 
 # Reset prunes commits
@@ -158,9 +160,9 @@ sh % "hg log -G -T '{node|short} {bookmarks}\\n'" == "@  b292c1e3311f foo"
 sh % "hg reset -C 7f3a02b3e388"
 sh % "hg log -G -T '{node|short} {bookmarks}\\n'" == r"""
     @  7f3a02b3e388 foo
-    |
+    │
     o  66ee28d0328c
-    |
+    │
     o  b292c1e3311f"""
 # Reset to the commit your on is a no-op
 sh % "hg status"

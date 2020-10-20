@@ -44,13 +44,13 @@ Push a bundle with four commits
   $ hg commit -Aqm bundled4
   $ tglog
   @  d1944cedf06c 'bundled4'
-  |
+  │
   o  916baec915e2 'bundled3'
-  |
+  │
   o  9494660bae92 'bundled2'
-  |
+  │
   o  f570e0648bfb 'bundled1'
-  |
+  │
   o  f7e449aab27f 'base'
   
 

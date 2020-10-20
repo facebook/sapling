@@ -1,3 +1,5 @@
+# coding=utf-8
+
 # Copyright (c) Facebook, Inc. and its affiliates.
 # Copyright (c) Mercurial Contributors.
 #
@@ -42,27 +44,27 @@ sh % "hg id" == "000000000000"
 # glog
 sh % "hg log -G --template '{rev}: {desc} [{branches}] @ {date}\\n'" == r"""
     o  11: r11 [] @ 11.00
-    |
+    │
     o  10: r10 [] @ 10.00
-    |
+    │
     o    9: r9 [] @ 9.00
-    |\
-    | o  8: r8 [temp] @ 8.00
-    | |
-    | o  7: r7 [temp] @ 7.00
-    | |
-    | o  6: r6 [temp] @ 6.00
-    | |
-    | o  5: r5 [temp] @ 5.00
-    | |
-    o |  4: r4 [] @ 4.00
-    | |
-    o |  3: r3 [] @ 3.00
-    | |
-    o |  2: r2 [] @ 2.00
-    |/
+    ├─╮
+    │ o  8: r8 [temp] @ 8.00
+    │ │
+    │ o  7: r7 [temp] @ 7.00
+    │ │
+    │ o  6: r6 [temp] @ 6.00
+    │ │
+    │ o  5: r5 [temp] @ 5.00
+    │ │
+    o │  4: r4 [] @ 4.00
+    │ │
+    o │  3: r3 [] @ 3.00
+    │ │
+    o │  2: r2 [] @ 2.00
+    ├─╯
     o  1: r1 [] @ 1.00
-    |
+    │
     o  0: r0 [] @ 0.00"""
 
 # overwritten files, starting on a non-default branch
@@ -82,52 +84,52 @@ sh % "hg id" == "000000000000"
 # glog
 sh % "hg log -G --template '{rev}: {desc} [{branches}] @ {date}\\n'" == r"""
     o  11: r11 [] @ 11.00
-    |
+    │
     o  10: r10 [] @ 10.00
-    |
+    │
     o    9: r9 [] @ 9.00
-    |\
-    | o  8: r8 [temp] @ 8.00
-    | |
-    | o  7: r7 [temp] @ 7.00
-    | |
-    | o  6: r6 [temp] @ 6.00
-    | |
-    | o  5: r5 [temp] @ 5.00
-    | |
-    o |  4: r4 [] @ 4.00
-    | |
-    o |  3: r3 [] @ 3.00
-    | |
-    o |  2: r2 [] @ 2.00
-    |/
+    ├─╮
+    │ o  8: r8 [temp] @ 8.00
+    │ │
+    │ o  7: r7 [temp] @ 7.00
+    │ │
+    │ o  6: r6 [temp] @ 6.00
+    │ │
+    │ o  5: r5 [temp] @ 5.00
+    │ │
+    o │  4: r4 [] @ 4.00
+    │ │
+    o │  3: r3 [] @ 3.00
+    │ │
+    o │  2: r2 [] @ 2.00
+    ├─╯
     o  1: r1 [] @ 1.00
-    |
+    │
     o  0: r0 [start] @ 0.00"""
 # glog of
 sh % "hg log -G --template '{rev}: {desc} [{branches}]\\n' of" == r"""
     o  11: r11 []
-    |
+    │
     o  10: r10 []
-    |
+    │
     o    9: r9 []
-    |\
-    | o  8: r8 [temp]
-    | |
-    | o  7: r7 [temp]
-    | |
-    | o  6: r6 [temp]
-    | |
-    | o  5: r5 [temp]
-    | |
-    o |  4: r4 []
-    | |
-    o |  3: r3 []
-    | |
-    o |  2: r2 []
-    |/
+    ├─╮
+    │ o  8: r8 [temp]
+    │ │
+    │ o  7: r7 [temp]
+    │ │
+    │ o  6: r6 [temp]
+    │ │
+    │ o  5: r5 [temp]
+    │ │
+    o │  4: r4 []
+    │ │
+    o │  3: r3 []
+    │ │
+    o │  2: r2 []
+    ├─╯
     o  1: r1 []
-    |
+    │
     o  0: r0 [start]"""
 # cat of
 sh % "hg cat of --rev tip" == "r11"
@@ -149,52 +151,52 @@ sh % "hg id" == "000000000000"
 # glog
 sh % "hg log -G --template '{rev}: {desc} [{branches}] @ {date}\\n'" == r"""
     o  11: r11 [] @ 11.00
-    |
+    │
     o  10: r10 [] @ 10.00
-    |
+    │
     o    9: r9 [] @ 9.00
-    |\
-    | o  8: r8 [temp] @ 8.00
-    | |
-    | o  7: r7 [temp] @ 7.00
-    | |
-    | o  6: r6 [temp] @ 6.00
-    | |
-    | o  5: r5 [temp] @ 5.00
-    | |
-    o |  4: r4 [] @ 4.00
-    | |
-    o |  3: r3 [] @ 3.00
-    | |
-    o |  2: r2 [] @ 2.00
-    |/
+    ├─╮
+    │ o  8: r8 [temp] @ 8.00
+    │ │
+    │ o  7: r7 [temp] @ 7.00
+    │ │
+    │ o  6: r6 [temp] @ 6.00
+    │ │
+    │ o  5: r5 [temp] @ 5.00
+    │ │
+    o │  4: r4 [] @ 4.00
+    │ │
+    o │  3: r3 [] @ 3.00
+    │ │
+    o │  2: r2 [] @ 2.00
+    ├─╯
     o  1: r1 [] @ 1.00
-    |
+    │
     o  0: r0 [] @ 0.00"""
 # glog mf
 sh % "hg log -G --template '{rev}: {desc} [{branches}]\\n' mf" == r"""
     o  11: r11 []
-    |
+    │
     o  10: r10 []
-    |
+    │
     o    9: r9 []
-    |\
-    | o  8: r8 [temp]
-    | |
-    | o  7: r7 [temp]
-    | |
-    | o  6: r6 [temp]
-    | |
-    | o  5: r5 [temp]
-    | |
-    o |  4: r4 []
-    | |
-    o |  3: r3 []
-    | |
-    o |  2: r2 []
-    |/
+    ├─╮
+    │ o  8: r8 [temp]
+    │ │
+    │ o  7: r7 [temp]
+    │ │
+    │ o  6: r6 [temp]
+    │ │
+    │ o  5: r5 [temp]
+    │ │
+    o │  4: r4 []
+    │ │
+    o │  3: r3 []
+    │ │
+    o │  2: r2 []
+    ├─╯
     o  1: r1 []
-    |
+    │
     o  0: r0 []"""
 
 # man r4

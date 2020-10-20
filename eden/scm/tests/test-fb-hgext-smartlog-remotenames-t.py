@@ -1,3 +1,5 @@
+# coding=utf-8
+
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
@@ -35,7 +37,7 @@ sh % "hg book mybook -r 0"
 sh % "hg up 0" == "1 files updated, 0 files merged, 0 files removed, 0 files unresolved"
 sh % "hg smartlog -T '{rev} {bookmarks} {remotebookmarks}'" == r"""
     o  1  default/master
-    |
+    │
     @  0 mybook"""
 
 # Old head (rev 1) is still visible
@@ -45,9 +47,9 @@ sh % "hg commit -qAm x3"
 sh % "hg push --non-forward-move -q --to master"
 sh % "hg smartlog -T '{rev} {bookmarks} {remotebookmarks}'" == r"""
     @  2  default/master
-    |
-    | o  1
-    |/
+    │
+    │ o  1
+    ├─╯
     o  0 mybook"""
 
 # Test configuration of "interesting" bookmarks
@@ -58,19 +60,19 @@ sh % "hg commit -qAm x4"
 sh % "hg push -q --to project/bookmark --create"
 sh % "hg smartlog -T '{rev} {bookmarks} {remotebookmarks}'" == r"""
     o  2  default/master
-    |
-    | @  3  default/project/bookmark
-    |/
-    | o  1
-    |/
+    │
+    │ @  3  default/project/bookmark
+    ├─╯
+    │ o  1
+    ├─╯
     o  0 mybook"""
 
 sh % "hg up '.^'" == "1 files updated, 0 files merged, 0 files removed, 0 files unresolved"
 sh % "hg smartlog -T '{rev} {bookmarks} {remotebookmarks}'" == r"""
     o  2  default/master
-    |
-    | o  1
-    |/
+    │
+    │ o  1
+    ├─╯
     @  0 mybook"""
 sh % "cat" << r"""
 [smartlog]
@@ -79,9 +81,9 @@ names=project/bookmark
 """ >> "$HGRCPATH"
 sh % "hg smartlog -T '{rev} {bookmarks} {remotebookmarks}'" == r"""
     o  3  default/project/bookmark
-    |
-    | o  1
-    |/
+    │
+    │ o  1
+    ├─╯
     @  0 mybook"""
 sh % "cat" << r"""
 [smartlog]
@@ -89,9 +91,9 @@ names=master project/bookmark
 """ >> "$HGRCPATH"
 sh % "hg smartlog -T '{rev} {bookmarks} {remotebookmarks}'" == r"""
     o  2  default/master
-    |
-    | o  3  default/project/bookmark
-    |/
-    | o  1
-    |/
+    │
+    │ o  3  default/project/bookmark
+    ├─╯
+    │ o  1
+    ├─╯
     @  0 mybook"""

@@ -98,46 +98,46 @@ Load commonly used test logic
 
   $ hg log --graph
   @  commit:      de0c236bcd02
-  |  bookmark:    master
-  |  user:        test >test@example.com>
-  |  date:        Mon Jan 01 00:00:18 2007 +0000
-  |  summary:     add theta
-  |
+  │  bookmark:    master
+  │  user:        test >test@example.com>
+  │  date:        Mon Jan 01 00:00:18 2007 +0000
+  │  summary:     add theta
+  │
   o  commit:      b4ada284aa0b
-  |  user:        test < test@example.com >
-  |  date:        Mon Jan 01 00:00:17 2007 +0000
-  |  summary:     add eta
-  |
+  │  user:        test < test@example.com >
+  │  date:        Mon Jan 01 00:00:17 2007 +0000
+  │  summary:     add eta
+  │
   o  commit:      be9e5ffbcff0
-  |  user:        test
-  |  date:        Mon Jan 01 00:00:16 2007 +0000
-  |  summary:     add zeta
-  |
+  │  user:        test
+  │  date:        Mon Jan 01 00:00:16 2007 +0000
+  │  summary:     add zeta
+  │
   o  commit:      721ffc4d7c76
-  |  user:        name <test@example.com
-  |  date:        Mon Jan 01 00:00:15 2007 +0000
-  |  summary:     add epsilon
-  |
+  │  user:        name <test@example.com
+  │  date:        Mon Jan 01 00:00:15 2007 +0000
+  │  summary:     add epsilon
+  │
   o  commit:      f1254cd4f0d9
-  |  user:        name<test@example.com>
-  |  date:        Mon Jan 01 00:00:14 2007 +0000
-  |  summary:     add delta
-  |
+  │  user:        name<test@example.com>
+  │  date:        Mon Jan 01 00:00:14 2007 +0000
+  │  summary:     add delta
+  │
   o  commit:      10310359956b
-  |  user:        <test@example.com>
-  |  date:        Mon Jan 01 00:00:13 2007 +0000
-  |  summary:     add gamma
-  |
+  │  user:        <test@example.com>
+  │  date:        Mon Jan 01 00:00:13 2007 +0000
+  │  summary:     add gamma
+  │
   o  commit:      a6260b330211
-  |  user:        test <test@example.com> (comment)
-  |  date:        Mon Jan 01 00:00:12 2007 +0000
-  |  summary:     modify beta
-  |
+  │  user:        test <test@example.com> (comment)
+  │  date:        Mon Jan 01 00:00:12 2007 +0000
+  │  summary:     modify beta
+  │
   o  commit:      574e2d660a7d
-  |  user:        test
-  |  date:        Mon Jan 01 00:00:11 2007 +0000
-  |  summary:     add beta
-  |
+  │  user:        test
+  │  date:        Mon Jan 01 00:00:11 2007 +0000
+  │  summary:     add beta
+  │
   o  commit:      69982ec78c6d
      bookmark:    not-master
      user:        test <test@example.org>
@@ -151,46 +151,46 @@ Load commonly used test logic
   8 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R hgrepo2 log --graph
   @  commit:      0e82f70d8365
-  |  bookmark:    master
-  |  user:        test ?test@example.com <test ?test@example.com>
-  |  date:        Mon Jan 01 00:00:18 2007 +0000
-  |  summary:     add theta
-  |
+  │  bookmark:    master
+  │  user:        test ?test@example.com <test ?test@example.com>
+  │  date:        Mon Jan 01 00:00:18 2007 +0000
+  │  summary:     add theta
+  │
   o  commit:      353db02be541
-  |  user:        test <test@example.com>
-  |  date:        Mon Jan 01 00:00:17 2007 +0000
-  |  summary:     add eta
-  |
+  │  user:        test <test@example.com>
+  │  date:        Mon Jan 01 00:00:17 2007 +0000
+  │  summary:     add eta
+  │
   o  commit:      8b7698cb629f
-  |  user:        test
-  |  date:        Mon Jan 01 00:00:16 2007 +0000
-  |  summary:     add zeta
-  |
+  │  user:        test
+  │  date:        Mon Jan 01 00:00:16 2007 +0000
+  │  summary:     add zeta
+  │
   o  commit:      8264dd8cdfb8
-  |  user:        name <test@example.com>
-  |  date:        Mon Jan 01 00:00:15 2007 +0000
-  |  summary:     add epsilon
-  |
+  │  user:        name <test@example.com>
+  │  date:        Mon Jan 01 00:00:15 2007 +0000
+  │  summary:     add epsilon
+  │
   o  commit:      ba47c351307f
-  |  user:        name <test@example.com>
-  |  date:        Mon Jan 01 00:00:14 2007 +0000
-  |  summary:     add delta
-  |
+  │  user:        name <test@example.com>
+  │  date:        Mon Jan 01 00:00:14 2007 +0000
+  │  summary:     add delta
+  │
   o  commit:      44bb6eac290f
-  |  user:        <test@example.com>
-  |  date:        Mon Jan 01 00:00:13 2007 +0000
-  |  summary:     add gamma
-  |
+  │  user:        <test@example.com>
+  │  date:        Mon Jan 01 00:00:13 2007 +0000
+  │  summary:     add gamma
+  │
   o  commit:      9699c3457ee8
-  |  user:        test <test@example.com> (comment)
-  |  date:        Mon Jan 01 00:00:12 2007 +0000
-  |  summary:     modify beta
-  |
+  │  user:        test <test@example.com> (comment)
+  │  date:        Mon Jan 01 00:00:12 2007 +0000
+  │  summary:     modify beta
+  │
   o  commit:      4272913025dd
-  |  user:        test
-  |  date:        Mon Jan 01 00:00:11 2007 +0000
-  |  summary:     add beta
-  |
+  │  user:        test
+  │  date:        Mon Jan 01 00:00:11 2007 +0000
+  │  summary:     add beta
+  │
   o  commit:      69982ec78c6d
      bookmark:    not-master
      user:        test <test@example.org>

@@ -13,11 +13,11 @@ Setup
 
   $ hg log -G -T "{node|short} {desc}"
   @  62615734edd5 Added d
-  |
+  │
   o  28ad74487de9 Added c
-  |
+  │
   o  29becc82797a Added b
-  |
+  │
   o  18d04c59bb5d Added a
   
 Getting the JSON output for nodechanges
@@ -36,11 +36,11 @@ Getting the JSON output for nodechanges
 
   $ hg log -G -T "{node|short} {desc}"
   @  f5dcf3b4db23 Added b
-  |
+  │
   o  109f8ec89544 Added a
-  |
+  │
   o  201423b441c8 Added d
-  |
+  │
   o  bff9e07c1807 Added c
   
   $ hg histedit -T "{nodechanges|json}" --commands - 2>&1 <<EOF

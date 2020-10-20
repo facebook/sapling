@@ -71,9 +71,9 @@ create new bookmarks, then update their properties
   scratch|scratch
   $ tglogpnr
   @  b2d646f64a99 public 'add c'  default/scratch
-  |
+  │
   o  907767d421e4 public 'add b'  default/not_pull_default
-  |
+  │
   o  ac82d8b1f7c4 public 'add a'  default/master_bookmark
   
 test publishing
@@ -95,9 +95,9 @@ test publishing
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ tglogpnr
   @  b2d646f64a99 draft 'add c'
-  |
+  │
   o  907767d421e4 draft 'add b'
-  |
+  │
   o  ac82d8b1f7c4 public 'add a'  default/master_bookmark
   
   $ hgmn bookmarks

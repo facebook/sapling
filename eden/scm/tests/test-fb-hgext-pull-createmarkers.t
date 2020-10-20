@@ -53,16 +53,16 @@ The first client works on several diffs while the second client lands one of her
   $ mkcommit e 131
   $ hg log -G -T '"{desc}" {remotebookmarks}'
   @  "add e
-  |
-  |  Differential Revision: https://phabricator.fb.com/D131"
+  │
+  │  Differential Revision: https://phabricator.fb.com/D131"
   o  "add d
-  |
-  |  Differential Revision: https://phabricator.intern.facebook.com/D124"
+  │
+  │  Differential Revision: https://phabricator.intern.facebook.com/D124"
   o  "add c
-  |
-  |  Differential Revision: https://phabricator.fb.com/D123"
+  │
+  │  Differential Revision: https://phabricator.fb.com/D123"
   o  "add secondcommit" default/master
-  |
+  │
   o  "add initial"
   
   $ hg push --to master
@@ -95,7 +95,7 @@ Here pull should mark 2, 3, and 4 as obsolete since they landed as 6, 7, 8 on
 the remote
   $ hg log -G -T '"{desc}" {remotebookmarks}'
   @  "add secondcommit"
-  |
+  │
   o  "add initial"
   
   $ hg pull
@@ -107,18 +107,18 @@ the remote
   added 3 changesets with 0 changes to 3 files
   $ hg log -G -T '"{desc}" {remotebookmarks}'
   o  "add e
-  |
-  |  Differential Revision: https://phabricator.fb.com/D131" default/master
+  │
+  │  Differential Revision: https://phabricator.fb.com/D131" default/master
   o  "add d
-  |
-  |  Differential Revision: https://phabricator.intern.facebook.com/D124"
+  │
+  │  Differential Revision: https://phabricator.intern.facebook.com/D124"
   o  "add c
-  |
-  |  Differential Revision: https://phabricator.fb.com/D123"
+  │
+  │  Differential Revision: https://phabricator.fb.com/D123"
   o  "add b"
-  |
+  │
   @  "add secondcommit"
-  |
+  │
   o  "add initial"
   
 Rebasing a stack containing landed changesets should only rebase the non-landed

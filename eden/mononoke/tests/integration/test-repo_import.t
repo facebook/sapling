@@ -11,9 +11,9 @@
   $ BLOB_TYPE="blob_files" default_setup
   hg repo
   o  C [draft;rev=2;26805aba1e60]
-  |
+  │
   o  B [draft;rev=1;112478962961]
-  |
+  │
   o  A [draft;rev=0;426bada5c675]
   $
   blobimporting
@@ -214,15 +214,15 @@
 
   $ log -r "all()"
   @    merging [draft;rev=5;*] (glob)
-  |\
-  | o  Add file3 [draft;rev=4;12e9a7555b29]
-  | |
-  | o  Add file1 and file2 [draft;rev=3;25f978935fdd]
-  |
+  ├─╮
+  │ o  Add file3 [draft;rev=4;12e9a7555b29]
+  │ │
+  │ o  Add file1 and file2 [draft;rev=3;25f978935fdd]
+  │
   o  C [draft;rev=2;26805aba1e60]
-  |
+  │
   o  B [draft;rev=1;112478962961]
-  |
+  │
   o  A [draft;rev=0;426bada5c675]
   $
 

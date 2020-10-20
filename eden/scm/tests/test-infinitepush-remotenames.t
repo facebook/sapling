@@ -101,16 +101,16 @@ Create one more branch head on the server
   $ mkcommit head2
   $ hg log -G
   @  commit:      dc4b2ecb723b
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     head2
-  |
-  | o  commit:      64d557aa86fd
-  |/   bookmark:    scratch/serverbook
-  |    user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     head1
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     head2
+  │
+  │ o  commit:      64d557aa86fd
+  ├─╯  bookmark:    scratch/serverbook
+  │    user:        test
+  │    date:        Thu Jan 01 00:00:00 1970 +0000
+  │    summary:     head1
+  │
   o  commit:      ac312cb08db5
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000

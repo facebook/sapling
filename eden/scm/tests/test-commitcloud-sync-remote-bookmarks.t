@@ -37,13 +37,13 @@ Setup remote repo
 
   $ showgraph
   @  a2: draft master
-  |
+  │
   o  a1: draft
-  |
-  | o  b1: draft stable
-  |/
-  | o  c1: draft warm
-  |/
+  │
+  │ o  b1: draft stable
+  ├─╯
+  │ o  c1: draft warm
+  ├─╯
   o  root: draft
   
 
@@ -66,13 +66,13 @@ Setup first client repo
   finished in 0.00 sec
   $ showgraph
   @  a2: public  default/master
-  |
+  │
   o  a1: public
-  |
-  | o  b1: public  default/stable
-  |/
-  | o  c1: public  default/warm
-  |/
+  │
+  │ o  b1: public  default/stable
+  ├─╯
+  │ o  c1: public  default/warm
+  ├─╯
   o  root: public
   
 Setup second client repo
@@ -104,13 +104,13 @@ Common case of unsynchronized remote bookmarks
   $ hg cloud sync -q
   $ showgraph
   @  draft-1: draft
-  |
+  │
   o  a3: public  default/master
-  |
+  │
   o  a2: public
-  |
+  │
   o  a1: public
-  |
+  │
   o  root: public
   
 
@@ -119,13 +119,13 @@ default/master should point to the new commit
   $ hg cloud sync -q
   $ showgraph
   o  draft-1: draft
-  |
+  │
   o  a3: public  default/master
-  |
+  │
   @  a2: public
-  |
+  │
   o  a1: public
-  |
+  │
   o  root: public
   
 Subscribe to a new remote bookmark
@@ -135,17 +135,17 @@ Subscribe to a new remote bookmark
   $ hg cloud sync -q
   $ showgraph
   o  draft-1: draft
-  |
+  │
   o  a3: public  default/master
-  |
+  │
   @  a2: public
-  |
+  │
   o  a1: public
-  |
-  | o  b1: public  default/stable
-  |/
-  | o  c1: public  default/warm
-  |/
+  │
+  │ o  b1: public  default/stable
+  ├─╯
+  │ o  c1: public  default/warm
+  ├─╯
   o  root: public
   
   $ hg book --list-subscriptions
@@ -158,17 +158,17 @@ the other client should be subscribed to this bookmark as well
   $ hg cloud sync -q
   $ showgraph
   @  draft-1: draft
-  |
+  │
   o  a3: public  default/master
-  |
+  │
   o  a2: public
-  |
+  │
   o  a1: public
-  |
-  | o  b1: public  default/stable
-  |/
-  | o  c1: public  default/warm
-  |/
+  │
+  │ o  b1: public  default/stable
+  ├─╯
+  │ o  c1: public  default/warm
+  ├─╯
   o  root: public
   
   $ hg book --list-subscriptions
@@ -186,19 +186,19 @@ try to create a commit on top of the default/stable
   $ hg cloud sync -q
   $ showgraph
   o  draft-2: draft
-  |
-  | @  draft-1: draft
-  | |
-  | o  a3: public  default/master
-  | |
-  | o  a2: public
-  | |
-  | o  a1: public
-  | |
-  o |  b1: public  default/stable
-  |/
-  | o  c1: public  default/warm
-  |/
+  │
+  │ @  draft-1: draft
+  │ │
+  │ o  a3: public  default/master
+  │ │
+  │ o  a2: public
+  │ │
+  │ o  a1: public
+  │ │
+  o │  b1: public  default/stable
+  ├─╯
+  │ o  c1: public  default/warm
+  ├─╯
   o  root: public
   
 check that copy with disabled remote bookmarks sync doesn't affect the other copies
@@ -208,21 +208,21 @@ check that copy with disabled remote bookmarks sync doesn't affect the other cop
   $ hg cloud sync -q
   $ showgraph
   @  draft-3: draft
-  |
-  | o  draft-2: draft
-  | |
-  | | o  draft-1: draft
-  | | |
-  | | o  a3: public  default/master
-  | | |
-  | | o  a2: public
-  | | |
-  | | o  a1: public
-  | | |
-  | o |  b1: public  default/stable
-  | |/
-  o /  c1: public  default/warm
-  |/
+  │
+  │ o  draft-2: draft
+  │ │
+  │ │ o  draft-1: draft
+  │ │ │
+  │ │ o  a3: public  default/master
+  │ │ │
+  │ │ o  a2: public
+  │ │ │
+  │ │ o  a1: public
+  │ │ │
+  │ o │  b1: public  default/stable
+  │ ├─╯
+  o │  c1: public  default/warm
+  ├─╯
   o  root: public
   
 sync and create a new commit on top of the draft-3
@@ -233,23 +233,23 @@ sync and create a new commit on top of the draft-3
   $ hg commit -qAm "draft-4"
   $ showgraph
   @  draft-4: draft
-  |
+  │
   o  draft-2: draft
-  |
-  | o  draft-1: draft
-  | |
-  | | o  draft-3: draft
-  | | |
-  | o |  a3: draft
-  | | |
-  | o |  a2: public  default/master
-  | | |
-  | o |  a1: public
-  | | |
-  o | |  b1: draft
-  |/ /
-  | o  c1: draft
-  |/
+  │
+  │ o  draft-1: draft
+  │ │
+  │ │ o  draft-3: draft
+  │ │ │
+  │ o │  a3: draft
+  │ │ │
+  │ o │  a2: public  default/master
+  │ │ │
+  │ o │  a1: public
+  │ │ │
+  o │ │  b1: draft
+  ├─╯ │
+  │   o  c1: draft
+  ├───╯
   o  root: public
   
   $ hg cloud sync -q
@@ -258,22 +258,22 @@ sync and create a new commit on top of the draft-3
   $ hg cloud sync -q
   $ showgraph
   o  draft-4: draft
-  |
-  | o  draft-3: draft
-  | |
-  o |  draft-2: draft
-  | |
-  | | @  draft-1: draft
-  | | |
-  | | o  a3: public  default/master
-  | | |
-  | | o  a2: public
-  | | |
-  | | o  a1: public
-  | | |
-  o---+  b1: public  default/stable
-   / /
-  o /  c1: public  default/warm
-  |/
+  │
+  │ o  draft-3: draft
+  │ │
+  o │  draft-2: draft
+  │ │
+  │ │ @  draft-1: draft
+  │ │ │
+  │ │ o  a3: public  default/master
+  │ │ │
+  │ │ o  a2: public
+  │ │ │
+  │ │ o  a1: public
+  │ │ │
+  o │ │  b1: public  default/stable
+  ├───╯
+  │ o  c1: public  default/warm
+  ├─╯
   o  root: public
   

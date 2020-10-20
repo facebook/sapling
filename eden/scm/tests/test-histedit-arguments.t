@@ -24,17 +24,17 @@ Repo setup.
 
   $ hg log --style compact --graph
   @     08d98a8350f3   1970-01-01 00:00 +0000   test
-  |    five
-  |
+  │    five
+  │
   o     c8e68270e35a   1970-01-01 00:00 +0000   test
-  |    four
-  |
+  │    four
+  │
   o     eb57da33312f   1970-01-01 00:00 +0000   test
-  |    three
-  |
+  │    three
+  │
   o     579e40513370   1970-01-01 00:00 +0000   test
-  |    two
-  |
+  │    two
+  │
   o     6058cbb6cfd7   1970-01-01 00:00 +0000   test
        one
   
@@ -120,11 +120,11 @@ temporarily.
 
   $ hg log -G -T '{shortest(node)} {desc}\n' -r 'desc(three)'::
   @  08d9 five
-  |
+  │
   o  c8e6 four
-  |
+  │
   o  eb57 three
-  |
+  │
   ~
   $ HGEDITOR=cat hg histedit -r 'desc(five)' --commands - << EOF
   > edit 08d98a8350f3 4 five
@@ -148,11 +148,11 @@ temporarily.
   $ hg histedit --continue
   $ hg log -G -T '{shortest(node)} {desc}\n' -r 'desc(three)'::
   @  f5ed five
-  |
-  | o  c8e6 four
-  |/
+  │
+  │ o  c8e6 four
+  ├─╯
   o  eb57 three
-  |
+  │
   ~
 
   $ hg debugstrip -q -r f5ed
@@ -320,18 +320,18 @@ Test --continue with --keep
   $ hg histedit -q --continue
   $ hg log -G -T '{node|short} {desc}'
   @  8fda0c726bf2 x
-  |
+  │
   o  63379946892c three
-  |
-  | x  f3cfcca30c44 x
-  | |
-  | | o  2a30f3cfee78 four
-  | |/   ***
-  | |    five
-  | x  eb57da33312f three
-  |/
+  │
+  │ x  f3cfcca30c44 x
+  │ │
+  │ │ o  2a30f3cfee78 four
+  │ ├─╯  ***
+  │ │    five
+  │ x  eb57da33312f three
+  ├─╯
   o  579e40513370 two
-  |
+  │
   o  6058cbb6cfd7 one
   
 
@@ -398,29 +398,29 @@ Set up default base revision tests
 
   $ hg log -G -T '{node|short} {phase} {desc}\n'
   @  8cde254db839 draft commit 2 after merge
-  |
+  │
   o  6f2f0241f119 draft commit 1 after merge
-  |
+  │
   o    90506cc76b00 draft merge head 3 into head 4
-  |\
-  | o  f8607a373a97 draft head 4
-  | |
-  o |  0da92be05148 draft head 3
-  |/
-  | o  4c35cdf97d5e draft head 2 commit 2
-  | |
-  | o  931820154288 draft head 2 commit 1
-  |/
-  | o  8cdc02b9bc63 draft head 1 draft 2
-  | |
-  | o  463b8c0d2973 draft head 1 draft 1
-  | |
-  | o  23a0c4eefcbf public head 1 public
-  | |
-  o |  4117331c3abb draft draft after public
-  |/
+  ├─╮
+  │ o  f8607a373a97 draft head 4
+  │ │
+  o │  0da92be05148 draft head 3
+  ├─╯
+  │ o  4c35cdf97d5e draft head 2 commit 2
+  │ │
+  │ o  931820154288 draft head 2 commit 1
+  ├─╯
+  │ o  8cdc02b9bc63 draft head 1 draft 2
+  │ │
+  │ o  463b8c0d2973 draft head 1 draft 1
+  │ │
+  │ o  23a0c4eefcbf public head 1 public
+  │ │
+  o │  4117331c3abb draft draft after public
+  ├─╯
   o  4426d359ea59 public public 1
-  |
+  │
   o  54136a8ddf32 public root
   
 
@@ -492,11 +492,11 @@ Test autoverb feature
 
   $ hg log --style compact --graph
   @     4f34d0f8b5fa   1970-01-01 00:00 +0000   test
-  |    roll! one
-  |
+  │    roll! one
+  │
   o     579e40513370   1970-01-01 00:00 +0000   test
-  |    two
-  |
+  │    two
+  │
   o     6058cbb6cfd7   1970-01-01 00:00 +0000   test
        one
   

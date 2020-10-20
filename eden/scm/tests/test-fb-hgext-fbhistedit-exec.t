@@ -22,30 +22,30 @@ log before edit
 
   $ hg log --graph
   @  commit:      652413bf663e
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     f
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     f
+  │
   o  commit:      e860deea161a
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     e
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     e
+  │
   o  commit:      055a42cdd887
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     d
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     d
+  │
   o  commit:      177f92b77385
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     c
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     c
+  │
   o  commit:      d2ae7f538514
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     b
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     b
+  │
   o  commit:      cb9a9f314b8b
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
@@ -69,30 +69,30 @@ exec & continue should not preserve hashes
 
   $ hg log --graph
   @  commit:      652413bf663e
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     f
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     f
+  │
   o  commit:      e860deea161a
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     e
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     e
+  │
   o  commit:      055a42cdd887
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     d
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     d
+  │
   o  commit:      177f92b77385
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     c
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     c
+  │
   o  commit:      d2ae7f538514
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     b
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     b
+  │
   o  commit:      cb9a9f314b8b
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
@@ -163,15 +163,15 @@ continue after the last entry
 
   $ hg log --template '{node|short} {desc}' --graph
   @  652413bf663e f
-  |
+  │
   o  e860deea161a e
-  |
+  │
   o  055a42cdd887 d
-  |
+  │
   o  177f92b77385 c
-  |
+  │
   o  d2ae7f538514 b
-  |
+  │
   o  cb9a9f314b8b a
   
 retry should try to execute the command again and continue if succeeded
@@ -228,15 +228,15 @@ retry should fail when used on non-exec histedit command
 
   $ hg log --template '{node|short} {desc}' --graph
   @  652413bf663e f
-  |
+  │
   o  e860deea161a e
-  |
+  │
   o  055a42cdd887 d
-  |
+  │
   o  177f92b77385 c
-  |
+  │
   o  d2ae7f538514 b
-  |
+  │
   o  cb9a9f314b8b a
   
 abort should work
@@ -256,15 +256,15 @@ abort should work
 
   $ hg log --template '{node|short} {desc}' --graph
   @  652413bf663e f
-  |
+  │
   o  e860deea161a e
-  |
+  │
   o  055a42cdd887 d
-  |
+  │
   o  177f92b77385 c
-  |
+  │
   o  d2ae7f538514 b
-  |
+  │
   o  cb9a9f314b8b a
   
 
@@ -287,15 +287,15 @@ Multiple exec commands must work
 
   $ hg log --template '{node|short} {desc}' --graph
   @  652413bf663e f
-  |
+  │
   o  e860deea161a e
-  |
+  │
   o  055a42cdd887 d
-  |
+  │
   o  177f92b77385 c
-  |
+  │
   o  d2ae7f538514 b
-  |
+  │
   o  cb9a9f314b8b a
   
 
@@ -353,15 +353,15 @@ Test continue a stopped histedit
 
   $ hg log -G --hidden -T '{node|short} {desc|firstline}\n'
   @  652413bf663e f
-  |
+  │
   o  e860deea161a e
-  |
+  │
   o  055a42cdd887 d
-  |
+  │
   o  177f92b77385 c
-  |
+  │
   o  d2ae7f538514 b
-  |
+  │
   o  cb9a9f314b8b a
   
   $ hg histedit 055a42cdd887 --commands - 2>&1 << EOF
@@ -376,61 +376,61 @@ Test continue a stopped histedit
   $ echo d >> d
   $ hg log -G --hidden -T '{node|short} {desc|firstline}\n'
   @  883a5225844a d
-  |
+  │
   o  d8249471110a e
-  |
-  | o  652413bf663e f
-  | |
-  | x  e860deea161a e
-  | |
-  | x  055a42cdd887 d
-  |/
+  │
+  │ o  652413bf663e f
+  │ │
+  │ x  e860deea161a e
+  │ │
+  │ x  055a42cdd887 d
+  ├─╯
   o  177f92b77385 c
-  |
+  │
   o  d2ae7f538514 b
-  |
+  │
   o  cb9a9f314b8b a
   
   $ hg commit --amend -m d
   $ hg log -G --hidden -T '{node|short} {desc|firstline}\n'
   @  8800a5180f91 d
-  |
-  | x  883a5225844a d
-  |/
+  │
+  │ x  883a5225844a d
+  ├─╯
   o  d8249471110a e
-  |
-  | o  652413bf663e f
-  | |
-  | x  e860deea161a e
-  | |
-  | x  055a42cdd887 d
-  |/
+  │
+  │ o  652413bf663e f
+  │ │
+  │ x  e860deea161a e
+  │ │
+  │ x  055a42cdd887 d
+  ├─╯
   o  177f92b77385 c
-  |
+  │
   o  d2ae7f538514 b
-  |
+  │
   o  cb9a9f314b8b a
   
   $ hg histedit --continue --traceback
   $ hg log -G --hidden -T '{node|short} {desc|firstline}\n'
   @  0d9a4961b100 f
-  |
+  │
   o  8800a5180f91 d
-  |
-  | x  883a5225844a d
-  |/
+  │
+  │ x  883a5225844a d
+  ├─╯
   o  d8249471110a e
-  |
-  | x  652413bf663e f
-  | |
-  | x  e860deea161a e
-  | |
-  | x  055a42cdd887 d
-  |/
+  │
+  │ x  652413bf663e f
+  │ │
+  │ x  e860deea161a e
+  │ │
+  │ x  055a42cdd887 d
+  ├─╯
   o  177f92b77385 c
-  |
+  │
   o  d2ae7f538514 b
-  |
+  │
   o  cb9a9f314b8b a
   
 
@@ -456,44 +456,44 @@ Test abort a stopped histedit with obsmarkers
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G --hidden -T '{node|short} {desc|firstline}\n'
   o  2b451ea9fdb0 e
-  |
-  | x  1d7ed205640e e
-  |/
+  │
+  │ x  1d7ed205640e e
+  ├─╯
   o  abce911bf7cf d
-  |
-  | @  0d9a4961b100 f
-  | |
-  | x  8800a5180f91 d
-  | |
-  | | x  883a5225844a d
-  | |/
-  | x  d8249471110a e
-  |/
-  | x  652413bf663e f
-  | |
-  | x  e860deea161a e
-  | |
-  | x  055a42cdd887 d
-  |/
+  │
+  │ @  0d9a4961b100 f
+  │ │
+  │ x  8800a5180f91 d
+  │ │
+  │ │ x  883a5225844a d
+  │ ├─╯
+  │ x  d8249471110a e
+  ├─╯
+  │ x  652413bf663e f
+  │ │
+  │ x  e860deea161a e
+  │ │
+  │ x  055a42cdd887 d
+  ├─╯
   o  177f92b77385 c
-  |
+  │
   o  d2ae7f538514 b
-  |
+  │
   o  cb9a9f314b8b a
   
 Test amend inside exec rule:
 
   $ hg log -G -T '{node|short} {desc|firstline}\n'
   @  0d9a4961b100 f
-  |
+  │
   o  8800a5180f91 d
-  |
+  │
   o  d8249471110a e
-  |
+  │
   o  177f92b77385 c
-  |
+  │
   o  d2ae7f538514 b
-  |
+  │
   o  cb9a9f314b8b a
   
 
@@ -506,15 +506,15 @@ Test amend inside exec rule:
 
   $ hg log -G -T '{node|short} {desc|firstline}\n'
   @  5aeafddb5246 f
-  |
+  │
   o  6bd17118649c d (amended)
-  |
+  │
   o  d8249471110a e
-  |
+  │
   o  177f92b77385 c
-  |
+  │
   o  d2ae7f538514 b
-  |
+  │
   o  cb9a9f314b8b a
   
 Use exec to create a new commit at the bottom of a stack (that is,
@@ -530,16 +530,16 @@ public commit.
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ hg log -G -T '{node|short} [{phase}] {desc|firstline}\n'
   @  325ec50aef26 [draft] f
-  |
+  │
   o  6fa3f6d34b50 [draft] d (amended)
-  |
+  │
   o  c90a2aff5a5c [draft] x (inserted)
-  |
+  │
   o  d8249471110a [public] e
-  |
+  │
   o  177f92b77385 [public] c
-  |
+  │
   o  d2ae7f538514 [public] b
-  |
+  │
   o  cb9a9f314b8b [public] a
   

@@ -8,9 +8,9 @@
   $ BLOB_TYPE="blob_files" default_setup
   hg repo
   o  C [draft;rev=2;26805aba1e60]
-  |
+  │
   o  B [draft;rev=1;112478962961]
-  |
+  │
   o  A [draft;rev=0;426bada5c675]
   $
   blobimporting
@@ -26,15 +26,15 @@ Try to push merge commit
   $ hg merge -q -r 3 && hg ci -m "merge 1 and 2"
   $ log -r ":"
   @    merge 1 and 2 [draft;rev=5;3e1c4ca1f9be]
-  |\
-  | o  2 [draft;rev=4;c9b2673d3218]
-  | |
-  o |  1 [draft;rev=3;a0c9c5791058]
-  |/
-  | o  C [public;rev=2;26805aba1e60] default/master_bookmark
-  | |
-  | o  B [public;rev=1;112478962961]
-  |/
+  ├─╮
+  │ o  2 [draft;rev=4;c9b2673d3218]
+  │ │
+  o │  1 [draft;rev=3;a0c9c5791058]
+  ├─╯
+  │ o  C [public;rev=2;26805aba1e60] default/master_bookmark
+  │ │
+  │ o  B [public;rev=1;112478962961]
+  ├─╯
   o  A [public;rev=0;426bada5c675]
   $
 

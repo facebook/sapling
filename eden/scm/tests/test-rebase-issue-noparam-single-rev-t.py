@@ -1,3 +1,5 @@
+# coding=utf-8
+
 # Copyright (c) Facebook, Inc. and its affiliates.
 # Copyright (c) Mercurial Contributors.
 #
@@ -42,13 +44,13 @@ sh % "hg ci -Am r2" == "adding r2"
 
 sh % "tglog" == r"""
     @  225af64d03e6 'r2'
-    |
+    │
     o  8d0a8c99b309 'r1'
-    |
-    | o  87c180a611f2 'l1'
-    |/
+    │
+    │ o  87c180a611f2 'l1'
+    ├─╯
     o  56daeba07f4b 'c2'
-    |
+    │
     o  e8faad3d03ff 'c1'"""
 # Rebase with no arguments - single revision in source branch:
 
@@ -58,13 +60,13 @@ sh % "hg rebase" == 'rebasing 87c180a611f2 "l1"'
 
 sh % "tglog" == r"""
     @  b1152cc99655 'l1'
-    |
+    │
     o  225af64d03e6 'r2'
-    |
+    │
     o  8d0a8c99b309 'r1'
-    |
+    │
     o  56daeba07f4b 'c2'
-    |
+    │
     o  e8faad3d03ff 'c1'"""
 sh % "cd .."
 
@@ -91,13 +93,13 @@ sh % "hg ci -Am r1" == "adding r1"
 
 sh % "tglog" == r"""
     @  8d0a8c99b309 'r1'
-    |
-    | o  1ac923b736ef 'l2'
-    | |
-    | o  87c180a611f2 'l1'
-    |/
+    │
+    │ o  1ac923b736ef 'l2'
+    │ │
+    │ o  87c180a611f2 'l1'
+    ├─╯
     o  56daeba07f4b 'c2'
-    |
+    │
     o  e8faad3d03ff 'c1'"""
 # Rebase with no arguments - single revision in target branch:
 
@@ -109,13 +111,13 @@ sh % "hg rebase" == r'''
 
 sh % "tglog" == r"""
     @  023181307ed0 'l2'
-    |
+    │
     o  913ab52b43b4 'l1'
-    |
+    │
     o  8d0a8c99b309 'r1'
-    |
+    │
     o  56daeba07f4b 'c2'
-    |
+    │
     o  e8faad3d03ff 'c1'"""
 
 sh % "cd .."

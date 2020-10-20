@@ -31,7 +31,7 @@ Create repo
 
   $ showgraph
   @  b
-  |
+  │
   o  a
 
 Test obsolete markers
@@ -41,9 +41,9 @@ Test obsolete markers
   > $revision"
   $ showgraph
   @  b'
-  |
-  | x  b
-  |/
+  │
+  │ x  b
+  ├─╯
   o  a
   $ hg debugcrdump -U 1 -r . --obsolete --traceback
   {

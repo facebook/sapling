@@ -1,3 +1,7 @@
+# coding=utf-8
+
+# coding=utf-8
+
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
@@ -31,27 +35,27 @@ Renamed
 
 sh % "hg log -Gp -T '{desc}\\n' --git Renamed A" == r"""
     @  C
-    :  diff --git a/Renamed b/Renamed
-    :  --- a/Renamed
-    :  +++ b/Renamed
-    :  @@ -1,1 +1,1 @@
-    :  -1
-    :  +2
-    :
+    ╷  diff --git a/Renamed b/Renamed
+    ╷  --- a/Renamed
+    ╷  +++ b/Renamed
+    ╷  @@ -1,1 +1,1 @@
+    ╷  -1
+    ╷  +2
+    ╷
     o  B
-    |  diff --git a/A b/A
-    |  deleted file mode 100644
-    |  --- a/A
-    |  +++ /dev/null
-    |  @@ -1,1 +0,0 @@
-    |  -1
-    |  diff --git a/Renamed b/Renamed
-    |  new file mode 100644
-    |  --- /dev/null
-    |  +++ b/Renamed
-    |  @@ -0,0 +1,1 @@
-    |  +1
-    |
+    │  diff --git a/A b/A
+    │  deleted file mode 100644
+    │  --- a/A
+    │  +++ /dev/null
+    │  @@ -1,1 +0,0 @@
+    │  -1
+    │  diff --git a/Renamed b/Renamed
+    │  new file mode 100644
+    │  --- /dev/null
+    │  +++ b/Renamed
+    │  @@ -0,0 +1,1 @@
+    │  +1
+    │
     o  A
        diff --git a/A b/A
        new file mode 100644

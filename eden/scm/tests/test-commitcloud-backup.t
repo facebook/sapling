@@ -203,19 +203,19 @@ Obsolete a head, make sure backup happens
 Rebase + backup. Make sure that two heads were deleted and head was saved
   $ hg log --graph -T '{node} {desc}'
   @  773a3ba2e7c25358df2e5b3cced70371333bc61c newcommit
-  |
+  │
   o  667453c0787e7830fdfb86db0f8c29aa7af2a1ea newhead2
-  |
-  | o  f79c5017def3b9af9928edbb52cc620c74b4b291 newhead1
-  |/
-  | o  3a30e220fe42e969e34bbe8001b951a20f31f2e8 newhead
-  |/
-  | o  d5609f7fa63352da538eeffbe3ffabed1779aafc ontopofobsoleted
-  | |
-  | o  361e89f06232897a098e3a11c49d9d8987da469d obsoletedcommit
-  | |
-  | o  94a60f5ad8b2e007240007edab982b3638a3f38d newcommit
-  |/
+  │
+  │ o  f79c5017def3b9af9928edbb52cc620c74b4b291 newhead1
+  ├─╯
+  │ o  3a30e220fe42e969e34bbe8001b951a20f31f2e8 newhead
+  ├─╯
+  │ o  d5609f7fa63352da538eeffbe3ffabed1779aafc ontopofobsoleted
+  │ │
+  │ o  361e89f06232897a098e3a11c49d9d8987da469d obsoletedcommit
+  │ │
+  │ o  94a60f5ad8b2e007240007edab982b3638a3f38d newcommit
+  ├─╯
   o  7e6a6fd9c7c8c8c307ee14678f03d63af3a7b455 commit
   
   $ hg rebase -s f79c5017de -d 773a3ba2e7c2
@@ -252,23 +252,23 @@ Make a few public commits. Make sure we don't backup them
   remote: added 5 changesets with 5 changes to 5 files
   $ hg log --graph -T '{node} {desc} {phase}'
   @  3446a384dd701da41cd83cbd9562805fc6412c0e public2 public
-  |
+  │
   o  bd2412178ef2d3f3aaaf8a4f2385bdd64b5c5e54 public1 public
-  |
+  │
   o  2d2e01441947afbb6bb5ae0efbb901f3eebe3fbd newhead1 public
-  |
+  │
   o  773a3ba2e7c25358df2e5b3cced70371333bc61c newcommit public
-  |
+  │
   o  667453c0787e7830fdfb86db0f8c29aa7af2a1ea newhead2 public
-  |
-  | o  3a30e220fe42e969e34bbe8001b951a20f31f2e8 newhead draft
-  |/
-  | o  d5609f7fa63352da538eeffbe3ffabed1779aafc ontopofobsoleted draft
-  | |
-  | o  361e89f06232897a098e3a11c49d9d8987da469d obsoletedcommit draft
-  | |
-  | o  94a60f5ad8b2e007240007edab982b3638a3f38d newcommit draft
-  |/
+  │
+  │ o  3a30e220fe42e969e34bbe8001b951a20f31f2e8 newhead draft
+  ├─╯
+  │ o  d5609f7fa63352da538eeffbe3ffabed1779aafc ontopofobsoleted draft
+  │ │
+  │ o  361e89f06232897a098e3a11c49d9d8987da469d obsoletedcommit draft
+  │ │
+  │ o  94a60f5ad8b2e007240007edab982b3638a3f38d newcommit draft
+  ├─╯
   o  7e6a6fd9c7c8c8c307ee14678f03d63af3a7b455 commit public
   
   $ hg cloud backup
@@ -488,11 +488,11 @@ Run command that creates multiple transactions. Make sure that just one backup i
   > EOS
   $ hg log -r ':' -G -T '{desc} {node}'
   o  C 26805aba1e600a82e93661149f2313866a221a7b
-  |
-  | o  D b18e25de2cf5fc4699a029ed635882849e53ef73
-  | |
-  o |  B 112478962961147124edd43549aedd1a335e44bf
-  |/
+  │
+  │ o  D b18e25de2cf5fc4699a029ed635882849e53ef73
+  │ │
+  o │  B 112478962961147124edd43549aedd1a335e44bf
+  ├─╯
   o  A 426bada5c67598ca65036d57d9e4b64b0c1ce7a0
   
   @  initial 630839011471e17f808b92ab084bedfaca33b110
@@ -521,15 +521,15 @@ Create logs directory and set correct permissions
   $ waitbgbackup
   $ hg log -r ':' -G -T '{desc} {node}'
   o  C ffeec75ec60331057b875fc5356c57c3ff204500
-  |
+  │
   o  B 1ef11233b74dfa8b57e8285fd6f546096af8f4c2
-  |
-  | x  C 26805aba1e600a82e93661149f2313866a221a7b
-  | |
-  o |  D b18e25de2cf5fc4699a029ed635882849e53ef73
-  | |
-  | x  B 112478962961147124edd43549aedd1a335e44bf
-  |/
+  │
+  │ x  C 26805aba1e600a82e93661149f2313866a221a7b
+  │ │
+  o │  D b18e25de2cf5fc4699a029ed635882849e53ef73
+  │ │
+  │ x  B 112478962961147124edd43549aedd1a335e44bf
+  ├─╯
   o  A 426bada5c67598ca65036d57d9e4b64b0c1ce7a0
   
   @  initial 630839011471e17f808b92ab084bedfaca33b110

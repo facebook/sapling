@@ -1,3 +1,5 @@
+# coding=utf-8
+
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
@@ -45,15 +47,15 @@ desc(C)
 sh % "mv .hg/store/00changelog.d .hg/store/00changelog.d.bak"
 sh % 'hg log -GT "{desc}"' == r"""
     o    F
-    |\
-    | o  E
-    | |
-    o |  D
-    |/
+    ├─╮
+    │ o  E
+    │ │
+    o │  D
+    ├─╯
     o  C
-    |
-    | o  B
-    |/
+    │
+    │ o  B
+    ├─╯
     o  A"""
 
 # Migrate down. 00changelog.d becomes required.
@@ -66,15 +68,15 @@ sh % 'hg log -GT "{desc}"' == r"""
 sh % "mv .hg/store/00changelog.d.bak .hg/store/00changelog.d"
 sh % 'hg log -GT "{desc}"' == r"""
     o    F
-    |\
-    | o  E
-    | |
-    o |  D
-    |/
+    ├─╮
+    │ o  E
+    │ │
+    o │  D
+    ├─╯
     o  C
-    |
-    | o  B
-    |/
+    │
+    │ o  B
+    ├─╯
     o  A"""
 
 # Create new commits.

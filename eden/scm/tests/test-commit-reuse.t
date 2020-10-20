@@ -14,9 +14,9 @@ Test the flag to reuse another commit's message (-M):
   $ hg commit -M $B
   $ tglog
   @  1c3d011e7c74 'B'
-  |
+  │
   o  112478962961 'B'
-  |
+  │
   o  426bada5c675 'A'
   
 Ensure it's incompatible with other flags:

@@ -25,15 +25,15 @@
   undone to *, before debugdrawdag * (glob)
   $ hg log -GT '{desc}'
   o  B
-  |
+  │
   o  A
   
   $ hg redo
   undone to *, before undo (glob)
   $ hg log -GT '{desc}'
   o  C
-  |
-  | o  B
-  |/
+  │
+  │ o  B
+  ├─╯
   o  A
   

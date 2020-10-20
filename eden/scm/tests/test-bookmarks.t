@@ -709,25 +709,25 @@ test stripping a non-checked-out but bookmarked revision
 
   $ hg log --graph
   @  commit:      9c404beeabc2
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     y
-  |
-  | o  commit:      125c9a1d6df6
-  |/   user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     x
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     y
+  │
+  │ o  commit:      125c9a1d6df6
+  ├─╯  user:        test
+  │    date:        Thu Jan 01 00:00:00 1970 +0000
+  │    summary:     x
+  │
   o  commit:      db815d6d32e6
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     2
-  |
-  | o  commit:      925d80f479bb
-  |/   user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     1
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     2
+  │
+  │ o  commit:      925d80f479bb
+  ├─╯  user:        test
+  │    date:        Thu Jan 01 00:00:00 1970 +0000
+  │    summary:     1
+  │
   o  commit:      f7b1eb17ad24
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
@@ -743,22 +743,22 @@ should-end-on-two should end up pointing to revision 2, as that's the
 tipmost surviving ancestor of the stripped revision.
   $ hg log --graph
   @  commit:      9c404beeabc2
-  |  bookmark:    four
-  |  bookmark:    should-end-on-two
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     y
-  |
+  │  bookmark:    four
+  │  bookmark:    should-end-on-two
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     y
+  │
   o  commit:      db815d6d32e6
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     2
-  |
-  | o  commit:      925d80f479bb
-  |/   user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     1
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     2
+  │
+  │ o  commit:      925d80f479bb
+  ├─╯  user:        test
+  │    date:        Thu Jan 01 00:00:00 1970 +0000
+  │    summary:     1
+  │
   o  commit:      f7b1eb17ad24
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
@@ -998,50 +998,50 @@ add hooks:
 
   $ hg log -G -T phases
   @  commit:      81dcce76aa0b
-  |  phase:       draft
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     xx
-  |
-  | o  commit:      f047c86095b7
-  | |  bookmark:    Z
-  | |  phase:       draft
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     yy
-  | |
-  o |  commit:      125c9a1d6df6
-  | |  bookmark:    Y
-  | |  phase:       public
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     x
-  | |
-  | o  commit:      9c404beeabc2
-  |/   bookmark:    foo
-  |    bookmark:    four
-  |    bookmark:    should-end-on-two
-  |    phase:       public
-  |    user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     y
-  |
+  │  phase:       draft
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     xx
+  │
+  │ o  commit:      f047c86095b7
+  │ │  bookmark:    Z
+  │ │  phase:       draft
+  │ │  user:        test
+  │ │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │ │  summary:     yy
+  │ │
+  o │  commit:      125c9a1d6df6
+  │ │  bookmark:    Y
+  │ │  phase:       public
+  │ │  user:        test
+  │ │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │ │  summary:     x
+  │ │
+  │ o  commit:      9c404beeabc2
+  ├─╯  bookmark:    foo
+  │    bookmark:    four
+  │    bookmark:    should-end-on-two
+  │    phase:       public
+  │    user:        test
+  │    date:        Thu Jan 01 00:00:00 1970 +0000
+  │    summary:     y
+  │
   o  commit:      db815d6d32e6
-  |  bookmark:    foo@2
-  |  bookmark:    x  y
-  |  phase:       public
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     2
-  |
-  | o  commit:      925d80f479bb
-  |/   bookmark:    X2
-  |    bookmark:    Z@1
-  |    phase:       public
-  |    user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     1
-  |
+  │  bookmark:    foo@2
+  │  bookmark:    x  y
+  │  phase:       public
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     2
+  │
+  │ o  commit:      925d80f479bb
+  ├─╯  bookmark:    X2
+  │    bookmark:    Z@1
+  │    phase:       public
+  │    user:        test
+  │    date:        Thu Jan 01 00:00:00 1970 +0000
+  │    summary:     1
+  │
   o  commit:      f7b1eb17ad24
      bookmark:    foo@1
      phase:       public

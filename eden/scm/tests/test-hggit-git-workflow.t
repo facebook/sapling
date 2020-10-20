@@ -47,18 +47,18 @@ get things back to hg
   importing git objects into hg
   $ hg log --graph --debug | grep -v phase:
   o  commit:      d294862c083a2eac3c1b31d3a3bdbdffb49a5b25
-  |  bookmark:    master
-  |  manifest:    f0bd6fbafbaebe4bb59c35108428f6fce152431d
-  |  user:        test <test@example.org>
-  |  date:        Mon Jan 01 00:00:11 2007 +0000
-  |  files+:      beta
-  |  extra:       branch=default
-  |  extra:       convert_revision=fef06279bff0022eee567d65729d8e795fd3efe8
-  |  extra:       hg-git-rename-source=git
-  |  description:
-  |  add beta
-  |
-  |
+  │  bookmark:    master
+  │  manifest:    f0bd6fbafbaebe4bb59c35108428f6fce152431d
+  │  user:        test <test@example.org>
+  │  date:        Mon Jan 01 00:00:11 2007 +0000
+  │  files+:      beta
+  │  extra:       branch=default
+  │  extra:       convert_revision=fef06279bff0022eee567d65729d8e795fd3efe8
+  │  extra:       hg-git-rename-source=git
+  │  description:
+  │  add beta
+  │
+  │
   o  commit:      0221c246a56712c6aa64e5ee382244d8a471b1e2
      manifest:    8b8a0e87dfd7a0706c0524afa8ba67e20544cbf0
      user:        test
@@ -87,11 +87,11 @@ gimport support for git.mindate
   no changes found
   $ hg log --graph
   o  commit:      d294862c083a
-  |  bookmark:    master
-  |  user:        test <test@example.org>
-  |  date:        Mon Jan 01 00:00:11 2007 +0000
-  |  summary:     add beta
-  |
+  │  bookmark:    master
+  │  user:        test <test@example.org>
+  │  date:        Mon Jan 01 00:00:11 2007 +0000
+  │  summary:     add beta
+  │
   o  commit:      0221c246a567
      user:        test
      date:        Mon Jan 01 00:00:10 2007 +0000
@@ -107,21 +107,21 @@ gimport support for git.mindate
   importing git objects into hg
   $ hg log --graph
   o  commit:      3231f2356e13
-  |  bookmark:    master
-  |  user:        test <test@example.org>
-  |  date:        Wed Jan 01 00:00:00 2014 +0000
-  |  summary:     newcommit
-  |
+  │  bookmark:    master
+  │  user:        test <test@example.org>
+  │  date:        Wed Jan 01 00:00:00 2014 +0000
+  │  summary:     newcommit
+  │
   o  commit:      7912581b53bd
-  |  user:        test <test@example.org>
-  |  date:        Sat Mar 01 00:00:00 2014 +0000
-  |  summary:     oldcommit
-  |
+  │  user:        test <test@example.org>
+  │  date:        Sat Mar 01 00:00:00 2014 +0000
+  │  summary:     oldcommit
+  │
   o  commit:      d294862c083a
-  |  user:        test <test@example.org>
-  |  date:        Mon Jan 01 00:00:11 2007 +0000
-  |  summary:     add beta
-  |
+  │  user:        test <test@example.org>
+  │  date:        Mon Jan 01 00:00:11 2007 +0000
+  │  summary:     add beta
+  │
   o  commit:      0221c246a567
      user:        test
      date:        Mon Jan 01 00:00:10 2007 +0000

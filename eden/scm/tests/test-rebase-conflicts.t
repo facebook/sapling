@@ -32,15 +32,15 @@
 
   $ tglogp
   @  8029388f38dc draft 'L3' mybook
-  |
+  │
   o  46f0b057b5c0 draft 'L2'
-  |
+  │
   o  3163e20567cc draft 'L1'
-  |
-  | o  a9ce13b75fb5 draft 'C3'
-  |/
+  │
+  │ o  a9ce13b75fb5 draft 'C3'
+  ├─╯
   o  11eb9c356adf draft 'C2'
-  |
+  │
   o  178f1774564f draft 'C1'
   
 Try to call --continue:
@@ -93,15 +93,15 @@ Conclude rebase:
 
   $ tglogp
   @  d67b21408fc0 draft 'L3' mybook
-  |
+  │
   o  5e5bd08c7e60 draft 'L2'
-  |
+  │
   o  3e046f2ecedb draft 'L1'
-  |
+  │
   o  a9ce13b75fb5 draft 'C3'
-  |
+  │
   o  11eb9c356adf draft 'C2'
-  |
+  │
   o  178f1774564f draft 'C1'
   
 Check correctness:
@@ -149,63 +149,63 @@ Check that the right ancestors is used while rebasing a merge (issue4041)
   $ hg up -q 'head() - merge()'
   $ hg log -G
   o    commit:      2f2496ddf49d
-  |\   branch:      f1
-  | |  user:        szhang
-  | |  date:        Thu Sep 05 12:59:39 2013 -0400
-  | |  summary:     merge
-  | |
-  | o  commit:      e31216eec445
-  | |  branch:      f1
-  | |  user:        szhang
-  | |  date:        Thu Sep 05 12:59:10 2013 -0400
-  | |  summary:     more changes to f1
-  | |
-  | o    commit:      8e4e2c1a07ae
-  | |\   branch:      f1
-  | | |  user:        szhang
-  | | |  date:        Thu Sep 05 12:57:59 2013 -0400
-  | | |  summary:     bad merge
-  | | |
-  o | |  commit:      4c9fbe56a16f
-  |/ /   branch:      f1
-  | |    user:        szhang
-  | |    date:        Thu Sep 05 12:54:00 2013 -0400
-  | |    summary:     changed f1
-  | |
-  | o  commit:      400110238667
-  | |  branch:      f2
-  | |  user:        szhang
-  | |  date:        Tue Sep 03 13:58:02 2013 -0400
-  | |  summary:     changed f2 on f2
-  | |
-  | | @  commit:      d79e2059b5c0
-  | | |  user:        szhang
-  | | |  date:        Tue Sep 03 13:57:39 2013 -0400
-  | | |  summary:     changed f2 on default
-  | | |
-  | o |  commit:      12e8ec6bb010
-  | |/   branch:      f2
-  | |    user:        szhang
-  | |    date:        Tue Sep 03 13:57:18 2013 -0400
-  | |    summary:     created f2 branch
-  | |
-  | o  commit:      8a951942e016
-  | |  user:        szhang
-  | |  date:        Tue Sep 03 13:57:11 2013 -0400
-  | |  summary:     added f2.txt
-  | |
-  o |  commit:      4bc80088dc6b
-  | |  branch:      f1
-  | |  user:        szhang
-  | |  date:        Tue Sep 03 13:56:20 2013 -0400
-  | |  summary:     added f1.txt
-  | |
-  o |  commit:      ef53c9e6b608
-  |/   branch:      f1
-  |    user:        szhang
-  |    date:        Tue Sep 03 13:55:26 2013 -0400
-  |    summary:     created f1 branch
-  |
+  ├─╮  branch:      f1
+  │ │  user:        szhang
+  │ │  date:        Thu Sep 05 12:59:39 2013 -0400
+  │ │  summary:     merge
+  │ │
+  │ o  commit:      e31216eec445
+  │ │  branch:      f1
+  │ │  user:        szhang
+  │ │  date:        Thu Sep 05 12:59:10 2013 -0400
+  │ │  summary:     more changes to f1
+  │ │
+  │ o    commit:      8e4e2c1a07ae
+  │ ├─╮  branch:      f1
+  │ │ │  user:        szhang
+  │ │ │  date:        Thu Sep 05 12:57:59 2013 -0400
+  │ │ │  summary:     bad merge
+  │ │ │
+  o │ │  commit:      4c9fbe56a16f
+  ├─╯ │  branch:      f1
+  │   │  user:        szhang
+  │   │  date:        Thu Sep 05 12:54:00 2013 -0400
+  │   │  summary:     changed f1
+  │   │
+  │   o  commit:      400110238667
+  │   │  branch:      f2
+  │   │  user:        szhang
+  │   │  date:        Tue Sep 03 13:58:02 2013 -0400
+  │   │  summary:     changed f2 on f2
+  │   │
+  │ @ │  commit:      d79e2059b5c0
+  │ │ │  user:        szhang
+  │ │ │  date:        Tue Sep 03 13:57:39 2013 -0400
+  │ │ │  summary:     changed f2 on default
+  │ │ │
+  │ │ o  commit:      12e8ec6bb010
+  │ ├─╯  branch:      f2
+  │ │    user:        szhang
+  │ │    date:        Tue Sep 03 13:57:18 2013 -0400
+  │ │    summary:     created f2 branch
+  │ │
+  │ o  commit:      8a951942e016
+  │ │  user:        szhang
+  │ │  date:        Tue Sep 03 13:57:11 2013 -0400
+  │ │  summary:     added f2.txt
+  │ │
+  o │  commit:      4bc80088dc6b
+  │ │  branch:      f1
+  │ │  user:        szhang
+  │ │  date:        Tue Sep 03 13:56:20 2013 -0400
+  │ │  summary:     added f1.txt
+  │ │
+  o │  commit:      ef53c9e6b608
+  ├─╯  branch:      f1
+  │    user:        szhang
+  │    date:        Tue Sep 03 13:55:26 2013 -0400
+  │    summary:     created f1 branch
+  │
   o  commit:      24797d4f68de
      user:        szhang
      date:        Tue Sep 03 13:55:08 2013 -0400
@@ -358,14 +358,14 @@ Test rebase with obsstore turned on and off (issue5606)
 
   $ tglogp
   o  c5f6f5f52dbd draft 'D' D
-  |
+  │
   o  a8990ee99807 draft 'B' B
-  |
+  │
   @  b2867df0c236 draft 'E' E
-  |
-  | o  26805aba1e60 draft 'C' C
-  | |
-  | x  112478962961 draft 'B'
-  |/
+  │
+  │ o  26805aba1e60 draft 'C' C
+  │ │
+  │ x  112478962961 draft 'B'
+  ├─╯
   o  426bada5c675 draft 'A' A
   

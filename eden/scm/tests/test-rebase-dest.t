@@ -32,11 +32,11 @@ Requiring dest should not break continue or other rebase options
   $ hg commit -qAm dc
   $ hg log -G -T '{desc}'
   @  dc
-  |
-  | o  cc
-  |/
+  │
+  │ o  cc
+  ├─╯
   o  bb
-  |
+  │
   o  aa
   
   $ hg rebase -d 'desc(cc)'
@@ -128,9 +128,9 @@ Destination resolves to an empty set:
   > EOS
   nothing to rebase - empty destination
   o  26805aba1e60 'C'
-  |
+  │
   o  112478962961 'B'
-  |
+  │
   o  426bada5c675 'A'
   
 
@@ -169,9 +169,9 @@ Rebase to null should work:
   o  d8d8601abd5e 'D'
   
   o  dc0947a82db8 'C'
-  |
-  | o  fc2b737bb2e5 'B'
-  |
+  │
+  │ o  fc2b737bb2e5 'B'
+  │
   o  426bada5c675 'A'
   
 Destination resolves to multiple changesets:
@@ -212,15 +212,15 @@ Switch roots:
   rebasing cd488e83d208 "E" (E)
   rebasing 0069ba24938a "F" (F)
   o  d150ff263fc8 'F'
-  |
+  │
   o  66f30a1a2eab 'E'
-  |
-  | o  93db94ffae0e 'C'
-  | |
-  | o  d0071c3b0c88 'B'
-  | |
-  | o  058c1e1fb10a 'D'
-  |
+  │
+  │ o  93db94ffae0e 'C'
+  │ │
+  │ o  d0071c3b0c88 'B'
+  │ │
+  │ o  058c1e1fb10a 'D'
+  │
   o  426bada5c675 'A'
   
 Different destinations for merge changesets with a same root:
@@ -237,18 +237,18 @@ Different destinations for merge changesets with a same root:
   rebasing a4256619d830 "B" (B)
   rebasing 8e139e245220 "C" (C)
   o    51e2ce92e06a 'C'
-  |\
-  | o    2ed0c8546285 'B'
-  | |\
-  o | |  8fdb2c1feb20 'G'
-  | | |
-  | | o  cd488e83d208 'E'
-  | | |
-  o | |  a6661b868de9 'F'
-   / /
-  | o  058c1e1fb10a 'D'
-  |
-  o  426bada5c675 'A'
+  ├─╮
+  │ o    2ed0c8546285 'B'
+  │ ├─╮
+  o │ │  8fdb2c1feb20 'G'
+  │ │ │
+  │ │ o  cd488e83d208 'E'
+  │ │ │
+  o │ │  a6661b868de9 'F'
+    │ │
+    │ o  058c1e1fb10a 'D'
+    │
+    o  426bada5c675 'A'
   
 Move to a previous parent:
 
@@ -267,19 +267,19 @@ Move to a previous parent:
   rebasing cf43ad9da869 "G" (G)
   rebasing eef94f3b5f03 "H" (H)
   o  b3d84c6666cf 'H'
-  |
-  | o  f7c28a1a15e2 'G'
-  | |
-  | | o  02aa697facf7 'F'
-  | | |
-  +-----o  f585351a92f8 'D'
-  | | |
-  o | |  26805aba1e60 'C'
-  |/ /
-  | | o  7fb047a69f22 'E'
-  | |/
-  o |  112478962961 'B'
-  |/
+  │
+  │ o  f7c28a1a15e2 'G'
+  │ │
+  │ │ o  02aa697facf7 'F'
+  │ │ │
+  │ │ │ o  f585351a92f8 'D'
+  ├─────╯
+  o │ │  26805aba1e60 'C'
+  ├─╯ │
+  │ o │  7fb047a69f22 'E'
+  │ ├─╯
+  o │  112478962961 'B'
+  ├─╯
   o  426bada5c675 'A'
   
 Source overlaps with destination:
@@ -292,11 +292,11 @@ Source overlaps with destination:
   rebasing dc0947a82db8 "C" (C)
   rebasing 112478962961 "B" (B)
   o  5fe9935d5222 'B'
-  |
+  │
   o  12d20731b9e0 'C'
-  |
+  │
   o  b18e25de2cf5 'D'
-  |
+  │
   o  426bada5c675 'A'
   
 Detect cycles early:
@@ -338,15 +338,15 @@ Detect source is ancestor of dest in runtime:
   already rebased 312782b8f06e "E" (E)
   already rebased ad6717a6a58e "F" (F)
   o  ad6717a6a58e 'F'
-  |
-  | o    312782b8f06e 'E'
-  | |\
-  o | |  b18e25de2cf5 'D'
-  | | |
-  +---o  dc0947a82db8 'C'
-  | |
-  | o  112478962961 'B'
-  |/
+  │
+  │ o    312782b8f06e 'E'
+  │ ├─╮
+  o │ │  b18e25de2cf5 'D'
+  │ │ │
+  │ │ o  dc0947a82db8 'C'
+  ├───╯
+  │ o  112478962961 'B'
+  ├─╯
   o  426bada5c675 'A'
   
 Massively rewrite the DAG:
@@ -372,25 +372,25 @@ Massively rewrite the DAG:
   rebasing 711f53bbef0b "G" (G)
   rebasing 64a8289d2492 "F" (F)
   o  3735afb3713a 'F'
-  |
+  │
   o  07698142d7a7 'G'
-  |
+  │
   o  33aba52e7e72 'K'
-  |
+  │
   o  9fdae89dc5a1 'D'
-  |
+  │
   o  277dda9a65ee 'E'
-  |
+  │
   o  9c74fd8657ad 'B'
-  |
+  │
   o  6527eb0688bb 'J'
-  |
+  │
   o  e94d655b928d 'C'
-  |
+  │
   o  620d6d349459 'H'
-  |
+  │
   o  a569a116758f 'A'
-  |
+  │
   o  2bf1302f5c18 'I'
   
 Resolve instability:
@@ -419,26 +419,26 @@ Resolve instability:
   rebasing fb184bcfeee8 "F2" (F2)
   rebasing dc838ab4c0da "G" (G)
   o  174f63d574a8 'G'
-  |
+  │
   o  c9d9fbe76705 'F2'
-  |
+  │
   o  0a03c2ede755 'E3'
-  |
+  │
   o  228d9d2541b1 'D'
-  |
+  │
   o  cd856b400c95 'C'
-  |
+  │
   o  9148200c858c 'J'
-  |
+  │
   o  eb74780f5094 'I2'
-  |
+  │
   o  78309edd643f 'H'
-  |
+  │
   o  4b4531bd8e1d 'B2'
-  |
+  │
   o  337c285c272b 'N'
-  |
+  │
   o  699bc4b6fa22 'M'
-  |
+  │
   o  426bada5c675 'A'
   

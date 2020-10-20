@@ -50,40 +50,40 @@ Initial generation of the command files
 log before edit
   $ hg log --graph
   @  commit:      42abbb61bede
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:07 1970 +0000
-  |  summary:     does not commute with e
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:07 1970 +0000
+  │  summary:     does not commute with e
+  │
   o  commit:      dd184f2faeb0
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:06 1970 +0000
-  |  summary:     f
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:06 1970 +0000
+  │  summary:     f
+  │
   o  commit:      7f3755409b00
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:05 1970 +0000
-  |  summary:     e
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:05 1970 +0000
+  │  summary:     e
+  │
   o  commit:      ae78f4c9d74f
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:04 1970 +0000
-  |  summary:     d
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:04 1970 +0000
+  │  summary:     d
+  │
   o  commit:      092e4ce14829
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:03 1970 +0000
-  |  summary:     c
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:03 1970 +0000
+  │  summary:     c
+  │
   o  commit:      40ccdd8beb95
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:02 1970 +0000
-  |  summary:     b
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:02 1970 +0000
+  │  summary:     b
+  │
   o  commit:      cd997a145b29
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:01 1970 +0000
-  |  summary:     a
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:01 1970 +0000
+  │  summary:     a
+  │
   o  commit:      1715188a53c7
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
@@ -135,30 +135,30 @@ keep the non-commuting change, and thus the pending change will be dropped
 log after edit
   $ hg log --graph
   @  commit:      1300355b1a54
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:06 1970 +0000
-  |  summary:     f
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:06 1970 +0000
+  │  summary:     f
+  │
   o  commit:      e2ac33269083
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:07 1970 +0000
-  |  summary:     d
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:07 1970 +0000
+  │  summary:     d
+  │
   o  commit:      092e4ce14829
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:03 1970 +0000
-  |  summary:     c
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:03 1970 +0000
+  │  summary:     c
+  │
   o  commit:      40ccdd8beb95
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:02 1970 +0000
-  |  summary:     b
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:02 1970 +0000
+  │  summary:     b
+  │
   o  commit:      cd997a145b29
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:01 1970 +0000
-  |  summary:     a
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:01 1970 +0000
+  │  summary:     a
+  │
   o  commit:      1715188a53c7
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
@@ -203,40 +203,40 @@ Initial generation of the command files
 log before edit
   $ hg log --graph
   @  commit:      42abbb61bede
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:07 1970 +0000
-  |  summary:     does not commute with e
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:07 1970 +0000
+  │  summary:     does not commute with e
+  │
   o  commit:      dd184f2faeb0
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:06 1970 +0000
-  |  summary:     f
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:06 1970 +0000
+  │  summary:     f
+  │
   o  commit:      7f3755409b00
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:05 1970 +0000
-  |  summary:     e
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:05 1970 +0000
+  │  summary:     e
+  │
   o  commit:      ae78f4c9d74f
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:04 1970 +0000
-  |  summary:     d
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:04 1970 +0000
+  │  summary:     d
+  │
   o  commit:      092e4ce14829
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:03 1970 +0000
-  |  summary:     c
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:03 1970 +0000
+  │  summary:     c
+  │
   o  commit:      40ccdd8beb95
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:02 1970 +0000
-  |  summary:     b
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:02 1970 +0000
+  │  summary:     b
+  │
   o  commit:      cd997a145b29
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:01 1970 +0000
-  |  summary:     a
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:01 1970 +0000
+  │  summary:     a
+  │
   o  commit:      1715188a53c7
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
@@ -273,30 +273,30 @@ just continue this time
 log after edit
   $ hg log --graph
   @  commit:      b538bcb461be
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:06 1970 +0000
-  |  summary:     f
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:06 1970 +0000
+  │  summary:     f
+  │
   o  commit:      317e37cb6d66
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:04 1970 +0000
-  |  summary:     d
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:04 1970 +0000
+  │  summary:     d
+  │
   o  commit:      092e4ce14829
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:03 1970 +0000
-  |  summary:     c
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:03 1970 +0000
+  │  summary:     c
+  │
   o  commit:      40ccdd8beb95
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:02 1970 +0000
-  |  summary:     b
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:02 1970 +0000
+  │  summary:     b
+  │
   o  commit:      cd997a145b29
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:01 1970 +0000
-  |  summary:     a
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:01 1970 +0000
+  │  summary:     a
+  │
   o  commit:      1715188a53c7
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000

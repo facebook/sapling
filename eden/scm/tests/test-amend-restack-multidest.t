@@ -29,28 +29,28 @@ Restack does topological sort and only rebases "D" once:
   $ B3=`hg log -r . -T '{node}'`
   $ showgraph
   @  da1d4fe88e84 B3
-  |
-  | o  ca53c8ceb284 C
-  | |
-  | x  fdcbd16a7d51 B2
-  |/
-  | o  f585351a92f8 D
-  | |
-  | x  26805aba1e60 C
-  | |
-  | x  112478962961 B
-  |/
+  │
+  │ o  ca53c8ceb284 C
+  │ │
+  │ x  fdcbd16a7d51 B2
+  ├─╯
+  │ o  f585351a92f8 D
+  │ │
+  │ x  26805aba1e60 C
+  │ │
+  │ x  112478962961 B
+  ├─╯
   o  426bada5c675 A
   $ hg rebase --restack
   rebasing ca53c8ceb284 "C"
   rebasing f585351a92f8 "D"
   $ showgraph
   o  981f3734c126 D
-  |
+  │
   o  bab9c1b0a249 C
-  |
+  │
   @  da1d4fe88e84 B3
-  |
+  │
   o  426bada5c675 A
 
 Restack will only restack the "current" stack and leave other stacks untouched.
@@ -85,24 +85,24 @@ Restack will only restack the "current" stack and leave other stacks untouched.
 
   $ showgraph
   o  c97827ce80f6 K
-  |
-  | o  47528c67632b H
-  | |
-  | | o  5cb8c357af9e D
-  | | |
-  o | |  a975bfef72d2 L
-  | | |
-  | o |  889f49cd29f6 G
-  | | |
-  | | o  dc0947a82db8 C
-  | | |
-  | | | o  48b9aae0607f Z
-  | | |
-  @ | |  02a9ac6a13a6 I
-   / /
-  o /  e8e0a81d950f E
-   /
-  o  426bada5c675 A
+  │
+  │ o  47528c67632b H
+  │ │
+  │ │ o  5cb8c357af9e D
+  │ │ │
+  o │ │  a975bfef72d2 L
+  │ │ │
+  │ o │  889f49cd29f6 G
+  │ │ │
+  │ │ o  dc0947a82db8 C
+  │ │ │
+  │ │ │ o  48b9aae0607f Z
+  │ │ │
+  @ │ │  02a9ac6a13a6 I
+    │ │
+    o │  e8e0a81d950f E
+      │
+      o  426bada5c675 A
 
 
 Restack could resume after resolving merge conflicts.
@@ -148,12 +148,12 @@ Restack could resume after resolving merge conflicts.
 
   $ showgraph
   o  3b00517bf275 G
-  |
-  | @  2282fe522d5c F
-  | |
-  o |  7fb047a69f22 E
-  | |
-  | o  dc0947a82db8 C
-  |/
+  │
+  │ @  2282fe522d5c F
+  │ │
+  o │  7fb047a69f22 E
+  │ │
+  │ o  dc0947a82db8 C
+  ├─╯
   o  426bada5c675 A
 

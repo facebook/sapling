@@ -64,22 +64,22 @@ Metaedit
  (Before metaedit)
   $ hg log -Gr 'all() + draft()' -T '{desc} {node|short} {phase}'
   @  c3 054edf9500f5 draft
-  |
+  │
   o  c2 33ca17be2228 draft
-  |
+  │
   o  c1 (amended 8) cc809964b024 draft
-  |
+  │
   o  base d20a80d4def3 draft
   
   $ hg meta -m "c3 (metaedited)"
  (After metaedit)
   $ hg log -Gr 'all() + draft()' -T '{desc} {node|short} {phase}'
   @  c3 (metaedited) 374724d5279b draft
-  |
+  │
   o  c2 33ca17be2228 draft
-  |
+  │
   o  c1 (amended 8) cc809964b024 draft
-  |
+  │
   o  base d20a80d4def3 draft
   
   $ hg debugmutation
@@ -95,11 +95,11 @@ Fold
  (Before fold)
   $ hg log -Gr 'all() + draft()' -T '{desc} {node|short} {phase}'
   @  c3 (metaedited) 374724d5279b draft
-  |
+  │
   o  c2 33ca17be2228 draft
-  |
+  │
   o  c1 (amended 8) cc809964b024 draft
-  |
+  │
   o  base d20a80d4def3 draft
   
   $ hg fold --from ".^"
@@ -108,11 +108,11 @@ Fold
  (After fold)
   $ hg log -Gr 'all() + draft()' -T '{desc} {node|short} {phase}'
   @  c2
-  |
-  |
-  |  c3 (metaedited) f05234144e37 draft
+  │
+  │
+  │  c3 (metaedited) f05234144e37 draft
   o  c1 (amended 8) cc809964b024 draft
-  |
+  │
   o  base d20a80d4def3 draft
   
   $ hg debugmutation
@@ -226,21 +226,21 @@ Amend with rebase afterwards (split info should not be propagated)
  (Before amend)
   $ hg log -Gr 'all() + draft()' -T '{desc} {node|short} {phase}'
   o  c6 0623f07d148d draft
-  |
+  │
   @  c5 aa10382521dc draft
-  |
+  │
   o  c5 36e4e93ec194 draft
-  |
+  │
   o  c4 9c2c451b82d0 draft
-  |
+  │
   o  c4 7d383d1b236d draft
-  |
+  │
   o  c2
-  |
-  |
-  |  c3 (metaedited) f05234144e37 draft
+  │
+  │
+  │  c3 (metaedited) f05234144e37 draft
   o  c1 (amended 8) cc809964b024 draft
-  |
+  │
   o  base d20a80d4def3 draft
   
   $ hg amend --rebase -m "c5 (split)"
@@ -248,21 +248,21 @@ Amend with rebase afterwards (split info should not be propagated)
  (After amend)
   $ hg log -Gr 'all() + draft()' -T '{desc} {node|short} {phase}'
   o  c6 c3b5428c707b draft
-  |
+  │
   @  c5 (split) 48b076c1640c draft
-  |
+  │
   o  c5 36e4e93ec194 draft
-  |
+  │
   o  c4 9c2c451b82d0 draft
-  |
+  │
   o  c4 7d383d1b236d draft
-  |
+  │
   o  c2
-  |
-  |
-  |  c3 (metaedited) f05234144e37 draft
+  │
+  │
+  │  c3 (metaedited) f05234144e37 draft
   o  c1 (amended 8) cc809964b024 draft
-  |
+  │
   o  base d20a80d4def3 draft
   
   $ hg debugmutation -r ".::tip"
@@ -290,27 +290,27 @@ Histedit
  (Before histedit)
   $ hg log -Gr 'all() + draft()' -T '{desc} {node|short} {phase}'
   @  c9 b6ea0faadebf draft
-  |
+  │
   o  c8 64a3bc96c043 draft
-  |
+  │
   o  c7 c4484fcb5ac0 draft
-  |
+  │
   o  c6 c3b5428c707b draft
-  |
+  │
   o  c5 (split) 48b076c1640c draft
-  |
+  │
   o  c5 36e4e93ec194 draft
-  |
+  │
   o  c4 9c2c451b82d0 draft
-  |
+  │
   o  c4 7d383d1b236d draft
-  |
+  │
   o  c2
-  |
-  |
-  |  c3 (metaedited) f05234144e37 draft
+  │
+  │
+  │  c3 (metaedited) f05234144e37 draft
   o  c1 (amended 8) cc809964b024 draft
-  |
+  │
   o  base d20a80d4def3 draft
   
   $ hg histedit 'max(desc(c1))' --commands - 2>&1 <<EOF | fixbundle
@@ -328,19 +328,19 @@ Histedit
  (After histedit)
   $ hg log -Gr 'all() + draft()' -T '{desc} {node|short} {phase}'
   @  c9 3c3b86a5a351 draft
-  |
+  │
   o  c6 dd5d0e1bc12e draft
-  |
+  │
   o  c2
-  |
-  |
-  |  c3 (metaedited)
-  |  ***
-  |  c4
-  |  ***
-  |  c5 1851fa2d6ef0 draft
+  │
+  │
+  │  c3 (metaedited)
+  │  ***
+  │  c4
+  │  ***
+  │  c5 1851fa2d6ef0 draft
   o  c1 (amended 8) cc809964b024 draft
-  |
+  │
   o  base d20a80d4def3 draft
   
   $ hg debugmutation -r cc809964b02448cb4c84c772b9beba99d4159cff::tip
@@ -461,23 +461,23 @@ Unhide some old commits and show their mutations in the log
   $ hg unhide -q c5d0fa8770bdde6ef311cc640a78a2f686be28b4
   $ tglogm
   @  3c3b86a5a351 'c9'
-  |
+  │
   o  dd5d0e1bc12e 'c6'
-  |
+  │
   o  1851fa2d6ef0 'c2'
-  |
-  | x  5dbe0bac3aa7 'c2'  (Rewritten using rewrite into 1851fa2d6ef0)
-  |/
-  | x  07f94070ed09 'c4'  (Rewritten using rewrite into 5dbe0bac3aa7)
-  | |
-  | x  f05234144e37 'c2'  (Rewritten using rewrite into 5dbe0bac3aa7)
-  |/
+  │
+  │ x  5dbe0bac3aa7 'c2'  (Rewritten using rewrite into 1851fa2d6ef0)
+  ├─╯
+  │ x  07f94070ed09 'c4'  (Rewritten using rewrite into 5dbe0bac3aa7)
+  │ │
+  │ x  f05234144e37 'c2'  (Rewritten using rewrite into 5dbe0bac3aa7)
+  ├─╯
   o  cc809964b024 'c1 (amended 8)'
-  |
-  | x  6d60953c6009 'c1 (amended 2)'  (Rewritten using rewrite into cc809964b024)
-  |/
-  | x  c5d0fa8770bd 'c1'  (Rewritten using amend into 6d60953c6009)
-  |/
+  │
+  │ x  6d60953c6009 'c1 (amended 2)'  (Rewritten using rewrite into cc809964b024)
+  ├─╯
+  │ x  c5d0fa8770bd 'c1'  (Rewritten using amend into 6d60953c6009)
+  ├─╯
   o  d20a80d4def3 'base'
   
 Debugmutatation looking forward
@@ -527,8 +527,8 @@ Histedit with exec that amends in between folds
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ tglog
   @  a2235e1011a0 'commit 3 amended
-  |  ***
-  |  commit 4'
+  │  ***
+  │  commit 4'
   o  c2a29f8b7d7a 'commit 1'
   
   $ hg debugmutation -r "all()" --hidden
@@ -585,12 +585,12 @@ Histedit with stop, extra commit, and fold
   $ hg histedit --continue | fixbundle
   $ tglog
   @  d313be93f9b7 'extra commit
-  |  ***
-  |  commit 4'
+  │  ***
+  │  commit 4'
   o  f8ba6373a87e 'commit 3'
-  |
+  │
   o  08d8367dafb9 'commit 2'
-  |
+  │
   o  c2a29f8b7d7a 'commit 1'
   
   $ hg debugmutation -r "all()" --hidden
@@ -631,15 +631,15 @@ Drawdag
 
   $ tglogm
   o  b2faf047aa50 'I' I
-  |
+  │
   o  a1093b439e1b 'H' H
-  |
-  | o  dd319aacbb51 'G' G
-  | |
-  | o  64a8289d2492 'F' F
-  | |
-  | o  7fb047a69f22 'E' E
-  |/
+  │
+  │ o  dd319aacbb51 'G' G
+  │ │
+  │ o  64a8289d2492 'F' F
+  │ │
+  │ o  7fb047a69f22 'E' E
+  ├─╯
   o  426bada5c675 'A' A
   
   $ hg debugmutation -r "all()" --hidden
@@ -1143,19 +1143,19 @@ Metaedit with descendant amended commits
   $ hg metaedit -r $A -m A1
   $ hg log -G -T "{desc} {mutation_descs}\n" -r "all()"
   o  C4
-  |
-  | o  E
-  | |
-  | x  C2 (Rewritten using rewrite into C4)
-  |/
-  | o  D
-  | |
-  | x  C (Rewritten using amend-copy into C4) (Rewritten using amend-copy into C2)
-  |/
+  │
+  │ o  E
+  │ │
+  │ x  C2 (Rewritten using rewrite into C4)
+  ├─╯
+  │ o  D
+  │ │
+  │ x  C (Rewritten using amend-copy into C4) (Rewritten using amend-copy into C2)
+  ├─╯
   o  B
-  |
+  │
   o  A1
-  |
+  │
   o  Z
   
 Metaedit with descendant folded commits
@@ -1175,29 +1175,29 @@ Metaedit with descendant folded commits
   > EOS
   $ hg log -G -T "{desc} {mutation_descs}\n" -r "all()"
   o  F
-  |
-  | o  D
-  | |
-  | x  C (Rewritten using fold into F)
-  |/
+  │
+  │ o  D
+  │ │
+  │ x  C (Rewritten using fold into F)
+  ├─╯
   o  B
-  |
+  │
   o  A
-  |
+  │
   o  Z
   
   $ hg metaedit -r $A -m "A1"
   $ hg log -G -T "{desc} {mutation_descs}\n" -r "all()"
   o  F
-  |
-  | o  D
-  | |
-  | x  C (Rewritten using fold-copy into F)
-  |/
+  │
+  │ o  D
+  │ │
+  │ x  C (Rewritten using fold-copy into F)
+  ├─╯
   o  B
-  |
+  │
   o  A1
-  |
+  │
   o  Z
   
 
@@ -1218,13 +1218,13 @@ Metaedit automatic rebase of amended commit
   $ hg metaedit -r $B -m B1
   $ hg log -G -T "{desc} {mutation_descs}\n" -r "all()"
   o  C2
-  |
-  | o  D
-  | |
-  | x  C (Rewritten using amend-copy into C2)
-  |/
+  │
+  │ o  D
+  │ │
+  │ x  C (Rewritten using amend-copy into C2)
+  ├─╯
   o  B1
-  |
+  │
   o  A
   
 Absorb
@@ -1262,24 +1262,24 @@ Absorb
   $ 
   $ tglogm
   @  426a0380e890 'E'
-  |
+  │
   o  d36b27fd01db 'D'
-  |
+  │
   o  fe174cefb48c 'C'
-  |
+  │
   o  112478962961 'B'
-  |
+  │
   o  426bada5c675 'A'
   
   $ tglogm
   @  426a0380e890 'E'
-  |
+  │
   o  d36b27fd01db 'D'
-  |
+  │
   o  fe174cefb48c 'C'
-  |
+  │
   o  112478962961 'B'
-  |
+  │
   o  426bada5c675 'A'
   
 
@@ -1307,11 +1307,11 @@ If we unhide B, we don't know that it was landed.
   $ hg unhide 'desc(B)'
   $ hg log -G -r "all()" -T "{desc} {mutation_descs}\n"
   o  X
-  |
-  | o  B
-  | |
-  o |  Y
-  |/
+  │
+  │ o  B
+  │ │
+  o │  Y
+  ├─╯
   o  Z
   
 We can restore it by re-introducing the links via mutation records.  This is a temporary
@@ -1322,11 +1322,11 @@ for us, but for this test we do it manually.
   $ hg debugsh --hidden -c "with repo.lock(): m.mutation.recordentries(repo, [m.mutation.createsyntheticentry(repo, [repo[\"$C\"].node()], repo[\"$X\"].node(), \"land\")], skipexisting=False)"
   $ hg log -G -r "all()" -T "{desc} {mutation_descs}\n"
   o  X
-  |
-  | x  B (Rewritten using land into X)
-  | |
-  o |  Y
-  |/
+  │
+  │ x  B (Rewritten using land into X)
+  │ │
+  o │  Y
+  ├─╯
   o  Z
   
 Test debugmutation filtering of mutation info by date

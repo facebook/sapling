@@ -230,7 +230,7 @@ Sync from the second client - the commit should appear
   $ hg up -q tip
   $ tglog
   @  fa5d62c46fd7 'commit1'
-  |
+  │
   o  d20a80d4def3 'base'
   
 Make a commit from the second client and sync it
@@ -260,9 +260,9 @@ On the first client, make a bookmark, then sync - the bookmark and new commit sh
   finished in * (glob)
   $ tglog
   o  02f6fc2b7154 'commit2'
-  |
+  │
   @  fa5d62c46fd7 'commit1'
-  |
+  │
   o  d20a80d4def3 'base' bookmark1
   
   $ cd ..
@@ -275,9 +275,9 @@ Sync the bookmark back to the second client
   finished in * (glob)
   $ tglog
   @  02f6fc2b7154 'commit2'
-  |
+  │
   o  fa5d62c46fd7 'commit1'
-  |
+  │
   o  d20a80d4def3 'base' bookmark1
   
 Move the bookmark on the second client, and then sync it
@@ -299,9 +299,9 @@ Move the bookmark also on the first client, it should be forked in the sync
   finished in * (glob)
   $ tglog
   o  02f6fc2b7154 'commit2' bookmark1
-  |
+  │
   @  fa5d62c46fd7 'commit1' bookmark1-testhost
-  |
+  │
   o  d20a80d4def3 'base'
   
   $ cd ..
@@ -324,9 +324,9 @@ Try to push selectively
 
   $ tglog
   o  48610b1a7ec0 'commit2' bookmark1
-  |
+  │
   @  a7bb357e7299 'commit1 amended' bookmark1-testhost
-  |
+  │
   o  d20a80d4def3 'base'
   
 
@@ -353,9 +353,9 @@ Sync the amended commit to the other client
   $ hg up -q tip
   $ tglog
   @  48610b1a7ec0 'commit2' bookmark1
-  |
+  │
   o  a7bb357e7299 'commit1 amended' bookmark1-testhost
-  |
+  │
   o  d20a80d4def3 'base'
   
   $ test ! -f .hg/store/commitcloudpendingobsmarkers
@@ -419,11 +419,11 @@ Expected result: the message telling that revision has been moved to another rev
   hint[hint-ack]: use 'hg hint --ack commitcloud-update-on-move' to silence these hints
   $ tglog
   o  41f3b9359864 'commit2 amended' bookmark1
-  |
-  | @  48610b1a7ec0 'commit2'
-  |/
+  │
+  │ @  48610b1a7ec0 'commit2'
+  ├─╯
   o  a7bb357e7299 'commit1 amended' bookmark1-testhost
-  |
+  │
   o  d20a80d4def3 'base'
   
 
@@ -476,9 +476,9 @@ Expected result: client2 should be moved to the amended version
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ tglog
   @  8134e74ecdc8 'commit2 amended amended' bookmark1
-  |
+  │
   o  a7bb357e7299 'commit1 amended' bookmark1-testhost
-  |
+  │
   o  d20a80d4def3 'base'
   
 
@@ -534,15 +534,15 @@ Expected result: move should not happen, expect a message that move is ambiguous
   (run 'hg update HASH' to go to the desired revision)
   $ tglog
   o  cebbb614447e 'commit2 amended amended'
-  |
-  | o  abd5311ab3c6 'commit2 amended amended'
-  |/
-  | o  8134e74ecdc8 'commit2 amended amended' bookmark1
-  |/
-  | @  41f3b9359864 'commit2 amended'
-  |/
+  │
+  │ o  abd5311ab3c6 'commit2 amended amended'
+  ├─╯
+  │ o  8134e74ecdc8 'commit2 amended amended' bookmark1
+  ├─╯
+  │ @  41f3b9359864 'commit2 amended'
+  ├─╯
   o  a7bb357e7299 'commit1 amended' bookmark1-testhost
-  |
+  │
   o  d20a80d4def3 'base'
   
   $ cd ..
@@ -605,13 +605,13 @@ Expected result: client2 should be moved to 68e035cc1996
   $ hg up cebbb614447e -q
   $ tglog
   o  fada67350ab0 'commit2 amended amended amended amended amended'
-  |
-  | @  cebbb614447e 'commit2 amended amended'
-  |/
-  | o  8134e74ecdc8 'commit2 amended amended' bookmark1
-  |/
+  │
+  │ @  cebbb614447e 'commit2 amended amended'
+  ├─╯
+  │ o  8134e74ecdc8 'commit2 amended amended' bookmark1
+  ├─╯
   o  a7bb357e7299 'commit1 amended' bookmark1-testhost
-  |
+  │
   o  d20a80d4def3 'base'
   
   $ hg rebase -s cebbb614447e -d d20a80d4def3 -m "`hg descr | head -n1` rebased" --collapse
@@ -624,7 +624,7 @@ Expected result: client2 should be moved to 68e035cc1996
   $ echo 6 >> filea.txt && hg amend -m "`hg descr | head -n1` amended"
   $ tglog -r '.'
   @  68e035cc1996 'commit2 amended amended rebased amended rebased amended'
-  |
+  │
   ~
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
@@ -641,19 +641,19 @@ Expected result: client2 should be moved to 68e035cc1996
   $ hg up cebbb614447e -q
   $ tglog
   o  fada67350ab0 'commit2 amended amended amended amended amended'
-  |
-  | @  cebbb614447e 'commit2 amended amended'
-  |/
-  | o  8134e74ecdc8 'commit2 amended amended' bookmark1
-  |/
+  │
+  │ @  cebbb614447e 'commit2 amended amended'
+  ├─╯
+  │ o  8134e74ecdc8 'commit2 amended amended' bookmark1
+  ├─╯
   o  a7bb357e7299 'commit1 amended' bookmark1-testhost
-  |
+  │
   o  d20a80d4def3 'base'
   
   $ hg cloud sync -q
   $ tglog -r '.'
   @  68e035cc1996 'commit2 amended amended rebased amended rebased amended'
-  |
+  │
   ~
 
 Clean up by hiding some commits, and create a new stack
@@ -679,9 +679,9 @@ Clean up by hiding some commits, and create a new stack
   $ hg cloud sync -q
   $ tglog
   o  f2ccc2716735 'stack commit 2' testbookmark
-  |
+  │
   o  74473a0f136f 'stack commit 1'
-  |
+  │
   @  d20a80d4def3 'base'
   
 Test race between syncing obsmarkers and a transaction creating new ones
@@ -712,9 +712,9 @@ Wait for them to complete and then do another cloud sync
   rebasing f2ccc2716735 "stack commit 2" (testbookmark)
   $ tglog
   o  715c1454ae33 'stack commit 2' testbookmark
-  |
+  │
   @  4b4f26511f8b 'race attempt'
-  |
+  │
   o  d20a80d4def3 'base'
   
   $ cd ..
@@ -722,9 +722,9 @@ Wait for them to complete and then do another cloud sync
   $ hg cloud sync -q
   $ tglog
   @  715c1454ae33 'stack commit 2' testbookmark
-  |
+  │
   o  4b4f26511f8b 'race attempt'
-  |
+  │
   o  d20a80d4def3 'base'
   
   $ cd ..
@@ -740,9 +740,9 @@ Create a shared client directory
   $ cd client1b
   $ tglog
   @  715c1454ae33 'stack commit 2' testbookmark
-  |
+  │
   o  4b4f26511f8b 'race attempt'
-  |
+  │
   o  d20a80d4def3 'base'
   
 Make a new commit to be shared
@@ -750,11 +750,11 @@ Make a new commit to be shared
   $ mkcommit "shared commit"
   $ tglog
   @  2c0ce859e76a 'shared commit'
-  |
+  │
   o  715c1454ae33 'stack commit 2' testbookmark
-  |
+  │
   o  4b4f26511f8b 'race attempt'
-  |
+  │
   o  d20a80d4def3 'base'
   
 Check cloud sync backs up the commit
@@ -770,11 +770,11 @@ Check cloud sync in the source repo doesn't need to do anything
   $ cd ../client1
   $ tglog
   o  2c0ce859e76a 'shared commit'
-  |
+  │
   o  715c1454ae33 'stack commit 2' testbookmark
-  |
+  │
   @  4b4f26511f8b 'race attempt'
-  |
+  │
   o  d20a80d4def3 'base'
   
   $ hg cloud sync
@@ -788,11 +788,11 @@ Check cloud sync pulls in the shared commit in the other client
   $ hg cloud sync -q
   $ tglog
   o  2c0ce859e76a 'shared commit'
-  |
+  │
   @  715c1454ae33 'stack commit 2' testbookmark
-  |
+  │
   o  4b4f26511f8b 'race attempt'
-  |
+  │
   o  d20a80d4def3 'base'
   
  
@@ -848,13 +848,13 @@ Simulate failure to backup a commit by setting the server maxbundlesize limit ve
   $ hg book toobig
   $ tglog
   @  9bd68ef10d6b 'toobig' testbookmark toobig
-  |
-  | o  a6b97eebbf74 'shared commit updated'
-  |/
+  │
+  │ o  a6b97eebbf74 'shared commit updated'
+  ├─╯
   o  715c1454ae33 'stack commit 2'
-  |
+  │
   o  4b4f26511f8b 'race attempt'
-  |
+  │
   o  d20a80d4def3 'base'
   
   $ hg cloud sync
@@ -930,9 +930,9 @@ Set the limit back high.  Sync in the other repo and check it still looks ok
   finished in * (glob)
   $ tglog
   o  715c1454ae33 'stack commit 2' testbookmark
-  |
+  │
   @  4b4f26511f8b 'race attempt'
-  |
+  │
   o  d20a80d4def3 'base'
   
 
@@ -953,13 +953,13 @@ Now sync in the repo we failed in.  This time it should work.
   9bd68ef10d6bdb8ebf3273a7b91bc4f3debe2a87 backed up
   $ tglog
   @  9bd68ef10d6b 'toobig' testbookmark toobig
-  |
-  | o  a6b97eebbf74 'shared commit updated'
-  |/
+  │
+  │ o  a6b97eebbf74 'shared commit updated'
+  ├─╯
   o  715c1454ae33 'stack commit 2'
-  |
+  │
   o  4b4f26511f8b 'race attempt'
-  |
+  │
   o  d20a80d4def3 'base'
   
 
@@ -982,13 +982,13 @@ And the commits should now be availble in the other client.
   finished in * (glob)
   $ tglog
   o  a6b97eebbf74 'shared commit updated'
-  |
-  | o  9bd68ef10d6b 'toobig' testbookmark toobig
-  |/
+  │
+  │ o  9bd68ef10d6b 'toobig' testbookmark toobig
+  ├─╯
   o  715c1454ae33 'stack commit 2'
-  |
+  │
   @  4b4f26511f8b 'race attempt'
-  |
+  │
   o  d20a80d4def3 'base'
   
 Clean up
@@ -1010,13 +1010,13 @@ Make two stacks
   $ mkcommit 'stack 2 second'
   $ tglog
   @  799d22972c4e 'stack 2 second'
-  |
+  │
   o  3597ff85ead0 'stack 2 first'
-  |
-  | o  9a3e7907fd5c 'stack 1 second'
-  | |
-  | o  e58a6603d256 'stack 1 first'
-  |/
+  │
+  │ o  9a3e7907fd5c 'stack 1 second'
+  │ │
+  │ o  e58a6603d256 'stack 1 first'
+  ├─╯
   o  d20a80d4def3 'base'
   
 Make one of the commits public when it shouldn't be.
@@ -1058,13 +1058,13 @@ Commit still becomes available in the other repo
   finished in * (glob)
   $ tglog
   o  9a3e7907fd5c 'stack 1 second'
-  |
+  │
   o  e58a6603d256 'stack 1 first'
-  |
-  | o  799d22972c4e 'stack 2 second'
-  | |
-  | o  3597ff85ead0 'stack 2 first'
-  |/
+  │
+  │ o  799d22972c4e 'stack 2 second'
+  │ │
+  │ o  3597ff85ead0 'stack 2 first'
+  ├─╯
   @  d20a80d4def3 'base'
   
 Fix up that public commit, set it back to draft
@@ -1081,15 +1081,15 @@ Pull it into one of the clients and rebase one of the stacks onto it
   $ hg pull -q
   $ hg trglog
   o  acd5b9e8c656 'public'  default/publicbookmark1 default/publicbookmark2
-  |
-  | @  799d22972c4e 'stack 2 second'
-  | |
-  | o  3597ff85ead0 'stack 2 first'
-  |/
-  | o  9a3e7907fd5c 'stack 1 second'
-  | |
-  | o  e58a6603d256 'stack 1 first'
-  |/
+  │
+  │ @  799d22972c4e 'stack 2 second'
+  │ │
+  │ o  3597ff85ead0 'stack 2 first'
+  ├─╯
+  │ o  9a3e7907fd5c 'stack 1 second'
+  │ │
+  │ o  e58a6603d256 'stack 1 first'
+  ├─╯
   o  d20a80d4def3 'base'
   
   $ hg rebase -s e58a6603d256 -d publicbookmark1
@@ -1102,9 +1102,9 @@ Create another public commit on the server, moving one of the bookmarks
   $ mkcommit 'public 2'
   $ tglog
   @  97250524560a 'public 2' publicbookmark2
-  |
+  │
   o  acd5b9e8c656 'public' publicbookmark1
-  |
+  │
   o  d20a80d4def3 'base'
   
 Sync this onto the second client, the remote bookmarks don't change.
@@ -1125,15 +1125,15 @@ Sync this onto the second client, the remote bookmarks don't change.
   finished in * (glob)
   $ hg trglog
   o  2da6c73964b8 'stack 1 second'
-  |
+  │
   o  5df7c1d8d8ab 'stack 1 first'
-  |
+  │
   o  acd5b9e8c656 'public'
-  |
-  | o  799d22972c4e 'stack 2 second'
-  | |
-  | o  3597ff85ead0 'stack 2 first'
-  |/
+  │
+  │ o  799d22972c4e 'stack 2 second'
+  │ │
+  │ o  3597ff85ead0 'stack 2 first'
+  ├─╯
   @  d20a80d4def3 'base'  default/publicbookmark1
   
 Do a pull on this client.  The remote bookmarks now get updated.
@@ -1146,17 +1146,17 @@ Do a pull on this client.  The remote bookmarks now get updated.
   added 1 changesets with 1 changes to 1 files
   $ hg trglog
   o  97250524560a 'public 2'  default/publicbookmark2
-  |
-  | o  2da6c73964b8 'stack 1 second'
-  | |
-  | o  5df7c1d8d8ab 'stack 1 first'
-  |/
+  │
+  │ o  2da6c73964b8 'stack 1 second'
+  │ │
+  │ o  5df7c1d8d8ab 'stack 1 first'
+  ├─╯
   o  acd5b9e8c656 'public'  default/publicbookmark1
-  |
-  | o  799d22972c4e 'stack 2 second'
-  | |
-  | o  3597ff85ead0 'stack 2 first'
-  |/
+  │
+  │ o  799d22972c4e 'stack 2 second'
+  │ │
+  │ o  3597ff85ead0 'stack 2 first'
+  ├─╯
   @  d20a80d4def3 'base'
   
 Rebase the commits again, and resync to the first client.
@@ -1181,34 +1181,34 @@ Rebase the commits again, and resync to the first client.
   finished in * (glob)
   $ hg trglog
   o  af621240884f 'stack 1 second'
-  |
+  │
   o  81cd67693e59 'stack 1 first'
-  |
+  │
   o  97250524560a 'public 2'
-  |
+  │
   o  acd5b9e8c656 'public'  default/publicbookmark1 default/publicbookmark2
-  |
-  | @  799d22972c4e 'stack 2 second'
-  | |
-  | o  3597ff85ead0 'stack 2 first'
-  |/
+  │
+  │ @  799d22972c4e 'stack 2 second'
+  │ │
+  │ o  3597ff85ead0 'stack 2 first'
+  ├─╯
   o  d20a80d4def3 'base'
   
 A final pull gets everything in sync here, too.
   $ hg pull -q
   $ hg trglog
   o  af621240884f 'stack 1 second'
-  |
+  │
   o  81cd67693e59 'stack 1 first'
-  |
+  │
   o  97250524560a 'public 2'  default/publicbookmark2
-  |
+  │
   o  acd5b9e8c656 'public'  default/publicbookmark1
-  |
-  | @  799d22972c4e 'stack 2 second'
-  | |
-  | o  3597ff85ead0 'stack 2 first'
-  |/
+  │
+  │ @  799d22972c4e 'stack 2 second'
+  │ │
+  │ o  3597ff85ead0 'stack 2 first'
+  ├─╯
   o  d20a80d4def3 'base'
   
 Check subscription when join/leave and also scm service health check
@@ -1293,17 +1293,17 @@ Reconnect to the default repository.  This should work and pull in the commits.
 
   $ hg trglog
   o  af621240884f 'stack 1 second'
-  |
+  │
   o  81cd67693e59 'stack 1 first'
-  |
-  | o  799d22972c4e 'stack 2 second'
-  | |
-  | o  3597ff85ead0 'stack 2 first'
-  | |
-  @ |  97250524560a 'public 2'  default/publicbookmark2
-  | |
-  o |  acd5b9e8c656 'public'  default/publicbookmark1
-  |/
+  │
+  │ o  799d22972c4e 'stack 2 second'
+  │ │
+  │ o  3597ff85ead0 'stack 2 first'
+  │ │
+  @ │  97250524560a 'public 2'  default/publicbookmark2
+  │ │
+  o │  acd5b9e8c656 'public'  default/publicbookmark1
+  ├─╯
   o  d20a80d4def3 'base'
   
 

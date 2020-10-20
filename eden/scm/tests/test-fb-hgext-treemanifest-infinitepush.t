@@ -154,17 +154,17 @@ Pull a treeonly scratch branch into a treeonly client (non-rebundling)
   added 1 changesets with 2 changes to 1 files
   $ hg log -G
   o  commit:      5a7a7de8a420
-  |  bookmark:    default/scratch/foo
-  |  hoistedname: scratch/foo
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     edit subdir/a
-  |
+  │  bookmark:    default/scratch/foo
+  │  hoistedname: scratch/foo
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     edit subdir/a
+  │
   o  commit:      02c12aef64ff
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     add subdir/a
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     add subdir/a
+  │
   @  commit:      085784c01c08
      bookmark:    default/master
      hoistedname: master
@@ -240,9 +240,9 @@ treemanifest data for the public commits.
   $ cd ../client1
   $ hg log -G -T '{node|short} {phase} {desc}'
   @  5a7a7de8a420 draft edit subdir/a
-  |
+  │
   o  02c12aef64ff draft add subdir/a
-  |
+  │
   o  085784c01c08 public add x
   
 # Strip all the commits so we can pull them again.
@@ -269,7 +269,7 @@ treemanifest data for the public commits.
 
   $ hg log -G -T '{node|short} {phase} {desc}'
   o  02c12aef64ff draft add subdir/a
-  |
+  │
   o  085784c01c08 public add x
   
 # Verify only the infinitepush commit tree data was downloaded

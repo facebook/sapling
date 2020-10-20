@@ -87,9 +87,9 @@ Smartlog and status should stay the same
 
   $ showgraph
   @  B (W1): draft
-  |
+  │
   o  A (W1): draft
-  |
+  │
   o  base: public  remote/master
   
   $ hg cloud sync --debug
@@ -131,9 +131,9 @@ Move to the second client
 
   $ showgraph
   @  B (W2): draft
-  |
+  │
   o  A (W2): draft
-  |
+  │
   o  base: public  remote/master
   
 
@@ -172,9 +172,9 @@ Back to client1
 
   $ showgraph
   o  B (W2): draft
-  |
+  │
   o  A (W2): draft
-  |
+  │
   @  base: public  remote/master
   
  
@@ -210,9 +210,9 @@ Test reclaim workspace
 
   $ hg smartlog -T '{desc}\n'
   o  B (W2)
-  |
+  │
   o  A (W2)
-  |
+  │
   @  base
   
   note: background backup is currently disabled so your commits are not being backed up.

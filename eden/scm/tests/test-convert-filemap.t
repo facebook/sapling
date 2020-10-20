@@ -52,21 +52,21 @@
   $ hg ci -m '8: change foo'
   $ glog
   @  "8: change foo" files: foo
-  |
+  │
   o    "7: second merge; change bar" files: bar baz
-  |\
-  | o  "6: change foo baz" files: baz foo
-  | |
-  o |  "5: change bar baz quux" files: bar baz quux
-  |/
+  ├─╮
+  │ o  "6: change foo baz" files: baz foo
+  │ │
+  o │  "5: change bar baz quux" files: bar baz quux
+  ├─╯
   o    "4: first merge; change bar baz" files: bar baz
-  |\
-  | o  "3: change bar quux" files: bar quux
-  | |
-  o |  "2: change foo" files: foo
-  |/
+  ├─╮
+  │ o  "3: change bar quux" files: bar quux
+  │ │
+  o │  "2: change foo" files: foo
+  ├─╯
   o  "1: add bar quux; copy foo to copied" files: bar copied dir/file4 quux
-  |
+  │
   o  "0: add foo baz dir/" files: baz dir/file dir/file2 dir/file3 dir/subdir/file3 dir/subdir/file4 foo
   
 
@@ -134,58 +134,58 @@ splitrepo tests
   $ splitrepo 'skip unwanted merges; use 1st parent in 1st merge, 2nd in 2nd' foo
   % foo: skip unwanted merges; use 1st parent in 1st merge, 2nd in 2nd
   @  "8: change foo" files: foo
-  |
+  │
   o  "6: change foo baz" files: foo
-  |
+  │
   o  "2: change foo" files: foo
-  |
+  │
   o  "0: add foo baz dir/" files: foo
   
   9a7b52012991e4873687192c3e17e61ba3e837a3 644   foo
   $ splitrepo 'merges are not merges anymore' bar
   % bar: merges are not merges anymore
   @  "7: second merge; change bar" files: bar
-  |
+  │
   o  "5: change bar baz quux" files: bar
-  |
+  │
   o  "4: first merge; change bar baz" files: bar
-  |
+  │
   o  "3: change bar quux" files: bar
-  |
+  │
   o  "1: add bar quux; copy foo to copied" files: bar
   
   9463f52fe115e377cf2878d4fc548117211063f2 644   bar
   $ splitrepo '1st merge is not a merge anymore; 2nd still is' baz
   % baz: 1st merge is not a merge anymore; 2nd still is
   @    "7: second merge; change bar" files: baz
-  |\
-  | o  "6: change foo baz" files: baz
-  | |
-  o |  "5: change bar baz quux" files: baz
-  |/
+  ├─╮
+  │ o  "6: change foo baz" files: baz
+  │ │
+  o │  "5: change bar baz quux" files: baz
+  ├─╯
   o  "4: first merge; change bar baz" files: baz
-  |
+  │
   o  "0: add foo baz dir/" files: baz
   
   94c1be4dfde2ee8d78db8bbfcf81210813307c3d 644   baz
   $ splitrepo 'we add additional merges when they are interesting' 'foo quux'
   % foo quux: we add additional merges when they are interesting
   @  "8: change foo" files: foo
-  |
+  │
   o    "7: second merge; change bar" files:
-  |\
-  | o  "6: change foo baz" files: foo
-  | |
-  o |  "5: change bar baz quux" files: quux
-  |/
+  ├─╮
+  │ o  "6: change foo baz" files: foo
+  │ │
+  o │  "5: change bar baz quux" files: quux
+  ├─╯
   o    "4: first merge; change bar baz" files:
-  |\
-  | o  "3: change bar quux" files: quux
-  | |
-  o |  "2: change foo" files: foo
-  |/
+  ├─╮
+  │ o  "3: change bar quux" files: quux
+  │ │
+  o │  "2: change foo" files: foo
+  ├─╯
   o  "1: add bar quux; copy foo to copied" files: quux
-  |
+  │
   o  "0: add foo baz dir/" files: foo
   
   9a7b52012991e4873687192c3e17e61ba3e837a3 644   foo
@@ -193,7 +193,7 @@ splitrepo tests
   $ splitrepo 'partial conversion' 'bar quux' '-r 3'
   % bar quux: partial conversion
   @  "3: change bar quux" files: bar quux
-  |
+  │
   o  "1: add bar quux; copy foo to copied" files: bar quux
   
   b79105bedc55102f394e90a789c9c380117c1b4a 644   bar
@@ -201,13 +201,13 @@ splitrepo tests
   $ splitrepo 'complete the partial conversion' 'bar quux'
   % bar quux: complete the partial conversion
   @  "7: second merge; change bar" files: bar
-  |
+  │
   o  "5: change bar baz quux" files: bar quux
-  |
+  │
   o  "4: first merge; change bar baz" files: bar
-  |
+  │
   o  "3: change bar quux" files: bar quux
-  |
+  │
   o  "1: add bar quux; copy foo to copied" files: bar quux
   
   9463f52fe115e377cf2878d4fc548117211063f2 644   bar
@@ -221,11 +221,11 @@ splitrepo tests
   $ splitrepo 'complete the partial conversion' 'foo'
   % foo: complete the partial conversion
   @  "8: change foo" files: foo
-  |
+  │
   o  "6: change foo baz" files: foo
-  |
+  │
   o  "2: change foo" files: foo
-  |
+  │
   o  "0: add foo baz dir/" files: foo
   
   9a7b52012991e4873687192c3e17e61ba3e837a3 644   foo
@@ -239,13 +239,13 @@ splitrepo tests
   $ splitrepo 'copied file; source included in new repo' 'foo copied'
   % foo copied: copied file; source included in new repo
   @  "8: change foo" files: foo
-  |
+  │
   o  "6: change foo baz" files: foo
-  |
+  │
   o  "2: change foo" files: foo
-  |
+  │
   o  "1: add bar quux; copy foo to copied" files: copied
-  |
+  │
   o  "0: add foo baz dir/" files: foo
   
   7711d36246cc83e61fb29cd6d4ef394c63f1ceaf 644   copied
@@ -295,13 +295,13 @@ ensure that the filemap contains duplicated slashes (issue3612)
   $ hg up -q -R renames.repo
   $ glog -R renames.repo
   @  "8: change foo" files: foo2
-  |
+  │
   o  "6: change foo baz" files: foo2
-  |
+  │
   o  "2: change foo" files: foo2
-  |
+  │
   o  "1: add bar quux; copy foo to copied" files: copied2
-  |
+  │
   o  "0: add foo baz dir/" files: dir2/dir3/file dir2/dir3/subdir/file3 foo2
   
   $ hg -R renames.repo verify
@@ -373,9 +373,9 @@ filemap rename undoing revision rename
   0 modify
   $ glog -R renameundo2
   o  "modify" files: a c
-  |
-  | o  "rename" files:
-  |/
+  │
+  │ o  "rename" files:
+  ├─╯
   o  "add" files: a c
   
 
@@ -424,16 +424,16 @@ test anonymous branch pruning
   0 merge
   $ glog -R anonymousbranch
   @    c71d5201a498@default "merge" files:
-  |\
-  | o  607eb44b17f9@default "changeb" files: b
-  | |
-  o |  1f60ea617824@default "changea" files: a
-  |/
+  ├─╮
+  │ o  607eb44b17f9@default "changeb" files: b
+  │ │
+  o │  1f60ea617824@default "changea" files: a
+  ├─╯
   o  0146e6129113@default "add" files: a b
   
   $ glog -R anonymousbranch-hg
   o  cda818e7219b@default "changea" files: a
-  |
+  │
   o  c334dc3be0da@default "add" files: a
   
   $ cat anonymousbranch-hg/.hg/shamap
@@ -456,16 +456,16 @@ test anonymous branch pruning
   0 merge
   $ glog -R anonymousbranch
   @    c71d5201a498@default "merge" files:
-  |\
-  | o  607eb44b17f9@default "changeb" files: b
-  | |
-  o |  1f60ea617824@default "changea" files: a
-  |/
+  ├─╮
+  │ o  607eb44b17f9@default "changeb" files: b
+  │ │
+  o │  1f60ea617824@default "changea" files: a
+  ├─╯
   o  0146e6129113@default "add" files: a b
   
   $ glog -R anonymousbranch-hg2
   o  62dd350b0df6@default "changeb" files: b
-  |
+  │
   o  4b9ced861657@default "add" files: b
   
   $ cat anonymousbranch-hg2/.hg/shamap
@@ -493,16 +493,16 @@ test converting merges into a repo that contains other files
   $ cd ..
   $ hg log -G -T '{shortest(node)} {desc}' -R merge-test1
   @    1191 merge a & b
-  |\
-  | o  9077 add b
-  | |
-  o |  d19f edit a
-  |/
+  ├─╮
+  │ o  9077 add b
+  │ │
+  o │  d19f edit a
+  ├─╯
   o  ac82 add a
   
   $ hg log -G -T '{shortest(node)} {desc}' -R merge-test2
   @  150e add x & remove tobremoved
-  |
+  │
   o  bbac add converted/a & toberemoved
   
 - Build a shamap where the target converted/a is in on top of an unrelated
@@ -527,16 +527,16 @@ test converting merges into a repo that contains other files
   x
   $ hg -R merge-test2 log -G -T '{shortest(node)} {desc}\n{files % "- {file}\n"}\n'
   o    6eaa merge a & b
-  |\   - converted/a
-  | |  - toberemoved
-  | |
-  | o  2995 add b
-  | |  - converted/b
-  | |
-  @ |  150e add x & remove tobremoved
-  |/   - toberemoved
-  |    - x
-  |
+  ├─╮  - converted/a
+  │ │  - toberemoved
+  │ │
+  │ o  2995 add b
+  │ │  - converted/b
+  │ │
+  @ │  150e add x & remove tobremoved
+  ├─╯  - toberemoved
+  │    - x
+  │
   o  bbac add converted/a & toberemoved
      - converted/a
      - toberemoved
@@ -573,13 +573,13 @@ example because filemap changed.
   0 3
   $ hg -R .-hg log -G -T '{shortest(node)} {desc}\n{files % "- {file}\n"}\n'
   o    bbfe 3
-  |\
-  | o  33a0 2
-  | |  - f
-  | |
-  o |  f73e 1
-  |/   - f
-  |
+  ├─╮
+  │ o  33a0 2
+  │ │  - f
+  │ │
+  o │  f73e 1
+  ├─╯  - f
+  │
   o  d681 0
      - f
   

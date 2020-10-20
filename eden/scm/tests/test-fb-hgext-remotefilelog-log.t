@@ -119,9 +119,9 @@ Trace renames
   $ hg repack
   $ hg log -f z -T '{desc}\n' -G --pager=off
   @  move
-  |
+  │
   o  Edit x
-  :
+  ╷
   o  x
   
 

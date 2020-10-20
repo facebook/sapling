@@ -61,7 +61,7 @@ Amending changeset with changes in working dir:
   +B
   $ hg log -Gr 'all()' -T '{desc}'
   @  amend base1
-  |
+  │
   o  A
   
 
@@ -373,12 +373,13 @@ Undo merge conflict resolution
 
   $ hg log -GT '{desc}\n' -f D
   @    D3
-  |\
-  | o  C
-  | |
-  | ~
+  ├─╮
+  │ o  C
+  │ │
+  │ ~
+  │
   o  B
-  |
+  │
   ~
 
  (This is suboptimal. It should only show B without D4)
@@ -386,19 +387,20 @@ Undo merge conflict resolution
   $ hg commit --amend -m D4
   $ hg log -GT '{desc}\n' -f D
   @    D4
-  |\
-  | o  C
-  | |
-  | ~
+  ├─╮
+  │ o  C
+  │ │
+  │ ~
+  │
   o  B
-  |
+  │
   ~
 
   $ printf 2 > D
   $ hg commit --amend -m D4
   $ hg log -GT '{desc}\n' -f D
   o  C
-  |
+  │
   ~
 
 Amend a merge, with change/deletion conflict.
@@ -424,14 +426,18 @@ Sadly, this test shows internals are inconsistent.
 
   $ hg log -f -T '{desc}' -G A
   o    D
-  |\
-  | ~
+  ├─╮
+  │ │
+  │ ~
+  │
   o  A
   
   $ hg log -f -T '{desc}' -G B
   o    C
-  |\
-  | ~
+  ├─╮
+  │ │
+  │ ~
+  │
   o  B
   
   $ hg log -r. -T '{files}'
@@ -440,24 +446,31 @@ Sadly, this test shows internals are inconsistent.
   $ hg ci --amend -m E2
   $ hg log --removed -f -T '{desc}' -G A
   o    D
-  |\
-  | ~
-  | o  C
-  |/|
-  | ~
+  ├─╮
+  │ │
+  │ ~
+  │
+  │ o  C
+  ╭─┤
+  │ │
+  │ ~
+  │
   o  A
   
   $ hg log --removed -f -T '{desc}' -G B
   @    E2
-  |\
-  | o    D
-  | |\
-  | | ~
-  o |  C
-  |\|
-  ~ |
-   /
-  o  B
+  ├─╮
+  │ o    D
+  │ ├─╮
+  │ │ │
+  │ │ ~
+  │ │
+  o │  C
+  ├─╮
+  │ │
+  ~ │
+    │
+    o  B
   
 
  Undo the removal
@@ -467,14 +480,18 @@ Sadly, this test shows internals are inconsistent.
   $ hg ci --amend -m E3
   $ hg log -fr tip -T '{desc}' -G A
   o    D
-  |\
-  | ~
+  ├─╮
+  │ │
+  │ ~
+  │
   o  A
   
   $ hg log -fr tip -T '{desc}' -G B
   o    C
-  |\
-  | ~
+  ├─╮
+  │ │
+  │ ~
+  │
   o  B
   
 

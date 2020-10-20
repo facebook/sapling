@@ -47,15 +47,15 @@ Graphlog still works
 
   $ hg log dir -G -T '{desc}\n'
   @  b
-  |
+  │
   o  a
   
 
   $ hg log dir -G -T '{desc}\n' --all
   @  b
-  |
-  | o  a2
-  |/
+  │
+  │ o  a2
+  ├─╯
   o  a
   
 

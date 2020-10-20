@@ -62,20 +62,20 @@ Rebasing B onto H and collapsing changesets:
 
   $ hg log -Gr 'all()' -T '{desc}'
   @  Collapsed revision
-  |  * B
-  |  * C
-  |  * D
-  |
-  |
-  |  edited manually
+  │  * B
+  │  * C
+  │  * D
+  │
+  │
+  │  edited manually
   o  H
-  |
-  | o  G
-  |/|
-  o |  F
-  | |
-  | o  E
-  |/
+  │
+  │ o  G
+  ╭─┤
+  o │  F
+  │ │
+  │ o  E
+  ├─╯
   o  A
   
   $ hg manifest --rev tip
@@ -99,18 +99,18 @@ Rebasing E onto H:
 
   $ hg log -Gr 'all()' -T '{desc}'
   o  Collapsed revision
-  |  * E
-  |  * G
-  | o  D
-  | |
-  @ |  H
-  | |
-  | o  C
-  | |
-  o |  F
-  | |
-  | o  B
-  |/
+  │  * E
+  │  * G
+  │ o  D
+  │ │
+  @ │  H
+  │ │
+  │ o  C
+  │ │
+  o │  F
+  │ │
+  │ o  B
+  ├─╯
   o  A
   
   $ hg manifest --rev tip
@@ -141,17 +141,17 @@ Rebasing G onto H with custom message:
 
   $ hg log -Gr 'all()' -T '{desc}'
   o  custom message
-  |
-  | o  D
-  | |
-  @ |  H
-  | |
-  | o  C
-  | |
-  o |  F
-  | |
-  | o  B
-  |/
+  │
+  │ o  D
+  │ │
+  @ │  H
+  │ │
+  │ o  C
+  │ │
+  o │  F
+  │ │
+  │ o  B
+  ├─╯
   o  A
   
   $ hg manifest --rev tip
@@ -203,17 +203,17 @@ Rebase and collapse - E onto H:
 
   $ hg log -Gr 'all()' -T '{desc}'
   o    Collapsed revision
-  |\   * E
-  | |  * F
-  | |  * G
-  | o    D
-  | |\
-  @ | |  H
-  | | |
-  +---o  C
-  | |
-  | o  B
-  |/
+  ├─╮  * E
+  │ │  * F
+  │ │  * G
+  │ o    D
+  │ ├─╮
+  @ │ │  H
+  │ │ │
+  │ │ o  C
+  ├───╯
+  │ o  B
+  ├─╯
   o  A
   
   $ hg manifest --rev tip
@@ -262,18 +262,18 @@ Rebase and collapse - E onto I:
 
   $ hg log -Gr 'all()' -T '{desc}'
   o    Collapsed revision
-  |\   * E
-  | |  * F
-  | |  * G
-  | |  * H
-  | o    D
-  | |\
-  @ | |  I
-  | | |
-  +---o  C
-  | |
-  | o  B
-  |/
+  ├─╮  * E
+  │ │  * F
+  │ │  * G
+  │ │  * H
+  │ o    D
+  │ ├─╮
+  @ │ │  I
+  │ │ │
+  │ │ o  C
+  ├───╯
+  │ o  B
+  ├─╯
   o  A
   
   $ hg manifest --rev tip
@@ -320,12 +320,12 @@ Rebase and collapse - B onto F:
 
   $ hg log -Gr 'all()' -T '{desc}'
   o  Collapsed revision
-  |  * B
-  |  * C
-  |  * D
-  |  * E
+  │  * B
+  │  * C
+  │  * D
+  │  * E
   @  F
-  |
+  │
   o  A
   
   $ hg manifest --rev tip
@@ -387,10 +387,10 @@ Rebase, collapse and copies
 
   $ hg log -Gr 'all()' -T '{desc}'
   @  Collapsed revision
-  |  * P
-  |  * Q
+  │  * P
+  │  * Q
   o  Y
-  |
+  │
   o  X
   
 Test collapsing in place
@@ -443,7 +443,7 @@ Test collapsing changes that add then remove a file
   rebasing 1cc73eca5ecc "b" (foo)
   $ hg log -G --template "'{desc}' {bookmarks}"
   @  'collapsed' foo
-  |
+  │
   o  'base'
   
   $ hg manifest --rev tip

@@ -24,19 +24,19 @@ can abort or warn for colliding untracked files)
 
   $ tglog
   @  02de42196ebe 'H'
-  |
-  | o  eea13746799a 'G'
-  |/|
-  o |  24b6387c8c8c 'F'
-  | |
-  | o  9520eea781bc 'E'
-  |/
-  | o  32af7686d403 'D'
-  | |
-  | o  5fddd98957c8 'C'
-  | |
-  | o  42ccdea3bb16 'B'
-  |/
+  │
+  │ o  eea13746799a 'G'
+  ╭─┤
+  o │  24b6387c8c8c 'F'
+  │ │
+  │ o  9520eea781bc 'E'
+  ├─╯
+  │ o  32af7686d403 'D'
+  │ │
+  │ o  5fddd98957c8 'C'
+  │ │
+  │ o  42ccdea3bb16 'B'
+  ├─╯
   o  cd010b8cd998 'A'
   
 
@@ -61,19 +61,19 @@ can abort or warn for colliding untracked files)
 
   $ tglog
   o  1619f02ff7dd 'D'
-  |
+  │
   @  02de42196ebe 'H'
-  |
-  | o  eea13746799a 'G'
-  |/|
-  o |  24b6387c8c8c 'F'
-  | |
-  | o  9520eea781bc 'E'
-  |/
-  | o  5fddd98957c8 'C'
-  | |
-  | o  42ccdea3bb16 'B'
-  |/
+  │
+  │ o  eea13746799a 'G'
+  ╭─┤
+  o │  24b6387c8c8c 'F'
+  │ │
+  │ o  9520eea781bc 'E'
+  ├─╯
+  │ o  5fddd98957c8 'C'
+  │ │
+  │ o  42ccdea3bb16 'B'
+  ├─╯
   o  cd010b8cd998 'A'
   
   $ cd ..
@@ -95,19 +95,19 @@ that we can ignore for colliding untracked files)
 
   $ tglog
   o  2107530e74ab 'D'
-  |
-  | @  02de42196ebe 'H'
-  |/
-  | o  eea13746799a 'G'
-  |/|
-  o |  24b6387c8c8c 'F'
-  | |
-  | o  9520eea781bc 'E'
-  |/
-  | o  5fddd98957c8 'C'
-  | |
-  | o  42ccdea3bb16 'B'
-  |/
+  │
+  │ @  02de42196ebe 'H'
+  ├─╯
+  │ o  eea13746799a 'G'
+  ╭─┤
+  o │  24b6387c8c8c 'F'
+  │ │
+  │ o  9520eea781bc 'E'
+  ├─╯
+  │ o  5fddd98957c8 'C'
+  │ │
+  │ o  42ccdea3bb16 'B'
+  ├─╯
   o  cd010b8cd998 'A'
   
   $ cd ..
@@ -131,17 +131,17 @@ if they have the same contents)
 
   $ tglog
   o  9f8b8ec77260 'E'
-  |
+  │
   @  02de42196ebe 'H'
-  |
+  │
   o  24b6387c8c8c 'F'
-  |
-  | o  32af7686d403 'D'
-  | |
-  | o  5fddd98957c8 'C'
-  | |
-  | o  42ccdea3bb16 'B'
-  |/
+  │
+  │ o  32af7686d403 'D'
+  │ │
+  │ o  5fddd98957c8 'C'
+  │ │
+  │ o  42ccdea3bb16 'B'
+  ├─╯
   o  cd010b8cd998 'A'
   
   $ cd ..
@@ -160,17 +160,17 @@ F onto E - rebase of a branching point (skip G):
 
   $ tglog
   @  e9240aeaa6ad 'H'
-  |
+  │
   o  5d0ccadb6e3e 'F'
-  |
+  │
   o  9520eea781bc 'E'
-  |
-  | o  32af7686d403 'D'
-  | |
-  | o  5fddd98957c8 'C'
-  | |
-  | o  42ccdea3bb16 'B'
-  |/
+  │
+  │ o  32af7686d403 'D'
+  │ │
+  │ o  5fddd98957c8 'C'
+  │ │
+  │ o  42ccdea3bb16 'B'
+  ├─╯
   o  cd010b8cd998 'A'
   
   $ cd ..
@@ -186,19 +186,19 @@ G onto H - merged revision having a parent in ancestors of target:
 
   $ tglog
   o    397834907a90 'G'
-  |\
-  | @  02de42196ebe 'H'
-  | |
-  | o  24b6387c8c8c 'F'
-  | |
-  o |  9520eea781bc 'E'
-  |/
-  | o  32af7686d403 'D'
-  | |
-  | o  5fddd98957c8 'C'
-  | |
-  | o  42ccdea3bb16 'B'
-  |/
+  ├─╮
+  │ @  02de42196ebe 'H'
+  │ │
+  │ o  24b6387c8c8c 'F'
+  │ │
+  o │  9520eea781bc 'E'
+  ├─╯
+  │ o  32af7686d403 'D'
+  │ │
+  │ o  5fddd98957c8 'C'
+  │ │
+  │ o  42ccdea3bb16 'B'
+  ├─╯
   o  cd010b8cd998 'A'
   
   $ cd ..
@@ -216,19 +216,19 @@ F onto B - G maintains E as parent:
 
   $ tglog
   @  c87be72f9641 'H'
-  |
-  | o  17badd73d4f1 'G'
-  |/|
-  o |  74fb9ed646c4 'F'
-  | |
-  | o  9520eea781bc 'E'
-  | |
-  | | o  32af7686d403 'D'
-  | | |
-  +---o  5fddd98957c8 'C'
-  | |
-  o |  42ccdea3bb16 'B'
-  |/
+  │
+  │ o  17badd73d4f1 'G'
+  ╭─┤
+  o │  74fb9ed646c4 'F'
+  │ │
+  │ o  9520eea781bc 'E'
+  │ │
+  │ │ o  32af7686d403 'D'
+  │ │ │
+  │ │ o  5fddd98957c8 'C'
+  ├───╯
+  o │  42ccdea3bb16 'B'
+  ├─╯
   o  cd010b8cd998 'A'
   
   $ cd ..
@@ -283,19 +283,19 @@ C onto A - rebase onto an ancestor:
   rebasing 32af7686d403 "D"
   $ tglog
   o  c9659aac0000 'D'
-  |
+  │
   o  e1c4361dd923 'C'
-  |
-  | @  02de42196ebe 'H'
-  | |
-  | | o  eea13746799a 'G'
-  | |/|
-  | o |  24b6387c8c8c 'F'
-  |/ /
-  | o  9520eea781bc 'E'
-  |/
-  | o  42ccdea3bb16 'B'
-  |/
+  │
+  │ @  02de42196ebe 'H'
+  │ │
+  │ │ o  eea13746799a 'G'
+  │ ╭─┤
+  │ o │  24b6387c8c8c 'F'
+  ├─╯ │
+  │   o  9520eea781bc 'E'
+  ├───╯
+  │ o  42ccdea3bb16 'B'
+  ├─╯
   o  cd010b8cd998 'A'
   
 
@@ -361,18 +361,18 @@ Check that temporary bundle doesn't lose phase when not using generaldelta
   $ hg debugmakepublic .
   $ hg log -G -T '{node|shortest} {phase} {desc}\n'
   @  d36c public c
-  |
-  | o  d2ae draft b
-  |/
+  │
+  │ o  d2ae draft b
+  ├─╯
   o  cb9a public a
   
   $ hg rebase -s 'desc(b)' -d 'desc(c)'
   rebasing d2ae7f538514 "b"
   $ hg log -G -T '{node|shortest} {phase} {desc}\n'
   o  c882 draft b
-  |
+  │
   @  d36c public c
-  |
+  │
   o  cb9a public a
   
   $ cd ..
@@ -391,21 +391,21 @@ All destination are B
   added 9 changesets with 9 changes to 9 files
   $ tglog
   o  479ddb54a924 'I'
-  |
+  │
   o  72434a4e60b0 'H'
-  |
+  │
   o  3d8a618087a7 'G'
-  |
-  | o  41bfcc75ed73 'F'
-  | |
-  | o  c01897464e7f 'E'
-  |/
+  │
+  │ o  41bfcc75ed73 'F'
+  │ │
+  │ o  c01897464e7f 'E'
+  ├─╯
   o  ffd453c31098 'D'
-  |
+  │
   o  c9e50f6cdc55 'C'
-  |
-  | o  8fd0f7e49f53 'B'
-  |/
+  │
+  │ o  8fd0f7e49f53 'B'
+  ├─╯
   o  9ae2ed22e576 'A'
   
   $ cd ..
@@ -425,31 +425,31 @@ Source on have two descendant heads but ask for one
   rebasing 479ddb54a924 "I"
   $ tglog
   o  9bf1d9358a90 'I'
-  |
+  │
   o  274623a778d4 'H'
-  |
+  │
   o  ab8c8617c8e8 'G'
-  |
+  │
   o  c8cbf59f70da 'D'
-  |
+  │
   o  563e4faab485 'C'
-  |
-  | o  479ddb54a924 'I'
-  | |
-  | o  72434a4e60b0 'H'
-  | |
-  | o  3d8a618087a7 'G'
-  | |
-  | | o  41bfcc75ed73 'F'
-  | | |
-  | | o  c01897464e7f 'E'
-  | |/
-  | o  ffd453c31098 'D'
-  | |
-  | o  c9e50f6cdc55 'C'
-  | |
-  o |  8fd0f7e49f53 'B'
-  |/
+  │
+  │ o  479ddb54a924 'I'
+  │ │
+  │ o  72434a4e60b0 'H'
+  │ │
+  │ o  3d8a618087a7 'G'
+  │ │
+  │ │ o  41bfcc75ed73 'F'
+  │ │ │
+  │ │ o  c01897464e7f 'E'
+  │ ├─╯
+  │ o  ffd453c31098 'D'
+  │ │
+  │ o  c9e50f6cdc55 'C'
+  │ │
+  o │  8fd0f7e49f53 'B'
+  ├─╯
   o  9ae2ed22e576 'A'
   
 
@@ -466,29 +466,29 @@ Base on have one descendant heads we ask for but common ancestor have two
   rebasing 479ddb54a924 "I"
   $ tglog
   o  9d7da0053b1c 'I'
-  |
+  │
   o  8fbd00952cbc 'H'
-  |
+  │
   o  51d434a615ee 'G'
-  |
+  │
   o  a9c125634b0b 'D'
-  |
-  | o  479ddb54a924 'I'
-  | |
-  | o  72434a4e60b0 'H'
-  | |
-  | o  3d8a618087a7 'G'
-  | |
-  | | o  41bfcc75ed73 'F'
-  | | |
-  | | o  c01897464e7f 'E'
-  | |/
-  | o  ffd453c31098 'D'
-  | |
-  | o  c9e50f6cdc55 'C'
-  | |
-  o |  8fd0f7e49f53 'B'
-  |/
+  │
+  │ o  479ddb54a924 'I'
+  │ │
+  │ o  72434a4e60b0 'H'
+  │ │
+  │ o  3d8a618087a7 'G'
+  │ │
+  │ │ o  41bfcc75ed73 'F'
+  │ │ │
+  │ │ o  c01897464e7f 'E'
+  │ ├─╯
+  │ o  ffd453c31098 'D'
+  │ │
+  │ o  c9e50f6cdc55 'C'
+  │ │
+  o │  8fd0f7e49f53 'B'
+  ├─╯
   o  9ae2ed22e576 'A'
   
 
@@ -504,27 +504,27 @@ rebase subset
   rebasing 72434a4e60b0 "H"
   $ tglog
   o  8fbd00952cbc 'H'
-  |
+  │
   o  51d434a615ee 'G'
-  |
+  │
   o  a9c125634b0b 'D'
-  |
-  | o  479ddb54a924 'I'
-  | |
-  | o  72434a4e60b0 'H'
-  | |
-  | o  3d8a618087a7 'G'
-  | |
-  | | o  41bfcc75ed73 'F'
-  | | |
-  | | o  c01897464e7f 'E'
-  | |/
-  | o  ffd453c31098 'D'
-  | |
-  | o  c9e50f6cdc55 'C'
-  | |
-  o |  8fd0f7e49f53 'B'
-  |/
+  │
+  │ o  479ddb54a924 'I'
+  │ │
+  │ o  72434a4e60b0 'H'
+  │ │
+  │ o  3d8a618087a7 'G'
+  │ │
+  │ │ o  41bfcc75ed73 'F'
+  │ │ │
+  │ │ o  c01897464e7f 'E'
+  │ ├─╯
+  │ o  ffd453c31098 'D'
+  │ │
+  │ o  c9e50f6cdc55 'C'
+  │ │
+  o │  8fd0f7e49f53 'B'
+  ├─╯
   o  9ae2ed22e576 'A'
   
 
@@ -542,31 +542,31 @@ rebase subset with multiple head
   rebasing 72434a4e60b0 "H"
   $ tglog
   o  8fbd00952cbc 'H'
-  |
+  │
   o  51d434a615ee 'G'
-  |
-  | o  df23d8bda0b7 'F'
-  | |
-  | o  47b7889448ff 'E'
-  |/
+  │
+  │ o  df23d8bda0b7 'F'
+  │ │
+  │ o  47b7889448ff 'E'
+  ├─╯
   o  a9c125634b0b 'D'
-  |
-  | o  479ddb54a924 'I'
-  | |
-  | o  72434a4e60b0 'H'
-  | |
-  | o  3d8a618087a7 'G'
-  | |
-  | | o  41bfcc75ed73 'F'
-  | | |
-  | | o  c01897464e7f 'E'
-  | |/
-  | o  ffd453c31098 'D'
-  | |
-  | o  c9e50f6cdc55 'C'
-  | |
-  o |  8fd0f7e49f53 'B'
-  |/
+  │
+  │ o  479ddb54a924 'I'
+  │ │
+  │ o  72434a4e60b0 'H'
+  │ │
+  │ o  3d8a618087a7 'G'
+  │ │
+  │ │ o  41bfcc75ed73 'F'
+  │ │ │
+  │ │ o  c01897464e7f 'E'
+  │ ├─╯
+  │ o  ffd453c31098 'D'
+  │ │
+  │ o  c9e50f6cdc55 'C'
+  │ │
+  o │  8fd0f7e49f53 'B'
+  ├─╯
   o  9ae2ed22e576 'A'
   
 
@@ -584,21 +584,21 @@ rebase on ancestor with revset
   rebasing 479ddb54a924 "I"
   $ tglog
   o  fcb52e68a694 'I'
-  |
+  │
   o  77bd65cd7600 'H'
-  |
+  │
   o  12d0e738fb18 'G'
-  |
-  | o  41bfcc75ed73 'F'
-  | |
-  | o  c01897464e7f 'E'
-  | |
-  | o  ffd453c31098 'D'
-  |/
+  │
+  │ o  41bfcc75ed73 'F'
+  │ │
+  │ o  c01897464e7f 'E'
+  │ │
+  │ o  ffd453c31098 'D'
+  ├─╯
   o  c9e50f6cdc55 'C'
-  |
-  | o  8fd0f7e49f53 'B'
-  |/
+  │
+  │ o  8fd0f7e49f53 'B'
+  ├─╯
   o  9ae2ed22e576 'A'
   
   $ cd ..
@@ -618,21 +618,21 @@ We would expect heads are I, F if it was supported
   rebasing 479ddb54a924 "I"
   $ tglog
   o  9136df9a87cf 'I'
-  |
+  │
   o  23e8f30da832 'H'
-  |
+  │
   o  b0efe8534e8b 'G'
-  |
-  | o  6eb5b496ab79 'F'
-  | |
-  | o  d15eade9b0b1 'E'
-  |/
-  | o  ffd453c31098 'D'
-  | |
-  | o  c9e50f6cdc55 'C'
-  | |
-  o |  8fd0f7e49f53 'B'
-  |/
+  │
+  │ o  6eb5b496ab79 'F'
+  │ │
+  │ o  d15eade9b0b1 'E'
+  ├─╯
+  │ o  ffd453c31098 'D'
+  │ │
+  │ o  c9e50f6cdc55 'C'
+  │ │
+  o │  8fd0f7e49f53 'B'
+  ├─╯
   o  9ae2ed22e576 'A'
   
   $ cd ..
@@ -657,25 +657,25 @@ each root have a different common ancestor with the destination and this is a de
   $ hg commit -m K
   $ tglog
   @  23a4ace37988 'K'
-  |
+  │
   o  1301922eeb0c 'J'
-  |
-  | o  e7ec4e813ba6 'I'
-  | |
-  | o  02de42196ebe 'H'
-  | |
-  +---o  eea13746799a 'G'
-  | |/
-  | o  24b6387c8c8c 'F'
-  | |
-  o |  9520eea781bc 'E'
-  |/
-  | o  32af7686d403 'D'
-  | |
-  | o  5fddd98957c8 'C'
-  | |
-  | o  42ccdea3bb16 'B'
-  |/
+  │
+  │ o  e7ec4e813ba6 'I'
+  │ │
+  │ o  02de42196ebe 'H'
+  │ │
+  │ │ o  eea13746799a 'G'
+  ╭─┬─╯
+  │ o  24b6387c8c8c 'F'
+  │ │
+  o │  9520eea781bc 'E'
+  ├─╯
+  │ o  32af7686d403 'D'
+  │ │
+  │ o  5fddd98957c8 'C'
+  │ │
+  │ o  42ccdea3bb16 'B'
+  ├─╯
   o  cd010b8cd998 'A'
   
 (actual test)
@@ -696,25 +696,25 @@ each root have a different common ancestor with the destination and this is a de
   
   $ tglog
   @  882431a34a0e 'K'
-  |
-  | o  adb617877056 'I'
-  |/
-  | o  1301922eeb0c 'J'
-  | |
-  | | o  02de42196ebe 'H'
-  | | |
-  o---+  eea13746799a 'G'
-  |/ /
-  | o  24b6387c8c8c 'F'
-  | |
-  o |  9520eea781bc 'E'
-  |/
-  | o  32af7686d403 'D'
-  | |
-  | o  5fddd98957c8 'C'
-  | |
-  | o  42ccdea3bb16 'B'
-  |/
+  │
+  │ o  adb617877056 'I'
+  ├─╯
+  │ o  1301922eeb0c 'J'
+  │ │
+  │ │ o  02de42196ebe 'H'
+  │ │ │
+  o │ │  eea13746799a 'G'
+  ╰─┬─╮
+    │ o  24b6387c8c8c 'F'
+    │ │
+    o │  9520eea781bc 'E'
+    ├─╯
+  o │  32af7686d403 'D'
+  │ │
+  o │  5fddd98957c8 'C'
+  │ │
+  o │  42ccdea3bb16 'B'
+  ├─╯
   o  cd010b8cd998 'A'
   
 
@@ -773,17 +773,17 @@ Test that rebase is done in topo order (issue5370)
 
   $ tglog
   @  124bb27b6f28 'G'
-  |
-  | o  412b391de760 'F'
-  | |
-  | | o  82ae8dc7a9b7 'E'
-  | | |
-  | o |  ab709c9f7171 'D'
-  | | |
-  | | o  d84f5cfaaf14 'C'
-  | |/
-  | o  76035bbd54bd 'B'
-  |/
+  │
+  │ o  412b391de760 'F'
+  │ │
+  │ │ o  82ae8dc7a9b7 'E'
+  │ │ │
+  │ o │  ab709c9f7171 'D'
+  │ │ │
+  │ │ o  d84f5cfaaf14 'C'
+  │ ├─╯
+  │ o  76035bbd54bd 'B'
+  ├─╯
   o  216878401574 'A'
   
 
@@ -796,17 +796,17 @@ Test that rebase is done in topo order (issue5370)
 
   $ tglog
   o  31884cfb735e 'F'
-  |
+  │
   o  6d89fa5b0909 'D'
-  |
-  | o  de64d97c697b 'E'
-  | |
-  | o  b18e4d2d0aa1 'C'
-  |/
+  │
+  │ o  de64d97c697b 'E'
+  │ │
+  │ o  b18e4d2d0aa1 'C'
+  ├─╯
   o  0983daf9ff6a 'B'
-  |
+  │
   @  124bb27b6f28 'G'
-  |
+  │
   o  216878401574 'A'
   
 
@@ -824,25 +824,25 @@ Make the repo a bit more interesting
   $ hg commit -m aaa
   $ hg log -G
   @  commit:      5f7bc9025ed2
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     aaa
-  |
-  | o  commit:      1910d5ff34ea
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     second source with subdir
-  | |
-  | o  commit:      82901330b6ef
-  |/   user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     first source commit
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     aaa
+  │
+  │ o  commit:      1910d5ff34ea
+  │ │  user:        test
+  │ │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │ │  summary:     second source with subdir
+  │ │
+  │ o  commit:      82901330b6ef
+  ├─╯  user:        test
+  │    date:        Thu Jan 01 00:00:00 1970 +0000
+  │    summary:     first source commit
+  │
   o  commit:      58d79cc1cf43
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     dest commit
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     dest commit
+  │
   o  commit:      e94b687f7da3
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000

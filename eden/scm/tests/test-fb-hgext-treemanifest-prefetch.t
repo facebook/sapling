@@ -193,11 +193,11 @@ Test prefetching when a draft commit is marked public
   $ hg debugmakepublic -r .
   $ hg log -G -T '{phase} {manifest}'
   @  public 5cf0d3bd4f40594eff7f0c945bec8baa8d115d01
-  |
+  │
   o  public 60a7f7acb6bb5aaf93ca7d9062931b0f6a0d6db5
-  |
+  │
   o  public 1be4ab2126dd2252dcae6be2aac2561dd3ddcda0
-  |
+  │
   o  public ef362f8bbe8aa457b0cfc49f200cbeb7747984ed
   
 - Add remotenames for the remote heads

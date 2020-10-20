@@ -21,30 +21,30 @@ log before edit
 
   $ hg log --graph
   @  commit:      652413bf663e
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     f
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     f
+  │
   o  commit:      e860deea161a
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     e
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     e
+  │
   o  commit:      055a42cdd887
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     d
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     d
+  │
   o  commit:      177f92b77385
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     c
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     c
+  │
   o  commit:      d2ae7f538514
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     b
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     b
+  │
   o  commit:      cb9a9f314b8b
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
@@ -108,14 +108,14 @@ continue after the last entry
 
   $ hg log --template '{node|short} {desc}' --graph
   @  652413bf663e f
-  |
+  │
   o  e860deea161a e
-  |
+  │
   o  055a42cdd887 d
-  |
+  │
   o  177f92b77385 c
-  |
+  │
   o  d2ae7f538514 b
-  |
+  │
   o  cb9a9f314b8b a
   

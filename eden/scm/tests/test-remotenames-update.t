@@ -21,9 +21,9 @@ Testing update -B feature
 
   $ hg log -G -T '{bookmarks} {remotebookmarks}'
   @
-  |
+  │
   o  foo
-  |
+  │
   o
   
 
@@ -32,9 +32,9 @@ Testing update -B feature
   (activating bookmark foo)
   $ hg log -G -T '{bookmarks} {remotebookmarks}'
   o
-  |
+  │
   @  bar foo
-  |
+  │
   o
   
   $ hg bookmarks -v
@@ -53,8 +53,8 @@ Test that a bare update no long moves the active bookmark
 
   $ hg log -G -T '{bookmarks} {remotebookmarks}'
   o
-  |
+  │
   @  bar foo
-  |
+  │
   o
   

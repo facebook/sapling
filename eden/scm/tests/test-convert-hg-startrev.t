@@ -52,15 +52,15 @@ Convert from null revision
 
   $ glog full
   o  "5: change a" files: a
-  |
+  │
   o    "4: merge 2 and 3" files: e f
-  |\
-  | o  "3: change a" files: a
-  | |
-  o |  "2: copy e from a, change b" files: b e
-  | |
-  o |  "1: add c, move f to d" files: c d f
-  |/
+  ├─╮
+  │ o  "3: change a" files: a
+  │ │
+  o │  "2: copy e from a, change b" files: b e
+  │ │
+  o │  "1: add c, move f to d" files: c d f
+  ├─╯
   o  "0: add a b f" files: a b f
   
   $ rm -Rf full
@@ -81,15 +81,15 @@ Convert from zero revision
 
   $ glog full
   o  "5: change a" files: a
-  |
+  │
   o    "4: merge 2 and 3" files: e f
-  |\
-  | o  "3: change a" files: a
-  | |
-  o |  "2: copy e from a, change b" files: b e
-  | |
-  o |  "1: add c, move f to d" files: c d f
-  |/
+  ├─╮
+  │ o  "3: change a" files: a
+  │ │
+  o │  "2: copy e from a, change b" files: b e
+  │ │
+  o │  "1: add c, move f to d" files: c d f
+  ├─╯
   o  "0: add a b f" files: a b f
   
 Convert from merge parent
@@ -106,11 +106,11 @@ Convert from merge parent
 
   $ glog conv1
   o  "5: change a" files: a
-  |
+  │
   o  "4: merge 2 and 3" files: a e
-  |
+  │
   o  "2: copy e from a, change b" files: b e
-  |
+  │
   o  "1: add c, move f to d" files: a b c d
   
   $ cd conv1
@@ -167,7 +167,7 @@ Convert from merge
   0 5: change a
   $ glog conv4
   o  "5: change a" files: a
-  |
+  │
   o  "4: merge 2 and 3" files: a b c d e
   
   $ cd conv4
@@ -195,9 +195,9 @@ Convert from revset in convert.hg.revs
 
   $ glog revsetrepo
   o  "4: merge 2 and 3" files: b c d e f
-  |
+  │
   o  "3: change a" files: a
-  |
+  │
   o  "0: add a b f" files: a b f
   
 Convert from specified revs
@@ -213,11 +213,11 @@ Convert from specified revs
   0 3: change a
   $ glog multiplerevs
   o  "3: change a" files: a
-  |
-  | o  "2: copy e from a, change b" files: b e
-  | |
-  | o  "1: add c, move f to d" files: c d f
-  |/
+  │
+  │ o  "2: copy e from a, change b" files: b e
+  │ │
+  │ o  "1: add c, move f to d" files: c d f
+  ├─╯
   o  "0: add a b f" files: a b f
   
 Convert in multiple steps that doesn't overlap - the link to the parent is
@@ -237,8 +237,8 @@ preserved anyway
   0 2: copy e from a, change b
   $ glog multistep
   o  "2: copy e from a, change b" files: b e
-  |
+  │
   o  "1: add c, move f to d" files: c d f
-  |
+  │
   o  "0: add a b f" files: a b f
   

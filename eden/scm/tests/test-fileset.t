@@ -223,13 +223,13 @@ Test with a revision
 
   $ hg log -G --template '{desc}\n'
   @  subrepo
-  |
+  │
   o    merge
-  |\
-  | o  diverging
-  | |
-  o |  manychanges
-  |/
+  ├─╮
+  │ o  diverging
+  │ │
+  o │  manychanges
+  ├─╯
   o  addfiles
   
   $ echo unknown > unknown
@@ -332,25 +332,25 @@ small reminder of the repository state
 
   $ hg log -G
   @  commit:      * (glob)
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     subrepo
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     subrepo
+  │
   o    commit:      * (glob)
-  |\   user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     merge
-  | |
-  | o  commit:      55b05bdebf36
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     diverging
-  | |
-  o |  commit:      * (glob)
-  |/   user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     manychanges
-  |
+  ├─╮  user:        test
+  │ │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │ │  summary:     merge
+  │ │
+  │ o  commit:      55b05bdebf36
+  │ │  user:        test
+  │ │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │ │  summary:     diverging
+  │ │
+  o │  commit:      830839835f98
+  ├─╯  user:        test
+  │    date:        Thu Jan 01 00:00:00 1970 +0000
+  │    summary:     manychanges
+  │
   o  commit:      8a9576c51c1f
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000

@@ -185,8 +185,6 @@ Test that corrupt caches are gracefully ignored, and updated
   
 
 Test strange (unicode) filenames
-  $ printf "delete cca.hg.buildstatus:f3a143469693894d291b7388ea8392a07492751f:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:v2\r\n" | nc localhost 11101
-  * (glob)
   $ echo 'x' > Å
   $ hg add Å
   $ hg commit -m 'unicode test'
@@ -205,7 +203,7 @@ Test strange (unicode) filenames
   set value for key buildstatus:f3a143469693894d291b7388ea8392a07492751f:a5d935fe38ada2b984c29e4e02bffd7f19bf818d:v2 to local
   diff -r a5d935fe38ada2b984c29e4e02bffd7f19bf818d -r f3a143469693894d291b7388ea8392a07492751f \xc3\x85 (esc)
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-  +++ b/\xc3\x85	Thu Jan 01 00:00:00 1970 +0000 (esc)
+  +++ b/Å	Thu Jan 01 00:00:00 1970 +0000
   @@ -0,0 +1,1 @@
   +x
   $ hg --debug log -vpC -r .
@@ -225,7 +223,7 @@ Test strange (unicode) filenames
   
   diff -r a5d935fe38ada2b984c29e4e02bffd7f19bf818d -r f3a143469693894d291b7388ea8392a07492751f \xc3\x85 (esc)
   --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-  +++ b/\xc3\x85	Thu Jan 01 00:00:00 1970 +0000 (esc)
+  +++ b/Å	Thu Jan 01 00:00:00 1970 +0000
   @@ -0,0 +1,1 @@
   +x
   

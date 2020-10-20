@@ -34,83 +34,88 @@ Continue repo setup
   $ hg debugmakepublic master
   $ hg log -G -T "{node|short} {bookmarks} {desc}" -r 'sort(:, topo)'
   @  db92053d5c83 feature2 d
-  |
-  | o  49cdb4091aca feature1 b
-  | |
-  o |  38d85b506754 master c2
-  | |
-  o |  ec7553f7b382  c1
-  |/
+  │
+  │ o  49cdb4091aca feature1 b
+  │ │
+  o │  38d85b506754 master c2
+  │ │
+  o │  ec7553f7b382  c1
+  ├─╯
   o  b68836a6e2ca  a2
-  |
+  │
   o  df4fd610a3d6  a1
   
 
 Basic test
   $ hg smartlog -T '{node|short} {bookmarks} {desc}'
   @  db92053d5c83 feature2 d
-  |
+  │
   o  38d85b506754 master c2
-  .
-  | o  49cdb4091aca feature1 b
-  |/
+  ╷
+  ╷ o  49cdb4091aca feature1 b
+  ╭─╯
   o  b68836a6e2ca  a2
-  |
+  │
+  ~
 
 With commit info
   $ echo "hello" >c2 && hg ci --amend
   $ hg smartlog -T '{node|short} {bookmarks} {desc}' --commit-info
   @  05d10250273e feature2 d M c2
-  |   A d
-  |
+  │   A d
+  │
   o  38d85b506754 master c2
-  .
-  | o  49cdb4091aca feature1 b
-  |/
+  ╷
+  ╷ o  49cdb4091aca feature1 b
+  ╭─╯
   o  b68836a6e2ca  a2
-  |
+  │
+  ~
 
 As a revset
   $ hg log -G -T '{node|short} {bookmarks} {desc}' -r 'smartlog()'
   @  05d10250273e feature2 d
-  |
-  | o  49cdb4091aca feature1 b
-  | |
-  o |  38d85b506754 master c2
-  |/
+  │
+  │ o  49cdb4091aca feature1 b
+  │ │
+  o │  38d85b506754 master c2
+  ├─╯
   o  b68836a6e2ca  a2
-  |
+  │
+  ~
 
 With --master
 
   $ hg smartlog -T '{node|short} {bookmarks} {desc}' --master 'desc(a2)'
   o  49cdb4091aca feature1 b
-  |
-  | @  05d10250273e feature2 d
-  | |
-  | o  38d85b506754 master c2
-  |/
+  │
+  │ @  05d10250273e feature2 d
+  │ │
+  │ o  38d85b506754 master c2
+  ├─╯
   o  b68836a6e2ca  a2
-  |
+  │
+  ~
 
 Specific revs
   $ hg smartlog -T '{node|short} {bookmarks} {desc}' -r 'desc(b)' -r 'desc(c2)' --master null
   o  49cdb4091aca feature1 b
-  |
-  | o  38d85b506754 master c2
-  |/
+  │
+  │ o  38d85b506754 master c2
+  ├─╯
   o  b68836a6e2ca  a2
-  |
+  │
+  ~
 
   $ hg smartlog -T '{node|short} {bookmarks} {desc}' -r 'smartlog()' -r 'desc(a1)'
   @  05d10250273e feature2 d
-  |
+  │
   o  38d85b506754 master c2
-  .
-  | o  49cdb4091aca feature1 b
-  |/
+  ╷
+  ╷ o  49cdb4091aca feature1 b
+  ╭─╯
   o  b68836a6e2ca  a2
-  |
+  │
   o  df4fd610a3d6  a1
   
 
@@ -120,15 +125,16 @@ Test master ordering
   $ hg boo -f master -r 49cdb4091aca
   $ hg smartlog -T '{node|short} {bookmarks} {desc}'
   o  49cdb4091aca feature1 master b
-  |
-  | @  05d10250273e feature2 d
-  | |
-  | o  38d85b506754  c2
-  | |
-  | o  ec7553f7b382  c1
-  |/
+  │
+  │ @  05d10250273e feature2 d
+  │ │
+  │ o  38d85b506754  c2
+  │ │
+  │ o  ec7553f7b382  c1
+  ├─╯
   o  b68836a6e2ca  a2
-  |
+  │
+  ~
 
 Test overriding master
   $ hg debugmakepublic 38d85b506754
@@ -136,51 +142,55 @@ Test overriding master
   $ hg boo -f master -r 38d85b506754
   $ hg smartlog -T '{node|short} {bookmarks} {desc}'
   @  05d10250273e feature2 d
-  |
+  │
   o  38d85b506754 master c2
-  .
-  | o  49cdb4091aca feature1 b
-  |/
+  ╷
+  ╷ o  49cdb4091aca feature1 b
+  ╭─╯
   o  b68836a6e2ca  a2
-  |
+  │
+  ~
 
   $ hg debugmakepublic feature1
 
   $ hg smartlog -T '{node|short} {bookmarks} {desc}' --master feature1
   o  49cdb4091aca feature1 b
-  |
-  | @  05d10250273e feature2 d
-  | |
-  | o  38d85b506754 master c2
-  | |
-  | o  ec7553f7b382  c1
-  |/
+  │
+  │ @  05d10250273e feature2 d
+  │ │
+  │ o  38d85b506754 master c2
+  │ │
+  │ o  ec7553f7b382  c1
+  ├─╯
   o  b68836a6e2ca  a2
-  |
+  │
+  ~
 
   $ hg smartlog -T '{node|short} {bookmarks} {desc}' --config smartlog.master=feature1
   o  49cdb4091aca feature1 b
-  |
-  | @  05d10250273e feature2 d
-  | |
-  | o  38d85b506754 master c2
-  | |
-  | o  ec7553f7b382  c1
-  |/
+  │
+  │ @  05d10250273e feature2 d
+  │ │
+  │ o  38d85b506754 master c2
+  │ │
+  │ o  ec7553f7b382  c1
+  ├─╯
   o  b68836a6e2ca  a2
-  |
+  │
+  ~
 
   $ hg smartlog -T '{node|short} {bookmarks} {desc}' --config smartlog.master=feature2 --master feature1
   o  49cdb4091aca feature1 b
-  |
-  | @  05d10250273e feature2 d
-  | |
-  | o  38d85b506754 master c2
-  | |
-  | o  ec7553f7b382  c1
-  |/
+  │
+  │ @  05d10250273e feature2 d
+  │ │
+  │ o  38d85b506754 master c2
+  │ │
+  │ o  ec7553f7b382  c1
+  ├─╯
   o  b68836a6e2ca  a2
-  |
+  │
+  ~
 
   $ hg debugmakepublic .
 
@@ -189,27 +199,29 @@ Test with weird bookmark names
   $ hg book -r 'desc(b)' foo-bar
   $ hg smartlog -r 'foo-bar + .' -T '{node|short} {bookmarks} {desc}'
   @  05d10250273e feature2 d
-  |
+  │
   o  38d85b506754 master c2
-  .
-  | o  49cdb4091aca feature1 foo-bar b
-  |/
+  ╷
+  ╷ o  49cdb4091aca feature1 foo-bar b
+  ╭─╯
   o  b68836a6e2ca  a2
-  |
+  │
+  ~
 
   $ hg debugmakepublic foo-bar
 
   $ hg smartlog --config smartlog.master=foo-bar -T '{node|short} {bookmarks} {desc}'
   o  49cdb4091aca feature1 foo-bar b
-  |
-  | @  05d10250273e feature2 d
-  | |
-  | o  38d85b506754 master c2
-  | |
-  | o  ec7553f7b382  c1
-  |/
+  │
+  │ @  05d10250273e feature2 d
+  │ │
+  │ o  38d85b506754 master c2
+  │ │
+  │ o  ec7553f7b382  c1
+  ├─╯
   o  b68836a6e2ca  a2
-  |
+  │
+  ~
   $ hg smartlog --config smartlog.master=xxxx -T '{node|short} {bookmarks} {desc}'
   abort: unknown revision 'xxxx'!
   [255]
@@ -223,19 +235,20 @@ Test with two unrelated histories
 
   $ hg smartlog  -T '{node|short} {bookmarks} {desc}'
   @  806aaef35296  u2
-  |
+  │
   o  8749dc393678  u1
   
   o  05d10250273e feature2 d
-  |
+  │
   o  38d85b506754 master c2
-  |
+  │
   o  ec7553f7b382  c1
-  |
-  | o  49cdb4091aca feature1 foo-bar b
-  |/
+  │
+  │ o  49cdb4091aca feature1 foo-bar b
+  ├─╯
   o  b68836a6e2ca  a2
-  |
+  │
+  ~
 
 
 A draft stack at the top
@@ -248,37 +261,39 @@ A draft stack at the top
   $ hg debugmakepublic -r 'desc(r1)'
   $ hg smartlog -T '{node|short} {bookmarks} {desc}' --all
   o  2dc09a01254d  r3
-  |
+  │
   o  01241442b3c2  r2
-  |
+  │
   o  66f7d451a68b master r1
-  |
+  │
+  ~
   $ hg smartlog -T '{node|short} {bookmarks} {desc}' --all --config smartlog.indentnonpublic=1
     o  2dc09a01254d  r3
-    |
+    │
     o  01241442b3c2  r2
-   /
+  ╭─╯
   o  66f7d451a68b master r1
-  |
+  │
+  ~
 
 Different number of lines per node
 
   $ hg smartlog -T '{node|short}\n{bookmarks}\n{desc}\n{author}\n{date|isodate}\n' --all --config smartlog.indentnonpublic=1
     o  2dc09a01254d
-    |
-    |  r3
-    |  debugbuilddag
-    |  1970-01-01 00:00 +0000
+    │
+    │  r3
+    │  debugbuilddag
+    │  1970-01-01 00:00 +0000
     o  01241442b3c2
-   /
-  |    r2
-  |    debugbuilddag
-  |    1970-01-01 00:00 +0000
+  ╭─╯
+  │    r2
+  │    debugbuilddag
+  │    1970-01-01 00:00 +0000
   o  66f7d451a68b
-  |  master
-  |  r1
-  |  debugbuilddag
-  |  1970-01-01 00:00 +0000
+  │  master
+  ~  r1
+     debugbuilddag
+     1970-01-01 00:00 +0000
 
 Add other draft stacks
   $ hg up 'desc(r1)' -q
@@ -291,17 +306,18 @@ Add other draft stacks
   $ hg ci -A b -m b -q
   $ hg smartlog -T '{node|short} {bookmarks} {desc}' --all --config smartlog.indentnonpublic=1
     o  a60fccdcd9e9  a
-    |
+    │
     o  8d92afe5abfd  a
-   /
-  | @  401cd6213b51  b
-  | |
-  | | o  2dc09a01254d  r3
-  | |/
-  | o  01241442b3c2  r2
-  |/
+  ╭─╯
+  │ @  401cd6213b51  b
+  │ │
+  │ │ o  2dc09a01254d  r3
+  │ ├─╯
+  │ o  01241442b3c2  r2
+  ├─╯
   o  66f7d451a68b master r1
-  |
+  │
+  ~
 
 Recent arg select days correctly
   $ echo 1 >> b
@@ -310,19 +326,19 @@ Recent arg select days correctly
   $ hg update 'desc(r0)' -q
   $ hg log -Gr 'smartlog(master="master", heads=((date(-15) & draft()) + .))' -T '{node|short} {bookmarks} {desc}'
   o  66f7d451a68b master r1
-  |
+  │
   @  1ea73414a91b  r0
   
 
   $ hg log -Gr 'smartlog((date(-25) & draft()) + .)' -T '{bookmarks} {desc}'
   o   test2
-  |
+  │
   o   b
-  |
+  │
   o   r2
-  |
+  │
   o  master r1
-  |
+  │
   @   r0
   
 Make sure public commits that are descendants of master are not drawn
@@ -334,26 +350,29 @@ Make sure public commits that are descendants of master are not drawn
   $ hg debugmakepublic -r 'desc(r1)'
   $ hg smartlog -T '{node|short} {bookmarks} {desc}' --all --config smartlog.indentnonpublic=1
     o  bebd167eb94d  r4
-    |
+    │
     o  2dc09a01254d  r3
-    |
+    │
     o  01241442b3c2  r2
-   /
+  ╭─╯
   o  66f7d451a68b master r1
-  |
+  │
+  ~
   $ hg debugmakepublic 'desc(r3)'
   $ hg up -q 'desc(r4)'
   $ hg smartlog -T '{node|short} {bookmarks} {desc}' --all --config smartlog.indentnonpublic=1
     @  bebd167eb94d  r4
-   /
+  ╭─╯
   o  2dc09a01254d  r3
-  .
+  ╷
   o  66f7d451a68b master r1
-  |
+  │
+  ~
   $ hg debugmakepublic 'desc(r4)'
   $ hg smartlog -T '{node|short} {bookmarks} {desc}' --all --config smartlog.indentnonpublic=1
   @  bebd167eb94d  r4
-  .
+  ╷
   o  66f7d451a68b master r1
-  |
+  │
+  ~
 

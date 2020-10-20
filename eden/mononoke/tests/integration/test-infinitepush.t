@@ -93,7 +93,7 @@ Do infinitepush (aka commit cloud) push
 
   $ tglogp
   @  47da8b81097c draft 'new'
-  |
+  │
   o  3903775176ed public 'a'
   
 
@@ -118,7 +118,7 @@ Do infinitepush (aka commit cloud) push
 
   $ tglogp
   @  47da8b81097c draft 'new'
-  |
+  │
   o  3903775176ed public 'a'
   
 
@@ -155,9 +155,9 @@ Do infinitepush (aka commit cloud) push, to a bookmark
   searching for changes
   $ tglogp
   @  007299f6399f draft 'new2'
-  |
+  │
   o  47da8b81097c draft 'new'
-  |
+  │
   o  3903775176ed public 'a'
   
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" 'SELECT name, hg_kind, HEX(changeset_id) FROM bookmarks;'
@@ -254,9 +254,9 @@ Do infinitepush (aka commit cloud) push, to a bookmark
 
   $ tglogp
   @  007299f6399f draft 'new2'
-  |
+  │
   o  47da8b81097c draft 'new'
-  |
+  │
   o  3903775176ed public 'a'
   
   $ hg book --remote
@@ -301,11 +301,11 @@ Pushbackup also works
 
   $ tglogp
   @  2cfeca6399fd draft 'newrepo'
-  |
+  │
   o  007299f6399f draft 'new2'
-  |
+  │
   o  47da8b81097c draft 'new'
-  |
+  │
   o  3903775176ed public 'a'
   
 
@@ -323,11 +323,11 @@ Pushbackup also works
 
   $ tglogp
   @  2cfeca6399fd draft 'newrepo'
-  |
+  │
   o  007299f6399f draft 'new2'
-  |
+  │
   o  47da8b81097c draft 'new'
-  |
+  │
   o  3903775176ed public 'a'
   
 
@@ -351,11 +351,11 @@ Pushbackup that pushes only bookmarks
 
   $ tglogp
   @  2cfeca6399fd draft 'newrepo' newbook
-  |
+  │
   o  007299f6399f draft 'new2'
-  |
+  │
   o  47da8b81097c draft 'new'
-  |
+  │
   o  3903775176ed public 'a'
   
 
@@ -367,11 +367,11 @@ Finally, try to push existing commit to a public bookmark
 
   $ tglogp
   @  2cfeca6399fd public 'newrepo' newbook
-  |
+  │
   o  007299f6399f public 'new2'
-  |
+  │
   o  47da8b81097c public 'new'
-  |
+  │
   o  3903775176ed public 'a'
   
 
@@ -389,11 +389,11 @@ Check phases on another side (for pull command and pull -r)
 
   $ tglogp
   @  2cfeca6399fd public 'newrepo'
-  |
+  │
   o  007299f6399f public 'new2'
-  |
+  │
   o  47da8b81097c public 'new'
-  |
+  │
   o  3903775176ed public 'a'
   
 
@@ -409,11 +409,11 @@ Check phases on another side (for pull command and pull -r)
 
   $ tglogp
   @  2cfeca6399fd public 'newrepo'
-  |
+  │
   o  007299f6399f public 'new2'
-  |
+  │
   o  47da8b81097c public 'new'
-  |
+  │
   o  3903775176ed public 'a'
   
 
@@ -439,15 +439,15 @@ Check phases on another side (for pull command and pull -r)
 
   $ tglogp
   @  eca836c7c651 draft 'change on top of the release'
-  |
+  │
   o  500658c138a4 public 'feature release'
-  |
-  | o  2cfeca6399fd public 'newrepo' newbook
-  | |
-  | o  007299f6399f public 'new2'
-  | |
-  | o  47da8b81097c public 'new'
-  |/
+  │
+  │ o  2cfeca6399fd public 'newrepo' newbook
+  │ │
+  │ o  007299f6399f public 'new2'
+  │ │
+  │ o  47da8b81097c public 'new'
+  ├─╯
   o  3903775176ed public 'a'
   
  
@@ -465,15 +465,15 @@ Check phases on another side (for pull command and pull -r)
 
   $ tglogp
   o  eca836c7c651 draft 'change on top of the release'
-  |
+  │
   o  500658c138a4 public 'feature release'
-  |
-  | @  2cfeca6399fd public 'newrepo'
-  | |
-  | o  007299f6399f public 'new2'
-  | |
-  | o  47da8b81097c public 'new'
-  |/
+  │
+  │ @  2cfeca6399fd public 'newrepo'
+  │ │
+  │ o  007299f6399f public 'new2'
+  │ │
+  │ o  47da8b81097c public 'new'
+  ├─╯
   o  3903775176ed public 'a'
   
 
@@ -488,15 +488,15 @@ Check phases on another side (for pull command and pull -r)
 
   $ tglogp
   o  eca836c7c651 draft 'change on top of the release'
-  |
+  │
   o  500658c138a4 public 'feature release'
-  |
-  | @  2cfeca6399fd public 'newrepo'
-  | |
-  | o  007299f6399f public 'new2'
-  | |
-  | o  47da8b81097c public 'new'
-  |/
+  │
+  │ @  2cfeca6399fd public 'newrepo'
+  │ │
+  │ o  007299f6399f public 'new2'
+  │ │
+  │ o  47da8b81097c public 'new'
+  ├─╯
   o  3903775176ed public 'a'
   
  
@@ -522,19 +522,19 @@ Test phases with pushrebase
 
   $ tglogp
   o  1708c61178dd public 'new feature on top of master'
-  |
-  | @  f9e4cd522499 draft 'new feature on top of master'
-  | |
-  | | o  eca836c7c651 draft 'change on top of the release'
-  | | |
-  | | o  500658c138a4 public 'feature release'
-  | |/
-  o |  2cfeca6399fd public 'newrepo' newbook
-  | |
-  o |  007299f6399f public 'new2'
-  | |
-  o |  47da8b81097c public 'new'
-  |/
+  │
+  │ @  f9e4cd522499 draft 'new feature on top of master'
+  │ │
+  │ │ o  eca836c7c651 draft 'change on top of the release'
+  │ │ │
+  │ │ o  500658c138a4 public 'feature release'
+  │ ├─╯
+  o │  2cfeca6399fd public 'newrepo' newbook
+  │ │
+  o │  007299f6399f public 'new2'
+  │ │
+  o │  47da8b81097c public 'new'
+  ├─╯
   o  3903775176ed public 'a'
   
 
@@ -591,47 +591,47 @@ More sophisticated test for phases
 
   $ tglogp
   @  b9f080ea9500 public 'zzzzz'
-  |
+  │
   o  6e068f112af8 public 'yyyyy'
-  |
+  │
   o  0ff6f97758ae public 'xxxxx'
-  |
+  │
   o  8be205326fcf public 'wwwww'
-  |
-  | o  7d67c7248d48 draft 'zzzz'
-  | |
-  | o  859e9fdde968 public 'yyyy'
-  | |
-  | o  abe01677f4a6 public 'xxxx'
-  | |
-  | o  4710fc0238de public 'wwww'
-  |/
-  | o  bf677f20a49d draft 'zzz'
-  | |
-  | o  43db2471732d draft 'yyy'
-  | |
-  | o  f743965444d9 public 'xxx'
-  | |
-  | o  83da839eb4d2 public 'www'
-  |/
-  | o  5e59ac0f4dd0 draft 'zz'
-  | |
-  | o  1a4fd3035391 draft 'yy'
-  | |
-  | o  c2234433b092 draft 'xx'
-  | |
-  | o  2ba1f5f6cccd public 'ww'
-  |/
+  │
+  │ o  7d67c7248d48 draft 'zzzz'
+  │ │
+  │ o  859e9fdde968 public 'yyyy'
+  │ │
+  │ o  abe01677f4a6 public 'xxxx'
+  │ │
+  │ o  4710fc0238de public 'wwww'
+  ├─╯
+  │ o  bf677f20a49d draft 'zzz'
+  │ │
+  │ o  43db2471732d draft 'yyy'
+  │ │
+  │ o  f743965444d9 public 'xxx'
+  │ │
+  │ o  83da839eb4d2 public 'www'
+  ├─╯
+  │ o  5e59ac0f4dd0 draft 'zz'
+  │ │
+  │ o  1a4fd3035391 draft 'yy'
+  │ │
+  │ o  c2234433b092 draft 'xx'
+  │ │
+  │ o  2ba1f5f6cccd public 'ww'
+  ├─╯
   o  1708c61178dd public 'new feature on top of master'
-  |
-  | o  500658c138a4 public 'feature release'
-  | |
-  o |  2cfeca6399fd public 'newrepo' newbook
-  | |
-  o |  007299f6399f public 'new2'
-  | |
-  o |  47da8b81097c public 'new'
-  |/
+  │
+  │ o  500658c138a4 public 'feature release'
+  │ │
+  o │  2cfeca6399fd public 'newrepo' newbook
+  │ │
+  o │  007299f6399f public 'new2'
+  │ │
+  o │  47da8b81097c public 'new'
+  ├─╯
   o  3903775176ed public 'a'
   
 
@@ -662,41 +662,41 @@ More sophisticated test for phases
 
   $ tglogpnr -r "::b9f080ea9500 - ::default/master_bookmark"
   o  b9f080ea9500 public 'zzzzz'  default/release 4
-  |
+  │
   o  6e068f112af8 public 'yyyyy'
-  |
+  │
   o  0ff6f97758ae public 'xxxxx'
-  |
+  │
   o  8be205326fcf public 'wwwww'
-  |
+  │
   ~
   $ tglogpnr -r "::7d67c7248d48 - ::default/master_bookmark"
   o  7d67c7248d48 draft 'zzzz'
-  |
+  │
   o  859e9fdde968 public 'yyyy'  default/release 3
-  |
+  │
   o  abe01677f4a6 public 'xxxx'
-  |
+  │
   o  4710fc0238de public 'wwww'
-  |
+  │
   ~
   $ tglogpnr -r "::bf677f20a49d - ::default/master_bookmark"
   o  bf677f20a49d draft 'zzz'
-  |
+  │
   o  43db2471732d draft 'yyy'
-  |
+  │
   o  f743965444d9 public 'xxx'  default/release 2
-  |
+  │
   o  83da839eb4d2 public 'www'
-  |
+  │
   ~
   $ tglogpnr -r "::5e59ac0f4dd0 - ::default/master_bookmark"
   o  5e59ac0f4dd0 draft 'zz'
-  |
+  │
   o  1a4fd3035391 draft 'yy'
-  |
+  │
   o  c2234433b092 draft 'xx'
-  |
+  │
   o  2ba1f5f6cccd public 'ww'  default/release 1
-  |
+  │
   ~

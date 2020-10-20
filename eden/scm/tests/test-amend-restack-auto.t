@@ -155,9 +155,9 @@ amend.autorestack=no-conflict, and mergeable changes (expect restack)
   merging file
   $ showgraph
   o  7ed7d67ad7bf C
-  |
+  │
   @  767372f778c5 B
-  |
+  │
   o  426bada5c675 A
   $ cat file
   0
@@ -226,13 +226,13 @@ amend.autorestack=no-conflict, and conflicting changes (expect cancelled restack
   (run `hg restack` manually to restack this commit's children)
   $ showgraph
   @  3000de962fa1 B
-  |
-  | o  02cc3cc1d010 D
-  | |
-  | o  b6c0d35dc9e9 C
-  | |
-  | x  fe14e2b67b65 B
-  |/
+  │
+  │ o  02cc3cc1d010 D
+  │ │
+  │ o  b6c0d35dc9e9 C
+  │ │
+  │ x  fe14e2b67b65 B
+  ├─╯
   o  426bada5c675 A
   $ cat file
   unmergeable!
@@ -267,13 +267,13 @@ amend.autorestack=always, and conflicting changes (expect restack)
   unmergeable!
   $ showgraph
   @  3000de962fa1 B
-  |
-  | o  02cc3cc1d010 D
-  | |
-  | o  b6c0d35dc9e9 C
-  | |
-  | x  fe14e2b67b65 B
-  |/
+  │
+  │ o  02cc3cc1d010 D
+  │ │
+  │ o  b6c0d35dc9e9 C
+  │ │
+  │ x  fe14e2b67b65 B
+  ├─╯
   o  426bada5c675 A
 
 Test rebasing children with obsolete children themselves needing a restack.
@@ -299,13 +299,13 @@ Test rebasing children with obsolete children themselves needing a restack.
   rebasing 01f26f1a10b2 "D" (D)
   $ showgraph
   o  0a75af8fc6e3 D
-  |
+  │
   o  84f362759e03 C2
-  |
+  │
   o  23018262b14e B
-  |
+  │
   @  21006be03678 A
-  |
+  │
   o  48b9aae0607f Z
 
 Test not rebasing unrelated changes. When rebasing X, only X:: are expected to be rebased.
@@ -329,15 +329,15 @@ Rebasing commits outside X:: can be surprising and more easily cause conflicts.
   rebasing afb1812f5f28 "D" (D)
   $ showgraph
   o  c9dfcf01df0b D
-  |
+  │
   @  1c28c4186c15 B3
-  |
-  | o  dbe6ebcaec86 C
-  | |
-  | x  588f87b965af B1
-  |/
+  │
+  │ o  dbe6ebcaec86 C
+  │ │
+  │ x  588f87b965af B1
+  ├─╯
   o  ac2f7407182b A
-  |
+  │
   o  48b9aae0607f Z
 
 

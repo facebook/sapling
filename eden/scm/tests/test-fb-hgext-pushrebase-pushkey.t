@@ -69,7 +69,7 @@ Push without pushrebase, and check that the hook sees the commit that was actual
   $ hg commit -Aqm 'commitC'
   $ hg log -Gr 'all()' -T '{desc} {bookmark}'
   @  commitC
-  |
+  │
   o  commitA
   
   $ hg push --to master --force --config extensions.wrapper="$TESTTMP/wrapper.py"
@@ -77,7 +77,7 @@ Push without pushrebase, and check that the hook sees the commit that was actual
   searching for changes
   committed
   o  commitX
-  |
+  │
   @  commitA
   
   remote: adding changesets
@@ -106,7 +106,7 @@ Then, pushrebase. This time, we expect the pushkey to be updated
   searching for changes
   committed
   o  commitX
-  |
+  │
   @  commitA
   
   remote: pushing 1 changeset:

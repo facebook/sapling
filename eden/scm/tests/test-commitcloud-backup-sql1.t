@@ -206,7 +206,7 @@ safely will be restored on the client2
   $ sleep 1
   $ hg log -G --template "{node|short} {bookmarks} '{desc}'\n"
   o  679ff862f673 feature1 'Test commit2'
-  |
+  │
   @  bf45ce9ee037 * 'Test commit1'
   
   $ hg cloud backup -q --config infinitepushbackup.hostname=testhost
@@ -216,7 +216,7 @@ safely will be restored on the client2
   $ hg cloud restorebackup --hostname testhost -q
   $ hg log -G --template "{node|short} {bookmarks} '{desc}'\n"
   o  679ff862f673 feature1 'Test commit2'
-  |
+  │
   o  bf45ce9ee037  'Test commit1'
   
 

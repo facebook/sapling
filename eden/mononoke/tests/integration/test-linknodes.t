@@ -69,7 +69,7 @@ push an infinitepush commit with new content
   commitcloud: backed up 1 commit
   $ hg log -G -T '{node} {desc} ({remotenames})\n' -r "all()"
   @  60ab8a6c8e652ea968be7ffdb658b49de35d3621 branch ()
-  |
+  │
   o  d998012a9c34a2423757a3d40f8579c78af1b342 base (default/master_bookmark)
   
 
@@ -156,7 +156,7 @@ pull only the master branch into another repo
 
   $ hg log -G -T '{node} {desc} ({remotenames})\n' -r "all()"
   @  6dbc3093b5955d7bb47512155149ec66791c277d master (default/master_bookmark)
-  |
+  │
   o  d998012a9c34a2423757a3d40f8579c78af1b342 base ()
   
   $ hg debughistorypack ../cachepath/repo-pull2/packs/e5e1a8b81e9d2360fe54412f8370812c06c6cadb

@@ -1607,21 +1607,21 @@ Test obsstore related revsets
 
   $ hg log -G -r "all()" -T '{desc}\n'
   o  H
-  |
-  | o  G
-  | |
-  | | x  F
-  | |/
-  | o  E
-  | |
-  | | o  D
-  | |/
-  | | x  C
-  | |/
-  x |  B
-  |/
-  | o  Z
-  |
+  │
+  │ o  G
+  │ │
+  │ │ x  F
+  │ ├─╯
+  │ o  E
+  │ │
+  │ │ o  D
+  │ ├─╯
+  │ │ x  C
+  │ ├─╯
+  x │  B
+  ├─╯
+  │ o  Z
+  │
   x  A
   
 
@@ -1713,25 +1713,25 @@ Test `draft() & ::x` optimization
   $ hg phase --force --secret -r S1+S2
   $ hg log -G -T '{desc} {phase}' -r 'sort(all(), topo, topo.firstbranch=P5)'
   o  P5 public
-  |
-  | o  S1 secret
-  | |
-  | o  D3 draft
-  |/
-  | o  S2 secret
-  |/
+  │
+  │ o  S1 secret
+  │ │
+  │ o  D3 draft
+  ├─╯
+  │ o  S2 secret
+  ├─╯
   o  P4 public
-  |
+  │
   o  P3 public
-  |
+  │
   o  P2 public
-  |
-  | o  D2 draft
-  | |
-  | o  D1 draft
-  |/
+  │
+  │ o  D2 draft
+  │ │
+  │ o  D1 draft
+  ├─╯
   o  P1 public
-  |
+  │
   o  P0 public
   
   $ hg debugrevspec --verify -p analyzed -p optimized 'draft() & ::(((S1+D1+P5)-D3)+S2)'

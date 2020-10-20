@@ -30,24 +30,24 @@ onto the newest successor of their parent.
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ showgraph
   o  cef323f40828 successor 2
-  |
-  | o  f60c1f15a70e successor 1
-  |/
-  | o  4538525df7e2 add c
-  | |
-  | @  7c3bad9141dc add b
-  |/
+  │
+  │ o  f60c1f15a70e successor 1
+  ├─╯
+  │ o  4538525df7e2 add c
+  │ │
+  │ @  7c3bad9141dc add b
+  ├─╯
   o  1f0dee641bb7 add a
   $ hg rebase --restack
   rebasing 4538525df7e2 "add c"
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ showgraph
   o  b0a0bc953ac3 add c
-  |
+  │
   @  cef323f40828 successor 2
-  |
-  | o  f60c1f15a70e successor 1
-  |/
+  │
+  │ o  f60c1f15a70e successor 1
+  ├─╯
   o  1f0dee641bb7 add a
 
 Test situation with divergence due to an unamend. This should actually succeed
@@ -65,11 +65,11 @@ since the successor is obsolete.
   hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ showgraph
   @  c54ee8acf83d add b
-  |
-  | o  4538525df7e2 add c
-  | |
-  | x  7c3bad9141dc add b
-  |/
+  │
+  │ o  4538525df7e2 add c
+  │ │
+  │ x  7c3bad9141dc add b
+  ├─╯
   o  1f0dee641bb7 add a
   $ hg up 7c3bad9141dcb46ff89abf5f61856facd56e476c
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -79,22 +79,22 @@ since the successor is obsolete.
   hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ showgraph
   @  2c965323ca2a add b
-  |
-  | o  c54ee8acf83d add b
-  |/
-  | o  4538525df7e2 add c
-  | |
-  | x  7c3bad9141dc add b
-  |/
+  │
+  │ o  c54ee8acf83d add b
+  ├─╯
+  │ o  4538525df7e2 add c
+  │ │
+  │ x  7c3bad9141dc add b
+  ├─╯
   o  1f0dee641bb7 add a
   $ hg unamend
   $ hg up -C c54ee8acf83d47ec674bca5bb6ba7be56227bd89
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ showgraph
   @  c54ee8acf83d add b
-  |
-  | o  4538525df7e2 add c
-  | |
-  | x  7c3bad9141dc add b
-  |/
+  │
+  │ o  4538525df7e2 add c
+  │ │
+  │ x  7c3bad9141dc add b
+  ├─╯
   o  1f0dee641bb7 add a

@@ -61,7 +61,7 @@ Pull in client1 (remote bookmarks sync enabled)
   $ hg cloud sync -q
   $ showgraph
   o  public1: public  default/master
-  |
+  │
   @  base: public  default/base
   
 
@@ -70,7 +70,7 @@ Sync in client2 (remote bookmarks sync disabled). The master bookmark doesn't mo
   $ hg cloud sync -q
   $ showgraph
   o  public1: draft
-  |
+  │
   @  base: public  default/base default/master
   
 
@@ -78,7 +78,7 @@ Sync in client2 with sync enabled
   $ hg cloud sync -q --config commitcloud.remotebookmarkssync=true
   $ showgraph
   o  public1: public  default/master
-  |
+  │
   @  base: public  default/base
   
 
@@ -87,7 +87,7 @@ Sync in client1 again.
   $ hg cloud sync -q
   $ showgraph
   o  public1: public  default/master
-  |
+  │
   @  base: public  default/base
   
 
@@ -96,7 +96,7 @@ Sync in client2 again (remote bookmarks sync disabled)
   $ hg cloud sync -q
   $ showgraph
   o  public1: public  default/master
-  |
+  │
   @  base: public  default/base
   
 
@@ -111,9 +111,9 @@ Pull in client1 and sync
   $ hg cloud sync -q
   $ showgraph
   o  public2: public  default/master
-  |
+  │
   o  public1: public
-  |
+  │
   @  base: public  default/base
   
 
@@ -122,9 +122,9 @@ Sync in client 2 with remotebookmarks sync enabled.
   $ hg cloud sync -q --config commitcloud.remotebookmarkssync=true
   $ showgraph
   o  public2: public  default/master
-  |
+  │
   o  public1: public
-  |
+  │
   @  base: public  default/base
   
 
@@ -137,9 +137,9 @@ Pull in client 1, which removes the base remote bookmark
   $ hg pull -q
   $ showgraph
   o  public2: public  default/master
-  |
+  │
   o  public1: public
-  |
+  │
   @  base: public
   
 
@@ -149,9 +149,9 @@ Make an update to the cloud workspace in client 2 with remotebookmarks sync disa
   $ hg cloud sync -q
   $ showgraph
   o  public2: public  default/master
-  |
+  │
   o  public1: public
-  |
+  │
   @  base: public local1 default/base
   
 
@@ -160,9 +160,9 @@ Sync in client1, deleted base bookmark remains deleted
   $ hg cloud sync -q
   $ showgraph
   o  public2: public  default/master
-  |
+  │
   o  public1: public
-  |
+  │
   @  base: public local1
   
 
@@ -171,9 +171,9 @@ Sync in client2 with remote bookmarks sync enabled
   $ hg cloud sync -q --config commitcloud.remotebookmarkssync=true
   $ showgraph
   o  public2: public  default/master
-  |
+  │
   o  public1: public
-  |
+  │
   @  base: public local1 default/base
   
 Pull in client 2, base bookmark is now deleted
@@ -183,9 +183,9 @@ Pull in client 2, base bookmark is now deleted
   $ hg cloud sync -q
   $ showgraph
   o  public2: public  default/master
-  |
+  │
   o  public1: public
-  |
+  │
   @  base: public local1
   
 
@@ -194,9 +194,9 @@ And remains deleted in client 1
   $ hg cloud sync -q
   $ showgraph
   o  public2: public  default/master
-  |
+  │
   o  public1: public
-  |
+  │
   @  base: public local1
   
 

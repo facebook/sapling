@@ -62,16 +62,16 @@ Stack of non-conflicting commits should be accepted
   $ echo "pushrebase =" >> .hg/hgrc
   $ log
   @  a => bar [draft:add0c792bfce] main
-  |
+  │
   o  initial [draft:2bb9d20e471c]
   
 
   $ cd ../client
   $ log
   @  b => baz [draft:0e3997dc0733]
-  |
+  │
   o  b => xxx [draft:46a2df24e272]
-  |
+  │
   o  initial [public:2bb9d20e471c]
   
   $ hg push --to main --config devel.bundle2.debug=1 --debug 2>&1 | tee stuff | grep -v bundle2-
@@ -121,11 +121,11 @@ Stack of non-conflicting commits should be accepted
 
   $ log -R ../server
   o  b => baz [draft:4cfedb0dc25f] main
-  |
+  │
   o  b => xxx [draft:6a6d9484552c]
-  |
+  │
   @  a => bar [draft:add0c792bfce]
-  |
+  │
   o  initial [draft:2bb9d20e471c]
   
 
@@ -140,11 +140,11 @@ Check that we did not generate any check:heads parts
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ log
   @  b => baz [draft:4cfedb0dc25f] main
-  |
+  │
   o  b => xxx [draft:6a6d9484552c]
-  |
+  │
   o  a => bar [draft:add0c792bfce]
-  |
+  │
   o  initial [draft:2bb9d20e471c]
   
   $ hg debugstrip -r 6a6d9484552c82e5f21b4ed4fce375930812f88c
@@ -157,9 +157,9 @@ Check that we did not generate any check:heads parts
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ log
   @  b => baz [draft:0e3997dc0733]
-  |
+  │
   o  b => xxx [draft:46a2df24e272]
-  |
+  │
   o  initial [draft:2bb9d20e471c]
   
 
@@ -181,11 +181,11 @@ Push using changegroup2
 
   $ log -R ../server
   o  b => baz [draft:4cfedb0dc25f] main
-  |
+  │
   o  b => xxx [draft:6a6d9484552c]
-  |
+  │
   @  a => bar [draft:add0c792bfce]
-  |
+  │
   o  initial [draft:2bb9d20e471c]
   
 
@@ -208,7 +208,7 @@ Regular commits should go through without changing hash
   $ commit 'b => quux'
   $ log -r tip
   @  b => quux [draft:741fd2094512]
-  |
+  │
   ~
 
   $ hg push --to main
@@ -220,13 +220,13 @@ Regular commits should go through without changing hash
 
   $ log
   @  b => quux [public:741fd2094512]
-  |
+  │
   o  b => baz [public:4cfedb0dc25f]
-  |
+  │
   o  b => xxx [public:6a6d9484552c]
-  |
+  │
   o  a => bar [public:add0c792bfce]
-  |
+  │
   o  initial [public:2bb9d20e471c]
   
   $ cd ../server
@@ -235,13 +235,13 @@ Regular commits should go through without changing hash
 
   $ log
   @  b => quux [draft:741fd2094512] main
-  |
+  │
   o  b => baz [draft:4cfedb0dc25f]
-  |
+  │
   o  b => xxx [draft:6a6d9484552c]
-  |
+  │
   o  a => bar [draft:add0c792bfce]
-  |
+  │
   o  initial [draft:2bb9d20e471c]
   
 
@@ -270,15 +270,15 @@ Stack with conflict in tail should abort
   $ cd ../server
   $ log
   @  a => baz [draft:fb983dc509b6] main
-  |
+  │
   o  b => quux [draft:741fd2094512]
-  |
+  │
   o  b => baz [draft:4cfedb0dc25f]
-  |
+  │
   o  b => xxx [draft:6a6d9484552c]
-  |
+  │
   o  a => bar [draft:add0c792bfce]
-  |
+  │
   o  initial [draft:2bb9d20e471c]
   
 
@@ -304,15 +304,15 @@ Stack with conflict in head should abort
   $ cd ../server
   $ log
   @  a => baz [draft:fb983dc509b6] main
-  |
+  │
   o  b => quux [draft:741fd2094512]
-  |
+  │
   o  b => baz [draft:4cfedb0dc25f]
-  |
+  │
   o  b => xxx [draft:6a6d9484552c]
-  |
+  │
   o  a => bar [draft:add0c792bfce]
-  |
+  │
   o  initial [draft:2bb9d20e471c]
   
 Pushing a merge should rebase only the latest side of the merge
@@ -341,36 +341,36 @@ Pushing a merge should rebase only the latest side of the merge
   $ hg debugmakepublic 741fd2094512
   $ log
   @  on top of merge [draft:9007d6a204f8] master
-  |
+  │
   o    merge [draft:2c0c699d7086]
-  |\
-  | o  branch middle [draft:5a0cbf3df4ef]
-  | |
-  | o  branch start [draft:add5ec74853d]
-  | |
-  o |  branch left [draft:e6b7549904cd]
-  | |
-  o |  b => quux [public:741fd2094512]
-  | |
-  o |  b => baz [public:4cfedb0dc25f]
-  |/
+  ├─╮
+  │ o  branch middle [draft:5a0cbf3df4ef]
+  │ │
+  │ o  branch start [draft:add5ec74853d]
+  │ │
+  o │  branch left [draft:e6b7549904cd]
+  │ │
+  o │  b => quux [public:741fd2094512]
+  │ │
+  o │  b => baz [public:4cfedb0dc25f]
+  ├─╯
   o  b => xxx [public:6a6d9484552c]
-  |
+  │
   o  a => bar [public:add0c792bfce]
-  |
+  │
   o  initial [public:2bb9d20e471c]
   
   $ log -R ../server
   @  a => baz [draft:fb983dc509b6] main master
-  |
+  │
   o  b => quux [draft:741fd2094512]
-  |
+  │
   o  b => baz [draft:4cfedb0dc25f]
-  |
+  │
   o  b => xxx [draft:6a6d9484552c]
-  |
+  │
   o  a => bar [draft:add0c792bfce]
-  |
+  │
   o  initial [draft:2bb9d20e471c]
   
   $ hg push --to main
@@ -392,25 +392,25 @@ Pushing a merge should rebase only the latest side of the merge
   $ cd ../server
   $ log
   o  on top of merge [draft:54b35e8b58eb] main
-  |
+  │
   o    merge [draft:5a512eb2b3f8]
-  |\
-  | o  branch middle [draft:5a0cbf3df4ef]
-  | |
-  | o  branch start [draft:add5ec74853d]
-  | |
-  o |  branch left [draft:cf07bdf4226e]
-  | |
-  @ |  a => baz [draft:fb983dc509b6] master
-  | |
-  o |  b => quux [draft:741fd2094512]
-  | |
-  o |  b => baz [draft:4cfedb0dc25f]
-  |/
+  ├─╮
+  │ o  branch middle [draft:5a0cbf3df4ef]
+  │ │
+  │ o  branch start [draft:add5ec74853d]
+  │ │
+  o │  branch left [draft:cf07bdf4226e]
+  │ │
+  @ │  a => baz [draft:fb983dc509b6] master
+  │ │
+  o │  b => quux [draft:741fd2094512]
+  │ │
+  o │  b => baz [draft:4cfedb0dc25f]
+  ├─╯
   o  b => xxx [draft:6a6d9484552c]
-  |
+  │
   o  a => bar [draft:add0c792bfce]
-  |
+  │
   o  initial [draft:2bb9d20e471c]
   
 - Verify the content of the merge files is correct
@@ -446,17 +446,17 @@ With evolution enabled, should set obsolescence markers
   $ commit 'b => foobar'
   $ log
   @  b => foobar [draft:e73acfaeee82]
-  |
+  │
   o  b => k [draft:9467a8ee5d0d]
-  |
+  │
   o  b => quux [public:741fd2094512]
-  |
+  │
   o  b => baz [public:4cfedb0dc25f]
-  |
+  │
   o  b => xxx [public:6a6d9484552c]
-  |
+  │
   o  a => bar [public:add0c792bfce]
-  |
+  │
   o  initial [public:2bb9d20e471c]
   
   $ hg push --to main
@@ -481,21 +481,21 @@ With evolution enabled, should set obsolescence markers
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ log
   @  b => foobar [public:d53a62ed14be]
-  |
+  │
   o  b => k [public:0d76868c25e6]
-  |
+  │
   o  branch left [public:cf07bdf4226e]
-  |
+  │
   o  a => baz [public:fb983dc509b6]
-  |
+  │
   o  b => quux [public:741fd2094512]
-  |
+  │
   o  b => baz [public:4cfedb0dc25f]
-  |
+  │
   o  b => xxx [public:6a6d9484552c]
-  |
+  │
   o  a => bar [public:add0c792bfce]
-  |
+  │
   o  initial [public:2bb9d20e471c]
   
 
@@ -504,21 +504,21 @@ With evolution enabled, should set obsolescence markers
   k (b)
   $ log
   o  b => foobar [draft:d53a62ed14be] main
-  |
+  │
   o  b => k [draft:0d76868c25e6]
-  |
+  │
   o  branch left [draft:cf07bdf4226e]
-  |
+  │
   @  a => baz [draft:fb983dc509b6]
-  |
+  │
   o  b => quux [draft:741fd2094512]
-  |
+  │
   o  b => baz [draft:4cfedb0dc25f]
-  |
+  │
   o  b => xxx [draft:6a6d9484552c]
-  |
+  │
   o  a => bar [draft:add0c792bfce]
-  |
+  │
   o  initial [draft:2bb9d20e471c]
   
 Test pushing master bookmark, fast forward
@@ -763,9 +763,9 @@ Test date rewriting
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G -T '{desc} {date|isodate}'
   @  c 2001-09-09 01:46 +0000
-  |
+  │
   o  b 1970-01-01 00:00 +0000
-  |
+  │
   o  a 1970-01-01 00:00 +0000
   
 Test date rewriting with a merge commit
@@ -835,11 +835,11 @@ Test pushrebase on merge commit where master is on the p2 side
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R ../p2mergeserver log -G -T '{desc}'
   o    merge b and c
-  |\
-  | o  add c
-  |
+  ├─╮
+  │ o  add c
+  │
   o  add b
-  |
+  │
   @  add a
   
   $ hg -R ../p2mergeserver manifest -r 7c3bad9141dcb46ff89abf5f61856facd56e476c
@@ -891,9 +891,9 @@ Test force pushes
   added 1 changesets with 1 changes to 1 files
   $ hg log -G -T '{desc} {bookmarks}'
   o  aa
-  |
-  | @  b
-  |/
+  │
+  │ @  b
+  ├─╯
   o  a
   
 Make sure that no hg-bundle-* files left
@@ -953,18 +953,18 @@ phase is updated correctly with the marker information.
   $ hg up tip -q
   $ log --hidden
   @  a2 [public:722505d780e3] BOOK main
-  |
+  │
   o  b [public:d2ae7f538514]
-  |
-  | x  a2 [draft:045279cde9f0]
-  |/
+  │
+  │ x  a2 [draft:045279cde9f0]
+  ├─╯
   o  a [public:cb9a9f314b8b]
   
   $ log
   @  a2 [public:722505d780e3] BOOK main
-  |
+  │
   o  b [public:d2ae7f538514]
-  |
+  │
   o  a [public:cb9a9f314b8b]
   
 Push a file-copy changeset and the copy source gets modified by others:

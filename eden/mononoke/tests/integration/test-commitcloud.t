@@ -105,11 +105,11 @@ Make commits in the first client, and sync it
 
   $ tglogp
   @  44641a2b1a42 draft 'commit3'
-  |
+  │
   o  eba3648c3275 draft 'commit2'
-  |
+  │
   o  660cb078da57 draft 'commit1'
-  |
+  │
   o  8b2dca0c8a72 public 'base_commit'
   
 Make sure these commits end up in reversefillerqueue
@@ -131,11 +131,11 @@ Sync from the second client - the commits should appear
 
   $ tglogp
   o  44641a2b1a42 draft 'commit3'
-  |
+  │
   o  eba3648c3275 draft 'commit2'
-  |
+  │
   o  660cb078da57 draft 'commit1'
-  |
+  │
   @  8b2dca0c8a72 public 'base_commit'
   
 
@@ -166,17 +166,17 @@ On the first client, make a bookmark, then sync - the bookmark and the new commi
 
   $ tglogp
   o  58508421158d draft 'commit6'
-  |
+  │
   o  a1806767adaa draft 'commit5'
-  |
+  │
   o  15f040cf571c draft 'commit4'
-  |
-  | @  44641a2b1a42 draft 'commit3'
-  | |
-  | o  eba3648c3275 draft 'commit2'
-  | |
-  | o  660cb078da57 draft 'commit1'
-  |/
+  │
+  │ @  44641a2b1a42 draft 'commit3'
+  │ │
+  │ o  eba3648c3275 draft 'commit2'
+  │ │
+  │ o  660cb078da57 draft 'commit1'
+  ├─╯
   o  8b2dca0c8a72 public 'base_commit' bookmark1
   
  
@@ -210,17 +210,17 @@ On the second client sync it
 
   $ tglogp
   @  8e3f03f8d9db draft 'commit6'
-  |
+  │
   o  fc9e76452973 draft 'commit5'
-  |
+  │
   o  f0345b3976c9 draft 'commit4'
-  |
+  │
   o  44641a2b1a42 draft 'commit3'
-  |
+  │
   o  eba3648c3275 draft 'commit2'
-  |
+  │
   o  660cb078da57 draft 'commit1'
-  |
+  │
   o  8b2dca0c8a72 public 'base_commit' bookmark1
   
 
@@ -266,13 +266,13 @@ On the first client make 2 stacks
 
   $ tglogp
   @  88d416aed919 draft 'stack 2 second'
-  |
+  │
   o  77a917e6c3a5 draft 'stack 2 first'
-  |
-  | o  ec61bf312a03 draft 'stack 1 second'
-  | |
-  | o  8d621fa11677 draft 'stack 1 first'
-  |/
+  │
+  │ o  ec61bf312a03 draft 'stack 1 second'
+  │ │
+  │ o  8d621fa11677 draft 'stack 1 first'
+  ├─╯
   o  8b2dca0c8a72 public 'base_commit' bookmark1
   
 Make one of the commits public when it shouldn't be.
@@ -306,15 +306,15 @@ Commit still becomes available in the other repo
 # Mononoke order is not stable, so the stacks print stacks separately
   $ tglogpnr -r "::ec61bf312a03 - ::master_bookmark"
   o  ec61bf312a03 draft 'stack 1 second'
-  |
+  │
   o  8d621fa11677 draft 'stack 1 first'
-  |
+  │
   ~
   $ tglogpnr -r "::88d416aed919 - ::master_bookmark"
   o  88d416aed919 draft 'stack 2 second'
-  |
+  │
   o  77a917e6c3a5 draft 'stack 2 first'
-  |
+  │
   ~
 
 Fix up that public commit, set it back to draft

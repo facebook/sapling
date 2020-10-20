@@ -50,9 +50,9 @@ Test basic repo behaviors
   (active)
   $ hg log -T '{node|short} {desc}\n' -G
   @  4b6cc7d5194b c3
-  |
-  | o  775bfdddc842 c2
-  |/
+  │
+  │ o  775bfdddc842 c2
+  ├─╯
   o  5cad84d1726f c1
   
 

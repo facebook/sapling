@@ -27,38 +27,38 @@ Test invalid value for amend.autorestack
   $ echo "new content" > B
   $ showgraph
   o  3c36beb5705f D
-  |
-  | o  26805aba1e60 C
-  | |
-  x |  07863d11c289 C_old
-  | |
-  | @  112478962961 B
-  | |
-  x |  3326d5194fc9 B_old
-  |/
+  │
+  │ o  26805aba1e60 C
+  │ │
+  x │  07863d11c289 C_old
+  │ │
+  │ @  112478962961 B
+  │ │
+  x │  3326d5194fc9 B_old
+  ├─╯
   o  426bada5c675 A
   $ hg amend -m "B'"
   restacking children automatically (unless they conflict)
   rebasing 26805aba1e60 "C" (C)
   $ showgraph
   o  5676eb48a524 C
-  |
+  │
   @  180681c3ccd0 B'
-  |
-  | o  3c36beb5705f D
-  | |
-  | x  07863d11c289 C_old
-  | |
-  | x  3326d5194fc9 B_old
-  |/
+  │
+  │ o  3c36beb5705f D
+  │ │
+  │ x  07863d11c289 C_old
+  │ │
+  │ x  3326d5194fc9 B_old
+  ├─╯
   o  426bada5c675 A
   $ hg rebase --restack
   rebasing 3c36beb5705f "D" (D)
   $ showgraph
   o  d1e904d06977 D
-  |
+  │
   o  5676eb48a524 C
-  |
+  │
   @  180681c3ccd0 B'
-  |
+  │
   o  426bada5c675 A

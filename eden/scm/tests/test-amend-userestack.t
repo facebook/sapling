@@ -36,13 +36,13 @@ Test that no preamend bookmark is created.
 Test hg amend --fixup.
   $ showgraph
   @  amended
-  |
-  | o  add d
-  | |
-  | o  add c
-  | |
-  | x  add b
-  |/
+  │
+  │ o  add d
+  │ │
+  │ o  add c
+  │ │
+  │ x  add b
+  ├─╯
   o  add a
 
   $ hg amend --fixup
@@ -51,11 +51,11 @@ Test hg amend --fixup.
   rebasing 47d2a3944de8 "add d"
   $ showgraph
   o  add d
-  |
+  │
   o  add c
-  |
+  │
   @  amended
-  |
+  │
   o  add a
 
 Test that the operation field on the metadata is correctly set.
@@ -78,9 +78,9 @@ Test hg amend --rebase
   rebasing * "add d" (glob)
   $ showgraph
   o  add d
-  |
+  │
   o  add c
-  |
+  │
   @  amended again
-  |
+  │
   o  add a

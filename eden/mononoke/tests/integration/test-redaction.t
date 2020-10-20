@@ -89,9 +89,9 @@ Push files
 
   $ tglogpnr
   @  064d994d0240 public 'add censored c'  default/master_bookmark
-  |
+  │
   o  14961831bd3a public 'add b'
-  |
+  │
   o  ac82d8b1f7c4 public 'add a'
   
 
@@ -101,9 +101,9 @@ Push files
   $ hgmn up -q 064d994d0240
   $ tglogpnr
   @  064d994d0240 public 'add censored c'  default/master_bookmark
-  |
+  │
   o  14961831bd3a public 'add b'
-  |
+  │
   o  ac82d8b1f7c4 public 'add a'
   
 
@@ -113,9 +113,9 @@ Push files
 
   $ tglogpnr
   o  064d994d0240 public 'add censored c'  default/master_bookmark
-  |
+  │
   o  14961831bd3a public 'add b'
-  |
+  │
   o  ac82d8b1f7c4 public 'add a'
   
 
@@ -131,9 +131,9 @@ Push files
 
   $ tglogpnr
   o  064d994d0240 public 'add censored c'  default/master_bookmark
-  |
+  │
   o  14961831bd3a public 'add b'
-  |
+  │
   o  ac82d8b1f7c4 public 'add a'
   
 
@@ -153,13 +153,13 @@ Update redacted blob
 
   $ tglogpnr
   @  73f850a22540 public 'log-only'  default/master_bookmark
-  |
+  │
   o  bbb84cdc8ec0 public 'uncensore c'
-  |
+  │
   o  064d994d0240 public 'add censored c'
-  |
+  │
   o  14961831bd3a public 'add b'
-  |
+  │
   o  ac82d8b1f7c4 public 'add a'
   
 
@@ -188,9 +188,9 @@ Restart mononoke
   $ cd "$TESTTMP/repo-pull"
   $ tglogpnr
   o  064d994d0240 public 'add censored c'  default/master_bookmark
-  |
+  │
   o  14961831bd3a public 'add b'
-  |
+  │
   o  ac82d8b1f7c4 public 'add a'
   
 
@@ -199,9 +199,9 @@ Restart mononoke
 
   $ tglogpnr
   @  064d994d0240 public 'add censored c'  default/master_bookmark
-  |
+  │
   o  14961831bd3a public 'add b'
-  |
+  │
   o  ac82d8b1f7c4 public 'add a'
   
 
@@ -220,11 +220,11 @@ Try push a new version of a redacted blob
 
   $ tglogpnr
   @  bb65510879c8 draft 'update c'
-  |
+  │
   o  064d994d0240 public 'add censored c'  default/master_bookmark
-  |
+  │
   o  14961831bd3a public 'add b'
-  |
+  │
   o  ac82d8b1f7c4 public 'add a'
   
 
@@ -246,20 +246,20 @@ As of the time of writing, updating redacted files throws an error - artifact of
 
   $ tglogpnr
   @  bb65510879c8 draft 'update c'
-  |
+  │
   o  064d994d0240 public 'add censored c'  default/master_bookmark
-  |
+  │
   o  14961831bd3a public 'add b'
-  |
+  │
   o  ac82d8b1f7c4 public 'add a'
   
 
   $ cd "$TESTTMP/repo-pull"
   $ tglogpnr
   @  064d994d0240 public 'add censored c'  default/master_bookmark
-  |
+  │
   o  14961831bd3a public 'add b'
-  |
+  │
   o  ac82d8b1f7c4 public 'add a'
   
 
@@ -267,13 +267,13 @@ As of the time of writing, updating redacted files throws an error - artifact of
 
   $ tglogpnr
   o  73f850a22540 public 'log-only'  default/master_bookmark
-  |
+  │
   o  bbb84cdc8ec0 public 'uncensore c'
-  |
+  │
   @  064d994d0240 public 'add censored c'
-  |
+  │
   o  14961831bd3a public 'add b'
-  |
+  │
   o  ac82d8b1f7c4 public 'add a'
   
 
@@ -286,13 +286,13 @@ Expect success (no blob in this commit is redacted)
 
   $ tglogpnr
   o  73f850a22540 public 'log-only'  default/master_bookmark
-  |
+  │
   @  bbb84cdc8ec0 public 'uncensore c'
-  |
+  │
   o  064d994d0240 public 'add censored c'
-  |
+  │
   o  14961831bd3a public 'add b'
-  |
+  │
   o  ac82d8b1f7c4 public 'add a'
   
 
@@ -300,9 +300,9 @@ Test rebasing local commit on top of master_bookmark, when base commit contains 
   $ cd "$TESTTMP/repo-push3"
   $ tglogpnr
   @  064d994d0240 public 'add censored c'  default/master_bookmark
-  |
+  │
   o  14961831bd3a public 'add b'
-  |
+  │
   o  ac82d8b1f7c4 public 'add a'
   
 
@@ -312,15 +312,15 @@ Test rebasing local commit on top of master_bookmark, when base commit contains 
   $ hgmn pull -q
   $ tglogpnr
   o  73f850a22540 public 'log-only'  default/master_bookmark
-  |
+  │
   o  bbb84cdc8ec0 public 'uncensore c'
-  |
-  | @  c6e4e7cae299 draft 'update a'
-  |/
+  │
+  │ @  c6e4e7cae299 draft 'update a'
+  ├─╯
   o  064d994d0240 public 'add censored c'
-  |
+  │
   o  14961831bd3a public 'add b'
-  |
+  │
   o  ac82d8b1f7c4 public 'add a'
   
 
@@ -330,15 +330,15 @@ Should be successful
 
   $ tglogpnr
   @  d967612e0cc1 draft 'update a'
-  |
-  | o  73f850a22540 public 'log-only'  default/master_bookmark
-  |/
+  │
+  │ o  73f850a22540 public 'log-only'  default/master_bookmark
+  ├─╯
   o  bbb84cdc8ec0 public 'uncensore c'
-  |
+  │
   o  064d994d0240 public 'add censored c'
-  |
+  │
   o  14961831bd3a public 'add b'
-  |
+  │
   o  ac82d8b1f7c4 public 'add a'
   
 
@@ -347,15 +347,15 @@ Should be successful
 
   $ tglogpnr
   o  d967612e0cc1 draft 'update a'
-  |
-  | o  73f850a22540 public 'log-only'  default/master_bookmark
-  |/
+  │
+  │ o  73f850a22540 public 'log-only'  default/master_bookmark
+  ├─╯
   o  bbb84cdc8ec0 public 'uncensore c'
-  |
+  │
   @  064d994d0240 public 'add censored c'
-  |
+  │
   o  14961831bd3a public 'add b'
-  |
+  │
   o  ac82d8b1f7c4 public 'add a'
   
 
@@ -364,15 +364,15 @@ Updating from a commit that contains a redacted file to another commit should su
 
   $ tglogpnr
   o  d967612e0cc1 draft 'update a'
-  |
-  | o  73f850a22540 public 'log-only'  default/master_bookmark
-  |/
+  │
+  │ o  73f850a22540 public 'log-only'  default/master_bookmark
+  ├─╯
   @  bbb84cdc8ec0 public 'uncensore c'
-  |
+  │
   o  064d994d0240 public 'add censored c'
-  |
+  │
   o  14961831bd3a public 'add b'
-  |
+  │
   o  ac82d8b1f7c4 public 'add a'
   
 

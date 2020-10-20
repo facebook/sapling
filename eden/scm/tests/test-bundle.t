@@ -763,20 +763,20 @@ directory does not exist
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ hg log -G
   o  commit:      8bd3e1f196af
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     3
-  |
-  | @  commit:      4652c276ac4f
-  |/   user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     2
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     3
+  │
+  │ @  commit:      4652c276ac4f
+  ├─╯  user:        test
+  │    date:        Thu Jan 01 00:00:00 1970 +0000
+  │    summary:     2
+  │
   o  commit:      a01eca7af26d
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     1
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     1
+  │
   o  commit:      4fe08cd4693e
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000

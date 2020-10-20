@@ -38,18 +38,18 @@ Do not strip innocent children. See https://bitbucket.org/facebook/hg-experiment
 
   $ hg log -G -T '{desc}'
   @  E
-  |
+  │
   o  D
-  |
+  │
   o  C
-  |
+  │
   o  B
-  |
-  | o  F
-  | |
-  | x  C
-  | |
-  | x  B
-  |/
+  │
+  │ o  F
+  │ │
+  │ x  C
+  │ │
+  │ x  B
+  ├─╯
   o  A
   

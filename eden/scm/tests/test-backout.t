@@ -43,32 +43,32 @@ check the changes
 
   $ hg log -Gr 'desc(Back)' -T '{desc}' -p --config diff.git=1
   @  Back out "Back out "C""
-  |
-  |  Original commit changeset: d2f56590172cdiff --git a/A b/A
-  |  deleted file mode 100644
-  |  --- a/A
-  |  +++ /dev/null
-  |  @@ -1,1 +0,0 @@
-  |  -A
-  |  \ No newline at end of file
-  |  diff --git a/B b/B
-  |  --- a/B
-  |  +++ b/B
-  |  @@ -1,1 +1,1 @@
-  |  -B
-  |  \ No newline at end of file
-  |  +B1
-  |  \ No newline at end of file
-  |  diff --git a/C b/C
-  |  new file mode 100644
-  |  --- /dev/null
-  |  +++ b/C
-  |  @@ -0,0 +1,1 @@
-  |  +C
-  |  \ No newline at end of file
-  |
+  │
+  │  Original commit changeset: d2f56590172cdiff --git a/A b/A
+  │  deleted file mode 100644
+  │  --- a/A
+  │  +++ /dev/null
+  │  @@ -1,1 +0,0 @@
+  │  -A
+  │  \ No newline at end of file
+  │  diff --git a/B b/B
+  │  --- a/B
+  │  +++ b/B
+  │  @@ -1,1 +1,1 @@
+  │  -B
+  │  \ No newline at end of file
+  │  +B1
+  │  \ No newline at end of file
+  │  diff --git a/C b/C
+  │  new file mode 100644
+  │  --- /dev/null
+  │  +++ b/C
+  │  @@ -0,0 +1,1 @@
+  │  +C
+  │  \ No newline at end of file
+  │
   o  Back out "C"
-  |
+  │
   ~  Original commit changeset: 2e4218cf3ee0diff --git a/A b/A
      new file mode 100644
      --- /dev/null

@@ -28,14 +28,14 @@ resolve using second parent
 
   $ hg log --graph --style compact
   @       120385945d08   1970-01-01 00:00 +0000   test
-  |\     merge to B
-  | |
-  | o     ea82b67264a1   1970-01-01 00:00 +0000   test
-  | |    A->C
-  | |
-  o |     7205e83b5a3f   1970-01-01 00:00 +0000   test
-  |/     A->B
-  |
+  ├─╮    merge to B
+  │ │
+  │ o     ea82b67264a1   1970-01-01 00:00 +0000   test
+  │ │    A->C
+  │ │
+  o │     7205e83b5a3f   1970-01-01 00:00 +0000   test
+  ├─╯    A->B
+  │
   o     5d1a6b64f9d0   1970-01-01 00:00 +0000   test
        origin
   
@@ -60,14 +60,14 @@ resolve using second parent
 expect the same revision ids as above
   $ hg -R hgrepo2 log --graph --style compact
   @    [master]   df42911f11c1   1970-01-01 00:00 +0000   test
-  |\     merge to B
-  | |
-  | o     47fc555571b8   1970-01-01 00:00 +0000   test
-  | |    A->B
-  | |
-  o |     8ec5b459b86e   1970-01-01 00:00 +0000   test
-  |/     A->C
-  |
+  ├─╮    merge to B
+  │ │
+  │ o     47fc555571b8   1970-01-01 00:00 +0000   test
+  │ │    A->B
+  │ │
+  o │     8ec5b459b86e   1970-01-01 00:00 +0000   test
+  ├─╯    A->C
+  │
   o     fd5eb788c3a1   1970-01-01 00:00 +0000   test
        origin
   

@@ -31,11 +31,11 @@ Create a repo with several bookmarks
 
   $ tglog
   @  41acb9dca9eb 'D' W
-  |
-  | o  49cb3485fa0c 'C' Y Z
-  | |
-  | o  6c81ed0049f8 'B' X
-  |/
+  │
+  │ o  49cb3485fa0c 'C' Y Z
+  │ │
+  │ o  6c81ed0049f8 'B' X
+  ├─╯
   o  1994f17a630e 'A'
   
 
@@ -58,11 +58,11 @@ Test deleting divergent bookmarks from dest (issue3685)
 
   $ tglog
   o  41acb9dca9eb 'D' W X@diverge Z@diverge
-  |
-  | @  49cb3485fa0c 'C' Y Z
-  | |
-  | o  6c81ed0049f8 'B' X
-  |/
+  │
+  │ @  49cb3485fa0c 'C' Y Z
+  │ │
+  │ o  6c81ed0049f8 'B' X
+  ├─╯
   o  1994f17a630e 'A' Y@diverge
   
   $ hg rebase -s Y -d 'desc(D)'
@@ -70,11 +70,11 @@ Test deleting divergent bookmarks from dest (issue3685)
 
   $ tglog
   @  17fb3faba63c 'C' Y Z
-  |
+  │
   o  41acb9dca9eb 'D' W X@diverge
-  |
-  | o  6c81ed0049f8 'B' X
-  |/
+  │
+  │ o  6c81ed0049f8 'B' X
+  ├─╯
   o  1994f17a630e 'A' Y@diverge
   
 Do not try to keep active but deleted divergent bookmark
@@ -109,11 +109,11 @@ Keep bookmarks to the correct rebased changeset
 
   $ tglog
   @  3d5fa227f4b5 'C' Y Z
-  |
+  │
   o  e926fccfa8ec 'B' X
-  |
+  │
   o  41acb9dca9eb 'D' W
-  |
+  │
   o  1994f17a630e 'A'
   
 
@@ -131,11 +131,11 @@ Keep active bookmark on the correct changeset
 
   $ tglog
   o  3d5fa227f4b5 'C' Y Z
-  |
+  │
   @  e926fccfa8ec 'B' X
-  |
+  │
   o  41acb9dca9eb 'D' W
-  |
+  │
   o  1994f17a630e 'A'
   
   $ hg bookmarks
@@ -168,13 +168,13 @@ rebase --continue with bookmarks present (issue3802)
   rebasing 3d5fa227f4b5 "C" (Y Z)
   $ tglog
   @  45c0f0ec1203 'C' Y Z
-  |
+  │
   o  b0e10b7175fd 'other C'
-  |
+  │
   o  e926fccfa8ec 'B' X
-  |
+  │
   o  41acb9dca9eb 'D' W
-  |
+  │
   o  1994f17a630e 'A'
   
 
@@ -208,20 +208,20 @@ Bookmark and working parent get moved even if --keep is set (issue5682)
   $ hg up -q $B
   $ tglog
   o  dc0947a82db8 'C'
-  |
-  | @  112478962961 'B'
-  |/
+  │
+  │ @  112478962961 'B'
+  ├─╯
   o  426bada5c675 'A'
   
   $ hg rebase -r $B -d $C --keep
   rebasing 112478962961 "B"
   $ tglog
   @  9769fc65c4c5 'B'
-  |
+  │
   o  dc0947a82db8 'C'
-  |
-  | o  112478962961 'B'
-  |/
+  │
+  │ o  112478962961 'B'
+  ├─╯
   o  426bada5c675 'A'
   
 

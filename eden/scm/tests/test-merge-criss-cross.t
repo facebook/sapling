@@ -39,39 +39,39 @@ Criss cross merging
 
   $ hg log -G
   @  commit:      6373bbfdae1d
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     6 second change f2
-  |
-  | o  commit:      e673248094b1
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     5 second change f1
-  | |
-  | o    commit:      177f58377c06
-  | |\   user:        test
-  | | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | | |  summary:     4 merge
-  | | |
-  o---+  commit:      c202c8af058d
-  | | |  user:        test
-  |/ /   date:        Thu Jan 01 00:00:00 1970 +0000
-  | |    summary:     3 merge
-  | |
-  | o  commit:      d1d156401c1b
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     2 first change f2
-  | |
-  o |  commit:      0f6b37dbe527
-  |/   user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     1 first change f1
-  |
-  o  commit:      40494bf2444c
-     user:        test
-     date:        Thu Jan 01 00:00:00 1970 +0000
-     summary:     0 base
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     6 second change f2
+  │
+  │ o  commit:      e673248094b1
+  │ │  user:        test
+  │ │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │ │  summary:     5 second change f1
+  │ │
+  │ o    commit:      177f58377c06
+  │ ├─╮  user:        test
+  │ │ │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │ │ │  summary:     4 merge
+  │ │ │
+  o │ │  commit:      c202c8af058d
+  ╰─┬─╮  user:        test
+    │ │  date:        Thu Jan 01 00:00:00 1970 +0000
+    │ │  summary:     3 merge
+    │ │
+    │ o  commit:      d1d156401c1b
+    │ │  user:        test
+    │ │  date:        Thu Jan 01 00:00:00 1970 +0000
+    │ │  summary:     2 first change f2
+    │ │
+    o │  commit:      0f6b37dbe527
+    ├─╯  user:        test
+    │    date:        Thu Jan 01 00:00:00 1970 +0000
+    │    summary:     1 first change f1
+    │
+    o  commit:      40494bf2444c
+       user:        test
+       date:        Thu Jan 01 00:00:00 1970 +0000
+       summary:     0 base
   
 
   $ hg merge -v --debug --tool internal:dump 'desc(5)' --config merge.preferancestor='!'

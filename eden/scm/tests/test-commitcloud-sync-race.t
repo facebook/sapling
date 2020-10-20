@@ -83,7 +83,7 @@ While that is getting started, create a new commit locally.
   $ tglogp
   visibility: read 1 heads: 1292cc1f1c17
   o  1292cc1f1c17 draft 'commit2'
-  |
+  │
   @  df4f53cec30a public 'base'
   
 
@@ -112,9 +112,9 @@ Let the background sync we started earlier continue, and start a concurrent clou
   $ tglogp
   visibility: read 2 heads: 79089e97b9e7, 1292cc1f1c17
   o  79089e97b9e7 draft 'commit1'
-  |
-  | o  1292cc1f1c17 draft 'commit2'
-  |/
+  │
+  │ o  1292cc1f1c17 draft 'commit2'
+  ├─╯
   @  df4f53cec30a public 'base'
   
 Wait for the background backup to finish and check its output.

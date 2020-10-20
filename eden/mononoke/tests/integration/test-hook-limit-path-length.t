@@ -70,6 +70,6 @@ File path too long (UTF-8 multibyte characters) - should fail
   remote:     limit_path_length for 2aa9727c0ca277205aedda2a1acf9d077eafc9d5: Path length for '12345678\xe2\x82\xac' (11) exceeds length limit (>= 10) (esc)
   remote: 
   remote:   Debug context:
-  remote:     "hooks failed:\\nlimit_path_length for 2aa9727c0ca277205aedda2a1acf9d077eafc9d5: Path length for \\'12345678\xe2\x82\xac\\' (11) exceeds length limit (>= 10)" (esc)
+  remote:     "hooks failed:\nlimit_path_length for 2aa9727c0ca277205aedda2a1acf9d077eafc9d5: Path length for \'12345678€\' (11) exceeds length limit (>= 10)"
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]

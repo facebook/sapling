@@ -215,19 +215,19 @@ Normal pushrebase with one commit
 -- newcommit was correctly pushed to master_bookmark
   $ log -r master_bookmark
   @  newcommit [public;rev=2;6989db12d1e5] default/master_bookmark
-  |
+  │
   ~
 
 -- newcommit is also present in the large repo (after a pull)
   $ cd "$TESTTMP"/large-hg-client
   $ log -r master_bookmark
   o  first post-move commit [public;rev=3;bca7e9574548] default/master_bookmark
-  |
+  │
   ~
   $ REPONAME=large-mon hgmn pull -q
   $ log -r master_bookmark
   o  newcommit [public;rev=4;7c9a729ceb57] default/master_bookmark
-  |
+  │
   ~
 - compare the working copies
   $ verify_wc master_bookmark
@@ -266,7 +266,7 @@ Non-shared bookmark should work
   $ REPONAME=large-mon hgmn pull -q
   $ log -r bookprefix1/master_bookmark_non_fast_forward
   o  non-forward move [public;rev=5;6b6a308437bb] default/bookprefix1/master_bookmark_non_fast_forward
-  |
+  │
   ~
 
 Bookmark-only pushrebase (Create a new bookmark, do not push commits)

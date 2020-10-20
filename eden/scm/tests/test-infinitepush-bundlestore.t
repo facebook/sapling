@@ -42,12 +42,12 @@ the history but is stored on disk
 
   $ hg log -G
   @  commit:      20759b6926ce
-  |  bookmark:    default/scratch/mybranch
-  |  hoistedname: scratch/mybranch
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     scratchcommit
-  |
+  │  bookmark:    default/scratch/mybranch
+  │  hoistedname: scratch/mybranch
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     scratchcommit
+  │
   o  commit:      67145f466344
      bookmark:    default/main
      hoistedname: main
@@ -89,12 +89,12 @@ From another client we can get the scratchbranch if we ask for it explicitely
   added 1 changesets with 1 changes to 1 files
   $ hg log -G
   o  commit:      20759b6926ce
-  |  bookmark:    default/scratch/mybranch
-  |  hoistedname: scratch/mybranch
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     scratchcommit
-  |
+  │  bookmark:    default/scratch/mybranch
+  │  hoistedname: scratch/mybranch
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     scratchcommit
+  │
   @  commit:      67145f466344
      bookmark:    default/main
      hoistedname: main
@@ -118,9 +118,9 @@ Push to non-scratch bookmark
   remote:     91894e11e825  newcommit
   $ hg log -G -T '{desc} {phase} {bookmarks}'
   @  newcommit public
-  |
-  | o  scratchcommit draft
-  |/
+  │
+  │ o  scratchcommit draft
+  ├─╯
   o  initialcommit public
   
 
@@ -136,9 +136,9 @@ Push to scratch branch
   remote:     1de1d7d92f89  new scratch commit
   $ hg log -G -T '{desc} {phase} {bookmarks}'
   @  new scratch commit draft
-  |
+  │
   o  scratchcommit draft
-  |
+  │
   o  initialcommit public
   
   $ scratchnodes
@@ -157,9 +157,9 @@ Push scratch bookmark with no new revs
   remote:     1de1d7d92f89  new scratch commit
   $ hg log -G -T '{desc} {phase} {bookmarks}'
   @  new scratch commit draft
-  |
+  │
   o  scratchcommit draft
-  |
+  │
   o  initialcommit public
   
   $ scratchbookmarks
@@ -179,11 +179,11 @@ Pull scratch and non-scratch bookmark at the same time
   added 1 changesets with 1 changes to 2 files
   $ hg log -G -T '{desc} {phase} {bookmarks}'
   o  new scratch commit draft
-  |
-  | @  newcommit public
-  | |
-  o |  scratchcommit draft
-  |/
+  │
+  │ @  newcommit public
+  │ │
+  o │  scratchcommit draft
+  ├─╯
   o  initialcommit public
   
 
@@ -193,13 +193,13 @@ Push scratch revision without bookmark with --bundle-store
   $ mkcommit scratchcommitnobook
   $ hg log -G -T '{desc} {phase} {bookmarks}'
   @  scratchcommitnobook draft
-  |
+  │
   o  new scratch commit draft
-  |
-  | o  newcommit public
-  | |
-  o |  scratchcommit draft
-  |/
+  │
+  │ o  newcommit public
+  │ │
+  o │  scratchcommit draft
+  ├─╯
   o  initialcommit public
   
   $ hg push -r . --bundle-store --create -f --allow-anon
@@ -211,7 +211,7 @@ Push scratch revision without bookmark with --bundle-store
   remote:     2b5d271c7e0d  scratchcommitnobook
   $ hg -R ../repo log -G -T '{desc} {phase}'
   o  newcommit draft
-  |
+  │
   o  initialcommit draft
   
 
@@ -242,7 +242,7 @@ Test with pushrebase
   remote:     d8c4f54ab678  scratchcommitwithpushrebase
   $ hg -R ../repo log -G -T '{desc} {phase}'
   o  newcommit draft
-  |
+  │
   o  initialcommit draft
   
   $ scratchnodes
@@ -274,7 +274,7 @@ Change the order of pushrebase and infinitepush
   remote:     6c10d49fe927  scratchcommitwithpushrebase2
   $ hg -R ../repo log -G -T '{desc} {phase}'
   o  newcommit draft
-  |
+  │
   o  initialcommit draft
   
   $ scratchnodes
@@ -292,17 +292,17 @@ Non-fastforward scratch bookmark push
   $ hg ci --amend -m 'scratch amended commit'
   $ hg log -G -T '{desc} {phase} {bookmarks}'
   @  scratch amended commit draft
-  |
+  │
   o  scratchcommitwithpushrebase draft
-  |
+  │
   o  scratchcommitnobook draft
-  |
+  │
   o  new scratch commit draft
-  |
-  | o  newcommit public
-  | |
-  o |  scratchcommit draft
-  |/
+  │
+  │ o  newcommit public
+  │ │
+  o │  scratchcommit draft
+  ├─╯
   o  initialcommit public
   
 
@@ -331,17 +331,17 @@ Non-fastforward scratch bookmark push
   scratch/mybranch 8872775dd97a750e1533dc1fbbca665644b32547
   $ hg log -G -T '{desc} {phase} {bookmarks}'
   @  scratch amended commit draft
-  |
+  │
   o  scratchcommitwithpushrebase draft
-  |
+  │
   o  scratchcommitnobook draft
-  |
+  │
   o  new scratch commit draft
-  |
-  | o  newcommit public
-  | |
-  o |  scratchcommit draft
-  |/
+  │
+  │ o  newcommit public
+  │ │
+  o │  scratchcommit draft
+  ├─╯
   o  initialcommit public
   
 Check that push path is not ignored. Add new path to the hgrc
@@ -364,14 +364,14 @@ Use --force because this push creates new head
   remote: added 2 changesets with 2 changes to 2 files
   $ hg -R ../repo log -G -T '{desc} {phase} {bookmarks}'
   o  newcommit draft main
-  |
+  │
   o  initialcommit draft
   
   $ hg -R ../client2 log -G -T '{desc} {phase} {bookmarks}'
   @  new scratch commit draft
-  |
+  │
   o  scratchcommit draft
-  |
+  │
   o  initialcommit public
   
   $ hg book --list-remote scratch/*
@@ -459,17 +459,17 @@ Prune it again and pull it via commit hash
   hint[hint-ack]: use 'hg hint --ack strip-hide' to silence these hints
   $ hg log -G -T '{node|short} {desc} {bookmarks}'
   @  fe8283fe1190 peercommit
-  |
-  | o  d8c4f54ab678 scratchcommitwithpushrebase scratch/mybranch
-  | |
-  | o  2b5d271c7e0d scratchcommitnobook
-  | |
-  | o  1de1d7d92f89 new scratch commit
-  | |
-  o |  91894e11e825 newcommit main
-  | |
-  | o  20759b6926ce scratchcommit
-  |/
+  │
+  │ o  d8c4f54ab678 scratchcommitwithpushrebase scratch/mybranch
+  │ │
+  │ o  2b5d271c7e0d scratchcommitnobook
+  │ │
+  │ o  1de1d7d92f89 new scratch commit
+  │ │
+  o │  91894e11e825 newcommit main
+  │ │
+  │ o  20759b6926ce scratchcommit
+  ├─╯
   o  67145f466344 initialcommit
   
 Have to use full hash because short hashes are not supported yet
@@ -482,19 +482,19 @@ Have to use full hash because short hashes are not supported yet
   added 0 changesets with 0 changes to 6 files
   $ hg log -G -T '{node|short} {desc} {bookmarks}'
   @  fe8283fe1190 peercommit
-  |
-  | o  8872775dd97a scratch amended commit
-  | |
-  | o  d8c4f54ab678 scratchcommitwithpushrebase scratch/mybranch
-  | |
-  | o  2b5d271c7e0d scratchcommitnobook
-  | |
-  | o  1de1d7d92f89 new scratch commit
-  | |
-  o |  91894e11e825 newcommit main
-  | |
-  | o  20759b6926ce scratchcommit
-  |/
+  │
+  │ o  8872775dd97a scratch amended commit
+  │ │
+  │ o  d8c4f54ab678 scratchcommitwithpushrebase scratch/mybranch
+  │ │
+  │ o  2b5d271c7e0d scratchcommitnobook
+  │ │
+  │ o  1de1d7d92f89 new scratch commit
+  │ │
+  o │  91894e11e825 newcommit main
+  │ │
+  │ o  20759b6926ce scratchcommit
+  ├─╯
   o  67145f466344 initialcommit
   
 Push new scratch head. Make sure that new bundle is created but 8872775dd97a
@@ -615,7 +615,7 @@ Make sure testpullbycommithash2 has not fetched
   added 1 changesets with 1 changes to 1 files
   $ hg log -G -T '{desc} {phase} {bookmarks}'
   o  testpullbycommithash1 draft
-  |
+  │
   @  initialcommit draft
   
 Make public commit in the repo and pull it.
@@ -633,9 +633,9 @@ Make sure phase on the client is public.
   added 1 changesets with 1 changes to 1 files
   $ hg log -G -T '{desc} {phase} {bookmarks} {node|short}'
   o  publiccommit draft  a79b6597f322
-  |
-  | o  testpullbycommithash1 draft  33910bfe6ffe
-  |/
+  │
+  │ o  testpullbycommithash1 draft  33910bfe6ffe
+  ├─╯
   @  initialcommit draft  67145f466344
   
   $ hg up a79b6597f322

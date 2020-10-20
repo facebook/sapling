@@ -37,13 +37,13 @@
 
   $ tglogp
   @  46f0b057b5c0 draft 'L2'
-  |
+  │
   o  3163e20567cc draft 'L1'
-  |
-  | o  a9ce13b75fb5 draft 'C3'
-  |/
+  │
+  │ o  a9ce13b75fb5 draft 'C3'
+  ├─╯
   o  11eb9c356adf draft 'C2'
-  |
+  │
   o  178f1774564f draft 'C1'
   
 
@@ -110,13 +110,13 @@ Abort (should clear out unsupported merge state):
 
   $ tglogp
   @  46f0b057b5c0 draft 'L2'
-  |
+  │
   o  3163e20567cc draft 'L1'
-  |
-  | o  a9ce13b75fb5 draft 'C3'
-  |/
+  │
+  │ o  a9ce13b75fb5 draft 'C3'
+  ├─╯
   o  11eb9c356adf draft 'C2'
-  |
+  │
   o  178f1774564f draft 'C1'
   
 Test safety for inconsistent rebase state, which may be created (and
@@ -181,13 +181,13 @@ Rebase and abort without generating new changesets:
 
   $ tglogp
   @  145842775fec draft 'C1'
-  |
+  │
   o  a6484957d6b9 draft 'B bis'
-  |
-  | o  49cb3485fa0c draft 'C'
-  | |
-  | o  6c81ed0049f8 public 'B'
-  |/
+  │
+  │ o  49cb3485fa0c draft 'C'
+  │ │
+  │ o  6c81ed0049f8 public 'B'
+  ├─╯
   o  1994f17a630e public 'A'
   
   $ hg rebase -b 'desc(C1)' -d 49cb3485fa0c1934763ac434487005741b74316f
@@ -201,13 +201,13 @@ Rebase and abort without generating new changesets:
 
   $ tglogp
   @  145842775fec draft 'C1'
-  |
+  │
   o  a6484957d6b9 draft 'B bis'
-  |
-  | @  49cb3485fa0c draft 'C'
-  | |
-  | o  6c81ed0049f8 public 'B'
-  |/
+  │
+  │ @  49cb3485fa0c draft 'C'
+  │ │
+  │ o  6c81ed0049f8 public 'B'
+  ├─╯
   o  1994f17a630e public 'A'
   
   $ hg rebase -a
@@ -215,13 +215,13 @@ Rebase and abort without generating new changesets:
 
   $ tglogp
   @  145842775fec draft 'C1'
-  |
+  │
   o  a6484957d6b9 draft 'B bis'
-  |
-  | o  49cb3485fa0c draft 'C'
-  | |
-  | o  6c81ed0049f8 public 'B'
-  |/
+  │
+  │ o  49cb3485fa0c draft 'C'
+  │ │
+  │ o  6c81ed0049f8 public 'B'
+  ├─╯
   o  1994f17a630e public 'A'
   
 
@@ -243,11 +243,11 @@ rebase abort should not leave working copy in a merge state if tip-1 is public
   $ echo C > c && hg ci -Aqm C
   $ hg log -G --template "{desc} {bookmarks}"
   @  C foo
-  |
-  | o  c master
-  | |
-  o |  b
-  |/
+  │
+  │ o  c master
+  │ │
+  o │  b
+  ├─╯
   o  a
   
 
@@ -261,11 +261,11 @@ rebase abort should not leave working copy in a merge state if tip-1 is public
   rebase aborted
   $ hg log -G --template "{desc} {bookmarks}"
   @  C foo
-  |
-  | o  c master
-  | |
-  o |  b
-  |/
+  │
+  │ o  c master
+  │ │
+  o │  b
+  ├─╯
   o  a
   
   $ cd ..
@@ -342,17 +342,17 @@ test aborting an interrupted series (issue5084)
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G --template "{desc} {bookmarks}"
   o  no-a
-  |
-  | o  d
-  | |
-  | o  c
-  | |
-  | o  b
-  | |
-  | o  1
-  |/
+  │
+  │ o  d
+  │ │
+  │ o  c
+  │ │
+  │ o  b
+  │ │
+  │ o  1
+  ├─╯
   o  a
-  |
+  │
   @  base
   
   $ hg --config extensions.n=$TESTDIR/failfilemerge.py rebase -s 'max(desc(b))' -d tip
@@ -364,17 +364,17 @@ test aborting an interrupted series (issue5084)
   rebase aborted
   $ hg log -G --template "{desc} {bookmarks}"
   o  no-a
-  |
-  | o  d
-  | |
-  | o  c
-  | |
-  | o  b
-  | |
-  | o  1
-  |/
+  │
+  │ o  d
+  │ │
+  │ o  c
+  │ │
+  │ o  b
+  │ │
+  │ o  1
+  ├─╯
   o  a
-  |
+  │
   @  base
   
   $ hg summary

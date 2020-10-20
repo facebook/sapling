@@ -40,15 +40,15 @@ Create stack of commits and go to the bottom.
   $ hg book bottom
   $ showgraph
   o   r5
-  |
+  │
   o   r4
-  |
+  │
   o   r3
-  |
+  │
   o   r2
-  |
+  │
   o   r1
-  |
+  │
   @  bottom r0
 
 Test invalid argument combinations.
@@ -96,15 +96,15 @@ Test bookmark navigation.
   $ hg book -r 'desc(r3)' bookmark
   $ showgraph
   @  top r5
-  |
+  │
   o   r4
-  |
+  │
   o  bookmark r3
-  |
+  │
   o   r2
-  |
+  │
   o   r1
-  |
+  │
   o  bottom r0
   $ hg up bottom
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
@@ -182,17 +182,17 @@ Test --newest flag.
   $ hg book other
   $ showgraph
   @  other test
-  |
-  | o  top r5
-  | |
-  | o   r4
-  |/
+  │
+  │ o  top r5
+  │ │
+  │ o   r4
+  ├─╯
   o  bookmark r3
-  |
+  │
   o   r2
-  |
+  │
   o   r1
-  |
+  │
   o  bottom r0
   $ hg up bottom
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -223,17 +223,17 @@ Test --towards flag.
   (activating bookmark bottom)
   $ showgraph
   o  other test
-  |
-  | o  top r5
-  | |
-  | o   r4
-  |/
+  │
+  │ o  top r5
+  │ │
+  │ o   r4
+  ├─╯
   o  bookmark r3
-  |
+  │
   o   r2
-  |
+  │
   o   r1
-  |
+  │
   @  bottom r0
   $ hg next 4 --towards 'desc(r1)'
   changeset * has multiple children, namely: (glob)
@@ -258,17 +258,17 @@ Test next prefer draft commit.
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ showgraph
   o  other test
-  |
-  | o  top r5
-  | |
-  | o   r4
-  |/
+  │
+  │ o  top r5
+  │ │
+  │ o   r4
+  ├─╯
   @  bookmark r3
-  |
+  │
   o   r2
-  |
+  │
   o   r1
-  |
+  │
   o  bottom r0
 Here we have 2 draft children.
   $ hg next

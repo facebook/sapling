@@ -198,6 +198,6 @@
    B: bin=0 lnk=0 flag=2000 size=11 copied='A' chain=bf5e569e3cba
   $ hg log -f B -G -T '{desc}\n'
   @  Move A -> B
-  |
+  │
   o  A
   

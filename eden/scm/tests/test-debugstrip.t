@@ -204,25 +204,25 @@
   $ rm .hg/strip-backup/*
   $ hg log --graph
   o  commit:      264128213d29
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     c
-  |
-  | o  commit:      443431ffac4f
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     e
-  | |
-  | o  commit:      65bd5f99a4a3
-  |/   user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     d
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     c
+  │
+  │ o  commit:      443431ffac4f
+  │ │  user:        test
+  │ │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │ │  summary:     e
+  │ │
+  │ o  commit:      65bd5f99a4a3
+  ├─╯  user:        test
+  │    date:        Thu Jan 01 00:00:00 1970 +0000
+  │    summary:     d
+  │
   @  commit:      ef3a871183d7
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     b
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     b
+  │
   o  commit:      9ab35a2d17cb
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
@@ -266,25 +266,25 @@ after strip of merge parent
   1 other heads for branch "default"
   $ hg log -G
   @  commit:      264128213d29
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     c
-  |
-  | o  commit:      443431ffac4f
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     e
-  | |
-  | o  commit:      65bd5f99a4a3
-  |/   user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     d
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     c
+  │
+  │ o  commit:      443431ffac4f
+  │ │  user:        test
+  │ │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │ │  summary:     e
+  │ │
+  │ o  commit:      65bd5f99a4a3
+  ├─╯  user:        test
+  │    date:        Thu Jan 01 00:00:00 1970 +0000
+  │    summary:     d
+  │
   o  commit:      ef3a871183d7
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     b
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     b
+  │
   o  commit:      9ab35a2d17cb
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
@@ -296,15 +296,15 @@ after strip of merge parent
   $ hg debugstrip "roots(desc(d))" 'desc(e)'
   $ hg log -G
   @  commit:      264128213d29
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     c
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     c
+  │
   o  commit:      ef3a871183d7
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     b
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     b
+  │
   o  commit:      9ab35a2d17cb
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
@@ -313,25 +313,25 @@ after strip of merge parent
   $ restore
   $ hg log -G
   o  commit:      443431ffac4f
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     e
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     e
+  │
   o  commit:      65bd5f99a4a3
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     d
-  |
-  | @  commit:      264128213d29
-  |/   user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     c
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     d
+  │
+  │ @  commit:      264128213d29
+  ├─╯  user:        test
+  │    date:        Thu Jan 01 00:00:00 1970 +0000
+  │    summary:     c
+  │
   o  commit:      ef3a871183d7
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     b
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     b
+  │
   o  commit:      9ab35a2d17cb
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
@@ -343,15 +343,15 @@ after strip of merge parent
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G
   o  commit:      65bd5f99a4a3
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     d
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     d
+  │
   @  commit:      ef3a871183d7
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     b
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     b
+  │
   o  commit:      9ab35a2d17cb
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
@@ -553,25 +553,25 @@ initialization (previous repo is empty anyway)
   $ hg ci -m 'mergeCD'
   $ hg log -G
   @    commit:      d8db9d137221
-  |\   user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     mergeCD
-  | |
-  | o  commit:      6625a5168474
-  | |  user:        test
-  | |  date:        Thu Jan 01 00:00:00 1970 +0000
-  | |  summary:     commitD
-  | |
-  o |  commit:      5c51d8d6557d
-  |/   user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     commitC
-  |
+  ├─╮  user:        test
+  │ │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │ │  summary:     mergeCD
+  │ │
+  │ o  commit:      6625a5168474
+  │ │  user:        test
+  │ │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │ │  summary:     commitD
+  │ │
+  o │  commit:      5c51d8d6557d
+  ├─╯  user:        test
+  │    date:        Thu Jan 01 00:00:00 1970 +0000
+  │    summary:     commitC
+  │
   o  commit:      eca11cf91c71
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     commitB
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     commitB
+  │
   o  commit:      105141ef12d0
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
@@ -620,15 +620,15 @@ unrelated to strip.)
   bundle2-output-part: "phase-heads" 24 bytes payload
   $ hg log -G
   o  commit:      5c51d8d6557d
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     commitC
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     commitC
+  │
   @  commit:      eca11cf91c71
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     commitB
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     commitB
+  │
   o  commit:      105141ef12d0
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
@@ -729,17 +729,17 @@ Use delayedstrip to strip inside a transaction
 
   $ hg log -G -T '{node|short} {desc}' -r 'sort(all(), topo)'
   @  2f2d51af6205 J
-  |
+  │
   o  08ebfeb61bac I
-  |
-  | o  64a8289d2492 F
-  | |
-  | o  7fb047a69f22 E
-  |/
-  | o  26805aba1e60 C
-  | |
-  | o  112478962961 B
-  |/
+  │
+  │ o  64a8289d2492 F
+  │ │
+  │ o  7fb047a69f22 E
+  ├─╯
+  │ o  26805aba1e60 C
+  │ │
+  │ o  112478962961 B
+  ├─╯
   o  426bada5c675 A
   
 Test high-level scmutil.cleanupnodes API
@@ -781,22 +781,22 @@ Test high-level scmutil.cleanupnodes API
 
   $ hg log -G -T '{node|short} {desc} {bookmarks}' -r 'sort(all(), topo)'
   o  1473d4b996d1 G2 G G2 b-F@divergent3 b-G
-  |
-  | o  d11b3456a873 F2 F F2 b-F
-  | |
-  | o  5cb05ba470a7 H H
-  |/|
-  | o  7fb047a69f22 E E b-F@divergent1
-  | |
-  | | o  7c78f703e465 D2 D D2 b-D
-  | | |
-  | | o  26805aba1e60 C
-  | | |
-  | | o  112478962961 B
-  | |/
-  o |  1fc8102cda62 G
-   /
-  o  426bada5c675 A A B C I b-B b-C b-I
+  │
+  │ o  d11b3456a873 F2 F F2 b-F
+  │ │
+  │ o  5cb05ba470a7 H H
+  ╭─┤
+  │ o  7fb047a69f22 E E b-F@divergent1
+  │ │
+  │ │ o  7c78f703e465 D2 D D2 b-D
+  │ │ │
+  │ │ o  26805aba1e60 C
+  │ │ │
+  │ │ o  112478962961 B
+  │ ├─╯
+  o │  1fc8102cda62 G
+    │
+    o  426bada5c675 A A B C I b-B b-C b-I
   
   $ hg bookmark
      A                         426bada5c675
@@ -836,22 +836,22 @@ we have reusable code here
 
   $ hg log -G -T '{node|short} {desc} {bookmarks}' -r 'sort(all(), topo)'
   o  1473d4b996d1 G2 G G2 b-F@divergent3 b-G
-  |
-  | o  d11b3456a873 F2 F F2 b-F
-  | |
-  | o  5cb05ba470a7 H H
-  |/|
-  | o  7fb047a69f22 E E b-F@divergent1
-  | |
-  | | o  7c78f703e465 D2 D D2 b-D
-  | | |
-  | | o  26805aba1e60 C
-  | | |
-  | | o  112478962961 B
-  | |/
-  x |  1fc8102cda62 G
-   /
-  o  426bada5c675 A A B C I b-B b-C b-I
+  │
+  │ o  d11b3456a873 F2 F F2 b-F
+  │ │
+  │ o  5cb05ba470a7 H H
+  ╭─┤
+  │ o  7fb047a69f22 E E b-F@divergent1
+  │ │
+  │ │ o  7c78f703e465 D2 D D2 b-D
+  │ │ │
+  │ │ o  26805aba1e60 C
+  │ │ │
+  │ │ o  112478962961 B
+  │ ├─╯
+  x │  1fc8102cda62 G
+    │
+    o  426bada5c675 A A B C I b-B b-C b-I
   
   $ hg debugobsolete
   $ cd ..

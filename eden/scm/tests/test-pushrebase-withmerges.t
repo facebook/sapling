@@ -53,16 +53,16 @@ Build commit graph to push in
   $ hg commit -m "merge alpha and beta"
   $ log
   @    merge alpha and beta [draft:b41b83f633d8]
-  |\
-  | o    merge beta [draft:45a8d60c53ab]
-  | |\
-  | | o  beta [draft:4f90fdc3a1aa]
-  | |
-  o |  merge alpha [draft:0fcb170b6d84]
-  |\|
-  o |  alpha [draft:c85f9ce7b342]
-   /
-  o  base [public:d20a80d4def3]
+  ├─╮
+  │ o    merge beta [draft:45a8d60c53ab]
+  │ ├─╮
+  │ │ o  beta [draft:4f90fdc3a1aa]
+  │ │
+  o │  merge alpha [draft:0fcb170b6d84]
+  ├─╮
+  o │  alpha [draft:c85f9ce7b342]
+    │
+    o  base [public:d20a80d4def3]
   
 
 Add a commit in the server
@@ -71,7 +71,7 @@ Add a commit in the server
   $ commit other
   $ log
   @  other [draft:7fd651906bb3] @
-  |
+  │
   o  base [draft:d20a80d4def3]
   
 
@@ -96,17 +96,17 @@ Push in from the client.
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ log
   @    merge alpha and beta [public:8c1abab9fd04]
-  |\
-  | o    merge beta [public:f71e1c3a925c]
-  | |\
-  o---+  merge alpha [public:a9138cc95bb3]
-  | | |
-  | | o  other [public:7fd651906bb3]
-  | | |
-  | o |  beta [public:4f90fdc3a1aa]
-  |  /
-  o /  alpha [public:c85f9ce7b342]
-   /
-  o  base [public:d20a80d4def3]
+  ├─╮
+  │ o    merge beta [public:f71e1c3a925c]
+  │ ├─╮
+  o │ │  merge alpha [public:a9138cc95bb3]
+  ├───╮
+  │ │ o  other [public:7fd651906bb3]
+  │ │ │
+  │ o │  beta [public:4f90fdc3a1aa]
+  │   │
+  o   │  alpha [public:c85f9ce7b342]
+      │
+      o  base [public:d20a80d4def3]
   
   $ test -f other

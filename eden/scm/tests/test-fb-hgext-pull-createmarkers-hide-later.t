@@ -41,16 +41,16 @@ Set up a client repository, and work on 3 diffs
   $ mkcommit d 131
   $ hg log -G -T '"{desc}" {remotebookmarks}' -r 'all()'
   @  "add d
-  |
-  |  Differential Revision: https://phabricator.fb.com/D131"
+  │
+  │  Differential Revision: https://phabricator.fb.com/D131"
   o  "add c
-  |
-  |  Differential Revision: https://phabricator.fb.com/D124"
+  │
+  │  Differential Revision: https://phabricator.fb.com/D124"
   o  "add b
-  |
-  |  Differential Revision: https://phabricator.fb.com/D123"
+  │
+  │  Differential Revision: https://phabricator.fb.com/D123"
   o  "add secondcommit" default/master
-  |
+  │
   o  "add initial"
   
 
@@ -91,24 +91,24 @@ hide them since there is a non-hidden successor.
   added 2 changesets with 0 changes to 2 files
   $ hg log -G -T '"{desc}" {remotebookmarks}' -r 'all()'
   o  "add c
-  |
-  |  Differential Revision: https://phabricator.fb.com/D124
-  |  Reviewed By: someone" default/master
+  │
+  │  Differential Revision: https://phabricator.fb.com/D124
+  │  Reviewed By: someone" default/master
   o  "add b
-  |
-  |  Differential Revision: https://phabricator.fb.com/D123
-  |  Reviewed By: someone"
-  | o  "add d
-  | |
-  | |  Differential Revision: https://phabricator.fb.com/D131"
-  | x  "add c
-  | |
-  | |  Differential Revision: https://phabricator.fb.com/D124"
-  | x  "add b
-  |/
-  |    Differential Revision: https://phabricator.fb.com/D123"
+  │
+  │  Differential Revision: https://phabricator.fb.com/D123
+  │  Reviewed By: someone"
+  │ o  "add d
+  │ │
+  │ │  Differential Revision: https://phabricator.fb.com/D131"
+  │ x  "add c
+  │ │
+  │ │  Differential Revision: https://phabricator.fb.com/D124"
+  │ x  "add b
+  ├─╯
+  │    Differential Revision: https://phabricator.fb.com/D123"
   @  "add secondcommit"
-  |
+  │
   o  "add initial"
   
   $ hg log -T '{node}\n' -r 'allsuccessors(948715751816b5aaf59c890f413d3b4c89008f12)'
@@ -149,18 +149,18 @@ until now had non-hidden successors.
   added 1 changesets with 0 changes to 1 files
   $ hg log -G -T '"{desc}" {remotebookmarks}' -r 'all()'
   o  "add d
-  |
-  |  Differential Revision: https://phabricator.fb.com/D131
-  |  Reviewed By: someone" default/master
+  │
+  │  Differential Revision: https://phabricator.fb.com/D131
+  │  Reviewed By: someone" default/master
   @  "add c
-  |
-  |  Differential Revision: https://phabricator.fb.com/D124
-  |  Reviewed By: someone"
+  │
+  │  Differential Revision: https://phabricator.fb.com/D124
+  │  Reviewed By: someone"
   o  "add b
-  |
-  |  Differential Revision: https://phabricator.fb.com/D123
-  |  Reviewed By: someone"
+  │
+  │  Differential Revision: https://phabricator.fb.com/D123
+  │  Reviewed By: someone"
   o  "add secondcommit"
-  |
+  │
   o  "add initial"
   

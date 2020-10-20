@@ -1804,7 +1804,6 @@ class TTest(Test):
 
     SKIPPED_PREFIX = b"skipped: "
     FAILED_PREFIX = b"hghave check failed: "
-    NEEDESCAPE = re.compile(br"[\x00-\x08\x0b-\x1f\x7f-\xff]").search
 
     ESCAPESUB = re.compile(br"[\x00-\x08\x0b-\x1f\\\x7f-\xff]").sub
     ESCAPEMAP = dict((bchr(i), br"\x%02x" % i) for i in range(256))
@@ -2152,8 +2151,6 @@ class TTest(Test):
                         del els[i]
                     postout.append(b"  " + el)
                 else:
-                    if self.NEEDESCAPE(lout):
-                        lout = TTest._stringescape(b"%s (esc)\n" % lout.rstrip(b"\n"))
                     postout.append(b"  " + lout)  # Let diff deal with it.
                     if r != "":  # If line failed.
                         warnonly = 3  # for sure not
@@ -2264,6 +2261,8 @@ class TTest(Test):
 
             if el.endswith(b" (esc)\n"):
                 if PYTHON3:
+                    if repr(el[:-7]) == repr(l[:-1]).replace("\\", "\\\\"):
+                        return True
                     el = el[:-7].decode("unicode_escape") + "\n"
                     el = el.encode("utf-8")
                 else:

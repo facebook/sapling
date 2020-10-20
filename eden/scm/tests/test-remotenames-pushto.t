@@ -125,9 +125,9 @@ Test that --non-forward-move allows moving bookmark around arbitrarily
   $ hg book -r 'desc(c)' headc
   $ hg log -G -T '{desc} {bookmarks} {remotebookmarks}\n'
   @  c headc
-  |
-  | o  b headb default/@
-  |/
+  │
+  │ o  b headb default/@
+  ├─╯
   o  a
   
   $ hg push --to @ -r headb
@@ -193,9 +193,9 @@ Clean up repo1
   $ cd ../repo1
   $ hg log -G -T '{desc} {bookmarks}\n'
   o  c
-  |
-  | o  b @
-  |/
+  │
+  │ o  b @
+  ├─╯
   o  a
   
   $ hg debugstrip 'desc(c)'
@@ -218,9 +218,9 @@ Test that rebasing and pushing works as expected
   added 1 changesets with 0 changes to 1 files
   $ hg log -G -T '{desc} {bookmarks} {remotebookmarks}\n'
   o  b  default/@
-  |
-  | o  c headc
-  |/
+  │
+  │ o  c headc
+  ├─╯
   @  a
   
   $ hg --config extensions.rebase= rebase -d default/@ -s headc 2>&1 | grep -v "^warning:" | grep -v incomplete
@@ -236,9 +236,9 @@ Test that rebasing and pushing works as expected
   rebasing cc61aa6be3dc "c" (headc)
   $ hg log -G -T '{desc} {bookmarks} {remotebookmarks}\n'
   o  c headc
-  |
+  │
   o  b  default/@
-  |
+  │
   @  a
   
   $ hg up headc
@@ -254,9 +254,9 @@ Test that rebasing and pushing works as expected
   updating bookmark @
   $ hg log -G -T '{desc} {bookmarks} {remotebookmarks}\n'
   @  c headc default/@
-  |
+  │
   o  b
-  |
+  │
   o  a
   
 # Evolve related tests removed. see https://fburl.com/evolveeol

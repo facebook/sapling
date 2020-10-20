@@ -40,9 +40,9 @@ Test that histedit learns about obsolescence not stored in histedit state
   $ hg histedit --continue
   $ hg log -G
   @  a7c0e6970599 b
-  |
+  │
   o  f6ad57c4d86d c
-  |
+  │
   o  cb9a9f314b8b a
   
 
@@ -84,9 +84,9 @@ With some node gone missing during the edit.
   $ hg histedit --continue
   $ hg log -G
   @  54f3bb7ec5b2 c
-  |
+  │
   o  12f834662cb1 b2
-  |
+  │
   o  cb9a9f314b8b a
   
 
@@ -128,15 +128,15 @@ Base setup for the rest of the testing
 
   $ hg log --graph
   @  652413bf663e f
-  |
+  │
   o  e860deea161a e
-  |
+  │
   o  055a42cdd887 d
-  |
+  │
   o  177f92b77385 c
-  |
+  │
   o  d2ae7f538514 b
-  |
+  │
   o  cb9a9f314b8b a
   
 
@@ -179,25 +179,25 @@ Base setup for the rest of the testing
   [1]
   $ hg log --graph --hidden
   @  363adb0b332c f
-  |
+  │
   o  e80cad0096a5 d
-  |
-  | o  7641852d682f fold-temp-revision e860deea161a
-  | |
-  | x  c04b72554bfd d
-  |/
+  │
+  │ o  7641852d682f fold-temp-revision e860deea161a
+  │ │
+  │ x  c04b72554bfd d
+  ├─╯
   o  dfac7d6bf3bc c
-  |
-  | x  652413bf663e f
-  | |
-  | x  e860deea161a e
-  | |
-  | x  055a42cdd887 d
-  | |
-  | x  177f92b77385 c
-  | |
-  | o  d2ae7f538514 b
-  |/
+  │
+  │ x  652413bf663e f
+  │ │
+  │ x  e860deea161a e
+  │ │
+  │ x  055a42cdd887 d
+  │ │
+  │ x  177f92b77385 c
+  │ │
+  │ o  d2ae7f538514 b
+  ├─╯
   o  cb9a9f314b8b a
   
 
@@ -239,9 +239,9 @@ create an hidden revision
   > EOF
   $ hg log --graph
   @  2a7423bdcce6 f
-  |
+  │
   o  dfac7d6bf3bc c
-  |
+  │
   o  cb9a9f314b8b a
   
 
@@ -298,7 +298,7 @@ dropped changeset to be hidden.
   > EOF
   $ hg log -G
   @  05d885d5bf7b c
-  |
+  │
   o  cb9a9f314b8b a
   
 
@@ -318,9 +318,9 @@ With rewritten ancestors
   > EOF
   $ hg log -G
   @  14ea19c40480 c
-  |
+  │
   o  64f466521de4 g
-  |
+  │
   o  cb9a9f314b8b a
   
 
@@ -342,9 +342,9 @@ Check that histedit respect immutability
   $ hg debugmakepublic '.^'
   $ hg log -G
   @  c3accca457aa (draft) f
-  |
+  │
   o  05d885d5bf7b (public) c
-  |
+  │
   o  cb9a9f314b8b (public) a
   
 
@@ -364,19 +364,19 @@ Prepare further testing
   > done
   $ hg log -G
   @  4f4f997369d1 (draft) k
-  |
+  │
   o  94556afb7287 (draft) j
-  |
+  │
   o  af5689bd30fd (draft) i
-  |
+  │
   o  49605d76b1f7 (draft) h
-  |
+  │
   o  bd6d43595d7e (draft) g
-  |
+  │
   o  c3accca457aa (draft) f
-  |
+  │
   o  05d885d5bf7b (public) c
-  |
+  │
   o  cb9a9f314b8b (public) a
   
 
@@ -409,19 +409,19 @@ New-commit as draft (default)
   $ hg histedit --continue
   $ hg log -G
   @  1313fc35db52 (draft) k
-  |
+  │
   o  b361034ee87c (draft) j
-  |
+  │
   o  c17eeb2f6c3d (draft) i
-  |
+  │
   o  5af825d0adbb (draft) h
-  |
+  │
   o  152765193a02 (draft) g
-  |
+  │
   o  6263e4f96392 (draft) f
-  |
+  │
   o  05d885d5bf7b (public) c
-  |
+  │
   o  cb9a9f314b8b (public) a
   
 
@@ -453,19 +453,19 @@ attempted later.
 
   $ hg log -G
   @  4f4f997369d1 (draft) k
-  |
+  │
   o  94556afb7287 (draft) j
-  |
+  │
   o  af5689bd30fd (draft) i
-  |
+  │
   o  49605d76b1f7 (draft) h
-  |
+  │
   o  bd6d43595d7e (draft) g
-  |
+  │
   o  c3accca457aa (draft) f
-  |
+  │
   o  05d885d5bf7b (public) c
-  |
+  │
   o  cb9a9f314b8b (public) a
   
 
@@ -484,19 +484,19 @@ attempted later.
   $ hg histedit --continue --config experimental.evolution.track-operation=1
   $ hg log -G
   @  dd9cf9176a2d (draft) k
-  |
+  │
   o  1380d026a7bb (draft) j
-  |
+  │
   o  9f336d5d47c2 (draft) i
-  |
+  │
   o  55f4840bfff6 (draft) g
-  |
+  │
   o  c679430403c0 (draft) h
-  |
+  │
   o  c3accca457aa (draft) f
-  |
+  │
   o  05d885d5bf7b (public) c
-  |
+  │
   o  cb9a9f314b8b (public) a
   
 

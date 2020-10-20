@@ -22,11 +22,11 @@ Rebase a simple DAG:
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ tglog
   o  814f6bd05178 'c'
-  |
-  | o  db0e82a16a62 'b'
-  |/
+  │
+  │ o  db0e82a16a62 'b'
+  ├─╯
   o  02952614a83d 'd'
-  |
+  │
   @  b173517d0057 'a'
   
   $ hg cat -r $c c
@@ -38,11 +38,11 @@ Rebase a simple DAG:
   rebasing db0e82a16a62 "b"
   $ tglog
   o  ca58782ad1e4 'b'
-  |
+  │
   o  814f6bd05178 'c'
-  |
+  │
   o  02952614a83d 'd'
-  |
+  │
   @  b173517d0057 'a'
   
   $ hg cat -r $b b
@@ -79,11 +79,11 @@ Write files to the working copy, and ensure they're still there after the rebase
   $ echo "mno" > e
   $ tglog
   o  f56b71190a8f 'c'
-  |
-  | o  db0e82a16a62 'b'
-  |/
+  │
+  │ o  db0e82a16a62 'b'
+  ├─╯
   o  02952614a83d 'd'
-  |
+  │
   @  b173517d0057 'a'
   
   $ hg cat -r 'desc(c)' c
@@ -97,11 +97,11 @@ Write files to the working copy, and ensure they're still there after the rebase
   rebasing db0e82a16a62 "b"
   $ tglog
   o  fc055c3b4d33 'b'
-  |
-  | o  f56b71190a8f 'c'
-  | |
-  | o  02952614a83d 'd'
-  |/
+  │
+  │ o  f56b71190a8f 'c'
+  │ │
+  │ o  02952614a83d 'd'
+  ├─╯
   @  b173517d0057 'a'
   
   $ hg cat -r 'desc(c)' c
@@ -114,11 +114,11 @@ Write files to the working copy, and ensure they're still there after the rebase
   rebasing f56b71190a8f "c"
   $ tglog
   o  753feb6fd12a 'c'
-  |
+  │
   o  09c044d2cb43 'd'
-  |
+  │
   o  fc055c3b4d33 'b'
-  |
+  │
   @  b173517d0057 'a'
   
 Ensure working copy files are still there:
@@ -145,11 +145,11 @@ cleanly.
   $ cd repo3
   $ tglog
   @  753feb6fd12a 'c'
-  |
+  │
   o  09c044d2cb43 'd'
-  |
+  │
   o  fc055c3b4d33 'b'
-  |
+  │
   o  b173517d0057 'a'
   
   $ chmod +x a
@@ -172,11 +172,11 @@ Rebase the working copy parent:
   rebasing 753feb6fd12a "c"
   $ tglog
   @  844a7de3e617 'c'
-  |
-  | o  09c044d2cb43 'd'
-  | |
-  | o  fc055c3b4d33 'b'
-  |/
+  │
+  │ o  09c044d2cb43 'd'
+  │ │
+  │ o  fc055c3b4d33 'b'
+  ├─╯
   o  b173517d0057 'a'
   
 Rerun with merge conflicts, demonstrating switching to on-disk merge:
@@ -190,13 +190,13 @@ Rerun with merge conflicts, demonstrating switching to on-disk merge:
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ tglog
   o  6af061510c70 'e -> c'
-  |
-  | o  844a7de3e617 'c'
-  | |
-  o |  09c044d2cb43 'd'
-  | |
-  @ |  fc055c3b4d33 'b'
-  |/
+  │
+  │ o  844a7de3e617 'c'
+  │ │
+  o │  09c044d2cb43 'd'
+  │ │
+  @ │  fc055c3b4d33 'b'
+  ├─╯
   o  b173517d0057 'a'
   
   $ hg rebase -r 844a7de3e617 -d 'desc(e)'
@@ -219,13 +219,13 @@ Allow the working copy parent to be rebased with IMM:
   rebasing 844a7de3e617 "c"
   $ tglog
   @  6f55b7035492 'c'
-  |
-  | o  6af061510c70 'e -> c'
-  |/
+  │
+  │ o  6af061510c70 'e -> c'
+  ├─╯
   o  09c044d2cb43 'd'
-  |
+  │
   o  fc055c3b4d33 'b'
-  |
+  │
   o  b173517d0057 'a'
   
 

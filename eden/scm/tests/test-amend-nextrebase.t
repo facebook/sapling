@@ -36,13 +36,13 @@ Build dag with instablility
 Check the next behaviour in case of ambiguity between obsolete and non-obsolete
   $ showgraph
   @  amended
-  |
-  | o  r3
-  | |
-  | o  r2
-  | |
-  | x  r1
-  |/
+  │
+  │ o  r3
+  │ │
+  │ o  r2
+  │ │
+  │ x  r1
+  ├─╯
   o  r0
   
   $ hg prev
@@ -66,15 +66,15 @@ Rebasing single changeset.
   [8fb200] r2
   $ showgraph
   @  r2
-  |
+  │
   o  amended
-  |
-  | o  r3
-  | |
-  | x  r2
-  | |
-  | x  r1
-  |/
+  │
+  │ o  r3
+  │ │
+  │ x  r2
+  │ │
+  │ x  r1
+  ├─╯
   o  r0
   
 Test --clean flag.
@@ -94,11 +94,11 @@ Test --clean flag.
   ? foo
   $ showgraph
   @  r3
-  |
+  │
   o  r2
-  |
+  │
   o  amended
-  |
+  │
   o  r0
   
 
@@ -118,13 +118,13 @@ Rebasing multiple changesets at once.
   [d25685] r4
   $ showgraph
   @  r4
-  |
+  │
   o  r3
-  |
+  │
   o  r2
-  |
+  │
   o  amended
-  |
+  │
   o  r0
   
 
@@ -146,19 +146,19 @@ Rebasing a stack one changeset at a time.
   [f12433] r3
   $ showgraph
   @  r3
-  |
+  │
   o  r2
-  |
+  │
   o  amended
-  |
-  | o  r4
-  | |
-  | x  r3
-  | |
-  | x  r2
-  | |
-  | x  r1
-  |/
+  │
+  │ o  r4
+  │ │
+  │ x  r3
+  │ │
+  │ x  r2
+  │ │
+  │ x  r1
+  ├─╯
   o  r0
   
 
@@ -168,13 +168,13 @@ Rebasing a stack one changeset at a time.
   [d25685] r4
   $ showgraph
   @  r4
-  |
+  │
   o  r3
-  |
+  │
   o  r2
-  |
+  │
   o  amended
-  |
+  │
   o  r0
   
 
@@ -193,21 +193,21 @@ Rebasing a stack two changesets at a time.
   [f12433] r3
   $ showgraph
   @  r3
-  |
+  │
   o  r2
-  |
+  │
   o  amended
-  |
-  | o  r5
-  | |
-  | o  r4
-  | |
-  | x  r3
-  | |
-  | x  r2
-  | |
-  | x  r1
-  |/
+  │
+  │ o  r5
+  │ │
+  │ o  r4
+  │ │
+  │ x  r3
+  │ │
+  │ x  r2
+  │ │
+  │ x  r1
+  ├─╯
   o  r0
   
   $ hg next --rebase 2
@@ -217,15 +217,15 @@ Rebasing a stack two changesets at a time.
   [dd153e] r5
   $ showgraph
   @  r5
-  |
+  │
   o  r4
-  |
+  │
   o  r3
-  |
+  │
   o  r2
-  |
+  │
   o  amended
-  |
+  │
   o  r0
   
 
@@ -241,15 +241,15 @@ Rebasing after multiple amends.
   $ hg amend -m "amend 3"
   $ showgraph
   @  amend 3
-  |
-  | o  r4
-  | |
-  | o  r3
-  | |
-  | o  r2
-  | |
-  | x  r1
-  |/
+  │
+  │ o  r4
+  │ │
+  │ o  r3
+  │ │
+  │ o  r2
+  │ │
+  │ x  r1
+  ├─╯
   o  r0
   
   $ hg next --rebase --top
@@ -260,13 +260,13 @@ Rebasing after multiple amends.
   [5d31c6] r4
   $ showgraph
   @  r4
-  |
+  │
   o  r3
-  |
+  │
   o  r2
-  |
+  │
   o  amend 3
-  |
+  │
   o  r0
   
 
@@ -282,17 +282,17 @@ Rebasing from below the amended changeset with the --newest flag.
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ showgraph
   o  amended
-  |
-  | o  r5
-  | |
-  | o  r4
-  | |
-  | o  r3
-  | |
-  | x  r2
-  |/
+  │
+  │ o  r5
+  │ │
+  │ o  r4
+  │ │
+  │ o  r3
+  │ │
+  │ x  r2
+  ├─╯
   o  r1
-  |
+  │
   @  r0
   
   $ hg next --rebase --top --newest
@@ -303,15 +303,15 @@ Rebasing from below the amended changeset with the --newest flag.
   [2d8122] r5
   $ showgraph
   @  r5
-  |
+  │
   o  r4
-  |
+  │
   o  r3
-  |
+  │
   o  amended
-  |
+  │
   o  r1
-  |
+  │
   o  r0
   
 
@@ -330,19 +330,19 @@ rolled back and the final state should be as it was before `hg next --rebase`.
   [f03405] amended
   $ showgraph
   o  add a
-  |
+  │
   @  amended
-  |
-  | o  r5
-  | |
-  | o  r4
-  | |
-  | o  r3
-  | |
-  | o  r2
-  | |
-  | x  r1
-  |/
+  │
+  │ o  r5
+  │ │
+  │ o  r4
+  │ │
+  │ o  r3
+  │ │
+  │ o  r2
+  │ │
+  │ x  r1
+  ├─╯
   o  r0
   
   $ hg next --rebase
@@ -357,19 +357,19 @@ rolled back and the final state should be as it was before `hg next --rebase`.
   [255]
   $ showgraph
   o  add a
-  |
+  │
   @  amended
-  |
-  | o  r5
-  | |
-  | o  r4
-  | |
-  | o  r3
-  | |
-  | o  r2
-  | |
-  | x  r1
-  |/
+  │
+  │ o  r5
+  │ │
+  │ o  r4
+  │ │
+  │ o  r3
+  │ │
+  │ o  r2
+  │ │
+  │ x  r1
+  ├─╯
   o  r0
   
 
@@ -388,13 +388,13 @@ Test a situation where there is a conflict.
   hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ showgraph
   @  amended to add c
-  |
-  | o  add d
-  | |
-  | o  add c
-  | |
-  | x  add b
-  |/
+  │
+  │ o  add d
+  │ │
+  │ o  add c
+  │ │
+  │ x  add b
+  ├─╯
   o  add a
   
   $ hg next --rebase --top
@@ -405,13 +405,13 @@ Test a situation where there is a conflict.
   [1]
   $ showgraph
   @  amended to add c
-  |
-  | o  add d
-  | |
-  | @  add c
-  | |
-  | x  add b
-  |/
+  │
+  │ o  add d
+  │ │
+  │ @  add c
+  │ │
+  │ x  add b
+  ├─╯
   o  add a
   
 In this mid-rebase state, we can't use `hg previous` or `hg next`:
@@ -429,15 +429,15 @@ Now resolve the conflict and resume the rebase.
   rebasing 4538525df7e2 "add c"
   $ showgraph
   o  add c
-  |
+  │
   @  amended to add c
-  |
-  | o  add d
-  | |
-  | x  add c
-  | |
-  | x  add b
-  |/
+  │
+  │ o  add d
+  │ │
+  │ x  add c
+  │ │
+  │ x  add b
+  ├─╯
   o  add a
   
 Rebase when other predecessors are still visible
@@ -460,17 +460,17 @@ Rebase when other predecessors are still visible
   hint[hint-ack]: use 'hg hint --ack amend-restack' to silence these hints
   $ showgraph
   @  amended 2
-  |
-  | o  r2
-  | |
-  | x  amended 1
-  |/
-  | o  r3
-  | |
-  | x  r2
-  | |
-  | x  r1
-  |/
+  │
+  │ o  r2
+  │ │
+  │ x  amended 1
+  ├─╯
+  │ o  r3
+  │ │
+  │ x  r2
+  │ │
+  │ x  r1
+  ├─╯
   o  r0
   
   $ hg next --rebase
@@ -479,14 +479,14 @@ Rebase when other predecessors are still visible
   [88a893] r2
   $ showgraph
   @  r2
-  |
+  │
   o  amended 2
-  |
-  | o  r3
-  | |
-  | x  r2
-  | |
-  | x  r1
-  |/
+  │
+  │ o  r3
+  │ │
+  │ x  r2
+  │ │
+  │ x  r1
+  ├─╯
   o  r0
   

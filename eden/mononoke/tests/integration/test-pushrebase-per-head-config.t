@@ -76,12 +76,12 @@ Check result
 
   $ hg log -r 'desc(A)+desc(B)::' -G -T '{desc} {date}'
   o  E 0.00
-  |
-  | o  D 0.00
-  |/
-  \| o  C [1-9].* (re)
-  |/
+  │
+  │ o  D 0.00
+  ├─╯
+  │ o  C * (glob)
+  ├─╯
   o  B 0.00
-  |
+  │
   o  A 0.00
   

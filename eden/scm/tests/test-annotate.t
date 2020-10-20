@@ -701,19 +701,19 @@ we follow all branches in descending direction
   $ hg ci -m 'baz:3->+3'
   $ hg log -T '{desc}\n' -r 'followlines(baz, 2:5, startrev=16, descend=True)' --graph
   @  baz:3->+3
-  :
-  : o  baz:3+->3-
-  : :
-  : o  baz:3->3+
-  :/
+  ╷
+  ╷ o  baz:3+->3-
+  ╷ ╷
+  ╷ o  baz:3->3+
+  ╭─╯
   o    baz:4
-  |\
-  | o  baz:3
-  |/
+  ├─╮
+  │ o  baz:3
+  ├─╯
   o  baz:2
-  :
+  ╷
   o  baz:0
-  |
+  │
   ~
 
 Issue5595: on a merge changeset with different line ranges depending on
@@ -759,19 +759,20 @@ track of possible further descendants in specified range.
   $ hg ci -m 'baz: narrow change (2->2+)'
   $ hg log -T '{desc}\n' -r 'followlines(baz, 3:4, startrev=20, descend=True)' --graph
   @  baz: narrow change (2->2+)
-  |
+  │
   o    merge forgetting about baz rewrite
-  |\
-  | o  baz: mostly rewrite with some content from 24
-  | :
-  | : o  baz:3->+3
-  | :/
-  +---o  baz:3+->3-
-  | :
-  o :  baz:3->3+
-  :/
+  ├─╮
+  │ o  baz: mostly rewrite with some content from 24
+  │ ╷
+  │ ╷ o  baz:3->+3
+  │ ╭─╯
+  │ ╷ o  baz:3+->3-
+  ├───╯
+  o ╷  baz:3->3+
+  ├─╯
   o    baz:4
-  |\
+  ├─╮
+  │ │
   ~ ~
 
 check error cases
@@ -918,25 +919,25 @@ create history with a filerev whose linkrev points to another branch
   $ echo W >> a
   $ hg log -G
   @  commit:      072f1e8df249
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     contentC
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     contentC
+  │
   o  commit:      ff38df03cc4b
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     contentB
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     contentB
+  │
   o  commit:      62aaf3f6fc06
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     unrelated
-  |
-  | o  commit:      fd27c222e3e6
-  |/   user:        test
-  |    date:        Thu Jan 01 00:00:00 1970 +0000
-  |    summary:     contentB
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     unrelated
+  │
+  │ o  commit:      fd27c222e3e6
+  ├─╯  user:        test
+  │    date:        Thu Jan 01 00:00:00 1970 +0000
+  │    summary:     contentB
+  │
   o  commit:      f0932f74827e
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000

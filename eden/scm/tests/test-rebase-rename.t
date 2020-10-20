@@ -33,11 +33,11 @@
 
   $ tglog
   @  73a3ee40125d 'rename A'
-  |
-  | o  220d0626d185 'rename B'
-  |/
+  │
+  │ o  220d0626d185 'rename B'
+  ├─╯
   o  3ab5da9a5c01 'B'
-  |
+  │
   o  1994f17a630e 'A'
   
 
@@ -62,11 +62,11 @@ Rebase the revision containing the rename:
 
   $ tglog
   @  032a9b75e83b 'rename A'
-  |
+  │
   o  220d0626d185 'rename B'
-  |
+  │
   o  3ab5da9a5c01 'B'
-  |
+  │
   o  1994f17a630e 'A'
   
 
@@ -126,11 +126,11 @@ Rebased revision does not contain information about b (issue3739)
 
   $ tglog
   @  0a8162ff18a8 'copy A'
-  |
-  | o  39e588434882 'copy B'
-  |/
+  │
+  │ o  39e588434882 'copy B'
+  ├─╯
   o  6c81ed0049f8 'B'
-  |
+  │
   o  1994f17a630e 'A'
   
 Copy is tracked:
@@ -148,11 +148,11 @@ Rebase the revision containing the copy:
 
   $ tglog
   @  98f6e6dbf45a 'copy A'
-  |
+  │
   o  39e588434882 'copy B'
-  |
+  │
   o  6c81ed0049f8 'B'
-  |
+  │
   o  1994f17a630e 'A'
   
 
@@ -212,13 +212,13 @@ Test rebase across repeating renames:
 
   $ tglog
   @  b918d683b091 'Another unrelated change'
-  |
-  | o  1ac17e43d8aa 'Rename file2 back to file1'
-  |/
+  │
+  │ o  1ac17e43d8aa 'Rename file2 back to file1'
+  ├─╯
   o  480101d66d8d 'Unrelated change'
-  |
+  │
   o  be44c61debd2 'Rename file1 to file2'
-  |
+  │
   o  8ce9a346991d 'Adding file1'
   
 
@@ -251,11 +251,11 @@ Verify that copies get preserved (issue4192).
 Note that there are four entries in the log for d
   $ tglog --follow d
   @  421b7e82bb85 'File d created as copy of c and modified'
-  |
+  │
   o  327f772bc074 'File c created as copy of b and modified'
-  |
+  │
   o  79d255d24ad2 'File b created as copy of a and modified'
-  |
+  │
   o  b220cd6d2326 'File a created'
   
 Update back to before we performed copies, and inject an unrelated change.
@@ -279,11 +279,11 @@ Rebase the copies on top of the unrelated change.
 There should still be four entries in the log for d
   $ tglog --follow d
   @  dbb9ba033561 'File d created as copy of c and modified'
-  |
+  │
   o  af74b229bc02 'File c created as copy of b and modified'
-  |
+  │
   o  68bf06433839 'File b created as copy of a and modified'
-  :
+  ╷
   o  b220cd6d2326 'File a created'
   
 Same steps as above, but with --collapse on rebase to make sure the
@@ -306,9 +306,9 @@ copy of 'a'.
 
   $ tglog --follow d
   @  5a46b94210e5 'Collapsed revision
-  :  * File b created as copy of a and modified
-  :  * File c created as copy of b and modified
-  :  * File d created as copy of c and modified'
+  ╷  * File b created as copy of a and modified
+  ╷  * File c created as copy of b and modified
+  ╷  * File d created as copy of c and modified'
   o  b220cd6d2326 'File a created'
   
 

@@ -1579,13 +1579,13 @@ test for case where we didn't look sufficiently far back to find rename ancestor
   $ hg ci -mmerge
   $ hg log -G --template '{desc}'
   @    merge
-  |\
-  | o  f=f
-  | |
-  | o  x
-  | |
-  o |  f->g
-  |/
+  ├─╮
+  │ o  f=f
+  │ │
+  │ o  x
+  │ │
+  o │  f->g
+  ├─╯
   o  f
   
   $ hg diff --git -r 2
@@ -1636,13 +1636,13 @@ faulty linkrev is not the "start" commit to ensure the linkrev will be used.
 
   $ hg log -G -T '{desc}'
   @  renamed
-  |
+  │
   o  change f
-  |
+  │
   o  dev
-  |
-  | o  change f
-  |/
+  │
+  │ o  change f
+  ├─╯
   o  empty f
   
 

@@ -98,9 +98,9 @@ Pull the new commits in the clone
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G
   @  f838bfaca5c7 draft test  C
-  |
+  │
   o  27547f69f254 draft test  B
-  |
+  │
   o  4a2df7238c3b draft test  A
   
 Add more changesets with multiple heads to the original repository
@@ -124,19 +124,19 @@ Add more changesets with multiple heads to the original repository
   $ hg commit -A -m H -q
   $ hg log -G
   @  5cd59d311f65 draft test  H
-  |
-  | o  1d14c3ce6ac0 draft test  G
-  | |
-  | | o  7f219660301f draft test  F
-  | | |
-  | | o  8a5212ebc852 draft test  E
-  | |/
-  o |  b3325c91a4d9 draft test  D
-  | |
-  o |  f838bfaca5c7 draft test  C
-  |/
+  │
+  │ o  1d14c3ce6ac0 draft test  G
+  │ │
+  │ │ o  7f219660301f draft test  F
+  │ │ │
+  │ │ o  8a5212ebc852 draft test  E
+  │ ├─╯
+  o │  b3325c91a4d9 draft test  D
+  │ │
+  o │  f838bfaca5c7 draft test  C
+  ├─╯
   o  27547f69f254 draft test  B
-  |
+  │
   o  4a2df7238c3b draft test  A
   
 New heads are reported during transfer and properly accounted for in
@@ -163,19 +163,19 @@ pullop.cgresult
   changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=7f219660301fe4c8a116f714df5e769695cc2b46 HG_NODE_LAST=5cd59d311f6508b8e0ed28a266756c859419c9f1 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
   $ hg log -G
   o  5cd59d311f65 draft test  H
-  |
-  | o  1d14c3ce6ac0 draft test  G
-  | |
-  | | o  7f219660301f draft test  F
-  | | |
-  | | o  8a5212ebc852 draft test  E
-  | |/
-  o |  b3325c91a4d9 draft test  D
-  | |
-  @ |  f838bfaca5c7 draft test  C
-  |/
+  │
+  │ o  1d14c3ce6ac0 draft test  G
+  │ │
+  │ │ o  7f219660301f draft test  F
+  │ │ │
+  │ │ o  8a5212ebc852 draft test  E
+  │ ├─╯
+  o │  b3325c91a4d9 draft test  D
+  │ │
+  @ │  f838bfaca5c7 draft test  C
+  ├─╯
   o  27547f69f254 draft test  B
-  |
+  │
   o  4a2df7238c3b draft test  A
   
 Removing a head from the original repository by merging it
@@ -187,23 +187,23 @@ Removing a head from the original repository by merging it
   $ hg commit -A -m H -q
   $ hg log -G
   @  9d18e5bd9ab0 draft test  H
-  |
+  │
   o    71bd7b46de72 draft test  Merge
-  |\
-  | o  5cd59d311f65 draft test  H
-  | |
-  o |  1d14c3ce6ac0 draft test  G
-  | |
-  | | o  7f219660301f draft test  F
-  | | |
-  +---o  8a5212ebc852 draft test  E
-  | |
-  | o  b3325c91a4d9 draft test  D
-  | |
-  | o  f838bfaca5c7 draft test  C
-  |/
+  ├─╮
+  │ o  5cd59d311f65 draft test  H
+  │ │
+  o │  1d14c3ce6ac0 draft test  G
+  │ │
+  │ │ o  7f219660301f draft test  F
+  │ │ │
+  │ │ o  8a5212ebc852 draft test  E
+  ├───╯
+  │ o  b3325c91a4d9 draft test  D
+  │ │
+  │ o  f838bfaca5c7 draft test  C
+  ├─╯
   o  27547f69f254 draft test  B
-  |
+  │
   o  4a2df7238c3b draft test  A
   
 Removed heads are reported during transfer and properly accounted for in
@@ -230,22 +230,22 @@ pullop.cgresult
   changegroup hook: HG_HOOKNAME=changegroup HG_HOOKTYPE=changegroup HG_NODE=9d18e5bd9ab09337802595d49f1dad0c98df4d84 HG_NODE_LAST=9d18e5bd9ab09337802595d49f1dad0c98df4d84 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_URL=file:$TESTTMP/repo
   $ hg log -G
   o  9d18e5bd9ab0 draft test  H
-  |
+  │
   o    71bd7b46de72 draft test  Merge
-  |\
-  | o  5cd59d311f65 draft test  H
-  | |
-  o |  1d14c3ce6ac0 draft test  G
-  | |
-  | | o  7f219660301f draft test  F
-  | | |
-  +---o  8a5212ebc852 draft test  E
-  | |
-  | o  b3325c91a4d9 draft test  D
-  | |
-  | @  f838bfaca5c7 draft test  C
-  |/
+  ├─╮
+  │ o  5cd59d311f65 draft test  H
+  │ │
+  o │  1d14c3ce6ac0 draft test  G
+  │ │
+  │ │ o  7f219660301f draft test  F
+  │ │ │
+  │ │ o  8a5212ebc852 draft test  E
+  ├───╯
+  │ o  b3325c91a4d9 draft test  D
+  │ │
+  │ @  f838bfaca5c7 draft test  C
+  ├─╯
   o  27547f69f254 draft test  B
-  |
+  │
   o  4a2df7238c3b draft test  A
   

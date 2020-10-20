@@ -19,20 +19,20 @@
   > EOS
   $ hg log --graph
   o  commit:      f585351a92f8
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     D
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     D
+  │
   o  commit:      26805aba1e60
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     C
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     C
+  │
   o  commit:      112478962961
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     B
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     B
+  │
   o  commit:      426bada5c675
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
@@ -49,20 +49,20 @@
 
   $ hg log --graph
   @  commit:      ded77c342953
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     D
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     D
+  │
   o  commit:      508221a61cea
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     B
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     B
+  │
   o  commit:      088d21ab9b28
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     C
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     C
+  │
   o  commit:      426bada5c675
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000

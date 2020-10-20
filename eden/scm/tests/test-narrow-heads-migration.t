@@ -75,11 +75,11 @@ Migrate up.
   $ setconfig experimental.narrow-heads=true
   $ hg log -G -T '{desc} {phase}'
   o  M public
-  |
-  | o  C draft
-  |/
-  | o  B draft
-  |/
+  │
+  │ o  C draft
+  ├─╯
+  │ o  B draft
+  ├─╯
   o  A public
   
 Migrate down.
@@ -88,11 +88,11 @@ Migrate down.
   $ setconfig experimental.narrow-heads=false
   $ hg log -G -T '{desc} {phase}'
   o  M public
-  |
-  | o  C draft
-  |/
-  | o  B draft
-  |/
+  │
+  │ o  C draft
+  ├─╯
+  │ o  B draft
+  ├─╯
   o  A public
   
  (Check: D is invisible)

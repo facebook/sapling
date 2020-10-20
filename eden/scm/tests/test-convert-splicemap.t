@@ -24,9 +24,9 @@
   $ cd ..
   $ glog -R repo1
   @  e55c719b85b6 "addc" files: c
-  |
+  │
   o  6d4c2037ddc2 "addb" files: a b
-  |
+  │
   o  07f494440405 "adda" files: a
   
 
@@ -49,9 +49,9 @@
   $ cd ..
   $ glog -R repo2
   @  a39b65753b0a "adde" files: e
-  |
+  │
   o  e4ea00df9189 "changed" files: d
-  |
+  │
   o  527cdedf31fb "addaandd" files: a d
   
 
@@ -107,15 +107,15 @@ splice repo2 on repo1
   0 adde
   $ glog -R target1
   o  16bc847b02aa "adde" files: e
-  |
+  │
   o    e30e4fee3418 "changed" files: d
-  |\
-  | o  e673348c3a3c "addaandd" files: a d
-  | |
-  @ |  e55c719b85b6 "addc" files: c
-  |/
+  ├─╮
+  │ o  e673348c3a3c "addaandd" files: a d
+  │ │
+  @ │  e55c719b85b6 "addc" files: c
+  ├─╯
   o  6d4c2037ddc2 "addb" files: a b
-  |
+  │
   o  07f494440405 "adda" files: a
   
 
@@ -162,11 +162,11 @@ Test regular conversion
   spliced in 540395c442253af3b991be882b539e7e198b5808 and 102a90ea7b4a3361e4082ed620918c261189a36a as parents of 67b3901ca07e1edc2eeb0971ed1e4647833ec555
   $ glog -R ordered-hg1
   o    e87a37405c69 "changeaagain" files: a
-  |\
-  | o  102a90ea7b4a "addb" files: b
-  | |
-  o |  540395c44225 "changea" files: a
-  |/
+  ├─╮
+  │ o  102a90ea7b4a "addb" files: b
+  │ │
+  o │  540395c44225 "changea" files: a
+  ├─╯
   o  07f494440405 "adda" files: a
   
 
@@ -200,11 +200,11 @@ and destination identifiers. Test unknown splicemap target.
   spliced in 540395c442253af3b991be882b539e7e198b5808 and 102a90ea7b4a3361e4082ed620918c261189a36a as parents of 67b3901ca07e1edc2eeb0971ed1e4647833ec555
   $ glog -R ordered-hg2
   o    e87a37405c69 "changeaagain" files: a
-  |\
-  | o  102a90ea7b4a "addb" files: b
-  | |
-  o |  540395c44225 "changea" files: a
-  |/
+  ├─╮
+  │ o  102a90ea7b4a "addb" files: b
+  │ │
+  o │  540395c44225 "changea" files: a
+  ├─╯
   o  07f494440405 "adda" files: a
   
 

@@ -21,9 +21,9 @@ Setup a server repo
   $ echo c > c && hg ci -qAm c && hg book -i book2
   $ log -r "all()"
   @  c [draft;177f92b773850b59254aa5e923436f921b55483b] book2
-  |
+  │
   o  b [draft;d2ae7f538514cd87c17547b0de4cea71fe1af9fb]
-  |
+  │
   o  a [draft;cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b] book1
   
 

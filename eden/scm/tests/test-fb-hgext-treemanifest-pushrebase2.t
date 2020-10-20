@@ -40,13 +40,13 @@ Verify the renames are preserved (commit hashes did not change)
   $ cd $TESTTMP/server
   $ hg log -r "::$D" -G -T "{desc} {bookmarks}"
   o    D foo
-  |\
-  | o  E
-  | |
-  o |  B
-  | |
-  | o  F
-  |
+  ├─╮
+  │ o  E
+  │ │
+  o │  B
+  │ │
+  │ o  F
+  │
   o  A
   
   $ setconfig treemanifest.treeonly=True

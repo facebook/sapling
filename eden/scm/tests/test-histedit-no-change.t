@@ -73,15 +73,15 @@ editing a changeset without any actual change would corrupt the repository
   $ graphlog "log before editing"
   % log before editing
   @  652413bf663ef2a641cab26574e46d5f5a64a55a "f"
-  |
+  │
   o  e860deea161a2f77de56603b340ebbb4536308ae "e"
-  |
+  │
   o  055a42cdd88768532f9cf79daa407fc8d138de9b "d"
-  |
+  │
   o  177f92b773850b59254aa5e923436f921b55483b "c"
-  |
+  │
   o  d2ae7f538514cd87c17547b0de4cea71fe1af9fb "b"
-  |
+  │
   o  cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b "a"
   
   $ startediting 2 3 "(not changing anything)" # edit the 2nd of 3 changesets
@@ -103,15 +103,15 @@ check state of working copy
   $ graphlog "log after history editing"
   % log after history editing
   @  794fe033d0a030f8df77c5de945fca35c9181c30 "f"
-  |
+  │
   o  04d2fab980779f332dec458cc944f28de8b43435 "e"
-  |
+  │
   o  055a42cdd88768532f9cf79daa407fc8d138de9b "d"
-  |
+  │
   o  177f92b773850b59254aa5e923436f921b55483b "c"
-  |
+  │
   o  d2ae7f538514cd87c17547b0de4cea71fe1af9fb "b"
-  |
+  │
   o  cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b "a"
   
 
@@ -124,15 +124,15 @@ check state of working copy
   $ graphlog "log before editing"
   % log before editing
   @  652413bf663ef2a641cab26574e46d5f5a64a55a "f"
-  |
+  │
   o  e860deea161a2f77de56603b340ebbb4536308ae "e"
-  |
+  │
   o  055a42cdd88768532f9cf79daa407fc8d138de9b "d"
-  |
+  │
   o  177f92b773850b59254aa5e923436f921b55483b "c"
-  |
+  │
   o  d2ae7f538514cd87c17547b0de4cea71fe1af9fb "b"
-  |
+  │
   o  cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b "a"
   
   $ startediting 1,2 3 "(not changing anything)" # edit the 1st two of 3 changesets
@@ -150,17 +150,17 @@ check state of working copy
   $ graphlog "log after first edit"
   % log after first edit
   @  e5ae3ca2f1ffdbd89ec41ebc273a231f7c3022f2 "d"
-  |
-  | o  652413bf663ef2a641cab26574e46d5f5a64a55a "f"
-  | |
-  | o  e860deea161a2f77de56603b340ebbb4536308ae "e"
-  | |
-  | x  055a42cdd88768532f9cf79daa407fc8d138de9b "d"
-  |/
+  │
+  │ o  652413bf663ef2a641cab26574e46d5f5a64a55a "f"
+  │ │
+  │ o  e860deea161a2f77de56603b340ebbb4536308ae "e"
+  │ │
+  │ x  055a42cdd88768532f9cf79daa407fc8d138de9b "d"
+  ├─╯
   o  177f92b773850b59254aa5e923436f921b55483b "c"
-  |
+  │
   o  d2ae7f538514cd87c17547b0de4cea71fe1af9fb "b"
-  |
+  │
   o  cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b "a"
   
 
@@ -190,15 +190,15 @@ modified files should survive the abort when we've moved away already
   $ graphlog "log after abort"
   % log after abort
   o  652413bf663ef2a641cab26574e46d5f5a64a55a "f"
-  |
+  │
   o  e860deea161a2f77de56603b340ebbb4536308ae "e"
-  |
+  │
   o  055a42cdd88768532f9cf79daa407fc8d138de9b "d"
-  |
+  │
   o  177f92b773850b59254aa5e923436f921b55483b "c"
-  |
+  │
   o  d2ae7f538514cd87c17547b0de4cea71fe1af9fb "b"
-  |
+  │
   @  cb9a9f314b8b07ba71012fcdbc544b5a4d82ff5b "a"
   
 aborting and not changing files can skip mentioning updating (no) files

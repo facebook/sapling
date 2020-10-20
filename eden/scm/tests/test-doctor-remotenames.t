@@ -74,9 +74,9 @@ Test less relevant branches:
   $ cd client2
   $ hg log -Gr 'all()' -T '{desc} {remotenames}'
   @  D remote/master
-  |
+  │
   o  B
-  |
+  │
   o  A
   
   $ drawdag << 'EOS'
@@ -104,14 +104,14 @@ local modifications.
 
   $ hg log -Gr 'all()' -T '{desc} {remotenames}'
   o  G4
-  |
+  │
   o  G2
-  |
+  │
   o  G1
-  |
+  │
   @  D remote/master
-  |
+  │
   o  B
-  |
+  │
   o  A
   

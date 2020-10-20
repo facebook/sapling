@@ -1,3 +1,5 @@
+# coding=utf-8
+
 # Copyright (c) Facebook, Inc. and its affiliates.
 # Copyright (c) Mercurial Contributors.
 #
@@ -66,11 +68,11 @@ sh % "hg pull --rebase" == r'''
 
 sh % "tglog" == r"""
     @  d80cc2da061e 'L1'
-    |
+    │
     o  77ae9631bcca 'R1'
-    |
+    │
     o  783333faa078 'C2'
-    |
+    │
     o  05d58a0c15dd 'C1'"""
 # Re-run:
 
@@ -109,7 +111,7 @@ sh % "hg clone --noupdate c d"
 sh % "cd d"
 sh % "tglog" == r"""
     o  783333faa078 'C2'
-    |
+    │
     o  05d58a0c15dd 'C1'"""
 sh % "hg update --quiet 0"
 sh % "echo M1" > "M1"
@@ -142,7 +144,7 @@ sh % "hg pull --rebase" == r"""
 
 sh % "tglog -l 1" == r"""
     @  77ae9631bcca 'R1' norebase
-    |
+    │
     ~"""
 
 # pull --rebase --update should ignore --update:
@@ -163,7 +165,7 @@ sh % "hg pull --rebase" == r"""
 
 sh % "tglog -l 1" == r"""
     o  77ae9631bcca 'R1' norebase
-    |
+    │
     ~"""
 
 sh % "cd .."
@@ -173,9 +175,9 @@ sh % "cd .."
 sh % "cd a"
 sh % "tglog" == r"""
     @  77ae9631bcca 'R1'
-    |
+    │
     o  783333faa078 'C2'
-    |
+    │
     o  05d58a0c15dd 'C1'"""
 sh % "echo R2" > "R2"
 sh % "hg ci -Am R2" == "adding R2"
@@ -184,9 +186,9 @@ sh % "hg ci -Am R3" == "adding R3"
 sh % "cd ../c"
 sh % "tglog" == r"""
     o  77ae9631bcca 'R1' norebase
-    |
+    │
     @  783333faa078 'C2'
-    |
+    │
     o  05d58a0c15dd 'C1'"""
 sh % "echo L1" > "L1"
 sh % "hg ci -Am L1" == "adding L1"
@@ -200,15 +202,15 @@ sh % "hg pull --rev tip --rebase" == r'''
     rebasing ff8d69a621f9 "L1"'''
 sh % "tglog" == r"""
     @  518d153c0ba3 'L1'
-    |
+    │
     o  770a61882ace 'R3'
-    |
+    │
     o  31cd3a05214e 'R2'
-    |
+    │
     o  77ae9631bcca 'R1' norebase
-    |
+    │
     o  783333faa078 'C2'
-    |
+    │
     o  05d58a0c15dd 'C1'"""
 # pull --rebase works with bundle2 turned on
 
@@ -217,15 +219,15 @@ sh % "echo R4" > "R4"
 sh % "hg ci -Am R4" == "adding R4"
 sh % "tglog" == r"""
     @  00e3b7781125 'R4'
-    |
+    │
     o  770a61882ace 'R3'
-    |
+    │
     o  31cd3a05214e 'R2'
-    |
+    │
     o  77ae9631bcca 'R1'
-    |
+    │
     o  783333faa078 'C2'
-    |
+    │
     o  05d58a0c15dd 'C1'"""
 sh % "cd ../c"
 sh % "hg pull --rebase" == r'''
@@ -238,17 +240,17 @@ sh % "hg pull --rebase" == r'''
     rebasing 518d153c0ba3 "L1"'''
 sh % "tglog" == r"""
     @  0d0727eb7ce0 'L1'
-    |
+    │
     o  00e3b7781125 'R4'
-    |
+    │
     o  770a61882ace 'R3'
-    |
+    │
     o  31cd3a05214e 'R2'
-    |
+    │
     o  77ae9631bcca 'R1' norebase
-    |
+    │
     o  783333faa078 'C2'
-    |
+    │
     o  05d58a0c15dd 'C1'"""
 
 # pull --rebase only update if there is nothing to rebase
@@ -258,17 +260,17 @@ sh % "echo R5" > "R5"
 sh % "hg ci -Am R5" == "adding R5"
 sh % "tglog" == r"""
     @  88dd24261747 'R5'
-    |
+    │
     o  00e3b7781125 'R4'
-    |
+    │
     o  770a61882ace 'R3'
-    |
+    │
     o  31cd3a05214e 'R2'
-    |
+    │
     o  77ae9631bcca 'R1'
-    |
+    │
     o  783333faa078 'C2'
-    |
+    │
     o  05d58a0c15dd 'C1'"""
 sh % "cd ../c"
 sh % "echo L2" > "L2"
@@ -285,21 +287,21 @@ sh % "hg pull --rebase" == r'''
     rebasing c1f58876e3bf "L2"'''
 sh % "tglog" == r"""
     o  6dc0ea5dcf55 'L2'
-    |
+    │
     @  864e0a2d2614 'L1'
-    |
+    │
     o  88dd24261747 'R5'
-    |
+    │
     o  00e3b7781125 'R4'
-    |
+    │
     o  770a61882ace 'R3'
-    |
+    │
     o  31cd3a05214e 'R2'
-    |
+    │
     o  77ae9631bcca 'R1' norebase
-    |
+    │
     o  783333faa078 'C2'
-    |
+    │
     o  05d58a0c15dd 'C1'"""
 
 # pull --rebase update (no rebase) use proper update:
@@ -324,21 +326,21 @@ sh % "hg pull --rebase" == r'''
     1 other heads for branch "default"'''
 sh % "tglog" == r"""
     @  65bc164c1d9b 'R6'
-    |
-    | o  6dc0ea5dcf55 'L2'
-    | |
-    | o  864e0a2d2614 'L1'
-    |/
+    │
+    │ o  6dc0ea5dcf55 'L2'
+    │ │
+    │ o  864e0a2d2614 'L1'
+    ├─╯
     o  88dd24261747 'R5'
-    |
+    │
     o  00e3b7781125 'R4'
-    |
+    │
     o  770a61882ace 'R3'
-    |
+    │
     o  31cd3a05214e 'R2'
-    |
+    │
     o  77ae9631bcca 'R1' norebase
-    |
+    │
     o  783333faa078 'C2'
-    |
+    │
     o  05d58a0c15dd 'C1'"""

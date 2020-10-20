@@ -38,7 +38,7 @@ Y are swapped 0 to 2 times, and merge those branches.
   > done
   log via B:
   o  B
-  |
+  │
   o  A
   
   log via C:
@@ -46,23 +46,23 @@ Y are swapped 0 to 2 times, and merge those branches.
   
   log via D:
   o  D
-  |
+  │
   o  A
   
   log via E:
   o  E
-  |
+  │
   o  B
-  |
+  │
   o  A
   
   log via H:
   o  E
-  |
-  | o  D
-  | |
-  o |  B
-  |/
+  │
+  │ o  D
+  │ │
+  o │  B
+  ├─╯
   o  A
   
 (incorrect: C disappeared in "log via H" and "log via C")
@@ -71,11 +71,11 @@ Y are swapped 0 to 2 times, and merge those branches.
 
   $ hg log -fr "desc(H)" X -T '{desc}\n' -G
   o  E
-  |
-  | o  D
-  | |
-  o |  B
-  |/
+  │
+  │ o  D
+  │ │
+  o │  B
+  ├─╯
   o  A
   
 
@@ -93,35 +93,35 @@ Try the same on a repacked shallow repo
   > done
   log via B:
   o  B
-  |
+  │
   o  A
   
   log via C:
   o  C
-  |
+  │
   o  A
   
   log via D:
   o  D
-  |
+  │
   o  A
   
   log via E:
   o  E
-  |
+  │
   o  B
-  |
+  │
   o  A
   
   log via H:
   o  E
-  |
-  | o  D
-  | |
-  | | o  C
-  | |/
-  o |  B
-  |/
+  │
+  │ o  D
+  │ │
+  │ │ o  C
+  │ ├─╯
+  o │  B
+  ├─╯
   o  A
   
 
@@ -153,9 +153,9 @@ Create a repo with one file X. Delete and recreate a few times.
   
   log via C:
   o  C
-  |
+  │
   o  B
-  |
+  │
   o  A
   
   log via E:
@@ -163,11 +163,11 @@ Create a repo with one file X. Delete and recreate a few times.
   
   log via G:
   o    G
-  :\
-  : o  C
-  : |
-  : o  B
-  :/
+  ├─╮
+  ╷ o  C
+  ╷ │
+  ╷ o  B
+  ╭─╯
   o  A
   
 (incorrect: D, E disappeared in "log via E" and "log via G"; F disappeared in "log via G")
@@ -176,13 +176,13 @@ With "--removed", it is slightly better.
 
   $ hg log -fr "desc(G)" X -T '{desc}\n' -G --removed
   o    G
-  :\
-  : o  C
-  : |
-  o |  D
-  | |
-  | o  B
-  |/
+  ├─╮
+  ╷ o  C
+  ╷ │
+  o │  D
+  │ │
+  │ o  B
+  ├─╯
   o  A
   
 
@@ -201,25 +201,25 @@ Try again in a shallow repo:
   
   log via C:
   o  C
-  |
+  │
   o  B
-  |
+  │
   o  A
   
   log via E:
   o  D
-  |
+  │
   o  A
   
   log via G:
   @    G
-  :\
-  : o  C
-  : |
-  o |  D
-  | |
-  | o  B
-  |/
+  ├─╮
+  ╷ o  C
+  ╷ │
+  o │  D
+  │ │
+  │ o  B
+  ├─╯
   o  A
   
 (incorrect: E disappeared in "log via E" and "log via G"; F disappeared in "log via G")
@@ -228,12 +228,12 @@ Try again in a shallow repo:
 
   $ hg log -fr "desc(G)" X -T '{desc}\n' -G --removed
   @    G
-  :\
-  : o  C
-  : |
-  o |  D
-  | |
-  | o  B
-  |/
+  ├─╮
+  ╷ o  C
+  ╷ │
+  o │  D
+  │ │
+  │ o  B
+  ├─╯
   o  A
   

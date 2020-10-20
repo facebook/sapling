@@ -36,9 +36,9 @@ Pull in client1
   $ hg cloud sync -q
   $ hg log -Gr 'all()' -T '{desc} {phase} {remotebookmarks}'
   o  X draft
-  |
-  | o  public1 public remote/master
-  |/
+  │
+  │ o  public1 public remote/master
+  ├─╯
   @  base public
   
 
@@ -54,9 +54,9 @@ client1, but not in the server.
   $ hg cloud sync -q
   $ hg log -Gr 'all()' -T '{desc} {phase} {remotebookmarks}'
   o  X draft
-  |
-  | o  public1 public remote/master
-  |/
+  │
+  │ o  public1 public remote/master
+  ├─╯
   @  base public
   
 
@@ -75,10 +75,10 @@ Sync back to client1. This does not cause lagged default/master.
   $ hg cloud sync -q
   $ hg log -Gr 'all()' -T '{desc} {phase} {remotebookmarks}'
   o  Y draft
-  |
+  │
   o  X draft
-  |
-  | o  public1 public remote/master
-  |/
+  │
+  │ o  public1 public remote/master
+  ├─╯
   @  base public
   

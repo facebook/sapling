@@ -49,19 +49,19 @@ blocked by deny_files
 -- newcommit was correctly pushed to master_bookmark
   $ log -r master_bookmark
   @  newcommit [public;rev=2;ce81c7d38286] default/master_bookmark
-  |
+  │
   ~
 
 -- newcommit is also present in the large repo (after a pull)
   $ cd "$TESTTMP"/large-hg-client
   $ log -r master_bookmark
   o  first post-move commit [public;rev=2;bfcfb674663c] default/master_bookmark
-  |
+  │
   ~
   $ REPONAME=large-mon hgmn pull -q
   $ log -r master_bookmark
   o  newcommit [public;rev=3;819e91b238b7] default/master_bookmark
-  |
+  │
   ~
 - compare the working copies
   $ verify_wc master_bookmark

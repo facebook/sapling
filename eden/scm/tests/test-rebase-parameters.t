@@ -25,21 +25,21 @@
 
   $ tglog
   @  e7ec4e813ba6 'I'
-  |
+  │
   o  02de42196ebe 'H'
-  |
-  | o  eea13746799a 'G'
-  |/|
-  o |  24b6387c8c8c 'F'
-  | |
-  | o  9520eea781bc 'E'
-  |/
-  | o  32af7686d403 'D'
-  | |
-  | o  5fddd98957c8 'C'
-  | |
-  | o  42ccdea3bb16 'B'
-  |/
+  │
+  │ o  eea13746799a 'G'
+  ╭─┤
+  o │  24b6387c8c8c 'F'
+  │ │
+  │ o  9520eea781bc 'E'
+  ├─╯
+  │ o  32af7686d403 'D'
+  │ │
+  │ o  5fddd98957c8 'C'
+  │ │
+  │ o  42ccdea3bb16 'B'
+  ├─╯
   o  cd010b8cd998 'A'
   
   $ cd ..
@@ -127,17 +127,17 @@ Rebase with no arguments (from 3 onto 8):
 
   $ tglog
   @  ed65089c18f8 'D'
-  |
+  │
   o  7621bf1a2f17 'C'
-  |
+  │
   o  9430a62369c6 'B'
-  |
+  │
   o  e7ec4e813ba6 'I'
-  |
+  │
   o  02de42196ebe 'H'
-  |
+  │
   o  24b6387c8c8c 'F'
-  |
+  │
   o  cd010b8cd998 'A'
   
   $ cd ..
@@ -154,17 +154,17 @@ Rebase with base == '.' => same as no arguments (from 3 onto 8):
 
   $ tglog
   @  ed65089c18f8 'D'
-  |
+  │
   o  7621bf1a2f17 'C'
-  |
+  │
   o  9430a62369c6 'B'
-  |
+  │
   o  e7ec4e813ba6 'I'
-  |
+  │
   o  02de42196ebe 'H'
-  |
+  │
   o  24b6387c8c8c 'F'
-  |
+  │
   o  cd010b8cd998 'A'
   
   $ cd ..
@@ -182,21 +182,21 @@ Rebase with dest == branch(.) => same as no arguments (from 3 onto 8):
 
   $ tglog
   @  ed65089c18f8 'D'
-  |
+  │
   o  7621bf1a2f17 'C'
-  |
+  │
   o  9430a62369c6 'B'
-  |
+  │
   o  e7ec4e813ba6 'I'
-  |
+  │
   o  02de42196ebe 'H'
-  |
-  | o  eea13746799a 'G'
-  |/|
-  o |  24b6387c8c8c 'F'
-  | |
-  | o  9520eea781bc 'E'
-  |/
+  │
+  │ o  eea13746799a 'G'
+  ╭─┤
+  o │  24b6387c8c8c 'F'
+  │ │
+  │ o  9520eea781bc 'E'
+  ├─╯
   o  cd010b8cd998 'A'
   
   $ cd ..
@@ -213,17 +213,17 @@ Specify only source (from 2 onto 8):
 
   $ tglog
   o  7726e9fd58f7 'D'
-  |
+  │
   o  72c8333623d0 'C'
-  |
+  │
   @  e7ec4e813ba6 'I'
-  |
+  │
   o  02de42196ebe 'H'
-  |
+  │
   o  24b6387c8c8c 'F'
-  |
-  | o  42ccdea3bb16 'B'
-  |/
+  │
+  │ o  42ccdea3bb16 'B'
+  ├─╯
   o  cd010b8cd998 'A'
   
   $ cd ..
@@ -241,21 +241,21 @@ Specify only dest (from 3 onto 6):
 
   $ tglog
   @  8eeb3c33ad33 'D'
-  |
+  │
   o  2327fea05063 'C'
-  |
+  │
   o  e4e5be0395b2 'B'
-  |
-  | o  e7ec4e813ba6 'I'
-  | |
-  | o  02de42196ebe 'H'
-  | |
-  o |  eea13746799a 'G'
-  |\|
-  | o  24b6387c8c8c 'F'
-  | |
-  o |  9520eea781bc 'E'
-  |/
+  │
+  │ o  e7ec4e813ba6 'I'
+  │ │
+  │ o  02de42196ebe 'H'
+  │ │
+  o │  eea13746799a 'G'
+  ├─╮
+  │ o  24b6387c8c8c 'F'
+  │ │
+  o │  9520eea781bc 'E'
+  ├─╯
   o  cd010b8cd998 'A'
   
   $ cd ..
@@ -273,17 +273,17 @@ Specify only base (from 1 onto 8):
 
   $ tglog
   o  ed65089c18f8 'D'
-  |
+  │
   o  7621bf1a2f17 'C'
-  |
+  │
   o  9430a62369c6 'B'
-  |
+  │
   @  e7ec4e813ba6 'I'
-  |
+  │
   o  02de42196ebe 'H'
-  |
+  │
   o  24b6387c8c8c 'F'
-  |
+  │
   o  cd010b8cd998 'A'
   
   $ cd ..
@@ -300,21 +300,21 @@ Specify source and dest (from 2 onto 7):
 
   $ tglog
   o  668acadedd30 'D'
-  |
+  │
   o  09eb682ba906 'C'
-  |
-  | @  e7ec4e813ba6 'I'
-  |/
+  │
+  │ @  e7ec4e813ba6 'I'
+  ├─╯
   o  02de42196ebe 'H'
-  |
-  | o  eea13746799a 'G'
-  |/|
-  o |  24b6387c8c8c 'F'
-  | |
-  | o  9520eea781bc 'E'
-  |/
-  | o  42ccdea3bb16 'B'
-  |/
+  │
+  │ o  eea13746799a 'G'
+  ╭─┤
+  o │  24b6387c8c8c 'F'
+  │ │
+  │ o  9520eea781bc 'E'
+  ├─╯
+  │ o  42ccdea3bb16 'B'
+  ├─╯
   o  cd010b8cd998 'A'
   
   $ cd ..
@@ -332,21 +332,21 @@ Specify base and dest (from 1 onto 7):
 
   $ tglog
   o  287cc92ba5a4 'D'
-  |
+  │
   o  6824f610a250 'C'
-  |
+  │
   o  7c6027df6a99 'B'
-  |
-  | @  e7ec4e813ba6 'I'
-  |/
+  │
+  │ @  e7ec4e813ba6 'I'
+  ├─╯
   o  02de42196ebe 'H'
-  |
-  | o  eea13746799a 'G'
-  |/|
-  o |  24b6387c8c8c 'F'
-  | |
-  | o  9520eea781bc 'E'
-  |/
+  │
+  │ o  eea13746799a 'G'
+  ╭─┤
+  o │  24b6387c8c8c 'F'
+  │ │
+  │ o  9520eea781bc 'E'
+  ├─╯
   o  cd010b8cd998 'A'
   
   $ cd ..
@@ -363,17 +363,17 @@ Specify only revs (from 2 onto 8)
 
   $ tglog
   o  7726e9fd58f7 'D'
-  |
+  │
   o  72c8333623d0 'C'
-  |
+  │
   @  e7ec4e813ba6 'I'
-  |
+  │
   o  02de42196ebe 'H'
-  |
+  │
   o  24b6387c8c8c 'F'
-  |
-  | o  42ccdea3bb16 'B'
-  |/
+  │
+  │ o  42ccdea3bb16 'B'
+  ├─╯
   o  cd010b8cd998 'A'
   
   $ cd ..

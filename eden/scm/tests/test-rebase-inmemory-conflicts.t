@@ -33,17 +33,17 @@ Make conflicts halfway up the stack:
   rebasing in-memory!
   $ hg log -G -r 'desc(a)':: -T '{desc}'
   o  g
-  |
+  │
   @  f
-  |
+  │
   o  e
-  |
+  │
   o  d
-  |
-  | o  c
-  |/
+  │
+  │ o  c
+  ├─╯
   o  b
-  |
+  │
   o  a
   
   $ cp -R . ../control
@@ -69,17 +69,17 @@ Make conflicts halfway up the stack:
   rebasing 2a19607ff85c "g" (g)
   $ hg log -G -r 'desc(a)':: -T '{desc} {node|short}'
   o  g 24c12a3229e2
-  |
+  │
   @  f c33e7f678afd
-  |
+  │
   o  e d82c41319fdd
-  |
+  │
   o  d 32bb4413a7df
-  |
+  │
   o  c a82ac2b38757
-  |
+  │
   o  b 488e1b7e7341
-  |
+  │
   o  a b173517d0057
   
 

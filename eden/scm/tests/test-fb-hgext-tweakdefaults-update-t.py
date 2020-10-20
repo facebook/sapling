@@ -1,3 +1,5 @@
+# coding=utf-8
+
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
@@ -23,15 +25,15 @@ sh % "cd repo"
 sh % "hg debugbuilddag -m '+4 *3 +1'"
 sh % "hg log --graph -r '0::' -T '{rev}'" == r"""
     o  5
-    |
+    │
     o  4
-    |
-    | o  3
-    | |
-    | o  2
-    |/
+    │
+    │ o  3
+    │ │
+    │ o  2
+    ├─╯
     o  1
-    |
+    │
     o  0"""
 
 sh % "hg up 3" == "1 files updated, 0 files merged, 0 files removed, 0 files unresolved"

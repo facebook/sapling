@@ -13,11 +13,11 @@ Setup
 
   $ hg log -G -T "{node|short} {desc}"
   @  62615734edd5 Added d
-  |
+  │
   o  28ad74487de9 Added c
-  |
+  │
   o  29becc82797a Added b
-  |
+  │
   o  18d04c59bb5d Added a
   
 Getting the JSON output for nodechanges
@@ -27,11 +27,11 @@ Getting the JSON output for nodechanges
 
   $ hg log -G -T "{node|short} {desc}"
   @  df21b32134ba Added d
-  |
+  │
   o  849767420fd5 Added c
-  |
-  | o  29becc82797a Added b
-  |/
+  │
+  │ o  29becc82797a Added b
+  ├─╯
   o  18d04c59bb5d Added a
   
   $ hg rebase -s 29becc82797a4bc11ec8880b58eaecd2ab3e7760 -d 'max(desc(Added))' -q -T "{nodechanges|json}"
@@ -39,11 +39,11 @@ Getting the JSON output for nodechanges
 
   $ hg log -G -T "{node|short} {desc}"
   o  d9d6773efc83 Added b
-  |
+  │
   @  df21b32134ba Added d
-  |
+  │
   o  849767420fd5 Added c
-  |
+  │
   o  18d04c59bb5d Added a
   
 

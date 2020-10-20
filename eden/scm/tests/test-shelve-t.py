@@ -1,3 +1,7 @@
+# coding=utf-8
+
+# coding=utf-8
+
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
@@ -582,23 +586,23 @@ sh % "hg shelve" == r"""
     0 files updated, 0 files merged, 1 files removed, 0 files unresolved"""
 sh % "hg log -G --template '{rev}  {desc|firstline}  {author}'" == r"""
     @  9  commit stuff  test
-    |
-    | o  8  shelve changes to: a  test
-    |/
-    | o  7  shelve changes to: a  test
-    |/
-    | o  6  shelve changes to: b  test
-    |/
-    | o  5  shelve changes to: b  test
-    | |
-    | | o  4  shelve changes to: c  test
-    | |/
-    | | o  3  shelve changes to: c  test
-    | | |
-    +---o  2  c  test
-    | |
-    | o  1  b  test
-    |/
+    │
+    │ o  8  shelve changes to: a  test
+    ├─╯
+    │ o  7  shelve changes to: a  test
+    ├─╯
+    │ o  6  shelve changes to: b  test
+    ├─╯
+    │ o  5  shelve changes to: b  test
+    │ │
+    │ │ o  4  shelve changes to: c  test
+    │ ├─╯
+    │ │ o  3  shelve changes to: c  test
+    │ │ │
+    │ │ o  2  c  test
+    ├───╯
+    │ o  1  b  test
+    ├─╯
     o  0  a  test"""
 sh % "mv f.orig f"
 sh % "echo 1" > "a"

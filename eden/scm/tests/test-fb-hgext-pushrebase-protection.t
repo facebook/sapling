@@ -63,6 +63,6 @@ Bookmark pushes should not be affected by the block
   [1]
   $ hg -R ../server log -T '{bookmarks}' -G
   o
-  |
+  │
   @  master
   

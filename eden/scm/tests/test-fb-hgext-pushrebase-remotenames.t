@@ -49,7 +49,7 @@ Test that pushing to a remotename preserves commit hash if no rebase happens
   a59527fd0ae5acd6fe09597193f5eb3e01113f22
   $ hg log -G -r 'all()' -T '{desc} {remotebookmarks} {bookmarks}'
   @  changed message default/master
-  |
+  │
   o  initial
   
   $ cd ..
@@ -70,7 +70,7 @@ Test that pushing to a remotename gets rebased
   $ echo x >> b && hg commit -m "client's commit"
   $ hg log -G -T '"{desc}" {remotebookmarks}'
   @  "client's commit"
-  |
+  │
   o  "initial" default/master
   
 
@@ -91,18 +91,18 @@ Test that pushing to a remotename gets rebased
 
   $ hg log -G -T '"{desc}" {remotebookmarks}'
   @  "client's commit" default/master
-  |
+  │
   o  "master's commit"
-  |
+  │
   o  "initial"
   
 
   $ cd ../server
   $ hg log -G -T '"{desc}" {bookmarks}'
   o  "client's commit" master
-  |
+  │
   @  "master's commit"
-  |
+  │
   o  "initial"
   
 Test pushing a new bookmark
@@ -125,16 +125,16 @@ Test pushing a new bookmark
      newbook                   98d6f1036c3b
   $ hg -R server log -G -T '"{desc}" {bookmarks}'
   o  "client's commit" master newbook
-  |
+  │
   @  "master's commit"
-  |
+  │
   o  "initial"
   
   $ hg log -R client -G -r 'all()' -T '{desc} {remotebookmarks}'
   @  client's commit default/master default/newbook
-  |
+  │
   o  master's commit
-  |
+  │
   o  initial
   
 Test doing a non-fastforward bookmark move
@@ -147,16 +147,16 @@ Test doing a non-fastforward bookmark move
   [1]
   $ hg -R server log -G -T '"{desc}" {bookmarks}'
   o  "client's commit" master newbook
-  |
+  │
   @  "master's commit"
-  |
+  │
   o  "initial"
   
   $ hg log -R client -G -r 'all()' -T '{desc} {remotebookmarks} {bookmarks}'
   @  client's commit default/master default/newbook
-  |
+  │
   o  master's commit
-  |
+  │
   o  initial
   
 
@@ -203,7 +203,7 @@ Test a push that comes with out-of-date bookmark discovery
   $ hg -R client commit -qAm 'cc'
   $ hg -R client log -G -T '"{desc}" {bookmarks}'
   @  "cc"
-  |
+  │
   o  "aa"
   
   $ hg -R client push --to bm
@@ -221,16 +221,16 @@ Test a push that comes with out-of-date bookmark discovery
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R server log -G -T '"{desc}" {bookmarks}'
   o  "cc" bm
-  |
+  │
   @  "bb"
-  |
+  │
   o  "aa"
   
   $ hg -R client log -G -T '"{desc}" {bookmarks} {remotenames}'
   @  "cc"  default/bm
-  |
+  │
   o  "bb"
-  |
+  │
   o  "aa"
   
 
@@ -240,11 +240,11 @@ Test that we still don't allow non-ff bm changes
   $ hg -R client commit -qAm "dd"
   $ hg -R client log -G -T '"{desc}" {bookmarks}'
   @  "dd"
-  |
+  │
   o  "cc"
-  |
+  │
   o  "bb"
-  |
+  │
   o  "aa"
   
 
@@ -301,7 +301,7 @@ Test force pushes
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G -r 'all()' -T '{desc} {remotebookmarks} {bookmarks}'
   @  b default/master
-  |
+  │
   o  a
   
   $ hg pull
@@ -313,9 +313,9 @@ Test force pushes
   added 1 changesets with 1 changes to 1 files
   $ hg log -G -T '{desc} {remotebookmarks}'
   o  aa
-  |
-  | @  b default/master
-  |/
+  │
+  │ @  b default/master
+  ├─╯
   o  a
   
   $ cd ..
@@ -359,9 +359,9 @@ Test 'hg push' with a tracking bookmark
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -T '{desc}' -G
   @  b
-  |
+  │
   o  c
-  |
+  │
   o  a
   
   $ cd ..
@@ -395,13 +395,13 @@ Test push --to to a repo without pushrebase on (i.e. the default remotenames beh
   remote: added 1 changesets with 1 changes to 1 files
   $ hg log -G -T '{shortest(node)} {bookmarks}'
   @  d2ae clientfeature
-  |
+  │
   o  cb9a
   
   $ cd ../oldserver
   $ hg log -G -T '{shortest(node)} {bookmarks}'
   o  d2ae serverfeature
-  |
+  │
   @  cb9a
   
 Test push --to with remotenames but without pushrebase to a remote repository

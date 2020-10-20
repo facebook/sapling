@@ -279,22 +279,22 @@ compare output of the entire tree. Instead we compare only linear histories
   $ hgmn log --graph --template '{node} {bookmarks}' -r "::f40c09205504"
   pulling 'f40c09205504' from 'ssh://user@dummy/repo'
   o  f40c09205504d8410f8c8679bf7a85fef25f9337
-  |
+  │
   o  bb0985934a0f8a493887892173b68940ceb40b4f
-  |
+  │
   @  0e7ec5675652a04069cbf976a42e45b740f3243c
    (re)
   $ hgmn log --graph --template '{node} {bookmarks}' -r "::634de738bb0f"
   o  634de738bb0ff135e32d48567718fb9d7dedf575 master_bookmark
-  |
+  │
   o  8315ea53ef41d34f56232c88669cc80225b6e66d
-  |
+  │
   o  30da5bf63484d2d6572edafb3ea211c17cd8c005
-  |
+  │
   o  fbd6b221382efa5d5bc53130cdaccf06e04c97d3
-  |
+  │
   o  bb0985934a0f8a493887892173b68940ceb40b4f
-  |
+  │
   @  0e7ec5675652a04069cbf976a42e45b740f3243c
    (re)
 This last step is verifying every commit one by one, it is done in a single

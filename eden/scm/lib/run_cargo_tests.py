@@ -42,6 +42,11 @@ def runtest(manifestpath):
             # Could happen when python cannot be found.
             # Do not consider it as fatal.
             return (0, name, ex.stderr.decode("utf-8", "ignore"))
+        elif b"LLVM ERROR: invalid" in ex.stderr:
+            # ex. LLVM ERROR: invalid sh_type for string table section [index
+            # 45]: expected SHT_STRTAB, but got SHT_NULL
+            # Not fatal.
+            return (0, name, ex.stderr.decode("utf-8", "ignore"))
         elif b"could not compile" in ex.stderr:
             # Only show stderr with information about how it fails
             # to compile.

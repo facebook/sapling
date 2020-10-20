@@ -18,19 +18,19 @@ Create repo a:
 
   $ tglogp
   @  02de42196ebe draft 'H'
-  |
-  | o  eea13746799a draft 'G'
-  |/|
-  o |  24b6387c8c8c draft 'F'
-  | |
-  | o  9520eea781bc draft 'E'
-  |/
-  | o  32af7686d403 draft 'D'
-  | |
-  | o  5fddd98957c8 draft 'C'
-  | |
-  | o  42ccdea3bb16 draft 'B'
-  |/
+  │
+  │ o  eea13746799a draft 'G'
+  ╭─┤
+  o │  24b6387c8c8c draft 'F'
+  │ │
+  │ o  9520eea781bc draft 'E'
+  ├─╯
+  │ o  32af7686d403 draft 'D'
+  │ │
+  │ o  5fddd98957c8 draft 'C'
+  │ │
+  │ o  42ccdea3bb16 draft 'B'
+  ├─╯
   o  cd010b8cd998 draft 'A'
   
 Verify that implicit base command and help are listed
@@ -54,19 +54,19 @@ Rebase B onto H
 
   $ tglogp
   @  0937e82309df draft 'D'
-  |
+  │
   o  f778d1cbddac draft 'C'
-  |
+  │
   o  3d41b7cc7085 draft 'B'
-  |
+  │
   o  02de42196ebe draft 'H'
-  |
-  | o  eea13746799a draft 'G'
-  |/|
-  o |  24b6387c8c8c draft 'F'
-  | |
-  | o  9520eea781bc draft 'E'
-  |/
+  │
+  │ o  eea13746799a draft 'G'
+  ╭─┤
+  o │  24b6387c8c8c draft 'F'
+  │ │
+  │ o  9520eea781bc draft 'E'
+  ├─╯
   o  cd010b8cd998 draft 'A'
   
 Rebase back and drop something
@@ -79,17 +79,17 @@ Rebase back and drop something
 
   $ tglogp
   @  476cc3e4168d draft 'D'
-  |
+  │
   o  d273e35dcdf2 draft 'B'
-  |
-  | o  02de42196ebe draft 'H'
-  | |
-  | | o  eea13746799a draft 'G'
-  | |/|
-  | o |  24b6387c8c8c draft 'F'
-  |/ /
-  | o  9520eea781bc draft 'E'
-  |/
+  │
+  │ o  02de42196ebe draft 'H'
+  │ │
+  │ │ o  eea13746799a draft 'G'
+  │ ╭─┤
+  │ o │  24b6387c8c8c draft 'F'
+  ├─╯ │
+  │   o  9520eea781bc draft 'E'
+  ├───╯
   o  cd010b8cd998 draft 'A'
   
 Split stack
@@ -102,17 +102,17 @@ Split stack
 
   $ tglogp
   @  d7a6f907a822 draft 'D'
-  |
-  | o  d273e35dcdf2 draft 'B'
-  |/
-  | o  02de42196ebe draft 'H'
-  | |
-  | | o  eea13746799a draft 'G'
-  | |/|
-  | o |  24b6387c8c8c draft 'F'
-  |/ /
-  | o  9520eea781bc draft 'E'
-  |/
+  │
+  │ o  d273e35dcdf2 draft 'B'
+  ├─╯
+  │ o  02de42196ebe draft 'H'
+  │ │
+  │ │ o  eea13746799a draft 'G'
+  │ ╭─┤
+  │ o │  24b6387c8c8c draft 'F'
+  ├─╯ │
+  │   o  9520eea781bc draft 'E'
+  ├───╯
   o  cd010b8cd998 draft 'A'
   
 Abort
@@ -121,19 +121,19 @@ Abort
   $ hg commit -m "X"
   $ tglogp
   @  591369deedfd draft 'X'
-  |
+  │
   o  d7a6f907a822 draft 'D'
-  |
-  | o  d273e35dcdf2 draft 'B'
-  |/
-  | o  02de42196ebe draft 'H'
-  | |
-  | | o  eea13746799a draft 'G'
-  | |/|
-  | o |  24b6387c8c8c draft 'F'
-  |/ /
-  | o  9520eea781bc draft 'E'
-  |/
+  │
+  │ o  d273e35dcdf2 draft 'B'
+  ├─╯
+  │ o  02de42196ebe draft 'H'
+  │ │
+  │ │ o  eea13746799a draft 'G'
+  │ ╭─┤
+  │ o │  24b6387c8c8c draft 'F'
+  ├─╯ │
+  │   o  9520eea781bc draft 'E'
+  ├───╯
   o  cd010b8cd998 draft 'A'
   
   $ hg histedit 'max(desc(D))' --commands - 2>&1 << EOF | fixbundle
@@ -149,19 +149,19 @@ Abort
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ tglogp
   @  591369deedfd draft 'X'
-  |
+  │
   o  d7a6f907a822 draft 'D'
-  |
-  | o  d273e35dcdf2 draft 'B'
-  |/
-  | o  02de42196ebe draft 'H'
-  | |
-  | | o  eea13746799a draft 'G'
-  | |/|
-  | o |  24b6387c8c8c draft 'F'
-  |/ /
-  | o  9520eea781bc draft 'E'
-  |/
+  │
+  │ o  d273e35dcdf2 draft 'B'
+  ├─╯
+  │ o  02de42196ebe draft 'H'
+  │ │
+  │ │ o  eea13746799a draft 'G'
+  │ ╭─┤
+  │ o │  24b6387c8c8c draft 'F'
+  ├─╯ │
+  │   o  9520eea781bc draft 'E'
+  ├───╯
   o  cd010b8cd998 draft 'A'
   
 Continue
@@ -181,17 +181,17 @@ Continue
   $ hg histedit --continue | fixbundle
   $ tglogp
   @  03772da75548 draft 'X'
-  |
+  │
   o  d273e35dcdf2 draft 'B'
-  |
-  | o  02de42196ebe draft 'H'
-  | |
-  | | o  eea13746799a draft 'G'
-  | |/|
-  | o |  24b6387c8c8c draft 'F'
-  |/ /
-  | o  9520eea781bc draft 'E'
-  |/
+  │
+  │ o  02de42196ebe draft 'H'
+  │ │
+  │ │ o  eea13746799a draft 'G'
+  │ ╭─┤
+  │ o │  24b6387c8c8c draft 'F'
+  ├─╯ │
+  │   o  9520eea781bc draft 'E'
+  ├───╯
   o  cd010b8cd998 draft 'A'
   
 
@@ -204,21 +204,21 @@ base on a previously picked changeset
   $ hg commit -m "J"
   $ tglogp
   @  e8c55b19d366 draft 'J'
-  |
+  │
   o  b2f90fd8aa85 draft 'I'
-  |
+  │
   o  03772da75548 draft 'X'
-  |
+  │
   o  d273e35dcdf2 draft 'B'
-  |
-  | o  02de42196ebe draft 'H'
-  | |
-  | | o  eea13746799a draft 'G'
-  | |/|
-  | o |  24b6387c8c8c draft 'F'
-  |/ /
-  | o  9520eea781bc draft 'E'
-  |/
+  │
+  │ o  02de42196ebe draft 'H'
+  │ │
+  │ │ o  eea13746799a draft 'G'
+  │ ╭─┤
+  │ o │  24b6387c8c8c draft 'F'
+  ├─╯ │
+  │   o  9520eea781bc draft 'E'
+  ├───╯
   o  cd010b8cd998 draft 'A'
   
   $ hg histedit 'max(desc(B))' --commands - 2>&1 << EOF | fixbundle
@@ -234,20 +234,20 @@ base on a previously picked changeset
 
   $ tglogp
   @  e8c55b19d366 draft 'J'
-  |
+  │
   o  b2f90fd8aa85 draft 'I'
-  |
+  │
   o  03772da75548 draft 'X'
-  |
+  │
   o  d273e35dcdf2 draft 'B'
-  |
-  | o  02de42196ebe draft 'H'
-  | |
-  | | o  eea13746799a draft 'G'
-  | |/|
-  | o |  24b6387c8c8c draft 'F'
-  |/ /
-  | o  9520eea781bc draft 'E'
-  |/
+  │
+  │ o  02de42196ebe draft 'H'
+  │ │
+  │ │ o  eea13746799a draft 'G'
+  │ ╭─┤
+  │ o │  24b6387c8c8c draft 'F'
+  ├─╯ │
+  │   o  9520eea781bc draft 'E'
+  ├───╯
   o  cd010b8cd998 draft 'A'
   

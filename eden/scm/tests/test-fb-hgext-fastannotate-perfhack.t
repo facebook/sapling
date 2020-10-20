@@ -30,13 +30,13 @@ a simple merge case
   $ hg commit -m merge
   $ hg log -G -T '{desc}'
   @    merge
-  |\
-  | o  insert 0
-  | |
-  o |  append 3
-  |/
+  ├─╮
+  │ o  insert 0
+  │ │
+  o │  append 3
+  ├─╯
   o  append 2
-  |
+  │
   o  append 1
   
   $ hg fastannotate a

@@ -1,3 +1,5 @@
+# coding=utf-8
+
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
@@ -38,7 +40,7 @@ sh % "hg pull --rebase -d master" == r"""
     nothing to rebase - fast-forwarded to master"""
 sh % "hg log -G -T '{rev} {desc}'" == r"""
     @  1 b
-    |
+    │
     o  0 a"""
 # Make a local commit and check pull --rebase still works.
 sh % "echo x" > "x"
@@ -55,9 +57,9 @@ sh % "hg pull --rebase -d master" == r'''
     rebasing 86d71924e1d0 "x"'''
 sh % "hg log -G -T '{rev} {desc}'" == r"""
     @  4 x
-    |
+    │
     o  3 c
-    |
+    │
     o  1 b
-    |
+    │
     o  0 a"""

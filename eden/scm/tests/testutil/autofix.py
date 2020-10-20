@@ -131,17 +131,19 @@ def _fix():
             # This is not super efficient. But it's easy to write.
             for i in range(startline, endline + 1):
                 line = lines[i - 1]
-                newline = ""
+                newline = u""
                 if i == startline:
-                    newline += "%s%s" % (line[:startcol], code)
+                    if isinstance(code, bytes):
+                        code = code.decode("utf-8")
+                    newline += u"%s%s" % (line[:startcol], code)
                 if i == endline:
                     newline += line[endcol:]
                 lines[i - 1] = newline
 
-            lines = "".join(lines).splitlines(True)
+            lines = u"".join(lines).splitlines(True)
 
         with open(path, "wb") as f:
-            f.write("".join(lines).encode("utf-8"))
+            f.write(u"".join(lines).encode("utf-8"))
 
 
 def _removeindent(text):

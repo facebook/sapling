@@ -58,26 +58,26 @@ Continue testing
 graph shows tags for the branch heads of each path
   $ hg log --graph
   @  commit:      9d206ffc875e
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     add e
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     add e
+  │
   o  commit:      47d2a3944de8
-  |  bookmark:    beta/babar
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     add d
-  |
+  │  bookmark:    beta/babar
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     add d
+  │
   o  commit:      4538525df7e2
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     add c
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     add c
+  │
   o  commit:      7c3bad9141dc
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     add b
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     add b
+  │
   o  commit:      1f0dee641bb7
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
@@ -158,26 +158,26 @@ but configured, it'll do the expected thing:
   $ echo 'upstream=alpha' >> .hg/hgrc
   $ hg log --graph -r 'not upstream()'
   @  commit:      9d206ffc875e
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     add e
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     add e
+  │
   o  commit:      47d2a3944de8
-  |  bookmark:    beta/babar
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     add d
-  |
+  │  bookmark:    beta/babar
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     add d
+  │
   o  commit:      4538525df7e2
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     add c
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     add c
+  │
   o  commit:      7c3bad9141dc
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     add b
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     add b
+  │
   o  commit:      1f0dee641bb7
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000

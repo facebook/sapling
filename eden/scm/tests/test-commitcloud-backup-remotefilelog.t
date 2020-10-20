@@ -59,11 +59,11 @@ bookmarks
   $ mkcommit clientbadcommit
   $ hg log --graph -T '{desc} {node}'
   @  clientbadcommit 07e73d09a07862bc2b8beb13b72d2347f83e4981
-  |
+  │
   o  committostripsecond 221b386ae565d9866b4838ae552ce3acc26e9fec
-  |
+  │
   o  committostripfirst 48acd0edbb460dec0d93314393d41f801a9797ce
-  |
+  │
   o  serverinitialcommit 22ea264ff89d6891c2889f15f338ac9fa2474f8b
   
   $ cd ..

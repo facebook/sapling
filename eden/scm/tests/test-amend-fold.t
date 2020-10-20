@@ -15,19 +15,19 @@ Set up repo.
   $ hg debugbuilddag -m "+5 *4 +2"
   $ showgraph
   o  9c9414e0356c r7
-  |
+  │
   o  ec6d8e65acbe r6
-  |
+  │
   o  77d787dfa5b6 r5
-  |
-  | o  b762560d23fd r4
-  | |
-  | o  a422badec216 r3
-  | |
-  | o  37d4c1cec295 r2
-  |/
+  │
+  │ o  b762560d23fd r4
+  │ │
+  │ o  a422badec216 r3
+  │ │
+  │ o  37d4c1cec295 r2
+  ├─╯
   o  f177fbb9e8d1 r1
-  |
+  │
   o  93cbaf5e6529 r0
 
 Test that a fold works correctly on error.
@@ -43,17 +43,17 @@ Test simple case of folding a head. Should work normally.
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ showgraph
   @  dd0541003d21 r6
-  |
+  │
   o  77d787dfa5b6 r5
-  |
-  | o  b762560d23fd r4
-  | |
-  | o  a422badec216 r3
-  | |
-  | o  37d4c1cec295 r2
-  |/
+  │
+  │ o  b762560d23fd r4
+  │ │
+  │ o  a422badec216 r3
+  │ │
+  │ o  37d4c1cec295 r2
+  ├─╯
   o  f177fbb9e8d1 r1
-  |
+  │
   o  93cbaf5e6529 r0
 
 Test rebasing of stack after fold.
@@ -66,15 +66,15 @@ Test rebasing of stack after fold.
   merging mf
   $ showgraph
   o  c480ccdc36c0 r4
-  |
+  │
   @  fac8d040c80b r2
-  |
-  | o  dd0541003d21 r6
-  | |
-  | o  77d787dfa5b6 r5
-  |/
+  │
+  │ o  dd0541003d21 r6
+  │ │
+  │ o  77d787dfa5b6 r5
+  ├─╯
   o  f177fbb9e8d1 r1
-  |
+  │
   o  93cbaf5e6529 r0
 
 Test rebasing of multiple children
@@ -93,13 +93,13 @@ Test rebasing of multiple children
   merging mf
   $ showgraph
   o  6b8dd87db039 r4
-  |
+  │
   o  7fd219543f4f r2
-  |
-  | o  31892267fa07 r6
-  | |
-  | o  c74bb9c4eec9 r5
-  |/
+  │
+  │ o  31892267fa07 r6
+  │ │
+  │ o  c74bb9c4eec9 r5
+  ├─╯
   @  bfc9ee54b8f4 r0
 
 Test folding multiple changesets, using default behavior of folding
@@ -109,19 +109,19 @@ rebase is not on the topmost folded commit.
   $ hg debugbuilddag -m "+5 *4 +2"
   $ showgraph
   o  9c9414e0356c r7
-  |
+  │
   o  ec6d8e65acbe r6
-  |
+  │
   o  77d787dfa5b6 r5
-  |
-  | o  b762560d23fd r4
-  | |
-  | o  a422badec216 r3
-  | |
-  | o  37d4c1cec295 r2
-  |/
+  │
+  │ o  b762560d23fd r4
+  │ │
+  │ o  a422badec216 r3
+  │ │
+  │ o  37d4c1cec295 r2
+  ├─╯
   o  f177fbb9e8d1 r1
-  |
+  │
   o  93cbaf5e6529 r0
 
   $ hg up 'desc(r0)'
@@ -141,15 +141,15 @@ rebase is not on the topmost folded commit.
   merging mf
   $ showgraph
   o  69b8281910bd r7
-  |
+  │
   o  b494e86b0fcd r6
-  |
+  │
   o  3b418b2dcaeb r5
-  |
-  | o  a78a744630c5 r4
-  | |
-  | o  6032a3d5c310 r3
-  |/
+  │
+  │ o  a78a744630c5 r4
+  │ │
+  │ o  6032a3d5c310 r3
+  ├─╯
   @  001b0872b432 r0
 
 Test folding changesets unrelated to working copy parent using --exact.
@@ -158,15 +158,15 @@ Also test that using node hashes instead of rev numbers works.
   $ hg debugbuilddag -m +6
   $ showgraph
   o  f2987ebe5838 r5
-  |
+  │
   o  aa70f0fe546a r4
-  |
+  │
   o  cb14eba0ad9c r3
-  |
+  │
   o  f07e66f449d0 r2
-  |
+  │
   o  09bb8c08de89 r1
-  |
+  │
   o  fdaccbb26270 r0
 
   $ hg fold --exact 09bb8c f07e66 cb14eb
@@ -177,11 +177,11 @@ Also test that using node hashes instead of rev numbers works.
   merging mf
   $ showgraph
   o  064f4cd2992f r5
-  |
+  │
   o  e39a86ad4ff1 r4
-  |
+  │
   o  b36e18e69785 r1
-  |
+  │
   o  fdaccbb26270 r0
 
 Test --no-rebase flag.
@@ -189,13 +189,13 @@ Test --no-rebase flag.
   2 changesets folded
   $ showgraph
   o  b431410f50a9 r1
-  |
-  | o  064f4cd2992f r5
-  | |
-  | x  e39a86ad4ff1 r4
-  | |
-  | x  b36e18e69785 r1
-  |/
+  │
+  │ o  064f4cd2992f r5
+  │ │
+  │ x  e39a86ad4ff1 r4
+  │ │
+  │ x  b36e18e69785 r1
+  ├─╯
   o  fdaccbb26270 r0
 
 Test that bookmarks are correctly moved.
@@ -222,15 +222,15 @@ Test JSON output
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ showgraph
   @  f2987ebe5838 r5
-  |
+  │
   o  aa70f0fe546a r4
-  |
+  │
   o  cb14eba0ad9c r3
-  |
+  │
   o  f07e66f449d0 r2
-  |
+  │
   o  09bb8c08de89 r1
-  |
+  │
   o  fdaccbb26270 r0
 
 When rebase is not involved
@@ -247,11 +247,11 @@ When rebase is not involved
 
   $ showgraph
   @  befa2830d024 r3
-  |
+  │
   o  f07e66f449d0 r2
-  |
+  │
   o  09bb8c08de89 r1
-  |
+  │
   o  fdaccbb26270 r0
 
 XXX: maybe we also want the rebase nodechanges here.

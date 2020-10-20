@@ -36,9 +36,9 @@ Fix the server using sqlrefill.
   $ hg sqlrefill --i-know-what-i-am-doing 0
   $ hg log -GT '{files}'
   @  r
-  |
-  | o  q
-  |/
+  │
+  │ o  q
+  ├─╯
   o  p
   
 
@@ -50,10 +50,10 @@ the refill.
   $ hg commit -qAm s
   $ hg log -GT '{files}'
   @  s
-  |
+  │
   o  r
-  |
-  | o  q
-  |/
+  │
+  │ o  q
+  ├─╯
   o  p
   

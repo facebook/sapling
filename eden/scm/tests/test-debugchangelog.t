@@ -30,11 +30,11 @@
 
   $ hg log -Gr 'all()' -T '{desc}'
   o    C
-  |\
-  +---o  B
-  | |
-  | o  D
-  |
+  ├─╮
+  │ │ o  B
+  ├───╯
+  │ o  D
+  │
   o  A
   
 
@@ -88,12 +88,12 @@ To doublewrite:
       Revlog
   $ hg log -Gr 'all()' -T '{desc}'
   o  B
-  |
-  | o  C
-  |/|
-  o |  A
-   /
-  o  D
+  │
+  │ o  C
+  ╭─┤
+  o │  A
+    │
+    o  D
   
 
 To full segments:
@@ -139,12 +139,12 @@ The segments backend does not need revlog data.
   $ rm -rf .hg/store/00changelog*
   $ hg log -Gr 'all()' -T '{desc}'
   o  B
-  |
-  | o  C
-  |/|
-  o |  A
-   /
-  o  D
+  │
+  │ o  C
+  ╭─┤
+  o │  A
+    │
+    o  D
   
 
 To revlog:
@@ -169,10 +169,10 @@ The revlog backend does not need segmented data.
   $ rm -rf .hg/store/segments .hg/store/hgcommits
   $ hg log -Gr 'all()' -T '{desc}'
   o  B
-  |
-  | o  C
-  |/|
-  o |  A
-   /
-  o  D
+  │
+  │ o  C
+  ╭─┤
+  o │  A
+    │
+    o  D
   

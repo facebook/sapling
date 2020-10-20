@@ -161,17 +161,17 @@
 # At this point, the linknode points to c1254e70bad1 instead of 32e6611f6149
   $ hg log -G -T '{node|short} {desc} {phase} {files}\n'
   @  a5957b6bf0bd xx3 draft x
-  |
+  │
   o  7200df4e0aca yy3 draft y
-  |
+  │
   o  32e6611f6149 xx2-fake-rebased draft x
-  |
+  │
   o  01979f9404f8 yy2 draft y
-  |
-  | o  c1254e70bad1 xx2 draft x
-  |/
+  │
+  │ o  c1254e70bad1 xx2 draft x
+  ├─╯
   o  0632994590a8 xx draft x
-  |
+  │
   o  b292c1e3311f x draft x
   
 

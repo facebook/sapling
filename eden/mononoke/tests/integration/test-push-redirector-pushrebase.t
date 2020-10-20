@@ -34,19 +34,19 @@ Normal pushrebase with one commit
 -- newcommit was correctly pushed to master_bookmark
   $ log -r master_bookmark
   @  newcommit [public;rev=2;ce81c7d38286] default/master_bookmark
-  |
+  │
   ~
 
 -- newcommit is also present in the large repo (after a pull)
   $ cd "$TESTTMP"/large-hg-client
   $ log -r master_bookmark
   o  first post-move commit [public;rev=2;bfcfb674663c] default/master_bookmark
-  |
+  │
   ~
   $ REPONAME=large-mon hgmn pull -q
   $ log -r master_bookmark
   o  newcommit [public;rev=3;819e91b238b7] default/master_bookmark
-  |
+  │
   ~
 - compare the working copies
   $ verify_wc master_bookmark
@@ -102,14 +102,14 @@ Normal pushrebase with many commits
   updating bookmark master_bookmark
   $ log -r master_bookmark
   @  The staunchest tramp to ply his trade [public;rev=6;beb30dc3a35c] default/master_bookmark
-  |
+  │
   ~
 -- this should also be present in a large repo, once we pull:
   $ cd "$TESTTMP/large-hg-client"
   $ REPONAME=large-mon hgmn pull -q
   $ log -r master_bookmark
   o  The staunchest tramp to ply his trade [public;rev=7;34c34be6efde] default/master_bookmark
-  |
+  │
   ~
   $ verify_wc master_bookmark
 
@@ -124,14 +124,14 @@ Pushrebase, which copies and removes files
   updating bookmark master_bookmark
   $ log -r master_bookmark
   @  Moves, renames and copies [public;rev=7;b888ee4f19b5] default/master_bookmark
-  |
+  │
   ~
 -- this should also be present in a large repo, once we pull:
   $ cd "$TESTTMP/large-hg-client"
   $ REPONAME=large-mon hgmn pull -q
   $ log -r master_bookmark
   o  Moves, renames and copies [public;rev=8;b4e3e504160c] default/master_bookmark
-  |
+  │
   ~
   $ verify_wc master_bookmark
 
@@ -145,14 +145,14 @@ Pushrebase, which replaces a directory with a file
   updating bookmark master_bookmark
   $ log -r master_bookmark
   @  Replace a directory with a file [public;rev=8;e72ee383159a] default/master_bookmark
-  |
+  │
   ~
 -- this should also be present in a large repo, once we pull
   $ cd "$TESTTMP/large-hg-client"
   $ REPONAME=large-mon hgmn pull -q
   $ log -r master_bookmark
   o  Replace a directory with a file [public;rev=9;6ac00e7afd93] default/master_bookmark
-  |
+  │
   ~
   $ verify_wc master_bookmark
 
@@ -164,14 +164,14 @@ Normal pushrebase to a prefixed bookmark
   $ REPONAME=small-mon hgmn push --to master_bookmark_2 --create -q
   $ log -r master_bookmark_2
   @  The epicness of this fail is great [public;rev=9;8d22dc8b8a89] default/master_bookmark_2
-  |
+  │
   ~
 -- this should also be present in a large repo, once we pull
   $ cd "$TESTTMP/large-hg-client"
   $ REPONAME=large-mon hgmn pull -q
   $ log -r bookprefix/master_bookmark_2
   o  The epicness of this fail is great [public;rev=10;030470259cb4] default/bookprefix/master_bookmark_2
-  |
+  │
   ~
   $ verify_wc bookprefix/master_bookmark_2
 -- push to update a second bookmark
@@ -182,14 +182,14 @@ Normal pushrebase to a prefixed bookmark
   updating bookmark master_bookmark_2
   $ log -r master_bookmark_2
   @  The epicness of this fail is greater [public;rev=10;bd5577e4b538] default/master_bookmark_2
-  |
+  │
   ~
 -- this should also be present in a large repo, once we pull
   $ cd "$TESTTMP/large-hg-client"
   $ REPONAME=large-mon hgmn pull -q
   $ log -r bookprefix/master_bookmark_2
   o  The epicness of this fail is greater [public;rev=11;ccbb367ae93a] default/bookprefix/master_bookmark_2
-  |
+  │
   ~
   $ verify_wc bookprefix/master_bookmark_2
 
@@ -255,7 +255,7 @@ Pushrebase, which replaces a file with a directory
   updating bookmark master_bookmark
   $ log -r master_bookmark
   @  Replace a file with a directory [public;rev=14;4d2fda63b03e] default/master_bookmark
-  |
+  │
   ~
 -- this should also be present in a large repo, once we pull
   $ cd "$TESTTMP/large-hg-client"
@@ -265,6 +265,6 @@ Pushrebase, which replaces a file with a directory
   greatfile
   $ log -r master_bookmark
   @  Replace a file with a directory [public;rev=15;81b97bd0337e] default/master_bookmark
-  |
+  │
   ~
   $ verify_wc master_bookmark

@@ -119,17 +119,17 @@ Sync these to commit cloud - they all get pushed even though they are old
 
   $ tglogp
   @  7f958333fe84 draft 'newstack-feb15'
-  |
+  │
   o  56a352317b67 draft 'newstack-feb13' newbook
-  |
-  | o  d133b886da68 draft 'midstack-feb9'
-  | |
-  | o  1c1b7955142c draft 'midstack-feb7' midbook
-  |/
-  | o  d16408588b2d draft 'oldstack-feb4'
-  | |
-  | o  1f9ebd6d1390 draft 'oldstack-feb1' oldbook
-  |/
+  │
+  │ o  d133b886da68 draft 'midstack-feb9'
+  │ │
+  │ o  1c1b7955142c draft 'midstack-feb7' midbook
+  ├─╯
+  │ o  d16408588b2d draft 'oldstack-feb4'
+  │ │
+  │ o  1f9ebd6d1390 draft 'oldstack-feb1' oldbook
+  ├─╯
   o  df4f53cec30a public 'base'
   
 
@@ -174,13 +174,13 @@ Connect to commit cloud
 
   $ tglogp
   o  7f958333fe84 draft 'newstack-feb15'
-  |
+  │
   o  56a352317b67 draft 'newstack-feb13' newbook
-  |
-  | o  d133b886da68 draft 'midstack-feb9'
-  | |
-  | o  1c1b7955142c draft 'midstack-feb7' midbook
-  |/
+  │
+  │ o  d133b886da68 draft 'midstack-feb9'
+  │ │
+  │ o  1c1b7955142c draft 'midstack-feb7' midbook
+  ├─╯
   @  df4f53cec30a public 'base'
   
 
@@ -213,19 +213,19 @@ Sync these commits to the first client - it has everything
   finished in * (glob)
   $ tglogp
   o  ff52de2f760c draft 'client2-feb28'
-  |
-  | @  7f958333fe84 draft 'newstack-feb15'
-  | |
-  | o  56a352317b67 draft 'newstack-feb13' newbook
-  |/
-  | o  d133b886da68 draft 'midstack-feb9'
-  | |
-  | o  1c1b7955142c draft 'midstack-feb7' midbook
-  |/
-  | o  d16408588b2d draft 'oldstack-feb4'
-  | |
-  | o  1f9ebd6d1390 draft 'oldstack-feb1' oldbook
-  |/
+  │
+  │ @  7f958333fe84 draft 'newstack-feb15'
+  │ │
+  │ o  56a352317b67 draft 'newstack-feb13' newbook
+  ├─╯
+  │ o  d133b886da68 draft 'midstack-feb9'
+  │ │
+  │ o  1c1b7955142c draft 'midstack-feb7' midbook
+  ├─╯
+  │ o  d16408588b2d draft 'oldstack-feb4'
+  │ │
+  │ o  1f9ebd6d1390 draft 'oldstack-feb1' oldbook
+  ├─╯
   o  df4f53cec30a public 'base'
   
 
@@ -237,15 +237,15 @@ Second client can still sync
   finished in * (glob)
   $ tglogp
   @  ff52de2f760c draft 'client2-feb28'
-  |
-  | o  7f958333fe84 draft 'newstack-feb15'
-  | |
-  | o  56a352317b67 draft 'newstack-feb13' newbook
-  |/
-  | o  d133b886da68 draft 'midstack-feb9'
-  | |
-  | o  1c1b7955142c draft 'midstack-feb7' midbook
-  |/
+  │
+  │ o  7f958333fe84 draft 'newstack-feb15'
+  │ │
+  │ o  56a352317b67 draft 'newstack-feb13' newbook
+  ├─╯
+  │ o  d133b886da68 draft 'midstack-feb9'
+  │ │
+  │ o  1c1b7955142c draft 'midstack-feb7' midbook
+  ├─╯
   o  df4f53cec30a public 'base'
   
 
@@ -306,17 +306,17 @@ Second client syncs that in, but still leaves the old commits missing
   finished in * (glob)
   $ tglogp
   o  46f8775ee5d4 draft 'newstack-feb28'
-  |
-  | @  ff52de2f760c draft 'client2-feb28'
-  | |
-  o |  7f958333fe84 draft 'newstack-feb15'
-  | |
-  o |  56a352317b67 draft 'newstack-feb13' newbook
-  |/
-  | o  d133b886da68 draft 'midstack-feb9'
-  | |
-  | o  1c1b7955142c draft 'midstack-feb7' midbook
-  |/
+  │
+  │ @  ff52de2f760c draft 'client2-feb28'
+  │ │
+  o │  7f958333fe84 draft 'newstack-feb15'
+  │ │
+  o │  56a352317b67 draft 'newstack-feb13' newbook
+  ├─╯
+  │ o  d133b886da68 draft 'midstack-feb9'
+  │ │
+  │ o  1c1b7955142c draft 'midstack-feb7' midbook
+  ├─╯
   o  df4f53cec30a public 'base'
   
 
@@ -381,23 +381,23 @@ Second client syncs the old stack in, and now has the bookmark
   finished in * (glob)
   $ tglogp
   o  2b8dce7bd745 draft 'oldstack-mar4'
-  |
+  │
   o  d16408588b2d draft 'oldstack-feb4'
-  |
+  │
   o  1f9ebd6d1390 draft 'oldstack-feb1' oldbook
-  |
-  | o  46f8775ee5d4 draft 'newstack-feb28'
-  | |
-  +---@  ff52de2f760c draft 'client2-feb28'
-  | |
-  | o  7f958333fe84 draft 'newstack-feb15'
-  | |
-  | o  56a352317b67 draft 'newstack-feb13' newbook
-  |/
-  | o  d133b886da68 draft 'midstack-feb9'
-  | |
-  | o  1c1b7955142c draft 'midstack-feb7' midbook
-  |/
+  │
+  │ o  46f8775ee5d4 draft 'newstack-feb28'
+  │ │
+  │ │ @  ff52de2f760c draft 'client2-feb28'
+  ├───╯
+  │ o  7f958333fe84 draft 'newstack-feb15'
+  │ │
+  │ o  56a352317b67 draft 'newstack-feb13' newbook
+  ├─╯
+  │ o  d133b886da68 draft 'midstack-feb9'
+  │ │
+  │ o  1c1b7955142c draft 'midstack-feb7' midbook
+  ├─╯
   o  df4f53cec30a public 'base'
   
   $ python $TESTTMP/dumpcommitcloudmetadata.py
@@ -446,19 +446,19 @@ Connect to commit cloud
 
   $ hgfakedate 1990-03-05T12:00Z smartlog -T '{node|short} {desc} {bookmarks}' --config infinitepushbackup.autobackup=true
   o  2b8dce7bd745 oldstack-mar4
-  |
+  │
   o  d16408588b2d oldstack-feb4
-  |
+  │
   o  1f9ebd6d1390 oldstack-feb1 oldbook
-  |
-  | o  ff52de2f760c client2-feb28
-  |/
-  | o  46f8775ee5d4 newstack-feb28
-  | |
-  | o  7f958333fe84 newstack-feb15
-  | |
-  | o  56a352317b67 newstack-feb13 newbook
-  |/
+  │
+  │ o  ff52de2f760c client2-feb28
+  ├─╯
+  │ o  46f8775ee5d4 newstack-feb28
+  │ │
+  │ o  7f958333fe84 newstack-feb15
+  │ │
+  │ o  56a352317b67 newstack-feb13 newbook
+  ├─╯
   @  df4f53cec30a base
   
   hint[commitcloud-old-commits]: some older commits or bookmarks have not been synced to this repo
@@ -488,19 +488,19 @@ Do a sync in the new client - the bookmark is left where it was
   finished in * (glob)
   $ tglogp
   o  2b8dce7bd745 draft 'oldstack-mar4'
-  |
+  │
   o  d16408588b2d draft 'oldstack-feb4'
-  |
+  │
   o  1f9ebd6d1390 draft 'oldstack-feb1'
-  |
-  | o  ff52de2f760c draft 'client2-feb28'
-  |/
-  | o  46f8775ee5d4 draft 'newstack-feb28'
-  | |
-  | o  7f958333fe84 draft 'newstack-feb15'
-  | |
-  | o  56a352317b67 draft 'newstack-feb13' newbook
-  |/
+  │
+  │ o  ff52de2f760c draft 'client2-feb28'
+  ├─╯
+  │ o  46f8775ee5d4 draft 'newstack-feb28'
+  │ │
+  │ o  7f958333fe84 draft 'newstack-feb15'
+  │ │
+  │ o  56a352317b67 draft 'newstack-feb13' newbook
+  ├─╯
   @  df4f53cec30a public 'base'
   
 Move the bookmark locally - this still gets synced ok.
@@ -508,19 +508,19 @@ Move the bookmark locally - this still gets synced ok.
   $ hg book -f -r 46f8775ee5d479eed945b5186929bd046f116176 oldbook
   $ tglogp
   o  2b8dce7bd745 draft 'oldstack-mar4'
-  |
+  │
   o  d16408588b2d draft 'oldstack-feb4'
-  |
+  │
   o  1f9ebd6d1390 draft 'oldstack-feb1'
-  |
-  | o  ff52de2f760c draft 'client2-feb28'
-  |/
-  | o  46f8775ee5d4 draft 'newstack-feb28' oldbook
-  | |
-  | o  7f958333fe84 draft 'newstack-feb15'
-  | |
-  | o  56a352317b67 draft 'newstack-feb13' newbook
-  |/
+  │
+  │ o  ff52de2f760c draft 'client2-feb28'
+  ├─╯
+  │ o  46f8775ee5d4 draft 'newstack-feb28' oldbook
+  │ │
+  │ o  7f958333fe84 draft 'newstack-feb15'
+  │ │
+  │ o  56a352317b67 draft 'newstack-feb13' newbook
+  ├─╯
   @  df4f53cec30a public 'base'
   
   $ hgfakedate 1990-03-05T12:01Z cloud sync
@@ -535,23 +535,23 @@ Move the bookmark locally - this still gets synced ok.
   finished in * (glob)
   $ tglogp
   @  2b8dce7bd745 draft 'oldstack-mar4'
-  |
-  | o  46f8775ee5d4 draft 'newstack-feb28' oldbook
-  | |
-  | | o  ff52de2f760c draft 'client2-feb28'
-  | | |
-  | o |  7f958333fe84 draft 'newstack-feb15'
-  | | |
-  | o |  56a352317b67 draft 'newstack-feb13' newbook
-  | |/
-  | | o  d133b886da68 draft 'midstack-feb9'
-  | | |
-  | | o  1c1b7955142c draft 'midstack-feb7' midbook
-  | |/
-  o |  d16408588b2d draft 'oldstack-feb4'
-  | |
-  o |  1f9ebd6d1390 draft 'oldstack-feb1'
-  |/
+  │
+  │ o  46f8775ee5d4 draft 'newstack-feb28' oldbook
+  │ │
+  │ │ o  ff52de2f760c draft 'client2-feb28'
+  │ │ │
+  │ o │  7f958333fe84 draft 'newstack-feb15'
+  │ │ │
+  │ o │  56a352317b67 draft 'newstack-feb13' newbook
+  │ ├─╯
+  │ │ o  d133b886da68 draft 'midstack-feb9'
+  │ │ │
+  │ │ o  1c1b7955142c draft 'midstack-feb7' midbook
+  │ ├─╯
+  o │  d16408588b2d draft 'oldstack-feb4'
+  │ │
+  o │  1f9ebd6d1390 draft 'oldstack-feb1'
+  ├─╯
   o  df4f53cec30a public 'base'
   
 
@@ -570,23 +570,23 @@ A full sync pulls the old commits in
 
   $ tglogp
   o  d133b886da68 draft 'midstack-feb9'
-  |
+  │
   o  1c1b7955142c draft 'midstack-feb7' midbook
-  |
-  | o  2b8dce7bd745 draft 'oldstack-mar4'
-  | |
-  | o  d16408588b2d draft 'oldstack-feb4'
-  | |
-  | o  1f9ebd6d1390 draft 'oldstack-feb1'
-  |/
-  | o  ff52de2f760c draft 'client2-feb28'
-  |/
-  | o  46f8775ee5d4 draft 'newstack-feb28' oldbook
-  | |
-  | o  7f958333fe84 draft 'newstack-feb15'
-  | |
-  | o  56a352317b67 draft 'newstack-feb13' newbook
-  |/
+  │
+  │ o  2b8dce7bd745 draft 'oldstack-mar4'
+  │ │
+  │ o  d16408588b2d draft 'oldstack-feb4'
+  │ │
+  │ o  1f9ebd6d1390 draft 'oldstack-feb1'
+  ├─╯
+  │ o  ff52de2f760c draft 'client2-feb28'
+  ├─╯
+  │ o  46f8775ee5d4 draft 'newstack-feb28' oldbook
+  │ │
+  │ o  7f958333fe84 draft 'newstack-feb15'
+  │ │
+  │ o  56a352317b67 draft 'newstack-feb13' newbook
+  ├─╯
   @  df4f53cec30a public 'base'
   
 Create a new client that isn't connected yet
@@ -650,11 +650,11 @@ Pull in some of the commits by setting max age manually
   finished in * (glob)
   $ tglogp
   o  2b8dce7bd745 draft 'oldstack-mar4'
-  |
+  │
   o  d16408588b2d draft 'oldstack-feb4'
-  |
+  │
   o  1f9ebd6d1390 draft 'oldstack-feb1'
-  |
+  │
   @  df4f53cec30a public 'base'
   
 
@@ -678,23 +678,23 @@ other bookmark is treated like a move.
   finished in * (glob)
   $ tglogp
   o  d133b886da68 draft 'midstack-feb9'
-  |
+  │
   o  1c1b7955142c draft 'midstack-feb7'
-  |
-  | o  2b8dce7bd745 draft 'oldstack-mar4' midbook
-  | |
-  | o  d16408588b2d draft 'oldstack-feb4'
-  | |
-  | o  1f9ebd6d1390 draft 'oldstack-feb1'
-  |/
-  | o  ff52de2f760c draft 'client2-feb28'
-  |/
-  | o  46f8775ee5d4 draft 'newstack-feb28'
-  | |
-  | o  7f958333fe84 draft 'newstack-feb15'
-  | |
-  | o  56a352317b67 draft 'newstack-feb13'
-  |/
+  │
+  │ o  2b8dce7bd745 draft 'oldstack-mar4' midbook
+  │ │
+  │ o  d16408588b2d draft 'oldstack-feb4'
+  │ │
+  │ o  1f9ebd6d1390 draft 'oldstack-feb1'
+  ├─╯
+  │ o  ff52de2f760c draft 'client2-feb28'
+  ├─╯
+  │ o  46f8775ee5d4 draft 'newstack-feb28'
+  │ │
+  │ o  7f958333fe84 draft 'newstack-feb15'
+  │ │
+  │ o  56a352317b67 draft 'newstack-feb13'
+  ├─╯
   @  df4f53cec30a public 'base'
   
 
@@ -707,25 +707,25 @@ Attempt to sync.  The midbook bookmark should make it visible again.
   $ hg cloud sync -q
   $ tglog
   @  2ace67ee4791 'oldstack-mar4 amended'
-  |
-  | x  2b8dce7bd745 'oldstack-mar4' midbook
-  |/
-  | o  46f8775ee5d4 'newstack-feb28'
-  | |
-  | | o  ff52de2f760c 'client2-feb28'
-  | | |
-  | o |  7f958333fe84 'newstack-feb15'
-  | | |
-  | o |  56a352317b67 'newstack-feb13'
-  | |/
-  | | o  d133b886da68 'midstack-feb9'
-  | | |
-  | | o  1c1b7955142c 'midstack-feb7'
-  | |/
-  o |  d16408588b2d 'oldstack-feb4'
-  | |
-  o |  1f9ebd6d1390 'oldstack-feb1'
-  |/
+  │
+  │ x  2b8dce7bd745 'oldstack-mar4' midbook
+  ├─╯
+  │ o  46f8775ee5d4 'newstack-feb28'
+  │ │
+  │ │ o  ff52de2f760c 'client2-feb28'
+  │ │ │
+  │ o │  7f958333fe84 'newstack-feb15'
+  │ │ │
+  │ o │  56a352317b67 'newstack-feb13'
+  │ ├─╯
+  │ │ o  d133b886da68 'midstack-feb9'
+  │ │ │
+  │ │ o  1c1b7955142c 'midstack-feb7'
+  │ ├─╯
+  o │  d16408588b2d 'oldstack-feb4'
+  │ │
+  o │  1f9ebd6d1390 'oldstack-feb1'
+  ├─╯
   o  df4f53cec30a 'base'
   
 Sync in client2.  It should match.
@@ -733,25 +733,25 @@ Sync in client2.  It should match.
   $ hg cloud sync -q
   $ tglog
   o  2ace67ee4791 'oldstack-mar4 amended'
-  |
-  | x  2b8dce7bd745 'oldstack-mar4' midbook
-  |/
+  │
+  │ x  2b8dce7bd745 'oldstack-mar4' midbook
+  ├─╯
   o  d16408588b2d 'oldstack-feb4'
-  |
+  │
   o  1f9ebd6d1390 'oldstack-feb1'
-  |
-  | o  46f8775ee5d4 'newstack-feb28'
-  | |
-  +---@  ff52de2f760c 'client2-feb28'
-  | |
-  | o  7f958333fe84 'newstack-feb15'
-  | |
-  | o  56a352317b67 'newstack-feb13'
-  |/
-  | o  d133b886da68 'midstack-feb9'
-  | |
-  | o  1c1b7955142c 'midstack-feb7'
-  |/
+  │
+  │ o  46f8775ee5d4 'newstack-feb28'
+  │ │
+  │ │ @  ff52de2f760c 'client2-feb28'
+  ├───╯
+  │ o  7f958333fe84 'newstack-feb15'
+  │ │
+  │ o  56a352317b67 'newstack-feb13'
+  ├─╯
+  │ o  d133b886da68 'midstack-feb9'
+  │ │
+  │ o  1c1b7955142c 'midstack-feb7'
+  ├─╯
   o  df4f53cec30a 'base'
   
 Hide some uninteresting commits and sync everywhere
@@ -795,26 +795,26 @@ Sync in client 2.  It doesn't have the new destination of midbook, so should omi
   $ hg cloud sync -q
   $ tglogp
   o  f770b7f72fa5 draft 'public1' midbook
-  |
-  | o  2ace67ee4791 draft 'oldstack-mar4 amended'
-  | |
-  | o  d16408588b2d draft 'oldstack-feb4'
-  | |
-  | o  1f9ebd6d1390 draft 'oldstack-feb1'
-  |/
+  │
+  │ o  2ace67ee4791 draft 'oldstack-mar4 amended'
+  │ │
+  │ o  d16408588b2d draft 'oldstack-feb4'
+  │ │
+  │ o  1f9ebd6d1390 draft 'oldstack-feb1'
+  ├─╯
   @  df4f53cec30a public 'base'
   
   $ cd ../client1
   $ hg cloud sync -q
   $ tglogp
   o  f770b7f72fa5 public 'public1' midbook
-  |
-  | @  2ace67ee4791 draft 'oldstack-mar4 amended'
-  | |
-  | o  d16408588b2d draft 'oldstack-feb4'
-  | |
-  | o  1f9ebd6d1390 draft 'oldstack-feb1'
-  |/
+  │
+  │ @  2ace67ee4791 draft 'oldstack-mar4 amended'
+  │ │
+  │ o  d16408588b2d draft 'oldstack-feb4'
+  │ │
+  │ o  1f9ebd6d1390 draft 'oldstack-feb1'
+  ├─╯
   o  df4f53cec30a public 'base'
   
 Sync in client 4.  Some of the omitted heads in this client have been removed

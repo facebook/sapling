@@ -1,3 +1,7 @@
+# coding=utf-8
+
+# coding=utf-8
+
 # Copyright (c) Facebook, Inc. and its affiliates.
 # Copyright (c) Mercurial Contributors.
 #
@@ -84,29 +88,29 @@ sh % "hg convert --datesort t t-datesort" == r"""
 
 sh % "hg -R t-datesort log -G --template '{rev} \"{desc}\"\\n'" == r'''
     o    12 "c1"
-    |\
-    | o  11 "b2x"
-    | |
-    | | o  10 "a7x"
-    | | |
-    o | |  9 "c0"
-    | | |
-    | o |  8 "b1"
-    | | |
-    | | o  7 "a6"
-    | | |
-    | | o  6 "a5"
-    | | |
-    | o |  5 "b0"
-    |/ /
-    | o  4 "a4"
-    | |
-    | o  3 "a3"
-    | |
-    | o  2 "a2"
-    | |
-    | o  1 "a1"
-    |/
+    ├─╮
+    │ o  11 "b2x"
+    │ │
+    │ │ o  10 "a7x"
+    │ │ │
+    o │ │  9 "c0"
+    │ │ │
+    │ o │  8 "b1"
+    │ │ │
+    │ │ o  7 "a6"
+    │ │ │
+    │ │ o  6 "a5"
+    │ │ │
+    │ o │  5 "b0"
+    ├─╯ │
+    │   o  4 "a4"
+    │   │
+    │   o  3 "a3"
+    │   │
+    │   o  2 "a2"
+    │   │
+    │   o  1 "a1"
+    ├───╯
     o  0 "a0"'''
 
 # convert with datesort (default mode)
@@ -134,29 +138,29 @@ sh % "hg convert t t-sourcesort" == r"""
 
 sh % "hg -R t-sourcesort log -G --template '{rev} \"{desc}\"\\n'" == r'''
     o    12 "c1"
-    |\
-    | o  11 "b2x"
-    | |
-    | | o  10 "a7x"
-    | | |
-    o | |  9 "c0"
-    | | |
-    | o |  8 "b1"
-    | | |
-    | | o  7 "a6"
-    | | |
-    | | o  6 "a5"
-    | | |
-    | | o  5 "a4"
-    | | |
-    | o |  4 "b0"
-    |/ /
-    | o  3 "a3"
-    | |
-    | o  2 "a2"
-    | |
-    | o  1 "a1"
-    |/
+    ├─╮
+    │ o  11 "b2x"
+    │ │
+    │ │ o  10 "a7x"
+    │ │ │
+    o │ │  9 "c0"
+    │ │ │
+    │ o │  8 "b1"
+    │ │ │
+    │ │ o  7 "a6"
+    │ │ │
+    │ │ o  6 "a5"
+    │ │ │
+    │ │ o  5 "a4"
+    │ │ │
+    │ o │  4 "b0"
+    ├─╯ │
+    │   o  3 "a3"
+    │   │
+    │   o  2 "a2"
+    │   │
+    │   o  1 "a1"
+    ├───╯
     o  0 "a0"'''
 
 # convert with closesort
@@ -184,27 +188,27 @@ sh % "hg convert --closesort t t-closesort" == r"""
 
 sh % "hg -R t-closesort log -G --template '{rev} \"{desc}\"\\n'" == r'''
     o    12 "c1"
-    |\
-    | o  11 "b2x"
-    | |
-    | | o  10 "a7x"
-    | | |
-    o | |  9 "c0"
-    | | |
-    | o |  8 "b1"
-    | | |
-    | | o  7 "a6"
-    | | |
-    | | o  6 "a5"
-    | | |
-    | | o  5 "a4"
-    | | |
-    | o |  4 "b0"
-    |/ /
-    | o  3 "a3"
-    | |
-    | o  2 "a2"
-    | |
-    | o  1 "a1"
-    |/
+    ├─╮
+    │ o  11 "b2x"
+    │ │
+    │ │ o  10 "a7x"
+    │ │ │
+    o │ │  9 "c0"
+    │ │ │
+    │ o │  8 "b1"
+    │ │ │
+    │ │ o  7 "a6"
+    │ │ │
+    │ │ o  6 "a5"
+    │ │ │
+    │ │ o  5 "a4"
+    │ │ │
+    │ o │  4 "b0"
+    ├─╯ │
+    │   o  3 "a3"
+    │   │
+    │   o  2 "a2"
+    │   │
+    │   o  1 "a1"
+    ├───╯
     o  0 "a0"'''

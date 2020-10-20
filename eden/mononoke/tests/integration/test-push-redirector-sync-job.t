@@ -40,18 +40,18 @@
   $ REPONAME=small-mon hgmn up -q master_bookmark
   $ log -r master_bookmark
   @  newcommit [public;rev=3;*] default/master_bookmark (glob)
-  |
+  │
   ~
 -- newcommit is also present in the large repo (after a pull)
   $ cd "$TESTTMP"/large-hg-client
   $ log -r master_bookmark
   o  first post-move commit [public;rev=2;*] default/master_bookmark (glob)
-  |
+  │
   ~
   $ REPONAME=large-mon hgmn pull -q
   $ log -r master_bookmark
   o  newcommit [public;rev=3;*] default/master_bookmark (glob)
-  |
+  │
   ~
   $ verify_wc master_bookmark
 -- do a push to a large repo, then backsync it to a small one
@@ -76,11 +76,11 @@
   $ cd small-hg-srv
   $ log -r :
   o  empty [draft;rev=3;*] (glob)
-  |
+  │
   o  newcommit [draft;rev=2;*] (glob)
-  |
+  │
   @  first post-move commit [draft;rev=1;*] (glob)
-  |
+  │
   o  pre-move commit [draft;rev=0;*] (glob)
   $
 

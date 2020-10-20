@@ -192,23 +192,23 @@ full conversion
   $ hg up -q -R fullrepo
   $ glog -R fullrepo
   @    "Discard change to foo" files: foo
-  |\
-  | o  "change foo" files: foo
-  | |
-  o |  "change bar" files: bar
-  |/
+  ├─╮
+  │ o  "change foo" files: foo
+  │ │
+  o │  "change bar" files: bar
+  ├─╯
   o    "(octopus merge fixup)" files:
-  |\
-  | o    "Octopus merge" files: baz
-  | |\
-  o | |  "add baz" files: baz
-  | | |
-  +---o  "add bar" files: bar
-  | |
-  o |  "add quux" files: quux
-  | |
-  | o  "change foo" files: foo
-  |/
+  ├─╮
+  │ o    "Octopus merge" files: baz
+  │ ├─╮
+  o │ │  "add baz" files: baz
+  │ │ │
+  │ │ o  "add bar" files: bar
+  ├───╯
+  o │  "add quux" files: quux
+  │ │
+  │ o  "change foo" files: foo
+  ├─╯
   o  "add foo" files: foo
   
   $ hg -R fullrepo manifest --debug
@@ -219,21 +219,21 @@ full conversion
   $ splitrepo 'octopus merge' 'foo bar baz'
   % foo bar baz: octopus merge
   @    "Discard change to foo" files: foo
-  |\
-  | o  "change foo" files: foo
-  | |
-  o |  "change bar" files: bar
-  |/
+  ├─╮
+  │ o  "change foo" files: foo
+  │ │
+  o │  "change bar" files: bar
+  ├─╯
   o    "(octopus merge fixup)" files:
-  |\
-  | o    "Octopus merge" files: baz
-  | |\
-  o | |  "add baz" files: baz
-  | | |
-  +---o  "add bar" files: bar
-  | |
-  | o  "change foo" files: foo
-  |/
+  ├─╮
+  │ o    "Octopus merge" files: baz
+  │ ├─╮
+  o │ │  "add baz" files: baz
+  │ │ │
+  │ │ o  "add bar" files: bar
+  ├───╯
+  │ o  "change foo" files: foo
+  ├─╯
   o  "add foo" files: foo
   
   245a3b8bc653999c2b22cdabd517ccb47aecafdf 644   bar
@@ -242,17 +242,17 @@ full conversion
   $ splitrepo 'only some parents of an octopus merge; "discard" a head' 'foo baz quux'
   % foo baz quux: only some parents of an octopus merge; "discard" a head
   @  "Discard change to foo" files: foo
-  |
+  │
   o  "change foo" files: foo
-  |
+  │
   o    "Octopus merge" files:
-  |\
-  | o  "add baz" files: baz
-  | |
-  | o  "add quux" files: quux
-  | |
-  o |  "change foo" files: foo
-  |/
+  ├─╮
+  │ o  "add baz" files: baz
+  │ │
+  │ o  "add quux" files: quux
+  │ │
+  o │  "change foo" files: foo
+  ├─╯
   o  "add foo" files: foo
   
   354ae8da6e890359ef49ade27b68bbc361f3ca88 644   baz
@@ -637,9 +637,9 @@ test converting certain branches
   $ cd hg-testrevs
   $ hg log -G -T '{bookmarks}'
   o  master
-  |
-  | o  goodbranch
-  |/
+  │
+  │ o  goodbranch
+  ├─╯
   o
   
   $ cd ..

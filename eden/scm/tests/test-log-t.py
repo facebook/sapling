@@ -1,3 +1,7 @@
+# coding=utf-8
+
+# coding=utf-8
+
 # Copyright (c) Facebook, Inc. and its affiliates.
 # Copyright (c) Mercurial Contributors.
 #
@@ -707,11 +711,11 @@ sh % "hg log -T '{rev}: {files}\\n' -r 'follow('\\''glob:*'\\'', startrev=.-.)'"
 
 sh % "hg log -Gq -r 'follow(startrev=2+4)'" == r"""
     o  ddb82e70d1a1
-    |
-    | o  60c670bf5b30
-    | |
-    | o  3d5bf5654eda
-    |/
+    │
+    │ o  60c670bf5b30
+    │ │
+    │ o  3d5bf5654eda
+    ├─╯
     @  67e992f2c4f3"""
 
 # follow the current revision:
@@ -728,8 +732,9 @@ sh % "hg log -f -r null" == r"""
     date:        Thu Jan 01 00:00:00 1970 +0000"""
 sh % "hg log -f -r null -G" == r"""
     o  commit:      000000000000
-       user:
-       date:        Thu Jan 01 00:00:00 1970 +0000"""
+    │  user:
+    │  date:        Thu Jan 01 00:00:00 1970 +0000
+    │"""
 
 
 # log -f with null parent
@@ -994,25 +999,25 @@ sh % "hg ci -m '(a0,b1->a1)->a'"
 
 sh % "hg log -GT '{rev}: {desc}\\n'" == r"""
     @    10: (a0,b1->a1)->a
-    |\
-    | o  9: b1->a1
-    | |
-    | o  8: a1
-    | |
-    | o  7: b1
-    | |
-    o |  6: b0
-    | |
-    o |  5: a0
-    |/
+    ├─╮
+    │ o  9: b1->a1
+    │ │
+    │ o  8: a1
+    │ │
+    │ o  7: b1
+    │ │
+    o │  6: b0
+    │ │
+    o │  5: a0
+    ├─╯
     o  4: a,b
-    |
+    │
     o  3: b
-    |
+    │
     o  2: a
-    |
+    │
     o  1: a->b
-    |
+    │
     o  0: a"""
 
 #  since file 'a' has multiple copy sources at the revision 4, ancestors can't
@@ -1061,15 +1066,15 @@ sh % "hg ci -qAm k0 -u u0"
 
 sh % "hg log -G -T '{rev} {bookmarks} {author} {desc} {files}\\n'" == r"""
     @  5 b0 u0 k0 f0
-    |
-    | o  4 b1 u1 k1 f1
-    | |
-    | | o  3 b2 u2 k2 f2
-    | | |
-    | | o  2  u2 k2 f2
-    | |/
-    | o  1  u1 k1 f1
-    |/
+    │
+    │ o  4 b1 u1 k1 f1
+    │ │
+    │ │ o  3 b2 u2 k2 f2
+    │ │ │
+    │ │ o  2  u2 k2 f2
+    │ ├─╯
+    │ o  1  u1 k1 f1
+    ├─╯
     o  0  u0 k0 f0"""
 
 #  log -u USER in ascending order, against compound set:
@@ -1307,55 +1312,55 @@ sh % "hg ci -m 'Last merge, related'"
 
 sh % "hg log --graph" == r"""
     @    commit:      4dae8563d2c5
-    |\   user:        test
-    | |  date:        Thu Jan 01 00:00:00 1970 +0000
-    | |  summary:     Last merge, related
-    | |
-    | o    commit:      7b35701b003e
-    | |\   user:        test
-    | | |  date:        Thu Jan 01 00:00:00 1970 +0000
-    | | |  summary:     First merge, related
-    | | |
-    | | o  commit:      e5416ad8a855
-    | | |  user:        test
-    | | |  date:        Thu Jan 01 00:00:00 1970 +0000
-    | | |  summary:     change foo in branch, related
-    | | |
-    | o |  commit:      87fe3144dcfa
-    | |/   user:        test
-    | |    date:        Thu Jan 01 00:00:00 1970 +0000
-    | |    summary:     change foo, related
-    | |
-    | o  commit:      dc6c325fe5ee
-    | |  user:        test
-    | |  date:        Thu Jan 01 00:00:00 1970 +0000
-    | |  summary:     create foo, related
-    | |
-    | o  commit:      73db34516eb9
-    | |  user:        test
-    | |  date:        Thu Jan 01 00:00:00 1970 +0000
-    | |  summary:     first branch, unrelated
-    | |
-    o |  commit:      88176d361b69
-    | |  user:        test
-    | |  date:        Thu Jan 01 00:00:00 1970 +0000
-    | |  summary:     add foo, related
-    | |
-    o |  commit:      dd78ae4afb56
-    | |  user:        test
-    | |  date:        Thu Jan 01 00:00:00 1970 +0000
-    | |  summary:     delete foo, unrelated
-    | |
-    o |  commit:      c4c64aedf0f7
-    | |  user:        test
-    | |  date:        Thu Jan 01 00:00:00 1970 +0000
-    | |  summary:     add unrelated old foo
-    | |
-    o |  commit:      e5faa7440653
-    |/   user:        test
-    |    date:        Thu Jan 01 00:00:00 1970 +0000
-    |    summary:     change, unrelated
-    |
+    ├─╮  user:        test
+    │ │  date:        Thu Jan 01 00:00:00 1970 +0000
+    │ │  summary:     Last merge, related
+    │ │
+    │ o    commit:      7b35701b003e
+    │ ├─╮  user:        test
+    │ │ │  date:        Thu Jan 01 00:00:00 1970 +0000
+    │ │ │  summary:     First merge, related
+    │ │ │
+    │ │ o  commit:      e5416ad8a855
+    │ │ │  user:        test
+    │ │ │  date:        Thu Jan 01 00:00:00 1970 +0000
+    │ │ │  summary:     change foo in branch, related
+    │ │ │
+    │ o │  commit:      87fe3144dcfa
+    │ ├─╯  user:        test
+    │ │    date:        Thu Jan 01 00:00:00 1970 +0000
+    │ │    summary:     change foo, related
+    │ │
+    │ o  commit:      dc6c325fe5ee
+    │ │  user:        test
+    │ │  date:        Thu Jan 01 00:00:00 1970 +0000
+    │ │  summary:     create foo, related
+    │ │
+    │ o  commit:      73db34516eb9
+    │ │  user:        test
+    │ │  date:        Thu Jan 01 00:00:00 1970 +0000
+    │ │  summary:     first branch, unrelated
+    │ │
+    o │  commit:      88176d361b69
+    │ │  user:        test
+    │ │  date:        Thu Jan 01 00:00:00 1970 +0000
+    │ │  summary:     add foo, related
+    │ │
+    o │  commit:      dd78ae4afb56
+    │ │  user:        test
+    │ │  date:        Thu Jan 01 00:00:00 1970 +0000
+    │ │  summary:     delete foo, unrelated
+    │ │
+    o │  commit:      c4c64aedf0f7
+    │ │  user:        test
+    │ │  date:        Thu Jan 01 00:00:00 1970 +0000
+    │ │  summary:     add unrelated old foo
+    │ │
+    o │  commit:      e5faa7440653
+    ├─╯  user:        test
+    │    date:        Thu Jan 01 00:00:00 1970 +0000
+    │    summary:     change, unrelated
+    │
     o  commit:      e87515fd044a
        user:        test
        date:        Thu Jan 01 00:00:00 1970 +0000
@@ -1806,15 +1811,15 @@ sh % "echo b" > "d/a"
 sh % "hg ci -Aqm c"
 sh % "hg log -f d -T '{desc}' -G" == r"""
     @  c
-    |
+    │
     o  a"""
 sh % "hg log -f d -T '{desc}' -G" == r"""
     @  c
-    |
+    │
     o  a"""
 sh % "hg log -f d/a -T '{desc}' -G" == r"""
     @  c
-    |
+    │
     o  a"""
 sh % "cd .."
 
@@ -1837,25 +1842,25 @@ sh % "echo 3" > "a"
 sh % "hg commit -m content3"
 sh % "hg log -G" == r"""
     @  commit:      50b9b36e9c5d
-    |  user:        test
-    |  date:        Thu Jan 01 00:00:00 1970 +0000
-    |  summary:     content3
-    |
+    │  user:        test
+    │  date:        Thu Jan 01 00:00:00 1970 +0000
+    │  summary:     content3
+    │
     o  commit:      15b2327059e5
-    |  user:        test
-    |  date:        Thu Jan 01 00:00:00 1970 +0000
-    |  summary:     content2
-    |
+    │  user:        test
+    │  date:        Thu Jan 01 00:00:00 1970 +0000
+    │  summary:     content2
+    │
     o  commit:      2029acd1168c
-    |  user:        test
-    |  date:        Thu Jan 01 00:00:00 1970 +0000
-    |  summary:     unrelated
-    |
-    | o  commit:      2294ae80ad84
-    |/   user:        test
-    |    date:        Thu Jan 01 00:00:00 1970 +0000
-    |    summary:     content2
-    |
+    │  user:        test
+    │  date:        Thu Jan 01 00:00:00 1970 +0000
+    │  summary:     unrelated
+    │
+    │ o  commit:      2294ae80ad84
+    ├─╯  user:        test
+    │    date:        Thu Jan 01 00:00:00 1970 +0000
+    │    summary:     content2
+    │
     o  commit:      ae0a3c9f9e95
        user:        test
        date:        Thu Jan 01 00:00:00 1970 +0000
@@ -1865,15 +1870,15 @@ sh % "hg log -G" == r"""
 
 sh % "hg log -Gf a" == r"""
     @  commit:      50b9b36e9c5d
-    |  user:        test
-    |  date:        Thu Jan 01 00:00:00 1970 +0000
-    |  summary:     content3
-    |
+    │  user:        test
+    │  date:        Thu Jan 01 00:00:00 1970 +0000
+    │  summary:     content3
+    │
     o  commit:      15b2327059e5
-    :  user:        test
-    :  date:        Thu Jan 01 00:00:00 1970 +0000
-    :  summary:     content2
-    :
+    ╷  user:        test
+    ╷  date:        Thu Jan 01 00:00:00 1970 +0000
+    ╷  summary:     content2
+    ╷
     o  commit:      ae0a3c9f9e95
        user:        test
        date:        Thu Jan 01 00:00:00 1970 +0000
@@ -1884,15 +1889,15 @@ sh % "hg log -Gf a" == r"""
 
 sh % "hg log -G a" == r"""
     @  commit:      50b9b36e9c5d
-    :  user:        test
-    :  date:        Thu Jan 01 00:00:00 1970 +0000
-    :  summary:     content3
-    :
-    : o  commit:      2294ae80ad84
-    :/   user:        test
-    :    date:        Thu Jan 01 00:00:00 1970 +0000
-    :    summary:     content2
-    :
+    ╷  user:        test
+    ╷  date:        Thu Jan 01 00:00:00 1970 +0000
+    ╷  summary:     content3
+    ╷
+    ╷ o  commit:      2294ae80ad84
+    ╭─╯  user:        test
+    │    date:        Thu Jan 01 00:00:00 1970 +0000
+    │    summary:     content2
+    │
     o  commit:      ae0a3c9f9e95
        user:        test
        date:        Thu Jan 01 00:00:00 1970 +0000
@@ -1904,10 +1909,10 @@ sh % "hg log -G a" == r"""
 sh % "hg up 'desc(content3)^'" == "1 files updated, 0 files merged, 0 files removed, 0 files unresolved"
 sh % "hg log -Gf a" == r"""
     @  commit:      15b2327059e5
-    :  user:        test
-    :  date:        Thu Jan 01 00:00:00 1970 +0000
-    :  summary:     content2
-    :
+    ╷  user:        test
+    ╷  date:        Thu Jan 01 00:00:00 1970 +0000
+    ╷  summary:     content2
+    ╷
     o  commit:      ae0a3c9f9e95
        user:        test
        date:        Thu Jan 01 00:00:00 1970 +0000
@@ -1921,20 +1926,20 @@ sh % "hg log -T '{node}\\n' -r 1" == "2294ae80ad8447bc78383182eeac50cb049df623"
 sh % "hg debugobsolete 2294ae80ad8447bc78383182eeac50cb049df623" == ""
 sh % "hg log -G" == r"""
     o  commit:      50b9b36e9c5d
-    |  user:        test
-    |  date:        Thu Jan 01 00:00:00 1970 +0000
-    |  summary:     content3
-    |
+    │  user:        test
+    │  date:        Thu Jan 01 00:00:00 1970 +0000
+    │  summary:     content3
+    │
     @  commit:      15b2327059e5
-    |  user:        test
-    |  date:        Thu Jan 01 00:00:00 1970 +0000
-    |  summary:     content2
-    |
+    │  user:        test
+    │  date:        Thu Jan 01 00:00:00 1970 +0000
+    │  summary:     content2
+    │
     o  commit:      2029acd1168c
-    |  user:        test
-    |  date:        Thu Jan 01 00:00:00 1970 +0000
-    |  summary:     unrelated
-    |
+    │  user:        test
+    │  date:        Thu Jan 01 00:00:00 1970 +0000
+    │  summary:     unrelated
+    │
     o  commit:      ae0a3c9f9e95
        user:        test
        date:        Thu Jan 01 00:00:00 1970 +0000
@@ -1944,10 +1949,10 @@ sh % "hg log -G" == r"""
 
 sh % "hg log -G a" == r"""
     o  commit:      50b9b36e9c5d
-    :  user:        test
-    :  date:        Thu Jan 01 00:00:00 1970 +0000
-    :  summary:     content3
-    :
+    ╷  user:        test
+    ╷  date:        Thu Jan 01 00:00:00 1970 +0000
+    ╷  summary:     content3
+    ╷
     o  commit:      ae0a3c9f9e95
        user:        test
        date:        Thu Jan 01 00:00:00 1970 +0000
@@ -1983,27 +1988,27 @@ sh % "hg ci -Am2" == "adding c"
 sh % "hg up 'head() and not .'" == "1 files updated, 0 files merged, 1 files removed, 0 files unresolved"
 sh % "hg log -G" == r"""
     o  commit:      db815d6d32e6
-    |  user:        test
-    |  date:        Thu Jan 01 00:00:00 1970 +0000
-    |  summary:     2
-    |
-    | @  commit:      9bc8ce7f9356
-    |/   user:        test
-    |    date:        Thu Jan 01 00:00:00 1970 +0000
-    |    summary:     1
-    |
+    │  user:        test
+    │  date:        Thu Jan 01 00:00:00 1970 +0000
+    │  summary:     2
+    │
+    │ @  commit:      9bc8ce7f9356
+    ├─╯  user:        test
+    │    date:        Thu Jan 01 00:00:00 1970 +0000
+    │    summary:     1
+    │
     o  commit:      f7b1eb17ad24
        user:        test
        date:        Thu Jan 01 00:00:00 1970 +0000
        summary:     0"""
 sh % "hg log -f -G b" == r"""
     @  commit:      9bc8ce7f9356
-    |  user:        test
+    │  user:        test
     ~  date:        Thu Jan 01 00:00:00 1970 +0000
        summary:     1"""
 sh % "hg log -G b" == r"""
     @  commit:      9bc8ce7f9356
-    |  user:        test
+    │  user:        test
     ~  date:        Thu Jan 01 00:00:00 1970 +0000
        summary:     1"""
 sh % "cd .."
@@ -2031,15 +2036,15 @@ sh % "hg commit -m A3B2C2"
 
 sh % "hg log -G" == r"""
     @  commit:      fe5fc3d0eb17
-    |  user:        test
-    |  date:        Thu Jan 01 00:00:00 1970 +0000
-    |  summary:     A3B2C2
-    |
-    | o  commit:      07dcc6b312c0
-    |/   user:        test
-    |    date:        Thu Jan 01 00:00:00 1970 +0000
-    |    summary:     A2B2C2
-    |
+    │  user:        test
+    │  date:        Thu Jan 01 00:00:00 1970 +0000
+    │  summary:     A3B2C2
+    │
+    │ o  commit:      07dcc6b312c0
+    ├─╯  user:        test
+    │    date:        Thu Jan 01 00:00:00 1970 +0000
+    │    summary:     A2B2C2
+    │
     o  commit:      abf4f0e38563
        user:        test
        date:        Thu Jan 01 00:00:00 1970 +0000
@@ -2049,10 +2054,10 @@ sh % "hg log -G" == r"""
 
 sh % "hg log -fG B" == r"""
     @  commit:      fe5fc3d0eb17
-    |  user:        test
-    |  date:        Thu Jan 01 00:00:00 1970 +0000
-    |  summary:     A3B2C2
-    |
+    │  user:        test
+    │  date:        Thu Jan 01 00:00:00 1970 +0000
+    │  summary:     A3B2C2
+    │
     o  commit:      abf4f0e38563
        user:        test
        date:        Thu Jan 01 00:00:00 1970 +0000

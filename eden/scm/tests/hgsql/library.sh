@@ -18,7 +18,7 @@ if [[ ! -f "$GETDB_PATH" ]]; then
   exit 80
 fi
 
-if ! ${PYTHON:-python} -c "import mysql.connector" 2>/dev/null; then
+if ! hg debugpython -- -c "import mysql.connector" 2>/dev/null; then
   echo "skipped: mysql-connector-python missing"
   exit 80
 fi

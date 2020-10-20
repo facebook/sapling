@@ -25,11 +25,11 @@ Initialize repo.
   $ mkcommit d
   $ showgraph
   @  d86136f6dbff add d1 and d2
-  |
+  │
   o  e5cbbeb3434b add c1 and c2
-  |
+  │
   o  b7fb8fde59b2 add b1 and b2
-  |
+  │
   o  c20cc4d302fc add a1 and a2
 
 Test that split behaves correctly on error.
@@ -82,13 +82,13 @@ Test basic case of splitting a head.
 
   $ showgraph
   @  43b9beefca2e add d1 and d2
-  |
+  │
   o  3c66f08f0fd3 add d1 and d2
-  |
+  │
   o  e5cbbeb3434b add c1 and c2
-  |
+  │
   o  b7fb8fde59b2 add b1 and b2
-  |
+  │
   o  c20cc4d302fc add a1 and a2
 
 Split in the middle of a stack.
@@ -121,15 +121,15 @@ Split in the middle of a stack.
 
   $ showgraph
   o  bdb846f063c6 add d1 and d2
-  |
+  │
   o  acbc5d06143b add d1 and d2
-  |
+  │
   @  bff303a2c228 add c1 and c2
-  |
+  │
   o  6227053e403e add c1 and c2
-  |
+  │
   o  b7fb8fde59b2 add b1 and b2
-  |
+  │
   o  c20cc4d302fc add a1 and a2
 
 Split with multiple children and using hash.
@@ -167,19 +167,19 @@ Split with multiple children and using hash.
 
   $ showgraph
   o  5ad76779e999 add d1 and d2
-  |
-  | o  c2fa6cc56f60 add d1 and d2
-  | |
-  | o  7c766f705803 add d1 and d2
-  | |
-  | o  7300aee81508 add c1 and c2
-  | |
-  | o  7c57722f849b add c1 and c2
-  | |
-  | o  cf2484b29d75 add b1 and b2
-  |/
+  │
+  │ o  c2fa6cc56f60 add d1 and d2
+  │ │
+  │ o  7c766f705803 add d1 and d2
+  │ │
+  │ o  7300aee81508 add c1 and c2
+  │ │
+  │ o  7c57722f849b add c1 and c2
+  │ │
+  │ o  cf2484b29d75 add b1 and b2
+  ├─╯
   @  a265b3c6c419 add a1 and a2
-  |
+  │
   o  5a5595e342b1 add a1 and a2
 
 Split using revset.
@@ -215,19 +215,19 @@ Split using revset.
 
   $ showgraph
   o  065a5bb834a6 add d1 and d2
-  |
+  │
   o  e3e63b66173e add d1 and d2
-  |
+  │
   o  6b6c4cdbcb5c add c1 and c2
-  |
+  │
   o  216c1cfd66ba add c1 and c2
-  |
+  │
   @  ef9770b15bd8 add b1 and b2
-  |
+  │
   o  172212eeb9e4 add b1 and b2
-  |
+  │
   o  a265b3c6c419 add a1 and a2
-  |
+  │
   o  5a5595e342b1 add a1 and a2
 
 Test that command aborts when given multiple commits.
@@ -245,21 +245,21 @@ Test --no-rebase flag.
   rebasing 065a5bb834a6 "add d1 and d2"
   $ showgraph
   o  5f8ed24aed8c add d1 and d2
-  |
+  │
   o  b5591417a3eb add d1 and d2
-  |
+  │
   o  484cd1d66520 add c1 and c2
-  |
+  │
   o  e051398780c8 add c1 and c2
-  |
+  │
   @  c1d00dbe112a add e1 and e2
-  |
+  │
   o  ef9770b15bd8 add b1 and b2
-  |
+  │
   o  172212eeb9e4 add b1 and b2
-  |
+  │
   o  a265b3c6c419 add a1 and a2
-  |
+  │
   o  5a5595e342b1 add a1 and a2
   $ hg split --no-rebase << EOF
   > y
@@ -286,25 +286,25 @@ Test --no-rebase flag.
 
   $ showgraph
   @  f98ad9103c3d add e1 and e2
-  |
+  │
   o  cc95492dd94d add e1 and e2
-  |
-  | o  5f8ed24aed8c add d1 and d2
-  | |
-  | o  b5591417a3eb add d1 and d2
-  | |
-  | o  484cd1d66520 add c1 and c2
-  | |
-  | o  e051398780c8 add c1 and c2
-  | |
-  | x  c1d00dbe112a add e1 and e2
-  |/
+  │
+  │ o  5f8ed24aed8c add d1 and d2
+  │ │
+  │ o  b5591417a3eb add d1 and d2
+  │ │
+  │ o  484cd1d66520 add c1 and c2
+  │ │
+  │ o  e051398780c8 add c1 and c2
+  │ │
+  │ x  c1d00dbe112a add e1 and e2
+  ├─╯
   o  ef9770b15bd8 add b1 and b2
-  |
+  │
   o  172212eeb9e4 add b1 and b2
-  |
+  │
   o  a265b3c6c419 add a1 and a2
-  |
+  │
   o  5a5595e342b1 add a1 and a2
 
 Test that bookmarks are correctly moved.
@@ -341,7 +341,7 @@ Test that bookmarks are correctly moved.
 
   $ showgraph
   @  a265b3c6c419 add a1 and a2
-  |
+  │
   o  5a5595e342b1 add a1 and a2
   $ hg bookmarks
      test1                     a265b3c6c419
@@ -379,5 +379,5 @@ Test the hint for Phabricator Diffs being duplicated
   amend the commit messages to remove them
   $ showgraph
   @  b696183283c3 Differential Revision: http://example.com/D1234
-  |
+  │
   o  6add538b4b79 Differential Revision: http://example.com/D1234

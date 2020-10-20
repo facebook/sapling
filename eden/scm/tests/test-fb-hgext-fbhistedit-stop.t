@@ -22,30 +22,30 @@ log before edit
 
   $ hg log --graph
   @  commit:      652413bf663e
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     f
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     f
+  │
   o  commit:      e860deea161a
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     e
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     e
+  │
   o  commit:      055a42cdd887
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     d
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     d
+  │
   o  commit:      177f92b77385
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     c
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     c
+  │
   o  commit:      d2ae7f538514
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     b
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     b
+  │
   o  commit:      cb9a9f314b8b
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
@@ -67,30 +67,30 @@ stop & continue cannot preserve hashes without obsolescence
 
   $ hg log --graph
   @  commit:      794fe033d0a0
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     f
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     f
+  │
   o  commit:      04d2fab98077
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     e
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     e
+  │
   o  commit:      055a42cdd887
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     d
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     d
+  │
   o  commit:      177f92b77385
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     c
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     c
+  │
   o  commit:      d2ae7f538514
-  |  user:        test
-  |  date:        Thu Jan 01 00:00:00 1970 +0000
-  |  summary:     b
-  |
+  │  user:        test
+  │  date:        Thu Jan 01 00:00:00 1970 +0000
+  │  summary:     b
+  │
   o  commit:      cb9a9f314b8b
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
@@ -120,15 +120,15 @@ stop on a commit
 
   $ hg log --graph --template '{node|short} {desc} {files}\n'
   @  099559071076 f f
-  |
+  │
   o  d51720eb7a13 e added e
-  |
+  │
   o  055a42cdd887 d d
-  |
+  │
   o  177f92b77385 c c
-  |
+  │
   o  d2ae7f538514 b b
-  |
+  │
   o  cb9a9f314b8b a a
   
 
@@ -163,14 +163,14 @@ fold a commit to check if other non-pick actions are handled correctly
 
   $ hg log --graph --template '{node|short} {desc} {files}\n'
   @  3c9ba74168ea f f
-  |
+  │
   o  08cf87522012 e added e
-  |
+  │
   o  66584b8c84e1 c
-  |  ***
-  |  d c d
+  │  ***
+  │  d c d
   o  d2ae7f538514 b b
-  |
+  │
   o  cb9a9f314b8b a a
   
   $ hg histedit 08cf87522012 --commands - 2>&1 << EOF| fixbundle
@@ -184,13 +184,13 @@ fold a commit to check if other non-pick actions are handled correctly
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log --graph --template '{node|short} {desc} {files}\n'
   @  3c9ba74168ea f f
-  |
+  │
   o  08cf87522012 e added e
-  |
+  │
   o  66584b8c84e1 c
-  |  ***
-  |  d c d
+  │  ***
+  │  d c d
   o  d2ae7f538514 b b
-  |
+  │
   o  cb9a9f314b8b a a
   

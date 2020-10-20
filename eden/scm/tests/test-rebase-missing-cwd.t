@@ -31,9 +31,9 @@ Ensure that dirsync does not cause an abort when cwd goes missing
 
   $ hg log -Gr "all()" -T "{node|short} {desc}"
   @  74e7da63e173 change
-  |
+  │
   o  5f45087392e8 delete
-  |
+  │
   o  aa6caddcd04f base
   
   $ hg rebase --abort

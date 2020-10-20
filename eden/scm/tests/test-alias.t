@@ -571,7 +571,7 @@ simple shell aliases
 
   $ tglog
   @  c0c7cf58edc5 'bar'
-  |
+  │
   o  e63c23eaa88a 'foo'
   
 

@@ -98,9 +98,9 @@ Switch workspace from a draft commit
   [255]
   $ showgraph
   @  B (W1): draft
-  |
+  │
   o  A (W1): draft
-  |
+  │
   o  base: public  remote/master
   
 Switch workspace from a public commit 
@@ -123,9 +123,9 @@ Switch workspace from a public commit
   finished in * (glob)
   $ showgraph
   o  D (W2): draft
-  |
+  │
   o  C (W2): draft
-  |
+  │
   @  base: public  remote/master
   
  
@@ -143,9 +143,9 @@ Switch workspace using merge strategy
   finished in * (glob)
   $ showgraph
   o  D (W2): draft
-  |
+  │
   o  C (W2): draft
-  |
+  │
   @  base: public  remote/master
   
 
@@ -161,9 +161,9 @@ Switch workspace back
   finished in * (glob)
   $ showgraph
   o  B (W1): draft
-  |
+  │
   o  A (W1): draft
-  |
+  │
   @  base: public  remote/master
   
 
@@ -171,9 +171,9 @@ Create a bookmark and switch workspace. The bookmark should be preserved in the 
   $ hg bookmark "book (W1)" -r 2
   $ showgraph
   o  B (W1): draft book (W1)
-  |
+  │
   o  A (W1): draft
-  |
+  │
   @  base: public  remote/master
   
   $ hg cloud join -w w2 --switch
@@ -187,9 +187,9 @@ Create a bookmark and switch workspace. The bookmark should be preserved in the 
   finished in * (glob)
   $ showgraph
   o  D (W2): draft
-  |
+  │
   o  C (W2): draft
-  |
+  │
   @  base: public  remote/master
   
 
@@ -197,9 +197,9 @@ Create a bookmark in w2 and switch workspace. The bookmark should be preserved i
   $ hg bookmark "book (W2)" -r 4
   $ showgraph
   o  D (W2): draft book (W2)
-  |
+  │
   o  C (W2): draft
-  |
+  │
   @  base: public  remote/master
   
 
@@ -214,9 +214,9 @@ Create a bookmark in w2 and switch workspace. The bookmark should be preserved i
   finished in * (glob)
   $ showgraph
   o  B (W1): draft book (W1)
-  |
+  │
   o  A (W1): draft
-  |
+  │
   @  base: public  remote/master
   
   $ cd ..
@@ -225,9 +225,9 @@ Switch between workspaces w1 and w2 in client2
   $ cd client2
   $ showgraph
   @  D (W2): draft
-  |
+  │
   o  C (W2): draft
-  |
+  │
   o  base: public  remote/master
   
   $ hg up d20a80d4def3
@@ -249,9 +249,9 @@ Switch between workspaces w1 and w2 in client2
   finished in * (glob)
   $ showgraph
   o  B (W1): draft book (W1)
-  |
+  │
   o  A (W1): draft
-  |
+  │
   @  base: public  remote/master
   
   $ hg cloud join -w w2 --switch
@@ -265,9 +265,9 @@ Switch between workspaces w1 and w2 in client2
   finished in * (glob)
   $ showgraph
   o  D (W2): draft book (W2)
-  |
+  │
   o  C (W2): draft
-  |
+  │
   @  base: public  remote/master
   
   $ hg cloud join -w w1 --switch
@@ -281,9 +281,9 @@ Switch between workspaces w1 and w2 in client2
   finished in * (glob)
   $ showgraph
   o  B (W1): draft book (W1)
-  |
+  │
   o  A (W1): draft
-  |
+  │
   @  base: public  remote/master
   
   $ cd ..
@@ -346,9 +346,9 @@ Commit changes to be able to switch
   finished in * (glob)
   $ showgraph
   o  B (W1): draft book (W1)
-  |
+  │
   o  A (W1): draft
-  |
+  │
   @  base: public  remote/master
   
   $ cd ..
@@ -372,13 +372,13 @@ Testing switching workspace with different remote bookmarks
   $ hg pull -B master -q
   $ showgraph
   o  M: public  remote/master
-  |
-  | o  F: public  remote/feature
-  |/
-  | o  B (W1): draft book (W1)
-  | |
-  | o  A (W1): draft
-  |/
+  │
+  │ o  F: public  remote/feature
+  ├─╯
+  │ o  B (W1): draft book (W1)
+  │ │
+  │ o  A (W1): draft
+  ├─╯
   @  base: public
   
  
@@ -386,24 +386,24 @@ Bookmark feature should disappear in w2 but master will stay as it is a protecte
   $ hg cloud join -w w2 --switch -q 
   $ showgraph
   o  M: public  remote/master
-  |
-  | o  D (W2): draft book (W2)
-  | |
-  | o  C (W2): draft
-  |/
+  │
+  │ o  D (W2): draft book (W2)
+  │ │
+  │ o  C (W2): draft
+  ├─╯
   @  base: public
   
 
   $ hg pull -B stable -q
   $ showgraph
   o  S: public  remote/stable
-  |
-  | o  M: public  remote/master
-  |/
-  | o  D (W2): draft book (W2)
-  | |
-  | o  C (W2): draft
-  |/
+  │
+  │ o  M: public  remote/master
+  ├─╯
+  │ o  D (W2): draft book (W2)
+  │ │
+  │ o  C (W2): draft
+  ├─╯
   @  base: public
   
 
@@ -411,13 +411,13 @@ Switch back. Bookmark stable should disappear.
   $ hg cloud join -w w1 --switch -q
   $ showgraph
   o  M: public  remote/master
-  |
-  | o  F: public  remote/feature
-  |/
-  | o  B (W1): draft book (W1)
-  | |
-  | o  A (W1): draft
-  |/
+  │
+  │ o  F: public  remote/feature
+  ├─╯
+  │ o  B (W1): draft book (W1)
+  │ │
+  │ o  A (W1): draft
+  ├─╯
   @  base: public
   
 
@@ -425,13 +425,13 @@ Switch one more time. Bookmark stable should return and feature disappear.
   $ hg cloud join -w w2 --switch -q
   $ showgraph
   o  S: public  remote/stable
-  |
-  | o  M: public  remote/master
-  |/
-  | o  D (W2): draft book (W2)
-  | |
-  | o  C (W2): draft
-  |/
+  │
+  │ o  M: public  remote/master
+  ├─╯
+  │ o  D (W2): draft book (W2)
+  │ │
+  │ o  C (W2): draft
+  ├─╯
   @  base: public
   
 
@@ -439,15 +439,15 @@ Pull a commit from another workspace
   $ hg pull -r b624c739a2da -q
   $ showgraph
   o  S: draft
-  |
-  | o  M: public  remote/master
-  |/
-  | o  D (W2): draft book (W2)
-  | |
-  | o  C (W2): draft
-  |/
-  | o  A (W1): draft
-  |/
+  │
+  │ o  M: public  remote/master
+  ├─╯
+  │ o  D (W2): draft book (W2)
+  │ │
+  │ o  C (W2): draft
+  ├─╯
+  │ o  A (W1): draft
+  ├─╯
   @  base: public
   
 
@@ -456,13 +456,13 @@ Switch back to W1
   $ hg cloud join -w w1 --switch -q
   $ showgraph
   o  M: public  remote/master
-  |
-  | o  F: public  remote/feature
-  |/
-  | o  B (W1): draft book (W1)
-  | |
-  | o  A (W1): draft
-  |/
+  │
+  │ o  F: public  remote/feature
+  ├─╯
+  │ o  B (W1): draft book (W1)
+  │ │
+  │ o  A (W1): draft
+  ├─╯
   @  base: public
   
 
@@ -470,15 +470,15 @@ Switch back to W2 and check that the pulled commit is there.
   $ hg cloud join -w w2 --switch -q
   $ showgraph
   o  S: draft
-  |
-  | o  M: public  remote/master
-  |/
-  | o  D (W2): draft book (W2)
-  | |
-  | o  C (W2): draft
-  |/
-  | o  A (W1): draft
-  |/
+  │
+  │ o  M: public  remote/master
+  ├─╯
+  │ o  D (W2): draft book (W2)
+  │ │
+  │ o  C (W2): draft
+  ├─╯
+  │ o  A (W1): draft
+  ├─╯
   @  base: public
   
  
@@ -499,7 +499,7 @@ Test switch to non default non-existent workspace
   finished in * (glob)
   $ showgraph
   o  M: public  remote/master
-  |
+  │
   @  base: public
   
  

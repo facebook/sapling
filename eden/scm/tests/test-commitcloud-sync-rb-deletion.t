@@ -27,7 +27,7 @@
   $ hg cloud sync -q
   $ showgraph
   @  public1: public  remote/master
-  |
+  │
   o  base: public
   
 
@@ -38,7 +38,7 @@
   $ hg cloud sync -q
   $ showgraph
   @  public1: public  remote/master
-  |
+  │
   o  base: public
   
 
@@ -49,7 +49,7 @@
   $ hg cloud sync -q
   $ showgraph
   @  public1: public  remote/master
-  |
+  │
   o  base: public
   
 
@@ -60,7 +60,7 @@
   $ hg cloud sync -q
   $ showgraph
   @  public1: public  remote/master
-  |
+  │
   o  base: public
   
 
@@ -90,11 +90,11 @@ Push to a new public branch
      remote/other              4c8ee072cf16
   $ showgraph
   @  public3: draft
-  |
-  | o  public2: public  remote/other
-  |/
-  | o  public1: public  remote/master
-  |/
+  │
+  │ o  public2: public  remote/other
+  ├─╯
+  │ o  public1: public  remote/master
+  ├─╯
   o  base: public
   
 
@@ -106,11 +106,11 @@ Workaround this bug by pulling created
   no changes found
   $ showgraph
   @  public3: public  remote/created
-  |
-  | o  public2: public  remote/other
-  |/
-  | o  public1: public  remote/master
-  |/
+  │
+  │ o  public2: public  remote/other
+  ├─╯
+  │ o  public1: public  remote/master
+  ├─╯
   o  base: public
   
 
@@ -127,13 +127,13 @@ Create a draft commit and push it to a scratch branch
   0 files updated, 0 files merged, 2 files removed, 0 files unresolved
   $ showgraph
   o  draft1: draft  remote/scratch/draft1
-  |
+  │
   o  public3: public  remote/created
-  |
-  | o  public2: public  remote/other
-  |/
-  | o  public1: public  remote/master
-  |/
+  │
+  │ o  public2: public  remote/other
+  ├─╯
+  │ o  public1: public  remote/master
+  ├─╯
   @  base: public
   
   $ hg cloud sync -q
@@ -147,13 +147,13 @@ Create a draft commit and push it to a scratch branch
      remote/scratch/draft1     d860d2fc26c5
   $ showgraph
   o  draft1: draft  remote/scratch/draft1
-  |
+  │
   o  public3: public  remote/created
-  |
-  | o  public2: public  remote/other
-  |/
-  | @  public1: public  remote/master
-  |/
+  │
+  │ o  public2: public  remote/other
+  ├─╯
+  │ @  public1: public  remote/master
+  ├─╯
   o  base: public
   
 
@@ -163,11 +163,11 @@ Pull in this repo
   no changes found
   $ showgraph
   o  draft1: draft  remote/scratch/draft1
-  |
+  │
   o  public3: draft
-  |
-  | @  public1: public  remote/master
-  |/
+  │
+  │ @  public1: public  remote/master
+  ├─╯
   o  base: public
   
 BUG! our subscriptions have been lost
@@ -178,13 +178,13 @@ Work around this by pulling them by name
   no changes found
   $ showgraph
   o  draft1: draft  remote/scratch/draft1
-  |
+  │
   o  public3: public  remote/created
-  |
-  | o  public2: public  remote/other
-  |/
-  | @  public1: public  remote/master
-  |/
+  │
+  │ o  public2: public  remote/other
+  ├─╯
+  │ @  public1: public  remote/master
+  ├─╯
   o  base: public
   
 
@@ -198,13 +198,13 @@ Sync in the third repo
      remote/scratch/draft1     d860d2fc26c5
   $ showgraph
   o  draft1: draft  remote/scratch/draft1
-  |
+  │
   o  public3: public  remote/created
-  |
-  | o  public2: public  remote/other
-  |/
-  | @  public1: public  remote/master
-  |/
+  │
+  │ o  public2: public  remote/other
+  ├─╯
+  │ @  public1: public  remote/master
+  ├─╯
   o  base: public
   
 
@@ -217,7 +217,7 @@ TODO: make this a command
   $ hg debugshell -c "with repo.wlock(), repo.lock(), repo.transaction(\"deleteremotebookmarks\"): repo._remotenames.applychanges({\"bookmarks\": {key: '0'*40 if key in {'remote/other', 'remote/created'} else edenscm.mercurial.node.hex(value[0]) for key, value in repo._remotenames[\"bookmarks\"].items() }})"
   $ showgraph
   @  public1: public  remote/master
-  |
+  │
   o  base: public
   
   $ hg cloud sync -q
@@ -230,7 +230,7 @@ Sync in the first repo
      remote/scratch/draft1     d860d2fc26c5
   $ showgraph
   o  public1: public  remote/master
-  |
+  │
   @  base: public
   
 
@@ -246,7 +246,7 @@ Sync in the third repo again
      remote/scratch/draft1     d860d2fc26c5
   $ showgraph
   @  public1: public  remote/master
-  |
+  │
   o  base: public local
   
   $ hg pull
@@ -257,7 +257,7 @@ Sync in the third repo again
      remote/scratch/draft1     d860d2fc26c5
   $ showgraph
   @  public1: public  remote/master
-  |
+  │
   o  base: public local
   
 
@@ -272,7 +272,7 @@ Sync in the fourth repo
      remote/master             9da34b1aa207
   $ showgraph
   @  public1: public  remote/master
-  |
+  │
   o  base: public local
   
 
@@ -285,9 +285,9 @@ Sync in the second repo with one of the deleted bookmarks protected
   finished in 0.00 sec
   $ showgraph
   o  public2: public  remote/other
-  |
-  | @  public1: public  remote/master
-  |/
+  │
+  │ @  public1: public  remote/master
+  ├─╯
   o  base: public local
   
 
@@ -296,8 +296,8 @@ The other bookmark is now revived in the other repos
   $ hg cloud sync -q
   $ showgraph
   o  public2: public  remote/other
-  |
-  | @  public1: public  remote/master
-  |/
+  │
+  │ @  public1: public  remote/master
+  ├─╯
   o  base: public local
   

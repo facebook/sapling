@@ -35,11 +35,11 @@ clone a branch
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R hgrepo-b log --graph
   @  commit:      3bb02b6794dd
-  |  bookmark:    beta
-  |  user:        test <test@example.org>
-  |  date:        Mon Jan 01 00:00:11 2007 +0000
-  |  summary:     add beta
-  |
+  │  bookmark:    beta
+  │  user:        test <test@example.org>
+  │  date:        Mon Jan 01 00:00:11 2007 +0000
+  │  summary:     add beta
+  │
   o  commit:      69982ec78c6d
      bookmark:    master
      user:        test <test@example.org>
@@ -69,16 +69,16 @@ pull works after 'hg git-cleanup'
   importing git objects into hg
   $ hg log --graph
   o  commit:      3db9bf9073b5
-  |  bookmark:    beta
-  |  user:        test <test@example.org>
-  |  date:        Mon Jan 01 00:00:12 2007 +0000
-  |  summary:     add to beta
-  |
+  │  bookmark:    beta
+  │  user:        test <test@example.org>
+  │  date:        Mon Jan 01 00:00:12 2007 +0000
+  │  summary:     add to beta
+  │
   o  commit:      3bb02b6794dd
-  |  user:        test <test@example.org>
-  |  date:        Mon Jan 01 00:00:11 2007 +0000
-  |  summary:     add beta
-  |
+  │  user:        test <test@example.org>
+  │  date:        Mon Jan 01 00:00:11 2007 +0000
+  │  summary:     add beta
+  │
   @  commit:      69982ec78c6d
      bookmark:    master
      user:        test <test@example.org>

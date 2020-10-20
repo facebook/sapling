@@ -91,9 +91,9 @@ remote or local repo
 
   $ hg log -G -T '{node|short} {bookmarks} {remotebookmarks}\n'
   @  2d95304fed5d
-  |
+  │
   o  1846eede8b68
-  |
+  │
   o  cb9a9f314b8b
   
   $ hg bookmark foo
@@ -105,16 +105,16 @@ remote or local repo
   [1]
   $ hg log -G -T '{node|short} {bookmarks} {remotebookmarks}\n'
   @  2d95304fed5d foo default/foo
-  |
+  │
   o  1846eede8b68
-  |
+  │
   o  cb9a9f314b8b
   
   $ hg boo -d foo
   $ hg debugstrip . -q
   $ hg log -G -T '{node|short} {bookmarks} {remotebookmarks}\n'
   @  1846eede8b68
-  |
+  │
   o  cb9a9f314b8b
   
   $ hg push

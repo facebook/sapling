@@ -64,9 +64,9 @@ Confirm that it rebases a three-way merge, but no conflict:
   $ hg commit -q -m "prepend with 0"
   $ hg log -G -r 'desc(base)':: -T '{desc}'
   @  prepend with 0
-  |
-  | o  extend to 10
-  |/
+  │
+  │ o  extend to 10
+  ├─╯
   o  base
   
   $ hg up -qC 'desc(base)'

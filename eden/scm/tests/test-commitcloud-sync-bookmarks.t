@@ -49,7 +49,7 @@
   finished in * (glob)
   $ tglogp
   o  00422fad0026 draft 'draft-commit
-  |  Differential Revision: https://phabricator.fb.com/D1234' foo
+  │  Differential Revision: https://phabricator.fb.com/D1234' foo
   @  df4f53cec30a public 'base'
   
   $ cd ..
@@ -76,13 +76,13 @@ Fake land the commit
   added 3 changesets with 2 changes to 2 files
   $ tglogp
   o  67d363c9001e public 'public-commit-2'
-  |
+  │
   o  441f69264760 public 'landed-commit
-  |  Differential Revision: https://phabricator.fb.com/D1234'
+  │  Differential Revision: https://phabricator.fb.com/D1234'
   o  031d760782fb public 'public-commit-1'
-  |
-  | x  00422fad0026 draft 'draft-commit
-  |/   Differential Revision: https://phabricator.fb.com/D1234' foo
+  │
+  │ x  00422fad0026 draft 'draft-commit
+  ├─╯  Differential Revision: https://phabricator.fb.com/D1234' foo
   @  df4f53cec30a public 'base'
   
   $ hg cloud sync -q
@@ -90,7 +90,7 @@ Fake land the commit
   $ hg cloud sync -q
   $ tglogp
   o  00422fad0026 draft 'draft-commit
-  |  Differential Revision: https://phabricator.fb.com/D1234' foo
+  │  Differential Revision: https://phabricator.fb.com/D1234' foo
   @  df4f53cec30a public 'base'
   
 
@@ -101,11 +101,11 @@ Rebasing the bookmark will make the draft commit disappear.
   note: not rebasing 00422fad0026 "draft-commit" (foo), already in destination as 441f69264760 "landed-commit"
   $ tglogp
   o  67d363c9001e public 'public-commit-2' foo
-  |
+  │
   o  441f69264760 public 'landed-commit
-  |  Differential Revision: https://phabricator.fb.com/D1234'
+  │  Differential Revision: https://phabricator.fb.com/D1234'
   o  031d760782fb public 'public-commit-1'
-  |
+  │
   @  df4f53cec30a public 'base'
   
   $ hg cloud sync
@@ -114,11 +114,11 @@ Rebasing the bookmark will make the draft commit disappear.
   finished in * (glob)
   $ tglogp
   o  67d363c9001e public 'public-commit-2' foo
-  |
+  │
   o  441f69264760 public 'landed-commit
-  |  Differential Revision: https://phabricator.fb.com/D1234'
+  │  Differential Revision: https://phabricator.fb.com/D1234'
   o  031d760782fb public 'public-commit-1'
-  |
+  │
   @  df4f53cec30a public 'base'
   
 Sync in client2.   This will omit the bookmark because we don't have the landed commit.
@@ -147,11 +147,11 @@ The draft commit is also gone from here, and the workspace is stable.
 
   $ tglogp
   o  67d363c9001e public 'public-commit-2' foo
-  |
+  │
   o  441f69264760 public 'landed-commit
-  |  Differential Revision: https://phabricator.fb.com/D1234'
+  │  Differential Revision: https://phabricator.fb.com/D1234'
   o  031d760782fb public 'public-commit-1'
-  |
+  │
   @  df4f53cec30a public 'base'
   
 
@@ -159,10 +159,10 @@ The draft commit is also gone from here, and the workspace is stable.
   $ hg cloud sync -q
   $ tglogp
   o  67d363c9001e public 'public-commit-2' foo
-  |
+  │
   o  441f69264760 public 'landed-commit
-  |  Differential Revision: https://phabricator.fb.com/D1234'
+  │  Differential Revision: https://phabricator.fb.com/D1234'
   o  031d760782fb public 'public-commit-1'
-  |
+  │
   @  df4f53cec30a public 'base'
   

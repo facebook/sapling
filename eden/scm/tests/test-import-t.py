@@ -1,4 +1,6 @@
 # coding=utf-8
+
+# coding=utf-8
 # Copyright (c) Facebook, Inc. and its affiliates.
 # Copyright (c) Mercurial Contributors.
 #
@@ -1213,15 +1215,15 @@ sh % "echo Celeste" >> "jungle"
 sh % "hg ci -m 'extended jungle' -u Cornelius"
 sh % "hg log -G --template '{desc|firstline} [{author}] {diffstat}\\n'" == r"""
     @  extended jungle [Cornelius] 1: +1/-0
-    |
+    │
     o  jungle [Zephir] 1: +1/-0
-    |
+    │
     o  five [Arthur] 2: +2/-1
-    |
+    │
     o  four [Rataxes] 1: +1/-1
-    |
+    │
     o  three [Celeste] 1: +1/-1
-    |
+    │
     o  initial [Babar] 2: +8/-0"""
 # Adding those config options should not change the output of diffstat. Bugfix #4755.
 
@@ -1242,17 +1244,17 @@ sh % "hg export --rev 'desc(five)'" | "hg import --partial -" == r"""
 
 sh % "hg log -G --template '{desc|firstline} [{author}] {diffstat}\\n'" == r"""
     @  five [Arthur] 1: +1/-0
-    |
-    | o  extended jungle [Cornelius] 1: +1/-0
-    | |
-    | o  jungle [Zephir] 1: +1/-0
-    | |
-    | o  five [Arthur] 2: +2/-1
-    | |
-    | o  four [Rataxes] 1: +1/-1
-    | |
-    | o  three [Celeste] 1: +1/-1
-    |/
+    │
+    │ o  extended jungle [Cornelius] 1: +1/-0
+    │ │
+    │ o  jungle [Zephir] 1: +1/-0
+    │ │
+    │ o  five [Arthur] 2: +2/-1
+    │ │
+    │ o  four [Rataxes] 1: +1/-1
+    │ │
+    │ o  three [Celeste] 1: +1/-1
+    ├─╯
     o  initial [Babar] 2: +8/-0"""
 sh % "hg export" == r"""
     # HG changeset patch
@@ -1291,19 +1293,19 @@ sh % "hg export --rev 'desc(four)'" | "hg import --partial -" == r"""
 
 sh % "hg log -G --template '{desc|firstline} [{author}] {diffstat}\\n'" == r"""
     @  four [Rataxes] 0: +0/-0
-    |
-    | o  five [Arthur] 1: +1/-0
-    |/
-    | o  extended jungle [Cornelius] 1: +1/-0
-    | |
-    | o  jungle [Zephir] 1: +1/-0
-    | |
-    | o  five [Arthur] 2: +2/-1
-    | |
-    | o  four [Rataxes] 1: +1/-1
-    | |
-    | o  three [Celeste] 1: +1/-1
-    |/
+    │
+    │ o  five [Arthur] 1: +1/-0
+    ├─╯
+    │ o  extended jungle [Cornelius] 1: +1/-0
+    │ │
+    │ o  jungle [Zephir] 1: +1/-0
+    │ │
+    │ o  five [Arthur] 2: +2/-1
+    │ │
+    │ o  four [Rataxes] 1: +1/-1
+    │ │
+    │ o  three [Celeste] 1: +1/-1
+    ├─╯
     o  initial [Babar] 2: +8/-0"""
 sh % "hg export" == r"""
     # HG changeset patch
@@ -1335,21 +1337,21 @@ sh % "hg export --rev 'desc(\"extended jungle\")'" | "hg import --partial -" == 
 
 sh % "hg log -G --template '{desc|firstline} [{author}] {diffstat}\\n'" == r"""
     @  extended jungle [Cornelius] 0: +0/-0
-    |
-    | o  four [Rataxes] 0: +0/-0
-    |/
-    | o  five [Arthur] 1: +1/-0
-    |/
-    | o  extended jungle [Cornelius] 1: +1/-0
-    | |
-    | o  jungle [Zephir] 1: +1/-0
-    | |
-    | o  five [Arthur] 2: +2/-1
-    | |
-    | o  four [Rataxes] 1: +1/-1
-    | |
-    | o  three [Celeste] 1: +1/-1
-    |/
+    │
+    │ o  four [Rataxes] 0: +0/-0
+    ├─╯
+    │ o  five [Arthur] 1: +1/-0
+    ├─╯
+    │ o  extended jungle [Cornelius] 1: +1/-0
+    │ │
+    │ o  jungle [Zephir] 1: +1/-0
+    │ │
+    │ o  five [Arthur] 2: +2/-1
+    │ │
+    │ o  four [Rataxes] 1: +1/-1
+    │ │
+    │ o  three [Celeste] 1: +1/-1
+    ├─╯
     o  initial [Babar] 2: +8/-0"""
 sh % "hg export" == r"""
     # HG changeset patch
@@ -1383,25 +1385,25 @@ sh % 'hg export --rev \'desc("four") + desc("extended jungle")\'' | "hg import -
     [1]"""
 sh % "hg log -G --template '{desc|firstline} [{author}] {diffstat}\\n'" == r"""
     @  four [Rataxes] 0: +0/-0
-    |
+    │
     o  a new base [test] 1: +1/-1
-    |
-    | o  extended jungle [Cornelius] 0: +0/-0
-    |/
-    | o  four [Rataxes] 0: +0/-0
-    |/
-    | o  five [Arthur] 1: +1/-0
-    |/
-    | o  extended jungle [Cornelius] 1: +1/-0
-    | |
-    | o  jungle [Zephir] 1: +1/-0
-    | |
-    | o  five [Arthur] 2: +2/-1
-    | |
-    | o  four [Rataxes] 1: +1/-1
-    | |
-    | o  three [Celeste] 1: +1/-1
-    |/
+    │
+    │ o  extended jungle [Cornelius] 0: +0/-0
+    ├─╯
+    │ o  four [Rataxes] 0: +0/-0
+    ├─╯
+    │ o  five [Arthur] 1: +1/-0
+    ├─╯
+    │ o  extended jungle [Cornelius] 1: +1/-0
+    │ │
+    │ o  jungle [Zephir] 1: +1/-0
+    │ │
+    │ o  five [Arthur] 2: +2/-1
+    │ │
+    │ o  four [Rataxes] 1: +1/-1
+    │ │
+    │ o  three [Celeste] 1: +1/-1
+    ├─╯
     o  initial [Babar] 2: +8/-0"""
 sh % "hg export" == r"""
     # HG changeset patch

@@ -66,11 +66,11 @@ pull a branch
   importing git objects into hg
   $ hg -R hgrepo log --graph
   o  commit:      3bb02b6794dd
-  |  bookmark:    beta
-  |  user:        test <test@example.org>
-  |  date:        Mon Jan 01 00:00:11 2007 +0000
-  |  summary:     add beta
-  |
+  │  bookmark:    beta
+  │  user:        test <test@example.org>
+  │  date:        Mon Jan 01 00:00:11 2007 +0000
+  │  summary:     add beta
+  │
   @  commit:      69982ec78c6d
      bookmark:    epsilon
      bookmark:    master
@@ -95,23 +95,23 @@ pull everything else
   importing git objects into hg
   $ hg -R hgrepo log --graph
   o  commit:      78f47553e70d
-  |  bookmark:    master
-  |  user:        test <test@example.org>
-  |  date:        Mon Jan 01 00:00:13 2007 +0000
-  |  summary:     add gamma
-  |
-  | o  commit:      0a22250873dd
-  |/   bookmark:    delta
-  |    user:        test <test@example.org>
-  |    date:        Mon Jan 01 00:00:12 2007 +0000
-  |    summary:     add delta
-  |
-  | o  commit:      3bb02b6794dd
-  |/   bookmark:    beta
-  |    user:        test <test@example.org>
-  |    date:        Mon Jan 01 00:00:11 2007 +0000
-  |    summary:     add beta
-  |
+  │  bookmark:    master
+  │  user:        test <test@example.org>
+  │  date:        Mon Jan 01 00:00:13 2007 +0000
+  │  summary:     add gamma
+  │
+  │ o  commit:      0a22250873dd
+  ├─╯  bookmark:    delta
+  │    user:        test <test@example.org>
+  │    date:        Mon Jan 01 00:00:12 2007 +0000
+  │    summary:     add delta
+  │
+  │ o  commit:      3bb02b6794dd
+  ├─╯  bookmark:    beta
+  │    user:        test <test@example.org>
+  │    date:        Mon Jan 01 00:00:11 2007 +0000
+  │    summary:     add beta
+  │
   @  commit:      69982ec78c6d
      bookmark:    epsilon
      bookmark:    t_alpha
@@ -134,28 +134,28 @@ pull the merge
   importing git objects into hg
   $ hg -R hgrepo log --graph
   o    commit:      10c1db28cc89
-  |\   bookmark:    master
-  | |  user:        test <test@example.org>
-  | |  date:        Mon Jan 01 00:00:13 2007 +0000
-  | |  summary:     Merge branch 'beta'
-  | |
-  | o  commit:      78f47553e70d
-  | |  user:        test <test@example.org>
-  | |  date:        Mon Jan 01 00:00:13 2007 +0000
-  | |  summary:     add gamma
-  | |
-  | | o  commit:      0a22250873dd
-  | |/   bookmark:    delta
-  | |    user:        test <test@example.org>
-  | |    date:        Mon Jan 01 00:00:12 2007 +0000
-  | |    summary:     add delta
-  | |
-  o |  commit:      3bb02b6794dd
-  |/   bookmark:    beta
-  |    user:        test <test@example.org>
-  |    date:        Mon Jan 01 00:00:11 2007 +0000
-  |    summary:     add beta
-  |
+  ├─╮  bookmark:    master
+  │ │  user:        test <test@example.org>
+  │ │  date:        Mon Jan 01 00:00:13 2007 +0000
+  │ │  summary:     Merge branch 'beta'
+  │ │
+  │ o  commit:      78f47553e70d
+  │ │  user:        test <test@example.org>
+  │ │  date:        Mon Jan 01 00:00:13 2007 +0000
+  │ │  summary:     add gamma
+  │ │
+  │ │ o  commit:      0a22250873dd
+  │ ├─╯  bookmark:    delta
+  │ │    user:        test <test@example.org>
+  │ │    date:        Mon Jan 01 00:00:12 2007 +0000
+  │ │    summary:     add delta
+  │ │
+  o │  commit:      3bb02b6794dd
+  ├─╯  bookmark:    beta
+  │    user:        test <test@example.org>
+  │    date:        Mon Jan 01 00:00:11 2007 +0000
+  │    summary:     add beta
+  │
   @  commit:      69982ec78c6d
      bookmark:    epsilon
      bookmark:    t_alpha
@@ -185,40 +185,40 @@ ensure that releases/v1 and releases/v2 are pulled but not notreleases/v1
   importing git objects into hg
   $ hg -R hgrepo log --graph
   o  commit:      47d709856ce8
-  |  bookmark:    releases/v2
-  |  user:        test <test@example.org>
-  |  date:        Mon Jan 01 00:00:15 2007 +0000
-  |  summary:     add eta
-  |
-  | o  commit:      e09a50abb1b1
-  |/   bookmark:    releases/v1
-  |    user:        test <test@example.org>
-  |    date:        Mon Jan 01 00:00:14 2007 +0000
-  |    summary:     add zeta
-  |
+  │  bookmark:    releases/v2
+  │  user:        test <test@example.org>
+  │  date:        Mon Jan 01 00:00:15 2007 +0000
+  │  summary:     add eta
+  │
+  │ o  commit:      e09a50abb1b1
+  ├─╯  bookmark:    releases/v1
+  │    user:        test <test@example.org>
+  │    date:        Mon Jan 01 00:00:14 2007 +0000
+  │    summary:     add zeta
+  │
   o    commit:      10c1db28cc89
-  |\   bookmark:    master
-  | |  user:        test <test@example.org>
-  | |  date:        Mon Jan 01 00:00:13 2007 +0000
-  | |  summary:     Merge branch 'beta'
-  | |
-  | o  commit:      78f47553e70d
-  | |  user:        test <test@example.org>
-  | |  date:        Mon Jan 01 00:00:13 2007 +0000
-  | |  summary:     add gamma
-  | |
-  | | o  commit:      0a22250873dd
-  | |/   bookmark:    delta
-  | |    user:        test <test@example.org>
-  | |    date:        Mon Jan 01 00:00:12 2007 +0000
-  | |    summary:     add delta
-  | |
-  o |  commit:      3bb02b6794dd
-  |/   bookmark:    beta
-  |    user:        test <test@example.org>
-  |    date:        Mon Jan 01 00:00:11 2007 +0000
-  |    summary:     add beta
-  |
+  ├─╮  bookmark:    master
+  │ │  user:        test <test@example.org>
+  │ │  date:        Mon Jan 01 00:00:13 2007 +0000
+  │ │  summary:     Merge branch 'beta'
+  │ │
+  │ o  commit:      78f47553e70d
+  │ │  user:        test <test@example.org>
+  │ │  date:        Mon Jan 01 00:00:13 2007 +0000
+  │ │  summary:     add gamma
+  │ │
+  │ │ o  commit:      0a22250873dd
+  │ ├─╯  bookmark:    delta
+  │ │    user:        test <test@example.org>
+  │ │    date:        Mon Jan 01 00:00:12 2007 +0000
+  │ │    summary:     add delta
+  │ │
+  o │  commit:      3bb02b6794dd
+  ├─╯  bookmark:    beta
+  │    user:        test <test@example.org>
+  │    date:        Mon Jan 01 00:00:11 2007 +0000
+  │    summary:     add beta
+  │
   @  commit:      69982ec78c6d
      bookmark:    epsilon
      bookmark:    t_alpha
@@ -315,22 +315,22 @@ Skip commits using hggit.skipgithashes
   forcing git commit cee7863e67baaf98d4b6f3645dd9fa78fba9de0d to be empty
   $ hg log -G --stat -T '{desc}'
   o  newcommit newcommit |  1 +
-  |   1 files changed, 1 insertions(+), 0 deletions(-)
-  |
+  │   1 files changed, 1 insertions(+), 0 deletions(-)
+  │
   o  oldcommit oldcommit |  1 +
-  |   1 files changed, 1 insertions(+), 0 deletions(-)
-  |
-  | o  oldtag oldtag |  1 +
-  |/    1 files changed, 1 insertions(+), 0 deletions(-)
-  |
+  │   1 files changed, 1 insertions(+), 0 deletions(-)
+  │
+  │ o  oldtag oldtag |  1 +
+  ├─╯   1 files changed, 1 insertions(+), 0 deletions(-)
+  │
   o    Merge branch 'beta' beta |  1 +
-  |\    1 files changed, 1 insertions(+), 0 deletions(-)
-  | |
-  | o  add beta beta |  1 +
-  | |   1 files changed, 1 insertions(+), 0 deletions(-)
-  | |
-  o |  add gamma
-  |/
+  ├─╮   1 files changed, 1 insertions(+), 0 deletions(-)
+  │ │
+  │ o  add beta beta |  1 +
+  │ │   1 files changed, 1 insertions(+), 0 deletions(-)
+  │ │
+  o │  add gamma
+  ├─╯
   o  add alpha alpha |  1 +
       1 files changed, 1 insertions(+), 0 deletions(-)
   

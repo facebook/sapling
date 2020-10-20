@@ -61,15 +61,15 @@ commit.
   $ hg commit -Aqm c
   $ hg log -G -T '{shortest(node)} {desc}'
   @  ebb8 c
-  |
+  │
   o    baf7 merge
-  |\
-  | o  a129 b
-  | |
-  o |  958c xz
-  | |
-  | o  f00c xy
-  |/
+  ├─╮
+  │ o  a129 b
+  │ │
+  o │  958c xz
+  │ │
+  │ o  f00c xy
+  ├─╯
   o  3903 a
   
   $ cd ..

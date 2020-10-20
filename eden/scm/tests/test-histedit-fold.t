@@ -44,15 +44,15 @@ Simple folding
 log before edit
   $ hg logt --graph
   @  178e35e0ce73 f
-  |
+  │
   o  1ddb6c90f2ee e
-  |
+  │
   o  532247a8969b d
-  |
+  │
   o  ff2c9fa2018b c
-  |
+  │
   o  97d72e5f12c7 b
-  |
+  │
   o  8580ff50825a a
   
 
@@ -66,13 +66,13 @@ log before edit
 log after edit
   $ hg logt --graph
   @  c4d7f3def76d d
-  |
+  │
   o  575228819b7e f
-  |
+  │
   o  505a591af19e e
-  |
+  │
   o  97d72e5f12c7 b
-  |
+  │
   o  8580ff50825a a
   
 
@@ -120,11 +120,11 @@ rollup will fold without preserving the folded commit's message or date
 log after edit
   $ hg logt --graph
   @  bab801520cec d
-  |
+  │
   o  58c8f2bfc151 f
-  |
+  │
   o  5d939c56c72e b
-  |
+  │
   o  8580ff50825a a
   
 
@@ -266,11 +266,11 @@ folded content is dropped during a merge. The folded commit should properly disa
   $ hg commit -m '+6'
   $ hg logt --graph
   @  251d831eeec5 +6
-  |
+  │
   o  888f9082bf99 +5
-  |
+  │
   o  617f94f13c0f +4
-  |
+  │
   o  0189ba417d34 1+2+3
   
 
@@ -312,7 +312,7 @@ should effectively drop the changes from +6.
   251d831eeec5: empty changeset
   $ hg logt --graph
   @  617f94f13c0f +4
-  |
+  │
   o  0189ba417d34 1+2+3
   
 
@@ -340,11 +340,11 @@ dropped revision.
   $ hg commit -m '+6'
   $ hg logt -G
   @  251d831eeec5 +6
-  |
+  │
   o  888f9082bf99 +5
-  |
+  │
   o  617f94f13c0f +4
-  |
+  │
   o  0189ba417d34 1+2+3
   
   $ hg histedit 617f94f13c0faff2ff307641901637b91cbd7c7b --commands -  << EOF
@@ -387,7 +387,7 @@ dropped revision.
   HG: changed file
   $ hg logt -G
   @  10c647b2cdd5 +4
-  |
+  │
   o  0189ba417d34 1+2+3
   
   $ hg export tip
@@ -558,9 +558,9 @@ Test rolling into a commit with multiple children (issue5498)
   $ hg commit -qAm cc
   $ hg log -G -T '{node|short} {desc}'
   @  5db65b93a12b cc
-  |
-  | o  301d76bdc3ae bb
-  |/
+  │
+  │ o  301d76bdc3ae bb
+  ├─╯
   o  8f0162e483d0 aa
   
 
@@ -571,9 +571,9 @@ Test rolling into a commit with multiple children (issue5498)
   [255]
   $ hg log -G -T '{node|short} {desc}'
   @  5db65b93a12b cc
-  |
-  | o  301d76bdc3ae bb
-  |/
+  │
+  │ o  301d76bdc3ae bb
+  ├─╯
   o  8f0162e483d0 aa
   
 

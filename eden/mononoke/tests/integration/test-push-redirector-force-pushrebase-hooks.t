@@ -67,7 +67,7 @@ blocked by deny_files
 -- newcommit was correctly pushed to test_bookmark
   $ log -r test_bookmark
   @  newcommit [public;rev=2;ce81c7d38286] default/test_bookmark
-  |
+  │
   ~
 
 -- newcommit is also present in the large repo (after a pull)
@@ -75,7 +75,7 @@ blocked by deny_files
   $ REPONAME=large-mon hgmn pull -q
   $ log -r bookprefix/test_bookmark
   o  newcommit [public;rev=3;819e91b238b7] default/bookprefix/test_bookmark
-  |
+  │
   ~
 - compare the working copies
   $ verify_wc bookprefix/test_bookmark
@@ -132,7 +132,7 @@ Commit has been backsynced
   $ REPONAME=small-mon hgmn pull -q
   $ log -r master_bookmark
   o  backsync [public;rev=4;cd9bfa9f25eb] default/master_bookmark
-  |
+  │
   ~
 
 Attempt to move test_bookmark to the new master_bookmark commit.  It fails because of the

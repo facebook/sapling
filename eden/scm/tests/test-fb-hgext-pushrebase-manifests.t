@@ -65,7 +65,7 @@ Make some non-conflicting commits in all three repos.
   adding srv
   $ log
   @  srv => bar (first) [draft:2d83594e8405] master
-  |
+  │
   o  [base] (zero'th) [draft:a9156650d8dd]
   
   $ cd ../client1
@@ -76,9 +76,9 @@ Make some non-conflicting commits in all three repos.
   $ commit 'c1 => baz (fourth)'
   $ log
   @  c1 => baz (fourth) [draft:1fe62957ca8a]
-  |
+  │
   o  c1 => xxx (third) [draft:8cf3b846b3a4]
-  |
+  │
   o  [base] (zero'th) [public:a9156650d8dd]
   
   $ cd ../client2
@@ -164,9 +164,9 @@ blocking. There shouldn't be any "[client1 push]" output here.
   [client2 push] 1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ log
   @  c2 => yyy (second) [public:d732e3c60e5e]
-  |
+  │
   o  srv => bar (first) [public:2d83594e8405]
-  |
+  │
   o  [base] (zero'th) [public:a9156650d8dd]
   
 
@@ -203,21 +203,21 @@ Verify the proper commit order. (Note: The received commits here shouldn't be
 draft; see t16967599).
   $ cd ../client1 && log
   @  c1 => baz (fourth) [public:24b9fc6d79e7]
-  |
+  │
   o  c1 => xxx (third) [public:074726aeb626]
-  |
+  │
   o  c2 => yyy (second) [public:d732e3c60e5e]
-  |
+  │
   o  srv => bar (first) [public:2d83594e8405]
-  |
+  │
   o  [base] (zero'th) [public:a9156650d8dd]
   
 client2 should only have its changesets because it won:
   $ cd ../client2 && log
   @  c2 => yyy (second) [public:d732e3c60e5e]
-  |
+  │
   o  srv => bar (first) [public:2d83594e8405]
-  |
+  │
   o  [base] (zero'th) [public:a9156650d8dd]
   
 
