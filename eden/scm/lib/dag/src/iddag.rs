@@ -9,6 +9,7 @@ use crate::errors::bug;
 use crate::id::{Group, Id};
 use crate::iddagstore::{IdDagStore, InProcessStore, IndexedLogStore};
 use crate::idmap::AssignHeadOutcome;
+use crate::locked::Locked;
 use crate::ops::Persist;
 use crate::segment::{Segment, SegmentFlags};
 use crate::spanset::Span;
@@ -22,8 +23,6 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 use std::collections::{BTreeSet, BinaryHeap};
 use std::fmt::{self, Debug, Formatter};
-use std::ops::Deref;
-use std::ops::DerefMut;
 use std::path::Path;
 use tracing::{debug_span, field, trace};
 
@@ -51,10 +50,7 @@ pub struct IdDag<Store> {
 }
 
 /// Guard to make sure [`IdDag`] on-disk writes are race-free.
-pub struct SyncableIdDag<'a, Store: Persist> {
-    dag: &'a mut IdDag<Store>,
-    lock: <Store as Persist>::Lock,
-}
+pub type SyncableIdDag<'a, Store> = Locked<'a, IdDag<Store>>;
 
 /// See benches/segment_sizes.rs (D16660078) for this choice.
 const DEFAULT_SEG_SIZE: usize = 16;
@@ -209,7 +205,7 @@ impl<Store: IdDagStore + Persist> IdDag<Store> {
         let lock = self.store.lock()?;
         // Read new entries from filesystem.
         self.store.reload(&lock)?;
-        Ok(SyncableIdDag { dag: self, lock })
+        Ok(SyncableIdDag { inner: self, lock })
     }
 }
 
@@ -1280,15 +1276,6 @@ pub enum FirstAncestorConstraint {
 }
 
 impl<Store: IdDagStore + Persist> SyncableIdDag<'_, Store> {
-    /// Write pending changes to disk. Release the exclusive lock.
-    ///
-    /// The newly written entries can be fetched by [`IdDag::reload`].
-    pub fn sync(self) -> Result<()> {
-        self.dag.store.persist(&self.lock)?;
-        drop(self.lock);
-        Ok(())
-    }
-
     /// Export non-master DAG as parent_id_func on HashMap.
     ///
     /// This can be expensive if there are a lot of non-master ids.
@@ -1297,7 +1284,7 @@ impl<Store: IdDagStore + Persist> SyncableIdDag<'_, Store> {
     pub fn non_master_parent_ids(&self) -> Result<HashMap<Id, Vec<Id>>> {
         let mut parents = HashMap::new();
         let start = Group::NON_MASTER.min_id();
-        for seg in self.dag.next_segments(start, 0)? {
+        for seg in self.next_segments(start, 0)? {
             let span = seg.span()?;
             parents.insert(span.low, seg.parents()?);
             for i in (span.low + 1).to(span.high) {
@@ -1309,21 +1296,23 @@ impl<Store: IdDagStore + Persist> SyncableIdDag<'_, Store> {
 
     /// Remove all non master Group identifiers from the DAG.
     pub fn remove_non_master(&mut self) -> Result<()> {
-        self.dag.store.remove_non_master()
+        self.store.remove_non_master()
     }
 }
 
-impl<Store: Persist> Deref for SyncableIdDag<'_, Store> {
-    type Target = IdDag<Store>;
+impl<Store: Persist> Persist for IdDag<Store> {
+    type Lock = <Store as Persist>::Lock;
 
-    fn deref(&self) -> &Self::Target {
-        &self.dag
+    fn lock(&self) -> Result<Self::Lock> {
+        self.store.lock()
     }
-}
 
-impl<Store: Persist> DerefMut for SyncableIdDag<'_, Store> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.dag
+    fn reload(&mut self, lock: &Self::Lock) -> Result<()> {
+        self.store.reload(lock)
+    }
+
+    fn persist(&mut self, lock: &Self::Lock) -> Result<()> {
+        self.store.persist(lock)
     }
 }
 
