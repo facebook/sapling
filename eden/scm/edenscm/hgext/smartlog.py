@@ -539,7 +539,7 @@ def _smartlog(ui, repo, *pats, **opts):
     revdag, reserved = getdag(ui, repo, sorted(revs, reverse=True), masterrev)
     displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
     ui.pager("smartlog")
-    cmdutil.rustdisplaygraph(ui, repo, revdag, displayer, reserved=reserved)
+    cmdutil.displaygraph(ui, repo, revdag, displayer, reserved=reserved)
 
     try:
         with open(repo.localvfs.join("completionhints"), "w+") as f:

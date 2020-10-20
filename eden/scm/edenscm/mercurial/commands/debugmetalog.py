@@ -68,7 +68,7 @@ def debugmetalog(ui, repo, **opts):
         ),
     )
     ui.pager("debugmetalog")
-    cmdutil.rustdisplaygraph(ui, repo, revdag, displayer(nodenamesdict))
+    cmdutil.displaygraph(ui, repo, revdag, displayer(nodenamesdict))
 
 
 def parsenodenames(meta):

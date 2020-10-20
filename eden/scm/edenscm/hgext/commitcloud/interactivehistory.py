@@ -80,7 +80,7 @@ def showhistory(ui, repo, reponame, workspacename, **opts):
 
             firstpublic, revdag = serv.makedagwalker(slinfo, repo)
             displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
-            cmdutil.rustdisplaygraph(ui, repo, revdag, displayer, reserved=firstpublic)
+            cmdutil.displaygraph(ui, repo, revdag, displayer, reserved=firstpublic)
             repo.ui.status(
                 _(
                     "<-: newer  "

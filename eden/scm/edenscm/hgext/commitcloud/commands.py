@@ -602,7 +602,7 @@ def cloudsmartlog(ui, repo, template="sl_cloud", **opts):
     # show all the nodes
     firstpublic, revdag = serv.makedagwalker(slinfo, repo)
     displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
-    cmdutil.rustdisplaygraph(ui, repo, revdag, displayer, reserved=firstpublic)
+    cmdutil.displaygraph(ui, repo, revdag, displayer, reserved=firstpublic)
 
 
 @subcmd("supersmartlog|ssl", workspace.workspaceopts)

@@ -3099,12 +3099,6 @@ def _graphnodeformatter(ui, displayer):
 
 
 def displaygraph(
-    ui, repo, dag, displayer, edgefn=None, getrenamed=None, filematcher=None, props=None
-):
-    rustdisplaygraph(ui, repo, dag, displayer, getrenamed, filematcher, props)
-
-
-def rustdisplaygraph(
     ui,
     repo,
     dag,
@@ -3190,7 +3184,7 @@ def graphlog(ui, repo, pats, opts):
 
     ui.pager("log")
     displayer = show_changeset(ui, repo, opts, buffered=True)
-    displaygraph(ui, repo, revdag, displayer, None, getrenamed, filematcher)
+    displaygraph(ui, repo, revdag, displayer, getrenamed, filematcher)
 
 
 def checkunsupportedgraphflags(pats, opts):
