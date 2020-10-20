@@ -1220,22 +1220,26 @@ void EdenServiceHandler::debugOutstandingFuseCalls(
 
   auto edenMount = server_->getMount(*mountPoint);
   auto* fuseChannel = edenMount->getFuseChannel();
-  std::vector<fuse_in_header> fuseOutstandingCalls =
-      fuseChannel->getOutstandingRequests();
-  FuseCall fuseCall;
 
-  for (const auto& call : fuseOutstandingCalls) {
+  for (const auto& call : fuseChannel->getOutstandingRequests()) {
+    FuseCall fuseCall;
     // Convert from fuse_in_header to fuseCall
     // Conversion is done here to avoid building a dependency between
     // FuseChannel and thrift
 
-    fuseCall.len_ref() = call.len;
-    fuseCall.opcode_ref() = call.opcode;
+    auto& request = call.request;
+    fuseCall.len_ref() = request.len;
+    fuseCall.opcode_ref() = request.opcode;
     fuseCall.unique_ref() = call.unique;
-    fuseCall.nodeid_ref() = call.nodeid;
-    fuseCall.uid_ref() = call.uid;
-    fuseCall.gid_ref() = call.gid;
-    fuseCall.pid_ref() = call.pid;
+    fuseCall.nodeid_ref() = request.nodeid;
+    fuseCall.uid_ref() = request.uid;
+    fuseCall.gid_ref() = request.gid;
+    fuseCall.pid_ref() = request.pid;
+
+    fuseCall.opcodeName_ref() = fuseOpcodeName(request.opcode);
+    fuseCall.processName_ref().from_optional(
+        server_->getServerState()->getProcessNameCache()->getProcessName(
+            request.pid));
 
     outstandingCalls.push_back(fuseCall);
   }

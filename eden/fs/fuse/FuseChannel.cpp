@@ -442,11 +442,6 @@ constexpr const HandlerEntry* lookupFuseHandlerEntry(uint32_t opcode) {
   return entry.name.empty() ? nullptr : &entry;
 }
 
-constexpr StringPiece fuseOpcodeName(uint32_t opcode) {
-  auto* entry = lookupFuseHandlerEntry(opcode);
-  return entry ? entry->name : "<unknown>";
-}
-
 constexpr std::pair<uint32_t, const char*> kCapsLabels[] = {
     {FUSE_ASYNC_READ, "ASYNC_READ"},
     {FUSE_POSIX_LOCKS, "POSIX_LOCKS"},
@@ -542,6 +537,11 @@ iovec make_iovec(const T& t) {
 }
 
 } // namespace
+
+StringPiece fuseOpcodeName(uint32_t opcode) {
+  auto* entry = lookupFuseHandlerEntry(opcode);
+  return entry ? entry->name : "<unknown>";
+}
 
 FuseChannel::DataRange::DataRange(int64_t off, int64_t len)
     : offset(off), length(len) {}
@@ -742,8 +742,8 @@ FuseChannel::FuseChannel(
         switch (event.type) {
           case FuseTraceEvent::START: {
             auto state = telemetryState_.wlock();
-            auto [iter, inserted] =
-                state->requests.emplace(event.unique, event.request);
+            auto [iter, inserted] = state->requests.emplace(
+                event.unique, OutstandingRequest{event.unique, event.request});
             XCHECK(inserted) << "duplicate fuse start event";
             break;
           }
@@ -1035,8 +1035,9 @@ void FuseChannel::sendInvalidateEntry(
   }
 }
 
-std::vector<fuse_in_header> FuseChannel::getOutstandingRequests() {
-  std::vector<fuse_in_header> outstandingCalls;
+std::vector<FuseChannel::OutstandingRequest>
+FuseChannel::getOutstandingRequests() {
+  std::vector<FuseChannel::OutstandingRequest> outstandingCalls;
 
   for (const auto& entry : telemetryState_.rlock()->requests) {
     outstandingCalls.push_back(entry.second);

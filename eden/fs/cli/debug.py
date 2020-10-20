@@ -657,7 +657,7 @@ class FuseCallsCmd(Subcmd):
         with instance.get_thrift_client_legacy() as client:
             outstanding_call = client.debugOutstandingFuseCalls(bytes(checkout.path))
 
-        out.write(b"Number of outstanding Calls: %d\n" % len(outstanding_call))
+        out.write(b"Outstanding FUSE calls: %d\n" % len(outstanding_call))
         for count, call in enumerate(outstanding_call):
             out.write(b"Call %d\n" % (count + 1))
             out.write(b"\tlen: %d\n" % call.len)

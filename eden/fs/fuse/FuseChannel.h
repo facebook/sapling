@@ -35,8 +35,7 @@ namespace folly {
 struct Unit;
 } // namespace folly
 
-namespace facebook {
-namespace eden {
+namespace facebook::eden {
 
 class Dispatcher;
 class Notifications;
@@ -116,6 +115,7 @@ class FuseChannel {
     FUSE_TRUNCATED_REQUEST,
     WORKER_EXCEPTION,
   };
+
   struct StopData {
     /**
      * The reason why the FUSE channel was stopped.
@@ -146,6 +146,11 @@ class FuseChannel {
     fuse_init_out fuseSettings = {};
   };
   using StopFuture = folly::SemiFuture<StopData>;
+
+  struct OutstandingRequest {
+    uint64_t unique;
+    fuse_in_header request;
+  };
 
   /**
    * Construct the fuse channel and session structures that are
@@ -374,7 +379,7 @@ class FuseChannel {
    * As another option, Linux kernel maintains a count, accessible via
    * /sys/fs/fuse/connections/${conn_id}/waiting
    */
-  std::vector<fuse_in_header> getOutstandingRequests();
+  std::vector<FuseChannel::OutstandingRequest> getOutstandingRequests();
 
   /**
    * While the returned handle is alive, FuseTraceEvents published on the
@@ -441,7 +446,7 @@ class FuseChannel {
    * Only written by the TraceBus thread, but must be synchronized for readers.
    */
   struct TelemetryState {
-    std::unordered_map<uint64_t, fuse_in_header> requests;
+    std::unordered_map<uint64_t, OutstandingRequest> requests;
   };
 
   struct DataRange {
@@ -755,6 +760,8 @@ class FuseChannel {
   std::shared_ptr<TraceBus<FuseTraceEvent>> traceBus_;
 };
 
+folly::StringPiece fuseOpcodeName(uint32_t opcode);
+
 /**
  * FuseChannelDeleter acts as a deleter argument for std::shared_ptr or
  * std::unique_ptr.
@@ -771,5 +778,4 @@ class FuseDeviceUnmountedDuringInitialization : public std::runtime_error {
   explicit FuseDeviceUnmountedDuringInitialization(AbsolutePathPiece mountPath);
 };
 
-} // namespace eden
-} // namespace facebook
+} // namespace facebook::eden
