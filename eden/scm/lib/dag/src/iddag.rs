@@ -54,8 +54,6 @@ pub struct IdDag<Store> {
 /// - The in-memory high-level segments are not lagging, but might be
 ///   fragmented because the last segment per level might not cover
 ///   as many lower-level segments as it can.
-///   Some DAG algorithms (children_set)
-///   assume high-level segments are not lagging.
 /// - The on-disk data has lagging high-level segment. This is helpful
 ///   because the Index backend is not good at (cheaply) deleting data
 ///   with bytes freed.
@@ -65,8 +63,6 @@ pub struct IdDag<Store> {
 /// - SyncableIdDag -> IdDag needs to re-add the high-level segments.
 ///   This is done by calling `build_all_high_level_segments()` at
 ///   `SyncableIdDag::sync()`.
-///
-/// (Consider making `children_set` not rely on the property)
 pub struct SyncableIdDag<'a, Store: GetLock> {
     dag: &'a mut IdDag<Store>,
     lock: <Store as GetLock>::LockT,
@@ -892,12 +888,27 @@ impl<Store: IdDagStore> IdDag<Store> {
 
         fn visit_segments<S: IdDagStore>(
             ctx: &mut Context<S>,
-            range: Span,
+            mut range: Span,
             level: Level,
         ) -> Result<()> {
             for seg in ctx.this.iter_segments_descending(range.high, level)? {
                 let seg = seg?;
                 let span = seg.span()?;
+                // `range` is all valid. If a high-level segment misses it, try
+                // a lower level one.
+                if span.high < range.high {
+                    let missing_range = Span::from((span.high + 1)..=range.high);
+                    if level > 0 {
+                        visit_segments(ctx, missing_range, level - 1)?;
+                    } else {
+                        return bug(format!(
+                            "flat segments should have covered: {:?} returned by all()",
+                            missing_range
+                        ));
+                    }
+                }
+                range.high = span.low.max(Id(1)) - 1;
+
                 if span.low < range.low || span.high < ctx.result_lower_bound {
                     break;
                 }
@@ -969,7 +980,9 @@ impl<Store: IdDagStore> IdDag<Store> {
             result: SpanSet::empty(),
         };
 
-        visit_segments(&mut ctx, (Id::MIN..=Id::MAX).into(), self.max_level)?;
+        for span in self.all()?.as_spans() {
+            visit_segments(&mut ctx, *span, self.max_level)?;
+        }
 
         if !tracing_span.is_disabled() {
             tracing_span.record("result", &field::debug(&ctx.result));
