@@ -49,10 +49,7 @@ async fn commit_info_by_hash(fb: FacebookInit) -> Result<(), Error> {
     let repo = mononoke.repo(ctx, "test").await?.expect("repo exists");
     let hash = "7785606eb1f26ff5722c831de402350cf97052dc44bc175da6ac0d715a3dbbf6";
     let cs_id = ChangesetId::from_str(hash)?;
-    let cs = repo
-        .changeset(ChangesetSpecifier::Bonsai(cs_id))
-        .await?
-        .expect("changeset exists");
+    let cs = repo.changeset(cs_id).await?.expect("changeset exists");
 
     assert_eq!(cs.message().await?, "modified 10");
     assert_eq!(cs.author().await?, "Jeremy Fitzhardinge <jsgf@fb.com>");
@@ -76,10 +73,7 @@ async fn commit_info_by_hg_hash(fb: FacebookInit) -> Result<(), Error> {
     let repo = mononoke.repo(ctx, "test").await?.expect("repo exists");
     let hg_hash = "607314ef579bd2407752361ba1b0c1729d08b281";
     let hg_cs_id = HgChangesetId::from_str(hg_hash)?;
-    let cs = repo
-        .changeset(ChangesetSpecifier::Hg(hg_cs_id))
-        .await?
-        .expect("changeset exists");
+    let cs = repo.changeset(hg_cs_id).await?.expect("changeset exists");
 
     let hash = "2cb6d2d3052bfbdd6a95a61f2816d81130033b5f5a99e8d8fc24d9238d85bb48";
     assert_eq!(cs.id(), ChangesetId::from_str(hash)?);
@@ -174,7 +168,7 @@ async fn commit_is_ancestor_of(fb: FacebookInit) -> Result<(), Error> {
     .iter()
     {
         let changeset = repo
-            .changeset(ChangesetSpecifier::Hg(HgChangesetId::from_str(hg_hash)?))
+            .changeset(HgChangesetId::from_str(hg_hash)?)
             .await
             .expect("changeset exists");
         changesets.push(changeset);
@@ -226,10 +220,7 @@ async fn commit_find_files(fb: FacebookInit) -> Result<(), Error> {
     let repo = mononoke.repo(ctx, "test").await?.expect("repo exists");
     let hash = "b0d1bf77898839595ee0f0cba673dd6e3be9dadaaa78bc6dd2dea97ca6bee77e";
     let cs_id = ChangesetId::from_str(hash)?;
-    let cs = repo
-        .changeset(ChangesetSpecifier::Bonsai(cs_id))
-        .await?
-        .expect("changeset exists");
+    let cs = repo.changeset(cs_id).await?.expect("changeset exists");
 
     // Find everything
     let mut files: Vec<_> = cs.find_files(None, None).await?.try_collect().await?;
@@ -313,10 +304,7 @@ async fn commit_path_exists_and_type(fb: FacebookInit) -> Result<(), Error> {
     let repo = mononoke.repo(ctx, "test").await?.expect("repo exists");
     let hash = "b0d1bf77898839595ee0f0cba673dd6e3be9dadaaa78bc6dd2dea97ca6bee77e";
     let cs_id = ChangesetId::from_str(hash)?;
-    let cs = repo
-        .changeset(ChangesetSpecifier::Bonsai(cs_id))
-        .await?
-        .expect("changeset exists");
+    let cs = repo.changeset(cs_id).await?.expect("changeset exists");
 
     let root_path = cs.root();
     assert_eq!(root_path.exists().await?, true);
@@ -351,10 +339,7 @@ async fn tree_list(fb: FacebookInit) -> Result<(), Error> {
     let repo = mononoke.repo(ctx, "test").await?.expect("repo exists");
     let hash = "b0d1bf77898839595ee0f0cba673dd6e3be9dadaaa78bc6dd2dea97ca6bee77e";
     let cs_id = ChangesetId::from_str(hash)?;
-    let cs = repo
-        .changeset(ChangesetSpecifier::Bonsai(cs_id))
-        .await?
-        .expect("changeset exists");
+    let cs = repo.changeset(cs_id).await?.expect("changeset exists");
     assert_eq!(
         {
             let path = cs.root();
@@ -495,10 +480,7 @@ async fn file_metadata(fb: FacebookInit) -> Result<(), Error> {
     // Get file by changeset path.
     let hash = "b0d1bf77898839595ee0f0cba673dd6e3be9dadaaa78bc6dd2dea97ca6bee77e";
     let cs_id = ChangesetId::from_str(hash)?;
-    let cs = repo
-        .changeset(ChangesetSpecifier::Bonsai(cs_id))
-        .await?
-        .expect("changeset exists");
+    let cs = repo.changeset(cs_id).await?.expect("changeset exists");
 
     let path = cs.path("dir1/file_1_in_dir1")?;
     let file = path.file().await?.unwrap();
@@ -548,10 +530,7 @@ async fn file_contents(fb: FacebookInit) -> Result<(), Error> {
 
     let hash = "b0d1bf77898839595ee0f0cba673dd6e3be9dadaaa78bc6dd2dea97ca6bee77e";
     let cs_id = ChangesetId::from_str(hash)?;
-    let cs = repo
-        .changeset(ChangesetSpecifier::Bonsai(cs_id))
-        .await?
-        .expect("changeset exists");
+    let cs = repo.changeset(cs_id).await?.expect("changeset exists");
 
     let path = cs.path("dir1/file_1_in_dir1")?;
     let file = path.file().await?.unwrap();
@@ -586,11 +565,7 @@ async fn xrepo_commit_lookup_simple(fb: FacebookInit) -> Result<(), Error> {
     );
     // Confirm that a cross-repo lookup for an unsynced commit just fails
     let cs = smallrepo
-        .xrepo_commit_lookup(
-            &largerepo,
-            ChangesetSpecifier::Bonsai(small_master_cs_id),
-            None,
-        )
+        .xrepo_commit_lookup(&largerepo, small_master_cs_id, None)
         .await?
         .expect("changeset should exist");
     let large_master_cs_id = resolve_cs_id(&ctx, largerepo.blob_repo(), "master").await?;
@@ -601,11 +576,7 @@ async fn xrepo_commit_lookup_simple(fb: FacebookInit) -> Result<(), Error> {
         "remapping {} from large to small", large_master_cs_id
     );
     let cs = largerepo
-        .xrepo_commit_lookup(
-            &smallrepo,
-            ChangesetSpecifier::Bonsai(large_master_cs_id),
-            None,
-        )
+        .xrepo_commit_lookup(&smallrepo, large_master_cs_id, None)
         .await?
         .expect("changeset should exist");
     assert_eq!(cs.id(), small_master_cs_id);
@@ -636,11 +607,7 @@ async fn xrepo_commit_lookup_draft(fb: FacebookInit) -> Result<(), Error> {
             .await?;
 
     let cs = largerepo
-        .xrepo_commit_lookup(
-            &smallrepo,
-            ChangesetSpecifier::Bonsai(new_large_draft),
-            None,
-        )
+        .xrepo_commit_lookup(&smallrepo, new_large_draft, None)
         .await?;
     assert!(cs.is_some());
     let bcs = cs
@@ -658,11 +625,7 @@ async fn xrepo_commit_lookup_draft(fb: FacebookInit) -> Result<(), Error> {
             .commit()
             .await?;
     let cs = smallrepo
-        .xrepo_commit_lookup(
-            &largerepo,
-            ChangesetSpecifier::Bonsai(new_small_draft),
-            None,
-        )
+        .xrepo_commit_lookup(&largerepo, new_small_draft, None)
         .await?;
     assert!(cs.is_some());
     let bcs = cs
@@ -704,11 +667,7 @@ async fn xrepo_commit_lookup_public(fb: FacebookInit) -> Result<(), Error> {
         .await?;
 
     let cs = largerepo
-        .xrepo_commit_lookup(
-            &smallrepo,
-            ChangesetSpecifier::Bonsai(new_large_public),
-            None,
-        )
+        .xrepo_commit_lookup(&smallrepo, new_large_public, None)
         .await?;
     assert!(cs.is_some());
     let bcs = cs
@@ -729,11 +688,7 @@ async fn xrepo_commit_lookup_public(fb: FacebookInit) -> Result<(), Error> {
         .set_to(new_small_public)
         .await?;
     let res = smallrepo
-        .xrepo_commit_lookup(
-            &largerepo,
-            ChangesetSpecifier::Bonsai(new_small_public),
-            None,
-        )
+        .xrepo_commit_lookup(&largerepo, new_small_public, None)
         .await;
     assert!(res.is_err());
 
@@ -765,7 +720,7 @@ async fn xrepo_commit_lookup_config_changing_live(fb: FacebookInit) -> Result<()
             .await?;
 
     let first_small = largerepo
-        .xrepo_commit_lookup(&smallrepo, ChangesetSpecifier::Bonsai(first_large), None)
+        .xrepo_commit_lookup(&smallrepo, first_large, None)
         .await?;
     let file_changes: Vec<_> = first_small
         .unwrap()
@@ -832,7 +787,7 @@ async fn xrepo_commit_lookup_config_changing_live(fb: FacebookInit) -> Result<()
             .await?;
 
     let second_small = largerepo
-        .xrepo_commit_lookup(&smallrepo, ChangesetSpecifier::Bonsai(second_large), None)
+        .xrepo_commit_lookup(&smallrepo, second_large, None)
         .await?;
     let file_changes: Vec<_> = second_small
         .unwrap()
@@ -966,7 +921,7 @@ async fn test_diff_with_moves(fb: FacebookInit) -> Result<(), Error> {
         .await?
         .expect("repo exists");
     let commit_with_move_ctx = repo
-        .changeset(ChangesetSpecifier::Bonsai(commit_with_move))
+        .changeset(commit_with_move)
         .await?
         .ok_or(anyhow!("commit not found"))?;
     let diff = commit_with_move_ctx
@@ -1003,13 +958,10 @@ async fn test_diff_with_dirs(fb: FacebookInit) -> Result<(), Error> {
 
     // Case one: dirs added
     let cs_id = HgChangesetId::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4")?;
-    let cs = repo
-        .changeset(ChangesetSpecifier::Hg(cs_id))
-        .await?
-        .expect("changeset exists");
+    let cs = repo.changeset(cs_id).await?.expect("changeset exists");
     let other_cs_id = HgChangesetId::from_str("5a28e25f924a5d209b82ce0713d8d83e68982bc8")?;
     let other_cs = repo
-        .changeset(ChangesetSpecifier::Hg(other_cs_id))
+        .changeset(other_cs_id)
         .await?
         .expect("other changeset exists");
 
@@ -1033,13 +985,10 @@ async fn test_diff_with_dirs(fb: FacebookInit) -> Result<(), Error> {
 
     // Case two: dir (with subdirs) replaced with file
     let cs_id = HgChangesetId::from_str("051946ed218061e925fb120dac02634f9ad40ae2")?;
-    let cs = repo
-        .changeset(ChangesetSpecifier::Hg(cs_id))
-        .await?
-        .expect("changeset exists");
+    let cs = repo.changeset(cs_id).await?.expect("changeset exists");
     let other_cs_id = HgChangesetId::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4")?;
     let other_cs = repo
-        .changeset(ChangesetSpecifier::Hg(other_cs_id))
+        .changeset(other_cs_id)
         .await?
         .expect("other changeset exists");
 

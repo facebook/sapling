@@ -816,10 +816,10 @@ impl RepoContext {
     /// Look up a changeset by specifier.
     pub async fn changeset(
         &self,
-        specifier: ChangesetSpecifier,
+        specifier: impl Into<ChangesetSpecifier>,
     ) -> Result<Option<ChangesetContext>, MononokeError> {
         let changeset = self
-            .resolve_specifier(specifier)
+            .resolve_specifier(specifier.into())
             .await?
             .map(|cs_id| ChangesetContext::new(self.clone(), cs_id));
         Ok(changeset)
@@ -1157,7 +1157,7 @@ impl RepoContext {
     pub async fn xrepo_commit_lookup(
         &self,
         other: &Self,
-        specifier: ChangesetSpecifier,
+        specifier: impl Into<ChangesetSpecifier>,
         maybe_candidate_selection_hint_args: Option<CandidateSelectionHintArgs>,
     ) -> Result<Option<ChangesetContext>, MononokeError> {
         let commit_sync_config = self
@@ -1180,6 +1180,7 @@ impl RepoContext {
             &commit_sync_config,
         )?;
 
+        let specifier = specifier.into();
         let changeset =
             self.resolve_specifier(specifier)
                 .await?

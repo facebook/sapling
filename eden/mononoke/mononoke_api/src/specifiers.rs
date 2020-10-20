@@ -32,6 +32,30 @@ pub enum ChangesetSpecifier {
     GitSha1(GitSha1),
 }
 
+impl From<ChangesetId> for ChangesetSpecifier {
+    fn from(id: ChangesetId) -> Self {
+        Self::Bonsai(id)
+    }
+}
+
+impl From<HgChangesetId> for ChangesetSpecifier {
+    fn from(id: HgChangesetId) -> Self {
+        Self::Hg(id)
+    }
+}
+
+impl From<Globalrev> for ChangesetSpecifier {
+    fn from(id: Globalrev) -> Self {
+        Self::Globalrev(id)
+    }
+}
+
+impl From<GitSha1> for ChangesetSpecifier {
+    fn from(id: GitSha1) -> Self {
+        Self::GitSha1(id)
+    }
+}
+
 /// A prefix of canonical ID for a changeset (Bonsai).
 pub type ChangesetIdPrefix = mononoke_types::ChangesetIdPrefix;
 

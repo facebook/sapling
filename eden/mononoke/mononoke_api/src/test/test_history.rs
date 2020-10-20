@@ -15,10 +15,7 @@ use futures::stream::TryStreamExt;
 use mononoke_types::DateTime;
 use tests_utils::CreateCommitContext;
 
-use crate::{
-    ChangesetHistoryOptions, ChangesetId, ChangesetPathHistoryOptions, ChangesetSpecifier, Repo,
-    RepoContext,
-};
+use crate::{ChangesetHistoryOptions, ChangesetId, ChangesetPathHistoryOptions, Repo, RepoContext};
 
 // Generates this commit graph:
 //
@@ -198,7 +195,7 @@ async fn commit_path_history(fb: FacebookInit) -> Result<()> {
     let (repo, changesets) = init_repo(&ctx).await?;
 
     let cs = repo
-        .changeset(ChangesetSpecifier::Bonsai(changesets["c2"]))
+        .changeset(changesets["c2"])
         .await?
         .expect("changeset exists");
 
@@ -370,7 +367,7 @@ async fn commit_history(fb: FacebookInit) -> Result<()> {
     let (repo, changesets) = init_repo(&ctx).await?;
 
     let cs = repo
-        .changeset(ChangesetSpecifier::Bonsai(changesets["c2"]))
+        .changeset(changesets["c2"])
         .await?
         .expect("changeset exists");
 
@@ -403,7 +400,7 @@ async fn commit_history(fb: FacebookInit) -> Result<()> {
 
     // The commit history of an empty commit starts with itself.
     let cs = repo
-        .changeset(ChangesetSpecifier::Bonsai(changesets["e1"]))
+        .changeset(changesets["e1"])
         .await?
         .expect("changeset exists");
     let history: Vec<_> = cs
@@ -447,7 +444,7 @@ async fn commit_history(fb: FacebookInit) -> Result<()> {
 
     // Setting descendendants_of omits some commits.
     let cs = repo
-        .changeset(ChangesetSpecifier::Bonsai(changesets["c2"]))
+        .changeset(changesets["c2"])
         .await?
         .expect("changeset exists");
     let history: Vec<_> = cs
@@ -477,7 +474,7 @@ async fn commit_history(fb: FacebookInit) -> Result<()> {
 
     // Setting exclude_changeset omits some commits.
     let cs = repo
-        .changeset(ChangesetSpecifier::Bonsai(changesets["c2"]))
+        .changeset(changesets["c2"])
         .await?
         .expect("changeset exists");
     let history: Vec<_> = cs
@@ -507,7 +504,7 @@ async fn commit_history(fb: FacebookInit) -> Result<()> {
     );
 
     let cs = repo
-        .changeset(ChangesetSpecifier::Bonsai(changesets["m2"]))
+        .changeset(changesets["m2"])
         .await?
         .expect("changeset exists");
     let history: Vec<_> = cs
