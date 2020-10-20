@@ -42,7 +42,7 @@ def _findlimit(repo, a, b):
     #   - quit when interesting revs is zero
 
     cl = repo.changelog
-    working = len(cl)  # pseudo rev for the working directory
+    working = 1 << 63  # pseudo rev for the working directory
     if a is None:
         a = working
     if b is None:
@@ -134,13 +134,15 @@ def _tracefile(fctx, am, limit=-1):
     """return file context that is the ancestor of fctx present in ancestor
     manifest am, stopping after the first ancestor lower than limit"""
 
+    repo = fctx.repo()
+    invalidatelinkrev = "invalidatelinkrev" in repo.storerequirements
     for f in fctx.topologicalancestors():
         if am.get(f.path(), None) == f.filenode():
             return f
         lkr = f.linkrev()
-        if lkr is None:
+        if not invalidatelinkrev and lkr is None:
             continue
-        if limit >= 0 and lkr < limit and f.rev() < limit:
+        if limit >= 0 and lkr is not None and lkr < limit and f.rev() < limit:
             return None
 
 
@@ -300,6 +302,8 @@ def _makegetfctx(ctx):
         # setup only needed for filectx not create from a changectx
         fctx._ancestrycontext = ac
         fctx._descendantrev = rev
+        # make __repr__ / introrev / adjustlinkrev work
+        fctx._changeid = rev
         return fctx
 
     return util.lrucachefunc(makectx)
@@ -777,10 +781,25 @@ def _related(f1, f2, limit):
     None (f1 and f2 can only be workingfilectx's initially).
     """
 
+    repo = f1.repo()
+
     if f1 == f2:
         return f1  # a match
 
     g1, g2 = f1.ancestors(), f2.ancestors()
+    invalidatelinkrev = "invalidatelinkrev" in repo.storerequirements
+    if invalidatelinkrev:
+        seen = {f1, f2}
+        for f in g1:
+            if f in seen:
+                return f
+            seen.add(f)
+        for f in g2:
+            if f in seen:
+                return f
+            seen.add(f)
+        return False
+
     try:
         while True:
             f1r, f2r = f1.linkrev(), f2.linkrev()
@@ -821,6 +840,9 @@ def _checkcopies(srcctx, dstctx, f, base, tca, remotebase, limit, data):
     once it "goes behind a certain revision".
     """
 
+    repo = base.repo()
+    invalidatelinkrev = "invalidatelinkrev" in repo.storerequirements
+
     msrc = srcctx.manifest()
     mdst = dstctx.manifest()
     mb = base.manifest()
@@ -849,7 +871,7 @@ def _checkcopies(srcctx, dstctx, f, base, tca, remotebase, limit, data):
         of = oc.path()
         if of in seen:
             # check limit late - grab last rename before
-            if ocr is not None and ocr < limit:
+            if not invalidatelinkrev and ocr is not None and ocr < limit:
                 break
             continue
         seen.add(of)
