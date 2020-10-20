@@ -16,16 +16,14 @@ use crate::id::Group;
 use crate::id::Id;
 use crate::id::VertexName;
 use crate::iddag::IdDag;
-use crate::iddag::SyncableIdDag;
 use crate::iddagstore::IdDagStore;
 use crate::iddagstore::InProcessStore;
 use crate::iddagstore::IndexedLogStore;
 use crate::idmap::AssignHeadOutcome;
 use crate::idmap::IdMap;
 use crate::idmap::IdMapAssignHead;
-use crate::idmap::IdMapWrite;
 use crate::idmap::MemIdMap;
-use crate::idmap::SyncableIdMap;
+use crate::locked::Locked;
 use crate::nameset::hints::Flags;
 use crate::nameset::hints::Hints;
 use crate::nameset::NameSet;
@@ -134,7 +132,14 @@ impl NameDag {
     }
 }
 
-impl DagPersistent for NameDag {
+impl<IS, M, P, S> DagPersistent for AbstractNameDag<IdDag<IS>, M, P, S>
+where
+    IS: IdDagStore + Persist,
+    IdDag<IS>: TryClone + Send + Sync + 'static,
+    M: TryClone + IdMapAssignHead + Persist + Send + Sync + 'static,
+    P: Open<OpenTarget = Self> + Send + Sync + 'static,
+    S: TryClone + Persist + Send + Sync + 'static,
+{
     /// Add vertexes and their ancestors to the on-disk DAG.
     ///
     /// This is similar to calling `add_heads` followed by `flush`.
@@ -155,14 +160,12 @@ impl DagPersistent for NameDag {
             ));
         }
         // Already include specified nodes?
-        if master_names.iter().all(|n| {
-            is_ok_some(
-                self.map
-                    .find_id_by_name_with_max_group(n.as_ref(), Group::MASTER),
-            )
-        }) && non_master_names
+        if master_names
             .iter()
-            .all(|n| is_ok_some(self.map.find_id_by_name(n.as_ref())))
+            .all(|n| is_ok_some(self.map.vertex_id_with_max_group(n, Group::MASTER)))
+            && non_master_names
+                .iter()
+                .all(|n| self.map.contains_vertex_name(n).unwrap_or(false))
         {
             return Ok(());
         }
@@ -171,11 +174,7 @@ impl DagPersistent for NameDag {
         //
         // Reload meta. This drops in-memory changes, which is fine because we have
         // checked there are no in-memory changes at the beginning.
-        if self.state.mlog.is_none() {
-            return bug("MultiLog should be Some for read-write NameDag");
-        }
-        let mlog = self.state.mlog.as_mut().unwrap();
-        let lock = mlog.lock()?;
+        let locked = self.state.prepare_filesystem_sync()?;
         let mut map = self.map.prepare_filesystem_sync()?;
         let mut dag = self.dag.prepare_filesystem_sync()?;
 
@@ -191,7 +190,7 @@ impl DagPersistent for NameDag {
         // Write to disk.
         map.sync()?;
         dag.sync()?;
-        mlog.write_meta(&lock)?;
+        locked.sync()?;
 
         self.invalidate_snapshot();
         Ok(())
@@ -202,7 +201,7 @@ impl DagPersistent for NameDag {
     fn flush(&mut self, master_heads: &[VertexName]) -> Result<()> {
         // Sanity check.
         for head in master_heads.iter() {
-            if self.map.find_id_by_name(head.as_ref())?.is_none() {
+            if !self.map.contains_vertex_name(head)? {
                 return head.not_found();
             }
         }
@@ -223,6 +222,28 @@ impl DagPersistent for NameDag {
         new_name_dag.dag.set_new_segment_size(seg_size);
         new_name_dag.add_heads_and_flush(&parents, master_heads, non_master_heads)?;
         *self = new_name_dag;
+        Ok(())
+    }
+}
+
+impl Persist for NameDagState {
+    type Lock = indexedlog::multi::LockGuard;
+
+    fn lock(&mut self) -> Result<Self::Lock> {
+        if self.mlog.is_none() {
+            return bug("MultiLog should be Some for read-write NameDag");
+        }
+        let mlog = self.mlog.as_mut().unwrap();
+        Ok(mlog.lock()?)
+    }
+
+    fn reload(&mut self, _lock: &Self::Lock) -> Result<()> {
+        // mlog does reload internally
+        Ok(())
+    }
+
+    fn persist(&mut self, lock: &Self::Lock) -> Result<()> {
+        self.mlog.as_mut().unwrap().write_meta(&lock)?;
         Ok(())
     }
 }
@@ -904,10 +925,14 @@ delegate!(PrefixLookup | IdConvert, MemNameDag => self.map());
 /// This can be expensive. It is expected to be either called infrequently,
 /// or called with a small amount of data. For example, bounded amount of
 /// non-master commits.
-fn non_master_parent_names(
-    map: &SyncableIdMap,
-    dag: &SyncableIdDag<IndexedLogStore>,
-) -> Result<HashMap<VertexName, Vec<VertexName>>> {
+fn non_master_parent_names<M, S>(
+    map: &Locked<M>,
+    dag: &Locked<IdDag<S>>,
+) -> Result<HashMap<VertexName, Vec<VertexName>>>
+where
+    M: IdMapAssignHead + Persist,
+    S: IdDagStore + Persist,
+{
     let parent_ids = dag.non_master_parent_ids()?;
     // Map id to name.
     let parent_names = parent_ids
@@ -925,10 +950,11 @@ fn non_master_parent_names(
 }
 
 /// Re-assign ids and segments for non-master group.
-pub fn rebuild_non_master(
-    map: &mut SyncableIdMap,
-    dag: &mut SyncableIdDag<IndexedLogStore>,
-) -> Result<()> {
+pub fn rebuild_non_master<M, S>(map: &mut Locked<M>, dag: &mut Locked<IdDag<S>>) -> Result<()>
+where
+    M: IdMapAssignHead + Persist,
+    S: IdDagStore + Persist,
+{
     // backup part of the named graph in memory.
     let parents = non_master_parent_names(map, dag)?;
     let mut heads = parents
@@ -962,15 +988,17 @@ pub fn rebuild_non_master(
 }
 
 /// Build IdMap and Segments for the given heads.
-pub fn build<F>(
-    map: &mut SyncableIdMap,
-    dag: &mut SyncableIdDag<IndexedLogStore>,
+pub fn build<F, IS, M>(
+    map: &mut Locked<M>,
+    dag: &mut Locked<IdDag<IS>>,
     parent_names_func: F,
     master_heads: &[VertexName],
     non_master_heads: &[VertexName],
 ) -> Result<()>
 where
     F: Fn(VertexName) -> Result<Vec<VertexName>>,
+    IS: IdDagStore + Persist,
+    M: IdMapAssignHead + Persist,
 {
     // Update IdMap.
     let mut outcome = AssignHeadOutcome::default();

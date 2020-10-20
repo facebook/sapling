@@ -67,7 +67,9 @@ impl IdDag<IndexedLogStore> {
         let store = IndexedLogStore::open(path)?;
         Self::open_from_store(store)
     }
+}
 
+impl<S> IdDag<S> {
     /// Set the maximum size of a new high-level segment.
     ///
     /// This does not affect existing segments.
