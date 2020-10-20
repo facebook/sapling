@@ -159,8 +159,16 @@ impl HybridResolver<Vertex, Bytes, anyhow::Error> for Resolver {
         let zstore = self.zstore.clone();
         let commits = response.entries.map(move |e| {
             let e = e?;
+            let written_id = zstore.write().insert(&e.revlog_data, &[])?;
+            if !written_id.is_null() && written_id != e.hgid {
+                anyhow::bail!(
+                    "server returned commit-text pair ({}, {:?}) has mismatched SHA1: {}",
+                    e.hgid.to_hex(),
+                    e.revlog_data,
+                    written_id.to_hex(),
+                );
+            }
             let bytes = &e.revlog_data[Id20::len() * 2..];
-            let _ = zstore.write().insert(bytes, &[]);
             let input_output = (
                 Vertex::copy_from(e.hgid.as_ref()),
                 Bytes::copy_from_slice(&bytes),
