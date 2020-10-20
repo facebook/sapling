@@ -1049,54 +1049,7 @@ class localrepository(object):
             if deleted:
                 self.ui.log("features", feature="remove-svfs-dottmp")
 
-            if "gitchangelog" in self.storerequirements:
-                self.ui.log("changelog_info", changelog_backend="git")
-                return changelog2.changelog.opengitsegments(
-                    self.svfs, self.ui.uiconfig()
-                )
-            if "hybridchangelog" in self.storerequirements:
-                return changelog2.changelog.openhybrid(self)
-            if "doublewritechangelog" in self.storerequirements:
-                if self.ui.configbool("experimental", "lazy-commit-data"):
-                    # alias of hybridchangelog
-                    self.ui.log("changelog_info", changelog_backend="hybrid")
-                    return changelog2.changelog.openhybrid(self)
-                else:
-                    self.ui.log("changelog_info", changelog_backend="doublewrite")
-                    return changelog2.changelog.opendoublewrite(
-                        self.svfs, self.ui.uiconfig()
-                    )
-            if "segmentedchangelog" in self.storerequirements:
-                self.ui.log("changelog_info", changelog_backend="segments")
-                return changelog2.changelog.opensegments(self.svfs, self.ui.uiconfig())
-
-            if (
-                (
-                    (
-                        self.ui.configbool("experimental", "rust-commits")
-                        and getattr(self.svfs, "options", {}).get(
-                            "bypass-revlog-transaction"
-                        )
-                    )
-                    or "rustrevlogchangelog" in self.storerequirements
-                )
-                and "hgsql" not in self.requirements
-                and "pythonrevlogchangelog" not in self.storerequirements
-            ):
-                self.ui.log("changelog_info", changelog_backend="rustrevlog")
-                return changelog2.changelog.openrevlog(self.svfs, self.ui.uiconfig())
-
-            if "zstorecommitdata" in self.storerequirements:
-                zstore = bindings.zstore.zstore(self.svfs.join("hgcommits/v1"))
-            else:
-                zstore = None
-            self.ui.log("changelog_info", changelog_backend="pythonrevlog")
-            return changelog.changelog(
-                self.svfs,
-                uiconfig=self.ui.uiconfig(),
-                trypending=txnutil.mayhavesharedpending(self.root, self.sharedroot),
-                zstore=zstore,
-            )
+            return _openchangelog(self)
 
         cl = loadchangelog(self)
 
@@ -3069,3 +3022,48 @@ def _remotenodes(repo):
             publicnodes += nodes
 
     return publicnodes, draftnodes
+
+
+def _openchangelog(repo):
+    if "gitchangelog" in repo.storerequirements:
+        repo.ui.log("changelog_info", changelog_backend="git")
+        return changelog2.changelog.opengitsegments(repo.svfs, repo.ui.uiconfig())
+    if "hybridchangelog" in repo.storerequirements:
+        return changelog2.changelog.openhybrid(repo)
+    if "doublewritechangelog" in repo.storerequirements:
+        if repo.ui.configbool("experimental", "lazy-commit-data"):
+            # alias of hybridchangelog
+            repo.ui.log("changelog_info", changelog_backend="hybrid")
+            return changelog2.changelog.openhybrid(repo)
+        else:
+            repo.ui.log("changelog_info", changelog_backend="doublewrite")
+            return changelog2.changelog.opendoublewrite(repo.svfs, repo.ui.uiconfig())
+    if "segmentedchangelog" in repo.storerequirements:
+        repo.ui.log("changelog_info", changelog_backend="segments")
+        return changelog2.changelog.opensegments(repo.svfs, repo.ui.uiconfig())
+
+    if (
+        (
+            (
+                repo.ui.configbool("experimental", "rust-commits")
+                and getattr(repo.svfs, "options", {}).get("bypass-revlog-transaction")
+            )
+            or "rustrevlogchangelog" in repo.storerequirements
+        )
+        and "hgsql" not in repo.requirements
+        and "pythonrevlogchangelog" not in repo.storerequirements
+    ):
+        repo.ui.log("changelog_info", changelog_backend="rustrevlog")
+        return changelog2.changelog.openrevlog(repo.svfs, repo.ui.uiconfig())
+
+    if "zstorecommitdata" in repo.storerequirements:
+        zstore = bindings.zstore.zstore(repo.svfs.join("hgcommits/v1"))
+    else:
+        zstore = None
+    repo.ui.log("changelog_info", changelog_backend="pythonrevlog")
+    return changelog.changelog(
+        repo.svfs,
+        uiconfig=repo.ui.uiconfig(),
+        trypending=txnutil.mayhavesharedpending(repo.root, repo.sharedroot),
+        zstore=zstore,
+    )
