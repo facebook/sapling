@@ -317,6 +317,15 @@ pub trait Persist {
     }
 }
 
+/// Address that can be used to open things.
+///
+/// The address type decides the return type of `open`.
+pub trait Open: Clone {
+    type OpenTarget;
+
+    fn open(&self) -> Result<Self::OpenTarget>;
+}
+
 /// Faillible clone.
 pub trait TryClone {
     fn try_clone(&self) -> Result<Self>

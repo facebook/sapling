@@ -34,6 +34,7 @@ use crate::ops::DagAlgorithm;
 use crate::ops::DagPersistent;
 use crate::ops::IdConvert;
 use crate::ops::IdMapSnapshot;
+use crate::ops::Open;
 use crate::ops::Persist;
 use crate::ops::PrefixLookup;
 use crate::ops::ToIdSet;
@@ -53,7 +54,7 @@ use std::sync::Arc;
 #[cfg(test)]
 use crate::idmap::IdMapBuildParents;
 
-pub struct AbstractNameDag<I, M, S> {
+pub struct AbstractNameDag<I, M, P, S> {
     pub(crate) dag: I,
     pub(crate) map: M,
 
@@ -64,6 +65,9 @@ pub struct AbstractNameDag<I, M, S> {
     /// Heads added via `add_heads` that are not flushed yet.
     pending_heads: Vec<VertexName>,
 
+    /// Path used to open this `NameDag`.
+    path: P,
+
     /// Extra state of the `NameDag`.
     state: S,
 }
@@ -72,11 +76,10 @@ pub struct AbstractNameDag<I, M, S> {
 ///
 /// A high-level wrapper structure. Combination of [`IdMap`] and [`Dag`].
 /// Maintains consistency of dag and map internally.
-pub type NameDag = AbstractNameDag<IdDag<IndexedLogStore>, IdMap, NameDagState>;
+pub type NameDag =
+    AbstractNameDag<IdDag<IndexedLogStore>, IdMap, IndexedLogNameDagPath, NameDagState>;
 
 pub struct NameDagState {
-    path: PathBuf,
-
     /// `MultiLog` controls on-disk metadata.
     /// `None` for read-only `NameDag`,
     mlog: Option<multi::MultiLog>,
@@ -92,9 +95,15 @@ pub struct MemNameDag {
     snapshot: RwLock<Option<Arc<MemNameDag>>>,
 }
 
-impl NameDag {
-    pub fn open(path: impl AsRef<Path>) -> Result<Self> {
-        let path = path.as_ref();
+/// Address to on-disk NameDag based on indexedlog.
+#[derive(Debug, Clone)]
+pub struct IndexedLogNameDagPath(pub PathBuf);
+
+impl Open for IndexedLogNameDagPath {
+    type OpenTarget = NameDag;
+
+    fn open(&self) -> Result<Self::OpenTarget> {
+        let path = &self.0;
         let opts = multi::OpenOptions::from_name_opts(vec![
             ("idmap2", IdMap::log_open_options()),
             ("iddag", IndexedLogStore::log_open_options()),
@@ -105,17 +114,23 @@ impl NameDag {
         let map_log = logs.pop().unwrap();
         let map = IdMap::open_from_log(map_log)?;
         let dag = IdDag::open_from_store(IndexedLogStore::open_from_log(dag_log))?;
-        let state = NameDagState {
-            path: path.to_path_buf(),
-            mlog: Some(mlog),
-        };
+        let state = NameDagState { mlog: Some(mlog) };
         Ok(AbstractNameDag {
             dag,
             map,
+            path: self.clone(),
             snapshot: Default::default(),
             pending_heads: Default::default(),
             state,
         })
+    }
+}
+
+impl NameDag {
+    pub fn open(path: impl AsRef<Path>) -> Result<Self> {
+        let path = path.as_ref().to_path_buf();
+        let path = IndexedLogNameDagPath(path);
+        path.open()
     }
 }
 
@@ -203,7 +218,7 @@ impl DagPersistent for NameDag {
         };
         let non_master_heads = &snapshot.pending_heads;
 
-        let mut new_name_dag = Self::open(&self.state.path)?;
+        let mut new_name_dag = self.path.open()?;
         let seg_size = self.dag.get_new_segment_size();
         new_name_dag.dag.set_new_segment_size(seg_size);
         new_name_dag.add_heads_and_flush(&parents, master_heads, non_master_heads)?;
@@ -212,11 +227,12 @@ impl DagPersistent for NameDag {
     }
 }
 
-impl<IS, M, S> DagAddHeads for AbstractNameDag<IdDag<IS>, M, S>
+impl<IS, M, P, S> DagAddHeads for AbstractNameDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore,
     IdDag<IS>: TryClone,
     M: TryClone + IdMapAssignHead,
+    P: TryClone,
     S: TryClone,
 {
     /// Add vertexes and their ancestors to the in-memory DAG.
@@ -273,11 +289,12 @@ where
     }
 }
 
-impl<IS, M, S> AbstractNameDag<IdDag<IS>, M, S>
+impl<IS, M, P, S> AbstractNameDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore,
     IdDag<IS>: TryClone,
     M: TryClone,
+    P: TryClone,
     S: TryClone,
 {
     /// Invalidate cached content. Call this after changing the graph.
@@ -300,6 +317,7 @@ where
                     map: self.map.try_clone()?,
                     snapshot: Default::default(),
                     pending_heads: self.pending_heads.clone(),
+                    path: self.path.try_clone()?,
                     state: self.state.try_clone()?,
                 };
                 let result = Arc::new(cloned);
@@ -321,7 +339,6 @@ where
 impl TryClone for NameDagState {
     fn try_clone(&self) -> Result<Self> {
         Ok(Self {
-            path: self.path.clone(),
             // mlog cannot be cloned.
             mlog: None,
         })
@@ -627,11 +644,12 @@ macro_rules! impl_dag_algorithms {
 }
 
 /// DAG related read-only algorithms.
-impl<IS, M, S> DagAlgorithm for AbstractNameDag<IdDag<IS>, M, S>
+impl<IS, M, P, S> DagAlgorithm for AbstractNameDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore,
     IdDag<IS>: TryClone + Send + Sync + 'static,
     M: TryClone + IdMapAssignHead + Sync + Send + 'static,
+    P: TryClone + Sync + Send + 'static,
     S: TryClone + Sync + Send + 'static,
 {
     /// Sort a `NameSet` topologically.
@@ -871,12 +889,12 @@ fn extract_ancestor_flag_if_compatible(
 
 delegate! {
     PrefixLookup {
-        impl<I, M: PrefixLookup, S> PrefixLookup for AbstractNameDag<I, M, S>
+        impl<I, M: PrefixLookup, P, S> PrefixLookup for AbstractNameDag<I, M, P, S>
     } => self.map
 }
 delegate! {
     IdConvert {
-        impl<I, M: IdConvert, S> IdConvert for AbstractNameDag<I, M, S>
+        impl<I, M: IdConvert, P, S> IdConvert for AbstractNameDag<I, M, P, S>
     } => self.map
 }
 delegate!(PrefixLookup | IdConvert, MemNameDag => self.map());
@@ -1038,11 +1056,12 @@ impl NameDagStorage for MemNameDag {
     }
 }
 
-impl<IS, M, S> IdMapSnapshot for AbstractNameDag<IdDag<IS>, M, S>
+impl<IS, M, P, S> IdMapSnapshot for AbstractNameDag<IdDag<IS>, M, P, S>
 where
     IS: IdDagStore,
     IdDag<IS>: TryClone + Send + Sync + 'static,
     M: TryClone + IdMapAssignHead + Send + Sync + 'static,
+    P: TryClone + Send + Sync + 'static,
     S: TryClone + Send + Sync + 'static,
 {
     fn id_map_snapshot(&self) -> Result<Arc<dyn IdConvert + Send + Sync>> {
