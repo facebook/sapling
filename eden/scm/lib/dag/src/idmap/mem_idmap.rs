@@ -8,6 +8,7 @@
 use super::IdMapWrite;
 use crate::id::{Group, Id, VertexName};
 use crate::ops::IdConvert;
+use crate::ops::Persist;
 use crate::ops::PrefixLookup;
 use crate::Result;
 use std::collections::{BTreeMap, HashMap};
@@ -88,6 +89,22 @@ impl IdMapWrite for MemIdMap {
         let cached = self.cached_next_free_ids[group.0].load(atomic::Ordering::SeqCst);
         let id = Id(cached);
         Ok(id)
+    }
+}
+
+impl Persist for MemIdMap {
+    type Lock = ();
+
+    fn lock(&self) -> Result<Self::Lock> {
+        Ok(())
+    }
+
+    fn reload(&mut self, _lock: &Self::Lock) -> Result<()> {
+        Ok(())
+    }
+
+    fn persist(&mut self, _lock: &Self::Lock) -> Result<()> {
+        Ok(())
     }
 }
 

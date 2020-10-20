@@ -11,6 +11,7 @@ use crate::errors::bug;
 use crate::errors::programming;
 use crate::id::{Group, Id, VertexName};
 use crate::ops::IdConvert;
+use crate::ops::Persist;
 use crate::ops::PrefixLookup;
 use crate::Result;
 use byteorder::{BigEndian, ReadBytesExt};
@@ -126,34 +127,15 @@ impl IdMap {
 
         // Take a filesystem lock. The file name 'lock' is taken by indexedlog
         // running on Windows, so we choose another file name here.
-        let lock_file = {
-            let mut path = self.path.clone();
-            path.push("wlock");
-            File::open(&path).or_else(|_| {
-                fs::OpenOptions::new()
-                    .write(true)
-                    .create_new(true)
-                    .open(&path)
-            })?
-        };
-        lock_file.lock_exclusive()?;
+        let lock_file = self.lock()?;
 
         // Reload. So we get latest data.
-        self.reload()?;
+        self.reload(&lock_file)?;
 
         Ok(SyncableIdMap {
             map: self,
             lock_file,
         })
-    }
-
-    /// Reload from the filesystem. Discard pending changes.
-    fn reload(&mut self) -> Result<()> {
-        self.log.clear_dirty()?;
-        self.log.sync()?;
-        // Invalidate the next free id cache.
-        self.cached_next_free_ids = Default::default();
-        Ok(())
     }
 
     /// Find name by a specified integer id.
@@ -388,6 +370,41 @@ impl IdMapWrite for IdMap {
     }
     fn next_free_id(&self, group: Group) -> Result<Id> {
         IdMap::next_free_id(self, group)
+    }
+}
+
+impl Persist for IdMap {
+    type Lock = File;
+
+    fn lock(&self) -> Result<Self::Lock> {
+        let lock_file = {
+            let mut path = self.path.clone();
+            path.push("wlock");
+            File::open(&path).or_else(|_| {
+                fs::OpenOptions::new()
+                    .write(true)
+                    .create_new(true)
+                    .open(&path)
+            })?
+        };
+        lock_file.lock_exclusive()?;
+        Ok(lock_file)
+    }
+
+    fn reload(&mut self, _lock: &Self::Lock) -> Result<()> {
+        self.log.clear_dirty()?;
+        self.log.sync()?;
+        // Invalidate the next free id cache.
+        self.cached_next_free_ids = Default::default();
+        Ok(())
+    }
+
+    fn persist(&mut self, _lock: &Self::Lock) -> Result<()> {
+        if self.need_rebuild_non_master {
+            return bug("cannot persist with re-assigned ids unresolved");
+        }
+        self.log.sync()?;
+        Ok(())
     }
 }
 
