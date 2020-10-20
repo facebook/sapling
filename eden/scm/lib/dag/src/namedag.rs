@@ -51,26 +51,33 @@ use std::sync::Arc;
 #[cfg(test)]
 use crate::idmap::IdMapBuildParents;
 
+pub struct AbstractNameDag<I, M, S> {
+    pub(crate) dag: I,
+    pub(crate) map: M,
+
+    /// A read-only snapshot of the `NameDag`.
+    /// Lazily calculated.
+    snapshot: RwLock<Option<Arc<Self>>>,
+
+    /// Heads added via `add_heads` that are not flushed yet.
+    pending_heads: Vec<VertexName>,
+
+    /// Extra state of the `NameDag`.
+    state: S,
+}
+
 /// A DAG that uses VertexName instead of ids as vertexes.
 ///
 /// A high-level wrapper structure. Combination of [`IdMap`] and [`Dag`].
 /// Maintains consistency of dag and map internally.
-pub struct NameDag {
+pub type NameDag = AbstractNameDag<IdDag<IndexedLogStore>, IdMap, NameDagState>;
+
+pub struct NameDagState {
     path: PathBuf,
-
-    pub(crate) dag: IdDag<IndexedLogStore>,
-    pub(crate) map: IdMap,
-
-    /// A read-only snapshot of the `NameDag`.
-    /// Lazily calculated.
-    snapshot: RwLock<Option<Arc<NameDag>>>,
 
     /// `MultiLog` controls on-disk metadata.
     /// `None` for read-only `NameDag`,
     mlog: Option<multi::MultiLog>,
-
-    /// Heads added via `add_heads` that are not flushed yet.
-    pending_heads: Vec<VertexName>,
 }
 
 /// In-memory version of [`NameDag`].
@@ -96,13 +103,16 @@ impl NameDag {
         let map_log = logs.pop().unwrap();
         let map = IdMap::open_from_log(map_log)?;
         let dag = IdDag::open_from_store(IndexedLogStore::open_from_log(dag_log))?;
-        Ok(Self {
+        let state = NameDagState {
             path: path.to_path_buf(),
+            mlog: Some(mlog),
+        };
+        Ok(AbstractNameDag {
             dag,
             map,
             snapshot: Default::default(),
-            mlog: Some(mlog),
             pending_heads: Default::default(),
+            state,
         })
     }
 }
@@ -144,10 +154,10 @@ impl DagPersistent for NameDag {
         //
         // Reload meta. This drops in-memory changes, which is fine because we have
         // checked there are no in-memory changes at the beginning.
-        if self.mlog.is_none() {
+        if self.state.mlog.is_none() {
             return bug("MultiLog should be Some for read-write NameDag");
         }
-        let mlog = self.mlog.as_mut().unwrap();
+        let mlog = self.state.mlog.as_mut().unwrap();
         let lock = mlog.lock()?;
         let mut map = self.map.prepare_filesystem_sync()?;
         let mut dag = self.dag.prepare_filesystem_sync()?;
@@ -191,7 +201,7 @@ impl DagPersistent for NameDag {
         };
         let non_master_heads = &snapshot.pending_heads;
 
-        let mut new_name_dag = Self::open(&self.path)?;
+        let mut new_name_dag = Self::open(&self.state.path)?;
         let seg_size = self.dag.get_new_segment_size();
         new_name_dag.dag.set_new_segment_size(seg_size);
         new_name_dag.add_heads_and_flush(&parents, master_heads, non_master_heads)?;
@@ -272,12 +282,14 @@ impl NameDag {
             Some(s) => Ok(s.clone()),
             None => {
                 let cloned = Self {
-                    path: self.path.clone(),
                     dag: self.dag.try_clone()?,
                     map: self.map.try_clone()?,
                     snapshot: Default::default(),
-                    mlog: None,
                     pending_heads: self.pending_heads.clone(),
+                    state: NameDagState {
+                        path: self.state.path.clone(),
+                        mlog: None,
+                    },
                 };
                 let result = Arc::new(cloned);
                 *snapshot = Some(result.clone());
