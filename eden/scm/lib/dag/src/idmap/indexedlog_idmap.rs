@@ -127,15 +127,12 @@ impl IdMap {
 
         // Take a filesystem lock. The file name 'lock' is taken by indexedlog
         // running on Windows, so we choose another file name here.
-        let lock_file = self.lock()?;
+        let lock = self.lock()?;
 
         // Reload. So we get latest data.
-        self.reload(&lock_file)?;
+        self.reload(&lock)?;
 
-        Ok(SyncableIdMap {
-            map: self,
-            lock_file,
-        })
+        Ok(SyncableIdMap { inner: self, lock })
     }
 
     /// Find name by a specified integer id.

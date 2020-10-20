@@ -9,13 +9,11 @@
 //!
 //! See [`IdMap`] for the main structure.
 
-use crate::errors::bug;
 use crate::errors::programming;
 use crate::id::{Group, Id, VertexName};
+use crate::locked::Locked;
 use crate::ops::IdConvert;
 use crate::Result;
-use std::fs::File;
-use std::ops::{Deref, DerefMut};
 
 mod indexedlog_idmap;
 mod mem_idmap;
@@ -24,14 +22,7 @@ pub use indexedlog_idmap::IdMap;
 pub use mem_idmap::MemIdMap;
 
 /// Guard to make sure [`IdMap`] on-disk writes are race-free.
-///
-/// Constructing this struct will take a filesystem lock and reload
-/// the content from the filesystem. Dropping this struct will write
-/// down changes to the filesystem and release the lock.
-pub struct SyncableIdMap<'a> {
-    map: &'a mut IdMap,
-    lock_file: File,
-}
+pub type SyncableIdMap<'a> = Locked<'a, IdMap>;
 
 /// Return value of `assign_head`.
 #[derive(Debug, Default)]
@@ -295,31 +286,6 @@ pub trait IdMapBuildParents: IdConvert {
 
 impl<T> IdMapBuildParents for T where T: IdConvert {}
 
-impl<'a> SyncableIdMap<'a> {
-    /// Write pending changes to disk.
-    pub fn sync(&mut self) -> Result<()> {
-        if self.need_rebuild_non_master() {
-            return bug("cannot sync with re-assigned ids unresolved");
-        }
-        self.map.log.sync()?;
-        Ok(())
-    }
-}
-
-impl<'a> Deref for SyncableIdMap<'a> {
-    type Target = IdMap;
-
-    fn deref(&self) -> &Self::Target {
-        self.map
-    }
-}
-
-impl<'a> DerefMut for SyncableIdMap<'a> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        self.map
-    }
-}
-
 /// Write operations for IdMap.
 pub trait IdMapWrite {
     fn insert(&mut self, id: Id, name: &[u8]) -> Result<()>;
@@ -331,7 +297,9 @@ pub trait IdMapWrite {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ops::Persist;
     use crate::ops::PrefixLookup;
+    use std::ops::Deref;
     use tempfile::tempdir;
 
     #[test]
@@ -388,7 +356,7 @@ mod tests {
             assert_eq!(map.find_id_by_name(b"jkl2").unwrap().unwrap().0, 15);
             assert!(map.find_id_by_name(b"jkl3").unwrap().is_none());
             // Error: re-assigned ids prevent sync.
-            map.sync().unwrap_err();
+            map.inner.persist(&map.lock).unwrap_err();
         }
 
         // Test Debug
