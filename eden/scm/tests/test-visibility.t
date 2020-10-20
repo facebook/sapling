@@ -2,7 +2,7 @@
 
   $ enable amend rebase undo directaccess shelve
   $ setconfig experimental.evolution=obsolete
-  $ setconfig visibility.enabled=true
+  $ setconfig visibility.enabled=true visibility.verbose=true
   $ setconfig mutation.record=true mutation.enabled=true mutation.date="0 0"
   $ setconfig hint.ack=undo
 
@@ -558,16 +558,15 @@ Unamend and Uncommit
   
 
 Migration down
-  $ setconfig visibility.automigrate=stop
+  $ setconfig visibility.enabled=false
   $ hg debugedenimporthelper --get-manifest-node df4f53cec30af1e4f669102135076fd4f9673fcc
   reverting to tracking visibility through obsmarkers
   4e7eb8574ed56675aa89d2b5abbced12d5688cef
 
 Migration up
-  $ setconfig visibility.automigrate=start
+  $ setconfig visibility.enabled=true
 
- (Test if the repo contains an abandoned transaction, the auto migration is
- skipped)
+ (Test if the repo contains an abandoned transaction, the auto migration does not crash)
   $ touch .hg/store/journal
   $ hg debugedenimporthelper --get-manifest-node df4f53cec30af1e4f669102135076fd4f9673fcc
   switching to explicit tracking of visible commits

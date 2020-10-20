@@ -205,12 +205,7 @@ def _sync(
     # developer config: commitcloud.requirevisibleheads
     if repo.ui.configbool("commitcloud", "requirevisibleheads", True):
         if not visibility.enabled(repo):
-            hint = None
-            if repo.ui.config("visibility", "automigrate") == "start":
-                hint = "try 'hg pull' in this repo to trigger an upgrade"
-            raise error.Abort(
-                "commit cloud sync requires new-style visibility", hint=hint
-            )
+            raise error.Abort(_("commit cloud sync requires new-style visibility"))
 
     # On cloud rejoin we already know what the cloudrefs are.  Otherwise,
     # fetch them from the commit cloud service.

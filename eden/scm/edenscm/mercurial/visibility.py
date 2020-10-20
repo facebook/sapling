@@ -363,10 +363,13 @@ def enabled(repo):
 
 
 def automigrate(repo):
-    mode = repo.ui.config("visibility", "automigrate")
-    if mode == "start" and "visibleheads" not in repo.storerequirements:
-        repo.ui.status(_("switching to explicit tracking of visible commits\n"))
+    desired = repo.ui.configbool("visibility", "enabled")
+    actual = tracking(repo)
+    if desired and not actual:
+        if repo.ui.configbool("visibility", "verbose"):
+            repo.ui.status(_("switching to explicit tracking of visible commits\n"))
         starttracking(repo)
-    if mode == "stop" and "visibleheads" in repo.storerequirements:
-        repo.ui.status(_("reverting to tracking visibility through obsmarkers\n"))
+    if not desired and actual:
+        if repo.ui.configbool("visibility", "verbose"):
+            repo.ui.status(_("reverting to tracking visibility through obsmarkers\n"))
         stoptracking(repo)

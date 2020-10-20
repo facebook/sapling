@@ -986,8 +986,6 @@ Options that control the behavior of EdenFS.
     potentially help save having to send separate fetch requests later to download any
     child trees that are needed.
 
-``automigrate``
-   The repository should automigrate when debugedenimporthelper is run.
 
 ``email``
 ---------
@@ -2325,11 +2323,6 @@ See :hg:`help templates` for details.
 ``treestate``
 -------------
 
-``automigrate``
-    Migrate dirstate format to ``format.dirstate`` during automigration (e.g.
-    on pull).
-    (default: false).
-
 ``mingcage``
     Seconds. Only files older than that would be garbage collected.
     (default: 1209600, 2 weeks)
@@ -2659,18 +2652,6 @@ can determine them implicitly from obsolescence markers.
     the ``visibleheads`` requirement is set in the repo.  If False,
     or if the ``visibleheads`` requirement is not set in the repo,
     then obsolescence markers will be used to determine visibility.
-
-``automigrate``
-    Set to ``start`` to automatically start tracking visibility of
-    commits by adding the ``visibileheads`` requirement to the repo
-    during automigration at the start of pull.  The initial visibility
-    of commits will be determined by snapshotting the commits that are
-    visible according to the obsolescence markers that are valid at the
-    point the ``visibleheads`` requirement is added.
-
-    Set to ``stop`` to automatically stop tracking visibility of
-    commits by removing the ``visibleheads`` requirement from the
-    repo and deleting any recorded visible heads.
 
 
 ``web``

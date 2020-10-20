@@ -6,6 +6,7 @@
 
   $ setconfig infinitepush.branchpattern="re:scratch/.*"
   $ setconfig commitcloud.hostname=testhost
+  $ setconfig visibility.verbose=true
   $ readconfig <<EOF
   > [alias]
   > trglog = log -G --template "{node|short} '{desc}' {bookmarks} {remotenames}\n"
@@ -209,6 +210,7 @@ Make a commit in the first client, and sync it
 
 Sync requires visibility
   $ hg cloud sync --config visibility.enabled=false
+  reverting to tracking visibility through obsmarkers
   commitcloud: synchronizing 'server' with 'user/test/default'
   abort: commit cloud sync requires new-style visibility
   [255]
@@ -248,6 +250,7 @@ Make a commit from the second client and sync it
 On the first client, make a bookmark, then sync - the bookmark and new commit should be synced
   $ cd client1
   $ hg bookmark -r 'desc(base)' bookmark1
+  switching to explicit tracking of visible commits
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   pulling 02f6fc2b7154 from ssh://user@dummy/server

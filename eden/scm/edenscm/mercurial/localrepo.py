@@ -602,12 +602,27 @@ class localrepository(object):
 
         self._eventreporting = True
         try:
+            self._treestatemigration()
+            self._visibilitymigration()
             self._svfsmigration()
             self._narrowheadsmigration()
             self._zstorecommitdatamigration()
         except errormod.LockHeld:
-            # Not fatal.
-            pass
+            self.ui.debug("skipping automigrate because lock is held\n")
+        except errormod.AbandonedTransactionFoundError:
+            self.ui.debug("skipping automigrate due to an abandoned transaction\n")
+
+    def _treestatemigration(self):
+        if treestate.currentversion(self) != self.ui.configint("format", "dirstate"):
+            with self.wlock(wait=False), self.lock(wait=False):
+                treestate.automigrate(self)
+
+    def _visibilitymigration(self):
+        if (
+            visibility.tracking(self) != self.ui.configbool("visibility", "enabled")
+        ) and not "hgsql" in self.requirements:
+            with self.lock(wait=False):
+                visibility.automigrate(self)
 
     def _svfsmigration(self):
         # Migrate 'remotenames' and 'bookmarks' state from sharedvfs to
@@ -2862,11 +2877,11 @@ class localrepository(object):
 
         Called at the start of pull if pull.automigrate is true
         """
+        # Migration of visibility, and treestate were moved to __init__ so they
+        # run for users not running 'pull'.
         try:
             with self.wlock(wait=False), self.lock(wait=False):
-                treestate.automigrate(self)
                 mutation.automigrate(self)
-                visibility.automigrate(self)
         except errormod.LockHeld:
             self.ui.debug("skipping automigrate because lock is held\n")
         except errormod.AbandonedTransactionFoundError:
