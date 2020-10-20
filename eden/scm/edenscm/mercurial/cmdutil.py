@@ -3099,64 +3099,9 @@ def _graphnodeformatter(ui, displayer):
 
 
 def displaygraph(
-    ui, repo, dag, displayer, edgefn, getrenamed=None, filematcher=None, props=None
+    ui, repo, dag, displayer, edgefn=None, getrenamed=None, filematcher=None, props=None
 ):
-    if ui.config("experimental", "graph.renderer") != "legacy":
-        rustdisplaygraph(ui, repo, dag, displayer, getrenamed, filematcher, props)
-        return
-
-    props = props or {}
-    formatnode = _graphnodeformatter(ui, displayer)
-    state = graphmod.asciistate()
-    styles = state["styles"]
-
-    # only set graph styling if HGPLAIN is not set.
-    if ui.plain("graph"):
-        # set all edge styles to |, the default pre-3.8 behaviour
-        styles.update(dict.fromkeys(styles, "|"))
-    else:
-        edgetypes = {
-            "parent": graphmod.PARENT,
-            "grandparent": graphmod.GRANDPARENT,
-            "missing": graphmod.MISSINGPARENT,
-        }
-        for name, key in edgetypes.items():
-            # experimental config: experimental.graphstyle.*
-            styles[key] = ui.config("experimental", "graphstyle.%s" % name, styles[key])
-            if not styles[key]:
-                styles[key] = None
-
-        # experimental config: experimental.graphshorten
-        state["graphshorten"] = ui.configbool("experimental", "graphshorten")
-
-    for rev, type, ctx, parents in dag:
-        char = formatnode(repo, ctx)
-        copies = None
-        if getrenamed and ctx.rev():
-            copies = []
-            for fn in ctx.files():
-                rename = getrenamed(fn, ctx.rev())
-                if rename:
-                    copies.append((fn, rename[0]))
-        revmatchfn = None
-        if filematcher is not None:
-            revmatchfn = filematcher(ctx.rev())
-        edges = edgefn(type, char, state, rev, parents)
-        firstedge = next(edges)
-        width = firstedge[2]
-        displayer.show(
-            ctx, copies=copies, matchfn=revmatchfn, _graphwidth=width, **props
-        )
-        # In case of graph display we don't preserve the original encoding
-        hunk = "".join(ensurestr(s) for s in displayer.hunk.pop(rev))
-        lines = hunk.split("\n")
-        if not lines[-1]:
-            del lines[-1]
-        displayer.flush(ctx)
-        for type, char, width, coldata in itertools.chain([firstedge], edges):
-            graphmod.ascii(ui, state, type, char, lines, coldata)
-            lines = []
-    displayer.close()
+    rustdisplaygraph(ui, repo, dag, displayer, getrenamed, filematcher, props)
 
 
 def rustdisplaygraph(
@@ -3245,9 +3190,7 @@ def graphlog(ui, repo, pats, opts):
 
     ui.pager("log")
     displayer = show_changeset(ui, repo, opts, buffered=True)
-    displaygraph(
-        ui, repo, revdag, displayer, graphmod.asciiedges, getrenamed, filematcher
-    )
+    displaygraph(ui, repo, revdag, displayer, None, getrenamed, filematcher)
 
 
 def checkunsupportedgraphflags(pats, opts):

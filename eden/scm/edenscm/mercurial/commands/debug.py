@@ -2127,9 +2127,7 @@ def debugpreviewbindag(ui, repo, path):
 
     opts = {"template": "{rev}", "graph": True}
     displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
-    cmdutil.displaygraph(
-        ui, repo, gendag(revs, parentrevs), displayer, edgefn=graphmod.asciiedges
-    )
+    cmdutil.displaygraph(ui, repo, gendag(revs, parentrevs), displayer)
 
 
 @command(

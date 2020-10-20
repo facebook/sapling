@@ -3885,7 +3885,7 @@ def incoming(ui, repo, source="default", **opts):
 
         def display(other, chlist, displayer):
             revdag = cmdutil.graphrevs(other, chlist, opts)
-            cmdutil.displaygraph(ui, repo, revdag, displayer, graphmod.asciiedges)
+            cmdutil.displaygraph(ui, repo, revdag, displayer)
 
         hg._incoming(display, ui, repo, source, opts, buffered=True)
         return 0
@@ -4453,7 +4453,7 @@ def outgoing(ui, repo, dest=None, **opts):
         revdag = cmdutil.graphrevs(repo, o, opts)
         ui.pager("outgoing")
         displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
-        cmdutil.displaygraph(ui, repo, revdag, displayer, graphmod.asciiedges)
+        cmdutil.displaygraph(ui, repo, revdag, displayer)
         cmdutil.outgoinghooks(ui, repo, other, opts, o)
         return 0
 
