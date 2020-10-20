@@ -346,7 +346,7 @@ small reminder of the repository state
   │ │  date:        Thu Jan 01 00:00:00 1970 +0000
   │ │  summary:     diverging
   │ │
-  o │  commit:      830839835f98
+  o │  commit:      * (glob)
   ├─╯  user:        test
   │    date:        Thu Jan 01 00:00:00 1970 +0000
   │    summary:     manychanges

@@ -404,6 +404,20 @@ def matchtree(pattern, tree, placeholder=None, incompletenodes=()):
         return matches
 
 
+def walktree(tree):
+    """Walk through a tree recursively
+
+    A tree is a S-exp represented by Python tuple and strings.
+    For example, ('func', ('symbol', 'ancestors'), ('symbol', 'foo')).
+    """
+    if isinstance(tree, tuple):
+        yield tree
+        for subtree in tree:
+            if isinstance(subtree, tuple):
+                for t in walktree(subtree):
+                    yield t
+
+
 def parseerrordetail(inst):
     """Compose error message from specified ParseError object"""
     if len(inst.args) > 1:
