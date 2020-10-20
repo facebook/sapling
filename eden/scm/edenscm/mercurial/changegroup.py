@@ -653,6 +653,8 @@ class cg1packer(object):
 
     # filter any nodes that claim to be part of the known set
     def prune(self, revlog, missing, commonrevs):
+        if "invalidatelinkrev" in self._repo.storerequirements:
+            return missing
         rr, rl = revlog.rev, revlog.linkrev
         return [n for n in missing if rl(rr(n)) not in commonrevs]
 
@@ -721,7 +723,11 @@ class cg1packer(object):
         # it is only reordered when reorder=True. To handle this case, we
         # simply take the slowpath, which already has the 'clrevorder' logic.
         # This was also fixed in cc0ff93d0c0c.
-        fastpathlinkrev = fastpathlinkrev and not self._reorder
+        fastpathlinkrev = (
+            fastpathlinkrev
+            and not self._reorder
+            and ("invalidatelinkrev" not in repo.storerequirements)
+        )
         # Treemanifests don't work correctly with fastpathlinkrev
         # either, because we don't discover which directory nodes to
         # send along with files. This could probably be fixed.
