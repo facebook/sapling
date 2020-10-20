@@ -16,6 +16,7 @@ use crate::namedag::MemNameDag;
 use crate::nameset::id_lazy::IdLazySet;
 use crate::nameset::id_static::IdStaticSet;
 use crate::nameset::NameSet;
+use crate::nameset::NameSetQuery;
 use crate::IdSet;
 use crate::Result;
 use std::sync::Arc;
@@ -280,11 +281,6 @@ pub trait ToSet {
     fn to_set(&self, set: &IdSet) -> Result<NameSet>;
 }
 
-pub trait IdMapEq {
-    /// (Cheaply) test if the map is compatible (same).
-    fn is_map_compatible(&self, other: &Arc<dyn IdConvert + Send + Sync>) -> bool;
-}
-
 pub trait IdMapSnapshot {
     /// Get a snapshot of IdMap.
     fn id_map_snapshot(&self) -> Result<Arc<dyn IdConvert + Send + Sync>>;
@@ -321,19 +317,21 @@ pub trait Persist {
     }
 }
 
-impl<T: IdConvert + IdMapEq> ToIdSet for T {
+impl<T: IdConvert + IdMapSnapshot> ToIdSet for T {
     /// Converts [`NameSet`] to [`IdSet`].
     fn to_id_set(&self, set: &NameSet) -> Result<IdSet> {
         // Fast path: extract IdSet from IdStaticSet.
         if let Some(set) = set.as_any().downcast_ref::<IdStaticSet>() {
-            if self.is_map_compatible(&set.map) {
+            let snapshot = self.id_map_snapshot()?;
+            if set.hints().is_id_map_compatible(snapshot) {
                 return Ok(set.spans.clone());
             }
         }
 
         // Convert IdLazySet to IdStaticSet. Bypass hash lookups.
         if let Some(set) = set.as_any().downcast_ref::<IdLazySet>() {
-            if self.is_map_compatible(&set.map) {
+            let snapshot = self.id_map_snapshot()?;
+            if set.hints().is_id_map_compatible(snapshot) {
                 let set: IdStaticSet = set.to_static()?;
                 return Ok(set.spans);
             }

@@ -33,7 +33,6 @@ use crate::ops::DagAddHeads;
 use crate::ops::DagAlgorithm;
 use crate::ops::DagPersistent;
 use crate::ops::IdConvert;
-use crate::ops::IdMapEq;
 use crate::ops::IdMapSnapshot;
 use crate::ops::Persist;
 use crate::ops::ToIdSet;
@@ -740,7 +739,7 @@ fn is_ok_some<T>(value: Result<Option<T>>) -> bool {
 }
 
 /// IdMap + IdDag backend for DagAlgorithm.
-pub trait NameDagStorage: IdMapEq {
+pub trait NameDagStorage {
     type IdDagStore: IdDagStore;
     type IdMap: IdConvert;
 
@@ -790,18 +789,6 @@ impl NameDagStorage for MemNameDag {
     }
     fn storage_dag_snapshot(&self) -> Result<Arc<dyn DagAlgorithm + Send + Sync>> {
         Ok(self.snapshot() as Arc<dyn DagAlgorithm + Send + Sync>)
-    }
-}
-
-impl IdMapEq for NameDag {
-    fn is_map_compatible(&self, other: &Arc<dyn IdConvert + Send + Sync>) -> bool {
-        Arc::ptr_eq(other, &self.snapshot_map)
-    }
-}
-
-impl IdMapEq for MemNameDag {
-    fn is_map_compatible(&self, other: &Arc<dyn IdConvert + Send + Sync>) -> bool {
-        Arc::ptr_eq(other, &self.snapshot_map)
     }
 }
 

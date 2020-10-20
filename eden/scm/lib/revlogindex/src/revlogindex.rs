@@ -21,7 +21,6 @@ use dag::nameset::meta::MetaSet;
 use dag::ops::DagAddHeads;
 use dag::ops::DagAlgorithm;
 use dag::ops::IdConvert;
-use dag::ops::IdMapEq;
 use dag::ops::IdMapSnapshot;
 use dag::ops::PrefixLookup;
 use dag::ops::ToIdSet;
@@ -1609,15 +1608,6 @@ impl DagAlgorithm for RevlogIndex {
 
     fn dag_snapshot(&self) -> dag::Result<Arc<dyn DagAlgorithm + Send + Sync>> {
         Ok(self.get_snapshot())
-    }
-}
-
-impl IdMapEq for RevlogIndex {
-    fn is_map_compatible(&self, other: &Arc<dyn IdConvert + Send + Sync>) -> bool {
-        Arc::ptr_eq(
-            other,
-            &(self.get_snapshot() as Arc<dyn IdConvert + Send + Sync>),
-        )
     }
 }
 
