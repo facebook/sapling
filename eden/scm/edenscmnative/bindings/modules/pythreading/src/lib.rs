@@ -18,6 +18,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let m = PyModule::new(py, &name)?;
     m.add_class::<Condition>(py)?;
     m.add_class::<bug29988wrapper>(py)?;
+    m.add_class::<RGenerator>(py)?;
     Ok(m)
 }
 
@@ -314,3 +315,157 @@ py_class!(class bug29988wrapper |py| {
         Ok(false)
     }
 });
+
+// Reentrant generator. Can be iterated multiple times by using the `iter()` method.
+py_class!(class RGenerator |py| {
+    // Main iterator (non-reentrant).
+    data iternext: Mutex<PyObject>;
+
+    // Items produced by iter.
+    data iterlist: PyList;
+
+    // Whether iteration was completed.
+    data itercompleted: Cell<bool>;
+
+    def __new__(_cls, gen: PyObject) -> PyResult<Self> {
+        Self::init(py, gen)
+    }
+
+    /// Obtains an iterator that iterates from the beginning.
+    def iter(&self, skip: usize = 0) -> PyResult<RGeneratorIter> {
+        RGeneratorIter::create_instance(py, self.clone_ref(py), Cell::new(skip))
+    }
+
+    /// Iterate to the end of the original generator.
+    def itertoend(&self) -> PyResult<usize> {
+        if self.itercompleted(py).get() {
+            Ok(0)
+        } else {
+            let iter = self.iter(py, self.iterlist(py).len(py))?;
+            let iter = ObjectProtocol::iter(iter.as_object(), py)?;
+            Ok(iter.count())
+        }
+    }
+
+    def list(&self) -> PyResult<PyList> {
+        Ok(self.iterlist(py).clone_ref(py))
+    }
+
+    def completed(&self) -> PyResult<bool> {
+        Ok(self.itercompleted(py).get())
+    }
+});
+
+impl RGenerator {
+    pub(crate) fn init(py: Python, gen: PyObject) -> PyResult<Self> {
+        let iter = gen.iter(py)?.into_object();
+        let next = match iter.getattr(py, "__next__") {
+            Err(_) => iter.getattr(py, "next")?,
+            Ok(next) => next,
+        };
+        Self::create_instance(py, Mutex::new(next), PyList::new(py, &[]), Cell::new(false))
+    }
+}
+
+py_class!(class RGeneratorIter |py| {
+    data rgen: RGenerator;
+    data index: Cell<usize>;
+
+    def __iter__(&self) -> PyResult<Self> {
+        Ok(self.clone_ref(py))
+    }
+
+    def __next__(&self) -> PyResult<Option<PyObject>> {
+        // Ensure that "__next__" is atomic by locking.
+        // Cannot rely on Python GIL because iternext.call(py) might release it.
+        let mutex = self.rgen(py).iternext(py);
+        if let Ok(locked) = mutex.try_lock() {
+            self.next_internal(py, &locked)
+        } else {
+            // Release Python GIL to give other threads chances to release mutex.
+            let locked = py.allow_threads(|| mutex.lock().unwrap());
+            self.next_internal(py, &locked)
+        }
+    }
+});
+
+impl RGeneratorIter {
+    // The caller should use locking to ensure `iternext` is not being called
+    // from another thread.
+    fn next_internal(&self, py: Python, iternext: &PyObject) -> PyResult<Option<PyObject>> {
+        let rgen = self.rgen(py);
+        let index = self.index(py).get();
+        while rgen.iterlist(py).len(py) <= index && !rgen.itercompleted(py).get() {
+            match iternext.call(py, NoArgs, None) {
+                Ok(item) => {
+                    rgen.iterlist(py).append(py, item);
+                }
+                Err(err) => {
+                    // Could be StopIteration.
+                    rgen.itercompleted(py).set(true);
+                    return Err(err);
+                }
+            };
+        }
+
+        let result = if rgen.iterlist(py).len(py) > index {
+            Some(rgen.iterlist(py).get_item(py, index))
+        } else {
+            None
+        };
+
+        self.index(py).set(index + 1);
+        Ok(result)
+    }
+}
+
+// fbcode has a whitelist of python2 executables, not including tests here
+#[cfg(test)]
+#[cfg(not(all(fbcode_build, feature = "python2")))]
+mod tests {
+    use super::*;
+    use std::thread;
+
+    #[test]
+    fn test_rgenerator_iter_multi_threads() {
+        let rgen = with_py(|py| {
+            let gen = py.eval("(i for i in range(1000))", None, None).unwrap();
+            RGenerator::init(py, gen).unwrap()
+        });
+        let mut rgen_list = Vec::new();
+        let n = 40;
+        with_py(|py| {
+            for _ in 0..n {
+                rgen_list.push(rgen.clone_ref(py));
+            }
+        });
+
+        let threads = rgen_list
+            .into_iter()
+            .map(move |rgen| {
+                thread::spawn(move || {
+                    let iter: RGeneratorIter =
+                        with_py(|py| RGenerator::iter(&rgen, py, 0).unwrap());
+                    let mut count = 0;
+                    while let Ok(Some(_)) = with_py(|py| iter.__next__(py)) {
+                        count += 1;
+                    }
+                    assert_eq!(count, 1000);
+                    let v: Vec<u32> =
+                        with_py(|py| rgen.list(py).unwrap().into_object().extract(py).unwrap());
+                    assert_eq!(v, (0..1000).collect::<Vec<u32>>());
+                    assert!(with_py(|py| rgen.completed(py).unwrap()));
+                })
+            })
+            .collect::<Vec<_>>();
+        for t in threads {
+            t.join().unwrap();
+        }
+    }
+
+    fn with_py<R>(f: impl FnOnce(Python) -> R) -> R {
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+        f(py)
+    }
+}
