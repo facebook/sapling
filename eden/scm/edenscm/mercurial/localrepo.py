@@ -2934,12 +2934,11 @@ def newreporequirements(repo):
     """
     ui = repo.ui
     requirements = {"revlogv1"}
-    if ui.configbool("format", "usestore"):
-        requirements.add("store")
-        if ui.configbool("format", "usefncache"):
-            requirements.add("fncache")
-            if ui.configbool("format", "dotencode"):
-                requirements.add("dotencode")
+    requirements.add("store")
+    if ui.configbool("format", "usefncache"):
+        requirements.add("fncache")
+        if ui.configbool("format", "dotencode"):
+            requirements.add("dotencode")
 
     compengine = ui.config("experimental", "format.compression")
     if compengine not in util.compengines:

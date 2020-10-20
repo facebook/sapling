@@ -60,15 +60,6 @@ test custom revlog chunk cache sizes
   +this
   
 
-creating repo with format.usestore=false
-
-  $ hg --config format.usestore=false init old
-  $ checknewrepo old
-  generaldelta
-  lz4revlog
-  revlogv1
-  treestate
-
 creating repo with format.usefncache=false
 
   $ hg --config format.usefncache=false init old2

@@ -1244,8 +1244,6 @@ Separate sections from subsections
   
       "usefncache"
   
-      "usestore"
-  
       "use-zstore-commit-data"
   
       "use-zstore-commit-data-revlog-fallback"

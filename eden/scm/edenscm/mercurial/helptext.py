@@ -1104,16 +1104,6 @@ Example for ``~/.hgrc``::
 
     Enabled by default.
 
-``usestore``
-    Enable or disable the "store" repository format which improves
-    compatibility with systems that fold case or otherwise mangle
-    filenames. Disabling this option will allow you to store longer filenames
-    in some situations at the expense of compatibility.
-
-    Repositories with this on-disk format require Mercurial version 0.9.4.
-
-    Enabled by default.
-
 ``use-zstore-commit-data``
 
     Use zstore (a SHA1 content store) to store commit metadata (user, date,
