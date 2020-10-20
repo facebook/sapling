@@ -21,6 +21,7 @@ pub mod id;
 mod iddag;
 pub mod iddagstore;
 pub mod idmap;
+mod locked;
 pub mod namedag;
 pub mod nameset;
 pub mod ops;
