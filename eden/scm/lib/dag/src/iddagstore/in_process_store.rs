@@ -5,10 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use super::GetLock;
 use super::IdDagStore;
 use super::StoreId;
 use crate::id::{Group, Id};
+use crate::ops::Persist;
 use crate::segment::Segment;
 use crate::Level;
 use crate::Result;
@@ -192,18 +192,18 @@ impl IdDagStore for InProcessStore {
     }
 }
 
-impl GetLock for InProcessStore {
-    type LockT = ();
+impl Persist for InProcessStore {
+    type Lock = ();
 
-    fn get_lock(&self) -> Result<()> {
+    fn lock(&self) -> Result<()> {
         Ok(())
     }
 
-    fn reload(&mut self, _lock: &Self::LockT) -> Result<()> {
+    fn reload(&mut self, _lock: &Self::Lock) -> Result<()> {
         Ok(())
     }
 
-    fn persist(&mut self, _lock: &Self::LockT) -> Result<()> {
+    fn persist(&mut self, _lock: &Self::Lock) -> Result<()> {
         Ok(())
     }
 }

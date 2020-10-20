@@ -7,8 +7,9 @@
 
 use crate::errors::bug;
 use crate::id::{Group, Id};
-use crate::iddagstore::{GetLock, IdDagStore, InProcessStore, IndexedLogStore};
+use crate::iddagstore::{IdDagStore, InProcessStore, IndexedLogStore};
 use crate::idmap::AssignHeadOutcome;
+use crate::ops::Persist;
 use crate::segment::{Segment, SegmentFlags};
 use crate::spanset::Span;
 use crate::spanset::SpanSet;
@@ -50,9 +51,9 @@ pub struct IdDag<Store> {
 }
 
 /// Guard to make sure [`IdDag`] on-disk writes are race-free.
-pub struct SyncableIdDag<'a, Store: GetLock> {
+pub struct SyncableIdDag<'a, Store: Persist> {
     dag: &'a mut IdDag<Store>,
-    lock: <Store as GetLock>::LockT,
+    lock: <Store as Persist>::Lock,
 }
 
 /// See benches/segment_sizes.rs (D16660078) for this choice.
@@ -196,7 +197,7 @@ impl<Store: IdDagStore> IdDag<Store> {
 }
 
 // Obtains SyncableIdDag
-impl<Store: IdDagStore + GetLock> IdDag<Store> {
+impl<Store: IdDagStore + Persist> IdDag<Store> {
     /// Return a [`SyncableIdDag`] instance that provides race-free
     /// filesytem read and write access by taking an exclusive lock.
     ///
@@ -205,7 +206,7 @@ impl<Store: IdDagStore + GetLock> IdDag<Store> {
     ///
     /// Block if another instance is taking the lock.
     pub fn prepare_filesystem_sync(&mut self) -> Result<SyncableIdDag<Store>> {
-        let lock = self.store.get_lock()?;
+        let lock = self.store.lock()?;
         // Read new entries from filesystem.
         self.store.reload(&lock)?;
         Ok(SyncableIdDag { dag: self, lock })
@@ -1278,7 +1279,7 @@ pub enum FirstAncestorConstraint {
     KnownUniversally { heads: SpanSet },
 }
 
-impl<Store: IdDagStore + GetLock> SyncableIdDag<'_, Store> {
+impl<Store: IdDagStore + Persist> SyncableIdDag<'_, Store> {
     /// Write pending changes to disk. Release the exclusive lock.
     ///
     /// The newly written entries can be fetched by [`IdDag::reload`].
@@ -1312,7 +1313,7 @@ impl<Store: IdDagStore + GetLock> SyncableIdDag<'_, Store> {
     }
 }
 
-impl<Store: GetLock> Deref for SyncableIdDag<'_, Store> {
+impl<Store: Persist> Deref for SyncableIdDag<'_, Store> {
     type Target = IdDag<Store>;
 
     fn deref(&self) -> &Self::Target {
@@ -1320,7 +1321,7 @@ impl<Store: GetLock> Deref for SyncableIdDag<'_, Store> {
     }
 }
 
-impl<Store: GetLock> DerefMut for SyncableIdDag<'_, Store> {
+impl<Store: Persist> DerefMut for SyncableIdDag<'_, Store> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.dag
     }

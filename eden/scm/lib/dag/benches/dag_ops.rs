@@ -5,13 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use dag::iddagstore::GetLock;
 use dag::iddagstore::IdDagStore;
 use dag::idmap::IdMapAssignHead;
 use dag::idmap::IdMapBuildParents;
 use dag::namedag::NameDag;
 use dag::ops::DagAlgorithm;
 use dag::ops::DagPersistent;
+use dag::ops::Persist;
 use dag::Set;
 use dag::{idmap::IdMap, spanset::SpanSet, Group, Id, IdDag, VertexName};
 use minibench::{bench, elapsed};
@@ -26,7 +26,7 @@ fn main() {
     bench_many_heads_namedag();
 }
 
-fn bench_with_iddag<S: IdDagStore + GetLock>(get_empty_iddag: impl Fn() -> IdDag<S>) {
+fn bench_with_iddag<S: IdDagStore + Persist>(get_empty_iddag: impl Fn() -> IdDag<S>) {
     println!("benchmarking {}", std::any::type_name::<S>());
     let parents = bindag::parse_bindag(bindag::MOZILLA);
 

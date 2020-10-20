@@ -289,6 +289,26 @@ pub trait IdMapSnapshot {
     fn id_map_snapshot(&self) -> Result<Arc<dyn IdConvert + Send + Sync>>;
 }
 
+/// Describes how to persist state to disk.
+pub trait Persist {
+    /// Return type of `lock()`.
+    type Lock;
+
+    /// Obtain an exclusive lock for writing.
+    /// This should prevent other writers.
+    fn lock(&self) -> Result<Self::Lock>;
+
+    /// Reload from the source of truth. Drop pending changes.
+    ///
+    /// This requires a lock and is usually called before `persist()`.
+    fn reload(&mut self, _lock: &Self::Lock) -> Result<()>;
+
+    /// Write pending changes to the source of truth.
+    ///
+    /// This requires a lock.
+    fn persist(&mut self, _lock: &Self::Lock) -> Result<()>;
+}
+
 impl<T: IdConvert + IdMapEq> ToIdSet for T {
     /// Converts [`NameSet`] to [`IdSet`].
     fn to_id_set(&self, set: &NameSet) -> Result<IdSet> {

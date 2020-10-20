@@ -5,10 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use super::GetLock;
 use super::IdDagStore;
 use crate::errors::bug;
 use crate::id::{Group, Id};
+use crate::ops::Persist;
 use crate::segment::Segment;
 use crate::Level;
 use crate::Result;
@@ -228,10 +228,10 @@ impl IdDagStore for IndexedLogStore {
     }
 }
 
-impl GetLock for IndexedLogStore {
-    type LockT = File;
+impl Persist for IndexedLogStore {
+    type Lock = File;
 
-    fn get_lock(&self) -> Result<File> {
+    fn lock(&self) -> Result<File> {
         // Take a filesystem lock. The file name 'lock' is taken by indexedlog
         // running on Windows, so we choose another file name here.
         let lock_file = {
@@ -248,13 +248,13 @@ impl GetLock for IndexedLogStore {
         Ok(lock_file)
     }
 
-    fn reload(&mut self, _lock: &Self::LockT) -> Result<()> {
+    fn reload(&mut self, _lock: &Self::Lock) -> Result<()> {
         self.log.clear_dirty()?;
         self.log.sync()?;
         Ok(())
     }
 
-    fn persist(&mut self, _lock: &Self::LockT) -> Result<()> {
+    fn persist(&mut self, _lock: &Self::Lock) -> Result<()> {
         self.log.sync()?;
         Ok(())
     }
