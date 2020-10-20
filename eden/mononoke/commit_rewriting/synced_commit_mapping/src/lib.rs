@@ -27,7 +27,7 @@ use thiserror::Error;
 #[derive(Debug, Eq, Error, PartialEq)]
 pub enum ErrorKind {
     #[error(
-        "tried to insert inconsistent small bcs id {expected_bcs_id:?} version {expected_config_version:?}, while db has {actual_bcs_id:?} version {actual_config_version:?}"
+        "tried to insert inconsistent small bcs id {actual_bcs_id:?} version {actual_config_version:?}, while db has {expected_bcs_id:?} version {expected_config_version:?}"
     )]
     InconsistentWorkingCopyEntry {
         expected_bcs_id: Option<ChangesetId>,
