@@ -27,6 +27,7 @@ from . import (
     bundle2,
     changegroup,
     changelog,
+    changelog2,
     cmdutil,
     discovery,
     error,
@@ -238,6 +239,53 @@ class bundlechangelog(bundlerevlog, changelog.changelog):
         return visibility.bundlevisibleheads(opener)
 
 
+class bundlechangelog2(changelog2.changelog):
+    def importbundle(self, cgunpacker):
+        """import commits from a bundle"""
+        nodetext = {}  # {node: text}
+        commits = []
+        bundlenodes = []
+        bundleparents = set()
+        nodemap = self.nodemap
+        for deltadata in cgunpacker.deltaiter():
+            node, p1, p2, cs, deltabase, delta, flags = deltadata
+            bundlenodes.append(node)
+            bundleparents.add(p1)
+            bundleparents.add(p2)
+
+            if node in nodemap:
+                # this can happen if two branches make the same change
+                continue
+
+            parentnodes = [p for p in (p1, p2) if p != nullid]
+            for p in parentnodes:
+                if p not in nodetext and p not in nodemap:
+                    raise error.LookupError(p, self.indexfile, _("unknown parent"))
+            if deltabase not in nodetext and deltabase not in self.nodemap:
+                raise LookupError(deltabase, self.indexfile, _("unknown delta base"))
+
+            basetext = nodetext.get(deltabase) or self.revision(deltabase)
+            text = bytes(mdiff.patches(basetext, [delta]))
+            nodetext[node] = text
+            commits.append((node, parentnodes, text))
+            bundlenodes.append(node)
+
+        self.inner.addcommits(commits)
+        self.bundlenodes = self.dag.sort(bundlenodes)
+        self.bundleheads = self.dag.heads(self.bundlenodes)
+        self._visibleheads = self._loadvisibleheads(self.svfs)
+
+    @property
+    def bundlerevs(self):
+        """used by 'bundle()' revset"""
+        return self.torevset(self.bundlenodes)
+
+    def _loadvisibleheads(self, opener):
+        heads = visibility.bundlevisibleheads(opener)
+        heads.addbundleheads(self.bundleheads)
+        return heads
+
+
 class bundlemanifest(bundlerevlog, manifest.manifestrevlog):
     def __init__(self, opener, cgunpacker, linkmapper, dirlogstarts=None, dir=""):
         manifest.manifestrevlog.__init__(self, opener, dir=dir)
@@ -379,10 +427,14 @@ class bundlerepository(localrepo.localrepository):
         # dict with the mapping 'filename' -> position in the changegroup.
         self._cgfilespos = {}
 
-        self.firstnewrev = self.changelog.repotiprev + 1
-        phases.retractboundary(
-            self, None, phases.draft, [ctx.node() for ctx in self[self.firstnewrev :]]
-        )
+        if util.safehasattr(self.changelog, "repotiprev"):
+            self.firstnewrev = self.changelog.repotiprev + 1
+            phases.retractboundary(
+                self,
+                None,
+                phases.draft,
+                [ctx.node() for ctx in self[self.firstnewrev :]],
+            )
 
     def _handlebundle2part(self, bundle, part):
         if part.type != "changegroup":
@@ -425,9 +477,19 @@ class bundlerepository(localrepo.localrepository):
     def changelog(self):
         # consume the header if it exists
         self._cgunpacker.changelogheader()
-        c = bundlechangelog(self.svfs, self._cgunpacker, self.ui.uiconfig())
+        cl = localrepo._openchangelog(self)
+        if (
+            isinstance(cl, changelog2.changelog)
+            and "revlog" not in cl.algorithmbackend
+            and len(cl) > 0
+        ):
+            cl.__class__ = bundlechangelog2
+            cl.importbundle(self._cgunpacker)
+        else:
+            cl = bundlechangelog(self.svfs, self._cgunpacker, self.ui.uiconfig())
+
         self.manstart = self._cgunpacker.tell()
-        return c
+        return cl
 
     @util.propertycache
     def manifestlog(self):
