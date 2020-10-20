@@ -298,7 +298,7 @@ impl<T> IdMapBuildParents for T where T: IdConvert {}
 impl<'a> SyncableIdMap<'a> {
     /// Write pending changes to disk.
     pub fn sync(&mut self) -> Result<()> {
-        if self.need_rebuild_non_master {
+        if self.need_rebuild_non_master() {
             return bug("cannot sync with re-assigned ids unresolved");
         }
         self.map.log.sync()?;
@@ -320,10 +320,12 @@ impl<'a> DerefMut for SyncableIdMap<'a> {
     }
 }
 
-/// Minimal write operations for IdMap.
+/// Write operations for IdMap.
 pub trait IdMapWrite {
     fn insert(&mut self, id: Id, name: &[u8]) -> Result<()>;
     fn next_free_id(&self, group: Group) -> Result<Id>;
+    fn remove_non_master(&mut self) -> Result<()>;
+    fn need_rebuild_non_master(&self) -> bool;
 }
 
 #[cfg(test)]
@@ -385,9 +387,8 @@ mod tests {
             assert_eq!(map.find_id_by_name(b"jkl").unwrap().unwrap(), id);
             assert_eq!(map.find_id_by_name(b"jkl2").unwrap().unwrap().0, 15);
             assert!(map.find_id_by_name(b"jkl3").unwrap().is_none());
-            // HACK: allow sync with re-assigned ids.
-            map.need_rebuild_non_master = false;
-            map.sync().unwrap();
+            // Error: re-assigned ids prevent sync.
+            map.sync().unwrap_err();
         }
 
         // Test Debug

@@ -30,7 +30,7 @@ pub struct IdMap {
     pub(crate) log: log::Log,
     path: PathBuf,
     cached_next_free_ids: [AtomicU64; Group::COUNT],
-    pub(crate) need_rebuild_non_master: bool,
+    need_rebuild_non_master: bool,
 }
 
 impl IdMap {
@@ -309,21 +309,6 @@ impl IdMap {
     }
 }
 
-// Remove data.
-impl IdMap {
-    /// Mark non-master ids as "removed".
-    pub fn remove_non_master(&mut self) -> Result<()> {
-        self.log.append(IdMap::MAGIC_CLEAR_NON_MASTER)?;
-        self.need_rebuild_non_master = false;
-        // Invalidate the next free id cache.
-        self.cached_next_free_ids = Default::default();
-        if self.next_free_id(Group::NON_MASTER)? != Group::NON_MASTER.min_id() {
-            return bug("remove_non_master did not take effect");
-        }
-        Ok(())
-    }
-}
-
 impl fmt::Debug for IdMap {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "IdMap {{\n")?;
@@ -370,6 +355,19 @@ impl IdMapWrite for IdMap {
     }
     fn next_free_id(&self, group: Group) -> Result<Id> {
         IdMap::next_free_id(self, group)
+    }
+    fn remove_non_master(&mut self) -> Result<()> {
+        self.log.append(IdMap::MAGIC_CLEAR_NON_MASTER)?;
+        self.need_rebuild_non_master = false;
+        // Invalidate the next free id cache.
+        self.cached_next_free_ids = Default::default();
+        if self.next_free_id(Group::NON_MASTER)? != Group::NON_MASTER.min_id() {
+            return bug("remove_non_master did not take effect");
+        }
+        Ok(())
+    }
+    fn need_rebuild_non_master(&self) -> bool {
+        self.need_rebuild_non_master
     }
 }
 

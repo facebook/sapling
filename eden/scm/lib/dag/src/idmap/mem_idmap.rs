@@ -71,6 +71,7 @@ impl IdConvert for MemIdMap {
     }
 }
 
+// TODO: Reconsider re-assign master cases. Currently they are ignored.
 impl IdMapWrite for MemIdMap {
     fn insert(&mut self, id: Id, name: &[u8]) -> Result<()> {
         let vertex_name = VertexName::copy_from(name);
@@ -89,6 +90,12 @@ impl IdMapWrite for MemIdMap {
         let cached = self.cached_next_free_ids[group.0].load(atomic::Ordering::SeqCst);
         let id = Id(cached);
         Ok(id)
+    }
+    fn remove_non_master(&mut self) -> Result<()> {
+        Ok(())
+    }
+    fn need_rebuild_non_master(&self) -> bool {
+        false
     }
 }
 

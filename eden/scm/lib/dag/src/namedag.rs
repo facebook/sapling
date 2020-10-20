@@ -23,6 +23,7 @@ use crate::iddagstore::IndexedLogStore;
 use crate::idmap::AssignHeadOutcome;
 use crate::idmap::IdMap;
 use crate::idmap::IdMapAssignHead;
+use crate::idmap::IdMapWrite;
 use crate::idmap::MemIdMap;
 use crate::idmap::SyncableIdMap;
 use crate::nameset::hints::Flags;
@@ -723,7 +724,7 @@ where
     }
 
     // Rebuild non-master ids and segments.
-    if map.need_rebuild_non_master {
+    if map.need_rebuild_non_master() {
         rebuild_non_master(map, dag)?;
     }
 
