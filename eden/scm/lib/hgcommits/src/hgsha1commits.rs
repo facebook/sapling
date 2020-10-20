@@ -102,25 +102,30 @@ impl AppendCommits for HgCommits {
         drop(zstore);
 
         // Write commit graph to DAG.
-        let commits: HashMap<Vertex, HgCommit> = commits
+        let commits_map: HashMap<Vertex, HgCommit> = commits
             .iter()
             .cloned()
             .map(|c| (c.vertex.clone(), c))
             .collect();
         let parent_func = |v: Vertex| -> dag::Result<Vec<Vertex>> {
-            match commits.get(&v) {
+            match commits_map.get(&v) {
                 Some(commit) => Ok(commit.parents.clone()),
                 None => v.not_found(),
             }
         };
         let heads: Vec<Vertex> = {
-            let mut heads: HashSet<Vertex> = commits.keys().cloned().collect();
-            for commit in commits.values() {
+            let mut non_heads = HashSet::new();
+            for commit in commits {
                 for parent in commit.parents.iter() {
-                    heads.remove(parent);
+                    non_heads.insert(parent);
                 }
             }
-            heads.into_iter().collect()
+            commits
+                .iter()
+                .map(|c| &c.vertex)
+                .filter(|v| !non_heads.contains(v))
+                .cloned()
+                .collect()
         };
         self.dag.add_heads(parent_func, &heads)?;
 
