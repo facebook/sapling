@@ -299,8 +299,10 @@ space by running:
 
         def get_size(path) -> int:
             total = 0
-            try:
-                for dirent in os.scandir(path):
+            failed_to_check_files = []
+
+            for dirent in os.scandir(path):
+                try:
                     if dirent.is_dir(follow_symlinks=False):
                         # Don't recurse onto different filesystems
                         if (
@@ -317,9 +319,19 @@ space by running:
                             # disk space allocated by the file, not its apparent
                             # size.
                             total += stat.st_blocks * 512
-            except FileNotFoundError:
-                pass
-
+                except FileNotFoundError:
+                    failed_to_check_files.append(dirent.path)
+                except PermissionError:
+                    failed_to_check_files.append(dirent.path)
+            if failed_to_check_files:
+                pretry_failed_to_check_files = ", ".join(failed_to_check_files)
+                self.color_out.write(
+                    "Warning: failed to check paths"
+                    f" {pretry_failed_to_check_files} due to file not found or"
+                    " permission errors. Note that will also not be able to"
+                    " clean these paths.\n",
+                    fg=self.color_out.YELLOW,
+                )
             return total
 
         return get_size(path)
