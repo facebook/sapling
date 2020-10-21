@@ -28,7 +28,7 @@ use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use mononoke_types::ChangesetId;
 use pushredirect_enable::types::MononokePushRedirectEnable;
 use scuba_ext::ScubaSampleBuilder;
-use slog::{debug, error, Logger};
+use slog::{error, info, Logger};
 use stats::prelude::*;
 use std::{sync::Arc, time::Duration};
 use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
@@ -153,7 +153,7 @@ async fn loop_forever<M: SyncedCommitMapping + Clone + 'static>(
                 error!(ctx.logger(), "validation failed: {:?}", err);
             }
         } else {
-            debug!(ctx.logger(), "push redirector is disabled");
+            info!(ctx.logger(), "push redirector is disabled");
             // Log success to prevent alarm from going off
             STATS::result_counter.set_value(
                 ctx.fb,
@@ -174,9 +174,9 @@ async fn validate<M: SyncedCommitMapping + Clone + 'static>(
     let commit_syncer = &syncers.small_to_large;
     let diffs = validation::find_bookmark_diff(ctx.clone(), &commit_syncer).await?;
 
-    debug!(ctx.logger(), "got {} bookmark diffs", diffs.len());
+    info!(ctx.logger(), "got {} bookmark diffs", diffs.len());
     for diff in diffs {
-        debug!(ctx.logger(), "processing {:?}", diff);
+        info!(ctx.logger(), "processing {:?}", diff);
         use BookmarkDiff::*;
 
         let (large_bookmark, large_cs_id, small_cs_id) = match diff {
@@ -212,7 +212,7 @@ async fn validate<M: SyncedCommitMapping + Clone + 'static>(
         )
         .await?;
         if in_history {
-            debug!(ctx.logger(), "all is well");
+            info!(ctx.logger(), "all is well");
         } else {
             return Err(format_err!(
                 "{} points to {:?} in {}, but points to {:?} in {}",
@@ -238,7 +238,7 @@ async fn check_large_bookmark_history<M: SyncedCommitMapping + Clone + 'static>(
 ) -> Result<bool, Error> {
     let small_to_large = &syncers.small_to_large;
     let large_to_small = &syncers.large_to_small;
-    debug!(ctx.logger(), "checking history of {}", large_bookmark);
+    info!(ctx.logger(), "checking history of {}", large_bookmark);
 
     let large_repo = small_to_large.get_large_repo();
     // Log entries are sorted newest to oldest
