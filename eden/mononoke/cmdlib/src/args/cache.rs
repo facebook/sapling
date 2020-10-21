@@ -151,7 +151,8 @@ pub fn init_cachelib<'a>(
         Caching::Enabled(..) | Caching::CachelibOnlyBlobstore(..) => {
             let mut settings = CachelibSettings::default();
             if let Some(cache_size) = matches.value_of(CACHE_SIZE_GB) {
-                settings.cache_size = cache_size.parse::<usize>().unwrap() * 1024 * 1024 * 1024;
+                settings.cache_size =
+                    (cache_size.parse::<f64>().unwrap() * (1024 * 1024 * 1024) as f64) as usize;
             }
             if let Some(max_process_size) = matches.value_of(MAX_PROCESS_SIZE) {
                 settings.max_process_size_gib = Some(max_process_size.parse().unwrap());
