@@ -518,3 +518,65 @@ TEST_F(JournalTest, compaction) {
   EXPECT_EQ(3, summed->toSequence);
   EXPECT_EQ(1, summed->changedFilesInOverlay.size());
 }
+
+TEST_F(JournalTest, subscribers_are_notified_of_changes) {
+  unsigned calls = 0;
+  auto sub = journal.registerSubscriber([&] { ++calls; });
+  (void)sub;
+
+  EXPECT_EQ(0u, calls);
+  journal.recordChanged("foo"_relpath);
+  EXPECT_EQ(1u, calls);
+  EXPECT_EQ(1u, journal.getLatest()->sequenceID);
+
+  journal.recordChanged("foo"_relpath);
+  EXPECT_EQ(2u, calls);
+  EXPECT_EQ(2u, journal.getLatest()->sequenceID);
+}
+
+TEST_F(
+    JournalTest,
+    subscribers_are_not_notified_of_changes_until_they_are_observed) {
+  unsigned calls = 0;
+  auto sub = journal.registerSubscriber([&] { ++calls; });
+  (void)sub;
+
+  EXPECT_EQ(0u, calls);
+  journal.recordChanged("foo"_relpath);
+  EXPECT_EQ(1u, calls);
+  journal.recordChanged("foo"_relpath);
+  EXPECT_EQ(1u, calls);
+  EXPECT_EQ(2u, journal.getLatest()->sequenceID);
+  journal.recordChanged("foo"_relpath);
+  EXPECT_EQ(2u, calls);
+  EXPECT_EQ(3u, journal.getLatest()->sequenceID);
+}
+
+TEST_F(JournalTest, all_subscribers_are_notified_after_any_observation) {
+  unsigned calls1 = 0;
+  unsigned calls2 = 0;
+  auto sub1 = journal.registerSubscriber([&] { ++calls1; });
+  (void)sub1;
+  auto sub2 = journal.registerSubscriber([&] { ++calls2; });
+  (void)sub2;
+
+  EXPECT_EQ(0u, calls1);
+  EXPECT_EQ(0u, calls2);
+
+  journal.recordChanged("foo"_relpath);
+  journal.recordChanged("foo"_relpath);
+
+  EXPECT_EQ(1u, calls1);
+  EXPECT_EQ(1u, calls2);
+
+  EXPECT_EQ(2u, journal.getLatest()->sequenceID);
+  journal.recordChanged("foo"_relpath);
+
+  EXPECT_EQ(2u, calls1);
+  EXPECT_EQ(2u, calls2);
+
+  journal.recordChanged("foo"_relpath);
+
+  EXPECT_EQ(2u, calls1);
+  EXPECT_EQ(2u, calls2);
+}

@@ -110,7 +110,7 @@ class Journal {
    * Returns a copy of the tip of the journal.
    * Will return a nullopt if the journal is empty.
    */
-  std::optional<JournalDeltaInfo> getLatest() const;
+  std::optional<JournalDeltaInfo> getLatest();
 
   /**
    * Returns an accumulation of all deltas with sequence number >= limitSequence
@@ -188,18 +188,27 @@ class Journal {
   static constexpr size_t kDefaultJournalMemoryLimit = 1000000000;
 
   struct DeltaState {
-    /** The sequence number that we'll use for the next entry
-     * that we link into the chain */
+    /**
+     * The sequence number that we'll use for the next entry that we link into
+     * the chain.
+     */
     SequenceNumber nextSequence{1};
-    /** All recorded entries. Newer (more recent) deltas are added to the back
-     * of the appropriate deque. */
+    /**
+     * All recorded entries. Newer (more recent) deltas are added to the back of
+     * the appropriate deque.
+     */
     std::deque<FileChangeJournalDelta> fileChangeDeltas;
     std::deque<HashUpdateJournalDelta> hashUpdateDeltas;
     Hash currentHash = kZeroHash;
-    /** The stats about this Journal up to the latest delta */
+    /// The stats about this Journal up to the latest delta.
     std::optional<JournalStats> stats;
     size_t memoryLimit = kDefaultJournalMemoryLimit;
     size_t deltaMemoryUsage = 0;
+
+    // Set to false when a delta is added.
+    // Set to true when getLatest() or accumulateRange() are called.
+    // If true before calling addDelta, subscribers are notified.
+    bool lastModificationHasBeenObserved = true;
 
     JournalDeltaPtr frontPtr() noexcept;
     void popFront();
@@ -223,7 +232,7 @@ class Journal {
       }
     }
   };
-  folly::Synchronized<DeltaState> deltaState_;
+  folly::Synchronized<DeltaState, std::mutex> deltaState_;
 
   /**
    * Removes the oldest deltas until the memory usage of the journal is below
@@ -248,9 +257,11 @@ class Journal {
    * The delta will have a new sequence number and timestamp
    * applied. A lock to the deltaState must be held and passed to this
    * function.
+   *
+   * Returns true if subscribers should be notified.
    */
   template <typename T>
-  void addDeltaWithoutNotifying(T&& delta, DeltaState& deltaState);
+  [[nodiscard]] bool addDeltaBeforeNotifying(T&& delta, DeltaState& deltaState);
 
   /**
    * Notify subscribers that a change has happened. Must not be called while
