@@ -16,6 +16,7 @@ use configparser::{
     config::ConfigSet,
     hg::{ByteCount, ConfigSetHgExt},
 };
+use indexedlog::Repair;
 use types::{Key, NodeInfo};
 
 use crate::{
@@ -51,6 +52,16 @@ impl MetadataStore {
         MetadataStoreBuilder::new(config)
             .local_path(&local_path)
             .build()
+    }
+
+    /// Attempt to repair the underlying stores that the `MetadataStore` is comprised of.
+    ///
+    /// As this may violate some of the stores asumptions, care must be taken to call this only
+    /// when no other `MetadataStore` have been created for the `shared_path`.
+    pub fn repair(shared_path: impl AsRef<Path>) -> Result<String> {
+        Ok(IndexedLogHgIdHistoryStore::repair(
+            get_indexedloghistorystore_path(shared_path)?,
+        )?)
     }
 }
 

@@ -91,22 +91,8 @@ def doctor(ui, **opts):
     if "remotefilelog" in repo.requirements:
         from ...hgext.remotefilelog import shallowutil
 
-        if ui.configbool("remotefilelog", "write-hgcache-to-indexedlog"):
-            path = shallowutil.getindexedlogdatastorepath(repo)
-            repair(
-                ui,
-                "indexedlogdatastore",
-                path,
-                revisionstore.indexedlogdatastore.repair,
-            )
-
-            path = shallowutil.getindexedloghistorystorepath(repo)
-            repair(
-                ui,
-                "indexedloghistorystore",
-                path,
-                revisionstore.indexedloghistorystore.repair,
-            )
+        path = os.path.join(shallowutil.getcachepath(ui), repo.name)
+        repair(ui, "revisionstore", path, revisionstore.repair)
 
     ui.write(_("checking commit references\n"))
     _try(ui, checklaggingremotename, repo)
@@ -502,15 +488,5 @@ def runglobalindexedlogdoctor(ui):
 
     from ...hgext.remotefilelog import shallowutil
 
-    for path in shallowutil.getallindexedlogdatastorepath(ui):
-        repair(
-            ui, "indexedlogdatastore", path, revisionstore.indexedlogdatastore.repair
-        )
-
-    for path in shallowutil.getallindexedloghistorystorepath(ui):
-        repair(
-            ui,
-            "indexedloghistorystore",
-            path,
-            revisionstore.indexedloghistorystore.repair,
-        )
+    for path in shallowutil.getallcachepaths(ui):
+        repair(ui, "revisionstore", path, revisionstore.repair)

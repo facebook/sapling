@@ -92,38 +92,13 @@ def getlocalpackpath(base, category):
     return os.path.join(base, "packs", category)
 
 
-def getexperimentalcachepath(repo):
-    return os.path.join(getcachepath(repo.ui), repo.name, "experimental")
-
-
-def getindexedlogdatastorepath(repo):
-    path = os.path.join(getcachepath(repo.ui), repo.name)
-    return os.path.join(path, "indexedlogdatastore")
-
-
-def getindexedloghistorystorepath(repo):
-    path = os.path.join(getcachepath(repo.ui), repo.name)
-    return os.path.join(path, "indexedloghistorystore")
-
-
-def getallindexedlogdatastorepath(ui):
+def getallcachepaths(ui):
     cachepath = getcachepath(ui)
-    paths = []
-    for name in os.listdir(cachepath):
-        fullpath = os.path.join(cachepath, name, "indexedlogdatastore")
-        if os.path.isdir(fullpath):
-            paths.append(fullpath)
-    return paths
 
-
-def getallindexedloghistorystorepath(ui):
-    cachepath = getcachepath(ui)
-    paths = []
     for name in os.listdir(cachepath):
-        fullpath = os.path.join(cachepath, name, "indexedloghistorystore")
-        if os.path.isdir(fullpath):
-            paths.append(fullpath)
-    return paths
+        path = os.path.join(cachepath, name)
+        if os.path.isdir(path):
+            yield path
 
 
 def createrevlogtext(text, copyfrom=None, copyrev=None):

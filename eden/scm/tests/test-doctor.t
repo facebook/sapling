@@ -71,7 +71,7 @@ Test that 'hg doctor' can fix them:
   hgcommits/v1: repaired
   metalog: repaired
   allheads: repaired
-  indexedlogdatastore: repaired
+  revisionstore: repaired
   checking commit references
 
 Check the repo is usable again:

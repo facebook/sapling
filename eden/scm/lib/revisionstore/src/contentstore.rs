@@ -22,6 +22,7 @@ use configparser::{
     hg::{ByteCount, ConfigSetHgExt},
 };
 use hgtime::HgTime;
+use indexedlog::Repair;
 use types::{Key, RepoPathBuf};
 
 use crate::{
@@ -63,6 +64,16 @@ impl ContentStore {
         ContentStoreBuilder::new(config)
             .local_path(&local_path)
             .build()
+    }
+
+    /// Attempt to repair the underlying stores that the `ContentStore` is comprised of.
+    ///
+    /// As this may violate some of the stores asumptions, care must be taken to call this only
+    /// when no other `ContentStore` have been created for the `shared_path`.
+    pub fn repair(shared_path: impl AsRef<Path>) -> Result<String> {
+        Ok(IndexedLogHgIdDataStore::repair(
+            get_indexedlogdatastore_path(shared_path)?,
+        )?)
     }
 
     /// Some blobs may contain copy-from metadata, let's strip it. For more details about the

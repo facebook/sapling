@@ -186,7 +186,6 @@ pub use crate::types::{ContentHash, StoreKey};
 pub use crate::uniondatastore::UnionHgIdDataStore;
 pub use crate::util::Error;
 
-pub use indexedlog::Repair as IndexedlogRepair;
 pub use revisionstore_types::*;
 
 #[cfg(any(test, feature = "for-tests"))]

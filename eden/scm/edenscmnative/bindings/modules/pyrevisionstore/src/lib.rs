@@ -32,9 +32,9 @@ use revisionstore::{
     DataPackVersion, Delta, EdenApiFileStore, EdenApiTreeStore, ExtStoredPolicy, HgIdDataStore,
     HgIdHistoryStore, HgIdMutableDeltaStore, HgIdMutableHistoryStore, HgIdRemoteStore, HistoryPack,
     HistoryPackStore, HistoryPackVersion, IndexedLogHgIdDataStore, IndexedLogHgIdHistoryStore,
-    IndexedlogRepair, LocalStore, MemcacheStore, Metadata, MetadataStore, MetadataStoreBuilder,
-    MutableDataPack, MutableHistoryPack, RemoteDataStore, RemoteHistoryStore, RepackKind,
-    RepackLocation, StoreKey, StoreResult,
+    LocalStore, MemcacheStore, Metadata, MetadataStore, MetadataStoreBuilder, MutableDataPack,
+    MutableHistoryPack, RemoteDataStore, RemoteHistoryStore, RepackKind, RepackLocation, StoreKey,
+    StoreResult,
 };
 use types::{Key, NodeInfo};
 
@@ -88,6 +88,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
             )
         ),
     )?;
+    m.add(py, "repair", py_fn!(py, repair(path: &PyPath)))?;
     Ok(m)
 }
 
@@ -124,6 +125,15 @@ fn repack_py(
     .map_pyerr(py)?;
 
     Ok(PyNone)
+}
+
+fn repair(py: Python, path: &PyPath) -> PyResult<Str> {
+    py.allow_threads(|| {
+        ContentStore::repair(path.as_path())?;
+        MetadataStore::repair(path.as_path())
+    })
+    .map_pyerr(py)
+    .map(Into::into)
 }
 
 py_class!(class datapack |py| {
@@ -359,11 +369,6 @@ py_class!(class indexedlogdatastore |py| {
         )
     }
 
-    @staticmethod
-    def repair(path: &PyPath) -> PyResult<Str> {
-        py.allow_threads(|| IndexedLogHgIdDataStore::repair(path.as_path())).map_pyerr(py).map(Into::into)
-    }
-
     def getdelta(&self, name: &PyPath, node: &PyBytes) -> PyResult<PyObject> {
         let store = self.store(py);
         store.get_delta_py(py, name, node)
@@ -405,11 +410,6 @@ py_class!(class indexedloghistorystore |py| {
             py,
             Box::new(IndexedLogHgIdHistoryStore::new(path.as_path(), &config).map_pyerr(py)?),
         )
-    }
-
-    @staticmethod
-    def repair(path: &PyPath) -> PyResult<PyUnicode> {
-        IndexedLogHgIdHistoryStore::repair(path.as_path()).map_pyerr(py).map(|s| PyUnicode::new(py, &s))
     }
 
     def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
