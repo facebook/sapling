@@ -71,9 +71,13 @@ impl ContentStore {
     /// As this may violate some of the stores asumptions, care must be taken to call this only
     /// when no other `ContentStore` have been created for the `shared_path`.
     pub fn repair(shared_path: impl AsRef<Path>) -> Result<String> {
-        Ok(IndexedLogHgIdDataStore::repair(
-            get_indexedlogdatastore_path(shared_path)?,
-        )?)
+        let shared_path = shared_path.as_ref();
+        let mut repair_str = String::new();
+
+        repair_str += &IndexedLogHgIdDataStore::repair(get_indexedlogdatastore_path(shared_path)?)?;
+        repair_str += &LfsStore::repair(shared_path)?;
+
+        Ok(repair_str)
     }
 
     /// Some blobs may contain copy-from metadata, let's strip it. For more details about the

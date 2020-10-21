@@ -138,11 +138,10 @@ impl StoreOpenOptions {
         ))
     }
 
-    /// Create a shared `Store`
+    /// Convert a `StoreOpenOptions` to a `rotate::OpenOptions`.
     ///
-    /// Data added to a shared store will be rotated out depending on the values of `max_log_count`
-    /// and `max_bytes_per_log`.
-    pub fn shared(self, path: impl AsRef<Path>) -> Result<Store> {
+    /// Should only be used to implement `indexedlog::DefaultOpenOptions`
+    pub fn into_rotate_open_options(self) -> rotate::OpenOptions {
         let mut opts = rotate::OpenOptions::new()
             .create(true)
             .auto_sync_threshold(self.auto_sync_threshold)
@@ -156,6 +155,15 @@ impl StoreOpenOptions {
             opts = opts.max_bytes_per_log(max_bytes_per_log);
         }
 
+        opts
+    }
+
+    /// Create a shared `Store`
+    ///
+    /// Data added to a shared store will be rotated out depending on the values of `max_log_count`
+    /// and `max_bytes_per_log`.
+    pub fn shared(self, path: impl AsRef<Path>) -> Result<Store> {
+        let opts = self.into_rotate_open_options();
         Ok(Store::Shared(opts.open(path.as_ref())?))
     }
 }

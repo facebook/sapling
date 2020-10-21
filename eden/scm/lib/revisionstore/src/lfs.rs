@@ -44,7 +44,7 @@ use configparser::{
 };
 use hg_http::http_client;
 use http_client::{HttpClient, Method, Request};
-use indexedlog::log::IndexOutput;
+use indexedlog::{log::IndexOutput, rotate, DefaultOpenOptions, Repair};
 use lfs_protocol::{
     ObjectAction, ObjectStatus, Operation, RequestBatch, RequestObject, ResponseBatch,
     Sha256 as LfsSha256,
@@ -166,15 +166,20 @@ struct LfsPointersEntry {
     content_hashes: HashMap<ContentHashType, ContentHash>,
 }
 
+impl DefaultOpenOptions<rotate::OpenOptions> for LfsPointersStore {
+    fn default_open_options() -> rotate::OpenOptions {
+        Self::default_store_open_options().into_rotate_open_options()
+    }
+}
+
 impl LfsPointersStore {
     const INDEX_NODE: usize = 0;
     const INDEX_SHA256: usize = 1;
 
-    fn open_options(config: &ConfigSet) -> Result<StoreOpenOptions> {
-        let log_size = config.get_or("lfs", "pointersstoresize", || ByteCount::from(40_000_000))?;
-        Ok(StoreOpenOptions::new()
+    fn default_store_open_options() -> StoreOpenOptions {
+        StoreOpenOptions::new()
             .max_log_count(4)
-            .max_bytes_per_log(log_size.value() / 4)
+            .max_bytes_per_log(40_000_000 / 4)
             .index("node", |_| {
                 vec![IndexOutput::Reference(0..HgId::len() as u64)]
             })
@@ -186,7 +191,15 @@ impl LfsPointersStore {
                 vec![IndexOutput::Owned(Box::from(
                     content_hash.unwrap_sha256().as_ref(),
                 ))]
-            }))
+            })
+    }
+
+    fn open_options(config: &ConfigSet) -> Result<StoreOpenOptions> {
+        let mut open_options = Self::default_store_open_options();
+        if let Some(log_size) = config.get_opt::<ByteCount>("lfs", "pointersstoresize")? {
+            open_options = open_options.max_bytes_per_log(log_size.value() / 4);
+        }
+        Ok(open_options)
     }
 
     /// Create a local `LfsPointersStore`.
@@ -241,6 +254,12 @@ struct LfsIndexedLogBlobsEntry {
     data: Bytes,
 }
 
+impl DefaultOpenOptions<rotate::OpenOptions> for LfsIndexedLogBlobsStore {
+    fn default_open_options() -> rotate::OpenOptions {
+        Self::default_store_open_options().into_rotate_open_options()
+    }
+}
+
 impl LfsIndexedLogBlobsStore {
     fn chunk_size(config: &ConfigSet) -> Result<usize> {
         Ok(config
@@ -248,19 +267,27 @@ impl LfsIndexedLogBlobsStore {
             .value() as usize)
     }
 
-    fn open_options(config: &ConfigSet) -> Result<StoreOpenOptions> {
-        let log_size =
-            config.get_or("lfs", "blobsstoresize", || ByteCount::from(20_000_000_000))?;
-        let auto_sync = config.get_or("lfs", "autosyncthreshold", || {
-            ByteCount::from(1_000_000_000)
-        })?;
-        Ok(StoreOpenOptions::new()
+    fn default_store_open_options() -> StoreOpenOptions {
+        StoreOpenOptions::new()
             .max_log_count(4)
-            .max_bytes_per_log(log_size.value() / 4)
-            .auto_sync_threshold(auto_sync.value())
+            .max_bytes_per_log(20_000_000_000 / 4)
+            .auto_sync_threshold(1_000_000_000)
             .index("sha256", |_| {
                 vec![IndexOutput::Reference(0..Sha256::len() as u64)]
-            }))
+            })
+    }
+
+    fn open_options(config: &ConfigSet) -> Result<StoreOpenOptions> {
+        let mut open_options = Self::default_store_open_options();
+        if let Some(log_size) = config.get_opt::<ByteCount>("lfs", "blobsstoresize")? {
+            open_options = open_options.max_bytes_per_log(log_size.value() / 4);
+        }
+
+        if let Some(auto_sync) = config.get_opt::<ByteCount>("lfs", "autosyncthreshold")? {
+            open_options = open_options.auto_sync_threshold(auto_sync.value());
+        }
+
+        Ok(open_options)
     }
 
     pub fn shared(path: &Path, config: &ConfigSet) -> Result<Self> {
@@ -539,6 +566,16 @@ impl LfsStore {
         let pointers = LfsPointersStore::shared(path, config)?;
         let blobs = LfsBlobsStore::shared(path, config)?;
         LfsStore::new(pointers, blobs)
+    }
+
+    pub fn repair(path: impl AsRef<Path>) -> Result<String> {
+        let path = path.as_ref();
+        let mut repair_str = String::new();
+
+        repair_str += &LfsPointersStore::repair(get_lfs_pointers_path(path)?)?;
+        repair_str += &LfsIndexedLogBlobsStore::repair(get_lfs_blobs_path(path)?)?;
+
+        Ok(repair_str)
     }
 
     fn blob_impl(&self, key: StoreKey) -> Result<StoreResult<(LfsPointersEntry, Bytes)>> {
