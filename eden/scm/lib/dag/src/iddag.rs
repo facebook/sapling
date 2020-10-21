@@ -859,7 +859,7 @@ impl<Store: IdDagStore> IdDag<Store> {
                 // a lower level one.
                 if span.high < range.high {
                     let low_id = (span.high + 1).max(range.low);
-                    if low_id >= range.high {
+                    if low_id > range.high {
                         return Ok(());
                     }
                     let missing_range = Span::from(low_id..=range.high);

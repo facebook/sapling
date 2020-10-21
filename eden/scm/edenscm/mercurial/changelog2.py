@@ -500,7 +500,7 @@ class changelog(object):
         if len(matched) > 1:
             # TODO: Add hints about possible matches.
             raise error.RepoLookupError(
-                hexprefix, self.indexfile, _("ambiguous identifier")
+                _("%s@%s: ambiguous identifier") % (self.indexfile, hexprefix)
             )
         elif len(matched) == 1:
             return matched[0]

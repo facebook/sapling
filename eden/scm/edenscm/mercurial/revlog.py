@@ -1193,7 +1193,9 @@ class revlog(object):
         except RevlogError:
             # parsers.c radix tree lookup gave multiple matches
             # fast path: for unfiltered changelog, radix tree is accurate
-            raise error.RepoLookupError(id, self.indexfile, _("ambiguous identifier"))
+            raise error.RepoLookupError(
+                _("%s@%s: ambiguous identifier") % (self.indexfile, id)
+            )
             # fall through to slow path that filters hidden revisions
         except (AttributeError, ValueError):
             # we are pure python, or key was too short to search radix tree
