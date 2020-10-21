@@ -1107,8 +1107,11 @@ impl HgCommands for RepoClient {
 
     // @wireprotocommand('clienttelemetry')
     fn clienttelemetry(&self, args: HashMap<Vec<u8>, Vec<u8>>) -> HgCommandRes<String> {
-        self.command_future(ops::CLIENTTELEMETRY, |_ctx, mut command_logger| {
-            let hostname = get_hostname().unwrap_or_else(|_| "<no hostname found>".to_owned());
+        self.command_future(ops::CLIENTTELEMETRY, |ctx, mut command_logger| {
+            let hostname = match get_hostname() {
+                Err(_) => format!("session {}", ctx.metadata().session_id()),
+                Ok(host) => format!("{} session {}", host, ctx.metadata().session_id()),
+            };
 
             if let Some(client_correlator) = args.get(b"correlator" as &[u8]) {
                 command_logger.add_scuba_extra(
