@@ -47,6 +47,7 @@ mod hg_sync;
 mod mutable_counters;
 mod phases;
 mod redaction;
+mod rsync;
 mod skiplist_subcommand;
 mod subcommand_blame;
 mod subcommand_deleted_manifest;
@@ -80,6 +81,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .subcommand(subcommand_blame::build_subcommand())
         .subcommand(subcommand_deleted_manifest::build_subcommand())
         .subcommand(derived_data::build_subcommand())
+        .subcommand(rsync::build_subcommand())
 }
 
 #[fbinit::main]
@@ -158,6 +160,9 @@ fn main(fb: FacebookInit) -> ExitCode {
             }
             (derived_data::DERIVED_DATA, Some(sub_m)) => {
                 derived_data::subcommand_derived_data(fb, logger, &matches, sub_m).await
+            }
+            (rsync::RSYNC, Some(sub_m)) => {
+                rsync::subcommand_rsync(fb, logger, &matches, sub_m).await
             }
             _ => Err(SubcommandError::InvalidArgs),
         }
