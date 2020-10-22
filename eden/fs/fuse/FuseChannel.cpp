@@ -394,7 +394,8 @@ constexpr auto kFuseHandlers = [] {
   handlers[FUSE_ACCESS] = {"FUSE_ACCESS",
                            &FuseChannel::fuseAccess,
                            &argrender::access,
-                           &ChannelThreadStats::access};
+                           &ChannelThreadStats::access,
+                           Read};
   handlers[FUSE_CREATE] = {"FUSE_CREATE",
                            &FuseChannel::fuseCreate,
                            &argrender::create,
