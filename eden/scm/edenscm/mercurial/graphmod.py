@@ -40,7 +40,7 @@ MISSINGPARENT = "M"
 EDGES = {PARENT: "|", GRANDPARENT: ":", MISSINGPARENT: None}
 
 
-def dagwalker(repo, revs):
+def dagwalker(repo, revs, template):
     """cset DAG generator yielding (id, CHANGESET, ctx, [parentinfo]) tuples
 
     This generator function walks through revisions (which should be ordered
@@ -63,9 +63,8 @@ def dagwalker(repo, revs):
         rootnodes = cl.tonodes(revs)
 
     gpcache = {}
-
-    for rev in revs:
-        ctx = repo[rev]
+    ctxstream = revs.prefetchbytemplate(repo, template).iterctx(repo)
+    for ctx in ctxstream:
         # partition into parents in the rev set and missing parents, then
         # augment the lists with markers, to inform graph drawing code about
         # what kind of edge to draw between nodes.

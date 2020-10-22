@@ -3071,7 +3071,7 @@ def getloglinerangerevs(repo, userrevs, opts):
 
     revs = sorted(linerangesbyrev, reverse=True)
 
-    return revs, filematcher, hunksfilter
+    return smartset.baseset(revs), filematcher, hunksfilter
 
 
 def _graphnodeformatter(ui, displayer):
@@ -3173,7 +3173,8 @@ def displaygraph(
 def graphlog(ui, repo, pats, opts):
     # Parameters are identical to log command ones
     revs, expr, filematcher = getgraphlogrevs(repo, pats, opts)
-    revdag = graphmod.dagwalker(repo, revs)
+    template = opts.get("template") or ""
+    revdag = graphmod.dagwalker(repo, revs, template)
 
     getrenamed = None
     if opts.get("copies"):

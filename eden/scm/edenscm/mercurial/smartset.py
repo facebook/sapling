@@ -1359,6 +1359,8 @@ class generatorset(abstractsmartset):
     def _fulllist(self):
         if not self._finished:
             self._rgen.itertoend()
+            assert self._finished
+        if self._asclist is None:
             asc = sorted(self._rgen.list())
             self._asclist = asc
             self.fastasc = asc.__iter__
