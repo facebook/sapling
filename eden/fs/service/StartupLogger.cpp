@@ -27,6 +27,11 @@
 
 #include "eden/fs/eden-config.h"
 
+#ifdef _WIN32
+#define EX_SOFTWARE 70
+#define EX_IOERR 74
+#endif
+
 using folly::checkUnixError;
 using folly::File;
 using folly::StringPiece;
@@ -45,16 +50,12 @@ DEFINE_int32(startupLoggerFd, -1, "The control pipe for startup logging");
 
 namespace {
 void writeMessageToFile(folly::File&, folly::StringPiece);
-#ifdef _WIN32
-void redirectOutput(folly::StringPiece);
-#endif // _WIN32
 } // namespace
 
 std::shared_ptr<StartupLogger> daemonizeIfRequested(
     folly::StringPiece logPath,
     PrivHelper* privHelper,
     const std::vector<std::string>& argv) {
-#ifndef _WIN32
   if (!FLAGS_foreground && FLAGS_startupLoggerFd == -1) {
     auto startupLogger = std::make_shared<DaemonStartupLogger>();
     if (!FLAGS_startupLogPath.empty()) {
@@ -72,15 +73,6 @@ std::shared_ptr<StartupLogger> daemonizeIfRequested(
         FileDescriptor(FLAGS_startupLoggerFd, FileDescriptor::FDType::Pipe));
     return startupLogger;
   }
-#else
-  // On Windows we always run as a foreground process, regardless of the value
-  // of FLAGS_foreground.  The main difference is that FLAGS_foreground will
-  // force logPath to be empty, which causes us to log to stderr.  Without
-  // FLAGS_foreground set we redirect our output to the specified log file.
-  if (!logPath.empty()) {
-    redirectOutput(logPath);
-  }
-#endif // _WIN32
 
   if (!FLAGS_startupLogPath.empty()) {
     return std::make_shared<FileStartupLogger>(FLAGS_startupLogPath);
@@ -110,7 +102,6 @@ void StartupLogger::writeMessage(folly::LogLevel level, StringPiece message) {
   writeMessageImpl(level, message);
 }
 
-#ifndef _WIN32
 void DaemonStartupLogger::successImpl() {
   if (!logPath_.empty()) {
     writeMessage(
@@ -136,10 +127,10 @@ void DaemonStartupLogger::writeMessageImpl(
 
 void DaemonStartupLogger::sendResult(ResultType result) {
   if (pipe_) {
-    auto bytesWritten = folly::writeFull(pipe_.fd(), &result, sizeof(result));
-    if (bytesWritten < 0) {
+    auto try_ = pipe_.writeFull(&result, sizeof(result));
+    if (try_.hasException()) {
       XLOG(ERR) << "error writing result to startup log pipe: "
-                << folly::errnoStr(errno);
+                << folly::exceptionStr(try_.exception());
     }
     pipe_.close();
   }
@@ -147,11 +138,13 @@ void DaemonStartupLogger::sendResult(ResultType result) {
   // Close the original stderr file descriptors once initialization is complete.
   origStderr_.close();
 
+#ifndef _WIN32
   // Call setsid() to create a new process group and detach from the
   // controlling TTY (if we had one).  We do this in sendResult() rather than in
   // prepareChildProcess() so that we will still receive SIGINT if the user
   // presses Ctrl-C during initialization.
   setsid();
+#endif
 }
 
 void DaemonStartupLogger::spawn(
@@ -206,6 +199,7 @@ std::pair<SpawnedProcess, FileDescriptor> DaemonStartupLogger::spawnImpl(
   args.push_back("--logPath");
   args.push_back(logPath.str());
 
+#ifndef _WIN32
   // If we started a privhelper, pass its control descriptor to the child
   if (privHelper && privHelper->getRawClientFd() != -1) {
     auto fd = opts.inheritDescriptor(FileDescriptor(
@@ -217,6 +211,7 @@ std::pair<SpawnedProcess, FileDescriptor> DaemonStartupLogger::spawnImpl(
     args.push_back("--privhelper_fd");
     args.push_back(folly::to<std::string>(fd));
   }
+#endif
 
   // Set up a pipe for the child to pass back startup status
   Pipe pipe;
@@ -361,7 +356,6 @@ DaemonStartupLogger::ParentResult DaemonStartupLogger::handleChildCrash(
         "its initialization status");
   }
 }
-#endif // !_WIN32
 
 void ForegroundStartupLogger::writeMessageImpl(folly::LogLevel, StringPiece) {}
 
@@ -402,51 +396,6 @@ void writeMessageToFile(folly::File& file, folly::StringPiece message) {
   // There is not much we can do if it fails.
   (void)folly::writevFull(file.fd(), iov.data(), iov.size());
 }
-
-#ifdef _WIN32
-void redirectOutput(folly::StringPiece logPath) {
-  auto logPathStr = logPath.str();
-  HANDLE newHandle = CreateFileA(
-      logPathStr.c_str(),
-      FILE_APPEND_DATA,
-      FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-      nullptr,
-      OPEN_ALWAYS,
-      FILE_ATTRIBUTE_NORMAL,
-      nullptr);
-
-  if (newHandle == INVALID_HANDLE_VALUE) {
-    throw makeWin32ErrorExplicit(
-        GetLastError(),
-        folly::sformat("Unable to open the log file {}\n", logPath));
-  }
-
-  // Don't close the previous handles here, it will be closed as part of _dup2
-  // call.
-
-  SetStdHandle(STD_OUTPUT_HANDLE, newHandle);
-  SetStdHandle(STD_ERROR_HANDLE, newHandle);
-
-  int fd = _open_osfhandle(reinterpret_cast<intptr_t>(newHandle), _O_APPEND);
-  if (fd == -1) {
-    throw std::runtime_error(
-        "_open_osfhandle() returned -1 while opening logfile");
-  }
-  SCOPE_EXIT {
-    _close(fd);
-  };
-
-  if (_dup2(fd, _fileno(stderr)) == -1) {
-    throw std::runtime_error(
-        folly::format("Dup failed to update stderr. errno: {}", errno).str());
-  }
-
-  if (_dup2(fd, _fileno(stdout)) == -1) {
-    throw std::runtime_error(
-        folly::format("Dup failed to update stdout. errno: {}", errno).str());
-  }
-}
-#endif // _WIN32
 
 } // namespace
 

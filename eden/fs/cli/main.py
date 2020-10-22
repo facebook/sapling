@@ -57,9 +57,7 @@ from .subcmd import Subcmd
 from .util import ShutdownError, print_stderr
 
 
-if sys.platform == "win32":
-    from . import winproc
-else:
+if sys.platform != "win32":
     from . import fsck as fsck_mod
 
 try:
@@ -1389,23 +1387,24 @@ class StartCmd(Subcmd):
         if args.edenfs_args:
             cmd.extend(args.edenfs_args)
 
-        if sys.platform == "win32":
-            return winproc.run_edenfs_foreground(cmd)
-
         # Update the command with additional arguments
-        if args.gdb:
-            cmd = ["gdb"] + args.gdb_arg + ["--args"] + cmd
-        if args.strace is not None:
-            cmd = ["strace", "-fttT", "-o", args.strace] + cmd
+        if sys.platform != "win32":
+            if args.gdb:
+                cmd = ["gdb"] + args.gdb_arg + ["--args"] + cmd
+            if args.strace is not None:
+                cmd = ["strace", "-fttT", "-o", args.strace] + cmd
 
         # Wrap the command in sudo, if necessary
         eden_env = daemon.get_edenfs_environment()
         cmd, eden_env = daemon.prepare_edenfs_privileges(daemon_binary, cmd, eden_env)
 
-        os.execve(cmd[0], cmd, env=eden_env)
-        # Throw an exception just to let mypy know that we should never reach here
-        # and will never return normally.
-        raise Exception("execve should never return")
+        if sys.platform == "win32":
+            return subprocess.call(cmd, env=eden_env)
+        else:
+            os.execve(cmd[0], cmd, env=eden_env)
+            # Throw an exception just to let mypy know that we should never reach here
+            # and will never return normally.
+            raise Exception("execve should never return")
 
 
 def unmount_redirections_for_path(repo_path: str) -> None:

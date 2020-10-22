@@ -8,13 +8,7 @@ import ctypes
 import datetime
 import sys
 import types
-from ctypes.wintypes import (
-    BOOL as _BOOL,
-    DWORD as _DWORD,
-    HANDLE as _HANDLE,
-    LPSTR as _LPSTR,
-    WORD as _WORD,
-)
+from ctypes.wintypes import BOOL as _BOOL, DWORD as _DWORD, HANDLE as _HANDLE
 from pathlib import Path
 from typing import Iterable, NoReturn, Optional, Type
 
@@ -41,15 +35,7 @@ else:
             ...
 
         @staticmethod
-        def GetLastError() -> int:
-            ...
-
-        @staticmethod
         def CloseHandle(handle: _HANDLE) -> None:
-            ...
-
-        @staticmethod
-        def CreateProcessW(*args) -> bool:
             ...
 
         @staticmethod
@@ -64,65 +50,6 @@ _PROCESS_TERMINATE = 0x0001
 _PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
 _ERROR_ACCESS_DENIED = 5
 _CREATE_NO_WINDOW = 0x08000000
-
-
-class _STARTUPINFO(ctypes.Structure):
-    _fields_ = [
-        ("cb", _DWORD),
-        ("lpReserved", _LPSTR),
-        ("lpDesktop", _LPSTR),
-        ("lpTitle", _LPSTR),
-        ("dwX", _DWORD),
-        ("dwY", _DWORD),
-        ("dwXSize", _DWORD),
-        ("dwYSize", _DWORD),
-        ("dwXCountChars", _DWORD),
-        ("dwYCountChars", _DWORD),
-        ("dwFillAttribute", _DWORD),
-        ("dwFlags", _DWORD),
-        ("wShowWindow", _WORD),
-        ("cbReserved2", _WORD),
-        ("lpReserved2", ctypes.c_char_p),
-        ("hStdInput", _HANDLE),
-        ("hStdOutput", _HANDLE),
-        ("hStdError", _HANDLE),
-    ]
-
-
-class _PROCESS_INFORMATION(ctypes.Structure):
-    _fields_ = [
-        ("hProcess", _HANDLE),
-        ("hThread", _HANDLE),
-        ("dwProcessId", _DWORD),
-        ("dwThreadId", _DWORD),
-    ]
-
-
-def create_process_shim(cmd_str: str) -> int:
-    si = _STARTUPINFO()
-    si.cb = ctypes.sizeof(_STARTUPINFO)  # pyre-ignore[16]
-    pi = _PROCESS_INFORMATION()
-
-    res = _win32.CreateProcessW(
-        None,
-        cmd_str,
-        None,
-        None,
-        False,
-        _CREATE_NO_WINDOW,
-        None,
-        None,
-        ctypes.byref(si),
-        ctypes.byref(pi),
-    )
-
-    if not res:
-        raise_win_error()
-
-    _win32.CloseHandle(pi.hProcess)
-    _win32.CloseHandle(pi.hThread)
-
-    return pi.dwProcessId
 
 
 class Handle:

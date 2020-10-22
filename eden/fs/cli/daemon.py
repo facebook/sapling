@@ -166,11 +166,6 @@ def _start_edenfs_service(
     # Wrap the command in sudo, if necessary
     cmd, eden_env = prepare_edenfs_privileges(daemon_binary, cmd, eden_env)
 
-    if sys.platform == "win32":
-        from . import winproc
-
-        return winproc.start_edenfs_service(instance, cmd)
-
     return subprocess.call(cmd, stdin=subprocess.DEVNULL, env=eden_env)
 
 

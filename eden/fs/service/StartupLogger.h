@@ -137,8 +137,6 @@ class StartupLogger {
   [[noreturn]] virtual void failAndExitImpl(uint8_t exitCode) = 0;
 };
 
-#ifndef _WIN32
-
 class DaemonStartupLogger : public StartupLogger {
  public:
   DaemonStartupLogger() = default;
@@ -228,7 +226,6 @@ class DaemonStartupLogger : public StartupLogger {
   // completed daemon startup.
   FileDescriptor pipe_;
 };
-#endif // !_WIN32
 
 class ForegroundStartupLogger : public StartupLogger {
  public:
