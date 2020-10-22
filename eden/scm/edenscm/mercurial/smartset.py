@@ -16,7 +16,7 @@ import copy
 
 import bindings
 
-from . import error, util
+from . import error, parser, streams, util
 from .node import nullrev, wdirrev
 from .pycompat import range
 
@@ -65,7 +65,18 @@ class abstractsmartset(object):
         raise NotImplementedError()
 
     def iterctx(self, repo):
-        """iterate the set using contexes"""
+        """iterate the set using contexes, with prefetch considered"""
+        ctxstream = self._iterctxnoprefetch(repo)
+        for field in sorted(self.prefetchfields()):
+            if field not in prefetchtable:
+                raise error.ProgrammingError(
+                    "do not know how to prefetch field %s for ctxstream" % field
+                )
+            ctxstream = prefetchtable[field](repo, ctxstream)
+        return ctxstream
+
+    def _iterctxnoprefetch(self, repo):
+        """iterate the set using contexes, without prefetch"""
         for rev in iter(self):
             yield repo[rev]
 
@@ -199,6 +210,39 @@ class abstractsmartset(object):
 
     def clone(self):
         return copy.copy(self)
+
+    def prefetch(self, *fields):
+        """return a smartset with given fields marked as "need prefetch"
+
+        Available fields:
+        - "text": commit message
+
+        Note:
+        'iterctx()' respects the prefetch metadata.
+        """
+        newobj = self.clone()
+        newobj._prefethfields = set(fields) | self.prefetchfields()
+        return newobj
+
+    def prefetchbytemplate(self, repo, templ):
+        """parse a template string and decide what to prefetch"""
+        from . import templater  # avoid cycle
+
+        ast = templater.parseexpandaliases(repo, templ)
+        fields = []
+        if not ast:
+            # empty template, use default
+            fields += prefetchtemplatekw.get("", [])
+        else:
+            for t in parser.walktree(ast):
+                if len(t) < 2 or t[0] != "symbol":
+                    continue
+                fields += prefetchtemplatekw.get(t[1], [])
+        return self.prefetch(*fields)
+
+    def prefetchfields(self):
+        """get a set of fields to prefetch"""
+        return getattr(self, "_prefethfields", set())
 
 
 class baseset(abstractsmartset):
@@ -689,7 +733,7 @@ class nameset(abstractsmartset):
         else:
             return self._set.iter()
 
-    def iterctx(self, repo):
+    def _iterctxnoprefetch(self, repo):
         for n in self._iternode():
             yield repo[n]
 
@@ -836,6 +880,14 @@ class filteredset(abstractsmartset):
         for x in it:
             if cond(x):
                 yield x
+
+    def _iterctxnoprefetch(self, repo):
+        # respect subset's prefetch settings
+        ctxstream = self._subset.iterctx(repo)
+        cond = self._condition
+        for ctx in ctxstream:
+            if cond(ctx.rev()):
+                yield ctx
 
     @property
     def fastasc(self):
@@ -1439,3 +1491,27 @@ def prettyformat(revs):
         lines.append((l, rs[p:q].rstrip()))
         p = q
     return "\n".join("  " * l + s for l, s in lines)
+
+
+# Given a "prefetch field name" like "text", how to do the prefetch.
+# {prefetch_field_name: func(repo, iter[ctx]) -> iter[ctx]}
+prefetchtable = {"text": streams.prefetchtextstream}
+
+# Given a template keyword, what "prefetch field name"s are needed.
+# {template_symbol: [prefetch_field_name]}
+prefetchtemplatekw = {
+    "author": ["text"],
+    "date": ["text"],
+    "desc": ["text"],
+    "extras": ["text"],
+    "file_adds": ["text"],
+    "file_copies_switch": ["text"],
+    "file_copies": ["text"],
+    "file_dels": ["text"],
+    "file_mods": ["text"],
+    "filestat": ["text"],
+    "files": ["text"],
+    "manifest": ["text"],
+    # used by default template
+    "": ["text"],
+}
