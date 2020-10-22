@@ -2659,10 +2659,10 @@ class remotetreestore(generatingdatastore):
         names = list(set(name for name, node in keys))
         nodes = list(set(node for name, node in keys))
         if len(names) != 1:
-            raise error.ProgrammingError(
-                "Legacy remotetreestore._prefetchtrees "
-                "does not support multiple tree names at once"
-            )
+            # Non-ondemandfetch queries don't support fetching multiple trees at
+            # once. Simply return, then the normal lookup path (i.e. the
+            # non-prefetch one) will trigger single tree fetches.
+            return
         name = names[0]
 
         # Only look at the server if not root or is public
