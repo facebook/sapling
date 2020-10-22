@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#ifndef _WIN32
+
 #include "eden/fs/utils/MappedDiskVector.h"
 
 #include <folly/experimental/TestUtil.h>
@@ -247,3 +249,5 @@ TEST_F(MappedDiskVectorTest, migrate_overwrites_existing_tmp_file) {
     EXPECT_EQ(2, mdv[1].y);
   }
 }
+
+#endif

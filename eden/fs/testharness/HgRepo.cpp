@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#ifndef _WIN32
+
 #include "eden/fs/testharness/HgRepo.h"
 
 #include <folly/Exception.h>
@@ -205,3 +207,5 @@ void HgRepo::symlink(StringPiece contents, RelativePathPiece path) {
 }
 } // namespace eden
 } // namespace facebook
+
+#endif

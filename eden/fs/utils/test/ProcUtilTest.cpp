@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#ifndef _WIN32
+
 #include "eden/fs/utils/ProcUtil.h"
 
 #include <fstream>
@@ -169,3 +171,5 @@ TEST(proc_util, noProcSmapsNoThrow) {
   auto privateBytes = proc_util::calculatePrivateBytes(smapsListOfMaps).value();
   EXPECT_EQ(privateBytes, 0);
 }
+
+#endif

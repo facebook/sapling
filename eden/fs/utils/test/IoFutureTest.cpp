@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#ifndef _WIN32
+
 #include "eden/fs/utils/IoFuture.h"
 
 #include <folly/Exception.h>
@@ -115,3 +117,5 @@ TEST(IoFuture, multiRead) {
   bytesRead = recv(sockets.first.fd(), buf.data(), buf.size(), MSG_DONTWAIT);
   EXPECT_EQ(bytesRead, 3);
 }
+
+#endif

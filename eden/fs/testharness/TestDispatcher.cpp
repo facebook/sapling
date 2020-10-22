@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#ifndef _WIN32
+
 #include "eden/fs/testharness/TestDispatcher.h"
 
 #include <folly/Conv.h>
@@ -65,3 +67,5 @@ TestDispatcher::PendingLookup TestDispatcher::waitForLookup(
 }
 } // namespace eden
 } // namespace facebook
+
+#endif

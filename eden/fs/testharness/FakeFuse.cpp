@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#ifndef _WIN32
+
 #include "eden/fs/testharness/FakeFuse.h"
 
 #include <folly/Exception.h>
@@ -165,3 +167,5 @@ uint32_t FakeFuse::sendLookup(uint64_t inode, StringPiece pathComponent) {
 
 } // namespace eden
 } // namespace facebook
+
+#endif
