@@ -12,8 +12,10 @@ int main(int argc, char* argv[]) {
   testing::InitGoogleTest(&argc, argv);
   folly::init(&argc, &argv);
 
+#ifndef _WIN32
   // The FuseChannel code sends SIGPIPE and expects it to be ignored.
   ::signal(SIGPIPE, SIG_IGN);
+#endif
 
   return RUN_ALL_TESTS();
 }

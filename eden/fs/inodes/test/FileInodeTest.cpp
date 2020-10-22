@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#ifndef _WIN32
+
 #include "eden/fs/inodes/FileInode.h"
 
 #include <folly/Format.h>
@@ -615,3 +617,5 @@ TEST(FileInode, reloadsBlobIfCacheIsEvicted) {
 // TODO: ensure ctime is updated after every call to setattr()
 // TODO: ensure mtime is updated after opening a file, writing to it, then
 // closing it.
+
+#endif

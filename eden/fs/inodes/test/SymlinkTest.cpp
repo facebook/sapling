@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#ifndef _WIN32
+
 #include <folly/Format.h>
 #include <folly/String.h>
 #include <folly/test/TestUtils.h>
@@ -78,3 +80,5 @@ TEST_F(SymlinkTest, makeSymlinkCollisionDir) {
       root->symlink(PathComponentPiece{name}, target, InvalidationRequired::No),
       EEXIST);
 }
+
+#endif

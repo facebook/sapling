@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#ifndef _WIN32
+
 #include "eden/fs/inodes/EdenDispatcher.h"
 
 #include <folly/experimental/TestUtil.h>
@@ -128,3 +130,5 @@ TEST(RawEdenDispatcherTest, lookup_returns_valid_inode_for_bad_file) {
   EXPECT_NE(0, entry.attr.ino);
   EXPECT_EQ(entry.nodeid, entry.attr.ino);
 }
+
+#endif

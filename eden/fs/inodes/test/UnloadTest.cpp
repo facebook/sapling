@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#ifndef _WIN32
+
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
 
@@ -149,3 +151,5 @@ TEST(UnloadUnreferencedByFuse, inodesReferencedByFuseAreNotUnloaded) {
   EXPECT_EQ(1, counts.fileCount);
   EXPECT_EQ(0, counts.unloadedInodeCount);
 }
+
+#endif

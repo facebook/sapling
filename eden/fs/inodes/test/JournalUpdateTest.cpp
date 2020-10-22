@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#ifndef _WIN32
+
 #include <gtest/gtest.h>
 
 #include "eden/fs/testharness/FakeTreeBuilder.h"
@@ -78,3 +80,5 @@ TEST_F(JournalUpdateTest, moveFileReplace) {
 
   EXPECT_EQ(summedDelta->uncleanPaths, std::unordered_set<RelativePath>{});
 }
+
+#endif

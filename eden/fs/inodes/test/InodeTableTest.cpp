@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#ifndef _WIN32
+
 #include "eden/fs/inodes/InodeTable.h"
 
 #include <folly/chrono/Conv.h>
@@ -167,3 +169,5 @@ TEST_F(InodeTableTest, setDefault) {
 // TEST(INodeTable, getOptional) {}
 // TEST(INodeTable, modifyOrThrow) {}
 // TEST(INodeTable, freeInodes) {}
+
+#endif

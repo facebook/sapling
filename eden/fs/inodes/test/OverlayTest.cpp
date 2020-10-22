@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#ifndef _WIN32
+
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/overlay/FsOverlay.h"
 
@@ -957,3 +959,5 @@ std::string debugDumpOverlayInodes(Overlay& overlay, InodeNumber rootInode) {
 
 } // namespace eden
 } // namespace facebook
+
+#endif
