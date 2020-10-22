@@ -28,10 +28,10 @@ using std::optional;
 using std::string;
 
 namespace {
-constexpr facebook::eden::RelativePathPiece kDefaultUserIgnoreFile{
+constexpr facebook::eden::PathComponentPiece kDefaultUserIgnoreFile{
     ".edenignore"};
-constexpr facebook::eden::RelativePathPiece kDefaultSystemIgnoreFile{"ignore"};
-constexpr facebook::eden::RelativePathPiece kDefaultEdenDirectory{".eden"};
+constexpr facebook::eden::PathComponentPiece kDefaultSystemIgnoreFile{"ignore"};
+constexpr facebook::eden::PathComponentPiece kDefaultEdenDirectory{".eden"};
 
 template <typename String>
 void toAppend(facebook::eden::EdenConfig& ec, String* result) {

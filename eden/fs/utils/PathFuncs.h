@@ -385,6 +385,13 @@ struct PathComponentSanityCheck {
             "directory separator: ",
             val));
       }
+
+      if (c == '\0') {
+        throw std::domain_error(folly::to<std::string>(
+            "attempt to construct a PathComponent from a string containing a "
+            "nul byte: ",
+            val));
+      }
     }
 
     if (val.empty()) {
@@ -866,6 +873,43 @@ class ComposedPathBase
   }
 };
 
+/// Asserts that val is formed of multiple well formed PathComponents.
+struct ComposedPathSanityCheck {
+  constexpr size_t nextSeparator(folly::StringPiece val, size_t start) const {
+    const char* data = val.data();
+
+    for (size_t i = start; i < val.size(); i++) {
+      if (data[i] == kDirSeparator) {
+        return i;
+      }
+    }
+
+    return folly::StringPiece::npos;
+  }
+
+  constexpr void operator()(folly::StringPiece val) const {
+    if (folly::kIsWindows) {
+      return;
+    }
+
+    size_t start = 0;
+    while (true) {
+      auto next = nextSeparator(val, start);
+      if (next == folly::StringPiece::npos) {
+        break;
+      }
+
+      PathComponentSanityCheck()(
+          folly::StringPiece{val.begin() + start, next - start});
+      start = next + 1;
+    }
+
+    // Last component
+    PathComponentSanityCheck()(
+        folly::StringPiece{val.begin() + start, val.end()});
+  }
+};
+
 /// Asserts that val is well formed relative path
 struct RelativePathSanityCheck {
   constexpr void operator()(folly::StringPiece val) const {
@@ -881,6 +925,8 @@ struct RelativePathSanityCheck {
         throw std::domain_error(folly::to<std::string>(
             "RelativePath must not end with a slash: ", val));
       }
+
+      ComposedPathSanityCheck()(val);
     }
   }
 };
@@ -1121,6 +1167,10 @@ struct AbsolutePathSanityCheck {
       // We do allow "/" though
       throw std::domain_error(folly::to<std::string>(
           "AbsolutePath must not end with a slash: ", val));
+    }
+
+    if (val.size() > 1) {
+      ComposedPathSanityCheck()(folly::StringPiece{val.begin() + 1, val.end()});
     }
   }
 };

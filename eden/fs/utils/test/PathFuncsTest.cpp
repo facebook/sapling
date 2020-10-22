@@ -31,6 +31,19 @@ using std::vector;
 using namespace facebook::eden;
 using testing::ElementsAre;
 
+TEST(PathFuncs, Sanity) {
+  if (!folly::kIsWindows) {
+    EXPECT_THROW(PathComponentPiece{"."}, std::domain_error);
+    EXPECT_THROW(PathComponentPiece{".."}, std::domain_error);
+
+    EXPECT_THROW(RelativePathPiece{"foo/./bar"}, std::domain_error);
+    EXPECT_THROW(RelativePathPiece{"../foo/bar"}, std::domain_error);
+
+    EXPECT_THROW(AbsolutePathPiece{"/foo/../bar"}, std::domain_error);
+    EXPECT_THROW(AbsolutePathPiece{"/foo/./bar"}, std::domain_error);
+  }
+}
+
 TEST(PathFuncs, StringCompare) {
   PathComponentPiece piece("foo");
 
