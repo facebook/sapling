@@ -48,6 +48,7 @@ pub struct Tailer {
     log_interval: usize,
     exclude_merges: bool,
     excludes: HashSet<ChangesetId>,
+    cross_repo_push_source: CrossRepoPushSource,
 }
 
 impl Tailer {
@@ -61,6 +62,7 @@ impl Tailer {
         exclude_merges: bool,
         excludes: HashSet<ChangesetId>,
         disabled_hooks: &HashSet<String>,
+        cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<Tailer> {
         let content_fetcher = blobrepo_text_only_fetcher(repo.clone(), config.hook_max_file_size);
 
@@ -83,6 +85,7 @@ impl Tailer {
             log_interval,
             exclude_merges,
             excludes,
+            cross_repo_push_source,
         })
     }
 
@@ -150,6 +153,7 @@ impl Tailer {
                             self.hook_manager,
                             self.bookmark,
                             self.exclude_merges,
+                            self.cross_repo_push_source,
                         );
 
                         let maybe_outcomes = task::spawn(async move {
@@ -160,6 +164,7 @@ impl Tailer {
                                 &bookmark,
                                 cs_id,
                                 exclude_merges,
+                                cross_repo_push_source,
                             )
                             .await
                         })
@@ -182,6 +187,7 @@ async fn run_hooks_for_changeset(
     bm: &BookmarkName,
     cs_id: ChangesetId,
     exclude_merges: bool,
+    cross_repo_push_source: CrossRepoPushSource,
 ) -> Result<Option<HookExecutionInstance>, Error> {
     let cs = cs_id.load(ctx.clone(), repo.blobstore()).await?;
 
@@ -194,15 +200,8 @@ async fn run_hooks_for_changeset(
 
     let file_count = cs.file_changes_map().len();
 
-    // TODO(ikostia): is it ok to have this cross-repo push source here?
     let (stats, outcomes) = hm
-        .run_hooks_for_bookmark(
-            ctx,
-            vec![cs].iter(),
-            bm,
-            None,
-            CrossRepoPushSource::NativeToThisRepo,
-        )
+        .run_hooks_for_bookmark(ctx, vec![cs].iter(), bm, None, cross_repo_push_source)
         .timed()
         .await;
 

@@ -7,9 +7,9 @@
 
 #![deny(warnings)]
 
-pub mod tailer;
+mod tailer;
 
-use anyhow::{format_err, Error, Result};
+use anyhow::{bail, format_err, Error, Result};
 use blobrepo::BlobRepo;
 use blobrepo_factory::BlobrepoBuilder;
 use bookmarks::BookmarkName;
@@ -22,6 +22,7 @@ use futures::{
     future,
     stream::{FuturesUnordered, StreamExt, TryStreamExt},
 };
+use hooks::CrossRepoPushSource;
 use mononoke_types::ChangesetId;
 use slog::{debug, info, Logger};
 use std::collections::HashSet;
@@ -99,6 +100,11 @@ async fn run_hook_tailer<'a>(
     let log_interval = cmdlib::args::get_usize(&matches, "log_interval", 500);
     let exclude_merges = matches.is_present("exclude_merges");
     let stats_file = matches.value_of("stats_file");
+    let cross_repo_push_source = match matches.value_of("push_source") {
+        Some("native-to-this-repo") => CrossRepoPushSource::NativeToThisRepo,
+        Some("push-redirected") => CrossRepoPushSource::PushRedirected,
+        _ => bail!("unexpected value of --push-source"),
+    };
 
     let mut stats_file = match stats_file {
         Some(stats_file) => {
@@ -151,6 +157,7 @@ async fn run_hook_tailer<'a>(
         exclude_merges,
         exclusions,
         &disabled_hooks,
+        cross_repo_push_source,
     )
     .await?;
 
@@ -311,6 +318,14 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .long("stats-file")
                 .takes_value(true)
                 .help("Log hook execution statistics to a file (CSV format)"),
+        )
+        .arg(
+            Arg::with_name("push_source")
+                .long("push-source")
+                .takes_value(true)
+                .possible_values(&["native-to-this-repo", "push-redirected"])
+                .default_value("native-to-this-repo")
+                .help("act as if changesets originated from a given source (see CrossRepoPushSource help for more info)"),
         );
 
     app
