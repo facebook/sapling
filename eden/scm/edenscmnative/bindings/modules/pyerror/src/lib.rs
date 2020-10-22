@@ -8,7 +8,7 @@
 use cpython::*;
 use cpython_ext::{error, ResultPyErrExt};
 
-use taggederror::{intentional_bail, intentional_error, CommonMetadata, Fault, FilteredAnyhow};
+use taggederror::{intentional_bail, intentional_error, CommonMetadata, FilteredAnyhow};
 use taggederror_util::AnyhowEdenExt;
 
 py_exception!(error, IndexedLogError);

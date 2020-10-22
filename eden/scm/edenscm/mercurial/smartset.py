@@ -1192,11 +1192,11 @@ class generatorset(abstractsmartset):
         """
         gen: a generator producing the values for the generatorset.
         """
-        self._gen = gen
+        rgen = bindings.threading.RGenerator(gen)
+        self._rgen = rgen
+        self._containschecked = 0
         self._asclist = None
         self._cache = {}
-        self._genlist = []
-        self._finished = False
         self._ascending = True
         if iterasc is not None:
             if iterasc:
@@ -1205,57 +1205,79 @@ class generatorset(abstractsmartset):
             else:
                 self.fastdesc = self._iterator
                 self.__contains__ = self._desccontains
+        self._iterasc = iterasc
+
+    @property
+    def _finished(self):
+        return self._rgen.completed()
 
     def __nonzero__(self):
         # Do not use 'for r in self' because it will enforce the iteration
         # order (default ascending), possibly unrolling a whole descending
         # iterator.
-        if self._genlist:
+        if self._rgen.list():
             return True
-        for r in self._consumegen():
+        try:
+            next(self._rgen.iter())
             return True
-        return False
+        except StopIteration:
+            return False
 
     __bool__ = __nonzero__
 
     def __contains__(self, x):
-        if x in self._cache:
-            return self._cache[x]
+        cache = self._cache
+        if x in cache:
+            return cache[x]
 
-        # Use new values only, as existing values would be cached.
-        for l in self._consumegen():
+        checked = self._containschecked
+        for l in self._rgen.iter(skip=checked):
+            checked += 1
+            cache[l] = True
             if l == x:
+                self._containschecked = checked
                 return True
+        self._containschecked = checked
 
-        self._cache[x] = False
+        cache[x] = False
         return False
 
     def _asccontains(self, x):
         """version of contains optimised for ascending generator"""
-        if x in self._cache:
-            return self._cache[x]
+        cache = self._cache
+        if x in cache:
+            return cache[x]
 
-        # Use new values only, as existing values would be cached.
-        for l in self._consumegen():
+        checked = self._containschecked
+        for l in self._rgen.iter(skip=checked):
+            checked += 1
+            cache[l] = True
             if l == x:
+                self._containschecked = checked
                 return True
             if l > x:
                 break
+        self._containschecked = checked
 
-        self._cache[x] = False
+        cache[x] = False
         return False
 
     def _desccontains(self, x):
         """version of contains optimised for descending generator"""
-        if x in self._cache:
-            return self._cache[x]
+        cache = self._cache
+        if x in cache:
+            return cache[x]
 
-        # Use new values only, as existing values would be cached.
-        for l in self._consumegen():
+        checked = self._containschecked
+        for l in self._rgen.iter(skip=checked):
+            checked += 1
+            cache[l] = True
             if l == x:
+                self._containschecked = checked
                 return True
             if l < x:
                 break
+        self._containschecked = checked
 
         self._cache[x] = False
         return False
@@ -1268,58 +1290,26 @@ class generatorset(abstractsmartset):
         if it is not None:
             return it()
         # we need to consume the iterator
-        for x in self._consumegen():
-            pass
+        self._fulllist()
         # recall the same code
         return iter(self)
 
     def _iterator(self):
         if self._finished:
-            return iter(self._genlist)
+            return iter(self._rgen.list())
+        return self._rgen.iter()
 
-        # We have to use this complex iteration strategy to allow multiple
-        # iterations at the same time. We need to be able to catch revision
-        # removed from _consumegen and added to genlist in another instance.
-        #
-        # Getting rid of it would provide an about 15% speed up on this
-        # iteration.
-        genlist = self._genlist
-        nextgen = self._consumegen()
-        _len, _next = len, next  # cache global lookup
-
-        def gen():
-            i = 0
-            while True:
-                if i < _len(genlist):
-                    yield genlist[i]
-                else:
-                    try:
-                        yield _next(nextgen)
-                    except StopIteration:
-                        return
-                i += 1
-
-        return gen()
-
-    def _consumegen(self):
-        cache = self._cache
-        genlist = self._genlist.append
-        for item in self._gen:
-            cache[item] = True
-            genlist(item)
-            yield item
+    def _fulllist(self):
         if not self._finished:
-            self._finished = True
-            asc = self._genlist[:]
-            asc.sort()
+            self._rgen.itertoend()
+            asc = sorted(self._rgen.list())
             self._asclist = asc
             self.fastasc = asc.__iter__
             self.fastdesc = asc.__reversed__
+        return self._rgen.list()
 
     def __len__(self):
-        for x in self._consumegen():
-            pass
-        return len(self._genlist)
+        return len(self._fulllist())
 
     def sort(self, reverse=False):
         self._ascending = not reverse
@@ -1346,8 +1336,7 @@ class generatorset(abstractsmartset):
             it = self.fastdesc
         if it is None:
             # we need to consume all and try again
-            for x in self._consumegen():
-                pass
+            self._fulllist()
             return self.first()
         return next(it(), None)
 
@@ -1358,8 +1347,7 @@ class generatorset(abstractsmartset):
             it = self.fastasc
         if it is None:
             # we need to consume all and try again
-            for x in self._consumegen():
-                pass
+            self._fulllist()
             return self.last()
         return next(it(), None)
 
