@@ -32,15 +32,17 @@ using namespace facebook::eden;
 using testing::ElementsAre;
 
 TEST(PathFuncs, Sanity) {
-  if (!folly::kIsWindows) {
-    EXPECT_THROW(PathComponentPiece{"."}, std::domain_error);
-    EXPECT_THROW(PathComponentPiece{".."}, std::domain_error);
+  EXPECT_THROW(PathComponentPiece{"."}, std::domain_error);
+  EXPECT_THROW(PathComponentPiece{".."}, std::domain_error);
 
-    EXPECT_THROW(RelativePathPiece{"foo/./bar"}, std::domain_error);
-    EXPECT_THROW(RelativePathPiece{"../foo/bar"}, std::domain_error);
+  EXPECT_THROW(RelativePathPiece{"foo/./bar"}, std::domain_error);
+  EXPECT_THROW(RelativePathPiece{"../foo/bar"}, std::domain_error);
 
-    EXPECT_THROW(AbsolutePathPiece{"/foo/../bar"}, std::domain_error);
-    EXPECT_THROW(AbsolutePathPiece{"/foo/./bar"}, std::domain_error);
+  EXPECT_THROW(AbsolutePathPiece{"/foo/../bar"}, std::domain_error);
+  EXPECT_THROW(AbsolutePathPiece{"/foo/./bar"}, std::domain_error);
+
+  if (folly::kIsWindows) {
+    EXPECT_THROW(AbsolutePathPiece{"/foo\\../bar"}, std::domain_error);
   }
 }
 
@@ -84,6 +86,41 @@ TEST(PathFuncs, Iterate) {
   EXPECT_EQ("foo/bar"_relpath, rallPaths.at(1));
   EXPECT_EQ("foo"_relpath, rallPaths.at(2));
   EXPECT_EQ(""_relpath, rallPaths.at(3));
+
+  if (folly::kIsWindows) {
+    RelativePath winRel("foo\\bar/baz");
+
+    std::vector<RelativePathPiece> winParents(
+        rel.paths().begin(), rel.paths().end());
+    EXPECT_EQ(3, winParents.size());
+    EXPECT_EQ("foo"_relpath, winParents.at(0));
+    EXPECT_EQ("foo\\bar"_relpath, winParents.at(1));
+    EXPECT_EQ("foo\\bar/baz"_relpath, winParents.at(2));
+
+    std::vector<RelativePathPiece> winAllPaths(
+        winRel.allPaths().begin(), winRel.allPaths().end());
+    EXPECT_EQ(4, winAllPaths.size());
+    EXPECT_EQ(""_relpath, winAllPaths.at(0));
+    EXPECT_EQ("foo"_relpath, winAllPaths.at(1));
+    EXPECT_EQ("foo\\bar"_relpath, winAllPaths.at(2));
+    EXPECT_EQ("foo\\bar/baz"_relpath, winAllPaths.at(3));
+
+    // And in reverse.
+    std::vector<RelativePathPiece> winRparents(
+        winRel.rpaths().begin(), winRel.rpaths().end());
+    EXPECT_EQ(3, winRparents.size());
+    EXPECT_EQ("foo\\bar/baz"_relpath, winRparents.at(0));
+    EXPECT_EQ("foo\\bar"_relpath, winRparents.at(1));
+    EXPECT_EQ("foo"_relpath, winRparents.at(2));
+
+    std::vector<RelativePathPiece> winRallPaths(
+        winRel.rallPaths().begin(), winRel.rallPaths().end());
+    EXPECT_EQ(4, winRallPaths.size());
+    EXPECT_EQ("foo\\bar/baz"_relpath, winRallPaths.at(0));
+    EXPECT_EQ("foo\\bar"_relpath, winRallPaths.at(1));
+    EXPECT_EQ("foo"_relpath, winRallPaths.at(2));
+    EXPECT_EQ(""_relpath, winRallPaths.at(3));
+  }
 
   // An empty relative path yields no elements.
   RelativePath emptyRel;
@@ -162,12 +199,36 @@ TEST(PathFuncs, IteratorDecrement) {
   expected = vector<string>{"", "foo", "foo/bar", "foo/bar/baz"};
   checkDecrement(rel, "rallPaths", rel.rallPaths(), expected);
 
+  if (folly::kIsWindows) {
+    RelativePath winRel("foo\\bar/baz");
+    expected = {"foo\\bar/baz", "foo\\bar", "foo"};
+    checkDecrement(winRel, "paths", winRel.paths(), expected);
+
+    expected = vector<string>{"foo\\bar/baz", "foo\\bar", "foo", ""};
+    checkDecrement(winRel, "allPaths", winRel.allPaths(), expected);
+
+    expected = vector<string>{"foo", "foo\\bar", "foo\\bar/baz"};
+    checkDecrement(winRel, "rpaths", winRel.rpaths(), expected);
+
+    expected = vector<string>{"", "foo", "foo\\bar", "foo\\bar/baz"};
+    checkDecrement(winRel, "rallPaths", winRel.rallPaths(), expected);
+  }
+
   AbsolutePath abs("/foo/bar/baz");
   expected = vector<string>{"/foo/bar/baz", "/foo/bar", "/foo", "/"};
   checkDecrement(abs, "paths", abs.paths(), expected);
 
   expected = vector<string>{"/", "/foo", "/foo/bar", "/foo/bar/baz"};
   checkDecrement(abs, "rpaths", abs.rpaths(), expected);
+
+  if (folly::kIsWindows) {
+    AbsolutePath winAbs("/foo\\bar/baz");
+    expected = vector<string>{"/foo\\bar/baz", "/foo\\bar", "/foo", "/"};
+    checkDecrement(winAbs, "paths", winAbs.paths(), expected);
+
+    expected = vector<string>{"/", "/foo", "/foo\\bar", "/foo\\bar/baz"};
+    checkDecrement(winAbs, "rpaths", winAbs.rpaths(), expected);
+  }
 }
 
 TEST(PathFuncs, IterateComponents) {
@@ -180,6 +241,17 @@ TEST(PathFuncs, IterateComponents) {
       rel.rcomponents().begin(), rel.rcomponents().end());
   EXPECT_THAT(relRParts, ElementsAre("baz"_pc, "bar"_pc, "foo"_pc));
 
+  if (folly::kIsWindows) {
+    RelativePath winRel("foo\\bar/baz");
+    std::vector<PathComponentPiece> winRelParts(
+        winRel.components().begin(), winRel.components().end());
+    EXPECT_THAT(winRelParts, ElementsAre("foo"_pc, "bar"_pc, "baz"_pc));
+
+    std::vector<PathComponentPiece> winRelRParts(
+        winRel.rcomponents().begin(), winRel.rcomponents().end());
+    EXPECT_THAT(winRelRParts, ElementsAre("baz"_pc, "bar"_pc, "foo"_pc));
+  }
+
   AbsolutePath abs("/foo/bar/baz");
   std::vector<PathComponentPiece> absParts(
       abs.components().begin(), abs.components().end());
@@ -188,6 +260,17 @@ TEST(PathFuncs, IterateComponents) {
   std::vector<PathComponentPiece> absRParts(
       abs.rcomponents().begin(), abs.rcomponents().end());
   EXPECT_THAT(absRParts, ElementsAre("baz"_pc, "bar"_pc, "foo"_pc));
+
+  if (folly::kIsWindows) {
+    AbsolutePath winAbs("/foo\\bar/baz");
+    std::vector<PathComponentPiece> winAbsParts(
+        winAbs.components().begin(), winAbs.components().end());
+    EXPECT_THAT(winAbsParts, ElementsAre("foo"_pc, "bar"_pc, "baz"_pc));
+
+    std::vector<PathComponentPiece> winAbsRParts(
+        winAbs.rcomponents().begin(), winAbs.rcomponents().end());
+    EXPECT_THAT(winAbsRParts, ElementsAre("baz"_pc, "bar"_pc, "foo"_pc));
+  }
 
   RelativePath rel2("r/s/t/u");
   std::vector<PathComponentPiece> rel2Parts(
@@ -198,6 +281,17 @@ TEST(PathFuncs, IterateComponents) {
       rel2.rcomponents().begin(), rel2.rcomponents().end());
   EXPECT_THAT(rel2RParts, ElementsAre("u"_pc, "t"_pc, "s"_pc, "r"_pc));
 
+  if (folly::kIsWindows) {
+    RelativePath winRel2("r\\s/t\\u");
+    std::vector<PathComponentPiece> winRel2Parts(
+        winRel2.components().begin(), winRel2.components().end());
+    EXPECT_THAT(winRel2Parts, ElementsAre("r"_pc, "s"_pc, "t"_pc, "u"_pc));
+
+    std::vector<PathComponentPiece> winRel2RParts(
+        winRel2.rcomponents().begin(), winRel2.rcomponents().end());
+    EXPECT_THAT(winRel2RParts, ElementsAre("u"_pc, "t"_pc, "s"_pc, "r"_pc));
+  }
+
   AbsolutePath abs2("/a/b/c/d");
   std::vector<PathComponentPiece> abs2Parts(
       abs2.components().begin(), abs2.components().end());
@@ -206,6 +300,17 @@ TEST(PathFuncs, IterateComponents) {
   std::vector<PathComponentPiece> abs2RParts(
       abs2.rcomponents().begin(), abs2.rcomponents().end());
   EXPECT_THAT(abs2RParts, ElementsAre("d"_pc, "c"_pc, "b"_pc, "a"_pc));
+
+  if (folly::kIsWindows) {
+    AbsolutePath winAbs2("/a\\b/c\\d");
+    std::vector<PathComponentPiece> winAbs2Parts(
+        winAbs2.components().begin(), winAbs2.components().end());
+    EXPECT_THAT(winAbs2Parts, ElementsAre("a"_pc, "b"_pc, "c"_pc, "d"_pc));
+
+    std::vector<PathComponentPiece> winAbs2RParts(
+        winAbs2.rcomponents().begin(), winAbs2.rcomponents().end());
+    EXPECT_THAT(winAbs2RParts, ElementsAre("d"_pc, "c"_pc, "b"_pc, "a"_pc));
+  }
 
   RelativePath empty;
   std::vector<PathComponentPiece> emptyParts(
@@ -230,6 +335,21 @@ TEST(PathFuncs, IterateSuffixes) {
       relRParts,
       ElementsAre("baz"_relpath, "bar/baz"_relpath, "foo/bar/baz"_relpath));
 
+  if (folly::kIsWindows) {
+    RelativePath winRel("foo\\bar/baz");
+    std::vector<RelativePathPiece> winRelParts(
+        winRel.suffixes().begin(), winRel.suffixes().end());
+    EXPECT_THAT(
+        winRelParts,
+        ElementsAre("foo\\bar/baz"_relpath, "bar/baz"_relpath, "baz"_relpath));
+
+    std::vector<RelativePathPiece> winRelRParts(
+        winRel.rsuffixes().begin(), winRel.rsuffixes().end());
+    EXPECT_THAT(
+        winRelRParts,
+        ElementsAre("baz"_relpath, "bar/baz"_relpath, "foo\\bar/baz"_relpath));
+  }
+
   AbsolutePath abs("/foo/bar/baz");
   std::vector<RelativePathPiece> absParts(
       abs.suffixes().begin(), abs.suffixes().end());
@@ -242,6 +362,21 @@ TEST(PathFuncs, IterateSuffixes) {
   EXPECT_THAT(
       absRParts,
       ElementsAre("baz"_relpath, "bar/baz"_relpath, "foo/bar/baz"_relpath));
+
+  if (folly::kIsWindows) {
+    AbsolutePath winAbs("/foo\\bar/baz");
+    std::vector<RelativePathPiece> winAbsParts(
+        winAbs.suffixes().begin(), winAbs.suffixes().end());
+    EXPECT_THAT(
+        winAbsParts,
+        ElementsAre("foo\\bar/baz"_relpath, "bar/baz"_relpath, "baz"_relpath));
+
+    std::vector<RelativePathPiece> winAbsRParts(
+        winAbs.rsuffixes().begin(), winAbs.rsuffixes().end());
+    EXPECT_THAT(
+        winAbsRParts,
+        ElementsAre("baz"_relpath, "bar/baz"_relpath, "foo\\bar/baz"_relpath));
+  }
 
   RelativePath rel2("r/s/t/u");
   std::vector<RelativePathPiece> rel2Parts(
@@ -258,6 +393,29 @@ TEST(PathFuncs, IterateSuffixes) {
       ElementsAre(
           "u"_relpath, "t/u"_relpath, "s/t/u"_relpath, "r/s/t/u"_relpath));
 
+  if (folly::kIsWindows) {
+    RelativePath winRel2("r\\s/t\\u");
+    std::vector<RelativePathPiece> winRel2Parts(
+        winRel2.suffixes().begin(), winRel2.suffixes().end());
+    EXPECT_THAT(
+        winRel2Parts,
+        ElementsAre(
+            "r\\s/t\\u"_relpath,
+            "s/t\\u"_relpath,
+            "t\\u"_relpath,
+            "u"_relpath));
+
+    std::vector<RelativePathPiece> winRel2RParts(
+        winRel2.rsuffixes().begin(), winRel2.rsuffixes().end());
+    EXPECT_THAT(
+        winRel2RParts,
+        ElementsAre(
+            "u"_relpath,
+            "t\\u"_relpath,
+            "s/t\\u"_relpath,
+            "r\\s/t\\u"_relpath));
+  }
+
   AbsolutePath abs2("/a/b/c/d");
   std::vector<RelativePathPiece> abs2Parts(
       abs2.suffixes().begin(), abs2.suffixes().end());
@@ -272,6 +430,26 @@ TEST(PathFuncs, IterateSuffixes) {
       abs2RParts,
       ElementsAre(
           "d"_relpath, "c/d"_relpath, "b/c/d"_relpath, "a/b/c/d"_relpath));
+
+  if (folly::kIsWindows) {
+    AbsolutePath winAbs2("/a\\b/c\\d");
+    std::vector<RelativePathPiece> winAbs2Parts(
+        winAbs2.suffixes().begin(), winAbs2.suffixes().end());
+    EXPECT_THAT(
+        winAbs2Parts,
+        ElementsAre(
+            "a\\b/c\\d"_relpath,
+            "b/c\\d"_relpath,
+            "c\\d"_relpath,
+            "d"_relpath));
+
+    std::vector<RelativePathPiece> winAbs2RParts(
+        winAbs2.rsuffixes().begin(), winAbs2.rsuffixes().end());
+    EXPECT_THAT(
+        winAbs2RParts,
+        ElementsAre(
+            "d"_relpath, "c\\d"_relpath, "b/c\\d"_relpath, "a/b/c\\d"_relpath));
+  }
 
   RelativePath empty;
   std::vector<RelativePathPiece> emptyParts(
@@ -411,11 +589,11 @@ TEST(PathFuncs, RelativePath) {
 TEST(PathFuncs, AbsolutePath) {
   // TODO(T66260288): These tests currently do not pass on Windows, as
   // AbsolutePath does not actually verify that the path is absolute on Windows.
-#ifndef _WIN32
-  EXPECT_THROW_RE(
-      AbsolutePath("invalid"), std::domain_error, "non-absolute string");
-  EXPECT_THROW_RE(AbsolutePath(""), std::domain_error, "non-absolute string");
-#endif // _WIN32
+  if (!folly::kIsWindows) {
+    EXPECT_THROW_RE(
+        AbsolutePath("invalid"), std::domain_error, "non-absolute string");
+    EXPECT_THROW_RE(AbsolutePath(""), std::domain_error, "non-absolute string");
+  }
   EXPECT_THROW_RE(
       AbsolutePath("/trailing/slash/"),
       std::domain_error,
@@ -619,14 +797,14 @@ TEST(PathFuncs, canonicalPath) {
   // TODO(T66260288): These tests currently do not pass on Windows, as
   // canonicalPath() incorrectly tries to put a leading slash on the paths.
   // e.g., "C:/foo" ends up being converted to "/C:/foo"
-#ifndef _WIN32
-  TmpWorkingDir tmpDir;
-  EXPECT_EQ(tmpDir.pathStr, canonicalPath(".").value());
-  EXPECT_EQ(tmpDir.pathStr + "/foo", canonicalPath("foo").value());
-  EXPECT_EQ(
-      tmpDir.pathStr + "/a/b/c.txt",
-      canonicalPath("foo/../a//d/../b/./c.txt").value());
-#endif // _WIN32
+  if (!folly::kIsWindows) {
+    TmpWorkingDir tmpDir;
+    EXPECT_EQ(tmpDir.pathStr, canonicalPath(".").value());
+    EXPECT_EQ(tmpDir.pathStr + "/foo", canonicalPath("foo").value());
+    EXPECT_EQ(
+        tmpDir.pathStr + "/a/b/c.txt",
+        canonicalPath("foo/../a//d/../b/./c.txt").value());
+  }
 }
 
 TEST(PathFuncs, joinAndNormalize) {
@@ -792,6 +970,19 @@ TEST(PathFuncs, comparison) {
   compareHelper<RelativePath, RelativePathPiece>("abc/def", "abc/xyz");
   compareHelper<AbsolutePath, AbsolutePathPiece>("/abc/def", "/abc/xyz");
 
+  if (folly::kIsWindows) {
+    // Make sure that path comparing paths doesn't take into account the path
+    // separator.
+    compareHelper<RelativePath, RelativePathPiece>("abc/def", "abc\\xyz");
+    compareHelper<AbsolutePath, AbsolutePathPiece>("/abc/def", "\\abc/xyz");
+
+    EXPECT_TRUE(RelativePath{"abc/def"} == RelativePath{"abc\\def"});
+    EXPECT_TRUE(RelativePath{"abc/def"} == RelativePathPiece{"abc\\def"});
+
+    EXPECT_TRUE(AbsolutePath{"Z:/abc/def"} == AbsolutePath{"Z:/abc\\def"});
+    EXPECT_TRUE(AbsolutePath{"Z:/abc/def"} == AbsolutePathPiece{"Z:/abc\\def"});
+  }
+
   // We should always perform byte-by-byte comparisons (and ignore locale)
   EXPECT_LT(PathComponent{"ABC"}, PathComponent{"abc"});
   EXPECT_LT(PathComponent{"XYZ"}, PathComponent{"abc"});
@@ -908,7 +1099,31 @@ TEST(PathFuncs, AbsolutePathWide) {
 
   AbsolutePath absBack(L"\\some\\dir");
   EXPECT_EQ(L"\\some\\dir", abs.wide());
-  EXPECT_EQ("/some", absBack.dirname());
+  EXPECT_EQ("\\some", absBack.dirname());
   EXPECT_EQ("dir", absBack.basename());
 }
 #endif
+
+TEST(PathFuncs, HashEquality) {
+  RelativePathPiece rel1{"foo/bar/baz"};
+  RelativePathPiece rel2{"foo/bar/baz"};
+
+  std::hash<RelativePathPiece> relHasher{};
+  EXPECT_EQ(relHasher(rel1), relHasher(rel2));
+
+  if (folly::kIsWindows) {
+    RelativePathPiece winRel{"foo\\bar/baz"};
+    EXPECT_EQ(relHasher(rel1), relHasher(winRel));
+  }
+
+  AbsolutePathPiece abs1{"/foo/bar/baz"};
+  AbsolutePathPiece abs2{"/foo/bar/baz"};
+
+  std::hash<AbsolutePathPiece> absHasher{};
+  EXPECT_EQ(absHasher(abs1), absHasher(abs2));
+
+  if (folly::kIsWindows) {
+    AbsolutePathPiece winAbs{"/foo\\bar/baz"};
+    EXPECT_EQ(absHasher(abs1), absHasher(winAbs));
+  }
+}

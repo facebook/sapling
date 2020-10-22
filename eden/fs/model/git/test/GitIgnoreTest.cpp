@@ -597,7 +597,9 @@ TEST(GitIgnore, testCornerCases) {
       "abc\\\n"
       "foo\n");
   EXPECT_IGNORE(ignore, NO_MATCH, "abc");
-  EXPECT_IGNORE(ignore, NO_MATCH, "abc\\");
+  if (!folly::kIsWindows) {
+    EXPECT_IGNORE(ignore, NO_MATCH, "abc\\");
+  }
   EXPECT_IGNORE(ignore, NO_MATCH, "abc\n");
   EXPECT_IGNORE(ignore, EXCLUDE, "test");
   EXPECT_IGNORE(ignore, EXCLUDE, "foo");
@@ -609,9 +611,13 @@ TEST(GitIgnore, testCornerCases) {
       "\\");
   EXPECT_IGNORE(ignore, NO_MATCH, "abc");
   EXPECT_IGNORE(ignore, EXCLUDE, "foo");
-  EXPECT_IGNORE(ignore, NO_MATCH, "foo\\");
+  if (!folly::kIsWindows) {
+    EXPECT_IGNORE(ignore, NO_MATCH, "foo\\");
+  }
   EXPECT_IGNORE(ignore, NO_MATCH, "foo\n");
-  EXPECT_IGNORE(ignore, NO_MATCH, "foo\n\\");
+  if (!folly::kIsWindows) {
+    EXPECT_IGNORE(ignore, NO_MATCH, "foo\n\\");
+  }
 
   // Multiple leading slashes or trailing slashes can't ever match
   // any real paths, since the paths passed in should never start or end with

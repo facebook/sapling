@@ -332,32 +332,29 @@ namespace {
 class LookupProcessor {
  public:
   explicit LookupProcessor(RelativePathPiece path, ObjectFetchContext& context)
-      : path_{path}, context_{context} {}
+      : path_{path},
+        iterRange_{path.components()},
+        iter_{iterRange_.begin()},
+        context_{context} {}
 
   Future<InodePtr> next(TreeInodePtr tree) {
-    auto pathStr = path_.stringPiece();
-    DCHECK_LT(pathIndex_, pathStr.size());
-    auto endIdx = pathStr.find(kDirSeparator, pathIndex_);
-    if (endIdx == StringPiece::npos) {
-      auto name = StringPiece{pathStr.data() + pathIndex_, pathStr.end()};
-      return tree->getOrLoadChild(PathComponentPiece{name}, context_);
+    auto name = *iter_++;
+    if (iter_ == iterRange_.end()) {
+      return tree->getOrLoadChild(name, context_);
+    } else {
+      return tree->getOrLoadChildTree(name).then(&LookupProcessor::next, this);
     }
-
-    auto name =
-        StringPiece{pathStr.data() + pathIndex_, pathStr.data() + endIdx};
-    pathIndex_ = endIdx + 1;
-    return tree->getOrLoadChildTree(PathComponentPiece{name})
-        .then(&LookupProcessor::next, this);
   }
 
  private:
   RelativePath path_;
+  RelativePath::base_type::component_iterator_range iterRange_;
+  RelativePath::base_type::component_iterator iter_;
   // The ObjectFetchContext is allocated at the beginning of a request and
   // released once the request completes. Since the lifetime of LookupProcessor
   // is strictly less than the one of a request, we can safely store a
   // reference to the fetch context.
   ObjectFetchContext& context_;
-  size_t pathIndex_{0};
 };
 } // namespace
 

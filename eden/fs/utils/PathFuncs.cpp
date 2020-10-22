@@ -31,17 +31,19 @@ namespace facebook {
 namespace eden {
 
 StringPiece dirname(StringPiece path) {
-  auto slash = path.rfind('/');
-  if (slash != std::string::npos) {
-    return path.subpiece(0, slash);
+  auto dirSeparator = detail::rfindPathSeparator(path);
+
+  if (dirSeparator != std::string::npos) {
+    return path.subpiece(0, dirSeparator);
   }
   return "";
 }
 
 StringPiece basename(StringPiece path) {
-  auto slash = path.rfind('/');
-  if (slash != std::string::npos) {
-    path.advance(slash + 1);
+  auto dirSeparator = detail::rfindPathSeparator(path);
+
+  if (dirSeparator != std::string::npos) {
+    path.advance(dirSeparator + 1);
     return path;
   }
   return path;
@@ -102,7 +104,7 @@ CanonicalData canonicalPathData(StringPiece path) {
   };
 
   for (const char* p = path.begin(); p != path.end(); ++p) {
-    if (*p == kDirSeparator) {
+    if (detail::isDirSeparator(*p)) {
       processSlash(p);
     }
   }
@@ -252,12 +254,13 @@ AbsolutePath normalizeBestEffort(folly::StringPiece path) {
 std::pair<PathComponentPiece, RelativePathPiece> splitFirst(
     RelativePathPiece path) {
   auto piece = path.stringPiece();
-  auto p = piece.find(kDirSeparator);
-  if (p != std::string::npos) {
-    return {PathComponentPiece{
-                folly::StringPiece{piece.begin(), piece.begin() + p}},
-            RelativePathPiece{
-                folly::StringPiece{piece.begin() + p + 1, piece.end()}}};
+  auto dirSeparator = detail::findPathSeparator(piece);
+
+  if (dirSeparator != std::string::npos) {
+    return {PathComponentPiece{folly::StringPiece{
+                piece.begin(), piece.begin() + dirSeparator}},
+            RelativePathPiece{folly::StringPiece{
+                piece.begin() + dirSeparator + 1, piece.end()}}};
   } else {
     return {PathComponentPiece{piece}, RelativePathPiece{}};
   }

@@ -45,8 +45,51 @@ folly::StringPiece dirname(folly::StringPiece path);
  * and don't want an actual symbol emitted by the compiler.)
  */
 
-enum : char { kDirSeparator = '/' };
+enum : char { kDirSeparator = '/', kWinDirSeparator = '\\' };
 constexpr folly::StringPiece kDirSeparatorStr{"/"};
+
+namespace detail {
+inline constexpr bool isDirSeparator(char c) {
+  return c == kDirSeparator || (folly::kIsWindows && c == kWinDirSeparator);
+}
+
+inline constexpr bool isDirSeparator(folly::StringPiece str) {
+  return str.size() == 1 && isDirSeparator(str[0]);
+}
+
+inline size_t findPathSeparator(folly::StringPiece str, size_t start = 0) {
+  auto index = str.find(kDirSeparator, start);
+  if (folly::kIsWindows) {
+    auto winIndex = str.find(kWinDirSeparator, start);
+    if (winIndex != folly::StringPiece::npos) {
+      if (index == folly::StringPiece::npos) {
+        return winIndex;
+      } else {
+        return std::min(index, winIndex);
+      }
+    }
+  }
+
+  return index;
+}
+
+inline size_t rfindPathSeparator(folly::StringPiece str) {
+  auto index = str.rfind(kDirSeparator);
+  if (folly::kIsWindows) {
+    auto winIndex = str.rfind(kWinDirSeparator);
+    if (winIndex != folly::StringPiece::npos) {
+      if (index == folly::StringPiece::npos) {
+        return winIndex;
+      } else {
+        return std::max(index, winIndex);
+      }
+    }
+  }
+
+  return index;
+}
+
+} // namespace detail
 
 /**
  * FUSE supports components up to 1024 (FUSE_NAME_MAX) by default. For
@@ -105,6 +148,7 @@ class RelativePathBase;
 
 template <typename STR>
 class AbsolutePathBase;
+
 } // namespace detail
 
 // Intentionally use folly::fbstring because Dir entries are keyed on
@@ -145,37 +189,61 @@ struct StoredOrPieceComparableAsStringPiece {
  */
 template <
     typename Stored, // eg: Foo<std::string>
-    typename Piece // eg: Foo<StringPiece>
-    >
+    typename Piece, // eg: Foo<StringPiece>
+    bool IsComposed>
 struct PathOperators {
   // Less-than
   friend bool operator<(const Stored& a, const Stored& b) {
-    return a.stringPiece() < b.stringPiece();
+    return Piece{a} < Piece{b};
   }
+
   friend bool operator<(const Piece& a, const Stored& b) {
-    return a.stringPiece() < b.stringPiece();
+    return a < Piece{b};
+  }
+
+  friend bool operator<(const Stored& a, const Piece& b) {
+    return Piece{a} < b;
   }
 
   friend bool operator<(const Piece& a, const Piece& b) {
-    return a.stringPiece() < b.stringPiece();
-  }
-  friend bool operator<(const Stored& a, const Piece& b) {
-    return a.stringPiece() < b.stringPiece();
+    if constexpr (IsComposed && folly::kIsWindows) {
+      auto aComponents = a.components();
+      auto bComponents = b.components();
+      return std::lexicographical_compare(
+          aComponents.begin(),
+          aComponents.end(),
+          bComponents.begin(),
+          bComponents.end());
+    } else {
+      return a.stringPiece() < b.stringPiece();
+    }
   }
 
   // Equality
   friend bool operator==(const Stored& a, const Stored& b) {
-    return a.stringPiece() == b.stringPiece();
+    return Piece{a} == Piece{b};
   }
+
   friend bool operator==(const Piece& a, const Stored& b) {
-    return a.stringPiece() == b.stringPiece();
+    return a == Piece{b};
+  }
+
+  friend bool operator==(const Stored& a, const Piece& b) {
+    return Piece{a} == b;
   }
 
   friend bool operator==(const Piece& a, const Piece& b) {
-    return a.stringPiece() == b.stringPiece();
-  }
-  friend bool operator==(const Stored& a, const Piece& b) {
-    return a.stringPiece() == b.stringPiece();
+    if constexpr (IsComposed && folly::kIsWindows) {
+      auto aComponents = a.components();
+      auto bComponents = b.components();
+      return std::equal(
+          aComponents.begin(),
+          aComponents.end(),
+          bComponents.begin(),
+          bComponents.end());
+    } else {
+      return a.stringPiece() == b.stringPiece();
+    }
   }
 
   // Equality and Inequality vs stringy looking values.
@@ -231,9 +299,7 @@ class PathBase :
     public std::conditional<
         std::is_same<Storage, Stored>::value,
         boost::totally_ordered<Stored, Piece>,
-        boost::totally_ordered<Piece>>::type,
-    // equality operators, as boost's helpers get confused
-    public PathOperators<Stored, Piece> {
+        boost::totally_ordered<Piece>>::type {
  protected:
   Storage path_;
 
@@ -254,11 +320,8 @@ class PathBase :
   }
 
 #ifdef _WIN32
-  constexpr explicit PathBase(std::wstring_view src) {
-    auto str = wideToMultibyteString<Storage>(src);
-    std::replace(str.begin(), str.end(), '\\', '/');
-    path_ = str;
-
+  constexpr explicit PathBase(std::wstring_view src)
+      : path_(wideToMultibyteString<Storage>(src)) {
     SanityChecker()(stringPiece());
   }
 #endif
@@ -372,14 +435,7 @@ class PathBase :
 struct PathComponentSanityCheck {
   constexpr void operator()(folly::StringPiece val) const {
     for (auto c : val) {
-      if (c == kDirSeparator
-#ifdef _WIN32
-          // On Windows we should also check if we have missed a Windows path
-          // separator. We have function to convert from Windows widechar paths
-          // to path component.
-          || (c == '\\')
-#endif
-      ) {
+      if (isDirSeparator(c)) {
         throw std::domain_error(folly::to<std::string>(
             "attempt to construct a PathComponent from a string containing a "
             "directory separator: ",
@@ -410,11 +466,13 @@ struct PathComponentSanityCheck {
  * It is illegal for a PathComponent to contain a directory
  * separator character. */
 template <typename Storage>
-class PathComponentBase : public PathBase<
-                              Storage,
-                              PathComponentSanityCheck,
-                              PathComponent,
-                              PathComponentPiece> {
+class PathComponentBase
+    : public PathBase<
+          Storage,
+          PathComponentSanityCheck,
+          PathComponent,
+          PathComponentPiece>,
+      public PathOperators<PathComponent, PathComponentPiece, false> {
  public:
   // Inherit constructors
   using base_type = PathBase<
@@ -579,7 +637,7 @@ class ComposedPathIterator {
     }
 
     ++pos_;
-    while (pos_ < path_.end() && *pos_ != kDirSeparator) {
+    while (pos_ < path_.end() && !isDirSeparator(*pos_)) {
       ++pos_;
     }
   }
@@ -602,7 +660,7 @@ class ComposedPathIterator {
     }
 
     --pos_;
-    while (pos_ > stopPos && *pos_ != kDirSeparator) {
+    while (pos_ > stopPos && !isDirSeparator(*pos_)) {
       --pos_;
     }
   }
@@ -642,18 +700,18 @@ class PathComponentIterator {
       start_ = path_.end();
       end_ = path_.end();
       // Back start_ up to just after the last kDirSeparator
-      while (start_ != path_.begin() && *(start_ - 1) != kDirSeparator) {
+      while (start_ != path_.begin() && !isDirSeparator(*(start_ - 1))) {
         --start_;
       }
     } else {
       // Skip over any leading slash, to handle absolute paths
       start_ = path_.begin();
-      while (start_ != path_.end() && *start_ == kDirSeparator) {
+      while (start_ != path_.end() && isDirSeparator(*start_)) {
         ++start_;
       }
       // Advance end_ until the next slash or the end of the path
       end_ = start_;
-      while (end_ != path_.end() && *end_ != kDirSeparator) {
+      while (end_ != path_.end() && !isDirSeparator(*end_)) {
         ++end_;
       }
     }
@@ -753,7 +811,7 @@ class PathComponentIterator {
     }
     ++end_;
     start_ = end_;
-    while (end_ != path_.end() && *end_ != kDirSeparator) {
+    while (end_ != path_.end() && !isDirSeparator(*end_)) {
       ++end_;
     }
   }
@@ -768,7 +826,7 @@ class PathComponentIterator {
 
     --start_;
     end_ = start_;
-    while (start_ != path_.begin() && *(start_ - 1) != kDirSeparator) {
+    while (start_ != path_.begin() && !isDirSeparator(*(start_ - 1))) {
       --start_;
     }
   }
@@ -816,8 +874,8 @@ template <
     typename Stored, // eg: Foo<std::string>
     typename Piece // eg: Foo<StringPiece>
     >
-class ComposedPathBase
-    : public PathBase<Storage, SanityChecker, Stored, Piece> {
+class ComposedPathBase : public PathBase<Storage, SanityChecker, Stored, Piece>,
+                         public PathOperators<Stored, Piece, true> {
  public:
   // Inherit constructors
   using base_type = PathBase<Storage, SanityChecker, Stored, Piece>;
@@ -879,7 +937,7 @@ struct ComposedPathSanityCheck {
     const char* data = val.data();
 
     for (size_t i = start; i < val.size(); i++) {
-      if (data[i] == kDirSeparator) {
+      if (isDirSeparator(data[i])) {
         return i;
       }
     }
@@ -888,10 +946,6 @@ struct ComposedPathSanityCheck {
   }
 
   constexpr void operator()(folly::StringPiece val) const {
-    if (folly::kIsWindows) {
-      return;
-    }
-
     size_t start = 0;
     while (true) {
       auto next = nextSeparator(val, start);
@@ -915,13 +969,13 @@ struct RelativePathSanityCheck {
   constexpr void operator()(folly::StringPiece val) const {
     if (!val.empty()) {
       const char* data = val.data();
-      if (data[0] == kDirSeparator) {
+      if (isDirSeparator(data[0])) {
         throw std::domain_error(folly::to<std::string>(
             "attempt to construct a RelativePath from an absolute path string: ",
             val));
       }
 
-      if (data[val.size() - 1] == kDirSeparator) {
+      if (isDirSeparator(data[val.size() - 1])) {
         throw std::domain_error(folly::to<std::string>(
             "RelativePath must not end with a slash: ", val));
       }
@@ -1084,7 +1138,7 @@ class RelativePathBase : public ComposedPathBase<
       // Note: this returns an iterator to an empty path.
       return allPaths().begin();
     }
-    if (this->path_[parentPiece.size()] != kDirSeparator) {
+    if (!isDirSeparator(this->path_[parentPiece.size()])) {
       return allPaths().end();
     }
     folly::StringPiece prefix{this->path_.data(), parentPiece.size()};
@@ -1293,7 +1347,7 @@ class AbsolutePathBase : public ComposedPathBase<
     if (b.stringPiece().empty()) {
       return this->copy();
     }
-    if (this->stringPiece() == kDirSeparatorStr) {
+    if (isDirSeparator(this->stringPiece())) {
       // Special case to avoid building a string like "//foo"
       return AbsolutePath(
           folly::to<std::string>(this->stringPiece(), b.stringPiece()),
@@ -1459,7 +1513,8 @@ class PathSuffixIterator {
     }
 
     // In all other cases, move to just past the next /
-    auto next = path_.find(kDirSeparator, start_ + 1);
+    auto next = findPathSeparator(path_, start_ + 1);
+
     if (next == folly::StringPiece::npos) {
       start_ = path_.size();
     } else {
@@ -1478,7 +1533,8 @@ class PathSuffixIterator {
 
     // Otherwise move to just past the previous /
     auto next =
-        rfind(folly::StringPiece{path_.begin(), start_ - 1}, kDirSeparator);
+        rfindPathSeparator(folly::StringPiece{path_.begin(), start_ - 1});
+
     if (next == folly::StringPiece::npos) {
       start_ = 0;
     } else {
@@ -1540,16 +1596,30 @@ size_t hash_value(const detail::PathComponentBase<A>& path) {
   return folly::hash::SpookyHashV2::Hash64(s.begin(), s.size(), 0);
 }
 
-template <typename A>
-size_t hash_value(const detail::RelativePathBase<A>& path) {
-  auto s = path.stringPiece();
-  return folly::hash::SpookyHashV2::Hash64(s.begin(), s.size(), 0);
-}
+template <
+    typename Storage,
+    typename SanityChecker,
+    typename Stored,
+    typename Piece>
+size_t hash_value(
+    const detail::ComposedPathBase<Storage, SanityChecker, Stored, Piece>&
+        path) {
+  if (folly::kIsWindows) {
+    folly::hash::SpookyHashV2 hash{};
 
-template <typename A>
-size_t hash_value(const detail::AbsolutePathBase<A>& path) {
-  auto s = path.stringPiece();
-  return folly::hash::SpookyHashV2::Hash64(s.begin(), s.size(), 0);
+    for (const auto& component : path.components()) {
+      auto s = component.stringPiece();
+      hash.Update(s.begin(), s.size());
+    }
+
+    uint64_t hash1, hash2;
+    hash.Final(&hash1, &hash2);
+
+    return hash1;
+  } else {
+    auto s = path.stringPiece();
+    return folly::hash::SpookyHashV2::Hash64(s.begin(), s.size(), 0);
+  }
 }
 
 // Streaming operators for logging and printing
