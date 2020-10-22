@@ -46,12 +46,9 @@ pub async fn verify_working_copy<M: SyncedCommitMapping + Clone + 'static>(
     let source_repo = commit_syncer.get_source_repo();
     let target_repo = commit_syncer.get_target_repo();
 
-    let (target_hash, maybe_version) =
+    let (target_hash, version) =
         get_synced_commit(ctx.clone(), &commit_syncer, source_hash).await?;
-    let version = match maybe_version {
-        Some(version) => version,
-        None => commit_syncer.get_current_version(&ctx)?,
-    };
+
     info!(
         ctx.logger(),
         "target repo cs id: {}, mapping version: {}", target_hash, version
@@ -601,7 +598,7 @@ async fn get_synced_commit<M: SyncedCommitMapping + Clone + 'static>(
     ctx: CoreContext,
     commit_syncer: &CommitSyncer<M>,
     hash: ChangesetId,
-) -> Result<(ChangesetId, Option<CommitSyncConfigVersion>), Error> {
+) -> Result<(ChangesetId, CommitSyncConfigVersion), Error> {
     let maybe_sync_outcome = commit_syncer
         .get_commit_sync_outcome(ctx.clone(), hash)
         .await?;
@@ -617,9 +614,7 @@ async fn get_synced_commit<M: SyncedCommitMapping + Clone + 'static>(
             return Err(format_err!("{} does not remap in small repo", hash).into());
         }
         RewrittenAs(cs_id, mapping_version)
-        | EquivalentWorkingCopyAncestor(cs_id, mapping_version) => {
-            Ok((cs_id, Some(mapping_version)))
-        }
+        | EquivalentWorkingCopyAncestor(cs_id, mapping_version) => Ok((cs_id, mapping_version)),
     }
 }
 
