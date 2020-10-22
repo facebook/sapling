@@ -187,11 +187,12 @@ folly::Try<void> writeFileAtomic(
     AbsolutePathPiece path,
     folly::ByteRange data) {
   auto parent = path.dirname();
-  std::wstring tmpFile(MAX_PATH, 0);
+  wchar_t tmpFile[MAX_PATH];
 
-  if (GetTempFileNameW(parent.wide().c_str(), L"tmp", 0, tmpFile.data()) == 0) {
+  if (GetTempFileNameW(parent.wide().c_str(), L"tmp", 0, tmpFile) == 0) {
+    auto err = GetLastError();
     return folly::Try<void>{makeWin32ErrorExplicit(
-        GetLastError(),
+        err,
         fmt::format(
             FMT_STRING("couldn't create a temporary file for {}"), path))};
   }
@@ -201,10 +202,10 @@ folly::Try<void> writeFileAtomic(
     return tryTmpFileWrite;
   }
 
-  if (!MoveFileExW(
-          tmpFile.c_str(), path.wide().c_str(), MOVEFILE_REPLACE_EXISTING)) {
+  if (!MoveFileExW(tmpFile, path.wide().c_str(), MOVEFILE_REPLACE_EXISTING)) {
+    auto err = GetLastError();
     return folly::Try<void>{makeWin32ErrorExplicit(
-        GetLastError(), fmt::format(FMT_STRING("couldn't replace {}"), path))};
+        err, fmt::format(FMT_STRING("couldn't replace {}"), path))};
   }
 
   return folly::Try<void>{};
