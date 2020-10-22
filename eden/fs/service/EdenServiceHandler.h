@@ -125,6 +125,11 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   apache::thrift::ServerStream<JournalPosition> subscribeStreamTemporary(
       std::unique_ptr<std::string> mountPoint) override;
 
+#ifndef _WIN32
+  apache::thrift::ServerStream<FsEvent> traceFsEvents(
+      std::unique_ptr<std::string> mountPoint) override;
+#endif
+
   void getManifestEntry(
       ManifestEntry& out,
       std::unique_ptr<std::string> mountPoint,

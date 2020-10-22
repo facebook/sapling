@@ -629,6 +629,114 @@ EdenServiceHandler::subscribeStreamTemporary(
   return std::move(streamAndPublisher.first);
 }
 
+#ifndef _WIN32
+
+namespace {
+FuseCall populateFuseCall(
+    uint64_t unique,
+    const fuse_in_header& request,
+    ProcessNameCache& processNameCache) {
+  FuseCall fc;
+  fc.len_ref() = request.len;
+  fc.opcode_ref() = request.opcode;
+  fc.unique_ref() = unique;
+  fc.nodeid_ref() = request.nodeid;
+  fc.uid_ref() = request.uid;
+  fc.gid_ref() = request.gid;
+  fc.pid_ref() = request.pid;
+
+  fc.opcodeName_ref() = fuseOpcodeName(request.opcode);
+  fc.processName_ref().from_optional(
+      processNameCache.getProcessName(request.pid));
+  return fc;
+}
+} // namespace
+
+apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
+    std::unique_ptr<std::string> mountPoint) {
+  auto edenMount = server_->getMount(*mountPoint);
+
+  struct Context {
+    // While subscribed to FuseChannel's TraceBus, request detailed argument
+    // strings.
+    TraceDetailedArgumentsHandle argHandle;
+    TraceSubscriptionHandle<FuseTraceEvent> subHandle;
+  };
+
+  auto context = std::make_shared<Context>();
+  context->argHandle = edenMount->getFuseChannel()->traceDetailedArguments();
+
+  auto [serverStream, publisher] =
+      apache::thrift::ServerStream<FsEvent>::createPublisher([context] {
+        // on disconnect, release context and the TraceSubscriptionHandle
+      });
+
+  struct PublisherOwner {
+    explicit PublisherOwner(
+        apache::thrift::ServerStreamPublisher<FsEvent> publisher)
+        : owner(true), publisher{std::move(publisher)} {}
+
+    PublisherOwner(PublisherOwner&& that) noexcept
+        : owner{std::exchange(that.owner, false)},
+          publisher{std::move(that.publisher)} {}
+
+    PublisherOwner& operator=(PublisherOwner&&) = delete;
+
+    // Destroying a publisher without calling complete() aborts the process, so
+    // ensure complete() is called when the TraceBus deletes the subscriber (as
+    // occurs during unmount).
+    ~PublisherOwner() {
+      if (owner) {
+        std::move(publisher).complete();
+      }
+    }
+
+    bool owner;
+    apache::thrift::ServerStreamPublisher<FsEvent> publisher;
+  };
+
+  context->subHandle =
+      edenMount->getFuseChannel()->getTraceBus().subscribeFunction(
+          folly::to<std::string>("strace-", edenMount->getPath().basename()),
+          [owner = PublisherOwner{std::move(publisher)},
+           serverState =
+               server_->getServerState()](const FuseTraceEvent& event) {
+            FsEvent te;
+            te.timestamp_ref() =
+                std::chrono::duration_cast<std::chrono::nanoseconds>(
+                    event.systemTime.time_since_epoch())
+                    .count();
+            te.monotonic_time_ns_ref() =
+                std::chrono::duration_cast<std::chrono::nanoseconds>(
+                    event.monotonicTime.time_since_epoch())
+                    .count();
+
+            te.fuseRequest_ref() = populateFuseCall(
+                event.unique,
+                event.request,
+                *serverState->getProcessNameCache());
+
+            switch (event.type) {
+              case FuseTraceEvent::START:
+                te.type_ref() = FsEventType::START;
+                break;
+              case FuseTraceEvent::FINISH:
+                te.type_ref() = FsEventType::FINISH;
+                break;
+            }
+
+            if (event.arguments) {
+              te.arguments_ref() = *event.arguments;
+            }
+
+            owner.publisher.next(te);
+          });
+
+  return std::move(serverStream);
+}
+
+#endif // _WIN32
+
 void EdenServiceHandler::getFilesChangedSince(
     FileDelta& out,
     std::unique_ptr<std::string> mountPoint,
@@ -1222,26 +1330,10 @@ void EdenServiceHandler::debugOutstandingFuseCalls(
   auto* fuseChannel = edenMount->getFuseChannel();
 
   for (const auto& call : fuseChannel->getOutstandingRequests()) {
-    FuseCall fuseCall;
-    // Convert from fuse_in_header to fuseCall
-    // Conversion is done here to avoid building a dependency between
-    // FuseChannel and thrift
-
-    auto& request = call.request;
-    fuseCall.len_ref() = request.len;
-    fuseCall.opcode_ref() = request.opcode;
-    fuseCall.unique_ref() = call.unique;
-    fuseCall.nodeid_ref() = request.nodeid;
-    fuseCall.uid_ref() = request.uid;
-    fuseCall.gid_ref() = request.gid;
-    fuseCall.pid_ref() = request.pid;
-
-    fuseCall.opcodeName_ref() = fuseOpcodeName(request.opcode);
-    fuseCall.processName_ref().from_optional(
-        server_->getServerState()->getProcessNameCache()->getProcessName(
-            request.pid));
-
-    outstandingCalls.push_back(fuseCall);
+    outstandingCalls.push_back(populateFuseCall(
+        call.unique,
+        call.request,
+        *server_->getServerState()->getProcessNameCache()));
   }
 #else
   NOT_IMPLEMENTED();

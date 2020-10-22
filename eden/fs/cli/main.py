@@ -62,6 +62,12 @@ if sys.platform == "win32":
 else:
     from . import fsck as fsck_mod
 
+try:
+    from eden.fs.service.eden.types import FuseCall
+except ImportError:
+    # Thrift-py3 is not available in CMake build yet.
+    pass
+
 
 subcmd = subcmd_mod.Decorator()
 
@@ -807,6 +813,87 @@ class DoctorCmd(Subcmd):
         if args.current_edenfs_only:
             doctor.run_system_wide_checks = False
         return doctor.cure_what_ails_you()
+
+
+@subcmd("strace", "Monitor FUSE requests.")
+class StraceCmd(Subcmd):
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "checkout", default=None, nargs="?", help="Path to the checkout"
+        )
+
+    async def run(self, args: argparse.Namespace) -> int:
+        from eden.fs.service.streamingeden.types import FsEventType
+
+        instance, checkout, _rel_path = require_checkout(args, args.checkout)
+        async with await instance.get_thrift_client() as client:
+            # Start tracing before querying outstanding fuse requests so none are missed.
+            trace = await client.traceFsEvents(os.fsencode(checkout.path))
+
+            calls = await client.debugOutstandingFuseCalls(os.fsencode(checkout.path))
+            if calls:
+                self.print_outstanding_calls(calls)
+
+            active_requests = {}
+
+            async for event in trace:
+                unique = event.fuseRequest.unique
+                if event.type == FsEventType.START:
+                    active_requests[unique] = event
+                    print("+", self.format_call(event.fuseRequest, event.arguments))
+                elif event.type == FsEventType.FINISH:
+                    formatted_call = self.format_call(
+                        event.fuseRequest, event.arguments
+                    )
+                    if unique in active_requests:
+                        print(
+                            "-",
+                            formatted_call,
+                            "in",
+                            self.format_time(
+                                event.monotonic_time_ns
+                                - active_requests[unique].monotonic_time_ns
+                            ),
+                        )
+                    else:
+                        print("-", formatted_call)
+            print(f"{checkout.path} was unmounted")
+
+        return 0
+
+    def print_outstanding_calls(self, calls: List["FuseCall"]) -> None:
+        header = "Outstanding FUSE calls"
+        print(header)
+        print("-" * len(header))
+        for call in calls:
+            print(self.format_call(call))
+        print("-" * len(header))
+
+    def format_opcode(self, call: "FuseCall") -> str:
+        if not call.opcodeName:
+            return f"unknown-{call.opcode}"
+
+        name = call.opcodeName
+        if name.startswith("FUSE_"):
+            return name[5:].lower()
+        return name
+
+    def format_call(self, call: "FuseCall", arguments: Optional[str] = None) -> str:
+        if call.processName is None:
+            processName = str(call.pid)
+        else:
+            processName = f"{call.processName.split(chr(0))[0]}({call.pid})"
+
+        opcodeName = self.format_opcode(call)
+        argString = ""
+        if arguments:
+            argString = f"({call.nodeid}, {arguments})"
+        else:
+            argString = f"({call.nodeid})"
+        return f"{call.unique} from {processName}: {opcodeName}{argString}"
+
+    def format_time(self, ns: float) -> str:
+        return "{:.3f} µs".format(ns / 1000.0)
 
 
 @subcmd("top", "Monitor Eden accesses by process.")
