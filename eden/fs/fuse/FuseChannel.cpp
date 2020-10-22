@@ -1327,6 +1327,9 @@ void FuseChannel::readInitPacket(bool caseSensitive) {
 #ifdef __linux__
   // We don't support setuid and setgid mode bits anyway.
   want |= FUSE_HANDLE_KILLPRIV;
+  // Allow the kernel to cache ACL xattrs, even though we will fail all setxattr
+  // calls.
+  want |= FUSE_POSIX_ACL;
   // We're happy to let the kernel cache readlink responses.
   want |= FUSE_CACHE_SYMLINKS;
   // We can handle almost any request in parallel.
