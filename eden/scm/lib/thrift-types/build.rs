@@ -57,7 +57,7 @@ fn generate_thrift_subcrates(thrift_units: &[ThriftUnit]) -> io::Result<()> {
             .arg("-I")
             .arg(fbcode_path)
             .arg("-gen")
-            .arg("mstch_rust:serde")
+            .arg("mstch_rust:serde,noserver")
             .arg("-out")
             .arg(&out_path)
             .arg(&thrift_source_path)

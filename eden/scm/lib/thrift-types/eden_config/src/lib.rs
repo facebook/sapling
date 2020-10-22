@@ -41,6 +41,15 @@ pub mod types {
                 "CommandLine",
             ]
         }
+
+        pub fn variant_values() -> &'static [ConfigSource] {
+            &[
+                ConfigSource::Default,
+                ConfigSource::SystemConfig,
+                ConfigSource::UserConfig,
+                ConfigSource::CommandLine,
+            ]
+        }
     }
 
     impl ::std::default::Default for ConfigSource {
@@ -139,6 +148,14 @@ pub mod types {
                 "AutoReload",
                 "NoReload",
                 "ForceReload",
+            ]
+        }
+
+        pub fn variant_values() -> &'static [ConfigReloadBehavior] {
+            &[
+                ConfigReloadBehavior::AutoReload,
+                ConfigReloadBehavior::NoReload,
+                ConfigReloadBehavior::ForceReload,
             ]
         }
     }
