@@ -853,6 +853,7 @@ async fn log_commits_to_scribe(
 
                 let username = ctx.metadata().unix_name();
                 let hostname = ctx.metadata().client_hostname();
+                let identities = ctx.metadata().identities();
                 let ci = scribe_commit_queue::CommitInfo::new(
                     repo_id,
                     bookmark,
@@ -860,6 +861,7 @@ async fn log_commits_to_scribe(
                     changeset_id,
                     parents,
                     username.as_deref(),
+                    identities,
                     hostname.as_deref(),
                     received_timestamp,
                 );

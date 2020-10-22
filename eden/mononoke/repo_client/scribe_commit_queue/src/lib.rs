@@ -8,6 +8,7 @@
 use anyhow::Error;
 use chrono::{DateTime, Utc};
 use mononoke_types::{ChangesetId, Generation, RepositoryId};
+use permission_checker::MononokeIdentitySet;
 use scribe_ext::Scribe;
 use serde_derive::Serialize;
 
@@ -21,6 +22,8 @@ pub struct CommitInfo<'a> {
     parents: Vec<ChangesetId>,
     #[serde(skip_serializing_if = "Option::is_none")]
     user_unix_name: Option<&'a str>,
+    #[serde(skip_serializing_if = "MononokeIdentitySet::is_empty")]
+    user_identities: &'a MononokeIdentitySet,
     #[serde(skip_serializing_if = "Option::is_none")]
     source_hostname: Option<&'a str>,
     #[serde(with = "::chrono::serde::ts_seconds")]
@@ -35,6 +38,7 @@ impl<'a> CommitInfo<'a> {
         changeset_id: ChangesetId,
         parents: Vec<ChangesetId>,
         user_unix_name: Option<&'a str>,
+        user_identities: &'a MononokeIdentitySet,
         source_hostname: Option<&'a str>,
         received_timestamp: DateTime<Utc>,
     ) -> Self {
@@ -45,6 +49,7 @@ impl<'a> CommitInfo<'a> {
             changeset_id,
             parents,
             user_unix_name,
+            user_identities,
             source_hostname,
             received_timestamp,
         }

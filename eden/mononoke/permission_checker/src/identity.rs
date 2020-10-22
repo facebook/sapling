@@ -6,6 +6,7 @@
  */
 
 use anyhow::{bail, Error, Result};
+use serde::ser::{Serialize, Serializer};
 use std::collections::BTreeSet;
 use std::fmt;
 use std::str::FromStr;
@@ -59,5 +60,14 @@ impl FromStr for MononokeIdentity {
                 value
             ),
         }
+    }
+}
+
+impl Serialize for MononokeIdentity {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.collect_str(self)
     }
 }
