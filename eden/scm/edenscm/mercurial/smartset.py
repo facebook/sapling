@@ -12,6 +12,8 @@
 
 from __future__ import absolute_import
 
+import copy
+
 import bindings
 
 from . import error, util
@@ -194,6 +196,9 @@ class abstractsmartset(object):
                 break
             ys.append(y)
         return baseset(ys, datarepr=("slice=%d:%d %r", start, stop, self))
+
+    def clone(self):
+        return copy.copy(self)
 
 
 class baseset(abstractsmartset):
@@ -1389,6 +1394,13 @@ class fullreposet(idset):
     def __new__(cls, repo):
         s = idset.range(repo, 0, maxrev, True)
         s.__class__ = cls
+        return s
+
+    def clone(self):
+        # cannot use copy.copy because __new__ is incompatible
+        s = idset(())
+        s.__dict__ = self.__dict__.copy()
+        s.__class__ = self.__class__
         return s
 
     def __init__(cls, repo):
