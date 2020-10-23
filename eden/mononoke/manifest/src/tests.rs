@@ -11,15 +11,14 @@ pub(crate) use crate::{
 };
 use anyhow::Error;
 use blobstore::{Blobstore, Loadable, LoadableError, Storable, StoreLoadable};
+use bounded_traversal::bounded_traversal_stream;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{
-    compat::Future01CompatExt,
-    future::{BoxFuture, FutureExt, TryFutureExt},
+    compat::{Future01CompatExt, Stream01CompatExt},
+    future::{self, BoxFuture, FutureExt, TryFutureExt},
+    stream::TryStreamExt,
 };
-use futures_ext::bounded_traversal::bounded_traversal_stream;
-use futures_old::{stream, Future, IntoFuture, Stream};
-use lock_ext::LockExt;
 use maplit::btreemap;
 use memblob::LazyMemblob;
 use mononoke_types::{BlobstoreBytes, FileType, MPath, MPathElement};
@@ -29,9 +28,8 @@ use std::{
     collections::{hash_map::DefaultHasher, BTreeMap, BTreeSet, HashMap},
     hash::{Hash, Hasher},
     iter::FromIterator,
-    sync::{Arc, Mutex},
+    sync::Arc,
 };
-use tokio_compat::runtime::Runtime;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 struct TestLeafId(u64);
@@ -145,48 +143,44 @@ impl Manifest for TestManifestU64 {
     }
 }
 
-fn derive_test_manifest(
+async fn derive_test_manifest(
     ctx: CoreContext,
     blobstore: Arc<dyn Blobstore>,
     parents: Vec<TestManifestIdU64>,
-    changes: BTreeMap<&str, Option<&str>>,
-) -> impl Future<Item = Option<TestManifestIdU64>, Error = Error> {
-    let changes: Result<Vec<_>, _> = changes
-        .iter()
-        .map(|(path, change)| {
-            MPath::new(path).map(|path| (path, change.map(|leaf| TestLeaf(leaf.to_owned()))))
-        })
-        .collect();
-    changes.into_future().and_then(move |changes| {
-        derive_manifest(
-            ctx.clone(),
-            blobstore.clone(),
-            parents,
-            changes,
-            {
-                let ctx = ctx.clone();
-                let blobstore = blobstore.clone();
-                move |TreeInfo { subentries, .. }| {
-                    let subentries = subentries
-                        .into_iter()
-                        .map(|(path, (_, id))| (path, id))
-                        .collect();
-                    TestManifestU64(subentries)
-                        .store(ctx.clone(), &blobstore)
-                        .map_ok(|id| ((), id))
-                }
-            },
-            move |leaf_info| match leaf_info.leaf {
-                None => futures::future::err(Error::msg("leaf only conflict")).left_future(),
-                Some(leaf) => leaf
+    changes_str: BTreeMap<&str, Option<&str>>,
+) -> Result<Option<TestManifestIdU64>, Error> {
+    let mut changes = Vec::new();
+    for (path, change) in changes_str {
+        let path = MPath::new(path)?;
+        changes.push((path, change.map(|leaf| TestLeaf(leaf.to_string()))));
+    }
+    derive_manifest(
+        ctx.clone(),
+        blobstore.clone(),
+        parents,
+        changes,
+        {
+            let ctx = ctx.clone();
+            let blobstore = blobstore.clone();
+            move |TreeInfo { subentries, .. }| {
+                let subentries = subentries
+                    .into_iter()
+                    .map(|(path, (_, id))| (path, id))
+                    .collect();
+                TestManifestU64(subentries)
                     .store(ctx.clone(), &blobstore)
                     .map_ok(|id| ((), id))
-                    .right_future(),
-            },
-        )
-        .boxed()
-        .compat()
-    })
+            }
+        },
+        move |leaf_info| match leaf_info.leaf {
+            None => futures::future::err(Error::msg("leaf only conflict")).left_future(),
+            Some(leaf) => leaf
+                .store(ctx.clone(), &blobstore)
+                .map_ok(|id| ((), id))
+                .right_future(),
+        },
+    )
+    .await
 }
 
 struct Files(TestManifestIdU64);
@@ -200,38 +194,34 @@ impl Loadable for Files {
         blobstore: &B,
     ) -> BoxFuture<'static, Result<Self::Value, LoadableError>> {
         let blobstore = blobstore.clone();
-
         bounded_traversal_stream(
             256,
             Some((None, Entry::Tree(self.0))),
             move |(path, entry)| {
-                Loadable::load(&entry, ctx.clone(), &blobstore)
-                    .compat()
-                    .map(move |content| {
-                        match content {
-                            Entry::Leaf(leaf) => (Some((path, leaf)), Vec::new()),
-                            Entry::Tree(tree) => {
-                                let recurse = tree
-                                    .list()
-                                    .map(|(name, entry)| {
-                                        (Some(MPath::join_opt_element(path.as_ref(), &name)), entry)
-                                    })
-                                    .collect();
-                                (None, recurse)
-                            }
+                Loadable::load(&entry, ctx.clone(), &blobstore).map_ok(move |content| {
+                    match content {
+                        Entry::Leaf(leaf) => (Some((path, leaf)), Vec::new()),
+                        Entry::Tree(tree) => {
+                            let recurse = tree
+                                .list()
+                                .map(|(name, entry)| {
+                                    (Some(MPath::join_opt_element(path.as_ref(), &name)), entry)
+                                })
+                                .collect();
+                            (None, recurse)
                         }
-                    })
+                    }
+                })
             },
         )
-        .filter_map(|item| {
-            let (path, leaf) = item?;
-            Some((path?, leaf.0))
+        .try_filter_map(|item| {
+            let item = item.and_then(|(path, leaf)| Some((path?, leaf.0)));
+            future::ok(item)
         })
-        .fold(BTreeMap::new(), |mut acc, (path, leaf)| {
+        .try_fold(BTreeMap::new(), |mut acc, (path, leaf)| {
             acc.insert(path, leaf);
-            Ok::<_, LoadableError>(acc)
+            future::ok::<_, LoadableError>(acc)
         })
-        .compat()
         .boxed()
     }
 }
@@ -266,32 +256,23 @@ fn test_path_tree() -> Result<(), Error> {
 }
 
 #[fbinit::test]
-fn test_derive_manifest(fb: FacebookInit) -> Result<(), Error> {
-    let runtime = Arc::new(Mutex::new(Runtime::new()?));
+async fn test_derive_manifest(fb: FacebookInit) -> Result<(), Error> {
     let blobstore: Arc<dyn Blobstore> = Arc::new(LazyMemblob::default());
     let ctx = CoreContext::test_mock(fb);
 
     // derive manifest
-    let derive = |parents, changes| -> Result<TestManifestIdU64, Error> {
-        let manifest_id = runtime
-            .with(|runtime| {
-                runtime.block_on(derive_test_manifest(
-                    ctx.clone(),
-                    blobstore.clone(),
-                    parents,
-                    changes,
-                ))
-            })?
-            .expect("expect non empty manifest");
-        Ok(manifest_id)
+    let derive = |parents, changes| {
+        let ctx = ctx.clone();
+        let blobstore = blobstore.clone();
+        async move {
+            derive_test_manifest(ctx, blobstore, parents, changes)
+                .await
+                .map(|mf| mf.expect("expect non empty manifest"))
+        }
     };
 
     // load all files for specified manifest
-    let files = |manifest_id| {
-        runtime.with(|runtime| {
-            runtime.block_on_std(Loadable::load(&Files(manifest_id), ctx.clone(), &blobstore))
-        })
-    };
+    let files = |manifest_id| Loadable::load(&Files(manifest_id), ctx.clone(), &blobstore);
 
     // clean merge of two directories
     {
@@ -302,7 +283,8 @@ fn test_derive_manifest(fb: FacebookInit) -> Result<(), Error> {
                 "/one/three" => Some("three"),
                 "/five/six" => Some("six"),
             },
-        )?;
+        )
+        .await?;
         let mf1 = derive(
             vec![],
             btreemap! {
@@ -310,8 +292,9 @@ fn test_derive_manifest(fb: FacebookInit) -> Result<(), Error> {
                 "/one/three" => Some("three"),
                 "/five/six" => Some("six"),
             },
-        )?;
-        let mf2 = derive(vec![mf0, mf1], btreemap! {})?;
+        )
+        .await?;
+        let mf2 = derive(vec![mf0, mf1], btreemap! {}).await?;
         assert_eq!(
             files_reference(btreemap! {
                 "/one/two" => "two",     // from mf0
@@ -319,7 +302,7 @@ fn test_derive_manifest(fb: FacebookInit) -> Result<(), Error> {
                 "/one/four" => "four",   // shared leaf mf{0|1}
                 "/five/six" => "six",    // shared tree mf{0|1}
             })?,
-            files(mf2)?,
+            files(mf2).await?,
         );
     }
 
@@ -332,19 +315,19 @@ fn test_derive_manifest(fb: FacebookInit) -> Result<(), Error> {
                 "/one/three" => Some("three"),
                 "/five/six" => Some("six"),
             },
-        )?;
-        let mf1 = runtime.with(|runtime| {
-            runtime.block_on(derive_test_manifest(
-                ctx.clone(),
-                blobstore.clone(),
-                vec![mf0],
-                btreemap! {
-                    "/one/two" => None,
-                    "/one/three" => None,
-                    "five/six" => None,
-                },
-            ))
-        })?;
+        )
+        .await?;
+        let mf1 = derive_test_manifest(
+            ctx.clone(),
+            blobstore.clone(),
+            vec![mf0],
+            btreemap! {
+                "/one/two" => None,
+                "/one/three" => None,
+                "five/six" => None,
+            },
+        )
+        .await?;
         assert!(mf1.is_none(), "empty manifest expected");
     }
 
@@ -356,18 +339,20 @@ fn test_derive_manifest(fb: FacebookInit) -> Result<(), Error> {
                 "/one/two" => Some("conflict"),
                 "/three" => Some("not a conflict")
             },
-        )?;
+        )
+        .await?;
         let mf1 = derive(
             vec![],
             btreemap! {
                 "/one/two" => Some("CONFLICT"),
                 "/three" => Some("not a conflict"),
             },
-        )?;
+        )
+        .await?;
 
         // make sure conflict is dectected
         assert!(
-            derive(vec![mf0, mf1], btreemap! {},).is_err(),
+            derive(vec![mf0, mf1], btreemap! {},).await.is_err(),
             "should contain file-file conflict"
         );
 
@@ -377,13 +362,14 @@ fn test_derive_manifest(fb: FacebookInit) -> Result<(), Error> {
             btreemap! {
                 "/one/two" => Some("resolved"),
             },
-        )?;
+        )
+        .await?;
         assert_eq!(
             files_reference(btreemap! {
                 "/one/two" => "resolved", // new file replaces conflict
                 "/three" => "not a conflict",
             })?,
-            files(mf2)?,
+            files(mf2).await?,
         );
 
         // resolve by deletion
@@ -392,13 +378,14 @@ fn test_derive_manifest(fb: FacebookInit) -> Result<(), Error> {
             btreemap! {
                 "/one/two" => None,
             },
-        )?;
+        )
+        .await?;
         assert_eq!(
             files_reference(btreemap! {
                 // file is deleted
                 "/three" => "not a conflict",
             })?,
-            files(mf3)?,
+            files(mf3).await?,
         );
 
         // resolve by overriding directory
@@ -407,13 +394,14 @@ fn test_derive_manifest(fb: FacebookInit) -> Result<(), Error> {
             btreemap! {
                 "/one" => Some("resolved"),
             },
-        )?;
+        )
+        .await?;
         assert_eq!(
             files_reference(btreemap! {
                 "/one" => "resolved", // whole subdirectory replace by file
                 "/three" => "not a conflict",
             })?,
-            files(mf4)?,
+            files(mf4).await?,
         );
     }
 
@@ -425,18 +413,20 @@ fn test_derive_manifest(fb: FacebookInit) -> Result<(), Error> {
                 "/one" => Some("file"),
                 "/three" => Some("not a conflict")
             },
-        )?;
+        )
+        .await?;
         let mf1 = derive(
             vec![],
             btreemap! {
                 "/one/two" => Some("directory"),
                 "/three" => Some("not a conflict"),
             },
-        )?;
+        )
+        .await?;
 
         // make sure conflict is dectected
         assert!(
-            derive(vec![mf0, mf1], btreemap! {}).is_err(),
+            derive(vec![mf0, mf1], btreemap! {}).await.is_err(),
             "should contain file-file conflict"
         );
 
@@ -446,13 +436,14 @@ fn test_derive_manifest(fb: FacebookInit) -> Result<(), Error> {
             btreemap! {
                 "/one" => None,
             },
-        )?;
+        )
+        .await?;
         assert_eq!(
             files_reference(btreemap! {
                 "/one/two" => "directory",
                 "/three" => "not a conflict",
             })?,
-            files(mf2)?,
+            files(mf2).await?,
         );
 
         // resolve by deleting of directory
@@ -464,13 +455,14 @@ fn test_derive_manifest(fb: FacebookInit) -> Result<(), Error> {
             btreemap! {
                 "/one" => Some("file"),
             },
-        )?;
+        )
+        .await?;
         assert_eq!(
             files_reference(btreemap! {
                 "/one" => "file",
                 "/three" => "not a conflict",
             })?,
-            files(mf3)?,
+            files(mf3).await?,
         );
     }
 
@@ -488,27 +480,13 @@ fn make_paths(paths_str: &[&str]) -> Result<BTreeSet<Option<MPath>>, Error> {
 }
 
 #[fbinit::test]
-fn test_find_entries(fb: FacebookInit) -> Result<(), Error> {
-    let rt = Arc::new(Mutex::new(Runtime::new()?));
+async fn test_find_entries(fb: FacebookInit) -> Result<(), Error> {
     let blobstore: Arc<dyn Blobstore> = Arc::new(LazyMemblob::default());
     let ctx = CoreContext::test_mock(fb);
 
-    // derive manifest
-    let derive = |parents, changes| -> Result<TestManifestIdU64, Error> {
-        let manifest_id = rt
-            .with(|rt| {
-                rt.block_on(derive_test_manifest(
-                    ctx.clone(),
-                    blobstore.clone(),
-                    parents,
-                    changes,
-                ))
-            })?
-            .expect("expect non empty manifest");
-        Ok(manifest_id)
-    };
-
-    let mf0 = derive(
+    let mf0 = derive_test_manifest(
+        ctx.clone(),
+        blobstore.clone(),
         vec![],
         btreemap! {
             "one/1" => Some("1"),
@@ -523,7 +501,9 @@ fn test_find_entries(fb: FacebookInit) -> Result<(), Error> {
             "five/seven/eight/nine/10" => Some("10"),
             "five/seven/11" => Some("11"),
         },
-    )?;
+    )
+    .await?
+    .expect("expect non empty manifest");
 
     // use single select
     {
@@ -535,12 +515,11 @@ fn test_find_entries(fb: FacebookInit) -> Result<(), Error> {
             "two/three/6",
         ])?;
 
-        let results = rt.with(|rt| {
-            rt.block_on(
-                mf0.find_entries(ctx.clone(), blobstore.clone(), paths)
-                    .collect(),
-            )
-        })?;
+        let results: Vec<_> = mf0
+            .find_entries(ctx.clone(), blobstore.clone(), paths)
+            .compat()
+            .try_collect()
+            .await?;
 
         let mut leafs = BTreeSet::new();
         let mut trees = BTreeSet::new();
@@ -563,12 +542,11 @@ fn test_find_entries(fb: FacebookInit) -> Result<(), Error> {
             PathOrPrefix::Prefix(Some(MPath::new("five/seven/eight")?)),
         ];
 
-        let results = rt.with(|rt| {
-            rt.block_on(
-                mf0.find_entries(ctx.clone(), blobstore.clone(), paths)
-                    .collect(),
-            )
-        })?;
+        let results: Vec<_> = mf0
+            .find_entries(ctx.clone(), blobstore.clone(), paths)
+            .compat()
+            .try_collect()
+            .await?;
 
         let mut leafs = BTreeSet::new();
         let mut trees = BTreeSet::new();
@@ -596,8 +574,10 @@ fn test_find_entries(fb: FacebookInit) -> Result<(), Error> {
 
     // find entry
     {
-        let mf_root =
-            rt.with(|rt| rt.block_on(mf0.find_entry(ctx.clone(), blobstore.clone(), None)))?;
+        let mf_root = mf0
+            .find_entry(ctx.clone(), blobstore.clone(), None)
+            .compat()
+            .await?;
         assert_eq!(mf_root, Some(Entry::Tree(mf0)));
 
         let paths = make_paths(&[
@@ -609,23 +589,21 @@ fn test_find_entries(fb: FacebookInit) -> Result<(), Error> {
             "five/seven/11",
         ])?;
 
-        let results = rt.with(|rt| {
-            rt.block_on(
-                stream::iter_ok(paths)
-                    .and_then(move |path| {
-                        mf0.find_entry(ctx.clone(), blobstore.clone(), path.clone())
-                            .map(move |entry| entry.map(|entry| (path, entry)))
-                    })
-                    .collect(),
-            )
-        })?;
-
         let mut leafs = BTreeSet::new();
         let mut trees = BTreeSet::new();
-        for (path, entry) in results.into_iter().flatten() {
+        for path in paths {
+            let entry = mf0
+                .find_entry(ctx.clone(), blobstore.clone(), path.clone())
+                .compat()
+                .await?;
             match entry {
-                Entry::Tree(_) => trees.insert(path),
-                Entry::Leaf(_) => leafs.insert(path),
+                Some(Entry::Tree(_)) => {
+                    trees.insert(path);
+                }
+                Some(Entry::Leaf(_)) => {
+                    leafs.insert(path);
+                }
+                _ => {}
             };
         }
 
@@ -640,27 +618,13 @@ fn test_find_entries(fb: FacebookInit) -> Result<(), Error> {
 }
 
 #[fbinit::test]
-fn test_diff(fb: FacebookInit) -> Result<(), Error> {
-    let runtime = Arc::new(Mutex::new(Runtime::new()?));
+async fn test_diff(fb: FacebookInit) -> Result<(), Error> {
     let blobstore: Arc<dyn Blobstore> = Arc::new(LazyMemblob::default());
     let ctx = CoreContext::test_mock(fb);
 
-    // derive manifest
-    let derive = |parents, changes| -> Result<TestManifestIdU64, Error> {
-        let manifest_id = runtime
-            .with(|runtime| {
-                runtime.block_on(derive_test_manifest(
-                    ctx.clone(),
-                    blobstore.clone(),
-                    parents,
-                    changes,
-                ))
-            })?
-            .expect("expect non empty manifest");
-        Ok(manifest_id)
-    };
-
-    let mf0 = derive(
+    let mf0 = derive_test_manifest(
+        ctx.clone(),
+        blobstore.clone(),
         vec![],
         btreemap! {
             "same_dir/1" => Some("1"),
@@ -671,9 +635,13 @@ fn test_diff(fb: FacebookInit) -> Result<(), Error> {
             "same_file" => Some("4"),
             "dir_file_conflict/5" => Some("5"),
         },
-    )?;
+    )
+    .await?
+    .expect("expect non empty manifest");
 
-    let mf1 = derive(
+    let mf1 = derive_test_manifest(
+        ctx.clone(),
+        blobstore.clone(),
         vec![],
         btreemap! {
             "same_dir/1" => Some("1"),
@@ -684,10 +652,15 @@ fn test_diff(fb: FacebookInit) -> Result<(), Error> {
             "same_file" => Some("4"),
             "dir_file_conflict" => Some("5"),
         },
-    )?;
+    )
+    .await?
+    .expect("expect non empty manifest");
 
-    let diffs =
-        runtime.with(|rt| rt.block_on(mf0.diff(ctx.clone(), blobstore.clone(), mf1).collect()))?;
+    let diffs: Vec<_> = mf0
+        .diff(ctx.clone(), blobstore.clone(), mf1)
+        .compat()
+        .try_collect()
+        .await?;
 
     let mut added = BTreeSet::new();
     let mut removed = BTreeSet::new();
@@ -727,40 +700,39 @@ fn test_diff(fb: FacebookInit) -> Result<(), Error> {
     );
     assert_eq!(changed, make_paths(&["/", "dir", "dir/changed_file"])?);
 
-    let diffs = runtime.with(|rt| {
-        rt.block_on(
-            mf0.filtered_diff(
-                ctx,
-                blobstore,
-                mf1,
-                |diff| {
-                    let path = match &diff {
-                        Diff::Added(path, ..)
-                        | Diff::Removed(path, ..)
-                        | Diff::Changed(path, ..) => path,
-                    };
-
-                    let badpath = MPath::new("dir/added_dir/3").unwrap();
-                    if &Some(badpath) != path {
-                        Some(diff)
-                    } else {
-                        None
+    let diffs: Vec<_> = mf0
+        .filtered_diff(
+            ctx,
+            blobstore,
+            mf1,
+            |diff| {
+                let path = match &diff {
+                    Diff::Added(path, ..) | Diff::Removed(path, ..) | Diff::Changed(path, ..) => {
+                        path
                     }
-                },
-                |diff| {
-                    let path = match diff {
-                        Diff::Added(path, ..)
-                        | Diff::Removed(path, ..)
-                        | Diff::Changed(path, ..) => path,
-                    };
+                };
 
-                    let badpath = MPath::new("dir/removed_dir").unwrap();
-                    &Some(badpath) != path
-                },
-            )
-            .collect(),
+                let badpath = MPath::new("dir/added_dir/3").unwrap();
+                if &Some(badpath) != path {
+                    Some(diff)
+                } else {
+                    None
+                }
+            },
+            |diff| {
+                let path = match diff {
+                    Diff::Added(path, ..) | Diff::Removed(path, ..) | Diff::Changed(path, ..) => {
+                        path
+                    }
+                };
+
+                let badpath = MPath::new("dir/removed_dir").unwrap();
+                &Some(badpath) != path
+            },
         )
-    })?;
+        .compat()
+        .try_collect()
+        .await?;
 
     let mut added = BTreeSet::new();
     let mut removed = BTreeSet::new();
@@ -797,27 +769,13 @@ fn test_diff(fb: FacebookInit) -> Result<(), Error> {
 }
 
 #[fbinit::test]
-fn test_find_intersection_of_diffs(fb: FacebookInit) -> Result<(), Error> {
-    let runtime = Arc::new(Mutex::new(Runtime::new()?));
+async fn test_find_intersection_of_diffs(fb: FacebookInit) -> Result<(), Error> {
     let blobstore: Arc<dyn Blobstore> = Arc::new(LazyMemblob::default());
     let ctx = CoreContext::test_mock(fb);
 
-    // derive manifest
-    let derive = |parents, changes| -> Result<TestManifestIdU64, Error> {
-        let manifest_id = runtime
-            .with(|runtime| {
-                runtime.block_on(derive_test_manifest(
-                    ctx.clone(),
-                    blobstore.clone(),
-                    parents,
-                    changes,
-                ))
-            })?
-            .expect("expect non empty manifest");
-        Ok(manifest_id)
-    };
-
-    let mf0 = derive(
+    let mf0 = derive_test_manifest(
+        ctx.clone(),
+        blobstore.clone(),
         vec![],
         btreemap! {
             "same_dir/1" => Some("1"),
@@ -828,9 +786,13 @@ fn test_find_intersection_of_diffs(fb: FacebookInit) -> Result<(), Error> {
             "same_file" => Some("4"),
             "dir_file_conflict/5" => Some("5"),
         },
-    )?;
+    )
+    .await?
+    .expect("expect non empty manifest");
 
-    let mf1 = derive(
+    let mf1 = derive_test_manifest(
+        ctx.clone(),
+        blobstore.clone(),
         vec![],
         btreemap! {
             "same_dir/1" => Some("1"),
@@ -841,30 +803,36 @@ fn test_find_intersection_of_diffs(fb: FacebookInit) -> Result<(), Error> {
             "same_file" => Some("4"),
             "dir_file_conflict" => Some("5"),
         },
-    )?;
+    )
+    .await?
+    .expect("expect non empty manifest");
 
-    let mf2 = derive(
+    let mf2 = derive_test_manifest(
+        ctx.clone(),
+        blobstore.clone(),
         vec![],
         btreemap! {
             "added_file" => Some("added_file"),
             "same_file" => Some("4"),
             "dir_file_conflict" => Some("5"),
         },
-    )?;
+    )
+    .await?
+    .expect("expect non empty manifest");
 
-    let intersection = runtime.with(|rt| {
-        rt.block_on(
-            find_intersection_of_diffs(ctx.clone(), blobstore.clone(), mf0, vec![mf0]).collect(),
-        )
-    })?;
+    let intersection: Vec<_> =
+        find_intersection_of_diffs(ctx.clone(), blobstore.clone(), mf0, vec![mf0])
+            .compat()
+            .try_collect()
+            .await?;
 
     assert_eq!(intersection, vec![]);
 
-    let intersection = runtime.with(|rt| {
-        rt.block_on(
-            find_intersection_of_diffs(ctx.clone(), blobstore.clone(), mf1, vec![mf0]).collect(),
-        )
-    })?;
+    let intersection: Vec<_> =
+        find_intersection_of_diffs(ctx.clone(), blobstore.clone(), mf1, vec![mf0])
+            .compat()
+            .try_collect()
+            .await?;
 
     let intersection: BTreeSet<_> = intersection.into_iter().map(|(path, _)| path).collect();
 
@@ -882,9 +850,10 @@ fn test_find_intersection_of_diffs(fb: FacebookInit) -> Result<(), Error> {
     );
 
     // Diff against two manifests
-    let intersection = runtime.with(|rt| {
-        rt.block_on(find_intersection_of_diffs(ctx, blobstore, mf1, vec![mf0, mf2]).collect())
-    })?;
+    let intersection: Vec<_> = find_intersection_of_diffs(ctx, blobstore, mf1, vec![mf0, mf2])
+        .compat()
+        .try_collect()
+        .await?;
 
     let intersection: BTreeSet<_> = intersection.into_iter().map(|(path, _)| path).collect();
 
