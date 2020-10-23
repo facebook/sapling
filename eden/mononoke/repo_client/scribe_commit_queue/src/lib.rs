@@ -28,6 +28,7 @@ pub struct CommitInfo<'a> {
     source_hostname: Option<&'a str>,
     #[serde(with = "::chrono::serde::ts_seconds")]
     received_timestamp: DateTime<Utc>,
+    changed_files_count: usize,
 }
 
 impl<'a> CommitInfo<'a> {
@@ -41,6 +42,7 @@ impl<'a> CommitInfo<'a> {
         user_identities: &'a MononokeIdentitySet,
         source_hostname: Option<&'a str>,
         received_timestamp: DateTime<Utc>,
+        changed_files_count: usize,
     ) -> Self {
         Self {
             repo_id,
@@ -52,6 +54,7 @@ impl<'a> CommitInfo<'a> {
             user_identities,
             source_hostname,
             received_timestamp,
+            changed_files_count,
         }
     }
 }

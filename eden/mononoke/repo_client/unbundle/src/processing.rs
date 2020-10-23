@@ -190,11 +190,12 @@ async fn run_push(
         .into());
     }
 
-    let mut new_changeset_ids = Vec::new();
+    let mut new_changeset_ids_and_changed_files_count = Vec::new();
     let mut new_changesets = HashMap::new();
     for bcs in uploaded_bonsais {
         let cs_id = bcs.get_changeset_id();
-        new_changeset_ids.push(cs_id);
+        let changed_files = bcs.file_changes_map().len();
+        new_changeset_ids_and_changed_files_count.push((cs_id, changed_files));
         new_changesets.insert(cs_id, bcs);
     }
 
@@ -233,7 +234,7 @@ async fn run_push(
         ctx,
         repo,
         maybe_bookmark.as_ref(),
-        new_changeset_ids,
+        new_changeset_ids_and_changed_files_count,
         push_params.commit_scribe_category.clone(),
     )
     .await;
@@ -339,16 +340,16 @@ async fn run_infinitepush(
         None => None,
     };
 
-    let new_commits: Vec<ChangesetId> = uploaded_bonsais
+    let new_changeset_ids_and_changed_files_count = uploaded_bonsais
         .iter()
-        .map(|cs| cs.get_changeset_id())
+        .map(|cs| (cs.get_changeset_id(), cs.file_changes_map().len()))
         .collect();
 
     log_commits_to_scribe(
         ctx,
         repo,
         bookmark.as_ref(),
-        new_commits,
+        new_changeset_ids_and_changed_files_count,
         infinitepush_params.commit_scribe_category.clone(),
     )
     .await;
@@ -377,6 +378,10 @@ async fn run_pushrebase(
         uploaded_bonsais,
         hook_rejection_remapper,
     } = action;
+    let changed_files_count: Vec<usize> = uploaded_bonsais
+        .iter()
+        .map(|b| b.file_changes_map().len())
+        .collect();
 
     // FIXME: stop cloning when this fn is async
     let bookmark = bookmark_spec.get_bookmark_name().clone();
@@ -430,13 +435,16 @@ async fn run_pushrebase(
         .await
         .context("While marking pushrebased changeset as public")?;
 
-    let new_commits = pushrebased_changesets.iter().map(|p| p.id_new).collect();
+    let new_commits: Vec<ChangesetId> = pushrebased_changesets.iter().map(|p| p.id_new).collect();
 
     log_commits_to_scribe(
         ctx,
         repo,
         Some(&bookmark),
-        new_commits,
+        new_commits
+            .into_iter()
+            .zip(changed_files_count.into_iter())
+            .collect(),
         pushrebase_params.commit_scribe_category.clone(),
     )
     .await;
@@ -570,11 +578,11 @@ async fn force_pushrebase(
         .new
         .ok_or_else(|| anyhow!("new changeset is required for force pushrebase"))?;
 
-    let mut new_changeset_ids = Vec::new();
+    let mut new_changeset_ids_and_changed_files_count = Vec::new();
     let mut new_changesets = HashMap::new();
     for bcs in uploaded_bonsais {
         let cs_id = bcs.get_changeset_id();
-        new_changeset_ids.push(cs_id);
+        new_changeset_ids_and_changed_files_count.push((cs_id, bcs.file_changes_map().len()));
         new_changesets.insert(cs_id, bcs);
     }
 
@@ -610,7 +618,7 @@ async fn force_pushrebase(
         ctx,
         repo,
         Some(&bookmark_push.name),
-        new_changeset_ids,
+        new_changeset_ids_and_changed_files_count,
         pushrebase_params.commit_scribe_category.clone(),
     )
     .await;
@@ -820,7 +828,7 @@ async fn log_commits_to_scribe(
     ctx: &CoreContext,
     repo: &BlobRepo,
     bookmark: Option<&BookmarkName>,
-    changesets: Vec<ChangesetId>,
+    changesets_and_changed_files_count: Vec<(ChangesetId, usize)>,
     commit_scribe_category: Option<String>,
 ) {
     let queue = match commit_scribe_category {
@@ -832,9 +840,9 @@ async fn log_commits_to_scribe(
     let bookmark = bookmark.map(|bm| bm.as_str());
     let received_timestamp = Utc::now();
 
-    let futs: FuturesUnordered<_> = changesets
+    let futs: FuturesUnordered<_> = changesets_and_changed_files_count
         .into_iter()
-        .map(|changeset_id| {
+        .map(|(changeset_id, changed_files_count)| {
             let queue = &queue;
             async move {
                 let get_generation = async {
@@ -864,6 +872,7 @@ async fn log_commits_to_scribe(
                     identities,
                     hostname.as_deref(),
                     received_timestamp,
+                    changed_files_count,
                 );
                 queue.queue_commit(&ci)
             }
