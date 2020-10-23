@@ -12,6 +12,7 @@ use blobrepo::BlobRepo;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
+use futures::TryStreamExt;
 use futures_old::{future, Future, Stream};
 use manifest::ManifestOps;
 use mononoke_types::{BonsaiChangeset, ChangesetId, FileUnodeId, MPath};
@@ -60,6 +61,7 @@ pub fn find_unode_renames(
                         .manifest_unode_id()
                         .clone()
                         .find_entries(ctx, blobstore, from_paths)
+                        .compat()
                         .filter_map(|(from_path, entry)| Some((from_path?, entry.into_leaf()?)))
                         .collect()
                         .map(move |unodes| {

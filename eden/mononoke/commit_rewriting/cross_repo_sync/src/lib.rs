@@ -24,7 +24,6 @@ use futures::{
     stream::{self, futures_unordered::FuturesUnordered, StreamExt, TryStreamExt},
 };
 use futures_old::Future;
-use futures_old::Stream as StreamOld;
 use live_commit_sync_config::LiveCommitSyncConfig;
 use manifest::get_implicit_deletes;
 use maplit::{hashmap, hashset};
@@ -155,8 +154,7 @@ async fn get_implicit_delete_file_changes<I: IntoIterator<Item = ChangesetId>>(
     let store = source_repo.get_blobstore();
     let implicit_deletes: Vec<MPath> =
         get_implicit_deletes(ctx, store, file_adds, parent_manifest_ids)
-            .collect()
-            .compat()
+            .try_collect()
             .await?;
     let maybe_renamed_implicit_deletes: Result<Vec<Option<MPath>>, _> =
         implicit_deletes.iter().map(|mpath| mover(mpath)).collect();

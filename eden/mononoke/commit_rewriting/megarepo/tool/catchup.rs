@@ -13,7 +13,7 @@ use bookmarks::BookmarkName;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
+    compat::Future01CompatExt,
     future::{self, try_join},
     TryStreamExt,
 };
@@ -120,12 +120,10 @@ pub async fn validate(
     let head_leaves = head_root_unode
         .manifest_unode_id()
         .list_leaf_entries(ctx.clone(), repo.get_blobstore())
-        .compat()
         .try_collect::<Vec<_>>();
     let to_merge_commit_leaves = to_merge_commit_root_unode
         .manifest_unode_id()
         .list_leaf_entries(ctx.clone(), repo.get_blobstore())
-        .compat()
         .try_collect::<Vec<_>>();
 
     let (head_leaves, mut to_merge_commit_leaves) =
@@ -204,7 +202,6 @@ async fn find_files_that_need_to_be_deleted(
             repo.get_blobstore(),
             *commit_to_merge_root_unode.manifest_unode_id(),
         )
-        .compat()
         .try_filter_map(|diff| async move {
             use Diff::*;
             let maybe_path = match diff {
@@ -229,6 +226,7 @@ async fn find_files_that_need_to_be_deleted(
 mod test {
     use super::*;
     use fbinit::FacebookInit;
+    use futures::compat::Stream01CompatExt;
     use megarepolib::common::ChangesetArgs;
     use mononoke_types::DateTime;
     use revset::RangeNodeStream;

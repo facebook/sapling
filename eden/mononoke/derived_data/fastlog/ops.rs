@@ -335,7 +335,6 @@ async fn derive_unode_entry(
     root_unode_mf_id
         .manifest_unode_id()
         .find_entry(ctx.clone(), repo.get_blobstore(), path.clone())
-        .compat()
         .await
 }
 

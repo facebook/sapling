@@ -1564,7 +1564,6 @@ impl TestHelper {
         let entry = hg_cs
             .manifestid()
             .find_entry(self.ctx.clone(), self.repo.get_blobstore(), Some(path))
-            .compat()
             .await?
             .ok_or(err)?;
 

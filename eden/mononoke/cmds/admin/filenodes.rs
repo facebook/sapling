@@ -17,7 +17,7 @@ use cmdlib::helpers;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use filenodes::FilenodeInfo;
-use futures::{compat::Future01CompatExt, future::TryFutureExt};
+use futures::{compat::Future01CompatExt, TryFutureExt, TryStreamExt};
 use futures_ext::FutureExt as OldFutureExt;
 use futures_old::future::{join_all, Future};
 use futures_old::{IntoFuture, Stream};
@@ -298,6 +298,7 @@ pub async fn subcommand_filenodes<'a>(
                         move |mf_id| {
                             mf_id
                                 .list_all_entries(ctx.clone(), repo.get_blobstore())
+                                .compat()
                                 .map(move |(path, entry)| {
                                     let (repo_path, filenode_id) = match entry {
                                         Entry::Leaf((_, filenode_id)) => (

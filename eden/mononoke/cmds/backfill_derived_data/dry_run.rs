@@ -15,7 +15,7 @@ use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fsnodes::RootFsnodeId;
 use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
+    compat::Future01CompatExt,
     stream::{self, FuturesUnordered, StreamExt, TryStreamExt},
 };
 use manifest::ManifestOps;
@@ -176,7 +176,6 @@ async fn find_entries_to_preserve(
                 root_fsnode
                     .fsnode_id()
                     .list_tree_entries(ctx.clone(), repo.get_blobstore())
-                    .compat()
                     .map_ok(move |(_, mf_id)| async move {
                         let mf = mf_id.load(ctx.clone(), &repo.get_blobstore()).await?;
                         Ok((mf_id.blobstore_key(), mf.into_blob().into()))
@@ -195,7 +194,6 @@ mod test {
     use super::*;
     use blobrepo_factory::TestRepoBuilder;
     use fbinit::FacebookInit;
-    use futures_old::Stream as OldStream;
     use maplit::hashmap;
     use tests_utils::CreateCommitContext;
 
@@ -210,8 +208,7 @@ mod test {
         fsnode
             .fsnode_id()
             .list_all_entries(ctx.clone(), repo.get_blobstore())
-            .collect()
-            .compat()
+            .try_collect::<Vec<_>>()
             .await?;
         Ok(())
     }

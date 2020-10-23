@@ -20,7 +20,7 @@ use derived_data::BonsaiDerived;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use filestore::FetchKey;
 use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
+    compat::Future01CompatExt,
     future::{self, FutureExt, TryFutureExt},
     stream::{self, Stream, StreamExt, TryStreamExt},
 };
@@ -999,7 +999,6 @@ async fn diff_with_parents(
     let blobstore = Arc::new(repo.get_blobstore());
     let new_entries: Vec<(Option<MPath>, Entry<_, _>, _)> =
         find_intersection_of_diffs_and_parents(ctx, blobstore, mf_id, parent_mf_ids)
-            .compat()
             .try_collect()
             .await?;
 

@@ -11,12 +11,7 @@ use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
-use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
-    future::try_join,
-    TryStreamExt,
-};
-use futures_old::stream::Stream;
+use futures::{compat::Future01CompatExt, future::try_join, TryStreamExt};
 use manifest::{Diff, ManifestOps};
 use mercurial_types::MPath;
 use mononoke_types::ChangesetId;
@@ -61,12 +56,11 @@ async fn get_working_copy_paths(
 
     let hg_cs = hg_cs_id.load(ctx.clone(), repo.blobstore()).await?;
     info!(ctx.logger(), "Getting working copy contents");
-    let mut paths = hg_cs
+    let mut paths: Vec<_> = hg_cs
         .manifestid()
         .list_leaf_entries(ctx.clone(), repo.get_blobstore())
-        .map(|(path, (_file_type, _filenode_id))| path)
-        .collect()
-        .compat()
+        .map_ok(|(path, (_file_type, _filenode_id))| path)
+        .try_collect()
         .await?;
     paths.sort();
     info!(ctx.logger(), "Done getting working copy contents");
@@ -91,7 +85,6 @@ async fn get_changed_working_copy_paths(
             repo.get_blobstore(),
             *unode_id.manifest_unode_id(),
         )
-        .compat()
         .try_filter_map(|diff| async move {
             use Diff::*;
             let maybe_path = match diff {

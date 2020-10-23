@@ -30,11 +30,7 @@ use cross_repo_sync::{
 };
 use cross_repo_sync_test_utils::rebase_root_on_master;
 use fixtures::{linear, many_files_dirs};
-use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
-    future::join_all,
-    TryStreamExt,
-};
+use futures::{compat::Future01CompatExt, future::join_all, TryStreamExt};
 use live_commit_sync_config::{TestLiveCommitSyncConfig, TestLiveCommitSyncConfigSource};
 use manifest::ManifestOps;
 use maplit::{btreemap, hashmap};
@@ -2008,7 +2004,6 @@ async fn assert_working_copy(
     let mf_id = hg_cs.manifestid();
     let mut actual_paths = mf_id
         .list_leaf_entries(ctx.clone(), repo.get_blobstore())
-        .compat()
         .map_ok(|(path, _)| path)
         .try_collect::<Vec<_>>()
         .await?;

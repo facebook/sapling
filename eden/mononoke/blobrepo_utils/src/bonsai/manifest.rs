@@ -13,8 +13,8 @@ use blobstore::{Blobstore, Loadable};
 use cacheblob::MemWritesBlobstore;
 use cloned::cloned;
 use context::CoreContext;
-use futures::future::TryFutureExt;
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt, StreamExt};
+use futures::{StreamExt, TryFutureExt, TryStreamExt};
+use futures_ext::{try_boxfuture, BoxFuture, FutureExt, StreamExt as _};
 use futures_old::{
     future::{self, Either},
     Future, Stream,
@@ -79,7 +79,9 @@ impl BonsaiMFVerifyDifference {
     {
         let lookup_mf_id = HgManifestId::new(self.lookup_mf_id);
         let roundtrip_mf_id = HgManifestId::new(self.roundtrip_mf_id);
-        lookup_mf_id.diff(ctx.clone(), self.repo.get_blobstore(), roundtrip_mf_id)
+        lookup_mf_id
+            .diff(ctx, self.repo.get_blobstore(), roundtrip_mf_id)
+            .compat()
     }
 
     /// Whether there are any changes beyond the root manifest ID being different.
@@ -229,6 +231,8 @@ impl ChangesetVisitor for BonsaiMFVerifyVisitor {
                     changeset.manifestid(),
                     parents.iter().cloned().collect(),
                 )
+                .boxed()
+                .compat()
                 .collect()
                 .join(root_mf_fut)
                 .and_then(move |(diff, root_mf)| {

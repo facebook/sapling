@@ -27,7 +27,7 @@ use futures::{
     channel::oneshot::{self, Sender},
     compat::Future01CompatExt,
     future::{self, select, Either, FutureExt, TryFutureExt},
-    pin_mut,
+    pin_mut, TryStreamExt,
 };
 use futures_ext::{
     spawn_future, try_boxfuture, try_boxstream, BoxFuture, BoxStream, BufferedParams,
@@ -2205,6 +2205,7 @@ fn get_changed_manifests_stream(
                 Diff::Removed(..) => false,
             },
         )
+        .compat()
         .map(move |(path_no_root_path, hg_mf_id)| {
             let mut path = rootpath.clone();
             path.extend(MPath::into_iter_opt(path_no_root_path));

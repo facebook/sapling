@@ -11,11 +11,7 @@ use clap::{App, Arg, ArgMatches, SubCommand};
 use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
 use fsnodes::RootFsnodeId;
-use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
-    future::try_join,
-    TryStreamExt,
-};
+use futures::{compat::Future01CompatExt, future::try_join, TryStreamExt};
 
 use blobrepo::BlobRepo;
 use cmdlib::{args, helpers};
@@ -241,7 +237,6 @@ async fn list_directory(
     let entries = root
         .fsnode_id()
         .find_entries(ctx.clone(), repo.get_blobstore(), vec![path.clone()])
-        .compat()
         .try_collect::<Vec<_>>()
         .await?;
 
@@ -262,7 +257,6 @@ async fn list_directory(
 
     let leaf_entries = fsnode_id
         .list_leaf_entries(ctx.clone(), repo.get_blobstore())
-        .compat()
         .try_collect::<BTreeMap<_, _>>()
         .await?;
 

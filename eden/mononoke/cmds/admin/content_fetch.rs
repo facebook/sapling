@@ -119,7 +119,6 @@ async fn fetch_entry(
     let ret = hg_cs
         .manifestid()
         .find_entry(ctx.clone(), repo.get_blobstore(), Some(mpath))
-        .compat()
         .await?
         .ok_or_else(|| format_err!("Path does not exist: {}", path))?;
 

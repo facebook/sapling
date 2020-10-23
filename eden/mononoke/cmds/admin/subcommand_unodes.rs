@@ -17,7 +17,7 @@ use cmdlib::{args, helpers};
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
-use futures::{compat::Future01CompatExt, future::TryFutureExt};
+use futures::{compat::Future01CompatExt, TryFutureExt, TryStreamExt};
 use futures_ext::{FutureExt, StreamExt};
 use futures_old::{future, Future, IntoFuture, Stream};
 use manifest::{Entry, ManifestOps, PathOrPrefix};
@@ -152,6 +152,7 @@ fn subcommand_tree(
             info!(ctx.logger(), "PATH: {:?}", path);
             root.manifest_unode_id()
                 .find_entries(ctx, repo.get_blobstore(), vec![PathOrPrefix::Prefix(path)])
+                .compat()
                 .for_each(|(path, entry)| {
                     match entry {
                         Entry::Tree(tree_id) => {
@@ -200,6 +201,7 @@ fn single_verify(
                 hg_changeset
                     .manifestid()
                     .find_entries(ctx, repo.get_blobstore(), vec![PathOrPrefix::Prefix(None)])
+                    .compat()
                     .filter_map(|(path, _)| path)
                     .collect_to::<BTreeSet<_>>()
             }
@@ -211,6 +213,7 @@ fn single_verify(
             tree_id
                 .manifest_unode_id()
                 .find_entries(ctx, repo.get_blobstore(), vec![PathOrPrefix::Prefix(None)])
+                .compat()
                 .filter_map(|(path, _)| path)
                 .collect_to::<BTreeSet<_>>()
         });

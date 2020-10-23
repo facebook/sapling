@@ -16,7 +16,7 @@ use derived_data::BonsaiDerived;
 use fastlog::{fetch_parent_root_unodes, RootFastlog};
 use fsnodes::{prefetch_content_metadata, RootFsnodeId};
 use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
+    compat::Future01CompatExt,
     future::{self, ready, try_join, try_join3, try_join4},
     stream::{self, FuturesUnordered, StreamExt, TryStreamExt},
     TryFutureExt,
@@ -146,7 +146,6 @@ async fn unode_warmup(
                 unode_mf_id,
                 parent_unodes,
             )
-            .compat()
             .try_for_each(|_| async { Ok(()) })
             .await
         };
@@ -217,7 +216,6 @@ async fn prefetch_content(
         root_manifest,
         parents_manifests,
     )
-    .compat()
     .map_ok(|(path, entry)| Some((path?, entry.into_leaf()?)))
     .try_filter_map(|maybe_entry| async move { Result::<_, Error>::Ok(maybe_entry) })
     .map(|result| async {

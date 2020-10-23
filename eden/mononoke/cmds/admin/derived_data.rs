@@ -19,7 +19,7 @@ use derived_data_utils::{derived_data_utils, POSSIBLE_DERIVED_TYPES};
 use fbinit::FacebookInit;
 use fsnodes::RootFsnodeId;
 use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
+    compat::Future01CompatExt,
     future::{try_join_all, FutureExt as PreviewFutureExt},
     Future, TryStreamExt,
 };
@@ -291,7 +291,6 @@ async fn list_hg_manifest(
     let mfid = hg_cs.manifestid();
 
     mfid.list_leaf_entries(ctx.clone(), repo.get_blobstore())
-        .compat()
         .map_ok(|(path, (ty, filenode_id))| async move {
             let filenode = filenode_id.load(ctx.clone(), repo.blobstore()).await?;
             let content_id = filenode.content_id();
@@ -315,7 +314,6 @@ async fn list_fsnodes(
     let fsnode_id = root_fsnode_id.fsnode_id();
     fsnode_id
         .list_leaf_entries(ctx.clone(), repo.get_blobstore())
-        .compat()
         .map_ok(|(path, fsnode)| {
             let (content_id, ty): (ContentId, FileType) = fsnode.into();
             let val = (ty, content_id, ManifestType::Fsnodes);
@@ -337,7 +335,6 @@ async fn list_unodes(
     let unode_id = root_unode_id.manifest_unode_id();
     unode_id
         .list_leaf_entries(ctx.clone(), repo.get_blobstore())
-        .compat()
         .map_ok(|(path, unode_id)| async move {
             let unode = unode_id.load(ctx.clone(), repo.blobstore()).await?;
             let val = (

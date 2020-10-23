@@ -13,7 +13,7 @@ use cloned::cloned;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
 use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
+    compat::Future01CompatExt,
     future::{FutureExt as NewFutureExt, TryFutureExt},
     stream::TryStreamExt,
 };
@@ -78,7 +78,6 @@ impl BonsaiDerived for RootFastlog {
             let unode_mf_id = root_unode_mf_id.manifest_unode_id().clone();
 
             find_intersection_of_diffs(ctx.clone(), blobstore.clone(), unode_mf_id, parents)
-                .compat()
                 .map_ok(move |(_, entry)| {
                     cloned!(blobstore, ctx);
                     async move {
@@ -208,6 +207,7 @@ mod tests {
         create_bonsai_changeset_with_files, linear, merge_even, merge_uneven, store_files,
         unshared_merge_even, unshared_merge_uneven,
     };
+    use futures::StreamExt;
     use manifest::ManifestOps;
     use maplit::btreemap;
     use mercurial_types::HgChangesetId;
@@ -276,6 +276,7 @@ mod tests {
             .block_on(
                 root_unode_mf_id
                     .find_entries(ctx.clone(), blobstore.clone(), vec![path_1, path_files])
+                    .compat()
                     .collect(),
             )
             .unwrap();
@@ -317,6 +318,7 @@ mod tests {
             .block_on(
                 root_unode_mf_id
                     .list_all_entries(ctx.clone(), blobstore)
+                    .compat()
                     .map(|(_, entry)| entry)
                     .collect(),
             )
@@ -434,6 +436,8 @@ mod tests {
                 child_root_unode,
                 vec![parent_root_unode],
             )
+            .boxed()
+            .compat()
             .map(|(path, _)| match path {
                 Some(path) => String::from_utf8(path.to_vec()).unwrap(),
                 None => String::new(),
@@ -502,6 +506,8 @@ mod tests {
                     merge_unode,
                     parent_unodes,
                 )
+                .boxed()
+                .compat()
                 .map(|(path, _)| match path {
                     Some(path) => String::from_utf8(path.to_vec()).unwrap(),
                     None => String::new(),
@@ -723,6 +729,7 @@ mod tests {
             .block_on(
                 root_unode_mf_id
                     .list_all_entries(ctx.clone(), blobstore.clone())
+                    .compat()
                     .collect(),
             )
             .unwrap();

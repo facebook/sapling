@@ -119,7 +119,6 @@ impl ChangesetPathContext {
                     root_fsnode_id
                         .fsnode_id()
                         .find_entry(ctx, blobstore, Some(mpath))
-                        .compat()
                         .await
                         .map_err(MononokeError::from)
                 } else {
@@ -139,7 +138,6 @@ impl ChangesetPathContext {
                     root_unode_manifest_id
                         .manifest_unode_id()
                         .find_entry(ctx.clone(), blobstore.clone(), Some(mpath))
-                        .compat()
                         .await
                         .map_err(MononokeError::from)
                 } else {

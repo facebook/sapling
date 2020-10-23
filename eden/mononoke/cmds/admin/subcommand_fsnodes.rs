@@ -14,10 +14,7 @@ use cmdlib::{args, helpers};
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
-use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
-    stream::StreamExt,
-};
+use futures::{compat::Future01CompatExt, stream::StreamExt};
 use manifest::{Entry, ManifestOps, PathOrPrefix};
 
 use fsnodes::RootFsnodeId;
@@ -83,14 +80,11 @@ async fn subcommand_tree(
     info!(ctx.logger(), "ROOT: {:?}", root);
     info!(ctx.logger(), "PATH: {:?}", path);
 
-    let mut stream = root
-        .fsnode_id()
-        .find_entries(
-            ctx.clone(),
-            repo.get_blobstore(),
-            vec![PathOrPrefix::Prefix(path)],
-        )
-        .compat();
+    let mut stream = root.fsnode_id().find_entries(
+        ctx.clone(),
+        repo.get_blobstore(),
+        vec![PathOrPrefix::Prefix(path)],
+    );
 
     while let Some((path, entry)) = stream.next().await.transpose()? {
         match entry {

@@ -9,8 +9,7 @@ use anyhow::Error;
 use blobstore::StoreLoadable;
 use cloned::cloned;
 use context::CoreContext;
-use futures_ext::StreamExt;
-use futures_old::{stream, Future, Stream};
+use futures::{future, stream, Stream, StreamExt, TryFutureExt, TryStreamExt};
 use mononoke_types::{FileType, MPath};
 use std::collections::HashSet;
 use std::hash::Hash;
@@ -41,7 +40,7 @@ fn get_implicit_dir_deletes<ManifestId, FileId, Store>(
     store: Store,
     path_added_in_a_child: MPath,
     parent: ManifestId,
-) -> impl Stream<Item = MPath, Error = Error>
+) -> impl Stream<Item = Result<MPath, Error>>
 where
     FileId: Hash + Eq + Send + Sync + 'static,
     ManifestId: Hash + Eq + StoreLoadable<Store> + Send + Sync + ManifestOps<Store> + 'static,
@@ -56,7 +55,7 @@ where
             store.clone(),
             Some(path_added_in_a_child.clone()),
         )
-        .map({
+        .map_ok({
             cloned!(ctx, store, path_added_in_a_child);
             move |maybe_entry| {
                 match maybe_entry {
@@ -65,7 +64,7 @@ where
                     None | Some(Entry::Leaf(_)) => stream::empty().left_stream(),
                     Some(Entry::Tree(tree)) => tree
                         .list_leaf_entries(ctx, store)
-                        .map({
+                        .map_ok({
                             cloned!(path_added_in_a_child);
                             move |(relative_path, _)| path_added_in_a_child.join(&relative_path)
                         })
@@ -73,7 +72,7 @@ where
                 }
             }
         })
-        .flatten_stream()
+        .try_flatten_stream()
 }
 
 /// Get implicit deletes from a single parent manifest,
@@ -83,7 +82,7 @@ fn get_implicit_deletes_single_parent<ManifestId, FileId, Store, I>(
     store: Store,
     paths_added_in_a_child: I,
     parent: ManifestId,
-) -> impl Stream<Item = MPath, Error = Error>
+) -> impl Stream<Item = Result<MPath, Error>>
 where
     FileId: Hash + Eq + Send + Sync + 'static,
     ManifestId: Hash + Eq + StoreLoadable<Store> + Send + Sync + ManifestOps<Store> + 'static,
@@ -104,7 +103,7 @@ where
             )
         }
     });
-    stream::iter_ok::<_, Error>(individual_path_streams).flatten()
+    stream::iter(individual_path_streams).flatten()
 }
 
 /// Get implicit deletes in parent manifests,
@@ -114,7 +113,7 @@ pub fn get_implicit_deletes<ManifestId, FileId, Store, I, M>(
     store: Store,
     paths_added_in_a_child: I,
     parents: M,
-) -> impl Stream<Item = MPath, Error = Error>
+) -> impl Stream<Item = Result<MPath, Error>>
 where
     FileId: Hash + Eq + Send + Sync + 'static,
     ManifestId: Hash + Eq + StoreLoadable<Store> + Send + Sync + ManifestOps<Store> + 'static,
@@ -139,11 +138,11 @@ where
     // Note that identical implicit deletes may exist against
     // multiple parents, so to ensure uniqueness, we must allocate
     // some additional memory
-    stream::iter_ok::<_, Error>(individual_parent_streams)
+    stream::iter(individual_parent_streams)
         .flatten()
-        .filter({
+        .try_filter({
             let mut seen = HashSet::new();
-            move |item| seen.insert(item.clone())
+            move |item| future::ready(seen.insert(item.clone()))
         })
 }
 
@@ -154,7 +153,6 @@ mod test {
         ctx, dir, element, file, path, ManifestStore, TestManifestIdStr, TestManifestStr,
     };
     use fbinit::{self, FacebookInit};
-    use futures_util::compat::Future01CompatExt;
     use maplit::hashmap;
     use std::fmt::Debug;
 
@@ -194,10 +192,9 @@ mod test {
             }),
         });
         // Child adds a file at /p1/p2
-        let implicitly_deleted_files =
+        let implicitly_deleted_files: Vec<_> =
             get_implicit_dir_deletes(ctx(fb), store.clone(), path("p1/p2"), root_manifest)
-                .collect()
-                .compat()
+                .try_collect()
                 .await?;
         // We expect the entire /p1/p2 dir to be implicitly deleted
         // (and we enumerate all files: /p1/p2/p3 and /p1/p2/p4)
@@ -207,10 +204,9 @@ mod test {
         );
 
         // Adding an unrelated file should not cause any implicit deletes
-        let implicitly_deleted_files =
+        let implicitly_deleted_files: Vec<_> =
             get_implicit_dir_deletes(ctx(fb), store.clone(), path("p1/p200"), root_manifest)
-                .collect()
-                .compat()
+                .try_collect()
                 .await?;
         assert_eq!(implicitly_deleted_files, vec![]);
 
@@ -271,14 +267,13 @@ mod test {
             }),
         });
         // Child adds files at /p1/p2, /p1/p7/p12 and /p1/p9
-        let implicitly_deleted_files = get_implicit_deletes(
+        let implicitly_deleted_files: Vec<_> = get_implicit_deletes(
             ctx(fb),
             store.clone(),
             vec![path("p1/p2"), path("p1/p7/p12"), path("p1/p9")],
             vec![root_manifest_1, root_manifest_2],
         )
-        .collect()
-        .compat()
+        .try_collect()
         .await?;
 
         ensure_unordered_eq(
@@ -287,14 +282,13 @@ mod test {
         );
 
         // Result should not depend on the order of parents
-        let implicitly_deleted_files = get_implicit_deletes(
+        let implicitly_deleted_files: Vec<_> = get_implicit_deletes(
             ctx(fb),
             store,
             vec![path("p1/p2"), path("p1/p7/p12"), path("p1/p9")],
             vec![root_manifest_2, root_manifest_1],
         )
-        .collect()
-        .compat()
+        .try_collect()
         .await?;
 
         ensure_unordered_eq(

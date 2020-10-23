@@ -16,9 +16,8 @@ use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
 use filenodes::{FilenodeInfo, FilenodeResult, PreparedFilenode};
 use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
-    future::try_join_all,
-    stream, FutureExt, StreamExt, TryFutureExt, TryStreamExt,
+    compat::Future01CompatExt, future::try_join_all, stream, FutureExt, StreamExt, TryFutureExt,
+    TryStreamExt,
 };
 use futures_ext::{BoxFuture, FutureExt as OldFutureExt};
 use futures_old::{future as old_future, Future};
@@ -214,7 +213,6 @@ pub async fn generate_all_filenodes(
         root_mf,
         parents.clone(),
     )
-    .compat()
     .try_filter_map(|(path, entry, parent_entries)| {
         async move {
             // file entry has file type and file node id. If file type is different but filenode is

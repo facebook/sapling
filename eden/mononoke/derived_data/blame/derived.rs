@@ -16,8 +16,9 @@ use filestore::{self, FetchKey};
 use futures::{
     compat::Future01CompatExt,
     future::{FutureExt, TryFutureExt},
+    StreamExt, TryStreamExt,
 };
-use futures_ext::{spawn_future, BoxFuture, FutureExt as OldFutureExt, StreamExt};
+use futures_ext::{spawn_future, BoxFuture, FutureExt as OldFutureExt, StreamExt as _};
 use futures_old::{future, stream, Future, IntoFuture, Stream};
 use manifest::find_intersection_of_diffs;
 use mononoke_types::{
@@ -74,6 +75,8 @@ impl BonsaiDerived for BlameRoot {
                 let renames = Arc::new(renames);
                 let blobstore = repo.get_blobstore().boxed();
                 find_intersection_of_diffs(ctx.clone(), blobstore.clone(), root_mf, parents_mf)
+                    .boxed()
+                    .compat()
                     .filter_map(|(path, entry)| Some((path?, entry.into_leaf()?)))
                     .map(move |(path, file)| {
                         spawn_future(create_blame(

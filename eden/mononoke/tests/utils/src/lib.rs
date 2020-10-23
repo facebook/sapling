@@ -62,7 +62,6 @@ pub async fn list_working_copy(
     let mf_id = hg_cs.manifestid();
     mf_id
         .list_leaf_entries(ctx.clone(), repo.blobstore().boxed())
-        .compat()
         .map_ok(|(path, (_file_type, filenode_id))| async move {
             let filenode = filenode_id.load(ctx.clone(), repo.blobstore()).await?;
             let content_id = filenode.content_id();

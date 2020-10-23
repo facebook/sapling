@@ -12,7 +12,7 @@ use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
+    compat::Future01CompatExt,
     future::{self, FutureExt as NewFutureExt, TryFutureExt as NewTryFutureExt},
     stream::TryStreamExt as NewTryStreamExt,
 };
@@ -216,7 +216,6 @@ pub(crate) async fn get_changes(
     let changes = if parent_mf_ids.is_empty() {
         unode_mf_id
             .list_all_entries(ctx.clone(), blobstore)
-            .compat()
             .try_filter_map(move |(path, _)| async {
                 match path {
                     Some(path) => Ok(Some((path, PathChange::Add))),
@@ -247,7 +246,6 @@ async fn diff_against_parents(
         move |parent| {
             parent
                 .diff(ctx.clone(), repo.get_blobstore(), unode.clone())
-                .compat()
                 .try_collect::<Vec<_>>()
         }
     });
@@ -475,6 +473,7 @@ mod tests {
     use blobrepo_factory::new_memblob_empty;
     use fbinit::FacebookInit;
     use fixtures::{many_files_dirs, store_files};
+    use futures::compat::Stream01CompatExt;
     use futures_ext::bounded_traversal::bounded_traversal_stream;
     use futures_old::stream::iter_ok;
     use maplit::btreemap;

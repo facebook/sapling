@@ -23,7 +23,7 @@ use cross_repo_sync::{
 use derived_data_utils::derived_data_utils;
 use fbinit::FacebookInit;
 use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
+    compat::Future01CompatExt,
     future::{self, TryFutureExt},
     stream::{self, StreamExt, TryStreamExt},
 };
@@ -549,7 +549,6 @@ async fn get_leaf_entries(
     hg_cs
         .manifestid()
         .list_leaf_entries(ctx.clone(), repo.get_blobstore())
-        .compat()
         .map_ok(|(path, (_file_type, _filenode_id))| path)
         .try_collect::<HashSet<_>>()
         .await

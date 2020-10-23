@@ -25,9 +25,9 @@ use cross_repo_sync::{
 use futures::{
     compat::Future01CompatExt,
     future::TryFutureExt,
-    stream::{futures_unordered::FuturesUnordered, TryStreamExt},
+    stream::{futures_unordered::FuturesUnordered, StreamExt, TryStreamExt},
 };
-use futures_ext::{BoxStream, StreamExt};
+use futures_ext::{BoxStream, StreamExt as _};
 use futures_old::{Future, IntoFuture, Stream};
 use live_commit_sync_config::LiveCommitSyncConfig;
 use manifest::{bonsai_diff, BonsaiDiffFileChange};
@@ -409,6 +409,8 @@ fn find_bonsai_diff(
                     d_mf,
                     Some(a_mf).into_iter().collect(),
                 )
+                .boxed()
+                .compat()
             }
         })
         .flatten_stream()

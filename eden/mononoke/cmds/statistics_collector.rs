@@ -200,7 +200,6 @@ pub async fn get_statistics_from_changeset(
     let manifest_id = get_manifest_from_changeset(ctx, repo, hg_cs_id).await?;
     let statistics = manifest_id
         .list_leaf_entries(ctx.clone(), blobstore.clone())
-        .compat()
         .map(move |result| {
             match result {
                 Ok((_, leaf)) => get_statistics_from_entry(ctx, repo, Entry::Leaf(leaf)).boxed(),
@@ -360,7 +359,10 @@ pub async fn generate_statistics_from_file<P: AsRef<Path>>(
                     ctx,
                     repo,
                     old_stats,
-                    old_manifest.diff(ctx.clone(), blobstore.clone(), manifest.clone()),
+                    old_manifest
+                        .diff(ctx.clone(), blobstore.clone(), manifest.clone())
+                        .compat()
+                        .boxify(),
                 )
                 .await?;
 
@@ -490,7 +492,10 @@ async fn run_statistics<'a>(
                 &ctx,
                 &repo,
                 statistics,
-                prev_manifest_id.diff(ctx.clone(), blobstore.clone(), cur_manifest_id.clone()),
+                prev_manifest_id
+                    .diff(ctx.clone(), blobstore.clone(), cur_manifest_id.clone())
+                    .compat()
+                    .boxify(),
             )
             .await?;
 
@@ -559,7 +564,7 @@ mod tests {
     use super::*;
     use bytes::Bytes;
     use fixtures::linear;
-    use futures::future::TryFutureExt;
+    use futures::future::{self, TryFutureExt};
     use futures_old::stream as old_stream;
     use maplit::btreemap;
     use std::str::FromStr;
@@ -719,12 +724,11 @@ mod tests {
 
             let mut tree_entries = manifest
                 .list_all_entries(ctx.clone(), blobstore.clone())
-                .filter_map(|(_, entry)| match entry {
-                    Entry::Tree(_) => Some(entry),
-                    _ => None,
+                .try_filter_map(|(_, entry)| match entry {
+                    Entry::Tree(_) => future::ok(Some(entry)),
+                    _ => future::ok(None),
                 })
-                .collect()
-                .compat()
+                .try_collect::<Vec<_>>()
                 .await
                 .unwrap();
 
@@ -776,7 +780,10 @@ mod tests {
                 &ctx,
                 &repo,
                 stats,
-                prev_manifest.diff(ctx.clone(), blobstore.clone(), cur_manifest.clone()),
+                prev_manifest
+                    .diff(ctx.clone(), blobstore.clone(), cur_manifest.clone())
+                    .compat()
+                    .boxify(),
             )
             .await
             .unwrap();

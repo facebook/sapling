@@ -8,11 +8,9 @@
 use anyhow::Error;
 use cloned::cloned;
 use context::CoreContext;
-use futures_ext::bounded_traversal::bounded_traversal_stream;
-use futures_old::{Future, Stream};
-use futures_util::{
-    future::{try_join_all, FutureExt as Futures03FutureExt, TryFutureExt},
-    try_join,
+use futures::{
+    future::{self, try_join_all},
+    try_join, Stream, TryFutureExt, TryStreamExt,
 };
 use maplit::{hashmap, hashset};
 use mononoke_types::{FileType, MPath};
@@ -297,7 +295,7 @@ pub fn bonsai_diff<ManifestId, FileId, Store>(
     store: Store,
     node: ManifestId,
     parents: HashSet<ManifestId>,
-) -> impl Stream<Item = BonsaiDiffFileChange<FileId>, Error = Error>
+) -> impl Stream<Item = Result<BonsaiDiffFileChange<FileId>, Error>>
 where
     FileId: Hash + Eq + Send + Sync + 'static,
     ManifestId: Hash + Eq + StoreLoadable<Store> + Send + Sync + 'static,
@@ -312,18 +310,14 @@ where
         cloned!(ctx, store);
         async move { recurse_trees(ctx, &store, None, Some(node), parents).await }
     }
-    .boxed()
-    .compat()
-    .map(|seed| {
-        bounded_traversal_stream(256, seed, move |(path, (node, parents))| {
+    .map_ok(|seed| {
+        bounded_traversal::bounded_traversal_stream(256, seed, move |(path, (node, parents))| {
             cloned!(ctx, store);
             async move { bonsai_diff_unfold(ctx, &store, path, node, parents).await }
-                .boxed()
-                .compat()
         })
     })
-    .flatten_stream()
-    .filter_map(|e| e)
+    .try_flatten_stream()
+    .try_filter_map(future::ok)
 }
 
 #[cfg(test)]

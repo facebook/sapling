@@ -11,7 +11,7 @@ use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{FutureExt, TryFutureExt};
+use futures::{FutureExt, TryFutureExt, TryStreamExt};
 use futures_old::future::{err, ok, Future};
 use futures_old::stream::Stream;
 use manifest::ManifestOps;
@@ -38,6 +38,7 @@ fn get_all_files_in_working_copy(
                 hg_cs
                     .manifestid()
                     .list_leaf_entries(ctx, repo.get_blobstore())
+                    .compat()
                     .map(|(mpath, _)| mpath)
                     .collect()
             }

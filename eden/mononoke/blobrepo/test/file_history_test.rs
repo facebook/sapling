@@ -99,7 +99,6 @@ async fn assert_linknodes(
         .manifestid();
     let (_, files_hg_id) = root_mf_id
         .find_entry(ctx.clone(), repo.get_blobstore(), Some(path.clone()))
-        .compat()
         .await?
         .ok_or_else(|| anyhow!("entry not found"))?
         .into_leaf()

@@ -166,7 +166,9 @@ pub async fn gitimport(
                     ctx.clone(),
                     repo.get_blobstore().boxed(),
                     pool.clone(),
-                    bonsai_diff(ctx.clone(), pool.clone(), tree, parent_trees),
+                    bonsai_diff(ctx.clone(), pool.clone(), tree, parent_trees)
+                        .boxed()
+                        .compat(),
                 )
                 .compat(),
             )

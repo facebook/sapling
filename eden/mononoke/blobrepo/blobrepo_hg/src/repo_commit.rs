@@ -10,9 +10,8 @@ use anyhow::{format_err, Context, Error, Result};
 use cloned::cloned;
 use failure_ext::{Compat, FutureFailureErrorExt, StreamFailureErrorExt};
 use futures::{
-    compat::Stream01CompatExt,
     future::{FutureExt, TryFutureExt},
-    stream::{self, TryStreamExt},
+    stream::{self, StreamExt, TryStreamExt},
 };
 use futures_ext::{
     BoxFuture as OldBoxFuture, BoxStream as OldBoxStream, FutureExt as OldFutureExt,
@@ -305,6 +304,8 @@ impl UploadEntries {
                 mf_id,
                 parent_manifest_ids,
             )
+            .boxed()
+            .compat()
             .map({
                 cloned!(ctx);
                 move |(path, entry)| {
@@ -618,7 +619,6 @@ pub async fn check_case_conflicts(
             // We don't have a parent, just check for internal case conflicts here.
             let paths = child_root_mf
                 .list_leaf_entries(ctx.clone(), repo.get_blobstore())
-                .compat()
                 .map_ok(|(path, _)| path)
                 .try_collect::<Vec<_>>()
                 .await
@@ -635,10 +635,7 @@ pub async fn check_case_conflicts(
     let mut added = Vec::new();
     let mut deleted = HashSet::new();
 
-    let mut diff = parent_root_mf
-        .diff(ctx.clone(), repo.get_blobstore(), child_root_mf)
-        .compat();
-
+    let mut diff = parent_root_mf.diff(ctx.clone(), repo.get_blobstore(), child_root_mf);
     while let Some(diff) = diff
         .try_next()
         .await
@@ -654,7 +651,6 @@ pub async fn check_case_conflicts(
             _ => {}
         };
     }
-
 
     // Check if there any conflicts internal to the change being landed. Past this point, the
     // conflicts we'll report are external (i.e. they are dependent on the parent commit).
@@ -721,7 +717,6 @@ pub async fn check_case_conflicts(
     if let Some((child, parent)) = mononoke_types::check_case_conflicts(files) {
         return Err(ErrorKind::ExternalCaseConflict(child, parent).into());
     }
-
 
     Ok(())
 }

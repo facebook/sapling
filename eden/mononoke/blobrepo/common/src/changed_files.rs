@@ -10,7 +10,6 @@ use blobrepo::BlobRepo;
 use cloned::cloned;
 use context::CoreContext;
 use futures::{
-    compat::Stream01CompatExt,
     future::{FutureExt, TryFutureExt},
     stream::{StreamExt, TryStreamExt},
 };
@@ -38,6 +37,7 @@ pub fn compute_changed_files(
     match (p1, p2) {
         (None, None) => root
             .list_leaf_entries(ctx, repo.get_blobstore())
+            .compat()
             .map(|(path, _)| path)
             .collect_to()
             .boxify(),
@@ -94,6 +94,7 @@ fn compute_changed_files_pair(
     repo: BlobRepo,
 ) -> OldBoxFuture<HashSet<MPath>, Error> {
     from.diff(ctx, repo.get_blobstore(), to)
+        .compat()
         .filter_map(|diff| {
             let (path, entry) = match diff {
                 Diff::Added(path, entry) | Diff::Removed(path, entry) => (path, entry),
@@ -140,12 +141,10 @@ async fn compute_files_with_status(
     let s = match parent {
         Some(parent) => parent
             .diff(ctx.clone(), repo.get_blobstore(), child)
-            .compat()
             .left_stream(),
         None => child
             .list_all_entries(ctx.clone(), repo.get_blobstore())
-            .map(|(path, entry)| Diff::Added(path, entry))
-            .compat()
+            .map_ok(|(path, entry)| Diff::Added(path, entry))
             .right_stream(),
     };
 

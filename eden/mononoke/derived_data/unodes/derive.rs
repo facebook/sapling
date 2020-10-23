@@ -402,7 +402,9 @@ mod tests {
     use derived_data_filenodes::FilenodesOnlyPublic;
     use fbinit::FacebookInit;
     use fixtures::linear;
-    use futures::{compat::Future01CompatExt, FutureExt as NewFutureExt, TryFutureExt};
+    use futures::{
+        compat::Future01CompatExt, FutureExt as NewFutureExt, TryFutureExt, TryStreamExt,
+    };
     use futures_old::Stream;
     use manifest::ManifestOps;
     use maplit::btreemap;
@@ -658,7 +660,7 @@ mod tests {
                         .compat()
                         .await?;
 
-                let mut p1_unodes = p1_root_unode_mf_id
+                let mut p1_unodes: Vec<_> = p1_root_unode_mf_id
                     .manifest_unode_id()
                     .find_entries(
                         ctx.clone(),
@@ -666,8 +668,7 @@ mod tests {
                         vec![Some(MPath::new(&merged_files)?), Some(MPath::new("dir")?)],
                         // Some(MPath::new(&merged_files)?),
                     )
-                    .collect()
-                    .compat()
+                    .try_collect()
                     .await?;
                 p1_unodes.sort_by_key(|(path, _)| path.clone());
 
@@ -676,15 +677,14 @@ mod tests {
                         .compat()
                         .await?;
 
-                let mut merge_unodes = merge_root_unode_mf_id
+                let mut merge_unodes: Vec<_> = merge_root_unode_mf_id
                     .manifest_unode_id()
                     .find_entries(
                         ctx.clone(),
                         repo.get_blobstore(),
                         vec![Some(MPath::new(&merged_files)?), Some(MPath::new("dir")?)],
                     )
-                    .collect()
-                    .compat()
+                    .try_collect()
                     .await?;
                 merge_unodes.sort_by_key(|(path, _)| path.clone());
 

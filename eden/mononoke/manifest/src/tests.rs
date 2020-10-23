@@ -15,7 +15,6 @@ use bounded_traversal::bounded_traversal_stream;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
     future::{self, BoxFuture, FutureExt, TryFutureExt},
     stream::TryStreamExt,
 };
@@ -517,7 +516,6 @@ async fn test_find_entries(fb: FacebookInit) -> Result<(), Error> {
 
         let results: Vec<_> = mf0
             .find_entries(ctx.clone(), blobstore.clone(), paths)
-            .compat()
             .try_collect()
             .await?;
 
@@ -544,7 +542,6 @@ async fn test_find_entries(fb: FacebookInit) -> Result<(), Error> {
 
         let results: Vec<_> = mf0
             .find_entries(ctx.clone(), blobstore.clone(), paths)
-            .compat()
             .try_collect()
             .await?;
 
@@ -574,10 +571,7 @@ async fn test_find_entries(fb: FacebookInit) -> Result<(), Error> {
 
     // find entry
     {
-        let mf_root = mf0
-            .find_entry(ctx.clone(), blobstore.clone(), None)
-            .compat()
-            .await?;
+        let mf_root = mf0.find_entry(ctx.clone(), blobstore.clone(), None).await?;
         assert_eq!(mf_root, Some(Entry::Tree(mf0)));
 
         let paths = make_paths(&[
@@ -594,7 +588,6 @@ async fn test_find_entries(fb: FacebookInit) -> Result<(), Error> {
         for path in paths {
             let entry = mf0
                 .find_entry(ctx.clone(), blobstore.clone(), path.clone())
-                .compat()
                 .await?;
             match entry {
                 Some(Entry::Tree(_)) => {
@@ -658,7 +651,6 @@ async fn test_diff(fb: FacebookInit) -> Result<(), Error> {
 
     let diffs: Vec<_> = mf0
         .diff(ctx.clone(), blobstore.clone(), mf1)
-        .compat()
         .try_collect()
         .await?;
 
@@ -730,7 +722,6 @@ async fn test_diff(fb: FacebookInit) -> Result<(), Error> {
                 &Some(badpath) != path
             },
         )
-        .compat()
         .try_collect()
         .await?;
 
@@ -822,7 +813,6 @@ async fn test_find_intersection_of_diffs(fb: FacebookInit) -> Result<(), Error> 
 
     let intersection: Vec<_> =
         find_intersection_of_diffs(ctx.clone(), blobstore.clone(), mf0, vec![mf0])
-            .compat()
             .try_collect()
             .await?;
 
@@ -830,7 +820,6 @@ async fn test_find_intersection_of_diffs(fb: FacebookInit) -> Result<(), Error> 
 
     let intersection: Vec<_> =
         find_intersection_of_diffs(ctx.clone(), blobstore.clone(), mf1, vec![mf0])
-            .compat()
             .try_collect()
             .await?;
 
@@ -851,7 +840,6 @@ async fn test_find_intersection_of_diffs(fb: FacebookInit) -> Result<(), Error> 
 
     // Diff against two manifests
     let intersection: Vec<_> = find_intersection_of_diffs(ctx, blobstore, mf1, vec![mf0, mf2])
-        .compat()
         .try_collect()
         .await?;
 

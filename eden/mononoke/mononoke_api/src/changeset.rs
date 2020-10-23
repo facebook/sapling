@@ -20,7 +20,7 @@ use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fsnodes::RootFsnodeId;
-use futures::compat::{Future01CompatExt, Stream01CompatExt};
+use futures::compat::Future01CompatExt;
 use futures::future::{self, try_join, try_join_all, FutureExt, Shared};
 use futures::stream::{self, Stream, StreamExt, TryStreamExt};
 use manifest::{Diff as ManifestDiff, Entry as ManifestEntry, ManifestOps, PathOrPrefix};
@@ -222,7 +222,6 @@ impl ChangesetContext {
                 self.repo().blob_repo().get_blobstore(),
                 paths.map(|path| path.into_mpath()),
             )
-            .compat()
             .map_ok({
                 let changeset = self.clone();
                 move |(mpath, entry)| {
@@ -419,7 +418,6 @@ impl ChangesetContext {
                     self.repo().blob_repo().get_blobstore(),
                     copy_path_map.keys().cloned().cloned(),
                 )
-                .compat()
                 .try_filter_map(|(maybe_from_path, entry)| async move {
                     Ok(maybe_from_path.map(|from_path| (from_path, entry)))
                 })
@@ -453,7 +451,6 @@ impl ChangesetContext {
                 self.repo().blob_repo().get_blobstore(),
                 copy_path_map.keys().cloned().cloned(),
             )
-            .compat()
             .try_filter_map(|(maybe_from_path, _)| async move { Ok(maybe_from_path) })
             .try_collect::<HashSet<_>>()
             .await?;
@@ -482,7 +479,6 @@ impl ChangesetContext {
                     }
                 },
             )
-            .compat()
             .try_filter_map(|diff_entry| {
                 future::ok(match diff_entry {
                     ManifestDiff::Added(Some(path), entry @ ManifestEntry::Leaf(_)) => {
@@ -658,7 +654,6 @@ impl ChangesetContext {
                 self.repo().blob_repo().get_blobstore(),
                 prefixes,
             )
-            .compat()
             .try_filter_map(|(path, entry)| async move {
                 match (path, entry) {
                     (Some(mpath), ManifestEntry::Leaf(_)) => Ok(Some(mpath)),

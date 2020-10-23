@@ -14,7 +14,7 @@ use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::{compat::Future01CompatExt, future::TryFutureExt};
+use futures::{compat::Future01CompatExt, StreamExt, TryFutureExt, TryStreamExt};
 use futures_ext::FutureExt;
 use futures_old::prelude::*;
 use manifest::{bonsai_diff, BonsaiDiffFileChange};
@@ -228,6 +228,8 @@ fn hg_manifest_diff(
         left,
         Some(right).into_iter().collect(),
     )
+    .boxed()
+    .compat()
     .collect()
     .map(|diffs| {
         let diff = diffs.into_iter().fold(

@@ -20,7 +20,7 @@ use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
 use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
+    compat::Future01CompatExt,
     future::{ready, try_join, FutureExt, TryFutureExt},
     StreamExt, TryStreamExt,
 };
@@ -141,10 +141,8 @@ pub async fn subcommand_blame<'a>(
             let mut paths = derived_unode
                 .manifest_unode_id()
                 .list_leaf_entries(ctx.clone(), repo.get_blobstore())
-                .compat()
-                .map_ok(|(path, file_unode_id)| (path, BlameId::from(file_unode_id)))
-                .map_ok(|(path, blame_id)| {
-                    blame_id
+                .map_ok(|(path, file_unode_id)| {
+                    BlameId::from(file_unode_id)
                         .load(ctx.clone(), repo.blobstore())
                         .map_ok(move |blame_maybe_rejected| (path, blame_maybe_rejected))
                         .map_err(Error::from)
@@ -228,6 +226,7 @@ fn find_leaf(
                     .manifest_unode_id()
                     .clone()
                     .find_entry(ctx, blobstore, Some(path))
+                    .compat()
             }
         })
         .and_then({

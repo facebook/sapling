@@ -22,7 +22,7 @@ use futures::{
     compat::Future01CompatExt,
     future::{FutureExt as PreviewFutureExt, TryFutureExt},
     stream::{self as new_stream, StreamExt as NewStreamExt},
-    try_join,
+    try_join, TryStreamExt,
 };
 use manifest::{Entry, ManifestOps};
 use mercurial_types::{FileType, HgFileNodeId, HgManifestId};
@@ -315,6 +315,7 @@ pub fn list_all_filenode_ids(
     );
     mf_id
         .list_all_entries(ctx.clone(), repo.get_blobstore())
+        .compat()
         .filter_map(move |(path, entry)| {
             match entry {
                 Entry::Leaf(leaf_payload) => {

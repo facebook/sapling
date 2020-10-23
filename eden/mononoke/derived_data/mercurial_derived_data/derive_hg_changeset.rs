@@ -16,6 +16,7 @@ use derived_data::{BonsaiDerived, DeriveError};
 use futures::{
     compat::Future01CompatExt,
     future::{try_join_all, TryFutureExt},
+    TryStreamExt,
 };
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt, StreamExt};
 use futures_old::{future, stream, Future, IntoFuture, Stream};
@@ -217,6 +218,7 @@ pub fn get_manifest_from_bonsai(
             None => future::ok(HashMap::new()).right_future(),
             Some(manifest_id) => manifest_id
                 .find_entries(ctx.clone(), blobstore.clone(), paths)
+                .compat()
                 .filter_map(|(path, entry)| Some((path?, entry.into_leaf()?.1)))
                 .collect_to::<HashMap<MPath, HgFileNodeId>>()
                 .left_future(),

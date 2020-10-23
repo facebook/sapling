@@ -673,15 +673,12 @@ async fn find_bonsai_diff(
     )
     .await?;
 
-    let stream = bonsai_diff(
+    Ok(bonsai_diff(
         ctx.clone(),
         repo.get_blobstore(),
         d_mf,
         Some(a_mf).into_iter().collect(),
-    )
-    .compat();
-
-    Ok(stream)
+    ))
 }
 
 async fn id_to_manifestid(
@@ -1158,6 +1155,7 @@ async fn generate_additional_bonsai_file_changes(
             let mfid = id_to_manifestid(ctx, repo, *p).await?;
             let stale = mfid
                 .find_entries(ctx.clone(), repo.get_blobstore(), paths)
+                .compat()
                 .filter_map(|(path, _)| path)
                 .collect_to::<HashSet<_>>()
                 .compat()
@@ -2331,7 +2329,6 @@ mod tests {
             let root_1_id = root_cs
                 .manifestid()
                 .find_entry(ctx.clone(), repo.get_blobstore(), Some(path_1.clone()))
-                .compat()
                 .await?
                 .and_then(|entry| Some(entry.into_leaf()?.1))
                 .ok_or(Error::msg("path_1 missing in manifest"))?;
@@ -2397,7 +2394,6 @@ mod tests {
             let result_1_id = result_cs
                 .manifestid()
                 .find_entry(ctx.clone(), repo.get_blobstore(), Some(path_1.clone()))
-                .compat()
                 .await?
                 .and_then(|entry| Some(entry.into_leaf()?.1))
                 .ok_or(Error::msg("path_1 missing in manifest"))?;
@@ -3549,7 +3545,6 @@ mod tests {
         let entries = cs
             .manifestid()
             .list_all_entries(ctx.clone(), repo.get_blobstore())
-            .compat()
             .try_collect::<Vec<_>>()
             .await?;
 

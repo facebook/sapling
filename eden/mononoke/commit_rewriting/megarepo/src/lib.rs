@@ -13,10 +13,7 @@ use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use context::CoreContext;
-use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
-    future, Stream, TryStreamExt,
-};
+use futures::{compat::Future01CompatExt, future, Stream, TryStreamExt};
 use itertools::Itertools;
 use manifest::ManifestOps;
 use mercurial_types::{
@@ -57,7 +54,6 @@ fn get_all_file_moves<'a>(
     hg_cs
         .manifestid()
         .list_leaf_entries(ctx.clone(), repo.get_blobstore())
-        .compat()
         .try_filter_map(move |(old_path, (file_type, filenode_id))| async move {
             let maybe_new_path = path_converter(&old_path).unwrap();
             if Some(&old_path) == maybe_new_path.as_ref() {
@@ -229,8 +225,7 @@ mod test {
     use cloned::cloned;
     use fbinit::FacebookInit;
     use fixtures::{linear, many_files_dirs};
-    use futures::{compat::Future01CompatExt, future::TryFutureExt};
-    use futures_old::{stream::Stream, Future};
+    use futures::{compat::Future01CompatExt, FutureExt};
     use maplit::btreemap;
     use mercurial_types::HgChangesetId;
     use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, DateTime};
@@ -418,17 +413,12 @@ mod test {
                 move |(path, (file_type, filenode_id))| {
                     filenode_id
                         .load(ctx.clone(), repo.blobstore())
-                        .compat()
-                        .from_err()
-                        .map(move |env| (path, (file_type, env.content_id())))
+                        .map(move |env| Ok((path, (file_type, env?.content_id()))))
                 }
             })
-            .collect()
-            .compat()
+            .try_collect()
             .await
             .unwrap()
-            .into_iter()
-            .collect()
     }
 
     #[fbinit::test]
@@ -502,7 +492,6 @@ mod test {
         let leaf_entries = last_hg_cs
             .manifestid()
             .list_leaf_entries(ctx.clone(), repo.get_blobstore())
-            .compat()
             .try_collect::<Vec<_>>()
             .await?;
 

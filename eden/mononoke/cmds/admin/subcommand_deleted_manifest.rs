@@ -18,7 +18,7 @@ use context::CoreContext;
 use deleted_files_manifest::{find_entries, list_all_entries, RootDeletedManifestId};
 use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
-use futures::{compat::Future01CompatExt, future::TryFutureExt};
+use futures::{compat::Future01CompatExt, TryFutureExt, TryStreamExt};
 use futures_ext::FutureExt;
 use futures_old::{future::err, stream::futures_unordered, Future, IntoFuture, Stream};
 use manifest::{get_implicit_deletes, PathOrPrefix};
@@ -221,6 +221,7 @@ fn get_file_changes(
                     paths_added.clone(),
                     parent_manifests,
                 )
+                .compat()
                 .collect()
                 .map(move |paths_deleted| (paths_added, paths_deleted))
             },

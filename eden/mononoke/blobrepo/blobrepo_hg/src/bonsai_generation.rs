@@ -10,7 +10,7 @@ use std::collections::BTreeMap;
 use anyhow::{Context, Error, Result};
 use cloned::cloned;
 use failure_ext::FutureFailureErrorExt;
-use futures::future::TryFutureExt;
+use futures::{StreamExt, TryFutureExt, TryStreamExt};
 use futures_ext::{try_boxfuture, FutureExt};
 use futures_old::future::{join_all, Future};
 use futures_old::{IntoFuture, Stream};
@@ -106,6 +106,8 @@ fn find_file_changes(
         cs.manifestid(),
         parent_manifests.iter().cloned().collect(),
     )
+    .boxed()
+    .compat()
     .map(move |changed_file| {
         match changed_file {
             BonsaiDiffFileChange::Changed(path, ty, entry_id) => {
@@ -209,6 +211,7 @@ fn get_copy_info(
                                     repo.get_blobstore(),
                                     Some(repopath.clone()),
                                 )
+                                .compat()
                                 .map(move |entry| {
                                     if entry?.into_leaf()?.1 == copyfromnode {
                                         Some(bonsai_parent)

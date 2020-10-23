@@ -17,7 +17,7 @@ use context::CoreContext;
 use failure_ext::FutureFailureErrorExt;
 use fbinit::FacebookInit;
 use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
+    compat::Future01CompatExt,
     future::{FutureExt as NewFutureExt, TryFutureExt},
     stream::{StreamExt, TryStreamExt},
 };
@@ -134,7 +134,6 @@ async fn find_files_with_given_content_id_blobstore_keys<'a>(
     let manifest_id = cs.manifestid();
     let mut s = manifest_id
         .list_leaf_entries(ctx.clone(), repo.get_blobstore())
-        .compat()
         .map_ok(|(full_path, (_, filenode_id))| async move {
             let env = filenode_id.load(ctx.clone(), repo.blobstore()).await?;
             Result::<_, Error>::Ok((env.content_id(), full_path))
@@ -142,7 +141,7 @@ async fn find_files_with_given_content_id_blobstore_keys<'a>(
         .try_buffer_unordered(100);
 
     let mut paths_and_content_ids = vec![];
-    let mut processed_files_count = 0;
+    let mut processed_files_count = 0usize;
     while let Some(key_and_path) = s.next().await {
         let (key, full_path) = key_and_path?;
         processed_files_count += 1;

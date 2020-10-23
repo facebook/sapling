@@ -255,7 +255,6 @@ impl ValidationHelper {
             ChangedTo(new_file_type, new_filenode_id) => {
                 let maybe_entry_in_p1 = p1_root_mf_id
                     .find_entry(ctx.clone(), repo.blobstore().clone(), Some(mpath.clone()))
-                    .compat()
                     .await?;
 
                 let (p1_file_type, p1_filenode_id) = match maybe_entry_in_p1 {
@@ -562,7 +561,6 @@ impl ValidationHelpers {
 
         let r: Vec<Result<_, Error>> = p1_root_mf_id
             .diff(ctx, repo.get_blobstore(), cs_root_mf_id)
-            .compat()
             .filter_map(|diff| async move { diff.map(FilenodeDiff::from_diff).transpose() })
             .collect()
             .await;

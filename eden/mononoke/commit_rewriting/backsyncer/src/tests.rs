@@ -24,6 +24,7 @@ use fixtures::linear;
 use futures::{
     compat::Future01CompatExt,
     future::{FutureExt, TryFutureExt},
+    TryStreamExt,
 };
 use futures_ext::spawn_future;
 use futures_old::{future, stream::Stream as OldStream};
@@ -718,8 +719,7 @@ async fn list_content(
     let entries = cs
         .manifestid()
         .list_all_entries(ctx.clone(), repo.get_blobstore())
-        .collect()
-        .compat()
+        .try_collect::<Vec<_>>()
         .await?;
 
     let mut actual = HashMap::new();

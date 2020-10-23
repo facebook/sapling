@@ -109,6 +109,7 @@ fn fetch_blame_if_derived(
                     .manifest_unode_id()
                     .clone()
                     .find_entry(ctx, blobstore, Some(path))
+                    .compat()
             }
         })
         .from_err()

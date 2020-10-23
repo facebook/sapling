@@ -12,7 +12,7 @@ use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use cloned::cloned;
 use cmdlib::helpers;
 use context::CoreContext;
-use futures::future::TryFutureExt;
+use futures::{TryFutureExt, TryStreamExt};
 use futures_ext::{FutureExt, StreamExt};
 use futures_old::{
     future::{self, Future},
@@ -111,6 +111,7 @@ pub fn get_file_nodes(
             move |root_mf_id| {
                 root_mf_id
                     .find_entries(ctx, repo.get_blobstore(), paths.clone())
+                    .compat()
                     .filter_map(|(path, entry)| Some((path?, entry.into_leaf()?.1)))
                     .collect_to::<HashMap<_, _>>()
                     .map(move |manifest_entries| {

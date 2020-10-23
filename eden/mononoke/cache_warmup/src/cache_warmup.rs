@@ -100,7 +100,6 @@ async fn blobstore_and_filenodes_warmup(
     let null_linknodes = cs
         .manifestid()
         .list_all_entries(ctx.clone(), repo.get_blobstore())
-        .compat()
         .try_filter_map(|(path, entry)| {
             let item = match entry {
                 Entry::Leaf(_) => None,
