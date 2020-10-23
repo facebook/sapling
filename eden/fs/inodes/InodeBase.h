@@ -94,6 +94,19 @@ class InodeBase {
   }
 
   /**
+   * Get an InodePtr to ourself.
+   *
+   * This uses InodePtr::newPtrFromExisting() internally.
+   *
+   * This should only be called in contexts where we know an external caller
+   * already has an existing reference to us.  (Which is most places--a caller
+   * has to have a reference to us in order to call any of our APIs.)
+   */
+  InodePtr inodePtrFromThis() {
+    return InodePtr::newPtrFromExisting(this);
+  }
+
+  /**
    * Get the EdenMount that this inode belongs to
    *
    * The EdenMount is guaranteed to remain valid for at least the lifetime of

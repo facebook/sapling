@@ -44,16 +44,18 @@ const char* InodeError::what() const noexcept {
 
 std::string InodeError::computeMessage() const {
   std::string path;
-  if (child_.has_value()) {
-    if (inode_->getNodeId() == kRootNodeId) {
-      path = child_.value().stringPiece().str();
+  if (inode_) {
+    if (child_.has_value()) {
+      if (inode_->getNodeId() == kRootNodeId) {
+        path = child_.value().stringPiece().str();
+      } else {
+        path = inode_->getLogPath() + "/";
+        auto childName = child_.value().stringPiece();
+        path.append(childName.begin(), childName.end());
+      }
     } else {
-      path = inode_->getLogPath() + "/";
-      auto childName = child_.value().stringPiece();
-      path.append(childName.begin(), childName.end());
+      path = inode_->getLogPath();
     }
-  } else {
-    path = inode_->getLogPath();
   }
 
   if (message_.empty()) {

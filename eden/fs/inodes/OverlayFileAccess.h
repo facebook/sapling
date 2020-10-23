@@ -12,6 +12,7 @@
 #include <folly/container/EvictingCacheMap.h>
 #include <memory>
 #include "eden/fs/inodes/InodeNumber.h"
+#include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/inodes/OverlayFile.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/utils/BufVec.h"
@@ -63,6 +64,7 @@ class OverlayFileAccess {
    * data has been corrupted.
    */
   off_t getFileSize(FileInode& inode);
+  off_t getFileSize(InodeNumber ino, InodeBase* inode);
 
   /**
    * Returns the SHA-1 hash of the file contents for the given inode number.

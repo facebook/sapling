@@ -75,7 +75,11 @@ void OverlayFileAccess::createFile(
 }
 
 off_t OverlayFileAccess::getFileSize(FileInode& inode) {
-  auto entry = getEntryForInode(inode.getNodeId());
+  return getFileSize(inode.getNodeId(), &inode);
+}
+
+off_t OverlayFileAccess::getFileSize(InodeNumber ino, InodeBase* inode) {
+  auto entry = getEntryForInode(ino);
   uint64_t version;
   {
     auto info = entry->info.rlock();
@@ -90,16 +94,21 @@ off_t OverlayFileAccess::getFileSize(FileInode& inode) {
   auto ret = entry->file.fstat();
   if (ret.hasError()) {
     throw InodeError(
-        ret.error(), inode.inodePtrFromThis(), "unable to fstat overlay file");
+        ret.error(),
+        inode ? inode->inodePtrFromThis() : InodePtr{},
+        "unable to fstat overlay file");
   }
   auto st = ret.value();
   if (st.st_size < static_cast<off_t>(FsOverlay::kHeaderLength)) {
     // Truncated overlay files can sometimes occur after a hard reboot
     // where the overlay file data was not flushed to disk before the
     // system powered off.
-    XLOG(ERR) << "overlay file for " << inode.getNodeId()
+    XLOG(ERR) << "overlay file for " << ino
               << " is too short for header: size=" << st.st_size;
-    throw InodeError(EIO, inode.inodePtrFromThis(), "corrupt overlay file");
+    throw InodeError(
+        EIO,
+        inode ? inode->inodePtrFromThis() : InodePtr{},
+        "corrupt overlay file");
   }
 
   auto size = st.st_size - static_cast<off_t>(FsOverlay::kHeaderLength);
