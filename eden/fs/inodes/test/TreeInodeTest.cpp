@@ -82,6 +82,7 @@ TEST(TreeInode, findEntryDifferencesWithOneAddition) {
 }
 
 #ifdef _WIN32
+
 TEST(TreeInode, readdirTest) {
   FakeTreeBuilder builder;
   builder.setFiles({{"file", ""}});
@@ -137,7 +138,9 @@ TEST(TreeInode, updateAndReaddir) {
   EXPECT_EQ(L"newfile.txt", result[1].name);
   EXPECT_EQ(L"renamedfile.txt", result[2].name);
 }
+
 #else
+
 TEST(TreeInode, readdirReturnsSelfAndParentBeforeEntries) {
   // libfuse's documentation says returning . and .. is optional, but the FUSE
   // kernel module does not synthesize them, so not returning . and .. would be
@@ -354,7 +357,8 @@ TEST(TreeInode, fuzzConcurrentModificationAndReaddir) {
   }
   std::cout << "Ran " << iterations << " iterations" << std::endl;
 }
-#endif
+
+#endif // _WIN32
 
 TEST(TreeInode, create) {
   FakeTreeBuilder builder;
@@ -391,6 +395,7 @@ TEST(TreeInode, createExists) {
 }
 
 #ifndef _WIN32
+
 TEST(TreeInode, createOverlayWriteError) {
   FakeTreeBuilder builder;
   builder.setFile("somedir/foo.txt", "test\n");
@@ -407,4 +412,5 @@ TEST(TreeInode, createOverlayWriteError) {
           "newfile.txt"_pc, S_IFREG | 0600, 0, InvalidationRequired::No),
       ENOSPC);
 }
+
 #endif
