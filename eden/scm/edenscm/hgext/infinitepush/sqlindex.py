@@ -428,7 +428,12 @@ class sqlindex(object):
             return
 
         data = [
-            (bookmark, node, hashlib.sha1(bookmark).hexdigest(), self.reponame)
+            (
+                bookmark,
+                node,
+                hashlib.sha1(pycompat.encodeutf8(bookmark)).hexdigest(),
+                self.reponame,
+            )
             for (bookmark, node) in pycompat.iteritems(bookmarks)
         ]
 
