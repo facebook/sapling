@@ -25,6 +25,7 @@ use mononoke_types::{
     fsnode::FsnodeFile, BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime, FileChange,
     MPath,
 };
+use regex::Regex;
 use slog::{info, Logger};
 use std::{collections::BTreeMap, num::NonZeroU64};
 
@@ -33,8 +34,9 @@ use crate::error::SubcommandError;
 pub const ARG_COMMIT_AUTHOR: &str = "commit-author";
 pub const ARG_COMMIT_MESSAGE: &str = "commit-message";
 pub const ARG_CSID: &str = "csid";
-pub const ARG_LIMIT: &str = "limit";
+pub const ARG_EXCLUDE_FILE_REGEX: &str = "exclude-file-regex";
 pub const ARG_FROM_DIR: &str = "from-dir";
+pub const ARG_LIMIT: &str = "limit";
 pub const ARG_TO_DIR: &str = "to-dir";
 pub const RSYNC: &str = "rsync";
 
@@ -89,6 +91,13 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
                 .takes_value(true)
                 .required(false),
         )
+        .arg(
+            Arg::with_name(ARG_EXCLUDE_FILE_REGEX)
+                .long(ARG_EXCLUDE_FILE_REGEX)
+                .help("exclude files that should not be copied")
+                .takes_value(true)
+                .required(false),
+        )
 }
 
 pub async fn subcommand_rsync<'a>(
@@ -128,6 +137,13 @@ pub async fn subcommand_rsync<'a>(
         .ok_or_else(|| anyhow!("{} arg is not specified", ARG_COMMIT_MESSAGE))?;
 
     let maybe_limit = args::get_and_parse_opt::<NonZeroU64>(sub_matches, ARG_LIMIT);
+
+    let maybe_exclude_file_regex = sub_matches.value_of(ARG_EXCLUDE_FILE_REGEX);
+    let maybe_exclude_file_regex = maybe_exclude_file_regex
+        .map(Regex::new)
+        .transpose()
+        .map_err(Error::from)?;
+
     let result_cs_id = rsync(
         &ctx,
         &repo,
@@ -137,6 +153,7 @@ pub async fn subcommand_rsync<'a>(
         author.to_string(),
         msg.to_string(),
         maybe_limit,
+        maybe_exclude_file_regex,
     )
     .await?;
 
@@ -154,6 +171,7 @@ async fn rsync(
     author: String,
     msg: String,
     maybe_limit: Option<NonZeroU64>,
+    maybe_exclude_file_regex: Option<Regex>,
 ) -> Result<ChangesetId, Error> {
     let (from_entries, to_entries) = try_join(
         list_directory(&ctx, &repo, cs_id, &from_dir),
@@ -165,21 +183,29 @@ async fn rsync(
 
     let mut file_changes = BTreeMap::new();
     for (from_suffix, fsnode_file) in from_entries {
-        if !to_entries.contains_key(&from_suffix) {
-            let from_path = from_dir.join(&from_suffix);
-            let to_path = to_dir.join(&from_suffix);
+        if let Some(ref regex) = maybe_exclude_file_regex {
+            if from_suffix.matches_regex(&regex) {
+                continue;
+            }
+        }
 
-            let file_change = FileChange::new(
-                *fsnode_file.content_id(),
-                *fsnode_file.file_type(),
-                fsnode_file.size(),
-                Some((from_path, cs_id)),
-            );
-            file_changes.insert(to_path, Some(file_change));
-            if let Some(limit) = maybe_limit {
-                if file_changes.len() as u64 >= limit.get() {
-                    break;
-                }
+        if to_entries.contains_key(&from_suffix) {
+            continue;
+        }
+
+        let from_path = from_dir.join(&from_suffix);
+        let to_path = to_dir.join(&from_suffix);
+
+        let file_change = FileChange::new(
+            *fsnode_file.content_id(),
+            *fsnode_file.file_type(),
+            fsnode_file.size(),
+            Some((from_path, cs_id)),
+        );
+        file_changes.insert(to_path, Some(file_change));
+        if let Some(limit) = maybe_limit {
+            if file_changes.len() as u64 >= limit.get() {
+                break;
             }
         }
     }
@@ -311,6 +337,7 @@ mod test {
             "author".to_string(),
             "msg".to_string(),
             None,
+            None,
         )
         .await?;
 
@@ -350,6 +377,7 @@ mod test {
             "author".to_string(),
             "msg".to_string(),
             limit,
+            None,
         )
         .await?;
 
@@ -373,6 +401,7 @@ mod test {
             "author".to_string(),
             "msg".to_string(),
             limit,
+            None,
         )
         .await?;
 
@@ -387,6 +416,49 @@ mod test {
                 MPath::new("dir_to/c")? => "c".to_string(),
             }
         );
+        Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn test_rsync_with_excludes(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = new_memblob_empty(None)?;
+        let cs_id = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("dir_from/BUCK", "buck")
+            .add_file("dir_from/b", "b")
+            .add_file("dir_from/TARGETS", "targets")
+            .add_file("dir_from/subdir/TARGETS", "targets")
+            .add_file("dir_from/c.bzl", "bzl")
+            .add_file("dir_to/a", "dontoverwrite")
+            .commit()
+            .await?;
+
+        let cs_id = rsync(
+            &ctx,
+            &repo,
+            cs_id,
+            MPath::new("dir_from")?,
+            MPath::new("dir_to")?,
+            "author".to_string(),
+            "msg".to_string(),
+            None,
+            Some(Regex::new("(BUCK|.*\\.bzl|TARGETS)$")?),
+        )
+        .await?;
+
+        assert_eq!(
+            list_working_copy_utf8(&ctx, &repo, cs_id,).await?,
+            hashmap! {
+                MPath::new("dir_from/BUCK")? => "buck".to_string(),
+                MPath::new("dir_from/b")? => "b".to_string(),
+                MPath::new("dir_from/TARGETS")? => "targets".to_string(),
+                MPath::new("dir_from/subdir/TARGETS")? => "targets".to_string(),
+                MPath::new("dir_from/c.bzl")? => "bzl".to_string(),
+                MPath::new("dir_to/a")? => "dontoverwrite".to_string(),
+                MPath::new("dir_to/b")? => "b".to_string(),
+            }
+        );
+
         Ok(())
     }
 }
