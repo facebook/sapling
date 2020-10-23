@@ -9,12 +9,10 @@ use anyhow::Error;
 use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use context::CoreContext;
 use futures::{future::BoxFuture, FutureExt, TryFutureExt};
-use futures_ext::FutureExt as _;
-use futures_old::Future as _;
 use mononoke_types::{
     fsnode::{Fsnode, FsnodeEntry, FsnodeFile},
     unode::{ManifestUnode, UnodeEntry},
-    ContentId, FileType, FileUnodeId, FsnodeId, MPath, MPathElement, ManifestUnodeId,
+    FileUnodeId, FsnodeId, MPath, MPathElement, ManifestUnodeId,
 };
 use serde_derive::{Deserialize, Serialize};
 use std::{

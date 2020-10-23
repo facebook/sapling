@@ -9,7 +9,7 @@ pub(crate) use crate::{
     bonsai::BonsaiEntry, derive_manifest, find_intersection_of_diffs, Diff, Entry, Manifest,
     ManifestOps, PathOrPrefix, PathTree, TreeInfo,
 };
-use anyhow::{format_err, Error};
+use anyhow::Error;
 use blobstore::{Blobstore, Loadable, LoadableError, Storable, StoreLoadable};
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -17,16 +17,16 @@ use futures::{
     compat::Future01CompatExt,
     future::{BoxFuture, FutureExt, TryFutureExt},
 };
-use futures_ext::{bounded_traversal::bounded_traversal_stream, FutureExt as _};
-use futures_old::{future, stream, Future, IntoFuture, Stream};
+use futures_ext::bounded_traversal::bounded_traversal_stream;
+use futures_old::{stream, Future, IntoFuture, Stream};
 use lock_ext::LockExt;
-use maplit::{btreemap, hashset};
+use maplit::btreemap;
 use memblob::LazyMemblob;
 use mononoke_types::{BlobstoreBytes, FileType, MPath, MPathElement};
 use pretty_assertions::assert_eq;
 use serde_derive::{Deserialize, Serialize};
 use std::{
-    collections::{hash_map::DefaultHasher, BTreeMap, BTreeSet, HashMap, HashSet},
+    collections::{hash_map::DefaultHasher, BTreeMap, BTreeSet, HashMap},
     hash::{Hash, Hasher},
     iter::FromIterator,
     sync::{Arc, Mutex},
@@ -173,19 +173,19 @@ fn derive_test_manifest(
                         .collect();
                     TestManifestU64(subentries)
                         .store(ctx.clone(), &blobstore)
-                        .compat()
-                        .map(|id| ((), id))
+                        .map_ok(|id| ((), id))
                 }
             },
             move |leaf_info| match leaf_info.leaf {
-                None => future::err(Error::msg("leaf only conflict")).left_future(),
+                None => futures::future::err(Error::msg("leaf only conflict")).left_future(),
                 Some(leaf) => leaf
                     .store(ctx.clone(), &blobstore)
-                    .compat()
-                    .map(|id| ((), id))
+                    .map_ok(|id| ((), id))
                     .right_future(),
             },
         )
+        .boxed()
+        .compat()
     })
 }
 

@@ -8,7 +8,6 @@
 use anyhow::Error;
 use cloned::cloned;
 use context::CoreContext;
-use futures::compat::Future01CompatExt;
 use futures_ext::bounded_traversal::bounded_traversal_stream;
 use futures_old::{Future, Stream};
 use futures_util::{
@@ -334,11 +333,7 @@ mod test {
         ctx, dir, element, file, path, ManifestStore, TestFileId, TestManifestIdStr,
         TestManifestStr,
     };
-    use anyhow::format_err;
     use fbinit::{self, FacebookInit};
-    use futures_ext::{BoxFuture, FutureExt as Futures01FutureExt};
-    use futures_old::IntoFuture;
-    use mononoke_types::MPathElement;
 
     impl<ManifestId, FileId> CompositeEntry<ManifestId, FileId>
     where

@@ -10,9 +10,13 @@ use blobrepo::BlobRepo;
 use blobstore::{Blobstore, Loadable};
 use cloned::cloned;
 use context::CoreContext;
-use futures::future::{self as new_future, FutureExt as NewFutureExt, TryFutureExt};
-use futures_ext::{BoxFuture, FutureExt};
-use futures_old::{future, sync::mpsc, Future};
+use futures::{
+    channel::mpsc,
+    compat::Future01CompatExt,
+    future::{self as new_future, BoxFuture, FutureExt as NewFutureExt, TryFutureExt},
+};
+use futures_ext::{BoxFuture as BoxFutureOld, FutureExt};
+use futures_old::{future, Future};
 use manifest::{derive_manifest_with_io_sender, Entry, LeafInfo, TreeInfo};
 use metaconfig_types::UnodeVersion;
 use mononoke_types::unode::{FileUnode, ManifestUnode, UnodeEntry};
@@ -58,6 +62,7 @@ pub(crate) fn derive_unode_manifest(
                         tree_info,
                         unode_version,
                     )
+                    .compat()
                 }
             },
             {
@@ -71,9 +76,12 @@ pub(crate) fn derive_unode_manifest(
                         leaf_info,
                         unode_version,
                     )
+                    .compat()
                 }
             },
         )
+        .boxed()
+        .compat()
         .and_then({
             cloned!(ctx, blobstore);
             move |maybe_tree_id| match maybe_tree_id {
@@ -114,7 +122,7 @@ fn create_unode_manifest(
     ctx: CoreContext,
     linknode: ChangesetId,
     blobstore: RepoBlobstore,
-    sender: Option<mpsc::UnboundedSender<BoxFuture<(), Error>>>,
+    sender: Option<mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>>,
     tree_info: TreeInfo<ManifestUnodeId, FileUnodeId, ()>,
     unode_version: UnodeVersion,
 ) -> impl Future<Item = ((), ManifestUnodeId), Error = Error> {
@@ -147,7 +155,7 @@ fn create_unode_manifest(
 
         match sender {
             Some(sender) => sender
-                .unbounded_send(f.compat().boxify())
+                .unbounded_send(f.boxed())
                 .map_err(|err| format_err!("failed to send manifest future {}", err))?,
             None => f.await?,
         };
@@ -161,21 +169,21 @@ fn create_unode_file(
     ctx: CoreContext,
     linknode: ChangesetId,
     blobstore: RepoBlobstore,
-    sender: mpsc::UnboundedSender<BoxFuture<(), Error>>,
+    sender: mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>,
     leaf_info: LeafInfo<FileUnodeId, (ContentId, FileType)>,
     unode_version: UnodeVersion,
 ) -> impl Future<Item = ((), FileUnodeId), Error = Error> {
     fn save_unode(
         ctx: CoreContext,
         blobstore: RepoBlobstore,
-        sender: mpsc::UnboundedSender<BoxFuture<(), Error>>,
+        sender: mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>,
         parents: Vec<FileUnodeId>,
         content_id: ContentId,
         file_type: FileType,
         path_hash: MPathHash,
         linknode: ChangesetId,
         unode_version: UnodeVersion,
-    ) -> BoxFuture<FileUnodeId, Error> {
+    ) -> BoxFutureOld<FileUnodeId, Error> {
         async move {
             if unode_version == UnodeVersion::V2 && parents.len() > 1 {
                 if let Some(parent) =
@@ -187,16 +195,16 @@ fn create_unode_file(
             let file_unode = FileUnode::new(parents, content_id, file_type, path_hash, linknode);
             let file_unode_id = file_unode.get_unode_id();
 
-            let f = future::lazy(move || {
+            let f = async move {
                 blobstore
                     .put(
                         ctx,
                         file_unode_id.blobstore_key(),
                         file_unode.into_blob().into(),
                     )
-                    .compat()
-            })
-            .boxify();
+                    .await
+            }
+            .boxed();
 
             sender
                 .unbounded_send(f)
@@ -969,9 +977,13 @@ mod tests {
             &self,
             ctx: CoreContext,
             repo: BlobRepo,
-        ) -> BoxFuture<Vec<UnodeEntry>, Error>;
+        ) -> BoxFutureOld<Vec<UnodeEntry>, Error>;
 
-        fn get_linknode(&self, ctx: CoreContext, repo: BlobRepo) -> BoxFuture<ChangesetId, Error>;
+        fn get_linknode(
+            &self,
+            ctx: CoreContext,
+            repo: BlobRepo,
+        ) -> BoxFutureOld<ChangesetId, Error>;
     }
 
     impl UnodeHistory for UnodeEntry {
@@ -979,7 +991,7 @@ mod tests {
             &self,
             ctx: CoreContext,
             repo: BlobRepo,
-        ) -> BoxFuture<Vec<UnodeEntry>, Error> {
+        ) -> BoxFutureOld<Vec<UnodeEntry>, Error> {
             match self {
                 UnodeEntry::File(file_unode_id) => file_unode_id
                     .load(ctx, repo.blobstore())
@@ -1010,7 +1022,11 @@ mod tests {
             }
         }
 
-        fn get_linknode(&self, ctx: CoreContext, repo: BlobRepo) -> BoxFuture<ChangesetId, Error> {
+        fn get_linknode(
+            &self,
+            ctx: CoreContext,
+            repo: BlobRepo,
+        ) -> BoxFutureOld<ChangesetId, Error> {
             match self {
                 UnodeEntry::File(file_unode_id) => file_unode_id
                     .clone()

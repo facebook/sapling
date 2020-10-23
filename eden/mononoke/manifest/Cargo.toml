@@ -8,11 +8,11 @@ include = ["src/*.rs"]
 
 [dependencies]
 blobstore = { path = "../blobstore" }
+bounded_traversal = { path = "../common/bounded_traversal" }
 context = { path = "../server/context" }
 mononoke_types = { path = "../mononoke_types" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-tracing = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }

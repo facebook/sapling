@@ -12,11 +12,12 @@ use cloned::cloned;
 use context::CoreContext;
 use futures::future::try_join_all;
 use futures::{
+    channel::mpsc,
     compat::Future01CompatExt,
-    future::{FutureExt as Futures02Ext, TryFutureExt},
+    future::{BoxFuture, FutureExt, TryFutureExt},
 };
-use futures_ext::{BoxFuture, FutureExt};
-use futures_old::{future, sync::mpsc, Future, IntoFuture};
+use futures_ext::FutureExt as _;
+use futures_old::{future, Future, IntoFuture};
 use manifest::{derive_manifest_with_io_sender, Entry, LeafInfo, Traced, TreeInfo};
 use mercurial_types::{
     blobs::{
@@ -36,7 +37,7 @@ pub fn derive_hg_manifest(
     ctx: CoreContext,
     blobstore: Arc<dyn Blobstore>,
     parents: impl IntoIterator<Item = HgManifestId>,
-    changes: impl IntoIterator<Item = (MPath, Option<HgBlobEntry>)>,
+    changes: impl IntoIterator<Item = (MPath, Option<HgBlobEntry>)> + 'static,
 ) -> impl Future<Item = HgManifestId, Error = Error> {
     let parents: Vec<_> = parents
         .into_iter()
@@ -52,14 +53,18 @@ pub fn derive_hg_manifest(
         {
             cloned!(ctx, blobstore);
             move |tree_info, sender| {
-                create_hg_manifest(ctx.clone(), blobstore.clone(), Some(sender), tree_info)
+                create_hg_manifest(ctx.clone(), blobstore.clone(), Some(sender), tree_info).compat()
             }
         },
         {
             cloned!(ctx, blobstore);
-            move |leaf_info, _sender| create_hg_file(ctx.clone(), blobstore.clone(), leaf_info)
+            move |leaf_info, _sender| {
+                create_hg_file(ctx.clone(), blobstore.clone(), leaf_info).compat()
+            }
         },
     )
+    .boxed()
+    .compat()
     .and_then(move |tree_id| {
         match tree_id {
             Some(traced_tree_id) => future::ok(traced_tree_id.into_untraced()).left_future(),
@@ -83,7 +88,7 @@ pub fn derive_hg_manifest(
 fn create_hg_manifest(
     ctx: CoreContext,
     blobstore: Arc<dyn Blobstore>,
-    sender: Option<mpsc::UnboundedSender<BoxFuture<(), Error>>>,
+    sender: Option<mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>>,
     tree_info: TreeInfo<
         Traced<ParentIndex, HgManifestId>,
         Traced<ParentIndex, (FileType, HgFileNodeId)>,
@@ -140,7 +145,7 @@ fn create_hg_manifest(
 
     let blobstore_fut = match sender {
         Some(sender) => sender
-            .unbounded_send(upload_fut.boxify())
+            .unbounded_send(upload_fut.compat().boxed())
             .map_err(|err| format_err!("failed to send hg manifest future {}", err))
             .into_future()
             .left_future(),

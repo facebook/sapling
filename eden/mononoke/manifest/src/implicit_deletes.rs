@@ -151,17 +151,11 @@ where
 mod test {
     use super::*;
     use crate::tests::{
-        ctx, dir, element, file, path, BonsaiEntry, ManifestStore, TestFileId, TestManifestIdStr,
-        TestManifestStr,
+        ctx, dir, element, file, path, ManifestStore, TestManifestIdStr, TestManifestStr,
     };
-    use anyhow::format_err;
     use fbinit::{self, FacebookInit};
-    use futures_ext::{BoxFuture, FutureExt as Futures01FutureExt};
-    use futures_old::IntoFuture;
     use futures_util::compat::Future01CompatExt;
     use maplit::hashmap;
-    use mononoke_types::MPathElement;
-    use std::collections::HashMap;
     use std::fmt::Debug;
 
     fn ensure_unordered_eq<T: Debug + Hash + PartialEq + Eq, I: IntoIterator<Item = T>>(
