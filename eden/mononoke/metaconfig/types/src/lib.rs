@@ -1078,12 +1078,45 @@ pub enum CommitSyncDirection {
 
 /// CommitSyncConfig version name
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(mysql::OptTryFromRowField)]
 pub struct CommitSyncConfigVersion(pub String);
 
 impl fmt::Display for CommitSyncConfigVersion {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
     }
+}
+
+impl From<CommitSyncConfigVersion> for Value {
+    fn from(version: CommitSyncConfigVersion) -> Self {
+        Value::Bytes(version.0.into_bytes())
+    }
+}
+
+impl ConvIr<CommitSyncConfigVersion> for CommitSyncConfigVersion {
+    fn new(v: Value) -> Result<Self, FromValueError> {
+        match v {
+            Value::Bytes(bytes) => match String::from_utf8(bytes) {
+                Ok(s) => Ok(CommitSyncConfigVersion(s)),
+                Err(from_utf8_error) => {
+                    Err(FromValueError(Value::Bytes(from_utf8_error.into_bytes())))
+                }
+            },
+            v => Err(FromValueError(v)),
+        }
+    }
+
+    fn commit(self) -> CommitSyncConfigVersion {
+        self
+    }
+
+    fn rollback(self) -> Value {
+        self.into()
+    }
+}
+
+impl FromValue for CommitSyncConfigVersion {
+    type Intermediate = CommitSyncConfigVersion;
 }
 
 /// Commit sync configuration for a large repo

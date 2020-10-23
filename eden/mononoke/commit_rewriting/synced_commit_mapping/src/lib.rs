@@ -74,6 +74,24 @@ impl SyncedCommitMappingEntry {
             version_name,
         }
     }
+
+    fn into_equivalent_working_copy_entry(self) -> EquivalentWorkingCopyEntry {
+        let Self {
+            large_repo_id,
+            large_bcs_id,
+            small_repo_id,
+            small_bcs_id,
+            version_name,
+        } = self;
+
+        EquivalentWorkingCopyEntry {
+            large_repo_id,
+            large_bcs_id,
+            small_repo_id,
+            small_bcs_id: Some(small_bcs_id),
+            version_name,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -194,7 +212,7 @@ queries! {
         large_bcs_id: ChangesetId,
         small_repo_id: RepositoryId,
         small_bcs_id: ChangesetId,
-        sync_map_version_name: Option<String>,
+        sync_map_version_name: Option<CommitSyncConfigVersion>,
     )) {
         insert_or_ignore,
         "{insert_or_ignore} INTO synced_commit_mapping (large_repo_id, large_bcs_id, small_repo_id, small_bcs_id, sync_map_version_name) VALUES {values}"
@@ -204,7 +222,7 @@ queries! {
         source_repo_id: RepositoryId,
         bcs_id: ChangesetId,
         target_repo_id: RepositoryId,
-    ) -> (RepositoryId, ChangesetId, RepositoryId, ChangesetId, Option<String>) {
+    ) -> (RepositoryId, ChangesetId, RepositoryId, ChangesetId, Option<CommitSyncConfigVersion>) {
         "SELECT large_repo_id, large_bcs_id, small_repo_id, small_bcs_id, sync_map_version_name
          FROM synced_commit_mapping
          WHERE (large_repo_id = {source_repo_id} AND large_bcs_id = {bcs_id} AND small_repo_id = {target_repo_id}) OR
@@ -216,7 +234,7 @@ queries! {
         large_bcs_id: ChangesetId,
         small_repo_id: RepositoryId,
         small_bcs_id: Option<ChangesetId>,
-        sync_map_version_name: Option<String>,
+        sync_map_version_name: Option<CommitSyncConfigVersion>,
     )) {
         insert_or_ignore,
         "{insert_or_ignore}
@@ -229,7 +247,7 @@ queries! {
         source_repo_id: RepositoryId,
         bcs_id: ChangesetId,
         target_repo_id: RepositoryId,
-    ) -> (RepositoryId, ChangesetId, RepositoryId, Option<ChangesetId>, Option<String>) {
+    ) -> (RepositoryId, ChangesetId, RepositoryId, Option<ChangesetId>, Option<CommitSyncConfigVersion>) {
         "SELECT large_repo_id, large_bcs_id, small_repo_id, small_bcs_id, sync_map_version_name
          FROM synced_working_copy_equivalence
          WHERE (large_repo_id = {source_repo_id} AND small_repo_id = {target_repo_id} AND large_bcs_id = {bcs_id})
@@ -322,25 +340,19 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
         })
         .map(move |rows| {
             let v: Vec<_> = rows
-                .iter()
+                .into_iter()
                 .map(|row| {
                     let (
                         large_repo_id,
                         large_bcs_id,
                         _small_repo_id,
                         small_bcs_id,
-                        ref version_name,
+                        maybe_version_name,
                     ) = row;
-                    let maybe_version_name: Option<CommitSyncConfigVersion> = match version_name {
-                        Some(version_name) => {
-                            Some(CommitSyncConfigVersion(version_name.to_owned()))
-                        }
-                        None => None,
-                    };
-                    if target_repo_id == *large_repo_id {
-                        (*large_bcs_id, maybe_version_name)
+                    if target_repo_id == large_repo_id {
+                        (large_bcs_id, maybe_version_name)
                     } else {
-                        (*small_bcs_id, maybe_version_name)
+                        (small_bcs_id, maybe_version_name)
                     }
                 })
                 .collect();
@@ -374,7 +386,7 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
                 &large_bcs_id,
                 &small_repo_id,
                 &small_bcs_id,
-                &version_name.map(|vn| vn.0),
+                &version_name,
             )],
         )
         .and_then(move |result| {
@@ -459,17 +471,15 @@ impl SyncedCommitMapping for SqlSyncedCommitMapping {
                     if target_repo_id == large_repo_id {
                         Some(WorkingCopyEquivalence::WorkingCopy(
                             large_bcs_id,
-                            maybe_mapping.map(CommitSyncConfigVersion),
+                            maybe_mapping,
                         ))
                     } else {
                         match maybe_small_bcs_id {
                             Some(small_bcs_id) => Some(WorkingCopyEquivalence::WorkingCopy(
                                 small_bcs_id,
-                                maybe_mapping.map(CommitSyncConfigVersion),
+                                maybe_mapping,
                             )),
-                            None => Some(WorkingCopyEquivalence::NoWorkingCopy(
-                                maybe_mapping.map(CommitSyncConfigVersion),
-                            )),
+                            None => Some(WorkingCopyEquivalence::NoWorkingCopy(maybe_mapping)),
                         }
                     }
                 }
@@ -486,71 +496,39 @@ pub fn add_many_in_txn(
 ) -> impl Future<Item = (Transaction, u64), Error = Error> {
     STATS::add_many_in_txn.add_value(1);
 
-    // `unwrapped_entries` is built only to turn `entry.version_name`
-    // (of type `Option<CommitSyncConfigVersion>`) into `entry.version_name.0`
-    // (of type `Option<String>`). We need to do this, so that below we can
-    // get `&Option<String>` for `insert_entries` vec
-    let unwrapped_entries: Vec<_> = entries
-        .into_iter()
+    let insert_entries: Vec<_> = entries
+        .iter()
         .map(|entry| {
             (
-                entry.large_repo_id,
-                entry.large_bcs_id,
-                entry.small_repo_id,
-                entry.small_bcs_id,
-                entry.version_name.map(|vn| vn.0),
+                &entry.large_repo_id,
+                &entry.large_bcs_id,
+                &entry.small_repo_id,
+                &entry.small_bcs_id,
+                &entry.version_name,
             )
         })
         .collect();
 
-    let insert_entries: Vec<_> = unwrapped_entries
-        .iter()
-        .map(
-            |(large_repo_id, large_bcs_id, small_repo_id, small_bcs_id, version_name)| {
-                (
-                    large_repo_id,
-                    large_bcs_id,
-                    small_repo_id,
-                    small_bcs_id,
-                    version_name,
-                )
-            },
-        )
-        .collect();
-
     InsertMapping::query_with_transaction(txn, &insert_entries).and_then(move |(txn, _result)| {
-        // We have to create temp_wce_entries because InsertWorkingCopyEquivalence requires
-        // and array of references.
-        let temp_wce_entries: Vec<_> = unwrapped_entries
-            .iter()
-            .map(
-                |(large_repo_id, large_bcs_id, small_repo_id, small_bcs_id, version_name)| {
-                    (
-                        *large_repo_id,
-                        *large_bcs_id,
-                        *small_repo_id,
-                        Some(*small_bcs_id),
-                        version_name.clone(),
-                    )
-                },
-            )
-            .collect();
-        let wce_entries: Vec<_> = temp_wce_entries
-            .iter()
-            .map(
-                |(large_repo_id, large_bcs_id, small_repo_id, small_bcs_id, version_name)| {
-                    (
-                        large_repo_id,
-                        large_bcs_id,
-                        small_repo_id,
-                        small_bcs_id,
-                        version_name,
-                    )
-                },
-            )
+        let owned_entries: Vec<_> = entries
+            .into_iter()
+            .map(|entry| entry.into_equivalent_working_copy_entry())
             .collect();
 
-        InsertWorkingCopyEquivalence::query_with_transaction(txn, &wce_entries)
+        let ref_entries: Vec<_> = owned_entries
+            .iter()
+            .map(|entry| {
+                (
+                    &entry.large_repo_id,
+                    &entry.large_bcs_id,
+                    &entry.small_repo_id,
+                    &entry.small_bcs_id,
+                    &entry.version_name,
+                )
+            })
+            .collect();
+
+        InsertWorkingCopyEquivalence::query_with_transaction(txn, &ref_entries)
             .map(|(txn, result)| (txn, result.affected_rows()))
     })
 }
