@@ -3455,69 +3455,68 @@ void TreeInode::getDebugStatus(
     vector<TreeInodeDebugInfo>& results,
     const RelativePath& myPath) const {
   TreeInodeDebugInfo info;
-  *info.inodeNumber_ref() = getNodeId().get();
-  *info.refcount_ref() = debugGetFuseRefcount();
-  *info.path_ref() = myPath.stringPiece().str();
+  info.inodeNumber_ref() = getNodeId().get();
+  info.refcount_ref() = debugGetFuseRefcount();
+  info.path_ref() = myPath.stringPiece().str();
 
   vector<std::pair<PathComponent, InodePtr>> childInodes;
   {
     auto contents = contents_.rlock();
 
-    *info.materialized_ref() = contents->isMaterialized();
-    *info.treeHash_ref() = thriftHash(contents->treeHash);
+    info.materialized_ref() = contents->isMaterialized();
+    info.treeHash_ref() = thriftHash(contents->treeHash);
 
-    for (const auto& entry : contents->entries) {
-      if (entry.second.getInode()) {
+    for (const auto& [name, entry] : contents->entries) {
+      if (entry.getInode()) {
         // A child inode exists, so just grab an InodePtr and add it to the
         // childInodes list.  We will process all loaded children after
         // releasing our own contents_ lock (since we need to grab each child
         // Inode's own lock to get its data).
-        childInodes.emplace_back(entry.first, entry.second.getInodePtr());
+        childInodes.emplace_back(name, entry.getInodePtr());
       } else {
         // We can store data about unloaded entries immediately, since we have
         // the authoritative data ourself, and don't need to ask a separate
         // InodeBase object.
         info.entries_ref()->emplace_back();
         auto& infoEntry = info.entries_ref()->back();
-        auto& inodeEntry = entry.second;
-        *infoEntry.name_ref() = entry.first.stringPiece().str();
-        *infoEntry.inodeNumber_ref() = inodeEntry.getInodeNumber().get();
-        *infoEntry.mode_ref() = inodeEntry.getInitialMode();
-        *infoEntry.loaded_ref() = false;
-        *infoEntry.materialized_ref() = inodeEntry.isMaterialized();
-        if (!(*infoEntry.materialized_ref())) {
-          *infoEntry.hash_ref() = thriftHash(inodeEntry.getHash());
+        infoEntry.name_ref() = name.stringPiece().str();
+        infoEntry.inodeNumber_ref() = entry.getInodeNumber().get();
+        infoEntry.mode_ref() = entry.getInitialMode();
+        infoEntry.loaded_ref() = false;
+        infoEntry.materialized_ref() = entry.isMaterialized();
+        if (!entry.isMaterialized()) {
+          infoEntry.hash_ref() = thriftHash(entry.getHash());
         }
       }
     }
   }
 
   std::vector<folly::Future<std::pair<size_t, uint64_t>>> futures;
-  for (const auto& childData : childInodes) {
+  for (const auto& [name, inode] : childInodes) {
     info.entries_ref()->emplace_back();
     auto& infoEntry = info.entries_ref()->back();
-    *infoEntry.name_ref() = childData.first.stringPiece().str();
-    *infoEntry.inodeNumber_ref() = childData.second->getNodeId().get();
-    *infoEntry.loaded_ref() = true;
+    infoEntry.name_ref() = name.stringPiece().str();
+    infoEntry.inodeNumber_ref() = inode->getNodeId().get();
+    infoEntry.loaded_ref() = true;
 
-    auto childTree = childData.second.asTreePtrOrNull();
+    auto childTree = inode.asTreePtrOrNull();
     if (childTree) {
       // The child will also store its own data when we recurse, but go ahead
       // and grab the materialization and status info now.
       {
         auto childContents = childTree->contents_.rlock();
-        *infoEntry.materialized_ref() = !childContents->treeHash.has_value();
-        *infoEntry.hash_ref() = thriftHash(childContents->treeHash);
+        infoEntry.materialized_ref() = !childContents->treeHash.has_value();
+        infoEntry.hash_ref() = thriftHash(childContents->treeHash);
         // TODO: We don't currently store mode data for TreeInodes.  We should.
-        *infoEntry.mode_ref() = (S_IFDIR | 0755);
+        infoEntry.mode_ref() = (S_IFDIR | 0755);
       }
     } else {
-      auto childFile = childData.second.asFilePtr();
+      auto childFile = inode.asFilePtr();
 
-      *infoEntry.mode_ref() = childFile->getMode();
+      infoEntry.mode_ref() = childFile->getMode();
       auto blobHash = childFile->getBlobHash();
-      *infoEntry.materialized_ref() = !blobHash.has_value();
-      *infoEntry.hash_ref() = thriftHash(blobHash);
+      infoEntry.materialized_ref() = !blobHash.has_value();
+      infoEntry.hash_ref() = thriftHash(blobHash);
       static auto context = ObjectFetchContext::getNullContextWithCauseDetail(
           "TreeInode::getDebugStatus");
       futures.push_back(childFile->stat(*context).thenValue(
