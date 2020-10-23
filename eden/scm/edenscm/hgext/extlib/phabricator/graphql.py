@@ -152,6 +152,7 @@ class Client(object):
                     nodes {
                     latest_phabricator_version {
                       description
+                      arcanist_project_name
                       source_control_system
                       phabricator_version_properties {
                         edges {

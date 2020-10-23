@@ -231,6 +231,14 @@ def diffidtonode(repo, diffid):
         return None
 
     vcs = resp.get("source_control_system")
+    diffreponame = resp.get("arcanist_project_name")
+    localreponame = repo.ui.config("remotefilelog", "reponame")
+
+    if not util.istest() and (diffreponame != localreponame):
+        raise error.Abort(
+            "D%s is for repo '%s', not this repo ('%s')"
+            % (diffid, diffreponame, localreponame)
+        )
 
     repo.ui.debug("[diffrev] VCS is %s\n" % vcs)
 
