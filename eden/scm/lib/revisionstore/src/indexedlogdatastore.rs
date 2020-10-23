@@ -165,6 +165,9 @@ impl IndexedLogHgIdDataStore {
         config: &ConfigSet,
     ) -> Result<Self> {
         let mut open_options = Self::default_open_options();
+        if let Some(max_log_count) = config.get_opt::<u8>("indexedlog", "data.max-log-count")? {
+            open_options = open_options.max_log_count(max_log_count);
+        }
         if let Some(max_bytes_per_log) =
             config.get_opt::<ByteCount>("indexedlog", "data.max-bytes-per-log")?
         {
@@ -172,12 +175,11 @@ impl IndexedLogHgIdDataStore {
         } else if let Some(max_bytes_per_log) =
             config.get_opt::<ByteCount>("remotefilelog", "cachelimit")?
         {
-            open_options = open_options.max_bytes_per_log(max_bytes_per_log.value());
+            let log_count = open_options.max_bytes_per_log.max(1);
+            open_options =
+                open_options.max_bytes_per_log((max_bytes_per_log.value() / log_count).max(1));
         }
 
-        if let Some(max_log_count) = config.get_opt::<u8>("indexedlog", "data.max-log-count")? {
-            open_options = open_options.max_log_count(max_log_count);
-        }
         let log = open_options.open(&path)?;
         Ok(IndexedLogHgIdDataStore {
             inner: RwLock::new(IndexedLogHgIdDataStoreInner { log }),
