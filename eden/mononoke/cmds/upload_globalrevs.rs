@@ -84,8 +84,9 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     args::init_cachelib(fb, &matches, None);
 
     let logger = args::init_logging(fb, &matches);
+    let config_store = args::init_config_store(fb, &logger, &matches)?;
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
-    let globalrevs_store = args::open_sql::<SqlBonsaiGlobalrevMapping>(fb, &matches);
+    let globalrevs_store = args::open_sql::<SqlBonsaiGlobalrevMapping>(fb, config_store, &matches);
 
     let blobrepo = args::open_repo(fb, &logger, &matches);
     let run = async {

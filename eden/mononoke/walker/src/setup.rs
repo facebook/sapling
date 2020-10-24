@@ -644,9 +644,10 @@ pub fn setup_common<'a>(
     sub_m: &'a ArgMatches<'a>,
 ) -> impl Future<Output = Result<(RepoWalkDatasources, RepoWalkParams), Error>> + 'a {
     async move {
-        let (_, config) = args::get_config(&matches)?;
+        let config_store = args::init_config_store(fb, logger, matches)?;
+        let (_, config) = args::get_config(config_store, &matches)?;
         let quiet = sub_m.is_present(QUIET_ARG);
-        let common_config = cmdlib::args::load_common_config(&matches)?;
+        let common_config = cmdlib::args::load_common_config(config_store, &matches)?;
         let scheduled_max = args::get_usize_opt(&sub_m, SCHEDULED_MAX_ARG).unwrap_or(4096) as usize;
         let inner_blobstore_id = args::get_u64_opt(&sub_m, INNER_BLOBSTORE_ID_ARG);
         let tail_secs = args::get_u64_opt(&sub_m, TAIL_INTERVAL_ARG);
@@ -767,7 +768,7 @@ pub fn setup_common<'a>(
         let storage_id = matches.value_of(STORAGE_ID_ARG);
         let storage_config = match storage_id {
             Some(storage_id) => {
-                let mut configs = args::load_storage_configs(&matches)?;
+                let mut configs = args::load_storage_configs(config_store, &matches)?;
                 configs.storage.remove(storage_id).ok_or_else(|| {
                     format_err!(
                         "Storage id `{}` not found in {:?}",
@@ -782,7 +783,7 @@ pub fn setup_common<'a>(
         let blobstore_options = args::parse_blobstore_options(&matches);
 
         let scuba_table = sub_m.value_of(SCUBA_TABLE_ARG).map(|a| a.to_string());
-        let repo_name = args::get_repo_name(&matches)?;
+        let repo_name = args::get_repo_name(config_store, &matches)?;
         let mut scuba_builder = ScubaSampleBuilder::with_opt_table(fb, scuba_table.clone());
         scuba_builder.add_common_server_data();
         scuba_builder.add(WALK_TYPE, walk_stats_key);

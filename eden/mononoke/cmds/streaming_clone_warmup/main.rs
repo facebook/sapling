@@ -92,9 +92,10 @@ async fn run<'a>(ctx: CoreContext, matches: &'a ArgMatches<'a>) -> Result<(), Er
         return Ok(());
     }
 
+    let config_store = args::init_config_store(ctx.fb, ctx.logger(), matches)?;
     let mysql_options = args::parse_mysql_options(matches);
     let blobstore_options = args::parse_blobstore_options(matches);
-    let configs = args::load_repo_configs(matches)?;
+    let configs = args::load_repo_configs(config_store, matches)?;
 
     // wait for myrouter
     myrouter_ready(

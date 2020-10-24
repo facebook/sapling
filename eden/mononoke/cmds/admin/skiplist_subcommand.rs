@@ -107,8 +107,9 @@ pub async fn subcommand_skiplist<'a>(
             let skiplist_ty = SkiplistType::new(sub_m.is_present(ARG_SPARSE));
 
             args::init_cachelib(fb, &matches, None);
+            let config_store = args::init_config_store(fb, &logger, matches)?;
             let ctx = CoreContext::new_with_logger(fb, logger.clone());
-            let sql_changesets = args::open_sql::<SqlChangesets>(fb, &matches);
+            let sql_changesets = args::open_sql::<SqlChangesets>(fb, config_store, &matches);
             let repo = args::open_repo(fb, &logger, &matches);
             repo.join(sql_changesets)
                 .and_then(move |(repo, sql_changesets)| {

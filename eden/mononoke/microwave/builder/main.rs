@@ -74,6 +74,7 @@ async fn do_main<'a>(
     matches: &ArgMatches<'a>,
     logger: &Logger,
 ) -> Result<(), Error> {
+    let config_store = args::init_config_store(fb, logger, matches)?;
     let mut scuba = args::get_scuba_sample_builder(fb, &matches)?;
     scuba.add_common_server_data();
 
@@ -82,7 +83,7 @@ async fn do_main<'a>(
     let blobstore_options = cmdlib::args::parse_blobstore_options(&matches);
     let caching = cmdlib::args::init_cachelib(fb, &matches, None);
 
-    let RepoConfigs { repos, common } = args::load_repo_configs(&matches)?;
+    let RepoConfigs { repos, common } = args::load_repo_configs(config_store, &matches)?;
     let censored_scuba_params = common.censored_scuba_params;
 
     let location = match matches.subcommand() {

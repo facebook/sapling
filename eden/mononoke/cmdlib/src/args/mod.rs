@@ -19,7 +19,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::{bail, format_err, Context, Error, Result};
+use anyhow::{bail, format_err, Error, Result};
 use cached_config::{ConfigHandle, ConfigStore, TestSource};
 use clap::{App, Arg, ArgGroup, ArgMatches};
 use cloned::cloned;
@@ -476,13 +476,14 @@ pub fn init_logging<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Logger {
 }
 
 fn get_repo_id_and_name_from_values<'a>(
+    config_store: &ConfigStore,
     matches: &ArgMatches<'a>,
     option_repo_name: &str,
     option_repo_id: &str,
 ) -> Result<(RepositoryId, String)> {
     let repo_name = matches.value_of(option_repo_name);
     let repo_id = matches.value_of(option_repo_id);
-    let configs = load_repo_configs(matches)?;
+    let configs = load_repo_configs(config_store, matches)?;
 
     match (repo_name, repo_id) {
         (Some(_), Some(_)) => bail!("both repo-name and repo-id parameters set"),
@@ -527,41 +528,64 @@ fn get_repo_id_and_name_from_values<'a>(
     }
 }
 
-pub fn get_repo_id<'a>(matches: &ArgMatches<'a>) -> Result<RepositoryId> {
-    let (repo_id, _) = get_repo_id_and_name_from_values(matches, REPO_NAME, REPO_ID)?;
+pub fn get_repo_id<'a>(
+    config_store: &ConfigStore,
+    matches: &ArgMatches<'a>,
+) -> Result<RepositoryId> {
+    let (repo_id, _) = get_repo_id_and_name_from_values(config_store, matches, REPO_NAME, REPO_ID)?;
     Ok(repo_id)
 }
 
-pub fn get_repo_name<'a>(matches: &ArgMatches<'a>) -> Result<String> {
-    let (_, repo_name) = get_repo_id_and_name_from_values(matches, REPO_NAME, REPO_ID)?;
+pub fn get_repo_name<'a>(config_store: &ConfigStore, matches: &ArgMatches<'a>) -> Result<String> {
+    let (_, repo_name) =
+        get_repo_id_and_name_from_values(config_store, matches, REPO_NAME, REPO_ID)?;
     Ok(repo_name)
 }
 
-pub fn get_source_repo_id<'a>(matches: &ArgMatches<'a>) -> Result<RepositoryId> {
-    let (repo_id, _) = get_repo_id_and_name_from_values(matches, SOURCE_REPO_NAME, SOURCE_REPO_ID)?;
+pub fn get_source_repo_id<'a>(
+    config_store: &ConfigStore,
+    matches: &ArgMatches<'a>,
+) -> Result<RepositoryId> {
+    let (repo_id, _) =
+        get_repo_id_and_name_from_values(config_store, matches, SOURCE_REPO_NAME, SOURCE_REPO_ID)?;
     Ok(repo_id)
 }
 
-pub fn get_source_repo_id_opt<'a>(matches: &ArgMatches<'a>) -> Result<Option<RepositoryId>> {
+pub fn get_source_repo_id_opt<'a>(
+    config_store: &ConfigStore,
+    matches: &ArgMatches<'a>,
+) -> Result<Option<RepositoryId>> {
     if matches.is_present(SOURCE_REPO_NAME) || matches.is_present(SOURCE_REPO_ID) {
-        let (repo_id, _) =
-            get_repo_id_and_name_from_values(matches, SOURCE_REPO_NAME, SOURCE_REPO_ID)?;
+        let (repo_id, _) = get_repo_id_and_name_from_values(
+            config_store,
+            matches,
+            SOURCE_REPO_NAME,
+            SOURCE_REPO_ID,
+        )?;
         Ok(Some(repo_id))
     } else {
         Ok(None)
     }
 }
 
-pub fn get_target_repo_id<'a>(matches: &ArgMatches<'a>) -> Result<RepositoryId> {
-    let (repo_id, _) = get_repo_id_and_name_from_values(matches, TARGET_REPO_NAME, TARGET_REPO_ID)?;
+pub fn get_target_repo_id<'a>(
+    config_store: &ConfigStore,
+    matches: &ArgMatches<'a>,
+) -> Result<RepositoryId> {
+    let (repo_id, _) =
+        get_repo_id_and_name_from_values(config_store, matches, TARGET_REPO_NAME, TARGET_REPO_ID)?;
     Ok(repo_id)
 }
 
-pub fn open_sql<T>(fb: FacebookInit, matches: &ArgMatches<'_>) -> BoxFuture<T, Error>
+pub fn open_sql<T>(
+    fb: FacebookInit,
+    config_store: &ConfigStore,
+    matches: &ArgMatches<'_>,
+) -> BoxFuture<T, Error>
 where
     T: SqlConstructFromMetadataDatabaseConfig,
 {
-    let (_, config) = try_boxfuture!(get_config(matches));
+    let (_, config) = try_boxfuture!(get_config(config_store, matches));
     let mysql_options = parse_mysql_options(matches);
     let readonly_storage = parse_readonly_storage(matches);
     open_sql_with_config_and_mysql_options(
@@ -572,12 +596,16 @@ where
     )
 }
 
-pub fn open_source_sql<T>(fb: FacebookInit, matches: &ArgMatches<'_>) -> BoxFuture<T, Error>
+pub fn open_source_sql<T>(
+    fb: FacebookInit,
+    config_store: &ConfigStore,
+    matches: &ArgMatches<'_>,
+) -> BoxFuture<T, Error>
 where
     T: SqlConstructFromMetadataDatabaseConfig,
 {
-    let source_repo_id = try_boxfuture!(get_source_repo_id(matches));
-    let (_, config) = try_boxfuture!(get_config_by_repoid(matches, source_repo_id));
+    let source_repo_id = try_boxfuture!(get_source_repo_id(config_store, matches));
+    let (_, config) = try_boxfuture!(get_config_by_repoid(config_store, matches, source_repo_id));
     let mysql_options = parse_mysql_options(matches);
     let readonly_storage = parse_readonly_storage(matches);
     open_sql_with_config_and_mysql_options(
@@ -879,28 +907,41 @@ pub fn get_config_path<'a>(matches: &'a ArgMatches<'a>) -> Result<&'a str> {
         .ok_or(Error::msg(format!("{} must be specified", CONFIG_PATH)))
 }
 
-pub fn load_repo_configs<'a>(matches: &ArgMatches<'a>) -> Result<RepoConfigs> {
-    metaconfig_parser::load_repo_configs(get_config_path(matches)?, get_config_store()?)
+pub fn load_repo_configs<'a>(
+    config_store: &ConfigStore,
+    matches: &ArgMatches<'a>,
+) -> Result<RepoConfigs> {
+    metaconfig_parser::load_repo_configs(get_config_path(matches)?, config_store)
 }
 
-pub fn load_common_config<'a>(matches: &ArgMatches<'a>) -> Result<CommonConfig> {
-    metaconfig_parser::load_common_config(get_config_path(matches)?, get_config_store()?)
+pub fn load_common_config<'a>(
+    config_store: &ConfigStore,
+    matches: &ArgMatches<'a>,
+) -> Result<CommonConfig> {
+    metaconfig_parser::load_common_config(get_config_path(matches)?, config_store)
 }
 
-pub fn load_storage_configs<'a>(matches: &ArgMatches<'a>) -> Result<StorageConfigs> {
-    metaconfig_parser::load_storage_configs(get_config_path(matches)?, get_config_store()?)
+pub fn load_storage_configs<'a>(
+    config_store: &ConfigStore,
+    matches: &ArgMatches<'a>,
+) -> Result<StorageConfigs> {
+    metaconfig_parser::load_storage_configs(get_config_path(matches)?, config_store)
 }
 
-pub fn get_config<'a>(matches: &ArgMatches<'a>) -> Result<(String, RepoConfig)> {
-    let repo_id = get_repo_id(matches)?;
-    get_config_by_repoid(matches, repo_id)
+pub fn get_config<'a>(
+    config_store: &ConfigStore,
+    matches: &ArgMatches<'a>,
+) -> Result<(String, RepoConfig)> {
+    let repo_id = get_repo_id(config_store, matches)?;
+    get_config_by_repoid(config_store, matches, repo_id)
 }
 
 pub fn get_config_by_repoid<'a>(
+    config_store: &ConfigStore,
     matches: &ArgMatches<'a>,
     repo_id: RepositoryId,
 ) -> Result<(String, RepoConfig)> {
-    let configs = load_repo_configs(matches)?;
+    let configs = load_repo_configs(config_store, matches)?;
     configs
         .get_repo_config(repo_id)
         .ok_or_else(|| format_err!("unknown repoid {:?}", repo_id))
@@ -916,7 +957,8 @@ fn open_repo_internal<'a>(
     scrub: Scrubbing,
     redaction_override: Option<Redaction>,
 ) -> impl Future<Item = BlobRepo, Error = Error> {
-    let repo_id = try_boxfuture!(get_repo_id(matches));
+    let config_store = try_boxfuture!(init_config_store(fb, logger, matches));
+    let repo_id = try_boxfuture!(get_repo_id(config_store, matches));
     open_repo_internal_with_repo_id(
         fb,
         logger,
@@ -939,11 +981,12 @@ fn open_repo_internal_with_repo_id<'a>(
     scrub: Scrubbing,
     redaction_override: Option<Redaction>,
 ) -> BoxFuture<BlobRepo, Error> {
-    try_boxfuture!(init_config_store(fb, logger, matches));
-    let common_config = try_boxfuture!(load_common_config(&matches));
+    let config_store = try_boxfuture!(init_config_store(fb, logger, matches));
+    let common_config = try_boxfuture!(load_common_config(config_store, &matches));
 
     let (reponame, config) = {
-        let (reponame, mut config) = try_boxfuture!(get_config_by_repoid(matches, repo_id));
+        let (reponame, mut config) =
+            try_boxfuture!(get_config_by_repoid(config_store, matches, repo_id));
         if let Scrubbing::Enabled = scrub {
             config
                 .storage_config
@@ -1246,13 +1289,13 @@ pub fn init_tunables<'a>(fb: FacebookInit, matches: &ArgMatches<'a>, logger: Log
         return Ok(());
     }
 
-    init_config_store(fb, &logger, matches)?;
+    let config_store = init_config_store(fb, &logger, matches)?;
 
     let tunables_spec = matches
         .value_of(TUNABLES_CONFIG)
         .unwrap_or(DEFAULT_TUNABLES_PATH);
 
-    let config_handle = get_config_handle(fb, logger.clone(), Some(tunables_spec), 1)?;
+    let config_handle = get_config_handle(config_store, &logger, Some(tunables_spec))?;
 
     init_tunables_worker(logger, config_handle)
 }
@@ -1269,10 +1312,9 @@ pub fn init_runtime(matches: &ArgMatches) -> io::Result<tokio_compat::runtime::R
 /// NB: Outside tests, using file:PATH is not recommended because it is inefficient - instead
 /// use a local configerator path and configerator:PATH
 pub fn get_config_handle<T>(
-    _fb: FacebookInit,
-    logger: Logger,
+    config_store: &ConfigStore,
+    logger: &Logger,
     source_spec: Option<&str>,
-    _poll_interval: u64,
 ) -> Result<ConfigHandle<T>, Error>
 where
     T: Default + Send + Sync + 'static + serde::de::DeserializeOwned,
@@ -1287,10 +1329,10 @@ where
             // disallowed trailing parts.
             match (iter.next(), iter.next(), iter.next()) {
                 (Some("configerator"), Some(source), None) => {
-                    get_config_store()?.get_config_handle(source.to_string())
+                    config_store.get_config_handle(source.to_string())
                 }
                 (Some("file"), Some(file), None) => ConfigStore::file(
-                    logger,
+                    logger.clone(),
                     PathBuf::new(),
                     String::new(),
                     Duration::from_secs(1),
@@ -1305,10 +1347,6 @@ where
 }
 
 static CONFIGERATOR: OnceCell<ConfigStore> = OnceCell::new();
-
-pub fn get_config_store() -> Result<&'static ConfigStore, Error> {
-    CONFIGERATOR.get().context("No configerator available")
-}
 
 pub fn is_test_instance<'a>(matches: &ArgMatches<'a>) -> bool {
     matches.is_present(TEST_INSTANCE_ARG)

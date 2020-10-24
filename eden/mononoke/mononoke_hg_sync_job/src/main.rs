@@ -660,9 +660,10 @@ fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> BoxFuture<(), Error> {
 
     let mysql_options = args::parse_mysql_options(&matches);
     let readonly_storage = args::parse_readonly_storage(&matches);
+    let config_store = try_boxfuture!(args::init_config_store(ctx.fb, ctx.logger(), &matches));
 
-    let repo_id = args::get_repo_id(&matches).expect("need repo id");
-    let repo_config = args::get_config(&matches);
+    let repo_id = args::get_repo_id(config_store, &matches).expect("need repo id");
+    let repo_config = args::get_config(config_store, &matches);
     let (repo_name, repo_config) = try_boxfuture!(repo_config);
 
     let base_retry_delay_ms = args::get_u64_opt(&matches, "base-retry-delay-ms").unwrap_or(1000);
@@ -792,7 +793,7 @@ fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> BoxFuture<(), Error> {
         ok(()).boxify()
     };
 
-    let bookmarks = args::open_sql::<SqlBookmarksBuilder>(ctx.fb, &matches);
+    let bookmarks = args::open_sql::<SqlBookmarksBuilder>(ctx.fb, config_store, &matches);
 
     myrouter_ready_fut
         .join(bookmarks)
@@ -884,7 +885,7 @@ fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> BoxFuture<(), Error> {
                         );
                     }
                     let loop_forever = sub_m.is_present("loop-forever");
-                    let mutable_counters = args::open_sql::<SqlMutableCounters>(ctx.fb, &matches);
+                    let mutable_counters = args::open_sql::<SqlMutableCounters>(ctx.fb, config_store, &matches);
                     let exit_path = sub_m
                         .value_of("exit-file")
                         .map(|name| Path::new(name).to_path_buf());
@@ -1073,18 +1074,15 @@ fn get_repo_sqldb_address<'a>(
     matches: &ArgMatches<'a>,
     repo_name: &HgsqlName,
 ) -> Result<Option<String>, Error> {
+    let config_store = args::init_config_store(ctx.fb, ctx.logger(), &matches)?;
     if let Some(db_addr) = matches.value_of("repo-lock-db-address") {
         return Ok(Some(db_addr.to_string()));
     }
     if !matches.is_present("lock-on-failure") {
         return Ok(None);
     }
-    let handle = args::get_config_handle(
-        ctx.fb,
-        ctx.logger().clone(),
-        Some(CONFIGERATOR_HGSERVER_PATH),
-        1,
-    )?;
+    let handle =
+        args::get_config_handle(config_store, ctx.logger(), Some(CONFIGERATOR_HGSERVER_PATH))?;
     let config: Arc<ServerConfig> = handle.get();
     match config.sql_confs.get(AsRef::<str>::as_ref(repo_name)) {
         Some(sql_conf) => Ok(Some(sql_conf.db_tier.clone())),

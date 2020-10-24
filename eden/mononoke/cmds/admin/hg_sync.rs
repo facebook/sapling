@@ -534,16 +534,18 @@ pub async fn subcommand_process_hg_sync<'a>(
     matches: &'a ArgMatches<'_>,
     logger: Logger,
 ) -> Result<(), SubcommandError> {
-    let repo_id = args::get_repo_id(&matches)?;
+    let config_store = args::init_config_store(fb, &logger, matches)?;
+
+    let repo_id = args::get_repo_id(config_store, &matches)?;
 
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
-    let mutable_counters = args::open_sql::<SqlMutableCounters>(fb, &matches)
+    let mutable_counters = args::open_sql::<SqlMutableCounters>(fb, config_store, &matches)
         .compat()
         .await
         .context("While opening SqlMutableCounters")?;
 
-    let bookmarks = args::open_sql::<SqlBookmarksBuilder>(fb, &matches)
+    let bookmarks = args::open_sql::<SqlBookmarksBuilder>(fb, config_store, &matches)
         .compat()
         .await
         .context("While opening SqlBookmarks")?

@@ -769,6 +769,7 @@ async fn get_pushredirected_vars(
     matches: &ArgMatches<'_>,
     live_commit_sync_config: CfgrLiveCommitSyncConfig,
 ) -> Result<(BlobRepo, RepoImportSetting, Syncers<SqlSyncedCommitMapping>), Error> {
+    let config_store = args::init_config_store(ctx.fb, ctx.logger(), matches)?;
     let large_repo_id = large_repo_config.repoid;
     let large_repo = args::open_repo_with_repo_id(ctx.fb, &ctx.logger(), large_repo_id, &matches)
         .compat()
@@ -790,7 +791,7 @@ async fn get_pushredirected_vars(
             large_repo.name()
         ));
     }
-    let mapping = args::open_source_sql::<SqlSyncedCommitMapping>(ctx.fb, &matches)
+    let mapping = args::open_source_sql::<SqlSyncedCommitMapping>(ctx.fb, config_store, &matches)
         .compat()
         .await?;
     let syncers = create_commit_syncers(
@@ -859,7 +860,8 @@ async fn repo_import(
         importing_bookmark,
         dest_bookmark,
     };
-    let (_, mut repo_config) = args::get_config_by_repoid(&matches, repo.get_repoid())?;
+    let (_, mut repo_config) =
+        args::get_config_by_repoid(config_store, &matches, repo.get_repoid())?;
     let mut call_sign = repo_config.phabricator_callsign.clone();
     if !recovery_fields.phab_check_disabled && call_sign.is_none() {
         return Err(format_err!(
@@ -876,7 +878,7 @@ async fn repo_import(
     };
     let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &config_store)?;
 
-    let configs = args::load_repo_configs(&matches)?;
+    let configs = args::load_repo_configs(config_store, &matches)?;
     let mysql_options = args::parse_mysql_options(&matches);
     let readonly_storage = args::parse_readonly_storage(&matches);
 
@@ -946,7 +948,7 @@ async fn repo_import(
         Ok(Some(mutable_path))
     });
 
-    let mutable_counters = args::open_sql::<SqlMutableCounters>(ctx.fb, &matches)
+    let mutable_counters = args::open_sql::<SqlMutableCounters>(ctx.fb, config_store, &matches)
         .compat()
         .await?;
 
@@ -1130,11 +1132,13 @@ async fn check_additional_setup_steps(
         dest_bookmark
     );
 
+    let config_store = args::init_config_store(fb, ctx.logger(), &matches)?;
+
     let repo_import_setting = RepoImportSetting {
         importing_bookmark,
         dest_bookmark,
     };
-    let (_, repo_config) = args::get_config_by_repoid(&matches, repo.get_repoid())?;
+    let (_, repo_config) = args::get_config_by_repoid(config_store, &matches, repo.get_repoid())?;
 
     let call_sign = repo_config.phabricator_callsign;
     let phab_check_disabled = sub_arg_matches.is_present(ARG_PHAB_CHECK_DISABLED);
@@ -1147,9 +1151,8 @@ async fn check_additional_setup_steps(
         ));
     }
 
-    let config_store = args::init_config_store(fb, ctx.logger(), &matches)?;
-    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &config_store)?;
-    let configs = args::load_repo_configs(&matches)?;
+    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), config_store)?;
+    let configs = args::load_repo_configs(config_store, &matches)?;
     let maybe_large_repo_config = get_large_repo_config_if_pushredirected(
         &ctx,
         &repo,

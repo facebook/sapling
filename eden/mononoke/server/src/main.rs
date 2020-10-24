@@ -55,7 +55,7 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     info!(root_log, "Starting up");
 
-    let config = args::load_repo_configs(&matches)?;
+    let config = args::load_repo_configs(config_source, &matches)?;
     let acceptor = {
         let cert = matches.value_of("cert").unwrap().to_string();
         let private_key = matches.value_of("private_key").unwrap().to_string();

@@ -276,6 +276,7 @@ pub async fn compression_benefit<'a>(
     sub_m: &'a ArgMatches<'a>,
 ) -> Result<(), Error> {
     let sizing_sampler = Arc::new(WalkSampleMapping::<Node, SizingSample>::new());
+    let config_store = args::init_config_store(fb, &logger, matches)?;
 
     let (datasources, walk_params) = setup_common(
         COMPRESSION_BENEFIT,
@@ -287,7 +288,7 @@ pub async fn compression_benefit<'a>(
     )
     .await?;
 
-    let repo_stats_key = args::get_repo_name(&matches)?;
+    let repo_stats_key = args::get_repo_name(config_store, &matches)?;
 
     let compression_level = args::get_i32_opt(&sub_m, COMPRESSION_LEVEL_ARG).unwrap_or(3);
     let sample_rate = args::get_u64_opt(&sub_m, SAMPLE_RATE_ARG).unwrap_or(100);

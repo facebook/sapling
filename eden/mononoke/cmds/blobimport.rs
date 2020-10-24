@@ -200,6 +200,8 @@ async fn run_blobimport<'a>(
     logger: &Logger,
     matches: &'a ArgMatches<'a>,
 ) -> Result<()> {
+    let config_store = args::init_config_store(fb, logger, matches)?;
+
     let revlogrepo_path = matches
         .value_of("INPUT")
         .expect("input is not specified")
@@ -283,10 +285,10 @@ async fn run_blobimport<'a>(
 
     let has_globalrev = matches.is_present("has-globalrev");
 
-    let (_repo_name, repo_config) = args::get_config(&matches)?;
+    let (_repo_name, repo_config) = args::get_config(config_store, &matches)?;
     let populate_git_mapping = repo_config.pushrebase.populate_git_mapping.clone();
 
-    let small_repo_id = args::get_source_repo_id_opt(&matches)?;
+    let small_repo_id = args::get_source_repo_id_opt(config_store, &matches)?;
 
     let (blobrepo, globalrevs_store, synced_commit_mapping, mutable_counters) = try_join4(
         if matches.is_present("no-create") {
@@ -298,9 +300,9 @@ async fn run_blobimport<'a>(
                 .compat()
                 .boxed()
         },
-        args::open_sql::<SqlBonsaiGlobalrevMapping>(fb, &matches).compat(),
-        args::open_sql::<SqlSyncedCommitMapping>(fb, &matches).compat(),
-        args::open_sql::<SqlMutableCounters>(fb, &matches).compat(),
+        args::open_sql::<SqlBonsaiGlobalrevMapping>(fb, config_store, &matches).compat(),
+        args::open_sql::<SqlSyncedCommitMapping>(fb, config_store, &matches).compat(),
+        args::open_sql::<SqlMutableCounters>(fb, config_store, &matches).compat(),
     )
     .await?;
 

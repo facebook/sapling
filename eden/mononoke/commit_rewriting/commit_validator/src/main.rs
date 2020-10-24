@@ -155,8 +155,9 @@ async fn run(
     ctx: CoreContext,
     matches: ArgMatches<'static>,
 ) -> Result<(), Error> {
-    let repo_id = args::get_repo_id(&matches)?;
-    let (_, repo_config) = args::get_config_by_repoid(&matches, repo_id)?;
+    let config_store = args::init_config_store(ctx.fb, ctx.logger(), &matches)?;
+    let repo_id = args::get_repo_id(config_store, &matches)?;
+    let (_, repo_config) = args::get_config_by_repoid(config_store, &matches, repo_id)?;
 
     let logger = ctx.logger();
     let blobrepo = args::open_repo_with_repo_id(fb, &logger, repo_id, &matches)

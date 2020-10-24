@@ -258,14 +258,14 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let matches = app.get_matches();
 
     let (_, logger, mut runtime) = args::init_mononoke(fb, &matches, None)?;
-    args::init_config_store(fb, &logger, &matches)?;
+    let config_store = args::init_config_store(fb, &logger, &matches)?;
 
-    let source_repo_id = args::get_source_repo_id(&matches)?;
-    let target_repo_id = args::get_target_repo_id(&matches)?;
+    let source_repo_id = args::get_source_repo_id(config_store, &matches)?;
+    let target_repo_id = args::get_target_repo_id(config_store, &matches)?;
 
-    let (source_repo_name, _) = args::get_config_by_repoid(&matches, source_repo_id)?;
+    let (source_repo_name, _) = args::get_config_by_repoid(config_store, &matches, source_repo_id)?;
     let (target_repo_name, target_repo_config) =
-        args::get_config_by_repoid(&matches, target_repo_id)?;
+        args::get_config_by_repoid(config_store, &matches, target_repo_id)?;
 
     let commit_syncer_args = runtime.block_on_std(create_commit_syncer_args_from_matches(
         fb, &logger, &matches,

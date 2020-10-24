@@ -103,8 +103,8 @@ fn get_commit_syncer<'a>(
     commit_syncer_args: CommitSyncerArgs<SqlSyncedCommitMapping>,
 ) -> Result<CommitSyncer<SqlSyncedCommitMapping>, Error> {
     let config_store = args::init_config_store(ctx.fb, logger, &matches)?;
-    let target_repo_id = args::get_target_repo_id(&matches)?;
-    let live_commit_sync_config = Arc::new(CfgrLiveCommitSyncConfig::new(&logger, &config_store)?);
+    let target_repo_id = args::get_target_repo_id(config_store, &matches)?;
+    let live_commit_sync_config = Arc::new(CfgrLiveCommitSyncConfig::new(&logger, config_store)?);
     let commit_sync_config =
         live_commit_sync_config.get_current_commit_sync_config(&ctx, target_repo_id)?;
     commit_syncer_args.try_into_commit_syncer(&commit_sync_config, live_commit_sync_config)

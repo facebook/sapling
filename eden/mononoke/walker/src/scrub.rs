@@ -313,6 +313,7 @@ pub async fn scrub_objects<'a>(
     sub_m: &'a ArgMatches<'a>,
 ) -> Result<(), Error> {
     let scrub_sampler = Arc::new(WalkSampleMapping::<Node, ScrubSample>::new());
+    let config_store = args::init_config_store(fb, &logger, matches)?;
 
     let (datasources, walk_params) = setup_common(
         SCRUB,
@@ -324,7 +325,7 @@ pub async fn scrub_objects<'a>(
     )
     .await?;
 
-    let repo_stats_key = args::get_repo_name(&matches)?;
+    let repo_stats_key = args::get_repo_name(config_store, &matches)?;
 
     let sample_rate = args::get_u64_opt(&sub_m, SAMPLE_RATE_ARG).unwrap_or(1);
     let sample_offset = args::get_u64_opt(&sub_m, SAMPLE_OFFSET_ARG).unwrap_or(0);

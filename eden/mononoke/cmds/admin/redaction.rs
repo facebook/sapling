@@ -240,9 +240,10 @@ fn get_ctx_blobrepo_redacted_blobs_cs_id(
     };
 
     args::init_cachelib(fb, &matches, None);
+    let config_store = try_boxfuture!(args::init_config_store(fb, &logger, matches));
 
     let blobrepo = args::open_repo(fb, &logger, &matches);
-    let redacted_blobs = args::open_sql::<SqlRedactedContentStore>(fb, &matches)
+    let redacted_blobs = args::open_sql::<SqlRedactedContentStore>(fb, config_store, &matches)
         .context("While opening SqlRedactedContentStore")
         .from_err();
 

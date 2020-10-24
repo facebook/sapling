@@ -222,7 +222,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let (caching, logger, mut runtime) =
         args::init_mononoke(fb, &matches, Some(CACHE_OBJECT_SIZE))?;
 
-    args::init_config_store(fb, &logger, &matches)?;
+    let config_store = args::init_config_store(fb, &logger, &matches)?;
 
     let mysql_options = args::parse_mysql_options(&matches);
     let blobstore_options = args::parse_blobstore_options(&matches);
@@ -260,7 +260,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         matches.value_of(ARG_UPSTREAM_URL),
     )?;
 
-    let RepoConfigs { repos, common } = args::load_repo_configs(&matches)?;
+    let RepoConfigs { repos, common } = args::load_repo_configs(config_store, &matches)?;
 
     let futs = repos
         .into_iter()
@@ -319,18 +319,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let will_exit = Arc::new(AtomicBool::new(false));
 
-    let config_interval: u64 = matches
-        .value_of(ARG_LIVE_CONFIG_FETCH_INTERVAL)
-        .unwrap()
-        .parse()?;
-
-    let config_handle = get_config_handle(
-        fb,
-        logger.clone(),
-        matches.value_of(ARG_LIVE_CONFIG),
-        config_interval,
-    )
-    .context(Error::msg("Failed to load configuration"))?;
+    let config_handle = get_config_handle(config_store, &logger, matches.value_of(ARG_LIVE_CONFIG))
+        .context(Error::msg("Failed to load configuration"))?;
 
     let max_upload_size: Option<u64> = matches
         .value_of(ARG_MAX_UPLOAD_SIZE)

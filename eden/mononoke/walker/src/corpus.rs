@@ -318,6 +318,7 @@ pub async fn corpus<'a>(
     matches: &'a ArgMatches<'a>,
     sub_m: &'a ArgMatches<'a>,
 ) -> Result<(), Error> {
+    let config_store = args::init_config_store(fb, &logger, matches)?;
     let output_dir = sub_m.value_of(OUTPUT_DIR_ARG).map(|s| s.to_string());
     let corpus_sampler = Arc::new(CorpusSamplingHandler::<CorpusSample>::new(
         output_dir.clone(),
@@ -333,7 +334,7 @@ pub async fn corpus<'a>(
     )
     .await?;
 
-    let repo_name = args::get_repo_name(&matches)?;
+    let repo_name = args::get_repo_name(config_store, &matches)?;
     let sample_rate = args::get_u64_opt(&sub_m, SAMPLE_RATE_ARG).unwrap_or(100);
     let sample_offset = args::get_u64_opt(&sub_m, SAMPLE_OFFSET_ARG).unwrap_or(0);
     let progress_interval_secs = args::get_u64_opt(&sub_m, PROGRESS_INTERVAL_ARG);

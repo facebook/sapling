@@ -105,11 +105,14 @@ pub async fn subcommand_crossrepo<'a>(
                 .map_err(|e| e.into())
         }
         (VERIFY_BOOKMARKS_SUBCOMMAND, Some(sub_sub_m)) => {
+            let config_store = args::init_config_store(fb, ctx.logger(), matches)?;
+
             let (source_repo, target_repo, mapping) =
                 get_source_target_repos_and_mapping(fb, logger, matches).await?;
             let source_repo_id = source_repo.get_repoid();
 
-            let (_, source_repo_config) = args::get_config_by_repoid(matches, source_repo_id)?;
+            let (_, source_repo_config) =
+                args::get_config_by_repoid(config_store, matches, source_repo_id)?;
 
             let update_large_repo_bookmarks = sub_sub_m.is_present(UPDATE_LARGE_REPO_BOOKMARKS);
 
@@ -141,7 +144,9 @@ async fn run_config_sub_subcommand<'a>(
     config_subcommand_matches: &'a ArgMatches<'a>,
     live_commit_sync_config: CfgrLiveCommitSyncConfig,
 ) -> Result<(), SubcommandError> {
-    let repo_id = args::get_repo_id(matches)?;
+    let config_store = args::init_config_store(ctx.fb, ctx.logger(), matches)?;
+
+    let repo_id = args::get_repo_id(config_store, matches)?;
 
     match config_subcommand_matches.subcommand() {
         (SUBCOMMAND_BY_VERSION, Some(sub_m)) => {
@@ -173,6 +178,8 @@ async fn run_pushredirection_subcommand<'a>(
     config_subcommand_matches: &'a ArgMatches<'a>,
     live_commit_sync_config: CfgrLiveCommitSyncConfig,
 ) -> Result<(), SubcommandError> {
+    let config_store = args::init_config_store(fb, ctx.logger(), matches)?;
+
     let (source_repo, target_repo, mapping) =
         get_source_target_repos_and_mapping(fb, ctx.logger().clone(), matches).await?;
 
@@ -205,10 +212,11 @@ async fn run_pushredirection_subcommand<'a>(
                 .await?
                 .ok_or_else(|| anyhow!("No bookmarks update log entries for large repo"))?;
 
-            let mutable_counters = args::open_source_sql::<SqlMutableCounters>(fb, &matches)
-                .context("While opening SqlMutableCounters")
-                .compat()
-                .await?;
+            let mutable_counters =
+                args::open_source_sql::<SqlMutableCounters>(fb, config_store, &matches)
+                    .context("While opening SqlMutableCounters")
+                    .compat()
+                    .await?;
 
             let counter = format_backsyncer_counter(&large_repo.get_repoid());
             info!(
@@ -428,8 +436,10 @@ async fn get_source_target_repos_and_mapping<'a>(
     logger: Logger,
     matches: &'a ArgMatches<'_>,
 ) -> Result<(BlobRepo, BlobRepo, SqlSyncedCommitMapping), Error> {
-    let source_repo_id = args::get_source_repo_id(matches)?;
-    let target_repo_id = args::get_target_repo_id(matches)?;
+    let config_store = args::init_config_store(fb, &logger, matches)?;
+
+    let source_repo_id = args::get_source_repo_id(config_store, matches)?;
+    let target_repo_id = args::get_target_repo_id(config_store, matches)?;
 
     let source_repo = args::open_repo_with_repo_id(fb, &logger, source_repo_id, matches)
         .boxify()
@@ -439,7 +449,8 @@ async fn get_source_target_repos_and_mapping<'a>(
         .compat();
     // TODO(stash): in reality both source and target should point to the same mapping
     // It'll be nice to verify it
-    let mapping = args::open_source_sql::<SqlSyncedCommitMapping>(fb, &matches).compat();
+    let mapping =
+        args::open_source_sql::<SqlSyncedCommitMapping>(fb, config_store, &matches).compat();
 
     try_join!(source_repo, target_repo, mapping)
 }

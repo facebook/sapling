@@ -397,13 +397,17 @@ async fn run(
     ctx: CoreContext,
     matches: ArgMatches<'static>,
 ) -> Result<(), Error> {
+    let config_store = args::init_config_store(ctx.fb, ctx.logger(), &matches)?;
     let mut scuba_sample = get_scuba_sample(ctx.clone(), &matches);
-    let mutable_counters = args::open_source_sql::<SqlMutableCounters>(fb, &matches).compat();
+    let mutable_counters =
+        args::open_source_sql::<SqlMutableCounters>(fb, config_store, &matches).compat();
 
-    let source_repo_id = args::get_source_repo_id(&matches)?;
-    let target_repo_id = args::get_target_repo_id(&matches)?;
-    let (_, source_repo_config) = args::get_config_by_repoid(&matches, source_repo_id)?;
-    let (_, target_repo_config) = args::get_config_by_repoid(&matches, target_repo_id)?;
+    let source_repo_id = args::get_source_repo_id(config_store, &matches)?;
+    let target_repo_id = args::get_target_repo_id(config_store, &matches)?;
+    let (_, source_repo_config) =
+        args::get_config_by_repoid(config_store, &matches, source_repo_id)?;
+    let (_, target_repo_config) =
+        args::get_config_by_repoid(config_store, &matches, target_repo_id)?;
 
     let logger = ctx.logger();
     let source_repo = args::open_repo_with_repo_id(fb, &logger, source_repo_id, &matches).compat();
@@ -414,7 +418,6 @@ async fn run(
 
     let commit_syncer_args = create_commit_syncer_args_from_matches(fb, &logger, &matches).await?;
 
-    let config_store = args::init_config_store(ctx.fb, logger, &matches)?;
     let live_commit_sync_config = Arc::new(CfgrLiveCommitSyncConfig::new(&logger, &config_store)?);
     let commit_sync_config =
         live_commit_sync_config.get_current_commit_sync_config(&ctx, source_repo.get_repoid())?;

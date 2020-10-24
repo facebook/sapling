@@ -29,11 +29,11 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     let quiet = matches.is_present("quiet");
     let verbose = matches.is_present("verbose");
-    args::init_config_store(fb, None, &matches)?;
+    let config_store = args::init_config_store(fb, None, &matches)?;
 
     // Most of the work is done here - this validates that the files are present,
     // are correctly formed, and have the right fields (not too many, not too few).
-    let configs = match args::load_repo_configs(&matches) {
+    let configs = match args::load_repo_configs(config_store, &matches) {
         Err(err) => {
             eprintln!("Error loading configs: {:#?}", err);
             return Err(err);

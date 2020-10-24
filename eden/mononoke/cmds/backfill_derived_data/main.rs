@@ -378,6 +378,7 @@ async fn run_subcmd<'a>(
             subcommand_tail(&ctx, unredacted_repo, use_shared_leases, batched).await
         }
         (SUBCOMMAND_PREFETCH_COMMITS, Some(sub_m)) => {
+            let config_store = args::init_config_store(fb, logger, &matches)?;
             let out_filename = sub_m
                 .value_of(ARG_OUT_FILENAME)
                 .ok_or_else(|| format_err!("missing required argument: {}", ARG_OUT_FILENAME))?
@@ -385,7 +386,7 @@ async fn run_subcmd<'a>(
 
             let (repo, changesets) = try_join(
                 args::open_repo(fb, &logger, &matches).compat(),
-                args::open_sql::<SqlChangesets>(fb, &matches).compat(),
+                args::open_sql::<SqlChangesets>(fb, config_store, &matches).compat(),
             )
             .await?;
             let phases = repo.get_phases();

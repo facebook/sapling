@@ -74,8 +74,6 @@ const ARG_LIVE_CONFIG: &str = "live-config";
 const ARG_COMMAND: &str = "command";
 const ARG_MULTIPLEXEDBLOB_SAMPLING: &str = "multiplexblob-sampling";
 
-const LIVE_CONFIG_POLL_INTERVAL: u64 = 5;
-
 fn should_admit(config: &FastReplayConfig) -> bool {
     let admission_rate = config.admission_rate();
 
@@ -225,7 +223,8 @@ async fn bootstrap_repositories<'a>(
     logger: &Logger,
     scuba: &ScubaSampleBuilder,
 ) -> Result<HashMap<String, FastReplayDispatcher>, Error> {
-    let config = args::load_repo_configs(&matches)?;
+    let config_store = args::init_config_store(fb, logger, matches)?;
+    let config = args::load_repo_configs(config_store, &matches)?;
 
     let mysql_options = cmdlib::args::parse_mysql_options(&matches);
     let caching = cmdlib::args::init_cachelib(fb, &matches, None);
@@ -390,13 +389,12 @@ impl ReplayOpts {
         };
         let aliases = Arc::new(aliases);
 
-        cmdlib::args::init_config_store(fb, &logger, matches)?;
+        let config_store = cmdlib::args::init_config_store(fb, &logger, matches)?;
 
         let config = cmdlib::args::get_config_handle(
-            fb,
-            logger,
+            config_store,
+            &logger,
             matches.value_of(ARG_LIVE_CONFIG),
-            LIVE_CONFIG_POLL_INTERVAL,
         )
         .with_context(|| format!("While parsing --{}", ARG_LIVE_CONFIG))?;
 

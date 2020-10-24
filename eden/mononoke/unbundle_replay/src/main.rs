@@ -73,12 +73,13 @@ async fn get_replay_stream<'a>(
     repo: &'a BlobRepo,
     matches: &'a ArgMatches<'a>,
 ) -> Result<impl Stream<Item = Result<ReplaySpec<'a>, Error>> + 'a, Error> {
+    let config_store = args::init_config_store(ctx.fb, ctx.logger(), matches)?;
     match matches.subcommand() {
         (SUBCOMMAND_HG_RECORDING, Some(sub)) => {
             let bundle_helper = sub.value_of(ARG_HG_BUNDLE_HELPER).unwrap();
             let bundle_id: i64 = sub.value_of(ARG_HG_RECORDING_ID).unwrap().parse()?;
 
-            let client = HgRecordingClient::new(ctx.fb, matches).await?;
+            let client = HgRecordingClient::new(ctx.fb, config_store, matches).await?;
 
             let entry = client
                 .next_entry_by_id(ctx, bundle_id - 1)
@@ -102,7 +103,7 @@ async fn get_replay_stream<'a>(
                 .transpose()?
                 .map(Duration::from_secs);
 
-            let client = HgRecordingClient::new(ctx.fb, matches).await?;
+            let client = HgRecordingClient::new(ctx.fb, config_store, matches).await?;
 
             let onto_rev = repo
                 .get_bookmark(ctx.clone(), &onto)
@@ -380,6 +381,7 @@ async fn do_main(
 ) -> Result<(), Error> {
     // TODO: Would want Scuba and such here.
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
+    let config_store = args::init_config_store(fb, logger, matches)?;
 
     let unbundle_concurrency = matches
         .value_of(ARG_UNBUNDLE_CONCURRENCY)
@@ -392,8 +394,8 @@ async fn do_main(
     let readonly_storage = args::parse_readonly_storage(&matches);
     let caching = args::init_cachelib(fb, &matches, None);
 
-    let repo_id = args::get_repo_id(matches)?;
-    let (repo_name, repo_config) = args::get_config_by_repoid(&matches, repo_id)?;
+    let repo_id = args::get_repo_id(config_store, matches)?;
+    let (repo_name, repo_config) = args::get_config_by_repoid(config_store, &matches, repo_id)?;
 
     info!(
         logger,
