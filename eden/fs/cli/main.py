@@ -819,14 +819,36 @@ class StraceCmd(Subcmd):
         parser.add_argument(
             "checkout", default=None, nargs="?", help="Path to the checkout"
         )
+        parser.add_argument(
+            "--reads",
+            action="store_true",
+            default=False,
+            help="Limit trace to read operations",
+        )
+        parser.add_argument(
+            "--writes",
+            action="store_true",
+            default=False,
+            help="Limit trace to write operations",
+        )
 
     async def run(self, args: argparse.Namespace) -> int:
-        from eden.fs.service.streamingeden.types import FsEventType
+        from eden.fs.service.streamingeden.types import (
+            FsEventType,
+            FS_EVENT_READ,
+            FS_EVENT_WRITE,
+        )
 
         instance, checkout, _rel_path = require_checkout(args, args.checkout)
         async with await instance.get_thrift_client() as client:
+            mask = 0
+            if args.reads:
+                mask |= FS_EVENT_READ
+            if args.writes:
+                mask |= FS_EVENT_WRITE
+
             # Start tracing before querying outstanding fuse requests so none are missed.
-            trace = await client.traceFsEvents(os.fsencode(checkout.path))
+            trace = await client.traceFsEvents(os.fsencode(checkout.path), mask)
 
             calls = await client.debugOutstandingFuseCalls(os.fsencode(checkout.path))
             if calls:

@@ -44,7 +44,7 @@ class FuseRequestContext;
 using TraceDetailedArgumentsHandle = std::shared_ptr<void>;
 
 struct FuseTraceEvent : TraceEventBase {
-  enum Type {
+  enum Type : unsigned char {
     START,
     FINISH,
   };
@@ -761,6 +761,7 @@ class FuseChannel {
 };
 
 folly::StringPiece fuseOpcodeName(uint32_t opcode);
+ProcessAccessLog::AccessType fuseOpcodeAccessType(uint32_t opcode);
 
 /**
  * FuseChannelDeleter acts as a deleter argument for std::shared_ptr or

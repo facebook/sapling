@@ -32,6 +32,7 @@
 #include "eden/fs/store/ScmStatusDiffCallback.h"
 #endif // _WIN32
 
+#include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/GlobNode.h"
@@ -39,8 +40,6 @@
 #include "eden/fs/inodes/InodeLoader.h"
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/TreeInode.h"
-
-#include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
@@ -49,6 +48,7 @@
 #include "eden/fs/service/EdenServer.h"
 #include "eden/fs/service/ThriftPermissionChecker.h"
 #include "eden/fs/service/ThriftUtil.h"
+#include "eden/fs/service/gen-cpp2/streamingeden_constants.h"
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/BlobMetadata.h"
 #include "eden/fs/store/Diff.h"
@@ -650,11 +650,38 @@ FuseCall populateFuseCall(
       processNameCache.getProcessName(request.pid));
   return fc;
 }
+
+/**
+ * Returns true if event should not be traced.
+ */
+bool isEventMasked(int64_t eventCategoryMask, const FuseTraceEvent& event) {
+  using AccessType = ProcessAccessLog::AccessType;
+  switch (fuseOpcodeAccessType(event.request.opcode)) {
+    case AccessType::FsChannelRead:
+      return 0 == (eventCategoryMask & streamingeden_constants::FS_EVENT_READ_);
+    case AccessType::FsChannelWrite:
+      return 0 ==
+          (eventCategoryMask & streamingeden_constants::FS_EVENT_WRITE_);
+    case AccessType::FsChannelOther:
+    default:
+      return 0 ==
+          (eventCategoryMask & streamingeden_constants::FS_EVENT_OTHER_);
+  }
+}
+
 } // namespace
 
 apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
-    std::unique_ptr<std::string> mountPoint) {
+    std::unique_ptr<std::string> mountPoint,
+    int64_t eventCategoryMask) {
   auto edenMount = server_->getMount(*mountPoint);
+
+  // Treat an empty bitset as an unfiltered stream. This is for clients that
+  // predate the addition of the mask and for clients that don't care.
+  // 0 would be meaningless anyway: it would never return any events.
+  if (0 == eventCategoryMask) {
+    eventCategoryMask = ~0;
+  }
 
   struct Context {
     // While subscribed to FuseChannel's TraceBus, request detailed argument
@@ -699,8 +726,12 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
       edenMount->getFuseChannel()->getTraceBus().subscribeFunction(
           folly::to<std::string>("strace-", edenMount->getPath().basename()),
           [owner = PublisherOwner{std::move(publisher)},
-           serverState =
-               server_->getServerState()](const FuseTraceEvent& event) {
+           serverState = server_->getServerState(),
+           eventCategoryMask](const FuseTraceEvent& event) {
+            if (isEventMasked(eventCategoryMask, event)) {
+              return;
+            }
+
             FsEvent te;
             te.timestamp_ref() =
                 std::chrono::duration_cast<std::chrono::nanoseconds>(

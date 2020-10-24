@@ -544,6 +544,12 @@ StringPiece fuseOpcodeName(uint32_t opcode) {
   return entry ? entry->name : "<unknown>";
 }
 
+ProcessAccessLog::AccessType fuseOpcodeAccessType(uint32_t opcode) {
+  auto* entry = lookupFuseHandlerEntry(opcode);
+  return entry ? entry->accessType
+               : ProcessAccessLog::AccessType::FsChannelOther;
+}
+
 FuseChannel::DataRange::DataRange(int64_t off, int64_t len)
     : offset(off), length(len) {}
 

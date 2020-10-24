@@ -31,7 +31,7 @@ struct ThreadLocalBucket;
  */
 class ProcessAccessLog {
  public:
-  enum class AccessType : unsigned int {
+  enum class AccessType : unsigned char {
     FsChannelRead,
     FsChannelWrite,
     FsChannelOther,

@@ -127,7 +127,8 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
 
 #ifndef _WIN32
   apache::thrift::ServerStream<FsEvent> traceFsEvents(
-      std::unique_ptr<std::string> mountPoint) override;
+      std::unique_ptr<std::string> mountPoint,
+      int64_t eventCategoryMask) override;
 #endif
 
   void getManifestEntry(
