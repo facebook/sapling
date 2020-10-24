@@ -283,10 +283,10 @@ async fn run_blobimport<'a>(
 
     let has_globalrev = matches.is_present("has-globalrev");
 
-    let (_repo_name, repo_config) = args::get_config(ctx.fb, &matches)?;
+    let (_repo_name, repo_config) = args::get_config(&matches)?;
     let populate_git_mapping = repo_config.pushrebase.populate_git_mapping.clone();
 
-    let small_repo_id = args::get_source_repo_id_opt(fb, &matches)?;
+    let small_repo_id = args::get_source_repo_id_opt(&matches)?;
 
     let (blobrepo, globalrevs_store, synced_commit_mapping, mutable_counters) = try_join4(
         if matches.is_present("no-create") {
@@ -449,6 +449,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     args::init_cachelib(fb, &matches, None);
     let logger = args::init_logging(fb, &matches);
     let ctx = &CoreContext::new_with_logger(fb, logger.clone());
+    args::init_config_store(fb, &logger, &matches)?;
 
     block_execute(
         run_blobimport(fb, ctx, &logger, &matches),

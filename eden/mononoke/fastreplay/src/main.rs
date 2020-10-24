@@ -225,7 +225,7 @@ async fn bootstrap_repositories<'a>(
     logger: &Logger,
     scuba: &ScubaSampleBuilder,
 ) -> Result<HashMap<String, FastReplayDispatcher>, Error> {
-    let config = args::load_repo_configs(fb, &matches)?;
+    let config = args::load_repo_configs(&matches)?;
 
     let mysql_options = cmdlib::args::parse_mysql_options(&matches);
     let caching = cmdlib::args::init_cachelib(fb, &matches, None);
@@ -389,6 +389,8 @@ impl ReplayOpts {
             None => HashMap::new(),
         };
         let aliases = Arc::new(aliases);
+
+        cmdlib::args::init_config_store(fb, &logger, matches)?;
 
         let config = cmdlib::args::get_config_handle(
             fb,
@@ -593,6 +595,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let matches = app.get_matches();
 
     let logger = args::init_logging(fb, &matches);
+    args::init_config_store(fb, &logger, &matches)?;
     args::init_tunables(fb, &matches, logger.clone())?;
     let service = ReadyFlagService::new();
 

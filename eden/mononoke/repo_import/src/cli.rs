@@ -33,7 +33,6 @@ pub const CHECK_ADDITIONAL_SETUP_STEPS: &str = "check-additional-setup-steps";
 pub fn setup_app<'a, 'b>() -> App<'a, 'b> {
     args::MononokeApp::new("Import Repository")
         .with_advanced_args_hidden()
-        .with_test_args()
         .build()
         .version("0.0.0")
         .about("Automating repository imports")

@@ -93,7 +93,9 @@ fn main(fb: fbinit::FacebookInit) {
     let (caching, logger, mut runtime) =
         args::init_mononoke(fb, &matches, None).expect("failed to initialise mononoke");
 
-    let storage_config = args::load_storage_configs(fb, &matches)
+    args::init_config_store(fb, &logger, &matches).expect("failed to start Configerator");
+
+    let storage_config = args::load_storage_configs(&matches)
         .expect("Could not read storage configs")
         .storage
         .remove(

@@ -23,7 +23,6 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
     let app = args::MononokeApp::new("mononoke server")
         .with_shutdown_timeout_args()
         .with_all_repos()
-        .with_test_args()
         .with_disabled_hooks_args()
         .build()
         .version("0.0.0")
@@ -52,10 +51,11 @@ fn main(fb: FacebookInit) -> Result<()> {
     cmdlib::args::maybe_enable_mcrouter(fb, &matches);
 
     let (caching, root_log, runtime) = cmdlib::args::init_mononoke(fb, &matches, None)?;
+    let config_source = cmdlib::args::init_config_store(fb, &root_log, &matches)?;
 
     info!(root_log, "Starting up");
 
-    let config = args::load_repo_configs(fb, &matches)?;
+    let config = args::load_repo_configs(&matches)?;
     let acceptor = {
         let cert = matches.value_of("cert").unwrap().to_string();
         let private_key = matches.value_of("private_key").unwrap().to_string();
@@ -71,8 +71,6 @@ fn main(fb: FacebookInit) -> Result<()> {
         .expect("failed to build tls acceptor")
     };
 
-    let config_source = args::maybe_init_config_store(fb, &root_log, &matches);
-
     info!(root_log, "Creating repo listeners");
 
     let service = ReadyFlagService::new();
@@ -83,6 +81,7 @@ fn main(fb: FacebookInit) -> Result<()> {
 
         repo_listener::create_repo_listeners(
             fb,
+            cmdlib::args::is_test_instance(&matches),
             config.common,
             config.repos.into_iter(),
             cmdlib::args::parse_mysql_options(&matches),

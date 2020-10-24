@@ -392,8 +392,8 @@ async fn do_main(
     let readonly_storage = args::parse_readonly_storage(&matches);
     let caching = args::init_cachelib(fb, &matches, None);
 
-    let repo_id = args::get_repo_id(fb, matches)?;
-    let (repo_name, repo_config) = args::get_config_by_repoid(fb, &matches, repo_id)?;
+    let repo_id = args::get_repo_id(matches)?;
+    let (repo_name, repo_config) = args::get_config_by_repoid(&matches, repo_id)?;
 
     info!(
         logger,
@@ -700,6 +700,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let logger = args::init_logging(fb, &matches);
     let service = ReadyFlagService::new();
+    args::init_config_store(fb, &logger, &matches)?;
 
     let main = do_main(fb, &matches, &logger, &service);
 

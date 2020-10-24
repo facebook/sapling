@@ -333,7 +333,7 @@ pub async fn corpus<'a>(
     )
     .await?;
 
-    let repo_name = args::get_repo_name(fb, &matches)?;
+    let repo_name = args::get_repo_name(&matches)?;
     let sample_rate = args::get_u64_opt(&sub_m, SAMPLE_RATE_ARG).unwrap_or(100);
     let sample_offset = args::get_u64_opt(&sub_m, SAMPLE_OFFSET_ARG).unwrap_or(0);
     let progress_interval_secs = args::get_u64_opt(&sub_m, PROGRESS_INTERVAL_ARG);

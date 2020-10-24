@@ -82,7 +82,7 @@ async fn do_main<'a>(
     let blobstore_options = cmdlib::args::parse_blobstore_options(&matches);
     let caching = cmdlib::args::init_cachelib(fb, &matches, None);
 
-    let RepoConfigs { repos, common } = args::load_repo_configs(fb, &matches)?;
+    let RepoConfigs { repos, common } = args::load_repo_configs(&matches)?;
     let censored_scuba_params = common.censored_scuba_params;
 
     let location = match matches.subcommand() {
@@ -206,6 +206,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let matches = app.get_matches();
 
     let logger = args::init_logging(fb, &matches);
+    args::init_config_store(fb, &logger, &matches)?;
 
     let main = do_main(fb, &matches, &logger);
 

@@ -324,7 +324,7 @@ pub async fn scrub_objects<'a>(
     )
     .await?;
 
-    let repo_stats_key = args::get_repo_name(fb, &matches)?;
+    let repo_stats_key = args::get_repo_name(&matches)?;
 
     let sample_rate = args::get_u64_opt(&sub_m, SAMPLE_RATE_ARG).unwrap_or(1);
     let sample_offset = args::get_u64_opt(&sub_m, SAMPLE_OFFSET_ARG).unwrap_or(0);

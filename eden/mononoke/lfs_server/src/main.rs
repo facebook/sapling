@@ -222,6 +222,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let (caching, logger, mut runtime) =
         args::init_mononoke(fb, &matches, Some(CACHE_OBJECT_SIZE))?;
 
+    args::init_config_store(fb, &logger, &matches)?;
+
     let mysql_options = args::parse_mysql_options(&matches);
     let blobstore_options = args::parse_blobstore_options(&matches);
     let readonly_storage = args::parse_readonly_storage(&matches);
@@ -258,7 +260,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         matches.value_of(ARG_UPSTREAM_URL),
     )?;
 
-    let RepoConfigs { repos, common } = args::load_repo_configs(fb, &matches)?;
+    let RepoConfigs { repos, common } = args::load_repo_configs(&matches)?;
 
     let futs = repos
         .into_iter()

@@ -534,7 +534,7 @@ pub async fn subcommand_process_hg_sync<'a>(
     matches: &'a ArgMatches<'_>,
     logger: Logger,
 ) -> Result<(), SubcommandError> {
-    let repo_id = args::get_repo_id(fb, &matches)?;
+    let repo_id = args::get_repo_id(&matches)?;
 
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 

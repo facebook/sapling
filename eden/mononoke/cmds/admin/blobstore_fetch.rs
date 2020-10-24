@@ -162,8 +162,8 @@ pub async fn subcommand_blobstore_fetch<'a>(
     matches: &'a ArgMatches<'_>,
     sub_m: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
-    let repo_id = args::get_repo_id(fb, &matches)?;
-    let (_, config) = args::get_config(fb, &matches)?;
+    let repo_id = args::get_repo_id(&matches)?;
+    let (_, config) = args::get_config(&matches)?;
     let redaction = config.redaction;
     let storage_config = config.storage_config;
     let inner_blobstore_id = args::get_u64_opt(&sub_m, "inner-blobstore-id");
@@ -185,7 +185,7 @@ pub async fn subcommand_blobstore_fetch<'a>(
         blobstore_options,
     );
 
-    let common_config = args::load_common_config(fb, &matches)?;
+    let common_config = args::load_common_config(&matches)?;
     let censored_scuba_params = common_config.censored_scuba_params;
     let mut scuba_redaction_builder =
         ScubaSampleBuilder::with_opt_table(fb, censored_scuba_params.table);

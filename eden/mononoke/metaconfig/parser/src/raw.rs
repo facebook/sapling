@@ -7,38 +7,29 @@
 
 use std::collections::{BTreeSet, HashMap};
 use std::path::Path;
-use std::time::Duration;
 
 use anyhow::{anyhow, Result};
 use cached_config::ConfigStore;
-use fbinit::FacebookInit;
-use maplit::hashmap;
 use repos::{
     RawCommitSyncConfig, RawCommonConfig, RawRepoConfig, RawRepoConfigs, RawStorageConfig,
 };
 
 use crate::errors::ConfigurationError;
 
-const CONFIGERATOR_CRYPTO_PROJECT: &str = "SCM";
 const CONFIGERATOR_PREFIX: &str = "configerator://";
 
-pub(crate) fn read_raw_configs(fb: FacebookInit, config_path: &Path) -> Result<RawRepoConfigs> {
+pub(crate) fn read_raw_configs(
+    config_path: &Path,
+    config_store: &ConfigStore,
+) -> Result<RawRepoConfigs> {
     if config_path.starts_with(CONFIGERATOR_PREFIX) {
         let cfg_path = config_path
             .strip_prefix(CONFIGERATOR_PREFIX)?
             .to_string_lossy()
             .into_owned();
-        let arc_conf = ConfigStore::signed_configerator(
-            fb,
-            None,
-            hashmap! {
-                cfg_path.clone() => CONFIGERATOR_CRYPTO_PROJECT.to_owned(),
-            },
-            None,
-            Duration::from_secs(30),
-        )?
-        .get_config_handle::<RawRepoConfigs>(cfg_path)?
-        .get();
+        let arc_conf = config_store
+            .get_config_handle::<RawRepoConfigs>(cfg_path)?
+            .get();
         Ok((*arc_conf).clone())
     } else if config_path.is_dir() {
         read_raw_configs_toml(config_path)

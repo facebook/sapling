@@ -99,10 +99,11 @@ fn main(fb: fbinit::FacebookInit) -> Result<()> {
     let matches = app.get_matches();
     let (_, logger, mut runtime) =
         args::init_mononoke(fb, &matches, None).context("failed to initialise mononoke")?;
+    args::init_config_store(fb, &logger, &matches)?;
 
     let scheduled_max = args::get_usize_opt(&matches, ARG_SCHEDULED_MAX).unwrap_or(100) as usize;
 
-    let storage_config = args::load_storage_configs(fb, &matches)
+    let storage_config = args::load_storage_configs(&matches)
         .context("Could not read storage configs")?
         .storage
         .remove(

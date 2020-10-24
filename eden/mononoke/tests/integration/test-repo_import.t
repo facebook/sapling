@@ -58,7 +58,6 @@
 # Run setup checker
   $ cd "$TESTTMP"
   $ repo_import \
-  > --test-instance \
   > --local-configerator-path="$TESTTMP/configerator" \
   > check-additional-setup-steps \
   > --disable-phabricator-check \
@@ -86,7 +85,6 @@
   > EOF
 
   $ repo_import \
-  > --test-instance \
   > --local-configerator-path="$TESTTMP/configerator" \
   > check-additional-setup-steps \
   > --disable-phabricator-check \
@@ -101,7 +99,6 @@
 
 # Import the repo
   $ repo_import \
-  > --test-instance \
   > --local-configerator-path="$TESTTMP/configerator" \
   > import \
   > "$GIT_REPO" \

@@ -120,6 +120,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     args::init_cachelib(fb, &matches, None);
     let logger = args::init_logging(fb, &matches);
+    args::init_config_store(fb, &logger, &matches)?;
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     let repo = args::create_repo(fb, &logger, &matches);

@@ -117,15 +117,14 @@ async fn start(
     matches: ArgMatches<'_>,
 ) -> Result<()> {
     debug!(logger, "Reading args");
-    let repo_configs = args::load_repo_configs(fb, &matches)?;
+    let repo_configs = args::load_repo_configs(&matches)?;
     let mysql_options = args::parse_mysql_options(&matches);
     let readonly_storage = args::parse_readonly_storage(&matches);
     let blobstore_options = args::parse_blobstore_options(&matches);
     let disabled_hooks = args::parse_disabled_hooks_with_repo_prefix(&matches, &logger)?;
     let trusted_proxy_idents = parse_identities(&matches)?;
     let tls_session_data_log = matches.value_of(ARG_TLS_SESSION_DATA_LOG_FILE);
-    let config_store = args::maybe_init_config_store(fb, &logger, &matches)
-        .context("failed to instantiate ConfigStore")?;
+    let config_store = args::init_config_store(fb, &logger, &matches)?;
     let mut scuba_logger = args::get_scuba_sample_builder(fb, &matches)?;
 
     debug!(logger, "Initializing Mononoke API");
@@ -256,7 +255,6 @@ fn main(fb: FacebookInit) -> Result<()> {
         .with_shutdown_timeout_args()
         .with_scuba_logging_args()
         .with_disabled_hooks_args()
-        .with_test_args()
         .build()
         .arg(
             Arg::with_name(ARG_LISTEN_HOST)
@@ -316,5 +314,6 @@ fn main(fb: FacebookInit) -> Result<()> {
     let matches = app.get_matches();
 
     let (caching, logger, mut runtime) = args::init_mononoke(fb, &matches, None)?;
+    args::init_config_store(fb, &logger, &matches)?;
     runtime.block_on_std(start(fb, caching, logger, matches))
 }

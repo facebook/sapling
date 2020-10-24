@@ -37,6 +37,7 @@ use crate::repo_handlers::repo_handlers;
 
 pub async fn create_repo_listeners(
     fb: FacebookInit,
+    test_instance: bool,
     common_config: CommonConfig,
     repos: impl IntoIterator<Item = (String, RepoConfig)>,
     mysql_options: MysqlOptions,
@@ -47,7 +48,7 @@ pub async fn create_repo_listeners(
     tls_acceptor: SslAcceptor,
     service: ReadyFlagService,
     terminate_process: oneshot::Receiver<()>,
-    config_store: Option<ConfigStore>,
+    config_store: &ConfigStore,
     readonly_storage: ReadOnlyStorage,
     blobstore_options: BlobstoreOptions,
     scribe: Scribe,
@@ -69,6 +70,7 @@ pub async fn create_repo_listeners(
     debug!(root_log, "Mononoke server is listening on {}", sockname);
     connection_acceptor(
         fb,
+        test_instance,
         common_config,
         sockname,
         service,

@@ -118,7 +118,7 @@ async fn run_in_single_commit_mode<M: SyncedCommitMapping + Clone + 'static>(
 
 enum TailingArgs<M> {
     CatchUpOnce(CommitSyncer<M>),
-    LoopForever(CommitSyncerArgs<M>, ConfigStore),
+    LoopForever(CommitSyncerArgs<M>, &'static ConfigStore),
 }
 
 async fn run_in_tailing_mode<
@@ -400,10 +400,10 @@ async fn run(
     let mut scuba_sample = get_scuba_sample(ctx.clone(), &matches);
     let mutable_counters = args::open_source_sql::<SqlMutableCounters>(fb, &matches).compat();
 
-    let source_repo_id = args::get_source_repo_id(fb, &matches)?;
-    let target_repo_id = args::get_target_repo_id(fb, &matches)?;
-    let (_, source_repo_config) = args::get_config_by_repoid(fb, &matches, source_repo_id)?;
-    let (_, target_repo_config) = args::get_config_by_repoid(fb, &matches, target_repo_id)?;
+    let source_repo_id = args::get_source_repo_id(&matches)?;
+    let target_repo_id = args::get_target_repo_id(&matches)?;
+    let (_, source_repo_config) = args::get_config_by_repoid(&matches, source_repo_id)?;
+    let (_, target_repo_config) = args::get_config_by_repoid(&matches, target_repo_id)?;
 
     let logger = ctx.logger();
     let source_repo = args::open_repo_with_repo_id(fb, &logger, source_repo_id, &matches).compat();
@@ -414,8 +414,7 @@ async fn run(
 
     let commit_syncer_args = create_commit_syncer_args_from_matches(fb, &logger, &matches).await?;
 
-    let config_store = args::maybe_init_config_store(ctx.fb, &logger, &matches)
-        .ok_or_else(|| format_err!("Failed initializing ConfigStore"))?;
+    let config_store = args::init_config_store(ctx.fb, logger, &matches)?;
     let live_commit_sync_config = Arc::new(CfgrLiveCommitSyncConfig::new(&logger, &config_store)?);
     let commit_sync_config =
         live_commit_sync_config.get_current_commit_sync_config(&ctx, source_repo.get_repoid())?;
@@ -469,8 +468,7 @@ async fn run(
             let tailing_args = if sub_m.is_present(ARG_CATCH_UP_ONCE) {
                 TailingArgs::CatchUpOnce(commit_syncer)
             } else {
-                let config_store = args::maybe_init_config_store(fb, ctx.logger(), &matches)
-                    .ok_or_else(|| format_err!("Failed to init ConfigStore."))?;
+                let config_store = args::init_config_store(fb, ctx.logger(), &matches)?;
 
                 TailingArgs::LoopForever(commit_syncer_args, config_store)
             };
@@ -565,6 +563,7 @@ impl BackpressureParams {
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
     let (ctx, matches) = context_and_matches(fb, create_app());
+    args::init_config_store(fb, ctx.logger(), &matches)?;
 
     let mut runtime = tokio_compat::runtime::Runtime::new()?;
     monitoring::start_fb303_and_stats_agg(

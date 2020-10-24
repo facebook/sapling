@@ -529,12 +529,13 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let logger = args::init_logging(fb, &matches);
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
+    args::init_config_store(fb, &logger, &matches)?;
     let bookmark = match matches.value_of("bookmark") {
         Some(name) => name.to_string(),
         None => String::from("master"),
     };
     let bookmark = BookmarkName::new(bookmark.clone())?;
-    let repo_name = args::get_repo_name(fb, &matches)?;
+    let repo_name = args::get_repo_name(&matches)?;
     let scuba_logger = if matches.is_present("log-to-scuba") {
         ScubaSampleBuilder::new(fb, SCUBA_DATASET_NAME)
     } else {

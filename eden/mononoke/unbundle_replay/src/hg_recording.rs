@@ -92,7 +92,7 @@ impl HgRecordingClient {
         let sql = args::open_sql::<HgRecordingConnection>(fb, matches)
             .compat()
             .await?;
-        let repo_id = args::get_repo_id(fb, matches)?;
+        let repo_id = args::get_repo_id(matches)?;
         Ok(HgRecordingClient { repo_id, sql })
     }
 

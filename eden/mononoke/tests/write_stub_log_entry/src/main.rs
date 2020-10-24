@@ -60,8 +60,9 @@ fn main(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
 
     let matches = setup_app().get_matches();
+    args::init_config_store(fb, None, &matches)?;
 
-    let repo_id = args::get_repo_id(fb, &matches).unwrap();
+    let repo_id = args::get_repo_id(&matches).unwrap();
     let fut = args::open_sql::<SqlBookmarksBuilder>(fb, &matches).and_then(move |builder| {
         let bookmarks = builder.with_repo_id(repo_id);
         let name = matches.value_of(BOOKMARK).unwrap().to_string();

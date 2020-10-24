@@ -64,6 +64,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let logger = args::init_logging(fb, &matches);
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
+    args::init_config_store(fb, &logger, &matches)?;
     helpers::block_execute(
         run(ctx, &matches),
         fb,
@@ -93,7 +94,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a ArgMatches<'a>) -> Result<(), Er
 
     let mysql_options = args::parse_mysql_options(matches);
     let blobstore_options = args::parse_blobstore_options(matches);
-    let configs = args::load_repo_configs(ctx.fb, matches)?;
+    let configs = args::load_repo_configs(matches)?;
 
     // wait for myrouter
     myrouter_ready(

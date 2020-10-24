@@ -55,11 +55,11 @@ async fn create_commit_syncer_args_and_config_from_matches_impl(
     matches: &ArgMatches<'_>,
     reverse: bool,
 ) -> Result<(CommitSyncerArgs<SqlSyncedCommitMapping>, CommitSyncConfig), Error> {
-    let source_repo_id = args::get_source_repo_id(fb, &matches)?;
-    let target_repo_id = args::get_target_repo_id(fb, &matches)?;
+    let source_repo_id = args::get_source_repo_id(&matches)?;
+    let target_repo_id = args::get_target_repo_id(&matches)?;
 
-    let (_, source_repo_config) = args::get_config_by_repoid(fb, &matches, source_repo_id)?;
-    let (_, target_repo_config) = args::get_config_by_repoid(fb, &matches, target_repo_id)?;
+    let (_, source_repo_config) = args::get_config_by_repoid(&matches, source_repo_id)?;
+    let (_, target_repo_config) = args::get_config_by_repoid(&matches, target_repo_id)?;
     let source_repo_fut = args::open_repo_with_repo_id(fb, logger, source_repo_id, &matches);
     let target_repo_fut = args::open_repo_with_repo_id(fb, logger, target_repo_id, &matches);
 

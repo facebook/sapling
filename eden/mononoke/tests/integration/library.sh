@@ -24,7 +24,7 @@ fi
 REPOID=0
 REPONAME=${REPONAME:-repo}
 
-COMMON_ARGS=(--skip-caching --mysql-master-only --tunables-config "file:$TESTTMP/mononoke_tunables.json")
+COMMON_ARGS=(--skip-caching --mysql-master-only --tunables-config "file:$TESTTMP/mononoke_tunables.json" --test-instance)
 if [[ -n "$MYSQL_CLIENT" ]]; then
   COMMON_ARGS+=(--use-mysql-client)
 fi
@@ -106,7 +106,6 @@ function mononoke {
   --cert "$TEST_CERTDIR/localhost.crt" \
   --ssl-ticket-seeds "$TEST_CERTDIR/server.pem.seeds" \
   --debug \
-  --test-instance \
   --listening-host-port "$(mononoke_address)" \
   --mononoke-config-path "$TESTTMP/mononoke-config" \
    "${COMMON_ARGS[@]}" >> "$TESTTMP/mononoke.out" 2>&1 &
@@ -141,7 +140,6 @@ function megarepo_tool {
 function megarepo_tool_multirepo {
   GLOG_minloglevel=5 "$MEGAREPO_TOOL" \
     "${COMMON_ARGS[@]}" \
-    --test-instance \
     --local-configerator-path="$TESTTMP/configerator" \
     --mononoke-config-path "$TESTTMP"/mononoke-config \
     "$@"
@@ -170,7 +168,6 @@ function mononoke_x_repo_sync() {
   GLOG_minloglevel=5 "$MONONOKE_X_REPO_SYNC" \
     "${COMMON_ARGS[@]}" \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
-    --test-instance \
     --local-configerator-path="$TESTTMP/configerator" \
     --source-repo-id "$source_repo_id" \
     --target-repo-id "$target_repo_id" \
@@ -242,7 +239,6 @@ function mononoke_bookmarks_filler {
   GLOG_minloglevel=5 "$MONONOKE_BOOKMARKS_FILLER" \
     "${COMMON_ARGS[@]}" \
     --mononoke-config-path "$TESTTMP"/mononoke-config \
-    --test-instance \
     --local-configerator-path="$TESTTMP/configerator" \
     "$@" "$sql_source" "$sql_name"  2>&1 | grep mononoke_commitcloud_bookmarks_filler
 }
@@ -311,7 +307,6 @@ function mononoke_hg_sync_loop_regenerate {
 function mononoke_admin {
   GLOG_minloglevel=5 "$MONONOKE_ADMIN" \
     "${COMMON_ARGS[@]}" \
-    --test-instance \
     --local-configerator-path="$TESTTMP/configerator" \
     --repo-id $REPOID \
     --mononoke-config-path "$TESTTMP"/mononoke-config "$@"
@@ -324,7 +319,6 @@ function mononoke_admin_source_target {
   shift
   GLOG_minloglevel=5 "$MONONOKE_ADMIN" \
     "${COMMON_ARGS[@]}" \
-    --test-instance \
     --local-configerator-path="$TESTTMP/configerator" \
     --source-repo-id "$source_repo_id" \
     --target-repo-id "$target_repo_id" \
@@ -334,7 +328,6 @@ function mononoke_admin_source_target {
 function mononoke_admin_sourcerepo {
   GLOG_minloglevel=5 "$MONONOKE_ADMIN" \
     "${COMMON_ARGS[@]}" \
-    --test-instance \
     --local-configerator-path="$TESTTMP/configerator" \
     --source-repo-id $REPOID \
     --mononoke-config-path "$TESTTMP"/mononoke-config "$@"
@@ -1032,7 +1025,6 @@ function start_and_wait_for_scs_server {
     -p "$SCS_PORT" \
     --log-level DEBUG \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
-    --test-instance \
     --local-configerator-path="$TESTTMP/configerator" \
     "${COMMON_ARGS[@]}" >> "$TESTTMP/scs_server.out" 2>&1 &
   export SCS_SERVER_PID=$!
@@ -1077,7 +1069,6 @@ function start_edenapi_server {
     --listen-host "$LOCALIP" \
     --listen-port "$port" \
     --mononoke-config-path "$TESTTMP/mononoke-config" \
-    --test-instance \
     --local-configerator-path="$TESTTMP/configerator" \
     --tls-ca "$TEST_CERTDIR/root-ca.crt" \
     --tls-private-key "$TEST_CERTDIR/localhost.key" \

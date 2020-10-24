@@ -68,8 +68,9 @@ async fn get_changesets<'a>(
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
     let matches = setup_app().get_matches();
-    let (repo_name, config) = cmdlib::args::get_config(fb, &matches)?;
     let logger = cmdlib::args::init_logging(fb, &matches);
+    cmdlib::args::init_config_store(fb, &logger, &matches)?;
+    let (repo_name, config) = cmdlib::args::get_config(&matches)?;
     info!(logger, "Hook tailer is starting");
 
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
@@ -94,7 +95,7 @@ async fn run_hook_tailer<'a>(
 ) -> Result<(), Error> {
     let bookmark_name = matches.value_of("bookmark").unwrap();
     let bookmark = BookmarkName::new(bookmark_name)?;
-    let common_config = cmdlib::args::load_common_config(fb, &matches)?;
+    let common_config = cmdlib::args::load_common_config(&matches)?;
     let limit = cmdlib::args::get_usize(&matches, "limit", 1000);
     let concurrency = cmdlib::args::get_usize(&matches, "concurrency", 20);
     let log_interval = cmdlib::args::get_usize(&matches, "log_interval", 500);

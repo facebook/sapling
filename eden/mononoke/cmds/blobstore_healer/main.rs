@@ -267,10 +267,11 @@ fn main(fb: FacebookInit) -> Result<()> {
         .value_of("storage-id")
         .ok_or(Error::msg("Missing storage-id"))?;
     let logger = args::init_logging(fb, &matches);
+    args::init_config_store(fb, &logger, &matches)?;
     let mysql_options = args::parse_mysql_options(&matches);
     let readonly_storage = args::parse_readonly_storage(&matches);
     let blobstore_options = args::parse_blobstore_options(&matches);
-    let storage_config = args::load_storage_configs(fb, &matches)?
+    let storage_config = args::load_storage_configs(&matches)?
         .storage
         .remove(storage_id)
         .ok_or(format_err!("Storage id `{}` not found", storage_id))?;

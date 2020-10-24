@@ -85,7 +85,7 @@ impl Mononoke {
         with_cachelib: Caching,
         readonly_storage: ReadOnlyStorage,
         blobstore_options: BlobstoreOptions,
-        config_store: ConfigStore,
+        config_store: &ConfigStore,
         disabled_hooks: HashMap<String, HashSet<String>>,
     ) -> Result<Self, Error> {
         let common_config = configs.common;
@@ -110,7 +110,7 @@ impl Mononoke {
                                 with_cachelib,
                                 readonly_storage,
                                 blobstore_options,
-                                config_store,
+                                &config_store,
                                 disabled_hooks,
                             )
                             .await

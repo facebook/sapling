@@ -287,7 +287,7 @@ pub async fn compression_benefit<'a>(
     )
     .await?;
 
-    let repo_stats_key = args::get_repo_name(fb, &matches)?;
+    let repo_stats_key = args::get_repo_name(&matches)?;
 
     let compression_level = args::get_i32_opt(&sub_m, COMPRESSION_LEVEL_ARG).unwrap_or(3);
     let sample_rate = args::get_u64_opt(&sub_m, SAMPLE_RATE_ARG).unwrap_or(100);

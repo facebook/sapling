@@ -67,6 +67,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     args::init_cachelib(fb, &matches, None);
 
     let logger = args::init_logging(fb, &matches);
+    args::init_config_store(fb, &logger, &matches)?;
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     let blobrepo = if matches.is_present(ARG_NO_CREATE) {
         args::open_repo(fb, &logger, &matches).left_future()

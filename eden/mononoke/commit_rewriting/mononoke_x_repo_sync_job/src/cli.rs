@@ -24,7 +24,6 @@ pub fn create_app<'a, 'b>() -> App<'a, 'b> {
     let app = args::MononokeApp::new("Mononoke cross-repo sync job")
         .with_fb303_args()
         .with_source_and_target_repos()
-        .with_test_args()
         .build();
 
     let app = app.arg(

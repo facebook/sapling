@@ -18,7 +18,6 @@ pub fn create_app<'a, 'b>() -> App<'a, 'b> {
     let app = args::MononokeApp::new("Mononoke cross-repo sync validator job")
         .with_scuba_logging_args()
         .with_fb303_args()
-        .with_test_args()
         .build();
 
     let app = app.arg(

@@ -19,15 +19,15 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::{bail, format_err, Error, Result};
-use cached_config::{ConfigHandle, ConfigStore};
+use anyhow::{bail, format_err, Context, Error, Result};
+use cached_config::{ConfigHandle, ConfigStore, TestSource};
 use clap::{App, Arg, ArgGroup, ArgMatches};
 use cloned::cloned;
 use fbinit::FacebookInit;
 use futures::{FutureExt, TryFutureExt};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt as OldFutureExt};
 use futures_old::Future;
-use maplit::hashmap;
+use once_cell::sync::OnceCell;
 use panichandler::{self, Fate};
 use scribe_ext::Scribe;
 use scuba::ScubaSampleBuilder;
@@ -73,7 +73,7 @@ const RUNTIME_THREADS: &str = "runtime-threads";
 const TUNABLES_CONFIG: &str = "tunables-config";
 const DISABLE_TUNABLES: &str = "disable-tunables";
 
-const DEFAULT_TUNABLES_PATH: &str = "signed-configerator:scm/mononoke/tunables/default";
+const DEFAULT_TUNABLES_PATH: &str = "configerator:scm/mononoke/tunables/default";
 
 const READ_QPS_ARG: &str = "blobstore-read-qps";
 const WRITE_QPS_ARG: &str = "blobstore-write-qps";
@@ -85,6 +85,7 @@ const CACHELIB_ATTEMPT_ZSTD_ARG: &str = "blobstore-cachelib-attempt-zstd";
 const BLOBSTORE_PUT_BEHAVIOUR_ARG: &str = "blobstore-put-behaviour";
 const TEST_INSTANCE_ARG: &str = "test-instance";
 const LOCAL_CONFIGERATOR_PATH_ARG: &str = "local-configerator-path";
+const CRYPTO_PATH_REGEX_ARG: &str = "crypto-path-regex";
 
 const CRYPTO_PROJECT: &str = "SCM";
 
@@ -123,9 +124,6 @@ pub struct MononokeApp {
 
     /// Adds --fb303-thrift-port
     fb303: bool,
-
-    /// Adds `--test-instance` and `--local-configerator-path` args
-    test_args: bool,
 }
 
 /// Create a default root logger for Facebook services
@@ -153,14 +151,7 @@ impl MononokeApp {
             scuba_logging: false,
             disabled_hooks: false,
             fb303: false,
-            test_args: false,
         }
-    }
-
-    /// Enable args that help to use this binary in integration tests
-    pub fn with_test_args(mut self) -> Self {
-        self.test_args = true;
-        self
     }
 
     /// Hide advanced args.
@@ -225,12 +216,32 @@ impl MononokeApp {
 
     /// Build a `clap::App` for this Mononoke app, which can then be customized further.
     pub fn build<'a, 'b>(self) -> App<'a, 'b> {
-        let mut app = App::new(self.name).arg(
-            Arg::with_name(CONFIG_PATH)
-                .long(CONFIG_PATH)
-                .value_name("MONONOKE_CONFIG_PATH")
-                .help("Path to the Mononoke configs"),
-        );
+        let mut app = App::new(self.name)
+            .arg(
+                Arg::with_name(CONFIG_PATH)
+                    .long(CONFIG_PATH)
+                    .value_name("MONONOKE_CONFIG_PATH")
+                    .help("Path to the Mononoke configs"),
+            )
+            .arg(
+                Arg::with_name(CRYPTO_PATH_REGEX_ARG)
+                    .multiple(true)
+                    .long(CRYPTO_PATH_REGEX_ARG)
+                    .takes_value(true)
+                    .help("Regex for a Configerator path that must be covered by Mononoke's crypto project")
+            )
+            .arg(
+                Arg::with_name(TEST_INSTANCE_ARG)
+                    .long(TEST_INSTANCE_ARG)
+                    .takes_value(false)
+                    .help("disables some functionality for tests"),
+            )
+            .arg(
+                Arg::with_name(LOCAL_CONFIGERATOR_PATH_ARG)
+                    .long(LOCAL_CONFIGERATOR_PATH_ARG)
+                    .takes_value(true)
+                    .help("local path to fetch configerator configs from, instead of normal configerator"),
+            );
 
         if !self.all_repos {
             let repo_conflicts: &[&str] = if self.source_repo {
@@ -331,27 +342,8 @@ impl MononokeApp {
             app = add_fb303_args(app);
         }
 
-        if self.test_args {
-            app = add_test_args(app);
-        }
-
         app
     }
-}
-
-pub fn add_test_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
-    app.arg(
-        Arg::with_name(TEST_INSTANCE_ARG)
-            .long(TEST_INSTANCE_ARG)
-            .takes_value(false)
-            .help("disables some functionality for tests"),
-    )
-    .arg(
-        Arg::with_name(LOCAL_CONFIGERATOR_PATH_ARG)
-            .long(LOCAL_CONFIGERATOR_PATH_ARG)
-            .takes_value(true)
-            .help("local path to fetch configerator configs from. used only if --test-instance is"),
-    )
 }
 
 pub fn add_tunables_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
@@ -484,14 +476,13 @@ pub fn init_logging<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Logger {
 }
 
 fn get_repo_id_and_name_from_values<'a>(
-    fb: FacebookInit,
     matches: &ArgMatches<'a>,
     option_repo_name: &str,
     option_repo_id: &str,
 ) -> Result<(RepositoryId, String)> {
     let repo_name = matches.value_of(option_repo_name);
     let repo_id = matches.value_of(option_repo_id);
-    let configs = load_repo_configs(fb, matches)?;
+    let configs = load_repo_configs(matches)?;
 
     match (repo_name, repo_id) {
         (Some(_), Some(_)) => bail!("both repo-name and repo-id parameters set"),
@@ -536,38 +527,33 @@ fn get_repo_id_and_name_from_values<'a>(
     }
 }
 
-pub fn get_repo_id<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Result<RepositoryId> {
-    let (repo_id, _) = get_repo_id_and_name_from_values(fb, matches, REPO_NAME, REPO_ID)?;
+pub fn get_repo_id<'a>(matches: &ArgMatches<'a>) -> Result<RepositoryId> {
+    let (repo_id, _) = get_repo_id_and_name_from_values(matches, REPO_NAME, REPO_ID)?;
     Ok(repo_id)
 }
 
-pub fn get_repo_name<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Result<String> {
-    let (_, repo_name) = get_repo_id_and_name_from_values(fb, matches, REPO_NAME, REPO_ID)?;
+pub fn get_repo_name<'a>(matches: &ArgMatches<'a>) -> Result<String> {
+    let (_, repo_name) = get_repo_id_and_name_from_values(matches, REPO_NAME, REPO_ID)?;
     Ok(repo_name)
 }
 
-pub fn get_source_repo_id<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Result<RepositoryId> {
-    let (repo_id, _) =
-        get_repo_id_and_name_from_values(fb, matches, SOURCE_REPO_NAME, SOURCE_REPO_ID)?;
+pub fn get_source_repo_id<'a>(matches: &ArgMatches<'a>) -> Result<RepositoryId> {
+    let (repo_id, _) = get_repo_id_and_name_from_values(matches, SOURCE_REPO_NAME, SOURCE_REPO_ID)?;
     Ok(repo_id)
 }
 
-pub fn get_source_repo_id_opt<'a>(
-    fb: FacebookInit,
-    matches: &ArgMatches<'a>,
-) -> Result<Option<RepositoryId>> {
+pub fn get_source_repo_id_opt<'a>(matches: &ArgMatches<'a>) -> Result<Option<RepositoryId>> {
     if matches.is_present(SOURCE_REPO_NAME) || matches.is_present(SOURCE_REPO_ID) {
         let (repo_id, _) =
-            get_repo_id_and_name_from_values(fb, matches, SOURCE_REPO_NAME, SOURCE_REPO_ID)?;
+            get_repo_id_and_name_from_values(matches, SOURCE_REPO_NAME, SOURCE_REPO_ID)?;
         Ok(Some(repo_id))
     } else {
         Ok(None)
     }
 }
 
-pub fn get_target_repo_id<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Result<RepositoryId> {
-    let (repo_id, _) =
-        get_repo_id_and_name_from_values(fb, matches, TARGET_REPO_NAME, TARGET_REPO_ID)?;
+pub fn get_target_repo_id<'a>(matches: &ArgMatches<'a>) -> Result<RepositoryId> {
+    let (repo_id, _) = get_repo_id_and_name_from_values(matches, TARGET_REPO_NAME, TARGET_REPO_ID)?;
     Ok(repo_id)
 }
 
@@ -575,7 +561,7 @@ pub fn open_sql<T>(fb: FacebookInit, matches: &ArgMatches<'_>) -> BoxFuture<T, E
 where
     T: SqlConstructFromMetadataDatabaseConfig,
 {
-    let (_, config) = try_boxfuture!(get_config(fb, matches));
+    let (_, config) = try_boxfuture!(get_config(matches));
     let mysql_options = parse_mysql_options(matches);
     let readonly_storage = parse_readonly_storage(matches);
     open_sql_with_config_and_mysql_options(
@@ -590,8 +576,8 @@ pub fn open_source_sql<T>(fb: FacebookInit, matches: &ArgMatches<'_>) -> BoxFutu
 where
     T: SqlConstructFromMetadataDatabaseConfig,
 {
-    let source_repo_id = try_boxfuture!(get_source_repo_id(fb, matches));
-    let (_, config) = try_boxfuture!(get_config_by_repoid(fb, matches, source_repo_id));
+    let source_repo_id = try_boxfuture!(get_source_repo_id(matches));
+    let (_, config) = try_boxfuture!(get_config_by_repoid(matches, source_repo_id));
     let mysql_options = parse_mysql_options(matches);
     let readonly_storage = parse_readonly_storage(matches);
     open_sql_with_config_and_mysql_options(
@@ -893,32 +879,28 @@ pub fn get_config_path<'a>(matches: &'a ArgMatches<'a>) -> Result<&'a str> {
         .ok_or(Error::msg(format!("{} must be specified", CONFIG_PATH)))
 }
 
-pub fn load_repo_configs<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Result<RepoConfigs> {
-    metaconfig_parser::load_repo_configs(fb, get_config_path(matches)?)
+pub fn load_repo_configs<'a>(matches: &ArgMatches<'a>) -> Result<RepoConfigs> {
+    metaconfig_parser::load_repo_configs(get_config_path(matches)?, get_config_store()?)
 }
 
-pub fn load_common_config<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Result<CommonConfig> {
-    metaconfig_parser::load_common_config(fb, get_config_path(matches)?)
+pub fn load_common_config<'a>(matches: &ArgMatches<'a>) -> Result<CommonConfig> {
+    metaconfig_parser::load_common_config(get_config_path(matches)?, get_config_store()?)
 }
 
-pub fn load_storage_configs<'a>(
-    fb: FacebookInit,
-    matches: &ArgMatches<'a>,
-) -> Result<StorageConfigs> {
-    metaconfig_parser::load_storage_configs(fb, get_config_path(matches)?)
+pub fn load_storage_configs<'a>(matches: &ArgMatches<'a>) -> Result<StorageConfigs> {
+    metaconfig_parser::load_storage_configs(get_config_path(matches)?, get_config_store()?)
 }
 
-pub fn get_config<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Result<(String, RepoConfig)> {
-    let repo_id = get_repo_id(fb, matches)?;
-    get_config_by_repoid(fb, matches, repo_id)
+pub fn get_config<'a>(matches: &ArgMatches<'a>) -> Result<(String, RepoConfig)> {
+    let repo_id = get_repo_id(matches)?;
+    get_config_by_repoid(matches, repo_id)
 }
 
 pub fn get_config_by_repoid<'a>(
-    fb: FacebookInit,
     matches: &ArgMatches<'a>,
     repo_id: RepositoryId,
 ) -> Result<(String, RepoConfig)> {
-    let configs = load_repo_configs(fb, matches)?;
+    let configs = load_repo_configs(matches)?;
     configs
         .get_repo_config(repo_id)
         .ok_or_else(|| format_err!("unknown repoid {:?}", repo_id))
@@ -934,7 +916,7 @@ fn open_repo_internal<'a>(
     scrub: Scrubbing,
     redaction_override: Option<Redaction>,
 ) -> impl Future<Item = BlobRepo, Error = Error> {
-    let repo_id = try_boxfuture!(get_repo_id(fb, matches));
+    let repo_id = try_boxfuture!(get_repo_id(matches));
     open_repo_internal_with_repo_id(
         fb,
         logger,
@@ -957,10 +939,11 @@ fn open_repo_internal_with_repo_id<'a>(
     scrub: Scrubbing,
     redaction_override: Option<Redaction>,
 ) -> BoxFuture<BlobRepo, Error> {
-    let common_config = try_boxfuture!(load_common_config(fb, &matches));
+    try_boxfuture!(init_config_store(fb, logger, matches));
+    let common_config = try_boxfuture!(load_common_config(&matches));
 
     let (reponame, config) = {
-        let (reponame, mut config) = try_boxfuture!(get_config_by_repoid(fb, matches, repo_id));
+        let (reponame, mut config) = try_boxfuture!(get_config_by_repoid(matches, repo_id));
         if let Scrubbing::Enabled = scrub {
             config
                 .storage_config
@@ -1263,6 +1246,8 @@ pub fn init_tunables<'a>(fb: FacebookInit, matches: &ArgMatches<'a>, logger: Log
         return Ok(());
     }
 
+    init_config_store(fb, &logger, matches)?;
+
     let tunables_spec = matches
         .value_of(TUNABLES_CONFIG)
         .unwrap_or(DEFAULT_TUNABLES_PATH);
@@ -1279,23 +1264,19 @@ pub fn init_runtime(matches: &ArgMatches) -> io::Result<tokio_compat::runtime::R
 
 /// Extract a ConfigHandle<T> from a source_spec str that has one ofthe folowing formats:
 /// - configerator:PATH
-/// - signed-configerator:PATH
 /// - file:PATH
 /// - default
+/// NB: Outside tests, using file:PATH is not recommended because it is inefficient - instead
+/// use a local configerator path and configerator:PATH
 pub fn get_config_handle<T>(
-    fb: FacebookInit,
+    _fb: FacebookInit,
     logger: Logger,
     source_spec: Option<&str>,
-    poll_interval: u64,
+    _poll_interval: u64,
 ) -> Result<ConfigHandle<T>, Error>
 where
     T: Default + Send + Sync + 'static + serde::de::DeserializeOwned,
 {
-    const CONFIGERATOR_FETCH_TIMEOUT: u64 = 10;
-
-    let timeout = Duration::from_secs(CONFIGERATOR_FETCH_TIMEOUT);
-    let poll_interval = Duration::from_secs(poll_interval);
-
     match source_spec {
         Some(source_spec) => {
             // NOTE: This means we don't support file paths with ":" in them, but it also means we can
@@ -1305,66 +1286,75 @@ where
             // NOTE: We match None as the last element to make sure the input doesn't contain
             // disallowed trailing parts.
             match (iter.next(), iter.next(), iter.next()) {
-                (Some("configerator"), Some(source), None) => Ok(Some((
-                    ConfigStore::configerator(fb, logger, poll_interval, timeout)?,
-                    source.to_string(),
-                ))),
-                (Some("signed-configerator"), Some(source), None) => Ok(Some((
-                    ConfigStore::signed_configerator(
-                        fb,
-                        logger,
-                        hashmap! {source.to_string() => CRYPTO_PROJECT.to_string()},
-                        poll_interval,
-                        timeout,
-                    )?,
-                    source.to_string(),
-                ))),
-                (Some("file"), Some(file), None) => Ok(Some((
-                    ConfigStore::file(
-                        logger,
-                        PathBuf::new(),
-                        String::new(),
-                        Duration::from_secs(1),
-                    ),
-                    file.to_string(),
-                ))),
-                (Some("default"), None, None) => Ok(None),
+                (Some("configerator"), Some(source), None) => {
+                    get_config_store()?.get_config_handle(source.to_string())
+                }
+                (Some("file"), Some(file), None) => ConfigStore::file(
+                    logger,
+                    PathBuf::new(),
+                    String::new(),
+                    Duration::from_secs(1),
+                )
+                .get_config_handle(file.to_string()),
+                (Some("default"), None, None) => Ok(ConfigHandle::default()),
                 _ => Err(format_err!("Invalid configuration spec: {:?}", source_spec)),
             }
         }
-        None => Ok(None),
-    }
-    .and_then(|config| match config {
         None => Ok(ConfigHandle::default()),
-        Some((source, path)) => source.get_config_handle(path),
-    })
+    }
 }
 
-pub fn maybe_init_config_store<'a>(
+static CONFIGERATOR: OnceCell<ConfigStore> = OnceCell::new();
+
+pub fn get_config_store() -> Result<&'static ConfigStore, Error> {
+    CONFIGERATOR.get().context("No configerator available")
+}
+
+pub fn is_test_instance<'a>(matches: &ArgMatches<'a>) -> bool {
+    matches.is_present(TEST_INSTANCE_ARG)
+}
+
+pub fn init_config_store<'a>(
     fb: FacebookInit,
-    root_log: &Logger,
+    root_log: impl Into<Option<&'a Logger>>,
     matches: &ArgMatches<'a>,
-) -> Option<ConfigStore> {
-    let test_instance = matches.is_present(TEST_INSTANCE_ARG);
-    if test_instance {
+) -> Result<&'static ConfigStore, Error> {
+    CONFIGERATOR.get_or_try_init(|| {
         let local_configerator_path = matches.value_of(LOCAL_CONFIGERATOR_PATH_ARG);
-        local_configerator_path.map(|path| {
-            ConfigStore::file(
-                root_log.clone(),
+        let crypto_regex = matches.values_of(CRYPTO_PATH_REGEX_ARG).map_or(
+            vec![
+                (
+                    "scm/mononoke/tunables/.*".to_string(),
+                    CRYPTO_PROJECT.to_string(),
+                ),
+                (
+                    "scm/mononoke/repos/.*".to_string(),
+                    CRYPTO_PROJECT.to_string(),
+                ),
+            ],
+            |it| {
+                it.map(|regex| (regex.to_string(), CRYPTO_PROJECT.to_string()))
+                    .collect()
+            },
+        );
+        match (is_test_instance(matches), local_configerator_path) {
+            // A local configerator path wins
+            (_, Some(path)) => Ok(ConfigStore::file(
+                root_log.into().cloned(),
                 PathBuf::from(path),
                 String::new(),
                 CONFIGERATOR_POLL_INTERVAL,
-            )
-        })
-    } else {
-        Some(
-            ConfigStore::configerator(
+            )),
+            // Test instances can't have network configerator
+            (true, None) => Ok(ConfigStore::new(Arc::new(TestSource::new()), None, None)),
+            // Prod instances do have network configerator, with signature checks
+            (false, None) => ConfigStore::regex_signed_configerator(
                 fb,
-                root_log.clone(),
+                root_log.into().cloned(),
+                crypto_regex,
                 CONFIGERATOR_POLL_INTERVAL,
                 CONFIGERATOR_REFRESH_TIMEOUT,
-            )
-            .expect("can't set up configerator API"),
-        )
-    }
+            ),
+        }
+    })
 }

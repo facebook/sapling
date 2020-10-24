@@ -60,7 +60,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .with_shutdown_timeout_args()
         .with_scuba_logging_args()
         .with_disabled_hooks_args()
-        .with_test_args()
         .build()
         .arg(
             Arg::with_name(ARG_HOST)
@@ -91,9 +90,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let exec = runtime.executor();
 
-    let repo_configs = load_repo_configs(fb, config_path)?;
-    let config_store = args::maybe_init_config_store(fb, &logger, &matches)
-        .expect("failed to instantiate ConfigStore");
+    let config_store = args::init_config_store(fb, &logger, &matches)?;
+    let repo_configs = load_repo_configs(config_path, config_store)?;
 
     let mut scuba_builder = args::get_scuba_sample_builder(fb, &matches)?;
 

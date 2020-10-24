@@ -62,6 +62,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let matches = app.get_matches();
 
     let logger = args::init_logging(fb, &matches);
+    args::init_config_store(fb, &logger, &matches)?;
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     helpers::block_execute(
         run(ctx, &matches),
@@ -86,7 +87,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a ArgMatches<'a>) -> Result<(), Er
         .context("opening repo")?;
 
     let mysql_options = args::parse_mysql_options(matches);
-    let (_, config) = args::get_config(ctx.fb, &matches)?;
+    let (_, config) = args::get_config(&matches)?;
     let storage_config = config.storage_config;
     let readonly_storage = ReadOnlyStorage(false);
 

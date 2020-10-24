@@ -155,8 +155,8 @@ async fn run(
     ctx: CoreContext,
     matches: ArgMatches<'static>,
 ) -> Result<(), Error> {
-    let repo_id = args::get_repo_id(fb, &matches)?;
-    let (_, repo_config) = args::get_config_by_repoid(fb, &matches, repo_id)?;
+    let repo_id = args::get_repo_id(&matches)?;
+    let (_, repo_config) = args::get_config_by_repoid(&matches, repo_id)?;
 
     let logger = ctx.logger();
     let blobrepo = args::open_repo_with_repo_id(fb, &logger, repo_id, &matches)
@@ -225,6 +225,7 @@ fn context_and_matches<'a>(fb: FacebookInit, app: App<'a, '_>) -> (CoreContext, 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
     let (ctx, matches) = context_and_matches(fb, create_app());
+    args::init_config_store(fb, ctx.logger(), &matches)?;
     block_execute(
         run(fb, ctx.clone(), matches.clone()),
         fb,

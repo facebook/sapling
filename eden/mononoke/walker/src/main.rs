@@ -37,6 +37,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let app_name = "walker";
     let matches = setup::setup_toplevel_app(app_name).get_matches();
     let logger = args::init_logging(fb, &matches);
+    args::init_config_store(fb, &logger, &matches)?;
 
     let future = match matches.subcommand() {
         (setup::COMPRESSION_BENEFIT, Some(sub_m)) => {

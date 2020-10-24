@@ -848,6 +848,7 @@ async fn repo_import(
                     You can only use alphanumeric and \"./-_\" characters"
         ));
     }
+    let config_store = args::init_config_store(fb, ctx.logger(), &matches)?;
     let dest_bookmark = BookmarkName::new(&recovery_fields.dest_bookmark_name)?;
     let changeset_args = ChangesetArgs {
         author: recovery_fields.commit_author.clone(),
@@ -858,7 +859,7 @@ async fn repo_import(
         importing_bookmark,
         dest_bookmark,
     };
-    let (_, mut repo_config) = args::get_config_by_repoid(ctx.fb, &matches, repo.get_repoid())?;
+    let (_, mut repo_config) = args::get_config_by_repoid(&matches, repo.get_repoid())?;
     let mut call_sign = repo_config.phabricator_callsign.clone();
     if !recovery_fields.phab_check_disabled && call_sign.is_none() {
         return Err(format_err!(
@@ -873,11 +874,9 @@ async fn repo_import(
         x_repo_check_disabled: recovery_fields.x_repo_check_disabled,
         hg_sync_check_disabled: recovery_fields.hg_sync_check_disabled,
     };
-    let config_store = args::maybe_init_config_store(fb, &ctx.logger(), &matches)
-        .ok_or_else(|| format_err!("failed to instantiate ConfigStore"))?;
     let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &config_store)?;
 
-    let configs = args::load_repo_configs(fb, &matches)?;
+    let configs = args::load_repo_configs(&matches)?;
     let mysql_options = args::parse_mysql_options(&matches);
     let readonly_storage = args::parse_readonly_storage(&matches);
 
@@ -1135,7 +1134,7 @@ async fn check_additional_setup_steps(
         importing_bookmark,
         dest_bookmark,
     };
-    let (_, repo_config) = args::get_config_by_repoid(ctx.fb, &matches, repo.get_repoid())?;
+    let (_, repo_config) = args::get_config_by_repoid(&matches, repo.get_repoid())?;
 
     let call_sign = repo_config.phabricator_callsign;
     let phab_check_disabled = sub_arg_matches.is_present(ARG_PHAB_CHECK_DISABLED);
@@ -1148,10 +1147,9 @@ async fn check_additional_setup_steps(
         ));
     }
 
-    let config_store = args::maybe_init_config_store(fb, &ctx.logger(), &matches)
-        .ok_or_else(|| format_err!("failed to instantiate ConfigStore"))?;
+    let config_store = args::init_config_store(fb, ctx.logger(), &matches)?;
     let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &config_store)?;
-    let configs = args::load_repo_configs(fb, &matches)?;
+    let configs = args::load_repo_configs(&matches)?;
     let maybe_large_repo_config = get_large_repo_config_if_pushredirected(
         &ctx,
         &repo,
@@ -1203,6 +1201,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     args::init_cachelib(fb, &matches, None);
     let logger = args::init_logging(fb, &matches);
+    args::init_config_store(fb, &logger, &matches)?;
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     let repo = args::create_repo(fb, &logger, &matches);
 

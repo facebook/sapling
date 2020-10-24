@@ -65,6 +65,7 @@ pub async fn wait_for_connections_closed() {
 /// a particular repo
 pub async fn connection_acceptor(
     fb: FacebookInit,
+    test_instance: bool,
     common_config: CommonConfig,
     sockname: String,
     service: ReadyFlagService,
@@ -72,30 +73,24 @@ pub async fn connection_acceptor(
     repo_handlers: HashMap<String, RepoHandler>,
     tls_acceptor: SslAcceptor,
     terminate_process: oneshot::Receiver<()>,
-    config_store: Option<ConfigStore>,
+    config_store: &ConfigStore,
     scribe: Scribe,
 ) -> Result<()> {
-    let (load_limiting_config, maybe_live_commit_sync_config) = match config_store {
-        Some(config_store) => {
-            let load_limiting_config = {
-                let config_loader = config_store
-                    .get_config_handle(CONFIGERATOR_LIMITS_CONFIG.to_string())
-                    .ok();
-                config_loader.and_then(|config_loader| {
-                    common_config
-                        .loadlimiter_category
-                        .clone()
-                        .map(|category| (config_loader, category))
-                })
-            };
-
-            let maybe_live_commit_sync_config =
-                Some(CfgrLiveCommitSyncConfig::new(&root_log, &config_store)?);
-
-            (load_limiting_config, maybe_live_commit_sync_config)
-        }
-        None => (None, None),
+    let load_limiting_config = {
+        let config_loader = config_store
+            .get_config_handle(CONFIGERATOR_LIMITS_CONFIG.to_string())
+            .ok();
+        config_loader.and_then(|config_loader| {
+            common_config
+                .loadlimiter_category
+                .clone()
+                .map(|category| (config_loader, category))
+        })
     };
+
+    let maybe_live_commit_sync_config = CfgrLiveCommitSyncConfig::new(&root_log, &config_store)
+        .map(Option::Some)
+        .or_else(|e| if test_instance { Ok(None) } else { Err(e) })?;
 
     let security_checker = Arc::new(
         ConnectionsSecurityChecker::new(fb, common_config, &repo_handlers, &root_log).await?,

@@ -561,7 +561,6 @@ pub fn setup_app<'a, 'b>() -> App<'a, 'b> {
     args::MononokeApp::new("megarepo preparation tool")
         .with_advanced_args_hidden()
         .with_source_and_target_repos()
-        .with_test_args()
         .build()
         .subcommand(add_resulting_commit_args(move_subcommand))
         .subcommand(add_resulting_commit_args(merge_subcommand))

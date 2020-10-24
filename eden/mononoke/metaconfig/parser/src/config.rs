@@ -18,7 +18,7 @@ use std::{
 use crate::convert::Convert;
 use crate::errors::ConfigurationError;
 use anyhow::{anyhow, Result};
-use fbinit::FacebookInit;
+use cached_config::ConfigStore;
 use metaconfig_types::{
     AllowlistEntry, CensoredScubaParams, CommitSyncConfig, CommonConfig, HgsqlGlobalrevsName,
     HgsqlName, Redaction, RepoConfig, RepoReadOnly, StorageConfig,
@@ -32,8 +32,11 @@ const LIST_KEYS_PATTERNS_MAX_DEFAULT: u64 = 500_000;
 const HOOK_MAX_FILE_SIZE_DEFAULT: u64 = 8 * 1024 * 1024; // 8MiB
 
 /// Load configuration common to all repositories.
-pub fn load_common_config(fb: FacebookInit, config_path: impl AsRef<Path>) -> Result<CommonConfig> {
-    let common = crate::raw::read_raw_configs(fb, config_path.as_ref())?.common;
+pub fn load_common_config(
+    config_path: impl AsRef<Path>,
+    config_store: &ConfigStore,
+) -> Result<CommonConfig> {
+    let common = crate::raw::read_raw_configs(config_path.as_ref(), config_store)?.common;
     parse_common_config(common)
 }
 
@@ -47,13 +50,16 @@ pub struct RepoConfigs {
 }
 
 /// Load configuration for repositories.
-pub fn load_repo_configs(fb: FacebookInit, config_path: impl AsRef<Path>) -> Result<RepoConfigs> {
+pub fn load_repo_configs(
+    config_path: impl AsRef<Path>,
+    config_store: &ConfigStore,
+) -> Result<RepoConfigs> {
     let RawRepoConfigs {
         commit_sync,
         common,
         repos,
         storage,
-    } = crate::raw::read_raw_configs(fb, config_path.as_ref())?;
+    } = crate::raw::read_raw_configs(config_path.as_ref(), config_store)?;
 
     let commit_sync = parse_commit_sync_config(commit_sync)?;
 
@@ -87,10 +93,10 @@ pub struct StorageConfigs {
 
 /// Load configuration for storage.
 pub fn load_storage_configs(
-    fb: FacebookInit,
     config_path: impl AsRef<Path>,
+    config_store: &ConfigStore,
 ) -> Result<StorageConfigs> {
-    let storage = crate::raw::read_raw_configs(fb, config_path.as_ref())?
+    let storage = crate::raw::read_raw_configs(config_path.as_ref(), config_store)?
         .storage
         .into_iter()
         .map(|(k, v)| Ok((k, v.convert()?)))
@@ -424,6 +430,7 @@ mod test {
     use super::*;
     use ascii::AsciiString;
     use bookmarks_types::BookmarkName;
+    use cached_config::TestSource;
     use maplit::{btreemap, btreeset, hashmap};
     use metaconfig_types::{
         BlobConfig, BlobstoreId, BookmarkParams, Bundle2ReplayParams, CacheWarmupParams,
@@ -444,6 +451,7 @@ mod test {
     use std::fs::{create_dir_all, write};
     use std::num::NonZeroUsize;
     use std::str::FromStr;
+    use std::sync::Arc;
     use tempdir::TempDir;
 
     fn write_files(
@@ -466,8 +474,8 @@ mod test {
         tmp_dir
     }
 
-    #[fbinit::test]
-    fn test_commit_sync_config_correct(fb: FacebookInit) {
+    #[test]
+    fn test_commit_sync_config_correct() {
         let commit_sync_config = r#"
             [mega]
             large_repo_id = 1
@@ -499,9 +507,10 @@ mod test {
         let paths = btreemap! {
             "common/commitsyncmap.toml" => commit_sync_config
         };
+        let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);
         let tmp_dir = write_files(&paths);
-        let raw_config =
-            crate::raw::read_raw_configs(fb, tmp_dir.path()).expect("expect to read configs");
+        let raw_config = crate::raw::read_raw_configs(tmp_dir.path(), &config_store)
+            .expect("expect to read configs");
         let commit_sync = parse_commit_sync_config(raw_config.commit_sync)
             .expect("expected to get a commit sync config");
 
@@ -536,8 +545,8 @@ mod test {
         assert_eq!(commit_sync, expected);
     }
 
-    #[fbinit::test]
-    fn test_commit_sync_config_large_is_small(fb: FacebookInit) {
+    #[test]
+    fn test_commit_sync_config_large_is_small() {
         let commit_sync_config = r#"
             [mega]
             large_repo_id = 1
@@ -557,16 +566,17 @@ mod test {
         let paths = btreemap! {
             "common/commitsyncmap.toml" => commit_sync_config
         };
+        let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);
         let tmp_dir = write_files(&paths);
-        let res = load_repo_configs(fb, tmp_dir.path());
+        let res = load_repo_configs(tmp_dir.path(), &config_store);
         let msg = format!("{:#?}", res);
         println!("res = {}", msg);
         assert!(res.is_err());
         assert!(msg.contains("is one of the small repos too"));
     }
 
-    #[fbinit::test]
-    fn test_commit_sync_config_duplicated_small_repos(fb: FacebookInit) {
+    #[test]
+    fn test_commit_sync_config_duplicated_small_repos() {
         let commit_sync_config = r#"
             [mega]
             large_repo_id = 1
@@ -589,16 +599,17 @@ mod test {
         let paths = btreemap! {
             "common/commitsyncmap.toml" => commit_sync_config
         };
+        let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);
         let tmp_dir = write_files(&paths);
-        let res = load_repo_configs(fb, tmp_dir.path());
+        let res = load_repo_configs(tmp_dir.path(), &config_store);
         let msg = format!("{:#?}", res);
         println!("res = {}", msg);
         assert!(res.is_err());
         assert!(msg.contains("present multiple times in the same CommitSyncConfig"));
     }
 
-    #[fbinit::test]
-    fn test_commit_sync_config_conflicting_bookmark_prefixes(fb: FacebookInit) {
+    #[test]
+    fn test_commit_sync_config_conflicting_bookmark_prefixes() {
         let commit_sync_config = r#"
             [mega]
             large_repo_id = 1
@@ -628,16 +639,17 @@ mod test {
         let paths = btreemap! {
             "common/commitsyncmap.toml" => commit_sync_config
         };
+        let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);
         let tmp_dir = write_files(&paths);
-        let res = load_repo_configs(fb, tmp_dir.path());
+        let res = load_repo_configs(tmp_dir.path(), &config_store);
         let msg = format!("{:#?}", res);
         println!("res = {}", msg);
         assert!(res.is_err());
         assert!(msg.contains("One bookmark prefix starts with another, which is prohibited"));
     }
 
-    #[fbinit::test]
-    fn test_duplicated_repo_ids(fb: FacebookInit) {
+    #[test]
+    fn test_duplicated_repo_ids() {
         let www_content = r#"
             repoid=1
             scuba_table="scuba_table"
@@ -668,16 +680,17 @@ mod test {
             "repos/www2/server.toml" => www_content,
         };
 
+        let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);
         let tmp_dir = write_files(&paths);
-        let res = load_repo_configs(fb, tmp_dir.path());
+        let res = load_repo_configs(tmp_dir.path(), &config_store);
         let msg = format!("{:#?}", res);
         println!("res = {}", msg);
         assert!(res.is_err());
         assert!(msg.contains("DuplicatedRepoId"));
     }
 
-    #[fbinit::test]
-    fn test_read_manifest(fb: FacebookInit) {
+    #[test]
+    fn test_read_manifest() {
         let fbsource_content = r#"
             write_lock_db_address="write_lock_db_address"
             generation_cache_size=1048576
@@ -824,9 +837,10 @@ mod test {
             "my_path/my_files" => "",
         };
 
+        let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);
         let tmp_dir = write_files(&paths);
-
-        let repoconfig = load_repo_configs(fb, tmp_dir.path()).expect("failed to read configs");
+        let repoconfig =
+            load_repo_configs(tmp_dir.path(), &config_store).expect("Read configs failed");
 
         let multiplex = BlobConfig::Multiplexed {
             multiplex_id: MultiplexId::new(1),
@@ -1125,8 +1139,8 @@ mod test {
         )
     }
 
-    #[fbinit::test]
-    fn test_broken_bypass_config(fb: FacebookInit) {
+    #[test]
+    fn test_broken_bypass_config() {
         let content = r#"
             repoid=0
             storage_config = "sqlite"
@@ -1152,9 +1166,9 @@ mod test {
             "repos/fbsource/server.toml" => content,
         };
 
+        let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);
         let tmp_dir = write_files(&paths);
-
-        let res = load_repo_configs(fb, tmp_dir.path());
+        let res = load_repo_configs(tmp_dir.path(), &config_store);
         let msg = format!("{:#?}", res);
         println!("res = {}", msg);
         assert!(res.is_err());
@@ -1185,18 +1199,18 @@ mod test {
             "repos/fbsource/server.toml" => content,
         };
 
+        let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);
         let tmp_dir = write_files(&paths);
-
-        let res = load_repo_configs(fb, tmp_dir.path());
+        let res = load_repo_configs(tmp_dir.path(), &config_store);
         let msg = format!("{:#?}", res);
         println!("res = {}", msg);
         assert!(res.is_err());
         assert!(msg.contains("InvalidPushvar"));
     }
 
-    #[fbinit::test]
-    fn test_broken_common_config(fb: FacebookInit) {
-        fn check_fails(fb: FacebookInit, common: &str, expect: &str) {
+    #[test]
+    fn test_broken_common_config() {
+        fn check_fails(common: &str, expect: &str) {
             let content = r#"
                 repoid = 0
                 storage_config = "storage"
@@ -1214,9 +1228,9 @@ mod test {
                 "repos/fbsource/server.toml" => content,
             };
 
+            let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);
             let tmp_dir = write_files(&paths);
-
-            let res = load_repo_configs(fb, tmp_dir.path());
+            let res = load_repo_configs(tmp_dir.path(), &config_store);
             println!("res = {:?}", res);
             let msg = format!("{:?}", res);
             assert!(res.is_err(), "unexpected success for {}", common);
@@ -1232,13 +1246,13 @@ mod test {
         [[whitelist_entry]]
         identity_type="user"
         "#;
-        check_fails(fb, common, "identity type and data must be specified");
+        check_fails(common, "identity type and data must be specified");
 
         let common = r#"
         [[whitelist_entry]]
         identity_data="user"
         "#;
-        check_fails(fb, common, "identity type and data must be specified");
+        check_fails(common, "identity type and data must be specified");
 
         let common = r#"
         [[whitelist_entry]]
@@ -1246,7 +1260,7 @@ mod test {
         identity_type="user"
         identity_data="user"
         "#;
-        check_fails(fb, common, "tier and identity cannot be both specified");
+        check_fails(common, "tier and identity cannot be both specified");
 
         // Only one tier is allowed
         let common = r#"
@@ -1255,11 +1269,11 @@ mod test {
         [[whitelist_entry]]
         tier="tier2"
         "#;
-        check_fails(fb, common, "only one tier is allowed");
+        check_fails(common, "only one tier is allowed");
     }
 
-    #[fbinit::test]
-    fn test_common_storage(fb: FacebookInit) {
+    #[test]
+    fn test_common_storage() {
         const STORAGE: &str = r#"
         [multiplex_store.metadata.remote]
         primary = { db_address = "some_db" }
@@ -1293,9 +1307,9 @@ mod test {
             "repos/test/server.toml" => REPO,
         };
 
+        let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);
         let tmp_dir = write_files(&paths);
-
-        let res = load_repo_configs(fb, tmp_dir.path()).expect("read configs failed");
+        let res = load_repo_configs(tmp_dir.path(), &config_store).expect("Read configs failed");
 
         let expected = hashmap! {
             "test".into() => RepoConfig {
@@ -1346,8 +1360,8 @@ mod test {
         )
     }
 
-    #[fbinit::test]
-    fn test_common_blobstores_local_override(fb: FacebookInit) {
+    #[test]
+    fn test_common_blobstores_local_override() {
         const STORAGE: &str = r#"
         [multiplex_store.metadata.remote]
         primary = { db_address = "some_db" }
@@ -1387,9 +1401,9 @@ mod test {
             "repos/test/server.toml" => REPO,
         };
 
+        let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);
         let tmp_dir = write_files(&paths);
-
-        let res = load_repo_configs(fb, tmp_dir.path()).expect("read configs failed");
+        let res = load_repo_configs(tmp_dir.path(), &config_store).expect("Read configs failed");
 
         let expected = hashmap! {
             "test".into() => RepoConfig {
@@ -1420,8 +1434,8 @@ mod test {
         )
     }
 
-    #[fbinit::test]
-    fn test_stray_fields(fb: FacebookInit) {
+    #[test]
+    fn test_stray_fields() {
         const REPO: &str = r#"
         repoid = 123
         storage_config = "randomstore"
@@ -1441,16 +1455,17 @@ mod test {
             "repos/test/server.toml" => REPO,
         };
 
+        let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);
         let tmp_dir = write_files(&paths);
-        let res = load_repo_configs(fb, tmp_dir.path());
+        let res = load_repo_configs(tmp_dir.path(), &config_store);
         let msg = format!("{:#?}", res);
         println!("res = {}", msg);
         assert!(res.is_err());
         assert!(msg.contains("unknown keys in config parsing"));
     }
 
-    #[fbinit::test]
-    fn test_multiplexed_store_types(fb: FacebookInit) {
+    #[test]
+    fn test_multiplexed_store_types() {
         const STORAGE: &str = r#"
         [multiplex_store.metadata.remote]
         primary = { db_address = "some_db" }
@@ -1477,8 +1492,9 @@ mod test {
             "repos/test/server.toml" => REPO,
         };
 
+        let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);
         let tmp_dir = write_files(&paths);
-        let res = load_repo_configs(fb, tmp_dir.path()).expect("Read configs failed");
+        let res = load_repo_configs(tmp_dir.path(), &config_store).expect("Read configs failed");
 
         if let BlobConfig::Multiplexed { blobstores, .. } =
             &res.repos["test"].storage_config.blobstore

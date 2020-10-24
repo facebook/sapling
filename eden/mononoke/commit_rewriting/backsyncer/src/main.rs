@@ -228,7 +228,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let app_name = "backsyncer cmd-line tool";
     let app = args::MononokeApp::new(app_name)
         .with_fb303_args()
-        .with_test_args()
         .with_source_and_target_repos()
         .build();
     let backsync_forever_subcommand =
@@ -259,13 +258,14 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let matches = app.get_matches();
 
     let (_, logger, mut runtime) = args::init_mononoke(fb, &matches, None)?;
+    args::init_config_store(fb, &logger, &matches)?;
 
-    let source_repo_id = args::get_source_repo_id(fb, &matches)?;
-    let target_repo_id = args::get_target_repo_id(fb, &matches)?;
+    let source_repo_id = args::get_source_repo_id(&matches)?;
+    let target_repo_id = args::get_target_repo_id(&matches)?;
 
-    let (source_repo_name, _) = args::get_config_by_repoid(fb, &matches, source_repo_id)?;
+    let (source_repo_name, _) = args::get_config_by_repoid(&matches, source_repo_id)?;
     let (target_repo_name, target_repo_config) =
-        args::get_config_by_repoid(fb, &matches, target_repo_id)?;
+        args::get_config_by_repoid(&matches, target_repo_id)?;
 
     let commit_syncer_args = runtime.block_on_std(create_commit_syncer_args_from_matches(
         fb, &logger, &matches,
@@ -280,9 +280,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         "syncing from repoid {:?} into repoid {:?}", source_repo_id, target_repo_id,
     );
 
-    let config_store = args::maybe_init_config_store(fb, &logger, &matches)
-        .ok_or_else(|| format_err!("Failed initializing ConfigStore"))?;
-    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(&logger, &config_store)?;
+    let config_store = args::init_config_store(fb, &logger, &matches)?;
+    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(&logger, config_store)?;
 
     match matches.subcommand() {
         (ARG_MODE_BACKSYNC_ALL, _) => {

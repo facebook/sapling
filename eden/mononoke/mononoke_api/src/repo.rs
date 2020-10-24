@@ -156,7 +156,7 @@ impl Repo {
         with_cachelib: Caching,
         readonly_storage: ReadOnlyStorage,
         blobstore_options: BlobstoreOptions,
-        config_store: ConfigStore,
+        config_store: &ConfigStore,
         disabled_hooks: HashSet<String>,
     ) -> Result<Self, Error> {
         let skiplist_index_blobstore_key = config.skiplist_index_blobstore_key.clone();
@@ -171,7 +171,7 @@ impl Repo {
         .await?;
 
         let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> =
-            Arc::new(CfgrLiveCommitSyncConfig::new(&logger, &config_store)?);
+            Arc::new(CfgrLiveCommitSyncConfig::new(&logger, config_store)?);
 
         let builder = BlobrepoBuilder::new(
             fb,

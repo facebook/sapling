@@ -33,9 +33,6 @@ use stats::prelude::*;
 use std::{sync::Arc, time::Duration};
 use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
 
-const CONFIGERATOR_TIMEOUT: Duration = Duration::from_millis(25);
-const CONFIGERATOR_POLL_INTERVAL: Duration = Duration::from_secs(1);
-
 define_stats! {
     prefix = "mononoke.bookmark_validator";
     result_counter: dynamic_singleton_counter(
@@ -81,8 +78,10 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         small_to_large: small_to_large_commit_syncer,
     };
 
+    let config_store = args::init_config_store(fb, &logger, &matches)?;
+
     helpers::block_execute(
-        loop_forever(ctx, syncers),
+        loop_forever(ctx, syncers, config_store),
         fb,
         "megarepo_bookmarks_validator",
         &logger,
@@ -103,9 +102,8 @@ fn get_commit_syncer<'a>(
     matches: &ArgMatches<'a>,
     commit_syncer_args: CommitSyncerArgs<SqlSyncedCommitMapping>,
 ) -> Result<CommitSyncer<SqlSyncedCommitMapping>, Error> {
-    let target_repo_id = args::get_target_repo_id(ctx.fb, &matches)?;
-    let config_store = args::maybe_init_config_store(ctx.fb, &logger, &matches)
-        .ok_or_else(|| format_err!("Failed initializing ConfigStore"))?;
+    let config_store = args::init_config_store(ctx.fb, logger, &matches)?;
+    let target_repo_id = args::get_target_repo_id(&matches)?;
     let live_commit_sync_config = Arc::new(CfgrLiveCommitSyncConfig::new(&logger, &config_store)?);
     let commit_sync_config =
         live_commit_sync_config.get_current_commit_sync_config(&ctx, target_repo_id)?;
@@ -115,17 +113,12 @@ fn get_commit_syncer<'a>(
 async fn loop_forever<M: SyncedCommitMapping + Clone + 'static>(
     ctx: CoreContext,
     syncers: Syncers<M>,
+    config_store: &ConfigStore,
 ) -> Result<(), Error> {
     let large_repo_name = syncers.large_to_small.get_large_repo().name();
     let small_repo_name = syncers.large_to_small.get_small_repo().name();
 
     let small_repo_id = syncers.small_to_large.get_small_repo().get_repoid();
-    let config_store = ConfigStore::configerator(
-        ctx.fb,
-        ctx.logger().clone(),
-        CONFIGERATOR_POLL_INTERVAL,
-        CONFIGERATOR_TIMEOUT,
-    )?;
 
     let config_handle =
         config_store.get_config_handle(CONFIGERATOR_PUSHREDIRECT_ENABLE.to_string())?;

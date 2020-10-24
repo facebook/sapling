@@ -661,8 +661,8 @@ fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> BoxFuture<(), Error> {
     let mysql_options = args::parse_mysql_options(&matches);
     let readonly_storage = args::parse_readonly_storage(&matches);
 
-    let repo_id = args::get_repo_id(ctx.fb, &matches).expect("need repo id");
-    let repo_config = args::get_config(ctx.fb, &matches);
+    let repo_id = args::get_repo_id(&matches).expect("need repo id");
+    let repo_config = args::get_config(&matches);
     let (repo_name, repo_config) = try_boxfuture!(repo_config);
 
     let base_retry_delay_ms = args::get_u64_opt(&matches, "base-retry-delay-ms").unwrap_or(1000);
@@ -1266,6 +1266,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let logger = args::init_logging(fb, &matches);
 
     args::init_cachelib(fb, &matches, None);
+    args::init_config_store(fb, &logger, &matches)?;
 
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 

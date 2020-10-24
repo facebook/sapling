@@ -171,8 +171,8 @@ async fn run_sync_diamond_merge<'a>(
     matches: &ArgMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let source_repo_id = args::get_source_repo_id(ctx.fb, matches)?;
-    let target_repo_id = args::get_target_repo_id(ctx.fb, matches)?;
+    let source_repo_id = args::get_source_repo_id(matches)?;
+    let target_repo_id = args::get_target_repo_id(matches)?;
     let maybe_bookmark = sub_m
         .value_of(cli::COMMIT_BOOKMARK)
         .map(|bookmark_str| BookmarkName::new(bookmark_str))
@@ -184,7 +184,7 @@ async fn run_sync_diamond_merge<'a>(
     let target_repo = args::open_repo_with_repo_id(ctx.fb, ctx.logger(), target_repo_id, matches);
     let mapping = args::open_source_sql::<SqlSyncedCommitMapping>(ctx.fb, &matches);
 
-    let (_, source_repo_config) = args::get_config_by_repoid(ctx.fb, matches, source_repo_id)?;
+    let (_, source_repo_config) = args::get_config_by_repoid(matches, source_repo_id)?;
 
     let merge_commit_hash = sub_m.value_of(COMMIT_HASH).unwrap().to_owned();
     let (source_repo, target_repo, mapping) =
@@ -195,8 +195,7 @@ async fn run_sync_diamond_merge<'a>(
             .compat()
             .await?;
 
-    let config_store = args::maybe_init_config_store(ctx.fb, ctx.logger(), &matches)
-        .ok_or_else(|| format_err!("Failed initializing ConfigStore"))?;
+    let config_store = args::init_config_store(ctx.fb, ctx.logger(), &matches)?;
     let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &config_store)?;
     sync_diamond_merge::do_sync_diamond_merge(
         ctx,
@@ -342,7 +341,7 @@ async fn run_gradual_merge<'a>(
     let dry_run = sub_m.is_present(DRY_RUN);
 
     let limit = args::get_usize_opt(sub_m, LIMIT);
-    let (_, repo_config) = args::get_config_by_repoid(ctx.fb, &matches, repo.get_repoid())?;
+    let (_, repo_config) = args::get_config_by_repoid(&matches, repo.get_repoid())?;
     let last_deletion_commit =
         helpers::csid_resolve(ctx.clone(), repo.clone(), last_deletion_commit).compat();
     let pre_deletion_commit =
@@ -395,7 +394,7 @@ async fn run_gradual_merge_progress<'a>(
         .value_of(COMMIT_BOOKMARK)
         .ok_or(format_err!("bookmark where to merge is not specified"))?;
 
-    let (_, repo_config) = args::get_config_by_repoid(ctx.fb, &matches, repo.get_repoid())?;
+    let (_, repo_config) = args::get_config_by_repoid(&matches, repo.get_repoid())?;
     let last_deletion_commit =
         helpers::csid_resolve(ctx.clone(), repo.clone(), last_deletion_commit).compat();
     let pre_deletion_commit =
@@ -473,9 +472,8 @@ async fn run_check_push_redirection_prereqs<'a>(
     matches: &ArgMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let target_repo_id = args::get_target_repo_id(ctx.fb, &matches)?;
-    let config_store = args::maybe_init_config_store(ctx.fb, ctx.logger(), &matches)
-        .ok_or_else(|| format_err!("Failed initializing ConfigStore"))?;
+    let target_repo_id = args::get_target_repo_id(&matches)?;
+    let config_store = args::init_config_store(ctx.fb, ctx.logger(), &matches)?;
     let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &config_store)?;
     let commit_syncer_args =
         create_commit_syncer_args_from_matches(ctx.fb, ctx.logger(), &matches).await?;
@@ -579,7 +577,7 @@ async fn run_catchup_delete_head<'a>(
     let deletion_chunk_size = args::get_usize(&sub_m, DELETION_CHUNK_SIZE, 10000);
 
     let cs_args_factory = get_catchup_head_delete_commits_cs_args_factory(&sub_m)?;
-    let (_, repo_config) = args::get_config(ctx.fb, &matches)?;
+    let (_, repo_config) = args::get_config(&matches)?;
 
     let wait_secs = args::get_u64(&sub_m, WAIT_SECS, 0);
 
@@ -799,10 +797,8 @@ async fn process_stream_and_wait_for_replication<'a>(
     let small_repo = commit_syncer.get_small_repo();
     let large_repo = commit_syncer.get_large_repo();
 
-    let (_, small_repo_config) =
-        args::get_config_by_repoid(ctx.fb, matches, small_repo.get_repoid())?;
-    let (_, large_repo_config) =
-        args::get_config_by_repoid(ctx.fb, matches, large_repo.get_repoid())?;
+    let (_, small_repo_config) = args::get_config_by_repoid(matches, small_repo.get_repoid())?;
+    let (_, large_repo_config) = args::get_config_by_repoid(matches, large_repo.get_repoid())?;
     if small_repo_config.storage_config.metadata != large_repo_config.storage_config.metadata {
         return Err(format_err!(
             "{} and {} have different db metadata configs: {:?} vs {:?}",
@@ -861,10 +857,9 @@ async fn get_commit_syncer(
     ctx: &CoreContext,
     matches: &ArgMatches<'_>,
 ) -> Result<CommitSyncer<SqlSyncedCommitMapping>> {
-    let target_repo_id = args::get_target_repo_id(ctx.fb, &matches)?;
-    let config_store = args::maybe_init_config_store(ctx.fb, ctx.logger(), &matches)
-        .ok_or_else(|| format_err!("Failed initializing ConfigStore"))?;
-    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), &config_store)?;
+    let target_repo_id = args::get_target_repo_id(&matches)?;
+    let config_store = args::get_config_store()?;
+    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), config_store)?;
     let commit_syncer_args =
         create_commit_syncer_args_from_matches(ctx.fb, ctx.logger(), &matches).await?;
     let commit_sync_config =
@@ -882,11 +877,8 @@ fn get_version(matches: &ArgMatches<'_>) -> Result<CommitSyncConfigVersion> {
     ))
 }
 
-fn get_and_verify_repo_config<'a>(
-    fb: FacebookInit,
-    matches: &ArgMatches<'a>,
-) -> Result<RepoConfig> {
-    args::get_config(fb, &matches).and_then(|(repo_name, repo_config)| {
+fn get_and_verify_repo_config<'a>(matches: &ArgMatches<'a>) -> Result<RepoConfig> {
+    args::get_config(&matches).and_then(|(repo_name, repo_config)| {
         let repo_id = repo_config.repoid;
         repo_config
             .commit_sync_config
@@ -911,12 +903,13 @@ fn main(fb: FacebookInit) -> Result<()> {
     let matches = app.get_matches();
     args::init_cachelib(fb, &matches, None);
     let logger = args::init_logging(fb, &matches);
+    args::init_config_store(fb, &logger, &matches)?;
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     let subcommand_future = async {
         match matches.subcommand() {
             (MOVE, Some(sub_m)) => {
-                let repo_config = get_and_verify_repo_config(fb, &matches)?;
+                let repo_config = get_and_verify_repo_config(&matches)?;
                 run_move(ctx, &matches, sub_m, repo_config).await
             }
             (MERGE, Some(sub_m)) => run_merge(ctx, &matches, sub_m).await,

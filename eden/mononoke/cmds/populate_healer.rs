@@ -172,15 +172,16 @@ fn parse_args(fb: FacebookInit) -> Result<Config, Error> {
         );
 
     let matches = app.get_matches();
-    let repo_id = args::get_repo_id(fb, &matches)?;
     let logger = args::init_logging(fb, &matches);
+    args::init_config_store(fb, &logger, &matches)?;
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
+    let repo_id = args::get_repo_id(&matches)?;
 
     let storage_id = matches
         .value_of("storage-id")
         .ok_or(Error::msg("`storage-id` argument required"))?;
 
-    let storage_config = args::load_storage_configs(fb, &matches)?
+    let storage_config = args::load_storage_configs(&matches)?
         .storage
         .remove(storage_id)
         .ok_or(Error::msg("Unknown `storage-id`"))?;
