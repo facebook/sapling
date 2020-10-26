@@ -1,0 +1,95 @@
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License version 2.
+ */
+
+use anyhow::{anyhow, Error};
+use blobstore::Loadable;
+use bookmarks::BookmarkName;
+use clap::{App, Arg, ArgMatches, SubCommand};
+use fbinit::FacebookInit;
+use futures::{compat::Future01CompatExt, TryFutureExt};
+
+use cmdlib::{args, helpers};
+use context::CoreContext;
+use maplit::hashset;
+use pushrebase::do_pushrebase_bonsai;
+use slog::Logger;
+use unbundle::get_pushrebase_hooks;
+
+use crate::error::SubcommandError;
+
+pub const ARG_BOOKMARK: &str = "bookmark";
+pub const ARG_CSID: &str = "csid";
+pub const PUSHREBASE: &str = "pushrebase";
+
+pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
+    SubCommand::with_name(PUSHREBASE)
+        .about("pushrebases a commit to a bookmark")
+        .arg(
+            Arg::with_name(ARG_CSID)
+                .long(ARG_CSID)
+                .takes_value(true)
+                .required(true)
+                .help("{hg|bonsai} changeset id or bookmark name"),
+        )
+        .arg(
+            Arg::with_name(ARG_BOOKMARK)
+                .long(ARG_BOOKMARK)
+                .takes_value(true)
+                .required(true)
+                .help("name of the bookmark to pushrebase to"),
+        )
+}
+
+pub async fn subcommand_pushrebase<'a>(
+    fb: FacebookInit,
+    logger: Logger,
+    matches: &'a ArgMatches<'_>,
+    sub_matches: &'a ArgMatches<'_>,
+) -> Result<(), SubcommandError> {
+    args::init_cachelib(fb, &matches, None);
+    let ctx = CoreContext::new_with_logger(fb, logger.clone());
+    let repo = args::open_repo(fb, &logger, &matches).compat().await?;
+
+    let cs_id = sub_matches
+        .value_of(ARG_CSID)
+        .ok_or_else(|| anyhow!("{} arg is not specified", ARG_CSID))?;
+
+    let cs_id = helpers::csid_resolve(ctx.clone(), repo.clone(), cs_id)
+        .compat()
+        .await?;
+
+    let bookmark = sub_matches
+        .value_of(ARG_BOOKMARK)
+        .ok_or_else(|| anyhow!("{} arg is not specified", ARG_BOOKMARK))?;
+
+    let config_store = args::init_config_store(fb, &logger, matches)?;
+    let (_, repo_config) = args::get_config(config_store, matches)?;
+    let bookmark = BookmarkName::new(bookmark)?;
+
+    let pushrebase_flags = repo_config.pushrebase.flags;
+    let pushrebase_hooks = get_pushrebase_hooks(&repo, &repo_config.pushrebase);
+
+    let bcs = cs_id
+        .load(ctx.clone(), &repo.get_blobstore())
+        .map_err(Error::from)
+        .await?;
+    let pushrebase_res = do_pushrebase_bonsai(
+        &ctx,
+        &repo,
+        &pushrebase_flags,
+        &bookmark,
+        &hashset![bcs],
+        None,
+        &pushrebase_hooks,
+    )
+    .map_err(Error::from)
+    .await?;
+
+    println!("{}", pushrebase_res.head);
+
+    Ok(())
+}
