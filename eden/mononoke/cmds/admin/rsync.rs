@@ -31,8 +31,10 @@ pub const ARG_COMMIT_AUTHOR: &str = "commit-author";
 pub const ARG_COMMIT_MESSAGE: &str = "commit-message";
 pub const ARG_CSID: &str = "csid";
 pub const ARG_EXCLUDE_FILE_REGEX: &str = "exclude-file-regex";
+pub const ARG_FILE_NUM_LIMIT: &str = "file-num-limit";
+pub const ARG_TOTAL_SIZE_LIMIT: &str = "total-size-limit";
 pub const ARG_FROM_DIR: &str = "from-dir";
-pub const ARG_LIMIT: &str = "limit";
+pub const ARG_LFS_THRESHOLD: &str = "lfs-threshold";
 pub const ARG_TO_DIR: &str = "to-dir";
 pub const RSYNC: &str = "rsync";
 
@@ -81,8 +83,8 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
                 .required(true),
         )
         .arg(
-            Arg::with_name(ARG_LIMIT)
-                .long(ARG_LIMIT)
+            Arg::with_name(ARG_FILE_NUM_LIMIT)
+                .long(ARG_FILE_NUM_LIMIT)
                 .help("limit the number of files moved in a commit")
                 .takes_value(true)
                 .required(false),
@@ -91,6 +93,22 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
             Arg::with_name(ARG_EXCLUDE_FILE_REGEX)
                 .long(ARG_EXCLUDE_FILE_REGEX)
                 .help("exclude files that should not be copied")
+                .takes_value(true)
+                .required(false),
+        )
+        .arg(
+            Arg::with_name(ARG_TOTAL_SIZE_LIMIT)
+                .long(ARG_TOTAL_SIZE_LIMIT)
+                .help("total size of all files in a commit")
+                .takes_value(true)
+                .required(false),
+        )
+        .arg(
+            Arg::with_name(ARG_LFS_THRESHOLD)
+                .long(ARG_LFS_THRESHOLD)
+                .help(
+                    "lfs threshold - files with size above that are excluded from file size limit",
+                )
                 .takes_value(true)
                 .required(false),
         )
@@ -132,13 +150,19 @@ pub async fn subcommand_rsync<'a>(
         .value_of(ARG_COMMIT_MESSAGE)
         .ok_or_else(|| anyhow!("{} arg is not specified", ARG_COMMIT_MESSAGE))?;
 
-    let maybe_limit = args::get_and_parse_opt::<NonZeroU64>(sub_matches, ARG_LIMIT);
+    let maybe_file_num_limit =
+        args::get_and_parse_opt::<NonZeroU64>(sub_matches, ARG_FILE_NUM_LIMIT);
 
     let maybe_exclude_file_regex = sub_matches.value_of(ARG_EXCLUDE_FILE_REGEX);
     let maybe_exclude_file_regex = maybe_exclude_file_regex
         .map(Regex::new)
         .transpose()
         .map_err(Error::from)?;
+
+    let maybe_total_size_limit =
+        args::get_and_parse_opt::<NonZeroU64>(sub_matches, ARG_TOTAL_SIZE_LIMIT);
+
+    let maybe_lfs_threshold = args::get_and_parse_opt::<NonZeroU64>(sub_matches, ARG_LFS_THRESHOLD);
 
     let result_cs_id = rsync(
         &ctx,
@@ -148,7 +172,11 @@ pub async fn subcommand_rsync<'a>(
         to_dir,
         author.to_string(),
         msg.to_string(),
-        maybe_limit,
+        Limits {
+            file_num_limit: maybe_file_num_limit,
+            total_size_limit: maybe_total_size_limit,
+            lfs_threshold: maybe_lfs_threshold,
+        },
         maybe_exclude_file_regex,
     )
     .await?;
@@ -156,6 +184,13 @@ pub async fn subcommand_rsync<'a>(
     println!("{}", result_cs_id);
 
     Ok(())
+}
+
+#[derive(Copy, Clone, Debug, Default)]
+struct Limits {
+    file_num_limit: Option<NonZeroU64>,
+    total_size_limit: Option<NonZeroU64>,
+    lfs_threshold: Option<NonZeroU64>,
 }
 
 async fn rsync(
@@ -166,7 +201,7 @@ async fn rsync(
     to_dir: MPath,
     author: String,
     msg: String,
-    maybe_limit: Option<NonZeroU64>,
+    limits: Limits,
     maybe_exclude_file_regex: Option<Regex>,
 ) -> Result<ChangesetId, Error> {
     let (from_entries, to_entries) = try_join(
@@ -178,6 +213,7 @@ async fn rsync(
     let to_entries = to_entries.unwrap_or_else(BTreeMap::new);
 
     let mut file_changes = BTreeMap::new();
+    let mut total_file_size = 0;
     for (from_suffix, fsnode_file) in from_entries {
         if let Some(ref regex) = maybe_exclude_file_regex {
             if from_suffix.matches_regex(&regex) {
@@ -199,8 +235,21 @@ async fn rsync(
             Some((from_path, cs_id)),
         );
         file_changes.insert(to_path, Some(file_change));
-        if let Some(limit) = maybe_limit {
+        if let Some(lfs_threshold) = limits.lfs_threshold {
+            if fsnode_file.size() < lfs_threshold.get() {
+                total_file_size += fsnode_file.size();
+            }
+        } else {
+            total_file_size += fsnode_file.size();
+        }
+
+        if let Some(limit) = limits.file_num_limit {
             if file_changes.len() as u64 >= limit.get() {
+                break;
+            }
+        }
+        if let Some(limit) = limits.total_size_limit {
+            if total_file_size as u64 > limit.get() {
                 break;
             }
         }
@@ -330,7 +379,7 @@ mod test {
             MPath::new("dir_to")?,
             "author".to_string(),
             "msg".to_string(),
-            None,
+            Limits::default(),
             None,
         )
         .await?;
@@ -361,7 +410,11 @@ mod test {
             .commit()
             .await?;
 
-        let limit = NonZeroU64::new(1);
+        let limit = Limits {
+            file_num_limit: NonZeroU64::new(1),
+            total_size_limit: None,
+            lfs_threshold: None,
+        };
         let first_cs_id = rsync(
             &ctx,
             &repo,
@@ -370,7 +423,7 @@ mod test {
             MPath::new("dir_to")?,
             "author".to_string(),
             "msg".to_string(),
-            limit,
+            limit.clone(),
             None,
         )
         .await?;
@@ -435,7 +488,7 @@ mod test {
             MPath::new("dir_to")?,
             "author".to_string(),
             "msg".to_string(),
-            None,
+            Limits::default(),
             Some(Regex::new("(BUCK|.*\\.bzl|TARGETS)$")?),
         )
         .await?;
@@ -450,6 +503,121 @@ mod test {
                 MPath::new("dir_from/c.bzl")? => "bzl".to_string(),
                 MPath::new("dir_to/a")? => "dontoverwrite".to_string(),
                 MPath::new("dir_to/b")? => "b".to_string(),
+            }
+        );
+
+        Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn test_rsync_with_file_size_limit(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = new_memblob_empty(None)?;
+        let cs_id = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("dir_from/a", "aaaaaaaaaa")
+            .add_file("dir_from/b", "b")
+            .add_file("dir_from/c", "c")
+            .commit()
+            .await?;
+
+        let first_cs_id = rsync(
+            &ctx,
+            &repo,
+            cs_id,
+            MPath::new("dir_from")?,
+            MPath::new("dir_to")?,
+            "author".to_string(),
+            "msg".to_string(),
+            Limits {
+                file_num_limit: None,
+                total_size_limit: NonZeroU64::new(5),
+                lfs_threshold: None,
+            },
+            None,
+        )
+        .await?;
+
+        assert_eq!(
+            list_working_copy_utf8(&ctx, &repo, first_cs_id,).await?,
+            hashmap! {
+                MPath::new("dir_from/a")? => "aaaaaaaaaa".to_string(),
+                MPath::new("dir_from/b")? => "b".to_string(),
+                MPath::new("dir_from/c")? => "c".to_string(),
+                MPath::new("dir_to/a")? => "aaaaaaaaaa".to_string(),
+            }
+        );
+
+        let second_cs_id = rsync(
+            &ctx,
+            &repo,
+            first_cs_id,
+            MPath::new("dir_from")?,
+            MPath::new("dir_to")?,
+            "author".to_string(),
+            "msg".to_string(),
+            Limits {
+                file_num_limit: None,
+                total_size_limit: NonZeroU64::new(5),
+                lfs_threshold: None,
+            },
+            None,
+        )
+        .await?;
+
+        assert_eq!(
+            list_working_copy_utf8(&ctx, &repo, second_cs_id,).await?,
+            hashmap! {
+                MPath::new("dir_to/a")? => "aaaaaaaaaa".to_string(),
+                MPath::new("dir_to/b")? => "b".to_string(),
+                MPath::new("dir_to/c")? => "c".to_string(),
+                MPath::new("dir_from/a")? => "aaaaaaaaaa".to_string(),
+                MPath::new("dir_from/b")? => "b".to_string(),
+                MPath::new("dir_from/c")? => "c".to_string(),
+            }
+        );
+
+        Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn test_rsync_with_file_size_limit_and_lfs_threshold(
+        fb: FacebookInit,
+    ) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = new_memblob_empty(None)?;
+        let cs_id = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("dir_from/a", "aaaaaaaaaa")
+            .add_file("dir_from/b", "b")
+            .add_file("dir_from/c", "c")
+            .commit()
+            .await?;
+
+        let cs_id = rsync(
+            &ctx,
+            &repo,
+            cs_id,
+            MPath::new("dir_from")?,
+            MPath::new("dir_to")?,
+            "author".to_string(),
+            "msg".to_string(),
+            Limits {
+                file_num_limit: None,
+                total_size_limit: NonZeroU64::new(5),
+                lfs_threshold: NonZeroU64::new(2),
+            },
+            None,
+        )
+        .await?;
+
+        assert_eq!(
+            list_working_copy_utf8(&ctx, &repo, cs_id,).await?,
+            hashmap! {
+                MPath::new("dir_to/a")? => "aaaaaaaaaa".to_string(),
+                MPath::new("dir_to/b")? => "b".to_string(),
+                MPath::new("dir_to/c")? => "c".to_string(),
+                MPath::new("dir_from/a")? => "aaaaaaaaaa".to_string(),
+                MPath::new("dir_from/b")? => "b".to_string(),
+                MPath::new("dir_from/c")? => "c".to_string(),
             }
         );
 
