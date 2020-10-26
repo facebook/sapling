@@ -141,17 +141,11 @@ pub fn parse_file_req(json: &Value) -> Result<FileRequest> {
 pub fn parse_tree_req(json: &Value) -> Result<TreeRequest> {
     let json = json.as_object().context("input must be a JSON object")?;
     let keys = json.get("keys").context("missing field: keys")?;
-    let with_file_metadata = json.get("with_file_metadata");
-    let with_directory_metadata = json.get("with_directory_metadata");
+    let with_child_metadata = optional_bool_field(json, "with_child_metadata")?;
 
     Ok(TreeRequest {
         keys: parse_keys(keys)?,
-        with_file_metadata: with_file_metadata
-            .map(parse_file_metadata_req)
-            .transpose()?,
-        with_directory_metadata: with_directory_metadata
-            .map(parse_directory_metadata_req)
-            .transpose()?,
+        with_child_metadata,
     })
 }
 
@@ -410,16 +404,10 @@ impl<T: ToJson> ToJson for Vec<T> {
 
 impl ToJson for TreeRequest {
     fn to_json(&self) -> Value {
-        let mut json = json!({
-            "keys": self.keys.to_json()
-        });
-        if let Some(file_metadata) = self.with_file_metadata {
-            json["with_file_metadata"] = file_metadata.to_json();
-        }
-        if let Some(dir_metadata) = self.with_directory_metadata {
-            json["with_directory_metadata"] = dir_metadata.to_json();
-        }
-        json
+        json!({
+            "keys": self.keys.to_json(),
+            "with_child_metadata": self.with_child_metadata,
+        })
     }
 }
 

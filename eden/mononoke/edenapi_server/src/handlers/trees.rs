@@ -13,7 +13,7 @@ use serde::Deserialize;
 
 use edenapi_types::{
     wire::{ToApi, ToWire, WireTreeRequest},
-    EdenApiServerError, FileMetadata, TreeEntry, TreeRequest,
+    EdenApiServerError, FileMetadata, TreeChildEntry, TreeEntry, TreeRequest,
 };
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
 use manifest::Entry;
@@ -66,7 +66,7 @@ fn fetch_all_trees(
     repo: HgRepoContext,
     request: TreeRequest,
 ) -> impl Stream<Item = Result<TreeEntry, EdenApiServerError>> {
-    let fetch_metadata = request.with_file_metadata.is_some();
+    let fetch_metadata = request.with_child_metadata;
     let fetches = request.keys.into_iter().map(move |key| {
         fetch_tree(repo.clone(), key.clone(), fetch_metadata)
             .map(|r| r.map_err(|e| EdenApiServerError::with_key(key, e)))
@@ -91,16 +91,16 @@ async fn fetch_tree(
         .with_context(|| ErrorKind::TreeFetchFailed(key.clone()))?
         .with_context(|| ErrorKind::KeyDoesNotExist(key.clone()))?;
 
-    let (data, metadata) = ctx
+    let (data, _) = ctx
         .content()
         .await
         .with_context(|| ErrorKind::TreeFetchFailed(key.clone()))?;
     let parents = ctx.hg_parents().into();
 
-    let mut entry = TreeEntry::new(key.clone(), data, parents, metadata);
+    let mut entry = TreeEntry::new(key.clone(), data, parents);
 
     if fetch_metadata {
-        let children: Vec<Result<TreeEntry, EdenApiServerError>> =
+        let children: Vec<Result<TreeChildEntry, EdenApiServerError>> =
             fetch_child_metadata_entries(&repo, &ctx)
                 .await?
                 .buffer_unordered(MAX_CONCURRENT_METADATA_FETCHES_PER_TREE_FETCH)
@@ -117,7 +117,8 @@ async fn fetch_tree(
 async fn fetch_child_metadata_entries<'a>(
     repo: &'a HgRepoContext,
     ctx: &'a HgTreeContext,
-) -> Result<impl Stream<Item = impl Future<Output = Result<TreeEntry, Error>> + 'a> + 'a, Error> {
+) -> Result<impl Stream<Item = impl Future<Output = Result<TreeChildEntry, Error>> + 'a> + 'a, Error>
+{
     let entries = ctx.entries()?.collect::<Vec<_>>();
 
     Ok(stream::iter(entries)
@@ -130,7 +131,7 @@ async fn fetch_child_metadata_entries<'a>(
                         let child_key = Key::new(name, child_id.into_nodehash().into());
                         fetch_child_file_metadata(repo, file_type, child_key.clone()).await?
                     }
-                    Entry::Tree(child_id) => TreeEntry::new_directory_entry(Key::new(
+                    Entry::Tree(child_id) => TreeChildEntry::new_directory_entry(Key::new(
                         name,
                         child_id.into_nodehash().into(),
                     )),
@@ -143,14 +144,14 @@ async fn fetch_child_file_metadata(
     repo: &HgRepoContext,
     file_type: FileType,
     child_key: Key,
-) -> Result<TreeEntry, Error> {
+) -> Result<TreeChildEntry, Error> {
     let fsnode = repo
         .file(HgFileNodeId::new(child_key.hgid.into()))
         .await?
         .ok_or_else(|| ErrorKind::FileFetchFailed(child_key.clone()))?
         .fetch_fsnode_data(file_type)
         .await?;
-    Ok(TreeEntry::new_file_entry(
+    Ok(TreeChildEntry::new_file_entry(
         child_key,
         FileMetadata {
             file_type: Some((*fsnode.file_type()).into()),

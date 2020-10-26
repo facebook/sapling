@@ -21,7 +21,6 @@ use mononoke_api::{
     hg::{HgDataContext, HgRepoContext, HgTreeContext},
     path::MononokePath,
 };
-use revisionstore_types::Metadata;
 use types::Key;
 
 use crate::context::ServerContext;
@@ -115,7 +114,6 @@ fn entry_for_tree(
     let key = Key::new(path, hgid);
     let data = tree.content_bytes();
     let parents = tree.hg_parents().into();
-    let metadata = Metadata::default();
 
-    Ok(TreeEntry::new(key, data, parents, metadata))
+    Ok(TreeEntry::new(key, data, parents))
 }

@@ -245,11 +245,7 @@ impl FakeEdenApi {
             .filter_map(|key| {
                 let data = map.get(&key)?.clone();
                 let parents = Parents::default();
-                let metadata = Metadata {
-                    flags: None,
-                    size: None,
-                };
-                Some(Ok(Ok(TreeEntry::new(key, data, parents, metadata))))
+                Some(Ok(Ok(TreeEntry::new(key, data, parents))))
             })
             .collect::<Vec<_>>();
 

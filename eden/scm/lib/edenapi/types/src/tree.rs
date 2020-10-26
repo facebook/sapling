@@ -12,13 +12,9 @@ use thiserror::Error;
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
 
-use revisionstore_types::Metadata;
 use types::{hgid::HgId, key::Key, parents::Parents};
 
-use crate::{
-    DirectoryMetadata, DirectoryMetadataRequest, EdenApiServerError, FileMetadata,
-    FileMetadataRequest, InvalidHgId,
-};
+use crate::{DirectoryMetadata, EdenApiServerError, FileMetadata, InvalidHgId};
 
 #[derive(Debug, Error)]
 pub enum TreeError {
@@ -57,44 +53,22 @@ pub struct TreeEntry {
     pub key: Key,
     pub data: Option<Bytes>,
     pub parents: Option<Parents>,
-    pub file_metadata: Option<FileMetadata>,
-    pub directory_metadata: Option<DirectoryMetadata>,
-    pub children: Option<Vec<Result<TreeEntry, EdenApiServerError>>>,
+    pub children: Option<Vec<Result<TreeChildEntry, EdenApiServerError>>>,
 }
 
 impl TreeEntry {
-    pub fn new(key: Key, data: Bytes, parents: Parents, metadata: Metadata) -> Self {
+    pub fn new(key: Key, data: Bytes, parents: Parents) -> Self {
         Self {
             key,
             data: Some(data),
             parents: Some(parents),
-            file_metadata: metadata.flags.map(|f| FileMetadata {
-                revisionstore_flags: Some(f),
-                ..Default::default()
-            }),
-            directory_metadata: None,
             children: None,
-        }
-    }
-
-    pub fn new_file_entry(key: Key, metadata: FileMetadata) -> Self {
-        Self {
-            key,
-            file_metadata: Some(metadata),
-            ..Default::default()
-        }
-    }
-
-    pub fn new_directory_entry(key: Key) -> Self {
-        Self {
-            key,
-            ..Default::default()
         }
     }
 
     pub fn with_children<'a>(
         &'a mut self,
-        children: Option<Vec<Result<TreeEntry, EdenApiServerError>>>,
+        children: Option<Vec<Result<TreeChildEntry, EdenApiServerError>>>,
     ) -> &'a mut Self {
         self.children = children;
         self
@@ -149,13 +123,39 @@ impl TreeEntry {
     pub fn data_unchecked(&self) -> Option<Bytes> {
         self.data.clone()
     }
+}
 
-    /// Get this entry's revisionstore metadata.
-    pub fn metadata(&self) -> Metadata {
-        Metadata {
-            flags: self.file_metadata.and_then(|m| m.revisionstore_flags),
-            size: None,
-        }
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum TreeChildEntry {
+    File(TreeChildFileEntry),
+    Directory(TreeChildDirectoryEntry),
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct TreeChildFileEntry {
+    pub key: Key,
+    pub file_metadata: Option<FileMetadata>,
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct TreeChildDirectoryEntry {
+    pub key: Key,
+    pub directory_metadata: Option<DirectoryMetadata>,
+}
+
+impl TreeChildEntry {
+    pub fn new_file_entry(key: Key, metadata: FileMetadata) -> Self {
+        TreeChildEntry::File(TreeChildFileEntry {
+            key,
+            file_metadata: Some(metadata),
+        })
+    }
+
+    pub fn new_directory_entry(key: Key) -> Self {
+        TreeChildEntry::Directory(TreeChildDirectoryEntry {
+            key,
+            ..Default::default()
+        })
     }
 }
 
@@ -167,10 +167,41 @@ impl Arbitrary for TreeEntry {
             key: Arbitrary::arbitrary(g),
             data: bytes.map(|b| Bytes::from(b)),
             parents: Arbitrary::arbitrary(g),
-            file_metadata: Arbitrary::arbitrary(g),
-            directory_metadata: Arbitrary::arbitrary(g),
             // Recursive TreeEntry in children causes stack overflow in QuickCheck
             children: None,
+        }
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for TreeChildEntry {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        use rand::Rng;
+        let variant = g.gen_range(0, 2);
+        match variant {
+            0 => TreeChildEntry::File(Arbitrary::arbitrary(g)),
+            1 => TreeChildEntry::Directory(Arbitrary::arbitrary(g)),
+            _ => unreachable!(),
+        }
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for TreeChildFileEntry {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        Self {
+            key: Arbitrary::arbitrary(g),
+            file_metadata: Arbitrary::arbitrary(g),
+        }
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for TreeChildDirectoryEntry {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        Self {
+            key: Arbitrary::arbitrary(g),
+            directory_metadata: Arbitrary::arbitrary(g),
         }
     }
 }
@@ -178,8 +209,7 @@ impl Arbitrary for TreeEntry {
 #[derive(Clone, Debug, Default, Deserialize, Serialize, Eq, PartialEq)]
 pub struct TreeRequest {
     pub keys: Vec<Key>,
-    pub with_file_metadata: Option<FileMetadataRequest>,
-    pub with_directory_metadata: Option<DirectoryMetadataRequest>,
+    pub with_child_metadata: bool,
 }
 
 #[cfg(any(test, feature = "for-tests"))]
@@ -187,8 +217,7 @@ impl Arbitrary for TreeRequest {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
         Self {
             keys: Arbitrary::arbitrary(g),
-            with_file_metadata: Arbitrary::arbitrary(g),
-            with_directory_metadata: Arbitrary::arbitrary(g),
+            with_child_metadata: Arbitrary::arbitrary(g),
         }
     }
 }

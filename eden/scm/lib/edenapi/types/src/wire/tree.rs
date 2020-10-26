@@ -11,11 +11,10 @@ use quickcheck::Arbitrary;
 use serde_derive::{Deserialize, Serialize};
 
 use crate::{
-    tree::{TreeEntry, TreeRequest},
+    tree::{TreeChildDirectoryEntry, TreeChildEntry, TreeChildFileEntry, TreeEntry, TreeRequest},
     wire::{
-        is_default, ToApi, ToWire, WireDirectoryMetadata, WireDirectoryMetadataRequest,
-        WireEdenApiServerError, WireFileMetadata, WireFileMetadataRequest, WireKey, WireParents,
-        WireToApiConversionError,
+        is_default, ToApi, ToWire, WireDirectoryMetadata, WireEdenApiServerError, WireFileMetadata,
+        WireKey, WireParents, WireToApiConversionError,
     },
     EdenApiServerError,
 };
@@ -32,15 +31,9 @@ pub struct WireTreeEntry {
     parents: Option<WireParents>,
 
     #[serde(rename = "3", default, skip_serializing_if = "is_default")]
-    file_metadata: Option<WireFileMetadata>,
+    children: Option<Vec<WireTreeChildEntry>>,
 
     #[serde(rename = "4", default, skip_serializing_if = "is_default")]
-    directory_metadata: Option<WireDirectoryMetadata>,
-
-    #[serde(rename = "5", default, skip_serializing_if = "is_default")]
-    children: Option<Vec<WireTreeEntry>>,
-
-    #[serde(rename = "6", default, skip_serializing_if = "is_default")]
     error: Option<WireEdenApiServerError>,
 }
 
@@ -53,8 +46,6 @@ impl ToWire for Result<TreeEntry, EdenApiServerError> {
                 key: Some(t.key.to_wire()),
                 data: t.data,
                 parents: t.parents.to_wire(),
-                file_metadata: t.file_metadata.to_wire(),
-                directory_metadata: t.directory_metadata.to_wire(),
                 children: t.children.to_wire(),
                 error: None,
             },
@@ -85,10 +76,82 @@ impl ToApi for WireTreeEntry {
                     .ok_or(WireToApiConversionError::CannotPopulateRequiredField("key"))?,
                 data: self.data,
                 parents: self.parents.to_api()?,
-                file_metadata: self.file_metadata.to_api()?,
-                directory_metadata: self.directory_metadata.to_api()?,
                 children: self.children.to_api()?,
             })
+        })
+    }
+}
+
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
+pub struct WireTreeChildEntry {
+    #[serde(rename = "0", default, skip_serializing_if = "is_default")]
+    key: Option<WireKey>,
+
+    #[serde(rename = "3", default, skip_serializing_if = "is_default")]
+    file_metadata: Option<WireFileMetadata>,
+
+    #[serde(rename = "4", default, skip_serializing_if = "is_default")]
+    directory_metadata: Option<WireDirectoryMetadata>,
+
+    #[serde(rename = "4", default, skip_serializing_if = "is_default")]
+    error: Option<WireEdenApiServerError>,
+}
+
+impl ToWire for Result<TreeChildEntry, EdenApiServerError> {
+    type Wire = WireTreeChildEntry;
+
+    fn to_wire(self) -> Self::Wire {
+        match self {
+            Ok(TreeChildEntry::File(t)) => WireTreeChildEntry {
+                key: Some(t.key.to_wire()),
+                file_metadata: t.file_metadata.to_wire(),
+                directory_metadata: None,
+                error: None,
+            },
+            Ok(TreeChildEntry::Directory(t)) => WireTreeChildEntry {
+                key: Some(t.key.to_wire()),
+                file_metadata: None,
+                directory_metadata: t.directory_metadata.to_wire(),
+                error: None,
+            },
+            Err(e) => WireTreeChildEntry {
+                key: e.key.to_wire(),
+                error: Some(e.err.to_wire()),
+                ..Default::default()
+            },
+        }
+    }
+}
+
+impl ToApi for WireTreeChildEntry {
+    type Api = Result<TreeChildEntry, EdenApiServerError>;
+    type Error = WireToApiConversionError;
+
+    fn to_api(self) -> Result<Self::Api, Self::Error> {
+        Ok(if let (key, Some(err)) = (self.key.clone(), self.error) {
+            Err(EdenApiServerError {
+                key: key.to_api()?,
+                err: err.to_api()?,
+            })
+        } else {
+            Ok(
+                if let (key, Some(file_metadata)) = (self.key.clone(), self.file_metadata) {
+                    TreeChildEntry::File(TreeChildFileEntry {
+                        key: key
+                            .to_api()?
+                            .ok_or(WireToApiConversionError::CannotPopulateRequiredField("key"))?,
+                        file_metadata: Some(file_metadata.to_api()?),
+                    })
+                } else {
+                    TreeChildEntry::Directory(TreeChildDirectoryEntry {
+                        key: self
+                            .key
+                            .to_api()?
+                            .ok_or(WireToApiConversionError::CannotPopulateRequiredField("key"))?,
+                        directory_metadata: self.directory_metadata.to_api()?,
+                    })
+                },
+            )
         })
     }
 }
@@ -115,14 +178,8 @@ pub struct WireTreeAttributesRequest {
     #[serde(rename = "1", default, skip_serializing_if = "is_default")]
     with_parents: bool,
 
-    #[serde(rename = "2", default, skip_serializing_if = "is_default")]
-    with_file_metadata: Option<WireFileMetadataRequest>,
-
-    #[serde(rename = "3", default, skip_serializing_if = "is_default")]
-    with_directory_metadata: Option<WireDirectoryMetadataRequest>,
-
     #[serde(rename = "4", default, skip_serializing_if = "is_default")]
-    with_children: bool,
+    with_child_metadata: bool,
 }
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize, Eq, PartialEq)]
@@ -146,9 +203,7 @@ impl ToWire for TreeRequest {
             attributes: Some(WireTreeAttributesRequest {
                 with_data: true,
                 with_parents: true,
-                with_file_metadata: self.with_file_metadata.to_wire(),
-                with_directory_metadata: self.with_directory_metadata.to_wire(),
-                with_children: true,
+                with_child_metadata: self.with_child_metadata,
             }),
         }
     }
@@ -173,16 +228,10 @@ impl ToApi for WireTreeRequest {
                     ));
                 }
             },
-            with_file_metadata: self
+            with_child_metadata: self
                 .attributes
-                .as_ref()
-                .and_then(|a| a.with_file_metadata)
-                .to_api()?,
-            with_directory_metadata: self
-                .attributes
-                .as_ref()
-                .and_then(|a| a.with_directory_metadata)
-                .to_api()?,
+                .map(|a| a.with_child_metadata)
+                .unwrap_or(false),
         })
     }
 }
@@ -195,8 +244,6 @@ impl Arbitrary for WireTreeEntry {
             key: Arbitrary::arbitrary(g),
             data: bytes.map(|b| Bytes::from(b)),
             parents: Arbitrary::arbitrary(g),
-            file_metadata: Arbitrary::arbitrary(g),
-            directory_metadata: Arbitrary::arbitrary(g),
             // Not recursing here because it causes Quickcheck to overflow the stack
             children: None,
             // TODO
@@ -211,9 +258,7 @@ impl Arbitrary for WireTreeAttributesRequest {
         Self {
             with_data: Arbitrary::arbitrary(g),
             with_parents: Arbitrary::arbitrary(g),
-            with_file_metadata: Arbitrary::arbitrary(g),
-            with_directory_metadata: Arbitrary::arbitrary(g),
-            with_children: Arbitrary::arbitrary(g),
+            with_child_metadata: Arbitrary::arbitrary(g),
         }
     }
 }
