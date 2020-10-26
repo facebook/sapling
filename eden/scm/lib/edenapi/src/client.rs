@@ -15,10 +15,9 @@ use serde::{de::DeserializeOwned, Serialize};
 use url::Url;
 
 use edenapi_types::{
-    wire::{WireFileEntry, WireTreeEntry},
+    wire::{WireFileEntry, WireHistoryResponseChunk, WireTreeEntry},
     CommitRevlogData, CommitRevlogDataRequest, CompleteTreeRequest, EdenApiServerError, FileEntry,
-    FileRequest, HistoryEntry, HistoryRequest, HistoryResponseChunk, ToApi, ToWire, TreeEntry,
-    TreeRequest,
+    FileRequest, HistoryEntry, HistoryRequest, ToApi, ToWire, TreeEntry, TreeRequest,
 };
 use hg_http::http_client;
 use http_client::{HttpClient, Request};
@@ -271,7 +270,7 @@ impl EdenApi for Client {
 
         let url = self.url(paths::HISTORY, Some(&repo))?;
         let requests = self.prepare(&url, keys, self.config.max_history, |keys| {
-            HistoryRequest { keys, length }
+            HistoryRequest { keys, length }.to_wire()
         })?;
 
         let Fetch {
@@ -279,7 +278,7 @@ impl EdenApi for Client {
             entries,
             stats,
         } = self
-            .fetch_raw::<HistoryResponseChunk>(requests, progress)
+            .fetch::<WireHistoryResponseChunk>(requests, progress)
             .await?;
 
         // Convert received `HistoryResponseChunk`s into `HistoryEntry`s.

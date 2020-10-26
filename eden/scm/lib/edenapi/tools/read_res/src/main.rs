@@ -24,9 +24,8 @@ use sha1::{Digest, Sha1};
 use structopt::StructOpt;
 
 use edenapi_types::{
-    wire::{ToApi, WireFileEntry, WireTreeEntry},
-    CommitLocationToHash, CommitRevlogData, FileError, HistoryResponseChunk, TreeError,
-    WireHistoryEntry,
+    wire::{ToApi, WireFileEntry, WireHistoryResponseChunk, WireTreeEntry},
+    CommitLocationToHash, CommitRevlogData, FileError, TreeError, WireHistoryEntry,
 };
 use types::{HgId, Key, Parents, RepoPathBuf};
 
@@ -302,10 +301,10 @@ fn cmd_history(args: HistoryArgs) -> Result<()> {
 }
 
 fn cmd_history_ls(args: HistLsArgs) -> Result<()> {
-    let chunks: Vec<HistoryResponseChunk> = read_input(args.input, args.limit)?;
+    let chunks: Vec<WireHistoryResponseChunk> = read_input(args.input, args.limit)?;
     // Deduplicate and sort paths.
     let mut paths = BTreeSet::new();
-    for chunk in chunks {
+    for chunk in chunks.into_iter().filter_map(to_api) {
         paths.insert(chunk.path.into_string());
     }
     for path in paths {
@@ -315,7 +314,7 @@ fn cmd_history_ls(args: HistLsArgs) -> Result<()> {
 }
 
 fn cmd_history_show(args: HistShowArgs) -> Result<()> {
-    let chunks: Vec<HistoryResponseChunk> = read_input(args.input, args.limit)?;
+    let chunks: Vec<WireHistoryResponseChunk> = read_input(args.input, args.limit)?;
     let map = make_history_map(chunks);
     match args.file {
         Some(ref path) => match map.get(path) {
@@ -393,10 +392,10 @@ fn cmd_commit_location_to_hash(args: CommitLocationToHashArgs) -> Result<()> {
 }
 
 fn make_history_map(
-    chunks: impl IntoIterator<Item = HistoryResponseChunk>,
+    chunks: impl IntoIterator<Item = WireHistoryResponseChunk>,
 ) -> BTreeMap<String, Vec<WireHistoryEntry>> {
     let mut map = BTreeMap::new();
-    for chunk in chunks {
+    for chunk in chunks.into_iter().filter_map(to_api) {
         map.entry(chunk.path.into_string())
             .or_insert_with(Vec::new)
             .extend_from_slice(&chunk.entries);

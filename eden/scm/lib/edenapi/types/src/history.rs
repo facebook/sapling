@@ -146,7 +146,7 @@ impl IntoIterator for HistoryResponse {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct HistoryResponseChunk {
     pub path: RepoPathBuf,
     pub entries: Vec<WireHistoryEntry>,
@@ -238,6 +238,16 @@ impl Arbitrary for HistoryRequest {
         Self {
             keys: Arbitrary::arbitrary(g),
             length: Arbitrary::arbitrary(g),
+        }
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for HistoryResponseChunk {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        Self {
+            path: Arbitrary::arbitrary(g),
+            entries: Arbitrary::arbitrary(g),
         }
     }
 }

@@ -17,7 +17,7 @@ use gotham_derive::{StateData, StaticResponseExtender};
 use serde::Deserialize;
 
 use cloned::cloned;
-use edenapi_types::{HistoryRequest, HistoryResponseChunk, WireHistoryEntry};
+use edenapi_types::{HistoryRequest, HistoryResponseChunk, ToWire, WireHistoryEntry};
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
 use mercurial_types::{HgFileNodeId, HgNodeHash};
 use mononoke_api::hg::HgRepoContext;
@@ -51,7 +51,12 @@ pub async fn history(state: &mut State) -> Result<impl TryIntoResponse, HttpErro
     let repo = get_repo(&sctx, &rctx, &params.repo).await?;
     let request = parse_cbor_request(state).await?;
 
-    Ok(cbor_stream(rctx, fetch_history(repo, request).await))
+    Ok(cbor_stream(
+        rctx,
+        fetch_history(repo, request)
+            .await
+            .map(|r| r.map(|e| e.to_wire())),
+    ))
 }
 
 /// Fetch history for all of the requested files concurrently.

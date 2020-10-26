@@ -47,12 +47,14 @@
 
 pub mod complete_tree;
 pub mod file;
+pub mod history;
 pub mod metadata;
 pub mod tree;
 
 pub use crate::wire::{
     complete_tree::WireCompleteTreeRequest,
     file::{WireFileEntry, WireFileRequest},
+    history::{WireHistoryRequest, WireHistoryResponseChunk, WireWireHistoryEntry},
     metadata::{
         WireDirectoryMetadata, WireDirectoryMetadataRequest, WireFileMetadata,
         WireFileMetadataRequest,
@@ -405,6 +407,23 @@ impl ToApi for WireRevisionstoreMetadata {
             size: self.size,
             flags: self.flags,
         })
+    }
+}
+
+impl ToWire for u32 {
+    type Wire = u32;
+
+    fn to_wire(self) -> Self::Wire {
+        self
+    }
+}
+
+impl ToApi for u32 {
+    type Api = u32;
+    type Error = Infallible;
+
+    fn to_api(self) -> Result<Self::Api, Self::Error> {
+        Ok(self)
     }
 }
 
