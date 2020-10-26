@@ -65,6 +65,7 @@ use std::fmt;
 
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
+use serde::{self, de::Error, Deserializer, Serializer};
 use serde_derive::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -72,6 +73,13 @@ use revisionstore_types::Metadata as RevisionstoreMetadata;
 use types::{path::ParseError as RepoPathParseError, HgId, Key, Parents, RepoPathBuf};
 
 use crate::EdenApiServerErrorKind;
+
+#[derive(Copy, Clone, Debug, Error)]
+#[error("invalid byte slice length, expected {expected_len} found {found_len}")]
+pub struct TryFromBytesError {
+    pub expected_len: usize,
+    pub found_len: usize,
+}
 
 #[derive(Debug, Error)]
 #[error("Failed to convert from wire to API representation")]
@@ -187,10 +195,8 @@ impl ToApi for WireEdenApiServerError {
     }
 }
 
-#[derive(Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct WireHgId(
-    #[serde(rename = "0", default, skip_serializing_if = "is_default")] [u8; WireHgId::len()],
-);
+#[derive(Clone, Copy, Default, PartialEq, Eq)]
+pub struct WireHgId([u8; WireHgId::len()]);
 
 impl WireHgId {
     const fn len() -> usize {
@@ -229,6 +235,36 @@ impl fmt::Debug for WireHgId {
         match self.to_api() {
             Ok(api) => write!(fmt, "WireHgId({:?})", &api.to_hex()),
             Err(_) => Err(fmt::Error),
+        }
+    }
+}
+
+impl serde::Serialize for WireHgId {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_bytes(&self.0)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for WireHgId {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let bytes: serde_bytes::ByteBuf = serde_bytes::deserialize(deserializer)?;
+        let bytes = bytes.as_ref();
+
+        if bytes.len() == Self::len() {
+            let mut ary = [0u8; Self::len()];
+            ary.copy_from_slice(&bytes);
+            Ok(WireHgId(ary))
+        } else {
+            Err(D::Error::custom(TryFromBytesError {
+                expected_len: Self::len(),
+                found_len: bytes.len(),
+            }))
         }
     }
 }

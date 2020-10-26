@@ -9,11 +9,13 @@ use std::convert::Infallible;
 
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
+use serde::{self, de::Error, Deserializer, Serializer};
 use serde_derive::{Deserialize, Serialize};
 
 use crate::{
-    wire::is_default, ContentId, DirectoryMetadata, DirectoryMetadataRequest, FileMetadata,
-    FileMetadataRequest, FileType, FsnodeId, Sha1, Sha256, ToApi, ToWire, WireToApiConversionError,
+    wire::{is_default, TryFromBytesError},
+    ContentId, DirectoryMetadata, DirectoryMetadataRequest, FileMetadata, FileMetadataRequest,
+    FileType, FsnodeId, Sha1, Sha256, ToApi, ToWire, WireToApiConversionError,
 };
 
 /// Directory entry metadata
@@ -293,10 +295,14 @@ impl ToApi for WireFileType {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct WireFsnodeId(
-    #[serde(rename = "0", default, skip_serializing_if = "is_default")] [u8; 32],
-);
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct WireFsnodeId([u8; WireFsnodeId::len()]);
+
+impl WireFsnodeId {
+    pub const fn len() -> usize {
+        32
+    }
+}
 
 impl ToWire for FsnodeId {
     type Wire = WireFsnodeId;
@@ -315,10 +321,44 @@ impl ToApi for WireFsnodeId {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct WireContentId(
-    #[serde(rename = "0", default, skip_serializing_if = "is_default")] [u8; 32],
-);
+impl serde::Serialize for WireFsnodeId {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_bytes(&self.0)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for WireFsnodeId {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let bytes: serde_bytes::ByteBuf = serde_bytes::deserialize(deserializer)?;
+        let bytes = bytes.as_ref();
+
+        if bytes.len() == Self::len() {
+            let mut ary = [0u8; Self::len()];
+            ary.copy_from_slice(&bytes);
+            Ok(WireFsnodeId(ary))
+        } else {
+            Err(D::Error::custom(TryFromBytesError {
+                expected_len: Self::len(),
+                found_len: bytes.len(),
+            }))
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct WireContentId([u8; WireContentId::len()]);
+
+impl WireContentId {
+    pub const fn len() -> usize {
+        32
+    }
+}
 
 impl ToWire for ContentId {
     type Wire = WireContentId;
@@ -337,8 +377,44 @@ impl ToApi for WireContentId {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct WireSha1(#[serde(rename = "0", default, skip_serializing_if = "is_default")] [u8; 20]);
+impl serde::Serialize for WireContentId {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_bytes(&self.0)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for WireContentId {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let bytes: serde_bytes::ByteBuf = serde_bytes::deserialize(deserializer)?;
+        let bytes = bytes.as_ref();
+
+        if bytes.len() == Self::len() {
+            let mut ary = [0u8; Self::len()];
+            ary.copy_from_slice(&bytes);
+            Ok(WireContentId(ary))
+        } else {
+            Err(D::Error::custom(TryFromBytesError {
+                expected_len: Self::len(),
+                found_len: bytes.len(),
+            }))
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct WireSha1([u8; WireSha1::len()]);
+
+impl WireSha1 {
+    pub const fn len() -> usize {
+        20
+    }
+}
 
 impl ToWire for Sha1 {
     type Wire = WireSha1;
@@ -357,8 +433,44 @@ impl ToApi for WireSha1 {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct WireSha256(#[serde(rename = "0", default, skip_serializing_if = "is_default")] [u8; 32]);
+impl serde::Serialize for WireSha1 {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_bytes(&self.0)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for WireSha1 {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let bytes: serde_bytes::ByteBuf = serde_bytes::deserialize(deserializer)?;
+        let bytes = bytes.as_ref();
+
+        if bytes.len() == Self::len() {
+            let mut ary = [0u8; Self::len()];
+            ary.copy_from_slice(&bytes);
+            Ok(WireSha1(ary))
+        } else {
+            Err(D::Error::custom(TryFromBytesError {
+                expected_len: Self::len(),
+                found_len: bytes.len(),
+            }))
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct WireSha256([u8; WireSha256::len()]);
+
+impl WireSha256 {
+    pub const fn len() -> usize {
+        32
+    }
+}
 
 impl ToWire for Sha256 {
     type Wire = WireSha256;
@@ -374,6 +486,36 @@ impl ToApi for WireSha256 {
 
     fn to_api(self) -> Result<Self::Api, Self::Error> {
         Ok(Sha256(self.0))
+    }
+}
+
+impl serde::Serialize for WireSha256 {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_bytes(&self.0)
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for WireSha256 {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let bytes: serde_bytes::ByteBuf = serde_bytes::deserialize(deserializer)?;
+        let bytes = bytes.as_ref();
+
+        if bytes.len() == Self::len() {
+            let mut ary = [0u8; Self::len()];
+            ary.copy_from_slice(&bytes);
+            Ok(WireSha256(ary))
+        } else {
+            Err(D::Error::custom(TryFromBytesError {
+                expected_len: Self::len(),
+                found_len: bytes.len(),
+            }))
+        }
     }
 }
 
