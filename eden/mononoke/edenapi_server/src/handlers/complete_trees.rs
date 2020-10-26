@@ -13,7 +13,7 @@ use serde::Deserialize;
 
 use edenapi_types::{
     wire::{ToApi, ToWire, WireCompleteTreeRequest},
-    CompleteTreeRequest, TreeEntry,
+    CompleteTreeRequest, EdenApiServerError, TreeEntry,
 };
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
 use mercurial_types::{HgManifestId, HgNodeHash};
@@ -55,7 +55,7 @@ pub async fn complete_trees(state: &mut State) -> Result<impl TryIntoResponse, H
 
     Ok(cbor_stream(
         rctx,
-        fetch_trees_under_path(&repo, request)?.map(|r| r.map(|e| e.to_wire())),
+        fetch_trees_under_path(&repo, request)?.map(|r| Ok(r.to_wire())),
     ))
 }
 
@@ -81,7 +81,7 @@ pub async fn complete_trees(state: &mut State) -> Result<impl TryIntoResponse, H
 fn fetch_trees_under_path(
     repo: &HgRepoContext,
     request: CompleteTreeRequest,
-) -> Result<impl Stream<Item = Result<TreeEntry, Error>>, HttpError> {
+) -> Result<impl Stream<Item = Result<TreeEntry, EdenApiServerError>>, HttpError> {
     let path = to_mononoke_path(request.rootdir).map_err(HttpError::e400)?;
 
     let root_nodes = request
@@ -99,15 +99,18 @@ fn fetch_trees_under_path(
     let stream = repo
         .trees_under_path(path, root_nodes, base_nodes, request.depth)
         .err_into::<Error>()
-        .map_err(|e| e.context(ErrorKind::CompleteTreeRequestFailed))
+        .map_err(|e| EdenApiServerError::new(e.context(ErrorKind::CompleteTreeRequestFailed)))
         .and_then(move |(tree, path)| async { entry_for_tree(tree, path) });
 
     Ok(stream)
 }
 
-fn entry_for_tree(tree: HgTreeContext, path: MononokePath) -> Result<TreeEntry, Error> {
+fn entry_for_tree(
+    tree: HgTreeContext,
+    path: MononokePath,
+) -> Result<TreeEntry, EdenApiServerError> {
     let hgid = tree.node_id().into_nodehash().into();
-    let path = to_hg_path(&path)?;
+    let path = to_hg_path(&path).map_err(|e| EdenApiServerError::with_hgid(hgid, e))?;
 
     let key = Key::new(path, hgid);
     let data = tree.content_bytes();

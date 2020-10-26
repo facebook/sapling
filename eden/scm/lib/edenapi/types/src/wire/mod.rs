@@ -71,6 +71,8 @@ use thiserror::Error;
 use revisionstore_types::Metadata as RevisionstoreMetadata;
 use types::{path::ParseError as RepoPathParseError, HgId, Key, Parents, RepoPathBuf};
 
+use crate::EdenApiServerErrorKind;
+
 #[derive(Debug, Error)]
 #[error("Failed to convert from wire to API representation")]
 pub enum WireToApiConversionError {
@@ -145,6 +147,43 @@ impl<W: ToApi> ToApi for Option<W> {
 
     fn to_api(self) -> Result<Self::Api, Self::Error> {
         self.map(|w| w.to_api()).transpose()
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum WireEdenApiServerError {
+    #[serde(rename = "1")]
+    OpaqueError(String),
+
+    #[serde(other, rename = "0")]
+    Unknown,
+}
+
+impl ToWire for EdenApiServerErrorKind {
+    type Wire = WireEdenApiServerError;
+
+    fn to_wire(self) -> Self::Wire {
+        use EdenApiServerErrorKind::*;
+        match self {
+            OpaqueError(s) => WireEdenApiServerError::OpaqueError(s),
+        }
+    }
+}
+
+impl ToApi for WireEdenApiServerError {
+    type Api = EdenApiServerErrorKind;
+    type Error = WireToApiConversionError;
+
+    fn to_api(self) -> Result<Self::Api, Self::Error> {
+        use WireEdenApiServerError::*;
+        Ok(match self {
+            Unknown => {
+                return Err(WireToApiConversionError::UnrecognizedEnumVariant(
+                    "WireEdenApiServerError",
+                ));
+            }
+            OpaqueError(s) => EdenApiServerErrorKind::OpaqueError(s),
+        })
     }
 }
 
@@ -359,6 +398,19 @@ impl Arbitrary for WireKey {
 }
 
 #[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for WireEdenApiServerError {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        use rand::Rng;
+        let variant = g.gen_range(0, 2);
+        match variant {
+            0 => WireEdenApiServerError::Unknown,
+            1 => WireEdenApiServerError::OpaqueError(Arbitrary::arbitrary(g)),
+            _ => unreachable!(),
+        }
+    }
+}
+
+#[cfg(any(test, feature = "for-tests"))]
 impl Arbitrary for WireParents {
     fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
         Parents::arbitrary(g).to_wire()
@@ -416,6 +468,10 @@ pub mod tests {
         }
 
         fn test_meta_roundtrip_serialize(v: WireRevisionstoreMetadata) -> bool {
+            check_serialize_roundtrip(v)
+        }
+
+        fn test_error_roundtrip_serialize(v: WireEdenApiServerError) -> bool {
             check_serialize_roundtrip(v)
         }
 

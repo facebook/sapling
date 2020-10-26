@@ -17,7 +17,7 @@ use url::Url;
 use edenapi_types::{
     wire::{WireFileEntry, WireTreeEntry},
     CommitRevlogData, CommitRevlogDataRequest, CompleteTreeRequest, DirectoryMetadataRequest,
-    FileEntry, FileMetadataRequest, FileRequest, HistoryEntry, HistoryRequest,
+    EdenApiServerError, FileEntry, FileMetadataRequest, FileRequest, HistoryEntry, HistoryRequest,
     HistoryResponseChunk, ToApi, ToWire, TreeEntry, TreeRequest,
 };
 use hg_http::http_client;
@@ -300,7 +300,7 @@ impl EdenApi for Client {
         repo: String,
         keys: Vec<Key>,
         progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<TreeEntry>, EdenApiError> {
+    ) -> Result<Fetch<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
         let msg = format!("Requesting {} trees(s)", keys.len());
         tracing::info!("{}", &msg);
         if self.config.debug {
@@ -348,7 +348,7 @@ impl EdenApi for Client {
         basemfnodes: Vec<HgId>,
         depth: Option<usize>,
         progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<TreeEntry>, EdenApiError> {
+    ) -> Result<Fetch<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
         let msg = format!(
             "Requesting {} complete tree(s) for directory '{}'",
             mfnodes.len(),

@@ -6,7 +6,7 @@
  */
 
 use async_runtime::block_on_exclusive as block_on_future;
-use edenapi_types::{CommitRevlogData, FileEntry, HistoryEntry, TreeEntry};
+use edenapi_types::{CommitRevlogData, EdenApiServerError, FileEntry, HistoryEntry, TreeEntry};
 use types::{HgId, Key, RepoPathBuf};
 
 use crate::api::{EdenApi, ProgressCallback};
@@ -42,7 +42,7 @@ pub trait EdenApiBlocking: EdenApi {
         repo: String,
         keys: Vec<Key>,
         progress: Option<ProgressCallback>,
-    ) -> Result<BlockingFetch<TreeEntry>, EdenApiError> {
+    ) -> Result<BlockingFetch<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
         BlockingFetch::from_async(self.trees(repo, keys, progress))
     }
 
@@ -54,7 +54,7 @@ pub trait EdenApiBlocking: EdenApi {
         basemfnodes: Vec<HgId>,
         depth: Option<usize>,
         progress: Option<ProgressCallback>,
-    ) -> Result<BlockingFetch<TreeEntry>, EdenApiError> {
+    ) -> Result<BlockingFetch<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
         BlockingFetch::from_async(self.complete_trees(
             repo,
             rootdir,

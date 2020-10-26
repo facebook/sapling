@@ -16,7 +16,7 @@ use cpython_async::TStream;
 use cpython_ext::convert::Serde;
 use cpython_ext::{PyPathBuf, ResultPyErrExt};
 use edenapi::{EdenApi, EdenApiBlocking, EdenApiError, Fetch, Stats};
-use edenapi_types::{CommitRevlogData, FileEntry, HistoryEntry, TreeEntry};
+use edenapi_types::{CommitRevlogData, EdenApiServerError, FileEntry, HistoryEntry, TreeEntry};
 use progress::{ProgressBar, ProgressFactory, Unit};
 use revisionstore::{HgIdMutableDeltaStore, HgIdMutableHistoryStore};
 
@@ -207,11 +207,11 @@ async fn write_files(
 }
 
 async fn write_trees(
-    mut response: Fetch<TreeEntry>,
+    mut response: Fetch<Result<TreeEntry, EdenApiServerError>>,
     store: Arc<dyn HgIdMutableDeltaStore>,
     prog: &dyn ProgressBar,
 ) -> Result<Stats, EdenApiError> {
-    while let Some(entry) = response.entries.try_next().await? {
+    while let Some(Ok(entry)) = response.entries.try_next().await? {
         store.add_tree(&entry)?;
         prog.increment(1)?;
     }

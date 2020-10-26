@@ -16,7 +16,8 @@ use revisionstore_types::Metadata;
 use types::{hgid::HgId, key::Key, parents::Parents};
 
 use crate::{
-    DirectoryMetadata, DirectoryMetadataRequest, FileMetadata, FileMetadataRequest, InvalidHgId,
+    DirectoryMetadata, DirectoryMetadataRequest, EdenApiServerError, FileMetadata,
+    FileMetadataRequest, InvalidHgId,
 };
 
 #[derive(Debug, Error)]
@@ -58,7 +59,7 @@ pub struct TreeEntry {
     pub parents: Option<Parents>,
     pub file_metadata: Option<FileMetadata>,
     pub directory_metadata: Option<DirectoryMetadata>,
-    pub children: Option<Vec<TreeEntry>>,
+    pub children: Option<Vec<Result<TreeEntry, EdenApiServerError>>>,
 }
 
 impl TreeEntry {
@@ -91,7 +92,10 @@ impl TreeEntry {
         }
     }
 
-    pub fn with_children<'a>(&'a mut self, children: Option<Vec<TreeEntry>>) -> &'a mut Self {
+    pub fn with_children<'a>(
+        &'a mut self,
+        children: Option<Vec<Result<TreeEntry, EdenApiServerError>>>,
+    ) -> &'a mut Self {
         self.children = children;
         self
     }

@@ -14,7 +14,7 @@ use futures::prelude::*;
 
 use configparser::config::ConfigSet;
 use edenapi::{EdenApi, EdenApiError, Fetch, ProgressCallback, ResponseMeta, Stats};
-use edenapi_types::{CommitRevlogData, FileEntry, HistoryEntry, TreeEntry};
+use edenapi_types::{CommitRevlogData, EdenApiServerError, FileEntry, HistoryEntry, TreeEntry};
 use types::{HgId, Key, NodeInfo, Parents, RepoPathBuf};
 
 use crate::{
@@ -239,7 +239,7 @@ impl FakeEdenApi {
     fn get_trees(
         map: &HashMap<Key, Bytes>,
         keys: Vec<Key>,
-    ) -> Result<Fetch<TreeEntry>, EdenApiError> {
+    ) -> Result<Fetch<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
         let entries = keys
             .into_iter()
             .filter_map(|key| {
@@ -249,7 +249,7 @@ impl FakeEdenApi {
                     flags: None,
                     size: None,
                 };
-                Some(Ok(TreeEntry::new(key, data, parents, metadata)))
+                Some(Ok(Ok(TreeEntry::new(key, data, parents, metadata))))
             })
             .collect::<Vec<_>>();
 
@@ -303,7 +303,7 @@ impl EdenApi for FakeEdenApi {
         _repo: String,
         keys: Vec<Key>,
         _progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<TreeEntry>, EdenApiError> {
+    ) -> Result<Fetch<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
         Self::get_trees(&self.trees, keys)
     }
 
@@ -315,7 +315,7 @@ impl EdenApi for FakeEdenApi {
         _basemfnodes: Vec<HgId>,
         _depth: Option<usize>,
         _progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<TreeEntry>, EdenApiError> {
+    ) -> Result<Fetch<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
         unimplemented!()
     }
 

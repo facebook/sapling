@@ -6,14 +6,14 @@
  */
 
 use anyhow::{Context, Error};
-use futures::{stream, Future, Stream, StreamExt, TryStreamExt};
+use futures::{stream, Future, FutureExt, Stream, StreamExt};
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
 use serde::Deserialize;
 
 use edenapi_types::{
     wire::{ToApi, ToWire, WireTreeRequest},
-    FileMetadata, TreeEntry, TreeRequest,
+    EdenApiServerError, FileMetadata, TreeEntry, TreeRequest,
 };
 use gotham_ext::{error::HttpError, response::TryIntoResponse};
 use manifest::Entry;
@@ -57,7 +57,7 @@ pub async fn trees(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
 
     Ok(cbor_stream(
         rctx,
-        fetch_all_trees(repo, request).map(|r| r.map(|v| v.to_wire())),
+        fetch_all_trees(repo, request).map(|r| Ok(r.to_wire())),
     ))
 }
 
@@ -65,12 +65,12 @@ pub async fn trees(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
 fn fetch_all_trees(
     repo: HgRepoContext,
     request: TreeRequest,
-) -> impl Stream<Item = Result<TreeEntry, Error>> {
+) -> impl Stream<Item = Result<TreeEntry, EdenApiServerError>> {
     let fetch_metadata = request.with_file_metadata.is_some();
-    let fetches = request
-        .keys
-        .into_iter()
-        .map(move |key| fetch_tree(repo.clone(), key, fetch_metadata));
+    let fetches = request.keys.into_iter().map(move |key| {
+        fetch_tree(repo.clone(), key.clone(), fetch_metadata)
+            .map(|r| r.map_err(|e| EdenApiServerError::with_key(key, e)))
+    });
 
     stream::iter(fetches).buffer_unordered(MAX_CONCURRENT_TREE_FETCHES_PER_REQUEST)
 }
@@ -97,14 +97,16 @@ async fn fetch_tree(
         .with_context(|| ErrorKind::TreeFetchFailed(key.clone()))?;
     let parents = ctx.hg_parents().into();
 
-    let mut entry = TreeEntry::new(key, data, parents, metadata);
+    let mut entry = TreeEntry::new(key.clone(), data, parents, metadata);
 
     if fetch_metadata {
-        let children = fetch_child_metadata_entries(&repo, &ctx)
-            .await?
-            .buffer_unordered(MAX_CONCURRENT_METADATA_FETCHES_PER_TREE_FETCH)
-            .try_collect()
-            .await?;
+        let children: Vec<Result<TreeEntry, EdenApiServerError>> =
+            fetch_child_metadata_entries(&repo, &ctx)
+                .await?
+                .buffer_unordered(MAX_CONCURRENT_METADATA_FETCHES_PER_TREE_FETCH)
+                .map(|r| r.map_err(|e| EdenApiServerError::with_key(key.clone(), e)))
+                .collect()
+                .await;
 
         entry.with_children(Some(children));
     }

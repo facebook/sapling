@@ -11,7 +11,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 
 use edenapi::{EdenApi, EdenApiError, Fetch, ProgressCallback};
-use edenapi_types::{FileEntry, TreeEntry};
+use edenapi_types::{EdenApiServerError, FileEntry, TreeEntry};
 use progress::{NullProgressFactory, ProgressFactory};
 use types::Key;
 
@@ -138,7 +138,7 @@ pub trait EdenApiStoreKind: Send + Sync + 'static {
         _repo: String,
         _keys: Vec<Key>,
         _progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<TreeEntry>, EdenApiError> {
+    ) -> Result<Fetch<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
         unimplemented!("fetching trees not supported for this store")
     }
 }
@@ -162,7 +162,7 @@ impl EdenApiStoreKind for Tree {
         repo: String,
         keys: Vec<Key>,
         progress: Option<ProgressCallback>,
-    ) -> Result<Fetch<TreeEntry>, EdenApiError> {
+    ) -> Result<Fetch<Result<TreeEntry, EdenApiServerError>>, EdenApiError> {
         client.trees(repo, keys, progress).await
     }
 }

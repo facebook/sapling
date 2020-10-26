@@ -86,7 +86,7 @@ impl RemoteDataStore for EdenApiDataStore<Tree> {
             )?;
 
             let mut response = Tree::prefetch_trees(client, repo, hgidkeys, None).await?;
-            while let Some(entry) = response.entries.try_next().await? {
+            while let Some(Ok(entry)) = response.entries.try_next().await? {
                 self.store.add_tree(&entry)?;
                 prog.increment(1)?;
             }

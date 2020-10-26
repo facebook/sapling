@@ -203,7 +203,7 @@ fn cmd_file(args: FileArgs) -> Result<()> {
 fn cmd_tree_ls(args: DataLsArgs) -> Result<()> {
     let entries: Vec<WireTreeEntry> = read_input(args.input, args.limit)?;
     for entry in entries.into_iter().filter_map(to_api) {
-        println!("{}", entry.key());
+        println!("{}", entry?.key());
     }
     Ok(())
 }
@@ -217,6 +217,7 @@ fn cmd_tree_cat(args: DataCatArgs) -> Result<()> {
     let entry = entries
         .into_iter()
         .filter_map(to_api)
+        .filter_map(|r| r.ok())
         .find(|entry| entry.key() == &key)
         .ok_or_else(|| anyhow!("Key not found"))?;
 
@@ -230,6 +231,7 @@ fn cmd_tree_cat(args: DataCatArgs) -> Result<()> {
 fn cmd_tree_check(args: DataCheckArgs) -> Result<()> {
     let entries: Vec<WireTreeEntry> = read_input(args.input, args.limit)?;
     for entry in entries.into_iter().filter_map(to_api) {
+        let entry = entry?;
         match entry.data() {
             Ok(_) => {}
             Err(TreeError::MaybeHybridManifest(e)) => {

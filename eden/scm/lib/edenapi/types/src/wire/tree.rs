@@ -14,8 +14,10 @@ use crate::{
     tree::{TreeEntry, TreeRequest},
     wire::{
         is_default, ToApi, ToWire, WireDirectoryMetadata, WireDirectoryMetadataRequest,
-        WireFileMetadata, WireFileMetadataRequest, WireKey, WireParents, WireToApiConversionError,
+        WireEdenApiServerError, WireFileMetadata, WireFileMetadataRequest, WireKey, WireParents,
+        WireToApiConversionError,
     },
+    EdenApiServerError,
 };
 
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
@@ -37,38 +39,56 @@ pub struct WireTreeEntry {
 
     #[serde(rename = "5", default, skip_serializing_if = "is_default")]
     children: Option<Vec<WireTreeEntry>>,
+
+    #[serde(rename = "6", default, skip_serializing_if = "is_default")]
+    error: Option<WireEdenApiServerError>,
 }
 
-impl ToWire for TreeEntry {
+impl ToWire for Result<TreeEntry, EdenApiServerError> {
     type Wire = WireTreeEntry;
 
     fn to_wire(self) -> Self::Wire {
-        WireTreeEntry {
-            key: Some(self.key.to_wire()),
-            data: self.data,
-            parents: self.parents.to_wire(),
-            file_metadata: self.file_metadata.to_wire(),
-            directory_metadata: self.directory_metadata.to_wire(),
-            children: self.children.to_wire(),
+        match self {
+            Ok(t) => WireTreeEntry {
+                key: Some(t.key.to_wire()),
+                data: t.data,
+                parents: t.parents.to_wire(),
+                file_metadata: t.file_metadata.to_wire(),
+                directory_metadata: t.directory_metadata.to_wire(),
+                children: t.children.to_wire(),
+                error: None,
+            },
+            Err(e) => WireTreeEntry {
+                key: e.key.to_wire(),
+                error: Some(e.err.to_wire()),
+                ..Default::default()
+            },
         }
     }
 }
 
 impl ToApi for WireTreeEntry {
-    type Api = TreeEntry;
+    type Api = Result<TreeEntry, EdenApiServerError>;
     type Error = WireToApiConversionError;
 
     fn to_api(self) -> Result<Self::Api, Self::Error> {
-        Ok(TreeEntry {
-            key: self
-                .key
-                .to_api()?
-                .ok_or(WireToApiConversionError::CannotPopulateRequiredField("key"))?,
-            data: self.data,
-            parents: self.parents.to_api()?,
-            file_metadata: self.file_metadata.to_api()?,
-            directory_metadata: self.directory_metadata.to_api()?,
-            children: self.children.to_api()?,
+        Ok(if let (key, Some(err)) = (self.key.clone(), self.error) {
+            Err(EdenApiServerError {
+                key: key.to_api()?,
+                err: err.to_api()?,
+            })
+        } else {
+            Ok(TreeEntry {
+                key: self
+                    .key
+                    .to_api()?
+                    .ok_or(WireToApiConversionError::CannotPopulateRequiredField("key"))?,
+                data: self.data,
+                parents: self.parents.to_api()?,
+                file_metadata: self.file_metadata.to_api()?,
+                directory_metadata: self.directory_metadata.to_api()?,
+                children: self.children.to_api()?,
+            })
         })
     }
 }
@@ -179,6 +199,8 @@ impl Arbitrary for WireTreeEntry {
             directory_metadata: Arbitrary::arbitrary(g),
             // Not recursing here because it causes Quickcheck to overflow the stack
             children: None,
+            // TODO
+            error: None,
         }
     }
 }
@@ -264,7 +286,7 @@ mod tests {
             check_wire_roundtrip(v)
         }
 
-        fn test_entry_roundtrip_wire(v: TreeEntry) -> bool {
+        fn test_entry_roundtrip_wire(v: Result<TreeEntry, EdenApiServerError>) -> bool {
             check_wire_roundtrip(v)
         }
     }
