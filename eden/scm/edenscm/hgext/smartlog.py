@@ -161,7 +161,7 @@ def sortnodes(nodes, parentfunc, masters):
     return results
 
 
-def getdag(ui, repo, revs, master, template):
+def getdag(ui, repo, revs, master):
 
     knownrevs = set(revs)
     gpcache = {}
@@ -184,17 +184,13 @@ def getdag(ui, repo, revs, master, template):
     if simplifygrandparents:
         rootnodes = cl.tonodes(revs)
 
-    revs = smartset.baseset(revs)
-    revs.sort(reverse=True)
-    ctxstream = revs.prefetchbytemplate(repo, template).iterctx(repo)
-
     # For each rev we need to show, compute it's parents in the dag.
     # If we have to reach for a grandparent, insert a fake node so we
     # can show '...' in the graph.
     # Use 'reversed' to start at the lowest commit so fake nodes are
     # placed at their lowest possible positions.
-    for ctx in ctxstream:
-        rev = ctx.rev()
+    for rev in reversed(revs):
+        ctx = repo[rev]
         # Parents in the dag
         parents = sorted(
             set(
@@ -540,8 +536,7 @@ def _smartlog(ui, repo, *pats, **opts):
         return
 
     # Print it!
-    template = opts.get("template") or ""
-    revdag, reserved = getdag(ui, repo, sorted(revs), masterrev, template)
+    revdag, reserved = getdag(ui, repo, sorted(revs, reverse=True), masterrev)
     displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
     ui.pager("smartlog")
     cmdutil.displaygraph(ui, repo, revdag, displayer, reserved=reserved)

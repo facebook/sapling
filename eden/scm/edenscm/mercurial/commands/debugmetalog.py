@@ -66,7 +66,6 @@ def debugmetalog(ui, repo, **opts):
             nodenamesdict.keys(),
             nodenamesdict.keys(),
         ),
-        (),
     )
     ui.pager("debugmetalog")
     cmdutil.displaygraph(ui, repo, revdag, displayer(nodenamesdict))

@@ -63,7 +63,6 @@ from .. import (
     sshserver,
     streamclone,
     templatekw,
-    templater,
     ui as uimod,
     util,
     visibility,
@@ -4204,15 +4203,12 @@ def log(ui, repo, *pats, **opts):
 
     ui.pager("log")
     displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
-
-    template = opts.get("template") or ""
-    ctxstream = revs.prefetchbytemplate(repo, template).iterctx(repo)
-    for ctx in ctxstream:
+    for rev in revs:
         if count == limit:
             break
-        rev = ctx.rev()
+        ctx = repo[rev]
         copies = None
-        if getrenamed is not None:
+        if getrenamed is not None and rev:
             copies = []
             for fn in ctx.files():
                 rename = getrenamed(fn, rev)

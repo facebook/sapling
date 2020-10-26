@@ -105,6 +105,7 @@ def reposetup(ui, repo):
 
 
 def extsetup(ui):
+    extensions.wrapfunction(graphmod, "dagwalker", _dagwalker)
     extensions.wrapfunction(hg, "updaterepo", _updaterepo)
     extensions.wrapfunction(visibility.visibleheads, "_updateheads", _updateheads)
     extensions.wrapfunction(templatekw, "showgraphnode", _showgraphnode)
@@ -129,6 +130,10 @@ def extsetup(ui):
 
     extensions.afterloaded("amend", wrapamend)
     extensions.afterloaded("smartlog", wrapsmartlog)
+
+
+def _dagwalker(orig, repo, revs):
+    return orig(repo, revs)
 
 
 def _updaterepo(orig, repo, node, overwrite, **opts):
