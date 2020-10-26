@@ -23,9 +23,11 @@ use metaconfig_types::{
 };
 use mononoke_types::BonsaiChangeset;
 use reachabilityindex::LeastCommonAncestorsHint;
+use repo_read_write_status::RepoReadWriteFetcher;
 use scuba_ext::ScubaSampleBuilderExt;
 
 use crate::affected_changesets::{AdditionalChangesets, AffectedChangesets};
+use crate::repo_lock::{check_repo_lock, RepoLockPushrebaseHook};
 use crate::restrictions::{BookmarkKindRestrictions, BookmarkMoveAuthorization};
 use crate::BookmarkMovementError;
 
@@ -101,6 +103,7 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
         pushrebase_params: &'op PushrebaseParams,
         bookmark_attrs: &'op BookmarkAttrs,
         hook_manager: &'op HookManager,
+        repo_read_write_fetcher: &'op RepoReadWriteFetcher,
     ) -> Result<pushrebase::PushrebaseOutcome, BookmarkMovementError> {
         let kind = self
             .kind_restrictions
@@ -161,6 +164,17 @@ impl<'op> PushrebaseOntoBookmarkOp<'op> {
         if let Some(rewritedates) = bookmark_attrs.should_rewrite_dates(self.bookmark) {
             // Bookmark config overrides repo flags.rewritedates config
             flags.rewritedates = rewritedates;
+        }
+
+        // For pushrebase, we check the repo lock once at the beginning of the
+        // pushrebase operation, and then once more as part of the pushrebase
+        // bookmark update transaction, to check if the repo got locked while
+        // we were peforming the pushrebase.
+        check_repo_lock(repo_read_write_fetcher, kind, self.pushvars).await?;
+        if let Some(hook) =
+            RepoLockPushrebaseHook::new(repo_read_write_fetcher, kind, self.pushvars)
+        {
+            pushrebase_hooks.push(hook);
         }
 
         ctx.scuba().clone().log_with_msg("Pushrebase started", None);

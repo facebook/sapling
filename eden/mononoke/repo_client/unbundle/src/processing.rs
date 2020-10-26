@@ -31,6 +31,7 @@ use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushParams, Pushrebase
 use mononoke_types::{BonsaiChangeset, ChangesetId, RawBundle2Id};
 use pushrebase::{PushrebaseError, PushrebaseHook};
 use reachabilityindex::LeastCommonAncestorsHint;
+use repo_read_write_status::RepoReadWriteFetcher;
 use reverse_filler_queue::ReverseFillerQueue;
 use scribe_commit_queue::{self, LogToScribe};
 use scuba_ext::ScubaSampleBuilderExt;
@@ -66,6 +67,7 @@ pub async fn run_post_resolve_action(
     push_params: &PushParams,
     hook_manager: &HookManager,
     maybe_reverse_filler_queue: Option<&dyn ReverseFillerQueue>,
+    readonly_fetcher: &RepoReadWriteFetcher,
     action: PostResolveAction,
     cross_repo_push_source: CrossRepoPushSource,
 ) -> Result<UnbundleResponse, BundleResolverError> {
@@ -84,6 +86,7 @@ pub async fn run_post_resolve_action(
             hook_manager,
             infinitepush_params,
             pushrebase_params,
+            readonly_fetcher,
             action,
             push_params,
             cross_repo_push_source,
@@ -100,6 +103,7 @@ pub async fn run_post_resolve_action(
             infinitepush_params,
             pushrebase_params,
             maybe_reverse_filler_queue,
+            readonly_fetcher,
             action,
             cross_repo_push_source,
         )
@@ -114,6 +118,7 @@ pub async fn run_post_resolve_action(
             infinitepush_params,
             pushrebase_params,
             hook_manager,
+            readonly_fetcher,
             action,
             cross_repo_push_source,
         )
@@ -127,6 +132,7 @@ pub async fn run_post_resolve_action(
             hook_manager,
             infinitepush_params,
             pushrebase_params,
+            readonly_fetcher,
             action,
             cross_repo_push_source,
         )
@@ -158,6 +164,7 @@ async fn run_push(
     hook_manager: &HookManager,
     infinitepush_params: &InfinitepushParams,
     pushrebase_params: &PushrebaseParams,
+    readonly_fetcher: &RepoReadWriteFetcher,
     action: PostResolvePush,
     push_params: &PushParams,
     cross_repo_push_source: CrossRepoPushSource,
@@ -224,6 +231,7 @@ async fn run_push(
             bundle_replay_data,
             hook_rejection_remapper.as_ref(),
             cross_repo_push_source,
+            readonly_fetcher,
         )
         .await?;
 
@@ -283,6 +291,7 @@ async fn run_infinitepush(
     infinitepush_params: &InfinitepushParams,
     pushrebase_params: &PushrebaseParams,
     maybe_reverse_filler_queue: Option<&dyn ReverseFillerQueue>,
+    readonly_fetcher: &RepoReadWriteFetcher,
     action: PostResolveInfinitePush,
     cross_repo_push_source: CrossRepoPushSource,
 ) -> Result<UnbundleInfinitePushResponse, BundleResolverError> {
@@ -332,6 +341,7 @@ async fn run_infinitepush(
                 &bookmark_push,
                 bundle_replay_data,
                 cross_repo_push_source,
+                readonly_fetcher,
             )
             .await?;
 
@@ -365,6 +375,7 @@ async fn run_pushrebase(
     infinitepush_params: &InfinitepushParams,
     pushrebase_params: &PushrebaseParams,
     hook_manager: &HookManager,
+    readonly_fetcher: &RepoReadWriteFetcher,
     action: PostResolvePushRebase,
     cross_repo_push_source: CrossRepoPushSource,
 ) -> Result<UnbundlePushRebaseResponse, BundleResolverError> {
@@ -407,6 +418,7 @@ async fn run_pushrebase(
                 hook_manager,
                 hook_rejection_remapper.as_ref(),
                 cross_repo_push_source,
+                readonly_fetcher,
             )
             .await?
         }
@@ -424,6 +436,7 @@ async fn run_pushrebase(
             infinitepush_params,
             hook_rejection_remapper.as_ref(),
             cross_repo_push_source,
+            readonly_fetcher,
         )
         .await
         .context("While doing a force pushrebase")?,
@@ -466,6 +479,7 @@ async fn run_bookmark_only_pushrebase(
     hook_manager: &HookManager,
     infinitepush_params: &InfinitepushParams,
     pushrebase_params: &PushrebaseParams,
+    readonly_fetcher: &RepoReadWriteFetcher,
     action: PostResolveBookmarkOnlyPushRebase,
     cross_repo_push_source: CrossRepoPushSource,
 ) -> Result<UnbundleBookmarkOnlyPushRebaseResponse, BundleResolverError> {
@@ -506,6 +520,7 @@ async fn run_bookmark_only_pushrebase(
         bundle_replay_data,
         hook_rejection_remapper.as_ref(),
         cross_repo_push_source,
+        readonly_fetcher,
     )
     .await?;
 
@@ -528,6 +543,7 @@ async fn normal_pushrebase<'a>(
     hook_manager: &'a HookManager,
     hook_rejection_remapper: &'a dyn HookRejectionRemapper,
     cross_repo_push_source: CrossRepoPushSource,
+    readonly_fetcher: &RepoReadWriteFetcher,
 ) -> Result<(ChangesetId, Vec<pushrebase::PushrebaseChangesetPair>), BundleResolverError> {
     match bookmarks_movement::PushrebaseOntoBookmarkOp::new(bookmark, changesets)
         .only_if_public()
@@ -542,6 +558,7 @@ async fn normal_pushrebase<'a>(
             pushrebase_params,
             bookmark_attrs,
             hook_manager,
+            readonly_fetcher,
         )
         .await
     {
@@ -573,6 +590,7 @@ async fn force_pushrebase(
     infinitepush_params: &InfinitepushParams,
     hook_rejection_remapper: &dyn HookRejectionRemapper,
     cross_repo_push_source: CrossRepoPushSource,
+    readonly_fetcher: &RepoReadWriteFetcher,
 ) -> Result<(ChangesetId, Vec<pushrebase::PushrebaseChangesetPair>), BundleResolverError> {
     let new_target = bookmark_push
         .new
@@ -611,6 +629,7 @@ async fn force_pushrebase(
         bundle_replay_data,
         hook_rejection_remapper,
         cross_repo_push_source,
+        readonly_fetcher,
     )
     .await?;
 
@@ -644,6 +663,7 @@ async fn plain_push_bookmark(
     bundle_replay_data: Option<&dyn BundleReplay>,
     hook_rejection_remapper: &dyn HookRejectionRemapper,
     cross_repo_push_source: CrossRepoPushSource,
+    readonly_fetcher: &RepoReadWriteFetcher,
 ) -> Result<(), BundleResolverError> {
     match (bookmark_push.old, bookmark_push.new) {
         (None, Some(new_target)) => {
@@ -662,6 +682,7 @@ async fn plain_push_bookmark(
                         pushrebase_params,
                         bookmark_attrs,
                         hook_manager,
+                        readonly_fetcher,
                     )
                     .await;
             match res {
@@ -708,6 +729,7 @@ async fn plain_push_bookmark(
                 pushrebase_params,
                 bookmark_attrs,
                 hook_manager,
+                readonly_fetcher,
             )
             .await;
             match res {
@@ -739,7 +761,13 @@ async fn plain_push_bookmark(
                 .only_if_public()
                 .with_pushvars(maybe_pushvars)
                 .with_bundle_replay_data(bundle_replay_data)
-                .run(ctx, repo, infinitepush_params, bookmark_attrs)
+                .run(
+                    ctx,
+                    repo,
+                    infinitepush_params,
+                    bookmark_attrs,
+                    readonly_fetcher,
+                )
                 .await
                 .context("Failed to delete bookmark")?;
         }
@@ -760,6 +788,7 @@ async fn infinitepush_scratch_bookmark(
     bookmark_push: &InfiniteBookmarkPush<ChangesetId>,
     bundle_replay_data: Option<&dyn BundleReplay>,
     cross_repo_push_source: CrossRepoPushSource,
+    readonly_fetcher: &RepoReadWriteFetcher,
 ) -> Result<()> {
     if bookmark_push.old.is_none() && bookmark_push.create {
         bookmarks_movement::CreateBookmarkOp::new(
@@ -778,6 +807,7 @@ async fn infinitepush_scratch_bookmark(
             pushrebase_params,
             bookmark_attrs,
             hook_manager,
+            readonly_fetcher,
         )
         .await
         .context("Failed to create scratch bookmark")?;
@@ -812,6 +842,7 @@ async fn infinitepush_scratch_bookmark(
             pushrebase_params,
             bookmark_attrs,
             hook_manager,
+            readonly_fetcher,
         )
         .await
         .context(if bookmark_push.force {

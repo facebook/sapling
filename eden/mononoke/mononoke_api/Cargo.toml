@@ -37,6 +37,7 @@ permission_checker = { path = "../permission_checker" }
 reachabilityindex = { path = "../reachabilityindex" }
 remotefilelog = { path = "../repo_client/remotefilelog" }
 repo_client = { path = "../repo_client" }
+repo_read_write_status = { path = "../repo_client/repo_read_write_status" }
 revisionstore_types = { path = "../../scm/lib/revisionstore/types" }
 revset = { path = "../revset" }
 scuba_ext = { path = "../common/scuba_ext" }

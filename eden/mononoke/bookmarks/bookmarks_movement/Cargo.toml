@@ -20,11 +20,14 @@ metaconfig_types = { path = "../../metaconfig/types" }
 mononoke_types = { path = "../../mononoke_types" }
 pushrebase = { path = "../../pushrebase" }
 reachabilityindex = { path = "../../reachabilityindex" }
+repo_read_write_status = { path = "../../repo_client/repo_read_write_status" }
 revset = { path = "../../revset" }
 scuba_ext = { path = "../../common/scuba_ext" }
 tunables = { path = "../../tunables" }
 futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
+async-trait = "0.1.29"
 bytes = { version = "0.5", features = ["serde"] }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 itertools = "0.8"
@@ -35,6 +38,5 @@ blobrepo_factory = { path = "../../blobrepo/factory" }
 mononoke_types-mocks = { path = "../../mononoke_types/mocks" }
 tests_utils = { path = "../../tests/utils" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 maplit = "1.0"
 tokio-compat = "0.1"

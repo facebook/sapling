@@ -177,6 +177,7 @@ impl PushRedirector {
             &push_params,
             self.repo.hook_manager().as_ref(),
             self.repo.maybe_reverse_filler_queue(),
+            self.repo.readonly_fetcher(),
             large_repo_action,
             CrossRepoPushSource::PushRedirected,
         )

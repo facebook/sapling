@@ -62,6 +62,7 @@ impl RepoWriteContext {
             self.blob_repo(),
             &self.config().infinitepush,
             &bookmark_attrs,
+            self.readonly_fetcher(),
         )
         .await?;
 

@@ -20,8 +20,10 @@ use metaconfig_types::{
 };
 use mononoke_types::{BonsaiChangeset, ChangesetId};
 use reachabilityindex::LeastCommonAncestorsHint;
+use repo_read_write_status::RepoReadWriteFetcher;
 
 use crate::affected_changesets::{AdditionalChangesets, AffectedChangesets};
+use crate::repo_lock::check_repo_lock;
 use crate::restrictions::{BookmarkKind, BookmarkKindRestrictions, BookmarkMoveAuthorization};
 use crate::BookmarkMovementError;
 
@@ -164,6 +166,7 @@ impl<'op> UpdateBookmarkOp<'op> {
         pushrebase_params: &'op PushrebaseParams,
         bookmark_attrs: &'op BookmarkAttrs,
         hook_manager: &'op HookManager,
+        repo_read_write_fetcher: &'op RepoReadWriteFetcher,
     ) -> Result<(), BookmarkMovementError> {
         let kind = self
             .kind_restrictions
@@ -202,6 +205,9 @@ impl<'op> UpdateBookmarkOp<'op> {
                 self.cross_repo_push_source,
             )
             .await?;
+
+        check_repo_lock(repo_read_write_fetcher, kind, self.pushvars).await?;
+
         let mut txn = repo.update_bookmark_transaction(ctx.clone());
         let mut txn_hook = None;
 

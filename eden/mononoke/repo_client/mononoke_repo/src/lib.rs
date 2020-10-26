@@ -209,6 +209,10 @@ impl MononokeRepo {
         self.readonly_fetcher.readonly()
     }
 
+    pub fn readonly_fetcher(&self) -> &RepoReadWriteFetcher {
+        &self.readonly_fetcher
+    }
+
     pub fn infinitepush(&self) -> &InfinitepushParams {
         &self.infinitepush
     }

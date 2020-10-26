@@ -34,6 +34,7 @@ obsolete = { path = "../obsolete" }
 pushrebase = { path = "../../pushrebase" }
 reachabilityindex = { path = "../../reachabilityindex" }
 remotefilelog = { path = "../remotefilelog" }
+repo_read_write_status = { path = "../repo_read_write_status" }
 reverse_filler_queue = { path = "../reverse_filler_queue" }
 scribe_commit_queue = { path = "../scribe_commit_queue" }
 scuba_ext = { path = "../../common/scuba_ext" }

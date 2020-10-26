@@ -20,6 +20,7 @@ mod git_mapping;
 mod globalrev_mapping;
 mod hook_running;
 mod pushrebase_onto;
+mod repo_lock;
 mod restrictions;
 mod update;
 
@@ -88,6 +89,9 @@ pub enum BookmarkMovementError {
 
     #[error("Pushrebase failed: {0}")]
     PushrebaseError(#[source] PushrebaseError),
+
+    #[error("Repo is locked: {0}")]
+    RepoLocked(String),
 
     #[error(transparent)]
     Error(#[from] anyhow::Error),

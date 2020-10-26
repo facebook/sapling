@@ -51,11 +51,13 @@ use permission_checker::{ArcPermissionChecker, PermissionCheckerBuilder};
 use reachabilityindex::LeastCommonAncestorsHint;
 #[cfg(test)]
 use regex::Regex;
+use repo_read_write_status::{RepoReadWriteFetcher, SqlRepoReadWriteStatus};
 use revset::AncestorsNodeStream;
 use scuba_ext::ScubaSampleBuilderExt;
 use segmented_changelog::SegmentedChangelog;
 use skiplist::{fetch_skiplist_index, SkiplistIndex};
 use slog::{debug, error, Logger};
+use sql_construct::facebook::FbSqlConstruct;
 #[cfg(test)]
 use sql_construct::SqlConstruct;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
@@ -106,6 +108,7 @@ pub(crate) struct Repo {
     pub(crate) service_permission_checker: ArcPermissionChecker,
     pub(crate) live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     pub(crate) hook_manager: Arc<HookManager>,
+    pub(crate) readonly_fetcher: RepoReadWriteFetcher,
 }
 
 #[derive(Clone)]
@@ -234,19 +237,42 @@ impl Repo {
         }
         let warm_bookmarks_cache = warm_bookmarks_cache_builder.build(BookmarkUpdateDelay::Allow);
 
+        let sql_read_write_status = async {
+            if let Some(addr) = &config.write_lock_db_address {
+                let r = SqlRepoReadWriteStatus::with_xdb(
+                    fb,
+                    addr.clone(),
+                    mysql_options,
+                    readonly_storage.0,
+                )
+                .await?;
+                Ok(Some(r))
+            } else {
+                Ok(None)
+            }
+        };
+
         let (
             repo_permission_checker,
             service_permission_checker,
             skiplist_index,
             warm_bookmarks_cache,
             hook_manager,
+            sql_read_write_status,
         ) = try_join!(
             repo_permission_checker,
             service_permission_checker,
             skiplist_index,
             warm_bookmarks_cache,
             hook_manager,
+            sql_read_write_status,
         )?;
+
+        let readonly_fetcher = RepoReadWriteFetcher::new(
+            sql_read_write_status,
+            config.readonly.clone(),
+            config.hgsql_name.clone(),
+        );
 
         Ok(Self {
             name,
@@ -259,6 +285,7 @@ impl Repo {
             service_permission_checker,
             live_commit_sync_config,
             hook_manager,
+            readonly_fetcher,
         })
     }
 
@@ -338,6 +365,9 @@ impl Repo {
             make_hook_manager(&ctx, &blob_repo, config.clone(), "test", &HashSet::new()).await?,
         );
 
+        let readonly_fetcher =
+            RepoReadWriteFetcher::new(None, config.readonly.clone(), config.hgsql_name.clone());
+
         Ok(Self {
             name: String::from("test"),
             blob_repo,
@@ -353,6 +383,7 @@ impl Repo {
             ),
             live_commit_sync_config,
             hook_manager,
+            readonly_fetcher,
         })
     }
 
@@ -682,6 +713,11 @@ impl RepoContext {
     /// The hook manager for the referenced repository.
     pub(crate) fn hook_manager(&self) -> &Arc<HookManager> {
         &self.repo.hook_manager
+    }
+
+    /// The Read/Write or Read-Only status fetcher.
+    pub(crate) fn readonly_fetcher(&self) -> &RepoReadWriteFetcher {
+        &self.repo.readonly_fetcher
     }
 
     /// The configuration for the referenced repository.
