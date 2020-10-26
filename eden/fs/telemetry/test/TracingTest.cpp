@@ -17,8 +17,8 @@ using namespace facebook::eden;
 namespace {
 void ensureValidTracePoint(const CompactTracePoint& point) {
   EXPECT_NE(point.timestamp.count(), 0);
-  EXPECT_NE(point.traceId, 0);
-  EXPECT_NE(point.blockId, 0);
+  EXPECT_NE(point.traceId, 0u);
+  EXPECT_NE(point.blockId, 0u);
   if (point.start) {
     EXPECT_FALSE(point.stop);
     EXPECT_NE(point.name, nullptr);

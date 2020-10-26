@@ -112,7 +112,7 @@ TEST(RawEdenDispatcherTest, lookup_returns_valid_inode_for_good_file) {
           ->lookup(
               0, kRootNodeId, "good"_pc, ObjectFetchContext::getNullContext())
           .get(0ms);
-  EXPECT_NE(0, entry.nodeid);
+  EXPECT_NE(0u, entry.nodeid);
   EXPECT_NE(0, entry.attr.ino);
   EXPECT_EQ(entry.nodeid, entry.attr.ino);
 }
