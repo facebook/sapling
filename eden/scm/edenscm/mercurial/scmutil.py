@@ -34,7 +34,6 @@ from . import (
     pycompat,
     revsetlang,
     similar,
-    smartset,
     url,
     util,
     vfs,
@@ -527,10 +526,6 @@ def revsingle(repo, revspec, default=".", localalias=None):
     if not revspec and revspec != 0:
         return repo[default]
 
-    # Used by amend/common calling rebase.rebase with non-string opts.
-    if isinstance(revspec, (int, type(1 << 63))):
-        return repo[revspec]
-
     l = revrange(repo, [revspec], localalias=localalias)
     if not l:
         raise error.Abort(_("empty revision set"))
@@ -604,9 +599,6 @@ def revrange(repo, specs, localalias=None):
     use repo.revs (ignores user-defined revset aliases) or repo.anyrevs
     (respects user-defined revset aliases) instead.
     """
-    # Used by amend/common calling rebase.rebase with non-string opts.
-    if isinstance(specs, smartset.abstractsmartset):
-        return specs
     allspecs = []
     for spec in specs:
         if isinstance(spec, int):
