@@ -267,6 +267,10 @@ async fn rsync(
         }
     }
 
+    if file_changes.is_empty() {
+        return Err(anyhow!("nothing to move!"));
+    }
+
     info!(
         ctx.logger(),
         "creating csid with {} file changes",
