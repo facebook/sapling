@@ -22,7 +22,7 @@ use mononoke_types::{
     MPath,
 };
 use regex::Regex;
-use slog::{info, Logger};
+use slog::{debug, info, Logger};
 use std::{collections::BTreeMap, num::NonZeroU64};
 
 use crate::error::SubcommandError;
@@ -228,6 +228,13 @@ async fn rsync(
         let from_path = from_dir.join(&from_suffix);
         let to_path = to_dir.join(&from_suffix);
 
+        debug!(
+            ctx.logger(),
+            "from {}, to {}, size: {}",
+            from_path,
+            to_path,
+            fsnode_file.size()
+        );
         let file_change = FileChange::new(
             *fsnode_file.content_id(),
             *fsnode_file.file_type(),
@@ -238,6 +245,11 @@ async fn rsync(
         if let Some(lfs_threshold) = limits.lfs_threshold {
             if fsnode_file.size() < lfs_threshold.get() {
                 total_file_size += fsnode_file.size();
+            } else {
+                debug!(
+                    ctx.logger(),
+                    "size is not accounted because of lfs threshold"
+                );
             }
         } else {
             total_file_size += fsnode_file.size();
