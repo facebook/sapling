@@ -694,6 +694,22 @@ folly::Try<void> PrjfsChannel::addDirectoryPlaceholder(RelativePathPiece path) {
   if (FAILED(result)) {
     if (result == HRESULT_FROM_WIN32(ERROR_REPARSE_POINT_ENCOUNTERED)) {
       // This is already a placeholder, not an error.
+    } else if (result == HRESULT_FROM_WIN32(ERROR_ACCESS_DENIED)) {
+      // TODO(T78476916): The access denied are coming from
+      // PrjMarkDirectoryAsPlaceholder recursively calling into EdenFS, which
+      // is denied by the BAIL_ON_RECURSIVE_CALL macro.
+      //
+      // In theory this means that EdenFS is invalidating a directory that
+      // isn't materialized, ie: doing useless work. Despite having a negative
+      // performance impact, this doesn't affect correctness, so ignore for now.
+      //
+      // A long term fix will need to not issue invalidation on directories
+      // that aren't materialized.
+      XLOG_EVERY_MS(
+          WARN,
+          100,
+          "Couldn't add a placeholder for: {}, as it triggered a recursive EdenFS call",
+          path);
     } else {
       return folly::Try<void>{makeHResultErrorExplicit(
           result,
