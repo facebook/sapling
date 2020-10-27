@@ -63,7 +63,7 @@ count-objects, default deep walk across bonsai and hg data.  BLOBCOUNT plus mapp
   Walking node types [AliasContentMapping, BonsaiChangeset, BonsaiFsnodeMapping, BonsaiHgMapping, Bookmark, FileContent, FileContentMetadata, Fsnode, HgBonsaiMapping, HgChangeset, HgFileEnvelope, HgFileNode, HgManifest]
   Final count: (43, 43)
   Bytes/s,* (glob)
-  * Type:Walked,Checks,Children AliasContentMapping:9,9,0 BonsaiChangeset:3,3,14 BonsaiFsnodeMapping:3,3,3 BonsaiHgMapping:3,* Bookmark:1,1,1 FileContent:3,*,0 FileContentMetadata:3,0,9 Fsnode:3,3,* HgBonsaiMapping:3,3,0 HgChangeset:3,* HgFileEnvelope:3,*,* HgFileNode:3,*,3 HgManifest:3,3,6 (glob)
+  * Type:Walked,Checks,Children AliasContentMapping:9,9,0 BonsaiChangeset:3,3,* BonsaiFsnodeMapping:3,3,3 BonsaiHgMapping:3,* Bookmark:1,1,1 FileContent:3,*,0 FileContentMetadata:3,0,9 Fsnode:3,3,* HgBonsaiMapping:3,3,0 HgChangeset:3,* HgFileEnvelope:3,*,* HgFileNode:3,*,3 HgManifest:3,3,6 (glob)
 
 count-objects, default shallow walk across bonsai and hg data, but exclude HgFileEnvelope so that we can test that we visit FileContent from fsnodes
   $ mononoke_walker --storage-id=blobstore --readonly-storage scrub -q --bookmark master_bookmark -I shallow -x HgFileEnvelope 2>&1 | strip_glog
@@ -81,7 +81,7 @@ count-objects, default shallow walk across bonsai and hg data, including mutable
   Walking node types [AliasContentMapping, BonsaiChangeset, BonsaiFsnodeMapping, BonsaiHgMapping, BonsaiPhaseMapping, Bookmark, FileContent, FileContentMetadata, Fsnode, HgChangeset, HgFileEnvelope, HgFileNode, HgManifest]
   Final count: (29, 29)
   Bytes/s,* (glob)
-  * Type:Walked,Checks,Children AliasContentMapping:9,9,0 BonsaiChangeset:1,1,5 BonsaiFsnodeMapping:1,1,1 BonsaiHgMapping:1,1,1 BonsaiPhaseMapping:1,1,0 Bookmark:1,1,1 FileContent:3,7,0 FileContentMetadata:3,0,9 Fsnode:1,1,* HgChangeset:1,1,1 HgFileEnvelope:3,3,* HgFileNode:3,3,0 HgManifest:1,1,6 (glob)
+  * Type:Walked,Checks,Children AliasContentMapping:9,9,0 BonsaiChangeset:1,1,5 BonsaiFsnodeMapping:1,1,1 BonsaiHgMapping:1,1,1 BonsaiPhaseMapping:1,1,0 Bookmark:1,1,1 FileContent:3,*,0 FileContentMetadata:3,0,9 Fsnode:1,1,* HgChangeset:1,1,1 HgFileEnvelope:3,3,* HgFileNode:3,3,0 HgManifest:1,1,6 (glob)
 
 count-objects, default shallow walk across bonsai and hg data, including mutable for all public heads
   $ mononoke_walker --storage-id=blobstore --readonly-storage scrub -q --walk-root PublishedBookmarks -I shallow -I marker 2>&1 | strip_glog
