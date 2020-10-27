@@ -38,10 +38,57 @@ pub const ARG_LFS_THRESHOLD: &str = "lfs-threshold";
 pub const ARG_OVERWRITE: &str = "overwrite";
 pub const ARG_TO_DIR: &str = "to-dir";
 pub const RSYNC: &str = "rsync";
+pub const SUBCOMMAND_COPY: &str = "copy";
+pub const SUBCOMMAND_REMOVE_EXCESSIVE_FILES: &str = "remove-excessive-files";
 
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
     SubCommand::with_name(RSYNC)
-        .about("creates commits that copy content of one directory into another")
+        .subcommand(
+            add_common_args(
+                SubCommand::with_name(SUBCOMMAND_COPY)
+                    .about("creates commits that copy content of one directory into another")
+            )
+            .arg(
+                Arg::with_name(ARG_EXCLUDE_FILE_REGEX)
+                    .long(ARG_EXCLUDE_FILE_REGEX)
+                    .help("exclude files that should not be copied")
+                    .takes_value(true)
+                    .required(false),
+            )
+            .arg(
+                Arg::with_name(ARG_TOTAL_SIZE_LIMIT)
+                    .long(ARG_TOTAL_SIZE_LIMIT)
+                    .help("total size of all files in a commit")
+                    .takes_value(true)
+                    .required(false),
+            )
+            .arg(
+                Arg::with_name(ARG_LFS_THRESHOLD)
+                    .long(ARG_LFS_THRESHOLD)
+                    .help(
+                        "lfs threshold - files with size above that are excluded from file size limit",
+                    )
+                    .takes_value(true)
+                    .required(false),
+            )
+            .arg(
+                Arg::with_name(ARG_OVERWRITE)
+                    .long(ARG_OVERWRITE)
+                    .help("overwrite a file if it exists in the destination directory")
+                    .takes_value(false)
+                    .required(false),
+            )
+        )
+        .subcommand(
+            add_common_args(
+                SubCommand::with_name(SUBCOMMAND_REMOVE_EXCESSIVE_FILES)
+                    .about("remove files from --to directory that are not present in --from directory")
+            )
+        )
+}
+
+pub fn add_common_args<'a, 'b>(sub_m: App<'a, 'b>) -> App<'a, 'b> {
+    sub_m
         .arg(
             Arg::with_name(ARG_CSID)
                 .long(ARG_CSID)
@@ -90,36 +137,6 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
                 .takes_value(true)
                 .required(false),
         )
-        .arg(
-            Arg::with_name(ARG_EXCLUDE_FILE_REGEX)
-                .long(ARG_EXCLUDE_FILE_REGEX)
-                .help("exclude files that should not be copied")
-                .takes_value(true)
-                .required(false),
-        )
-        .arg(
-            Arg::with_name(ARG_TOTAL_SIZE_LIMIT)
-                .long(ARG_TOTAL_SIZE_LIMIT)
-                .help("total size of all files in a commit")
-                .takes_value(true)
-                .required(false),
-        )
-        .arg(
-            Arg::with_name(ARG_LFS_THRESHOLD)
-                .long(ARG_LFS_THRESHOLD)
-                .help(
-                    "lfs threshold - files with size above that are excluded from file size limit",
-                )
-                .takes_value(true)
-                .required(false),
-        )
-        .arg(
-            Arg::with_name(ARG_OVERWRITE)
-                .long(ARG_OVERWRITE)
-                .help("overwrite a file if it exists in the destination directory")
-                .takes_value(false)
-                .required(false),
-        )
 }
 
 pub async fn subcommand_rsync<'a>(
@@ -132,51 +149,100 @@ pub async fn subcommand_rsync<'a>(
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     let repo = args::open_repo(fb, &logger, &matches).compat().await?;
 
-    let cs_id = sub_matches
-        .value_of(ARG_CSID)
-        .ok_or_else(|| anyhow!("{} arg is not specified", ARG_CSID))?;
+    match sub_matches.subcommand() {
+        (SUBCOMMAND_COPY, Some(sub_matches)) => {
+            let cs_id = sub_matches
+                .value_of(ARG_CSID)
+                .ok_or_else(|| anyhow!("{} arg is not specified", ARG_CSID))?;
 
-    let cs_id = helpers::csid_resolve(ctx.clone(), repo.clone(), cs_id)
-        .compat()
-        .await?;
+            let cs_id = helpers::csid_resolve(ctx.clone(), repo.clone(), cs_id)
+                .compat()
+                .await?;
 
-    let from_dir = sub_matches
-        .value_of(ARG_FROM_DIR)
-        .ok_or_else(|| anyhow!("{} arg is not specified", ARG_FROM_DIR))?;
-    let from_dir = MPath::new(from_dir)?;
+            let from_dir = sub_matches
+                .value_of(ARG_FROM_DIR)
+                .ok_or_else(|| anyhow!("{} arg is not specified", ARG_FROM_DIR))?;
+            let from_dir = MPath::new(from_dir)?;
 
-    let to_dir = sub_matches
-        .value_of(ARG_TO_DIR)
-        .ok_or_else(|| anyhow!("{} arg is not specified", ARG_TO_DIR))?;
-    let to_dir = MPath::new(to_dir)?;
+            let to_dir = sub_matches
+                .value_of(ARG_TO_DIR)
+                .ok_or_else(|| anyhow!("{} arg is not specified", ARG_TO_DIR))?;
+            let to_dir = MPath::new(to_dir)?;
 
-    let author = sub_matches
-        .value_of(ARG_COMMIT_AUTHOR)
-        .ok_or_else(|| anyhow!("{} arg is not specified", ARG_COMMIT_AUTHOR))?;
+            let author = sub_matches
+                .value_of(ARG_COMMIT_AUTHOR)
+                .ok_or_else(|| anyhow!("{} arg is not specified", ARG_COMMIT_AUTHOR))?;
 
-    let msg = sub_matches
-        .value_of(ARG_COMMIT_MESSAGE)
-        .ok_or_else(|| anyhow!("{} arg is not specified", ARG_COMMIT_MESSAGE))?;
+            let msg = sub_matches
+                .value_of(ARG_COMMIT_MESSAGE)
+                .ok_or_else(|| anyhow!("{} arg is not specified", ARG_COMMIT_MESSAGE))?;
 
-    let cs_ids = rsync(
-        &ctx,
-        &repo,
-        cs_id,
-        from_dir,
-        to_dir,
-        author.to_string(),
-        msg.to_string(),
-        Limits::new(sub_matches),
-        Options::new(sub_matches)?,
-    )
-    .await?;
+            let cs_ids = copy(
+                &ctx,
+                &repo,
+                cs_id,
+                from_dir,
+                to_dir,
+                author.to_string(),
+                msg.to_string(),
+                Limits::new(sub_matches),
+                Options::new(sub_matches)?,
+            )
+            .await?;
 
-    let result_cs_id = cs_ids
-        .last()
-        .copied()
-        .ok_or_else(|| anyhow!("nothing to move!"))?;
+            let result_cs_id = cs_ids
+                .last()
+                .copied()
+                .ok_or_else(|| anyhow!("nothing to move!"))?;
 
-    println!("{}", result_cs_id);
+            println!("{}", result_cs_id);
+        }
+        (SUBCOMMAND_REMOVE_EXCESSIVE_FILES, Some(sub_matches)) => {
+            let cs_id = sub_matches
+                .value_of(ARG_CSID)
+                .ok_or_else(|| anyhow!("{} arg is not specified", ARG_CSID))?;
+
+            let cs_id = helpers::csid_resolve(ctx.clone(), repo.clone(), cs_id)
+                .compat()
+                .await?;
+
+            let from_dir = sub_matches
+                .value_of(ARG_FROM_DIR)
+                .ok_or_else(|| anyhow!("{} arg is not specified", ARG_FROM_DIR))?;
+            let from_dir = MPath::new(from_dir)?;
+
+            let to_dir = sub_matches
+                .value_of(ARG_TO_DIR)
+                .ok_or_else(|| anyhow!("{} arg is not specified", ARG_TO_DIR))?;
+            let to_dir = MPath::new(to_dir)?;
+
+            let author = sub_matches
+                .value_of(ARG_COMMIT_AUTHOR)
+                .ok_or_else(|| anyhow!("{} arg is not specified", ARG_COMMIT_AUTHOR))?;
+
+            let msg = sub_matches
+                .value_of(ARG_COMMIT_MESSAGE)
+                .ok_or_else(|| anyhow!("{} arg is not specified", ARG_COMMIT_MESSAGE))?;
+
+            let maybe_file_num_limit =
+                args::get_and_parse_opt::<NonZeroU64>(sub_matches, ARG_FILE_NUM_LIMIT);
+
+            let result_cs_id = remove_excessive_files(
+                &ctx,
+                &repo,
+                cs_id,
+                from_dir,
+                to_dir,
+                author.to_string(),
+                msg.to_string(),
+                maybe_file_num_limit,
+            )
+            .await?;
+
+            println!("{}", result_cs_id);
+        }
+        _ => return Err(SubcommandError::InvalidArgs),
+    }
 
     Ok(())
 }
@@ -227,7 +293,7 @@ impl Options {
     }
 }
 
-async fn rsync(
+async fn copy(
     ctx: &CoreContext,
     repo: &BlobRepo,
     cs_id: ChangesetId,
@@ -363,6 +429,45 @@ async fn create_changesets(
     Ok(cs_ids)
 }
 
+async fn remove_excessive_files(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    cs_id: ChangesetId,
+    from_dir: MPath,
+    to_dir: MPath,
+    author: String,
+    msg: String,
+    maybe_file_num_limit: Option<NonZeroU64>,
+) -> Result<ChangesetId, Error> {
+    let (from_entries, to_entries) = try_join(
+        list_directory(&ctx, &repo, cs_id, &from_dir),
+        list_directory(&ctx, &repo, cs_id, &to_dir),
+    )
+    .await?;
+    let from_entries = from_entries.ok_or_else(|| Error::msg("from directory does not exist!"))?;
+    let to_entries = to_entries.unwrap_or_else(BTreeMap::new);
+
+    let mut to_delete = BTreeMap::new();
+    for to_suffix in to_entries.keys() {
+        if !from_entries.contains_key(to_suffix) {
+            let to_path = to_dir.join(to_suffix);
+            to_delete.insert(to_path, None);
+            if let Some(limit) = maybe_file_num_limit {
+                if to_delete.len() as u64 >= limit.get() {
+                    break;
+                }
+            }
+        }
+    }
+
+    let cs_ids = create_changesets(ctx, repo, vec![to_delete], cs_id, author, msg).await?;
+
+    cs_ids
+        .last()
+        .copied()
+        .ok_or_else(|| anyhow!("nothing to remove!"))
+}
+
 // Recursively lists all the files under `path` if this is a directory.
 // If `path` does not exist then None is returned.
 // Note that returned paths are RELATIVE to `path`.
@@ -464,7 +569,7 @@ mod test {
             .commit()
             .await?;
 
-        let new_cs_id = rsync(
+        let new_cs_id = copy(
             &ctx,
             &repo,
             cs_id,
@@ -511,7 +616,7 @@ mod test {
             total_size_limit: None,
             lfs_threshold: None,
         };
-        let first_cs_id = rsync(
+        let first_cs_id = copy(
             &ctx,
             &repo,
             cs_id,
@@ -538,7 +643,7 @@ mod test {
             }
         );
 
-        let second_cs_id = rsync(
+        let second_cs_id = copy(
             &ctx,
             &repo,
             first_cs_id,
@@ -582,7 +687,7 @@ mod test {
             .commit()
             .await?;
 
-        let cs_id = rsync(
+        let cs_id = copy(
             &ctx,
             &repo,
             cs_id,
@@ -628,7 +733,7 @@ mod test {
             .commit()
             .await?;
 
-        let first_cs_id = rsync(
+        let first_cs_id = copy(
             &ctx,
             &repo,
             cs_id,
@@ -658,7 +763,7 @@ mod test {
             }
         );
 
-        let second_cs_id = rsync(
+        let second_cs_id = copy(
             &ctx,
             &repo,
             first_cs_id,
@@ -706,7 +811,7 @@ mod test {
             .commit()
             .await?;
 
-        let cs_ids = rsync(
+        let cs_ids = copy(
             &ctx,
             &repo,
             cs_id,
@@ -753,7 +858,7 @@ mod test {
             .await?;
 
         // No overwrite - nothing should be copied
-        let cs_ids = rsync(
+        let cs_ids = copy(
             &ctx,
             &repo,
             cs_id,
@@ -772,7 +877,7 @@ mod test {
 
         // Use overwrite - it should create two commits.
         // First commit removes dir_to/a, second commit copies dir_form/a to dir_to/a
-        let cs_ids = rsync(
+        let cs_ids = copy(
             &ctx,
             &repo,
             cs_id,
@@ -804,6 +909,41 @@ mod test {
                 MPath::new("dir_from/b")? => "b".to_string(),
                 MPath::new("dir_to/a")? => "aa".to_string(),
                 MPath::new("dir_to/b")? => "b".to_string(),
+            }
+        );
+
+        Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn test_delete_excessive_files(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = new_memblob_empty(None)?;
+        let cs_id = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("dir_from/a", "a")
+            .add_file("dir_to/a", "a")
+            .add_file("dir_to/b", "b")
+            .add_file("dir_to/c/d", "c/d")
+            .commit()
+            .await?;
+
+        let cs_id = remove_excessive_files(
+            &ctx,
+            &repo,
+            cs_id,
+            MPath::new("dir_from")?,
+            MPath::new("dir_to")?,
+            "author".to_string(),
+            "msg".to_string(),
+            None,
+        )
+        .await?;
+
+        assert_eq!(
+            list_working_copy_utf8(&ctx, &repo, cs_id,).await?,
+            hashmap! {
+                MPath::new("dir_from/a")? => "a".to_string(),
+                MPath::new("dir_to/a")? => "a".to_string(),
             }
         );
 
