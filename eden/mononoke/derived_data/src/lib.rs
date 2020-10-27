@@ -101,18 +101,6 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
         derive_impl::fetch_derived::<Self, Self::Mapping>(ctx, csid, &mapping).await
     }
 
-    /// Derives derived data even if it's disabled in the config. Should normally
-    /// be used only for backfilling.
-    fn derive_with_mode(
-        ctx: CoreContext,
-        repo: BlobRepo,
-        csid: ChangesetId,
-        mode: Mode,
-    ) -> BoxFuture01<Self, DeriveError> {
-        let mapping = Self::mapping(&ctx, &repo);
-        derive_impl::derive_impl::<Self, Self::Mapping>(ctx, repo, mapping, csid, mode).boxify()
-    }
-
     /// Returns min(number of ancestors of `csid` to be derived, `limit`)
     ///
     /// This function fails immediately if derived data is not enabled for this repo.
