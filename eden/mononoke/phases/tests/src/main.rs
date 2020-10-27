@@ -10,8 +10,8 @@ use blobrepo::BlobRepo;
 use cloned::cloned;
 use context::CoreContext;
 use futures::future::TryFutureExt;
-use futures_ext::{BoxFuture, FutureExt};
-use futures_old::{future, Future, Stream};
+use futures_ext::{BoxFuture as BoxFuture01, FutureExt as FutureExt01};
+use futures_old::{future as future01, Future as Future01, Stream as Stream01};
 
 use blobrepo_hg::BlobRepoHg;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
@@ -65,7 +65,7 @@ fn is_public(
     phases: &Arc<dyn Phases>,
     ctx: CoreContext,
     csid: ChangesetId,
-) -> BoxFuture<bool, Error> {
+) -> BoxFuture01<bool, Error> {
     phases
         .get_public(ctx, vec![csid], false)
         .map(move |public| public.contains(&csid))
@@ -257,7 +257,7 @@ fn test_mark_reachable_as_public(fb: FacebookInit) -> Result<()> {
 
     // resolve bonsai
     let bcss = rt
-        .block_on(future::join_all(
+        .block_on(future01::join_all(
             hgcss
                 .iter()
                 .map(|hgcs| {

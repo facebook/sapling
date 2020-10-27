@@ -20,10 +20,10 @@ use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use futures::{
     compat::Future01CompatExt,
-    future::{try_join, BoxFuture as NewBoxFuture, FutureExt},
+    future::{try_join, BoxFuture, FutureExt},
     TryFutureExt,
 };
-use futures_ext::{BoxFuture, FutureExt as OldFutureExt};
+use futures_ext::{BoxFuture as BoxFuture01, FutureExt as FutureExt01};
 use mononoke_types::{ChangesetId, RepositoryId};
 use sql::mysql;
 use sql::mysql_async::{
@@ -136,21 +136,20 @@ pub trait Phases: Send + Sync {
         &self,
         ctx: CoreContext,
         heads: Vec<ChangesetId>,
-    ) -> BoxFuture<Vec<ChangesetId>, Error>;
+    ) -> BoxFuture01<Vec<ChangesetId>, Error>;
 
     fn get_public(
         &self,
         ctx: CoreContext,
         csids: Vec<ChangesetId>,
         ephemeral_derive: bool,
-    ) -> BoxFuture<HashSet<ChangesetId>, Error>;
+    ) -> BoxFuture01<HashSet<ChangesetId>, Error>;
 
     fn get_sql_phases(&self) -> &SqlPhases;
 }
 
-pub type HeadsFetcher = Arc<
-    dyn Fn(&CoreContext) -> NewBoxFuture<'static, Result<Vec<ChangesetId>, Error>> + Send + Sync,
->;
+pub type HeadsFetcher =
+    Arc<dyn Fn(&CoreContext) -> BoxFuture<'static, Result<Vec<ChangesetId>, Error>> + Send + Sync>;
 
 #[derive(Clone)]
 pub struct SqlPhases {
@@ -256,7 +255,7 @@ impl Phases for SqlPhases {
         ctx: CoreContext,
         csids: Vec<ChangesetId>,
         ephemeral_derive: bool,
-    ) -> BoxFuture<HashSet<ChangesetId>, Error> {
+    ) -> BoxFuture01<HashSet<ChangesetId>, Error> {
         let this = self.clone();
         async move { this.get_public_derive(&ctx, csids, ephemeral_derive).await }
             .boxed()
@@ -268,7 +267,7 @@ impl Phases for SqlPhases {
         &self,
         ctx: CoreContext,
         heads: Vec<ChangesetId>,
-    ) -> BoxFuture<Vec<ChangesetId>, Error> {
+    ) -> BoxFuture01<Vec<ChangesetId>, Error> {
         let this = self.clone();
         async move { mark_reachable_as_public(&ctx, &this, &heads, false).await }
             .boxed()
