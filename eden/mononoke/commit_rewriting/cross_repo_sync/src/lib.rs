@@ -1505,9 +1505,9 @@ pub fn create_synced_commit_mapping_entry(
     let target_repoid = target_repo.get_repoid();
 
     if source_is_large {
-        SyncedCommitMappingEntry::new(source_repoid, from, target_repoid, to, Some(version_name))
+        SyncedCommitMappingEntry::new(source_repoid, from, target_repoid, to, version_name)
     } else {
-        SyncedCommitMappingEntry::new(target_repoid, to, source_repoid, from, Some(version_name))
+        SyncedCommitMappingEntry::new(target_repoid, to, source_repoid, from, version_name)
     }
 }
 

@@ -975,7 +975,7 @@ async fn init_repos(
         initial_bcs_id,
         target_repo.get_repoid(),
         rewritten_first_bcs_id,
-        Some(CommitSyncConfigVersion("TEST_VERSION_NAME".to_string())),
+        CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
     );
     mapping.add(ctx.clone(), first_entry).compat().await?;
 
@@ -1343,7 +1343,7 @@ async fn init_merged_repos(
             first_after_merge_commit,
             small_repo.get_repoid(),
             small_repo_first_after_merge,
-            Some(CommitSyncConfigVersion("TEST_VERSION_NAME".to_string())),
+            CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
         );
         mapping.add(ctx.clone(), entry).compat().await?;
     }

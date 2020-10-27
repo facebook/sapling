@@ -64,14 +64,14 @@ impl SyncedCommitMappingEntry {
         large_bcs_id: ChangesetId,
         small_repo_id: RepositoryId,
         small_bcs_id: ChangesetId,
-        version_name: Option<CommitSyncConfigVersion>,
+        version_name: CommitSyncConfigVersion,
     ) -> Self {
         Self {
             large_repo_id,
             large_bcs_id,
             small_repo_id,
             small_bcs_id,
-            version_name,
+            version_name: Some(version_name),
         }
     }
 

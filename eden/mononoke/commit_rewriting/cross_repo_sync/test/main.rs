@@ -949,7 +949,7 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
         megarepo_initial_bcs_id,
         repo.get_repoid(),
         repo_initial_bcs_id,
-        Some(current_version),
+        current_version,
     );
     mapping.add(ctx.clone(), entry).compat().await?;
 
@@ -1192,7 +1192,7 @@ async fn get_multiple_master_mapping_setup(
                 megarepo_master_cs_id,
                 small_repo.get_repoid(),
                 small_repo_master_cs_id,
-                Some(current_version),
+                current_version,
             ),
         )
         .compat()

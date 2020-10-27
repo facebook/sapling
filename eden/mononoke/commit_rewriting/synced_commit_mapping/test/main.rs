@@ -30,7 +30,7 @@ async fn add_and_get<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {
         bonsai::ONES_CSID,
         REPO_ONE,
         bonsai::TWOS_CSID,
-        Some(version_name.clone()),
+        version_name.clone(),
     );
     assert_eq!(
         true,
@@ -69,7 +69,7 @@ async fn add_and_get<M: SyncedCommitMapping>(fb: FacebookInit, mapping: M) {
         bonsai::THREES_CSID,
         REPO_ONE,
         bonsai::FOURS_CSID,
-        Some(CommitSyncConfigVersion("TEST_VERSION_NAME".to_string())),
+        CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
     );
     assert_eq!(
         true,

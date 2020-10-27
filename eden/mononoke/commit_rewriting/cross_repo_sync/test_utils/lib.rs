@@ -124,7 +124,7 @@ where
         target_bcs.get_changeset_id(),
         source_repo.get_repoid(),
         source_bcs_id,
-        Some(CommitSyncConfigVersion("TEST_VERSION_NAME".to_string())),
+        CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
     );
     commit_syncer
         .get_mapping()
