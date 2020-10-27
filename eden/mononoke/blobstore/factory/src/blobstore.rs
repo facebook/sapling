@@ -17,7 +17,7 @@ use fbinit::FacebookInit;
 use fileblob::Fileblob;
 use futures::{
     compat::Future01CompatExt,
-    future::{self, BoxFuture, Future, FutureExt},
+    future::{self, BoxFuture, FutureExt},
 };
 use logblob::LogBlob;
 use metaconfig_types::{

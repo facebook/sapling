@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#![deny(warnings)]
+
 mod blobstore;
 #[cfg(fbcode_build)]
 mod facebook;

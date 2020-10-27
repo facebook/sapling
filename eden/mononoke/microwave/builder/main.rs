@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+ #![deny(warnings)]
+
 mod changesets;
 mod filenodes;
 
@@ -74,7 +76,6 @@ async fn do_main<'a>(
     matches: &ArgMatches<'a>,
     logger: &Logger,
 ) -> Result<(), Error> {
-    let config_store = args::init_config_store(fb, logger, matches)?;
     let mut scuba = args::get_scuba_sample_builder(fb, &matches)?;
     scuba.add_common_server_data();
 
