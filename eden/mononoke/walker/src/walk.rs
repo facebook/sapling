@@ -672,21 +672,30 @@ fn alias_content_mapping_step<'a, V: VisitOne>(
         .map_err(Error::from)
 }
 
+async fn maybe_derived<Derived: BonsaiDerived>(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    bcs_id: ChangesetId,
+    enable_derive: bool,
+) -> Result<Option<Derived>, Error> {
+    if enable_derive {
+        Ok(Some(Derived::derive03(ctx, repo, bcs_id).await?))
+    } else {
+        Derived::fetch_derived(ctx, repo, &bcs_id).await
+    }
+}
+
 async fn bonsai_to_fsnode_mapping_step<V: VisitOne>(
     ctx: &CoreContext,
     repo: &BlobRepo,
     checker: &Checker<V>,
-    bcs_id: &ChangesetId,
+    bcs_id: ChangesetId,
     enable_derive: bool,
 ) -> Result<StepOutput, Error> {
-    let is_derived = RootFsnodeId::is_derived(&ctx, &repo, &bcs_id).await?;
+    let root_fsnode_id = maybe_derived::<RootFsnodeId>(ctx, repo, bcs_id, enable_derive).await?;
 
-    if is_derived || enable_derive {
+    if let Some(root_fsnode_id) = root_fsnode_id {
         let mut edges = vec![];
-        let root_fsnode_id = RootFsnodeId::derive(ctx.clone(), repo.clone(), *bcs_id)
-            .map_err(Error::from)
-            .compat()
-            .await?;
         checker.add_edge(&mut edges, EdgeType::BonsaiToRootFsnode, || {
             Node::Fsnode((WrappedPath::Root, *root_fsnode_id.fsnode_id()))
         });
@@ -1057,8 +1066,8 @@ where
         Node::AliasContentMapping(alias) => {
             alias_content_mapping_step(ctx.clone(), &repo, &checker, alias).await
         }
-        Node::BonsaiFsnodeMapping(cs_id) => {
-            bonsai_to_fsnode_mapping_step(&ctx, &repo, &checker, &cs_id, enable_derive).await
+        Node::BonsaiFsnodeMapping(bcs_id) => {
+            bonsai_to_fsnode_mapping_step(&ctx, &repo, &checker, bcs_id, enable_derive).await
         }
         Node::Fsnode((path, fsnode_id)) => {
             fsnode_step(&ctx, &repo, &checker, path, &fsnode_id).await
