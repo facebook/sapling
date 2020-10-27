@@ -568,11 +568,7 @@ fn parse_edge_value(arg: &str) -> Result<HashSet<EdgeType>, Error> {
         SHALLOW_VALUE_ARG => Ok(HashSet::from_iter(
             SHALLOW_INCLUDE_EDGE_TYPES.iter().cloned(),
         )),
-        _ => EdgeType::from_str(arg).map(|e| {
-            let mut h = HashSet::new();
-            h.insert(e);
-            h
-        }),
+        _ => EdgeType::from_str(arg).map(|e| HashSet::from_iter(Some(e))),
     }
 }
 
@@ -582,10 +578,7 @@ fn parse_edge_values(
 ) -> Result<HashSet<EdgeType>, Error> {
     match values {
         None => Ok(HashSet::from_iter(default.iter().cloned())),
-        Some(values) => values
-            .map(parse_edge_value)
-            .collect::<Result<Vec<HashSet<EdgeType>>, Error>>()
-            .map(|m| m.into_iter().flatten().collect::<HashSet<EdgeType>>()),
+        Some(values) => Ok(values.flat_map(parse_edge_value).flatten().collect()),
     }
 }
 
@@ -596,7 +589,7 @@ fn parse_edge_types(
     default: &[EdgeType],
 ) -> Result<HashSet<EdgeType>, Error> {
     let mut include_edge_types = parse_edge_values(sub_m.values_of(include_arg_name), default)?;
-    let exclude_edge_types = parse_edge_values(sub_m.values_of(exclude_arg_name), &vec![])?;
+    let exclude_edge_types = parse_edge_values(sub_m.values_of(exclude_arg_name), &[])?;
     include_edge_types.retain(|x| !exclude_edge_types.contains(x));
     Ok(include_edge_types)
 }
