@@ -1653,7 +1653,7 @@ impl HgCommands for RepoClient {
                                                 None,
                                             );
                                             push_redirector
-                                                .run_redirected_post_resolve_action(ctx, action)
+                                                .run_redirected_post_resolve_action(&ctx, action)
                                                 .await
                                         }
                                         None => {

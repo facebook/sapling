@@ -153,7 +153,7 @@ impl PushRedirector {
     /// - convert the `UnbundleResponse` struct to be a small-repo one
     pub async fn run_redirected_post_resolve_action(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         action: PostResolveAction,
     ) -> Result<UnbundleResponse, BundleResolverError> {
         let large_repo = self.repo.blobrepo().clone();
@@ -164,7 +164,7 @@ impl PushRedirector {
         let push_params = self.repo.push_params().clone();
 
         let large_repo_action = self
-            .convert_post_resolve_action(ctx.clone(), action)
+            .convert_post_resolve_action(&ctx, action)
             .await
             .map_err(BundleResolverError::from)?;
         let large_repo_response = run_post_resolve_action(
@@ -182,18 +182,19 @@ impl PushRedirector {
             CrossRepoPushSource::PushRedirected,
         )
         .await?;
-        self.convert_unbundle_response(ctx.clone(), large_repo_response)
+        self.convert_unbundle_response(&ctx, large_repo_response)
             .await
             .map_err(BundleResolverError::from)
     }
 
     fn make_hook_rejection_remapper(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         large_to_small: HashMap<ChangesetId, ChangesetId>,
     ) -> Arc<dyn HookRejectionRemapper> {
         Arc::new({
             let large_to_small_commit_syncer = self.large_to_small_commit_syncer.clone();
+            cloned!(ctx);
             move |
                 HookRejection {
                     hook_name,
@@ -246,7 +247,7 @@ impl PushRedirector {
     /// to be suitable for processing in the large repo
     async fn convert_post_resolve_action(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         orig: PostResolveAction,
     ) -> Result<PostResolveAction, Error> {
         use PostResolveAction::*;
@@ -275,7 +276,7 @@ impl PushRedirector {
     /// the large repo
     async fn convert_post_resolve_push_action(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         orig: PostResolvePush,
     ) -> Result<PostResolvePush, Error> {
         // Note: the `maybe_raw_bundle2_id` field here contains a bundle, which
@@ -297,11 +298,11 @@ impl PushRedirector {
         } = orig;
 
         let uploaded_bonsais = self
-            .sync_uploaded_changesets(ctx.clone(), uploaded_bonsais, None)
+            .sync_uploaded_changesets(ctx, uploaded_bonsais, None)
             .await?;
 
         let bookmark_pushes = try_join_all(bookmark_pushes.into_iter().map(|bookmark_push| {
-            self.convert_plain_bookmark_push_small_to_large(ctx.clone(), bookmark_push)
+            self.convert_plain_bookmark_push_small_to_large(ctx, bookmark_push)
         }))
         .await?;
 
@@ -330,7 +331,7 @@ impl PushRedirector {
     /// the large repo
     async fn convert_post_resolve_pushrebase_action(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         orig: PostResolvePushRebase,
     ) -> Result<PostResolvePushRebase, Error> {
         // Note: the `maybe_raw_bundle2_id` field here contains a bundle, which
@@ -354,18 +355,14 @@ impl PushRedirector {
         // changesets to be rewritten
         let maybe_renamed_bookmark = self
             .small_to_large_commit_syncer
-            .rename_bookmark(&ctx, bookmark_spec.get_bookmark_name())?;
+            .rename_bookmark(ctx, bookmark_spec.get_bookmark_name())?;
 
         let uploaded_bonsais = self
-            .sync_uploaded_changesets(
-                ctx.clone(),
-                uploaded_bonsais,
-                maybe_renamed_bookmark.as_ref(),
-            )
+            .sync_uploaded_changesets(ctx, uploaded_bonsais, maybe_renamed_bookmark.as_ref())
             .await?;
 
         let bookmark_spec = self
-            .convert_pushrebase_bookmark_spec(ctx.clone(), bookmark_spec)
+            .convert_pushrebase_bookmark_spec(ctx, bookmark_spec)
             .await?;
 
         let source_repo = self.small_to_large_commit_syncer.get_source_repo().clone();
@@ -419,7 +416,7 @@ impl PushRedirector {
     /// the large repo
     async fn convert_post_resolve_infinitepush_action(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         orig: PostResolveInfinitePush,
     ) -> Result<PostResolveInfinitePush, Error> {
         let PostResolveInfinitePush {
@@ -432,11 +429,11 @@ impl PushRedirector {
             is_cross_backend_sync,
         } = orig;
         let uploaded_bonsais = self
-            .sync_uploaded_changesets(ctx.clone(), uploaded_bonsais, None)
+            .sync_uploaded_changesets(ctx, uploaded_bonsais, None)
             .await?;
         let maybe_bookmark_push = match maybe_bookmark_push {
             Some(bookmark_push) => Some(
-                self.convert_infinite_bookmark_push_small_to_large(ctx.clone(), bookmark_push)
+                self.convert_infinite_bookmark_push_small_to_large(ctx, bookmark_push)
                     .await
                     .context("while converting infinite bookmark push small-to-large")?,
             ),
@@ -458,7 +455,7 @@ impl PushRedirector {
     /// direction, to be suitable for a processing in a large repo
     async fn convert_post_resolve_bookmark_only_pushrebase_action(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         orig: PostResolveBookmarkOnlyPushRebase,
     ) -> Result<PostResolveBookmarkOnlyPushRebase, Error> {
         let PostResolveBookmarkOnlyPushRebase {
@@ -470,7 +467,7 @@ impl PushRedirector {
         } = orig;
 
         let bookmark_push = self
-            .convert_plain_bookmark_push_small_to_large(ctx.clone(), bookmark_push)
+            .convert_plain_bookmark_push_small_to_large(ctx, bookmark_push)
             .await
             .context("while converting converting plain bookmark push small-to-large")?;
 
@@ -489,7 +486,7 @@ impl PushRedirector {
     /// to be suitable for response generation in the small repo
     async fn convert_unbundle_response(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         orig: UnbundleResponse,
     ) -> Result<UnbundleResponse, Error> {
         use UnbundleResponse::*;
@@ -521,7 +518,7 @@ impl PushRedirector {
     /// direction to be suitable for response generation in the small repo
     async fn convert_unbundle_pushrebase_response(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         orig: UnbundlePushRebaseResponse,
     ) -> Result<UnbundlePushRebaseResponse, Error> {
         let UnbundlePushRebaseResponse {
@@ -546,7 +543,7 @@ impl PushRedirector {
         let (pushrebased_rev, pushrebased_changesets) = try_join!(
             async {
                 self.remap_changeset_expect_rewritten_or_preserved(
-                    ctx.clone(),
+                    ctx,
                     &self.large_to_small_commit_syncer,
                     pushrebased_rev,
                 )
@@ -554,7 +551,7 @@ impl PushRedirector {
                 .context("while remapping pushrebased rev")
             },
             async {
-                self.convert_pushrebased_changesets(ctx.clone(), pushrebased_changesets)
+                self.convert_pushrebased_changesets(ctx, pushrebased_changesets)
                     .await
                     .context("while converting pushrebased changesets")
             },
@@ -562,7 +559,7 @@ impl PushRedirector {
 
         let onto = self
             .large_to_small_commit_syncer
-            .rename_bookmark(&ctx, &onto)?
+            .rename_bookmark(ctx, &onto)?
             .ok_or(format_err!(
                 "bookmark_renamer unexpectedly dropped {} in {:?}",
                 onto,
@@ -582,7 +579,7 @@ impl PushRedirector {
     /// direction to be suitable for response generation in the small repo
     async fn convert_unbundle_bookmark_only_pushrebase_response(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         orig: UnbundleBookmarkOnlyPushRebaseResponse,
     ) -> Result<UnbundleBookmarkOnlyPushRebaseResponse, Error> {
         // `UnbundleBookmarkOnlyPushRebaseResponse` consists of only one field:
@@ -604,7 +601,7 @@ impl PushRedirector {
     /// direction to be suitable for response generation in the small repo
     async fn convert_unbundle_push_response(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         orig: UnbundlePushResponse,
     ) -> Result<UnbundlePushResponse, Error> {
         // `UnbundlePushResponse` consists of only two fields:
@@ -626,7 +623,7 @@ impl PushRedirector {
     /// direction to be suitable for response generation in the small repo
     async fn convert_unbundle_infinite_push_response(
         &self,
-        _ctx: CoreContext,
+        _ctx: &CoreContext,
         _orig: UnbundleInfinitePushResponse,
     ) -> Result<UnbundleInfinitePushResponse, Error> {
         // TODO: this can only be implemented once we have a way
@@ -645,7 +642,7 @@ impl PushRedirector {
     /// for details
     async fn get_small_to_large_commit_equivalent(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         source_cs_id: ChangesetId,
     ) -> Result<ChangesetId, Error> {
         self.remap_changeset_expect_rewritten_or_preserved(
@@ -665,11 +662,11 @@ impl PushRedirector {
     /// preserved from a different repo.
     async fn remap_changeset_expect_rewritten_or_preserved(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         syncer: &CommitSyncer<Arc<dyn SyncedCommitMapping>>,
         cs_id: ChangesetId,
     ) -> Result<ChangesetId, Error> {
-        let maybe_commit_sync_outcome = syncer.get_commit_sync_outcome(&ctx, cs_id).await?;
+        let maybe_commit_sync_outcome = syncer.get_commit_sync_outcome(ctx, cs_id).await?;
         maybe_commit_sync_outcome
             .ok_or(format_err!(
                 "Unexpected absence of CommitSyncOutcome for {} in {:?}",
@@ -692,7 +689,7 @@ impl PushRedirector {
     ///       all the syncing is expected to be done prior to calling this fn.
     async fn convert_infinite_bookmark_push_small_to_large(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         orig: InfiniteBookmarkPush<ChangesetId>,
     ) -> Result<InfiniteBookmarkPush<ChangesetId>, Error> {
         let maybe_old = orig.old.clone();
@@ -703,12 +700,12 @@ impl PushRedirector {
                 match maybe_old {
                     None => Ok(None),
                     Some(old) => self
-                        .get_small_to_large_commit_equivalent(ctx.clone(), old)
+                        .get_small_to_large_commit_equivalent(ctx, old)
                         .await
                         .map(Some),
                 }
             },
-            self.get_small_to_large_commit_equivalent(ctx.clone(), new),
+            self.get_small_to_large_commit_equivalent(ctx, new),
         )?;
 
         Ok(InfiniteBookmarkPush { old, new, ..orig })
@@ -719,7 +716,7 @@ impl PushRedirector {
     ///       all the syncing is expected to be done prior to calling this fn.
     async fn convert_plain_bookmark_push_small_to_large(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         orig: PlainBookmarkPush<ChangesetId>,
     ) -> Result<PlainBookmarkPush<ChangesetId>, Error> {
         let PlainBookmarkPush {
@@ -745,7 +742,7 @@ impl PushRedirector {
                 match maybe_old {
                     None => Ok(None),
                     Some(old) => self
-                        .get_small_to_large_commit_equivalent(ctx.clone(), old)
+                        .get_small_to_large_commit_equivalent(ctx, old)
                         .await
                         .map(Some),
                 }
@@ -754,7 +751,7 @@ impl PushRedirector {
                 match maybe_new {
                     None => Ok(None),
                     Some(new) => self
-                        .get_small_to_large_commit_equivalent(ctx.clone(), new)
+                        .get_small_to_large_commit_equivalent(ctx, new)
                         .await
                         .map(Some),
                 }
@@ -763,7 +760,7 @@ impl PushRedirector {
 
         let name = self
             .small_to_large_commit_syncer
-            .rename_bookmark(&ctx, &name)?
+            .rename_bookmark(ctx, &name)?
             .ok_or(format_err!(
                 "Bookmark {} unexpectedly dropped in {:?}",
                 name,
@@ -781,14 +778,14 @@ impl PushRedirector {
     /// Convert the `PushrebaseBookmarkSpec` struct in the small-to-large direction
     async fn convert_pushrebase_bookmark_spec(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         pushrebase_bookmark_spec: PushrebaseBookmarkSpec<ChangesetId>,
     ) -> Result<PushrebaseBookmarkSpec<ChangesetId>, Error> {
         match pushrebase_bookmark_spec {
             PushrebaseBookmarkSpec::NormalPushrebase(bookmark) => {
                 let bookmark = self
                     .small_to_large_commit_syncer
-                    .rename_bookmark(&ctx, &bookmark)?
+                    .rename_bookmark(ctx, &bookmark)?
                     .ok_or(format_err!(
                         "Bookmark {} unexpectedly dropped in {:?}",
                         bookmark,
@@ -799,7 +796,7 @@ impl PushRedirector {
             }
             PushrebaseBookmarkSpec::ForcePushrebase(plain_push) => {
                 let converted = self
-                    .convert_plain_bookmark_push_small_to_large(ctx.clone(), plain_push)
+                    .convert_plain_bookmark_push_small_to_large(ctx, plain_push)
                     .await?;
                 Ok(PushrebaseBookmarkSpec::ForcePushrebase(converted))
             }
@@ -809,18 +806,18 @@ impl PushRedirector {
     /// Convert `PushrebaseChangesetPair` struct in the large-to-small direction
     async fn convert_pushrebase_changeset_pair(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         pushrebase_changeset_pair: PushrebaseChangesetPair,
     ) -> Result<PushrebaseChangesetPair, Error> {
         let PushrebaseChangesetPair { id_old, id_new } = pushrebase_changeset_pair;
         let (id_old, id_new) = try_join!(
             self.remap_changeset_expect_rewritten_or_preserved(
-                ctx.clone(),
+                ctx,
                 &self.large_to_small_commit_syncer,
                 id_old
             ),
             self.remap_changeset_expect_rewritten_or_preserved(
-                ctx.clone(),
+                ctx,
                 &self.large_to_small_commit_syncer,
                 id_new
             ),
@@ -832,12 +829,12 @@ impl PushRedirector {
     /// large-to-small direction
     async fn convert_pushrebased_changesets(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         pushrebased_changesets: Vec<PushrebaseChangesetPair>,
     ) -> Result<Vec<PushrebaseChangesetPair>, Error> {
         try_join_all(pushrebased_changesets.into_iter().map({
             |pushrebase_changeset_pair| {
-                self.convert_pushrebase_changeset_pair(ctx.clone(), pushrebase_changeset_pair)
+                self.convert_pushrebase_changeset_pair(ctx, pushrebase_changeset_pair)
             }
         }))
         .await
@@ -848,7 +845,7 @@ impl PushRedirector {
     /// corresponds to which large cs id
     async fn sync_uploaded_changesets(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         uploaded_map: UploadedBonsais,
         maybe_bookmark: Option<&BookmarkName>,
     ) -> Result<HashMap<ChangesetId, BonsaiChangeset>, Error> {
@@ -893,7 +890,7 @@ impl PushRedirector {
         for bcs_id in to_sync.iter() {
             let synced_bcs_id = self
                 .small_to_large_commit_syncer
-                .unsafe_sync_commit(&ctx, *bcs_id, candidate_selection_hint.clone())
+                .unsafe_sync_commit(ctx, *bcs_id, candidate_selection_hint.clone())
                 .await?
                 .ok_or(format_err!(
                     "{} was rewritten into nothingness during uploaded changesets sync",
