@@ -72,6 +72,8 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
         parents: Vec<Self>,
     ) -> BoxFuture01<Self, Error>;
 
+    /// TODO(ahornby) delete onces all callsites using ::derive03
+    ///
     /// This function is the entrypoint for changeset derivation, it converts
     /// bonsai representation to derived one by calling derive_from_parents(), and saves mapping
     /// from csid -> BonsaiDerived in BonsaiDerivedMapping
@@ -96,6 +98,27 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
         .boxed()
         .compat()
         .boxify()
+    }
+
+    /// This function is the entrypoint for changeset derivation, it converts
+    /// bonsai representation to derived one by calling derive_from_parents(), and saves mapping
+    /// from csid -> BonsaiDerived in BonsaiDerivedMapping
+    ///
+    /// This function fails immediately if this type of derived data is not enabled for this repo.
+    async fn derive03(
+        ctx: &CoreContext,
+        repo: &BlobRepo,
+        csid: ChangesetId,
+    ) -> Result<Self, DeriveError> {
+        let mapping = Self::mapping(&ctx, &repo);
+        derive_impl::derive_impl::<Self, Self::Mapping>(
+            ctx,
+            repo,
+            &mapping,
+            csid,
+            Mode::OnlyIfEnabled,
+        )
+        .await
     }
 
     /// Fetch the derived data in cases where we might not want to trigger derivation, e.g. when scrubbing.
