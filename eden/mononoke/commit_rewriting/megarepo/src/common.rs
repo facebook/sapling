@@ -81,7 +81,6 @@ async fn save_and_maybe_mark_public(
     if mark_public {
         repo.get_phases()
             .add_reachable_as_public(ctx.clone(), vec![bcs_id])
-            .compat()
             .await?;
         info!(ctx.logger(), "Marked as public {:?}", bcs_id);
     }

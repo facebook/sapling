@@ -444,7 +444,6 @@ async fn run_pushrebase(
 
     repo.get_phases()
         .add_reachable_as_public(ctx.clone(), vec![pushrebased_rev.clone()])
-        .compat()
         .await
         .context("While marking pushrebased changeset as public")?;
 

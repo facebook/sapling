@@ -13,8 +13,10 @@ use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{Compat, FutureFailureErrorExt, FutureFailureExt, StreamFailureErrorExt};
+use futures::{FutureExt, TryFutureExt};
 use futures_ext::{
-    spawn_future, try_boxfuture, try_boxstream, BoxFuture, BoxStream, FutureExt, StreamExt,
+    spawn_future, try_boxfuture, try_boxstream, BoxFuture, BoxStream, FutureExt as FutureExt01,
+    StreamExt,
 };
 use futures_old::{
     future::{self, SharedItem},
@@ -474,7 +476,9 @@ impl UploadChangesets {
                 .and_then(move |shared| {
                     phases
                         .add_reachable_as_public(ctx, vec![shared.0.get_changeset_id()])
-                        .map(move |_| (revidx, shared))
+                        .map_ok(move |_| (revidx, shared))
+                        .boxed()
+                        .compat()
                 })
                 .boxify()
             })

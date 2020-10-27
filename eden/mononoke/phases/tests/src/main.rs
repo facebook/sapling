@@ -276,31 +276,28 @@ fn test_mark_reachable_as_public(fb: FacebookInit) -> Result<()> {
     let phases = repo.get_phases();
     // get phases mapping for all `bcss` in the same order
     let get_phases_map = || {
-        phases
-            .get_public(ctx.clone(), bcss.clone(), false)
-            .map_ok({
-                cloned!(bcss);
-                move |public| {
-                    bcss.iter()
-                        .map(|bcs| public.contains(bcs))
-                        .collect::<Vec<_>>()
-                }
-            })
-            .compat()
+        phases.get_public(ctx.clone(), bcss.clone(), false).map_ok({
+            cloned!(bcss);
+            move |public| {
+                bcss.iter()
+                    .map(|bcs| public.contains(bcs))
+                    .collect::<Vec<_>>()
+            }
+        })
     };
 
     // all phases are draft
-    assert_eq!(rt.block_on(get_phases_map())?, [false; 7]);
+    assert_eq!(rt.block_on_std(get_phases_map())?, [false; 7]);
 
-    rt.block_on(phases.add_reachable_as_public(ctx.clone(), vec![bcss[1]]))?;
+    rt.block_on_std(phases.add_reachable_as_public(ctx.clone(), vec![bcss[1]]))?;
     assert_eq!(
-        rt.block_on(get_phases_map())?,
+        rt.block_on_std(get_phases_map())?,
         [true, true, false, false, false, false, false],
     );
 
-    rt.block_on(phases.add_reachable_as_public(ctx.clone(), vec![bcss[2], bcss[5]]))?;
+    rt.block_on_std(phases.add_reachable_as_public(ctx.clone(), vec![bcss[2], bcss[5]]))?;
     assert_eq!(
-        rt.block_on(get_phases_map())?,
+        rt.block_on_std(get_phases_map())?,
         [true, true, true, false, true, true, false],
     );
 

@@ -21,9 +21,7 @@ use context::CoreContext;
 use futures::{
     compat::Future01CompatExt,
     future::{try_join, BoxFuture, FutureExt},
-    TryFutureExt,
 };
-use futures_ext::{BoxFuture as BoxFuture01, FutureExt as FutureExt01};
 use mononoke_types::{ChangesetId, RepositoryId};
 use sql::mysql;
 use sql::mysql_async::{
@@ -136,7 +134,7 @@ pub trait Phases: Send + Sync {
         &self,
         ctx: CoreContext,
         heads: Vec<ChangesetId>,
-    ) -> BoxFuture01<Vec<ChangesetId>, Error>;
+    ) -> BoxFuture<'static, Result<Vec<ChangesetId>, Error>>;
 
     fn get_public(
         &self,
@@ -264,12 +262,9 @@ impl Phases for SqlPhases {
         &self,
         ctx: CoreContext,
         heads: Vec<ChangesetId>,
-    ) -> BoxFuture01<Vec<ChangesetId>, Error> {
+    ) -> BoxFuture<'static, Result<Vec<ChangesetId>, Error>> {
         let this = self.clone();
-        async move { mark_reachable_as_public(&ctx, &this, &heads, false).await }
-            .boxed()
-            .compat()
-            .boxify()
+        async move { mark_reachable_as_public(&ctx, &this, &heads, false).await }.boxed()
     }
 
     fn get_sql_phases(&self) -> &SqlPhases {
