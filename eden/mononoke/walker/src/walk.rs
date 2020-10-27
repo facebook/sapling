@@ -26,7 +26,7 @@ use futures::{
     stream::{BoxStream, StreamExt, TryStreamExt},
 };
 use futures_ext::FutureExt as Future01Ext;
-use futures_old::{future as old_future, Future as Future01, Stream as Stream01};
+use futures_old::{Future as Future01, Stream as Stream01};
 use itertools::{Either, Itertools};
 use manifest::{Entry, Manifest};
 use mercurial_types::{FileBytes, HgChangesetId, HgFileNodeId, HgManifestId, RepoPath};
@@ -228,8 +228,7 @@ fn bonsai_phase_step<'a, V: VisitOne>(
 ) -> impl Future<Output = Result<StepOutput, Error>> + 'a {
     phases_store
         .get_public(ctx.clone(), vec![bcs_id], true)
-        .map(move |public| public.contains(&bcs_id))
-        .compat()
+        .map_ok(move |public| public.contains(&bcs_id))
         .map_ok(move |is_public| {
             let phase = if is_public { Some(Phase::Public) } else { None };
             StepOutput(
@@ -378,12 +377,14 @@ fn bonsai_to_hg_mapping_step<'a, V: 'a + VisitOne>(
                         FilenodesOnlyPublic::derive(ctx.clone(), repo.clone(), bcs_id)
                             .from_err()
                             .map(|_| ())
+                            .compat()
                             .left_future()
                     } else {
-                        old_future::ok(()).right_future()
+                        future::ok(()).right_future()
                     }
                 }
-            });
+            })
+            .compat();
 
         let hg_cs_derive = repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id);
 

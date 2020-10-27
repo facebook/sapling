@@ -337,7 +337,6 @@ impl<'a> Blobimport<'a> {
                             .collect(),
                         false, /* ephemeral_derive */
                     )
-                    .compat()
                     .await?;
 
                 let hg_cs_ids: HashMap<_, _> = hg_to_bcs_ids.into_iter().collect();

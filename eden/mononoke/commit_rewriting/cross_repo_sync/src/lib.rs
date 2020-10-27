@@ -676,7 +676,6 @@ where
                     unsynced_ancestors.clone(),
                     false, /* ephemeral_derive */
                 )
-                .compat()
                 .await?;
             if !public_unsynced_ancestors.is_empty() {
                 return Err(format_err!(

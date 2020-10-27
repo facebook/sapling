@@ -1351,12 +1351,13 @@ impl HgCommands for RepoClient {
                     move |(bcs_ids, bcs_hg_mapping)| {
                         phases_hint
                             .get_public(ctx, bcs_ids, false)
-                            .map(move |public_csids| {
+                            .map_ok(move |public_csids| {
                                 public_csids
                                     .into_iter()
                                     .filter_map(|csid| bcs_hg_mapping.get(&csid).cloned())
                                     .collect::<HashSet<_>>()
                             })
+                            .compat()
                     }
                 })
                 .map(move |found_hg_changesets| {

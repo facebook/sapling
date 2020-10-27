@@ -143,7 +143,7 @@ pub trait Phases: Send + Sync {
         ctx: CoreContext,
         csids: Vec<ChangesetId>,
         ephemeral_derive: bool,
-    ) -> BoxFuture01<HashSet<ChangesetId>, Error>;
+    ) -> BoxFuture<'static, Result<HashSet<ChangesetId>, Error>>;
 
     fn get_sql_phases(&self) -> &SqlPhases;
 }
@@ -255,12 +255,9 @@ impl Phases for SqlPhases {
         ctx: CoreContext,
         csids: Vec<ChangesetId>,
         ephemeral_derive: bool,
-    ) -> BoxFuture01<HashSet<ChangesetId>, Error> {
+    ) -> BoxFuture<'static, Result<HashSet<ChangesetId>, Error>> {
         let this = self.clone();
-        async move { this.get_public_derive(&ctx, csids, ephemeral_derive).await }
-            .boxed()
-            .compat()
-            .boxify()
+        async move { this.get_public_derive(&ctx, csids, ephemeral_derive).await }.boxed()
     }
 
     fn add_reachable_as_public(

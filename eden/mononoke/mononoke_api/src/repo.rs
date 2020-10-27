@@ -1012,7 +1012,6 @@ impl RepoContext {
         // get phases
         let public_phases = phases
             .get_public(self.ctx.clone(), changesets.clone(), false)
-            .compat()
             .await?;
 
         // partition
@@ -1047,7 +1046,6 @@ impl RepoContext {
             // get phases for the parents
             let public_phases = phases
                 .get_public(self.ctx.clone(), parents.clone(), false)
-                .compat()
                 .await?;
 
             // partition

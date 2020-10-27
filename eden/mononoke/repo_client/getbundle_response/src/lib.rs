@@ -706,7 +706,6 @@ async fn traverse_draft_commits(
                 .collect(),
             false,
         )
-        .compat()
         .await?;
 
     // Call the draft head callback for each of the draft heads.
@@ -753,7 +752,7 @@ async fn traverse_draft_commits(
         let (new_next_changesets, new_public_changesets) = try_join!(
             repo.get_hg_bonsai_mapping(ctx.clone(), parents.clone())
                 .compat(),
-            phases.get_public(ctx.clone(), parents, false).compat()
+            phases.get_public(ctx.clone(), parents, false)
         )?;
         next_changesets = new_next_changesets;
         public_changesets = new_public_changesets;
