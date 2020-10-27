@@ -197,7 +197,7 @@ where
         // even if it was already generated (see RegenerateMapping call).
         cloned!(self.mapping, self.mode);
         async move {
-            let result = derive_impl::<M::Value, _>(ctx, repo, mapping, csid, mode).await?;
+            let result = derive_impl::<M::Value, _>(&ctx, &repo, &mapping, csid, mode).await?;
             Ok(format!("{:?}", result))
         }
         .boxed()
@@ -242,9 +242,9 @@ where
                 // create new context so each derivation would have its own trace
                 let ctx = CoreContext::new_with_logger(ctx.fb, ctx.logger().clone());
                 derive_impl::<M::Value, _>(
-                    ctx.clone(),
-                    repo.clone(),
-                    in_memory_mapping.clone(),
+                    &ctx,
+                    &repo,
+                    &in_memory_mapping,
                     csid,
                     DeriveMode::Unsafe,
                 )

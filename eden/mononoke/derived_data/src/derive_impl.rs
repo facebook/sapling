@@ -75,15 +75,15 @@ pub async fn derive_impl<
     Derived: BonsaiDerived,
     Mapping: BonsaiDerivedMapping<Value = Derived> + Send + Sync + Clone + 'static,
 >(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    derived_mapping: Mapping,
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    derived_mapping: &Mapping,
     start_csid: ChangesetId,
     mode: Mode,
 ) -> Result<Derived, DeriveError> {
     let derivation = async {
         let all_csids =
-            find_topo_sorted_underived(&ctx, &repo, &derived_mapping, Some(start_csid), None, mode)
+            find_topo_sorted_underived(ctx, repo, derived_mapping, Some(start_csid), None, mode)
                 .await?;
 
         for csid in &all_csids {
@@ -92,7 +92,7 @@ pub async fn derive_impl<
                 Some(format!("{} {}", Derived::NAME, csid)),
             );
 
-            let (stats, res) = derive_may_panic(&ctx, &repo, &derived_mapping, &csid)
+            let (stats, res) = derive_may_panic(&ctx, &repo, derived_mapping, &csid)
                 .timed()
                 .await;
 
@@ -142,7 +142,7 @@ pub async fn derive_impl<
 
     res?;
 
-    let derived = fetch_derived_may_panic(&ctx, start_csid, &derived_mapping).await?;
+    let derived = fetch_derived_may_panic(&ctx, start_csid, derived_mapping).await?;
     Ok(derived)
 }
 
@@ -204,8 +204,7 @@ pub(crate) async fn find_topo_sorted_underived<
                         }
                     }
 
-                    let derive_node =
-                        DeriveNode::from_bonsai(&ctx, derived_mapping, &cs_id).await?;
+                    let derive_node = DeriveNode::from_bonsai(ctx, derived_mapping, &cs_id).await?;
 
                     match derive_node {
                         DeriveNode::Derived(_) => Ok((None, vec![])),

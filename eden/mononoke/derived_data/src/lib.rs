@@ -85,9 +85,9 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
         async move {
             let mapping = Self::mapping(&ctx, &repo);
             derive_impl::derive_impl::<Self, Self::Mapping>(
-                ctx,
-                repo,
-                mapping,
+                &ctx,
+                &repo,
+                &mapping,
                 csid,
                 Mode::OnlyIfEnabled,
             )
