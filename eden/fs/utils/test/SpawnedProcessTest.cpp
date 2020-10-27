@@ -62,11 +62,8 @@ TEST(SpawnedProcess, pipe) {
 #ifndef _WIN32
           "echo",
 #else
-          // If we're being built via cmake we know that we
-          // have the cmake executable on hand to invoke its
-          // echo program
-          "cmake",
-          "-E",
+          "powershell",
+          "-Command",
           "echo",
 #endif
           "hello"},
@@ -76,7 +73,7 @@ TEST(SpawnedProcess, pipe) {
   echo.wait();
 
   folly::StringPiece line(outputs.first);
-  EXPECT_TRUE(line.startsWith("hello"));
+  EXPECT_EQ(line.subpiece(0, 5), "hello");
 }
 
 void test_pipe_input(bool threaded) {
