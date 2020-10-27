@@ -19,6 +19,7 @@ use cacheblob::{
     new_cachelib_blobstore_no_lease, new_memcache_blobstore, CachelibBlobstoreOptions,
     InProcessLease, LeaseOps, MemcacheOps,
 };
+use cached_config::ConfigStore;
 use changeset_fetcher::{ChangesetFetcher, SimpleChangesetFetcher};
 use changeset_info::ChangesetInfo;
 use changesets::{CachingChangesets, Changesets, SqlChangesets};
@@ -91,6 +92,7 @@ pub struct BlobrepoBuilder<'a> {
     logger: &'a Logger,
     derived_data_config: DerivedDataConfig,
     segmented_changelog_config: SegmentedChangelogConfig,
+    config_store: &'a ConfigStore,
 }
 
 impl<'a> BlobrepoBuilder<'a> {
@@ -104,6 +106,7 @@ impl<'a> BlobrepoBuilder<'a> {
         readonly_storage: ReadOnlyStorage,
         blobstore_options: BlobstoreOptions,
         logger: &'a Logger,
+        config_store: &'a ConfigStore,
     ) -> Self {
         Self {
             fb,
@@ -121,6 +124,7 @@ impl<'a> BlobrepoBuilder<'a> {
             logger,
             derived_data_config: config.derived_data_config.clone(),
             segmented_changelog_config: config.segmented_changelog_config.clone(),
+            config_store,
         }
     }
 
@@ -151,6 +155,7 @@ impl<'a> BlobrepoBuilder<'a> {
             logger,
             derived_data_config,
             segmented_changelog_config,
+            config_store,
         } = self;
 
         let sql_factory = make_metadata_sql_factory(
@@ -170,6 +175,7 @@ impl<'a> BlobrepoBuilder<'a> {
             readonly_storage,
             &blobstore_options,
             &logger,
+            config_store,
         );
 
         let (sql_factory, blobstore) = future::try_join(sql_factory, blobstore).await?;

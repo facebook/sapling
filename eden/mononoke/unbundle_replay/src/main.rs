@@ -416,6 +416,7 @@ async fn do_main(
         readonly_storage,
         blobstore_options,
         &logger,
+        config_store,
     )
     .build()
     .await?;

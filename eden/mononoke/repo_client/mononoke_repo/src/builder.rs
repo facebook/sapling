@@ -8,6 +8,7 @@
 use anyhow::{Context, Error};
 use blobrepo::BlobRepo;
 use blobrepo_factory::{BlobrepoBuilder, BlobstoreOptions, Caching, ReadOnlyStorage};
+use cached_config::ConfigStore;
 use context::CoreContext;
 use futures::{compat::Future01CompatExt, future, FutureExt};
 use hooks::HookManager;
@@ -43,6 +44,7 @@ impl MononokeRepoBuilder {
         readonly_storage: ReadOnlyStorage,
         blobstore_options: BlobstoreOptions,
         record_infinitepush_writes: bool,
+        config_store: &ConfigStore,
     ) -> Result<MononokeRepoBuilder, Error> {
         let builder = BlobrepoBuilder::new(
             ctx.fb,
@@ -54,6 +56,7 @@ impl MononokeRepoBuilder {
             readonly_storage,
             blobstore_options.clone(),
             ctx.logger(),
+            config_store,
         );
         let repo = builder.build().await?;
 

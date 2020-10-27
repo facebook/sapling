@@ -11,6 +11,7 @@ use blobstore::{
 };
 use blobstore_sync_queue::SqlBlobstoreSyncQueue;
 use cacheblob::CachelibBlobstoreOptions;
+use cached_config::ConfigStore;
 use chaosblob::{ChaosBlobstore, ChaosOptions};
 use fbinit::FacebookInit;
 use fileblob::Fileblob;
@@ -92,6 +93,7 @@ pub fn make_blobstore<'a>(
     readonly_storage: ReadOnlyStorage,
     blobstore_options: &'a BlobstoreOptions,
     logger: &'a Logger,
+    config_store: &'a ConfigStore,
 ) -> BoxFuture<'a, Result<Arc<dyn Blobstore>, Error>> {
     async move {
         let store = make_blobstore_put_ops(
@@ -101,6 +103,7 @@ pub fn make_blobstore<'a>(
             readonly_storage,
             blobstore_options,
             logger,
+            config_store,
         )
         .await?;
         // Workaround for trait A {} trait B:A {} but Arc<dyn B> is not a Arc<dyn A>
@@ -119,6 +122,7 @@ pub fn make_blobstore_put_ops<'a>(
     readonly_storage: ReadOnlyStorage,
     blobstore_options: &'a BlobstoreOptions,
     logger: &'a Logger,
+    config_store: &'a ConfigStore,
 ) -> BoxFuture<'a, Result<Arc<dyn BlobstorePutOps>, Error>> {
     // NOTE: This needs to return a BoxFuture because it recurses.
     async move {
@@ -148,6 +152,7 @@ pub fn make_blobstore_put_ops<'a>(
                     readonly_storage,
                     blobstore_options,
                     logger,
+                    config_store,
                 )
                 .await?
             }
@@ -177,6 +182,7 @@ pub fn make_blobstore_put_ops<'a>(
                     readonly_storage,
                     blobstore_options,
                     logger,
+                    config_store,
                 )
                 .await?
             }
@@ -296,6 +302,7 @@ pub fn make_blobstore_put_ops<'a>(
                     readonly_storage,
                     &blobstore_options,
                     logger,
+                    config_store,
                 )
                 .await?;
 
@@ -353,6 +360,7 @@ pub fn make_blobstore_put_ops<'a>(
                     readonly_storage,
                     &blobstore_options,
                     logger,
+                    config_store,
                 )
                 .await?;
 
@@ -417,7 +425,7 @@ pub fn make_blobstore_put_ops<'a>(
     .boxed()
 }
 
-pub fn make_blobstore_multiplexed<'a>(
+pub async fn make_blobstore_multiplexed<'a>(
     fb: FacebookInit,
     multiplex_id: MultiplexId,
     queue_db: DatabaseConfig,
@@ -430,98 +438,98 @@ pub fn make_blobstore_multiplexed<'a>(
     readonly_storage: ReadOnlyStorage,
     blobstore_options: &'a BlobstoreOptions,
     logger: &'a Logger,
-) -> impl Future<Output = Result<Arc<dyn BlobstorePutOps>, Error>> + 'a {
-    async move {
-        let component_readonly = match &scrub_args {
-            // Need to write to components to repair them.
-            Some((_, ScrubAction::Repair)) => ReadOnlyStorage(false),
-            _ => readonly_storage,
-        };
+    config_store: &'a ConfigStore,
+) -> Result<Arc<dyn BlobstorePutOps>, Error> {
+    let component_readonly = match &scrub_args {
+        // Need to write to components to repair them.
+        Some((_, ScrubAction::Repair)) => ReadOnlyStorage(false),
+        _ => readonly_storage,
+    };
 
-        let mut applied_chaos = false;
+    let mut applied_chaos = false;
 
-        let components = future::try_join_all(inner_config.into_iter().map({
-            move |(blobstoreid, store_type, config)| {
-                let mut blobstore_options = blobstore_options.clone();
+    let components = future::try_join_all(inner_config.into_iter().map({
+        move |(blobstoreid, store_type, config)| {
+            let mut blobstore_options = blobstore_options.clone();
 
-                if blobstore_options.chaos_options.has_chaos() {
-                    if applied_chaos {
-                        blobstore_options = BlobstoreOptions {
-                            chaos_options: ChaosOptions::new(None, None),
-                            ..blobstore_options
-                        };
-                    } else {
-                        applied_chaos = true;
-                    }
-                }
-
-                async move {
-                    let store = make_blobstore_put_ops(
-                        fb,
-                        config,
-                        mysql_options,
-                        component_readonly,
-                        &blobstore_options,
-                        logger,
-                    )
-                    .await?;
-
-                    Ok((blobstoreid, store_type, store))
+            if blobstore_options.chaos_options.has_chaos() {
+                if applied_chaos {
+                    blobstore_options = BlobstoreOptions {
+                        chaos_options: ChaosOptions::new(None, None),
+                        ..blobstore_options
+                    };
+                } else {
+                    applied_chaos = true;
                 }
             }
-        }));
 
-        let queue = SqlBlobstoreSyncQueue::with_database_config(
-            fb,
-            &queue_db,
-            mysql_options,
-            readonly_storage.0,
-        );
+            async move {
+                let store = make_blobstore_put_ops(
+                    fb,
+                    config,
+                    mysql_options,
+                    component_readonly,
+                    &blobstore_options,
+                    logger,
+                    config_store,
+                )
+                .await?;
 
-        let (components, queue) = future::try_join(components, queue).await?;
+                Ok((blobstoreid, store_type, store))
+            }
+        }
+    }));
 
-        // For now, `partition` could do this, but this will be easier to extend when we introduce more store types
-        let (normal_components, write_mostly_components) = {
-            let mut normal_components = vec![];
-            let mut write_mostly_components = vec![];
-            for (blobstore_id, store_type, store) in components.into_iter() {
-                match store_type {
-                    MultiplexedStoreType::Normal => normal_components.push((blobstore_id, store)),
-                    MultiplexedStoreType::WriteMostly => {
-                        write_mostly_components.push((blobstore_id, store))
-                    }
+    let queue = SqlBlobstoreSyncQueue::with_database_config(
+        fb,
+        &queue_db,
+        mysql_options,
+        readonly_storage.0,
+    );
+
+    let (components, queue) = future::try_join(components, queue).await?;
+
+    // For now, `partition` could do this, but this will be easier to extend when we introduce more store types
+    let (normal_components, write_mostly_components) = {
+        let mut normal_components = vec![];
+        let mut write_mostly_components = vec![];
+        for (blobstore_id, store_type, store) in components.into_iter() {
+            match store_type {
+                MultiplexedStoreType::Normal => normal_components.push((blobstore_id, store)),
+                MultiplexedStoreType::WriteMostly => {
+                    write_mostly_components.push((blobstore_id, store))
                 }
             }
-            (normal_components, write_mostly_components)
-        };
+        }
+        (normal_components, write_mostly_components)
+    };
 
-        let blobstore = match scrub_args {
-            Some((scrub_handler, scrub_action)) => Arc::new(ScrubBlobstore::new(
-                multiplex_id,
-                normal_components,
-                write_mostly_components,
-                minimum_successful_writes,
-                Arc::new(queue),
-                scuba_table.map_or(ScubaSampleBuilder::with_discard(), |table| {
-                    ScubaSampleBuilder::new(fb, table)
-                }),
-                scuba_sample_rate,
-                scrub_handler,
-                scrub_action,
-            )) as Arc<dyn BlobstorePutOps>,
-            None => Arc::new(MultiplexedBlobstore::new(
-                multiplex_id,
-                normal_components,
-                write_mostly_components,
-                minimum_successful_writes,
-                Arc::new(queue),
-                scuba_table.map_or(ScubaSampleBuilder::with_discard(), |table| {
-                    ScubaSampleBuilder::new(fb, table)
-                }),
-                scuba_sample_rate,
-            )) as Arc<dyn BlobstorePutOps>,
-        };
+    let blobstore = match scrub_args {
+        Some((scrub_handler, scrub_action)) => Arc::new(ScrubBlobstore::new(
+            multiplex_id,
+            normal_components,
+            write_mostly_components,
+            minimum_successful_writes,
+            Arc::new(queue),
+            scuba_table.map_or(ScubaSampleBuilder::with_discard(), |table| {
+                ScubaSampleBuilder::new(fb, table)
+            }),
+            scuba_sample_rate,
+            scrub_handler,
+            scrub_action,
+        )) as Arc<dyn BlobstorePutOps>,
+        None => Arc::new(MultiplexedBlobstore::new(
+            multiplex_id,
+            normal_components,
+            write_mostly_components,
+            minimum_successful_writes,
+            Arc::new(queue),
+            scuba_table.map_or(ScubaSampleBuilder::with_discard(), |table| {
+                ScubaSampleBuilder::new(fb, table)
+            }),
+            scuba_sample_rate,
+        )) as Arc<dyn BlobstorePutOps>,
+    };
 
-        Ok(blobstore)
-    }
+    Ok(blobstore)
 }

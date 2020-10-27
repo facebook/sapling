@@ -11,6 +11,7 @@ use anyhow::{anyhow, Error};
 use blobstore::Blobstore;
 use blobstore_factory::{make_blobstore, BlobstoreOptions, ReadOnlyStorage};
 use cacheblob::new_memcache_blobstore;
+use cached_config::ConfigStore;
 use clap::{Arg, ArgMatches};
 use cmdlib::{args, helpers};
 use context::CoreContext;
@@ -118,6 +119,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a ArgMatches<'a>) -> Result<(), Er
             config,
             mysql_options,
             blobstore_options.clone(),
+            config_store,
         )
         .await?;
         warmers.push(warmer);
@@ -152,6 +154,7 @@ impl StreamingCloneWarmup {
         config: &RepoConfig,
         mysql_options: MysqlOptions,
         blobstore_options: BlobstoreOptions,
+        config_store: &ConfigStore,
     ) -> Result<Self, Error> {
         // Create blobstore that contains streaming clone chunks, without cachelib
         // layer (we want to hit memcache even if it is available in cachelib), and
@@ -163,6 +166,7 @@ impl StreamingCloneWarmup {
             ReadOnlyStorage(true),
             &blobstore_options,
             ctx.logger(),
+            config_store,
         )
         .await?;
         let blobstore = new_memcache_blobstore(ctx.fb, blobstore, "multiplexed", "")?;

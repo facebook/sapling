@@ -14,6 +14,7 @@ use blobrepo::BlobRepo;
 use blobrepo_factory::{BlobstoreOptions, Caching, ReadOnlyStorage};
 use blobstore_factory::make_blobstore;
 use cache_warmup::cache_warmup;
+use cached_config::ConfigStore;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
@@ -160,6 +161,7 @@ pub fn repo_handlers(
     readonly_storage: ReadOnlyStorage,
     blobstore_options: BlobstoreOptions,
     root_log: &Logger,
+    config_store: &'static ConfigStore,
 ) -> BoxFuture<HashMap<String, RepoHandler>, Error> {
     // compute eagerly to avoid lifetime issues
     let repo_futs: Vec<BoxFuture<(String, IncompleteRepoHandler), Error>> = repos
@@ -214,6 +216,7 @@ pub fn repo_handlers(
                     readonly_storage,
                     blobstore_options,
                     record_infinitepush_writes,
+                    config_store,
                 )
                 .await?;
 
@@ -264,6 +267,7 @@ pub fn repo_handlers(
                     readonly_storage,
                     wireproto_logging,
                     logger.clone(),
+                    config_store,
                 )
                 .compat();
 
@@ -415,6 +419,7 @@ fn create_wireproto_logging(
     readonly_storage: ReadOnlyStorage,
     wireproto_logging_config: WireprotoLoggingConfig,
     logger: Logger,
+    config_store: &'static ConfigStore,
 ) -> impl Future<Item = WireprotoLogging, Error = Error> {
     let WireprotoLoggingConfig {
         storage_config_and_threshold,
@@ -438,6 +443,7 @@ fn create_wireproto_logging(
                     readonly_storage,
                     &Default::default(),
                     &logger,
+                    config_store,
                 )
                 .await?;
 

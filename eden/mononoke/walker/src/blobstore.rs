@@ -12,6 +12,7 @@ use blobstore::{Blobstore, BlobstoreMetadata};
 use blobstore_factory::{
     make_blobstore_multiplexed, make_blobstore_put_ops, BlobstoreOptions, ReadOnlyStorage,
 };
+use cached_config::ConfigStore;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use inlinable_string::InlinableString;
@@ -153,6 +154,7 @@ pub async fn open_blobstore(
     repo_stats_key: String,
     blobstore_options: BlobstoreOptions,
     logger: Logger,
+    config_store: &ConfigStore,
 ) -> Result<Arc<dyn Blobstore>, Error> {
     let mut blobconfig = get_blobconfig(blob_config, inner_blobstore_id)?;
     let scrub_handler = scrub_action.map(|scrub_action| {
@@ -200,6 +202,7 @@ pub async fn open_blobstore(
                 readonly_storage,
                 &blobstore_options,
                 &logger,
+                config_store,
             )
             .await?
         }
@@ -227,6 +230,7 @@ pub async fn open_blobstore(
                 readonly_storage,
                 &blobstore_options,
                 &logger,
+                config_store,
             )
             .await?
         }
@@ -238,6 +242,7 @@ pub async fn open_blobstore(
                 readonly_storage,
                 &blobstore_options,
                 &logger,
+                config_store,
             )
             .await?
         }

@@ -139,6 +139,7 @@ async fn run_hook_tailer<'a>(
         readonly_storage,
         cmdlib::args::parse_blobstore_options(&matches),
         &logger,
+        config_store,
     );
 
     let blobrepo = builder.build().await?;

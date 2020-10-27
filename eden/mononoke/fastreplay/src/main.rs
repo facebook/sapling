@@ -291,6 +291,7 @@ async fn bootstrap_repositories<'a>(
                         readonly_storage,
                         remote_args_blobstore_options,
                         &logger,
+                        config_store,
                     )
                 });
 
@@ -318,6 +319,7 @@ async fn bootstrap_repositories<'a>(
                 readonly_storage,
                 blobstore_options.clone(),
                 false, // Don't record infinitepush writes
+                config_store,
             )
             .await?
             .finalize(noop_hook_manager.clone())

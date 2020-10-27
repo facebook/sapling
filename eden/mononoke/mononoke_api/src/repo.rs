@@ -186,6 +186,7 @@ impl Repo {
             readonly_storage,
             blobstore_options,
             &logger,
+            config_store,
         );
         let blob_repo = builder.build().await?;
 

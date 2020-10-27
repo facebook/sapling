@@ -147,6 +147,7 @@ throttledblob = { path = "blobstore/throttledblob" }
 unbundle = { path = "repo_client/unbundle" }
 unodes = { path = "derived_data/unodes" }
 xdiff = { path = "../scm/lib/xdiff" }
+cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 cachelib = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

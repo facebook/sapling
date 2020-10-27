@@ -1025,6 +1025,7 @@ fn open_repo_internal_with_repo_id<'a>(
             readonly_storage,
             blobstore_options,
             &logger,
+            config_store,
         );
         if let Some(redaction_override) = redaction_override {
             builder.set_redaction(redaction_override);

@@ -82,6 +82,7 @@ async fn do_main<'a>(
     let readonly_storage = cmdlib::args::parse_readonly_storage(&matches);
     let blobstore_options = cmdlib::args::parse_blobstore_options(&matches);
     let caching = cmdlib::args::init_cachelib(fb, &matches, None);
+    let config_store = cmdlib::args::init_config_store(fb, logger, matches)?;
 
     let RepoConfigs { repos, common } = args::load_repo_configs(config_store, &matches)?;
     let censored_scuba_params = common.censored_scuba_params;
@@ -125,6 +126,7 @@ async fn do_main<'a>(
                         readonly_storage,
                         blobstore_options,
                         &logger,
+                        config_store,
                     );
                     let repo = builder.build().await?;
 

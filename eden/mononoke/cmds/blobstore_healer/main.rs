@@ -15,6 +15,7 @@ use anyhow::{bail, format_err, Context, Error, Result};
 use blobstore::Blobstore;
 use blobstore_factory::{make_blobstore, BlobstoreOptions, ReadOnlyStorage};
 use blobstore_sync_queue::{BlobstoreSyncQueue, SqlBlobstoreSyncQueue};
+use cached_config::ConfigStore;
 use chrono::Duration as ChronoDuration;
 use clap::{value_t, App, Arg};
 use cmdlib::{
@@ -65,6 +66,7 @@ async fn maybe_schedule_healer_for_storage(
     blobstore_options: &BlobstoreOptions,
     iter_limit: Option<u64>,
     heal_min_age: ChronoDuration,
+    config_store: &ConfigStore,
 ) -> Result<(), Error> {
     let (blobstore_configs, multiplex_id, queue_db) = match storage_config.blobstore {
         BlobConfig::Multiplexed {
@@ -110,6 +112,7 @@ async fn maybe_schedule_healer_for_storage(
                 readonly_storage,
                 blobstore_options,
                 ctx.logger(),
+                config_store,
             )
             .await?;
 
@@ -311,6 +314,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         &blobstore_options,
         iter_limit,
         healing_min_age,
+        config_store,
     );
 
     block_execute(

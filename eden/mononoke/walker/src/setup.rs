@@ -813,6 +813,7 @@ pub fn setup_common<'a>(
             repo_name.clone(),
             blobstore_options.clone(),
             logger.clone(),
+            config_store,
         );
 
         let sql_factory = make_metadata_sql_factory(

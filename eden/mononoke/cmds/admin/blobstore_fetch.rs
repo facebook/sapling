@@ -19,6 +19,7 @@ use futures_old::prelude::*;
 use blobstore::{Blobstore, BlobstoreGetData};
 use blobstore_factory::{make_blobstore, BlobstoreOptions, ReadOnlyStorage};
 use cacheblob::{new_memcache_blobstore, CacheBlobstoreExt};
+use cached_config::ConfigStore;
 use cmdlib::args;
 use context::CoreContext;
 use futures_old::future;
@@ -142,6 +143,7 @@ async fn get_blobstore(
     logger: Logger,
     readonly_storage: ReadOnlyStorage,
     blobstore_options: BlobstoreOptions,
+    config_store: &ConfigStore,
 ) -> Result<Arc<dyn Blobstore>, Error> {
     let blobconfig = get_blobconfig(storage_config.blobstore, inner_blobstore_id, scrub_action)?;
 
@@ -152,6 +154,7 @@ async fn get_blobstore(
         readonly_storage,
         &blobstore_options,
         &logger,
+        config_store,
     )
     .await
 }
@@ -184,6 +187,7 @@ pub async fn subcommand_blobstore_fetch<'a>(
         logger.clone(),
         readonly_storage,
         blobstore_options,
+        config_store,
     );
 
     let common_config = args::load_common_config(config_store, &matches)?;

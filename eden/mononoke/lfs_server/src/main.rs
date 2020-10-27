@@ -279,6 +279,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                     readonly_storage,
                     blobstore_options,
                     &logger,
+                    config_store,
                 );
 
                 let hipster_acl = config.hipster_acl.as_ref();

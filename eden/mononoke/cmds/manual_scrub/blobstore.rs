@@ -8,6 +8,7 @@
 use std::sync::Arc;
 
 use anyhow::{Error, Result};
+use cached_config::ConfigStore;
 use fbinit::FacebookInit;
 use slog::Logger;
 
@@ -22,6 +23,7 @@ pub async fn open_blobstore(
     mysql_options: MysqlOptions,
     blobstore_options: &BlobstoreOptions,
     logger: &Logger,
+    config_store: &ConfigStore,
 ) -> Result<Arc<dyn Blobstore>> {
     storage_config.blobstore.set_scrubbed(ScrubAction::Repair);
 
@@ -32,6 +34,7 @@ pub async fn open_blobstore(
         blobstore_factory::ReadOnlyStorage(false),
         blobstore_options,
         logger,
+        config_store,
     )
     .await
     .map_err(Error::from)

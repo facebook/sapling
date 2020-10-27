@@ -134,6 +134,7 @@ fn main(fb: fbinit::FacebookInit) -> Result<()> {
             mysql_options,
             &blobstore_options,
             &logger,
+            config_store,
         )
         .await?;
 

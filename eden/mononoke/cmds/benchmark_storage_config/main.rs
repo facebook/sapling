@@ -117,6 +117,7 @@ fn main(fb: fbinit::FacebookInit) {
             blobstore_factory::ReadOnlyStorage(false),
             &blobstore_options,
             &logger,
+            config_store,
         )
         .await
         .expect("Could not make blobstore");

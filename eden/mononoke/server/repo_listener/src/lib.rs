@@ -48,7 +48,7 @@ pub async fn create_repo_listeners(
     tls_acceptor: SslAcceptor,
     service: ReadyFlagService,
     terminate_process: oneshot::Receiver<()>,
-    config_store: &ConfigStore,
+    config_store: &'static ConfigStore,
     readonly_storage: ReadOnlyStorage,
     blobstore_options: BlobstoreOptions,
     scribe: Scribe,
@@ -63,6 +63,7 @@ pub async fn create_repo_listeners(
         readonly_storage,
         blobstore_options,
         &root_log,
+        config_store,
     )
     .compat()
     .await?;
