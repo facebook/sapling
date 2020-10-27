@@ -249,6 +249,22 @@ show file info
   Content-SHA256: 86dc03602dcf385217216784784a8ecf20e6400decc3208170b12fcb0afb6698
   Size: 10 bytes
 
+show file info with multiple paths
+  $ scsc info --repo repo -i ee87eb8cfeb218e7352a94689b241ea973b80402 -p a ""
+  Path: 
+  Type: tree
+  Id: 7403a559399d2aeb6b0e58f62131ac121a3347ec6342201895d34036d87c726e
+  Simple-Format-SHA1: 7c6d1b3745da28107356823689cb2b83c4132f7c
+  Simple-Format-SHA256: 57abececda70ab40c538a02743987a7e5f829581986c582fc11e7fe9d37b7bac
+  Children: 4 files (25 bytes), 0 dirs
+  Descendants: 4 files (25 bytes)
+  Path: a
+  Type: file
+  Id: af1950dbdacd7eee24e4dbb7de9bcbf1f6b05c4a24b066deab407e9143715702
+  Content-SHA1: 6249443f65b64a5ac07802a3582fd5c1f5f2ebd8
+  Content-SHA256: 86dc03602dcf385217216784784a8ecf20e6400decc3208170b12fcb0afb6698
+  Size: 10 bytes
+
 list directory
   $ scsc ls --repo repo -i ee87eb8cfeb218e7352a94689b241ea973b80402
   a

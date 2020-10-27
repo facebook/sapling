@@ -469,6 +469,11 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             params: thrift::CommitPathInfoParams,
         ) -> Result<thrift::CommitPathInfoResponse, service::CommitPathInfoExn>;
 
+        async fn commit_multiple_path_info(
+            commit_path: thrift::CommitSpecifier,
+            params: thrift::CommitMultiplePathInfoParams,
+        ) -> Result<thrift::CommitMultiplePathInfoResponse, service::CommitMultiplePathInfoExn>;
+
         async fn commit_path_blame(
             commit_path: thrift::CommitPathSpecifier,
             params: thrift::CommitPathBlameParams,

@@ -232,6 +232,12 @@ impl AddScubaParams for thrift::CommitPathHistoryParams {
 
 impl AddScubaParams for thrift::CommitPathInfoParams {}
 
+impl AddScubaParams for thrift::CommitMultiplePathInfoParams {
+    fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
+        scuba.add("param_paths", self.paths.iter().collect::<ScubaValue>());
+    }
+}
+
 impl AddScubaParams for thrift::FileContentChunkParams {
     fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
         scuba.add("param_offset", self.offset);

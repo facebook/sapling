@@ -7,11 +7,14 @@
 
 use context::CoreContext;
 use dedupmap::DedupMap;
+use futures::stream::TryStreamExt;
 use futures::{future, try_join};
+use mononoke_api::MononokePath;
 use mononoke_api::{ChangesetPathHistoryOptions, ChangesetSpecifier, MononokeError, PathEntry};
 use source_control as thrift;
 use std::borrow::Cow;
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::convert::TryFrom;
 
 use crate::commit_id::map_commit_identities;
 use crate::errors;
@@ -70,6 +73,68 @@ impl SourceControlServiceImpl {
             }
         };
         Ok(response)
+    }
+
+    pub(crate) async fn commit_multiple_path_info(
+        &self,
+        ctx: CoreContext,
+        commit: thrift::CommitSpecifier,
+        params: thrift::CommitMultiplePathInfoParams,
+    ) -> Result<thrift::CommitMultiplePathInfoResponse, errors::ServiceError> {
+        let (_repo, changeset) = self.repo_changeset(ctx, &commit).await?;
+        let mut paths = vec![];
+        for path in params.paths {
+            let strpath = path.as_str();
+            let mpath = MononokePath::try_from(strpath)?;
+            paths.push(mpath);
+        }
+
+        let result = changeset
+            .paths(paths.into_iter())
+            .await?
+            .map_ok(|context| async move {
+                let context_path = context.path().to_string();
+
+                match context.entry().await? {
+                    PathEntry::NotPresent => {
+                        let not_present_elem = thrift::CommitPathInfoResponse {
+                            exists: false,
+                            type_: None,
+                            info: None,
+                        };
+                        return Result::<_, errors::ServiceError>::Ok((
+                            context_path,
+                            not_present_elem,
+                        ));
+                    }
+                    PathEntry::Tree(tree) => {
+                        let summary = tree.summary().await?;
+                        let tree_elem = thrift::CommitPathInfoResponse {
+                            exists: true,
+                            type_: Some(thrift::EntryType::TREE),
+                            info: Some(thrift::EntryInfo::tree(
+                                (*tree.id(), summary).into_response(),
+                            )),
+                        };
+                        return Result::<_, errors::ServiceError>::Ok((context_path, tree_elem));
+                    }
+                    PathEntry::File(file, file_type) => {
+                        let metadata = file.metadata().await?;
+                        let file_elem = thrift::CommitPathInfoResponse {
+                            exists: true,
+                            type_: Some(file_type.into_response()),
+                            info: Some(thrift::EntryInfo::file(metadata.into_response())),
+                        };
+                        return Result::<_, errors::ServiceError>::Ok((context_path, file_elem));
+                    }
+                };
+            })
+            .map_err(errors::ServiceError::from)
+            .try_buffer_unordered(100)
+            .try_collect::<BTreeMap<_, _>>()
+            .await?;
+
+        Ok(thrift::CommitMultiplePathInfoResponse { path_info: result })
     }
 
     pub(crate) async fn commit_path_blame(
