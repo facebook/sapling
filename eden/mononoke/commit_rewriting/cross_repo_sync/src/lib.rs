@@ -336,7 +336,7 @@ pub async fn find_toposorted_unsynced_ancestors<M>(
 where
     M: SyncedCommitMapping + Clone + 'static,
 {
-    let source_repo = commit_syncer.get_source_repo().clone();
+    let source_repo = commit_syncer.get_source_repo();
 
     let mut visited = hashset! { start_cs_id };
     let mut q = VecDeque::new();
