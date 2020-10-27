@@ -211,7 +211,7 @@ impl PushRedirector {
                     let (repo, cs_id) = match large_to_small.get(&cs_id) {
                         Some(&small_cs_id) => (small_repo.clone(), small_cs_id),
                         None => match large_to_small_commit_syncer
-                            .get_commit_sync_outcome(ctx.clone(), cs_id)
+                            .get_commit_sync_outcome(&ctx, cs_id)
                             .await?
                         {
                             Some(CommitSyncOutcome::RewrittenAs(small_cs_id, _)) => {
@@ -669,7 +669,7 @@ impl PushRedirector {
         syncer: &CommitSyncer<Arc<dyn SyncedCommitMapping>>,
         cs_id: ChangesetId,
     ) -> Result<ChangesetId, Error> {
-        let maybe_commit_sync_outcome = syncer.get_commit_sync_outcome(ctx.clone(), cs_id).await?;
+        let maybe_commit_sync_outcome = syncer.get_commit_sync_outcome(&ctx, cs_id).await?;
         maybe_commit_sync_outcome
             .ok_or(format_err!(
                 "Unexpected absence of CommitSyncOutcome for {} in {:?}",
@@ -893,7 +893,7 @@ impl PushRedirector {
         for bcs_id in to_sync.iter() {
             let synced_bcs_id = self
                 .small_to_large_commit_syncer
-                .unsafe_sync_commit(ctx.clone(), *bcs_id, candidate_selection_hint.clone())
+                .unsafe_sync_commit(&ctx, *bcs_id, candidate_selection_hint.clone())
                 .await?
                 .ok_or(format_err!(
                     "{} was rewritten into nothingness during uploaded changesets sync",

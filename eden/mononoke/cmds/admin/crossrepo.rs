@@ -303,7 +303,7 @@ async fn run_pushredirection_subcommand<'a>(
 
             let maybe_rewritten_small_cs_id = commit_syncer
                 .unsafe_always_rewrite_sync_commit(
-                    ctx.clone(),
+                    &ctx,
                     large_cs_id.0,
                     Some(hashmap! {
                       large_bookmark_value.0.clone() => small_bookmark_value.0.clone(),

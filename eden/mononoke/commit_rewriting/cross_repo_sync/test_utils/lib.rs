@@ -75,7 +75,7 @@ where
         async move {
             let map = HashMap::new();
             rewrite_commit(
-                ctx.clone(),
+                &ctx,
                 source_bcs_mut,
                 &map,
                 commit_syncer.get_current_mover_DEPRECATED(&ctx)?,
@@ -96,10 +96,10 @@ where
         cloned!(ctx, target_bcs);
         async move {
             upload_commits(
-                ctx,
+                &ctx,
                 vec![target_bcs],
-                commit_syncer.get_source_repo().clone(),
-                commit_syncer.get_target_repo().clone(),
+                commit_syncer.get_source_repo(),
+                commit_syncer.get_target_repo(),
             )
             .await
         }
@@ -229,7 +229,7 @@ pub async fn init_small_large_repo(
 
     small_to_large_commit_syncer
         .test_unsafe_sync_commit_with_version_override(
-            ctx.clone(),
+            ctx,
             first_bcs_id,
             CandidateSelectionHint::Only,
             Some(noop_version.clone()),
@@ -237,7 +237,7 @@ pub async fn init_small_large_repo(
         .await?;
     small_to_large_commit_syncer
         .test_unsafe_sync_commit_with_version_override(
-            ctx.clone(),
+            ctx,
             second_bcs_id,
             CandidateSelectionHint::Only,
             Some(noop_version.clone()),
@@ -300,7 +300,7 @@ pub async fn init_small_large_repo(
         .await?;
 
     update_mapping_with_version(
-        ctx.clone(),
+        &ctx,
         hashmap! { small_master_bcs_id => large_master_bcs_id},
         &small_to_large_commit_syncer,
         &small_to_large_commit_syncer.get_current_version(&ctx)?,
@@ -314,7 +314,7 @@ pub async fn init_small_large_repo(
     println!(
         "{:?}",
         small_to_large_commit_syncer
-            .get_commit_sync_outcome(ctx.clone(), small_master_bcs_id)
+            .get_commit_sync_outcome(&ctx, small_master_bcs_id)
             .await?
     );
 

@@ -306,7 +306,7 @@ async fn remap<M: SyncedCommitMapping + Clone + 'static>(
     source_cs_id: &ChangesetId,
 ) -> Result<Option<ChangesetId>, Error> {
     let maybe_commit_sync_outcome = commit_syncer
-        .get_commit_sync_outcome(ctx.clone(), *source_cs_id)
+        .get_commit_sync_outcome(ctx, *source_cs_id)
         .await?;
 
     use CommitSyncOutcome::*;

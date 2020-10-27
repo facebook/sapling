@@ -90,7 +90,7 @@ async fn run_in_single_commit_mode<M: SyncedCommitMapping + Clone + 'static>(
         commit_syncer.repos.get_target_repo().get_repoid()
     );
     if commit_syncer
-        .commit_sync_outcome_exists(ctx.clone(), Source(bcs))
+        .commit_sync_outcome_exists(ctx, Source(bcs))
         .await?
     {
         info!(ctx.logger(), "{} is already synced", bcs);

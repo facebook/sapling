@@ -401,9 +401,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                                     .sync_commit(&ctx, bonsai.clone(), CandidateSelectionHint::Only)
                                     .await?;
 
-                                let maybe_sync_outcome = commit_syncer
-                                    .get_commit_sync_outcome(ctx.clone(), bonsai)
-                                    .await?;
+                                let maybe_sync_outcome =
+                                    commit_syncer.get_commit_sync_outcome(&ctx, bonsai).await?;
 
                                 info!(
                                     ctx.logger(),

@@ -771,7 +771,7 @@ async fn xrepo_commit_lookup_config_changing_live(fb: FacebookInit) -> Result<()
     );
 
     update_mapping_with_version(
-        ctx.clone(),
+        &ctx,
         hashmap! {change_mapping_large => change_mapping_small},
         &commit_syncer,
         &new_version,

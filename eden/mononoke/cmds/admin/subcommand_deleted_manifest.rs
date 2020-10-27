@@ -216,7 +216,7 @@ fn get_file_changes(
         .and_then(
             move |(paths_added, parent_manifests): (Vec<MPath>, Vec<HgManifestId>)| {
                 get_implicit_deletes(
-                    ctx.clone(),
+                    &ctx,
                     repo.get_blobstore(),
                     paths_added.clone(),
                     parent_manifests,

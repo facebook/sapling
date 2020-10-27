@@ -169,7 +169,7 @@ async fn rewrite_file_paths(
     for (index, bcs) in gitimport_changesets.iter().enumerate() {
         let bcs_id = bcs.get_changeset_id();
         let rewritten_bcs_opt = rewrite_commit(
-            ctx.clone(),
+            &ctx,
             bcs.clone().into_mut(),
             &remapped_parents,
             mover.clone(),

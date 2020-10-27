@@ -326,7 +326,7 @@ pub async fn sync_commit_without_pushrebase<M: SyncedCommitMapping + Clone + 'st
             // TODO(stash, ikostia) - T77836390. fix how merges are processed by x-repo sync job
             let current_version = commit_syncer.get_current_version(&ctx)?;
             commit_syncer
-                .unsafe_always_rewrite_sync_commit(ctx.clone(), cs_id, None, &current_version)
+                .unsafe_always_rewrite_sync_commit(ctx, cs_id, None, &current_version)
                 .timed()
                 .await
         } else {
@@ -336,7 +336,7 @@ pub async fn sync_commit_without_pushrebase<M: SyncedCommitMapping + Clone + 'st
         }
     } else {
         commit_syncer
-            .unsafe_sync_commit(ctx.clone(), cs_id, CandidateSelectionHint::Only)
+            .unsafe_sync_commit(ctx, cs_id, CandidateSelectionHint::Only)
             .timed()
             .await
     };
@@ -405,7 +405,7 @@ async fn find_remapped_cs_id<M: SyncedCommitMapping + Clone + 'static>(
     orig_cs_id: ChangesetId,
 ) -> Result<Option<ChangesetId>, Error> {
     let maybe_sync_outcome = commit_syncer
-        .get_commit_sync_outcome(ctx.clone(), orig_cs_id)
+        .get_commit_sync_outcome(ctx, orig_cs_id)
         .await?;
     use CommitSyncOutcome::*;
     match maybe_sync_outcome {
@@ -430,7 +430,7 @@ async fn pushrebase_commit<M: SyncedCommitMapping + Clone + 'static>(
     let target_lca_hint: Target<Arc<dyn LeastCommonAncestorsHint>> =
         Target(Arc::new((*target_skiplist_index.0).clone()));
     commit_syncer
-        .unsafe_sync_commit_pushrebase(ctx, bcs, bookmark.clone(), target_lca_hint)
+        .unsafe_sync_commit_pushrebase(&ctx, bcs, bookmark.clone(), target_lca_hint)
         .await
 }
 
@@ -679,7 +679,7 @@ mod test {
                 .await?;
             sync_and_validate(&ctx, &commit_syncer, &mutable_counters).await?;
             let commit_sync_outcome = commit_syncer
-                .get_commit_sync_outcome(ctx.clone(), premove)
+                .get_commit_sync_outcome(&ctx, premove)
                 .await?
                 .ok_or(format_err!("commit sync outcome not set"))?;
             match commit_sync_outcome {

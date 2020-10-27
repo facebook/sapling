@@ -244,9 +244,7 @@ where
         async move {
             match maybe_cs_id {
                 Some(cs_id) => {
-                    let maybe_outcome = commit_syncer
-                        .get_commit_sync_outcome(ctx.clone(), cs_id)
-                        .await?;
+                    let maybe_outcome = commit_syncer.get_commit_sync_outcome(&ctx, cs_id).await?;
                     match maybe_outcome {
                         Some(outcome) => Ok(Some((outcome, cs_id))),
                         None => Err(format_err!("{} hasn't been backsynced yet", cs_id)),

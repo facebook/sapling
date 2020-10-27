@@ -109,7 +109,7 @@ where
 /// Get implicit deletes in parent manifests,
 /// caused by introducing new paths into a child
 pub fn get_implicit_deletes<ManifestId, FileId, Store, I, M>(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     store: Store,
     paths_added_in_a_child: I,
     parents: M,
@@ -266,9 +266,10 @@ mod test {
                 element("p6") => file(FileType::Regular, "6"),
             }),
         });
+        let c = ctx(fb);
         // Child adds files at /p1/p2, /p1/p7/p12 and /p1/p9
         let implicitly_deleted_files: Vec<_> = get_implicit_deletes(
-            ctx(fb),
+            &c,
             store.clone(),
             vec![path("p1/p2"), path("p1/p7/p12"), path("p1/p9")],
             vec![root_manifest_1, root_manifest_2],
@@ -283,7 +284,7 @@ mod test {
 
         // Result should not depend on the order of parents
         let implicitly_deleted_files: Vec<_> = get_implicit_deletes(
-            ctx(fb),
+            &c,
             store,
             vec![path("p1/p2"), path("p1/p7/p12"), path("p1/p9")],
             vec![root_manifest_2, root_manifest_1],

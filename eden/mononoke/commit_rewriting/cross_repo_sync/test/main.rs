@@ -203,7 +203,7 @@ where
 
     config
         .unsafe_sync_commit_pushrebase(
-            ctx.clone(),
+            &ctx,
             source_bcs,
             bookmark_name,
             Target(Arc::new(SkiplistIndex::new())),
@@ -1233,7 +1233,7 @@ async fn get_multiple_master_mapping_setup(
         .await?;
     small_to_large_syncer
         .unsafe_sync_commit_pushrebase(
-            ctx.clone(),
+            &ctx,
             small_cs.clone(),
             BookmarkName::new("master").unwrap(),
             Target(megarepo_lca_hint.clone()),
@@ -1243,7 +1243,7 @@ async fn get_multiple_master_mapping_setup(
 
     small_to_large_syncer
         .unsafe_sync_commit_pushrebase(
-            ctx.clone(),
+            &ctx,
             small_cs.clone(),
             BookmarkName::new("other_branch").unwrap(),
             Target(megarepo_lca_hint.clone()),
@@ -1298,7 +1298,7 @@ async fn test_sync_parent_has_multiple_mappings(fb: FacebookInit) -> Result<(), 
 
     // Cannot sync without a hint
     let e = small_to_large_syncer
-        .unsafe_sync_commit(ctx.clone(), to_sync, CandidateSelectionHint::Only)
+        .unsafe_sync_commit(&ctx, to_sync, CandidateSelectionHint::Only)
         .await
         .expect_err("sync should have failed");
     assert!(format!("{:?}", e).contains("Too many rewritten candidates for"));
@@ -1310,7 +1310,7 @@ async fn test_sync_parent_has_multiple_mappings(fb: FacebookInit) -> Result<(), 
         Target(Arc::new(SkiplistIndex::new()));
     small_to_large_syncer
         .unsafe_sync_commit(
-            ctx.clone(),
+            &ctx,
             to_sync,
             CandidateSelectionHint::OnlyOrAncestorOfBookmark(
                 book,
@@ -1349,7 +1349,7 @@ async fn test_sync_no_op_pushrebase_has_multiple_mappings(fb: FacebookInit) -> R
         Target(Arc::new(SkiplistIndex::new()));
     small_to_large_syncer
         .unsafe_sync_commit_pushrebase(
-            ctx.clone(),
+            &ctx,
             to_sync,
             BookmarkName::new("master").unwrap(),
             lca_hint,
@@ -1395,7 +1395,7 @@ async fn test_sync_real_pushrebase_has_multiple_mappings(fb: FacebookInit) -> Re
         Target(Arc::new(SkiplistIndex::new()));
     small_to_large_syncer
         .unsafe_sync_commit_pushrebase(
-            ctx.clone(),
+            &ctx,
             to_sync,
             BookmarkName::new("master").unwrap(),
             lca_hint,
@@ -1447,7 +1447,7 @@ async fn test_sync_with_mapping_change(fb: FacebookInit) -> Result<(), Error> {
     .await?;
 
     let outcome = large_to_small_syncer
-        .get_commit_sync_outcome(ctx.clone(), new_mapping_cs_id)
+        .get_commit_sync_outcome(&ctx, new_mapping_cs_id)
         .await?;
 
     match outcome {
@@ -1490,7 +1490,7 @@ async fn test_sync_with_mapping_change(fb: FacebookInit) -> Result<(), Error> {
 
 
     let outcome = large_to_small_syncer
-        .get_commit_sync_outcome(ctx.clone(), old_mapping_cs_id)
+        .get_commit_sync_outcome(&ctx, old_mapping_cs_id)
         .await?;
 
     match outcome {
@@ -1568,7 +1568,7 @@ async fn test_sync_equivalent_wc_with_mapping_change(fb: FacebookInit) -> Result
     .await?;
 
     let outcome = large_to_small_syncer
-        .get_commit_sync_outcome(ctx.clone(), new_mapping_cs_id)
+        .get_commit_sync_outcome(&ctx, new_mapping_cs_id)
         .await?;
 
     match outcome {
@@ -1617,7 +1617,7 @@ async fn test_sync_equivalent_wc_with_mapping_change(fb: FacebookInit) -> Result
     .await?;
 
     let outcome = large_to_small_syncer
-        .get_commit_sync_outcome(ctx.clone(), old_mapping_cs_id)
+        .get_commit_sync_outcome(&ctx, old_mapping_cs_id)
         .await?;
 
     match outcome {
@@ -1664,7 +1664,7 @@ async fn prepare_commit_syncer_with_mapping_change(
 
     let current_version = large_to_small_syncer.get_current_version(&ctx)?;
     let maybe_small_root_cs_id = large_to_small_syncer
-        .unsafe_always_rewrite_sync_commit(ctx.clone(), root_cs_id, None, &current_version)
+        .unsafe_always_rewrite_sync_commit(&ctx, root_cs_id, None, &current_version)
         .await?;
     assert!(maybe_small_root_cs_id.is_some());
     let small_root_cs_id = maybe_small_root_cs_id.unwrap();
@@ -1725,7 +1725,7 @@ async fn prepare_commit_syncer_with_mapping_change(
             .await?;
 
     update_mapping_with_version(
-        ctx.clone(),
+        &ctx,
         hashmap! {new_mapping_large_cs_id => new_mapping_small_cs_id},
         &large_to_small_syncer,
         &new_version,
@@ -1850,7 +1850,7 @@ async fn merge_test_setup(
 
     lts_syncer
         .test_unsafe_sync_commit_with_version_override(
-            ctx.clone(),
+            &ctx,
             c1,
             CandidateSelectionHint::Only,
             Some(v1.clone()),
@@ -1858,7 +1858,7 @@ async fn merge_test_setup(
         .await?;
     lts_syncer
         .test_unsafe_sync_commit_with_version_override(
-            ctx.clone(),
+            &ctx,
             c2,
             CandidateSelectionHint::Only,
             Some(v1.clone()),
@@ -1866,7 +1866,7 @@ async fn merge_test_setup(
         .await?;
     lts_syncer
         .test_unsafe_sync_commit_with_version_override(
-            ctx.clone(),
+            &ctx,
             c3,
             CandidateSelectionHint::Only,
             Some(v2.clone()),
@@ -1874,7 +1874,7 @@ async fn merge_test_setup(
         .await?;
     lts_syncer
         .test_unsafe_sync_commit_with_version_override(
-            ctx.clone(),
+            &ctx,
             c4,
             CandidateSelectionHint::Only,
             Some(v2.clone()),
@@ -1930,7 +1930,7 @@ async fn test_sync_merge_gets_version_from_parents_1(fb: FacebookInit) -> Result
             .await?
     );
     let outcome = lts_syncer
-        .get_commit_sync_outcome(ctx.clone(), merge_bcs_id)
+        .get_commit_sync_outcome(&ctx, merge_bcs_id)
         .await?
         .expect("merge syncing outcome is missing");
     if let CommitSyncOutcome::RewrittenAs(_, merge_version) = outcome {
@@ -1956,7 +1956,7 @@ async fn test_sync_merge_gets_version_from_parents_2(fb: FacebookInit) -> Result
         .await?
         .unwrap();
     let outcome = lts_syncer
-        .get_commit_sync_outcome(ctx.clone(), merge_bcs_id)
+        .get_commit_sync_outcome(&ctx, merge_bcs_id)
         .await?
         .expect("merge syncing outcome is missing");
     if let CommitSyncOutcome::RewrittenAs(_, merge_version) = outcome {
@@ -2068,10 +2068,10 @@ async fn test_no_accidental_preserved_roots(
 
     let root_commit = create_initial_commit(ctx.clone(), commit_sync_repos.get_source_repo()).await;
     commit_syncer
-        .unsafe_sync_commit(ctx.clone(), root_commit, CandidateSelectionHint::Only)
+        .unsafe_sync_commit(&ctx, root_commit, CandidateSelectionHint::Only)
         .await?;
     let outcome = commit_syncer
-        .get_commit_sync_outcome(ctx, root_commit)
+        .get_commit_sync_outcome(&ctx, root_commit)
         .await?;
     assert!(
         matches!(outcome, Some(CommitSyncOutcome::RewrittenAs(_, version)) if version == current_version)

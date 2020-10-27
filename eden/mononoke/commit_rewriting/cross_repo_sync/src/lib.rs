@@ -87,9 +87,9 @@ async fn identity<T>(res: T) -> Result<T, Error> {
 
 /// Get `HgManifestId`s for a set of `ChangesetId`s
 /// This is needed for the purposes of implicit delete detection
-async fn get_manifest_ids<I: IntoIterator<Item = ChangesetId>>(
-    ctx: CoreContext,
-    repo: &BlobRepo,
+async fn get_manifest_ids<'a, I: IntoIterator<Item = ChangesetId>>(
+    ctx: &'a CoreContext,
+    repo: &'a BlobRepo,
     bcs_ids: I,
 ) -> Result<Vec<HgManifestId>, Error> {
     try_join_all(bcs_ids.into_iter().map({
@@ -137,15 +137,14 @@ fn minimize_file_change_set<FC, I: IntoIterator<Item = (MPath, Option<FC>)>>(
 /// to naive `MPath` rewriting in `cs.file_changes`. For
 /// more information about implicit deletes, please see
 /// `manifest/src/implici_deletes.rs`
-async fn get_implicit_delete_file_changes<I: IntoIterator<Item = ChangesetId>>(
-    ctx: CoreContext,
+async fn get_implicit_delete_file_changes<'a, I: IntoIterator<Item = ChangesetId>>(
+    ctx: &'a CoreContext,
     cs: BonsaiChangesetMut,
     parent_changeset_ids: I,
     mover: Mover,
-    source_repo: BlobRepo,
+    source_repo: &'a BlobRepo,
 ) -> Result<Vec<(MPath, Option<FileChange>)>, Error> {
-    let parent_manifest_ids =
-        get_manifest_ids(ctx.clone(), &source_repo, parent_changeset_ids).await?;
+    let parent_manifest_ids = get_manifest_ids(ctx, source_repo, parent_changeset_ids).await?;
     let file_adds: Vec<_> = cs
         .file_changes
         .iter()
@@ -181,20 +180,20 @@ async fn get_implicit_delete_file_changes<I: IntoIterator<Item = ChangesetId>>(
 ///
 /// Precondition: this function expects all `cs` parents to be present
 /// in `remapped_parents` as keys, and their remapped versions as values.
-pub async fn rewrite_commit(
-    ctx: CoreContext,
+pub async fn rewrite_commit<'a>(
+    ctx: &'a CoreContext,
     mut cs: BonsaiChangesetMut,
-    remapped_parents: &HashMap<ChangesetId, ChangesetId>,
+    remapped_parents: &'a HashMap<ChangesetId, ChangesetId>,
     mover: Mover,
     source_repo: BlobRepo,
 ) -> Result<Option<BonsaiChangesetMut>, Error> {
     if !cs.file_changes.is_empty() {
         let implicit_delete_file_changes = get_implicit_delete_file_changes(
-            ctx.clone(),
+            ctx,
             cs.clone(),
             remapped_parents.keys().cloned(),
             mover.clone(),
-            source_repo,
+            &source_repo,
         )
         .await?;
 
@@ -289,15 +288,15 @@ pub async fn rewrite_commit(
 /// Precondition: *all* parents must already have been rewritten into the target repo. The
 /// behaviour of this function is unpredictable if some parents have not yet been remapped
 async fn remap_parents_and_rewrite_commit<'a, M: SyncedCommitMapping + Clone + 'static>(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     cs: BonsaiChangesetMut,
     commit_syncer: &'a CommitSyncer<M>,
     source_repo: BlobRepo,
     parent_selection_hint: CandidateSelectionHint,
 ) -> Result<Option<BonsaiChangesetMut>, Error> {
-    let (_, _, mover) = commit_syncer.get_source_target_mover(&ctx)?;
-    let remapped_parents = remap_parents(&ctx, &cs, commit_syncer, parent_selection_hint).await?;
-    rewrite_commit(ctx.clone(), cs, &remapped_parents, mover, source_repo).await
+    let (_, _, mover) = commit_syncer.get_source_target_mover(ctx)?;
+    let remapped_parents = remap_parents(ctx, &cs, commit_syncer, parent_selection_hint).await?;
+    rewrite_commit(ctx, cs, &remapped_parents, mover, source_repo).await
 }
 
 async fn remap_parents<'a, M: SyncedCommitMapping + Clone + 'static>(
@@ -309,7 +308,7 @@ async fn remap_parents<'a, M: SyncedCommitMapping + Clone + 'static>(
     let mut remapped_parents = HashMap::new();
     for commit in &cs.parents {
         let maybe_sync_outcome = commit_syncer
-            .get_commit_sync_outcome_with_hint(ctx.clone(), Source(*commit), hint.clone())
+            .get_commit_sync_outcome_with_hint(ctx, Source(*commit), hint.clone())
             .await?;
         let sync_outcome: Result<_, Error> =
             maybe_sync_outcome.ok_or(ErrorKind::ParentNotRemapped(*commit).into());
@@ -358,7 +357,7 @@ where
         }
 
         if commit_syncer
-            .commit_sync_outcome_exists(ctx.clone(), Source(cs_id))
+            .commit_sync_outcome_exists(ctx, Source(cs_id))
             .await?
         {
             continue;
@@ -598,13 +597,13 @@ where
         Ok(self.get_bookmark_renamer(ctx)?(bookmark))
     }
 
-    pub async fn get_commit_sync_outcome(
-        &self,
-        ctx: CoreContext,
+    pub async fn get_commit_sync_outcome<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         source_cs_id: ChangesetId,
     ) -> Result<Option<CommitSyncOutcome>, Error> {
         get_commit_sync_outcome(
-            &ctx,
+            ctx,
             Source(self.repos.get_source_repo().get_repoid()),
             Target(self.repos.get_target_repo().get_repoid()),
             Source(source_cs_id),
@@ -613,13 +612,13 @@ where
         .await
     }
 
-    pub async fn commit_sync_outcome_exists(
-        &self,
-        ctx: CoreContext,
+    pub async fn commit_sync_outcome_exists<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         source_cs_id: Source<ChangesetId>,
     ) -> Result<bool, Error> {
         commit_sync_outcome_exists(
-            &ctx,
+            ctx,
             Source(self.repos.get_source_repo().get_repoid()),
             Target(self.repos.get_target_repo().get_repoid()),
             source_cs_id,
@@ -628,14 +627,14 @@ where
         .await
     }
 
-    pub async fn get_commit_sync_outcome_with_hint(
-        &self,
-        ctx: CoreContext,
+    pub async fn get_commit_sync_outcome_with_hint<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         source_cs_id: Source<ChangesetId>,
         hint: CandidateSelectionHint,
     ) -> Result<Option<CommitSyncOutcome>, Error> {
         get_commit_sync_outcome_with_hint(
-            &ctx,
+            ctx,
             Source(self.repos.get_source_repo().get_repoid()),
             Target(self.repos.get_target_repo().get_repoid()),
             source_cs_id,
@@ -687,12 +686,12 @@ where
         }
 
         for ancestor in unsynced_ancestors {
-            self.unsafe_sync_commit(ctx.clone(), ancestor, ancestor_selection_hint.clone())
+            self.unsafe_sync_commit(ctx, ancestor, ancestor_selection_hint.clone())
                 .await?;
         }
 
         let commit_sync_outcome = self
-            .get_commit_sync_outcome(ctx.clone(), source_cs_id)
+            .get_commit_sync_outcome(ctx, source_cs_id)
             .await?
             .ok_or(format_err!(
                 "was not able to remap a commit {}",
@@ -718,7 +717,7 @@ where
     /// See `CandidateSelectionHint` doctring for more details.
     pub async fn unsafe_sync_commit(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         source_cs_id: ChangesetId,
         parent_mapping_selection_hint: CandidateSelectionHint,
     ) -> Result<Option<ChangesetId>, Error> {
@@ -732,9 +731,9 @@ where
     /// of a different version instead of a lengthy crafting of "version boundary"
     /// commits.
     /// It is a dangerous override and should be used from tests.
-    pub async fn test_unsafe_sync_commit_with_version_override(
-        &self,
-        ctx: CoreContext,
+    pub async fn test_unsafe_sync_commit_with_version_override<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         source_cs_id: ChangesetId,
         parent_mapping_selection_hint: CandidateSelectionHint,
         sync_config_version_override: Option<CommitSyncConfigVersion>,
@@ -748,9 +747,9 @@ where
         .await
     }
 
-    async fn unsafe_sync_commit_impl(
-        &self,
-        ctx: CoreContext,
+    async fn unsafe_sync_commit_impl<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         source_cs_id: ChangesetId,
         parent_mapping_selection_hint: CandidateSelectionHint,
         sync_config_version_override: Option<CommitSyncConfigVersion>,
@@ -772,19 +771,18 @@ where
         let parents: Vec<_> = cs.parents().collect();
 
         if parents.is_empty() {
-            self.sync_commit_no_parents(ctx.clone(), cs, sync_config_version_override)
+            self.sync_commit_no_parents(ctx, cs, sync_config_version_override)
                 .await
         } else if parents.len() == 1 {
             self.sync_commit_single_parent(
-                ctx.clone(),
+                ctx,
                 cs,
                 parent_mapping_selection_hint,
                 sync_config_version_override,
             )
             .await
         } else {
-            self.sync_merge(ctx.clone(), cs, sync_config_version_override)
-                .await
+            self.sync_merge(ctx, cs, sync_config_version_override).await
         }
     }
 
@@ -805,9 +803,9 @@ where
     /// Normally this function is able to find the parents for the synced commit automatically
     /// but in case it can't then `maybe_parents` parameter allows us to overwrite parents of
     /// the synced commit.
-    pub async fn unsafe_always_rewrite_sync_commit(
-        &self,
-        ctx: CoreContext,
+    pub async fn unsafe_always_rewrite_sync_commit<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         source_cs_id: ChangesetId,
         maybe_parents: Option<HashMap<ChangesetId, ChangesetId>>,
         sync_config_version: &CommitSyncConfigVersion,
@@ -821,11 +819,11 @@ where
         let source_cs = source_cs.clone().into_mut();
         let remapped_parents = match maybe_parents {
             Some(parents) => parents,
-            None => remap_parents(&ctx, &source_cs, self, CandidateSelectionHint::Only).await?, // TODO: check if only is ok
+            None => remap_parents(ctx, &source_cs, self, CandidateSelectionHint::Only).await?, // TODO: check if only is ok
         };
 
         let rewritten_commit = rewrite_commit(
-            ctx.clone(),
+            ctx,
             source_cs,
             &remapped_parents,
             mover,
@@ -834,18 +832,17 @@ where
         .await?;
         match rewritten_commit {
             None => {
-                self.update_wc_equivalence(ctx.clone(), source_cs_id, None)
-                    .await?;
+                self.update_wc_equivalence(ctx, source_cs_id, None).await?;
                 Ok(None)
             }
             Some(rewritten) => {
                 // Sync commit
                 let frozen = rewritten.freeze()?;
                 let frozen_cs_id = frozen.get_changeset_id();
-                upload_commits(ctx.clone(), vec![frozen], source_repo, target_repo.clone()).await?;
+                upload_commits(ctx, vec![frozen], &source_repo, &target_repo).await?;
 
                 update_mapping_with_version(
-                    ctx.clone(),
+                    ctx,
                     hashmap! { source_cs_id => frozen_cs_id },
                     &self,
                     sync_config_version,
@@ -859,9 +856,9 @@ where
     /// This function is prefixed with unsafe because it requires that ancestors commits are
     /// already synced and because there should be exactly one sync job that uses this function
     /// for a (small repo -> large repo) pair.
-    pub async fn unsafe_sync_commit_pushrebase(
-        &self,
-        ctx: CoreContext,
+    pub async fn unsafe_sync_commit_pushrebase<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         source_cs: BonsaiChangeset,
         bookmark: BookmarkName,
         target_lca_hint: Target<Arc<dyn LeastCommonAncestorsHint>>,
@@ -877,7 +874,7 @@ where
             target_lca_hint,
         );
         match remap_parents_and_rewrite_commit(
-            ctx.clone(),
+            ctx,
             source_cs.clone().into_mut(),
             self,
             source_repo.clone(),
@@ -889,14 +886,14 @@ where
                 let mut remapped_parents_outcome = vec![];
                 for p in source_cs.parents() {
                     let maybe_commit_sync_outcome = self
-                        .get_commit_sync_outcome(ctx.clone(), p)
+                        .get_commit_sync_outcome(ctx, p)
                         .await?
                         .map(|sync_outcome| (sync_outcome, p));
                     remapped_parents_outcome.extend(maybe_commit_sync_outcome.into_iter());
                 }
 
                 if remapped_parents_outcome.is_empty() {
-                    self.update_wc_equivalence(ctx.clone(), hash, None).await?;
+                    self.update_wc_equivalence(ctx, hash, None).await?;
                 } else if remapped_parents_outcome.len() == 1 {
                     use CommitSyncOutcome::*;
                     let (sync_outcome, _) = &remapped_parents_outcome[0];
@@ -907,7 +904,7 @@ where
                         }
                     };
 
-                    self.update_wc_equivalence(ctx.clone(), hash, wc_equivalence)
+                    self.update_wc_equivalence(ctx, hash, wc_equivalence)
                         .await?;
                 } else {
                     return Err(ErrorKind::AmbiguousWorkingCopyEquivalent(
@@ -923,10 +920,10 @@ where
                 let frozen = rewritten.freeze()?;
                 let rewritten_list = hashset![frozen];
                 upload_commits(
-                    ctx.clone(),
+                    ctx,
                     rewritten_list.clone().into_iter().collect(),
-                    source_repo.clone(),
-                    target_repo.clone(),
+                    &source_repo,
+                    &target_repo,
                 )
                 .await?;
 
@@ -940,7 +937,7 @@ where
                 };
 
                 let pushrebase_res = do_pushrebase_bonsai(
-                    &ctx,
+                    ctx,
                     &target_repo,
                     &pushrebase_flags,
                     &bookmark,
@@ -961,17 +958,17 @@ where
         }
     }
 
-    async fn sync_commit_no_parents(
-        &self,
-        ctx: CoreContext,
+    async fn sync_commit_no_parents<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         cs: BonsaiChangeset,
         sync_config_version_override: Option<CommitSyncConfigVersion>,
     ) -> Result<Option<ChangesetId>, Error> {
         let source_cs_id = cs.get_changeset_id();
         let (source_repo, target_repo, mover, version) = match sync_config_version_override {
             None => {
-                let version = self.get_current_version(&ctx)?;
-                let (sr, tr, mv) = self.get_source_target_mover(&ctx)?;
+                let version = self.get_current_version(ctx)?;
+                let (sr, tr, mv) = self.get_source_target_mover(ctx)?;
                 (sr, tr, mv, version)
             }
             Some(version_override) => {
@@ -982,7 +979,7 @@ where
         };
 
         match rewrite_commit(
-            ctx.clone(),
+            ctx,
             cs.into_mut(),
             &HashMap::new(),
             mover,
@@ -992,18 +989,12 @@ where
         {
             Some(rewritten) => {
                 let frozen = rewritten.freeze()?;
-                upload_commits(
-                    ctx.clone(),
-                    vec![frozen.clone()],
-                    source_repo.clone(),
-                    target_repo.clone(),
-                )
-                .await?;
+                upload_commits(ctx, vec![frozen.clone()], &source_repo, &target_repo).await?;
 
                 // update_mapping also updates working copy equivalence, so no need
                 // to do it separately
                 update_mapping_with_version(
-                    ctx.clone(),
+                    ctx,
                     hashmap! { source_cs_id => frozen.get_changeset_id() },
                     &self,
                     &version,
@@ -1012,16 +1003,16 @@ where
                 Ok(Some(frozen.get_changeset_id()))
             }
             None => {
-                self.update_wc_equivalence_with_version(ctx.clone(), source_cs_id, None, version)
+                self.update_wc_equivalence_with_version(ctx, source_cs_id, None, version)
                     .await?;
                 Ok(None)
             }
         }
     }
 
-    async fn sync_commit_single_parent(
-        &self,
-        ctx: CoreContext,
+    async fn sync_commit_single_parent<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         cs: BonsaiChangeset,
         parent_mapping_selection_hint: CandidateSelectionHint,
         sync_config_version_override: Option<CommitSyncConfigVersion>,
@@ -1032,11 +1023,7 @@ where
         let (source_repo, target_repo) = self.get_source_target();
 
         let maybe_parent_sync_outcome = self
-            .get_commit_sync_outcome_with_hint(
-                ctx.clone(),
-                Source(p),
-                parent_mapping_selection_hint,
-            )
+            .get_commit_sync_outcome_with_hint(ctx, Source(p), parent_mapping_selection_hint)
             .await?;
 
         let parent_sync_outcome = maybe_parent_sync_outcome
@@ -1047,8 +1034,7 @@ where
             NotSyncCandidate => {
                 // If there's not working copy for parent commit then there's no working
                 // copy for child either.
-                self.update_wc_equivalence(ctx.clone(), source_cs_id, None)
-                    .await?;
+                self.update_wc_equivalence(ctx, source_cs_id, None).await?;
                 Ok(None)
             }
             RewrittenAs(remapped_p, version)
@@ -1059,7 +1045,7 @@ where
                 let mut remapped_parents = HashMap::new();
                 remapped_parents.insert(p, remapped_p);
                 let maybe_rewritten = rewrite_commit(
-                    ctx.clone(),
+                    ctx,
                     cs,
                     &remapped_parents,
                     rewrite_paths,
@@ -1069,18 +1055,13 @@ where
                 match maybe_rewritten {
                     Some(rewritten) => {
                         let frozen = rewritten.freeze()?;
-                        upload_commits(
-                            ctx.clone(),
-                            vec![frozen.clone()],
-                            source_repo.clone(),
-                            target_repo.clone(),
-                        )
-                        .await?;
+                        upload_commits(ctx, vec![frozen.clone()], &source_repo, &target_repo)
+                            .await?;
 
                         // update_mapping also updates working copy equivalence, so no need
                         // to do it separately
                         update_mapping_with_version(
-                            ctx.clone(),
+                            ctx,
                             hashmap! { source_cs_id => frozen.get_changeset_id() },
                             &self,
                             &version,
@@ -1093,7 +1074,7 @@ where
                         // In that case equivalent working copy is the equivalent working
                         // copy of the parent
                         self.update_wc_equivalence_with_version(
-                            ctx.clone(),
+                            ctx,
                             source_cs_id,
                             Some(remapped_p),
                             version,
@@ -1132,9 +1113,9 @@ where
     // 1) Merges are synced only in LARGE -> SMALL direction.
     // 2) If a large repo merge has any parent after big merge, then this merge will appear
     //    in all small repos
-    async fn sync_merge(
-        &self,
-        ctx: CoreContext,
+    async fn sync_merge<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         cs: BonsaiChangeset,
         _sync_config_version_override: Option<CommitSyncConfigVersion>,
     ) -> Result<Option<ChangesetId>, Error> {
@@ -1146,7 +1127,7 @@ where
         let cs = cs.into_mut();
 
         let parent_outcomes = stream::iter(cs.parents.clone().into_iter().map(|p| {
-            self.get_commit_sync_outcome(ctx.clone(), p)
+            self.get_commit_sync_outcome(ctx, p)
                 .and_then(move |maybe_outcome| {
                     match maybe_outcome {
                         Some(outcome) => future::ok((p, outcome)),
@@ -1165,8 +1146,7 @@ where
             .iter()
             .all(|(_, outcome)| outcome == &CommitSyncOutcome::NotSyncCandidate)
         {
-            self.update_wc_equivalence(ctx.clone(), source_cs_id, None)
-                .await?;
+            self.update_wc_equivalence(ctx, source_cs_id, None).await?;
             return Ok(None);
         }
 
@@ -1210,23 +1190,12 @@ where
                 .await
                 .context("failed getting a mover to use for merge rewriting")?;
 
-            match rewrite_commit(
-                ctx.clone(),
-                cs,
-                &new_parents,
-                mover,
-                self.get_source_repo().clone(),
-            )
-            .await?
+            match rewrite_commit(ctx, cs, &new_parents, mover, self.get_source_repo().clone())
+                .await?
             {
                 Some(rewritten) => {
                     let target_cs_id = self
-                        .upload_rewritten_and_update_mapping(
-                            ctx.clone(),
-                            source_cs_id,
-                            rewritten,
-                            version,
-                        )
+                        .upload_rewritten_and_update_mapping(ctx, source_cs_id, rewritten, version)
                         .await?;
                     Ok(Some(target_cs_id))
                 }
@@ -1237,7 +1206,7 @@ where
                         .values()
                         .next()
                         .ok_or(Error::msg("logic merge: cannot find merge parent"))?;
-                    self.update_wc_equivalence(ctx.clone(), source_cs_id, Some(*parent_cs_id))
+                    self.update_wc_equivalence(ctx, source_cs_id, Some(*parent_cs_id))
                         .await?;
                     Ok(Some(*parent_cs_id))
                 }
@@ -1245,16 +1214,15 @@ where
         } else {
             // All parents of the merge commit are NotSyncCandidate, mark it as NotSyncCandidate
             // as well
-            self.update_wc_equivalence(ctx.clone(), source_cs_id, None)
-                .await?;
+            self.update_wc_equivalence(ctx, source_cs_id, None).await?;
             Ok(None)
         }
     }
 
     // Rewrites a commit and uploads it
-    async fn upload_rewritten_and_update_mapping(
-        &self,
-        ctx: CoreContext,
+    async fn upload_rewritten_and_update_mapping<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         source_cs_id: ChangesetId,
         rewritten: BonsaiChangesetMut,
         version: CommitSyncConfigVersion,
@@ -1263,18 +1231,12 @@ where
 
         let frozen = rewritten.freeze()?;
         let target_cs_id = frozen.get_changeset_id();
-        upload_commits(
-            ctx.clone(),
-            vec![frozen],
-            source_repo.clone(),
-            target_repo.clone(),
-        )
-        .await?;
+        upload_commits(ctx, vec![frozen], &source_repo, &target_repo).await?;
 
         // update_mapping also updates working copy equivalence, so no need
         // to do it separately
         update_mapping_with_version(
-            ctx.clone(),
+            ctx,
             hashmap! { source_cs_id =>  target_cs_id},
             &self,
             &version,
@@ -1357,9 +1319,9 @@ where
         }
     }
 
-    async fn update_wc_equivalence(
-        &self,
-        ctx: CoreContext,
+    async fn update_wc_equivalence<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         source_bcs_id: ChangesetId,
         maybe_target_bcs_id: Option<ChangesetId>,
     ) -> Result<(), Error> {
@@ -1374,9 +1336,9 @@ where
         .await
     }
 
-    async fn update_wc_equivalence_with_version(
-        &self,
-        ctx: CoreContext,
+    async fn update_wc_equivalence_with_version<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
         source_bcs_id: ChangesetId,
         maybe_target_bcs_id: Option<ChangesetId>,
         version_name: CommitSyncConfigVersion,
@@ -1458,11 +1420,11 @@ impl CommitSyncRepos {
     }
 }
 
-pub async fn upload_commits(
-    ctx: CoreContext,
+pub async fn upload_commits<'a>(
+    ctx: &'a CoreContext,
     rewritten_list: Vec<BonsaiChangeset>,
-    source_repo: BlobRepo,
-    target_repo: BlobRepo,
+    source_repo: &'a BlobRepo,
+    target_repo: &'a BlobRepo,
 ) -> Result<(), Error> {
     let mut files_to_sync = vec![];
     for rewritten in &rewritten_list {
@@ -1500,7 +1462,7 @@ pub async fn upload_commits(
 }
 
 pub async fn update_mapping_with_version<'a, M: SyncedCommitMapping + Clone + 'static>(
-    ctx: CoreContext,
+    ctx: &'a CoreContext,
     mapped: HashMap<ChangesetId, ChangesetId>,
     syncer: &'a CommitSyncer<M>,
     version_name: &CommitSyncConfigVersion,
@@ -1508,9 +1470,10 @@ pub async fn update_mapping_with_version<'a, M: SyncedCommitMapping + Clone + 's
     let entries: Vec<_> = mapped
         .into_iter()
         .map(|(from, to)| {
-            create_synced_commit_mapping_entry(from, to, &syncer.repos, Some(version_name.clone()))
+            create_synced_commit_mapping_entry(from, to, &syncer.repos, version_name.clone())
         })
         .collect();
+
     syncer
         .mapping
         .add_bulk(ctx.clone(), entries)
@@ -1523,7 +1486,7 @@ pub fn create_synced_commit_mapping_entry(
     from: ChangesetId,
     to: ChangesetId,
     repos: &CommitSyncRepos,
-    version_name: Option<CommitSyncConfigVersion>,
+    version_name: CommitSyncConfigVersion,
 ) -> SyncedCommitMappingEntry {
     let (source_repo, target_repo, source_is_large) = match repos {
         CommitSyncRepos::LargeToSmall {
@@ -1542,9 +1505,9 @@ pub fn create_synced_commit_mapping_entry(
     let target_repoid = target_repo.get_repoid();
 
     if source_is_large {
-        SyncedCommitMappingEntry::new(source_repoid, from, target_repoid, to, version_name)
+        SyncedCommitMappingEntry::new(source_repoid, from, target_repoid, to, Some(version_name))
     } else {
-        SyncedCommitMappingEntry::new(target_repoid, to, source_repoid, from, version_name)
+        SyncedCommitMappingEntry::new(target_repoid, to, source_repoid, from, Some(version_name))
     }
 }
 

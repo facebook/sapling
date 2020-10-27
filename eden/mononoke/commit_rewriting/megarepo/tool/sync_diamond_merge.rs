@@ -140,7 +140,7 @@ pub async fn do_sync_diamond_merge(
         // repo. Manual remediation would be needed in that case.
         syncers
             .small_to_large
-            .unsafe_sync_commit(ctx.clone(), cs_id, CandidateSelectionHint::Only)
+            .unsafe_sync_commit(&ctx, cs_id, CandidateSelectionHint::Only)
             .await?;
     }
 
@@ -165,10 +165,10 @@ pub async fn do_sync_diamond_merge(
 
     let new_merge_cs_id = rewritten.get_changeset_id();
     info!(ctx.logger(), "uploading merge commit {}", new_merge_cs_id);
-    upload_commits(ctx.clone(), vec![rewritten], small_repo, large_repo.clone()).await?;
+    upload_commits(&ctx, vec![rewritten], &small_repo, &large_repo).await?;
 
     update_mapping_with_version(
-        ctx.clone(),
+        &ctx,
         hashmap! {small_merge_cs_id => new_merge_cs_id},
         &syncers.small_to_large,
         &syncers.small_to_large.get_current_version(&ctx)?,
@@ -217,7 +217,7 @@ async fn create_rewritten_merge_commit(
         p2 => remapped_p2,
     };
     let maybe_rewritten = rewrite_commit(
-        ctx.clone(),
+        &ctx,
         merge_bcs,
         &remapped_parents,
         syncers.small_to_large.get_current_mover_DEPRECATED(&ctx)?,
@@ -290,7 +290,7 @@ async fn remap_commit(
     cs_id: ChangesetId,
 ) -> Result<ChangesetId, Error> {
     let maybe_sync_outcome = small_to_large_commit_syncer
-        .get_commit_sync_outcome(ctx.clone(), cs_id)
+        .get_commit_sync_outcome(&ctx, cs_id)
         .await?;
 
     let sync_outcome = maybe_sync_outcome.ok_or(format_err!(

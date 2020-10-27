@@ -600,9 +600,7 @@ async fn get_synced_commit<M: SyncedCommitMapping + Clone + 'static>(
     commit_syncer: &CommitSyncer<M>,
     hash: ChangesetId,
 ) -> Result<(ChangesetId, CommitSyncConfigVersion), Error> {
-    let maybe_sync_outcome = commit_syncer
-        .get_commit_sync_outcome(ctx.clone(), hash)
-        .await?;
+    let maybe_sync_outcome = commit_syncer.get_commit_sync_outcome(&ctx, hash).await?;
     let sync_outcome = maybe_sync_outcome.ok_or(format_err!(
         "No sync outcome for {} in {:?}",
         hash,
@@ -685,7 +683,7 @@ async fn rename_and_remap_bookmarks<M: SyncedCommitMapping + Clone + 'static>(
     for (bookmark, cs_id) in bookmarks {
         if let Some(renamed_bookmark) = bookmark_renamer(&bookmark) {
             let maybe_sync_outcome = commit_syncer
-                .get_commit_sync_outcome(ctx.clone(), cs_id)
+                .get_commit_sync_outcome(&ctx, cs_id)
                 .map(move |maybe_sync_outcome| {
                     let maybe_sync_outcome = maybe_sync_outcome?;
                     use CommitSyncOutcome::*;

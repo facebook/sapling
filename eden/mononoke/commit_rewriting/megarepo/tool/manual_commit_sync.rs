@@ -56,7 +56,7 @@ pub async fn manual_commit_sync<M: SyncedCommitMapping + Clone + 'static>(
 
     let res = commit_syncer
         .unsafe_always_rewrite_sync_commit(
-            ctx.clone(),
+            ctx,
             source_cs_id,
             Some(remapped_parents),
             &mapping_version,

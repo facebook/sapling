@@ -538,9 +538,7 @@ async fn verify_mapping_and_all_wc(
             continue;
         }
         let csc = commit_syncer.clone();
-        let outcome = csc
-            .get_commit_sync_outcome(ctx.clone(), source_cs_id)
-            .await?;
+        let outcome = csc.get_commit_sync_outcome(&ctx, source_cs_id).await?;
         let outcome = outcome.expect(&format!("commit has not been synced {}", source_cs_id));
         use CommitSyncOutcome::*;
 
@@ -633,7 +631,7 @@ async fn verify_bookmarks(
                     .unwrap();
 
                 let commit_sync_outcome = commit_syncer
-                    .get_commit_sync_outcome(ctx.clone(), source_bcs_id)
+                    .get_commit_sync_outcome(&ctx, source_bcs_id)
                     .await?;
                 let commit_sync_outcome = commit_sync_outcome.expect("unsynced commit");
 
@@ -945,19 +943,13 @@ async fn init_repos(
     let first_bcs = initial_bcs_id
         .load(ctx.clone(), source_repo.blobstore())
         .await?;
-    upload_commits(
-        ctx.clone(),
-        vec![first_bcs.clone()],
-        source_repo.clone(),
-        target_repo.clone(),
-    )
-    .await?;
+    upload_commits(&ctx, vec![first_bcs.clone()], &source_repo, &target_repo).await?;
     let first_bcs_mut = first_bcs.into_mut();
     let maybe_rewritten = {
         let empty_map = HashMap::new();
         cloned!(ctx, source_repo);
         rewrite_commit(
-            ctx,
+            &ctx,
             first_bcs_mut,
             &empty_map,
             mover_type.get_mover(),
@@ -1517,7 +1509,7 @@ async fn preserve_premerge_commit(
     };
 
     small_to_large_sync_config
-        .unsafe_sync_commit(ctx.clone(), bcs_id, CandidateSelectionHint::Only)
+        .unsafe_sync_commit(&ctx, bcs_id, CandidateSelectionHint::Only)
         .await?;
 
     for another_repo_id in another_small_repo_ids {

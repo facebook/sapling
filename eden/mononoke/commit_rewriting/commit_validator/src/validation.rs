@@ -1461,7 +1461,7 @@ mod tests {
             .collect();
 
         update_mapping_with_version(
-            ctx.clone(),
+            &ctx,
             commit_mapping,
             &small_to_large_commit_syncer,
             &small_to_large_commit_syncer.get_current_version(&ctx)?,
