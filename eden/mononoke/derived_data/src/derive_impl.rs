@@ -430,6 +430,25 @@ where
     Ok(())
 }
 
+/// This function returns None if this item is not yet derived,  Some(Self) otherwise.
+/// It does not derive if not already derived.
+pub(crate) async fn fetch_derived<Derived, Mapping>(
+    ctx: &CoreContext,
+    bcs_id: &ChangesetId,
+    derived_mapping: &Mapping,
+) -> Result<Option<Derived>, Error>
+where
+    Derived: BonsaiDerived,
+    Mapping: BonsaiDerivedMapping<Value = Derived>,
+{
+    let derive_node = DeriveNode::from_bonsai(ctx, derived_mapping, bcs_id).await?;
+    match derive_node {
+        DeriveNode::Derived(derived) => Ok(Some(derived)),
+        DeriveNode::Bonsai(_) => Ok(None),
+    }
+}
+
+// Like fetch_derived but panics if not found
 async fn fetch_derived_may_panic<Derived, Mapping>(
     ctx: &CoreContext,
     bcs_id: ChangesetId,
@@ -437,14 +456,12 @@ async fn fetch_derived_may_panic<Derived, Mapping>(
 ) -> Result<Derived, Error>
 where
     Derived: BonsaiDerived,
-    Mapping: BonsaiDerivedMapping<Value = Derived> + Send + Sync + Clone,
+    Mapping: BonsaiDerivedMapping<Value = Derived>,
 {
-    let derive_node = DeriveNode::from_bonsai(ctx, derived_mapping, &bcs_id).await?;
-    match derive_node {
-        DeriveNode::Derived(derived) => Ok(derived),
-        DeriveNode::Bonsai(_) => {
-            panic!("{} should be derived already", bcs_id);
-        }
+    if let Some(derived) = fetch_derived(ctx, &bcs_id, derived_mapping).await? {
+        Ok(derived)
+    } else {
+        panic!("{} should be derived already", bcs_id)
     }
 }
 
@@ -531,7 +548,7 @@ impl<Derived: BonsaiDerived> DeriveNode<Derived> {
         csid: &ChangesetId,
     ) -> Result<Self, Error>
     where
-        Mapping: BonsaiDerivedMapping<Value = Derived> + Clone,
+        Mapping: BonsaiDerivedMapping<Value = Derived>,
     {
         // TODO: do not create intermediate hashmap, since this methods is going to be called
         //       most often, to get derived value

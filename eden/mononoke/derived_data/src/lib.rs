@@ -91,6 +91,16 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
         .boxify()
     }
 
+    /// Fetch the derived data in cases where we might not want to trigger derivation, e.g. when scrubbing.
+    async fn fetch_derived(
+        ctx: &CoreContext,
+        repo: &BlobRepo,
+        csid: &ChangesetId,
+    ) -> Result<Option<Self>, Error> {
+        let mapping = Self::mapping(ctx, repo);
+        derive_impl::fetch_derived::<Self, Self::Mapping>(ctx, csid, &mapping).await
+    }
+
     /// Derives derived data even if it's disabled in the config. Should normally
     /// be used only for backfilling.
     fn derive_with_mode(
