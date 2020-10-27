@@ -289,6 +289,8 @@ Merge with preserved ancestors
   $ mononoke_x_repo_sync 1 0 once --target-bookmark master_bookmark --commit $(hg log -T "{node}" -r pre_merge_p1 --cwd "$TESTTMP/with_merge_hg") |& grep -v "using repo"
   * Initializing CfgrLiveCommitSyncConfig (glob)
   * Done initializing CfgrLiveCommitSyncConfig (glob)
+  * Initializing CfgrLiveCommitSyncConfig (glob)
+  * Done initializing CfgrLiveCommitSyncConfig (glob)
   * changeset resolved as: ChangesetId(Blake2(87924512f63d088d5b6bb5368bfef8016246e59927fe9d06d8ea657bc94e993d)) (glob)
   * Checking if 87924512f63d088d5b6bb5368bfef8016246e59927fe9d06d8ea657bc94e993d is already synced 1->0 (glob)
   * 1 unsynced ancestors of 87924512f63d088d5b6bb5368bfef8016246e59927fe9d06d8ea657bc94e993d (glob)

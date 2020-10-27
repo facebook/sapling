@@ -16,9 +16,9 @@ use bookmarks::Freshness;
 use clap::{Arg, SubCommand};
 use cloned::cloned;
 use cmdlib::{args, monitoring};
-use cmdlib_x_repo::create_commit_syncer_args_from_matches;
+use cmdlib_x_repo::create_commit_syncer_from_matches;
 use context::{CoreContext, SessionContainer};
-use cross_repo_sync::{CandidateSelectionHint, CommitSyncOutcome, CommitSyncer, CommitSyncerArgs};
+use cross_repo_sync::{CandidateSelectionHint, CommitSyncOutcome, CommitSyncer};
 use fbinit::FacebookInit;
 use futures::{
     compat::Future01CompatExt,
@@ -102,7 +102,7 @@ async fn derive_target_hg_changesets(
 
 pub async fn backsync_forever<M>(
     ctx: CoreContext,
-    commit_syncer_args: CommitSyncerArgs<M>,
+    commit_syncer: CommitSyncer<M>,
     target_repo_dbs: TargetRepoDbs,
     source_repo_name: String,
     target_repo_name: String,
@@ -111,32 +111,26 @@ pub async fn backsync_forever<M>(
 where
     M: SyncedCommitMapping + Clone + 'static,
 {
-    let target_repo_id = commit_syncer_args.get_target_repo_id();
-
+    let target_repo_id = commit_syncer.get_target_repo_id();
     let live_commit_sync_config = Arc::new(live_commit_sync_config);
+
     loop {
         // We only care about public pushes because draft pushes are not in the bookmark
         // update log at all.
         let enabled = live_commit_sync_config.push_redirector_enabled_for_public(target_repo_id);
 
         if enabled {
-            let delay = calculate_delay(&ctx, &commit_syncer_args, &target_repo_dbs).await?;
+            let delay = calculate_delay(&ctx, &commit_syncer, &target_repo_dbs).await?;
             log_delay(&ctx, &delay, &source_repo_name, &target_repo_name);
             if delay.remaining_entries == 0 {
                 debug!(ctx.logger(), "no entries remained");
                 tokio::time::delay_for(Duration::new(1, 0)).await;
             } else {
                 debug!(ctx.logger(), "backsyncing...");
-                let commit_sync_config =
-                    live_commit_sync_config.get_current_commit_sync_config(&ctx, target_repo_id)?;
-
-                let commit_syncer = commit_syncer_args
-                    .clone()
-                    .try_into_commit_syncer(&commit_sync_config, live_commit_sync_config.clone())?;
 
                 backsync_latest(
                     ctx.clone(),
-                    commit_syncer,
+                    commit_syncer.clone(),
                     target_repo_dbs.clone(),
                     BacksyncLimit::NoLimit,
                 )
@@ -168,15 +162,15 @@ impl Delay {
 // Returns logs delay and returns the number of remaining bookmark update log entries
 async fn calculate_delay<M>(
     ctx: &CoreContext,
-    commit_syncer_args: &CommitSyncerArgs<M>,
+    commit_syncer: &CommitSyncer<M>,
     target_repo_dbs: &TargetRepoDbs,
 ) -> Result<Delay, Error>
 where
     M: SyncedCommitMapping + Clone + 'static,
 {
     let TargetRepoDbs { ref counters, .. } = target_repo_dbs;
-    let target_repo_id = commit_syncer_args.get_target_repo().get_repoid();
-    let source_repo_id = commit_syncer_args.get_source_repo().get_repoid();
+    let target_repo_id = commit_syncer.get_target_repo().get_repoid();
+    let source_repo_id = commit_syncer.get_source_repo().get_repoid();
 
     let counter_name = format_counter(&source_repo_id);
     let maybe_counter = counters
@@ -184,7 +178,7 @@ where
         .compat()
         .await?;
     let counter = maybe_counter.ok_or(format_err!("{} counter not found", counter_name))?;
-    let source_repo = commit_syncer_args.get_source_repo();
+    let source_repo = commit_syncer.get_source_repo();
     let next_entry = source_repo
         .read_next_bookmark_log_entries(ctx.clone(), counter as u64, 1, Freshness::MostRecent)
         .collect()
@@ -267,13 +261,15 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let (target_repo_name, target_repo_config) =
         args::get_config_by_repoid(config_store, &matches, target_repo_id)?;
 
-    let commit_syncer_args = runtime.block_on_std(create_commit_syncer_args_from_matches(
-        fb, &logger, &matches,
-    ))?;
+    let session_container = SessionContainer::new_with_defaults(fb);
+    let commit_syncer = {
+        let scuba_sample = ScubaSampleBuilder::with_discard();
+        let ctx = session_container.new_context(logger.clone(), scuba_sample);
+        runtime.block_on_std(create_commit_syncer_from_matches(&ctx, &matches))?
+    };
+
     let mysql_options = args::parse_mysql_options(&matches);
     let readonly_storage = args::parse_readonly_storage(&matches);
-
-    let session_container = SessionContainer::new_with_defaults(fb);
 
     info!(
         logger,
@@ -287,10 +283,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         (ARG_MODE_BACKSYNC_ALL, _) => {
             let scuba_sample = ScubaSampleBuilder::with_discard();
             let ctx = session_container.new_context(logger.clone(), scuba_sample);
-            let commit_sync_config =
-                live_commit_sync_config.get_current_commit_sync_config(&ctx, target_repo_id)?;
-            let commit_syncer = commit_syncer_args
-                .try_into_commit_syncer(&commit_sync_config, Arc::new(live_commit_sync_config))?;
 
             let db_config = target_repo_config.storage_config.metadata;
             let target_repo_dbs = runtime.block_on_std(
@@ -304,6 +296,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .boxed(),
             )?;
 
+            // TODO(ikostia): why do we use discarding ScubaSample for BACKSYNC_ALL?
             runtime.block_on_std(
                 backsync_latest(ctx, commit_syncer, target_repo_dbs, BacksyncLimit::NoLimit)
                     .boxed(),
@@ -316,7 +309,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             let target_repo_dbs = runtime.block_on_std(
                 open_backsyncer_dbs(
                     ctx,
-                    commit_syncer_args.get_target_repo().clone(),
+                    commit_syncer.get_target_repo().clone(),
                     db_config,
                     mysql_options,
                     readonly_storage,
@@ -334,7 +327,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             let ctx = session_container.new_context(logger.clone(), scuba_sample);
             let f = backsync_forever(
                 ctx,
-                commit_syncer_args,
+                commit_syncer,
                 target_repo_dbs,
                 source_repo_name,
                 target_repo_name,
@@ -354,10 +347,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         }
         (ARG_MODE_BACKSYNC_COMMITS, Some(sub_m)) => {
             let ctx = session_container.new_context(logger, ScubaSampleBuilder::with_discard());
-            let commit_sync_config =
-                live_commit_sync_config.get_current_commit_sync_config(&ctx, target_repo_id)?;
-            let commit_syncer = commit_syncer_args
-                .try_into_commit_syncer(&commit_sync_config, Arc::new(live_commit_sync_config))?;
 
             let inputfile = sub_m
                 .value_of(ARG_INPUT_FILE)

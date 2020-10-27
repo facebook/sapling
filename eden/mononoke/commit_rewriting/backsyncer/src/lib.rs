@@ -80,6 +80,7 @@ pub async fn backsync_latest<M>(
 where
     M: SyncedCommitMapping + Clone + 'static,
 {
+    // TODO(ikostia): start borrowing `CommitSyncer`, no reason to consume it
     let TargetRepoDbs { ref counters, .. } = target_repo_dbs;
     let target_repo_id = commit_syncer.get_target_repo().get_repoid();
     let source_repo_id = commit_syncer.get_source_repo().get_repoid();

@@ -10,10 +10,13 @@ include = ["src/**/*.rs"]
 blobrepo = { path = "../../blobrepo" }
 blobrepo_factory = { path = "../../blobrepo/factory" }
 cmdlib = { path = ".." }
+context = { path = "../../server/context" }
 cross_repo_sync = { path = "../../commit_rewriting/cross_repo_sync" }
+live_commit_sync_config = { path = "../../commit_rewriting/live_commit_sync_config" }
 metaconfig_types = { path = "../../metaconfig/types" }
 sql_ext = { path = "../../common/rust/sql_ext" }
 synced_commit_mapping = { path = "../../commit_rewriting/synced_commit_mapping" }
+cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
 clap = "2.33"

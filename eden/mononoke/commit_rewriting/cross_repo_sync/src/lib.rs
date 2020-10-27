@@ -45,14 +45,12 @@ use synced_commit_mapping::{
 use thiserror::Error;
 use topo_sort::sort_topological;
 
-pub use commit_syncer_args::CommitSyncerArgs;
 use merge_utils::get_version_for_merge;
 use pushrebase_hook::CrossRepoSyncPushrebaseHook;
 use types::{Source, Target};
 
 mod commit_sync_data_provider;
 pub mod commit_sync_outcome;
-mod commit_syncer_args;
 mod merge_utils;
 mod pushrebase_hook;
 pub mod types;

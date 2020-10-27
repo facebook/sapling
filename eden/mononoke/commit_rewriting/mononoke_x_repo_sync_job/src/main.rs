@@ -25,11 +25,11 @@ use bookmarks::{BookmarkName, BookmarkUpdateLog, Freshness};
 use cached_config::ConfigStore;
 use clap::{App, ArgMatches};
 use cmdlib::{args, monitoring};
-use cmdlib_x_repo::create_commit_syncer_args_from_matches;
+use cmdlib_x_repo::create_commit_syncer_from_matches;
 use context::CoreContext;
 use cross_repo_sync::{
     types::{Source, Target},
-    CommitSyncer, CommitSyncerArgs,
+    CommitSyncer,
 };
 use derived_data_utils::derive_data_for_csids;
 use fbinit::FacebookInit;
@@ -118,7 +118,7 @@ async fn run_in_single_commit_mode<M: SyncedCommitMapping + Clone + 'static>(
 
 enum TailingArgs<M> {
     CatchUpOnce(CommitSyncer<M>),
-    LoopForever(CommitSyncerArgs<M>, &'static ConfigStore),
+    LoopForever(CommitSyncer<M>, &'static ConfigStore),
 }
 
 async fn run_in_tailing_mode<
@@ -155,10 +155,10 @@ async fn run_in_tailing_mode<
             )
             .await?;
         }
-        TailingArgs::LoopForever(commit_syncer_args, config_store) => {
+        TailingArgs::LoopForever(commit_syncer, config_store) => {
             let live_commit_sync_config =
                 Arc::new(CfgrLiveCommitSyncConfig::new(ctx.logger(), &config_store)?);
-            let source_repo_id = commit_syncer_args.get_source_repo().get_repoid();
+            let source_repo_id = commit_syncer.get_source_repo().get_repoid();
 
             loop {
                 let scuba_sample = base_scuba_sample.clone();
@@ -173,13 +173,6 @@ async fn run_in_tailing_mode<
                     tokio::time::delay_for(Duration::new(sleep_secs, 0)).await;
                     continue;
                 }
-
-                let commit_sync_config =
-                    live_commit_sync_config.get_current_commit_sync_config(&ctx, source_repo_id)?;
-
-                let commit_syncer = commit_syncer_args
-                    .clone()
-                    .try_into_commit_syncer(&commit_sync_config, live_commit_sync_config.clone())?;
 
                 let synced_something = tail(
                     &ctx,
@@ -416,7 +409,7 @@ async fn run(
     let (source_repo, target_repo, counters) =
         try_join3(source_repo, target_repo, mutable_counters).await?;
 
-    let commit_syncer_args = create_commit_syncer_args_from_matches(fb, &logger, &matches).await?;
+    let commit_syncer = create_commit_syncer_from_matches(&ctx, &matches).await?;
 
     let live_commit_sync_config = Arc::new(CfgrLiveCommitSyncConfig::new(&logger, &config_store)?);
     let commit_sync_config =
@@ -428,17 +421,13 @@ async fn run(
         .into_iter()
         .collect();
 
-    let commit_syncer = commit_syncer_args
-        .clone()
-        .try_into_commit_syncer(&commit_sync_config, live_commit_sync_config)?;
-
     let source_skiplist =
         get_skiplist_index(&ctx, &source_repo_config, &source_repo).map_ok(Source);
     let target_skiplist =
         get_skiplist_index(&ctx, &target_repo_config, &target_repo).map_ok(Target);
     match matches.subcommand() {
         (ARG_ONCE, Some(sub_m)) => {
-            add_common_fields(&mut scuba_sample, &commit_syncer_args);
+            add_common_fields(&mut scuba_sample, &commit_syncer);
             let maybe_target_bookmark = sub_m
                 .value_of(ARG_TARGET_BOOKMARK)
                 .map(BookmarkName::new)
@@ -465,7 +454,7 @@ async fn run(
         (ARG_TAIL, Some(sub_m)) => {
             let (source_skiplist_index, target_skiplist_index) =
                 try_join(source_skiplist, target_skiplist).await?;
-            add_common_fields(&mut scuba_sample, &commit_syncer_args);
+            add_common_fields(&mut scuba_sample, &commit_syncer);
 
             let sleep_secs = get_sleep_secs(&sub_m)?;
             let tailing_args = if sub_m.is_present(ARG_CATCH_UP_ONCE) {
@@ -473,7 +462,7 @@ async fn run(
             } else {
                 let config_store = args::init_config_store(fb, ctx.logger(), &matches)?;
 
-                TailingArgs::LoopForever(commit_syncer_args, config_store)
+                TailingArgs::LoopForever(commit_syncer, config_store)
             };
 
             let backpressure_params = BackpressureParams::new(&ctx, &matches, sub_m).await?;

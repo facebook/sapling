@@ -76,6 +76,8 @@ run the sync again
   $ mononoke_x_repo_sync 1 0 once --commit "$TOMERGE" |& grep -v "using repo"
   * Initializing CfgrLiveCommitSyncConfig (glob)
   * Done initializing CfgrLiveCommitSyncConfig (glob)
+  * Initializing CfgrLiveCommitSyncConfig (glob)
+  * Done initializing CfgrLiveCommitSyncConfig (glob)
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
   * Checking if 6d7f84d613e4cccb4ec27259b7b59335573cdd65ee5dc78887056a5eeb6e6a47 is already synced 1->0 (glob)
   * 1 unsynced ancestors of 6d7f84d613e4cccb4ec27259b7b59335573cdd65ee5dc78887056a5eeb6e6a47 (glob)
@@ -83,6 +85,8 @@ run the sync again
   * changeset 6d7f84d613e4cccb4ec27259b7b59335573cdd65ee5dc78887056a5eeb6e6a47 synced as fa8f65693524f78f5e0a40099d10acdc3001d6d472c62baabf03231e51b109c7 in * (glob)
   * successful sync (glob)
   $ mononoke_x_repo_sync 1 0 once --target-bookmark master_bookmark --commit fbsource_master |& grep -v "using repo"
+  * Initializing CfgrLiveCommitSyncConfig (glob)
+  * Done initializing CfgrLiveCommitSyncConfig (glob)
   * Initializing CfgrLiveCommitSyncConfig (glob)
   * Done initializing CfgrLiveCommitSyncConfig (glob)
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
@@ -116,4 +120,3 @@ check that the changes are synced
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     megarepo commit 1
   
- 

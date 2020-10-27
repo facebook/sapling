@@ -7,7 +7,7 @@
 
 use anyhow::Error;
 use context::CoreContext;
-use cross_repo_sync::CommitSyncerArgs;
+use cross_repo_sync::CommitSyncer;
 use futures_stats::FutureStats;
 use mononoke_types::ChangesetId;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
@@ -29,11 +29,11 @@ const SUCCESS: &'static str = "success";
 /// this tailer run
 pub fn add_common_fields<M: SyncedCommitMapping + Clone + 'static>(
     scuba_sample: &mut ScubaSampleBuilder,
-    commit_syncer_args: &CommitSyncerArgs<M>,
+    commit_syncer: &CommitSyncer<M>,
 ) {
     scuba_sample
-        .add(SOURCE_REPO, commit_syncer_args.get_source_repo_id().id())
-        .add(TARGET_REPO, commit_syncer_args.get_target_repo_id().id());
+        .add(SOURCE_REPO, commit_syncer.get_source_repo_id().id())
+        .add(TARGET_REPO, commit_syncer.get_target_repo_id().id());
 }
 
 /// Log the fact of successful syncing of the single changeset to Scuba

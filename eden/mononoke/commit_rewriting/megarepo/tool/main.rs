@@ -14,7 +14,7 @@ use borrowed::borrowed;
 use cached_config::ConfigStore;
 use clap::ArgMatches;
 use cmdlib::{args, helpers};
-use cmdlib_x_repo::create_commit_syncer_args_from_matches;
+use cmdlib_x_repo::create_commit_syncer_from_matches;
 use context::CoreContext;
 use cross_repo_sync::CommitSyncer;
 use cross_repo_sync::{
@@ -27,7 +27,7 @@ use futures::{
     future::{try_join, try_join3, try_join_all},
     Stream, StreamExt, TryStreamExt,
 };
-use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
+use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use metaconfig_types::RepoConfig;
 use metaconfig_types::{CommitSyncConfigVersion, MetadataDatabaseConfig};
 use mononoke_types::{MPath, RepositoryId};
@@ -432,7 +432,7 @@ async fn run_manual_commit_sync<'a>(
     matches: &ArgMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let commit_syncer = get_commit_syncer(&ctx, matches).await?;
+    let commit_syncer = create_commit_syncer_from_matches(&ctx, matches).await?;
 
     let target_repo = commit_syncer.get_target_repo();
     let target_repo_parents = sub_m.values_of(PARENTS);
@@ -477,15 +477,7 @@ async fn run_check_push_redirection_prereqs<'a>(
     matches: &ArgMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let config_store = args::init_config_store(ctx.fb, ctx.logger(), &matches)?;
-    let target_repo_id = args::get_target_repo_id(config_store, &matches)?;
-    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), config_store)?;
-    let commit_syncer_args =
-        create_commit_syncer_args_from_matches(ctx.fb, ctx.logger(), &matches).await?;
-    let commit_sync_config =
-        live_commit_sync_config.get_current_commit_sync_config(&ctx, target_repo_id)?;
-    let commit_syncer = commit_syncer_args
-        .try_into_commit_syncer(&commit_sync_config, Arc::new(live_commit_sync_config))?;
+    let commit_syncer = create_commit_syncer_from_matches(&ctx, &matches).await?;
 
     let target_repo = commit_syncer.get_target_repo();
     let source_repo = commit_syncer.get_source_repo();
@@ -607,7 +599,7 @@ async fn run_mover<'a>(
     matches: &ArgMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let commit_syncer = get_commit_syncer(&ctx, matches).await?;
+    let commit_syncer = create_commit_syncer_from_matches(&ctx, matches).await?;
     let version = get_version(sub_m)?;
     let mover = commit_syncer.get_mover_by_version(&version)?;
     let path = sub_m
@@ -654,7 +646,7 @@ async fn run_mark_not_synced<'a>(
     matches: &ArgMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let commit_syncer = get_commit_syncer(&ctx, matches).await?;
+    let commit_syncer = create_commit_syncer_from_matches(&ctx, matches).await?;
 
     let small_repo = commit_syncer.get_small_repo();
     let large_repo = commit_syncer.get_large_repo();
@@ -722,7 +714,7 @@ async fn run_backfill_noop_mapping<'a>(
     matches: &ArgMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let commit_syncer = get_commit_syncer(&ctx, matches).await?;
+    let commit_syncer = create_commit_syncer_from_matches(&ctx, matches).await?;
 
     let small_repo = commit_syncer.get_small_repo();
     let large_repo = commit_syncer.get_large_repo();
@@ -860,21 +852,6 @@ async fn process_stream_and_wait_for_replication<'a>(
     }
 
     Ok(())
-}
-
-async fn get_commit_syncer(
-    ctx: &CoreContext,
-    matches: &ArgMatches<'_>,
-) -> Result<CommitSyncer<SqlSyncedCommitMapping>> {
-    let config_store = args::init_config_store(ctx.fb, ctx.logger(), matches)?;
-    let target_repo_id = args::get_target_repo_id(config_store, &matches)?;
-    let live_commit_sync_config = CfgrLiveCommitSyncConfig::new(ctx.logger(), config_store)?;
-    let commit_syncer_args =
-        create_commit_syncer_args_from_matches(ctx.fb, ctx.logger(), &matches).await?;
-    let commit_sync_config =
-        live_commit_sync_config.get_current_commit_sync_config(&ctx, target_repo_id)?;
-    commit_syncer_args
-        .try_into_commit_syncer(&commit_sync_config, Arc::new(live_commit_sync_config))
 }
 
 fn get_version(matches: &ArgMatches<'_>) -> Result<CommitSyncConfigVersion> {
