@@ -13,7 +13,7 @@ use cacheblob::LeaseOps;
 use context::CoreContext;
 use futures::{
     compat::Future01CompatExt,
-    future::{try_join, try_join_all, FutureExt, TryFutureExt},
+    future::{try_join, try_join_all, TryFutureExt},
     TryStreamExt,
 };
 use futures_ext::FutureExt as FutureExt01;
@@ -71,7 +71,7 @@ const LEASE_WARNING_THRESHOLD: Duration = Duration::from_secs(60);
 /// C <- no mapping
 ///
 /// is possible and valid (but only if the data for commit C is derived).
-pub fn derive_impl<
+pub async fn derive_impl<
     Derived: BonsaiDerived,
     Mapping: BonsaiDerivedMapping<Value = Derived> + Send + Sync + Clone + 'static,
 >(
@@ -80,80 +80,70 @@ pub fn derive_impl<
     derived_mapping: Mapping,
     start_csid: ChangesetId,
     mode: Mode,
-) -> impl Future01<Item = Derived, Error = DeriveError> {
-    async move {
-        let derivation = async {
-            let all_csids = find_topo_sorted_underived(
-                &ctx,
-                &repo,
-                &derived_mapping,
-                Some(start_csid),
-                None,
-                mode,
-            )
-            .await?;
+) -> Result<Derived, DeriveError> {
+    let derivation = async {
+        let all_csids =
+            find_topo_sorted_underived(&ctx, &repo, &derived_mapping, Some(start_csid), None, mode)
+                .await?;
 
-            for csid in &all_csids {
-                ctx.scuba().clone().log_with_msg(
-                    "Waiting for derived data to be generated",
-                    Some(format!("{} {}", Derived::NAME, csid)),
-                );
-
-                let (stats, res) = derive_may_panic(&ctx, &repo, &derived_mapping, &csid)
-                    .timed()
-                    .await;
-
-                let tag = if res.is_ok() {
-                    "Got derived data"
-                } else {
-                    "Failed to get derived data"
-                };
-                ctx.scuba()
-                    .clone()
-                    .add_future_stats(&stats)
-                    .log_with_msg(tag, Some(format!("{} {}", Derived::NAME, csid)));
-                res?;
-            }
-
-            let res: Result<_, DeriveError> = Ok(all_csids.len());
-            res
-        };
-
-        let (stats, res) = derivation.timed().await;
-
-        let count = match res {
-            Ok(ref count) => *count,
-            Err(_) => 0,
-        };
-
-        if should_log_slow_derivation(stats.completion_time) {
-            warn!(
-                ctx.logger(),
-                "slow derivation of {} {} for {}, took {:?}: mononoke_prod/flat/{}.trace",
-                count,
-                Derived::NAME,
-                start_csid,
-                stats.completion_time,
-                ctx.trace().id(),
+        for csid in &all_csids {
+            ctx.scuba().clone().log_with_msg(
+                "Waiting for derived data to be generated",
+                Some(format!("{} {}", Derived::NAME, csid)),
             );
-            ctx.scuba().clone().add_future_stats(&stats).log_with_msg(
-                "Slow derivation",
-                Some(format!(
-                    "type={},count={},csid={}",
-                    Derived::NAME,
-                    count,
-                    start_csid.to_string()
-                )),
-            );
+
+            let (stats, res) = derive_may_panic(&ctx, &repo, &derived_mapping, &csid)
+                .timed()
+                .await;
+
+            let tag = if res.is_ok() {
+                "Got derived data"
+            } else {
+                "Failed to get derived data"
+            };
+            ctx.scuba()
+                .clone()
+                .add_future_stats(&stats)
+                .log_with_msg(tag, Some(format!("{} {}", Derived::NAME, csid)));
+            res?;
         }
 
-        res?;
+        let res: Result<_, DeriveError> = Ok(all_csids.len());
+        res
+    };
 
-        let derived = fetch_derived_may_panic(&ctx, start_csid, &derived_mapping).await?;
-        Ok(derived)
+    let (stats, res) = derivation.timed().await;
+
+    let count = match res {
+        Ok(ref count) => *count,
+        Err(_) => 0,
+    };
+
+    if should_log_slow_derivation(stats.completion_time) {
+        warn!(
+            ctx.logger(),
+            "slow derivation of {} {} for {}, took {:?}: mononoke_prod/flat/{}.trace",
+            count,
+            Derived::NAME,
+            start_csid,
+            stats.completion_time,
+            ctx.trace().id(),
+        );
+        ctx.scuba().clone().add_future_stats(&stats).log_with_msg(
+            "Slow derivation",
+            Some(format!(
+                "type={},count={},csid={}",
+                Derived::NAME,
+                count,
+                start_csid.to_string()
+            )),
+        );
     }
-    .boxed()
-    .compat()
+
+    res?;
+
+    let derived = fetch_derived_may_panic(&ctx, start_csid, &derived_mapping).await?;
+    Ok(derived)
 }
 
 fn should_log_slow_derivation(duration: Duration) -> bool {

@@ -197,9 +197,7 @@ where
         // even if it was already generated (see RegenerateMapping call).
         cloned!(self.mapping, self.mode);
         async move {
-            let result = derive_impl::<M::Value, _>(ctx, repo, mapping, csid, mode)
-                .compat()
-                .await?;
+            let result = derive_impl::<M::Value, _>(ctx, repo, mapping, csid, mode).await?;
             Ok(format!("{:?}", result))
         }
         .boxed()
@@ -250,7 +248,6 @@ where
                     csid,
                     DeriveMode::Unsafe,
                 )
-                .compat()
                 .await?;
             }
 

@@ -11,7 +11,9 @@ use anyhow::Error;
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use context::CoreContext;
-use futures::{compat::Future01CompatExt, stream, StreamExt, TryStreamExt};
+use futures::{
+    compat::Future01CompatExt, stream, FutureExt, StreamExt, TryFutureExt, TryStreamExt,
+};
 use futures_ext::{BoxFuture as BoxFuture01, FutureExt as _};
 use lock_ext::LockExt;
 use mononoke_types::{BonsaiChangeset, ChangesetId, RepositoryId};
@@ -80,14 +82,19 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
         repo: BlobRepo,
         csid: ChangesetId,
     ) -> BoxFuture01<Self, DeriveError> {
-        let mapping = Self::mapping(&ctx, &repo);
-        derive_impl::derive_impl::<Self, Self::Mapping>(
-            ctx,
-            repo,
-            mapping,
-            csid,
-            Mode::OnlyIfEnabled,
-        )
+        async move {
+            let mapping = Self::mapping(&ctx, &repo);
+            derive_impl::derive_impl::<Self, Self::Mapping>(
+                ctx,
+                repo,
+                mapping,
+                csid,
+                Mode::OnlyIfEnabled,
+            )
+            .await
+        }
+        .boxed()
+        .compat()
         .boxify()
     }
 
