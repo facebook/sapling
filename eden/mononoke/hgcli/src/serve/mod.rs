@@ -26,7 +26,11 @@ use futures_stats::TimedFutureExt;
 use futures_util::future::FutureExt;
 use hostname::get_hostname;
 use libc::c_ulong;
-use openssl::ssl::{SslConnector, SslMethod, SslVerifyMode};
+use openssl::{
+    nid::Nid,
+    ssl::{SslConnector, SslMethod, SslVerifyMode},
+    x509::{X509StoreContextRef, X509VerifyResult},
+};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use secure_utils::{build_identity, read_x509};
 use session_id::generate_session_id;
@@ -221,12 +225,42 @@ impl<'a> StdioRelay<'a> {
     async fn establish_connection(&self) -> Result<SslStream<TcpStream>, Error> {
         let path = self.path.to_owned();
         let ssl_common_name = self.ssl_common_name.to_owned();
+        let client_logger = self.client_logger.clone();
+        let scuba_logger = self.scuba_logger.clone();
 
         let connector = {
             let mut connector = SslConnector::builder(SslMethod::tls())?;
 
             if self.insecure {
                 connector.set_verify(SslVerifyMode::NONE);
+            } else {
+                connector.set_verify_callback(
+                    SslVerifyMode::PEER,
+                    move |preverify_ok, x509_ctx_ref| {
+                        // error_depth is the depth of the certificate that we need to check,
+                        // and we are interested in doing additional verification only for the
+                        // cert with depth == 0 (i.e. it's the actual certificate of the server
+                        // and not another certificate in the chain).
+                        if !preverify_ok || x509_ctx_ref.error_depth() != 0 {
+                            return preverify_ok;
+                        }
+
+                        let verification_result =
+                            verify_common_name(&ssl_common_name, x509_ctx_ref);
+                        match verification_result {
+                            Ok(()) => true,
+                            Err(err_msg) => {
+                                error!(client_logger, "{}", err_msg);
+                                scuba_logger.clone().log_with_msg(
+                                    "Hgcli proxy - certificate verification failure",
+                                    err_msg,
+                                );
+                                x509_ctx_ref.set_error(X509VerifyResult::APPLICATION_VERIFICATION);
+                                false
+                            }
+                        }
+                    },
+                );
             }
 
             let pkcs12 = build_identity(self.cert.to_owned(), self.private_key.to_owned())?;
@@ -266,7 +300,11 @@ impl<'a> StdioRelay<'a> {
             .await
             .with_context(|| format!("failed: connecting to '{}'", path))?;
 
-        tokio_openssl::connect(connector.configure()?, &ssl_common_name, sock)
+        let mut configured_connector = connector.configure()?;
+        // Don't verify the hostname since we have a callback that verifies the
+        // common name
+        configured_connector.set_verify_hostname(false);
+        tokio_openssl::connect(configured_connector, &self.ssl_common_name, sock)
             .await
             .with_context(|| format!("tls failed: talking to '{}'", path))
     }
@@ -346,5 +384,46 @@ impl<'a> StdioRelay<'a> {
         };
 
         res
+    }
+}
+
+fn verify_common_name(
+    ssl_common_name: &str,
+    x509_ctx_ref: &mut X509StoreContextRef,
+) -> Result<(), String> {
+    let cert = match x509_ctx_ref.current_cert() {
+        Some(cert) => cert,
+        None => {
+            let err_msg = "certificate to verify not found";
+            return Err(err_msg.to_string());
+        }
+    };
+
+    // Check that we have the correct common name
+    let name = cert.subject_name();
+    let mut entries = name.entries_by_nid(Nid::COMMONNAME);
+    match entries.next() {
+        Some(entry) => match entry.data().as_utf8() {
+            Ok(s) => {
+                let s: &str = s.as_ref();
+                if ssl_common_name == s {
+                    Ok(())
+                } else {
+                    let err_msg = format!(
+                        "invalid common name. Expected {}, found {}",
+                        ssl_common_name, s
+                    );
+                    Err(err_msg)
+                }
+            }
+            Err(_) => {
+                let err_msg = "cannot parse common name as utf-8";
+                Err(err_msg.to_string())
+            }
+        },
+        None => {
+            let err_msg = "common name not found in certificate";
+            Err(err_msg.to_string())
+        }
     }
 }
