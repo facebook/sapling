@@ -5,6 +5,15 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::{BTreeMap, BTreeSet};
+use std::fmt;
+use std::iter;
+use std::result::Result as StdResult;
+
+use serde::de::{Error, SeqAccess, Visitor};
+use serde::ser::SerializeSeq;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
 use super::IdDagStore;
 use super::StoreId;
 use crate::id::{Group, Id};
@@ -12,11 +21,8 @@ use crate::ops::Persist;
 use crate::segment::Segment;
 use crate::Level;
 use crate::Result;
-use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, BTreeSet};
-use std::iter;
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone)]
 pub struct InProcessStore {
     master_segments: Vec<Segment>,
     non_master_segments: Vec<Segment>,
@@ -237,5 +243,52 @@ impl InProcessStore {
             level_head_index: Vec::new(),
             parent_index: BTreeMap::new(),
         }
+    }
+}
+
+impl Serialize for InProcessStore {
+    fn serialize<S>(&self, serializer: S) -> StdResult<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut seq = serializer.serialize_seq(Some(
+            self.master_segments.len() + self.non_master_segments.len(),
+        ))?;
+        for e in &self.master_segments {
+            seq.serialize_element(e)?;
+        }
+        for e in &self.non_master_segments {
+            seq.serialize_element(e)?;
+        }
+        seq.end()
+    }
+}
+
+impl<'de> Deserialize<'de> for InProcessStore {
+    fn deserialize<D>(deserializer: D) -> StdResult<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct InProcessStoreVisitor;
+        impl<'de> Visitor<'de> for InProcessStoreVisitor {
+            type Value = InProcessStore;
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("a list of segments")
+            }
+            fn visit_seq<A>(self, mut access: A) -> StdResult<Self::Value, A::Error>
+            where
+                A: SeqAccess<'de>,
+            {
+                let mut store = InProcessStore::new();
+                while let Some(segment) = access.next_element()? {
+                    store.insert_segment(segment).map_err(|e| {
+                        A::Error::custom(format!("failed to deserialize IdDagStore: {} ", e))
+                    })?;
+                }
+                Ok(store)
+            }
+        }
+
+        deserializer.deserialize_seq(InProcessStoreVisitor)
     }
 }
