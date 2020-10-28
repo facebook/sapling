@@ -14,6 +14,7 @@ use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmarks::{BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, Freshness};
 use bounded_traversal::bounded_traversal_stream;
+use changeset_info::ChangesetInfo;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
@@ -240,6 +241,38 @@ fn bonsai_phase_step<'a, V: VisitOne>(
         })
 }
 
+async fn changeset_info_step<V: VisitOne>(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    checker: &Checker<V>,
+    bcs_id: ChangesetId,
+    enable_derive: bool,
+) -> Result<StepOutput, Error> {
+    let info = maybe_derived::<ChangesetInfo>(ctx, repo, bcs_id, enable_derive).await?;
+
+    if let Some(info) = info {
+        let mut edges = vec![];
+        for parent_id in info.parents() {
+            checker.add_edge(
+                &mut edges,
+                EdgeType::ChangesetInfoToChangesetInfoParent,
+                || Node::ChangesetInfo(parent_id),
+            );
+        }
+        Ok(StepOutput(
+            checker.step_data(NodeType::ChangesetInfo, || {
+                NodeData::ChangesetInfo(Some(info))
+            }),
+            edges,
+        ))
+    } else {
+        Ok(StepOutput(
+            checker.step_data(NodeType::ChangesetInfo, || NodeData::ChangesetInfo(None)),
+            vec![],
+        ))
+    }
+}
+
 async fn bonsai_changeset_step<V: VisitOne>(
     ctx: &CoreContext,
     repo: &BlobRepo,
@@ -251,6 +284,11 @@ async fn bonsai_changeset_step<V: VisitOne>(
 
     // Build edges, from mostly queue expansion to least
     let mut edges = vec![];
+
+    // Expands to parents
+    checker.add_edge(&mut edges, EdgeType::BonsaiChangesetToChangesetInfo, || {
+        Node::ChangesetInfo(*bcs_id)
+    });
 
     // Parents expand 1:[0|1|2] and then the same as all below
     for parent_id in bcs.parents() {
@@ -1069,6 +1107,9 @@ where
         }
         Node::BonsaiFsnodeMapping(bcs_id) => {
             bonsai_to_fsnode_mapping_step(&ctx, &repo, &checker, bcs_id, enable_derive).await
+        }
+        Node::ChangesetInfo(bcs_id) => {
+            changeset_info_step(&ctx, &repo, &checker, bcs_id, enable_derive).await
         }
         Node::Fsnode((path, fsnode_id)) => {
             fsnode_step(&ctx, &repo, &checker, path, &fsnode_id).await

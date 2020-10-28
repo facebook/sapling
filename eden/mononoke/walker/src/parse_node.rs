@@ -115,6 +115,9 @@ pub fn parse_node(s: &str) -> Result<Node, Error> {
         NodeType::BonsaiFsnodeMapping => {
             Node::BonsaiFsnodeMapping(ChangesetId::from_str(&parts.join(NODE_SEP))?)
         }
+        NodeType::ChangesetInfo => {
+            Node::ChangesetInfo(ChangesetId::from_str(&parts.join(NODE_SEP))?)
+        }
         NodeType::Fsnode => {
             let mpath = check_and_build_mpath(node_type, parts)?;
             let id = FsnodeId::from_str(parts[0])?;
@@ -228,6 +231,12 @@ mod tests {
                     node_type,
                     &parse_node(&format!("BonsaiFsnodeMapping{}{}", NODE_SEP, SAMPLE_BLAKE2))?
                         .get_type()
+                );
+            }
+            NodeType::ChangesetInfo => {
+                assert_eq!(
+                    node_type,
+                    &parse_node(&format!("ChangesetInfo{}{}", NODE_SEP, SAMPLE_BLAKE2))?.get_type()
                 );
             }
             NodeType::Fsnode => {

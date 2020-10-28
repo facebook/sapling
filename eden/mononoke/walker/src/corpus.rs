@@ -168,6 +168,7 @@ fn dump_with_extension(node_type: NodeType) -> bool {
         NodeType::FileContentMetadata => true,
         NodeType::AliasContentMapping => true,
         // Derived Data
+        NodeType::ChangesetInfo => false,
         NodeType::Fsnode => false,
     }
 }

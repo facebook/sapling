@@ -8,6 +8,7 @@
 use ahash::RandomState;
 use anyhow::{format_err, Error};
 use bookmarks::BookmarkName;
+use changeset_info::ChangesetInfo;
 use derived_data::BonsaiDerived;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use filenodes::FilenodeInfo;
@@ -100,6 +101,7 @@ enum NodeType {
     AliasContentMapping,
     // Derived data
     BonsaiFsnodeMapping,
+    ChangesetInfo,
     Fsnode,
 }
 }
@@ -132,6 +134,7 @@ impl NodeType {
             NodeType::AliasContentMapping => Some(EdgeType::RootToAliasContentMapping),
             // Derived data
             NodeType::BonsaiFsnodeMapping => Some(EdgeType::RootToBonsaiFsnodeMapping),
+            NodeType::ChangesetInfo => Some(EdgeType::RootToChangesetInfo),
             NodeType::Fsnode => Some(EdgeType::RootToFsnode),
         }
     }
@@ -158,6 +161,7 @@ impl NodeType {
             NodeType::AliasContentMapping => None,
             // Derived data
             NodeType::BonsaiFsnodeMapping => Some(RootFsnodeId::NAME),
+            NodeType::ChangesetInfo => Some(ChangesetInfo::NAME),
             NodeType::Fsnode => Some(RootFsnodeId::NAME),
         }
     }
@@ -275,6 +279,7 @@ pub enum Node {
     AliasContentMapping(Alias),
     // Derived data
     BonsaiFsnodeMapping(ChangesetId),
+    ChangesetInfo(ChangesetId),
     Fsnode((WrappedPath, FsnodeId)),
 }
 
@@ -300,6 +305,7 @@ enum EdgeType {
     RootToAliasContentMapping,
     // Derived data Roots
     RootToBonsaiFsnodeMapping,
+    RootToChangesetInfo,
     RootToFsnode,
     // Bonsai
     BookmarkToBonsaiChangeset,
@@ -332,6 +338,8 @@ enum EdgeType {
     AliasContentMappingToFileContent,
     // Derived data
     BonsaiToRootFsnode,
+    BonsaiChangesetToChangesetInfo,
+    ChangesetInfoToChangesetInfoParent,
     FsnodeToChildFsnode,
     FsnodeToFileContent,
 }
@@ -366,6 +374,7 @@ impl EdgeType {
             EdgeType::RootToAliasContentMapping => None,
             // Derived data Roots
             EdgeType::RootToBonsaiFsnodeMapping => None,
+            EdgeType::RootToChangesetInfo => None,
             EdgeType::RootToFsnode => None,
             // Bonsai
             EdgeType::BookmarkToBonsaiChangeset => Some(NodeType::Bookmark),
@@ -398,6 +407,8 @@ impl EdgeType {
             EdgeType::AliasContentMappingToFileContent => Some(NodeType::AliasContentMapping),
             // Derived data
             EdgeType::BonsaiToRootFsnode => Some(NodeType::BonsaiFsnodeMapping),
+            EdgeType::BonsaiChangesetToChangesetInfo => Some(NodeType::BonsaiChangeset),
+            EdgeType::ChangesetInfoToChangesetInfoParent => Some(NodeType::ChangesetInfo),
             EdgeType::FsnodeToChildFsnode => Some(NodeType::Fsnode),
             EdgeType::FsnodeToFileContent => Some(NodeType::Fsnode),
         }
@@ -422,6 +433,7 @@ impl EdgeType {
             EdgeType::RootToAliasContentMapping => NodeType::AliasContentMapping,
             // Derived data Roots
             EdgeType::RootToBonsaiFsnodeMapping => NodeType::BonsaiFsnodeMapping,
+            EdgeType::RootToChangesetInfo => NodeType::ChangesetInfo,
             EdgeType::RootToFsnode => NodeType::Fsnode,
             // Bonsai
             EdgeType::BookmarkToBonsaiChangeset => NodeType::BonsaiChangeset,
@@ -454,6 +466,8 @@ impl EdgeType {
             EdgeType::AliasContentMappingToFileContent => NodeType::FileContent,
             // Derived data
             EdgeType::BonsaiToRootFsnode => NodeType::Fsnode,
+            EdgeType::BonsaiChangesetToChangesetInfo => NodeType::ChangesetInfo,
+            EdgeType::ChangesetInfoToChangesetInfoParent => NodeType::ChangesetInfo,
             EdgeType::FsnodeToChildFsnode => NodeType::Fsnode,
             EdgeType::FsnodeToFileContent => NodeType::FileContent,
         }
@@ -495,6 +509,7 @@ pub enum NodeData {
     AliasContentMapping(ContentId),
     // Derived data
     BonsaiFsnodeMapping(Option<FsnodeId>),
+    ChangesetInfo(Option<ChangesetInfo>),
     Fsnode(Fsnode),
 }
 
@@ -520,6 +535,7 @@ impl Node {
             Node::AliasContentMapping(_) => NodeType::AliasContentMapping,
             // Derived data
             Node::BonsaiFsnodeMapping(_) => NodeType::BonsaiFsnodeMapping,
+            Node::ChangesetInfo(_) => NodeType::ChangesetInfo,
             Node::Fsnode(_) => NodeType::Fsnode,
         }
     }
@@ -545,6 +561,7 @@ impl Node {
             Node::AliasContentMapping(k) => k.blobstore_key(),
             // Derived data
             Node::BonsaiFsnodeMapping(k) => k.blobstore_key(),
+            Node::ChangesetInfo(k) => k.blobstore_key(),
             Node::Fsnode((_, k)) => k.blobstore_key(),
         }
     }
@@ -570,6 +587,7 @@ impl Node {
             Node::AliasContentMapping(_) => None,
             // Derived data
             Node::BonsaiFsnodeMapping(_) => None,
+            Node::ChangesetInfo(_) => None,
             Node::Fsnode((p, _)) => Some(&p),
         }
     }
@@ -596,6 +614,7 @@ impl Node {
             Node::AliasContentMapping(k) => Some(k.sampling_fingerprint()),
             // Derived data
             Node::BonsaiFsnodeMapping(k) => Some(k.sampling_fingerprint()),
+            Node::ChangesetInfo(k) => Some(k.sampling_fingerprint()),
             Node::Fsnode((_, k)) => Some(k.sampling_fingerprint()),
         }
     }

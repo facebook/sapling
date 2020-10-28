@@ -96,6 +96,7 @@ fn filter_repo_path(node_type: NodeType, path: Option<&'_ WrappedPath>) -> Optio
         NodeType::FileContentMetadata => path,
         NodeType::AliasContentMapping => path,
         // Derived Data
+        NodeType::ChangesetInfo => None,
         NodeType::Fsnode => path,
     }
 }

@@ -154,6 +154,8 @@ const DEEP_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::AliasContentMappingToFileContent,
     // Derived data
     EdgeType::BonsaiToRootFsnode,
+    EdgeType::BonsaiChangesetToChangesetInfo,
+    EdgeType::ChangesetInfoToChangesetInfoParent,
     EdgeType::FsnodeToChildFsnode,
     EdgeType::FsnodeToFileContent,
 ];
@@ -183,6 +185,7 @@ const SHALLOW_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::AliasContentMappingToFileContent,
     // Derived data
     EdgeType::BonsaiToRootFsnode,
+    EdgeType::BonsaiChangesetToChangesetInfo,
     EdgeType::FsnodeToChildFsnode,
     EdgeType::FsnodeToFileContent,
 ];
