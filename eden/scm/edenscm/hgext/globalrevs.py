@@ -62,6 +62,7 @@ from edenscm.mercurial import (
     namespaces,
     phases,
     progress,
+    pycompat,
     registrar,
     revset,
     smartset,
@@ -264,7 +265,7 @@ class _globalrevmap(object):
 
     @staticmethod
     def _globalrevtonode(grev):
-        return _u64le2bin(grev).ljust(20, "\0")
+        return _u64le2bin(grev).ljust(20, b"\0")
 
     @staticmethod
     def _nodetoglobalrev(grevnode):
@@ -282,7 +283,7 @@ class _globalrevmap(object):
 
     def save(self):
         self.map.flush()
-        self.repo.sharedvfs.write(LASTREVFILE, "%s" % self.lastrev)
+        self.repo.sharedvfs.write(LASTREVFILE, pycompat.encodeutf8("%s" % self.lastrev))
 
 
 def _lookupglobalrev(repo, grev):

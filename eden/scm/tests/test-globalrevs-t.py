@@ -10,8 +10,6 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, shlib, testtmp  # noqa: F401
 
 
-feature.require(["py2"])
-
 sh.enable("remotenames")
 sh % ". '$TESTDIR/hgsql/library.sh'"
 sh % "initdb"

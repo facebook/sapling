@@ -10,6 +10,8 @@ from __future__ import absolute_import
 import os
 import subprocess
 
+from edenscm.mercurial.pycompat import encodeutf8
+
 from .. import shlib, testtmp
 
 
@@ -25,7 +27,7 @@ dbconfig = None
 
 def _createdatabase():
     schema = open(
-        shlib.expandpath("$TESTDIR/hgsql/schema.%s.sql" % dbconfig["dbengine"]), "rb"
+        shlib.expandpath("$TESTDIR/hgsql/schema.%s.sql" % dbconfig["dbengine"]), "r"
     ).read()
 
     p = subprocess.Popen(
@@ -41,7 +43,8 @@ def _createdatabase():
         stderr=subprocess.PIPE,
     )
     stdout, stderr = p.communicate(
-        r"""
+        encodeutf8(
+            r"""
     CREATE DATABASE IF NOT EXISTS {dbname};
     USE {dbname};
     DROP TABLE IF EXISTS revisions;
@@ -49,7 +52,8 @@ def _createdatabase():
     DROP TABLE IF EXISTS repo_lock;
     {schema}
     """.format(
-            dbname=dbconfig["dbname"], dbengine=dbconfig["dbengine"], schema=schema
+                dbname=dbconfig["dbname"], dbengine=dbconfig["dbengine"], schema=schema
+            )
         )
     )
     if p.returncode != 0:
@@ -70,7 +74,7 @@ def initserver(servername, dbname):
 def configureserver(servername, reponame):
     config = dict(dbconfig)
     config["reponame"] = reponame
-    open(os.path.join(servername, ".hg/hgrc"), "ab").write(
+    open(os.path.join(servername, ".hg/hgrc"), "a").write(
         r"""
 [extensions]
 hgsql=
@@ -105,7 +109,7 @@ def initclient(name):
 
 
 def configureclient(name):
-    open(os.path.join(name, ".hg/hgrc"), "ab").write(
+    open(os.path.join(name, ".hg/hgrc"), "a").write(
         r"""
 [ui]
 ssh={}
