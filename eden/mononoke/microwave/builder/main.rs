@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
- #![deny(warnings)]
+#![deny(warnings)]
 
 mod changesets;
 mod filenodes;
