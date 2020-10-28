@@ -80,8 +80,18 @@ pub async fn cmd(
             let mock_username = sub.value_of("mock-username");
             let client_debug = sub.is_present("client-debug");
 
+            let mut scuba_logger =
+                ScubaSampleBuilder::with_opt_table(fb, scuba_table.map(|v| v.to_owned()));
+            scuba_logger.add_common_server_data();
+
+            let client_logger = {
+                let drain = slog_term::PlainSyncDecorator::new(std::io::stderr());
+                let drain = slog_term::FullFormat::new(drain).build();
+                Logger::root(drain.ignore_res(), o!())
+            };
+
+
             return StdioRelay {
-                fb,
                 path: mononoke_path,
                 repo,
                 query_string,
@@ -91,11 +101,12 @@ pub async fn cmd(
                 ssl_common_name: common_name,
                 insecure,
                 is_remote_proxy,
-                scuba_table,
+                scuba_logger,
                 mock_username,
                 show_session_output,
                 priority,
                 client_debug,
+                client_logger,
             }
             .run()
             .await;
@@ -106,7 +117,6 @@ pub async fn cmd(
 }
 
 struct StdioRelay<'a> {
-    fb: FacebookInit,
     path: &'a str,
     repo: &'a str,
     query_string: &'a str,
@@ -116,19 +126,16 @@ struct StdioRelay<'a> {
     ssl_common_name: &'a str,
     insecure: bool,
     is_remote_proxy: bool,
-    scuba_table: Option<&'a str>,
+    scuba_logger: ScubaSampleBuilder,
     mock_username: Option<&'a str>,
     show_session_output: bool,
     priority: Priority,
     client_debug: bool,
+    client_logger: Logger,
 }
 
 impl<'a> StdioRelay<'a> {
-    async fn run(self) -> Result<(), Error> {
-        let mut scuba_logger =
-            ScubaSampleBuilder::with_opt_table(self.fb, self.scuba_table.map(|v| v.to_owned()));
-        scuba_logger.add_common_server_data();
-
+    async fn run(mut self) -> Result<(), Error> {
         let session_uuid = generate_session_id();
         let unix_username = if let Some(mock_username) = self.mock_username {
             Some(mock_username.to_string())
@@ -167,17 +174,11 @@ impl<'a> StdioRelay<'a> {
 
         self.priority.add_to_preamble(&mut preamble);
 
-        scuba_logger.add_preamble(&preamble);
+        self.scuba_logger.add_preamble(&preamble);
 
         let stdin = io::stdin();
         let stdout = io::stdout();
         let stderr = io::stderr();
-
-        let client_logger = {
-            let drain = slog_term::PlainSyncDecorator::new(std::io::stderr());
-            let drain = slog_term::FullFormat::new(drain).build();
-            Logger::root(drain.ignore_res(), o!())
-        };
 
         if self.show_session_output {
             // This message is parsed on various places by Sandcastle to determine it was served by
@@ -187,7 +188,7 @@ impl<'a> StdioRelay<'a> {
             // this a non-optional parameter and show the user friendly message on empty query string.
             if self.query_string.is_empty() || self.query_string.contains("sandcastle") {
                 debug!(
-                    client_logger,
+                    self.client_logger,
                     "Session with Mononoke started with uuid: {}", session_uuid
                 );
             } else {
@@ -195,21 +196,25 @@ impl<'a> StdioRelay<'a> {
             }
         }
 
-        scuba_logger.log_with_msg("Hgcli proxy - Connected", None);
+        self.scuba_logger
+            .log_with_msg("Hgcli proxy - Connected", None);
 
         let (stats, result) = self
             .internal_run(preamble, stdin, stdout, stderr)
             .timed()
             .await;
-        scuba_logger.add_future_stats(&stats);
+        self.scuba_logger.add_future_stats(&stats);
         match result {
-            Ok(_) => scuba_logger.log_with_msg("Hgcli proxy - Success", None),
+            Ok(_) => self
+                .scuba_logger
+                .log_with_msg("Hgcli proxy - Success", None),
             Err(err) => {
-                scuba_logger.log_with_msg("Hgcli proxy - Failure", format!("{:#?}", err));
-                error!(client_logger, "Error in hgcli proxy"; SlogKVError(err));
+                self.scuba_logger
+                    .log_with_msg("Hgcli proxy - Failure", format!("{:#?}", err));
+                error!(self.client_logger, "Error in hgcli proxy"; SlogKVError(err));
             }
         }
-        scuba_logger.flush(SCUBA_TIMEOUT);
+        self.scuba_logger.flush(SCUBA_TIMEOUT);
         Ok(())
     }
 
@@ -267,7 +272,7 @@ impl<'a> StdioRelay<'a> {
     }
 
     async fn internal_run(
-        self,
+        &self,
         preamble: Preamble,
         stdin: Stdin,
         stdout: Stdout,
