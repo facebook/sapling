@@ -99,6 +99,8 @@ pub struct MononokeTunables {
     repo_client_getpack_timeout_secs: AtomicI64,
     derived_data_slow_derivation_threshold_secs: AtomicI64,
     disable_running_hooks_in_pushredirected_repo: AtomicBool,
+    scs_request_read_qps: AtomicI64,
+    scs_request_write_qps: AtomicI64,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {

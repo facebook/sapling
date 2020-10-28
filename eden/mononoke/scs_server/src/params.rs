@@ -19,7 +19,7 @@ use crate::commit_id::CommitIdExt;
 /// should have their name prefixed by `param_` to make it clear that
 /// the column is for a parameter.  The default implementation does
 /// nothing.
-pub(crate) trait AddScubaParams {
+pub(crate) trait AddScubaParams: Send + Sync {
     fn add_scuba_params(&self, _scuba: &mut ScubaSampleBuilder) {}
 }
 

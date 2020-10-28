@@ -6,10 +6,13 @@
  */
 
 use std::collections::HashSet;
+use std::convert::TryInto;
 use std::future::Future;
+use std::num::NonZeroU32;
 use std::pin::Pin;
 use std::sync::Arc;
 
+use async_limiter::AsyncLimiter;
 use fbinit::FacebookInit;
 use futures_stats::{FutureStats, TimedFutureExt};
 use identity::Identity;
@@ -21,6 +24,7 @@ use mononoke_api::{
 use mononoke_types::hash::{Sha1, Sha256};
 use once_cell::sync::Lazy;
 use permission_checker::{MononokeIdentity, MononokeIdentitySet};
+use ratelimit_meter::{algorithms::LeakyBucket, DirectRateLimiter};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt, ScubaValue};
 use slog::Logger;
 use source_control as thrift;
@@ -89,13 +93,38 @@ impl SourceControlServiceImpl {
         SourceControlServiceThriftImpl(self.clone())
     }
 
-    pub(crate) fn create_ctx(
+    pub(crate) async fn create_ctx(
         &self,
         name: &str,
         req_ctxt: &RequestContext,
         specifier: Option<&dyn SpecifierExt>,
         params: &dyn AddScubaParams,
     ) -> Result<CoreContext, errors::ServiceError> {
+        let identities: MononokeIdentitySet = req_ctxt
+            .identities_for_service(&self.service_identity)
+            .map_err(errors::internal_error)?
+            .entries()
+            .into_iter()
+            .filter_map(|id| MononokeIdentity::try_from_identity_ref(id).ok())
+            .collect();
+
+        let mut scuba = self.create_scuba(name, req_ctxt, specifier, params, &identities)?;
+        let session = self.create_session(identities).await?;
+        scuba.add("session_uuid", session.metadata().session_id().to_string());
+
+        let ctx = session.new_context(self.logger.clone(), scuba);
+        Ok(ctx)
+    }
+
+    /// Create and configure a scuba sample builder for a request.
+    fn create_scuba(
+        &self,
+        name: &str,
+        req_ctxt: &RequestContext,
+        specifier: Option<&dyn SpecifierExt>,
+        params: &dyn AddScubaParams,
+        identities: &MononokeIdentitySet,
+    ) -> Result<ScubaSampleBuilder, errors::ServiceError> {
         let mut scuba = self.scuba_builder.clone();
         scuba.add_common_server_data();
         scuba.add("type", "thrift");
@@ -138,10 +167,6 @@ impl SourceControlServiceImpl {
             }
         }
 
-        let identities = req_ctxt
-            .identities_for_service(&self.service_identity)
-            .map_err(errors::internal_error)?;
-        let identities = identities.entries();
         scuba.add(
             "identities",
             identities
@@ -150,19 +175,36 @@ impl SourceControlServiceImpl {
                 .collect::<ScubaValue>(),
         );
 
-        let identities: MononokeIdentitySet = identities
-            .into_iter()
-            .filter_map(|id| MononokeIdentity::try_from_identity_ref(id).ok())
-            .collect();
+        Ok(scuba)
+    }
+
+    /// Create and configure the session container for a request.
+    async fn create_session(
+        &self,
+        identities: MononokeIdentitySet,
+    ) -> Result<SessionContainer, errors::ServiceError> {
         let metadata = Metadata::default().set_identities(identities);
-        scuba.add("session_uuid", metadata.session_id().to_string());
-        let session = SessionContainer::builder(self.fb)
-            .metadata(metadata)
-            .build();
 
-        let ctx = session.new_context(self.logger.clone(), scuba);
+        let mut session_builder = SessionContainer::builder(self.fb).metadata(metadata);
 
-        Ok(ctx)
+        fn maybe_qps(tunable: i64) -> Option<NonZeroU32> {
+            let v = tunable.try_into().ok()?;
+            NonZeroU32::new(v)
+        }
+
+        if let Some(qps) = maybe_qps(tunables().get_scs_request_read_qps()) {
+            session_builder.blobstore_read_limiter(
+                AsyncLimiter::new(DirectRateLimiter::<LeakyBucket>::per_second(qps)).await,
+            );
+        }
+
+        if let Some(qps) = maybe_qps(tunables().get_scs_request_write_qps()) {
+            session_builder.blobstore_write_limiter(
+                AsyncLimiter::new(DirectRateLimiter::<LeakyBucket>::per_second(qps)).await,
+            );
+        }
+
+        Ok(session_builder.build())
     }
 
     /// Get the repo specified by a `thrift::RepoSpecifier`.
@@ -373,7 +415,7 @@ macro_rules! impl_thrift_methods {
                 Self: Sync + 'async_trait,
             {
                 let handler = async move {
-                    let ctx = create_ctx!(self.0, $method_name, req_ctxt, $( $param_name ),*)?;
+                    let ctx = create_ctx!(self.0, $method_name, req_ctxt, $( $param_name ),*).await?;
                     ctx.scuba().clone().log_with_msg("Request start", None);
                     STATS::total_request_start.add_value(1);
                     let (stats, res) = (self.0)

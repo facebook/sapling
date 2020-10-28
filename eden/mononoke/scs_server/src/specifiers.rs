@@ -10,7 +10,7 @@ use source_control as thrift;
 
 use crate::commit_id::CommitIdExt;
 
-pub(crate) trait SpecifierExt {
+pub(crate) trait SpecifierExt: Send + Sync {
     fn description(&self) -> String;
 
     fn scuba_reponame(&self) -> Option<String> {
