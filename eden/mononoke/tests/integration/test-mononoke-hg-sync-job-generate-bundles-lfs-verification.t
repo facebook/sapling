@@ -85,18 +85,14 @@ Make client repo
 
   $ cd "$TESTTMP"
 
-Two missing blobs: it fails
-  $ mononoke_hg_sync repo-hg 1 --generate-bundles --verify-lfs-blob-presence "${lfs_uri_other}/objects/batch" 2>&1 | grep 'objects are missing'
-  * LFS objects are missing: * (glob)
+Two missing blobs that were uploaded
+  $ mononoke_hg_sync repo-hg 1 --generate-bundles --verify-lfs-blob-presence "${lfs_uri_other}/objects/batch" 2>&1 | grep missing
+  * missing * object, uploading (glob)
+  * missing * object, uploading (glob)
 
-One missing blob: it still fails
-  $ hg debuglfssend "$lfs_uri_other" < client-push/long
-  c12949887b7d8c46e9fcc5d9cd4bd884de33c1d00e24d7ac56ed9200e07f31a1 40
-  $ mononoke_hg_sync repo-hg 1 --generate-bundles --verify-lfs-blob-presence "${lfs_uri_other}/objects/batch" 2>&1 | grep 'objects are missing'
-  * LFS objects are missing: [RequestObject { oid: Sha256(aac24ec70120b177274d359073212777a40780e2874b120a0f210096e55cfa5f), size: 40 }] (glob)
+Check that they were uploaded
+  $ hg debuglfsreceive c12949887b7d8c46e9fcc5d9cd4bd884de33c1d00e24d7ac56ed9200e07f31a1 0 "${lfs_uri_other}" > "$TESTTMP/long"
+  $ cmp "$TESTTMP/long" client-push/long
 
-Zero missing blobs: it succeeds
-  $ hg debuglfssend "$lfs_uri_other" < client-push/long2
-  aac24ec70120b177274d359073212777a40780e2874b120a0f210096e55cfa5f 40
-  $ mononoke_hg_sync repo-hg 1 --generate-bundles --verify-lfs-blob-presence "${lfs_uri_other}/objects/batch" 2>&1 | grep 'successful sync'
-  * successful sync of entries [2] (glob)
+  $ hg debuglfsreceive aac24ec70120b177274d359073212777a40780e2874b120a0f210096e55cfa5f 0 "${lfs_uri_other}" > "$TESTTMP/long2"
+  $ cmp "$TESTTMP/long2" client-push/long2

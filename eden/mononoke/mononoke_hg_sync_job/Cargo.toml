@@ -21,6 +21,7 @@ bookmarks = { path = "../bookmarks" }
 cmdlib = { path = "../cmdlib" }
 context = { path = "../server/context" }
 dbbookmarks = { path = "../bookmarks/dbbookmarks" }
+filestore = { path = "../filestore" }
 getbundle_response = { path = "../repo_client/getbundle_response" }
 hgserver_config = { path = "../../../configerator/structs/scm/mononoke/hgserverconf" }
 lfs_protocol = { path = "../lfs_protocol" }

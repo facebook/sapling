@@ -166,6 +166,7 @@ pub enum FilenodeVerifier {
 impl FilenodeVerifier {
     fn verify_entries(
         &self,
+        ctx: CoreContext,
         filenode_entries: &HashMap<MPath, Vec<PreparedFilenodeEntry>>,
     ) -> impl Future<Item = (), Error = Error> + 'static {
         match self {
@@ -182,7 +183,9 @@ impl FilenodeVerifier {
                     })
                     .collect();
 
-                lfs_verifier.verify_lfs_presence(&lfs_blobs).right_future()
+                lfs_verifier
+                    .ensure_lfs_presence(ctx, &lfs_blobs)
+                    .right_future()
             }
         }
     }
@@ -261,7 +264,8 @@ fn create_bundle_impl(
                 };
 
                 // Check that the filenodes pass the verifier prior to serializing them.
-                let verify_ok = filenode_verifier.verify_entries(&prepared_filenode_entries);
+                let verify_ok =
+                    filenode_verifier.verify_entries(ctx.clone(), &prepared_filenode_entries);
 
                 let filenode_entries =
                     create_filenodes(ctx.clone(), repo.clone(), prepared_filenode_entries).boxify();

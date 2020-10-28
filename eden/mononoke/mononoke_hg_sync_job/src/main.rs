@@ -679,14 +679,9 @@ fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> BoxFuture<(), Error> {
 
     let lfs_params = repo_config.lfs.clone();
 
-    let filenode_verifier = match matches.value_of("verify-lfs-blob-presence") {
-        Some(uri) => {
-            let uri = try_boxfuture!(uri.parse::<Uri>());
-            let verifier = try_boxfuture!(LfsVerifier::new(uri));
-            FilenodeVerifier::LfsVerifier(verifier)
-        }
-        None => FilenodeVerifier::NoopVerifier,
-    };
+    let verify_lfs_blob_presence = matches
+        .value_of("verify-lfs-blob-presence")
+        .map(|s| s.to_string());
 
     let hgsql_use_sqlite = matches.is_present(HGSQL_GLOBALREVS_USE_SQLITE);
     let hgsql_db_addr = matches
@@ -699,6 +694,16 @@ fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> BoxFuture<(), Error> {
         let maybe_skiplist_blobstore_key = repo_config.skiplist_index_blobstore_key.clone();
         let hgsql_globalrevs_name = repo_config.hgsql_globalrevs_name.clone();
         move |repo| {
+            let filenode_verifier = match verify_lfs_blob_presence {
+                Some(uri) => {
+                    let uri = try_boxfuture!(uri.parse::<Uri>());
+                    let verifier =
+                        try_boxfuture!(LfsVerifier::new(uri, Arc::new(repo.get_blobstore())));
+                    FilenodeVerifier::LfsVerifier(verifier)
+                }
+                None => FilenodeVerifier::NoopVerifier,
+            };
+
             let overlay = list_hg_server_bookmarks(hg_repo_path.clone())
                 .and_then({
                     cloned!(ctx, repo);
@@ -759,7 +764,10 @@ fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> BoxFuture<(), Error> {
             .boxed()
             .compat();
 
-            preparer.map(Arc::new).join3(overlay, globalrev_syncer)
+            preparer
+                .map(Arc::new)
+                .join3(overlay, globalrev_syncer)
+                .boxify()
         }
     });
 
