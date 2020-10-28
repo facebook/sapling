@@ -9,6 +9,8 @@ import getpass
 import io
 import os.path
 import platform
+import re
+import shlex
 import socket
 import subprocess
 import sys
@@ -53,6 +55,9 @@ def print_diagnostic_info(instance: EdenInstance, out: IO[bytes]) -> None:
         # TODO(zeyi): fix `eden doctor` on Windows
         print_eden_doctor_report(instance, out)
 
+    processor = instance.get_config_value("rage.reporter", default="")
+    if processor:
+        print_expanded_log_file(instance.get_log_path(), processor, out)
     print_tail_of_log_file(instance.get_log_path(), out)
     print_running_eden_process(out)
 
@@ -122,6 +127,65 @@ def print_eden_doctor_report(instance: EdenInstance, out: IO[bytes]) -> None:
     except Exception:
         out.write(b"\nUnexpected exception thrown while running eden doctor checks:\n")
         out.write(traceback.format_exc().encode("utf-8") + b"\n")
+
+
+def read_chunk(logfile: IO[bytes]):
+    CHUNK_SIZE = 20 * 1024
+    while True:
+        data = logfile.read(CHUNK_SIZE)
+        if not data:
+            break
+        yield data
+
+
+def print_log_file(
+    path: Path, out: IO[bytes], whole_file: bool, size: int = 1000000
+) -> None:
+    try:
+        with path.open("rb") as logfile:
+            if not whole_file:
+                LOG_AMOUNT = size
+                size = logfile.seek(0, io.SEEK_END)
+                logfile.seek(max(0, size - LOG_AMOUNT), io.SEEK_SET)
+            for data in read_chunk(logfile):
+                out.write(data)
+    except Exception as e:
+        out.write(b"Error reading the log file: %s\n" % str(e).encode())
+
+
+def print_expanded_log_file(path: Path, processor: str, out: IO[bytes]) -> None:
+    try:
+        proc = subprocess.Popen(
+            shlex.split(processor), stdin=subprocess.PIPE, stdout=subprocess.PIPE
+        )
+        sink = proc.stdin
+        output = proc.stdout
+
+        # pyre-fixme[6]: Expected `IO[bytes]` for 2nd param but got
+        #  `Optional[typing.IO[typing.Any]]`.
+        print_log_file(path, sink, whole_file=False)
+
+        # pyre-fixme[16]: `Optional` has no attribute `close`.
+        sink.close()
+
+        # pyre-fixme[16]: `Optional` has no attribute `read`.
+        stdout = output.read().decode("utf-8")
+
+        output.close()
+        proc.wait()
+
+        # Expected output to be in form "<str0>\n<str1>: <str2>\n"
+        # and we want str1
+        pattern = re.compile("^.*\\n[a-zA-Z0-9_.-]*: .*\\n$")
+        match = pattern.match(stdout)
+
+        if not match:
+            out.write(b"Verbose Eden logs: %s\n" % stdout.encode())
+        else:
+            paste, _ = stdout.split("\n")[1].split(": ")
+            out.write(b"Verbose Eden logs: %s\n" % paste.encode())
+    except Exception as e:
+        out.write(b"Error generating expanded Eden logs: %s\n" % str(e).encode())
 
 
 def print_tail_of_log_file(path: Path, out: IO[bytes]) -> None:

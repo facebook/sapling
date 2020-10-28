@@ -1742,6 +1742,53 @@ update your shell's working directory."""
         return 0
 
 
+@subcmd("logs", "Gather logs from eden")
+class LogsCmd(Subcmd):
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "--stdout",
+            action="store_true",
+            help="Print the logs to stdout: ignore reporter.",
+        )
+        parser.add_argument(
+            "--full", action="store_true", help="Gather the full logs from eden"
+        )
+        parser.add_argument(
+            "--size",
+            type=int,
+            default=1000000,
+            help="The amount of the logs we should gather. If --full is passed in,"
+            "we will ignore this value. Default to 1M",
+        )
+
+    def run(self, args: argparse.Namespace) -> int:
+        instance = get_eden_instance(args)
+        eden_log_path = instance.get_log_path()
+        if not eden_log_path.exists():
+            print(f"No log file found at {eden_log_path}", file=sys.stderr)
+            return 1
+
+        # For ease of use, just use the same rage reporter
+        rage_processor = instance.get_config_value("rage.reporter", default="")
+
+        proc: Optional[subprocess.Popen] = None
+        if rage_processor and not args.stdout:
+            proc = subprocess.Popen(shlex.split(rage_processor), stdin=subprocess.PIPE)
+            sink = proc.stdin
+        else:
+            proc = None
+            sink = sys.stdout.buffer
+
+        # pyre-fixme[6]: Expected `IO[bytes]` for 2nd param but got
+        #  `Optional[typing.IO[typing.Any]]`.
+        rage_mod.print_log_file(eden_log_path, sink, args.full, args.size)
+        if proc:
+            # pyre-fixme[16]: `Optional` has no attribute `close`.
+            sink.close()
+            proc.wait()
+        return 0
+
+
 @subcmd("rage", "Gather diagnostic information about eden")
 class RageCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
