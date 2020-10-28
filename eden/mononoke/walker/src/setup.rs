@@ -93,6 +93,7 @@ pub const OUTPUT_DIR_ARG: &str = "output-dir";
 const SCUBA_TABLE_ARG: &str = "scuba-table";
 const SCUBA_LOG_FILE_ARG: &str = "scuba-log-file";
 
+const DEFAULT_VALUE_ARG: &str = "default";
 const SHALLOW_VALUE_ARG: &str = "shallow";
 const DEEP_VALUE_ARG: &str = "deep";
 const MARKER_VALUE_ARG: &str = "marker";
@@ -539,20 +540,34 @@ fn setup_subcommand_args<'a, 'b>(subcmd: App<'a, 'b>) -> App<'a, 'b> {
         );
 }
 
+// parse the pre-defined groups we have for default etc
+fn parse_node_value(arg: &str) -> Result<HashSet<NodeType>, Error> {
+    match arg {
+        DEFAULT_VALUE_ARG => Ok(HashSet::from_iter(
+            DEFAULT_INCLUDE_NODE_TYPES.iter().cloned(),
+        )),
+        _ => NodeType::from_str(arg).map(|e| HashSet::from_iter(Some(e))),
+    }
+}
+
+fn parse_node_values(
+    values: Option<Values>,
+    default: &[NodeType],
+) -> Result<HashSet<NodeType>, Error> {
+    match values {
+        None => Ok(HashSet::from_iter(default.iter().cloned())),
+        Some(values) => Ok(values.flat_map(parse_node_value).flatten().collect()),
+    }
+}
+
 pub fn parse_node_types(
     sub_m: &ArgMatches<'_>,
     include_arg_name: &str,
     exclude_arg_name: &str,
     default: &[NodeType],
 ) -> Result<HashSet<NodeType>, Error> {
-    let mut include_node_types: HashSet<NodeType> = match sub_m.values_of(include_arg_name) {
-        None => Ok(HashSet::from_iter(default.iter().cloned())),
-        Some(values) => values.map(NodeType::from_str).collect(),
-    }?;
-    let exclude_node_types: HashSet<NodeType> = match sub_m.values_of(exclude_arg_name) {
-        None => Ok(HashSet::new()),
-        Some(values) => values.map(NodeType::from_str).collect(),
-    }?;
+    let mut include_node_types = parse_node_values(sub_m.values_of(include_arg_name), default)?;
+    let exclude_node_types = parse_node_values(sub_m.values_of(exclude_arg_name), &[])?;
     include_node_types.retain(|x| !exclude_node_types.contains(x));
     Ok(include_node_types)
 }
