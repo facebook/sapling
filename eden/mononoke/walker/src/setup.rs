@@ -664,12 +664,21 @@ pub fn setup_common<'a>(
             DEEP_INCLUDE_EDGE_TYPES,
         )?;
 
-        let include_node_types = parse_node_types(
+        let mut include_node_types = parse_node_types(
             sub_m,
             INCLUDE_NODE_TYPE_ARG,
             EXCLUDE_NODE_TYPE_ARG,
             DEFAULT_INCLUDE_NODE_TYPES,
         )?;
+
+        // Only walk derived node types that the repo is configured to contain
+        include_node_types.retain(|t| {
+            if let Some(t) = t.derived_data_name() {
+                config.derived_data_config.derived_data_types.contains(t)
+            } else {
+                true
+            }
+        });
 
         let mut walk_roots: Vec<OutgoingEdge> = vec![];
 

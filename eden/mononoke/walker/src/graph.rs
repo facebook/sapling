@@ -8,8 +8,11 @@
 use ahash::RandomState;
 use anyhow::{format_err, Error};
 use bookmarks::BookmarkName;
+use derived_data::BonsaiDerived;
+use derived_data_filenodes::FilenodesOnlyPublic;
 use filenodes::FilenodeInfo;
 use filestore::Alias;
+use fsnodes::RootFsnodeId;
 use futures::stream::BoxStream;
 use hash_memo::EagerHashMemoizer;
 use internment::ArcIntern;
@@ -130,6 +133,32 @@ impl NodeType {
             // Derived data
             NodeType::BonsaiFsnodeMapping => Some(EdgeType::RootToBonsaiFsnodeMapping),
             NodeType::Fsnode => Some(EdgeType::RootToFsnode),
+        }
+    }
+
+    /// Derived data types are keyed by their statically defined NAME
+    pub fn derived_data_name(&self) -> Option<&'static str> {
+        match self {
+            NodeType::Root => None,
+            // Bonsai
+            NodeType::Bookmark => None,
+            NodeType::BonsaiChangeset => None,
+            NodeType::BonsaiHgMapping => Some(FilenodesOnlyPublic::NAME),
+            NodeType::BonsaiPhaseMapping => None,
+            NodeType::PublishedBookmarks => None,
+            // Hg
+            NodeType::HgBonsaiMapping => None,
+            NodeType::HgChangeset => None,
+            NodeType::HgManifest => None,
+            NodeType::HgFileEnvelope => None,
+            NodeType::HgFileNode => Some(FilenodesOnlyPublic::NAME),
+            // Content
+            NodeType::FileContent => None,
+            NodeType::FileContentMetadata => None,
+            NodeType::AliasContentMapping => None,
+            // Derived data
+            NodeType::BonsaiFsnodeMapping => Some(RootFsnodeId::NAME),
+            NodeType::Fsnode => Some(RootFsnodeId::NAME),
         }
     }
 }
@@ -575,7 +604,8 @@ impl Node {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::mem::size_of;
+    use blobrepo_factory::init_all_derived_data;
+    use std::{collections::HashSet, mem::size_of};
 
     #[test]
     fn test_node_size() {
@@ -589,5 +619,34 @@ mod tests {
         for t in NodeType::ALL_VARIANTS {
             assert!(*t as usize <= NodeType::MAX_ORDINAL)
         }
+    }
+
+    #[test]
+    fn test_all_derived_data_types_supported() {
+        // All types blobrepo can support
+        let a = init_all_derived_data().derived_data_types;
+
+        // supported in graph
+        let mut s = HashSet::new();
+        for t in NodeType::ALL_VARIANTS {
+            if let Some(d) = t.derived_data_name() {
+                assert!(
+                    a.contains(d),
+                    "graph derived data type {} for {} is not known by blobrepo::init_all_derived_data()",
+                    d,
+                    t
+                );
+                s.insert(d);
+            }
+        }
+
+        // TODO(ahornby) implement all derived types in walker so can enable this check
+        // for t in &a {
+        //     assert!(
+        //         s.contains(t.as_str()),
+        //         "blobrepo derived data type {} is not supported by walker graph",
+        //         t
+        //     );
+        // }
     }
 }
