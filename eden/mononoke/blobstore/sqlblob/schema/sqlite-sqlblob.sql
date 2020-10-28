@@ -21,3 +21,9 @@ CREATE TABLE `chunk` (
   `value` BLOB NOT NULL,
   PRIMARY KEY (`id`, `chunk_num`)
 );
+
+CREATE TABLE `chunk_generation` (
+    `id` VARCHAR(255) NOT NULL,
+    `last_seen_generation` BIGINT UNSIGNED NOT NULL,
+    PRIMARY KEY (`id`)
+);

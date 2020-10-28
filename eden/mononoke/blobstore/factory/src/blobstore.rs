@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Context, Error};
+use anyhow::{bail, Context, Error};
 use blobstore::{
     Blobstore, BlobstorePutOps, DisabledBlob, ErrorKind, PutBehaviour, DEFAULT_PUT_BEHAVIOUR,
 };
@@ -31,7 +31,7 @@ use scuba::ScubaSampleBuilder;
 use slog::Logger;
 use sql_construct::SqlConstructFromDatabaseConfig;
 use sql_ext::facebook::{MysqlConnectionType, MysqlOptions};
-use sqlblob::Sqlblob;
+use sqlblob::{CountedSqlblob, Sqlblob};
 use std::num::{NonZeroU64, NonZeroUsize};
 use std::sync::Arc;
 use throttledblob::{ThrottleOptions, ThrottledBlob};
@@ -113,6 +113,117 @@ pub fn make_blobstore<'a>(
     .boxed()
 }
 
+pub async fn make_sql_blobstore<'a>(
+    fb: FacebookInit,
+    blobconfig: BlobConfig,
+    mysql_options: MysqlOptions,
+    readonly_storage: ReadOnlyStorage,
+    blobstore_options: &'a BlobstoreOptions,
+    config_store: &'a ConfigStore,
+) -> Result<CountedSqlblob, Error> {
+    use BlobConfig::*;
+    match blobconfig {
+        Sqlite { path } => Sqlblob::with_sqlite_path(
+            path.join("blobs"),
+            readonly_storage.0,
+            blobstore_options.put_behaviour,
+            config_store,
+        )
+        .context(ErrorKind::StateOpen),
+
+        Mysql { remote } => match remote {
+            ShardableRemoteDatabaseConfig::Unsharded(config) => {
+                let read_conn_type = mysql_options.read_connection_type();
+                match mysql_options.connection_type {
+                    MysqlConnectionType::Myrouter(myrouter_port) => {
+                        Sqlblob::with_myrouter_unsharded(
+                            fb,
+                            config.db_address,
+                            myrouter_port,
+                            read_conn_type,
+                            readonly_storage.0,
+                            blobstore_options.put_behaviour,
+                            config_store,
+                        )
+                        .compat()
+                        .await
+                    }
+                    MysqlConnectionType::Mysql => {
+                        Sqlblob::with_mysql_unsharded(
+                            fb,
+                            config.db_address,
+                            read_conn_type,
+                            readonly_storage.0,
+                            blobstore_options.put_behaviour,
+                            config_store,
+                        )
+                        .compat()
+                        .await
+                    }
+                    MysqlConnectionType::RawXDB => {
+                        Sqlblob::with_raw_xdb_unsharded(
+                            fb,
+                            config.db_address,
+                            read_conn_type,
+                            readonly_storage.0,
+                            blobstore_options.put_behaviour,
+                            config_store,
+                        )
+                        .compat()
+                        .await
+                    }
+                }
+            }
+            ShardableRemoteDatabaseConfig::Sharded(config) => {
+                let read_conn_type = mysql_options.read_connection_type();
+                match mysql_options.connection_type {
+                    MysqlConnectionType::Myrouter(myrouter_port) => {
+                        Sqlblob::with_myrouter(
+                            fb,
+                            config.shard_map.clone(),
+                            myrouter_port,
+                            read_conn_type,
+                            config.shard_num,
+                            readonly_storage.0,
+                            blobstore_options.put_behaviour,
+                            config_store,
+                        )
+                        .compat()
+                        .await
+                    }
+                    MysqlConnectionType::Mysql => {
+                        Sqlblob::with_mysql(
+                            fb,
+                            config.shard_map.clone(),
+                            config.shard_num,
+                            read_conn_type,
+                            readonly_storage.0,
+                            blobstore_options.put_behaviour,
+                            config_store,
+                        )
+                        .compat()
+                        .await
+                    }
+                    MysqlConnectionType::RawXDB => {
+                        Sqlblob::with_raw_xdb_shardmap(
+                            fb,
+                            config.shard_map.clone(),
+                            read_conn_type,
+                            config.shard_num,
+                            readonly_storage.0,
+                            blobstore_options.put_behaviour,
+                            config_store,
+                        )
+                        .compat()
+                        .await
+                    }
+                }
+            }
+        },
+        _ => bail!("Not an SQL blobstore"),
+    }
+}
+
 // Constructs the BlobstorePutOps store implementations for apps needing low level blobsore access
 // most users should use `make_blobstore`
 pub fn make_blobstore_put_ops<'a>(
@@ -130,6 +241,17 @@ pub fn make_blobstore_put_ops<'a>(
 
         let mut has_components = false;
         let store = match blobconfig {
+            Sqlite { .. } | Mysql { .. } => make_sql_blobstore(
+                fb,
+                blobconfig,
+                mysql_options,
+                readonly_storage,
+                blobstore_options,
+                config_store,
+            )
+            .await
+            .map(|store| Arc::new(store) as Arc<dyn BlobstorePutOps>)?,
+
             Multiplexed {
                 multiplex_id,
                 scuba_table,
@@ -194,98 +316,6 @@ pub fn make_blobstore_put_ops<'a>(
                 .context(ErrorKind::StateOpen)
                 .map(|store| Arc::new(store) as Arc<dyn BlobstorePutOps>)?,
 
-            Sqlite { path } => Sqlblob::with_sqlite_path(
-                path.join("blobs"),
-                readonly_storage.0,
-                blobstore_options.put_behaviour,
-            )
-            .context(ErrorKind::StateOpen)
-            .map(|store| Arc::new(store) as Arc<dyn BlobstorePutOps>)?,
-
-            Mysql { remote } => match remote {
-                ShardableRemoteDatabaseConfig::Unsharded(config) => {
-                    let read_conn_type = mysql_options.read_connection_type();
-                    match mysql_options.connection_type {
-                        MysqlConnectionType::Myrouter(myrouter_port) => {
-                            Sqlblob::with_myrouter_unsharded(
-                                fb,
-                                config.db_address,
-                                myrouter_port,
-                                read_conn_type,
-                                readonly_storage.0,
-                                blobstore_options.put_behaviour,
-                            )
-                            .compat()
-                            .await
-                        }
-                        MysqlConnectionType::Mysql => {
-                            Sqlblob::with_mysql_unsharded(
-                                fb,
-                                config.db_address,
-                                read_conn_type,
-                                readonly_storage.0,
-                                blobstore_options.put_behaviour,
-                            )
-                            .compat()
-                            .await
-                        }
-                        MysqlConnectionType::RawXDB => {
-                            Sqlblob::with_raw_xdb_unsharded(
-                                fb,
-                                config.db_address,
-                                read_conn_type,
-                                readonly_storage.0,
-                                blobstore_options.put_behaviour,
-                            )
-                            .compat()
-                            .await
-                        }
-                    }
-                }
-                ShardableRemoteDatabaseConfig::Sharded(config) => {
-                    let read_conn_type = mysql_options.read_connection_type();
-                    match mysql_options.connection_type {
-                        MysqlConnectionType::Myrouter(myrouter_port) => {
-                            Sqlblob::with_myrouter(
-                                fb,
-                                config.shard_map.clone(),
-                                myrouter_port,
-                                read_conn_type,
-                                config.shard_num,
-                                readonly_storage.0,
-                                blobstore_options.put_behaviour,
-                            )
-                            .compat()
-                            .await
-                        }
-                        MysqlConnectionType::Mysql => {
-                            Sqlblob::with_mysql(
-                                fb,
-                                config.shard_map.clone(),
-                                config.shard_num,
-                                read_conn_type,
-                                readonly_storage.0,
-                                blobstore_options.put_behaviour,
-                            )
-                            .compat()
-                            .await
-                        }
-                        MysqlConnectionType::RawXDB => {
-                            Sqlblob::with_raw_xdb_shardmap(
-                                fb,
-                                config.shard_map.clone(),
-                                read_conn_type,
-                                config.shard_num,
-                                readonly_storage.0,
-                                blobstore_options.put_behaviour,
-                            )
-                            .compat()
-                            .await
-                        }
-                    }
-                }
-            }
-            .map(|store| Arc::new(store) as Arc<dyn BlobstorePutOps>)?,
             Logging {
                 blobconfig,
                 scuba_table,

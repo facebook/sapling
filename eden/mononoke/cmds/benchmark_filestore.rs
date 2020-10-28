@@ -11,6 +11,7 @@ use anyhow::{format_err, Error};
 use blobstore::{Blobstore, PutBehaviour, DEFAULT_PUT_BEHAVIOUR};
 use bytes::{Bytes, BytesMut};
 use cacheblob::new_memcache_blobstore_no_lease;
+use cached_config::ConfigStore;
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cmdlib::args;
 use context::CoreContext;
@@ -183,6 +184,7 @@ async fn run_benchmark_filestore<'a>(
 async fn get_blob<'a>(
     fb: FacebookInit,
     matches: &'a ArgMatches<'a>,
+    config_store: &ConfigStore,
     put_behaviour: PutBehaviour,
 ) -> Result<Arc<dyn Blobstore>, Error> {
     let blob: Arc<dyn Blobstore> = match matches.subcommand() {
@@ -218,6 +220,7 @@ async fn get_blob<'a>(
                     shard_count,
                     false,
                     put_behaviour,
+                    config_store,
                 )
                 .compat()
                 .await?
@@ -229,6 +232,7 @@ async fn get_blob<'a>(
                     ReadConnectionType::Replica,
                     false,
                     put_behaviour,
+                    config_store,
                 )
                 .compat()
                 .await?
@@ -240,6 +244,7 @@ async fn get_blob<'a>(
                     shard_count,
                     false,
                     put_behaviour,
+                    config_store,
                 )
                 .compat()
                 .await?
@@ -391,6 +396,11 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .takes_value(true)
                 .required(false),
         )
+        .arg(
+            Arg::with_name("test-instance")
+                .long("test-instance")
+                .required(false),
+        )
         .arg(Arg::with_name(ARG_INPUT).takes_value(true).required(true))
         .subcommand(manifold_subcommand)
         .subcommand(memory_subcommand)
@@ -401,11 +411,12 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let matches = app.get_matches();
 
     let logger = args::init_logging(fb, &matches);
+    let config_store = args::init_config_store(fb, &logger, &matches)?;
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     let mut runtime = tokio_compat::runtime::Runtime::new().map_err(Error::from)?;
 
-    let blob = runtime.block_on_std(get_blob(fb, &matches, DEFAULT_PUT_BEHAVIOUR))?;
+    let blob = runtime.block_on_std(get_blob(fb, &matches, config_store, DEFAULT_PUT_BEHAVIOUR))?;
 
     runtime.block_on_std(run_benchmark_filestore(&ctx, &matches, blob))?;
 

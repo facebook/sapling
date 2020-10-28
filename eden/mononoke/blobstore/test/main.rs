@@ -23,7 +23,7 @@ use context::CoreContext;
 use fileblob::Fileblob;
 use memblob::{EagerMemblob, LazyMemblob};
 use mononoke_types::BlobstoreBytes;
-use sqlblob::Sqlblob;
+use sqlblob::{get_test_config_store, Sqlblob};
 
 async fn overwrite<B: Blobstore + BlobstorePutOps>(
     fb: FacebookInit,
@@ -239,7 +239,7 @@ blobstore_test_impl! {
 blobstore_test_impl! {
     sqlblob_test => {
         state: (),
-        new: move |_, put_behaviour,| Sqlblob::with_sqlite_in_memory(put_behaviour),
+        new: move |_, put_behaviour,| Sqlblob::with_sqlite_in_memory(put_behaviour, &(get_test_config_store().1)),
         persistent: true,
         has_ctime: true,
     }

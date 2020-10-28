@@ -22,18 +22,19 @@ use crate::facebook::myadmin_delay;
 #[cfg(not(fbcode_build))]
 use crate::myadmin_delay_dummy as myadmin_delay;
 use crate::store::{ChunkSqlStore, ChunkingMethod, DataSqlStore};
-use anyhow::{format_err, Error, Result};
+use anyhow::{bail, format_err, Error, Result};
 use blobstore::{
     Blobstore, BlobstoreGetData, BlobstoreMetadata, BlobstorePutOps, BlobstoreWithLink,
     CountedBlobstore, OverwriteStatus, PutBehaviour,
 };
 use bytes::BytesMut;
+use cached_config::{ConfigHandle, ConfigStore, TestSource};
 use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{
     future::{self, BoxFuture, FutureExt, TryFutureExt},
-    stream::{FuturesOrdered, TryStreamExt},
+    stream::{FuturesOrdered, FuturesUnordered, Stream, TryStreamExt},
 };
 use futures_ext::{try_boxfuture, BoxFuture as BoxFuture01, FutureExt as _};
 use futures_old::future::join_all;
@@ -52,13 +53,19 @@ use std::fmt;
 use std::num::NonZeroUsize;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::SystemTime;
+use std::time::{Duration, SystemTime};
+use xdb_gc_structs::XdbGc;
 
 // Leaving some space for metadata
 const MAX_KEY_SIZE: usize = 200;
 // MySQL wants multiple chunks, each around 1 MiB, as a tradeoff between query latency and replication lag
 const CHUNK_SIZE: usize = 1024 * 1024;
 const SQLITE_SHARD_NUM: NonZeroUsize = unsafe { NonZeroUsize::new_unchecked(2) };
+const GC_GENERATION_PATH: &str = "scm/mononoke/xdb_gc/default";
+
+// Test setup data
+const UPDATE_FREQUENCY: Duration = Duration::from_millis(1);
+const INITIAL_VERSION: u64 = 0;
 
 const COUNTED_ID: &str = "sqlblob";
 pub type CountedSqlblob = CountedBlobstore<Sqlblob>;
@@ -67,6 +74,10 @@ pub struct Sqlblob {
     data_store: Arc<DataSqlStore>,
     chunk_store: Arc<ChunkSqlStore>,
     put_behaviour: PutBehaviour,
+}
+
+fn get_gc_config_handle(config_store: &ConfigStore) -> Result<ConfigHandle<XdbGc>> {
+    config_store.get_config_handle(GC_GENERATION_PATH.to_string())
 }
 
 impl Sqlblob {
@@ -78,6 +89,7 @@ impl Sqlblob {
         shard_num: NonZeroUsize,
         readonly: bool,
         put_behaviour: PutBehaviour,
+        config_store: &ConfigStore,
     ) -> BoxFuture01<CountedSqlblob, Error> {
         let delay = try_boxfuture!(myadmin_delay::sharded(fb, shardmap.clone(), shard_num));
         Self::with_connection_factory(
@@ -98,6 +110,7 @@ impl Sqlblob {
                 .into_future()
                 .boxify()
             },
+            config_store,
         )
     }
 
@@ -108,6 +121,7 @@ impl Sqlblob {
         read_con_type: ReadConnectionType,
         readonly: bool,
         put_behaviour: PutBehaviour,
+        config_store: &ConfigStore,
     ) -> BoxFuture01<CountedSqlblob, Error> {
         let delay = try_boxfuture!(myadmin_delay::single(fb, db_address.clone()));
         Self::with_connection_factory(
@@ -128,6 +142,7 @@ impl Sqlblob {
                 .into_future()
                 .boxify()
             },
+            config_store,
         )
     }
 
@@ -138,6 +153,7 @@ impl Sqlblob {
         read_con_type: ReadConnectionType,
         readonly: bool,
         put_behaviour: PutBehaviour,
+        config_store: &ConfigStore,
     ) -> BoxFuture01<CountedSqlblob, Error> {
         let delay = try_boxfuture!(myadmin_delay::sharded(fb, shardmap.clone(), shard_num));
         Self::with_connection_factory(
@@ -157,6 +173,7 @@ impl Sqlblob {
                 .into_future()
                 .boxify()
             },
+            config_store,
         )
     }
 
@@ -166,6 +183,7 @@ impl Sqlblob {
         read_con_type: ReadConnectionType,
         readonly: bool,
         put_behaviour: PutBehaviour,
+        config_store: &ConfigStore,
     ) -> BoxFuture01<CountedSqlblob, Error> {
         let delay = try_boxfuture!(myadmin_delay::single(fb, db_address.clone()));
         Self::with_connection_factory(
@@ -185,6 +203,7 @@ impl Sqlblob {
                 .into_future()
                 .boxify()
             },
+            config_store,
         )
     }
 
@@ -195,6 +214,7 @@ impl Sqlblob {
         shard_num: NonZeroUsize,
         readonly: bool,
         put_behaviour: PutBehaviour,
+        config_store: &ConfigStore,
     ) -> BoxFuture01<CountedSqlblob, Error> {
         let delay = try_boxfuture!(myadmin_delay::sharded(fb, shardmap.clone(), shard_num));
         Self::with_connection_factory(
@@ -211,6 +231,7 @@ impl Sqlblob {
                 )
                 .boxify()
             },
+            config_store,
         )
     }
 
@@ -220,6 +241,7 @@ impl Sqlblob {
         read_con_type: ReadConnectionType,
         readonly: bool,
         put_behaviour: PutBehaviour,
+        config_store: &ConfigStore,
     ) -> BoxFuture01<CountedSqlblob, Error> {
         let delay = try_boxfuture!(myadmin_delay::single(fb, db_address.clone()));
         Self::with_connection_factory(
@@ -230,6 +252,7 @@ impl Sqlblob {
             move |_shard_id| {
                 create_raw_xdb_connections(fb, db_address.clone(), read_con_type, readonly).boxify()
             },
+            config_store,
         )
     }
 
@@ -239,8 +262,11 @@ impl Sqlblob {
         shard_num: NonZeroUsize,
         put_behaviour: PutBehaviour,
         connection_factory: impl Fn(usize) -> BoxFuture01<SqlConnections, Error>,
+        config_store: &ConfigStore,
     ) -> BoxFuture01<CountedSqlblob, Error> {
         let shard_count = shard_num.get();
+
+        let config_handle = try_boxfuture!(get_gc_config_handle(config_store));
 
         let futs: Vec<_> = (0..shard_count)
             .into_iter()
@@ -278,6 +304,7 @@ impl Sqlblob {
                             read_connections,
                             read_master_connections,
                             delay,
+                            config_handle,
                         )),
                         put_behaviour,
                     },
@@ -287,33 +314,49 @@ impl Sqlblob {
             .boxify()
     }
 
-    pub fn with_sqlite_in_memory(put_behaviour: PutBehaviour) -> Result<CountedSqlblob> {
-        Self::with_sqlite(put_behaviour, |_| {
-            let con = open_sqlite_in_memory()?;
-            con.execute_batch(Self::CREATION_QUERY)?;
-            Ok(con)
-        })
+    pub fn with_sqlite_in_memory(
+        put_behaviour: PutBehaviour,
+        config_store: &ConfigStore,
+    ) -> Result<CountedSqlblob> {
+        Self::with_sqlite(
+            put_behaviour,
+            |_| {
+                let con = open_sqlite_in_memory()?;
+                con.execute_batch(Self::CREATION_QUERY)?;
+                Ok(con)
+            },
+            config_store,
+        )
     }
 
     pub fn with_sqlite_path<P: Into<PathBuf>>(
         path: P,
         readonly_storage: bool,
         put_behaviour: PutBehaviour,
+        config_store: &ConfigStore,
     ) -> Result<CountedSqlblob> {
         let pathbuf = path.into();
-        Self::with_sqlite(put_behaviour, move |shard_id| {
-            let con = open_sqlite_path(
-                &pathbuf.join(format!("shard_{}.sqlite", shard_id)),
-                readonly_storage,
-            )?;
-            // When opening an sqlite database we might already have the proper tables in it, so ignore
-            // errors from table creation
-            let _ = con.execute_batch(Self::CREATION_QUERY);
-            Ok(con)
-        })
+        Self::with_sqlite(
+            put_behaviour,
+            move |shard_id| {
+                let con = open_sqlite_path(
+                    &pathbuf.join(format!("shard_{}.sqlite", shard_id)),
+                    readonly_storage,
+                )?;
+                // When opening an sqlite database we might already have the proper tables in it, so ignore
+                // errors from table creation
+                let _ = con.execute_batch(Self::CREATION_QUERY);
+                Ok(con)
+            },
+            config_store,
+        )
     }
 
-    fn with_sqlite<F>(put_behaviour: PutBehaviour, mut constructor: F) -> Result<CountedSqlblob>
+    fn with_sqlite<F>(
+        put_behaviour: PutBehaviour,
+        mut constructor: F,
+        config_store: &ConfigStore,
+    ) -> Result<CountedSqlblob>
     where
         F: FnMut(usize) -> Result<SqliteConnection>,
     {
@@ -324,6 +367,11 @@ impl Sqlblob {
         }
 
         let cons = Arc::new(cons);
+
+        // SQLite is predominately intended for tests, and has less concurrency
+        // issues relating to GC, so cope with missing configerator
+        let config_handle = get_gc_config_handle(config_store)
+            .or_else(|_| get_gc_config_handle(&(get_test_config_store().1)))?;
 
         Ok(Self::counted(
             Self {
@@ -340,6 +388,7 @@ impl Sqlblob {
                     cons.clone(),
                     cons,
                     BlobDelay::dummy(SQLITE_SHARD_NUM),
+                    config_handle,
                 )),
                 put_behaviour,
             },
@@ -356,6 +405,40 @@ impl Sqlblob {
     #[cfg(test)]
     pub(crate) fn get_data_store(&self) -> &DataSqlStore {
         &self.data_store
+    }
+
+    pub fn get_keys_from_shard(&self, shard_num: usize) -> impl Stream<Item = Result<String>> {
+        self.data_store.get_keys_from_shard(shard_num)
+    }
+
+    pub async fn get_chunk_generations(&self, key: &str) -> Result<Vec<Option<u64>>> {
+        let chunked = self.data_store.get(key).await?;
+        if let Some(chunked) = chunked {
+            let fetch_chunk_generations: FuturesOrdered<_> = (0..chunked.count)
+                .map(|chunk_num| {
+                    self.chunk_store
+                        .get_generation(&chunked.id, chunk_num, chunked.chunking_method)
+                })
+                .collect();
+            fetch_chunk_generations.try_collect().await
+        } else {
+            bail!("key does not exist");
+        }
+    }
+
+    pub async fn set_generation(&self, key: &str) -> Result<(), Error> {
+        let chunked = self.data_store.get(key).await?;
+        if let Some(chunked) = chunked {
+            let set_chunk_generations: FuturesUnordered<_> = (0..chunked.count)
+                .map(|chunk_num| {
+                    self.chunk_store
+                        .set_generation(&chunked.id, chunk_num, chunked.chunking_method)
+                })
+                .collect();
+            set_chunk_generations.try_collect().await
+        } else {
+            bail!("key does not exist");
+        }
     }
 }
 
@@ -533,4 +616,33 @@ impl BlobstoreWithLink for Sqlblob {
         }
         .boxed()
     }
+}
+
+pub fn set_test_generations(
+    source: &TestSource,
+    put_generation: i64,
+    mark_generation: i64,
+    delete_generation: i64,
+    mod_time: u64,
+) {
+    source.insert_config(
+        GC_GENERATION_PATH,
+        &serde_json::to_string(&XdbGc {
+            put_generation,
+            mark_generation,
+            delete_generation,
+        })
+        .expect("Invalid input config somehow"),
+        mod_time,
+    );
+    source.insert_to_refresh(GC_GENERATION_PATH.to_string());
+}
+
+pub fn get_test_config_store() -> (Arc<TestSource>, ConfigStore) {
+    let test_source = Arc::new(TestSource::new());
+    set_test_generations(test_source.as_ref(), 2, 1, 0, INITIAL_VERSION);
+    (
+        test_source.clone(),
+        ConfigStore::new(test_source, UPDATE_FREQUENCY, None),
+    )
 }

@@ -646,6 +646,17 @@ EOF
   mkdir -p "$COMMIT_SYNC_CONF"
   cp "$TEST_FIXTURES/commitsync/all.json" "$COMMIT_SYNC_CONF/all"
   cp "$TEST_FIXTURES/commitsync/current.json" "$COMMIT_SYNC_CONF/current"
+
+  export XDB_GC_CONF
+  XDB_GC_CONF="$TESTTMP/configerator/scm/mononoke/xdb_gc"
+  mkdir -p "$XDB_GC_CONF"
+  cat >> "$XDB_GC_CONF/default" <<EOF
+{
+  "put_generation": 2,
+  "mark_generation": 1,
+  "delete_generation": 0
+}
+EOF
 }
 
 function setup_mononoke_repo_config {

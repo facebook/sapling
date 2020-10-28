@@ -11,9 +11,15 @@ use std::sync::Arc;
 
 use anyhow::{format_err, Error};
 use bytes::BytesMut;
-use futures::compat::Future01CompatExt;
+use cached_config::ConfigHandle;
+use futures::{
+    compat::Future01CompatExt,
+    future::TryFutureExt,
+    stream::{self, Stream},
+};
 use sql::{queries, Connection};
 use twox_hash::XxHash32;
+use xdb_gc_structs::XdbGc;
 
 use crate::delay::BlobDelay;
 
@@ -95,6 +101,13 @@ queries! {
         ) VALUES {values}"
     }
 
+    write UpdateGeneration(id: &str, generation: u64) {
+        none,
+        "UPDATE chunk_generation
+            SET last_seen_generation = {generation}
+            WHERE id = {id} AND last_seen_generation < {generation}"
+    }
+
     read SelectData(id: &str) -> (i64, Vec<u8>, u32, ChunkingMethod) {
         "SELECT creation_time, chunk_id, chunk_count, chunking_method
          FROM data
@@ -112,6 +125,21 @@ queries! {
          FROM chunk
          WHERE id = {id}
            AND chunk_num = {chunk_num}"
+    }
+
+    read GetChunkGeneration(id: &str) -> (u64) {
+        "SELECT last_seen_generation
+        FROM chunk_generation
+        WHERE id = {id}"
+    }
+
+    write InsertGeneration(values: (id: &str, generation: u64)) {
+        insert_or_ignore,
+        "{insert_or_ignore} INTO chunk_generation VALUES {values}"
+    }
+
+    read GetAllKeys() -> (Vec<u8>) {
+        "SELECT id FROM data"
     }
 }
 
@@ -226,6 +254,21 @@ impl DataSqlStore {
         Ok(!rows.is_empty())
     }
 
+    pub(crate) fn get_keys_from_shard(
+        &self,
+        shard_num: usize,
+    ) -> impl Stream<Item = Result<String, Error>> {
+        GetAllKeys::query(&self.read_master_connection[shard_num])
+            .compat()
+            .map_ok(|keys| {
+                stream::iter(
+                    keys.into_iter()
+                        .map(|(id,)| Ok(String::from_utf8_lossy(&id).to_string())),
+                )
+            })
+            .try_flatten_stream()
+    }
+
     fn shard(&self, key: &str) -> usize {
         let mut hasher = XxHash32::with_seed(0);
         hasher.write(key.as_bytes());
@@ -240,6 +283,7 @@ pub(crate) struct ChunkSqlStore {
     read_connection: Arc<Vec<Connection>>,
     read_master_connection: Arc<Vec<Connection>>,
     delay: BlobDelay,
+    gc_generations: ConfigHandle<XdbGc>,
 }
 
 impl ChunkSqlStore {
@@ -249,6 +293,7 @@ impl ChunkSqlStore {
         read_connection: Arc<Vec<Connection>>,
         read_master_connection: Arc<Vec<Connection>>,
         delay: BlobDelay,
+        gc_generations: ConfigHandle<XdbGc>,
     ) -> Self {
         Self {
             shard_count,
@@ -256,6 +301,7 @@ impl ChunkSqlStore {
             read_connection,
             read_master_connection,
             delay,
+            gc_generations,
         }
     }
 
@@ -295,9 +341,65 @@ impl ChunkSqlStore {
         let shard_id = self.shard(key, chunk_num, chunking_method);
 
         self.delay.delay(shard_id).await;
+        UpdateGeneration::query(
+            &self.write_connection[shard_id],
+            &key,
+            &(self.gc_generations.get().put_generation as u64),
+        )
+        .compat()
+        .await?;
         InsertChunk::query(
             &self.write_connection[shard_id],
             &[(&key, &chunk_num, &value)],
+        )
+        .compat()
+        .await?;
+        Ok(())
+    }
+
+    pub(crate) async fn get_generation(
+        &self,
+        key: &str,
+        chunk_num: u32,
+        chunking_method: ChunkingMethod,
+    ) -> Result<Option<u64>, Error> {
+        let shard_id = self.shard(key, chunk_num, chunking_method);
+        let rows = {
+            let rows = GetChunkGeneration::query(&self.read_connection[shard_id], &key)
+                .compat()
+                .await?;
+            if rows.is_empty() {
+                GetChunkGeneration::query(&self.read_master_connection[shard_id], &key)
+                    .compat()
+                    .await?
+            } else {
+                rows
+            }
+        };
+        Ok(rows.into_iter().next().map(|(v,)| v))
+    }
+
+    pub(crate) async fn set_generation(
+        &self,
+        key: &str,
+        chunk_num: u32,
+        chunking_method: ChunkingMethod,
+    ) -> Result<(), Error> {
+        let shard_id = self.shard(key, chunk_num, chunking_method);
+        // First set the generation if unset, so that future writers will update it.
+        // TODO: replace 2 with the fetched generation number
+        InsertGeneration::query(
+            &self.write_connection[shard_id],
+            &[(&key, &(self.gc_generations.get().put_generation as u64))],
+        )
+        .compat()
+        .await?;
+        // Then update it in case it already existed
+        // TODO: replace 1 with the fetched generation number
+        UpdateGeneration::query(
+            &self.write_connection[shard_id],
+            &key,
+            &(self.gc_generations.get().mark_generation as u64),
         )
         .compat()
         .await?;

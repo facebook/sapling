@@ -10,15 +10,20 @@ use blobstore::DEFAULT_PUT_BEHAVIOUR;
 use bytes::Bytes;
 use fbinit::FacebookInit;
 use rand::{distributions::Alphanumeric, thread_rng, Rng, RngCore};
+use std::time::Duration;
+
+const UPDATE_WAIT_TIME: Duration = Duration::from_millis(3);
 
 #[fbinit::compat_test]
 async fn read_write(fb: FacebookInit) {
+    let (_, config_store) = get_test_config_store();
     let ctx = CoreContext::test_mock(fb);
     // Generate unique keys.
     let suffix: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
     let key = format!("manifoldblob_test_{}", suffix);
 
-    let bs = Arc::new(Sqlblob::with_sqlite_in_memory(DEFAULT_PUT_BEHAVIOUR).unwrap());
+    let bs =
+        Arc::new(Sqlblob::with_sqlite_in_memory(DEFAULT_PUT_BEHAVIOUR, &config_store).unwrap());
 
     let mut bytes_in = [0u8; 64];
     thread_rng().fill_bytes(&mut bytes_in);
@@ -46,12 +51,14 @@ async fn read_write(fb: FacebookInit) {
 
 #[fbinit::compat_test]
 async fn double_put(fb: FacebookInit) {
+    let (_, config_store) = get_test_config_store();
     let ctx = CoreContext::test_mock(fb);
     // Generate unique keys.
     let suffix: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
     let key = format!("manifoldblob_test_{}", suffix);
 
-    let bs = Arc::new(Sqlblob::with_sqlite_in_memory(DEFAULT_PUT_BEHAVIOUR).unwrap());
+    let bs =
+        Arc::new(Sqlblob::with_sqlite_in_memory(DEFAULT_PUT_BEHAVIOUR, &config_store).unwrap());
 
     let mut bytes_in = [0u8; 64];
     thread_rng().fill_bytes(&mut bytes_in);
@@ -80,12 +87,14 @@ async fn double_put(fb: FacebookInit) {
 
 #[fbinit::compat_test]
 async fn overwrite(fb: FacebookInit) -> Result<()> {
+    let (_, config_store) = get_test_config_store();
     let ctx = CoreContext::test_mock(fb);
     // Generate unique keys.
     let suffix: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
     let key = format!("manifoldblob_test_{}", suffix);
 
-    let bs = Arc::new(Sqlblob::with_sqlite_in_memory(PutBehaviour::Overwrite).unwrap());
+    let bs =
+        Arc::new(Sqlblob::with_sqlite_in_memory(PutBehaviour::Overwrite, &config_store).unwrap());
 
     let mut bytes_1 = [0u8; 64];
     thread_rng().fill_bytes(&mut bytes_1);
@@ -113,6 +122,7 @@ async fn overwrite(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::compat_test]
 async fn dedup(fb: FacebookInit) {
+    let (_, config_store) = get_test_config_store();
     let ctx = CoreContext::test_mock(fb);
     // Generate unique keys.
     let suffix: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
@@ -120,7 +130,8 @@ async fn dedup(fb: FacebookInit) {
     let suffix: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
     let key2 = format!("manifoldblob_test_{}", suffix);
 
-    let bs = Arc::new(Sqlblob::with_sqlite_in_memory(DEFAULT_PUT_BEHAVIOUR).unwrap());
+    let bs =
+        Arc::new(Sqlblob::with_sqlite_in_memory(DEFAULT_PUT_BEHAVIOUR, &config_store).unwrap());
 
     let mut bytes_in = [0u8; 64];
     thread_rng().fill_bytes(&mut bytes_in);
@@ -168,6 +179,7 @@ async fn dedup(fb: FacebookInit) {
 
 #[fbinit::compat_test]
 async fn link(fb: FacebookInit) {
+    let (_, config_store) = get_test_config_store();
     let ctx = CoreContext::test_mock(fb);
     // Generate unique keys.
     let suffix: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
@@ -175,7 +187,8 @@ async fn link(fb: FacebookInit) {
     let suffix: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
     let key2 = format!("manifoldblob_test_{}", suffix);
 
-    let bs = Arc::new(Sqlblob::with_sqlite_in_memory(DEFAULT_PUT_BEHAVIOUR).unwrap());
+    let bs =
+        Arc::new(Sqlblob::with_sqlite_in_memory(DEFAULT_PUT_BEHAVIOUR, &config_store).unwrap());
 
     let mut bytes_in = [0u8; 64];
     thread_rng().fill_bytes(&mut bytes_in);
@@ -227,4 +240,59 @@ async fn link(fb: FacebookInit) {
         row1.chunking_method, row2.chunking_method,
         "Chunking method differs"
     );
+}
+
+#[fbinit::compat_test]
+async fn generations(fb: FacebookInit) -> Result<()> {
+    let (test_source, config_store) = get_test_config_store();
+    let ctx = CoreContext::test_mock(fb);
+    // Generate unique keys.
+    let suffix: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
+    let key1 = format!("manifoldblob_test_{}", suffix);
+    let suffix: String = thread_rng().sample_iter(&Alphanumeric).take(10).collect();
+    let key2 = format!("manifoldblob_test_{}", suffix);
+
+    let bs = Arc::new(Sqlblob::with_sqlite_in_memory(
+        DEFAULT_PUT_BEHAVIOUR,
+        &config_store,
+    )?);
+
+    let mut bytes_in = [0u8; 64];
+    thread_rng().fill_bytes(&mut bytes_in);
+
+    let blobstore_bytes = BlobstoreBytes::from_bytes(Bytes::copy_from_slice(&bytes_in));
+
+    // Write a fresh blob
+    bs.put(ctx.clone(), key1.clone(), blobstore_bytes.clone())
+        .await?;
+
+    // Inspect, and determine that the generation number is missing
+    let generations = bs.as_inner().get_chunk_generations(&key1).await?;
+    assert_eq!(generations, vec![None], "Generation appeared unexpectedly");
+
+    // Set the generation and confirm
+    bs.as_inner().set_generation(&key1).await?;
+    let generations = bs.as_inner().get_chunk_generations(&key1).await?;
+    assert_eq!(generations, vec![Some(2)], "Generation set to 2");
+
+    // Update via another key, confirm both have put generation
+    set_test_generations(test_source.as_ref(), 5, 4, 2, INITIAL_VERSION + 1);
+    tokio::time::delay_for(UPDATE_WAIT_TIME).await;
+    bs.put(ctx.clone(), key2.clone(), blobstore_bytes.clone())
+        .await?;
+    let generations = bs.as_inner().get_chunk_generations(&key1).await?;
+    assert_eq!(generations, vec![Some(5)], "key1 generation not updated");
+    let generations = bs.as_inner().get_chunk_generations(&key2).await?;
+    assert_eq!(generations, vec![Some(5)], "key2 generation not updated");
+
+    // Now update via the route GC uses, confirm it updates nicely and doesn't leap to
+    // the wrong version.
+    set_test_generations(test_source.as_ref(), 999, 10, 3, INITIAL_VERSION + 2);
+    tokio::time::delay_for(UPDATE_WAIT_TIME).await;
+    bs.as_inner().set_generation(&key1).await?;
+    let generations = bs.as_inner().get_chunk_generations(&key1).await?;
+    assert_eq!(generations, vec![Some(10)], "key1 generation not updated");
+    let generations = bs.as_inner().get_chunk_generations(&key2).await?;
+    assert_eq!(generations, vec![Some(10)], "key2 generation not updated");
+    Ok(())
 }
