@@ -233,6 +233,8 @@ def diffidtonode(repo, diffid):
     vcs = resp.get("source_control_system")
     diffreponame = resp.get("arcanist_project_name")
     localreponame = repo.ui.config("remotefilelog", "reponame")
+    if diffreponame in repo.ui.configlist("phrevset", "aliases"):
+        diffreponame = localreponame
 
     if not util.istest() and (diffreponame != localreponame):
         raise error.Abort(
