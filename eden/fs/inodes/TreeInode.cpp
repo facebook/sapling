@@ -333,7 +333,7 @@ class LookupProcessor {
  public:
   explicit LookupProcessor(RelativePathPiece path, ObjectFetchContext& context)
       : path_{path},
-        iterRange_{path.components()},
+        iterRange_{path_.components()},
         iter_{iterRange_.begin()},
         context_{context} {}
 
