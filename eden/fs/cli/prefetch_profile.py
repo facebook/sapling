@@ -210,13 +210,56 @@ class ActivateProfileCmd(Subcmd):
             help="The checkout for which you want to activate this profile.",
             default=None,
         )
+        parser.add_argument(
+            "--verbose",
+            help="Print extra info including warnings and the names of the "
+            "matching files to fetch.",
+            default=False,
+            action="store_true",
+        )
+        parser.add_argument(
+            "--skip-prefetch",
+            help="Still activate the profile, but do not prefetch profiles. "
+            "This will still list the names of matching files for the profile "
+            "when the verbose flag is also used",
+            default=False,
+            action="store_true",
+        )
+        parser.add_argument(
+            "--foreground",
+            help="Run the prefetch in the main thread rather than in the"
+            " background. Normally this command will return once the prefetched"
+            " has been kicked off, but when this flag is used it to block until"
+            " all of the files are prefetched.",
+            default=False,
+            action="store_true",
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         checkout = args.checkout
 
         instance, checkout, _rel_path = require_checkout(args, checkout)
 
-        return checkout.activate_profile(args.profile_name)
+        activation_result = checkout.activate_profile(args.profile_name)
+
+        # error in activation, no point in continuing, so exit early
+        if activation_result:
+            return activation_result
+
+        if not args.skip_prefetch:
+            result = prefetch_profiles(
+                checkout,
+                instance,
+                [args.profile_name],
+                run_in_foreground=args.foreground,
+                enable_prefetch=True,
+                silent=not args.verbose,
+            )
+            if args.verbose and result is not None:
+                for name in result.matchingFiles:
+                    print(os.fsdecode(name))
+
+        return 0
 
 
 @prefetch_profile_cmd(
