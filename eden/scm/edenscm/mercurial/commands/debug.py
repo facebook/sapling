@@ -1678,6 +1678,7 @@ def debuglabelcomplete(ui, repo, *args):
         ("U", "force-undolog-lock", None, _("free the undolog lock " "(DANGEROUS)")),
         ("s", "set-lock", None, _("set the store lock until stopped")),
         ("S", "set-wlock", None, _("set the working state lock until stopped")),
+        ("", "wait", None, _("wait for the lock when setting it")),
     ],
     _("[OPTION]..."),
 )
@@ -1726,16 +1727,18 @@ def debuglocks(ui, repo, **opts):
     if done:
         return 0
 
+    wait = opts.get(r"wait") or False
+
     locks = []
     try:
         if opts.get(r"set_wlock"):
             try:
-                locks.append(repo.wlock(False))
+                locks.append(repo.wlock(wait))
             except error.LockHeld:
                 raise error.Abort(_("wlock is already held"))
         if opts.get(r"set_lock"):
             try:
-                locks.append(repo.lock(False))
+                locks.append(repo.lock(wait))
             except error.LockHeld:
                 raise error.Abort(_("lock is already held"))
         if len(locks):

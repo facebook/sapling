@@ -417,7 +417,7 @@ Show all commands + options
   debuginstall: template
   debugknown: 
   debuglabelcomplete: 
-  debuglocks: force-lock, force-wlock, force-undolog-lock, set-lock, set-wlock
+  debuglocks: force-lock, force-wlock, force-undolog-lock, set-lock, set-wlock, wait
   debugmakepublic: rev, delete
   debugmanifestdirs: rev
   debugmergestate: 
