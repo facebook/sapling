@@ -90,6 +90,8 @@ impl Convert for RawHookManagerParams {
     fn convert(self) -> Result<Self::Output> {
         Ok(HookManagerParams {
             disable_acl_checker: self.disable_acl_checker,
+            all_hooks_bypassed: self.all_hooks_bypassed,
+            bypassed_commits_scuba_table: self.bypassed_commits_scuba_table,
         })
     }
 }

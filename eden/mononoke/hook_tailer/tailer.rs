@@ -71,6 +71,7 @@ impl Tailer {
             content_fetcher,
             config.hook_manager_params.clone().unwrap_or_default(),
             ScubaSampleBuilder::with_discard(),
+            repo.name().clone(),
         )
         .await?;
 

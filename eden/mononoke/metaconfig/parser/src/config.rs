@@ -716,6 +716,8 @@ mod test {
             commit_limit=100
             [hook_manager_params]
             disable_acl_checker=false
+            all_hooks_bypassed=false
+            bypassed_commits_scuba_table="commits_bypassed_hooks"
 
             [derived_data_config]
             derived_data_types=["fsnodes"]
@@ -904,6 +906,8 @@ mod test {
                 }),
                 hook_manager_params: Some(HookManagerParams {
                     disable_acl_checker: false,
+                    all_hooks_bypassed: false,
+                    bypassed_commits_scuba_table: Some("commits_bypassed_hooks".to_string()),
                 }),
                 bookmarks_cache_ttl: Some(Duration::from_millis(5000)),
                 bookmarks: vec![

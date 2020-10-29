@@ -60,4 +60,8 @@ impl MembershipCheckerBuilder {
     pub async fn for_reviewers_group(_fb: FacebookInit) -> Result<BoxMembershipChecker> {
         Ok(Self::always_member())
     }
+
+    pub async fn for_admin_group(_fb: FacebookInit) -> Result<BoxMembershipChecker> {
+        Ok(Self::never_member())
+    }
 }

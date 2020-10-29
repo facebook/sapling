@@ -38,6 +38,7 @@ pub async fn make_hook_manager(
         blobrepo_text_only_fetcher(repo.clone(), hook_max_file_size),
         hook_manager_params.unwrap_or_default(),
         hooks_scuba,
+        repo.name().clone(),
     )
     .await?;
 

@@ -29,7 +29,7 @@ pub use errors::*;
 use fbinit::FacebookInit;
 use futures::{
     stream::{futures_unordered::FuturesUnordered, TryStreamExt},
-    Future, TryFutureExt,
+    try_join, Future, TryFutureExt,
 };
 use futures_stats::TimedFutureExt;
 use hooks_content_stores::FileContentFetcher;
@@ -49,12 +49,16 @@ use std::str;
 /// Knows how to run hooks
 
 pub struct HookManager {
+    repo_name: String,
     hooks: HashMap<String, Hook>,
     bookmark_hooks: HashMap<BookmarkName, Vec<String>>,
     regex_hooks: Vec<(Regex, Vec<String>)>,
     content_fetcher: Box<dyn FileContentFetcher>,
     reviewers_membership: ArcMembershipChecker,
+    admin_membership: ArcMembershipChecker,
     scuba: ScubaSampleBuilder,
+    all_hooks_bypassed: bool,
+    scuba_bypassed_commits: ScubaSampleBuilder,
 }
 
 impl HookManager {
@@ -63,6 +67,7 @@ impl HookManager {
         content_fetcher: Box<dyn FileContentFetcher>,
         hook_manager_params: HookManagerParams,
         mut scuba: ScubaSampleBuilder,
+        repo_name: String,
     ) -> Result<HookManager> {
         let hooks = HashMap::new();
 
@@ -74,19 +79,36 @@ impl HookManager {
                 _ => data.default_key(),
             });
 
-        let reviewers_membership = if !hook_manager_params.disable_acl_checker {
-            MembershipCheckerBuilder::for_reviewers_group(fb).await?
+        let (reviewers_membership, admin_membership) = if hook_manager_params.disable_acl_checker {
+            (
+                MembershipCheckerBuilder::never_member(),
+                MembershipCheckerBuilder::never_member(),
+            )
         } else {
-            MembershipCheckerBuilder::never_member()
+            try_join!(
+                MembershipCheckerBuilder::for_reviewers_group(fb),
+                MembershipCheckerBuilder::for_admin_group(fb),
+            )?
         };
 
+        let scuba_bypassed_commits: ScubaSampleBuilder =
+            scuba_ext::ScubaSampleBuilderExt::with_opt_table(
+                fb,
+                hook_manager_params.bypassed_commits_scuba_table,
+            );
+
+
         Ok(HookManager {
+            repo_name,
             hooks,
             bookmark_hooks: HashMap::new(),
             regex_hooks: Vec::new(),
             content_fetcher,
             reviewers_membership: reviewers_membership.into(),
+            admin_membership: admin_membership.into(),
             scuba,
+            all_hooks_bypassed: hook_manager_params.all_hooks_bypassed,
+            scuba_bypassed_commits,
         })
     }
 
@@ -125,6 +147,10 @@ impl HookManager {
         self.reviewers_membership.clone()
     }
 
+    pub fn get_admin_perm_checker(&self) -> ArcMembershipChecker {
+        self.admin_membership.clone()
+    }
+
     pub fn hooks_exist_for_bookmark(&self, bookmark: &BookmarkName) -> bool {
         if self.bookmark_hooks.contains_key(bookmark) {
             return true;
@@ -134,6 +160,10 @@ impl HookManager {
         self.regex_hooks
             .iter()
             .any(|(regex, _)| regex.is_match(bookmark))
+    }
+
+    pub fn repo_name(&self) -> &String {
+        &self.repo_name
     }
 
     fn hooks_for_bookmark<'a>(
@@ -153,6 +183,14 @@ impl HookManager {
         }
 
         hooks.into_iter()
+    }
+
+    pub fn all_hooks_bypassed(&self) -> bool {
+        self.all_hooks_bypassed
+    }
+
+    pub fn scuba_bypassed_commits(&self) -> &ScubaSampleBuilder {
+        &self.scuba_bypassed_commits
     }
 
     pub async fn run_hooks_for_bookmark(

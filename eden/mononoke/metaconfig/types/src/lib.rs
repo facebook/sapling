@@ -293,12 +293,18 @@ pub struct CacheWarmupParams {
 pub struct HookManagerParams {
     /// Wether to disable the acl checker or not (intended for testing purposes)
     pub disable_acl_checker: bool,
+    /// Whether to log admin bypasses.
+    pub all_hooks_bypassed: bool,
+    /// Scuba table for bypassed commits logging.
+    pub bypassed_commits_scuba_table: Option<String>,
 }
 
 impl Default for HookManagerParams {
     fn default() -> Self {
         Self {
             disable_acl_checker: false,
+            all_hooks_bypassed: false,
+            bypassed_commits_scuba_table: None,
         }
     }
 }

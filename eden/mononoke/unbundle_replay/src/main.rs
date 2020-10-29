@@ -428,6 +428,7 @@ async fn do_main(
             blobrepo_text_only_fetcher(repo.clone(), repo_config.hook_max_file_size),
             repo_config.hook_manager_params.clone().unwrap_or_default(),
             ScubaSampleBuilder::with_discard(),
+            repo.name().clone(),
         )
         .await?;
 

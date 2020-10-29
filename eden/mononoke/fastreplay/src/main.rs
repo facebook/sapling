@@ -199,8 +199,11 @@ async fn build_noop_hook_manager(fb: FacebookInit) -> Result<HookManager, Error>
         Box::new(InMemoryFileContentFetcher::new()),
         HookManagerParams {
             disable_acl_checker: true,
+            all_hooks_bypassed: true,
+            bypassed_commits_scuba_table: None,
         },
         ScubaSampleBuilder::with_discard(),
+        "fastreplay_none_repo".to_string(),
     )
     .await
 }

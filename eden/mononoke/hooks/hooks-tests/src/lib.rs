@@ -1120,6 +1120,7 @@ async fn hook_manager_blobrepo(fb: FacebookInit, repo: BlobRepo) -> HookManager 
         Box::new(content_fetcher),
         Default::default(),
         ScubaSampleBuilder::with_discard(),
+        "zoo".to_string(),
     )
     .await
     .expect("Failed to construct HookManager")
@@ -1146,6 +1147,7 @@ async fn hook_manager_inmem(fb: FacebookInit) -> HookManager {
         Box::new(content_fetcher),
         Default::default(),
         ScubaSampleBuilder::with_discard(),
+        "zoo".to_string(),
     )
     .await
     .expect("Failed to construct HookManager")

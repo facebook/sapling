@@ -481,8 +481,11 @@ async fn run_and_check_if_lfs(
             Box::new(InMemoryFileContentFetcher::new()),
             HookManagerParams {
                 disable_acl_checker: true,
+                all_hooks_bypassed: true,
+                bypassed_commits_scuba_table: None,
             },
             ScubaSampleBuilder::with_discard(),
+            repo.name().clone(),
         )),
         None,
         lfs_params,
