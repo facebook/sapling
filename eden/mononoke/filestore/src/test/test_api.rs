@@ -12,7 +12,7 @@ use crate::{errors, Alias, FetchKey, FilestoreConfig, StoreRequest};
 use super::failing_blobstore::{FailingBlobstore, FailingBlobstoreError};
 use anyhow::{Error, Result};
 use assert_matches::assert_matches;
-use blobstore::Blobstore;
+use blobstore::{Blobstore, PutBehaviour};
 use bytes::{Bytes, BytesMut};
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -977,7 +977,7 @@ async fn filestore_store_error(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::compat_test]
 async fn filestore_test_rechunk(fb: FacebookInit) -> Result<()> {
-    let blob = memblob::LazyMemblob::default();
+    let blob = memblob::LazyMemblob::new(PutBehaviour::Overwrite);
 
     let small = FilestoreConfig {
         chunk_size: Some(1),
@@ -1014,7 +1014,7 @@ async fn filestore_test_rechunk(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::compat_test]
 async fn filestore_test_rechunk_larger(fb: FacebookInit) -> Result<()> {
-    let blob = memblob::LazyMemblob::default();
+    let blob = memblob::LazyMemblob::new(PutBehaviour::Overwrite);
 
     let small = FilestoreConfig {
         chunk_size: Some(1),
@@ -1057,7 +1057,7 @@ async fn filestore_test_rechunk_larger(fb: FacebookInit) -> Result<()> {
 
 #[fbinit::compat_test]
 async fn filestore_test_rechunk_unchunked(fb: FacebookInit) -> Result<()> {
-    let blob = memblob::LazyMemblob::default();
+    let blob = memblob::LazyMemblob::new(PutBehaviour::Overwrite);
 
     let small = FilestoreConfig {
         chunk_size: Some(1),
@@ -1209,7 +1209,7 @@ async fn filestore_test_rechunk_if_needed_tiny_unchunked_file(fb: FacebookInit) 
 
 #[fbinit::compat_test]
 async fn filestore_test_rechunk_if_needed_large_unchunked_file(fb: FacebookInit) -> Result<()> {
-    let blob = memblob::LazyMemblob::default();
+    let blob = memblob::LazyMemblob::new(PutBehaviour::Overwrite);
 
     let large = FilestoreConfig {
         chunk_size: Some(100),
@@ -1248,7 +1248,7 @@ async fn filestore_test_rechunk_if_needed_large_unchunked_file(fb: FacebookInit)
 
 #[fbinit::compat_test]
 async fn filestore_test_rechunk_if_needed_large_chunks(fb: FacebookInit) -> Result<()> {
-    let blob = memblob::LazyMemblob::default();
+    let blob = memblob::LazyMemblob::new(PutBehaviour::Overwrite);
 
     let large = FilestoreConfig {
         chunk_size: Some(5),

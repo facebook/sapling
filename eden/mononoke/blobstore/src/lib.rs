@@ -304,8 +304,8 @@ pub trait Blobstore: fmt::Debug + Send + Sync + 'static {
     }
 }
 
-/// Keep the status quo for now
-pub const DEFAULT_PUT_BEHAVIOUR: PutBehaviour = PutBehaviour::Overwrite;
+/// Mononoke binaries will not overwrite existing blobstore keys by default
+pub const DEFAULT_PUT_BEHAVIOUR: PutBehaviour = PutBehaviour::IfAbsent;
 
 /// For blobstore implementors and advanced admin type users to control requested put behaviour
 #[derive(
