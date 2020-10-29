@@ -231,8 +231,11 @@ def diffidtonode(repo, diffid):
         return None
 
     vcs = resp.get("source_control_system")
-    diffreponame = resp.get("arcanist_project_name")
     localreponame = repo.ui.config("remotefilelog", "reponame")
+    diffreponame = None
+    repository = resp.get("repository")
+    if repository is not None:
+        diffreponame = repository.get("scm_name")
     if diffreponame in repo.ui.configlist("phrevset", "aliases"):
         diffreponame = localreponame
 
