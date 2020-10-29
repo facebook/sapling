@@ -69,19 +69,19 @@ Test for `hg diff --since-last-submit`
 
   $ cd client1
   $ echo '{}' > .arcrc
-  $ echo '{"config" : {"default" : "https://a.com/api"}, "hosts" : {"https://a.com/api/" : { "user" : "testuser", "cert" : "garbage_cert"}}}' > .arcconfig
+  $ echo '{"config" : {"default" : "https://a.com/api"}, "hosts" : {"https://a.com/api/" : { "user" : "testuser", "oauth" : "garbage_cert"}}}' > .arcconfig
 
   $ cd ..
 
   $ cd client2
   $ echo '{}' > .arcrc
-  $ echo '{"config" : {"default" : "https://a.com/api"}, "hosts" : {"https://a.com/api/" : { "user" : "testuser", "cert" : "garbage_cert"}}}' > .arcconfig
+  $ echo '{"config" : {"default" : "https://a.com/api"}, "hosts" : {"https://a.com/api/" : { "user" : "testuser", "oauth" : "garbage_cert"}}}' > .arcconfig
 
   $ cd ..
 
   $ cd client3
   $ echo '{}' > .arcrc
-  $ echo '{"config" : {"default" : "https://a.com/api"}, "hosts" : {"https://a.com/api/" : { "user" : "testuser", "cert" : "garbage_cert"}}}' > .arcconfig
+  $ echo '{"config" : {"default" : "https://a.com/api"}, "hosts" : {"https://a.com/api/" : { "user" : "testuser", "oauth" : "garbage_cert"}}}' > .arcconfig
 
   $ cd ..
 
@@ -92,14 +92,14 @@ Test for `hg diff --since-last-submit`
 
   $ hg ci -Aqm 'Differential Revision: https://phabricator.fb.com/D1'
   $ hg log -r '.' -T '{node}'
-  a8080066a666ffa51c0a171e87d5a0396ecb559a (no-eol)
+  162e0a8b5732f1fa168b0a6d8cf9809053ae272a (no-eol)
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  backing up stack rooted at a8080066a666
+  backing up stack rooted at 162e0a8b5732
   commitcloud: commits synchronized
   finished in * (glob)
   remote: pushing 1 commit:
-  remote:     a8080066a666  Differential Revision: https://phabricator.fb.com/
+  remote:     162e0a8b5732  Differential Revision: https://phabricator.fb.com/
 
   $ cat > $TESTTMP/mockduit << EOF
   > [{"data": {"query": [{"results": {"nodes": [{
@@ -108,7 +108,7 @@ Test for `hg diff --since-last-submit`
   >   "latest_active_diff": {
   >     "local_commit_info": {
   >       "nodes": [
-  >         {"property_value": "{\"lolwut\": {\"time\": 0, \"commit\": \"a8080066a666ffa51c0a171e87d5a0396ecb559a\"}}"}
+  >         {"property_value": "{\"lolwut\": {\"time\": 0, \"commit\": \"162e0a8b5732f1fa168b0a6d8cf9809053ae272a\"}}"}
   >       ]
   >     }
   >   },
@@ -124,11 +124,11 @@ Test for `hg diff --since-last-submit`
 
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  backing up stack rooted at 95847be64d6a
+  backing up stack rooted at 1166f984c176
   commitcloud: commits synchronized
   finished in * (glob)
   remote: pushing 1 commit:
-  remote:     95847be64d6a  Differential Revision: https://phabricator.fb.com/
+  remote:     1166f984c176  Differential Revision: https://phabricator.fb.com/
 
   $ cd ..
 
@@ -136,7 +136,7 @@ Test for `hg diff --since-last-submit`
 
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  pulling 95847be64d6a from ssh://user@dummy/server
+  pulling 1166f984c176 from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
@@ -145,12 +145,12 @@ Test for `hg diff --since-last-submit`
   commitcloud: commits synchronized
   finished in * (glob)
 
-  $ hg up 95847be64d6a
+  $ hg up 1166f984c176
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg diff --since-last-submit --config extensions.commitcloud=!
-  pulling 'a8080066a666ffa51c0a171e87d5a0396ecb559a' from 'ssh://user@dummy/server'
-  diff -r a8080066a666 -r 95847be64d6a feature2.body.txt
+  pulling '162e0a8b5732f1fa168b0a6d8cf9809053ae272a' from 'ssh://user@dummy/server'
+  diff -r 162e0a8b5732 -r 1166f984c176 feature2.body.txt
   --- a/feature2.body.txt	Thu Jan 01 00:00:00 1970 +0000
   +++ b/feature2.body.txt	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,1 +1,1 @@
@@ -158,7 +158,7 @@ Test for `hg diff --since-last-submit`
   +Hello feature2 update
 
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg diff --since-last-submit
-  diff -r a8080066a666 -r 95847be64d6a feature2.body.txt
+  diff -r 162e0a8b5732 -r 1166f984c176 feature2.body.txt
   --- a/feature2.body.txt	Thu Jan 01 00:00:00 1970 +0000
   +++ b/feature2.body.txt	Thu Jan 01 00:00:00 1970 +0000
   @@ -1,1 +1,1 @@
@@ -171,7 +171,7 @@ Test for `hg diff --since-last-submit`
 
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  pulling 95847be64d6a from ssh://user@dummy/server
+  pulling 1166f984c176 from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
@@ -180,12 +180,12 @@ Test for `hg diff --since-last-submit`
   commitcloud: commits synchronized
   finished in * (glob)
 
-  $ hg up 95847be64d6a
+  $ hg up 1166f984c176
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -r 'lastsubmitted(.)' -T '{node} {desc}'  --config extensions.commitcloud=!
-  pulling 'a8080066a666ffa51c0a171e87d5a0396ecb559a' from 'ssh://user@dummy/server'
-  a8080066a666ffa51c0a171e87d5a0396ecb559a Differential Revision: https://phabricator.fb.com/D1 (no-eol)
+  pulling '162e0a8b5732f1fa168b0a6d8cf9809053ae272a' from 'ssh://user@dummy/server'
+  162e0a8b5732f1fa168b0a6d8cf9809053ae272a Differential Revision: https://phabricator.fb.com/D1 (no-eol)
 
   $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log --hidden -r 'lastsubmitted(.)' -T '{node} {desc}'
-  a8080066a666ffa51c0a171e87d5a0396ecb559a Differential Revision: https://phabricator.fb.com/D1 (no-eol)
+  162e0a8b5732f1fa168b0a6d8cf9809053ae272a Differential Revision: https://phabricator.fb.com/D1 (no-eol)

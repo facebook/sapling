@@ -52,7 +52,6 @@ class Client(object):
 
         self._host = None
         self._user = None
-        self._cert = None
         self._oauth = None
         self._catslocation = None
         self._cats = None
@@ -71,11 +70,8 @@ class Client(object):
 
             self._client = phabricator_graphql_client.PhabricatorGraphQLClient(
                 phabricator_graphql_client_urllib.PhabricatorGraphQLClientRequests(),
-                self._cert,
                 self._oauth,
                 self._cats,
-                self._user,
-                "phabricator",
                 self._host,
                 app_id,
                 app_token,
@@ -105,7 +101,6 @@ class Client(object):
         hostconfig = allhosts[arcrchost]
 
         self._user = hostconfig.get("user", None)
-        self._cert = hostconfig.get("cert", None)
         self._oauth = hostconfig.get("oauth", None)
         self._catslocation = hostconfig.get("crypto_auth_tokens_location", None)
         if self._catslocation is not None:
@@ -116,16 +111,14 @@ class Client(object):
             except Exception:
                 pass
 
-        if not self._user or (
-            self._cert is None and self._oauth is None and self._cats is None
-        ):
+        if not self._user or (self._oauth is None and self._cats is None):
             self._raisearcrcerror()
 
     @classmethod
     def _raisearcrcerror(cls):
         raise arcconfig.ArcConfigError(
             "arcrc is missing user "
-            "credentials. use "
+            "credentials. Use "
             '"jf authenticate" to fix, '
             "or ensure you are prepping your arcrc properly."
         )

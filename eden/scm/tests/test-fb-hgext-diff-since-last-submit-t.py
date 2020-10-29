@@ -46,7 +46,7 @@ sh % "hg log -r 'lastsubmitted(.)' -T '{node} {desc}\\n'" == r"""
 # Prep configuration
 
 sh % "echo '{}'" > ".arcrc"
-sh % 'echo \'{"config" : {"default" : "https://a.com/api"}, "hosts" : {"https://a.com/api/" : { "user" : "testuser", "cert" : "garbage_cert"}}}\'' > ".arcconfig"
+sh % 'echo \'{"config" : {"default" : "https://a.com/api"}, "hosts" : {"https://a.com/api/" : { "user" : "testuser", "oauth" : "garbage_cert"}}}\'' > ".arcconfig"
 
 # Now progressively test the response handling for variations of missing data
 

@@ -19,7 +19,7 @@ With an invalid arc configuration
 Configure arc...
 
   $ echo '{}' > .arcrc
-  $ echo '{"config" : {"default" : "https://a.com/api"}, "hosts" : {"https://a.com/api/" : { "user" : "testuser", "cert" : "garbage_cert"}}}' > .arcconfig
+  $ echo '{"config" : {"default" : "https://a.com/api"}, "hosts" : {"https://a.com/api/" : { "user" : "testuser", "oauth" : "garbage_cert"}}}' > .arcconfig
 
 And now with bad responses:
 
@@ -113,7 +113,7 @@ so it tries to parse the (empty) arc config files.
   $ echo '{}' > .arcconfig
   $ hg log -T '{phabstatus}\n' -r .
   arcconfig configuration problem. No diff information can be provided.
-  Error info: arcrc is missing user credentials. use "jf authenticate" to fix, or ensure you are prepping your arcrc properly.
+  Error info: arcrc is missing user credentials. Use "jf authenticate" to fix, or ensure you are prepping your arcrc properly.
   Error
 
 Make sure we get an error message if .arcrc is not proper JSON (for example

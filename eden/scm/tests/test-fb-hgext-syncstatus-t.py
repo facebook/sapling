@@ -31,7 +31,7 @@ sh % "hg log -T '{syncstatus}\\n' -r ." == r"""
 # Configure arc...
 
 sh % "echo '{}'" > ".arcrc"
-sh % 'echo \'{"config" : {"default" : "https://a.com/api"}, "hosts" : {"https://a.com/api/" : { "user" : "testuser", "cert" : "garbage_cert"}}}\'' > ".arcconfig"
+sh % 'echo \'{"config" : {"default" : "https://a.com/api"}, "hosts" : {"https://a.com/api/" : { "user" : "testuser", "oauth" : "garbage_cert"}}}\'' > ".arcconfig"
 
 # And now with bad responses:
 
