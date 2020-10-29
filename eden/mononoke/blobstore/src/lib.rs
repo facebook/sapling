@@ -18,7 +18,7 @@ use std::ops::{Range, RangeFrom, RangeFull, RangeTo};
 use abomonation_derive::Abomonation;
 use anyhow::Error;
 use futures::future::{BoxFuture, FutureExt};
-use strum_macros::{AsRefStr, Display, EnumIter, EnumString};
+use strum_macros::{AsRefStr, Display, EnumIter, EnumString, IntoStaticStr};
 
 use std::io::Cursor;
 use thiserror::Error;
@@ -308,7 +308,17 @@ pub trait Blobstore: fmt::Debug + Send + Sync + 'static {
 pub const DEFAULT_PUT_BEHAVIOUR: PutBehaviour = PutBehaviour::Overwrite;
 
 /// For blobstore implementors and advanced admin type users to control requested put behaviour
-#[derive(Clone, Copy, Debug, Display, EnumIter, EnumString, Eq, PartialEq)]
+#[derive(
+    IntoStaticStr,
+    Clone,
+    Copy,
+    Debug,
+    Display,
+    EnumIter,
+    EnumString,
+    Eq,
+    PartialEq
+)]
 pub enum PutBehaviour {
     /// Blobstore::put will overwrite even if key is already present
     Overwrite,

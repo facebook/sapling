@@ -14,7 +14,7 @@ use ::changesets::Changesets;
 use ::filenodes::Filenodes;
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
-use blobrepo_factory::BlobrepoBuilder;
+use blobrepo_factory::{BlobrepoBuilder, PutBehaviour};
 use blobrepo_override::DangerousOverride;
 use bookmarks::BookmarkName;
 use cache_warmup::{CacheWarmupRequest, CacheWarmupTarget};
@@ -192,6 +192,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .with_fb303_args()
         .with_all_repos()
         .with_scuba_logging_args()
+        .with_special_put_behaviour(PutBehaviour::Overwrite)
         .build()
         .subcommand(
             SubCommand::with_name(SUBCOMMAND_LOCAL_PATH)

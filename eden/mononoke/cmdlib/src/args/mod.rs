@@ -40,7 +40,7 @@ use blobrepo::BlobRepo;
 use blobrepo_factory::{BlobrepoBuilder, Caching, ReadOnlyStorage};
 use blobstore_factory::{
     BlobstoreOptions, CachelibBlobstoreOptions, ChaosOptions, PackOptions, PutBehaviour, Scrubbing,
-    ThrottleOptions,
+    ThrottleOptions, DEFAULT_PUT_BEHAVIOUR,
 };
 use metaconfig_parser::{RepoConfigs, StorageConfigs};
 use metaconfig_types::{BlobConfig, CommonConfig, Redaction, RepoConfig, ScrubAction};
@@ -124,6 +124,9 @@ pub struct MononokeApp {
 
     /// Adds --fb303-thrift-port
     fb303: bool,
+
+    /// This app is special admin tool, needs to run with specific PutBehaviour
+    special_put_behaviour: Option<PutBehaviour>,
 }
 
 /// Create a default root logger for Facebook services
@@ -151,6 +154,7 @@ impl MononokeApp {
             scuba_logging: false,
             disabled_hooks: false,
             fb303: false,
+            special_put_behaviour: None,
         }
     }
 
@@ -211,6 +215,11 @@ impl MononokeApp {
 
     pub fn with_fb303_args(mut self) -> Self {
         self.fb303 = true;
+        self
+    }
+
+    pub fn with_special_put_behaviour(mut self, put_behaviour: PutBehaviour) -> Self {
+        self.special_put_behaviour = Some(put_behaviour);
         self
     }
 
@@ -321,7 +330,7 @@ impl MononokeApp {
 
         app = add_logger_args(app);
         app = add_mysql_options_args(app);
-        app = add_blobstore_args(app);
+        app = add_blobstore_args(app, self.special_put_behaviour);
         app = add_cachelib_args(app, self.hide_advanced_args);
         app = add_runtime_args(app);
         app = add_tunables_args(app);
@@ -732,7 +741,23 @@ pub fn add_mysql_options_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     )
 }
 
-pub fn add_blobstore_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+fn add_blobstore_args<'a, 'b>(
+    app: App<'a, 'b>,
+    special_put_behaviour: Option<PutBehaviour>,
+) -> App<'a, 'b> {
+    let mut put_arg = Arg::with_name(BLOBSTORE_PUT_BEHAVIOUR_ARG)
+        .long(BLOBSTORE_PUT_BEHAVIOUR_ARG)
+        .takes_value(true)
+        .required(false)
+        .help("Desired blobstore behaviour when a put is made to an existing key.");
+
+    if let Some(special_put_behaviour) = special_put_behaviour {
+        put_arg = put_arg.default_value(special_put_behaviour.into());
+    } else {
+        // Add the default here so that it shows in --help
+        put_arg = put_arg.default_value(DEFAULT_PUT_BEHAVIOUR.into());
+    }
+
     app.arg(
         Arg::with_name(READ_QPS_ARG)
             .long(READ_QPS_ARG)
@@ -783,11 +808,7 @@ pub fn add_blobstore_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
             .help("Whether to attempt zstd compression when blobstore is putting things into cachelib over threshold size.  Default is true."),
     )
     .arg(
-        Arg::with_name(BLOBSTORE_PUT_BEHAVIOUR_ARG)
-            .long(BLOBSTORE_PUT_BEHAVIOUR_ARG)
-            .takes_value(true)
-            .required(false)
-            .help("Whether blobstore put unconditionally attempts to write even if key already present.  Default is Overwrite."),
+      put_arg
     )
 }
 

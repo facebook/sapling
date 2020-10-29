@@ -8,7 +8,7 @@
 #![deny(warnings)]
 
 use anyhow::{format_err, Error};
-use blobstore::Loadable;
+use blobstore::{Loadable, PutBehaviour};
 use clap::Arg;
 use cloned::cloned;
 use context::CoreContext;
@@ -30,6 +30,7 @@ const DEFAULT_NUM_JOBS: usize = 10;
 fn main(fb: FacebookInit) -> Result<(), Error> {
     let matches = args::MononokeApp::new(NAME)
         .with_advanced_args_hidden()
+        .with_special_put_behaviour(PutBehaviour::Overwrite)
         .build()
         .version("0.0.0")
         .about("Rechunk blobs using the filestore")

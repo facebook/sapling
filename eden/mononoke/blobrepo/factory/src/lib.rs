@@ -62,7 +62,7 @@ use type_map::TypeMap;
 use unodes::RootUnodeManifestId;
 use virtually_sharded_blobstore::VirtuallyShardedBlobstore;
 
-pub use blobstore_factory::{BlobstoreOptions, ReadOnlyStorage};
+pub use blobstore_factory::{BlobstoreOptions, PutBehaviour, ReadOnlyStorage};
 
 #[derive(Copy, Clone, PartialEq)]
 pub enum Caching {

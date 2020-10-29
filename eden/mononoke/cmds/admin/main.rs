@@ -9,6 +9,7 @@
 #![deny(warnings)]
 #![feature(process_exitcode_placeholder)]
 
+use blobstore::PutBehaviour;
 use clap::App;
 use fbinit::FacebookInit;
 use futures_ext::FutureExt as Future01Ext;
@@ -59,6 +60,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
     args::MononokeApp::new("Mononoke admin command line tool")
         .with_advanced_args_hidden()
         .with_source_and_target_repos()
+        .with_special_put_behaviour(PutBehaviour::Overwrite)
         .build()
         .version("0.0.0")
         .about("Poke at mononoke internals for debugging and investigating data structures.")
