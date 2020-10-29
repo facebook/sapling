@@ -16,7 +16,7 @@ use mononoke_types::{FileChange, MPath};
 use regex::Regex;
 
 const NOCOMMIT_MARKER: &str = "\x40nocommit";
-const NOCOMIT_REGEX: &str = "(\\A|\\W)\x40nocommit(\\W|\\z)";
+const NOCOMIT_REGEX: &str = "\x40nocommit(\\W|_|\\z)";
 
 #[derive(Clone, Debug)]
 pub struct CheckNocommitHook;
@@ -96,8 +96,15 @@ mod test {
     }
 
     #[test]
-    fn test_require_word_boundaries() {
+    fn test_require_word_boundaries_after() {
         assert!(!has_nocommit(b"\x40nocommitfoo"));
-        assert!(!has_nocommit(b"foo\x40nocommit"));
+        assert!(has_nocommit(b"foo\x40nocommit"));
+        assert!(has_nocommit(b"foo_\x40nocommit\""));
+    }
+
+    #[test]
+    fn test_matches_underscores_before_and_after() {
+        assert!(has_nocommit(b"__\x40nocommit"));
+        assert!(has_nocommit(b"\x40nocommit__"));
     }
 }
