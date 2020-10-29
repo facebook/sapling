@@ -42,19 +42,40 @@ class GlobNode {
   struct GlobResult {
     RelativePath name;
     dtype_t dtype;
+    // Currently this is the commit hash for the commit to which this file
+    // belongs. But should eden move away from commit hashes this may become
+    // the tree hash of the root tree to which this file belongs.
+    // This should never become a dangling reference because the caller
+    // of Globresult::evaluate ensures that the hashes have a lifetime that
+    // exceeds that of the GlobResults returned.
+    const Hash* originHash;
 
     // Comparison operator for testing purposes
     bool operator==(const GlobResult& other) const noexcept {
-      return name == other.name && dtype == other.dtype;
+      return name == other.name && dtype == other.dtype &&
+          originHash == other.originHash;
     }
     bool operator!=(const GlobResult& other) const noexcept {
       return !(*this == other);
     }
-    GlobResult(RelativePathPiece name, dtype_t dtype)
-        : name(name.copy()), dtype(dtype) {}
 
-    GlobResult(RelativePath&& name, dtype_t dtype) noexcept
-        : name(std::move(name)), dtype(dtype) {}
+    bool operator<(const GlobResult& other) const noexcept {
+      return name < other.name || (name == other.name && dtype < other.dtype) ||
+          (name == other.name && dtype == other.dtype &&
+           originHash < other.originHash);
+    }
+
+    // originHash should never become a dangling refernece because the caller
+    // of Globresult::evaluate ensures that the hashes have a lifetime that
+    // exceeds that of the GlobResults returned.
+    GlobResult(RelativePathPiece name, dtype_t dtype, const Hash& originHash)
+        : name(name.copy()), dtype(dtype), originHash(&originHash) {}
+
+    GlobResult(
+        RelativePath&& name,
+        dtype_t dtype,
+        const Hash& originHash) noexcept
+        : name(std::move(name)), dtype(dtype), originHash(&originHash) {}
   };
 
   // Compile and add a new glob pattern to the tree.
@@ -65,8 +86,11 @@ class GlobNode {
   // This is a recursive function to evaluate the compiled glob against
   // the provided input path and inode.
   // It returns the set of matching file names.
-  // Note: the caller is responsible for ensuring that this
+  // Note_0: the caller is responsible for ensuring that this
   // GlobNode exists until the returned Future is resolved.
+  // Note_1: The caller is also responsible for ensuring the originHash's
+  // lifetime exceeds that of all the returned GlobResults. These GlobResults
+  // will hold pointers to this originHash.
   // If prefetchFiles is true, each matching file will have its content
   // prefetched via the ObjectStore layer.  This will not change the
   // materialization or overlay state for children that already have
@@ -76,7 +100,8 @@ class GlobNode {
       ObjectFetchContext& context,
       RelativePathPiece rootPath,
       TreeInodePtr root,
-      PrefetchList fileBlobsToPrefetch);
+      PrefetchList fileBlobsToPrefetch,
+      const Hash& originHash);
 
   // This is the Tree version of the method above
   folly::Future<std::vector<GlobResult>> evaluate(
@@ -84,7 +109,8 @@ class GlobNode {
       ObjectFetchContext& context,
       RelativePathPiece rootPath,
       const std::shared_ptr<const Tree>& tree,
-      PrefetchList fileBlobsToPrefetch);
+      PrefetchList fileBlobsToPrefetch,
+      const Hash& originHash);
 
   /**
    * Print a human-readable description of this GlobNode to stderr.
@@ -123,7 +149,8 @@ class GlobNode {
       ObjectFetchContext& context,
       RelativePathPiece rootPath,
       ROOT&& root,
-      PrefetchList fileBlobsToPrefetch);
+      PrefetchList fileBlobsToPrefetch,
+      const Hash& originHash);
 
   template <typename ROOT>
   folly::Future<std::vector<GlobResult>> evaluateImpl(
@@ -131,7 +158,8 @@ class GlobNode {
       ObjectFetchContext& context,
       RelativePathPiece rootPath,
       ROOT&& root,
-      PrefetchList fileBlobsToPrefetch);
+      PrefetchList fileBlobsToPrefetch,
+      const Hash& originHash);
 
   void debugDump(int currentDepth) const;
 

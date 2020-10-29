@@ -119,13 +119,16 @@ struct TreeInodePtrRoot {
   template <typename ENTRY>
   GlobNode::GlobResult entryToResult(
       RelativePath&& entryPath,
-      const ENTRY& entry) {
-    return this->entryToResult(std::move(entryPath), &entry.second);
+      const ENTRY& entry,
+      const Hash& originHash) {
+    return this->entryToResult(std::move(entryPath), &entry.second, originHash);
   }
   GlobNode::GlobResult entryToResult(
       RelativePath&& entryPath,
-      const DirEntry* entry) {
-    return GlobNode::GlobResult{std::move(entryPath), entry->getDtype()};
+      const DirEntry* entry,
+      const Hash& originHash) {
+    return GlobNode::GlobResult{
+        std::move(entryPath), entry->getDtype(), originHash};
   }
 };
 
@@ -198,14 +201,17 @@ struct TreeRoot {
 
   GlobNode::GlobResult entryToResult(
       RelativePath&& entryPath,
-      const TreeEntry* entry) {
-    return GlobNode::GlobResult{std::move(entryPath), entry->getDType()};
+      const TreeEntry* entry,
+      const Hash& originHash) {
+    return GlobNode::GlobResult{
+        std::move(entryPath), entry->getDType(), originHash};
   }
 
   GlobNode::GlobResult entryToResult(
       RelativePath&& entryPath,
-      const TreeEntry& entry) {
-    return this->entryToResult(std::move(entryPath), &entry);
+      const TreeEntry& entry,
+      const Hash& originHash) {
+    return this->entryToResult(std::move(entryPath), &entry, originHash);
   }
 };
 } // namespace
@@ -292,12 +298,13 @@ Future<vector<GlobNode::GlobResult>> GlobNode::evaluateImpl(
     ObjectFetchContext& context,
     RelativePathPiece rootPath,
     ROOT&& root,
-    GlobNode::PrefetchList fileBlobsToPrefetch) {
+    GlobNode::PrefetchList fileBlobsToPrefetch,
+    const Hash& originHash) {
   vector<GlobResult> results;
   vector<std::pair<PathComponentPiece, GlobNode*>> recurse;
   vector<Future<vector<GlobResult>>> futures;
   futures.emplace_back(evaluateRecursiveComponentImpl(
-      store, context, rootPath, root, fileBlobsToPrefetch));
+      store, context, rootPath, root, fileBlobsToPrefetch, originHash));
 
   auto recurseIfNecessary =
       [&](PathComponentPiece name, GlobNode* node, const auto& entry) {
@@ -309,19 +316,20 @@ Future<vector<GlobNode::GlobResult>> GlobNode::evaluateImpl(
             auto candidateName = rootPath + name;
             futures.emplace_back(
                 store->getTree(root.entryHash(entry), context)
-                    .thenValue(
-                        [candidateName,
-                         store,
-                         &context,
-                         innerNode = node,
-                         fileBlobsToPrefetch](std::shared_ptr<const Tree> dir) {
-                          return innerNode->evaluateImpl(
-                              store,
-                              context,
-                              candidateName,
-                              TreeRoot(dir),
-                              fileBlobsToPrefetch);
-                        }));
+                    .thenValue([candidateName,
+                                store,
+                                &context,
+                                innerNode = node,
+                                fileBlobsToPrefetch,
+                                &originHash](std::shared_ptr<const Tree> dir) {
+                      return innerNode->evaluateImpl(
+                          store,
+                          context,
+                          candidateName,
+                          TreeRoot(dir),
+                          fileBlobsToPrefetch,
+                          originHash);
+                    }));
           }
         }
       };
@@ -336,7 +344,8 @@ Future<vector<GlobNode::GlobResult>> GlobNode::evaluateImpl(
         if (entry) {
           // Matched!
           if (node->isLeaf_) {
-            results.emplace_back(root.entryToResult(rootPath + name, entry));
+            results.emplace_back(
+                root.entryToResult(rootPath + name, entry, originHash));
 
             if (fileBlobsToPrefetch && root.entryShouldPrefetch(entry)) {
               fileBlobsToPrefetch->wlock()->emplace_back(root.entryHash(entry));
@@ -352,7 +361,8 @@ Future<vector<GlobNode::GlobResult>> GlobNode::evaluateImpl(
           auto name = root.entryName(entry);
           if (node->alwaysMatch_ || node->matcher_.match(name.stringPiece())) {
             if (node->isLeaf_) {
-              results.emplace_back(root.entryToResult(rootPath + name, entry));
+              results.emplace_back(
+                  root.entryToResult(rootPath + name, entry, originHash));
               if (fileBlobsToPrefetch && root.entryShouldPrefetch(entry)) {
                 fileBlobsToPrefetch->wlock()->emplace_back(
                     root.entryHash(entry));
@@ -371,20 +381,21 @@ Future<vector<GlobNode::GlobResult>> GlobNode::evaluateImpl(
 
   for (auto& item : recurse) {
     auto candidateName = rootPath + item.first;
-    futures.emplace_back(
-        root.getOrLoadChildTree(item.first)
-            .thenValue([store,
-                        &context,
-                        candidateName,
-                        node = item.second,
-                        fileBlobsToPrefetch](TreeInodePtr dir) {
-              return node->evaluateImpl(
-                  store,
-                  context,
-                  candidateName,
-                  TreeInodePtrRoot(dir),
-                  fileBlobsToPrefetch);
-            }));
+    futures.emplace_back(root.getOrLoadChildTree(item.first)
+                             .thenValue([store,
+                                         &context,
+                                         candidateName,
+                                         node = item.second,
+                                         fileBlobsToPrefetch,
+                                         &originHash](TreeInodePtr dir) {
+                               return node->evaluateImpl(
+                                   store,
+                                   context,
+                                   candidateName,
+                                   TreeInodePtrRoot(dir),
+                                   fileBlobsToPrefetch,
+                                   originHash);
+                             }));
   }
 
   // Note: we use collectAll() rather than collect() here to make sure that
@@ -411,9 +422,15 @@ Future<vector<GlobNode::GlobResult>> GlobNode::evaluate(
     ObjectFetchContext& context,
     RelativePathPiece rootPath,
     TreeInodePtr root,
-    GlobNode::PrefetchList fileBlobsToPrefetch) {
+    GlobNode::PrefetchList fileBlobsToPrefetch,
+    const Hash& originHash) {
   return evaluateImpl(
-      store, context, rootPath, TreeInodePtrRoot(root), fileBlobsToPrefetch);
+      store,
+      context,
+      rootPath,
+      TreeInodePtrRoot(root),
+      fileBlobsToPrefetch,
+      originHash);
 }
 
 folly::Future<vector<GlobNode::GlobResult>> GlobNode::evaluate(
@@ -421,9 +438,15 @@ folly::Future<vector<GlobNode::GlobResult>> GlobNode::evaluate(
     ObjectFetchContext& context,
     RelativePathPiece rootPath,
     const std::shared_ptr<const Tree>& tree,
-    GlobNode::PrefetchList fileBlobsToPrefetch) {
+    GlobNode::PrefetchList fileBlobsToPrefetch,
+    const Hash& originHash) {
   return evaluateImpl(
-      store, context, rootPath, TreeRoot(tree), fileBlobsToPrefetch);
+      store,
+      context,
+      rootPath,
+      TreeRoot(tree),
+      fileBlobsToPrefetch,
+      originHash);
 }
 
 StringPiece GlobNode::tokenize(StringPiece& pattern, bool* hasSpecials) {
@@ -470,7 +493,8 @@ Future<vector<GlobNode::GlobResult>> GlobNode::evaluateRecursiveComponentImpl(
     ObjectFetchContext& context,
     RelativePathPiece rootPath,
     ROOT&& root,
-    GlobNode::PrefetchList fileBlobsToPrefetch) {
+    GlobNode::PrefetchList fileBlobsToPrefetch,
+    const Hash& originHash) {
   vector<GlobResult> results;
   if (recursiveChildren_.empty()) {
     return results;
@@ -486,7 +510,8 @@ Future<vector<GlobNode::GlobResult>> GlobNode::evaluateRecursiveComponentImpl(
       for (auto& node : recursiveChildren_) {
         if (node->alwaysMatch_ ||
             node->matcher_.match(candidateName.stringPiece())) {
-          results.emplace_back(root.entryToResult(candidateName.copy(), entry));
+          results.emplace_back(
+              root.entryToResult(candidateName.copy(), entry, originHash));
           if (fileBlobsToPrefetch && root.entryShouldPrefetch(entry)) {
             fileBlobsToPrefetch->wlock()->emplace_back(root.entryHash(entry));
           }
@@ -503,19 +528,21 @@ Future<vector<GlobNode::GlobResult>> GlobNode::evaluateRecursiveComponentImpl(
         } else {
           futures.emplace_back(
               store->getTree(root.entryHash(entry), context)
-                  .thenValue([candidateName,
-                              store,
-                              &context,
-                              this,
-                              fileBlobsToPrefetch](
-                                 const std::shared_ptr<const Tree>& tree) {
-                    return evaluateRecursiveComponentImpl(
-                        store,
-                        context,
-                        candidateName,
-                        TreeRoot(tree),
-                        fileBlobsToPrefetch);
-                  }));
+                  .thenValue(
+                      [candidateName,
+                       store,
+                       &context,
+                       this,
+                       fileBlobsToPrefetch,
+                       &originHash](const std::shared_ptr<const Tree>& tree) {
+                        return evaluateRecursiveComponentImpl(
+                            store,
+                            context,
+                            candidateName,
+                            TreeRoot(tree),
+                            fileBlobsToPrefetch,
+                            originHash);
+                      }));
         }
       }
     }
@@ -523,18 +550,21 @@ Future<vector<GlobNode::GlobResult>> GlobNode::evaluateRecursiveComponentImpl(
 
   // Recursively load child inodes and evaluate matches
   for (auto& candidateName : subDirNames) {
-    futures.emplace_back(
-        root.getOrLoadChildTree(candidateName.basename())
-            .thenValue(
-                [candidateName, store, &context, this, fileBlobsToPrefetch](
-                    TreeInodePtr dir) {
-                  return evaluateRecursiveComponentImpl(
-                      store,
-                      context,
-                      candidateName,
-                      TreeInodePtrRoot(dir),
-                      fileBlobsToPrefetch);
-                }));
+    futures.emplace_back(root.getOrLoadChildTree(candidateName.basename())
+                             .thenValue([candidateName,
+                                         store,
+                                         &context,
+                                         this,
+                                         fileBlobsToPrefetch,
+                                         &originHash](TreeInodePtr dir) {
+                               return evaluateRecursiveComponentImpl(
+                                   store,
+                                   context,
+                                   candidateName,
+                                   TreeInodePtrRoot(dir),
+                                   fileBlobsToPrefetch,
+                                   originHash);
+                             }));
   }
 
   // Note: we use collectAll() rather than collect() here to make sure that

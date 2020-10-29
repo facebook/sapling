@@ -14,6 +14,13 @@ from .lib import testcase
 @testcase.eden_repo_test
 class GlobTest(testcase.EdenRepoTest):
     def populate_repo(self) -> None:
+        self.repo.write_file("hello", "bonjour\n")
+        self.repo.write_file("hola", "hello\n")
+        self.repo.write_file("adir/phile", "phoo!\n")
+
+        self.commit0 = self.repo.commit("Commit 0.")
+
+        self.repo.remove_files(["hello", "hola", "adir/phile"])
         self.repo.write_file("hello", "hola\n")
         self.repo.write_file("adir/file", "foo!\n")
         self.repo.write_file("bdir/file", "bar!\n")
@@ -30,10 +37,16 @@ class GlobTest(testcase.EdenRepoTest):
         self.repo.write_file("java/com/example/foo/bar/Bar.java", "")
         self.repo.write_file("java/com/example/foo/bar/baz/Baz.java", "")
 
-        self.repo.commit("Commit 1.")
+        self.commit1 = self.repo.commit("Commit 1.")
 
     def setUp(self) -> None:
+        # needs to be done before set up because these need to be created
+        # for populate_repo() and the supers set up will call this.
+        self.commit0 = ""
+        self.commit1 = ""
+
         super().setUp()
+
         self.client = self.get_thrift_client()
         self.client.open()
         self.addCleanup(self.client.close)
@@ -125,17 +138,103 @@ class GlobTest(testcase.EdenRepoTest):
         self.assertIn("unterminated bracket sequence", str(ctx.exception))
         self.assertEqual(EdenErrorType.POSIX_ERROR, ctx.exception.errorType)
 
+    def test_glob_on_non_current_commit(self) -> None:
+        self.assert_glob(["hello"], [b"hello"], commits=[bytes.fromhex(self.commit0)])
+        self.assert_glob(["hola"], [b"hola"], commits=[bytes.fromhex(self.commit0)])
+
+    def test_glob_multiple_commits(self) -> None:
+        self.assert_glob(
+            ["hello"],
+            [b"hello", b"hello"],
+            commits=[bytes.fromhex(self.commit0), bytes.fromhex(self.commit1)],
+        )
+        self.assert_glob(
+            ["h*"],
+            [b"hello", b"hello", b"hola"],
+            commits=[bytes.fromhex(self.commit0), bytes.fromhex(self.commit1)],
+        )
+        self.assert_glob(
+            ["a*/*ile"],
+            [b"adir/file", b"adir/phile"],
+            commits=[bytes.fromhex(self.commit0), bytes.fromhex(self.commit1)],
+        )
+
+    def test_prefetch_matching_files(self) -> None:
+        self.assert_glob(["hello"], [b"hello"], prefetching=True)
+        self.assert_glob(
+            ["hello"],
+            [b"hello"],
+            prefetching=True,
+            commits=[bytes.fromhex(self.commit0)],
+        )
+        self.assert_glob(
+            ["hello"],
+            [b"hello", b"hello"],
+            prefetching=True,
+            commits=[bytes.fromhex(self.commit0), bytes.fromhex(self.commit1)],
+        )
+
+    def test_simple_matching_commit(self) -> None:
+        self.assert_glob(
+            ["hello"],
+            expected_matches=[b"hello"],
+            expected_commits=[bytes.fromhex(self.commit1)],
+        )
+
+        self.assert_glob(
+            ["hello"],
+            expected_matches=[b"hello"],
+            expected_commits=[bytes.fromhex(self.commit0)],
+            commits=[bytes.fromhex(self.commit0)],
+        )
+
+    def test_duplicate_file_multiple_commits(self) -> None:
+        self.assert_glob(
+            ["hello"],
+            expected_matches=[b"hello", b"hello"],
+            expected_commits=[
+                bytes.fromhex(self.commit0),
+                bytes.fromhex(self.commit1),
+            ],
+            commits=[bytes.fromhex(self.commit0), bytes.fromhex(self.commit1)],
+        )
+
+        def test_multiple_file_multiple_commits(self) -> None:
+            self.assert_glob(
+                ["a*/*ile"],
+                [b"adir/file", b"adir/phile"],
+                expected_commits=[
+                    bytes.fromhex(self.commit1),
+                    bytes.fromhex(self.commit0),
+                ],
+                commits=[bytes.fromhex(self.commit0), bytes.fromhex(self.commit1)],
+            )
+
     def assert_glob(
         self,
         globs: List[str],
         expected_matches: List[bytes],
         include_dotfiles: bool = False,
         msg: Optional[str] = None,
+        commits: Optional[List[bytes]] = None,
+        prefetching: bool = False,
+        expected_commits: Optional[List[bytes]] = None,
     ) -> None:
-        params = GlobParams(self.mount_path_bytes, globs, include_dotfiles)
+        params = GlobParams(
+            mountPoint=self.mount_path_bytes,
+            globs=globs,
+            includeDotfiles=include_dotfiles,
+            prefetchFiles=prefetching,
+            revisions=commits,
+        )
         self.assertCountEqual(
             expected_matches, self.client.globFiles(params).matchingFiles, msg=msg
         )
+
+        if expected_commits:
+            self.assertCountEqual(
+                expected_commits, self.client.globFiles(params).originHashes, msg=msg
+            )
 
         # Also verify behavior of legacy Thrift API.
         if include_dotfiles:
