@@ -30,6 +30,7 @@ use futures_ext::FutureExt as Future01Ext;
 use futures_old::{Future as Future01, Stream as Stream01};
 use itertools::{Either, Itertools};
 use manifest::{Entry, Manifest};
+use mercurial_derived_data::MappedHgChangesetId;
 use mercurial_types::{FileBytes, HgChangesetId, HgFileNodeId, HgManifestId, RepoPath};
 use mononoke_types::{fsnode::FsnodeEntry, ChangesetId, ContentId, FsnodeId, MPath};
 use phases::{HeadsFetcher, Phase, Phases};
@@ -397,89 +398,62 @@ fn file_content_metadata_step<'a, V: VisitOne>(
         .compat()
 }
 
-fn bonsai_to_hg_mapping_step<'a, V: 'a + VisitOne>(
+async fn bonsai_to_hg_mapping_step<'a, V: 'a + VisitOne>(
     ctx: &'a CoreContext,
     repo: &'a BlobRepo,
     checker: &'a Checker<V>,
     bcs_id: ChangesetId,
     enable_derive: bool,
-) -> impl Future<Output = Result<StepOutput, Error>> + 'a {
-    let hg_cs_id = if enable_derive {
-        let filenodes_derive = repo
+) -> Result<StepOutput, Error> {
+    let has_filenode = if enable_derive {
+        let public = repo
             .get_phases()
             .get_public(ctx.clone(), vec![bcs_id], false /* ephemeral_derive */)
-            .and_then({
-                cloned!(ctx, repo);
-                move |public| {
-                    if public.contains(&bcs_id) {
-                        FilenodesOnlyPublic::derive(ctx.clone(), repo.clone(), bcs_id)
-                            .from_err()
-                            .map(|_| ())
-                            .compat()
-                            .left_future()
-                    } else {
-                        future::ok(()).right_future()
-                    }
-                }
-            })
-            .compat();
-
-        let hg_cs_derive = repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id);
-
-        filenodes_derive
-            .join(hg_cs_derive)
-            .map(|((), hg_cs_id)| Some(hg_cs_id))
-            .left_future()
-    } else {
-        // Check that both filenodes and hg changesets are derived
-        {
-            async move {
-                FilenodesOnlyPublic::is_derived(&ctx, &repo, &bcs_id)
-                    .map_err(Error::from)
-                    .await
-            }
+            .await?;
+        // Even if enable_derive is set, only derive for public changesets
+        if public.contains(&bcs_id) {
+            let _ = FilenodesOnlyPublic::derive03(ctx, repo, bcs_id).await?;
+            Some(true)
+        } else {
+            None
         }
-        .boxed()
-        .compat()
-        .join(repo.get_bonsai_hg_mapping().get_hg_from_bonsai(
-            ctx.clone(),
-            repo.get_repoid(),
-            bcs_id,
-        ))
-        .map(|(filenodes_derived, maybe_hg_cs_id)| {
-            if filenodes_derived {
-                maybe_hg_cs_id
-            } else {
-                None
-            }
-        })
-        .right_future()
+    } else {
+        None
     };
 
-    hg_cs_id
-        .map(move |maybe_hg_cs_id| {
-            match maybe_hg_cs_id {
-                Some(hg_cs_id) => {
-                    let mut edges = vec![];
-                    checker.add_edge(&mut edges, EdgeType::BonsaiHgMappingToHgChangeset, || {
-                        Node::HgChangeset(hg_cs_id)
-                    });
-                    StepOutput(
-                        checker.step_data(NodeType::BonsaiHgMapping, || {
-                            NodeData::BonsaiHgMapping(Some(hg_cs_id))
-                        }),
-                        edges,
-                    )
-                }
-                None => StepOutput(
-                    checker.step_data(NodeType::BonsaiHgMapping, || {
-                        NodeData::BonsaiHgMapping(None)
-                    }),
-                    vec![],
-                ),
-            }
-        })
-        .compat()
+    // We only want to walk to Hg step if filenode is present
+    let has_filenode = match has_filenode {
+        Some(v) => v,
+        None => FilenodesOnlyPublic::is_derived(&ctx, &repo, &bcs_id).await?,
+    };
+
+    let maybe_hg_cs_id = if has_filenode {
+        maybe_derived::<MappedHgChangesetId>(ctx, repo, bcs_id, enable_derive).await?
+    } else {
+        None
+    };
+
+    Ok(match maybe_hg_cs_id {
+        Some(hg_cs_id) => {
+            let hg_cs_id = hg_cs_id.0;
+            let mut edges = vec![];
+            checker.add_edge(&mut edges, EdgeType::BonsaiHgMappingToHgChangeset, || {
+                Node::HgChangeset(hg_cs_id)
+            });
+            StepOutput(
+                checker.step_data(NodeType::BonsaiHgMapping, || {
+                    NodeData::BonsaiHgMapping(Some(hg_cs_id))
+                }),
+                edges,
+            )
+        }
+        None => StepOutput(
+            checker.step_data(NodeType::BonsaiHgMapping, || {
+                NodeData::BonsaiHgMapping(None)
+            }),
+            vec![],
+        ),
+    })
 }
 
 fn hg_to_bonsai_mapping_step<'a, V: VisitOne>(

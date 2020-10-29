@@ -23,6 +23,7 @@ filenodes = { path = "../filenodes" }
 filestore = { path = "../filestore" }
 fsnodes = { path = "../derived_data/fsnodes" }
 manifest = { path = "../manifest" }
+mercurial_derived_data = { path = "../derived_data/mercurial_derived_data" }
 mercurial_types = { path = "../mercurial/types" }
 metaconfig_types = { path = "../metaconfig/types" }
 mononoke_types = { path = "../mononoke_types" }

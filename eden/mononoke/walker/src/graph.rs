@@ -17,6 +17,7 @@ use fsnodes::RootFsnodeId;
 use futures::stream::BoxStream;
 use hash_memo::EagerHashMemoizer;
 use internment::ArcIntern;
+use mercurial_derived_data::MappedHgChangesetId;
 use mercurial_types::{
     blobs::{BlobManifest, HgBlobChangeset},
     FileBytes, HgChangesetId, HgFileEnvelope, HgFileNodeId, HgManifestId,
@@ -146,14 +147,16 @@ impl NodeType {
             // Bonsai
             NodeType::Bookmark => None,
             NodeType::BonsaiChangeset => None,
+            // from filenodes/lib.rs: If hg changeset is not generated, then root filenode can't possible be generated
+            // therefore this is the same as MappedHgChangesetId + FilenodesOnlyPublic
             NodeType::BonsaiHgMapping => Some(FilenodesOnlyPublic::NAME),
             NodeType::BonsaiPhaseMapping => None,
             NodeType::PublishedBookmarks => None,
             // Hg
-            NodeType::HgBonsaiMapping => None,
-            NodeType::HgChangeset => None,
-            NodeType::HgManifest => None,
-            NodeType::HgFileEnvelope => None,
+            NodeType::HgBonsaiMapping => Some(MappedHgChangesetId::NAME),
+            NodeType::HgChangeset => Some(MappedHgChangesetId::NAME),
+            NodeType::HgManifest => Some(MappedHgChangesetId::NAME),
+            NodeType::HgFileEnvelope => Some(MappedHgChangesetId::NAME),
             NodeType::HgFileNode => Some(FilenodesOnlyPublic::NAME),
             // Content
             NodeType::FileContent => None,
