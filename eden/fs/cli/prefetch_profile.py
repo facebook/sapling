@@ -5,9 +5,11 @@
 
 import argparse
 import os
+import re
 import subprocess
 import sys
 import warnings
+from pathlib import Path
 from typing import List, Optional, Set
 
 from facebook.eden.ttypes import Glob, GlobParams
@@ -48,7 +50,76 @@ def make_prefetch_request(
     all_profile_contents: Set[str],
     enable_prefetch: bool,
     silent: bool,
+    revisions: Optional[List[str]],
+    predict_revisions: bool,
 ) -> Optional[Glob]:
+    if predict_revisions:
+        # The arc and hg commands need to be run in the mount mount, so we need
+        # to change the working path if it is not within the mount.
+        current_path = Path.cwd()
+        in_checkout = False
+        try:
+            # this will throw if current_path is not a relative path of the
+            # checkout path
+            checkout.get_relative_path(current_path)
+            in_checkout = True
+        except Exception:
+            os.chdir(checkout.path)
+
+        bookmark_to_prefetch_command = ["arc", "stable", "best", "--verbose", "error"]
+        bookmarks_result = subprocess.run(
+            bookmark_to_prefetch_command,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+
+        if bookmarks_result.returncode:
+            raise Exception(
+                "Unable to predict commits to prefetch, error finding bookmark"
+                f" to prefetch: {bookmarks_result.stderr}"
+            )
+
+        bookmark_to_prefetch = bookmarks_result.stdout.decode().strip("\n")
+
+        commit_from_bookmark_commmand = [
+            "hg",
+            "log",
+            "-r",
+            bookmark_to_prefetch,
+            "-T",
+            "{node}",
+        ]
+        commits_result = subprocess.run(
+            commit_from_bookmark_commmand,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+
+        if commits_result.returncode:
+            raise Exception(
+                "Unable to predict commits to prefetch, error converting"
+                f" bookmark to commit: {commits_result.stderr}"
+            )
+
+        # if we changed the working path lets change it back to what it was
+        # before
+        if not in_checkout:
+            os.chdir(current_path)
+
+        raw_commits = commits_result.stdout.decode()
+        # arc stable only gives us one commit, so for now this is a single
+        # commit, but we might use multiple in the future.
+        revisions = [re.sub("\n$", "", raw_commits)]
+
+        if not silent:
+            print(f"Prefetching for revisions: {revisions}")
+
+    byte_revisions = None
+    if revisions is not None:
+        byte_revisions = [bytes.fromhex(revision) for revision in revisions]
+
     with instance.get_thrift_client_legacy() as client:
         return client.globFiles(
             GlobParams(
@@ -57,6 +128,7 @@ def make_prefetch_request(
                 includeDotfiles=False,
                 prefetchFiles=enable_prefetch,
                 suppressFileList=silent,
+                revisions=byte_revisions,
             )
         )
 
@@ -69,6 +141,8 @@ def prefetch_profiles(
     run_in_foreground: bool,
     enable_prefetch: bool,
     silent: bool,
+    revisions: Optional[List[str]],
+    predict_revisions: bool,
 ) -> Optional[Glob]:
 
     # if we are running in the foreground, skip creating a new process to
@@ -85,6 +159,8 @@ def prefetch_profiles(
             all_profile_contents=all_profile_contents,
             enable_prefetch=enable_prefetch,
             silent=silent,
+            revisions=revisions,
+            predict_revisions=predict_revisions,
         )
     # if we are running in the background, create a copy of the fetch command
     # but in the foreground.
@@ -104,6 +180,12 @@ def prefetch_profiles(
         ]
 
         fetch_sub_command += ["--profile-names"] + profiles
+
+        if revisions is not None:
+            fetch_sub_command += ["--commits"] + revisions
+
+        if predict_revisions:
+            fetch_sub_command += ["--predict-commits"]
 
         # we need to say if we are not suppose to prefetch as it is the
         # default to enable_prefetching
@@ -130,6 +212,24 @@ def prefetch_profiles(
                 creationflags=creation_flags,
             )
             return None
+
+
+def print_prefetch_results(results, print_commits):
+    print("\nFiles Prefetched: ")
+    # Can just print names it's clear which commit they come from
+    if not print_commits:
+        columns = ["FileName"]
+        data = [{"FileName": os.fsdecode(name)} for name in results.matchingFiles]
+        print(tabulate.tabulate(columns, data))
+    # Print commit and name this will make it more clean which commits
+    # files are fetched from
+    else:
+        columns = ["FileName", "Commit"]
+        data = [
+            {"FileName": os.fsdecode(name), "Commit": commit.hex()}
+            for name, commit in zip(results.matchingFiles, results.originHashes)
+        ]
+        print(tabulate.tabulate(columns, data))
 
 
 @prefetch_profile_cmd("record", "Start recording fetched file paths.")
@@ -254,10 +354,14 @@ class ActivateProfileCmd(Subcmd):
                 run_in_foreground=args.foreground,
                 enable_prefetch=True,
                 silent=not args.verbose,
+                revisions=None,
+                predict_revisions=False,
             )
+            # there will only every be one commit used to query globFiles here,
+            # so no need to list which commit a file is fetched for, it will
+            # be the current commit.
             if args.verbose and result is not None:
-                for name in result.matchingFiles:
-                    print(os.fsdecode(name))
+                print_prefetch_results(result, False)
 
         return 0
 
@@ -328,6 +432,26 @@ class FetchProfileCmd(Subcmd):
             "profiles.",
             default=None,
         )
+        parser.add_argument(
+            "--commits",
+            nargs="+",
+            help="Commit hashes of the commits for which globs should be"
+            " evaluated. Note that the current commit in the checkout is used"
+            " if this is not specified. Note that the prefetch profiles are"
+            " always read from the current commit, not the commits specified"
+            " here.",
+            default=None,
+        )
+        parser.add_argument(
+            "--predict-commits",
+            help="Predict the commits a user is likely to checkout. Evaluate"
+            " the active prefetch profiles against those commits and fetch the"
+            " resulting files in those commits. Note that the prefetch profiles "
+            " are always read from the current commit, not the commits "
+            " predicted here. This is intended to be used post pull.",
+            default=False,
+            action="store_true",
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         if sys.platform == "win32":
@@ -355,11 +479,15 @@ class FetchProfileCmd(Subcmd):
             run_in_foreground=args.foreground,
             enable_prefetch=not args.skip_prefetch,
             silent=not args.verbose,
+            revisions=args.commits,
+            predict_revisions=args.predict_commits,
         )
 
         if args.verbose and result is not None:
-            for name in result.matchingFiles:
-                print(os.fsdecode(name))
+            # Can just print names it's clear which commit they come from
+            # i.e. the current commit is used or only one commit passed.
+            print_prefetch_results(result, args.commits and len(args.commits) > 1)
+
         return 0
 
 
