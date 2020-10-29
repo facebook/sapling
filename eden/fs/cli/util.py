@@ -640,3 +640,11 @@ def format_mount(mount):
 
 def is_edenfs_mount_device(device: bytes) -> bool:
     return device == b"edenfs" or device.startswith(b"edenfs:")
+
+
+def get_eden_cli_cmd(argv=sys.argv) -> List[str]:
+    # We likely only need to do this on windows to make sure we run the
+    # edenfsctl in a python environment that isn't frozen. But this should
+    # be safe to do on all platforms, so for sake of uniformity, do it
+    # everywhere.
+    return [sys.executable] + argv[:1]

@@ -5,15 +5,18 @@
 
 import argparse
 import os
+import subprocess
 import sys
-from typing import List, Set
+import warnings
+from typing import List, Optional, Set
 
-from facebook.eden.ttypes import GlobParams
+from facebook.eden.ttypes import Glob, GlobParams
 
 from . import subcmd as subcmd_mod, tabulate
 from .cmd_util import get_eden_instance, require_checkout
 from .config import EdenCheckout, EdenInstance
 from .subcmd import Subcmd
+from .util import get_eden_cli_cmd
 
 
 prefetch_profile_cmd = subcmd_mod.Decorator()
@@ -35,19 +38,17 @@ def get_contents_for_profile(
         return {pat.strip() for pat in f.readlines()}
 
 
-# prefetch all of the files specified by a profile in the given checkout
-def prefetch_profiles(
+# Function to actually cause the prefetch, can be called on a background process
+# or in the main process.
+# Only print here if silent is False, as that could send messages randomly to
+# stdout.
+def make_prefetch_request(
     checkout: EdenCheckout,
     instance: EdenInstance,
-    profiles: List[str],
+    all_profile_contents: Set[str],
     enable_prefetch: bool,
     silent: bool,
-):
-    all_profile_contents = set()
-
-    for profile in profiles:
-        all_profile_contents |= get_contents_for_profile(checkout, profile, silent)
-
+) -> Optional[Glob]:
     with instance.get_thrift_client_legacy() as client:
         return client.globFiles(
             GlobParams(
@@ -58,6 +59,77 @@ def prefetch_profiles(
                 suppressFileList=silent,
             )
         )
+
+
+# prefetch all of the files specified by a profile in the given checkout
+def prefetch_profiles(
+    checkout: EdenCheckout,
+    instance: EdenInstance,
+    profiles: List[str],
+    run_in_foreground: bool,
+    enable_prefetch: bool,
+    silent: bool,
+) -> Optional[Glob]:
+
+    # if we are running in the foreground, skip creating a new process to
+    # run in, just run it here.
+    if run_in_foreground:
+        all_profile_contents = set()
+
+        for profile in profiles:
+            all_profile_contents |= get_contents_for_profile(checkout, profile, silent)
+
+        return make_prefetch_request(
+            checkout=checkout,
+            instance=instance,
+            all_profile_contents=all_profile_contents,
+            enable_prefetch=enable_prefetch,
+            silent=silent,
+        )
+    # if we are running in the background, create a copy of the fetch command
+    # but in the foreground.
+    else:
+        # note that we intentionally skip the verbose flag, since this is
+        # running in the background there is no point to printing, eventually
+        # we might write to a log at which point we would want to forward
+        # the verbose flag
+        fetch_sub_command = get_eden_cli_cmd() + [
+            "prefetch_profile",
+            "fetch",
+            "--checkout",
+            str(checkout.path),
+            # Since we have already backgrounded, the background
+            # process should run the fetch in the foreground.
+            "--foreground",
+        ]
+
+        fetch_sub_command += ["--profile-names"] + profiles
+
+        # we need to say if we are not suppose to prefetch as it is the
+        # default to enable_prefetching
+        if not enable_prefetch:
+            fetch_sub_command += ["--skip-prefetch"]
+
+        creation_flags = 0
+        if sys.platform == "win32":
+            # TODO add subprocess.DETACHED_PROCESS only available in python 3.7+
+            # on windows, currently only 3.6 avialable
+            creation_flags |= subprocess.CREATE_NEW_PROCESS_GROUP
+
+        # Note that we can not just try except to catch warnings, because
+        # warnings do not raise errors so the except would not catch them.
+        # We would have to turn warnings into errors with
+        # `warnings.filterwarnings('error')` and then we could catch them with
+        # try except, but this is the more idomatic way to catch warnings.
+        with warnings.catch_warnings(record=True):
+            subprocess.Popen(
+                fetch_sub_command,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                creationflags=creation_flags,
+            )
+            return None
 
 
 @prefetch_profile_cmd("record", "Start recording fetched file paths.")
@@ -184,7 +256,8 @@ class FetchProfileCmd(Subcmd):
         parser.add_argument(
             "--verbose",
             help="Print extra info including warnings and the names of the "
-            "matching files to fetch.",
+            "matching files to fetch. Note that the matching files fetched"
+            "will not be printed when the foreground flag is passed.",
             default=False,
             action="store_true",
         )
@@ -193,6 +266,15 @@ class FetchProfileCmd(Subcmd):
             help="Do not prefetch profiles only find all the files that match "
             "them. This will still list the names of matching files when the "
             "verbose flag is also used",
+            default=False,
+            action="store_true",
+        )
+        parser.add_argument(
+            "--foreground",
+            help="Run the prefetch in the main thread rather than in the"
+            " background. Normally this command will return once the prefetched"
+            " has been kicked off, but when this flag is used it to block until"
+            " all of the files are prefetched.",
             default=False,
             action="store_true",
         )
@@ -227,11 +309,12 @@ class FetchProfileCmd(Subcmd):
             checkout,
             instance,
             profiles_to_fetch,
+            run_in_foreground=args.foreground,
             enable_prefetch=not args.skip_prefetch,
             silent=not args.verbose,
         )
 
-        if args.verbose:
+        if args.verbose and result is not None:
             for name in result.matchingFiles:
                 print(os.fsdecode(name))
         return 0
