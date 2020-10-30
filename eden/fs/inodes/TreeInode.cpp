@@ -2791,19 +2791,12 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
   // attempt to finish.
   // We also have to load the inode if it is materialized so we can
   // check its contents to see if there are conflicts or not.
-#ifndef _WIN32
+  // On Windows, we need to invalidate ProjectedFS on-disk state.
   if (entry.isMaterialized() ||
       getInodeMap()->isInodeRemembered(entry.getInodeNumber()) ||
-      (kPreciseInodeNumberMemory && entry.isDirectory() &&
+      ((kPreciseInodeNumberMemory || folly::kIsWindows) &&
+       entry.isDirectory() &&
        getOverlay()->hasOverlayData(entry.getInodeNumber()))) {
-#else
-  // On Windows we need to load the all the entries to clean up the contents
-  // from the Projfs cache.
-  if (entry.isMaterialized() ||
-      (entry.isDirectory() &&
-       getOverlay()->hasOverlayData(entry.getInodeNumber()))) {
-#endif
-
     XLOG(DBG6) << "must load child: inode=" << getNodeId() << " child=" << name;
     // This child is potentially modified (or has saved state that must be
     // updated), but is not currently loaded. Start loading it and create a
