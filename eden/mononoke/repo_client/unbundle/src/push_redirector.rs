@@ -106,6 +106,7 @@ impl PushRedirectorArgs {
         let large_repo = target_repo.blobrepo().clone();
         let mapping: Arc<dyn SyncedCommitMapping> = Arc::new(synced_commit_mapping);
         let syncers = create_commit_syncers(
+            ctx,
             small_repo,
             large_repo,
             mapping.clone(),

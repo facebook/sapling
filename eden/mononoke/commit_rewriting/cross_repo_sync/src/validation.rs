@@ -999,10 +999,11 @@ mod test {
             },
         );
 
-        Ok(CommitSyncer {
-            repos,
+        Ok(CommitSyncer::new_with_provider(
+            &ctx,
             mapping,
+            repos,
             commit_sync_data_provider,
-        })
+        ))
     }
 }

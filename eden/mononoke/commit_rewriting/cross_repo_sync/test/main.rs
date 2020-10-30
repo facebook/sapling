@@ -299,6 +299,7 @@ fn create_commit_sync_config(
 }
 
 fn create_small_to_large_commit_syncer(
+    ctx: &CoreContext,
     small_repo: BlobRepo,
     large_repo: BlobRepo,
     prefix: &str,
@@ -315,10 +316,16 @@ fn create_small_to_large_commit_syncer(
     source.add_current_version(commit_sync_config.version_name);
 
     let live_commit_sync_config = Arc::new(sync_config);
-    Ok(CommitSyncer::new(mapping, repos, live_commit_sync_config))
+    Ok(CommitSyncer::new(
+        ctx,
+        mapping,
+        repos,
+        live_commit_sync_config,
+    ))
 }
 
 fn create_large_to_small_commit_syncer_and_config_source(
+    ctx: &CoreContext,
     small_repo: BlobRepo,
     large_repo: BlobRepo,
     prefix: &str,
@@ -342,19 +349,20 @@ fn create_large_to_small_commit_syncer_and_config_source(
 
     let live_commit_sync_config = Arc::new(sync_config);
     Ok((
-        CommitSyncer::new(mapping, repos, live_commit_sync_config),
+        CommitSyncer::new(ctx, mapping, repos, live_commit_sync_config),
         source,
     ))
 }
 
 fn create_large_to_small_commit_syncer(
+    ctx: &CoreContext,
     small_repo: BlobRepo,
     large_repo: BlobRepo,
     prefix: &str,
     mapping: SqlSyncedCommitMapping,
 ) -> Result<CommitSyncer<SqlSyncedCommitMapping>, Error> {
     let (syncer, _) = create_large_to_small_commit_syncer_and_config_source(
-        small_repo, large_repo, prefix, mapping,
+        ctx, small_repo, large_repo, prefix, mapping,
     )?;
     Ok(syncer)
 }
@@ -365,7 +373,7 @@ async fn test_sync_parentage(fb: FacebookInit) -> Result<(), Error> {
     let (small_repo, megarepo, mapping) = prepare_repos_and_mapping()?;
     linear::initrepo(fb, &small_repo).await;
     let config =
-        create_small_to_large_commit_syncer(small_repo, megarepo.clone(), "linear", mapping)?;
+        create_small_to_large_commit_syncer(&ctx, small_repo, megarepo.clone(), "linear", mapping)?;
     create_initial_commit(ctx.clone(), &megarepo).await;
 
     // Take 2d7d4ba9ce0a6ffd222de7785b249ead9c51c536 from linear, and rewrite it as a child of master
@@ -511,14 +519,20 @@ async fn test_sync_causes_conflict(fb: FacebookInit) -> Result<(), Error> {
     let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
     let linear = linear::getrepo(fb).await;
     let linear_config = create_small_to_large_commit_syncer(
+        &ctx,
         linear.clone(),
         megarepo.clone(),
         "linear",
         mapping.clone(),
     )?;
 
-    let master_file_config =
-        create_small_to_large_commit_syncer(linear, megarepo.clone(), "master_file", mapping)?;
+    let master_file_config = create_small_to_large_commit_syncer(
+        &ctx,
+        linear,
+        megarepo.clone(),
+        "master_file",
+        mapping,
+    )?;
 
     create_initial_commit(ctx.clone(), &megarepo).await;
 
@@ -575,12 +589,14 @@ async fn test_sync_empty_commit(fb: FacebookInit) -> Result<(), Error> {
     let linear = small_repo;
 
     let stl_config = create_small_to_large_commit_syncer(
+        &ctx,
         linear.clone(),
         megarepo.clone(),
         "linear",
         mapping.clone(),
     )?;
     let lts_config = create_large_to_small_commit_syncer(
+        &ctx,
         linear.clone(),
         megarepo.clone(),
         "linear",
@@ -679,13 +695,19 @@ async fn test_sync_copyinfo(fb: FacebookInit) -> Result<(), Error> {
     let linear = small_repo;
 
     let stl_config = create_small_to_large_commit_syncer(
+        &ctx,
         linear.clone(),
         megarepo.clone(),
         "linear",
         mapping.clone(),
     )?;
-    let lts_config =
-        create_large_to_small_commit_syncer(linear.clone(), megarepo.clone(), "linear", mapping)?;
+    let lts_config = create_large_to_small_commit_syncer(
+        &ctx,
+        linear.clone(),
+        megarepo.clone(),
+        "linear",
+        mapping,
+    )?;
 
     create_initial_commit(ctx.clone(), &megarepo).await;
 
@@ -752,6 +774,7 @@ async fn test_sync_remap_failure(fb: FacebookInit) -> Result<(), Error> {
     let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
 
     let mut fail_config = create_large_to_small_commit_syncer(
+        &ctx,
         linear.clone(),
         megarepo.clone(),
         // This is ignored
@@ -782,6 +805,7 @@ async fn test_sync_remap_failure(fb: FacebookInit) -> Result<(), Error> {
     fail_config.commit_sync_data_provider = commit_sync_data_provider;
 
     let stl_config = create_small_to_large_commit_syncer(
+        &ctx,
         linear.clone(),
         megarepo.clone(),
         "linear",
@@ -789,6 +813,7 @@ async fn test_sync_remap_failure(fb: FacebookInit) -> Result<(), Error> {
     )?;
 
     let mut copyfrom_fail_config = create_large_to_small_commit_syncer(
+        &ctx,
         linear.clone(),
         megarepo.clone(),
         // This is ignored
@@ -876,6 +901,7 @@ async fn test_sync_implicit_deletes(fb: FacebookInit) -> Result<(), Error> {
     let repo = small_repo;
 
     let mut commit_syncer = create_small_to_large_commit_syncer(
+        &ctx,
         repo.clone(),
         megarepo.clone(),
         "linear",
@@ -1056,13 +1082,19 @@ async fn test_sync_parent_search(fb: FacebookInit) -> Result<(), Error> {
     let linear = small_repo;
 
     let config = create_small_to_large_commit_syncer(
+        &ctx,
         linear.clone(),
         megarepo.clone(),
         "linear",
         mapping.clone(),
     )?;
-    let reverse_config =
-        create_large_to_small_commit_syncer(linear.clone(), megarepo.clone(), "linear", mapping)?;
+    let reverse_config = create_large_to_small_commit_syncer(
+        &ctx,
+        linear.clone(),
+        megarepo.clone(),
+        "linear",
+        mapping,
+    )?;
 
     create_initial_commit(ctx.clone(), &megarepo).await;
 
@@ -1171,6 +1203,7 @@ async fn get_multiple_master_mapping_setup(
     let (small_repo, megarepo, mapping) = prepare_repos_and_mapping().unwrap();
     linear::initrepo(fb, &small_repo).await;
     let small_to_large_syncer = create_small_to_large_commit_syncer(
+        &ctx,
         small_repo.clone(),
         megarepo.clone(),
         "prefix",
@@ -1645,6 +1678,7 @@ async fn prepare_commit_syncer_with_mapping_change(
     let (small_repo, megarepo, mapping) = prepare_repos_and_mapping()?;
     let (large_to_small_syncer, config_source) =
         create_large_to_small_commit_syncer_and_config_source(
+            &ctx,
             small_repo.clone(),
             megarepo.clone(),
             "prefix",
@@ -1808,6 +1842,7 @@ async fn merge_test_setup(
 
     let lts_syncer = {
         let mut lts_syncer = create_large_to_small_commit_syncer(
+            &ctx,
             small_repo.clone(),
             large_repo.clone(),
             // This is ignored
@@ -2023,6 +2058,7 @@ async fn test_no_accidental_preserved_roots(
                 small_repo,
                 large_repo,
             } => create_large_to_small_commit_syncer(
+                &ctx,
                 small_repo.clone(),
                 large_repo.clone(),
                 "ignored",
@@ -2032,6 +2068,7 @@ async fn test_no_accidental_preserved_roots(
                 small_repo,
                 large_repo,
             } => create_small_to_large_commit_syncer(
+                &ctx,
                 small_repo.clone(),
                 large_repo.clone(),
                 "ignored",

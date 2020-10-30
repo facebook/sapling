@@ -111,6 +111,7 @@ pub async fn do_sync_diamond_merge(
         find_new_branch_oldest_first(ctx.clone(), &small_repo, p1, p2, &small_repo_config).await?;
 
     let syncers = create_commit_syncers(
+        &ctx,
         small_repo.clone(),
         large_repo.clone(),
         mapping,

@@ -795,6 +795,7 @@ async fn get_pushredirected_vars(
         .compat()
         .await?;
     let syncers = create_commit_syncers(
+        ctx,
         repo.clone(),
         large_repo.clone(),
         mapping.clone(),

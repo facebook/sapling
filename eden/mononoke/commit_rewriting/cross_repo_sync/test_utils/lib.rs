@@ -181,11 +181,12 @@ pub async fn init_small_large_repo(
         },
     );
 
-    let small_to_large_commit_syncer = CommitSyncer {
-        mapping: mapping.clone(),
-        repos: repos.clone(),
+    let small_to_large_commit_syncer = CommitSyncer::new_with_provider(
+        ctx,
+        mapping.clone(),
+        repos.clone(),
         commit_sync_data_provider,
-    };
+    );
 
     let repos = CommitSyncRepos::LargeToSmall {
         small_repo: smallrepo.clone(),
@@ -212,11 +213,12 @@ pub async fn init_small_large_repo(
         },
     );
 
-    let large_to_small_commit_syncer = CommitSyncer {
-        mapping: mapping.clone(),
-        repos: repos.clone(),
+    let large_to_small_commit_syncer = CommitSyncer::new_with_provider(
+        ctx,
+        mapping.clone(),
+        repos.clone(),
         commit_sync_data_provider,
-    };
+    );
 
     let first_bcs_id = CreateCommitContext::new_root(&ctx, &smallrepo)
         .add_file("file", "content")

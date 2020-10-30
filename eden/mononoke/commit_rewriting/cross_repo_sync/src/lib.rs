@@ -35,6 +35,7 @@ use mononoke_types::{
 use movers::Mover;
 use pushrebase::{do_pushrebase_bonsai, PushrebaseError};
 use reachabilityindex::LeastCommonAncestorsHint;
+use scuba_ext::ScubaSampleBuilder;
 use slog::{debug, info};
 use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::fmt;
@@ -53,6 +54,7 @@ mod commit_sync_data_provider;
 pub mod commit_sync_outcome;
 mod merge_utils;
 mod pushrebase_hook;
+mod reporting;
 pub mod types;
 pub mod validation;
 
@@ -447,6 +449,7 @@ pub struct CommitSyncer<M> {
     pub mapping: M,
     pub repos: CommitSyncRepos,
     pub commit_sync_data_provider: CommitSyncDataProvider,
+    pub scuba_sample: ScubaSampleBuilder,
 }
 
 impl<M> fmt::Debug for CommitSyncer<M>
@@ -465,15 +468,27 @@ where
     M: SyncedCommitMapping + Clone + 'static,
 {
     pub fn new(
+        ctx: &CoreContext,
         mapping: M,
         repos: CommitSyncRepos,
         live_commit_sync_config: Arc<dyn LiveCommitSyncConfig>,
     ) -> Self {
         let commit_sync_data_provider = CommitSyncDataProvider::Live(live_commit_sync_config);
+        Self::new_with_provider(ctx, mapping, repos, commit_sync_data_provider)
+    }
+
+    pub fn new_with_provider(
+        ctx: &CoreContext,
+        mapping: M,
+        repos: CommitSyncRepos,
+        commit_sync_data_provider: CommitSyncDataProvider,
+    ) -> Self {
+        let scuba_sample = reporting::get_scuba_sample(ctx);
         Self {
             mapping,
             repos,
             commit_sync_data_provider,
+            scuba_sample,
         }
     }
 
@@ -1481,6 +1496,7 @@ pub struct Syncers<M: SyncedCommitMapping + Clone + 'static> {
 }
 
 pub fn create_commit_syncers<M>(
+    ctx: &CoreContext,
     small_repo: BlobRepo,
     large_repo: BlobRepo,
     mapping: M,
@@ -1499,17 +1515,18 @@ where
         large_repo,
     };
 
-    let commit_sync_data_provider = CommitSyncDataProvider::Live(live_commit_sync_config);
-    let large_to_small_commit_syncer = CommitSyncer {
-        mapping: mapping.clone(),
-        repos: large_to_small_commit_sync_repos,
-        commit_sync_data_provider: commit_sync_data_provider.clone(),
-    };
-    let small_to_large_commit_syncer = CommitSyncer {
-        mapping,
-        repos: small_to_large_commit_sync_repos,
-        commit_sync_data_provider,
-    };
+    let large_to_small_commit_syncer = CommitSyncer::new(
+        ctx,
+        mapping.clone(),
+        large_to_small_commit_sync_repos,
+        live_commit_sync_config.clone(),
+    );
+    let small_to_large_commit_syncer = CommitSyncer::new(
+        ctx,
+        mapping.clone(),
+        small_to_large_commit_sync_repos,
+        live_commit_sync_config.clone(),
+    );
 
     Ok(Syncers {
         large_to_small: large_to_small_commit_syncer,

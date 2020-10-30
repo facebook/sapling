@@ -925,6 +925,7 @@ fn get_large_to_small_commit_syncer(
     };
 
     Ok(CommitSyncer::new(
+        &ctx,
         mapping,
         commit_sync_repos,
         live_commit_sync_config,
@@ -1151,10 +1152,11 @@ mod test {
                 }
             },
         );
-        Ok(CommitSyncer {
+        Ok(CommitSyncer::new_with_provider(
+            &ctx,
             mapping,
             repos,
             commit_sync_data_provider,
-        })
+        ))
     }
 }

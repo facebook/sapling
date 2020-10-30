@@ -765,6 +765,7 @@ async fn xrepo_commit_lookup_config_changing_live(fb: FacebookInit) -> Result<()
     )?;
 
     let commit_syncer = CommitSyncer::new(
+        &ctx,
         largerepo.synced_commit_mapping().clone(),
         commit_sync_repos,
         largerepo.live_commit_sync_config(),

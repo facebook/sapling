@@ -577,6 +577,7 @@ mod tests {
 
         let live_commit_sync_config = get_large_repo_live_commit_sync_config();
         let syncers_1 = create_commit_syncers(
+            &ctx,
             small_repo_1.clone(),
             large_repo.clone(),
             mapping.clone(),
@@ -601,6 +602,7 @@ mod tests {
         };
 
         let syncers_2 = create_commit_syncers(
+            &ctx,
             small_repo_2.clone(),
             large_repo.clone(),
             mapping.clone(),
@@ -652,6 +654,7 @@ mod tests {
         let live_commit_sync_config = get_large_repo_live_commit_sync_config();
         let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory().unwrap();
         let syncers = create_commit_syncers(
+            &ctx,
             small_repo.clone(),
             large_repo.clone(),
             mapping.clone(),
@@ -802,6 +805,7 @@ mod tests {
         let live_commit_sync_config = get_large_repo_live_commit_sync_config();
         let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
         let syncers = create_commit_syncers(
+            &ctx,
             small_repo.clone(),
             large_repo.clone(),
             mapping.clone(),

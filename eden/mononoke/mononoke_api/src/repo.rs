@@ -1225,6 +1225,7 @@ impl RepoContext {
                 )))?;
 
         let commit_syncer = CommitSyncer::new(
+            &self.ctx,
             self.synced_commit_mapping().clone(),
             commit_sync_repos,
             self.live_commit_sync_config(),

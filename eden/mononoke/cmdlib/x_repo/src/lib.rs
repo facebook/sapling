@@ -52,7 +52,13 @@ pub async fn create_commit_syncers_from_matches(
         );
     };
 
-    create_commit_syncers(small_repo, large_repo, mapping, live_commit_sync_config)
+    create_commit_syncers(
+        ctx,
+        small_repo,
+        large_repo,
+        mapping,
+        live_commit_sync_config,
+    )
 }
 
 /// Instantiate the source-target `CommitSyncer` struct by parsing `matches`
@@ -170,6 +176,6 @@ async fn create_commit_syncer<'a>(
         live_commit_sync_config.get_current_commit_sync_config(ctx, source_repo.0.get_repoid())?;
 
     let repos = CommitSyncRepos::new(source_repo.0, target_repo.0, &current_config)?;
-    let commit_syncer = CommitSyncer::new(mapping, repos, live_commit_sync_config);
+    let commit_syncer = CommitSyncer::new(ctx, mapping, repos, live_commit_sync_config);
     Ok(commit_syncer)
 }

@@ -283,7 +283,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         (ARG_MODE_BACKSYNC_ALL, _) => {
             let scuba_sample = ScubaSampleBuilder::with_discard();
             let ctx = session_container.new_context(logger.clone(), scuba_sample);
-
             let db_config = target_repo_config.storage_config.metadata;
             let target_repo_dbs = runtime.block_on_std(
                 open_backsyncer_dbs(
@@ -347,7 +346,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         }
         (ARG_MODE_BACKSYNC_COMMITS, Some(sub_m)) => {
             let ctx = session_container.new_context(logger, ScubaSampleBuilder::with_discard());
-
             let inputfile = sub_m
                 .value_of(ARG_INPUT_FILE)
                 .expect("input file is not set");

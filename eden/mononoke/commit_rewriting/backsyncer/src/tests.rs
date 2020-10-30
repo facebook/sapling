@@ -925,11 +925,8 @@ async fn init_repos(
             }
         },
     );
-    let commit_syncer = CommitSyncer {
-        repos,
-        mapping: mapping.clone(),
-        commit_sync_data_provider,
-    };
+    let commit_syncer =
+        CommitSyncer::new_with_provider(&ctx, mapping.clone(), repos, commit_sync_data_provider);
 
     // Sync first commit manually
     let initial_bcs_id = source_repo
@@ -1238,11 +1235,12 @@ async fn init_merged_repos(
             },
         );
 
-        let commit_syncer = CommitSyncer {
-            mapping: mapping.clone(),
+        let commit_syncer = CommitSyncer::new_with_provider(
+            &ctx,
+            mapping.clone(),
             repos,
             commit_sync_data_provider,
-        };
+        );
         output.push((commit_syncer, small_repo_dbs));
 
         let filename = format!("file_in_smallrepo{}", small_repo.get_repoid().id());
@@ -1501,11 +1499,7 @@ async fn preserve_premerge_commit(
                 }
             },
         );
-        CommitSyncer {
-            repos,
-            mapping: mapping.clone(),
-            commit_sync_data_provider,
-        }
+        CommitSyncer::new_with_provider(&ctx, mapping.clone(), repos, commit_sync_data_provider)
     };
 
     small_to_large_sync_config
