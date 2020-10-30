@@ -14,7 +14,6 @@ use futures::future::try_join_all;
 use futures::StreamExt;
 
 use blobrepo::BlobRepo;
-use bulkops::PublicChangesetBulkFetch;
 use context::CoreContext;
 use fixtures::{linear, merge_even, merge_uneven, unshared_merge_even};
 use mononoke_types::ChangesetId;
@@ -67,26 +66,13 @@ pub async fn new_build_all_from_blobrepo(
     blobrepo: &BlobRepo,
     head: ChangesetId,
 ) -> Result<Dag> {
-    let changesets = blobrepo.get_changesets_object();
-    let phases = blobrepo.get_phases();
-    let repo_id = blobrepo.get_repoid();
-    let bulk_fetch = PublicChangesetBulkFetch::new(repo_id, changesets, phases);
     let seeder = SegmentedChangelogBuilder::with_sqlite_in_memory()?
-        .with_repo_id(repo_id)
-        .with_changeset_bulk_fetch(Arc::new(bulk_fetch))
-        .with_blobstore(Arc::new(memblob::LazyMemblob::default()))
+        .with_blobrepo(blobrepo)
         .build_seeder(ctx)
         .await?;
 
     let (dag, _) = seeder.build_dag_from_scratch(ctx, head).await?;
     Ok(dag)
-}
-
-pub fn new_on_demand_update_dag(blobrepo: &BlobRepo) -> Result<OnDemandUpdateDag> {
-    SegmentedChangelogBuilder::with_sqlite_in_memory()?
-        .with_repo_id(blobrepo.get_repoid())
-        .with_changeset_fetcher(blobrepo.get_changeset_fetcher())
-        .build_on_demand_update()
 }
 
 #[fbinit::compat_test]
@@ -108,8 +94,7 @@ async fn test_iddag_save_store(fb: FacebookInit) -> Result<()> {
         resolve_cs_id(&ctx, &blobrepo, "3e0e761030db6e479a7fb58b12881883f9f8c63f").await?;
     assert_eq!(answer, expected_cs);
 
-    let blobstore = memblob::LazyMemblob::default();
-    let iddag_save_store = IdDagSaveStore::new(repo_id, Arc::new(blobstore));
+    let iddag_save_store = IdDagSaveStore::new(repo_id, Arc::new(blobrepo.get_blobstore()));
     let iddag_version = iddag_save_store.save(&ctx, &dag.iddag).await?;
 
     assert!(
@@ -257,7 +242,9 @@ async fn test_build_incremental_from_scratch(fb: FacebookInit) -> Result<()> {
     {
         // linear
         let blobrepo = linear::getrepo(fb).await;
-        let dag = new_on_demand_update_dag(&blobrepo)?;
+        let dag = SegmentedChangelogBuilder::with_sqlite_in_memory()?
+            .with_blobrepo(&blobrepo)
+            .build_on_demand_update()?;
 
         let known_cs =
             resolve_cs_id(&ctx, &blobrepo, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
@@ -272,7 +259,9 @@ async fn test_build_incremental_from_scratch(fb: FacebookInit) -> Result<()> {
     {
         // merge_uneven
         let blobrepo = merge_uneven::getrepo(fb).await;
-        let dag = new_on_demand_update_dag(&blobrepo)?;
+        let dag = SegmentedChangelogBuilder::with_sqlite_in_memory()?
+            .with_blobrepo(&blobrepo)
+            .build_on_demand_update()?;
 
         let known_cs =
             resolve_cs_id(&ctx, &blobrepo, "264f01429683b3dd8042cb3979e8bf37007118bc").await?;
@@ -364,8 +353,7 @@ async fn test_on_demand_update_dag_location_to_changeset_ids(fb: FacebookInit) -
         resolve_cs_id(&ctx, &blobrepo, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
 
     let dag = SegmentedChangelogBuilder::with_sqlite_in_memory()?
-        .with_repo_id(blobrepo.get_repoid())
-        .with_changeset_fetcher(blobrepo.get_changeset_fetcher())
+        .with_blobrepo(&blobrepo)
         .build_on_demand_update()?;
 
     let distance: u64 = 4;
@@ -390,16 +378,8 @@ async fn test_incremental_update_with_desync_iddag(fb: FacebookInit) -> Result<(
         resolve_cs_id(&ctx, &blobrepo, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
 
     setup_phases(&ctx, &blobrepo, master_cs).await?;
-    let changesets = blobrepo.get_changesets_object();
-    let phases = blobrepo.get_phases();
-    let repo_id = blobrepo.get_repoid();
-    let bulk_fetch = PublicChangesetBulkFetch::new(repo_id, changesets, phases);
 
-    let mut builder = SegmentedChangelogBuilder::with_sqlite_in_memory()?
-        .with_repo_id(repo_id)
-        .with_changeset_bulk_fetch(Arc::new(bulk_fetch))
-        .with_blobstore(Arc::new(memblob::LazyMemblob::default()))
-        .with_changeset_fetcher(blobrepo.get_changeset_fetcher());
+    let mut builder = SegmentedChangelogBuilder::with_sqlite_in_memory()?.with_blobrepo(&blobrepo);
     let seeder = builder.build_seeder(&ctx).await?;
 
     let (dag, _) = seeder.build_dag_from_scratch(&ctx, master_cs).await?;

@@ -8,9 +8,11 @@
 use std::sync::Arc;
 
 use anyhow::{format_err, Context, Result};
+use blobrepo::BlobRepo;
 use blobstore::Blobstore;
 use bookmarks::{BookmarkName, Bookmarks};
 use bulkops::ChangesetBulkFetch;
+use bulkops::PublicChangesetBulkFetch;
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use dag::InProcessIdDag;
@@ -126,6 +128,18 @@ impl SegmentedChangelogBuilder {
     pub fn with_bookmark_name(mut self, bookmark_name: BookmarkName) -> Self {
         self.bookmark_name = Some(bookmark_name);
         self
+    }
+
+    pub fn with_blobrepo(self, repo: &BlobRepo) -> Self {
+        let repo_id = repo.get_repoid();
+        let changesets = repo.get_changesets_object();
+        let phases = repo.get_phases();
+        let bulk_fetch = PublicChangesetBulkFetch::new(repo_id, changesets, phases);
+        self.with_repo_id(repo_id)
+            .with_changeset_fetcher(repo.get_changeset_fetcher())
+            .with_bookmarks(repo.bookmarks())
+            .with_blobstore(Arc::new(repo.get_blobstore()))
+            .with_changeset_bulk_fetch(Arc::new(bulk_fetch))
     }
 
     pub fn build_disabled(self) -> DisabledSegmentedChangelog {

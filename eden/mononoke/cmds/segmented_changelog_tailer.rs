@@ -124,12 +124,9 @@ async fn run<'a>(ctx: CoreContext, matches: &'a ArgMatches<'a>) -> Result<(), Er
         .context("constructing segmented changelog builder")?;
 
     let segmented_changelog_tailer = segmented_changelog_builder
-        .with_repo_id(repo.get_repoid())
+        .with_blobrepo(&repo)
         .with_replica_lag_monitor(replica_lag_monitor)
-        .with_changeset_fetcher(repo.get_changeset_fetcher())
-        .with_bookmarks(repo.bookmarks())
         .with_bookmark_name(track_bookmark)
-        .with_blobstore(Arc::new(repo.get_blobstore()))
         .build_tailer()
         .context("building SegmentedChangelogTailer")?;
 

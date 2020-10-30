@@ -15,7 +15,6 @@ use futures::compat::Future01CompatExt;
 use slog::info;
 
 use blobstore_factory::{make_metadata_sql_factory, ReadOnlyStorage};
-use bulkops::PublicChangesetBulkFetch;
 use cmdlib::{args, helpers};
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -106,12 +105,6 @@ async fn run<'a>(ctx: CoreContext, matches: &'a ArgMatches<'a>) -> Result<(), Er
     .await
     .context("constructing metadata sql factory")?;
 
-    let changeset_bulk_fetch = PublicChangesetBulkFetch::new(
-        repo.get_repoid(),
-        repo.get_changesets_object(),
-        repo.get_phases(),
-    );
-
     let mut segmented_changelog_builder = sql_factory
         .open::<SegmentedChangelogBuilder>()
         .compat()
@@ -123,10 +116,8 @@ async fn run<'a>(ctx: CoreContext, matches: &'a ArgMatches<'a>) -> Result<(), Er
     }
 
     let segmented_changelog_seeder = segmented_changelog_builder
-        .with_repo_id(repo.get_repoid())
+        .with_blobrepo(&repo)
         .with_replica_lag_monitor(replica_lag_monitor)
-        .with_changeset_bulk_fetch(Arc::new(changeset_bulk_fetch))
-        .with_blobstore(Arc::new(repo.get_blobstore()))
         .build_seeder(&ctx)
         .await
         .context("building SegmentedChangelogSeeder")?;

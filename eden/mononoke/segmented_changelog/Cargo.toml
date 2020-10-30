@@ -7,6 +7,7 @@ license = "GPLv2+"
 include = ["schemas/**/*.sql", "src/**/*.rs"]
 
 [dependencies]
+blobrepo = { path = "../blobrepo" }
 blobstore = { path = "../blobstore" }
 bookmarks = { path = "../bookmarks" }
 bulkops = { path = "../bulkops" }
@@ -29,9 +30,7 @@ slog = { version = "2.5", features = ["max_level_debug"] }
 tokio = { version = "=0.2.13", features = ["full"] }
 
 [dev-dependencies]
-blobrepo = { path = "../blobrepo" }
 fixtures = { path = "../tests/fixtures" }
-memblob = { path = "../blobstore/memblob" }
 mononoke_types-mocks = { path = "../mononoke_types/mocks" }
 phases = { path = "../phases" }
 revset = { path = "../revset" }
