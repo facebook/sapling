@@ -7,7 +7,7 @@
 
 use std::{collections::HashMap, sync::Arc};
 
-use anyhow::{format_err, Result};
+use anyhow::{format_err, Context, Result};
 use async_trait::async_trait;
 use futures::stream::{self, StreamExt, TryStreamExt};
 use maplit::hashset;
@@ -65,10 +65,16 @@ impl Dag {
         count: u64,
     ) -> Result<Vec<ChangesetId>> {
         STATS::location_to_changeset_id.add_value(1);
-        let mut dist_ancestor_vertex = self.iddag.first_ancestor_nth(known_vertex, distance)?;
+        let mut dist_ancestor_vertex = self
+            .iddag
+            .first_ancestor_nth(known_vertex, distance)
+            .with_context(|| format!("nth ({}) p1 ancestor for {}", distance, known_vertex))?;
         let mut vertexes = vec![dist_ancestor_vertex];
         for _ in 1..count {
-            let parents = self.iddag.parent_ids(dist_ancestor_vertex)?;
+            let parents = self
+                .iddag
+                .parent_ids(dist_ancestor_vertex)
+                .with_context(|| format!("looking up parents ids for {}", dist_ancestor_vertex))?;
             if parents.len() != 1 {
                 return Err(format_err!(
                     "invalid request: changeset with vertex {} does not have {} single parent ancestors",
@@ -178,7 +184,8 @@ impl Dag {
         // TODO(sfilip, T67731559): Prefetch parents for IdDag from last processed Vertex
         debug!(ctx.logger(), "building iddag");
         self.iddag
-            .build_segments_volatile(head_vertex, &get_vertex_parents)?;
+            .build_segments_volatile(head_vertex, &get_vertex_parents)
+            .context("building iddag")?;
         debug!(
             ctx.logger(),
             "successfully finished building building iddag"
@@ -192,6 +199,7 @@ impl Dag {
 // we have 0, 1 and 2 parents, 3+ is a 4th variant backed by Vec.
 // Note: the segment construction algorithm will want to query the vertexes of the parents
 // that were already assigned.
+#[derive(Debug)]
 pub(crate) struct StartState {
     parents: HashMap<ChangesetId, Vec<ChangesetId>>,
     assignments: MemIdMap,

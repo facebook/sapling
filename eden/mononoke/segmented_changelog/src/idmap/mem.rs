@@ -13,6 +13,7 @@ use dag::Id as Vertex;
 
 use mononoke_types::ChangesetId;
 
+#[derive(Debug)]
 pub struct MemIdMap {
     vertex2cs: HashMap<Vertex, ChangesetId>,
     cs2vertex: HashMap<ChangesetId, Vertex>,
