@@ -91,9 +91,9 @@ queries! {
         SELECT idmap.vertex as vertex, idmap.cs_id as cs_id
         FROM segmented_changelog_idmap AS idmap
         WHERE idmap.repo_id = {repo_id} AND idmap.version = {version} AND idmap.vertex = (
-            SELECT MAX(inner.vertex)
-            FROM segmented_changelog_idmap AS inner
-            WHERE inner.repo_id = {repo_id} AND inner.version = {version}
+            SELECT MAX(inx.vertex)
+            FROM segmented_changelog_idmap AS inx
+            WHERE inx.repo_id = {repo_id} AND inx.version = {version}
         )
         "
     }
