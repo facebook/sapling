@@ -39,25 +39,5 @@ jobs:
       run: df -h
     - name: Test mononoke
       run: python3 build/fbcode_builder/getdeps.py test --allow-system-packages --src-dir=. mononoke
-    - name: Check space after running tests
-      run: df -h
-    - name: Install Rust Beta
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: beta
-        default: true
-        profile: minimal
-    - name: Test mononoke with beta toolchain
-      run: python3 build/fbcode_builder/getdeps.py test --allow-system-packages --src-dir=. mononoke
-      continue-on-error: true
-    - name: Install Rust Nightly
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: nightly
-        default: true
-        profile: minimal
-    - name: Test mononoke with nightly toolchain
-      run: python3 build/fbcode_builder/getdeps.py test --allow-system-packages --src-dir=. mononoke
-      continue-on-error: true
     - name: Check space at the end
       run: df -h
