@@ -30,6 +30,7 @@ def generate_ssh_vendor(ui):
             ui.debug("calling ssh: %s\n" % cmd)
             proc = subprocess.Popen(
                 util.quotecommand(cmd),
+                bufsize=0,
                 shell=True,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
