@@ -10,11 +10,11 @@ Setup repository
 
   $ BLOB_TYPE="blob_files" quiet default_setup
 
-Run Segmented Changelog Builder.
+Run Segmented Changelog Seeder.
 
   $ quiet segmented_changelog_seeder --head-bookmark=master_bookmark
   $ grep segmented_changelog "$TESTTMP/quiet.last.log"
-  * SegmentedChangelogBuilder initialized for repository 'repo' (glob)
+  * SegmentedChangelogSeeder initialized for repository 'repo' (glob)
   * resolved bookmark 'master_bookmark' * (glob)
   * seeding segmented changelog using idmap version: 1 (glob)
   * loaded 3 changesets (glob)

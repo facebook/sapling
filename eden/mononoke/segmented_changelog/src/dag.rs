@@ -138,7 +138,7 @@ impl Dag {
 
         debug!(
             ctx.logger(),
-            "inserting {} entries into the IdMap",
+            "inserting {} entries into IdMap",
             mem_idmap.len()
         );
         self.idmap

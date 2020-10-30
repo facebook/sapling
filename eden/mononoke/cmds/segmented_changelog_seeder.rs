@@ -144,7 +144,7 @@ async fn run<'a>(ctx: CoreContext, matches: &'a ArgMatches<'a>) -> Result<(), Er
 
     info!(
         ctx.logger(),
-        "SegmentedChangelogBuilder initialized for repository '{}'",
+        "SegmentedChangelogSeeder initialized for repository '{}'",
         repo.name()
     );
 
