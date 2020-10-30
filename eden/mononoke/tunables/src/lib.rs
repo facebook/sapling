@@ -101,6 +101,7 @@ pub struct MononokeTunables {
     disable_running_hooks_in_pushredirected_repo: AtomicBool,
     scs_request_read_qps: AtomicI64,
     scs_request_write_qps: AtomicI64,
+    enable_logging_commit_rewrite_data: AtomicBool,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {

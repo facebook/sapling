@@ -40,6 +40,7 @@ use slog::{debug, info};
 use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::fmt;
 use std::sync::Arc;
+use std::time::Instant;
 use synced_commit_mapping::{
     EquivalentWorkingCopyEntry, SyncedCommitMapping, SyncedCommitMappingEntry,
 };
@@ -48,6 +49,7 @@ use topo_sort::sort_topological;
 
 use merge_utils::get_version_for_merge;
 use pushrebase_hook::CrossRepoSyncPushrebaseHook;
+use reporting::{log_rewrite, CommitSyncContext};
 use types::{Source, Target};
 
 mod commit_sync_data_provider;
@@ -483,7 +485,11 @@ where
         repos: CommitSyncRepos,
         commit_sync_data_provider: CommitSyncDataProvider,
     ) -> Self {
-        let scuba_sample = reporting::get_scuba_sample(ctx);
+        let scuba_sample = reporting::get_scuba_sample(
+            ctx,
+            repos.get_source_repo().name(),
+            repos.get_target_repo().name(),
+        );
         Self {
             mapping,
             repos,
@@ -660,6 +666,29 @@ where
         source_cs_id: ChangesetId,
         ancestor_selection_hint: CandidateSelectionHint,
     ) -> Result<Option<ChangesetId>, Error> {
+        let before = Instant::now();
+        let res = self
+            .sync_commit_impl(ctx, source_cs_id, ancestor_selection_hint)
+            .await;
+        let elapsed = before.elapsed();
+        log_rewrite(
+            ctx,
+            self.scuba_sample.clone(),
+            source_cs_id,
+            "sync_commit",
+            CommitSyncContext::Unknown,
+            elapsed,
+            &res,
+        );
+        res
+    }
+
+    async fn sync_commit_impl(
+        &self,
+        ctx: &CoreContext,
+        source_cs_id: ChangesetId,
+        ancestor_selection_hint: CandidateSelectionHint,
+    ) -> Result<Option<ChangesetId>, Error> {
         let unsynced_ancestors =
             find_toposorted_unsynced_ancestors(&ctx, self, source_cs_id).await?;
 
@@ -722,8 +751,21 @@ where
         source_cs_id: ChangesetId,
         parent_mapping_selection_hint: CandidateSelectionHint,
     ) -> Result<Option<ChangesetId>, Error> {
-        self.unsafe_sync_commit_impl(ctx, source_cs_id, parent_mapping_selection_hint, None)
-            .await
+        let before = Instant::now();
+        let res = self
+            .unsafe_sync_commit_impl(ctx, source_cs_id, parent_mapping_selection_hint, None)
+            .await;
+        let elapsed = before.elapsed();
+        log_rewrite(
+            ctx,
+            self.scuba_sample.clone(),
+            source_cs_id,
+            "unsafe_sync_commit",
+            CommitSyncContext::Unknown,
+            elapsed,
+            &res,
+        );
+        res
     }
 
     async fn unsafe_sync_commit_impl<'a>(
@@ -789,6 +831,35 @@ where
         maybe_parents: Option<HashMap<ChangesetId, ChangesetId>>,
         sync_config_version: &CommitSyncConfigVersion,
     ) -> Result<Option<ChangesetId>, Error> {
+        let before = Instant::now();
+        let res = self
+            .unsafe_always_rewrite_sync_commit_impl(
+                ctx,
+                source_cs_id,
+                maybe_parents,
+                sync_config_version,
+            )
+            .await;
+        let elapsed = before.elapsed();
+        log_rewrite(
+            ctx,
+            self.scuba_sample.clone(),
+            source_cs_id,
+            "unsafe_always_rewrite_sync_commit",
+            CommitSyncContext::Unknown,
+            elapsed,
+            &res,
+        );
+        res
+    }
+
+    async fn unsafe_always_rewrite_sync_commit_impl<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        source_cs_id: ChangesetId,
+        maybe_parents: Option<HashMap<ChangesetId, ChangesetId>>,
+        sync_config_version: &CommitSyncConfigVersion,
+    ) -> Result<Option<ChangesetId>, Error> {
         let (source_repo, target_repo) = self.get_source_target();
         let mover = self.get_mover_by_version(sync_config_version)?;
         let source_cs = source_cs_id
@@ -836,6 +907,32 @@ where
     /// already synced and because there should be exactly one sync job that uses this function
     /// for a (small repo -> large repo) pair.
     pub async fn unsafe_sync_commit_pushrebase<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        source_cs: BonsaiChangeset,
+        bookmark: BookmarkName,
+        target_lca_hint: Target<Arc<dyn LeastCommonAncestorsHint>>,
+    ) -> Result<Option<ChangesetId>, Error> {
+        let source_cs_id = source_cs.get_changeset_id();
+        let before = Instant::now();
+        let res = self
+            .unsafe_sync_commit_pushrebase_impl(ctx, source_cs, bookmark, target_lca_hint)
+            .await;
+        let elapsed = before.elapsed();
+
+        log_rewrite(
+            ctx,
+            self.scuba_sample.clone(),
+            source_cs_id,
+            "unsafe_sync_commit_pushrebase",
+            CommitSyncContext::Unknown,
+            elapsed,
+            &res,
+        );
+        res
+    }
+
+    async fn unsafe_sync_commit_pushrebase_impl<'a>(
         &'a self,
         ctx: &'a CoreContext,
         source_cs: BonsaiChangeset,
