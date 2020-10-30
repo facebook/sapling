@@ -400,24 +400,6 @@ class CompactLocalStorageCmd(Subcmd):
         return 0
 
 
-@debug_cmd("uptime", "Check how long edenfs has been running")
-class UptimeCmd(Subcmd):
-    def run(self, args: argparse.Namespace) -> int:
-        instance = cmd_util.get_eden_instance(args)
-        do_uptime(instance)
-        return 0
-
-
-def do_uptime(instance: EdenInstance, out: Optional[IO[bytes]] = None) -> None:
-    if out is None:
-        out = sys.stdout.buffer
-    uptime = instance.get_uptime()  # Check if uptime is negative?
-    days = uptime.days
-    hours, remainder = divmod(uptime.seconds, 3600)
-    minutes, seconds = divmod(remainder, 60)
-    out.write(b"%dd:%02dh:%02dm:%02ds\n" % (days, hours, minutes, seconds))
-
-
 @debug_cmd("hg_copy_map_get_all", "Copymap for dirstate")
 class HgCopyMapGetAllCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:

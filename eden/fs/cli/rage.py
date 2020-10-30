@@ -49,7 +49,7 @@ def print_diagnostic_info(instance: EdenInstance, out: IO[bytes]) -> None:
         out.write(b"\n")
         debug_mod.do_buildinfo(instance, out)
         out.write(b"uptime: ")
-        debug_mod.do_uptime(instance, out)
+        instance.do_uptime(pretty=False, out=out)
 
     if sys.platform != "win32":
         # TODO(zeyi): fix `eden doctor` on Windows

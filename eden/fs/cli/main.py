@@ -1833,36 +1833,7 @@ class RageCmd(Subcmd):
 class UptimeCmd(Subcmd):
     def run(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
-        proc_utility = proc_utils.new()
-
-        health_info = instance.check_health()
-        edenfs_pid = health_info.pid
-        if edenfs_pid is None:
-            print(health_info.detail)
-            return 1
-
-        # Print a warning if the EdenFS process is not healthy. We will
-        # still try to calculate and show the uptime
-        if not health_info.is_healthy():
-            print(f"edenfs (pid: {edenfs_pid}) is not healthy")
-
-        try:
-            uptime = health_info.uptime
-            if uptime is None:
-                process_start_time = proc_utility.get_process_start_time(edenfs_pid)
-                edenfs_uptime = time.time() - process_start_time
-                print(
-                    f"edenfs uptime (pid {edenfs_pid}): "
-                    f"{datetime.timedelta(seconds=edenfs_uptime)}"
-                )
-            else:
-                print(
-                    f"edenfs uptime (pid {edenfs_pid}): "
-                    f"{datetime.timedelta(seconds=uptime)}"
-                )
-        except Exception as ex:
-            print(f"Error determining uptime of edenfs (pid: {edenfs_pid}): {ex}")
-            return 1
+        instance.do_uptime(pretty=True)
         return 0
 
 

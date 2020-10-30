@@ -17,7 +17,7 @@ import sys
 import time
 import typing
 from pathlib import Path
-from typing import Any, Dict, List, Mapping, Optional, Set, Tuple, Type, Union, cast
+from typing import IO, Any, Dict, List, Mapping, Optional, Set, Tuple, Type, Union, cast
 
 import facebook.eden.ttypes as eden_ttypes
 import toml
@@ -786,6 +786,33 @@ Do you want to run `eden mount %s` instead?"""
             since_in_seconds = client.aliveSince()
         since = datetime.datetime.fromtimestamp(since_in_seconds)
         return now - since
+
+    def do_uptime(self, pretty: bool, out: Optional[IO[bytes]] = None) -> None:
+        if out is None:
+            out = sys.stdout.buffer
+
+        health_info = self.check_health()
+        edenfs_pid = health_info.pid
+        if edenfs_pid is None:
+            running_details = f"{health_info.detail}\n"
+            out.write(running_details.encode())
+            return
+
+        uptime = self.get_uptime()  # Check if uptime is negative?
+        days = uptime.days
+        hours, remainder = divmod(uptime.seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
+
+        if pretty:
+            if not health_info.is_healthy():
+                not_healthy = f"edenfs (pid: {edenfs_pid}) is not healthy\n"
+                out.write(not_healthy.encode())
+
+            pretty_uptime = f"edenfs uptime (pid {edenfs_pid}): {datetime.timedelta(days=days, hours=hours, minutes=minutes, seconds=seconds)}\n"
+            out.write(pretty_uptime.encode())
+
+        else:
+            out.write(b"%dd:%02dh:%02dm:%02ds\n" % (days, hours, minutes, seconds))
 
 
 class EdenCheckout:
