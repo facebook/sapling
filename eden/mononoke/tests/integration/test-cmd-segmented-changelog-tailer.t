@@ -54,12 +54,12 @@ Actually run Segmented Changelog Tailer.
   $ grep segmented_changelog "$TESTTMP/quiet.last.log"
   * SegmentedChangelogTailer initialized for repository 'repo' (glob)
   * starting incremental update to segmented changelog (glob)
-  * base idmap version: 1; base iddag version: 3ecf193f* (glob)
+  * base idmap version: 1; base iddag version: b70e1608* (glob)
   * base dag loaded successfully (glob)
   * bookmark master_bookmark resolved to * (glob)
   * IdMap updated, IdDag updated (glob)
   * IdDag rebuilt (glob)
-  * success - new iddag saved, idmap_version: 1, iddag_version: e159f327* (glob)
+  * success - new iddag saved, idmap_version: 1, iddag_version: 5bdcf177* (glob)
   * SegmentedChangelogTailer is done for repo repo (glob)
 
 Run Segmented Changelog Tailer. Nothing to do.
@@ -68,7 +68,7 @@ Run Segmented Changelog Tailer. Nothing to do.
   $ grep segmented_changelog "$TESTTMP/quiet.last.log"
   * SegmentedChangelogTailer initialized for repository 'repo' (glob)
   * starting incremental update to segmented changelog (glob)
-  * base idmap version: 1; base iddag version: e159f327* (glob)
+  * base idmap version: 1; base iddag version: 5bdcf177* (glob)
   * base dag loaded successfully (glob)
   * bookmark master_bookmark resolved to * (glob)
   * dag already up to date, skipping update to iddag (glob)
