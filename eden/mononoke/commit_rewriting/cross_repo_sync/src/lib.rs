@@ -81,6 +81,14 @@ pub enum ErrorKind {
     ParentNotSyncCandidate(ChangesetId),
     #[error("Cannot choose working copy equivalent for {0}")]
     AmbiguousWorkingCopyEquivalent(ChangesetId),
+    #[error(
+        "expected {expected_version} mapping version to be used to remap {cs_id}, but actually {actual_version} mapping version was used"
+    )]
+    UnexpectedVersion {
+        expected_version: CommitSyncConfigVersion,
+        actual_version: CommitSyncConfigVersion,
+        cs_id: ChangesetId,
+    },
 }
 
 async fn identity<T>(res: T) -> Result<T, Error> {
@@ -768,12 +776,33 @@ where
         res
     }
 
+
+    /// Just like unsafe_sync_commit, but sets an expected version i.e.
+    /// for commits that have at least a single parent it checks that these commits
+    /// will be rewritten with this version, and for commits with no parents
+    /// this expected version will be used for rewriting.
+    pub async fn unsafe_sync_commit_with_expected_version(
+        &self,
+        ctx: &CoreContext,
+        source_cs_id: ChangesetId,
+        parent_mapping_selection_hint: CandidateSelectionHint,
+        expected_version: CommitSyncConfigVersion,
+    ) -> Result<Option<ChangesetId>, Error> {
+        self.unsafe_sync_commit_impl(
+            ctx,
+            source_cs_id,
+            parent_mapping_selection_hint,
+            Some(expected_version),
+        )
+        .await
+    }
+
     async fn unsafe_sync_commit_impl<'a>(
         &'a self,
         ctx: &'a CoreContext,
         source_cs_id: ChangesetId,
         parent_mapping_selection_hint: CandidateSelectionHint,
-        sync_config_version_override: Option<CommitSyncConfigVersion>,
+        expected_version: Option<CommitSyncConfigVersion>,
     ) -> Result<Option<ChangesetId>, Error> {
         // Take most of below function unsafe_sync_commit into here and delete. Leave pushrebase in next fn
         let (source_repo, _) = self.get_source_target();
@@ -792,18 +821,19 @@ where
         let parents: Vec<_> = cs.parents().collect();
 
         if parents.is_empty() {
-            self.sync_commit_no_parents(ctx, cs, sync_config_version_override)
-                .await
+            match expected_version {
+                Some(version) => self.sync_commit_no_parents(ctx, cs, version).await,
+                None => {
+                    // TODO(stash): fail instead of using the current version
+                    let version = self.get_current_version(ctx)?;
+                    self.sync_commit_no_parents(ctx, cs, version).await
+                }
+            }
         } else if parents.len() == 1 {
-            self.sync_commit_single_parent(
-                ctx,
-                cs,
-                parent_mapping_selection_hint,
-                sync_config_version_override,
-            )
-            .await
+            self.sync_commit_single_parent(ctx, cs, parent_mapping_selection_hint, expected_version)
+                .await
         } else {
-            self.sync_merge(ctx, cs, sync_config_version_override).await
+            self.sync_merge(ctx, cs, expected_version).await
         }
     }
 
@@ -1038,21 +1068,11 @@ where
         &'a self,
         ctx: &'a CoreContext,
         cs: BonsaiChangeset,
-        sync_config_version_override: Option<CommitSyncConfigVersion>,
+        version: CommitSyncConfigVersion,
     ) -> Result<Option<ChangesetId>, Error> {
         let source_cs_id = cs.get_changeset_id();
-        let (source_repo, target_repo, mover, version) = match sync_config_version_override {
-            None => {
-                let version = self.get_current_version(ctx)?;
-                let (sr, tr, mv) = self.get_source_target_mover(ctx)?;
-                (sr, tr, mv, version)
-            }
-            Some(version_override) => {
-                let (source_repo, target_repo) = self.get_source_target();
-                let mover = self.get_mover_by_version(&version_override)?;
-                (source_repo, target_repo, mover, version_override)
-            }
-        };
+        let (source_repo, target_repo) = self.get_source_target();
+        let mover = self.get_mover_by_version(&version)?;
 
         match rewrite_commit(
             ctx,
@@ -1091,7 +1111,7 @@ where
         ctx: &'a CoreContext,
         cs: BonsaiChangeset,
         parent_mapping_selection_hint: CandidateSelectionHint,
-        sync_config_version_override: Option<CommitSyncConfigVersion>,
+        expected_version: Option<CommitSyncConfigVersion>,
     ) -> Result<Option<ChangesetId>, Error> {
         let source_cs_id = cs.get_changeset_id();
         let cs = cs.into_mut();
@@ -1115,7 +1135,17 @@ where
             }
             RewrittenAs(remapped_p, version)
             | EquivalentWorkingCopyAncestor(remapped_p, version) => {
-                let version = sync_config_version_override.unwrap_or(version);
+                if let Some(expected_version) = expected_version {
+                    if expected_version != version {
+                        return Err(ErrorKind::UnexpectedVersion {
+                            expected_version,
+                            actual_version: version,
+                            cs_id: source_cs_id,
+                        }
+                        .into());
+                    }
+                }
+
                 let rewrite_paths = self.get_mover_by_version(&version)?;
 
                 let mut remapped_parents = HashMap::new();
@@ -1193,7 +1223,7 @@ where
         &'a self,
         ctx: &'a CoreContext,
         cs: BonsaiChangeset,
-        _sync_config_version_override: Option<CommitSyncConfigVersion>,
+        expected_version: Option<CommitSyncConfigVersion>,
     ) -> Result<Option<ChangesetId>, Error> {
         if let CommitSyncRepos::SmallToLarge { .. } = self.repos {
             bail!("syncing merge commits is supported only in large to small direction");
@@ -1265,6 +1295,17 @@ where
                 )
                 .await
                 .context("failed getting a mover to use for merge rewriting")?;
+
+            if let Some(expected_version) = expected_version {
+                if version != expected_version {
+                    return Err(ErrorKind::UnexpectedVersion {
+                        expected_version,
+                        actual_version: version,
+                        cs_id: source_cs_id,
+                    }
+                    .into());
+                }
+            }
 
             match rewrite_commit(ctx, cs, &new_parents, mover, self.get_source_repo().clone())
                 .await?
