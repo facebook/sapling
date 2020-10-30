@@ -75,7 +75,7 @@ Disable bookmarks cache because bookmarks are modified by two separate processes
   $ MEGAREPO_MERGE_BONSAI=$(get_bonsai_bookmark 0 master_bookmark)
 
 -- insert sync mapping entry
-  $ add_synced_commit_mapping_entry 1 $FBSOURCE_MASTER_BONSAI 0 $MEGAREPO_MERGE_BONSAI test_version
+  $ add_synced_commit_mapping_entry 1 $FBSOURCE_MASTER_BONSAI 0 $MEGAREPO_MERGE_BONSAI TEST_VERSION_NAME
 
 -- setup hg client repos
   $ cd "$TESTTMP"

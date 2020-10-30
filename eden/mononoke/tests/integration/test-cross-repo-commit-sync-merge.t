@@ -70,7 +70,7 @@ start mononoke server
   $ wait_for_mononoke
 
 insert sync mapping entry
-  $ add_synced_commit_mapping_entry 1 $FBSOURCE_C1_BONSAI 0 $MEGAREPO_MERGE_BONSAI test_version
+  $ add_synced_commit_mapping_entry 1 $FBSOURCE_C1_BONSAI 0 $MEGAREPO_MERGE_BONSAI TEST_VERSION_NAME
 
 run the sync again
   $ mononoke_x_repo_sync 1 0 once --commit "$TOMERGE" |& grep -v "using repo"
