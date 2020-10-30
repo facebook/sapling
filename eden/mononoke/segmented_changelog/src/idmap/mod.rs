@@ -66,7 +66,7 @@ pub trait IdMap: Send + Sync {
     async fn get_vertex(&self, ctx: &CoreContext, cs_id: ChangesetId) -> Result<Vertex> {
         self.find_vertex(ctx, cs_id)
             .await?
-            .ok_or_else(|| format_err!("Failed to find find changeset id {} in IdMap", cs_id))
+            .ok_or_else(|| format_err!("Failed to find changeset id {} in IdMap", cs_id))
     }
 }
 

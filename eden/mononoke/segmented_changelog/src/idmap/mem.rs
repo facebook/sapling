@@ -57,6 +57,6 @@ impl MemIdMap {
 
     pub fn get_vertex(&self, cs_id: ChangesetId) -> Result<Vertex> {
         self.find_vertex(cs_id)
-            .ok_or_else(|| format_err!("Failed to find find changeset id {} in IdMap", cs_id))
+            .ok_or_else(|| format_err!("Failed to find changeset id {} in IdMap", cs_id))
     }
 }

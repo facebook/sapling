@@ -165,6 +165,13 @@ impl<Store: IdDagStore> IdDag<Store> {
         self.store.next_free_id(level, group)
     }
 
+    /// Returns whether the iddag contains segments for the given `id`.
+    pub fn contains_id(&self, id: Id) -> Result<bool> {
+        let group = id.group();
+        let level = 0;
+        Ok(self.next_free_id(level, group)? > id)
+    }
+
     /// Find segments that covers `id..` range at the given level, within a same group.
     pub(crate) fn next_segments(&self, id: Id, level: Level) -> Result<Vec<Segment>> {
         self.store.next_segments(id, level)

@@ -140,6 +140,7 @@ impl Dag {
 
         let head_vertex = mem_idmap
             .find_vertex(head)
+            .or_else(|| start_state.assignments.find_vertex(head))
             .ok_or_else(|| format_err!("error building IdMap; failed to assign head {}", head))?;
 
         debug!(
@@ -201,8 +202,8 @@ impl Dag {
 // that were already assigned.
 #[derive(Debug)]
 pub(crate) struct StartState {
-    parents: HashMap<ChangesetId, Vec<ChangesetId>>,
-    assignments: MemIdMap,
+    pub(crate) parents: HashMap<ChangesetId, Vec<ChangesetId>>,
+    pub(crate) assignments: MemIdMap,
 }
 
 impl StartState {

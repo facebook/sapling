@@ -378,3 +378,51 @@ async fn test_on_demand_update_dag_location_to_changeset_ids(fb: FacebookInit) -
 
     Ok(())
 }
+
+#[fbinit::compat_test]
+async fn test_incremental_update_with_desync_iddag(fb: FacebookInit) -> Result<()> {
+    // In this test we first build a dag from scratch and then we reuse the idmap in an ondemand
+    // dag that starts off with an empty iddag.
+    let ctx = CoreContext::test_mock(fb);
+    let blobrepo = linear::getrepo(fb).await;
+
+    let master_cs =
+        resolve_cs_id(&ctx, &blobrepo, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
+
+    setup_phases(&ctx, &blobrepo, master_cs).await?;
+    let changesets = blobrepo.get_changesets_object();
+    let phases = blobrepo.get_phases();
+    let repo_id = blobrepo.get_repoid();
+    let bulk_fetch = PublicChangesetBulkFetch::new(repo_id, changesets, phases);
+
+    let mut builder = SegmentedChangelogBuilder::with_sqlite_in_memory()?
+        .with_repo_id(repo_id)
+        .with_changeset_bulk_fetch(Arc::new(bulk_fetch))
+        .with_blobstore(Arc::new(memblob::LazyMemblob::default()))
+        .with_changeset_fetcher(blobrepo.get_changeset_fetcher());
+    let seeder = builder.build_seeder(&ctx).await?;
+
+    let (dag, _) = seeder.build_dag_from_scratch(&ctx, master_cs).await?;
+
+    let cs7 = resolve_cs_id(&ctx, &blobrepo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17").await?;
+    let distance: u64 = 4;
+    let answer = dag
+        .location_to_changeset_id(&ctx, master_cs, distance)
+        .await?;
+    assert_eq!(answer, cs7);
+
+    let ondemand_dag = builder.build_on_demand_update()?;
+
+    let cs3 = resolve_cs_id(&ctx, &blobrepo, "607314ef579bd2407752361ba1b0c1729d08b281").await?;
+    let answer = ondemand_dag
+        .location_to_changeset_id(&ctx, cs7, distance)
+        .await?;
+    assert_eq!(answer, cs3);
+
+    let answer = ondemand_dag
+        .location_to_changeset_id(&ctx, master_cs, distance)
+        .await?;
+    assert_eq!(answer, cs7);
+
+    Ok(())
+}
