@@ -12,7 +12,7 @@ use blobstore::{Blobstore, PutBehaviour, DEFAULT_PUT_BEHAVIOUR};
 use bytes::{Bytes, BytesMut};
 use cacheblob::new_memcache_blobstore_no_lease;
 use cached_config::ConfigStore;
-use clap::{App, Arg, ArgMatches, SubCommand};
+use clap::{Arg, ArgMatches, SubCommand};
 use cmdlib::args;
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -340,7 +340,9 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .conflicts_with(ARG_MYROUTER_PORT),
         );
 
-    let app = App::new(NAME)
+    let app = args::MononokeApp::new(NAME)
+        .with_all_repos()
+        .build()
         .arg(
             Arg::with_name(ARG_INPUT_CAPACITY)
                 .long("input-capacity")
@@ -396,18 +398,11 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .takes_value(true)
                 .required(false),
         )
-        .arg(
-            Arg::with_name("test-instance")
-                .long("test-instance")
-                .required(false),
-        )
         .arg(Arg::with_name(ARG_INPUT).takes_value(true).required(true))
         .subcommand(manifold_subcommand)
         .subcommand(memory_subcommand)
         .subcommand(xdb_subcommand);
 
-    let app = args::add_logger_args(app);
-    let app = args::add_tunables_args(app);
     let matches = app.get_matches();
 
     let logger = args::init_logging(fb, &matches);

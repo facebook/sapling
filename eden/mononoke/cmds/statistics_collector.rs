@@ -426,7 +426,7 @@ async fn run_statistics<'a>(
     repo_name: String,
     bookmark: BookmarkName,
 ) -> Result<(), Error> {
-    let repo = args::open_repo(fb, &logger, &matches).compat().await?;
+    let repo = args::open_repo(fb, &logger, &matches).await?;
 
     if let (SUBCOMMAND_STATISTICS_FROM_FILE, Some(sub_m)) = matches.subcommand() {
         // Both arguments are set to be required

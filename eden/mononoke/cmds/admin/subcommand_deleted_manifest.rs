@@ -75,7 +75,7 @@ pub async fn subcommand_deleted_manifest<'a>(
 ) -> Result<(), SubcommandError> {
     args::init_cachelib(fb, &matches, None);
 
-    let repo = args::open_repo(fb, &logger, &matches);
+    let repo = args::open_repo(fb, &logger, &matches).await?;
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     match sub_matches.subcommand() {
@@ -86,7 +86,7 @@ pub async fn subcommand_deleted_manifest<'a>(
                 p => MPath::new(p).map(Some),
             };
 
-            (repo, path)
+            (Ok(repo), path)
                 .into_future()
                 .and_then(move |(repo, path)| {
                     helpers::csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
@@ -103,12 +103,8 @@ pub async fn subcommand_deleted_manifest<'a>(
                 .parse::<u64>()
                 .expect("limit must be an integer");
 
-            cloned!(ctx);
-            repo.into_future()
-                .and_then(move |repo| {
-                    helpers::csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
-                        .and_then(move |cs_id| subcommand_verify(ctx, repo, cs_id, limit))
-                })
+            helpers::csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
+                .and_then(move |cs_id| subcommand_verify(ctx, repo, cs_id, limit))
                 .from_err()
                 .boxify()
         }

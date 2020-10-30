@@ -9,14 +9,15 @@ use anyhow::{format_err, Context, Error, Result};
 use blobrepo::BlobRepo;
 use blobrepo_factory::ReadOnlyStorage;
 use bookmarks::BookmarkName;
+use borrowed::borrowed;
 use clap::ArgMatches;
 use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
 use cross_repo_sync::types::{Large, Small};
 use fbinit::FacebookInit;
+use futures::compat::Future01CompatExt;
 use futures::future::try_join_all;
-use futures::{compat::Future01CompatExt, future::TryFutureExt};
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use metaconfig_types::RepoConfig;
 use mononoke_types::RepositoryId;
@@ -79,28 +80,28 @@ pub async fn get_validation_helpers(
             .small_repos
             .into_iter()
             .map(|(small_repo_id, _)| {
-                let scuba_sample = {
-                    let mut scuba_sample = scuba_sample.clone();
-                    add_common_commit_syncing_fields(
-                        &mut scuba_sample,
-                        Large(large_repo.get_repoid()),
-                        Small(small_repo_id),
-                    );
+                cloned!(large_repo);
+                borrowed!(matches, ctx, scuba_sample);
+                async move {
+                    let scuba_sample = {
+                        let mut scuba_sample = scuba_sample.clone();
+                        add_common_commit_syncing_fields(
+                            &mut scuba_sample,
+                            Large(large_repo.get_repoid()),
+                            Small(small_repo_id),
+                        );
 
-                    scuba_sample
-                };
+                        scuba_sample
+                    };
 
-                args::open_repo_with_repo_id(fb, ctx.logger(), small_repo_id, &matches)
-                    .compat()
-                    .and_then({
-                        cloned!(large_repo);
-                        move |small_repo| async move {
-                            Ok((
-                                small_repo_id,
-                                (Large(large_repo), Small(small_repo), scuba_sample),
-                            ))
-                        }
-                    })
+                    let small_repo =
+                        args::open_repo_with_repo_id(fb, ctx.logger(), small_repo_id, matches)
+                            .await?;
+                    Result::<_, Error>::Ok((
+                        small_repo_id,
+                        (Large(large_repo), Small(small_repo), scuba_sample),
+                    ))
+                }
             });
 
     let validation_helpers = try_join_all(validation_helper_futs).await?;

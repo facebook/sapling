@@ -291,18 +291,16 @@ async fn run_blobimport<'a>(
     let small_repo_id = args::get_source_repo_id_opt(config_store, &matches)?;
 
     let (blobrepo, globalrevs_store, synced_commit_mapping, mutable_counters) = try_join4(
-        if matches.is_present("no-create") {
-            args::open_repo_unredacted(fb, &ctx.logger(), &matches)
-                .compat()
-                .boxed()
-        } else {
-            args::create_repo_unredacted(fb, &ctx.logger(), &matches)
-                .compat()
-                .boxed()
+        async {
+            if matches.is_present("no-create") {
+                args::open_repo_unredacted(fb, &ctx.logger(), &matches).await
+            } else {
+                args::create_repo_unredacted(fb, &ctx.logger(), &matches).await
+            }
         },
-        args::open_sql::<SqlBonsaiGlobalrevMapping>(fb, config_store, &matches).compat(),
-        args::open_sql::<SqlSyncedCommitMapping>(fb, config_store, &matches).compat(),
-        args::open_sql::<SqlMutableCounters>(fb, config_store, &matches).compat(),
+        args::open_sql::<SqlBonsaiGlobalrevMapping>(fb, config_store, &matches),
+        args::open_sql::<SqlSyncedCommitMapping>(fb, config_store, &matches),
+        args::open_sql::<SqlMutableCounters>(fb, config_store, &matches),
     )
     .await?;
 

@@ -321,8 +321,8 @@ async fn run_aliasverify<'a>(
 ) -> Result<(), Error> {
     let config_store = args::init_config_store(fb, logger, matches)?;
     let (sqlchangesets, blobrepo) = try_join!(
-        args::open_sql::<SqlChangesets>(fb, config_store, matches).compat(),
-        args::open_repo(fb, &logger, matches).compat(),
+        args::open_sql::<SqlChangesets>(fb, config_store, matches),
+        args::open_repo(fb, &logger, matches),
     )?;
     AliasVerification::new(
         logger.clone(),

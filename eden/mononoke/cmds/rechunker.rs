@@ -13,10 +13,7 @@ use clap::Arg;
 use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::{
-    compat::Future01CompatExt,
-    stream::{self, TryStreamExt},
-};
+use futures::stream::{self, TryStreamExt};
 
 use mercurial_types::{HgFileNodeId, HgNodeHash};
 use std::str::FromStr;
@@ -76,7 +73,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let blobrepo = args::open_repo(fb, &logger, &matches);
     let rechunk = async move {
-        let blobrepo = blobrepo.compat().await?;
+        let blobrepo = blobrepo.await?;
         stream::iter(filenode_ids)
             .try_for_each_concurrent(jobs, |fid| {
                 cloned!(blobrepo, ctx);

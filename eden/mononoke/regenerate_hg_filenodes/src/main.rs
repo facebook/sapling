@@ -106,7 +106,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let (_, logger, mut rt) = args::init_mononoke(fb, &matches, None)?;
 
     let repo_fut = args::open_repo(fb, &logger, &matches);
-    let repo = rt.block_on(repo_fut).unwrap();
+    let repo = rt.block_on_std(repo_fut).unwrap();
 
     let ctx = CoreContext::test_mock(fb);
 

@@ -21,7 +21,7 @@ use futures::{compat::Future01CompatExt, TryFutureExt, TryStreamExt};
 use futures_ext::FutureExt as OldFutureExt;
 use futures_old::future::{join_all, Future};
 use futures_old::{IntoFuture, Stream};
-use futures_stats::futures03::TimedFutureExt;
+use futures_stats::TimedFutureExt;
 use manifest::{Entry, ManifestOps};
 use mercurial_types::{HgFileEnvelope, HgFileNodeId, MPath};
 use mononoke_types::RepoPath;
@@ -223,7 +223,7 @@ pub async fn subcommand_filenodes<'a>(
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     args::init_cachelib(fb, &matches, None);
 
-    let blobrepo = args::open_repo(fb, &ctx.logger(), &matches);
+    let repo = args::open_repo(fb, &ctx.logger(), &matches).await?;
     let log_envelope = sub_m.is_present(ARG_ENVELOPE);
 
     match sub_m.subcommand() {
@@ -235,14 +235,12 @@ pub async fn subcommand_filenodes<'a>(
                 .unwrap()
                 .map(extract_path)
                 .collect();
+            let paths = paths?;
 
-            (blobrepo, Ok(rev).into_future(), paths)
-                .into_future()
-                .and_then(move |(blobrepo, rev, paths)| {
-                    handle_filenodes_at_revision(ctx, blobrepo, &rev, paths, log_envelope)
-                })
-                .from_err()
-                .boxify()
+            handle_filenodes_at_revision(ctx, repo, &rev, paths, log_envelope)
+                .compat()
+                .await
+                .map_err(SubcommandError::Error)
         }
         (COMMAND_ID, Some(matches)) => {
             let path = matches.value_of(ARG_PATH).unwrap();
@@ -250,33 +248,28 @@ pub async fn subcommand_filenodes<'a>(
                 Some('/') => extract_path(&path).map(RepoPath::DirectoryPath),
                 Some(_) => extract_path(&path).map(RepoPath::FilePath),
                 None => Ok(RepoPath::RootPath),
-            };
+            }?;
 
-            let id = matches.value_of(ARG_ID).unwrap().parse::<HgFileNodeId>();
+            let id = matches.value_of(ARG_ID).unwrap().parse::<HgFileNodeId>()?;
 
-            (blobrepo, path.into_future(), id.into_future())
-                .into_future()
+            repo.get_filenode(ctx.clone(), &path, id)
+                .and_then(|filenode| filenode.do_not_handle_disabled_filenodes())
                 .and_then({
                     cloned!(ctx);
-                    move |(blobrepo, path, id)| {
-                        blobrepo
-                            .get_filenode(ctx.clone(), &path, id)
-                            .and_then(|filenode| filenode.do_not_handle_disabled_filenodes())
-                            .and_then(move |filenode| {
-                                let envelope = if log_envelope {
-                                    filenode
-                                        .filenode
-                                        .load(ctx, blobrepo.blobstore())
-                                        .compat()
-                                        .from_err()
-                                        .map(Some)
-                                        .left_future()
-                                } else {
-                                    Ok(None).into_future().right_future()
-                                };
+                    move |filenode| {
+                        let envelope = if log_envelope {
+                            filenode
+                                .filenode
+                                .load(ctx, repo.blobstore())
+                                .compat()
+                                .from_err()
+                                .map(Some)
+                                .left_future()
+                        } else {
+                            Ok(None).into_future().right_future()
+                        };
 
-                                (Ok(path), Ok(filenode), envelope)
-                            })
+                        (Ok(path), Ok(filenode), envelope)
                     }
                 })
                 .map({
@@ -285,63 +278,50 @@ pub async fn subcommand_filenodes<'a>(
                         log_filenode(ctx.logger(), &path, &filenode, envelope.as_ref());
                     }
                 })
-                .from_err()
-                .boxify()
+                .compat()
+                .await?;
+            Ok(())
         }
         (COMMAND_VALIDATE, Some(matches)) => {
             let rev = matches.value_of(ARG_REVISION).unwrap().to_string();
             let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
-            blobrepo
-                .and_then(move |repo| {
-                    helpers::get_root_manifest_id(ctx.clone(), repo.clone(), rev).and_then(
-                        move |mf_id| {
-                            mf_id
-                                .list_all_entries(ctx.clone(), repo.get_blobstore())
-                                .compat()
-                                .map(move |(path, entry)| {
-                                    let (repo_path, filenode_id) = match entry {
-                                        Entry::Leaf((_, filenode_id)) => (
-                                            RepoPath::FilePath(
-                                                path.expect("unexpected empty file path"),
-                                            ),
-                                            filenode_id,
-                                        ),
-                                        Entry::Tree(mf_id) => {
-                                            let filenode_id =
-                                                HgFileNodeId::new(mf_id.into_nodehash());
-                                            match path {
-                                                Some(path) => {
-                                                    (RepoPath::DirectoryPath(path), filenode_id)
-                                                }
-                                                None => (RepoPath::RootPath, filenode_id),
-                                            }
-                                        }
-                                    };
+            helpers::get_root_manifest_id(ctx.clone(), repo.clone(), rev)
+                .and_then(move |mf_id| {
+                    mf_id
+                        .list_all_entries(ctx.clone(), repo.get_blobstore())
+                        .compat()
+                        .map(move |(path, entry)| {
+                            let (repo_path, filenode_id) = match entry {
+                                Entry::Leaf((_, filenode_id)) => (
+                                    RepoPath::FilePath(path.expect("unexpected empty file path")),
+                                    filenode_id,
+                                ),
+                                Entry::Tree(mf_id) => {
+                                    let filenode_id = HgFileNodeId::new(mf_id.into_nodehash());
+                                    match path {
+                                        Some(path) => (RepoPath::DirectoryPath(path), filenode_id),
+                                        None => (RepoPath::RootPath, filenode_id),
+                                    }
+                                }
+                            };
 
-                                    repo.get_filenode_opt(ctx.clone(), &repo_path, filenode_id)
-                                        .and_then(|filenode| {
-                                            filenode.do_not_handle_disabled_filenodes()
-                                        })
-                                        .and_then(move |maybe_filenode| {
-                                            if maybe_filenode.is_some() {
-                                                Ok(())
-                                            } else {
-                                                Err(format_err!(
-                                                    "not found filenode for {}",
-                                                    repo_path
-                                                ))
-                                            }
-                                        })
+                            repo.get_filenode_opt(ctx.clone(), &repo_path, filenode_id)
+                                .and_then(|filenode| filenode.do_not_handle_disabled_filenodes())
+                                .and_then(move |maybe_filenode| {
+                                    if maybe_filenode.is_some() {
+                                        Ok(())
+                                    } else {
+                                        Err(format_err!("not found filenode for {}", repo_path))
+                                    }
                                 })
-                                .buffer_unordered(100)
-                                .for_each(|_| Ok(()))
-                        },
-                    )
+                        })
+                        .buffer_unordered(100)
+                        .for_each(|_| Ok(()))
                 })
-                .map(|_| ())
-                .from_err()
-                .boxify()
+                .compat()
+                .await?;
+            Ok(())
         }
         (COMMAND_ALL_FILENODES, Some(matches)) => {
             let maybe_mpath = MPath::new_opt(matches.value_of(ARG_PATH).unwrap())?;
@@ -357,7 +337,6 @@ pub async fn subcommand_filenodes<'a>(
                 }
             };
 
-            let repo = blobrepo.compat().await?;
             let filenodes = repo.get_filenodes();
             let (stats, res) = filenodes
                 .get_all_filenodes_maybe_stale(ctx.clone(), &path, repo.get_repoid(), None)
@@ -372,10 +351,8 @@ pub async fn subcommand_filenodes<'a>(
             for filenode in filenodes {
                 log_filenode(ctx.logger(), &path, &filenode, None);
             }
-            return Ok(());
+            Ok(())
         }
-        _ => Err(SubcommandError::InvalidArgs).into_future().boxify(),
+        _ => Err(SubcommandError::InvalidArgs),
     }
-    .compat()
-    .await
 }

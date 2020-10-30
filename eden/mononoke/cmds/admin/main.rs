@@ -12,7 +12,6 @@
 use blobstore::PutBehaviour;
 use clap::App;
 use fbinit::FacebookInit;
-use futures_ext::FutureExt as Future01Ext;
 use std::process::ExitCode;
 
 use cmdlib::args;
@@ -113,8 +112,8 @@ fn main(fb: FacebookInit) -> ExitCode {
             (bookmarks_manager::BOOKMARKS, Some(sub_m)) => {
                 args::init_cachelib(fb, &matches, None);
                 let ctx = CoreContext::new_with_logger(fb, logger.clone());
-                let repo_fut = args::open_repo(fb, &logger, &matches).boxify();
-                bookmarks_manager::handle_command(ctx, repo_fut, sub_m, logger).await
+                let repo = args::open_repo(fb, &logger, &matches).await?;
+                bookmarks_manager::handle_command(ctx, repo, sub_m, logger.clone()).await
             }
             (hg_changeset::HG_CHANGESET, Some(sub_m)) => {
                 subcommand_hg_changeset(fb, logger, &matches, sub_m).await

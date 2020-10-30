@@ -10,7 +10,6 @@ use cmdlib::args;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::compat::Future01CompatExt;
-use futures_old::prelude::*;
 use mononoke_types::{BonsaiChangeset, ChangesetId, DateTime, FileChange};
 use serde_derive::Serialize;
 use slog::Logger;
@@ -43,21 +42,19 @@ pub async fn subcommand_bonsai_fetch<'a>(
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     let json_flag = sub_m.is_present("json");
 
-    args::open_repo(fb, &logger, &matches)
-        .and_then(move |blobrepo| fetch_bonsai_changeset(ctx, &rev, &blobrepo))
-        .map(move |bcs| {
-            if json_flag {
-                match serde_json::to_string(&SerializableBonsaiChangeset::from(bcs)) {
-                    Ok(json) => println!("{}", json),
-                    Err(e) => println!("{}", e),
-                }
-            } else {
-                print_bonsai_changeset(&bcs);
-            }
-        })
-        .from_err()
+    let blobrepo = args::open_repo(fb, &logger, &matches).await?;
+    let bcs = fetch_bonsai_changeset(ctx, &rev, &blobrepo)
         .compat()
-        .await
+        .await?;
+    if json_flag {
+        match serde_json::to_string(&SerializableBonsaiChangeset::from(bcs)) {
+            Ok(json) => println!("{}", json),
+            Err(e) => println!("{}", e),
+        }
+    } else {
+        print_bonsai_changeset(&bcs);
+    }
+    Ok(())
 }
 
 #[derive(Serialize)]

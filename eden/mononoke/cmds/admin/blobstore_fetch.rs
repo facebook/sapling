@@ -13,8 +13,6 @@ use anyhow::{format_err, Error, Result};
 use clap::{App, Arg, ArgMatches, SubCommand};
 use fbinit::FacebookInit;
 use futures::{compat::Future01CompatExt, future::try_join};
-use futures_ext::FutureExt;
-use futures_old::prelude::*;
 
 use blobstore::{Blobstore, BlobstoreGetData};
 use blobstore_factory::{make_blobstore, BlobstoreOptions, ReadOnlyStorage};
@@ -22,7 +20,6 @@ use cacheblob::{new_memcache_blobstore, CacheBlobstoreExt};
 use cached_config::ConfigStore;
 use cmdlib::args;
 use context::CoreContext;
-use futures_old::future;
 use git_types::Tree as GitTree;
 use mercurial_types::{HgChangesetEnvelope, HgFileEnvelope, HgManifestEnvelope};
 use metaconfig_types::{BlobConfig, BlobstoreId, Redaction, ScrubAction, StorageConfig};
@@ -208,19 +205,22 @@ pub async fn subcommand_blobstore_fetch<'a>(
     let no_prefix = sub_m.is_present("no-prefix");
     let maybe_output_file = sub_m.value_of_os(RAW_FILE_NAME_ARG);
 
-    let maybe_redacted_blobs_fut = match redaction {
-        Redaction::Enabled => args::open_sql::<SqlRedactedContentStore>(fb, config_store, &matches)
-            .and_then(|redacted_blobs| {
+    let maybe_redacted_blobs_fut = async {
+        match redaction {
+            Redaction::Enabled => {
+                let redacted_blobs =
+                    args::open_sql::<SqlRedactedContentStore>(fb, config_store, &matches).await?;
                 redacted_blobs
                     .get_all_redacted_blobs()
+                    .compat()
+                    .await
                     .map_err(Error::from)
                     .map(HashMap::from_iter)
                     .map(Some)
-            })
-            .left_future(),
-        Redaction::Disabled => future::ok(None).right_future(),
-    }
-    .compat();
+            }
+            Redaction::Disabled => Ok(None),
+        }
+    };
 
     let (blobstore, maybe_redacted_blobs) =
         try_join(blobstore_fut, maybe_redacted_blobs_fut).await?;

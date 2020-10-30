@@ -161,7 +161,6 @@ async fn run(
 
     let logger = ctx.logger();
     let blobrepo = args::open_repo_with_repo_id(fb, &logger, repo_id, &matches)
-        .compat()
         .await
         .with_context(|| format!("While opening the large repo ({})", repo_id))?;
     let mysql_options = args::parse_mysql_options(&matches);

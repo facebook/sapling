@@ -541,12 +541,10 @@ pub async fn subcommand_process_hg_sync<'a>(
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     let mutable_counters = args::open_sql::<SqlMutableCounters>(fb, config_store, &matches)
-        .compat()
         .await
         .context("While opening SqlMutableCounters")?;
 
     let bookmarks = args::open_sql::<SqlBookmarksBuilder>(fb, config_store, &matches)
-        .compat()
         .await
         .context("While opening SqlBookmarks")?
         .with_repo_id(repo_id);
@@ -560,17 +558,17 @@ pub async fn subcommand_process_hg_sync<'a>(
         }
         (HG_SYNC_SHOW, Some(sub_m)) => {
             args::init_cachelib(fb, &matches, None);
-            let repo = args::open_repo(fb, ctx.logger(), &matches).compat().await?;
+            let repo = args::open_repo(fb, ctx.logger(), &matches).await?;
             show(sub_m, &ctx, &repo, &mutable_counters, &bookmarks).await?
         }
         (HG_SYNC_FETCH_BUNDLE, Some(sub_m)) => {
             args::init_cachelib(fb, &matches, None);
-            let repo = args::open_repo(fb, ctx.logger(), &matches).compat().await?;
+            let repo = args::open_repo(fb, ctx.logger(), &matches).await?;
             fetch_bundle(sub_m, &ctx, &repo, &bookmarks).await?
         }
         (HG_SYNC_INSPECT, Some(sub_m)) => {
             args::init_cachelib(fb, &matches, None);
-            let repo = args::open_repo(fb, ctx.logger(), &matches).compat().await?;
+            let repo = args::open_repo(fb, ctx.logger(), &matches).await?;
             inspect(sub_m, &ctx, &repo, &bookmarks).await?
         }
         (HG_SYNC_VERIFY, Some(..)) => {

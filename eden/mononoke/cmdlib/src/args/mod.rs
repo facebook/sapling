@@ -12,6 +12,7 @@ mod facebook;
 pub use self::cache::{add_cachelib_args, init_cachelib};
 
 use std::collections::{HashMap, HashSet};
+use std::future::Future;
 use std::io;
 use std::num::NonZeroU32;
 use std::path::PathBuf;
@@ -22,11 +23,8 @@ use std::time::Duration;
 use anyhow::{bail, format_err, Error, Result};
 use cached_config::{ConfigHandle, ConfigStore, TestSource};
 use clap::{App, Arg, ArgGroup, ArgMatches};
-use cloned::cloned;
 use fbinit::FacebookInit;
-use futures::{FutureExt, TryFutureExt};
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt as OldFutureExt};
-use futures_old::Future;
+use futures::compat::Future01CompatExt;
 use once_cell::sync::OnceCell;
 use panichandler::{self, Fate};
 use scribe_ext::Scribe;
@@ -586,15 +584,15 @@ pub fn get_target_repo_id<'a>(
     Ok(repo_id)
 }
 
-pub fn open_sql<T>(
+pub async fn open_sql<T>(
     fb: FacebookInit,
     config_store: &ConfigStore,
     matches: &ArgMatches<'_>,
-) -> BoxFuture<T, Error>
+) -> Result<T, Error>
 where
     T: SqlConstructFromMetadataDatabaseConfig,
 {
-    let (_, config) = try_boxfuture!(get_config(config_store, matches));
+    let (_, config) = get_config(config_store, matches)?;
     let mysql_options = parse_mysql_options(matches);
     let readonly_storage = parse_readonly_storage(matches);
     open_sql_with_config_and_mysql_options(
@@ -603,18 +601,20 @@ where
         mysql_options,
         readonly_storage,
     )
+    .compat()
+    .await
 }
 
-pub fn open_source_sql<T>(
+pub async fn open_source_sql<T>(
     fb: FacebookInit,
     config_store: &ConfigStore,
     matches: &ArgMatches<'_>,
-) -> BoxFuture<T, Error>
+) -> Result<T, Error>
 where
     T: SqlConstructFromMetadataDatabaseConfig,
 {
-    let source_repo_id = try_boxfuture!(get_source_repo_id(config_store, matches));
-    let (_, config) = try_boxfuture!(get_config_by_repoid(config_store, matches, source_repo_id));
+    let source_repo_id = get_source_repo_id(config_store, matches)?;
+    let (_, config) = get_config_by_repoid(config_store, matches, source_repo_id)?;
     let mysql_options = parse_mysql_options(matches);
     let readonly_storage = parse_readonly_storage(matches);
     open_sql_with_config_and_mysql_options(
@@ -623,15 +623,17 @@ where
         mysql_options,
         readonly_storage,
     )
+    .compat()
+    .await
 }
 
 /// Create a new `BlobRepo` -- for local instances, expect its contents to be empty.
 #[inline]
 pub fn create_repo<'a>(
     fb: FacebookInit,
-    logger: &Logger,
-    matches: &ArgMatches<'a>,
-) -> impl Future<Item = BlobRepo, Error = Error> {
+    logger: &'a Logger,
+    matches: &'a ArgMatches<'a>,
+) -> impl Future<Output = Result<BlobRepo, Error>> + 'a {
     open_repo_internal(
         fb,
         logger,
@@ -648,9 +650,9 @@ pub fn create_repo<'a>(
 #[inline]
 pub fn create_repo_unredacted<'a>(
     fb: FacebookInit,
-    logger: &Logger,
-    matches: &ArgMatches<'a>,
-) -> impl Future<Item = BlobRepo, Error = Error> {
+    logger: &'a Logger,
+    matches: &'a ArgMatches<'a>,
+) -> impl Future<Output = Result<BlobRepo, Error>> + 'a {
     open_repo_internal(
         fb,
         logger,
@@ -666,9 +668,9 @@ pub fn create_repo_unredacted<'a>(
 #[inline]
 pub fn open_repo<'a>(
     fb: FacebookInit,
-    logger: &Logger,
-    matches: &ArgMatches<'a>,
-) -> impl Future<Item = BlobRepo, Error = Error> {
+    logger: &'a Logger,
+    matches: &'a ArgMatches<'a>,
+) -> impl Future<Output = Result<BlobRepo, Error>> + 'a {
     open_repo_internal(
         fb,
         logger,
@@ -685,9 +687,9 @@ pub fn open_repo<'a>(
 #[inline]
 pub fn open_repo_unredacted<'a>(
     fb: FacebookInit,
-    logger: &Logger,
-    matches: &ArgMatches<'a>,
-) -> impl Future<Item = BlobRepo, Error = Error> {
+    logger: &'a Logger,
+    matches: &'a ArgMatches<'a>,
+) -> impl Future<Output = Result<BlobRepo, Error>> + 'a {
     open_repo_internal(
         fb,
         logger,
@@ -703,11 +705,11 @@ pub fn open_repo_unredacted<'a>(
 /// If there are multiple backing blobstores, open them in scrub mode, where we check that
 /// the blobstore contents all match.
 #[inline]
-pub fn open_scrub_repo<'a>(
+pub async fn open_scrub_repo<'a>(
     fb: FacebookInit,
-    logger: &Logger,
-    matches: &ArgMatches<'a>,
-) -> impl Future<Item = BlobRepo, Error = Error> {
+    logger: &'a Logger,
+    matches: &'a ArgMatches<'a>,
+) -> impl Future<Output = Result<BlobRepo, Error>> + 'a {
     open_repo_internal(
         fb,
         logger,
@@ -969,17 +971,17 @@ pub fn get_config_by_repoid<'a>(
         .map(|(name, config)| (name.clone(), config.clone()))
 }
 
-fn open_repo_internal<'a>(
+async fn open_repo_internal(
     fb: FacebookInit,
     logger: &Logger,
-    matches: &ArgMatches<'a>,
+    matches: &ArgMatches<'_>,
     create: bool,
     caching: Caching,
     scrub: Scrubbing,
     redaction_override: Option<Redaction>,
-) -> impl Future<Item = BlobRepo, Error = Error> {
-    let config_store = try_boxfuture!(init_config_store(fb, logger, matches));
-    let repo_id = try_boxfuture!(get_repo_id(config_store, matches));
+) -> Result<BlobRepo, Error> {
+    let config_store = init_config_store(fb, logger, matches)?;
+    let repo_id = get_repo_id(config_store, matches)?;
     open_repo_internal_with_repo_id(
         fb,
         logger,
@@ -990,24 +992,24 @@ fn open_repo_internal<'a>(
         scrub,
         redaction_override,
     )
+    .await
 }
 
-fn open_repo_internal_with_repo_id<'a>(
+async fn open_repo_internal_with_repo_id(
     fb: FacebookInit,
     logger: &Logger,
     repo_id: RepositoryId,
-    matches: &ArgMatches<'a>,
+    matches: &ArgMatches<'_>,
     create: bool,
     caching: Caching,
     scrub: Scrubbing,
     redaction_override: Option<Redaction>,
-) -> BoxFuture<BlobRepo, Error> {
-    let config_store = try_boxfuture!(init_config_store(fb, logger, matches));
-    let common_config = try_boxfuture!(load_common_config(config_store, &matches));
+) -> Result<BlobRepo, Error> {
+    let config_store = init_config_store(fb, logger, matches)?;
+    let common_config = load_common_config(config_store, &matches)?;
 
     let (reponame, config) = {
-        let (reponame, mut config) =
-            try_boxfuture!(get_config_by_repoid(config_store, matches, repo_id));
+        let (reponame, mut config) = get_config_by_repoid(config_store, matches, repo_id)?;
         if let Scrubbing::Enabled = scrub {
             config
                 .storage_config
@@ -1025,7 +1027,7 @@ fn open_repo_internal_with_repo_id<'a>(
             } else {
                 CreateStorage::ExistingOnly
             };
-            try_boxfuture!(setup_repo_dir(path, create));
+            setup_repo_dir(path, create)?;
         }
         _ => {}
     };
@@ -1034,36 +1036,30 @@ fn open_repo_internal_with_repo_id<'a>(
     let blobstore_options = parse_blobstore_options(matches);
     let readonly_storage = parse_readonly_storage(matches);
 
-    cloned!(logger);
-    async move {
-        let mut builder = BlobrepoBuilder::new(
-            fb,
-            reponame,
-            &config,
-            mysql_options,
-            caching,
-            common_config.censored_scuba_params,
-            readonly_storage,
-            blobstore_options,
-            &logger,
-            config_store,
-        );
-        if let Some(redaction_override) = redaction_override {
-            builder.set_redaction(redaction_override);
-        }
-        builder.build().await
+    let mut builder = BlobrepoBuilder::new(
+        fb,
+        reponame,
+        &config,
+        mysql_options,
+        caching,
+        common_config.censored_scuba_params,
+        readonly_storage,
+        blobstore_options,
+        &logger,
+        config_store,
+    );
+    if let Some(redaction_override) = redaction_override {
+        builder.set_redaction(redaction_override);
     }
-    .boxed()
-    .compat()
-    .boxify()
+    builder.build().await
 }
 
-pub fn open_repo_with_repo_id<'a>(
+pub async fn open_repo_with_repo_id(
     fb: FacebookInit,
     logger: &Logger,
     repo_id: RepositoryId,
-    matches: &ArgMatches<'a>,
-) -> impl Future<Item = BlobRepo, Error = Error> {
+    matches: &ArgMatches<'_>,
+) -> Result<BlobRepo, Error> {
     open_repo_internal_with_repo_id(
         fb,
         logger,
@@ -1074,7 +1070,7 @@ pub fn open_repo_with_repo_id<'a>(
         Scrubbing::Disabled,
         None,
     )
-    .boxify()
+    .await
 }
 
 pub fn parse_readonly_storage<'a>(matches: &ArgMatches<'a>) -> ReadOnlyStorage {

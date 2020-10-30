@@ -8,12 +8,11 @@
 use anyhow::{anyhow, Error};
 use bulkops::fetch_all_public_changesets;
 use clap::{App, Arg, ArgMatches, SubCommand};
-use cloned::cloned;
 use fbinit::FacebookInit;
 use fbthrift::compact_protocol;
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
-    future::{try_join, FutureExt as NewFutureExt, TryFutureExt},
+    future::{try_join, TryFutureExt},
     stream, StreamExt, TryStreamExt,
 };
 use futures_ext::{BoxFuture, FutureExt};
@@ -111,25 +110,18 @@ pub async fn subcommand_skiplist<'a>(
             let ctx = CoreContext::new_with_logger(fb, logger.clone());
             let sql_changesets = args::open_sql::<SqlChangesets>(fb, config_store, &matches);
             let repo = args::open_repo(fb, &logger, &matches);
-            repo.join(sql_changesets)
-                .and_then(move |(repo, sql_changesets)| {
-                    async move {
-                        build_skiplist_index(
-                            &ctx,
-                            &repo,
-                            key,
-                            &logger,
-                            &sql_changesets,
-                            rebuild,
-                            skiplist_ty,
-                        )
-                        .await
-                    }
-                    .boxed()
-                    .compat()
-                })
-                .from_err()
-                .boxify()
+            let (repo, sql_changesets) = try_join(repo, sql_changesets).await?;
+            build_skiplist_index(
+                &ctx,
+                &repo,
+                key,
+                &logger,
+                &sql_changesets,
+                rebuild,
+                skiplist_ty,
+            )
+            .await
+            .map_err(SubcommandError::Error)
         }
         (SKIPLIST_READ, Some(sub_m)) => {
             let key = sub_m
@@ -139,32 +131,26 @@ pub async fn subcommand_skiplist<'a>(
 
             args::init_cachelib(fb, &matches, None);
             let ctx = CoreContext::test_mock(fb);
-            args::open_repo(fb, &logger, &matches)
-                .and_then({
-                    cloned!(logger);
-                    move |repo| read_skiplist_index(ctx.clone(), repo, key, logger)
-                })
-                .map(move |maybe_index| {
-                    match maybe_index {
-                        Some(index) => {
-                            info!(
-                                logger,
-                                "skiplist graph has {} entries",
-                                index.indexed_node_count()
-                            );
-                        }
-                        None => {
-                            info!(logger, "skiplist not found");
-                        }
-                    }
-                })
-                .from_err()
-                .boxify()
+            let repo = args::open_repo(fb, &logger, &matches).await?;
+            let maybe_index = read_skiplist_index(ctx.clone(), repo, key, logger.clone())
+                .compat()
+                .await?;
+            match maybe_index {
+                Some(index) => {
+                    info!(
+                        logger,
+                        "skiplist graph has {} entries",
+                        index.indexed_node_count()
+                    );
+                }
+                None => {
+                    info!(logger, "skiplist not found");
+                }
+            }
+            Ok(())
         }
-        _ => Err(SubcommandError::InvalidArgs).into_future().boxify(),
+        _ => Err(SubcommandError::InvalidArgs),
     }
-    .compat()
-    .await
 }
 
 async fn build_skiplist_index<'a, S: ToString>(

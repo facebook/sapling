@@ -52,7 +52,7 @@ pub async fn subcommand_pushrebase<'a>(
 ) -> Result<(), SubcommandError> {
     args::init_cachelib(fb, &matches, None);
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
-    let repo = args::open_repo(fb, &logger, &matches).compat().await?;
+    let repo = args::open_repo(fb, &logger, &matches).await?;
 
     let cs_id = sub_matches
         .value_of(ARG_CSID)

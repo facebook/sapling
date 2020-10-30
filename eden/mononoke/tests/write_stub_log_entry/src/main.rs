@@ -7,15 +7,13 @@
 
 #![deny(warnings)]
 
-use anyhow::Result;
+use anyhow::{bail, Context, Result};
 use bookmarks::{BookmarkName, BookmarkUpdateReason, Bookmarks};
 use clap::{App, Arg, SubCommand};
 use cmdlib::args;
 use context::CoreContext;
 use dbbookmarks::SqlBookmarksBuilder;
 use fbinit::FacebookInit;
-use futures::future::TryFutureExt;
-use futures_old::future::Future;
 use mononoke_types::ChangesetId;
 
 const CREATE: &'static str = "create";
@@ -56,61 +54,51 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
 }
 
 #[fbinit::main]
-fn main(fb: FacebookInit) -> Result<()> {
+async fn main(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
 
     let matches = setup_app().get_matches();
     let config_store = args::init_config_store(fb, None, &matches)?;
 
-    let repo_id = args::get_repo_id(config_store, &matches).unwrap();
-    let fut = args::open_sql::<SqlBookmarksBuilder>(fb, config_store, &matches).and_then(
-        move |builder| {
-            let bookmarks = builder.with_repo_id(repo_id);
-            let name = matches.value_of(BOOKMARK).unwrap().to_string();
-            let reason = match matches.is_present(BLOBIMPORT) {
-                true => BookmarkUpdateReason::Blobimport,
-                false => BookmarkUpdateReason::TestMove,
-            };
+    let repo_id = args::get_repo_id(config_store, &matches)?;
+    let builder = args::open_sql::<SqlBookmarksBuilder>(fb, config_store, &matches).await?;
+    let bookmarks = builder.with_repo_id(repo_id);
+    let name = matches
+        .value_of(BOOKMARK)
+        .context("no bookmark")?
+        .to_string();
+    let reason = match matches.is_present(BLOBIMPORT) {
+        true => BookmarkUpdateReason::Blobimport,
+        false => BookmarkUpdateReason::TestMove,
+    };
 
-            let bookmark = BookmarkName::new(name).unwrap();
+    let bookmark = BookmarkName::new(name)?;
 
-            let mut txn = bookmarks.create_transaction(ctx);
+    let mut txn = bookmarks.create_transaction(ctx);
 
-            match matches.subcommand() {
-                (CREATE, Some(sub_m)) => {
-                    txn.create(
-                        &bookmark,
-                        ChangesetId::from_str(&sub_m.value_of(ID).unwrap().to_string()).unwrap(),
-                        reason,
-                        None,
-                    )
-                    .unwrap();
-                }
-                (UPDATE, Some(sub_m)) => {
-                    txn.update(
-                        &bookmark,
-                        ChangesetId::from_str(&sub_m.value_of(TO_ID).unwrap().to_string()).unwrap(),
-                        ChangesetId::from_str(&sub_m.value_of(FROM_ID).unwrap().to_string())
-                            .unwrap(),
-                        reason,
-                        None,
-                    )
-                    .unwrap();
-                }
-                _ => {
-                    println!("{}", matches.usage());
-                    ::std::process::exit(1);
-                }
-            }
+    match matches.subcommand() {
+        (CREATE, Some(sub_m)) => {
+            txn.create(
+                &bookmark,
+                ChangesetId::from_str(&sub_m.value_of(ID).context("no ID")?.to_string())?,
+                reason,
+                None,
+            )?;
+        }
+        (UPDATE, Some(sub_m)) => {
+            txn.update(
+                &bookmark,
+                ChangesetId::from_str(&sub_m.value_of(TO_ID).context("no TO_ID")?.to_string())?,
+                ChangesetId::from_str(&sub_m.value_of(FROM_ID).context("no FROM_ID")?.to_string())?,
+                reason,
+                None,
+            )?;
+        }
+        _ => {
+            bail!("{}", matches.usage());
+        }
+    }
 
-            txn.commit().compat()
-        },
-    );
-
-    tokio::run(fut.map(|_| ()).map_err(move |err| {
-        println!("{:?}", err);
-        ::std::process::exit(1);
-    }));
-
+    txn.commit().await?;
     Ok(())
 }

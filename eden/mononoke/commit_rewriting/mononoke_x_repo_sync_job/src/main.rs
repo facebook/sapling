@@ -392,8 +392,7 @@ async fn run(
 ) -> Result<(), Error> {
     let config_store = args::init_config_store(ctx.fb, ctx.logger(), &matches)?;
     let mut scuba_sample = get_scuba_sample(ctx.clone(), &matches);
-    let mutable_counters =
-        args::open_source_sql::<SqlMutableCounters>(fb, config_store, &matches).compat();
+    let mutable_counters = args::open_source_sql::<SqlMutableCounters>(fb, config_store, &matches);
 
     let source_repo_id = args::get_source_repo_id(config_store, &matches)?;
     let target_repo_id = args::get_target_repo_id(config_store, &matches)?;
@@ -403,8 +402,8 @@ async fn run(
         args::get_config_by_repoid(config_store, &matches, target_repo_id)?;
 
     let logger = ctx.logger();
-    let source_repo = args::open_repo_with_repo_id(fb, &logger, source_repo_id, &matches).compat();
-    let target_repo = args::open_repo_with_repo_id(fb, &logger, target_repo_id, &matches).compat();
+    let source_repo = args::open_repo_with_repo_id(fb, &logger, source_repo_id, &matches);
+    let target_repo = args::open_repo_with_repo_id(fb, &logger, target_repo_id, &matches);
 
     let (source_repo, target_repo, counters) =
         try_join3(source_repo, target_repo, mutable_counters).await?;
@@ -535,7 +534,6 @@ impl BackpressureParams {
                         RepositoryId::new(repo_id),
                         &matches,
                     )
-                    .compat()
                 })
                 .try_buffer_unordered(100)
                 .try_collect::<Vec<_>>();

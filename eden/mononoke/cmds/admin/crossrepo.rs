@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, format_err, Error};
+use anyhow::{anyhow, format_err, Context, Error};
 use backsyncer::format_counter as format_backsyncer_counter;
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use bookmark_renaming::get_small_to_large_renamer;
@@ -18,7 +18,6 @@ use cross_repo_sync::{
     validation::{self, BookmarkDiff},
     CommitSyncRepos, CommitSyncer,
 };
-use failure_ext::FutureFailureErrorExt;
 use fbinit::FacebookInit;
 use futures::{compat::Future01CompatExt, try_join};
 use futures_ext::FutureExt;
@@ -28,7 +27,8 @@ use maplit::{btreemap, hashmap};
 use metaconfig_types::CommitSyncConfigVersion;
 use metaconfig_types::{CommitSyncConfig, RepoConfig};
 use mononoke_types::{BonsaiChangesetMut, ChangesetId, DateTime, RepositoryId};
-use mutable_counters::{MutableCounters, SqlMutableCounters};
+use mutable_counters::MutableCounters;
+use mutable_counters::SqlMutableCounters;
 use pushrebase::FAILUPUSHREBASE_EXTRA;
 use slog::{info, warn, Logger};
 use std::convert::TryInto;
@@ -214,9 +214,8 @@ async fn run_pushredirection_subcommand<'a>(
 
             let mutable_counters =
                 args::open_source_sql::<SqlMutableCounters>(fb, config_store, &matches)
-                    .context("While opening SqlMutableCounters")
-                    .compat()
-                    .await?;
+                    .await
+                    .context("While opening SqlMutableCounters")?;
 
             let counter = format_backsyncer_counter(&large_repo.get_repoid());
             info!(
@@ -441,16 +440,11 @@ async fn get_source_target_repos_and_mapping<'a>(
     let source_repo_id = args::get_source_repo_id(config_store, matches)?;
     let target_repo_id = args::get_target_repo_id(config_store, matches)?;
 
-    let source_repo = args::open_repo_with_repo_id(fb, &logger, source_repo_id, matches)
-        .boxify()
-        .compat();
-    let target_repo = args::open_repo_with_repo_id(fb, &logger, target_repo_id, matches)
-        .boxify()
-        .compat();
+    let source_repo = args::open_repo_with_repo_id(fb, &logger, source_repo_id, matches);
+    let target_repo = args::open_repo_with_repo_id(fb, &logger, target_repo_id, matches);
     // TODO(stash): in reality both source and target should point to the same mapping
     // It'll be nice to verify it
-    let mapping =
-        args::open_source_sql::<SqlSyncedCommitMapping>(fb, config_store, &matches).compat();
+    let mapping = args::open_source_sql::<SqlSyncedCommitMapping>(fb, config_store, &matches);
 
     try_join!(source_repo, target_repo, mapping)
 }

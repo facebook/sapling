@@ -6,12 +6,11 @@
  */
 
 use crate::error::SubcommandError;
-use anyhow::{format_err, Error};
+use anyhow::{format_err, Context, Error};
 
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cmdlib::args;
 use context::CoreContext;
-use failure_ext::FutureFailureErrorExt;
 use fbinit::FacebookInit;
 use futures::compat::Future01CompatExt;
 use mononoke_types::RepositoryId;
@@ -76,9 +75,8 @@ pub async fn subcommand_mutable_counters<'a>(
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     let mutable_counters = args::open_sql::<SqlMutableCounters>(fb, config_store, &matches)
-        .context("While opening SqlMutableCounters")
-        .compat()
-        .await?;
+        .await
+        .context("While opening SqlMutableCounters")?;
 
     match sub_m.subcommand() {
         (MUTABLE_COUNTERS_LIST, Some(_)) => {

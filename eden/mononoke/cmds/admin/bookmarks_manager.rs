@@ -117,7 +117,7 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
 
 pub async fn handle_command(
     ctx: CoreContext,
-    repo: BoxFuture<BlobRepo, Error>,
+    repo: BlobRepo,
     matches: &ArgMatches<'_>,
     _logger: Logger,
 ) -> Result<(), SubcommandError> {
@@ -148,7 +148,7 @@ fn format_output(json_flag: bool, changeset_id: String, changeset_type: &str) ->
 fn handle_get<'a>(
     args: &ArgMatches<'a>,
     ctx: CoreContext,
-    repo: BoxFuture<BlobRepo, Error>,
+    repo: BlobRepo,
 ) -> impl Future<Item = (), Error = Error> {
     let bookmark_name = args.value_of("BOOKMARK_NAME").unwrap().to_string();
     let bookmark = BookmarkName::new(bookmark_name).unwrap();
@@ -157,7 +157,7 @@ fn handle_get<'a>(
 
     match changeset_type {
         "hg" => repo
-            .and_then(move |repo| repo.get_bookmark(ctx, &bookmark))
+            .get_bookmark(ctx, &bookmark)
             .and_then(move |cs| {
                 let changeset_id_str = cs.expect("bookmark could not be found").to_string();
                 let output = format_output(json_flag, changeset_id_str, "hg");
@@ -166,16 +166,12 @@ fn handle_get<'a>(
             })
             .left_future(),
 
-        "bonsai" => repo
-            .and_then(move |repo| {
-                fetch_bonsai_changeset(ctx, bookmark.to_string().as_str(), &repo).and_then(
-                    move |bonsai_cs| {
-                        let changeset_id_str = bonsai_cs.get_changeset_id().to_string();
-                        let output = format_output(json_flag, changeset_id_str, "bonsai");
-                        println!("{}", output);
-                        future::ok(())
-                    },
-                )
+        "bonsai" => fetch_bonsai_changeset(ctx, bookmark.to_string().as_str(), &repo)
+            .and_then(move |bonsai_cs| {
+                let changeset_id_str = bonsai_cs.get_changeset_id().to_string();
+                let output = format_output(json_flag, changeset_id_str, "bonsai");
+                println!("{}", output);
+                future::ok(())
             })
             .right_future(),
 
@@ -208,7 +204,7 @@ fn list_hg_bookmark_log_entries(
 fn handle_log<'a>(
     args: &ArgMatches<'a>,
     ctx: CoreContext,
-    repo: BoxFuture<BlobRepo, Error>,
+    repo: BlobRepo,
 ) -> impl Future<Item = (), Error = Error> {
     let bookmark_name = args.value_of("BOOKMARK_NAME").unwrap().to_string();
     let bookmark = BookmarkName::new(bookmark_name).unwrap();
@@ -223,40 +219,9 @@ fn handle_log<'a>(
         ),
     };
     match changeset_type {
-        "hg" => repo
-            .and_then(move |repo| {
-                list_hg_bookmark_log_entries(repo, ctx, bookmark.clone(), max_rec)
-                    .buffered(100)
-                    .map(move |rows| {
-                        let (cs_id, reason, timestamp) = rows;
-                        let cs_id_str = match cs_id {
-                            None => String::new(),
-                            Some(x) => x.to_string(),
-                        };
-                        let output = format_bookmark_log_entry(
-                            json_flag,
-                            cs_id_str,
-                            reason,
-                            timestamp,
-                            "hg",
-                            bookmark.clone(),
-                            None,
-                        );
-                        println!("{}", output);
-                    })
-                    .for_each(|_x| Ok(()))
-            })
-            .boxify(),
-
-        "bonsai" => repo
-            .and_then(move |repo| {
-                repo.list_bookmark_log_entries(
-                    ctx,
-                    bookmark.clone(),
-                    max_rec,
-                    None,
-                    Freshness::MostRecent,
-                )
+        "hg" => {
+            list_hg_bookmark_log_entries(repo, ctx, bookmark.clone(), max_rec)
+                .buffered(100)
                 .map(move |rows| {
                     let (cs_id, reason, timestamp) = rows;
                     let cs_id_str = match cs_id {
@@ -268,15 +233,44 @@ fn handle_log<'a>(
                         cs_id_str,
                         reason,
                         timestamp,
-                        "bonsai",
+                        "hg",
                         bookmark.clone(),
                         None,
                     );
                     println!("{}", output);
                 })
-                .for_each(|_| Ok(()))
+                .for_each(|_x| Ok(()))
+        }
+        .boxify(),
+
+        "bonsai" => {
+            repo.list_bookmark_log_entries(
+                ctx,
+                bookmark.clone(),
+                max_rec,
+                None,
+                Freshness::MostRecent,
+            )
+            .map(move |rows| {
+                let (cs_id, reason, timestamp) = rows;
+                let cs_id_str = match cs_id {
+                    None => String::new(),
+                    Some(x) => x.to_string(),
+                };
+                let output = format_bookmark_log_entry(
+                    json_flag,
+                    cs_id_str,
+                    reason,
+                    timestamp,
+                    "bonsai",
+                    bookmark.clone(),
+                    None,
+                );
+                println!("{}", output);
             })
-            .boxify(),
+            .for_each(|_| Ok(()))
+        }
+        .boxify(),
 
         _ => panic!("Unknown changeset-type supplied"),
     }
@@ -285,27 +279,25 @@ fn handle_log<'a>(
 fn handle_list<'a>(
     args: &ArgMatches<'a>,
     ctx: CoreContext,
-    repo: BoxFuture<BlobRepo, Error>,
+    repo: BlobRepo,
 ) -> BoxFuture<(), Error> {
     match args.value_of("kind") {
-        Some("publishing") => repo
-            .map(move |repo| {
-                repo.get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
-                    .map({
-                        cloned!(repo, ctx);
-                        move |(bookmark, bonsai_cs_id)| {
-                            repo.get_hg_from_bonsai_changeset(ctx.clone(), bonsai_cs_id)
-                                .map(move |hg_cs_id| (bookmark, bonsai_cs_id, hg_cs_id))
-                        }
-                    })
-            })
-            .flatten_stream()
-            .buffer_unordered(100)
-            .for_each(|(bookmark, bonsai_cs_id, hg_cs_id)| {
-                println!("{}\t{}\t{}", bookmark.into_name(), bonsai_cs_id, hg_cs_id);
-                Ok(())
-            })
-            .boxify(),
+        Some("publishing") => {
+            repo.get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
+                .map({
+                    cloned!(repo, ctx);
+                    move |(bookmark, bonsai_cs_id)| {
+                        repo.get_hg_from_bonsai_changeset(ctx.clone(), bonsai_cs_id)
+                            .map(move |hg_cs_id| (bookmark, bonsai_cs_id, hg_cs_id))
+                    }
+                })
+        }
+        .buffer_unordered(100)
+        .for_each(|(bookmark, bonsai_cs_id, hg_cs_id)| {
+            println!("{}\t{}\t{}", bookmark.into_name(), bonsai_cs_id, hg_cs_id);
+            Ok(())
+        })
+        .boxify(),
         kind => panic!("Invalid kind {:?}", kind),
     }
 }
@@ -313,98 +305,92 @@ fn handle_list<'a>(
 fn handle_set<'a>(
     args: &ArgMatches<'a>,
     ctx: CoreContext,
-    repo: BoxFuture<BlobRepo, Error>,
+    repo: BlobRepo,
 ) -> impl Future<Item = (), Error = Error> {
     let bookmark_name = args.value_of("BOOKMARK_NAME").unwrap().to_string();
     let rev = args.value_of("HG_CHANGESET_ID").unwrap().to_string();
     let bookmark = BookmarkName::new(bookmark_name).unwrap();
 
-    repo.and_then(move |repo| {
-        fetch_bonsai_changeset(ctx.clone(), &rev, &repo)
-            .and_then({
-                cloned!(ctx, repo, bookmark);
-                move |new_bcs| {
-                    repo.get_bonsai_bookmark(ctx.clone(), &bookmark)
-                        .map(move |maybe_old_bcs_id| (maybe_old_bcs_id, new_bcs))
-                }
-            })
-            .and_then({
-                move |(maybe_old_bcs_id, new_bcs)| {
-                    info!(
-                        ctx.logger(),
-                        "Current position of {:?} is {:?}", bookmark, maybe_old_bcs_id
-                    );
-                    let mut transaction = repo.update_bookmark_transaction(ctx);
-                    match maybe_old_bcs_id {
-                        Some(old_bcs_id) => {
-                            try_boxfuture!(transaction.update(
-                                &bookmark,
-                                new_bcs.get_changeset_id(),
-                                old_bcs_id,
-                                BookmarkUpdateReason::ManualMove,
-                                None,
-                            ));
-                        }
-                        None => {
-                            try_boxfuture!(transaction.create(
-                                &bookmark,
-                                new_bcs.get_changeset_id(),
-                                BookmarkUpdateReason::ManualMove,
-                                None,
-                            ));
-                        }
+    fetch_bonsai_changeset(ctx.clone(), &rev, &repo)
+        .and_then({
+            cloned!(ctx, repo, bookmark);
+            move |new_bcs| {
+                repo.get_bonsai_bookmark(ctx.clone(), &bookmark)
+                    .map(move |maybe_old_bcs_id| (maybe_old_bcs_id, new_bcs))
+            }
+        })
+        .and_then({
+            move |(maybe_old_bcs_id, new_bcs)| {
+                info!(
+                    ctx.logger(),
+                    "Current position of {:?} is {:?}", bookmark, maybe_old_bcs_id
+                );
+                let mut transaction = repo.update_bookmark_transaction(ctx);
+                match maybe_old_bcs_id {
+                    Some(old_bcs_id) => {
+                        try_boxfuture!(transaction.update(
+                            &bookmark,
+                            new_bcs.get_changeset_id(),
+                            old_bcs_id,
+                            BookmarkUpdateReason::ManualMove,
+                            None,
+                        ));
                     }
-                    transaction
-                        .commit()
-                        .compat()
-                        .map(|_| ())
-                        .from_err()
-                        .boxify()
+                    None => {
+                        try_boxfuture!(transaction.create(
+                            &bookmark,
+                            new_bcs.get_changeset_id(),
+                            BookmarkUpdateReason::ManualMove,
+                            None,
+                        ));
+                    }
                 }
-            })
-    })
+                transaction
+                    .commit()
+                    .compat()
+                    .map(|_| ())
+                    .from_err()
+                    .boxify()
+            }
+        })
 }
 
 fn handle_delete<'a>(
     args: &ArgMatches<'a>,
     ctx: CoreContext,
-    repo: BoxFuture<BlobRepo, Error>,
+    repo: BlobRepo,
 ) -> impl Future<Item = (), Error = Error> {
     let bookmark_name = args.value_of("BOOKMARK_NAME").unwrap().to_string();
     let bookmark = BookmarkName::new(bookmark_name).unwrap();
 
-    repo.and_then({
-        cloned!(bookmark);
-        move |repo| {
-            repo.get_bonsai_bookmark(ctx.clone(), &bookmark).and_then({
-                move |maybe_bcs_id| {
-                    info!(
-                        ctx.logger(),
-                        "Current position of {:?} is {:?}", bookmark, maybe_bcs_id
-                    );
-                    match maybe_bcs_id {
-                        Some(bcs_id) => {
-                            let mut transaction = repo.update_bookmark_transaction(ctx);
-                            try_boxfuture!(transaction.delete(
-                                &bookmark,
-                                bcs_id,
-                                BookmarkUpdateReason::ManualMove,
-                                None,
-                            ));
-                            transaction
-                                .commit()
-                                .compat()
-                                .map(|_| ())
-                                .from_err()
-                                .boxify()
-                        }
-                        None => future::err(format_err!("Cannot delete missing bookmark")).boxify(),
+    repo.get_bonsai_bookmark(ctx.clone(), &bookmark)
+        .and_then({
+            move |maybe_bcs_id| {
+                info!(
+                    ctx.logger(),
+                    "Current position of {:?} is {:?}", bookmark, maybe_bcs_id
+                );
+                match maybe_bcs_id {
+                    Some(bcs_id) => {
+                        let mut transaction = repo.update_bookmark_transaction(ctx);
+                        try_boxfuture!(transaction.delete(
+                            &bookmark,
+                            bcs_id,
+                            BookmarkUpdateReason::ManualMove,
+                            None,
+                        ));
+                        transaction
+                            .commit()
+                            .compat()
+                            .map(|_| ())
+                            .from_err()
+                            .boxify()
                     }
+                    None => future::err(format_err!("Cannot delete missing bookmark")).boxify(),
                 }
-            })
-        }
-    })
-    .boxify()
+            }
+        })
+        .boxify()
 }
 
 #[cfg(test)]

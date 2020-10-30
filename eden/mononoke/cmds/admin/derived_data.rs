@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::pin::Pin;
-
 use anyhow::{anyhow, Error};
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
@@ -21,7 +19,7 @@ use fsnodes::RootFsnodeId;
 use futures::{
     compat::Future01CompatExt,
     future::{try_join_all, FutureExt as PreviewFutureExt},
-    Future, TryStreamExt,
+    TryStreamExt,
 };
 use manifest::ManifestOps;
 use mercurial_derived_data::MappedHgChangesetId;
@@ -89,15 +87,15 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
         )
 }
 
-pub fn subcommand_derived_data(
+pub async fn subcommand_derived_data<'a>(
     fb: FacebookInit,
     logger: Logger,
-    matches: &ArgMatches<'_>,
-    sub_m: &ArgMatches<'_>,
-) -> Pin<Box<dyn Future<Output = Result<(), SubcommandError>> + Send>> {
+    matches: &'a ArgMatches<'_>,
+    sub_m: &'a ArgMatches<'_>,
+) -> Result<(), SubcommandError> {
     args::init_cachelib(fb, &matches, None);
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
-    let repo = args::open_repo(fb, &logger, &matches);
+    let repo = args::open_repo(fb, &logger, &matches).await?;
 
     match sub_m.subcommand() {
         (SUBCOMMAND_EXISTS, Some(arg_matches)) => {
@@ -111,11 +109,7 @@ pub fn subcommand_derived_data(
                 .map(|m| m.to_string())
                 .unwrap();
 
-            async move {
-                let repo = repo.compat().await?;
-                check_derived_data_exists(ctx, repo, derived_data_type, hashes_or_bookmarks).await
-            }
-            .boxed()
+            check_derived_data_exists(ctx, repo, derived_data_type, hashes_or_bookmarks).await
         }
         (SUBCOMMAND_VERIFY_MANIFESTS, Some(arg_matches)) => {
             let hash_or_bookmark = arg_matches
@@ -133,13 +127,9 @@ pub fn subcommand_derived_data(
                         .collect::<Vec<_>>()
                 });
 
-            async move {
-                let repo = repo.compat().await?;
-                verify_manifests(ctx, repo, derived_data_types, hash_or_bookmark).await
-            }
-            .boxed()
+            verify_manifests(ctx, repo, derived_data_types, hash_or_bookmark).await
         }
-        _ => async move { Err(SubcommandError::InvalidArgs) }.boxed(),
+        _ => Err(SubcommandError::InvalidArgs),
     }
 }
 

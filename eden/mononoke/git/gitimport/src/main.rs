@@ -21,7 +21,6 @@ use cmdlib::args;
 use cmdlib::helpers::block_execute;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::compat::Future01CompatExt;
 use git2::Oid;
 use import_tools::{GitimportPreferences, GitimportTarget};
 use linked_hash_map::LinkedHashMap;
@@ -126,7 +125,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let repo = args::create_repo(fb, &logger, &matches);
     block_execute(
         async {
-            let repo = repo.compat().await?;
+            let repo = repo.await?;
 
             let repo = if prefs.dry_run {
                 repo.dangerous_override(|blobstore| -> Arc<dyn Blobstore> {

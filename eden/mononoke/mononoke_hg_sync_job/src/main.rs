@@ -27,7 +27,7 @@ use dbbookmarks::SqlBookmarksBuilder;
 use fbinit::FacebookInit;
 use futures::{
     compat::Future01CompatExt,
-    future::{try_join, FutureExt as _, TryFutureExt},
+    future::{try_join, try_join3, FutureExt as _, TryFutureExt},
     stream::TryStreamExt,
 };
 use futures_ext::{spawn_future, try_boxfuture, BoxFuture, FutureExt, StreamExt};
@@ -641,7 +641,7 @@ impl BookmarkOverlay {
     }
 }
 
-fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> BoxFuture<(), Error> {
+async fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> Result<(), Error> {
     let hg_repo_path = match matches.value_of("hg-repo-ssh-path") {
         Some(hg_repo_path) => hg_repo_path.to_string(),
         None => {
@@ -660,22 +660,19 @@ fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> BoxFuture<(), Error> {
 
     let mysql_options = args::parse_mysql_options(&matches);
     let readonly_storage = args::parse_readonly_storage(&matches);
-    let config_store = try_boxfuture!(args::init_config_store(ctx.fb, ctx.logger(), &matches));
+    let config_store = args::init_config_store(ctx.fb, ctx.logger(), &matches)?;
 
     let repo_id = args::get_repo_id(config_store, &matches).expect("need repo id");
-    let repo_config = args::get_config(config_store, &matches);
-    let (repo_name, repo_config) = try_boxfuture!(repo_config);
+    let (repo_name, repo_config) = args::get_config(config_store, &matches)?;
 
     let base_retry_delay_ms = args::get_u64_opt(&matches, "base-retry-delay-ms").unwrap_or(1000);
     let retry_num = args::get_usize(&matches, "retry-num", DEFAULT_RETRY_NUM);
 
     let generate_bundles = matches.is_present(GENERATE_BUNDLES);
-    let bookmark_regex_force_lfs = try_boxfuture!(
-        matches
-            .value_of(ARG_BOOKMARK_REGEX_FORCE_GENERATE_LFS)
-            .map(Regex::new)
-            .transpose()
-    );
+    let bookmark_regex_force_lfs = matches
+        .value_of(ARG_BOOKMARK_REGEX_FORCE_GENERATE_LFS)
+        .map(Regex::new)
+        .transpose()?;
 
     let lfs_params = repo_config.lfs.clone();
 
@@ -688,88 +685,87 @@ fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> BoxFuture<(), Error> {
         .value_of(HGSQL_GLOBALREVS_DB_ADDR)
         .map(|a| a.to_string());
 
-    let repo_parts = args::open_repo(ctx.fb, &ctx.logger(), &matches).and_then({
+    let repo_parts = {
+        let repo = args::open_repo(ctx.fb, &ctx.logger(), &matches).await?;
         cloned!(ctx, hg_repo_path);
         let fb = ctx.fb;
         let maybe_skiplist_blobstore_key = repo_config.skiplist_index_blobstore_key.clone();
         let hgsql_globalrevs_name = repo_config.hgsql_globalrevs_name.clone();
-        move |repo| {
-            let filenode_verifier = match verify_lfs_blob_presence {
-                Some(uri) => {
-                    let uri = try_boxfuture!(uri.parse::<Uri>());
-                    let verifier =
-                        try_boxfuture!(LfsVerifier::new(uri, Arc::new(repo.get_blobstore())));
-                    FilenodeVerifier::LfsVerifier(verifier)
-                }
-                None => FilenodeVerifier::NoopVerifier,
-            };
-
-            let overlay = list_hg_server_bookmarks(hg_repo_path.clone())
-                .and_then({
-                    cloned!(ctx, repo);
-                    move |bookmarks| {
-                        stream::iter_ok(bookmarks.into_iter())
-                            .map(move |(book, hg_cs_id)| {
-                                repo.get_bonsai_from_hg(ctx.clone(), hg_cs_id).map(
-                                    move |maybe_bcs_id| maybe_bcs_id.map(|bcs_id| (book, bcs_id)),
-                                )
-                            })
-                            .buffered(100)
-                            .filter_map(|x| x)
-                            .collect_to::<HashMap<_, _>>()
-                    }
-                })
-                .map(Arc::new)
-                .map(BookmarkOverlay::new);
-
-            let preparer = if generate_bundles {
-                BundlePreparer::new_generate_bundles(
-                    ctx,
-                    repo.clone(),
-                    base_retry_delay_ms,
-                    retry_num,
-                    maybe_skiplist_blobstore_key,
-                    lfs_params,
-                    filenode_verifier,
-                    bookmark_regex_force_lfs,
-                )
-                .boxify()
-            } else {
-                BundlePreparer::new_use_existing(repo.clone(), base_retry_delay_ms, retry_num)
-                    .boxify()
-            };
-
-            let globalrev_syncer = {
-                async move {
-                    if !generate_bundles && hgsql_db_addr.is_some() {
-                        return Err(format_err!(
-                            "Syncing globalrevs ({}) requires generating bundles ({})",
-                            HGSQL_GLOBALREVS_DB_ADDR,
-                            GENERATE_BUNDLES
-                        ));
-                    }
-
-                    GlobalrevSyncer::new(
-                        fb,
-                        repo,
-                        hgsql_use_sqlite,
-                        hgsql_db_addr.as_ref().map(|a| a.as_ref()),
-                        mysql_options,
-                        readonly_storage.0,
-                        hgsql_globalrevs_name,
-                    )
-                    .await
-                }
+        let filenode_verifier = match verify_lfs_blob_presence {
+            Some(uri) => {
+                let uri = uri.parse::<Uri>()?;
+                let verifier = LfsVerifier::new(uri, Arc::new(repo.get_blobstore()))?;
+                FilenodeVerifier::LfsVerifier(verifier)
             }
-            .boxed()
+            None => FilenodeVerifier::NoopVerifier,
+        };
+
+        let overlay = list_hg_server_bookmarks(hg_repo_path)
+            .and_then({
+                cloned!(ctx, repo);
+                move |bookmarks| {
+                    stream::iter_ok(bookmarks.into_iter())
+                        .map(move |(book, hg_cs_id)| {
+                            repo.get_bonsai_from_hg(ctx.clone(), hg_cs_id)
+                                .map(move |maybe_bcs_id| maybe_bcs_id.map(|bcs_id| (book, bcs_id)))
+                        })
+                        .buffered(100)
+                        .filter_map(|x| x)
+                        .collect_to::<HashMap<_, _>>()
+                }
+            })
+            .map(Arc::new)
+            .map(BookmarkOverlay::new)
             .compat();
 
-            preparer
-                .map(Arc::new)
-                .join3(overlay, globalrev_syncer)
-                .boxify()
-        }
-    });
+        let preparer = {
+            cloned!(repo);
+            async move {
+                if generate_bundles {
+                    BundlePreparer::new_generate_bundles(
+                        ctx,
+                        repo,
+                        base_retry_delay_ms,
+                        retry_num,
+                        maybe_skiplist_blobstore_key,
+                        lfs_params,
+                        filenode_verifier,
+                        bookmark_regex_force_lfs,
+                    )
+                    .map(Arc::new)
+                    .compat()
+                    .await
+                } else {
+                    BundlePreparer::new_use_existing(repo, base_retry_delay_ms, retry_num)
+                        .map(Arc::new)
+                        .compat()
+                        .await
+                }
+            }
+        };
+
+        let globalrev_syncer = {
+            if !generate_bundles && hgsql_db_addr.is_some() {
+                return Err(format_err!(
+                    "Syncing globalrevs ({}) requires generating bundles ({})",
+                    HGSQL_GLOBALREVS_DB_ADDR,
+                    GENERATE_BUNDLES
+                ));
+            }
+
+            GlobalrevSyncer::new(
+                fb,
+                repo,
+                hgsql_use_sqlite,
+                hgsql_db_addr.as_ref().map(|a| a.as_ref()),
+                mysql_options,
+                readonly_storage.0,
+                hgsql_globalrevs_name,
+            )
+        };
+
+        try_join3(preparer, overlay, globalrev_syncer)
+    };
 
     let batch_size = args::get_usize(&matches, "batch-size", DEFAULT_BATCH_SIZE);
     let single_bundle_timeout_ms = args::get_u64(
@@ -783,298 +779,272 @@ fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> BoxFuture<(), Error> {
         batch_size,
         single_bundle_timeout_ms,
         verify_server_bookmark_on_failure,
-    );
-    let repos = repo_parts.join(hg_repo);
+    )?;
     scuba_sample.add("repo", repo_id.id());
     scuba_sample.add("reponame", repo_name.clone());
 
-    let myrouter_ready_fut = if let MysqlConnectionType::Myrouter(_) = mysql_options.connection_type
-    {
-        // connection goes via Myrouter
-        myrouter_ready(
-            repo_config.primary_metadata_db_address(),
-            mysql_options,
-            ctx.logger().clone(),
-        )
-    } else {
-        // connection goes via Mysql client
-        ok(()).boxify()
+    let myrouter_ready_fut = async {
+        if let MysqlConnectionType::Myrouter(_) = mysql_options.connection_type {
+            // connection goes via Myrouter
+            myrouter_ready(
+                repo_config.primary_metadata_db_address(),
+                mysql_options,
+                ctx.logger().clone(),
+            )
+            .compat()
+            .await
+        } else {
+            // connection goes via Mysql client
+            Ok(())
+        }
     };
 
     let bookmarks = args::open_sql::<SqlBookmarksBuilder>(ctx.fb, config_store, &matches);
 
-    myrouter_ready_fut
-        .join(bookmarks)
-        .and_then(move |(_, bookmarks)| {
-            let bookmarks = bookmarks.with_repo_id(repo_id);
-            let reporting_handler = build_reporting_handler(
-                ctx.clone(),
-                scuba_sample.clone(),
-                retry_num,
-                bookmarks.clone(),
-            );
+    let (_, bookmarks) = try_join(myrouter_ready_fut, bookmarks).await?;
+    let bookmarks = bookmarks.with_repo_id(repo_id);
+    let reporting_handler = build_reporting_handler(
+        ctx.clone(),
+        scuba_sample.clone(),
+        retry_num,
+        bookmarks.clone(),
+    );
 
-            let repo_lockers = get_read_write_fetcher(
-                ctx.fb,
-                mysql_options,
-                try_boxfuture!(get_repo_sqldb_address(&ctx, &matches, &repo_config.hgsql_name)).as_deref(),
-                repo_config.hgsql_name.clone(),
-                matches.is_present("lock-on-failure"),
-                matches.is_present("repo-lock-sqlite"),
-                readonly_storage.0,
-            );
+    let (lock_via, unlock_via) = get_read_write_fetcher(
+        ctx.fb,
+        mysql_options,
+        get_repo_sqldb_address(&ctx, &matches, &repo_config.hgsql_name)?.as_deref(),
+        repo_config.hgsql_name.clone(),
+        matches.is_present("lock-on-failure"),
+        matches.is_present("repo-lock-sqlite"),
+        readonly_storage.0,
+    )?;
 
-            let (lock_via, unlock_via) = try_boxfuture!(repo_lockers);
+    match matches.subcommand() {
+        (MODE_SYNC_ONCE, Some(sub_m)) => {
+            let start_id = args::get_usize_opt(&sub_m, "start-id")
+                .ok_or_else(|| Error::msg("--start-id must be specified"))?;
 
-            match matches.subcommand() {
-                (MODE_SYNC_ONCE, Some(sub_m)) => {
-                    let start_id = try_boxfuture!(args::get_usize_opt(&sub_m, "start-id")
-                        .ok_or(Error::msg("--start-id must be specified")));
-
-                    bookmarks
-                        .read_next_bookmark_log_entries(ctx.clone(), start_id as u64, 1, Freshness::MaybeStale)
-                        .compat()
-                        .collect()
-                        .map(|entries| entries.into_iter().next())
-                        .join(repos)
-                        .and_then({
-                            cloned!(ctx);
-                            move |(maybe_log_entry, ((bundle_preparer, overlay, globalrev_syncer), hg_repo))| {
-                                if let Some(log_entry) = maybe_log_entry {
-                                    bundle_preparer.prepare_single_bundle(
-                                        ctx.clone(),
-                                        log_entry.clone(),
-                                        overlay.clone(),
-                                    )
-                                    .and_then({
-                                        cloned!(ctx);
-                                        |prepared_log_entry| {
-                                            combine_entries(ctx, &vec![prepared_log_entry])
-                                        }
-                                    })
-                                    .and_then({
-                                        cloned!(ctx);
-                                        move |combined_entry| {
-                                            sync_single_combined_entry(
-                                                ctx.clone(),
-                                                combined_entry,
-                                                hg_repo,
-                                                base_retry_delay_ms,
-                                                retry_num,
-                                                globalrev_syncer.clone(),
-                                            )
-                                        }
-                                    })
-                                    .then(move |r| {
-                                        bind_sync_result(&vec![log_entry], r).into_future()
-                                    })
-                                    .collect_timing()
-                                    .map_err(|(stats, e)| (Some(stats), e))
-                                    .then(reporting_handler)
-                                    .then(build_outcome_handler(ctx.clone(), lock_via))
-                                    .map(|_| ())
-                                    .left_future()
-                                } else {
-                                    info!(ctx.logger(), "no log entries found");
-                                    Ok(()).into_future().right_future()
-                                }
-                            }
-                        })
-                        .boxify()
-                }
-                (MODE_SYNC_LOOP, Some(sub_m)) => {
-                    let start_id = args::get_i64_opt(&sub_m, "start-id");
-                    let bundle_buffer_size =
-                        args::get_usize_opt(&sub_m, "bundle-prefetch").unwrap_or(0) + 1;
-                    let combine_bundles = args::get_u64_opt(&sub_m, "combine-bundles").unwrap_or(1);
-                    if combine_bundles != 1 {
-                        panic!(
-                            "For now, we don't allow combining bundles. See T43929272 for details"
-                        );
-                    }
-                    let loop_forever = sub_m.is_present("loop-forever");
-                    let mutable_counters = args::open_sql::<SqlMutableCounters>(ctx.fb, config_store, &matches);
-                    let exit_path = sub_m
-                        .value_of("exit-file")
-                        .map(|name| Path::new(name).to_path_buf());
-
-                    // NOTE: We poll this callback twice:
-                    // - Once after possibly pulling a new piece of work.
-                    // - Once after pulling a prepared piece of work.
-                    //
-                    // This ensures that we exit ASAP in the two following cases:
-                    // - There is no work whatsoever. The first check exits early.
-                    // - There is a lot of buffered work. The 2nd check exits early without doing it all.
-                    let can_continue = Arc::new({
+            let (maybe_log_entry, (bundle_preparer, overlay, globalrev_syncer)) = try_join(
+                bookmarks
+                    .read_next_bookmark_log_entries(
+                        ctx.clone(),
+                        start_id as u64,
+                        1u64,
+                        Freshness::MaybeStale,
+                    )
+                    .try_next(),
+                repo_parts,
+            )
+            .await?;
+            if let Some(log_entry) = maybe_log_entry {
+                bundle_preparer
+                    .prepare_single_bundle(ctx.clone(), log_entry.clone(), overlay.clone())
+                    .and_then({
                         cloned!(ctx);
-                        move || match exit_path {
-                            Some(ref exit_path) if exit_path.exists() => {
-                                info!(ctx.logger(), "path {:?} exists: exiting ...", exit_path);
-                                false
-                            }
-                            _ => true,
+                        |prepared_log_entry| combine_entries(ctx, &[prepared_log_entry])
+                    })
+                    .and_then({
+                        cloned!(ctx);
+                        move |combined_entry| {
+                            sync_single_combined_entry(
+                                ctx.clone(),
+                                combined_entry,
+                                hg_repo,
+                                base_retry_delay_ms,
+                                retry_num,
+                                globalrev_syncer,
+                            )
                         }
-                    });
-
-                    mutable_counters
-                        .and_then(move |mutable_counters| {
-                            let counter = mutable_counters
-                                .get_counter(ctx.clone(), repo_id, LATEST_REPLAYED_REQUEST_KEY)
-                                .and_then(move |maybe_counter| {
-                                    maybe_counter
-                                        .or_else(move || start_id)
-                                        .ok_or(format_err!(
-                                            "{} counter not found. Pass `--start-id` flag to set the counter",
-                                            LATEST_REPLAYED_REQUEST_KEY
-                                        ))
-                                });
-
-                            cloned!(ctx);
-                            counter
-                                .join(repos)
-                                .map(move |(start_id, repos)| {
-                                    let ((bundle_preparer, mut overlay, globalrev_syncer), hg_repo) = repos;
-
-                                    loop_over_log_entries(
-                                        ctx.clone(),
-                                        bookmarks.clone(),
-                                        repo_id,
-                                        start_id,
-                                        loop_forever,
-                                        scuba_sample.clone(),
-                                        combine_bundles,
-                                        unlock_via.clone(),
-                                    )
-                                    .take_while({
-                                        cloned!(can_continue);
-                                        move |_| ok(can_continue())
-                                    })
-                                    .filter_map(|entry_vec| {
-                                        if entry_vec.is_empty() {
-                                            None
-                                        } else {
-                                            Some(entry_vec)
-                                        }
-                                    })
-                                    .map_err(|cause| AnonymousError { cause })
-                                    .map({
-                                        cloned!(ctx, bundle_preparer);
-                                        move |entries: Vec<BookmarkUpdateLogEntry>| {
-                                            cloned!(ctx, bundle_preparer);
-                                            let mut futs = vec![];
-                                            for log_entry in entries {
-                                                let f = bundle_preparer.prepare_single_bundle(
-                                                    ctx.clone(),
-                                                    log_entry.clone(),
-                                                    overlay.clone(),
-                                                );
-                                                let f = spawn_future(f)
-                                                    .map_err({
-                                                        cloned!(log_entry);
-                                                        move |err| {
-                                                            bind_sync_err(&vec![log_entry], err)
-                                                        }
-                                                    })
-                                                    // boxify is used here because of the
-                                                    // type_length_limit limitation, which gets exceeded
-                                                    // if we use heap-allocated types
-                                                    .boxify();
-                                                overlay.update(
-                                                    log_entry.bookmark_name.clone(),
-                                                    log_entry.to_changeset_id.clone(),
-                                                );
-                                                futs.push(f);
-                                            }
-
-                                            join_all(futs).and_then({
-                                                cloned!(ctx);
-                                                |prepared_log_entries| {
-                                                    combine_entries(ctx, &prepared_log_entries)
-                                                        .map_err(|e| {
-                                                            bind_sync_err(
-                                                                &prepared_log_entries
-                                                                    .into_iter()
-                                                                    .map(|prepared_entry| {
-                                                                        prepared_entry.log_entry
-                                                                    })
-                                                                    .collect::<Vec<_>>(),
-                                                                e,
-                                                            )
-                                                        })
-                                                }
-                                            })
-                                        }
-                                    })
-                                    .buffered(bundle_buffer_size)
-                                    .take_while({
-                                        cloned!(can_continue);
-                                        move |_| ok(can_continue())
-                                    })
-                                    .then({
-                                        cloned!(ctx, hg_repo);
-
-                                        move |res| match res {
-                                            Ok(combined_entry) => sync_single_combined_entry(
-                                                ctx.clone(),
-                                                combined_entry.clone(),
-                                                hg_repo.clone(),
-                                                base_retry_delay_ms,
-                                                retry_num,
-                                                globalrev_syncer.clone(),
-                                            )
-                                            .then(move |r| {
-                                                bind_sync_result(&combined_entry.components, r)
-                                            })
-                                            .collect_timing()
-                                            .map_err(|(stats, e)| (Some(stats), e))
-                                            .left_future(),
-                                            Err(e) => err((None, e)).right_future(),
-                                        }
-                                    })
-                                    .then(reporting_handler)
-                                    .then(build_outcome_handler(ctx.clone(), lock_via))
-                                    .map(move |entry| {
-                                        let next_id = get_id_to_search_after(&entry);
-                                        retry(
-                                            ctx.logger().clone(),
-                                            {
-                                                cloned!(ctx, mutable_counters);
-                                                move |_| {
-                                                    mutable_counters.set_counter(
-                                                        ctx.clone(),
-                                                        repo_id,
-                                                        LATEST_REPLAYED_REQUEST_KEY,
-                                                        next_id,
-                                                        // TODO(stash): do we need conditional updates here?
-                                                        None,
-                                                    )
-                                                    .and_then(|success| {
-                                                        if success {
-                                                            Ok(())
-                                                        } else {
-                                                            bail!("failed to update counter")
-                                                        }
-                                                    })
-                                                }
-                                            },
-                                            base_retry_delay_ms,
-                                            retry_num,
-                                        )
-                                    })
-                                })
-                                .flatten_stream()
-                                .for_each(|res| res.map(|_| ()))
-                                .boxify()
-                        })
-                        .boxify()
-                }
-                _ => {
-                    error!(ctx.logger(), "incorrect mode of operation is specified");
-                    std::process::exit(1);
-                }
+                    })
+                    .then(move |r| bind_sync_result(&[log_entry], r).into_future())
+                    .collect_timing()
+                    .map_err(|(stats, e)| (Some(stats), e))
+                    .then(reporting_handler)
+                    .then(build_outcome_handler(ctx.clone(), lock_via))
+                    .map(|_| ())
+                    .compat()
+                    .await
+            } else {
+                info!(ctx.logger(), "no log entries found");
+                Ok(())
             }
-        })
-        .boxify()
+        }
+        (MODE_SYNC_LOOP, Some(sub_m)) => {
+            let start_id = args::get_i64_opt(&sub_m, "start-id");
+            let bundle_buffer_size =
+                args::get_usize_opt(&sub_m, "bundle-prefetch").unwrap_or(0) + 1;
+            let combine_bundles = args::get_u64_opt(&sub_m, "combine-bundles").unwrap_or(1);
+            if combine_bundles != 1 {
+                panic!("For now, we don't allow combining bundles. See T43929272 for details");
+            }
+            let loop_forever = sub_m.is_present("loop-forever");
+            let mutable_counters =
+                args::open_sql::<SqlMutableCounters>(ctx.fb, config_store, &matches).await?;
+            let exit_path = sub_m
+                .value_of("exit-file")
+                .map(|name| Path::new(name).to_path_buf());
+
+            // NOTE: We poll this callback twice:
+            // - Once after possibly pulling a new piece of work.
+            // - Once after pulling a prepared piece of work.
+            //
+            // This ensures that we exit ASAP in the two following cases:
+            // - There is no work whatsoever. The first check exits early.
+            // - There is a lot of buffered work. The 2nd check exits early without doing it all.
+            let can_continue = Arc::new({
+                cloned!(ctx);
+                move || match exit_path {
+                    Some(ref exit_path) if exit_path.exists() => {
+                        info!(ctx.logger(), "path {:?} exists: exiting ...", exit_path);
+                        false
+                    }
+                    _ => true,
+                }
+            });
+
+            let counter = mutable_counters
+                .get_counter(ctx.clone(), repo_id, LATEST_REPLAYED_REQUEST_KEY)
+                .and_then(move |maybe_counter| {
+                    maybe_counter.or_else(move || start_id).ok_or_else(|| {
+                        format_err!(
+                            "{} counter not found. Pass `--start-id` flag to set the counter",
+                            LATEST_REPLAYED_REQUEST_KEY
+                        )
+                    })
+                })
+                .compat();
+
+            cloned!(ctx);
+            let (start_id, (bundle_preparer, mut overlay, globalrev_syncer)) =
+                try_join(counter, repo_parts).await?;
+
+            loop_over_log_entries(
+                ctx.clone(),
+                bookmarks.clone(),
+                repo_id,
+                start_id,
+                loop_forever,
+                scuba_sample.clone(),
+                combine_bundles,
+                unlock_via.clone(),
+            )
+            .take_while({
+                cloned!(can_continue);
+                move |_| ok(can_continue())
+            })
+            .filter_map(|entry_vec| {
+                if entry_vec.is_empty() {
+                    None
+                } else {
+                    Some(entry_vec)
+                }
+            })
+            .map_err(|cause| AnonymousError { cause })
+            .map({
+                cloned!(ctx, bundle_preparer);
+                move |entries: Vec<BookmarkUpdateLogEntry>| {
+                    cloned!(ctx, bundle_preparer);
+                    let mut futs = vec![];
+                    for log_entry in entries {
+                        let f = bundle_preparer.prepare_single_bundle(
+                            ctx.clone(),
+                            log_entry.clone(),
+                            overlay.clone(),
+                        );
+                        let f = spawn_future(f)
+                            .map_err({
+                                cloned!(log_entry);
+                                move |err| bind_sync_err(&[log_entry], err)
+                            })
+                            // boxify is used here because of the
+                            // type_length_limit limitation, which gets exceeded
+                            // if we use heap-allocated types
+                            .boxify();
+                        overlay.update(
+                            log_entry.bookmark_name.clone(),
+                            log_entry.to_changeset_id.clone(),
+                        );
+                        futs.push(f);
+                    }
+
+                    join_all(futs).and_then({
+                        cloned!(ctx);
+                        |prepared_log_entries| {
+                            combine_entries(ctx, &prepared_log_entries).map_err(|e| {
+                                bind_sync_err(
+                                    &prepared_log_entries
+                                        .into_iter()
+                                        .map(|prepared_entry| prepared_entry.log_entry)
+                                        .collect::<Vec<_>>(),
+                                    e,
+                                )
+                            })
+                        }
+                    })
+                }
+            })
+            .buffered(bundle_buffer_size)
+            .take_while({
+                cloned!(can_continue);
+                move |_| ok(can_continue())
+            })
+            .then({
+                cloned!(ctx, hg_repo);
+
+                move |res| match res {
+                    Ok(combined_entry) => sync_single_combined_entry(
+                        ctx.clone(),
+                        combined_entry.clone(),
+                        hg_repo.clone(),
+                        base_retry_delay_ms,
+                        retry_num,
+                        globalrev_syncer.clone(),
+                    )
+                    .then(move |r| bind_sync_result(&combined_entry.components, r))
+                    .collect_timing()
+                    .map_err(|(stats, e)| (Some(stats), e))
+                    .left_future(),
+                    Err(e) => err((None, e)).right_future(),
+                }
+            })
+            .then(reporting_handler)
+            .then(build_outcome_handler(ctx.clone(), lock_via))
+            .map(move |entry| {
+                let next_id = get_id_to_search_after(&entry);
+                retry(
+                    ctx.logger().clone(),
+                    {
+                        cloned!(ctx, mutable_counters);
+                        move |_| {
+                            mutable_counters
+                                .set_counter(
+                                    ctx.clone(),
+                                    repo_id,
+                                    LATEST_REPLAYED_REQUEST_KEY,
+                                    next_id,
+                                    // TODO(stash): do we need conditional updates here?
+                                    None,
+                                )
+                                .and_then(|success| {
+                                    if success {
+                                        Ok(())
+                                    } else {
+                                        bail!("failed to update counter")
+                                    }
+                                })
+                        }
+                    },
+                    base_retry_delay_ms,
+                    retry_num,
+                )
+            })
+            .for_each(|res| res.map(|_| ()))
+            .compat()
+            .await
+        }
+        _ => bail!("incorrect mode of operation is specified"),
+    }
 }
 
 fn get_repo_sqldb_address<'a>(
@@ -1277,7 +1247,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     // TODO: Don't take ownership of matches here
-    let fut = run(ctx.clone(), matches.clone()).compat();
+    let fut = run(ctx, matches.clone());
 
     block_execute(
         fut,

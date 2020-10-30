@@ -92,7 +92,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     let run = async {
-        let repo = args::open_repo(fb, &logger, &matches).compat().await?;
+        let repo = args::open_repo(fb, &logger, &matches).await?;
         let in_filename = matches.value_of("IN_FILENAME").unwrap();
         backfill(ctx, repo, in_filename).await
     };

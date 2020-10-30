@@ -14,7 +14,7 @@ use futures::{
     future::{FutureExt as PreviewFutureExt, TryFutureExt},
 };
 use futures_ext::{try_boxfuture, FutureExt};
-use futures_old::{stream, Future, IntoFuture, Stream};
+use futures_old::{stream, Future, Stream};
 use std::{
     fs::File,
     io::{BufRead, BufReader, Write},
@@ -103,7 +103,7 @@ pub async fn subcommand_phases<'a>(
     matches: &'a ArgMatches<'_>,
     sub_m: &'a ArgMatches<'_>,
 ) -> Result<(), SubcommandError> {
-    let repo = args::open_repo(fb, &logger, &matches);
+    let repo = args::open_repo(fb, &logger, &matches).await?;
     args::init_cachelib(fb, &matches, None);
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
@@ -120,10 +120,8 @@ pub async fn subcommand_phases<'a>(
                 .ok_or(Error::msg("changeset hash is not specified"));
 
             subcommand_fetch_phase_impl(fb, repo, hash, ty)
-                .boxed()
-                .compat()
-                .from_err()
-                .boxify()
+                .await
+                .map_err(SubcommandError::Error)
         }
         (ADD_PUBLIC_PHASES, Some(sub_m)) => {
             let path = String::from(sub_m.value_of("input-file").unwrap());
@@ -132,9 +130,11 @@ pub async fn subcommand_phases<'a>(
                 .and_then(|chunk_size| chunk_size.parse::<usize>().ok())
                 .unwrap_or(16384);
 
-            repo.and_then(move |repo| add_public_phases(ctx, repo, logger, path, chunk_size))
+            add_public_phases(ctx, repo, logger, path, chunk_size)
                 .from_err()
-                .boxify()
+                .compat()
+                .await
+                .map_err(SubcommandError::Error)
         }
         (LIST_PUBLIC, Some(sub_m)) => {
             let ty = sub_m
@@ -144,15 +144,11 @@ pub async fn subcommand_phases<'a>(
                 .to_string();
 
             subcommand_list_public_impl(ctx, ty, repo)
-                .boxed()
-                .compat()
-                .from_err()
-                .boxify()
+                .await
+                .map_err(SubcommandError::Error)
         }
-        _ => Err(SubcommandError::InvalidArgs).into_future().boxify(),
+        _ => Err(SubcommandError::InvalidArgs),
     }
-    .compat()
-    .await
 }
 
 fn add_public_phases(
@@ -212,9 +208,8 @@ fn add_public_phases(
 async fn subcommand_list_public_impl(
     ctx: CoreContext,
     ty: String,
-    repo: impl Future<Item = BlobRepo, Error = Error>,
+    repo: BlobRepo,
 ) -> Result<(), Error> {
-    let repo = repo.compat().await?;
     let phases = repo.get_phases();
     let sql_phases = phases.get_sql_phases();
 
@@ -246,12 +241,11 @@ async fn subcommand_list_public_impl(
 
 pub async fn subcommand_fetch_phase_impl<'a>(
     fb: FacebookInit,
-    repo: impl Future<Item = BlobRepo, Error = Error>,
+    repo: BlobRepo,
     hash: Result<String, Error>,
     ty: String,
 ) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo = repo.compat().await?;
     let hash = hash?;
     let phases = repo.get_phases();
 

@@ -16,7 +16,6 @@ use futures::{
     future::TryFutureExt,
     stream::{self, TryStreamExt},
 };
-use futures_ext::FutureExt;
 use lfs_import_lib::lfs_upload;
 use mercurial_types::blobs::File;
 
@@ -69,11 +68,6 @@ fn main(fb: FacebookInit) -> Result<()> {
     let logger = args::init_logging(fb, &matches);
     args::init_config_store(fb, &logger, &matches)?;
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
-    let blobrepo = if matches.is_present(ARG_NO_CREATE) {
-        args::open_repo(fb, &logger, &matches).left_future()
-    } else {
-        args::create_repo(fb, &logger, &matches).right_future()
-    };
     let lfs_helper = matches.value_of(ARG_LFS_HELPER).unwrap().to_string();
 
     let concurrency: usize = matches
@@ -88,15 +82,23 @@ fn main(fb: FacebookInit) -> Result<()> {
         .map(|e| File::new(Bytes::copy_from_slice(e.as_bytes()), None, None).get_lfs_content())
         .collect();
 
-    let import = async move {
-        let blobrepo = blobrepo.compat().await?;
-        stream::iter(entries)
-            .try_for_each_concurrent(concurrency, |lfs| {
-                lfs_upload(ctx.clone(), blobrepo.clone(), lfs_helper.clone(), lfs)
-                    .compat()
-                    .map_ok(|_| ())
-            })
-            .await
+    let import = {
+        let matches = &matches;
+        let logger = &logger;
+        async move {
+            let blobrepo = if matches.is_present(ARG_NO_CREATE) {
+                args::open_repo(fb, logger, &matches).await?
+            } else {
+                args::create_repo(fb, logger, &matches).await?
+            };
+            stream::iter(entries)
+                .try_for_each_concurrent(concurrency, |lfs| {
+                    lfs_upload(ctx.clone(), blobrepo.clone(), lfs_helper.clone(), lfs)
+                        .compat()
+                        .map_ok(|_| ())
+                })
+                .await
+        }
     };
 
     block_execute(

@@ -124,7 +124,7 @@ async fn get_things_from_matches(
     let source_repo_fut = args::open_repo_with_repo_id(fb, logger, source_repo_id, &matches);
     let target_repo_fut = args::open_repo_with_repo_id(fb, logger, target_repo_id, &matches);
 
-    let (source_repo, target_repo) = try_join!(source_repo_fut.compat(), target_repo_fut.compat())?;
+    let (source_repo, target_repo) = try_join!(source_repo_fut, target_repo_fut)?;
 
     let live_commit_sync_config: Arc<dyn LiveCommitSyncConfig> =
         Arc::new(CfgrLiveCommitSyncConfig::new(&ctx.logger(), config_store)?);

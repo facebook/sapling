@@ -15,7 +15,6 @@ use cmdlib::args;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{compat::Future01CompatExt, StreamExt, TryFutureExt, TryStreamExt};
-use futures_ext::FutureExt;
 use futures_old::prelude::*;
 use manifest::{bonsai_diff, BonsaiDiffFileChange};
 use mercurial_types::{HgChangesetId, HgManifestId, MPath};
@@ -74,21 +73,20 @@ pub async fn subcommand_hg_changeset<'a>(
                 .and_then(HgChangesetId::from_str);
 
             args::init_cachelib(fb, &matches, None);
-            args::open_repo(fb, &logger, &matches)
-                .and_then(move |repo| {
-                    (left_cs, right_cs)
-                        .into_future()
-                        .and_then(move |(left_cs, right_cs)| {
-                            hg_changeset_diff(ctx, repo, left_cs, right_cs)
-                        })
+            let repo = args::open_repo(fb, &logger, &matches).await?;
+            (left_cs, right_cs)
+                .into_future()
+                .and_then(move |(left_cs, right_cs)| {
+                    hg_changeset_diff(ctx, repo, left_cs, right_cs)
                 })
                 .and_then(|diff| {
                     serde_json::to_writer(io::stdout(), &diff)
                         .map(|_| ())
                         .map_err(Error::from)
                 })
-                .from_err()
-                .boxify()
+                .compat()
+                .await
+                .map_err(SubcommandError::Error)
         }
         (HG_CHANGESET_RANGE, Some(sub_m)) => {
             let start_cs = sub_m
@@ -101,53 +99,50 @@ pub async fn subcommand_hg_changeset<'a>(
                 .and_then(HgChangesetId::from_str);
 
             args::init_cachelib(fb, &matches, None);
-            args::open_repo(fb, &logger, &matches)
-                .and_then(move |repo| {
-                    (start_cs, stop_cs)
-                        .into_future()
-                        .and_then({
-                            cloned!(ctx, repo);
-                            move |(start_cs, stop_cs)| {
-                                (
-                                    repo.get_bonsai_from_hg(ctx.clone(), start_cs),
-                                    repo.get_bonsai_from_hg(ctx, stop_cs),
-                                )
-                            }
-                        })
-                        .and_then(|(start_cs_opt, stop_cs_opt)| {
-                            (
-                                start_cs_opt.ok_or(Error::msg("failed to resolve changeset")),
-                                stop_cs_opt.ok_or(Error::msg("failed to resovle changeset")),
-                            )
-                        })
-                        .and_then({
-                            cloned!(repo);
-                            move |(start_cs, stop_cs)| {
-                                RangeNodeStream::new(
-                                    ctx.clone(),
-                                    repo.get_changeset_fetcher(),
-                                    start_cs,
-                                    stop_cs,
-                                )
-                                .map(move |cs| repo.get_hg_from_bonsai_changeset(ctx.clone(), cs))
-                                .buffered(100)
-                                .map(|cs| cs.to_hex().to_string())
-                                .collect()
-                            }
-                        })
-                        .and_then(|css| {
-                            serde_json::to_writer(io::stdout(), &css)
-                                .map(|_| ())
-                                .map_err(Error::from)
-                        })
+            let repo = args::open_repo(fb, &logger, &matches).await?;
+            (start_cs, stop_cs)
+                .into_future()
+                .and_then({
+                    cloned!(ctx, repo);
+                    move |(start_cs, stop_cs)| {
+                        (
+                            repo.get_bonsai_from_hg(ctx.clone(), start_cs),
+                            repo.get_bonsai_from_hg(ctx, stop_cs),
+                        )
+                    }
                 })
-                .from_err()
-                .boxify()
+                .and_then(|(start_cs_opt, stop_cs_opt)| {
+                    (
+                        start_cs_opt.ok_or_else(|| Error::msg("failed to resolve changeset")),
+                        stop_cs_opt.ok_or_else(|| Error::msg("failed to resovle changeset")),
+                    )
+                })
+                .and_then({
+                    cloned!(repo);
+                    move |(start_cs, stop_cs)| {
+                        RangeNodeStream::new(
+                            ctx.clone(),
+                            repo.get_changeset_fetcher(),
+                            start_cs,
+                            stop_cs,
+                        )
+                        .map(move |cs| repo.get_hg_from_bonsai_changeset(ctx.clone(), cs))
+                        .buffered(100)
+                        .map(|cs| cs.to_hex().to_string())
+                        .collect()
+                    }
+                })
+                .and_then(|css| {
+                    serde_json::to_writer(io::stdout(), &css)
+                        .map(|_| ())
+                        .map_err(Error::from)
+                })
+                .compat()
+                .await
+                .map_err(SubcommandError::Error)
         }
-        _ => Err(SubcommandError::InvalidArgs).into_future().boxify(),
+        _ => Err(SubcommandError::InvalidArgs),
     }
-    .compat()
-    .await
 }
 
 fn hg_changeset_diff(

@@ -91,9 +91,7 @@ impl HgRecordingClient {
         config_store: &ConfigStore,
         matches: &ArgMatches<'_>,
     ) -> Result<HgRecordingClient, Error> {
-        let sql = args::open_sql::<HgRecordingConnection>(fb, config_store, matches)
-            .compat()
-            .await?;
+        let sql = args::open_sql::<HgRecordingConnection>(fb, config_store, matches).await?;
         let repo_id = args::get_repo_id(config_store, matches)?;
         Ok(HgRecordingClient { repo_id, sql })
     }

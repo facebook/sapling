@@ -95,7 +95,7 @@ async fn run_move<'a>(
         args::get_and_parse_opt::<NonZeroU64>(sub_m, MAX_NUM_OF_MOVES_IN_COMMIT);
 
     let (repo, resulting_changeset_args) = try_join(
-        args::open_repo(ctx.fb, &ctx.logger().clone(), &matches).compat(),
+        args::open_repo(ctx.fb, &ctx.logger().clone(), &matches),
         resulting_changeset_args.compat(),
     )
     .await?;
@@ -144,7 +144,7 @@ async fn run_merge<'a>(
     let second_parent = sub_m.value_of(SECOND_PARENT).unwrap().to_owned();
     let resulting_changeset_args = cs_args_from_matches(&sub_m);
     let (repo, resulting_changeset_args) = try_join(
-        args::open_repo(ctx.fb, &ctx.logger().clone(), &matches).compat(),
+        args::open_repo(ctx.fb, &ctx.logger().clone(), &matches),
         resulting_changeset_args.compat(),
     )
     .await?;
@@ -190,8 +190,7 @@ async fn run_sync_diamond_merge<'a>(
         args::get_config_by_repoid(config_store, matches, source_repo_id)?;
 
     let merge_commit_hash = sub_m.value_of(COMMIT_HASH).unwrap().to_owned();
-    let (source_repo, target_repo, mapping) =
-        try_join3(source_repo.compat(), target_repo.compat(), mapping.compat()).await?;
+    let (source_repo, target_repo, mapping) = try_join3(source_repo, target_repo, mapping).await?;
 
     let source_merge_cs_id =
         helpers::csid_resolve(ctx.clone(), source_repo.clone(), merge_commit_hash)
@@ -219,9 +218,7 @@ async fn run_pre_merge_delete<'a>(
     matches: &ArgMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let repo = args::open_repo(ctx.fb, &ctx.logger().clone(), &matches)
-        .compat()
-        .await?;
+    let repo = args::open_repo(ctx.fb, &ctx.logger().clone(), &matches).await?;
 
     let delete_cs_args_factory = get_delete_commits_cs_args_factory(sub_m)?;
 
@@ -293,9 +290,7 @@ async fn run_bonsai_merge<'a>(
     matches: &ArgMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let repo = args::open_repo(ctx.fb, &ctx.logger().clone(), &matches)
-        .compat()
-        .await?;
+    let repo = args::open_repo(ctx.fb, &ctx.logger().clone(), &matches).await?;
 
     let (p1, p2) = try_join(
         async {
@@ -329,9 +324,7 @@ async fn run_gradual_merge<'a>(
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
     let config_store = args::init_config_store(ctx.fb, ctx.logger(), matches)?;
-    let repo = args::open_repo(ctx.fb, &ctx.logger(), &matches)
-        .compat()
-        .await?;
+    let repo = args::open_repo(ctx.fb, &ctx.logger(), &matches).await?;
 
     let last_deletion_commit = sub_m
         .value_of(LAST_DELETION_COMMIT)
@@ -385,9 +378,7 @@ async fn run_gradual_merge_progress<'a>(
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
     let config_store = args::init_config_store(ctx.fb, ctx.logger(), matches)?;
-    let repo = args::open_repo(ctx.fb, &ctx.logger(), &matches)
-        .compat()
-        .await?;
+    let repo = args::open_repo(ctx.fb, &ctx.logger(), &matches).await?;
 
     let last_deletion_commit = sub_m
         .value_of(LAST_DELETION_COMMIT)
@@ -549,9 +540,7 @@ async fn run_catchup_delete_head<'a>(
     matches: &ArgMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let repo = args::open_repo(ctx.fb, &ctx.logger().clone(), &matches)
-        .compat()
-        .await?;
+    let repo = args::open_repo(ctx.fb, &ctx.logger().clone(), &matches).await?;
 
     let head_bookmark = sub_m
         .value_of(HEAD_BOOKMARK)
@@ -615,9 +604,7 @@ async fn run_catchup_validate<'a>(
     matches: &ArgMatches<'a>,
     sub_m: &ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let repo = args::open_repo(ctx.fb, &ctx.logger().clone(), &matches)
-        .compat()
-        .await?;
+    let repo = args::open_repo(ctx.fb, &ctx.logger().clone(), &matches).await?;
 
     let result_commit = sub_m
         .value_of(COMMIT_HASH)

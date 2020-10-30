@@ -90,8 +90,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let blobrepo = args::open_repo(fb, &logger, &matches);
     let run = async {
-        let (repo, globalrevs_store) =
-            try_join(blobrepo.compat(), globalrevs_store.compat()).await?;
+        let (repo, globalrevs_store) = try_join(blobrepo, globalrevs_store).await?;
         let in_filename = matches.value_of("IN_FILENAME").unwrap();
         let globalrevs_store = Arc::new(globalrevs_store);
         upload(ctx, repo, in_filename, globalrevs_store)

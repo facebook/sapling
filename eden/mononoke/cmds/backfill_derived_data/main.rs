@@ -32,8 +32,6 @@ use futures::{
     future::{self, try_join},
     stream::{self, StreamExt, TryStreamExt},
 };
-use futures_ext::FutureExt as OldFutureExt;
-use futures_old::Future as OldFuture;
 use futures_stats::TimedFutureExt;
 use metaconfig_types::DerivedDataConfig;
 use mononoke_types::{ChangesetId, DateTime};
@@ -94,16 +92,16 @@ const UNREDACTED_TYPES: &[&str] = &[
     BlameRoot::NAME,
 ];
 
-fn open_repo_maybe_unredacted<'a>(
+async fn open_repo_maybe_unredacted(
     fb: FacebookInit,
     logger: &Logger,
-    matches: &ArgMatches<'a>,
+    matches: &ArgMatches<'_>,
     data_type: &str,
-) -> impl OldFuture<Item = BlobRepo, Error = Error> {
+) -> Result<BlobRepo, Error> {
     if UNREDACTED_TYPES.contains(&data_type) {
-        args::open_repo_unredacted(fb, logger, matches).left_future()
+        args::open_repo_unredacted(fb, logger, matches).await
     } else {
-        args::open_repo(fb, logger, matches).right_future()
+        args::open_repo(fb, logger, matches).await
     }
 }
 
@@ -266,9 +264,7 @@ async fn run_subcmd<'a>(
 ) -> Result<(), Error> {
     match matches.subcommand() {
         (SUBCOMMAND_BACKFILL_ALL, Some(sub_m)) => {
-            let repo = args::open_repo_unredacted(fb, logger, matches)
-                .compat()
-                .await?;
+            let repo = args::open_repo_unredacted(fb, logger, matches).await?;
             let derived_data_types = sub_m.values_of(ARG_DERIVED_DATA_TYPE).map_or_else(
                 || repo.get_derived_data_config().derived_data_types.clone(),
                 |names| names.map(ToString::to_string).collect(),
@@ -301,9 +297,8 @@ async fn run_subcmd<'a>(
                 .map(|limit| limit.parse::<usize>())
                 .transpose()?;
 
-            let repo = open_repo_maybe_unredacted(fb, &logger, &matches, &derived_data_type)
-                .compat()
-                .await?;
+            let repo =
+                open_repo_maybe_unredacted(fb, &logger, &matches, &derived_data_type).await?;
 
             // Backfill is used when when a derived data type is not enabled yet, and so
             // any attempt to call BonsaiDerived::derive() fails. However calling
@@ -370,9 +365,7 @@ async fn run_subcmd<'a>(
             .await
         }
         (SUBCOMMAND_TAIL, Some(sub_m)) => {
-            let unredacted_repo = args::open_repo_unredacted(fb, &logger, &matches)
-                .compat()
-                .await?;
+            let unredacted_repo = args::open_repo_unredacted(fb, &logger, &matches).await?;
             let use_shared_leases = sub_m.is_present(ARG_USE_SHARED_LEASES);
             let batched = sub_m.is_present(ARG_BATCHED);
             subcommand_tail(&ctx, unredacted_repo, use_shared_leases, batched).await
@@ -385,8 +378,8 @@ async fn run_subcmd<'a>(
                 .to_string();
 
             let (repo, changesets) = try_join(
-                args::open_repo(fb, &logger, &matches).compat(),
-                args::open_sql::<SqlChangesets>(fb, config_store, &matches).compat(),
+                args::open_repo(fb, &logger, &matches),
+                args::open_sql::<SqlChangesets>(fb, config_store, &matches),
             )
             .await?;
             let phases = repo.get_phases();
@@ -408,9 +401,7 @@ async fn run_subcmd<'a>(
             let derived_data_type = sub_m.value_of(ARG_DERIVED_DATA_TYPE);
             let (repo, types): (_, Vec<String>) = match (all, derived_data_type) {
                 (true, None) => {
-                    let repo = args::open_repo_unredacted(fb, logger, matches)
-                        .compat()
-                        .await?;
+                    let repo = args::open_repo_unredacted(fb, logger, matches).await?;
                     let types = repo
                         .get_derived_data_config()
                         .derived_data_types
@@ -422,7 +413,6 @@ async fn run_subcmd<'a>(
                 (false, Some(derived_data_type)) => {
                     let repo =
                         open_repo_maybe_unredacted(fb, &logger, &matches, &derived_data_type)
-                            .compat()
                             .await?;
                     (repo, vec![derived_data_type.to_string()])
                 }

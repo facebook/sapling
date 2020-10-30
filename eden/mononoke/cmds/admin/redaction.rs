@@ -6,7 +6,7 @@
  */
 
 use crate::common::get_file_nodes;
-use anyhow::{anyhow, format_err, Error};
+use anyhow::{anyhow, format_err, Context, Error};
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
@@ -14,15 +14,13 @@ use clap::{App, Arg, ArgGroup, ArgMatches, SubCommand};
 use cloned::cloned;
 use cmdlib::{args, helpers};
 use context::CoreContext;
-use failure_ext::FutureFailureErrorExt;
 use fbinit::FacebookInit;
 use futures::{
     compat::Future01CompatExt,
-    future::{FutureExt as NewFutureExt, TryFutureExt},
+    future::{try_join, FutureExt as NewFutureExt, TryFutureExt},
     stream::{StreamExt, TryStreamExt},
 };
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
-use futures_old::future::{self, join_all, Future};
+use futures_old::future::{join_all, Future};
 use manifest::ManifestOps;
 use mercurial_types::{blobs::HgBlobChangeset, HgChangesetId, MPath};
 use mononoke_types::{typed_hash::MononokeId, ContentId, Timestamp};
@@ -166,15 +164,9 @@ pub async fn subcommand_redaction<'a>(
     match sub_m.subcommand() {
         (REDACTION_ADD, Some(sub_sub_m)) => redaction_add(fb, logger, matches, sub_sub_m).await,
         (REDACTION_REMOVE, Some(sub_sub_m)) => {
-            redaction_remove(fb, logger, matches, sub_sub_m)
-                .compat()
-                .await
+            redaction_remove(fb, logger, matches, sub_sub_m).await
         }
-        (REDACTION_LIST, Some(sub_sub_m)) => {
-            redaction_list(fb, logger, matches, sub_sub_m)
-                .compat()
-                .await
-        }
+        (REDACTION_LIST, Some(sub_sub_m)) => redaction_list(fb, logger, matches, sub_sub_m).await,
         _ => {
             eprintln!("{}", matches.usage());
             ::std::process::exit(1);
@@ -220,53 +212,47 @@ fn task_and_paths_parser(sub_m: &ArgMatches<'_>) -> Result<(String, Vec<MPath>),
 }
 
 /// Boilerplate to prepare a bunch of prerequisites for the rest of blaclisting operations
-fn get_ctx_blobrepo_redacted_blobs_cs_id(
+async fn get_ctx_blobrepo_redacted_blobs_cs_id<'a>(
     fb: FacebookInit,
     logger: Logger,
-    matches: &ArgMatches<'_>,
-    sub_m: &ArgMatches<'_>,
-) -> impl Future<
-    Item = (
+    matches: &'a ArgMatches<'_>,
+    sub_m: &'a ArgMatches<'_>,
+) -> Result<
+    (
         CoreContext,
         BlobRepo,
         SqlRedactedContentStore,
         HgChangesetId,
     ),
-    Error = SubcommandError,
+    SubcommandError,
 > {
     let rev = match sub_m.value_of("hash") {
         Some(rev) => rev.to_string(),
-        None => return future::err(SubcommandError::InvalidArgs).boxify(),
+        None => return Err(SubcommandError::InvalidArgs),
     };
 
     args::init_cachelib(fb, &matches, None);
-    let config_store = try_boxfuture!(args::init_config_store(fb, &logger, matches));
+    let config_store = args::init_config_store(fb, &logger, matches)?;
 
     let blobrepo = args::open_repo(fb, &logger, &matches);
-    let redacted_blobs = args::open_sql::<SqlRedactedContentStore>(fb, config_store, &matches)
-        .context("While opening SqlRedactedContentStore")
-        .from_err();
+    let redacted_blobs = async move {
+        args::open_sql::<SqlRedactedContentStore>(fb, config_store, &matches)
+            .await
+            .context("While opening SqlRedactedContentStore")
+    };
+    let (blobrepo, redacted_blobs) = try_join(blobrepo, redacted_blobs).await?;
 
     let ctx = CoreContext::new_with_logger(fb, logger);
 
-    blobrepo
-        .and_then({
-            cloned!(ctx);
-            move |blobrepo| {
-                helpers::csid_resolve(ctx.clone(), blobrepo.clone(), rev.to_string())
-                    .and_then({
-                        cloned!(ctx, blobrepo);
-                        move |cs_id| blobrepo.get_hg_from_bonsai_changeset(ctx, cs_id)
-                    })
-                    .map(|hg_cs_id| (blobrepo, hg_cs_id))
-            }
-        })
-        .join(redacted_blobs)
-        .map(move |((blobrepo, hg_cs_id), redacted_blobs)| {
-            (ctx, blobrepo, redacted_blobs, hg_cs_id)
-        })
-        .from_err()
-        .boxify()
+    let cs_id = helpers::csid_resolve(ctx.clone(), blobrepo.clone(), rev.to_string())
+        .compat()
+        .await?;
+    let hg_cs_id = blobrepo
+        .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
+        .compat()
+        .await?;
+
+    Ok((ctx, blobrepo, redacted_blobs, hg_cs_id))
 }
 
 /// Fetch a vector of `ContentId`s for a vector of `MPath`s
@@ -305,9 +291,7 @@ async fn redaction_add<'a, 'b>(
 ) -> Result<(), SubcommandError> {
     let (task, paths) = task_and_paths_parser(sub_m)?;
     let (ctx, blobrepo, redacted_blobs, cs_id) =
-        get_ctx_blobrepo_redacted_blobs_cs_id(fb, logger.clone(), matches, sub_m)
-            .compat()
-            .await?;
+        get_ctx_blobrepo_redacted_blobs_cs_id(fb, logger.clone(), matches, sub_m).await?;
 
     let content_ids =
         content_ids_for_paths(ctx.clone(), logger.clone(), blobrepo.clone(), cs_id, paths)
@@ -344,98 +328,96 @@ async fn redaction_add<'a, 'b>(
     Ok(())
 }
 
-fn redaction_list(
+async fn redaction_list<'a>(
     fb: FacebookInit,
     logger: Logger,
-    matches: &ArgMatches<'_>,
-    sub_m: &ArgMatches<'_>,
-) -> BoxFuture<(), SubcommandError> {
-    get_ctx_blobrepo_redacted_blobs_cs_id(fb, logger.clone(), matches, sub_m)
-        .and_then(move |(ctx, blobrepo, redacted_blobs, cs_id)| {
-            info!(
-                logger,
-                "Listing redacted files for ChangesetId: {:?}", cs_id
-            );
-            info!(logger, "Please be patient.");
-            redacted_blobs
-                .get_all_redacted_blobs()
-                .join(
-                    cs_id
-                        .load(ctx.clone(), blobrepo.blobstore())
-                        .compat()
-                        .from_err(),
-                )
-                .and_then({
-                    cloned!(logger);
-                    move |(redacted_blobs, hg_cs)| {
-                        async move {
-                            let redacted_keys = redacted_blobs.iter().map(|(key, _)| key).collect();
-                            let path_keys = find_files_with_given_content_id_blobstore_keys(
-                                &ctx,
-                                &blobrepo,
-                                hg_cs,
-                                redacted_keys,
-                            )
-                            .await?;
+    matches: &'a ArgMatches<'_>,
+    sub_m: &'a ArgMatches<'_>,
+) -> Result<(), SubcommandError> {
+    let (ctx, blobrepo, redacted_blobs, cs_id) =
+        get_ctx_blobrepo_redacted_blobs_cs_id(fb, logger.clone(), matches, sub_m).await?;
+    info!(
+        logger,
+        "Listing redacted files for ChangesetId: {:?}", cs_id
+    );
+    info!(logger, "Please be patient.");
+    redacted_blobs
+        .get_all_redacted_blobs()
+        .join(
+            cs_id
+                .load(ctx.clone(), blobrepo.blobstore())
+                .compat()
+                .from_err(),
+        )
+        .and_then({
+            cloned!(logger);
+            move |(redacted_blobs, hg_cs)| {
+                async move {
+                    let redacted_keys = redacted_blobs.iter().map(|(key, _)| key).collect();
+                    let path_keys = find_files_with_given_content_id_blobstore_keys(
+                        &ctx,
+                        &blobrepo,
+                        hg_cs,
+                        redacted_keys,
+                    )
+                    .await?;
 
-                            Ok(path_keys
-                                .into_iter()
-                                .filter_map(move |(path, key)| {
-                                    redacted_blobs.get(&key.blobstore_key()).cloned().map(
-                                        |redacted_meta| {
-                                            (redacted_meta.task, path, redacted_meta.log_only)
-                                        },
-                                    )
+                    Ok(path_keys
+                        .into_iter()
+                        .filter_map(move |(path, key)| {
+                            redacted_blobs
+                                .get(&key.blobstore_key())
+                                .cloned()
+                                .map(|redacted_meta| {
+                                    (redacted_meta.task, path, redacted_meta.log_only)
                                 })
-                                .collect::<Vec<_>>())
-                        }
-                        .boxed()
-                        .compat()
-                        .map({
-                            cloned!(logger);
-                            move |mut res| {
-                                if res.is_empty() {
-                                    info!(logger, "No files are redacted at this commit");
-                                } else {
-                                    res.sort();
-                                    res.into_iter().for_each(|(task_id, file_path, log_only)| {
-                                        let log_only_msg =
-                                            if log_only { " (log only)" } else { "" };
-                                        info!(
-                                            logger,
-                                            "{:20}: {}{}", task_id, file_path, log_only_msg
-                                        );
-                                    })
-                                }
-                            }
                         })
+                        .collect::<Vec<_>>())
+                }
+                .boxed()
+                .compat()
+                .map({
+                    cloned!(logger);
+                    move |mut res| {
+                        if res.is_empty() {
+                            info!(logger, "No files are redacted at this commit");
+                        } else {
+                            res.sort();
+                            res.into_iter().for_each(|(task_id, file_path, log_only)| {
+                                let log_only_msg = if log_only { " (log only)" } else { "" };
+                                info!(logger, "{:20}: {}{}", task_id, file_path, log_only_msg);
+                            })
+                        }
                     }
                 })
-                .from_err()
+            }
         })
-        .boxify()
+        .from_err()
+        .compat()
+        .await
 }
 
-fn redaction_remove(
+async fn redaction_remove<'a>(
     fb: FacebookInit,
     logger: Logger,
-    matches: &ArgMatches<'_>,
-    sub_m: &ArgMatches<'_>,
-) -> BoxFuture<(), SubcommandError> {
-    let paths = try_boxfuture!(paths_parser(sub_m));
-    get_ctx_blobrepo_redacted_blobs_cs_id(fb, logger.clone(), matches, sub_m)
-        .and_then(move |(ctx, blobrepo, redacted_blobs, cs_id)| {
-            content_ids_for_paths(ctx, logger, blobrepo, cs_id, paths)
-                .and_then(move |content_ids| {
-                    let blobstore_keys: Vec<_> = content_ids
-                        .into_iter()
-                        .map(|content_id| content_id.blobstore_key())
-                        .collect();
-                    redacted_blobs.delete_redacted_blobs(&blobstore_keys)
-                })
-                .from_err()
-        })
-        .boxify()
+    matches: &'a ArgMatches<'_>,
+    sub_m: &'a ArgMatches<'_>,
+) -> Result<(), SubcommandError> {
+    let paths = paths_parser(sub_m)?;
+    let (ctx, blobrepo, redacted_blobs, cs_id) =
+        get_ctx_blobrepo_redacted_blobs_cs_id(fb, logger.clone(), matches, sub_m).await?;
+    let content_ids = content_ids_for_paths(ctx, logger, blobrepo, cs_id, paths)
+        .compat()
+        .await?;
+    let blobstore_keys: Vec<_> = content_ids
+        .into_iter()
+        .map(|content_id| content_id.blobstore_key())
+        .collect();
+    redacted_blobs
+        .delete_redacted_blobs(&blobstore_keys)
+        .compat()
+        .await
+        .map_err(SubcommandError::Error)
 }
 
 async fn check_if_content_is_reachable_from_bookmark(

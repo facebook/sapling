@@ -49,7 +49,7 @@ pub async fn subcommand_fsnodes<'a>(
 ) -> Result<(), SubcommandError> {
     args::init_cachelib(fb, &matches, None);
 
-    let repo = args::open_repo(fb, &logger, &matches).compat().await?;
+    let repo = args::open_repo(fb, &logger, &matches).await?;
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     match sub_matches.subcommand() {

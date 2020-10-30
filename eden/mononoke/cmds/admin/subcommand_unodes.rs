@@ -18,8 +18,8 @@ use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
 use futures::{compat::Future01CompatExt, TryFutureExt, TryStreamExt};
-use futures_ext::{FutureExt, StreamExt};
-use futures_old::{future, Future, IntoFuture, Stream};
+use futures_ext::StreamExt;
+use futures_old::{Future, IntoFuture, Stream};
 use manifest::{Entry, ManifestOps, PathOrPrefix};
 
 use mononoke_types::{ChangesetId, MPath};
@@ -93,22 +93,19 @@ pub async fn subcommand_unodes<'a>(
 
     args::init_cachelib(fb, &matches, None);
 
-    let repo = args::open_repo(fb, &logger, &matches);
-    let ctx = CoreContext::new_with_logger(fb, logger.clone());
+    let repo = args::open_repo(fb, &logger, &matches).await?;
+    let ctx = CoreContext::new_with_logger(fb, logger);
 
-    let run = match sub_matches.subcommand() {
+    let res = match sub_matches.subcommand() {
         (COMMAND_TREE, Some(matches)) => {
             let hash_or_bookmark = String::from(matches.value_of(ARG_CSID).unwrap());
-            let path = path_resolve(matches.value_of(ARG_PATH).unwrap());
-            cloned!(ctx);
-            (repo, path)
-                .into_future()
-                .and_then(move |(repo, path)| {
-                    helpers::csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
-                        .and_then(move |csid| subcommand_tree(ctx, repo, csid, path))
-                })
-                .from_err()
-                .boxify()
+            let path = path_resolve(matches.value_of(ARG_PATH).unwrap())?;
+            let csid = helpers::csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
+                .compat()
+                .await?;
+            subcommand_tree(&ctx, repo, csid, path)
+                .await
+                .map_err(SubcommandError::Error)
         }
         (COMMAND_VERIFY, Some(matches)) => {
             let hash_or_bookmark = String::from(matches.value_of(ARG_CSID).unwrap());
@@ -117,65 +114,66 @@ pub async fn subcommand_unodes<'a>(
                 .unwrap()
                 .parse::<u64>()
                 .expect("limit must be an integer");
-            cloned!(ctx);
-            repo.into_future()
-                .and_then(move |repo| {
-                    helpers::csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
-                        .and_then(move |csid| subcommand_verify(ctx, repo, csid, limit))
-                })
-                .from_err()
-                .boxify()
+            let csid = helpers::csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
+                .compat()
+                .await?;
+            subcommand_verify(&ctx, repo, csid, limit)
+                .await
+                .map_err(SubcommandError::Error)
         }
-        _ => future::err(SubcommandError::InvalidArgs).boxify(),
+        _ => Err(SubcommandError::InvalidArgs),
     };
 
     if tracing_enable {
-        run.then(move |result| ctx.trace_upload().then(move |_| result))
-            .boxify()
-    } else {
-        run
+        ctx.trace_upload().compat().await?;
     }
-    .compat()
-    .await
+    res
 }
 
-fn subcommand_tree(
-    ctx: CoreContext,
+async fn subcommand_tree(
+    ctx: &CoreContext,
     repo: BlobRepo,
     csid: ChangesetId,
     path: Option<MPath>,
-) -> impl Future<Item = (), Error = Error> {
-    RootUnodeManifestId::derive(ctx.clone(), repo.clone(), csid)
-        .from_err()
-        .and_then(move |root| {
-            info!(ctx.logger(), "ROOT: {:?}", root);
-            info!(ctx.logger(), "PATH: {:?}", path);
-            root.manifest_unode_id()
-                .find_entries(ctx, repo.get_blobstore(), vec![PathOrPrefix::Prefix(path)])
-                .compat()
-                .for_each(|(path, entry)| {
-                    match entry {
-                        Entry::Tree(tree_id) => {
-                            println!("{}/ {:?}", MPath::display_opt(path.as_ref()), tree_id);
-                        }
-                        Entry::Leaf(leaf_id) => {
-                            println!("{} {:?}", MPath::display_opt(path.as_ref()), leaf_id);
-                        }
-                    }
-                    Ok(())
-                })
+) -> Result<(), Error> {
+    let root = RootUnodeManifestId::derive(ctx.clone(), repo.clone(), csid)
+        .compat()
+        .await?;
+    info!(ctx.logger(), "ROOT: {:?}", root);
+    info!(ctx.logger(), "PATH: {:?}", path);
+    root.manifest_unode_id()
+        .find_entries(
+            ctx.clone(),
+            repo.get_blobstore(),
+            vec![PathOrPrefix::Prefix(path)],
+        )
+        .compat()
+        .for_each(|(path, entry)| {
+            match entry {
+                Entry::Tree(tree_id) => {
+                    println!("{}/ {:?}", MPath::display_opt(path.as_ref()), tree_id);
+                }
+                Entry::Leaf(leaf_id) => {
+                    println!("{} {:?}", MPath::display_opt(path.as_ref()), leaf_id);
+                }
+            }
+            Ok(())
         })
+        .compat()
+        .await
 }
 
-fn subcommand_verify(
-    ctx: CoreContext,
+async fn subcommand_verify(
+    ctx: &CoreContext,
     repo: BlobRepo,
     csid: ChangesetId,
     limit: u64,
-) -> impl Future<Item = (), Error = Error> {
+) -> Result<(), Error> {
     AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), csid)
         .take(limit)
         .for_each(move |csid| single_verify(ctx.clone(), repo.clone(), csid))
+        .compat()
+        .await
 }
 
 fn single_verify(

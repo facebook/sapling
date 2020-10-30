@@ -771,9 +771,8 @@ async fn get_pushredirected_vars(
 ) -> Result<(BlobRepo, RepoImportSetting, Syncers<SqlSyncedCommitMapping>), Error> {
     let config_store = args::init_config_store(ctx.fb, ctx.logger(), matches)?;
     let large_repo_id = large_repo_config.repoid;
-    let large_repo = args::open_repo_with_repo_id(ctx.fb, &ctx.logger(), large_repo_id, &matches)
-        .compat()
-        .await?;
+    let large_repo =
+        args::open_repo_with_repo_id(ctx.fb, &ctx.logger(), large_repo_id, &matches).await?;
     let commit_sync_config = match large_repo_config.commit_sync_config.clone() {
         Some(config) => config,
         None => {
@@ -791,9 +790,8 @@ async fn get_pushredirected_vars(
             large_repo.name()
         ));
     }
-    let mapping = args::open_source_sql::<SqlSyncedCommitMapping>(ctx.fb, config_store, &matches)
-        .compat()
-        .await?;
+    let mapping =
+        args::open_source_sql::<SqlSyncedCommitMapping>(ctx.fb, config_store, &matches).await?;
     let syncers = create_commit_syncers(
         ctx,
         repo.clone(),
@@ -949,9 +947,8 @@ async fn repo_import(
         Ok(Some(mutable_path))
     });
 
-    let mutable_counters = args::open_sql::<SqlMutableCounters>(ctx.fb, config_store, &matches)
-        .compat()
-        .await?;
+    let mutable_counters =
+        args::open_sql::<SqlMutableCounters>(ctx.fb, config_store, &matches).await?;
 
     // Importing process starts here
     if recovery_fields.import_stage == ImportStage::GitImport {
@@ -1211,7 +1208,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     block_execute(
         async {
-            let repo = repo.compat().await?;
+            let repo = repo.await?;
             let mut recovery_fields = match matches.subcommand() {
                 (CHECK_ADDITIONAL_SETUP_STEPS, Some(sub_arg_matches)) => {
                     check_additional_setup_steps(ctx, repo, fb, &sub_arg_matches, &matches).await?;

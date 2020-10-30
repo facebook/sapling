@@ -78,7 +78,6 @@ async fn run<'a>(ctx: CoreContext, matches: &'a ArgMatches<'a>) -> Result<(), Er
     // On the other hand reconstructing the dependencies for SegmentedChangelog without BlobRepo is
     // probably prone to more problems from the maintenance perspective.
     let repo = args::open_repo(ctx.fb, ctx.logger(), &matches)
-        .compat()
         .await
         .context("opening repo")?;
 
