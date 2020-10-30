@@ -12,10 +12,10 @@ Setup repository
 
 Run Segmented Changelog Seeder.
 
-  $ quiet segmented_changelog_seeder --head-bookmark=master_bookmark
+  $ quiet segmented_changelog_seeder --head=master_bookmark
   $ grep segmented_changelog "$TESTTMP/quiet.last.log"
   * SegmentedChangelogSeeder initialized for repository 'repo' (glob)
-  * resolved bookmark 'master_bookmark' * (glob)
+  * using '*' for head (glob)
   * seeding segmented changelog using idmap version: 1 (glob)
   * loaded 3 changesets (glob)
   * finished building dag, head '*' has assigned vertex '2' (glob)

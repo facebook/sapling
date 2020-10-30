@@ -1728,6 +1728,14 @@ function segmented_changelog_seeder() {
     "$@"
 }
 
+function segmented_changelog_tailer() {
+  "$MONONOKE_SEGMENTED_CHANGELOG_TAILER" \
+    "${COMMON_ARGS[@]}" \
+    --repo-id "$REPOID" \
+    --mononoke-config-path "${TESTTMP}/mononoke-config" \
+    "$@"
+}
+
 function fastreplay() {
   "$MONONOKE_FASTREPLAY" \
     "${COMMON_ARGS[@]}" \

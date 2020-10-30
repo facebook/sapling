@@ -27,6 +27,7 @@ mod logging;
 mod on_demand;
 mod seeder;
 mod sql_types;
+mod tailer;
 mod types;
 
 #[cfg(test)]

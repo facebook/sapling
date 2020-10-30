@@ -9,6 +9,7 @@ use std::sync::Arc;
 
 use anyhow::{format_err, Context, Result};
 use blobstore::Blobstore;
+use bookmarks::{BookmarkName, Bookmarks};
 use bulkops::ChangesetBulkFetch;
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
@@ -24,6 +25,7 @@ use crate::iddag::IdDagSaveStore;
 use crate::idmap::{SqlIdMap, SqlIdMapVersionStore};
 use crate::on_demand::OnDemandUpdateDag;
 use crate::seeder::SegmentedChangelogSeeder;
+use crate::tailer::SegmentedChangelogTailer;
 use crate::types::IdMapVersion;
 use crate::DisabledSegmentedChangelog;
 
@@ -44,6 +46,8 @@ pub struct SegmentedChangelogBuilder {
     changeset_fetcher: Option<Arc<dyn ChangesetFetcher>>,
     changeset_bulk_fetch: Option<Arc<dyn ChangesetBulkFetch>>,
     blobstore: Option<Arc<dyn Blobstore>>,
+    bookmarks: Option<Arc<dyn Bookmarks>>,
+    bookmark_name: Option<BookmarkName>,
 }
 
 impl SqlConstruct for SegmentedChangelogBuilder {
@@ -60,6 +64,8 @@ impl SqlConstruct for SegmentedChangelogBuilder {
             changeset_fetcher: None,
             changeset_bulk_fetch: None,
             blobstore: None,
+            bookmarks: None,
+            bookmark_name: None,
         }
     }
 }
@@ -109,6 +115,16 @@ impl SegmentedChangelogBuilder {
 
     pub fn with_blobstore(mut self, blobstore: Arc<dyn Blobstore>) -> Self {
         self.blobstore = Some(blobstore);
+        self
+    }
+
+    pub fn with_bookmarks(mut self, bookmarks: Arc<dyn Bookmarks>) -> Self {
+        self.bookmarks = Some(bookmarks);
+        self
+    }
+
+    pub fn with_bookmark_name(mut self, bookmark_name: BookmarkName) -> Self {
+        self.bookmark_name = Some(bookmark_name);
         self
     }
 
@@ -187,6 +203,20 @@ impl SegmentedChangelogBuilder {
         Ok(seeder)
     }
 
+    pub fn build_tailer(&mut self) -> Result<SegmentedChangelogTailer> {
+        let tailer = SegmentedChangelogTailer::new(
+            self.connections_clone()?,
+            self.repo_id()?,
+            self.replica_lag_monitor(),
+            self.changeset_fetcher()?,
+            self.bookmarks()?,
+            self.bookmark_name()?,
+            self.build_iddag_save_store()?,
+            self.build_sql_bundle_store()?,
+        );
+        Ok(tailer)
+    }
+
     fn repo_id(&self) -> Result<RepositoryId> {
         self.repo_id.ok_or_else(|| {
             format_err!("SegmentedChangelog cannot be built without RepositoryId being specified.")
@@ -231,6 +261,18 @@ impl SegmentedChangelogBuilder {
     fn blobstore(&mut self) -> Result<Arc<dyn Blobstore>> {
         self.blobstore.take().ok_or_else(|| {
             format_err!("SegmentedChangelog cannot be built without Blobstore being specified.")
+        })
+    }
+
+    fn bookmarks(&mut self) -> Result<Arc<dyn Bookmarks>> {
+        self.bookmarks.take().ok_or_else(|| {
+            format_err!("SegmentedChangelog cannot be built without Bookmarks being specified.")
+        })
+    }
+
+    fn bookmark_name(&mut self) -> Result<BookmarkName> {
+        self.bookmark_name.take().ok_or_else(|| {
+            format_err!("SegmentedChangelog cannot be built without BookmarkName being specified.")
         })
     }
 }
