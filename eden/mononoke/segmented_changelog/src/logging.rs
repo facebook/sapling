@@ -36,7 +36,7 @@ pub fn log_new_iddag_version(
         .add_common_server_data()
         .add("type", "iddag")
         .add("repo_id", repo_id.id())
-        .add("iddag_version", iddag_version.0)
+        .add("iddag_version", format!("{}", iddag_version.0))
         .log(); // note that logging may fail
 }
 
@@ -46,6 +46,6 @@ pub fn log_new_bundle(ctx: &CoreContext, repo_id: RepositoryId, bundle: DagBundl
         .add("type", "bundle")
         .add("repo_id", repo_id.id())
         .add("idmap_version", bundle.idmap_version.0)
-        .add("iddag_version", bundle.iddag_version.0)
+        .add("iddag_version", format!("{}", bundle.iddag_version.0))
         .log(); // note that logging may fail
 }

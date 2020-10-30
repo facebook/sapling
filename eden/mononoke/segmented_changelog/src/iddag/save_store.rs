@@ -16,6 +16,7 @@ use context::CoreContext;
 use mononoke_types::RepositoryId;
 
 use crate::dag::Dag;
+use crate::logging::log_new_iddag_version;
 use crate::types::IdDagVersion;
 
 pub struct IdDagSaveStore {
@@ -65,13 +66,9 @@ impl IdDagSaveStore {
         })
     }
 
-    pub async fn save(
-        &self,
-        ctx: &CoreContext,
-        iddag_version: IdDagVersion,
-        iddag: &InProcessIdDag,
-    ) -> Result<()> {
+    pub async fn save(&self, ctx: &CoreContext, iddag: &InProcessIdDag) -> Result<IdDagVersion> {
         let buffer = mincode::serialize(iddag)?;
+        let iddag_version = IdDagVersion::from_serialized_bytes(&buffer);
         self.blobstore
             .put(
                 ctx.clone(),
@@ -79,21 +76,16 @@ impl IdDagSaveStore {
                 BlobstoreBytes::from_bytes(buffer),
             )
             .await
+            .context("saving iddag in blobstore")?;
+        log_new_iddag_version(&ctx, self.repo_id, iddag_version);
+        Ok(iddag_version)
     }
 
-    pub async fn save_from_dag(
-        &self,
-        ctx: &CoreContext,
-        iddag_version: IdDagVersion,
-        dag: &Dag,
-    ) -> Result<()> {
-        self.save(ctx, iddag_version, &dag.iddag).await
+    pub async fn save_from_dag(&self, ctx: &CoreContext, dag: &Dag) -> Result<IdDagVersion> {
+        self.save(ctx, &dag.iddag).await
     }
 
     fn key(&self, iddag_version: IdDagVersion) -> String {
-        format!(
-            "segmented_changelog.iddag_save.v1.{}.{}",
-            self.repo_id, iddag_version.0
-        )
+        format!("segmented_changelog_iddag.blake2.{}", iddag_version.0)
     }
 }

@@ -110,17 +110,15 @@ async fn test_iddag_save_store(fb: FacebookInit) -> Result<()> {
 
     let blobstore = memblob::LazyMemblob::default();
     let iddag_save_store = IdDagSaveStore::new(repo_id, Arc::new(blobstore));
-    iddag_save_store
-        .save(&ctx, IdDagVersion(1), &dag.iddag)
-        .await?;
+    let iddag_version = iddag_save_store.save(&ctx, &dag.iddag).await?;
 
     assert!(
         iddag_save_store
-            .find(&ctx, IdDagVersion(2))
+            .find(&ctx, IdDagVersion::from_serialized_bytes(b"random"))
             .await?
             .is_none()
     );
-    let loaded_id_dag = iddag_save_store.load(&ctx, IdDagVersion(1)).await?;
+    let loaded_id_dag = iddag_save_store.load(&ctx, iddag_version).await?;
     let from_save = Dag::new(loaded_id_dag, dag.idmap.clone());
     let answer = from_save
         .location_to_changeset_id(&ctx, known_cs, distance)

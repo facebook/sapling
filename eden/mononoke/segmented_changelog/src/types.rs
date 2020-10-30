@@ -9,6 +9,8 @@ use std::fmt;
 
 use sql::mysql;
 
+use mononoke_types::hash::{self, Blake2};
+
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd)]
 #[derive(mysql::OptTryFromRowField)]
 pub struct IdMapVersion(pub u64);
@@ -19,9 +21,17 @@ impl fmt::Display for IdMapVersion {
     }
 }
 
-#[derive(Copy, Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[derive(mysql::OptTryFromRowField)]
-pub struct IdDagVersion(pub u64);
+pub struct IdDagVersion(pub Blake2);
+
+impl IdDagVersion {
+    pub fn from_serialized_bytes<B: AsRef<[u8]>>(bytes: B) -> Self {
+        let mut blake2_builder = hash::Context::new("iddag_version".as_bytes());
+        blake2_builder.update(bytes);
+        Self(blake2_builder.finish())
+    }
+}
 
 impl fmt::Display for IdDagVersion {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -29,7 +39,7 @@ impl fmt::Display for IdDagVersion {
     }
 }
 
-#[derive(Copy, Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct DagBundle {
     pub iddag_version: IdDagVersion,
     pub idmap_version: IdMapVersion,

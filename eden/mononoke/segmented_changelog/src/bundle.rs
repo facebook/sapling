@@ -111,8 +111,8 @@ mod tests {
 
         assert_eq!(version_repo1.get(&ctx).await?, None);
         assert_eq!(version_repo2.get(&ctx).await?, None);
-        let bundle11 = DagBundle::new(IdDagVersion(1), IdMapVersion(1));
-        let bundle23 = DagBundle::new(IdDagVersion(2), IdMapVersion(3));
+        let bundle11 = DagBundle::new(IdDagVersion::from_serialized_bytes(b"1"), IdMapVersion(1));
+        let bundle23 = DagBundle::new(IdDagVersion::from_serialized_bytes(b"2"), IdMapVersion(3));
         version_repo1.set(&ctx, bundle11).await?;
         assert_eq!(version_repo1.get(&ctx).await?, Some(bundle11));
         assert_eq!(version_repo2.get(&ctx).await?, None);

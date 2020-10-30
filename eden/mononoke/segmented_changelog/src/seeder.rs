@@ -21,7 +21,7 @@ use mononoke_types::ChangesetId;
 
 use crate::bundle::SqlBundleStore;
 use crate::dag::{Dag, StartState};
-use crate::iddag::{IdDagSaveStore, SqlIdDagVersionStore};
+use crate::iddag::IdDagSaveStore;
 use crate::idmap::{IdMap, SqlIdMapVersionStore};
 use crate::types::{DagBundle, IdMapVersion};
 
@@ -34,7 +34,6 @@ pub struct SegmentedChangelogSeeder {
     idmap: Arc<dyn IdMap>,
     idmap_version: IdMapVersion,
     idmap_version_store: SqlIdMapVersionStore,
-    iddag_version_store: SqlIdDagVersionStore,
     iddag_save_store: IdDagSaveStore,
     bundle_store: SqlBundleStore,
     changeset_bulk_fetch: Arc<dyn ChangesetBulkFetch>,
@@ -45,7 +44,6 @@ impl SegmentedChangelogSeeder {
         idmap: Arc<dyn IdMap>,
         idmap_version: IdMapVersion,
         idmap_version_store: SqlIdMapVersionStore,
-        iddag_version_store: SqlIdDagVersionStore,
         iddag_save_store: IdDagSaveStore,
         bundle_store: SqlBundleStore,
         changeset_bulk_fetch: Arc<dyn ChangesetBulkFetch>,
@@ -54,7 +52,6 @@ impl SegmentedChangelogSeeder {
             idmap,
             idmap_version,
             idmap_version_store,
-            iddag_version_store,
             iddag_save_store,
             bundle_store,
             changeset_bulk_fetch,
@@ -73,15 +70,10 @@ impl SegmentedChangelogSeeder {
             ctx.logger(),
             "finished building dag, head '{}' has assigned vertex '{}'", head, last_vertex
         );
-        // IdDagVersion
-        let iddag_version = self
-            .iddag_version_store
-            .new_version(&ctx, self.idmap_version)
-            .await
-            .context("fetching new iddag version")?;
         // Save the IdDag
-        self.iddag_save_store
-            .save(&ctx, iddag_version, &dag.iddag)
+        let iddag_version = self
+            .iddag_save_store
+            .save(&ctx, &dag.iddag)
             .await
             .context("saving iddag")?;
         // Update BundleStore

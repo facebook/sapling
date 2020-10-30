@@ -6,7 +6,5 @@
  */
 
 mod save_store;
-mod version;
 
 pub use self::save_store::IdDagSaveStore;
-pub use self::version::SqlIdDagVersionStore;

@@ -20,7 +20,7 @@ use sql_ext::SqlConnections;
 
 use crate::bundle::SqlBundleStore;
 use crate::dag::Dag;
-use crate::iddag::{IdDagSaveStore, SqlIdDagVersionStore};
+use crate::iddag::IdDagSaveStore;
 use crate::idmap::{SqlIdMap, SqlIdMapVersionStore};
 use crate::on_demand::OnDemandUpdateDag;
 use crate::seeder::SegmentedChangelogSeeder;
@@ -151,12 +151,6 @@ impl SegmentedChangelogBuilder {
         Ok(SqlIdMapVersionStore::new(connections, repo_id))
     }
 
-    pub(crate) fn build_sql_iddag_version_store(&self) -> Result<SqlIdDagVersionStore> {
-        let connections = self.connections_clone()?;
-        let repo_id = self.repo_id()?;
-        Ok(SqlIdDagVersionStore::new(connections, repo_id))
-    }
-
     pub(crate) fn build_sql_bundle_store(&self) -> Result<SqlBundleStore> {
         let connections = self.connections_clone()?;
         let repo_id = self.repo_id()?;
@@ -186,7 +180,6 @@ impl SegmentedChangelogBuilder {
             Arc::new(self.build_sql_idmap()?),
             self.idmap_version(),
             idmap_version_store,
-            self.build_sql_iddag_version_store()?,
             self.build_iddag_save_store()?,
             self.build_sql_bundle_store()?,
             self.changeset_bulk_fetch()?,
