@@ -995,7 +995,14 @@ where
                         .get_commit_sync_outcome(ctx, p)
                         .await?
                         .map(|sync_outcome| (sync_outcome, p));
-                    remapped_parents_outcome.extend(maybe_commit_sync_outcome.into_iter());
+                    let commit_sync_outcome = maybe_commit_sync_outcome.ok_or_else(|| {
+                        format_err!(
+                            "parent {} has not been remapped yet, therefore can't remap {}",
+                            p,
+                            source_cs.get_changeset_id()
+                        )
+                    })?;
+                    remapped_parents_outcome.push(commit_sync_outcome);
                 }
 
                 if remapped_parents_outcome.is_empty() {
