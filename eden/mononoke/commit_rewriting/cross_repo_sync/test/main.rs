@@ -1849,35 +1849,27 @@ async fn merge_test_setup(
     .await;
 
     lts_syncer
-        .test_unsafe_sync_commit_with_version_override(
-            &ctx,
-            c1,
-            CandidateSelectionHint::Only,
-            Some(v1.clone()),
+        .unsafe_always_rewrite_sync_commit(
+            &ctx, c1, None, // parents override
+            &v1,
         )
         .await?;
     lts_syncer
-        .test_unsafe_sync_commit_with_version_override(
-            &ctx,
-            c2,
-            CandidateSelectionHint::Only,
-            Some(v1.clone()),
+        .unsafe_always_rewrite_sync_commit(
+            &ctx, c2, None, // parents override
+            &v1,
         )
         .await?;
     lts_syncer
-        .test_unsafe_sync_commit_with_version_override(
-            &ctx,
-            c3,
-            CandidateSelectionHint::Only,
-            Some(v2.clone()),
+        .unsafe_always_rewrite_sync_commit(
+            &ctx, c3, None, // parents override
+            &v2,
         )
         .await?;
     lts_syncer
-        .test_unsafe_sync_commit_with_version_override(
-            &ctx,
-            c4,
-            CandidateSelectionHint::Only,
-            Some(v2.clone()),
+        .unsafe_always_rewrite_sync_commit(
+            &ctx, c4, None, // parents override
+            &v2,
         )
         .await?;
 

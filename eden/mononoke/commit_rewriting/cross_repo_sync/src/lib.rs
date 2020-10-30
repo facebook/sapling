@@ -711,28 +711,6 @@ where
             .await
     }
 
-    /// Same as `unsafe_commit_sync`, but with a version override
-    /// Normally commit sync logic would chose the `CommitSyncConfigVersion` to use
-    /// from the parent commits. In tests it's convenient to just force the use
-    /// of a different version instead of a lengthy crafting of "version boundary"
-    /// commits.
-    /// It is a dangerous override and should be used from tests.
-    pub async fn test_unsafe_sync_commit_with_version_override<'a>(
-        &'a self,
-        ctx: &'a CoreContext,
-        source_cs_id: ChangesetId,
-        parent_mapping_selection_hint: CandidateSelectionHint,
-        sync_config_version_override: Option<CommitSyncConfigVersion>,
-    ) -> Result<Option<ChangesetId>, Error> {
-        self.unsafe_sync_commit_impl(
-            ctx,
-            source_cs_id,
-            parent_mapping_selection_hint,
-            sync_config_version_override,
-        )
-        .await
-    }
-
     async fn unsafe_sync_commit_impl<'a>(
         &'a self,
         ctx: &'a CoreContext,

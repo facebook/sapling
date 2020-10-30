@@ -19,8 +19,8 @@ use context::CoreContext;
 use cross_repo_sync::{
     rewrite_commit,
     types::{Source, Target},
-    update_mapping_with_version, upload_commits, CandidateSelectionHint, CommitSyncDataProvider,
-    CommitSyncRepos, CommitSyncer, SyncData, Syncers,
+    update_mapping_with_version, upload_commits, CommitSyncDataProvider, CommitSyncRepos,
+    CommitSyncer, SyncData, Syncers,
 };
 use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt};
 use maplit::hashmap;
@@ -228,19 +228,19 @@ pub async fn init_small_large_repo(
         .await?;
 
     small_to_large_commit_syncer
-        .test_unsafe_sync_commit_with_version_override(
+        .unsafe_always_rewrite_sync_commit(
             ctx,
             first_bcs_id,
-            CandidateSelectionHint::Only,
-            Some(noop_version.clone()),
+            None, // parents override
+            &noop_version,
         )
         .await?;
     small_to_large_commit_syncer
-        .test_unsafe_sync_commit_with_version_override(
+        .unsafe_always_rewrite_sync_commit(
             ctx,
             second_bcs_id,
-            CandidateSelectionHint::Only,
-            Some(noop_version.clone()),
+            None, // parents override
+            &noop_version,
         )
         .await?;
     bookmark(&ctx, &smallrepo, "premove")
