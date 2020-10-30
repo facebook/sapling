@@ -1620,9 +1620,9 @@ where
     );
     let small_to_large_commit_syncer = CommitSyncer::new(
         ctx,
-        mapping.clone(),
+        mapping,
         small_to_large_commit_sync_repos,
-        live_commit_sync_config.clone(),
+        live_commit_sync_config,
     );
 
     Ok(Syncers {
