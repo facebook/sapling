@@ -47,7 +47,9 @@ class ThriftTest(testcase.EdenRepoTest):
 
     def get_loaded_inodes_count(self, path: str) -> int:
         with self.get_thrift_client() as client:
-            result = client.debugInodeStatus(self.mount_path_bytes, os.fsencode(path))
+            result = client.debugInodeStatus(
+                self.mount_path_bytes, os.fsencode(path), flags=0
+            )
         inode_count = 0
         for item in result:
             assert item.entries is not None

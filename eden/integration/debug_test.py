@@ -19,7 +19,7 @@ class DebugBlobTest(testcase.EdenRepoTest):
     # TODO: enable when using the modern Python 3 Thrift API
     def xtest_debug_blob_prints_binary_data(self) -> None:
         with self.eden.get_thrift_client() as client:
-            debugInfo = client.debugInodeStatus(os.fsencode(self.mount), b".")
+            debugInfo = client.debugInodeStatus(os.fsencode(self.mount), b".", flags=0)
 
         [root] = [entry for entry in debugInfo if entry.path == b""]
         self.assertEqual(1, root.inodeNumber)

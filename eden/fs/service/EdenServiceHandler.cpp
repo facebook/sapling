@@ -25,9 +25,7 @@
 #include <folly/system/Shell.h>
 #include <thrift/lib/cpp/util/EnumUtils.h>
 
-#ifdef _WIN32
-#include "eden/fs/service/gen-cpp2/eden_types.h"
-#else
+#ifndef _WIN32
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/Overlay.h"
@@ -41,6 +39,7 @@
 #include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/InodeLoader.h"
 #include "eden/fs/inodes/InodeMap.h"
+#include "eden/fs/inodes/Traverse.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
@@ -50,6 +49,8 @@
 #include "eden/fs/service/EdenServer.h"
 #include "eden/fs/service/ThriftPermissionChecker.h"
 #include "eden/fs/service/ThriftUtil.h"
+#include "eden/fs/service/gen-cpp2/eden_constants.h"
+#include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/service/gen-cpp2/streamingeden_constants.h"
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/BlobMetadata.h"
@@ -1439,15 +1440,147 @@ void EdenServiceHandler::debugGetScmBlobMetadata(
   result.contentsSha1_ref() = thriftHash(metadata->sha1);
 }
 
+namespace {
+
+class InodeStatusCallbacks : public TraversalCallbacks {
+ public:
+  explicit InodeStatusCallbacks(
+      EdenMount* mount,
+      int64_t flags,
+      std::vector<TreeInodeDebugInfo>& results)
+      : mount_{mount}, flags_{flags}, results_{results} {}
+
+  void visitTreeInode(
+      RelativePathPiece path,
+      InodeNumber ino,
+      const std::optional<Hash>& hash,
+      uint64_t fuseRefcount,
+      const std::vector<ChildEntry>& entries) override {
+#ifndef _WIN32
+    auto* inodeMetadataTable = mount_->getInodeMetadataTable();
+#endif
+
+    TreeInodeDebugInfo info;
+    info.inodeNumber_ref() = ino.get();
+    info.path_ref() = path.stringPiece().str();
+    info.materialized_ref() = !hash.has_value();
+    if (hash.has_value()) {
+      info.treeHash_ref() = thriftHash(hash.value());
+    }
+    info.refcount_ref() = fuseRefcount;
+
+    info.entries_ref()->reserve(entries.size());
+
+    for (auto& entry : entries) {
+      TreeInodeEntryDebugInfo entryInfo;
+      entryInfo.name_ref() = entry.name.stringPiece().str();
+      entryInfo.inodeNumber_ref() = entry.ino.get();
+
+      // This could be enabled on Windows if InodeMetadataTable was removed.
+#ifndef _WIN32
+      if (auto metadata = (flags_ & eden_constants::DIS_COMPUTE_ACCURATE_MODE_)
+              ? inodeMetadataTable->getOptional(entry.ino)
+              : std::nullopt) {
+        entryInfo.mode_ref() = metadata->mode;
+      } else {
+        entryInfo.mode_ref() = dtype_to_mode(entry.dtype);
+      }
+#else
+      entryInfo.mode_ref() = dtype_to_mode(entry.dtype);
+#endif
+
+      entryInfo.loaded_ref() = entry.loadedChild != nullptr;
+      entryInfo.materialized_ref() = !entry.hash.has_value();
+      if (entry.hash.has_value()) {
+        entryInfo.hash_ref() = thriftHash(entry.hash.value());
+      }
+
+      if ((flags_ & eden_constants::DIS_COMPUTE_BLOB_SIZES_) &&
+          dtype_t::Dir != entry.dtype) {
+        if (entry.hash.has_value()) {
+          // schedule fetching size from ObjectStore::getBlobSize
+          requestedSizes_.push_back(RequestedSize{
+              results_.size(), info.entries_ref()->size(), entry.hash.value()});
+        } else {
+#ifndef _WIN32
+          entryInfo.fileSize_ref() =
+              mount_->getOverlayFileAccess()->getFileSize(
+                  entry.ino, entry.loadedChild.get());
+#else
+          // TODO: Populate on Windows, if this field is actually useful. We
+          // print it in `eden debug file_stats`, but I don't know who actually
+          // uses that output today.
+#endif
+        }
+      }
+
+      info.entries_ref()->push_back(entryInfo);
+    }
+
+    results_.push_back(std::move(info));
+  }
+
+  bool shouldRecurse(const ChildEntry& entry) override {
+    if ((flags_ & eden_constants::DIS_REQUIRE_LOADED_) && !entry.loadedChild) {
+      return false;
+    }
+    if ((flags_ & eden_constants::DIS_REQUIRE_MATERIALIZED_) &&
+        entry.hash.has_value()) {
+      return false;
+    }
+    return true;
+  }
+
+  void fillBlobSizes(ObjectFetchContext& fetchContext) {
+    std::vector<folly::Future<folly::Unit>> futures;
+    futures.reserve(requestedSizes_.size());
+    for (auto& request : requestedSizes_) {
+      futures.push_back(mount_->getObjectStore()
+                            ->getBlobSize(request.hash, fetchContext)
+                            .thenValue([this, request](uint64_t blobSize) {
+                              results_.at(request.resultIndex)
+                                  .entries_ref()
+                                  ->at(request.entryIndex)
+                                  .fileSize_ref() = blobSize;
+                            }));
+    }
+    folly::collectAll(futures).get();
+  }
+
+ private:
+  struct RequestedSize {
+    size_t resultIndex;
+    size_t entryIndex;
+    Hash hash;
+  };
+
+  EdenMount* mount_;
+  int64_t flags_;
+  std::vector<TreeInodeDebugInfo>& results_;
+  std::vector<RequestedSize> requestedSizes_;
+};
+
+} // namespace
+
 void EdenServiceHandler::debugInodeStatus(
     vector<TreeInodeDebugInfo>& inodeInfo,
     unique_ptr<string> mountPoint,
-    std::unique_ptr<std::string> path) {
-  auto helper = INSTRUMENT_THRIFT_CALL(DBG3);
+    unique_ptr<std::string> path,
+    int64_t flags) {
+  if (0 == flags) {
+    flags = eden_constants::DIS_REQUIRE_LOADED_ |
+        eden_constants::DIS_COMPUTE_BLOB_SIZES_;
+  }
+
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG2, *mountPoint, *path, flags);
   auto edenMount = server_->getMount(*mountPoint);
 
   auto inode = inodeFromUserPath(*edenMount, *path).asTreePtr();
-  inode->getDebugStatus(inodeInfo, RelativePath{*path});
+  auto inodePath = inode->getPath().value();
+
+  InodeStatusCallbacks callbacks{edenMount.get(), flags, inodeInfo};
+  traverseObservedInodes(*inode, inodePath, callbacks);
+  callbacks.fillBlobSizes(helper->getFetchContext());
 }
 
 void EdenServiceHandler::debugOutstandingFuseCalls(

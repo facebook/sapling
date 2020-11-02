@@ -174,7 +174,8 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
   void debugInodeStatus(
       std::vector<TreeInodeDebugInfo>& inodeInfo,
       std::unique_ptr<std::string> mountPoint,
-      std::unique_ptr<std::string> path) override;
+      std::unique_ptr<std::string> path,
+      int64_t flags) override;
 
   void debugOutstandingFuseCalls(
       std::vector<FuseCall>& outstandingCalls,

@@ -542,7 +542,9 @@ class InodeCmd(Subcmd):
         out = sys.stdout.buffer
         instance, checkout, rel_path = cmd_util.require_checkout(args, args.path)
         with instance.get_thrift_client_legacy() as client:
-            results = client.debugInodeStatus(bytes(checkout.path), bytes(rel_path))
+            results = client.debugInodeStatus(
+                bytes(checkout.path), bytes(rel_path), flags=0
+            )
 
         out.write(b"%d loaded TreeInodes\n" % len(results))
         for inode_info in results:
@@ -610,7 +612,7 @@ class FileStatsCMD(Subcmd):
 
         with instance.get_thrift_client_legacy() as client:
             inode_results = client.debugInodeStatus(
-                bytes(checkout.path), bytes(rel_path)
+                bytes(checkout.path), bytes(rel_path), flags=0
             )
 
         read_files, written_files = split_inodes_by_operation_type(inode_results)
