@@ -35,6 +35,7 @@ import eden.dirstate
 import facebook.eden.ttypes as eden_ttypes
 import thrift.util.inspect
 from facebook.eden import EdenService
+from facebook.eden.constants import DIS_REQUIRE_MATERIALIZED
 from facebook.eden.ttypes import (
     DebugGetRawJournalParams,
     DebugJournalDelta,
@@ -549,6 +550,53 @@ class InodeCmd(Subcmd):
         out.write(b"%d loaded TreeInodes\n" % len(results))
         for inode_info in results:
             _print_inode_info(inode_info, out)
+        return 0
+
+
+@debug_cmd(
+    "modified", "Enumerate all potentially-modified inode paths", aliases="materialized"
+)
+class MaterializedCmd(Subcmd):
+    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "path",
+            default=None,
+            nargs="?",
+            help="The path to the eden mount point.  If a subdirectory inside "
+            "a mount point is specified, only data about inodes under the "
+            "specified subdirectory will be reported.",
+        )
+
+    def run(self, args: argparse.Namespace) -> int:
+        instance, checkout, rel_path = cmd_util.require_checkout(args, args.path)
+
+        with instance.get_thrift_client_legacy() as client:
+            results = client.debugInodeStatus(
+                bytes(checkout.path), bytes(rel_path), DIS_REQUIRE_MATERIALIZED
+            )
+
+        if not results:
+            return 0
+
+        by_inode = {}
+        for result in results:
+            by_inode[result.inodeNumber] = result
+
+        def walk(ino, path):
+            print(os.fsdecode(path if path else b"/"))
+            try:
+                inode = by_inode[ino]
+            except KeyError:
+                return
+            for entry in inode.entries:
+                if entry.materialized:
+                    walk(entry.inodeNumber, os.path.join(path, entry.name))
+
+        root = results[0]
+        # In practice, this condition is always true, because edenfs creates .eden at startup.
+        if root.materialized:
+            walk(root.inodeNumber, root.path)
+
         return 0
 
 
