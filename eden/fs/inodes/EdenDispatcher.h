@@ -121,7 +121,7 @@ class EdenDispatcher : public Dispatcher {
       const Guid guid,
       ObjectFetchContext& context) override;
 
-  void closedir(const Guid& guid);
+  void closedir(const Guid& guid) override;
 
   HRESULT getEnumerationData(
       const PRJ_CALLBACK_DATA& callbackData,
