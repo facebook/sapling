@@ -438,8 +438,8 @@ void cancelCommand(const PRJ_CALLBACK_DATA* callbackData) noexcept {
 }
 
 typedef folly::Future<folly::Unit> (Dispatcher::*NotificationHandler)(
-    RelativePathPiece oldPath,
-    RelativePathPiece destPath,
+    RelativePath oldPath,
+    RelativePath destPath,
     bool isDirectory,
     ObjectFetchContext& context);
 
@@ -528,7 +528,10 @@ HRESULT notification(
                 dispatcher->getStats(), histogram, requestWatch);
 
             return (dispatcher->*handler)(
-                       relPath, destPath, isDirectory, *context)
+                       std::move(relPath),
+                       std::move(destPath),
+                       isDirectory,
+                       *context)
                 .thenValue([context = context](auto&&) {
                   context->sendNotificationSuccess();
                 });

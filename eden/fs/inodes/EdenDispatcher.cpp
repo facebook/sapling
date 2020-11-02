@@ -728,17 +728,21 @@ folly::Future<folly::Unit> materializeFile(
 
 folly::Future<folly::Unit> renameFile(
     const EdenMount& mount,
-    const RelativePathPiece oldPath,
-    const RelativePathPiece newPath,
+    const RelativePath oldPath,
+    const RelativePath newPath,
     ObjectFetchContext& context) {
   auto oldParentInode = createDirInode(mount, oldPath.dirname(), context);
   auto newParentInode = createDirInode(mount, newPath.dirname(), context);
 
   return std::move(oldParentInode)
-      .thenValue([=, newParentInode = std::move(newParentInode)](
+      .thenValue([newParentInode = std::move(newParentInode),
+                  oldPath = std::move(oldPath),
+                  newPath = std::move(newPath)](
                      const TreeInodePtr oldParentTreePtr) mutable {
         return std::move(newParentInode)
-            .thenValue([=, oldParentTreePtr = std::move(oldParentTreePtr)](
+            .thenValue([oldParentTreePtr = std::move(oldParentTreePtr),
+                        oldPath = std::move(oldPath),
+                        newPath = std::move(newPath)](
                            const TreeInodePtr newParentTreePtr) {
               // TODO(xavierd): In the case where the oldPath is actually being
               // created in another thread, EdenFS simply might not know about
@@ -779,8 +783,8 @@ folly::Future<folly::Unit> removeFile(
 } // namespace
 
 folly::Future<folly::Unit> EdenDispatcher::newFileCreated(
-    RelativePathPiece relPath,
-    RelativePathPiece destPath,
+    RelativePath relPath,
+    RelativePath destPath,
     bool isDirectory,
     ObjectFetchContext& context) {
   // TODO: Move this Windows-specific call logging into PrjfsChannel.
@@ -794,8 +798,8 @@ folly::Future<folly::Unit> EdenDispatcher::newFileCreated(
 }
 
 folly::Future<folly::Unit> EdenDispatcher::fileOverwritten(
-    RelativePathPiece relPath,
-    RelativePathPiece destPath,
+    RelativePath relPath,
+    RelativePath destPath,
     bool isDirectory,
     ObjectFetchContext& context) {
   // TODO: Move this Windows-specific call logging into PrjfsChannel.
@@ -804,8 +808,8 @@ folly::Future<folly::Unit> EdenDispatcher::fileOverwritten(
 }
 
 folly::Future<folly::Unit> EdenDispatcher::fileHandleClosedFileModified(
-    RelativePathPiece relPath,
-    RelativePathPiece destPath,
+    RelativePath relPath,
+    RelativePath destPath,
     bool isDirectory,
     ObjectFetchContext& context) {
   // TODO: Move this Windows-specific call logging into PrjfsChannel.
@@ -814,8 +818,8 @@ folly::Future<folly::Unit> EdenDispatcher::fileHandleClosedFileModified(
 }
 
 folly::Future<folly::Unit> EdenDispatcher::fileRenamed(
-    RelativePathPiece oldPath,
-    RelativePathPiece newPath,
+    RelativePath oldPath,
+    RelativePath newPath,
     bool isDirectory,
     ObjectFetchContext& context) {
   // TODO: Move this Windows-specific call logging into PrjfsChannel.
@@ -829,13 +833,13 @@ folly::Future<folly::Unit> EdenDispatcher::fileRenamed(
   } else if (newPath.empty()) {
     return removeFile(*mount_, oldPath, isDirectory, context);
   } else {
-    return renameFile(*mount_, oldPath, newPath, context);
+    return renameFile(*mount_, std::move(oldPath), std::move(newPath), context);
   }
 }
 
 folly::Future<folly::Unit> EdenDispatcher::preRename(
-    RelativePathPiece oldPath,
-    RelativePathPiece newPath,
+    RelativePath oldPath,
+    RelativePath newPath,
     bool isDirectory,
     ObjectFetchContext& context) {
   // TODO: Move this Windows-specific call logging into PrjfsChannel.
@@ -845,8 +849,8 @@ folly::Future<folly::Unit> EdenDispatcher::preRename(
 }
 
 folly::Future<folly::Unit> EdenDispatcher::fileHandleClosedFileDeleted(
-    RelativePathPiece oldPath,
-    RelativePathPiece destPath,
+    RelativePath oldPath,
+    RelativePath destPath,
     bool isDirectory,
     ObjectFetchContext& context) {
   // TODO: Move this Windows-specific call logging into PrjfsChannel.
@@ -860,8 +864,8 @@ folly::Future<folly::Unit> EdenDispatcher::fileHandleClosedFileDeleted(
 }
 
 folly::Future<folly::Unit> EdenDispatcher::preSetHardlink(
-    RelativePathPiece relPath,
-    RelativePathPiece destPath,
+    RelativePath relPath,
+    RelativePath destPath,
     bool isDirectory,
     ObjectFetchContext& context) {
   // TODO: Move this Windows-specific call logging into PrjfsChannel.

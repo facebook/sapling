@@ -143,44 +143,44 @@ class EdenDispatcher : public Dispatcher {
       ObjectFetchContext& context) override;
 
   folly::Future<folly::Unit> newFileCreated(
-      RelativePathPiece relPath,
-      RelativePathPiece destPath,
+      RelativePath relPath,
+      RelativePath destPath,
       bool isDirectory,
       ObjectFetchContext& context) override;
 
   folly::Future<folly::Unit> fileOverwritten(
-      RelativePathPiece relPath,
-      RelativePathPiece destPath,
+      RelativePath relPath,
+      RelativePath destPath,
       bool isDirectory,
       ObjectFetchContext& context) override;
 
   folly::Future<folly::Unit> fileHandleClosedFileModified(
-      RelativePathPiece relPath,
-      RelativePathPiece destPath,
+      RelativePath relPath,
+      RelativePath destPath,
       bool isDirectory,
       ObjectFetchContext& context) override;
 
   folly::Future<folly::Unit> fileRenamed(
-      RelativePathPiece oldPath,
-      RelativePathPiece newPath,
+      RelativePath oldPath,
+      RelativePath newPath,
       bool isDirectory,
       ObjectFetchContext& context) override;
 
   folly::Future<folly::Unit> preRename(
-      RelativePathPiece oldPath,
-      RelativePathPiece newPath,
+      RelativePath oldPath,
+      RelativePath newPath,
       bool isDirectory,
       ObjectFetchContext& context) override;
 
   folly::Future<folly::Unit> fileHandleClosedFileDeleted(
-      RelativePathPiece relPath,
-      RelativePathPiece destPath,
+      RelativePath relPath,
+      RelativePath destPath,
       bool isDirectory,
       ObjectFetchContext& context) override;
 
   folly::Future<folly::Unit> preSetHardlink(
-      RelativePathPiece oldPath,
-      RelativePathPiece newPath,
+      RelativePath oldPath,
+      RelativePath newPath,
       bool isDirectory,
       ObjectFetchContext& context) override;
 #endif

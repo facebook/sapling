@@ -96,8 +96,8 @@ class Dispatcher {
    * Notification sent when a file was created
    */
   virtual folly::Future<folly::Unit> newFileCreated(
-      RelativePathPiece relPath,
-      RelativePathPiece destPath,
+      RelativePath relPath,
+      RelativePath destPath,
       bool isDirectory,
       ObjectFetchContext& context) = 0;
 
@@ -105,8 +105,8 @@ class Dispatcher {
    * Notification sent when a file was ovewritten
    */
   virtual folly::Future<folly::Unit> fileOverwritten(
-      RelativePathPiece relPath,
-      RelativePathPiece destPath,
+      RelativePath relPath,
+      RelativePath destPath,
       bool isDirectory,
       ObjectFetchContext& context) = 0;
 
@@ -114,8 +114,8 @@ class Dispatcher {
    * Notification sent when a file is closed after being modified
    */
   virtual folly::Future<folly::Unit> fileHandleClosedFileModified(
-      RelativePathPiece relPath,
-      RelativePathPiece destPath,
+      RelativePath relPath,
+      RelativePath destPath,
       bool isDirectory,
       ObjectFetchContext& context) = 0;
 
@@ -123,8 +123,8 @@ class Dispatcher {
    * Notification sent when a file is renamed
    */
   virtual folly::Future<folly::Unit> fileRenamed(
-      RelativePathPiece oldPath,
-      RelativePathPiece newPath,
+      RelativePath oldPath,
+      RelativePath newPath,
       bool isDirectory,
       ObjectFetchContext& context) = 0;
 
@@ -134,8 +134,8 @@ class Dispatcher {
    * A failure will block the rename operation
    */
   virtual folly::Future<folly::Unit> preRename(
-      RelativePathPiece oldPath,
-      RelativePathPiece newPath,
+      RelativePath oldPath,
+      RelativePath newPath,
       bool isDirectory,
       ObjectFetchContext& context) = 0;
 
@@ -143,8 +143,8 @@ class Dispatcher {
    * Notification sent when a file is being removed
    */
   virtual folly::Future<folly::Unit> fileHandleClosedFileDeleted(
-      RelativePathPiece relPath,
-      RelativePathPiece destPath,
+      RelativePath relPath,
+      RelativePath destPath,
       bool isDirectory,
       ObjectFetchContext& context) = 0;
 
@@ -154,8 +154,8 @@ class Dispatcher {
    * A failure will block the hardlink operation
    */
   virtual folly::Future<folly::Unit> preSetHardlink(
-      RelativePathPiece oldPath,
-      RelativePathPiece newPath,
+      RelativePath oldPath,
+      RelativePath newPath,
       bool isDirectory,
       ObjectFetchContext& context) = 0;
 
