@@ -120,7 +120,11 @@ def localconfig(ui):
     result = []
     for section, name, value in ui.walkconfig():
         source = ui.configsource(section, name)
-        if source.find("/etc/") == -1 and source.find("builtin") == -1:
+        if (
+            source.find("/etc/") == -1
+            and source.find("builtin") == -1
+            and source.find("hgrc.dynamic") == -1
+        ):
             result.append("%s.%s=%s  # %s" % (section, name, value, source))
     return result
 
