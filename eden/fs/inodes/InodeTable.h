@@ -299,6 +299,11 @@ class InodeTable {
     State(MappedDiskVector<Entry>&& mdv) : storage{std::move(mdv)} {
       for (size_t i = 0; i < storage.size(); ++i) {
         const Entry& entry = storage[i];
+        if (entry.inode.empty()) {
+          // Buffers probably weren't flushed to disk, leaving
+          // zeroes. Don't pretend this entry is valid.
+          continue;
+        }
         auto ret = indices.insert({entry.inode, i});
         if (!ret.second) {
           XLOG(WARNING) << "Duplicate records for the same inode: indices "
