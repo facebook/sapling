@@ -387,16 +387,6 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       const std::optional<TreeEntry>& newScmEntry);
 
   /**
-   * Get debug data about this TreeInode and all of its children (recursively).
-   *
-   * This populates the results argument with TreeInodeDebugInfo objects for
-   * this TreeInode and all subdirectories inside of it.
-   */
-  void getDebugStatus(
-      std::vector<TreeInodeDebugInfo>& results,
-      const RelativePath& myPath) const;
-
-  /**
    * Returns a copy of this inode's metadata.
    */
 #ifndef _WIN32
