@@ -10,7 +10,7 @@ use libc::{c_char, c_int};
 use std::ffi::{CString, OsString};
 use std::path::Path;
 
-#[cfg_attr(not(fbcode_build), link(name = "chg", kind = "static"))]
+#[cfg_attr(not(fb_buck_build), link(name = "chg", kind = "static"))]
 extern "C" {
     fn chg_main(argc: c_int, argv: *mut *mut c_char, envp: *mut *mut c_char) -> c_int;
 }
