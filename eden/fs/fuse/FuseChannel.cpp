@@ -1178,6 +1178,8 @@ void FuseChannel::fuseWorkerThread() noexcept {
 }
 
 void FuseChannel::invalidationThread() noexcept {
+  setThreadName(to<std::string>("inval", mountPath_.basename()));
+
   // We send all FUSE_NOTIFY_INVAL_ENTRY and FUSE_NOTIFY_INVAL_INODE requests
   // in a dedicated thread.  These requests will block in the kernel until it
   // can obtain the inode lock on the inode in question.

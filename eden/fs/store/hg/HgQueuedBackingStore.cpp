@@ -16,6 +16,7 @@
 #include <folly/Range.h>
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
+#include <folly/system/ThreadName.h>
 #include <gflags/gflags.h>
 
 #include "eden/fs/config/ReloadableConfig.h"
@@ -168,6 +169,7 @@ void HgQueuedBackingStore::processPrefetchRequests(
 }
 
 void HgQueuedBackingStore::processRequest() {
+  folly::setThreadName("hgqueue");
   for (;;) {
     auto requests = queue_.dequeue(FLAGS_hg_queue_batch_size);
 
