@@ -16,8 +16,8 @@ use blobstore::Blobstore;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
 use fbthrift::compact_protocol;
+use futures::compat::Future01CompatExt;
 use futures::future::TryFutureExt;
-use futures_ext::{BoxFuture, FutureExt};
 use futures_old::{stream::FuturesUnordered, Future, Stream};
 use mononoke_types::{BlobstoreBytes, BonsaiChangeset, ChangesetId};
 
@@ -58,14 +58,15 @@ impl ChangesetInfoMapping {
     }
 }
 
+#[async_trait]
 impl BonsaiDerivedMapping for ChangesetInfoMapping {
     type Value = ChangesetInfo;
 
-    fn get(
+    async fn get(
         &self,
         ctx: CoreContext,
         csids: Vec<ChangesetId>,
-    ) -> BoxFuture<HashMap<ChangesetId, Self::Value>, Error> {
+    ) -> Result<HashMap<ChangesetId, Self::Value>, Error> {
         let futs = csids.into_iter().map(|csid| {
             self.blobstore
                 .get(ctx.clone(), self.format_key(&csid))
@@ -81,18 +82,21 @@ impl BonsaiDerivedMapping for ChangesetInfoMapping {
             .filter_map(|maybe_info| maybe_info)
             .collect()
             .and_then(move |infos| infos.into_iter().collect::<Result<HashMap<_, _>, Error>>())
-            .boxify()
+            .compat()
+            .await
     }
 
-    fn put(&self, ctx: CoreContext, csid: ChangesetId, info: Self::Value) -> BoxFuture<(), Error> {
+    async fn put(
+        &self,
+        ctx: CoreContext,
+        csid: ChangesetId,
+        info: Self::Value,
+    ) -> Result<(), Error> {
         let data = {
             let data = compact_protocol::serialize(&info.into_thrift());
             BlobstoreBytes::from_bytes(data)
         };
-        self.blobstore
-            .put(ctx, self.format_key(&csid), data)
-            .compat()
-            .boxify()
+        self.blobstore.put(ctx, self.format_key(&csid), data).await
     }
 }
 

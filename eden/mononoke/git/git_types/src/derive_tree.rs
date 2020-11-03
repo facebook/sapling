@@ -11,7 +11,7 @@ use cloned::cloned;
 use context::CoreContext;
 use futures::compat::Future01CompatExt;
 use futures::future::{ready, FutureExt, TryFutureExt};
-use futures_ext::{BoxFuture, FutureExt as _, StreamExt};
+use futures_ext::{FutureExt as _, StreamExt};
 use futures_old::{stream::futures_unordered, Future, IntoFuture, Stream};
 use manifest::derive_manifest;
 use std::collections::HashMap;
@@ -58,14 +58,15 @@ impl TreeMapping {
     }
 }
 
+#[async_trait]
 impl BonsaiDerivedMapping for TreeMapping {
     type Value = TreeHandle;
 
-    fn get(
+    async fn get(
         &self,
         ctx: CoreContext,
         csids: Vec<ChangesetId>,
-    ) -> BoxFuture<HashMap<ChangesetId, Self::Value>, Error> {
+    ) -> Result<HashMap<ChangesetId, Self::Value>, Error> {
         let gets = csids
             .into_iter()
             .map(|cs_id| self.fetch_root(ctx.clone(), cs_id));
@@ -73,14 +74,19 @@ impl BonsaiDerivedMapping for TreeMapping {
         futures_unordered(gets)
             .filter_map(|maybe_handle| maybe_handle)
             .collect_to()
-            .boxify()
+            .compat()
+            .await
     }
 
-    fn put(&self, ctx: CoreContext, csid: ChangesetId, root: Self::Value) -> BoxFuture<(), Error> {
+    async fn put(
+        &self,
+        ctx: CoreContext,
+        csid: ChangesetId,
+        root: Self::Value,
+    ) -> Result<(), Error> {
         self.blobstore
             .put(ctx, self.root_key(csid), root.into())
-            .compat()
-            .boxify()
+            .await
     }
 }
 

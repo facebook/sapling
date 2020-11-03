@@ -19,7 +19,7 @@ use futures::{
     future::{FutureExt, TryFutureExt},
     StreamExt, TryStreamExt,
 };
-use futures_ext::{spawn_future, BoxFuture, FutureExt as OldFutureExt, StreamExt as _};
+use futures_ext::{spawn_future, StreamExt as _};
 use futures_old::{future, stream, Future, IntoFuture, Stream};
 use manifest::find_intersection_of_diffs;
 use mononoke_types::{
@@ -114,14 +114,15 @@ impl BlameRootMapping {
     }
 }
 
+#[async_trait]
 impl BonsaiDerivedMapping for BlameRootMapping {
     type Value = BlameRoot;
 
-    fn get(
+    async fn get(
         &self,
         ctx: CoreContext,
         csids: Vec<ChangesetId>,
-    ) -> BoxFuture<HashMap<ChangesetId, Self::Value>, Error> {
+    ) -> Result<HashMap<ChangesetId, Self::Value>, Error> {
         let futs = csids.into_iter().map(|csid| {
             self.blobstore
                 .get(ctx.clone(), self.format_key(&csid))
@@ -131,18 +132,23 @@ impl BonsaiDerivedMapping for BlameRootMapping {
         stream::FuturesUnordered::from_iter(futs)
             .filter_map(|v| v)
             .collect_to()
-            .boxify()
+            .compat()
+            .await
     }
 
-    fn put(&self, ctx: CoreContext, csid: ChangesetId, _id: Self::Value) -> BoxFuture<(), Error> {
+    async fn put(
+        &self,
+        ctx: CoreContext,
+        csid: ChangesetId,
+        _id: Self::Value,
+    ) -> Result<(), Error> {
         self.blobstore
             .put(
                 ctx,
                 self.format_key(&csid),
                 BlobstoreBytes::from_bytes(Bytes::new()),
             )
-            .compat()
-            .boxify()
+            .await
     }
 }
 

@@ -208,33 +208,35 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
 /// After derived data was generated then it will be stored in BonsaiDerivedMapping, which is
 /// normally a persistent store. This is used to avoid regenerating the same derived data over
 /// and over again.
+#[async_trait]
 pub trait BonsaiDerivedMapping: Send + Sync + Clone {
     type Value: BonsaiDerived;
 
     /// Fetches mapping from bonsai changeset ids to generated value
-    fn get(
+    async fn get(
         &self,
         ctx: CoreContext,
         csids: Vec<ChangesetId>,
-    ) -> BoxFuture01<HashMap<ChangesetId, Self::Value>, Error>;
+    ) -> Result<HashMap<ChangesetId, Self::Value>, Error>;
 
     /// Saves mapping between bonsai changeset and derived data id
-    fn put(&self, ctx: CoreContext, csid: ChangesetId, id: Self::Value) -> BoxFuture01<(), Error>;
+    async fn put(&self, ctx: CoreContext, csid: ChangesetId, id: Self::Value) -> Result<(), Error>;
 }
 
+#[async_trait]
 impl<Mapping: BonsaiDerivedMapping> BonsaiDerivedMapping for Arc<Mapping> {
     type Value = Mapping::Value;
 
-    fn get(
+    async fn get(
         &self,
         ctx: CoreContext,
         csids: Vec<ChangesetId>,
-    ) -> BoxFuture01<HashMap<ChangesetId, Self::Value>, Error> {
-        (**self).get(ctx, csids)
+    ) -> Result<HashMap<ChangesetId, Self::Value>, Error> {
+        (**self).get(ctx, csids).await
     }
 
-    fn put(&self, ctx: CoreContext, csid: ChangesetId, id: Self::Value) -> BoxFuture01<(), Error> {
-        (**self).put(ctx, csid, id)
+    async fn put(&self, ctx: CoreContext, csid: ChangesetId, id: Self::Value) -> Result<(), Error> {
+        (**self).put(ctx, csid, id).await
     }
 }
 
@@ -260,24 +262,25 @@ impl<M> RegenerateMapping<M> {
     }
 }
 
+#[async_trait]
 impl<M> BonsaiDerivedMapping for RegenerateMapping<M>
 where
     M: BonsaiDerivedMapping,
 {
     type Value = M::Value;
 
-    fn get(
+    async fn get(
         &self,
         ctx: CoreContext,
         mut csids: Vec<ChangesetId>,
-    ) -> BoxFuture01<HashMap<ChangesetId, Self::Value>, Error> {
+    ) -> Result<HashMap<ChangesetId, Self::Value>, Error> {
         self.regenerate
             .with(|regenerate| csids.retain(|id| !regenerate.contains(&id)));
-        self.base.get(ctx, csids)
+        self.base.get(ctx, csids).await
     }
 
-    fn put(&self, ctx: CoreContext, csid: ChangesetId, id: Self::Value) -> BoxFuture01<(), Error> {
+    async fn put(&self, ctx: CoreContext, csid: ChangesetId, id: Self::Value) -> Result<(), Error> {
         self.regenerate.with(|regenerate| regenerate.remove(&csid));
-        self.base.put(ctx, csid, id)
+        self.base.put(ctx, csid, id).await
     }
 }

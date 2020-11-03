@@ -16,7 +16,7 @@ use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
 use futures::compat::Future01CompatExt;
 use futures::future::TryFutureExt;
 use futures::stream::TryStreamExt;
-use futures_ext::{BoxFuture, FutureExt, StreamExt};
+use futures_ext::StreamExt;
 use futures_old::{future, stream::FuturesUnordered, Future, Stream};
 use manifest::{find_intersection_of_diffs, Entry};
 use mononoke_types::{BonsaiChangeset, ChangesetId, FileUnodeId, ManifestUnodeId};
@@ -151,14 +151,15 @@ impl RootFastlogMapping {
     }
 }
 
+#[async_trait]
 impl BonsaiDerivedMapping for RootFastlogMapping {
     type Value = RootFastlog;
 
-    fn get(
+    async fn get(
         &self,
         ctx: CoreContext,
         csids: Vec<ChangesetId>,
-    ) -> BoxFuture<HashMap<ChangesetId, Self::Value>, Error> {
+    ) -> Result<HashMap<ChangesetId, Self::Value>, Error> {
         let gets = csids.into_iter().map(|cs_id| {
             self.blobstore
                 .get(ctx.clone(), self.format_key(&cs_id))
@@ -168,10 +169,16 @@ impl BonsaiDerivedMapping for RootFastlogMapping {
         FuturesUnordered::from_iter(gets)
             .filter_map(|x| x) // Remove None
             .collect_to()
-            .boxify()
+            .compat()
+            .await
     }
 
-    fn put(&self, ctx: CoreContext, csid: ChangesetId, _id: Self::Value) -> BoxFuture<(), Error> {
+    async fn put(
+        &self,
+        ctx: CoreContext,
+        csid: ChangesetId,
+        _id: Self::Value,
+    ) -> Result<(), Error> {
         self.blobstore
             .put(
                 ctx,
@@ -179,8 +186,7 @@ impl BonsaiDerivedMapping for RootFastlogMapping {
                 // Value doesn't matter here, so just put empty Value
                 BlobstoreBytes::from_bytes(Bytes::new()),
             )
-            .compat()
-            .boxify()
+            .await
     }
 }
 
@@ -200,6 +206,7 @@ mod tests {
         unshared_merge_even, unshared_merge_uneven,
     };
     use futures::StreamExt;
+    use futures_ext::{BoxFuture, FutureExt};
     use manifest::ManifestOps;
     use maplit::btreemap;
     use mercurial_types::HgChangesetId;

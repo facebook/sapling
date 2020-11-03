@@ -15,7 +15,7 @@ use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
 use futures::compat::Future01CompatExt;
 use futures::future::TryFutureExt;
-use futures_ext::{BoxFuture, FutureExt, StreamExt};
+use futures_ext::StreamExt;
 use futures_old::{
     stream::{self, FuturesUnordered},
     Future, Stream,
@@ -132,14 +132,15 @@ impl RootUnodeManifestMapping {
     }
 }
 
+#[async_trait]
 impl BonsaiDerivedMapping for RootUnodeManifestMapping {
     type Value = RootUnodeManifestId;
 
-    fn get(
+    async fn get(
         &self,
         ctx: CoreContext,
         csids: Vec<ChangesetId>,
-    ) -> BoxFuture<HashMap<ChangesetId, Self::Value>, Error> {
+    ) -> Result<HashMap<ChangesetId, Self::Value>, Error> {
         let gets = csids.into_iter().map(|cs_id| {
             self.fetch_unode(ctx.clone(), cs_id)
                 .map(|maybe_root_mf_id| stream::iter_ok(maybe_root_mf_id.into_iter()))
@@ -147,14 +148,14 @@ impl BonsaiDerivedMapping for RootUnodeManifestMapping {
         FuturesUnordered::from_iter(gets)
             .flatten()
             .collect_to()
-            .boxify()
+            .compat()
+            .await
     }
 
-    fn put(&self, ctx: CoreContext, csid: ChangesetId, id: Self::Value) -> BoxFuture<(), Error> {
+    async fn put(&self, ctx: CoreContext, csid: ChangesetId, id: Self::Value) -> Result<(), Error> {
         self.blobstore
             .put(ctx, self.format_key(csid), id.into())
-            .compat()
-            .boxify()
+            .await
     }
 }
 

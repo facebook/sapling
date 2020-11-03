@@ -31,8 +31,6 @@ use futures::{
     stream::{self, futures_unordered::FuturesUnordered},
     Future, Stream, StreamExt, TryFutureExt, TryStreamExt,
 };
-use futures_ext::{BoxFuture as BoxFutureOld, FutureExt as OldFutureExt};
-use futures_old::{future as future_old, Future as OldFuture};
 use lazy_static::lazy_static;
 use lock_ext::LockExt;
 use mercurial_derived_data::{HgChangesetIdMapping, MappedHgChangesetId};
@@ -259,11 +257,7 @@ where
                 let buffer = in_memory_mapping.into_buffer();
                 let buffer = buffer.lock().unwrap();
                 for (cs_id, value) in buffer.iter() {
-                    futs.push(
-                        orig_mapping
-                            .put(ctx.clone(), *cs_id, value.clone())
-                            .compat(),
-                    );
+                    futs.push(orig_mapping.put(ctx.clone(), *cs_id, value.clone()));
                 }
             }
             futs.try_for_each(|_| future::ok(())).await?;
@@ -278,7 +272,7 @@ where
         _repo: BlobRepo,
         mut csids: Vec<ChangesetId>,
     ) -> Result<Vec<ChangesetId>, Error> {
-        let derived = self.mapping.get(ctx, csids.clone()).compat().await?;
+        let derived = self.mapping.get(ctx, csids.clone()).await?;
         csids.retain(|csid| !derived.contains_key(&csid));
         Ok(csids)
     }
@@ -356,6 +350,7 @@ where
     }
 }
 
+#[async_trait]
 impl<M> BonsaiDerivedMapping for InMemoryMapping<M>
 where
     M: BonsaiDerivedMapping + Clone,
@@ -363,37 +358,37 @@ where
 {
     type Value = M::Value;
 
-    fn get(
+    async fn get(
         &self,
         ctx: CoreContext,
         mut csids: Vec<ChangesetId>,
-    ) -> BoxFutureOld<HashMap<ChangesetId, Self::Value>, Error> {
-        let buffer = self.buffer.lock().unwrap();
+    ) -> Result<HashMap<ChangesetId, Self::Value>, Error> {
         let mut ans = HashMap::new();
-        csids.retain(|cs_id| {
-            if let Some(v) = buffer.get(cs_id) {
-                ans.insert(*cs_id, v.clone());
-                false
-            } else {
-                true
-            }
-        });
+        {
+            let buffer = self.buffer.lock().unwrap();
+            csids.retain(|cs_id| {
+                if let Some(v) = buffer.get(cs_id) {
+                    ans.insert(*cs_id, v.clone());
+                    false
+                } else {
+                    true
+                }
+            });
+        }
 
-        self.mapping
-            .get(ctx, csids)
-            .map(move |fetched| ans.into_iter().chain(fetched.into_iter()).collect())
-            .boxify()
+        let fetched = self.mapping.get(ctx, csids).await?;
+        Ok(ans.into_iter().chain(fetched.into_iter()).collect())
     }
 
-    fn put(
+    async fn put(
         &self,
         _ctx: CoreContext,
         csid: ChangesetId,
         id: Self::Value,
-    ) -> BoxFutureOld<(), Error> {
+    ) -> Result<(), Error> {
         let mut buffer = self.buffer.lock().unwrap();
         buffer.insert(csid, id);
-        future_old::ok(()).boxify()
+        Ok(())
     }
 }
 

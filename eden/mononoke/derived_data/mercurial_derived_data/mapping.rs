@@ -10,7 +10,7 @@ use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry};
 use context::CoreContext;
-use futures_ext::{BoxFuture, FutureExt as _};
+use futures::compat::Future01CompatExt;
 use futures_old::Future;
 use mercurial_types::HgChangesetId;
 use mononoke_types::{BonsaiChangeset, ChangesetId, RepositoryId};
@@ -56,14 +56,15 @@ impl HgChangesetIdMapping {
     }
 }
 
+#[async_trait]
 impl BonsaiDerivedMapping for HgChangesetIdMapping {
     type Value = MappedHgChangesetId;
 
-    fn get(
+    async fn get(
         &self,
         ctx: CoreContext,
         csids: Vec<ChangesetId>,
-    ) -> BoxFuture<HashMap<ChangesetId, Self::Value>, Error> {
+    ) -> Result<HashMap<ChangesetId, Self::Value>, Error> {
         self.mapping
             .get(ctx, self.repo_id, csids.into())
             .map(|v| {
@@ -71,10 +72,11 @@ impl BonsaiDerivedMapping for HgChangesetIdMapping {
                     .map(|entry| (entry.bcs_id, MappedHgChangesetId(entry.hg_cs_id)))
                     .collect()
             })
-            .boxify()
+            .compat()
+            .await
     }
 
-    fn put(&self, ctx: CoreContext, csid: ChangesetId, id: Self::Value) -> BoxFuture<(), Error> {
+    async fn put(&self, ctx: CoreContext, csid: ChangesetId, id: Self::Value) -> Result<(), Error> {
         self.mapping
             .add(
                 ctx,
@@ -85,6 +87,7 @@ impl BonsaiDerivedMapping for HgChangesetIdMapping {
                 },
             )
             .map(|_| ())
-            .boxify()
+            .compat()
+            .await
     }
 }

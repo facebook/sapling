@@ -12,16 +12,14 @@ use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
-use cloned::cloned;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
 use filenodes::{FilenodeInfo, FilenodeResult, PreparedFilenode};
 use futures::{
-    compat::Future01CompatExt, future::try_join_all, stream, FutureExt, StreamExt, TryFutureExt,
-    TryStreamExt,
+    compat::Future01CompatExt, future::try_join_all, stream, StreamExt, TryFutureExt, TryStreamExt,
 };
-use futures_ext::{BoxFuture, FutureExt as OldFutureExt};
-use futures_old::{future as old_future, Future};
+use futures_ext::FutureExt as OldFutureExt;
+use futures_old::Future;
 use futures_util::try_join;
 use itertools::{Either, Itertools};
 use manifest::{find_intersection_of_diffs_and_parents, Entry};
@@ -312,50 +310,50 @@ impl FilenodesOnlyPublicMapping {
     }
 }
 
+#[async_trait]
 impl BonsaiDerivedMapping for FilenodesOnlyPublicMapping {
     type Value = FilenodesOnlyPublic;
 
-    fn get(
+    async fn get(
         &self,
         ctx: CoreContext,
         csids: Vec<ChangesetId>,
-    ) -> BoxFuture<HashMap<ChangesetId, Self::Value>, Error> {
-        cloned!(self.repo);
-        async move {
-            stream::iter(csids.into_iter())
-                .map({
-                    let repo = &repo;
-                    let ctx = &ctx;
-                    move |cs_id| async move {
-                        let filenode_res = fetch_root_filenode(&ctx, cs_id, &repo).await?;
-                        let maybe_root_filenode = match filenode_res {
-                            FilenodeResult::Present(maybe_root_filenode) => maybe_root_filenode,
-                            FilenodeResult::Disabled => {
-                                return Ok(Some((cs_id, FilenodesOnlyPublic::Disabled)));
-                            }
-                        };
+    ) -> Result<HashMap<ChangesetId, Self::Value>, Error> {
+        stream::iter(csids.into_iter())
+            .map({
+                let repo = &self.repo;
+                let ctx = &ctx;
+                move |cs_id| async move {
+                    let filenode_res = fetch_root_filenode(&ctx, cs_id, &repo).await?;
+                    let maybe_root_filenode = match filenode_res {
+                        FilenodeResult::Present(maybe_root_filenode) => maybe_root_filenode,
+                        FilenodeResult::Disabled => {
+                            return Ok(Some((cs_id, FilenodesOnlyPublic::Disabled)));
+                        }
+                    };
 
-                        Ok(maybe_root_filenode.map(move |filenode| {
-                            (
-                                cs_id,
-                                FilenodesOnlyPublic::Present {
-                                    root_filenode: Some(filenode),
-                                },
-                            )
-                        }))
-                    }
-                })
-                .buffer_unordered(100)
-                .try_filter_map(|x| async { Ok(x) })
-                .try_collect()
-                .await
-        }
-        .boxed()
-        .compat()
-        .boxify()
+                    Ok(maybe_root_filenode.map(move |filenode| {
+                        (
+                            cs_id,
+                            FilenodesOnlyPublic::Present {
+                                root_filenode: Some(filenode),
+                            },
+                        )
+                    }))
+                }
+            })
+            .buffer_unordered(100)
+            .try_filter_map(|x| async { Ok(x) })
+            .try_collect()
+            .await
     }
 
-    fn put(&self, ctx: CoreContext, _csid: ChangesetId, id: Self::Value) -> BoxFuture<(), Error> {
+    async fn put(
+        &self,
+        ctx: CoreContext,
+        _csid: ChangesetId,
+        id: Self::Value,
+    ) -> Result<(), Error> {
         let filenodes = self.repo.get_filenodes();
         let repo_id = self.repo.get_repoid();
 
@@ -365,16 +363,19 @@ impl BonsaiDerivedMapping for FilenodesOnlyPublicMapping {
         };
 
         match root_filenode {
-            Some(root_filenode) => filenodes
-                .add_filenodes(ctx.clone(), vec![root_filenode.into()], repo_id)
-                .map(|res| match res {
-                    // If filenodes are disabled then just return success
-                    // but use explicit match here in case we add more variants
-                    // to FilenodeResult enum
-                    FilenodeResult::Present(()) | FilenodeResult::Disabled => {}
-                })
-                .boxify(),
-            None => old_future::ok(()).boxify(),
+            Some(root_filenode) => {
+                filenodes
+                    .add_filenodes(ctx.clone(), vec![root_filenode.into()], repo_id)
+                    .map(|res| match res {
+                        // If filenodes are disabled then just return success
+                        // but use explicit match here in case we add more variants
+                        // to FilenodeResult enum
+                        FilenodeResult::Present(()) | FilenodeResult::Disabled => {}
+                    })
+                    .compat()
+                    .await
+            }
+            None => Ok(()),
         }
     }
 }
@@ -629,7 +630,6 @@ mod tests {
         // Make sure they are in the mapping
         let maps = FilenodesOnlyPublic::mapping(&ctx, &repo)
             .get(ctx.clone(), vec![parent_empty, child_empty])
-            .compat()
             .await?;
 
         assert_eq!(maps.len(), 2);
@@ -659,7 +659,6 @@ mod tests {
         // Make sure they are in the mapping
         let maps = mapping
             .get(ctx.clone(), vec![child_empty, parent_empty])
-            .compat()
             .await?;
         assert_eq!(maps.len(), 2);
         Ok(())
@@ -692,7 +691,7 @@ mod tests {
         assert_eq!(derived, FilenodesOnlyPublic::Disabled);
 
         let mapping = FilenodesOnlyPublic::mapping(&ctx, &repo);
-        let res = mapping.get(ctx.clone(), vec![cs]).compat().await?;
+        let res = mapping.get(ctx.clone(), vec![cs]).await?;
 
         assert_eq!(res.get(&cs).unwrap(), &FilenodesOnlyPublic::Disabled);
 

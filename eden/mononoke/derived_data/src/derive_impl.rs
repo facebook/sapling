@@ -342,7 +342,7 @@ where
             Err(_) => (false, true),
         };
 
-        let mut vs = mapping.get(ctx.clone(), vec![bcs_id]).compat().await?;
+        let mut vs = mapping.get(ctx.clone(), vec![bcs_id]).await?;
         let derived = vs.remove(&bcs_id);
 
         match derived {
@@ -373,7 +373,7 @@ where
                                 )
                                 .compat()
                                 .await?;
-                        mapping.put(ctx.clone(), bcs_id, derived).compat().await?;
+                        mapping.put(ctx.clone(), bcs_id, derived).await?;
                         let res: Result<_, Error> = Ok(());
                         res
                     };
@@ -543,10 +543,7 @@ impl<Derived: BonsaiDerived> DeriveNode<Derived> {
     {
         // TODO: do not create intermediate hashmap, since this methods is going to be called
         //       most often, to get derived value
-        let csids_to_id = derived_mapping
-            .get(ctx.clone(), vec![*csid])
-            .compat()
-            .await?;
+        let csids_to_id = derived_mapping.get(ctx.clone(), vec![*csid]).await?;
         match csids_to_id.get(csid) {
             Some(id) => Ok(DeriveNode::Derived(id.clone())),
             None => Ok(DeriveNode::Bonsai(*csid)),
@@ -641,14 +638,15 @@ mod test {
         }
     }
 
+    #[async_trait]
     impl BonsaiDerivedMapping for TestMapping {
         type Value = TestGenNum;
 
-        fn get(
+        async fn get(
             &self,
             _ctx: CoreContext,
             csids: Vec<ChangesetId>,
-        ) -> BoxFuture01<HashMap<ChangesetId, Self::Value>, Error> {
+        ) -> Result<HashMap<ChangesetId, Self::Value>, Error> {
             let mut res = hashmap! {};
             {
                 let mapping = self.mapping.lock().unwrap();
@@ -659,20 +657,20 @@ mod test {
                 }
             }
 
-            future01::ok(res).boxify()
+            Ok(res)
         }
 
-        fn put(
+        async fn put(
             &self,
             _ctx: CoreContext,
             csid: ChangesetId,
             id: Self::Value,
-        ) -> BoxFuture01<(), Error> {
+        ) -> Result<(), Error> {
             {
                 let mut mapping = self.mapping.lock().unwrap();
                 mapping.insert(csid, id);
             }
-            future01::ok(()).boxify()
+            Ok(())
         }
     }
 
@@ -696,7 +694,7 @@ mod test {
             )
             .unwrap();
 
-        let mapping = TestGenNum::mapping(&ctx, &repo);
+        let mapping = &TestGenNum::mapping(&ctx, &repo);
         let actual = runtime
             .block_on(TestGenNum::derive(ctx.clone(), repo.clone(), bcs_id))
             .unwrap();
@@ -712,7 +710,7 @@ mod test {
                 )
                 .and_then(move |new_bcs_id| {
                     let parents = changeset_fetcher.get_parents(ctx.clone(), new_bcs_id.clone());
-                    let mapping = mapping.get(ctx.clone(), vec![new_bcs_id]);
+                    let mapping = mapping.get(ctx.clone(), vec![new_bcs_id]).boxed().compat();
 
                     parents.join(mapping).map(move |(parents, mapping)| {
                         let gen_num = mapping.get(&new_bcs_id).unwrap();
@@ -935,7 +933,7 @@ mod test {
         // schedule derivation
         runtime.block_on(tokio_timer::sleep(Duration::from_millis(300)))?;
         assert_eq!(
-            runtime.block_on(mapping.get(ctx.clone(), vec![csid]))?,
+            runtime.block_on_std(mapping.get(ctx.clone(), vec![csid]))?,
             HashMap::new()
         );
 
@@ -950,7 +948,7 @@ mod test {
             None => panic!("scheduled derivation should have been completed"),
         };
         assert_eq!(
-            runtime.block_on(mapping.get(ctx.clone(), vec![csid]))?,
+            runtime.block_on_std(mapping.get(ctx.clone(), vec![csid]))?,
             hashmap! { csid => result.clone() }
         );
 
@@ -1022,7 +1020,7 @@ mod test {
         // should succeed even though lease always fails
         let result = runtime.block_on(TestGenNum::derive(ctx.clone(), repo.clone(), csid))?;
         assert_eq!(
-            runtime.block_on(mapping.get(ctx.clone(), vec![csid]))?,
+            runtime.block_on_std(mapping.get(ctx, vec![csid]))?,
             hashmap! { csid => result },
         );
 
