@@ -18,7 +18,7 @@ use context::CoreContext;
 use cross_repo_sync::{
     find_toposorted_unsynced_ancestors,
     types::{Source, Target},
-    CandidateSelectionHint, CommitSyncOutcome, CommitSyncer,
+    CandidateSelectionHint, CommitSyncContext, CommitSyncOutcome, CommitSyncer,
 };
 use futures::{
     compat::Future01CompatExt,
@@ -326,7 +326,13 @@ pub async fn sync_commit_without_pushrebase<M: SyncedCommitMapping + Clone + 'st
             // TODO(stash, ikostia) - T77836390. fix how merges are processed by x-repo sync job
             let current_version = commit_syncer.get_current_version(&ctx)?;
             commit_syncer
-                .unsafe_always_rewrite_sync_commit(ctx, cs_id, None, &current_version)
+                .unsafe_always_rewrite_sync_commit(
+                    ctx,
+                    cs_id,
+                    None,
+                    &current_version,
+                    CommitSyncContext::XRepoSyncJob,
+                )
                 .timed()
                 .await
         } else {
@@ -336,7 +342,12 @@ pub async fn sync_commit_without_pushrebase<M: SyncedCommitMapping + Clone + 'st
         }
     } else {
         commit_syncer
-            .unsafe_sync_commit(ctx, cs_id, CandidateSelectionHint::Only)
+            .unsafe_sync_commit(
+                ctx,
+                cs_id,
+                CandidateSelectionHint::Only,
+                CommitSyncContext::XRepoSyncJob,
+            )
             .timed()
             .await
     };
@@ -430,7 +441,13 @@ async fn pushrebase_commit<M: SyncedCommitMapping + Clone + 'static>(
     let target_lca_hint: Target<Arc<dyn LeastCommonAncestorsHint>> =
         Target(Arc::new((*target_skiplist_index.0).clone()));
     commit_syncer
-        .unsafe_sync_commit_pushrebase(&ctx, bcs, bookmark.clone(), target_lca_hint)
+        .unsafe_sync_commit_pushrebase(
+            &ctx,
+            bcs,
+            bookmark.clone(),
+            target_lca_hint,
+            CommitSyncContext::XRepoSyncJob,
+        )
         .await
 }
 

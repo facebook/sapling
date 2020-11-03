@@ -8,7 +8,7 @@
 use anyhow::{anyhow, Error};
 use blobstore::Loadable;
 use context::CoreContext;
-use cross_repo_sync::CommitSyncer;
+use cross_repo_sync::{CommitSyncContext, CommitSyncer};
 use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types::ChangesetId;
 use std::collections::HashMap;
@@ -60,6 +60,7 @@ pub async fn manual_commit_sync<M: SyncedCommitMapping + Clone + 'static>(
             source_cs_id,
             Some(remapped_parents),
             &mapping_version,
+            CommitSyncContext::ManualCommitSync,
         )
         .await?;
 

@@ -26,15 +26,34 @@ const ERROR: &str = "error";
 const SUCCESS: &str = "success";
 const SESSION_ID: &str = "session_id";
 
+/// Context of a commit sync function being called
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum CommitSyncContext {
+    AdminChangeMapping,
+    Backsyncer,
+    ManualCommitSync,
+    PushRedirector,
+    RepoImport,
+    ScsXrepoLookup,
+    SyncDiamondMerge,
+    Tests,
     Unknown,
+    XRepoSyncJob,
 }
 
 impl fmt::Display for CommitSyncContext {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::AdminChangeMapping => write!(f, "admin-change-mapping"),
+            Self::Backsyncer => write!(f, "backsyncer"),
+            Self::ManualCommitSync => write!(f, "manual-commit-sync"),
+            Self::PushRedirector => write!(f, "push-redirector"),
+            Self::RepoImport => write!(f, "repo-import"),
+            Self::ScsXrepoLookup => write!(f, "scs-xrepo-lookup"),
+            Self::SyncDiamondMerge => write!(f, "sync-diamond-merge"),
+            Self::Tests => write!(f, "tests"),
             Self::Unknown => write!(f, "unknown"),
+            Self::XRepoSyncJob => write!(f, "x-repo-sync-job"),
         }
     }
 }

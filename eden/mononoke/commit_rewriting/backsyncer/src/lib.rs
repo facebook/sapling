@@ -34,7 +34,7 @@ use bookmarks::{
 };
 use cloned::cloned;
 use context::CoreContext;
-use cross_repo_sync::{CandidateSelectionHint, CommitSyncOutcome, CommitSyncer};
+use cross_repo_sync::{CandidateSelectionHint, CommitSyncContext, CommitSyncOutcome, CommitSyncer};
 use futures::{
     compat::Future01CompatExt,
     future::{FutureExt, TryFutureExt},
@@ -155,7 +155,12 @@ where
             // therefore there can be at most one remapped candidate,
             // so `CandidateSelectionHint::Only` is a safe choice
             commit_syncer
-                .sync_commit(&ctx, to_cs_id, CandidateSelectionHint::Only)
+                .sync_commit(
+                    &ctx,
+                    to_cs_id,
+                    CandidateSelectionHint::Only,
+                    CommitSyncContext::Backsyncer,
+                )
                 .await?;
         }
 

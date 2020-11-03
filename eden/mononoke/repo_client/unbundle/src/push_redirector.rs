@@ -32,7 +32,7 @@ use cloned::cloned;
 use context::CoreContext;
 use cross_repo_sync::create_commit_syncers;
 use cross_repo_sync::types::Target;
-use cross_repo_sync::{CandidateSelectionHint, CommitSyncOutcome, CommitSyncer};
+use cross_repo_sync::{CandidateSelectionHint, CommitSyncContext, CommitSyncOutcome, CommitSyncer};
 use futures::{
     compat::Future01CompatExt,
     future::{try_join_all, FutureExt},
@@ -891,7 +891,12 @@ impl PushRedirector {
         for bcs_id in to_sync.iter() {
             let synced_bcs_id = self
                 .small_to_large_commit_syncer
-                .unsafe_sync_commit(ctx, *bcs_id, candidate_selection_hint.clone())
+                .unsafe_sync_commit(
+                    ctx,
+                    *bcs_id,
+                    candidate_selection_hint.clone(),
+                    CommitSyncContext::PushRedirector,
+                )
                 .await?
                 .ok_or(format_err!(
                     "{} was rewritten into nothingness during uploaded changesets sync",

@@ -22,7 +22,9 @@ use bookmarks::{BookmarkKind, BookmarkName, BookmarkPagination, BookmarkPrefix, 
 use cached_config::ConfigStore;
 use changeset_info::ChangesetInfo;
 use context::CoreContext;
-use cross_repo_sync::{types::Target, CandidateSelectionHint, CommitSyncRepos, CommitSyncer};
+use cross_repo_sync::{
+    types::Target, CandidateSelectionHint, CommitSyncContext, CommitSyncRepos, CommitSyncer,
+};
 use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
 use filestore::{Alias, FetchKey};
@@ -1232,7 +1234,12 @@ impl RepoContext {
         );
 
         let maybe_cs_id = commit_syncer
-            .sync_commit(&self.ctx, changeset, candidate_selection_hint)
+            .sync_commit(
+                &self.ctx,
+                changeset,
+                candidate_selection_hint,
+                CommitSyncContext::ScsXrepoLookup,
+            )
             .await?;
         Ok(maybe_cs_id.map(|cs_id| ChangesetContext::new(other.clone(), cs_id)))
     }

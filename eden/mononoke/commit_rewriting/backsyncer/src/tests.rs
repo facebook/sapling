@@ -17,7 +17,9 @@ use cloned::cloned;
 use context::CoreContext;
 use cross_repo_sync::types::{Source, Target};
 use cross_repo_sync::{rewrite_commit, upload_commits, CommitSyncOutcome, CommitSyncer};
-use cross_repo_sync::{CandidateSelectionHint, CommitSyncDataProvider, CommitSyncRepos, SyncData};
+use cross_repo_sync::{
+    CandidateSelectionHint, CommitSyncContext, CommitSyncDataProvider, CommitSyncRepos, SyncData,
+};
 use dbbookmarks::SqlBookmarksBuilder;
 use fbinit::FacebookInit;
 use fixtures::linear;
@@ -1503,7 +1505,12 @@ async fn preserve_premerge_commit(
     };
 
     small_to_large_sync_config
-        .unsafe_sync_commit(&ctx, bcs_id, CandidateSelectionHint::Only)
+        .unsafe_sync_commit(
+            &ctx,
+            bcs_id,
+            CandidateSelectionHint::Only,
+            CommitSyncContext::Tests,
+        )
         .await?;
 
     for another_repo_id in another_small_repo_ids {

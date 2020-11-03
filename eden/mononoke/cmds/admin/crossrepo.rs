@@ -16,7 +16,7 @@ use context::CoreContext;
 use cross_repo_sync::{
     types::{Large, Small},
     validation::{self, BookmarkDiff},
-    CommitSyncRepos, CommitSyncer,
+    CommitSyncContext, CommitSyncRepos, CommitSyncer,
 };
 use fbinit::FacebookInit;
 use futures::{compat::Future01CompatExt, try_join};
@@ -308,6 +308,7 @@ async fn run_pushredirection_subcommand<'a>(
                       large_bookmark_value.0.clone() => small_bookmark_value.0.clone(),
                     }),
                     &mapping_version,
+                    CommitSyncContext::AdminChangeMapping,
                 )
                 .await?;
 

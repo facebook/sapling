@@ -18,7 +18,7 @@ use cloned::cloned;
 use cmdlib::{args, monitoring};
 use cmdlib_x_repo::create_commit_syncer_from_matches;
 use context::{CoreContext, SessionContainer};
-use cross_repo_sync::{CandidateSelectionHint, CommitSyncOutcome, CommitSyncer};
+use cross_repo_sync::{CandidateSelectionHint, CommitSyncContext, CommitSyncOutcome, CommitSyncer};
 use fbinit::FacebookInit;
 use futures::{
     compat::Future01CompatExt,
@@ -385,7 +385,12 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                                 // therefore there can be at most one remapped candidate,
                                 // so `CandidateSelectionHint::Only` is a safe choice
                                 commit_syncer
-                                    .sync_commit(&ctx, bonsai.clone(), CandidateSelectionHint::Only)
+                                    .sync_commit(
+                                        &ctx,
+                                        bonsai.clone(),
+                                        CandidateSelectionHint::Only,
+                                        CommitSyncContext::Backsyncer,
+                                    )
                                     .await?;
 
                                 let maybe_sync_outcome =

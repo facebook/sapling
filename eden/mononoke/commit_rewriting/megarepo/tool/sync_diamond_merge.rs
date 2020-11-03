@@ -20,7 +20,7 @@ use cloned::cloned;
 use context::CoreContext;
 use cross_repo_sync::{
     create_commit_syncers, rewrite_commit, update_mapping_with_version, upload_commits,
-    CandidateSelectionHint, CommitSyncOutcome, CommitSyncer, Syncers,
+    CandidateSelectionHint, CommitSyncContext, CommitSyncOutcome, CommitSyncer, Syncers,
 };
 use futures::{
     compat::Future01CompatExt,
@@ -141,7 +141,12 @@ pub async fn do_sync_diamond_merge(
         // repo. Manual remediation would be needed in that case.
         syncers
             .small_to_large
-            .unsafe_sync_commit(&ctx, cs_id, CandidateSelectionHint::Only)
+            .unsafe_sync_commit(
+                &ctx,
+                cs_id,
+                CandidateSelectionHint::Only,
+                CommitSyncContext::SyncDiamondMerge,
+            )
             .await?;
     }
 

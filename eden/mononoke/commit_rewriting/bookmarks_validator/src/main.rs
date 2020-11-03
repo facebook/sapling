@@ -287,7 +287,7 @@ async fn remap<M: SyncedCommitMapping + Clone + 'static>(
 mod tests {
     use super::*;
 
-    use cross_repo_sync::CandidateSelectionHint;
+    use cross_repo_sync::{CandidateSelectionHint, CommitSyncContext};
     use cross_repo_sync_test_utils::init_small_large_repo;
     use tests_utils::{bookmark, resolve_cs_id, CreateCommitContext};
     use tokio_compat::runtime::Runtime;
@@ -392,7 +392,12 @@ mod tests {
         }
         syncers
             .large_to_small
-            .sync_commit(&ctx, last.unwrap(), CandidateSelectionHint::Only)
+            .sync_commit(
+                &ctx,
+                last.unwrap(),
+                CandidateSelectionHint::Only,
+                CommitSyncContext::Tests,
+            )
             .await?;
 
         // Since all commits were from another repo, large repo's master still remaps

@@ -49,7 +49,8 @@ use topo_sort::sort_topological;
 
 use merge_utils::get_version_for_merge;
 use pushrebase_hook::CrossRepoSyncPushrebaseHook;
-use reporting::{log_rewrite, CommitSyncContext};
+use reporting::log_rewrite;
+pub use reporting::CommitSyncContext;
 use types::{Source, Target};
 
 mod commit_sync_data_provider;
@@ -673,6 +674,7 @@ where
         ctx: &CoreContext,
         source_cs_id: ChangesetId,
         ancestor_selection_hint: CandidateSelectionHint,
+        commit_sync_context: CommitSyncContext,
     ) -> Result<Option<ChangesetId>, Error> {
         let before = Instant::now();
         let res = self
@@ -684,7 +686,7 @@ where
             self.scuba_sample.clone(),
             source_cs_id,
             "sync_commit",
-            CommitSyncContext::Unknown,
+            commit_sync_context,
             elapsed,
             &res,
         );
@@ -724,7 +726,7 @@ where
         }
 
         for ancestor in unsynced_ancestors {
-            self.unsafe_sync_commit(ctx, ancestor, ancestor_selection_hint.clone())
+            self.unsafe_sync_commit_impl(ctx, ancestor, ancestor_selection_hint.clone(), None)
                 .await?;
         }
 
@@ -758,6 +760,7 @@ where
         ctx: &CoreContext,
         source_cs_id: ChangesetId,
         parent_mapping_selection_hint: CandidateSelectionHint,
+        commit_sync_context: CommitSyncContext,
     ) -> Result<Option<ChangesetId>, Error> {
         let before = Instant::now();
         let res = self
@@ -769,7 +772,7 @@ where
             self.scuba_sample.clone(),
             source_cs_id,
             "unsafe_sync_commit",
-            CommitSyncContext::Unknown,
+            commit_sync_context,
             elapsed,
             &res,
         );
@@ -787,14 +790,28 @@ where
         source_cs_id: ChangesetId,
         parent_mapping_selection_hint: CandidateSelectionHint,
         expected_version: CommitSyncConfigVersion,
+        commit_sync_context: CommitSyncContext,
     ) -> Result<Option<ChangesetId>, Error> {
-        self.unsafe_sync_commit_impl(
+        let before = Instant::now();
+        let res = self
+            .unsafe_sync_commit_impl(
+                ctx,
+                source_cs_id,
+                parent_mapping_selection_hint,
+                Some(expected_version),
+            )
+            .await;
+        let elapsed = before.elapsed();
+        log_rewrite(
             ctx,
+            self.scuba_sample.clone(),
             source_cs_id,
-            parent_mapping_selection_hint,
-            Some(expected_version),
-        )
-        .await
+            "unsafe_sync_commit_with_expected_version",
+            commit_sync_context,
+            elapsed,
+            &res,
+        );
+        res
     }
 
     async fn unsafe_sync_commit_impl<'a>(
@@ -860,6 +877,7 @@ where
         source_cs_id: ChangesetId,
         maybe_parents: Option<HashMap<ChangesetId, ChangesetId>>,
         sync_config_version: &CommitSyncConfigVersion,
+        commit_sync_context: CommitSyncContext,
     ) -> Result<Option<ChangesetId>, Error> {
         let before = Instant::now();
         let res = self
@@ -876,7 +894,7 @@ where
             self.scuba_sample.clone(),
             source_cs_id,
             "unsafe_always_rewrite_sync_commit",
-            CommitSyncContext::Unknown,
+            commit_sync_context,
             elapsed,
             &res,
         );
@@ -942,6 +960,7 @@ where
         source_cs: BonsaiChangeset,
         bookmark: BookmarkName,
         target_lca_hint: Target<Arc<dyn LeastCommonAncestorsHint>>,
+        commit_sync_context: CommitSyncContext,
     ) -> Result<Option<ChangesetId>, Error> {
         let source_cs_id = source_cs.get_changeset_id();
         let before = Instant::now();
@@ -955,7 +974,7 @@ where
             self.scuba_sample.clone(),
             source_cs_id,
             "unsafe_sync_commit_pushrebase",
-            CommitSyncContext::Unknown,
+            commit_sync_context,
             elapsed,
             &res,
         );

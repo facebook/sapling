@@ -18,7 +18,8 @@ use cmdlib::args;
 use cmdlib::helpers::block_execute;
 use context::CoreContext;
 use cross_repo_sync::{
-    create_commit_syncers, rewrite_commit, CandidateSelectionHint, CommitSyncer, Syncers,
+    create_commit_syncers, rewrite_commit, CandidateSelectionHint, CommitSyncContext, CommitSyncer,
+    Syncers,
 };
 use derived_data_utils::derived_data_utils;
 use fbinit::FacebookInit;
@@ -220,7 +221,12 @@ async fn back_sync_commits_to_small_repo(
         // It is always safe to use `CandidateSelectionHint::Only` in
         // the large-to-small direction
         let maybe_synced_cs_id: Option<ChangesetId> = large_to_small_syncer
-            .sync_commit(&ctx, bcs_id.clone(), CandidateSelectionHint::Only)
+            .sync_commit(
+                &ctx,
+                bcs_id.clone(),
+                CandidateSelectionHint::Only,
+                CommitSyncContext::RepoImport,
+            )
             .await?;
         if let Some(synced_cs_id) = maybe_synced_cs_id {
             info!(
