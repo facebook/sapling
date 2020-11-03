@@ -24,7 +24,7 @@ use cmdlib::{args, monitoring::ReadyFlagService};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{
-    compat::Future01CompatExt,
+    compat::{Future01CompatExt, Stream01CompatExt},
     future,
     stream::{self, Stream, StreamExt, TryStreamExt},
 };
@@ -261,7 +261,7 @@ async fn maybe_unbundle(
                 &ctx,
                 &repo,
                 false, // infinitepush_writes_allowed
-                Box::new(bundle_stream),
+                bundle_stream.compat().boxed(),
                 RepoReadOnly::ReadWrite,
                 None,  // maybe_full_content
                 false, // pure_push_allowed

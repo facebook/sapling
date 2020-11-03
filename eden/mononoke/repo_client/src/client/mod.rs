@@ -25,13 +25,13 @@ use context::{CoreContext, LoggingContainer, PerfCounterType, SessionContainer};
 use filenodes::FilenodeResult;
 use futures::{
     channel::oneshot::{self, Sender},
-    compat::Future01CompatExt,
+    compat::{Future01CompatExt, Stream01CompatExt},
     future::{self, select, Either, FutureExt, TryFutureExt},
-    pin_mut, TryStreamExt,
+    pin_mut, StreamExt, TryStreamExt,
 };
 use futures_ext::{
     spawn_future, try_boxfuture, try_boxstream, BoxFuture, BoxStream, BufferedParams,
-    FutureExt as OldFutureExt, StreamExt, StreamTimeoutError,
+    FutureExt as OldFutureExt, StreamExt as OldStreamExt, StreamTimeoutError,
 };
 use futures_old::future::ok;
 use futures_old::{
@@ -1609,7 +1609,7 @@ impl HgCommands for RepoClient {
                             &ctx,
                             &blobrepo,
                             infinitepush_writes_allowed,
-                            stream,
+                            stream.compat().boxed(),
                             read_write,
                             maybe_full_content,
                             pure_push_allowed,
