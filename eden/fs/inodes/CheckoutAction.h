@@ -115,9 +115,9 @@ class CheckoutAction {
       folly::Future<InodePtr> inodeFuture);
 
   void setOldTree(std::shared_ptr<const Tree> tree);
-  void setOldBlob(std::shared_ptr<const Blob> blob);
+  void setOldBlob(Hash blobSha1);
   void setNewTree(std::shared_ptr<const Tree> tree);
-  void setNewBlob(std::shared_ptr<const Blob> blob);
+  void setNewBlob();
   void setInode(InodePtr inode);
   void error(folly::StringPiece msg, const folly::exception_wrapper& ew);
 
@@ -173,15 +173,16 @@ class CheckoutAction {
    * Only one each oldTree_ and oldBlob_ will be loaded,
    * and the same goes for newTree_ and newBlob_.
    *
-   * TODO: We don't actually ever need the data from new blob.  If the
-   * destination entry is a blob we could just record this fact, and not bother
-   * loading the blob data itself.
+   * Note that for trees we download the full tree. For the old blob we
+   * only download the sha1 as this is all we will need. We don't actually ever
+   * need the data from new blob.  So we just record if the destination is
+   * a new blob, and not bother loading the blob data itself.
    */
   InodePtr inode_;
   std::shared_ptr<const Tree> oldTree_;
-  std::shared_ptr<const Blob> oldBlob_;
+  std::optional<Hash> oldBlobSha1_;
   std::shared_ptr<const Tree> newTree_;
-  std::shared_ptr<const Blob> newBlob_;
+  bool newBlobMarker_ = false;
 
   /**
    * The errors vector keeps track of any errors that occurred while trying to

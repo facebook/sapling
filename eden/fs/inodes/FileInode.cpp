@@ -528,6 +528,22 @@ std::optional<bool> FileInode::isSameAsFast(
   return std::nullopt;
 }
 
+folly::Future<bool> FileInode::isSameAsSlow(
+    const Hash& expectedBlobSha1,
+    ObjectFetchContext& fetchContext) {
+  return getSha1(fetchContext)
+      .thenTry([expectedBlobSha1](folly::Try<Hash>&& try_) {
+        if (try_.hasException()) {
+          XLOG(DBG2) << "Assuming changed: "
+                     << folly::exceptionStr(
+                            try_.tryGetExceptionObject<std::exception>());
+          return false;
+        } else {
+          return try_.value() == expectedBlobSha1;
+        }
+      });
+}
+
 folly::Future<bool> FileInode::isSameAs(
     const Blob& blob,
     TreeEntryType entryType,
@@ -538,16 +554,20 @@ folly::Future<bool> FileInode::isSameAs(
   }
 
   auto blobSha1 = Hash::sha1(blob.getContents());
-  return getSha1(fetchContext).thenTry([blobSha1](folly::Try<Hash>&& try_) {
-    if (try_.hasException()) {
-      XLOG(DBG2) << "Assuming changed: "
-                 << folly::exceptionStr(
-                        try_.tryGetExceptionObject<std::exception>());
-      return false;
-    } else {
-      return try_.value() == blobSha1;
-    }
-  });
+  return isSameAsSlow(blobSha1, fetchContext);
+}
+
+folly::Future<bool> FileInode::isSameAs(
+    const Hash& blobID,
+    const Hash& blobSha1,
+    TreeEntryType entryType,
+    ObjectFetchContext& fetchContext) {
+  auto result = isSameAsFast(blobID, entryType);
+  if (result.has_value()) {
+    return result.value();
+  }
+
+  return isSameAsSlow(blobSha1, fetchContext);
 }
 
 folly::Future<bool> FileInode::isSameAs(

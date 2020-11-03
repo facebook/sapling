@@ -130,14 +130,15 @@ Future<InvalidationRequired> CheckoutAction::run(
                   rc->error("error getting old tree", ew);
                 });
       } else {
-        store->getBlob(oldScmEntry_.value().getHash(), ctx->getFetchContext())
-            .thenValue([rc = LoadingRefcount(this)](
-                           std::shared_ptr<const Blob> oldBlob) {
-              rc->setOldBlob(std::move(oldBlob));
+        store
+            ->getBlobSha1(
+                oldScmEntry_.value().getHash(), ctx->getFetchContext())
+            .thenValue([rc = LoadingRefcount(this)](Hash oldBlobSha1) {
+              rc->setOldBlob(std::move(oldBlobSha1));
             })
             .thenError(
                 [rc = LoadingRefcount(this)](const exception_wrapper& ew) {
-                  rc->error("error getting old blob", ew);
+                  rc->error("error getting old blob Sha1", ew);
                 });
       }
     }
@@ -156,15 +157,9 @@ Future<InvalidationRequired> CheckoutAction::run(
                   rc->error("error getting new tree", ew);
                 });
       } else {
-        store->getBlob(newEntry.getHash(), ctx->getFetchContext())
-            .thenValue([rc = LoadingRefcount(this)](
-                           std::shared_ptr<const Blob> newBlob) {
-              rc->setNewBlob(std::move(newBlob));
-            })
-            .thenError(
-                [rc = LoadingRefcount(this)](const exception_wrapper& ew) {
-                  rc->error("error getting new blob", ew);
-                });
+        // We don't actually compare the new blob to anything, so we don't need
+        // to fetch it. This just marks that the new inode will be a file.
+        LoadingRefcount(this)->setNewBlob();
       }
     }
 
@@ -189,26 +184,26 @@ Future<InvalidationRequired> CheckoutAction::run(
 
 void CheckoutAction::setOldTree(std::shared_ptr<const Tree> tree) {
   CHECK(!oldTree_);
-  CHECK(!oldBlob_);
+  CHECK(!oldBlobSha1_);
   oldTree_ = std::move(tree);
 }
 
-void CheckoutAction::setOldBlob(std::shared_ptr<const Blob> blob) {
+void CheckoutAction::setOldBlob(Hash blobSha1) {
   CHECK(!oldTree_);
-  CHECK(!oldBlob_);
-  oldBlob_ = std::move(blob);
+  CHECK(!oldBlobSha1_);
+  oldBlobSha1_ = std::move(blobSha1);
 }
 
 void CheckoutAction::setNewTree(std::shared_ptr<const Tree> tree) {
   CHECK(!newTree_);
-  CHECK(!newBlob_);
+  CHECK(!newBlobMarker_);
   newTree_ = std::move(tree);
 }
 
-void CheckoutAction::setNewBlob(std::shared_ptr<const Blob> blob) {
+void CheckoutAction::setNewBlob() {
   CHECK(!newTree_);
-  CHECK(!newBlob_);
-  newBlob_ = std::move(blob);
+  CHECK(!newBlobMarker_);
+  newBlobMarker_ = true;
 }
 
 void CheckoutAction::setInode(InodePtr inode) {
@@ -260,12 +255,12 @@ bool CheckoutAction::ensureDataReady() noexcept {
   // Make sure we actually have all the data we need.
   // (Just in case something went wrong when wiring up the callbacks in such a
   // way that we also failed to call error().)
-  if (oldScmEntry_.has_value() && (!oldTree_ && !oldBlob_)) {
+  if (oldScmEntry_.has_value() && (!oldTree_ && !oldBlobSha1_)) {
     promise_.setException(
         std::runtime_error("failed to load data for old TreeEntry"));
     return false;
   }
-  if (newScmEntry_.has_value() && (!newTree_ && !newBlob_)) {
+  if (newScmEntry_.has_value() && (!newTree_ && !newBlobMarker_)) {
     promise_.setException(
         std::runtime_error("failed to load data for new TreeEntry"));
     return false;
@@ -333,7 +328,7 @@ Future<bool> CheckoutAction::hasConflict() {
     // conflicts for individual leaf inodes that were modified, and not for the
     // parent directories.
     return false;
-  } else if (oldBlob_) {
+  } else if (oldBlobSha1_) {
     auto fileInode = inode_.asFilePtrOrNull();
     if (!fileInode) {
       // This was a file, but has been replaced with a directory on disk
@@ -344,7 +339,10 @@ Future<bool> CheckoutAction::hasConflict() {
     // Check that the file contents are the same as the old source control entry
     return fileInode
         ->isSameAs(
-            *oldBlob_, oldScmEntry_.value().getType(), ctx_->getFetchContext())
+            oldScmEntry_.value().getHash(),
+            oldBlobSha1_.value(),
+            oldScmEntry_.value().getType(),
+            ctx_->getFetchContext())
         .thenValue([this](bool isSame) {
           if (isSame) {
             // no conflict

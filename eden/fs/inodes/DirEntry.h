@@ -186,6 +186,7 @@ class DirEntry {
 
   /**
    * If true, the inode_ field is valid. If false, inodeNumber_ is valid.
+   * Synonymous with the inode being "loaded".
    */
   uint32_t hasInodePointer_ : 1;
 

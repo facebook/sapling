@@ -174,6 +174,11 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
       ObjectFetchContext& fetchContext);
   folly::Future<bool> isSameAs(
       const Hash& blobID,
+      const Hash& blobSha1,
+      TreeEntryType entryType,
+      ObjectFetchContext& fetchContext);
+  folly::Future<bool> isSameAs(
+      const Hash& blobID,
       TreeEntryType entryType,
       ObjectFetchContext& fetchContext);
 
@@ -383,6 +388,17 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
    * contents.
    */
   std::optional<bool> isSameAsFast(const Hash& blobID, TreeEntryType entryType);
+
+  /**
+   * Helper function for isSameAs().
+   *
+   * This does the second portion of the check which requires a Future.
+   * Returns Future<bool> that checks the inodes Sha1 against the given
+   * Sha1.
+   */
+  folly::Future<bool> isSameAsSlow(
+      const Hash& expectedBlobSha1,
+      ObjectFetchContext& fetchContext);
 
   /**
    * Get the ObjectStore used by this FileInode to load non-materialized data.
