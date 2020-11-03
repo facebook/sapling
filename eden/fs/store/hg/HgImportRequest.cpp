@@ -17,17 +17,17 @@ namespace facebook {
 namespace eden {
 
 namespace {
-template <typename Request, typename Input>
+template <typename Request, typename... Input>
 std::pair<HgImportRequest, folly::SemiFuture<typename Request::Response>>
 makeRequest(
-    Input&& input,
     ImportPriority priority,
-    std::unique_ptr<RequestMetricsScope> metricsScope) {
+    std::unique_ptr<RequestMetricsScope> metricsScope,
+    Input&&... input) {
   auto [promise, future] =
       folly::makePromiseContract<typename Request::Response>();
   return std::make_pair(
       HgImportRequest{
-          Request{std::forward<Input>(input)}, priority, std::move(promise)},
+          Request{std::forward<Input>(input)...}, priority, std::move(promise)},
       std::move(future).defer(
           [metrics = std::move(metricsScope)](auto&& result) {
             return std::forward<decltype(result)>(result);
@@ -38,25 +38,30 @@ makeRequest(
 std::pair<HgImportRequest, folly::SemiFuture<std::unique_ptr<Blob>>>
 HgImportRequest::makeBlobImportRequest(
     Hash hash,
+    HgProxyHash proxyHash,
     ImportPriority priority,
     std::unique_ptr<RequestMetricsScope> metricsScope) {
-  return makeRequest<BlobImport>(hash, priority, std::move(metricsScope));
+  return makeRequest<BlobImport>(
+      priority, std::move(metricsScope), hash, std::move(proxyHash));
 }
 
 std::pair<HgImportRequest, folly::SemiFuture<std::unique_ptr<Tree>>>
 HgImportRequest::makeTreeImportRequest(
     Hash hash,
+    HgProxyHash proxyHash,
     ImportPriority priority,
     std::unique_ptr<RequestMetricsScope> metricsScope) {
-  return makeRequest<TreeImport>(hash, priority, std::move(metricsScope));
+  return makeRequest<TreeImport>(
+      priority, std::move(metricsScope), hash, std::move(proxyHash));
 }
 
 std::pair<HgImportRequest, folly::SemiFuture<folly::Unit>>
 HgImportRequest::makePrefetchRequest(
-    std::vector<Hash> hashes,
+    std::vector<HgProxyHash> hashes,
     ImportPriority priority,
     std::unique_ptr<RequestMetricsScope> metricsScope) {
-  return makeRequest<Prefetch>(hashes, priority, std::move(metricsScope));
+  return makeRequest<Prefetch>(
+      priority, std::move(metricsScope), std::move(hashes));
 }
 } // namespace eden
 } // namespace facebook

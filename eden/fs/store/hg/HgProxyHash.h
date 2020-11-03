@@ -42,6 +42,11 @@ class HgProxyHash {
    */
   HgProxyHash(LocalStore* store, Hash edenBlobHash, folly::StringPiece context);
 
+  /**
+   * Create a ProxyHash given the specified values.
+   */
+  HgProxyHash(RelativePathPiece path, const Hash& hgRevHash);
+
   ~HgProxyHash() = default;
 
   HgProxyHash(const HgProxyHash& other) = default;
@@ -58,6 +63,12 @@ class HgProxyHash {
   RelativePathPiece path() const;
 
   Hash revHash() const;
+
+  /**
+   * Returns the SHA-1 of the canonical serialization of this ProxyHash, which
+   * is used as the object ID throughout EdenFS.
+   */
+  Hash sha1() const;
 
   static folly::Future<std::vector<HgProxyHash>> getBatch(
       LocalStore* store,

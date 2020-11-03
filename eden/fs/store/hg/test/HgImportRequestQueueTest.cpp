@@ -14,6 +14,7 @@
 #include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/store/hg/HgImportRequest.h"
 #include "eden/fs/store/hg/HgImportRequestQueue.h"
+#include "eden/fs/store/hg/HgProxyHash.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/utils/IDGen.h"
 
@@ -29,26 +30,30 @@ Hash uniqueHash() {
 std::pair<Hash, HgImportRequest> makeBlobImportRequest(
     ImportPriority priority,
     RequestMetricsScope::LockedRequestWatchList& pendingImportWatches) {
-  auto hash = uniqueHash();
+  auto hgRevHash = uniqueHash();
+  auto proxyHash = HgProxyHash{RelativePath{"some_blob"}, hgRevHash};
+  auto hash = proxyHash.sha1();
   auto importTracker =
       std::make_unique<RequestMetricsScope>(&pendingImportWatches);
   return std::make_pair(
       hash,
       HgImportRequest::makeBlobImportRequest(
-          hash, priority, std::move(importTracker))
+          hash, std::move(proxyHash), priority, std::move(importTracker))
           .first);
 }
 
 std::pair<Hash, HgImportRequest> makeTreeImportRequest(
     ImportPriority priority,
     RequestMetricsScope::LockedRequestWatchList& pendingImportWatches) {
-  auto hash = uniqueHash();
+  auto hgRevHash = uniqueHash();
+  auto proxyHash = HgProxyHash{RelativePath{"some_tree"}, hgRevHash};
+  auto hash = proxyHash.sha1();
   auto importTracker =
       std::make_unique<RequestMetricsScope>(&pendingImportWatches);
   return std::make_pair(
       hash,
       HgImportRequest::makeTreeImportRequest(
-          hash, priority, std::move(importTracker))
+          hash, std::move(proxyHash), priority, std::move(importTracker))
           .first);
 }
 

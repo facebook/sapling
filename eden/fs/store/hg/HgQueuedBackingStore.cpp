@@ -66,16 +66,19 @@ HgQueuedBackingStore::~HgQueuedBackingStore() {
 void HgQueuedBackingStore::processBlobImportRequests(
     std::vector<HgImportRequest>&& requests) {
   std::vector<Hash> hashes;
+  std::vector<HgProxyHash> proxyHashes;
   std::vector<folly::Promise<HgImportRequest::BlobImport::Response>*> promises;
 
   folly::stop_watch<std::chrono::milliseconds> watch;
   hashes.reserve(requests.size());
+  proxyHashes.reserve(requests.size());
   promises.reserve(requests.size());
 
   XLOG(DBG4) << "Processing blob import batch size=" << requests.size();
 
   for (auto& request : requests) {
-    auto& hash = request.getRequest<HgImportRequest::BlobImport>()->hash;
+    auto* blobImport = request.getRequest<HgImportRequest::BlobImport>();
+    auto& hash = blobImport->hash;
     auto* promise = request.getPromise<HgImportRequest::BlobImport::Response>();
 
     XLOGF(
@@ -84,27 +87,9 @@ void HgQueuedBackingStore::processBlobImportRequests(
         hash.toString(),
         static_cast<void*>(promise));
     hashes.emplace_back(hash);
+    proxyHashes.emplace_back(blobImport->proxyHash);
     promises.emplace_back(promise);
   }
-
-  auto proxyHashesTry =
-      HgProxyHash::getBatch(localStore_.get(), hashes).wait().result();
-
-  if (proxyHashesTry.hasException()) {
-    // TODO(zeyi): We should change HgProxyHash::getBatch to make it return
-    // partial result instead of fail the entire batch.
-    XLOG(WARN) << "Failed to get proxy hash: "
-               << proxyHashesTry.exception().what();
-
-    for (auto& request : requests) {
-      request.getPromise<HgImportRequest::BlobImport::Response>()->setException(
-          proxyHashesTry.exception());
-    }
-
-    return;
-  }
-
-  auto proxyHashes = proxyHashesTry.value();
 
   backingStore_->getDatapackStore().getBlobBatch(hashes, proxyHashes, promises);
 
@@ -146,10 +131,16 @@ void HgQueuedBackingStore::processTreeImportRequests(
   for (auto& request : requests) {
     auto parameter = request.getRequest<HgImportRequest::TreeImport>();
     request.getPromise<HgImportRequest::TreeImport::Response>()->setWith(
-        [store = backingStore_.get(), hash = parameter->hash]() {
+        [store = backingStore_.get(),
+         hash = parameter->hash,
+         proxyHash = parameter->proxyHash]() mutable {
           // TODO(kmancini): follow up with threading the context all the way
           // through the backing store
-          return store->getTree(hash, ObjectFetchContext::getNullContext())
+          return store
+              ->getTree(
+                  hash,
+                  std::move(proxyHash),
+                  ObjectFetchContext::getNullContext())
               .getTry();
         });
   }
@@ -160,9 +151,11 @@ void HgQueuedBackingStore::processPrefetchRequests(
   for (auto& request : requests) {
     auto parameter = request.getRequest<HgImportRequest::Prefetch>();
     request.getPromise<HgImportRequest::Prefetch::Response>()->setWith(
-        [store = backingStore_.get(), hashes = parameter->hashes]() {
+        [store = backingStore_.get(),
+         proxyHashes = parameter->proxyHashes]() mutable {
           return store
-              ->prefetchBlobs(hashes, ObjectFetchContext::getNullContext())
+              ->prefetchBlobs(
+                  std::move(proxyHashes), ObjectFetchContext::getNullContext())
               .getTry();
         });
   }
@@ -192,12 +185,17 @@ void HgQueuedBackingStore::processRequest() {
 folly::SemiFuture<std::unique_ptr<Tree>> HgQueuedBackingStore::getTree(
     const Hash& id,
     ObjectFetchContext& context) {
-  logBackingStoreFetch(context, id, ObjectFetchContext::ObjectType::Tree);
+  auto proxyHash = HgProxyHash{localStore_.get(), id, "getTree"};
+  logBackingStoreFetch(
+      context, proxyHash, ObjectFetchContext::ObjectType::Tree);
 
   auto importTracker =
       std::make_unique<RequestMetricsScope>(&pendingImportTreeWatches_);
   auto [request, future] = HgImportRequest::makeTreeImportRequest(
-      id, context.getPriority(), std::move(importTracker));
+      id,
+      std::move(proxyHash),
+      context.getPriority(),
+      std::move(importTracker));
   queue_.enqueue(std::move(request));
   return std::move(future);
 }
@@ -205,10 +203,10 @@ folly::SemiFuture<std::unique_ptr<Tree>> HgQueuedBackingStore::getTree(
 folly::SemiFuture<std::unique_ptr<Blob>> HgQueuedBackingStore::getBlob(
     const Hash& id,
     ObjectFetchContext& context) {
-  auto proxyHash = HgProxyHash(localStore_.get(), id, "getBlob");
+  auto proxyHash = HgProxyHash{localStore_.get(), id, "getBlob"};
   auto path = proxyHash.path();
-
-  logBackingStoreFetch(context, path, ObjectFetchContext::ObjectType::Blob);
+  logBackingStoreFetch(
+      context, proxyHash, ObjectFetchContext::ObjectType::Blob);
 
   if (auto blob =
           backingStore_->getDatapackStore().getBlobLocal(id, proxyHash)) {
@@ -220,7 +218,10 @@ folly::SemiFuture<std::unique_ptr<Blob>> HgQueuedBackingStore::getBlob(
   auto importTracker =
       std::make_unique<RequestMetricsScope>(&pendingImportBlobWatches_);
   auto [request, future] = HgImportRequest::makeBlobImportRequest(
-      id, context.getPriority(), std::move(importTracker));
+      id,
+      std::move(proxyHash),
+      context.getPriority(),
+      std::move(importTracker));
   queue_.enqueue(std::move(request));
   return std::move(future);
 }
@@ -255,14 +256,18 @@ folly::SemiFuture<folly::Unit> HgQueuedBackingStore::prefetchBlobs(
     });
   }
 
-  for (auto& hash : ids) {
+  auto proxyHashes = HgProxyHash::getBatch(localStore_.get(), ids).get();
+
+  for (auto& hash : proxyHashes) {
     logBackingStoreFetch(context, hash, ObjectFetchContext::ObjectType::Blob);
   }
 
   auto importTracker =
       std::make_unique<RequestMetricsScope>(&pendingImportPrefetchWatches_);
   auto [request, future] = HgImportRequest::makePrefetchRequest(
-      ids, ImportPriority::kNormal(), std::move(importTracker));
+      std::move(proxyHashes),
+      ImportPriority::kNormal(),
+      std::move(importTracker));
   queue_.enqueue(std::move(request));
 
   return std::move(future);
@@ -270,7 +275,7 @@ folly::SemiFuture<folly::Unit> HgQueuedBackingStore::prefetchBlobs(
 
 void HgQueuedBackingStore::logBackingStoreFetch(
     ObjectFetchContext& context,
-    std::variant<RelativePathPiece, Hash> identifier,
+    const HgProxyHash& proxyHash,
     ObjectFetchContext::ObjectType type) {
   if (!config_) {
     return;
@@ -282,20 +287,7 @@ void HgQueuedBackingStore::logBackingStoreFetch(
   if (!(logFetchPath || logFetchPathRegex || isRecordingFetch_.load())) {
     return;
   }
-  std::optional<HgProxyHash> proxyHash;
-  RelativePathPiece path;
-  if (auto maybe_path = std::get_if<RelativePathPiece>(&identifier)) {
-    path = *maybe_path;
-  } else {
-    auto hash = std::get<Hash>(identifier);
-    try {
-      proxyHash = HgProxyHash(localStore_.get(), hash, "logBackingStoreFetch");
-      path = proxyHash.value().path();
-    } catch (const std::domain_error&) {
-      XLOG(WARN) << "Unable to get proxy hash for logging " << hash.toString();
-      return;
-    }
-  }
+  RelativePathPiece path = proxyHash.path();
 
   if (type != ObjectFetchContext::ObjectType::Tree) {
     recordFetch(path.stringPiece());

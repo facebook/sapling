@@ -15,6 +15,7 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/ImportPriority.h"
+#include "eden/fs/store/hg/HgProxyHash.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/utils/Bug.h"
 
@@ -32,35 +33,39 @@ class HgImportRequest {
     using Response = std::unique_ptr<Blob>;
 
     Hash hash;
+    HgProxyHash proxyHash;
   };
 
   struct TreeImport {
     using Response = std::unique_ptr<Tree>;
 
     Hash hash;
+    HgProxyHash proxyHash;
   };
 
   struct Prefetch {
     using Response = folly::Unit;
 
-    std::vector<Hash> hashes;
+    std::vector<HgProxyHash> proxyHashes;
   };
 
   static std::pair<HgImportRequest, folly::SemiFuture<std::unique_ptr<Blob>>>
   makeBlobImportRequest(
       Hash hash,
+      HgProxyHash proxyHash,
       ImportPriority priority,
       std::unique_ptr<RequestMetricsScope> metricsScope);
 
   static std::pair<HgImportRequest, folly::SemiFuture<std::unique_ptr<Tree>>>
   makeTreeImportRequest(
       Hash hash,
+      HgProxyHash proxyHash,
       ImportPriority priority,
       std::unique_ptr<RequestMetricsScope> metricsScope);
 
   static std::pair<HgImportRequest, folly::SemiFuture<folly::Unit>>
   makePrefetchRequest(
-      std::vector<Hash> hashes,
+      std::vector<HgProxyHash> hashes,
       ImportPriority priority,
       std::unique_ptr<RequestMetricsScope> metricsScope);
 

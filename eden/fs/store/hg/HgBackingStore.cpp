@@ -198,8 +198,8 @@ HgBackingStore::~HgBackingStore() {}
 
 SemiFuture<unique_ptr<Tree>> HgBackingStore::getTree(
     const Hash& id,
+    HgProxyHash proxyHash,
     ObjectFetchContext& /*context*/) {
-  HgProxyHash pathInfo(localStore_.get(), id, "importTree");
   std::optional<Hash> commitHash;
   // note: if the parent of the tree was fetched with an old version of eden
   // then the commit id will not be available
@@ -208,9 +208,9 @@ SemiFuture<unique_ptr<Tree>> HgBackingStore::getTree(
     commitHash = commitInfo.value().commitHash();
   }
   return importTreeImpl(
-      pathInfo.revHash(), // this is really the manifest node
+      proxyHash.revHash(), // this is really the manifest node
       id,
-      pathInfo.path(),
+      proxyHash.path(),
       commitHash);
 }
 
@@ -494,19 +494,16 @@ SemiFuture<std::unique_ptr<Blob>> HgBackingStore::fetchBlobFromHgImporter(
 
 SemiFuture<unique_ptr<Blob>> HgBackingStore::getBlob(
     const Hash& id,
+    HgProxyHash proxyHash,
     ObjectFetchContext& /*context*/) {
   folly::stop_watch<std::chrono::milliseconds> watch;
-  // Look up the mercurial path and file revision hash,
-  // which we need to import the data from mercurial
-  HgProxyHash hgInfo(localStore_.get(), id, "importFileContents");
-
-  if (auto result = getBlobFromHgCache(id, hgInfo)) {
+  if (auto result = getBlobFromHgCache(id, proxyHash)) {
     stats_->getHgBackingStoreStatsForCurrentThread()
         .hgBackingStoreGetBlob.addValue(watch.elapsed().count());
     return folly::makeSemiFuture(std::move(result));
   }
 
-  return fetchBlobFromHgImporter(std::move(hgInfo))
+  return fetchBlobFromHgImporter(std::move(proxyHash))
       .deferValue([stats = stats_, watch](auto&& blob) {
         stats->getHgBackingStoreStatsForCurrentThread()
             .hgBackingStoreGetBlob.addValue(watch.elapsed().count());
@@ -515,15 +512,15 @@ SemiFuture<unique_ptr<Blob>> HgBackingStore::getBlob(
 }
 
 SemiFuture<folly::Unit> HgBackingStore::prefetchBlobs(
-    const std::vector<Hash>& ids,
+    std::vector<HgProxyHash> proxyHashes,
     ObjectFetchContext& /*context*/) {
-  return HgProxyHash::getBatch(localStore_.get(), ids)
-      .via(importThreadPool_.get())
-      .thenValue([&liveImportPrefetchWatches = liveImportPrefetchWatches_](
-                     std::vector<HgProxyHash>&& hgPathHashes) {
-        RequestMetricsScope queueTracker{&liveImportPrefetchWatches};
-        return getThreadLocalImporter().prefetchFiles(hgPathHashes);
-      })
+  return folly::via(
+             importThreadPool_.get(),
+             [proxyHashes = std::move(proxyHashes),
+              &liveImportPrefetchWatches = liveImportPrefetchWatches_] {
+               RequestMetricsScope queueTracker{&liveImportPrefetchWatches};
+               return getThreadLocalImporter().prefetchFiles(proxyHashes);
+             })
       .via(serverThreadPool_);
 }
 

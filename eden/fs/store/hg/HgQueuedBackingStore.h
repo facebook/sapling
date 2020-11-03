@@ -108,7 +108,7 @@ class HgQueuedBackingStore : public BackingStore {
    */
   void logBackingStoreFetch(
       ObjectFetchContext& context,
-      std::variant<RelativePathPiece, Hash> identifer,
+      const HgProxyHash& proxyHash,
       ObjectFetchContext::ObjectType type);
 
   /**

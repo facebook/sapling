@@ -41,6 +41,12 @@ HgProxyHash::HgProxyHash(
   validate(edenBlobHash);
 }
 
+HgProxyHash::HgProxyHash(RelativePathPiece path, const Hash& hgRevHash) {
+  auto [hash, buf] = prepareToStore(path, hgRevHash);
+  buf.coalesce();
+  value_ = std::string{buf.data(), buf.data() + buf.length()};
+}
+
 folly::Future<std::vector<HgProxyHash>> HgProxyHash::getBatch(
     LocalStore* store,
     const std::vector<Hash>& blobHashes) {
@@ -141,6 +147,11 @@ Hash HgProxyHash::revHash() const {
     DCHECK_GE(value_.size(), Hash::RAW_SIZE);
     return Hash{ByteRange{StringPiece{value_.data(), Hash::RAW_SIZE}}};
   }
+}
+
+Hash HgProxyHash::sha1() const {
+  auto [hash, buf] = prepareToStore(path(), revHash());
+  return hash;
 }
 
 void HgProxyHash::validate(Hash edenBlobHash) {
