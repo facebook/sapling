@@ -43,15 +43,27 @@ class MergeTest(EdenHgTestCase):
         self._do_merge_and_commit(":union")
         self._verify_tip("21")
 
+    def _do_merge(self, tool: str, check: bool = True) -> None:
+        self.hg(
+            "merge",
+            "--tool",
+            tool,
+            "-r",
+            self.commit1,
+            "--config",
+            "ui.allowmerge=True",
+            check=check,
+        )
+
     def _do_merge_and_commit(self, tool: str) -> None:
-        self.hg("merge", "--tool", tool, "-r", self.commit1)
+        self._do_merge(tool)
         self.assert_status({"foo": "M"}, op="merge")
         self.repo.commit("merge commit1 into commit2")
         self.assert_status_empty()
 
     def test_resolve_merge(self) -> None:
         # Perform the merge and let it fail with the file unresolved
-        self.hg("merge", "--tool", ":fail", "-r", self.commit1, check=False)
+        self._do_merge(":fail", check=False)
         self.assert_status({"foo": "M"}, op="merge")
         self.assert_unresolved(["foo"])
 
@@ -64,7 +76,7 @@ class MergeTest(EdenHgTestCase):
 
     def test_clear_merge_state(self) -> None:
         # Perform the merge and let it fail with the file unresolved
-        self.hg("merge", "--tool", ":fail", "-r", self.commit1, check=False)
+        self._do_merge(":fail", check=False)
         self.assert_status({"foo": "M"}, op="merge")
         self.assert_unresolved(["foo"])
 
