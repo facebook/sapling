@@ -5,9 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Error;
-use std::{collections::HashMap, iter::FromIterator, sync::Arc};
+use std::collections::HashMap;
+use std::iter::FromIterator;
+use std::sync::Arc;
 
+use anyhow::Error;
+use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobstore::Blobstore;
 use context::CoreContext;
@@ -15,11 +18,12 @@ use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
 use fbthrift::compact_protocol;
 use futures::future::TryFutureExt;
 use futures_ext::{BoxFuture, FutureExt};
-use futures_old::{future, stream::FuturesUnordered, Future, Stream};
+use futures_old::{stream::FuturesUnordered, Future, Stream};
 use mononoke_types::{BlobstoreBytes, BonsaiChangeset, ChangesetId};
 
 use crate::ChangesetInfo;
 
+#[async_trait]
 impl BonsaiDerived for ChangesetInfo {
     const NAME: &'static str = "changeset_info";
     type Mapping = ChangesetInfoMapping;
@@ -28,14 +32,14 @@ impl BonsaiDerived for ChangesetInfo {
         ChangesetInfoMapping::new(repo.blobstore().boxed())
     }
 
-    fn derive_from_parents(
+    async fn derive_from_parents(
         _ctx: CoreContext,
         _repo: BlobRepo,
         bonsai: BonsaiChangeset,
         _parents: Vec<Self>,
-    ) -> BoxFuture<Self, Error> {
+    ) -> Result<Self, Error> {
         let csid = bonsai.get_changeset_id();
-        future::ok(ChangesetInfo::new(csid, bonsai)).boxify()
+        Ok(ChangesetInfo::new(csid, bonsai))
     }
 }
 

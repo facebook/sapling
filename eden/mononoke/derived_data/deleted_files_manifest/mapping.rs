@@ -7,12 +7,14 @@
 
 use crate::derive::{derive_deleted_files_manifest, get_changes};
 use anyhow::{Error, Result};
+use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobstore::{Blobstore, BlobstoreGetData};
 use bytes::Bytes;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
-use futures::future::{FutureExt as NewFutureExt, TryFutureExt};
+use futures::compat::Future01CompatExt;
+use futures::future::TryFutureExt;
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use futures_old::{
     stream::{self, FuturesUnordered},
@@ -55,6 +57,7 @@ impl From<RootDeletedManifestId> for BlobstoreBytes {
     }
 }
 
+#[async_trait]
 impl BonsaiDerived for RootDeletedManifestId {
     const NAME: &'static str = "deleted_manifest";
     type Mapping = RootDeletedManifestMapping;
@@ -63,30 +66,27 @@ impl BonsaiDerived for RootDeletedManifestId {
         RootDeletedManifestMapping::new(repo.blobstore().clone())
     }
 
-    fn derive_from_parents(
+    async fn derive_from_parents(
         ctx: CoreContext,
         repo: BlobRepo,
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
-    ) -> BoxFuture<Self, Error> {
+    ) -> Result<Self, Error> {
         let bcs_id = bonsai.get_changeset_id();
-        get_changes(ctx.clone(), repo.clone(), bonsai)
-            .boxed()
-            .compat()
-            .and_then(move |changes| {
-                derive_deleted_files_manifest(
-                    ctx,
-                    repo,
-                    bcs_id,
-                    parents
-                        .into_iter()
-                        .map(|root_mf_id| root_mf_id.deleted_manifest_id().clone())
-                        .collect(),
-                    changes,
-                )
-            })
-            .map(RootDeletedManifestId)
-            .boxify()
+        let changes = get_changes(ctx.clone(), repo.clone(), bonsai).await?;
+        derive_deleted_files_manifest(
+            ctx,
+            repo,
+            bcs_id,
+            parents
+                .into_iter()
+                .map(|root_mf_id| root_mf_id.deleted_manifest_id().clone())
+                .collect(),
+            changes,
+        )
+        .map(RootDeletedManifestId)
+        .compat()
+        .await
     }
 }
 

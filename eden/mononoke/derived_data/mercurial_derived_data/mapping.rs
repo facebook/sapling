@@ -6,10 +6,10 @@
  */
 
 use anyhow::Error;
+use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry};
 use context::CoreContext;
-use futures::{FutureExt, TryFutureExt};
 use futures_ext::{BoxFuture, FutureExt as _};
 use futures_old::Future;
 use mercurial_types::HgChangesetId;
@@ -22,6 +22,7 @@ use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct MappedHgChangesetId(pub HgChangesetId);
 
+#[async_trait]
 impl BonsaiDerived for MappedHgChangesetId {
     const NAME: &'static str = "hgchangesets";
     type Mapping = HgChangesetIdMapping;
@@ -30,16 +31,13 @@ impl BonsaiDerived for MappedHgChangesetId {
         HgChangesetIdMapping::new(repo)
     }
 
-    fn derive_from_parents(
+    async fn derive_from_parents(
         ctx: CoreContext,
         repo: BlobRepo,
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
-    ) -> BoxFuture<Self, Error> {
-        crate::derive_hg_changeset::derive_from_parents(ctx, repo, bonsai, parents)
-            .boxed()
-            .compat()
-            .boxify()
+    ) -> Result<Self, Error> {
+        crate::derive_hg_changeset::derive_from_parents(ctx, repo, bonsai, parents).await
     }
 }
 

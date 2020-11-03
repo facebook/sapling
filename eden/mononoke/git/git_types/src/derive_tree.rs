@@ -6,8 +6,10 @@
  */
 
 use anyhow::Error;
+use async_trait::async_trait;
 use cloned::cloned;
 use context::CoreContext;
+use futures::compat::Future01CompatExt;
 use futures::future::{ready, FutureExt, TryFutureExt};
 use futures_ext::{BoxFuture, FutureExt as _, StreamExt};
 use futures_old::{stream::futures_unordered, Future, IntoFuture, Stream};
@@ -82,6 +84,7 @@ impl BonsaiDerivedMapping for TreeMapping {
     }
 }
 
+#[async_trait]
 impl BonsaiDerived for TreeHandle {
     const NAME: &'static str = "git_trees";
     type Mapping = TreeMapping;
@@ -90,17 +93,17 @@ impl BonsaiDerived for TreeHandle {
         TreeMapping::new(repo.blobstore().boxed())
     }
 
-    fn derive_from_parents(
+    async fn derive_from_parents(
         ctx: CoreContext,
         repo: BlobRepo,
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
-    ) -> BoxFuture<Self, Error> {
+    ) -> Result<Self, Error> {
         let blobstore = repo.get_blobstore();
-        let changes = get_file_changes(&blobstore, &ctx, bonsai);
-        changes
-            .and_then(move |changes| derive_git_manifest(ctx, blobstore, parents, changes))
-            .boxify()
+        let changes = get_file_changes(&blobstore, &ctx, bonsai).compat().await?;
+        derive_git_manifest(ctx, blobstore, parents, changes)
+            .compat()
+            .await
     }
 }
 

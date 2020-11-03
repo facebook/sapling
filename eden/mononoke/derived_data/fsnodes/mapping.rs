@@ -76,12 +76,12 @@ impl BonsaiDerived for RootFsnodeId {
         RootFsnodeMapping::new(repo.blobstore().clone())
     }
 
-    fn derive_from_parents(
+    async fn derive_from_parents(
         ctx: CoreContext,
         repo: BlobRepo,
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
-    ) -> BoxFuture<Self, Error> {
+    ) -> Result<Self, Error> {
         derive_fsnode(
             ctx,
             repo,
@@ -92,7 +92,8 @@ impl BonsaiDerived for RootFsnodeId {
             get_file_changes(&bonsai),
         )
         .map(RootFsnodeId)
-        .boxify()
+        .compat()
+        .await
     }
 
     async fn batch_derive<'a, Iter>(

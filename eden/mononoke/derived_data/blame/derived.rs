@@ -6,6 +6,7 @@
  */
 
 use anyhow::{format_err, Error};
+use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobstore::{Blobstore, BlobstoreBytes, Loadable};
 use bytes::Bytes;
@@ -34,6 +35,7 @@ pub const BLAME_FILESIZE_LIMIT: u64 = 10 * 1024 * 1024;
 #[derive(Debug, Clone, Copy)]
 pub struct BlameRoot(ChangesetId);
 
+#[async_trait]
 impl BonsaiDerived for BlameRoot {
     const NAME: &'static str = "blame";
     type Mapping = BlameRootMapping;
@@ -42,12 +44,12 @@ impl BonsaiDerived for BlameRoot {
         BlameRootMapping::new(repo.blobstore().boxed())
     }
 
-    fn derive_from_parents(
+    async fn derive_from_parents(
         ctx: CoreContext,
         repo: BlobRepo,
         bonsai: BonsaiChangeset,
         _parents: Vec<Self>,
-    ) -> BoxFuture<Self, Error> {
+    ) -> Result<Self, Error> {
         let csid = bonsai.get_changeset_id();
         let root_manifest = RootUnodeManifestId::derive(ctx.clone(), repo.clone(), csid)
             .from_err()
@@ -92,7 +94,8 @@ impl BonsaiDerived for BlameRoot {
                     .for_each(|_| Ok(()))
                     .map(move |_| BlameRoot(csid))
             })
-            .boxify()
+            .compat()
+            .await
     }
 }
 

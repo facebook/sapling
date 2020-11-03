@@ -7,11 +7,13 @@
 
 use crate::derive::derive_unode_manifest;
 use anyhow::{Error, Result};
+use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobstore::{Blobstore, BlobstoreGetData};
 use bytes::Bytes;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
+use futures::compat::Future01CompatExt;
 use futures::future::TryFutureExt;
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use futures_old::{
@@ -60,6 +62,7 @@ impl From<RootUnodeManifestId> for BlobstoreBytes {
     }
 }
 
+#[async_trait]
 impl BonsaiDerived for RootUnodeManifestId {
     const NAME: &'static str = "unodes";
     type Mapping = RootUnodeManifestMapping;
@@ -71,12 +74,12 @@ impl BonsaiDerived for RootUnodeManifestId {
         )
     }
 
-    fn derive_from_parents(
+    async fn derive_from_parents(
         ctx: CoreContext,
         repo: BlobRepo,
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
-    ) -> BoxFuture<Self, Error> {
+    ) -> Result<Self, Error> {
         let bcs_id = bonsai.get_changeset_id();
         derive_unode_manifest(
             ctx,
@@ -89,7 +92,8 @@ impl BonsaiDerived for RootUnodeManifestId {
             get_file_changes(&bonsai),
         )
         .map(RootUnodeManifestId)
-        .boxify()
+        .compat()
+        .await
     }
 }
 

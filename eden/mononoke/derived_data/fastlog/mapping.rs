@@ -6,17 +6,16 @@
  */
 
 use anyhow::Error;
+use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobstore::{Blobstore, BlobstoreBytes, Loadable};
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
-use futures::{
-    compat::Future01CompatExt,
-    future::{FutureExt as NewFutureExt, TryFutureExt},
-    stream::TryStreamExt,
-};
+use futures::compat::Future01CompatExt;
+use futures::future::TryFutureExt;
+use futures::stream::TryStreamExt;
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use futures_old::{future, stream::FuturesUnordered, Future, Stream};
 use manifest::{find_intersection_of_diffs, Entry};
@@ -51,6 +50,7 @@ pub enum ErrorKind {
 #[derive(Clone, Debug)]
 pub struct RootFastlog(ChangesetId);
 
+#[async_trait]
 impl BonsaiDerived for RootFastlog {
     const NAME: &'static str = "fastlog";
     type Mapping = RootFastlogMapping;
@@ -59,51 +59,43 @@ impl BonsaiDerived for RootFastlog {
         RootFastlogMapping::new(repo.blobstore().boxed())
     }
 
-    fn derive_from_parents(
+    async fn derive_from_parents(
         ctx: CoreContext,
         repo: BlobRepo,
         bonsai: BonsaiChangeset,
         _parents: Vec<Self>,
-    ) -> BoxFuture<Self, Error> {
-        async move {
-            let bcs_id = bonsai.get_changeset_id();
-            let (root_unode_mf_id, parents) =
-                RootUnodeManifestId::derive(ctx.clone(), repo.clone(), bcs_id)
-                    .from_err()
-                    .join(fetch_parent_root_unodes(ctx.clone(), repo.clone(), bonsai))
-                    .compat()
-                    .await?;
-
-            let blobstore = repo.get_blobstore().boxed();
-            let unode_mf_id = root_unode_mf_id.manifest_unode_id().clone();
-
-            find_intersection_of_diffs(ctx.clone(), blobstore.clone(), unode_mf_id, parents)
-                .map_ok(move |(_, entry)| {
-                    cloned!(blobstore, ctx);
-                    async move {
-                        let res = tokio::spawn(async move {
-                            let parents = fetch_unode_parents(&ctx, &blobstore, entry).await?;
-
-                            let fastlog_batch =
-                                create_new_batch(&ctx, &blobstore, parents, bcs_id).await?;
-
-                            save_fastlog_batch_by_unode_id(&ctx, &blobstore, entry, fastlog_batch)
-                                .await
-                        })
-                        .await?;
-
-                        res
-                    }
-                })
-                .try_buffer_unordered(100)
-                .try_for_each(|_| async { Ok(()) })
+    ) -> Result<Self, Error> {
+        let bcs_id = bonsai.get_changeset_id();
+        let (root_unode_mf_id, parents) =
+            RootUnodeManifestId::derive(ctx.clone(), repo.clone(), bcs_id)
+                .from_err()
+                .join(fetch_parent_root_unodes(ctx.clone(), repo.clone(), bonsai))
+                .compat()
                 .await?;
 
-            Ok(RootFastlog(bcs_id))
-        }
-        .boxed()
-        .compat()
-        .boxify()
+        let blobstore = repo.get_blobstore().boxed();
+        let unode_mf_id = root_unode_mf_id.manifest_unode_id().clone();
+
+        find_intersection_of_diffs(ctx.clone(), blobstore.clone(), unode_mf_id, parents)
+            .map_ok(move |(_, entry)| {
+                cloned!(blobstore, ctx);
+                async move {
+                    tokio::spawn(async move {
+                        let parents = fetch_unode_parents(&ctx, &blobstore, entry).await?;
+
+                        let fastlog_batch =
+                            create_new_batch(&ctx, &blobstore, parents, bcs_id).await?;
+
+                        save_fastlog_batch_by_unode_id(&ctx, &blobstore, entry, fastlog_batch).await
+                    })
+                    .await?
+                }
+            })
+            .try_buffer_unordered(100)
+            .try_for_each(|_| async { Ok(()) })
+            .await?;
+
+        Ok(RootFastlog(bcs_id))
     }
 }
 

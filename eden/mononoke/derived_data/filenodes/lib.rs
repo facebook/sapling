@@ -8,6 +8,7 @@
 #![deny(warnings)]
 
 use anyhow::{format_err, Error};
+use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
@@ -103,6 +104,7 @@ pub enum FilenodesOnlyPublic {
     Disabled,
 }
 
+#[async_trait]
 impl BonsaiDerived for FilenodesOnlyPublic {
     const NAME: &'static str = "filenodes";
     type Mapping = FilenodesOnlyPublicMapping;
@@ -111,51 +113,46 @@ impl BonsaiDerived for FilenodesOnlyPublic {
         FilenodesOnlyPublicMapping::new(repo.clone())
     }
 
-    fn derive_from_parents(
+    async fn derive_from_parents(
         ctx: CoreContext,
         repo: BlobRepo,
         bonsai: BonsaiChangeset,
         _parents: Vec<Self>,
-    ) -> BoxFuture<Self, Error> {
-        async move {
-            let filenodes = generate_all_filenodes(&ctx, &repo, bonsai.get_changeset_id()).await?;
+    ) -> Result<Self, Error> {
+        let filenodes = generate_all_filenodes(&ctx, &repo, bonsai.get_changeset_id()).await?;
 
-            if filenodes.is_empty() {
-                // This commit didn't create any new filenodes, and it's root manifest is the
-                // same as one of the parents (that can happen if this commit is empty).
-                // In that case we don't need to insert a root filenode - it will be inserted
-                // when parent is derived.
-                Ok(FilenodesOnlyPublic::Present {
-                    root_filenode: None,
-                })
-            } else {
-                let (roots, non_roots): (Vec<_>, Vec<_>) =
-                    filenodes.into_iter().partition_map(classify_filenode);
-                let mut roots = roots.into_iter();
+        if filenodes.is_empty() {
+            // This commit didn't create any new filenodes, and it's root manifest is the
+            // same as one of the parents (that can happen if this commit is empty).
+            // In that case we don't need to insert a root filenode - it will be inserted
+            // when parent is derived.
+            Ok(FilenodesOnlyPublic::Present {
+                root_filenode: None,
+            })
+        } else {
+            let (roots, non_roots): (Vec<_>, Vec<_>) =
+                filenodes.into_iter().partition_map(classify_filenode);
+            let mut roots = roots.into_iter();
 
-                match (roots.next(), roots.next()) {
-                    (Some(root_filenode), None) => {
-                        let filenodes = repo.get_filenodes();
-                        let repo_id = repo.get_repoid();
-                        let filenode_res = filenodes
-                            .add_filenodes(ctx.clone(), non_roots, repo_id)
-                            .compat()
-                            .await?;
+            match (roots.next(), roots.next()) {
+                (Some(root_filenode), None) => {
+                    let filenodes = repo.get_filenodes();
+                    let repo_id = repo.get_repoid();
+                    let filenode_res = filenodes
+                        .add_filenodes(ctx.clone(), non_roots, repo_id)
+                        .compat()
+                        .await?;
 
-                        match filenode_res {
-                            FilenodeResult::Present(()) => Ok(FilenodesOnlyPublic::Present {
-                                root_filenode: Some(root_filenode),
-                            }),
-                            FilenodeResult::Disabled => Ok(FilenodesOnlyPublic::Disabled),
-                        }
+                    match filenode_res {
+                        FilenodeResult::Present(()) => Ok(FilenodesOnlyPublic::Present {
+                            root_filenode: Some(root_filenode),
+                        }),
+                        FilenodeResult::Disabled => Ok(FilenodesOnlyPublic::Disabled),
                     }
-                    _ => Err(format_err!("expected exactly one root, found {:?}", roots)),
                 }
+                _ => Err(format_err!("expected exactly one root, found {:?}", roots)),
             }
         }
-        .boxed()
-        .compat()
-        .boxify()
     }
 }
 

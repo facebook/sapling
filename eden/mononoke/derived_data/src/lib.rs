@@ -11,9 +11,8 @@ use anyhow::Error;
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use context::CoreContext;
-use futures::{
-    compat::Future01CompatExt, stream, FutureExt, StreamExt, TryFutureExt, TryStreamExt,
-};
+use futures::future::{FutureExt, TryFutureExt};
+use futures::stream::{self, StreamExt, TryStreamExt};
 use futures_ext::{BoxFuture as BoxFuture01, FutureExt as _};
 use lock_ext::LockExt;
 use mononoke_types::{BonsaiChangeset, ChangesetId, RepositoryId};
@@ -65,12 +64,12 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
     /// For example, to derive HgChangesetId we also need to derive all filenodes and all manifests
     /// and then store them in blobstore. Derived data library is only responsible for
     /// updating BonsaiDerivedMapping.
-    fn derive_from_parents(
+    async fn derive_from_parents(
         ctx: CoreContext,
         repo: BlobRepo,
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
-    ) -> BoxFuture01<Self, Error>;
+    ) -> Result<Self, Error>;
 
     /// TODO(ahornby) delete onces all callsites using ::derive03
     ///
@@ -197,9 +196,7 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
     {
         let iter = csids.into_iter();
         stream::iter(iter.map(|cs_id| async move {
-            let derived = Self::derive(ctx.clone(), repo.clone(), cs_id)
-                .compat()
-                .await?;
+            let derived = Self::derive03(ctx, repo, cs_id).await?;
             Ok((cs_id, derived))
         }))
         .buffered(100)

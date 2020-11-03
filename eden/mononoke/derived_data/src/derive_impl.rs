@@ -13,7 +13,7 @@ use cacheblob::LeaseOps;
 use context::CoreContext;
 use futures::{
     compat::Future01CompatExt,
-    future::{try_join, try_join_all, TryFutureExt},
+    future::{try_join, try_join_all, FutureExt, TryFutureExt},
     TryStreamExt,
 };
 use futures_ext::FutureExt as FutureExt01;
@@ -360,6 +360,8 @@ where
                     let deriver = async {
                         let derived =
                             Derived::derive_from_parents(ctx.clone(), repo.clone(), bcs, parents)
+                                .boxed()
+                                .compat()
                                 .traced_with_id(
                                     &ctx.trace(),
                                     "derive::derive_from_parents",
@@ -557,6 +559,7 @@ mod test {
     use super::*;
 
     use anyhow::Error;
+    use async_trait::async_trait;
     use blobrepo_hg::BlobRepoHg;
     use blobrepo_override::DangerousOverride;
     use bookmarks::BookmarkName;
@@ -595,6 +598,7 @@ mod test {
     #[derive(Clone, Hash, Eq, Ord, PartialEq, PartialOrd, Debug)]
     struct TestGenNum(u64, ChangesetId, Vec<ChangesetId>);
 
+    #[async_trait]
     impl BonsaiDerived for TestGenNum {
         const NAME: &'static str = "test_gen_num";
         type Mapping = TestMapping;
@@ -604,20 +608,19 @@ mod test {
             MAPPINGS.with(|m| m.entry(session).or_insert_with(TestMapping::new).clone())
         }
 
-        fn derive_from_parents(
+        async fn derive_from_parents(
             _ctx: CoreContext,
             _repo: BlobRepo,
             bonsai: BonsaiChangeset,
             parents: Vec<Self>,
-        ) -> BoxFuture01<Self, Error> {
+        ) -> Result<Self, Error> {
             let parent_commits = parents.iter().map(|x| x.1).collect();
 
-            future01::ok(Self(
+            Ok(Self(
                 parents.into_iter().max().map(|x| x.0).unwrap_or(0) + 1,
                 bonsai.get_changeset_id(),
                 parent_commits,
             ))
-            .boxify()
         }
     }
 
