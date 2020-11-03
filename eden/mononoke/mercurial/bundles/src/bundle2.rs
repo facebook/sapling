@@ -13,7 +13,7 @@ use std::mem;
 
 use anyhow::Error;
 use bytes_old::BytesMut;
-use futures::{Async, Poll, Stream};
+use futures_old::{Async, Poll, Stream};
 
 use futures_ext::io::Either;
 use futures_ext::BoxFuture;
@@ -25,7 +25,7 @@ use crate::errors::ErrorKind;
 use crate::part_inner::inner_stream;
 use crate::part_outer::{outer_stream, OuterFrame, OuterStream};
 use crate::stream_start::StartDecoder;
-use crate::Bundle2Item;
+use crate::{Bundle2Item, OldBundle2Item};
 
 pub enum StreamEvent<I, S> {
     Next(I),
@@ -149,7 +149,7 @@ impl<R> Stream for Bundle2Stream<R>
 where
     R: AsyncRead + BufRead + 'static + Send,
 {
-    type Item = StreamEvent<Bundle2Item, Remainder<R>>;
+    type Item = StreamEvent<Bundle2Item<'static>, Remainder<R>>;
     type Error = Error;
 
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
@@ -157,7 +157,17 @@ where
 
         let (ret, stream) = self.inner.poll_next(current_stream);
         self.current_stream = stream;
-        ret
+        match ret {
+            Ok(Async::Ready(Some(StreamEvent::Next(item)))) => {
+                Ok(Async::Ready(Some(StreamEvent::Next(item.into()))))
+            }
+            Ok(Async::Ready(Some(StreamEvent::Done(rem)))) => {
+                Ok(Async::Ready(Some(StreamEvent::Done(rem))))
+            }
+            Ok(Async::Ready(None)) => Ok(Async::Ready(None)),
+            Ok(Async::NotReady) => Ok(Async::NotReady),
+            Err(err) => Err(err),
+        }
     }
 }
 
@@ -166,7 +176,7 @@ impl Bundle2StreamInner {
         &mut self,
         current_stream: CurrentStream<R>,
     ) -> (
-        Poll<Option<StreamEvent<Bundle2Item, Remainder<R>>>, Error>,
+        Poll<Option<StreamEvent<OldBundle2Item, Remainder<R>>>, Error>,
         CurrentStream<R>,
     )
     where
@@ -205,9 +215,9 @@ impl Bundle2StreamInner {
                             Ok(v) => {
                                 let outer = CurrentStream::Outer(v);
                                 (
-                                    Ok(Async::Ready(Some(StreamEvent::Next(Bundle2Item::Start(
-                                        start,
-                                    ))))),
+                                    Ok(Async::Ready(Some(StreamEvent::Next(
+                                        OldBundle2Item::Start(start),
+                                    )))),
                                     outer,
                                 )
                             }

@@ -1563,7 +1563,7 @@ impl HgCommands for RepoClient {
     fn unbundle(
         &self,
         _heads: Vec<String>,
-        stream: BoxStream<Bundle2Item, Error>,
+        stream: BoxStream<Bundle2Item<'static>, Error>,
         maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
     ) -> HgCommandRes<BytesOld> {
         let reponame = self.repo.reponame().clone();

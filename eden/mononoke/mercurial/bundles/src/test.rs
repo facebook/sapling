@@ -12,11 +12,11 @@ use std::io::{BufRead, BufReader, Cursor};
 use std::iter::Iterator;
 use std::str::FromStr;
 
-use anyhow::{Error, Result};
+use anyhow::Result;
 use assert_matches::assert_matches;
-use futures::stream;
-use futures::stream::Stream;
-use futures_ext::BoxStream;
+use futures::{stream::BoxStream, TryStreamExt};
+use futures_old::stream::Stream;
+use futures_old::stream::{self, Stream as OldStream};
 use tokio_compat::runtime::Runtime;
 use tokio_io::AsyncRead;
 
@@ -269,7 +269,7 @@ fn parse_bundle(
     let stream = parse_stream_start(&mut runtime, partial_read, compression).unwrap();
 
     let (stream, cg2s) = {
-        let (res, stream) = runtime.next_stream(stream);
+        let (res, stream) = runtime.old_next_stream(stream);
         let mut header = PartHeaderBuilder::new(PartHeaderType::Changegroup, true).unwrap();
         header.add_mparam("version", "02").unwrap();
         header.add_aparam("nbchanges", "2").unwrap();
@@ -286,20 +286,20 @@ fn parse_bundle(
 
     verify_cg2(&mut runtime, cg2s);
 
-    let (res, stream) = runtime.next_stream(stream);
+    let (res, stream) = runtime.old_next_stream(stream);
     assert_matches!(res, Some(StreamEvent::Done(_)));
 
-    let (res, stream) = runtime.next_stream(stream);
+    let (res, stream) = runtime.old_next_stream(stream);
     assert!(res.is_none());
 
     // Make sure the stream is fused.
-    let (res, stream) = runtime.next_stream(stream);
+    let (res, stream) = runtime.old_next_stream(stream);
     assert!(res.is_none());
 
     assert!(stream.app_errors().is_empty());
 }
 
-fn verify_cg2(runtime: &mut Runtime, stream: BoxStream<changegroup::Part, Error>) {
+fn verify_cg2(runtime: &mut Runtime, stream: BoxStream<'static, Result<changegroup::Part>>) {
     let (res, stream) = runtime.next_stream(stream);
     let res = res.expect("expected part");
 
@@ -452,10 +452,12 @@ fn parse_wirepack(read_ops: PartialWithErrors<GenWouldBlock>) {
     let stream = parse_stream_start(&mut runtime, partial_read, None).unwrap();
 
     let stream = {
-        let (res, stream) = runtime.next_stream(stream);
+        let (res, stream) = runtime.old_next_stream(stream);
         match res {
             Some(StreamEvent::Next(Bundle2Item::Changegroup(_, cg2s))) => {
-                runtime.block_on(cg2s.for_each(|_| Ok(()))).unwrap();
+                runtime
+                    .block_on(cg2s.compat().for_each(|_| Ok(())))
+                    .unwrap();
             }
             bad => panic!("Unexpected Bundle2Item: {:?}", bad),
         }
@@ -463,7 +465,7 @@ fn parse_wirepack(read_ops: PartialWithErrors<GenWouldBlock>) {
     };
 
     let (stream, wirepacks) = {
-        let (res, stream) = runtime.next_stream(stream);
+        let (res, stream) = runtime.old_next_stream(stream);
         // Header
         let mut header = PartHeaderBuilder::new(PartHeaderType::B2xTreegroup2, true).unwrap();
         header.add_mparam("version", "1").unwrap();
@@ -572,7 +574,7 @@ fn parse_wirepack(read_ops: PartialWithErrors<GenWouldBlock>) {
         "after the End part this stream should be empty"
     );
 
-    let (res, stream) = runtime.next_stream(stream);
+    let (res, stream) = runtime.old_next_stream(stream);
     assert_matches!(res, Some(StreamEvent::Done(_)));
     assert!(stream.app_errors().is_empty());
 }
@@ -609,19 +611,37 @@ fn parse_stream_start<R: AsyncRead + BufRead + 'static + Send>(
 }
 
 trait RuntimeExt {
-    fn next_stream<S>(&mut self, stream: S) -> (Option<S::Item>, S)
+    fn next_stream<T>(
+        &mut self,
+        stream: BoxStream<'static, Result<T>>,
+    ) -> (Option<T>, BoxStream<'static, Result<T>>)
     where
-        S: Stream + Send + 'static,
-        <S as Stream>::Item: Send,
-        <S as Stream>::Error: Debug + Send;
+        T: Send + 'static;
+
+    fn old_next_stream<S>(&mut self, stream: S) -> (Option<S::Item>, S)
+    where
+        S: OldStream + Send + 'static,
+        <S as OldStream>::Item: Send,
+        <S as OldStream>::Error: Debug + Send;
 }
 
 impl RuntimeExt for Runtime {
-    fn next_stream<S>(&mut self, stream: S) -> (Option<S::Item>, S)
+    fn next_stream<T>(
+        &mut self,
+        stream: BoxStream<'static, Result<T>>,
+    ) -> (Option<T>, BoxStream<'static, Result<T>>)
     where
-        S: Stream + Send + 'static,
-        <S as Stream>::Item: Send,
-        <S as Stream>::Error: Debug + Send,
+        T: Send + 'static,
+    {
+        let (item, stream) = self.old_next_stream(stream.compat());
+        (item, stream.into_inner())
+    }
+
+    fn old_next_stream<S>(&mut self, stream: S) -> (Option<S::Item>, S)
+    where
+        S: OldStream + Send + 'static,
+        <S as OldStream>::Item: Send,
+        <S as OldStream>::Error: Debug + Send,
     {
         match self.block_on(stream.into_future()) {
             Ok((res, stream)) => (res, stream),

@@ -13,8 +13,8 @@ use std::mem;
 use anyhow::{Error, Result};
 use bytes::Bytes as BytesNew;
 use bytes_old::Bytes;
-use futures::{Async, Future, Poll, Stream};
 use futures_ext::{BoxStream, StreamExt};
+use futures_old::{Async, Future, Poll, Stream};
 
 use crate::chunk::Chunk;
 use crate::part_header::{PartHeader, PartHeaderBuilder, PartHeaderType, PartId};

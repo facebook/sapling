@@ -10,7 +10,8 @@ use std::mem;
 
 use anyhow::{Error, Result};
 use bytes::Bytes;
-use futures::{Poll, Stream};
+use futures::{compat::Compat, stream::BoxStream, TryStreamExt};
+use futures_old::{Poll, Stream as OldStream};
 use thiserror::Error;
 
 use mercurial_bundles::wirepack::converter::{WirePackConverter, WirePackPartProcessor};
@@ -30,25 +31,19 @@ pub enum ErrorKind {
 /// It assumes a few things:
 /// 1) all data is sent as a delta from the null revision (i.e. data is basically non-deltaed).
 /// 2) there are exactly one history entry and exactly one data entry for each tree.
-pub struct TreemanifestBundle2Parser<S> {
-    stream: WirePackConverter<S, TreemanifestPartProcessor>,
+pub struct TreemanifestBundle2Parser {
+    stream: WirePackConverter<Compat<BoxStream<'static, Result<Part>>>, TreemanifestPartProcessor>,
 }
 
-impl<S> TreemanifestBundle2Parser<S>
-where
-    S: Stream<Item = Part, Error = Error>,
-{
-    pub fn new(part_stream: S) -> Self {
+impl TreemanifestBundle2Parser {
+    pub fn new(part_stream: BoxStream<'static, Result<Part>>) -> Self {
         Self {
-            stream: WirePackConverter::new(part_stream, TreemanifestPartProcessor::new()),
+            stream: WirePackConverter::new(part_stream.compat(), TreemanifestPartProcessor::new()),
         }
     }
 }
 
-impl<S> Stream for TreemanifestBundle2Parser<S>
-where
-    S: Stream<Item = Part, Error = Error>,
-{
+impl OldStream for TreemanifestBundle2Parser {
     type Item = TreemanifestEntry;
     type Error = Error;
 
@@ -171,7 +166,8 @@ fn unwrap_field<T: Clone>(field: &mut Option<T>, field_name: &str) -> Result<T> 
 #[cfg(test)]
 mod test {
     use super::*;
-    use futures::{stream, Future};
+    use futures::stream::{self, StreamExt};
+    use futures_old::Future;
 
     use maplit::btreemap;
     use mercurial_revlog::manifest::Details;
@@ -193,7 +189,7 @@ mod test {
             Part::End,
         ];
 
-        let part_stream = stream::iter_ok(parts.into_iter());
+        let part_stream = stream::iter(parts.into_iter().map(Ok)).boxed();
         let stream = TreemanifestBundle2Parser::new(part_stream);
         assert_eq!(
             stream.collect().wait().unwrap(),
@@ -298,7 +294,7 @@ mod test {
     }
 
     fn assert_fails(parts: Vec<Part>) {
-        let part_stream = stream::iter_ok(parts.into_iter());
+        let part_stream = stream::iter(parts.into_iter().map(Ok)).boxed();
         let stream = TreemanifestBundle2Parser::new(part_stream);
         assert!(stream.collect().wait().is_err());
     }

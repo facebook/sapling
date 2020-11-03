@@ -370,6 +370,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use futures::{TryFutureExt, TryStreamExt};
     use futures_ext::FutureExt;
     use mercurial_bundles::bundle2::{Bundle2Stream, StreamEvent};
     use mercurial_bundles::Bundle2Item;
@@ -418,10 +419,14 @@ mod tests {
             })
             .and_then(|bundle2item| match bundle2item {
                 Bundle2Item::Start(_) => future::ok(()).boxify(),
-                Bundle2Item::Replycaps(_, fut) => fut.map(|_| ()).boxify(),
-                Bundle2Item::B2xCommonHeads(_, stream) => stream.collect().map(|_| ()).boxify(),
-                Bundle2Item::B2xRebasePack(_, stream) => stream.collect().map(|_| ()).boxify(),
-                Bundle2Item::B2xRebase(_, stream) => stream.collect().map(|_| ()).boxify(),
+                Bundle2Item::Replycaps(_, fut) => fut.compat().map(|_| ()).boxify(),
+                Bundle2Item::B2xCommonHeads(_, stream) => {
+                    stream.compat().collect().map(|_| ()).boxify()
+                }
+                Bundle2Item::B2xRebasePack(_, stream) => {
+                    stream.compat().collect().map(|_| ()).boxify()
+                }
+                Bundle2Item::B2xRebase(_, stream) => stream.compat().collect().map(|_| ()).boxify(),
                 _ => panic!("unexpected bundle2 item"),
             })
             .collect();

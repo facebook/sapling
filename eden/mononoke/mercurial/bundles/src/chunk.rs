@@ -157,7 +157,7 @@ mod test {
     use std::io::Cursor;
 
     use assert_matches::assert_matches;
-    use futures::{stream, Future, Sink, Stream};
+    use futures_old::{stream, Future, Sink, Stream};
     use quickcheck::{quickcheck, TestResult};
     use tokio_codec::{FramedRead, FramedWrite};
 

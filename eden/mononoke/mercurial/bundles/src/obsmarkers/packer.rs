@@ -13,8 +13,8 @@ use crate::chunk::Chunk;
 use anyhow::{Error, Result};
 use byteorder::ByteOrder;
 use bytes_old::{BigEndian, BufMut};
-use futures::stream::iter_result;
-use futures::Stream;
+use futures_old::stream::iter_result;
+use futures_old::Stream;
 use mercurial_types::HgChangesetId;
 use mononoke_types::DateTime;
 use std::convert::TryFrom;
@@ -100,8 +100,8 @@ fn prepare_obsmarker_chunk(
 mod test {
     use super::*;
     use anyhow::Error;
-    use futures::{stream, Async, Poll};
     use futures_ext::StreamExt;
+    use futures_old::{stream, Async, Poll};
     use mercurial_types_mocks::nodehash;
     use quickcheck::quickcheck;
 

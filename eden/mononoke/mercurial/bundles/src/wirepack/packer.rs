@@ -14,7 +14,7 @@
 use anyhow::{bail, Error, Result};
 use byteorder::BigEndian;
 use bytes_old::BufMut;
-use futures::{Poll, Stream};
+use futures_old::{Poll, Stream};
 
 use crate::chunk::Chunk;
 use mercurial_types::{MPath, RepoPath};

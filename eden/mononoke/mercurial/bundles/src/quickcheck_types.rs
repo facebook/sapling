@@ -17,7 +17,7 @@ use std::vec::IntoIter;
 use anyhow::{Error, Result};
 use bytes::Bytes;
 #[cfg(test)]
-use futures::stream;
+use futures_old::stream;
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
 use rand::Rng;
 

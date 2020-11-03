@@ -10,7 +10,7 @@
 use std::mem;
 
 use anyhow::{bail, ensure, Error, Result};
-use futures::{try_ready, Async, Poll, Stream};
+use futures_old::{try_ready, Async, Poll, Stream};
 
 use mercurial_types::RepoPath;
 

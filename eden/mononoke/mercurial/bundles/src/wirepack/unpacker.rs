@@ -259,7 +259,7 @@ enum DecodeRes<T> {
 mod test {
     use std::io::Cursor;
 
-    use futures::{Future, Stream};
+    use futures_old::{Future, Stream};
     use slog::{o, Discard};
     use tokio_codec::FramedRead;
 

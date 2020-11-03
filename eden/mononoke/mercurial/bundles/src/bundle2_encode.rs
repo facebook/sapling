@@ -13,9 +13,9 @@ use std::vec::IntoIter;
 use anyhow::{bail, Context, Error, Result};
 use byteorder::ByteOrder;
 use bytes_old::{BigEndian, Buf, BufMut, Bytes, IntoBuf};
-use futures::stream::Forward;
-use futures::{try_ready, Async, AsyncSink, Future, Poll, Sink, StartSend, Stream};
 use futures_ext::io::Either::{self, A as UncompressedRead, B as CompressedRead};
+use futures_old::stream::Forward;
+use futures_old::{try_ready, Async, AsyncSink, Future, Poll, Sink, StartSend, Stream};
 use tokio_codec::FramedWrite;
 use tokio_io::AsyncWrite;
 

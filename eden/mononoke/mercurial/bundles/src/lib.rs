@@ -34,47 +34,48 @@ mod utils;
 
 use anyhow::{bail, Error, Result};
 use bytes_old::Bytes;
-use futures::sync::{mpsc, oneshot};
-use futures::{Future, Stream};
-use futures_ext::SinkToAsyncWrite;
-
+use futures::{
+    compat::{Future01CompatExt, Stream01CompatExt},
+    future::{BoxFuture, FutureExt},
+    stream::{BoxStream, StreamExt},
+};
+use futures_ext::{BoxFuture as OldBoxFuture, BoxStream as OldBoxStream, SinkToAsyncWrite};
+use futures_old::{
+    sync::{mpsc, oneshot},
+    Future as OldFuture, Stream as OldStream,
+};
 use std::fmt;
-
-use futures_ext::{BoxFuture, BoxStream};
 
 pub use crate::bundle2_encode::Bundle2EncodeBuilder;
 pub use crate::part_header::{PartHeader, PartHeaderInner, PartHeaderType, PartId};
 pub use crate::types::StreamHeader;
 
-pub enum Bundle2Item {
+pub enum Bundle2Item<'a> {
     Start(StreamHeader),
-    Changegroup(PartHeader, BoxStream<changegroup::Part, Error>),
-    B2xCommonHeads(PartHeader, BoxStream<mercurial_types::HgChangesetId, Error>),
-    B2xInfinitepush(PartHeader, BoxStream<changegroup::Part, Error>),
-    B2xTreegroup2(PartHeader, BoxStream<wirepack::Part, Error>),
+    Changegroup(PartHeader, BoxStream<'a, Result<changegroup::Part>>),
+    B2xCommonHeads(
+        PartHeader,
+        BoxStream<'a, Result<mercurial_types::HgChangesetId>>,
+    ),
+    B2xInfinitepush(PartHeader, BoxStream<'a, Result<changegroup::Part>>),
+    B2xTreegroup2(PartHeader, BoxStream<'a, Result<wirepack::Part>>),
     // B2xInfinitepushBookmarks returns Bytes because this part is not going to be used.
-    B2xInfinitepushBookmarks(PartHeader, BoxStream<bytes_old::Bytes, Error>),
+    B2xInfinitepushBookmarks(PartHeader, BoxStream<'a, Result<bytes_old::Bytes>>),
     B2xInfinitepushMutation(
         PartHeader,
-        BoxStream<Vec<mercurial_mutation::HgMutationEntry>, Error>,
+        BoxStream<'a, Result<Vec<mercurial_mutation::HgMutationEntry>>>,
     ),
-    B2xRebasePack(PartHeader, BoxStream<wirepack::Part, Error>),
-    B2xRebase(PartHeader, BoxStream<changegroup::Part, Error>),
-    Replycaps(PartHeader, BoxFuture<capabilities::Capabilities, Error>),
-    Pushkey(PartHeader, BoxFuture<(), Error>),
-    Pushvars(PartHeader, BoxFuture<(), Error>),
-    // Same as B2xInfinitepushBookmarks: this part won't be used.
-    Obsmarkers(PartHeader, BoxStream<bytes_old::Bytes, Error>),
+    B2xRebasePack(PartHeader, BoxStream<'a, Result<wirepack::Part>>),
+    B2xRebase(PartHeader, BoxStream<'a, Result<changegroup::Part>>),
+    Replycaps(
+        PartHeader,
+        BoxFuture<'a, Result<capabilities::Capabilities>>,
+    ),
+    Pushkey(PartHeader, BoxFuture<'a, Result<()>>),
+    Pushvars(PartHeader, BoxFuture<'a, Result<()>>),
 }
 
-impl Bundle2Item {
-    pub fn is_start(&self) -> bool {
-        match self {
-            &Bundle2Item::Start(_) => true,
-            _ => false,
-        }
-    }
-
+impl<'a> Bundle2Item<'a> {
     #[cfg(test)]
     pub(crate) fn unwrap_start(self) -> StreamHeader {
         match self {
@@ -84,7 +85,7 @@ impl Bundle2Item {
     }
 }
 
-impl fmt::Debug for Bundle2Item {
+impl<'a> fmt::Debug for Bundle2Item<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use crate::Bundle2Item::*;
         match self {
@@ -114,16 +115,72 @@ impl fmt::Debug for Bundle2Item {
             &Replycaps(ref header, _) => write!(f, "Bundle2Item::Replycaps({:?}, ...)", header),
             &Pushkey(ref header, _) => write!(f, "Bundle2Item::Pushkey({:?}, ...)", header),
             &Pushvars(ref header, _) => write!(f, "Bundle2Item::Pushvars({:?}, ...)", header),
-            &Obsmarkers(ref header, _) => write!(f, "Bundle2Item::Obsmarkers({:?}, ...)", header),
         }
     }
+}
+
+impl<'a> From<OldBundle2Item> for Bundle2Item<'a> {
+    fn from(this: OldBundle2Item) -> Self {
+        use crate::OldBundle2Item::*;
+        match this {
+            Start(header) => Bundle2Item::Start(header),
+            Changegroup(header, stream) => {
+                Bundle2Item::Changegroup(header, stream.compat().boxed())
+            }
+            B2xCommonHeads(header, stream) => {
+                Bundle2Item::B2xCommonHeads(header, stream.compat().boxed())
+            }
+            B2xInfinitepush(header, stream) => {
+                Bundle2Item::B2xInfinitepush(header, stream.compat().boxed())
+            }
+            B2xTreegroup2(header, stream) => {
+                Bundle2Item::B2xTreegroup2(header, stream.compat().boxed())
+            }
+            // B2xInfinitepushBookmarks returns Bytes because this part is not going to be used.
+            B2xInfinitepushBookmarks(header, stream) => {
+                Bundle2Item::B2xInfinitepushBookmarks(header, stream.compat().boxed())
+            }
+            B2xInfinitepushMutation(header, stream) => {
+                Bundle2Item::B2xInfinitepushMutation(header, stream.compat().boxed())
+            }
+            B2xRebasePack(header, stream) => {
+                Bundle2Item::B2xRebasePack(header, stream.compat().boxed())
+            }
+            B2xRebase(header, stream) => Bundle2Item::B2xRebase(header, stream.compat().boxed()),
+            Replycaps(header, future) => Bundle2Item::Replycaps(header, future.compat().boxed()),
+            Pushkey(header, future) => Bundle2Item::Pushkey(header, future.compat().boxed()),
+            Pushvars(header, future) => Bundle2Item::Pushvars(header, future.compat().boxed()),
+        }
+    }
+}
+
+pub(crate) enum OldBundle2Item {
+    Start(StreamHeader),
+    Changegroup(PartHeader, OldBoxStream<changegroup::Part, Error>),
+    B2xCommonHeads(
+        PartHeader,
+        OldBoxStream<mercurial_types::HgChangesetId, Error>,
+    ),
+    B2xInfinitepush(PartHeader, OldBoxStream<changegroup::Part, Error>),
+    B2xTreegroup2(PartHeader, OldBoxStream<wirepack::Part, Error>),
+    // B2xInfinitepushBookmarks returns Bytes because this part is not going to be used.
+    B2xInfinitepushBookmarks(PartHeader, OldBoxStream<bytes_old::Bytes, Error>),
+    B2xInfinitepushMutation(
+        PartHeader,
+        OldBoxStream<Vec<mercurial_mutation::HgMutationEntry>, Error>,
+    ),
+    B2xRebasePack(PartHeader, OldBoxStream<wirepack::Part, Error>),
+    B2xRebase(PartHeader, OldBoxStream<changegroup::Part, Error>),
+    Replycaps(PartHeader, OldBoxFuture<capabilities::Capabilities, Error>),
+    Pushkey(PartHeader, OldBoxFuture<(), Error>),
+    Pushvars(PartHeader, OldBoxFuture<(), Error>),
 }
 
 /// Given bundle parts, returns a stream of Bytes that represent an encoded bundle with these parts
 pub fn create_bundle_stream<C: Into<Option<async_compression::CompressorType>>>(
     parts: Vec<part_encode::PartEncodeBuilder>,
     ct: C,
-) -> impl Stream<Item = bytes_old::Bytes, Error = Error> {
+) -> impl OldStream<Item = bytes_old::Bytes, Error = Error> {
     let (sender, receiver) = mpsc::channel::<Bytes>(1);
     // Sends either and empty Bytes if bundle generation was successful or an error.
     // Empty Bytes are used just to make chaining of streams below easier.

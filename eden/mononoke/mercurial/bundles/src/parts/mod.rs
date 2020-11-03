@@ -21,9 +21,9 @@ use byteorder::{BigEndian, WriteBytesExt};
 use bytes::Bytes as BytesNew;
 use bytes_old::Bytes;
 use context::CoreContext;
-use futures::stream::{iter_ok, once};
-use futures::{Future, Stream};
 use futures_ext::{BoxFuture, BoxStream, StreamExt};
+use futures_old::stream::{iter_ok, once};
+use futures_old::{Future, Stream};
 use futures_stats::Timed;
 use mercurial_mutation::HgMutationEntry;
 use mercurial_types::{

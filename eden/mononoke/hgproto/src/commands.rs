@@ -489,7 +489,7 @@ impl Decoder for Getpackv1ArgDecoder {
 fn extract_remainder_from_bundle2<R>(
     bundle2: Bundle2Stream<R>,
 ) -> (
-    BoxStream<Bundle2Item, Error>,
+    BoxStream<Bundle2Item<'static>, Error>,
     BoxFuture<bundle2::Remainder<R>, Error>,
 )
 where
@@ -627,7 +627,7 @@ pub trait HgCommands {
     fn unbundle(
         &self,
         _heads: Vec<String>,
-        _stream: BoxStream<Bundle2Item, Error>,
+        _stream: BoxStream<Bundle2Item<'static>, Error>,
         _maybe_full_content: Option<Arc<Mutex<Bytes>>>,
     ) -> HgCommandRes<Bytes> {
         unimplemented("unbundle")

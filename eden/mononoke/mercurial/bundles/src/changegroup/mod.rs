@@ -50,7 +50,7 @@ pub struct CgDeltaChunk {
 mod test {
     use std::io::Cursor;
 
-    use futures::{Future, Stream};
+    use futures_old::{Future, Stream};
     use quickcheck::{QuickCheck, StdGen, TestResult};
     use tokio_codec::{FramedRead, FramedWrite};
 

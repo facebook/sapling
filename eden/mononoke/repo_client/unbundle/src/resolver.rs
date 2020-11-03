@@ -23,16 +23,16 @@ use bytes::Bytes;
 use bytes_old::Bytes as BytesOld;
 use context::CoreContext;
 use core::fmt::Debug;
-use failure_ext::{Compat, FutureFailureErrorExt};
-use futures::future::{try_join_all, Future};
-use futures::stream;
+use failure_ext::{Compat as FailureCompat, FutureFailureErrorExt};
+use futures::{
+    future::{self, try_join_all, Future},
+    stream,
+};
 use futures_ext::{
     BoxFuture as OldBoxFuture, BoxStream as OldBoxStream, FutureExt as OldFutureExt,
     StreamExt as OldStreamExt,
 };
-use futures_old::future::Shared;
-use futures_old::stream as old_stream;
-use futures_old::{Future as OldFuture, Stream as OldStream};
+use futures_old::{future::Shared, stream as old_stream, Future as OldFuture, Stream as OldStream};
 use futures_util::{compat::Future01CompatExt, try_join, StreamExt, TryStreamExt};
 use hooks::HookRejectionInfo;
 use lazy_static::lazy_static;
@@ -75,7 +75,8 @@ mod UNBUNDLE_STATS {
 }
 
 pub type Changesets = Vec<(HgChangesetId, RevlogChangeset)>;
-type Filelogs = HashMap<HgNodeKey, Shared<OldBoxFuture<(HgBlobEntry, RepoPath), Compat<Error>>>>;
+type Filelogs =
+    HashMap<HgNodeKey, Shared<OldBoxFuture<(HgBlobEntry, RepoPath), FailureCompat<Error>>>>;
 type ContentBlobs = HashMap<HgNodeKey, ContentBlobInfo>;
 type Manifests = HashMap<HgNodeKey, <TreemanifestEntry as UploadableHgBlob>::Value>;
 pub type UploadedBonsais = HashSet<BonsaiChangeset>;
@@ -259,7 +260,7 @@ pub async fn resolve<'a>(
     ctx: &'a CoreContext,
     repo: &'a BlobRepo,
     infinitepush_writes_allowed: bool,
-    bundle2: OldBoxStream<Bundle2Item, Error>,
+    bundle2: OldBoxStream<Bundle2Item<'static>, Error>,
     readonly: RepoReadOnly,
     maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
     pure_push_allowed: bool,
@@ -398,7 +399,7 @@ fn report_unbundle_type(
 async fn resolve_push<'r>(
     ctx: &'r CoreContext,
     resolver: Bundle2Resolver<'r>,
-    bundle2: OldBoxStream<Bundle2Item, Error>,
+    bundle2: OldBoxStream<Bundle2Item<'static>, Error>,
     maybe_pushvars: Option<HashMap<String, Bytes>>,
     non_fast_forward_policy: NonFastForwardPolicy,
     maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
@@ -583,7 +584,7 @@ async fn resolve_pushrebase<'r>(
     ctx: &'r CoreContext,
     commonheads: CommonHeads,
     resolver: Bundle2Resolver<'r>,
-    bundle2: OldBoxStream<Bundle2Item, Error>,
+    bundle2: OldBoxStream<Bundle2Item<'static>, Error>,
     maybe_pushvars: Option<HashMap<String, Bytes>>,
     maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
     changegroup_acceptable: impl FnOnce() -> bool + Send + Sync + 'static,
@@ -691,7 +692,7 @@ async fn resolve_pushrebase<'r>(
 async fn resolve_bookmark_only_pushrebase<'r>(
     ctx: &'r CoreContext,
     resolver: Bundle2Resolver<'r>,
-    bundle2: OldBoxStream<Bundle2Item, Error>,
+    bundle2: OldBoxStream<Bundle2Item<'static>, Error>,
     maybe_pushvars: Option<HashMap<String, Bytes>>,
     non_fast_forward_policy: NonFastForwardPolicy,
     maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
@@ -738,8 +739,14 @@ async fn resolve_bookmark_only_pushrebase<'r>(
 }
 
 async fn next_item(
-    bundle2: OldBoxStream<Bundle2Item, Error>,
-) -> Result<(Option<Bundle2Item>, OldBoxStream<Bundle2Item, Error>), Error> {
+    bundle2: OldBoxStream<Bundle2Item<'static>, Error>,
+) -> Result<
+    (
+        Option<Bundle2Item<'static>>,
+        OldBoxStream<Bundle2Item<'static>, Error>,
+    ),
+    Error,
+> {
     bundle2.into_future().map_err(|(err, _)| err).compat().await
 }
 
@@ -828,8 +835,8 @@ impl<'r> Bundle2Resolver<'r> {
     /// Return unchanged `bundle2`
     async fn is_next_part_pushkey(
         &self,
-        bundle2: OldBoxStream<Bundle2Item, Error>,
-    ) -> Result<(bool, OldBoxStream<Bundle2Item, Error>), Error> {
+        bundle2: OldBoxStream<Bundle2Item<'static>, Error>,
+    ) -> Result<(bool, OldBoxStream<Bundle2Item<'static>, Error>), Error> {
         let (start, bundle2) = next_item(bundle2).await?;
         match start {
             Some(part) => {
@@ -874,8 +881,8 @@ impl<'r> Bundle2Resolver<'r> {
     /// Return the rest of the stream along with params
     async fn resolve_stream_params(
         &self,
-        bundle2: OldBoxStream<Bundle2Item, Error>,
-    ) -> Result<(StreamHeader, OldBoxStream<Bundle2Item, Error>), Error> {
+        bundle2: OldBoxStream<Bundle2Item<'static>, Error>,
+    ) -> Result<(StreamHeader, OldBoxStream<Bundle2Item<'static>, Error>), Error> {
         let (maybe_start, rest_of_bundle2) = next_item(bundle2).await?;
         match maybe_start {
             Some(Bundle2Item::Start(stream_header)) => Ok((stream_header, rest_of_bundle2)),
@@ -887,12 +894,13 @@ impl<'r> Bundle2Resolver<'r> {
     /// Return the rest of the bundle
     async fn resolve_replycaps(
         &self,
-        bundle2: OldBoxStream<Bundle2Item, Error>,
-    ) -> Result<OldBoxStream<Bundle2Item, Error>, Error> {
+        bundle2: OldBoxStream<Bundle2Item<'static>, Error>,
+    ) -> Result<OldBoxStream<Bundle2Item<'static>, Error>, Error> {
         let (maybe_replycaps, rest_of_bundle2) = next_item(bundle2).await?;
         match maybe_replycaps {
             Some(Bundle2Item::Replycaps(_, part)) => {
-                part.map(|_| rest_of_bundle2).boxify().compat().await
+                part.await?;
+                Ok(rest_of_bundle2)
             }
             _ => Err(format_err!("Expected Bundle2 Replycaps")),
         }
@@ -903,16 +911,23 @@ impl<'r> Bundle2Resolver<'r> {
     // client. This part is used as a marker that this push is pushrebase.
     async fn maybe_resolve_commonheads(
         &self,
-        bundle2: OldBoxStream<Bundle2Item, Error>,
-    ) -> Result<(Option<CommonHeads>, OldBoxStream<Bundle2Item, Error>), Error> {
+        bundle2: OldBoxStream<Bundle2Item<'static>, Error>,
+    ) -> Result<
+        (
+            Option<CommonHeads>,
+            OldBoxStream<Bundle2Item<'static>, Error>,
+        ),
+        Error,
+    > {
         let (maybe_commonheads, bundle2) = next_item(bundle2).await?;
 
         match maybe_commonheads {
-            Some(Bundle2Item::B2xCommonHeads(_header, heads)) => {
-                let heads = heads.collect().compat().await?;
-                let heads = CommonHeads { heads };
-                Ok((Some(heads), bundle2))
-            }
+            Some(Bundle2Item::B2xCommonHeads(_header, heads)) => Ok((
+                Some(CommonHeads {
+                    heads: heads.try_collect().await?,
+                }),
+                bundle2,
+            )),
 
             Some(part) => return_with_rest_of_bundle(None, part, bundle2).await,
             _ => Err(format_err!("Unexpected Bundle2 stream end")),
@@ -923,11 +938,11 @@ impl<'r> Bundle2Resolver<'r> {
     /// It is used to store hook arguments.
     async fn maybe_resolve_pushvars(
         &self,
-        bundle2: OldBoxStream<Bundle2Item, Error>,
+        bundle2: OldBoxStream<Bundle2Item<'static>, Error>,
     ) -> Result<
         (
             Option<HashMap<String, Bytes>>,
-            OldBoxStream<Bundle2Item, Error>,
+            OldBoxStream<Bundle2Item<'static>, Error>,
         ),
         Error,
     > {
@@ -937,7 +952,7 @@ impl<'r> Bundle2Resolver<'r> {
             Some(Bundle2Item::Pushvars(header, emptypart)) => {
                 let pushvars = header.into_inner().aparams;
                 // ignored for now, will be used for hooks
-                emptypart.compat().await?;
+                emptypart.await?;
                 Some(pushvars)
             }
             Some(part) => return return_with_rest_of_bundle(None, part, bundle2).await,
@@ -956,9 +971,15 @@ impl<'r> Bundle2Resolver<'r> {
     /// pure (non-pushrebase and non-infinitepush) pushes
     async fn maybe_resolve_changegroup(
         &self,
-        bundle2: OldBoxStream<Bundle2Item, Error>,
+        bundle2: OldBoxStream<Bundle2Item<'static>, Error>,
         changegroup_acceptable: impl FnOnce() -> bool + Send + Sync + 'static,
-    ) -> Result<(Option<ChangegroupPush>, OldBoxStream<Bundle2Item, Error>), Error> {
+    ) -> Result<
+        (
+            Option<ChangegroupPush>,
+            OldBoxStream<Bundle2Item<'static>, Error>,
+        ),
+        Error,
+    > {
         let infinitepush_writes_allowed = self.infinitepush_writes_allowed;
 
         let (changegroup, bundle2) = next_item(bundle2).await?;
@@ -1034,8 +1055,8 @@ impl<'r> Bundle2Resolver<'r> {
     /// Returns an error if the pushkey namespace is unknown
     async fn maybe_resolve_pushkey(
         &self,
-        bundle2: OldBoxStream<Bundle2Item, Error>,
-    ) -> Result<(Option<Pushkey>, OldBoxStream<Bundle2Item, Error>), Error> {
+        bundle2: OldBoxStream<Bundle2Item<'static>, Error>,
+    ) -> Result<(Option<Pushkey>, OldBoxStream<Bundle2Item<'static>, Error>), Error> {
         let (newpart, bundle2) = next_item(bundle2).await?;
 
         match newpart {
@@ -1070,7 +1091,7 @@ impl<'r> Bundle2Resolver<'r> {
                     }
                 };
 
-                emptypart.compat().await?;
+                emptypart.await?;
                 Ok((Some(pushkey), bundle2))
             }
             Some(part) => return_with_rest_of_bundle(None, part, bundle2).await,
@@ -1081,8 +1102,14 @@ impl<'r> Bundle2Resolver<'r> {
     /// Parse b2xinfinitepushmutation.
     async fn maybe_resolve_infinitepush_mutation(
         &self,
-        bundle2: OldBoxStream<Bundle2Item, Error>,
-    ) -> Result<(Vec<HgMutationEntry>, OldBoxStream<Bundle2Item, Error>), Error> {
+        bundle2: OldBoxStream<Bundle2Item<'static>, Error>,
+    ) -> Result<
+        (
+            Vec<HgMutationEntry>,
+            OldBoxStream<Bundle2Item<'static>, Error>,
+        ),
+        Error,
+    > {
         let (infinitepushmutation, bundle2): (
             Option<Bundle2Item>,
             OldBoxStream<Bundle2Item, Error>,
@@ -1090,7 +1117,7 @@ impl<'r> Bundle2Resolver<'r> {
 
         match infinitepushmutation {
             Some(Bundle2Item::B2xInfinitepushMutation(_, entries)) => {
-                let mutations = entries.concat2().compat().await?;
+                let mutations = entries.try_concat().await?;
                 Ok((mutations, bundle2))
             }
             Some(part) => return_with_rest_of_bundle(Vec::new(), part, bundle2).await,
@@ -1103,8 +1130,8 @@ impl<'r> Bundle2Resolver<'r> {
     /// their upload as well as their parsed content should be used for uploading changesets.
     async fn resolve_b2xtreegroup2(
         &self,
-        bundle2: OldBoxStream<Bundle2Item, Error>,
-    ) -> Result<(Manifests, OldBoxStream<Bundle2Item, Error>), Error> {
+        bundle2: OldBoxStream<Bundle2Item<'static>, Error>,
+    ) -> Result<(Manifests, OldBoxStream<Bundle2Item<'static>, Error>), Error> {
         let (b2xtreegroup2, bundle2) = next_item(bundle2).await?;
 
         match b2xtreegroup2 {
@@ -1132,8 +1159,8 @@ impl<'r> Bundle2Resolver<'r> {
     /// This part is ignored, so just parse it and forget it
     async fn maybe_resolve_infinitepush_bookmarks(
         &self,
-        bundle2: OldBoxStream<Bundle2Item, Error>,
-    ) -> Result<((), OldBoxStream<Bundle2Item, Error>), Error> {
+        bundle2: OldBoxStream<Bundle2Item<'static>, Error>,
+    ) -> Result<((), OldBoxStream<Bundle2Item<'static>, Error>), Error> {
         let (infinitepushbookmarks, bundle2): (
             Option<Bundle2Item>,
             OldBoxStream<Bundle2Item, Error>,
@@ -1141,7 +1168,7 @@ impl<'r> Bundle2Resolver<'r> {
 
         match infinitepushbookmarks {
             Some(Bundle2Item::B2xInfinitepushBookmarks(_, bookmarks)) => {
-                let _ = bookmarks.collect().boxify().compat().await?;
+                bookmarks.try_for_each(|_| future::ok(())).await?;
                 Ok(((), bundle2))
             }
             None => Ok(((), bundle2)),
@@ -1248,7 +1275,7 @@ impl<'r> Bundle2Resolver<'r> {
     /// Ensures that the next item in stream is None
     async fn ensure_stream_finished(
         &self,
-        bundle2: OldBoxStream<Bundle2Item, Error>,
+        bundle2: OldBoxStream<Bundle2Item<'static>, Error>,
         maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
     ) -> Result<Option<RawBundle2Id>, Error> {
         let (none, _bundle2) = next_item(bundle2).await?;
@@ -1263,12 +1290,13 @@ impl<'r> Bundle2Resolver<'r> {
     /// one pushkey part per bookmark.
     async fn resolve_multiple_parts<'a, T, Func, Fut>(
         &'a self,
-        bundle2: OldBoxStream<Bundle2Item, Error>,
+        bundle2: OldBoxStream<Bundle2Item<'static>, Error>,
         mut maybe_resolve: Func,
-    ) -> Result<(Vec<T>, OldBoxStream<Bundle2Item, Error>), Error>
+    ) -> Result<(Vec<T>, OldBoxStream<Bundle2Item<'static>, Error>), Error>
     where
-        Fut: Future<Output = Result<(Option<T>, OldBoxStream<Bundle2Item, Error>), Error>> + Sized,
-        Func: FnMut(&'a Self, OldBoxStream<Bundle2Item, Error>) -> Fut + Send + 'static,
+        Fut: Future<Output = Result<(Option<T>, OldBoxStream<Bundle2Item<'static>, Error>), Error>>
+            + Sized,
+        Func: FnMut(&'a Self, OldBoxStream<Bundle2Item<'static>, Error>) -> Fut + Send + 'static,
         T: Send + 'static,
     {
         let mut result = Vec::new();
@@ -1421,9 +1449,9 @@ fn try_collect_all_bookmark_pushes(
 /// chain together an unused part with the rest of the bundle
 async fn return_with_rest_of_bundle<T: Send + 'static>(
     value: T,
-    unused_part: Bundle2Item,
-    rest_of_bundle: OldBoxStream<Bundle2Item, Error>,
-) -> Result<(T, OldBoxStream<Bundle2Item, Error>), Error> {
+    unused_part: Bundle2Item<'static>,
+    rest_of_bundle: OldBoxStream<Bundle2Item<'static>, Error>,
+) -> Result<(T, OldBoxStream<Bundle2Item<'static>, Error>), Error> {
     Ok((
         value,
         old_stream::once(Ok(unused_part))

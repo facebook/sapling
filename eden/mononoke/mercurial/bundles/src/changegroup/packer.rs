@@ -7,7 +7,7 @@
 
 use std::convert::From;
 
-use futures::{try_ready, Async, Poll, Stream};
+use futures_old::{try_ready, Async, Poll, Stream};
 
 use anyhow::{Error, Result};
 use byteorder::ByteOrder;
