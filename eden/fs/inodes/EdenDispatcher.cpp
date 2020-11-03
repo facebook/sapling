@@ -24,6 +24,7 @@
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/utils/SystemError.h"
+#include "eden/fs/utils/UnboundedQueueExecutor.h"
 
 using namespace folly;
 using std::string;
@@ -734,32 +735,27 @@ folly::Future<folly::Unit> renameFile(
   auto oldParentInode = createDirInode(mount, oldPath.dirname(), context);
   auto newParentInode = createDirInode(mount, newPath.dirname(), context);
 
-  return std::move(oldParentInode)
-      .thenValue([newParentInode = std::move(newParentInode),
-                  oldPath = std::move(oldPath),
-                  newPath = std::move(newPath)](
-                     const TreeInodePtr oldParentTreePtr) mutable {
-        return std::move(newParentInode)
-            .thenValue([oldParentTreePtr = std::move(oldParentTreePtr),
-                        oldPath = std::move(oldPath),
-                        newPath = std::move(newPath)](
-                           const TreeInodePtr newParentTreePtr) {
-              // TODO(xavierd): In the case where the oldPath is actually being
-              // created in another thread, EdenFS simply might not know about
-              // it at this point. Creating the file and renaming it at this
-              // point won't help as the other thread will re-create it. In the
-              // future, we may want to try, wait a bit and retry, or re-think
-              // this and somehow order requests so the file creation always
-              // happens before the rename.
-              //
-              // This should be *extremely* rare, for now let's just let it
-              // error out.
-              return oldParentTreePtr->rename(
-                  oldPath.basename(),
-                  newParentTreePtr,
-                  newPath.basename(),
-                  InvalidationRequired::No);
-            });
+  return folly::collect(oldParentInode, newParentInode)
+      .via(mount.getThreadPool().get())
+      .thenValue([oldPath = std::move(oldPath), newPath = std::move(newPath)](
+                     const std::tuple<TreeInodePtr, TreeInodePtr> inodes) {
+        auto& oldParentTreePtr = std::get<0>(inodes);
+        auto& newParentTreePtr = std::get<1>(inodes);
+        // TODO(xavierd): In the case where the oldPath is actually being
+        // created in another thread, EdenFS simply might not know about
+        // it at this point. Creating the file and renaming it at this
+        // point won't help as the other thread will re-create it. In the
+        // future, we may want to try, wait a bit and retry, or re-think
+        // this and somehow order requests so the file creation always
+        // happens before the rename.
+        //
+        // This should be *extremely* rare, for now let's just let it
+        // error out.
+        return oldParentTreePtr->rename(
+            oldPath.basename(),
+            newParentTreePtr,
+            newPath.basename(),
+            InvalidationRequired::No);
       });
 }
 
