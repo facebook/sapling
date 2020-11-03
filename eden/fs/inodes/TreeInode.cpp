@@ -3343,7 +3343,6 @@ size_t TreeInode::unloadChildrenNow() {
       [](InodeBase*) { return true; });
 }
 
-#ifndef _WIN32
 size_t TreeInode::unloadChildrenUnreferencedByFuse() {
   auto treeChildren = getTreeChildren(this);
   return unloadChildrenIf(
@@ -3354,6 +3353,7 @@ size_t TreeInode::unloadChildrenUnreferencedByFuse() {
       [](InodeBase* child) { return child->getFuseRefcount() == 0; });
 }
 
+#ifndef _WIN32
 size_t TreeInode::unloadChildrenLastAccessedBefore(const timespec& cutoff) {
   // Unloading children by criteria is a bit of an intricate operation. The
   // InodeMap and tree's contents lock must be held simultaneously when

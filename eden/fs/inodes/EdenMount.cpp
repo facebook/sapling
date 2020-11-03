@@ -895,28 +895,29 @@ folly::Future<CheckoutResult> EdenMount::checkout(
         ctx->start(this->acquireRenameLock());
 
         checkoutTimes->didAcquireRenameLock = stopWatch.elapsed();
-#ifndef _WIN32
 
-        /**
-         * If a significant number of tree inodes are loaded or referenced
-         * by FUSE, then checkout is slow, because Eden must precisely
-         * manage changes to each one, as if the checkout was actually
-         * creating and removing files in each directory. If a tree is
-         * unloaded and unmodified, Eden can pretend the checkout
-         * operation blew away the entire subtree and assigned new inode
-         * numbers to everything under it, which is much cheaper.
-         *
-         * To make checkout faster, enumerate all loaded, unreferenced
-         * inodes and unload them, allowing checkout to use the fast path.
-         *
-         * Note that this will not unload any inodes currently referenced
-         * by FUSE, including the kernel's cache, so rapidly switching
-         * between commits while working should not be materially
-         * affected.
-         */
+        // If a significant number of tree inodes are loaded or referenced
+        // by FUSE, then checkout is slow, because Eden must precisely
+        // manage changes to each one, as if the checkout was actually
+        // creating and removing files in each directory. If a tree is
+        // unloaded and unmodified, Eden can pretend the checkout
+        // operation blew away the entire subtree and assigned new inode
+        // numbers to everything under it, which is much cheaper.
+        //
+        // To make checkout faster, enumerate all loaded, unreferenced
+        // inodes and unload them, allowing checkout to use the fast path.
+        //
+        // Note that this will not unload any inodes currently referenced
+        // by FUSE, including the kernel's cache, so rapidly switching
+        // between commits while working should not be materially
+        // affected.
+        //
+        // On Windows, most of the above is also true, but instead of files
+        // being referenced by the kernel, the files are actually on disk. All
+        // the files on disk must also be present in the overlay, and thus the
+        // checkout code will take care of doing the right invalidation for
+        // these.
         this->getRootInode()->unloadChildrenUnreferencedByFuse();
-
-#endif // !1
 
         auto rootInode = getRootInode();
         return serverState_->getFaultInjector()
