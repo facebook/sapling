@@ -124,15 +124,23 @@ IOBuf HgProxyHash::serialize(RelativePathPiece path, Hash hgRevHash) {
 }
 
 RelativePathPiece HgProxyHash::path() const {
-  DCHECK_GE(value_.size(), Hash::RAW_SIZE + sizeof(uint32_t));
-  StringPiece data{value_.data(), value_.size()};
-  data.advance(Hash::RAW_SIZE + sizeof(uint32_t));
-  return RelativePathPiece{data};
+  if (value_.empty()) {
+    return RelativePathPiece{};
+  } else {
+    DCHECK_GE(value_.size(), Hash::RAW_SIZE + sizeof(uint32_t));
+    StringPiece data{value_.data(), value_.size()};
+    data.advance(Hash::RAW_SIZE + sizeof(uint32_t));
+    return RelativePathPiece{data};
+  }
 }
 
 Hash HgProxyHash::revHash() const {
-  DCHECK_GE(value_.size(), Hash::RAW_SIZE);
-  return Hash{ByteRange{StringPiece{value_.data(), Hash::RAW_SIZE}}};
+  if (value_.empty()) {
+    return kZeroHash;
+  } else {
+    DCHECK_GE(value_.size(), Hash::RAW_SIZE);
+    return Hash{ByteRange{StringPiece{value_.data(), Hash::RAW_SIZE}}};
+  }
 }
 
 void HgProxyHash::validate(Hash edenBlobHash) {

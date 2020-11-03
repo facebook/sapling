@@ -15,8 +15,6 @@
 #include <folly/io/IOBuf.h>
 #include <folly/logging/xlog.h>
 
-#include "eden/fs/model/Hash.h"
-#include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/StoreResult.h"
 
 using folly::ByteRange;
@@ -27,7 +25,7 @@ using folly::io::Appender;
 namespace facebook {
 namespace eden {
 
-ScsProxyHash::ScsProxyHash(std::string value) : value_(value) {}
+ScsProxyHash::ScsProxyHash(std::string value) : value_(std::move(value)) {}
 
 std::optional<ScsProxyHash>
 ScsProxyHash::load(LocalStore* store, Hash edenBlobHash, StringPiece context) {

@@ -7,7 +7,6 @@
 
 #pragma once
 
-#include <folly/FixedString.h>
 #include <string>
 #include <vector>
 #include "eden/fs/model/Hash.h"
@@ -22,13 +21,6 @@ class IOBuf;
 
 namespace facebook {
 namespace eden {
-namespace {
-// An empty ProxyHash. It contains an all zeros hash and zero length path.
-constexpr auto kDefaultProxyHash =
-    folly::FixedString<Hash::RAW_SIZE + sizeof(uint32_t)>().append(
-        Hash::RAW_SIZE + sizeof(uint32_t),
-        '\x00');
-} // namespace
 
 /**
  * HgProxyHash manages mercurial (path, revHash) data in the LocalStore.
@@ -55,13 +47,11 @@ class HgProxyHash {
   HgProxyHash(const HgProxyHash& other) = default;
   HgProxyHash& operator=(const HgProxyHash& other) = default;
 
-  HgProxyHash(HgProxyHash&& other) noexcept(false) {
-    value_.swap(other.value_);
-  }
+  HgProxyHash(HgProxyHash&& other) noexcept
+      : value_{std::exchange(other.value_, std::string{})} {}
 
-  HgProxyHash& operator=(HgProxyHash&& other) noexcept(false) {
-    value_.swap(other.value_);
-    other.value_ = kDefaultProxyHash;
+  HgProxyHash& operator=(HgProxyHash&& other) noexcept {
+    value_ = std::exchange(other.value_, std::string{});
     return *this;
   }
 
@@ -130,7 +120,7 @@ class HgProxyHash {
   /**
    * The serialized data as written in the LocalStore.
    */
-  std::string value_ = kDefaultProxyHash;
+  std::string value_;
 };
 
 } // namespace eden

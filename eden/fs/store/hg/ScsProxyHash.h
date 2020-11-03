@@ -13,7 +13,8 @@
 
 #include <folly/FixedString.h>
 
-#include "eden/fs/store/hg/HgProxyHash.h"
+#include "eden/fs/model/Hash.h"
+#include "eden/fs/store/LocalStore.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace folly {
@@ -25,8 +26,13 @@ class IOBuf;
 namespace facebook {
 namespace eden {
 
-class Hash;
-class LocalStore;
+namespace {
+// An empty ProxyHash. It contains an all zeros hash and zero length path.
+constexpr auto kDefaultProxyHash =
+    folly::FixedString<Hash::RAW_SIZE + sizeof(uint32_t)>().append(
+        Hash::RAW_SIZE + sizeof(uint32_t),
+        '\x00');
+} // namespace
 
 /**
  * ScsProxyHash manages Source Control Service data in the LocalStore.
