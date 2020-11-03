@@ -40,9 +40,10 @@ class ServiceAddress;
 class HgProxyHash;
 
 /**
- * A BackingStore implementation that loads data out of a mercurial repository.
+ * An implementation class for HgQueuedBackingStore that loads data out of a
+ * mercurial repository.
  */
-class HgBackingStore : public BackingStore {
+class HgBackingStore {
  public:
   /**
    * Create a new HgBackingStore.
@@ -66,24 +67,24 @@ class HgBackingStore : public BackingStore {
       std::shared_ptr<LocalStore> localStore,
       std::shared_ptr<EdenStats>);
 
-  ~HgBackingStore() override;
+  ~HgBackingStore();
 
   folly::SemiFuture<std::unique_ptr<Tree>> getTree(
       const Hash& id,
-      ObjectFetchContext& context) override;
+      ObjectFetchContext& context);
   folly::SemiFuture<std::unique_ptr<Blob>> getBlob(
       const Hash& id,
-      ObjectFetchContext& context) override;
+      ObjectFetchContext& context);
   folly::SemiFuture<std::unique_ptr<Tree>> getTreeForCommit(
-      const Hash& commitID) override;
+      const Hash& commitID);
   folly::SemiFuture<std::unique_ptr<Tree>> getTreeForManifest(
       const Hash& commitID,
-      const Hash& manifestID) override;
+      const Hash& manifestID);
   FOLLY_NODISCARD folly::SemiFuture<folly::Unit> prefetchBlobs(
       const std::vector<Hash>& ids,
-      ObjectFetchContext& context) override;
+      ObjectFetchContext& context);
 
-  void periodicManagementTask() override;
+  void periodicManagementTask();
 
   /**
    * Import the manifest for the specified revision using mercurial

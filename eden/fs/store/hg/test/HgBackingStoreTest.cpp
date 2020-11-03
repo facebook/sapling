@@ -13,10 +13,12 @@
 
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/model/Tree.h"
+#include "eden/fs/store/BackingStoreLogger.h"
 #include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/hg/HgBackingStore.h"
 #include "eden/fs/store/hg/HgImporter.h"
+#include "eden/fs/store/hg/HgQueuedBackingStore.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/NullStructuredLogger.h"
 #include "eden/fs/testharness/HgRepo.h"
@@ -53,11 +55,17 @@ struct HgBackingStoreTest : TestRepo, ::testing::Test {
       std::make_shared<MemoryLocalStore>()};
   std::shared_ptr<EdenStats> stats{std::make_shared<EdenStats>()};
   HgImporter importer{repo.path(), stats};
-  std::shared_ptr<HgBackingStore> backingStore{std::make_shared<HgBackingStore>(
-      repo.path(),
-      &importer,
-      localStore,
-      stats)};
+  std::shared_ptr<HgQueuedBackingStore> backingStore{
+      std::make_shared<HgQueuedBackingStore>(
+          localStore,
+          stats,
+          std::make_unique<HgBackingStore>(
+              repo.path(),
+              &importer,
+              localStore,
+              stats),
+          nullptr,
+          nullptr)};
   std::shared_ptr<ObjectStore> objectStore{ObjectStore::create(
       localStore,
       backingStore,

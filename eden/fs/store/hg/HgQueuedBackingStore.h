@@ -67,10 +67,6 @@ class HgQueuedBackingStore : public BackingStore {
       const std::vector<Hash>& ids,
       ObjectFetchContext& context) override;
 
-  HgBackingStore* getHgBackingStore() const {
-    return backingStore_.get();
-  }
-
   /**
    * calculates `metric` for `object` imports that are `stage`.
    *    ex. HgQueuedBackingStore::getImportMetrics(
