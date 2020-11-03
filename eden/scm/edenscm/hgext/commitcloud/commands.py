@@ -769,10 +769,13 @@ def authenticate(ui, repo, tokenlocator):
     # ui.prompt doesn't set up the prompt correctly, so pasting long lines
     # wraps incorrectly in the terminal.  Print the prompt on its own line
     # to avoid this.
-    prompt = _("paste your commit cloud authentication token below:\n")
+    prompt = _(
+        "paste your commit cloud authentication token below or run `hg cloud auth -t <token>` to set the token:\n"
+    )
     ui.write(ui.label(prompt, "ui.prompt"))
     token = ui.prompt("", default="").strip()
     if token:
+        ui.status(_("checking the token '%s'\n") % token)
         service.get(ui, token).check()
         tokenlocator.settoken(token)
         ui.status(_("authentication successful\n"))
