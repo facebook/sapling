@@ -1228,7 +1228,7 @@ fn test_hg_commit_generation_diamond(fb: FacebookInit) {
     let repo = runtime.block_on_std(fixtures::linear::getrepo(fb));
 
     let last_bcs_id = runtime
-        .block_on(fixtures::save_diamond_commits(
+        .block_on_std(fixtures::save_diamond_commits(
             ctx.clone(),
             repo.clone(),
             vec![],

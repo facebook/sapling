@@ -11,14 +11,16 @@ use anyhow::Error;
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobrepo_hg::BlobRepoHg;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
+use borrowed::borrowed;
 use bytes::Bytes;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use filestore::StoreRequest;
-use futures::compat::Future01CompatExt;
-use futures_ext::{BoxFuture, FutureExt};
-use futures_old::future::{join_all, Future};
-use futures_old::stream;
+use futures::{
+    compat::Future01CompatExt,
+    future::try_join_all,
+    stream::{self, StreamExt, TryStreamExt},
+};
 use maplit::btreemap;
 use mercurial_types::{HgChangesetId, MPath};
 use mononoke_types::{
@@ -44,7 +46,9 @@ pub async fn store_files(
                     repo.filestore_config(),
                     ctx.clone(),
                     &StoreRequest::new(size),
-                    stream::once(Ok(Bytes::copy_from_slice(content.as_bytes()))),
+                    stream::once(async { Ok(Bytes::copy_from_slice(content.as_bytes())) })
+                        .boxed()
+                        .compat(),
                 )
                 .compat()
                 .await
@@ -83,12 +87,17 @@ async fn create_bonsai_changeset_from_test_data(
         .filter(|s| !s.is_empty())
         .map(|s| HgChangesetId::from_str(s).unwrap())
         .map(|p| {
-            blobrepo
-                .get_bonsai_from_hg(ctx.clone(), p)
-                .map(|maybe_cs| maybe_cs.unwrap())
+            borrowed!(ctx, blobrepo);
+            async move {
+                blobrepo
+                    .get_bonsai_from_hg(ctx.clone(), p)
+                    .compat()
+                    .await
+                    .map(|maybe_cs| maybe_cs.unwrap())
+            }
         });
 
-    let bonsai_parents = join_all(parents).compat().await.unwrap();
+    let bonsai_parents = try_join_all(parents).await.unwrap();
 
     let bcs = BonsaiChangesetMut {
         parents: bonsai_parents,
@@ -1550,11 +1559,11 @@ pub mod unshared_merge_uneven {
     }
 }
 
-pub fn save_diamond_commits(
+pub async fn save_diamond_commits(
     ctx: CoreContext,
     repo: BlobRepo,
     parents: Vec<ChangesetId>,
-) -> BoxFuture<ChangesetId, Error> {
+) -> Result<ChangesetId, Error> {
     let first_bcs = create_bonsai_changeset(parents);
     let first_bcs_id = first_bcs.get_changeset_id();
 
@@ -1573,8 +1582,9 @@ pub fn save_diamond_commits(
         ctx.clone(),
         repo.clone(),
     )
+    .compat()
+    .await
     .map(move |()| fourth_bcs_id)
-    .boxify()
 }
 
 pub fn create_bonsai_changeset(parents: Vec<ChangesetId>) -> BonsaiChangeset {
@@ -1645,14 +1655,12 @@ pub mod many_diamonds {
         let ctx = CoreContext::test_mock(fb);
 
         let mut last_bcs_id = save_diamond_commits(ctx.clone(), repo.clone(), vec![])
-            .compat()
             .await
             .unwrap();
 
         let diamond_stack_size = 50u8;
         for _ in 1..diamond_stack_size {
             let new_bcs_id = save_diamond_commits(ctx.clone(), repo.clone(), vec![last_bcs_id])
-                .compat()
                 .await
                 .unwrap();
             last_bcs_id = new_bcs_id;
