@@ -29,7 +29,7 @@ use mononoke_types::{MPath, MPathElement};
 use repo_blobstore::RepoBlobstore;
 use sorted_vector_map::SortedVectorMap;
 
-use crate::ErrorKind;
+use crate::FsnodeDerivationError;
 
 /// Derives fsnodes for bonsai_changeset `cs_id` given parent fsnodes. Note
 /// that `derive_manifest()` does a lot of the heavy lifting for us, and this
@@ -37,8 +37,8 @@ use crate::ErrorKind;
 /// that the leaf entries (which are `(ContentId, FileType)` pairs) are valid
 /// during merges.
 pub(crate) async fn derive_fsnode(
-    ctx: CoreContext,
-    repo: BlobRepo,
+    ctx: &CoreContext,
+    repo: &BlobRepo,
     parents: Vec<FsnodeId>,
     changes: Vec<(MPath, Option<(ContentId, FileType)>)>,
 ) -> Result<FsnodeId> {
@@ -51,7 +51,7 @@ pub(crate) async fn derive_fsnode(
         .collect();
 
     let prefetched_content_metadata =
-        Arc::new(prefetch_content_metadata(&ctx, &blobstore, content_ids).await?);
+        Arc::new(prefetch_content_metadata(ctx, &blobstore, content_ids).await?);
 
     // We must box and store the derivation future, otherwise lifetime
     // analysis is unable to see that the blobstore lasts long enough.
@@ -63,13 +63,17 @@ pub(crate) async fn derive_fsnode(
         {
             cloned!(blobstore, ctx, prefetched_content_metadata);
             move |tree_info, sender| {
-                create_fsnode(
-                    ctx.clone(),
-                    blobstore.clone(),
-                    Some(sender),
-                    prefetched_content_metadata.clone(),
-                    tree_info,
-                )
+                cloned!(blobstore, ctx, prefetched_content_metadata);
+                async move {
+                    create_fsnode(
+                        &ctx,
+                        &blobstore,
+                        Some(sender),
+                        prefetched_content_metadata,
+                        tree_info,
+                    )
+                    .await
+                }
             }
         },
         |leaf_info, _sender| check_fsnode_leaf(leaf_info),
@@ -86,8 +90,14 @@ pub(crate) async fn derive_fsnode(
                 parents,
                 subentries: Default::default(),
             };
-            let (_, tree_id) =
-                create_fsnode(ctx, blobstore, None, prefetched_content_metadata, tree_info).await?;
+            let (_, tree_id) = create_fsnode(
+                ctx,
+                &blobstore,
+                None,
+                prefetched_content_metadata,
+                tree_info,
+            )
+            .await?;
             Ok(tree_id)
         }
     }
@@ -143,7 +153,7 @@ async fn collect_fsnode_subentries(
                 fsnode_id
                     .load(ctx.clone(), blobstore)
                     .await
-                    .context(ErrorKind::MissingParent(fsnode_id))
+                    .context(FsnodeDerivationError::MissingParent(fsnode_id))
             }
         })
         .collect::<FuturesUnordered<_>>();
@@ -153,10 +163,10 @@ async fn collect_fsnode_subentries(
                 FsnodeEntry::File(file) => {
                     file_cache
                         .entry((*file.content_id(), *file.file_type()))
-                        .or_insert(file.clone());
+                        .or_insert_with(|| file.clone());
                 }
                 FsnodeEntry::Directory(dir) => {
-                    dir_cache.entry(*dir.id()).or_insert(dir.clone());
+                    dir_cache.entry(*dir.id()).or_insert_with(|| dir.clone());
                 }
             }
         }
@@ -188,7 +198,7 @@ async fn collect_fsnode_subentries(
                             let fsnode =
                                 fsnode_id.load(ctx.clone(), blobstore).await.with_context({
                                     || {
-                                        ErrorKind::MissingSubentry(
+                                        FsnodeDerivationError::MissingSubentry(
                                             String::from_utf8_lossy(elem.as_ref()).to_string(),
                                             fsnode_id,
                                         )
@@ -221,7 +231,7 @@ async fn collect_fsnode_subentries(
                                 ));
                                 Ok((elem.clone(), entry))
                             } else {
-                                Err(ErrorKind::MissingContent(content_id).into())
+                                Err(FsnodeDerivationError::MissingContent(content_id).into())
                             }
                         }
                     }
@@ -235,15 +245,15 @@ async fn collect_fsnode_subentries(
 
 /// Create a new fsnode for the tree described by `tree_info`.
 async fn create_fsnode(
-    ctx: CoreContext,
-    blobstore: RepoBlobstore,
+    ctx: &CoreContext,
+    blobstore: &RepoBlobstore,
     sender: Option<mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>>,
     prefetched_content_metadata: Arc<HashMap<ContentId, ContentMetadata>>,
     tree_info: TreeInfo<FsnodeId, (ContentId, FileType), Option<FsnodeSummary>>,
 ) -> Result<(Option<FsnodeSummary>, FsnodeId)> {
     let entries = collect_fsnode_subentries(
-        &ctx,
-        &blobstore,
+        ctx,
+        blobstore,
         prefetched_content_metadata.as_ref(),
         tree_info.parents,
         tree_info.subentries,
@@ -302,7 +312,7 @@ async fn create_fsnode(
     let blob = fsnode.into_blob();
     let fsnode_id = *blob.id();
     let key = fsnode_id.blobstore_key();
-    let f = blobstore.put(ctx, key, blob.into());
+    let f = blobstore.put(ctx.clone(), key, blob.into());
 
     match sender {
         Some(sender) => sender
@@ -362,7 +372,7 @@ async fn check_fsnode_leaf(
         // types match for this file, then the content ID is valid. Check
         // this is so.
         if leaf_info.parents.len() < 2 {
-            return Err(ErrorKind::InvalidBonsai(
+            return Err(FsnodeDerivationError::InvalidBonsai(
                 "no change is provided, but file has only one parent".to_string(),
             )
             .into());
@@ -378,7 +388,7 @@ async fn check_fsnode_leaf(
         if let Some(fsnode_file) = fsnode_file {
             Ok((None, fsnode_file.into()))
         } else {
-            Err(ErrorKind::InvalidBonsai(
+            Err(FsnodeDerivationError::InvalidBonsai(
                 "no change is provided, but file content or type is different".to_string(),
             )
             .into())
@@ -408,7 +418,7 @@ mod test {
             let (_bcs_id, bcs) =
                 get_bonsai_changeset(ctx.clone(), repo.clone(), &mut runtime, parent_hg_cs);
 
-            let f = derive_fsnode(ctx.clone(), repo.clone(), vec![], get_file_changes(&bcs));
+            let f = derive_fsnode(&ctx, &repo, vec![], get_file_changes(&bcs));
 
             let root_fsnode_id = runtime.block_on_std(f).unwrap();
 
@@ -460,8 +470,8 @@ mod test {
                 get_bonsai_changeset(ctx.clone(), repo.clone(), &mut runtime, child_hg_cs);
 
             let f = derive_fsnode(
-                ctx.clone(),
-                repo.clone(),
+                &ctx,
+                &repo,
                 vec![parent_fsnode_id.clone()],
                 get_file_changes(&bcs),
             );
@@ -523,7 +533,7 @@ mod test {
             let parent_hg_cs = "5a28e25f924a5d209b82ce0713d8d83e68982bc8";
             let (_bcs_id, bcs) =
                 get_bonsai_changeset(ctx.clone(), repo.clone(), &mut runtime, parent_hg_cs);
-            let f = derive_fsnode(ctx.clone(), repo.clone(), vec![], get_file_changes(&bcs));
+            let f = derive_fsnode(&ctx, &repo, vec![], get_file_changes(&bcs));
             runtime.block_on_std(f).unwrap()
         };
 
@@ -532,8 +542,8 @@ mod test {
             let (_bcs_id, bcs) =
                 get_bonsai_changeset(ctx.clone(), repo.clone(), &mut runtime, parent_hg_cs);
             let f = derive_fsnode(
-                ctx.clone(),
-                repo.clone(),
+                &ctx,
+                &repo,
                 vec![parent_fsnode_id.clone()],
                 get_file_changes(&bcs),
             );
@@ -546,8 +556,8 @@ mod test {
                 get_bonsai_changeset(ctx.clone(), repo.clone(), &mut runtime, parent_hg_cs);
 
             let f = derive_fsnode(
-                ctx.clone(),
-                repo.clone(),
+                &ctx,
+                &repo,
                 vec![parent_fsnode_id.clone()],
                 get_file_changes(&bcs),
             );
@@ -731,8 +741,8 @@ mod test {
                 get_bonsai_changeset(ctx.clone(), repo.clone(), &mut runtime, child_hg_cs);
 
             let f = derive_fsnode(
-                ctx.clone(),
-                repo.clone(),
+                &ctx,
+                &repo,
                 vec![parent_fsnode_id.clone()],
                 get_file_changes(&bcs),
             );

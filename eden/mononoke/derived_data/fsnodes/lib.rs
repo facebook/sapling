@@ -6,7 +6,6 @@
  */
 
 #![deny(warnings)]
-#![type_length_limit = "4715995"]
 
 use mononoke_types::{ContentId, FsnodeId};
 use thiserror::Error;
@@ -19,7 +18,7 @@ pub use derive::prefetch_content_metadata;
 pub use mapping::{RootFsnodeId, RootFsnodeMapping};
 
 #[derive(Debug, Error)]
-pub enum ErrorKind {
+pub enum FsnodeDerivationError {
     #[error("Invalid bonsai changeset: {0}")]
     InvalidBonsai(String),
     #[error("Missing content: {0}")]

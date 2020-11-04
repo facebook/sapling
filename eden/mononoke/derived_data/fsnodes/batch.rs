@@ -11,9 +11,11 @@ use std::collections::{BTreeMap, HashMap};
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
+use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
-use futures::{compat::Future01CompatExt, stream, stream::FuturesOrdered, StreamExt, TryStreamExt};
+use futures::compat::Future01CompatExt;
+use futures::stream::{self, FuturesOrdered, StreamExt, TryStreamExt};
 use itertools::Itertools;
 use mononoke_types::{BonsaiChangeset, FileChange, MPath};
 use mononoke_types::{ChangesetId, ContentId, FileType, FsnodeId};
@@ -72,16 +74,16 @@ pub async fn derive_fsnode_in_batch(
             .file_changes
             .into_iter()
             .map(|(cs_id, fc)| {
-                let parent_fsnodes = parent_fsnodes.clone();
+                // Clone the values that we need owned copies of to move
+                // into the future we are going to spawn, which means it
+                // must have static lifetime.
+                cloned!(ctx, repo, parent_fsnodes);
                 async move {
-                    let f = derive_fsnode(
-                        ctx.clone(),
-                        repo.clone(),
-                        parent_fsnodes,
-                        fc.into_iter().collect(),
-                    );
-                    let f = tokio::spawn(f);
-                    let fsnode_id: FsnodeId = f.await??;
+                    let derivation_fut = async move {
+                        derive_fsnode(&ctx, &repo, parent_fsnodes, fc.into_iter().collect()).await
+                    };
+                    let derivation_handle = tokio::spawn(derivation_fut);
+                    let fsnode_id: FsnodeId = derivation_handle.await??;
                     Result::<_, Error>::Ok((cs_id, fsnode_id))
                 }
             })

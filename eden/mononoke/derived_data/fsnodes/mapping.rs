@@ -5,8 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use crate::batch::derive_fsnode_in_batch;
-use crate::derive::derive_fsnode;
+use std::collections::HashMap;
+use std::convert::{TryFrom, TryInto};
+
 use anyhow::{Error, Result};
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
@@ -20,10 +21,9 @@ use mononoke_types::{
     BlobstoreBytes, BonsaiChangeset, ChangesetId, ContentId, FileType, FsnodeId, MPath,
 };
 use repo_blobstore::RepoBlobstore;
-use std::{
-    collections::HashMap,
-    convert::{TryFrom, TryInto},
-};
+
+use crate::batch::derive_fsnode_in_batch;
+use crate::derive::derive_fsnode;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct RootFsnodeId(FsnodeId);
@@ -75,8 +75,8 @@ impl BonsaiDerived for RootFsnodeId {
         parents: Vec<Self>,
     ) -> Result<Self, Error> {
         let fsnode_id = derive_fsnode(
-            ctx,
-            repo,
+            &ctx,
+            &repo,
             parents
                 .into_iter()
                 .map(|root_fsnode_id| root_fsnode_id.into_fsnode_id())
