@@ -17,7 +17,7 @@ import threading
 import weakref
 from typing import Any
 
-from . import error, progress, pycompat, util, wireproto
+from . import error, perftrace, progress, pycompat, util, wireproto
 from .i18n import _
 from .pycompat import decodeutf8, encodeutf8
 
@@ -441,9 +441,12 @@ class sshpeer(wireproto.wirepeer):
         if r:
             # XXX needs to be made better
             raise error.Abort(_("unexpected remote reply: %s") % r)
+        payloadsize = 0
         for d in iter(lambda: fp.read(4096), b""):
+            payloadsize += len(d)
             self._send(d)
         self._send(b"", flush=True)
+        perftrace.tracebytes("two-way stream payload size", payloadsize)
         return self._pipei
 
     def _getamount(self):

@@ -28,6 +28,7 @@ from . import (
     extensions,
     json,
     peer,
+    perftrace,
     pushkey as pushkeymod,
     pycompat,
     replay,
@@ -425,6 +426,7 @@ class wirepeer(repository.legacypeer):
         else:
             return changegroupmod.cg1unpacker(f, "UN")
 
+    @perftrace.tracefunc("Unbundle wireproto command")
     def unbundle(self, cg, heads, url):
         """Send cg (a readable file-like object representing the
         changegroup to push, typically a chunkbuffer object) to the
@@ -460,7 +462,12 @@ class wirepeer(repository.legacypeer):
                 self.ui.status(_("remote: "), l)
         else:
             # bundle2 push. Send a stream, fetch a stream.
-            stream = self._calltwowaystream("unbundle", cg, heads=heads)
+            # Let's measure this in both `perftrace` and `timesection`
+            # so that this can be looked at through individual traces
+            # and aggregated in Scuba
+            with self.ui.timesection("getscratchbranchparts"):
+                with perftrace.trace("Sending unbundle data to the server"):
+                    stream = self._calltwowaystream("unbundle", cg, heads=heads)
             ret = bundle2.getunbundler(self.ui, stream)
         return ret
 

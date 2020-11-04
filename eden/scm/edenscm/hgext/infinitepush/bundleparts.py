@@ -14,6 +14,7 @@ from edenscm.mercurial import (
     exchange,
     extensions,
     mutation,
+    perftrace,
     pycompat,
     revsetlang,
     util,
@@ -82,6 +83,7 @@ def _exchangesetup():
         return handlereply
 
 
+@perftrace.tracefunc("Get ScratchBranch parts")
 def getscratchbranchparts(
     repo, peer, outgoing, confignonforwardmove, ui, bookmark, create, bookmarknode=None
 ):
@@ -90,6 +92,24 @@ def getscratchbranchparts(
             _("no server support for %r") % constants.scratchbranchparttype
         )
 
+    # This is already measured by the perftreace, but let's also measure it
+    # by `timesection` to be able to aggregate on this value in Scuba
+    with ui.timesection("getscratchbranchparts"):
+        return _getscratchbranchpartsimpl(
+            repo,
+            peer,
+            outgoing,
+            confignonforwardmove,
+            ui,
+            bookmark,
+            create,
+            bookmarknode=bookmarknode,
+        )
+
+
+def _getscratchbranchpartsimpl(
+    repo, peer, outgoing, confignonforwardmove, ui, bookmark, create, bookmarknode=None
+):
     _validaterevset(repo, revsetlang.formatspec("%ln", outgoing.missing), bookmark)
 
     supportedversions = changegroup.supportedoutgoingversions(repo)
@@ -195,7 +215,8 @@ def _handlelfs(repo, missing):
     """
     try:
         lfsmod = extensions.find("lfs")
-        lfsmod.wrapper.uploadblobsfromrevs(repo, missing)
+        with perftrace.trace("Upload LFS Blobs"):
+            lfsmod.wrapper.uploadblobsfromrevs(repo, missing)
     except KeyError:
         # Ignore if lfs extension is not enabled
         return

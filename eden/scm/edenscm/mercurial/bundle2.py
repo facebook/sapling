@@ -1024,29 +1024,35 @@ class bundlepart(object):
         self, parttype, mandatoryparams=(), advisoryparams=(), data=b"", mandatory=True
     ):
         # type: (str, Iterable[Tuple[str,str]], Iterable[Tuple[str,str]], bytes, bool) -> None
-        validateparttype(parttype)
-        self.id = None
-        self.type = parttype
-        assert (
-            isinstance(data, bytes)
-            or util.safehasattr(data, "next")
-            or util.safehasattr(data, "__next__")
-        )
-        self._data = data
-        self._mandatoryparams = list(mandatoryparams)  # type: List[Tuple[str, str]]
-        self._advisoryparams = list(advisoryparams)  # type: List[Tuple[str, str]]
-        # checking for duplicated entries
-        self._seenparams = set()
-        for pname, __ in self._mandatoryparams + self._advisoryparams:
-            if pname in self._seenparams:
-                raise error.ProgrammingError("duplicated params: %s" % pname)
-            self._seenparams.add(pname)
-        # status of the part's generation:
-        # - None: not started,
-        # - False: currently generated,
-        # - True: generation done.
-        self._generated = None
-        self.mandatory = mandatory
+        with perftrace.trace("Create bundle part"):
+            validateparttype(parttype)
+            self.id = None
+            self.type = parttype
+            assert (
+                isinstance(data, bytes)
+                or util.safehasattr(data, "next")
+                or util.safehasattr(data, "__next__")
+            )
+
+            self._data = data
+            self._mandatoryparams = list(mandatoryparams)  # type: List[Tuple[str, str]]
+            self._advisoryparams = list(advisoryparams)  # type: List[Tuple[str, str]]
+            # checking for duplicated entries
+            self._seenparams = set()
+            for pname, __ in self._mandatoryparams + self._advisoryparams:
+                if pname in self._seenparams:
+                    raise error.ProgrammingError("duplicated params: %s" % pname)
+                self._seenparams.add(pname)
+            # status of the part's generation:
+            # - None: not started,
+            # - False: currently generated,
+            # - True: generation done.
+            self._generated = None
+            self.mandatory = mandatory
+
+            perftrace.tracevalue("part type", parttype)
+            if isinstance(data, bytes):
+                perftrace.tracebytes("part data size", len(data))
 
     def __repr__(self):
         cls = "%s.%s" % (self.__class__.__module__, self.__class__.__name__)

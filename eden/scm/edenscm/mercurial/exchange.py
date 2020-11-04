@@ -441,6 +441,7 @@ bookmsgmap = {
 }
 
 
+@perftrace.tracefunc("Push")
 def push(repo, remote, force=False, revs=None, bookmarks=(), opargs=None):
     """Push outgoing changesets (limited by revs) from a local
     repository to remote. Return an integer:
@@ -1018,6 +1019,8 @@ def _getbundlesendvars(pushop, bundler):
             part.addparam(key, value, mandatory=False)
 
 
+@util.timefunction("pushbundle2", 0, "ui")
+@perftrace.tracefunc("_pushbundle2")
 def _pushbundle2(pushop):
     """push data to the remote using bundle2
 
@@ -1065,8 +1068,9 @@ def _pushbundle2(pushop):
         if partid not in pushop.pkfailcb:
             raise
         pushop.pkfailcb[partid](pushop, exc)
-    for rephand in replyhandlers:
-        rephand(op)
+    with perftrace.trace("Processing bundle2 reply handlers"):
+        for rephand in replyhandlers:
+            rephand(op)
 
 
 def _pushchangeset(pushop):
