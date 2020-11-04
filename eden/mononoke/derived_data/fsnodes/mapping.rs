@@ -11,18 +11,11 @@ use anyhow::{Error, Result};
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobstore::{Blobstore, BlobstoreGetData};
+use borrowed::borrowed;
 use bytes::Bytes;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
-use futures::{
-    compat::Future01CompatExt, stream as new_stream, StreamExt as NewStreamExt, TryFutureExt,
-    TryStreamExt,
-};
-use futures_ext::StreamExt;
-use futures_old::{
-    stream::{self, FuturesUnordered},
-    Future, Stream,
-};
+use futures::stream::{self, FuturesUnordered, StreamExt, TryStreamExt};
 use mononoke_types::{
     BlobstoreBytes, BonsaiChangeset, ChangesetId, ContentId, FileType, FsnodeId, MPath,
 };
@@ -30,7 +23,6 @@ use repo_blobstore::RepoBlobstore;
 use std::{
     collections::HashMap,
     convert::{TryFrom, TryInto},
-    iter::FromIterator,
 };
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -109,7 +101,7 @@ impl BonsaiDerived for RootFsnodeId {
 
         let mapping = Self::mapping(ctx, repo);
 
-        new_stream::iter(derived.into_iter().map(|(cs_id, derived)| {
+        stream::iter(derived.into_iter().map(|(cs_id, derived)| {
             let mapping = mapping.clone();
             async move {
                 let derived = RootFsnodeId(derived);
@@ -140,18 +132,19 @@ impl RootFsnodeMapping {
         format!("derived_root_fsnode.{}", cs_id)
     }
 
-    fn fetch_fsnode(
+    async fn fetch_fsnode(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         cs_id: ChangesetId,
-    ) -> impl Future<Item = Option<(ChangesetId, RootFsnodeId)>, Error = Error> {
-        self.blobstore
+    ) -> Result<Option<RootFsnodeId>> {
+        match self
+            .blobstore
             .get(ctx.clone(), self.format_key(cs_id))
-            .compat()
-            .and_then(|opt_blob| opt_blob.map(TryInto::try_into).transpose())
-            .map(move |maybe_root_fsnode_id| {
-                maybe_root_fsnode_id.map(|root_fsnode_id| (cs_id, root_fsnode_id))
-            })
+            .await?
+        {
+            Some(blob) => Ok(Some(blob.try_into()?)),
+            None => Ok(None),
+        }
     }
 }
 
@@ -164,14 +157,18 @@ impl BonsaiDerivedMapping for RootFsnodeMapping {
         ctx: CoreContext,
         csids: Vec<ChangesetId>,
     ) -> Result<HashMap<ChangesetId, Self::Value>, Error> {
-        let gets = csids.into_iter().map(|cs_id| {
-            self.fetch_fsnode(ctx.clone(), cs_id)
-                .map(|maybe_root_fsnode_id| stream::iter_ok(maybe_root_fsnode_id.into_iter()))
-        });
-        FuturesUnordered::from_iter(gets)
-            .flatten()
-            .collect_to()
-            .compat()
+        borrowed!(ctx);
+        csids
+            .into_iter()
+            .map(|cs_id| async move {
+                match self.fetch_fsnode(ctx, cs_id).await? {
+                    Some(root_fsnode_id) => Ok(Some((cs_id, root_fsnode_id))),
+                    None => Ok(None),
+                }
+            })
+            .collect::<FuturesUnordered<_>>()
+            .try_filter_map(|maybe_fsnode_mapping| async move { Ok(maybe_fsnode_mapping) })
+            .try_collect()
             .await
     }
 
@@ -201,107 +198,107 @@ mod test {
     use blobrepo_hg::BlobRepoHg;
     use blobstore::Loadable;
     use bookmarks::BookmarkName;
-    use cloned::cloned;
     use fbinit::FacebookInit;
     use fixtures::{
         branch_even, branch_uneven, branch_wide, linear, many_diamonds, many_files_dirs,
         merge_even, merge_uneven, unshared_merge_even, unshared_merge_uneven,
     };
-    use futures::future::{Future as NewFuture, TryFutureExt};
+    use futures::compat::{Future01CompatExt, Stream01CompatExt};
+    use futures::future::Future;
+    use futures::stream::Stream;
+    use futures::try_join;
     use manifest::Entry;
     use mercurial_types::{HgChangesetId, HgManifestId};
     use revset::AncestorsNodeStream;
     use test_utils::iterate_all_entries;
     use tokio_compat::runtime::Runtime;
 
-    fn fetch_manifest_by_cs_id(
-        ctx: CoreContext,
-        repo: BlobRepo,
+    async fn fetch_manifest_by_cs_id(
+        ctx: &CoreContext,
+        repo: &BlobRepo,
         hg_cs_id: HgChangesetId,
-    ) -> impl Future<Item = HgManifestId, Error = Error> {
-        hg_cs_id
-            .load(ctx, repo.blobstore())
-            .compat()
-            .from_err()
-            .map(|hg_cs| hg_cs.manifestid())
+    ) -> Result<HgManifestId> {
+        Ok(hg_cs_id
+            .load(ctx.clone(), repo.blobstore())
+            .await?
+            .manifestid())
     }
 
-    fn verify_fsnode(
-        ctx: CoreContext,
-        repo: BlobRepo,
+    async fn verify_fsnode(
+        ctx: &CoreContext,
+        repo: &BlobRepo,
         bcs_id: ChangesetId,
         hg_cs_id: HgChangesetId,
-    ) -> impl Future<Item = (), Error = Error> {
-        let fsnode_entries = RootFsnodeId::derive(ctx.clone(), repo.clone(), bcs_id)
-            .from_err()
-            .map(|root_fsnode| root_fsnode.fsnode_id().clone())
-            .and_then({
-                cloned!(ctx, repo);
-                move |fsnode_id| {
-                    iterate_all_entries(ctx, repo, Entry::Tree(fsnode_id))
-                        .map(|(path, _)| path)
-                        .collect()
-                        .map(|mut paths| {
-                            paths.sort();
-                            paths
-                        })
-                }
-            });
+    ) -> Result<()> {
+        let root_fsnode_id = RootFsnodeId::derive03(ctx, repo, bcs_id)
+            .await?
+            .into_fsnode_id();
 
-        let filenode_entries = fetch_manifest_by_cs_id(ctx.clone(), repo.clone(), hg_cs_id)
-            .and_then({
-                cloned!(ctx, repo);
-                move |root_mf_id| {
-                    iterate_all_entries(ctx, repo, Entry::Tree(root_mf_id))
-                        .map(|(path, _)| path)
-                        .collect()
-                        .map(|mut paths| {
-                            paths.sort();
-                            paths
-                        })
-                }
-            });
+        let fsnode_entries =
+            iterate_all_entries(ctx.clone(), repo.clone(), Entry::Tree(root_fsnode_id))
+                .compat()
+                .map_ok(|(path, _)| path)
+                .try_collect::<Vec<_>>();
 
-        fsnode_entries
-            .join(filenode_entries)
-            .map(|(fsnode_entries, filenode_entries)| {
-                assert_eq!(fsnode_entries, filenode_entries);
-            })
+        let root_mf_id = fetch_manifest_by_cs_id(ctx, repo, hg_cs_id).await?;
+
+        let filenode_entries =
+            iterate_all_entries(ctx.clone(), repo.clone(), Entry::Tree(root_mf_id))
+                .compat()
+                .map_ok(|(path, _)| path)
+                .try_collect::<Vec<_>>();
+
+
+        let (mut fsnode_entries, mut filenode_entries) =
+            try_join!(fsnode_entries, filenode_entries)?;
+        fsnode_entries.sort();
+        filenode_entries.sort();
+        assert_eq!(fsnode_entries, filenode_entries);
+        Ok(())
     }
 
-    fn all_commits(
-        ctx: CoreContext,
-        repo: BlobRepo,
-    ) -> impl Stream<Item = (ChangesetId, HgChangesetId), Error = Error> {
+    async fn all_commits<'a>(
+        ctx: &'a CoreContext,
+        repo: &'a BlobRepo,
+    ) -> Result<impl Stream<Item = Result<(ChangesetId, HgChangesetId)>> + 'a> {
         let master_book = BookmarkName::new("master").unwrap();
-        repo.get_bonsai_bookmark(ctx.clone(), &master_book)
-            .map(move |maybe_bcs_id| {
-                let bcs_id = maybe_bcs_id.unwrap();
-                AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), bcs_id.clone())
-                    .and_then(move |new_bcs_id| {
-                        repo.get_hg_from_bonsai_changeset(ctx.clone(), new_bcs_id)
-                            .map(move |hg_cs_id| (new_bcs_id, hg_cs_id))
-                    })
-            })
-            .flatten_stream()
+        let bcs_id = repo
+            .get_bonsai_bookmark(ctx.clone(), &master_book)
+            .compat()
+            .await?
+            .unwrap();
+
+        Ok(
+            AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), bcs_id.clone())
+                .compat()
+                .and_then(move |new_bcs_id| async move {
+                    let hg_cs_id = repo
+                        .get_hg_from_bonsai_changeset(ctx.clone(), new_bcs_id)
+                        .compat()
+                        .await?;
+                    Ok((new_bcs_id, hg_cs_id))
+                }),
+        )
     }
 
     fn verify_repo<F>(fb: FacebookInit, repo: F, runtime: &mut Runtime)
     where
-        F: NewFuture<Output = BlobRepo>,
+        F: Future<Output = BlobRepo>,
     {
         let ctx = CoreContext::test_mock(fb);
-
         let repo = runtime.block_on_std(repo);
+        borrowed!(ctx, repo);
 
         runtime
-            .block_on(
-                all_commits(ctx.clone(), repo.clone())
-                    .and_then(move |(bcs_id, hg_cs_id)| {
-                        verify_fsnode(ctx.clone(), repo.clone(), bcs_id, hg_cs_id)
+            .block_on_std(async move {
+                all_commits(ctx, repo)
+                    .await
+                    .unwrap()
+                    .try_for_each(move |(bcs_id, hg_cs_id)| async move {
+                        verify_fsnode(ctx, repo, bcs_id, hg_cs_id).await
                     })
-                    .collect(),
-            )
+                    .await
+            })
             .unwrap();
     }
 
