@@ -8,7 +8,7 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::Arc;
 
-use anyhow::{format_err, Error};
+use anyhow::{format_err, Error, Result};
 use ascii::AsciiString;
 use blobrepo::BlobRepo;
 use blobstore::{Blobstore, Loadable};
@@ -17,13 +17,12 @@ use context::CoreContext;
 use digest::Digest;
 use failure_ext::FutureFailureExt;
 use filestore::{get_metadata, FetchKey};
-use futures::{
-    channel::mpsc,
-    compat::Future01CompatExt,
-    future::{BoxFuture, FutureExt, TryFutureExt},
-};
+use futures::channel::mpsc;
+use futures::compat::Future01CompatExt;
+use futures::future::{BoxFuture, FutureExt, TryFutureExt};
+use futures::stream::{FuturesUnordered, TryStreamExt};
 use futures_ext::FutureExt as _;
-use futures_old::{future, stream, Future, IntoFuture, Stream};
+use futures_old::{future, stream, Future, Stream};
 use manifest::{derive_manifest_with_io_sender, Entry, LeafInfo, TreeInfo};
 use mononoke_types::fsnode::{Fsnode, FsnodeDirectory, FsnodeEntry, FsnodeFile, FsnodeSummary};
 use mononoke_types::hash::{Sha1, Sha256};
@@ -39,91 +38,86 @@ use crate::ErrorKind;
 /// crate has to provide only functions to create a single fsnode, and check
 /// that the leaf entries (which are `(ContentId, FileType)` pairs) are valid
 /// during merges.
-pub(crate) fn derive_fsnode(
+pub(crate) async fn derive_fsnode(
     ctx: CoreContext,
     repo: BlobRepo,
     parents: Vec<FsnodeId>,
     changes: Vec<(MPath, Option<(ContentId, FileType)>)>,
-) -> impl Future<Item = FsnodeId, Error = Error> {
-    future::lazy(move || {
-        let blobstore = repo.get_blobstore();
-        let content_ids = changes
-            .iter()
-            .filter_map(|(_mpath, content_id_and_file_type)| {
-                content_id_and_file_type.map(|(content_id, _file_type)| content_id)
-            })
-            .collect();
-        prefetch_content_metadata(ctx.clone(), blobstore.clone(), content_ids)
-            .map(Arc::new)
-            .and_then(move |prefetched_content_metadata| {
-                derive_manifest_with_io_sender(
+) -> Result<FsnodeId> {
+    let blobstore = repo.get_blobstore();
+    let content_ids = changes
+        .iter()
+        .filter_map(|(_mpath, content_id_and_file_type)| {
+            content_id_and_file_type.map(|(content_id, _file_type)| content_id)
+        })
+        .collect();
+
+    let prefetched_content_metadata =
+        Arc::new(prefetch_content_metadata(&ctx, &blobstore, content_ids).await?);
+
+    // We must box and store the derivation future, otherwise lifetime
+    // analysis is unable to see that the blobstore lasts long enough.
+    let derive_fut = derive_manifest_with_io_sender(
+        ctx.clone(),
+        blobstore.clone(),
+        parents.clone(),
+        changes,
+        {
+            cloned!(blobstore, ctx, prefetched_content_metadata);
+            move |tree_info, sender| {
+                create_fsnode(
                     ctx.clone(),
                     blobstore.clone(),
-                    parents.clone(),
-                    changes,
-                    {
-                        cloned!(blobstore, ctx, prefetched_content_metadata);
-                        move |tree_info, sender| {
-                            create_fsnode(
-                                ctx.clone(),
-                                blobstore.clone(),
-                                Some(sender),
-                                prefetched_content_metadata.clone(),
-                                tree_info,
-                            )
-                            .compat()
-                        }
-                    },
-                    |leaf_info, _sender| check_fsnode_leaf(leaf_info).compat(),
+                    Some(sender),
+                    prefetched_content_metadata.clone(),
+                    tree_info,
                 )
-                .boxed()
-                .compat()
-                .and_then(move |maybe_tree_id| {
-                    match maybe_tree_id {
-                        Some(tree_id) => future::ok(tree_id).left_future(),
-                        None => {
-                            // All files have been deleted, generate empty fsnode
-                            let tree_info = TreeInfo {
-                                path: None,
-                                parents,
-                                subentries: Default::default(),
-                            };
-                            create_fsnode(
-                                ctx,
-                                blobstore,
-                                None,
-                                prefetched_content_metadata,
-                                tree_info,
-                            )
-                            .map(|(_, tree_id)| tree_id)
-                            .right_future()
-                        }
-                    }
-                })
-            })
-    })
+            }
+        },
+        |leaf_info, _sender| check_fsnode_leaf(leaf_info),
+    )
+    .boxed();
+    let maybe_tree_id = derive_fut.await?;
+
+    match maybe_tree_id {
+        Some(tree_id) => Ok(tree_id),
+        None => {
+            // All files have been deleted, generate empty fsnode
+            let tree_info = TreeInfo {
+                path: None,
+                parents,
+                subentries: Default::default(),
+            };
+            let (_, tree_id) =
+                create_fsnode(ctx, blobstore, None, prefetched_content_metadata, tree_info).await?;
+            Ok(tree_id)
+        }
+    }
 }
 
 // Prefetch metadata for all content IDs introduced by a changeset.
-pub fn prefetch_content_metadata(
-    ctx: CoreContext,
-    blobstore: RepoBlobstore,
+pub async fn prefetch_content_metadata(
+    ctx: &CoreContext,
+    blobstore: &RepoBlobstore,
     content_ids: HashSet<ContentId>,
-) -> impl Future<Item = HashMap<ContentId, ContentMetadata>, Error = Error> {
-    stream::futures_unordered(content_ids.into_iter().map({
-        cloned!(blobstore, ctx);
-        move |content_id| {
-            get_metadata(&blobstore, ctx.clone(), &FetchKey::Canonical(content_id))
-                .map(move |metadata| (content_id, metadata))
-        }
-    }))
-    .collect()
-    .map(|metadata| {
-        metadata
-            .into_iter()
-            .filter_map(|(content_id, metadata)| metadata.map(|metadata| (content_id, metadata)))
-            .collect::<HashMap<_, _>>()
-    })
+) -> Result<HashMap<ContentId, ContentMetadata>> {
+    content_ids
+        .into_iter()
+        .map({
+            move |content_id| async move {
+                match get_metadata(blobstore, ctx.clone(), &FetchKey::Canonical(content_id))
+                    .compat()
+                    .await?
+                {
+                    Some(metadata) => Ok(Some((content_id, metadata))),
+                    None => Ok(None),
+                }
+            }
+        })
+        .collect::<FuturesUnordered<_>>()
+        .try_filter_map(|maybe_metadata| async move { Ok(maybe_metadata) })
+        .try_collect()
+        .await
 }
 
 /// Collect all the subentries for a new fsnode, re-using entries the parent
@@ -251,86 +245,84 @@ fn collect_fsnode_subentries(
 }
 
 /// Create a new fsnode for the tree described by `tree_info`.
-fn create_fsnode(
+async fn create_fsnode(
     ctx: CoreContext,
     blobstore: RepoBlobstore,
     sender: Option<mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>>,
     prefetched_content_metadata: Arc<HashMap<ContentId, ContentMetadata>>,
     tree_info: TreeInfo<FsnodeId, (ContentId, FileType), Option<FsnodeSummary>>,
-) -> impl Future<Item = (Option<FsnodeSummary>, FsnodeId), Error = Error> {
-    collect_fsnode_subentries(
+) -> Result<(Option<FsnodeSummary>, FsnodeId)> {
+    let entries = collect_fsnode_subentries(
         ctx.clone(),
         blobstore.clone(),
         prefetched_content_metadata,
         tree_info.parents,
         tree_info.subentries,
     )
-    .and_then(move |entries| {
-        // Build a summary of the entries and store it as the new fsnode.
-        let entries: SortedVectorMap<_, _> = entries.into_iter().collect();
-        let simple_format_sha1 = {
-            let digest = generate_simple_format_digest(
-                sha1::Sha1::new(),
-                &entries,
-                |fsnode_file| fsnode_file.content_sha1().to_hex(),
-                |fsnode_dir| fsnode_dir.summary().simple_format_sha1.to_hex(),
-            );
-            let bytes = digest.result().into();
-            Sha1::from_byte_array(bytes)
-        };
-        let simple_format_sha256 = {
-            let digest = generate_simple_format_digest(
-                sha2::Sha256::new(),
-                &entries,
-                |fsnode_file| fsnode_file.content_sha256().to_hex(),
-                |fsnode_dir| fsnode_dir.summary().simple_format_sha256.to_hex(),
-            );
-            let bytes = digest.result().into();
-            Sha256::from_byte_array(bytes)
-        };
-        let mut summary = FsnodeSummary {
-            simple_format_sha1,
-            simple_format_sha256,
-            child_files_count: 0,
-            child_files_total_size: 0,
-            child_dirs_count: 0,
-            descendant_files_count: 0,
-            descendant_files_total_size: 0,
-        };
-        for (_elem, entry) in entries.iter() {
-            match entry {
-                FsnodeEntry::File(fsnode_file) => {
-                    let size = fsnode_file.size();
-                    summary.child_files_count += 1;
-                    summary.child_files_total_size += size;
-                    summary.descendant_files_count += 1;
-                    summary.descendant_files_total_size += size;
-                }
-                FsnodeEntry::Directory(fsnode_dir) => {
-                    let subdir_summary = fsnode_dir.summary();
-                    summary.child_dirs_count += 1;
-                    summary.descendant_files_count += subdir_summary.descendant_files_count;
-                    summary.descendant_files_total_size +=
-                        subdir_summary.descendant_files_total_size;
-                }
+    .compat()
+    .await?;
+
+    // Build a summary of the entries and store it as the new fsnode.
+    let entries: SortedVectorMap<_, _> = entries.into_iter().collect();
+    let simple_format_sha1 = {
+        let digest = generate_simple_format_digest(
+            sha1::Sha1::new(),
+            &entries,
+            |fsnode_file| fsnode_file.content_sha1().to_hex(),
+            |fsnode_dir| fsnode_dir.summary().simple_format_sha1.to_hex(),
+        );
+        let bytes = digest.result().into();
+        Sha1::from_byte_array(bytes)
+    };
+    let simple_format_sha256 = {
+        let digest = generate_simple_format_digest(
+            sha2::Sha256::new(),
+            &entries,
+            |fsnode_file| fsnode_file.content_sha256().to_hex(),
+            |fsnode_dir| fsnode_dir.summary().simple_format_sha256.to_hex(),
+        );
+        let bytes = digest.result().into();
+        Sha256::from_byte_array(bytes)
+    };
+    let mut summary = FsnodeSummary {
+        simple_format_sha1,
+        simple_format_sha256,
+        child_files_count: 0,
+        child_files_total_size: 0,
+        child_dirs_count: 0,
+        descendant_files_count: 0,
+        descendant_files_total_size: 0,
+    };
+    for (_elem, entry) in entries.iter() {
+        match entry {
+            FsnodeEntry::File(fsnode_file) => {
+                let size = fsnode_file.size();
+                summary.child_files_count += 1;
+                summary.child_files_total_size += size;
+                summary.descendant_files_count += 1;
+                summary.descendant_files_total_size += size;
+            }
+            FsnodeEntry::Directory(fsnode_dir) => {
+                let subdir_summary = fsnode_dir.summary();
+                summary.child_dirs_count += 1;
+                summary.descendant_files_count += subdir_summary.descendant_files_count;
+                summary.descendant_files_total_size += subdir_summary.descendant_files_total_size;
             }
         }
-        let fsnode = Fsnode::new(entries, summary.clone());
-        let blob = fsnode.into_blob();
-        let fsnode_id = *blob.id();
-        let key = fsnode_id.blobstore_key();
-        let f = blobstore.put(ctx, key, blob.into());
+    }
+    let fsnode = Fsnode::new(entries, summary.clone());
+    let blob = fsnode.into_blob();
+    let fsnode_id = *blob.id();
+    let key = fsnode_id.blobstore_key();
+    let f = blobstore.put(ctx, key, blob.into());
 
-        let res = match sender {
-            Some(sender) => sender
-                .unbounded_send(f.boxed())
-                .into_future()
-                .map_err(|err| format_err!("failed to send fsnode future {}", err))
-                .left_future(),
-            None => f.compat().right_future(),
-        };
-        res.map(move |()| (Some(summary), fsnode_id))
-    })
+    match sender {
+        Some(sender) => sender
+            .unbounded_send(f.boxed())
+            .map_err(|err| format_err!("failed to send fsnode future {}", err))?,
+        None => f.await?,
+    };
+    Ok((Some(summary), fsnode_id))
 }
 
 /// Generate the simple format hash for a directory. See
@@ -372,22 +364,20 @@ where
 /// that any merge operations have resulted in valid fsnodes, where, for each
 /// file, either all the parents have the same file contents, or the
 /// changeset includes a change for that file.
-fn check_fsnode_leaf(
+async fn check_fsnode_leaf(
     leaf_info: LeafInfo<FsnodeFile, (ContentId, FileType)>,
-) -> impl Future<Item = (Option<FsnodeSummary>, (ContentId, FileType)), Error = Error> {
+) -> Result<(Option<FsnodeSummary>, (ContentId, FileType))> {
     if let Some(content_id_and_file_type) = leaf_info.leaf {
-        future::ok((None, content_id_and_file_type))
+        Ok((None, content_id_and_file_type))
     } else {
         // This bonsai changeset is a merge. If all content IDs and file
         // types match for this file, then the content ID is valid. Check
         // this is so.
         if leaf_info.parents.len() < 2 {
-            return future::err(
-                ErrorKind::InvalidBonsai(
-                    "no change is provided, but file has only one parent".to_string(),
-                )
-                .into(),
-            );
+            return Err(ErrorKind::InvalidBonsai(
+                "no change is provided, but file has only one parent".to_string(),
+            )
+            .into());
         }
         let mut iter = leaf_info.parents.clone().into_iter();
         let fsnode_file = iter.next().and_then(|first_elem| {
@@ -398,14 +388,12 @@ fn check_fsnode_leaf(
             }
         });
         if let Some(fsnode_file) = fsnode_file {
-            future::ok((None, fsnode_file.into()))
+            Ok((None, fsnode_file.into()))
         } else {
-            future::err(
-                ErrorKind::InvalidBonsai(
-                    "no change is provided, but file content or type is different".to_string(),
-                )
-                .into(),
+            Err(ErrorKind::InvalidBonsai(
+                "no change is provided, but file content or type is different".to_string(),
             )
+            .into())
         }
     }
 }
@@ -433,7 +421,7 @@ mod test {
 
             let f = derive_fsnode(ctx.clone(), repo.clone(), vec![], get_file_changes(&bcs));
 
-            let root_fsnode_id = runtime.block_on(f).unwrap();
+            let root_fsnode_id = runtime.block_on_std(f).unwrap();
 
             // Make sure it's saved in the blobstore.
             let root_fsnode = runtime
@@ -490,7 +478,7 @@ mod test {
                 get_file_changes(&bcs),
             );
 
-            let root_fsnode_id = runtime.block_on(f).unwrap();
+            let root_fsnode_id = runtime.block_on_std(f).unwrap();
 
             // Make sure it's saved in the blobstore
             let root_fsnode = runtime
@@ -549,7 +537,7 @@ mod test {
             let (_bcs_id, bcs) =
                 get_bonsai_changeset(ctx.clone(), repo.clone(), &mut runtime, parent_hg_cs);
             let f = derive_fsnode(ctx.clone(), repo.clone(), vec![], get_file_changes(&bcs));
-            runtime.block_on(f).unwrap()
+            runtime.block_on_std(f).unwrap()
         };
 
         let parent_fsnode_id = {
@@ -562,7 +550,7 @@ mod test {
                 vec![parent_fsnode_id.clone()],
                 get_file_changes(&bcs),
             );
-            runtime.block_on(f).unwrap()
+            runtime.block_on_std(f).unwrap()
         };
 
         let parent_fsnode_id = {
@@ -577,7 +565,7 @@ mod test {
                 get_file_changes(&bcs),
             );
 
-            let root_fsnode_id = runtime.block_on(f).unwrap();
+            let root_fsnode_id = runtime.block_on_std(f).unwrap();
 
             // Make sure it's saved in the blobstore.
             let root_fsnode = runtime
@@ -763,7 +751,7 @@ mod test {
                 get_file_changes(&bcs),
             );
 
-            let root_fsnode_id = runtime.block_on(f).unwrap();
+            let root_fsnode_id = runtime.block_on_std(f).unwrap();
 
             // Make sure it's saved in the blobstore
             let root_fsnode = runtime

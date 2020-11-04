@@ -79,8 +79,7 @@ pub async fn derive_fsnode_in_batch(
                         repo.clone(),
                         parent_fsnodes,
                         fc.into_iter().collect(),
-                    )
-                    .compat();
+                    );
                     let f = tokio::spawn(f);
                     let fsnode_id: FsnodeId = f.await??;
                     Result::<_, Error>::Ok((cs_id, fsnode_id))

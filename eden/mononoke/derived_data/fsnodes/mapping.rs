@@ -82,18 +82,17 @@ impl BonsaiDerived for RootFsnodeId {
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
     ) -> Result<Self, Error> {
-        derive_fsnode(
+        let fsnode_id = derive_fsnode(
             ctx,
             repo,
             parents
                 .into_iter()
-                .map(|root_fsnode_id| root_fsnode_id.fsnode_id().clone())
+                .map(|root_fsnode_id| root_fsnode_id.into_fsnode_id())
                 .collect(),
             get_file_changes(&bonsai),
         )
-        .map(RootFsnodeId)
-        .compat()
-        .await
+        .await?;
+        Ok(RootFsnodeId(fsnode_id))
     }
 
     async fn batch_derive<'a, Iter>(

@@ -108,9 +108,7 @@ async fn content_metadata_warmup(
                         content_ids.insert(file_change.content_id());
                     }
                 }
-                prefetch_content_metadata(ctx.clone(), repo.blobstore().clone(), content_ids)
-                    .compat()
-                    .await?;
+                prefetch_content_metadata(ctx, repo.blobstore(), content_ids).await?;
 
                 Result::<_, Error>::Ok(())
             }
