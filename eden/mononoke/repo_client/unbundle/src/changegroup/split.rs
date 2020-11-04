@@ -187,17 +187,13 @@ where
 mod tests {
     use super::*;
 
-    use futures::{
-        stream::{iter, StreamExt},
-        FutureExt, TryFutureExt,
-    };
+    use futures::stream::iter;
     use itertools::{assert_equal, equal};
-    use quickcheck::quickcheck;
 
     use mercurial_bundles::changegroup::CgDeltaChunk;
     use mercurial_types::MPath;
 
-    async fn check_splitting<S, I, J>(cg2s: S, exp_cs: I, exp_fs: J) -> Result<()>
+    async fn check_splitting<S, I, J>(cg2s: S, exp_cs: I, exp_fs: J) -> bool
     where
         S: Stream<Item = Result<Part>> + Send + 'static,
         I: IntoIterator<Item = ChangesetDeltaed>,
@@ -205,14 +201,16 @@ mod tests {
     {
         let (cs, fs) = split_changegroup(cg2s);
 
-        let cs = cs.try_collect::<Vec<_>>().await?;
-        let fs = fs.try_collect::<Vec<_>>().await?;
+        let cs = cs
+            .try_collect::<Vec<_>>()
+            .await
+            .expect("error in changesets");
+        let fs = fs
+            .try_collect::<Vec<_>>()
+            .await
+            .expect("error in changesets");
 
-        if equal(cs, exp_cs) && equal(fs, exp_fs) {
-            Ok(())
-        } else {
-            Err(anyhow!("mismatching changesets"))
-        }
+        equal(cs, exp_cs) && equal(fs, exp_fs)
     }
 
     #[tokio::test]
@@ -232,24 +230,27 @@ mod tests {
                 vec![],
             )
             .await
-            .is_ok()
         )
     }
 
-    quickcheck! {
-        fn splitting_minimal(c: CgDeltaChunk, f: CgDeltaChunk, f_p: MPath) -> bool {
-            check_splitting(
-                iter(
-                    vec![
-                        Part::CgChunk(Section::Changeset, c.clone()),
-                        Part::SectionEnd(Section::Changeset),
-                        Part::SectionEnd(Section::Manifest),
-                        Part::End,
-                    ].into_iter().map(Ok),
-                ),
-                vec![ChangesetDeltaed { chunk: c.clone() }],
-                vec![],
-            ).boxed().compat().wait().is_ok() && check_splitting(
+    #[quickcheck_async::tokio]
+    async fn splitting_minimal(c: CgDeltaChunk, f: CgDeltaChunk, f_p: MPath) -> bool {
+        check_splitting(
+            iter(
+                vec![
+                    Part::CgChunk(Section::Changeset, c.clone()),
+                    Part::SectionEnd(Section::Changeset),
+                    Part::SectionEnd(Section::Manifest),
+                    Part::End,
+                ]
+                .into_iter()
+                .map(Ok),
+            ),
+            vec![ChangesetDeltaed { chunk: c.clone() }],
+            vec![],
+        )
+        .await
+            && check_splitting(
                 iter(
                     vec![
                         Part::SectionEnd(Section::Changeset),
@@ -257,16 +258,18 @@ mod tests {
                         Part::CgChunk(Section::Filelog(f_p.clone()), f.clone()),
                         Part::SectionEnd(Section::Filelog(f_p.clone())),
                         Part::End,
-                    ].into_iter().map(Ok),
+                    ]
+                    .into_iter()
+                    .map(Ok),
                 ),
                 vec![],
-                vec![
-                    FilelogDeltaed {
-                        path: f_p.clone(),
-                        chunk: f.clone(),
-                    },
-                ],
-            ).boxed().compat().wait().is_ok() && check_splitting(
+                vec![FilelogDeltaed {
+                    path: f_p.clone(),
+                    chunk: f.clone(),
+                }],
+            )
+            .await
+            && check_splitting(
                 iter(
                     vec![
                         Part::CgChunk(Section::Changeset, c.clone()),
@@ -275,120 +278,146 @@ mod tests {
                         Part::CgChunk(Section::Filelog(f_p.clone()), f.clone()),
                         Part::SectionEnd(Section::Filelog(f_p.clone())),
                         Part::End,
-                    ].into_iter().map(Ok),
+                    ]
+                    .into_iter()
+                    .map(Ok),
                 ),
                 vec![ChangesetDeltaed { chunk: c.clone() }],
-                vec![
-                    FilelogDeltaed {
-                        path: f_p.clone(),
-                        chunk: f.clone(),
-                    },
-                ],
-            ).boxed().compat().wait().is_ok()
-        }
+                vec![FilelogDeltaed {
+                    path: f_p.clone(),
+                    chunk: f.clone(),
+                }],
+            )
+            .await
+    }
 
-        fn splitting_complex(
-            c1: CgDeltaChunk,
-            c2: CgDeltaChunk,
-            f1: CgDeltaChunk,
-            f1_bis: CgDeltaChunk,
-            f1_p: MPath,
-            f2: CgDeltaChunk,
-            f2_bis: CgDeltaChunk,
-            f2_p: MPath
-        ) -> bool {
-            check_splitting(
+    #[quickcheck_async::tokio]
+    async fn splitting_complex(
+        c1: CgDeltaChunk,
+        c2: CgDeltaChunk,
+        f1: CgDeltaChunk,
+        f1_bis: CgDeltaChunk,
+        f1_p: MPath,
+        f2: CgDeltaChunk,
+        f2_bis: CgDeltaChunk,
+        f2_p: MPath,
+    ) -> bool {
+        check_splitting(
+            iter(
+                vec![
+                    Part::CgChunk(Section::Changeset, c1.clone()),
+                    Part::CgChunk(Section::Changeset, c2.clone()),
+                    Part::SectionEnd(Section::Changeset),
+                    Part::SectionEnd(Section::Manifest),
+                    Part::CgChunk(Section::Filelog(f1_p.clone()), f1.clone()),
+                    Part::CgChunk(Section::Filelog(f1_p.clone()), f1_bis.clone()),
+                    Part::SectionEnd(Section::Filelog(f1_p.clone())),
+                    Part::CgChunk(Section::Filelog(f2_p.clone()), f2.clone()),
+                    Part::CgChunk(Section::Filelog(f2_p.clone()), f2_bis.clone()),
+                    Part::SectionEnd(Section::Filelog(f2_p.clone())),
+                    Part::End,
+                ]
+                .into_iter()
+                .map(Ok),
+            ),
+            vec![
+                ChangesetDeltaed { chunk: c1 },
+                ChangesetDeltaed { chunk: c2 },
+            ],
+            vec![
+                FilelogDeltaed {
+                    path: f1_p.clone(),
+                    chunk: f1,
+                },
+                FilelogDeltaed {
+                    path: f1_p,
+                    chunk: f1_bis,
+                },
+                FilelogDeltaed {
+                    path: f2_p.clone(),
+                    chunk: f2,
+                },
+                FilelogDeltaed {
+                    path: f2_p,
+                    chunk: f2_bis,
+                },
+            ],
+        )
+        .await
+    }
+
+    #[quickcheck_async::tokio]
+    async fn splitting_error_filelog_end(f: CgDeltaChunk, f1_p: MPath, f2_p: MPath) -> bool {
+        {
+            let (cs, fs) = split_changegroup(
                 iter(
                     vec![
-                        Part::CgChunk(Section::Changeset, c1.clone()),
-                        Part::CgChunk(Section::Changeset, c2.clone()),
                         Part::SectionEnd(Section::Changeset),
                         Part::SectionEnd(Section::Manifest),
-                        Part::CgChunk(Section::Filelog(f1_p.clone()), f1.clone()),
-                        Part::CgChunk(Section::Filelog(f1_p.clone()), f1_bis.clone()),
                         Part::SectionEnd(Section::Filelog(f1_p.clone())),
-                        Part::CgChunk(Section::Filelog(f2_p.clone()), f2.clone()),
-                        Part::CgChunk(Section::Filelog(f2_p.clone()), f2_bis.clone()),
-                        Part::SectionEnd(Section::Filelog(f2_p.clone())),
                         Part::End,
-                    ].into_iter().map(Ok),
-                ),
-                vec![ChangesetDeltaed { chunk: c1 }, ChangesetDeltaed { chunk: c2 }],
-                vec![
-                    FilelogDeltaed {
-                        path: f1_p.clone(),
-                        chunk: f1,
-                    },
-                    FilelogDeltaed {
-                        path: f1_p,
-                        chunk: f1_bis,
-                    },
-                    FilelogDeltaed {
-                        path: f2_p.clone(),
-                        chunk: f2,
-                    },
-                    FilelogDeltaed {
-                        path: f2_p,
-                        chunk: f2_bis,
-                    },
-                ],
-            ).boxed().compat().wait().is_ok()
+                    ]
+                    .into_iter()
+                    .map(Ok),
+                )
+                .boxed(),
+            );
+
+            assert_equal(cs.try_collect::<Vec<_>>().await.unwrap(), vec![]);
+            assert!(fs.try_collect::<Vec<_>>().await.is_err());
         }
 
-        fn splitting_error_filelog_end(f: CgDeltaChunk, f1_p: MPath, f2_p: MPath) -> bool {
-            {
-                let (cs, fs) = split_changegroup(iter(
-                    vec![
-                        Part::SectionEnd(Section::Changeset),
-                        Part::SectionEnd(Section::Manifest),
-                        Part::SectionEnd(Section::Filelog(f1_p.clone())),
-                        Part::End,
-                    ].into_iter().map(Ok),
-                ).boxed());
-
-                assert_equal(cs.try_collect::<Vec<_>>().compat().wait().unwrap(), vec![]);
-                assert!(fs.try_collect::<Vec<_>>().compat().wait().is_err());
-            }
-
-            {
-                let (cs, fs) = split_changegroup(iter(
+        {
+            let (cs, fs) = split_changegroup(
+                iter(
                     vec![
                         Part::SectionEnd(Section::Changeset),
                         Part::SectionEnd(Section::Manifest),
                         Part::CgChunk(Section::Filelog(f1_p.clone()), f.clone()),
                         Part::End,
-                    ].into_iter().map(Ok),
-                ).boxed());
+                    ]
+                    .into_iter()
+                    .map(Ok),
+                )
+                .boxed(),
+            );
 
-                assert_equal(cs.try_collect::<Vec<_>>().compat().wait().unwrap(), vec![]);
-                assert!(fs.try_collect::<Vec<_>>().compat().wait().is_err());
-            }
+            assert_equal(cs.try_collect::<Vec<_>>().await.unwrap(), vec![]);
+            assert!(fs.try_collect::<Vec<_>>().await.is_err());
+        }
 
-            {
-                let (cs, fs) = split_changegroup(iter(
+        {
+            let (cs, fs) = split_changegroup(
+                iter(
                     vec![
                         Part::SectionEnd(Section::Changeset),
                         Part::SectionEnd(Section::Manifest),
                         Part::CgChunk(Section::Filelog(f1_p.clone()), f.clone()),
                         Part::SectionEnd(Section::Filelog(f2_p.clone())),
                         Part::End,
-                    ].into_iter().map(Ok),
-                ).boxed());
+                    ]
+                    .into_iter()
+                    .map(Ok),
+                )
+                .boxed(),
+            );
 
-                assert_equal(cs.try_collect::<Vec<_>>().compat().wait().unwrap(), vec![]);
-                assert!(f1_p == f2_p || fs.try_collect::<Vec<_>>().compat().wait().is_err());
-            }
-
-            true
+            assert_equal(cs.try_collect::<Vec<_>>().await.unwrap(), vec![]);
+            assert!(f1_p == f2_p || fs.try_collect::<Vec<_>>().await.is_err());
         }
 
-        fn splitting_error_manifest(
-            c: CgDeltaChunk,
-            m: CgDeltaChunk,
-            f: CgDeltaChunk,
-            f_p: MPath
-        ) -> bool {
-            let (cs, fs) = split_changegroup(iter(
+        true
+    }
+
+    #[quickcheck_async::tokio]
+    async fn splitting_error_manifest(
+        c: CgDeltaChunk,
+        m: CgDeltaChunk,
+        f: CgDeltaChunk,
+        f_p: MPath,
+    ) -> bool {
+        let (cs, fs) = split_changegroup(
+            iter(
                 vec![
                     Part::CgChunk(Section::Changeset, c.clone()),
                     Part::SectionEnd(Section::Changeset),
@@ -397,12 +426,17 @@ mod tests {
                     Part::CgChunk(Section::Filelog(f_p.clone()), f.clone()),
                     Part::SectionEnd(Section::Filelog(f_p.clone())),
                     Part::End,
-                ].into_iter().map(Ok),
-            ).boxed());
+                ]
+                .into_iter()
+                .map(Ok),
+            )
+            .boxed(),
+        );
 
-            equal(cs.try_collect::<Vec<_>>().compat().wait().unwrap(), vec![ChangesetDeltaed { chunk: c }])
-                && fs.try_collect::<Vec<_>>().compat().wait().is_err()
-        }
+        equal(
+            cs.try_collect::<Vec<_>>().await.unwrap(),
+            vec![ChangesetDeltaed { chunk: c }],
+        ) && fs.try_collect::<Vec<_>>().await.is_err()
     }
 
     #[tokio::test]

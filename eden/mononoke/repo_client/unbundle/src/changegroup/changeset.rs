@@ -18,12 +18,9 @@ pub struct ChangesetDeltaed {
     pub chunk: CgDeltaChunk,
 }
 
-pub(crate) fn convert_to_revlog_changesets<S>(
-    deltaed: S,
-) -> impl Stream<Item = Result<(HgChangesetId, RevlogChangeset)>>
-where
-    S: Stream<Item = Result<ChangesetDeltaed>>,
-{
+pub(crate) fn convert_to_revlog_changesets(
+    deltaed: impl Stream<Item = Result<ChangesetDeltaed>>,
+) -> impl Stream<Item = Result<(HgChangesetId, RevlogChangeset)>> {
     deltaed.and_then(|ChangesetDeltaed { chunk }| async move {
         ensure!(
             chunk.base == NULL_HASH,
@@ -54,11 +51,9 @@ where
 mod tests {
     use super::*;
 
-    use futures::{stream::iter, FutureExt, TryFutureExt};
-    use futures_old::Future;
+    use futures::stream::iter;
     use itertools::equal;
     use mercurial_types::HgNodeHash;
-    use quickcheck::quickcheck;
 
     enum CheckResult {
         ExpectedOk(bool),
@@ -72,7 +67,7 @@ mod tests {
         base: HgNodeHash,
         p1: HgNodeHash,
         p2: HgNodeHash,
-    ) -> Result<CheckResult> {
+    ) -> CheckResult {
         let blobnode = HgBlobNode::new(
             RevlogChangeset::new_null()
                 .get_node()
@@ -101,34 +96,31 @@ mod tests {
             .await;
 
         if base == NULL_HASH && node == linknode {
-            Ok(ExpectedOk(equal(
-                result.unwrap(),
-                vec![(HgChangesetId::new(node), cs)],
-            )))
+            ExpectedOk(equal(result.unwrap(), vec![(HgChangesetId::new(node), cs)]))
         } else {
-            Ok(ExpectedErr(result.is_err()))
+            ExpectedErr(result.is_err())
         }
     }
 
-    quickcheck! {
-        fn null_changeset_random(
-            node: HgNodeHash,
-            linknode: HgNodeHash,
-            base: HgNodeHash,
-            p1: HgNodeHash,
-            p2: HgNodeHash
-        ) -> bool {
-            match check_null_changeset(node, linknode, base, p1, p2).boxed().compat().wait().unwrap() {
-                ExpectedOk(true) | ExpectedErr(true) => true,
-                _ => false
-            }
+    #[quickcheck_async::tokio]
+    async fn null_changeset_random(
+        node: HgNodeHash,
+        linknode: HgNodeHash,
+        base: HgNodeHash,
+        p1: HgNodeHash,
+        p2: HgNodeHash,
+    ) -> bool {
+        match check_null_changeset(node, linknode, base, p1, p2).await {
+            ExpectedOk(true) | ExpectedErr(true) => true,
+            _ => false,
         }
+    }
 
-        fn null_changeset_correct(node: HgNodeHash, p1: HgNodeHash, p2: HgNodeHash) -> bool {
-            match check_null_changeset(node.clone(), node, NULL_HASH, p1, p2).boxed().compat().wait().unwrap() {
-                ExpectedOk(true) => true,
-                _ => false
-            }
+    #[quickcheck_async::tokio]
+    async fn null_changeset_correct(node: HgNodeHash, p1: HgNodeHash, p2: HgNodeHash) -> bool {
+        match check_null_changeset(node.clone(), node, NULL_HASH, p1, p2).await {
+            ExpectedOk(true) => true,
+            _ => false,
         }
     }
 }

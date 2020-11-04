@@ -102,14 +102,11 @@ impl UploadableHgBlob for Filelog {
     }
 }
 
-pub fn convert_to_revlog_filelog<S>(
+pub fn convert_to_revlog_filelog(
     ctx: CoreContext,
     repo: BlobRepo,
-    deltaed: S,
-) -> impl Stream<Item = Result<Filelog>>
-where
-    S: Stream<Item = Result<FilelogDeltaed>> + Send + 'static,
-{
+    deltaed: impl Stream<Item = Result<FilelogDeltaed>> + Send + 'static,
+) -> impl Stream<Item = Result<Filelog>> {
     let mut delta_cache = DeltaCache::new(repo.clone());
     deltaed
         .map_ok(move |FilelogDeltaed { path, chunk }| {
@@ -355,9 +352,9 @@ mod tests {
 
     use blobrepo_factory::new_memblob_empty;
     use fbinit::FacebookInit;
-    use futures::{stream::iter, FutureExt};
+    use futures::stream::iter;
     use itertools::{assert_equal, EitherOrBoth, Itertools};
-    use quickcheck::quickcheck;
+    use quickcheck_macros::quickcheck;
 
     use mercurial_types::delta::Fragment;
     use mercurial_types::NULL_HASH;
@@ -388,7 +385,7 @@ mod tests {
         }
     }
 
-    async fn check_conversion<I, J>(ctx: CoreContext, inp: I, exp: J) -> Result<()>
+    async fn check_conversion<I, J>(ctx: CoreContext, inp: I, exp: J)
     where
         I: IntoIterator<Item = FilelogDeltaed>,
         J: IntoIterator<Item = Filelog>,
@@ -403,7 +400,6 @@ mod tests {
         .unwrap();
 
         assert_equal(result, exp);
-        Ok(())
     }
 
     fn filelog_to_deltaed(f: &Filelog) -> FilelogDeltaed {
@@ -512,8 +508,7 @@ mod tests {
             vec![filelog_to_deltaed(&f1), filelog_to_deltaed(&f2)],
             vec![f1, f2],
         )
-        .await
-        .unwrap();
+        .await;
     }
 
     async fn files_check_order(ctx: CoreContext, correct_order: bool) {
@@ -583,79 +578,79 @@ mod tests {
         files_check_order(CoreContext::test_mock(fb), false).await;
     }
 
-    quickcheck! {
-        fn sanitycheck_delta_computation(b1: Vec<u8>, b2: Vec<u8>) -> bool {
-            assert_equal(&b2, &delta::apply(&b1, &compute_delta(&b1, &b2)).unwrap());
-            true
+    #[quickcheck]
+    fn sanitycheck_delta_computation(b1: Vec<u8>, b2: Vec<u8>) -> bool {
+        assert_equal(&b2, &delta::apply(&b1, &compute_delta(&b1, &b2)).unwrap());
+        true
+    }
+
+    #[quickcheck_async::tokio]
+    async fn correct_conversion_single(fb: FacebookInit, f: Filelog) -> bool {
+        let ctx = CoreContext::test_mock(fb);
+        check_conversion(ctx, vec![filelog_to_deltaed(&f)], vec![f]).await;
+
+        true
+    }
+
+    #[quickcheck_async::tokio]
+    async fn correct_conversion_delta_against_first(
+        fb: FacebookInit,
+        f: Filelog,
+        fs: Vec<Filelog>,
+    ) -> bool {
+        let ctx = CoreContext::test_mock(fb);
+        let mut hash_gen = NodeHashGen::new();
+
+        let mut f = f.clone();
+        f.node_key.hash = hash_gen.next();
+
+        let mut fs = fs.clone();
+        for el in fs.iter_mut() {
+            el.node_key.hash = hash_gen.next();
         }
 
-        fn correct_conversion_single(fb: FacebookInit, f: Filelog) -> bool {
-            let ctx = CoreContext::test_mock(fb);
-            check_conversion(
-                ctx,
-                vec![filelog_to_deltaed(&f)],
-                vec![f],
-            ).boxed().compat().wait().unwrap();
-
-            true
+        let mut deltas = vec![filelog_to_deltaed(&f)];
+        for filelog in &fs {
+            let mut delta = filelog_to_deltaed(filelog);
+            delta.chunk.base = f.node_key.hash.clone();
+            delta.chunk.delta = filelog_compute_delta(&f.data, &filelog.data);
+            deltas.push(delta);
         }
 
-        fn correct_conversion_delta_against_first(fb: FacebookInit, f: Filelog, fs: Vec<Filelog>) -> bool {
-            let ctx = CoreContext::test_mock(fb);
-            let mut hash_gen = NodeHashGen::new();
+        check_conversion(ctx, deltas, vec![f].into_iter().chain(fs)).await;
 
-            let mut f = f.clone();
-            f.node_key.hash = hash_gen.next();
+        true
+    }
 
-            let mut fs = fs.clone();
-            for el in fs.iter_mut() {
-                el.node_key.hash = hash_gen.next();
-            }
+    #[quickcheck_async::tokio]
+    async fn correct_conversion_delta_against_next(fb: FacebookInit, fs: Vec<Filelog>) -> bool {
+        let ctx = CoreContext::test_mock(fb);
+        let mut hash_gen = NodeHashGen::new();
 
-            let mut deltas = vec![filelog_to_deltaed(&f)];
-            for filelog in &fs {
-                let mut delta = filelog_to_deltaed(filelog);
-                delta.chunk.base = f.node_key.hash.clone();
-                delta.chunk.delta =
-                    filelog_compute_delta(&f.data, &filelog.data);
+        let mut fs = fs.clone();
+        for el in fs.iter_mut() {
+            el.node_key.hash = hash_gen.next();
+        }
+
+        let deltas = {
+            let mut it = fs.iter();
+            let mut deltas = match it.next() {
+                None => return true, // empty test case
+                Some(f) => vec![filelog_to_deltaed(f)],
+            };
+
+            for (prev, next) in fs.iter().zip(it) {
+                let mut delta = filelog_to_deltaed(next);
+                delta.chunk.base = prev.node_key.hash.clone();
+                delta.chunk.delta = filelog_compute_delta(&prev.data, &next.data);
                 deltas.push(delta);
             }
 
-            check_conversion(ctx, deltas, vec![f].into_iter().chain(fs)).boxed().compat().wait().unwrap();
+            deltas
+        };
 
-            true
-        }
+        check_conversion(ctx, deltas, fs).await;
 
-        fn correct_conversion_delta_against_next(fb: FacebookInit, fs: Vec<Filelog>) -> bool {
-            let ctx = CoreContext::test_mock(fb);
-            let mut hash_gen = NodeHashGen::new();
-
-            let mut fs = fs.clone();
-            for el in fs.iter_mut() {
-                el.node_key.hash = hash_gen.next();
-            }
-
-            let deltas = {
-                let mut it = fs.iter();
-                let mut deltas = match it.next() {
-                    None => return true, // empty test case
-                    Some(f) => vec![filelog_to_deltaed(f)],
-                };
-
-                for (prev, next) in fs.iter().zip(it) {
-                    let mut delta = filelog_to_deltaed(next);
-                    delta.chunk.base = prev.node_key.hash.clone();
-                    delta.chunk.delta =
-                        filelog_compute_delta(&prev.data, &next.data);
-                    deltas.push(delta);
-                }
-
-                deltas
-            };
-
-            check_conversion(ctx, deltas, fs).boxed().compat().wait().unwrap();
-
-            true
-        }
+        true
     }
 }
