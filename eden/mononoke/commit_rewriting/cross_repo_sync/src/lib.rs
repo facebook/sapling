@@ -291,25 +291,6 @@ pub async fn rewrite_commit<'a>(
     Ok(Some(cs))
 }
 
-/// Applies `Mover` to all paths in `cs`, dropping any entry whose path rewrites to `None`
-/// E.g. adding a prefix can be done by a `Mover` that adds the prefix and returns `Some(path)`.
-/// Removing a prefix would be like adding, but returning `None` if the path does not have the prefix
-/// Additionally, changeset IDs are rewritten.
-///
-/// Precondition: *all* parents must already have been rewritten into the target repo. The
-/// behaviour of this function is unpredictable if some parents have not yet been remapped
-async fn remap_parents_and_rewrite_commit<'a, M: SyncedCommitMapping + Clone + 'static>(
-    ctx: &CoreContext,
-    cs: BonsaiChangesetMut,
-    commit_syncer: &'a CommitSyncer<M>,
-    source_repo: BlobRepo,
-    parent_selection_hint: CandidateSelectionHint,
-) -> Result<Option<BonsaiChangesetMut>, Error> {
-    let (_, _, mover) = commit_syncer.get_source_target_mover(ctx)?;
-    let remapped_parents = remap_parents(ctx, &cs, commit_syncer, parent_selection_hint).await?;
-    rewrite_commit(ctx, cs, &remapped_parents, mover, source_repo).await
-}
-
 async fn remap_parents<'a, M: SyncedCommitMapping + Clone + 'static>(
     ctx: &CoreContext,
     cs: &BonsaiChangesetMut,
@@ -990,40 +971,67 @@ where
     ) -> Result<Option<ChangesetId>, Error> {
         let hash = source_cs.get_changeset_id();
         let (source_repo, target_repo) = self.get_source_target();
-        // TODO(stash): use the actual version that was used to remap commits
-        let version_name = self.get_current_version(&ctx)?;
 
         let parent_selection_hint = CandidateSelectionHint::OnlyOrAncestorOfBookmark(
             Target(bookmark.clone()),
             Target(self.get_target_repo().clone()),
             target_lca_hint,
         );
-        match remap_parents_and_rewrite_commit(
-            ctx,
-            source_cs.clone().into_mut(),
-            self,
-            source_repo.clone(),
-            parent_selection_hint,
-        )
-        .await?
-        {
-            None => {
-                let mut remapped_parents_outcome = vec![];
-                for p in source_cs.parents() {
-                    let maybe_commit_sync_outcome = self
-                        .get_commit_sync_outcome(ctx, p)
-                        .await?
-                        .map(|sync_outcome| (sync_outcome, p));
-                    let commit_sync_outcome = maybe_commit_sync_outcome.ok_or_else(|| {
-                        format_err!(
-                            "parent {} has not been remapped yet, therefore can't remap {}",
-                            p,
-                            source_cs.get_changeset_id()
-                        )
-                    })?;
-                    remapped_parents_outcome.push(commit_sync_outcome);
-                }
 
+        let mut remapped_parents_outcome = vec![];
+        for p in source_cs.parents() {
+            let maybe_commit_sync_outcome = self
+                .get_commit_sync_outcome_with_hint(ctx, Source(p), parent_selection_hint.clone())
+                .await?
+                .map(|sync_outcome| (sync_outcome, p));
+            let commit_sync_outcome = maybe_commit_sync_outcome.ok_or_else(|| {
+                format_err!(
+                    "parent {} has not been remapped yet, therefore can't remap {}",
+                    p,
+                    source_cs.get_changeset_id()
+                )
+            })?;
+            remapped_parents_outcome.push(commit_sync_outcome);
+        }
+
+        let p1 = remapped_parents_outcome.get(0);
+        let p2 = remapped_parents_outcome.get(1);
+        let version_name = match (p1, p2) {
+            (None, None) => {
+                return Err(format_err!("cannot pushrebase a commit with no parents"));
+            }
+            (Some((sync_outcome, _)), None) => {
+                use CommitSyncOutcome::*;
+
+                match sync_outcome {
+                    NotSyncCandidate => {
+                        return Err(ErrorKind::ParentNotSyncCandidate(hash).into());
+                    }
+                    RewrittenAs(_, version_name)
+                    | EquivalentWorkingCopyAncestor(_, version_name) => version_name.clone(),
+                }
+            }
+            _ => get_version_for_merge(
+                hash,
+                remapped_parents_outcome.iter().map(|(outcome, _)| outcome),
+            )?,
+        };
+
+        let mover = self.get_mover_by_version(&version_name)?;
+        let source_cs_mut = source_cs.clone().into_mut();
+        let remapped_parents =
+            remap_parents(ctx, &source_cs_mut, self, parent_selection_hint).await?;
+        let rewritten = rewrite_commit(
+            ctx,
+            source_cs_mut,
+            &remapped_parents,
+            mover,
+            source_repo.clone(),
+        )
+        .await?;
+
+        match rewritten {
+            None => {
                 if remapped_parents_outcome.is_empty() {
                     self.update_wc_equivalence(ctx, hash, None).await?;
                 } else if remapped_parents_outcome.len() == 1 {
@@ -1078,7 +1086,7 @@ where
                     &[CrossRepoSyncPushrebaseHook::new(
                         hash,
                         self.repos.clone(),
-                        version_name,
+                        version_name.clone(),
                     )],
                 )
                 .await;

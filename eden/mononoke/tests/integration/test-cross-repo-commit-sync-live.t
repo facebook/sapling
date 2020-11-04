@@ -60,21 +60,26 @@ Before the change
   smallrepofolder/foo
 
 Make a config change
+  $ killandwait "$XREPOSYNC_PID"
   $ update_commit_sync_map_first_option
+  $ mononoke_admin_source_target $REPOIDLARGE $REPOIDSMALL crossrepo pushredirection change-mapping-version \
+  > --author author \
+  > --large-repo-bookmark master_bookmark \
+  > --mapping-version new_version &> /dev/null
 
--- let LiveCommitSyncConfig pick up the changes
-  $ sleep 2
+  $ mononoke_x_repo_sync_forever $REPOIDSMALL $REPOIDLARGE --local-configerator-path="$TESTTMP/configerator"
 
 After the change
 -- push to a small repo
   $ cd "$TESTTMP/small-hg-client"
+  $ REPONAME=small-mon hgmn pull -q
   $ REPONAME=small-mon hgmn up -q master_bookmark
   $ echo a > boo
   $ echo b > non_path_shifting/baz
   $ hg ci -Aqm "after config change"
   $ REPONAME=small-mon hgmn push -r . --to master_bookmark -q
   $ log -r master_bookmark
-  @  after config change [public;rev=3;6b8e5fe49ff9] default/master_bookmark
+  @  after config change [public;rev=4;*] default/master_bookmark (glob)
   │
   ~
 
@@ -85,8 +90,10 @@ After the change
   $ cd "$TESTTMP/large-hg-client"
   $ REPONAME=large-mon hgmn pull -q
   $ REPONAME=large-mon hgmn up -q master_bookmark
-  $ log -r master_bookmark
-  @  after config change [public;rev=4;f73b39d6fa97] default/master_bookmark
+  $ log -r "master_bookmark^::master_bookmark"
+  @  after config change [public;rev=5;*] default/master_bookmark (glob)
+  │
+  o  Changing synced mapping version to new_version for large-mon->small-mon sync [public;rev=4;*] (glob)
   │
   ~
   $ REPONAME=large-mon hgmn log -r master_bookmark -T "{files % '{file}\n'}"
