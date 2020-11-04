@@ -18,9 +18,8 @@ use filestore::{self, FetchKey, StoreRequest};
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
     future,
-    stream::TryStreamExt,
+    stream::{self, StreamExt, TryStreamExt},
 };
-use futures_old::stream;
 use manifest::ManifestOps;
 use maplit::btreemap;
 use mercurial_types::HgChangesetId;
@@ -301,7 +300,9 @@ impl CreateFileContext {
                     repo.filestore_config(),
                     ctx.clone(),
                     &StoreRequest::new(content.len().try_into().unwrap()),
-                    stream::once(Ok(Bytes::copy_from_slice(content.as_bytes()))),
+                    stream::once(async { Ok(Bytes::copy_from_slice(content.as_bytes())) })
+                        .boxed()
+                        .compat(),
                 )
                 .compat()
                 .await?;
