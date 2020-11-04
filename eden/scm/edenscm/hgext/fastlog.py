@@ -326,9 +326,17 @@ def fastlogfollow(orig, repo, subset, x, name, followfirst=False):
     return subset & fastlogset
 
 
-class readonlychangelog(object):
-    def __init__(self, *args, **kwargs):
-        self._changelog = changelog.changelog(*args, **kwargs)
+class readonlythreadsafechangelog(object):
+    def __init__(self, repo):
+        if repo.changelog.userust():
+            # Rust changelog backend is thread-safe
+            self._changelog = repo.changelog
+        else:
+            # Python revlog changelog is not thread-safe - `self._cache` is
+            # mutably shared without protection.
+            self._changelog = changelog.changelog(
+                repo.svfs, uiconfig=repo.ui.uiconfig()
+            )
 
     def parentrevs(self, rev):
         return self._changelog.parentrevs(rev)
@@ -378,7 +386,7 @@ class LocalIteratorThread(Thread):
 
         # Create a private instance of changelog to avoid trampling
         # internal caches of other threads
-        c = readonlychangelog(repo.svfs, uiconfig=repo.ui.uiconfig())
+        c = readonlythreadsafechangelog(repo)
         self.generator = originator(c.parentrevs, rev)
         self.filefunc = c.readfiles
         self.ui = repo.ui
@@ -440,7 +448,7 @@ class FastLogThread(Thread):
         self.paths = list(paths)
         self.repo = repo
         self.ui = repo.ui
-        self.changelog = readonlychangelog(repo.svfs, uiconfig=repo.ui.uiconfig())
+        self.changelog = readonlythreadsafechangelog(repo)
         self._stop = Event()
         self._paths_to_fetch = 0
 
