@@ -13,10 +13,13 @@ use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{Compat, FutureFailureErrorExt};
-use futures::future::TryFutureExt;
-use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
-use futures_old::future::Shared;
-use futures_old::{Future, IntoFuture, Stream};
+use futures::{
+    compat::Future01CompatExt,
+    future::TryFutureExt,
+    stream::{Stream, TryStreamExt},
+};
+use futures_ext::{BoxFuture, FutureExt as OldFutureExt};
+use futures_old::{future::Shared, Future, IntoFuture};
 use quickcheck::{Arbitrary, Gen};
 
 use blobrepo::BlobRepo;
@@ -103,13 +106,13 @@ pub fn convert_to_revlog_filelog<S>(
     ctx: CoreContext,
     repo: BlobRepo,
     deltaed: S,
-) -> BoxStream<Filelog, Error>
+) -> impl Stream<Item = Result<Filelog>>
 where
-    S: Stream<Item = FilelogDeltaed, Error = Error> + Send + 'static,
+    S: Stream<Item = Result<FilelogDeltaed>> + Send + 'static,
 {
     let mut delta_cache = DeltaCache::new(repo.clone());
     deltaed
-        .map(move |FilelogDeltaed { path, chunk }| {
+        .map_ok(move |FilelogDeltaed { path, chunk }| {
             let CgDeltaChunk {
                 node,
                 base,
@@ -148,10 +151,9 @@ where
                     )
                 })
                 .from_err()
-                .boxify()
+                .compat()
         })
-        .buffer_unordered(100)
-        .boxify()
+        .try_buffer_unordered(100)
 }
 
 fn generate_lfs_meta_data(
@@ -353,8 +355,7 @@ mod tests {
 
     use blobrepo_factory::new_memblob_empty;
     use fbinit::FacebookInit;
-    use futures_old::stream::iter_ok;
-    use futures_old::Future;
+    use futures::{stream::iter, FutureExt};
     use itertools::{assert_equal, EitherOrBoth, Itertools};
     use quickcheck::quickcheck;
 
@@ -387,7 +388,7 @@ mod tests {
         }
     }
 
-    fn check_conversion<I, J>(ctx: CoreContext, inp: I, exp: J)
+    async fn check_conversion<I, J>(ctx: CoreContext, inp: I, exp: J) -> Result<()>
     where
         I: IntoIterator<Item = FilelogDeltaed>,
         J: IntoIterator<Item = Filelog>,
@@ -395,13 +396,14 @@ mod tests {
         let result = convert_to_revlog_filelog(
             ctx,
             new_memblob_empty(None).unwrap(),
-            iter_ok(inp.into_iter().collect::<Vec<_>>()),
+            iter(inp.into_iter().map(Ok).collect::<Vec<_>>()),
         )
-        .collect()
-        .wait()
+        .try_collect::<Vec<_>>()
+        .await
         .unwrap();
 
         assert_equal(result, exp);
+        Ok(())
     }
 
     fn filelog_to_deltaed(f: &Filelog) -> FilelogDeltaed {
@@ -479,7 +481,7 @@ mod tests {
     }
 
     #[fbinit::test]
-    fn two_fulltext_files(fb: FacebookInit) {
+    async fn two_fulltext_files(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
         let f1 = Filelog {
             node_key: HgNodeKey {
@@ -509,10 +511,12 @@ mod tests {
             ctx,
             vec![filelog_to_deltaed(&f1), filelog_to_deltaed(&f2)],
             vec![f1, f2],
-        );
+        )
+        .await
+        .unwrap();
     }
 
-    fn files_check_order(ctx: CoreContext, correct_order: bool) {
+    async fn files_check_order(ctx: CoreContext, correct_order: bool) {
         let f1 = Filelog {
             node_key: HgNodeKey {
                 path: RepoPath::FilePath(MPath::new(b"test").unwrap()),
@@ -549,9 +553,13 @@ mod tests {
             vec![f2_deltaed, f1_deltaed]
         };
 
-        let result = convert_to_revlog_filelog(ctx, new_memblob_empty(None).unwrap(), iter_ok(inp))
-            .collect()
-            .wait();
+        let result = convert_to_revlog_filelog(
+            ctx,
+            new_memblob_empty(None).unwrap(),
+            iter(inp.into_iter().map(Ok)),
+        )
+        .try_collect::<Vec<_>>()
+        .await;
 
         match result {
             Ok(_) => assert!(
@@ -566,13 +574,13 @@ mod tests {
     }
 
     #[fbinit::test]
-    fn files_order_correct(fb: FacebookInit) {
-        files_check_order(CoreContext::test_mock(fb), true);
+    async fn files_order_correct(fb: FacebookInit) {
+        files_check_order(CoreContext::test_mock(fb), true).await;
     }
 
     #[fbinit::test]
-    fn files_order_incorrect(fb: FacebookInit) {
-        files_check_order(CoreContext::test_mock(fb), false);
+    async fn files_order_incorrect(fb: FacebookInit) {
+        files_check_order(CoreContext::test_mock(fb), false).await;
     }
 
     quickcheck! {
@@ -587,7 +595,7 @@ mod tests {
                 ctx,
                 vec![filelog_to_deltaed(&f)],
                 vec![f],
-            );
+            ).boxed().compat().wait().unwrap();
 
             true
         }
@@ -613,7 +621,7 @@ mod tests {
                 deltas.push(delta);
             }
 
-            check_conversion(ctx, deltas, vec![f].into_iter().chain(fs));
+            check_conversion(ctx, deltas, vec![f].into_iter().chain(fs)).boxed().compat().wait().unwrap();
 
             true
         }
@@ -645,7 +653,7 @@ mod tests {
                 deltas
             };
 
-            check_conversion(ctx, deltas, fs);
+            check_conversion(ctx, deltas, fs).boxed().compat().wait().unwrap();
 
             true
         }

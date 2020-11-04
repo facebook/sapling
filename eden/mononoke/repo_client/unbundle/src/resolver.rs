@@ -25,11 +25,12 @@ use context::CoreContext;
 use core::fmt::Debug;
 use failure_ext::{Compat as FailureCompat, FutureFailureErrorExt};
 use futures::{
+    compat::Stream01CompatExt,
     future::{self, try_join_all, Future},
     stream::{self, BoxStream},
 };
 use futures_ext::{BoxFuture as OldBoxFuture, FutureExt as OldFutureExt};
-use futures_old::{future::Shared, Future as OldFuture, Stream as OldStream};
+use futures_old::{future::Shared, Future as OldFuture};
 use futures_util::{compat::Future01CompatExt, try_join, StreamExt, TryStreamExt};
 use hooks::HookRejectionInfo;
 use lazy_static::lazy_static;
@@ -976,8 +977,7 @@ impl<'r> Bundle2Resolver<'r> {
 
                 let (changesets, filelogs) = split_changegroup(parts);
                 let changesets = convert_to_revlog_changesets(changesets)
-                    .collect()
-                    .compat()
+                    .try_collect()
                     .await?;
                 let upload_map = upload_hg_blobs(
                     self.ctx.clone(),
@@ -1113,7 +1113,7 @@ impl<'r> Bundle2Resolver<'r> {
                 let manifests = upload_hg_blobs(
                     self.ctx.clone(),
                     self.repo.clone(),
-                    TreemanifestBundle2Parser::new(parts),
+                    TreemanifestBundle2Parser::new(parts).compat(),
                     UploadBlobsType::IgnoreDuplicates,
                 )
                 .context("While uploading Manifest Blobs")

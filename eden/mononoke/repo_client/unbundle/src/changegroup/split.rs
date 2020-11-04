@@ -5,10 +5,18 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{bail, ensure, Error, Result};
-use futures::{stream::BoxStream, TryStreamExt};
-use futures_ext::{BoxStream as OldBoxStream, StreamExt};
-use futures_old::{try_ready, Async, Future, Poll, Stream};
+use anyhow::{anyhow, bail, Result};
+use futures::{
+    compat::Stream01CompatExt,
+    ready,
+    stream::BoxStream,
+    task::{Context, Poll},
+    Stream, StreamExt, TryStreamExt,
+};
+use futures_ext::StreamExt as OldStreamExt;
+use futures_old::{Future as OldFuture, Stream as OldStream};
+use pin_project::pin_project;
+use std::pin::Pin;
 
 use mercurial_bundles::changegroup::{Part, Section};
 
@@ -16,12 +24,12 @@ use crate::changegroup::changeset::ChangesetDeltaed;
 use crate::changegroup::filelog::FilelogDeltaed;
 
 pub fn split_changegroup(
-    cg2s: BoxStream<'static, Result<Part>>,
+    cg2s: impl Stream<Item = Result<Part>> + Send + 'static,
 ) -> (
-    OldBoxStream<ChangesetDeltaed, Error>,
-    OldBoxStream<FilelogDeltaed, Error>,
+    BoxStream<'static, Result<ChangesetDeltaed>>,
+    BoxStream<'static, Result<FilelogDeltaed>>,
 ) {
-    let cg2s = CheckEnd::new(cg2s.compat());
+    let cg2s = CheckEnd::new(cg2s).boxed().compat();
 
     let (changesets, remainder) = cg2s
         .take_while(|part| match part {
@@ -119,19 +127,21 @@ pub fn split_changegroup(
         .filter_map(|x| x)
         .boxify();
 
-    (changesets, filelogs)
+    (changesets.compat().boxed(), filelogs.compat().boxed())
 }
 
 /// Wrapper for Stream of Part that is supposed to ensure that there is exactly one Part::End in
 /// the stream and that it is at the end of it
+#[pin_project]
 struct CheckEnd<S> {
+    #[pin]
     cg2s: S,
     seen_end: bool,
 }
 
 impl<S> CheckEnd<S>
 where
-    S: Stream<Item = Part, Error = Error> + Send + 'static,
+    S: Stream<Item = Result<Part>>,
 {
     fn new(cg2s: S) -> Self {
         Self {
@@ -143,25 +153,33 @@ where
 
 impl<S> Stream for CheckEnd<S>
 where
-    S: Stream<Item = Part, Error = Error> + Send + 'static,
+    S: Stream<Item = Result<Part>>,
 {
     type Item = S::Item;
-    type Error = S::Error;
 
-    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-        let part = try_ready!(self.cg2s.poll());
-        match &part {
-            &Some(Part::End) => {
-                ensure!(!self.seen_end, "More than one Part::End noticed");
-                self.seen_end = true;
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
+        let mut this = self.project();
+
+        let part = ready!(this.cg2s.as_mut().poll_next(cx));
+        Poll::Ready((|| {
+            match part {
+                Some(Ok(Part::End)) => {
+                    if *this.seen_end {
+                        return Some(Err(anyhow!("More than one Part::End noticed")));
+                    }
+                    *this.seen_end = true;
+                }
+                None => {
+                    if !*this.seen_end {
+                        return Some(Err(anyhow!(
+                            "End of stream reached, but no Part::End noticed"
+                        )));
+                    }
+                }
+                _ => {} // all good, proceed
             }
-            &None => ensure!(
-                self.seen_end,
-                "End of stream reached, but no Part::End noticed"
-            ),
-            _ => {} // all good, proceed
-        }
-        Ok(Async::Ready(part))
+            part
+        })())
     }
 }
 
@@ -170,68 +188,76 @@ mod tests {
     use super::*;
 
     use futures::{
-        compat::Stream01CompatExt,
         stream::{iter, StreamExt},
+        FutureExt, TryFutureExt,
     };
-    use futures_old::stream::iter_ok;
     use itertools::{assert_equal, equal};
     use quickcheck::quickcheck;
 
     use mercurial_bundles::changegroup::CgDeltaChunk;
     use mercurial_types::MPath;
 
-    fn check_splitting<S, I, J>(cg2s: S, exp_cs: I, exp_fs: J) -> bool
+    async fn check_splitting<S, I, J>(cg2s: S, exp_cs: I, exp_fs: J) -> Result<()>
     where
-        S: Stream<Item = Part, Error = Error> + Send + 'static,
+        S: Stream<Item = Result<Part>> + Send + 'static,
         I: IntoIterator<Item = ChangesetDeltaed>,
         J: IntoIterator<Item = FilelogDeltaed>,
     {
-        let (cs, fs) = split_changegroup(cg2s.compat().boxed());
+        let (cs, fs) = split_changegroup(cg2s);
 
-        let cs = cs.collect().wait().expect("error in changesets");
-        let fs = fs.collect().wait().expect("error in changesets");
+        let cs = cs.try_collect::<Vec<_>>().await?;
+        let fs = fs.try_collect::<Vec<_>>().await?;
 
-        equal(cs, exp_cs) && equal(fs, exp_fs)
+        if equal(cs, exp_cs) && equal(fs, exp_fs) {
+            Ok(())
+        } else {
+            Err(anyhow!("mismatching changesets"))
+        }
     }
 
-    #[test]
-    fn splitting_empty() {
-        assert!(check_splitting(
-            iter_ok(
-                vec![
-                    Part::SectionEnd(Section::Changeset),
-                    Part::SectionEnd(Section::Manifest),
-                    Part::End,
-                ]
-                .into_iter(),
-            ),
-            vec![],
-            vec![],
-        ))
+    #[tokio::test]
+    async fn splitting_empty() {
+        assert!(
+            check_splitting(
+                iter(
+                    vec![
+                        Part::SectionEnd(Section::Changeset),
+                        Part::SectionEnd(Section::Manifest),
+                        Part::End,
+                    ]
+                    .into_iter()
+                    .map(Ok),
+                ),
+                vec![],
+                vec![],
+            )
+            .await
+            .is_ok()
+        )
     }
 
     quickcheck! {
         fn splitting_minimal(c: CgDeltaChunk, f: CgDeltaChunk, f_p: MPath) -> bool {
             check_splitting(
-                iter_ok(
+                iter(
                     vec![
                         Part::CgChunk(Section::Changeset, c.clone()),
                         Part::SectionEnd(Section::Changeset),
                         Part::SectionEnd(Section::Manifest),
                         Part::End,
-                    ].into_iter(),
+                    ].into_iter().map(Ok),
                 ),
                 vec![ChangesetDeltaed { chunk: c.clone() }],
                 vec![],
-            ) && check_splitting(
-                iter_ok(
+            ).boxed().compat().wait().is_ok() && check_splitting(
+                iter(
                     vec![
                         Part::SectionEnd(Section::Changeset),
                         Part::SectionEnd(Section::Manifest),
                         Part::CgChunk(Section::Filelog(f_p.clone()), f.clone()),
                         Part::SectionEnd(Section::Filelog(f_p.clone())),
                         Part::End,
-                    ].into_iter(),
+                    ].into_iter().map(Ok),
                 ),
                 vec![],
                 vec![
@@ -240,8 +266,8 @@ mod tests {
                         chunk: f.clone(),
                     },
                 ],
-            ) && check_splitting(
-                iter_ok(
+            ).boxed().compat().wait().is_ok() && check_splitting(
+                iter(
                     vec![
                         Part::CgChunk(Section::Changeset, c.clone()),
                         Part::SectionEnd(Section::Changeset),
@@ -249,7 +275,7 @@ mod tests {
                         Part::CgChunk(Section::Filelog(f_p.clone()), f.clone()),
                         Part::SectionEnd(Section::Filelog(f_p.clone())),
                         Part::End,
-                    ].into_iter(),
+                    ].into_iter().map(Ok),
                 ),
                 vec![ChangesetDeltaed { chunk: c.clone() }],
                 vec![
@@ -258,7 +284,7 @@ mod tests {
                         chunk: f.clone(),
                     },
                 ],
-            )
+            ).boxed().compat().wait().is_ok()
         }
 
         fn splitting_complex(
@@ -272,7 +298,7 @@ mod tests {
             f2_p: MPath
         ) -> bool {
             check_splitting(
-                iter_ok(
+                iter(
                     vec![
                         Part::CgChunk(Section::Changeset, c1.clone()),
                         Part::CgChunk(Section::Changeset, c2.clone()),
@@ -285,7 +311,7 @@ mod tests {
                         Part::CgChunk(Section::Filelog(f2_p.clone()), f2_bis.clone()),
                         Part::SectionEnd(Section::Filelog(f2_p.clone())),
                         Part::End,
-                    ].into_iter(),
+                    ].into_iter().map(Ok),
                 ),
                 vec![ChangesetDeltaed { chunk: c1 }, ChangesetDeltaed { chunk: c2 }],
                 vec![
@@ -306,7 +332,7 @@ mod tests {
                         chunk: f2_bis,
                     },
                 ],
-            )
+            ).boxed().compat().wait().is_ok()
         }
 
         fn splitting_error_filelog_end(f: CgDeltaChunk, f1_p: MPath, f2_p: MPath) -> bool {
@@ -320,8 +346,8 @@ mod tests {
                     ].into_iter().map(Ok),
                 ).boxed());
 
-                assert_equal(cs.collect().wait().unwrap(), vec![]);
-                assert!(fs.collect().wait().is_err());
+                assert_equal(cs.try_collect::<Vec<_>>().compat().wait().unwrap(), vec![]);
+                assert!(fs.try_collect::<Vec<_>>().compat().wait().is_err());
             }
 
             {
@@ -334,8 +360,8 @@ mod tests {
                     ].into_iter().map(Ok),
                 ).boxed());
 
-                assert_equal(cs.collect().wait().unwrap(), vec![]);
-                assert!(fs.collect().wait().is_err());
+                assert_equal(cs.try_collect::<Vec<_>>().compat().wait().unwrap(), vec![]);
+                assert!(fs.try_collect::<Vec<_>>().compat().wait().is_err());
             }
 
             {
@@ -349,8 +375,8 @@ mod tests {
                     ].into_iter().map(Ok),
                 ).boxed());
 
-                assert_equal(cs.collect().wait().unwrap(), vec![]);
-                assert!(f1_p == f2_p || fs.collect().wait().is_err());
+                assert_equal(cs.try_collect::<Vec<_>>().compat().wait().unwrap(), vec![]);
+                assert!(f1_p == f2_p || fs.try_collect::<Vec<_>>().compat().wait().is_err());
             }
 
             true
@@ -374,13 +400,13 @@ mod tests {
                 ].into_iter().map(Ok),
             ).boxed());
 
-            equal(cs.collect().wait().unwrap(), vec![ChangesetDeltaed { chunk: c }])
-                && fs.collect().wait().is_err()
+            equal(cs.try_collect::<Vec<_>>().compat().wait().unwrap(), vec![ChangesetDeltaed { chunk: c }])
+                && fs.try_collect::<Vec<_>>().compat().wait().is_err()
         }
     }
 
-    #[test]
-    fn splitting_error_two_ends() {
+    #[tokio::test]
+    async fn splitting_error_two_ends() {
         {
             let (cs, fs) = split_changegroup(
                 iter(
@@ -396,8 +422,8 @@ mod tests {
                 .boxed(),
             );
 
-            assert_equal(cs.collect().wait().unwrap(), vec![]);
-            assert!(fs.collect().wait().is_err());
+            assert_equal(cs.try_collect::<Vec<_>>().await.unwrap(), vec![]);
+            assert!(fs.try_collect::<Vec<_>>().await.is_err());
         }
 
         {
@@ -415,8 +441,8 @@ mod tests {
                 .boxed(),
             );
 
-            assert_equal(cs.collect().wait().unwrap(), vec![]);
-            assert!(fs.collect().wait().is_err());
+            assert_equal(cs.try_collect::<Vec<_>>().await.unwrap(), vec![]);
+            assert!(fs.try_collect::<Vec<_>>().await.is_err());
         }
 
         {
@@ -434,13 +460,13 @@ mod tests {
                 .boxed(),
             );
 
-            assert_equal(cs.collect().wait().unwrap(), vec![]);
-            assert!(fs.collect().wait().is_err());
+            assert_equal(cs.try_collect::<Vec<_>>().await.unwrap(), vec![]);
+            assert!(fs.try_collect::<Vec<_>>().await.is_err());
         }
     }
 
-    #[test]
-    fn splitting_error_missing_end() {
+    #[tokio::test]
+    async fn splitting_error_missing_end() {
         {
             let (cs, fs) = split_changegroup(
                 iter(
@@ -451,8 +477,8 @@ mod tests {
                 .boxed(),
             );
 
-            assert!(cs.collect().wait().is_err());
-            assert!(fs.collect().wait().is_err());
+            assert!(cs.try_collect::<Vec<_>>().await.is_err());
+            assert!(fs.try_collect::<Vec<_>>().await.is_err());
         }
 
         {
@@ -465,8 +491,8 @@ mod tests {
                 .boxed(),
             );
 
-            assert_equal(cs.collect().wait().unwrap(), vec![]);
-            assert!(fs.collect().wait().is_err());
+            assert_equal(cs.try_collect::<Vec<_>>().await.unwrap(), vec![]);
+            assert!(fs.try_collect::<Vec<_>>().await.is_err());
         }
 
         {
@@ -482,8 +508,8 @@ mod tests {
                 .boxed(),
             );
 
-            assert_equal(cs.collect().wait().unwrap(), vec![]);
-            assert!(fs.collect().wait().is_err());
+            assert_equal(cs.try_collect::<Vec<_>>().await.unwrap(), vec![]);
+            assert!(fs.try_collect::<Vec<_>>().await.is_err());
         }
     }
 }

@@ -9,8 +9,9 @@ use std::collections::HashMap;
 
 use anyhow::{ensure, Error, Result};
 use failure_ext::Compat;
+use futures::stream::{Stream, StreamExt, TryStreamExt};
 use futures_ext::{BoxFuture, FutureExt};
-use futures_old::{future::Shared, Future, Stream};
+use futures_old::{future::Shared, Future, Stream as OldStream};
 
 use blobrepo::BlobRepo;
 use context::CoreContext;
@@ -43,10 +44,12 @@ pub fn upload_hg_blobs<S, B>(
     ubtype: UploadBlobsType,
 ) -> BoxFuture<HashMap<HgNodeKey, B::Value>, Error>
 where
-    S: Stream<Item = B, Error = Error> + Send + 'static,
-    B: UploadableHgBlob,
+    S: Stream<Item = Result<B>> + Send + 'static,
+    B: UploadableHgBlob + 'static,
 {
     blobs
+        .boxed()
+        .compat()
         .fold(HashMap::new(), move |mut map, item| {
             let (key, value) = item.upload(ctx.clone(), &repo)?;
             ensure!(

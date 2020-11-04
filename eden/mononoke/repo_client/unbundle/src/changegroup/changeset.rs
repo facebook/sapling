@@ -5,10 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{ensure, Error};
+use anyhow::{ensure, Result};
 use bytes::Bytes;
-use futures_ext::{BoxStream, StreamExt};
-use futures_old::Stream;
+use futures::stream::{Stream, TryStreamExt};
 
 use mercurial_bundles::changegroup::CgDeltaChunk;
 use mercurial_revlog::changeset::RevlogChangeset;
@@ -19,45 +18,43 @@ pub struct ChangesetDeltaed {
     pub chunk: CgDeltaChunk,
 }
 
-pub fn convert_to_revlog_changesets<S>(
+pub(crate) fn convert_to_revlog_changesets<S>(
     deltaed: S,
-) -> BoxStream<(HgChangesetId, RevlogChangeset), Error>
+) -> impl Stream<Item = Result<(HgChangesetId, RevlogChangeset)>>
 where
-    S: Stream<Item = ChangesetDeltaed, Error = Error> + Send + 'static,
+    S: Stream<Item = Result<ChangesetDeltaed>>,
 {
-    deltaed
-        .and_then(|ChangesetDeltaed { chunk }| {
-            ensure!(
-                chunk.base == NULL_HASH,
-                "Changeset chunk base ({:?}) should be equal to root commit ({:?}), \
+    deltaed.and_then(|ChangesetDeltaed { chunk }| async move {
+        ensure!(
+            chunk.base == NULL_HASH,
+            "Changeset chunk base ({:?}) should be equal to root commit ({:?}), \
                  because it is never deltaed",
-                chunk.base,
-                NULL_HASH
-            );
-            ensure!(
-                chunk.node == chunk.linknode,
-                "Changeset chunk node ({:?}) should be equal to linknode ({:?})",
-                chunk.node,
-                chunk.linknode
-            );
+            chunk.base,
+            NULL_HASH
+        );
+        ensure!(
+            chunk.node == chunk.linknode,
+            "Changeset chunk node ({:?}) should be equal to linknode ({:?})",
+            chunk.node,
+            chunk.linknode
+        );
 
-            Ok((
-                HgChangesetId::new(chunk.node),
-                RevlogChangeset::new(HgBlobNode::new(
-                    HgBlob::from(Bytes::from(delta::apply(b"", &chunk.delta)?)),
-                    chunk.p1.into_option(),
-                    chunk.p2.into_option(),
-                ))?,
-            ))
-        })
-        .boxify()
+        Ok((
+            HgChangesetId::new(chunk.node),
+            RevlogChangeset::new(HgBlobNode::new(
+                HgBlob::from(Bytes::from(delta::apply(b"", &chunk.delta)?)),
+                chunk.p1.into_option(),
+                chunk.p2.into_option(),
+            ))?,
+        ))
+    })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    use futures_old::stream::iter_ok;
+    use futures::{stream::iter, FutureExt, TryFutureExt};
     use futures_old::Future;
     use itertools::equal;
     use mercurial_types::HgNodeHash;
@@ -69,13 +66,13 @@ mod tests {
     }
     use self::CheckResult::*;
 
-    fn check_null_changeset(
+    async fn check_null_changeset(
         node: HgNodeHash,
         linknode: HgNodeHash,
         base: HgNodeHash,
         p1: HgNodeHash,
         p2: HgNodeHash,
-    ) -> CheckResult {
+    ) -> Result<CheckResult> {
         let blobnode = HgBlobNode::new(
             RevlogChangeset::new_null()
                 .get_node()
@@ -99,14 +96,17 @@ mod tests {
             flags: None,
         };
 
-        let result = convert_to_revlog_changesets(iter_ok(vec![ChangesetDeltaed { chunk }]))
-            .collect()
-            .wait();
+        let result = convert_to_revlog_changesets(iter(vec![Ok(ChangesetDeltaed { chunk })]))
+            .try_collect::<Vec<_>>()
+            .await;
 
         if base == NULL_HASH && node == linknode {
-            ExpectedOk(equal(result.unwrap(), vec![(HgChangesetId::new(node), cs)]))
+            Ok(ExpectedOk(equal(
+                result.unwrap(),
+                vec![(HgChangesetId::new(node), cs)],
+            )))
         } else {
-            ExpectedErr(result.is_err())
+            Ok(ExpectedErr(result.is_err()))
         }
     }
 
@@ -118,14 +118,14 @@ mod tests {
             p1: HgNodeHash,
             p2: HgNodeHash
         ) -> bool {
-            match check_null_changeset(node, linknode, base, p1, p2) {
+            match check_null_changeset(node, linknode, base, p1, p2).boxed().compat().wait().unwrap() {
                 ExpectedOk(true) | ExpectedErr(true) => true,
                 _ => false
             }
         }
 
         fn null_changeset_correct(node: HgNodeHash, p1: HgNodeHash, p2: HgNodeHash) -> bool {
-            match check_null_changeset(node.clone(), node, NULL_HASH, p1, p2) {
+            match check_null_changeset(node.clone(), node, NULL_HASH, p1, p2).boxed().compat().wait().unwrap() {
                 ExpectedOk(true) => true,
                 _ => false
             }

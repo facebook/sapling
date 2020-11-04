@@ -20,7 +20,7 @@ use slog::debug;
 use std::collections::HashMap;
 use std::time::Duration;
 use time_window_counter::{BoxGlobalTimeWindowCounter, GlobalTimeWindowCounterBuilder};
-use tokio::util::FutureExt as TokioFutureExt;
+use tokio_old::util::FutureExt as TokioFutureExt;
 
 const TIME_WINDOW_MIN: u32 = 10;
 const TIME_WINDOW_MAX: u32 = 3600;
