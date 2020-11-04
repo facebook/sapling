@@ -18,8 +18,8 @@ use cmdlib::args;
 use cmdlib::helpers::block_execute;
 use context::CoreContext;
 use cross_repo_sync::{
-    create_commit_syncers, rewrite_commit, CandidateSelectionHint, CommitSyncContext, CommitSyncer,
-    Syncers,
+    create_commit_syncers, find_toposorted_unsynced_ancestors, rewrite_commit,
+    CandidateSelectionHint, CommitSyncContext, CommitSyncer, Syncers,
 };
 use derived_data_utils::derived_data_utils;
 use fbinit::FacebookInit;
@@ -210,30 +210,41 @@ async fn back_sync_commits_to_small_repo(
     large_to_small_syncer: &CommitSyncer<SqlSyncedCommitMapping>,
     bcs_ids: &[ChangesetId],
 ) -> Result<Vec<ChangesetId>, Error> {
+    // TODO(stash, ikostia) - do not use current version, but rather
+    // fetch version from destination bookmark
+    let current_version = large_to_small_syncer.get_current_version(&ctx)?;
     info!(
         ctx.logger(),
-        "Back syncing from large repo {} to small repo {}",
+        "Back syncing from large repo {} to small repo {} using {} mapping version",
         large_to_small_syncer.get_large_repo().name(),
-        small_repo.name()
+        small_repo.name(),
+        current_version
     );
+
     let mut synced_bcs_ids = vec![];
     for bcs_id in bcs_ids {
-        // It is always safe to use `CandidateSelectionHint::Only` in
-        // the large-to-small direction
-        let maybe_synced_cs_id: Option<ChangesetId> = large_to_small_syncer
-            .sync_commit(
-                &ctx,
-                bcs_id.clone(),
-                CandidateSelectionHint::Only,
-                CommitSyncContext::RepoImport,
-            )
-            .await?;
-        if let Some(synced_cs_id) = maybe_synced_cs_id {
-            info!(
-                ctx.logger(),
-                "Synced large repo cs: {} => {}", bcs_id, synced_cs_id
-            );
-            synced_bcs_ids.push(synced_cs_id);
+        let (unsynced_ancestors, _) =
+            find_toposorted_unsynced_ancestors(&ctx, &large_to_small_syncer, bcs_id.clone())
+                .await?;
+        for ancestor in unsynced_ancestors {
+            // It is always safe to use `CandidateSelectionHint::Only` in
+            // the large-to-small direction
+            let maybe_synced_cs_id: Option<ChangesetId> = large_to_small_syncer
+                .unsafe_sync_commit_with_expected_version(
+                    ctx,
+                    ancestor,
+                    CandidateSelectionHint::Only,
+                    current_version.clone(),
+                    CommitSyncContext::RepoImport,
+                )
+                .await?;
+            if let Some(synced_cs_id) = maybe_synced_cs_id {
+                info!(
+                    ctx.logger(),
+                    "Synced large repo cs: {} => {}", bcs_id, synced_cs_id
+                );
+                synced_bcs_ids.push(synced_cs_id);
+            }
         }
     }
 

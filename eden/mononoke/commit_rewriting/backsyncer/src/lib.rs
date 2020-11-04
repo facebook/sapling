@@ -24,7 +24,7 @@
 /// 2) Rewrite these commits and create rewritten commits in target repo
 /// 3) In the same transaction try to update a bookmark in the source repo AND latest backsynced
 ///    log id.
-use anyhow::{bail, format_err, Error};
+use anyhow::{bail, format_err, Context, Error};
 use blobrepo::BlobRepo;
 use blobrepo_factory::ReadOnlyStorage;
 use blobstore_factory::make_metadata_sql_factory;
@@ -34,7 +34,10 @@ use bookmarks::{
 };
 use cloned::cloned;
 use context::CoreContext;
-use cross_repo_sync::{CandidateSelectionHint, CommitSyncContext, CommitSyncOutcome, CommitSyncer};
+use cross_repo_sync::{
+    find_toposorted_unsynced_ancestors, CandidateSelectionHint, CommitSyncContext,
+    CommitSyncOutcome, CommitSyncer,
+};
 use futures::{
     compat::Future01CompatExt,
     future::{FutureExt, TryFutureExt},
@@ -151,17 +154,55 @@ where
         let start_instant = Instant::now();
 
         if let Some(to_cs_id) = entry.to_changeset_id {
-            // Backsyncer is always used in the large-to-small direction,
-            // therefore there can be at most one remapped candidate,
-            // so `CandidateSelectionHint::Only` is a safe choice
-            commit_syncer
-                .sync_commit(
-                    &ctx,
-                    to_cs_id,
-                    CandidateSelectionHint::Only,
-                    CommitSyncContext::Backsyncer,
-                )
-                .await?;
+            let (cs_ids, unsynced_ancestors_versions) =
+                find_toposorted_unsynced_ancestors(&ctx, commit_syncer, to_cs_id).await?;
+
+            let maybe_version = if !unsynced_ancestors_versions.has_ancestor_with_a_known_outcome()
+            {
+                // Not a single ancestor of to_cs_id was ever synced.
+                // That means that we can't figure out which commit sync mapping version
+                // to use. For now let's use the current version.
+                Some(commit_syncer.get_current_version(&ctx)?)
+            } else {
+                // version can be None if all ancestors are NotSyncCandidate
+                unsynced_ancestors_versions
+                    .get_only_version()
+                    .with_context(|| {
+                        format!(
+                            "failed to backsync cs id {}, entry id {}",
+                            to_cs_id, entry.id
+                        )
+                    })?
+            };
+
+            for cs_id in cs_ids {
+                // Backsyncer is always used in the large-to-small direction,
+                // therefore there can be at most one remapped candidate,
+                // so `CandidateSelectionHint::Only` is a safe choice
+                match maybe_version.clone() {
+                    Some(version) => {
+                        commit_syncer
+                            .unsafe_sync_commit_with_expected_version(
+                                &ctx,
+                                cs_id,
+                                CandidateSelectionHint::Only,
+                                version,
+                                CommitSyncContext::Backsyncer,
+                            )
+                            .await?;
+                    }
+                    None => {
+                        commit_syncer
+                            .unsafe_sync_commit(
+                                &ctx,
+                                cs_id,
+                                CandidateSelectionHint::Only,
+                                CommitSyncContext::Backsyncer,
+                            )
+                            .await?;
+                    }
+                }
+            }
         }
 
         let new_counter = entry.id;

@@ -1226,7 +1226,7 @@ async fn get_multiple_master_mapping_setup(
                 megarepo_master_cs_id,
                 small_repo.get_repoid(),
                 small_repo_master_cs_id,
-                current_version,
+                current_version.clone(),
             ),
         )
         .compat()
@@ -2167,10 +2167,11 @@ async fn test_no_accidental_preserved_roots(
 
     let root_commit = create_initial_commit(ctx.clone(), commit_sync_repos.get_source_repo()).await;
     commit_syncer
-        .unsafe_sync_commit(
+        .unsafe_sync_commit_with_expected_version(
             &ctx,
             root_commit,
             CandidateSelectionHint::Only,
+            CommitSyncConfigVersion("TEST_VERSION_NAME".to_string()),
             CommitSyncContext::Tests,
         )
         .await?;

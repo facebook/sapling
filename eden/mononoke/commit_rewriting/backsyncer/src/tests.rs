@@ -1505,10 +1505,11 @@ async fn preserve_premerge_commit(
     };
 
     small_to_large_sync_config
-        .unsafe_sync_commit(
+        .unsafe_sync_commit_with_expected_version(
             &ctx,
             bcs_id,
             CandidateSelectionHint::Only,
+            CommitSyncConfigVersion("noop".to_string()),
             CommitSyncContext::Tests,
         )
         .await?;

@@ -9,7 +9,7 @@ use crate::reporting::{
     log_bookmark_deletion_result, log_non_pushrebase_sync_single_changeset_result,
     log_pushrebase_sync_single_changeset_result,
 };
-use anyhow::{format_err, Error};
+use anyhow::{format_err, Context, Error};
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateLogEntry, BookmarkUpdateReason};
@@ -27,6 +27,7 @@ use futures::{
 };
 use futures_old::{stream::Stream, Future};
 use futures_stats::TimedFutureExt;
+use metaconfig_types::CommitSyncConfigVersion;
 use mononoke_types::ChangesetId;
 use reachabilityindex::{LeastCommonAncestorsHint, ReachabilityIndex};
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
@@ -113,8 +114,25 @@ pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static>
     common_pushrebase_bookmarks: &HashSet<BookmarkName>,
     scuba_sample: ScubaSampleBuilder,
 ) -> Result<Vec<ChangesetId>, Error> {
-    let unsynced_ancestors =
+    let (unsynced_ancestors, unsynced_ancestors_versions) =
         find_toposorted_unsynced_ancestors(&ctx, &commit_syncer, to_cs_id.clone()).await?;
+
+    let version = if !unsynced_ancestors_versions.has_ancestor_with_a_known_outcome() {
+        // TODO(stash): do not use current version here, and instead do not sync
+        // these commits
+        commit_syncer.get_current_version(&ctx)?
+    } else {
+        let maybe_version = unsynced_ancestors_versions
+            .get_only_version()
+            .with_context(|| format!("failed to backsync cs id {}", to_cs_id))?;
+        maybe_version.ok_or_else(|| {
+            format_err!(
+                "failed to sync {} - all of the ancestors are NotSyncCandidate",
+                to_cs_id
+            )
+        })?
+    };
+
     let len = unsynced_ancestors.len();
     info!(ctx.logger(), "{} unsynced ancestors of {}", len, to_cs_id);
 
@@ -142,6 +160,7 @@ pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static>
                 &common_pushrebase_bookmarks,
                 scuba_sample.clone(),
                 unsynced_ancestors,
+                &version,
             )
             .await;
         }
@@ -157,6 +176,7 @@ pub async fn sync_commit_and_ancestors<M: SyncedCommitMapping + Clone + 'static>
             scuba_sample.clone(),
             cs_id,
             &common_pushrebase_bookmarks,
+            &version,
         )
         .await?;
         res.extend(synced);
@@ -198,6 +218,7 @@ pub async fn sync_commits_via_pushrebase<M: SyncedCommitMapping + Clone + 'stati
     common_pushrebase_bookmarks: &HashSet<BookmarkName>,
     scuba_sample: ScubaSampleBuilder,
     unsynced_ancestors: Vec<ChangesetId>,
+    version: &CommitSyncConfigVersion,
 ) -> Result<Vec<ChangesetId>, Error> {
     let source_repo = commit_syncer.get_source_repo();
     // It stores commits that were introduced as part of current bookmark update, but that
@@ -234,6 +255,7 @@ pub async fn sync_commits_via_pushrebase<M: SyncedCommitMapping + Clone + 'stati
         }
     }
 
+
     for cs_id in unsynced_ancestors {
         let maybe_new_cs_id = if no_pushrebase.contains(&cs_id) {
             sync_commit_without_pushrebase(
@@ -243,6 +265,7 @@ pub async fn sync_commits_via_pushrebase<M: SyncedCommitMapping + Clone + 'stati
                 scuba_sample.clone(),
                 cs_id,
                 common_pushrebase_bookmarks,
+                version,
             )
             .await?
         } else {
@@ -282,6 +305,7 @@ pub async fn sync_commit_without_pushrebase<M: SyncedCommitMapping + Clone + 'st
     scuba_sample: ScubaSampleBuilder,
     cs_id: ChangesetId,
     common_pushrebase_bookmarks: &HashSet<BookmarkName>,
+    version: &CommitSyncConfigVersion,
 ) -> Result<Vec<ChangesetId>, Error> {
     info!(ctx.logger(), "syncing {}", cs_id);
     let bcs = cs_id
@@ -323,14 +347,12 @@ pub async fn sync_commit_without_pushrebase<M: SyncedCommitMapping + Clone + 'st
         // Merge is from a branch completely independent from common_pushrebase_bookmark -
         // it's fine to sync it.
         if maybe_independent_branch.is_some() {
-            // TODO(stash, ikostia) - T77836390. fix how merges are processed by x-repo sync job
-            let current_version = commit_syncer.get_current_version(&ctx)?;
             commit_syncer
                 .unsafe_always_rewrite_sync_commit(
                     ctx,
                     cs_id,
                     None,
-                    &current_version,
+                    version,
                     CommitSyncContext::XRepoSyncJob,
                 )
                 .timed()
@@ -342,10 +364,11 @@ pub async fn sync_commit_without_pushrebase<M: SyncedCommitMapping + Clone + 'st
         }
     } else {
         commit_syncer
-            .unsafe_sync_commit(
+            .unsafe_sync_commit_with_expected_version(
                 ctx,
                 cs_id,
                 CandidateSelectionHint::Only,
+                version.clone(),
                 CommitSyncContext::XRepoSyncJob,
             )
             .timed()
@@ -625,7 +648,6 @@ mod test {
     use fbinit::FacebookInit;
     use futures_old::stream::Stream;
     use maplit::hashset;
-    use metaconfig_types::CommitSyncConfigVersion;
     use mutable_counters::MutableCounters;
     use tests_utils::{bookmark, resolve_cs_id, CreateCommitContext};
 
@@ -919,10 +941,68 @@ mod test {
         })
     }
 
+    #[fbinit::compat_test]
+    async fn test_merge_different_versions(fb: FacebookInit) -> Result<(), Error> {
+        let mutable_counters = SqlMutableCounters::with_sqlite_in_memory()?;
+
+        let ctx = CoreContext::test_mock(fb);
+        let (syncers, _) = init_small_large_repo(&ctx).await?;
+        let commit_syncer = syncers.small_to_large;
+        let smallrepo = commit_syncer.get_source_repo();
+
+        // Merge new repo
+        let new_repo = CreateCommitContext::new_root(&ctx, &smallrepo)
+            .add_file("firstnewrepo", "newcontent")
+            .commit()
+            .await?;
+
+        bookmark(&ctx, &smallrepo, "another_pushrebase_bookmark")
+            .set_to("premove")
+            .await?;
+        sync_and_validate_with_common_bookmarks(
+            &ctx,
+            &commit_syncer,
+            &mutable_counters,
+            &hashset! { BookmarkName::new("master")?},
+        )
+        .await?;
+
+        let merge = CreateCommitContext::new_root(&ctx, &smallrepo)
+            .add_parent("premove")
+            .add_parent(new_repo)
+            .commit()
+            .await?;
+        bookmark(&ctx, &smallrepo, "another_pushrebase_bookmark")
+            .set_to(merge)
+            .await?;
+
+        sync_and_validate_with_common_bookmarks(
+            &ctx, &commit_syncer, &mutable_counters,
+            &hashset!{ BookmarkName::new("master")?, BookmarkName::new("another_pushrebase_bookmark")?}
+        ).await?;
+
+        Ok(())
+    }
+
     async fn sync_and_validate(
         ctx: &CoreContext,
         commit_syncer: &CommitSyncer<SqlSyncedCommitMapping>,
         mutable_counters: &SqlMutableCounters,
+    ) -> Result<(), Error> {
+        sync_and_validate_with_common_bookmarks(
+            ctx,
+            commit_syncer,
+            mutable_counters,
+            &hashset! {BookmarkName::new("master")?},
+        )
+        .await
+    }
+
+    async fn sync_and_validate_with_common_bookmarks(
+        ctx: &CoreContext,
+        commit_syncer: &CommitSyncer<SqlSyncedCommitMapping>,
+        mutable_counters: &SqlMutableCounters,
+        common_pushrebase_bookmarks: &HashSet<BookmarkName>,
     ) -> Result<(), Error> {
         let smallrepo = commit_syncer.get_source_repo();
         let megarepo = commit_syncer.get_target_repo();
@@ -957,7 +1037,6 @@ mod test {
 
         let source_skiplist_index = Source(Arc::new(SkiplistIndex::new()));
         let target_skiplist_index = Target(Arc::new(SkiplistIndex::new()));
-        let common_pushrebase_bookmarks = hashset! { BookmarkName::new("master")? };
         for entry in log_entries {
             let entry_id = entry.id;
             sync_single_bookmark_update_log(

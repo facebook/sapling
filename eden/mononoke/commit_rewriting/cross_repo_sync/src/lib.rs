@@ -37,7 +37,7 @@ use pushrebase::{do_pushrebase_bonsai, PushrebaseError};
 use reachabilityindex::LeastCommonAncestorsHint;
 use scuba_ext::ScubaSampleBuilder;
 use slog::{debug, info};
-use std::collections::{BTreeMap, HashMap, VecDeque};
+use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
 use std::fmt;
 use std::sync::Arc;
 use std::time::Instant;
@@ -320,14 +320,61 @@ async fn remap_parents<'a, M: SyncedCommitMapping + Clone + 'static>(
     Ok(remapped_parents)
 }
 
+#[derive(Clone, Default)]
+pub struct SyncedAncestorsVersions {
+    // Versions of all synced ancestors
+    versions: HashSet<CommitSyncConfigVersion>,
+    // Whether there was at least one NotSyncCandidate ancestor (i.e.
+    // this ancestor was "synced" but no commits were created in target repo)
+    has_not_sync_candidate: bool,
+}
+
+impl SyncedAncestorsVersions {
+    pub fn has_ancestor_with_a_known_outcome(&self) -> bool {
+        !self.versions.is_empty() || self.has_not_sync_candidate
+    }
+
+    pub fn get_only_version(&self) -> Result<Option<CommitSyncConfigVersion>, Error> {
+        let mut iter = self.versions.iter();
+        match (iter.next(), iter.next()) {
+            (Some(v1), None) => Ok(Some(v1.clone())),
+            (None, None) => {
+                if self.has_not_sync_candidate {
+                    Ok(None)
+                } else {
+                    Err(format_err!("no ancestor version found"))
+                }
+            }
+            _ => Err(format_err!(
+                "cannot find single ancestor version: {:?}",
+                self.versions
+            )),
+        }
+    }
+}
+
+/// Returns unsynced ancestors and also list of CommitSyncConfigVersion
+/// of latest *synced* ancestors.
+/// See example below (U means unsyned, S means synced)
+///
+/// ```
+/// U2
+/// |
+/// U1
+/// |
+/// S with version V1
+/// ```
+///
+/// In this case we'll return [U1, U2] and [V1]
 pub async fn find_toposorted_unsynced_ancestors<M>(
     ctx: &CoreContext,
     commit_syncer: &CommitSyncer<M>,
     start_cs_id: ChangesetId,
-) -> Result<Vec<ChangesetId>, Error>
+) -> Result<(Vec<ChangesetId>, SyncedAncestorsVersions), Error>
 where
     M: SyncedCommitMapping + Clone + 'static,
 {
+    let mut synced_ancestors_versions = SyncedAncestorsVersions::default();
     let source_repo = commit_syncer.get_source_repo();
 
     let mut visited = hashset! { start_cs_id };
@@ -348,20 +395,38 @@ where
             );
         }
 
-        if commit_syncer
-            .commit_sync_outcome_exists(ctx, Source(cs_id))
-            .await?
-        {
-            continue;
-        } else {
-            let parents = source_repo
-                .get_changeset_parents_by_bonsai(ctx.clone(), cs_id)
-                .compat()
-                .await?;
+        let maybe_plural_outcome = commit_syncer
+            .get_plural_commit_sync_outcome(ctx, cs_id)
+            .await?;
 
-            commits_to_backsync.insert(cs_id, parents.clone());
+        match maybe_plural_outcome {
+            Some(plural) => {
+                use PluralCommitSyncOutcome::*;
+                match plural {
+                    NotSyncCandidate => {
+                        synced_ancestors_versions.has_not_sync_candidate = true;
+                    }
+                    RewrittenAs(cs_ids_versions) => {
+                        for (_, version) in cs_ids_versions {
+                            synced_ancestors_versions.versions.insert(version);
+                        }
+                    }
+                    EquivalentWorkingCopyAncestor(_, version) => {
+                        synced_ancestors_versions.versions.insert(version);
+                    }
+                };
+                continue;
+            }
+            None => {
+                let parents = source_repo
+                    .get_changeset_parents_by_bonsai(ctx.clone(), cs_id)
+                    .compat()
+                    .await?;
 
-            q.extend(parents.into_iter().filter(|p| visited.insert(*p)));
+                commits_to_backsync.insert(cs_id, parents.clone());
+
+                q.extend(parents.into_iter().filter(|p| visited.insert(*p)));
+            }
         }
     }
 
@@ -371,10 +436,12 @@ where
     // TODO(stash): T60147215 change sort_topological logic to not return parents!
     let res = sort_topological(&commits_to_backsync).expect("unexpected cycle in commit graph!");
 
-    Ok(res
-        .into_iter()
-        .filter(|r| commits_to_backsync.contains_key(r))
-        .collect())
+    Ok((
+        res.into_iter()
+            .filter(|r| commits_to_backsync.contains_key(r))
+            .collect(),
+        synced_ancestors_versions,
+    ))
 }
 
 #[derive(Clone)]
@@ -594,6 +661,21 @@ where
         Ok(self.get_bookmark_renamer(ctx)?(bookmark))
     }
 
+    pub async fn get_plural_commit_sync_outcome<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        source_cs_id: ChangesetId,
+    ) -> Result<Option<PluralCommitSyncOutcome>, Error> {
+        get_plural_commit_sync_outcome(
+            ctx,
+            Source(self.repos.get_source_repo().get_repoid()),
+            Target(self.repos.get_target_repo().get_repoid()),
+            Source(source_cs_id),
+            &self.mapping,
+        )
+        .await
+    }
+
     pub async fn get_commit_sync_outcome<'a>(
         &'a self,
         ctx: &'a CoreContext,
@@ -680,7 +762,7 @@ where
         source_cs_id: ChangesetId,
         ancestor_selection_hint: CandidateSelectionHint,
     ) -> Result<Option<ChangesetId>, Error> {
-        let unsynced_ancestors =
+        let (unsynced_ancestors, _) =
             find_toposorted_unsynced_ancestors(&ctx, self, source_cs_id).await?;
 
         let source_repo = self.repos.get_source_repo();
@@ -821,11 +903,10 @@ where
         if parents.is_empty() {
             match expected_version {
                 Some(version) => self.sync_commit_no_parents(ctx, cs, version).await,
-                None => {
-                    // TODO(stash): fail instead of using the current version
-                    let version = self.get_current_version(ctx)?;
-                    self.sync_commit_no_parents(ctx, cs, version).await
-                }
+                None => Err(format_err!(
+                    "no version specified for remapping commit {} with no parents",
+                    source_cs_id
+                )),
             }
         } else if parents.len() == 1 {
             self.sync_commit_single_parent(ctx, cs, parent_mapping_selection_hint, expected_version)
