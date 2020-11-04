@@ -151,6 +151,8 @@ impl CreateChangeset {
                                         bonsai_parents,
                                         repo.clone(),
                                     )
+                                    .boxed()
+                                    .compat()
                                     .map(|bonsai_cs| (hg_cs, bonsai_cs))
                                 }
                             });
@@ -209,7 +211,9 @@ impl CreateChangeset {
                                                 ctx.clone(),
                                                 blobstore.clone(),
                                                 bonsai_cs.clone(),
-                                            );
+                                            )
+                                            .boxed()
+                                            .compat();
 
                                             blobcs
                                                 .save(ctx.clone(), blobstore)
