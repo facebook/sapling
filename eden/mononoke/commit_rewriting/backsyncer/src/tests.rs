@@ -50,7 +50,7 @@ use synced_commit_mapping::{
     EquivalentWorkingCopyEntry, SqlSyncedCommitMapping, SyncedCommitMapping,
     SyncedCommitMappingEntry,
 };
-use tests_utils::{create_commit, store_files, store_rename};
+use tests_utils::{create_commit, store_files, store_rename, CreateCommitContext};
 use tokio_compat::runtime::Runtime;
 
 use pretty_assertions::assert_eq;
@@ -347,7 +347,7 @@ fn backsync_branch_merge_remove_branch_merge_file(fb: FacebookInit) -> Result<()
 }
 
 #[fbinit::test]
-fn backsync_merge_unrelated_branch(fb: FacebookInit) -> Result<(), Error> {
+fn backsync_unrelated_branch(fb: FacebookInit) -> Result<(), Error> {
     let mut runtime = Runtime::new()?;
     runtime.block_on_std(async move {
         let master = BookmarkName::new("master")?;
@@ -371,31 +371,48 @@ fn backsync_merge_unrelated_branch(fb: FacebookInit) -> Result<(), Error> {
         )
         .await?;
 
-        backsync_and_verify_master_wc(fb, commit_syncer, target_repo_dbs).await
-    })
-}
+        backsync_latest(
+            ctx.clone(),
+            commit_syncer.clone(),
+            target_repo_dbs.clone(),
+            BacksyncLimit::NoLimit,
+        )
+        .await?;
 
-#[fbinit::test]
-fn backsync_merge_unrelated_branch_preserved(fb: FacebookInit) -> Result<(), Error> {
-    let mut runtime = Runtime::new()?;
-    runtime.block_on_std(async move {
-        let (commit_syncer, target_repo_dbs) =
-            init_repos(fb, MoverType::Noop, BookmarkRenamerType::Noop).await?;
+        // Unrelated branch should be ignored until it's merged into already backsynced
+        // branch
+        let maybe_outcome = commit_syncer.get_commit_sync_outcome(&ctx, merge).await?;
+        assert!(maybe_outcome.is_none());
 
-        let source_repo = commit_syncer.get_source_repo();
-
-        let ctx = CoreContext::test_mock(fb);
-        let merge = build_unrelated_branch(ctx.clone(), &source_repo).await;
+        println!("merging into master");
+        let new_master =
+            CreateCommitContext::new(&ctx, &source_repo, vec!["master", "otherrepo/somebook"])
+                .commit()
+                .await?;
 
         move_bookmark(
             ctx.clone(),
             source_repo.clone(),
-            &BookmarkName::new("otherrepo/somebook")?,
-            merge,
+            &BookmarkName::new("master")?,
+            new_master,
         )
         .await?;
 
-        backsync_and_verify_master_wc(fb, commit_syncer, target_repo_dbs).await
+        backsync_latest(
+            ctx.clone(),
+            commit_syncer.clone(),
+            target_repo_dbs.clone(),
+            BacksyncLimit::NoLimit,
+        )
+        .await?;
+        let maybe_outcome = commit_syncer
+            .get_commit_sync_outcome(&ctx, new_master)
+            .await?;
+        assert!(maybe_outcome.is_some());
+        let maybe_outcome = commit_syncer.get_commit_sync_outcome(&ctx, merge).await?;
+        assert!(maybe_outcome.is_some());
+
+        Ok(())
     })
 }
 
@@ -541,7 +558,13 @@ async fn verify_mapping_and_all_wc(
         }
         let csc = commit_syncer.clone();
         let outcome = csc.get_commit_sync_outcome(&ctx, source_cs_id).await?;
-        let outcome = outcome.expect(&format!("commit has not been synced {}", source_cs_id));
+        let source_bcs = source_cs_id
+            .load(ctx.clone(), source_repo.blobstore())
+            .await?;
+        let outcome = outcome.expect(&format!(
+            "commit has not been synced {} {:?}",
+            source_cs_id, source_bcs
+        ));
         use CommitSyncOutcome::*;
 
         let (target_cs_id, mover_to_use) = match outcome {
@@ -1273,7 +1296,7 @@ async fn init_merged_repos(
             ctx.clone(),
             large_repo.clone(),
             small_repo.clone(),
-            other_repo_ids,
+            other_repo_ids.clone(),
             small_repo_cs_id,
             &mapping,
         )

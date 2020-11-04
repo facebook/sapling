@@ -48,7 +48,7 @@ use metaconfig_types::MetadataDatabaseConfig;
 use mononoke_types::{ChangesetId, RepositoryId};
 use mutable_counters::{MutableCounters, SqlMutableCounters};
 use scuba_ext::ScubaSampleBuilderExt;
-use slog::debug;
+use slog::{debug, warn};
 use sql::Transaction;
 use sql_construct::SqlConstruct;
 use sql_ext::facebook::MysqlOptions;
@@ -157,23 +157,45 @@ where
             let (cs_ids, unsynced_ancestors_versions) =
                 find_toposorted_unsynced_ancestors(&ctx, commit_syncer, to_cs_id).await?;
 
-            let maybe_version = if !unsynced_ancestors_versions.has_ancestor_with_a_known_outcome()
-            {
+            if !unsynced_ancestors_versions.has_ancestor_with_a_known_outcome() {
                 // Not a single ancestor of to_cs_id was ever synced.
                 // That means that we can't figure out which commit sync mapping version
-                // to use. For now let's use the current version.
-                Some(commit_syncer.get_current_version(&ctx)?)
-            } else {
-                // version can be None if all ancestors are NotSyncCandidate
-                unsynced_ancestors_versions
-                    .get_only_version()
-                    .with_context(|| {
-                        format!(
-                            "failed to backsync cs id {}, entry id {}",
-                            to_cs_id, entry.id
-                        )
-                    })?
-            };
+                // to use. In that case we just skip this entry and not sync it at all.
+                // This seems the safest option (i.e. we won't rewrite a commit with
+                // an incorrect version) but it also has a downside that the bookmark that points
+                // to this commit is not going to be synced.
+                warn!(
+                    ctx.logger(),
+                    "skipping {}, entry id {}", entry.bookmark_name, entry.id
+                );
+                scuba_sample.log_with_msg(
+                    "Skipping entry because there are no synced ancestors",
+                    Some(format!("{}", entry.id)),
+                );
+                target_repo_dbs
+                    .counters
+                    .set_counter(
+                        ctx.clone(),
+                        commit_syncer.get_target_repo().get_repoid(),
+                        &format_counter(&commit_syncer.get_source_repo().get_repoid()),
+                        entry.id,
+                        Some(counter),
+                    )
+                    .compat()
+                    .await?;
+                counter = entry.id;
+                continue;
+            }
+
+            // version can be None if all ancestors are NotSyncCandidate
+            let maybe_version = unsynced_ancestors_versions
+                .get_only_version()
+                .with_context(|| {
+                    format!(
+                        "failed to backsync cs id {}, entry id {}",
+                        to_cs_id, entry.id
+                    )
+                })?;
 
             for cs_id in cs_ids {
                 // Backsyncer is always used in the large-to-small direction,
