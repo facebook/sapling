@@ -164,7 +164,7 @@ impl ProgressStateCountByType<ScrubStats, ScrubStats> {
             (
                 self.params.subcommand_stats_key,
                 self.params.repo_stats_key.clone(),
-                node_type.to_str(),
+                node_type.into(),
             ),
         );
         STATS::walk_progress_keys_by_type.add_value(
@@ -172,7 +172,7 @@ impl ProgressStateCountByType<ScrubStats, ScrubStats> {
             (
                 self.params.subcommand_stats_key,
                 self.params.repo_stats_key.clone(),
-                node_type.to_str(),
+                node_type.into(),
             ),
         );
     }
@@ -197,7 +197,7 @@ impl ProgressStateCountByType<ScrubStats, ScrubStats> {
 
     fn report_completion_stats(&self) {
         for (k, v) in self.reporting_stats.last_summary_by_type.iter() {
-            self.report_completion_stat(v, k.to_str())
+            self.report_completion_stat(v, k.into())
         }
         self.report_completion_stat(&self.reporting_stats.last_summary, TOTAL)
     }

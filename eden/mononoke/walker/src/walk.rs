@@ -1107,7 +1107,7 @@ where
                 &mut scuba,
             );
             scuba
-                .add(EDGE_TYPE, edge_label.to_str())
+                .add(EDGE_TYPE, Into::<&'static str>::into(edge_label))
                 .add(CHECK_TYPE, "step")
                 .add(CHECK_FAIL, 1)
                 .add("error_msg", msg.clone())

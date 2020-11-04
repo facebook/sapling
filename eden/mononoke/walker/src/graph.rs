@@ -48,7 +48,7 @@ macro_rules! define_type_enum {
      (enum $enum_name:ident {
          $($variant:ident),*,
      }) => {
-         #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+         #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, strum_macros::IntoStaticStr)]
          pub enum $enum_name {
              $($variant),*
          }
@@ -67,13 +67,6 @@ macro_rules! define_type_enum {
             pub const ALL_VARIANTS: &'static [$enum_name] = &[
                 $($enum_name::$variant),*
             ];
-
-            #[allow(dead_code)]
-            pub fn to_str(&self) -> &'static str {
-                match self {
-                    $($enum_name::$variant=>stringify!($variant),)*
-                }
-            }
 
             #[allow(dead_code)]
             pub const MAX_ORDINAL: usize = max!($($enum_name::$variant as usize),*);
