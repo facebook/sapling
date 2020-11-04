@@ -15,7 +15,9 @@ use mononoke_types::{
     hash::{GitSha1, Sha1, Sha256},
     ChangesetId, ContentId, FsnodeId, MPath,
 };
+use std::iter::FromIterator;
 use std::str::FromStr;
+use strum::IntoEnumIterator;
 
 const NODE_SEP: &str = ":";
 
@@ -98,7 +100,7 @@ pub fn parse_node(s: &str) -> Result<Node, Error> {
             if parts.len() < 2 {
                 return Err(format_err!(
                     "parse_node requires an alias type from {:?} and key for {}",
-                    AliasType::ALL_VARIANTS,
+                    Vec::from_iter(AliasType::iter()),
                     node_type
                 ));
             }
@@ -255,8 +257,8 @@ mod tests {
 
     #[test]
     fn parse_all_node_types() -> Result<(), Error> {
-        for t in NodeType::ALL_VARIANTS {
-            test_node_type(t)?;
+        for t in NodeType::iter() {
+            test_node_type(&t)?;
         }
         Ok(())
     }

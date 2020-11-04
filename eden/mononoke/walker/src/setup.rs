@@ -33,6 +33,7 @@ use samplingblob::SamplingHandler;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::{info, warn, Logger};
 use std::{collections::HashSet, iter::FromIterator, str::FromStr, sync::Arc, time::Duration};
+use strum::IntoEnumIterator;
 
 pub struct RepoWalkDatasources {
     pub blobrepo: BlobRepo,
@@ -232,7 +233,7 @@ const MARKER_EDGE_TYPES: &[EdgeType] = &[EdgeType::BonsaiChangesetToBonsaiPhaseM
 lazy_static! {
     static ref INCLUDE_CHECK_TYPE_HELP: String = format!(
         "Check types to include, defaults to: {:?}",
-        CheckType::ALL_VARIANTS,
+        Vec::from_iter(CheckType::iter()),
     );
 
     static ref INCLUDE_NODE_TYPE_HELP: String = format!(
@@ -242,7 +243,7 @@ lazy_static! {
 
     static ref EXCLUDE_NODE_TYPE_HELP: String = format!(
         "Graph node types to exclude from walk. They are removed from the include node types. Specific any of: {:?}",
-        NodeType::ALL_VARIANTS,
+        Vec::from_iter(NodeType::iter()),
     );
 
     static ref INCLUDE_EDGE_TYPE_HELP: String = format!(
@@ -252,7 +253,7 @@ lazy_static! {
 
     static ref EXCLUDE_EDGE_TYPE_HELP: String = format!(
         "Graph edge types to exclude from walk. Can pass pre-configured sets via deep, shallow, hg, bonsai, as well as individual types. Defaults to deep.  All individual types: {:?}",
-        EdgeType::ALL_VARIANTS,
+        Vec::from_iter(EdgeType::iter()),
     );
 }
 

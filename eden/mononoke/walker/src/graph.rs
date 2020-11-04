@@ -48,7 +48,7 @@ macro_rules! define_type_enum {
      (enum $enum_name:ident {
          $($variant:ident),*,
      }) => {
-         #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, strum_macros::IntoStaticStr)]
+         #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, strum_macros::EnumIter, strum_macros::IntoStaticStr)]
          pub enum $enum_name {
              $($variant),*
          }
@@ -64,10 +64,6 @@ macro_rules! define_type_enum {
          }
 
         impl $enum_name {
-            pub const ALL_VARIANTS: &'static [$enum_name] = &[
-                $($enum_name::$variant),*
-            ];
-
             #[allow(dead_code)]
             pub const MAX_ORDINAL: usize = max!($($enum_name::$variant as usize),*);
         }
@@ -621,6 +617,7 @@ mod tests {
     use super::*;
     use blobrepo_factory::init_all_derived_data;
     use std::{collections::HashSet, mem::size_of};
+    use strum::IntoEnumIterator;
 
     #[test]
     fn test_node_size() {
@@ -631,8 +628,8 @@ mod tests {
     #[test]
     fn test_node_type_max_ordinal() {
         // Check the macros worked consistently
-        for t in NodeType::ALL_VARIANTS {
-            assert!(*t as usize <= NodeType::MAX_ORDINAL)
+        for t in NodeType::iter() {
+            assert!(t as usize <= NodeType::MAX_ORDINAL)
         }
     }
 
@@ -643,7 +640,7 @@ mod tests {
 
         // supported in graph
         let mut s = HashSet::new();
-        for t in NodeType::ALL_VARIANTS {
+        for t in NodeType::iter() {
             if let Some(d) = t.derived_data_name() {
                 assert!(
                     a.contains(d),
