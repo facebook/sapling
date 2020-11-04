@@ -7,10 +7,15 @@
 // See:
 // https://github.com/osquery/osquery/blob/4.0.0/osquery/tables/system/darwin/processes.cpp
 
+// The build system is disappointing and can't exclude this target from Linux
+// builds. So let's ifdef out the entire file.
+
+#ifdef __APPLE__
+
 #include <assert.h>
-#include <libproc.h>
-#include <mach-o/dyld_images.h>
-#include <mach/mach.h>
+#include <libproc.h> // @manual
+#include <mach-o/dyld_images.h> // @manual
+#include <mach/mach.h> // @manual
 
 /// Return pid's parent process id.
 /// Return 0 on error or if pid does not have a parent.
@@ -37,3 +42,5 @@ const char* darwin_exepath(pid_t pid) {
   }
   return path;
 }
+
+#endif
