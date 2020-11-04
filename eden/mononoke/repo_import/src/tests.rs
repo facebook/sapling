@@ -9,9 +9,9 @@
 mod tests {
     use crate::{
         back_sync_commits_to_small_repo, check_dependent_systems, derive_bonsais_single_repo,
-        get_large_repo_config_if_pushredirected, get_large_repo_setting, merge_imported_commit,
-        move_bookmark, push_merge_commit, rewrite_file_paths, ChangesetArgs, CheckerFlags,
-        ImportStage, RecoveryFields, RepoImportSetting,
+        find_mapping_version, get_large_repo_config_if_pushredirected, get_large_repo_setting,
+        merge_imported_commit, move_bookmark, push_merge_commit, rewrite_file_paths, ChangesetArgs,
+        CheckerFlags, ImportStage, RecoveryFields, RepoImportSetting,
     };
     use anyhow::Result;
     use ascii::AsciiString;
@@ -21,7 +21,7 @@ mod tests {
     use bookmarks::{BookmarkName, BookmarkUpdateLog, BookmarkUpdateReason, Freshness};
     use cached_config::{ConfigStore, TestSource};
     use context::CoreContext;
-    use cross_repo_sync::create_commit_syncers;
+    use cross_repo_sync::{create_commit_syncers, CommitSyncContext};
     use derived_data::BonsaiDerived;
     use derived_data_utils::derived_data_utils;
     use fbinit::FacebookInit;
@@ -54,7 +54,9 @@ mod tests {
     use std::sync::Arc;
     use std::time::Duration;
     use synced_commit_mapping::SqlSyncedCommitMapping;
-    use tests_utils::{bookmark, drawdag::create_from_dag, CreateCommitContext};
+    use tests_utils::{
+        bookmark, drawdag::create_from_dag, list_working_copy_utf8, CreateCommitContext,
+    };
     use tokio::time;
 
     fn create_bookmark_name(book: &str) -> BookmarkName {
@@ -526,6 +528,20 @@ mod tests {
         }
     }
 
+    fn get_small_repo_sync_config_1_later() -> SmallRepoCommitSyncConfig {
+        SmallRepoCommitSyncConfig {
+            default_action: DefaultSmallToLargeCommitSyncPathAction::PrependPrefix(mp(
+                "large_repo",
+            )),
+            map: hashmap! {
+                mp("dest_path_prefix/B") => mp("random_dir/B"),
+                mp("dest_path_prefix/C") => mp("random_dir/C"),
+            },
+            bookmark_prefix: AsciiString::from_ascii("large_repo_bookmark/".to_string()).unwrap(),
+            direction: CommitSyncDirection::SmallToLarge,
+        }
+    }
+
     fn get_small_repo_sync_config_2() -> SmallRepoCommitSyncConfig {
         SmallRepoCommitSyncConfig {
             default_action: DefaultSmallToLargeCommitSyncPathAction::Preserve,
@@ -540,7 +556,11 @@ mod tests {
     fn get_large_repo_live_commit_sync_config() -> Arc<dyn LiveCommitSyncConfig> {
         let commit_sync_config = get_large_repo_sync_config();
         let (sync_config, source) = TestLiveCommitSyncConfig::new_with_source();
+
+        let later_commit_sync_config = get_later_large_repo_sync_config();
+
         source.add_config(commit_sync_config.clone());
+        source.add_config(later_commit_sync_config);
         source.add_current_version(commit_sync_config.version_name);
 
         Arc::new(sync_config)
@@ -555,6 +575,18 @@ mod tests {
                 RepositoryId::new(2) => get_small_repo_sync_config_2(),
             },
             version_name: CommitSyncConfigVersion("TEST_VERSION".to_string()),
+        }
+    }
+
+    fn get_later_large_repo_sync_config() -> CommitSyncConfig {
+        CommitSyncConfig {
+            large_repo_id: RepositoryId::new(0),
+            common_pushrebase_bookmarks: vec![],
+            small_repos: hashmap! {
+                RepositoryId::new(1) => get_small_repo_sync_config_1_later(),
+                RepositoryId::new(2) => get_small_repo_sync_config_2(),
+            },
+            version_name: CommitSyncConfigVersion("TEST_VERSION2".to_string()),
         }
     }
 
@@ -709,6 +741,7 @@ mod tests {
             &small_repo,
             &large_to_small_syncer,
             &shifted_bcs_ids,
+            &large_to_small_syncer.get_current_version(&ctx)?,
         )
         .await?;
 
@@ -848,6 +881,7 @@ mod tests {
             &small_repo,
             &large_to_small_syncer,
             &large_repo_cs_ids,
+            &large_to_small_syncer.get_current_version(&ctx)?,
         )
         .await?;
 
@@ -856,6 +890,105 @@ mod tests {
 
         check_no_pending_commits(&ctx, &large_repo, &large_repo_cs_ids).await?;
         check_no_pending_commits(&ctx, &small_repo, &small_repo_cs_ids).await?;
+        Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn test_find_version_and_backsync(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let large_repo = create_repo(0)?;
+        let small_repo = create_repo(1)?;
+
+        let root = CreateCommitContext::new_root(&ctx, &large_repo)
+            .add_file("random_dir/B/file", "text")
+            .commit()
+            .await?;
+
+        let first_commit = CreateCommitContext::new(&ctx, &large_repo, vec![root])
+            .add_file("large_repo/justfile", "justtext")
+            .commit()
+            .await?;
+
+        bookmark(&ctx, &large_repo, "before_mapping_change")
+            .set_to(first_commit)
+            .await?;
+
+        let live_commit_sync_config = get_large_repo_live_commit_sync_config();
+        let mapping = SqlSyncedCommitMapping::with_sqlite_in_memory()?;
+        let syncers = create_commit_syncers(
+            &ctx,
+            small_repo.clone(),
+            large_repo.clone(),
+            mapping.clone(),
+            live_commit_sync_config,
+        )?;
+
+        let large_to_small_syncer = syncers.large_to_small;
+
+        let small_repo_cs_ids = back_sync_commits_to_small_repo(
+            &ctx,
+            &small_repo,
+            &large_to_small_syncer,
+            &[root, first_commit],
+            &large_to_small_syncer.get_current_version(&ctx)?,
+        )
+        .await?;
+
+        let wc = list_working_copy_utf8(&ctx, &small_repo, small_repo_cs_ids[0]).await?;
+        assert_eq!(
+            wc,
+            hashmap! {
+                MPath::new("dest_path_prefix/B/file")? => "text".to_string()
+            }
+        );
+
+        let wc = list_working_copy_utf8(&ctx, &small_repo, small_repo_cs_ids[1]).await?;
+        assert_eq!(
+            wc,
+            hashmap! {
+                MPath::new("dest_path_prefix/B/file")? => "text".to_string(),
+                MPath::new("justfile")? => "justtext".to_string(),
+            }
+        );
+
+        // Change mapping
+        let change_mapping_cs_id = CreateCommitContext::new(&ctx, &large_repo, vec![first_commit])
+            .commit()
+            .await?;
+        bookmark(&ctx, &large_repo, "after_mapping_change")
+            .set_to(change_mapping_cs_id)
+            .await?;
+
+        large_to_small_syncer
+            .unsafe_always_rewrite_sync_commit(
+                &ctx,
+                change_mapping_cs_id,
+                None,
+                &CommitSyncConfigVersion("TEST_VERSION2".to_string()),
+                CommitSyncContext::Tests,
+            )
+            .await?;
+
+        assert_eq!(
+            find_mapping_version(
+                &ctx,
+                &large_to_small_syncer,
+                &BookmarkName::new("before_mapping_change")?,
+            )
+            .await?,
+            Some(CommitSyncConfigVersion("TEST_VERSION".to_string()))
+        );
+
+        assert_eq!(
+            find_mapping_version(
+                &ctx,
+                &large_to_small_syncer,
+                &BookmarkName::new("after_mapping_change")?,
+            )
+            .await?,
+            Some(CommitSyncConfigVersion("TEST_VERSION2".to_string()))
+        );
+
         Ok(())
     }
 }

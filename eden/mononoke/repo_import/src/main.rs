@@ -19,7 +19,7 @@ use cmdlib::helpers::block_execute;
 use context::CoreContext;
 use cross_repo_sync::{
     create_commit_syncers, find_toposorted_unsynced_ancestors, rewrite_commit,
-    CandidateSelectionHint, CommitSyncContext, CommitSyncer, Syncers,
+    CandidateSelectionHint, CommitSyncContext, CommitSyncOutcome, CommitSyncer, Syncers,
 };
 use derived_data_utils::derived_data_utils;
 use fbinit::FacebookInit;
@@ -34,7 +34,7 @@ use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use manifest::ManifestOps;
 use maplit::hashset;
 use mercurial_types::{HgChangesetId, MPath};
-use metaconfig_types::RepoConfig;
+use metaconfig_types::{CommitSyncConfigVersion, RepoConfig};
 use mononoke_hg_sync_job_helper_lib::wait_for_latest_log_id_to_be_synced;
 use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime};
 use movers::{DefaultAction, Mover};
@@ -108,6 +108,7 @@ struct SmallRepoBackSyncVars {
     small_repo_bookmark: BookmarkName,
     small_repo: BlobRepo,
     maybe_call_sign: Option<String>,
+    version: CommitSyncConfigVersion,
 }
 
 #[derive(Copy, Clone, Serialize, Deserialize, Debug, PartialEq)]
@@ -204,21 +205,34 @@ async fn rewrite_file_paths(
     Ok(bcs_ids)
 }
 
+async fn find_mapping_version(
+    ctx: &CoreContext,
+    large_to_small_syncer: &CommitSyncer<SqlSyncedCommitMapping>,
+    dest_bookmark: &BookmarkName,
+) -> Result<Option<CommitSyncConfigVersion>, Error> {
+    let bookmark_val = large_to_small_syncer
+        .get_large_repo()
+        .get_bonsai_bookmark(ctx.clone(), dest_bookmark)
+        .compat()
+        .await?
+        .ok_or_else(|| format_err!("{} not found", dest_bookmark))?;
+
+    wait_until_backsynced_and_return_version(ctx, &large_to_small_syncer, bookmark_val).await
+}
+
 async fn back_sync_commits_to_small_repo(
     ctx: &CoreContext,
     small_repo: &BlobRepo,
     large_to_small_syncer: &CommitSyncer<SqlSyncedCommitMapping>,
     bcs_ids: &[ChangesetId],
+    version: &CommitSyncConfigVersion,
 ) -> Result<Vec<ChangesetId>, Error> {
-    // TODO(stash, ikostia) - do not use current version, but rather
-    // fetch version from destination bookmark
-    let current_version = large_to_small_syncer.get_current_version(&ctx)?;
     info!(
         ctx.logger(),
-        "Back syncing from large repo {} to small repo {} using {} mapping version",
+        "Back syncing from large repo {} to small repo {} using {:?} mapping version",
         large_to_small_syncer.get_large_repo().name(),
         small_repo.name(),
-        current_version
+        version
     );
 
     let mut synced_bcs_ids = vec![];
@@ -229,15 +243,16 @@ async fn back_sync_commits_to_small_repo(
         for ancestor in unsynced_ancestors {
             // It is always safe to use `CandidateSelectionHint::Only` in
             // the large-to-small direction
-            let maybe_synced_cs_id: Option<ChangesetId> = large_to_small_syncer
+            let maybe_synced_cs_id = large_to_small_syncer
                 .unsafe_sync_commit_with_expected_version(
                     ctx,
                     ancestor,
                     CandidateSelectionHint::Only,
-                    current_version.clone(),
+                    version.clone(),
                     CommitSyncContext::RepoImport,
                 )
                 .await?;
+
             if let Some(synced_cs_id) = maybe_synced_cs_id {
                 info!(
                     ctx.logger(),
@@ -250,6 +265,55 @@ async fn back_sync_commits_to_small_repo(
 
     info!(ctx.logger(), "Finished back syncing shifted bonsais");
     Ok(synced_bcs_ids)
+}
+
+async fn wait_until_backsynced_and_return_version(
+    ctx: &CoreContext,
+    large_to_small_syncer: &CommitSyncer<SqlSyncedCommitMapping>,
+    cs_id: ChangesetId,
+) -> Result<Option<CommitSyncConfigVersion>, Error> {
+    let sleep_time_secs = 10;
+
+    info!(
+        ctx.logger(),
+        "waiting until {} is backsynced from {} to {}...",
+        cs_id,
+        large_to_small_syncer.get_source_repo().name(),
+        large_to_small_syncer.get_target_repo().name(),
+    );
+
+    // There's an option of actually running the backsync here instead of waiting,
+    // but I'd rather leave it to the backsyncer job.
+    for _ in 1..10 {
+        let maybe_sync_outcome = large_to_small_syncer
+            .get_commit_sync_outcome(ctx, cs_id)
+            .await?;
+
+        match maybe_sync_outcome {
+            Some(sync_outcome) => {
+                use CommitSyncOutcome::*;
+
+                let maybe_version = match sync_outcome {
+                    RewrittenAs(_, version) => Some(version),
+                    EquivalentWorkingCopyAncestor(_, version) => Some(version),
+                    NotSyncCandidate => None,
+                };
+
+                return Ok(maybe_version);
+            }
+            None => {
+                info!(ctx.logger(), "sleeping for {} secs", sleep_time_secs);
+                time::delay_for(time::Duration::from_secs(sleep_time_secs)).await;
+            }
+        }
+    }
+
+    Err(format_err!(
+        "{} hasn't been synced from {} to {} for too long, aborting",
+        cs_id,
+        large_to_small_syncer.get_source_repo().name(),
+        large_to_small_syncer.get_target_repo().name(),
+    ))
 }
 
 async fn derive_bonsais_single_repo(
@@ -400,7 +464,8 @@ async fn move_bookmark(
                 BacksyncLimit::NoLimit,
             )
             .await?;
-            let small_repo_cs_id = repo
+            let small_repo_cs_id = small_repo_back_sync_vars
+                .small_repo
                 .get_bonsai_bookmark(ctx.clone(), &small_repo_back_sync_vars.small_repo_bookmark)
                 .compat()
                 .await?
@@ -807,8 +872,7 @@ async fn get_pushredirected_vars(
             large_repo.name()
         ));
     }
-    let mapping =
-        args::open_source_sql::<SqlSyncedCommitMapping>(ctx.fb, config_store, &matches).await?;
+    let mapping = args::open_sql::<SqlSyncedCommitMapping>(ctx.fb, config_store, &matches).await?;
     let syncers = create_commit_syncers(
         ctx,
         repo.clone(),
@@ -929,15 +993,32 @@ async fn repo_import(
             readonly_storage,
         )
         .await?;
+
+        let maybe_version = find_mapping_version(
+            &ctx,
+            &syncers.large_to_small,
+            &large_repo_import_setting.dest_bookmark,
+        )
+        .await?;
+        let version = maybe_version.ok_or_else(|| {
+            format_err!(
+                "cannot import into large repo {} because can't find mapping for {} bookmark",
+                large_repo.name(),
+                large_repo_import_setting.dest_bookmark,
+            )
+        })?;
+
+        movers.push(syncers.small_to_large.get_mover_by_version(&version)?);
+
         maybe_small_repo_back_sync_vars = Some(SmallRepoBackSyncVars {
             large_to_small_syncer: syncers.large_to_small.clone(),
             target_repo_dbs,
             small_repo_bookmark: repo_import_setting.importing_bookmark.clone(),
             small_repo: repo.clone(),
             maybe_call_sign: call_sign.clone(),
+            version,
         });
 
-        movers.push(syncers.small_to_large.get_current_mover_DEPRECATED(&ctx)?);
         repo_import_setting = large_repo_import_setting;
         repo = large_repo;
         repo_config = large_repo_config;
@@ -1027,12 +1108,12 @@ async fn repo_import(
                 };
 
                 let small_repo = &vars.small_repo;
-
                 let synced_bcs_ids = back_sync_commits_to_small_repo(
-                    &ctx,
-                    &small_repo,
+                    ctx,
+                    small_repo,
                     &vars.large_to_small_syncer,
-                    &shifted_bcs_ids,
+                    shifted_bcs_ids,
+                    &vars.version,
                 )
                 .await?;
 
