@@ -25,7 +25,7 @@ use crate::state::{StepStats, WalkState};
 use crate::tail::{walk_exact_tail, RepoWalkRun};
 use crate::walk::{EmptyRoute, OutgoingEdge, StepRoute, VisitOne, WalkVisitor};
 
-use anyhow::{format_err, Error};
+use anyhow::Error;
 use clap::ArgMatches;
 use cloned::cloned;
 use cmdlib::args;

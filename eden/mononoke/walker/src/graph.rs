@@ -6,7 +6,7 @@
  */
 
 use ahash::RandomState;
-use anyhow::{format_err, Error};
+use anyhow::Error;
 use bookmarks::BookmarkName;
 use changeset_info::ChangesetInfo;
 use derived_data::BonsaiDerived;
@@ -31,7 +31,6 @@ use phases::Phase;
 use std::{
     fmt,
     hash::{Hash, Hasher},
-    str::FromStr,
 };
 
 pub(crate) const fn const_max(a: usize, b: usize) -> usize {
@@ -48,19 +47,9 @@ macro_rules! define_type_enum {
      (enum $enum_name:ident {
          $($variant:ident),*,
      }) => {
-         #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, strum_macros::EnumIter, strum_macros::IntoStaticStr)]
+         #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, strum_macros::EnumIter, strum_macros::EnumString,  strum_macros::IntoStaticStr)]
          pub enum $enum_name {
              $($variant),*
-         }
-
-         impl FromStr for $enum_name {
-             type Err = Error;
-             fn from_str(s: &str) -> Result<Self, Self::Err> {
-                 match s {
-                     $(stringify!($variant)=>Ok($enum_name::$variant),)*
-                     _ => Err(format_err!("Unknown {} {}",stringify!($enum_name), s)),
-                 }
-             }
          }
 
         impl $enum_name {

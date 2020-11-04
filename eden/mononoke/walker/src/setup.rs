@@ -546,12 +546,10 @@ fn setup_subcommand_args<'a, 'b>(subcmd: App<'a, 'b>) -> App<'a, 'b> {
 
 // parse the pre-defined groups we have for default etc
 fn parse_node_value(arg: &str) -> Result<HashSet<NodeType>, Error> {
-    match arg {
-        DEFAULT_VALUE_ARG => Ok(HashSet::from_iter(
-            DEFAULT_INCLUDE_NODE_TYPES.iter().cloned(),
-        )),
-        _ => NodeType::from_str(arg).map(|e| HashSet::from_iter(Some(e))),
-    }
+    Ok(match arg {
+        DEFAULT_VALUE_ARG => HashSet::from_iter(DEFAULT_INCLUDE_NODE_TYPES.iter().cloned()),
+        _ => NodeType::from_str(arg).map(|e| HashSet::from_iter(Some(e)))?,
+    })
 }
 
 fn parse_node_values(
@@ -578,17 +576,15 @@ pub fn parse_node_types(
 
 // parse the pre-defined groups we have for deep, shallow, hg, bonsai etc.
 fn parse_edge_value(arg: &str) -> Result<HashSet<EdgeType>, Error> {
-    match arg {
-        BONSAI_VALUE_ARG => Ok(HashSet::from_iter(BONSAI_EDGE_TYPES.iter().cloned())),
-        CONTENT_META_VALUE_ARG => Ok(HashSet::from_iter(CONTENT_META_EDGE_TYPES.iter().cloned())),
-        DEEP_VALUE_ARG => Ok(HashSet::from_iter(DEEP_INCLUDE_EDGE_TYPES.iter().cloned())),
-        MARKER_VALUE_ARG => Ok(HashSet::from_iter(MARKER_EDGE_TYPES.iter().cloned())),
-        HG_VALUE_ARG => Ok(HashSet::from_iter(HG_EDGE_TYPES.iter().cloned())),
-        SHALLOW_VALUE_ARG => Ok(HashSet::from_iter(
-            SHALLOW_INCLUDE_EDGE_TYPES.iter().cloned(),
-        )),
-        _ => EdgeType::from_str(arg).map(|e| HashSet::from_iter(Some(e))),
-    }
+    Ok(match arg {
+        BONSAI_VALUE_ARG => HashSet::from_iter(BONSAI_EDGE_TYPES.iter().cloned()),
+        CONTENT_META_VALUE_ARG => HashSet::from_iter(CONTENT_META_EDGE_TYPES.iter().cloned()),
+        DEEP_VALUE_ARG => HashSet::from_iter(DEEP_INCLUDE_EDGE_TYPES.iter().cloned()),
+        MARKER_VALUE_ARG => HashSet::from_iter(MARKER_EDGE_TYPES.iter().cloned()),
+        HG_VALUE_ARG => HashSet::from_iter(HG_EDGE_TYPES.iter().cloned()),
+        SHALLOW_VALUE_ARG => HashSet::from_iter(SHALLOW_INCLUDE_EDGE_TYPES.iter().cloned()),
+        _ => EdgeType::from_str(arg).map(|e| HashSet::from_iter(Some(e)))?,
+    })
 }
 
 fn parse_edge_values(
