@@ -668,7 +668,11 @@ mod tests {
             DefaultAction::PrependPrefix(mp("dest_path_prefix")),
         )?;
         movers.push(importing_mover);
-        movers.push(syncers.small_to_large.get_current_mover_DEPRECATED(&ctx)?);
+        movers.push(
+            syncers
+                .small_to_large
+                .get_mover_by_version(&CommitSyncConfigVersion("TEST_VERSION".to_string()))?,
+        );
 
         let combined_mover: Mover = Arc::new(move |source_path: &MPath| {
             let mut mutable_path = source_path.clone();
@@ -819,7 +823,11 @@ mod tests {
             DefaultAction::PrependPrefix(mp("dest_path_prefix")),
         )?;
         movers.push(importing_mover);
-        movers.push(syncers.small_to_large.get_current_mover_DEPRECATED(&ctx)?);
+        movers.push(
+            syncers
+                .small_to_large
+                .get_mover_by_version(&CommitSyncConfigVersion("TEST_VERSION".to_string()))?,
+        );
 
         let combined_mover: Mover = Arc::new(move |source_path: &MPath| {
             let mut mutable_path = source_path.clone();
