@@ -35,6 +35,11 @@ cmdtable = {}
 command = registrar.command(cmdtable)
 
 
+def _isrevert(message, diffid):
+    result = ("Revert D%s" % diffid) in message
+    return result
+
+
 def _cleanuplanded(repo, dryrun=False):
     """Query Phabricator about states of draft commits and optionally mark them
     as landed.
@@ -45,7 +50,7 @@ def _cleanuplanded(repo, dryrun=False):
     difftodraft = {}  # {str: node}
     for ctx in repo.set("sort(draft() - obsolete(), -rev)"):
         diffid = diffprops.parserevfromcommitmsg(ctx.description())  # str or None
-        if diffid:
+        if diffid and not _isrevert(ctx.description(), diffid):
             difftodraft.setdefault(diffid, []).append(ctx.node())
             # Bound the number of diffs we query from Phabricator.
             if len(difftodraft) >= limit:
@@ -223,11 +228,15 @@ def getmarkersfromdrafts(repo, landeddiffs):
     unfiltered = repo
 
     for rev in unfiltered.revs("draft() - obsolete() - hidden()"):
-        rev = unfiltered[rev]
-        diff = getdiff(rev)
+        ctx = unfiltered[rev]
+        diff = getdiff(ctx)
 
-        if diff in landeddiffs and landeddiffs[diff].rev() != rev.rev():
-            marker = (rev, (landeddiffs[diff],))
+        if (
+            diff in landeddiffs
+            and not _isrevert(ctx.description(), str(diff))
+            and landeddiffs[diff].rev() != ctx.rev()
+        ):
+            marker = (ctx, (landeddiffs[diff],))
             tocreate.append(marker)
     return tocreate
 
