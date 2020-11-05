@@ -1681,3 +1681,29 @@ def isbackedup(ui, repo, dest=None, **opts):
     'hg isbackedup' is deprecated in favour of 'hg cloud check'.
     """
     return cloudcheck(ui, repo, dest, **opts)
+
+
+@subcmd(
+    "getfrombackup",
+    [
+        ("r", "rev", [], _("revisions to lookup and pull (full hashes only)")),
+    ],
+)
+def getfrombackup(ui, repo, **opts):
+    """Downloading and applying mercurial bundles directly for list of given heads
+
+    Backup store stores commits as mercurial bundles that can be fetched directly from the store and applied.
+
+    The command could be useful when we migrate our server from one backend to another (Mononoke) and some commits can be missing in Mononoke.
+    """
+    revs = opts.get("rev")
+    if not revs:
+        raise error.Abort(
+            _(
+                "no revision specified, please run with `hg cloud getfrombackup -r <revs>`"
+            )
+        )
+
+    service.get(ui, tokenmod.TokenLocator(ui).token).getheadsfrombackupbundlestore(
+        repo, revs
+    )

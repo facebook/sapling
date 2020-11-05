@@ -347,6 +347,10 @@ class _LocalService(baseservice.BaseService):
         else:
             raise error.Abort(_("unknown workspace: %s") % workspace)
 
+    def getheadsfrombackupbundlestore(self, repo, heads):
+        """Downloading and applying mercurial bundles directly"""
+        raise NotImplementedError
+
 
 # Make sure that the LocalService is a singleton
 LocalService = baseservice.SingletonDecorator(_LocalService)

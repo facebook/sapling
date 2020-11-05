@@ -137,6 +137,10 @@ Configs::
 
     # Number of backups to list by default in getavailablebackups
     backuplistlimit = 10
+
+    # The command to download bundles from a backup bundle store
+    # the command has to be a formatted string with params: 'filename' and 'handle'
+    get_command = bundlefetcher -h {handle} -o {filename}
 """
 
 from __future__ import absolute_import
@@ -191,6 +195,9 @@ configitem("commitcloud", "automigratehostworkspace", default=False)
 configitem("commitcloud", "synccheckoutlocations", default=False)
 configitem("commitcloud", "enablestatus", default=True)
 configitem("commitcloud", "enableprogress", default=True)
+configitem(
+    "commitcloud", "get_command", default="jf download --filepath {filename} {handle}"
+)
 configitem("infinitepushbackup", "backuplistlimit", default=5)
 configitem("infinitepushbackup", "enablestatus", default=True)
 configitem("infinitepushbackup", "maxheadstobackup", default=-1)

@@ -11,11 +11,15 @@ import os
 import socket
 import ssl
 import time
+import tempfile
+from multiprocessing.pool import ThreadPool
+from subprocess import PIPE, Popen
 
-from edenscm.mercurial import error, json, perftrace, pycompat, util
+
+from edenscm.mercurial import error, json, perftrace, pycompat, util, commands
 from edenscm.mercurial.i18n import _
 
-from . import baseservice, error as ccerror
+from . import baseservice, error as ccerror, util as ccutil
 
 
 # pyre-fixme[11]: Annotation `client` is not defined as a type.
@@ -478,6 +482,78 @@ class _HttpsCommitCloudService(baseservice.BaseService):
             "new_workspace": new_workspace,
         }
         self._timedsend(path, data)
+
+    @perftrace.tracefunc("Get Heads From Backup Bundle Store")
+    def getheadsfrombackupbundlestore(self, repo, heads):
+        """Downloading and applying mercurial bundles directly
+
+        API for fetching commits from the backup store where they are stored as mercurial bundles
+        """
+        if not heads:
+            return
+
+        self.ui.debug(
+            "sending 'get_bundles_handles' request\n", component="commitcloud"
+        )
+        path = "/commit_cloud/get_bundles_handles"
+        data = {"repo_name": ccutil.getreponame(repo), "heads": heads}
+        response = self._timedsend(path, data)
+        handles = response["data"]["handles"]
+
+        if not all(handles):
+            raise error.Abort(_("some bundles are missing in the bundle store"))
+
+        command = self.ui.config("commitcloud", "get_command")
+
+        def unbundleall(bundlefiles):
+            commands.unbundle(self.ui, repo, bundlefiles[0], *bundlefiles[1:])
+
+        def downloader(param):
+            head = param[0]
+            handle = param[1]
+            self.ui.status(
+                _("downloading mercurial bundle '%s' for changeset '%s'\n")
+                % (handle, head),
+                component="commitcloud",
+            )
+            tempdir = tempfile.mkdtemp()
+            dstfile = os.path.join(tempdir, handle.lower())
+            util.tryunlink(dstfile)
+            fullcommand = command.format(filename=dstfile, handle=handle)
+            p = Popen(
+                fullcommand,
+                close_fds=util.closefds,
+                stdout=PIPE,
+                stderr=PIPE,
+                stdin=open(os.devnull, "r"),
+                shell=True,
+            )
+            stdout, stderr = p.communicate()
+            rc = p.returncode
+            if rc != 0:
+                if not stderr:
+                    stderr = stdout
+                raise ccerror.SubprocessError(self.ui, rc, stderr)
+            return dstfile
+
+        files = []
+        try:
+            pool = ThreadPool(8)
+            seen = set()
+            handles = [
+                seen.add(handle) or (heads[i], handle)
+                for i, handle in enumerate(handles)
+                if handle not in seen
+            ]
+            files = pool.map(downloader, handles)
+            self.ui.status(
+                _("applying downloaded mercurial bundles\n"),
+                component="commitcloud",
+            )
+            unbundleall(files)
+        finally:
+            for dstfile in files:
+                util.tryunlink(dstfile)
 
 
 # Make sure that the HttpsCommitCloudService is a singleton
