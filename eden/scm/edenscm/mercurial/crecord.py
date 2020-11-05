@@ -1110,7 +1110,10 @@ class curseschunkselector(object):
         try:
             for line in self._getstatuslines():
                 printstring(
-                    self.statuswin, pycompat.encodeutf8(line), pairname="legend"
+                    self.statuswin,
+                    pycompat.encodeutf8(line),
+                    pairname="legend",
+                    attrlist=[curses.A_BOLD],
                 )
             self.statuswin.refresh()
         except curses.error:
@@ -1183,7 +1186,8 @@ class curseschunkselector(object):
             )
         # select color-pair based on if the header is selected
         colorpair = self.getcolorpair(
-            name=selected and "selected" or "normal", attrlist=[curses.A_BOLD]
+            name=selected and "selected" or "normal",
+            attrlist=selected and [curses.A_BOLD] or [],
         )
 
         # print out each line of the chunk, expanding it to screen width
@@ -1222,7 +1226,8 @@ class curseschunkselector(object):
             )
 
         colorpair = self.getcolorpair(
-            name=selected and "selected" or "normal", attrlist=[curses.A_BOLD]
+            name=selected and "selected" or "hunk",
+            attrlist=selected and [curses.A_BOLD] or [],
         )
 
         # print out from-to line with checkbox
@@ -1268,7 +1273,7 @@ class curseschunkselector(object):
 
         # select color-pair based on whether line is an addition/removal
         if selected:
-            colorpair = self.getcolorpair(name="selected")
+            colorpair = self.getcolorpair(name="selected", attrlist=[curses.A_BOLD])
         elif linestr.startswith(b"+"):
             colorpair = self.getcolorpair(name="addition")
         elif linestr.startswith(b"-"):
@@ -1495,7 +1500,12 @@ the following are valid keystrokes:
         )
         try:
             for line in helplines:
-                self.printstring(helpwin, pycompat.encodeutf8(line), pairname="legend")
+                self.printstring(
+                    helpwin,
+                    pycompat.encodeutf8(line),
+                    pairname="legend",
+                    attrlist=[curses.A_BOLD],
+                )
         except curses.error:
             pass
         helpwin.refresh()
@@ -1787,6 +1797,7 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
         self.initcolorpair(curses.COLOR_RED, None, name="deletion")
         self.initcolorpair(curses.COLOR_GREEN, None, name="addition")
         self.initcolorpair(curses.COLOR_WHITE, curses.COLOR_BLUE, name="legend")
+        self.initcolorpair(curses.COLOR_MAGENTA, None, name="hunk")
         # newwin([height, width,] begin_y, begin_x)
         self.statuswin = curses.newwin(self.numstatuslines, 0, 0, 0)
         self.statuswin.keypad(1)  # interpret arrow-key, etc. esc sequences
