@@ -175,7 +175,7 @@ impl IndexedLogHgIdDataStore {
         } else if let Some(max_bytes_per_log) =
             config.get_opt::<ByteCount>("remotefilelog", "cachelimit")?
         {
-            let log_count = open_options.max_bytes_per_log.max(1);
+            let log_count: u64 = open_options.max_log_count.max(1).into();
             open_options =
                 open_options.max_bytes_per_log((max_bytes_per_log.value() / log_count).max(1));
         }

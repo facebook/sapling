@@ -31,6 +31,7 @@ Test max-bytes-per-log
   * 12 *0* (glob)
   $ cd shallow2
 
+  $ cp .hg/hgrc .hg/hgrc.bak
   $ setconfig indexedlog.data.max-bytes-per-log=10
   $ hg up -q 'desc(u)'
   $ ls_l $(findfilessorted $CACHEDIR/master/ | grep -v 'manifest' | grep 'datastore.*log')
@@ -88,3 +89,20 @@ Test max-log-count
   $ hg up -q 'desc(z)'
   $ findfilessorted $CACHEDIR/master/ | grep -v 'manifest' | grep 'datastore.*log' | wc -l | sed -e 's/ //g'
   2
+
+Test remotefilelog.cachelimit
+  $ cp .hg/hgrc.bak .hg/hgrc
+  $ hg up -q null
+  $ rm -rf $CACHEDIR/master
+  $ setconfig remotefilelog.cachelimit=300B
+  $ hg up -q 'desc(u)'
+  $ ls_l $(findfilessorted $CACHEDIR/master/ | grep -v 'manifest' | grep 'datastore.*log')
+  * 70 *0* (glob)
+  $ hg up -q 'desc(v)'
+  $ ls_l $(findfilessorted $CACHEDIR/master/ | grep -v 'manifest' | grep 'datastore.*log')
+  * 128 *0* (glob)
+  * 12 *1* (glob)
+  $ hg up -q 'desc(w)'
+  $ ls_l $(findfilessorted $CACHEDIR/master/ | grep -v 'manifest' | grep 'datastore.*log')
+  * 128 *0* (glob)
+  * 70 *1* (glob)
