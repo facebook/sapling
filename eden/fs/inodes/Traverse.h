@@ -43,7 +43,7 @@ struct TraversalCallbacks {
       RelativePathPiece path,
       InodeNumber ino,
       const std::optional<Hash>& hash,
-      uint64_t fuseRefcount,
+      uint64_t fsRefcount,
       const std::vector<ChildEntry>& entries) = 0;
 
   /**

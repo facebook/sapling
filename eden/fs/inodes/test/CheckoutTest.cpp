@@ -1026,7 +1026,7 @@ TEST(Checkout, checkoutUpdatesUnlinkedStatusForLoadedTrees) {
           .get(1ms)
           .asTreePtr();
   auto subInodeNumber = subTree->getNodeId();
-  subTree->incFuseRefcount();
+  subTree->incFsRefcount();
   subTree.reset();
 
   testMount.remountGracefully();
@@ -1083,7 +1083,7 @@ TEST(Checkout, checkoutRemembersInodeNumbersAfterCheckoutAndTakeover) {
           .asTreePtr();
   auto dirInodeNumber = subTree->getParentRacy()->getNodeId();
   auto subInodeNumber = subTree->getNodeId();
-  subTree->incFuseRefcount();
+  subTree->incFsRefcount();
   subTree.reset();
 
   // Checkout to a revision with a new dir/sub tree.  The old data should be
@@ -1167,7 +1167,7 @@ TYPED_TEST(
                       .asFilePtr();
   auto abcfile1InodeNumber = abcfile1->getNodeId();
   auto abcInodeNumber = abcfile1->getParentRacy()->getNodeId();
-  abcfile1->incFuseRefcount();
+  abcfile1->incFsRefcount();
   abcfile1.reset();
 
   auto deffile2 = edenMount
@@ -1178,7 +1178,7 @@ TYPED_TEST(
                       .asFilePtr();
   auto deffile2InodeNumber = deffile2->getNodeId();
   auto defInodeNumber = deffile2->getParentRacy()->getNodeId();
-  deffile2->getParentRacy()->incFuseRefcount();
+  deffile2->getParentRacy()->incFsRefcount();
   deffile2.reset();
 
   auto ghifile3 = edenMount

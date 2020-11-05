@@ -336,7 +336,7 @@ TEST(InodeMap, unloadedUnlinkedTreesAreRemovedFromOverlay) {
   dir2->unlink("file.txt"_pc, InvalidationRequired::No).get(0ms);
 
   // Test both having a positive and zero fuse reference counts.
-  dir2->incFuseRefcount();
+  dir2->incFsRefcount();
 
   root->rmdir("dir1"_pc, InvalidationRequired::No).get(0ms);
   root->rmdir("dir2"_pc, InvalidationRequired::No).get(0ms);
@@ -395,7 +395,7 @@ TEST(InodeMap, unloadedFileMetadataIsForgotten) {
   EXPECT_TRUE(mount.hasMetadata(file2ino));
 
   // Try having both positive and zero FUSE reference counts.
-  file1->incFuseRefcount();
+  file1->incFsRefcount();
   file1.reset();
   file2.reset();
 
@@ -444,9 +444,9 @@ struct InodePersistenceTakeoverTest : InodePersistenceTreeTest {
             .get();
 
     // Pretend FUSE is keeping references to these.
-    tree->incFuseRefcount();
-    file1->incFuseRefcount();
-    file2->incFuseRefcount();
+    tree->incFsRefcount();
+    file1->incFsRefcount();
+    file2->incFsRefcount();
 
     oldTreeId = tree->getNodeId();
     oldFile1Id = file1->getNodeId();
@@ -495,9 +495,9 @@ TEST_F(
           .get();
 
 #ifndef _WIN32
-  EXPECT_EQ(1, tree->debugGetFuseRefcount());
-  EXPECT_EQ(1, file1->debugGetFuseRefcount());
-  EXPECT_EQ(1, file2->debugGetFuseRefcount());
+  EXPECT_EQ(1, tree->debugGetFsRefcount());
+  EXPECT_EQ(1, file1->debugGetFsRefcount());
+  EXPECT_EQ(1, file2->debugGetFsRefcount());
 #endif // !1
 
   EXPECT_EQ(oldTreeId, tree->getNodeId());
@@ -552,9 +552,9 @@ TEST_F(
           .get();
 
 #ifndef _WIN32
-  EXPECT_EQ(1, tree->debugGetFuseRefcount());
-  EXPECT_EQ(1, file1->debugGetFuseRefcount());
-  EXPECT_EQ(1, file2->debugGetFuseRefcount());
+  EXPECT_EQ(1, tree->debugGetFsRefcount());
+  EXPECT_EQ(1, file1->debugGetFsRefcount());
+  EXPECT_EQ(1, file2->debugGetFsRefcount());
 #endif // !_WIN32
 
   EXPECT_EQ(oldTreeId, tree->getNodeId());
@@ -590,17 +590,17 @@ TEST_F(
               "dir/file2.txt"_relpath, ObjectFetchContext::getNullContext())
           .get();
 
-  tree->incFuseRefcount();
-  file1->incFuseRefcount();
-  file2->incFuseRefcount();
+  tree->incFsRefcount();
+  file1->incFsRefcount();
+  file2->incFsRefcount();
 
   auto oldTreeId = tree->getNodeId();
   auto oldFile1Id = file1->getNodeId();
   auto oldFile2Id = file2->getNodeId();
 
-  tree->decFuseRefcount();
-  file1->decFuseRefcount();
-  file2->decFuseRefcount();
+  tree->decFsRefcount();
+  file1->decFsRefcount();
+  file2->decFsRefcount();
 
   edenMount.reset();
   tree.reset();

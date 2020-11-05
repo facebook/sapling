@@ -431,7 +431,7 @@ TEST_F(RenameTest, renameOverEmptyDirWithPositiveFuseRefcount) {
   auto yino = y->getNodeId();
   auto newParent = mount_->getTreeInode("a/b");
   auto toBeUnlinked = newParent->getOrLoadChildTree("emptydir"_pc).get(0ms);
-  toBeUnlinked->incFuseRefcount();
+  toBeUnlinked->incFsRefcount();
   toBeUnlinked.reset();
 
   (void)x->rename("y"_pc, newParent, "emptydir"_pc, InvalidationRequired::No)

@@ -335,11 +335,11 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
 
   /**
    * Unload all children, recursively, neither referenced internally by Eden nor
-   * by FUSE.
+   * by FUSE or ProjectedFS.
    *
    * Returns the number of inodes unloaded.
    */
-  size_t unloadChildrenUnreferencedByFuse();
+  size_t unloadChildrenUnreferencedByFs();
 
 #ifndef _WIN32
   /**

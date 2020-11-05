@@ -182,7 +182,7 @@ TEST(TestMount, addFileDoesNotLeakFuseRefcount) {
   TestMount testMount{builder};
   testMount.addFile("f", "contents");
   auto f = testMount.getFileInode("f");
-  EXPECT_EQ(0, f->debugGetFuseRefcount());
+  EXPECT_EQ(0, f->debugGetFsRefcount());
 }
 
 TEST(TestMount, addSymlinkDoesNotLeakFuseRefcount) {
@@ -190,7 +190,7 @@ TEST(TestMount, addSymlinkDoesNotLeakFuseRefcount) {
   TestMount testMount{builder};
   testMount.addSymlink("l", "targets");
   auto link = testMount.getFileInode("l");
-  EXPECT_EQ(0, link->debugGetFuseRefcount());
+  EXPECT_EQ(0, link->debugGetFsRefcount());
 }
 
 TEST(TestMount, mkdirDoesNotLeakFuseRefcount) {
@@ -198,5 +198,5 @@ TEST(TestMount, mkdirDoesNotLeakFuseRefcount) {
   TestMount testMount{builder};
   testMount.mkdir("d");
   auto d = testMount.getTreeInode("d");
-  EXPECT_EQ(0, d->debugGetFuseRefcount());
+  EXPECT_EQ(0, d->debugGetFsRefcount());
 }

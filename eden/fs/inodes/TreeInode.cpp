@@ -3343,14 +3343,14 @@ size_t TreeInode::unloadChildrenNow() {
       [](InodeBase*) { return true; });
 }
 
-size_t TreeInode::unloadChildrenUnreferencedByFuse() {
+size_t TreeInode::unloadChildrenUnreferencedByFs() {
   auto treeChildren = getTreeChildren(this);
   return unloadChildrenIf(
       this,
       getInodeMap(),
       treeChildren,
-      [](TreeInode& child) { return child.unloadChildrenUnreferencedByFuse(); },
-      [](InodeBase* child) { return child->getFuseRefcount() == 0; });
+      [](TreeInode& child) { return child.unloadChildrenUnreferencedByFs(); },
+      [](InodeBase* child) { return child->getFsRefcount() == 0; });
 }
 
 #ifndef _WIN32

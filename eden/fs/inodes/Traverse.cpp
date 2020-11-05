@@ -37,9 +37,9 @@ void traverseTreeInodeChildren(
     RelativePathPiece rootPath,
     InodeNumber ino,
     const std::optional<Hash>& hash,
-    uint64_t fuseRefcount,
+    uint64_t fsRefcount,
     TraversalCallbacks& callbacks) {
-  callbacks.visitTreeInode(rootPath, ino, hash, fuseRefcount, children);
+  callbacks.visitTreeInode(rootPath, ino, hash, fsRefcount, children);
   for (auto& entry : children) {
     auto childPath = rootPath + entry.name;
     if (auto child = entry.loadedChild) {
@@ -89,7 +89,7 @@ void traverseObservedInodes(
       rootPath,
       root.getNodeId(),
       hash,
-      root.debugGetFuseRefcount(),
+      root.debugGetFsRefcount(),
       callbacks);
 }
 

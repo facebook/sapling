@@ -47,7 +47,7 @@ InodeMap::UnloadedInode::UnloadedInode(
       isUnlinked{isUnlinked},
       mode{mode},
       hash{hash},
-      numFuseReferences{fuseRefcount} {}
+      numFsReferences{fuseRefcount} {}
 
 InodeMap::UnloadedInode::UnloadedInode(
     TreeInode* parent,
@@ -64,7 +64,7 @@ InodeMap::UnloadedInode::UnloadedInode(
       // force the value down here.
       mode{S_IFDIR | 0755},
       hash{hash},
-      numFuseReferences{fuseRefcount} {}
+      numFsReferences{fuseRefcount} {}
 
 InodeMap::UnloadedInode::UnloadedInode(
     FileInode* inode,
@@ -77,7 +77,7 @@ InodeMap::UnloadedInode::UnloadedInode(
       isUnlinked{isUnlinked},
       mode{inode->getMode()},
       hash{inode->getBlobHash()},
-      numFuseReferences{fuseRefcount} {}
+      numFsReferences{fuseRefcount} {}
 
 InodeMap::InodeMap(EdenMount* mount) : mount_{mount} {}
 
@@ -136,11 +136,11 @@ void InodeMap::initializeFromTakeover(
   DCHECK_EQ(1, data->numTreeInodes_);
   DCHECK_EQ(0, data->numFileInodes_);
   for (const auto& entry : *takeover.unloadedInodes_ref()) {
-    if (*entry.numFuseReferences_ref() < 0) {
+    if (*entry.numFsReferences_ref() < 0) {
       auto message = folly::to<std::string>(
           "inode number ",
           *entry.inodeNumber_ref(),
-          " has a negative numFuseReferences number");
+          " has a negative numFsReferences number");
       XLOG(ERR) << message;
       throw std::runtime_error(message);
     }
@@ -153,7 +153,7 @@ void InodeMap::initializeFromTakeover(
         entry.hash_ref()->empty()
             ? std::nullopt
             : std::optional<Hash>{hashFromThrift(*entry.hash_ref())},
-        folly::to<uint32_t>(*entry.numFuseReferences_ref()));
+        folly::to<uint32_t>(*entry.numFsReferences_ref()));
 
     auto result = data->unloadedInodes_.emplace(
         InodeNumber::fromThrift(*entry.inodeNumber_ref()),
@@ -361,7 +361,7 @@ InodeMap::PromiseVector InodeMap::inodeLoadComplete(InodeBase* inode) {
         << number;
     swap(promises, it->second.promises);
 
-    inode->setFuseRefcount(it->second.numFuseReferences);
+    inode->setChannelRefcount(it->second.numFsReferences);
 
     // Insert the entry into loadedInodes_, and remove it from unloadedInodes_
     insertLoadedInode(data, inode);
@@ -490,7 +490,7 @@ void InodeMap::decFuseRefcount(InodeNumber number, uint32_t count) {
     // Now release our lock before decrementing the inode's FUSE reference
     // count and immediately releasing our pointer reference.
     data.unlock();
-    inode->decFuseRefcount(count);
+    inode->decFsRefcount(count);
     return;
   }
 
@@ -503,9 +503,9 @@ void InodeMap::decFuseRefcount(InodeNumber number, uint32_t count) {
 
   // Decrement the reference count in the unloaded entry
   auto& unloadedEntry = unloadedIter->second;
-  CHECK_GE(unloadedEntry.numFuseReferences, count);
-  unloadedEntry.numFuseReferences -= count;
-  if (unloadedEntry.numFuseReferences == 0) {
+  CHECK_GE(unloadedEntry.numFsReferences, count);
+  unloadedEntry.numFsReferences -= count;
+  if (unloadedEntry.numFsReferences == 0) {
     // We can completely forget about this unloaded inode now.
     XLOG(DBG5) << "forgetting unloaded inode " << number << ": "
                << unloadedEntry.parent << ":" << unloadedEntry.name;
@@ -624,13 +624,13 @@ Future<SerializedInodeMap> InodeMap::shutdown(bool doTakeover) {
       XLOG(DBG5) << "  serializing unloaded inode " << inodeNumber
                  << " parent=" << entry.parent.get() << " name=" << entry.name;
 
-      *serializedEntry.inodeNumber_ref() = inodeNumber.get();
-      *serializedEntry.parentInode_ref() = entry.parent.get();
-      *serializedEntry.name_ref() = entry.name.stringPiece().str();
-      *serializedEntry.isUnlinked_ref() = entry.isUnlinked;
-      *serializedEntry.numFuseReferences_ref() = entry.numFuseReferences;
-      *serializedEntry.hash_ref() = thriftHash(entry.hash);
-      *serializedEntry.mode_ref() = entry.mode;
+      serializedEntry.inodeNumber_ref() = inodeNumber.get();
+      serializedEntry.parentInode_ref() = entry.parent.get();
+      serializedEntry.name_ref() = entry.name.stringPiece().str();
+      serializedEntry.isUnlinked_ref() = entry.isUnlinked;
+      serializedEntry.numFsReferences_ref() = entry.numFsReferences;
+      serializedEntry.hash_ref() = thriftHash(entry.hash);
+      serializedEntry.mode_ref() = entry.mode;
 
       result.unloadedInodes_ref()->emplace_back(std::move(serializedEntry));
     }
@@ -692,7 +692,7 @@ void InodeMap::onInodeUnreferenced(
     // Always unload Inode objects immediately when shutting down.
     // We can't destroy the EdenMount until all inodes get unloaded.
     unloadNow = true;
-  } else if (parentInfo.isUnlinked() && inode->getFuseRefcount() == 0) {
+  } else if (parentInfo.isUnlinked() && inode->getFsRefcount() == 0) {
     // This inode has been unlinked and has no outstanding FUSE references.
     // This inode can now be completely destroyed and forgotten about.
     unloadNow = true;
@@ -778,7 +778,7 @@ optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
     PathComponentPiece name,
     bool isUnlinked,
     const folly::Synchronized<Members>::LockedPtr& data) {
-  auto fuseCount = inode->getFuseRefcount();
+  auto fuseCount = inode->getFsRefcount();
   if (isUnlinked && (data->isUnmounted_ || fuseCount == 0)) {
     try {
       mount_->getOverlay()->removeOverlayData(inode->getNodeId());
@@ -924,7 +924,7 @@ std::vector<InodeNumber> InodeMap::getReferencedInodes() const {
     }
 
     for (const auto& [ino, unloadedInode] : data->unloadedInodes_) {
-      if (unloadedInode.numFuseReferences > 0) {
+      if (unloadedInode.numFsReferences > 0) {
         inodes.push_back(ino);
       }
     }

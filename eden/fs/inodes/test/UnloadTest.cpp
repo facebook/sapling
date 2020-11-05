@@ -48,7 +48,7 @@ TYPED_TEST(UnloadTest, inodesAreUnloaded) {
     auto inode =
         edenMount->getInode(relpath, ObjectFetchContext::getNullContext())
             .get();
-    inode->incFuseRefcount();
+    inode->incFsRefcount();
     loadedInodeNumbers.push_back(inode->getNodeId());
     return inode->getNodeId();
   };
@@ -134,7 +134,7 @@ TEST(UnloadUnreferencedByFuse, inodesReferencedByFuseAreNotUnloaded) {
           ->getInode(
               "src/file.txt"_relpath, ObjectFetchContext::getNullContext())
           .get();
-  inode->incFuseRefcount();
+  inode->incFsRefcount();
   inode.reset();
 
   // 1 file + 1 subdirectory + 1 root + 1 .eden + 4 .eden entries
@@ -143,7 +143,7 @@ TEST(UnloadUnreferencedByFuse, inodesReferencedByFuseAreNotUnloaded) {
   EXPECT_EQ(5, counts.fileCount);
   EXPECT_EQ(0, counts.unloadedInodeCount);
 
-  EXPECT_EQ(5, edenMount->getRootInode()->unloadChildrenUnreferencedByFuse());
+  EXPECT_EQ(5, edenMount->getRootInode()->unloadChildrenUnreferencedByFs());
 
   // root + src + file.txt
   counts = inodeMap->getInodeCounts();

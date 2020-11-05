@@ -148,9 +148,9 @@ class InodeMap {
    *
    * Inode objects can only be looked up by number if the inode number
    * reference count is non-zero.  The inode number refcount is incremented by
-   * calling incFuseRefcount() on the Inode object.  The initial access that
+   * calling incFsRefcount() on the Inode object.  The initial access that
    * first creates an Inode is always by name.  After the initial access,
-   * incFuseRefcount() can be called to allow it to be retrieved by inode
+   * incFsRefcount() can be called to allow it to be retrieved by inode
    * number later.  InodeMap::decFuseRefcount() can be used to drop an inode
    * number reference count.
    *
@@ -452,9 +452,10 @@ class InodeMap {
     /**
      * The number of times we have returned this inode number to FUSE via
      * lookup() calls that have not yet been released with a corresponding
-     * forget().
+     * forget(). For ProjectedFS, a positive value indicates an on-disk
+     * placeholder for that inode that hasn't been invalided.
      */
-    uint32_t numFuseReferences{0};
+    uint32_t numFsReferences{0};
   };
 
   struct LoadedInode {

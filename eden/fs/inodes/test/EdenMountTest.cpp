@@ -639,7 +639,7 @@ class ChownTest : public ::testing::Test {
             ->getInode("file.txt"_relpath, ObjectFetchContext::getNullContext())
             .get();
     // Load the file into the inode map
-    file->incFuseRefcount();
+    file->incFsRefcount();
     file->getNodeId();
     return file->getNodeId();
   }

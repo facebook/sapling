@@ -28,13 +28,13 @@ InodeBase::InodeBase(EdenMount* mount)
     : ino_{kRootNodeId},
       initialMode_{S_IFDIR | 0755},
       mount_{mount},
+      // The root inode always starts with an implicit reference from FUSE.
+      numFsReferences_{1},
       location_{
           LocationInfo{nullptr,
                        PathComponentPiece{"", detail::SkipPathSanityCheck()}}} {
   XLOG(DBG5) << "root inode " << this << " (" << ino_ << ") created for mount "
              << mount_->getPath();
-  // The root inode always starts with an implicit reference from FUSE.
-  incFuseRefcount();
 
 #ifndef _WIN32
   mount->getInodeMetadataTable()->populateIfNotSet(
@@ -233,7 +233,7 @@ std::unique_ptr<InodeBase> InodeBase::markUnlinked(
   // ourself immediately.
   auto* inodeMap = getMount()->getInodeMap();
   auto inodeMapLock = inodeMap->lockForUnload();
-  if (isPtrAcquireCountZero() && getFuseRefcount() == 0) {
+  if (isPtrAcquireCountZero() && getFsRefcount() == 0) {
     inodeMap->unloadInode(this, parent, name, true, inodeMapLock);
     // We have to delete ourself now.
     // Do this by returning a unique_ptr to ourself, so that our caller will

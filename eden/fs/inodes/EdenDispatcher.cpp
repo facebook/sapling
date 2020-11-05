@@ -115,7 +115,7 @@ folly::Future<fuse_entry_out> EdenDispatcher::lookup(
         return folly::makeFutureWith([&]() { return inode->stat(context); })
             .thenTry([inode](folly::Try<struct stat> maybeStat) {
               if (maybeStat.hasValue()) {
-                inode->incFuseRefcount();
+                inode->incFsRefcount();
                 return computeEntryParam(Dispatcher::Attr{maybeStat.value()});
               } else {
                 // The most common case for stat() failing is if this file is
@@ -135,7 +135,7 @@ folly::Future<fuse_entry_out> EdenDispatcher::lookup(
                 XLOG(WARN) << "error getting attributes for inode "
                            << inode->getNodeId() << " (" << inode->getLogPath()
                            << "): " << maybeStat.exception().what();
-                inode->incFuseRefcount();
+                inode->incFsRefcount();
                 return computeEntryParam(
                     attrForInodeWithCorruptOverlay(inode->getNodeId()));
               }
@@ -208,7 +208,7 @@ folly::Future<fuse_entry_out> EdenDispatcher::create(
             "EdenDispatcher::create");
         return child->stat(*context).thenValue(
             [child](struct stat st) -> fuse_entry_out {
-              child->incFuseRefcount();
+              child->incFsRefcount();
               return computeEntryParam(Dispatcher::Attr{st});
             });
       });
@@ -301,7 +301,7 @@ folly::Future<fuse_entry_out> EdenDispatcher::mknod(
             inode->mknod(childName, mode, rdev, InvalidationRequired::No);
         return child->stat(*context).thenValue(
             [child](struct stat st) -> fuse_entry_out {
-              child->incFuseRefcount();
+              child->incFsRefcount();
               return computeEntryParam(Dispatcher::Attr{st});
             });
       });
@@ -317,7 +317,7 @@ folly::Future<fuse_entry_out> EdenDispatcher::mkdir(
       [childName = PathComponent{name}, mode](const TreeInodePtr& inode) {
         auto child = inode->mkdir(childName, mode, InvalidationRequired::No);
         return child->stat(*context).thenValue([child](struct stat st) {
-          child->incFuseRefcount();
+          child->incFsRefcount();
           return computeEntryParam(Dispatcher::Attr{st});
         });
       });
@@ -354,7 +354,7 @@ folly::Future<fuse_entry_out> EdenDispatcher::symlink(
        childName = PathComponent{name}](const TreeInodePtr& inode) {
         auto symlinkInode =
             inode->symlink(childName, linkContents, InvalidationRequired::No);
-        symlinkInode->incFuseRefcount();
+        symlinkInode->incFsRefcount();
         return symlinkInode->stat(*context).thenValue(
             [symlinkInode](struct stat st) {
               return computeEntryParam(Dispatcher::Attr{st});

@@ -68,28 +68,30 @@ class InodeBase {
   /**
    * Increment the number of references to this inode by its inode number.
    *
-   * While the FUSE reference count is non-zero, the inode number will be
+   * While the channel reference count is non-zero, the inode number will be
    * remembered, and InodeMap::lookupInode() can be used to look up the inode
-   * object using its inode number.  Once the FUSE reference count drops to
+   * object using its inode number.  Once the channel reference count drops to
    * zero the inode number may be forgotten, and it is no longer valid to call
    * InodeMap::lookupInode() with this inode's number.
    *
    * This is generally intended for use by FUSE APIs that return an inode
-   * number to the kernel: lookup(), create(), mkdir(), symlink(), link()
+   * number to the kernel: lookup(), create(), mkdir(), symlink(), link(), or
+   * by ProjectedFS APIs that write a placeholder to disk.
    */
-  void incFuseRefcount(uint32_t count = 1) {
-    numFuseReferences_.fetch_add(count, std::memory_order_acq_rel);
+  void incFsRefcount(uint32_t count = 1) {
+    numFsReferences_.fetch_add(count, std::memory_order_acq_rel);
   }
 
   /**
    * Decrement the number of outstanding references to this inode's number.
    *
    * This should be used to release inode number references obtained via
-   * incFuseRefcount().  The primary use case is for FUSE forget() calls.
+   * incFsRefcount().  The primary use case is for FUSE forget() calls, or
+   * when a ProjectedFS placeholder is manually invalidated.
    */
-  void decFuseRefcount(uint32_t count = 1) {
+  void decFsRefcount(uint32_t count = 1) {
     auto prevValue =
-        numFuseReferences_.fetch_sub(count, std::memory_order_acq_rel);
+        numFsReferences_.fetch_sub(count, std::memory_order_acq_rel);
     DCHECK_GE(prevValue, count);
   }
 
@@ -248,48 +250,48 @@ class InodeBase {
   }
 
   /**
-   * Get the FUSE reference count.
+   * Get the channel reference count.
    *
    * This is intended only to be checked when an Inode is being unloaded,
    * while holding both it's parent TreeInode's contents_ lock and the InodeMap
    * lock.
    *
-   * The FUSE reference count is only incremented or decremented while holding
-   * a pointer reference on the Inode.  Checking the FUSE reference count is
-   * therefore safe during unload, when we are sure there are no outstanding
-   * pointer references to the inode.
+   * The channel reference count is only incremented or decremented while
+   * holding a pointer reference on the Inode.  Checking the channel reference
+   * count is therefore safe during unload, when we are sure there are no
+   * outstanding pointer references to the inode.
    *
-   * Checking the FUSE reference count at any other point in time may be racy,
-   * since other threads may be changing the reference count concurrently.
+   * Checking the channel reference count at any other point in time may be
+   * racy, since other threads may be changing the reference count concurrently.
    */
-  uint32_t getFuseRefcount() const {
+  uint32_t getFsRefcount() const {
     // DCHECK that the caller is only calling us while the inode is being
     // unloaded
     DCHECK_EQ(0u, ptrAcquireCount_.load(std::memory_order_acquire));
 
-    return numFuseReferences_.load(std::memory_order_acquire);
+    return numFsReferences_.load(std::memory_order_acquire);
   }
 
   /**
-   * Get the FUSE refcount for debugging or diagnostic purposes.
+   * Get the channel refcount for debugging or diagnostic purposes.
    *
    * This method should only be used during unit tests or diagnostic utilities.
-   * The FUSE refcount may change as soon as this function returns (before the
-   * caller has a chance to examine the result), so this should never be used
-   * for any real decision making purposes.
+   * The channel refcount may change as soon as this function returns (before
+   * the caller has a chance to examine the result), so this should never be
+   * used for any real decision making purposes.
    */
-  uint32_t debugGetFuseRefcount() const {
-    return numFuseReferences_.load(std::memory_order_acquire);
+  uint32_t debugGetFsRefcount() const {
+    return numFsReferences_.load(std::memory_order_acquire);
   }
 
   /**
-   * Set the FUSE reference count.
+   * Set the channel reference count.
    *
    * This method should only be called by InodeMap when first loading an Inode,
    * before the Inode object has been returned to any users.
    */
-  void setFuseRefcount(uint32_t count) {
-    return numFuseReferences_.store(count, std::memory_order_release);
+  void setChannelRefcount(uint32_t count) {
+    return numFsReferences_.store(count, std::memory_order_release);
   }
 
   /**
@@ -455,8 +457,12 @@ class InodeBase {
    * the Inode object itself, destroying ourself and letting the InodeMap
    * simply remember the association of the InodeNumber with our location in
    * the file system.)
+   *
+   * For ProjectedFS, a positive value tracks whether a placeholder has been
+   * cached on disk for that inode. Fully unloading that inode will require
+   * also invalidating the placeholder.
    */
-  std::atomic<uint32_t> numFuseReferences_{0};
+  std::atomic<uint32_t> numFsReferences_{0};
 
   /**
    * A reference count used by InodePtr.
@@ -502,7 +508,7 @@ class InodeBase {
    * - Each TreeInode holds raw (non-owning) pointers to its children.  When an
    *   Inode is unloaded we explicitly reset its parent pointer to this object.
    *
-   * - The numFuseReferences_ variable tracks the number of users that know
+   * - The numFsReferences_ variable tracks the number of users that know
    *   about this inode by its inode number.  However, this does not prevent us
    *   from destroying the Inode object.  We can unload the Inode object itself
    *   in this case, and InodeMap will retain enough information to be able to

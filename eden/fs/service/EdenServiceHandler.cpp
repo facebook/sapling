@@ -1454,7 +1454,7 @@ class InodeStatusCallbacks : public TraversalCallbacks {
       RelativePathPiece path,
       InodeNumber ino,
       const std::optional<Hash>& hash,
-      uint64_t fuseRefcount,
+      uint64_t fsRefcount,
       const std::vector<ChildEntry>& entries) override {
 #ifndef _WIN32
     auto* inodeMetadataTable = mount_->getInodeMetadataTable();
@@ -1467,7 +1467,7 @@ class InodeStatusCallbacks : public TraversalCallbacks {
     if (hash.has_value()) {
       info.treeHash_ref() = thriftHash(hash.value());
     }
-    info.refcount_ref() = fuseRefcount;
+    info.refcount_ref() = fsRefcount;
 
     info.entries_ref()->reserve(entries.size());
 

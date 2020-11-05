@@ -917,7 +917,7 @@ folly::Future<CheckoutResult> EdenMount::checkout(
         // the files on disk must also be present in the overlay, and thus the
         // checkout code will take care of doing the right invalidation for
         // these.
-        this->getRootInode()->unloadChildrenUnreferencedByFuse();
+        this->getRootInode()->unloadChildrenUnreferencedByFs();
 
         auto rootInode = getRootInode();
         return serverState_->getFaultInjector()
