@@ -357,7 +357,7 @@ impl SyncedAncestorsVersions {
 /// of latest *synced* ancestors.
 /// See example below (U means unsyned, S means synced)
 ///
-/// ```
+/// ```text
 /// U2
 /// |
 /// U1
