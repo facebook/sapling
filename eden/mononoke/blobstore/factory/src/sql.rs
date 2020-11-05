@@ -23,7 +23,7 @@ use sql_construct::{
 };
 use sql_ext::{
     facebook::{
-        create_myrouter_connections, create_mysql_connections, create_raw_xdb_connections,
+        create_myrouter_connections, create_mysql_pool_unsharded, create_raw_xdb_connections,
         myrouter_ready, MysqlConnectionType, MysqlOptions, PoolSizeConfig,
     },
     open_sqlite_path, SqlConnections,
@@ -117,10 +117,9 @@ impl MetadataSqlFactory {
                     ))
                     .boxify()
                 }
-                MysqlConnectionType::Mysql => create_mysql_connections(
+                MysqlConnectionType::Mysql => create_mysql_pool_unsharded(
                     self.fb,
                     config.primary.db_address.clone(),
-                    None,
                     self.mysql_options.read_connection_type(),
                     PoolSizeConfig::for_regular_connection(),
                     self.readonly.0,

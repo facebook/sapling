@@ -12,7 +12,7 @@ use sql::Connection;
 use sql_construct::{
     SqlConstruct, SqlShardableConstructFromMetadataDatabaseConfig, SqlShardedConstruct,
 };
-use sql_ext::SqlConnections;
+use sql_ext::{SqlConnections, SqlShardedConnections};
 use std::sync::Arc;
 
 use crate::local_cache::{CachelibCache, LocalCache};
@@ -60,29 +60,26 @@ impl SqlShardedConstruct for NewFilenodesBuilder {
 
     const CREATION_QUERY: &'static str = <NewFilenodesBuilder as SqlConstruct>::CREATION_QUERY;
 
-    fn from_sql_shard_connections(shard_connections: Vec<SqlConnections>) -> Self {
+    fn from_sql_shard_connections(shard_connections: SqlShardedConnections) -> Self {
         if shard_connections.is_empty() {
             // It should be impossible for shard_connections to be empty, as the configured
             // number of shards was required to be non-zero.
             panic!("sharded database constructed with no shards");
         }
-        let chunk_size = match shard_connections.iter().next() {
-            Some(SqlConnections {
-                read_connection: Connection::DeprecatedMysql(_),
-                ..
-            }) => MYSQL_INSERT_CHUNK_SIZE,
+
+        let SqlShardedConnections {
+            read_connections,
+            read_master_connections,
+            write_connections,
+        } = shard_connections;
+        let chunk_size = match read_connections.get(0) {
+            Some(Connection::DeprecatedMysql(_)) | Some(Connection::Mysql(_)) => {
+                MYSQL_INSERT_CHUNK_SIZE
+            }
             _ => SQLITE_INSERT_CHUNK_SIZE,
         };
-        let mut write_connections = Vec::with_capacity(shard_connections.len());
-        let mut read_connections = Vec::with_capacity(shard_connections.len());
-        let mut read_master_connections = Vec::with_capacity(shard_connections.len());
-        for connections in shard_connections.into_iter() {
-            write_connections.push(connections.write_connection);
-            read_connections.push(connections.read_connection);
-            read_master_connections.push(connections.read_master_connection);
-        }
-        let reader = FilenodesReader::new(read_connections.clone(), read_master_connections);
 
+        let reader = FilenodesReader::new(read_connections.clone(), read_master_connections);
         let writer = FilenodesWriter::new(chunk_size, write_connections, read_connections);
 
         Self { reader, writer }

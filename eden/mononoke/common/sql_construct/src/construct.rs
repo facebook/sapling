@@ -9,7 +9,7 @@ use std::path::Path;
 
 use anyhow::Result;
 use sql::Connection;
-use sql_ext::{open_sqlite_in_memory, open_sqlite_path, SqlConnections};
+use sql_ext::{open_sqlite_in_memory, open_sqlite_path, SqlConnections, SqlShardedConnections};
 
 /// Construct a SQL data manager backed by a database
 ///
@@ -65,5 +65,5 @@ pub trait SqlShardedConstruct: Sized + Send + Sync + 'static {
     const CREATION_QUERY: &'static str;
 
     /// Construct an instance from a vector of SqlConnections, one for each shard
-    fn from_sql_shard_connections(shard_connections: Vec<SqlConnections>) -> Self;
+    fn from_sql_shard_connections(shard_connections: SqlShardedConnections) -> Self;
 }

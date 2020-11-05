@@ -29,6 +29,10 @@ impl PoolSizeConfig {
     pub fn for_sharded_connection() -> Self {
         fb_unimplemented!()
     }
+
+    pub fn for_mysql_sharded() -> Self {
+        fb_unimplemented!()
+    }
 }
 
 pub fn create_myrouter_connections(
@@ -43,14 +47,24 @@ pub fn create_myrouter_connections(
     fb_unimplemented!()
 }
 
-pub fn create_mysql_connections(
+pub fn create_mysql_pool_unsharded(
     _fb: FacebookInit,
     _tier: String,
-    _shard_id: Option<usize>,
     _read_con_type: ReadConnectionType,
     _pool_size_config: PoolSizeConfig,
     _readonly: bool,
 ) -> Result<SqlConnections, Error> {
+    fb_unimplemented!()
+}
+
+pub fn create_mysql_pool_sharded(
+    _fb: FacebookInit,
+    _shardmap: String,
+    _shard_id: usize,
+    _read_con_type: ReadConnectionType,
+    _pool_size_config: PoolSizeConfig,
+    _readonly: bool,
+) -> Result<SqlShardedConnections, Error> {
     fb_unimplemented!()
 }
 

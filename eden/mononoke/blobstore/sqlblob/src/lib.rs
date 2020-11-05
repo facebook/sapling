@@ -43,10 +43,10 @@ use mononoke_types::{hash::Context as HashContext, BlobstoreBytes};
 use sql::{rusqlite::Connection as SqliteConnection, Connection};
 use sql_ext::{
     facebook::{
-        create_myrouter_connections, create_mysql_connections, create_raw_xdb_connections,
-        PoolSizeConfig, ReadConnectionType,
+        create_myrouter_connections, create_mysql_pool_sharded, create_mysql_pool_unsharded,
+        create_raw_xdb_connections, PoolSizeConfig, ReadConnectionType,
     },
-    open_sqlite_in_memory, open_sqlite_path, SqlConnections,
+    open_sqlite_in_memory, open_sqlite_path, SqlConnections, SqlShardedConnections,
 };
 use std::convert::TryInto;
 use std::fmt;
@@ -156,25 +156,53 @@ impl Sqlblob {
         config_store: &ConfigStore,
     ) -> BoxFuture01<CountedSqlblob, Error> {
         let delay = try_boxfuture!(myadmin_delay::sharded(fb, shardmap.clone(), shard_num));
-        Self::with_connection_factory(
-            delay,
+        let config_handle = try_boxfuture!(get_gc_config_handle(config_store));
+
+        let shard_num_us = shard_num.clone().get();
+        create_mysql_pool_sharded(
+            fb,
             shardmap.clone(),
-            shard_num,
-            put_behaviour,
-            move |shard_id| {
-                create_mysql_connections(
-                    fb,
-                    shardmap.clone(),
-                    Some(shard_id),
-                    read_con_type,
-                    PoolSizeConfig::for_sharded_connection(),
-                    readonly,
-                )
-                .into_future()
-                .boxify()
-            },
-            config_store,
+            shard_num_us,
+            read_con_type,
+            PoolSizeConfig::for_mysql_sharded(),
+            readonly,
         )
+        .map(
+            |
+                SqlShardedConnections {
+                    read_connections,
+                    read_master_connections,
+                    write_connections,
+                },
+            | {
+                let write_connections = Arc::new(write_connections);
+                let read_connections = Arc::new(read_connections);
+                let read_master_connections = Arc::new(read_master_connections);
+                Self::counted(
+                    Self {
+                        data_store: Arc::new(DataSqlStore::new(
+                            shard_num,
+                            write_connections.clone(),
+                            read_connections.clone(),
+                            read_master_connections.clone(),
+                            delay.clone(),
+                        )),
+                        chunk_store: Arc::new(ChunkSqlStore::new(
+                            shard_num,
+                            write_connections,
+                            read_connections,
+                            read_master_connections,
+                            delay,
+                            config_handle,
+                        )),
+                        put_behaviour,
+                    },
+                    shardmap,
+                )
+            },
+        )
+        .into_future()
+        .boxify()
     }
 
     pub fn with_mysql_unsharded(
@@ -192,10 +220,9 @@ impl Sqlblob {
             NonZeroUsize::new(1).expect("One should be greater than zero"),
             put_behaviour,
             move |_shard_id| {
-                create_mysql_connections(
+                create_mysql_pool_unsharded(
                     fb,
                     db_address.clone(),
-                    None,
                     read_con_type,
                     PoolSizeConfig::for_regular_connection(),
                     readonly,
