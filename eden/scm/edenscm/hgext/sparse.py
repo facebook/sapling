@@ -132,6 +132,11 @@ be included.
     [sparse]
     unsafe_sparse_profile_marker_files = "somefile, anotherfile"
     unsafe_sparse_profile_message = "do not do this!"
+
+The following options can be used to tune the behaviour of tree prefetching when sparse profile changes
+
+    [sparse]
+    force_full_prefetch_on_sparse_profile_change = False
 """
 
 from __future__ import division
@@ -366,22 +371,36 @@ def _setupupdates(ui):
         if changedprofiles and not branchmerge:
             scopename = "Calculating additional actions for sparse profile update"
             with util.traced(scopename):
-                # We're going to need a full manifest, so if treemanifest is in
-                # use, we should prefetch. Since our tree might be incomplete
-                # (and its root could be unknown to the server if this is a
-                # local commit), we use BFS prefetching to "complete" our tree.
-                if util.safehasattr(repo, "forcebfsprefetch"):
-                    repo.forcebfsprefetch("", [mctx.manifestnode()])
-
                 mf = mctx.manifest()
-                for file in mf:
-                    old = oldsparsematch(file)
-                    new = sparsematch(file)
-                    if not old and new:
-                        flags = mf.flags(file)
-                        prunedactions[file] = ("g", (flags, False), "")
-                    elif old and not new:
-                        prunedactions[file] = ("r", [], "")
+                fullprefetchonsparseprofilechange = ui.configbool(
+                    "sparse", "force_full_prefetch_on_sparse_profile_change"
+                )
+                fullprefetchonsparseprofilechange |= not util.safehasattr(mf, "walk")
+
+                with ui.configoverride(
+                    {("treemanifest", "ondemandfetch"): True}, "sparseprofilechange"
+                ):
+                    if fullprefetchonsparseprofilechange:
+                        # We're going to need a full manifest, so if treemanifest is in
+                        # use, we should prefetch. Since our tree might be incomplete
+                        # (and its root could be unknown to the server if this is a
+                        # local commit), we use BFS prefetching to "complete" our tree.
+                        if util.safehasattr(repo, "forcebfsprefetch"):
+                            repo.forcebfsprefetch("", [mctx.manifestnode()])
+
+                        iter = mf
+                    else:
+                        match = matchmod.unionmatcher([oldsparsematch, sparsematch])
+                        iter = mf.walk(match)
+
+                    for file in iter:
+                        old = oldsparsematch(file)
+                        new = sparsematch(file)
+                        if not old and new:
+                            flags = mf.flags(file)
+                            prunedactions[file] = ("g", (flags, False), "")
+                        elif old and not new:
+                            prunedactions[file] = ("r", [], "")
 
         return prunedactions, diverge, renamedelete
 

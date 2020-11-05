@@ -75,7 +75,7 @@ Checkout commits. Expect BFS prefetch to fill our tree
   fetching tree '' e6226c902ed8e9cd5583dcae4de931e10a4e267a, found via 2b5a205a671e
   1 trees fetched over * (glob)
 
-  $ hgmn up 'master_bookmark'
+  $ hgmn up 'master_bookmark' --config sparse.force_full_prefetch_on_sparse_profile_change=True
   fetching tree 'sparse' * (glob)
   1 trees fetched over * (glob)
   fetching tree '' *, based on *, found via * (glob)
@@ -88,6 +88,21 @@ Checkout commits. Expect BFS prefetch to fill our tree
   2 trees fetched over * (glob)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   2 files fetched over 2 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
+
+# Now, force load the root tree for the commit again, and do update to master_bookmark
+# without force_full_prefetch_on_sparse_profile_change set. Note that we fetch less trees
+
+  $ hgmn up 'master_bookmark~2' -q
+  $ rm -r "$TESTTMP/test_repo.cache"
+  $ hgmn debuggetroottree "$(hg log -r '.' -T '{manifest}')"
+  fetching tree '' e6226c902ed8e9cd5583dcae4de931e10a4e267a, found via 2b5a205a671e
+  1 trees fetched over * (glob)
+  $ hgmn up 'master_bookmark'
+  fetching tree 'sparse' * (glob)
+  1 trees fetched over * (glob)
+  fetching tree '' *, based on *, found via * (glob)
+  3 trees fetched over * (glob)
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Check that we can create some commits, and that nothing breaks even if the
 server does not know about our root manifest.
