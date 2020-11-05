@@ -224,14 +224,8 @@ class chgcmdserver(commandserver.server):
             if fn == "ferr":
                 newfp = fp
             else:
-                # make it line buffered explicitly because the default is
-                # decided on first write(), where fout could be a pager.
-                if fp.isatty():
-                    bufsize = 1  # line buffered
-                else:
-                    bufsize = -1  # system default
                 try:
-                    newfp = util.fdopen(fp.fileno(), mode, bufsize)
+                    newfp = util.fdopen(fp.fileno(), mode)
                 except OSError:
                     # fdopen can fail with EINVAL. For example, run
                     # with nohup. Do not set buffer size in that case.
