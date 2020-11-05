@@ -20,10 +20,6 @@
 #include "eden/fs/takeover/gen-cpp2/takeover_types.h"
 #include "eden/fs/utils/PathFuncs.h"
 
-#ifndef _WIN32
-#include "eden/fs/fuse/FuseChannel.h"
-#endif
-
 namespace folly {
 class exception_wrapper;
 }
