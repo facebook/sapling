@@ -1249,6 +1249,40 @@ class unionmatcher(basematcher):
         return "<unionmatcher matchers=%r>" % self._matchers
 
 
+class xormatcher(basematcher):
+    """A matcher that is the xor of two matchers i.e. match returns true if there's at least
+    one false and one true.
+
+    The non-matching-attributes (root, cwd, bad, traversedir) are
+    taken from the first matcher.
+    """
+
+    def __init__(self, m1, m2):
+        super(xormatcher, self).__init__(m1._root, m1._cwd)
+        self.traversedir = m1.traversedir
+        self.m1 = m1
+        self.m2 = m2
+
+    def matchfn(self, f):
+        return self.m1(f) ^ self.m2(f)
+
+    def visitdir(self, dir):
+        m1dir = self.m1.visitdir(dir)
+        m2dir = self.m2.visitdir(dir)
+
+        # if both matchers return "all" then we know for sure we don't need
+        # to visit this directory. Same if all matchers return False. In all
+        # other case we have to visit a directory.
+        if m1dir == "all" and m2dir == "all":
+            return False
+        if not m1dir and not m2dir:
+            return False
+        return True
+
+    def __repr__(self):
+        return "<xormatcher matchers=%r>" % self._matchers
+
+
 class recursivematcher(basematcher):
     """Make matchers recursive. If "a/b/c" matches, match "a/b/c/**".
 

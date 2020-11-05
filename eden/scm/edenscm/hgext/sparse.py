@@ -390,7 +390,7 @@ def _setupupdates(ui):
 
                         iter = mf
                     else:
-                        match = matchmod.unionmatcher([oldsparsematch, sparsematch])
+                        match = matchmod.xormatcher(oldsparsematch, sparsematch)
                         iter = mf.walk(match)
 
                     for file in iter:
