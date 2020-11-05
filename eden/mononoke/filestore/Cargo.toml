@@ -11,7 +11,7 @@ blobstore = { path = "../blobstore" }
 context = { path = "../server/context" }
 mononoke_types = { path = "../mononoke_types" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
 bytes = { version = "0.5", features = ["serde"] }
 digest = "0.8"

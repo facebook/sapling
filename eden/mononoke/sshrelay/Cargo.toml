@@ -9,7 +9,7 @@ include = ["src/**/*.rs"]
 [dependencies]
 permission_checker = { path = "../permission_checker" }
 session_id = { path = "../server/session_id" }
-futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 netstring = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
 bytes = { version = "0.5", features = ["serde"] }
