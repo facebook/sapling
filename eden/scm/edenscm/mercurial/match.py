@@ -1050,6 +1050,9 @@ class differencematcher(basematcher):
 
     def visitdir(self, dir):
         dir = normalizerootdir(dir, "visitdir")
+        if not self._m2.visitdir(dir):
+            return self._m1.visitdir(dir)
+
         if self._m2.visitdir(dir) == "all":
             # There's a bug here: If m1 matches file 'dir/file' and m2 excludes
             # 'dir' (recursively), we should still visit 'dir' due to the
