@@ -149,6 +149,7 @@ pub async fn request_handler(
     // Upgrade log to include server drain
     let conn_log = create_conn_logger(stderr.clone(), Some(logger), Some(session_id));
 
+    scuba = scuba.with_seq("seq");
     scuba.add("repo", reponame);
     scuba.add_metadata(&metadata);
 

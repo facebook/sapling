@@ -239,7 +239,6 @@ pub fn repo_handlers(
                 if let Some(scuba_local_path) = scuba_local_path {
                     scuba_logger = scuba_logger.with_log_file(scuba_local_path)?;
                 }
-                scuba_logger = scuba_logger.with_seq("seq");
 
                 info!(logger, "Creating HookManager and loading hooks");
                 let hook_manager = make_hook_manager(
