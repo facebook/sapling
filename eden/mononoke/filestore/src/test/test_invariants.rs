@@ -10,11 +10,8 @@ use blobstore::Blobstore;
 use bytes::Bytes;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::compat::Future01CompatExt;
-use futures_old::{
-    future::{self, Future},
-    stream,
-};
+use futures::{compat::Future01CompatExt, future, stream};
+use futures_old::future::{self as old_future, Future};
 use quickcheck::{Arbitrary, StdGen};
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -61,7 +58,7 @@ fn check_consistency<B: Blobstore + Clone>(
 
     let futs: Vec<_> = futs.into_iter().map(|f| f.map(|r| r.is_some())).collect();
 
-    future::join_all(futs).and_then(|outcomes| {
+    old_future::join_all(futs).and_then(|outcomes| {
         // Either all should exist, or none should exist.
         let h: HashSet<_> = outcomes.iter().collect();
         if h.len() == 1 {
@@ -106,12 +103,12 @@ fn test_invariants(fb: FacebookInit) -> Result<()> {
         let req = request(&bytes);
 
         // Try to store with a broken blobstore. It doesn't matter if we succeed or not.
-        let res = rt.block_on(filestore::store(
-            blob.clone(),
+        let res = rt.block_on_std(filestore::store(
+            &blob,
             config,
             ctx.clone(),
             &req,
-            stream::once(Ok(bytes.clone())),
+            stream::once(future::ready(Ok(bytes.clone()))),
         ));
         println!("store: {:?}", res);
 
@@ -156,7 +153,7 @@ fn test_store_bytes_consistency(fb: FacebookInit) -> Result<(), Error> {
 
             let ((id1, len1), fut1) =
                 filestore::store_bytes(memblob.clone(), no_chunking, ctx.clone(), bytes.clone());
-            fut1.compat().await?;
+            fut1.await?;
 
             assert_eq!(
                 bytes,
@@ -167,7 +164,7 @@ fn test_store_bytes_consistency(fb: FacebookInit) -> Result<(), Error> {
 
             let ((id2, len2), fut2) =
                 filestore::store_bytes(memblob.clone(), chunked, ctx.clone(), bytes.clone());
-            fut2.compat().await?;
+            fut2.await?;
 
             assert_eq!(
                 bytes,
@@ -182,7 +179,7 @@ fn test_store_bytes_consistency(fb: FacebookInit) -> Result<(), Error> {
                 ctx.clone(),
                 bytes.clone(),
             );
-            fut3.compat().await?;
+            fut3.await?;
 
             assert_eq!(
                 bytes,
@@ -192,13 +189,12 @@ fn test_store_bytes_consistency(fb: FacebookInit) -> Result<(), Error> {
             );
 
             let meta = filestore::store(
-                memblob.clone(),
+                &memblob,
                 no_chunking,
                 ctx.clone(),
                 &request(&bytes),
-                stream::once(Ok(bytes.clone())),
+                stream::once(future::ready(Ok(bytes.clone()))),
             )
-            .compat()
             .await?;
 
             assert_eq!(meta.content_id, id1);

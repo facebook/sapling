@@ -6,11 +6,7 @@
  */
 
 use anyhow::Error;
-use futures::{compat::Future01CompatExt, future::TryFutureExt};
-use futures_ext::{
-    BoxFuture as OldBoxFuture, BoxStream as OldBoxStream, FutureExt as OldFutureExt,
-    StreamExt as OldStreamExt,
-};
+use futures::{compat::Stream01CompatExt, future::TryFutureExt};
 use slog::debug;
 use thiserror::Error;
 
@@ -185,15 +181,13 @@ async fn do_rechunk_file_contents<B: Blobstore + Clone>(
     content_id: ContentId,
 ) -> Result<ContentMetadata, Error> {
     let req = StoreRequest::with_canonical(file_contents.size(), content_id);
-    let file_stream: OldBoxStream<_, _> = fetch::stream_file_bytes(
+    let file_stream = fetch::stream_file_bytes(
         blobstore.clone(),
         ctx.clone(),
         file_contents,
         fetch::Range::All,
     )
-    .boxify();
-    let stored: OldBoxFuture<_, _> =
-        store(blobstore, filestore_config, ctx, &req, file_stream).boxify();
+    .compat();
 
-    stored.compat().await
+    store(&blobstore, filestore_config, ctx, &req, file_stream).await
 }

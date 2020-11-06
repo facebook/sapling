@@ -13,9 +13,11 @@ use bytes::Bytes;
 use chrono::{DateTime, FixedOffset};
 use context::CoreContext;
 use filestore::{FetchKey, StoreRequest};
-use futures::stream::{FuturesOrdered, FuturesUnordered, Stream, TryStreamExt};
-use futures::{compat::Future01CompatExt, future::try_join3, Future};
-use futures_old::stream as old_stream;
+use futures::{
+    compat::Future01CompatExt,
+    future::{try_join3, Future},
+    stream::{self, FuturesOrdered, FuturesUnordered, Stream, TryStreamExt},
+};
 use manifest::PathTree;
 use mononoke_types::{
     BonsaiChangesetMut, ChangesetId, DateTime as MononokeDateTime, FileChange, MPath,
@@ -100,13 +102,12 @@ impl CreateChange {
         match self {
             CreateChange::NewContent(bytes, file_type, copy_info) => {
                 let meta = filestore::store(
-                    repo.get_blobstore(),
+                    repo.blobstore(),
                     repo.filestore_config(),
                     ctx,
                     &StoreRequest::new(bytes.len() as u64),
-                    old_stream::once(Ok(bytes)),
+                    stream::once(async move { Ok(bytes) }),
                 )
-                .compat()
                 .await?;
                 let copy_info = match copy_info {
                     Some(copy_info) => Some(copy_info.resolve(parents).await?),

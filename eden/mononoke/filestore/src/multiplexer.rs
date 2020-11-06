@@ -91,7 +91,7 @@ impl<T: Send + Sync + Clone + 'static> Multiplexer<T> {
     /// Drain a Stream into the multiplexer.
     pub async fn drain<'a, S, E>(self, stream: S) -> Result<(), MultiplexerError<E>>
     where
-        S: Stream<Item = Result<T, E>> + Send + 'static,
+        S: Stream<Item = Result<T, E>> + Send,
     {
         let Self { sink, .. } = self;
 

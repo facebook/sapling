@@ -570,8 +570,7 @@ mod test {
     use context::CoreContext;
     use fbinit::FacebookInit;
     use filestore::{self, StoreRequest};
-    use futures::compat::Future01CompatExt;
-    use futures_old::stream as stream_old;
+    use futures::stream;
     use hyper::Uri;
     use mononoke_types_mocks::hash::ONES_SHA256;
     use redactedblobstore::RedactedMetadata;
@@ -801,13 +800,12 @@ mod test {
         let ctx = RepositoryRequestContext::test_builder(fb)?.build()?;
 
         let meta = filestore::store(
-            ctx.repo.blobstore().clone(),
+            ctx.repo.blobstore(),
             ctx.repo.filestore_config(),
             ctx.ctx.clone(),
             &StoreRequest::new(6),
-            stream_old::once(Ok(Bytes::from("foobar"))),
+            stream::once(async move { Ok(Bytes::from("foobar")) }),
         )
-        .compat()
         .await?;
 
         assert_eq!(
@@ -824,13 +822,12 @@ mod test {
         let stub = TestRepoBuilder::new().build()?;
 
         let meta = filestore::store(
-            stub.blobstore().clone(),
+            stub.blobstore(),
             stub.filestore_config(),
             CoreContext::test_mock(fb),
             &StoreRequest::new(6),
-            stream_old::once(Ok(Bytes::from("foobar"))),
+            stream::once(async move { Ok(Bytes::from("foobar")) }),
         )
-        .compat()
         .await?;
 
         // Get the internal blobstore from the stub we just wrote into.

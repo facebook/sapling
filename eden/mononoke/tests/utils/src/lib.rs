@@ -18,7 +18,7 @@ use filestore::{self, FetchKey, StoreRequest};
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
     future,
-    stream::{self, StreamExt, TryStreamExt},
+    stream::{self, TryStreamExt},
 };
 use manifest::ManifestOps;
 use maplit::btreemap;
@@ -298,13 +298,12 @@ impl CreateFileContext {
                 let content = Bytes::copy_from_slice(content.as_bytes());
 
                 let meta = filestore::store(
-                    repo.get_blobstore(),
+                    repo.blobstore(),
                     repo.filestore_config(),
                     ctx.clone(),
                     &StoreRequest::new(content.len().try_into().unwrap()),
-                    stream::once(async move { Ok(content) }).boxed().compat(),
+                    stream::once(async move { Ok(content) }),
                 )
-                .compat()
                 .await?;
 
                 let copy_info = match copy_info {

@@ -156,13 +156,12 @@ where
     STATS::internal_uploads.add_value(1);
 
     let res = filestore::store(
-        ctx.repo.get_blobstore(),
+        ctx.repo.blobstore(),
         ctx.repo.filestore_config(),
         ctx.ctx.clone(),
         &StoreRequest::with_sha256(size, oid),
-        data.compat(),
+        data,
     )
-    .compat()
     .await
     .context(ErrorKind::FilestoreWriteFailure)
     .map_err(Error::from);

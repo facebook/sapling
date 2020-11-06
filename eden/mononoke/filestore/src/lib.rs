@@ -16,11 +16,11 @@ use anyhow::Error;
 use cloned::cloned;
 use futures::{
     compat::Stream01CompatExt,
-    future::{FutureExt, TryFutureExt},
-    stream::TryStreamExt,
+    future::{Future, TryFutureExt},
+    stream::{self, Stream, TryStreamExt},
 };
 use futures_ext::FutureExt as OldFutureExt;
-use futures_old::{stream, Future, IntoFuture, Stream};
+use futures_old::{Future as OldFuture, IntoFuture, Stream as OldStream};
 
 use blobstore::{Blobstore, Loadable, LoadableError};
 use context::CoreContext;
@@ -205,7 +205,7 @@ pub fn exists<B: Blobstore + Clone>(
     blobstore: &B,
     ctx: CoreContext,
     key: &FetchKey,
-) -> impl Future<Item = bool, Error = Error> {
+) -> impl OldFuture<Item = bool, Error = Error> {
     key.load(ctx.clone(), blobstore)
         .compat()
         .map(Some)
@@ -231,7 +231,8 @@ pub fn fetch_with_size<B: Blobstore + Clone>(
     blobstore: &B,
     ctx: CoreContext,
     key: &FetchKey,
-) -> impl Future<Item = Option<(impl Stream<Item = Bytes, Error = Error>, u64)>, Error = Error> {
+) -> impl OldFuture<Item = Option<(impl OldStream<Item = Bytes, Error = Error>, u64)>, Error = Error>
+{
     key.load(ctx.clone(), blobstore)
         .compat()
         .map(Some)
@@ -262,7 +263,8 @@ pub fn fetch_range_with_size<B: Blobstore + Clone>(
     key: &FetchKey,
     start: u64,
     size: u64,
-) -> impl Future<Item = Option<(impl Stream<Item = Bytes, Error = Error>, u64)>, Error = Error> {
+) -> impl OldFuture<Item = Option<(impl OldStream<Item = Bytes, Error = Error>, u64)>, Error = Error>
+{
     key.load(ctx.clone(), blobstore)
         .compat()
         .map(Some)
@@ -293,7 +295,7 @@ pub fn fetch<B: Blobstore + Clone>(
     blobstore: &B,
     ctx: CoreContext,
     key: &FetchKey,
-) -> impl Future<Item = Option<impl Stream<Item = Bytes, Error = Error>>, Error = Error> {
+) -> impl OldFuture<Item = Option<impl OldStream<Item = Bytes, Error = Error>>, Error = Error> {
     fetch_with_size(blobstore, ctx, key).map(|res| res.map(|(stream, _len)| stream))
 }
 
@@ -303,7 +305,7 @@ pub fn fetch_concat_opt<B: Blobstore + Clone>(
     blobstore: &B,
     ctx: CoreContext,
     key: &FetchKey,
-) -> impl Future<Item = Option<Bytes>, Error = Error> {
+) -> impl OldFuture<Item = Option<Bytes>, Error = Error> {
     fetch_with_size(blobstore, ctx, key).and_then(|res| match res {
         Some((stream, len)) => {
             let len = len
@@ -333,7 +335,7 @@ pub fn fetch_concat<B: Blobstore + Clone>(
     blobstore: &B,
     ctx: CoreContext,
     key: impl Into<FetchKey>,
-) -> impl Future<Item = Bytes, Error = Error> {
+) -> impl OldFuture<Item = Bytes, Error = Error> {
     let key: FetchKey = key.into();
     fetch_concat_opt(blobstore, ctx, &key)
         .and_then(move |bytes| bytes.ok_or_else(|| errors::ErrorKind::MissingContent(key).into()))
@@ -347,7 +349,7 @@ pub fn fetch_stream<B: Blobstore + Clone>(
     blobstore: &B,
     ctx: CoreContext,
     key: impl Into<FetchKey>,
-) -> impl Stream<Item = Bytes, Error = Error> {
+) -> impl OldStream<Item = Bytes, Error = Error> {
     let key: FetchKey = key.into();
     fetch(blobstore, ctx, &key)
         .and_then(move |stream| stream.ok_or_else(|| errors::ErrorKind::MissingContent(key).into()))
@@ -361,7 +363,7 @@ pub fn fetch_range<B: Blobstore + Clone>(
     key: &FetchKey,
     start: u64,
     size: u64,
-) -> impl Future<Item = Option<impl Stream<Item = Bytes, Error = Error>>, Error = Error> {
+) -> impl OldFuture<Item = Option<impl OldStream<Item = Bytes, Error = Error>>, Error = Error> {
     fetch_range_with_size(blobstore, ctx, key, start, size)
         .map(|res| res.map(|(stream, _len)| stream))
 }
@@ -374,7 +376,7 @@ pub fn peek<B: Blobstore + Clone>(
     ctx: CoreContext,
     key: &FetchKey,
     size: usize,
-) -> impl Future<Item = Option<Bytes>, Error = Error> {
+) -> impl OldFuture<Item = Option<Bytes>, Error = Error> {
     fetch(blobstore, ctx, key)
         .map(move |maybe_stream| {
             match maybe_stream {
@@ -393,37 +395,30 @@ pub fn peek<B: Blobstore + Clone>(
 /// Store a file from a stream. This is guaranteed atomic - either the store will succeed
 /// for the entire file, or it will fail and the file will logically not exist (however
 /// there's no guarantee that any partially written parts will be cleaned up).
-pub fn store<B: Blobstore + Clone>(
-    blobstore: B,
+pub async fn store<B: Blobstore + Clone>(
+    blobstore: &B,
     config: FilestoreConfig,
     ctx: CoreContext,
     req: &StoreRequest,
-    data: impl Stream<Item = Bytes, Error = Error> + Send + 'static,
-) -> impl Future<Item = ContentMetadata, Error = Error> {
+    data: impl Stream<Item = Result<Bytes, Error>> + Send + 'static,
+) -> Result<ContentMetadata, Error> {
     use chunk::Chunks;
 
-    cloned!(req); // TODO: Just take this by value.
+    let prepared = match chunk::make_chunks(data, req.expected_size, config.chunk_size) {
+        Chunks::Inline(fut) => prepare::prepare_bytes(fut.await?),
+        Chunks::Chunked(expected_size, chunks) => {
+            prepare::prepare_chunked(
+                ctx.clone(),
+                blobstore.clone(),
+                expected_size,
+                chunks,
+                config.concurrency,
+            )
+            .await?
+        }
+    };
 
-    async move {
-        let prepared = match chunk::make_chunks(data.compat(), req.expected_size, config.chunk_size)
-        {
-            Chunks::Inline(fut) => prepare::prepare_bytes(fut.await?),
-            Chunks::Chunked(expected_size, chunks) => {
-                prepare::prepare_chunked(
-                    ctx.clone(),
-                    blobstore.clone(),
-                    expected_size,
-                    chunks,
-                    config.concurrency,
-                )
-                .await?
-            }
-        };
-
-        finalize::finalize(blobstore, ctx, Some(&req), prepared).await
-    }
-    .boxed()
-    .compat()
+    finalize::finalize(blobstore, ctx, Some(&req), prepared).await
 }
 
 /// Store a set of bytes, and immediately return their Contentid and size. This function is
@@ -436,21 +431,28 @@ pub fn store_bytes<B: Blobstore + Clone>(
     config: FilestoreConfig,
     ctx: CoreContext,
     bytes: Bytes,
-) -> ((ContentId, u64), impl Future<Item = (), Error = Error>) {
+) -> (
+    (ContentId, u64),
+    impl Future<Output = Result<(), Error>> + Send + 'static,
+) {
     // NOTE: Like in other places in the Filestore, we assume that the size of buffers being passed
     // in can be represented in 64 bits (which is OK for the world we live in).
 
     let content_id = FileContents::content_id_for_bytes(&bytes);
     let size: u64 = bytes.len().try_into().unwrap();
 
-    let upload = store(
-        blobstore,
-        config,
-        ctx,
-        &StoreRequest::with_canonical(size, content_id),
-        stream::once(Ok(bytes)),
-    )
-    .map(|_| ());
+    let upload = async move {
+        store(
+            &blobstore,
+            config,
+            ctx,
+            &StoreRequest::with_canonical(size, content_id),
+            stream::once(async move { Ok(bytes) }),
+        )
+        .await?;
+
+        Ok(())
+    };
 
     ((content_id, size), upload)
 }

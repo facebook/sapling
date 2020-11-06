@@ -19,8 +19,8 @@ use context::CoreContext;
 use failure_ext::FutureFailureErrorExt;
 use filestore::FilestoreConfig;
 use filestore::{self, FetchKey};
-use futures::future::TryFutureExt;
-use futures_ext::{BoxFuture, FutureExt};
+use futures::future::{FutureExt, TryFutureExt};
+use futures_ext::{BoxFuture, FutureExt as _};
 use futures_old::{future, stream, Future, IntoFuture, Stream};
 use futures_stats::{FutureStats, Timed};
 use mononoke_types::{ContentId, FileType, MPath, RepoPath};
@@ -275,7 +275,7 @@ impl UploadHgFileContents {
                     file_bytes.into_bytes(),
                 );
 
-                let upload_fut = upload_fut.timed({
+                let upload_fut = upload_fut.boxed().compat().timed({
                     cloned!(path);
                     let logger = ctx.logger().clone();
                     move |stats, result| {

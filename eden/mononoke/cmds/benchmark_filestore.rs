@@ -152,16 +152,10 @@ async fn run_benchmark_filestore<'a>(
 
     let req = StoreRequest::new(len);
 
-    let (stats, res) = filestore::store(
-        blob.clone(),
-        config,
-        ctx.clone(),
-        &req,
-        data.map_err(Error::from).compat(),
-    )
-    .compat()
-    .timed()
-    .await;
+    let (stats, res) =
+        filestore::store(&blob, config, ctx.clone(), &req, data.map_err(Error::from))
+            .timed()
+            .await;
     log_perf(stats, &res, len);
 
     let metadata = res?;

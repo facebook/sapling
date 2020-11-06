@@ -16,11 +16,7 @@ use bytes::Bytes;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use filestore::StoreRequest;
-use futures::{
-    compat::Future01CompatExt,
-    future::try_join_all,
-    stream::{self, StreamExt, TryStreamExt},
-};
+use futures::{compat::Future01CompatExt, future::try_join_all, stream};
 use maplit::btreemap;
 use mercurial_types::{HgChangesetId, MPath};
 use mononoke_types::{
@@ -43,13 +39,12 @@ pub async fn store_files(
                 let content = Bytes::copy_from_slice(content.as_bytes());
                 let size = content.len() as u64;
                 let metadata = filestore::store(
-                    repo.get_blobstore(),
+                    repo.blobstore(),
                     repo.filestore_config(),
                     ctx.clone(),
                     &StoreRequest::new(size),
-                    stream::once(async { Ok(content) }).boxed().compat(),
+                    stream::once(async { Ok(content) }),
                 )
-                .compat()
                 .await
                 .unwrap();
                 let file_change =

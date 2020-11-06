@@ -29,10 +29,7 @@ use futures::{
 };
 use futures_ext::{FutureExt, StreamExt};
 use futures_old::Future;
-use futures_old::{
-    future::IntoFuture,
-    stream::{self as stream_old, Stream},
-};
+use futures_old::{future::IntoFuture, stream::Stream};
 use git2::{Oid, Repository, Sort};
 use git_types::TreeHandle;
 use linked_hash_map::LinkedHashMap;
@@ -72,13 +69,12 @@ async fn do_upload(
     let req = StoreRequest::with_git_sha1(size, git_sha1);
 
     let meta = filestore::store(
-        blobstore,
+        &blobstore,
         FilestoreConfig::default(),
         ctx,
         &req,
-        stream_old::once(Ok(bytes)),
+        stream::once(async move { Ok(bytes) }),
     )
-    .compat()
     .await?;
 
     Ok(meta)

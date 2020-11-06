@@ -13,7 +13,10 @@ use blobstore::Blobstore;
 use cloned::cloned;
 use context::CoreContext;
 use filestore::{exists, fetch, get_metadata, store, FetchKey, FilestoreConfig, StoreRequest};
-use futures::future::{FutureExt, TryFutureExt};
+use futures::{
+    compat::Stream01CompatExt,
+    future::{FutureExt, TryFutureExt},
+};
 use futures_ext::{BoxFuture, FutureExt as _};
 use futures_old::future::{err, ok, Future};
 use mononoke_types::ContentId;
@@ -96,14 +99,19 @@ pub fn copy_content(
                 })
                 .and_then({
                     move |(store_request, byte_stream)| {
-                        store(
-                            dst_blobstore,
-                            dst_filestore_config,
-                            ctx,
-                            &store_request,
-                            byte_stream,
-                        )
-                        .map(|_| ())
+                        async move {
+                            store(
+                                &dst_blobstore,
+                                dst_filestore_config,
+                                ctx,
+                                &store_request,
+                                byte_stream.compat(),
+                            )
+                            .await?;
+                            Ok(())
+                        }
+                        .boxed()
+                        .compat()
                     }
                 })
                 .boxify()
@@ -231,13 +239,12 @@ mod test {
         let cid = canonical(bytes);
 
         store(
-            bs1.clone(),
+            &bs1,
             default_filestore_config,
             ctx.clone(),
             &req,
-            stream::once(Ok(Bytes::from(&bytes[..]))),
+            stream::once(Ok(Bytes::from(&bytes[..]))).compat(),
         )
-        .compat()
         .await?;
         copy_content(
             ctx.clone(),

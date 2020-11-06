@@ -61,7 +61,7 @@ pub async fn prepare_chunked<B: Blobstore + Clone, S>(
     concurrency: usize,
 ) -> Result<Prepared, Error>
 where
-    S: Stream<Item = Result<Bytes, Error>> + Send + 'static,
+    S: Stream<Item = Result<Bytes, Error>> + Send,
 {
     // NOTE: The Multiplexer makes clones of the Bytes we pass in. It's worth noting that Bytes
     // actually behaves like an Arc with an inner reference-counted handle to data, so those

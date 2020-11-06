@@ -125,13 +125,12 @@ pub async fn execute_command<'a>(
             let data = FramedRead::new(data, BytesCodec::new()).map_ok(BytesMut::freeze);
             let len = metadata.len();
             let metadata = filestore::store(
-                blobrepo.get_blobstore(),
+                blobrepo.blobstore(),
                 blobrepo.filestore_config(),
                 ctx,
                 &StoreRequest::new(len),
-                data.map_err(Error::from).compat(),
+                data.map_err(Error::from),
             )
-            .compat()
             .await?;
             info!(
                 logger,
