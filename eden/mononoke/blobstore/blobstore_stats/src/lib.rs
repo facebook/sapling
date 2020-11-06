@@ -16,6 +16,7 @@ use time_ext::DurationExt;
 use blobstore::{BlobstoreGetData, OverwriteStatus};
 use context::PerfCounters;
 use metaconfig_types::BlobstoreId;
+use tunables::tunables;
 
 const SLOW_REQUEST_THRESHOLD: Duration = Duration::from_secs(5);
 
@@ -86,7 +87,12 @@ pub fn record_get_stats(
 
     match result {
         Ok(Some(data)) => {
-            scuba.add(SIZE, data.as_bytes().len());
+            let size = data.as_bytes().len();
+            let size_logging_threshold = tunables().get_blobstore_read_size_logging_threshold();
+            if size_logging_threshold > 0 && size > size_logging_threshold as usize {
+                scuba.unsampled();
+            }
+            scuba.add(SIZE, size);
         }
         Err(error) => {
             // Always log errors

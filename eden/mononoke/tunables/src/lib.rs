@@ -102,6 +102,9 @@ pub struct MononokeTunables {
     scs_request_read_qps: AtomicI64,
     scs_request_write_qps: AtomicI64,
     enable_logging_commit_rewrite_data: AtomicBool,
+    // All blobstore read request with size bigger than
+    // this threshold will be logged to scuba
+    blobstore_read_size_logging_threshold: AtomicI64,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {
