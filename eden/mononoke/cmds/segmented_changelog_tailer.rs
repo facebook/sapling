@@ -35,7 +35,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .with_advanced_args_hidden()
         .with_fb303_args()
         .build()
-        .version("0.0.0")
         .about("Builds a new version of segmented changelog.")
         .arg(
             Arg::with_name(DELAY_ARG)

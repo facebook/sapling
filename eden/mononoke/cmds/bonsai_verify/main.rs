@@ -48,7 +48,6 @@ use std::{
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
     args::MononokeApp::new("bonsai roundtrip verification")
         .build()
-        .version("0.0.0")
         .subcommand(
             SubCommand::with_name("round-trip")
                 .about("Verify that bonsai changesets roundtrip correctly.")

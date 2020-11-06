@@ -26,7 +26,6 @@ use std::path::Path;
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
     args::MononokeApp::new("Tool to backfill git mappings for given commits")
         .build()
-        .version("0.0.0")
         .arg(Arg::from_usage(
             "<IN_FILENAME>  'file with hg changeset ids (separated by newlines)'",
         ))

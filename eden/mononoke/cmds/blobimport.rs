@@ -49,7 +49,6 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .with_repo_required()
         .with_source_repos()
         .build()
-        .version("0.0.0")
         .about("Import a revlog-backed Mercurial repo into Mononoke blobstore.")
         .args_from_usage(
             r#"

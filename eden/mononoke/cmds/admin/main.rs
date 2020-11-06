@@ -63,7 +63,6 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .with_source_and_target_repos()
         .with_special_put_behaviour(PutBehaviour::Overwrite)
         .build()
-        .version("0.0.0")
         .about("Poke at mononoke internals for debugging and investigating data structures.")
         .subcommand(blobstore_fetch::build_subcommand())
         .subcommand(bonsai_fetch::build_subcommand())

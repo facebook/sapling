@@ -30,7 +30,6 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .with_advanced_args_hidden()
         .with_all_repos()
         .build()
-        .version("0.0.0")
         .about("Perform garbage collection on a set of SQLblob shards")
         .arg(
             Arg::with_name(ARG_STORAGE_CONFIG_NAME)

@@ -219,7 +219,6 @@ fn setup_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
     let app = args::MononokeApp::new(app_name)
         .with_scuba_logging_args()
         .build()
-        .version("0.0.0")
         .about("Monitors blobstore_sync_queue to heal blobstores with missing data")
         .args_from_usage(
             r#"

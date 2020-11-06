@@ -33,7 +33,6 @@ fn main(fb: FacebookInit) -> Result<()> {
     let app = args::MononokeApp::new(NAME)
         .with_advanced_args_hidden()
         .build()
-        .version("0.0.0")
         .about("Import LFS blobs")
         .arg(
             Arg::with_name(ARG_CONCURRENCY)

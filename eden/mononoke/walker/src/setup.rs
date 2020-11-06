@@ -363,7 +363,6 @@ pub fn setup_toplevel_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
     );
 
     app_template.build()
-        .version("0.0.0")
         .about("Walks the mononoke commit and/or derived data graphs, with option of performing validations and modifications")
         .arg(
             Arg::with_name(STORAGE_ID_ARG)

@@ -25,7 +25,6 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .with_all_repos()
         .with_disabled_hooks_args()
         .build()
-        .version("0.0.0")
         .about("serve repos")
         .args_from_usage(
             r#"

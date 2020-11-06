@@ -14,7 +14,6 @@ use std::{path::PathBuf, str::FromStr};
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
     App::new("read revlog repo content")
-        .version("0.0.0")
         .about("read revlogs")
         .args_from_usage(
             r#"

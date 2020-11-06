@@ -54,7 +54,6 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
     args::MononokeApp::new("Tool to calculate repo statistic")
         .with_fb303_args()
         .build()
-        .version("0.0.0")
         .subcommand(
             SubCommand::with_name(SUBCOMMAND_STATISTICS_FROM_FILE)
                 .about(

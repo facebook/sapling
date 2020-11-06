@@ -13,7 +13,6 @@ use std::str::FromStr;
 fn run() -> Result<()> {
     // Define command line args and parse command line
     let matches = App::new("idxdump")
-        .version("0.0.0")
         .about("dump index entries")
         .args_from_usage(concat!(
             "<IDXFILE>               'index file'\n",

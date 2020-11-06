@@ -31,7 +31,6 @@ use std::sync::Arc;
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
     args::MononokeApp::new("Tool to upload globalrevs from commits saved in file")
         .build()
-        .version("0.0.0")
         .arg(Arg::from_usage(
             "<IN_FILENAME>  'file with bonsai changesets'",
         ))

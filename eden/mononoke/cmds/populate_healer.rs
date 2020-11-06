@@ -116,7 +116,6 @@ impl<'a> From<&'a State> for StateSerde {
 fn parse_args(fb: FacebookInit) -> Result<Config, Error> {
     let app = args::MononokeApp::new("populate healer queue")
         .build()
-        .version("0.0.0")
         .about("Populate blobstore queue from existing key source")
         .arg(
             Arg::with_name("storage-id")

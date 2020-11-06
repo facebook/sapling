@@ -250,7 +250,6 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .with_advanced_args_hidden()
         .with_disabled_hooks_args()
         .build()
-        .version("0.0.0")
         .arg(
             Arg::with_name("bookmark")
                 .long("bookmark")

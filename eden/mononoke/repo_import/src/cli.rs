@@ -34,7 +34,6 @@ pub fn setup_app<'a, 'b>() -> App<'a, 'b> {
     args::MononokeApp::new("Import Repository")
         .with_advanced_args_hidden()
         .build()
-        .version("0.0.0")
         .about("Automating repository imports")
         .subcommand(
             SubCommand::with_name(CHECK_ADDITIONAL_SETUP_STEPS)

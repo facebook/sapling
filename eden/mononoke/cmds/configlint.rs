@@ -17,7 +17,6 @@ fn main(fb: FacebookInit) -> Result<()> {
     let matches = args::MononokeApp::new("Lint Mononoke config files")
         .with_advanced_args_hidden()
         .build()
-        .version("0.0.0")
         .about("Check Mononoke server configs for syntax and sanity.")
         .args_from_usage(
             r#"

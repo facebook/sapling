@@ -29,7 +29,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .with_advanced_args_hidden()
         .with_special_put_behaviour(PutBehaviour::Overwrite)
         .build()
-        .version("0.0.0")
         .about("Rechunk blobs using the filestore")
         .arg(
             Arg::with_name("filenodes")

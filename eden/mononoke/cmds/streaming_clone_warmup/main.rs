@@ -43,7 +43,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .with_advanced_args_hidden()
         .with_fb303_args()
         .build()
-        .version("0.0.0")
         .about("Utility to keep streaming clone data warm")
         .arg(
             Arg::with_name(REPO_ARG)

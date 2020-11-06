@@ -13,7 +13,6 @@ use std::{fs::File, io::Write, str::FromStr};
 fn run() -> Result<()> {
     // Define command line args and parse command line
     let matches = App::new("dumprev")
-        .version("0.0.0")
         .about("extract a revision from a revlog")
         .args_from_usage(concat!(
             "-d, --data=[DATAFILE]  'Data file if not inline'\n",

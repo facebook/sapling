@@ -283,7 +283,6 @@ impl AliasVerification {
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
     args::MononokeApp::new("Verify and reload all the alias blobs")
         .build()
-        .version("0.0.0")
         .about("Verify and reload all the alias blobs into Mononoke blobstore.")
         .arg(
             Arg::with_name("mode")

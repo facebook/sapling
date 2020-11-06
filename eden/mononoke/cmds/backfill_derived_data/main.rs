@@ -111,7 +111,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .with_advanced_args_hidden()
         .with_fb303_args()
         .build()
-        .version("0.0.0")
         .about("Utility to work with bonsai derived data")
         .subcommand(
             SubCommand::with_name(SUBCOMMAND_BACKFILL)
