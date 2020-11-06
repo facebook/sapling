@@ -11,13 +11,12 @@
 
 use anyhow::Error;
 use bytes::{Bytes, BytesMut};
-use cloned::cloned;
 use futures::{
     compat::Stream01CompatExt,
     future::{Future, TryFutureExt},
     stream::{self, Stream, StreamExt, TryStreamExt},
 };
-use futures_old::{Future as OldFuture, Stream as OldStream};
+use futures_old::Stream as OldStream;
 use std::convert::TryInto;
 
 use blobstore::{Blobstore, Loadable, LoadableError};
@@ -199,25 +198,24 @@ pub async fn get_metadata_readonly<B: Blobstore + Clone>(
 
 /// Return true if the given key exists. A successful return means the key definitely
 /// either exists or doesn't; an error means the existence could not be determined.
-pub fn exists<B: Blobstore + Clone>(
+pub async fn exists<B: Blobstore + Clone>(
     blobstore: &B,
     ctx: CoreContext,
     key: &FetchKey,
-) -> impl OldFuture<Item = bool, Error = Error> {
-    key.load(ctx.clone(), blobstore)
-        .compat()
+) -> Result<bool, Error> {
+    let maybe_id = key
+        .load(ctx.clone(), blobstore)
+        .await
         .map(Some)
         .or_else(|err| match err {
             LoadableError::Error(err) => Err(err),
             LoadableError::Missing(_) => Ok(None),
-        })
-        .and_then({
-            cloned!(blobstore, ctx);
-            move |maybe_id| {
-                maybe_id.map(|id| blobstore.is_present(ctx, id.blobstore_key()).compat())
-            }
-        })
-        .map(|exists: Option<bool>| exists.unwrap_or(false))
+        })?;
+
+    match maybe_id {
+        Some(id) => blobstore.is_present(ctx, id.blobstore_key()).await,
+        None => Ok(false),
+    }
 }
 
 /// Fetch a file as a stream. This returns either success with a stream of data and file size if

@@ -186,7 +186,7 @@ pub fn get_file_changes<B: Blobstore + Clone>(
                 }
                 .boxed()
                 .compat()
-                .and_then(|r| r.ok_or_else(|| ErrorKind::ContentMissing(k).into()))
+                .and_then(move |r| r.ok_or_else(|| ErrorKind::ContentMissing(k).into()))
                 .map(move |m| (mpath, Some(BlobHandle::new(m, t))))
                 .left_future()
             }

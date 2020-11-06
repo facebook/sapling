@@ -1259,3 +1259,30 @@ async fn assert_fetches_as<B: Blobstore + Clone>(
     assert_eq!(res?, Some(expected));
     Ok(())
 }
+
+#[fbinit::compat_test]
+async fn filestore_exists(fb: FacebookInit) -> Result<()> {
+    let req = request(HELLO_WORLD);
+    let content_id = canonical(HELLO_WORLD);
+    let alias = Alias::Sha1(*HELLO_WORLD_SHA1);
+
+    let blob = memblob::LazyMemblob::default();
+    let ctx = CoreContext::test_mock(fb);
+
+    assert!(!filestore::exists(&blob, ctx.clone(), &content_id.into()).await?);
+    assert!(!filestore::exists(&blob, ctx.clone(), &alias.into()).await?);
+
+    filestore::store(
+        &blob,
+        DEFAULT_CONFIG,
+        ctx.clone(),
+        &req,
+        stream::once(future::ready(Ok(Bytes::from(HELLO_WORLD)))),
+    )
+    .await?;
+
+    assert!(filestore::exists(&blob, ctx.clone(), &content_id.into()).await?);
+    assert!(filestore::exists(&blob, ctx.clone(), &alias.into()).await?);
+
+    Ok(())
+}

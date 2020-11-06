@@ -12,7 +12,7 @@ use futures::future::{self, BoxFuture, FutureExt};
 use mononoke_types::{errors::ErrorKind, hash, ContentAlias, ContentId};
 
 /// Key for fetching - we can access with any of the supported key types
-#[derive(Debug, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub enum FetchKey {
     Canonical(ContentId),
     Aliased(Alias),
@@ -36,7 +36,7 @@ impl From<hash::Sha256> for FetchKey {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum Alias {
     Sha1(hash::Sha1),
     Sha256(hash::Sha256),
