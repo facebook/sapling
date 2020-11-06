@@ -365,7 +365,7 @@ impl SyncedAncestorsVersions {
 /// S with version V1
 /// ```
 ///
-/// In this case we'll return [U1, U2] and [V1]
+/// In this case we'll return [U1, U2] and \[V1\]
 pub async fn find_toposorted_unsynced_ancestors<M>(
     ctx: &CoreContext,
     commit_syncer: &CommitSyncer<M>,
