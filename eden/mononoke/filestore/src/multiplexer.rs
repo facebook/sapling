@@ -6,10 +6,14 @@
  */
 
 use anyhow::{format_err, Error};
-use futures_ext::{self, BoxStream, FutureExt, StreamExt};
-use futures_old::{sync::mpsc, Future, Sink, Stream};
-
-use crate::spawn;
+use futures::{
+    channel::mpsc,
+    future::{self, Future, TryFutureExt},
+    sink::{Sink, SinkExt},
+    stream::Stream,
+    stream::TryStreamExt,
+};
+use tokio::task::JoinHandle;
 
 // NOTE: This buffer size is used by the Multiplexer to let the overall multiplexer make progress
 // even if one part is being a little slow. The multiplexer typically has individual tasks running
@@ -21,7 +25,7 @@ use crate::spawn;
 // Filestore's upload concurrency level.
 const BUFFER_SIZE: usize = 5;
 
-type InnerSink<T> = dyn Sink<SinkItem = T, SinkError = mpsc::SendError<T>> + Send + 'static;
+type InnerSink<T> = dyn Sink<T, Error = mpsc::SendError> + Send + std::marker::Unpin + 'static;
 
 pub struct Multiplexer<T: Send + Sync> {
     buffer_size: usize,
@@ -62,15 +66,11 @@ impl<T: Send + Sync + Clone + 'static> Multiplexer<T> {
     /// data as input (the same data you'll pass in later when draining the Multiplexer), and
     /// retuns a Future. This returns a Future with the same result, and an Error type of
     /// SpawnError, which is a thin wrapper over your Future's Error type.
-    pub fn add<I, E, F, B>(
-        &mut self,
-        builder: B,
-    ) -> impl Future<Item = I, Error = spawn::SpawnError<E>>
+    pub fn add<I, F, B>(&mut self, builder: B) -> JoinHandle<I>
     where
         I: Send + 'static,
-        E: Send + 'static,
-        F: Future<Item = I, Error = E> + Send + 'static,
-        B: FnOnce(BoxStream<T, !>) -> F,
+        F: Future<Output = I> + Send + 'static,
+        B: FnOnce(mpsc::Receiver<T>) -> F,
     {
         let (sender, receiver) = mpsc::channel::<T>(self.buffer_size);
 
@@ -81,27 +81,17 @@ impl<T: Send + Sync + Clone + 'static> Multiplexer<T> {
 
         self.sink = Some(sink);
 
-        // NOTE: receiver is a mpsc::Receiver<T>, and those don't actually yield errors (see the
-        // source code for Receiver). The std lib doesn't enable the never type, so they used (),
-        // but using the never type here is much nicer when dealing with mapping errors from the
-        // resulting stream here.
-        let receiver = receiver
-            .map_err(|_| -> ! {
-                unreachable!();
-            })
-            .boxify();
-
         // NOTE: We need to start the built future here to make sure it makes progress even if the
         // receiving channel we return here is not polled. This ensures that consumers can't
         // deadlock their Multiplexer.
-        // TODO: Pass through an executor
-        spawn::spawn_and_start(builder(receiver))
+        // TODO: Pass through an executor?
+        tokio::task::spawn(builder(receiver))
     }
 
     /// Drain a Stream into the multiplexer.
-    pub fn drain<S, E>(self, stream: S) -> impl Future<Item = (), Error = MultiplexerError<E>>
+    pub async fn drain<S, E>(self, stream: S) -> Result<(), MultiplexerError<E>>
     where
-        S: Stream<Item = T, Error = E>,
+        S: Stream<Item = Result<T, E>>,
     {
         let Self { sink, .. } = self;
 
@@ -109,15 +99,18 @@ impl<T: Send + Sync + Clone + 'static> Multiplexer<T> {
             // If we have a Sink, then forward the Stream's data into it, and differentiate between
             // errors originating from the Stream and errors originating from the Sink.
             Some(sink) => {
-                let sink = sink.sink_map_err(|_| MultiplexerError::Cancelled);
+                let mut sink = sink.sink_map_err(|_| MultiplexerError::Cancelled);
                 let stream = stream.map_err(MultiplexerError::InputError);
-                sink.send_all(stream).map(|_| ()).left_future()
+                futures::pin_mut!(stream);
+                sink.send_all(&mut stream).await
             }
             // If we have no Sink, then consume the Stream regardless.
-            None => stream
-                .for_each(|_| Ok(()))
-                .map_err(MultiplexerError::InputError)
-                .right_future(),
+            None => {
+                stream
+                    .try_for_each(|_| future::ready(Ok(())))
+                    .map_err(MultiplexerError::InputError)
+                    .await
+            }
         }
     }
 }

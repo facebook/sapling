@@ -5,31 +5,32 @@
  * GNU General Public License version 2.
  */
 
-use futures_old::{Future, Stream};
+use futures::{
+    future::{self, FutureExt},
+    stream::{Stream, StreamExt},
+};
 
 use crate::incremental_hash::Hasher;
 
-pub fn hash_stream<H, E, I, S>(
-    hasher: impl Hasher<H>,
-    stream: S,
-) -> impl Future<Item = H, Error = E>
+pub async fn hash_stream<H, I, S>(hasher: impl Hasher<H>, stream: S) -> H
 where
     I: AsRef<[u8]>,
-    S: Stream<Item = I, Error = E>,
+    S: Stream<Item = I>,
 {
     stream
         .fold(hasher, |mut hasher, bytes| {
             hasher.update(bytes);
-            Ok(hasher)
+            future::ready(hasher)
         })
         .map(|hasher| hasher.finish())
+        .await
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
     use bytes::Bytes;
-    use futures_old::stream;
+    use futures::stream;
 
     use crate::incremental_hash::{
         ContentIdIncrementalHasher, GitSha1IncrementalHasher, Sha1IncrementalHasher,
@@ -43,16 +44,12 @@ mod test {
         ContentId,
     };
 
-    #[test]
-    fn sha1_simple() {
+    #[tokio::test]
+    async fn sha1_simple() {
         let data = Bytes::from(&b"hello, world"[..]); // b7e23ec29af22b0b4e41da31e868d57226121c84
-        let s = stream::once(Ok::<_, ()>(data));
+        let s = stream::once(future::ready(data));
 
-        let mut rt = tokio_compat::runtime::Runtime::new().unwrap();
-
-        let res: Sha1 = rt
-            .block_on(hash_stream(Sha1IncrementalHasher::new(), s))
-            .unwrap();
+        let res: Sha1 = hash_stream(Sha1IncrementalHasher::new(), s).await;
 
         assert_eq!(
             res,
@@ -64,18 +61,14 @@ mod test {
         );
     }
 
-    #[test]
-    fn sha1_chunks() {
+    #[tokio::test]
+    async fn sha1_chunks() {
         let data = vec![&b"hello"[..], &b", "[..], &b"world"[..]] // b7e23ec29af22b0b4e41da31e868d57226121c84
             .into_iter()
             .map(Bytes::from);
-        let s = stream::iter_ok::<_, ()>(data);
+        let s = stream::iter(data);
 
-        let mut rt = tokio_compat::runtime::Runtime::new().unwrap();
-
-        let res: Sha1 = rt
-            .block_on(hash_stream(Sha1IncrementalHasher::new(), s))
-            .unwrap();
+        let res: Sha1 = hash_stream(Sha1IncrementalHasher::new(), s).await;
 
         assert_eq!(
             res,
@@ -87,19 +80,13 @@ mod test {
         );
     }
 
-    #[test]
-    fn git_sha1_simple() {
+    #[tokio::test]
+    async fn git_sha1_simple() {
         let data = Bytes::from(&b"hello, world"[..]); // 8c01d89ae06311834ee4b1fab2f0414d35f01102
-        let s = stream::once(Ok::<_, ()>(data));
+        let s = stream::once(future::ready(data));
 
-        let mut rt = tokio_compat::runtime::Runtime::new().unwrap();
-
-        let res: RichGitSha1 = rt
-            .block_on(hash_stream(
-                GitSha1IncrementalHasher::new(ExpectedSize::new(12)),
-                s,
-            ))
-            .unwrap();
+        let res: RichGitSha1 =
+            hash_stream(GitSha1IncrementalHasher::new(ExpectedSize::new(12)), s).await;
 
         assert_eq!(
             res,
@@ -115,21 +102,15 @@ mod test {
         );
     }
 
-    #[test]
-    fn git_sha1_chunks() {
+    #[tokio::test]
+    async fn git_sha1_chunks() {
         let data = vec![&b"hello"[..], &b", "[..], &b"world"[..]] // 8c01d89ae06311834ee4b1fab2f0414d35f01102
             .into_iter()
             .map(Bytes::from);
-        let s = stream::iter_ok::<_, ()>(data);
+        let s = stream::iter(data);
 
-        let mut rt = tokio_compat::runtime::Runtime::new().unwrap();
-
-        let res: RichGitSha1 = rt
-            .block_on(hash_stream(
-                GitSha1IncrementalHasher::new(ExpectedSize::new(12)),
-                s,
-            ))
-            .unwrap();
+        let res: RichGitSha1 =
+            hash_stream(GitSha1IncrementalHasher::new(ExpectedSize::new(12)), s).await;
 
         assert_eq!(
             res,
@@ -145,16 +126,12 @@ mod test {
         );
     }
 
-    #[test]
-    fn sha256_simple() {
+    #[tokio::test]
+    async fn sha256_simple() {
         let data = Bytes::from(&b"hello, world"[..]); // 09ca7e4eaa6e8ae9c7d261167129184883644d07dfba7cbfbc4c8a2e08360d5b
-        let s = stream::once(Ok::<_, ()>(data));
+        let s = stream::once(future::ready(data));
 
-        let mut rt = tokio_compat::runtime::Runtime::new().unwrap();
-
-        let res: Sha256 = rt
-            .block_on(hash_stream(Sha256IncrementalHasher::new(), s))
-            .unwrap();
+        let res: Sha256 = hash_stream(Sha256IncrementalHasher::new(), s).await;
 
         assert_eq!(
             res,
@@ -167,18 +144,14 @@ mod test {
         );
     }
 
-    #[test]
-    fn sha256_chunks() {
+    #[tokio::test]
+    async fn sha256_chunks() {
         let data = vec![&b"hello"[..], &b", "[..], &b"world"[..]] // 09ca7e4eaa6e8ae9c7d261167129184883644d07dfba7cbfbc4c8a2e08360d5b
             .into_iter()
             .map(Bytes::from);
-        let s = stream::iter_ok::<_, ()>(data);
+        let s = stream::iter(data);
 
-        let mut rt = tokio_compat::runtime::Runtime::new().unwrap();
-
-        let res: Sha256 = rt
-            .block_on(hash_stream(Sha256IncrementalHasher::new(), s))
-            .unwrap();
+        let res: Sha256 = hash_stream(Sha256IncrementalHasher::new(), s).await;
 
         assert_eq!(
             res,
@@ -191,16 +164,12 @@ mod test {
         );
     }
 
-    #[test]
-    fn content_id_simple() {
+    #[tokio::test]
+    async fn content_id_simple() {
         let data = Bytes::from(&b"hello, world"[..]); // 19d95f338fa0f547f773c12353eb6dacb1a7ce9b0402515484e8276055774b35
-        let s = stream::once(Ok::<_, ()>(data));
+        let s = stream::once(future::ready(data));
 
-        let mut rt = tokio_compat::runtime::Runtime::new().unwrap();
-
-        let res: ContentId = rt
-            .block_on(hash_stream(ContentIdIncrementalHasher::new(), s))
-            .unwrap();
+        let res: ContentId = hash_stream(ContentIdIncrementalHasher::new(), s).await;
 
         assert_eq!(
             res,
@@ -213,18 +182,14 @@ mod test {
         );
     }
 
-    #[test]
-    fn content_id_chunks() {
+    #[tokio::test]
+    async fn content_id_chunks() {
         let data = vec![&b"hello"[..], &b", "[..], &b"world"[..]] // 19d95f338fa0f547f773c12353eb6dacb1a7ce9b0402515484e8276055774b35
             .into_iter()
             .map(Bytes::from);
-        let s = stream::iter_ok::<_, ()>(data);
+        let s = stream::iter(data);
 
-        let mut rt = tokio_compat::runtime::Runtime::new().unwrap();
-
-        let res: ContentId = rt
-            .block_on(hash_stream(ContentIdIncrementalHasher::new(), s))
-            .unwrap();
+        let res: ContentId = hash_stream(ContentIdIncrementalHasher::new(), s).await;
 
         assert_eq!(
             res,
@@ -237,13 +202,11 @@ mod test {
         );
     }
 
-    #[test]
-    fn sha1_empty() {
-        let s = stream::iter_ok::<_, ()>(Vec::<Bytes>::new());
-        let mut rt = tokio_compat::runtime::Runtime::new().unwrap();
-        let res: Sha1 = rt
-            .block_on(hash_stream(Sha1IncrementalHasher::new(), s))
-            .unwrap();
+    #[tokio::test]
+    async fn sha1_empty() {
+        let s = stream::empty::<Vec<u8>>();
+
+        let res: Sha1 = hash_stream(Sha1IncrementalHasher::new(), s).await;
 
         assert_eq!(
             res,

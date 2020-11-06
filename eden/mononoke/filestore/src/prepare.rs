@@ -10,8 +10,12 @@ use blobstore::Blobstore;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
-use futures::future::TryFutureExt;
-use futures_ext::FutureExt;
+use futures::{
+    compat::{Future01CompatExt, Stream01CompatExt},
+    future::{FutureExt, TryFutureExt},
+    stream::{StreamExt, TryStreamExt},
+};
+use futures_ext::FutureExt as _;
 use futures_old::{
     future::{lazy, IntoFuture},
     Future, Stream,
@@ -73,7 +77,7 @@ pub fn prepare_chunked<B: Blobstore + Clone, S>(
     concurrency: usize,
 ) -> impl Future<Item = Prepared, Error = Error>
 where
-    S: Stream<Item = Bytes, Error = Error>,
+    S: Stream<Item = Bytes, Error = Error> + Send + 'static,
 {
     lazy(move || {
         // NOTE: The Multiplexer makes clones of the Bytes we pass in. It's worth noting that Bytes
@@ -82,90 +86,105 @@ where
         let mut multiplexer = Multiplexer::<Bytes>::new();
 
         // Spawn a stream for each hash we need to produce.
-        let content_id =
-            multiplexer.add(|stream| hash_stream(ContentIdIncrementalHasher::new(), stream));
+        let content_id = multiplexer
+            .add(|stream| hash_stream(ContentIdIncrementalHasher::new(), stream))
+            .boxed()
+            .compat();
         let aliases = add_aliases_to_multiplexer(&mut multiplexer, expected_size);
 
         // For the file's contents, spawn new tasks for each individual chunk. This ensures that
         // each chunk is hashed and uploaded separately, and potentially on a different CPU core.
         // We allow up to concurrency uploads to progress at the same time, which creates
         // backpressure into the chunks Stream.
-        let contents = multiplexer.add(move |stream| {
-            stream
-                .map_err(|e| -> Error { e }) // Coerce the Error value for our stream.
-                .map(move |bytes| {
-                    // NOTE: This is lazy to allow the hash computation for this chunk's ID to
-                    // happen on a separate core.
-                    let fut = lazy({
-                        cloned!(blobstore, ctx);
-                        move || {
-                            let (blob, pointer) = new_blob_and_pointer(bytes);
+        let contents = multiplexer
+            .add(move |stream| {
+                stream
+                    .map(|bytes| Result::<_, Error>::Ok(bytes))
+                    .compat()
+                    .map(move |bytes| {
+                        // NOTE: This is lazy to allow the hash computation for this chunk's ID to
+                        // happen on a separate core.
+                        let fut = lazy({
+                            cloned!(blobstore, ctx);
+                            move || {
+                                let (blob, pointer) = new_blob_and_pointer(bytes);
 
-                            // TODO: Convert this along with other store calls to impl Storable for
-                            // MononokeId.
-                            blobstore
-                                .put(ctx, blob.id().blobstore_key(), blob.into())
-                                .compat()
-                                .map(move |_| pointer)
-                        }
-                    });
+                                // TODO: Convert this along with other store calls to impl Storable for
+                                // MononokeId.
+                                blobstore
+                                    .put(ctx, blob.id().blobstore_key(), blob.into())
+                                    .compat()
+                                    .map(move |_| pointer)
+                            }
+                        });
 
-                    spawn::spawn_and_start(fut).map_err(|e| e.into())
-                })
-                .buffered(concurrency)
-                .fold(vec![], |mut chunks, chunk| {
-                    chunks.push(chunk);
-                    let res: Result<_> = Ok(chunks);
-                    res
-                })
-        });
-
-        multiplexer.drain(chunks).then(|res| {
-            // Coerce the Error value for all our futures to Error. Note that the content_id and
-            // alias ones actually cannot fail.
-            let content_id = content_id.map_err(|e| e.into());
-            let aliases = aliases.map_err(|e| e.into());
-            let contents = contents.map_err(|e| e.into());
-
-            // Mutable so we can poll later in the error case.
-            let mut futs = (content_id, aliases, contents).into_future();
-
-            match res {
-                // All is well - get the results when our futures complete.
-                Ok(_) => futs
-                    .and_then(|(content_id, aliases, chunks)| {
-                        let contents =
-                            FileContents::Chunked(ChunkedFileContents::new(content_id, chunks));
-
-                        let (sha1, sha256, git_sha1) = aliases.redeem(contents.size())?;
-
-                        let prepared = Prepared {
-                            sha1,
-                            sha256,
-                            git_sha1,
-                            contents,
-                        };
-
-                        Ok(prepared)
+                        spawn::spawn_and_start(fut).map_err(|e| e.into())
                     })
-                    .left_future(),
-                // If the Multiplexer hit an error, then it's worth handling the Cancelled case
-                // separately: Cancelled means our Multiplexer noted that one of its readers
-                // stopped reading. Usually, this will be because one of the readers failed. So,
-                // let's just poll the readers once to see if they have an error value ready, and
-                // if so, let's return that Error (because it'll be a more usable one). If not,
-                // we'll passthrough the cancellation (but, we do have a unit test to make sure we
-                // hit the happy path that prettifies the error).
-                Err(e) => Err(match e {
-                    e @ MultiplexerError::Cancelled => match futs.poll() {
-                        Ok(_) => e.into(),
-                        Err(e) => e,
-                    },
-                    e @ MultiplexerError::InputError(_) => e.into(),
-                })
-                .into_future()
-                .right_future(),
-            }
-        })
+                    .buffered(concurrency)
+                    .fold(vec![], |mut chunks, chunk| {
+                        chunks.push(chunk);
+                        let res: Result<_> = Ok(chunks);
+                        res
+                    })
+                    .compat()
+            })
+            .map(|res| match res {
+                Ok(Ok(r)) => Ok(r),
+                Ok(Err(e)) => Err(e),
+                Err(e) => Err(e.into()),
+            })
+            .compat();
+
+        multiplexer
+            .drain(chunks.compat())
+            .boxed()
+            .compat()
+            .then(|res| {
+                // Coerce the Error value for all our futures to Error. Note that the content_id and
+                // alias ones actually cannot fail.
+                let content_id = content_id.map_err(|e| e.into());
+                let aliases = aliases.map_err(|e| e.into());
+                let contents = contents.map_err(|e| e.into());
+
+                // Mutable so we can poll later in the error case.
+                let mut futs = (content_id, aliases, contents).into_future();
+
+                match res {
+                    // All is well - get the results when our futures complete.
+                    Ok(_) => futs
+                        .and_then(|(content_id, aliases, chunks)| {
+                            let contents =
+                                FileContents::Chunked(ChunkedFileContents::new(content_id, chunks));
+
+                            let (sha1, sha256, git_sha1) = aliases.redeem(contents.size())?;
+
+                            let prepared = Prepared {
+                                sha1,
+                                sha256,
+                                git_sha1,
+                                contents,
+                            };
+
+                            Ok(prepared)
+                        })
+                        .left_future(),
+                    // If the Multiplexer hit an error, then it's worth handling the Cancelled case
+                    // separately: Cancelled means our Multiplexer noted that one of its readers
+                    // stopped reading. Usually, this will be because one of the readers failed. So,
+                    // let's just poll the readers once to see if they have an error value ready, and
+                    // if so, let's return that Error (because it'll be a more usable one). If not,
+                    // we'll passthrough the cancellation (but, we do have a unit test to make sure we
+                    // hit the happy path that prettifies the error).
+                    Err(e) => Err(match e {
+                        e @ MultiplexerError::Cancelled => match futs.poll() {
+                            Ok(_) => e.into(),
+                            Err(e) => e,
+                        },
+                        e @ MultiplexerError::InputError(_) => e.into(),
+                    })
+                    .into_future()
+                    .right_future(),
+                }
+            })
     })
 }

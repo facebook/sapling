@@ -396,7 +396,7 @@ pub fn store<B: Blobstore + Clone>(
     config: FilestoreConfig,
     ctx: CoreContext,
     req: &StoreRequest,
-    data: impl Stream<Item = Bytes, Error = Error>,
+    data: impl Stream<Item = Bytes, Error = Error> + Send + 'static,
 ) -> impl Future<Item = ContentMetadata, Error = Error> {
     use chunk::Chunks;
 

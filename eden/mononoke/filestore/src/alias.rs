@@ -7,6 +7,10 @@
 
 use anyhow::{Error, Result};
 use bytes::Bytes;
+use futures::{
+    compat::Stream01CompatExt,
+    future::{FutureExt, TryFutureExt},
+};
 use futures_old::{
     future::{lazy, IntoFuture},
     Future, Stream,
@@ -18,7 +22,6 @@ use crate::incremental_hash::{
     GitSha1IncrementalHasher, Sha1IncrementalHasher, Sha256IncrementalHasher,
 };
 use crate::multiplexer::Multiplexer;
-use crate::spawn::SpawnError;
 use crate::streamhash::hash_stream;
 
 type Aliases = (hash::Sha1, hash::Sha256, hash::RichGitSha1);
@@ -54,11 +57,16 @@ impl RedeemableAliases {
 pub fn add_aliases_to_multiplexer<T: AsRef<[u8]> + Send + Sync + Clone + 'static>(
     multiplexer: &mut Multiplexer<T>,
     expected_size: ExpectedSize,
-) -> impl Future<Item = RedeemableAliases, Error = SpawnError<!>> {
-    let sha1 = multiplexer.add(|stream| hash_stream(Sha1IncrementalHasher::new(), stream));
-    let sha256 = multiplexer.add(|stream| hash_stream(Sha256IncrementalHasher::new(), stream));
+) -> impl Future<Item = RedeemableAliases, Error = tokio::task::JoinError> {
+    let sha1 = multiplexer
+        .add(|stream| hash_stream(Sha1IncrementalHasher::new(), stream))
+        .compat();
+    let sha256 = multiplexer
+        .add(|stream| hash_stream(Sha256IncrementalHasher::new(), stream))
+        .compat();
     let git_sha1 = multiplexer
-        .add(move |stream| hash_stream(GitSha1IncrementalHasher::new(expected_size), stream));
+        .add(move |stream| hash_stream(GitSha1IncrementalHasher::new(expected_size), stream))
+        .compat();
 
     (sha1, sha256, git_sha1)
         .into_future()
@@ -71,14 +79,16 @@ pub fn alias_stream<S>(
     chunks: S,
 ) -> impl Future<Item = RedeemableAliases, Error = Error>
 where
-    S: Stream<Item = Bytes, Error = Error>,
+    S: Stream<Item = Bytes, Error = Error> + Send + 'static,
 {
     lazy(move || {
         let mut multiplexer = Multiplexer::new();
         let aliases = add_aliases_to_multiplexer(&mut multiplexer, expected_size);
 
         multiplexer
-            .drain(chunks)
+            .drain(chunks.compat())
+            .boxed()
+            .compat()
             .map_err(|e| e.into())
             .and_then(|_| aliases.map_err(|e| e.into()))
     })

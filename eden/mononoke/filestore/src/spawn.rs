@@ -53,7 +53,7 @@ where
     let (sender, receiver) = oneshot::channel::<Result<I, E>>();
 
     let fut = fut.then(|res| sender.send(res)).discard();
-    tokio::spawn(fut);
+    tokio_old::spawn(fut);
 
     receiver.into_future().then(|res| match res {
         Ok(Ok(r)) => Ok(r),
