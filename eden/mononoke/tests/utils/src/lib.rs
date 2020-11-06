@@ -16,7 +16,7 @@ use bytes::{Bytes, BytesMut};
 use context::CoreContext;
 use filestore::{self, FetchKey, StoreRequest};
 use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
+    compat::Future01CompatExt,
     future,
     stream::{self, TryStreamExt},
 };
@@ -81,7 +81,6 @@ pub async fn list_working_copy(
                 }
             };
             let bytes = s
-                .compat()
                 .try_fold(BytesMut::new(), |mut bytes, new_bytes| {
                     bytes.extend_from_slice(&new_bytes);
                     future::ready(Ok(bytes))

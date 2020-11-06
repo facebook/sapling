@@ -70,7 +70,7 @@ pub async fn alias_stream<S>(
     chunks: S,
 ) -> Result<RedeemableAliases, Error>
 where
-    S: Stream<Item = Result<Bytes, Error>> + Send + 'static,
+    S: Stream<Item = Result<Bytes, Error>> + Send,
 {
     let mut multiplexer = Multiplexer::new();
     let aliases = add_aliases_to_multiplexer(&mut multiplexer, expected_size);

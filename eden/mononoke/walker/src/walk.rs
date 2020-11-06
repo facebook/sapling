@@ -22,11 +22,11 @@ use derived_data_filenodes::FilenodesOnlyPublic;
 use filestore::{self, Alias};
 use fsnodes::RootFsnodeId;
 use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
+    compat::Future01CompatExt,
     future::{self, Future, FutureExt, TryFutureExt},
     stream::{BoxStream, StreamExt, TryStreamExt},
 };
-use futures_old::{Future as Future01, Stream as Stream01};
+use futures_old::Future as Future01;
 use itertools::{Either, Itertools};
 use manifest::{Entry, Manifest};
 use mercurial_derived_data::MappedHgChangesetId;
@@ -336,9 +336,7 @@ fn file_content_step<V: VisitOne>(
     checker: &Checker<V>,
     id: ContentId,
 ) -> Result<StepOutput, Error> {
-    let s = filestore::fetch_stream(repo.get_blobstore(), ctx, id)
-        .map(FileBytes)
-        .compat();
+    let s = filestore::fetch_stream(repo.get_blobstore(), ctx, id).map_ok(FileBytes);
     // We don't force file loading here, content may not be needed
     Ok(StepOutput(
         checker.step_data(NodeType::FileContent, || {

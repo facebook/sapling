@@ -289,12 +289,11 @@ async fn fetch_from_filestore(
             let v = Vec::with_capacity(size as usize);
             let bytes = stream
                 .map_err(FetchError::Error)
-                .fold(v, |mut acc, bytes| {
+                .try_fold(v, |mut acc, bytes| async move {
                     acc.extend(check_binary(bytes.as_ref())?);
                     Ok(acc)
                 })
-                .map(Bytes::from)
-                .compat()
+                .map_ok(Bytes::from)
                 .await?;
             Ok(bytes)
         }

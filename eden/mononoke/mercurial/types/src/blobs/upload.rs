@@ -20,7 +20,6 @@ use failure_ext::FutureFailureErrorExt;
 use filestore::FilestoreConfig;
 use filestore::{self, FetchKey};
 use futures::{
-    compat::Stream01CompatExt,
     future::{FutureExt, TryFutureExt},
     stream::{StreamExt, TryStreamExt},
 };
@@ -366,7 +365,7 @@ impl UploadHgFileContents {
             let stream = filestore::fetch(&blobstore, ctx, &FetchKey::Canonical(content_id))
                 .await?
                 .ok_or(ErrorKind::ContentBlobMissing(content_id))?;
-            Result::<_, Error>::Ok(stream.compat()) // TODO: We are compat-ing the stream twice here. This will be fixed when we return a new Stream
+            Result::<_, Error>::Ok(stream)
         }
         .try_flatten_stream()
         .boxed()

@@ -54,6 +54,5 @@ tokio-openssl = "0.4"
 [dev-dependencies]
 blobrepo_override = { path = "../blobrepo/override" }
 mononoke_types-mocks = { path = "../mononoke_types/mocks" }
-futures-old = { package = "futures", version = "0.1" }
 pretty_assertions = "0.6"
 tokio-compat = "0.1"

@@ -13,10 +13,7 @@ use blobstore::Blobstore;
 use cloned::cloned;
 use context::CoreContext;
 use filestore::{exists, fetch, get_metadata, store, FetchKey, FilestoreConfig, StoreRequest};
-use futures::{
-    compat::Stream01CompatExt,
-    future::{FutureExt, TryFutureExt},
-};
+use futures::future::{FutureExt, TryFutureExt};
 use futures_ext::{BoxFuture, FutureExt as _};
 use futures_old::future::{err, ok, Future};
 use mononoke_types::ContentId;
@@ -112,7 +109,7 @@ pub fn copy_content(
                             dst_filestore_config,
                             ctx,
                             &store_request,
-                            byte_stream.compat(),
+                            byte_stream,
                         )
                         .await?;
                         Ok(())
@@ -135,7 +132,7 @@ mod test {
     use bytes::Bytes;
     use context::CoreContext;
     use fbinit::FacebookInit;
-    use futures::compat::Future01CompatExt;
+    use futures::compat::{Future01CompatExt, Stream01CompatExt};
     use futures_old::stream;
     use memblob::EagerMemblob;
     use mononoke_types::{typed_hash, BlobstoreBytes, ContentMetadata, RepositoryId};

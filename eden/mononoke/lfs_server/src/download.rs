@@ -8,10 +8,7 @@
 use std::str::FromStr;
 
 use anyhow::Context;
-use futures::{
-    compat::Stream01CompatExt,
-    stream::{StreamExt, TryStreamExt},
-};
+use futures::stream::{StreamExt, TryStreamExt};
 use gotham::state::State;
 use gotham_derive::{StateData, StaticResponseExtender};
 use serde::Deserialize;
@@ -75,8 +72,6 @@ async fn fetch_by_key(
     let (stream, size) = fetched
         .ok_or_else(|| ErrorKind::ObjectDoesNotExist(key))
         .map_err(HttpError::e404)?;
-
-    let stream = stream.compat();
 
     ScubaMiddlewareState::maybe_add(scuba, LfsScubaKey::DownloadContentSize, size);
 

@@ -17,11 +17,9 @@ use bytes::{Bytes, BytesMut};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
     future::{self, TryFutureExt},
     stream::{self, TryStreamExt},
 };
-use futures_old::{future::Future, stream::Stream};
 use lazy_static::lazy_static;
 use mononoke_types::{hash, typed_hash::MononokeId, ContentId, ContentMetadata, ContentMetadataId};
 use mononoke_types_mocks::contentid::ONES_CTID;
@@ -559,7 +557,6 @@ async fn filestore_get_range(fb: FacebookInit) -> Result<()> {
                 .0;
 
         let bytes = stream
-            .compat()
             .try_fold(BytesMut::new(), |mut buff, chunk| async move {
                 buff.extend_from_slice(&chunk);
                 Result::<_, Error>::Ok(buff)
@@ -610,7 +607,6 @@ async fn filestore_get_chunked_range(fb: FacebookInit) -> Result<()> {
                 .0;
 
         let bytes = stream
-            .compat()
             .try_fold(BytesMut::new(), |mut buff, chunk| async move {
                 buff.extend_from_slice(&chunk);
                 Result::<_, Error>::Ok(buff)
@@ -1065,13 +1061,13 @@ async fn filestore_chunked_put_get_with_size(fb: FacebookInit) -> Result<()> {
     let (stream, size) = res?.unwrap();
 
     let fut = stream
-        .fold(BytesMut::new(), |mut buff, chunk| {
+        .try_fold(BytesMut::new(), |mut buff, chunk| async move {
             buff.extend_from_slice(&chunk);
             Result::<_, Error>::Ok(buff)
         })
-        .map(BytesMut::freeze);
+        .map_ok(BytesMut::freeze);
 
-    let bytes = fut.compat().await;
+    let bytes = fut.await;
 
     println!("{:?}", bytes);
 
@@ -1246,7 +1242,7 @@ async fn assert_fetches_as<B: Blobstore + Clone>(
     let res = filestore::fetch(blobstore, ctx, &FetchKey::Canonical(content_id))
         .map_ok(|maybe_stream| async move {
             let res: Option<Vec<Bytes>> = match maybe_stream {
-                Some(stream) => Some(stream.compat().try_collect().await?),
+                Some(stream) => Some(stream.try_collect().await?),
                 None => None,
             };
 

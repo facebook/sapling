@@ -15,9 +15,9 @@ use context::CoreContext;
 use fbinit::FacebookInit;
 use filestore::{self, Alias, FetchKey, StoreRequest};
 use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
+    compat::Future01CompatExt,
     future::{self, FutureExt, TryFutureExt},
-    stream::{StreamExt, TryStreamExt},
+    stream::TryStreamExt,
 };
 use futures_old::Future as _;
 use mononoke_types::{
@@ -142,13 +142,12 @@ pub async fn execute_command<'a>(
             let fetch_key = extract_fetch_key(matches)?;
             let mut stream = filestore::fetch(&blobrepo.get_blobstore(), ctx.clone(), &fetch_key)
                 .await?
-                .ok_or_else(|| anyhow!("content not found"))?
-                .compat();
+                .ok_or_else(|| anyhow!("content not found"))?;
 
             let mut stdout = tokio::io::stdout();
 
-            while let Some(b) = stream.next().await {
-                stdout.write_all(b?.as_ref()).await.map_err(Error::from)?;
+            while let Some(b) = stream.try_next().await? {
+                stdout.write_all(b.as_ref()).await.map_err(Error::from)?;
             }
 
             Ok(())

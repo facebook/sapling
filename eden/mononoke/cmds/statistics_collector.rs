@@ -19,10 +19,9 @@ use cmdlib::{args, helpers::block_execute};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::compat::{Future01CompatExt, Stream01CompatExt};
-use futures::stream::{self, StreamExt, TryStreamExt};
+use futures::stream::{self, Stream, StreamExt, TryStreamExt};
 use futures::{future::FutureExt, try_join};
 use futures_ext::{BoxStream, StreamExt as OldStreamExt};
-use futures_old::stream::Stream;
 use manifest::{Diff, Entry, ManifestOps};
 use mercurial_types::{FileBytes, HgChangesetId, HgFileNodeId, HgManifestId};
 use mononoke_types::{FileType, RepositoryId};
@@ -124,9 +123,10 @@ impl Sub for RepoStatistics {
     }
 }
 
-pub async fn number_of_lines(bytes_stream: BoxStream<FileBytes, Error>) -> Result<i64, Error> {
+pub async fn number_of_lines(
+    bytes_stream: impl Stream<Item = Result<FileBytes, Error>>,
+) -> Result<i64, Error> {
     bytes_stream
-        .compat()
         .map_ok(|bytes| {
             bytes.into_iter().fold(0, |num_lines, byte| {
                 if byte == '\n' as u8 {
@@ -174,8 +174,7 @@ pub async fn get_statistics_from_entry(
             let lines = if FileType::Regular == file_type && size < BIG_FILE_THRESHOLD {
                 let content =
                     filestore::fetch_stream(repo.get_blobstore(), ctx.clone(), content_id)
-                        .map(FileBytes)
-                        .boxify();
+                        .map_ok(FileBytes);
                 number_of_lines(content).await?
             } else {
                 0
@@ -565,8 +564,10 @@ mod tests {
     use super::*;
     use bytes::Bytes;
     use fixtures::linear;
-    use futures::future::{self, TryFutureExt};
-    use futures_old::stream as old_stream;
+    use futures::{
+        future::{self, TryFutureExt},
+        stream,
+    };
     use maplit::btreemap;
     use std::str::FromStr;
     use tests_utils::{create_commit, store_files};
@@ -576,8 +577,7 @@ mod tests {
     fn test_number_of_lines_empty_stream() -> Result<(), Error> {
         let mut rt = Runtime::new().unwrap();
 
-        let stream: BoxStream<FileBytes, Error> =
-            Box::new(old_stream::once(Ok(FileBytes(Bytes::from(&b""[..])))));
+        let stream = stream::once(async { Ok(FileBytes(Bytes::from(&b""[..]))) });
         let result = rt.block_on(number_of_lines(stream).boxed().compat())?;
         assert_eq!(result, 0);
         Ok(())
@@ -587,9 +587,7 @@ mod tests {
     fn test_number_of_lines_one_line() -> Result<(), Error> {
         let mut rt = Runtime::new().unwrap();
 
-        let stream: BoxStream<FileBytes, Error> = Box::new(old_stream::once(Ok(FileBytes(
-            Bytes::from(&b"First line\n"[..]),
-        ))));
+        let stream = stream::once(async { Ok(FileBytes(Bytes::from(&b"First line\n"[..]))) });
         let result = rt.block_on(number_of_lines(stream).boxed().compat())?;
         assert_eq!(result, 1);
         Ok(())
@@ -599,9 +597,11 @@ mod tests {
     fn test_number_of_lines_many_lines() -> Result<(), Error> {
         let mut rt = Runtime::new().unwrap();
 
-        let stream: BoxStream<FileBytes, Error> = Box::new(old_stream::once(Ok(FileBytes(
-            Bytes::from(&b"First line\nSecond line\nThird line\n"[..]),
-        ))));
+        let stream = stream::once(async {
+            Ok(FileBytes(Bytes::from(
+                &b"First line\nSecond line\nThird line\n"[..],
+            )))
+        });
         let result = rt.block_on(number_of_lines(stream).boxed().compat())?;
         assert_eq!(result, 3);
         Ok(())
@@ -616,7 +616,7 @@ mod tests {
             FileBytes(Bytes::from(&b""[..])),
             FileBytes(Bytes::from(&b"First line\nSecond line\nThird line\n"[..])),
         ];
-        let stream: BoxStream<FileBytes, Error> = Box::new(old_stream::iter_ok(vec));
+        let stream = stream::iter(vec.into_iter().map(Ok));
         let result = rt.block_on(number_of_lines(stream).boxed().compat())?;
         assert_eq!(result, 4);
         Ok(())

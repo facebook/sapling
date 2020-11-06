@@ -12,11 +12,9 @@
 use anyhow::Error;
 use bytes::{Bytes, BytesMut};
 use futures::{
-    compat::Stream01CompatExt,
     future::{Future, TryFutureExt},
-    stream::{self, Stream, StreamExt, TryStreamExt},
+    stream::{self, Stream, TryStreamExt},
 };
-use futures_old::Stream as OldStream;
 use std::convert::TryInto;
 
 use blobstore::{Blobstore, Loadable, LoadableError};
@@ -227,7 +225,7 @@ pub async fn fetch_with_size<B: Blobstore + Clone>(
     blobstore: &B,
     ctx: CoreContext,
     key: &FetchKey,
-) -> Result<Option<(impl OldStream<Item = Bytes, Error = Error>, u64)>, Error> {
+) -> Result<Option<(impl Stream<Item = Result<Bytes, Error>>, u64)>, Error> {
     let content_id = key
         .load(ctx.clone(), blobstore)
         .await
@@ -256,7 +254,7 @@ pub async fn fetch_range_with_size<B: Blobstore + Clone>(
     key: &FetchKey,
     start: u64,
     size: u64,
-) -> Result<Option<(impl OldStream<Item = Bytes, Error = Error>, u64)>, Error> {
+) -> Result<Option<(impl Stream<Item = Result<Bytes, Error>>, u64)>, Error> {
     let content_id = key
         .load(ctx.clone(), blobstore)
         .await
@@ -288,7 +286,7 @@ pub async fn fetch<B: Blobstore + Clone>(
     blobstore: &B,
     ctx: CoreContext,
     key: &FetchKey,
-) -> Result<Option<impl OldStream<Item = Bytes, Error = Error>>, Error> {
+) -> Result<Option<impl Stream<Item = Result<Bytes, Error>>>, Error> {
     let res = fetch_with_size(blobstore, ctx, key).await?;
     Ok(res.map(|(stream, _len)| stream))
 }
@@ -311,7 +309,6 @@ pub async fn fetch_concat_opt<B: Blobstore + Clone>(
             let buf = BytesMut::with_capacity(len);
 
             let bytes = stream
-                .compat()
                 .try_fold(buf, |mut buffer, chunk| async move {
                     buffer.extend_from_slice(&chunk);
                     Result::<_, Error>::Ok(buffer)
@@ -343,18 +340,16 @@ pub fn fetch_stream<B: Blobstore + Clone>(
     blobstore: B,
     ctx: CoreContext,
     key: impl Into<FetchKey>,
-) -> impl OldStream<Item = Bytes, Error = Error> {
+) -> impl Stream<Item = Result<Bytes, Error>> {
     let key: FetchKey = key.into();
 
     async move {
         let stream = fetch(&blobstore, ctx, &key)
             .await?
             .ok_or_else(|| errors::ErrorKind::MissingContent(key))?;
-        Result::<_, Error>::Ok(stream.compat())
+        Result::<_, Error>::Ok(stream)
     }
     .try_flatten_stream()
-    .boxed()
-    .compat()
 }
 
 /// This function has the same functionality as fetch_range_with_size, but doesn't return the file size.
@@ -364,7 +359,7 @@ pub async fn fetch_range<B: Blobstore + Clone>(
     key: &FetchKey,
     start: u64,
     size: u64,
-) -> Result<Option<impl OldStream<Item = Bytes, Error = Error>>, Error> {
+) -> Result<Option<impl Stream<Item = Result<Bytes, Error>>>, Error> {
     let res = fetch_range_with_size(blobstore, ctx, key, start, size).await?;
     Ok(res.map(|(stream, _len)| stream))
 }
@@ -383,7 +378,7 @@ pub async fn peek<B: Blobstore + Clone>(
     match maybe_stream {
         None => Ok(None),
         Some(stream) => {
-            let mut stream = chunk::ChunkStream::new(stream.compat(), size);
+            let mut stream = chunk::ChunkStream::new(stream, size);
             stream.try_next().await
         }
     }
@@ -397,7 +392,7 @@ pub async fn store<B: Blobstore + Clone>(
     config: FilestoreConfig,
     ctx: CoreContext,
     req: &StoreRequest,
-    data: impl Stream<Item = Result<Bytes, Error>> + Send + 'static,
+    data: impl Stream<Item = Result<Bytes, Error>> + Send,
 ) -> Result<ContentMetadata, Error> {
     use chunk::Chunks;
 
@@ -430,7 +425,7 @@ pub fn store_bytes<B: Blobstore + Clone>(
     bytes: Bytes,
 ) -> (
     (ContentId, u64),
-    impl Future<Output = Result<(), Error>> + Send + 'static,
+    impl Future<Output = Result<(), Error>> + Send,
 ) {
     // NOTE: Like in other places in the Filestore, we assume that the size of buffers being passed
     // in can be represented in 64 bits (which is OK for the world we live in).

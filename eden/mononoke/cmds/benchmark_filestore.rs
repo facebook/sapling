@@ -21,7 +21,6 @@ use futures::{
     compat::Future01CompatExt,
     stream::{self, StreamExt, TryStreamExt},
 };
-use futures_old::Stream;
 use futures_stats::{FutureStats, TimedFutureExt};
 use mononoke_types::{ContentMetadata, MononokeId};
 use rand::Rng;
@@ -89,7 +88,7 @@ async fn read<B: Blobstore + Clone>(
         .await?
         .ok_or(format_err!("Fetch failed: no stream"))?;
 
-    let (stats, res) = stream.for_each(|_| Ok(())).compat().timed().await;
+    let (stats, res) = stream.try_for_each(|_| async { Ok(()) }).timed().await;
     log_perf(stats, &res, content_metadata.total_size);
 
     // ignore errors - all we do is log them in `log_perf`

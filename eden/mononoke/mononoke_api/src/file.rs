@@ -15,7 +15,6 @@ use bytes::{Bytes, BytesMut};
 use cloned::cloned;
 use context::CoreContext;
 use filestore::{self, get_metadata, FetchKey};
-use futures::compat::Stream01CompatExt;
 use futures::future::{FutureExt, Shared};
 use futures::stream::TryStreamExt;
 use futures::try_join;
@@ -170,7 +169,6 @@ impl FileContext {
                 })?;
 
                 let bytes = stream
-                    .compat()
                     .map_err(MononokeError::from)
                     .try_fold(
                         BytesMut::with_capacity(size),

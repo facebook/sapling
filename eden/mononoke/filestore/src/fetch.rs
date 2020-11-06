@@ -11,9 +11,9 @@ use anyhow::Error;
 use blobstore::{Blobstore, Loadable, LoadableError};
 use bytes::Bytes;
 use context::CoreContext;
-use futures::future::TryFutureExt;
-use futures_ext::{BufferedParams, FutureExt, StreamExt};
-use futures_old::{stream, Future, Stream};
+use futures::{compat::Stream01CompatExt, future::TryFutureExt, stream::Stream};
+use futures_ext::{BufferedParams, FutureExt, StreamExt as OldStreamExt};
+use futures_old::{stream as old_stream, Future, Stream as OldStream};
 use itertools::Either;
 use mononoke_types::{ContentChunk, ContentChunkId, ContentId, FileContents};
 use thiserror::Error;
@@ -40,7 +40,7 @@ pub fn stream_file_bytes<B: Blobstore + Clone>(
     ctx: CoreContext,
     file_contents: FileContents,
     range: Range,
-) -> impl Stream<Item = Bytes, Error = Error> {
+) -> impl OldStream<Item = Bytes, Error = Error> {
     match file_contents {
         FileContents::Bytes(bytes) => {
             // File is just a single chunk of bytes. Return the correct
@@ -57,7 +57,7 @@ pub fn stream_file_bytes<B: Blobstore + Clone>(
                 }
                 Range::All => bytes,
             };
-            stream::once(Ok(bytes)).left_stream()
+            old_stream::once(Ok(bytes)).left_stream()
         }
         FileContents::Chunked(chunked) => {
             // File is split into multiple chunks. Dispatch fetches for the
@@ -120,7 +120,7 @@ pub fn stream_file_bytes<B: Blobstore + Clone>(
                 }
             };
 
-            stream::iter_ok(chunk_iter.map(move |(chunk_range, chunk)| {
+            old_stream::iter_ok(chunk_iter.map(move |(chunk_range, chunk)| {
                 // Send some (maybe all) of this chunk.
                 let chunk_id = chunk.chunk_id();
 
@@ -161,7 +161,7 @@ pub async fn fetch_with_size<B: Blobstore + Clone>(
     ctx: CoreContext,
     content_id: ContentId,
     range: Range,
-) -> Result<Option<(impl Stream<Item = Bytes, Error = Error>, u64)>, Error> {
+) -> Result<Option<(impl Stream<Item = Result<Bytes, Error>>, u64)>, Error> {
     let maybe_file_contents = content_id
         .load(ctx.clone(), blobstore)
         .await
@@ -174,7 +174,7 @@ pub async fn fetch_with_size<B: Blobstore + Clone>(
     Ok(maybe_file_contents.map(|file_contents| {
         let file_size = file_contents.size();
         (
-            stream_file_bytes(blobstore.clone(), ctx, file_contents, range),
+            stream_file_bytes(blobstore.clone(), ctx, file_contents, range).compat(),
             file_size,
         )
     }))

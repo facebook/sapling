@@ -12,7 +12,6 @@ use anyhow::{Context, Error};
 use bytes::Bytes;
 use futures::{
     channel::mpsc::{self, channel},
-    compat::Stream01CompatExt,
     SinkExt, Stream, StreamExt, TryStreamExt,
 };
 use futures_util::try_join;
@@ -318,7 +317,7 @@ async fn sync_internal_and_upstream(
         Some(stream) => {
             // We have the data, so presumably upstream does not have it.
             ScubaMiddlewareState::maybe_add(scuba, LfsScubaKey::UploadSync, "internal_to_upstream");
-            upstream_upload(ctx, oid, size, stream.compat()).await?
+            upstream_upload(ctx, oid, size, stream).await?
         }
         None => {
             // We do not have the data. Get it from upstream.
