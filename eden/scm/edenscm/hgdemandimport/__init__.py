@@ -69,6 +69,7 @@ ignore = [
     "sqlite3",  # for IPython to detect missing sqlite
     "pyreadline",  # for IPython on Windows to detect missing pyreadline
     "ctypes.windll",  # for IPython on Linux to detect missing "windll"
+    "edenscm.mercurial.progress",  # module 'edenscm.mercurial.progress' has no attribute 'bar'
 ]
 
 _pypy = "__pypy__" in sys.builtin_module_names
