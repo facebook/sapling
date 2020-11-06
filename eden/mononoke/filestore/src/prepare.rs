@@ -11,7 +11,6 @@ use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use futures::{
-    compat::Future01CompatExt,
     future::{self, FutureExt, TryFutureExt},
     stream::{Stream, StreamExt, TryStreamExt},
     task::Poll,
@@ -73,7 +72,7 @@ where
     let content_id =
         multiplexer.add(|stream| hash_stream(ContentIdIncrementalHasher::new(), stream));
 
-    let aliases = add_aliases_to_multiplexer(&mut multiplexer, expected_size).compat();
+    let aliases = add_aliases_to_multiplexer(&mut multiplexer, expected_size);
 
     // For the file's contents, spawn new tasks for each individual chunk. This ensures that
     // each chunk is hashed and uploaded separately, and potentially on a different CPU core.

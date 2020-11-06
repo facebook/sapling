@@ -8,7 +8,7 @@
 use anyhow::Error;
 use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use context::CoreContext;
-use futures::compat::Future01CompatExt;
+use futures::compat::Stream01CompatExt;
 use mononoke_types::{BlobstoreValue, ContentId, ContentMetadata, ContentMetadataId};
 use thiserror::Error;
 
@@ -105,10 +105,10 @@ async fn rebuild_metadata<B: Blobstore + Clone>(
         ctx.clone(),
         file_contents,
         fetch::Range::All,
-    );
+    )
+    .compat();
 
     let redeemable = alias_stream(ExpectedSize::new(total_size), content_stream)
-        .compat()
         .await
         .map_err(|e| InternalError(content_id, e))?;
 

@@ -8,12 +8,8 @@
 use anyhow::{Error, Result};
 use bytes::Bytes;
 use futures::{
-    compat::Stream01CompatExt,
-    future::{FutureExt, TryFutureExt},
-};
-use futures_old::{
-    future::{lazy, IntoFuture},
-    Future, Stream,
+    future::{self, Future, TryFutureExt},
+    stream::Stream,
 };
 use mononoke_types::hash;
 
@@ -57,39 +53,32 @@ impl RedeemableAliases {
 pub fn add_aliases_to_multiplexer<T: AsRef<[u8]> + Send + Sync + Clone + 'static>(
     multiplexer: &mut Multiplexer<T>,
     expected_size: ExpectedSize,
-) -> impl Future<Item = RedeemableAliases, Error = tokio::task::JoinError> {
-    let sha1 = multiplexer
-        .add(|stream| hash_stream(Sha1IncrementalHasher::new(), stream))
-        .compat();
-    let sha256 = multiplexer
-        .add(|stream| hash_stream(Sha256IncrementalHasher::new(), stream))
-        .compat();
+) -> impl Future<Output = Result<RedeemableAliases, Error>> + std::marker::Unpin {
+    let sha1 = multiplexer.add(|stream| hash_stream(Sha1IncrementalHasher::new(), stream));
+    let sha256 = multiplexer.add(|stream| hash_stream(Sha256IncrementalHasher::new(), stream));
     let git_sha1 = multiplexer
-        .add(move |stream| hash_stream(GitSha1IncrementalHasher::new(expected_size), stream))
-        .compat();
+        .add(move |stream| hash_stream(GitSha1IncrementalHasher::new(expected_size), stream));
 
-    (sha1, sha256, git_sha1)
-        .into_future()
-        .map(move |aliases| RedeemableAliases::new(expected_size, aliases))
+    future::try_join3(sha1, sha256, git_sha1)
+        .map_ok(move |aliases| RedeemableAliases::new(expected_size, aliases))
+        .map_err(Error::from)
 }
 
 /// Produce hashes for a stream.
-pub fn alias_stream<S>(
+pub async fn alias_stream<S>(
     expected_size: ExpectedSize,
     chunks: S,
-) -> impl Future<Item = RedeemableAliases, Error = Error>
+) -> Result<RedeemableAliases, Error>
 where
-    S: Stream<Item = Bytes, Error = Error> + Send + 'static,
+    S: Stream<Item = Result<Bytes, Error>> + Send + 'static,
 {
-    lazy(move || {
-        let mut multiplexer = Multiplexer::new();
-        let aliases = add_aliases_to_multiplexer(&mut multiplexer, expected_size);
+    let mut multiplexer = Multiplexer::new();
+    let aliases = add_aliases_to_multiplexer(&mut multiplexer, expected_size);
 
-        multiplexer
-            .drain(chunks.compat())
-            .boxed()
-            .compat()
-            .map_err(|e| e.into())
-            .and_then(|_| aliases.map_err(|e| e.into()))
-    })
+    multiplexer
+        .drain(chunks)
+        .await
+        .map_err(|e| -> Error { e.into() })?;
+
+    Ok(aliases.await?)
 }
