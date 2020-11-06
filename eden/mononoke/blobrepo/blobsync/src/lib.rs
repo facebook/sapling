@@ -13,8 +13,8 @@ use blobstore::Blobstore;
 use cloned::cloned;
 use context::CoreContext;
 use filestore::{exists, fetch, get_metadata, store, FetchKey, FilestoreConfig, StoreRequest};
-use futures::future::TryFutureExt;
-use futures_ext::{BoxFuture, FutureExt};
+use futures::future::{FutureExt, TryFutureExt};
+use futures_ext::{BoxFuture, FutureExt as _};
 use futures_old::future::{err, ok, Future};
 use mononoke_types::ContentId;
 use repo_blobstore::RepoBlobstore;
@@ -56,54 +56,57 @@ pub fn copy_content(
             if exists {
                 ok(()).boxify()
             } else {
-                get_metadata(&src_blobstore, ctx.clone(), &fetch_key.clone())
-                    .and_then({
-                        cloned!(ctx, src_blobstore, fetch_key, key);
-                        move |maybe_content_metadata| {
-                            let store_request = match maybe_content_metadata {
-                                Some(content_metadata) => {
-                                    StoreRequest::with_canonical(content_metadata.total_size, key)
-                                }
-                                None => {
-                                    return err(format_err!(
+                {
+                    cloned!(src_blobstore, ctx, fetch_key);
+                    async move { get_metadata(&src_blobstore, ctx, &fetch_key).await }
+                }
+                .boxed()
+                .compat()
+                .and_then({
+                    cloned!(ctx, src_blobstore, fetch_key, key);
+                    move |maybe_content_metadata| {
+                        let store_request = match maybe_content_metadata {
+                            Some(content_metadata) => {
+                                StoreRequest::with_canonical(content_metadata.total_size, key)
+                            }
+                            None => {
+                                return err(format_err!(
+                                    "File not found for fetch key: {:?}",
+                                    fetch_key
+                                ))
+                                .left_future();
+                            }
+                        };
+
+                        fetch(&src_blobstore, ctx, &fetch_key)
+                            .and_then(move |maybe_byte_stream| {
+                                match maybe_byte_stream {
+                                    None => err(format_err!(
                                         "File not found for fetch key: {:?}",
                                         fetch_key
                                     ))
-                                    .left_future();
-                                }
-                            };
-
-                            fetch(&src_blobstore, ctx, &fetch_key)
-                                .and_then(move |maybe_byte_stream| {
-                                    match maybe_byte_stream {
-                                        None => {
-                                            return err(format_err!(
-                                                "File not found for fetch key: {:?}",
-                                                fetch_key
-                                            ))
-                                            .left_future();
-                                        }
-                                        Some(byte_stream) => {
-                                            ok((store_request, byte_stream)).right_future()
-                                        }
+                                    .left_future(),
+                                    Some(byte_stream) => {
+                                        ok((store_request, byte_stream)).right_future()
                                     }
-                                })
-                                .right_future()
-                        }
-                    })
-                    .and_then({
-                        move |(store_request, byte_stream)| {
-                            store(
-                                dst_blobstore,
-                                dst_filestore_config,
-                                ctx,
-                                &store_request,
-                                byte_stream,
-                            )
-                            .map(|_| ())
-                        }
-                    })
-                    .boxify()
+                                }
+                            })
+                            .right_future()
+                    }
+                })
+                .and_then({
+                    move |(store_request, byte_stream)| {
+                        store(
+                            dst_blobstore,
+                            dst_filestore_config,
+                            ctx,
+                            &store_request,
+                            byte_stream,
+                        )
+                        .map(|_| ())
+                    }
+                })
+                .boxify()
             }
         })
         .boxify()
@@ -245,9 +248,8 @@ mod test {
         )
         .compat()
         .await?;
-        let maybe_copy_meta = get_metadata(&bs2.clone(), ctx.clone(), &FetchKey::Canonical(cid))
-            .compat()
-            .await?;
+        let maybe_copy_meta =
+            get_metadata(&bs2.clone(), ctx.clone(), &FetchKey::Canonical(cid)).await?;
 
         let copy_meta =
             maybe_copy_meta.expect("Copied file not found in the destination filestore");

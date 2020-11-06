@@ -68,7 +68,6 @@ impl FileContext {
             cloned!(repo, fetch_key);
             async move {
                 get_metadata(repo.blob_repo().blobstore(), repo.ctx().clone(), &fetch_key)
-                    .compat()
                     .await
                     .map_err(MononokeError::from)
                     .and_then(|metadata| {
@@ -92,7 +91,6 @@ impl FileContext {
     ) -> Result<Option<Self>, MononokeError> {
         // Try to get the file metadata immediately to see if it exists.
         let file = get_metadata(repo.blob_repo().blobstore(), repo.ctx().clone(), &fetch_key)
-            .compat()
             .await?
             .map(|metadata| {
                 let metadata = async move { Ok(metadata) };

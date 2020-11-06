@@ -27,7 +27,6 @@ impl FileContentFetcher for BlobRepoFileContentFetcher {
     ) -> Result<u64, ErrorKind> {
         let store = self.repo.get_blobstore();
         Ok(filestore::get_metadata(&store, ctx.clone(), &id.into())
-            .compat()
             .await?
             .ok_or(ErrorKind::ContentIdNotFound(id))?
             .total_size)

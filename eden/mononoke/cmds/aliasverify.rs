@@ -144,7 +144,6 @@ impl AliasVerification {
                     ctx.clone(),
                     &FetchKey::Canonical(content_id),
                 )
-                .compat()
                 .await?;
 
                 let meta = maybe_meta.ok_or(format_err!("Missing content {:?}", content_id))?;

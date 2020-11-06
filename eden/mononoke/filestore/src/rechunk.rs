@@ -63,9 +63,8 @@ pub async fn rechunk<B: Blobstore + Clone>(
 ) -> Result<(ContentMetadata, bool), Error> {
     let fetch_key = FetchKey::Canonical(content_id.clone());
     let chunk_size = filestore_config.chunk_size;
-    let metadata_fut: OldBoxFuture<Option<ContentMetadata>, _> =
-        get_metadata(&blobstore, ctx.clone(), &fetch_key).boxify();
-    let content_metadata: ContentMetadata = match metadata_fut.compat().await? {
+    let metadata = get_metadata(&blobstore, ctx.clone(), &fetch_key).await?;
+    let content_metadata: ContentMetadata = match metadata {
         Some(content_metadata) => content_metadata,
         None => return Err(ErrorKind::ContentNotFound(content_id).into()),
     };

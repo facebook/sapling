@@ -72,14 +72,15 @@ fn check_consistency<B: Blobstore + Clone>(
     })
 }
 
-fn check_metadata<B: Blobstore + Clone>(
+async fn check_metadata<B: Blobstore + Clone>(
     blobstore: &B,
     ctx: CoreContext,
     bytes: &Bytes,
-) -> impl Future<Item = bool, Error = Error> {
+) -> Result<bool, Error> {
     let content_id = hash_bytes(ContentIdIncrementalHasher::new(), &bytes);
 
     filestore::get_metadata(blobstore, ctx.clone(), &FetchKey::Canonical(content_id))
+        .await
         .map(|r| r.is_some())
 }
 
@@ -119,7 +120,7 @@ fn test_invariants(fb: FacebookInit) -> Result<()> {
         println!("content_ok: {:?}", content_ok);
 
         // If we can read the content metadata, then we should also be able to read a metadata.
-        let metadata_ok = rt.block_on(check_metadata(&memblob, ctx.clone(), &bytes))?;
+        let metadata_ok = rt.block_on_std(check_metadata(&memblob, ctx.clone(), &bytes))?;
         println!("metadata_ok: {:?}", metadata_ok);
         assert_eq!(content_ok, metadata_ok)
     }

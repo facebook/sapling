@@ -108,7 +108,6 @@ impl HgFileContext {
         let fetch_key = filestore::FetchKey::Canonical(content_id);
         let blobstore = self.repo.blob_repo().blobstore();
         let metadata = filestore::get_metadata(blobstore, self.repo.ctx().clone(), &fetch_key)
-            .compat()
             .await?
             .ok_or_else(|| {
                 MononokeError::NotAvailable(format!(

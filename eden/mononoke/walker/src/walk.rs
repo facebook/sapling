@@ -26,7 +26,6 @@ use futures::{
     future::{self, Future, FutureExt, TryFutureExt},
     stream::{BoxStream, StreamExt, TryStreamExt},
 };
-use futures_ext::FutureExt as Future01Ext;
 use futures_old::{Future as Future01, Stream as Stream01};
 use itertools::{Either, Itertools};
 use manifest::{Entry, Manifest};
@@ -356,12 +355,20 @@ fn file_content_metadata_step<'a, V: VisitOne>(
     id: ContentId,
     enable_derive: bool,
 ) -> impl Future<Output = Result<StepOutput, Error>> + 'a {
-    let loader = if enable_derive {
-        filestore::get_metadata(repo.blobstore(), ctx, &id.into())
-            .map(Some)
-            .left_future()
-    } else {
-        filestore::get_metadata_readonly(repo.blobstore(), ctx, &id.into()).right_future()
+    let loader = {
+        cloned!(ctx, id);
+        let blobstore = repo.get_blobstore();
+        async move {
+            if enable_derive {
+                filestore::get_metadata(&blobstore, ctx, &id.into())
+                    .await
+                    .map(Some)
+            } else {
+                filestore::get_metadata_readonly(&blobstore, ctx, &id.into()).await
+            }
+        }
+        .boxed()
+        .compat()
     };
 
     loader

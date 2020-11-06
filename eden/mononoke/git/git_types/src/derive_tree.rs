@@ -179,10 +179,16 @@ pub fn get_file_changes<B: Blobstore + Clone>(
             Some(file_change) => {
                 let t = file_change.file_type();
                 let k = FetchKey::Canonical(file_change.content_id());
-                filestore::get_metadata(blobstore, ctx.clone(), &k)
-                    .and_then(|r| r.ok_or(ErrorKind::ContentMissing(k).into()))
-                    .map(move |m| (mpath, Some(BlobHandle::new(m, t))))
-                    .left_future()
+
+                {
+                    cloned!(blobstore, ctx, k);
+                    async move { filestore::get_metadata(&blobstore, ctx, &k).await }
+                }
+                .boxed()
+                .compat()
+                .and_then(|r| r.ok_or_else(|| ErrorKind::ContentMissing(k).into()))
+                .map(move |m| (mpath, Some(BlobHandle::new(m, t))))
+                .left_future()
             }
             None => Ok((mpath, None)).into_future().right_future(),
         });

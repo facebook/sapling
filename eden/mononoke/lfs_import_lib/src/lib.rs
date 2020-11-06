@@ -11,11 +11,12 @@ use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use filestore::{self, Alias, FetchKey, StoreRequest};
-use futures::{
+use futures::future::{FutureExt, TryFutureExt};
+use futures_ext::{BoxFuture, FutureExt as _};
+use futures_old::{
     future::{loop_fn, Loop},
     Future, IntoFuture, Stream,
 };
-use futures_ext::{BoxFuture, FutureExt};
 use mercurial_types::blobs::LFSContent;
 use mononoke_types::ContentMetadata;
 use slog::info;
@@ -54,11 +55,19 @@ fn do_lfs_upload(
 ) -> BoxFuture<ContentMetadata, Error> {
     let blobstore = blobrepo.get_blobstore();
 
-    filestore::get_metadata(
-        &blobstore,
-        ctx.clone(),
-        &FetchKey::Aliased(Alias::Sha256(lfs.oid())),
-    )
+    {
+        cloned!(blobstore, ctx, lfs);
+        async move {
+            filestore::get_metadata(
+                &blobstore,
+                ctx,
+                &FetchKey::Aliased(Alias::Sha256(lfs.oid())),
+            )
+            .await
+        }
+        .boxed()
+        .compat()
+    }
     .and_then({
         move |metadata| match metadata {
             Some(metadata) => {

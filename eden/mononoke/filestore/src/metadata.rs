@@ -7,11 +7,8 @@
 
 use anyhow::Error;
 use blobstore::{Blobstore, Loadable, LoadableError, Storable};
-use cloned::cloned;
 use context::CoreContext;
-use futures::future::TryFutureExt;
-use futures_ext::FutureExt;
-use futures_old::{Future, IntoFuture};
+use futures::compat::Future01CompatExt;
 use mononoke_types::{BlobstoreValue, ContentId, ContentMetadata, ContentMetadataId};
 use thiserror::Error;
 
@@ -31,47 +28,47 @@ pub enum RebuildBackmappingError {
 /// Finds the metadata for a ContentId. Returns None if the content does not exist, and returns
 /// the metadata otherwise. This might recompute the metadata on the fly if it is found to
 /// be missing but the content exists.
-pub fn get_metadata<B: Blobstore + Clone>(
+pub async fn get_metadata<B: Blobstore + Clone>(
     blobstore: B,
     ctx: CoreContext,
     content_id: ContentId,
-) -> impl Future<Item = Option<ContentMetadata>, Error = Error> {
-    get_metadata_readonly(&blobstore, ctx.clone(), content_id).and_then({
-        move |maybe_metadata| match maybe_metadata {
-            // We found the metadata. Return it.
-            Some(metadata) => Ok(Some(metadata)).into_future().left_future(),
+) -> Result<Option<ContentMetadata>, Error> {
+    let maybe_metadata = get_metadata_readonly(&blobstore, ctx.clone(), content_id).await?;
 
-            // We didn't find the metadata. Try to recompute it. This might fail if the
-            // content doesn't exist, or due to an internal error.
-            None => rebuild_metadata(blobstore, ctx, content_id)
-                .map(Some)
-                .or_else({
-                    use RebuildBackmappingError::*;
-                    |e| match e {
-                        // If we didn't find the ContentId we're rebuilding the metadata for,
-                        // then there is nothing else to do but indicate this metadata does not
-                        // exist.
-                        NotFound(_) => Ok(None),
-                        // If we ran into some error rebuilding the metadata that isn't not
-                        // having found the content, then we pass it up.
-                        e @ InternalError(..) => Err(e.into()),
-                    }
-                })
-                .right_future(),
-        }
-    })
+    // We found the metadata. Return it.
+    if let Some(metadata) = maybe_metadata {
+        return Ok(Some(metadata));
+    }
+
+    // We didn't find the metadata. Try to recompute it. This might fail if the
+    // content doesn't exist, or due to an internal error.
+    rebuild_metadata(blobstore, ctx, content_id)
+        .await
+        .map(Some)
+        .or_else({
+            use RebuildBackmappingError::*;
+            |e| match e {
+                // If we didn't find the ContentId we're rebuilding the metadata for,
+                // then there is nothing else to do but indicate this metadata does not
+                // exist.
+                NotFound(_) => Ok(None),
+                // If we ran into some error rebuilding the metadata that isn't not
+                // having found the content, then we pass it up.
+                e @ InternalError(..) => Err(e.into()),
+            }
+        })
 }
 
 /// Finds the metadata for a ContentId. Returns None if the content metadata does not exist
 /// and returns Some(metadata) if it already exists. Does not recompute it on the fly.
-pub fn get_metadata_readonly<B: Blobstore + Clone>(
+pub async fn get_metadata_readonly<B: Blobstore + Clone>(
     blobstore: &B,
     ctx: CoreContext,
     content_id: ContentId,
-) -> impl Future<Item = Option<ContentMetadata>, Error = Error> {
+) -> Result<Option<ContentMetadata>, Error> {
     ContentMetadataId::from(content_id)
         .load(ctx.clone(), blobstore)
-        .compat()
+        .await
         .map(Some)
         .or_else(|err| match err {
             LoadableError::Error(err) => Err(err),
@@ -84,56 +81,55 @@ pub fn get_metadata_readonly<B: Blobstore + Clone>(
 /// its metadata. To rebuild the metadata, we peek at the content in the blobstore to get
 /// its size, then produce a stream of its contents and compute aliases over it. Finally, store
 /// the metadata, and return it.
-fn rebuild_metadata<B: Blobstore + Clone>(
+async fn rebuild_metadata<B: Blobstore + Clone>(
     blobstore: B,
     ctx: CoreContext,
     content_id: ContentId,
-) -> impl Future<Item = ContentMetadata, Error = RebuildBackmappingError> {
+) -> Result<ContentMetadata, RebuildBackmappingError> {
     use RebuildBackmappingError::*;
 
-    content_id
-        .load(ctx.clone(), &blobstore)
+    let file_contents =
+        content_id
+            .load(ctx.clone(), &blobstore)
+            .await
+            .map_err(|err| match err {
+                LoadableError::Error(err) => InternalError(content_id, err),
+                LoadableError::Missing(_) => NotFound(content_id),
+            })?;
+
+    // NOTE: We implicitly trust data from the Filestore here. We do not validate
+    // the size, nor the ContentId.
+    let total_size = file_contents.size();
+    let content_stream = fetch::stream_file_bytes(
+        blobstore.clone(),
+        ctx.clone(),
+        file_contents,
+        fetch::Range::All,
+    );
+
+    let redeemable = alias_stream(ExpectedSize::new(total_size), content_stream)
         .compat()
-        .or_else(move |err| {
-            match err {
-                LoadableError::Error(err) => Err(InternalError(content_id, err)),
-                LoadableError::Missing(_) => Err(NotFound(content_id)),
-            }
-        })
-        .and_then({
-            cloned!(blobstore, ctx);
-            move |file_contents| {
-                // NOTE: We implicitly trust data from the Filestore here. We do not validate
-                // the size, nor the ContentId.
-                let total_size = file_contents.size();
-                let content_stream =
-                    fetch::stream_file_bytes(blobstore, ctx, file_contents, fetch::Range::All);
+        .await
+        .map_err(|e| InternalError(content_id, e))?;
 
-                alias_stream(ExpectedSize::new(total_size), content_stream)
-                    .from_err()
-                    .and_then(move |redeemable| Ok((redeemable.redeem(total_size)?, total_size)))
-                    .map_err(move |e| InternalError(content_id, e))
-            }
-        })
-        .and_then({
-            cloned!(blobstore, ctx);
-            move |(aliases, total_size)| {
-                let (sha1, sha256, git_sha1) = aliases;
+    let (sha1, sha256, git_sha1) = redeemable
+        .redeem(total_size)
+        .map_err(|e| InternalError(content_id, e))?;
 
-                let metadata = ContentMetadata {
-                    total_size,
-                    content_id,
-                    sha1,
-                    sha256,
-                    git_sha1,
-                };
 
-                let blob = metadata.clone().into_blob();
+    let metadata = ContentMetadata {
+        total_size,
+        content_id,
+        sha1,
+        sha256,
+        git_sha1,
+    };
 
-                blob.store(ctx, &blobstore)
-                    .compat()
-                    .map_err(move |e| InternalError(content_id, e))
-                    .map(|_| metadata)
-            }
-        })
+    let blob = metadata.clone().into_blob();
+
+    blob.store(ctx, &blobstore)
+        .await
+        .map_err(|e| InternalError(content_id, e))?;
+
+    Ok(metadata)
 }

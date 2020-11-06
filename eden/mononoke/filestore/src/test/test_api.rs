@@ -17,7 +17,7 @@ use bytes::{Bytes, BytesMut};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::compat::Future01CompatExt;
-use futures_ext::{BoxFuture as OldBoxFuture, FutureExt as OldFutureExt};
+use futures_ext::FutureExt as OldFutureExt;
 use futures_old::{
     future::Future,
     stream::{self, Stream},
@@ -74,9 +74,7 @@ async fn filestore_put_alias(fb: FacebookInit) -> Result<()> {
     .boxify()
     .compat()
     .await?;
-    let fut: OldBoxFuture<_, _> =
-        filestore::get_metadata(&blob, ctx, &FetchKey::Canonical(content_id)).boxify();
-    let res = fut.compat().await;
+    let res = filestore::get_metadata(&blob, ctx, &FetchKey::Canonical(content_id)).await;
 
     println!("res = {:#?}", res);
 
@@ -709,9 +707,7 @@ async fn filestore_rebuild_metadata(fb: FacebookInit) -> Result<()> {
     );
 
     // Getting the metadata should cause it to get recomputed
-    let fut: OldBoxFuture<_, _> =
-        filestore::get_metadata(&blob, ctx.clone(), &FetchKey::Canonical(content_id)).boxify();
-    let res = fut.compat().await;
+    let res = filestore::get_metadata(&blob, ctx.clone(), &FetchKey::Canonical(content_id)).await;
     println!("res = {:#?}", res);
     assert_eq!(res?, expected);
 
@@ -724,9 +720,7 @@ async fn filestore_rebuild_metadata(fb: FacebookInit) -> Result<()> {
     );
 
     // Query the metadata again. It should succeed because it's saved.
-    let fut: OldBoxFuture<_, _> =
-        filestore::get_metadata(&blob, ctx.clone(), &FetchKey::Canonical(content_id)).boxify();
-    let res = fut.compat().await;
+    let res = filestore::get_metadata(&blob, ctx.clone(), &FetchKey::Canonical(content_id)).await;
     println!("res = {:#?}", res);
     assert_eq!(res?, expected);
 
@@ -740,9 +734,7 @@ async fn filestore_rebuild_metadata(fb: FacebookInit) -> Result<()> {
 
     // And then, query it again. This should now return None, because the metadata isn't there,
     // and we can't recreate it.
-    let fut: OldBoxFuture<_, _> =
-        filestore::get_metadata(&blob, ctx.clone(), &FetchKey::Canonical(content_id)).boxify();
-    let res = fut.compat().await;
+    let res = filestore::get_metadata(&blob, ctx.clone(), &FetchKey::Canonical(content_id)).await;
     println!("res = {:#?}", res);
     assert_eq!(res?, None);
 
@@ -758,39 +750,34 @@ async fn filestore_test_missing_metadata(fb: FacebookInit) -> Result<()> {
 
     // No matter the Fetchkey, querying the metadata should return None.
 
-    let fut: OldBoxFuture<_, _> =
-        filestore::get_metadata(&blob, ctx.clone(), &FetchKey::Canonical(content_id)).boxify();
-    let res = fut.compat().await;
+    let res = filestore::get_metadata(&blob, ctx.clone(), &FetchKey::Canonical(content_id)).await;
     println!("res = {:#?}", res);
     assert_eq!(res?, None);
 
-    let fut: OldBoxFuture<_, _> = filestore::get_metadata(
+    let res = filestore::get_metadata(
         &blob,
         ctx.clone(),
         &FetchKey::Aliased(Alias::Sha1(*HELLO_WORLD_SHA1)),
     )
-    .boxify();
-    let res = fut.compat().await;
+    .await;
     println!("res = {:#?}", res);
     assert_eq!(res?, None);
 
-    let fut: OldBoxFuture<_, _> = filestore::get_metadata(
+    let res = filestore::get_metadata(
         &blob,
         ctx.clone(),
         &FetchKey::Aliased(Alias::Sha256(*HELLO_WORLD_SHA256)),
     )
-    .boxify();
-    let res = fut.compat().await;
+    .await;
     println!("res = {:#?}", res);
     assert_eq!(res?, None);
 
-    let fut: OldBoxFuture<_, _> = filestore::get_metadata(
+    let res = filestore::get_metadata(
         &blob,
         ctx.clone(),
         &FetchKey::Aliased(Alias::GitSha1(HELLO_WORLD_GIT_SHA1.sha1())),
     )
-    .boxify();
-    let res = fut.compat().await;
+    .await;
     println!("res = {:#?}", res);
     assert_eq!(res?, None);
 

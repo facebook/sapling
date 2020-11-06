@@ -13,7 +13,6 @@ use borrowed::borrowed;
 use bytes::Bytes;
 use chrono::{DateTime, FixedOffset, Local};
 use context::CoreContext;
-use futures::compat::Future01CompatExt;
 use futures::future::try_join_all;
 use futures::stream::{FuturesOrdered, StreamExt, TryStreamExt};
 use futures::try_join;
@@ -599,7 +598,6 @@ impl SourceControlServiceImpl {
                                 filestore::FetchKey::Canonical(hg_file_envelope.content_id());
                             let metadata =
                                 filestore::get_metadata(blobstore, ctx.clone(), &fetch_key)
-                                    .compat()
                                     .await
                                     .map_err(errors::internal_error)?
                                     .ok_or_else(|| errors::internal_error("no metadata found"))?;

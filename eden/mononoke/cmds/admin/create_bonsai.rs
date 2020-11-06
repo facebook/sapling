@@ -76,7 +76,6 @@ pub async fn subcommand_create_bonsai<'a>(
                 ctx.clone(),
                 &change.content_id().into(),
             )
-            .compat()
             .await?
             .is_none()
             {

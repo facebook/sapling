@@ -873,9 +873,8 @@ fn prepare_filenode_entries_stream<'a>(
                     }
                     _ => {
                         let key = FetchKey::from(envelope.content_id());
-                        let meta = filestore::get_metadata(repo.blobstore(), ctx.clone(), &key)
-                            .compat()
-                            .await?;
+                        let meta =
+                            filestore::get_metadata(repo.blobstore(), ctx.clone(), &key).await?;
                         let meta =
                             meta.ok_or_else(|| Error::from(ErrorKind::MissingContent(key)))?;
                         let oid = meta.sha256;

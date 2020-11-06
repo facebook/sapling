@@ -19,8 +19,8 @@ use bytes::{Bytes, BytesMut};
 use cloned::cloned;
 use context::CoreContext;
 use filestore::FetchKey;
-use futures::future::TryFutureExt;
-use futures_ext::{select_all, BoxFuture, FutureExt};
+use futures::future::{FutureExt, TryFutureExt};
+use futures_ext::{select_all, BoxFuture, FutureExt as _};
 use futures_old::{Future, IntoFuture, Stream};
 use getbundle_response::SessionLfsParams;
 use mercurial_types::{
@@ -311,9 +311,16 @@ fn prepare_blob(
                     // metadata encoded for LFS blobs (it's in the LFS pointer instead).
                     let key = FetchKey::from(envelope.content_id());
                     let blob_fut = (
-                        filestore::get_metadata(repo.blobstore(), ctx, &key).and_then(
-                            move |meta| Ok(meta.ok_or(ErrorKind::MissingContent(key))?.sha256),
-                        ),
+                        {
+                            cloned!(ctx, key);
+                            let blobstore = repo.get_blobstore();
+                            async move { filestore::get_metadata(&blobstore, ctx, &key).await }
+                        }
+                        .boxed()
+                        .compat()
+                        .and_then(move |meta| {
+                            Ok(meta.ok_or(ErrorKind::MissingContent(key))?.sha256)
+                        }),
                         File::extract_copied_from(envelope.metadata()).into_future(),
                     )
                         .into_future()

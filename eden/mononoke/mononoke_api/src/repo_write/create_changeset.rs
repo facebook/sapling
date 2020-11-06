@@ -125,7 +125,6 @@ impl CreateChange {
                     ctx,
                     &FetchKey::Canonical(file_id),
                 )
-                .compat()
                 .await?
                 .ok_or_else(|| {
                     MononokeError::InvalidRequest(format!(

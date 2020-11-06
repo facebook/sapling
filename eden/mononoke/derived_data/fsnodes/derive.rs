@@ -18,7 +18,6 @@ use context::CoreContext;
 use digest::Digest;
 use filestore::{get_metadata, FetchKey};
 use futures::channel::mpsc;
-use futures::compat::Future01CompatExt;
 use futures::future::{BoxFuture, FutureExt};
 use futures::stream::{FuturesOrdered, FuturesUnordered, TryStreamExt};
 use manifest::{derive_manifest_with_io_sender, Entry, LeafInfo, TreeInfo};
@@ -113,9 +112,7 @@ pub async fn prefetch_content_metadata(
         .into_iter()
         .map({
             move |content_id| async move {
-                match get_metadata(blobstore, ctx.clone(), &FetchKey::Canonical(content_id))
-                    .compat()
-                    .await?
+                match get_metadata(blobstore, ctx.clone(), &FetchKey::Canonical(content_id)).await?
                 {
                     Some(metadata) => Ok(Some((content_id, metadata))),
                     None => Ok(None),

@@ -16,7 +16,7 @@ use fbinit::FacebookInit;
 use filestore::{self, Alias, FetchKey, StoreRequest};
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
-    future::TryFutureExt,
+    future::{FutureExt, TryFutureExt},
     stream::{StreamExt, TryStreamExt},
 };
 use futures_old::Future as _;
@@ -105,7 +105,9 @@ pub async fn execute_command<'a>(
     match sub_matches.subcommand() {
         (COMMAND_METADATA, Some(matches)) => {
             let key = extract_fetch_key(matches)?;
-            filestore::get_metadata(blobrepo.blobstore(), ctx, &key)
+            async move { filestore::get_metadata(blobrepo.blobstore(), ctx, &key).await }
+                .boxed()
+                .compat()
                 .inspect({
                     cloned!(logger);
                     move |r| info!(logger, "{:?}", r)
@@ -157,63 +159,66 @@ pub async fn execute_command<'a>(
             let key = extract_fetch_key(matches)?;
             let blobstore = blobrepo.get_blobstore();
 
-            filestore::get_metadata(&blobstore, ctx.clone(), &key)
-                .and_then(|metadata| match metadata {
-                    Some(metadata) => Ok(metadata),
-                    None => bail!("Content not found!"),
-                })
-                .and_then({
-                    cloned!(blobstore, ctx);
-                    move |metadata| {
-                        use Alias::*;
+            {
+                cloned!(blobstore, ctx);
+                async move { filestore::get_metadata(&blobstore, ctx, &key).await }
+            }
+            .boxed()
+            .compat()
+            .and_then(|metadata| match metadata {
+                Some(metadata) => Ok(metadata),
+                None => bail!("Content not found!"),
+            })
+            .and_then({
+                cloned!(blobstore, ctx);
+                move |metadata| {
+                    use Alias::*;
 
-                        (
-                            filestore::fetch(
-                                &blobstore,
-                                ctx.clone(),
-                                &FetchKey::Canonical(metadata.content_id),
-                            )
-                            .then(Ok),
-                            filestore::fetch(
-                                &blobstore,
-                                ctx.clone(),
-                                &FetchKey::Aliased(Sha1(metadata.sha1)),
-                            )
-                            .then(Ok),
-                            filestore::fetch(
-                                &blobstore,
-                                ctx.clone(),
-                                &FetchKey::Aliased(Sha256(metadata.sha256)),
-                            )
-                            .then(Ok),
-                            filestore::fetch(
-                                &blobstore,
-                                ctx.clone(),
-                                &FetchKey::Aliased(GitSha1(metadata.git_sha1.sha1())),
-                            )
-                            .then(Ok),
+                    (
+                        filestore::fetch(
+                            &blobstore,
+                            ctx.clone(),
+                            &FetchKey::Canonical(metadata.content_id),
                         )
-                    }
-                })
-                .map({
-                    cloned!(logger);
-                    move |(content_id, sha1, sha256, git_sha1)| {
-                        info!(logger, "content_id: {:?}", content_id.is_ok());
-                        info!(logger, "sha1: {:?}", sha1.is_ok());
-                        info!(logger, "sha256: {:?}", sha256.is_ok());
-                        info!(logger, "git_sha1: {:?}", git_sha1.is_ok());
-                    }
-                })
-                .compat()
-                .await?;
+                        .then(Ok),
+                        filestore::fetch(
+                            &blobstore,
+                            ctx.clone(),
+                            &FetchKey::Aliased(Sha1(metadata.sha1)),
+                        )
+                        .then(Ok),
+                        filestore::fetch(
+                            &blobstore,
+                            ctx.clone(),
+                            &FetchKey::Aliased(Sha256(metadata.sha256)),
+                        )
+                        .then(Ok),
+                        filestore::fetch(
+                            &blobstore,
+                            ctx.clone(),
+                            &FetchKey::Aliased(GitSha1(metadata.git_sha1.sha1())),
+                        )
+                        .then(Ok),
+                    )
+                }
+            })
+            .map({
+                cloned!(logger);
+                move |(content_id, sha1, sha256, git_sha1)| {
+                    info!(logger, "content_id: {:?}", content_id.is_ok());
+                    info!(logger, "sha1: {:?}", sha1.is_ok());
+                    info!(logger, "sha256: {:?}", sha256.is_ok());
+                    info!(logger, "git_sha1: {:?}", git_sha1.is_ok());
+                }
+            })
+            .compat()
+            .await?;
             Ok(())
         }
         (COMMAND_IS_CHUNKED, Some(matches)) => {
             let fetch_key = extract_fetch_key(matches)?;
             let maybe_metadata =
-                filestore::get_metadata(&blobrepo.get_blobstore(), ctx.clone(), &fetch_key)
-                    .compat()
-                    .await?;
+                filestore::get_metadata(&blobrepo.get_blobstore(), ctx.clone(), &fetch_key).await?;
             match maybe_metadata {
                 Some(metadata) => {
                     let file_contents = metadata
