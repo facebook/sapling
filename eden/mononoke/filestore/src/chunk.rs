@@ -7,11 +7,12 @@
 
 use anyhow::{Error, Result};
 use bytes::{Bytes, BytesMut};
-use futures_old::{
-    future::{Future, Map},
-    stream::{AndThen, Fold, Stream},
-    try_ready, Async, Poll,
+use futures::{
+    compat::{Future01CompatExt, Stream01CompatExt},
+    future::{BoxFuture, FutureExt},
+    stream::{BoxStream, StreamExt},
 };
+use futures_old::{future::Future, stream::Stream, try_ready, Async, Poll};
 use std::convert::TryFrom;
 use std::fmt::{self, Debug};
 
@@ -106,37 +107,12 @@ where
     }
 }
 
-// NOTE: We concretely spell out the types the Chunk variants here. Boxifying would be a little
-// nicer, but that causes us to lose the sense of whether the incoming Stream was Send or not.
-// Spelling out the concrete types here lets us include the incoming Stream in them, and therefore
-// allow callers to call the Filestore with a Stream that's either Send or non-Send, and get back a
-// Future that is either Send or non-Send.
-type LimitFn = Box<dyn FnMut(Bytes) -> Result<Bytes> + Send>;
-type LimitStream<S> = AndThen<S, LimitFn, Result<Bytes>>;
-
-pub type BufferedStream<S> = Map<
-    Fold<
-        LimitStream<S>,
-        fn(BytesMut, Bytes) -> Result<BytesMut, Error>,
-        Result<BytesMut, Error>,
-        BytesMut,
-    >,
-    fn(BytesMut) -> Bytes,
->;
-pub type ChunkedStream<S> = ChunkStream<LimitStream<S>>;
-
-pub enum Chunks<S>
-where
-    S: Stream<Item = Bytes, Error = Error>,
-{
-    Inline(BufferedStream<S>),
-    Chunked(ExpectedSize, ChunkedStream<S>),
+pub enum Chunks<'a> {
+    Inline(BoxFuture<'a, Result<Bytes, Error>>),
+    Chunked(ExpectedSize, BoxStream<'a, Result<Bytes, Error>>),
 }
 
-impl<S> Debug for Chunks<S>
-where
-    S: Stream<Item = Bytes, Error = Error>,
-{
+impl Debug for Chunks<'_> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Chunks::Inline(_) => write!(f, "Chunks::Inline(..)"),
@@ -145,16 +121,15 @@ where
     }
 }
 
-fn extend_bytes(mut bytes: BytesMut, incoming: Bytes) -> Result<BytesMut, Error> {
-    bytes.extend_from_slice(incoming.as_ref());
-    Ok(bytes)
-}
-
 /// Chunk a stream of incoming data for storage. We use the incoming size hint to decide whether
 /// to chunk.
-pub fn make_chunks<S>(data: S, expected_size: ExpectedSize, chunk_size: Option<u64>) -> Chunks<S>
+pub fn make_chunks<'a, S>(
+    data: S,
+    expected_size: ExpectedSize,
+    chunk_size: Option<u64>,
+) -> Chunks<'a>
 where
-    S: Stream<Item = Bytes, Error = Error>,
+    S: Stream<Item = Bytes, Error = Error> + Send + 'a,
 {
     // NOTE: We stop reading if the stream we are provided exceeds the expected_size we were given.
     // While we do check later that the stream matches *exactly* the size we were given, doing this
@@ -167,24 +142,26 @@ where
             // We presumably don't have such Bytes in memory!
             observed_size += u64::try_from(chunk.len()).unwrap();
             expected_size.check_less(observed_size)?;
-            Ok(chunk)
+            Result::<_, Error>::Ok(chunk)
         }
     };
 
-    let data = data.and_then(Box::new(limit) as LimitFn);
+    let data = data.and_then(limit);
 
     match chunk_size {
         Some(chunk_size) if expected_size.should_chunk(chunk_size) => {
             let stream = ChunkStream::new(data, chunk_size as usize);
-            Chunks::Chunked(expected_size, stream)
+            Chunks::Chunked(expected_size, stream.compat().boxed())
         }
         _ => {
             let fut = data
-                .fold(
-                    expected_size.new_buffer(),
-                    extend_bytes as fn(BytesMut, Bytes) -> Result<BytesMut, Error>,
-                )
-                .map(BytesMut::freeze as fn(BytesMut) -> Bytes);
+                .fold(expected_size.new_buffer(), |mut bytes, incoming| {
+                    bytes.extend_from_slice(incoming.as_ref());
+                    Result::<_, Error>::Ok(bytes)
+                })
+                .map(BytesMut::freeze)
+                .compat()
+                .boxed();
             Chunks::Inline(fut)
         }
     }
@@ -195,6 +172,7 @@ mod test {
     use super::*;
 
     use assert_matches::assert_matches;
+    use futures::stream::TryStreamExt;
     use futures_old::stream;
     use quickcheck::quickcheck;
     use tokio_compat::runtime::Runtime;
@@ -258,7 +236,7 @@ mod test {
             Chunks::Inline(fut) => fut,
         };
 
-        rt.block_on(fut)
+        rt.block_on_std(fut)
             .expect_err("make_chunks should abort if the content does not end as advertised");
     }
 
@@ -276,11 +254,11 @@ mod test {
         let in_stream = stream::iter_ok::<_, Error>(chunks);
 
         let fut = match make_chunks(in_stream, ExpectedSize::new(10), Some(1)) {
-            Chunks::Chunked(_, stream) => stream.collect(),
+            Chunks::Chunked(_, stream) => stream.try_collect::<Vec<_>>(),
             c @ Chunks::Inline(..) => panic!("Did not expect {:?}", c),
         };
 
-        rt.block_on(fut)
+        rt.block_on_std(fut)
             .expect_err("make_chunks should abort if the content does not end as advertised");
     }
 
@@ -463,7 +441,7 @@ mod test {
                 c => panic!("Did not expect {:?}", c),
             };
 
-            let out_bytes = rt.block_on(fut).unwrap();
+            let out_bytes = rt.block_on_std(fut).unwrap();
             out_bytes == expected_bytes
         }
     }

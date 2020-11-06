@@ -25,7 +25,6 @@ use mononoke_types::{
 };
 
 use crate::alias::add_aliases_to_multiplexer;
-use crate::chunk::{BufferedStream, ChunkedStream};
 use crate::expected_size::ExpectedSize;
 use crate::incremental_hash::{
     hash_bytes, ContentIdIncrementalHasher, GitSha1IncrementalHasher, Sha1IncrementalHasher,
@@ -60,9 +59,9 @@ pub fn prepare_bytes(bytes: Bytes) -> Prepared {
 
 /// Prepare a set of Bytes for upload. The size hint isn't actually used here, it's just passed
 /// through.
-pub fn prepare_inline<S>(chunk: BufferedStream<S>) -> impl Future<Item = Prepared, Error = Error>
+pub fn prepare_inline<F>(chunk: F) -> impl Future<Item = Prepared, Error = Error>
 where
-    S: Stream<Item = Bytes, Error = Error>,
+    F: Future<Item = Bytes, Error = Error>,
 {
     chunk.map(prepare_bytes)
 }
@@ -73,7 +72,7 @@ pub fn prepare_chunked<B: Blobstore + Clone, S>(
     ctx: CoreContext,
     blobstore: B,
     expected_size: ExpectedSize,
-    chunks: ChunkedStream<S>,
+    chunks: S,
     concurrency: usize,
 ) -> impl Future<Item = Prepared, Error = Error>
 where

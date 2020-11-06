@@ -14,7 +14,7 @@ use std::convert::TryInto;
 
 use anyhow::Error;
 use cloned::cloned;
-use futures::future::TryFutureExt;
+use futures::{future::TryFutureExt, stream::TryStreamExt};
 use futures_ext::FutureExt;
 use futures_old::{stream, Future, IntoFuture, Stream};
 
@@ -401,12 +401,12 @@ pub fn store<B: Blobstore + Clone>(
     use chunk::Chunks;
 
     let prepared = match chunk::make_chunks(data, req.expected_size, config.chunk_size) {
-        Chunks::Inline(fut) => prepare::prepare_inline(fut).left_future(),
+        Chunks::Inline(fut) => prepare::prepare_inline(fut.compat()).left_future(),
         Chunks::Chunked(expected_size, chunks) => prepare::prepare_chunked(
             ctx.clone(),
             blobstore.clone(),
             expected_size,
-            chunks,
+            chunks.compat(),
             config.concurrency,
         )
         .right_future(),
