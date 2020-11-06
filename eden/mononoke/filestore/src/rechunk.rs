@@ -11,7 +11,6 @@ use futures_ext::{
     BoxFuture as OldBoxFuture, BoxStream as OldBoxStream, FutureExt as OldFutureExt,
     StreamExt as OldStreamExt,
 };
-use futures_old::Future as OldFuture;
 use slog::debug;
 use thiserror::Error;
 
@@ -141,14 +140,12 @@ async fn rechunk_if_uses_larger_chunk_size<B: Blobstore + Clone>(
 
     let file_contents: FileContents = content_id
         .load(ctx.clone(), &blobstore)
-        .compat()
         .map_err(move |err| {
             match err {
                 LoadableError::Error(err) => err,
                 LoadableError::Missing(_) => ErrorKind::ContentNotFound(content_id).into(),
             }
         })
-        .compat()
         .await?;
 
     let should_rechunk = match file_contents {
