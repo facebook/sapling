@@ -24,7 +24,6 @@ sha2 = "0.8"
 slog = { version = "2.5", features = ["max_level_debug"] }
 thiserror = "1.0"
 tokio = { version = "=0.2.13", features = ["full"] }
-tokio-old = { package = "tokio", version = "0.1" }
 
 [dev-dependencies]
 memblob = { path = "../blobstore/memblob" }

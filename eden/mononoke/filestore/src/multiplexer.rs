@@ -10,8 +10,7 @@ use futures::{
     channel::mpsc,
     future::{self, Future, TryFutureExt},
     sink::{Sink, SinkExt},
-    stream::Stream,
-    stream::TryStreamExt,
+    stream::{Stream, StreamExt, TryStreamExt},
 };
 use tokio::task::JoinHandle;
 
@@ -36,6 +35,7 @@ pub struct Multiplexer<T: Send + Sync> {
 pub enum MultiplexerError<E> {
     /// InputError indicates that the input stream hit an error E.
     InputError(E),
+
     /// Cancelled indicates that one of the consumers add()'ed to this Multiplexer stopped
     /// accepting input (likely because it hit an error).
     Cancelled,
@@ -89,9 +89,9 @@ impl<T: Send + Sync + Clone + 'static> Multiplexer<T> {
     }
 
     /// Drain a Stream into the multiplexer.
-    pub async fn drain<S, E>(self, stream: S) -> Result<(), MultiplexerError<E>>
+    pub async fn drain<'a, S, E>(self, stream: S) -> Result<(), MultiplexerError<E>>
     where
-        S: Stream<Item = Result<T, E>>,
+        S: Stream<Item = Result<T, E>> + Send + 'static,
     {
         let Self { sink, .. } = self;
 
@@ -100,8 +100,9 @@ impl<T: Send + Sync + Clone + 'static> Multiplexer<T> {
             // errors originating from the Stream and errors originating from the Sink.
             Some(sink) => {
                 let mut sink = sink.sink_map_err(|_| MultiplexerError::Cancelled);
-                let stream = stream.map_err(MultiplexerError::InputError);
-                futures::pin_mut!(stream);
+                // NOTE: I'd like to use futures::pin_mut! here, but:
+                // https://github.com/rust-lang/rust/issues/64552
+                let mut stream = stream.map_err(MultiplexerError::InputError).boxed();
                 sink.send_all(&mut stream).await
             }
             // If we have no Sink, then consume the Stream regardless.

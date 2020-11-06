@@ -14,8 +14,12 @@ use std::convert::TryInto;
 
 use anyhow::Error;
 use cloned::cloned;
-use futures::{compat::Stream01CompatExt, future::TryFutureExt, stream::TryStreamExt};
-use futures_ext::FutureExt;
+use futures::{
+    compat::{Future01CompatExt, Stream01CompatExt},
+    future::{FutureExt, TryFutureExt},
+    stream::TryStreamExt,
+};
+use futures_ext::FutureExt as OldFutureExt;
 use futures_old::{stream, Future, IntoFuture, Stream};
 
 use blobstore::{Blobstore, Loadable, LoadableError};
@@ -34,7 +38,6 @@ mod metadata;
 mod multiplexer;
 mod prepare;
 mod rechunk;
-mod spawn;
 mod streamhash;
 
 pub use fetch_key::{Alias, AliasBlob, FetchKey};
@@ -401,22 +404,30 @@ pub fn store<B: Blobstore + Clone>(
 ) -> impl Future<Item = ContentMetadata, Error = Error> {
     use chunk::Chunks;
 
-    let prepared = match chunk::make_chunks(data.compat(), req.expected_size, config.chunk_size) {
-        Chunks::Inline(fut) => prepare::prepare_inline(fut.compat()).left_future(),
-        Chunks::Chunked(expected_size, chunks) => prepare::prepare_chunked(
-            ctx.clone(),
-            blobstore.clone(),
-            expected_size,
-            chunks.compat(),
-            config.concurrency,
-        )
-        .right_future(),
-    };
+    cloned!(req); // TODO: Just take this by value.
 
-    prepared.and_then({
-        cloned!(blobstore, ctx, req);
-        move |prepared| finalize::finalize(blobstore, ctx, Some(&req), prepared)
-    })
+    async move {
+        let prepared = match chunk::make_chunks(data.compat(), req.expected_size, config.chunk_size)
+        {
+            Chunks::Inline(fut) => prepare::prepare_bytes(fut.await?),
+            Chunks::Chunked(expected_size, chunks) => {
+                prepare::prepare_chunked(
+                    ctx.clone(),
+                    blobstore.clone(),
+                    expected_size,
+                    chunks,
+                    config.concurrency,
+                )
+                .await?
+            }
+        };
+
+        finalize::finalize(blobstore, ctx, Some(&req), prepared)
+            .compat()
+            .await
+    }
+    .boxed()
+    .compat()
 }
 
 /// Store a set of bytes, and immediately return their Contentid and size. This function is
