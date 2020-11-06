@@ -20,6 +20,7 @@ mod lua_pattern;
 pub(crate) mod no_bad_filenames;
 mod no_insecure_filenames;
 pub(crate) mod no_questionable_filenames;
+pub(crate) mod no_windows_filenames;
 
 use anyhow::Result;
 use fbinit::FacebookInit;
@@ -88,6 +89,11 @@ pub fn hook_name_to_file_hook(
         }
         "no_questionable_filenames" => Some(Box::new(
             no_questionable_filenames::NoQuestionableFilenames::builder()
+                .set_from_config(config)
+                .build()?,
+        )),
+        "no_windows_filenames" => Some(Box::new(
+            no_windows_filenames::NoWindowsFilenames::builder()
                 .set_from_config(config)
                 .build()?,
         )),
