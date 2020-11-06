@@ -295,14 +295,14 @@ impl CreateFileContext {
     ) -> Result<Option<FileChange>, Error> {
         let file_change = match self {
             Self::FromHelper(content, file_type, copy_info) => {
+                let content = Bytes::copy_from_slice(content.as_bytes());
+
                 let meta = filestore::store(
                     repo.get_blobstore(),
                     repo.filestore_config(),
                     ctx.clone(),
                     &StoreRequest::new(content.len().try_into().unwrap()),
-                    stream::once(async { Ok(Bytes::copy_from_slice(content.as_bytes())) })
-                        .boxed()
-                        .compat(),
+                    stream::once(async move { Ok(content) }).boxed().compat(),
                 )
                 .compat()
                 .await?;

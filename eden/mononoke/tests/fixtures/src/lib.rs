@@ -40,15 +40,14 @@ pub async fn store_files(
         let path = MPath::new(path).unwrap();
         match content {
             Some(content) => {
+                let content = Bytes::copy_from_slice(content.as_bytes());
                 let size = content.len() as u64;
                 let metadata = filestore::store(
                     repo.get_blobstore(),
                     repo.filestore_config(),
                     ctx.clone(),
                     &StoreRequest::new(size),
-                    stream::once(async { Ok(Bytes::copy_from_slice(content.as_bytes())) })
-                        .boxed()
-                        .compat(),
+                    stream::once(async { Ok(content) }).boxed().compat(),
                 )
                 .compat()
                 .await
