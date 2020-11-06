@@ -9,7 +9,6 @@ use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use bytes::Bytes;
 use context::CoreContext;
-use futures::compat::Future01CompatExt;
 use mononoke_types::ContentId;
 
 use crate::{ErrorKind, FileContentFetcher};
@@ -39,7 +38,6 @@ impl FileContentFetcher for BlobRepoFileContentFetcher {
     ) -> Result<Option<Bytes>, ErrorKind> {
         let store = self.repo.get_blobstore();
         filestore::fetch_concat_opt(&store, ctx.clone(), &id.into())
-            .compat()
             .await?
             .ok_or(ErrorKind::ContentIdNotFound(id))
             .map(Option::Some)

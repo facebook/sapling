@@ -18,9 +18,9 @@ use bytes::Bytes;
 use clap::{App, Arg, ArgMatches};
 use fbinit::FacebookInit;
 use futures::compat::{Future01CompatExt, Stream01CompatExt};
+use futures::future::TryFutureExt;
 use futures::stream::{self, StreamExt, TryStreamExt};
 use futures::try_join;
-use futures_old::Future as OldFuture;
 use slog::{debug, info, Logger};
 
 use blobrepo::BlobRepo;
@@ -198,9 +198,8 @@ impl AliasVerification {
         let repo = self.blobrepo.clone();
 
         let alias = filestore::fetch_concat(repo.blobstore(), ctx.clone(), content_id)
-            .map(FileBytes)
-            .map(|content| get_sha256(&content.into_bytes()))
-            .compat()
+            .map_ok(FileBytes)
+            .map_ok(|content| get_sha256(&content.into_bytes()))
             .await?;
 
         self.process_alias(ctx, &alias, content_id).await

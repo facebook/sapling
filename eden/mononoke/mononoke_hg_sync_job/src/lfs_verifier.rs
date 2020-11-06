@@ -189,7 +189,7 @@ async fn upload(
                 let ObjectAction { href, .. } = action;
 
                 let s = fetch_stream(
-                    &blobstore,
+                    blobstore.clone(),
                     ctx.clone(),
                     FetchKey::from(Sha256::from_byte_array(resp_object.object.oid.0)),
                 );

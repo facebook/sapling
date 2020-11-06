@@ -69,7 +69,6 @@ pub async fn list_working_copy(
                 ctx.clone(),
                 &FetchKey::Canonical(content_id),
             )
-            .compat()
             .await?;
             let s = match maybe_content {
                 Some(s) => s,

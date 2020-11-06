@@ -15,7 +15,7 @@ use bytes::{Bytes, BytesMut};
 use cloned::cloned;
 use context::CoreContext;
 use filestore::{self, get_metadata, FetchKey};
-use futures::compat::{Future01CompatExt, Stream01CompatExt};
+use futures::compat::Stream01CompatExt;
 use futures::future::{FutureExt, Shared};
 use futures::stream::TryStreamExt;
 use futures::try_join;
@@ -135,7 +135,6 @@ impl FileContext {
             self.ctx().clone(),
             &self.fetch_key,
         )
-        .compat()
         .await;
 
         match bytes {
@@ -162,7 +161,6 @@ impl FileContext {
             start,
             size,
         )
-        .compat()
         .await;
 
         match ret {

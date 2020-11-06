@@ -336,7 +336,7 @@ fn file_content_step<V: VisitOne>(
     checker: &Checker<V>,
     id: ContentId,
 ) -> Result<StepOutput, Error> {
-    let s = filestore::fetch_stream(repo.blobstore(), ctx, id)
+    let s = filestore::fetch_stream(repo.get_blobstore(), ctx, id)
         .map(FileBytes)
         .compat();
     // We don't force file loading here, content may not be needed

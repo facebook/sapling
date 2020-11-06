@@ -752,9 +752,8 @@ async fn list_content(
                 let blobstore = repo.get_blobstore();
                 let ctx = ctx.clone();
                 let envelope = filenode_id.load(ctx.clone(), &blobstore).await?;
-                let content = filestore::fetch_concat(&blobstore, ctx, envelope.content_id())
-                    .compat()
-                    .await?;
+                let content =
+                    filestore::fetch_concat(&blobstore, ctx, envelope.content_id()).await?;
                 let s = String::from_utf8_lossy(content.as_ref()).into_owned();
                 actual.insert(format!("{}", path.unwrap()), s);
             }

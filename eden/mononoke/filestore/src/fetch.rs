@@ -10,7 +10,6 @@ use std::cmp::{max, min};
 use anyhow::Error;
 use blobstore::{Blobstore, Loadable, LoadableError};
 use bytes::Bytes;
-use cloned::cloned;
 use context::CoreContext;
 use futures::future::TryFutureExt;
 use futures_ext::{BufferedParams, FutureExt, StreamExt};
@@ -157,30 +156,26 @@ pub fn stream_file_bytes<B: Blobstore + Clone>(
     }
 }
 
-pub fn fetch_with_size<B: Blobstore + Clone>(
-    blobstore: B,
+pub async fn fetch_with_size<B: Blobstore + Clone>(
+    blobstore: &B,
     ctx: CoreContext,
     content_id: ContentId,
     range: Range,
-) -> impl Future<Item = Option<(impl Stream<Item = Bytes, Error = Error>, u64)>, Error = Error> {
-    content_id
-        .load(ctx.clone(), &blobstore)
-        .compat()
+) -> Result<Option<(impl Stream<Item = Bytes, Error = Error>, u64)>, Error> {
+    let maybe_file_contents = content_id
+        .load(ctx.clone(), blobstore)
+        .await
         .map(Some)
         .or_else(|err| match err {
             LoadableError::Error(err) => Err(err),
             LoadableError::Missing(_) => Ok(None),
-        })
-        .map({
-            cloned!(blobstore, ctx);
-            move |maybe_file_contents| {
-                maybe_file_contents.map(|file_contents| {
-                    let file_size = file_contents.size();
-                    (
-                        stream_file_bytes(blobstore, ctx, file_contents, range),
-                        file_size,
-                    )
-                })
-            }
-        })
+        })?;
+
+    Ok(maybe_file_contents.map(|file_contents| {
+        let file_size = file_contents.size();
+        (
+            stream_file_bytes(blobstore.clone(), ctx, file_contents, range),
+            file_size,
+        )
+    }))
 }

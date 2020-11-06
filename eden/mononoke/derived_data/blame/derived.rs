@@ -271,7 +271,6 @@ async fn fetch_from_filestore(
     let result =
         filestore::fetch_with_size(blobstore, ctx.clone(), &FetchKey::Canonical(content_id))
             .map_err(FetchError::Error)
-            .compat()
             .await?;
 
     match result {

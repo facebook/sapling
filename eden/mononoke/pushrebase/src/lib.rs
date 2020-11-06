@@ -3554,9 +3554,7 @@ mod tests {
                 Entry::Leaf((_, filenode_id)) => {
                     let store = repo.blobstore();
                     let content_id = filenode_id.load(ctx.clone(), store).await?.content_id();
-                    let content = filestore::fetch_concat(store, ctx.clone(), content_id)
-                        .compat()
-                        .await?;
+                    let content = filestore::fetch_concat(store, ctx.clone(), content_id).await?;
 
                     let s = String::from_utf8_lossy(content.as_ref()).into_owned();
                     actual.insert(format!("{}", path.unwrap()), s);

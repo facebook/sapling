@@ -9,18 +9,16 @@
 #![deny(warnings)]
 #![type_length_limit = "2000000"]
 
-use bytes::{Bytes, BytesMut};
-use std::convert::TryInto;
-
 use anyhow::Error;
+use bytes::{Bytes, BytesMut};
 use cloned::cloned;
 use futures::{
     compat::Stream01CompatExt,
     future::{Future, TryFutureExt},
-    stream::{self, Stream, TryStreamExt},
+    stream::{self, Stream, StreamExt, TryStreamExt},
 };
-use futures_ext::FutureExt as OldFutureExt;
-use futures_old::{Future as OldFuture, IntoFuture, Stream as OldStream};
+use futures_old::{Future as OldFuture, Stream as OldStream};
+use std::convert::TryInto;
 
 use blobstore::{Blobstore, Loadable, LoadableError};
 use context::CoreContext;
@@ -227,29 +225,26 @@ pub fn exists<B: Blobstore + Clone>(
 /// be determined or if opening the file failed. File contents are returned in chunks configured by
 /// FilestoreConfig::read_chunk_size - this defines the max chunk size, but they may be shorter
 /// (not just the final chunks - any of them). Chunks are guaranteed to have non-zero size.
-pub fn fetch_with_size<B: Blobstore + Clone>(
+pub async fn fetch_with_size<B: Blobstore + Clone>(
     blobstore: &B,
     ctx: CoreContext,
     key: &FetchKey,
-) -> impl OldFuture<Item = Option<(impl OldStream<Item = Bytes, Error = Error>, u64)>, Error = Error>
-{
-    key.load(ctx.clone(), blobstore)
-        .compat()
+) -> Result<Option<(impl OldStream<Item = Bytes, Error = Error>, u64)>, Error> {
+    let content_id = key
+        .load(ctx.clone(), blobstore)
+        .await
         .map(Some)
         .or_else(|err| match err {
             LoadableError::Error(err) => Err(err),
             LoadableError::Missing(_) => Ok(None),
-        })
-        .and_then({
-            cloned!(blobstore, ctx);
-            move |content_id| match content_id {
-                Some(content_id) => {
-                    fetch::fetch_with_size(blobstore, ctx, content_id, fetch::Range::All)
-                        .left_future()
-                }
-                None => Ok(None).into_future().right_future(),
-            }
-        })
+        })?;
+
+    match content_id {
+        Some(content_id) => {
+            fetch::fetch_with_size(blobstore, ctx, content_id, fetch::Range::All).await
+        }
+        None => Ok(None),
+    }
 }
 
 /// This function has the same functionality as fetch_with_size, but only
@@ -257,88 +252,89 @@ pub fn fetch_with_size<B: Blobstore + Clone>(
 ///
 /// Requests for data beyond the end of the file will return only the part of
 /// the file that overlaps with the requested range, if any.
-pub fn fetch_range_with_size<B: Blobstore + Clone>(
+pub async fn fetch_range_with_size<B: Blobstore + Clone>(
     blobstore: &B,
     ctx: CoreContext,
     key: &FetchKey,
     start: u64,
     size: u64,
-) -> impl OldFuture<Item = Option<(impl OldStream<Item = Bytes, Error = Error>, u64)>, Error = Error>
-{
-    key.load(ctx.clone(), blobstore)
-        .compat()
+) -> Result<Option<(impl OldStream<Item = Bytes, Error = Error>, u64)>, Error> {
+    let content_id = key
+        .load(ctx.clone(), blobstore)
+        .await
         .map(Some)
         .or_else(|err| match err {
             LoadableError::Error(err) => Err(err),
             LoadableError::Missing(_) => Ok(None),
-        })
-        .and_then({
-            cloned!(blobstore, ctx);
-            move |content_id| match content_id {
-                Some(content_id) => fetch::fetch_with_size(
-                    blobstore,
-                    ctx,
-                    content_id,
-                    fetch::Range::Span {
-                        start,
-                        end: start.saturating_add(size),
-                    },
-                )
-                .left_future(),
-                None => Ok(None).into_future().right_future(),
-            }
-        })
+        })?;
+
+    match content_id {
+        Some(content_id) => {
+            fetch::fetch_with_size(
+                blobstore,
+                ctx,
+                content_id,
+                fetch::Range::Span {
+                    start,
+                    end: start.saturating_add(size),
+                },
+            )
+            .await
+        }
+        None => Ok(None),
+    }
 }
 
 /// This function has the same functionality as fetch_with_size, but doesn't return the file size.
-pub fn fetch<B: Blobstore + Clone>(
+pub async fn fetch<B: Blobstore + Clone>(
     blobstore: &B,
     ctx: CoreContext,
     key: &FetchKey,
-) -> impl OldFuture<Item = Option<impl OldStream<Item = Bytes, Error = Error>>, Error = Error> {
-    fetch_with_size(blobstore, ctx, key).map(|res| res.map(|(stream, _len)| stream))
+) -> Result<Option<impl OldStream<Item = Bytes, Error = Error>>, Error> {
+    let res = fetch_with_size(blobstore, ctx, key).await?;
+    Ok(res.map(|(stream, _len)| stream))
 }
 
 /// Fetch the contents of a blob concatenated together. This bad for buffering, and you shouldn't
 /// add new callsites. This is only for compatibility with existin callsites.
-pub fn fetch_concat_opt<B: Blobstore + Clone>(
+pub async fn fetch_concat_opt<B: Blobstore + Clone>(
     blobstore: &B,
     ctx: CoreContext,
     key: &FetchKey,
-) -> impl OldFuture<Item = Option<Bytes>, Error = Error> {
-    fetch_with_size(blobstore, ctx, key).and_then(|res| match res {
+) -> Result<Option<Bytes>, Error> {
+    let res = fetch_with_size(blobstore, ctx, key).await?;
+
+    match res {
         Some((stream, len)) => {
             let len = len
                 .try_into()
-                .map_err(|_| anyhow::format_err!("Cannot fetch file with length {}", len));
+                .map_err(|_| anyhow::format_err!("Cannot fetch file with length {}", len))?;
 
-            len.into_future()
-                .and_then(move |len| {
-                    let buf = BytesMut::with_capacity(len);
+            let buf = BytesMut::with_capacity(len);
 
-                    stream
-                        .fold(buf, |mut buffer, chunk| {
-                            buffer.extend_from_slice(&chunk);
-                            Result::<_, Error>::Ok(buffer)
-                        })
-                        .map(BytesMut::freeze)
-                        .map(Some)
+            let bytes = stream
+                .compat()
+                .try_fold(buf, |mut buffer, chunk| async move {
+                    buffer.extend_from_slice(&chunk);
+                    Result::<_, Error>::Ok(buffer)
                 })
-                .left_future()
+                .await?;
+
+            Ok(Some(bytes.freeze()))
         }
-        None => Ok(None).into_future().right_future(),
-    })
+        None => Ok(None),
+    }
 }
 
 /// Similar to `fetch_concat_opt`, but requires the blob to be present, or errors out.
-pub fn fetch_concat<B: Blobstore + Clone>(
+pub async fn fetch_concat<B: Blobstore + Clone>(
     blobstore: &B,
     ctx: CoreContext,
     key: impl Into<FetchKey>,
-) -> impl OldFuture<Item = Bytes, Error = Error> {
+) -> Result<Bytes, Error> {
     let key: FetchKey = key.into();
-    fetch_concat_opt(blobstore, ctx, &key)
-        .and_then(move |bytes| bytes.ok_or_else(|| errors::ErrorKind::MissingContent(key).into()))
+    let bytes = fetch_concat_opt(blobstore, ctx, &key).await?;
+    bytes.ok_or_else(|| errors::ErrorKind::MissingContent(key).into())
 }
 
 /// Fetch content associated with the key as a stream
@@ -346,50 +342,53 @@ pub fn fetch_concat<B: Blobstore + Clone>(
 /// Moslty behaves as the `fetch`, except it is pushing missing content error into stream if
 /// data associated with the key was not found.
 pub fn fetch_stream<B: Blobstore + Clone>(
-    blobstore: &B,
+    blobstore: B,
     ctx: CoreContext,
     key: impl Into<FetchKey>,
 ) -> impl OldStream<Item = Bytes, Error = Error> {
     let key: FetchKey = key.into();
-    fetch(blobstore, ctx, &key)
-        .and_then(move |stream| stream.ok_or_else(|| errors::ErrorKind::MissingContent(key).into()))
-        .flatten_stream()
+
+    async move {
+        let stream = fetch(&blobstore, ctx, &key)
+            .await?
+            .ok_or_else(|| errors::ErrorKind::MissingContent(key))?;
+        Result::<_, Error>::Ok(stream.compat())
+    }
+    .try_flatten_stream()
+    .boxed()
+    .compat()
 }
 
 /// This function has the same functionality as fetch_range_with_size, but doesn't return the file size.
-pub fn fetch_range<B: Blobstore + Clone>(
+pub async fn fetch_range<B: Blobstore + Clone>(
     blobstore: &B,
     ctx: CoreContext,
     key: &FetchKey,
     start: u64,
     size: u64,
-) -> impl OldFuture<Item = Option<impl OldStream<Item = Bytes, Error = Error>>, Error = Error> {
-    fetch_range_with_size(blobstore, ctx, key, start, size)
-        .map(|res| res.map(|(stream, _len)| stream))
+) -> Result<Option<impl OldStream<Item = Bytes, Error = Error>>, Error> {
+    let res = fetch_range_with_size(blobstore, ctx, key, start, size).await?;
+    Ok(res.map(|(stream, _len)| stream))
 }
 
 /// Fetch the start of a file. Returns a Future that resolves with Some(Bytes) if the file was
 /// found, and None otherwise. If Bytes are found, this function is guaranteed to return as many
 /// Bytes as requested unless the file is shorter than that.
-pub fn peek<B: Blobstore + Clone>(
+pub async fn peek<B: Blobstore + Clone>(
     blobstore: &B,
     ctx: CoreContext,
     key: &FetchKey,
     size: usize,
-) -> impl OldFuture<Item = Option<Bytes>, Error = Error> {
-    fetch(blobstore, ctx, key)
-        .map(move |maybe_stream| {
-            match maybe_stream {
-                None => Ok(None).into_future().left_future(),
-                Some(stream) => chunk::ChunkStream::new(stream.compat(), size)
-                    .compat()
-                    .into_future()
-                    .map(|(bytes, _rest)| bytes)
-                    .map_err(|(err, _rest)| err)
-                    .right_future(),
-            }
-        })
-        .flatten()
+) -> Result<Option<Bytes>, Error> {
+    let maybe_stream = fetch(blobstore, ctx, key).await?;
+
+    match maybe_stream {
+        None => Ok(None),
+        Some(stream) => {
+            let mut stream = chunk::ChunkStream::new(stream.compat(), size);
+            stream.try_next().await
+        }
+    }
 }
 
 /// Store a file from a stream. This is guaranteed atomic - either the store will succeed

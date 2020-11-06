@@ -261,9 +261,14 @@ fn prepare_blob(
                 // (based on their signature).
 
                 if inline_file {
-                    let content_fut =
-                        filestore::fetch_concat(repo.blobstore(), ctx, envelope.content_id())
-                            .map(FileBytes);
+                    let content_fut = {
+                        let blobstore = repo.get_blobstore();
+                        let content_id = envelope.content_id();
+                        async move { filestore::fetch_concat(&blobstore, ctx, content_id).await }
+                    }
+                    .map_ok(FileBytes)
+                    .boxed()
+                    .compat();
 
                     let blob_fut = if validate_hash {
                         content_fut

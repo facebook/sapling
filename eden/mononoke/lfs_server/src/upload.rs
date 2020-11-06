@@ -12,7 +12,7 @@ use anyhow::{Context, Error};
 use bytes::Bytes;
 use futures::{
     channel::mpsc::{self, channel},
-    compat::{Future01CompatExt, Stream01CompatExt},
+    compat::Stream01CompatExt,
     SinkExt, Stream, StreamExt, TryStreamExt,
 };
 use futures_util::try_join;
@@ -312,9 +312,7 @@ async fn sync_internal_and_upstream(
 ) -> Result<(), Error> {
     let key = FetchKey::Aliased(Alias::Sha256(oid));
 
-    let res = filestore::fetch(ctx.repo.blobstore(), ctx.ctx.clone(), &key)
-        .compat()
-        .await?;
+    let res = filestore::fetch(ctx.repo.blobstore(), ctx.ctx.clone(), &key).await?;
 
     match res {
         Some(stream) => {

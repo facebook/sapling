@@ -10,8 +10,10 @@ use blobstore::Blobstore;
 use bytes::Bytes;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::{compat::Future01CompatExt, future, stream};
-use futures_old::future::{self as old_future, Future};
+use futures::{
+    future::{self, TryFutureExt},
+    stream,
+};
 use quickcheck::{Arbitrary, StdGen};
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -27,46 +29,42 @@ use super::failing_blobstore::FailingBlobstore;
 use super::request;
 
 /// Fetching through any alias should return the same outcome.
-fn check_consistency<B: Blobstore + Clone>(
+async fn check_consistency<B: Blobstore + Clone>(
     blobstore: &B,
     ctx: CoreContext,
     bytes: &Bytes,
-) -> impl Future<Item = bool, Error = Error> {
+) -> Result<bool, Error> {
     let content_id = hash_bytes(ContentIdIncrementalHasher::new(), &bytes);
     let sha1 = hash_bytes(Sha1IncrementalHasher::new(), &bytes);
     let sha256 = hash_bytes(Sha256IncrementalHasher::new(), &bytes);
     let git_sha1 = hash_bytes(GitSha1IncrementalHasher::new(*&bytes), &bytes);
 
+    let content_id = FetchKey::Canonical(content_id);
+    let sha1 = FetchKey::Aliased(Alias::Sha1(sha1));
+    let sha256 = FetchKey::Aliased(Alias::Sha256(sha256));
+    let git_sha1 = FetchKey::Aliased(Alias::GitSha1(git_sha1.sha1()));
+
     let futs = vec![
-        filestore::fetch(blobstore, ctx.clone(), &FetchKey::Canonical(content_id)),
-        filestore::fetch(
-            blobstore,
-            ctx.clone(),
-            &FetchKey::Aliased(Alias::Sha1(sha1)),
-        ),
-        filestore::fetch(
-            blobstore,
-            ctx.clone(),
-            &FetchKey::Aliased(Alias::Sha256(sha256)),
-        ),
-        filestore::fetch(
-            blobstore,
-            ctx.clone(),
-            &FetchKey::Aliased(Alias::GitSha1(git_sha1.sha1())),
-        ),
+        filestore::fetch(blobstore, ctx.clone(), &content_id),
+        filestore::fetch(blobstore, ctx.clone(), &sha1),
+        filestore::fetch(blobstore, ctx.clone(), &sha256),
+        filestore::fetch(blobstore, ctx.clone(), &git_sha1),
     ];
 
-    let futs: Vec<_> = futs.into_iter().map(|f| f.map(|r| r.is_some())).collect();
+    let futs: Vec<_> = futs
+        .into_iter()
+        .map(|f| f.map_ok(|r| r.is_some()))
+        .collect();
 
-    old_future::join_all(futs).and_then(|outcomes| {
-        // Either all should exist, or none should exist.
-        let h: HashSet<_> = outcomes.iter().collect();
-        if h.len() == 1 {
-            Ok(*h.into_iter().next().unwrap())
-        } else {
-            Err(format_err!("Inconsistent fetch results: {:?}", outcomes))
-        }
-    })
+    let outcomes = future::try_join_all(futs).await?;
+
+    // Either all should exist, or none should exist.
+    let h: HashSet<_> = outcomes.iter().collect();
+    if h.len() == 1 {
+        Ok(*h.into_iter().next().unwrap())
+    } else {
+        Err(format_err!("Inconsistent fetch results: {:?}", outcomes))
+    }
 }
 
 async fn check_metadata<B: Blobstore + Clone>(
@@ -113,7 +111,7 @@ fn test_invariants(fb: FacebookInit) -> Result<()> {
         println!("store: {:?}", res);
 
         // Try to read with a functional blobstore. All results should be consistent.
-        let content_ok = rt.block_on(check_consistency(&memblob, ctx.clone(), &bytes))?;
+        let content_ok = rt.block_on_std(check_consistency(&memblob, ctx.clone(), &bytes))?;
         println!("content_ok: {:?}", content_ok);
 
         // If we can read the content metadata, then we should also be able to read a metadata.
@@ -157,9 +155,7 @@ fn test_store_bytes_consistency(fb: FacebookInit) -> Result<(), Error> {
 
             assert_eq!(
                 bytes,
-                filestore::fetch_concat(&memblob, ctx.clone(), id1)
-                    .compat()
-                    .await?
+                filestore::fetch_concat(&memblob, ctx.clone(), id1).await?
             );
 
             let ((id2, len2), fut2) =
@@ -168,9 +164,7 @@ fn test_store_bytes_consistency(fb: FacebookInit) -> Result<(), Error> {
 
             assert_eq!(
                 bytes,
-                filestore::fetch_concat(&memblob, ctx.clone(), id2)
-                    .compat()
-                    .await?
+                filestore::fetch_concat(&memblob, ctx.clone(), id2).await?
             );
 
             let ((id3, len3), fut3) = filestore::store_bytes(
@@ -183,9 +177,7 @@ fn test_store_bytes_consistency(fb: FacebookInit) -> Result<(), Error> {
 
             assert_eq!(
                 bytes,
-                filestore::fetch_concat(&memblob, ctx.clone(), id3)
-                    .compat()
-                    .await?
+                filestore::fetch_concat(&memblob, ctx.clone(), id3).await?
             );
 
             let meta = filestore::store(

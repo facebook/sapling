@@ -66,7 +66,7 @@ async fn get_content(
 ) -> Result<bytes::Bytes, Error> {
     let content_id = id.load(ctx.clone(), repo.blobstore()).await?.content_id();
     let content = filestore::fetch_concat(repo.blobstore(), ctx.clone(), content_id);
-    (content).compat().await
+    content.await
 }
 
 async fn upload_blob_no_parents(fb: FacebookInit, repo: BlobRepo) {
@@ -669,7 +669,6 @@ async fn entry_content(
         Entry::Leaf((_, id)) => {
             let envelope = id.load(ctx.clone(), repo.blobstore()).await?;
             filestore::fetch_concat(&repo.get_blobstore(), ctx.clone(), envelope.content_id())
-                .compat()
                 .await?
         }
         Entry::Tree(..) => {

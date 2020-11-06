@@ -86,7 +86,6 @@ async fn read<B: Blobstore + Clone>(
     );
 
     let stream = filestore::fetch(blob, ctx.clone(), &key)
-        .compat()
         .await?
         .ok_or(format_err!("Fetch failed: no stream"))?;
 

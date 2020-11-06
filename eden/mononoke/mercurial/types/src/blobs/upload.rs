@@ -19,7 +19,11 @@ use context::CoreContext;
 use failure_ext::FutureFailureErrorExt;
 use filestore::FilestoreConfig;
 use filestore::{self, FetchKey};
-use futures::future::{FutureExt, TryFutureExt};
+use futures::{
+    compat::Stream01CompatExt,
+    future::{FutureExt, TryFutureExt},
+    stream::{StreamExt, TryStreamExt},
+};
 use futures_ext::{BoxFuture, FutureExt as _};
 use futures_old::{future, stream, Future, IntoFuture, Stream};
 use futures_stats::{FutureStats, Timed};
@@ -330,7 +334,11 @@ impl UploadHgFileContents {
         content_id: ContentId,
         copy_from: Option<(MPath, HgFileNodeId)>,
     ) -> impl Future<Item = Bytes, Error = Error> {
-        filestore::peek(&*blobstore, ctx, &FetchKey::Canonical(content_id), META_SZ)
+        cloned!(blobstore);
+
+        async move { filestore::peek(&blobstore, ctx, &FetchKey::Canonical(content_id), META_SZ).await }
+            .boxed()
+            .compat()
             .and_then(move |bytes| bytes.ok_or(ErrorKind::ContentBlobMissing(content_id).into()))
             .context("While computing metadata")
             .from_err()
@@ -352,9 +360,17 @@ impl UploadHgFileContents {
         p1: Option<HgFileNodeId>,
         p2: Option<HgFileNodeId>,
     ) -> impl Future<Item = HgFileNodeId, Error = Error> {
-        let file_bytes = filestore::fetch(&*blobstore, ctx, &FetchKey::Canonical(content_id))
-            .and_then(move |stream| stream.ok_or(ErrorKind::ContentBlobMissing(content_id).into()))
-            .flatten_stream();
+        cloned!(blobstore);
+
+        let file_bytes = async move {
+            let stream = filestore::fetch(&blobstore, ctx, &FetchKey::Canonical(content_id))
+                .await?
+                .ok_or(ErrorKind::ContentBlobMissing(content_id))?;
+            Result::<_, Error>::Ok(stream.compat()) // TODO: We are compat-ing the stream twice here. This will be fixed when we return a new Stream
+        }
+        .try_flatten_stream()
+        .boxed()
+        .compat();
 
         let all_bytes = stream::once(Ok(metadata)).chain(file_bytes);
 

@@ -505,7 +505,6 @@ mod test {
                                 ctx.clone(),
                                 filestore::FetchKey::Canonical(content_id),
                             )
-                            .compat()
                             .await?;
 
                             let content = String::from_utf8(content.to_vec())?;

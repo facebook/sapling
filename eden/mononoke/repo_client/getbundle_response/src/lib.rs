@@ -802,9 +802,7 @@ impl PreparedFilenodeEntry {
             repo: BlobRepo,
             content_id: ContentId,
         ) -> Result<FileBytes, Error> {
-            let content = filestore::fetch_concat(repo.blobstore(), ctx, content_id)
-                .compat()
-                .await?;
+            let content = filestore::fetch_concat(repo.blobstore(), ctx, content_id).await?;
 
             Ok(FileBytes(content))
         }

@@ -16,8 +16,11 @@ use blobstore::{Blobstore, PutBehaviour};
 use bytes::{Bytes, BytesMut};
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::{compat::Future01CompatExt, future, stream};
-use futures_ext::FutureExt as OldFutureExt;
+use futures::{
+    compat::{Future01CompatExt, Stream01CompatExt},
+    future::{self, TryFutureExt},
+    stream::{self, TryStreamExt},
+};
 use futures_old::{future::Future, stream::Stream};
 use lazy_static::lazy_static;
 use mononoke_types::{hash, typed_hash::MononokeId, ContentId, ContentMetadata, ContentMetadataId};
@@ -104,9 +107,7 @@ async fn filestore_put_get_canon(fb: FacebookInit) -> Result<()> {
     )
     .await?;
 
-    let res = filestore::fetch_concat_opt(&blob, ctx, &FetchKey::Canonical(content_id))
-        .compat()
-        .await;
+    let res = filestore::fetch_concat_opt(&blob, ctx, &FetchKey::Canonical(content_id)).await;
 
     println!("res = {:#?}", res);
 
@@ -136,7 +137,6 @@ async fn filestore_put_get_sha1(fb: FacebookInit) -> Result<()> {
         ctx,
         &FetchKey::Aliased(Alias::Sha1(*HELLO_WORLD_SHA1)),
     )
-    .compat()
     .await;
 
     println!("res = {:#?}", res);
@@ -166,7 +166,6 @@ async fn filestore_put_get_git_sha1(fb: FacebookInit) -> Result<()> {
         ctx,
         &FetchKey::Aliased(Alias::GitSha1(HELLO_WORLD_GIT_SHA1.sha1())),
     )
-    .compat()
     .await;
 
     println!("res = {:#?}", res);
@@ -196,7 +195,6 @@ async fn filestore_put_get_sha256(fb: FacebookInit) -> Result<()> {
         ctx,
         &FetchKey::Aliased(Alias::Sha256(*HELLO_WORLD_SHA256)),
     )
-    .compat()
     .await;
 
     println!("res = {:#?}", res);
@@ -227,9 +225,7 @@ async fn filestore_chunked_put_get(fb: FacebookInit) -> Result<()> {
     )
     .await?;
 
-    let res = filestore::fetch_concat_opt(&blob, ctx, &FetchKey::Canonical(content_id))
-        .compat()
-        .await;
+    let res = filestore::fetch_concat_opt(&blob, ctx, &FetchKey::Canonical(content_id)).await;
 
     println!("res = {:#?}", res);
 
@@ -293,9 +289,7 @@ async fn filestore_content_not_found(fb: FacebookInit) -> Result<()> {
     let content_id = canonical(data);
 
     // Verify that we can still read the full thing.
-    let res = filestore::fetch_concat_opt(&blob, ctx, &FetchKey::Canonical(content_id))
-        .compat()
-        .await;
+    let res = filestore::fetch_concat_opt(&blob, ctx, &FetchKey::Canonical(content_id)).await;
 
     println!("res = {:#?}", res);
     assert_eq!(res?, None);
@@ -335,9 +329,7 @@ async fn filestore_chunk_not_found(fb: FacebookInit) -> Result<()> {
     );
 
     // This should fail
-    let res = filestore::fetch_concat_opt(&blob, ctx, &FetchKey::Canonical(content_id))
-        .compat()
-        .await;
+    let res = filestore::fetch_concat_opt(&blob, ctx, &FetchKey::Canonical(content_id)).await;
 
     println!("res = {:#?}", res);
     assert!(res.is_err());
@@ -559,24 +551,29 @@ async fn filestore_get_range(fb: FacebookInit) -> Result<()> {
     )
     .await?;
 
-    let res = filestore::fetch_range_with_size(&blob, ctx, &FetchKey::Canonical(content_id), 7, 5)
-        .map(|maybe_stream| {
-            maybe_stream.map(|(stream, _size)| {
-                stream
-                    .fold(BytesMut::new(), |mut buff, chunk| {
-                        buff.extend_from_slice(&chunk);
-                        Result::<_, Error>::Ok(buff)
-                    })
-                    .map(BytesMut::freeze)
+    let res = async {
+        let stream =
+            filestore::fetch_range_with_size(&blob, ctx, &FetchKey::Canonical(content_id), 7, 5)
+                .await?
+                .ok_or_else(|| Error::msg("Object does not exist"))?
+                .0;
+
+        let bytes = stream
+            .compat()
+            .try_fold(BytesMut::new(), |mut buff, chunk| async move {
+                buff.extend_from_slice(&chunk);
+                Result::<_, Error>::Ok(buff)
             })
-        })
-        .flatten()
-        .compat()
-        .await;
+            .await?
+            .freeze();
+
+        Result::<_, Error>::Ok(bytes)
+    }
+    .await;
 
     println!("res = {:#?}", res);
 
-    assert_eq!(res?, Some(Bytes::from(&HELLO_WORLD[7..])));
+    assert_eq!(res?, Bytes::from(&HELLO_WORLD[7..]));
 
     Ok(())
 }
@@ -605,24 +602,29 @@ async fn filestore_get_chunked_range(fb: FacebookInit) -> Result<()> {
     )
     .await?;
 
-    let res = filestore::fetch_range_with_size(&blob, ctx, &FetchKey::Canonical(full_id), 4, 6)
-        .map(|maybe_stream| {
-            maybe_stream.map(|(stream, _size)| {
-                stream
-                    .fold(BytesMut::new(), |mut buff, chunk| {
-                        buff.extend_from_slice(&chunk);
-                        Result::<_, Error>::Ok(buff)
-                    })
-                    .map(BytesMut::freeze)
+    let res = async {
+        let stream =
+            filestore::fetch_range_with_size(&blob, ctx, &FetchKey::Canonical(full_id), 4, 6)
+                .await?
+                .ok_or_else(|| Error::msg("Object does not exist"))?
+                .0;
+
+        let bytes = stream
+            .compat()
+            .try_fold(BytesMut::new(), |mut buff, chunk| async move {
+                buff.extend_from_slice(&chunk);
+                Result::<_, Error>::Ok(buff)
             })
-        })
-        .flatten()
-        .compat()
-        .await;
+            .await?
+            .freeze();
+
+        Result::<_, Error>::Ok(bytes)
+    }
+    .await;
 
     println!("res = {:#?}", res);
 
-    assert_eq!(res?, Some(Bytes::from(&b"arbazq"[..])));
+    assert_eq!(res?, Bytes::from(&b"arbazq"[..]));
 
     Ok(())
 }
@@ -756,9 +758,7 @@ async fn filestore_test_peek(fb: FacebookInit) -> Result<()> {
     )
     .await?;
 
-    let res = filestore::peek(&blob, ctx, &FetchKey::Canonical(content_id), 3)
-        .compat()
-        .await;
+    let res = filestore::peek(&blob, ctx, &FetchKey::Canonical(content_id), 3).await;
     println!("res = {:#?}", res);
 
     let expected: &[u8] = b"hel";
@@ -789,9 +789,7 @@ async fn filestore_test_chunked_peek(fb: FacebookInit) -> Result<()> {
     )
     .await?;
 
-    let res = filestore::peek(&blob, ctx, &FetchKey::Canonical(content_id), 3)
-        .compat()
-        .await;
+    let res = filestore::peek(&blob, ctx, &FetchKey::Canonical(content_id), 3).await;
     println!("res = {:#?}", res);
 
     let expected: &[u8] = b"hel";
@@ -817,9 +815,7 @@ async fn filestore_test_short_peek(fb: FacebookInit) -> Result<()> {
     )
     .await?;
 
-    let res = filestore::peek(&blob, ctx, &FetchKey::Canonical(content_id), 128)
-        .compat()
-        .await;
+    let res = filestore::peek(&blob, ctx, &FetchKey::Canonical(content_id), 128).await;
     println!("res = {:#?}", res);
 
     assert_eq!(res?, Some(Bytes::from(HELLO_WORLD)));
@@ -846,9 +842,7 @@ async fn filestore_test_empty_peek(fb: FacebookInit) -> Result<()> {
     )
     .await?;
 
-    let res = filestore::peek(&blob, ctx, &FetchKey::Canonical(content_id), 128)
-        .compat()
-        .await;
+    let res = filestore::peek(&blob, ctx, &FetchKey::Canonical(content_id), 128).await;
     println!("res = {:#?}", res);
 
     assert_eq!(res?, Some(bytes.clone()));
@@ -871,9 +865,7 @@ async fn filestore_store_bytes(fb: FacebookInit) -> Result<()> {
 
     fut.await?;
 
-    let res = filestore::fetch_concat_opt(&blob, ctx, &FetchKey::Canonical(content_id))
-        .compat()
-        .await;
+    let res = filestore::fetch_concat_opt(&blob, ctx, &FetchKey::Canonical(content_id)).await;
 
     println!("res = {:#?}", res);
 
@@ -1068,10 +1060,7 @@ async fn filestore_chunked_put_get_with_size(fb: FacebookInit) -> Result<()> {
     )
     .await?;
 
-    let res = filestore::fetch_with_size(&blob, ctx, &FetchKey::Canonical(content_id))
-        .boxify()
-        .compat()
-        .await;
+    let res = filestore::fetch_with_size(&blob, ctx, &FetchKey::Canonical(content_id)).await;
 
     let (stream, size) = res?.unwrap();
 
@@ -1255,9 +1244,15 @@ async fn assert_fetches_as<B: Blobstore + Clone>(
     expected: Vec<&'static str>,
 ) -> Result<()> {
     let res = filestore::fetch(blobstore, ctx, &FetchKey::Canonical(content_id))
-        .map(|maybe_stream| maybe_stream.map(|s| s.collect()))
-        .flatten()
-        .compat()
+        .map_ok(|maybe_stream| async move {
+            let res: Option<Vec<Bytes>> = match maybe_stream {
+                Some(stream) => Some(stream.compat().try_collect().await?),
+                None => None,
+            };
+
+            Result::<_, Error>::Ok(res)
+        })
+        .try_flatten()
         .await;
     println!("res = {:#?}", res);
     let expected = expected.into_iter().map(Bytes::from).collect();

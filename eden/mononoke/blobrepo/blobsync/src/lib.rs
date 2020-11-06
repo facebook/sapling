@@ -81,20 +81,25 @@ pub fn copy_content(
                             }
                         };
 
-                        fetch(&src_blobstore, ctx, &fetch_key)
-                            .and_then(move |maybe_byte_stream| {
-                                match maybe_byte_stream {
-                                    None => err(format_err!(
-                                        "File not found for fetch key: {:?}",
-                                        fetch_key
-                                    ))
-                                    .left_future(),
-                                    Some(byte_stream) => {
-                                        ok((store_request, byte_stream)).right_future()
-                                    }
+                        {
+                            cloned!(fetch_key);
+                            async move { fetch(&src_blobstore, ctx, &fetch_key).await }
+                        }
+                        .boxed()
+                        .compat()
+                        .and_then(move |maybe_byte_stream| {
+                            match maybe_byte_stream {
+                                None => err(format_err!(
+                                    "File not found for fetch key: {:?}",
+                                    fetch_key
+                                ))
+                                .left_future(),
+                                Some(byte_stream) => {
+                                    ok((store_request, byte_stream)).right_future()
                                 }
-                            })
-                            .right_future()
+                            }
+                        })
+                        .right_future()
                     }
                 })
                 .and_then({

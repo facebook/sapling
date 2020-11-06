@@ -9,7 +9,7 @@ use std::str::FromStr;
 
 use anyhow::Context;
 use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
+    compat::Stream01CompatExt,
     stream::{StreamExt, TryStreamExt},
 };
 use gotham::state::State;
@@ -62,7 +62,6 @@ async fn fetch_by_key(
 ) -> Result<impl TryIntoResponse, HttpError> {
     // Query a stream out of the Filestore
     let fetched = filestore::fetch_with_size(ctx.repo.blobstore(), ctx.ctx.clone(), &key)
-        .compat()
         .await
         .map_err(|e| {
             if has_redaction_root_cause(&e) {

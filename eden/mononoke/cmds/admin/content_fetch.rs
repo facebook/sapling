@@ -59,7 +59,6 @@ pub async fn subcommand_content_fetch<'a>(
                 .map_err(Error::from)?;
             let bytes =
                 filestore::fetch_concat(&repo.get_blobstore(), ctx.clone(), envelope.content_id())
-                    .compat()
                     .await?;
             let content = String::from_utf8(bytes.to_vec()).expect("non-utf8 file content");
             println!("{}", content);
