@@ -14,7 +14,7 @@ use std::convert::TryInto;
 
 use anyhow::Error;
 use cloned::cloned;
-use futures::{future::TryFutureExt, stream::TryStreamExt};
+use futures::{compat::Stream01CompatExt, future::TryFutureExt, stream::TryStreamExt};
 use futures_ext::FutureExt;
 use futures_old::{stream, Future, IntoFuture, Stream};
 
@@ -378,7 +378,8 @@ pub fn peek<B: Blobstore + Clone>(
         .map(move |maybe_stream| {
             match maybe_stream {
                 None => Ok(None).into_future().left_future(),
-                Some(stream) => chunk::ChunkStream::new(stream, size)
+                Some(stream) => chunk::ChunkStream::new(stream.compat(), size)
+                    .compat()
                     .into_future()
                     .map(|(bytes, _rest)| bytes)
                     .map_err(|(err, _rest)| err)
@@ -400,7 +401,7 @@ pub fn store<B: Blobstore + Clone>(
 ) -> impl Future<Item = ContentMetadata, Error = Error> {
     use chunk::Chunks;
 
-    let prepared = match chunk::make_chunks(data, req.expected_size, config.chunk_size) {
+    let prepared = match chunk::make_chunks(data.compat(), req.expected_size, config.chunk_size) {
         Chunks::Inline(fut) => prepare::prepare_inline(fut.compat()).left_future(),
         Chunks::Chunked(expected_size, chunks) => prepare::prepare_chunked(
             ctx.clone(),

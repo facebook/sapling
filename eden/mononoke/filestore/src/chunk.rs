@@ -8,20 +8,27 @@
 use anyhow::{Error, Result};
 use bytes::{Bytes, BytesMut};
 use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
-    future::{BoxFuture, FutureExt},
-    stream::{BoxStream, StreamExt},
+    future::{BoxFuture, FutureExt, TryFutureExt},
+    stream::{BoxStream, Stream, StreamExt, TryStreamExt},
+    task::{Context, Poll},
 };
-use futures_old::{future::Future, stream::Stream, try_ready, Async, Poll};
 use std::convert::TryFrom;
 use std::fmt::{self, Debug};
+use std::pin::Pin;
 
 use crate::expected_size::ExpectedSize;
 
-#[derive(Debug)]
 #[must_use = "streams do nothing unless polled"]
+#[pin_project::pin_project]
+#[derive(Debug)]
 pub struct ChunkStream<S> {
+    #[pin]
     stream: S,
+    state: ChunkStreamState,
+}
+
+#[derive(Debug)]
+struct ChunkStreamState {
     chunk_size: usize,
     buff: BytesMut,
     emitted: bool,
@@ -35,48 +42,60 @@ impl<S> ChunkStream<S> {
 
         ChunkStream {
             stream,
-            chunk_size,
-            buff: BytesMut::with_capacity(chunk_size),
-            emitted: false,
-            had_data: false,
-            done: false,
+            state: ChunkStreamState {
+                chunk_size,
+                buff: BytesMut::with_capacity(chunk_size),
+                emitted: false,
+                had_data: false,
+                done: false,
+            },
         }
     }
 }
 
-impl<S> Stream for ChunkStream<S>
+impl<S, E> Stream for ChunkStream<S>
 where
-    S: Stream<Item = Bytes>,
+    S: Stream<Item = Result<Bytes, E>>,
 {
-    type Item = Bytes;
-    type Error = S::Error;
+    type Item = S::Item;
 
-    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-        if self.done {
-            return Ok(Async::Ready(None));
+    fn poll_next(self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        let mut proj = self.project();
+
+        if proj.state.done {
+            return Poll::Ready(None);
         }
 
         loop {
-            if self.buff.len() >= self.chunk_size {
+            if proj.state.buff.len() >= proj.state.chunk_size {
                 // We've buffered more data than we need. Emit some.
-                self.emitted = true;
-                let chunk = self.buff.split_to(self.chunk_size).freeze();
-                return Ok(Async::Ready(Some(chunk)));
+                proj.state.emitted = true;
+                let chunk = proj.state.buff.split_to(proj.state.chunk_size).freeze();
+                return Poll::Ready(Some(Ok(chunk)));
             }
 
-            // We need more data. Poll for some!
+            // We need more data. Poll for some! Note the as_mut() here is used to reborrow the
+            // stream and avoid moving it into the loop iteration.
 
-            if let Some(bytes) = try_ready!(self.stream.poll()) {
-                // We got more data. Extend our buffer, then see if that is enough to return. Note
-                // that extend_from slice implicitly extends our BytesMut.
-                self.had_data = true;
-                self.buff.extend_from_slice(&bytes);
-                continue;
-            }
+            match futures::ready!(proj.stream.as_mut().poll_next(ctx)) {
+                Some(Ok(bytes)) => {
+                    // We got more data. Extend our buffer, then see if that is enough to return. Note
+                    // that extend_from slice implicitly extends our BytesMut.
+                    proj.state.had_data = true;
+                    proj.state.buff.extend_from_slice(&bytes);
+                    continue;
+                }
+                Some(Err(e)) => {
+                    return Poll::Ready(Some(Err(e)));
+                }
+                None => {
+                    // Fallthrough
+                }
+            };
 
             // No more data is coming.
 
-            self.done = true;
+            proj.state.done = true;
 
             // Return whatever we have left. However, we need to be a little careful to handle
             // empty data here.
@@ -92,17 +111,18 @@ where
             //
             // - Our underlying stream was empty. In this case, we shouldn't return anything.
 
-            let out = if !self.buff.is_empty() || (self.had_data && !self.emitted) {
+            let out = if !proj.state.buff.is_empty() || (proj.state.had_data && !proj.state.emitted)
+            {
                 // We did have some buffered data. Emit that.
-                self.emitted = true;
-                let chunk = std::mem::replace(&mut self.buff, BytesMut::new()).freeze();
-                Async::Ready(Some(chunk))
+                proj.state.emitted = true;
+                let chunk = std::mem::replace(&mut proj.state.buff, BytesMut::new()).freeze();
+                Poll::Ready(Some(Ok(chunk)))
             } else {
                 // We have no more buffered data. We're done.
-                Async::Ready(None)
+                Poll::Ready(None)
             };
 
-            return Ok(out);
+            return out;
         }
     }
 }
@@ -129,7 +149,7 @@ pub fn make_chunks<'a, S>(
     chunk_size: Option<u64>,
 ) -> Chunks<'a>
 where
-    S: Stream<Item = Bytes, Error = Error> + Send + 'a,
+    S: Stream<Item = Result<Bytes, Error>> + Send + 'a,
 {
     // NOTE: We stop reading if the stream we are provided exceeds the expected_size we were given.
     // While we do check later that the stream matches *exactly* the size we were given, doing this
@@ -137,30 +157,33 @@ where
     // actually is 1TB, we don't try to buffer the whole 1TB).
     let limit = {
         let mut observed_size: u64 = 0; // This moves into the closure below and serves as its state.
-        move |chunk: Bytes| {
+        move |chunk: Result<Bytes, Error>| {
             // NOTE: unwrap() will fail if we have a Bytes whose length is too large to fit in a u64.
             // We presumably don't have such Bytes in memory!
+            let chunk = chunk?;
             observed_size += u64::try_from(chunk.len()).unwrap();
             expected_size.check_less(observed_size)?;
             Result::<_, Error>::Ok(chunk)
         }
     };
 
-    let data = data.and_then(limit);
+    let data = data.map(limit);
 
     match chunk_size {
         Some(chunk_size) if expected_size.should_chunk(chunk_size) => {
             let stream = ChunkStream::new(data, chunk_size as usize);
-            Chunks::Chunked(expected_size, stream.compat().boxed())
+            Chunks::Chunked(expected_size, stream.boxed())
         }
         _ => {
             let fut = data
-                .fold(expected_size.new_buffer(), |mut bytes, incoming| {
-                    bytes.extend_from_slice(incoming.as_ref());
-                    Result::<_, Error>::Ok(bytes)
-                })
-                .map(BytesMut::freeze)
-                .compat()
+                .try_fold(
+                    expected_size.new_buffer(),
+                    |mut bytes, incoming| async move {
+                        bytes.extend_from_slice(incoming.as_ref());
+                        Result::<_, Error>::Ok(bytes)
+                    },
+                )
+                .map_ok(BytesMut::freeze)
                 .boxed();
             Chunks::Inline(fut)
         }
@@ -172,14 +195,13 @@ mod test {
     use super::*;
 
     use assert_matches::assert_matches;
-    use futures::stream::TryStreamExt;
-    use futures_old::stream;
+    use futures::stream;
     use quickcheck::quickcheck;
     use tokio_compat::runtime::Runtime;
 
     #[test]
     fn test_make_chunks_no_chunk_size() {
-        let in_stream = stream::iter_ok::<_, Error>(vec![]);
+        let in_stream = stream::empty();
 
         match make_chunks(in_stream, ExpectedSize::new(10), None) {
             Chunks::Inline(_) => {}
@@ -189,7 +211,7 @@ mod test {
 
     #[test]
     fn test_make_chunks_no_chunking() {
-        let in_stream = stream::iter_ok::<_, Error>(vec![]);
+        let in_stream = stream::empty();
 
         match make_chunks(in_stream, ExpectedSize::new(10), Some(100)) {
             Chunks::Inline(_) => {}
@@ -199,7 +221,7 @@ mod test {
 
     #[test]
     fn test_make_chunks_no_chunking_limit() {
-        let in_stream = stream::iter_ok::<_, Error>(vec![]);
+        let in_stream = stream::empty();
 
         match make_chunks(in_stream, ExpectedSize::new(100), Some(100)) {
             Chunks::Inline(_) => {}
@@ -209,7 +231,7 @@ mod test {
 
     #[test]
     fn test_make_chunks_chunking() {
-        let in_stream = stream::iter_ok::<_, Error>(vec![]);
+        let in_stream = stream::empty();
 
         match make_chunks(in_stream, ExpectedSize::new(1000), Some(100)) {
             Chunks::Chunked(h, _) if h.check_equals(1000).is_ok() => {}
@@ -217,11 +239,10 @@ mod test {
         };
     }
 
-    #[test]
-    fn test_make_chunks_overflow_inline() {
+    #[tokio::test]
+    async fn test_make_chunks_overflow_inline() {
         // Make chunks buffers if we expect content that is small enough to fit the chunk size.
         // However, if we get more content than that, we should stop.
-        let mut rt = Runtime::new().unwrap();
 
         let chunks = vec![
             Bytes::from(vec![1; 5]),
@@ -229,21 +250,20 @@ mod test {
             Bytes::from(vec![1; 5]),
             Bytes::from(vec![1; 5]),
         ];
-        let in_stream = stream::iter_ok::<_, Error>(chunks);
+        let in_stream = stream::iter(chunks).map(Ok);
 
         let fut = match make_chunks(in_stream, ExpectedSize::new(10), Some(100)) {
             c @ Chunks::Chunked(..) => panic!("Did not expect {:?}", c),
             Chunks::Inline(fut) => fut,
         };
 
-        rt.block_on_std(fut)
+        fut.await
             .expect_err("make_chunks should abort if the content does not end as advertised");
     }
 
-    #[test]
-    fn test_make_chunks_overflow_chunked() {
+    #[tokio::test]
+    async fn test_make_chunks_overflow_chunked() {
         // If we get more content than advertises, abort.
-        let mut rt = Runtime::new().unwrap();
 
         let chunks = vec![
             Bytes::from(vec![1; 5]),
@@ -251,98 +271,90 @@ mod test {
             Bytes::from(vec![1; 5]),
             Bytes::from(vec![1; 5]),
         ];
-        let in_stream = stream::iter_ok::<_, Error>(chunks);
+        let in_stream = stream::iter(chunks).map(Ok);
 
         let fut = match make_chunks(in_stream, ExpectedSize::new(10), Some(1)) {
             Chunks::Chunked(_, stream) => stream.try_collect::<Vec<_>>(),
             c @ Chunks::Inline(..) => panic!("Did not expect {:?}", c),
         };
 
-        rt.block_on_std(fut)
+        fut.await
             .expect_err("make_chunks should abort if the content does not end as advertised");
     }
 
-    #[test]
-    fn test_stream_of_empty_bytes() {
+    #[tokio::test]
+    async fn test_stream_of_empty_bytes() {
         // If we give ChunkStream a stream that contains empty bytes, then we should return one
         // chunk of empty bytes.
-        let mut rt = Runtime::new().unwrap();
-
         let chunks = vec![Bytes::new()];
-        let in_stream = stream::iter_ok::<_, Error>(chunks);
-        let stream = ChunkStream::new(in_stream, 1);
+        let in_stream = stream::iter(chunks).map(Result::<_, ()>::Ok);
+        let mut stream = ChunkStream::new(in_stream, 1);
 
-        let (ret, stream) = rt.block_on(stream.into_future()).unwrap();
-        assert_eq!(ret, Some(Bytes::new()));
-
-        let (ret, _) = rt.block_on(stream.into_future()).unwrap();
-        assert_eq!(ret, None);
+        assert_eq!(stream.try_next().await, Ok(Some(Bytes::new())));
+        assert_eq!(stream.try_next().await, Ok(None));
     }
 
-    #[test]
-    fn test_stream_of_repeated_empty_bytes() {
+    #[tokio::test]
+    async fn test_stream_of_repeated_empty_bytes() {
         // If we give ChunkStream a stream that contains however many empty bytes, then we should
         // return a single chunk of empty bytes.
-        let mut rt = Runtime::new().unwrap();
 
         let chunks = vec![Bytes::new(), Bytes::new()];
-        let in_stream = stream::iter_ok::<_, Error>(chunks);
-        let stream = ChunkStream::new(in_stream, 1);
+        let in_stream = stream::iter(chunks).map(Result::<_, ()>::Ok);
+        let mut stream = ChunkStream::new(in_stream, 1);
 
-        let (ret, stream) = rt.block_on(stream.into_future()).unwrap();
-        assert_eq!(ret, Some(Bytes::new()));
-
-        let (ret, _) = rt.block_on(stream.into_future()).unwrap();
-        assert_eq!(ret, None);
+        assert_eq!(stream.try_next().await, Ok(Some(Bytes::new())));
+        assert_eq!(stream.try_next().await, Ok(None));
     }
 
-    #[test]
-    fn test_empty_stream() {
+    #[tokio::test]
+    async fn test_empty_stream() {
         // If we give ChunkStream an empty stream, it should retun an empty stream.
-        let mut rt = Runtime::new().unwrap();
 
-        let in_stream = stream::iter_ok::<_, Error>(vec![]);
-        let stream = ChunkStream::new(in_stream, 1);
+        let in_stream = stream::iter(vec![]).map(Result::<_, ()>::Ok);
+        let mut stream = ChunkStream::new(in_stream, 1);
 
-        let (ret, _) = rt.block_on(stream.into_future()).unwrap();
-        assert_eq!(ret, None);
+        assert_eq!(stream.next().await, None);
     }
 
-    #[test]
-    fn test_bigger_incoming_chunks() {
+    #[tokio::test]
+    async fn test_bigger_incoming_chunks() {
         // Explicitly test that ChunkStream handles splitting chunks.
         let chunks = vec![vec![1; 10], vec![1; 10]];
-        assert!(do_check_chunk_stream(chunks, 5))
+        assert!(do_check_chunk_stream(chunks, 5).await)
     }
 
-    #[test]
-    fn test_smaller_incoming_chunks() {
+    #[tokio::test]
+    async fn test_smaller_incoming_chunks() {
         // Explicitly test that ChunkStream handles putting chunks together.
         let chunks = vec![vec![1; 10], vec![1; 10]];
-        assert!(do_check_chunk_stream(chunks, 15))
+        assert!(do_check_chunk_stream(chunks, 15).await)
     }
 
-    #[test]
-    fn test_stream_exhaustion() {
+    #[tokio::test]
+    async fn test_stream_exhaustion() {
+        #[pin_project::pin_project]
         struct StrictStream {
             chunks: Vec<Bytes>,
             done: bool,
         }
 
         impl Stream for StrictStream {
-            type Item = Bytes;
-            type Error = ();
+            type Item = Result<Bytes, ()>;
 
-            fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
+            fn poll_next(
+                mut self: Pin<&mut Self>,
+                _: &mut Context<'_>,
+            ) -> Poll<Option<Self::Item>> {
                 if self.done {
                     panic!("StrictStream was done");
                 }
 
                 match self.chunks.pop() {
-                    Some(b) => Ok(Async::Ready(Some(b))),
+                    Some(b) => Poll::Ready(Some(Ok(b))),
                     None => {
                         self.done = true;
-                        Ok(Async::Ready(None))
+                        Poll::Ready(None)
                     }
                 }
             }
@@ -363,18 +375,19 @@ mod test {
             10,
         );
 
-        assert_matches!(stream.poll(), Ok(Async::Ready(Some(_))));
-        assert_matches!(stream.poll(), Ok(Async::Ready(Some(_))));
-        assert_matches!(stream.poll(), Ok(Async::Ready(None)));
-        assert_matches!(stream.poll(), Ok(Async::Ready(None)));
+        assert_matches!(stream.try_next().await, Ok(Some(_)));
+        assert_matches!(stream.try_next().await, Ok(Some(_)));
+        assert_matches!(stream.try_next().await, Ok(None));
+        assert_matches!(stream.try_next().await, Ok(None));
     }
 
-    fn do_check_chunk_stream(in_chunks: Vec<Vec<u8>>, size: usize) -> bool {
-        let mut rt = Runtime::new().unwrap();
-
+    async fn do_check_chunk_stream(in_chunks: Vec<Vec<u8>>, size: usize) -> bool {
         let in_chunks: Vec<Bytes> = in_chunks.into_iter().map(Bytes::from).collect();
-        let chunk_stream = ChunkStream::new(stream::iter_ok::<_, ()>(in_chunks.clone()), size);
-        let out_chunks = rt.block_on(chunk_stream.collect()).unwrap();
+        let chunk_stream = ChunkStream::new(
+            stream::iter(in_chunks.clone()).map(Result::<_, ()>::Ok),
+            size,
+        );
+        let out_chunks = chunk_stream.try_collect::<Vec<_>>().await.unwrap();
 
         let expected_bytes = in_chunks
             .iter()
@@ -420,14 +433,15 @@ mod test {
     quickcheck! {
         fn check_chunk_stream(in_chunks: Vec<Vec<u8>>, size: usize) -> bool {
             let size = size + 1; // Don't allow 0 as the size.
-            do_check_chunk_stream(in_chunks, size)
+            let mut rt = Runtime::new().unwrap();
+            rt.block_on_std(do_check_chunk_stream(in_chunks, size))
         }
 
         fn check_make_chunks_fut_joins(in_chunks: Vec<Vec<u8>>) -> bool {
             let mut rt = Runtime::new().unwrap();
 
             let in_chunks: Vec<Bytes> = in_chunks.into_iter().map(Bytes::from).collect();
-            let in_stream = stream::iter_ok::<_, Error>(in_chunks.clone());
+            let in_stream = stream::iter(in_chunks.clone()).map(Ok);
 
             let expected_bytes = in_chunks.iter().fold(BytesMut::new(), |mut bytes, chunk| {
                 bytes.extend_from_slice(&chunk);
