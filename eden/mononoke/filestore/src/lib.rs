@@ -15,7 +15,7 @@ use std::convert::TryInto;
 use anyhow::Error;
 use cloned::cloned;
 use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
+    compat::Stream01CompatExt,
     future::{FutureExt, TryFutureExt},
     stream::TryStreamExt,
 };
@@ -422,9 +422,7 @@ pub fn store<B: Blobstore + Clone>(
             }
         };
 
-        finalize::finalize(blobstore, ctx, Some(&req), prepared)
-            .compat()
-            .await
+        finalize::finalize(blobstore, ctx, Some(&req), prepared).await
     }
     .boxed()
     .compat()
