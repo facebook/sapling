@@ -6,7 +6,7 @@
  */
 
 use anyhow::Error;
-use futures::{compat::Stream01CompatExt, future::TryFutureExt};
+use futures::future::TryFutureExt;
 use slog::debug;
 use thiserror::Error;
 
@@ -186,8 +186,7 @@ async fn do_rechunk_file_contents<B: Blobstore + Clone>(
         ctx.clone(),
         file_contents,
         fetch::Range::All,
-    )
-    .compat();
+    );
 
     store(&blobstore, filestore_config, ctx, &req, file_stream).await
 }

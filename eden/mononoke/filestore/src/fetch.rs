@@ -6,14 +6,16 @@
  */
 
 use std::cmp::{max, min};
+use std::convert::TryInto;
 
 use anyhow::Error;
 use blobstore::{Blobstore, Loadable, LoadableError};
 use bytes::Bytes;
 use context::CoreContext;
-use futures::{compat::Stream01CompatExt, future::TryFutureExt, stream::Stream};
-use futures_ext::{BufferedParams, FutureExt, StreamExt as OldStreamExt};
-use futures_old::{stream as old_stream, Future, Stream as OldStream};
+use futures::{
+    future,
+    stream::{self, Stream, StreamExt},
+};
 use itertools::Either;
 use mononoke_types::{ContentChunk, ContentChunkId, ContentId, FileContents};
 use thiserror::Error;
@@ -21,7 +23,6 @@ use thiserror::Error;
 // TODO: Make this configurable? Perhaps as a global, since it's something that only makes sense at
 // the program level (as opposed to e;g. chunk size, which makes sense at the repo level).
 const BUFFER_MEMORY_BUDGET: u64 = 16 * 1024 * 1024; // 16MB.
-const BUFFER_MAX_SIZE: usize = 1024; // Fairly arbitrarily large buffer size (we rely on weight).
 
 #[derive(Debug, Error)]
 pub enum ErrorKind {
@@ -40,7 +41,7 @@ pub fn stream_file_bytes<B: Blobstore + Clone>(
     ctx: CoreContext,
     file_contents: FileContents,
     range: Range,
-) -> impl OldStream<Item = Bytes, Error = Error> {
+) -> impl Stream<Item = Result<Bytes, Error>> {
     match file_contents {
         FileContents::Bytes(bytes) => {
             // File is just a single chunk of bytes. Return the correct
@@ -57,23 +58,31 @@ pub fn stream_file_bytes<B: Blobstore + Clone>(
                 }
                 Range::All => bytes,
             };
-            old_stream::once(Ok(bytes)).left_stream()
+            stream::once(future::ready(Ok(bytes))).left_stream()
         }
         FileContents::Chunked(chunked) => {
-            // File is split into multiple chunks. Dispatch fetches for the
-            // chunks that overlap the range, and buffer them.
-            let params = BufferedParams {
-                weight_limit: BUFFER_MEMORY_BUDGET,
-                buffer_size: BUFFER_MAX_SIZE,
+            // File is split into multiple chunks. Dispatch fetches for the chunks that overlap the
+            // range, and buffer them. We know all chunks are the same size (same possibly for the
+            // last one) so we use that to get our buffer size.
+            let chunks = chunked.into_chunks();
+
+            let max_chunk_size = chunks.iter().map(|c| c.size()).max();
+            let buffer_size = match max_chunk_size {
+                Some(size) if size > 0 => BUFFER_MEMORY_BUDGET / size,
+                _ => 1,
             };
+            let buffer_size = std::cmp::max(buffer_size, 1);
+
+            // NOTE: buffer_size cannot be greater than our memory budget given how it's computed,
+            // so that's safe.
+            let buffer_size = buffer_size.try_into().unwrap();
 
             let chunk_iter = match range {
                 Range::Span {
                     start: range_start,
                     end: range_end,
                 } => {
-                    let iter = chunked
-                        .into_chunks()
+                    let iter = chunks
                         .into_iter()
                         .map({
                             // Compute chunk start and end within the file.
@@ -112,45 +121,39 @@ pub fn stream_file_bytes<B: Blobstore + Clone>(
                     Either::Left(iter)
                 }
                 Range::All => {
-                    let iter = chunked
-                        .into_chunks()
-                        .into_iter()
-                        .map(|chunk| (Range::All, chunk));
+                    let iter = chunks.into_iter().map(|chunk| (Range::All, chunk));
                     Either::Right(iter)
                 }
             };
 
-            old_stream::iter_ok(chunk_iter.map(move |(chunk_range, chunk)| {
+            stream::iter(chunk_iter.map(move |(chunk_range, chunk)| {
                 // Send some (maybe all) of this chunk.
                 let chunk_id = chunk.chunk_id();
 
-                let fut = chunk_id
-                    .load(ctx.clone(), &blobstore)
-                    .compat()
-                    .or_else(move |err| {
-                        match err {
-                            LoadableError::Error(err) => Err(err),
-                            LoadableError::Missing(_) => {
-                                Err(ErrorKind::ChunkNotFound(chunk_id).into())
+                let load_op = chunk_id.load(ctx.clone(), &blobstore);
+
+                async move {
+                    let bytes = load_op
+                        .await
+                        .map_err(move |err| {
+                            match err {
+                                LoadableError::Error(err) => err,
+                                LoadableError::Missing(_) => {
+                                    ErrorKind::ChunkNotFound(chunk_id).into()
+                                }
                             }
-                        }
-                    })
-                    .map(ContentChunk::into_bytes);
+                        })
+                        .map(ContentChunk::into_bytes)?;
 
-                let fut = match chunk_range {
-                    Range::Span { start, end } => fut
-                        .map(move |b| b.slice((start as usize)..(end as usize)))
-                        .left_future(),
-                    Range::All => fut.right_future(),
-                };
+                    let bytes = match chunk_range {
+                        Range::Span { start, end } => bytes.slice((start as usize)..(end as usize)),
+                        Range::All => bytes,
+                    };
 
-                // Even if we're planning to return only part of this chunk,
-                // the weight is still the full chunk size as that is what
-                // must be fetched.
-                let weight = chunk.size();
-                (fut, weight)
+                    Ok(bytes)
+                }
             }))
-            .buffered_weight_limited(params)
+            .buffered(buffer_size)
             .right_stream()
         }
     }
@@ -174,7 +177,7 @@ pub async fn fetch_with_size<B: Blobstore + Clone>(
     Ok(maybe_file_contents.map(|file_contents| {
         let file_size = file_contents.size();
         (
-            stream_file_bytes(blobstore.clone(), ctx, file_contents, range).compat(),
+            stream_file_bytes(blobstore.clone(), ctx, file_contents, range),
             file_size,
         )
     }))
