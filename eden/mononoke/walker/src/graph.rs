@@ -33,29 +33,16 @@ use std::{
     hash::{Hash, Hasher},
 };
 
-pub(crate) const fn const_max(a: usize, b: usize) -> usize {
-    [a, b][(a < b) as usize]
-}
-
-macro_rules! max {
-    ($x: expr) => ($x);
-    ($x: expr, $($z: expr),+) => ($crate::graph::const_max($x, max!($($z),*)));
-}
-
 // Helper to save repetition for the type enums
 macro_rules! define_type_enum {
      (enum $enum_name:ident {
          $($variant:ident),*,
      }) => {
-         #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, strum_macros::EnumIter, strum_macros::EnumString,  strum_macros::IntoStaticStr)]
+         #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, strum_macros::EnumCount,
+	     strum_macros::EnumIter, strum_macros::EnumString,  strum_macros::IntoStaticStr)]
          pub enum $enum_name {
              $($variant),*
          }
-
-        impl $enum_name {
-            #[allow(dead_code)]
-            pub const MAX_ORDINAL: usize = max!($($enum_name::$variant as usize),*);
-        }
     }
 }
 
@@ -606,7 +593,7 @@ mod tests {
     use super::*;
     use blobrepo_factory::init_all_derived_data;
     use std::{collections::HashSet, mem::size_of};
-    use strum::IntoEnumIterator;
+    use strum::{EnumCount, IntoEnumIterator};
 
     #[test]
     fn test_node_size() {
@@ -618,7 +605,7 @@ mod tests {
     fn test_node_type_max_ordinal() {
         // Check the macros worked consistently
         for t in NodeType::iter() {
-            assert!(t as usize <= NodeType::MAX_ORDINAL)
+            assert!((t as usize) < NodeType::COUNT)
         }
     }
 

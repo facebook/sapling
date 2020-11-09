@@ -24,6 +24,7 @@ use std::{
     ops::Add,
     sync::atomic::{AtomicU32, AtomicUsize, Ordering},
 };
+use strum::EnumCount;
 
 #[derive(Clone, Copy, Default, Debug, PartialEq)]
 pub struct StepStats {
@@ -154,7 +155,7 @@ pub struct WalkState {
     visited_hg_filenode: StateMap<(InternedId<Option<MPathHash>>, InternedId<HgFileNodeId>)>,
     visited_hg_manifest: StateMap<(InternedId<Option<MPathHash>>, InternedId<HgManifestId>)>,
     visited_fsnode: StateMap<(InternedId<Option<MPathHash>>, InternedId<FsnodeId>)>,
-    visit_count: [AtomicUsize; NodeType::MAX_ORDINAL + 1],
+    visit_count: [AtomicUsize; NodeType::COUNT],
 }
 
 impl WalkState {
