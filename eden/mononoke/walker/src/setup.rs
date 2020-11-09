@@ -154,7 +154,7 @@ const DEEP_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::FileContentMetadataToGitSha1Alias,
     EdgeType::AliasContentMappingToFileContent,
     // Derived data
-    EdgeType::BonsaiToRootFsnode,
+    EdgeType::BonsaiFsnodeMappingToRootFsnode,
     EdgeType::BonsaiChangesetToChangesetInfo,
     EdgeType::ChangesetInfoToChangesetInfoParent,
     EdgeType::FsnodeToChildFsnode,
@@ -185,7 +185,7 @@ const SHALLOW_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::FileContentMetadataToGitSha1Alias,
     EdgeType::AliasContentMappingToFileContent,
     // Derived data
-    EdgeType::BonsaiToRootFsnode,
+    EdgeType::BonsaiFsnodeMappingToRootFsnode,
     EdgeType::BonsaiChangesetToChangesetInfo,
     EdgeType::FsnodeToChildFsnode,
     EdgeType::FsnodeToFileContent,

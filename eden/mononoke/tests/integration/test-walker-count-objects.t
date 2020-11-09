@@ -41,7 +41,7 @@ count-objects, bonsai core data.  total nodes is BONSAICOUNT plus one for the ro
 count-objects, shallow, bonsai only.  No parents, expect just one of each node type. Also exclude FsnodeToFileContent to keep the test intact
   $ mononoke_walker --storage-id=blobstore --readonly-storage scrub -q --bookmark master_bookmark -I shallow -X hg -x BonsaiHgMapping -X FsnodeToFileContent 2>&1 | strip_glog
   Walking roots * (glob)
-  Walking edge types [AliasContentMappingToFileContent, BonsaiChangesetToBonsaiFsnodeMapping, BonsaiChangesetToFileContent, BonsaiToRootFsnode, BookmarkToBonsaiChangeset, FileContentMetadataToGitSha1Alias, FileContentMetadataToSha1Alias, FileContentMetadataToSha256Alias, FileContentToFileContentMetadata, FsnodeToChildFsnode]
+  Walking edge types [AliasContentMappingToFileContent, BonsaiChangesetToBonsaiFsnodeMapping, BonsaiChangesetToFileContent, BonsaiFsnodeMappingToRootFsnode, BookmarkToBonsaiChangeset, FileContentMetadataToGitSha1Alias, FileContentMetadataToSha1Alias, FileContentMetadataToSha256Alias, FileContentToFileContentMetadata, FsnodeToChildFsnode]
   Walking node types [AliasContentMapping, BonsaiChangeset, BonsaiFsnodeMapping, Bookmark, FileContent, FileContentMetadata, Fsnode]
   Final count: (9, 9)
   Bytes/s,* (glob)
@@ -59,7 +59,7 @@ count-objects, hg only. total nodes is HGCOUNT plus 1 for the root bookmark step
 count-objects, default deep walk across bonsai and hg data.  BLOBCOUNT plus mappings and root.
   $ mononoke_walker --storage-id=blobstore --readonly-storage scrub -q --bookmark master_bookmark -I deep -i default -i ChangesetInfo 2>&1 | strip_glog
   Walking roots * (glob)
-  Walking edge types [AliasContentMappingToFileContent, BonsaiChangesetToBonsaiFsnodeMapping, BonsaiChangesetToBonsaiHgMapping, BonsaiChangesetToBonsaiParent, BonsaiChangesetToChangesetInfo, BonsaiChangesetToFileContent, BonsaiHgMappingToHgChangeset, BonsaiToRootFsnode, BookmarkToBonsaiChangeset, ChangesetInfoToChangesetInfoParent, FileContentMetadataToGitSha1Alias, FileContentMetadataToSha1Alias, FileContentMetadataToSha256Alias, FileContentToFileContentMetadata, FsnodeToChildFsnode, FsnodeToFileContent, HgBonsaiMappingToBonsaiChangeset, HgChangesetToHgManifest, HgChangesetToHgParent, HgFileEnvelopeToFileContent, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgFileNodeToLinkedHgBonsaiMapping, HgFileNodeToLinkedHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
+  Walking edge types [AliasContentMappingToFileContent, BonsaiChangesetToBonsaiFsnodeMapping, BonsaiChangesetToBonsaiHgMapping, BonsaiChangesetToBonsaiParent, BonsaiChangesetToChangesetInfo, BonsaiChangesetToFileContent, BonsaiFsnodeMappingToRootFsnode, BonsaiHgMappingToHgChangeset, BookmarkToBonsaiChangeset, ChangesetInfoToChangesetInfoParent, FileContentMetadataToGitSha1Alias, FileContentMetadataToSha1Alias, FileContentMetadataToSha256Alias, FileContentToFileContentMetadata, FsnodeToChildFsnode, FsnodeToFileContent, HgBonsaiMappingToBonsaiChangeset, HgChangesetToHgManifest, HgChangesetToHgParent, HgFileEnvelopeToFileContent, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgFileNodeToLinkedHgBonsaiMapping, HgFileNodeToLinkedHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
   Walking node types [AliasContentMapping, BonsaiChangeset, BonsaiFsnodeMapping, BonsaiHgMapping, Bookmark, ChangesetInfo, FileContent, FileContentMetadata, Fsnode, HgBonsaiMapping, HgChangeset, HgFileEnvelope, HgFileNode, HgManifest]
   Final count: (49, 49)
   Bytes/s,* (glob)
@@ -68,7 +68,7 @@ count-objects, default deep walk across bonsai and hg data.  BLOBCOUNT plus mapp
 count-objects, default shallow walk across bonsai and hg data, but exclude HgFileEnvelope so that we can test that we visit FileContent from fsnodes
   $ mononoke_walker --storage-id=blobstore --readonly-storage scrub -q --bookmark master_bookmark -I shallow -x HgFileEnvelope 2>&1 | strip_glog
   Walking roots * (glob)
-  Walking edge types [AliasContentMappingToFileContent, BonsaiChangesetToBonsaiFsnodeMapping, BonsaiChangesetToBonsaiHgMapping, BonsaiChangesetToFileContent, BonsaiHgMappingToHgChangeset, BonsaiToRootFsnode, BookmarkToBonsaiChangeset, FileContentMetadataToGitSha1Alias, FileContentMetadataToSha1Alias, FileContentMetadataToSha256Alias, FileContentToFileContentMetadata, FsnodeToChildFsnode, FsnodeToFileContent, HgChangesetToHgManifest, HgManifestToChildHgManifest, HgManifestToHgFileNode]
+  Walking edge types [AliasContentMappingToFileContent, BonsaiChangesetToBonsaiFsnodeMapping, BonsaiChangesetToBonsaiHgMapping, BonsaiChangesetToFileContent, BonsaiFsnodeMappingToRootFsnode, BonsaiHgMappingToHgChangeset, BookmarkToBonsaiChangeset, FileContentMetadataToGitSha1Alias, FileContentMetadataToSha1Alias, FileContentMetadataToSha256Alias, FileContentToFileContentMetadata, FsnodeToChildFsnode, FsnodeToFileContent, HgChangesetToHgManifest, HgManifestToChildHgManifest, HgManifestToHgFileNode]
   Walking node types [AliasContentMapping, BonsaiChangeset, BonsaiFsnodeMapping, BonsaiHgMapping, Bookmark, FileContent, FileContentMetadata, Fsnode, HgChangeset, HgFileNode, HgManifest]
   Final count: (25, 25)
   Bytes/s,* (glob)
@@ -77,7 +77,7 @@ count-objects, default shallow walk across bonsai and hg data, but exclude HgFil
 count-objects, default shallow walk across bonsai and hg data, including mutable
   $ mononoke_walker --storage-id=blobstore --readonly-storage scrub -q --bookmark master_bookmark -I shallow -I marker 2>&1 | strip_glog
   Walking roots * (glob)
-  Walking edge types [AliasContentMappingToFileContent, BonsaiChangesetToBonsaiFsnodeMapping, BonsaiChangesetToBonsaiHgMapping, BonsaiChangesetToBonsaiPhaseMapping, BonsaiChangesetToFileContent, BonsaiHgMappingToHgChangeset, BonsaiToRootFsnode, BookmarkToBonsaiChangeset, FileContentMetadataToGitSha1Alias, FileContentMetadataToSha1Alias, FileContentMetadataToSha256Alias, FileContentToFileContentMetadata, FsnodeToChildFsnode, FsnodeToFileContent, HgChangesetToHgManifest, HgFileEnvelopeToFileContent, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
+  Walking edge types [AliasContentMappingToFileContent, BonsaiChangesetToBonsaiFsnodeMapping, BonsaiChangesetToBonsaiHgMapping, BonsaiChangesetToBonsaiPhaseMapping, BonsaiChangesetToFileContent, BonsaiFsnodeMappingToRootFsnode, BonsaiHgMappingToHgChangeset, BookmarkToBonsaiChangeset, FileContentMetadataToGitSha1Alias, FileContentMetadataToSha1Alias, FileContentMetadataToSha256Alias, FileContentToFileContentMetadata, FsnodeToChildFsnode, FsnodeToFileContent, HgChangesetToHgManifest, HgFileEnvelopeToFileContent, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
   Walking node types [AliasContentMapping, BonsaiChangeset, BonsaiFsnodeMapping, BonsaiHgMapping, BonsaiPhaseMapping, Bookmark, FileContent, FileContentMetadata, Fsnode, HgChangeset, HgFileEnvelope, HgFileNode, HgManifest]
   Final count: (29, 29)
   Bytes/s,* (glob)
@@ -86,7 +86,7 @@ count-objects, default shallow walk across bonsai and hg data, including mutable
 count-objects, default shallow walk across bonsai and hg data, including mutable for all public heads
   $ mononoke_walker --storage-id=blobstore --readonly-storage scrub -q --walk-root PublishedBookmarks -I shallow -I marker 2>&1 | strip_glog
   Walking roots * (glob)
-  Walking edge types [AliasContentMappingToFileContent, BonsaiChangesetToBonsaiFsnodeMapping, BonsaiChangesetToBonsaiHgMapping, BonsaiChangesetToBonsaiPhaseMapping, BonsaiChangesetToFileContent, BonsaiHgMappingToHgChangeset, BonsaiToRootFsnode, FileContentMetadataToGitSha1Alias, FileContentMetadataToSha1Alias, FileContentMetadataToSha256Alias, FileContentToFileContentMetadata, FsnodeToChildFsnode, FsnodeToFileContent, HgChangesetToHgManifest, HgFileEnvelopeToFileContent, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode, PublishedBookmarksToBonsaiChangeset, PublishedBookmarksToBonsaiHgMapping]
+  Walking edge types [AliasContentMappingToFileContent, BonsaiChangesetToBonsaiFsnodeMapping, BonsaiChangesetToBonsaiHgMapping, BonsaiChangesetToBonsaiPhaseMapping, BonsaiChangesetToFileContent, BonsaiFsnodeMappingToRootFsnode, BonsaiHgMappingToHgChangeset, FileContentMetadataToGitSha1Alias, FileContentMetadataToSha1Alias, FileContentMetadataToSha256Alias, FileContentToFileContentMetadata, FsnodeToChildFsnode, FsnodeToFileContent, HgChangesetToHgManifest, HgFileEnvelopeToFileContent, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode, PublishedBookmarksToBonsaiChangeset, PublishedBookmarksToBonsaiHgMapping]
   Walking node types [AliasContentMapping, BonsaiChangeset, BonsaiFsnodeMapping, BonsaiHgMapping, BonsaiPhaseMapping, FileContent, FileContentMetadata, Fsnode, HgChangeset, HgFileEnvelope, HgFileNode, HgManifest, PublishedBookmarks]
   Final count: (30, 30)
   Bytes/s,* (glob)

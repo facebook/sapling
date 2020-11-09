@@ -716,7 +716,7 @@ async fn bonsai_to_fsnode_mapping_step<V: VisitOne>(
 
     if let Some(root_fsnode_id) = root_fsnode_id {
         let mut edges = vec![];
-        checker.add_edge(&mut edges, EdgeType::BonsaiToRootFsnode, || {
+        checker.add_edge(&mut edges, EdgeType::BonsaiFsnodeMappingToRootFsnode, || {
             Node::Fsnode((WrappedPath::Root, *root_fsnode_id.fsnode_id()))
         });
         Ok(StepOutput(

@@ -308,7 +308,7 @@ enum EdgeType {
     FileContentMetadataToGitSha1Alias,
     AliasContentMappingToFileContent,
     // Derived data
-    BonsaiToRootFsnode,
+    BonsaiFsnodeMappingToRootFsnode,
     BonsaiChangesetToChangesetInfo,
     ChangesetInfoToChangesetInfoParent,
     FsnodeToChildFsnode,
@@ -377,7 +377,7 @@ impl EdgeType {
             EdgeType::FileContentMetadataToGitSha1Alias => Some(NodeType::FileContentMetadata),
             EdgeType::AliasContentMappingToFileContent => Some(NodeType::AliasContentMapping),
             // Derived data
-            EdgeType::BonsaiToRootFsnode => Some(NodeType::BonsaiFsnodeMapping),
+            EdgeType::BonsaiFsnodeMappingToRootFsnode => Some(NodeType::BonsaiFsnodeMapping),
             EdgeType::BonsaiChangesetToChangesetInfo => Some(NodeType::BonsaiChangeset),
             EdgeType::ChangesetInfoToChangesetInfoParent => Some(NodeType::ChangesetInfo),
             EdgeType::FsnodeToChildFsnode => Some(NodeType::Fsnode),
@@ -436,7 +436,7 @@ impl EdgeType {
             EdgeType::FileContentMetadataToGitSha1Alias => NodeType::AliasContentMapping,
             EdgeType::AliasContentMappingToFileContent => NodeType::FileContent,
             // Derived data
-            EdgeType::BonsaiToRootFsnode => NodeType::Fsnode,
+            EdgeType::BonsaiFsnodeMappingToRootFsnode => NodeType::Fsnode,
             EdgeType::BonsaiChangesetToChangesetInfo => NodeType::ChangesetInfo,
             EdgeType::ChangesetInfoToChangesetInfoParent => NodeType::ChangesetInfo,
             EdgeType::FsnodeToChildFsnode => NodeType::Fsnode,
