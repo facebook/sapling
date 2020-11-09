@@ -66,6 +66,15 @@ macro_rules! create_graph_impl {
     };
 }
 
+macro_rules! root_edge_type {
+    ($edgetypeenum:ident, Root) => {
+        None
+    };
+    ($edgetypeenum:ident, $target:ident) => {
+        Some(paste::item! {$edgetypeenum::[<RootTo $target>]})
+    };
+}
+
 macro_rules! create_graph {
     ($nodetypeenum:ident, $nodekeyenum:ident, $edgetypeenum:ident, $(($source:ident, $sourcekey:tt)),* $(,)?) => {
         create_graph_impl! {
@@ -73,6 +82,13 @@ macro_rules! create_graph {
             {}
             {}
             $(($source, $sourcekey))*
+        }
+        impl $nodetypeenum {
+            pub fn root_edge_type(&self) -> Option<EdgeType> {
+                match self {
+                    $($nodetypeenum::$source => root_edge_type!($edgetypeenum, $source)),*
+                }
+            }
         }
     };
 }
@@ -111,32 +127,6 @@ impl fmt::Display for NodeType {
 }
 
 impl NodeType {
-    pub fn root_edge_type(&self) -> Option<EdgeType> {
-        match self {
-            NodeType::Root => None,
-            // Bonsai
-            NodeType::Bookmark => Some(EdgeType::RootToBookmark),
-            NodeType::BonsaiChangeset => Some(EdgeType::RootToBonsaiChangeset),
-            NodeType::BonsaiHgMapping => Some(EdgeType::RootToBonsaiHgMapping),
-            NodeType::BonsaiPhaseMapping => Some(EdgeType::RootToBonsaiPhaseMapping),
-            NodeType::PublishedBookmarks => Some(EdgeType::RootToPublishedBookmarks),
-            // Hg
-            NodeType::HgBonsaiMapping => Some(EdgeType::RootToHgBonsaiMapping),
-            NodeType::HgChangeset => Some(EdgeType::RootToHgChangeset),
-            NodeType::HgManifest => Some(EdgeType::RootToHgManifest),
-            NodeType::HgFileEnvelope => Some(EdgeType::RootToHgFileEnvelope),
-            NodeType::HgFileNode => Some(EdgeType::RootToHgFileNode),
-            // Content
-            NodeType::FileContent => Some(EdgeType::RootToFileContent),
-            NodeType::FileContentMetadata => Some(EdgeType::RootToFileContentMetadata),
-            NodeType::AliasContentMapping => Some(EdgeType::RootToAliasContentMapping),
-            // Derived data
-            NodeType::BonsaiFsnodeMapping => Some(EdgeType::RootToBonsaiFsnodeMapping),
-            NodeType::ChangesetInfo => Some(EdgeType::RootToChangesetInfo),
-            NodeType::Fsnode => Some(EdgeType::RootToFsnode),
-        }
-    }
-
     /// Derived data types are keyed by their statically defined NAME
     pub fn derived_data_name(&self) -> Option<&'static str> {
         match self {
