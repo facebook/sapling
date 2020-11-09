@@ -567,16 +567,18 @@ fn hg_file_node_step<'a, V: VisitOne>(
                 Some(file_node_info) => {
                     let mut edges = vec![];
                     // Validate hg link node
-                    checker.add_edge(&mut edges, EdgeType::HgLinkNodeToHgChangeset, || {
+                    checker.add_edge(&mut edges, EdgeType::HgFileNodeToLinkedHgChangeset, || {
                         Node::HgChangeset(file_node_info.linknode)
                     });
 
                     // Following linknode bonsai increases parallelism of walk.
                     // Linknodes will point to many commits we can then walk
                     // in parallel
-                    checker.add_edge(&mut edges, EdgeType::HgLinkNodeToHgBonsaiMapping, || {
-                        Node::HgBonsaiMapping(file_node_info.linknode)
-                    });
+                    checker.add_edge(
+                        &mut edges,
+                        EdgeType::HgFileNodeToLinkedHgBonsaiMapping,
+                        || Node::HgBonsaiMapping(file_node_info.linknode),
+                    );
 
                     // Parents
                     for parent in &[file_node_info.p1, file_node_info.p2] {

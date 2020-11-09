@@ -24,7 +24,7 @@ The graph is dynamically discovered, so edges are represented as an `OutgoingEdg
 
 The types are represented as Enum variants so they can be passed in heterogeneous collections, in particular the queues used by `bounded_traversal_stream` which does the dynamic unfolding of the graph.
 
-Note that due to backlinks from file to commit graph (e.g. `HgLinkNodeToHgChangeset`)  the graph has cycles so tracking visits is important to be able to break cycles.
+Note that due to backlinks from file to commit graph (e.g. `HgFileNodeToHgChangeset`)  the graph has cycles so tracking visits is important to be able to break cycles.
 
 A walk is said to be deep if it will cover the entire history of the repo,  or shallow if it will only look at data (e.g. FileContent) accessible at a given commit.
 

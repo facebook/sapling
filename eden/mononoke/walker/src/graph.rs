@@ -297,8 +297,8 @@ enum EdgeType {
     HgManifestToHgFileNode,
     HgManifestToChildHgManifest,
     HgFileEnvelopeToFileContent,
-    HgLinkNodeToHgBonsaiMapping,
-    HgLinkNodeToHgChangeset,
+    HgFileNodeToLinkedHgBonsaiMapping,
+    HgFileNodeToLinkedHgChangeset,
     HgFileNodeToHgParentFileNode,
     HgFileNodeToHgCopyfromFileNode,
     // Content
@@ -366,8 +366,8 @@ impl EdgeType {
             EdgeType::HgManifestToHgFileNode => Some(NodeType::HgManifest),
             EdgeType::HgManifestToChildHgManifest => Some(NodeType::HgManifest),
             EdgeType::HgFileEnvelopeToFileContent => Some(NodeType::HgFileEnvelope),
-            EdgeType::HgLinkNodeToHgBonsaiMapping => Some(NodeType::HgFileNode),
-            EdgeType::HgLinkNodeToHgChangeset => Some(NodeType::HgFileNode),
+            EdgeType::HgFileNodeToLinkedHgBonsaiMapping => Some(NodeType::HgFileNode),
+            EdgeType::HgFileNodeToLinkedHgChangeset => Some(NodeType::HgFileNode),
             EdgeType::HgFileNodeToHgParentFileNode => Some(NodeType::HgFileNode),
             EdgeType::HgFileNodeToHgCopyfromFileNode => Some(NodeType::HgFileNode),
             // Content
@@ -425,8 +425,8 @@ impl EdgeType {
             EdgeType::HgManifestToHgFileNode => NodeType::HgFileNode,
             EdgeType::HgManifestToChildHgManifest => NodeType::HgManifest,
             EdgeType::HgFileEnvelopeToFileContent => NodeType::FileContent,
-            EdgeType::HgLinkNodeToHgBonsaiMapping => NodeType::HgBonsaiMapping,
-            EdgeType::HgLinkNodeToHgChangeset => NodeType::HgChangeset,
+            EdgeType::HgFileNodeToLinkedHgBonsaiMapping => NodeType::HgBonsaiMapping,
+            EdgeType::HgFileNodeToLinkedHgChangeset => NodeType::HgChangeset,
             EdgeType::HgFileNodeToHgParentFileNode => NodeType::HgFileNode,
             EdgeType::HgFileNodeToHgCopyfromFileNode => NodeType::HgFileNode,
             // Content

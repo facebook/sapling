@@ -143,8 +143,8 @@ const DEEP_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::HgManifestToHgFileNode,
     EdgeType::HgManifestToChildHgManifest,
     EdgeType::HgFileEnvelopeToFileContent,
-    EdgeType::HgLinkNodeToHgBonsaiMapping,
-    EdgeType::HgLinkNodeToHgChangeset,
+    EdgeType::HgFileNodeToLinkedHgBonsaiMapping,
+    EdgeType::HgFileNodeToLinkedHgChangeset,
     EdgeType::HgFileNodeToHgParentFileNode,
     EdgeType::HgFileNodeToHgCopyfromFileNode,
     // Content
@@ -204,7 +204,7 @@ const HG_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::HgManifestToHgFileNode,
     EdgeType::HgManifestToChildHgManifest,
     EdgeType::HgFileEnvelopeToFileContent,
-    EdgeType::HgLinkNodeToHgChangeset,
+    EdgeType::HgFileNodeToLinkedHgChangeset,
     EdgeType::HgFileNodeToHgParentFileNode,
     EdgeType::HgFileNodeToHgCopyfromFileNode,
 ];

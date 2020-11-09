@@ -223,7 +223,7 @@ fn check_linknode_populated(
 ) -> CheckStatus {
     if outgoing
         .iter()
-        .any(|e| e.label == EdgeType::HgLinkNodeToHgChangeset)
+        .any(|e| e.label == EdgeType::HgFileNodeToLinkedHgChangeset)
     {
         CheckStatus::Pass
     } else {
@@ -674,7 +674,7 @@ pub async fn validate<'a>(
     };
 
     let always_emit_edge_types =
-        HashSet::from_iter(vec![EdgeType::HgLinkNodeToHgChangeset].into_iter());
+        HashSet::from_iter(vec![EdgeType::HgFileNodeToLinkedHgChangeset].into_iter());
 
     let stateful_visitor = Arc::new(ValidatingVisitor::new(
         repo_stats_key,
