@@ -22,7 +22,6 @@ pub struct FastReplayDispatcher {
     repo: MononokeRepo,
     wireproto_logging: Arc<WireprotoLogging>,
     remote_args_blobstore: Option<Arc<dyn Blobstore>>,
-    hash_validation_percentage: usize,
     repo_client_knobs: RepoClientKnobs,
 }
 
@@ -32,7 +31,6 @@ impl FastReplayDispatcher {
         logger: Logger,
         repo: MononokeRepo,
         remote_args_blobstore: Option<Arc<dyn Blobstore>>,
-        hash_validation_percentage: usize,
         repo_client_knobs: RepoClientKnobs,
     ) -> Result<Self, Error> {
         let noop_wireproto = WireprotoLogging::new(fb, repo.reponame().clone(), None, None, None)
@@ -44,7 +42,6 @@ impl FastReplayDispatcher {
             repo,
             wireproto_logging: Arc::new(noop_wireproto),
             remote_args_blobstore,
-            hash_validation_percentage,
             repo_client_knobs,
         })
     }
@@ -61,7 +58,6 @@ impl FastReplayDispatcher {
             self.repo.clone(),
             session,
             logging,
-            self.hash_validation_percentage,
             false, // Don't preserve raw bundle 2 (we don't push)
             self.wireproto_logging.clone(),
             None, // Don't push redirect (we don't push)

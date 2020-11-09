@@ -56,7 +56,6 @@ struct IncompleteRepoHandler {
     scuba: ScubaSampleBuilder,
     wireproto_logging: Arc<WireprotoLogging>,
     repo: MononokeRepo,
-    hash_validation_percentage: usize,
     preserve_raw_bundle2: bool,
     maybe_incomplete_push_redirector_args: Option<IncompletePushRedirectorArgs>,
     maybe_warm_bookmarks_cache: Option<Arc<WarmBookmarksCache>>,
@@ -110,7 +109,6 @@ impl IncompleteRepoHandler {
             scuba,
             wireproto_logging,
             repo,
-            hash_validation_percentage,
             preserve_raw_bundle2,
             maybe_incomplete_push_redirector_args,
             maybe_warm_bookmarks_cache,
@@ -129,7 +127,6 @@ impl IncompleteRepoHandler {
             scuba,
             wireproto_logging,
             repo,
-            hash_validation_percentage,
             preserve_raw_bundle2,
             maybe_push_redirector_args,
             maybe_warm_bookmarks_cache,
@@ -144,7 +141,6 @@ pub struct RepoHandler {
     pub scuba: ScubaSampleBuilder,
     pub wireproto_logging: Arc<WireprotoLogging>,
     pub repo: MononokeRepo,
-    pub hash_validation_percentage: usize,
     pub preserve_raw_bundle2: bool,
     pub maybe_push_redirector_args: Option<PushRedirectorArgs>,
     pub maybe_warm_bookmarks_cache: Option<Arc<WarmBookmarksCache>>,
@@ -184,7 +180,6 @@ pub fn repo_handlers(
             let scuba_table = config.scuba_table.clone();
             let scuba_local_path = config.scuba_local_path.clone();
             let db_config = config.storage_config.metadata.clone();
-            let hash_validation_percentage = config.hash_validation_percentage.clone();
             let preserve_raw_bundle2 = config.bundle2_replay_params.preserve_raw_bundle2.clone();
             let wireproto_logging = config.wireproto_logging.clone();
             let commit_sync_config = config.commit_sync_config.clone();
@@ -367,7 +362,6 @@ pub fn repo_handlers(
                         scuba: scuba_logger,
                         wireproto_logging: Arc::new(wireproto_logging),
                         repo,
-                        hash_validation_percentage,
                         preserve_raw_bundle2,
                         maybe_incomplete_push_redirector_args,
                         maybe_warm_bookmarks_cache,

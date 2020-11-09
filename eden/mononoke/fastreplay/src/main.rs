@@ -236,14 +236,6 @@ async fn bootstrap_repositories<'a>(
 
     let no_skiplist = matches.is_present(ARG_NO_SKIPLIST);
     let no_cache_warmup = matches.is_present(ARG_NO_CACHE_WARMUP);
-    let hash_validation_percentage = matches
-        .value_of(ARG_HASH_VALIDATION_PERCENTAGE)
-        .map(|n| -> Result<usize, Error> {
-            let n = n.parse()?;
-            Ok(n)
-        })
-        .transpose()?
-        .unwrap_or(0);
     let multiplexblob_sampling_rate = matches
         .value_of(ARG_MULTIPLEXEDBLOB_SAMPLING)
         .map(|n| -> Result<NonZeroU64, Error> {
@@ -351,7 +343,6 @@ async fn bootstrap_repositories<'a>(
                 logger.clone(),
                 repo,
                 remote_args_blobstore,
-                hash_validation_percentage,
                 repo_client_knobs,
             )?;
 
@@ -571,6 +562,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .arg(
             Arg::with_name(ARG_HASH_VALIDATION_PERCENTAGE)
                 .long(ARG_HASH_VALIDATION_PERCENTAGE)
+                .help("unused")
                 .takes_value(true)
                 .required(false),
         )

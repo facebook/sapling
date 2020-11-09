@@ -409,9 +409,6 @@ pub struct RepoClient {
     // A base logging container. This will be combined with the Session container for each command
     // to produce a CoreContext.
     logging: LoggingContainer,
-    // Percent of returned entries (filelogs, manifests, changesets) which content
-    // will be hash validated
-    hash_validation_percentage: usize,
     // Whether to save raw bundle2 content into the blobstore
     preserve_raw_bundle2: bool,
     // There is a race condition in bookmarks handling in Mercurial, which needs protocol-level
@@ -433,7 +430,6 @@ impl RepoClient {
         repo: MononokeRepo,
         session: SessionContainer,
         logging: LoggingContainer,
-        hash_validation_percentage: usize,
         preserve_raw_bundle2: bool,
         wireproto_logging: Arc<WireprotoLogging>,
         maybe_push_redirector_args: Option<PushRedirectorArgs>,
@@ -446,7 +442,6 @@ impl RepoClient {
             repo,
             session,
             logging,
-            hash_validation_percentage,
             preserve_raw_bundle2,
             session_bookmarks_cache: Arc::new(SessionBookmarkCache::new(
                 blobrepo,
@@ -614,7 +609,8 @@ impl RepoClient {
         ctx: CoreContext,
         params: GettreepackArgs,
     ) -> BoxStream<BytesOld, Error> {
-        let validate_hash = rand::random::<usize>() % 100 < self.hash_validation_percentage;
+        let hash_validation_percentage = tunables().get_hash_validation_percentage();
+        let validate_hash = ((rand::random::<usize>() % 100) as i64) < hash_validation_percentage;
 
         let undesired_path_logger =
             try_boxstream!(UndesiredPathLogger::new(ctx.clone(), self.repo.blobrepo()));
@@ -679,8 +675,9 @@ impl RepoClient {
 
             let lfs_params = self.lfs_params();
 
+            let hash_validation_percentage = tunables().get_hash_validation_percentage();
             let validate_hash =
-                rand::thread_rng().gen_ratio(self.hash_validation_percentage as u32, 100);
+                rand::thread_rng().gen_ratio(hash_validation_percentage as u32, 100);
             let getpack_buffer_size = 500;
             // Let's fetch the whole request before responding.
             // That's prevents deadlocks, because hg client doesn't start reading the response

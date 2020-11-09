@@ -4,6 +4,13 @@
 # GNU General Public License found in the LICENSE file in the root
 # directory of this source tree.
 
+  $ MONONOKE_TUNABLES="
+  > {
+  >   \"ints\": {
+  >      \"hash_validation_percentage\": 100
+  >   }
+  > }
+  > "
   $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration

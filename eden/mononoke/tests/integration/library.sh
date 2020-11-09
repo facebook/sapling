@@ -490,6 +490,12 @@ function get_bonsai_globalrev_mapping {
 
 function setup_mononoke_config {
   cd "$TESTTMP" || exit
+  if [[ -z "$MONONOKE_TUNABLES" ]]; then
+    echo "{}" > "$TESTTMP/mononoke_tunables.json"
+  else
+    echo "$MONONOKE_TUNABLES" > "$TESTTMP/mononoke_tunables.json"
+  fi
+
   mkdir -p mononoke-config
   REPOTYPE="blob_sqlite"
   if [[ $# -gt 0 ]]; then
@@ -520,8 +526,6 @@ EOF
     chmod a+x "$TESTTMP/mononoke_hgcli"
     MONONOKE_HGCLI="$TESTTMP/mononoke_hgcli"
   fi
-
-  echo "{}" > "$TESTTMP/mononoke_tunables.json"
 
   cd mononoke-config || exit 1
   mkdir -p common

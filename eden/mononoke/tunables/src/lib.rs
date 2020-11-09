@@ -105,6 +105,7 @@ pub struct MononokeTunables {
     // All blobstore read request with size bigger than
     // this threshold will be logged to scuba
     blobstore_read_size_logging_threshold: AtomicI64,
+    hash_validation_percentage: AtomicI64,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {
