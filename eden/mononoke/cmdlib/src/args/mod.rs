@@ -14,6 +14,7 @@ pub use self::cache::{add_cachelib_args, init_cachelib};
 use std::collections::{HashMap, HashSet};
 use std::future::Future;
 use std::io;
+use std::iter::FromIterator;
 use std::num::NonZeroU32;
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -90,6 +91,56 @@ const CRYPTO_PROJECT: &str = "SCM";
 const CONFIGERATOR_POLL_INTERVAL: Duration = Duration::from_secs(1);
 const CONFIGERATOR_REFRESH_TIMEOUT: Duration = Duration::from_secs(1);
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ArgType {
+    /// Options related to mononoke config
+    Config,
+    /// Options related to mononoke tests
+    Test,
+    /// Options related to stderr logging,
+    Logging,
+    /// Adds options related to mysql database connections
+    Mysql,
+    /// Adds options related to blobstore access
+    Blobstore,
+    /// Adds options related to cachelib and its use from blobstore
+    Cachelib,
+    /// Adds options related to tokio runtime
+    Runtime,
+    /// Adds options related to mononoke tunables
+    Tunables,
+    /// Adds options to select a repo. If not present then all repos.
+    Repo,
+    /// Adds --source-repo-id/repo-name and --target-repo-id/repo-name options.
+    /// Necessary for crossrepo operations
+    /// Only visible if Repo group is visible.
+    SourceAndTargetRepos,
+    /// Adds just --source-repo-id/repo-name, for blobimport into a megarepo
+    /// Only visible if Repo group is visible.
+    SourceRepo,
+    /// Adds --shutdown-grace-period and --shutdown-timeout for graceful shutdown.
+    ShutdownTimeouts,
+    /// Adds --scuba-dataset and --scuba-log-file for scuba logging.
+    ScubaLogging,
+    /// Adds --disabled-hooks for disabling hooks.
+    DisableHooks,
+    /// Adds --fb303-thrift-port for stats and profiling
+    Fb303,
+}
+
+// Arguments that are enabled by default for MononokeApp
+const DEFAULT_ARG_TYPES: &[ArgType] = &[
+    ArgType::Blobstore,
+    ArgType::Cachelib,
+    ArgType::Config,
+    ArgType::Logging,
+    ArgType::Mysql,
+    ArgType::Repo,
+    ArgType::Runtime,
+    ArgType::Test,
+    ArgType::Tunables,
+];
+
 pub struct MononokeApp {
     /// The app name.
     name: String,
@@ -98,30 +149,11 @@ pub struct MononokeApp {
     /// still be available, just not displayed in help.
     hide_advanced_args: bool,
 
-    /// Whether to operate on all repos, and not provide options to select a repo.
-    all_repos: bool,
-
-    /// Whether to require the user select a repo.
+    /// Whether to require the user select a repo if the option is present.
     repo_required: bool,
 
-    /// Adds --source-repo-id/repo-name and --target-repo-id/repo-name options.
-    /// Necessary for crossrepo operations
-    source_and_target_repos: bool,
-
-    /// Adds just --source-repo-id/repo-name, for blobimport into a megarepo
-    source_repo: bool,
-
-    /// Adds --shutdown-grace-period and --shutdown-timeout for graceful shutdown.
-    shutdown_timeout: bool,
-
-    /// Adds --scuba-dataset and --scuba-log-file for scuba logging.
-    scuba_logging: bool,
-
-    /// Adds --disabled-hooks for disabling hooks.
-    disabled_hooks: bool,
-
-    /// Adds --fb303-thrift-port
-    fb303: bool,
+    /// Which groups of arguments are enabled for this app
+    arg_types: HashSet<ArgType>,
 
     /// This app is special admin tool, needs to run with specific PutBehaviour
     special_put_behaviour: Option<PutBehaviour>,
@@ -144,14 +176,8 @@ impl MononokeApp {
         Self {
             name: name.into(),
             hide_advanced_args: false,
-            all_repos: false,
             repo_required: false,
-            source_and_target_repos: false,
-            source_repo: false,
-            shutdown_timeout: false,
-            scuba_logging: false,
-            disabled_hooks: false,
-            fb303: false,
+            arg_types: HashSet::from_iter(DEFAULT_ARG_TYPES.iter().cloned()),
             special_put_behaviour: None,
         }
     }
@@ -166,7 +192,7 @@ impl MononokeApp {
     /// repo.  The default behaviour is for the arguments to specify the repo to be optional, which is
     /// probably not what you want, so you should call either this method or `with_repo_required`.
     pub fn with_all_repos(mut self) -> Self {
-        self.all_repos = true;
+        self.arg_types.remove(&ArgType::Repo);
         self
     }
 
@@ -175,6 +201,7 @@ impl MononokeApp {
     /// optional, which is probably not what you want, so you should call either this method or
     /// `with_all_repos`.
     pub fn with_repo_required(mut self) -> Self {
+        self.arg_types.insert(ArgType::Repo);
         self.repo_required = true;
         self
     }
@@ -182,40 +209,64 @@ impl MononokeApp {
     /// This command might operate on two repos in the same time. This is normally used
     /// for two repos where one repo is synced into another.
     pub fn with_source_and_target_repos(mut self) -> Self {
-        self.source_and_target_repos = true;
+        self.arg_types.insert(ArgType::SourceAndTargetRepos);
         self
     }
 
     /// This command operates on one repo (--repo-id/name), but needs to be aware that commits
     /// are sourced from another repo.
     pub fn with_source_repos(mut self) -> Self {
-        self.source_repo = true;
+        self.arg_types.insert(ArgType::SourceRepo);
         self
     }
 
     /// This command has arguments for graceful shutdown.
     pub fn with_shutdown_timeout_args(mut self) -> Self {
-        self.shutdown_timeout = true;
+        self.arg_types.insert(ArgType::ShutdownTimeouts);
         self
     }
 
     /// This command has arguments for scuba logging.
     pub fn with_scuba_logging_args(mut self) -> Self {
-        self.scuba_logging = true;
+        self.arg_types.insert(ArgType::ScubaLogging);
         self
     }
 
     /// This command has arguments for disabled hooks.
     pub fn with_disabled_hooks_args(mut self) -> Self {
-        self.disabled_hooks = true;
+        self.arg_types.insert(ArgType::DisableHooks);
         self
     }
 
+    /// This command has arguments for fb303
     pub fn with_fb303_args(mut self) -> Self {
-        self.fb303 = true;
+        self.arg_types.insert(ArgType::Fb303);
         self
     }
 
+    /// This command does expose these types of arguments
+    pub fn with_arg_types<I>(mut self, types: I) -> Self
+    where
+        I: IntoIterator<Item = ArgType>,
+    {
+        for t in types {
+            self.arg_types.insert(t);
+        }
+        self
+    }
+
+    /// This command does not expose these types of arguments
+    pub fn without_arg_types<I>(mut self, types: I) -> Self
+    where
+        I: IntoIterator<Item = ArgType>,
+    {
+        for t in types {
+            self.arg_types.remove(&t);
+        }
+        self
+    }
+
+    /// This command needs a special default put behaviour (e.g. its an admin tool)
     pub fn with_special_put_behaviour(mut self, put_behaviour: PutBehaviour) -> Self {
         self.special_put_behaviour = Some(put_behaviour);
         self
@@ -223,8 +274,10 @@ impl MononokeApp {
 
     /// Build a `clap::App` for this Mononoke app, which can then be customized further.
     pub fn build<'a, 'b>(self) -> App<'a, 'b> {
-        let mut app = App::new(self.name)
-            .arg(
+        let mut app = App::new(self.name);
+
+        if self.arg_types.contains(&ArgType::Config) {
+            app = app.arg(
                 Arg::with_name(CONFIG_PATH)
                     .long(CONFIG_PATH)
                     .value_name("MONONOKE_CONFIG_PATH")
@@ -238,20 +291,24 @@ impl MononokeApp {
                     .help("Regex for a Configerator path that must be covered by Mononoke's crypto project")
             )
             .arg(
-                Arg::with_name(TEST_INSTANCE_ARG)
-                    .long(TEST_INSTANCE_ARG)
-                    .takes_value(false)
-                    .help("disables some functionality for tests"),
-            )
-            .arg(
                 Arg::with_name(LOCAL_CONFIGERATOR_PATH_ARG)
                     .long(LOCAL_CONFIGERATOR_PATH_ARG)
                     .takes_value(true)
                     .help("local path to fetch configerator configs from, instead of normal configerator"),
             );
+        }
 
-        if !self.all_repos {
-            let repo_conflicts: &[&str] = if self.source_repo {
+        if self.arg_types.contains(&ArgType::Test) {
+            app = app.arg(
+                Arg::with_name(TEST_INSTANCE_ARG)
+                    .long(TEST_INSTANCE_ARG)
+                    .takes_value(false)
+                    .help("disables some functionality for tests"),
+            );
+        }
+
+        if self.arg_types.contains(&ArgType::Repo) {
+            let repo_conflicts: &[&str] = if self.arg_types.contains(&ArgType::SourceRepo) {
                 &[TARGET_REPO_ID, TARGET_REPO_NAME]
             } else {
                 &[
@@ -285,7 +342,9 @@ impl MononokeApp {
                         .required(self.repo_required),
                 );
 
-            if self.source_repo || self.source_and_target_repos {
+            if self.arg_types.contains(&ArgType::SourceRepo)
+                || self.arg_types.contains(&ArgType::SourceAndTargetRepos)
+            {
                 app = app
                     .arg(
                         Arg::with_name(SOURCE_REPO_ID)
@@ -305,7 +364,7 @@ impl MononokeApp {
                     )
             }
 
-            if self.source_and_target_repos {
+            if self.arg_types.contains(&ArgType::SourceAndTargetRepos) {
                 app = app
                     .arg(
                         Arg::with_name(TARGET_REPO_ID)
@@ -326,26 +385,34 @@ impl MononokeApp {
             }
         }
 
-        app = add_logger_args(app);
-        app = add_mysql_options_args(app);
-        app = add_blobstore_args(app, self.special_put_behaviour);
-        app = add_cachelib_args(app, self.hide_advanced_args);
-        app = add_runtime_args(app);
-        app = add_tunables_args(app);
-
-        if self.shutdown_timeout {
+        if self.arg_types.contains(&ArgType::Logging) {
+            app = add_logger_args(app);
+        }
+        if self.arg_types.contains(&ArgType::Mysql) {
+            app = add_mysql_options_args(app);
+        }
+        if self.arg_types.contains(&ArgType::Blobstore) {
+            app = add_blobstore_args(app, self.special_put_behaviour);
+        }
+        if self.arg_types.contains(&ArgType::Cachelib) {
+            app = add_cachelib_args(app, self.hide_advanced_args);
+        }
+        if self.arg_types.contains(&ArgType::Runtime) {
+            app = add_runtime_args(app);
+        }
+        if self.arg_types.contains(&ArgType::Tunables) {
+            app = add_tunables_args(app);
+        }
+        if self.arg_types.contains(&ArgType::ShutdownTimeouts) {
             app = add_shutdown_timeout_args(app);
         }
-
-        if self.scuba_logging {
+        if self.arg_types.contains(&ArgType::ScubaLogging) {
             app = add_scuba_logging_args(app);
         }
-
-        if self.disabled_hooks {
+        if self.arg_types.contains(&ArgType::DisableHooks) {
             app = add_disabled_hooks_args(app);
         }
-
-        if self.fb303 {
+        if self.arg_types.contains(&ArgType::Fb303) {
             app = add_fb303_args(app);
         }
 
