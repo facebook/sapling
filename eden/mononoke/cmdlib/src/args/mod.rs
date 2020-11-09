@@ -9,7 +9,7 @@ mod cache;
 #[cfg(fbcode_build)]
 mod facebook;
 
-pub use self::cache::{add_cachelib_args, init_cachelib};
+pub use self::cache::init_cachelib;
 
 use std::collections::{HashMap, HashSet};
 use std::future::Future;
@@ -53,7 +53,7 @@ use crate::helpers::{
 };
 use crate::log;
 
-use self::cache::parse_caching;
+use self::cache::{add_cachelib_args, parse_caching};
 
 const CONFIG_PATH: &str = "mononoke-config-path";
 const REPO_ID: &str = "repo-id";
@@ -420,7 +420,7 @@ impl MononokeApp {
     }
 }
 
-pub fn add_tunables_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+fn add_tunables_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.arg(
         Arg::with_name(TUNABLES_CONFIG)
             .long(TUNABLES_CONFIG)
@@ -433,7 +433,7 @@ pub fn add_tunables_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
             .help("Use the default values for all tunables (useful for tests)"),
     )
 }
-pub fn add_runtime_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+fn add_runtime_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.arg(
         Arg::with_name(RUNTIME_THREADS)
             .long(RUNTIME_THREADS)
@@ -442,7 +442,7 @@ pub fn add_runtime_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     )
 }
 
-pub fn add_logger_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+fn add_logger_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.arg(
         Arg::with_name("panic-fate")
             .long("panic-fate")
@@ -788,7 +788,7 @@ pub async fn open_scrub_repo<'a>(
     )
 }
 
-pub fn add_mysql_options_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+fn add_mysql_options_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.arg(
         Arg::with_name(MYSQL_MYROUTER_PORT)
             .long(MYSQL_MYROUTER_PORT)
@@ -890,7 +890,7 @@ pub fn add_mcrouter_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     )
 }
 
-pub fn add_fb303_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+pub(crate) fn add_fb303_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.args_from_usage(r"--fb303-thrift-port=[PORT]    'port for fb303 service'")
 }
 
@@ -905,7 +905,7 @@ fn add_disabled_hooks_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     )
 }
 
-pub fn add_shutdown_timeout_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+fn add_shutdown_timeout_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.arg(
         Arg::with_name("shutdown-grace-period")
             .long("shutdown-grace-period")
@@ -944,7 +944,7 @@ pub fn get_shutdown_timeout<'a>(matches: &ArgMatches<'a>) -> Result<Duration> {
     Ok(Duration::from_secs(seconds))
 }
 
-pub fn add_scuba_logging_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+fn add_scuba_logging_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.arg(
         Arg::with_name("scuba-dataset")
             .long("scuba-dataset")

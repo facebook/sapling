@@ -216,8 +216,9 @@ async fn schedule_healing(
 }
 
 fn setup_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
-    let app = args::MononokeApp::new(app_name)
+    args::MononokeApp::new(app_name)
         .with_scuba_logging_args()
+        .with_fb303_args()
         .build()
         .about("Monitors blobstore_sync_queue to heal blobstores with missing data")
         .args_from_usage(
@@ -256,8 +257,7 @@ fn setup_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
                 .takes_value(true)
                 .required(false)
                 .help("How maby blobs to heal concurrently."),
-        );
-    args::add_fb303_args(app)
+        )
 }
 
 #[fbinit::main]

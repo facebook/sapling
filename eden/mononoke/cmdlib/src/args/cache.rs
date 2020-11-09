@@ -51,7 +51,7 @@ const CACHE_ARGS: &[(&str, &str)] = &[
     ),
 ];
 
-pub fn add_cachelib_args<'a, 'b>(app: App<'a, 'b>, hide_advanced_args: bool) -> App<'a, 'b> {
+pub(crate) fn add_cachelib_args<'a, 'b>(app: App<'a, 'b>, hide_advanced_args: bool) -> App<'a, 'b> {
     let cache_args: Vec<_> = CACHE_ARGS
         .iter()
         .map(|(flag, help)| {
@@ -123,7 +123,7 @@ pub fn add_cachelib_args<'a, 'b>(app: App<'a, 'b>, hide_advanced_args: bool) -> 
     .args(&cache_args)
 }
 
-pub fn parse_cachelib_shards<'a>(matches: &ArgMatches<'a>) -> usize {
+pub(crate) fn parse_cachelib_shards<'a>(matches: &ArgMatches<'a>) -> usize {
     match matches.value_of(CACHELIB_SHARDS) {
         Some(v) => v.parse().unwrap(),
         None => 0,
