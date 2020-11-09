@@ -33,10 +33,10 @@ blobrepo_hg = { path = "../../blobrepo/blobrepo_hg" }
 blobrepo_override = { path = "../../blobrepo/override" }
 bookmarks = { path = "../../bookmarks" }
 derived_data_filenodes = { path = "../filenodes" }
+derived_data_test_utils = { path = "../test_utils" }
 fixtures = { path = "../../tests/fixtures" }
 mercurial_types = { path = "../../mercurial/types" }
 revset = { path = "../../revset" }
-test_utils = { path = "../../manifest/test_utils" }
 tests_utils = { path = "../../tests/utils" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 maplit = "1.0"

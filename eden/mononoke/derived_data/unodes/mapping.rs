@@ -180,16 +180,17 @@ mod test {
     use blobstore::Loadable;
     use bookmarks::BookmarkName;
     use cloned::cloned;
+    use derived_data_test_utils::iterate_all_manifest_entries;
     use fbinit::FacebookInit;
     use fixtures::{
         branch_even, branch_uneven, branch_wide, linear, many_diamonds, many_files_dirs,
         merge_even, merge_uneven, unshared_merge_even, unshared_merge_uneven,
     };
-    use futures::future::{Future as NewFuture, TryFutureExt};
+    use futures::future::{Future as NewFuture, FutureExt, TryFutureExt};
+    use futures::stream::TryStreamExt;
     use manifest::Entry;
     use mercurial_types::{HgChangesetId, HgManifestId};
     use revset::AncestorsNodeStream;
-    use test_utils::iterate_all_entries;
     use tokio_compat::runtime::Runtime;
 
     fn fetch_manifest_by_cs_id(
@@ -216,13 +217,20 @@ mod test {
             .and_then({
                 cloned!(ctx, repo);
                 move |mf_unode_id| {
-                    iterate_all_entries(ctx, repo, Entry::Tree(mf_unode_id))
-                        .map(|(path, _)| path)
-                        .collect()
-                        .map(|mut paths| {
-                            paths.sort();
-                            paths
-                        })
+                    async move {
+                        iterate_all_manifest_entries(&ctx, &repo, Entry::Tree(mf_unode_id))
+                            .compat()
+                            .map(|(path, _)| path)
+                            .collect()
+                            .map(|mut paths| {
+                                paths.sort();
+                                paths
+                            })
+                            .compat()
+                            .await
+                    }
+                    .boxed()
+                    .compat()
                 }
             });
 
@@ -230,13 +238,20 @@ mod test {
             .and_then({
                 cloned!(ctx, repo);
                 move |root_mf_id| {
-                    iterate_all_entries(ctx, repo, Entry::Tree(root_mf_id))
-                        .map(|(path, _)| path)
-                        .collect()
-                        .map(|mut paths| {
-                            paths.sort();
-                            paths
-                        })
+                    async move {
+                        iterate_all_manifest_entries(&ctx, &repo, Entry::Tree(root_mf_id))
+                            .compat()
+                            .map(|(path, _)| path)
+                            .collect()
+                            .map(|mut paths| {
+                                paths.sort();
+                                paths
+                            })
+                            .compat()
+                            .await
+                    }
+                    .boxed()
+                    .compat()
                 }
             });
 

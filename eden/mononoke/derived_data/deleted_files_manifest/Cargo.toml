@@ -32,8 +32,8 @@ tokio = "0.1"
 
 [dev-dependencies]
 blobrepo_factory = { path = "../../blobrepo/factory" }
+derived_data_test_utils = { path = "../test_utils" }
 fixtures = { path = "../../tests/fixtures" }
-test_utils = { path = "../../manifest/test_utils" }
 tests_utils = { path = "../../tests/utils" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 tokio-compat = "0.1"

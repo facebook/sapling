@@ -198,6 +198,7 @@ mod test {
     use blobrepo_hg::BlobRepoHg;
     use blobstore::Loadable;
     use bookmarks::BookmarkName;
+    use derived_data_test_utils::iterate_all_manifest_entries;
     use fbinit::FacebookInit;
     use fixtures::{
         branch_even, branch_uneven, branch_wide, linear, many_diamonds, many_files_dirs,
@@ -210,7 +211,6 @@ mod test {
     use manifest::Entry;
     use mercurial_types::{HgChangesetId, HgManifestId};
     use revset::AncestorsNodeStream;
-    use test_utils::iterate_all_entries;
     use tokio_compat::runtime::Runtime;
 
     async fn fetch_manifest_by_cs_id(
@@ -234,19 +234,15 @@ mod test {
             .await?
             .into_fsnode_id();
 
-        let fsnode_entries =
-            iterate_all_entries(ctx.clone(), repo.clone(), Entry::Tree(root_fsnode_id))
-                .compat()
-                .map_ok(|(path, _)| path)
-                .try_collect::<Vec<_>>();
+        let fsnode_entries = iterate_all_manifest_entries(ctx, repo, Entry::Tree(root_fsnode_id))
+            .map_ok(|(path, _)| path)
+            .try_collect::<Vec<_>>();
 
         let root_mf_id = fetch_manifest_by_cs_id(ctx, repo, hg_cs_id).await?;
 
-        let filenode_entries =
-            iterate_all_entries(ctx.clone(), repo.clone(), Entry::Tree(root_mf_id))
-                .compat()
-                .map_ok(|(path, _)| path)
-                .try_collect::<Vec<_>>();
+        let filenode_entries = iterate_all_manifest_entries(ctx, repo, Entry::Tree(root_mf_id))
+            .map_ok(|(path, _)| path)
+            .try_collect::<Vec<_>>();
 
 
         let (mut fsnode_entries, mut filenode_entries) =

@@ -400,12 +400,12 @@ mod tests {
     use bytes::Bytes;
     use derived_data::BonsaiDerived;
     use derived_data_filenodes::FilenodesOnlyPublic;
+    use derived_data_test_utils::{bonsai_changeset_from_hg, iterate_all_manifest_entries};
     use fbinit::FacebookInit;
     use fixtures::linear;
     use futures::{
         compat::Future01CompatExt, FutureExt as NewFutureExt, TryFutureExt, TryStreamExt,
     };
-    use futures_old::Stream;
     use manifest::ManifestOps;
     use maplit::btreemap;
     use mercurial_types::{blobs::BlobManifest, HgFileNodeId, HgManifestId};
@@ -415,7 +415,6 @@ mod tests {
         RepoPath,
     };
     use std::collections::{HashSet, VecDeque};
-    use test_utils::{get_bonsai_changeset, iterate_all_entries};
     use tests_utils::{resolve_cs_id, CreateCommitContext};
     use tokio_compat::runtime::Runtime;
 
@@ -441,8 +440,9 @@ mod tests {
         })?;
         let parent_unode_id = {
             let parent_hg_cs = "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536";
-            let (bcs_id, bcs) =
-                get_bonsai_changeset(ctx.clone(), repo.clone(), &mut runtime, parent_hg_cs);
+            let (bcs_id, bcs) = runtime
+                .block_on_std(bonsai_changeset_from_hg(&ctx, &repo, parent_hg_cs))
+                .unwrap();
 
             let f = derive_unode_manifest(
                 ctx.clone(),
@@ -457,9 +457,9 @@ mod tests {
             runtime
                 .block_on_std(unode_id.load(ctx.clone(), repo.blobstore()))
                 .unwrap();
-            let all_unodes = runtime
-                .block_on(
-                    iterate_all_entries(ctx.clone(), repo.clone(), Entry::Tree(unode_id)).collect(),
+            let all_unodes: Vec<_> = runtime
+                .block_on_std(
+                    iterate_all_manifest_entries(&ctx, &repo, Entry::Tree(unode_id)).try_collect(),
                 )
                 .unwrap();
             let mut paths: Vec<_> = all_unodes.into_iter().map(|(path, _)| path).collect();
@@ -477,8 +477,9 @@ mod tests {
 
         {
             let child_hg_cs = "3e0e761030db6e479a7fb58b12881883f9f8c63f";
-            let (bcs_id, bcs) =
-                get_bonsai_changeset(ctx.clone(), repo.clone(), &mut runtime, child_hg_cs);
+            let (bcs_id, bcs) = runtime
+                .block_on_std(bonsai_changeset_from_hg(&ctx, &repo, child_hg_cs))
+                .unwrap();
 
             let f = derive_unode_manifest(
                 ctx.clone(),
@@ -509,9 +510,9 @@ mod tests {
                 find_filenode_history(fb, &mut runtime, repo.clone(), root_filenode_id),
             );
 
-            let all_unodes = runtime
-                .block_on(
-                    iterate_all_entries(ctx.clone(), repo.clone(), Entry::Tree(unode_id)).collect(),
+            let all_unodes: Vec<_> = runtime
+                .block_on_std(
+                    iterate_all_manifest_entries(&ctx, &repo, Entry::Tree(unode_id)).try_collect(),
                 )
                 .unwrap();
             let mut paths: Vec<_> = all_unodes.into_iter().map(|(path, _)| path).collect();

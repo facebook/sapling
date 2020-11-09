@@ -471,6 +471,7 @@ mod tests {
     use crate::mapping::RootDeletedManifestId;
     use blobrepo::save_bonsai_changesets;
     use blobrepo_factory::new_memblob_empty;
+    use derived_data_test_utils::bonsai_changeset_from_hg;
     use fbinit::FacebookInit;
     use fixtures::{many_files_dirs, store_files};
     use futures::compat::Stream01CompatExt;
@@ -478,7 +479,6 @@ mod tests {
     use futures_old::stream::iter_ok;
     use maplit::btreemap;
     use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, DateTime, FileChange, MPath};
-    use test_utils::get_bonsai_changeset;
     use tests_utils::CreateCommitContext;
     use tokio_compat::runtime::Runtime;
 
@@ -661,7 +661,9 @@ mod tests {
 
         let mf_id_1 = {
             let hg_cs = "5a28e25f924a5d209b82ce0713d8d83e68982bc8";
-            let (_, bcs) = get_bonsai_changeset(ctx.clone(), repo.clone(), &mut runtime, hg_cs);
+            let (_, bcs) = runtime
+                .block_on_std(bonsai_changeset_from_hg(&ctx, &repo, hg_cs))
+                .unwrap();
 
             let (_, mf_id, deleted_nodes) =
                 derive_manifest(ctx.clone(), repo.clone(), &mut runtime, bcs, vec![]);
@@ -674,7 +676,9 @@ mod tests {
 
         let mf_id_2 = {
             let hg_cs = "2f866e7e549760934e31bf0420a873f65100ad63";
-            let (_, bcs) = get_bonsai_changeset(ctx.clone(), repo.clone(), &mut runtime, hg_cs);
+            let (_, bcs) = runtime
+                .block_on_std(bonsai_changeset_from_hg(&ctx, &repo, hg_cs))
+                .unwrap();
 
             let (_, mf_id, deleted_nodes) =
                 derive_manifest(ctx.clone(), repo.clone(), &mut runtime, bcs, vec![mf_id_1]);
@@ -687,7 +691,9 @@ mod tests {
 
         let mf_id_3 = {
             let hg_cs = "d261bc7900818dea7c86935b3fb17a33b2e3a6b4";
-            let (_, bcs) = get_bonsai_changeset(ctx.clone(), repo.clone(), &mut runtime, hg_cs);
+            let (_, bcs) = runtime
+                .block_on_std(bonsai_changeset_from_hg(&ctx, &repo, hg_cs))
+                .unwrap();
 
             let (_, mf_id, deleted_nodes) =
                 derive_manifest(ctx.clone(), repo.clone(), &mut runtime, bcs, vec![mf_id_2]);
@@ -700,8 +706,9 @@ mod tests {
 
         {
             let hg_cs = "051946ed218061e925fb120dac02634f9ad40ae2";
-            let (bcs_id, bcs) =
-                get_bonsai_changeset(ctx.clone(), repo.clone(), &mut runtime, hg_cs);
+            let (bcs_id, bcs) = runtime
+                .block_on_std(bonsai_changeset_from_hg(&ctx, &repo, hg_cs))
+                .unwrap();
 
             let (_, mf_id, deleted_nodes) =
                 derive_manifest(ctx.clone(), repo.clone(), &mut runtime, bcs, vec![mf_id_3]);

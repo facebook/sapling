@@ -1,5 +1,5 @@
 [package]
-name = "test_utils"
+name = "derived_data_test_utils"
 edition = "2018"
 version = "0.1.0"
 authors = ['Facebook']
@@ -13,12 +13,10 @@ path = "lib.rs"
 blobrepo = { path = "../../blobrepo" }
 blobrepo_hg = { path = "../../blobrepo/blobrepo_hg" }
 blobstore = { path = "../../blobstore" }
+bounded_traversal = { path = "../../common/bounded_traversal" }
 context = { path = "../../server/context" }
-manifest = { path = ".." }
+manifest = { path = "../../manifest" }
 mercurial_types = { path = "../../mercurial/types" }
 mononoke_types = { path = "../../mononoke_types" }
-futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
-futures-old = { package = "futures", version = "0.1" }
-tokio-compat = "0.1"
