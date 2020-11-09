@@ -90,7 +90,14 @@ macro_rules! create_graph {
                 }
             }
         }
-    };
+        impl $nodekeyenum {
+            pub fn get_type(&self) -> NodeType {
+                match self {
+                    $($nodekeyenum::$source(_) => $nodetypeenum::$source),*
+                }
+            }
+        }
+    }
 }
 
 create_graph!(
@@ -478,32 +485,6 @@ pub enum NodeData {
 }
 
 impl Node {
-    pub fn get_type(&self) -> NodeType {
-        match self {
-            Node::Root(_) => NodeType::Root,
-            // Bonsai
-            Node::Bookmark(_) => NodeType::Bookmark,
-            Node::BonsaiChangeset(_) => NodeType::BonsaiChangeset,
-            Node::BonsaiHgMapping(_) => NodeType::BonsaiHgMapping,
-            Node::BonsaiPhaseMapping(_) => NodeType::BonsaiPhaseMapping,
-            Node::PublishedBookmarks(_) => NodeType::PublishedBookmarks,
-            // Hg
-            Node::HgBonsaiMapping(_) => NodeType::HgBonsaiMapping,
-            Node::HgChangeset(_) => NodeType::HgChangeset,
-            Node::HgManifest(_) => NodeType::HgManifest,
-            Node::HgFileEnvelope(_) => NodeType::HgFileEnvelope,
-            Node::HgFileNode(_) => NodeType::HgFileNode,
-            // Content
-            Node::FileContent(_) => NodeType::FileContent,
-            Node::FileContentMetadata(_) => NodeType::FileContentMetadata,
-            Node::AliasContentMapping(_) => NodeType::AliasContentMapping,
-            // Derived data
-            Node::BonsaiFsnodeMapping(_) => NodeType::BonsaiFsnodeMapping,
-            Node::ChangesetInfo(_) => NodeType::ChangesetInfo,
-            Node::Fsnode(_) => NodeType::Fsnode,
-        }
-    }
-
     pub fn stats_key(&self) -> String {
         match self {
             Node::Root(_) => "root".to_string(),
