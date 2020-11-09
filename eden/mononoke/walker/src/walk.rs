@@ -1021,7 +1021,7 @@ where
     }
 
     let step_result = match walk_item.target.clone() {
-        Node::Root => Err(format_err!("Not expecting Roots to be generated")),
+        Node::Root(_) => Err(format_err!("Not expecting Roots to be generated")),
         // Bonsai
         Node::Bookmark(bookmark_name) => {
             bookmark_step(
@@ -1047,7 +1047,7 @@ where
             );
             bonsai_phase_step(&ctx, &checker, phases_store, bcs_id).await
         }
-        Node::PublishedBookmarks => {
+        Node::PublishedBookmarks(_) => {
             published_bookmarks_step(published_bookmarks.clone(), &checker).await
         }
         // Hg

@@ -46,31 +46,63 @@ macro_rules! define_type_enum {
     }
 }
 
-define_type_enum! {
-enum NodeType {
-    Root,
+#[doc(hidden)]
+macro_rules! create_graph_impl {
+    ($nodetypeenum:ident, $nodekeyenum:ident, $edgetypeenum:ident, {$($nodetype:tt)*} {$($nodekeys:tt)*})=> {
+        define_type_enum!{
+            enum $nodetypeenum {$($nodetype)*}
+        }
+
+        #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+        pub enum $nodekeyenum {$($nodekeys)*}
+    };
+    ($nodetypeenum:ident, $nodekeyenum:ident, $edgetypeenum:ident, {$($nodetype:tt)*} {$($nodekeys:tt)*} ($source:ident, $sourcekey:ty) $($rest:tt)*) => {
+        create_graph_impl! {
+            $nodetypeenum, $nodekeyenum, $edgetypeenum,
+            {$($nodetype)* $source,}
+            {$($nodekeys)* $source($sourcekey),}
+            $($rest)*
+        }
+    };
+}
+
+macro_rules! create_graph {
+    ($nodetypeenum:ident, $nodekeyenum:ident, $edgetypeenum:ident, $(($source:ident, $sourcekey:tt)),* $(,)?) => {
+        create_graph_impl! {
+            $nodetypeenum, $nodekeyenum, $edgetypeenum,
+            {}
+            {}
+            $(($source, $sourcekey))*
+        }
+    };
+}
+
+create_graph!(
+    NodeType,
+    Node,
+    EdgeType,
+    (Root, ()),
     // Bonsai
-    Bookmark,
-    BonsaiChangeset,
-    BonsaiHgMapping,
-    BonsaiPhaseMapping,
-    PublishedBookmarks,
+    (Bookmark, BookmarkName),
+    (BonsaiChangeset, ChangesetId),
+    (BonsaiHgMapping, ChangesetId),
+    (BonsaiPhaseMapping, ChangesetId),
+    (PublishedBookmarks, ()),
     // Hg
-    HgBonsaiMapping,
-    HgChangeset,
-    HgManifest,
-    HgFileEnvelope,
-    HgFileNode,
+    (HgBonsaiMapping, HgChangesetId),
+    (HgChangeset, HgChangesetId),
+    (HgManifest, (WrappedPath, HgManifestId)),
+    (HgFileEnvelope, HgFileNodeId),
+    (HgFileNode, (WrappedPath, HgFileNodeId)),
     // Content
-    FileContent,
-    FileContentMetadata,
-    AliasContentMapping,
+    (FileContent, ContentId),
+    (FileContentMetadata, ContentId),
+    (AliasContentMapping, Alias),
     // Derived data
-    BonsaiFsnodeMapping,
-    ChangesetInfo,
-    Fsnode,
-}
-}
+    (BonsaiFsnodeMapping, ChangesetId),
+    (ChangesetInfo, ChangesetId),
+    (Fsnode, (WrappedPath, FsnodeId)),
+);
 
 impl fmt::Display for NodeType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -223,32 +255,6 @@ impl From<Option<MPath>> for WrappedPath {
             None => WrappedPath::Root,
         }
     }
-}
-
-// Set of keys to look up items by, name is the type of lookup, payload is the key used.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum Node {
-    Root,
-    // Bonsai
-    Bookmark(BookmarkName),
-    BonsaiChangeset(ChangesetId),
-    BonsaiHgMapping(ChangesetId),
-    BonsaiPhaseMapping(ChangesetId),
-    PublishedBookmarks,
-    // Hg
-    HgBonsaiMapping(HgChangesetId),
-    HgChangeset(HgChangesetId),
-    HgManifest((WrappedPath, HgManifestId)),
-    HgFileEnvelope(HgFileNodeId),
-    HgFileNode((WrappedPath, HgFileNodeId)),
-    // Content
-    FileContent(ContentId),
-    FileContentMetadata(ContentId),
-    AliasContentMapping(Alias),
-    // Derived data
-    BonsaiFsnodeMapping(ChangesetId),
-    ChangesetInfo(ChangesetId),
-    Fsnode((WrappedPath, FsnodeId)),
 }
 
 // Some Node types are accessible by more than one type of edge, this allows us to restrict the paths
@@ -484,13 +490,13 @@ pub enum NodeData {
 impl Node {
     pub fn get_type(&self) -> NodeType {
         match self {
-            Node::Root => NodeType::Root,
+            Node::Root(_) => NodeType::Root,
             // Bonsai
             Node::Bookmark(_) => NodeType::Bookmark,
             Node::BonsaiChangeset(_) => NodeType::BonsaiChangeset,
             Node::BonsaiHgMapping(_) => NodeType::BonsaiHgMapping,
             Node::BonsaiPhaseMapping(_) => NodeType::BonsaiPhaseMapping,
-            Node::PublishedBookmarks => NodeType::PublishedBookmarks,
+            Node::PublishedBookmarks(_) => NodeType::PublishedBookmarks,
             // Hg
             Node::HgBonsaiMapping(_) => NodeType::HgBonsaiMapping,
             Node::HgChangeset(_) => NodeType::HgChangeset,
@@ -510,13 +516,13 @@ impl Node {
 
     pub fn stats_key(&self) -> String {
         match self {
-            Node::Root => "root".to_string(),
+            Node::Root(_) => "root".to_string(),
             // Bonsai
             Node::Bookmark(k) => k.to_string(),
             Node::BonsaiChangeset(k) => k.blobstore_key(),
             Node::BonsaiHgMapping(k) => k.blobstore_key(),
             Node::BonsaiPhaseMapping(k) => k.blobstore_key(),
-            Node::PublishedBookmarks => "published_bookmarks".to_string(),
+            Node::PublishedBookmarks(_) => "published_bookmarks".to_string(),
             // Hg
             Node::HgBonsaiMapping(k) => k.blobstore_key(),
             Node::HgChangeset(k) => k.blobstore_key(),
@@ -536,13 +542,13 @@ impl Node {
 
     pub fn stats_path(&self) -> Option<&WrappedPath> {
         match self {
-            Node::Root => None,
+            Node::Root(_) => None,
             // Bonsai
             Node::Bookmark(_) => None,
             Node::BonsaiChangeset(_) => None,
             Node::BonsaiHgMapping(_) => None,
             Node::BonsaiPhaseMapping(_) => None,
-            Node::PublishedBookmarks => None,
+            Node::PublishedBookmarks(_) => None,
             // Hg
             Node::HgBonsaiMapping(_) => None,
             Node::HgChangeset(_) => None,
@@ -563,13 +569,13 @@ impl Node {
     /// None means not hash based
     pub fn sampling_fingerprint(&self) -> Option<u64> {
         match self {
-            Node::Root => None,
+            Node::Root(_) => None,
             // Bonsai
             Node::Bookmark(_k) => None,
             Node::BonsaiChangeset(k) => Some(k.sampling_fingerprint()),
             Node::BonsaiHgMapping(k) => Some(k.sampling_fingerprint()),
             Node::BonsaiPhaseMapping(k) => Some(k.sampling_fingerprint()),
-            Node::PublishedBookmarks => None,
+            Node::PublishedBookmarks(_) => None,
             // Hg
             Node::HgBonsaiMapping(k) => Some(k.sampling_fingerprint()),
             Node::HgChangeset(k) => Some(k.sampling_fingerprint()),

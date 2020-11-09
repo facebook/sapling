@@ -60,7 +60,7 @@ pub fn parse_node(s: &str) -> Result<Node, Error> {
 
     let parts = &parts[1..];
     let node = match node_type {
-        NodeType::Root => Node::Root,
+        NodeType::Root => Node::Root(()),
         // Bonsai
         NodeType::Bookmark => Node::Bookmark(BookmarkName::new(parts.join(NODE_SEP))?),
         NodeType::BonsaiChangeset => {
@@ -72,7 +72,7 @@ pub fn parse_node(s: &str) -> Result<Node, Error> {
         NodeType::BonsaiPhaseMapping => {
             Node::BonsaiPhaseMapping(ChangesetId::from_str(&parts.join(NODE_SEP))?)
         }
-        NodeType::PublishedBookmarks => Node::PublishedBookmarks,
+        NodeType::PublishedBookmarks => Node::PublishedBookmarks(()),
         // Hg
         NodeType::HgBonsaiMapping => {
             Node::HgBonsaiMapping(HgChangesetId::from_str(&parts.join(NODE_SEP))?)
@@ -141,7 +141,7 @@ mod tests {
     fn test_node_type(node_type: &NodeType) -> Result<(), Error> {
         let v = match node_type {
             NodeType::Root => {
-                assert_eq!(Node::Root, parse_node("Root")?);
+                assert_eq!(Node::Root(()), parse_node("Root")?);
                 assert_eq!(
                     "Err(parse_node expects Root not to be followed by any parts)",
                     format!("{:?}", parse_node("Root:garbage"))
@@ -165,7 +165,10 @@ mod tests {
                     .get_type()
             ),
             NodeType::PublishedBookmarks => {
-                assert_eq!(Node::PublishedBookmarks, parse_node("PublishedBookmarks")?);
+                assert_eq!(
+                    Node::PublishedBookmarks(()),
+                    parse_node("PublishedBookmarks")?
+                );
                 assert_eq!(
                     "Err(parse_node expects PublishedBookmarks not to be followed by any parts)",
                     format!("{:?}", parse_node("PublishedBookmarks:garbage"))
