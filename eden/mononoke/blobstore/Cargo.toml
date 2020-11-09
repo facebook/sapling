@@ -25,8 +25,8 @@ futures = { version = "0.3.5", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_derive = "1.0"
-strum = "0.17"
-strum_macros = "0.17"
+strum = "0.19"
+strum_macros = "0.19"
 thiserror = "1.0"
 zstd = "=0.5.3+zstd.1.4.5"
 
