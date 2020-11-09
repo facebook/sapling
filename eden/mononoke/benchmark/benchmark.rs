@@ -14,8 +14,8 @@ use anyhow::{bail, format_err, Error, Result};
 use benchmark_lib::{new_benchmark_repo, GenManifest};
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
-use clap::{App, Arg};
-use cmdlib::args;
+use clap::Arg;
+use cmdlib::args::{self, ArgType};
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
@@ -106,38 +106,45 @@ fn derive_fn(ctx: CoreContext, repo: BlobRepo, derive_type: Option<&str>) -> Res
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
-    let app = {
-        let app = App::new("mononoke benchmark")
-            .arg(
-                Arg::with_name(ARG_SEED)
-                    .short("s")
-                    .long(ARG_SEED)
-                    .takes_value(true)
-                    .value_name(ARG_SEED)
-                    .help("seed changeset generator for u64 seed"),
-            )
-            .arg(
-                Arg::with_name(ARG_STACK_SIZE)
-                    .long(ARG_STACK_SIZE)
-                    .takes_value(true)
-                    .value_name(ARG_STACK_SIZE)
-                    .help("Size of the generated stack"),
-            )
-            .arg(
-                Arg::with_name(ARG_TYPE)
-                    .required(true)
-                    .index(1)
-                    .possible_values(&[
-                        HG_CHANGESET_TYPE,
-                        RootUnodeManifestId::NAME,
-                        RootFsnodeId::NAME,
-                    ])
-                    .help("derived data type"),
-            );
-        let app = args::add_logger_args(app);
-        args::add_cachelib_args(app, true /* hide_advanced_args */)
-    };
-    let matches = app.get_matches();
+    let matches = args::MononokeApp::new("mononoke benchmark")
+        .without_arg_types(vec![
+            ArgType::Config,
+            ArgType::Test,
+            ArgType::Repo,
+            ArgType::Mysql,
+            ArgType::Blobstore,
+            ArgType::Tunables,
+            ArgType::Runtime, // we construct our own runtime, so these args would do nothing
+        ])
+        .with_advanced_args_hidden()
+        .build()
+        .arg(
+            Arg::with_name(ARG_SEED)
+                .short("s")
+                .long(ARG_SEED)
+                .takes_value(true)
+                .value_name(ARG_SEED)
+                .help("seed changeset generator for u64 seed"),
+        )
+        .arg(
+            Arg::with_name(ARG_STACK_SIZE)
+                .long(ARG_STACK_SIZE)
+                .takes_value(true)
+                .value_name(ARG_STACK_SIZE)
+                .help("Size of the generated stack"),
+        )
+        .arg(
+            Arg::with_name(ARG_TYPE)
+                .required(true)
+                .index(1)
+                .possible_values(&[
+                    HG_CHANGESET_TYPE,
+                    RootUnodeManifestId::NAME,
+                    RootFsnodeId::NAME,
+                ])
+                .help("derived data type"),
+        )
+        .get_matches();
 
     args::init_cachelib(fb, &matches, None);
     let logger = args::init_logging(fb, &matches);
