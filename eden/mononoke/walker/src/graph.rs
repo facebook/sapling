@@ -58,7 +58,7 @@ macro_rules! create_graph_impl {
         pub enum $nodekeyenum {$($nodekeys)*}
 
         define_type_enum!{
-            enum DummyEnum /*$edgetypeenum until edges populated*/ {$($edgetype)*}
+            enum $edgetypeenum {$($edgetype)*}
         }
     };
     ($nodetypeenum:ident, $nodekeyenum:ident, $edgetypeenum:ident,
@@ -140,25 +140,53 @@ create_graph!(
         ]
     ),
     // Bonsai
-    (Bookmark, BookmarkName, []),
-    (BonsaiChangeset, ChangesetId, []),
-    (BonsaiHgMapping, ChangesetId, []),
+    (Bookmark, BookmarkName, [BonsaiChangeset, BonsaiHgMapping]),
+    (
+        BonsaiChangeset,
+        ChangesetId,
+        [
+            FileContent,
+            BonsaiParent,
+            BonsaiHgMapping,
+            BonsaiPhaseMapping,
+            BonsaiFsnodeMapping,
+            ChangesetInfo
+        ]
+    ),
+    (BonsaiHgMapping, ChangesetId, [HgChangeset]),
     (BonsaiPhaseMapping, ChangesetId, []),
-    (PublishedBookmarks, (), []),
+    (PublishedBookmarks, (), [BonsaiChangeset, BonsaiHgMapping]),
     // Hg
-    (HgBonsaiMapping, HgChangesetId, []),
-    (HgChangeset, HgChangesetId, []),
-    (HgManifest, (WrappedPath, HgManifestId), []),
-    (HgFileEnvelope, HgFileNodeId, []),
-    (HgFileNode, (WrappedPath, HgFileNodeId), []),
+    (HgBonsaiMapping, HgChangesetId, [BonsaiChangeset]),
+    (HgChangeset, HgChangesetId, [HgParent, HgManifest]),
+    (
+        HgManifest,
+        (WrappedPath, HgManifestId),
+        [HgFileEnvelope, HgFileNode, ChildHgManifest]
+    ),
+    (HgFileEnvelope, HgFileNodeId, [FileContent]),
+    (
+        HgFileNode,
+        (WrappedPath, HgFileNodeId),
+        [
+            LinkedHgBonsaiMapping,
+            LinkedHgChangeset,
+            HgParentFileNode,
+            HgCopyfromFileNode
+        ]
+    ),
     // Content
-    (FileContent, ContentId, []),
-    (FileContentMetadata, ContentId, []),
-    (AliasContentMapping, Alias, []),
+    (FileContent, ContentId, [FileContentMetadata]),
+    (
+        FileContentMetadata,
+        ContentId,
+        [Sha1Alias, Sha256Alias, GitSha1Alias]
+    ),
+    (AliasContentMapping, Alias, [FileContent]),
     // Derived data
-    (BonsaiFsnodeMapping, ChangesetId, []),
-    (ChangesetInfo, ChangesetId, []),
-    (Fsnode, (WrappedPath, FsnodeId), []),
+    (BonsaiFsnodeMapping, ChangesetId, [RootFsnode]),
+    (ChangesetInfo, ChangesetId, [ChangesetInfoParent]),
+    (Fsnode, (WrappedPath, FsnodeId), [ChildFsnode, FileContent]),
 );
 
 impl fmt::Display for NodeType {
@@ -286,68 +314,6 @@ impl From<Option<MPath>> for WrappedPath {
             None => WrappedPath::Root,
         }
     }
-}
-
-// Some Node types are accessible by more than one type of edge, this allows us to restrict the paths
-// This is really a declaration of the steps a walker can take.
-define_type_enum! {
-enum EdgeType {
-    // Bonsai Roots
-    RootToBookmark,
-    RootToBonsaiChangeset,
-    RootToBonsaiHgMapping,
-    RootToBonsaiPhaseMapping,
-    RootToPublishedBookmarks,
-    // Hg Roots
-    RootToHgBonsaiMapping,
-    RootToHgChangeset,
-    RootToHgManifest,
-    RootToHgFileEnvelope,
-    RootToHgFileNode,
-    // Content Roots
-    RootToFileContent,
-    RootToFileContentMetadata,
-    RootToAliasContentMapping,
-    // Derived data Roots
-    RootToBonsaiFsnodeMapping,
-    RootToChangesetInfo,
-    RootToFsnode,
-    // Bonsai
-    BookmarkToBonsaiChangeset,
-    BookmarkToBonsaiHgMapping,
-    BonsaiChangesetToFileContent,
-    BonsaiChangesetToBonsaiParent,
-    BonsaiChangesetToBonsaiHgMapping,
-    BonsaiChangesetToBonsaiPhaseMapping,
-    BonsaiHgMappingToHgChangeset,
-    PublishedBookmarksToBonsaiChangeset,
-    PublishedBookmarksToBonsaiHgMapping,
-    BonsaiChangesetToBonsaiFsnodeMapping,
-    // Hg
-    HgBonsaiMappingToBonsaiChangeset,
-    HgChangesetToHgParent,
-    HgChangesetToHgManifest,
-    HgManifestToHgFileEnvelope,
-    HgManifestToHgFileNode,
-    HgManifestToChildHgManifest,
-    HgFileEnvelopeToFileContent,
-    HgFileNodeToLinkedHgBonsaiMapping,
-    HgFileNodeToLinkedHgChangeset,
-    HgFileNodeToHgParentFileNode,
-    HgFileNodeToHgCopyfromFileNode,
-    // Content
-    FileContentToFileContentMetadata,
-    FileContentMetadataToSha1Alias,
-    FileContentMetadataToSha256Alias,
-    FileContentMetadataToGitSha1Alias,
-    AliasContentMappingToFileContent,
-    // Derived data
-    BonsaiFsnodeMappingToRootFsnode,
-    BonsaiChangesetToChangesetInfo,
-    ChangesetInfoToChangesetInfoParent,
-    FsnodeToChildFsnode,
-    FsnodeToFileContent,
-}
 }
 
 define_type_enum! {
@@ -618,6 +584,32 @@ mod tests {
         for t in NodeType::iter() {
             assert!((t as usize) < NodeType::COUNT)
         }
+    }
+
+    #[test]
+    fn test_small_graphs() {
+        create_graph!(
+            Test1NodeType,
+            Test1Node,
+            Test1EdgeType,
+            (Root, (), [Foo]),
+            (Foo, u32, []),
+        );
+        assert_eq!(Test1NodeType::Root, Test1Node::Root(()).get_type());
+        assert_eq!(Test1NodeType::Foo, Test1Node::Foo(42).get_type());
+
+        // Make sure type names don't clash
+        create_graph!(
+            Test2NodeType,
+            Test2Node,
+            Test2EdgeType,
+            (Root, (), [Foo, Bar]),
+            (Foo, u32, []),
+            (Bar, u32, []),
+        );
+        assert_eq!(Test2NodeType::Root, Test2Node::Root(()).get_type());
+        assert_eq!(Test2NodeType::Foo, Test2Node::Foo(42).get_type());
+        assert_eq!(Test2NodeType::Bar, Test2Node::Bar(42).get_type());
     }
 
     #[test]
