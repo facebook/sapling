@@ -152,14 +152,17 @@ TEST(WinErrorTest, testexceptionToHResultWrapper_EACCES) {
   int arg1 = 1111;
   std::string arg2 = "Test String Win32";
 
-  EXPECT_EQ(catchSystemError(arg1, arg2), ERROR_ERRORS_ENCOUNTERED);
+  EXPECT_EQ(
+      catchSystemError(arg1, arg2),
+      HRESULT_FROM_WIN32(ERROR_ERRORS_ENCOUNTERED));
 }
 
 TEST(WinErrorTest, testexceptionToHResult_EACCES) {
   try {
     throw std::system_error(EEXIST, std::generic_category(), "Test Throw");
   } catch (const std::exception& ex) {
-    EXPECT_EQ(exceptionToHResult(ex), ERROR_ERRORS_ENCOUNTERED);
+    EXPECT_EQ(
+        exceptionToHResult(ex), HRESULT_FROM_WIN32(ERROR_ERRORS_ENCOUNTERED));
   }
 }
 #endif

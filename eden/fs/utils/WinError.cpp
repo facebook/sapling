@@ -82,12 +82,12 @@ HRESULT exceptionToHResult(const std::exception& ex) noexcept {
     if (code.category() == Win32ErrorCategory::get()) {
       return HRESULT_FROM_WIN32(code.value());
     }
-    return ERROR_ERRORS_ENCOUNTERED;
+    return HRESULT_FROM_WIN32(ERROR_ERRORS_ENCOUNTERED);
   } else if (auto e = dynamic_cast<const std::bad_alloc*>(&ex)) {
     return E_OUTOFMEMORY;
   } else {
     XLOG(ERR) << ex.what();
-    return ERROR_ERRORS_ENCOUNTERED;
+    return HRESULT_FROM_WIN32(ERROR_ERRORS_ENCOUNTERED);
   }
 }
 
