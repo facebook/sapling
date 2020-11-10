@@ -157,10 +157,12 @@ impl Context {
     pub fn finish(self) -> Blake2 {
         let mut ret = [0u8; BLAKE2_HASH_LENGTH_BYTES];
         self.0.variable_result(|res| {
-            ret.as_mut().write_all(res).expect(&format!(
-                "{}-byte array must work with {}-byte blake2b",
-                BLAKE2_HASH_LENGTH_BYTES, BLAKE2_HASH_LENGTH_BYTES
-            ));
+            if let Err(e) = ret.as_mut().write_all(res) {
+                panic!(
+                    "{}-byte array must work with {}-byte blake2b: {:?}",
+                    BLAKE2_HASH_LENGTH_BYTES, BLAKE2_HASH_LENGTH_BYTES, e
+                );
+            }
         });
         Blake2(ret)
     }
