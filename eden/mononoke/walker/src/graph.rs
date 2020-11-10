@@ -48,20 +48,30 @@ macro_rules! define_type_enum {
 
 #[doc(hidden)]
 macro_rules! create_graph_impl {
-    ($nodetypeenum:ident, $nodekeyenum:ident, $edgetypeenum:ident, {$($nodetype:tt)*} {$($nodekeys:tt)*})=> {
+    ($nodetypeenum:ident, $nodekeyenum:ident, $edgetypeenum:ident,
+        {$($nodetype:tt)*} {$($nodekeys:tt)*} {$($edgetype:tt)+}) => {
         define_type_enum!{
             enum $nodetypeenum {$($nodetype)*}
         }
 
         #[derive(Clone, Debug, PartialEq, Eq, Hash)]
         pub enum $nodekeyenum {$($nodekeys)*}
+
+        define_type_enum!{
+            enum DummyEnum /*$edgetypeenum until edges populated*/ {$($edgetype)*}
+        }
     };
-    ($nodetypeenum:ident, $nodekeyenum:ident, $edgetypeenum:ident, {$($nodetype:tt)*} {$($nodekeys:tt)*} ($source:ident, $sourcekey:ty) $($rest:tt)*) => {
-        create_graph_impl! {
-            $nodetypeenum, $nodekeyenum, $edgetypeenum,
-            {$($nodetype)* $source,}
-            {$($nodekeys)* $source($sourcekey),}
-            $($rest)*
+    ($nodetypeenum:ident, $nodekeyenum:ident, $edgetypeenum:ident,
+        {$($nodetype:tt)*} {$($nodekeys:tt)*} {$($edgetype:tt)*}
+            ($source:ident, $sourcekey:ty, [$($target:ident),*]) $($rest:tt)*) => {
+        paste::item!{
+            create_graph_impl! {
+                $nodetypeenum, $nodekeyenum, $edgetypeenum,
+                {$($nodetype)* $source,}
+                {$($nodekeys)* $source($sourcekey),}
+                {$($edgetype)* $([<$source To $target>],)*}
+                $($rest)*
+            }
         }
     };
 }
@@ -76,22 +86,25 @@ macro_rules! root_edge_type {
 }
 
 macro_rules! create_graph {
-    ($nodetypeenum:ident, $nodekeyenum:ident, $edgetypeenum:ident, $(($source:ident, $sourcekey:tt)),* $(,)?) => {
+    ($nodetypeenum:ident, $nodekeyenum:ident, $edgetypeenum:ident,
+        $(($source:ident, $sourcekey:tt, [$($target:ident),*])),* $(,)?) => {
         create_graph_impl! {
             $nodetypeenum, $nodekeyenum, $edgetypeenum,
             {}
             {}
-            $(($source, $sourcekey))*
+            {}
+            $(($source, $sourcekey, [$($target),*]))*
         }
+
         impl $nodetypeenum {
-            pub fn root_edge_type(&self) -> Option<EdgeType> {
+            pub fn root_edge_type(&self) -> Option<$edgetypeenum> {
                 match self {
                     $($nodetypeenum::$source => root_edge_type!($edgetypeenum, $source)),*
                 }
             }
         }
         impl $nodekeyenum {
-            pub fn get_type(&self) -> NodeType {
+            pub fn get_type(&self) -> $nodetypeenum {
                 match self {
                     $($nodekeyenum::$source(_) => $nodetypeenum::$source),*
                 }
@@ -104,27 +117,48 @@ create_graph!(
     NodeType,
     Node,
     EdgeType,
-    (Root, ()),
+    (
+        Root,
+        (),
+        [
+            Bookmark,
+            BonsaiChangeset,
+            BonsaiHgMapping,
+            BonsaiPhaseMapping,
+            PublishedBookmarks,
+            HgBonsaiMapping,
+            HgChangeset,
+            HgManifest,
+            HgFileEnvelope,
+            HgFileNode,
+            FileContent,
+            FileContentMetadata,
+            AliasContentMapping,
+            BonsaiFsnodeMapping,
+            ChangesetInfo,
+            Fsnode
+        ]
+    ),
     // Bonsai
-    (Bookmark, BookmarkName),
-    (BonsaiChangeset, ChangesetId),
-    (BonsaiHgMapping, ChangesetId),
-    (BonsaiPhaseMapping, ChangesetId),
-    (PublishedBookmarks, ()),
+    (Bookmark, BookmarkName, []),
+    (BonsaiChangeset, ChangesetId, []),
+    (BonsaiHgMapping, ChangesetId, []),
+    (BonsaiPhaseMapping, ChangesetId, []),
+    (PublishedBookmarks, (), []),
     // Hg
-    (HgBonsaiMapping, HgChangesetId),
-    (HgChangeset, HgChangesetId),
-    (HgManifest, (WrappedPath, HgManifestId)),
-    (HgFileEnvelope, HgFileNodeId),
-    (HgFileNode, (WrappedPath, HgFileNodeId)),
+    (HgBonsaiMapping, HgChangesetId, []),
+    (HgChangeset, HgChangesetId, []),
+    (HgManifest, (WrappedPath, HgManifestId), []),
+    (HgFileEnvelope, HgFileNodeId, []),
+    (HgFileNode, (WrappedPath, HgFileNodeId), []),
     // Content
-    (FileContent, ContentId),
-    (FileContentMetadata, ContentId),
-    (AliasContentMapping, Alias),
+    (FileContent, ContentId, []),
+    (FileContentMetadata, ContentId, []),
+    (AliasContentMapping, Alias, []),
     // Derived data
-    (BonsaiFsnodeMapping, ChangesetId),
-    (ChangesetInfo, ChangesetId),
-    (Fsnode, (WrappedPath, FsnodeId)),
+    (BonsaiFsnodeMapping, ChangesetId, []),
+    (ChangesetInfo, ChangesetId, []),
+    (Fsnode, (WrappedPath, FsnodeId), []),
 );
 
 impl fmt::Display for NodeType {
