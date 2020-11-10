@@ -233,7 +233,7 @@ function mononoke_bookmarks_filler {
     sql_name="$DB_SHARD_NAME"
   else
     sql_source="sqlite"
-    sql_name="${TESTTMP}/replaybookmarksqueue"
+    sql_name="${TESTTMP}/replaybookmarksqueue/replaybookmarksqueue"
   fi
 
   GLOG_minloglevel=5 "$MONONOKE_BOOKMARKS_FILLER" \
@@ -929,7 +929,8 @@ function write_infinitepush_config {
   if [[ -n "${INFINITEPUSH_ALLOW_WRITES:-}" ]] || \
      [[ -n "${INFINITEPUSH_NAMESPACE_REGEX:-}" ]] || \
      [[ -n "${INFINITEPUSH_HYDRATE_GETBUNDLE_RESPONSE:-}" ]] || \
-     [[ -n "${INFINITEPUSH_POPULATE_REVERSE_FILLER_QUEUE:-}" ]];
+     [[ -n "${INFINITEPUSH_POPULATE_REVERSE_FILLER_QUEUE:-}" ]] || \
+     [[ -n "${INFINITEPUSH_POPULATE_REVERSE_BOOKMARK_FILLER_QUEUE:-}" ]];
   then
     namespace=""
     if [[ -n "${INFINITEPUSH_NAMESPACE_REGEX:-}" ]]; then
@@ -941,7 +942,8 @@ function write_infinitepush_config {
 allow_writes = ${INFINITEPUSH_ALLOW_WRITES:-true}
 hydrate_getbundle_response = ${INFINITEPUSH_HYDRATE_GETBUNDLE_RESPONSE:-false}
 populate_reverse_filler_queue = ${INFINITEPUSH_POPULATE_REVERSE_FILLER_QUEUE:-false}
-bookmarks_filler = 2
+populate_reverse_bookmarks_filler_queue =  ${INFINITEPUSH_POPULATE_REVERSE_BOOKMARK_FILLER_QUEUE:-false}
+bookmarks_filler = 3
 ${namespace}
 CONFIG
   fi

@@ -982,7 +982,7 @@ impl InfinitepushNamespace {
 }
 
 /// Commit cloud bookmark filler operation mode for the repo.
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, PartialOrd, Ord)]
 pub enum CommitcloudBookmarksFillerMode {
     /// No filling.
     DISABLED = 0,
@@ -990,6 +990,8 @@ pub enum CommitcloudBookmarksFillerMode {
     BACKFILL = 1,
     /// Fill the entries forward.
     FORWARDFILL = 2,
+    /// Both fillers active.
+    BIDIRECTIONAL = 3,
 }
 
 impl Default for CommitcloudBookmarksFillerMode {

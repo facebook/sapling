@@ -275,6 +275,9 @@ impl Convert for RawInfinitepushParams {
                 RawCommitcloudBookmarksFiller::FORWARDFILL => {
                     CommitcloudBookmarksFillerMode::FORWARDFILL
                 }
+                RawCommitcloudBookmarksFiller::BIDIRECTIONAL => {
+                    CommitcloudBookmarksFillerMode::BIDIRECTIONAL
+                }
                 _ => return Err(anyhow!("unknown bookmarks filler operation mode!")),
             },
             populate_reverse_bookmarks_filler_queue: self
