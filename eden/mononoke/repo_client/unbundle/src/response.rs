@@ -13,7 +13,7 @@ use bookmarks::BookmarkName;
 use bytes::{Bytes, BytesMut};
 use context::CoreContext;
 use failure_ext::FutureFailureErrorExt;
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt as OldFutureExt};
+use futures_01_ext::{try_boxfuture, BoxFuture, FutureExt as OldFutureExt};
 use futures_old::{Future, Stream};
 use futures_stats::Timed;
 use futures_util::{FutureExt, TryFutureExt};

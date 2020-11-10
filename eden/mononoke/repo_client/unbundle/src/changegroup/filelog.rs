@@ -18,7 +18,7 @@ use futures::{
     future::TryFutureExt,
     stream::{Stream, TryStreamExt},
 };
-use futures_ext::{BoxFuture, FutureExt as OldFutureExt};
+use futures_01_ext::{BoxFuture, FutureExt as OldFutureExt};
 use futures_old::{future::Shared, Future, IntoFuture};
 use quickcheck::{Arbitrary, Gen};
 

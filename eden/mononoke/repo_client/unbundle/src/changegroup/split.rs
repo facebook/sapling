@@ -5,16 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, Result};
 use futures::{
-    compat::Stream01CompatExt,
-    ready,
-    stream::BoxStream,
+    future, ready,
     task::{Context, Poll},
-    Stream, StreamExt, TryStreamExt,
+    Stream, StreamExt, TryFutureExt, TryStreamExt,
 };
-use futures_ext::StreamExt as OldStreamExt;
-use futures_old::{Future as OldFuture, Stream as OldStream};
+use futures_ext::FbStreamExt;
 use pin_project::pin_project;
 use std::pin::Pin;
 
@@ -26,50 +23,53 @@ use crate::changegroup::filelog::FilelogDeltaed;
 pub fn split_changegroup(
     cg2s: impl Stream<Item = Result<Part>> + Send + 'static,
 ) -> (
-    BoxStream<'static, Result<ChangesetDeltaed>>,
-    BoxStream<'static, Result<FilelogDeltaed>>,
+    impl Stream<Item = Result<ChangesetDeltaed>>,
+    impl Stream<Item = Result<FilelogDeltaed>>,
 ) {
-    let cg2s = CheckEnd::new(cg2s).boxed().compat();
+    let cg2s = CheckEnd::new(cg2s).boxed();
 
     let (changesets, remainder) = cg2s
-        .take_while(|part| match part {
-            &Part::CgChunk(Section::Changeset, _) => Ok(true),
-            &Part::SectionEnd(Section::Changeset) => Ok(false),
-            bad => bail!("Expected Changeset chunk or end, found: {:?}", bad),
+        .try_take_while(|part| {
+            future::ready(match part {
+                &Part::CgChunk(Section::Changeset, _) => Ok(true),
+                &Part::SectionEnd(Section::Changeset) => Ok(false),
+                bad => Err(anyhow!("Expected Changeset chunk or end, found: {:?}", bad)),
+            })
         })
         .return_remainder();
 
     let changesets = changesets
-        .and_then(|part| match part {
-            Part::CgChunk(Section::Changeset, chunk) => Ok(ChangesetDeltaed { chunk }),
-            bad => bail!("Expected Changeset chunk, found: {:?}", bad),
+        .and_then(|part| {
+            future::ready(match part {
+                Part::CgChunk(Section::Changeset, chunk) => Ok(ChangesetDeltaed { chunk }),
+                bad => Err(anyhow!("Expected Changeset chunk, found: {:?}", bad)),
+            })
         })
         .map_err(|err| {
             err.context("While extracting Changesets from Changegroup")
                 .into()
-        })
-        .boxify();
+        });
 
     let filelogs = remainder
-        .from_err()
-        .map(|take_while_stream| take_while_stream.into_inner())
-        .flatten_stream()
-        .skip_while({
+        .err_into()
+        .map_ok(|take_while_stream| take_while_stream.into_inner())
+        .try_flatten_stream()
+        .try_skip_while({
             let mut seen_manifest_end = false;
-            move |part| match part {
+            move |part| future::ready(match part {
                 &Part::SectionEnd(Section::Manifest) if !seen_manifest_end => {
                     seen_manifest_end = true;
                     Ok(true)
                 }
                 _ if seen_manifest_end => Ok(false),
-                bad => bail!("Expected Manifest end, found: {:?}", bad),
-            }
+                bad => Err(anyhow!("Expected Manifest end, found: {:?}", bad)),
+            })
         })
         .map_err(|err| {
             err.context("While skipping Manifests in Changegroup")
                 .into()
         })
-        .and_then({
+        .try_filter_map({
             let mut seen_path = None;
             move |part| {
                 if let &Some(ref seen_path) = &seen_path {
@@ -77,19 +77,19 @@ pub fn split_changegroup(
                         &Part::CgChunk(Section::Filelog(ref path), _)
                         | &Part::SectionEnd(Section::Filelog(ref path)) => {
                             if seen_path != path {
-                                bail!(
+                                return future::ready(Err(anyhow!(
                                     "Mismatched path found {0} ({0:?}) != {1} ({1:?}), for part: {2:?}",
                                     seen_path,
                                     path,
                                     part
-                                );
+                                )));
                             }
                         }
                         _ => (), // Handled in the next pattern-match
                     }
                 }
 
-                match part {
+                future::ready(match part {
                     Part::CgChunk(Section::Filelog(path), chunk) => {
                         seen_path = Some(path.clone());
                         Ok(Some(FilelogDeltaed { path, chunk }))
@@ -102,32 +102,30 @@ pub fn split_changegroup(
                     // Checking that there is exactly one Part::end is is covered by CheckEnd
                     // wrapper
                     Part::End if seen_path.is_none() => Ok(None),
-                    bad => {
+                    bad => Err(
                         if seen_path.is_some() {
-                            bail!(
+                            anyhow!(
                                 "Expected Filelog chunk or end, seen_path was {:?}, found: {:?}",
                                 seen_path,
                                 bad
                             )
                         } else {
-                            bail!(
+                            anyhow!(
                                 "Expected Filelog chunk or Part::End, seen_path was {:?}, found: {:?}",
                                 seen_path,
                                 bad
                             )
                         }
-                    }
-                }
+                    )
+                })
             }
         })
         .map_err(|err| {
             err.context("While extracting Filelogs from Changegroup")
                 .into()
-        })
-        .filter_map(|x| x)
-        .boxify();
+        });
 
-    (changesets.compat().boxed(), filelogs.compat().boxed())
+    (changesets, filelogs)
 }
 
 /// Wrapper for Stream of Part that is supposed to ensure that there is exactly one Part::End in

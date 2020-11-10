@@ -12,7 +12,7 @@ use blobrepo::BlobRepo;
 use blobrepo_hg::{ChangesetHandle, CreateChangeset};
 use context::CoreContext;
 use failure_ext::{Compat, StreamFailureErrorExt};
-use futures_ext::{
+use futures_01_ext::{
     BoxFuture as OldBoxFuture, BoxStream as OldBoxStream, FutureExt as OldFutureExt,
     StreamExt as OldStreamExt,
 };

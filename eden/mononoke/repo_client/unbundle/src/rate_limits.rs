@@ -10,7 +10,7 @@ use anyhow::{format_err, Result};
 use cloned::cloned;
 use context::CoreContext;
 use futures::future::{FutureExt as NewFutureExt, TryFutureExt};
-use futures_ext::{BoxFuture, FutureExt};
+use futures_01_ext::{BoxFuture, FutureExt};
 use futures_old::{future::join_all, Future, IntoFuture};
 use limits::types::{RateLimit, RateLimitStatus};
 use mononoke_types::BonsaiChangeset;

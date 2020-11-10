@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use anyhow::{ensure, Error, Result};
 use failure_ext::Compat;
 use futures::stream::{Stream, StreamExt, TryStreamExt};
-use futures_ext::{BoxFuture, FutureExt};
+use futures_01_ext::{BoxFuture, FutureExt};
 use futures_old::{future::Shared, Future, Stream as OldStream};
 
 use blobrepo::BlobRepo;

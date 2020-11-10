@@ -29,7 +29,7 @@ use futures::{
     future::{self, try_join_all, Future},
     stream::{self, BoxStream},
 };
-use futures_ext::{BoxFuture as OldBoxFuture, FutureExt as OldFutureExt};
+use futures_01_ext::{BoxFuture as OldBoxFuture, FutureExt as OldFutureExt};
 use futures_old::{future::Shared, Future as OldFuture};
 use futures_util::{compat::Future01CompatExt, try_join, StreamExt, TryStreamExt};
 use hooks::HookRejectionInfo;

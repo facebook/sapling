@@ -38,7 +38,7 @@ use futures::{
     future::{try_join_all, FutureExt},
     try_join,
 };
-use futures_ext::{try_boxfuture, FutureExt as OldFutureExt};
+use futures_01_ext::{try_boxfuture, FutureExt as OldFutureExt};
 use hooks::{CrossRepoPushSource, HookRejection};
 use live_commit_sync_config::{CfgrLiveCommitSyncConfig, LiveCommitSyncConfig};
 use metaconfig_types::CommitSyncConfig;
