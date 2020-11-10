@@ -573,6 +573,8 @@ class Top:
             return (stage, metric)
         except KeyError:
             return None
+        except ValueError:
+            return None
 
     def render(self, window: Window) -> None:
         window.reset()
