@@ -48,6 +48,18 @@ impl<FileId> BonsaiDiffFileChange<FileId> {
             Self::Changed(path, ..) | Self::ChangedReusedId(path, ..) | Self::Deleted(path) => path,
         }
     }
+    pub fn file_id(&self) -> Option<&FileId> {
+        match self {
+            Self::Changed(_, _, fid) | Self::ChangedReusedId(_, _, fid) => Some(fid),
+            Self::Deleted(_) => None,
+        }
+    }
+    pub fn file_type(&self) -> Option<&FileType> {
+        match self {
+            Self::Changed(_, ft, _) | Self::ChangedReusedId(_, ft, _) => Some(ft),
+            Self::Deleted(_) => None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
