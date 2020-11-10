@@ -277,6 +277,9 @@ impl Convert for RawInfinitepushParams {
                 }
                 _ => return Err(anyhow!("unknown bookmarks filler operation mode!")),
             },
+            populate_reverse_bookmarks_filler_queue: self
+                .populate_reverse_bookmarks_filler_queue
+                .unwrap_or(false),
         })
     }
 }

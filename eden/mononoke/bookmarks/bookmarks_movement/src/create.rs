@@ -142,10 +142,28 @@ impl<'op> CreateBookmarkOp<'op> {
         check_repo_lock(repo_read_write_fetcher, kind, self.pushvars).await?;
 
         let mut txn = repo.update_bookmark_transaction(ctx.clone());
-        let mut txn_hook = None;
+        let txn_hook;
 
         match kind {
             BookmarkKind::Scratch => {
+                // TODO: remove this once hg->mononoke migration is done
+                // as we won't need any syncing between hg and mononoke then.
+                #[cfg(fbcode_build)]
+                {
+                    txn_hook =
+                        crate::facebook::bookmarks_filler::populate_bookmarks_filler_txn_hook(
+                            ctx,
+                            repo,
+                            infinitepush_params,
+                            self.bookmark,
+                            self.target,
+                        )
+                        .await?;
+                }
+                #[cfg(not(fbcode_build))]
+                {
+                    txn_hook = None;
+                }
                 txn.create_scratch(self.bookmark, self.target)?;
             }
             BookmarkKind::Public => {

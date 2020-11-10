@@ -8,6 +8,7 @@ include = ["**/*.rs"]
 
 [dependencies]
 blobrepo = { path = "../../blobrepo" }
+blobrepo_hg = { path = "../../blobrepo/blobrepo_hg" }
 blobstore = { path = "../../blobstore" }
 bonsai_git_mapping = { path = "../../bonsai_git_mapping" }
 bookmarks = { path = ".." }
@@ -16,6 +17,7 @@ context = { path = "../../server/context" }
 git_mapping_pushrebase_hook = { path = "../../bonsai_git_mapping/git_mapping_pushrebase_hook" }
 globalrev_pushrebase_hook = { path = "../../bonsai_globalrev_mapping/globalrev_pushrebase_hook" }
 hooks = { path = "../../hooks" }
+mercurial_types = { path = "../../mercurial/types" }
 metaconfig_types = { path = "../../metaconfig/types" }
 mononoke_types = { path = "../../mononoke_types" }
 pushrebase = { path = "../../pushrebase" }
@@ -24,6 +26,7 @@ repo_read_write_status = { path = "../../repo_client/repo_read_write_status" }
 revset = { path = "../../revset" }
 scuba_ext = { path = "../../common/scuba_ext" }
 tunables = { path = "../../tunables" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
@@ -31,6 +34,7 @@ async-trait = "0.1.29"
 bytes = { version = "0.5", features = ["serde"] }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 itertools = "0.8"
+slog = { version = "2.5", features = ["max_level_debug"] }
 thiserror = "1.0"
 
 [dev-dependencies]

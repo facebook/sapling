@@ -1023,6 +1023,9 @@ pub struct InfinitepushParams {
 
     /// Bookmarks filler operation mode
     pub bookmarks_filler: CommitcloudBookmarksFillerMode,
+
+    /// Whether to write scratch bookmark updates to the reverse filler queue
+    pub populate_reverse_bookmarks_filler_queue: bool,
 }
 
 impl Default for InfinitepushParams {
@@ -1034,6 +1037,7 @@ impl Default for InfinitepushParams {
             populate_reverse_filler_queue: false,
             commit_scribe_category: None,
             bookmarks_filler: Default::default(),
+            populate_reverse_bookmarks_filler_queue: false,
         }
     }
 }
