@@ -76,9 +76,9 @@ setup configuration
   $ mononoke_admin bookmarks list --kind publishing 2>/dev/null
   master_bookmark	4b71c845e8783e58fce825fa80254840eba291d323a5d69218ad927fc801153c	26805aba1e600a82e93661149f2313866a221a7b
 
-  $ REPOID=2 blobimport repo-hg/.hg backup
+  $ REPOID=2 blobimport repo-hg/.hg backup --backup-from-repo-id 0
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select * from mutable_counters";
   0|highest-imported-gen-num|2
   2|highest-imported-gen-num|3
   $ REPOID=2 mononoke_admin bookmarks list --kind publishing 2>/dev/null
-  master_bookmark	c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd	26805aba1e600a82e93661149f2313866a221a7b
+  master_bookmark	4b71c845e8783e58fce825fa80254840eba291d323a5d69218ad927fc801153c	26805aba1e600a82e93661149f2313866a221a7b

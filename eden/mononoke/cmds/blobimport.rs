@@ -43,6 +43,7 @@ use synced_commit_mapping::SqlSyncedCommitMapping;
 
 const ARG_DERIVED_DATA_TYPE: &str = "derived-data-type";
 const ARG_FIND_ALREADY_IMPORTED_REV_ONLY: &str = "find-already-imported-rev-only";
+const BACKUP_FROM_REPO_ID: &str = "backup-from-repo-id";
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
     args::MononokeApp::new("revlog to blob importer")
@@ -108,6 +109,12 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                       updates manifold-next-rev-to-import if it's set. Note that we might have \
                       a situation where revision i is imported, i+1 is not and i+2 is imported. \
                       In that case this function would return i.")
+        )
+        .arg(
+            Arg::with_name(BACKUP_FROM_REPO_ID)
+            .long(BACKUP_FROM_REPO_ID)
+            .value_name("ID")
+            .help("numeric ID of backup source of truth mononoke repository (used only for backup jobs to sync bonsai changesets)"),
         )
 }
 
@@ -303,6 +310,13 @@ async fn run_blobimport<'a>(
     )
     .await?;
 
+    let origin_repo = if matches.is_present(BACKUP_FROM_REPO_ID) {
+        let repo_id = args::get_repo_id_from_value(config_store, &matches, BACKUP_FROM_REPO_ID)?;
+        Some(args::open_repo_with_repo_id(fb, &logger, repo_id, &matches).await?)
+    } else {
+        None
+    };
+
     let globalrevs_store = Arc::new(globalrevs_store);
     let synced_commit_mapping = Arc::new(synced_commit_mapping);
 
@@ -327,6 +341,7 @@ async fn run_blobimport<'a>(
             populate_git_mapping,
             small_repo_id,
             derived_data_types,
+            origin_repo,
         };
 
         let maybe_latest_imported_rev = if find_latest_imported_rev_only {

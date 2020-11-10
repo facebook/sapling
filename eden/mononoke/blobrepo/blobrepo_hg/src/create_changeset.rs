@@ -23,9 +23,9 @@ use futures_old::IntoFuture;
 use futures_stats::Timed;
 use mercurial_types::{
     blobs::{ChangesetMetadata, HgBlobChangeset, HgBlobEntry},
-    HgNodeHash, RepoPath,
+    HgManifestId, HgNodeHash, RepoPath,
 };
-use mononoke_types::{BlobstoreValue, BonsaiChangeset, MPath};
+use mononoke_types::{BlobstoreValue, BonsaiChangeset, ChangesetId, MPath};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use stats::prelude::*;
 use std::{
@@ -54,6 +54,19 @@ pub struct CreateChangeset {
     pub sub_entries: BoxStream<(HgBlobEntry, RepoPath), Error>,
     pub cs_metadata: ChangesetMetadata,
     pub must_check_case_conflicts: bool,
+    pub create_bonsai_changeset_hook: Option<
+        Arc<
+            dyn Fn(
+                    CoreContext,
+                    HgBlobChangeset,
+                    Vec<HgManifestId>,
+                    Vec<ChangesetId>,
+                    BlobRepo,
+                ) -> BoxFuture<BonsaiChangeset, Error>
+                + Send
+                + Sync,
+        >,
+    >,
 }
 
 impl CreateChangeset {
@@ -94,6 +107,29 @@ impl CreateChangeset {
                 event_id,
             );
         let must_check_case_conflicts = self.must_check_case_conflicts.clone();
+        let create_bonsai_changeset_object = match self.create_bonsai_changeset_hook {
+            Some(hook) => Arc::clone(&hook),
+            None => Arc::new(
+                |
+                    ctx: CoreContext,
+                    hg_cs: HgBlobChangeset,
+                    parent_manifest_hashes: Vec<HgManifestId>,
+                    bonsai_parents: Vec<ChangesetId>,
+                    repo: BlobRepo,
+                | {
+                    create_bonsai_changeset_object(
+                        ctx,
+                        hg_cs,
+                        parent_manifest_hashes,
+                        bonsai_parents,
+                        repo,
+                    )
+                    .boxed()
+                    .compat()
+                    .boxify()
+                },
+            ),
+        };
         let changeset = {
             let mut scuba_logger = scuba_logger.clone();
             upload_entries
@@ -151,8 +187,6 @@ impl CreateChangeset {
                                         bonsai_parents,
                                         repo.clone(),
                                     )
-                                    .boxed()
-                                    .compat()
                                     .map(|bonsai_cs| (hg_cs, bonsai_cs))
                                 }
                             });

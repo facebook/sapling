@@ -651,6 +651,15 @@ pub fn get_target_repo_id<'a>(
     Ok(repo_id)
 }
 
+pub fn get_repo_id_from_value<'a>(
+    config_store: &ConfigStore,
+    matches: &ArgMatches<'a>,
+    repo_id_arg: &str,
+) -> Result<RepositoryId> {
+    let (repo_id, _) = get_repo_id_and_name_from_values(config_store, matches, "", repo_id_arg)?;
+    Ok(repo_id)
+}
+
 pub async fn open_sql<T>(
     fb: FacebookInit,
     config_store: &ConfigStore,

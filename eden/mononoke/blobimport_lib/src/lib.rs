@@ -72,6 +72,7 @@ pub struct Blobimport<'a> {
     pub populate_git_mapping: bool,
     pub small_repo_id: Option<RepositoryId>,
     pub derived_data_types: Vec<String>,
+    pub origin_repo: Option<BlobRepo>,
 }
 
 impl<'a> Blobimport<'a> {
@@ -95,6 +96,7 @@ impl<'a> Blobimport<'a> {
             populate_git_mapping,
             small_repo_id,
             derived_data_types,
+            origin_repo,
         } = self;
 
         // Take refs to avoid `async move` blocks capturing data data
@@ -132,7 +134,7 @@ impl<'a> Blobimport<'a> {
             concurrent_lfs_imports,
             fixed_parent_order,
         }
-        .upload(changesets, is_import_from_beggining)
+        .upload(changesets, is_import_from_beggining, origin_repo)
         .enumerate()
         .compat()
         .map_ok({
