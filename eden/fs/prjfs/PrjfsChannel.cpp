@@ -61,33 +61,26 @@ HRESULT startEnumeration(
     auto dispatcher = channel->getDispatcher();
     auto guid = Guid(*enumerationId);
     auto context =
-        std::make_unique<PrjfsRequestContext>(channel, *callbackData);
+        std::make_shared<PrjfsRequestContext>(channel, *callbackData);
     auto path = RelativePath(callbackData->FilePathName);
 
-    context
-        ->catchErrors(folly::makeFutureWith([context = context.get(),
-                                             channel,
-                                             dispatcher,
-                                             guid = std::move(guid),
-                                             path = std::move(path)] {
-          auto requestWatch =
-              std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(
-                  nullptr);
-          auto histogram = &ChannelThreadStats::openDir;
-          context->startRequest(
-              dispatcher->getStats(), histogram, requestWatch);
+    auto fut = folly::makeFutureWith([context,
+                                      channel,
+                                      dispatcher,
+                                      guid = std::move(guid),
+                                      path = std::move(path)] {
+      auto requestWatch =
+          std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(nullptr);
+      auto histogram = &ChannelThreadStats::openDir;
+      context->startRequest(dispatcher->getStats(), histogram, requestWatch);
 
-          FB_LOGF(
-              channel->getStraceLogger(),
-              DBG7,
-              "opendir({}, guid={})",
-              path,
-              guid);
-          return dispatcher->opendir(path, std::move(guid), *context)
-              .thenValue(
-                  [context = context](auto&&) { context->sendSuccess(); });
-        }))
-        .ensure([context = std::move(context)] {});
+      FB_LOGF(
+          channel->getStraceLogger(), DBG7, "opendir({}, guid={})", path, guid);
+      return dispatcher->opendir(path, std::move(guid), *context)
+          .thenValue([context](auto&&) { context->sendSuccess(); });
+    });
+
+    context->catchErrors(std::move(fut)).ensure([context] {});
 
     return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
   } catch (const std::exception& ex) {
@@ -138,60 +131,56 @@ HRESULT getPlaceholderInfo(const PRJ_CALLBACK_DATA* callbackData) noexcept {
     auto channel = getChannel(callbackData);
     auto dispatcher = channel->getDispatcher();
     auto context =
-        std::make_unique<PrjfsRequestContext>(channel, *callbackData);
+        std::make_shared<PrjfsRequestContext>(channel, *callbackData);
 
     auto path = RelativePath(callbackData->FilePathName);
     auto virtualizationContext = callbackData->NamespaceVirtualizationContext;
 
-    context
-        ->catchErrors(folly::makeFutureWith([context = context.get(),
-                                             channel,
-                                             dispatcher,
-                                             path = std::move(path),
-                                             virtualizationContext] {
-          auto requestWatch =
-              std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(
-                  nullptr);
-          auto histogram = &ChannelThreadStats::lookup;
-          context->startRequest(
-              dispatcher->getStats(), histogram, requestWatch);
+    auto fut = folly::makeFutureWith([context,
+                                      channel,
+                                      dispatcher,
+                                      path = std::move(path),
+                                      virtualizationContext] {
+      auto requestWatch =
+          std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(nullptr);
+      auto histogram = &ChannelThreadStats::lookup;
+      context->startRequest(dispatcher->getStats(), histogram, requestWatch);
 
-          FB_LOGF(channel->getStraceLogger(), DBG7, "lookup({})", path);
-          return dispatcher->lookup(std::move(path), *context)
-              .thenValue([context = context,
-                          virtualizationContext = virtualizationContext](
-                             const std::optional<InodeMetadata>&& optMetadata) {
-                if (!optMetadata) {
-                  context->sendError(HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND));
-                  return folly::makeFuture(folly::unit);
-                }
-                auto metadata = std::move(optMetadata).value();
+      FB_LOGF(channel->getStraceLogger(), DBG7, "lookup({})", path);
+      return dispatcher->lookup(std::move(path), *context)
+          .thenValue([context, virtualizationContext = virtualizationContext](
+                         const std::optional<InodeMetadata>&& optMetadata) {
+            if (!optMetadata) {
+              context->sendError(HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND));
+              return folly::makeFuture(folly::unit);
+            }
+            auto metadata = std::move(optMetadata).value();
 
-                PRJ_PLACEHOLDER_INFO placeholderInfo{};
-                placeholderInfo.FileBasicInfo.IsDirectory = metadata.isDir;
-                placeholderInfo.FileBasicInfo.FileSize = metadata.size;
-                auto inodeName = metadata.path.wide();
+            PRJ_PLACEHOLDER_INFO placeholderInfo{};
+            placeholderInfo.FileBasicInfo.IsDirectory = metadata.isDir;
+            placeholderInfo.FileBasicInfo.FileSize = metadata.size;
+            auto inodeName = metadata.path.wide();
 
-                HRESULT result = PrjWritePlaceholderInfo(
-                    virtualizationContext,
-                    inodeName.c_str(),
-                    &placeholderInfo,
-                    sizeof(placeholderInfo));
+            HRESULT result = PrjWritePlaceholderInfo(
+                virtualizationContext,
+                inodeName.c_str(),
+                &placeholderInfo,
+                sizeof(placeholderInfo));
 
-                if (FAILED(result)) {
-                  return folly::makeFuture<folly::Unit>(
-                      makeHResultErrorExplicit(
-                          result,
-                          fmt::format(
-                              FMT_STRING("Writing placeholder for {}"),
-                              metadata.path)));
-                }
+            if (FAILED(result)) {
+              return folly::makeFuture<folly::Unit>(makeHResultErrorExplicit(
+                  result,
+                  fmt::format(
+                      FMT_STRING("Writing placeholder for {}"),
+                      metadata.path)));
+            }
 
-                context->sendSuccess();
-                return folly::makeFuture(folly::unit);
-              });
-        }))
-        .ensure([context = std::move(context)] {});
+            context->sendSuccess();
+            return folly::makeFuture(folly::unit);
+          });
+    });
+
+    context->catchErrors(std::move(fut)).ensure([context] {});
 
     return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
   } catch (const std::exception& ex) {
@@ -206,32 +195,30 @@ HRESULT queryFileName(const PRJ_CALLBACK_DATA* callbackData) noexcept {
     auto channel = getChannel(callbackData);
     auto dispatcher = channel->getDispatcher();
     auto context =
-        std::make_unique<PrjfsRequestContext>(channel, *callbackData);
+        std::make_shared<PrjfsRequestContext>(channel, *callbackData);
 
     auto path = RelativePath(callbackData->FilePathName);
 
-    context
-        ->catchErrors(folly::makeFutureWith([context = context.get(),
-                                             channel,
-                                             dispatcher,
-                                             path = std::move(path)] {
-          auto requestWatch =
-              std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(
-                  nullptr);
-          auto histogram = &ChannelThreadStats::access;
-          context->startRequest(
-              dispatcher->getStats(), histogram, requestWatch);
-          FB_LOGF(channel->getStraceLogger(), DBG7, "access({})", path);
-          return dispatcher->access(std::move(path), *context)
-              .thenValue([context = context](bool present) {
-                if (present) {
-                  context->sendSuccess();
-                } else {
-                  context->sendError(HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND));
-                }
-              });
-        }))
-        .ensure([context = std::move(context)] {});
+    auto fut = folly::makeFutureWith([context,
+                                      channel,
+                                      dispatcher,
+                                      path = std::move(path)] {
+      auto requestWatch =
+          std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(nullptr);
+      auto histogram = &ChannelThreadStats::access;
+      context->startRequest(dispatcher->getStats(), histogram, requestWatch);
+      FB_LOGF(channel->getStraceLogger(), DBG7, "access({})", path);
+      return dispatcher->access(std::move(path), *context)
+          .thenValue([context](bool present) {
+            if (present) {
+              context->sendSuccess();
+            } else {
+              context->sendError(HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND));
+            }
+          });
+    });
+
+    context->catchErrors(std::move(fut)).ensure([context] {});
 
     return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
   } catch (const std::exception& ex) {
@@ -326,106 +313,104 @@ HRESULT getFileData(
     auto channel = getChannel(callbackData);
     auto dispatcher = channel->getDispatcher();
     auto context =
-        std::make_unique<PrjfsRequestContext>(channel, *callbackData);
+        std::make_shared<PrjfsRequestContext>(channel, *callbackData);
 
-    context
-        ->catchErrors(folly::makeFutureWith(
-            [context = context.get(),
-             channel,
-             dispatcher,
-             path = RelativePath(callbackData->FilePathName),
-             virtualizationContext =
-                 callbackData->NamespaceVirtualizationContext,
-             dataStreamId = Guid(callbackData->DataStreamId),
-             byteOffset,
-             length] {
-              auto requestWatch =
-                  std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(
-                      nullptr);
-              auto histogram = &ChannelThreadStats::read;
-              context->startRequest(
-                  dispatcher->getStats(), histogram, requestWatch);
+    auto fut = folly::makeFutureWith(
+        [context,
+         channel,
+         dispatcher,
+         path = RelativePath(callbackData->FilePathName),
+         virtualizationContext = callbackData->NamespaceVirtualizationContext,
+         dataStreamId = Guid(callbackData->DataStreamId),
+         byteOffset,
+         length] {
+          auto requestWatch =
+              std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(
+                  nullptr);
+          auto histogram = &ChannelThreadStats::read;
+          context->startRequest(
+              dispatcher->getStats(), histogram, requestWatch);
 
-              FB_LOGF(
-                  channel->getStraceLogger(),
-                  DBG7,
-                  "read({}, off={}, len={})",
-                  path,
-                  byteOffset,
-                  length);
-              return dispatcher
-                  ->read(std::move(path), byteOffset, length, *context)
-                  .thenValue([context = context,
-                              virtualizationContext = virtualizationContext,
-                              dataStreamId = std::move(dataStreamId),
-                              byteOffset = byteOffset,
-                              length = length](const std::string content) {
-                    //
-                    // We should return file data which is smaller than
-                    // our kMaxChunkSize and meets the memory alignment
-                    // requirements of the virtualization instance's storage
-                    // device.
-                    //
+          FB_LOGF(
+              channel->getStraceLogger(),
+              DBG7,
+              "read({}, off={}, len={})",
+              path,
+              byteOffset,
+              length);
+          return dispatcher->read(std::move(path), byteOffset, length, *context)
+              .thenValue([context,
+                          virtualizationContext = virtualizationContext,
+                          dataStreamId = std::move(dataStreamId),
+                          byteOffset = byteOffset,
+                          length = length](const std::string content) {
+                //
+                // We should return file data which is smaller than
+                // our kMaxChunkSize and meets the memory alignment
+                // requirements of the virtualization instance's storage
+                // device.
+                //
 
-                    HRESULT result;
-                    if (content.length() <= kMinChunkSize) {
-                      //
-                      // If the file is small - copy the whole file in one shot.
-                      //
-                      result = readSingleFileChunk(
-                          virtualizationContext,
-                          dataStreamId,
-                          content,
-                          /*startOffset=*/0,
-                          /*writeLength=*/content.length());
+                HRESULT result;
+                if (content.length() <= kMinChunkSize) {
+                  //
+                  // If the file is small - copy the whole file in one shot.
+                  //
+                  result = readSingleFileChunk(
+                      virtualizationContext,
+                      dataStreamId,
+                      content,
+                      /*startOffset=*/0,
+                      /*writeLength=*/content.length());
 
-                    } else if (length <= kMaxChunkSize) {
-                      //
-                      // If the request is with in our kMaxChunkSize - copy the
-                      // entire request.
-                      //
-                      result = readSingleFileChunk(
-                          virtualizationContext,
-                          dataStreamId,
-                          content,
-                          /*startOffset=*/byteOffset,
-                          /*writeLength=*/length);
-                    } else {
-                      //
-                      // When the request is larger than kMaxChunkSize we split
-                      // the request into multiple chunks.
-                      //
-                      PRJ_VIRTUALIZATION_INSTANCE_INFO instanceInfo;
-                      result = PrjGetVirtualizationInstanceInfo(
-                          virtualizationContext, &instanceInfo);
+                } else if (length <= kMaxChunkSize) {
+                  //
+                  // If the request is with in our kMaxChunkSize - copy the
+                  // entire request.
+                  //
+                  result = readSingleFileChunk(
+                      virtualizationContext,
+                      dataStreamId,
+                      content,
+                      /*startOffset=*/byteOffset,
+                      /*writeLength=*/length);
+                } else {
+                  //
+                  // When the request is larger than kMaxChunkSize we split
+                  // the request into multiple chunks.
+                  //
+                  PRJ_VIRTUALIZATION_INSTANCE_INFO instanceInfo;
+                  result = PrjGetVirtualizationInstanceInfo(
+                      virtualizationContext, &instanceInfo);
 
-                      if (SUCCEEDED(result)) {
-                        uint64_t startOffset = byteOffset;
-                        uint64_t endOffset = BlockAlignTruncate(
-                            startOffset + kMaxChunkSize,
-                            instanceInfo.WriteAlignment);
-                        DCHECK(endOffset > 0);
-                        DCHECK(endOffset > startOffset);
+                  if (SUCCEEDED(result)) {
+                    uint64_t startOffset = byteOffset;
+                    uint64_t endOffset = BlockAlignTruncate(
+                        startOffset + kMaxChunkSize,
+                        instanceInfo.WriteAlignment);
+                    DCHECK(endOffset > 0);
+                    DCHECK(endOffset > startOffset);
 
-                        uint64_t chunkSize = endOffset - startOffset;
-                        result = readMultipleFileChunks(
-                            virtualizationContext,
-                            dataStreamId,
-                            content,
-                            /*startOffset=*/startOffset,
-                            /*length=*/length,
-                            /*chunkSize=*/chunkSize);
-                      }
-                    }
+                    uint64_t chunkSize = endOffset - startOffset;
+                    result = readMultipleFileChunks(
+                        virtualizationContext,
+                        dataStreamId,
+                        content,
+                        /*startOffset=*/startOffset,
+                        /*length=*/length,
+                        /*chunkSize=*/chunkSize);
+                  }
+                }
 
-                    if (FAILED(result)) {
-                      context->sendError(result);
-                    } else {
-                      context->sendSuccess();
-                    }
-                  });
-            }))
-        .ensure([context = std::move(context)] {});
+                if (FAILED(result)) {
+                  context->sendError(result);
+                } else {
+                  context->sendSuccess();
+                }
+              });
+        });
+
+    context->catchErrors(std::move(fut)).ensure([context] {});
 
     return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
   } catch (const std::exception& ex) {
@@ -506,38 +491,35 @@ HRESULT notification(
       auto channel = getChannel(callbackData);
       auto dispatcher = channel->getDispatcher();
       auto context =
-          std::make_unique<PrjfsRequestContext>(channel, *callbackData);
+          std::make_shared<PrjfsRequestContext>(channel, *callbackData);
       auto histogram = it->second.histogram;
       auto handler = it->second.handler;
 
       auto relPath = RelativePath(callbackData->FilePathName);
       auto destPath = RelativePath(destinationFileName);
 
-      context
-          ->catchErrors(folly::makeFutureWith([context = context.get(),
-                                               handler = handler,
-                                               histogram = histogram,
-                                               dispatcher = dispatcher,
-                                               relPath = std::move(relPath),
-                                               destPath = std::move(destPath),
-                                               isDirectory] {
-            auto requestWatch =
-                std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(
-                    nullptr);
-            context->startRequest(
-                dispatcher->getStats(), histogram, requestWatch);
+      auto fut = folly::makeFutureWith([context,
+                                        handler = handler,
+                                        histogram = histogram,
+                                        dispatcher = dispatcher,
+                                        relPath = std::move(relPath),
+                                        destPath = std::move(destPath),
+                                        isDirectory] {
+        auto requestWatch =
+            std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(
+                nullptr);
+        context->startRequest(dispatcher->getStats(), histogram, requestWatch);
 
-            return (dispatcher->*handler)(
-                       std::move(relPath),
-                       std::move(destPath),
-                       isDirectory,
-                       *context)
-                .thenValue([context = context](auto&&) {
-                  context->sendNotificationSuccess();
-                });
-          }))
-          // Make sure that the context is alive for the duration of the future.
-          .ensure([context = std::move(context)] {});
+        return (dispatcher->*handler)(
+                   std::move(relPath),
+                   std::move(destPath),
+                   isDirectory,
+                   *context)
+            .thenValue(
+                [context](auto&&) { context->sendNotificationSuccess(); });
+      });
+
+      context->catchErrors(std::move(fut)).ensure([context] {});
 
       return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
     }
