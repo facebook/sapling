@@ -98,7 +98,7 @@ pub struct CreateCommitContext<'a> {
     ctx: &'a CoreContext,
     repo: &'a BlobRepo,
     parents: Vec<CommitIdentifier>,
-    files: BTreeMap<String, CreateFileContext>,
+    files: BTreeMap<MPath, CreateFileContext>,
     message: Option<String>,
     author: Option<String>,
     author_date: Option<DateTime>,
@@ -149,15 +149,15 @@ impl<'a> CreateCommitContext<'a> {
         self
     }
 
-    pub fn add_file(mut self, path: impl Into<String>, content: impl Into<String>) -> Self {
+    pub fn add_file(mut self, path: impl TryInto<MPath>, content: impl Into<String>) -> Self {
         self.files.insert(
-            path.into(),
+            path.try_into().ok().expect("Invalid path"),
             CreateFileContext::FromHelper(content.into(), FileType::Regular, None),
         );
         self
     }
 
-    pub fn add_files<P: Into<String>, C: Into<String>, I: IntoIterator<Item = (P, C)>>(
+    pub fn add_files<P: TryInto<MPath>, C: Into<String>, I: IntoIterator<Item = (P, C)>>(
         mut self,
         path_contents: I,
     ) -> Self {
@@ -167,24 +167,28 @@ impl<'a> CreateCommitContext<'a> {
         self
     }
 
-    pub fn delete_file(mut self, path: impl Into<String>) -> Self {
-        self.files.insert(path.into(), CreateFileContext::Deleted);
+    pub fn delete_file(mut self, path: impl TryInto<MPath>) -> Self {
+        self.files.insert(
+            path.try_into().ok().expect("Invalid path"),
+            CreateFileContext::Deleted,
+        );
         self
     }
 
-    pub fn forget_file(mut self, path: impl AsRef<str>) -> Self {
-        self.files.remove(path.as_ref());
+    pub fn forget_file(mut self, path: impl TryInto<MPath>) -> Self {
+        let path = path.try_into().ok().expect("Invalid path");
+        self.files.remove(&path);
         self
     }
 
     pub fn add_file_with_type(
         mut self,
-        path: impl Into<String>,
+        path: impl TryInto<MPath>,
         content: impl Into<String>,
         t: FileType,
     ) -> Self {
         self.files.insert(
-            path.into(),
+            path.try_into().ok().expect("Invalid path"),
             CreateFileContext::FromHelper(content.into(), t, None),
         );
         self
@@ -192,21 +196,26 @@ impl<'a> CreateCommitContext<'a> {
 
     pub fn add_file_with_copy_info(
         mut self,
-        path: &str,
+        path: impl TryInto<MPath>,
         content: impl Into<String>,
-        (parent, parent_path): (impl Into<CommitIdentifier>, &str),
-    ) -> Result<Self, Error> {
-        let copy_info = (MPath::new(parent_path)?, parent.into());
+        (parent, parent_path): (impl Into<CommitIdentifier>, impl TryInto<MPath>),
+    ) -> Self {
+        let copy_info = (
+            parent_path.try_into().ok().expect("Invalid path"),
+            parent.into(),
+        );
         self.files.insert(
-            path.into(),
+            path.try_into().ok().expect("Invalid path"),
             CreateFileContext::FromHelper(content.into(), FileType::Regular, Some(copy_info)),
         );
-        Ok(self)
+        self
     }
 
-    pub fn add_file_change(mut self, path: impl Into<String>, file_change: FileChange) -> Self {
-        self.files
-            .insert(path.into(), CreateFileContext::FromFileChange(file_change));
+    pub fn add_file_change(mut self, path: impl TryInto<MPath>, file_change: FileChange) -> Self {
+        self.files.insert(
+            path.try_into().ok().expect("Invalid path"),
+            CreateFileContext::FromFileChange(file_change),
+        );
         self
     }
 
@@ -264,7 +273,6 @@ impl<'a> CreateCommitContext<'a> {
         };
 
         for (path, file_change) in files {
-            let path = MPath::new(path)?;
             bcs.file_changes.insert(path, file_change);
         }
 

@@ -83,7 +83,7 @@ pub async fn create_from_dag_with_changes<'a>(
                 .collect();
             let mut create_commit = CreateCommitContext::new(ctx, repo, parent_ids)
                 .set_message(name)
-                .add_file(name, name);
+                .add_file(name.as_str(), name);
             if let Some(change) = changes.get_mut(name.as_str()) {
                 create_commit = change(create_commit);
             }

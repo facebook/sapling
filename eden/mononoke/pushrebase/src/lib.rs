@@ -1716,7 +1716,7 @@ mod tests {
                 .commit()
                 .await?;
             let bcs_id_2 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_1])
-                .add_file_with_copy_info("file_renamed", "content", (bcs_id_1, "file"))?
+                .add_file_with_copy_info("file_renamed", "content", (bcs_id_1, "file"))
                 .commit()
                 .await?;
 
@@ -2093,7 +2093,7 @@ mod tests {
                         let file = format!("f{}", index);
                         let content = format!("{}", index);
                         let bcs = CreateCommitContext::new(&ctx, &repo, vec![head])
-                            .add_file(&file, content)
+                            .add_file(file.as_str(), content)
                             .commit()
                             .await?;
                         bcss.push(bcs);
@@ -2356,7 +2356,7 @@ mod tests {
             );
 
             let bcs = CreateCommitContext::new(&ctx, &repo, vec![root])
-                .add_file_change(path_1.to_string(), file_1_exec.clone())
+                .add_file_change(path_1.clone(), file_1_exec.clone())
                 .commit()
                 .await?;
 
@@ -2515,7 +2515,7 @@ mod tests {
 
                 let f = format!("file{}", i);
                 let bcs_id = CreateCommitContext::new(&ctx, &repo, parents.clone())
-                    .add_file(&f, "content")
+                    .add_file(f.as_str(), "content")
                     .commit()
                     .await?;
 
@@ -2623,7 +2623,7 @@ mod tests {
 
                 let f = format!("file{}", i);
                 let bcs_id = CreateCommitContext::new(&ctx, &repo, parents.clone())
-                    .add_file(&f, "content")
+                    .add_file(f.as_str(), "content")
                     .commit()
                     .await?;
 
@@ -3228,7 +3228,7 @@ mod tests {
             // Move to base file
             let bcs_id_pre_master =
                 CreateCommitContext::new(&ctx, &repo, vec![bcs_id_pre_pre_master])
-                    .add_file_with_copy_info("base", "somecontent", (bcs_id_pre_pre_master, "p1"))?
+                    .add_file_with_copy_info("base", "somecontent", (bcs_id_pre_pre_master, "p1"))
                     .commit()
                     .await?;
 

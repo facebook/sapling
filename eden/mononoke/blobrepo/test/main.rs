@@ -1765,7 +1765,7 @@ mod octopus_merges {
             .add_parent(p1)
             .add_parent(p2)
             .add_parent(p3)
-            .add_file_with_copy_info("foo", "bar", (p3, "foo"))?
+            .add_file_with_copy_info("foo", "bar", (p3, "foo"))
             .commit()
             .await?;
 

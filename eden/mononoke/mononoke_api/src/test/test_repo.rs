@@ -909,7 +909,7 @@ async fn test_diff_with_moves(fb: FacebookInit) -> Result<(), Error> {
         .await?;
 
     let commit_with_move = CreateCommitContext::new(&ctx, &blobrepo, vec![root])
-        .add_file_with_copy_info("file_moved", "context", (root, "file_to_move"))?
+        .add_file_with_copy_info("file_moved", "context", (root, "file_to_move"))
         .delete_file("file_to_move")
         .commit()
         .await?;

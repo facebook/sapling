@@ -381,7 +381,7 @@ mod test {
         let dir = "dir";
         let file1 = format!("{}/file1", dir);
         let root = CreateCommitContext::new_root(&ctx, &repo)
-            .add_file(&file1, "content1")
+            .add_file(file1.as_str(), "content1")
             .commit()
             .await?;
         let child = CreateCommitContext::new(&ctx, &repo, vec![root])

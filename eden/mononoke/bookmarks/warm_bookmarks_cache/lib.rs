@@ -801,7 +801,7 @@ mod tests {
 
         for i in 1..50 {
             let new_master = CreateCommitContext::new(&ctx, &repo, vec!["master"])
-                .add_file(format!("{}", i), "content")
+                .add_file(format!("{}", i).as_str(), "content")
                 .commit()
                 .await?;
 
@@ -840,7 +840,7 @@ mod tests {
         // First history threshold is 10. Let's make sure we don't have off-by one errors
         for i in 0..10 {
             let new_master = CreateCommitContext::new(&ctx, &repo, vec!["master"])
-                .add_file(format!("{}", i), "content")
+                .add_file(format!("{}", i).as_str(), "content")
                 .commit()
                 .await?;
 
@@ -932,7 +932,7 @@ mod tests {
         info!(ctx.logger(), "created stack of commits");
         for i in 1..10 {
             let master = CreateCommitContext::new(&ctx, &repo, vec!["master"])
-                .add_file(format!("somefile{}", i), "content")
+                .add_file(format!("somefile{}", i).as_str(), "content")
                 .commit()
                 .await?;
             info!(ctx.logger(), "created {}", master);
