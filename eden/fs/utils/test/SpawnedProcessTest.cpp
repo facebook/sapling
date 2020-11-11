@@ -138,3 +138,28 @@ TEST(SpawnedProcess, inputThreaded) {
 TEST(SpawnedProcess, inputNotThreaded) {
   test_pipe_input(false);
 }
+
+TEST(SpawnedProcess, shellQuoting) {
+  std::vector<std::string> args;
+  if (folly::kIsWindows) {
+    args.emplace_back("powershell");
+    args.emplace_back("-Command");
+  } else {
+    args.emplace_back("/bin/sh");
+    args.emplace_back("-c");
+  }
+
+  args.emplace_back("echo \"This is a test\"");
+
+  Options opts;
+  opts.nullStdin();
+  opts.pipeStdout();
+  SpawnedProcess proc(args, std::move(opts));
+  auto outputs = proc.communicate();
+
+  auto status = proc.wait();
+  EXPECT_EQ(status.exitStatus(), 0);
+
+  folly::StringPiece line(outputs.first);
+  EXPECT_EQ(line.subpiece(0, 14), "This is a test");
+}
