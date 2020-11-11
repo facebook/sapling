@@ -22,15 +22,20 @@ def rununbundle(ui, remote, stream):
     try:
         reply = remote.unbundle(stream, [b"force"], remote.url())
     except Exception as e:
-        raise error.Abort("unbunble exception: %s" % (e,))
+        raise error.Abort("unbundle exception: %s" % (e,))
 
     for part in reply.iterparts():
         part.read()
         if part.type.startswith("error:"):
             returncode = 1
-            ui.warn(_("unbundle failed: %s\n") % part.type)
+            ui.warn(_("unbundle failed, error part type: %s\n") % part.type)
             if "message" in part.params:
                 ui.warn(_("part message: %s\n") % (part.params["message"]))
+            if "params" in part.params:
+                ui.warn(
+                    _("part params: %s\n")
+                    % (", ".join(part.params["params"].split("\0")))
+                )
     return returncode
 
 

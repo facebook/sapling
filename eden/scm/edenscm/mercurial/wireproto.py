@@ -1386,6 +1386,7 @@ def unbundleimpl(repo, proto, heads, replaydata=None, respondlightly=False):
                 errpart.addparam("parttype", exc.parttype)
             if exc.params:
                 errpart.addparam("params", "\0".join(exc.params))
+            errpart.addparam("message", str(exc))
         except error.Abort as exc:
             bundler.addpart(bundle2.createerrorpart(str(exc), hint=exc.hint))
         except error.PushRaced as exc:
