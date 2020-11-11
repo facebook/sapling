@@ -23,6 +23,12 @@ from .util import get_eden_cli_cmd
 
 prefetch_profile_cmd = subcmd_mod.Decorator()
 
+# consults the global kill switch to check if this user should prefetch their
+# active prefetch profiles.
+def should_prefetch_profiles(instance: EdenInstance):
+    return instance.get_config_bool("prefetch-profiles.prefetching-enabled", False)
+
+
 # find the profile inside the given checkout and return a set of its contents.
 def get_contents_for_profile(
     checkout: EdenCheckout, profile: str, silent: bool
@@ -144,6 +150,14 @@ def prefetch_profiles(
     revisions: Optional[List[str]],
     predict_revisions: bool,
 ) -> Optional[Glob]:
+    if not should_prefetch_profiles(instance):
+        if not silent:
+            print(
+                "Skipping Prefetch Profiles fetch due to global kill switch. "
+                "This means prefetch-profiles.allow-prefetching is set in the "
+                "eden configs."
+            )
+        return None
 
     # if we are running in the foreground, skip creating a new process to
     # run in, just run it here.
