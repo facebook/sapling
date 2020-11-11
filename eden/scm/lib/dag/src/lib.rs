@@ -13,6 +13,7 @@
 //! Building blocks for the commit graph used by source control.
 
 mod bsearch;
+pub mod clone;
 mod default_impl;
 mod delegate;
 pub mod errors;
@@ -27,10 +28,11 @@ pub mod nameset;
 pub mod ops;
 pub mod protocol;
 pub mod render;
-mod segment;
+pub mod segment;
 pub mod spanset;
 pub mod utils;
 
+pub use clone::CloneData;
 pub use id::{Group, Id, VertexName};
 pub use iddag::IdDag;
 pub use idmap::IdMap;
