@@ -19,38 +19,38 @@ use fbthrift::compact_protocol;
 use sorted_vector_map::SortedVectorMap;
 use std::collections::BTreeMap;
 
-// An fsnode is a manifest node containing summary information about the
-// files in the manifest that is useful in the implementation of
-// filesystems.
-//
-// Fsnodes only exist for trees, and each fsnode is a structure that contains:
-// * A list of its children, containing for each child:
-//   - Name
-//   - Type (regular file, executable file, symlink or sub-directory)
-//   - The content id, size, and content hashes for files
-//   - The fsnode id, simple format hashes, and summary counts for directories
-// * The simple format hashes and summary counts for the directory itself
-//
-// Simple format hashes are a SHA-1 or SHA-256 hash of the directory's
-// contents rendered in the following simple form: "HASH TYPE NAME\0"
-// for each entry in the directory, where "TYPE" is one of 'file', 'exec',
-// 'link', or 'tree', and HASH is the corresponding SHA-1 or SHA-256 hash
-// of the entry (content for files, simple format for directories).
-//
-// The purpose of simple format hashes is to allow clients to construct
-// their own hashes of data they have available locally, in order to do a
-// whole-tree comparison with data stored in Mononoke.
-//
-// The summary counts stored for each directory are:
-// * count of immediate child files
-// * count of immediate child sub-directories
-// * recursive count of descendant files
-// * total size of immediate child files
-// * rercursive total size of descendant files
-//
-// Unlike unodes, fsnodes are not repository-wide unique. If the same set of
-// files and directories appear at different places in the commit graph,
-// they will share fsnodes.
+/// An fsnode is a manifest node containing summary information about the
+/// files in the manifest that is useful in the implementation of
+/// filesystems.
+///
+/// Fsnodes only exist for trees, and each fsnode is a structure that contains:
+/// * A list of its children, containing for each child:
+///   - Name
+///   - Type (regular file, executable file, symlink or sub-directory)
+///   - The content id, size, and content hashes for files
+///   - The fsnode id, simple format hashes, and summary counts for directories
+/// * The simple format hashes and summary counts for the directory itself
+///
+/// Simple format hashes are a SHA-1 or SHA-256 hash of the directory's
+/// contents rendered in the following simple form: "HASH TYPE NAME\0"
+/// for each entry in the directory, where "TYPE" is one of 'file', 'exec',
+/// 'link', or 'tree', and HASH is the corresponding SHA-1 or SHA-256 hash
+/// of the entry (content for files, simple format for directories).
+///
+/// The purpose of simple format hashes is to allow clients to construct
+/// their own hashes of data they have available locally, in order to do a
+/// whole-tree comparison with data stored in Mononoke.
+///
+/// The summary counts stored for each directory are:
+/// * count of immediate child files
+/// * count of immediate child sub-directories
+/// * recursive count of descendant files
+/// * total size of immediate child files
+/// * rercursive total size of descendant files
+///
+/// Unlike unodes, fsnodes are not repository-wide unique. If the same set of
+/// files and directories appear at different places in the commit graph,
+/// they will share fsnodes.
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct Fsnode {

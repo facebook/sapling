@@ -47,6 +47,7 @@ typedef IdType FileUnodeId (rust.newtype)
 typedef IdType ManifestUnodeId (rust.newtype)
 typedef IdType DeletedManifestId(rust.newtype)
 typedef IdType FsnodeId (rust.newtype)
+typedef IdType SkeletonManifestId(rust.newtype)
 typedef IdType MPathHash (rust.newtype)
 
 typedef IdType ContentMetadataId (rust.newtype)
@@ -263,9 +264,56 @@ union FsnodeEntry {
   2: FsnodeDirectory Directory,
 }
 
+// Content-addressed manifest, with metadata useful for filesystem
+// implementations.
+//
+// Fsnodes form a manifest tree, where unique tree content (i.e. the names and
+// contents of files and directories, but not their history) is represented by
+// a single fsnode.  Fsnode identities change when any file content is changed.
+//
+// Fsnode metadata includes summary information about the content ID of
+// files and manifests, and the number of files and sub-directories within
+// directories.
 struct Fsnode {
   1: map<MPathElement, FsnodeEntry> subentries,
   2: FsnodeSummary summary,
+}
+
+struct SkeletonManifestDirectory {
+  1: SkeletonManifestId id,
+  2: SkeletonManifestSummary summary,
+}
+
+struct SkeletonManifestSummary {
+  1: i64 child_files_count,
+  2: i64 child_dirs_count,
+  3: i64 descendant_files_count,
+  4: i64 descendant_dirs_count,
+  5: i32 max_path_len,
+  6: i32 max_path_wchar_len,
+  7: bool child_case_conflicts,
+  8: bool descendant_case_conflicts,
+  9: bool child_non_utf8_filenames,
+  10: bool descendant_non_utf8_filenames,
+  11: bool child_invalid_windows_filenames,
+  12: bool descendant_invalid_windows_filenames,
+}
+
+struct SkeletonManifestEntry {
+  // Present if this is a directory, absent for a file.
+  1: optional SkeletonManifestDirectory directory,
+}
+
+// Structure-addressed manifest, with metadata useful for traversing manifest
+// trees and determining case conflicts.
+//
+// Skeleton manifests form a manifest tree, where unique tree structure (i.e.
+// the names of files and directories, but not their contents or history) is
+// represented by a single skeleton manifest.  Skeleton manifest identities
+// change when files are added or removed.
+struct SkeletonManifest {
+  1: map<MPathElement, SkeletonManifestEntry> subentries,
+  2: SkeletonManifestSummary summary,
 }
 
 // Structure that holds a commit graph, usually a history of a file

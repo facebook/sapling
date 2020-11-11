@@ -30,6 +30,7 @@ use crate::{
     fsnode::Fsnode,
     hash::{Blake2, Blake2Prefix, Context},
     rawbundle2::RawBundle2,
+    skeleton_manifest::SkeletonManifest,
     thrift,
     unode::{FileUnode, ManifestUnode},
 };
@@ -105,6 +106,10 @@ pub struct DeletedManifestId(Blake2);
 /// An identifier for an fsnode
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 pub struct FsnodeId(Blake2);
+
+/// An identifier for a skeleton manifest
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
+pub struct SkeletonManifestId(Blake2);
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 pub struct FastlogBatchId(Blake2);
@@ -446,6 +451,13 @@ impl From<EdenapiFsnodeId> for FsnodeId {
     }
 }
 
+impl_typed_hash! {
+    hash_type => SkeletonManifestId,
+    value_type => SkeletonManifest,
+    context_type => SkeletonManifestIdContext,
+    context_key => "skeletonmanifest",
+}
+
 impl_typed_hash_no_context! {
     hash_type => ContentMetadataId,
     value_type => ContentMetadata,
@@ -578,6 +590,12 @@ mod test {
         let id = FsnodeId::from_byte_array([1; 32]);
         assert_eq!(id.blobstore_key(), format!("fsnode.blake2.{}", id));
 
+        let id = SkeletonManifestId::from_byte_array([1; 32]);
+        assert_eq!(
+            id.blobstore_key(),
+            format!("skeletonmanifest.blake2.{}", id)
+        );
+
         let id = ContentMetadataId::from_byte_array([1; 32]);
         assert_eq!(
             id.blobstore_key(),
@@ -626,6 +644,11 @@ mod test {
         assert_eq!(id, deserialized);
 
         let id = FsnodeId::from_byte_array([1; 32]);
+        let serialized = serde_json::to_string(&id).unwrap();
+        let deserialized = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(id, deserialized);
+
+        let id = SkeletonManifestId::from_byte_array([1; 32]);
         let serialized = serde_json::to_string(&id).unwrap();
         let deserialized = serde_json::from_str(&serialized).unwrap();
         assert_eq!(id, deserialized);

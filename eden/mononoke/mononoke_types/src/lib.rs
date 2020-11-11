@@ -28,6 +28,7 @@ pub mod hash;
 pub mod path;
 pub mod rawbundle2;
 pub mod repo;
+pub mod skeleton_manifest;
 pub mod sql_types;
 pub mod typed_hash;
 pub mod unode;
@@ -49,7 +50,7 @@ pub use repo::{RepositoryId, REPO_PREFIX_REGEX};
 pub use typed_hash::{
     ChangesetId, ChangesetIdPrefix, ChangesetIdsResolvedFromPrefix, ContentChunkId, ContentId,
     ContentMetadataId, DeletedManifestId, FastlogBatchId, FileUnodeId, FsnodeId, ManifestUnodeId,
-    MononokeId, RawBundle2Id,
+    MononokeId, RawBundle2Id, SkeletonManifestId,
 };
 
 mod macros;
