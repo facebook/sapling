@@ -53,11 +53,20 @@ void Notifications::showGenericErrorNotification(const std::exception& err) {
   }
   *lastShown_.wlock() = std::chrono::steady_clock::now();
 
-  SpawnedProcess(
-      {"/bin/sh",
-       "-c",
-       config_.getEdenConfig()->genericErrorNotificationCommand.getValue()})
-      .detach();
+  std::vector<std::string> args;
+  if (folly::kIsWindows) {
+    args.emplace_back("powershell");
+    args.emplace_back("-NoProfile");
+    args.emplace_back("-Command");
+  } else {
+    args.emplace_back("/bin/sh");
+    args.emplace_back("-c");
+  }
+
+  args.emplace_back(
+      config_.getEdenConfig()->genericErrorNotificationCommand.getValue());
+
+  SpawnedProcess(args).detach();
 }
 } // namespace eden
 } // namespace facebook
