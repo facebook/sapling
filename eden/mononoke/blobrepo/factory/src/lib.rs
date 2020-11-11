@@ -52,6 +52,7 @@ use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use segmented_changelog::{
     DisabledSegmentedChangelog, SegmentedChangelog, SegmentedChangelogBuilder,
 };
+use skeleton_manifest::RootSkeletonManifestId;
 use slog::Logger;
 use sql::{rusqlite::Connection as SqliteConnection, Connection};
 use sql_construct::SqlConstruct;
@@ -419,6 +420,7 @@ pub fn init_all_derived_data() -> DerivedDataConfig {
             ChangesetInfo::NAME.to_string(),
             RootFastlog::NAME.to_string(),
             RootFsnodeId::NAME.to_string(),
+            RootSkeletonManifestId::NAME.to_string(),
             RootDeletedManifestId::NAME.to_string(),
             RootUnodeManifestId::NAME.to_string(),
             TreeHandle::NAME.to_string(),

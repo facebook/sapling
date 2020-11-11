@@ -35,6 +35,7 @@ use lazy_static::lazy_static;
 use lock_ext::LockExt;
 use mercurial_derived_data::{HgChangesetIdMapping, MappedHgChangesetId};
 use mononoke_types::{BonsaiChangeset, ChangesetId};
+use skeleton_manifest::{RootSkeletonManifestId, RootSkeletonManifestMapping};
 use std::{
     collections::{HashMap, HashSet},
     hash::{Hash, Hasher},
@@ -53,6 +54,7 @@ pub const POSSIBLE_DERIVED_TYPES: &[&str] = &[
     ChangesetInfo::NAME,
     RootDeletedManifestId::NAME,
     FilenodesOnlyPublic::NAME,
+    RootSkeletonManifestId::NAME,
 ];
 
 lazy_static! {
@@ -66,6 +68,7 @@ lazy_static! {
         let changesets_info = ChangesetInfo::NAME;
         let deleted_mf = RootDeletedManifestId::NAME;
         let filenodes = FilenodesOnlyPublic::NAME;
+        let skeleton_mf = RootSkeletonManifestId::NAME;
 
         let mut dag = HashMap::new();
 
@@ -77,6 +80,7 @@ lazy_static! {
         dag.insert(filenodes, vec![hgchangeset]);
         dag.insert(fsnodes, vec![]);
         dag.insert(deleted_mf, vec![unodes]);
+        dag.insert(skeleton_mf, vec![]);
 
         dag
     };
@@ -445,6 +449,10 @@ fn derived_data_utils_impl(
         }
         FilenodesOnlyPublic::NAME => {
             let mapping = FilenodesOnlyPublicMapping::new(repo);
+            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping, mode)))
+        }
+        RootSkeletonManifestId::NAME => {
+            let mapping = RootSkeletonManifestMapping::new(repo.get_blobstore());
             Ok(Arc::new(DerivedUtilsFromMapping::new(mapping, mode)))
         }
         name => Err(format_err!("Unsupported derived data type: {}", name)),

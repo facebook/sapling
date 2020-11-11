@@ -37,7 +37,7 @@ use mercurial_types::{
     blobs::{ChangesetMetadata, HgBlobChangeset, HgBlobEntry, HgChangesetContent},
     manifest,
     nodehash::{HgFileNodeId, HgManifestId},
-    HgChangesetId, HgNodeHash, HgNodeKey, HgParents, MPath, RepoPath, NULL_HASH,
+    HgChangesetId, HgNodeHash, HgNodeKey, HgParents, MPath, MPathElement, RepoPath, NULL_HASH,
 };
 use mononoke_types::{self, BonsaiChangeset, ChangesetId};
 
@@ -659,9 +659,7 @@ pub async fn check_case_conflicts(
     }
 
     fn lowercase_mpath(e: &MPath) -> Option<Vec<String>> {
-        e.into_iter()
-            .map(|e| mononoke_types::path::lowercase_mpath_element(e))
-            .collect()
+        e.into_iter().map(MPathElement::to_lowercase_utf8).collect()
     }
 
     let mut path_tree_builder = PathTreeBuilder::default();
@@ -685,7 +683,7 @@ pub async fn check_case_conflicts(
             let mut recurse = vec![];
 
             for (name, entry) in mf.list() {
-                let lowered_el = match mononoke_types::path::lowercase_mpath_element(&name) {
+                let lowered_el = match name.to_lowercase_utf8() {
                     Some(lowered_el) => lowered_el,
                     None => continue,
                 };

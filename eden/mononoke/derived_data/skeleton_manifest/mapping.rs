@@ -16,36 +16,35 @@ use borrowed::borrowed;
 use bytes::Bytes;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
-use futures::stream::{self, FuturesUnordered, StreamExt, TryStreamExt};
+use futures::stream::{FuturesUnordered, TryStreamExt};
 use mononoke_types::{
-    BlobstoreBytes, BonsaiChangeset, ChangesetId, ContentId, FileType, FsnodeId, MPath,
+    BlobstoreBytes, BonsaiChangeset, ChangesetId, ContentId, FileType, MPath, SkeletonManifestId,
 };
 use repo_blobstore::RepoBlobstore;
 
-use crate::batch::derive_fsnode_in_batch;
-use crate::derive::derive_fsnode;
+use crate::derive::derive_skeleton_manifest;
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct RootFsnodeId(FsnodeId);
+pub struct RootSkeletonManifestId(SkeletonManifestId);
 
-impl RootFsnodeId {
-    pub fn fsnode_id(&self) -> &FsnodeId {
+impl RootSkeletonManifestId {
+    pub fn skeleton_manifest_id(&self) -> &SkeletonManifestId {
         &self.0
     }
-    pub fn into_fsnode_id(self) -> FsnodeId {
+    pub fn into_skeleton_manifest_id(self) -> SkeletonManifestId {
         self.0
     }
 }
 
-impl TryFrom<BlobstoreBytes> for RootFsnodeId {
+impl TryFrom<BlobstoreBytes> for RootSkeletonManifestId {
     type Error = Error;
 
     fn try_from(blob_bytes: BlobstoreBytes) -> Result<Self> {
-        FsnodeId::from_bytes(&blob_bytes.into_bytes()).map(RootFsnodeId)
+        SkeletonManifestId::from_bytes(&blob_bytes.into_bytes()).map(RootSkeletonManifestId)
     }
 }
 
-impl TryFrom<BlobstoreGetData> for RootFsnodeId {
+impl TryFrom<BlobstoreGetData> for RootSkeletonManifestId {
     type Error = Error;
 
     fn try_from(blob_get_data: BlobstoreGetData) -> Result<Self> {
@@ -53,19 +52,21 @@ impl TryFrom<BlobstoreGetData> for RootFsnodeId {
     }
 }
 
-impl From<RootFsnodeId> for BlobstoreBytes {
-    fn from(root_fsnode_id: RootFsnodeId) -> Self {
-        BlobstoreBytes::from_bytes(Bytes::copy_from_slice(root_fsnode_id.0.blake2().as_ref()))
+impl From<RootSkeletonManifestId> for BlobstoreBytes {
+    fn from(root_skeleton_manifest_id: RootSkeletonManifestId) -> Self {
+        BlobstoreBytes::from_bytes(Bytes::copy_from_slice(
+            root_skeleton_manifest_id.0.blake2().as_ref(),
+        ))
     }
 }
 
 #[async_trait]
-impl BonsaiDerived for RootFsnodeId {
-    const NAME: &'static str = "fsnodes";
-    type Mapping = RootFsnodeMapping;
+impl BonsaiDerived for RootSkeletonManifestId {
+    const NAME: &'static str = "skeleton_manifests";
+    type Mapping = RootSkeletonManifestMapping;
 
     fn mapping(_ctx: &CoreContext, repo: &BlobRepo) -> Self::Mapping {
-        RootFsnodeMapping::new(repo.blobstore().clone())
+        RootSkeletonManifestMapping::new(repo.blobstore().clone())
     }
 
     async fn derive_from_parents(
@@ -74,68 +75,39 @@ impl BonsaiDerived for RootFsnodeId {
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
     ) -> Result<Self, Error> {
-        let fsnode_id = derive_fsnode(
+        let skeleton_manifest_id = derive_skeleton_manifest(
             &ctx,
             &repo,
             parents
                 .into_iter()
-                .map(|root_fsnode_id| root_fsnode_id.into_fsnode_id())
+                .map(RootSkeletonManifestId::into_skeleton_manifest_id)
                 .collect(),
             get_file_changes(&bonsai),
         )
         .await?;
-        Ok(RootFsnodeId(fsnode_id))
-    }
-
-    async fn batch_derive<'a, Iter>(
-        ctx: &CoreContext,
-        repo: &BlobRepo,
-        csids: Iter,
-    ) -> Result<HashMap<ChangesetId, Self>, Error>
-    where
-        Iter: IntoIterator<Item = ChangesetId> + Send,
-        Iter::IntoIter: Send,
-    {
-        let csids = csids.into_iter().collect::<Vec<_>>();
-        let derived = derive_fsnode_in_batch(ctx, repo, csids.clone()).await?;
-
-        let mapping = Self::mapping(ctx, repo);
-
-        stream::iter(derived.into_iter().map(|(cs_id, derived)| {
-            let mapping = mapping.clone();
-            async move {
-                let derived = RootFsnodeId(derived);
-                mapping
-                    .put(ctx.clone(), cs_id.clone(), derived.clone())
-                    .await?;
-                Ok((cs_id, derived))
-            }
-        }))
-        .buffered(100)
-        .try_collect::<HashMap<_, _>>()
-        .await
+        Ok(RootSkeletonManifestId(skeleton_manifest_id))
     }
 }
 
 #[derive(Clone)]
-pub struct RootFsnodeMapping {
+pub struct RootSkeletonManifestMapping {
     blobstore: RepoBlobstore,
 }
 
-impl RootFsnodeMapping {
+impl RootSkeletonManifestMapping {
     pub fn new(blobstore: RepoBlobstore) -> Self {
         Self { blobstore }
     }
 
     fn format_key(&self, cs_id: ChangesetId) -> String {
-        format!("derived_root_fsnode.{}", cs_id)
+        format!("derived_root_skeletonmanifest.{}", cs_id)
     }
 
-    async fn fetch_fsnode(
+    async fn fetch_skeleton_manifest(
         &self,
         ctx: &CoreContext,
         cs_id: ChangesetId,
-    ) -> Result<Option<RootFsnodeId>> {
+    ) -> Result<Option<RootSkeletonManifestId>> {
         match self
             .blobstore
             .get(ctx.clone(), self.format_key(cs_id))
@@ -148,8 +120,8 @@ impl RootFsnodeMapping {
 }
 
 #[async_trait]
-impl BonsaiDerivedMapping for RootFsnodeMapping {
-    type Value = RootFsnodeId;
+impl BonsaiDerivedMapping for RootSkeletonManifestMapping {
+    type Value = RootSkeletonManifestId;
 
     async fn get(
         &self,
@@ -160,13 +132,15 @@ impl BonsaiDerivedMapping for RootFsnodeMapping {
         csids
             .into_iter()
             .map(|cs_id| async move {
-                match self.fetch_fsnode(ctx, cs_id).await? {
-                    Some(root_fsnode_id) => Ok(Some((cs_id, root_fsnode_id))),
+                match self.fetch_skeleton_manifest(ctx, cs_id).await? {
+                    Some(root_skeleton_manifest_id) => Ok(Some((cs_id, root_skeleton_manifest_id))),
                     None => Ok(None),
                 }
             })
             .collect::<FuturesUnordered<_>>()
-            .try_filter_map(|maybe_fsnode_mapping| async move { Ok(maybe_fsnode_mapping) })
+            .try_filter_map(|maybe_skeleton_manifest_mapping| async move {
+                Ok(maybe_skeleton_manifest_mapping)
+            })
             .try_collect()
             .await
     }
@@ -223,19 +197,20 @@ mod test {
             .manifestid())
     }
 
-    async fn verify_fsnode(
+    async fn verify_skeleton_manifest(
         ctx: &CoreContext,
         repo: &BlobRepo,
         bcs_id: ChangesetId,
         hg_cs_id: HgChangesetId,
     ) -> Result<()> {
-        let root_fsnode_id = RootFsnodeId::derive03(ctx, repo, bcs_id)
+        let root_skeleton_manifest_id = RootSkeletonManifestId::derive03(ctx, repo, bcs_id)
             .await?
-            .into_fsnode_id();
+            .into_skeleton_manifest_id();
 
-        let fsnode_entries = iterate_all_manifest_entries(ctx, repo, Entry::Tree(root_fsnode_id))
-            .map_ok(|(path, _)| path)
-            .try_collect::<Vec<_>>();
+        let skeleton_manifest_entries =
+            iterate_all_manifest_entries(ctx, repo, Entry::Tree(root_skeleton_manifest_id))
+                .map_ok(|(path, _)| path)
+                .try_collect::<Vec<_>>();
 
         let root_mf_id = fetch_manifest_by_cs_id(ctx, repo, hg_cs_id).await?;
 
@@ -244,11 +219,11 @@ mod test {
             .try_collect::<Vec<_>>();
 
 
-        let (mut fsnode_entries, mut filenode_entries) =
-            try_join!(fsnode_entries, filenode_entries)?;
-        fsnode_entries.sort();
+        let (mut skeleton_manifest_entries, mut filenode_entries) =
+            try_join!(skeleton_manifest_entries, filenode_entries)?;
+        skeleton_manifest_entries.sort();
         filenode_entries.sort();
-        assert_eq!(fsnode_entries, filenode_entries);
+        assert_eq!(skeleton_manifest_entries, filenode_entries);
         Ok(())
     }
 
@@ -290,7 +265,7 @@ mod test {
                     .await
                     .unwrap()
                     .try_for_each(move |(bcs_id, hg_cs_id)| async move {
-                        verify_fsnode(ctx, repo, bcs_id, hg_cs_id).await
+                        verify_skeleton_manifest(ctx, repo, bcs_id, hg_cs_id).await
                     })
                     .await
             })

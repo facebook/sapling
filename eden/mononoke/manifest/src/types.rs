@@ -11,8 +11,9 @@ use context::CoreContext;
 use futures::{future::BoxFuture, FutureExt, TryFutureExt};
 use mononoke_types::{
     fsnode::{Fsnode, FsnodeEntry, FsnodeFile},
+    skeleton_manifest::{SkeletonManifest, SkeletonManifestEntry},
     unode::{ManifestUnode, UnodeEntry},
-    FileUnodeId, FsnodeId, MPath, MPathElement, ManifestUnodeId,
+    FileUnodeId, FsnodeId, MPath, MPathElement, ManifestUnodeId, SkeletonManifestId,
 };
 use serde_derive::{Deserialize, Serialize};
 use std::{
@@ -74,6 +75,34 @@ fn convert_fsnode(fsnode_entry: &FsnodeEntry) -> Entry<FsnodeId, FsnodeFile> {
     match fsnode_entry {
         FsnodeEntry::File(fsnode_file) => Entry::Leaf(*fsnode_file),
         FsnodeEntry::Directory(fsnode_directory) => Entry::Tree(fsnode_directory.id().clone()),
+    }
+}
+
+impl Manifest for SkeletonManifest {
+    type TreeId = SkeletonManifestId;
+    type LeafId = ();
+
+    fn lookup(&self, name: &MPathElement) -> Option<Entry<Self::TreeId, Self::LeafId>> {
+        self.lookup(name).map(convert_skeleton_manifest)
+    }
+
+    fn list(&self) -> Box<dyn Iterator<Item = (MPathElement, Entry<Self::TreeId, Self::LeafId>)>> {
+        let v: Vec<_> = self
+            .list()
+            .map(|(basename, entry)| (basename.clone(), convert_skeleton_manifest(entry)))
+            .collect();
+        Box::new(v.into_iter())
+    }
+}
+
+fn convert_skeleton_manifest(
+    skeleton_entry: &SkeletonManifestEntry,
+) -> Entry<SkeletonManifestId, ()> {
+    match skeleton_entry {
+        SkeletonManifestEntry::File => Entry::Leaf(()),
+        SkeletonManifestEntry::Directory(skeleton_directory) => {
+            Entry::Tree(skeleton_directory.id().clone())
+        }
     }
 }
 

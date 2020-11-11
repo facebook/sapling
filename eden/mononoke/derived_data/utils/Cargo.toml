@@ -25,6 +25,7 @@ fastlog = { path = "../fastlog" }
 fsnodes = { path = "../fsnodes" }
 mercurial_derived_data = { path = "../mercurial_derived_data" }
 mononoke_types = { path = "../../mononoke_types" }
+skeleton_manifest = { path = "../skeleton_manifest" }
 topo_sort = { path = "../../common/topo_sort" }
 unodes = { path = "../unodes" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

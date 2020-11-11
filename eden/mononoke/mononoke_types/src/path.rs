@@ -18,6 +18,7 @@ use anyhow::{bail, Context as _, Error, Result};
 use lazy_static::lazy_static;
 use quickcheck::{Arbitrary, Gen};
 use rand::{seq::SliceRandom, Rng};
+use regex::bytes::Regex as BytesRegex;
 use regex::Regex;
 use serde_derive::{Deserialize, Serialize};
 use smallvec::SmallVec;
@@ -272,6 +273,69 @@ impl MPathElement {
     pub fn into_thrift(self) -> thrift::MPathElement {
         thrift::MPathElement(self.0.into_vec())
     }
+
+    /// Returns true if this path element is valid UTF-8.
+    pub fn is_utf8(&self) -> bool {
+        std::str::from_utf8(self.0.as_ref()).is_ok()
+    }
+
+    /// Returns the length of the path element in WCHARs, if the path element
+    /// is re-interpreted as a Windows filename.
+    ///
+    /// For UTF-8 path elements, this is the length of the UTF-16 encoding.
+    /// For other path elementss, it is assumed that a Windows 8-bit encoding
+    /// is in use and each byte corresponds to one WCHAR.
+    pub fn wchar_len(&self) -> usize {
+        match std::str::from_utf8(self.0.as_ref()) {
+            Ok(s) => s.encode_utf16().count(),
+            Err(_) => self.0.len(),
+        }
+    }
+
+    /// Returns the lowercased version of this MPath element if it is valid
+    /// UTF-8.
+    pub fn to_lowercase_utf8(&self) -> Option<String> {
+        let s = std::str::from_utf8(self.0.as_ref()).ok()?;
+        let s = s.to_lowercase();
+        Some(s)
+    }
+
+    /// Returns whether this path element is a valid filename on Windows.
+    ///
+    /// Invalid filenames on Windows are:
+    ///
+    /// * Any filename containing a control character in the range 0-31, or
+    ///   any character in the set `< > : " / \\ | ? *`.
+    /// * Any filename ending in a `.` or a space.
+    /// * Any filename that is `CON`, `PRN`, `AUX`, `NUL`, `COM1-9` or
+    ///   `LPT1-9`, with or without an extension.
+    pub fn is_valid_windows_filename(&self) -> bool {
+        // File names containing any of <>:"/\|?* or control characters are invalid.
+        let is_invalid = |c: &u8| *c < b' ' || b"<>:\"/\\|?*".iter().any(|i| i == c);
+        if self.0.iter().any(is_invalid) {
+            return false;
+        }
+
+        // File names ending in . or space are invalid.
+        if let Some(b' ') | Some(b'.') = self.0.last() {
+            return false;
+        }
+
+        // CON, PRN, AUX, NUL, COM[1-9] and LPT[1-9] are invalid, with or
+        // without extension.
+        if INVALID_WINDOWS_FILENAME_REGEX.is_match(self.0.as_ref()) {
+            return false;
+        }
+
+        true
+    }
+}
+
+// Regex for looking for invalid windows filenames
+lazy_static! {
+    static ref INVALID_WINDOWS_FILENAME_REGEX: BytesRegex =
+        BytesRegex::new("^((?i)CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])([.][^.]*|)$")
+            .expect("invalid windows filename regex should be valid");
 }
 
 impl AsRef<[u8]> for MPathElement {
@@ -1026,7 +1090,7 @@ impl CaseConflictTrie {
                     });
                 }
 
-                if let Some(lower) = lowercase_mpath_element(&element) {
+                if let Some(lower) = element.to_lowercase_utf8() {
                     if let Some(conflict) = self.lowercase_to_original.get(&lower) {
                         return Err(ReverseMPath {
                             elements: vec![conflict.clone()],
@@ -1059,7 +1123,7 @@ impl CaseConflictTrie {
                 if remove {
                     self.children.remove(&element);
 
-                    if let Some(lower) = lowercase_mpath_element(&element) {
+                    if let Some(lower) = element.to_lowercase_utf8() {
                         self.lowercase_to_original.remove(&lower);
                     }
                 }
@@ -1154,12 +1218,6 @@ where
         }
         trie
     }
-}
-
-pub fn lowercase_mpath_element(e: &MPathElement) -> Option<String> {
-    let s = std::str::from_utf8(e.as_ref()).ok()?;
-    let s = s.to_lowercase();
-    Some(s)
 }
 
 #[cfg(test)]
