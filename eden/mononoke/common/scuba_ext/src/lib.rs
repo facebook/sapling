@@ -27,7 +27,7 @@ pub trait ScubaSampleBuilderExt {
     fn with_opt_table(fb: FacebookInit, scuba_table: Option<String>) -> Self;
     fn add_preamble(&mut self, preamble: &Preamble) -> &mut Self;
     fn add_metadata(&mut self, metadata: &Metadata) -> &mut Self;
-    fn log_with_msg<S: Into<Option<String>>>(&mut self, log_tag: &'static str, msg: S);
+    fn log_with_msg<S: Into<Option<String>>>(&mut self, log_tag: &str, msg: S);
     fn add_stream_stats(&mut self, stats: &StreamStats) -> &mut Self;
     fn add_future_stats(&mut self, stats: &FutureStats) -> &mut Self;
     fn log_with_trace(&mut self, fb: FacebookInit, trace: &TraceContext) -> BoxFuture<(), ()>;
@@ -68,7 +68,7 @@ impl ScubaSampleBuilderExt for ScubaSampleBuilder {
         self
     }
 
-    fn log_with_msg<S: Into<Option<String>>>(&mut self, log_tag: &'static str, msg: S) {
+    fn log_with_msg<S: Into<Option<String>>>(&mut self, log_tag: &str, msg: S) {
         self.add("log_tag", log_tag);
         if let Some(mut msg) = msg.into() {
             match tunables().get_max_scuba_msg_length().try_into() {
