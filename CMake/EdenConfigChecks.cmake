@@ -133,7 +133,7 @@ set(EDEN_HAVE_MONONOKE OFF)
 set(EDEN_HAVE_SYSTEMD OFF)
 
 if (WIN32)
-  set(DEFAULT_ETC_EDEN_DIR "C:/tools/eden/config")
+  set(DEFAULT_ETC_EDEN_DIR "C:/ProgramData/Facebook/eden")
 else()
   set(DEFAULT_ETC_EDEN_DIR "/etc/eden")
 endif()
