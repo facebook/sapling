@@ -11,7 +11,7 @@ use crate::iddagstore::{IdDagStore, InProcessStore, IndexedLogStore};
 use crate::locked::Locked;
 use crate::ops::Persist;
 use crate::ops::TryClone;
-use crate::segment::{PreparedFlatSegments, Segment, SegmentFlags};
+use crate::segment::{FlatSegment, PreparedFlatSegments, Segment, SegmentFlags};
 use crate::spanset::Span;
 use crate::spanset::SpanSet;
 use crate::Error::Programming;
@@ -513,6 +513,28 @@ impl<Store: IdDagStore> IdDag<Store> {
             total += count;
         }
         Ok(total)
+    }
+}
+
+impl<Store: IdDagStore> IdDag<Store> {
+    /// Returns the [`FlatSegment`] entries that are used by this [`IdDag`].
+    pub fn flat_segments(&self, group: Group) -> Result<PreparedFlatSegments> {
+        let level = 0;
+        let mut segments = Vec::new();
+        for sr in self.iter_segments_ascending(group.min_id(), level)? {
+            let segment = sr?;
+            let span = segment.span()?;
+            if span.high > group.max_id() {
+                break;
+            }
+            let fs = FlatSegment {
+                low: span.low,
+                high: span.high,
+                parents: segment.parents()?,
+            };
+            segments.push(fs);
+        }
+        Ok(PreparedFlatSegments { segments })
     }
 }
 
@@ -1488,5 +1510,28 @@ mod tests {
         assert!(dag.all().unwrap().is_empty());
         dag.build_segments_volatile(Id(1001), &get_parents).unwrap();
         assert_eq!(dag.all().unwrap().count(), 1002);
+    }
+
+    #[test]
+    fn test_flat_segments() {
+        let dir = tempdir().unwrap();
+        let test_dir = tempdir().unwrap();
+        let mut dag = IdDag::open(dir.path()).unwrap();
+        let mut test_dag = IdDag::open(test_dir.path()).unwrap();
+
+        let empty_dag_segments = dag.flat_segments(Group::MASTER).unwrap();
+        test_dag
+            .build_segments_volatile_from_prepared_flat_segments(&empty_dag_segments)
+            .unwrap();
+        assert!(test_dag.all().unwrap().is_empty());
+
+        dag.build_segments_volatile(Id(1001), &get_parents).unwrap();
+        let flat_segments = dag.flat_segments(Group::MASTER).unwrap();
+        test_dag
+            .build_segments_volatile_from_prepared_flat_segments(&flat_segments)
+            .unwrap();
+
+        assert_eq!(test_dag.max_level, 3);
+        assert_eq!(test_dag.all().unwrap().count(), 1002);
     }
 }
