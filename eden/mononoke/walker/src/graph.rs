@@ -55,10 +55,21 @@ macro_rules! incoming_type {
     };
 }
 
+macro_rules! outgoing_type {
+    // Edge isn't named exactly same as the target node type
+    ($nodetypeenum:ident, $edgetypeenum:tt, $targetlabel:ident($targettype:ident)) => {
+        $nodetypeenum::$targettype
+    };
+    // In most cases its the same
+    ($nodetypeenum:ident, $edgetypeenum:tt, $targetlabel:ident) => {
+        $nodetypeenum::$targetlabel
+    };
+}
+
 #[doc(hidden)]
 macro_rules! create_graph_impl {
     ($nodetypeenum:ident, $nodekeyenum:ident, $edgetypeenum:ident,
-        {$($nodetype:tt)*} {$($nodekeys:tt)*} {$(($edgetype:tt, $edgesourcetype:tt)),+ $(,)?} ) => {
+        {$($nodetype:tt)*} {$($nodekeys:tt)*} {$(($edgetype:tt, $edgesourcetype:tt, $($edgetargetdef:tt)+)),+ $(,)?} ) => {
         define_type_enum!{
             enum $nodetypeenum {$($nodetype)*}
         }
@@ -77,18 +88,26 @@ macro_rules! create_graph_impl {
                 }
             }
         }
+
+        impl $edgetypeenum {
+            pub fn outgoing_type(&self) -> $nodetypeenum {
+                match self {
+                    $($edgetypeenum::$edgetype => outgoing_type!($nodetypeenum, $edgetypeenum, $($edgetargetdef)+)),*
+                }
+            }
+        }
     };
     ($nodetypeenum:ident, $nodekeyenum:ident, $edgetypeenum:ident,
-        {$($nodetype:tt)*} {$($nodekeys:tt)*} {$(($edgetype:tt, $edgesourcetype:tt)),* $(,)?}
-            ($source:ident, $sourcekey:ty, [$($target:ident),*]) $($rest:tt)*) => {
+        {$($nodetype:tt)*} {$($nodekeys:tt)*} {$(($edgetype:tt, $edgesourcetype:tt, $($edgetargetdef:tt)+)),* $(,)?}
+            ($source:ident, $sourcekey:ty, [$($target:ident$(($targettype:ident))?),*]) $($rest:tt)*) => {
         paste::item!{
             create_graph_impl! {
                 $nodetypeenum, $nodekeyenum, $edgetypeenum,
                 {$($nodetype)* $source,}
                 {$($nodekeys)* $source($sourcekey),}
                 {
-                    $(($edgetype, $edgesourcetype),)*
-                    $(([<$source To $target>], $source),)*
+                    $(($edgetype, $edgesourcetype, $($edgetargetdef)+),)*
+                    $(([<$source To $target>], $source, $target$(($targettype))? ),)*
                 }
                 $($rest)*
             }
@@ -107,13 +126,13 @@ macro_rules! root_edge_type {
 
 macro_rules! create_graph {
     ($nodetypeenum:ident, $nodekeyenum:ident, $edgetypeenum:ident,
-        $(($source:ident, $sourcekey:tt, [$($target:ident),*])),* $(,)?) => {
+        $(($source:ident, $sourcekey:tt, [$($target:ident$(($targettype:ident))?),*])),* $(,)?) => {
         create_graph_impl! {
             $nodetypeenum, $nodekeyenum, $edgetypeenum,
             {}
             {}
             {}
-            $(($source, $sourcekey, [$($target),*]))*
+            $(($source, $sourcekey, [$($target$(($targettype))?),*]))*
         }
 
         impl $nodetypeenum {
@@ -166,7 +185,7 @@ create_graph!(
         ChangesetId,
         [
             FileContent,
-            BonsaiParent,
+            BonsaiParent(BonsaiChangeset),
             BonsaiHgMapping,
             BonsaiPhaseMapping,
             BonsaiFsnodeMapping,
@@ -178,21 +197,25 @@ create_graph!(
     (PublishedBookmarks, (), [BonsaiChangeset, BonsaiHgMapping]),
     // Hg
     (HgBonsaiMapping, HgChangesetId, [BonsaiChangeset]),
-    (HgChangeset, HgChangesetId, [HgParent, HgManifest]),
+    (
+        HgChangeset,
+        HgChangesetId,
+        [HgParent(HgChangeset), HgManifest]
+    ),
     (
         HgManifest,
         (WrappedPath, HgManifestId),
-        [HgFileEnvelope, HgFileNode, ChildHgManifest]
+        [HgFileEnvelope, HgFileNode, ChildHgManifest(HgManifest)]
     ),
     (HgFileEnvelope, HgFileNodeId, [FileContent]),
     (
         HgFileNode,
         (WrappedPath, HgFileNodeId),
         [
-            LinkedHgBonsaiMapping,
-            LinkedHgChangeset,
-            HgParentFileNode,
-            HgCopyfromFileNode
+            LinkedHgBonsaiMapping(HgBonsaiMapping),
+            LinkedHgChangeset(HgChangeset),
+            HgParentFileNode(HgFileNode),
+            HgCopyfromFileNode(HgFileNode)
         ]
     ),
     // Content
@@ -200,13 +223,25 @@ create_graph!(
     (
         FileContentMetadata,
         ContentId,
-        [Sha1Alias, Sha256Alias, GitSha1Alias]
+        [
+            Sha1Alias(AliasContentMapping),
+            Sha256Alias(AliasContentMapping),
+            GitSha1Alias(AliasContentMapping)
+        ]
     ),
     (AliasContentMapping, Alias, [FileContent]),
     // Derived data
-    (BonsaiFsnodeMapping, ChangesetId, [RootFsnode]),
-    (ChangesetInfo, ChangesetId, [ChangesetInfoParent]),
-    (Fsnode, (WrappedPath, FsnodeId), [ChildFsnode, FileContent]),
+    (BonsaiFsnodeMapping, ChangesetId, [RootFsnode(Fsnode)]),
+    (
+        ChangesetInfo,
+        ChangesetId,
+        [ChangesetInfoParent(ChangesetInfo)]
+    ),
+    (
+        Fsnode,
+        (WrappedPath, FsnodeId),
+        [ChildFsnode(Fsnode), FileContent]
+    ),
 );
 
 impl fmt::Display for NodeType {
@@ -341,68 +376,6 @@ define_type_enum! {
         GitSha1,
         Sha1,
         Sha256,
-    }
-}
-
-impl EdgeType {
-    pub fn outgoing_type(&self) -> NodeType {
-        match self {
-            // Bonsai Roots
-            EdgeType::RootToBookmark => NodeType::Bookmark,
-            EdgeType::RootToBonsaiChangeset => NodeType::BonsaiChangeset,
-            EdgeType::RootToBonsaiHgMapping => NodeType::BonsaiHgMapping,
-            EdgeType::RootToBonsaiPhaseMapping => NodeType::BonsaiPhaseMapping,
-            EdgeType::RootToPublishedBookmarks => NodeType::PublishedBookmarks,
-            // Hg Roots
-            EdgeType::RootToHgBonsaiMapping => NodeType::HgBonsaiMapping,
-            EdgeType::RootToHgChangeset => NodeType::HgChangeset,
-            EdgeType::RootToHgManifest => NodeType::HgManifest,
-            EdgeType::RootToHgFileEnvelope => NodeType::HgFileEnvelope,
-            EdgeType::RootToHgFileNode => NodeType::HgFileNode,
-            // Content Roots
-            EdgeType::RootToFileContent => NodeType::FileContent,
-            EdgeType::RootToFileContentMetadata => NodeType::FileContentMetadata,
-            EdgeType::RootToAliasContentMapping => NodeType::AliasContentMapping,
-            // Derived data Roots
-            EdgeType::RootToBonsaiFsnodeMapping => NodeType::BonsaiFsnodeMapping,
-            EdgeType::RootToChangesetInfo => NodeType::ChangesetInfo,
-            EdgeType::RootToFsnode => NodeType::Fsnode,
-            // Bonsai
-            EdgeType::BookmarkToBonsaiChangeset => NodeType::BonsaiChangeset,
-            EdgeType::BookmarkToBonsaiHgMapping => NodeType::BonsaiHgMapping,
-            EdgeType::BonsaiChangesetToFileContent => NodeType::FileContent,
-            EdgeType::BonsaiChangesetToBonsaiParent => NodeType::BonsaiChangeset,
-            EdgeType::BonsaiChangesetToBonsaiHgMapping => NodeType::BonsaiHgMapping,
-            EdgeType::BonsaiChangesetToBonsaiPhaseMapping => NodeType::BonsaiPhaseMapping,
-            EdgeType::BonsaiHgMappingToHgChangeset => NodeType::HgChangeset,
-            EdgeType::PublishedBookmarksToBonsaiChangeset => NodeType::BonsaiChangeset,
-            EdgeType::PublishedBookmarksToBonsaiHgMapping => NodeType::BonsaiHgMapping,
-            EdgeType::BonsaiChangesetToBonsaiFsnodeMapping => NodeType::BonsaiFsnodeMapping,
-            // Hg
-            EdgeType::HgBonsaiMappingToBonsaiChangeset => NodeType::BonsaiChangeset,
-            EdgeType::HgChangesetToHgParent => NodeType::HgChangeset,
-            EdgeType::HgChangesetToHgManifest => NodeType::HgManifest,
-            EdgeType::HgManifestToHgFileEnvelope => NodeType::HgFileEnvelope,
-            EdgeType::HgManifestToHgFileNode => NodeType::HgFileNode,
-            EdgeType::HgManifestToChildHgManifest => NodeType::HgManifest,
-            EdgeType::HgFileEnvelopeToFileContent => NodeType::FileContent,
-            EdgeType::HgFileNodeToLinkedHgBonsaiMapping => NodeType::HgBonsaiMapping,
-            EdgeType::HgFileNodeToLinkedHgChangeset => NodeType::HgChangeset,
-            EdgeType::HgFileNodeToHgParentFileNode => NodeType::HgFileNode,
-            EdgeType::HgFileNodeToHgCopyfromFileNode => NodeType::HgFileNode,
-            // Content
-            EdgeType::FileContentToFileContentMetadata => NodeType::FileContentMetadata,
-            EdgeType::FileContentMetadataToSha1Alias => NodeType::AliasContentMapping,
-            EdgeType::FileContentMetadataToSha256Alias => NodeType::AliasContentMapping,
-            EdgeType::FileContentMetadataToGitSha1Alias => NodeType::AliasContentMapping,
-            EdgeType::AliasContentMappingToFileContent => NodeType::FileContent,
-            // Derived data
-            EdgeType::BonsaiFsnodeMappingToRootFsnode => NodeType::Fsnode,
-            EdgeType::BonsaiChangesetToChangesetInfo => NodeType::ChangesetInfo,
-            EdgeType::ChangesetInfoToChangesetInfoParent => NodeType::ChangesetInfo,
-            EdgeType::FsnodeToChildFsnode => NodeType::Fsnode,
-            EdgeType::FsnodeToFileContent => NodeType::FileContent,
-        }
     }
 }
 
@@ -559,6 +532,7 @@ mod tests {
         assert_eq!(Test1NodeType::Root, Test1Node::Root(()).get_type());
         assert_eq!(Test1NodeType::Foo, Test1Node::Foo(42).get_type());
         assert_eq!(Test1EdgeType::RootToFoo.incoming_type(), None);
+        assert_eq!(Test1EdgeType::RootToFoo.outgoing_type(), Test1NodeType::Foo);
 
         // Make sure type names don't clash
         create_graph!(
@@ -573,11 +547,14 @@ mod tests {
         assert_eq!(Test2NodeType::Foo, Test2Node::Foo(42).get_type());
         assert_eq!(Test2NodeType::Bar, Test2Node::Bar(42).get_type());
         assert_eq!(Test2EdgeType::RootToFoo.incoming_type(), None);
+        assert_eq!(Test2EdgeType::RootToFoo.outgoing_type(), Test2NodeType::Foo);
         assert_eq!(Test2EdgeType::RootToBar.incoming_type(), None);
+        assert_eq!(Test2EdgeType::RootToBar.outgoing_type(), Test2NodeType::Bar);
         assert_eq!(
             Test2EdgeType::FooToBar.incoming_type(),
             Some(Test2NodeType::Foo)
         );
+        assert_eq!(Test2EdgeType::FooToBar.outgoing_type(), Test2NodeType::Bar);
     }
 
     #[test]
