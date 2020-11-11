@@ -125,11 +125,11 @@ bool FileChangeJournalDelta::isSameAction(
 JournalDeltaPtr::JournalDeltaPtr(std::nullptr_t) {}
 
 JournalDeltaPtr::JournalDeltaPtr(FileChangeJournalDelta* p) : data_{p} {
-  CHECK(p);
+  XCHECK(p);
 }
 
 JournalDeltaPtr::JournalDeltaPtr(HashUpdateJournalDelta* p) : data_{p} {
-  CHECK(p);
+  XCHECK(p);
 }
 
 size_t JournalDeltaPtr::estimateMemoryUsage() const {

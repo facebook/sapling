@@ -303,7 +303,7 @@ class MappedDiskVector {
           mapSizeInBytes_ + GROWTH_IN_PAGES * detail::kPageSize;
 
       // Always keep the file size a whole number of pages.
-      CHECK_EQ(0, newFileSize % detail::kPageSize);
+      XCHECK_EQ(0ul, newFileSize % detail::kPageSize);
 
       if (-1 == folly::ftruncateNoInt(file_.fd(), newFileSize)) {
         folly::throwSystemError("ftruncateNoInt failed when growing capacity");
@@ -348,18 +348,18 @@ class MappedDiskVector {
   void pop_back() {
     // TODO: It might be worth eliminating the end_ pointer and always adding
     // header().entryCount to begin_.
-    DCHECK_GT(end_, begin_);
+    XDCHECK_GT(end_, begin_);
     --end_;
     --header().entryCount;
   }
 
   T& front() {
-    DCHECK_GT(end_, begin_);
+    XDCHECK_GT(end_, begin_);
     return begin_[0];
   }
 
   T& back() {
-    DCHECK_GT(end_, begin_);
+    XDCHECK_GT(end_, begin_);
     return end_[-1];
   }
 
@@ -470,7 +470,7 @@ class MappedDiskVector {
     end_ = begin_ + currentEntryCount;
 
     // Just double-check that the accessed region is within the map.
-    CHECK_LE(
+    XCHECK_LE(
         reinterpret_cast<char*>(end_),
         static_cast<char*>(map_) + mapSizeInBytes_);
   }

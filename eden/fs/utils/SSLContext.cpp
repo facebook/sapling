@@ -10,8 +10,6 @@
 #include <folly/io/async/SSLContext.h>
 #include <folly/io/async/SSLOptions.h>
 #include <folly/logging/xlog.h>
-#include <gflags/gflags.h>
-#include <glog/logging.h>
 
 #include "eden/fs/utils/PathFuncs.h"
 

@@ -28,9 +28,9 @@ DEFINE_string(
  */
 void createGoldMasterOverlay(AbsolutePath overlayPath) {
   struct stat overlayStat;
-  CHECK_EQ(-1, stat(overlayPath.c_str(), &overlayStat))
+  XCHECK_EQ(-1, stat(overlayPath.c_str(), &overlayStat))
       << "given overlay path " << overlayPath << " already exists";
-  CHECK_EQ(ENOENT, errno) << "error must be ENOENT";
+  XCHECK_EQ(ENOENT, errno) << "error must be ENOENT";
 
   Hash hash1{folly::ByteRange{"abcdabcdabcdabcdabcd"_sp}};
   Hash hash2{folly::ByteRange{"01234012340123401234"_sp}};
@@ -40,7 +40,7 @@ void createGoldMasterOverlay(AbsolutePath overlayPath) {
   auto overlay = Overlay::create(overlayPath, kPathMapCaseSensitive);
 
   auto fileInode = overlay->allocateInodeNumber();
-  CHECK_EQ(2_ino, fileInode);
+  XCHECK_EQ(2_ino, fileInode);
   auto subdirInode = overlay->allocateInodeNumber();
   auto emptyDirInode = overlay->allocateInodeNumber();
   auto helloInode = overlay->allocateInodeNumber();

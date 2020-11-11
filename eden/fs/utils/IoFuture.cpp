@@ -11,6 +11,7 @@
 #include <folly/futures/Promise.h>
 #include <folly/io/async/AsyncTimeout.h>
 #include <folly/io/async/EventHandler.h>
+#include <folly/logging/xlog.h>
 
 using folly::EventBase;
 using folly::Promise;
@@ -40,7 +41,7 @@ folly::Future<int> IoFuture::wait(
   // We do not support using the EventHandler::PERSIST flag.
   // folly::Future objects are one-shot, so it doesn't make sense to repeatedly
   // wait for I/O to be ready using a Future.
-  CHECK(!(eventFlags & EventHandler::PERSIST));
+  XCHECK(!(eventFlags & EventHandler::PERSIST));
 
   auto future = promise_.getFuture();
 

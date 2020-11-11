@@ -155,7 +155,7 @@ class SqliteStatement {
   /** Small helper to safely narrow size_t to int
    */
   static inline int unsignedNoToInt(size_t no) {
-    DCHECK(no < std::numeric_limits<int>::max());
+    XDCHECK(no < std::numeric_limits<int>::max());
     return static_cast<int>(no);
   }
 

@@ -44,8 +44,8 @@ class DirEntry {
         hasInodePointer_{false},
         hash_{hash},
         inodeNumber_{number} {
-    CHECK_EQ(m, m & 0x3fffffff);
-    DCHECK(number.hasValue());
+    XCHECK_EQ(m, m & 0x3fffffff);
+    XDCHECK(number.hasValue());
   }
 
   /**
@@ -56,8 +56,8 @@ class DirEntry {
         hasHash_{false},
         hasInodePointer_{false},
         inodeNumber_{number} {
-    CHECK_EQ(m, m & 0x3fffffff);
-    DCHECK(number.hasValue());
+    XCHECK_EQ(m, m & 0x3fffffff);
+    XDCHECK(number.hasValue());
   }
 
   DirEntry(DirEntry&& e) = default;
@@ -76,7 +76,7 @@ class DirEntry {
     // TODO: In the future we should probably only allow callers to invoke
     // this method when inode is not set.  If inode is set it should be the
     // authoritative source of data.
-    DCHECK(hasHash_);
+    XDCHECK(hasHash_);
     return hash_;
   }
 
@@ -95,7 +95,7 @@ class DirEntry {
   }
 
   void setDematerialized(Hash hash) {
-    DCHECK(hasInodePointer_);
+    XDCHECK(hasInodePointer_);
     hasHash_ = true;
     hash_ = hash;
   }

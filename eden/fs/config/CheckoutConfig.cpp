@@ -129,7 +129,7 @@ void CheckoutConfig::setParentCommits(const ParentCommits& parents) const {
   // Optional 20-byte commit ID: parent2
   if (parents.parent2().has_value()) {
     cursor.push(parents.parent2()->getBytes());
-    CHECK(cursor.isAtEnd());
+    XCHECK(cursor.isAtEnd());
   }
   size_t writtenSize = cursor - folly::io::RWPrivateCursor{&buf};
   ByteRange snapshotData{buffer.data(), writtenSize};

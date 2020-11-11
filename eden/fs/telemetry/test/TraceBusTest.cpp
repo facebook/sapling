@@ -40,9 +40,9 @@ TEST(TraceBusTest, publishes_exceed_capacity) {
     }
   }
 
-  CHECK_EQ(100, values.size());
+  XCHECK_EQ(100ul, values.size());
   for (int i = 0; i < 100; ++i) {
-    CHECK_EQ(i, values[i]);
+    XCHECK_EQ(i, values[i]);
   }
 }
 
@@ -60,7 +60,7 @@ TEST(TraceBusTest, unsubscribes_upon_exception) {
     bus->publish(2);
   }
 
-  CHECK_EQ(1, i);
+  XCHECK_EQ(1, i);
 }
 
 TEST(TraceBusTest, unsubscribe_in_arbitrary_order) {
@@ -98,5 +98,5 @@ TEST(TraceBusTest, unsubscribe_before_publish) {
 
   // It's not guaranteed that unsubscribe will immediately prevent observation
   // of events.
-  CHECK(1 == i || i == 3) << i << " must be 1 or 3";
+  XCHECK(1 == i || i == 3) << i << " must be 1 or 3";
 }

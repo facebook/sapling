@@ -79,12 +79,12 @@ folly::IOBuf ScsProxyHash::serialize(RelativePathPiece path, Hash commitHash) {
 }
 
 Hash ScsProxyHash::commitHash() const {
-  DCHECK_GE(value_.size(), Hash::RAW_SIZE);
+  XDCHECK_GE(value_.size(), Hash::RAW_SIZE);
   return Hash{ByteRange{StringPiece{value_.data(), Hash::RAW_SIZE}}};
 }
 
 RelativePathPiece ScsProxyHash::path() const {
-  DCHECK_GE(value_.size(), Hash::RAW_SIZE + sizeof(uint32_t));
+  XDCHECK_GE(value_.size(), Hash::RAW_SIZE + sizeof(uint32_t));
   StringPiece data{value_.data(), value_.size()};
   data.advance(Hash::RAW_SIZE + sizeof(uint32_t));
   return RelativePathPiece{data};

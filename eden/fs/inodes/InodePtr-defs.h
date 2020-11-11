@@ -58,13 +58,13 @@ void InodePtrImpl<InodeType>::decref() {
 
 template <typename InodeType>
 void InodePtrImpl<InodeType>::manualDecRef() {
-  CHECK_NOTNULL(value_);
+  XCHECK_NE(value_, nullptr);
   value_->decrementPtrRef();
 }
 
 template <typename InodeType>
 void InodePtrImpl<InodeType>::resetNoDecRef() {
-  CHECK_NOTNULL(value_);
+  XCHECK_NE(value_, nullptr);
   value_ = nullptr;
 }
 } // namespace eden

@@ -1085,11 +1085,11 @@ bool EdenServer::performCleanup() {
         performNormalShutdown().thenValue([](auto&&) { return std::nullopt; });
   }
 
-  DCHECK(shutdownFuture.valid())
+  XDCHECK(shutdownFuture.valid())
       << "shutdownFuture should not be empty during cleanup";
 
   // Drive the main event base until shutdownFuture completes
-  CHECK_EQ(mainEventBase_, folly::EventBaseManager::get()->getEventBase());
+  XCHECK_EQ(mainEventBase_, folly::EventBaseManager::get()->getEventBase());
   while (!shutdownFuture.isReady()) {
     mainEventBase_->loopOnce();
   }
@@ -1460,7 +1460,7 @@ void EdenServer::mountFinished(
   {
     const auto mountPoints = mountPoints_.wlock();
     const auto it = mountPoints->find(mountPath);
-    CHECK(it != mountPoints->end());
+    XCHECK(it != mountPoints->end());
     unmountPromise = std::move(it->second.unmountPromise);
     takeoverPromise = std::move(it->second.takeoverPromise);
   }

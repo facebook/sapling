@@ -54,7 +54,7 @@ InodeBase::InodeBase(
       location_{LocationInfo{std::move(parent), name}} {
   // Inode numbers generally shouldn't be 0.
   // Older versions of glibc have bugs handling files with an inode number of 0
-  DCHECK(ino_.hasValue());
+  XDCHECK(ino_.hasValue());
   XLOG(DBG5) << "inode " << this << " (" << ino_
              << ") created: " << getLogPath();
 
@@ -147,7 +147,7 @@ bool InodeBase::getPathHelper(
     }
     parent = loc->parent;
     // Our caller should ensure that we are not the root
-    DCHECK(parent);
+    XDCHECK(parent);
     names.push_back(loc->name);
   }
 
@@ -176,7 +176,7 @@ bool InodeBase::getPathHelper(
     }
     names.push_back(loc->name);
     parent = loc->parent;
-    DCHECK(parent);
+    XDCHECK(parent);
   }
 }
 
@@ -211,7 +211,7 @@ std::string InodeBase::getLogPath() const {
 
 void InodeBase::markUnlinkedAfterLoad() {
   auto loc = location_.wlock();
-  DCHECK(!loc->unlinked);
+  XDCHECK(!loc->unlinked);
   loc->unlinked = true;
 }
 
@@ -220,12 +220,12 @@ std::unique_ptr<InodeBase> InodeBase::markUnlinked(
     PathComponentPiece name,
     const RenameLock& renameLock) {
   XLOG(DBG5) << "inode " << this << " unlinked: " << getLogPath();
-  DCHECK(renameLock.isHeld(mount_));
+  XDCHECK(renameLock.isHeld(mount_));
 
   {
     auto loc = location_.wlock();
-    DCHECK(!loc->unlinked);
-    DCHECK_EQ(loc->parent.get(), parent);
+    XDCHECK(!loc->unlinked);
+    XDCHECK_EQ(loc->parent.get(), parent);
     loc->unlinked = true;
   }
 
@@ -262,11 +262,11 @@ void InodeBase::updateLocation(
     const RenameLock& renameLock) {
   XLOG(DBG5) << "inode " << this << " renamed: " << getLogPath() << " --> "
              << newParent->getLogPath() << " / \"" << newName << "\"";
-  DCHECK(renameLock.isHeld(mount_));
-  DCHECK_EQ(mount_, newParent->mount_);
+  XDCHECK(renameLock.isHeld(mount_));
+  XDCHECK_EQ(mount_, newParent->mount_);
 
   auto loc = location_.wlock();
-  DCHECK(!loc->unlinked);
+  XDCHECK(!loc->unlinked);
   loc->parent = newParent;
   loc->name = newName.copy();
 }
@@ -318,7 +318,7 @@ ParentInodeInfo InodeBase::getParentInfo() const {
 
     if (!parent) {
       // We are the root inode.
-      DCHECK_EQ(numTries, 1u);
+      XDCHECK_EQ(numTries, 1u);
       return ParentInodeInfo{
           PathComponentPiece{"", detail::SkipPathSanityCheck()},
           nullptr,

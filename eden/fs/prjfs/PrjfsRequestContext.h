@@ -41,7 +41,7 @@ class PrjfsRequestContext : public RequestContext {
 
       if (try_.hasException()) {
         auto* err = try_.tryGetExceptionObject<std::exception>();
-        DCHECK(err);
+        XDCHECK(err);
         sendError(exceptionToHResult(*err));
       }
     });

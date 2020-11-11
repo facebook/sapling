@@ -389,7 +389,7 @@ void Journal::flush() {
 
 std::unique_ptr<JournalDeltaRange> Journal::accumulateRange(
     SequenceNumber from) {
-  DCHECK(from > 0);
+  XDCHECK(from > 0);
   std::unique_ptr<JournalDeltaRange> result = nullptr;
 
   size_t filesAccumulated = 0;

@@ -55,7 +55,7 @@ class FutureUnixSocket::ReceiveCallback : public folly::AsyncTimeout {
     return std::move(next_);
   }
   void append(std::unique_ptr<ReceiveCallback> next) {
-    CHECK(!next_);
+    XCHECK(!next_);
     next_ = std::move(next);
   }
 
@@ -130,8 +130,8 @@ FutureUnixSocket::~FutureUnixSocket() {
     socket_->closeNow();
   }
   // closeNow() should have forced us to clear out recvQueue_
-  CHECK(!recvQueue_);
-  CHECK(!recvQueueTail_);
+  XCHECK(!recvQueue_);
+  XCHECK(!recvQueueTail_);
 }
 
 Future<Unit> FutureUnixSocket::connect(
@@ -189,10 +189,10 @@ Future<UnixSocket::Message> FutureUnixSocket::receive(
   auto previousTail = recvQueueTail_;
   recvQueueTail_ = callback.get();
   if (previousTail) {
-    DCHECK(recvQueue_);
+    XDCHECK(recvQueue_);
     previousTail->append(std::move(callback));
   } else {
-    DCHECK(!recvQueue_);
+    XDCHECK(!recvQueue_);
     recvQueue_ = std::move(callback);
     socket_->setReceiveCallback(this);
   }
@@ -217,8 +217,8 @@ void FutureUnixSocket::receiveTimeout() {
 
 void FutureUnixSocket::messageReceived(Message&& message) noexcept {
   XLOG(DBG3) << "messageReceived()";
-  CHECK(recvQueue_);
-  DCHECK(recvQueueTail_);
+  XCHECK(recvQueue_);
+  XDCHECK(recvQueueTail_);
 
   auto callback = std::move(recvQueue_);
   recvQueue_ = callback->popNext();
@@ -226,8 +226,8 @@ void FutureUnixSocket::messageReceived(Message&& message) noexcept {
     recvQueueTail_ = nullptr;
     socket_->clearReceiveCallback();
   } else {
-    DCHECK(recvQueueTail_);
-    DCHECK_NE(recvQueueTail_, callback.get());
+    XDCHECK(recvQueueTail_);
+    XDCHECK_NE(recvQueueTail_, callback.get());
   }
 
   // Fulfill the callback as the very last thing we do,

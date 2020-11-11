@@ -40,7 +40,7 @@ bool DirList::add(StringPiece name, ino_t inode, dtype_t type, off_t off) {
   }
 
   cur_ += fullSize;
-  DCHECK_LE(cur_, end_);
+  XDCHECK_LE(cur_, end_);
   return true;
 }
 

@@ -159,7 +159,7 @@ class InodeTable {
         return std::nullopt;
       } else {
         auto index = iter->second;
-        CHECK_LT(index, state.storage.size());
+        XCHECK_LT(index, state.storage.size());
         return state.storage[index].record;
       }
     });
@@ -181,7 +181,7 @@ class InodeTable {
             folly::to<std::string>("no entry in InodeTable for inode ", ino));
       }
       auto index = iter->second;
-      CHECK_LT(index, state.storage.size());
+      XCHECK_LT(index, state.storage.size());
       fn(state.storage[index].record);
       // TODO: maybe trigger a background msync
       return state.storage[index].record;
@@ -207,7 +207,7 @@ class InodeTable {
       size_t indexToDelete = iter->second;
       indices.erase(iter);
 
-      DCHECK_GT(storage.size(), 0);
+      XDCHECK_GT(storage.size(), 0ul);
       size_t lastIndex = storage.size() - 1;
 
       if (lastIndex != indexToDelete) {

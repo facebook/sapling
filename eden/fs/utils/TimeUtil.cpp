@@ -7,9 +7,8 @@
 
 #include "eden/fs/utils/TimeUtil.h"
 
-#include <glog/logging.h>
-
 #include <folly/Format.h>
+#include <folly/logging/xlog.h>
 
 namespace facebook {
 namespace eden {
@@ -69,8 +68,8 @@ std::string durationStr(std::chrono::nanoseconds duration) {
 
 // Set of all the Comparision operators for comparing two timespec structs.
 bool operator<(const timespec& a, const timespec& b) {
-  CHECK_LT(a.tv_nsec, 1000000000);
-  CHECK_LT(b.tv_nsec, 1000000000);
+  XCHECK_LT(a.tv_nsec, 1000000000);
+  XCHECK_LT(b.tv_nsec, 1000000000);
   if (a.tv_sec == b.tv_sec) {
     return a.tv_nsec < b.tv_nsec;
   } else {
@@ -78,8 +77,8 @@ bool operator<(const timespec& a, const timespec& b) {
   }
 }
 bool operator<=(const timespec& a, const timespec& b) {
-  CHECK_LT(a.tv_nsec, 1000000000);
-  CHECK_LT(b.tv_nsec, 1000000000);
+  XCHECK_LT(a.tv_nsec, 1000000000);
+  XCHECK_LT(b.tv_nsec, 1000000000);
   if (a.tv_sec == b.tv_sec) {
     return a.tv_nsec <= b.tv_nsec;
   } else {

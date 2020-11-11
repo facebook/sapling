@@ -10,7 +10,7 @@
 #include <assert.h>
 #include <fmt/format.h>
 #include <folly/Format.h>
-#include <glog/logging.h>
+#include <folly/logging/xlog.h>
 #include <stdint.h>
 
 namespace facebook {
@@ -30,8 +30,8 @@ struct InodeNumber {
    * initialized to zero.
    */
   constexpr explicit InodeNumber(uint64_t ino) noexcept : rawValue_{ino} {
-    // This is intentionally an assert() rather than DCHECK_NE() since
-    // DCHECK_NE is not allowed in constexpr methods.
+    // This is intentionally an assert() rather than XDCHECK_NE() since
+    // XDCHECK_NE is not allowed in constexpr methods.
     assert(0 != rawValue_);
   }
 
@@ -49,7 +49,7 @@ struct InodeNumber {
    * Use this accessor when handing inode numbers to FUSE.
    */
   uint64_t get() const {
-    DCHECK_NE(0u, rawValue_);
+    XDCHECK_NE(0u, rawValue_);
     return rawValue_;
   }
 

@@ -8,7 +8,6 @@
 #pragma once
 
 #include <folly/Range.h>
-#include <glog/logging.h>
 #include <variant>
 #include "eden/fs/config/EdenConfig.h"
 
@@ -61,7 +60,7 @@ class KeySpace {
       : record_{&record} {}
 
   /* implicit */ KeySpace(const KeySpaceRecord* record) : record_{record} {
-    CHECK_NOTNULL(record);
+    XCHECK_NE(record, nullptr);
   }
 
   constexpr const KeySpaceRecord* operator->() const {

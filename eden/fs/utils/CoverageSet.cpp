@@ -23,7 +23,7 @@ void CoverageSet::add(size_t begin, size_t end) {
   using Set = std::set<Interval>;
   using Iter = Set::iterator;
 
-  CHECK_LE(begin, end)
+  XCHECK_LE(begin, end)
       << "End of interval must be greater than or equal to begin";
   if (begin == end) {
     return;
@@ -81,7 +81,7 @@ void CoverageSet::add(size_t begin, size_t end) {
 }
 
 bool CoverageSet::covers(size_t begin, size_t end) const noexcept {
-  CHECK_LE(begin, end)
+  XCHECK_LE(begin, end)
       << "End of interval must be greater than or equal to begin";
   if (begin == end) {
     return true;

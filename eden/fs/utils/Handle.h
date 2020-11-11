@@ -80,7 +80,7 @@ class HandleBase {
   }
 
   Type* set() noexcept {
-    DCHECK(handle_ == Traits::invalidHandleValue());
+    XDCHECK(handle_ == Traits::invalidHandleValue());
     return &handle_;
   }
 

@@ -10,7 +10,6 @@
 #include "eden/fs/utils/Memory.h"
 
 #include <boost/operators.hpp>
-#include <glog/logging.h>
 
 #include <fmt/format.h>
 #include <folly/Expected.h>
@@ -19,6 +18,7 @@
 #include <folly/Format.h>
 #include <folly/String.h>
 #include <folly/hash/Hash.h>
+#include <folly/logging/xlog.h>
 #include <iterator>
 #include <optional>
 #include <type_traits>
@@ -535,12 +535,12 @@ class ComposedPathIterator {
       : path_(path.stringPiece()), pos_(pos) {}
 
   bool operator==(const ComposedPathIterator& other) const {
-    DCHECK_EQ(path_, other.path_);
+    XDCHECK_EQ(path_, other.path_);
     return pos_ == other.pos_;
   }
 
   bool operator!=(const ComposedPathIterator& other) const {
-    DCHECK_EQ(path_, other.path_);
+    XDCHECK_EQ(path_, other.path_);
     return pos_ != other.pos_;
   }
 
@@ -580,7 +580,7 @@ class ComposedPathIterator {
 
   /// Returns the piece for the current iterator position.
   Piece piece() const {
-    CHECK_NOTNULL(pos_);
+    XCHECK_NE(pos_, nullptr);
     // Return everything preceding the slash to which pos_ points.
     return Piece(folly::StringPiece(path_.begin(), pos_));
   }
@@ -627,9 +627,9 @@ class ComposedPathIterator {
         pos_ = pathBegin();
         return;
       }
-      CHECK_NE(pos_, path_.end());
+      XCHECK_NE(pos_, path_.end());
     } else {
-      CHECK_NOTNULL(pos_);
+      XCHECK_NE(pos_, nullptr);
       if (pos_ == path_.end()) {
         pos_ = nullptr;
         return;
@@ -646,7 +646,7 @@ class ComposedPathIterator {
   void retreat() {
     auto stopPos = pathBegin();
     if (IsReverse) {
-      CHECK_NOTNULL(pos_);
+      XCHECK_NE(pos_, nullptr);
       if (pos_ <= stopPos) {
         pos_ = nullptr;
         return;
@@ -656,7 +656,7 @@ class ComposedPathIterator {
         pos_ = path_.end();
         return;
       }
-      CHECK_NE(pos_, stopPos);
+      XCHECK_NE(pos_, stopPos);
     }
 
     --pos_;
@@ -730,7 +730,7 @@ class PathComponentIterator {
   }
 
   bool operator==(const PathComponentIterator& other) const {
-    DCHECK_EQ(path_, other.path_);
+    XDCHECK_EQ(path_, other.path_);
     // We have to check both start_ and end_ here.
     // In most cases start_ will equal other.start_ if and only if end_ equals
     // other.end_.  However, this is not always true because of end() and
@@ -740,7 +740,7 @@ class PathComponentIterator {
   }
 
   bool operator!=(const PathComponentIterator& other) const {
-    DCHECK_EQ(path_, other.path_);
+    XDCHECK_EQ(path_, other.path_);
     return (start_ != other.start_) || (end_ != other.end_);
   }
 
@@ -804,7 +804,7 @@ class PathComponentIterator {
  private:
   // Move the iterator forwards in the path.
   void advance() {
-    DCHECK_NE(start_, path_.end());
+    XDCHECK_NE(start_, path_.end());
     if (end_ == path_.end()) {
       start_ = end_;
       return;
@@ -818,7 +818,7 @@ class PathComponentIterator {
 
   // Move the iterator backwards in the path.
   void retreat() {
-    DCHECK_NE(end_, path_.begin());
+    XDCHECK_NE(end_, path_.begin());
     if (start_ == path_.begin()) {
       end_ = path_.begin();
       return;
@@ -1428,7 +1428,7 @@ class PathSuffixIterator {
   }
 
   bool operator==(const PathSuffixIterator& other) const {
-    DCHECK_EQ(path_, other.path_);
+    XDCHECK_EQ(path_, other.path_);
     // We have to check both start_ and end_ here.
     // In most cases start_ will equal other.start_ if and only if end_ equals
     // other.end_.  However, this is not always true because of end() and
@@ -1438,7 +1438,7 @@ class PathSuffixIterator {
   }
 
   bool operator!=(const PathSuffixIterator& other) const {
-    DCHECK_EQ(path_, other.path_);
+    XDCHECK_EQ(path_, other.path_);
     return start_ != other.start_;
   }
 
@@ -1503,7 +1503,7 @@ class PathSuffixIterator {
  private:
   // Move the iterator forwards in the path.
   void advance() {
-    DCHECK_LT(start_, path_.size());
+    XDCHECK_LT(start_, path_.size());
 
     // npos is used to represent one before the beginning (that is,
     // path.rsuffixes().end()).  Advance from npos to 0.
@@ -1524,7 +1524,7 @@ class PathSuffixIterator {
 
   // Move the iterator backwards in the path.
   void retreat() {
-    DCHECK_NE(start_, folly::StringPiece::npos);
+    XDCHECK_NE(start_, folly::StringPiece::npos);
     // If we are at the start of the string, move to npos
     if (start_ == 0) {
       start_ = folly::StringPiece::npos;
@@ -1713,7 +1713,7 @@ RelativePath operator+(
 namespace detail {
 template <typename Piece, bool IsReverse>
 RelativePathPiece ComposedPathIterator<Piece, IsReverse>::remainder() const {
-  CHECK_NOTNULL(pos_);
+  XCHECK_NE(pos_, nullptr);
   if (pos_ < path_.end()) {
     return RelativePathPiece(
         folly::StringPiece(pos_ + 1, path_.end()),

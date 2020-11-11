@@ -22,7 +22,6 @@
 #include <folly/lang/Bits.h>
 #include <folly/logging/xlog.h>
 #include <gflags/gflags.h>
-#include <glog/logging.h>
 #ifndef _WIN32
 #include <unistd.h>
 #endif
@@ -560,7 +559,7 @@ HgImporter::TransactionID HgImporter::sendPrefetchFilesRequest(
     // This isn't really that big of a deal though.
     appender.push(StringPiece(file.revHash().toString()));
   }
-  DCHECK_EQ(buf.length(), dataLength);
+  XDCHECK_EQ(buf.length(), dataLength);
 
   std::array<struct iovec, 2> iov;
   iov[0].iov_base = &header;

@@ -102,7 +102,7 @@ inline void InodeMap::insertLoadedInode(
     const folly::Synchronized<Members>::LockedPtr& data,
     InodeBase* inode) {
   auto ret = data->loadedInodes_.emplace(inode->getNodeId(), inode);
-  CHECK(ret.second);
+  XCHECK(ret.second);
   if (inode->getType() == dtype_t::Dir) {
     ++data->numTreeInodes_;
   } else {
@@ -112,11 +112,11 @@ inline void InodeMap::insertLoadedInode(
 
 void InodeMap::initialize(TreeInodePtr root) {
   auto data = data_.wlock();
-  CHECK(!root_);
+  XCHECK(!root_);
   root_ = std::move(root);
   insertLoadedInode(data, root_.get());
-  DCHECK_EQ(1u, data->numTreeInodes_);
-  DCHECK_EQ(0u, data->numFileInodes_);
+  XDCHECK_EQ(1u, data->numTreeInodes_);
+  XDCHECK_EQ(0u, data->numFileInodes_);
 }
 
 void InodeMap::initializeFromTakeover(
@@ -125,16 +125,16 @@ void InodeMap::initializeFromTakeover(
 #ifndef _WIN32
   auto data = data_.wlock();
 
-  CHECK_EQ(data->loadedInodes_.size(), 0)
+  XCHECK_EQ(data->loadedInodes_.size(), 0ul)
       << "cannot load InodeMap data over a populated instance";
-  CHECK_EQ(data->unloadedInodes_.size(), 0)
+  XCHECK_EQ(data->unloadedInodes_.size(), 0ul)
       << "cannot load InodeMap data over a populated instance";
 
-  CHECK(!root_);
+  XCHECK(!root_);
   root_ = std::move(root);
   insertLoadedInode(data, root_.get());
-  DCHECK_EQ(1, data->numTreeInodes_);
-  DCHECK_EQ(0, data->numFileInodes_);
+  XDCHECK_EQ(1ul, data->numTreeInodes_);
+  XDCHECK_EQ(0ul, data->numFileInodes_);
   for (const auto& entry : *takeover.unloadedInodes_ref()) {
     if (*entry.numFsReferences_ref() < 0) {
       auto message = folly::to<std::string>(
@@ -356,7 +356,7 @@ InodeMap::PromiseVector InodeMap::inodeLoadComplete(InodeBase* inode) {
   try {
     auto data = data_.wlock();
     auto it = data->unloadedInodes_.find(number);
-    CHECK(it != data->unloadedInodes_.end())
+    XCHECK(it != data->unloadedInodes_.end())
         << "failed to find unloaded inode data when finishing load of inode "
         << number;
     swap(promises, it->second.promises);
@@ -394,7 +394,7 @@ InodeMap::PromiseVector InodeMap::extractPendingPromises(InodeNumber number) {
   {
     auto data = data_.wlock();
     auto it = data->unloadedInodes_.find(number);
-    CHECK(it != data->unloadedInodes_.end())
+    XCHECK(it != data->unloadedInodes_.end())
         << "failed to find unloaded inode data when finishing load of inode "
         << number;
     swap(promises, it->second.promises);
@@ -503,7 +503,7 @@ void InodeMap::decFuseRefcount(InodeNumber number, uint32_t count) {
 
   // Decrement the reference count in the unloaded entry
   auto& unloadedEntry = unloadedIter->second;
-  CHECK_GE(unloadedEntry.numFsReferences, count);
+  XCHECK_GE(unloadedEntry.numFsReferences, count);
   unloadedEntry.numFsReferences -= count;
   if (unloadedEntry.numFsReferences == 0) {
     // We can completely forget about this unloaded inode now.
@@ -515,7 +515,7 @@ void InodeMap::decFuseRefcount(InodeNumber number, uint32_t count) {
 
 void InodeMap::setUnmounted() {
   auto data = data_.wlock();
-  DCHECK(!data->isUnmounted_);
+  XDCHECK(!data->isUnmounted_);
   data->isUnmounted_ = true;
 }
 
@@ -524,7 +524,7 @@ Future<SerializedInodeMap> InodeMap::shutdown(bool doTakeover) {
   auto future = Future<folly::Unit>::makeEmpty();
   {
     auto data = data_.wlock();
-    CHECK(!data->shutdownPromise.has_value())
+    XCHECK(!data->shutdownPromise.has_value())
         << "shutdown() invoked more than once on InodeMap for "
         << mount_->getPath();
     data->shutdownPromise.emplace(Promise<Unit>{});
@@ -680,7 +680,7 @@ void InodeMap::onInodeUnreferenced(
   // Decide if we should unload the inode now, or wait until later.
   bool unloadNow = false;
   bool shuttingDown = data->shutdownPromise.has_value();
-  DCHECK(shuttingDown || inode != root_.get());
+  XDCHECK(shuttingDown || inode != root_.get());
   if (shuttingDown) {
     // Check to see if this was the root inode that got unloaded.
     // This indicates that the shutdown is complete.
@@ -713,9 +713,9 @@ void InodeMap::onInodeUnreferenced(
     if (!parentInfo.isUnlinked()) {
       const auto& parentContents = parentInfo.getParentContents();
       auto it = parentContents->entries.find(parentInfo.getName());
-      CHECK(it != parentContents->entries.end());
+      XCHECK(it != parentContents->entries.end());
       auto released = it->second.clearInode();
-      CHECK_EQ(inode, released);
+      XCHECK_EQ(inode, released);
     }
   }
 
@@ -759,12 +759,12 @@ void InodeMap::unloadInode(
                << inode->getNodeId();
     auto ret = data->unloadedInodes_.emplace(
         inode->getNodeId(), std::move(unloadedEntry.value()));
-    CHECK(ret.second);
+    XCHECK(ret.second);
   }
 
   auto numErased = data->loadedInodes_.erase(inode->getNodeId());
-  CHECK_EQ(numErased, 1u) << "inconsistent loaded inodes data: "
-                          << inode->getLogPath();
+  XCHECK_EQ(numErased, 1u) << "inconsistent loaded inodes data: "
+                           << inode->getLogPath();
   if (inode->getType() == dtype_t::Dir) {
     --data->numTreeInodes_;
   } else {
@@ -877,7 +877,7 @@ bool InodeMap::shouldLoadChild(
     auto newUnloadedData = UnloadedInode(parentNumber, name);
     auto ret =
         data->unloadedInodes_.emplace(childInode, std::move(newUnloadedData));
-    DCHECK(ret.second);
+    XDCHECK(ret.second);
     unloadedData = &ret.first->second;
   } else {
     unloadedData = &iter->second;
@@ -904,7 +904,7 @@ void InodeMap::inodeCreated(const InodePtr& inode) {
 InodeMap::InodeCounts InodeMap::getInodeCounts() const {
   InodeCounts counts;
   auto data = data_.rlock();
-  DCHECK_EQ(
+  XDCHECK_EQ(
       data->numTreeInodes_ + data->numFileInodes_, data->loadedInodes_.size());
   counts.treeCount = data->numTreeInodes_;
   counts.fileCount = data->numFileInodes_;

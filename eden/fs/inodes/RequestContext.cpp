@@ -23,7 +23,7 @@ void RequestContext::startRequest(
     std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>&
         requestWatches) {
   startTime_ = steady_clock::now();
-  DCHECK(latencyHistogram_ == nullptr);
+  XDCHECK(latencyHistogram_ == nullptr);
   latencyHistogram_ = histogram;
   stats_ = stats;
   channelThreadLocalStats_ = requestWatches;

@@ -92,7 +92,7 @@ class InodeBase {
   void decFsRefcount(uint32_t count = 1) {
     auto prevValue =
         numFsReferences_.fetch_sub(count, std::memory_order_acq_rel);
-    DCHECK_GE(prevValue, count);
+    XDCHECK_GE(prevValue, count);
   }
 
   /**
@@ -265,9 +265,9 @@ class InodeBase {
    * racy, since other threads may be changing the reference count concurrently.
    */
   uint32_t getFsRefcount() const {
-    // DCHECK that the caller is only calling us while the inode is being
+    // XDCHECK that the caller is only calling us while the inode is being
     // unloaded
-    DCHECK_EQ(0u, ptrAcquireCount_.load(std::memory_order_acquire));
+    XDCHECK_EQ(0u, ptrAcquireCount_.load(std::memory_order_acquire));
 
     return numFsReferences_.load(std::memory_order_acquire);
   }
@@ -409,7 +409,7 @@ class InodeBase {
     // The refcount is only allowed to go from 0 to 1 when holding the InodeMap
     // lock or our parent TreeInode's contents lock.  Those two situations call
     // newInodeRefConstructed() instead
-    DCHECK_NE(0u, prevValue);
+    XDCHECK_NE(0u, prevValue);
   }
 
   // newInodeRefConstructed() is called any time we construct a brand new

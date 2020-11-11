@@ -165,7 +165,7 @@ TreeInode::TreeInode(
     std::optional<Hash> treeHash)
     : Base(ino, initialMode, initialTimestamps, parent, name),
       contents_(folly::in_place, std::move(dir), treeHash) {
-  DCHECK_NE(ino, kRootNodeId);
+  XDCHECK_NE(ino, kRootNodeId);
 }
 
 TreeInode::TreeInode(EdenMount* mount, std::shared_ptr<const Tree>&& tree)
@@ -382,7 +382,8 @@ InodeNumber TreeInode::getChildInodeNumber(PathComponentPiece name) {
   }
 
   auto& ent = iter->second;
-  DCHECK(!ent.getInode() || ent.getInode()->getNodeId() == ent.getInodeNumber())
+  XDCHECK(
+      !ent.getInode() || ent.getInode()->getNodeId() == ent.getInodeNumber())
       << "inode number mismatch: " << ent.getInode()->getNodeId()
       << " != " << ent.getInodeNumber();
   return ent.getInodeNumber();
@@ -621,7 +622,7 @@ Future<unique_ptr<InodeBase>> TreeInode::startLoadingInode(
     ObjectFetchContext& fetchContext) {
   XLOG(DBG5) << "starting to load inode " << entry.getInodeNumber() << ": "
              << getLogPath() << " / \"" << name << "\"";
-  DCHECK(entry.getInode() == nullptr);
+  XDCHECK(entry.getInode() == nullptr);
   if (!entry.isDirectory()) {
     // If this is a file we can just go ahead and create it now;
     // we don't need to load anything else.
@@ -874,7 +875,7 @@ DirContents TreeInode::buildDirFromTree(
     const Tree* tree,
     Overlay* overlay,
     bool caseSensitive) {
-  CHECK(tree);
+  XCHECK(tree);
 
   // A future optimization is for this code to allocate all of the inode numbers
   // at once and then dole them out, one per entry. It would reduce the number
@@ -959,7 +960,7 @@ FileInodePtr TreeInode::createImpl(
 
     // Record the new entry
     auto insertion = contents->entries.emplace(name, mode, childNumber);
-    CHECK(insertion.second)
+    XCHECK(insertion.second)
         << "we already confirmed that this entry did not exist above";
     auto& entry = insertion.first->second;
 
@@ -1095,7 +1096,7 @@ TreeInodePtr TreeInode::mkdir(
 
     // Add a new entry to contents_.entries
     auto emplaceResult = contents->entries.emplace(name, mode, childNumber);
-    CHECK(emplaceResult.second)
+    XCHECK(emplaceResult.second)
         << "directory contents should not have changed since the check above";
     auto& entry = emplaceResult.first->second;
 
@@ -1399,7 +1400,7 @@ class TreeInode::TreeRenameLocks {
     return destChildIter_;
   }
   InodeBase* destChild() const {
-    DCHECK(destChildExists());
+    XDCHECK(destChildExists());
     return destChildIter_->second.getInode();
   }
 
@@ -1407,11 +1408,11 @@ class TreeInode::TreeRenameLocks {
     return destChildIter_ != destContents_->end();
   }
   bool destChildIsDirectory() const {
-    DCHECK(destChildExists());
+    XDCHECK(destChildExists());
     return destChildIter_->second.isDirectory();
   }
   bool destChildIsEmpty() const {
-    DCHECK(destChildContents_);
+    XDCHECK(destChildContents_);
     return destChildContents_->empty();
   }
 
@@ -1578,7 +1579,7 @@ Future<Unit> TreeInode::rename(
   } else if (needSrc) {
     return getOrLoadChild(name, *context).thenValue(onLoadFinished);
   } else {
-    CHECK(needDest);
+    XCHECK(needDest);
     return destParent->getOrLoadChild(destName, *context)
         .thenValue(onLoadFinished);
   }
@@ -1660,7 +1661,7 @@ Future<Unit> TreeInode::doRename(
   } else {
     auto ret =
         locks.destContents()->emplace(destName, std::move(srcIter->second));
-    CHECK(ret.second);
+    XCHECK(ret.second);
 
     // If the source and destination directory are the same, then inserting the
     // destination entry may have invalidated our source entry iterator, so we
@@ -1775,7 +1776,7 @@ void TreeInode::TreeRenameLocks::acquireLocks(
     // This will either be ENOENT (src entry doesn't exist) or ENOTEMPTY
     // (destChild is not empty since the src entry exists).
     if (destChildExists() && destChild() == srcTree) {
-      CHECK_NOTNULL(destChildContents_);
+      XCHECK_NE(destChildContents_, nullptr);
       srcContents_ = destChildContents_;
     } else {
       srcContentsLock_ = srcTree->contents_.wlock();
@@ -2155,7 +2156,7 @@ Future<Unit> TreeInode::computeDiff(
     shared_ptr<const Tree> tree,
     std::unique_ptr<GitIgnoreStack> ignore,
     bool isIgnored) {
-  DCHECK(isIgnored || ignore != nullptr)
+  XDCHECK(isIgnored || ignore != nullptr)
       << "the ignore stack is required if this directory is not ignored";
 
   // A list of entries that have been removed
@@ -2700,7 +2701,7 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
              << "): " << (oldScmEntry ? oldScmEntry->toLogString() : "(null)")
              << " -> " << (newScmEntry ? newScmEntry->toLogString() : "(null)");
   // At most one of oldScmEntry and newScmEntry may be null.
-  DCHECK(oldScmEntry || newScmEntry);
+  XDCHECK(oldScmEntry || newScmEntry);
 
   // If we aren't doing a force checkout, we don't need to do anything
   // for entries that are identical between the old and new source control
@@ -2744,7 +2745,7 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
       ctx->addConflict(
           ConflictType::REMOVED_MODIFIED, this, oldScmEntry->getName());
       if (ctx->forceUpdate()) {
-        DCHECK(!ctx->isDryRun());
+        XDCHECK(!ctx->isDryRun());
         contentsUpdated = true;
       }
     }
@@ -2934,7 +2935,7 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
       // entry as desired.
       deletedInode = inode->markUnlinked(this, name, ctx->renameLock());
       if (newScmEntry) {
-        DCHECK_EQ(newScmEntry->getName(), name);
+        XDCHECK_EQ(newScmEntry->getName(), name);
         it->second = DirEntry(
             modeFromTreeEntryType(newScmEntry->getType()),
             getOverlay()->allocateInodeNumber(),
@@ -2955,8 +2956,8 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
   if (newTree) {
     // TODO: Also apply permissions changes to the entry.
 
-    CHECK(newScmEntry.has_value());
-    CHECK(newScmEntry->isTree());
+    XCHECK(newScmEntry.has_value());
+    XCHECK(newScmEntry->isTree());
     return treeInode->checkout(ctx, std::move(oldTree), std::move(newTree))
         .thenValue([](folly::Unit) { return InvalidationRequired::No; });
   }
@@ -2999,7 +3000,7 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
             bool inserted;
             {
               auto contents = parentInode->contents_.wlock();
-              DCHECK(!newScmEntry->isTree());
+              XDCHECK(!newScmEntry->isTree());
 
               // This code is running asynchronously during checkout, so
               // flush the readdir cache right here.
@@ -3210,7 +3211,7 @@ void TreeInode::saveOverlayPostCheckout(
 
 bool TreeInode::checkoutTryRemoveEmptyDir(CheckoutContext* ctx) {
   auto location = getLocationInfo(ctx->renameLock());
-  DCHECK(!location.unlinked);
+  XDCHECK(!location.unlinked);
   if (!location.parent) {
     // We can't ever remove the root directory.
     return false;
@@ -3230,7 +3231,7 @@ folly::Future<InodePtr> TreeInode::loadChildLocked(
     DirEntry& entry,
     std::vector<IncompleteInodeLoad>& pendingLoads,
     ObjectFetchContext& fetchContext) {
-  DCHECK(!entry.getInode());
+  XDCHECK(!entry.getInode());
 
   folly::Promise<InodePtr> promise;
   auto future = promise.getFuture();

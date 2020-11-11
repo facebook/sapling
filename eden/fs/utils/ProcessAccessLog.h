@@ -71,7 +71,7 @@ class ProcessAccessLog {
     size_t& operator[](AccessType type) {
       static_assert(std::is_unsigned_v<std::underlying_type_t<AccessType>>);
       auto idx = enumValue(type);
-      CHECK_LT(idx, enumValue(AccessType::Last));
+      XCHECK_LT(idx, enumValue(AccessType::Last));
       return counts[idx];
     }
   };

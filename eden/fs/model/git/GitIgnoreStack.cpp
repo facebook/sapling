@@ -7,8 +7,6 @@
 
 #include "eden/fs/model/git/GitIgnoreStack.h"
 
-#include <glog/logging.h>
-
 namespace facebook {
 namespace eden {
 
@@ -64,7 +62,7 @@ GitIgnore::MatchResult GitIgnoreStack::match(
     // We should add exactly one GitIgnore entry to the stack for each
     // directory.  We may also start with a few more GitIgnore entries on the
     // stack initially for system-wide or personal user ignore rules.
-    DCHECK(node != nullptr || suffixIter == suffixRange.end());
+    XDCHECK(node != nullptr || suffixIter == suffixRange.end());
   }
   return GitIgnore::NO_MATCH;
 }

@@ -694,7 +694,7 @@ void FuseChannel::sendReply(
 
 void FuseChannel::sendRawReply(const iovec iov[], size_t count) const {
   // Ensure that the length is set correctly
-  DCHECK_EQ(iov[0].iov_len, sizeof(fuse_out_header));
+  XDCHECK_EQ(iov[0].iov_len, sizeof(fuse_out_header));
   const auto header = reinterpret_cast<fuse_out_header*>(iov[0].iov_base);
   header->len = 0;
   for (size_t i = 0; i < count; ++i) {
@@ -741,7 +741,7 @@ FuseChannel::FuseChannel(
       traceBus_(TraceBus<FuseTraceEvent>::create(
           "FuseTrace" + mountPath.stringPiece().str(),
           kTraceBusCapacity)) {
-  CHECK_GE(numThreads_, 1);
+  XCHECK_GE(numThreads_, 1ul);
   installSignalHandler();
 
   traceSubscriptionHandles_.push_back(traceBus_->subscribeFunction(
@@ -765,7 +765,7 @@ FuseChannel::FuseChannel(
 }
 
 FuseChannel::~FuseChannel() {
-  CHECK_EQ(1, traceBus_.use_count())
+  XCHECK_EQ(1, traceBus_.use_count())
       << "This shared_ptr should not be copied; see attached comment.";
 }
 
@@ -1163,8 +1163,8 @@ void FuseChannel::fuseWorkerThread() noexcept {
   {
     auto state = state_.wlock();
     ++state->stoppedThreads;
-    DCHECK(!state->destroyPending) << "destroyPending cannot be set while "
-                                      "worker threads are still running";
+    XDCHECK(!state->destroyPending) << "destroyPending cannot be set while "
+                                       "worker threads are still running";
 
     // If we are the last thread to stop and there are no more requests
     // outstanding then invoke sessionComplete().  If we are the last thread

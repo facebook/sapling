@@ -10,7 +10,7 @@
 #include <cpptoml.h> // @manual=fbsource//third-party/cpptoml:cpptoml
 #include <folly/Range.h>
 #include <folly/String.h>
-#include <glog/logging.h>
+#include <folly/logging/xlog.h>
 
 namespace facebook {
 namespace eden {
@@ -57,7 +57,7 @@ template <typename T>
 std::pair<T, bool>
 setDefault(cpptoml::table& root, TomlPath key, const T& defaultValue) {
   // TODO: Much of this function could be moved into the .cpp file.
-  DCHECK_GE(key.size(), 1u);
+  XDCHECK_GE(key.size(), 1u);
 
   auto begin = key.begin();
   const auto end = key.end();

@@ -66,8 +66,8 @@ void PrivHelperServer::init(folly::File&& socket, uid_t uid, gid_t gid) {
 
 void PrivHelperServer::initPartial(folly::File&& socket, uid_t uid, gid_t gid) {
   // Make sure init() is only called once.
-  CHECK_EQ(uid_, std::numeric_limits<uid_t>::max());
-  CHECK_EQ(gid_, std::numeric_limits<gid_t>::max());
+  XCHECK_EQ(uid_, std::numeric_limits<uid_t>::max());
+  XCHECK_EQ(gid_, std::numeric_limits<gid_t>::max());
 
   // Set our thread name to to make it easier to distinguish
   // the privhelper process from the main EdenFS process.  Setting the thread

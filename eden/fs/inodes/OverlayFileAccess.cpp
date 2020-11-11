@@ -56,7 +56,7 @@ OverlayFileAccess::~OverlayFileAccess() = default;
 void OverlayFileAccess::createEmptyFile(InodeNumber ino) {
   auto file = overlay_->createOverlayFile(ino, folly::ByteRange{});
   auto state = state_.wlock();
-  CHECK(!state->entries.exists(ino))
+  XCHECK(!state->entries.exists(ino))
       << "Cannot create overlay file " << ino << " when it's already open!";
   state->entries.set(
       ino, std::make_shared<Entry>(std::move(file), size_t{0}, kEmptySha1));
@@ -68,7 +68,7 @@ void OverlayFileAccess::createFile(
     const std::optional<Hash>& sha1) {
   auto file = overlay_->createOverlayFile(ino, blob.getContents());
   auto state = state_.wlock();
-  CHECK(!state->entries.exists(ino))
+  XCHECK(!state->entries.exists(ino))
       << "Cannot create overlay file " << ino << " when it's already open!";
   state->entries.set(
       ino, std::make_shared<Entry>(std::move(file), blob.getSize(), sha1));

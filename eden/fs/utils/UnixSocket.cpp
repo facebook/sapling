@@ -137,14 +137,14 @@ void UnixSocket::destroy() {
 }
 
 void UnixSocket::attachEventBase(folly::EventBase* eventBase) {
-  DCHECK(!eventBase_);
+  XDCHECK(!eventBase_);
   eventBase_ = eventBase;
   EventHandler::attachEventBase(eventBase);
   AsyncTimeout::attachEventBase(eventBase);
 }
 
 void UnixSocket::detachEventBase() {
-  DCHECK(eventBase_);
+  XDCHECK(eventBase_);
   eventBase_ = nullptr;
   EventHandler::detachEventBase();
   AsyncTimeout::detachEventBase();
@@ -239,12 +239,12 @@ void UnixSocket::close() {
 
 void UnixSocket::closeNow() {
   if (!socket_) {
-    DCHECK(closeStarted_);
-    DCHECK_EQ(registeredIOEvents_, 0);
-    DCHECK(!isScheduled());
-    DCHECK(!receiveCallback_);
-    DCHECK(!sendQueue_);
-    DCHECK(!sendQueueTail_);
+    XDCHECK(closeStarted_);
+    XDCHECK_EQ(registeredIOEvents_, 0);
+    XDCHECK(!isScheduled());
+    XDCHECK(!receiveCallback_);
+    XDCHECK(!sendQueue_);
+    XDCHECK(!sendQueueTail_);
     return;
   }
 
@@ -365,12 +365,12 @@ void UnixSocket::send(Message&& message, SendCallback* callback) noexcept {
 
   // Append the new SendQueueEntry to sendQueue_
   if (!sendQueueTail_) {
-    DCHECK(!sendQueue_);
+    XDCHECK(!sendQueue_);
     trySendNow = true;
     sendQueue_ = std::move(queueEntry);
     sendQueueTail_ = sendQueue_.get();
   } else {
-    DCHECK(sendQueue_);
+    XDCHECK(sendQueue_);
     sendQueueTail_->next = std::move(queueEntry);
     sendQueueTail_ = sendQueueTail_->next.get();
   }
@@ -417,7 +417,7 @@ UnixSocket::SendQueueEntry::SendQueueEntry(
     bodySize += iovec.iov_len;
   });
 
-  DCHECK_EQ(iovCount, idx);
+  XDCHECK_EQ(iovCount, idx);
 
   serializeHeader(header, bodySize, message.files.size());
 }
@@ -470,7 +470,7 @@ void UnixSocket::serializeHeader(
   cursor.writeBE(static_cast<uint64_t>(kProtocolID));
   cursor.writeBE(static_cast<uint32_t>(dataSize));
   cursor.writeBE(static_cast<uint32_t>(numFiles));
-  CHECK(cursor.isAtEnd());
+  XCHECK(cursor.isAtEnd());
 }
 
 UnixSocket::Header UnixSocket::deserializeHeader(const HeaderBuffer& buffer) {
@@ -554,7 +554,7 @@ bool UnixSocket::trySendMessage(SendQueueEntry* entry) {
     // message body.  We have to include at least 1 byte of normal data in each
     // sendmsg() call, so we send a single 0 byte with each remainging chunk of
     // FDs.
-    CHECK_LT(entry->filesSent, entry->message.files.size());
+    XCHECK_LT(entry->filesSent, entry->message.files.size());
     // We re-use the header iovec to point at our 1 byte of data,
     // since we are don sending the header and don't need it to point at the
     // header any more.
@@ -627,8 +627,8 @@ size_t UnixSocket::initializeFirstControlMsg(
 
   // Initialize the data
   struct cmsghdr* hdr = CMSG_FIRSTHDR(msg);
-  DCHECK(hdr);
-  DCHECK_GT(fdsToSend, 0);
+  XDCHECK(hdr);
+  XDCHECK_GT(fdsToSend, 0ul);
   hdr->cmsg_len = CMSG_LEN(fdsToSend * sizeof(int));
   hdr->cmsg_level = SOL_SOCKET;
   hdr->cmsg_type = SCM_RIGHTS;
@@ -647,8 +647,8 @@ size_t UnixSocket::initializeAdditionalControlMsg(
     SendQueueEntry* entry) {
   const auto& message = entry->message;
 
-  DCHECK(!message.files.empty());
-  DCHECK_GT(entry->filesSent, 0);
+  XDCHECK(!message.files.empty());
+  XDCHECK_GT(entry->filesSent, 0ul);
 
   size_t fdsToSend = std::min(kMaxFDs, message.files.size() - entry->filesSent);
   auto cmsgSpace = CMSG_SPACE(fdsToSend * sizeof(int));
@@ -693,7 +693,7 @@ void UnixSocket::clearReceiveCallback() {
 }
 
 void UnixSocket::tryReceive() {
-  DCHECK(receiveCallback_);
+  XDCHECK(receiveCallback_);
 
   // Set a limit on the number of messages we process at once in one EventBase
   // loop iteration, to avoid starving other EventBase callbacks.
@@ -719,8 +719,8 @@ void UnixSocket::tryReceive() {
 
 bool UnixSocket::tryReceiveOne() {
   if (headerBytesReceived_ < recvHeaderBuffer_.size()) {
-    DCHECK_EQ(recvMessage_.data.length(), 0);
-    DCHECK_EQ(recvMessage_.files.size(), 0);
+    XDCHECK_EQ(recvMessage_.data.length(), 0ul);
+    XDCHECK_EQ(recvMessage_.files.size(), 0ul);
 
     if (!tryReceiveHeader()) {
       return false;
@@ -798,7 +798,7 @@ void UnixSocket::processReceivedFiles(struct cmsghdr* cmsg) {
   size_t dataLength = cmsg->cmsg_len - CMSG_LEN(0);
 
   size_t numFDs = dataLength / sizeof(int);
-  DCHECK_EQ(dataLength % sizeof(int), 0)
+  XDCHECK_EQ(dataLength % sizeof(int), 0ul)
       << "expected an even number of file descriptors: size=" << dataLength;
 
   auto* data = reinterpret_cast<const int*>(CMSG_DATA(cmsg));
@@ -963,11 +963,11 @@ void UnixSocket::socketError(const exception_wrapper& ew) {
   // In case socketError() gets called when we are already closed,
   // just return immediately.
   if (!socket_) {
-    DCHECK_EQ(registeredIOEvents_, 0);
-    DCHECK(!isScheduled());
-    DCHECK(!receiveCallback_);
-    DCHECK(!sendQueue_);
-    DCHECK(!sendQueueTail_);
+    XDCHECK_EQ(registeredIOEvents_, 0);
+    XDCHECK(!isScheduled());
+    XDCHECK(!receiveCallback_);
+    XDCHECK(!sendQueue_);
+    XDCHECK(!sendQueueTail_);
     return;
   }
 

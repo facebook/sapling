@@ -159,7 +159,7 @@ std::pair<SpawnedProcess, FileDescriptor> DaemonStartupLogger::spawnImpl(
     StringPiece logPath,
     PrivHelper* privHelper,
     const std::vector<std::string>& argv) {
-  DCHECK(!logPath.empty());
+  XDCHECK(!logPath.empty());
 
   auto exePath = executablePath();
   auto canonPath = realpath(exePath.c_str());
@@ -227,7 +227,7 @@ std::pair<SpawnedProcess, FileDescriptor> DaemonStartupLogger::spawnImpl(
 void DaemonStartupLogger::initClient(
     folly::StringPiece logPath,
     FileDescriptor&& pipe) {
-  DCHECK(!logPath.empty());
+  XDCHECK(!logPath.empty());
   pipe_ = std::move(pipe);
   redirectOutput(logPath);
 }

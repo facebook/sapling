@@ -72,7 +72,7 @@ class PrivHelperClientImpl : public PrivHelper,
         conn_(UnixSocket::makeUnique(nullptr, std::move(conn))) {}
   ~PrivHelperClientImpl() override {
     cleanup();
-    DCHECK_EQ(sendPending_, 0);
+    XDCHECK_EQ(sendPending_, 0ul);
   }
 
   void attachEventBase(EventBase* eventBase) override {
@@ -305,7 +305,7 @@ class PrivHelperClientImpl : public PrivHelper,
     PendingRequestMap pending;
     pending.swap(pendingRequests_);
     conn_.reset();
-    DCHECK_EQ(sendPending_, 0);
+    XDCHECK_EQ(sendPending_, 0ul);
 
     for (auto& entry : pending) {
       entry.second.setException(ex);

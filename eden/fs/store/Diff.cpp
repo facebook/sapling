@@ -497,7 +497,7 @@ void processBothPresent(
   if (isTreeSCM) {
     if (isTreeWD) {
       // tree-to-tree diff
-      DCHECK_EQ(scmEntry.getType(), wdEntry.getType());
+      XDCHECK_EQ(scmEntry.getType(), wdEntry.getType());
       if (scmEntry.getHash() == wdEntry.getHash()) {
         return;
       }
@@ -576,7 +576,7 @@ void processBothPresent(
 FOLLY_NODISCARD Future<Unit> waitOnResults(
     DiffContext* context,
     ChildFutures&& childFutures) {
-  DCHECK_EQ(childFutures.paths.size(), childFutures.futures.size());
+  XDCHECK_EQ(childFutures.paths.size(), childFutures.futures.size());
   if (childFutures.futures.empty()) {
     return makeFuture();
   }
@@ -585,7 +585,7 @@ FOLLY_NODISCARD Future<Unit> waitOnResults(
       .toUnsafeFuture()
       .thenValue([context, paths = std::move(childFutures.paths)](
                      vector<Try<Unit>>&& results) {
-        DCHECK_EQ(paths.size(), results.size());
+        XDCHECK_EQ(paths.size(), results.size());
         for (size_t idx = 0; idx < results.size(); ++idx) {
           const auto& result = results[idx];
           if (!result.hasException()) {

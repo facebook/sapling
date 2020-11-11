@@ -637,7 +637,7 @@ folly::Future<folly::Unit> EdenMount::unmount() {
         })
         .thenTry([this](Try<Unit> && result) noexcept->folly::Future<Unit> {
           auto mountingUnmountingState = mountingUnmountingState_.wlock();
-          DCHECK(mountingUnmountingState->channelUnmountPromise.has_value());
+          XDCHECK(mountingUnmountingState->channelUnmountPromise.has_value());
           folly::SharedPromise<folly::Unit>* unsafeUnmountPromise =
               &*mountingUnmountingState->channelUnmountPromise;
           mountingUnmountingState.unlock();

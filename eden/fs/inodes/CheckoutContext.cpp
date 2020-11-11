@@ -92,7 +92,7 @@ Future<vector<CheckoutConflict>> CheckoutContext::finish(Hash newSnapshot) {
 
 void CheckoutContext::addConflict(ConflictType type, RelativePathPiece path) {
   // Errors should be added using addError()
-  CHECK(type != ConflictType::ERROR)
+  XCHECK(type != ConflictType::ERROR)
       << "attempted to add error using addConflict(): " << path;
 
   CheckoutConflict conflict;
@@ -112,7 +112,7 @@ void CheckoutContext::addConflict(
   // namespace.  Therefore parent->getPath() must always return non-none value
   // here.
   auto parentPath = parent->getPath();
-  CHECK(parentPath.has_value());
+  XCHECK(parentPath.has_value());
 
   addConflict(type, parentPath.value() + name);
 }
@@ -120,7 +120,7 @@ void CheckoutContext::addConflict(
 void CheckoutContext::addConflict(ConflictType type, InodeBase* inode) {
   // As above, the inode in question must have a path here.
   auto path = inode->getPath();
-  CHECK(path.has_value());
+  XCHECK(path.has_value());
   addConflict(type, path.value());
 }
 
@@ -130,7 +130,7 @@ void CheckoutContext::addError(
     const folly::exception_wrapper& ew) {
   // As above in addConflict(), the parent tree must have a valid path here.
   auto parentPath = parent->getPath();
-  CHECK(parentPath.has_value());
+  XCHECK(parentPath.has_value());
 
   auto path = parentPath.value() + name;
   CheckoutConflict conflict;

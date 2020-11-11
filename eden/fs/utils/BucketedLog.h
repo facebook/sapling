@@ -98,10 +98,10 @@ class BucketedLog {
     }
     auto newWindowStart = now + 1 - Size;
 
-    DCHECK_GE(newWindowStart, windowStart_);
+    XDCHECK_GE(newWindowStart, windowStart_);
     uint64_t toClear =
         std::min(static_cast<uint64_t>(Size), newWindowStart - windowStart_);
-    DCHECK_GE(newWindowStart, toClear);
+    XDCHECK_GE(newWindowStart, toClear);
     for (uint64_t p = newWindowStart - toClear; p < newWindowStart; ++p) {
       buckets_[p % Size].clear();
     }

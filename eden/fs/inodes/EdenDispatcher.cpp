@@ -48,7 +48,7 @@ namespace {
 
 /** Compute a fuse_entry_out */
 fuse_entry_out computeEntryParam(const Dispatcher::Attr& attr) {
-  DCHECK(attr.st.st_ino) << "We should never return a 0 inode to FUSE";
+  XDCHECK(attr.st.st_ino) << "We should never return a 0 inode to FUSE";
   fuse_entry_out entry = {};
   entry.nodeid = attr.st.st_ino;
   entry.generation = 0;
@@ -487,7 +487,7 @@ folly::Future<folly::Unit> EdenDispatcher::opendir(
       .thenValue([this, guid = std::move(guid)](auto&& dirents) {
         auto [iterator, inserted] =
             enumSessions_.wlock()->emplace(guid, std::move(dirents));
-        DCHECK(inserted);
+        XDCHECK(inserted);
 
         return folly::unit;
       });
@@ -495,7 +495,7 @@ folly::Future<folly::Unit> EdenDispatcher::opendir(
 
 void EdenDispatcher::closedir(const Guid& guid) {
   auto erasedCount = enumSessions_.wlock()->erase(guid);
-  DCHECK(erasedCount == 1);
+  XDCHECK(erasedCount == 1);
 }
 
 HRESULT EdenDispatcher::getEnumerationData(

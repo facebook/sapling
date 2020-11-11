@@ -93,7 +93,7 @@ void SubprocessScribeLogger::log(std::string message) {
 
   {
     auto state = state_.lock();
-    CHECK(!state->shouldStop) << "log() called during destruction - that's UB";
+    XCHECK(!state->shouldStop) << "log() called during destruction - that's UB";
     if (state->didStop) {
       return;
     }
@@ -122,7 +122,7 @@ void SubprocessScribeLogger::writerThread() {
         return state->shouldStop || !state->messages.empty();
       });
       if (!state->messages.empty()) {
-        CHECK_LE(state->messages.front().size(), state->totalBytes)
+        XCHECK_LE(state->messages.front().size(), state->totalBytes)
             << "totalSize accounting fell out of sync!";
 
         // The below statements are all noexcept.
@@ -133,7 +133,7 @@ void SubprocessScribeLogger::writerThread() {
         // If the predicate succeeded but we have no messages, then we're
         // shutting down cleanly.
         assert(state->shouldStop);
-        CHECK_EQ(0, state->totalBytes)
+        XCHECK_EQ(0ul, state->totalBytes)
             << "totalSize accounting fell out of sync!";
         state->didStop = true;
         state.unlock();

@@ -9,10 +9,10 @@
 
 #include "InodePtrFwd.h"
 
-#include <glog/logging.h>
 #include <cstddef>
 #include <memory>
 #include <utility>
+#include "folly/logging/xlog.h"
 
 namespace facebook {
 namespace eden {
@@ -78,7 +78,7 @@ class InodePtrImpl {
     // http://www.open-std.org/jtc1/sc22/wg21/docs/lwg-defects.html#1204
     //
     // Make sure our callers never try to move assign an InodePtr from itself.
-    DCHECK_NE(this, &other);
+    XDCHECK_NE(this, &other);
 
     decref();
     value_ = other.value_;

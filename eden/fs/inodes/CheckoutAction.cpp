@@ -31,7 +31,7 @@ CheckoutAction::CheckoutAction(
     const TreeEntry* newScmEntry,
     InodePtr&& inode)
     : ctx_(ctx), inode_(std::move(inode)) {
-  DCHECK(oldScmEntry || newScmEntry);
+  XDCHECK(oldScmEntry || newScmEntry);
   if (oldScmEntry) {
     oldScmEntry_ = *oldScmEntry;
   }
@@ -47,7 +47,7 @@ CheckoutAction::CheckoutAction(
     const TreeEntry* newScmEntry,
     folly::Future<InodePtr> inodeFuture)
     : ctx_(ctx), inodeFuture_(std::move(inodeFuture)) {
-  DCHECK(oldScmEntry || newScmEntry);
+  XDCHECK(oldScmEntry || newScmEntry);
   if (oldScmEntry) {
     oldScmEntry_ = *oldScmEntry;
   }
@@ -59,7 +59,7 @@ CheckoutAction::CheckoutAction(
 CheckoutAction::~CheckoutAction() {}
 
 PathComponentPiece CheckoutAction::getEntryName() const {
-  DCHECK(oldScmEntry_.has_value() || newScmEntry_.has_value());
+  XDCHECK(oldScmEntry_.has_value() || newScmEntry_.has_value());
   return oldScmEntry_.has_value() ? oldScmEntry_.value().getName()
                                   : newScmEntry_.value().getName();
 }
@@ -165,7 +165,7 @@ Future<InvalidationRequired> CheckoutAction::run(
 
     // If we were constructed with a Future<InodePtr>, wait for it.
     if (!inode_) {
-      CHECK(inodeFuture_.valid());
+      XCHECK(inodeFuture_.valid());
       std::move(inodeFuture_)
           .thenValue([rc = LoadingRefcount(this)](InodePtr inode) {
             rc->setInode(std::move(inode));
@@ -183,31 +183,31 @@ Future<InvalidationRequired> CheckoutAction::run(
 }
 
 void CheckoutAction::setOldTree(std::shared_ptr<const Tree> tree) {
-  CHECK(!oldTree_);
-  CHECK(!oldBlobSha1_);
+  XCHECK(!oldTree_);
+  XCHECK(!oldBlobSha1_);
   oldTree_ = std::move(tree);
 }
 
 void CheckoutAction::setOldBlob(Hash blobSha1) {
-  CHECK(!oldTree_);
-  CHECK(!oldBlobSha1_);
+  XCHECK(!oldTree_);
+  XCHECK(!oldBlobSha1_);
   oldBlobSha1_ = std::move(blobSha1);
 }
 
 void CheckoutAction::setNewTree(std::shared_ptr<const Tree> tree) {
-  CHECK(!newTree_);
-  CHECK(!newBlobMarker_);
+  XCHECK(!newTree_);
+  XCHECK(!newBlobMarker_);
   newTree_ = std::move(tree);
 }
 
 void CheckoutAction::setNewBlob() {
-  CHECK(!newTree_);
-  CHECK(!newBlobMarker_);
+  XCHECK(!newTree_);
+  XCHECK(!newBlobMarker_);
   newBlobMarker_ = true;
 }
 
 void CheckoutAction::setInode(InodePtr inode) {
-  CHECK(!inode_);
+  XCHECK(!inode_);
   inode_ = std::move(inode);
 }
 
@@ -362,10 +362,10 @@ Future<bool> CheckoutAction::hasConflict() {
         });
   }
 
-  DCHECK(!oldScmEntry_) << "Both oldTree_ and oldBlob_ are nullptr, "
-                           "so this file should not have an oldScmEntry_.";
-  DCHECK(newScmEntry_) << "If there is no oldScmEntry_, then there must be a "
-                          "newScmEntry_.";
+  XDCHECK(!oldScmEntry_) << "Both oldTree_ and oldBlob_ are nullptr, "
+                            "so this file should not have an oldScmEntry_.";
+  XDCHECK(newScmEntry_) << "If there is no oldScmEntry_, then there must be a "
+                           "newScmEntry_.";
 
   auto localIsFile = inode_.asFilePtrOrNull() != nullptr;
   if (localIsFile) {

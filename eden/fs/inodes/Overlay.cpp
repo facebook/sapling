@@ -58,7 +58,7 @@ Overlay::~Overlay() {
 }
 
 void Overlay::close() {
-  CHECK_NE(std::this_thread::get_id(), gcThread_.get_id());
+  XCHECK_NE(std::this_thread::get_id(), gcThread_.get_id());
 
   gcQueue_.lock()->stop = true;
   gcCondVar_.notify_one();
@@ -193,7 +193,7 @@ InodeNumber Overlay::allocateInodeNumber() {
 #ifdef _WIN32
   backingOverlay_.updateUsedInodeNumber(previous);
 #endif
-  DCHECK_NE(0u, previous) << "allocateInodeNumber called before initialize";
+  XDCHECK_NE(0u, previous) << "allocateInodeNumber called before initialize";
   return InodeNumber{previous};
 }
 
@@ -241,7 +241,7 @@ optional<DirContents> Overlay::loadOverlayDir(InodeNumber inodeNumber) {
 void Overlay::saveOverlayDir(InodeNumber inodeNumber, const DirContents& dir) {
   IORequest req{this};
   auto nextInodeNumber = nextInodeNumber_.load(std::memory_order_relaxed);
-  CHECK_LT(inodeNumber.get(), nextInodeNumber)
+  XCHECK_LT(inodeNumber.get(), nextInodeNumber)
       << "saveOverlayDir called with unallocated inode number";
 
   // TODO: T20282158 clean up access of child inode information.
@@ -253,10 +253,10 @@ void Overlay::saveOverlayDir(InodeNumber inodeNumber, const DirContents& dir) {
     const auto& entName = entIter.first;
     const auto& ent = entIter.second;
 
-    CHECK_NE(entName, "")
+    XCHECK_NE(entName, "")
         << "saveOverlayDir called with entry with an empty path for directory with inodeNumber="
         << inodeNumber;
-    CHECK_LT(ent.getInodeNumber().get(), nextInodeNumber)
+    XCHECK_LT(ent.getInodeNumber().get(), nextInodeNumber)
         << "saveOverlayDir called with entry using unallocated inode number";
 
     overlay::OverlayEntry oent;
@@ -351,7 +351,7 @@ OverlayFile Overlay::createOverlayFile(
     InodeNumber inodeNumber,
     folly::ByteRange contents) {
   IORequest req{this};
-  CHECK_LT(inodeNumber.get(), nextInodeNumber_.load(std::memory_order_relaxed))
+  XCHECK_LT(inodeNumber.get(), nextInodeNumber_.load(std::memory_order_relaxed))
       << "createOverlayFile called with unallocated inode number";
   return OverlayFile(
       backingOverlay_.createOverlayFile(inodeNumber, contents),
@@ -362,7 +362,7 @@ OverlayFile Overlay::createOverlayFile(
     InodeNumber inodeNumber,
     const folly::IOBuf& contents) {
   IORequest req{this};
-  CHECK_LT(inodeNumber.get(), nextInodeNumber_.load(std::memory_order_relaxed))
+  XCHECK_LT(inodeNumber.get(), nextInodeNumber_.load(std::memory_order_relaxed))
       << "createOverlayFile called with unallocated inode number";
   return OverlayFile(
       backingOverlay_.createOverlayFile(inodeNumber, contents),
@@ -373,7 +373,7 @@ OverlayFile Overlay::createOverlayFile(
 
 InodeNumber Overlay::getMaxInodeNumber() {
   auto ino = nextInodeNumber_.load(std::memory_order_relaxed);
-  CHECK_GT(ino, 1u);
+  XCHECK_GT(ino, 1u);
   return InodeNumber{ino - 1};
 }
 

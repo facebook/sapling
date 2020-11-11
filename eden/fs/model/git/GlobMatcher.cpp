@@ -255,8 +255,8 @@ Expected<size_t, string> GlobMatcher::parseBracketExpr(
     StringPiece glob,
     size_t idx,
     vector<uint8_t>* pattern) {
-  DCHECK_LT(idx, glob.size());
-  DCHECK_EQ(glob[idx], '[');
+  XDCHECK_LT(idx, glob.size());
+  XDCHECK_EQ(glob[idx], '[');
 
   // Check for a leading '!' or '^'
   if (idx + 1 >= glob.size()) {
@@ -313,7 +313,7 @@ Expected<size_t, string> GlobMatcher::parseBracketExpr(
       // ']' normally signifies the end of the character class,
       // unless it is the very first character after the opening '[' or '[^'
       if (idx == startIdx + 1) {
-        DCHECK_EQ(NO_PREV_CHAR, prevChar);
+        XDCHECK_EQ(NO_PREV_CHAR, prevChar);
         prevChar = c;
       } else {
         // End of the character class.
@@ -395,7 +395,7 @@ bool GlobMatcher::addCharClass(
     StringPiece charClass,
     vector<uint8_t>* pattern) {
   auto addRange = [&](uint8_t low, uint8_t high) {
-    DCHECK_LE(low, high);
+    XDCHECK_LE(low, high);
     pattern->push_back(GLOB_CHAR_CLASS_RANGE);
     pattern->push_back(low);
     pattern->push_back(high);
@@ -691,13 +691,13 @@ bool GlobMatcher::tryMatchAt(
 bool GlobMatcher::charClassMatch(uint8_t ch, size_t* patternIdx) const {
   size_t idx = *patternIdx + 1;
   while (true) {
-    DCHECK_LT(idx, pattern_.size());
+    XDCHECK_LT(idx, pattern_.size());
     if (pattern_[idx] == GLOB_CHAR_CLASS_END) {
       // Reached the end of the character class with no match.
       *patternIdx = idx + 1;
       return false;
     } else if (pattern_[idx] == GLOB_CHAR_CLASS_RANGE) {
-      DCHECK_LT(idx + 2, pattern_.size());
+      XDCHECK_LT(idx + 2, pattern_.size());
       uint8_t lowBound = pattern_[idx + 1];
       uint8_t highBound = pattern_[idx + 2];
       idx += 2;

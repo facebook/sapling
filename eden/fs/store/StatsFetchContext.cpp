@@ -67,7 +67,7 @@ uint64_t StatsFetchContext::countFetchesOfTypeAndOrigin(
 
 FetchStatistics StatsFetchContext::computeStatistics() const {
   auto computePercent = [&](uint64_t n, uint64_t d) -> unsigned short {
-    DCHECK_LE(n, d) << n << " > " << d;
+    XDCHECK_LE(n, d) << n << " > " << d;
     if (d == 0) {
       return 0;
     }

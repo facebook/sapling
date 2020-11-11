@@ -99,7 +99,7 @@ Dispatcher::Attr setFileAttr(
 }
 
 /**
- * Helper function used by BASIC_ATTR_CHECKS()
+ * Helper function used by BASIC_ATTR_XCHECKS()
  */
 void basicAttrChecks(const FileInodePtr& inode, const Dispatcher::Attr& attr) {
   EXPECT_EQ(inode->getNodeId().getRawValue(), attr.st.st_ino);
@@ -140,7 +140,7 @@ void basicAttrChecks(const FileInodePtr& inode, const Dispatcher::Attr& attr) {
  * - The link count should always be 1.
  * - The timestamps should be greater than 0.
  */
-#define BASIC_ATTR_CHECKS(inode, ...)                                         \
+#define BASIC_ATTR_XCHECKS(inode, ...)                                        \
   ({                                                                          \
     SCOPED_TRACE(                                                             \
         folly::to<std::string>("Originally from ", __FILE__, ":", __LINE__)); \
@@ -176,7 +176,7 @@ TEST_F(FileInodeTest, getattrFromBlob) {
   auto inode = mount_.getFileInode("dir/a.txt");
   auto attr = getFileAttr(inode);
 
-  BASIC_ATTR_CHECKS(inode, attr);
+  BASIC_ATTR_XCHECKS(inode, attr);
   EXPECT_EQ((S_IFREG | 0644), attr.st.st_mode);
   EXPECT_EQ(15, attr.st.st_size);
   EXPECT_EQ(1, attr.st.st_blocks);
@@ -189,7 +189,7 @@ TEST_F(FileInodeTest, getattrFromOverlay) {
   auto inode = mount_.getFileInode("dir/new_file.c");
 
   auto attr = getFileAttr(inode);
-  BASIC_ATTR_CHECKS(inode, attr);
+  BASIC_ATTR_XCHECKS(inode, attr);
   EXPECT_EQ((S_IFREG | 0644), attr.st.st_mode);
   EXPECT_EQ(12, attr.st.st_size);
   EXPECT_EQ(1, attr.st.st_blocks);
@@ -204,7 +204,7 @@ void testSetattrTruncateAll(TestMount& mount) {
   desired.valid = FATTR_SIZE;
   auto attr = setFileAttr(inode, desired);
 
-  BASIC_ATTR_CHECKS(inode, attr);
+  BASIC_ATTR_XCHECKS(inode, attr);
   EXPECT_EQ((S_IFREG | 0644), attr.st.st_mode);
   EXPECT_EQ(0, attr.st.st_size);
   EXPECT_EQ(0, attr.st.st_blocks);
@@ -233,7 +233,7 @@ TEST_F(FileInodeTest, setattrTruncatePartial) {
   desired.valid = FATTR_SIZE;
   auto attr = setFileAttr(inode, desired);
 
-  BASIC_ATTR_CHECKS(inode, attr);
+  BASIC_ATTR_XCHECKS(inode, attr);
   EXPECT_EQ((S_IFREG | 0644), attr.st.st_mode);
   EXPECT_EQ(4, attr.st.st_size);
 
@@ -247,7 +247,7 @@ TEST_F(FileInodeTest, setattrBiggerSize) {
   desired.valid = FATTR_SIZE;
   auto attr = setFileAttr(inode, desired);
 
-  BASIC_ATTR_CHECKS(inode, attr);
+  BASIC_ATTR_XCHECKS(inode, attr);
   EXPECT_EQ((S_IFREG | 0644), attr.st.st_mode);
   EXPECT_EQ(30, attr.st.st_size);
 
@@ -267,7 +267,7 @@ TEST_F(FileInodeTest, setattrPermissions) {
     desired.valid = FATTR_MODE;
     auto attr = setFileAttr(inode, desired);
 
-    BASIC_ATTR_CHECKS(inode, attr);
+    BASIC_ATTR_XCHECKS(inode, attr);
     EXPECT_EQ((S_IFREG | n), attr.st.st_mode);
     EXPECT_EQ(15, attr.st.st_size);
     EXPECT_FILE_INODE(inode, "This is a.txt.\n", n);
@@ -283,7 +283,7 @@ TEST_F(FileInodeTest, setattrFileType) {
   desired.valid = FATTR_MODE;
   auto attr = setFileAttr(inode, desired);
 
-  BASIC_ATTR_CHECKS(inode, attr);
+  BASIC_ATTR_XCHECKS(inode, attr);
   EXPECT_EQ((S_IFREG | 0755), attr.st.st_mode)
       << "File type bits in the mode should be ignored by setattr()";
   EXPECT_EQ(15, attr.st.st_size);
@@ -300,7 +300,7 @@ TEST_F(FileInodeTest, setattrAtime) {
   desired.atimensec = 5678;
   auto attr = setFileAttr(inode, desired);
 
-  BASIC_ATTR_CHECKS(inode, attr);
+  BASIC_ATTR_XCHECKS(inode, attr);
   EXPECT_EQ(1234, attr.st.st_atime);
   EXPECT_EQ(1234, stAtime(attr.st).tv_sec);
   EXPECT_EQ(5678, stAtime(attr.st).tv_nsec);
@@ -313,7 +313,7 @@ TEST_F(FileInodeTest, setattrAtime) {
   desired.valid = FATTR_ATIME_NOW;
   attr = setFileAttr(inode, desired);
 
-  BASIC_ATTR_CHECKS(inode, attr);
+  BASIC_ATTR_XCHECKS(inode, attr);
   EXPECT_EQ(
       mount_.getClock().getTimePoint(),
       folly::to<FakeClock::time_point>(stAtime(attr.st)));
@@ -329,7 +329,7 @@ void testSetattrMtime(TestMount& mount) {
   desired.valid = FATTR_MTIME;
   auto attr = setFileAttr(inode, desired);
 
-  BASIC_ATTR_CHECKS(inode, attr);
+  BASIC_ATTR_XCHECKS(inode, attr);
   EXPECT_EQ(1234, attr.st.st_mtime);
   EXPECT_EQ(1234, stMtime(attr.st).tv_sec);
   EXPECT_EQ(5678, stMtime(attr.st).tv_nsec);
@@ -342,7 +342,7 @@ void testSetattrMtime(TestMount& mount) {
   desired.valid = FATTR_MTIME_NOW;
   attr = setFileAttr(inode, desired);
 
-  BASIC_ATTR_CHECKS(inode, attr);
+  BASIC_ATTR_XCHECKS(inode, attr);
   EXPECT_EQ(start, folly::to<FakeClock::time_point>(stMtime(attr.st)));
 }
 

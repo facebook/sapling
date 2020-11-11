@@ -96,7 +96,7 @@ void EdenMain::runServer(const EdenServer& server) {
   // ThriftServer::serve() will drive the current thread's EventBase.
   // Verify that we are being called from the expected thread, and will end up
   // driving the EventBase returned by EdenServer::getMainEventBase().
-  CHECK_EQ(
+  XCHECK_EQ(
       server.getMainEventBase(),
       folly::EventBaseManager::get()->getEventBase());
 

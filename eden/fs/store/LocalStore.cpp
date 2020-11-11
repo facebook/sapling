@@ -253,7 +253,7 @@ void LocalStore::put(
     KeySpace keySpace,
     const Hash& id,
     folly::ByteRange value) {
-  CHECK(!keySpace->isDeprecated())
+  XCHECK(!keySpace->isDeprecated())
       << "Write to deprecated keyspace " << keySpace->name;
   put(keySpace, id.getBytes(), value);
 }
@@ -262,7 +262,7 @@ void LocalStore::WriteBatch::put(
     KeySpace keySpace,
     const Hash& id,
     folly::ByteRange value) {
-  CHECK(!keySpace->isDeprecated())
+  XCHECK(!keySpace->isDeprecated())
       << "Write to deprecated keyspace " << keySpace->name;
   put(keySpace, id.getBytes(), value);
 }

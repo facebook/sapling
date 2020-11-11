@@ -76,7 +76,7 @@ static void doFormatSubdirPath(
     uint64_t inodeNum,
     MutableStringPiece subdirPath) {
   constexpr char hexdigit[] = "0123456789abcdef";
-  DCHECK_EQ(subdirPath.size(), FsOverlay::kShardDirPathLength);
+  XDCHECK_EQ(subdirPath.size(), FsOverlay::kShardDirPathLength);
   subdirPath[0] = hexdigit[(inodeNum >> 4) & 0xf];
   subdirPath[1] = hexdigit[inodeNum & 0xf];
 }
@@ -90,7 +90,7 @@ void FsOverlay::formatSubdirPath(
 void FsOverlay::formatSubdirShardPath(
     ShardID shardID,
     MutableStringPiece subdirPath) {
-  DCHECK_LE(shardID, 0xff);
+  XDCHECK_LE(shardID, 0xfful);
   return doFormatSubdirPath(shardID, subdirPath);
 }
 
@@ -321,7 +321,7 @@ InodePath FsOverlay::getFilePath(InodeNumber inodeNumber) {
   auto numberPathStart = kShardDirPathLength + 1;
   auto index = folly::uint64ToBufferUnsafe(
       inodeNumber.get(), outPathArray.data() + numberPathStart);
-  DCHECK_LT(index + numberPathStart, outPathArray.size());
+  XDCHECK_LT(index + numberPathStart, outPathArray.size());
   outPathArray[index + numberPathStart] = '\0';
   return outPath;
 }

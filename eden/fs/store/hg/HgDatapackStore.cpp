@@ -139,7 +139,7 @@ void HgDatapackStore::getBlobBatch(
   auto blobhash = blobhashes.begin();
   auto hash = hashes.begin();
   for (; blobhash != blobhashes.end(); blobhash++, hash++) {
-    CHECK(hash != hashes.end());
+    XCHECK(hash != hashes.end());
     requests.emplace_back(std::make_pair<>(
         folly::ByteRange{hash->path().stringPiece()}, blobhash->getBytes()));
   }

@@ -35,8 +35,8 @@ Future<fuse_entry_out> TestDispatcher::lookup(
 
     // We expect the test code to generate unique request IDs,
     // just like the kernel should.
-    CHECK(emplaceResult.second) << "received duplicate request ID " << requestID
-                                << " from the test harness";
+    XCHECK(emplaceResult.second) << "received duplicate request ID "
+                                 << requestID << " from the test harness";
     result = emplaceResult.first->second.promise.getFuture();
   }
 

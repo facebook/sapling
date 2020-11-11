@@ -59,7 +59,7 @@ void FakeTreeBuilder::setFileImpl(
     folly::ByteRange contents,
     bool replace,
     TreeEntryType type) {
-  CHECK(!finalizedRoot_);
+  XCHECK(!finalizedRoot_);
 
   auto dir = getDirEntry(path.dirname(), true);
   auto name = path.basename();
@@ -88,7 +88,7 @@ void FakeTreeBuilder::setFileImpl(
 void FakeTreeBuilder::removeFile(
     RelativePathPiece path,
     bool removeEmptyParents) {
-  CHECK(!finalizedRoot_);
+  XCHECK(!finalizedRoot_);
 
   auto parentPath = path.dirname();
   auto dir = getDirEntry(parentPath, false);
@@ -108,7 +108,7 @@ void FakeTreeBuilder::removeFile(
 }
 
 void FakeTreeBuilder::setReady(RelativePathPiece path) {
-  CHECK(finalizedRoot_) << "call finalize before setReady";
+  XCHECK(finalizedRoot_) << "call finalize before setReady";
 
   if (path.empty()) {
     finalizedRoot_->setReady();
@@ -125,7 +125,7 @@ void FakeTreeBuilder::setReady(RelativePathPiece path) {
 }
 
 void FakeTreeBuilder::setAllReady() {
-  CHECK(finalizedRoot_);
+  XCHECK(finalizedRoot_);
   setAllReadyUnderTree(finalizedRoot_);
 }
 
@@ -150,7 +150,7 @@ void FakeTreeBuilder::setAllReadyUnderTree(StoredTree* tree) {
 void FakeTreeBuilder::triggerError(
     RelativePathPiece path,
     folly::exception_wrapper ew) {
-  CHECK(finalizedRoot_);
+  XCHECK(finalizedRoot_);
 
   if (path.empty()) {
     finalizedRoot_->triggerError(std::move(ew));
@@ -169,8 +169,8 @@ void FakeTreeBuilder::triggerError(
 StoredTree* FakeTreeBuilder::finalize(
     std::shared_ptr<FakeBackingStore> store,
     bool setReady) {
-  CHECK(!finalizedRoot_);
-  CHECK(!store_);
+  XCHECK(!finalizedRoot_);
+  XCHECK(!store_);
   store_ = std::move(store);
 
   finalizedRoot_ = root_.finalizeTree(this, setReady);
@@ -178,7 +178,7 @@ StoredTree* FakeTreeBuilder::finalize(
 }
 
 StoredTree* FakeTreeBuilder::getRoot() const {
-  CHECK(finalizedRoot_);
+  XCHECK(finalizedRoot_);
   return finalizedRoot_;
 }
 
@@ -209,7 +209,7 @@ FakeTreeBuilder::EntryInfo* FakeTreeBuilder::getDirEntry(
             "tried to look up non-existent directory ", path));
       }
       auto ret = parent->entries->emplace(name, EntryInfo{TreeEntryType::TREE});
-      CHECK(ret.second);
+      XCHECK(ret.second);
       parent = &ret.first->second;
     } else {
       parent = &iter->second;
@@ -228,7 +228,7 @@ FakeTreeBuilder::EntryInfo* FakeTreeBuilder::getDirEntry(
 }
 
 StoredTree* FakeTreeBuilder::getStoredTree(RelativePathPiece path) {
-  CHECK(finalizedRoot_);
+  XCHECK(finalizedRoot_);
 
   StoredTree* current = finalizedRoot_;
   for (auto name : path.components()) {
@@ -272,7 +272,7 @@ FakeTreeBuilder::EntryInfo::EntryInfo(ExplicitClone, const EntryInfo& orig)
     entries = make_unique<PathMap<EntryInfo>>(kPathMapDefaultCaseSensitive);
     for (const auto& e : *orig.entries) {
       auto ret = entries->emplace(e.first, EntryInfo{CLONE, e.second});
-      CHECK(ret.second) << "failed to insert " << e.first;
+      XCHECK(ret.second) << "failed to insert " << e.first;
     }
   }
 }
@@ -280,7 +280,7 @@ FakeTreeBuilder::EntryInfo::EntryInfo(ExplicitClone, const EntryInfo& orig)
 StoredTree* FakeTreeBuilder::EntryInfo::finalizeTree(
     FakeTreeBuilder* builder,
     bool setReady) const {
-  CHECK(type == TreeEntryType::TREE);
+  XCHECK(type == TreeEntryType::TREE);
 
   std::vector<TreeEntry> treeEntries;
   for (const auto& e : *entries) {
@@ -306,7 +306,7 @@ StoredTree* FakeTreeBuilder::EntryInfo::finalizeTree(
 StoredBlob* FakeTreeBuilder::EntryInfo::finalizeBlob(
     FakeTreeBuilder* builder,
     bool setReady) const {
-  CHECK(type != TreeEntryType::TREE);
+  XCHECK(type != TreeEntryType::TREE);
   auto* storedBlob = builder->store_->maybePutBlob(contents).first;
   if (setReady) {
     storedBlob->setReady();

@@ -70,7 +70,7 @@ class UntrackedDiffEntry : public DeferredDiffEntry {
     // If we have an inodeFuture_ to wait on, wait for it to finish,
     // then store the resulting inode_ and invoke run() again.
     if (inodeFuture_.valid()) {
-      CHECK(!inode_) << "cannot have both inode_ and inodeFuture_ set";
+      XCHECK(!inode_) << "cannot have both inode_ and inodeFuture_ set";
       return std::move(inodeFuture_).thenValue([this](InodePtr inode) {
         inode_ = std::move(inode);
         inodeFuture_ = folly::Future<InodePtr>::makeEmpty();
@@ -128,7 +128,7 @@ class ModifiedDiffEntry : public DeferredDiffEntry {
     // TODO: Load the inode in parallel with loading the source control data
     // below.
     if (inodeFuture_.valid()) {
-      CHECK(!inode_) << "cannot have both inode_ and inodeFuture_ set";
+      XCHECK(!inode_) << "cannot have both inode_ and inodeFuture_ set";
       return std::move(inodeFuture_).thenValue([this](InodePtr inode) {
         inode_ = std::move(inode);
         inodeFuture_ = Future<InodePtr>::makeEmpty();

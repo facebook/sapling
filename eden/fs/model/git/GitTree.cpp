@@ -192,7 +192,7 @@ folly::IOBuf GitTreeSerializer::finalize() {
   }
   headerLength += 1; // Include the terminating NUL byte
 
-  CHECK_GE(buf_.headroom(), headerLength);
+  XCHECK_GE(buf_.headroom(), static_cast<size_t>(headerLength));
   buf_.prepend(headerLength);
   memcpy(buf_.writableData(), header.data(), headerLength);
 

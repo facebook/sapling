@@ -10,6 +10,7 @@
 #include <folly/Conv.h>
 #include <folly/io/Cursor.h>
 #include <folly/lang/Bits.h>
+#include <folly/logging/xlog.h>
 
 #include "eden/fs/store/BlobMetadata.h"
 #include "eden/fs/store/StoreResult.h"
@@ -43,7 +44,7 @@ IOBuf TreeMetadata::serialize() const {
   Appender appender(&buf, 0);
 
   auto numberOfEntries = getNumberOfEntries();
-  CHECK_LE(numberOfEntries, std::numeric_limits<uint32_t>::max());
+  XCHECK_LE(numberOfEntries, std::numeric_limits<uint32_t>::max());
   appender.write<uint32_t>(folly::to_narrow(numberOfEntries));
   auto hashIndexedEntries =
       std::get_if<HashIndexedEntryMetadata>(&entryMetadata_);

@@ -45,9 +45,9 @@ using facebook::eden::win32ErrorToString;
   } while (false)
 
 PrjfsChannel* getChannel(const PRJ_CALLBACK_DATA* callbackData) noexcept {
-  DCHECK(callbackData);
+  XDCHECK(callbackData);
   auto channel = static_cast<PrjfsChannel*>(callbackData->InstanceContext);
-  DCHECK(channel);
+  XDCHECK(channel);
   return channel;
 }
 
@@ -388,8 +388,8 @@ HRESULT getFileData(
                     uint64_t endOffset = BlockAlignTruncate(
                         startOffset + kMaxChunkSize,
                         instanceInfo.WriteAlignment);
-                    DCHECK(endOffset > 0);
-                    DCHECK(endOffset > startOffset);
+                    XDCHECK_GT(endOffset, 0ul);
+                    XDCHECK_GT(endOffset, startOffset);
 
                     uint64_t chunkSize = endOffset - startOffset;
                     result = readMultipleFileChunks(
@@ -613,7 +613,7 @@ void PrjfsChannel::start(bool readOnly, bool useNegativePathCaching) {
 
 void PrjfsChannel::stop() {
   XLOG(INFO) << "Stopping PrjfsChannel for: " << mountPath_;
-  DCHECK(isRunning_);
+  XDCHECK(isRunning_);
   PrjStopVirtualizing(mountChannel_);
   stopPromise_.setValue(StopData{});
   isRunning_ = false;

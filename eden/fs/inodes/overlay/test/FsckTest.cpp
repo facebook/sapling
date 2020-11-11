@@ -67,7 +67,7 @@ class TestOverlay : public std::enable_shared_from_this<TestOverlay> {
   }
 
   void corruptInodeHeader(InodeNumber number, StringPiece headerData) {
-    CHECK_EQ(headerData.size(), FsOverlay::kHeaderLength);
+    XCHECK_EQ(headerData.size(), FsOverlay::kHeaderLength);
     auto overlayFile = fs_.openFileNoVerify(number);
     auto ret = folly::pwriteFull(
         overlayFile.fd(), headerData.data(), headerData.size(), 0);

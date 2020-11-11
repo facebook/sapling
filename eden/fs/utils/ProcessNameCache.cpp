@@ -13,6 +13,7 @@
 #include <fmt/format.h>
 #include <folly/FileUtil.h>
 #include <folly/MapUtil.h>
+#include <folly/logging/xlog.h>
 #include <folly/system/ThreadName.h>
 
 #include "eden/fs/utils/Synchronized.h"
@@ -46,7 +47,7 @@ size_t queryKernArgMax() {
   folly::checkUnixError(
       sysctl(mib, std::size(mib), &argmax, &size, nullptr, 0),
       "error retrieving KERN_ARGMAX via sysctl");
-  CHECK(argmax > 0) << "KERN_ARGMAX has a negative value!?";
+  XCHECK(argmax > 0) << "KERN_ARGMAX has a negative value!?";
   return size_t(argmax);
 }
 #endif
@@ -330,7 +331,7 @@ void ProcessNameCache::processActions() {
       if (state->workerThreadShouldStop) {
         // Shutdown is only initiated by the destructor and since gets
         // are blocking, this implies no gets can be pending.
-        CHECK(state->getQueue.empty())
+        XCHECK(state->getQueue.empty())
             << "ProcessNameCache destroyed while gets were pending!";
         return;
       }

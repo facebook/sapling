@@ -520,23 +520,23 @@ FunctionResult runFunctionInSeparateProcess(
       std::exit(0);
     }
   };
-  // CHECK_FUNCTION defines a lookup table entry
-#define CHECK_FUNCTION(name) checkFunction(#name, name)
-  CHECK_FUNCTION(daemonClosesStandardFileDescriptorsChild);
-  CHECK_FUNCTION(exitUnsuccessfullyMakesProcessExitWithCodeChild);
-  CHECK_FUNCTION(exitUnsuccessfullyWritesMessageAndKillsProcessChild);
-  CHECK_FUNCTION(loggedMessagesAreWrittenToStandardErrorChild);
-  CHECK_FUNCTION(programExitsUnsuccessfullyIfLogFileIsInaccessibleChild);
-  CHECK_FUNCTION(successWritesStartedMessageToStandardErrorDaemonChild);
-  CHECK_FUNCTION(successWritesStartedMessageToStandardErrorForegroundChild);
-  CHECK_FUNCTION(xlogsAfterSuccessAreWrittenToStandardErrorChild);
-  CHECK_FUNCTION(crashWithNoResult);
-  CHECK_FUNCTION(exitWithNoResult);
-  CHECK_FUNCTION(exitSuccessfullyWithNoResult);
-  CHECK_FUNCTION(destroyLoggerWhileDaemonIsStillRunning);
-  CHECK_FUNCTION(success);
-  CHECK_FUNCTION(failure);
-#undef CHECK_FUNCTION
+  // XCHECK_FUNCTION defines a lookup table entry
+#define XCHECK_FUNCTION(name) checkFunction(#name, name)
+  XCHECK_FUNCTION(daemonClosesStandardFileDescriptorsChild);
+  XCHECK_FUNCTION(exitUnsuccessfullyMakesProcessExitWithCodeChild);
+  XCHECK_FUNCTION(exitUnsuccessfullyWritesMessageAndKillsProcessChild);
+  XCHECK_FUNCTION(loggedMessagesAreWrittenToStandardErrorChild);
+  XCHECK_FUNCTION(programExitsUnsuccessfullyIfLogFileIsInaccessibleChild);
+  XCHECK_FUNCTION(successWritesStartedMessageToStandardErrorDaemonChild);
+  XCHECK_FUNCTION(successWritesStartedMessageToStandardErrorForegroundChild);
+  XCHECK_FUNCTION(xlogsAfterSuccessAreWrittenToStandardErrorChild);
+  XCHECK_FUNCTION(crashWithNoResult);
+  XCHECK_FUNCTION(exitWithNoResult);
+  XCHECK_FUNCTION(exitSuccessfullyWithNoResult);
+  XCHECK_FUNCTION(destroyLoggerWhileDaemonIsStillRunning);
+  XCHECK_FUNCTION(success);
+  XCHECK_FUNCTION(failure);
+#undef XCHECK_FUNCTION
   std::fprintf(
       stderr,
       "error: unknown function: %s\n",

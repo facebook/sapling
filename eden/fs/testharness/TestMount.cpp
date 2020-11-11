@@ -136,7 +136,7 @@ TestMount::~TestMount() {
   // Make sure the server executor has nothing left to run.
   serverExecutor_->drain();
 
-  CHECK_EQ(0, serverExecutor_->clear());
+  XCHECK_EQ(0ul, serverExecutor_->clear());
 }
 
 void TestMount::initialize(
@@ -261,7 +261,7 @@ Dispatcher* TestMount::getDispatcher() const {
 
 void TestMount::startFuseAndWait(std::shared_ptr<FakeFuse> fuse) {
   constexpr auto kTimeout = 10s;
-  CHECK(edenMount_) << "Call initialize() before calling " << __func__;
+  XCHECK(edenMount_) << "Call initialize() before calling " << __func__;
   registerFakeFuse(fuse);
   auto startChannelFuture = edenMount_->startChannel(false);
   fuse->sendInitRequest();

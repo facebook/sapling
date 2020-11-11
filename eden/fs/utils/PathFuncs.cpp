@@ -9,9 +9,9 @@
 
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
-#include <glog/logging.h>
 
 #include <folly/Exception.h>
+#include <folly/logging/xlog.h>
 #include <folly/portability/Stdlib.h>
 #include <optional>
 #ifdef _WIN32
@@ -199,7 +199,7 @@ folly::Expected<RelativePath, int> joinAndNormalize(
                      : folly::to<std::string>(base, kDirSeparator, path);
   const CanonicalData cdata{canonicalPathData(joined)};
   const auto& parts{cdata.components};
-  DCHECK(!cdata.isAbsolute);
+  XDCHECK(!cdata.isAbsolute);
   if (!parts.empty() && parts[0] == "..") {
     return folly::makeUnexpected(EXDEV);
   } else {

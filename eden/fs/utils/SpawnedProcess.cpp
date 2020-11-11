@@ -409,10 +409,10 @@ SpawnedProcess::SpawnedProcess(SpawnedProcess&& other) noexcept {
 SpawnedProcess& SpawnedProcess::operator=(SpawnedProcess&& other) noexcept {
   if (&other != this) {
 #ifdef _WIN32
-    CHECK_EQ(proc_, INVALID_HANDLE_VALUE);
+    XCHECK_EQ(proc_, INVALID_HANDLE_VALUE);
     proc_ = other.proc_;
 #else
-    CHECK_EQ(pid_, 0);
+    XCHECK_EQ(pid_, 0);
     pid_ = other.pid_;
 #endif
     waited_ = other.waited_;
@@ -427,7 +427,7 @@ SpawnedProcess::SpawnedProcess(
     const std::vector<std::string>& args,
     Options&& options)
     : pipes_(std::move(options.pipes_)) {
-  CHECK(!args.empty());
+  XCHECK(!args.empty());
 #ifndef _WIN32
 
   posix_spawnattr_t attr;

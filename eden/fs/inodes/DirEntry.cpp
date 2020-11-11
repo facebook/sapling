@@ -51,15 +51,15 @@ TreeInodePtr DirEntry::asTreePtrOrNull() const {
 }
 
 void DirEntry::setInode(InodeBase* inode) {
-  DCHECK(!hasInodePointer_);
-  DCHECK(inode);
-  DCHECK_EQ(inodeNumber_, inode->getNodeId());
+  XDCHECK(!hasInodePointer_);
+  XDCHECK(inode);
+  XDCHECK_EQ(inodeNumber_, inode->getNodeId());
   hasInodePointer_ = true;
   inode_ = inode;
 }
 
 InodeBase* DirEntry::clearInode() {
-  DCHECK(hasInodePointer_);
+  XDCHECK(hasInodePointer_);
   auto inode = inode_;
   hasInodePointer_ = false;
   inodeNumber_ = inode->getNodeId();
