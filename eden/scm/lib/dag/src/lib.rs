@@ -37,6 +37,7 @@ pub use idmap::IdMap;
 pub use namedag::NameDag;
 pub use nameset::NameSet;
 pub use ops::DagAlgorithm;
+pub use segment::{FlatSegment, PreparedFlatSegments};
 pub use spanset::SpanSet;
 
 pub type Level = u8;

@@ -17,7 +17,6 @@ use crate::id::Id;
 use crate::id::VertexName;
 use crate::iddag::IdDag;
 use crate::iddagstore::IdDagStore;
-use crate::idmap::AssignHeadOutcome;
 use crate::idmap::IdMapAssignHead;
 use crate::locked::Locked;
 use crate::nameset::hints::Flags;
@@ -33,6 +32,7 @@ use crate::ops::Persist;
 use crate::ops::PrefixLookup;
 use crate::ops::ToIdSet;
 use crate::ops::TryClone;
+use crate::segment::PreparedFlatSegments;
 use crate::segment::SegmentFlags;
 use crate::spanset::SpanSet;
 use crate::Result;
@@ -203,7 +203,7 @@ where
         let group = Group::NON_MASTER;
 
         // Update IdMap. Keep track of what heads are added.
-        let mut outcome = AssignHeadOutcome::default();
+        let mut outcome = PreparedFlatSegments::default();
         for head in heads.iter() {
             if !self.map.contains_vertex_name(head)? {
                 outcome.merge(self.map.assign_head(head.clone(), &parents, group)?);
@@ -219,7 +219,7 @@ where
         }
 
         self.dag
-            .build_segments_volatile_from_assign_head_outcome(&outcome)?;
+            .build_segments_volatile_from_prepared_flat_segments(&outcome)?;
 
         self.invalidate_snapshot();
 
@@ -611,7 +611,7 @@ where
     M: IdMapAssignHead + Persist,
 {
     // Update IdMap.
-    let mut outcome = AssignHeadOutcome::default();
+    let mut outcome = PreparedFlatSegments::default();
     for (nodes, group) in [
         (master_heads, Group::MASTER),
         (non_master_heads, Group::NON_MASTER),
@@ -631,7 +631,7 @@ where
             outcome.verify(&parent_ids_func);
         }
 
-        dag.build_segments_volatile_from_assign_head_outcome(&outcome)?;
+        dag.build_segments_volatile_from_prepared_flat_segments(&outcome)?;
     }
 
     // Rebuild non-master ids and segments.

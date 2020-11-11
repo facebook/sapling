@@ -8,11 +8,10 @@
 use crate::errors::bug;
 use crate::id::{Group, Id};
 use crate::iddagstore::{IdDagStore, InProcessStore, IndexedLogStore};
-use crate::idmap::AssignHeadOutcome;
 use crate::locked::Locked;
 use crate::ops::Persist;
 use crate::ops::TryClone;
-use crate::segment::{Segment, SegmentFlags};
+use crate::segment::{PreparedFlatSegments, Segment, SegmentFlags};
 use crate::spanset::Span;
 use crate::spanset::SpanSet;
 use crate::Error::Programming;
@@ -228,22 +227,22 @@ impl<Store: IdDagStore> IdDag<Store> {
         Ok(count)
     }
 
-    /// Similar to `build_segments_volatile`, but takes `AssignHeadOutcome` instead
+    /// Similar to `build_segments_volatile`, but takes `PreparedFlatSegments` instead
     /// of `get_parents`.
-    pub fn build_segments_volatile_from_assign_head_outcome(
+    pub fn build_segments_volatile_from_prepared_flat_segments(
         &mut self,
-        outcome: &AssignHeadOutcome,
+        outcome: &PreparedFlatSegments,
     ) -> Result<usize> {
-        let mut count = self.build_flat_segments_from_assign_head_outcome(outcome)?;
+        let mut count = self.build_flat_segments_from_prepared_flat_segments(outcome)?;
         count += self.build_all_high_level_segments(Level::MAX)?;
         Ok(count)
     }
 
     /// Build flat segments using the outcome from `add_head`.
     /// This is not public because it does not keep high-level segments in sync.
-    fn build_flat_segments_from_assign_head_outcome(
+    fn build_flat_segments_from_prepared_flat_segments(
         &mut self,
-        outcome: &AssignHeadOutcome,
+        outcome: &PreparedFlatSegments,
     ) -> Result<usize> {
         if outcome.segments.is_empty() {
             return Ok(0);

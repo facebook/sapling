@@ -263,6 +263,17 @@ impl Iterator for IdIter {
     }
 }
 
+#[cfg(any(test, feature = "for-tests"))]
+use quickcheck::Arbitrary;
+
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for Id {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        let group = Group((g.next_u32() & 1) as usize);
+        group.min_id() + g.next_u64() % (group.max_id().0 - group.min_id().0)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -38,7 +38,7 @@ fn main() {
         .unwrap();
     let mut iddag = IdDag::new_in_process();
     iddag
-        .build_segments_volatile_from_assign_head_outcome(&outcome)
+        .build_segments_volatile_from_prepared_flat_segments(&outcome)
         .unwrap();
 
 
