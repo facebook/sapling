@@ -12,9 +12,10 @@ def _fixsys():
 
     Fix sys.stdin if it's None.
     """
+    import os
+
     # Do not expose those modules to edenscm.__dict__
     import sys
-    import os
 
     dirname = os.path.dirname
 

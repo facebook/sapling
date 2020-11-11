@@ -174,8 +174,8 @@ else:
 
 
 try:
-    import edemscm.mercurial.registrar
     import edemscm.mercurial.configitems
+    import edemscm.mercurial.registrar
     import edenscm.mercurial as mercurial
 
     configtable = {}
@@ -444,8 +444,8 @@ def perfdatapack(ui, repo, packpath, **opts):
 
 
 def _packtestfn(ui, packpath, opts, func):
-    from edenscm.hgext.remotefilelog.datapack import datapack, fastdatapack
     from bindings import revisionstore
+    from edenscm.hgext.remotefilelog.datapack import datapack, fastdatapack
 
     kinds = [
         ("Python", datapack),

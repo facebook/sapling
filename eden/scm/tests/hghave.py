@@ -587,6 +587,7 @@ def has_defaultcacerts():
 @check("defaultcacertsloaded", "detected presence of loaded system CA certs")
 def has_defaultcacertsloaded():
     import ssl
+
     from edenscm.mercurial import sslutil, ui as uimod
 
     if not has_defaultcacerts():

@@ -13,11 +13,10 @@ import os
 import sys
 import warnings
 
+from edenscm.mercurial import namespaces
 from edenscm.mercurial import pycompat
 from testutil.autofix import eq
 from testutil.dott import feature, sh, testtmp  # noqa: F401
-
-from edenscm.mercurial import namespaces
 
 is_py3 = sys.version_info[0] >= 3
 

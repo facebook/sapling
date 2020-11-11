@@ -218,8 +218,8 @@ class Overlay:
         return (header, self.parse_dir_inode_data(data))
 
     def parse_dir_inode_data(self, data: bytes) -> OverlayDir:
-        from thrift.util import Serializer
         from thrift.protocol import TCompactProtocol
+        from thrift.util import Serializer
 
         # Initialize entries to the empty dictionary.
         # This value will be used if the serialized data does not have any value
@@ -388,8 +388,8 @@ class Overlay:
         self._write_inode(inode_number, OverlayHeader.TYPE_FILE, b"")
 
     def write_empty_dir(self, inode_number: int) -> None:
-        from thrift.util import Serializer
         from thrift.protocol import TCompactProtocol
+        from thrift.util import Serializer
 
         empty_tree = OverlayDir()
         protocol_factory = TCompactProtocol.TCompactProtocolFactory()

@@ -116,8 +116,8 @@ def debugshell(ui, repo, *args, **opts):
 
 
 def _startipython(ui, repo):
-    from IPython.terminal.ipapp import load_default_config
     from IPython.terminal.embed import InteractiveShellEmbed
+    from IPython.terminal.ipapp import load_default_config
 
     bannermsg = "loaded repo:  %s\n" "using source: %s" % (
         repo and repo.root or "(none)",

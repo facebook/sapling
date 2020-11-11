@@ -10,11 +10,10 @@ import gzip
 import os
 import socket
 import ssl
-import time
 import tempfile
+import time
 from multiprocessing.pool import ThreadPool
 from subprocess import PIPE, Popen
-
 
 from edenscm.mercurial import error, json, perftrace, pycompat, util, commands
 from edenscm.mercurial.i18n import _

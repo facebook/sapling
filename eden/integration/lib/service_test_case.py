@@ -20,8 +20,9 @@ from .testcase import test_replicator
 
 
 if sys.platform.startswith("linux"):
-    from .systemd import SystemdService, SystemdUserServiceManager, temp_systemd
     from eden.fs.cli.systemd import edenfs_systemd_service_name
+
+    from .systemd import SystemdService, SystemdUserServiceManager, temp_systemd
 
     try:
         import pystemd  # noqa: F401

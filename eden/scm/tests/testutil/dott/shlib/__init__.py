@@ -52,8 +52,8 @@ def editsyspath(modname, relpaths):
 # Soon, the only way to run this script is to via "hg debugpython" and
 # all sys.path mess can be removed.
 try:
-    from edenscmnative import diffhelpers
     from edenscm import mercurial
+    from edenscmnative import diffhelpers
 except (AttributeError, ImportError):
     editsyspath("edenscm", ["..", "../../.."])
 
@@ -72,8 +72,8 @@ if DUMMYSSH is None:
 
 
 try:
-    from edenscm.mercurial import encoding, util, pycompat
     import bindings
+    from edenscm.mercurial import encoding, util, pycompat
 except ImportError:
     raise RuntimeError("Cannot find edenscm")
 

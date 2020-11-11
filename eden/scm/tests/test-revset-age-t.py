@@ -6,11 +6,10 @@
 
 from __future__ import absolute_import
 
-from testutil.dott import feature, sh, testtmp  # noqa: F401
+import time
 
 from edenscm.mercurial.extensions import wrappedfunction
-
-import time
+from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
 # Setup repo

@@ -42,6 +42,8 @@ NoRepo = common.NoRepo
 # these bindings.
 
 try:
+    import warnings
+
     # pyre-fixme[21]: Could not find `svn`.
     import svn
 
@@ -51,13 +53,13 @@ try:
     # pyre-fixme[21]: Could not find module `svn.core`.
     import svn.core
 
+    # pyre-fixme[21]: Could not find module `svn.delta`.
+    import svn.delta
+
     # pyre-fixme[21]: Could not find module `svn.ra`.
     import svn.ra
 
-    # pyre-fixme[21]: Could not find module `svn.delta`.
-    import svn.delta
     from . import transport
-    import warnings
 
     warnings.filterwarnings("ignore", module="svn.core", category=DeprecationWarning)
     svn.core.SubversionException  # trigger import to catch error

@@ -406,10 +406,10 @@ def run(
 ):
     manifest = os.path.abspath(manifest)
     if is_libfb_present():
-        from libfb.py.log import set_simple_logging
         from eden.mononoke.tests.integration.facebook.lib_runner import (
             load_manifest_env,
         )
+        from libfb.py.log import set_simple_logging
 
         set_simple_logging(logging.INFO)
         manifest_env: ManifestEnv = load_manifest_env(manifest)

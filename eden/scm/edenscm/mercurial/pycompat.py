@@ -30,17 +30,13 @@ ispypy = r"__pypy__" in sys.builtin_module_names
 
 if sys.version_info[0] < 3:
     import cookielib
-
     import cPickle as pickle
-
     import httplib
-
     import Queue as _queue
-
     import SocketServer as socketserver
 else:
-    import http.cookiejar as cookielib  # noqa: F401
     import http.client as httplib  # noqa: F401
+    import http.cookiejar as cookielib  # noqa: F401
     import pickle  # noqa: F401
     import queue as _queue
     import socketserver  # noqa: F401

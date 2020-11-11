@@ -133,14 +133,10 @@ if sys.version_info[0] >= 3:
 
 else:
     import BaseHTTPServer
-
     import CGIHTTPServer
-
     import SimpleHTTPServer
-
-    import urllib2
     import urllib
-
+    import urllib2
     import urlparse
 
     urlreq._registeraliases(

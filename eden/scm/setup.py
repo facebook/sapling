@@ -18,6 +18,7 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+
 import contextlib
 import ctypes
 import ctypes.util
@@ -160,12 +161,10 @@ else:
 ispypy = "PyPy" in sys.version
 
 
-from distutils.core import setup
+import distutils
+from distutils import file_util
 from distutils import log
 from distutils.ccompiler import new_compiler
-from distutils.core import Command, Extension
-from distutils.dir_util import copy_tree
-from distutils.dist import Distribution
 from distutils.command.build import build
 from distutils.command.build_ext import build_ext
 from distutils.command.build_py import build_py
@@ -173,13 +172,16 @@ from distutils.command.build_scripts import build_scripts
 from distutils.command.install import install
 from distutils.command.install_lib import install_lib
 from distutils.command.install_scripts import install_scripts
-from distutils.spawn import spawn, find_executable
-from distutils import file_util
+from distutils.core import Command, Extension
+from distutils.core import setup
+from distutils.dir_util import copy_tree
+from distutils.dist import Distribution
 from distutils.errors import CCompilerError, DistutilsError, DistutilsExecError
+from distutils.spawn import spawn, find_executable
 from distutils.sysconfig import get_config_var
 from distutils.version import StrictVersion
+
 from distutils_rust import RustBinary, BuildRustExt, InstallRustExt
-import distutils
 
 havefb = os.path.exists("fb")
 isgetdepsbuild = os.environ.get("GETDEPS_BUILD") == "1"

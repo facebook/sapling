@@ -214,8 +214,8 @@ def check(pofile, fatal=True, warning=False):
 ########################################
 
 if __name__ == "__main__":
-    import sys
     import optparse
+    import sys
 
     optparser = optparse.OptionParser(
         """%prog [options] pofile ...

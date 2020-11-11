@@ -121,11 +121,11 @@ pygmentspresent = False
 if os.name != "nt":
     try:  # is pygments installed
         import pygments
-        import pygments.lexers as lexers
-        import pygments.lexer as lexer
         import pygments.formatters as formatters
-        import pygments.token as token
+        import pygments.lexer as lexer
+        import pygments.lexers as lexers
         import pygments.style as style
+        import pygments.token as token
 
         pygmentspresent = True
         difflexer = lexers.DiffLexer()
