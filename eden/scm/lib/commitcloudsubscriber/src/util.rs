@@ -8,6 +8,7 @@
 use crate::error::*;
 use crate::subscriber::Subscription;
 use anyhow::{bail, Result};
+use filetime::FileTime;
 use ini::Ini;
 use log::{error, info};
 use std::collections::HashMap;
@@ -15,10 +16,12 @@ use std::fmt;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::str;
+use std::time::SystemTime;
 use std::{fs, io};
 
 static JOINED_DIR: &str = ".commitcloud";
 static JOINED: &str = "joined";
+static SEC_IN_WEEK: u64 = 604800;
 
 /// Map from a subscription to list of repo roots
 pub fn read_subscriptions(
@@ -49,6 +52,27 @@ pub fn read_subscriptions(
     let mut subscriptions: HashMap<Subscription, Vec<PathBuf>> = HashMap::new();
 
     for ref path in paths {
+        let metadata = fs::metadata(path)?;
+        let mtime = FileTime::from_last_modification_time(&metadata).unix_seconds() as u64;
+        let timenow = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)?
+            .as_secs();
+        if mtime + SEC_IN_WEEK < timenow {
+            info!(
+                "Removing old subscription file '{}' (mtime ts: {}). The client needs to resubscribe.",
+                path.display(),
+                mtime
+            );
+            let res = fs::remove_file(path);
+            if res.is_ok() {
+                continue;
+            } else {
+                info!(
+                    "Failed to clean up old subscription file '{}'. The subscription remains active.",
+                    path.display(),
+                );
+            }
+        }
         if let Ok(ref mut file) = fs::OpenOptions::new().read(true).open(path) {
             let ini = Ini::read_from(&mut io::BufReader::new(file))?;
             let section = ini.section(Some("commitcloud"));

@@ -2,21 +2,22 @@
 name = "commitcloudsubscriber"
 version = "0.1.0"
 description = """ \
-	Cross platform client for subscribing to Commit Cloud eventsource (http server-sent events) \
-	The workflow is the following: \
-	* define 'subscription' as a unique [repo_name, workspace] pair \
-	* read set of 'subscribers', defined as [repo_name, workspace, repo_root] \
-	* runs a Commit Cloud eventsource listener in a separate thread for every 'subscription' \
-		(and a set of 'subscribers' (repo_roots)) \
-	* triggers `hg cloud sync` command on notifications in all 'subscribers' (repo_roots) \
-		for a given 'subscription' \
-	* the library also contains a module to find OAuth token, \
-		this logic should be in sync with `hg cloud auth` command. \
+    Cross platform client for subscribing to Commit Cloud eventsource (http server-sent events) \
+    The workflow is the following: \
+    * define 'subscription' as a unique [repo_name, workspace] pair \
+    * read set of 'subscribers', defined as [repo_name, workspace, repo_root] \
+    * runs a Commit Cloud eventsource listener in a separate thread for every 'subscription' \
+        (and a set of 'subscribers' (repo_roots)) \
+    * triggers `hg cloud sync` command on notifications in all 'subscribers' (repo_roots) \
+        for a given 'subscription' \
+    * the library also contains a module to find OAuth token, \
+        this logic should be in sync with `hg cloud auth` command. \
 """
 edition = "2018"
 
 [dependencies]
 anyhow = "1.0.20"
+filetime = "0.2"
 eventsource = "0.5"
 lazy_static = "1.2.0"
 log = "0.4.6"
