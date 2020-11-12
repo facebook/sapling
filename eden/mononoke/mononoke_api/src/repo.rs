@@ -56,7 +56,7 @@ use regex::Regex;
 use repo_read_write_status::{RepoReadWriteFetcher, SqlRepoReadWriteStatus};
 use revset::AncestorsNodeStream;
 use scuba_ext::ScubaSampleBuilderExt;
-use segmented_changelog::SegmentedChangelog;
+use segmented_changelog::{CloneData, SegmentedChangelog};
 use skiplist::{fetch_skiplist_index, SkiplistIndex};
 use slog::{debug, error, Logger};
 use sql_construct::facebook::FbSqlConstruct;
@@ -1343,6 +1343,25 @@ impl RepoContext {
             .await
             .map_err(MononokeError::from)?;
         Ok(ancestor)
+    }
+
+    pub async fn segmented_changelog_clone_data(
+        &self,
+    ) -> Result<CloneData<ChangesetId>, MononokeError> {
+        let blob_repo = self.blob_repo();
+        let segmented_changelog =
+            blob_repo
+                .attribute::<dyn SegmentedChangelog>()
+                .ok_or_else(|| {
+                    MononokeError::InvalidRequest(String::from(
+                        "Segmented Changelog is not enabled for this repo",
+                    ))
+                })?;
+        let clone_data = segmented_changelog
+            .clone_data(&self.ctx)
+            .await
+            .map_err(MononokeError::from)?;
+        Ok(clone_data)
     }
 }
 

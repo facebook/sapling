@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+
+use anyhow::{format_err, Context};
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use bytes::Bytes;
@@ -18,6 +21,7 @@ use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId};
 use metaconfig_types::RepoConfig;
 use mononoke_types::MPath;
 use repo_client::gettreepack_entries;
+use segmented_changelog::CloneData;
 
 use crate::errors::MononokeError;
 use crate::path::MononokePath;
@@ -173,6 +177,42 @@ impl HgRepoContext {
             .generate_for_hash_verification(&mut buffer)
             .map_err(MononokeError::from)?;
         Ok(Some(buffer.into()))
+    }
+
+    pub async fn segmented_changelog_clone_data(
+        &self,
+    ) -> Result<CloneData<HgChangesetId>, MononokeError> {
+        const CHUNK_SIZE: usize = 1000;
+        let m_clone_data = self.repo().segmented_changelog_clone_data().await?;
+        let idmap_list = m_clone_data.idmap.into_iter().collect::<Vec<_>>();
+        let mut hg_idmap = HashMap::new();
+        for chunk in idmap_list.chunks(CHUNK_SIZE) {
+            let csids = chunk.iter().map(|(_, csid)| *csid).collect::<Vec<_>>();
+            let mapping = self
+                .blob_repo()
+                .get_hg_bonsai_mapping(self.ctx().clone(), csids)
+                .compat()
+                .await
+                .context("error fetching hg bonsai mapping")?
+                .into_iter()
+                .map(|(hgid, csid)| (csid, hgid))
+                .collect::<HashMap<_, _>>();
+            for (v, csid) in chunk {
+                let hgid = mapping.get(&csid).ok_or_else(|| {
+                    MononokeError::from(format_err!(
+                        "failed to find bonsai '{}' mapping to hg",
+                        csid
+                    ))
+                })?;
+                hg_idmap.insert(*v, *hgid);
+            }
+        }
+        let hg_clone_data = CloneData {
+            head_id: m_clone_data.head_id,
+            flat_segments: m_clone_data.flat_segments,
+            idmap: hg_idmap,
+        };
+        Ok(hg_clone_data)
     }
 }
 

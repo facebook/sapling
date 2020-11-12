@@ -25,6 +25,7 @@ use gotham_ext::response::build_response;
 
 use crate::context::ServerContext;
 
+mod clone;
 mod commit;
 mod complete_trees;
 mod files;
@@ -42,6 +43,7 @@ pub enum EdenApiMethod {
     History,
     CommitLocationToHash,
     CommitRevlogData,
+    Clone,
 }
 
 impl fmt::Display for EdenApiMethod {
@@ -53,6 +55,7 @@ impl fmt::Display for EdenApiMethod {
             Self::History => "history",
             Self::CommitLocationToHash => "commit_location_to_hash",
             Self::CommitRevlogData => "commit_revlog_data",
+            Self::Clone => "clone",
         };
         write!(f, "{}", name)
     }
@@ -107,6 +110,7 @@ define_handler!(complete_trees_handler, complete_trees::complete_trees);
 define_handler!(history_handler, history::history);
 define_handler!(commit_location_to_hash_handler, commit::location_to_hash);
 define_handler!(commit_revlog_data_handler, commit::revlog_data);
+define_handler!(clone_handler, clone::clone_data);
 
 fn health_handler(state: State) -> (State, &'static str) {
     if ServerContext::borrow_from(&state).will_exit() {
@@ -147,5 +151,9 @@ pub fn build_router(ctx: ServerContext) -> Router {
             .post("/:repo/commit/revlog_data")
             .with_path_extractor::<commit::RevlogDataParams>()
             .to(commit_revlog_data_handler);
+        route
+            .post("/:repo/clone")
+            .with_path_extractor::<clone::CloneParams>()
+            .to(clone_handler);
     })
 }

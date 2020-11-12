@@ -7,6 +7,7 @@
 
 use std::iter::FromIterator;
 
+use anyhow::format_err;
 use async_trait::async_trait;
 use futures::prelude::*;
 use itertools::Itertools;
@@ -15,9 +16,9 @@ use serde::{de::DeserializeOwned, Serialize};
 use url::Url;
 
 use edenapi_types::{
-    wire::{WireFileEntry, WireHistoryResponseChunk, WireTreeEntry},
-    CommitRevlogData, CommitRevlogDataRequest, CompleteTreeRequest, EdenApiServerError, FileEntry,
-    FileRequest, HistoryEntry, HistoryRequest, ToApi, ToWire, TreeEntry, TreeRequest,
+    wire::{WireCloneData, WireFileEntry, WireHistoryResponseChunk, WireTreeEntry},
+    CloneData, CommitRevlogData, CommitRevlogDataRequest, CompleteTreeRequest, EdenApiServerError,
+    FileEntry, FileRequest, HistoryEntry, HistoryRequest, ToApi, ToWire, TreeEntry, TreeRequest,
 };
 use hg_http::http_client;
 use http_client::{HttpClient, Request};
@@ -39,6 +40,7 @@ mod paths {
     pub const TREES: &str = "trees";
     pub const COMPLETE_TREES: &str = "trees/complete";
     pub const COMMIT_REVLOG_DATA: &str = "commit/revlog_data";
+    pub const CLONE_DATA: &str = "clone";
 }
 
 pub struct Client {
@@ -380,6 +382,26 @@ impl EdenApi for Client {
 
         self.fetch_raw::<CommitRevlogData>(vec![req], progress)
             .await
+    }
+
+    async fn clone_data(
+        &self,
+        repo: String,
+        progress: Option<ProgressCallback>,
+    ) -> Result<CloneData<HgId>, EdenApiError> {
+        let msg = format!("Requesting clone data for the '{}' repository", repo);
+        tracing::info!("{}", &msg);
+        if self.config.debug {
+            eprintln!("{}", &msg);
+        }
+
+        let url = self.url(paths::CLONE_DATA, Some(&repo))?;
+        let req = self.configure(Request::get(url))?;
+        let mut fetch = self.fetch::<WireCloneData>(vec![req], progress).await?;
+        let clone_data = fetch.entries.next().await.ok_or_else(|| {
+            EdenApiError::Other(format_err!("clone data missing from reponse body"))
+        })??;
+        Ok(clone_data)
     }
 }
 

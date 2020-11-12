@@ -24,7 +24,7 @@ use sha1::{Digest, Sha1};
 use structopt::StructOpt;
 
 use edenapi_types::{
-    wire::{ToApi, WireFileEntry, WireHistoryResponseChunk, WireTreeEntry},
+    wire::{ToApi, WireCloneData, WireFileEntry, WireHistoryResponseChunk, WireTreeEntry},
     CommitLocationToHash, CommitRevlogData, FileError, TreeError, WireHistoryEntry,
 };
 use types::{HgId, Key, Parents, RepoPathBuf};
@@ -37,6 +37,7 @@ enum Args {
     History(HistoryArgs),
     CommitRevlogData(CommitRevlogDataArgs),
     CommitLocationToHash(CommitLocationToHashArgs),
+    Clone(CloneArgs),
 }
 
 #[derive(Debug, StructOpt)]
@@ -173,6 +174,13 @@ struct CommitLocationToHashArgs {
     limit: Option<usize>,
 }
 
+#[derive(Debug, StructOpt)]
+#[structopt(about = "Read the contents of a clone data request")]
+struct CloneArgs {
+    #[structopt(help = "Input CBOR file (stdin is used if omitted)")]
+    input: Option<PathBuf>,
+}
+
 fn main() -> Result<()> {
     match Args::from_args() {
         Args::Tree(args) => cmd_tree(args),
@@ -180,6 +188,7 @@ fn main() -> Result<()> {
         Args::History(args) => cmd_history(args),
         Args::CommitRevlogData(args) => cmd_commit_revlog_data(args),
         Args::CommitLocationToHash(args) => cmd_commit_location_to_hash(args),
+        Args::Clone(args) => cmd_clone(args),
     }
 }
 
@@ -388,6 +397,37 @@ fn cmd_commit_location_to_hash(args: CommitLocationToHashArgs) -> Result<()> {
             println!("  {}", hgid);
         }
     }
+    Ok(())
+}
+
+fn cmd_clone(args: CloneArgs) -> Result<()> {
+    let mut wire_clone_data: Vec<WireCloneData> = read_input(args.input, None)?;
+    let clone_data = wire_clone_data
+        .pop()
+        .ok_or_else(|| anyhow!("empty response for clone data"))?
+        .to_api()?;
+    println!("head_id: {}", clone_data.head_id);
+    println!("flat_segments: [");
+    for fs in clone_data.flat_segments.segments {
+        println!(
+            "  {}, {}, [{}]",
+            fs.low,
+            fs.high,
+            fs.parents
+                .iter()
+                .map(|x| x.to_string())
+                .collect::<Vec<_>>()
+                .join(", ")
+        );
+    }
+    println!("]");
+    let mut idmap_entries = clone_data
+        .idmap
+        .iter()
+        .map(|(k, v)| format!("  {}: {}\n", k, v.to_hex()))
+        .collect::<Vec<_>>();
+    idmap_entries.sort();
+    println!("idmap: {{\n{}}}", idmap_entries.join(""));
     Ok(())
 }
 

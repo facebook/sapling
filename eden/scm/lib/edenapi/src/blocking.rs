@@ -6,7 +6,9 @@
  */
 
 use async_runtime::block_on_exclusive as block_on_future;
-use edenapi_types::{CommitRevlogData, EdenApiServerError, FileEntry, HistoryEntry, TreeEntry};
+use edenapi_types::{
+    CloneData, CommitRevlogData, EdenApiServerError, FileEntry, HistoryEntry, TreeEntry,
+};
 use types::{HgId, Key, RepoPathBuf};
 
 use crate::api::{EdenApi, ProgressCallback};
@@ -72,6 +74,14 @@ pub trait EdenApiBlocking: EdenApi {
         progress: Option<ProgressCallback>,
     ) -> Result<BlockingFetch<CommitRevlogData>, EdenApiError> {
         BlockingFetch::from_async(self.commit_revlog_data(repo, hgids, progress))
+    }
+
+    fn clone_data_blocking(
+        &self,
+        repo: String,
+        progress: Option<ProgressCallback>,
+    ) -> Result<CloneData<HgId>, EdenApiError> {
+        block_on_future(self.clone_data(repo, progress))
     }
 }
 
