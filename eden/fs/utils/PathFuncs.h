@@ -1607,7 +1607,7 @@ size_t hash_value(
   if (folly::kIsWindows) {
     folly::hash::SpookyHashV2 hash{};
 
-    for (const auto& component : path.components()) {
+    for (const auto component : path.components()) {
       auto s = component.stringPiece();
       hash.Update(s.begin(), s.size());
     }
