@@ -534,10 +534,9 @@ HRESULT EdenDispatcher::getEnumerationData(
       session.restart();
     }
 
-    //
     // Traverse the list enumeration list and fill the remaining entry. Start
     // from where the last call left off.
-    //
+    bool added = false;
     for (const FileMetadata* entry; (entry = session.current());
          session.advance()) {
       auto fileInfo = PRJ_FILE_BASIC_INFO();
@@ -552,12 +551,19 @@ HRESULT EdenDispatcher::getEnumerationData(
           fileInfo.IsDirectory ? "Dir" : "File",
           fileInfo.FileSize);
 
-      if (S_OK !=
-          PrjFillDirEntryBuffer(entry->name.c_str(), &fileInfo, bufferHandle)) {
-        // We are out of buffer space. This entry didn't make it. Return without
-        // increment.
-        return S_OK;
+      auto result =
+          PrjFillDirEntryBuffer(entry->name.c_str(), &fileInfo, bufferHandle);
+      if (result != S_OK) {
+        if (result == HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER) && added) {
+          // We are out of buffer space. This entry didn't make it. Return
+          // without increment.
+          break;
+        } else {
+          return result;
+        }
       }
+
+      added = true;
     }
     return S_OK;
   } catch (const std::exception& ex) {
