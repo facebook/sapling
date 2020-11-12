@@ -23,7 +23,7 @@ const REPO_ID_SUFFIX: &str = ".";
 lazy_static! {
     /// Used to strip of repo prefixes when embedding keys inside blobs
     pub static ref REPO_PREFIX_REGEX: Regex = Regex::new(
-        format!(r"^{}\d{{3}}\d+\{}", REPO_ID_PREFIX, REPO_ID_SUFFIX
+        format!(r"^{}(\d{{3}}\d+)\{}", REPO_ID_PREFIX, REPO_ID_SUFFIX
     ).as_str()).unwrap();
 }
 
