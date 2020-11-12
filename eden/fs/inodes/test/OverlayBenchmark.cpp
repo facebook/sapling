@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/inodes/Overlay.h"
+#include "eden/fs/telemetry/NullStructuredLogger.h"
 
 using namespace facebook::eden;
 using namespace folly::string_piece_literals;
@@ -26,7 +27,10 @@ void benchmarkOverlayTreeWrites(AbsolutePathPiece overlayPath) {
   //
   // overlayPath is parameterized to measure on different filesystem types.
 
-  auto overlay = Overlay::create(overlayPath, kPathMapDefaultCaseSensitive);
+  auto overlay = Overlay::create(
+      overlayPath,
+      kPathMapDefaultCaseSensitive,
+      std::make_shared<NullStructuredLogger>());
   overlay->initialize().get();
 
   Hash hash1{folly::ByteRange{"abcdabcdabcdabcdabcd"_sp}};

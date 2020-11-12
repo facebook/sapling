@@ -203,7 +203,8 @@ EdenMount::EdenMount(
       blobAccess_{objectStore_, blobCache_},
       overlay_{Overlay::create(
           config_->getOverlayPath(),
-          config_->getCaseSensitive())},
+          config_->getCaseSensitive(),
+          serverState_->getStructuredLogger())},
 #ifndef _WIN32
       overlayFileAccess_{overlay_.get()},
 #endif

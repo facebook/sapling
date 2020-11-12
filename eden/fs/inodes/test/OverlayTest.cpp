@@ -29,6 +29,7 @@
 #include "eden/fs/inodes/OverlayFile.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/service/PrettyPrinters.h"
+#include "eden/fs/telemetry/NullStructuredLogger.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TempFile.h"
@@ -65,7 +66,8 @@ TEST(OverlayGoldMasterTest, can_load_overlay_v2) {
 
   auto overlay = Overlay::create(
       realpath(tmpdir.path().string()) + "overlay-v2"_pc,
-      kPathMapDefaultCaseSensitive);
+      kPathMapDefaultCaseSensitive,
+      std::make_shared<NullStructuredLogger>());
   overlay->initialize().get();
 
   Hash hash1{folly::ByteRange{"abcdabcdabcdabcdabcd"_sp}};
@@ -259,7 +261,9 @@ TEST_F(OverlayTest, getFilePath) {
 TEST(PlainOverlayTest, new_overlay_is_clean) {
   folly::test::TemporaryDirectory testDir;
   auto overlay = Overlay::create(
-      AbsolutePath{testDir.path().string()}, kPathMapDefaultCaseSensitive);
+      AbsolutePath{testDir.path().string()},
+      kPathMapDefaultCaseSensitive,
+      std::make_shared<NullStructuredLogger>());
   overlay->initialize().get();
   EXPECT_TRUE(overlay->hadCleanStartup());
 }
@@ -268,12 +272,16 @@ TEST(PlainOverlayTest, reopened_overlay_is_clean) {
   folly::test::TemporaryDirectory testDir;
   {
     auto overlay = Overlay::create(
-        AbsolutePath{testDir.path().string()}, kPathMapDefaultCaseSensitive);
+        AbsolutePath{testDir.path().string()},
+        kPathMapDefaultCaseSensitive,
+        std::make_shared<NullStructuredLogger>());
     overlay->initialize().get();
   }
 
   auto overlay = Overlay::create(
-      AbsolutePath{testDir.path().string()}, kPathMapDefaultCaseSensitive);
+      AbsolutePath{testDir.path().string()},
+      kPathMapDefaultCaseSensitive,
+      std::make_shared<NullStructuredLogger>());
   overlay->initialize().get();
   EXPECT_TRUE(overlay->hadCleanStartup());
 }
@@ -284,7 +292,9 @@ TEST(PlainOverlayTest, unclean_overlay_is_dirty) {
 
   {
     auto overlay = Overlay::create(
-        AbsolutePath{testDir.path().string()}, kPathMapDefaultCaseSensitive);
+        AbsolutePath{testDir.path().string()},
+        kPathMapDefaultCaseSensitive,
+        std::make_shared<NullStructuredLogger>());
     overlay->initialize().get();
   }
 
@@ -293,7 +303,9 @@ TEST(PlainOverlayTest, unclean_overlay_is_dirty) {
   }
 
   auto overlay = Overlay::create(
-      AbsolutePath{testDir.path().string()}, kPathMapDefaultCaseSensitive);
+      AbsolutePath{testDir.path().string()},
+      kPathMapDefaultCaseSensitive,
+      std::make_shared<NullStructuredLogger>());
   overlay->initialize().get();
   EXPECT_FALSE(overlay->hadCleanStartup());
 }
@@ -330,7 +342,10 @@ class RawOverlayTest : public ::testing::TestWithParam<OverlayRestartMode> {
   }
 
   void loadOverlay() {
-    overlay = Overlay::create(getLocalDir(), kPathMapDefaultCaseSensitive);
+    overlay = Overlay::create(
+        getLocalDir(),
+        kPathMapDefaultCaseSensitive,
+        std::make_shared<NullStructuredLogger>());
     overlay->initialize().get();
   }
 
@@ -732,7 +747,8 @@ class DebugDumpOverlayInodesTest : public ::testing::Test {
       : testDir_{makeTempDir("eden_DebugDumpOverlayInodesTest")},
         overlay{Overlay::create(
             AbsolutePathPiece{testDir_.path().string()},
-            kPathMapDefaultCaseSensitive)} {
+            kPathMapDefaultCaseSensitive,
+            std::make_shared<NullStructuredLogger>())} {
     overlay->initialize().get();
   }
 

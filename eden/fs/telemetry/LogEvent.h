@@ -58,6 +58,20 @@ class DynamicEvent {
   DoubleMap doubles_;
 };
 
+struct Fsck {
+  static constexpr const char* type = "fsck";
+
+  double duration = 0.0;
+  bool success = false;
+  bool attempted_repair = false;
+
+  void populate(DynamicEvent& event) const {
+    event.addDouble("duration", duration);
+    event.addBool("success", success);
+    event.addBool("attempted_repair", attempted_repair);
+  }
+};
+
 struct FetchHeavy {
   static constexpr const char* type = "fetch_heavy";
 

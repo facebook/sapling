@@ -17,6 +17,7 @@
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <folly/logging/xlog.h>
+#include <folly/stop_watch.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/inodes/InodeBase.h"
@@ -42,16 +43,25 @@ using std::optional;
 
 std::shared_ptr<Overlay> Overlay::create(
     AbsolutePathPiece localDir,
-    bool caseSensitive) {
+    bool caseSensitive,
+    std::shared_ptr<StructuredLogger> logger) {
   struct MakeSharedEnabler : public Overlay {
-    explicit MakeSharedEnabler(AbsolutePathPiece localDir, bool caseSensitive)
-        : Overlay(localDir, caseSensitive) {}
+    explicit MakeSharedEnabler(
+        AbsolutePathPiece localDir,
+        bool caseSensitive,
+        std::shared_ptr<StructuredLogger> logger)
+        : Overlay(localDir, caseSensitive, logger) {}
   };
-  return std::make_shared<MakeSharedEnabler>(localDir, caseSensitive);
+  return std::make_shared<MakeSharedEnabler>(localDir, caseSensitive, logger);
 }
 
-Overlay::Overlay(AbsolutePathPiece localDir, bool caseSensitive)
-    : backingOverlay_{localDir}, caseSensitive_{caseSensitive} {}
+Overlay::Overlay(
+    AbsolutePathPiece localDir,
+    bool caseSensitive,
+    std::shared_ptr<StructuredLogger> logger)
+    : backingOverlay_{localDir},
+      caseSensitive_{caseSensitive},
+      structuredLogger_{logger} {}
 
 Overlay::~Overlay() {
   close();
@@ -151,8 +161,21 @@ void Overlay::initOverlay(
                << " was not shut down cleanly.  Performing fsck scan.";
 
     OverlayChecker checker(&backingOverlay_, std::nullopt);
+    folly::stop_watch<> fsckRuntime;
     checker.scanForErrors(progressCallback);
-    checker.repairErrors();
+    auto result = checker.repairErrors();
+    auto fsckRuntimeInSeconds =
+        std::chrono::duration<double>{fsckRuntime.elapsed()}.count();
+    if (result) {
+      // If totalErrors - fixedErrors is nonzero, then we failed to
+      // fix all of the problems.
+      auto success = !(result->totalErrors - result->fixedErrors);
+      structuredLogger_->logEvent(
+          Fsck{fsckRuntimeInSeconds, success, true /*attempted_repair*/});
+    } else {
+      structuredLogger_->logEvent(Fsck{
+          fsckRuntimeInSeconds, true /*success*/, false /*attempted_repair*/});
+    }
 
     optNextInodeNumber = checker.getNextInodeNumber();
 #else

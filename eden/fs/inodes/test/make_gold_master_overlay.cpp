@@ -11,6 +11,7 @@
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/OverlayFile.h"
+#include "eden/fs/telemetry/NullStructuredLogger.h"
 
 using namespace facebook::eden;
 using namespace folly::string_piece_literals;
@@ -37,7 +38,10 @@ void createGoldMasterOverlay(AbsolutePath overlayPath) {
   Hash hash3{folly::ByteRange{"e0e0e0e0e0e0e0e0e0e0"_sp}};
   Hash hash4{folly::ByteRange{"44444444444444444444"_sp}};
 
-  auto overlay = Overlay::create(overlayPath, kPathMapCaseSensitive);
+  auto overlay = Overlay::create(
+      overlayPath,
+      kPathMapCaseSensitive,
+      std::make_shared<NullStructuredLogger>());
 
   auto fileInode = overlay->allocateInodeNumber();
   XCHECK_EQ(2_ino, fileInode);

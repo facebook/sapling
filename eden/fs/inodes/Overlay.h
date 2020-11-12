@@ -20,6 +20,7 @@
 #include "eden/fs/inodes/overlay/OverlayChecker.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
 #include "eden/fs/inodes/sqliteoverlay/SqliteOverlay.h"
+#include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/utils/DirType.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -74,7 +75,8 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
    */
   static std::shared_ptr<Overlay> create(
       AbsolutePathPiece localDir,
-      bool caseSensitive);
+      bool caseSensitive,
+      std::shared_ptr<StructuredLogger> logger);
 
   ~Overlay();
 
@@ -217,7 +219,10 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   struct statfs statFs();
 #endif // !_WIN32
  private:
-  explicit Overlay(AbsolutePathPiece localDir, bool caseSensitive);
+  explicit Overlay(
+      AbsolutePathPiece localDir,
+      bool caseSensitive,
+      std::shared_ptr<StructuredLogger> logger);
 
   /**
    * A request for the background GC thread.  There are two types of requests:
@@ -299,6 +304,8 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
 
   folly::Baton<> lastOutstandingRequestIsComplete_;
   bool caseSensitive_;
+
+  std::shared_ptr<StructuredLogger> structuredLogger_;
 
   friend class IORequest;
 };

@@ -719,7 +719,7 @@ optional<OverlayChecker::RepairResult> OverlayChecker::repairErrors() {
     }
   }
 
-  auto numUnfixed = errors_.size() - result.fixedErrors;
+  auto numUnfixed = result.totalErrors - result.fixedErrors;
   string finalMsg;
   if (numUnfixed) {
     finalMsg = folly::to<string>(
