@@ -1365,4 +1365,9 @@ impl SegmentedChangelogConfig {
     pub fn is_update_ondemand(&self) -> bool {
         self.update_algorithm.as_deref() == Some("ondemand")
     }
+
+    /// Returns whether `update_algorithm` is set to 'always_download_save'
+    pub fn is_update_always_download_save(&self) -> bool {
+        self.update_algorithm.as_deref() == Some("always_download_save")
+    }
 }

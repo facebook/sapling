@@ -632,6 +632,8 @@ async fn new_development(
     let censored_scuba_builder = get_censored_scuba_builder(fb, censored_scuba_params)?;
     let changesets = Arc::new(changesets);
     let changeset_fetcher = Arc::new(SimpleChangesetFetcher::new(changesets.clone(), repoid));
+    let repo_blobstore_args =
+        RepoBlobstoreArgs::new(blobstore, redacted_blobs, repoid, censored_scuba_builder);
     let segmented_changelog: Arc<dyn SegmentedChangelog> = if !segmented_changelog_config.enabled {
         Arc::new(segmented_changelog_builder.build_disabled())
     } else {
@@ -640,6 +642,12 @@ async fn new_development(
                 .with_repo_id(repoid)
                 .with_changeset_fetcher(changeset_fetcher.clone())
                 .build_on_demand_update()?;
+            Arc::new(dag)
+        } else if segmented_changelog_config.is_update_always_download_save() {
+            let dag = segmented_changelog_builder
+                .with_repo_id(repoid)
+                .with_blobstore(Arc::new(repo_blobstore_args.repo_blobstore_clone()))
+                .build_manager()?;
             Arc::new(dag)
         } else {
             let dag = segmented_changelog_builder
@@ -652,7 +660,7 @@ async fn new_development(
     Ok(blobrepo_new(
         bookmarks,
         bookmark_update_log,
-        RepoBlobstoreArgs::new(blobstore, redacted_blobs, repoid, censored_scuba_builder),
+        repo_blobstore_args,
         Arc::new(filenodes_builder.build()),
         changesets,
         changeset_fetcher,

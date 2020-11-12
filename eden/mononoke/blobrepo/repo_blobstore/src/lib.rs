@@ -110,6 +110,10 @@ impl RepoBlobstoreArgs {
         (blobstore, repoid)
     }
 
+    pub fn repo_blobstore_clone(&self) -> RepoBlobstore {
+        self.blobstore.clone()
+    }
+
     fn build<T: Blobstore + Clone>(
         blobstore: T,
         repoid: RepositoryId,

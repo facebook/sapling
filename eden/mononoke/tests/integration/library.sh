@@ -911,7 +911,10 @@ derived_data_types=["blame", "changeset_info", "deleted_manifest", "fastlog", "f
 CONFIG
 fi
 
-if [[ -n "${SEGMENTED_CHANGELOG_ENABLE:-}" ]]; then
+if [[ -n "${SEGMENTED_CHANGELOG_ENABLE:-}" ]] || \
+   [[ -n "${SEGMENTED_CHANGELOG_ON_DEMAND_UPDATE:-}" ]] || \
+   [[ -n "${SEGMENTED_CHANGELOG_ALWAYS_DOWNLOAD_SAVE:-}" ]];
+then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 [segmented_changelog_config]
 enabled=true
@@ -919,6 +922,11 @@ CONFIG
   if [[ -n "${SEGMENTED_CHANGELOG_ON_DEMAND_UPDATE:-}" ]]; then
     cat >> "repos/$reponame/server.toml" <<CONFIG
 update_algorithm="ondemand"
+CONFIG
+  fi
+  if [[ -n "${SEGMENTED_CHANGELOG_ALWAYS_DOWNLOAD_SAVE:-}" ]]; then
+    cat >> "repos/$reponame/server.toml" <<CONFIG
+update_algorithm="always_download_save"
 CONFIG
   fi
 fi

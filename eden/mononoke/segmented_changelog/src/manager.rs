@@ -8,12 +8,13 @@
 use std::sync::Arc;
 
 use anyhow::{format_err, Context, Result};
+use async_trait::async_trait;
 use slog::{debug, info};
 
 use dag::InProcessIdDag;
 
 use context::CoreContext;
-use mononoke_types::RepositoryId;
+use mononoke_types::{ChangesetId, RepositoryId};
 
 use crate::bundle::SqlBundleStore;
 use crate::dag::Dag;
@@ -21,6 +22,7 @@ use crate::iddag::IdDagSaveStore;
 use crate::idmap::{SqlIdMap, SqlIdMapFactory};
 use crate::logging::log_new_bundle;
 use crate::types::{DagBundle, IdMapVersion};
+use crate::{CloneData, SegmentedChangelog};
 
 pub struct SegmentedChangelogManager {
     repo_id: RepositoryId,
@@ -103,5 +105,31 @@ impl SegmentedChangelogManager {
 
     pub fn new_sql_idmap(&self, idmap_version: IdMapVersion) -> Arc<SqlIdMap> {
         Arc::new(self.idmap_factory.sql_idmap(idmap_version))
+    }
+}
+
+#[async_trait]
+impl SegmentedChangelog for SegmentedChangelogManager {
+    async fn location_to_many_changeset_ids(
+        &self,
+        ctx: &CoreContext,
+        known: ChangesetId,
+        distance: u64,
+        count: u64,
+    ) -> Result<Vec<ChangesetId>> {
+        let (_, dag) = self
+            .load_dag(&ctx)
+            .await
+            .context("error loading segmented changelog from save")?;
+        dag.location_to_many_changeset_ids(ctx, known, distance, count)
+            .await
+    }
+
+    async fn clone_data(&self, ctx: &CoreContext) -> Result<CloneData<ChangesetId>> {
+        let (_, dag) = self
+            .load_dag(&ctx)
+            .await
+            .context("error loading segmented changelog from save")?;
+        dag.clone_data(ctx).await
     }
 }
