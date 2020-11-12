@@ -19,6 +19,7 @@ Run Segmented Changelog Seeder.
   * seeding segmented changelog using idmap version: 1 (glob)
   * loaded 3 changesets (glob)
   * finished building dag, head '*' has assigned vertex '2' (glob)
-  * finished writing dag bundle and updating metadata* (glob)
+  * segmented changelog dag bundle saved, repo_id: 0, idmap_version: 1, iddag_version: * (glob)
+  * successfully finished seeding segmented changelog (glob)
   * successfully finished seeding SegmentedChangelog for repository 'repo' (glob)
 

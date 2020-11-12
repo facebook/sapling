@@ -43,6 +43,35 @@ pub struct SqlIdMap {
     version: IdMapVersion,
 }
 
+pub struct SqlIdMapFactory {
+    connections: SqlConnections,
+    replica_lag_monitor: Arc<dyn ReplicaLagMonitor>,
+    repo_id: RepositoryId,
+}
+
+impl SqlIdMapFactory {
+    pub fn new(
+        connections: SqlConnections,
+        replica_lag_monitor: Arc<dyn ReplicaLagMonitor>,
+        repo_id: RepositoryId,
+    ) -> Self {
+        Self {
+            connections,
+            replica_lag_monitor,
+            repo_id,
+        }
+    }
+
+    pub fn sql_idmap(&self, version: IdMapVersion) -> SqlIdMap {
+        SqlIdMap::new(
+            self.connections.clone(),
+            self.replica_lag_monitor.clone(),
+            self.repo_id,
+            version,
+        )
+    }
+}
+
 queries! {
     write InsertIdMapEntry(
         values: (repo_id: RepositoryId, version: IdMapVersion, vertex: u64, cs_id: ChangesetId)

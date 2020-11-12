@@ -42,8 +42,8 @@ Run Segmented Changelog Tailer. Error because there was no seeding.
 
   $ segmented_changelog_tailer --track-bookmark=master_bookmark &>"$TESTTMP/error.log"
   [1]
-  $ grep seeding "$TESTTMP/error.log"
-  * maybe it needs seeding (glob)
+  $ grep seeded "$TESTTMP/error.log"
+  * maybe repo is not seeded (glob)
 
 Seed repository.
   $ quiet segmented_changelog_seeder --head=$A
@@ -53,13 +53,12 @@ Actually run Segmented Changelog Tailer.
   $ quiet segmented_changelog_tailer --track-bookmark=master_bookmark --once
   $ grep segmented_changelog "$TESTTMP/quiet.last.log"
   * SegmentedChangelogTailer initialized for repository 'repo' (glob)
-  * starting incremental update to segmented changelog (glob)
-  * base idmap version: 1; base iddag version: b70e1608* (glob)
-  * base dag loaded successfully (glob)
+  * starting incremental update to segmented changelog for repo 0 (glob)
   * bookmark master_bookmark resolved to * (glob)
   * IdMap updated, IdDag updated (glob)
   * IdDag rebuilt (glob)
-  * success - new iddag saved, idmap_version: 1, iddag_version: 5bdcf177* (glob)
+  * segmented changelog dag bundle saved, repo_id: 0, idmap_version: 1, iddag_version: 5bdcf177* (glob)
+  * successful incremental update to segmented changelog for repo 0 (glob)
   * SegmentedChangelogTailer is done for repo repo (glob)
 
 Run Segmented Changelog Tailer. Nothing to do.
@@ -67,9 +66,7 @@ Run Segmented Changelog Tailer. Nothing to do.
   $ quiet segmented_changelog_tailer --track-bookmark=master_bookmark --once
   $ grep segmented_changelog "$TESTTMP/quiet.last.log"
   * SegmentedChangelogTailer initialized for repository 'repo' (glob)
-  * starting incremental update to segmented changelog (glob)
-  * base idmap version: 1; base iddag version: 5bdcf177* (glob)
-  * base dag loaded successfully (glob)
+  * starting incremental update to segmented changelog for repo 0 (glob)
   * bookmark master_bookmark resolved to * (glob)
   * dag already up to date, skipping update to iddag (glob)
   * SegmentedChangelogTailer is done for repo repo (glob)

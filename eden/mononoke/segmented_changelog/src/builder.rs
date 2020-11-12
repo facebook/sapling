@@ -24,7 +24,8 @@ use sql_ext::SqlConnections;
 use crate::bundle::SqlBundleStore;
 use crate::dag::Dag;
 use crate::iddag::IdDagSaveStore;
-use crate::idmap::{SqlIdMap, SqlIdMapVersionStore};
+use crate::idmap::{SqlIdMap, SqlIdMapFactory, SqlIdMapVersionStore};
+use crate::manager::SegmentedChangelogManager;
 use crate::on_demand::OnDemandUpdateDag;
 use crate::seeder::SegmentedChangelogSeeder;
 use crate::tailer::SegmentedChangelogTailer;
@@ -142,6 +143,19 @@ impl SegmentedChangelogBuilder {
             .with_changeset_bulk_fetch(Arc::new(bulk_fetch))
     }
 
+    pub fn build_manager(&mut self) -> Result<SegmentedChangelogManager> {
+        let repo_id = self.repo_id()?;
+        let bundle_store = self.build_sql_bundle_store()?;
+        let iddag_save_store = self.build_iddag_save_store()?;
+        let idmap_factory = self.build_sql_idmap_factory()?;
+        Ok(SegmentedChangelogManager::new(
+            repo_id,
+            bundle_store,
+            iddag_save_store,
+            idmap_factory,
+        ))
+    }
+
     pub fn build_disabled(self) -> DisabledSegmentedChangelog {
         DisabledSegmentedChangelog::new()
     }
@@ -172,6 +186,17 @@ impl SegmentedChangelogBuilder {
             replica_lag_monitor,
             repo_id,
             idmap_version,
+        ))
+    }
+
+    pub(crate) fn build_sql_idmap_factory(&mut self) -> Result<SqlIdMapFactory> {
+        let connections = self.connections_clone()?;
+        let replica_lag_monitor = self.replica_lag_monitor();
+        let repo_id = self.repo_id()?;
+        Ok(SqlIdMapFactory::new(
+            connections,
+            replica_lag_monitor,
+            repo_id,
         ))
     }
 
@@ -207,26 +232,21 @@ impl SegmentedChangelogBuilder {
             self.idmap_version = Some(IdMapVersion(version));
         }
         let seeder = SegmentedChangelogSeeder::new(
-            Arc::new(self.build_sql_idmap()?),
             self.idmap_version(),
             idmap_version_store,
-            self.build_iddag_save_store()?,
-            self.build_sql_bundle_store()?,
             self.changeset_bulk_fetch()?,
+            self.build_manager()?,
         );
         Ok(seeder)
     }
 
     pub fn build_tailer(&mut self) -> Result<SegmentedChangelogTailer> {
         let tailer = SegmentedChangelogTailer::new(
-            self.connections_clone()?,
             self.repo_id()?,
-            self.replica_lag_monitor(),
             self.changeset_fetcher()?,
             self.bookmarks()?,
             self.bookmark_name()?,
-            self.build_iddag_save_store()?,
-            self.build_sql_bundle_store()?,
+            self.build_manager()?,
         );
         Ok(tailer)
     }

@@ -12,21 +12,16 @@ use anyhow::{format_err, Context, Result};
 use slog::info;
 
 use dag::{Group, Id as Vertex, InProcessIdDag};
-use sql_ext::replication::ReplicaLagMonitor;
 use stats::prelude::*;
 
 use bookmarks::{BookmarkName, Bookmarks};
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
 use mononoke_types::RepositoryId;
-use sql_ext::SqlConnections;
 
-use crate::bundle::SqlBundleStore;
 use crate::dag::Dag;
-use crate::iddag::IdDagSaveStore;
-use crate::idmap::SqlIdMap;
+use crate::manager::SegmentedChangelogManager;
 use crate::on_demand::build_incremental;
-use crate::types::DagBundle;
 
 define_stats! {
     prefix = "mononoke.segmented_changelog.tailer";
@@ -34,36 +29,27 @@ define_stats! {
 }
 
 pub struct SegmentedChangelogTailer {
-    connections: SqlConnections,
     repo_id: RepositoryId,
-    replica_lag_monitor: Arc<dyn ReplicaLagMonitor>,
     changeset_fetcher: Arc<dyn ChangesetFetcher>,
     bookmarks: Arc<dyn Bookmarks>,
     bookmark_name: BookmarkName,
-    iddag_save_store: IdDagSaveStore,
-    bundle_store: SqlBundleStore,
+    manager: SegmentedChangelogManager,
 }
 
 impl SegmentedChangelogTailer {
     pub fn new(
-        connections: SqlConnections,
         repo_id: RepositoryId,
-        replica_lag_monitor: Arc<dyn ReplicaLagMonitor>,
         changeset_fetcher: Arc<dyn ChangesetFetcher>,
         bookmarks: Arc<dyn Bookmarks>,
         bookmark_name: BookmarkName,
-        iddag_save_store: IdDagSaveStore,
-        bundle_store: SqlBundleStore,
+        manager: SegmentedChangelogManager,
     ) -> Self {
         Self {
-            connections,
             repo_id,
-            replica_lag_monitor,
             changeset_fetcher,
             bookmarks,
             bookmark_name,
-            iddag_save_store,
-            bundle_store,
+            manager,
         }
     }
 
@@ -78,38 +64,14 @@ impl SegmentedChangelogTailer {
     pub async fn once(&self, ctx: &CoreContext) -> Result<(Dag, Vertex)> {
         info!(
             ctx.logger(),
-            "starting incremental update to segmented changelog"
+            "starting incremental update to segmented changelog for repo {}", self.repo_id,
         );
 
-        let bundle = self
-            .bundle_store
-            .get(&ctx)
+        let (bundle, mut dag) = self
+            .manager
+            .load_dag(&ctx)
             .await
-            .context("fetching version information")?
-            .ok_or_else(|| {
-                format_err!(
-                    "could not find bundle information for repo {}, maybe it needs seeding",
-                    self.repo_id
-                )
-            })?;
-        let idmap_version = bundle.idmap_version;
-        info!(
-            ctx.logger(),
-            "base idmap version: {}; base iddag version: {}", idmap_version, bundle.iddag_version
-        );
-        let idmap: Arc<SqlIdMap> = Arc::new(SqlIdMap::new(
-            self.connections.clone(),
-            self.replica_lag_monitor.clone(),
-            self.repo_id,
-            idmap_version,
-        ));
-        let iddag = self
-            .iddag_save_store
-            .load(&ctx, bundle.iddag_version)
-            .await
-            .context("loading iddag save")?;
-        let mut dag = Dag::new(iddag, idmap.clone());
-        info!(ctx.logger(), "base dag loaded successfully");
+            .context("failed to load base dag")?;
 
         let head = self
             .bookmarks
@@ -147,23 +109,18 @@ impl SegmentedChangelogTailer {
         new_iddag.build_segments_volatile(head_vertex, &get_parents)?;
         info!(ctx.logger(), "IdDag rebuilt");
 
-        // Save the IdDag
-        let iddag_version = self
-            .iddag_save_store
-            .save(&ctx, &new_iddag)
+        // Save the Dag
+        self.manager
+            .save_dag(&ctx, &new_iddag, bundle.idmap_version)
             .await
-            .context("saving iddag")?;
-        // Update BundleStore
-        self.bundle_store
-            .set(&ctx, DagBundle::new(iddag_version, idmap_version))
-            .await
-            .context("updating bundle store")?;
+            .context("failed to save updated dag")?;
+
         info!(
             ctx.logger(),
-            "success - new iddag saved, idmap_version: {}, iddag_version: {} ",
-            idmap_version,
-            iddag_version,
+            "successful incremental update to segmented changelog for repo {}", self.repo_id,
         );
-        Ok((Dag::new(new_iddag, idmap), head_vertex))
+
+        let new_dag = Dag::new(new_iddag, dag.idmap);
+        Ok((new_dag, head_vertex))
     }
 }

@@ -10,7 +10,7 @@ mod sql;
 mod version;
 
 pub use self::mem::MemIdMap;
-pub use self::sql::SqlIdMap;
+pub use self::sql::{SqlIdMap, SqlIdMapFactory};
 pub use self::version::SqlIdMapVersionStore;
 
 use std::collections::HashMap;

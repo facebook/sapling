@@ -15,7 +15,6 @@ use stats::prelude::*;
 use context::{CoreContext, PerfCounterType};
 use mononoke_types::RepositoryId;
 
-use crate::logging::log_new_bundle;
 use crate::types::{DagBundle, IdDagVersion, IdMapVersion};
 
 define_stats! {
@@ -51,7 +50,6 @@ impl SqlBundleStore {
         .compat()
         .await
         .context("inserting segmented changelog bundle")?;
-        log_new_bundle(ctx, self.repo_id, bundle);
         Ok(())
     }
 
