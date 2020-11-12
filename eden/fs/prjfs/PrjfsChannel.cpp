@@ -690,10 +690,9 @@ folly::Try<void> PrjfsChannel::addDirectoryPlaceholder(RelativePathPiece path) {
       //
       // A long term fix will need to not issue invalidation on directories
       // that aren't materialized.
-      XLOG_EVERY_MS(
-          WARN,
-          100,
-          "Couldn't add a placeholder for: {}, as it triggered a recursive EdenFS call",
+      XLOG_EVERY_MS(WARN, 100) << fmt::format(
+          FMT_STRING(
+              "Couldn't add a placeholder for: {}, as it triggered a recursive EdenFS call"),
           path);
     } else {
       return folly::Try<void>{makeHResultErrorExplicit(
