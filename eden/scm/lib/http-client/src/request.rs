@@ -58,6 +58,7 @@ pub struct Request {
     creds: Option<(PathBuf, PathBuf)>,
     cainfo: Option<PathBuf>,
     timeout: Option<Duration>,
+    http_version: HttpVersion,
 }
 
 impl Request {
@@ -72,6 +73,9 @@ impl Request {
             creds: None,
             cainfo: None,
             timeout: None,
+            // Attempt to use HTTP/2 by default. Will fall back to HTTP/1.1
+            // if version negotiation with the server fails.
+            http_version: HttpVersion::V2,
         }
     }
 
@@ -99,6 +103,14 @@ impl Request {
     pub fn body<B: Into<Vec<u8>>>(self, data: B) -> Self {
         Self {
             body: Some(data.into()),
+            ..self
+        }
+    }
+
+    /// Set the http version for this request. Defaults to HTTP/2.
+    pub fn http_version(self, http_version: HttpVersion) -> Self {
+        Self {
+            http_version,
             ..self
         }
     }
@@ -266,9 +278,7 @@ impl Request {
             easy.timeout(timeout)?;
         }
 
-        // Always use attempt to use HTTP/2. Will fall back to HTTP/1.1
-        // if version negotiation with the server fails.
-        easy.http_version(HttpVersion::V2)?;
+        easy.http_version(self.http_version)?;
 
         // Tell libcurl to report progress to the handler.
         easy.progress(true)?;

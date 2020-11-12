@@ -23,6 +23,7 @@ mod stats;
 mod stream;
 
 pub use client::{HttpClient, ResponseStream, StatsFuture};
+pub use curl::easy::HttpVersion;
 pub use errors::{Abort, CertOrKeyMissing, HttpClientError};
 pub use header::Header;
 pub use progress::Progress;
