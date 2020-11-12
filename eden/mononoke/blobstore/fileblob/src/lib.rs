@@ -92,6 +92,8 @@ impl BlobstorePutOps for Fileblob {
             let new_file = tempfile.as_file().try_clone()?;
             let mut tokio_file = File::from_std(new_file);
             tokio_file.write_all(value.as_bytes().as_ref()).await?;
+            tokio_file.flush().await?;
+            tokio_file.sync_all().await?;
             let status = match put_behaviour {
                 PutBehaviour::Overwrite => {
                     tempfile.persist(&p)?;
