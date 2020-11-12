@@ -39,14 +39,16 @@ SemiFuture<unique_ptr<Blob>> EmptyBackingStore::getBlob(
 }
 
 SemiFuture<unique_ptr<Tree>> EmptyBackingStore::getTreeForCommit(
-    const Hash& /* commitID */) {
+    const Hash& /* commitID */,
+    ObjectFetchContext& /* context */) {
   return makeSemiFuture<unique_ptr<Tree>>(
       std::domain_error("empty backing store"));
 }
 
 SemiFuture<std::unique_ptr<Tree>> EmptyBackingStore::getTreeForManifest(
     const Hash& /* commitID */,
-    const Hash& /* manifestID */) {
+    const Hash& /* manifestID */,
+    ObjectFetchContext& /* context */) {
   return makeSemiFuture<unique_ptr<Tree>>(
       std::domain_error("empty backing store"));
 }

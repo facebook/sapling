@@ -148,6 +148,11 @@ class ThriftFetchContext : public ObjectFetchContext {
       std::optional<pid_t> pid,
       folly::StringPiece endpoint)
       : pid_(pid), endpoint_(endpoint) {}
+  explicit ThriftFetchContext(
+      std::optional<pid_t> pid,
+      folly::StringPiece endpoint,
+      bool prefetchMetadata)
+      : pid_(pid), endpoint_(endpoint), prefetchMetadata_(prefetchMetadata) {}
 
   std::optional<pid_t> getClientPid() const override {
     return pid_;
@@ -161,9 +166,18 @@ class ThriftFetchContext : public ObjectFetchContext {
     return endpoint_;
   }
 
+  bool prefetchMetadata() const override {
+    return prefetchMetadata_;
+  }
+
+  void setPrefetchMetadata(bool prefetchMetadata) {
+    prefetchMetadata_ = prefetchMetadata;
+  }
+
  private:
   std::optional<pid_t> pid_;
   folly::StringPiece endpoint_;
+  bool prefetchMetadata_ = false;
 };
 
 // Helper class to log where the request completes in Future
@@ -207,7 +221,7 @@ class ThriftLogHelper {
         itcTimer_.elapsed().count());
   }
 
-  ObjectFetchContext& getFetchContext() {
+  ThriftFetchContext& getFetchContext() {
     return fetchContext_;
   }
 
@@ -1039,6 +1053,7 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
       : nullptr;
 
   auto& fetchContext = helper->getFetchContext();
+  fetchContext.setPrefetchMetadata(*params->prefetchMetadata_ref());
 
   // These hashes must outlive the GlobResult created by evaluate as the
   // GlobResults will hold on to references to these hashes

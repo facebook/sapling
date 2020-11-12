@@ -73,6 +73,10 @@ class ObjectFetchContext {
     return ImportPriority::kNormal();
   }
 
+  virtual bool prefetchMetadata() const {
+    return true;
+  }
+
   /**
    * Support deprioritizing in sub-classes.
    * Note: Normally, each ObjectFetchContext is designed to be used for only one

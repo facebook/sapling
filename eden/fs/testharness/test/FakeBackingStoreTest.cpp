@@ -64,7 +64,7 @@ TEST_F(FakeBackingStoreTest, getNonExistent) {
       std::domain_error,
       "tree 0+1 not found");
   EXPECT_THROW_RE(
-      store_->getTreeForCommit(hash),
+      store_->getTreeForCommit(hash, ObjectFetchContext::getNullContext()),
       std::domain_error,
       "commit 0+1 not found");
 }
@@ -221,9 +221,11 @@ TEST_F(FakeBackingStoreTest, getTreeForCommit) {
   auto hash2 = makeTestHash("2");
   auto* commit2 = store_->putCommit(hash2, makeTestHash("3"));
 
-  auto future1 = store_->getTreeForCommit(hash1);
+  auto future1 =
+      store_->getTreeForCommit(hash1, ObjectFetchContext::getNullContext());
   EXPECT_FALSE(future1.isReady());
-  auto future2 = store_->getTreeForCommit(hash2);
+  auto future2 =
+      store_->getTreeForCommit(hash2, ObjectFetchContext::getNullContext());
   EXPECT_FALSE(future2.isReady());
 
   // Trigger commit1, then dir1 to make future1 ready.
@@ -237,7 +239,8 @@ TEST_F(FakeBackingStoreTest, getTreeForCommit) {
   EXPECT_FALSE(future2.isReady());
 
   // Get another future for commit1
-  auto future3 = store_->getTreeForCommit(hash1);
+  auto future3 =
+      store_->getTreeForCommit(hash1, ObjectFetchContext::getNullContext());
   EXPECT_FALSE(future3.isReady());
   // Triggering the directory now should have no effect,
   // since there should be no futures for it yet.
@@ -250,13 +253,15 @@ TEST_F(FakeBackingStoreTest, getTreeForCommit) {
   EXPECT_EQ(dir1Hash, std::move(future3).get()->getHash());
 
   // Try triggering errors
-  auto future4 = store_->getTreeForCommit(hash1);
+  auto future4 =
+      store_->getTreeForCommit(hash1, ObjectFetchContext::getNullContext());
   EXPECT_FALSE(future4.isReady());
   commit1->triggerError(std::runtime_error("bad luck"));
   ASSERT_TRUE(future4.isReady());
   EXPECT_THROW_RE(std::move(future4).get(), std::runtime_error, "bad luck");
 
-  auto future5 = store_->getTreeForCommit(hash1);
+  auto future5 =
+      store_->getTreeForCommit(hash1, ObjectFetchContext::getNullContext());
   EXPECT_FALSE(future5.isReady());
   commit1->trigger();
   EXPECT_FALSE(future5.isReady());
@@ -286,12 +291,14 @@ TEST_F(FakeBackingStoreTest, getTreeForManifest) {
   auto hash3 = makeTestHash("3");
   store_->putCommit(hash2, hash3);
 
-  auto future1 = store_->getTreeForManifest(hash1, dir1Hash);
+  auto future1 = store_->getTreeForManifest(
+      hash1, dir1Hash, ObjectFetchContext::getNullContext());
   // Since we are not looking up the commit hash, but since the tree exists, we
   // are waiting on the tree to be triggered
   EXPECT_FALSE(future1.isReady());
 
-  auto future2 = store_->getTreeForManifest(hash2, hash3);
+  auto future2 = store_->getTreeForManifest(
+      hash2, hash3, ObjectFetchContext::getNullContext());
   // Since we are not looking up the commit hash, and since the tree does not
   // exist, we are not waiting on the tree to be triggered to resolve this.
   EXPECT_TRUE(future2.isReady());
@@ -307,7 +314,8 @@ TEST_F(FakeBackingStoreTest, getTreeForManifest) {
   EXPECT_EQ(dir1Hash, std::move(future1).get()->getHash());
 
   // Get another future for commit1
-  auto future3 = store_->getTreeForManifest(hash1, dir1Hash);
+  auto future3 = store_->getTreeForManifest(
+      hash1, dir1Hash, ObjectFetchContext::getNullContext());
   EXPECT_FALSE(future3.isReady());
   // Triggering the directory now should have an effect since we are not waiting
   // to look up the manifest id using the commit hash and are only waiting on
@@ -317,7 +325,8 @@ TEST_F(FakeBackingStoreTest, getTreeForManifest) {
   EXPECT_EQ(dir1Hash, std::move(future3).get()->getHash());
 
   // Try triggering errors
-  auto future4 = store_->getTreeForManifest(hash1, dir1Hash);
+  auto future4 = store_->getTreeForManifest(
+      hash1, dir1Hash, ObjectFetchContext::getNullContext());
   EXPECT_FALSE(future4.isReady());
   commit1->triggerError(std::runtime_error("bad luck"));
   EXPECT_FALSE(future4.isReady());
@@ -328,7 +337,8 @@ TEST_F(FakeBackingStoreTest, getTreeForManifest) {
   // commit will not cause getTreeForManifest to fail
   EXPECT_EQ(dir1Hash, std::move(future4).get()->getHash());
 
-  auto future5 = store_->getTreeForManifest(hash1, dir1Hash);
+  auto future5 = store_->getTreeForManifest(
+      hash1, dir1Hash, ObjectFetchContext::getNullContext());
   EXPECT_FALSE(future5.isReady());
   commit1->trigger();
   EXPECT_FALSE(future5.isReady());

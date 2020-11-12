@@ -182,6 +182,20 @@ HgBackingStore::HgBackingStore(
     HgImporter* importer,
     std::shared_ptr<LocalStore> localStore,
     std::shared_ptr<EdenStats> stats)
+    : HgBackingStore(
+          repository,
+          importer,
+          localStore,
+          stats,
+          MetadataImporter::getMetadataImporterFactory<
+              DefaultMetadataImporter>()) {}
+
+HgBackingStore::HgBackingStore(
+    AbsolutePathPiece repository,
+    HgImporter* importer,
+    std::shared_ptr<LocalStore> localStore,
+    std::shared_ptr<EdenStats> stats,
+    MetadataImporterFactory metadataImporterFactory)
     : localStore_{std::move(localStore)},
       stats_{std::move(stats)},
       importThreadPool_{std::make_unique<HgImporterTestExecutor>(importer)},
@@ -189,9 +203,7 @@ HgBackingStore::HgBackingStore(
       datapackStore_(repository, false) {
   const auto& options = importer->getOptions();
   repoName_ = options.repoName;
-  metadataImporter_ =
-      MetadataImporter::getMetadataImporterFactory<DefaultMetadataImporter>()(
-          config_, repoName_, localStore_);
+  metadataImporter_ = metadataImporterFactory(config_, repoName_, localStore_);
 }
 
 HgBackingStore::~HgBackingStore() {}
@@ -199,6 +211,7 @@ HgBackingStore::~HgBackingStore() {}
 SemiFuture<unique_ptr<Tree>> HgBackingStore::getTree(
     const Hash& id,
     HgProxyHash proxyHash,
+    bool prefetchMetadata,
     ObjectFetchContext& /*context*/) {
   std::optional<Hash> commitHash;
   // note: if the parent of the tree was fetched with an old version of eden
@@ -211,14 +224,16 @@ SemiFuture<unique_ptr<Tree>> HgBackingStore::getTree(
       proxyHash.revHash(), // this is really the manifest node
       id,
       proxyHash.path(),
-      commitHash);
+      commitHash,
+      prefetchMetadata);
 }
 
 Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
     const Hash& manifestNode,
     const Hash& edenTreeID,
     RelativePathPiece path,
-    const std::optional<Hash>& commitHash) {
+    const std::optional<Hash>& commitHash,
+    bool prefetchMetadata) {
   XLOG(DBG6) << "importing tree " << edenTreeID << ": hg manifest "
              << manifestNode << " for path \"" << path << "\"";
 
@@ -234,7 +249,7 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
 
   auto treeMetadataFuture =
       folly::SemiFuture<std::unique_ptr<TreeMetadata>>::makeEmpty();
-  if (metadataImporter_->metadataFetchingAvailable()) {
+  if (metadataImporter_->metadataFetchingAvailable() && prefetchMetadata) {
     treeMetadataFuture =
         metadataImporter_->getTreeMetadata(edenTreeID, manifestNode);
   }
@@ -429,7 +444,8 @@ std::unique_ptr<Tree> HgBackingStore::processTree(
 }
 
 folly::Future<std::unique_ptr<Tree>> HgBackingStore::importTreeManifest(
-    const Hash& commitId) {
+    const Hash& commitId,
+    bool prefetchMetadata) {
   return folly::via(
              importThreadPool_.get(),
              [commitId] {
@@ -437,7 +453,7 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::importTreeManifest(
                    commitId.toString());
              })
       .via(serverThreadPool_)
-      .thenValue([this, commitId](auto manifestNode) {
+      .thenValue([this, commitId, prefetchMetadata](auto manifestNode) {
         XLOG(DBG2) << "revision " << commitId.toString()
                    << " has manifest node " << manifestNode;
         // Record that we are at the root for this node
@@ -448,8 +464,8 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::importTreeManifest(
         auto batch = localStore_->beginWrite();
         ScsProxyHash::store(proxyInfo.first, path, commitId, batch.get());
         batch->flush();
-        auto futTree =
-            importTreeImpl(manifestNode, proxyInfo.first, path, commitId);
+        auto futTree = importTreeImpl(
+            manifestNode, proxyInfo.first, path, commitId, prefetchMetadata);
         return std::move(futTree).thenValue(
             [batch = localStore_->beginWrite(),
              info = std::move(proxyInfo)](auto tree) {
@@ -525,38 +541,43 @@ SemiFuture<folly::Unit> HgBackingStore::prefetchBlobs(
 }
 
 SemiFuture<unique_ptr<Tree>> HgBackingStore::getTreeForCommit(
-    const Hash& commitID) {
+    const Hash& commitID,
+    bool prefetchMetadata) {
   return localStore_
       ->getFuture(KeySpace::HgCommitToTreeFamily, commitID.getBytes())
       .thenValue(
-          [this, commitID](
+          [this, commitID, prefetchMetadata](
               StoreResult result) -> folly::SemiFuture<unique_ptr<Tree>> {
             if (!result.isValid()) {
-              return importTreeForCommit(commitID);
+              return importTreeForCommit(commitID, prefetchMetadata);
             }
 
             auto rootTreeHash = Hash{result.bytes()};
             XLOG(DBG5) << "found existing tree " << rootTreeHash.toString()
                        << " for mercurial commit " << commitID.toString();
-            return getTreeForRootTreeImpl(commitID, rootTreeHash);
+            return getTreeForRootTreeImpl(
+                commitID, rootTreeHash, prefetchMetadata);
           });
 }
 
 folly::SemiFuture<unique_ptr<Tree>> HgBackingStore::getTreeForManifest(
     const Hash& commitID,
-    const Hash& manifestID) {
+    const Hash& manifestID,
+    bool prefetchMetadata) {
   // Construct the edenTreeID to pass to localStore lookup
   auto rootTreeHash =
       HgProxyHash::prepareToStore(RelativePathPiece{}, manifestID).first;
-  return getTreeForRootTreeImpl(commitID, rootTreeHash).via(serverThreadPool_);
+  return getTreeForRootTreeImpl(commitID, rootTreeHash, prefetchMetadata)
+      .via(serverThreadPool_);
 }
 
 folly::Future<unique_ptr<Tree>> HgBackingStore::getTreeForRootTreeImpl(
     const Hash& commitID,
-    const Hash& rootTreeHash) {
+    const Hash& rootTreeHash,
+    bool prefetchMetadata) {
   return localStore_->getTree(rootTreeHash)
       .thenValue(
-          [this, rootTreeHash, commitID](
+          [this, rootTreeHash, commitID, prefetchMetadata](
               std::unique_ptr<Tree> tree) -> folly::Future<unique_ptr<Tree>> {
             if (tree) {
               return folly::makeFuture(std::move(tree));
@@ -564,7 +585,8 @@ folly::Future<unique_ptr<Tree>> HgBackingStore::getTreeForRootTreeImpl(
 
             return localStore_->getTree(rootTreeHash)
                 .thenValue(
-                    [this, rootTreeHash, commitID](std::unique_ptr<Tree> tree)
+                    [this, rootTreeHash, commitID, prefetchMetadata](
+                        std::unique_ptr<Tree> tree)
                         -> folly::SemiFuture<unique_ptr<Tree>> {
                       if (tree) {
                         return std::move(tree);
@@ -577,15 +599,16 @@ folly::Future<unique_ptr<Tree>> HgBackingStore::getTreeForRootTreeImpl(
                       XLOG(WARN) << "No corresponding tree " << rootTreeHash
                                  << " for commit " << commitID
                                  << "; will import again";
-                      return importTreeForCommit(commitID);
+                      return importTreeForCommit(commitID, prefetchMetadata);
                     });
           });
 }
 
 folly::SemiFuture<unique_ptr<Tree>> HgBackingStore::importTreeForCommit(
-    Hash commitID) {
-  return importTreeManifest(commitID).thenValue(
-      [this, commitID](std::unique_ptr<Tree> rootTree) {
+    Hash commitID,
+    bool prefetchMetadata) {
+  return importTreeManifest(commitID, prefetchMetadata)
+      .thenValue([this, commitID](std::unique_ptr<Tree> rootTree) {
         XLOG(DBG1) << "imported mercurial commit " << commitID.toString()
                    << " as tree " << rootTree->getHash().toString();
 

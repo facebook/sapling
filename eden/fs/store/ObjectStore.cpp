@@ -156,11 +156,13 @@ Future<shared_ptr<const Tree>> ObjectStore::getTree(
 
 Future<shared_ptr<const Tree>> ObjectStore::getTreeForCommit(
     const Hash& commitID,
-    ObjectFetchContext&) const {
+    ObjectFetchContext& context) const {
   XLOG(DBG3) << "getTreeForCommit(" << commitID << ")";
 
-  return backingStore_->getTreeForCommit(commitID).via(executor_).thenValue(
-      [commitID, localStore = localStore_](std::shared_ptr<const Tree> tree) {
+  return backingStore_->getTreeForCommit(commitID, context)
+      .via(executor_)
+      .thenValue([commitID,
+                  localStore = localStore_](std::shared_ptr<const Tree> tree) {
         if (!tree) {
           throw std::domain_error(folly::to<string>(
               "unable to import commit ", commitID.toString()));
@@ -174,10 +176,10 @@ Future<shared_ptr<const Tree>> ObjectStore::getTreeForCommit(
 Future<shared_ptr<const Tree>> ObjectStore::getTreeForManifest(
     const Hash& commitID,
     const Hash& manifestID,
-    ObjectFetchContext&) const {
+    ObjectFetchContext& context) const {
   XLOG(DBG3) << "getTreeForManifest(" << commitID << ", " << manifestID << ")";
 
-  return backingStore_->getTreeForManifest(commitID, manifestID)
+  return backingStore_->getTreeForManifest(commitID, manifestID, context)
       .via(executor_)
       .thenValue([commitID, manifestID, localStore = localStore_](
                      std::shared_ptr<const Tree> tree) {

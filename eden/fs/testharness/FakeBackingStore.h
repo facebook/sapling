@@ -46,10 +46,12 @@ class FakeBackingStore : public BackingStore {
       const Hash& id,
       ObjectFetchContext& context) override;
   folly::SemiFuture<std::unique_ptr<Tree>> getTreeForCommit(
-      const Hash& commitID) override;
+      const Hash& commitID,
+      ObjectFetchContext& context) override;
   folly::SemiFuture<std::unique_ptr<Tree>> getTreeForManifest(
       const Hash& commitID,
-      const Hash& manifestID) override;
+      const Hash& manifestID,
+      ObjectFetchContext& context) override;
   /**
    * Add a Blob to the backing store
    *

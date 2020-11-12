@@ -66,18 +66,29 @@ class HgBackingStore {
       HgImporter* importer,
       std::shared_ptr<LocalStore> localStore,
       std::shared_ptr<EdenStats>);
+  HgBackingStore(
+      AbsolutePathPiece repository,
+      HgImporter* importer,
+      std::shared_ptr<LocalStore> localStore,
+      std::shared_ptr<EdenStats>,
+      MetadataImporterFactory metadataImporter);
 
   ~HgBackingStore();
 
-  folly::SemiFuture<std::unique_ptr<Tree>>
-  getTree(const Hash& id, HgProxyHash proxyHash, ObjectFetchContext& context);
+  folly::SemiFuture<std::unique_ptr<Tree>> getTree(
+      const Hash& id,
+      HgProxyHash proxyHash,
+      bool prefetchMetadata,
+      ObjectFetchContext& context);
   folly::SemiFuture<std::unique_ptr<Blob>>
   getBlob(const Hash& id, HgProxyHash proxyHash, ObjectFetchContext& context);
   folly::SemiFuture<std::unique_ptr<Tree>> getTreeForCommit(
-      const Hash& commitID);
+      const Hash& commitID,
+      bool prefetchMetadata);
   folly::SemiFuture<std::unique_ptr<Tree>> getTreeForManifest(
       const Hash& commitID,
-      const Hash& manifestID);
+      const Hash& manifestID,
+      bool prefetchMetadata);
   FOLLY_NODISCARD folly::SemiFuture<folly::Unit> prefetchBlobs(
       std::vector<HgProxyHash> ids,
       ObjectFetchContext& context);
@@ -88,7 +99,9 @@ class HgBackingStore {
    * Import the manifest for the specified revision using mercurial
    * treemanifest data.
    */
-  folly::Future<std::unique_ptr<Tree>> importTreeManifest(const Hash& commitId);
+  folly::Future<std::unique_ptr<Tree>> importTreeManifest(
+      const Hash& commitId,
+      bool prefetchMetadata);
 
   /**
    * Objects that can be imported from Hg
@@ -128,26 +141,36 @@ class HgBackingStore {
     return datapackStore_;
   }
 
+  MetadataImporter& getMetadataImporter() {
+    return *metadataImporter_;
+  }
+
  private:
   // Forbidden copy constructor and assignment operator
   HgBackingStore(HgBackingStore const&) = delete;
   HgBackingStore& operator=(HgBackingStore const&) = delete;
 
-  folly::Future<std::unique_ptr<Tree>> getTreeForCommitImpl(Hash commitID);
+  folly::Future<std::unique_ptr<Tree>> getTreeForCommitImpl(
+      Hash commitID,
+      bool prefetchMetadata);
 
   folly::Future<std::unique_ptr<Tree>> getTreeForRootTreeImpl(
       const Hash& commitID,
-      const Hash& rootTreeHash);
+      const Hash& rootTreeHash,
+      bool prefetchMetadata);
 
   // Import the Tree from Hg and cache it in the LocalStore before returning it.
-  folly::SemiFuture<std::unique_ptr<Tree>> importTreeForCommit(Hash commitID);
+  folly::SemiFuture<std::unique_ptr<Tree>> importTreeForCommit(
+      Hash commitID,
+      bool prefetchMetadata);
 
   void initializeDatapackImport(AbsolutePathPiece repository);
   folly::Future<std::unique_ptr<Tree>> importTreeImpl(
       const Hash& manifestNode,
       const Hash& edenTreeID,
       RelativePathPiece path,
-      const std::optional<Hash>& commitHash);
+      const std::optional<Hash>& commitHash,
+      bool prefetchMetadata);
   folly::Future<std::unique_ptr<Tree>> fetchTreeFromHgCacheOrImporter(
       Hash manifestNode,
       Hash edenTreeID,

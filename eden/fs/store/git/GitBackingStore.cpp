@@ -159,7 +159,8 @@ unique_ptr<Blob> GitBackingStore::getBlobImpl(const Hash& id) {
 }
 
 SemiFuture<unique_ptr<Tree>> GitBackingStore::getTreeForCommit(
-    const Hash& commitID) {
+    const Hash& commitID,
+    ObjectFetchContext& /*context*/) {
   // TODO: Use a separate thread pool to do the git I/O
   XLOG(DBG4) << "resolving tree for commit " << commitID;
 
@@ -193,8 +194,9 @@ SemiFuture<unique_ptr<Tree>> GitBackingStore::getTreeForCommit(
 
 SemiFuture<std::unique_ptr<Tree>> GitBackingStore::getTreeForManifest(
     const Hash& commitID,
-    const Hash& /* manifestID */) {
-  return getTreeForCommit(commitID);
+    const Hash& /* manifestID */,
+    ObjectFetchContext& context) {
+  return getTreeForCommit(commitID, context);
 }
 
 git_oid GitBackingStore::hash2Oid(const Hash& hash) {

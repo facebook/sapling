@@ -12,6 +12,7 @@
 
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/store/ImportPriority.h"
+#include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/hg/HgImportRequest.h"
 #include "eden/fs/store/hg/HgImportRequestQueue.h"
 #include "eden/fs/store/hg/HgProxyHash.h"
@@ -53,7 +54,7 @@ std::pair<Hash, HgImportRequest> makeTreeImportRequest(
   return std::make_pair(
       hash,
       HgImportRequest::makeTreeImportRequest(
-          hash, std::move(proxyHash), priority, std::move(importTracker))
+          hash, std::move(proxyHash), priority, std::move(importTracker), true)
           .first);
 }
 

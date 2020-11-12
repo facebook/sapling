@@ -58,10 +58,12 @@ class HgQueuedBackingStore : public BackingStore {
       ObjectFetchContext& context) override;
 
   folly::SemiFuture<std::unique_ptr<Tree>> getTreeForCommit(
-      const Hash& commitID) override;
+      const Hash& commitID,
+      ObjectFetchContext& context) override;
   folly::SemiFuture<std::unique_ptr<Tree>> getTreeForManifest(
       const Hash& commitID,
-      const Hash& manifestID) override;
+      const Hash& manifestID,
+      ObjectFetchContext& context) override;
 
   FOLLY_NODISCARD virtual folly::SemiFuture<folly::Unit> prefetchBlobs(
       const std::vector<Hash>& ids,
@@ -84,6 +86,10 @@ class HgQueuedBackingStore : public BackingStore {
   void startRecordingFetch() override;
   void recordFetch(folly::StringPiece) override;
   std::unordered_set<std::string> stopRecordingFetch() override;
+
+  HgBackingStore& getHgBackingStore() {
+    return *backingStore_;
+  }
 
  private:
   // Forbidden copy constructor and assignment operator

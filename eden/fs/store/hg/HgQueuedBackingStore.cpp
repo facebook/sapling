@@ -133,13 +133,13 @@ void HgQueuedBackingStore::processTreeImportRequests(
     request.getPromise<HgImportRequest::TreeImport::Response>()->setWith(
         [store = backingStore_.get(),
          hash = parameter->hash,
-         proxyHash = parameter->proxyHash]() mutable {
-          // TODO(kmancini): follow up with threading the context all the way
-          // through the backing store
+         proxyHash = parameter->proxyHash,
+         prefetchMetadata = parameter->prefetchMetadata]() mutable {
           return store
               ->getTree(
                   hash,
                   std::move(proxyHash),
+                  prefetchMetadata,
                   ObjectFetchContext::getNullContext())
               .getTry();
         });
@@ -195,7 +195,8 @@ folly::SemiFuture<std::unique_ptr<Tree>> HgQueuedBackingStore::getTree(
       id,
       std::move(proxyHash),
       context.getPriority(),
-      std::move(importTracker));
+      std::move(importTracker),
+      context.prefetchMetadata());
   queue_.enqueue(std::move(request));
   return std::move(future);
 }
@@ -227,15 +228,18 @@ folly::SemiFuture<std::unique_ptr<Blob>> HgQueuedBackingStore::getBlob(
 }
 
 folly::SemiFuture<std::unique_ptr<Tree>> HgQueuedBackingStore::getTreeForCommit(
-    const Hash& commitID) {
-  return backingStore_->getTreeForCommit(commitID);
+    const Hash& commitID,
+    ObjectFetchContext& context) {
+  return backingStore_->getTreeForCommit(commitID, context.prefetchMetadata());
 }
 
 folly::SemiFuture<std::unique_ptr<Tree>>
 HgQueuedBackingStore::getTreeForManifest(
     const Hash& commitID,
-    const Hash& manifestID) {
-  return backingStore_->getTreeForManifest(commitID, manifestID);
+    const Hash& manifestID,
+    ObjectFetchContext& context) {
+  return backingStore_->getTreeForManifest(
+      commitID, manifestID, context.prefetchMetadata());
 }
 
 folly::SemiFuture<folly::Unit> HgQueuedBackingStore::prefetchBlobs(

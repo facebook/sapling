@@ -41,6 +41,9 @@ class HgImportRequest {
 
     Hash hash;
     HgProxyHash proxyHash;
+    // we normally want to prefetch metadata, there are only a few cases where
+    // we do not want to
+    bool prefetchMetadata = true;
   };
 
   struct Prefetch {
@@ -61,7 +64,8 @@ class HgImportRequest {
       Hash hash,
       HgProxyHash proxyHash,
       ImportPriority priority,
-      std::unique_ptr<RequestMetricsScope> metricsScope);
+      std::unique_ptr<RequestMetricsScope> metricsScope,
+      bool prefetchMetadata);
 
   static std::pair<HgImportRequest, folly::SemiFuture<folly::Unit>>
   makePrefetchRequest(

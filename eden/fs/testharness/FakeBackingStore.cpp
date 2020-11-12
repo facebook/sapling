@@ -71,7 +71,8 @@ SemiFuture<unique_ptr<Blob>> FakeBackingStore::getBlob(
 }
 
 SemiFuture<unique_ptr<Tree>> FakeBackingStore::getTreeForCommit(
-    const Hash& commitID) {
+    const Hash& commitID,
+    ObjectFetchContext& context) {
   StoredHash* storedTreeHash;
   {
     auto data = data_.wlock();
@@ -86,15 +87,16 @@ SemiFuture<unique_ptr<Tree>> FakeBackingStore::getTreeForCommit(
   }
 
   return storedTreeHash->getFuture().thenValue(
-      [this, commitID](const std::unique_ptr<Hash>& hash) {
+      [this, commitID, &context](const std::unique_ptr<Hash>& hash) {
         // Check in the LocalStore for the tree first.
-        return getTreeForManifest(commitID, *hash);
+        return getTreeForManifest(commitID, *hash, context);
       });
 }
 
 folly::SemiFuture<std::unique_ptr<Tree>> FakeBackingStore::getTreeForManifest(
     const Hash& commitID,
-    const Hash& manifestID) {
+    const Hash& manifestID,
+    ObjectFetchContext&) {
   // Check in the LocalStore for the tree first.
   return localStore_->getTree(manifestID)
       .thenValue(

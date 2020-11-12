@@ -10,11 +10,13 @@
 #include <folly/test/TestUtils.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <stdexcept>
 
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/BackingStoreLogger.h"
 #include "eden/fs/store/MemoryLocalStore.h"
+#include "eden/fs/store/ObjectFetchContext.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/hg/HgBackingStore.h"
 #include "eden/fs/store/hg/HgImporter.h"
@@ -26,6 +28,8 @@
 
 using namespace facebook::eden;
 using namespace std::chrono_literals;
+
+const auto kTestTimeout = 10s;
 
 struct TestRepo {
   folly::test::TemporaryDirectory testDir{"eden_hg_backing_store_test"};
@@ -48,6 +52,36 @@ struct TestRepo {
   }
 };
 
+/**
+ * Stubbed out MetadataImporter
+ */
+class TestMetadataImporter : public MetadataImporter {
+ public:
+  TestMetadataImporter(
+      std::shared_ptr<ReloadableConfig> /*config*/,
+      std::string /*repoName*/,
+      std::shared_ptr<LocalStore> /*localStore*/) {}
+
+  folly::SemiFuture<std::unique_ptr<TreeMetadata>> getTreeMetadata(
+      const Hash& /*edenId*/,
+      const Hash& /*manifestId*/) override {
+    getTreeMetadataCalled = true;
+    return folly::SemiFuture<std::unique_ptr<TreeMetadata>>::makeEmpty();
+  }
+
+  bool metadataFetchingAvailable() override {
+    return true;
+  }
+
+  bool getTreeMetadataCalled = false;
+};
+
+class SkipMetadatPrefetchFetchContext : public ObjectFetchContext {
+  bool prefetchMetadata() const override {
+    return false;
+  }
+};
+
 struct HgBackingStoreTest : TestRepo, ::testing::Test {
   HgBackingStoreTest() {}
 
@@ -55,17 +89,18 @@ struct HgBackingStoreTest : TestRepo, ::testing::Test {
       std::make_shared<MemoryLocalStore>()};
   std::shared_ptr<EdenStats> stats{std::make_shared<EdenStats>()};
   HgImporter importer{repo.path(), stats};
-  std::shared_ptr<HgQueuedBackingStore> backingStore{
-      std::make_shared<HgQueuedBackingStore>(
+  std::shared_ptr<HgQueuedBackingStore> backingStore{std::make_shared<
+      HgQueuedBackingStore>(
+      localStore,
+      stats,
+      std::make_unique<HgBackingStore>(
+          repo.path(),
+          &importer,
           localStore,
           stats,
-          std::make_unique<HgBackingStore>(
-              repo.path(),
-              &importer,
-              localStore,
-              stats),
-          nullptr,
-          nullptr)};
+          MetadataImporter::getMetadataImporterFactory<TestMetadataImporter>()),
+      nullptr,
+      nullptr)};
   std::shared_ptr<ObjectStore> objectStore{ObjectStore::create(
       localStore,
       backingStore,
@@ -109,4 +144,29 @@ TEST_F(HgBackingStoreTest, getTreeForManifest) {
                        commit1, manifest1, ObjectFetchContext::getNullContext())
                    .get(0ms);
   EXPECT_EQ(tree1->getHash(), tree2->getHash());
+}
+
+TEST_F(HgBackingStoreTest, skipMetadataPrefetch) {
+  auto metadataImporter = dynamic_cast<TestMetadataImporter*>(
+      &(backingStore->getHgBackingStore().getMetadataImporter()));
+  // The Metadata importer should be a TestMetadataImporter, so this should
+  // never be null
+  EXPECT_TRUE(metadataImporter);
+
+  auto tree =
+      objectStore
+          ->getTreeForCommit(commit1, ObjectFetchContext::getNullContext())
+          .get(0ms);
+  auto context = SkipMetadatPrefetchFetchContext{};
+
+  // Metadata prefetch should not be called here
+  metadataImporter->getTreeMetadataCalled = false;
+  backingStore->getTree(tree->getHash(), context).get(kTestTimeout);
+  EXPECT_FALSE(metadataImporter->getTreeMetadataCalled);
+
+  // Metadata prefetch should be called here
+  metadataImporter->getTreeMetadataCalled = false;
+  backingStore->getTree(tree->getHash(), ObjectFetchContext::getNullContext())
+      .get(kTestTimeout);
+  EXPECT_TRUE(metadataImporter->getTreeMetadataCalled);
 }

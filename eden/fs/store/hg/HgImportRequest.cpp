@@ -50,9 +50,14 @@ HgImportRequest::makeTreeImportRequest(
     Hash hash,
     HgProxyHash proxyHash,
     ImportPriority priority,
-    std::unique_ptr<RequestMetricsScope> metricsScope) {
+    std::unique_ptr<RequestMetricsScope> metricsScope,
+    bool prefetchMetadata) {
   return makeRequest<TreeImport>(
-      priority, std::move(metricsScope), hash, std::move(proxyHash));
+      priority,
+      std::move(metricsScope),
+      hash,
+      std::move(proxyHash),
+      prefetchMetadata);
 }
 
 std::pair<HgImportRequest, folly::SemiFuture<folly::Unit>>

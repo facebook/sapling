@@ -75,9 +75,11 @@ struct HgQueuedBackingStoreTest : TestRepo, ::testing::Test {
 
 TEST_F(HgQueuedBackingStoreTest, getTree) {
   auto queuedStore = makeQueuedStore();
-  auto tree1 = queuedStore->getTreeForCommit(commit1)
-                   .via(&folly::QueuedImmediateExecutor::instance())
-                   .get(kTestTimeout);
+  auto tree1 =
+      queuedStore
+          ->getTreeForCommit(commit1, ObjectFetchContext::getNullContext())
+          .via(&folly::QueuedImmediateExecutor::instance())
+          .get(kTestTimeout);
 
   auto tree2 =
       queuedStore
@@ -90,9 +92,11 @@ TEST_F(HgQueuedBackingStoreTest, getTree) {
 
 TEST_F(HgQueuedBackingStoreTest, getBlob) {
   auto queuedStore = makeQueuedStore();
-  auto tree = queuedStore->getTreeForCommit(commit1)
-                  .via(&folly::QueuedImmediateExecutor::instance())
-                  .get(kTestTimeout);
+  auto tree =
+      queuedStore
+          ->getTreeForCommit(commit1, ObjectFetchContext::getNullContext())
+          .via(&folly::QueuedImmediateExecutor::instance())
+          .get(kTestTimeout);
 
   for (auto& entry : tree->getTreeEntries()) {
     if (entry.getName() == "foo.txt") {
