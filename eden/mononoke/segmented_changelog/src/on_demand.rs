@@ -16,7 +16,7 @@ use futures::try_join;
 use slog::{debug, warn};
 use tokio::sync::RwLock;
 
-use dag::{self, Id as Vertex};
+use dag::{self, CloneData, Id as Vertex};
 use stats::prelude::*;
 
 use changeset_fetcher::ChangesetFetcher;
@@ -80,6 +80,11 @@ impl SegmentedChangelog for OnDemandUpdateDag {
         let dag = self.dag.read().await;
         dag.known_location_to_many_changeset_ids(ctx, known_vertex, distance, count)
             .await
+    }
+
+    async fn clone_data(&self, ctx: &CoreContext) -> Result<CloneData<ChangesetId>> {
+        let dag = self.dag.read().await;
+        dag.clone_data(ctx).await
     }
 }
 

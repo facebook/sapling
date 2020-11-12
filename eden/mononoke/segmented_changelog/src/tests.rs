@@ -15,6 +15,7 @@ use futures::StreamExt;
 
 use blobrepo::BlobRepo;
 use context::CoreContext;
+use dag::InProcessIdDag;
 use fixtures::{linear, merge_even, merge_uneven, unshared_merge_even};
 use mononoke_types::ChangesetId;
 use phases::mark_reachable_as_public;
@@ -403,6 +404,34 @@ async fn test_incremental_update_with_desync_iddag(fb: FacebookInit) -> Result<(
         .location_to_changeset_id(&ctx, master_cs, distance)
         .await?;
     assert_eq!(answer, cs7);
+
+    Ok(())
+}
+
+#[fbinit::compat_test]
+async fn test_clone_data(fb: FacebookInit) -> Result<()> {
+    // In this test we first build a dag from scratch and then we reuse the idmap in an ondemand
+    // dag that starts off with an empty iddag.
+    let ctx = CoreContext::test_mock(fb);
+    let blobrepo = linear::getrepo(fb).await;
+
+    let head = resolve_cs_id(&ctx, &blobrepo, "79a13814c5ce7330173ec04d279bf95ab3f652fb").await?;
+    setup_phases(&ctx, &blobrepo, head).await?;
+    let dag = new_build_all_from_blobrepo(&ctx, &blobrepo, head).await?;
+
+    let clone_data = dag.clone_data(&ctx).await?;
+
+    let mut new_iddag = InProcessIdDag::new_in_process();
+    new_iddag.build_segments_volatile_from_prepared_flat_segments(&clone_data.flat_segments)?;
+    let new_dag = Dag::new(new_iddag, dag.idmap.clone());
+
+    let distance: u64 = 4;
+    let answer = new_dag
+        .location_to_changeset_id(&ctx, head, distance)
+        .await?;
+    let expected_cs =
+        resolve_cs_id(&ctx, &blobrepo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17").await?;
+    assert_eq!(answer, expected_cs);
 
     Ok(())
 }

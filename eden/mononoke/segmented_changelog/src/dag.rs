@@ -13,7 +13,7 @@ use futures::stream::{self, StreamExt, TryStreamExt};
 use maplit::hashset;
 use slog::{debug, trace};
 
-use dag::{self, Id as Vertex, InProcessIdDag};
+use dag::{self, CloneData, Group, Id as Vertex, InProcessIdDag};
 use stats::prelude::*;
 
 use context::CoreContext;
@@ -49,6 +49,41 @@ impl SegmentedChangelog for Dag {
         let known_vertex = self.idmap.get_vertex(ctx, known).await?;
         self.known_location_to_many_changeset_ids(ctx, known_vertex, distance, count)
             .await
+    }
+
+    async fn clone_data(&self, ctx: &CoreContext) -> Result<CloneData<ChangesetId>> {
+        let group = Group::MASTER;
+        let level = 0;
+        let next_id = self
+            .iddag
+            .next_free_id(level, group)
+            .context("error computing next free id for dag")?;
+        let head_id = if next_id > group.min_id() {
+            next_id - 1
+        } else {
+            return Err(format_err!("error generating clone data for empty iddag"));
+        };
+        let flat_segments = self
+            .iddag
+            .flat_segments(group)
+            .context("error during flat segment retrieval")?;
+        let universal_ids = self
+            .iddag
+            .universal_ids()
+            .context("error computing universal ids")?
+            .into_iter()
+            .collect();
+        let idmap = self
+            .idmap
+            .find_many_changeset_ids(&ctx, universal_ids)
+            .await
+            .context("error retrieving mappings for dag universal ids")?;
+        let clone_data = CloneData {
+            head_id,
+            flat_segments,
+            idmap,
+        };
+        Ok(clone_data)
     }
 }
 

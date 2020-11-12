@@ -34,6 +34,8 @@ mod types;
 #[cfg(test)]
 mod tests;
 
+pub use ::dag::{CloneData, FlatSegment, PreparedFlatSegments};
+
 pub use crate::builder::SegmentedChangelogBuilder;
 
 // TODO(T74420661): use `thiserror` to represent error case
@@ -68,6 +70,12 @@ pub trait SegmentedChangelog: Send + Sync {
         distance: u64,
         count: u64,
     ) -> Result<Vec<ChangesetId>>;
+
+    /// Returns data necessary for SegmentedChangelog to be initialized by a client.
+    ///
+    /// Note that the heads that are sent over in a clone can vary. Strictly speaking the client
+    /// only needs one head.
+    async fn clone_data(&self, ctx: &CoreContext) -> Result<CloneData<ChangesetId>>;
 }
 
 #[async_trait]
@@ -82,6 +90,10 @@ impl SegmentedChangelog for Arc<dyn SegmentedChangelog> {
         (**self)
             .location_to_many_changeset_ids(ctx, known, distance, count)
             .await
+    }
+
+    async fn clone_data(&self, ctx: &CoreContext) -> Result<CloneData<ChangesetId>> {
+        (**self).clone_data(ctx).await
     }
 }
 
@@ -103,6 +115,12 @@ impl SegmentedChangelog for DisabledSegmentedChangelog {
         _count: u64,
     ) -> Result<Vec<ChangesetId>> {
         // TODO(T74420661): use `thiserror` to represent error case
+        Err(format_err!(
+            "Segmented Changelog is not enabled for this repo",
+        ))
+    }
+
+    async fn clone_data(&self, _ctx: &CoreContext) -> Result<CloneData<ChangesetId>> {
         Err(format_err!(
             "Segmented Changelog is not enabled for this repo",
         ))
