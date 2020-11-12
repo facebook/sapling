@@ -20,8 +20,21 @@ pub mod types {
         pub const STOPPING: Self = fb303_status(3i32);
         pub const STOPPED: Self = fb303_status(4i32);
         pub const WARNING: Self = fb303_status(5i32);
+    }
 
-        pub fn variants() -> &'static [&'static str] {
+    impl ::fbthrift::ThriftEnum for fb303_status {
+        fn enumerate() -> &'static [(fb303_status, &'static str)] {
+            &[
+                (fb303_status::DEAD, "DEAD"),
+                (fb303_status::STARTING, "STARTING"),
+                (fb303_status::ALIVE, "ALIVE"),
+                (fb303_status::STOPPING, "STOPPING"),
+                (fb303_status::STOPPED, "STOPPED"),
+                (fb303_status::WARNING, "WARNING"),
+            ]
+        }
+
+        fn variants() -> &'static [&'static str] {
             &[
                 "DEAD",
                 "STARTING",
@@ -32,7 +45,7 @@ pub mod types {
             ]
         }
 
-        pub fn variant_values() -> &'static [fb303_status] {
+        fn variant_values() -> &'static [fb303_status] {
             &[
                 fb303_status::DEAD,
                 fb303_status::STARTING,
@@ -2675,7 +2688,7 @@ pub mod client {
     /// needing ClientFactory trait in scope, avoids unidiomatic
     /// make_Trait name.
     ///
-    /// ```
+    /// ```text
     /// use bgs::client::BuckGraphService;
     ///
     /// let protocol = BinaryProtocol::new();
@@ -2717,86 +2730,92 @@ pub mod client {
 ///
 /// As an example of the generated API, for the following thrift service:
 ///
-///     service MyService {
-///         FunctionResponse myFunction(
-///             1: FunctionRequest request,
-///         ) throws {
-///             1: StorageException s,
-///             2: NotFoundException n,
-///         ),
+/// ```text
+/// service MyService {
+///     FunctionResponse myFunction(
+///         1: FunctionRequest request,
+///     ) throws {
+///         1: StorageException s,
+///         2: NotFoundException n,
+///     ),
 ///
-///         // other functions
-///     }
+///     // other functions
+/// }
+/// ```
 ///
 ///
 /// we would end up with this mock object under crate::mock::MyService:
 ///
-///     impl crate::client::MyService for MyService<'mock> {...}
+/// ```text
+/// impl crate::client::MyService for MyService<'mock> {...}
 ///
-///     pub struct MyService<'mock> {
-///         pub myFunction: myFunction<'mock>,
-///         // ...
-///     }
+/// pub struct MyService<'mock> {
+///     pub myFunction: myFunction<'mock>,
+///     // ...
+/// }
 ///
-///     impl dyn crate::client::MyService {
-///         pub fn mock<'mock>() -> MyService<'mock>;
-///     }
+/// impl dyn crate::client::MyService {
+///     pub fn mock<'mock>() -> MyService<'mock>;
+/// }
 ///
-///     impl myFunction<'mock> {
-///         // directly return the given success response
-///         pub fn ret(&self, value: FunctionResponse);
+/// impl myFunction<'mock> {
+///     // directly return the given success response
+///     pub fn ret(&self, value: FunctionResponse);
 ///
-///         // invoke closure to compute success response
-///         pub fn mock(
-///             &self,
-///             mock: impl FnMut(FunctionRequest) -> FunctionResponse + Send + Sync + 'mock,
-///         );
+///     // invoke closure to compute success response
+///     pub fn mock(
+///         &self,
+///         mock: impl FnMut(FunctionRequest) -> FunctionResponse + Send + Sync + 'mock,
+///     );
 ///
-///         // invoke closure to compute response
-///         pub fn mock_result(
-///             &self,
-///             mock: impl FnMut(FunctionRequest) -> Result<FunctionResponse, crate::services::MyService::MyFunctionExn> + Send + Sync + 'mock,
-///         );
+///     // invoke closure to compute response
+///     pub fn mock_result(
+///         &self,
+///         mock: impl FnMut(FunctionRequest) -> Result<FunctionResponse, crate::services::MyService::MyFunctionExn> + Send + Sync + 'mock,
+///     );
 ///
-///         // return one of the function's declared exceptions
-///         pub fn throw<E>(&self, exception: E)
-///         where
-///             E: Clone + Into<crate::services::MyService::MyFunctionExn> + Send + Sync + 'mock;
-///     }
+///     // return one of the function's declared exceptions
+///     pub fn throw<E>(&self, exception: E)
+///     where
+///         E: Clone + Into<crate::services::MyService::MyFunctionExn> + Send + Sync + 'mock;
+/// }
 ///
-///     impl From<StorageException> for MyFunctionExn {...}
-///     impl From<NotFoundException> for MyFunctionExn {...}
+/// impl From<StorageException> for MyFunctionExn {...}
+/// impl From<NotFoundException> for MyFunctionExn {...}
+/// ```
 ///
 ///
 /// The intended usage from a test would be:
 ///
-///     use std::sync::Arc;
-///     use thrift_if::client::MyService;
+/// ```text
+/// use std::sync::Arc;
+/// use thrift_if::client::MyService;
 ///
-///     #[test]
-///     fn test_my_client() {
-///         let mock = Arc::new(MyService::mock());
+/// #[test]
+/// fn test_my_client() {
+///     let mock = Arc::new(MyService::mock());
 ///
-///         // directly return a success response
-///         let resp = FunctionResponse {...};
-///         mock.myFunction.ret(resp);
+///     // directly return a success response
+///     let resp = FunctionResponse {...};
+///     mock.myFunction.ret(resp);
 ///
-///         // or give a closure to compute the success response
-///         mock.myFunction.mock(|request| FunctionResponse {...});
+///     // or give a closure to compute the success response
+///     mock.myFunction.mock(|request| FunctionResponse {...});
 ///
-///         // or throw one of the function's exceptions
-///         mock.myFunction.throw(StorageException::ItFailed);
+///     // or throw one of the function's exceptions
+///     mock.myFunction.throw(StorageException::ItFailed);
 ///
-///         // or compute a Result (useful if your exceptions aren't Clone)
-///         mock.myFunction.mock_result(|request| Err(...));
+///     // or compute a Result (useful if your exceptions aren't Clone)
+///     mock.myFunction.mock_result(|request| Err(...));
 ///
-///         let out = do_the_thing(mock).wait().unwrap();
-///         assert!(out.what_i_expected());
-///     }
+///     let out = do_the_thing(mock).wait().unwrap();
+///     assert!(out.what_i_expected());
+/// }
 ///
-///     fn do_the_thing(
-///         client: Arc<dyn MyService + Send + Sync + 'static>,
-///     ) -> impl Future<Item = Out> {...}
+/// fn do_the_thing(
+///     client: Arc<dyn MyService + Send + Sync + 'static>,
+/// ) -> impl Future<Item = Out> {...}
+/// ```
 pub mod mock {
     pub struct BaseService<'mock> {
         pub getStatus: r#impl::base_service::getStatus<'mock>,

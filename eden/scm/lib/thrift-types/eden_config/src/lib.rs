@@ -32,8 +32,19 @@ pub mod types {
         pub const SystemConfig: Self = ConfigSource(1i32);
         pub const UserConfig: Self = ConfigSource(2i32);
         pub const CommandLine: Self = ConfigSource(3i32);
+    }
 
-        pub fn variants() -> &'static [&'static str] {
+    impl ::fbthrift::ThriftEnum for ConfigSource {
+        fn enumerate() -> &'static [(ConfigSource, &'static str)] {
+            &[
+                (ConfigSource::Default, "Default"),
+                (ConfigSource::SystemConfig, "SystemConfig"),
+                (ConfigSource::UserConfig, "UserConfig"),
+                (ConfigSource::CommandLine, "CommandLine"),
+            ]
+        }
+
+        fn variants() -> &'static [&'static str] {
             &[
                 "Default",
                 "SystemConfig",
@@ -42,7 +53,7 @@ pub mod types {
             ]
         }
 
-        pub fn variant_values() -> &'static [ConfigSource] {
+        fn variant_values() -> &'static [ConfigSource] {
             &[
                 ConfigSource::Default,
                 ConfigSource::SystemConfig,
@@ -142,8 +153,18 @@ pub mod types {
         pub const AutoReload: Self = ConfigReloadBehavior(0i32);
         pub const NoReload: Self = ConfigReloadBehavior(1i32);
         pub const ForceReload: Self = ConfigReloadBehavior(2i32);
+    }
 
-        pub fn variants() -> &'static [&'static str] {
+    impl ::fbthrift::ThriftEnum for ConfigReloadBehavior {
+        fn enumerate() -> &'static [(ConfigReloadBehavior, &'static str)] {
+            &[
+                (ConfigReloadBehavior::AutoReload, "AutoReload"),
+                (ConfigReloadBehavior::NoReload, "NoReload"),
+                (ConfigReloadBehavior::ForceReload, "ForceReload"),
+            ]
+        }
+
+        fn variants() -> &'static [&'static str] {
             &[
                 "AutoReload",
                 "NoReload",
@@ -151,7 +172,7 @@ pub mod types {
             ]
         }
 
-        pub fn variant_values() -> &'static [ConfigReloadBehavior] {
+        fn variant_values() -> &'static [ConfigReloadBehavior] {
             &[
                 ConfigReloadBehavior::AutoReload,
                 ConfigReloadBehavior::NoReload,

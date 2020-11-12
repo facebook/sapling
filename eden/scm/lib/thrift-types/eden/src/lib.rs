@@ -3,8 +3,21 @@
 #![allow(non_camel_case_types, non_snake_case, non_upper_case_globals, unused_crate_dependencies)]
 
 extern crate serde;
+pub use self::consts::*;
 pub use self::errors::*;
 pub use self::types::*;
+
+pub mod consts {
+    pub const DIS_ENABLE_FLAGS: ::std::primitive::i64 = 1;
+
+    pub const DIS_REQUIRE_LOADED: ::std::primitive::i64 = 2;
+
+    pub const DIS_REQUIRE_MATERIALIZED: ::std::primitive::i64 = 4;
+
+    pub const DIS_COMPUTE_BLOB_SIZES: ::std::primitive::i64 = 8;
+
+    pub const DIS_COMPUTE_ACCURATE_MODE: ::std::primitive::i64 = 16;
+}
 
 pub mod types {
     #![allow(clippy::redundant_closure)]
@@ -348,6 +361,9 @@ pub mod types {
         pub gid: ::std::primitive::i32,
         #[serde(default)]
         pub pid: crate::types::pid_t,
+        #[serde(default)]
+        pub opcodeName: ::std::string::String,
+        pub processName: ::std::option::Option<::std::string::String>,
     }
 
     #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
@@ -370,6 +386,8 @@ pub mod types {
         pub suppressFileList: ::std::primitive::bool,
         #[serde(default)]
         pub wantDtype: ::std::primitive::bool,
+        #[serde(default)]
+        pub revisions: ::std::vec::Vec<crate::types::BinaryHash>,
     }
 
     #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
@@ -378,6 +396,8 @@ pub mod types {
         pub matchingFiles: ::std::vec::Vec<crate::types::PathString>,
         #[serde(default)]
         pub dtypes: ::std::vec::Vec<crate::types::OsDtype>,
+        #[serde(default)]
+        pub originHashes: ::std::vec::Vec<::std::vec::Vec<::std::primitive::u8>>,
     }
 
     #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, ::serde_derive::Serialize, ::serde_derive::Deserialize)]
@@ -489,8 +509,24 @@ pub mod types {
         pub const JOURNAL_TRUNCATED: Self = EdenErrorType(6i32);
         pub const CHECKOUT_IN_PROGRESS: Self = EdenErrorType(7i32);
         pub const OUT_OF_DATE_PARENT: Self = EdenErrorType(8i32);
+    }
 
-        pub fn variants() -> &'static [&'static str] {
+    impl ::fbthrift::ThriftEnum for EdenErrorType {
+        fn enumerate() -> &'static [(EdenErrorType, &'static str)] {
+            &[
+                (EdenErrorType::POSIX_ERROR, "POSIX_ERROR"),
+                (EdenErrorType::WIN32_ERROR, "WIN32_ERROR"),
+                (EdenErrorType::HRESULT_ERROR, "HRESULT_ERROR"),
+                (EdenErrorType::ARGUMENT_ERROR, "ARGUMENT_ERROR"),
+                (EdenErrorType::GENERIC_ERROR, "GENERIC_ERROR"),
+                (EdenErrorType::MOUNT_GENERATION_CHANGED, "MOUNT_GENERATION_CHANGED"),
+                (EdenErrorType::JOURNAL_TRUNCATED, "JOURNAL_TRUNCATED"),
+                (EdenErrorType::CHECKOUT_IN_PROGRESS, "CHECKOUT_IN_PROGRESS"),
+                (EdenErrorType::OUT_OF_DATE_PARENT, "OUT_OF_DATE_PARENT"),
+            ]
+        }
+
+        fn variants() -> &'static [&'static str] {
             &[
                 "POSIX_ERROR",
                 "WIN32_ERROR",
@@ -504,7 +540,7 @@ pub mod types {
             ]
         }
 
-        pub fn variant_values() -> &'static [EdenErrorType] {
+        fn variant_values() -> &'static [EdenErrorType] {
             &[
                 EdenErrorType::POSIX_ERROR,
                 EdenErrorType::WIN32_ERROR,
@@ -626,8 +662,25 @@ pub mod types {
         pub const SHUT_DOWN: Self = MountState(7i32);
         pub const DESTROYING: Self = MountState(8i32);
         pub const INIT_ERROR: Self = MountState(9i32);
+    }
 
-        pub fn variants() -> &'static [&'static str] {
+    impl ::fbthrift::ThriftEnum for MountState {
+        fn enumerate() -> &'static [(MountState, &'static str)] {
+            &[
+                (MountState::UNINITIALIZED, "UNINITIALIZED"),
+                (MountState::INITIALIZING, "INITIALIZING"),
+                (MountState::INITIALIZED, "INITIALIZED"),
+                (MountState::STARTING, "STARTING"),
+                (MountState::RUNNING, "RUNNING"),
+                (MountState::FUSE_ERROR, "FUSE_ERROR"),
+                (MountState::SHUTTING_DOWN, "SHUTTING_DOWN"),
+                (MountState::SHUT_DOWN, "SHUT_DOWN"),
+                (MountState::DESTROYING, "DESTROYING"),
+                (MountState::INIT_ERROR, "INIT_ERROR"),
+            ]
+        }
+
+        fn variants() -> &'static [&'static str] {
             &[
                 "UNINITIALIZED",
                 "INITIALIZING",
@@ -642,7 +695,7 @@ pub mod types {
             ]
         }
 
-        pub fn variant_values() -> &'static [MountState] {
+        fn variant_values() -> &'static [MountState] {
             &[
                 MountState::UNINITIALIZED,
                 MountState::INITIALIZING,
@@ -761,8 +814,19 @@ pub mod types {
         pub const MODIFIED: Self = ScmFileStatus(1i32);
         pub const REMOVED: Self = ScmFileStatus(2i32);
         pub const IGNORED: Self = ScmFileStatus(3i32);
+    }
 
-        pub fn variants() -> &'static [&'static str] {
+    impl ::fbthrift::ThriftEnum for ScmFileStatus {
+        fn enumerate() -> &'static [(ScmFileStatus, &'static str)] {
+            &[
+                (ScmFileStatus::ADDED, "ADDED"),
+                (ScmFileStatus::MODIFIED, "MODIFIED"),
+                (ScmFileStatus::REMOVED, "REMOVED"),
+                (ScmFileStatus::IGNORED, "IGNORED"),
+            ]
+        }
+
+        fn variants() -> &'static [&'static str] {
             &[
                 "ADDED",
                 "MODIFIED",
@@ -771,7 +835,7 @@ pub mod types {
             ]
         }
 
-        pub fn variant_values() -> &'static [ScmFileStatus] {
+        fn variant_values() -> &'static [ScmFileStatus] {
             &[
                 ScmFileStatus::ADDED,
                 ScmFileStatus::MODIFIED,
@@ -871,8 +935,18 @@ pub mod types {
         pub const NORMAL: Self = CheckoutMode(0i32);
         pub const DRY_RUN: Self = CheckoutMode(1i32);
         pub const FORCE: Self = CheckoutMode(2i32);
+    }
 
-        pub fn variants() -> &'static [&'static str] {
+    impl ::fbthrift::ThriftEnum for CheckoutMode {
+        fn enumerate() -> &'static [(CheckoutMode, &'static str)] {
+            &[
+                (CheckoutMode::NORMAL, "NORMAL"),
+                (CheckoutMode::DRY_RUN, "DRY_RUN"),
+                (CheckoutMode::FORCE, "FORCE"),
+            ]
+        }
+
+        fn variants() -> &'static [&'static str] {
             &[
                 "NORMAL",
                 "DRY_RUN",
@@ -880,7 +954,7 @@ pub mod types {
             ]
         }
 
-        pub fn variant_values() -> &'static [CheckoutMode] {
+        fn variant_values() -> &'static [CheckoutMode] {
             &[
                 CheckoutMode::NORMAL,
                 CheckoutMode::DRY_RUN,
@@ -981,8 +1055,22 @@ pub mod types {
         pub const MISSING_REMOVED: Self = ConflictType(4i32);
         pub const MODIFIED_MODIFIED: Self = ConflictType(5i32);
         pub const DIRECTORY_NOT_EMPTY: Self = ConflictType(6i32);
+    }
 
-        pub fn variants() -> &'static [&'static str] {
+    impl ::fbthrift::ThriftEnum for ConflictType {
+        fn enumerate() -> &'static [(ConflictType, &'static str)] {
+            &[
+                (ConflictType::ERROR, "ERROR"),
+                (ConflictType::MODIFIED_REMOVED, "MODIFIED_REMOVED"),
+                (ConflictType::UNTRACKED_ADDED, "UNTRACKED_ADDED"),
+                (ConflictType::REMOVED_MODIFIED, "REMOVED_MODIFIED"),
+                (ConflictType::MISSING_REMOVED, "MISSING_REMOVED"),
+                (ConflictType::MODIFIED_MODIFIED, "MODIFIED_MODIFIED"),
+                (ConflictType::DIRECTORY_NOT_EMPTY, "DIRECTORY_NOT_EMPTY"),
+            ]
+        }
+
+        fn variants() -> &'static [&'static str] {
             &[
                 "ERROR",
                 "MODIFIED_REMOVED",
@@ -994,7 +1082,7 @@ pub mod types {
             ]
         }
 
-        pub fn variant_values() -> &'static [ConflictType] {
+        fn variant_values() -> &'static [ConflictType] {
             &[
                 ConflictType::ERROR,
                 ConflictType::MODIFIED_REMOVED,
@@ -1109,8 +1197,24 @@ pub mod types {
         pub const LINK: Self = Dtype(10i32);
         pub const SOCKET: Self = Dtype(12i32);
         pub const WHITEOUT: Self = Dtype(14i32);
+    }
 
-        pub fn variants() -> &'static [&'static str] {
+    impl ::fbthrift::ThriftEnum for Dtype {
+        fn enumerate() -> &'static [(Dtype, &'static str)] {
+            &[
+                (Dtype::UNKNOWN, "UNKNOWN"),
+                (Dtype::FIFO, "FIFO"),
+                (Dtype::CHAR, "CHAR"),
+                (Dtype::DIR, "DIR"),
+                (Dtype::BLOCK, "BLOCK"),
+                (Dtype::REGULAR, "REGULAR"),
+                (Dtype::LINK, "LINK"),
+                (Dtype::SOCKET, "SOCKET"),
+                (Dtype::WHITEOUT, "WHITEOUT"),
+            ]
+        }
+
+        fn variants() -> &'static [&'static str] {
             &[
                 "UNKNOWN",
                 "FIFO",
@@ -1124,7 +1228,7 @@ pub mod types {
             ]
         }
 
-        pub fn variant_values() -> &'static [Dtype] {
+        fn variant_values() -> &'static [Dtype] {
             &[
                 Dtype::UNKNOWN,
                 Dtype::FIFO,
@@ -1238,15 +1342,24 @@ pub mod types {
     impl TracePointEvent {
         pub const START: Self = TracePointEvent(0i32);
         pub const STOP: Self = TracePointEvent(1i32);
+    }
 
-        pub fn variants() -> &'static [&'static str] {
+    impl ::fbthrift::ThriftEnum for TracePointEvent {
+        fn enumerate() -> &'static [(TracePointEvent, &'static str)] {
+            &[
+                (TracePointEvent::START, "START"),
+                (TracePointEvent::STOP, "STOP"),
+            ]
+        }
+
+        fn variants() -> &'static [&'static str] {
             &[
                 "START",
                 "STOP",
             ]
         }
 
-        pub fn variant_values() -> &'static [TracePointEvent] {
+        fn variant_values() -> &'static [TracePointEvent] {
             &[
                 TracePointEvent::START,
                 TracePointEvent::STOP,
@@ -3715,6 +3828,8 @@ pub mod types {
                 uid: ::std::default::Default::default(),
                 gid: ::std::default::Default::default(),
                 pid: ::std::default::Default::default(),
+                opcodeName: ::std::default::Default::default(),
+                processName: ::std::option::Option::None,
             }
         }
     }
@@ -3753,6 +3868,14 @@ pub mod types {
             p.write_field_begin("pid", ::fbthrift::TType::I32, 7);
             ::fbthrift::Serialize::write(&self.pid, p);
             p.write_field_end();
+            p.write_field_begin("opcodeName", ::fbthrift::TType::String, 8);
+            ::fbthrift::Serialize::write(&self.opcodeName, p);
+            p.write_field_end();
+            if let ::std::option::Option::Some(some) = &self.processName {
+                p.write_field_begin("processName", ::fbthrift::TType::String, 9);
+                ::fbthrift::Serialize::write(some, p);
+                p.write_field_end();
+            }
             p.write_field_stop();
             p.write_struct_end();
         }
@@ -3768,7 +3891,9 @@ pub mod types {
                 ::fbthrift::Field::new("len", ::fbthrift::TType::I32, 1),
                 ::fbthrift::Field::new("nodeid", ::fbthrift::TType::I64, 4),
                 ::fbthrift::Field::new("opcode", ::fbthrift::TType::I32, 2),
+                ::fbthrift::Field::new("opcodeName", ::fbthrift::TType::String, 8),
                 ::fbthrift::Field::new("pid", ::fbthrift::TType::I32, 7),
+                ::fbthrift::Field::new("processName", ::fbthrift::TType::String, 9),
                 ::fbthrift::Field::new("uid", ::fbthrift::TType::I32, 5),
                 ::fbthrift::Field::new("unique", ::fbthrift::TType::I64, 3),
             ];
@@ -3779,6 +3904,8 @@ pub mod types {
             let mut field_uid = ::std::option::Option::None;
             let mut field_gid = ::std::option::Option::None;
             let mut field_pid = ::std::option::Option::None;
+            let mut field_opcodeName = ::std::option::Option::None;
+            let mut field_processName = ::std::option::Option::None;
             let _ = p.read_struct_begin(|_| ())?;
             loop {
                 let (_, fty, fid) = p.read_field_begin(|_| (), FIELDS)?;
@@ -3791,6 +3918,8 @@ pub mod types {
                     (::fbthrift::TType::I32, 5) => field_uid = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
                     (::fbthrift::TType::I32, 6) => field_gid = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
                     (::fbthrift::TType::I32, 7) => field_pid = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
+                    (::fbthrift::TType::String, 8) => field_opcodeName = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
+                    (::fbthrift::TType::String, 9) => field_processName = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
                     (fty, _) => p.skip(fty)?,
                 }
                 p.read_field_end()?;
@@ -3804,6 +3933,8 @@ pub mod types {
                 uid: field_uid.unwrap_or_default(),
                 gid: field_gid.unwrap_or_default(),
                 pid: field_pid.unwrap_or_default(),
+                opcodeName: field_opcodeName.unwrap_or_default(),
+                processName: field_processName,
             })
         }
     }
@@ -3874,6 +4005,7 @@ pub mod types {
                 prefetchFiles: ::std::default::Default::default(),
                 suppressFileList: ::std::default::Default::default(),
                 wantDtype: ::std::default::Default::default(),
+                revisions: ::std::default::Default::default(),
             }
         }
     }
@@ -3909,6 +4041,9 @@ pub mod types {
             p.write_field_begin("wantDtype", ::fbthrift::TType::Bool, 6);
             ::fbthrift::Serialize::write(&self.wantDtype, p);
             p.write_field_end();
+            p.write_field_begin("revisions", ::fbthrift::TType::List, 7);
+            ::fbthrift::Serialize::write(&self.revisions, p);
+            p.write_field_end();
             p.write_field_stop();
             p.write_struct_end();
         }
@@ -3924,6 +4059,7 @@ pub mod types {
                 ::fbthrift::Field::new("includeDotfiles", ::fbthrift::TType::Bool, 3),
                 ::fbthrift::Field::new("mountPoint", ::fbthrift::TType::String, 1),
                 ::fbthrift::Field::new("prefetchFiles", ::fbthrift::TType::Bool, 4),
+                ::fbthrift::Field::new("revisions", ::fbthrift::TType::List, 7),
                 ::fbthrift::Field::new("suppressFileList", ::fbthrift::TType::Bool, 5),
                 ::fbthrift::Field::new("wantDtype", ::fbthrift::TType::Bool, 6),
             ];
@@ -3933,6 +4069,7 @@ pub mod types {
             let mut field_prefetchFiles = ::std::option::Option::None;
             let mut field_suppressFileList = ::std::option::Option::None;
             let mut field_wantDtype = ::std::option::Option::None;
+            let mut field_revisions = ::std::option::Option::None;
             let _ = p.read_struct_begin(|_| ())?;
             loop {
                 let (_, fty, fid) = p.read_field_begin(|_| (), FIELDS)?;
@@ -3944,6 +4081,7 @@ pub mod types {
                     (::fbthrift::TType::Bool, 4) => field_prefetchFiles = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
                     (::fbthrift::TType::Bool, 5) => field_suppressFileList = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
                     (::fbthrift::TType::Bool, 6) => field_wantDtype = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
+                    (::fbthrift::TType::List, 7) => field_revisions = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
                     (fty, _) => p.skip(fty)?,
                 }
                 p.read_field_end()?;
@@ -3956,6 +4094,7 @@ pub mod types {
                 prefetchFiles: field_prefetchFiles.unwrap_or_default(),
                 suppressFileList: field_suppressFileList.unwrap_or_default(),
                 wantDtype: field_wantDtype.unwrap_or_default(),
+                revisions: field_revisions.unwrap_or_default(),
             })
         }
     }
@@ -3966,6 +4105,7 @@ pub mod types {
             Self {
                 matchingFiles: ::std::default::Default::default(),
                 dtypes: ::std::default::Default::default(),
+                originHashes: ::std::default::Default::default(),
             }
         }
     }
@@ -3989,6 +4129,9 @@ pub mod types {
             p.write_field_begin("dtypes", ::fbthrift::TType::List, 2);
             ::fbthrift::Serialize::write(&self.dtypes, p);
             p.write_field_end();
+            p.write_field_begin("originHashes", ::fbthrift::TType::List, 3);
+            ::fbthrift::Serialize::write(&self.originHashes, p);
+            p.write_field_end();
             p.write_field_stop();
             p.write_struct_end();
         }
@@ -4002,9 +4145,11 @@ pub mod types {
             static FIELDS: &[::fbthrift::Field] = &[
                 ::fbthrift::Field::new("dtypes", ::fbthrift::TType::List, 2),
                 ::fbthrift::Field::new("matchingFiles", ::fbthrift::TType::List, 1),
+                ::fbthrift::Field::new("originHashes", ::fbthrift::TType::List, 3),
             ];
             let mut field_matchingFiles = ::std::option::Option::None;
             let mut field_dtypes = ::std::option::Option::None;
+            let mut field_originHashes = ::std::option::Option::None;
             let _ = p.read_struct_begin(|_| ())?;
             loop {
                 let (_, fty, fid) = p.read_field_begin(|_| (), FIELDS)?;
@@ -4012,6 +4157,7 @@ pub mod types {
                     (::fbthrift::TType::Stop, _) => break,
                     (::fbthrift::TType::List, 1) => field_matchingFiles = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
                     (::fbthrift::TType::List, 2) => field_dtypes = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
+                    (::fbthrift::TType::List, 3) => field_originHashes = ::std::option::Option::Some(::fbthrift::Deserialize::read(p)?),
                     (fty, _) => p.skip(fty)?,
                 }
                 p.read_field_end()?;
@@ -4020,6 +4166,7 @@ pub mod types {
             ::std::result::Result::Ok(Self {
                 matchingFiles: field_matchingFiles.unwrap_or_default(),
                 dtypes: field_dtypes.unwrap_or_default(),
+                originHashes: field_originHashes.unwrap_or_default(),
             })
         }
     }
@@ -10656,6 +10803,7 @@ pub mod client {
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_path: &crate::types::PathString,
+            arg_flags: ::std::primitive::i64,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::TreeInodeDebugInfo>, crate::errors::eden_service::DebugInodeStatusError>> + ::std::marker::Send + 'static>>;
         fn debugOutstandingFuseCalls(
             &self,
@@ -12714,6 +12862,7 @@ pub mod client {
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_path: &crate::types::PathString,
+            arg_flags: ::std::primitive::i64,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::TreeInodeDebugInfo>, crate::errors::eden_service::DebugInodeStatusError>> + ::std::marker::Send + 'static>> {
             use ::fbthrift::{ProtocolReader as _, ProtocolWriter as _};
             use ::futures::future::{FutureExt as _, TryFutureExt as _};
@@ -12732,6 +12881,9 @@ pub mod client {
                     p.write_field_end();
                     p.write_field_begin("arg_path", ::fbthrift::TType::String, 2i16);
                     ::fbthrift::Serialize::write(&arg_path, p);
+                    p.write_field_end();
+                    p.write_field_begin("arg_flags", ::fbthrift::TType::I64, 3i16);
+                    ::fbthrift::Serialize::write(&arg_flags, p);
                     p.write_field_end();
                     p.write_field_stop();
                     p.write_struct_end();
@@ -14223,10 +14375,12 @@ pub mod client {
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_path: &crate::types::PathString,
+            arg_flags: ::std::primitive::i64,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::TreeInodeDebugInfo>, crate::errors::eden_service::DebugInodeStatusError>> + ::std::marker::Send + 'static>> {
             self.as_ref().debugInodeStatus(
                 arg_mountPoint,
                 arg_path,
+                arg_flags,
             )
         }
         fn debugOutstandingFuseCalls(
@@ -14383,7 +14537,7 @@ pub mod client {
     /// needing ClientFactory trait in scope, avoids unidiomatic
     /// make_Trait name.
     ///
-    /// ```
+    /// ```text
     /// use bgs::client::BuckGraphService;
     ///
     /// let protocol = BinaryProtocol::new();
@@ -14425,86 +14579,92 @@ pub mod client {
 ///
 /// As an example of the generated API, for the following thrift service:
 ///
-///     service MyService {
-///         FunctionResponse myFunction(
-///             1: FunctionRequest request,
-///         ) throws {
-///             1: StorageException s,
-///             2: NotFoundException n,
-///         ),
+/// ```text
+/// service MyService {
+///     FunctionResponse myFunction(
+///         1: FunctionRequest request,
+///     ) throws {
+///         1: StorageException s,
+///         2: NotFoundException n,
+///     ),
 ///
-///         // other functions
-///     }
+///     // other functions
+/// }
+/// ```
 ///
 ///
 /// we would end up with this mock object under crate::mock::MyService:
 ///
-///     impl crate::client::MyService for MyService<'mock> {...}
+/// ```text
+/// impl crate::client::MyService for MyService<'mock> {...}
 ///
-///     pub struct MyService<'mock> {
-///         pub myFunction: myFunction<'mock>,
-///         // ...
-///     }
+/// pub struct MyService<'mock> {
+///     pub myFunction: myFunction<'mock>,
+///     // ...
+/// }
 ///
-///     impl dyn crate::client::MyService {
-///         pub fn mock<'mock>() -> MyService<'mock>;
-///     }
+/// impl dyn crate::client::MyService {
+///     pub fn mock<'mock>() -> MyService<'mock>;
+/// }
 ///
-///     impl myFunction<'mock> {
-///         // directly return the given success response
-///         pub fn ret(&self, value: FunctionResponse);
+/// impl myFunction<'mock> {
+///     // directly return the given success response
+///     pub fn ret(&self, value: FunctionResponse);
 ///
-///         // invoke closure to compute success response
-///         pub fn mock(
-///             &self,
-///             mock: impl FnMut(FunctionRequest) -> FunctionResponse + Send + Sync + 'mock,
-///         );
+///     // invoke closure to compute success response
+///     pub fn mock(
+///         &self,
+///         mock: impl FnMut(FunctionRequest) -> FunctionResponse + Send + Sync + 'mock,
+///     );
 ///
-///         // invoke closure to compute response
-///         pub fn mock_result(
-///             &self,
-///             mock: impl FnMut(FunctionRequest) -> Result<FunctionResponse, crate::services::MyService::MyFunctionExn> + Send + Sync + 'mock,
-///         );
+///     // invoke closure to compute response
+///     pub fn mock_result(
+///         &self,
+///         mock: impl FnMut(FunctionRequest) -> Result<FunctionResponse, crate::services::MyService::MyFunctionExn> + Send + Sync + 'mock,
+///     );
 ///
-///         // return one of the function's declared exceptions
-///         pub fn throw<E>(&self, exception: E)
-///         where
-///             E: Clone + Into<crate::services::MyService::MyFunctionExn> + Send + Sync + 'mock;
-///     }
+///     // return one of the function's declared exceptions
+///     pub fn throw<E>(&self, exception: E)
+///     where
+///         E: Clone + Into<crate::services::MyService::MyFunctionExn> + Send + Sync + 'mock;
+/// }
 ///
-///     impl From<StorageException> for MyFunctionExn {...}
-///     impl From<NotFoundException> for MyFunctionExn {...}
+/// impl From<StorageException> for MyFunctionExn {...}
+/// impl From<NotFoundException> for MyFunctionExn {...}
+/// ```
 ///
 ///
 /// The intended usage from a test would be:
 ///
-///     use std::sync::Arc;
-///     use thrift_if::client::MyService;
+/// ```text
+/// use std::sync::Arc;
+/// use thrift_if::client::MyService;
 ///
-///     #[test]
-///     fn test_my_client() {
-///         let mock = Arc::new(MyService::mock());
+/// #[test]
+/// fn test_my_client() {
+///     let mock = Arc::new(MyService::mock());
 ///
-///         // directly return a success response
-///         let resp = FunctionResponse {...};
-///         mock.myFunction.ret(resp);
+///     // directly return a success response
+///     let resp = FunctionResponse {...};
+///     mock.myFunction.ret(resp);
 ///
-///         // or give a closure to compute the success response
-///         mock.myFunction.mock(|request| FunctionResponse {...});
+///     // or give a closure to compute the success response
+///     mock.myFunction.mock(|request| FunctionResponse {...});
 ///
-///         // or throw one of the function's exceptions
-///         mock.myFunction.throw(StorageException::ItFailed);
+///     // or throw one of the function's exceptions
+///     mock.myFunction.throw(StorageException::ItFailed);
 ///
-///         // or compute a Result (useful if your exceptions aren't Clone)
-///         mock.myFunction.mock_result(|request| Err(...));
+///     // or compute a Result (useful if your exceptions aren't Clone)
+///     mock.myFunction.mock_result(|request| Err(...));
 ///
-///         let out = do_the_thing(mock).wait().unwrap();
-///         assert!(out.what_i_expected());
-///     }
+///     let out = do_the_thing(mock).wait().unwrap();
+///     assert!(out.what_i_expected());
+/// }
 ///
-///     fn do_the_thing(
-///         client: Arc<dyn MyService + Send + Sync + 'static>,
-///     ) -> impl Future<Item = Out> {...}
+/// fn do_the_thing(
+///     client: Arc<dyn MyService + Send + Sync + 'static>,
+/// ) -> impl Future<Item = Out> {...}
+/// ```
 pub mod mock {
     pub struct EdenService<'mock> {
         pub parent: fb303_core::mock::BaseService<'mock>,
@@ -14909,10 +15069,11 @@ pub mod mock {
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_path: &crate::types::PathString,
+            arg_flags: ::std::primitive::i64,
         ) -> ::std::pin::Pin<::std::boxed::Box<dyn ::std::future::Future<Output = ::std::result::Result<::std::vec::Vec<crate::types::TreeInodeDebugInfo>, crate::errors::eden_service::DebugInodeStatusError>> + ::std::marker::Send + 'static>> {
             let mut closure = self.debugInodeStatus.closure.lock().unwrap();
-            let closure: &mut dyn ::std::ops::FnMut(crate::types::PathString, crate::types::PathString) -> _ = &mut **closure;
-            ::std::boxed::Box::pin(::futures::future::ready(closure(arg_mountPoint.clone(), arg_path.clone())))
+            let closure: &mut dyn ::std::ops::FnMut(crate::types::PathString, crate::types::PathString, ::std::primitive::i64) -> _ = &mut **closure;
+            ::std::boxed::Box::pin(::futures::future::ready(closure(arg_mountPoint.clone(), arg_path.clone(), arg_flags.clone())))
         }
         fn debugOutstandingFuseCalls(
             &self,
@@ -16490,7 +16651,7 @@ pub mod mock {
 
             pub struct debugInodeStatus<'mock> {
                 pub(crate) closure: ::std::sync::Mutex<::std::boxed::Box<
-                    dyn ::std::ops::FnMut(crate::types::PathString, crate::types::PathString) -> ::std::result::Result<
+                    dyn ::std::ops::FnMut(crate::types::PathString, crate::types::PathString, ::std::primitive::i64) -> ::std::result::Result<
                         ::std::vec::Vec<crate::types::TreeInodeDebugInfo>,
                         crate::errors::eden_service::DebugInodeStatusError,
                     > + ::std::marker::Send + ::std::marker::Sync + 'mock,
@@ -16500,7 +16661,7 @@ pub mod mock {
             impl<'mock> debugInodeStatus<'mock> {
                 pub fn unimplemented() -> Self {
                     debugInodeStatus {
-                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: crate::types::PathString| panic!(
+                        closure: ::std::sync::Mutex::new(::std::boxed::Box::new(|_: crate::types::PathString, _: crate::types::PathString, _: ::std::primitive::i64| panic!(
                             "{}::{} is not mocked",
                             "EdenService",
                             "debugInodeStatus",
@@ -16509,17 +16670,17 @@ pub mod mock {
                 }
 
                 pub fn ret(&self, value: ::std::vec::Vec<crate::types::TreeInodeDebugInfo>) {
-                    self.mock(move |_: crate::types::PathString, _: crate::types::PathString| value.clone());
+                    self.mock(move |_: crate::types::PathString, _: crate::types::PathString, _: ::std::primitive::i64| value.clone());
                 }
 
-                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, crate::types::PathString) -> ::std::vec::Vec<crate::types::TreeInodeDebugInfo> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                pub fn mock(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, crate::types::PathString, ::std::primitive::i64) -> ::std::vec::Vec<crate::types::TreeInodeDebugInfo> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
                     let mut closure = self.closure.lock().unwrap();
-                    *closure = ::std::boxed::Box::new(move |mountPoint, path| ::std::result::Result::Ok(mock(mountPoint, path)));
+                    *closure = ::std::boxed::Box::new(move |mountPoint, path, flags| ::std::result::Result::Ok(mock(mountPoint, path, flags)));
                 }
 
-                pub fn mock_result(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, crate::types::PathString) -> ::std::result::Result<::std::vec::Vec<crate::types::TreeInodeDebugInfo>, crate::errors::eden_service::DebugInodeStatusError> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
+                pub fn mock_result(&self, mut mock: impl ::std::ops::FnMut(crate::types::PathString, crate::types::PathString, ::std::primitive::i64) -> ::std::result::Result<::std::vec::Vec<crate::types::TreeInodeDebugInfo>, crate::errors::eden_service::DebugInodeStatusError> + ::std::marker::Send + ::std::marker::Sync + 'mock) {
                     let mut closure = self.closure.lock().unwrap();
-                    *closure = ::std::boxed::Box::new(move |mountPoint, path| mock(mountPoint, path));
+                    *closure = ::std::boxed::Box::new(move |mountPoint, path, flags| mock(mountPoint, path, flags));
                 }
 
                 pub fn throw<E>(&self, exception: E)
@@ -16528,7 +16689,7 @@ pub mod mock {
                     E: ::std::clone::Clone + ::std::marker::Send + ::std::marker::Sync + 'mock,
                 {
                     let mut closure = self.closure.lock().unwrap();
-                    *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: crate::types::PathString| ::std::result::Result::Err(exception.clone().into()));
+                    *closure = ::std::boxed::Box::new(move |_: crate::types::PathString, _: crate::types::PathString, _: ::std::primitive::i64| ::std::result::Result::Err(exception.clone().into()));
                 }
             }
 
