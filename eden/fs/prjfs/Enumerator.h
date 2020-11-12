@@ -44,9 +44,9 @@ class Enumerator {
 
   Enumerator(std::vector<FileMetadata>&& entryList);
 
-  Enumerator(Enumerator&& other)
-      : metadataList_(std::move(other.metadataList_)),
-        searchExpression_(std::move(other.searchExpression_)),
+  Enumerator(Enumerator&& other) noexcept
+      : searchExpression_(std::move(other.searchExpression_)),
+        metadataList_(std::move(other.metadataList_)),
         listIndex_(std::move(other.listIndex_)) {}
 
   explicit Enumerator() = delete;
