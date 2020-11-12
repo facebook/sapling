@@ -50,6 +50,9 @@ pub use crate::metadata::{
 pub use crate::tree::{TreeChildEntry, TreeEntry, TreeError, TreeRequest};
 pub use crate::wire::{ToApi, ToWire, WireToApiConversionError};
 
+// re-export CloneData
+pub use dag::{CloneData, FlatSegment, PreparedFlatSegments};
+
 #[cfg(any(test, feature = "for-tests"))]
 use quickcheck::Arbitrary;
 use thiserror::Error;

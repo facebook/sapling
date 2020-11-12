@@ -45,6 +45,7 @@
 //! 7. If the type has a corresponding API type, add a quickcheck wire-API round
 //! trip test.
 
+pub mod clone;
 pub mod complete_tree;
 pub mod file;
 pub mod history;
@@ -52,6 +53,7 @@ pub mod metadata;
 pub mod tree;
 
 pub use crate::wire::{
+    clone::{WireCloneData, WireIdMapEntry},
     complete_tree::WireCompleteTreeRequest,
     file::{WireFileEntry, WireFileRequest},
     history::{WireHistoryRequest, WireHistoryResponseChunk, WireWireHistoryEntry},
@@ -427,6 +429,26 @@ impl ToApi for u32 {
     }
 }
 
+#[derive(Clone, Copy, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct WireDagId(u64);
+
+impl ToWire for dag::Id {
+    type Wire = WireDagId;
+
+    fn to_wire(self) -> Self::Wire {
+        WireDagId(self.0)
+    }
+}
+
+impl ToApi for WireDagId {
+    type Api = dag::Id;
+    type Error = Infallible;
+
+    fn to_api(self) -> Result<Self::Api, Self::Error> {
+        Ok(dag::Id(self.0))
+    }
+}
+
 fn is_default<T: Default + PartialEq>(v: &T) -> bool {
     v == &T::default()
 }
@@ -482,6 +504,13 @@ impl Arbitrary for WireRevisionstoreMetadata {
     }
 }
 
+#[cfg(any(test, feature = "for-tests"))]
+impl Arbitrary for WireDagId {
+    fn arbitrary<G: quickcheck::Gen>(g: &mut G) -> Self {
+        dag::Id::arbitrary(g).to_wire()
+    }
+}
+
 #[cfg(test)]
 pub mod tests {
     use super::*;
@@ -530,6 +559,10 @@ pub mod tests {
             check_serialize_roundtrip(v)
         }
 
+        fn test_dagid_roundtrip_serialize(v: WireDagId) -> bool {
+            check_serialize_roundtrip(v)
+        }
+
         // API-Wire roundtrips
         fn test_hgid_roundtrip_wire(v: HgId) -> bool {
             check_wire_roundtrip(v)
@@ -548,6 +581,10 @@ pub mod tests {
         }
 
         fn test_meta_roundtrip_wire(v: RevisionstoreMetadata) -> bool {
+            check_wire_roundtrip(v)
+        }
+
+        fn test_dagid_roundtrip_wire(v: dag::Id) -> bool {
             check_wire_roundtrip(v)
         }
     }
