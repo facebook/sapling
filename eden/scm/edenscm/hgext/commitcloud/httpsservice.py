@@ -12,7 +12,6 @@ import socket
 import ssl
 import tempfile
 import time
-from multiprocessing.pool import ThreadPool
 from subprocess import PIPE, Popen
 
 from edenscm.mercurial import error, json, perftrace, pycompat, util, commands
@@ -537,14 +536,13 @@ class _HttpsCommitCloudService(baseservice.BaseService):
 
         files = []
         try:
-            pool = ThreadPool(8)
             seen = set()
             handles = [
                 seen.add(handle) or (heads[i], handle)
                 for i, handle in enumerate(handles)
                 if handle not in seen
             ]
-            files = pool.map(downloader, handles)
+            files = [downloader(handle) for handle in handles]
             self.ui.status(
                 _("applying downloaded mercurial bundles\n"),
                 component="commitcloud",
