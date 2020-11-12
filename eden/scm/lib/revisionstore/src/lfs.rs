@@ -43,7 +43,7 @@ use configparser::{
     hg::{ByteCount, ConfigSetHgExt},
 };
 use hg_http::http_client;
-use http_client::{HttpClient, Method, Request};
+use http_client::{HttpClient, HttpVersion, Method, Request};
 use indexedlog::{log::IndexOutput, rotate, DefaultOpenOptions, Repair};
 use lfs_protocol::{
     ObjectAction, ObjectStatus, Operation, RequestBatch, RequestObject, ResponseBatch,
@@ -98,6 +98,7 @@ struct HttpLfsRemote {
     request_timeout: Duration,
     client: HttpClient,
     accept_zstd: bool,
+    http_version: HttpVersion,
 }
 
 enum LfsRemoteInner {
@@ -956,6 +957,7 @@ impl LfsRemoteInner {
         request_timeout: Duration,
         add_extra: impl Fn(Request) -> Request,
         accept_zstd: bool,
+        http_version: HttpVersion,
     ) -> Result<Option<Bytes>> {
         let mut backoff = backoff_times.into_iter();
         let mut rng = thread_rng();
@@ -968,7 +970,8 @@ impl LfsRemoteInner {
                 .header("Accept", "application/vnd.git-lfs+json")
                 .header("Content-Type", "application/vnd.git-lfs+json")
                 .header("User-Agent", &user_agent)
-                .header("X-Attempt", attempt.to_string());
+                .header("X-Attempt", attempt.to_string())
+                .http_version(http_version);
 
             if accept_zstd {
                 req = req.header("Accept-Encoding", "zstd");
@@ -1080,6 +1083,7 @@ impl LfsRemoteInner {
                 http.request_timeout,
                 move |builder| builder.body(batch_json.clone()),
                 http.accept_zstd,
+                http.http_version,
             )
             .await
         };
@@ -1105,6 +1109,7 @@ impl LfsRemoteInner {
         read_from_store: impl Fn(Sha256) -> Result<Option<Bytes>> + Send + 'static,
         write_to_store: impl Fn(Sha256, Bytes) -> Result<()> + Send + 'static,
         accept_zstd: bool,
+        http_version: HttpVersion,
     ) -> Result<()> {
         let body = if op == Operation::Upload {
             spawn_blocking(move || read_from_store(oid)).await??
@@ -1140,6 +1145,7 @@ impl LfsRemoteInner {
                 }
             },
             accept_zstd,
+            http_version,
         )
         .await?;
 
@@ -1203,6 +1209,7 @@ impl LfsRemoteInner {
                         read_from_store,
                         write_to_store,
                         http.accept_zstd,
+                        http.http_version,
                     )
                 };
 
@@ -1299,6 +1306,15 @@ impl LfsRemote {
 
             let accept_zstd = config.get_or("lfs", "accept-zstd", || true)?;
 
+            let http_version = match config
+                .get_or("lfs", "http-version", || "2".to_string())?
+                .as_str()
+            {
+                "1.1" => HttpVersion::V11,
+                "2" => HttpVersion::V2,
+                x => bail!("Unsupported http_version: {}", x),
+            };
+
             let client = http_client("lfs");
 
             Ok(Self {
@@ -1314,6 +1330,7 @@ impl LfsRemote {
                     request_timeout,
                     client,
                     accept_zstd,
+                    http_version,
                 }),
             })
         }
@@ -2392,48 +2409,73 @@ mod tests {
 
         #[test]
         fn test_lfs_remote() -> Result<()> {
+            for http_version in &["1.1", "2"] {
+                let _env_lock = crate::env_lock();
+
+                let cachedir = TempDir::new()?;
+                let lfsdir = TempDir::new()?;
+                let mut config = make_lfs_config(&cachedir);
+                config.set(
+                    "lfs",
+                    "http-version",
+                    Some(http_version),
+                    &Default::default(),
+                );
+
+                let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
+                let remote = LfsRemote::new(lfs, None, &config)?;
+
+                let blob1 = (
+                    Sha256::from_str(
+                        "fc613b4dfd6736a7bd268c8a0e74ed0d1c04a959f59dd74ef2874983fd443fc9",
+                    )?,
+                    6,
+                    Bytes::from(&b"master"[..]),
+                );
+                let blob2 = (
+                    Sha256::from_str(
+                        "ca3e228a1d8d845064112c4e92781f6b8fc2501f0aa0e415d4a1dcc941485b24",
+                    )?,
+                    6,
+                    Bytes::from(&b"1.44.0"[..]),
+                );
+
+                let objs = [(blob1.0, blob1.1), (blob2.0, blob2.1)]
+                    .iter()
+                    .cloned()
+                    .collect::<HashSet<_>>();
+                let out = Arc::new(Mutex::new(Vec::new()));
+                remote.batch_fetch(&objs, {
+                    let out = out.clone();
+                    move |sha256, blob| {
+                        out.lock().push((sha256, blob));
+                        Ok(())
+                    }
+                })?;
+                out.lock().sort();
+
+                let mut expected_res = vec![(blob1.0, blob1.2), (blob2.0, blob2.2)];
+                expected_res.sort();
+
+                assert_eq!(*out.lock(), expected_res);
+            }
+
+            Ok(())
+        }
+
+        #[test]
+        fn test_lfs_invalid_http() -> Result<()> {
             let _env_lock = crate::env_lock();
 
             let cachedir = TempDir::new()?;
             let lfsdir = TempDir::new()?;
-            let config = make_lfs_config(&cachedir);
+            let mut config = make_lfs_config(&cachedir);
+            config.set("lfs", "http-version", Some("3"), &Default::default());
 
-            let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
-            let remote = LfsRemote::new(lfs, None, &config)?;
+            let lfs = Arc::new(LfsStore::shared(&lfsdir, &config).unwrap());
+            let result = LfsRemote::new(lfs, None, &config);
 
-            let blob1 = (
-                Sha256::from_str(
-                    "fc613b4dfd6736a7bd268c8a0e74ed0d1c04a959f59dd74ef2874983fd443fc9",
-                )?,
-                6,
-                Bytes::from(&b"master"[..]),
-            );
-            let blob2 = (
-                Sha256::from_str(
-                    "ca3e228a1d8d845064112c4e92781f6b8fc2501f0aa0e415d4a1dcc941485b24",
-                )?,
-                6,
-                Bytes::from(&b"1.44.0"[..]),
-            );
-
-            let objs = [(blob1.0, blob1.1), (blob2.0, blob2.1)]
-                .iter()
-                .cloned()
-                .collect::<HashSet<_>>();
-            let out = Arc::new(Mutex::new(Vec::new()));
-            remote.batch_fetch(&objs, {
-                let out = out.clone();
-                move |sha256, blob| {
-                    out.lock().push((sha256, blob));
-                    Ok(())
-                }
-            })?;
-            out.lock().sort();
-
-            let mut expected_res = vec![(blob1.0, blob1.2), (blob2.0, blob2.2)];
-            expected_res.sort();
-
-            assert_eq!(*out.lock(), expected_res);
+            assert!(result.is_err());
 
             Ok(())
         }
