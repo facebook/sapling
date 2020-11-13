@@ -152,13 +152,16 @@ macro_rules! create_graph {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct UnitKey();
+
 create_graph!(
     NodeType,
     Node,
     EdgeType,
     (
         Root,
-        (),
+        UnitKey,
         [
             Bookmark,
             BonsaiChangeset,
@@ -194,7 +197,11 @@ create_graph!(
     ),
     (BonsaiHgMapping, ChangesetId, [HgChangeset]),
     (BonsaiPhaseMapping, ChangesetId, []),
-    (PublishedBookmarks, (), [BonsaiChangeset, BonsaiHgMapping]),
+    (
+        PublishedBookmarks,
+        UnitKey,
+        [BonsaiChangeset, BonsaiHgMapping]
+    ),
     // Hg
     (HgBonsaiMapping, HgChangesetId, [BonsaiChangeset]),
     (
@@ -526,10 +533,10 @@ mod tests {
             Test1NodeType,
             Test1Node,
             Test1EdgeType,
-            (Root, (), [Foo]),
+            (Root, UnitKey, [Foo]),
             (Foo, u32, []),
         );
-        assert_eq!(Test1NodeType::Root, Test1Node::Root(()).get_type());
+        assert_eq!(Test1NodeType::Root, Test1Node::Root(UnitKey()).get_type());
         assert_eq!(Test1NodeType::Foo, Test1Node::Foo(42).get_type());
         assert_eq!(Test1EdgeType::RootToFoo.incoming_type(), None);
         assert_eq!(Test1EdgeType::RootToFoo.outgoing_type(), Test1NodeType::Foo);
@@ -539,11 +546,11 @@ mod tests {
             Test2NodeType,
             Test2Node,
             Test2EdgeType,
-            (Root, (), [Foo, Bar]),
+            (Root, UnitKey, [Foo, Bar]),
             (Foo, u32, [Bar]),
             (Bar, u32, []),
         );
-        assert_eq!(Test2NodeType::Root, Test2Node::Root(()).get_type());
+        assert_eq!(Test2NodeType::Root, Test2Node::Root(UnitKey()).get_type());
         assert_eq!(Test2NodeType::Foo, Test2Node::Foo(42).get_type());
         assert_eq!(Test2NodeType::Bar, Test2Node::Bar(42).get_type());
         assert_eq!(Test2EdgeType::RootToFoo.incoming_type(), None);

@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use crate::graph::{AliasType, Node, NodeType, WrappedPath};
+use crate::graph::{AliasType, Node, NodeType, UnitKey, WrappedPath};
 
 use anyhow::{format_err, Error};
 use bookmarks::BookmarkName;
@@ -35,6 +35,17 @@ fn check_and_build_mpath(node_type: NodeType, parts: &[&str]) -> Result<Option<M
     Ok(mpath)
 }
 
+impl FromStr for UnitKey {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if s.is_empty() {
+            Ok(Self())
+        } else {
+            Err(format_err!("Expected empty string for UnitKey"))
+        }
+    }
+}
+
 pub fn parse_node(s: &str) -> Result<Node, Error> {
     let parts: Vec<_> = s.split(NODE_SEP).collect();
     if parts.len() < 1 {
@@ -60,7 +71,7 @@ pub fn parse_node(s: &str) -> Result<Node, Error> {
 
     let parts = &parts[1..];
     let node = match node_type {
-        NodeType::Root => Node::Root(()),
+        NodeType::Root => Node::Root(UnitKey::from_str(&parts.join(NODE_SEP))?),
         // Bonsai
         NodeType::Bookmark => Node::Bookmark(BookmarkName::new(parts.join(NODE_SEP))?),
         NodeType::BonsaiChangeset => {
@@ -72,7 +83,9 @@ pub fn parse_node(s: &str) -> Result<Node, Error> {
         NodeType::BonsaiPhaseMapping => {
             Node::BonsaiPhaseMapping(ChangesetId::from_str(&parts.join(NODE_SEP))?)
         }
-        NodeType::PublishedBookmarks => Node::PublishedBookmarks(()),
+        NodeType::PublishedBookmarks => {
+            Node::PublishedBookmarks(UnitKey::from_str(&parts.join(NODE_SEP))?)
+        }
         // Hg
         NodeType::HgBonsaiMapping => {
             Node::HgBonsaiMapping(HgChangesetId::from_str(&parts.join(NODE_SEP))?)
@@ -141,7 +154,7 @@ mod tests {
     fn test_node_type(node_type: &NodeType) -> Result<(), Error> {
         let v = match node_type {
             NodeType::Root => {
-                assert_eq!(Node::Root(()), parse_node("Root")?);
+                assert_eq!(Node::Root(UnitKey()), parse_node("Root")?);
                 assert_eq!(
                     "Err(parse_node expects Root not to be followed by any parts)",
                     format!("{:?}", parse_node("Root:garbage"))
@@ -166,7 +179,7 @@ mod tests {
             ),
             NodeType::PublishedBookmarks => {
                 assert_eq!(
-                    Node::PublishedBookmarks(()),
+                    Node::PublishedBookmarks(UnitKey()),
                     parse_node("PublishedBookmarks")?
                 );
                 assert_eq!(
