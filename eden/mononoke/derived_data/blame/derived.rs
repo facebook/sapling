@@ -51,9 +51,15 @@ impl BonsaiDerived for BlameRoot {
         _parents: Vec<Self>,
     ) -> Result<Self, Error> {
         let csid = bonsai.get_changeset_id();
-        let root_manifest = RootUnodeManifestId::derive(ctx.clone(), repo.clone(), csid)
-            .from_err()
-            .map(|mf| mf.manifest_unode_id().clone());
+        let root_manifest = {
+            cloned!(ctx, repo);
+            async move {
+                let root_id = RootUnodeManifestId::derive03(&ctx, &repo, csid).await?;
+                Ok(root_id.manifest_unode_id().clone())
+            }
+            .boxed()
+            .compat()
+        };
         let parents_manifest = bonsai
             .parents()
             .collect::<Vec<_>>() // iterator should be owned
@@ -61,9 +67,13 @@ impl BonsaiDerived for BlameRoot {
             .map({
                 cloned!(ctx, repo);
                 move |csid| {
-                    RootUnodeManifestId::derive(ctx.clone(), repo.clone(), csid)
-                        .from_err()
-                        .map(|mf| mf.manifest_unode_id().clone())
+                    cloned!(ctx, repo);
+                    async move {
+                        let root_id = RootUnodeManifestId::derive03(&ctx, &repo, csid).await?;
+                        Ok(root_id.manifest_unode_id().clone())
+                    }
+                    .boxed()
+                    .compat()
                 }
             });
 
