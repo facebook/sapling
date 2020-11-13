@@ -300,9 +300,10 @@ impl VisitOne for WalkState {
                 &self.hg_filenode_ids.interned(id),
             ),
             Node::FileContent(content_id) => self.record(&self.visited_file, content_id),
-            Node::Fsnode((p, id)) => {
-                self.record_with_path(&self.visited_fsnode, (p, &self.fsnode_ids.interned(id)))
-            }
+            Node::Fsnode(k) => self.record_with_path(
+                &self.visited_fsnode,
+                (&k.path, &self.fsnode_ids.interned(&k.id)),
+            ),
             _ => true,
         }
     }

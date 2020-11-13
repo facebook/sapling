@@ -257,7 +257,7 @@ create_graph!(
     ),
     (
         Fsnode,
-        (WrappedPath, FsnodeId),
+        PathKey<FsnodeId>,
         [ChildFsnode(Fsnode), FileContent]
     ),
 );
@@ -459,7 +459,7 @@ impl Node {
             // Derived data
             Node::BonsaiFsnodeMapping(k) => k.blobstore_key(),
             Node::ChangesetInfo(k) => k.blobstore_key(),
-            Node::Fsnode((_, k)) => k.blobstore_key(),
+            Node::Fsnode(PathKey { id, path: _ }) => id.blobstore_key(),
         }
     }
 
@@ -485,7 +485,7 @@ impl Node {
             // Derived data
             Node::BonsaiFsnodeMapping(_) => None,
             Node::ChangesetInfo(_) => None,
-            Node::Fsnode((p, _)) => Some(&p),
+            Node::Fsnode(PathKey { id: _, path }) => Some(&path),
         }
     }
 
@@ -512,7 +512,7 @@ impl Node {
             // Derived data
             Node::BonsaiFsnodeMapping(k) => Some(k.sampling_fingerprint()),
             Node::ChangesetInfo(k) => Some(k.sampling_fingerprint()),
-            Node::Fsnode((_, k)) => Some(k.sampling_fingerprint()),
+            Node::Fsnode(PathKey { id, path: _ }) => Some(id.sampling_fingerprint()),
         }
     }
 }

@@ -717,7 +717,7 @@ async fn bonsai_to_fsnode_mapping_step<V: VisitOne>(
     if let Some(root_fsnode_id) = root_fsnode_id {
         let mut edges = vec![];
         checker.add_edge(&mut edges, EdgeType::BonsaiFsnodeMappingToRootFsnode, || {
-            Node::Fsnode((WrappedPath::Root, *root_fsnode_id.fsnode_id()))
+            Node::Fsnode(PathKey::new(*root_fsnode_id.fsnode_id(), WrappedPath::Root))
         });
         Ok(StepOutput(
             checker.step_data(NodeType::BonsaiFsnodeMapping, || {
@@ -757,7 +757,7 @@ async fn fsnode_step<V: VisitOne>(
                 let mpath_opt =
                     WrappedPath::from(MPath::join_element_opt(path.as_ref(), Some(child)));
                 checker.add_edge(&mut dir_edges, EdgeType::FsnodeToChildFsnode, || {
-                    Node::Fsnode((WrappedPath::from(mpath_opt), *fsnode_id))
+                    Node::Fsnode(PathKey::new(*fsnode_id, mpath_opt))
                 });
             }
             FsnodeEntry::File(file) => {
@@ -1092,9 +1092,7 @@ where
         Node::ChangesetInfo(bcs_id) => {
             changeset_info_step(&ctx, &repo, &checker, bcs_id, enable_derive).await
         }
-        Node::Fsnode((path, fsnode_id)) => {
-            fsnode_step(&ctx, &repo, &checker, path, &fsnode_id).await
-        }
+        Node::Fsnode(PathKey { id, path }) => fsnode_step(&ctx, &repo, &checker, path, &id).await,
     };
 
     let edge_label = walk_item.label;
