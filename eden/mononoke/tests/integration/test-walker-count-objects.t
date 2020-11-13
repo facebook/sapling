@@ -83,6 +83,15 @@ count-objects, default shallow walk across bonsai and hg data, including mutable
   Bytes/s,* (glob)
   * Type:Walked,Checks,Children AliasContentMapping:9,9,0 BonsaiChangeset:1,1,5 BonsaiFsnodeMapping:1,1,1 BonsaiHgMapping:2,2,1 BonsaiPhaseMapping:1,1,0 FileContent:3,*,0 FileContentMetadata:3,0,9 Fsnode:1,1,* HgChangeset:1,*,1 HgFileEnvelope:3,*,* HgFileNode:3,3,0 HgManifest:1,1,6 PublishedBookmarks:1,1,2 (glob)
 
+count-objects, shallow walk across bonsai and changeset_info
+  $ mononoke_walker --storage-id=blobstore --readonly-storage scrub -q --bookmark master_bookmark -I shallow -i bonsai -i derived_changeset_info 2>&1 | strip_glog
+  Walking roots * (glob)
+  Walking edge types [BonsaiChangesetToChangesetInfo, BookmarkToBonsaiChangeset]
+  Walking node types [BonsaiChangeset, Bookmark, ChangesetInfo]
+  Final count: (3, 3)
+  Bytes/s,* (glob)
+  * Type:Walked,Checks,Children BonsaiChangeset:1,* Bookmark:1,* ChangesetInfo:1,* (glob)
+
 count-objects, deep walk across bonsai and changeset_info
   $ mononoke_walker --storage-id=blobstore --readonly-storage scrub -q --bookmark master_bookmark -I deep -i bonsai -i derived_changeset_info 2>&1 | strip_glog
   Walking roots * (glob)
