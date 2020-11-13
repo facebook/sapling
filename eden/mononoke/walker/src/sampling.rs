@@ -100,6 +100,7 @@ fn filter_repo_path(node_type: NodeType, path: Option<&'_ WrappedPath>) -> Optio
         NodeType::BonsaiUnodeMapping => None,
         NodeType::ChangesetInfo => None,
         NodeType::Fsnode => path,
+        NodeType::UnodeFile => path,
         NodeType::UnodeManifest => path,
     }
 }

@@ -34,7 +34,8 @@ use manifest::{Entry, Manifest};
 use mercurial_derived_data::MappedHgChangesetId;
 use mercurial_types::{FileBytes, HgChangesetId, HgFileNodeId, HgManifestId, RepoPath};
 use mononoke_types::{
-    fsnode::FsnodeEntry, ChangesetId, ContentId, FsnodeId, MPath, ManifestUnodeId,
+    fsnode::FsnodeEntry, unode::UnodeEntry, ChangesetId, ContentId, FileUnodeId, FsnodeId, MPath,
+    ManifestUnodeId,
 };
 use phases::{HeadsFetcher, Phase, Phases};
 use scuba_ext::ScubaSampleBuilder;
@@ -885,6 +886,31 @@ async fn bonsai_to_unode_mapping_step<V: VisitOne>(
         ))
     }
 }
+async fn unode_file_step<V: VisitOne>(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    checker: &Checker<V>,
+    path: WrappedPath,
+    unode_file_id: &FileUnodeId,
+) -> Result<StepOutput, Error> {
+    let unode_file = unode_file_id
+        .load(ctx.clone(), &repo.get_blobstore())
+        .await?;
+
+    let mut edges = vec![];
+
+    checker.add_edge_with_path(
+        &mut edges,
+        EdgeType::UnodeFileToFileContent,
+        || Node::FileContent(*unode_file.content_id()),
+        || Some(path),
+    );
+
+    Ok(StepOutput(
+        checker.step_data(NodeType::UnodeFile, || NodeData::UnodeFile(unode_file)),
+        edges,
+    ))
+}
 
 async fn unode_manifest_step<V: VisitOne>(
     ctx: &CoreContext,
@@ -912,6 +938,33 @@ async fn unode_manifest_step<V: VisitOne>(
             || Node::UnodeManifest(PathKey::new(*p, path.clone())),
         );
     }
+
+    let mut file_edges = vec![];
+    for (child, subentry) in unode_manifest.subentries() {
+        match subentry {
+            UnodeEntry::Directory(manifest_unode_id) => {
+                let mpath_opt =
+                    WrappedPath::from(MPath::join_element_opt(path.as_ref(), Some(child)));
+                checker.add_edge(
+                    &mut edges,
+                    EdgeType::UnodeManifestToUnodeManifestChild,
+                    || Node::UnodeManifest(PathKey::new(*manifest_unode_id, mpath_opt)),
+                );
+            }
+            UnodeEntry::File(file_unode_id) => {
+                let mpath_opt =
+                    WrappedPath::from(MPath::join_element_opt(path.as_ref(), Some(child)));
+                checker.add_edge(
+                    &mut file_edges,
+                    EdgeType::UnodeManifestToUnodeFileChild,
+                    || Node::UnodeFile(PathKey::new(*file_unode_id, mpath_opt)),
+                );
+            }
+        }
+    }
+
+    // Ordering to reduce queue depth
+    edges.append(&mut file_edges);
 
     Ok(StepOutput(
         checker.step_data(NodeType::UnodeManifest, || {
@@ -1237,6 +1290,9 @@ where
             changeset_info_step(&ctx, &repo, &checker, bcs_id, enable_derive).await
         }
         Node::Fsnode(PathKey { id, path }) => fsnode_step(&ctx, &repo, &checker, path, &id).await,
+        Node::UnodeFile(PathKey { id, path }) => {
+            unode_file_step(&ctx, &repo, &checker, path, &id).await
+        }
         Node::UnodeManifest(PathKey { id, path }) => {
             unode_manifest_step(&ctx, &repo, &checker, path, &id).await
         }

@@ -172,6 +172,7 @@ fn dump_with_extension(node_type: NodeType) -> bool {
         NodeType::BonsaiUnodeMapping => false,
         NodeType::ChangesetInfo => false,
         NodeType::Fsnode => false,
+        NodeType::UnodeFile => false,
         NodeType::UnodeManifest => false,
     }
 }

@@ -173,8 +173,11 @@ const DEEP_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::ChangesetInfoToChangesetInfoParent,
     EdgeType::FsnodeToChildFsnode,
     EdgeType::FsnodeToFileContent,
+    EdgeType::UnodeFileToFileContent,
     EdgeType::UnodeManifestToLinkedBonsaiChangeset,
     EdgeType::UnodeManifestToUnodeManifestParent,
+    EdgeType::UnodeManifestToUnodeFileChild,
+    EdgeType::UnodeManifestToUnodeManifestChild,
 ];
 
 // Does not recurse into history, edges to parents excluded
@@ -208,6 +211,9 @@ const SHALLOW_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::BonsaiUnodeMappingToRootUnodeManifest,
     EdgeType::FsnodeToChildFsnode,
     EdgeType::FsnodeToFileContent,
+    EdgeType::UnodeFileToFileContent,
+    EdgeType::UnodeManifestToUnodeFileChild,
+    EdgeType::UnodeManifestToUnodeManifestChild,
 ];
 
 // Types that can result in loading hg data.  Useful for excludes.

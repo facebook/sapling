@@ -12,7 +12,7 @@ use filestore::Alias;
 use mercurial_types::{HgFileNodeId, HgManifestId};
 use mononoke_types::{
     hash::{GitSha1, Sha1, Sha256},
-    FsnodeId, MPath, ManifestUnodeId,
+    FileUnodeId, FsnodeId, MPath, ManifestUnodeId,
 };
 use std::{iter::FromIterator, str::FromStr};
 use strum::IntoEnumIterator;
@@ -80,6 +80,16 @@ impl FromStr for PathKey<ManifestUnodeId> {
         let parts: Vec<_> = s.split(NODE_SEP).collect();
         let path = check_and_build_path(NodeType::UnodeManifest, &parts)?;
         let id = ManifestUnodeId::from_str(parts[0])?;
+        Ok(Self { id, path })
+    }
+}
+
+impl FromStr for PathKey<FileUnodeId> {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let parts: Vec<_> = s.split(NODE_SEP).collect();
+        let path = check_and_build_path(NodeType::UnodeFile, &parts)?;
+        let id = FileUnodeId::from_str(parts[0])?;
         Ok(Self { id, path })
     }
 }
@@ -271,6 +281,16 @@ mod tests {
                     node_type,
                     &parse_node(&format!(
                         "Fsnode{}{}{}{}",
+                        NODE_SEP, SAMPLE_BLAKE2, NODE_SEP, SAMPLE_PATH
+                    ))?
+                    .get_type()
+                );
+            }
+            NodeType::UnodeFile => {
+                assert_eq!(
+                    node_type,
+                    &parse_node(&format!(
+                        "UnodeFile{}{}{}{}",
                         NODE_SEP, SAMPLE_BLAKE2, NODE_SEP, SAMPLE_PATH
                     ))?
                     .get_type()

@@ -102,19 +102,19 @@ count-objects, deep walk across bonsai and changeset_info
   * Type:Walked,Checks,Children BonsaiChangeset:3,* BonsaiChangesetInfoMapping:3,* Bookmark:1,* ChangesetInfo:3,* (glob)
 
 count-objects, shallow walk across bonsai and unodes
-  $ mononoke_walker --storage-id=blobstore --readonly-storage scrub -q --bookmark master_bookmark -I shallow -i bonsai -i derived_unodes 2>&1 | strip_glog
+  $ mononoke_walker --storage-id=blobstore --readonly-storage scrub -q --bookmark master_bookmark -I shallow -i bonsai -i derived_unodes -i FileContent -X BonsaiChangesetToFileContent 2>&1 | strip_glog
   Walking roots * (glob)
-  Walking edge types [BonsaiChangesetToBonsaiUnodeMapping, BonsaiUnodeMappingToRootUnodeManifest, BookmarkToBonsaiChangeset]
-  Walking node types [BonsaiChangeset, BonsaiUnodeMapping, Bookmark, UnodeManifest]
-  Final count: (4, 4)
+  Walking edge types [BonsaiChangesetToBonsaiUnodeMapping, BonsaiUnodeMappingToRootUnodeManifest, BookmarkToBonsaiChangeset, UnodeFileToFileContent, UnodeManifestToUnodeFileChild, UnodeManifestToUnodeManifestChild]
+  Walking node types [BonsaiChangeset, BonsaiUnodeMapping, Bookmark, FileContent, UnodeFile, UnodeManifest]
+  Final count: (10, 10)
   Bytes/s,* (glob)
-  * Type:Walked,Checks,Children BonsaiChangeset:1,* BonsaiUnodeMapping:1,* Bookmark:1,1,1 UnodeManifest:1,* (glob)
+  * Type:Walked,Checks,Children BonsaiChangeset:1,* BonsaiUnodeMapping:1,* Bookmark:1,1,1 FileContent:3,* UnodeFile:3,* UnodeManifest:1,* (glob)
 
 count-objects, deep walk across bonsai and unodes
   $ mononoke_walker --storage-id=blobstore --readonly-storage scrub -q --bookmark master_bookmark -I deep -i bonsai -i derived_unodes -X BonsaiChangesetToBonsaiParent 2>&1 | strip_glog
   Walking roots * (glob)
-  Walking edge types [BonsaiChangesetToBonsaiUnodeMapping, BonsaiUnodeMappingToRootUnodeManifest, BookmarkToBonsaiChangeset, UnodeManifestToLinkedBonsaiChangeset, UnodeManifestToUnodeManifestParent]
-  Walking node types [BonsaiChangeset, BonsaiUnodeMapping, Bookmark, UnodeManifest]
-  Final count: (10, 10)
+  Walking edge types [BonsaiChangesetToBonsaiUnodeMapping, BonsaiUnodeMappingToRootUnodeManifest, BookmarkToBonsaiChangeset, UnodeManifestToLinkedBonsaiChangeset, UnodeManifestToUnodeFileChild, UnodeManifestToUnodeManifestChild, UnodeManifestToUnodeManifestParent]
+  Walking node types [BonsaiChangeset, BonsaiUnodeMapping, Bookmark, UnodeFile, UnodeManifest]
+  Final count: (13, 13)
   Bytes/s,* (glob)
-  * Type:Walked,Checks,Children BonsaiChangeset:3,* BonsaiUnodeMapping:3,* Bookmark:1,1,1 UnodeManifest:3,* (glob)
+  * Type:Walked,Checks,Children BonsaiChangeset:3,* BonsaiUnodeMapping:3,* Bookmark:1,1,1 UnodeFile:3,* UnodeManifest:3,* (glob)
