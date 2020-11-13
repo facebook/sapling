@@ -22,9 +22,9 @@ use mercurial_types::{
     blobs::{BlobManifest, HgBlobChangeset},
     FileBytes, HgChangesetId, HgFileEnvelope, HgFileNodeId, HgManifestId,
 };
-use mononoke_types::{fsnode::Fsnode, FsnodeId, ManifestUnodeId};
 use mononoke_types::{
-    BonsaiChangeset, ChangesetId, ContentId, ContentMetadata, MPath, MPathHash, MononokeId,
+    fsnode::Fsnode, unode::ManifestUnode, BonsaiChangeset, ChangesetId, ContentId, ContentMetadata,
+    FsnodeId, MPath, MPathHash, ManifestUnodeId, MononokeId,
 };
 use once_cell::sync::OnceCell;
 use phases::Phase;
@@ -205,7 +205,8 @@ create_graph!(
             BonsaiFsnodeMapping,
             ChangesetInfo,
             Fsnode,
-            BonsaiUnodeMapping
+            BonsaiUnodeMapping,
+            UnodeManifest
         ]
     ),
     // Bonsai
@@ -283,7 +284,12 @@ create_graph!(
         PathKey<FsnodeId>,
         [ChildFsnode(Fsnode), FileContent]
     ),
-    (BonsaiUnodeMapping, ChangesetId, []),
+    (
+        UnodeManifest,
+        PathKey<ManifestUnodeId>,
+        [UnodeManifestParent(UnodeManifest)]
+    ),
+    (BonsaiUnodeMapping, ChangesetId, [RootUnodeManifest(UnodeManifest)]),
 );
 
 impl fmt::Display for NodeType {
@@ -321,6 +327,7 @@ impl NodeType {
             NodeType::BonsaiUnodeMapping => Some(RootUnodeManifestId::NAME),
             NodeType::ChangesetInfo => Some(ChangesetInfo::NAME),
             NodeType::Fsnode => Some(RootFsnodeId::NAME),
+            NodeType::UnodeManifest => Some(RootUnodeManifestId::NAME),
         }
     }
 }
@@ -462,6 +469,7 @@ pub enum NodeData {
     BonsaiUnodeMapping(Option<ManifestUnodeId>),
     ChangesetInfo(Option<ChangesetInfo>),
     Fsnode(Fsnode),
+    UnodeManifest(ManifestUnode),
 }
 
 impl Node {
@@ -490,6 +498,7 @@ impl Node {
             Node::BonsaiUnodeMapping(k) => k.blobstore_key(),
             Node::ChangesetInfo(k) => k.blobstore_key(),
             Node::Fsnode(PathKey { id, path: _ }) => id.blobstore_key(),
+            Node::UnodeManifest(PathKey { id, path: _ }) => id.blobstore_key(),
         }
     }
 
@@ -518,6 +527,7 @@ impl Node {
             Node::BonsaiUnodeMapping(_) => None,
             Node::ChangesetInfo(_) => None,
             Node::Fsnode(PathKey { id: _, path }) => Some(&path),
+            Node::UnodeManifest(PathKey { id: _, path }) => Some(&path),
         }
     }
 
@@ -547,6 +557,7 @@ impl Node {
             Node::BonsaiUnodeMapping(k) => Some(k.sampling_fingerprint()),
             Node::ChangesetInfo(k) => Some(k.sampling_fingerprint()),
             Node::Fsnode(PathKey { id, path: _ }) => Some(id.sampling_fingerprint()),
+            Node::UnodeManifest(PathKey { id, path: _ }) => Some(id.sampling_fingerprint()),
         }
     }
 }

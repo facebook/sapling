@@ -101,20 +101,20 @@ count-objects, deep walk across bonsai and changeset_info
   Bytes/s,* (glob)
   * Type:Walked,Checks,Children BonsaiChangeset:3,* BonsaiChangesetInfoMapping:3,* Bookmark:1,* ChangesetInfo:3,* (glob)
 
-count-objects, shallow walk for bonsai and unodes
+count-objects, shallow walk across bonsai and unodes
   $ mononoke_walker --storage-id=blobstore --readonly-storage scrub -q --bookmark master_bookmark -I shallow -i bonsai -i derived_unodes 2>&1 | strip_glog
   Walking roots * (glob)
-  Walking edge types [BonsaiChangesetToBonsaiUnodeMapping, BookmarkToBonsaiChangeset]
-  Walking node types [BonsaiChangeset, BonsaiUnodeMapping, Bookmark]
-  Final count: (3, 3)
+  Walking edge types [BonsaiChangesetToBonsaiUnodeMapping, BonsaiUnodeMappingToRootUnodeManifest, BookmarkToBonsaiChangeset]
+  Walking node types [BonsaiChangeset, BonsaiUnodeMapping, Bookmark, UnodeManifest]
+  Final count: (4, 4)
   Bytes/s,* (glob)
-  * Type:Walked,Checks,Children BonsaiChangeset:1,* BonsaiUnodeMapping:1,* Bookmark:1,1,1 (glob)
+  * Type:Walked,Checks,Children BonsaiChangeset:1,* BonsaiUnodeMapping:1,* Bookmark:1,1,1 UnodeManifest:1,* (glob)
 
-count-objects, deep walk for bonsai and unodes
+count-objects, deep walk across bonsai and unodes
   $ mononoke_walker --storage-id=blobstore --readonly-storage scrub -q --bookmark master_bookmark -I deep -i bonsai -i derived_unodes 2>&1 | strip_glog
   Walking roots * (glob)
-  Walking edge types [BonsaiChangesetToBonsaiParent, BonsaiChangesetToBonsaiUnodeMapping, BookmarkToBonsaiChangeset]
-  Walking node types [BonsaiChangeset, BonsaiUnodeMapping, Bookmark]
-  Final count: (7, 7)
+  Walking edge types [BonsaiChangesetToBonsaiParent, BonsaiChangesetToBonsaiUnodeMapping, BonsaiUnodeMappingToRootUnodeManifest, BookmarkToBonsaiChangeset, UnodeManifestToUnodeManifestParent]
+  Walking node types [BonsaiChangeset, BonsaiUnodeMapping, Bookmark, UnodeManifest]
+  Final count: (10, 10)
   Bytes/s,* (glob)
-  * Type:Walked,Checks,Children BonsaiChangeset:3,* BonsaiUnodeMapping:3,* Bookmark:1,1,1 (glob)
+  * Type:Walked,Checks,Children BonsaiChangeset:3,* BonsaiUnodeMapping:3,* Bookmark:1,1,1 UnodeManifest:3,* (glob)

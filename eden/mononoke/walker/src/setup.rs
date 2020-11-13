@@ -167,11 +167,13 @@ const DEEP_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::FileContentMetadataToGitSha1Alias,
     EdgeType::AliasContentMappingToFileContent,
     // Derived data
-    EdgeType::BonsaiFsnodeMappingToRootFsnode,
     EdgeType::BonsaiChangesetInfoMappingToChangesetInfo,
+    EdgeType::BonsaiFsnodeMappingToRootFsnode,
+    EdgeType::BonsaiUnodeMappingToRootUnodeManifest,
     EdgeType::ChangesetInfoToChangesetInfoParent,
     EdgeType::FsnodeToChildFsnode,
     EdgeType::FsnodeToFileContent,
+    EdgeType::UnodeManifestToUnodeManifestParent,
 ];
 
 // Does not recurse into history, edges to parents excluded
@@ -202,6 +204,7 @@ const SHALLOW_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     // Derived data
     EdgeType::BonsaiFsnodeMappingToRootFsnode,
     EdgeType::BonsaiChangesetInfoMappingToChangesetInfo,
+    EdgeType::BonsaiUnodeMappingToRootUnodeManifest,
     EdgeType::FsnodeToChildFsnode,
     EdgeType::FsnodeToFileContent,
 ];

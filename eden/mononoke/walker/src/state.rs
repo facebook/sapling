@@ -13,7 +13,7 @@ use array_init::array_init;
 use context::CoreContext;
 use dashmap::{mapref::one::Ref, DashMap};
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId};
-use mononoke_types::{ChangesetId, ContentId, FsnodeId, MPathHash};
+use mononoke_types::{ChangesetId, ContentId, FsnodeId, MPathHash, ManifestUnodeId};
 use phases::Phase;
 use std::{
     cmp,
@@ -144,6 +144,7 @@ pub struct WalkState {
     mpath_hashs: InternMap<Option<MPathHash>, InternedId<Option<MPathHash>>>,
     fsnode_ids: InternMap<FsnodeId, InternedId<FsnodeId>>,
     hg_manifest_ids: InternMap<HgManifestId, InternedId<HgManifestId>>,
+    unode_manifest_ids: InternMap<ManifestUnodeId, InternedId<ManifestUnodeId>>,
     // State
     visited_bcs: StateMap<InternedId<ChangesetId>>,
     visited_bcs_mapping: StateMap<InternedId<ChangesetId>>,
@@ -159,6 +160,7 @@ pub struct WalkState {
     visited_changeset_info_mapping: StateMap<InternedId<ChangesetId>>,
     visited_fsnode: StateMap<(InternedId<Option<MPathHash>>, InternedId<FsnodeId>)>,
     visited_fsnode_mapping: StateMap<InternedId<ChangesetId>>,
+    visited_unode_manifest: StateMap<(InternedId<Option<MPathHash>>, InternedId<ManifestUnodeId>)>,
     visited_unode_mapping: StateMap<InternedId<ChangesetId>>,
     // Count
     visit_count: [AtomicUsize; NodeType::COUNT],
@@ -183,6 +185,7 @@ impl WalkState {
             mpath_hashs: InternMap::with_hasher(fac.clone()),
             fsnode_ids: InternMap::with_hasher(fac.clone()),
             hg_manifest_ids: InternMap::with_hasher(fac.clone()),
+            unode_manifest_ids: InternMap::with_hasher(fac.clone()),
             // State
             visited_bcs: StateMap::with_hasher(fac.clone()),
             visited_bcs_mapping: StateMap::with_hasher(fac.clone()),
@@ -197,6 +200,7 @@ impl WalkState {
             visited_changeset_info_mapping: StateMap::with_hasher(fac.clone()),
             visited_fsnode: StateMap::with_hasher(fac.clone()),
             visited_fsnode_mapping: StateMap::with_hasher(fac.clone()),
+            visited_unode_manifest: StateMap::with_hasher(fac.clone()),
             visited_unode_mapping: StateMap::with_hasher(fac),
             visit_count: array_init(|_i| AtomicUsize::new(0)),
         }
@@ -364,6 +368,10 @@ impl VisitOne for WalkState {
             Node::Fsnode(k) => self.record_with_path(
                 &self.visited_fsnode,
                 (&k.path, &self.fsnode_ids.interned(&k.id)),
+            ),
+            Node::UnodeManifest(k) => self.record_with_path(
+                &self.visited_unode_manifest,
+                (&k.path, &self.unode_manifest_ids.interned(&k.id)),
             ),
         }
     }

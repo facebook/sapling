@@ -33,7 +33,9 @@ use itertools::{Either, Itertools};
 use manifest::{Entry, Manifest};
 use mercurial_derived_data::MappedHgChangesetId;
 use mercurial_types::{FileBytes, HgChangesetId, HgFileNodeId, HgManifestId, RepoPath};
-use mononoke_types::{fsnode::FsnodeEntry, ChangesetId, ContentId, FsnodeId, MPath};
+use mononoke_types::{
+    fsnode::FsnodeEntry, ChangesetId, ContentId, FsnodeId, MPath, ManifestUnodeId,
+};
 use phases::{HeadsFetcher, Phase, Phases};
 use scuba_ext::ScubaSampleBuilder;
 use slog::warn;
@@ -856,8 +858,18 @@ async fn bonsai_to_unode_mapping_step<V: VisitOne>(
         maybe_derived::<RootUnodeManifestId>(ctx, repo, bcs_id, enable_derive).await?;
 
     if let Some(root_unode_id) = root_unode_id {
-        // TODO, will step to UnodeManifest type when its added
-        let edges = vec![];
+        let mut edges = vec![];
+
+        checker.add_edge(
+            &mut edges,
+            EdgeType::BonsaiUnodeMappingToRootUnodeManifest,
+            || {
+                Node::UnodeManifest(PathKey::new(
+                    *root_unode_id.manifest_unode_id(),
+                    WrappedPath::Root,
+                ))
+            },
+        );
         Ok(StepOutput(
             checker.step_data(NodeType::BonsaiUnodeMapping, || {
                 NodeData::BonsaiUnodeMapping(Some(*root_unode_id.manifest_unode_id()))
@@ -872,6 +884,32 @@ async fn bonsai_to_unode_mapping_step<V: VisitOne>(
             vec![],
         ))
     }
+}
+
+async fn unode_manifest_step<V: VisitOne>(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    checker: &Checker<V>,
+    path: WrappedPath,
+    unode_manifest_id: &ManifestUnodeId,
+) -> Result<StepOutput, Error> {
+    let unode_manifest = unode_manifest_id
+        .load(ctx.clone(), &repo.get_blobstore())
+        .await?;
+    let mut manifest_edges = vec![];
+    for p in unode_manifest.parents() {
+        checker.add_edge(
+            &mut manifest_edges,
+            EdgeType::UnodeManifestToUnodeManifestParent,
+            || Node::UnodeManifest(PathKey::new(*p, path.clone())),
+        );
+    }
+    Ok(StepOutput(
+        checker.step_data(NodeType::UnodeManifest, || {
+            NodeData::UnodeManifest(unode_manifest)
+        }),
+        manifest_edges,
+    ))
 }
 
 /// Expand nodes where check for a type is used as a check for other types.
@@ -1190,6 +1228,9 @@ where
             changeset_info_step(&ctx, &repo, &checker, bcs_id, enable_derive).await
         }
         Node::Fsnode(PathKey { id, path }) => fsnode_step(&ctx, &repo, &checker, path, &id).await,
+        Node::UnodeManifest(PathKey { id, path }) => {
+            unode_manifest_step(&ctx, &repo, &checker, path, &id).await
+        }
     };
 
     let edge_label = walk_item.label;
