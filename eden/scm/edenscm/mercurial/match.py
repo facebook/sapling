@@ -1264,7 +1264,7 @@ class xormatcher(basematcher):
         self.m2 = m2
 
     def matchfn(self, f):
-        return self.m1(f) ^ self.m2(f)
+        return bool(self.m1(f)) ^ bool(self.m2(f))
 
     def visitdir(self, dir):
         m1dir = self.m1.visitdir(dir)
