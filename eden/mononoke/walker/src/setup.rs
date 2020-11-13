@@ -124,6 +124,8 @@ pub const DEFAULT_INCLUDE_NODE_TYPES: &[NodeType] = &[
     NodeType::BonsaiFsnodeMapping,
 ];
 
+const BONSAI_INCLUDE_NODE_TYPES: &[NodeType] = &[NodeType::Bookmark, NodeType::BonsaiChangeset];
+
 // Goes as far into history as it can
 const DEEP_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     // Bonsai
@@ -547,6 +549,7 @@ fn setup_subcommand_args<'a, 'b>(subcmd: App<'a, 'b>) -> App<'a, 'b> {
 fn parse_node_value(arg: &str) -> Result<HashSet<NodeType>, Error> {
     Ok(match arg {
         DEFAULT_VALUE_ARG => HashSet::from_iter(DEFAULT_INCLUDE_NODE_TYPES.iter().cloned()),
+        BONSAI_VALUE_ARG => HashSet::from_iter(BONSAI_INCLUDE_NODE_TYPES.iter().cloned()),
         _ => NodeType::from_str(arg).map(|e| HashSet::from_iter(Some(e)))?,
     })
 }
