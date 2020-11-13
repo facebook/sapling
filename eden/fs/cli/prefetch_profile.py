@@ -507,7 +507,7 @@ class FetchProfileCmd(Subcmd):
 
 
 class PrefetchProfileCmd(Subcmd):
-    NAME = "prefetch_profile"
+    NAME = "prefetch-profile"
     HELP = (
         "Create, manage, and use Prefetch Profiles. This command is "
         " primarily for use in automation."
