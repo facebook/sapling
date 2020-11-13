@@ -16,7 +16,6 @@ use futures::{
     future::{FutureExt, TryFutureExt},
 };
 use futures_ext::FutureExt as OldFutureExt;
-use futures_old::Future as OldFuture;
 use mononoke_types::{ChangesetId, Generation};
 use mutable_counters::MutableCounters;
 use slog::info;
@@ -109,10 +108,13 @@ async fn check_if_present_in_hg(
 pub fn create_derived_data_warmer<D: BonsaiDerived>(ctx: &CoreContext) -> Warmer {
     info!(ctx.logger(), "Warming {}", D::NAME);
     let warmer: Box<WarmerFn> = Box::new(|ctx: CoreContext, repo: BlobRepo, cs_id: ChangesetId| {
-        D::derive(ctx, repo, cs_id)
-            .map(|_| ())
-            .map_err(Error::from)
-            .boxify()
+        async move {
+            D::derive03(&ctx, &repo, cs_id).await?;
+            Ok(())
+        }
+        .boxed()
+        .compat()
+        .boxify()
     });
 
     let is_warm: Box<IsWarmFn> =
