@@ -11,9 +11,7 @@ use anyhow::Error;
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use context::CoreContext;
-use futures::future::{FutureExt, TryFutureExt};
 use futures::stream::{self, StreamExt, TryStreamExt};
-use futures_ext::{BoxFuture as BoxFuture01, FutureExt as _};
 use lock_ext::LockExt;
 use mononoke_types::{BonsaiChangeset, ChangesetId, RepositoryId};
 use std::{
@@ -70,34 +68,6 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
         bonsai: BonsaiChangeset,
         parents: Vec<Self>,
     ) -> Result<Self, Error>;
-
-    /// TODO(ahornby) delete onces all callsites using ::derive03
-    ///
-    /// This function is the entrypoint for changeset derivation, it converts
-    /// bonsai representation to derived one by calling derive_from_parents(), and saves mapping
-    /// from csid -> BonsaiDerived in BonsaiDerivedMapping
-    ///
-    /// This function fails immediately if this type of derived data is not enabled for this repo.
-    fn derive(
-        ctx: CoreContext,
-        repo: BlobRepo,
-        csid: ChangesetId,
-    ) -> BoxFuture01<Self, DeriveError> {
-        async move {
-            let mapping = Self::mapping(&ctx, &repo);
-            derive_impl::derive_impl::<Self, Self::Mapping>(
-                &ctx,
-                &repo,
-                &mapping,
-                csid,
-                Mode::OnlyIfEnabled,
-            )
-            .await
-        }
-        .boxed()
-        .compat()
-        .boxify()
-    }
 
     /// This function is the entrypoint for changeset derivation, it converts
     /// bonsai representation to derived one by calling derive_from_parents(), and saves mapping
