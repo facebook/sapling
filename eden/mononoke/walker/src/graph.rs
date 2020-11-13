@@ -290,7 +290,7 @@ create_graph!(
     (
         UnodeFile,
         PathKey<FileUnodeId>,
-        [FileContent]
+        [FileContent, LinkedBonsaiChangeset(BonsaiChangeset)]
     ),
     (
         UnodeManifest,

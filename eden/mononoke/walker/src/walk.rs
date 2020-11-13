@@ -899,6 +899,10 @@ async fn unode_file_step<V: VisitOne>(
 
     let mut edges = vec![];
 
+    checker.add_edge(&mut edges, EdgeType::UnodeFileToLinkedBonsaiChangeset, || {
+        Node::BonsaiChangeset(*unode_file.linknode())
+    });
+
     checker.add_edge_with_path(
         &mut edges,
         EdgeType::UnodeFileToFileContent,
