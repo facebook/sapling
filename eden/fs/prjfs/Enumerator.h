@@ -7,9 +7,11 @@
 
 #pragma once
 
+#include <optional>
 #include <string>
 #include <vector>
 #include "eden/fs/model/Hash.h"
+#include "folly/futures/Future.h"
 
 namespace facebook {
 namespace eden {
@@ -26,15 +28,30 @@ struct FileMetadata {
   //
   bool isDirectory{false};
 
-  //
-  // File size. For directories it will ignored
-  //
-  size_t size{0};
+  folly::Future<size_t> getSize() {
+    if (cachedSize_) {
+      return *cachedSize_;
+    }
 
-  FileMetadata(std::wstring&& name, bool isDir, size_t size)
-      : name(std::move(name)), isDirectory(isDir), size(size) {}
+    return std::move(sizeFuture_).thenValue([this](size_t size) {
+      cachedSize_ = size;
+      return size;
+    });
+  }
 
-  FileMetadata() = delete;
+  FileMetadata(
+      std::wstring&& name,
+      bool isDir,
+      folly::Future<size_t> sizeFuture)
+      : name(std::move(name)),
+        isDirectory(isDir),
+        sizeFuture_(std::move(sizeFuture)) {}
+
+  FileMetadata() = default;
+
+ private:
+  folly::Future<size_t> sizeFuture_;
+  std::optional<size_t> cachedSize_;
 };
 
 class Enumerator {
@@ -51,7 +68,7 @@ class Enumerator {
 
   explicit Enumerator() = delete;
 
-  const FileMetadata* current();
+  FileMetadata* current();
 
   void advance() {
     ++listIndex_;

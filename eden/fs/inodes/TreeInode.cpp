@@ -1909,42 +1909,37 @@ TreeInode::readdir(DirList&& list, off_t off, ObjectFetchContext& context) {
 
 #else
 
-folly::Future<std::vector<FileMetadata>> TreeInode::readdir(
-    ObjectFetchContext& context) {
-  vector<Future<FileMetadata>> futures;
-  {
-    auto dir = contents_.rlock();
-    auto& entries = dir->entries;
-    futures.reserve(entries.size());
+std::vector<FileMetadata> TreeInode::readdir() {
+  vector<FileMetadata> ret;
 
-    for (auto& [name, entry] : entries) {
-      auto isDir = entry.getDtype() == dtype_t::Dir;
-      auto winName = name.wide();
+  auto dir = contents_.rlock();
+  auto& entries = dir->entries;
+  ret.reserve(entries.size());
 
-      if (!isDir) {
-        // We only populates the file size for non-materialized files. For
-        // the materialized files, ProjectedFS will use the on-disk size.
-        auto hash = entry.getOptionalHash();
-        if (hash.has_value()) {
-          futures.emplace_back(
-              getMount()
-                  ->getObjectStore()
-                  ->getBlobSize(hash.value(), context)
-                  .thenValue(
-                      [winName = std::move(winName)](uint64_t size) mutable {
-                        return FileMetadata(std::move(winName), false, size);
-                      }));
-          continue;
-        }
+  for (auto& [name, entry] : entries) {
+    auto isDir = entry.getDtype() == dtype_t::Dir;
+    auto winName = name.wide();
+
+    if (!isDir) {
+      // We only populates the file size for non-materialized files. For
+      // the materialized files, ProjectedFS will use the on-disk size.
+      auto hash = entry.getOptionalHash();
+      if (hash.has_value()) {
+        static ObjectFetchContext* context =
+            ObjectFetchContext::getNullContextWithCauseDetail(
+                "TreeInode::readdir");
+        ret.emplace_back(
+            std::move(winName),
+            false,
+            getMount()->getObjectStore()->getBlobSize(hash.value(), *context));
+        continue;
       }
-      futures.emplace_back(FileMetadata(std::move(winName), isDir, 0));
     }
 
-    // We can release the content lock here.
+    ret.emplace_back(std::move(winName), isDir, folly::Future<size_t>(0));
   }
 
-  return folly::collect(std::move(futures))
-      .via(getMount()->getServerState()->getThreadPool().get());
+  return ret;
 }
 #endif // _WIN32
 

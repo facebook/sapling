@@ -11,14 +11,7 @@
 #ifndef _WIN32
 #include "eden/fs/fuse/Dispatcher.h"
 #else
-#include "folly/portability/Windows.h"
-
-#include <ProjectedFSLib.h> // @manual
 #include "eden/fs/prjfs/Dispatcher.h"
-#include "eden/fs/prjfs/Enumerator.h"
-#include "eden/fs/utils/Guid.h"
-#include "folly/Synchronized.h"
-#include "folly/container/F14Map.h"
 #endif
 
 namespace facebook {
@@ -116,18 +109,9 @@ class EdenDispatcher : public Dispatcher {
       override;
   folly::Future<std::vector<std::string>> listxattr(InodeNumber ino) override;
 #else
-  folly::Future<folly::Unit> opendir(
+  folly::Future<std::vector<FileMetadata>> opendir(
       RelativePathPiece path,
-      const Guid guid,
       ObjectFetchContext& context) override;
-
-  void closedir(const Guid& guid) override;
-
-  HRESULT getEnumerationData(
-      const PRJ_CALLBACK_DATA& callbackData,
-      const GUID& enumerationId,
-      PCWSTR searchExpression,
-      PRJ_DIR_ENTRY_BUFFER_HANDLE dirEntryBufferHandle) noexcept override;
 
   folly::Future<std::optional<InodeMetadata>> lookup(
       RelativePath path,
@@ -196,9 +180,6 @@ class EdenDispatcher : public Dispatcher {
   // mount_ first.
   InodeMap* const inodeMap_;
 #else
-  // Set of currently active directory enumerations.
-  folly::Synchronized<folly::F14FastMap<Guid, Enumerator>> enumSessions_;
-
   const std::string dotEdenConfig_;
 #endif
 };

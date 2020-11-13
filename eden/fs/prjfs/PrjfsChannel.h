@@ -10,6 +10,7 @@
 #include "folly/portability/Windows.h"
 
 #include <ProjectedFSLib.h> // @manual
+#include "eden/fs/prjfs/Enumerator.h"
 #include "eden/fs/utils/Guid.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/ProcessAccessLog.h"
@@ -83,6 +84,29 @@ class PrjfsChannel {
 
   void sendError(int32_t commandId, HRESULT error);
 
+  void addDirectoryEnumeration(Guid guid, std::vector<FileMetadata> dirents) {
+    auto [iterator, inserted] = enumSessions_.wlock()->emplace(
+        std::move(guid), std::make_shared<Enumerator>(std::move(dirents)));
+    XDCHECK(inserted);
+  }
+
+  std::optional<std::shared_ptr<Enumerator>> findDirectoryEnumeration(
+      Guid& guid) {
+    auto enumerators = enumSessions_.rlock();
+    auto it = enumerators->find(guid);
+
+    if (it == enumerators->end()) {
+      return std::nullopt;
+    }
+
+    return it->second;
+  }
+
+  void removeDirectoryEnumeration(Guid& guid) {
+    auto erasedCount = enumSessions_.wlock()->erase(guid);
+    XDCHECK(erasedCount == 1);
+  }
+
  private:
   //
   // Channel to talk to projectedFS.
@@ -98,6 +122,10 @@ class PrjfsChannel {
   folly::Promise<StopData> stopPromise_;
 
   ProcessAccessLog processAccessLog_;
+
+  // Set of currently active directory enumerations.
+  folly::Synchronized<folly::F14FastMap<Guid, std::shared_ptr<Enumerator>>>
+      enumSessions_;
 };
 
 } // namespace eden

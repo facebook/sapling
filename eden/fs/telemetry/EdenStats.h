@@ -156,6 +156,7 @@ class ChannelThreadStats : public EdenThreadStatsBase {
   Histogram preSetHardlink{createHistogram("prjfs.preSetHardlink_us")};
 
   Histogram openDir{createHistogram("prjfs.opendir_us")};
+  Histogram readDir{createHistogram("prjfs.readdir_us")};
   Histogram lookup{createHistogram("prjfs.lookup_us")};
   Histogram access{createHistogram("prjfs.access_us")};
   Histogram read{createHistogram("prjfs.read_us")};

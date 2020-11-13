@@ -26,7 +26,7 @@ Enumerator::Enumerator(std::vector<FileMetadata>&& entryList)
       });
 }
 
-const FileMetadata* Enumerator::current() {
+FileMetadata* Enumerator::current() {
   for (; listIndex_ < metadataList_.size(); listIndex_++) {
     if (PrjFileNameMatch(
             metadataList_[listIndex_].name.c_str(),

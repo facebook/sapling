@@ -20,20 +20,7 @@
 
 namespace {
 
-using facebook::eden::ChannelThreadStats;
-using facebook::eden::Dispatcher;
-using facebook::eden::exceptionToHResult;
-using facebook::eden::Guid;
-using facebook::eden::InodeMetadata;
-using facebook::eden::makeHResultErrorExplicit;
-using facebook::eden::ObjectFetchContext;
-using facebook::eden::PrjfsChannel;
-using facebook::eden::PrjfsRequestContext;
-using facebook::eden::RelativePath;
-using facebook::eden::RelativePathPiece;
-using facebook::eden::RequestMetricsScope;
-using facebook::eden::wideToMultibyteString;
-using facebook::eden::win32ErrorToString;
+using namespace facebook::eden;
 
 #define BAIL_ON_RECURSIVE_CALL(callbackData)                               \
   do {                                                                     \
@@ -76,8 +63,13 @@ HRESULT startEnumeration(
 
       FB_LOGF(
           channel->getStraceLogger(), DBG7, "opendir({}, guid={})", path, guid);
-      return dispatcher->opendir(path, std::move(guid), *context)
-          .thenValue([context](auto&&) { context->sendSuccess(); });
+      return dispatcher->opendir(path, *context)
+          .thenValue(
+              [context, guid = std::move(guid), channel](auto&& dirents) {
+                channel->addDirectoryEnumeration(
+                    std::move(guid), std::move(dirents));
+                context->sendSuccess();
+              });
     });
 
     context->catchErrors(std::move(fut)).ensure([context] {});
@@ -97,7 +89,8 @@ HRESULT endEnumeration(
     auto guid = Guid(*enumerationId);
     auto* channel = getChannel(callbackData);
     FB_LOGF(channel->getStraceLogger(), DBG7, "closedir({})", guid);
-    channel->getDispatcher()->closedir(guid);
+
+    channel->removeDirectoryEnumeration(guid);
 
     return S_OK;
   } catch (const std::exception& ex) {
@@ -111,17 +104,97 @@ HRESULT getEnumerationData(
     PCWSTR searchExpression,
     PRJ_DIR_ENTRY_BUFFER_HANDLE dirEntryBufferHandle) noexcept {
   BAIL_ON_RECURSIVE_CALL(callbackData);
-  auto* channel = getChannel(callbackData);
-  FB_LOGF(
-      channel->getStraceLogger(),
-      DBG7,
-      "readdir({}, searchExpression={})",
-      Guid{*enumerationId},
-      searchExpression == nullptr
-          ? "<nullptr>"
-          : wideToMultibyteString<std::string>(searchExpression));
-  return channel->getDispatcher()->getEnumerationData(
-      *callbackData, *enumerationId, searchExpression, dirEntryBufferHandle);
+
+  try {
+    auto guid = Guid(*enumerationId);
+    auto* channel = getChannel(callbackData);
+
+    FB_LOGF(
+        channel->getStraceLogger(),
+        DBG7,
+        "readdir({}, searchExpression={})",
+        guid,
+        searchExpression == nullptr
+            ? "<nullptr>"
+            : wideToMultibyteString<std::string>(searchExpression));
+
+    auto optEnumerator = channel->findDirectoryEnumeration(guid);
+    if (!optEnumerator.has_value()) {
+      XLOG(DBG5) << "Directory enumeration not found: " << guid;
+      return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
+    }
+    auto enumerator = std::move(optEnumerator).value();
+
+    auto shouldRestart =
+        bool(callbackData->Flags & PRJ_CB_DATA_FLAG_ENUM_RESTART_SCAN);
+    if (enumerator->isSearchExpressionEmpty() || shouldRestart) {
+      if (searchExpression != nullptr) {
+        enumerator->saveExpression(searchExpression);
+      } else {
+        enumerator->saveExpression(L"*");
+      }
+    }
+
+    if (shouldRestart) {
+      enumerator->restart();
+    }
+
+    auto context =
+        std::make_shared<PrjfsRequestContext>(channel, *callbackData);
+    auto fut = folly::makeFutureWith([context,
+                                      dispatcher = channel->getDispatcher(),
+                                      enumerator = std::move(enumerator),
+                                      buffer = dirEntryBufferHandle] {
+      auto requestWatch =
+          std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>(nullptr);
+      auto histogram = &ChannelThreadStats::readDir;
+      context->startRequest(dispatcher->getStats(), histogram, requestWatch);
+
+      bool added = false;
+      for (FileMetadata* entry; (entry = enumerator->current());
+           enumerator->advance()) {
+        auto fileInfo = PRJ_FILE_BASIC_INFO();
+
+        fileInfo.IsDirectory = entry->isDirectory;
+        fileInfo.FileSize = entry->getSize().get();
+
+        XLOGF(
+            DBG6,
+            "Directory entry: {}, {}, size={}",
+            fileInfo.IsDirectory ? "Dir" : "File",
+            PathComponent(entry->name),
+            fileInfo.FileSize);
+
+        auto result =
+            PrjFillDirEntryBuffer(entry->name.c_str(), &fileInfo, buffer);
+        if (FAILED(result)) {
+          if (result == HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER) &&
+              added) {
+            // We are out of buffer space. This entry didn't make it. Return
+            // without increment.
+            break;
+          } else {
+            return folly::makeFuture<folly::Unit>(makeHResultErrorExplicit(
+                result,
+                fmt::format(
+                    FMT_STRING("Adding directory entry {}"),
+                    PathComponent(entry->name))));
+          }
+        }
+
+        added = true;
+      }
+
+      context->sendEnumerationSuccess(buffer);
+      return folly::makeFuture(folly::unit);
+    });
+
+    context->catchErrors(std::move(fut)).ensure([context] {});
+
+    return HRESULT_FROM_WIN32(ERROR_IO_PENDING);
+  } catch (const std::exception& ex) {
+    return exceptionToHResult(ex);
+  }
 }
 
 HRESULT getPlaceholderInfo(const PRJ_CALLBACK_DATA* callbackData) noexcept {

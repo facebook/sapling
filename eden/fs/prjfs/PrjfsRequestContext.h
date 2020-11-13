@@ -57,6 +57,13 @@ class PrjfsRequestContext : public RequestContext {
     return channel_->sendSuccess(commandId_, &extra);
   }
 
+  void sendEnumerationSuccess(PRJ_DIR_ENTRY_BUFFER_HANDLE buffer) const {
+    PRJ_COMPLETE_COMMAND_EXTENDED_PARAMETERS extra{};
+    extra.CommandType = PRJ_COMPLETE_COMMAND_TYPE_ENUMERATION;
+    extra.Enumeration.DirEntryBufferHandle = buffer;
+    return channel_->sendSuccess(commandId_, &extra);
+  }
+
   void sendError(HRESULT result) const {
     return channel_->sendError(commandId_, result);
   }

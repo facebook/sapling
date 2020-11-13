@@ -475,100 +475,14 @@ EdenDispatcher::EdenDispatcher(EdenMount* mount)
       mount_{mount},
       dotEdenConfig_{makeDotEdenConfig(*mount)} {}
 
-folly::Future<folly::Unit> EdenDispatcher::opendir(
+folly::Future<std::vector<FileMetadata>> EdenDispatcher::opendir(
     RelativePathPiece path,
-    const Guid guid,
     ObjectFetchContext& context) {
   return mount_->getInode(path, context)
-      .thenValue([&context](const InodePtr inode) {
+      .thenValue([this](const InodePtr inode) {
         auto treePtr = inode.asTreePtr();
-        return treePtr->readdir(context);
-      })
-      .thenValue([this, guid = std::move(guid)](auto&& dirents) {
-        auto [iterator, inserted] =
-            enumSessions_.wlock()->emplace(guid, std::move(dirents));
-        XDCHECK(inserted);
-
-        return folly::unit;
+        return treePtr->readdir();
       });
-}
-
-void EdenDispatcher::closedir(const Guid& guid) {
-  auto erasedCount = enumSessions_.wlock()->erase(guid);
-  XDCHECK(erasedCount == 1);
-}
-
-HRESULT EdenDispatcher::getEnumerationData(
-    const PRJ_CALLBACK_DATA& callbackData,
-    const GUID& enumerationId,
-    PCWSTR searchExpression,
-    PRJ_DIR_ENTRY_BUFFER_HANDLE bufferHandle) noexcept {
-  try {
-    auto guid = Guid(enumerationId);
-
-    auto lockedSessions = enumSessions_.rlock();
-    auto sessionIterator = lockedSessions->find(guid);
-    if (sessionIterator == lockedSessions->end()) {
-      XLOG(DBG5) << "Enum instance not found: "
-                 << RelativePath(callbackData.FilePathName);
-      return HRESULT_FROM_WIN32(ERROR_INVALID_PARAMETER);
-    }
-
-    auto shouldRestart =
-        bool(callbackData.Flags & PRJ_CB_DATA_FLAG_ENUM_RESTART_SCAN);
-
-    // We won't ever get concurrent callbacks for a given enumeration, it is
-    // therefore safe to modify the session here even though we do not hold an
-    // exclusive lock to it.
-    auto& session = const_cast<Enumerator&>(sessionIterator->second);
-
-    if (session.isSearchExpressionEmpty() || shouldRestart) {
-      if (searchExpression != nullptr) {
-        session.saveExpression(searchExpression);
-      } else {
-        session.saveExpression(L"*");
-      }
-    }
-
-    if (shouldRestart) {
-      session.restart();
-    }
-
-    // Traverse the list enumeration list and fill the remaining entry. Start
-    // from where the last call left off.
-    bool added = false;
-    for (const FileMetadata* entry; (entry = session.current());
-         session.advance()) {
-      auto fileInfo = PRJ_FILE_BASIC_INFO();
-
-      fileInfo.IsDirectory = entry->isDirectory;
-      fileInfo.FileSize = entry->size;
-
-      XLOGF(
-          DBG6,
-          "Enum {} {} size= {}",
-          PathComponent(entry->name),
-          fileInfo.IsDirectory ? "Dir" : "File",
-          fileInfo.FileSize);
-
-      auto result =
-          PrjFillDirEntryBuffer(entry->name.c_str(), &fileInfo, bufferHandle);
-      if (result != S_OK) {
-        if (result == HRESULT_FROM_WIN32(ERROR_INSUFFICIENT_BUFFER) && added) {
-          // We are out of buffer space. This entry didn't make it. Return
-          // without increment.
-          break;
-        } else {
-          return result;
-        }
-      }
-
-      added = true;
-    }
-    return S_OK;
-  } catch (const std::exception& ex) {
-    return exceptionToHResult(ex);
-  }
 }
 
 folly::Future<std::optional<InodeMetadata>> EdenDispatcher::lookup(

@@ -10,6 +10,7 @@
 #include "folly/portability/Windows.h"
 
 #include <ProjectedFSLib.h> // @manual
+#include "eden/fs/prjfs/Enumerator.h"
 #include "eden/fs/utils/Guid.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -42,27 +43,9 @@ class Dispatcher {
   /**
    * Open a directory
    */
-  virtual folly::Future<folly::Unit> opendir(
+  virtual folly::Future<std::vector<FileMetadata>> opendir(
       RelativePathPiece path,
-      const Guid guid,
       ObjectFetchContext& context) = 0;
-
-  /**
-   * Close a directory
-   */
-  virtual void closedir(const Guid& guid) = 0;
-
-  /**
-   * Read a directory
-   *
-   * @param dirEntryBufferHandle output buffer where the directory entry will be
-   * written to.
-   */
-  virtual HRESULT getEnumerationData(
-      const PRJ_CALLBACK_DATA& callbackData,
-      const GUID& enumerationId,
-      PCWSTR searchExpression,
-      PRJ_DIR_ENTRY_BUFFER_HANDLE dirEntryBufferHandle) noexcept = 0;
 
   /**
    * Lookup the specified file and get its attributes.
