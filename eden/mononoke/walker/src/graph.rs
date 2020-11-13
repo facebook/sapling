@@ -228,7 +228,7 @@ create_graph!(
     (HgFileEnvelope, HgFileNodeId, [FileContent]),
     (
         HgFileNode,
-        (WrappedPath, HgFileNodeId),
+        PathKey<HgFileNodeId>,
         [
             LinkedHgBonsaiMapping(HgBonsaiMapping),
             LinkedHgChangeset(HgChangeset),
@@ -451,7 +451,7 @@ impl Node {
             Node::HgChangeset(k) => k.blobstore_key(),
             Node::HgManifest(PathKey { id, path: _ }) => id.blobstore_key(),
             Node::HgFileEnvelope(k) => k.blobstore_key(),
-            Node::HgFileNode((_, k)) => k.blobstore_key(),
+            Node::HgFileNode(PathKey { id, path: _ }) => id.blobstore_key(),
             // Content
             Node::FileContent(k) => k.blobstore_key(),
             Node::FileContentMetadata(k) => k.blobstore_key(),
@@ -477,7 +477,7 @@ impl Node {
             Node::HgChangeset(_) => None,
             Node::HgManifest(PathKey { id: _, path }) => Some(&path),
             Node::HgFileEnvelope(_) => None,
-            Node::HgFileNode((p, _)) => Some(&p),
+            Node::HgFileNode(PathKey { id: _, path }) => Some(&path),
             // Content
             Node::FileContent(_) => None,
             Node::FileContentMetadata(_) => None,
@@ -504,7 +504,7 @@ impl Node {
             Node::HgChangeset(k) => Some(k.sampling_fingerprint()),
             Node::HgManifest(PathKey { id, path: _ }) => Some(id.sampling_fingerprint()),
             Node::HgFileEnvelope(k) => Some(k.sampling_fingerprint()),
-            Node::HgFileNode((_, k)) => Some(k.sampling_fingerprint()),
+            Node::HgFileNode(PathKey { id, path: _ }) => Some(id.sampling_fingerprint()),
             // Content
             Node::FileContent(k) => Some(k.sampling_fingerprint()),
             Node::FileContentMetadata(k) => Some(k.sampling_fingerprint()),

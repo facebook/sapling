@@ -291,9 +291,9 @@ impl VisitOne for WalkState {
                 &self.visited_hg_manifest,
                 (&k.path, &self.hg_manifest_ids.interned(&k.id)),
             ),
-            Node::HgFileNode((p, id)) => self.record_with_path(
+            Node::HgFileNode(k) => self.record_with_path(
                 &self.visited_hg_filenode,
-                (p, &self.hg_filenode_ids.interned(id)),
+                (&k.path, &self.hg_filenode_ids.interned(&k.id)),
             ),
             Node::HgFileEnvelope(id) => self.record(
                 &self.visited_hg_file_envelope,

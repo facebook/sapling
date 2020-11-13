@@ -586,7 +586,7 @@ fn hg_file_node_step<'a, V: VisitOne>(
                             checker.add_edge(
                                 &mut edges,
                                 EdgeType::HgFileNodeToHgParentFileNode,
-                                || Node::HgFileNode((path.clone(), *parent)),
+                                || Node::HgFileNode(PathKey::new(*parent, path.clone())),
                             )
                         }
                     }
@@ -594,9 +594,9 @@ fn hg_file_node_step<'a, V: VisitOne>(
                     // Copyfrom is like another parent
                     for (repo_path, file_node_id) in &file_node_info.copyfrom {
                         checker.add_edge(&mut edges, EdgeType::HgFileNodeToHgCopyfromFileNode, || {
-                            Node::HgFileNode((
-                                WrappedPath::from(repo_path.clone().into_mpath()),
+                            Node::HgFileNode(PathKey::new(
                                 *file_node_id,
+                                WrappedPath::from(repo_path.clone().into_mpath()),
                             ))
                         })
                     }
@@ -654,7 +654,7 @@ fn hg_manifest_step<'a, V: VisitOne>(
                     || Some(full_path.clone()),
                 );
                 checker.add_edge(&mut filenode_edges, EdgeType::HgManifestToHgFileNode, || {
-                    Node::HgFileNode((full_path, hg_file_node_id))
+                    Node::HgFileNode(PathKey::new(hg_file_node_id, full_path))
                 });
             }
             // File nodes can expand a lot into history via linknodes
@@ -1069,8 +1069,8 @@ where
             )
             .await
         }
-        Node::HgFileNode((path, hg_file_node_id)) => {
-            hg_file_node_step(ctx.clone(), &repo, &checker, path, hg_file_node_id).await
+        Node::HgFileNode(PathKey { id, path }) => {
+            hg_file_node_step(ctx.clone(), &repo, &checker, path, id).await
         }
         Node::HgManifest(PathKey { id, path }) => {
             hg_manifest_step(ctx.clone(), &repo, &checker, path, id).await

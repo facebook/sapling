@@ -56,6 +56,16 @@ impl FromStr for PathKey<HgManifestId> {
     }
 }
 
+impl FromStr for PathKey<HgFileNodeId> {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let parts: Vec<_> = s.split(NODE_SEP).collect();
+        let path = check_and_build_path(NodeType::HgFileNode, &parts)?;
+        let id = HgFileNodeId::from_str(parts[0])?;
+        Ok(Self { id, path })
+    }
+}
+
 pub fn parse_node(s: &str) -> Result<Node, Error> {
     let parts: Vec<_> = s.split(NODE_SEP).collect();
     if parts.len() < 1 {
@@ -105,11 +115,7 @@ pub fn parse_node(s: &str) -> Result<Node, Error> {
         NodeType::HgFileEnvelope => {
             Node::HgFileEnvelope(HgFileNodeId::from_str(&parts.join(NODE_SEP))?)
         }
-        NodeType::HgFileNode => {
-            let path = check_and_build_path(node_type, parts)?;
-            let id = HgFileNodeId::from_str(parts[0])?;
-            Node::HgFileNode((path, id))
-        }
+        NodeType::HgFileNode => Node::HgFileNode(PathKey::from_str(&parts.join(NODE_SEP))?),
         // Content
         NodeType::FileContent => Node::FileContent(ContentId::from_str(&parts.join(NODE_SEP))?),
         NodeType::FileContentMetadata => {
