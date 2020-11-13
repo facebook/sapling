@@ -29,10 +29,17 @@ use futures::{
 };
 use lazy_static::lazy_static;
 use metaconfig_types::{Redaction, ScrubAction};
+use once_cell::sync::OnceCell;
 use samplingblob::SamplingHandler;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::{info, warn, Logger};
-use std::{collections::HashSet, iter::FromIterator, str::FromStr, sync::Arc, time::Duration};
+use std::{
+    collections::{HashMap, HashSet},
+    iter::FromIterator,
+    str::FromStr,
+    sync::Arc,
+    time::Duration,
+};
 use strum::IntoEnumIterator;
 
 pub struct RepoWalkDatasources {
@@ -125,6 +132,8 @@ pub const DEFAULT_INCLUDE_NODE_TYPES: &[NodeType] = &[
 ];
 
 const BONSAI_INCLUDE_NODE_TYPES: &[NodeType] = &[NodeType::Bookmark, NodeType::BonsaiChangeset];
+
+static DERIVED_DATA_INCLUDE_NODE_TYPES: OnceCell<HashMap<String, Vec<NodeType>>> = OnceCell::new();
 
 // Goes as far into history as it can
 const DEEP_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
@@ -547,10 +556,28 @@ fn setup_subcommand_args<'a, 'b>(subcmd: App<'a, 'b>) -> App<'a, 'b> {
 
 // parse the pre-defined groups we have for default etc
 fn parse_node_value(arg: &str) -> Result<HashSet<NodeType>, Error> {
+    let by_derived_name = DERIVED_DATA_INCLUDE_NODE_TYPES.get_or_init(|| {
+        let mut m = HashMap::new();
+        for t in NodeType::iter() {
+            if let Some(n) = t.derived_data_name() {
+                m.entry(format!("derived_{}", n))
+                    .or_insert_with(|| vec![])
+                    .push(t);
+            }
+        }
+        m
+    });
+
     Ok(match arg {
         DEFAULT_VALUE_ARG => HashSet::from_iter(DEFAULT_INCLUDE_NODE_TYPES.iter().cloned()),
         BONSAI_VALUE_ARG => HashSet::from_iter(BONSAI_INCLUDE_NODE_TYPES.iter().cloned()),
-        _ => NodeType::from_str(arg).map(|e| HashSet::from_iter(Some(e)))?,
+        _ => {
+            if let Some(v) = by_derived_name.get(arg) {
+                HashSet::from_iter(v.iter().cloned())
+            } else {
+                NodeType::from_str(arg).map(|e| HashSet::from_iter(Some(e)))?
+            }
+        }
     })
 }
 
