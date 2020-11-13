@@ -569,6 +569,7 @@ mod test {
         merge_even, merge_uneven, unshared_merge_even, unshared_merge_uneven,
     };
     use futures::compat::Future01CompatExt;
+    use futures::future::TryFutureExt;
     use futures_ext::BoxFuture as BoxFuture01;
     use futures_old::{future as future01, Stream as Stream01};
     use lazy_static::lazy_static;
@@ -696,7 +697,7 @@ mod test {
 
         let mapping = &TestGenNum::mapping(&ctx, &repo);
         let actual = runtime
-            .block_on(TestGenNum::derive(ctx.clone(), repo.clone(), bcs_id))
+            .block_on_std(TestGenNum::derive03(&ctx, &repo, bcs_id))
             .unwrap();
         assert_eq!(expected.value(), actual.0);
 
@@ -751,22 +752,16 @@ mod test {
             let root_cs_id =
                 resolve_cs_id(&ctx, &repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").await?;
 
-            TestGenNum::derive(ctx.clone(), repo.clone(), after_root_cs_id)
-                .compat()
-                .await?;
+            TestGenNum::derive03(&ctx, &repo, after_root_cs_id).await?;
 
             // Delete root entry, and derive descendant of after_root changeset, make sure
             // it doesn't fail
             TestGenNum::mapping(&ctx, &repo).remove(&root_cs_id);
-            TestGenNum::derive(ctx.clone(), repo.clone(), after_root_cs_id)
-                .compat()
-                .await?;
+            TestGenNum::derive03(&ctx, &repo, after_root_cs_id).await?;
 
             let third_cs_id =
                 resolve_cs_id(&ctx, &repo, "607314ef579bd2407752361ba1b0c1729d08b281").await?;
-            TestGenNum::derive(ctx.clone(), repo.clone(), third_cs_id)
-                .compat()
-                .await?;
+            TestGenNum::derive03(&ctx, &repo, third_cs_id).await?;
 
             Ok(())
         })
@@ -882,9 +877,7 @@ mod test {
                 derived_data_config
             });
             let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
-            TestGenNum::derive(ctx.clone(), repo.clone(), master_cs_id)
-                .compat()
-                .await?
+            TestGenNum::derive03(&ctx, &repo, master_cs_id).await?
         };
 
         assert_eq!(from_batch, sequential);
@@ -922,13 +915,13 @@ mod test {
         );
 
         let output = Arc::new(Mutex::new(Vec::new()));
-        runtime.spawn(TestGenNum::derive(ctx.clone(), repo.clone(), csid).then({
-            cloned!(output);
-            move |result| {
+        runtime.spawn_std({
+            cloned!(ctx, repo, output);
+            async move {
+                let result = TestGenNum::derive03(&ctx, &repo, csid).await;
                 output.with(move |output| output.push(result));
-                Ok::<_, ()>(())
             }
-        }));
+        });
 
         // schedule derivation
         runtime.block_on(tokio_timer::sleep(Duration::from_millis(300)))?;
@@ -959,7 +952,7 @@ mod test {
         );
         // should succed as lease should not be request
         assert_eq!(
-            runtime.block_on(TestGenNum::derive(ctx.clone(), repo.clone(), csid))?,
+            runtime.block_on_std(TestGenNum::derive03(&ctx, &repo, csid))?,
             result
         );
         runtime
@@ -1018,7 +1011,7 @@ mod test {
         );
 
         // should succeed even though lease always fails
-        let result = runtime.block_on(TestGenNum::derive(ctx.clone(), repo.clone(), csid))?;
+        let result = runtime.block_on_std(TestGenNum::derive03(&ctx, &repo, csid))?;
         assert_eq!(
             runtime.block_on_std(mapping.get(ctx, vec![csid]))?,
             hashmap! { csid => result },
