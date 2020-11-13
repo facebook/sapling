@@ -12,7 +12,6 @@ use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use futures::{
-    compat::Future01CompatExt,
     future::{self, FutureExt as NewFutureExt, TryFutureExt as NewTryFutureExt},
     stream::TryStreamExt as NewTryStreamExt,
 };
@@ -184,8 +183,8 @@ pub(crate) enum PathChange {
 }
 
 pub(crate) async fn get_changes(
-    ctx: CoreContext,
-    repo: BlobRepo,
+    ctx: &CoreContext,
+    repo: &BlobRepo,
     bonsai: BonsaiChangeset,
 ) -> Result<PathTree<Option<PathChange>>, Error> {
     let blobstore = repo.get_blobstore();
@@ -197,19 +196,17 @@ pub(crate) async fn get_changes(
     // get parent unodes
     let parent_cs_ids: Vec<_> = bonsai.parents().collect();
     let parent_unodes = parent_cs_ids.into_iter().map({
-        cloned!(ctx, repo);
-        move |cs_id| {
-            RootUnodeManifestId::derive(ctx.clone(), repo.clone(), cs_id)
-                .from_err()
-                .map(|root_mf_id| root_mf_id.manifest_unode_id().clone())
+        move |cs_id| async move {
+            let root_mf_id = RootUnodeManifestId::derive03(ctx, repo, cs_id).await?;
+            Ok(root_mf_id.manifest_unode_id().clone())
         }
     });
 
-    let (root_unode_mf_id, parent_mf_ids) =
-        RootUnodeManifestId::derive(ctx.clone(), repo.clone(), bcs_id)
-            .join(old_future::join_all(parent_unodes))
-            .compat()
-            .await?;
+    let (root_unode_mf_id, parent_mf_ids) = future::try_join(
+        RootUnodeManifestId::derive03(ctx, repo, bcs_id),
+        future::try_join_all(parent_unodes),
+    )
+    .await?;
 
     // compute diff between changeset's and its parents' manifests
     let unode_mf_id = root_unode_mf_id.manifest_unode_id().clone();
@@ -225,7 +222,7 @@ pub(crate) async fn get_changes(
             .try_collect::<Vec<_>>()
             .await
     } else {
-        diff_against_parents(&ctx, &repo, unode_mf_id, parent_mf_ids).await
+        diff_against_parents(ctx, repo, unode_mf_id, parent_mf_ids).await
     }?;
 
     Ok(PathTree::from_iter(
@@ -978,9 +975,7 @@ mod tests {
         repo: &BlobRepo,
         bonsai: ChangesetId,
     ) -> Result<Vec<(Option<MPath>, Status)>, Error> {
-        let manifest = RootDeletedManifestId::derive(ctx.clone(), repo.clone(), bonsai)
-            .compat()
-            .await?;
+        let manifest = RootDeletedManifestId::derive03(ctx, repo, bonsai).await?;
         let mut deleted_nodes =
             iterate_all_entries(ctx.clone(), repo.clone(), *manifest.deleted_manifest_id())
                 .compat()
@@ -1021,9 +1016,7 @@ mod tests {
     ) -> (ChangesetId, DeletedManifestId, Vec<(Option<MPath>, Status)>) {
         let bcs_id = bcs.get_changeset_id();
 
-        let changes = runtime
-            .block_on_std(get_changes(ctx.clone(), repo.clone(), bcs))
-            .unwrap();
+        let changes = runtime.block_on_std(get_changes(&ctx, &repo, bcs)).unwrap();
         let f = derive_deleted_files_manifest(
             ctx.clone(),
             repo.clone(),
