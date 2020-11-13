@@ -126,7 +126,7 @@ macro_rules! root_edge_type {
 
 macro_rules! create_graph {
     ($nodetypeenum:ident, $nodekeyenum:ident, $edgetypeenum:ident,
-        $(($source:ident, $sourcekey:tt, [$($target:ident$(($targettype:ident))?),*])),* $(,)?) => {
+        $(($source:ident, $sourcekey:ty, [$($target:ident$(($targettype:ident))?),*])),* $(,)?) => {
         create_graph_impl! {
             $nodetypeenum, $nodekeyenum, $edgetypeenum,
             {}
@@ -154,6 +154,17 @@ macro_rules! create_graph {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct UnitKey();
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct PathKey<T: fmt::Debug + Clone + PartialEq + Eq + Hash> {
+    pub id: T,
+    pub path: WrappedPath,
+}
+impl<T: fmt::Debug + Clone + PartialEq + Eq + Hash> PathKey<T> {
+    pub fn new(id: T, path: WrappedPath) -> Self {
+        Self { id, path }
+    }
+}
 
 create_graph!(
     NodeType,
@@ -211,7 +222,7 @@ create_graph!(
     ),
     (
         HgManifest,
-        (WrappedPath, HgManifestId),
+        PathKey<HgManifestId>,
         [HgFileEnvelope, HgFileNode, ChildHgManifest(HgManifest)]
     ),
     (HgFileEnvelope, HgFileNodeId, [FileContent]),
@@ -438,7 +449,7 @@ impl Node {
             // Hg
             Node::HgBonsaiMapping(k) => k.blobstore_key(),
             Node::HgChangeset(k) => k.blobstore_key(),
-            Node::HgManifest((_, k)) => k.blobstore_key(),
+            Node::HgManifest(PathKey { id, path: _ }) => id.blobstore_key(),
             Node::HgFileEnvelope(k) => k.blobstore_key(),
             Node::HgFileNode((_, k)) => k.blobstore_key(),
             // Content
@@ -464,7 +475,7 @@ impl Node {
             // Hg
             Node::HgBonsaiMapping(_) => None,
             Node::HgChangeset(_) => None,
-            Node::HgManifest((p, _)) => Some(&p),
+            Node::HgManifest(PathKey { id: _, path }) => Some(&path),
             Node::HgFileEnvelope(_) => None,
             Node::HgFileNode((p, _)) => Some(&p),
             // Content
@@ -491,7 +502,7 @@ impl Node {
             // Hg
             Node::HgBonsaiMapping(k) => Some(k.sampling_fingerprint()),
             Node::HgChangeset(k) => Some(k.sampling_fingerprint()),
-            Node::HgManifest((_, k)) => Some(k.sampling_fingerprint()),
+            Node::HgManifest(PathKey { id, path: _ }) => Some(id.sampling_fingerprint()),
             Node::HgFileEnvelope(k) => Some(k.sampling_fingerprint()),
             Node::HgFileNode((_, k)) => Some(k.sampling_fingerprint()),
             // Content

@@ -287,9 +287,9 @@ impl VisitOne for WalkState {
             Node::HgChangeset(hg_cs_id) => {
                 self.record(&self.visited_hg_cs, &self.hg_cs_ids.interned(hg_cs_id))
             }
-            Node::HgManifest((p, id)) => self.record_with_path(
+            Node::HgManifest(k) => self.record_with_path(
                 &self.visited_hg_manifest,
-                (p, &self.hg_manifest_ids.interned(id)),
+                (&k.path, &self.hg_manifest_ids.interned(&k.id)),
             ),
             Node::HgFileNode((p, id)) => self.record_with_path(
                 &self.visited_hg_filenode,

@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use crate::graph::{AliasType, Node, NodeType, UnitKey, WrappedPath};
+use crate::graph::{AliasType, Node, NodeType, PathKey, UnitKey, WrappedPath};
 
 use anyhow::{format_err, Error};
 use bookmarks::BookmarkName;
@@ -21,7 +21,7 @@ use strum::IntoEnumIterator;
 
 const NODE_SEP: &str = ":";
 
-fn check_and_build_mpath(node_type: NodeType, parts: &[&str]) -> Result<Option<MPath>, Error> {
+fn check_and_build_path(node_type: NodeType, parts: &[&str]) -> Result<WrappedPath, Error> {
     if parts.len() < 2 {
         return Err(format_err!(
             "parse_node requires a path and key for {}",
@@ -32,7 +32,7 @@ fn check_and_build_mpath(node_type: NodeType, parts: &[&str]) -> Result<Option<M
         "/" => None,
         p => Some(MPath::new(p)?),
     };
-    Ok(mpath)
+    Ok(WrappedPath::from(mpath))
 }
 
 impl FromStr for UnitKey {
@@ -43,6 +43,16 @@ impl FromStr for UnitKey {
         } else {
             Err(format_err!("Expected empty string for UnitKey"))
         }
+    }
+}
+
+impl FromStr for PathKey<HgManifestId> {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let parts: Vec<_> = s.split(NODE_SEP).collect();
+        let path = check_and_build_path(NodeType::HgManifest, &parts)?;
+        let id = HgManifestId::from_str(parts[0])?;
+        Ok(Self { id, path })
     }
 }
 
@@ -91,18 +101,14 @@ pub fn parse_node(s: &str) -> Result<Node, Error> {
             Node::HgBonsaiMapping(HgChangesetId::from_str(&parts.join(NODE_SEP))?)
         }
         NodeType::HgChangeset => Node::HgChangeset(HgChangesetId::from_str(&parts.join(NODE_SEP))?),
-        NodeType::HgManifest => {
-            let mpath = check_and_build_mpath(node_type, parts)?;
-            let id = HgManifestId::from_str(parts[0])?;
-            Node::HgManifest((WrappedPath::from(mpath), id))
-        }
+        NodeType::HgManifest => Node::HgManifest(PathKey::from_str(&parts.join(NODE_SEP))?),
         NodeType::HgFileEnvelope => {
             Node::HgFileEnvelope(HgFileNodeId::from_str(&parts.join(NODE_SEP))?)
         }
         NodeType::HgFileNode => {
-            let mpath = check_and_build_mpath(node_type, parts)?;
+            let path = check_and_build_path(node_type, parts)?;
             let id = HgFileNodeId::from_str(parts[0])?;
-            Node::HgFileNode((WrappedPath::from(mpath), id))
+            Node::HgFileNode((path, id))
         }
         // Content
         NodeType::FileContent => Node::FileContent(ContentId::from_str(&parts.join(NODE_SEP))?),
@@ -134,9 +140,9 @@ pub fn parse_node(s: &str) -> Result<Node, Error> {
             Node::ChangesetInfo(ChangesetId::from_str(&parts.join(NODE_SEP))?)
         }
         NodeType::Fsnode => {
-            let mpath = check_and_build_mpath(node_type, parts)?;
+            let path = check_and_build_path(node_type, parts)?;
             let id = FsnodeId::from_str(parts[0])?;
-            Node::Fsnode((WrappedPath::from(mpath), id))
+            Node::Fsnode((path, id))
         }
     };
     Ok(node)

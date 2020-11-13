@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use crate::graph::{EdgeType, FileContentData, Node, NodeData, NodeType, WrappedPath};
+use crate::graph::{EdgeType, FileContentData, Node, NodeData, NodeType, PathKey, WrappedPath};
 use crate::validate::{add_node_to_scuba, CHECK_FAIL, CHECK_TYPE, EDGE_TYPE};
 
 use anyhow::{format_err, Context, Error};
@@ -505,7 +505,7 @@ fn hg_changeset_step<'a, V: VisitOne>(
             let mut edges = vec![];
             // 1:1 but will then expand a lot, usually
             checker.add_edge(&mut edges, EdgeType::HgChangesetToHgManifest, || {
-                Node::HgManifest((WrappedPath::Root, hgchangeset.manifestid()))
+                Node::HgManifest(PathKey::new(hgchangeset.manifestid(), WrappedPath::Root))
             });
             // Mostly 1:1, can be 1:2, with further expansion
             for p in hgchangeset.parents().into_iter() {
@@ -640,7 +640,7 @@ fn hg_manifest_step<'a, V: VisitOne>(
             // Manifests expand as a tree so 1:N
             for (full_path, hg_child_manifest_id) in manifests {
                 checker.add_edge(&mut edges, EdgeType::HgManifestToChildHgManifest, || {
-                    Node::HgManifest((full_path, hg_child_manifest_id))
+                    Node::HgManifest(PathKey::new(hg_child_manifest_id, full_path))
                 })
             }
 
@@ -1072,8 +1072,8 @@ where
         Node::HgFileNode((path, hg_file_node_id)) => {
             hg_file_node_step(ctx.clone(), &repo, &checker, path, hg_file_node_id).await
         }
-        Node::HgManifest((path, hg_manifest_id)) => {
-            hg_manifest_step(ctx.clone(), &repo, &checker, path, hg_manifest_id).await
+        Node::HgManifest(PathKey { id, path }) => {
+            hg_manifest_step(ctx.clone(), &repo, &checker, path, id).await
         }
         // Content
         Node::FileContent(content_id) => {
