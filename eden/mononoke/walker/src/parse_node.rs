@@ -226,6 +226,16 @@ mod tests {
                     .get_type()
                 );
             }
+            NodeType::BonsaiChangesetInfoMapping => {
+                assert_eq!(
+                    node_type,
+                    &parse_node(&format!(
+                        "BonsaiChangesetInfoMapping{}{}",
+                        NODE_SEP, SAMPLE_BLAKE2
+                    ))?
+                    .get_type()
+                );
+            }
             NodeType::BonsaiFsnodeMapping => {
                 assert_eq!(
                     node_type,

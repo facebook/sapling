@@ -183,19 +183,24 @@ create_graph!(
         Root,
         UnitKey,
         [
+            // Bonsai
             Bookmark,
             BonsaiChangeset,
             BonsaiHgMapping,
             BonsaiPhaseMapping,
             PublishedBookmarks,
+            // Hg
             HgBonsaiMapping,
             HgChangeset,
             HgManifest,
             HgFileEnvelope,
             HgFileNode,
+            // Content
             FileContent,
             FileContentMetadata,
             AliasContentMapping,
+            // Derived
+            BonsaiChangesetInfoMapping,
             BonsaiFsnodeMapping,
             ChangesetInfo,
             Fsnode
@@ -211,8 +216,8 @@ create_graph!(
             BonsaiParent(BonsaiChangeset),
             BonsaiHgMapping,
             BonsaiPhaseMapping,
-            BonsaiFsnodeMapping,
-            ChangesetInfo
+            BonsaiChangesetInfoMapping,
+            BonsaiFsnodeMapping
         ]
     ),
     (BonsaiHgMapping, ChangesetId, [HgChangeset]),
@@ -265,6 +270,11 @@ create_graph!(
         [ChangesetInfoParent(ChangesetInfo)]
     ),
     (
+        BonsaiChangesetInfoMapping,
+        ChangesetId,
+        [ChangesetInfo]
+    ),
+    (
         Fsnode,
         PathKey<FsnodeId>,
         [ChildFsnode(Fsnode), FileContent]
@@ -301,6 +311,7 @@ impl NodeType {
             NodeType::FileContentMetadata => None,
             NodeType::AliasContentMapping => None,
             // Derived data
+            NodeType::BonsaiChangesetInfoMapping => Some(ChangesetInfo::NAME),
             NodeType::BonsaiFsnodeMapping => Some(RootFsnodeId::NAME),
             NodeType::ChangesetInfo => Some(ChangesetInfo::NAME),
             NodeType::Fsnode => Some(RootFsnodeId::NAME),
@@ -440,6 +451,7 @@ pub enum NodeData {
     FileContentMetadata(Option<ContentMetadata>),
     AliasContentMapping(ContentId),
     // Derived data
+    BonsaiChangesetInfoMapping(Option<ChangesetId>),
     BonsaiFsnodeMapping(Option<FsnodeId>),
     ChangesetInfo(Option<ChangesetInfo>),
     Fsnode(Fsnode),
@@ -466,6 +478,7 @@ impl Node {
             Node::FileContentMetadata(k) => k.blobstore_key(),
             Node::AliasContentMapping(k) => k.0.blobstore_key(),
             // Derived data
+            Node::BonsaiChangesetInfoMapping(k) => k.blobstore_key(),
             Node::BonsaiFsnodeMapping(k) => k.blobstore_key(),
             Node::ChangesetInfo(k) => k.blobstore_key(),
             Node::Fsnode(PathKey { id, path: _ }) => id.blobstore_key(),
@@ -492,6 +505,7 @@ impl Node {
             Node::FileContentMetadata(_) => None,
             Node::AliasContentMapping(_) => None,
             // Derived data
+            Node::BonsaiChangesetInfoMapping(_) => None,
             Node::BonsaiFsnodeMapping(_) => None,
             Node::ChangesetInfo(_) => None,
             Node::Fsnode(PathKey { id: _, path }) => Some(&path),
@@ -519,6 +533,7 @@ impl Node {
             Node::FileContentMetadata(k) => Some(k.sampling_fingerprint()),
             Node::AliasContentMapping(k) => Some(k.0.sampling_fingerprint()),
             // Derived data
+            Node::BonsaiChangesetInfoMapping(k) => Some(k.sampling_fingerprint()),
             Node::BonsaiFsnodeMapping(k) => Some(k.sampling_fingerprint()),
             Node::ChangesetInfo(k) => Some(k.sampling_fingerprint()),
             Node::Fsnode(PathKey { id, path: _ }) => Some(id.sampling_fingerprint()),

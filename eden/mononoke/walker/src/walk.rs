@@ -243,6 +243,36 @@ fn bonsai_phase_step<'a, V: VisitOne>(
         })
 }
 
+async fn bonsai_changeset_info_mapping_step<V: VisitOne>(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    checker: &Checker<V>,
+    bcs_id: ChangesetId,
+    enable_derive: bool,
+) -> Result<StepOutput, Error> {
+    if is_derived::<ChangesetInfo>(ctx, repo, bcs_id, enable_derive).await? {
+        let mut edges = vec![];
+        checker.add_edge(
+            &mut edges,
+            EdgeType::BonsaiChangesetInfoMappingToChangesetInfo,
+            || Node::ChangesetInfo(bcs_id),
+        );
+        Ok(StepOutput(
+            checker.step_data(NodeType::BonsaiChangesetInfoMapping, || {
+                NodeData::BonsaiChangesetInfoMapping(Some(bcs_id))
+            }),
+            edges,
+        ))
+    } else {
+        Ok(StepOutput(
+            checker.step_data(NodeType::BonsaiChangesetInfoMapping, || {
+                NodeData::BonsaiChangesetInfoMapping(None)
+            }),
+            vec![],
+        ))
+    }
+}
+
 async fn changeset_info_step<V: VisitOne>(
     ctx: &CoreContext,
     repo: &BlobRepo,
@@ -288,9 +318,11 @@ async fn bonsai_changeset_step<V: VisitOne>(
     let mut edges = vec![];
 
     // Expands to parents
-    checker.add_edge(&mut edges, EdgeType::BonsaiChangesetToChangesetInfo, || {
-        Node::ChangesetInfo(*bcs_id)
-    });
+    checker.add_edge(
+        &mut edges,
+        EdgeType::BonsaiChangesetToBonsaiChangesetInfoMapping,
+        || Node::BonsaiChangesetInfoMapping(*bcs_id),
+    );
 
     // Parents expand 1:[0|1|2] and then the same as all below
     for parent_id in bcs.parents() {
@@ -698,6 +730,7 @@ fn alias_content_mapping_step<'a, V: VisitOne>(
         .map_err(Error::from)
 }
 
+// Only fetch if already derived unless enable_derive is set
 async fn maybe_derived<Derived: BonsaiDerived>(
     ctx: &CoreContext,
     repo: &BlobRepo,
@@ -708,6 +741,21 @@ async fn maybe_derived<Derived: BonsaiDerived>(
         Ok(Some(Derived::derive(ctx, repo, bcs_id).await?))
     } else {
         Derived::fetch_derived(ctx, repo, &bcs_id).await
+    }
+}
+
+// Variant of is_derived that will still trigger derivation if enable_derive is set
+async fn is_derived<Derived: BonsaiDerived>(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    bcs_id: ChangesetId,
+    enable_derive: bool,
+) -> Result<bool, Error> {
+    if enable_derive {
+        let _ = Derived::derive03(ctx, repo, bcs_id).await?;
+        Ok(true)
+    } else {
+        Ok(Derived::is_derived(&ctx, &repo, &bcs_id).await?)
     }
 }
 
@@ -1091,6 +1139,10 @@ where
         }
         Node::AliasContentMapping(AliasKey(alias)) => {
             alias_content_mapping_step(ctx.clone(), &repo, &checker, alias).await
+        }
+        // Derived
+        Node::BonsaiChangesetInfoMapping(bcs_id) => {
+            bonsai_changeset_info_mapping_step(&ctx, &repo, &checker, bcs_id, enable_derive).await
         }
         Node::BonsaiFsnodeMapping(bcs_id) => {
             bonsai_to_fsnode_mapping_step(&ctx, &repo, &checker, bcs_id, enable_derive).await

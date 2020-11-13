@@ -156,7 +156,6 @@ fn dump_with_extension(node_type: NodeType) -> bool {
         NodeType::BonsaiHgMapping => false,
         NodeType::BonsaiPhaseMapping => false,
         NodeType::PublishedBookmarks => false,
-        NodeType::BonsaiFsnodeMapping => false,
         // Hg
         NodeType::HgBonsaiMapping => false,
         NodeType::HgChangeset => false,
@@ -168,6 +167,8 @@ fn dump_with_extension(node_type: NodeType) -> bool {
         NodeType::FileContentMetadata => true,
         NodeType::AliasContentMapping => true,
         // Derived Data
+        NodeType::BonsaiChangesetInfoMapping => false,
+        NodeType::BonsaiFsnodeMapping => false,
         NodeType::ChangesetInfo => false,
         NodeType::Fsnode => false,
     }

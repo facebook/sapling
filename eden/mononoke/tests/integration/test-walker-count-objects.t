@@ -86,17 +86,17 @@ count-objects, default shallow walk across bonsai and hg data, including mutable
 count-objects, shallow walk across bonsai and changeset_info
   $ mononoke_walker --storage-id=blobstore --readonly-storage scrub -q --bookmark master_bookmark -I shallow -i bonsai -i derived_changeset_info 2>&1 | strip_glog
   Walking roots * (glob)
-  Walking edge types [BonsaiChangesetToChangesetInfo, BookmarkToBonsaiChangeset]
-  Walking node types [BonsaiChangeset, Bookmark, ChangesetInfo]
-  Final count: (3, 3)
+  Walking edge types [BonsaiChangesetInfoMappingToChangesetInfo, BonsaiChangesetToBonsaiChangesetInfoMapping, BookmarkToBonsaiChangeset]
+  Walking node types [BonsaiChangeset, BonsaiChangesetInfoMapping, Bookmark, ChangesetInfo]
+  Final count: (4, 4)
   Bytes/s,* (glob)
-  * Type:Walked,Checks,Children BonsaiChangeset:1,* Bookmark:1,* ChangesetInfo:1,* (glob)
+  * Type:Walked,Checks,Children BonsaiChangeset:1,* BonsaiChangesetInfoMapping:1,* Bookmark:1,* ChangesetInfo:1,* (glob)
 
 count-objects, deep walk across bonsai and changeset_info
   $ mononoke_walker --storage-id=blobstore --readonly-storage scrub -q --bookmark master_bookmark -I deep -i bonsai -i derived_changeset_info 2>&1 | strip_glog
   Walking roots * (glob)
-  Walking edge types [BonsaiChangesetToBonsaiParent, BonsaiChangesetToChangesetInfo, BookmarkToBonsaiChangeset, ChangesetInfoToChangesetInfoParent]
-  Walking node types [BonsaiChangeset, Bookmark, ChangesetInfo]
-  Final count: (10, 10)
+  Walking edge types [BonsaiChangesetInfoMappingToChangesetInfo, BonsaiChangesetToBonsaiChangesetInfoMapping, BonsaiChangesetToBonsaiParent, BookmarkToBonsaiChangeset, ChangesetInfoToChangesetInfoParent]
+  Walking node types [BonsaiChangeset, BonsaiChangesetInfoMapping, Bookmark, ChangesetInfo]
+  Final count: (13, 13)
   Bytes/s,* (glob)
-  * Type:Walked,Checks,Children BonsaiChangeset:3,* Bookmark:1,* ChangesetInfo:6,* (glob)
+  * Type:Walked,Checks,Children BonsaiChangeset:3,* BonsaiChangesetInfoMapping:3,* Bookmark:1,* ChangesetInfo:6,* (glob)

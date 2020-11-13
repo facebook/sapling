@@ -145,6 +145,7 @@ const DEEP_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::BonsaiHgMappingToHgChangeset,
     EdgeType::PublishedBookmarksToBonsaiChangeset,
     EdgeType::PublishedBookmarksToBonsaiHgMapping,
+    EdgeType::BonsaiChangesetToBonsaiChangesetInfoMapping,
     EdgeType::BonsaiChangesetToBonsaiFsnodeMapping,
     // Hg
     EdgeType::HgBonsaiMappingToBonsaiChangeset,
@@ -166,7 +167,7 @@ const DEEP_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::AliasContentMappingToFileContent,
     // Derived data
     EdgeType::BonsaiFsnodeMappingToRootFsnode,
-    EdgeType::BonsaiChangesetToChangesetInfo,
+    EdgeType::BonsaiChangesetInfoMappingToChangesetInfo,
     EdgeType::ChangesetInfoToChangesetInfoParent,
     EdgeType::FsnodeToChildFsnode,
     EdgeType::FsnodeToFileContent,
@@ -181,6 +182,7 @@ const SHALLOW_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::BonsaiHgMappingToHgChangeset,
     EdgeType::PublishedBookmarksToBonsaiChangeset,
     EdgeType::PublishedBookmarksToBonsaiHgMapping,
+    EdgeType::BonsaiChangesetToBonsaiChangesetInfoMapping,
     EdgeType::BonsaiChangesetToBonsaiFsnodeMapping,
     // Hg
     EdgeType::HgBonsaiMappingToBonsaiChangeset,
@@ -197,7 +199,7 @@ const SHALLOW_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::AliasContentMappingToFileContent,
     // Derived data
     EdgeType::BonsaiFsnodeMappingToRootFsnode,
-    EdgeType::BonsaiChangesetToChangesetInfo,
+    EdgeType::BonsaiChangesetInfoMappingToChangesetInfo,
     EdgeType::FsnodeToChildFsnode,
     EdgeType::FsnodeToFileContent,
 ];

@@ -84,7 +84,6 @@ fn filter_repo_path(node_type: NodeType, path: Option<&'_ WrappedPath>) -> Optio
         NodeType::BonsaiHgMapping => None,
         NodeType::BonsaiPhaseMapping => None,
         NodeType::PublishedBookmarks => None,
-        NodeType::BonsaiFsnodeMapping => None,
         // Hg
         NodeType::HgBonsaiMapping => None,
         NodeType::HgChangeset => None,
@@ -96,6 +95,8 @@ fn filter_repo_path(node_type: NodeType, path: Option<&'_ WrappedPath>) -> Optio
         NodeType::FileContentMetadata => path,
         NodeType::AliasContentMapping => path,
         // Derived Data
+        NodeType::BonsaiChangesetInfoMapping => None,
+        NodeType::BonsaiFsnodeMapping => None,
         NodeType::ChangesetInfo => None,
         NodeType::Fsnode => path,
     }
