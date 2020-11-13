@@ -135,8 +135,7 @@ pub async fn subcommand_blame<'a>(
                 .compat()
                 .await?;
 
-            let derived_unode = RootUnodeManifestId::derive(ctx.clone(), repo.clone(), cs_id)
-                .compat()
+            let derived_unode = RootUnodeManifestId::derive03(&ctx, &repo, cs_id)
                 .map_err(Error::from)
                 .await?;
 
@@ -219,31 +218,33 @@ fn find_leaf(
     path: MPath,
 ) -> impl Future<Item = FileUnodeId, Error = Error> {
     let blobstore = repo.get_blobstore();
-    RootUnodeManifestId::derive(ctx.clone(), repo, csid)
-        .from_err()
-        .and_then({
-            cloned!(blobstore, path);
-            move |mf_root| {
-                mf_root
-                    .manifest_unode_id()
-                    .clone()
-                    .find_entry(ctx, blobstore, Some(path))
-                    .compat()
+    {
+        cloned!(ctx, path);
+        async move {
+            let mf_root = RootUnodeManifestId::derive03(&ctx, &repo, csid).await?;
+
+            Ok(mf_root
+                .manifest_unode_id()
+                .clone()
+                .find_entry(ctx, blobstore, Some(path))
+                .await?)
+        }
+    }
+    .boxed()
+    .compat()
+    .and_then({
+        cloned!(path);
+        move |entry_opt| {
+            let entry = entry_opt.ok_or_else(|| format_err!("No such path: {}", path))?;
+            match entry.into_leaf() {
+                None => Err(format_err!(
+                    "Blame is not available for directories: {}",
+                    path
+                )),
+                Some(file_unode_id) => Ok(file_unode_id),
             }
-        })
-        .and_then({
-            cloned!(path);
-            move |entry_opt| {
-                let entry = entry_opt.ok_or_else(|| format_err!("No such path: {}", path))?;
-                match entry.into_leaf() {
-                    None => Err(format_err!(
-                        "Blame is not available for directories: {}",
-                        path
-                    )),
-                    Some(file_unode_id) => Ok(file_unode_id),
-                }
-            }
-        })
+        }
+    })
 }
 
 fn subcommand_show_diffs(

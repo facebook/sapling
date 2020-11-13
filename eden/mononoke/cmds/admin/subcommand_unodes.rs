@@ -17,7 +17,7 @@ use cmdlib::{args, helpers};
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
-use futures::{compat::Future01CompatExt, TryFutureExt, TryStreamExt};
+use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt, TryStreamExt};
 use futures_ext::StreamExt;
 use futures_old::{Future, IntoFuture, Stream};
 use manifest::{Entry, ManifestOps, PathOrPrefix};
@@ -136,9 +136,7 @@ async fn subcommand_tree(
     csid: ChangesetId,
     path: Option<MPath>,
 ) -> Result<(), Error> {
-    let root = RootUnodeManifestId::derive(ctx.clone(), repo.clone(), csid)
-        .compat()
-        .await?;
+    let root = RootUnodeManifestId::derive03(ctx, &repo, csid).await?;
     info!(ctx.logger(), "ROOT: {:?}", root);
     info!(ctx.logger(), "PATH: {:?}", path);
     root.manifest_unode_id()
@@ -205,16 +203,20 @@ fn single_verify(
             }
         });
 
-    let unode_paths = RootUnodeManifestId::derive(ctx.clone(), repo.clone(), csid)
-        .from_err()
-        .and_then(move |tree_id| {
-            tree_id
-                .manifest_unode_id()
-                .find_entries(ctx, repo.get_blobstore(), vec![PathOrPrefix::Prefix(None)])
-                .compat()
-                .filter_map(|(path, _)| path)
-                .collect_to::<BTreeSet<_>>()
-        });
+    let unode_paths = {
+        cloned!(ctx, repo);
+        async move { Ok(RootUnodeManifestId::derive03(&ctx, &repo, csid).await?) }
+            .boxed()
+            .compat()
+    }
+    .and_then(move |tree_id| {
+        tree_id
+            .manifest_unode_id()
+            .find_entries(ctx, repo.get_blobstore(), vec![PathOrPrefix::Prefix(None)])
+            .compat()
+            .filter_map(|(path, _)| path)
+            .collect_to::<BTreeSet<_>>()
+    });
 
     (hg_paths, unode_paths)
         .into_future()

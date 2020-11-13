@@ -18,8 +18,8 @@ use context::CoreContext;
 use deleted_files_manifest::{find_entries, list_all_entries, RootDeletedManifestId};
 use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
-use futures::{compat::Future01CompatExt, TryFutureExt, TryStreamExt};
-use futures_ext::FutureExt;
+use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt, TryStreamExt};
+use futures_ext::FutureExt as OldFutureExt;
 use futures_old::{future::err, stream::futures_unordered, Future, IntoFuture, Stream};
 use manifest::{get_implicit_deletes, PathOrPrefix};
 use mercurial_types::HgManifestId;
@@ -120,29 +120,33 @@ fn subcommand_manifest(
     cs_id: ChangesetId,
     prefix: Option<MPath>,
 ) -> impl Future<Item = (), Error = Error> {
-    RootDeletedManifestId::derive(ctx.clone(), repo.clone(), cs_id)
-        .from_err()
-        .and_then(move |root_manifest| {
-            debug!(
-                ctx.logger(),
-                "ROOT Deleted Files Manifest {:?}", root_manifest,
-            );
+    {
+        cloned!(ctx, repo);
+        async move { Ok(RootDeletedManifestId::derive03(&ctx, &repo, cs_id).await?) }
+            .boxed()
+            .compat()
+    }
+    .and_then(move |root_manifest| {
+        debug!(
+            ctx.logger(),
+            "ROOT Deleted Files Manifest {:?}", root_manifest,
+        );
 
-            let mf_id = root_manifest.deleted_manifest_id().clone();
-            find_entries(
-                ctx.clone(),
-                repo.get_blobstore(),
-                mf_id,
-                Some(PathOrPrefix::Prefix(prefix)),
-            )
-            .collect()
-        })
-        .map(move |mut entries: Vec<_>| {
-            entries.sort_by_key(|(path, _)| path.clone());
-            for (path, mf_id) in entries {
-                println!("{}/ {:?}", MPath::display_opt(path.as_ref()), mf_id);
-            }
-        })
+        let mf_id = root_manifest.deleted_manifest_id().clone();
+        find_entries(
+            ctx.clone(),
+            repo.get_blobstore(),
+            mf_id,
+            Some(PathOrPrefix::Prefix(prefix)),
+        )
+        .collect()
+    })
+    .map(move |mut entries: Vec<_>| {
+        entries.sort_by_key(|(path, _)| path.clone());
+        for (path, mf_id) in entries {
+            println!("{}/ {:?}", MPath::display_opt(path.as_ref()), mf_id);
+        }
+    })
 }
 
 fn subcommand_verify(
@@ -230,21 +234,25 @@ fn verify_single_commit(
     cs_id: ChangesetId,
 ) -> impl Future<Item = (), Error = Error> {
     let file_changes = get_file_changes(ctx.clone(), repo.clone(), cs_id.clone());
-    let deleted_manifest_paths = RootDeletedManifestId::derive(ctx.clone(), repo.clone(), cs_id)
-        .from_err()
-        .and_then({
-            cloned!(ctx, repo);
-            move |root_manifest| {
-                let mf_id = root_manifest.deleted_manifest_id().clone();
-                list_all_entries(ctx.clone(), repo.get_blobstore(), mf_id).collect()
-            }
-        })
-        .map(move |entries: Vec<_>| {
-            entries
-                .into_iter()
-                .filter_map(move |(path_opt, ..)| path_opt)
-                .collect::<BTreeSet<_>>()
-        });
+    let deleted_manifest_paths = {
+        cloned!(ctx, repo);
+        async move { Ok(RootDeletedManifestId::derive03(&ctx, &repo, cs_id).await?) }
+            .boxed()
+            .compat()
+    }
+    .and_then({
+        cloned!(ctx, repo);
+        move |root_manifest| {
+            let mf_id = root_manifest.deleted_manifest_id().clone();
+            list_all_entries(ctx.clone(), repo.get_blobstore(), mf_id).collect()
+        }
+    })
+    .map(move |entries: Vec<_>| {
+        entries
+            .into_iter()
+            .filter_map(move |(path_opt, ..)| path_opt)
+            .collect::<BTreeSet<_>>()
+    });
 
     file_changes.join(deleted_manifest_paths).and_then(
         move |((paths_added, paths_deleted), deleted_manifest_paths)| {

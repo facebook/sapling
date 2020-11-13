@@ -477,9 +477,7 @@ async fn list_directory(
     cs_id: ChangesetId,
     path: &MPath,
 ) -> Result<Option<BTreeMap<MPath, FsnodeFile>>, Error> {
-    let root = RootFsnodeId::derive(ctx.clone(), repo.clone(), cs_id)
-        .compat()
-        .await?;
+    let root = RootFsnodeId::derive03(ctx, repo, cs_id).await?;
 
     let entries = root
         .fsnode_id()
