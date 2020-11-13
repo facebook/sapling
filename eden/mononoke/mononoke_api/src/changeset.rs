@@ -93,8 +93,7 @@ impl ChangesetContext {
         let changeset_info = {
             cloned!(repo);
             async move {
-                ChangesetInfo::derive(repo.ctx().clone(), repo.blob_repo().clone(), id)
-                    .compat()
+                ChangesetInfo::derive03(repo.ctx(), repo.blob_repo(), id)
                     .await
                     .map_err(MononokeError::from)
             }
@@ -103,8 +102,7 @@ impl ChangesetContext {
         let root_fsnode_id = {
             cloned!(repo);
             async move {
-                RootFsnodeId::derive(repo.ctx().clone(), repo.blob_repo().clone(), id)
-                    .compat()
+                RootFsnodeId::derive03(repo.ctx(), repo.blob_repo(), id)
                     .await
                     .map_err(MononokeError::from)
             }
@@ -113,8 +111,7 @@ impl ChangesetContext {
         let root_unode_manifest_id = {
             cloned!(repo);
             async move {
-                RootUnodeManifestId::derive(repo.ctx().clone(), repo.blob_repo().clone(), id)
-                    .compat()
+                RootUnodeManifestId::derive03(repo.ctx(), repo.blob_repo(), id)
                     .await
                     .map_err(MononokeError::from)
             }
@@ -714,13 +711,8 @@ impl ChangesetContext {
         let terminate = opts.until_timestamp.map(move |until_timestamp| {
             move |changeset_id| async move {
                 let info = if cs_info_enabled {
-                    ChangesetInfo::derive(
-                        self.ctx().clone(),
-                        self.repo().blob_repo().clone(),
-                        changeset_id,
-                    )
-                    .compat()
-                    .await?
+                    ChangesetInfo::derive03(self.ctx(), self.repo().blob_repo(), changeset_id)
+                        .await?
                 } else {
                     let bonsai = changeset_id
                         .load(self.ctx().clone(), self.repo().blob_repo().blobstore())
