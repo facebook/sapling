@@ -135,6 +135,7 @@ def make_prefetch_request(
                 prefetchFiles=enable_prefetch,
                 suppressFileList=silent,
                 revisions=byte_revisions,
+                prefetchMetadata=False,
             )
         )
 

@@ -62,6 +62,7 @@ class PrefetchCmd(Subcmd):
                     includeDotfiles=False,
                     prefetchFiles=not args.no_prefetch,
                     suppressFileList=args.silent,
+                    prefetchMetadata=False,
                 )
             )
             if not args.silent:
