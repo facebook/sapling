@@ -97,6 +97,6 @@ count-objects, deep walk across bonsai and changeset_info
   Walking roots * (glob)
   Walking edge types [BonsaiChangesetInfoMappingToChangesetInfo, BonsaiChangesetToBonsaiChangesetInfoMapping, BonsaiChangesetToBonsaiParent, BookmarkToBonsaiChangeset, ChangesetInfoToChangesetInfoParent]
   Walking node types [BonsaiChangeset, BonsaiChangesetInfoMapping, Bookmark, ChangesetInfo]
-  Final count: (13, 13)
+  Final count: (10, 10)
   Bytes/s,* (glob)
-  * Type:Walked,Checks,Children BonsaiChangeset:3,* BonsaiChangesetInfoMapping:3,* Bookmark:1,* ChangesetInfo:6,* (glob)
+  * Type:Walked,Checks,Children BonsaiChangeset:3,* BonsaiChangesetInfoMapping:3,* Bookmark:1,* ChangesetInfo:3,* (glob)
