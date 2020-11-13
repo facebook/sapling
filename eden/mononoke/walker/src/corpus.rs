@@ -169,6 +169,7 @@ fn dump_with_extension(node_type: NodeType) -> bool {
         // Derived Data
         NodeType::BonsaiChangesetInfoMapping => false,
         NodeType::BonsaiFsnodeMapping => false,
+        NodeType::BonsaiUnodeMapping => false,
         NodeType::ChangesetInfo => false,
         NodeType::Fsnode => false,
     }

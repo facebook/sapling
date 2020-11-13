@@ -44,6 +44,7 @@ use std::{
     sync::Arc,
 };
 use thiserror::Error;
+use unodes::RootUnodeManifestId;
 
 pub trait StepRoute: Debug {
     /// Where we stepped from, useful for immediate reproductions with --walk-root
@@ -330,6 +331,12 @@ async fn bonsai_changeset_step<V: VisitOne>(
             Node::BonsaiChangeset(parent_id)
         });
     }
+    // Unode mapping is 1:1 but from their expands considerably
+    checker.add_edge(
+        &mut edges,
+        EdgeType::BonsaiChangesetToBonsaiUnodeMapping,
+        || Node::BonsaiUnodeMapping(*bcs_id),
+    );
     // Fs node mapping is 1:1 but from their expands considerably
     checker.add_edge(
         &mut edges,
@@ -838,6 +845,35 @@ async fn fsnode_step<V: VisitOne>(
     ))
 }
 
+async fn bonsai_to_unode_mapping_step<V: VisitOne>(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    checker: &Checker<V>,
+    bcs_id: ChangesetId,
+    enable_derive: bool,
+) -> Result<StepOutput, Error> {
+    let root_unode_id =
+        maybe_derived::<RootUnodeManifestId>(ctx, repo, bcs_id, enable_derive).await?;
+
+    if let Some(root_unode_id) = root_unode_id {
+        // TODO, will step to UnodeManifest type when its added
+        let edges = vec![];
+        Ok(StepOutput(
+            checker.step_data(NodeType::BonsaiUnodeMapping, || {
+                NodeData::BonsaiUnodeMapping(Some(*root_unode_id.manifest_unode_id()))
+            }),
+            edges,
+        ))
+    } else {
+        Ok(StepOutput(
+            checker.step_data(NodeType::BonsaiUnodeMapping, || {
+                NodeData::BonsaiUnodeMapping(None)
+            }),
+            vec![],
+        ))
+    }
+}
+
 /// Expand nodes where check for a type is used as a check for other types.
 /// e.g. to make sure metadata looked up/considered for files.
 pub fn expand_checked_nodes(children: &mut Vec<OutgoingEdge>) -> () {
@@ -1146,6 +1182,9 @@ where
         }
         Node::BonsaiFsnodeMapping(bcs_id) => {
             bonsai_to_fsnode_mapping_step(&ctx, &repo, &checker, bcs_id, enable_derive).await
+        }
+        Node::BonsaiUnodeMapping(bcs_id) => {
+            bonsai_to_unode_mapping_step(&ctx, &repo, &checker, bcs_id, enable_derive).await
         }
         Node::ChangesetInfo(bcs_id) => {
             changeset_info_step(&ctx, &repo, &checker, bcs_id, enable_derive).await

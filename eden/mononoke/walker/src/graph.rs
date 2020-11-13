@@ -22,7 +22,7 @@ use mercurial_types::{
     blobs::{BlobManifest, HgBlobChangeset},
     FileBytes, HgChangesetId, HgFileEnvelope, HgFileNodeId, HgManifestId,
 };
-use mononoke_types::{fsnode::Fsnode, FsnodeId};
+use mononoke_types::{fsnode::Fsnode, FsnodeId, ManifestUnodeId};
 use mononoke_types::{
     BonsaiChangeset, ChangesetId, ContentId, ContentMetadata, MPath, MPathHash, MononokeId,
 };
@@ -33,6 +33,7 @@ use std::{
     hash::{Hash, Hasher},
     str::FromStr,
 };
+use unodes::RootUnodeManifestId;
 
 // Helper to save repetition for the type enums
 macro_rules! define_type_enum {
@@ -203,7 +204,8 @@ create_graph!(
             BonsaiChangesetInfoMapping,
             BonsaiFsnodeMapping,
             ChangesetInfo,
-            Fsnode
+            Fsnode,
+            BonsaiUnodeMapping
         ]
     ),
     // Bonsai
@@ -217,7 +219,9 @@ create_graph!(
             BonsaiHgMapping,
             BonsaiPhaseMapping,
             BonsaiChangesetInfoMapping,
-            BonsaiFsnodeMapping
+            BonsaiFsnodeMapping,
+            BonsaiUnodeMapping,
+            ChangesetInfo
         ]
     ),
     (BonsaiHgMapping, ChangesetId, [HgChangeset]),
@@ -279,6 +283,7 @@ create_graph!(
         PathKey<FsnodeId>,
         [ChildFsnode(Fsnode), FileContent]
     ),
+    (BonsaiUnodeMapping, ChangesetId, []),
 );
 
 impl fmt::Display for NodeType {
@@ -313,6 +318,7 @@ impl NodeType {
             // Derived data
             NodeType::BonsaiChangesetInfoMapping => Some(ChangesetInfo::NAME),
             NodeType::BonsaiFsnodeMapping => Some(RootFsnodeId::NAME),
+            NodeType::BonsaiUnodeMapping => Some(RootUnodeManifestId::NAME),
             NodeType::ChangesetInfo => Some(ChangesetInfo::NAME),
             NodeType::Fsnode => Some(RootFsnodeId::NAME),
         }
@@ -453,6 +459,7 @@ pub enum NodeData {
     // Derived data
     BonsaiChangesetInfoMapping(Option<ChangesetId>),
     BonsaiFsnodeMapping(Option<FsnodeId>),
+    BonsaiUnodeMapping(Option<ManifestUnodeId>),
     ChangesetInfo(Option<ChangesetInfo>),
     Fsnode(Fsnode),
 }
@@ -480,6 +487,7 @@ impl Node {
             // Derived data
             Node::BonsaiChangesetInfoMapping(k) => k.blobstore_key(),
             Node::BonsaiFsnodeMapping(k) => k.blobstore_key(),
+            Node::BonsaiUnodeMapping(k) => k.blobstore_key(),
             Node::ChangesetInfo(k) => k.blobstore_key(),
             Node::Fsnode(PathKey { id, path: _ }) => id.blobstore_key(),
         }
@@ -507,6 +515,7 @@ impl Node {
             // Derived data
             Node::BonsaiChangesetInfoMapping(_) => None,
             Node::BonsaiFsnodeMapping(_) => None,
+            Node::BonsaiUnodeMapping(_) => None,
             Node::ChangesetInfo(_) => None,
             Node::Fsnode(PathKey { id: _, path }) => Some(&path),
         }
@@ -535,6 +544,7 @@ impl Node {
             // Derived data
             Node::BonsaiChangesetInfoMapping(k) => Some(k.sampling_fingerprint()),
             Node::BonsaiFsnodeMapping(k) => Some(k.sampling_fingerprint()),
+            Node::BonsaiUnodeMapping(k) => Some(k.sampling_fingerprint()),
             Node::ChangesetInfo(k) => Some(k.sampling_fingerprint()),
             Node::Fsnode(PathKey { id, path: _ }) => Some(id.sampling_fingerprint()),
         }

@@ -97,6 +97,7 @@ fn filter_repo_path(node_type: NodeType, path: Option<&'_ WrappedPath>) -> Optio
         // Derived Data
         NodeType::BonsaiChangesetInfoMapping => None,
         NodeType::BonsaiFsnodeMapping => None,
+        NodeType::BonsaiUnodeMapping => None,
         NodeType::ChangesetInfo => None,
         NodeType::Fsnode => path,
     }

@@ -159,6 +159,7 @@ pub struct WalkState {
     visited_changeset_info_mapping: StateMap<InternedId<ChangesetId>>,
     visited_fsnode: StateMap<(InternedId<Option<MPathHash>>, InternedId<FsnodeId>)>,
     visited_fsnode_mapping: StateMap<InternedId<ChangesetId>>,
+    visited_unode_mapping: StateMap<InternedId<ChangesetId>>,
     // Count
     visit_count: [AtomicUsize; NodeType::COUNT],
 }
@@ -195,7 +196,8 @@ impl WalkState {
             visited_changeset_info: StateMap::with_hasher(fac.clone()),
             visited_changeset_info_mapping: StateMap::with_hasher(fac.clone()),
             visited_fsnode: StateMap::with_hasher(fac.clone()),
-            visited_fsnode_mapping: StateMap::with_hasher(fac),
+            visited_fsnode_mapping: StateMap::with_hasher(fac.clone()),
+            visited_unode_mapping: StateMap::with_hasher(fac),
             visit_count: array_init(|_i| AtomicUsize::new(0)),
         }
     }
@@ -256,6 +258,9 @@ impl WalkState {
             }
             (Node::BonsaiFsnodeMapping(bcs_id), Some(NodeData::BonsaiFsnodeMapping(Some(_)))) => {
                 self.record(&self.visited_fsnode_mapping, &self.bcs_ids.interned(bcs_id));
+            }
+            (Node::BonsaiUnodeMapping(bcs_id), Some(NodeData::BonsaiUnodeMapping(Some(_)))) => {
+                self.record(&self.visited_unode_mapping, &self.bcs_ids.interned(bcs_id));
             }
             _ => {}
         }
@@ -342,6 +347,13 @@ impl VisitOne for WalkState {
             Node::BonsaiFsnodeMapping(bcs_id) => {
                 if let Some(id) = self.bcs_ids.get(bcs_id) {
                     !self.visited_fsnode_mapping.contains_key(&id) // Does not insert, see record_resolved_visit
+                } else {
+                    true
+                }
+            }
+            Node::BonsaiUnodeMapping(bcs_id) => {
+                if let Some(id) = self.bcs_ids.get(bcs_id) {
+                    !self.visited_unode_mapping.contains_key(&id) // Does not insert, see record_resolved_visit
                 } else {
                     true
                 }
