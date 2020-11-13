@@ -73,8 +73,8 @@ async fn get_changed_working_copy_paths(
     bcs_id: ChangesetId,
     base_cs_id: ChangesetId,
 ) -> Result<Vec<MPath>, Error> {
-    let unode_id = RootUnodeManifestId::derive03(ctx, repo, bcs_id);
-    let base_unode_id = RootUnodeManifestId::derive03(ctx, repo, base_cs_id);
+    let unode_id = RootUnodeManifestId::derive(ctx, repo, bcs_id);
+    let base_unode_id = RootUnodeManifestId::derive(ctx, repo, base_cs_id);
 
     let (unode_id, base_unode_id) = try_join(unode_id, base_unode_id).await?;
 

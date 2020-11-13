@@ -73,7 +73,7 @@ async fn subcommand_tree(
     csid: ChangesetId,
     path: Option<MPath>,
 ) -> Result<(), Error> {
-    let root = RootFsnodeId::derive03(ctx, repo, csid).await?;
+    let root = RootFsnodeId::derive(ctx, repo, csid).await?;
 
     info!(ctx.logger(), "ROOT: {:?}", root);
     info!(ctx.logger(), "PATH: {:?}", path);

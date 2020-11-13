@@ -135,7 +135,7 @@ pub async fn subcommand_blame<'a>(
                 .compat()
                 .await?;
 
-            let derived_unode = RootUnodeManifestId::derive03(&ctx, &repo, cs_id)
+            let derived_unode = RootUnodeManifestId::derive(&ctx, &repo, cs_id)
                 .map_err(Error::from)
                 .await?;
 
@@ -221,7 +221,7 @@ fn find_leaf(
     {
         cloned!(ctx, path);
         async move {
-            let mf_root = RootUnodeManifestId::derive03(&ctx, &repo, csid).await?;
+            let mf_root = RootUnodeManifestId::derive(&ctx, &repo, csid).await?;
 
             Ok(mf_root
                 .manifest_unode_id()

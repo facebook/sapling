@@ -74,7 +74,7 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
     /// from csid -> BonsaiDerived in BonsaiDerivedMapping
     ///
     /// This function fails immediately if this type of derived data is not enabled for this repo.
-    async fn derive03(
+    async fn derive(
         ctx: &CoreContext,
         repo: &BlobRepo,
         csid: ChangesetId,
@@ -166,7 +166,7 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
     {
         let iter = csids.into_iter();
         stream::iter(iter.map(|cs_id| async move {
-            let derived = Self::derive03(ctx, repo, cs_id).await?;
+            let derived = Self::derive(ctx, repo, cs_id).await?;
             Ok((cs_id, derived))
         }))
         .buffered(100)

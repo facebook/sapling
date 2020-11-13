@@ -623,7 +623,7 @@ mod tests {
             .commit()
             .await?;
 
-        FilenodesOnlyPublic::derive03(&ctx, &repo, child_empty).await?;
+        FilenodesOnlyPublic::derive(&ctx, &repo, child_empty).await?;
 
         // Make sure they are in the mapping
         let maps = FilenodesOnlyPublic::mapping(&ctx, &repo)
@@ -650,7 +650,7 @@ mod tests {
             .await?;
 
         let mapping = FilenodesOnlyPublic::mapping(&ctx, &repo);
-        FilenodesOnlyPublic::derive03(&ctx, &repo, child_empty).await?;
+        FilenodesOnlyPublic::derive(&ctx, &repo, child_empty).await?;
 
         // Make sure they are in the mapping
         let maps = mapping
@@ -681,7 +681,7 @@ mod tests {
         let ctx = CoreContext::test_mock(fb);
         let repo = blobrepo_factory::new_memblob_empty(None)?;
         let cs = CreateCommitContext::new_root(&ctx, &repo).commit().await?;
-        let derived = FilenodesOnlyPublic::derive03(&ctx, &repo, cs).await?;
+        let derived = FilenodesOnlyPublic::derive(&ctx, &repo, cs).await?;
         assert_eq!(derived, FilenodesOnlyPublic::Disabled);
 
         let mapping = FilenodesOnlyPublic::mapping(&ctx, &repo);

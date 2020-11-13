@@ -62,7 +62,7 @@ pub fn fetch_blame(
                 Ok((blame_id, blame)) => future::ok((blame_id, blame)).left_future(),
                 Err(blame_id) => {
                     cloned!(ctx, repo);
-                    async move { Ok(BlameRoot::derive03(&ctx, &repo, csid).await?) }
+                    async move { Ok(BlameRoot::derive(&ctx, &repo, csid).await?) }
                         .boxed()
                         .compat()
                 }
@@ -106,7 +106,7 @@ fn fetch_blame_if_derived(
     let blobstore = repo.get_blobstore();
     {
         cloned!(ctx);
-        async move { Ok(RootUnodeManifestId::derive03(&ctx, &repo, csid).await?) }
+        async move { Ok(RootUnodeManifestId::derive(&ctx, &repo, csid).await?) }
             .boxed()
             .compat()
     }

@@ -297,7 +297,7 @@ async fn list_fsnodes(
     repo: &BlobRepo,
     cs_id: ChangesetId,
 ) -> Result<HashMap<MPath, (FileType, ContentId, ManifestType)>, Error> {
-    let root_fsnode_id = RootFsnodeId::derive03(ctx, repo, cs_id).await?;
+    let root_fsnode_id = RootFsnodeId::derive(ctx, repo, cs_id).await?;
 
     let fsnode_id = root_fsnode_id.fsnode_id();
     fsnode_id
@@ -316,7 +316,7 @@ async fn list_unodes(
     repo: &BlobRepo,
     cs_id: ChangesetId,
 ) -> Result<HashMap<MPath, (FileType, ContentId, ManifestType)>, Error> {
-    let root_unode_id = RootUnodeManifestId::derive03(ctx, repo, cs_id).await?;
+    let root_unode_id = RootUnodeManifestId::derive(ctx, repo, cs_id).await?;
 
     let unode_id = root_unode_id.manifest_unode_id();
     unode_id

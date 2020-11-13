@@ -54,7 +54,7 @@ impl BonsaiDerived for BlameRoot {
         let root_manifest = {
             cloned!(ctx, repo);
             async move {
-                let root_id = RootUnodeManifestId::derive03(&ctx, &repo, csid).await?;
+                let root_id = RootUnodeManifestId::derive(&ctx, &repo, csid).await?;
                 Ok(root_id.manifest_unode_id().clone())
             }
             .boxed()
@@ -69,7 +69,7 @@ impl BonsaiDerived for BlameRoot {
                 move |csid| {
                     cloned!(ctx, repo);
                     async move {
-                        let root_id = RootUnodeManifestId::derive03(&ctx, &repo, csid).await?;
+                        let root_id = RootUnodeManifestId::derive(&ctx, &repo, csid).await?;
                         Ok(root_id.manifest_unode_id().clone())
                     }
                     .boxed()

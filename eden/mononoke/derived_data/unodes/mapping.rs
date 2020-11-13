@@ -214,7 +214,7 @@ mod test {
         let unode_entries = {
             cloned!(ctx, repo);
             async move {
-                Ok(RootUnodeManifestId::derive03(&ctx, &repo, bcs_id)
+                Ok(RootUnodeManifestId::derive(&ctx, &repo, bcs_id)
                     .await?
                     .manifest_unode_id()
                     .clone())

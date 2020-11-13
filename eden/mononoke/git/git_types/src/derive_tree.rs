@@ -225,7 +225,7 @@ mod test {
             .await?
             .ok_or(format_err!("no master"))?;
 
-        let tree = TreeHandle::derive03(&ctx, &repo, bcs_id).await?;
+        let tree = TreeHandle::derive(&ctx, &repo, bcs_id).await?;
 
         let leaves = tree
             .list_leaf_entries(ctx.clone(), repo.get_blobstore())

@@ -417,7 +417,7 @@ async fn bonsai_to_hg_mapping_step<'a, V: 'a + VisitOne>(
             .await?;
         // Even if enable_derive is set, only derive for public changesets
         if public.contains(&bcs_id) {
-            let _ = FilenodesOnlyPublic::derive03(ctx, repo, bcs_id).await?;
+            let _ = FilenodesOnlyPublic::derive(ctx, repo, bcs_id).await?;
             Some(true)
         } else {
             None
@@ -699,7 +699,7 @@ async fn maybe_derived<Derived: BonsaiDerived>(
     enable_derive: bool,
 ) -> Result<Option<Derived>, Error> {
     if enable_derive {
-        Ok(Some(Derived::derive03(ctx, repo, bcs_id).await?))
+        Ok(Some(Derived::derive(ctx, repo, bcs_id).await?))
     } else {
         Derived::fetch_derived(ctx, repo, &bcs_id).await
     }

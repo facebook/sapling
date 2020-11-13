@@ -229,7 +229,7 @@ mod test {
         bcs_id: ChangesetId,
         hg_cs_id: HgChangesetId,
     ) -> Result<()> {
-        let root_fsnode_id = RootFsnodeId::derive03(ctx, repo, bcs_id)
+        let root_fsnode_id = RootFsnodeId::derive(ctx, repo, bcs_id)
             .await?
             .into_fsnode_id();
 

@@ -53,7 +53,7 @@ pub fn find_unode_renames(
     let unodes = references.into_iter().map(move |(csid, mut paths)| {
         {
             cloned!(ctx, repo);
-            async move { RootUnodeManifestId::derive03(&ctx, &repo, csid).await }
+            async move { RootUnodeManifestId::derive(&ctx, &repo, csid).await }
         }
         .boxed()
         .compat()

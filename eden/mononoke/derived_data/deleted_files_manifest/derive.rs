@@ -197,13 +197,13 @@ pub(crate) async fn get_changes(
     let parent_cs_ids: Vec<_> = bonsai.parents().collect();
     let parent_unodes = parent_cs_ids.into_iter().map({
         move |cs_id| async move {
-            let root_mf_id = RootUnodeManifestId::derive03(ctx, repo, cs_id).await?;
+            let root_mf_id = RootUnodeManifestId::derive(ctx, repo, cs_id).await?;
             Ok(root_mf_id.manifest_unode_id().clone())
         }
     });
 
     let (root_unode_mf_id, parent_mf_ids) = future::try_join(
-        RootUnodeManifestId::derive03(ctx, repo, bcs_id),
+        RootUnodeManifestId::derive(ctx, repo, bcs_id),
         future::try_join_all(parent_unodes),
     )
     .await?;
@@ -975,7 +975,7 @@ mod tests {
         repo: &BlobRepo,
         bonsai: ChangesetId,
     ) -> Result<Vec<(Option<MPath>, Status)>, Error> {
-        let manifest = RootDeletedManifestId::derive03(ctx, repo, bonsai).await?;
+        let manifest = RootDeletedManifestId::derive(ctx, repo, bonsai).await?;
         let mut deleted_nodes =
             iterate_all_entries(ctx.clone(), repo.clone(), *manifest.deleted_manifest_id())
                 .compat()

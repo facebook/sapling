@@ -88,7 +88,7 @@ fn derive_fn(ctx: CoreContext, repo: BlobRepo, derive_type: Option<&str>) -> Res
             let derive_unodes = move |csid| {
                 cloned!(ctx, repo);
                 async move {
-                    Ok(RootUnodeManifestId::derive03(&ctx, &repo, csid)
+                    Ok(RootUnodeManifestId::derive(&ctx, &repo, csid)
                         .await?
                         .manifest_unode_id()
                         .to_string())
@@ -103,7 +103,7 @@ fn derive_fn(ctx: CoreContext, repo: BlobRepo, derive_type: Option<&str>) -> Res
             let derive_fsnodes = move |csid| {
                 cloned!(ctx, repo);
                 async move {
-                    Ok(RootFsnodeId::derive03(&ctx, &repo, csid)
+                    Ok(RootFsnodeId::derive(&ctx, &repo, csid)
                         .await?
                         .fsnode_id()
                         .to_string())

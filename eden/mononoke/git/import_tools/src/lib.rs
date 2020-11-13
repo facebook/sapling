@@ -268,7 +268,7 @@ pub async fn gitimport(
             let commit = walk_repo.find_commit(*id)?;
             let tree_id = commit.tree()?.id();
 
-            let derived_tree = TreeHandle::derive03(&ctx, &repo, *bcs_id).await?;
+            let derived_tree = TreeHandle::derive(&ctx, &repo, *bcs_id).await?;
 
             let derived_tree_id = Oid::from_bytes(derived_tree.oid().as_ref())?;
 

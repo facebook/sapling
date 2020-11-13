@@ -136,7 +136,7 @@ async fn subcommand_tree(
     csid: ChangesetId,
     path: Option<MPath>,
 ) -> Result<(), Error> {
-    let root = RootUnodeManifestId::derive03(ctx, &repo, csid).await?;
+    let root = RootUnodeManifestId::derive(ctx, &repo, csid).await?;
     info!(ctx.logger(), "ROOT: {:?}", root);
     info!(ctx.logger(), "PATH: {:?}", path);
     root.manifest_unode_id()
@@ -205,7 +205,7 @@ fn single_verify(
 
     let unode_paths = {
         cloned!(ctx, repo);
-        async move { Ok(RootUnodeManifestId::derive03(&ctx, &repo, csid).await?) }
+        async move { Ok(RootUnodeManifestId::derive(&ctx, &repo, csid).await?) }
             .boxed()
             .compat()
     }

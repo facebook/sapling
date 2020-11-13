@@ -716,7 +716,7 @@ mod tests {
         assert_eq!(bookmarks, HashMap::new());
 
         let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
-        RootUnodeManifestId::derive03(&ctx, &repo, master_cs_id).await?;
+        RootUnodeManifestId::derive(&ctx, &repo, master_cs_id).await?;
 
         let bookmarks = init_bookmarks(&ctx, &repo, &warmers).await?;
         assert_eq!(
@@ -750,7 +750,7 @@ mod tests {
             bookmark(&ctx, &repo, "master").set_to(new_master).await?;
             master = new_master;
         }
-        RootUnodeManifestId::derive03(&ctx, &repo, master).await?;
+        RootUnodeManifestId::derive(&ctx, &repo, master).await?;
         let derived_master = master;
 
         info!(ctx.logger(), "creating 5 more underived commits");
@@ -768,7 +768,7 @@ mod tests {
             hashmap! {BookmarkName::new("master")? => (derived_master, BookmarkKind::PullDefaultPublishing)}
         );
 
-        RootUnodeManifestId::derive03(&ctx, &repo, master).await?;
+        RootUnodeManifestId::derive(&ctx, &repo, master).await?;
         let bookmarks = init_bookmarks(&ctx, &repo, &warmers).await?;
         assert_eq!(
             bookmarks,
@@ -788,7 +788,7 @@ mod tests {
         let warmers = Arc::new(warmers);
 
         let derived_master = resolve_cs_id(&ctx, &repo, "master").await?;
-        RootUnodeManifestId::derive03(&ctx, &repo, derived_master).await?;
+        RootUnodeManifestId::derive(&ctx, &repo, derived_master).await?;
 
         for i in 1..50 {
             let new_master = CreateCommitContext::new(&ctx, &repo, vec!["master"])
@@ -821,7 +821,7 @@ mod tests {
             .add_file("somefile", "content")
             .commit()
             .await?;
-        RootUnodeManifestId::derive03(&ctx, &repo, derived_master).await?;
+        RootUnodeManifestId::derive(&ctx, &repo, derived_master).await?;
         bookmark(&ctx, &repo, "master")
             .set_to(derived_master)
             .await?;
@@ -1026,7 +1026,7 @@ mod tests {
                         futures_old::future::err(anyhow!("failed")).boxify()
                     } else {
                         async move {
-                            RootUnodeManifestId::derive03(&ctx, &repo, cs_id).await?;
+                            RootUnodeManifestId::derive(&ctx, &repo, cs_id).await?;
                             Ok(())
                         }
                         .boxed()
@@ -1107,7 +1107,7 @@ mod tests {
         let repo = linear::getrepo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
-        RootUnodeManifestId::derive03(
+        RootUnodeManifestId::derive(
             &ctx,
             &repo,
             repo.get_bonsai_bookmark(ctx.clone(), &BookmarkName::new("master")?)
@@ -1128,7 +1128,7 @@ mod tests {
                     });
                     async move {
                         tokio::time::delay_for(Duration::from_millis(derive_sleep_time_ms)).await;
-                        RootUnodeManifestId::derive03(&ctx, &repo, cs_id).await?;
+                        RootUnodeManifestId::derive(&ctx, &repo, cs_id).await?;
                         Ok(())
                     }
                     .boxed()

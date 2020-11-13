@@ -203,7 +203,7 @@ mod test {
         bcs_id: ChangesetId,
         hg_cs_id: HgChangesetId,
     ) -> Result<()> {
-        let root_skeleton_manifest_id = RootSkeletonManifestId::derive03(ctx, repo, bcs_id)
+        let root_skeleton_manifest_id = RootSkeletonManifestId::derive(ctx, repo, bcs_id)
             .await?
             .into_skeleton_manifest_id();
 

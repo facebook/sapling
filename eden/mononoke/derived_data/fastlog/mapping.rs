@@ -67,7 +67,7 @@ impl BonsaiDerived for RootFastlog {
     ) -> Result<Self, Error> {
         let bcs_id = bonsai.get_changeset_id();
         let (root_unode_mf_id, parents) = future::try_join(
-            async { Ok(RootUnodeManifestId::derive03(&ctx, &repo, bcs_id).await?) },
+            async { Ok(RootUnodeManifestId::derive(&ctx, &repo, bcs_id).await?) },
             fetch_parent_root_unodes(&ctx, &repo, bonsai),
         )
         .await?;
@@ -104,7 +104,7 @@ pub async fn fetch_parent_root_unodes(
     bonsai: BonsaiChangeset,
 ) -> Result<Vec<ManifestUnodeId>, Error> {
     future::try_join_all(bonsai.parents().map(move |p| async move {
-        Ok(RootUnodeManifestId::derive03(ctx, repo, p)
+        Ok(RootUnodeManifestId::derive(ctx, repo, p)
             .await?
             .manifest_unode_id()
             .clone())
@@ -488,13 +488,13 @@ mod tests {
             let mut parent_unodes = vec![];
 
             for p in parents {
-                let parent_unode = RootUnodeManifestId::derive03(&ctx, &repo, p);
+                let parent_unode = RootUnodeManifestId::derive(&ctx, &repo, p);
                 let parent_unode = rt.block_on_std(parent_unode)?;
                 let parent_unode = parent_unode.manifest_unode_id().clone();
                 parent_unodes.push(parent_unode);
             }
 
-            let merge_unode = RootUnodeManifestId::derive03(&ctx, &repo, merge_bcs_id);
+            let merge_unode = RootUnodeManifestId::derive(&ctx, &repo, merge_bcs_id);
             let merge_unode = rt.block_on_std(merge_unode)?;
             let merge_unode = merge_unode.manifest_unode_id().clone();
 
@@ -748,7 +748,7 @@ mod tests {
         let hg_cs_id = HgChangesetId::from_str(hg_cs)?;
         let bcs_id = rt.block_on(repo.get_bonsai_from_hg(ctx.clone(), hg_cs_id))?;
         let bcs_id = bcs_id.unwrap();
-        let root_unode = RootUnodeManifestId::derive03(&ctx, &repo, bcs_id);
+        let root_unode = RootUnodeManifestId::derive(&ctx, &repo, bcs_id);
         let root_unode = rt.block_on_std(root_unode)?;
         Ok(root_unode.manifest_unode_id().clone())
     }
@@ -759,10 +759,10 @@ mod tests {
         bcs_id: ChangesetId,
         repo: BlobRepo,
     ) -> ManifestUnodeId {
-        rt.block_on_std(RootFastlog::derive03(&ctx, &repo, bcs_id))
+        rt.block_on_std(RootFastlog::derive(&ctx, &repo, bcs_id))
             .unwrap();
 
-        let root_unode = RootUnodeManifestId::derive03(&ctx, &repo, bcs_id);
+        let root_unode = RootUnodeManifestId::derive(&ctx, &repo, bcs_id);
         let root_unode = rt.block_on_std(root_unode).unwrap();
         root_unode.manifest_unode_id().clone()
     }

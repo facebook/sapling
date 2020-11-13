@@ -131,7 +131,7 @@ mod test {
 
         // Make sure that the changeset info was saved in the blobstore
         let info = runtime
-            .block_on_std(ChangesetInfo::derive03(&ctx, &repo, bcs_id))
+            .block_on_std(ChangesetInfo::derive(&ctx, &repo, bcs_id))
             .unwrap();
 
         check_info(&info, &bcs);

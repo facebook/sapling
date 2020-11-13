@@ -129,7 +129,7 @@ async fn unode_warmup(
         let f = async move {
             let bcs = cs_id.load(ctx.clone(), repo.blobstore()).await?;
 
-            let root_mf_id = RootUnodeManifestId::derive03(&ctx, &repo, bcs.get_changeset_id())
+            let root_mf_id = RootUnodeManifestId::derive(&ctx, &repo, bcs.get_changeset_id())
                 .map_err(Error::from);
 
             let parent_unodes = fetch_parent_root_unodes(ctx, repo, bcs);
@@ -184,12 +184,12 @@ async fn prefetch_content(
 
     let bonsai = csid.load(ctx.clone(), repo.blobstore()).await?;
 
-    let root_manifest_fut = RootUnodeManifestId::derive03(&ctx, &repo, csid.clone())
+    let root_manifest_fut = RootUnodeManifestId::derive(&ctx, &repo, csid.clone())
         .map_ok(|mf| mf.manifest_unode_id().clone())
         .map_err(Error::from);
     let parents_manifest_futs = bonsai.parents().collect::<Vec<_>>().into_iter().map({
         move |csid| {
-            RootUnodeManifestId::derive03(&ctx, &repo, csid)
+            RootUnodeManifestId::derive(&ctx, &repo, csid)
                 .map_ok(|mf| mf.manifest_unode_id().clone())
                 .map_err(Error::from)
         }

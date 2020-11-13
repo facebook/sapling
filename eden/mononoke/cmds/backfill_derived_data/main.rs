@@ -300,9 +300,9 @@ async fn run_subcmd<'a>(
                 open_repo_maybe_unredacted(fb, &logger, &matches, &derived_data_type).await?;
 
             // Backfill is used when when a derived data type is not enabled yet, and so
-            // any attempt to call BonsaiDerived::derive03() fails. However calling
-            // BonsaiDerived::derive03() might be useful, and so the lines below explicitly
-            // enable `derived_data_type` to allow calling BonsaiDerived::derive03() if necessary.
+            // any attempt to call BonsaiDerived::derive() fails. However calling
+            // BonsaiDerived::derive() might be useful, and so the lines below explicitly
+            // enable `derived_data_type` to allow calling BonsaiDerived::derive() if necessary.
             let mut repo = repo.dangerous_override(|mut derived_data_config: DerivedDataConfig| {
                 derived_data_config
                     .derived_data_types

@@ -422,7 +422,7 @@ pub fn get_hg_from_bonsai_changeset(
 ) -> impl Future<Item = HgChangesetId, Error = Error> + Send {
     STATS::get_hg_from_bonsai_changeset.add_value(1);
     cloned!(repo);
-    async move { MappedHgChangesetId::derive03(&ctx, &repo, bcs_id).await }
+    async move { MappedHgChangesetId::derive(&ctx, &repo, bcs_id).await }
         .boxed()
         .compat()
         .then(|result| match result {

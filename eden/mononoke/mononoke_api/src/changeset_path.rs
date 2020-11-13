@@ -336,7 +336,7 @@ impl ChangesetPathContext {
                 if let Some(until_ts) = self.until_timestamp {
                     cs_ids = try_join_all(cs_ids.into_iter().map(|cs_id| async move {
                         let info = if cs_info_enabled {
-                            ChangesetInfo::derive03(ctx, repo, cs_id).await
+                            ChangesetInfo::derive(ctx, repo, cs_id).await
                         } else {
                             let bonsai = cs_id.load(ctx.clone(), repo.blobstore()).await?;
                             Ok(ChangesetInfo::new(cs_id, bonsai))

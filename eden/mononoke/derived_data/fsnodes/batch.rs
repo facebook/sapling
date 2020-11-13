@@ -63,7 +63,7 @@ pub async fn derive_fsnode_in_batch(
         let parent_fsnodes = linear_stack
             .parents
             .into_iter()
-            .map(|p| RootFsnodeId::derive03(ctx, repo, p))
+            .map(|p| RootFsnodeId::derive(ctx, repo, p))
             .collect::<FuturesOrdered<_>>()
             .map_ok(|root_fsnode_id| root_fsnode_id.into_fsnode_id())
             .try_collect::<Vec<_>>()
@@ -563,7 +563,7 @@ mod test {
         let sequential = {
             let repo = linear::getrepo(fb).await;
             let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
-            RootFsnodeId::derive03(&ctx, &repo, master_cs_id)
+            RootFsnodeId::derive(&ctx, &repo, master_cs_id)
                 .await?
                 .into_fsnode_id()
         };

@@ -90,7 +90,7 @@ async fn blobstore_and_filenodes_warmup(
         hg_cs_id
             .load(ctx.clone(), repo.blobstore())
             .map_err(Error::from),
-        FilenodesOnlyPublic::derive03(ctx, repo, bcs_id)
+        FilenodesOnlyPublic::derive(ctx, repo, bcs_id)
             .map_err(Error::from)
             .map_ok(|_| ()),
     )

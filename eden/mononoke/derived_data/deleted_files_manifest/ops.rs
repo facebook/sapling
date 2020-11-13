@@ -117,7 +117,7 @@ async fn resolve_path_state_unfold(
     // let's get deleted manifests for each changeset id
     // and try to find the given path
     if let Some(cs_id) = queue.pop_front() {
-        let root_dfm_id = RootDeletedManifestId::derive03(&ctx, &repo, cs_id.clone()).await?;
+        let root_dfm_id = RootDeletedManifestId::derive(&ctx, &repo, cs_id.clone()).await?;
         let dfm_id = root_dfm_id.deleted_manifest_id();
         let entry = find_entry(ctx.clone(), repo.get_blobstore(), *dfm_id, path.clone())
             .compat()
@@ -213,7 +213,7 @@ async fn derive_unode_entry(
     cs_id: ChangesetId,
     path: &Option<MPath>,
 ) -> Result<Option<UnodeEntry>, Error> {
-    let root_unode_mf_id = RootUnodeManifestId::derive03(ctx, repo, cs_id).await?;
+    let root_unode_mf_id = RootUnodeManifestId::derive(ctx, repo, cs_id).await?;
     root_unode_mf_id
         .manifest_unode_id()
         .find_entry(ctx.clone(), repo.get_blobstore(), path.clone())

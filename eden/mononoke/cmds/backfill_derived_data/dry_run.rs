@@ -169,7 +169,7 @@ async fn find_entries_to_preserve(
     cs_to_preserve
         .iter()
         .map(|cs_id| async move {
-            let root_fsnode = RootFsnodeId::derive03(&ctx, &repo, *cs_id).await?;
+            let root_fsnode = RootFsnodeId::derive(&ctx, &repo, *cs_id).await?;
             Result::<_, Error>::Ok(
                 root_fsnode
                     .fsnode_id()
@@ -200,7 +200,7 @@ mod test {
         repo: &BlobRepo,
         cs_id: ChangesetId,
     ) -> Result<(), Error> {
-        let fsnode = RootFsnodeId::derive03(&ctx, &repo, cs_id).await?;
+        let fsnode = RootFsnodeId::derive(&ctx, &repo, cs_id).await?;
         fsnode
             .fsnode_id()
             .list_all_entries(ctx.clone(), repo.get_blobstore())

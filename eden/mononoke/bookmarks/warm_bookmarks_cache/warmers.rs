@@ -109,7 +109,7 @@ pub fn create_derived_data_warmer<D: BonsaiDerived>(ctx: &CoreContext) -> Warmer
     info!(ctx.logger(), "Warming {}", D::NAME);
     let warmer: Box<WarmerFn> = Box::new(|ctx: CoreContext, repo: BlobRepo, cs_id: ChangesetId| {
         async move {
-            D::derive03(&ctx, &repo, cs_id).await?;
+            D::derive(&ctx, &repo, cs_id).await?;
             Ok(())
         }
         .boxed()

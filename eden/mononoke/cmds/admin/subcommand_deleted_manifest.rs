@@ -122,7 +122,7 @@ fn subcommand_manifest(
 ) -> impl Future<Item = (), Error = Error> {
     {
         cloned!(ctx, repo);
-        async move { Ok(RootDeletedManifestId::derive03(&ctx, &repo, cs_id).await?) }
+        async move { Ok(RootDeletedManifestId::derive(&ctx, &repo, cs_id).await?) }
             .boxed()
             .compat()
     }
@@ -236,7 +236,7 @@ fn verify_single_commit(
     let file_changes = get_file_changes(ctx.clone(), repo.clone(), cs_id.clone());
     let deleted_manifest_paths = {
         cloned!(ctx, repo);
-        async move { Ok(RootDeletedManifestId::derive03(&ctx, &repo, cs_id).await?) }
+        async move { Ok(RootDeletedManifestId::derive(&ctx, &repo, cs_id).await?) }
             .boxed()
             .compat()
     }
