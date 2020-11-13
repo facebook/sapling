@@ -762,7 +762,7 @@ async fn is_derived<Derived: BonsaiDerived>(
     enable_derive: bool,
 ) -> Result<bool, Error> {
     if enable_derive {
-        let _ = Derived::derive03(ctx, repo, bcs_id).await?;
+        let _ = Derived::derive(ctx, repo, bcs_id).await?;
         Ok(true)
     } else {
         Ok(Derived::is_derived(&ctx, &repo, &bcs_id).await?)
