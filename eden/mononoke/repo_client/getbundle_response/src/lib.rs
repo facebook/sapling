@@ -549,7 +549,7 @@ async fn find_new_draft_commits_and_derive_filenodes_for_public_roots(
 
     // Ensure filenodes are derived for all of the public heads.
     stream::iter(public_heads)
-        .map(|bcs_id| FilenodesOnlyPublic::derive(ctx.clone(), repo.clone(), bcs_id).compat())
+        .map(|bcs_id| FilenodesOnlyPublic::derive03(ctx, repo, bcs_id))
         .buffered(100)
         .try_for_each(|_derive| async { Ok(()) })
         .await?;
