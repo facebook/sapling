@@ -36,7 +36,6 @@ class EdenStats;
 class LocalStore;
 class UnboundedQueueExecutor;
 class ReloadableConfig;
-class ServiceAddress;
 class HgProxyHash;
 
 /**
