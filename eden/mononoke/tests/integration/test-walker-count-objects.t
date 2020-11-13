@@ -113,7 +113,7 @@ count-objects, shallow walk across bonsai and unodes
 count-objects, deep walk across bonsai and unodes
   $ mononoke_walker --storage-id=blobstore --readonly-storage scrub -q --bookmark master_bookmark -I deep -i bonsai -i derived_unodes -X BonsaiChangesetToBonsaiParent 2>&1 | strip_glog
   Walking roots * (glob)
-  Walking edge types [BonsaiChangesetToBonsaiUnodeMapping, BonsaiUnodeMappingToRootUnodeManifest, BookmarkToBonsaiChangeset, UnodeFileToLinkedBonsaiChangeset, UnodeManifestToLinkedBonsaiChangeset, UnodeManifestToUnodeFileChild, UnodeManifestToUnodeManifestChild, UnodeManifestToUnodeManifestParent]
+  Walking edge types [BonsaiChangesetToBonsaiUnodeMapping, BonsaiUnodeMappingToRootUnodeManifest, BookmarkToBonsaiChangeset, UnodeFileToLinkedBonsaiChangeset, UnodeFileToUnodeFileParent, UnodeManifestToLinkedBonsaiChangeset, UnodeManifestToUnodeFileChild, UnodeManifestToUnodeManifestChild, UnodeManifestToUnodeManifestParent]
   Walking node types [BonsaiChangeset, BonsaiUnodeMapping, Bookmark, UnodeFile, UnodeManifest]
   Final count: (13, 13)
   Bytes/s,* (glob)

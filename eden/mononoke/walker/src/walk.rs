@@ -903,6 +903,12 @@ async fn unode_file_step<V: VisitOne>(
         Node::BonsaiChangeset(*unode_file.linknode())
     });
 
+    for p in unode_file.parents() {
+        checker.add_edge(&mut edges, EdgeType::UnodeFileToUnodeFileParent, || {
+            Node::UnodeFile(PathKey::new(*p, path.clone()))
+        });
+    }
+
     checker.add_edge_with_path(
         &mut edges,
         EdgeType::UnodeFileToFileContent,
