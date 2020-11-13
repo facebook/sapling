@@ -896,19 +896,28 @@ async fn unode_manifest_step<V: VisitOne>(
     let unode_manifest = unode_manifest_id
         .load(ctx.clone(), &repo.get_blobstore())
         .await?;
-    let mut manifest_edges = vec![];
+
+    let mut edges = vec![];
+
+    checker.add_edge(
+        &mut edges,
+        EdgeType::UnodeManifestToLinkedBonsaiChangeset,
+        || Node::BonsaiChangeset(*unode_manifest.linknode()),
+    );
+
     for p in unode_manifest.parents() {
         checker.add_edge(
-            &mut manifest_edges,
+            &mut edges,
             EdgeType::UnodeManifestToUnodeManifestParent,
             || Node::UnodeManifest(PathKey::new(*p, path.clone())),
         );
     }
+
     Ok(StepOutput(
         checker.step_data(NodeType::UnodeManifest, || {
             NodeData::UnodeManifest(unode_manifest)
         }),
-        manifest_edges,
+        edges,
     ))
 }
 

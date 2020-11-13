@@ -287,7 +287,7 @@ create_graph!(
     (
         UnodeManifest,
         PathKey<ManifestUnodeId>,
-        [UnodeManifestParent(UnodeManifest)]
+        [UnodeManifestParent(UnodeManifest), LinkedBonsaiChangeset(BonsaiChangeset)]
     ),
     (BonsaiUnodeMapping, ChangesetId, [RootUnodeManifest(UnodeManifest)]),
 );

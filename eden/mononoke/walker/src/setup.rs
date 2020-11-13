@@ -173,6 +173,7 @@ const DEEP_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::ChangesetInfoToChangesetInfoParent,
     EdgeType::FsnodeToChildFsnode,
     EdgeType::FsnodeToFileContent,
+    EdgeType::UnodeManifestToLinkedBonsaiChangeset,
     EdgeType::UnodeManifestToUnodeManifestParent,
 ];
 
