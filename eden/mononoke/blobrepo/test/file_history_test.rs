@@ -27,9 +27,7 @@ async fn test_linear_get_file_history(fb: FacebookInit) -> Result<(), Error> {
     let repo = linear::getrepo(fb).await;
 
     let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
-    FilenodesOnlyPublic::derive(ctx.clone(), repo.clone(), master_cs_id)
-        .compat()
-        .await?;
+    FilenodesOnlyPublic::derive03(&ctx, &repo, master_cs_id).await?;
 
     let expected_linknodes = vec![
         HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?,
