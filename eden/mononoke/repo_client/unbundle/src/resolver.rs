@@ -10,6 +10,7 @@ use crate::changegroup::{
 };
 use crate::errors::*;
 use crate::hook_running::{make_hook_rejection_remapper, HookRejectionRemapper};
+use crate::rate_limits::{enforce_file_changes_rate_limits, RateLimitedPushKind};
 use crate::stats::*;
 use crate::upload_blobs::{upload_hg_blobs, UploadBlobsType, UploadableHgBlob};
 use crate::upload_changesets::upload_changeset;
@@ -975,10 +976,34 @@ impl<'r> Bundle2Resolver<'r> {
                     return Err(format_err!("Pure pushes are disallowed in this repo"));
                 }
 
+                let is_infinitepush = header.part_type() == &PartHeaderType::B2xInfinitepush;
+
+                if is_infinitepush && !infinitepush_writes_allowed {
+                    bail!(
+                        "Infinitepush is not enabled on this server. Contact Source Control @ FB."
+                    );
+                }
+
+                let push_kind = if is_infinitepush {
+                    RateLimitedPushKind::InfinitePush
+                } else {
+                    RateLimitedPushKind::Public
+                };
+
                 let (changesets, filelogs) = split_changegroup(parts);
-                let changesets = convert_to_revlog_changesets(changesets)
-                    .try_collect()
-                    .await?;
+                let changesets: Vec<(HgChangesetId, RevlogChangeset)> =
+                    convert_to_revlog_changesets(changesets)
+                        .try_collect()
+                        .await?;
+
+                enforce_file_changes_rate_limits(
+                    &self.ctx,
+                    self.repo.get_repoid(),
+                    push_kind,
+                    changesets.iter().map(|(_, rc)| rc),
+                )
+                .await?;
+
                 let upload_map = upload_hg_blobs(
                     self.ctx.clone(),
                     self.repo.clone(),
@@ -1015,19 +1040,7 @@ impl<'r> Bundle2Resolver<'r> {
             _ => return Err(format_err!("Unexpected Bundle2 stream end")),
         };
 
-        // Check that infinitepush is enabled if we use it.
-        if infinitepush_writes_allowed {
-            Ok((maybe_cg_push, bundle2))
-        } else {
-            match maybe_cg_push {
-                Some(ref cg_push) if cg_push.infinitepush_payload.is_some() => {
-                    bail!(
-                        "Infinitepush is not enabled on this server. Contact Source Control @ FB."
-                    );
-                }
-                other => Ok((other, bundle2)),
-            }
-        }
+        Ok((maybe_cg_push, bundle2))
     }
 
     /// Parses pushkey part if it exists

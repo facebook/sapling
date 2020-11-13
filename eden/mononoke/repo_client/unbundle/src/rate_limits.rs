@@ -14,7 +14,8 @@ use futures_01_ext::{BoxFuture, FutureExt};
 use futures_old::{future::join_all, Future, IntoFuture};
 use limits::types::{RateLimit, RateLimitStatus};
 use maplit::hashmap;
-use mononoke_types::BonsaiChangeset;
+use mercurial_revlog::changeset::RevlogChangeset;
+use mononoke_types::{BonsaiChangeset, RepositoryId};
 use scuba_ext::ScubaSampleBuilderExt;
 use sha2::{Digest, Sha256};
 use slog::debug;
@@ -25,6 +26,116 @@ use tokio_old::util::FutureExt as TokioFutureExt;
 
 const TIME_WINDOW_MIN: u32 = 10;
 const TIME_WINDOW_MAX: u32 = 3600;
+
+#[derive(Clone, Copy, Eq, PartialEq, Debug)]
+pub enum RateLimitedPushKind {
+    Public,
+    InfinitePush,
+}
+
+impl std::fmt::Display for RateLimitedPushKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Public => write!(f, "Public"),
+            Self::InfinitePush => write!(f, "Infinitepush"),
+        }
+    }
+}
+
+fn get_file_changes_rate_limit(
+    ctx: &CoreContext,
+    repo_id: RepositoryId,
+    push_kind: RateLimitedPushKind,
+) -> Option<(RateLimit, &str)> {
+    let maybe_rate_limit_with_category = ctx
+        .session()
+        .load_limiter()
+        .and_then(|load_limiter| {
+            let maybe_limit_map = if push_kind == RateLimitedPushKind::InfinitePush {
+                load_limiter
+                    .rate_limits()
+                    .infinitepush_file_changes
+                    .as_ref()
+            } else {
+                load_limiter.rate_limits().public_file_changes.as_ref()
+            };
+
+            let category = load_limiter.category();
+
+            maybe_limit_map.map(|limit_map| (limit_map, category))
+        })
+        .and_then(|(limit_map, category)| {
+            limit_map
+                .get(&(repo_id.id() as i64))
+                .map(|limit| (limit.clone(), category))
+        });
+
+    if maybe_rate_limit_with_category.is_none() {
+        debug!(
+            ctx.logger(),
+            "{} is not rate-limited for {:?}", repo_id, push_kind
+        );
+    }
+
+    maybe_rate_limit_with_category
+}
+
+pub async fn enforce_file_changes_rate_limits<'a, RC: Iterator<Item = &'a RevlogChangeset>>(
+    ctx: &CoreContext,
+    repo_id: RepositoryId,
+    push_kind: RateLimitedPushKind,
+    revlog_changesets: RC,
+) -> Result<(), BundleResolverError> {
+    let (limit, category) = match get_file_changes_rate_limit(ctx, repo_id, push_kind) {
+        Some((limit, category)) => (limit, category),
+        None => return Ok(()),
+    };
+
+    let enforced = match limit.status {
+        RateLimitStatus::Disabled => return Ok(()),
+        RateLimitStatus::Tracked => false,
+        RateLimitStatus::Enforced => true,
+        // NOTE: Thrift enums aren't real enums once in Rust. We have to account for other values
+        // here.
+        _ => {
+            let e = format_err!("Invalid file count rate limit status: {:?}", limit.status);
+            return Err(BundleResolverError::Error(e));
+        }
+    };
+
+
+    let max_value = limit.max_value as f64;
+    let interval = limit.interval as u32;
+    let key = format!("{}_{}", limit.prefix, repo_id);
+    let timeout = Duration::from_secs(limit.timeout as u64);
+
+    let counter = GlobalTimeWindowCounterBuilder::build(
+        ctx.fb,
+        category,
+        key,
+        TIME_WINDOW_MIN,
+        TIME_WINDOW_MAX,
+    );
+    let total_file_number: usize = revlog_changesets.map(|rc| rc.files().len()).sum();
+    counter_check_and_bump(
+        ctx,
+        counter,
+        max_value,
+        interval,
+        timeout,
+        total_file_number as f64,
+        enforced,
+        "File Changes Rate Limit",        /* rate_limit_name */
+        "file_changes_rate_limit_status", /* scuba_status_name */
+        hashmap! { "push_kind" => format!("{}", push_kind) },
+    )
+    .await
+    .map_err(|value| BundleResolverError::RateLimitExceeded {
+        limit,
+        entity: format!("{:?}", push_kind),
+        value,
+    })
+}
 
 pub fn enforce_commit_rate_limits<'a>(
     ctx: CoreContext,
