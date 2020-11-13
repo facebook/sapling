@@ -59,11 +59,13 @@ futures-old = { package = "futures", version = "0.1" }
 futures-util = "0.3"
 hex = "0.4"
 lazy_static = "1.0"
+maplit = "1.0"
 pin-project = "0.4"
 quickcheck = "0.9"
 sha2 = "0.8"
 slog = { version = "2.5", features = ["max_level_debug"] }
 thiserror = "1.0"
+tokio = { version = "=0.2.13", features = ["full"] }
 tokio-old = { package = "tokio", version = "0.1" }
 
 [dev-dependencies]
@@ -73,4 +75,3 @@ fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch
 itertools = "0.8"
 quickcheck_async = "0.1.1"
 quickcheck_macros = "0.8"
-tokio = { version = "=0.2.13", features = ["full"] }

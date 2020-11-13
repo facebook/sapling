@@ -163,7 +163,7 @@ impl From<BundleResolverError> for Error {
             } => format_err!(
                 "Rate limit exceeded: {} for {}. \
                  The maximum allowed value is {} over a sliding {}s interval. \
-                 The observed value was {}. For help: {}.",
+                 If allowed, the value would be {}. For help: {}.",
                 limit.name,
                 entity,
                 limit.max_value,

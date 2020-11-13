@@ -13,6 +13,7 @@ use futures::future::{FutureExt as NewFutureExt, TryFutureExt};
 use futures_01_ext::{BoxFuture, FutureExt};
 use futures_old::{future::join_all, Future, IntoFuture};
 use limits::types::{RateLimit, RateLimitStatus};
+use maplit::hashmap;
 use mononoke_types::BonsaiChangeset;
 use scuba_ext::ScubaSampleBuilderExt;
 use sha2::{Digest, Sha256};
@@ -141,46 +142,116 @@ fn dispatch_counter_checks_and_bumps(
 ) -> Vec<BoxFuture<(), (String, f64)>> {
     let max_value = limit.max_value as f64;
     let interval = limit.interval as u32;
+    let timeout = Duration::from_secs(limit.timeout as u64);
 
     counters
         .into_iter()
         .map(move |(counter, author, bump)| {
-            cloned!(ctx);
-            async move { Ok((counter.get(interval).await?, counter)) }
-                .boxed()
-                .compat()
-                .then(move |res: Result<_>| {
-                    // NOTE: We only bump after we've allowed a response. This is reasonable for
-                    // this kind of limit.
-                    let mut scuba = ctx.scuba().clone();
-                    scuba.add("author", author.clone());
-
-                    match res {
-                        Ok((count, counter)) => {
-                            scuba.add("rate_limit_status", count);
-
-                            if count <= max_value {
-                                scuba.log_with_msg("Rate Limit: Passed", None);
-                                counter.bump(bump as f64);
-                                Ok(())
-                            } else if !enforced {
-                                scuba.log_with_msg("Rate Limit: Skipped", None);
-                                Ok(())
-                            } else {
-                                scuba.log_with_msg("Rate Limit: Blocked", None);
-                                Err((author, count))
-                            }
-                        }
-                        // Fail open if we fail to load something.
-                        Err(_) => {
-                            scuba.log_with_msg("Rate Limit: Failed", None);
-                            Ok(())
-                        }
-                    }
-                })
-                .boxify()
+            cloned!(ctx, author);
+            async move {
+                counter_check_and_bump(
+                    &ctx,
+                    counter,
+                    max_value,
+                    interval,
+                    timeout,
+                    bump as f64,
+                    enforced,
+                    "Commits Per Author Rate Limit",
+                    "commits_per_author_rate_limit_status",
+                    hashmap! {"author" => author.clone() },
+                )
+                .await
+                .map_err(|count| (author, count))
+            }
+            .boxed()
+            .compat()
+            .boxify()
         })
         .collect()
+}
+
+/// Check if a counter would exceed maximum value if bumped
+/// and bump it if it would not. If getting the counter
+/// value times out, just act as if rate-limit check passes.
+/// Returns
+async fn counter_check_and_bump<'a>(
+    ctx: &'a CoreContext,
+    counter: BoxGlobalTimeWindowCounter,
+    max_value: f64,
+    interval: u32,
+    timeout: Duration,
+    bump: f64,
+    enforced: bool,
+    rate_limit_name: &'a str,
+    scuba_status_name: &'a str,
+    scuba_extras: HashMap<&'a str, String>,
+) -> Result<(), f64> {
+    let mut scuba = ctx.scuba().clone();
+    for (key, val) in scuba_extras {
+        scuba.add(key, val.clone());
+    }
+
+    match tokio::time::timeout(timeout, counter.get(interval)).await {
+        Ok(Ok(count)) => {
+            // NOTE: We only bump after we've allowed a response. This is reasonable for
+            // this kind of limit.
+            scuba.add(scuba_status_name, count);
+            let new_value = count + bump;
+            if new_value <= max_value {
+                debug!(
+                    ctx.logger(),
+                    "Rate-limiting counter {} ({}) does not exceed threshold {} if bumped by {}",
+                    rate_limit_name,
+                    count,
+                    max_value,
+                    bump
+                );
+                let msg = format!("{}: Passed", rate_limit_name);
+                scuba.log_with_msg(&msg, None);
+                counter.bump(bump);
+                Ok(())
+            } else if !enforced {
+                debug!(
+                    ctx.logger(),
+                    "Rate-limiting counter {} ({}) exceeds threshold {} if bumped by {}, but enforcement is disabled",
+                    rate_limit_name,
+                    count,
+                    max_value,
+                    bump
+                );
+                let msg = format!("{}: Skipped", rate_limit_name);
+                scuba.log_with_msg(&msg, None);
+                Ok(())
+            } else {
+                debug!(
+                    ctx.logger(),
+                    "Rate-limiting counter {} ({}) exceeds threshold {} if bumped by {}. Blocking request",
+                    rate_limit_name,
+                    count,
+                    max_value,
+                    bump
+                );
+                let msg = format!("{}: Blocked", rate_limit_name);
+                scuba.log_with_msg(&msg, None);
+                Err(new_value)
+            }
+        }
+        Ok(Err(e)) => {
+            debug!(
+                ctx.logger(),
+                "Failed getting rate limiting counter {}: {:?}", rate_limit_name, e
+            );
+            let msg = format!("{}: Failed", rate_limit_name);
+            scuba.log_with_msg(&msg, None);
+            Ok(())
+        }
+        Err(_) => {
+            let msg = format!("{}: Timed out", rate_limit_name);
+            scuba.log_with_msg(&msg, None);
+            Ok(())
+        }
+    }
 }
 
 fn make_key(prefix: &str, author: &str) -> String {
