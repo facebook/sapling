@@ -39,6 +39,8 @@
 #ifdef __APPLE__
 #include <CoreFoundation/CoreFoundation.h> // @manual
 #include <IOKit/kext/KextManager.h> // @manual
+#include <eden/fs/utils/Pipe.h>
+#include <eden/fs/utils/SpawnedProcess.h>
 #include <fuse_ioctl.h> // @manual
 #include <fuse_mount.h> // @manual
 #include <grp.h> // @manual
@@ -118,7 +120,7 @@ std::pair<int, int> determineMacOsVersion() {
   return std::make_pair(major, minor);
 }
 
-std::string computeKextPath() {
+std::string computeOSXFuseKextPath() {
   auto version = determineMacOsVersion();
   return folly::to<std::string>(
       OSXFUSE_EXTENSIONS_PATH,
@@ -131,16 +133,18 @@ std::string computeKextPath() {
 }
 
 // Returns true if the system already knows about the fuse filesystem stuff
-bool isFuseKextLoaded() {
+bool isOSXFuseKextLoaded() {
   struct vfsconf vfc;
-  return getvfsbyname(OSXFUSE_NAME, &vfc) == 0;
+  return getvfsbyname("osxfuse", &vfc) == 0;
 }
 
-void ensureFuseKextIsLoaded() {
-  if (isFuseKextLoaded()) {
-    return;
-  }
-  auto kextPathString = computeKextPath();
+bool isMacFuseKextLoaded() {
+  struct vfsconf vfc;
+  return getvfsbyname("macfuse", &vfc) == 0;
+}
+
+bool tryLoadOSXFuse() {
+  auto kextPathString = computeOSXFuseKextPath();
 
   CFStringRef kextPath = CFStringCreateWithCString(
       kCFAllocatorDefault, kextPathString.c_str(), kCFStringEncodingUTF8);
@@ -157,8 +161,9 @@ void ensureFuseKextIsLoaded() {
   auto ret = KextManagerLoadKextWithURL(kextUrl, NULL);
 
   if (ret != kOSReturnSuccess) {
-    folly::throwSystemErrorExplicit(
-        ENOENT, "Failed to load ", kextPathString, ": error code ", ret);
+    XLOG(ERR) << "Failed to load " << kextPathString << ": error code " << ret;
+    // Soft error: we might be able to continue with MacFuse
+    return false;
   }
 
   // libfuse uses a sysctl to update the kext's idea of the admin group,
@@ -168,6 +173,16 @@ void ensureFuseKextIsLoaded() {
     int gid = adminGroup->gr_gid;
     sysctlbyname(OSXFUSE_SYSCTL_TUNABLES_ADMIN, NULL, NULL, &gid, sizeof(gid));
   }
+
+  return true;
+}
+
+void ensureFuseKextIsLoaded() {
+  if (isOSXFuseKextLoaded() || isMacFuseKextLoaded()) {
+    return;
+  }
+
+  tryLoadOSXFuse();
 }
 
 // The osxfuse kernel doesn't automatically assign a device, so we have
@@ -230,11 +245,11 @@ void checkedSnprintf(
   }
 }
 
-} // namespace
-#endif
-
-folly::File PrivHelperServer::fuseMount(const char* mountPath, bool readOnly) {
-#ifdef __APPLE__
+// Mount osxfuse (3.x)
+folly::File mountOSXFuse(
+    const char* mountPath,
+    bool readOnly,
+    std::chrono::nanoseconds fuseTimeout) {
   auto [fuseDev, dindex] = allocateFuseDevice();
 
   fuse_mount_args args{};
@@ -288,7 +303,7 @@ folly::File PrivHelperServer::fuseMount(const char* mountPath, bool readOnly) {
   // If the timeout is reached, the kernel will shut down the fuse
   // connection.
   auto daemon_timeout_seconds =
-      std::chrono::duration_cast<std::chrono::seconds>(fuseTimeout_).count();
+      std::chrono::duration_cast<std::chrono::seconds>(fuseTimeout).count();
   if (daemon_timeout_seconds > FUSE_MAX_DAEMON_TIMEOUT) {
     args.daemon_timeout = FUSE_MAX_DAEMON_TIMEOUT;
   } else {
@@ -349,7 +364,135 @@ folly::File PrivHelperServer::fuseMount(const char* mountPath, bool readOnly) {
   }
 
   return std::move(fuseDev);
+}
 
+// Mount MacFuse (4.x)
+// MacFuse is a closed-source fork of osxfuse.  In 4.x the mount procedure
+// became opaque behind a loader utility that performs the actual mount syscall
+// using an undocumented and backwards incompatible mount protocol to prior
+// versions. This function uses that utility to perform the mount procedure.
+folly::File mountMacFuse(
+    const char* mountPath,
+    bool readOnly,
+    std::chrono::nanoseconds fuseTimeout) {
+  if (readOnly) {
+    folly::throwSystemErrorExplicit(
+        EINVAL, "MacFUSE doesn't support read-only mounts");
+  }
+
+  // mount_macfuse will send the fuse device descriptor back to us
+  // over a unix domain socket; we create the connected pair here
+  // and pass the descriptor to mount_macfuse via the _FUSE_COMMFD
+  // environment variable below.
+  SocketPair socketPair;
+  SpawnedProcess::Options opts;
+
+  auto commFd = opts.inheritDescriptor(std::move(socketPair.write));
+  // mount_macfuse refuses to do anything unless this is set
+  opts.environment().set("_FUSE_CALL_BY_LIB", "1");
+  // Tell it which unix socket to use to pass back the device
+  opts.environment().set("_FUSE_COMMFD", folly::to<std::string>(commFd));
+  // Tell it to use version 2 of the mount protocol
+  opts.environment().set("_FUSE_COMMVERS", "2");
+  // It is unclear what purpose passing the daemon path serves, but
+  // libfuse does this, and thus we do also.
+  opts.environment().set(
+      "_FUSE_DAEMON_PATH", executablePath().stringPiece().toString());
+
+  AbsolutePath canonicalPath = realpath(mountPath);
+
+  // These options are equivalent to those that are explained in more
+  // detail in mountOSXFuse() above.
+  std::vector<std::string> args = {
+      "/Library/Filesystems/macfuse.fs/Contents/Resources/mount_macfuse",
+      "-ofsname=eden",
+      folly::to<std::string>("-ovolname=", canonicalPath.basename()),
+      "-ofstypename=eden",
+      folly::to<std::string>("-oblocksize=", FUSE_DEFAULT_BLOCKSIZE),
+      folly::to<std::string>(
+          "-odaemon_timeout=",
+          std::chrono::duration_cast<std::chrono::seconds>(fuseTimeout)
+              .count()),
+      folly::to<std::string>("-oiosize=", 1024 * 1024),
+      "-oallow_other",
+      "-odefault_permissions",
+      "-onoapplexattr",
+      canonicalPath.stringPiece().toString(),
+  };
+
+  // Start the helper...
+  SpawnedProcess mounter(args, std::move(opts));
+  // ... but wait for it in another thread.
+  // We MUST NOT try to wait for it directly here as the mount protocol
+  // requires FUSE_INIT to be replied to before the mount_macfuse can
+  // return, and attempting to disrupt that can effectively deadlock
+  // macOS to the point that you need to powercycle!
+  // We move the process wait into a separate thread so that it can
+  // take its time to wait on the child process.
+  auto thr =
+      std::thread([proc = std::move(mounter)]() mutable { proc.wait(); });
+  // we can't wait for the thread for the same reason, so detach it.
+  thr.detach();
+
+  // Now, prepare to receive the fuse device descriptor via our socketpair.
+  struct iovec iov;
+  char buf[1];
+  char ccmsg[CMSG_SPACE(sizeof(int))];
+
+  iov.iov_base = buf;
+  iov.iov_len = sizeof(buf);
+
+  struct msghdr msg {};
+  msg.msg_iov = &iov;
+  msg.msg_iovlen = 1;
+  msg.msg_control = ccmsg;
+  msg.msg_controllen = sizeof(ccmsg);
+
+  while (1) {
+    auto rv = recvmsg(socketPair.read.fd(), &msg, 0);
+    if (rv == -1 && errno == EINTR) {
+      continue;
+    }
+    if (rv == -1) {
+      folly::throwSystemErrorExplicit(
+          errno, "failed to recvmsg the fuse device descriptor from MacFUSE");
+    }
+    if (rv == 0) {
+      folly::throwSystemErrorExplicit(
+          ECONNRESET,
+          "failed to recvmsg the fuse device descriptor from MacFUSE");
+    }
+    break;
+  }
+
+  auto cmsg = CMSG_FIRSTHDR(&msg);
+  if (cmsg->cmsg_type != SCM_RIGHTS) {
+    folly::throwSystemErrorExplicit(
+        EINVAL,
+        "MacFUSE didn't send SCM_RIGHTS message while transferring fuse device descriptor");
+  }
+
+  // Got it; copy the bytes into something with the right type
+  int fuseDevice;
+  memcpy(&fuseDevice, CMSG_DATA(cmsg), sizeof(fuseDevice));
+
+  // and take ownership!
+  // The caller will complete the FUSE_INIT handshake.
+  return folly::File{fuseDevice, true};
+}
+
+} // namespace
+#endif
+
+folly::File PrivHelperServer::fuseMount(const char* mountPath, bool readOnly) {
+#ifdef __APPLE__
+  try {
+    return mountMacFuse(mountPath, readOnly, fuseTimeout_);
+  } catch (const std::exception& macFuseExc) {
+    XLOG(ERR) << "Failed to mount using MacFuse, trying OSXFuse ("
+              << folly::exceptionStr(macFuseExc) << ")";
+    return mountOSXFuse(mountPath, readOnly, fuseTimeout_);
+  }
 #else
   // We manually call open() here rather than using the folly::File()
   // constructor just so we can emit a slightly more helpful message on error.

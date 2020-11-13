@@ -356,6 +356,7 @@ mod macos {
             match value {
                 "apfs" => FsType::APFS,
                 "hfs" => FsType::HFS,
+                "macfuse_eden" => FsType::EDENFS,
                 "osxfuse_eden" => FsType::EDENFS,
                 _ => FsType::Unknown(value.to_string()),
             }
