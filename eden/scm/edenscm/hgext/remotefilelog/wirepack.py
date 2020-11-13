@@ -48,14 +48,16 @@ def sendpackpart(filename, history, data, version=1):
 
     # Serialize and send history
     historylen = struct.pack("!I", len(history))
-    rawhistory = b""
+    rawhistory = []
     for entry in history:
         copyfrom = pycompat.encodeutf8(entry[4] or "")
         copyfromlen = len(copyfrom)
         tup = entry[:-1] + (copyfromlen,)
-        rawhistory += struct.pack("!20s20s20s20sH", *tup)
+        rawhistory.append(struct.pack("!20s20s20s20sH", *tup))
         if copyfrom:
-            rawhistory += copyfrom
+            rawhistory.append(copyfrom)
+
+    rawhistory = b"".join(rawhistory)
 
     yield b"%s%s" % (historylen, rawhistory)
 
