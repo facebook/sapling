@@ -15,12 +15,14 @@ use benchmark_lib::{new_benchmark_repo, GenManifest};
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use clap::Arg;
+use cloned::cloned;
 use cmdlib::args::{self, ArgType};
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
 use fsnodes::RootFsnodeId;
 use futures::compat::Future01CompatExt;
+use futures::future::{FutureExt, TryFutureExt};
 use futures_ext::{BoxFuture as OldBoxFuture, FutureExt as OldFutureExt};
 use futures_old::Future;
 use futures_stats::futures03::TimedFutureExt;
@@ -84,19 +86,31 @@ fn derive_fn(ctx: CoreContext, repo: BlobRepo, derive_type: Option<&str>) -> Res
         }
         Some(RootUnodeManifestId::NAME) => {
             let derive_unodes = move |csid| {
-                RootUnodeManifestId::derive(ctx.clone(), repo.clone(), csid)
-                    .from_err()
-                    .map(|root| root.manifest_unode_id().to_string())
-                    .boxify()
+                cloned!(ctx, repo);
+                async move {
+                    Ok(RootUnodeManifestId::derive03(&ctx, &repo, csid)
+                        .await?
+                        .manifest_unode_id()
+                        .to_string())
+                }
+                .boxed()
+                .compat()
+                .boxify()
             };
             Ok(Arc::new(derive_unodes))
         }
         Some(RootFsnodeId::NAME) => {
             let derive_fsnodes = move |csid| {
-                RootFsnodeId::derive(ctx.clone(), repo.clone(), csid)
-                    .from_err()
-                    .map(|root| root.fsnode_id().to_string())
-                    .boxify()
+                cloned!(ctx, repo);
+                async move {
+                    Ok(RootFsnodeId::derive03(&ctx, &repo, csid)
+                        .await?
+                        .fsnode_id()
+                        .to_string())
+                }
+                .boxed()
+                .compat()
+                .boxify()
             };
             Ok(Arc::new(derive_fsnodes))
         }
