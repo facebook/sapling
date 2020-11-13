@@ -31,6 +31,7 @@ use phases::Phase;
 use std::{
     fmt,
     hash::{Hash, Hasher},
+    str::FromStr,
 };
 
 // Helper to save repetition for the type enums
@@ -139,6 +140,11 @@ macro_rules! create_graph {
             pub fn root_edge_type(&self) -> Option<$edgetypeenum> {
                 match self {
                     $($nodetypeenum::$source => root_edge_type!($edgetypeenum, $source)),*
+                }
+            }
+            pub fn parse_node(&self, s: &str) -> Result<$nodekeyenum, Error> {
+                match self {
+                    $($nodetypeenum::$source => Ok($nodekeyenum::$source(<$sourcekey>::from_str(s)?))),*
                 }
             }
         }
@@ -542,7 +548,7 @@ mod tests {
     }
 
     #[test]
-    fn test_small_graphs() {
+    fn test_small_graphs() -> Result<(), Error> {
         create_graph!(
             Test1NodeType,
             Test1Node,
@@ -554,6 +560,7 @@ mod tests {
         assert_eq!(Test1NodeType::Foo, Test1Node::Foo(42).get_type());
         assert_eq!(Test1EdgeType::RootToFoo.incoming_type(), None);
         assert_eq!(Test1EdgeType::RootToFoo.outgoing_type(), Test1NodeType::Foo);
+        assert_eq!(Test1NodeType::Foo.parse_node("123")?, Test1Node::Foo(123));
 
         // Make sure type names don't clash
         create_graph!(
@@ -576,6 +583,8 @@ mod tests {
             Some(Test2NodeType::Foo)
         );
         assert_eq!(Test2EdgeType::FooToBar.outgoing_type(), Test2NodeType::Bar);
+        assert_eq!(Test2NodeType::Bar.parse_node("123")?, Test2Node::Bar(123));
+        Ok(())
     }
 
     #[test]

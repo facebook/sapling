@@ -8,15 +8,13 @@
 use crate::graph::{AliasKey, AliasType, Node, NodeType, PathKey, UnitKey, WrappedPath};
 
 use anyhow::{format_err, Error};
-use bookmarks::BookmarkName;
 use filestore::Alias;
-use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId};
+use mercurial_types::{HgFileNodeId, HgManifestId};
 use mononoke_types::{
     hash::{GitSha1, Sha1, Sha256},
-    ChangesetId, ContentId, FsnodeId, MPath,
+    FsnodeId, MPath,
 };
-use std::iter::FromIterator;
-use std::str::FromStr;
+use std::{iter::FromIterator, str::FromStr};
 use strum::IntoEnumIterator;
 
 const NODE_SEP: &str = ":";
@@ -121,55 +119,14 @@ pub fn parse_node(s: &str) -> Result<Node, Error> {
     }
 
     let parts = &parts[1..];
-    let node = match node_type {
-        NodeType::Root => Node::Root(UnitKey::from_str(&parts.join(NODE_SEP))?),
-        // Bonsai
-        NodeType::Bookmark => Node::Bookmark(BookmarkName::new(parts.join(NODE_SEP))?),
-        NodeType::BonsaiChangeset => {
-            Node::BonsaiChangeset(ChangesetId::from_str(&parts.join(NODE_SEP))?)
-        }
-        NodeType::BonsaiHgMapping => {
-            Node::BonsaiHgMapping(ChangesetId::from_str(&parts.join(NODE_SEP))?)
-        }
-        NodeType::BonsaiPhaseMapping => {
-            Node::BonsaiPhaseMapping(ChangesetId::from_str(&parts.join(NODE_SEP))?)
-        }
-        NodeType::PublishedBookmarks => {
-            Node::PublishedBookmarks(UnitKey::from_str(&parts.join(NODE_SEP))?)
-        }
-        // Hg
-        NodeType::HgBonsaiMapping => {
-            Node::HgBonsaiMapping(HgChangesetId::from_str(&parts.join(NODE_SEP))?)
-        }
-        NodeType::HgChangeset => Node::HgChangeset(HgChangesetId::from_str(&parts.join(NODE_SEP))?),
-        NodeType::HgManifest => Node::HgManifest(PathKey::from_str(&parts.join(NODE_SEP))?),
-        NodeType::HgFileEnvelope => {
-            Node::HgFileEnvelope(HgFileNodeId::from_str(&parts.join(NODE_SEP))?)
-        }
-        NodeType::HgFileNode => Node::HgFileNode(PathKey::from_str(&parts.join(NODE_SEP))?),
-        // Content
-        NodeType::FileContent => Node::FileContent(ContentId::from_str(&parts.join(NODE_SEP))?),
-        NodeType::FileContentMetadata => {
-            Node::FileContentMetadata(ContentId::from_str(&parts.join(NODE_SEP))?)
-        }
-        NodeType::AliasContentMapping => {
-            Node::AliasContentMapping(AliasKey::from_str(&parts.join(NODE_SEP))?)
-        }
-        // Derived data
-        NodeType::BonsaiFsnodeMapping => {
-            Node::BonsaiFsnodeMapping(ChangesetId::from_str(&parts.join(NODE_SEP))?)
-        }
-        NodeType::ChangesetInfo => {
-            Node::ChangesetInfo(ChangesetId::from_str(&parts.join(NODE_SEP))?)
-        }
-        NodeType::Fsnode => Node::Fsnode(PathKey::from_str(&parts.join(NODE_SEP))?),
-    };
+    let node = node_type.parse_node(&parts.join(NODE_SEP))?;
     Ok(node)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use bookmarks::BookmarkName;
 
     const SAMPLE_BLAKE2: &str = "b847b8838bfe3ae13ea6f8ce2e341c51193587b8392494f6dbab7224b3b116bf";
     const SAMPLE_SHA1: &str = "e797dcabdd6d16ec4ae614165178b60d7054305b";
