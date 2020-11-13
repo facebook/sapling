@@ -14,10 +14,10 @@ use cloned::cloned;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
 use futures::compat::Future01CompatExt;
-use futures::future::TryFutureExt;
+use futures::future::{self, TryFutureExt};
 use futures::stream::TryStreamExt;
 use futures_ext::StreamExt;
-use futures_old::{future, stream::FuturesUnordered, Future, Stream};
+use futures_old::{stream::FuturesUnordered, Future, Stream};
 use manifest::{find_intersection_of_diffs, Entry};
 use mononoke_types::{BonsaiChangeset, ChangesetId, FileUnodeId, ManifestUnodeId};
 use std::collections::HashMap;
@@ -66,12 +66,11 @@ impl BonsaiDerived for RootFastlog {
         _parents: Vec<Self>,
     ) -> Result<Self, Error> {
         let bcs_id = bonsai.get_changeset_id();
-        let (root_unode_mf_id, parents) =
-            RootUnodeManifestId::derive(ctx.clone(), repo.clone(), bcs_id)
-                .from_err()
-                .join(fetch_parent_root_unodes(ctx.clone(), repo.clone(), bonsai))
-                .compat()
-                .await?;
+        let (root_unode_mf_id, parents) = future::try_join(
+            async { Ok(RootUnodeManifestId::derive03(&ctx, &repo, bcs_id).await?) },
+            fetch_parent_root_unodes(&ctx, &repo, bonsai),
+        )
+        .await?;
 
         let blobstore = repo.get_blobstore().boxed();
         let unode_mf_id = root_unode_mf_id.manifest_unode_id().clone();
@@ -99,17 +98,18 @@ impl BonsaiDerived for RootFastlog {
     }
 }
 
-pub fn fetch_parent_root_unodes(
-    ctx: CoreContext,
-    repo: BlobRepo,
+pub async fn fetch_parent_root_unodes(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
     bonsai: BonsaiChangeset,
-) -> impl Future<Item = Vec<ManifestUnodeId>, Error = Error> {
-    let parents: Vec<_> = bonsai.parents().collect();
-    future::join_all(parents.into_iter().map(move |p| {
-        RootUnodeManifestId::derive(ctx.clone(), repo.clone(), p)
-            .from_err()
-            .map(|root_unode_mf_id| root_unode_mf_id.manifest_unode_id().clone())
+) -> Result<Vec<ManifestUnodeId>, Error> {
+    future::try_join_all(bonsai.parents().map(move |p| async move {
+        Ok(RootUnodeManifestId::derive03(ctx, repo, p)
+            .await?
+            .manifest_unode_id()
+            .clone())
     }))
+    .await
 }
 
 async fn fetch_unode_parents(
@@ -488,14 +488,14 @@ mod tests {
             let mut parent_unodes = vec![];
 
             for p in parents {
-                let parent_unode = RootUnodeManifestId::derive(ctx.clone(), repo.clone(), p);
-                let parent_unode = rt.block_on(parent_unode)?;
+                let parent_unode = RootUnodeManifestId::derive03(&ctx, &repo, p);
+                let parent_unode = rt.block_on_std(parent_unode)?;
                 let parent_unode = parent_unode.manifest_unode_id().clone();
                 parent_unodes.push(parent_unode);
             }
 
-            let merge_unode = RootUnodeManifestId::derive(ctx.clone(), repo.clone(), merge_bcs_id);
-            let merge_unode = rt.block_on(merge_unode)?;
+            let merge_unode = RootUnodeManifestId::derive03(&ctx, &repo, merge_bcs_id);
+            let merge_unode = rt.block_on_std(merge_unode)?;
             let merge_unode = merge_unode.manifest_unode_id().clone();
 
             let mut entries = rt.block_on(
@@ -748,8 +748,8 @@ mod tests {
         let hg_cs_id = HgChangesetId::from_str(hg_cs)?;
         let bcs_id = rt.block_on(repo.get_bonsai_from_hg(ctx.clone(), hg_cs_id))?;
         let bcs_id = bcs_id.unwrap();
-        let root_unode = RootUnodeManifestId::derive(ctx.clone(), repo.clone(), bcs_id);
-        let root_unode = rt.block_on(root_unode)?;
+        let root_unode = RootUnodeManifestId::derive03(&ctx, &repo, bcs_id);
+        let root_unode = rt.block_on_std(root_unode)?;
         Ok(root_unode.manifest_unode_id().clone())
     }
 
@@ -759,11 +759,11 @@ mod tests {
         bcs_id: ChangesetId,
         repo: BlobRepo,
     ) -> ManifestUnodeId {
-        rt.block_on(RootFastlog::derive(ctx.clone(), repo.clone(), bcs_id))
+        rt.block_on_std(RootFastlog::derive03(&ctx, &repo, bcs_id))
             .unwrap();
 
-        let root_unode = RootUnodeManifestId::derive(ctx.clone(), repo.clone(), bcs_id);
-        let root_unode = rt.block_on(root_unode).unwrap();
+        let root_unode = RootUnodeManifestId::derive03(&ctx, &repo, bcs_id);
+        let root_unode = rt.block_on_std(root_unode).unwrap();
         root_unode.manifest_unode_id().clone()
     }
 

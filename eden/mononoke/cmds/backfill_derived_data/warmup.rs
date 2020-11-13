@@ -126,7 +126,6 @@ async fn unode_warmup(
 ) -> Result<(), Error> {
     let futs = FuturesUnordered::new();
     for cs_id in chunk {
-        cloned!(ctx, repo);
         let f = async move {
             let bcs = cs_id.load(ctx.clone(), repo.blobstore()).await?;
 
@@ -135,8 +134,8 @@ async fn unode_warmup(
                     .compat()
                     .map_err(Error::from);
 
-            let parent_unodes = fetch_parent_root_unodes(ctx.clone(), repo.clone(), bcs);
-            let (root_mf_id, parent_unodes) = try_join(root_mf_id, parent_unodes.compat()).await?;
+            let parent_unodes = fetch_parent_root_unodes(ctx, repo, bcs);
+            let (root_mf_id, parent_unodes) = try_join(root_mf_id, parent_unodes).await?;
             let unode_mf_id = root_mf_id.manifest_unode_id().clone();
             find_intersection_of_diffs(
                 ctx.clone(),

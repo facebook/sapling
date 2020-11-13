@@ -329,9 +329,7 @@ async fn derive_unode_entry(
     cs_id: ChangesetId,
     path: &Option<MPath>,
 ) -> Result<Option<UnodeEntry>, Error> {
-    let root_unode_mf_id = RootUnodeManifestId::derive(ctx.clone(), repo.clone(), cs_id)
-        .compat()
-        .await?;
+    let root_unode_mf_id = RootUnodeManifestId::derive03(ctx, repo, cs_id).await?;
     root_unode_mf_id
         .manifest_unode_id()
         .find_entry(ctx.clone(), repo.get_blobstore(), path.clone())
@@ -584,9 +582,7 @@ async fn prefetch_fastlog_by_changeset(
 
     // if there is no history, let's try to derive batched fastlog data
     // and fetch history again
-    RootFastlog::derive(ctx.clone(), repo.clone(), changeset_id.clone())
-        .compat()
-        .await?;
+    RootFastlog::derive03(ctx, repo, changeset_id.clone()).await?;
     let fastlog_batch_opt = prefetch_history(ctx, repo, entry).await?;
     fastlog_batch_opt
         .ok_or_else(|| format_err!("Fastlog data is not found {:?} {:?}", changeset_id, path))
@@ -628,9 +624,7 @@ mod test {
 
         let top = parents.get(0).unwrap().clone();
 
-        RootFastlog::derive(ctx.clone(), repo.clone(), top.clone())
-            .compat()
-            .await?;
+        RootFastlog::derive03(&ctx, &repo, top).await?;
 
         let history = list_file_history(
             ctx,
@@ -701,9 +695,7 @@ mod test {
         let (m_top, graph) = branch_head("M", 1, vec![all_top.clone()], graph).await?;
         let (top, graph) = branch_head("Top", 2, vec![l_top, m_top], graph).await?;
 
-        RootFastlog::derive(ctx.clone(), repo.clone(), top.clone())
-            .compat()
-            .await?;
+        RootFastlog::derive03(&ctx, &repo, top).await?;
 
         let history = list_file_history(
             ctx,
@@ -766,9 +758,7 @@ mod test {
             prev_id = create_diamond(&ctx, &repo, vec![prev_id], &mut expected).await?;
         }
 
-        RootFastlog::derive(ctx.clone(), repo.clone(), prev_id.clone())
-            .compat()
-            .await?;
+        RootFastlog::derive03(&ctx, &repo, prev_id).await?;
 
         let history = list_file_history(
             ctx,
