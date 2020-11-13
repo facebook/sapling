@@ -166,6 +166,9 @@ impl<T: fmt::Debug + Clone + PartialEq + Eq + Hash> PathKey<T> {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct AliasKey(pub Alias);
+
 create_graph!(
     NodeType,
     Node,
@@ -247,7 +250,7 @@ create_graph!(
             GitSha1Alias(AliasContentMapping)
         ]
     ),
-    (AliasContentMapping, Alias, [FileContent]),
+    (AliasContentMapping, AliasKey, [FileContent]),
     // Derived data
     (BonsaiFsnodeMapping, ChangesetId, [RootFsnode(Fsnode)]),
     (
@@ -455,7 +458,7 @@ impl Node {
             // Content
             Node::FileContent(k) => k.blobstore_key(),
             Node::FileContentMetadata(k) => k.blobstore_key(),
-            Node::AliasContentMapping(k) => k.blobstore_key(),
+            Node::AliasContentMapping(k) => k.0.blobstore_key(),
             // Derived data
             Node::BonsaiFsnodeMapping(k) => k.blobstore_key(),
             Node::ChangesetInfo(k) => k.blobstore_key(),
@@ -508,7 +511,7 @@ impl Node {
             // Content
             Node::FileContent(k) => Some(k.sampling_fingerprint()),
             Node::FileContentMetadata(k) => Some(k.sampling_fingerprint()),
-            Node::AliasContentMapping(k) => Some(k.sampling_fingerprint()),
+            Node::AliasContentMapping(k) => Some(k.0.sampling_fingerprint()),
             // Derived data
             Node::BonsaiFsnodeMapping(k) => Some(k.sampling_fingerprint()),
             Node::ChangesetInfo(k) => Some(k.sampling_fingerprint()),

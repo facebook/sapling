@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use crate::graph::{AliasType, Node, NodeType, PathKey, UnitKey, WrappedPath};
+use crate::graph::{AliasKey, AliasType, Node, NodeType, PathKey, UnitKey, WrappedPath};
 
 use anyhow::{format_err, Error};
 use bookmarks::BookmarkName;
@@ -76,6 +76,27 @@ impl FromStr for PathKey<FsnodeId> {
     }
 }
 
+impl FromStr for AliasKey {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let parts: Vec<_> = s.split(NODE_SEP).collect();
+        if parts.len() < 2 {
+            return Err(format_err!(
+                "parse_node requires an alias type from {:?} and key for AliasKey",
+                Vec::from_iter(AliasType::iter()),
+            ));
+        }
+        let alias_type = AliasType::from_str(parts[0])?;
+        let id = &parts[1..].join(NODE_SEP);
+        let alias = match alias_type {
+            AliasType::GitSha1 => Alias::GitSha1(GitSha1::from_str(id)?),
+            AliasType::Sha1 => Alias::Sha1(Sha1::from_str(id)?),
+            AliasType::Sha256 => Alias::Sha256(Sha256::from_str(id)?),
+        };
+        Ok(Self(alias))
+    }
+}
+
 pub fn parse_node(s: &str) -> Result<Node, Error> {
     let parts: Vec<_> = s.split(NODE_SEP).collect();
     if parts.len() < 1 {
@@ -132,21 +153,7 @@ pub fn parse_node(s: &str) -> Result<Node, Error> {
             Node::FileContentMetadata(ContentId::from_str(&parts.join(NODE_SEP))?)
         }
         NodeType::AliasContentMapping => {
-            if parts.len() < 2 {
-                return Err(format_err!(
-                    "parse_node requires an alias type from {:?} and key for {}",
-                    Vec::from_iter(AliasType::iter()),
-                    node_type
-                ));
-            }
-            let alias_type = AliasType::from_str(parts[0])?;
-            let id = &parts[1..].join(NODE_SEP);
-            let alias = match alias_type {
-                AliasType::GitSha1 => Alias::GitSha1(GitSha1::from_str(id)?),
-                AliasType::Sha1 => Alias::Sha1(Sha1::from_str(id)?),
-                AliasType::Sha256 => Alias::Sha256(Sha256::from_str(id)?),
-            };
-            Node::AliasContentMapping(alias)
+            Node::AliasContentMapping(AliasKey::from_str(&parts.join(NODE_SEP))?)
         }
         // Derived data
         NodeType::BonsaiFsnodeMapping => {

@@ -5,7 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use crate::graph::{EdgeType, FileContentData, Node, NodeData, NodeType, PathKey, WrappedPath};
+use crate::graph::{
+    AliasKey, EdgeType, FileContentData, Node, NodeData, NodeType, PathKey, WrappedPath,
+};
 use crate::validate::{add_node_to_scuba, CHECK_FAIL, CHECK_TYPE, EDGE_TYPE};
 
 use anyhow::{format_err, Context, Error};
@@ -375,15 +377,19 @@ fn file_content_metadata_step<'a, V: VisitOne>(
                 Some(Some(metadata)) => {
                     let mut edges = vec![];
                     checker.add_edge(&mut edges, EdgeType::FileContentMetadataToSha1Alias, || {
-                        Node::AliasContentMapping(Alias::Sha1(metadata.sha1))
+                        Node::AliasContentMapping(AliasKey(Alias::Sha1(metadata.sha1)))
                     });
                     checker.add_edge(&mut edges, EdgeType::FileContentMetadataToSha256Alias, || {
-                        Node::AliasContentMapping(Alias::Sha256(metadata.sha256))
+                        Node::AliasContentMapping(AliasKey(Alias::Sha256(metadata.sha256)))
                     });
                     checker.add_edge(
                         &mut edges,
                         EdgeType::FileContentMetadataToGitSha1Alias,
-                        || Node::AliasContentMapping(Alias::GitSha1(metadata.git_sha1.sha1())),
+                        || {
+                            Node::AliasContentMapping(AliasKey(Alias::GitSha1(
+                                metadata.git_sha1.sha1(),
+                            )))
+                        },
                     );
                     StepOutput(
                         checker.step_data(NodeType::FileContentMetadata, || {
@@ -1083,7 +1089,7 @@ where
             file_content_metadata_step(ctx.clone(), &repo, &checker, content_id, enable_derive)
                 .await
         }
-        Node::AliasContentMapping(alias) => {
+        Node::AliasContentMapping(AliasKey(alias)) => {
             alias_content_mapping_step(ctx.clone(), &repo, &checker, alias).await
         }
         Node::BonsaiFsnodeMapping(bcs_id) => {
