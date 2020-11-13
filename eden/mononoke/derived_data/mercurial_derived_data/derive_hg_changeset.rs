@@ -15,10 +15,10 @@ use context::CoreContext;
 use derived_data::{BonsaiDerived, DeriveError};
 use futures::{
     compat::Future01CompatExt,
-    future::{try_join_all, TryFutureExt},
+    future::{try_join_all, FutureExt, TryFutureExt},
     TryStreamExt,
 };
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt, StreamExt};
+use futures_ext::{try_boxfuture, BoxFuture, FutureExt as OldFutureExt, StreamExt};
 use futures_old::{future, stream, Future, IntoFuture, Stream};
 use futures_stats::futures01::Timed;
 use manifest::ManifestOps;
@@ -421,7 +421,10 @@ pub fn get_hg_from_bonsai_changeset(
     bcs_id: ChangesetId,
 ) -> impl Future<Item = HgChangesetId, Error = Error> + Send {
     STATS::get_hg_from_bonsai_changeset.add_value(1);
-    MappedHgChangesetId::derive(ctx, repo.clone(), bcs_id)
+    cloned!(repo);
+    async move { MappedHgChangesetId::derive03(&ctx, &repo, bcs_id).await }
+        .boxed()
+        .compat()
         .then(|result| match result {
             Ok(id) => Ok(id.0),
             Err(err) => match err {
