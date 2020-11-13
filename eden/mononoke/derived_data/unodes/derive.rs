@@ -403,9 +403,7 @@ mod tests {
     use derived_data_test_utils::{bonsai_changeset_from_hg, iterate_all_manifest_entries};
     use fbinit::FacebookInit;
     use fixtures::linear;
-    use futures::{
-        compat::Future01CompatExt, FutureExt as NewFutureExt, TryFutureExt, TryStreamExt,
-    };
+    use futures::{TryFutureExt, TryStreamExt};
     use manifest::ManifestOps;
     use maplit::btreemap;
     use mercurial_types::{blobs::BlobManifest, HgFileNodeId, HgManifestId};
@@ -425,18 +423,11 @@ mod tests {
         let ctx = CoreContext::test_mock(fb);
 
         // Derive filenodes because they are going to be used in this test
-        runtime.block_on({
-            cloned!(ctx, repo);
-            async move {
-                let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
-                FilenodesOnlyPublic::derive(ctx, repo, master_cs_id)
-                    .compat()
-                    .await?;
-                let res: Result<(), Error> = Ok(());
-                res
-            }
-            .boxed()
-            .compat()
+        runtime.block_on_std(async {
+            let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
+            FilenodesOnlyPublic::derive03(&ctx, &repo, master_cs_id).await?;
+            let res: Result<(), Error> = Ok(());
+            res
         })?;
         let parent_unode_id = {
             let parent_hg_cs = "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536";
@@ -656,10 +647,7 @@ mod tests {
 
         let find_unodes = {
             |ctx: CoreContext, repo: BlobRepo| async move {
-                let p1_root_unode_mf_id =
-                    RootUnodeManifestId::derive(ctx.clone(), repo.clone(), p1)
-                        .compat()
-                        .await?;
+                let p1_root_unode_mf_id = RootUnodeManifestId::derive03(&ctx, &repo, p1).await?;
 
                 let mut p1_unodes: Vec<_> = p1_root_unode_mf_id
                     .manifest_unode_id()
@@ -674,9 +662,7 @@ mod tests {
                 p1_unodes.sort_by_key(|(path, _)| path.clone());
 
                 let merge_root_unode_mf_id =
-                    RootUnodeManifestId::derive(ctx.clone(), repo.clone(), merge)
-                        .compat()
-                        .await?;
+                    RootUnodeManifestId::derive03(&ctx, &repo, merge).await?;
 
                 let mut merge_unodes: Vec<_> = merge_root_unode_mf_id
                     .manifest_unode_id()

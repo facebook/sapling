@@ -211,28 +211,36 @@ mod test {
         bcs_id: ChangesetId,
         hg_cs_id: HgChangesetId,
     ) -> impl Future<Item = (), Error = Error> {
-        let unode_entries = RootUnodeManifestId::derive(ctx.clone(), repo.clone(), bcs_id)
-            .from_err()
-            .map(|root_mf_unode| root_mf_unode.manifest_unode_id().clone())
-            .and_then({
-                cloned!(ctx, repo);
-                move |mf_unode_id| {
-                    async move {
-                        iterate_all_manifest_entries(&ctx, &repo, Entry::Tree(mf_unode_id))
-                            .compat()
-                            .map(|(path, _)| path)
-                            .collect()
-                            .map(|mut paths| {
-                                paths.sort();
-                                paths
-                            })
-                            .compat()
-                            .await
-                    }
-                    .boxed()
-                    .compat()
+        let unode_entries = {
+            cloned!(ctx, repo);
+            async move {
+                Ok(RootUnodeManifestId::derive03(&ctx, &repo, bcs_id)
+                    .await?
+                    .manifest_unode_id()
+                    .clone())
+            }
+            .boxed()
+            .compat()
+        }
+        .and_then({
+            cloned!(ctx, repo);
+            move |mf_unode_id| {
+                async move {
+                    iterate_all_manifest_entries(&ctx, &repo, Entry::Tree(mf_unode_id))
+                        .compat()
+                        .map(|(path, _)| path)
+                        .collect()
+                        .map(|mut paths| {
+                            paths.sort();
+                            paths
+                        })
+                        .compat()
+                        .await
                 }
-            });
+                .boxed()
+                .compat()
+            }
+        });
 
         let filenode_entries = fetch_manifest_by_cs_id(ctx.clone(), repo.clone(), hg_cs_id)
             .and_then({
