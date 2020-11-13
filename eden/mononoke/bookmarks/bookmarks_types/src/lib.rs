@@ -19,6 +19,7 @@ use sql::mysql_async::{
 use std::convert::TryFrom;
 use std::fmt;
 use std::ops::{Bound, Range, RangeBounds, RangeFrom, RangeFull};
+use std::str::FromStr;
 
 /// This enum represents how fresh you want results to be. MostRecent will go to the master, so you
 /// normally don't want to issue queries using MostRecent unless you have a very good reason.
@@ -101,6 +102,13 @@ impl Bookmark {
 #[derive(mysql::OptTryFromRowField)]
 pub struct BookmarkName {
     bookmark: AsciiString,
+}
+
+impl FromStr for BookmarkName {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(BookmarkName::new(s)?)
+    }
 }
 
 impl fmt::Display for BookmarkName {
