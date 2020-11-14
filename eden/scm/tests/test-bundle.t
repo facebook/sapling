@@ -253,11 +253,11 @@ packed1 is produced properly
 
 #if common-zlib
   $ f -B 64 --size --sha1 --hexdump packed.hg
-  packed.hg: size=2799, sha1=10fe38eb3815c6a1ffbcec08867c2b64d5a021b3
+  packed.hg: size=2799, sha1=870ec1de2df4b7f71501812b244fd53fc5eb25f1
   0000: 48 47 53 31 55 4e 00 00 00 00 00 00 00 07 00 00 |HGS1UN..........|
   0010: 00 00 00 00 0a 31 00 20 67 65 6e 65 72 61 6c 64 |.....1. generald|
   0020: 65 6c 74 61 2c 6c 7a 34 72 65 76 6c 6f 67 2c 72 |elta,lz4revlog,r|
-  0030: 65 76 6c 6f 67 76 31 00 64 61 74 61 2f 61 64 69 |evlogv1.data/adi|
+  0030: 65 76 6c 6f 67 76 31 00 30 30 6d 61 6e 69 66 65 |evlogv1.00manife|
 #endif
 
   $ hg debugbundle --spec packed.hg
@@ -275,11 +275,11 @@ generaldelta requirement is not listed in stream clone bundles unless used
   bundle requirements: lz4revlog, revlogv1
 
   $ f -B 64 --size --sha1 --hexdump packednongd.hg
-  packednongd.hg: size=409, sha1=46b7cfc1514a962c7d13c00ffc26d7fe2128c36c
+  packednongd.hg: size=409, sha1=344c366796aba47616a3e9a56836e8789bb2af26
   0000: 48 47 53 31 55 4e 00 00 00 00 00 00 00 04 00 00 |HGS1UN..........|
   0010: 00 00 00 00 01 2d 00 13 6c 7a 34 72 65 76 6c 6f |.....-..lz4revlo|
-  0020: 67 2c 72 65 76 6c 6f 67 76 31 00 64 61 74 61 2f |g,revlogv1.data/|
-  0030: 66 6f 6f 2e 69 00 36 34 0a 00 01 00 01 00 00 00 |foo.i.64........|
+  0020: 67 2c 72 65 76 6c 6f 67 76 31 00 30 30 6d 61 6e |g,revlogv1.00man|
+  0030: 69 66 65 73 74 2e 69 00 31 31 30 0a 00 01 00 01 |ifest.i.110.....|
 
   $ hg debugbundle --spec packednongd.hg
   none-packed1;requirements%3Dlz4revlog%2Crevlogv1

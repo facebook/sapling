@@ -233,6 +233,16 @@ def generatev1(repo):
 
     repo.ui.debug("%d files, %d bytes to transfer\n" % (len(entries), total_bytes))
 
+    # Send entries that are closest to the revlog splitting size: they may be
+    # modified from under us as send the otherwise (as they're expanded from a
+    # .i to a .i and a .d), which would corrupt the clone. Sending them first
+    # reduces the race window (though it does not eliminate it).
+    def priority(entry):
+        (_, size) = entry
+        return abs(131072 - size)
+
+    entries.sort(key=priority)
+
     svfs = repo.svfs
     debugflag = repo.ui.debugflag
 
@@ -243,14 +253,28 @@ def generatev1(repo):
                 repo.ui.debug("sending %s (%d bytes)\n" % (name, size))
             # partially encode name over the wire for backwards compat
             yield b"%s\0%d\n" % (encodeutf8(store.encodedir(name)), size)
+
+            sentsize = 0
+
             # auditing at this stage is both pointless (paths are already
             # trusted by the local repo) and expensive
             with svfs(name, "rb", auditpath=False) as fp:
                 if size <= 65536:
-                    yield fp.read(size)
+                    chunk = fp.read(size)
+                    sentsize += len(chunk)
+                    yield chunk
                 else:
                     for chunk in util.filechunkiter(fp, limit=size):
+                        sentsize += len(chunk)
                         yield chunk
+
+            if sentsize != size:
+                msg = _("failed to fully send %s: fetched:%s expected:%s") % (
+                    name,
+                    sentsize,
+                    size,
+                )
+                raise error.Abort(msg)
 
     return len(entries), total_bytes, emitrevlogdata()
 
