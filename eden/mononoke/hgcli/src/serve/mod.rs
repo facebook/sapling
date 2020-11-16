@@ -36,8 +36,8 @@ use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use secure_utils::{build_identity, read_x509};
 use session_id::generate_session_id;
 use slog::{debug, error, o, Drain, Logger};
-use sshrelay::{Preamble, Priority, SshDecoder, SshEncoder, SshEnvVars, SshMsg, SshStream};
 use std::str::FromStr;
+use sshrelay::{IoStream, Preamble, Priority, SshDecoder, SshEncoder, SshEnvVars, SshMsg};
 use tokio::io::{self, BufReader, Stderr, Stdin, Stdout};
 use tokio::net::TcpStream;
 use tokio::time::timeout;
@@ -391,13 +391,13 @@ impl<'a> StdioRelay<'a> {
         let tx = FramedWrite::new(socket_write, SshEncoder::new());
 
         let preamble =
-            stream::once(async { Ok(SshMsg::new(SshStream::Preamble(preamble), Bytes::new())) });
+            stream::once(async { Ok(SshMsg::new(IoStream::Preamble(preamble), Bytes::new())) });
 
         // Start a task to copy from stdin to the socket
         let stdin = BufReader::with_capacity(BUFSZ, stdin);
         let stdin = FramedRead::new(stdin, BytesCodec::new());
         let stdin_future = preamble
-            .chain(stdin.map_ok(|buf| SshMsg::new(SshStream::Stdin, buf.freeze())))
+            .chain(stdin.map_ok(|buf| SshMsg::new(IoStream::Stdin, buf.freeze())))
             .forward(tx.buffer(NUMBUFS));
 
         // A task to copy from the socket, then use streamfork() to split the
@@ -419,8 +419,8 @@ impl<'a> StdioRelay<'a> {
                 |msg| -> Result<bool> {
                     // Select a sink based on the stream
                     match msg.stream() {
-                        SshStream::Stdout => Ok(false),
-                        SshStream::Stderr => Ok(true),
+                        IoStream::Stdout => Ok(false),
+                        IoStream::Stderr => Ok(true),
                         bad => bail!("Bad stream: {:?}", bad),
                     }
                 },

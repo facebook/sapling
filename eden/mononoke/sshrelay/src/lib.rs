@@ -213,8 +213,9 @@ impl Preamble {
     }
 }
 
+// Matches Iostream in Mercurial mononokepeer.py
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum SshStream {
+pub enum IoStream {
     Stdin,
     Stdout,
     Stderr,
@@ -222,21 +223,21 @@ pub enum SshStream {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct SshMsg(SshStream, Bytes);
+pub struct SshMsg(IoStream, Bytes);
 
 impl SshMsg {
-    pub fn new(stream: SshStream, data: Bytes) -> Self {
+    pub fn new(stream: IoStream, data: Bytes) -> Self {
         SshMsg(stream, data)
     }
 
-    pub fn from_slice<T>(stream: SshStream, t: T) -> Self
+    pub fn from_slice<T>(stream: IoStream, t: T) -> Self
     where
         T: AsRef<[u8]>,
     {
         Self::new(stream, Bytes::copy_from_slice(t.as_ref()))
     }
 
-    pub fn stream(&self) -> SshStream {
+    pub fn stream(&self) -> IoStream {
         self.0.clone()
     }
     pub fn data(self) -> Bytes {
@@ -270,9 +271,9 @@ impl Decoder for SshDecoder {
                 return Ok(None);
             }
             match data.split_to(1)[0] {
-                0 => Ok(Some(SshMsg(SshStream::Stdin, data.freeze()))),
-                1 => Ok(Some(SshMsg(SshStream::Stdout, data.freeze()))),
-                2 => Ok(Some(SshMsg(SshStream::Stderr, data.freeze()))),
+                0 => Ok(Some(SshMsg(IoStream::Stdin, data.freeze()))),
+                1 => Ok(Some(SshMsg(IoStream::Stdout, data.freeze()))),
+                2 => Ok(Some(SshMsg(IoStream::Stderr, data.freeze()))),
                 3 => {
                     let data = data.freeze();
                     let strdata = match std::str::from_utf8(&data) {
@@ -285,7 +286,7 @@ impl Decoder for SshDecoder {
                         }
                     };
                     let preamble: Preamble = serde_json::from_str(strdata)?;
-                    Ok(Some(SshMsg(SshStream::Preamble(preamble), Bytes::new())))
+                    Ok(Some(SshMsg(IoStream::Preamble(preamble), Bytes::new())))
                 }
                 _ => {
                     return Err(io::Error::new(
@@ -313,22 +314,22 @@ impl Encoder for SshEncoder {
     fn encode(&mut self, msg: SshMsg, buf: &mut BytesMut) -> io::Result<()> {
         let mut v = BytesMut::with_capacity(1 + msg.1.len());
         match msg.0 {
-            SshStream::Stdin => {
+            IoStream::Stdin => {
                 v.put_u8(0);
                 v.put_slice(&msg.1);
                 Ok(self.0.encode(v.freeze(), buf).map_err(ioerr_cvt)?)
             }
-            SshStream::Stdout => {
+            IoStream::Stdout => {
                 v.put_u8(1);
                 v.put_slice(&msg.1);
                 Ok(self.0.encode(v.freeze(), buf).map_err(ioerr_cvt)?)
             }
-            SshStream::Stderr => {
+            IoStream::Stderr => {
                 v.put_u8(2);
                 v.put_slice(&msg.1);
                 Ok(self.0.encode(v.freeze(), buf).map_err(ioerr_cvt)?)
             }
-            SshStream::Preamble(preamble) => {
+            IoStream::Preamble(preamble) => {
                 // msg.1 is ignored in preamble
                 debug_assert!(msg.1.is_empty(), "preamble ignores additional bytes");
                 v.put_u8(3);
@@ -394,7 +395,7 @@ mod test {
     use bytes::{BufMut, BytesMut};
     use tokio_util::codec::{Decoder, Encoder};
 
-    use super::SshStream::*;
+    use super::IoStream::*;
     use super::*;
 
     trait ToBytes: AsRef<[u8]> {

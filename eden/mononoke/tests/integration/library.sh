@@ -375,14 +375,14 @@ function wait_for_mononoke {
   timeout="${MONONOKE_START_TIMEOUT:-"$MONONOKE_DEFAULT_START_TIMEOUT"}"
   attempts="$((timeout * 10))"
 
-  SSLCURL="sslcurl https://localhost:$MONONOKE_SOCKET"
+  SSLCURL="sslcurl -f https://localhost:$MONONOKE_SOCKET"
 
   for _ in $(seq 1 $attempts); do
-    $SSLCURL 2>&1 | grep -q 'Empty reply' && break
+    $SSLCURL -s 2>&1 && break
     sleep 0.1
   done
 
-  if ! $SSLCURL 2>&1 | grep -q 'Empty reply'; then
+  if ! $SSLCURL -s 2>&1; then
     echo "Mononoke did not start" >&2
 
     echo ""
@@ -428,6 +428,13 @@ ack=*
 changegroup3=True
 [mutation]
 record=False
+[mononokepeer]
+cn=localhost
+[web]
+cacerts=$TEST_CERTDIR/root-ca.crt
+[auth]
+edenapi.cert=$TEST_CERTDIR/localhost.crt
+edenapi.key=$TEST_CERTDIR/localhost.key
 EOF
 }
 
@@ -1220,9 +1227,15 @@ function extract_json_error {
   echo "$input" | tail -n +2
 }
 
-# Run an hg binary configured with the settings required to talk to Mononoke.
+# Run an hg binary configured with the settings required to
+# talk to Mononoke or use the new hg direct Mononoke connection
+# if this is setup and available.
 function hgmn {
-  hg --config ui.ssh="$DUMMYSSH" --config paths.default=ssh://user@dummy/$REPONAME --config ui.remotecmd="$MONONOKE_HGCLI" "$@"
+  if [[ -z "${MONONOKE_DIRECT_PEER}" ]]; then
+    hg --config ui.ssh="$DUMMYSSH" --config paths.default="ssh://user@dummy/$REPONAME" --config ui.remotecmd="$MONONOKE_HGCLI" "$@"
+  else
+    hg --config paths.default="mononoke://$(mononoke_address)/$REPONAME" "$@"
+  fi
 }
 
 function hgmn_local {
@@ -1260,7 +1273,7 @@ EOF
 }
 
 function hgclone_treemanifest() {
-  hg clone -q --shallow --config remotefilelog.reponame=master "$@" --config extensions.treemanifest= --config treemanifest.treeonly=True
+  hg clone -q --shallow --config remotefilelog.reponame="$2" --config extensions.treemanifest= --config treemanifest.treeonly=True "$@"
   cat >> "$2"/.hg/hgrc <<EOF
 [extensions]
 treemanifest=

@@ -23,10 +23,12 @@ use cloned::cloned;
 use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
 use futures::{channel::oneshot, select_biased};
+use futures_ext::BoxStream;
 use futures_old::{stream, sync::mpsc, Stream};
 use futures_util::compat::Stream01CompatExt;
 use futures_util::future::FutureExt;
 use futures_util::stream::{StreamExt, TryStreamExt};
+use itertools::Itertools;
 use lazy_static::lazy_static;
 use live_commit_sync_config::CfgrLiveCommitSyncConfig;
 use metaconfig_types::CommonConfig;
@@ -34,15 +36,18 @@ use openssl::ssl::SslAcceptor;
 use permission_checker::{MononokeIdentity, MononokeIdentitySet};
 use scribe_ext::Scribe;
 use slog::{debug, error, info, warn, Logger};
-use tokio::io::{AsyncRead, AsyncWrite};
+use tokio::io::{
+    AsyncBufRead, AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader,
+};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::task::JoinHandle;
+use tokio_openssl::SslStream;
 use tokio_util::codec::{FramedRead, FramedWrite};
 
 use cmdlib::monitoring::ReadyFlagService;
 use limits::types::MononokeThrottleLimits;
 use sshrelay::{
-    Metadata, Preamble, Priority, SshDecoder, SshEncoder, SshEnvVars, SshMsg, SshStream, Stdio,
+    IoStream, Metadata, Preamble, Priority, SshDecoder, SshEncoder, SshEnvVars, SshMsg, Stdio,
 };
 
 use crate::errors::ErrorKind;
@@ -61,7 +66,7 @@ pub async fn wait_for_connections_closed() {
     }
 }
 
-/// This function accepts connections, reads Preamble and routes request to a thread responsible for
+/// This function accepts connections, reads Preamble and routes first_line to a thread responsible for
 /// a particular repo
 pub async fn connection_acceptor(
     fb: FacebookInit,
@@ -172,129 +177,305 @@ async fn accept(
         None => Err(ErrorKind::ConnectionNoClientCertificate.into()),
     }?;
 
-    let (stdio, reponame, forwarding_join_handle) =
-        ssh_server_mux(addr.ip(), ssl_socket, &security_checker, &identities)
-            .await
-            .with_context(|| format!("reading preamble failed: talking to '{}'", addr))?;
+    let mux_result = server_mux(addr.ip(), ssl_socket, &security_checker, &identities)
+        .await
+        .with_context(|| format!("couldn't complete request: talking to '{}'", addr))?;
 
-    request_handler(
-        fb,
-        reponame,
-        repo_handlers,
-        security_checker,
-        stdio,
-        load_limiting_config,
-        addr.ip(),
-        maybe_live_commit_sync_config,
-        scribe,
-    )
-    .await?;
+    match mux_result {
+        MuxOutcome::Proceed(stdio, reponame, forwarding_join_handle) => {
+            request_handler(
+                fb,
+                reponame,
+                repo_handlers,
+                security_checker,
+                stdio,
+                load_limiting_config,
+                addr.ip(),
+                maybe_live_commit_sync_config,
+                scribe,
+            )
+            .await?;
 
-    let _ = forwarding_join_handle.await?;
+            let _ = forwarding_join_handle.await?;
+        }
+        MuxOutcome::Close => {}
+    }
+
     Ok(())
+}
+
+enum MuxOutcome {
+    Proceed(
+        Stdio,
+        String,
+        JoinHandle<std::result::Result<(), std::io::Error>>,
+    ),
+    Close,
 }
 
 // As a server, given a stream to a client, return an Io pair with stdin/stdout, and an
 // auxillary sink for stderr.
-async fn ssh_server_mux<S>(
+async fn server_mux(
     addr: IpAddr,
-    s: S,
+    s: SslStream<TcpStream>,
     security_checker: &Arc<ConnectionsSecurityChecker>,
     tls_identities: &MononokeIdentitySet,
-) -> Result<(
-    Stdio,
-    String,
-    JoinHandle<std::result::Result<(), std::io::Error>>,
-)>
-where
-    S: AsyncRead + AsyncWrite + Send + 'static,
-{
-    let (rx, tx) = tokio::io::split(s);
-    let wr = FramedWrite::new(tx, SshEncoder::new());
-    let mut rd = FramedRead::new(rx, SshDecoder::new());
+) -> Result<MuxOutcome> {
+    let is_trusted = security_checker.check_if_trusted(&tls_identities).await?;
+    let (mut rx, mut tx) = tokio::io::split(s);
 
-    let maybe_preamble = rd.next().await.transpose()?;
-    let preamble = match maybe_preamble {
-        Some(maybe_preamble) => {
-            if let SshStream::Preamble(preamble) = maybe_preamble.stream() {
-                preamble
-            } else {
-                return Err(ErrorKind::NoConnectionPreamble.into());
+    // Elaborate scheme to workaround lack of peek() on AsyncRead
+    let mut peek_buf = vec![0; 3];
+    rx.read_exact(&mut peek_buf[..]).await?;
+    let is_http = match peek_buf.as_slice() {
+        // For non-HTTP connection this can never start with GET as these
+        // are wrapped in NetString encoding and prefixed with a type, so
+        // should start with:
+        // <number>:\x00
+        //
+        // For example:
+        // 6:\x00hello
+        b"GET" => true,
+        _ => false,
+    };
+    let buf_rx = std::io::Cursor::new(peek_buf).chain(BufReader::new(rx));
+
+    let (reponame, maybe_metadata, client_debug, channels) = if is_http {
+        // Max 8KB of headers is in line with common HTTP servers
+        // https://www.tutorialspoint.com/What-is-the-maximum-size-of-HTTP-header-values
+        let mut limited_reader = buf_rx.take(8192);
+        match process_http_headers(&mut limited_reader).await {
+            Ok(HttpParse::IoStream(reponame, headers)) => {
+                tx.write_all(b"HTTP/1.1 101 Mononoke Peer Upgrade\r\nConnection: Upgrade\r\nUpgrade: mercurial/v1\r\n\r\n")
+                .await?;
+                let conn = FramedConn::setup(limited_reader.into_inner(), tx);
+                let channels = ChannelConn::setup(conn);
+                (
+                    reponame,
+                    None,
+                    headers.contains_key("x-client-debug"),
+                    channels,
+                )
+            }
+            Ok(HttpParse::NotFound) => {
+                tx.write_all(b"HTTP/1.1 404 Not Found\r\n\r\n").await?;
+                return Ok(MuxOutcome::Close);
+            }
+            Ok(HttpParse::Noop) => {
+                tx.write_all(b"HTTP/1.1 200 OK\r\n\r\n").await?;
+                return Ok(MuxOutcome::Close);
+            }
+            Err(e) => {
+                tx.write_all(b"HTTP/1.1 400 Bad Request\r\n\r\n").await?;
+                return Err(e);
             }
         }
-        None => {
-            return Err(ErrorKind::NoConnectionPreamble.into());
-        }
-    };
+    } else {
+        let mut conn = FramedConn::setup(buf_rx, tx);
 
-    let stdin = Box::new(rd.compat().filter_map(|s| {
-        if s.stream() == SshStream::Stdin {
-            Some(s.data())
+        let preamble = match conn.rd.next().await.transpose()? {
+            Some(maybe_preamble) => {
+                if let IoStream::Preamble(preamble) = maybe_preamble.stream() {
+                    preamble
+                } else {
+                    return Err(ErrorKind::NoConnectionPreamble.into());
+                }
+            }
+            None => {
+                return Err(ErrorKind::NoConnectionPreamble.into());
+            }
+        };
+
+        let channels = ChannelConn::setup(conn);
+
+        let metadata = if is_trusted {
+            // Relayed through trusted proxy. Proxy authenticates end client and generates
+            // preamble so we can trust it. Use identity provided in preamble.
+            Some(try_convert_preamble_to_metadata(&preamble, addr, &channels.logger).await?)
         } else {
             None
-        }
-    }));
+        };
 
-    let (stdout, stderr, join_handle) = {
-        let (otx, orx) = mpsc::channel(1);
-        let (etx, erx) = mpsc::unbounded();
-
-        let orx = orx
-            .map(|blob| split_bytes_in_chunk(blob, CHUNK_SIZE))
-            .flatten()
-            .map(|v| SshMsg::new(SshStream::Stdout, v));
-        let erx = erx
-            .map(|blob| split_bytes_in_chunk(blob, CHUNK_SIZE))
-            .flatten()
-            .map(|v| SshMsg::new(SshStream::Stderr, v));
-
-        // Glue them together
-        let fwd = orx
-            .select(erx)
-            .compat()
-            .map_err(|()| io::Error::new(io::ErrorKind::Other, "huh?"))
-            .forward(wr);
-
-        // spawn a task for forwarding stdout/err into stream
-        let join_handle = tokio::spawn(fwd);
-
-        (otx, etx, join_handle)
+        (preamble.reponame.clone(), metadata, false, channels)
     };
 
-    let conn_log = create_conn_logger(stderr.clone(), None, None);
-
-    let metadata = if security_checker.check_if_trusted(&tls_identities).await? {
-        // Relayed through trusted proxy. Proxy authenticates end client and generates
-        // preamble so we can trust it. Use identity provided in preamble.
-        try_convert_preamble_to_metadata(&preamble, addr, &conn_log).await?
+    let metadata = if let Some(metadata) = maybe_metadata {
+        metadata
     } else {
-        // Most likely client is connecting directly. We can't trust preamble.
-        // Use TLS connection cert as identity.
+        // Most likely client is not trusted. Use TLS connection
+        // cert as identity.
         Metadata::new(
             Some(&generate_session_id().to_string()),
-            false,
+            is_trusted,
             tls_identities.clone(),
             Priority::Default,
-            false,
+            client_debug,
             Some(addr),
         )
         .await
     };
 
     if metadata.client_debug() {
-        info!(&conn_log, "{:#?}", metadata; "remote" => "true");
+        info!(&channels.logger, "{:#?}", metadata; "remote" => "true");
     }
 
-    Ok((
+    Ok(MuxOutcome::Proceed(
         Stdio {
             metadata,
+            stdin: channels.stdin,
+            stdout: channels.stdout,
+            stderr: channels.stderr,
+        },
+        reponame,
+        channels.join_handle,
+    ))
+}
+
+struct FramedConn<R, W> {
+    rd: FramedRead<R, SshDecoder>,
+    wr: FramedWrite<W, SshEncoder>,
+}
+
+impl<R, W> FramedConn<R, W>
+where
+    R: AsyncRead + Send + Sync + std::marker::Unpin + 'static,
+    W: AsyncWrite + Send + Sync + std::marker::Unpin + 'static,
+{
+    pub fn setup(rd: R, wr: W) -> Self {
+        let rd = FramedRead::new(rd, SshDecoder::new());
+        let wr = FramedWrite::new(wr, SshEncoder::new());
+        Self { rd, wr }
+    }
+}
+
+struct ChannelConn {
+    stdin: BoxStream<Bytes, io::Error>,
+    stdout: mpsc::Sender<Bytes>,
+    stderr: mpsc::UnboundedSender<Bytes>,
+    logger: Logger,
+    join_handle: JoinHandle<Result<(), io::Error>>,
+}
+
+impl ChannelConn {
+    fn setup<R, W>(conn: FramedConn<R, W>) -> Self
+    where
+        R: AsyncRead + Send + Sync + std::marker::Unpin + 'static,
+        W: AsyncWrite + Send + Sync + std::marker::Unpin + 'static,
+    {
+        let FramedConn { rd, wr } = conn;
+
+        let stdin = Box::new(rd.compat().filter_map(|s| {
+            if s.stream() == IoStream::Stdin {
+                Some(s.data())
+            } else {
+                None
+            }
+        }));
+
+        let (stdout, stderr, join_handle) = {
+            let (otx, orx) = mpsc::channel(1);
+            let (etx, erx) = mpsc::unbounded();
+
+            let orx = orx
+                .map(|blob| split_bytes_in_chunk(blob, CHUNK_SIZE))
+                .flatten()
+                .map(|v| SshMsg::new(IoStream::Stdout, v));
+            let erx = erx
+                .map(|blob| split_bytes_in_chunk(blob, CHUNK_SIZE))
+                .flatten()
+                .map(|v| SshMsg::new(IoStream::Stderr, v));
+
+            // Glue them together
+            let fwd = orx
+                .select(erx)
+                .compat()
+                .map_err(|()| io::Error::new(io::ErrorKind::Other, "huh?"))
+                .forward(wr);
+
+            // spawn a task for forwarding stdout/err into stream
+            let join_handle = tokio::spawn(fwd);
+
+            (otx, etx, join_handle)
+        };
+
+        let logger = create_conn_logger(stderr.clone(), None, None);
+
+        ChannelConn {
             stdin,
             stdout,
             stderr,
-        },
-        preamble.reponame,
-        join_handle,
-    ))
+            logger,
+            join_handle,
+        }
+    }
+}
+
+enum HttpParse {
+    IoStream(String, HashMap<String, String>),
+    NotFound,
+    Noop,
+}
+
+async fn process_http_headers<R>(limited_reader: &mut R) -> Result<HttpParse>
+where
+    R: AsyncBufRead + std::marker::Unpin,
+{
+    let mut headers: HashMap<String, String> = HashMap::new();
+    let mut first_line: Option<String> = None;
+
+    loop {
+        // read_line breaks on \n, which is included in the buffer, so any
+        // newline characters will need to be stripped from the buffer. Depending
+        // on the client, \n can be prepended with \r, which is the recommended HTTP
+        // specification, so take this in to account
+        let mut line_buf = String::new();
+        limited_reader.read_line(&mut line_buf).await?;
+        if line_buf.ends_with('\n') {
+            line_buf.pop();
+        }
+        if line_buf.ends_with('\r') {
+            line_buf.pop();
+        }
+
+        if first_line.is_none() {
+            first_line = Some(line_buf.to_ascii_lowercase());
+        } else if !line_buf.is_empty() {
+            let (key, value) = line_buf
+                .splitn(2, ':')
+                .map(|s| s.trim().to_ascii_lowercase())
+                .collect_tuple()
+                .ok_or_else(|| anyhow!("invalid header tuple: {}", line_buf))?;
+            headers.insert(key, value);
+        } else {
+            // HTTP headers are closed by an empty line, so break once we have all our headers
+            break;
+        }
+    }
+
+    if let Some(first_line) = first_line {
+        if headers.contains_key("connection") {
+            let reponame = first_line
+                .split_ascii_whitespace()
+                .nth(1)
+                .map(|s| s.trim_matches('/').to_string())
+                .ok_or_else(|| anyhow!("missing reponame from request"))?;
+
+            return Ok(HttpParse::IoStream(reponame, headers));
+        } else {
+            let mut tokens = first_line.split_ascii_whitespace();
+            let method = tokens.next().map(|s| s.to_ascii_uppercase());
+            let path = tokens.next();
+
+            if method.as_deref() == Some("GET") && path.as_deref() == Some("/") {
+                // This is a health check, make sure we return healthy
+                return Ok(HttpParse::Noop);
+            } else {
+                return Ok(HttpParse::NotFound);
+            }
+        }
+    }
+
+    Err(anyhow!("invalid http request"))
 }
 
 async fn try_convert_preamble_to_metadata(
