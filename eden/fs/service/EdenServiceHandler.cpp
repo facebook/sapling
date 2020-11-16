@@ -1522,9 +1522,23 @@ class InodeStatusCallbacks : public TraversalCallbacks {
               mount_->getOverlayFileAccess()->getFileSize(
                   entry.ino, entry.loadedChild.get());
 #else
-          // TODO: Populate on Windows, if this field is actually useful. We
-          // print it in `eden debug file_stats`, but I don't know who actually
-          // uses that output today.
+          // This following code ends up doing a stat in the working directory.
+          // This is safe to do as Windows works very differently from
+          // Linux/macOS when dealing with materialized files. In this code, we
+          // know that the file is materialized because we do not have a hash
+          // for it, and every materialized file is present on disk and
+          // reading/stating it is guaranteed to be done without EdenFS
+          // involvement. If somehow EdenFS is wrong, and this ends up
+          // triggering a recursive call into EdenFS, we are detecting this and
+          // simply bailing out very early in the callback.
+          auto filePath = mount_->getPath() + path + entry.name;
+          struct stat fileStat;
+          if (::stat(filePath.c_str(), &fileStat) == 0) {
+            entryInfo.fileSize_ref() = fileStat.st_size;
+          } else {
+            // Couldn't read the file, let's pretend it has a size of 0.
+            entryInfo.fileSize_ref() = 0;
+          }
 #endif
         }
       }
