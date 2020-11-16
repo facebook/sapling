@@ -3585,16 +3585,16 @@ def amend(ui, repo, old, extra, pats, opts):
             # was removed, it's no longer relevant. If X is missing (aka
             # deleted), old X must be preserved.
             with perftrace.trace("Prune files reverted by amend"):
-                files.update(filestoamend)
                 statusmanifest = wctx.buildstatusmanifest(status)
-                files = [
-                    f
-                    for f in files
+                for f in filestoamend:
                     if (
                         not samefile(f, wctx, base, m1=statusmanifest)
                         or f in status.deleted
-                    )
-                ]
+                    ):
+                        files.add(f)
+                    else:
+                        files.discard(f)
+                files = list(files)
 
             def filectxfn(repo, ctx_, path):
                 try:

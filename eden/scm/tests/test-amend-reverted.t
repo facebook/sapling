@@ -79,8 +79,9 @@ commit, then revert two of them and then amend a single one
   $ hg ci -m 'xx yy'
   $ hg revert -r .^ x
   $ hg revert -r .^ y
-Wrong - amends two files instead of just a sinle one
   $ hg amend x
   $ hg st
+  M y
   $ hg log -r . -T '{files}'
+  y (no-eol)
 
