@@ -5,146 +5,109 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Error, Result};
+use anyhow::{Context as _, Error, Result};
 use blobrepo::BlobRepo;
-use bytes::Bytes;
-use cloned::cloned;
+use bytes::{Bytes, BytesMut};
 use context::CoreContext;
 use filestore::{self, Alias, FetchKey, StoreRequest};
 use futures::{
-    compat::Stream01CompatExt,
-    future::{FutureExt, TryFutureExt},
-};
-use futures_ext::{BoxFuture, FutureExt as _};
-use futures_old::{
-    future::{loop_fn, Loop},
-    Future, IntoFuture, Stream,
+    future::{self, TryFutureExt},
+    stream::{Stream, TryStreamExt},
 };
 use mercurial_types::blobs::LFSContent;
 use mononoke_types::ContentMetadata;
 use slog::info;
-use std::io::BufReader;
-use std::process::{Command, Stdio};
-use tokio::codec;
-use tokio_process::{Child, CommandExt};
+use std::process::Stdio;
+use tokio::{
+    io::BufReader,
+    process::{Child, Command},
+};
+use tokio_util::codec::{BytesCodec, FramedRead};
 
 fn lfs_stream(
     lfs_helper: &str,
     lfs: &LFSContent,
-) -> Result<(Child, impl Stream<Item = Bytes, Error = Error>)> {
-    let cmd = Command::new(lfs_helper)
+) -> Result<(Child, impl Stream<Item = Result<Bytes, Error>>)> {
+    let mut cmd = Command::new(lfs_helper)
         .arg(format!("{}", lfs.oid().to_hex()))
         .arg(format!("{}", lfs.size()))
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
-        .spawn_async();
+        .spawn()
+        .with_context(|| format!("Error starting lfs_helper: {:?}", lfs_helper))?;
 
-    cmd.map_err(|e| Error::new(e).context(format!("While starting lfs_helper: {:?}", lfs_helper)))
-        .map(|mut cmd| {
-            let stdout = cmd.stdout().take().expect("stdout was missing");
-            let stdout = BufReader::new(stdout);
-            let stream = codec::FramedRead::new(stdout, codec::BytesCodec::new())
-                .map(|bytes_mut| bytes_ext::copy_from_old(bytes_mut.freeze()))
-                .from_err();
-            (cmd, stream)
-        })
+    let stdout = cmd
+        .stdout
+        .take()
+        .expect("stdout was piped earlier and is missing here");
+    let stdout = BufReader::new(stdout);
+    let stream = FramedRead::new(stdout, BytesCodec::new())
+        .map_ok(BytesMut::freeze)
+        .map_err(Error::from);
+
+    Ok((cmd, stream))
 }
 
-fn do_lfs_upload(
-    ctx: CoreContext,
-    blobrepo: BlobRepo,
-    lfs_helper: String,
-    lfs: LFSContent,
-) -> BoxFuture<ContentMetadata, Error> {
-    let blobstore = blobrepo.get_blobstore();
+async fn do_lfs_upload(
+    ctx: &CoreContext,
+    blobrepo: &BlobRepo,
+    lfs_helper: &str,
+    lfs: &LFSContent,
+) -> Result<ContentMetadata, Error> {
+    let metadata = filestore::get_metadata(
+        blobrepo.blobstore(),
+        ctx.clone(),
+        &FetchKey::Aliased(Alias::Sha256(lfs.oid())),
+    )
+    .await?;
 
-    {
-        cloned!(blobstore, ctx, lfs);
-        async move {
-            filestore::get_metadata(
-                &blobstore,
-                ctx,
-                &FetchKey::Aliased(Alias::Sha256(lfs.oid())),
-            )
-            .await
-        }
-        .boxed()
-        .compat()
+    if let Some(metadata) = metadata {
+        info!(
+            ctx.logger(),
+            "lfs_upload: reusing blob {:?}", metadata.sha256
+        );
+        return Ok(metadata);
     }
-    .and_then({
-        move |metadata| match metadata {
-            Some(metadata) => {
-                info!(
-                    ctx.logger(),
-                    "lfs_upload: reusing blob {:?}", metadata.sha256
-                );
-                Ok(metadata).into_future()
-            }
-            .left_future(),
-            None => {
-                info!(ctx.logger(), "lfs_upload: importing blob {:?}", lfs.oid());
-                let req = StoreRequest::with_sha256(lfs.size(), lfs.oid());
 
-                lfs_stream(&lfs_helper, &lfs)
-                    .into_future()
-                    .and_then(move |(child, stream)| {
-                        let upload_fut = {
-                            cloned!(ctx);
-                            async move {
-                                filestore::store(
-                                    blobrepo.blobstore(),
-                                    blobrepo.filestore_config(),
-                                    ctx.clone(),
-                                    &req,
-                                    stream.compat(),
-                                )
-                                .await
-                            }
-                        }
-                        .boxed()
-                        .compat();
+    info!(ctx.logger(), "lfs_upload: importing blob {:?}", lfs.oid());
+    let req = StoreRequest::with_sha256(lfs.size(), lfs.oid());
 
-                        // NOTE: We ignore the child exit code here. Since the Filestore validates the object
-                        // we're uploading by SHA256, that's indeed fine (it doesn't matter if the Child failed
-                        // if it gave us exactly the content we wanted).
-                        (upload_fut, child.from_err()).into_future().map({
-                            cloned!(ctx);
-                            move |(meta, _)| {
-                                info!(ctx.logger(), "lfs_upload: imported blob {:?}", meta.sha256);
-                                meta
-                            }
-                        })
-                    })
-            }
-            .right_future(),
-        }
-    })
-    .boxify()
+    let (child, stream) = lfs_stream(lfs_helper, lfs)?;
+
+    let upload = filestore::store(
+        blobrepo.blobstore(),
+        blobrepo.filestore_config(),
+        ctx.clone(),
+        &req,
+        stream,
+    );
+
+    // NOTE: We ignore the child exit code here. Since the Filestore validates the object
+    // we're uploading by SHA256, that's indeed fine (it doesn't matter if the Child failed
+    // if it gave us exactly the content we wanted).
+    let (_, meta) = future::try_join(child.map_err(Error::from), upload).await?;
+
+    info!(ctx.logger(), "lfs_upload: imported blob {:?}", meta.sha256);
+
+    Ok(meta)
 }
 
-pub fn lfs_upload(
-    ctx: CoreContext,
-    blobrepo: BlobRepo,
-    lfs_helper: String,
-    lfs: LFSContent,
-) -> impl Future<Item = ContentMetadata, Error = Error> {
+pub async fn lfs_upload(
+    ctx: &CoreContext,
+    blobrepo: &BlobRepo,
+    lfs_helper: &str,
+    lfs: &LFSContent,
+) -> Result<ContentMetadata, Error> {
     let max_attempts = 5;
+    let mut attempt = 0;
 
-    loop_fn(0, move |i| {
-        do_lfs_upload(
-            ctx.clone(),
-            blobrepo.clone(),
-            lfs_helper.clone(),
-            lfs.clone(),
-        )
-        .then(move |r| {
-            let loop_state = if r.is_ok() || i > max_attempts {
-                Loop::Break(r)
-            } else {
-                Loop::Continue(i + 1)
-            };
-            Ok(loop_state)
-        })
-    })
-    .and_then(|r| r)
+    loop {
+        let res = do_lfs_upload(ctx, blobrepo, lfs_helper, lfs).await;
+
+        if res.is_ok() || attempt > max_attempts {
+            break res;
+        }
+
+        attempt += 1;
+    }
 }

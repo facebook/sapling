@@ -332,12 +332,12 @@ impl UploadChangesets {
             {
                 cloned!(ctx, blobrepo);
                 move |lfs_content| match &lfs_helper {
-                    Some(lfs_helper) => lfs_upload(
-                        ctx.clone(),
-                        blobrepo.clone(),
-                        lfs_helper.clone(),
-                        lfs_content,
-                    )
+                    Some(lfs_helper) => {
+                        cloned!(ctx, blobrepo, lfs_helper);
+                        async move { lfs_upload(&ctx, &blobrepo, &lfs_helper, &lfs_content).await }
+                            .boxed()
+                            .compat()
+                    }
                     .boxify(),
                     None => Err(Error::msg("Cannot blobimport LFS without LFS helper"))
                         .into_future()

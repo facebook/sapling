@@ -6,16 +6,13 @@
  */
 
 use anyhow::{Error, Result};
+use borrowed::borrowed;
 use bytes::Bytes;
 use clap::Arg;
 use cmdlib::{args, helpers::block_execute};
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::{
-    compat::Future01CompatExt,
-    future::TryFutureExt,
-    stream::{self, TryStreamExt},
-};
+use futures::stream::{self, TryStreamExt};
 use lfs_import_lib::lfs_upload;
 use mercurial_types::blobs::File;
 
@@ -91,10 +88,12 @@ fn main(fb: FacebookInit) -> Result<()> {
                 args::create_repo(fb, logger, &matches).await?
             };
             stream::iter(entries)
-                .try_for_each_concurrent(concurrency, |lfs| {
-                    lfs_upload(ctx.clone(), blobrepo.clone(), lfs_helper.clone(), lfs)
-                        .compat()
-                        .map_ok(|_| ())
+                .try_for_each_concurrent(concurrency, {
+                    borrowed!(ctx, blobrepo, lfs_helper);
+                    move |lfs| async move {
+                        lfs_upload(ctx, blobrepo, lfs_helper, &lfs).await?;
+                        Ok(())
+                    }
                 })
                 .await
         }
