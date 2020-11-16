@@ -13,8 +13,10 @@ use std::time::Duration;
 use anyhow::{Context, Error};
 use url::Url;
 
+use anyhow::anyhow;
 use auth::AuthConfig;
 use configparser::{config::ConfigSet, hg::ConfigSetHgExt};
+use http_client::HttpVersion;
 
 use crate::client::Client;
 use crate::errors::{ConfigError, EdenApiError};
@@ -32,6 +34,7 @@ pub struct Builder {
     timeout: Option<Duration>,
     debug: bool,
     correlator: Option<String>,
+    http_version: Option<HttpVersion>,
 }
 
 impl Builder {
@@ -88,6 +91,21 @@ impl Builder {
             .map_err(|e| ConfigError::Malformed("edenapi.timeout".into(), e))?
             .unwrap_or_default();
 
+        let http_version = config
+            .get_opt("edenapi", "http-version")
+            .map_err(|e| ConfigError::Malformed("edenapi.http-version".into(), e))?
+            .unwrap_or_else(|| "2".to_string());
+        let http_version = Some(match http_version.as_str() {
+            "1.1" => HttpVersion::V11,
+            "2" => HttpVersion::V2,
+            x => {
+                return Err(EdenApiError::BadConfig(ConfigError::Malformed(
+                    "edenapi.http-version".into(),
+                    anyhow!("invalid http version {}", x),
+                )));
+            }
+        });
+
         Ok(Self {
             server_url: Some(server_url),
             client_creds,
@@ -99,6 +117,7 @@ impl Builder {
             timeout,
             debug,
             correlator: None,
+            http_version,
         })
     }
 
@@ -215,6 +234,7 @@ pub(crate) struct Config {
     pub(crate) timeout: Option<Duration>,
     pub(crate) debug: bool,
     pub(crate) correlator: Option<String>,
+    pub(crate) http_version: Option<HttpVersion>,
 }
 
 impl TryFrom<Builder> for Config {
@@ -232,6 +252,7 @@ impl TryFrom<Builder> for Config {
             timeout,
             debug,
             correlator,
+            http_version,
         } = builder;
 
         // Check for missing required fields.
@@ -253,6 +274,7 @@ impl TryFrom<Builder> for Config {
             timeout,
             debug,
             correlator,
+            http_version,
         })
     }
 }

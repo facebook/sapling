@@ -89,6 +89,10 @@ impl Client {
             req = req.timeout(timeout);
         }
 
+        if let Some(http_version) = self.config.http_version {
+            req = req.http_version(http_version);
+        }
+
         Ok(req)
     }
 
