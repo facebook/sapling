@@ -554,7 +554,9 @@ class InodeCmd(Subcmd):
 
 
 @debug_cmd(
-    "modified", "Enumerate all potentially-modified inode paths", aliases="materialized"
+    "modified",
+    "Enumerate all potentially-modified inode paths",
+    aliases=["materialized"],
 )
 class MaterializedCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
