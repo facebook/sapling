@@ -25,14 +25,6 @@ TEST(ProcessAccessLog, emptyLogHasNoAccesses) {
   EXPECT_THAT(log.getAccessCounts(10s), ElementsAre());
 }
 
-TEST(ProcessAccessLog, accessAddsProcessToProcessNameCache) {
-  auto pid = ::getpid();
-  auto processNameCache = std::make_shared<ProcessNameCache>();
-  auto log = ProcessAccessLog{processNameCache};
-  log.recordAccess(::getpid(), ProcessAccessLog::AccessType::FsChannelOther);
-  EXPECT_THAT(processNameCache->getAllProcessNames(), Contains(Key(Eq(pid))));
-}
-
 TEST(ProcessAccessLog, accessIncrementsAccessCount) {
   auto pid = pid_t{42};
   auto log = ProcessAccessLog{std::make_shared<ProcessNameCache>()};
@@ -50,4 +42,12 @@ TEST(ProcessAccessLog, accessIncrementsAccessCount) {
   ac.fsChannelBackingStoreImports_ref() = 1;
 
   EXPECT_THAT(log.getAccessCounts(10s), Contains(std::pair{pid, ac}));
+}
+
+TEST(ProcessAccessLog, accessAddsProcessToProcessNameCache) {
+  auto pid = pid_t{1};
+  auto processNameCache = std::make_shared<ProcessNameCache>();
+  auto log = ProcessAccessLog{processNameCache};
+  log.recordAccess(pid, ProcessAccessLog::AccessType::FsChannelOther);
+  EXPECT_THAT(processNameCache->getAllProcessNames(), Contains(Key(Eq(pid))));
 }

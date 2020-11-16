@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#ifndef _WIN32
+
 #include "eden/fs/utils/UnixSocket.h"
 #include "eden/fs/utils/FutureUnixSocket.h"
 
@@ -300,3 +302,5 @@ TEST(FutureUnixSocket, attachEventBase) {
     test(&evb2, socket2, socket1);
   }
 }
+
+#endif
