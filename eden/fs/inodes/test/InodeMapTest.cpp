@@ -344,7 +344,7 @@ TEST(InodeMap, unloadedUnlinkedTreesAreRemovedFromOverlay) {
   dir1.reset();
   dir2.reset();
 
-  edenMount->getInodeMap()->decFuseRefcount(dir2ino);
+  edenMount->getInodeMap()->decFsRefcount(dir2ino);
   EXPECT_FALSE(mount.hasOverlayData(dir1ino));
   EXPECT_FALSE(mount.hasOverlayData(dir2ino));
 #ifndef _WIN32
@@ -407,7 +407,7 @@ TEST(InodeMap, unloadedFileMetadataIsForgotten) {
   EXPECT_TRUE(mount.hasMetadata(file1ino));
   EXPECT_FALSE(mount.hasMetadata(file2ino));
 
-  edenMount->getInodeMap()->decFuseRefcount(file1ino);
+  edenMount->getInodeMap()->decFsRefcount(file1ino);
   EXPECT_FALSE(mount.hasMetadata(file1ino));
   EXPECT_FALSE(mount.hasMetadata(file2ino));
 }

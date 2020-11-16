@@ -1115,7 +1115,7 @@ TEST(Checkout, checkoutRemembersInodeNumbersAfterCheckoutAndTakeover) {
   EXPECT_EQ(dirInodeNumber, subTree2->getParentRacy()->getNodeId());
   EXPECT_EQ(subInodeNumber, subTree2->getNodeId());
 
-  testMount.getEdenMount()->getInodeMap()->decFuseRefcount(subInodeNumber);
+  testMount.getEdenMount()->getInodeMap()->decFsRefcount(subInodeNumber);
   subTree.reset();
   subTree2.reset();
 

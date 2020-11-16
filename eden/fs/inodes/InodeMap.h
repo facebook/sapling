@@ -49,10 +49,11 @@ class InodeMapLock;
  *
  * Note that InodeNumber values and Inode objects have separate lifetimes:
  * - Inode numbers are allocated when we need to return a InodeNumber value to
- *   the FUSE APIs.  These are generally allocated by lookup() calls. FUSE will
- *   call forget() to let us know when we can forget about a InodeNumber value.
- *   (We may not necessarily forget about the InodeNumber value immediately,
- *   though.)
+ *   the FUSE/ProjectedFS APIs. These are generally allocated by lookup()
+ *   calls. FUSE will call forget() to let us know when we can forget about a
+ *   InodeNumber value. For ProjectedFS, we can forget about an InodeNumber as
+ *   soon as it is invalidated from the FS.  (We may not necessarily forget
+ *   about the InodeNumber value immediately, though.)
  *
  * - InodeBase objects are needed when we have to actually operate on a file or
  *   directory.  Any operation more than looking up a file name (or some of its
@@ -147,7 +148,7 @@ class InodeMap {
    * calling incFsRefcount() on the Inode object.  The initial access that
    * first creates an Inode is always by name.  After the initial access,
    * incFsRefcount() can be called to allow it to be retrieved by inode
-   * number later.  InodeMap::decFuseRefcount() can be used to drop an inode
+   * number later.  InodeMap::decFsRefcount() can be used to drop an inode
    * number reference count.
    *
    * If the InodeBase object is not currently loaded it will be loaded and a
@@ -216,22 +217,22 @@ class InodeMap {
   std::optional<RelativePath> getPathForInode(InodeNumber inodeNumber);
 
   /**
-   * Decrement the number of outstanding FUSE references to an inode number.
+   * Decrement the number of outstanding FS references to an inode number.
    *
-   * Note that there is no corresponding incFuseRefcount() function:
+   * Note that there is no corresponding incFsRefcount() function:
    * increments are always done directly on a loaded InodeBase object.
    *
    * However, decrements may happen after we have decided to unload the Inode
    * object.  Therefore decrements are performed on the InodeMap so that we can
    * avoid loading an Inode object just to decrement its reference count.
    */
-  void decFuseRefcount(InodeNumber number, uint32_t count = 1);
+  void decFsRefcount(InodeNumber number, uint32_t count = 1);
 
   /**
    * Indicate that the mount point has been unmounted.
    *
    * Calling this before shutdown() will inform the InodeMap that it no longer
-   * needs to remember inodes with outstanding FUSE refcounts when shutting
+   * needs to remember inodes with outstanding FS refcounts when shutting
    * down.
    */
   void setUnmounted();
@@ -379,7 +380,7 @@ class InodeMap {
 
   /*
    * Return all referenced inodes (loaded and unloaded inodes whose
-   * fuse references is greater than zero).
+   * fs references is greater than zero).
    */
   std::vector<InodeNumber> getReferencedInodes() const;
 
@@ -400,19 +401,19 @@ class InodeMap {
         bool isUnlinked,
         mode_t mode,
         std::optional<Hash> hash,
-        uint32_t fuseRefcount);
+        uint32_t fsRefcount);
     UnloadedInode(
         TreeInode* parent,
         PathComponentPiece entryName,
         bool isUnlinked,
         std::optional<Hash> hash,
-        uint32_t fuseRefcount);
+        uint32_t fsRefcount);
     UnloadedInode(
         FileInode* inode,
         TreeInode* parent,
         PathComponentPiece entryName,
         bool isUnlinked,
-        uint32_t fuseRefcount);
+        uint32_t fsRefcount);
 
     InodeNumber const parent;
     PathComponent const name;
@@ -504,9 +505,9 @@ class InodeMap {
     std::unordered_map<InodeNumber, UnloadedInode> unloadedInodes_;
 
     /**
-     * Indicates if the FUSE mount point has been unmounted.
+     * Indicates if the FS mount point has been unmounted.
      *
-     * If this is true then the FUSE refcount on all inodes should be treated
+     * If this is true then the FS refcount on all inodes should be treated
      * as 0, and we can forget all inodes while shutting down.
      */
     bool isUnmounted_{false};
@@ -576,7 +577,7 @@ class InodeMap {
    * Unload an inode
    *
    * This simply removes it from the loadedInodes_ map and, if it is still
-   * referenced by FUSE, adds it to the unloadedInodes_ map.
+   * referenced by the FS, adds it to the unloadedInodes_ map.
    *
    * The caller is responsible for actually deleting the Inode object after
    * releasing the InodeMap lock.

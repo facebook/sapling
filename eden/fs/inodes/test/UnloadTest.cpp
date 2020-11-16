@@ -65,10 +65,10 @@ TYPED_TEST(UnloadTest, inodesAreUnloaded) {
   EXPECT_TRUE(inodeMap->lookupInode(test_ino).get());
 
   // Now decrement the FUSE refcounts.
-  inodeMap->decFuseRefcount(readme_ino, 1);
-  inodeMap->decFuseRefcount(wholefish_ino, 1);
-  inodeMap->decFuseRefcount(code_ino, 1);
-  inodeMap->decFuseRefcount(test_ino, 1);
+  inodeMap->decFsRefcount(readme_ino, 1);
+  inodeMap->decFsRefcount(wholefish_ino, 1);
+  inodeMap->decFsRefcount(code_ino, 1);
+  inodeMap->decFsRefcount(test_ino, 1);
 
   // At this point, every file and tree should be loaded, plus the root and
   // .eden.

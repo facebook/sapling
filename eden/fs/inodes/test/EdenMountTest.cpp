@@ -678,7 +678,7 @@ TEST_F(ChownTest, UnloadedInodeWithZeroRefCount) {
   auto fileIno = load();
   EXPECT_TRUE(inodeMap->lookupInode(fileIno).get());
   // now unload it with a zero ref count
-  inodeMap->decFuseRefcount(fileIno, 1);
+  inodeMap->decFsRefcount(fileIno, 1);
   edenMount_->getRootInode()->unloadChildrenNow();
 
   auto chownFuture = edenMount_->chown(uid, gid);

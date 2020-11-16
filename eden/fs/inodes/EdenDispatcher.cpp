@@ -175,7 +175,7 @@ folly::Future<Dispatcher::Attr> EdenDispatcher::setattr(
 }
 
 void EdenDispatcher::forget(InodeNumber ino, unsigned long nlookup) {
-  inodeMap_->decFuseRefcount(ino, nlookup);
+  inodeMap_->decFsRefcount(ino, nlookup);
 }
 
 folly::Future<uint64_t> EdenDispatcher::open(

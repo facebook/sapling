@@ -41,20 +41,20 @@ InodeMap::UnloadedInode::UnloadedInode(
     bool isUnlinked,
     mode_t mode,
     std::optional<Hash> hash,
-    uint32_t fuseRefcount)
+    uint32_t fsRefcount)
     : parent(parentNum),
       name(entryName),
       isUnlinked{isUnlinked},
       mode{mode},
       hash{hash},
-      numFsReferences{fuseRefcount} {}
+      numFsReferences{fsRefcount} {}
 
 InodeMap::UnloadedInode::UnloadedInode(
     TreeInode* parent,
     PathComponentPiece entryName,
     bool isUnlinked,
     std::optional<Hash> hash,
-    uint32_t fuseRefcount)
+    uint32_t fsRefcount)
     : parent{parent->getNodeId()},
       name{entryName},
       isUnlinked{isUnlinked},
@@ -64,20 +64,20 @@ InodeMap::UnloadedInode::UnloadedInode(
       // force the value down here.
       mode{S_IFDIR | 0755},
       hash{hash},
-      numFsReferences{fuseRefcount} {}
+      numFsReferences{fsRefcount} {}
 
 InodeMap::UnloadedInode::UnloadedInode(
     FileInode* inode,
     TreeInode* parent,
     PathComponentPiece entryName,
     bool isUnlinked,
-    uint32_t fuseRefcount)
+    uint32_t fsRefcount)
     : parent{parent->getNodeId()},
       name{entryName},
       isUnlinked{isUnlinked},
       mode{inode->getMode()},
       hash{inode->getBlobHash()},
-      numFsReferences{fuseRefcount} {}
+      numFsReferences{fsRefcount} {}
 
 InodeMap::InodeMap(EdenMount* mount) : mount_{mount} {}
 
@@ -474,20 +474,20 @@ std::optional<RelativePath> InodeMap::getPathForInodeHelper(
   }
 }
 
-void InodeMap::decFuseRefcount(InodeNumber number, uint32_t count) {
+void InodeMap::decFsRefcount(InodeNumber number, uint32_t count) {
   auto data = data_.wlock();
 
   // First check in the loaded inode map
   auto loadedIter = data->loadedInodes_.find(number);
   if (loadedIter != data->loadedInodes_.end()) {
     // Acquire an InodePtr, so that we are always holding a pointer reference
-    // on the inode when we decrement the fuse refcount.
+    // on the inode when we decrement the fs refcount.
     //
     // This ensures that onInodeUnreferenced() will be processed at some point
-    // after decrementing the FUSE refcount to 0, even if there were no
+    // after decrementing the FS refcount to 0, even if there were no
     // outstanding pointer references before this.
     auto inode = loadedIter->second.getPtr();
-    // Now release our lock before decrementing the inode's FUSE reference
+    // Now release our lock before decrementing the inode's FS reference
     // count and immediately releasing our pointer reference.
     data.unlock();
     inode->decFsRefcount(count);
@@ -497,7 +497,7 @@ void InodeMap::decFuseRefcount(InodeNumber number, uint32_t count) {
   // If it wasn't loaded, it should be in the unloaded map
   auto unloadedIter = data->unloadedInodes_.find(number);
   if (UNLIKELY(unloadedIter == data->unloadedInodes_.end())) {
-    EDEN_BUG() << "InodeMap::decFuseRefcount() called on unknown inode number "
+    EDEN_BUG() << "InodeMap::decFsRefcount() called on unknown inode number "
                << number;
   }
 
@@ -557,7 +557,7 @@ Future<SerializedInodeMap> InodeMap::shutdown(bool doTakeover) {
 
   // Also walk loadedInodes_ to immediately destroy all unreferenced unlinked
   // inodes.  (There may be unlinked inodes that have no outstanding pointer
-  // references, but outstanding FUSE references.)
+  // references, but outstanding FS references.)
   //
   // We walk normal inodes via the root since it is easier to hold the parent
   // TreeInode's contents lock as we walk down from the root.  However, we
@@ -693,7 +693,7 @@ void InodeMap::onInodeUnreferenced(
     // We can't destroy the EdenMount until all inodes get unloaded.
     unloadNow = true;
   } else if (parentInfo.isUnlinked() && inode->getFsRefcount() == 0) {
-    // This inode has been unlinked and has no outstanding FUSE references.
+    // This inode has been unlinked and has no outstanding FS references.
     // This inode can now be completely destroyed and forgotten about.
     unloadNow = true;
   } else {
@@ -778,8 +778,8 @@ optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
     PathComponentPiece name,
     bool isUnlinked,
     const folly::Synchronized<Members>::LockedPtr& data) {
-  auto fuseCount = inode->getFsRefcount();
-  if (isUnlinked && (data->isUnmounted_ || fuseCount == 0)) {
+  auto fsCount = inode->getFsRefcount();
+  if (isUnlinked && (data->isUnmounted_ || fsCount == 0)) {
     try {
       mount_->getOverlay()->removeOverlayData(inode->getNodeId());
     } catch (const std::exception& ex) {
@@ -798,9 +798,9 @@ optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
     }
   }
 
-  // If the mount point has been unmounted, ignore any outstanding FUSE
+  // If the mount point has been unmounted, ignore any outstanding FS
   // refcounts on inodes that still existed before it was unmounted.
-  // Everything is unreferenced by FUSE after an unmount operation, and we no
+  // Everything is unreferenced by FS after an unmount operation, and we no
   // longer need to remember anything in the unloadedInodes_ map.
   if (data->isUnmounted_) {
     XLOG(DBG5) << "forgetting unreferenced inode " << inode->getNodeId()
@@ -810,7 +810,7 @@ optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
 
   // If the tree is unlinked and no longer referenced we can delete it from
   // the overlay and completely forget about it.
-  if (isUnlinked && fuseCount == 0) {
+  if (isUnlinked && fsCount == 0) {
     XLOG(DBG5) << "forgetting unreferenced unlinked inode "
                << inode->getNodeId() << ": " << inode->getLogPath();
     return std::nullopt;
@@ -825,13 +825,13 @@ optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
     // the contents can be directly accessed here.
     auto& treeContents = asTree->getContents().unsafeGetUnlocked();
 
-    // If the fuse refcount is non-zero we have to remember this inode.
-    if (fuseCount > 0) {
+    // If the fs refcount is non-zero we have to remember this inode.
+    if (fsCount > 0) {
       XLOG(DBG5) << "unloading tree inode " << inode->getNodeId()
-                 << " with FUSE refcount=" << fuseCount << ": "
+                 << " with Fs refcount=" << fsCount << ": "
                  << inode->getLogPath();
       return UnloadedInode(
-          parent, name, isUnlinked, treeContents.treeHash, fuseCount);
+          parent, name, isUnlinked, treeContents.treeHash, fsCount);
     }
 
     // If any of this inode's childrens are in unloadedInodes_, then this
@@ -844,18 +844,18 @@ optional<InodeMap::UnloadedInode> InodeMap::updateOverlayForUnload(
                    << asTree->getLogPath() << ") because its child "
                    << childName << " was remembered";
         return UnloadedInode(
-            parent, name, isUnlinked, treeContents.treeHash, fuseCount);
+            parent, name, isUnlinked, treeContents.treeHash, fsCount);
       }
     }
     return std::nullopt;
   } else {
-    // We have to remember files only if their FUSE refcount is non-zero
-    if (fuseCount > 0) {
+    // We have to remember files only if their FS refcount is non-zero
+    if (fsCount > 0) {
       XLOG(DBG5) << "unloading file inode " << inode->getNodeId()
-                 << " with FUSE refcount=" << fuseCount << ": "
+                 << " with FS refcount=" << fsCount << ": "
                  << inode->getLogPath();
       auto* asFile = boost::polymorphic_downcast<FileInode*>(inode);
-      return UnloadedInode(asFile, parent, name, isUnlinked, fuseCount);
+      return UnloadedInode(asFile, parent, name, isUnlinked, fsCount);
     } else {
       XLOG(DBG5) << "forgetting unreferenced file inode " << inode->getNodeId()
                  << " : " << inode->getLogPath();
