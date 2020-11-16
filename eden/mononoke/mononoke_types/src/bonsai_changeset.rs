@@ -37,10 +37,71 @@ pub struct BonsaiChangesetMut {
 }
 
 impl BonsaiChangesetMut {
+    /// Create from a thrift `BonsaiChangeset`.
+    fn from_thrift(tc: thrift::BonsaiChangeset) -> Result<Self> {
+        Ok(BonsaiChangesetMut {
+            parents: tc
+                .parents
+                .into_iter()
+                .map(ChangesetId::from_thrift)
+                .collect::<Result<_>>()?,
+            author: tc.author,
+            author_date: DateTime::from_thrift(
+                tc.author_date
+                    .ok_or_else(|| Error::msg("missing author date field"))?,
+            )?,
+            committer: tc.committer,
+            committer_date: tc.committer_date.map(DateTime::from_thrift).transpose()?,
+            message: tc.message,
+            extra: tc.extra,
+            file_changes: tc
+                .file_changes
+                .into_iter()
+                .map(|(f, fc_opt)| {
+                    let mpath = MPath::from_thrift(f)?;
+                    let fc_opt = FileChange::from_thrift_opt(fc_opt, &mpath)?;
+                    Ok((mpath, fc_opt))
+                })
+                .collect::<Result<_>>()?,
+        })
+    }
+
+    /// Convert into a thrift `BonsaiChangeset`.
+    fn into_thrift(self) -> thrift::BonsaiChangeset {
+        thrift::BonsaiChangeset {
+            parents: self
+                .parents
+                .into_iter()
+                .map(|parent| parent.into_thrift())
+                .collect(),
+            author: self.author,
+            author_date: Some(self.author_date.into_thrift()),
+            committer: self.committer,
+            committer_date: self.committer_date.map(DateTime::into_thrift),
+            message: self.message,
+            extra: self.extra,
+            file_changes: self
+                .file_changes
+                .into_iter()
+                .map(|(f, c)| (f.into_thrift(), FileChange::into_thrift_opt(c)))
+                .collect(),
+        }
+    }
+
+    /// Compute the changeset id for the `BonsaiChangeset`.
+    fn changeset_id(&self) -> ChangesetId {
+        let thrift = self.clone().into_thrift();
+        let data = compact_protocol::serialize(&thrift);
+        let mut context = ChangesetIdContext::new();
+        context.update(&data);
+        context.finish()
+    }
+
     /// Freeze this instance and turn it into a `BonsaiChangeset`.
     pub fn freeze(self) -> Result<BonsaiChangeset> {
         self.verify()?;
-        Ok(BonsaiChangeset { inner: self })
+        let id = self.changeset_id();
+        Ok(BonsaiChangeset { inner: self, id })
     }
 
     /// Verify that this will form a valid `BonsaiChangeset`.
@@ -78,41 +139,25 @@ impl BonsaiChangesetMut {
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub struct BonsaiChangeset {
+    /// The changeset data.
+    ///
+    /// This is immutable while the changeset is frozen.  Use `into_mut` to
+    /// thaw the changeset and make it mutable again.
     inner: BonsaiChangesetMut,
+
+    /// The changeset id.
+    ///
+    /// `BonsaiChangeset` is immutable, so this is computed once, either when
+    /// the changeset is frozen, or when it is loaded.
+    id: ChangesetId,
 }
 
 impl BonsaiChangeset {
-    pub(crate) fn from_thrift(tc: thrift::BonsaiChangeset) -> Result<Self> {
+    fn from_thrift_with_id(tc: thrift::BonsaiChangeset, id: ChangesetId) -> Result<Self> {
         let catch_block = || -> Result<_> {
-            Ok(BonsaiChangesetMut {
-                parents: tc
-                    .parents
-                    .into_iter()
-                    .map(|parent| ChangesetId::from_thrift(parent))
-                    .collect::<Result<_>>()?,
-                author: tc.author,
-                author_date: DateTime::from_thrift(
-                    tc.author_date
-                        .ok_or_else(|| Error::msg("missing author date field"))?,
-                )?,
-                committer: tc.committer,
-                committer_date: match tc.committer_date {
-                    Some(dt) => Some(DateTime::from_thrift(dt)?),
-                    None => None,
-                },
-                message: tc.message,
-                extra: tc.extra,
-                file_changes: tc
-                    .file_changes
-                    .into_iter()
-                    .map(|(f, fc_opt)| {
-                        let mpath = MPath::from_thrift(f)?;
-                        let fc_opt = FileChange::from_thrift_opt(fc_opt, &mpath)?;
-                        Ok((mpath, fc_opt))
-                    })
-                    .collect::<Result<_>>()?,
-            }
-            .freeze()?)
+            let inner = BonsaiChangesetMut::from_thrift(tc)?;
+            inner.verify()?;
+            Ok(BonsaiChangeset { inner, id })
         };
 
         Ok(catch_block().with_context(|| {
@@ -184,35 +229,12 @@ impl BonsaiChangeset {
     }
 
     pub fn get_changeset_id(&self) -> ChangesetId {
-        *self.clone().into_blob().id()
+        self.id
     }
 
     /// Allow mutating this instance of `BonsaiChangeset`.
     pub fn into_mut(self) -> BonsaiChangesetMut {
         self.inner
-    }
-
-    pub(crate) fn into_thrift(self) -> thrift::BonsaiChangeset {
-        thrift::BonsaiChangeset {
-            parents: self
-                .inner
-                .parents
-                .into_iter()
-                .map(|parent| parent.into_thrift())
-                .collect(),
-            author: self.inner.author,
-            author_date: Some(self.inner.author_date.into_thrift()),
-            committer: self.inner.committer,
-            committer_date: self.inner.committer_date.map(|dt| dt.into_thrift()),
-            message: self.inner.message,
-            extra: self.inner.extra,
-            file_changes: self
-                .inner
-                .file_changes
-                .into_iter()
-                .map(|(f, c)| (f.into_thrift(), FileChange::into_thrift_opt(c)))
-                .collect(),
-        }
     }
 }
 
@@ -220,18 +242,17 @@ impl BlobstoreValue for BonsaiChangeset {
     type Key = ChangesetId;
 
     fn into_blob(self) -> ChangesetBlob {
-        let thrift = self.into_thrift();
+        let id = self.id;
+        let thrift = self.inner.into_thrift();
         let data = compact_protocol::serialize(&thrift);
-        let mut context = ChangesetIdContext::new();
-        context.update(&data);
-        let id = context.finish();
         Blob::new(id, data)
     }
 
     fn from_blob(blob: Blob<Self::Key>) -> Result<Self> {
         let thrift_tc = compact_protocol::deserialize(blob.data().as_ref())
             .with_context(|| ErrorKind::BlobDeserializeError("BonsaiChangeset".into()))?;
-        Self::from_thrift(thrift_tc)
+        let bcs = Self::from_thrift_with_id(thrift_tc, *blob.id())?;
+        Ok(bcs)
     }
 }
 
@@ -321,8 +342,8 @@ mod test {
 
     quickcheck! {
         fn thrift_roundtrip(cs: BonsaiChangeset) -> bool {
-            let thrift_cs = cs.clone().into_thrift();
-            let cs2 = BonsaiChangeset::from_thrift(thrift_cs)
+            let thrift_cs = cs.inner.clone().into_thrift();
+            let cs2 = BonsaiChangeset::from_thrift_with_id(thrift_cs, cs.id)
                 .expect("thrift roundtrips should always be valid");
             cs == cs2
         }
