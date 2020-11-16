@@ -8,7 +8,7 @@
 #![deny(warnings)]
 
 use anyhow::Error;
-use clap::{App, Arg, SubCommand};
+use clap::{App, Arg, ArgGroup, SubCommand};
 use fbinit::FacebookInit;
 use std::time::Duration;
 
@@ -60,9 +60,6 @@ fn main(fb: FacebookInit) {
                 .arg(Arg::from_usage(
                     "--private-key [KEY] 'path to the private key'",
                 ))
-                .arg(Arg::from_usage(
-                    "--common-name [CN] 'expected SSL common name of the server see https://www.ssl.com/faqs/common-name/'",
-                ))
                 .arg(Arg::from_usage("--insecure 'run hgcli without verifying peer certificate'"))
                 .arg(Arg::from_usage("--stdio 'for remote clients'"))
                 .arg(
@@ -74,7 +71,26 @@ fn main(fb: FacebookInit) {
                 ))
                 .arg(Arg::from_usage(
                     "--client-debug 'tell mononoke to send debug information to the client'",
-                )),
+                ))
+                .arg(
+                    Arg::with_name(serve::ARG_COMMON_NAME)
+                        .long(serve::ARG_COMMON_NAME)
+                        .takes_value(true)
+                        .required(false)
+                        .help("expected SSL common name of the server see https://www.ssl.com/faqs/common-name/"),
+                )
+                .arg(
+                    Arg::with_name(serve::ARG_SERVER_CERT_IDENTITY)
+                        .long(serve::ARG_SERVER_CERT_IDENTITY)
+                        .takes_value(true)
+                        .required(false)
+                        .help("expected identity of the server"),
+                )
+                .group(
+                    ArgGroup::with_name("idents")
+                        .args(&[serve::ARG_COMMON_NAME, serve::ARG_SERVER_CERT_IDENTITY])
+                        .required(true)
+                ),
         )
         .get_matches();
 

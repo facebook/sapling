@@ -7,6 +7,7 @@ license = "GPLv2+"
 include = ["src/**/*.rs"]
 
 [dependencies]
+permission_checker = { path = "../permission_checker" }
 scuba_ext = { path = "../common/scuba_ext" }
 session_id = { path = "../server/session_id" }
 sshrelay = { path = "../sshrelay" }

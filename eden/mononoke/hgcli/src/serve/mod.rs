@@ -31,11 +31,13 @@ use openssl::{
     ssl::{SslConnector, SslMethod, SslVerifyMode},
     x509::{X509StoreContextRef, X509VerifyResult},
 };
+use permission_checker::MononokeIdentity;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use secure_utils::{build_identity, read_x509};
 use session_id::generate_session_id;
 use slog::{debug, error, o, Drain, Logger};
 use sshrelay::{Preamble, Priority, SshDecoder, SshEncoder, SshEnvVars, SshMsg, SshStream};
+use std::str::FromStr;
 use tokio::io::{self, BufReader, Stderr, Stdin, Stdout};
 use tokio::net::TcpStream;
 use tokio::time::timeout;
@@ -46,6 +48,8 @@ use users::get_current_username;
 const X509_R_CERT_ALREADY_IN_HASH_TABLE: c_ulong = 185057381;
 const BUFSZ: usize = 8192;
 const NUMBUFS: usize = 50000; // This seems high
+pub const ARG_COMMON_NAME: &str = "common-name";
+pub const ARG_SERVER_CERT_IDENTITY: &str = "server-cert-identity";
 
 // Wait for up to 1sec to let Scuba flush its data to the server.
 const SCUBA_TIMEOUT: Duration = Duration::from_millis(1000);
@@ -75,9 +79,7 @@ pub async fn cmd(
             let ca_pem = sub
                 .value_of("ca-pem")
                 .expect("Cental authority pem file is not specified");
-            let common_name = sub
-                .value_of("common-name")
-                .expect("expected SSL common name of the Mononoke server");
+            let expected_server_identity = ExpectedServerIdentity::new(sub)?;
             let insecure = sub.is_present("insecure");
             let is_remote_proxy = main.is_present("remote-proxy");
             let scuba_table = main.value_of("scuba-table");
@@ -102,7 +104,7 @@ pub async fn cmd(
                 cert,
                 private_key,
                 ca_pem,
-                ssl_common_name: common_name,
+                expected_server_identity,
                 insecure,
                 is_remote_proxy,
                 scuba_logger,
@@ -120,6 +122,43 @@ pub async fn cmd(
     return Err(format_err!("Only stdio server is supported"));
 }
 
+#[derive(Clone)]
+enum ExpectedServerIdentity {
+    CommonName(String),
+    Identity(MononokeIdentity),
+}
+
+impl ExpectedServerIdentity {
+    fn new(matches: &ArgMatches<'_>) -> Result<Self, Error> {
+        let maybe_common_name = matches.value_of(ARG_COMMON_NAME);
+        let maybe_server_cert_identity = matches.value_of(ARG_SERVER_CERT_IDENTITY);
+
+        match (maybe_common_name, maybe_server_cert_identity) {
+            (Some(common_name), None) => {
+                Ok(ExpectedServerIdentity::CommonName(common_name.to_string()))
+            }
+            (None, Some(server_cert_identity)) => Ok(ExpectedServerIdentity::Identity(
+                MononokeIdentity::from_str(server_cert_identity)?,
+            )),
+            (Some(_), Some(_)) => Err(format_err!(
+                "both common-name and server-cert-identity are specified"
+            )),
+            (None, None) => Err(format_err!(
+                "neither common-name nor server-cert-identity are specified"
+            )),
+        }
+    }
+
+    fn maybe_get_common_name(&self) -> Option<&str> {
+        use ExpectedServerIdentity::*;
+
+        match self {
+            CommonName(common_name) => Some(&common_name),
+            Identity(_) => None,
+        }
+    }
+}
+
 struct StdioRelay<'a> {
     path: &'a str,
     repo: &'a str,
@@ -127,7 +166,7 @@ struct StdioRelay<'a> {
     cert: &'a str,
     private_key: &'a str,
     ca_pem: &'a str,
-    ssl_common_name: &'a str,
+    expected_server_identity: ExpectedServerIdentity,
     insecure: bool,
     is_remote_proxy: bool,
     scuba_logger: ScubaSampleBuilder,
@@ -224,7 +263,7 @@ impl<'a> StdioRelay<'a> {
 
     async fn establish_connection(&self) -> Result<SslStream<TcpStream>, Error> {
         let path = self.path.to_owned();
-        let ssl_common_name = self.ssl_common_name.to_owned();
+        let expected_server_identity = self.expected_server_identity.clone();
         let client_logger = self.client_logger.clone();
         let scuba_logger = self.scuba_logger.clone();
 
@@ -245,8 +284,27 @@ impl<'a> StdioRelay<'a> {
                             return preverify_ok;
                         }
 
-                        let verification_result =
-                            verify_common_name(&ssl_common_name, x509_ctx_ref);
+
+                        let verification_result = match expected_server_identity {
+                            ExpectedServerIdentity::CommonName(ref common_name) => {
+                                verify_common_name(&common_name, x509_ctx_ref)
+                            }
+                            ExpectedServerIdentity::Identity(ref identity) => {
+                                #[cfg(fbcode_build)]
+                                {
+                                    verify_service_identity::verify_service_identity(
+                                        identity,
+                                        x509_ctx_ref,
+                                    )
+                                }
+                                #[cfg(not(fbcode_build))]
+                                {
+                                    let _ = identity;
+                                    Err("verifying service identity is not supported".to_string())
+                                }
+                            }
+                        };
+
                         match verification_result {
                             Ok(()) => true,
                             Err(err_msg) => {
@@ -304,7 +362,14 @@ impl<'a> StdioRelay<'a> {
         // Don't verify the hostname since we have a callback that verifies the
         // common name
         configured_connector.set_verify_hostname(false);
-        tokio_openssl::connect(configured_connector, &self.ssl_common_name, sock)
+        let common_name = match self.expected_server_identity.maybe_get_common_name() {
+            Some(common_name) => common_name,
+            None => {
+                configured_connector.set_use_server_name_indication(false);
+                ""
+            }
+        };
+        tokio_openssl::connect(configured_connector, &common_name, sock)
             .await
             .with_context(|| format!("tls failed: talking to '{}'", path))
     }
@@ -424,6 +489,40 @@ fn verify_common_name(
         None => {
             let err_msg = "common name not found in certificate";
             Err(err_msg.to_string())
+        }
+    }
+}
+
+#[cfg(fbcode_build)]
+mod verify_service_identity {
+    use super::*;
+    use identity::Identity;
+    use identity_ext::x509::get_identities;
+
+    pub fn verify_service_identity(
+        expected_identity: &MononokeIdentity,
+        x509_ctx_ref: &mut X509StoreContextRef,
+    ) -> Result<(), String> {
+        let cert = match x509_ctx_ref.current_cert() {
+            Some(cert) => cert,
+            None => {
+                let err_msg = "certificate to verify not found";
+                return Err(err_msg.to_string());
+            }
+        };
+
+        let identities = get_identities(cert)
+            .map_err(|err| format!("failed get identities from certificate: {:#}", err))?;
+
+        let expected_identity = Identity::from(expected_identity);
+        if identities.contains(&expected_identity) {
+            Ok(())
+        } else {
+            let err_msg = format!(
+                "couldn't find identity {} in certificate that has identities {:?}",
+                expected_identity, identities
+            );
+            Err(err_msg)
         }
     }
 }
