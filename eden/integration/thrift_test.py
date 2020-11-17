@@ -102,7 +102,7 @@ class ThriftTest(testcase.EdenRepoTest):
         self.assertEqual(1, len(results))
         self.assert_error(
             results[0],
-            re.compile(r".*domain_error.*: PathComponent must not be \. or \.\."),
+            re.compile(r".*domain_error.*: PathComponent must not be \."),
         )
 
     def test_get_sha1_throws_for_empty_string(self) -> None:

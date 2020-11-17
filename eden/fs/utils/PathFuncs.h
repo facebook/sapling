@@ -450,14 +450,19 @@ struct PathComponentSanityCheck {
       }
     }
 
-    if (val.empty()) {
-      throw std::domain_error("cannot have an empty PathComponent");
-    }
-
-    const char* data = val.data();
-    if (data[0] == '.' &&
-        (val.size() == 1 || (val.size() == 2 && data[1] == '.'))) {
-      throw std::domain_error("PathComponent must not be . or ..");
+    switch (val.size()) {
+      case 0:
+        throw std::domain_error("cannot have an empty PathComponent");
+      case 1:
+        if ('.' == val[0]) {
+          throw std::domain_error("PathComponent must not be .");
+        }
+        break;
+      case 2:
+        if ('.' == val[0] && '.' == val[1]) {
+          throw std::domain_error("PathComponent must not be ..");
+        }
+        break;
     }
   }
 };

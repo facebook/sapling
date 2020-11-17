@@ -545,10 +545,8 @@ TEST(PathFuncs, PathComponent) {
       PathComponent(""),
       std::domain_error,
       "cannot have an empty PathComponent");
-  EXPECT_THROW_RE(
-      PathComponent("."), std::domain_error, "must not be \\. or \\.\\.");
-  EXPECT_THROW_RE(
-      PathComponent(".."), std::domain_error, "must not be \\. or \\.\\.");
+  EXPECT_THROW_RE(PathComponent("."), std::domain_error, "must not be \\.");
+  EXPECT_THROW_RE(PathComponent(".."), std::domain_error, "must not be \\.\\.");
 }
 
 TEST(PathFuncs, RelativePath) {
@@ -1060,9 +1058,9 @@ TEST(PathFuncs, PathComponentWide) {
       std::domain_error,
       "cannot have an empty PathComponent");
   EXPECT_THROW_RE(
-      PathComponent(L"."), std::domain_error, "must not be \\. or \\.\\.");
+      PathComponent(L"."), std::domain_error, "must not be \\.");
   EXPECT_THROW_RE(
-      PathComponent(L".."), std::domain_error, "must not be \\. or \\.\\.");
+      PathComponent(L".."), std::domain_error, "must not be \\.\\.");
 }
 
 TEST(PathFuncs, RelativePathWide) {
