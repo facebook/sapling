@@ -446,16 +446,53 @@ impl FromStr for HookType {
 
 /// Hook bypass
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub enum HookBypass {
+pub struct HookBypass {
     /// Bypass that checks that a string is in the commit message
-    CommitMessage(String),
+    commit_message_bypass: Option<String>,
     /// Bypass that checks that a string is in the commit message
-    Pushvar {
-        /// Name of the pushvar
-        name: String,
-        /// Value of the pushvar
-        value: String,
-    },
+    pushvar_name_and_value: Option<(String, String)>,
+}
+
+impl HookBypass {
+    /// Create commit-message-only bypass
+    pub fn new_with_commit_msg(msg: String) -> Self {
+        Self {
+            commit_message_bypass: Some(msg),
+            pushvar_name_and_value: None,
+        }
+    }
+
+    /// Create pushvar-only bypass
+    pub fn new_with_pushvar(name: String, value: String) -> Self {
+        Self {
+            commit_message_bypass: None,
+            pushvar_name_and_value: Some((name, value)),
+        }
+    }
+
+    /// Create a bypass with both a commit message and a pushvar
+    pub fn new_with_commit_msg_and_pushvar(
+        msg: String,
+        pushvar_name: String,
+        pushvar_value: String,
+    ) -> Self {
+        Self {
+            commit_message_bypass: Some(msg),
+            pushvar_name_and_value: Some((pushvar_name, pushvar_value)),
+        }
+    }
+
+    /// Get commit message bypass params
+    pub fn commit_message_bypass(&self) -> Option<&String> {
+        self.commit_message_bypass.as_ref()
+    }
+
+    /// Get pushvar bypass params
+    pub fn pushvar_bypass(&self) -> Option<(&String, &String)> {
+        self.pushvar_name_and_value
+            .as_ref()
+            .map(|name_and_value| (&name_and_value.0, &name_and_value.1))
+    }
 }
 
 /// Configs that are being passed to the hook during runtime

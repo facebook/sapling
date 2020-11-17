@@ -31,7 +31,4 @@ pub enum ConfigurationError {
     /// Invalid pushvar
     #[error("invalid pushvar, should be KEY=VALUE: {0}")]
     InvalidPushvar(String),
-    /// Too many bypass options for a hook
-    #[error("Only one bypass option is allowed. Hook: {0}")]
-    TooManyBypassOptions(String),
 }

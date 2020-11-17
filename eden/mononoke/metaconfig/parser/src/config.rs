@@ -934,7 +934,7 @@ mod test {
                     HookParams {
                         name: "hook1".to_string(),
                         config: HookConfig {
-                            bypass: Some(HookBypass::CommitMessage("@allow_hook1".into())),
+                            bypass: Some(HookBypass::new_with_commit_msg("@allow_hook1".into())),
                             strings: hashmap! {},
                             ints: hashmap! {},
                             string_lists: hashmap! {},
@@ -1146,39 +1146,6 @@ mod test {
 
     #[test]
     fn test_broken_bypass_config() {
-        let content = r#"
-            repoid=0
-            storage_config = "sqlite"
-
-            [storage.sqlite.metadata.local]
-            local_db_path = "/tmp/fbsource"
-
-            [storage.sqlite.blobstore.blob_files]
-            path = "/tmp/fbsource"
-
-            [[bookmarks]]
-            name="master"
-            [[bookmarks.hooks]]
-            hook_name="hook1"
-            [[hooks]]
-            name="hook1"
-            bypass_commit_string="@allow_hook1"
-            bypass_pushvar="var=val"
-        "#;
-
-        let paths = btreemap! {
-            "common/commitsyncmap.toml" => "",
-            "repos/fbsource/server.toml" => content,
-        };
-
-        let config_store = ConfigStore::new(Arc::new(TestSource::new()), None, None);
-        let tmp_dir = write_files(&paths);
-        let res = load_repo_configs(tmp_dir.path(), &config_store);
-        let msg = format!("{:#?}", res);
-        println!("res = {}", msg);
-        assert!(res.is_err());
-        assert!(msg.contains("TooManyBypassOptions"));
-
         // Incorrect bypass string
         let content = r#"
             repoid=0

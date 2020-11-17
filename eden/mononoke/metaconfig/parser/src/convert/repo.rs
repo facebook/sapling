@@ -100,26 +100,27 @@ impl Convert for RawHookConfig {
     type Output = HookParams;
 
     fn convert(self) -> Result<Self::Output> {
-        let bypass_commit_message = self.bypass_commit_string.map(HookBypass::CommitMessage);
+        let bypass_commit_message = self.bypass_commit_string;
 
         let bypass_pushvar = self
             .bypass_pushvar
             .map(|s| {
                 let parts: Vec<_> = s.split('=').collect();
                 match parts.as_slice() {
-                    [name, value] => Ok(HookBypass::Pushvar {
-                        name: name.to_string(),
-                        value: value.to_string(),
-                    }),
+                    [name, value] => Ok((name.to_string(), value.to_string())),
                     _ => Err(ConfigurationError::InvalidPushvar(s)),
                 }
             })
             .transpose()?;
 
-        if bypass_commit_message.is_some() && bypass_pushvar.is_some() {
-            return Err(ConfigurationError::TooManyBypassOptions(self.name).into());
-        }
-        let bypass = bypass_commit_message.or(bypass_pushvar);
+        let bypass = match (bypass_commit_message, bypass_pushvar) {
+            (Some(msg), None) => Some(HookBypass::new_with_commit_msg(msg)),
+            (None, Some((name, value))) => Some(HookBypass::new_with_pushvar(name, value)),
+            (Some(msg), Some((name, value))) => Some(HookBypass::new_with_commit_msg_and_pushvar(
+                msg, name, value,
+            )),
+            (None, None) => None,
+        };
 
         let config = HookConfig {
             bypass,
