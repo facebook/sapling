@@ -394,6 +394,7 @@ pub async fn scrub_objects<'a>(
         scrub_sampler,
         sample_rate,
         sample_offset,
+        walk_params.enable_derive,
     ));
     walk_exact_tail::<_, _, _, _, _, EmptyRoute>(
         fb,

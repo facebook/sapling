@@ -367,6 +367,7 @@ pub async fn compression_benefit<'a>(
         sizing_sampler,
         sample_rate,
         sample_offset,
+        walk_params.enable_derive,
     ));
     walk_exact_tail::<_, _, _, _, _, PathTrackingRoute>(
         fb,

@@ -11,6 +11,7 @@ use crate::graph::{
 use crate::validate::{add_node_to_scuba, CHECK_FAIL, CHECK_TYPE, EDGE_TYPE};
 
 use anyhow::{format_err, Context, Error};
+use async_trait::async_trait;
 use auto_impl::auto_impl;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
@@ -105,9 +106,17 @@ pub enum ErrorKind {
 
 // Simpler visitor trait used inside each step to decide
 // whether to emit an edge
+#[async_trait]
 #[auto_impl(Arc)]
 pub trait VisitOne {
     fn needs_visit(&self, outgoing: &OutgoingEdge) -> bool;
+
+    async fn is_public(
+        &self,
+        ctx: &CoreContext,
+        phases_store: &dyn Phases,
+        bcs_id: &ChangesetId,
+    ) -> Result<bool, Error>;
 }
 
 // Overall trait with support for route tracking and handling
@@ -191,22 +200,22 @@ fn published_bookmarks_step<V: VisitOne>(
     ))
 }
 
-fn bonsai_phase_step<'a, V: VisitOne>(
-    ctx: &'a CoreContext,
-    checker: &'a Checker<V>,
-    phases_store: Arc<dyn Phases>,
-    bcs_id: ChangesetId,
-) -> impl Future<Output = Result<StepOutput, Error>> + 'a {
-    phases_store
-        .get_public(ctx.clone(), vec![bcs_id], true)
-        .map_ok(move |public| public.contains(&bcs_id))
-        .map_ok(move |is_public| {
-            let phase = if is_public { Some(Phase::Public) } else { None };
-            StepOutput(
-                checker.step_data(NodeType::PhaseMapping, || NodeData::PhaseMapping(phase)),
-                vec![],
-            )
-        })
+async fn bonsai_phase_step<V: VisitOne>(
+    ctx: &CoreContext,
+    checker: &Checker<V>,
+    bcs_id: &ChangesetId,
+) -> Result<StepOutput, Error> {
+    let maybe_phase = if checker.is_public(ctx, bcs_id).await? {
+        Some(Phase::Public)
+    } else {
+        None
+    };
+    Ok(StepOutput(
+        checker.step_data(NodeType::PhaseMapping, || {
+            NodeData::PhaseMapping(maybe_phase)
+        }),
+        vec![],
+    ))
 }
 
 async fn bonsai_changeset_info_mapping_step<V: VisitOne>(
@@ -413,12 +422,7 @@ async fn bonsai_to_hg_mapping_step<'a, V: 'a + VisitOne>(
     enable_derive: bool,
 ) -> Result<StepOutput, Error> {
     let has_filenode = if enable_derive {
-        let public = repo
-            .get_phases()
-            .get_public(ctx.clone(), vec![bcs_id], false /* ephemeral_derive */)
-            .await?;
-        // Even if enable_derive is set, only derive for public changesets
-        if public.contains(&bcs_id) {
+        if checker.is_public(ctx, &bcs_id).await? {
             let _ = FilenodesOnlyPublic::derive(ctx, repo, bcs_id).await?;
             Some(true)
         } else {
@@ -959,9 +963,16 @@ struct Checker<V: VisitOne> {
     required_node_data_types: HashSet<NodeType>,
     keep_edge_paths: bool,
     visitor: V,
+    phases_store: Arc<dyn Phases>,
 }
 
 impl<V: VisitOne> Checker<V> {
+    async fn is_public(&self, ctx: &CoreContext, bcs_id: &ChangesetId) -> Result<bool, Error> {
+        self.visitor
+            .is_public(ctx, self.phases_store.as_ref(), bcs_id)
+            .await
+    }
+
     // Convience method around make_edge
     fn add_edge<N>(&self, edges: &mut Vec<OutgoingEdge>, edge_type: EdgeType, node_fn: N)
     where
@@ -1080,17 +1091,37 @@ where
     let walk_roots: Vec<(Option<Route>, OutgoingEdge)> =
         walk_roots.into_iter().map(|e| (None, e)).collect();
 
-    let checker = Arc::new(Checker {
-        include_edge_types,
-        always_emit_edge_types,
-        keep_edge_paths,
-        visitor: visitor.clone(),
-        required_node_data_types,
-    });
-
     published_bookmarks
         .map_ok(move |published_bookmarks| {
             let published_bookmarks = Arc::new(published_bookmarks);
+
+            let heads_fetcher: HeadsFetcher = Arc::new({
+                cloned!(published_bookmarks);
+                move |_ctx: &CoreContext| {
+                    future::ok(
+                        published_bookmarks
+                            .iter()
+                            .map(|(_, csid)| csid)
+                            .cloned()
+                            .collect(),
+                    )
+                    .boxed()
+                }
+            });
+
+            let checker = Arc::new(Checker {
+                include_edge_types,
+                always_emit_edge_types,
+                keep_edge_paths,
+                visitor: visitor.clone(),
+                required_node_data_types,
+                phases_store: repo.get_phases_factory().get_phases(
+                    repo.get_repoid(),
+                    repo.get_changeset_fetcher(),
+                    heads_fetcher,
+                ),
+            });
+
             bounded_traversal_stream(scheduled_max, walk_roots, {
                 move |(via, walk_item): (Option<Route>, OutgoingEdge)| {
                     let ctx = visitor.start_step(ctx.clone(), via.as_ref(), &walk_item);
@@ -1115,17 +1146,7 @@ where
                             error_as_data_node_types,
                             error_as_data_edge_types,
                             scuba,
-                            published_bookmarks.clone(),
-                            Arc::new(move |_ctx: &CoreContext| {
-                                future::ok(
-                                    published_bookmarks
-                                        .iter()
-                                        .map(|(_, csid)| csid)
-                                        .cloned()
-                                        .collect(),
-                                )
-                                .boxed()
-                            }),
+                            published_bookmarks,
                             checker,
                         );
 
@@ -1151,7 +1172,6 @@ async fn walk_one<V, VOut, Route>(
     error_as_data_edge_types: HashSet<EdgeType>,
     mut scuba: ScubaSampleBuilder,
     published_bookmarks: Arc<HashMap<BookmarkName, ChangesetId>>,
-    heads_fetcher: HeadsFetcher,
     checker: Arc<Checker<V>>,
 ) -> Result<(VOut, Vec<(Option<Route>, OutgoingEdge)>), Error>
 where
@@ -1183,14 +1203,7 @@ where
         Node::BonsaiHgMapping(bcs_id) => {
             bonsai_to_hg_mapping_step(&ctx, &repo, &checker, bcs_id, enable_derive).await
         }
-        Node::PhaseMapping(bcs_id) => {
-            let phases_store = repo.get_phases_factory().get_phases(
-                repo.get_repoid(),
-                repo.get_changeset_fetcher(),
-                heads_fetcher.clone(),
-            );
-            bonsai_phase_step(&ctx, &checker, phases_store, bcs_id).await
-        }
+        Node::PhaseMapping(bcs_id) => bonsai_phase_step(&ctx, &checker, &bcs_id).await,
         Node::PublishedBookmarks(_) => {
             published_bookmarks_step(published_bookmarks.clone(), &checker).await
         }

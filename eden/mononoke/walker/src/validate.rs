@@ -26,6 +26,7 @@ use crate::tail::{walk_exact_tail, RepoWalkRun};
 use crate::walk::{EmptyRoute, OutgoingEdge, StepRoute, VisitOne, WalkVisitor};
 
 use anyhow::Error;
+use async_trait::async_trait;
 use clap::ArgMatches;
 use cloned::cloned;
 use cmdlib::args;
@@ -34,8 +35,8 @@ use derive_more::AddAssign;
 use fbinit::FacebookInit;
 use futures::{future::TryFutureExt, stream::TryStreamExt};
 use itertools::Itertools;
-use mononoke_types::MPath;
-use phases::Phase;
+use mononoke_types::{ChangesetId, MPath};
+use phases::{Phase, Phases};
 use scuba_ext::ScubaSampleBuilder;
 use slog::{info, warn, Logger};
 use stats::prelude::*;
@@ -158,6 +159,7 @@ impl ValidatingVisitor {
         include_edge_types: HashSet<EdgeType>,
         include_checks: HashSet<CheckType>,
         always_emit_edge_types: HashSet<EdgeType>,
+        enable_derive: bool,
     ) -> Self {
         Self {
             repo_stats_key,
@@ -165,6 +167,7 @@ impl ValidatingVisitor {
                 include_node_types,
                 include_edge_types,
                 always_emit_edge_types,
+                enable_derive,
             ),
             checks_by_node_type: include_checks
                 .into_iter()
@@ -176,9 +179,19 @@ impl ValidatingVisitor {
     }
 }
 
+#[async_trait]
 impl VisitOne for ValidatingVisitor {
     fn needs_visit(&self, outgoing: &OutgoingEdge) -> bool {
         self.inner.needs_visit(outgoing)
+    }
+
+    async fn is_public(
+        &self,
+        ctx: &CoreContext,
+        phases_store: &dyn Phases,
+        bcs_id: &ChangesetId,
+    ) -> Result<bool, Error> {
+        self.inner.is_public(ctx, phases_store, bcs_id).await
     }
 }
 
@@ -678,6 +691,7 @@ pub async fn validate<'a>(
         include_edge_types,
         include_check_types,
         always_emit_edge_types.clone(),
+        walk_params.enable_derive,
     ));
 
     walk_exact_tail(

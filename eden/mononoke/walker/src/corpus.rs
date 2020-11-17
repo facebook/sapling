@@ -416,6 +416,7 @@ pub async fn corpus<'a>(
         corpus_sampler,
         sample_rate,
         sample_offset,
+        walk_params.enable_derive,
     ));
     walk_exact_tail::<_, _, _, _, _, PathTrackingRoute>(
         fb,

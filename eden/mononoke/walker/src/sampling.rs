@@ -9,9 +9,12 @@ use crate::graph::{EdgeType, Node, NodeData, NodeType, WrappedPath};
 use crate::state::{StepStats, WalkState};
 use crate::walk::{EmptyRoute, OutgoingEdge, StepRoute, VisitOne, WalkVisitor};
 
+use anyhow::Error;
+use async_trait::async_trait;
 use context::{CoreContext, SamplingKey};
 use dashmap::DashMap;
-use mononoke_types::datetime::DateTime;
+use mononoke_types::{datetime::DateTime, ChangesetId};
+use phases::Phases;
 use regex::Regex;
 use std::{collections::HashSet, fmt, hash, sync::Arc};
 
@@ -37,9 +40,15 @@ impl<T> SamplingWalkVisitor<T> {
         sampler: Arc<T>,
         sample_rate: u64,
         sample_offset: u64,
+        enable_derive: bool,
     ) -> Self {
         Self {
-            inner: WalkState::new(include_node_types, include_edge_types, HashSet::new()),
+            inner: WalkState::new(
+                include_node_types,
+                include_edge_types,
+                HashSet::new(),
+                enable_derive,
+            ),
             sample_node_types,
             sample_path_regex,
             sampler,
@@ -49,9 +58,18 @@ impl<T> SamplingWalkVisitor<T> {
     }
 }
 
-impl<T> VisitOne for SamplingWalkVisitor<T> {
+#[async_trait]
+impl<T: Send + Sync> VisitOne for SamplingWalkVisitor<T> {
     fn needs_visit(&self, outgoing: &OutgoingEdge) -> bool {
         self.inner.needs_visit(outgoing)
+    }
+    async fn is_public(
+        &self,
+        ctx: &CoreContext,
+        phases_store: &dyn Phases,
+        bcs_id: &ChangesetId,
+    ) -> Result<bool, Error> {
+        self.inner.is_public(ctx, phases_store, bcs_id).await
     }
 }
 
@@ -168,7 +186,7 @@ pub struct WalkPayloadMtime(pub Option<DateTime>, pub Option<NodeData>);
 impl<T> WalkVisitor<(WalkKeyOptPath, WalkPayloadMtime, Option<StepStats>), PathTrackingRoute>
     for SamplingWalkVisitor<T>
 where
-    T: SampleTrigger<WalkKeyOptPath>,
+    T: SampleTrigger<WalkKeyOptPath> + Send + Sync,
 {
     fn start_step(
         &self,
@@ -265,7 +283,7 @@ where
 impl<T> WalkVisitor<(Node, Option<NodeData>, Option<StepStats>), EmptyRoute>
     for SamplingWalkVisitor<T>
 where
-    T: SampleTrigger<Node>,
+    T: SampleTrigger<Node> + Send + Sync,
 {
     fn start_step(
         &self,

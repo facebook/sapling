@@ -9,12 +9,15 @@ use crate::graph::{EdgeType, Node, NodeData, NodeType, WrappedPath};
 use crate::walk::{expand_checked_nodes, EmptyRoute, OutgoingEdge, VisitOne, WalkVisitor};
 
 use ahash::RandomState;
+use anyhow::Error;
 use array_init::array_init;
+use async_trait::async_trait;
 use context::CoreContext;
 use dashmap::{mapref::one::Ref, DashMap};
+use futures::future::TryFutureExt;
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId};
 use mononoke_types::{ChangesetId, ContentId, FileUnodeId, FsnodeId, MPathHash, ManifestUnodeId};
-use phases::Phase;
+use phases::{Phase, Phases};
 use std::{
     cmp,
     collections::HashSet,
@@ -137,6 +140,7 @@ pub struct WalkState {
     include_node_types: HashSet<NodeType>,
     include_edge_types: HashSet<EdgeType>,
     always_emit_edge_types: HashSet<EdgeType>,
+    enable_derive: bool,
     // Interning
     bcs_ids: InternMap<ChangesetId, InternedId<ChangesetId>>,
     hg_cs_ids: InternMap<HgChangesetId, InternedId<HgChangesetId>>,
@@ -149,6 +153,7 @@ pub struct WalkState {
     // State
     visited_bcs: StateMap<InternedId<ChangesetId>>,
     visited_bcs_mapping: StateMap<InternedId<ChangesetId>>,
+    public_not_visited: StateMap<InternedId<ChangesetId>>,
     visited_bcs_phase: StateMap<InternedId<ChangesetId>>,
     visited_file: StateMap<ContentId>,
     visited_hg_cs: StateMap<InternedId<HgChangesetId>>,
@@ -173,6 +178,7 @@ impl WalkState {
         include_node_types: HashSet<NodeType>,
         include_edge_types: HashSet<EdgeType>,
         always_emit_edge_types: HashSet<EdgeType>,
+        enable_derive: bool,
     ) -> Self {
         let fac = RandomState::default();
         Self {
@@ -180,6 +186,7 @@ impl WalkState {
             include_node_types,
             include_edge_types,
             always_emit_edge_types,
+            enable_derive,
             // Interning
             bcs_ids: InternMap::with_hasher(fac.clone()),
             hg_cs_ids: InternMap::with_hasher(fac.clone()),
@@ -192,6 +199,7 @@ impl WalkState {
             // State
             visited_bcs: StateMap::with_hasher(fac.clone()),
             visited_bcs_mapping: StateMap::with_hasher(fac.clone()),
+            public_not_visited: StateMap::with_hasher(fac.clone()),
             visited_bcs_phase: StateMap::with_hasher(fac.clone()),
             visited_file: StateMap::with_hasher(fac.clone()),
             visited_hg_cs: StateMap::with_hasher(fac.clone()),
@@ -244,8 +252,11 @@ impl WalkState {
         match (&resolved.target, node_data) {
             // Bonsai
             (Node::PhaseMapping(bcs_id), Some(NodeData::PhaseMapping(Some(Phase::Public)))) => {
+                let id = &self.bcs_ids.interned(bcs_id);
                 // Only retain visit if already public, otherwise it could mutate between walks.
-                self.record(&self.visited_bcs_phase, &self.bcs_ids.interned(bcs_id));
+                self.record(&self.visited_bcs_phase, &id);
+                // Save some memory, no need to keep an entry in public_not_visited now its in visited_bcs_phase
+                self.public_not_visited.remove(&id);
             }
             // Hg
             (Node::BonsaiHgMapping(bcs_id), Some(NodeData::BonsaiHgMapping(Some(_)))) => {
@@ -282,7 +293,43 @@ impl WalkState {
     }
 }
 
+#[async_trait]
 impl VisitOne for WalkState {
+    async fn is_public(
+        &self,
+        ctx: &CoreContext,
+        phases_store: &dyn Phases,
+        bcs_id: &ChangesetId,
+    ) -> Result<bool, Error> {
+        // Short circuit if we already know its public
+        if let Some(id) = self.bcs_ids.get(bcs_id) {
+            if self.visited_bcs_phase.contains_key(&id) || self.public_not_visited.contains_key(&id)
+            {
+                return Ok(true);
+            }
+        }
+
+        let public_not_visited = &self.public_not_visited;
+        let id = self.bcs_ids.interned(bcs_id);
+
+        let is_public = phases_store
+            .get_public(
+                ctx.clone(),
+                vec![*bcs_id],
+                !self.enable_derive, /* emphemeral_derive */
+            )
+            .map_ok(move |public| public.contains(bcs_id))
+            .await?;
+
+        // Only record visit in public_not_visited if it is public, as state can't change from that point
+        // NB, this puts it in public_not_visited rather than visited_bcs_phase so that we still emit a Phase
+        // entry from the stream
+        if is_public {
+            public_not_visited.insert(id, ());
+        }
+        Ok(is_public)
+    }
+
     /// If the set did not have this value present, true is returned.
     fn needs_visit(&self, outgoing: &OutgoingEdge) -> bool {
         let target_node: &Node = &outgoing.target;
