@@ -211,7 +211,7 @@ class Client(object):
                     identifier = n["commit_identifier"]
                     # commit_identifier could be svn revision numbers, ignore
                     # them.
-                    if len(identifier) == 40:
+                    if len(identifier) == 40 and identifier in repo:
                         difftonode[diffid] = bin(identifier)
                     elif identifier.isdigit():
                         # This is probably a globalrev.
