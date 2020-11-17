@@ -15,7 +15,7 @@ use crate::state::StepStats;
 use crate::validate::{CheckType, REPO, WALK_TYPE};
 use crate::walk::OutgoingEdge;
 
-use anyhow::{format_err, Error};
+use anyhow::{format_err, Context, Error};
 use blobrepo::BlobRepo;
 use blobrepo_factory::open_blobrepo_given_datasources;
 use blobstore_factory::make_metadata_sql_factory;
@@ -27,6 +27,7 @@ use futures::{
     compat::Future01CompatExt,
     future::{self, Future},
 };
+use itertools::{process_results, Itertools};
 use lazy_static::lazy_static;
 use metaconfig_types::{Redaction, ScrubAction};
 use once_cell::sync::OnceCell;
@@ -594,7 +595,9 @@ fn parse_node_value(arg: &str) -> Result<HashSet<NodeType>, Error> {
             if let Some(v) = by_derived_name.get(arg) {
                 HashSet::from_iter(v.iter().cloned())
             } else {
-                NodeType::from_str(arg).map(|e| HashSet::from_iter(Some(e)))?
+                NodeType::from_str(arg)
+                    .map(|e| HashSet::from_iter(Some(e)))
+                    .with_context(|| format_err!("Unknown NodeType {}", arg))?
             }
         }
     })
@@ -606,7 +609,7 @@ fn parse_node_values(
 ) -> Result<HashSet<NodeType>, Error> {
     match values {
         None => Ok(HashSet::from_iter(default.iter().cloned())),
-        Some(values) => Ok(values.flat_map(parse_node_value).flatten().collect()),
+        Some(values) => process_results(values.map(parse_node_value), |s| s.concat()),
     }
 }
 
@@ -631,7 +634,9 @@ fn parse_edge_value(arg: &str) -> Result<HashSet<EdgeType>, Error> {
         MARKER_VALUE_ARG => HashSet::from_iter(MARKER_EDGE_TYPES.iter().cloned()),
         HG_VALUE_ARG => HashSet::from_iter(HG_EDGE_TYPES.iter().cloned()),
         SHALLOW_VALUE_ARG => HashSet::from_iter(SHALLOW_INCLUDE_EDGE_TYPES.iter().cloned()),
-        _ => EdgeType::from_str(arg).map(|e| HashSet::from_iter(Some(e)))?,
+        _ => EdgeType::from_str(arg)
+            .map(|e| HashSet::from_iter(Some(e)))
+            .with_context(|| format_err!("Unknown EdgeType {}", arg))?,
     })
 }
 
@@ -641,7 +646,7 @@ fn parse_edge_values(
 ) -> Result<HashSet<EdgeType>, Error> {
     match values {
         None => Ok(HashSet::from_iter(default.iter().cloned())),
-        Some(values) => Ok(values.flat_map(parse_edge_value).flatten().collect()),
+        Some(values) => process_results(values.map(parse_edge_value), |s| s.concat()),
     }
 }
 
@@ -943,5 +948,30 @@ pub fn setup_common<'a>(
                 error_as_data_edge_types,
             },
         ))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn bad_parse_node_value() {
+        let r = parse_node_value("bad_node_type");
+        assert!(r.is_err());
+    }
+
+    #[test]
+    fn bad_parse_node_values() {
+        let m = App::new("test")
+            .arg(
+                Arg::with_name(INCLUDE_NODE_TYPE_ARG)
+                    .short("i")
+                    .multiple(true)
+                    .takes_value(true),
+            )
+            .get_matches_from(vec!["test", "-i", "bad_node_type"]);
+        let r = parse_node_values(m.values_of(INCLUDE_NODE_TYPE_ARG), &[]);
+        assert!(r.is_err());
     }
 }
