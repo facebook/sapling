@@ -243,10 +243,7 @@ impl WalkState {
     fn record_resolved_visit(&self, resolved: &OutgoingEdge, node_data: Option<&NodeData>) {
         match (&resolved.target, node_data) {
             // Bonsai
-            (
-                Node::BonsaiPhaseMapping(bcs_id),
-                Some(NodeData::BonsaiPhaseMapping(Some(Phase::Public))),
-            ) => {
+            (Node::PhaseMapping(bcs_id), Some(NodeData::PhaseMapping(Some(Phase::Public)))) => {
                 // Only retain visit if already public, otherwise it could mutate between walks.
                 self.record(&self.visited_bcs_phase, &self.bcs_ids.interned(bcs_id));
             }
@@ -255,19 +252,16 @@ impl WalkState {
                 self.record(&self.visited_bcs_mapping, &self.bcs_ids.interned(bcs_id));
             }
             // Derived
-            (
-                Node::BonsaiChangesetInfoMapping(bcs_id),
-                Some(NodeData::BonsaiChangesetInfoMapping(Some(_))),
-            ) => {
+            (Node::ChangesetInfoMapping(bcs_id), Some(NodeData::ChangesetInfoMapping(Some(_)))) => {
                 self.record(
                     &self.visited_changeset_info_mapping,
                     &self.bcs_ids.interned(bcs_id),
                 );
             }
-            (Node::BonsaiFsnodeMapping(bcs_id), Some(NodeData::BonsaiFsnodeMapping(Some(_)))) => {
+            (Node::FsnodeMapping(bcs_id), Some(NodeData::FsnodeMapping(Some(_)))) => {
                 self.record(&self.visited_fsnode_mapping, &self.bcs_ids.interned(bcs_id));
             }
-            (Node::BonsaiUnodeMapping(bcs_id), Some(NodeData::BonsaiUnodeMapping(Some(_)))) => {
+            (Node::UnodeMapping(bcs_id), Some(NodeData::UnodeMapping(Some(_)))) => {
                 self.record(&self.visited_unode_mapping, &self.bcs_ids.interned(bcs_id));
             }
             _ => {}
@@ -301,7 +295,7 @@ impl VisitOne for WalkState {
             Node::Bookmark(_) => true,
             Node::PublishedBookmarks(_) => true,
             // Bonsai
-            Node::BonsaiChangeset(bcs_id) => {
+            Node::Changeset(bcs_id) => {
                 self.record(&self.visited_bcs, &self.bcs_ids.interned(bcs_id))
             }
             Node::BonsaiHgMapping(bcs_id) => {
@@ -312,7 +306,7 @@ impl VisitOne for WalkState {
                     true
                 }
             }
-            Node::BonsaiPhaseMapping(bcs_id) => {
+            Node::PhaseMapping(bcs_id) => {
                 if let Some(id) = self.bcs_ids.get(bcs_id) {
                     // Does not insert, as can only prune visits once data resolved, see record_resolved_visit
                     !self.visited_bcs_phase.contains_key(&id)
@@ -345,21 +339,21 @@ impl VisitOne for WalkState {
             Node::FileContentMetadata(_) => true, // reached via expand_checked_nodes
             Node::AliasContentMapping(_) => true, // reached via expand_checked_nodes
             // Derived
-            Node::BonsaiChangesetInfoMapping(bcs_id) => {
+            Node::ChangesetInfoMapping(bcs_id) => {
                 if let Some(id) = self.bcs_ids.get(bcs_id) {
                     !self.visited_changeset_info_mapping.contains_key(&id) // Does not insert, see record_resolved_visit
                 } else {
                     true
                 }
             }
-            Node::BonsaiFsnodeMapping(bcs_id) => {
+            Node::FsnodeMapping(bcs_id) => {
                 if let Some(id) = self.bcs_ids.get(bcs_id) {
                     !self.visited_fsnode_mapping.contains_key(&id) // Does not insert, see record_resolved_visit
                 } else {
                     true
                 }
             }
-            Node::BonsaiUnodeMapping(bcs_id) => {
+            Node::UnodeMapping(bcs_id) => {
                 if let Some(id) = self.bcs_ids.get(bcs_id) {
                     !self.visited_unode_mapping.contains_key(&id) // Does not insert, see record_resolved_visit
                 } else {

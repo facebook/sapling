@@ -45,7 +45,7 @@ Check scuba data is logged for error on step and that it contains message and ro
   $ wc -l < scuba-error.json
   1
   $ jq -r '.int * .normal | [ .check_fail, .check_type, .node_key, .node_type, .repo, .src_node_type, .via_node_type, .walk_type, .error_msg ] | @csv' < scuba-error.json
-  1,"step","changeset.blake2.c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd","BonsaiChangeset","repo","Bookmark",,"validate","Could not step to OutgoingEdge { label: BookmarkToBonsaiChangeset, target: BonsaiChangeset(ChangesetId(Blake2(c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd))), path: None }, due to Blobstore error
+  1,"step","changeset.blake2.c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd","Changeset","repo","Bookmark",,"validate","Could not step to OutgoingEdge { label: BookmarkToChangeset, target: Changeset(ChangesetId(Blake2(c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd))), path: None }, due to Blobstore error
   * (glob)
   Caused by:
       Injected failure in get to ChaosBlobstore for key repo0000.changeset.blake2.c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd, via Some(ValidateRoute { src_node: Bookmark(BookmarkName { bookmark: ""master_bookmark"" }), via: [] })"
@@ -78,10 +78,10 @@ validate, expecting all valid, this time checking marker types as well
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
-  Performing check types [BonsaiChangesetPhaseIsPublic, HgLinkNodePopulated]
+  Performing check types [ChangesetPhaseIsPublic, HgLinkNodePopulated]
   Final count: * (glob)
   Walked* (glob)
-  Nodes,Pass,Fail:43,6,0; EdgesChecked:12; CheckType:Pass,Fail Total:6,0 BonsaiChangesetPhaseIsPublic:3,0 HgLinkNodePopulated:3,0
+  Nodes,Pass,Fail:43,6,0; EdgesChecked:12; CheckType:Pass,Fail Total:6,0 ChangesetPhaseIsPublic:3,0 HgLinkNodePopulated:3,0
 
 Remove the phase information, linknodes already point to them
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "DELETE FROM phases where repo_id >= 0";
@@ -91,10 +91,10 @@ validate, expect no failures on phase info, as the commits are still public, jus
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
-  Performing check types [BonsaiChangesetPhaseIsPublic, HgLinkNodePopulated]
+  Performing check types [ChangesetPhaseIsPublic, HgLinkNodePopulated]
   Final count: * (glob)
   Walked* (glob)
-  Nodes,Pass,Fail:43,6,0; EdgesChecked:12; CheckType:Pass,Fail Total:6,0 BonsaiChangesetPhaseIsPublic:3,0 HgLinkNodePopulated:3,0
+  Nodes,Pass,Fail:43,6,0; EdgesChecked:12; CheckType:Pass,Fail Total:6,0 ChangesetPhaseIsPublic:3,0 HgLinkNodePopulated:3,0
 
 Remove all filenodes for the last commit, validation should succeed (i.e. filenodes were not derived yet)
   $ cd "$TESTTMP"

@@ -166,18 +166,17 @@ mod tests {
                 Node::Bookmark(BookmarkName::new("foo")?),
                 parse_node(&format!("Bookmark{}foo", NODE_SEP))?
             ),
-            NodeType::BonsaiChangeset => assert_eq!(
+            NodeType::Changeset => assert_eq!(
                 node_type,
-                &parse_node(&format!("BonsaiChangeset{}{}", NODE_SEP, SAMPLE_BLAKE2))?.get_type()
+                &parse_node(&format!("Changeset{}{}", NODE_SEP, SAMPLE_BLAKE2))?.get_type()
             ),
             NodeType::BonsaiHgMapping => assert_eq!(
                 node_type,
                 &parse_node(&format!("BonsaiHgMapping{}{}", NODE_SEP, SAMPLE_BLAKE2))?.get_type()
             ),
-            NodeType::BonsaiPhaseMapping => assert_eq!(
+            NodeType::PhaseMapping => assert_eq!(
                 node_type,
-                &parse_node(&format!("BonsaiPhaseMapping{}{}", NODE_SEP, SAMPLE_BLAKE2))?
-                    .get_type()
+                &parse_node(&format!("PhaseMapping{}{}", NODE_SEP, SAMPLE_BLAKE2))?.get_type()
             ),
             NodeType::PublishedBookmarks => {
                 assert_eq!(
@@ -246,28 +245,26 @@ mod tests {
                     .get_type()
                 );
             }
-            NodeType::BonsaiChangesetInfoMapping => {
+            NodeType::ChangesetInfoMapping => {
                 assert_eq!(
                     node_type,
                     &parse_node(&format!(
-                        "BonsaiChangesetInfoMapping{}{}",
+                        "ChangesetInfoMapping{}{}",
                         NODE_SEP, SAMPLE_BLAKE2
                     ))?
                     .get_type()
                 );
             }
-            NodeType::BonsaiFsnodeMapping => {
+            NodeType::FsnodeMapping => {
                 assert_eq!(
                     node_type,
-                    &parse_node(&format!("BonsaiFsnodeMapping{}{}", NODE_SEP, SAMPLE_BLAKE2))?
-                        .get_type()
+                    &parse_node(&format!("FsnodeMapping{}{}", NODE_SEP, SAMPLE_BLAKE2))?.get_type()
                 );
             }
-            NodeType::BonsaiUnodeMapping => {
+            NodeType::UnodeMapping => {
                 assert_eq!(
                     node_type,
-                    &parse_node(&format!("BonsaiUnodeMapping{}{}", NODE_SEP, SAMPLE_BLAKE2))?
-                        .get_type()
+                    &parse_node(&format!("UnodeMapping{}{}", NODE_SEP, SAMPLE_BLAKE2))?.get_type()
                 );
             }
             NodeType::ChangesetInfo => {

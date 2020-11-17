@@ -186,8 +186,8 @@ fn bookmark_step<'a, V: VisitOne>(
         match bcs_opt {
             Some(bcs_id) => {
                 let mut edges = vec![];
-                checker.add_edge(&mut edges, EdgeType::BookmarkToBonsaiChangeset, || {
-                    Node::BonsaiChangeset(bcs_id)
+                checker.add_edge(&mut edges, EdgeType::BookmarkToChangeset, || {
+                    Node::Changeset(bcs_id)
                 });
                 checker.add_edge(&mut edges, EdgeType::BookmarkToBonsaiHgMapping, || {
                     Node::BonsaiHgMapping(bcs_id)
@@ -208,11 +208,9 @@ fn published_bookmarks_step<V: VisitOne>(
 ) -> impl Future<Output = Result<StepOutput, Error>> {
     let mut edges = vec![];
     for (_, bcs_id) in published_bookmarks.iter() {
-        checker.add_edge(
-            &mut edges,
-            EdgeType::PublishedBookmarksToBonsaiChangeset,
-            || Node::BonsaiChangeset(bcs_id.clone()),
-        );
+        checker.add_edge(&mut edges, EdgeType::PublishedBookmarksToChangeset, || {
+            Node::Changeset(bcs_id.clone())
+        });
         checker.add_edge(
             &mut edges,
             EdgeType::PublishedBookmarksToBonsaiHgMapping,
@@ -239,9 +237,7 @@ fn bonsai_phase_step<'a, V: VisitOne>(
         .map_ok(move |is_public| {
             let phase = if is_public { Some(Phase::Public) } else { None };
             StepOutput(
-                checker.step_data(NodeType::BonsaiPhaseMapping, || {
-                    NodeData::BonsaiPhaseMapping(phase)
-                }),
+                checker.step_data(NodeType::PhaseMapping, || NodeData::PhaseMapping(phase)),
                 vec![],
             )
         })
@@ -258,19 +254,19 @@ async fn bonsai_changeset_info_mapping_step<V: VisitOne>(
         let mut edges = vec![];
         checker.add_edge(
             &mut edges,
-            EdgeType::BonsaiChangesetInfoMappingToChangesetInfo,
+            EdgeType::ChangesetInfoMappingToChangesetInfo,
             || Node::ChangesetInfo(bcs_id),
         );
         Ok(StepOutput(
-            checker.step_data(NodeType::BonsaiChangesetInfoMapping, || {
-                NodeData::BonsaiChangesetInfoMapping(Some(bcs_id))
+            checker.step_data(NodeType::ChangesetInfoMapping, || {
+                NodeData::ChangesetInfoMapping(Some(bcs_id))
             }),
             edges,
         ))
     } else {
         Ok(StepOutput(
-            checker.step_data(NodeType::BonsaiChangesetInfoMapping, || {
-                NodeData::BonsaiChangesetInfoMapping(None)
+            checker.step_data(NodeType::ChangesetInfoMapping, || {
+                NodeData::ChangesetInfoMapping(None)
             }),
             vec![],
         ))
@@ -322,32 +318,26 @@ async fn bonsai_changeset_step<V: VisitOne>(
     let mut edges = vec![];
 
     // Expands to parents
-    checker.add_edge(
-        &mut edges,
-        EdgeType::BonsaiChangesetToBonsaiChangesetInfoMapping,
-        || Node::BonsaiChangesetInfoMapping(*bcs_id),
-    );
+    checker.add_edge(&mut edges, EdgeType::ChangesetToChangesetInfoMapping, || {
+        Node::ChangesetInfoMapping(*bcs_id)
+    });
 
     // Parents expand 1:[0|1|2] and then the same as all below
     for parent_id in bcs.parents() {
-        checker.add_edge(&mut edges, EdgeType::BonsaiChangesetToBonsaiParent, || {
-            Node::BonsaiChangeset(parent_id)
+        checker.add_edge(&mut edges, EdgeType::ChangesetToBonsaiParent, || {
+            Node::Changeset(parent_id)
         });
     }
     // Unode mapping is 1:1 but from their expands considerably
-    checker.add_edge(
-        &mut edges,
-        EdgeType::BonsaiChangesetToBonsaiUnodeMapping,
-        || Node::BonsaiUnodeMapping(*bcs_id),
-    );
+    checker.add_edge(&mut edges, EdgeType::ChangesetToUnodeMapping, || {
+        Node::UnodeMapping(*bcs_id)
+    });
     // Fs node mapping is 1:1 but from their expands considerably
-    checker.add_edge(
-        &mut edges,
-        EdgeType::BonsaiChangesetToBonsaiFsnodeMapping,
-        || Node::BonsaiFsnodeMapping(*bcs_id),
-    );
+    checker.add_edge(&mut edges, EdgeType::ChangesetToFsnodeMapping, || {
+        Node::FsnodeMapping(*bcs_id)
+    });
     // Allow Hg based lookup which is 1:[1|0], may expand a lot from that
-    checker.add_edge(&mut edges, EdgeType::BonsaiChangesetToBonsaiHgMapping, || {
+    checker.add_edge(&mut edges, EdgeType::ChangesetToBonsaiHgMapping, || {
         Node::BonsaiHgMapping(*bcs_id)
     });
     // File content expands just to meta+aliases 1:~5, with no further steps
@@ -355,21 +345,19 @@ async fn bonsai_changeset_step<V: VisitOne>(
         if let Some(fc) = fc {
             checker.add_edge_with_path(
                 &mut edges,
-                EdgeType::BonsaiChangesetToFileContent,
+                EdgeType::ChangesetToFileContent,
                 || Node::FileContent(fc.content_id()),
                 || Some(WrappedPath::from(Some(mpath.clone()))),
             );
         }
     }
     // Phase mapping is 1:[0|1]
-    checker.add_edge(
-        &mut edges,
-        EdgeType::BonsaiChangesetToBonsaiPhaseMapping,
-        || Node::BonsaiPhaseMapping(*bcs_id),
-    );
+    checker.add_edge(&mut edges, EdgeType::ChangesetToPhaseMapping, || {
+        Node::PhaseMapping(*bcs_id)
+    });
 
     Ok(StepOutput(
-        checker.step_data(NodeType::BonsaiChangeset, || NodeData::BonsaiChangeset(bcs)),
+        checker.step_data(NodeType::Changeset, || NodeData::Changeset(bcs)),
         edges,
     ))
 }
@@ -520,8 +508,8 @@ fn hg_to_bonsai_mapping_step<'a, V: VisitOne>(
             match maybe_bcs_id {
                 Some(bcs_id) => {
                     let mut edges = vec![];
-                    checker.add_edge(&mut edges, EdgeType::HgBonsaiMappingToBonsaiChangeset, || {
-                        Node::BonsaiChangeset(bcs_id)
+                    checker.add_edge(&mut edges, EdgeType::HgBonsaiMappingToChangeset, || {
+                        Node::Changeset(bcs_id)
                     });
                     StepOutput(
                         checker.step_data(NodeType::HgBonsaiMapping, || {
@@ -780,20 +768,18 @@ async fn bonsai_to_fsnode_mapping_step<V: VisitOne>(
 
     if let Some(root_fsnode_id) = root_fsnode_id {
         let mut edges = vec![];
-        checker.add_edge(&mut edges, EdgeType::BonsaiFsnodeMappingToRootFsnode, || {
+        checker.add_edge(&mut edges, EdgeType::FsnodeMappingToRootFsnode, || {
             Node::Fsnode(PathKey::new(*root_fsnode_id.fsnode_id(), WrappedPath::Root))
         });
         Ok(StepOutput(
-            checker.step_data(NodeType::BonsaiFsnodeMapping, || {
-                NodeData::BonsaiFsnodeMapping(Some(*root_fsnode_id.fsnode_id()))
+            checker.step_data(NodeType::FsnodeMapping, || {
+                NodeData::FsnodeMapping(Some(*root_fsnode_id.fsnode_id()))
             }),
             edges,
         ))
     } else {
         Ok(StepOutput(
-            checker.step_data(NodeType::BonsaiFsnodeMapping, || {
-                NodeData::BonsaiFsnodeMapping(None)
-            }),
+            checker.step_data(NodeType::FsnodeMapping, || NodeData::FsnodeMapping(None)),
             vec![],
         ))
     }
@@ -861,27 +847,21 @@ async fn bonsai_to_unode_mapping_step<V: VisitOne>(
     if let Some(root_unode_id) = root_unode_id {
         let mut edges = vec![];
 
-        checker.add_edge(
-            &mut edges,
-            EdgeType::BonsaiUnodeMappingToRootUnodeManifest,
-            || {
-                Node::UnodeManifest(PathKey::new(
-                    *root_unode_id.manifest_unode_id(),
-                    WrappedPath::Root,
-                ))
-            },
-        );
+        checker.add_edge(&mut edges, EdgeType::UnodeMappingToRootUnodeManifest, || {
+            Node::UnodeManifest(PathKey::new(
+                *root_unode_id.manifest_unode_id(),
+                WrappedPath::Root,
+            ))
+        });
         Ok(StepOutput(
-            checker.step_data(NodeType::BonsaiUnodeMapping, || {
-                NodeData::BonsaiUnodeMapping(Some(*root_unode_id.manifest_unode_id()))
+            checker.step_data(NodeType::UnodeMapping, || {
+                NodeData::UnodeMapping(Some(*root_unode_id.manifest_unode_id()))
             }),
             edges,
         ))
     } else {
         Ok(StepOutput(
-            checker.step_data(NodeType::BonsaiUnodeMapping, || {
-                NodeData::BonsaiUnodeMapping(None)
-            }),
+            checker.step_data(NodeType::UnodeMapping, || NodeData::UnodeMapping(None)),
             vec![],
         ))
     }
@@ -899,8 +879,8 @@ async fn unode_file_step<V: VisitOne>(
 
     let mut edges = vec![];
 
-    checker.add_edge(&mut edges, EdgeType::UnodeFileToLinkedBonsaiChangeset, || {
-        Node::BonsaiChangeset(*unode_file.linknode())
+    checker.add_edge(&mut edges, EdgeType::UnodeFileToLinkedChangeset, || {
+        Node::Changeset(*unode_file.linknode())
     });
 
     for p in unode_file.parents() {
@@ -935,11 +915,9 @@ async fn unode_manifest_step<V: VisitOne>(
 
     let mut edges = vec![];
 
-    checker.add_edge(
-        &mut edges,
-        EdgeType::UnodeManifestToLinkedBonsaiChangeset,
-        || Node::BonsaiChangeset(*unode_manifest.linknode()),
-    );
+    checker.add_edge(&mut edges, EdgeType::UnodeManifestToLinkedChangeset, || {
+        Node::Changeset(*unode_manifest.linknode())
+    });
 
     for p in unode_manifest.parents() {
         checker.add_edge(
@@ -1235,13 +1213,11 @@ where
             )
             .await
         }
-        Node::BonsaiChangeset(bcs_id) => {
-            bonsai_changeset_step(&ctx, &repo, &checker, &bcs_id).await
-        }
+        Node::Changeset(bcs_id) => bonsai_changeset_step(&ctx, &repo, &checker, &bcs_id).await,
         Node::BonsaiHgMapping(bcs_id) => {
             bonsai_to_hg_mapping_step(&ctx, &repo, &checker, bcs_id, enable_derive).await
         }
-        Node::BonsaiPhaseMapping(bcs_id) => {
+        Node::PhaseMapping(bcs_id) => {
             let phases_store = repo.get_phases_factory().get_phases(
                 repo.get_repoid(),
                 repo.get_changeset_fetcher(),
@@ -1287,13 +1263,13 @@ where
             alias_content_mapping_step(ctx.clone(), &repo, &checker, alias).await
         }
         // Derived
-        Node::BonsaiChangesetInfoMapping(bcs_id) => {
+        Node::ChangesetInfoMapping(bcs_id) => {
             bonsai_changeset_info_mapping_step(&ctx, &repo, &checker, bcs_id, enable_derive).await
         }
-        Node::BonsaiFsnodeMapping(bcs_id) => {
+        Node::FsnodeMapping(bcs_id) => {
             bonsai_to_fsnode_mapping_step(&ctx, &repo, &checker, bcs_id, enable_derive).await
         }
-        Node::BonsaiUnodeMapping(bcs_id) => {
+        Node::UnodeMapping(bcs_id) => {
             bonsai_to_unode_mapping_step(&ctx, &repo, &checker, bcs_id, enable_derive).await
         }
         Node::ChangesetInfo(bcs_id) => {

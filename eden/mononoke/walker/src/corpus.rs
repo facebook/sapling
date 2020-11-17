@@ -106,7 +106,7 @@ where
 // Disk directory layout is of the form NodeType/root/<repo_path>/.mononoke,/aa/bb/cc/blob_key
 // where the repo_path and blob_key are both percent_encoded and
 // aa/bb/cc etc is a subset of the hash used to prevent any one directory becoming too large.
-// For types without any in-repo path (e.g. `BonsaiChangeset`) the repo_path component is omitted.
+// For types without any in-repo path (e.g. `Changeset`) the repo_path component is omitted.
 fn disk_node_dir(
     base_for_type: &PathBuf,
     path: Option<&WrappedPath>,
@@ -133,7 +133,7 @@ fn disk_node_dir(
         }
         // This is content directly for the root, e.g. a root manifest
         Some(WrappedPath::Root) => o.push("root"),
-        // Not path associated in any way, e.g. a BonsaiChangeset
+        // Not path associated in any way, e.g. a Changeset
         None => {}
     };
 
@@ -152,9 +152,9 @@ fn dump_with_extension(node_type: NodeType) -> bool {
         NodeType::Root => false,
         // Bonsai
         NodeType::Bookmark => false,
-        NodeType::BonsaiChangeset => false,
+        NodeType::Changeset => false,
         NodeType::BonsaiHgMapping => false,
-        NodeType::BonsaiPhaseMapping => false,
+        NodeType::PhaseMapping => false,
         NodeType::PublishedBookmarks => false,
         // Hg
         NodeType::HgBonsaiMapping => false,
@@ -167,9 +167,9 @@ fn dump_with_extension(node_type: NodeType) -> bool {
         NodeType::FileContentMetadata => true,
         NodeType::AliasContentMapping => true,
         // Derived Data
-        NodeType::BonsaiChangesetInfoMapping => false,
-        NodeType::BonsaiFsnodeMapping => false,
-        NodeType::BonsaiUnodeMapping => false,
+        NodeType::ChangesetInfoMapping => false,
+        NodeType::FsnodeMapping => false,
+        NodeType::UnodeMapping => false,
         NodeType::ChangesetInfo => false,
         NodeType::Fsnode => false,
         NodeType::UnodeFile => false,

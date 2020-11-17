@@ -78,7 +78,7 @@ define_stats! {
 }
 
 pub const DEFAULT_CHECK_TYPES: &[CheckType] = &[
-    CheckType::BonsaiChangesetPhaseIsPublic,
+    CheckType::ChangesetPhaseIsPublic,
     CheckType::HgLinkNodePopulated,
 ];
 
@@ -107,7 +107,7 @@ enum CheckStatus {
 
 define_type_enum! {
 enum CheckType {
-    BonsaiChangesetPhaseIsPublic,
+    ChangesetPhaseIsPublic,
     HgLinkNodePopulated,
 }
 }
@@ -115,13 +115,13 @@ enum CheckType {
 impl CheckType {
     fn stats_key(&self) -> &'static str {
         match self {
-            CheckType::BonsaiChangesetPhaseIsPublic => "bonsai_phase_is_public",
+            CheckType::ChangesetPhaseIsPublic => "bonsai_phase_is_public",
             CheckType::HgLinkNodePopulated => "hg_link_node_populated",
         }
     }
     pub fn node_type(&self) -> NodeType {
         match self {
-            CheckType::BonsaiChangesetPhaseIsPublic => NodeType::BonsaiPhaseMapping,
+            CheckType::ChangesetPhaseIsPublic => NodeType::PhaseMapping,
             CheckType::HgLinkNodePopulated => NodeType::HgFileNode,
         }
     }
@@ -188,19 +188,15 @@ fn check_bonsai_phase_is_public(
     route: Option<&ValidateRoute>,
 ) -> CheckStatus {
     match (&node, &node_data) {
-        (
-            Node::BonsaiPhaseMapping(_cs_id),
-            Some(NodeData::BonsaiPhaseMapping(Some(Phase::Public))),
-        ) => CheckStatus::Pass,
-        (
-            Node::BonsaiPhaseMapping(non_public_cs_id),
-            Some(NodeData::BonsaiPhaseMapping(_phase)),
-        ) => {
+        (Node::PhaseMapping(_cs_id), Some(NodeData::PhaseMapping(Some(Phase::Public)))) => {
+            CheckStatus::Pass
+        }
+        (Node::PhaseMapping(non_public_cs_id), Some(NodeData::PhaseMapping(_phase))) => {
             let via = route.and_then(|r| {
                 for n in r.via.iter().rev() {
                     match n {
                         Node::HgChangeset(_via_hg_cs_id) => return Some(n.clone()),
-                        Node::BonsaiChangeset(via_cs_id) => {
+                        Node::Changeset(via_cs_id) => {
                             // Check for most recent non-identical changesethg
                             if via_cs_id != non_public_cs_id {
                                 return Some(n.clone());
@@ -278,7 +274,7 @@ impl ValidateRoute {
 
         // Only track changesets for the via information
         match node {
-            Node::HgChangeset(_) | Node::BonsaiChangeset(_) => next_via.push(node.clone()),
+            Node::HgChangeset(_) | Node::Changeset(_) => next_via.push(node.clone()),
             _ => {}
         };
         Self {
@@ -333,7 +329,7 @@ impl WalkVisitor<(Node, Option<CheckData>, Option<StepStats>), ValidateRoute>
                 set.iter().filter_map(|check| {
                     // Lets check!
                     let status = match check {
-                        CheckType::BonsaiChangesetPhaseIsPublic => check_bonsai_phase_is_public(
+                        CheckType::ChangesetPhaseIsPublic => check_bonsai_phase_is_public(
                             &resolved.target,
                             node_data.as_ref(),
                             route.as_ref(),
@@ -689,7 +685,7 @@ pub async fn validate<'a>(
         logger,
         datasources,
         walk_params,
-        &[NodeType::BonsaiPhaseMapping],
+        &[NodeType::PhaseMapping],
         Some(always_emit_edge_types),
         stateful_visitor,
         make_sink,

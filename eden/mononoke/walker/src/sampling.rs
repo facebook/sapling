@@ -80,9 +80,9 @@ fn filter_repo_path(node_type: NodeType, path: Option<&'_ WrappedPath>) -> Optio
         NodeType::Root => None,
         // Bonsai
         NodeType::Bookmark => None,
-        NodeType::BonsaiChangeset => None,
+        NodeType::Changeset => None,
         NodeType::BonsaiHgMapping => None,
-        NodeType::BonsaiPhaseMapping => None,
+        NodeType::PhaseMapping => None,
         NodeType::PublishedBookmarks => None,
         // Hg
         NodeType::HgBonsaiMapping => None,
@@ -95,9 +95,9 @@ fn filter_repo_path(node_type: NodeType, path: Option<&'_ WrappedPath>) -> Optio
         NodeType::FileContentMetadata => path,
         NodeType::AliasContentMapping => path,
         // Derived Data
-        NodeType::BonsaiChangesetInfoMapping => None,
-        NodeType::BonsaiFsnodeMapping => None,
-        NodeType::BonsaiUnodeMapping => None,
+        NodeType::ChangesetInfoMapping => None,
+        NodeType::FsnodeMapping => None,
+        NodeType::UnodeMapping => None,
         NodeType::ChangesetInfo => None,
         NodeType::Fsnode => path,
         NodeType::UnodeFile => path,
@@ -232,7 +232,7 @@ where
         let inner_route = route.as_ref().map(|_| EmptyRoute {});
 
         let mtime = match &node_data {
-            Some(NodeData::BonsaiChangeset(bcs)) => {
+            Some(NodeData::Changeset(bcs)) => {
                 if let Some(committer_date) = bcs.committer_date() {
                     Some(committer_date)
                 } else {

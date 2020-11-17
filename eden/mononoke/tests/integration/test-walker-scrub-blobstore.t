@@ -39,7 +39,7 @@ Check fails on only the deleted side
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
-  Execution error: Could not step to OutgoingEdge { label: BookmarkToBonsaiChangeset, target: BonsaiChangeset(ChangesetId(Blake2(c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd)))* (glob)
+  Execution error: Could not step to OutgoingEdge { label: BookmarkToChangeset, target: Changeset(ChangesetId(Blake2(c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd)))* (glob)
   * (glob)
   Caused by:
       Blob is missing: changeset.blake2.c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd
@@ -51,7 +51,7 @@ Check can walk fine on the only remaining side
   Walking edge types * (glob)
   Walking node types * (glob)
   Final count: (40, 40)
-  Bytes/s,Keys/s,Bytes,Keys; Delta */s,*/s,2168,30,0s; Run */s,*/s,2168,30,*s; Type:Raw,Compressed AliasContentMapping:333,9 BonsaiChangeset:277,3 BonsaiFsnodeMapping:0,0 BonsaiHgMapping:281,3 Bookmark:0,0 FileContent:12,3 FileContentMetadata:351,3 Fsnode:0,0 HgBonsaiMapping:0,0 HgChangeset:281,3 HgFileEnvelope:189,3 HgFileNode:0,0 HgManifest:444,3* (glob)
+  Bytes/s,Keys/s,Bytes,Keys; Delta */s,*/s,2168,30,0s; Run */s,*/s,2168,30,*s; Type:Raw,Compressed AliasContentMapping:333,9 BonsaiHgMapping:281,3 Bookmark:0,0 Changeset:277,3 FileContent:12,3 FileContentMetadata:351,3 Fsnode:0,0 FsnodeMapping:0,0 HgBonsaiMapping:0,0 HgChangeset:281,3 HgFileEnvelope:189,3 HgFileNode:0,0 HgManifest:444,3* (glob)
   Walked* (glob)
 
 Check can walk fine on the multiplex remaining side

@@ -22,10 +22,10 @@ validate, expecting all valid, checking marker types
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
-  Performing check types [BonsaiChangesetPhaseIsPublic, HgLinkNodePopulated]
+  Performing check types [ChangesetPhaseIsPublic, HgLinkNodePopulated]
   Final count: * (glob)
   Walked* (glob)
-  Nodes,Pass,Fail:43,6,0; EdgesChecked:12; CheckType:Pass,Fail Total:6,0 BonsaiChangesetPhaseIsPublic:3,0 HgLinkNodePopulated:3,0
+  Nodes,Pass,Fail:43,6,0; EdgesChecked:12; CheckType:Pass,Fail Total:6,0 ChangesetPhaseIsPublic:3,0 HgLinkNodePopulated:3,0
 
 Remove the phase information, linknodes already point to them
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "DELETE FROM phases where repo_id >= 0";
@@ -35,10 +35,10 @@ validate, expect no failures on phase info, as the commits are still public, jus
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
-  Performing check types [BonsaiChangesetPhaseIsPublic, HgLinkNodePopulated]
+  Performing check types [ChangesetPhaseIsPublic, HgLinkNodePopulated]
   Final count: * (glob)
   Walked* (glob)
-  Nodes,Pass,Fail:43,6,0; EdgesChecked:12; CheckType:Pass,Fail Total:6,0 BonsaiChangesetPhaseIsPublic:3,0 HgLinkNodePopulated:3,0
+  Nodes,Pass,Fail:43,6,0; EdgesChecked:12; CheckType:Pass,Fail Total:6,0 ChangesetPhaseIsPublic:3,0 HgLinkNodePopulated:3,0
 
 Record the filenode info
   $ PATHHASHC=$(sqlite3 "$TESTTMP/monsql/sqlite_dbs" "SELECT hex(path_hash) FROM paths WHERE path = CAST('C' as BLOB)")
@@ -64,14 +64,14 @@ validate, expect failures on phase info, as we now point to a non-public commit
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
-  Performing check types [BonsaiChangesetPhaseIsPublic, HgLinkNodePopulated]
+  Performing check types [ChangesetPhaseIsPublic, HgLinkNodePopulated]
   Validation failed: *bonsai_phase_is_public* (glob)
   Final count: * (glob)
   Walked* (glob)
-  Nodes,Pass,Fail:56,7,1; EdgesChecked:15; CheckType:Pass,Fail Total:7,1 BonsaiChangesetPhaseIsPublic:3,1 HgLinkNodePopulated:4,0
+  Nodes,Pass,Fail:56,7,1; EdgesChecked:15; CheckType:Pass,Fail Total:7,1 ChangesetPhaseIsPublic:3,1 HgLinkNodePopulated:4,0
 
 Check scuba data
   $ wc -l < scuba.json
   1
   $ jq -r '.int * .normal | [ .check_fail, .check_type, .node_key, .node_path, .node_type, .repo, .src_node_key, .src_node_path, .src_node_type, .via_node_key, .via_node_path, .via_node_type, .walk_type ] | @csv' < scuba.json | sort
-  1,"bonsai_phase_is_public","changeset.blake2.2b06a8547bfe6a3ac79392aef3fa7f3f45a82f4e0beb95c4fa2b914c34b5b215",,"BonsaiPhaseMapping","repo","changeset.blake2.2b06a8547bfe6a3ac79392aef3fa7f3f45a82f4e0beb95c4fa2b914c34b5b215",,"BonsaiChangeset","hgchangeset.sha1.26805aba1e600a82e93661149f2313866a221a7b",,"HgChangeset","validate"
+  1,"bonsai_phase_is_public","changeset.blake2.2b06a8547bfe6a3ac79392aef3fa7f3f45a82f4e0beb95c4fa2b914c34b5b215",,"PhaseMapping","repo","changeset.blake2.2b06a8547bfe6a3ac79392aef3fa7f3f45a82f4e0beb95c4fa2b914c34b5b215",,"Changeset","hgchangeset.sha1.26805aba1e600a82e93661149f2313866a221a7b",,"HgChangeset","validate"

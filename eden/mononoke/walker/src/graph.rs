@@ -188,9 +188,9 @@ create_graph!(
         [
             // Bonsai
             Bookmark,
-            BonsaiChangeset,
+            Changeset,
             BonsaiHgMapping,
-            BonsaiPhaseMapping,
+            PhaseMapping,
             PublishedBookmarks,
             // Hg
             HgBonsaiMapping,
@@ -203,40 +203,40 @@ create_graph!(
             FileContentMetadata,
             AliasContentMapping,
             // Derived
-            BonsaiChangesetInfoMapping,
-            BonsaiFsnodeMapping,
+            ChangesetInfoMapping,
+            FsnodeMapping,
             ChangesetInfo,
             Fsnode,
-            BonsaiUnodeMapping,
+            UnodeMapping,
             UnodeFile,
             UnodeManifest
         ]
     ),
     // Bonsai
-    (Bookmark, BookmarkName, [BonsaiChangeset, BonsaiHgMapping]),
+    (Bookmark, BookmarkName, [Changeset, BonsaiHgMapping]),
     (
-        BonsaiChangeset,
+        Changeset,
         ChangesetId,
         [
             FileContent,
-            BonsaiParent(BonsaiChangeset),
+            BonsaiParent(Changeset),
             BonsaiHgMapping,
-            BonsaiPhaseMapping,
-            BonsaiChangesetInfoMapping,
-            BonsaiFsnodeMapping,
-            BonsaiUnodeMapping,
+            PhaseMapping,
+            ChangesetInfoMapping,
+            FsnodeMapping,
+            UnodeMapping,
             ChangesetInfo
         ]
     ),
     (BonsaiHgMapping, ChangesetId, [HgChangeset]),
-    (BonsaiPhaseMapping, ChangesetId, []),
+    (PhaseMapping, ChangesetId, []),
     (
         PublishedBookmarks,
         UnitKey,
-        [BonsaiChangeset, BonsaiHgMapping]
+        [Changeset, BonsaiHgMapping]
     ),
     // Hg
-    (HgBonsaiMapping, HgChangesetId, [BonsaiChangeset]),
+    (HgBonsaiMapping, HgChangesetId, [Changeset]),
     (
         HgChangeset,
         HgChangesetId,
@@ -271,14 +271,14 @@ create_graph!(
     ),
     (AliasContentMapping, AliasKey, [FileContent]),
     // Derived data
-    (BonsaiFsnodeMapping, ChangesetId, [RootFsnode(Fsnode)]),
+    (FsnodeMapping, ChangesetId, [RootFsnode(Fsnode)]),
     (
         ChangesetInfo,
         ChangesetId,
         [ChangesetInfoParent(ChangesetInfo)]
     ),
     (
-        BonsaiChangesetInfoMapping,
+        ChangesetInfoMapping,
         ChangesetId,
         [ChangesetInfo]
     ),
@@ -290,14 +290,14 @@ create_graph!(
     (
         UnodeFile,
         PathKey<FileUnodeId>,
-        [FileContent, LinkedBonsaiChangeset(BonsaiChangeset), UnodeFileParent(UnodeFile)]
+        [FileContent, LinkedChangeset(Changeset), UnodeFileParent(UnodeFile)]
     ),
     (
         UnodeManifest,
         PathKey<ManifestUnodeId>,
-        [UnodeFileChild(UnodeFile), UnodeManifestChild(UnodeManifest), UnodeManifestParent(UnodeManifest), LinkedBonsaiChangeset(BonsaiChangeset)]
+        [UnodeFileChild(UnodeFile), UnodeManifestChild(UnodeManifest), UnodeManifestParent(UnodeManifest), LinkedChangeset(Changeset)]
     ),
-    (BonsaiUnodeMapping, ChangesetId, [RootUnodeManifest(UnodeManifest)]),
+    (UnodeMapping, ChangesetId, [RootUnodeManifest(UnodeManifest)]),
 );
 
 impl fmt::Display for NodeType {
@@ -313,11 +313,11 @@ impl NodeType {
             NodeType::Root => None,
             // Bonsai
             NodeType::Bookmark => None,
-            NodeType::BonsaiChangeset => None,
+            NodeType::Changeset => None,
             // from filenodes/lib.rs: If hg changeset is not generated, then root filenode can't possible be generated
             // therefore this is the same as MappedHgChangesetId + FilenodesOnlyPublic
             NodeType::BonsaiHgMapping => Some(FilenodesOnlyPublic::NAME),
-            NodeType::BonsaiPhaseMapping => None,
+            NodeType::PhaseMapping => None,
             NodeType::PublishedBookmarks => None,
             // Hg
             NodeType::HgBonsaiMapping => Some(MappedHgChangesetId::NAME),
@@ -330,9 +330,9 @@ impl NodeType {
             NodeType::FileContentMetadata => None,
             NodeType::AliasContentMapping => None,
             // Derived data
-            NodeType::BonsaiChangesetInfoMapping => Some(ChangesetInfo::NAME),
-            NodeType::BonsaiFsnodeMapping => Some(RootFsnodeId::NAME),
-            NodeType::BonsaiUnodeMapping => Some(RootUnodeManifestId::NAME),
+            NodeType::ChangesetInfoMapping => Some(ChangesetInfo::NAME),
+            NodeType::FsnodeMapping => Some(RootFsnodeId::NAME),
+            NodeType::UnodeMapping => Some(RootUnodeManifestId::NAME),
             NodeType::ChangesetInfo => Some(ChangesetInfo::NAME),
             NodeType::Fsnode => Some(RootFsnodeId::NAME),
             NodeType::UnodeFile => Some(RootUnodeManifestId::NAME),
@@ -458,9 +458,9 @@ pub enum NodeData {
     NotRequired,
     // Bonsai
     Bookmark(ChangesetId),
-    BonsaiChangeset(BonsaiChangeset),
+    Changeset(BonsaiChangeset),
     BonsaiHgMapping(Option<HgChangesetId>),
-    BonsaiPhaseMapping(Option<Phase>),
+    PhaseMapping(Option<Phase>),
     PublishedBookmarks,
     // Hg
     HgBonsaiMapping(Option<ChangesetId>),
@@ -473,9 +473,9 @@ pub enum NodeData {
     FileContentMetadata(Option<ContentMetadata>),
     AliasContentMapping(ContentId),
     // Derived data
-    BonsaiChangesetInfoMapping(Option<ChangesetId>),
-    BonsaiFsnodeMapping(Option<FsnodeId>),
-    BonsaiUnodeMapping(Option<ManifestUnodeId>),
+    ChangesetInfoMapping(Option<ChangesetId>),
+    FsnodeMapping(Option<FsnodeId>),
+    UnodeMapping(Option<ManifestUnodeId>),
     ChangesetInfo(Option<ChangesetInfo>),
     Fsnode(Fsnode),
     UnodeFile(FileUnode),
@@ -488,9 +488,9 @@ impl Node {
             Node::Root(_) => "root".to_string(),
             // Bonsai
             Node::Bookmark(k) => k.to_string(),
-            Node::BonsaiChangeset(k) => k.blobstore_key(),
+            Node::Changeset(k) => k.blobstore_key(),
             Node::BonsaiHgMapping(k) => k.blobstore_key(),
-            Node::BonsaiPhaseMapping(k) => k.blobstore_key(),
+            Node::PhaseMapping(k) => k.blobstore_key(),
             Node::PublishedBookmarks(_) => "published_bookmarks".to_string(),
             // Hg
             Node::HgBonsaiMapping(k) => k.blobstore_key(),
@@ -503,9 +503,9 @@ impl Node {
             Node::FileContentMetadata(k) => k.blobstore_key(),
             Node::AliasContentMapping(k) => k.0.blobstore_key(),
             // Derived data
-            Node::BonsaiChangesetInfoMapping(k) => k.blobstore_key(),
-            Node::BonsaiFsnodeMapping(k) => k.blobstore_key(),
-            Node::BonsaiUnodeMapping(k) => k.blobstore_key(),
+            Node::ChangesetInfoMapping(k) => k.blobstore_key(),
+            Node::FsnodeMapping(k) => k.blobstore_key(),
+            Node::UnodeMapping(k) => k.blobstore_key(),
             Node::ChangesetInfo(k) => k.blobstore_key(),
             Node::Fsnode(PathKey { id, path: _ }) => id.blobstore_key(),
             Node::UnodeFile(PathKey { id, path: _ }) => id.blobstore_key(),
@@ -518,9 +518,9 @@ impl Node {
             Node::Root(_) => None,
             // Bonsai
             Node::Bookmark(_) => None,
-            Node::BonsaiChangeset(_) => None,
+            Node::Changeset(_) => None,
             Node::BonsaiHgMapping(_) => None,
-            Node::BonsaiPhaseMapping(_) => None,
+            Node::PhaseMapping(_) => None,
             Node::PublishedBookmarks(_) => None,
             // Hg
             Node::HgBonsaiMapping(_) => None,
@@ -533,9 +533,9 @@ impl Node {
             Node::FileContentMetadata(_) => None,
             Node::AliasContentMapping(_) => None,
             // Derived data
-            Node::BonsaiChangesetInfoMapping(_) => None,
-            Node::BonsaiFsnodeMapping(_) => None,
-            Node::BonsaiUnodeMapping(_) => None,
+            Node::ChangesetInfoMapping(_) => None,
+            Node::FsnodeMapping(_) => None,
+            Node::UnodeMapping(_) => None,
             Node::ChangesetInfo(_) => None,
             Node::Fsnode(PathKey { id: _, path }) => Some(&path),
             Node::UnodeFile(PathKey { id: _, path }) => Some(&path),
@@ -549,9 +549,9 @@ impl Node {
             Node::Root(_) => None,
             // Bonsai
             Node::Bookmark(_k) => None,
-            Node::BonsaiChangeset(k) => Some(k.sampling_fingerprint()),
+            Node::Changeset(k) => Some(k.sampling_fingerprint()),
             Node::BonsaiHgMapping(k) => Some(k.sampling_fingerprint()),
-            Node::BonsaiPhaseMapping(k) => Some(k.sampling_fingerprint()),
+            Node::PhaseMapping(k) => Some(k.sampling_fingerprint()),
             Node::PublishedBookmarks(_) => None,
             // Hg
             Node::HgBonsaiMapping(k) => Some(k.sampling_fingerprint()),
@@ -564,9 +564,9 @@ impl Node {
             Node::FileContentMetadata(k) => Some(k.sampling_fingerprint()),
             Node::AliasContentMapping(k) => Some(k.0.sampling_fingerprint()),
             // Derived data
-            Node::BonsaiChangesetInfoMapping(k) => Some(k.sampling_fingerprint()),
-            Node::BonsaiFsnodeMapping(k) => Some(k.sampling_fingerprint()),
-            Node::BonsaiUnodeMapping(k) => Some(k.sampling_fingerprint()),
+            Node::ChangesetInfoMapping(k) => Some(k.sampling_fingerprint()),
+            Node::FsnodeMapping(k) => Some(k.sampling_fingerprint()),
+            Node::UnodeMapping(k) => Some(k.sampling_fingerprint()),
             Node::ChangesetInfo(k) => Some(k.sampling_fingerprint()),
             Node::Fsnode(PathKey { id, path: _ }) => Some(id.sampling_fingerprint()),
             Node::UnodeFile(PathKey { id, path: _ }) => Some(id.sampling_fingerprint()),

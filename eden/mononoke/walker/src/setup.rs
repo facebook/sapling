@@ -115,9 +115,9 @@ const STORAGE_ID_ARG: &str = "storage-id";
 
 pub const DEFAULT_INCLUDE_NODE_TYPES: &[NodeType] = &[
     NodeType::Bookmark,
-    NodeType::BonsaiChangeset,
+    NodeType::Changeset,
     NodeType::BonsaiHgMapping,
-    NodeType::BonsaiPhaseMapping,
+    NodeType::PhaseMapping,
     NodeType::PublishedBookmarks,
     NodeType::HgBonsaiMapping,
     NodeType::HgChangeset,
@@ -128,28 +128,28 @@ pub const DEFAULT_INCLUDE_NODE_TYPES: &[NodeType] = &[
     NodeType::FileContentMetadata,
     NodeType::AliasContentMapping,
     NodeType::Fsnode,
-    NodeType::BonsaiFsnodeMapping,
+    NodeType::FsnodeMapping,
 ];
 
-const BONSAI_INCLUDE_NODE_TYPES: &[NodeType] = &[NodeType::Bookmark, NodeType::BonsaiChangeset];
+const BONSAI_INCLUDE_NODE_TYPES: &[NodeType] = &[NodeType::Bookmark, NodeType::Changeset];
 
 static DERIVED_DATA_INCLUDE_NODE_TYPES: OnceCell<HashMap<String, Vec<NodeType>>> = OnceCell::new();
 
 // Goes as far into history as it can
 const DEEP_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     // Bonsai
-    EdgeType::BookmarkToBonsaiChangeset,
-    EdgeType::BonsaiChangesetToFileContent,
-    EdgeType::BonsaiChangesetToBonsaiParent,
-    EdgeType::BonsaiChangesetToBonsaiHgMapping,
+    EdgeType::BookmarkToChangeset,
+    EdgeType::ChangesetToFileContent,
+    EdgeType::ChangesetToBonsaiParent,
+    EdgeType::ChangesetToBonsaiHgMapping,
     EdgeType::BonsaiHgMappingToHgChangeset,
-    EdgeType::PublishedBookmarksToBonsaiChangeset,
+    EdgeType::PublishedBookmarksToChangeset,
     EdgeType::PublishedBookmarksToBonsaiHgMapping,
-    EdgeType::BonsaiChangesetToBonsaiChangesetInfoMapping,
-    EdgeType::BonsaiChangesetToBonsaiFsnodeMapping,
-    EdgeType::BonsaiChangesetToBonsaiUnodeMapping,
+    EdgeType::ChangesetToChangesetInfoMapping,
+    EdgeType::ChangesetToFsnodeMapping,
+    EdgeType::ChangesetToUnodeMapping,
     // Hg
-    EdgeType::HgBonsaiMappingToBonsaiChangeset,
+    EdgeType::HgBonsaiMappingToChangeset,
     EdgeType::HgChangesetToHgParent,
     EdgeType::HgChangesetToHgManifest,
     EdgeType::HgManifestToHgFileEnvelope,
@@ -167,16 +167,16 @@ const DEEP_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::FileContentMetadataToGitSha1Alias,
     EdgeType::AliasContentMappingToFileContent,
     // Derived data
-    EdgeType::BonsaiChangesetInfoMappingToChangesetInfo,
-    EdgeType::BonsaiFsnodeMappingToRootFsnode,
-    EdgeType::BonsaiUnodeMappingToRootUnodeManifest,
+    EdgeType::ChangesetInfoMappingToChangesetInfo,
+    EdgeType::FsnodeMappingToRootFsnode,
+    EdgeType::UnodeMappingToRootUnodeManifest,
     EdgeType::ChangesetInfoToChangesetInfoParent,
     EdgeType::FsnodeToChildFsnode,
     EdgeType::FsnodeToFileContent,
     EdgeType::UnodeFileToFileContent,
-    EdgeType::UnodeFileToLinkedBonsaiChangeset,
+    EdgeType::UnodeFileToLinkedChangeset,
     EdgeType::UnodeFileToUnodeFileParent,
-    EdgeType::UnodeManifestToLinkedBonsaiChangeset,
+    EdgeType::UnodeManifestToLinkedChangeset,
     EdgeType::UnodeManifestToUnodeManifestParent,
     EdgeType::UnodeManifestToUnodeFileChild,
     EdgeType::UnodeManifestToUnodeManifestChild,
@@ -185,17 +185,17 @@ const DEEP_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
 // Does not recurse into history, edges to parents excluded
 const SHALLOW_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     // Bonsai
-    EdgeType::BookmarkToBonsaiChangeset,
-    EdgeType::BonsaiChangesetToFileContent,
-    EdgeType::BonsaiChangesetToBonsaiHgMapping,
+    EdgeType::BookmarkToChangeset,
+    EdgeType::ChangesetToFileContent,
+    EdgeType::ChangesetToBonsaiHgMapping,
     EdgeType::BonsaiHgMappingToHgChangeset,
-    EdgeType::PublishedBookmarksToBonsaiChangeset,
+    EdgeType::PublishedBookmarksToChangeset,
     EdgeType::PublishedBookmarksToBonsaiHgMapping,
-    EdgeType::BonsaiChangesetToBonsaiChangesetInfoMapping,
-    EdgeType::BonsaiChangesetToBonsaiFsnodeMapping,
-    EdgeType::BonsaiChangesetToBonsaiUnodeMapping,
+    EdgeType::ChangesetToChangesetInfoMapping,
+    EdgeType::ChangesetToFsnodeMapping,
+    EdgeType::ChangesetToUnodeMapping,
     // Hg
-    EdgeType::HgBonsaiMappingToBonsaiChangeset,
+    EdgeType::HgBonsaiMappingToChangeset,
     EdgeType::HgChangesetToHgManifest,
     EdgeType::HgManifestToHgFileEnvelope,
     EdgeType::HgManifestToHgFileNode,
@@ -208,9 +208,9 @@ const SHALLOW_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::FileContentMetadataToGitSha1Alias,
     EdgeType::AliasContentMappingToFileContent,
     // Derived data
-    EdgeType::BonsaiFsnodeMappingToRootFsnode,
-    EdgeType::BonsaiChangesetInfoMappingToChangesetInfo,
-    EdgeType::BonsaiUnodeMappingToRootUnodeManifest,
+    EdgeType::FsnodeMappingToRootFsnode,
+    EdgeType::ChangesetInfoMappingToChangesetInfo,
+    EdgeType::UnodeMappingToRootUnodeManifest,
     EdgeType::FsnodeToChildFsnode,
     EdgeType::FsnodeToFileContent,
     EdgeType::UnodeFileToFileContent,
@@ -239,10 +239,10 @@ const HG_EDGE_TYPES: &[EdgeType] = &[
 // Types that can result in loading bonsai data
 const BONSAI_EDGE_TYPES: &[EdgeType] = &[
     // Bonsai
-    EdgeType::BookmarkToBonsaiChangeset,
-    EdgeType::BonsaiChangesetToFileContent,
-    EdgeType::BonsaiChangesetToBonsaiParent,
-    EdgeType::PublishedBookmarksToBonsaiChangeset,
+    EdgeType::BookmarkToChangeset,
+    EdgeType::ChangesetToFileContent,
+    EdgeType::ChangesetToBonsaiParent,
+    EdgeType::PublishedBookmarksToChangeset,
 ];
 
 const CONTENT_META_EDGE_TYPES: &[EdgeType] = &[
@@ -255,7 +255,7 @@ const CONTENT_META_EDGE_TYPES: &[EdgeType] = &[
 ];
 
 // Things like phases and obs markers will go here
-const MARKER_EDGE_TYPES: &[EdgeType] = &[EdgeType::BonsaiChangesetToBonsaiPhaseMapping];
+const MARKER_EDGE_TYPES: &[EdgeType] = &[EdgeType::ChangesetToPhaseMapping];
 
 lazy_static! {
     static ref INCLUDE_CHECK_TYPE_HELP: String = format!(

@@ -31,18 +31,18 @@ Base case, sample all in one go. Expeding WALKABLEBLOBCOUNT keys plus mappings a
   Walking edge types * (glob)
   Walking node types * (glob)
   Final count: * (glob)
-  * Run */s,*/s,3086,36,0s; Type:Raw,Compressed AliasContentMapping:333,9 BonsaiChangeset:277,3 BonsaiFsnodeMapping:96,3 BonsaiHgMapping:281,3 Bookmark:0,0 FileContent:12,3 FileContentMetadata:351,3 Fsnode:822,3 HgBonsaiMapping:0,0 HgChangeset:281,3 HgFileEnvelope:189,3 HgFileNode:0,0 HgManifest:444,3* (glob)
+  * Run */s,*/s,3086,36,0s; Type:Raw,Compressed AliasContentMapping:333,9 BonsaiHgMapping:281,3 Bookmark:0,0 Changeset:277,3 FileContent:12,3 FileContentMetadata:351,3 Fsnode:822,3 FsnodeMapping:96,3 HgBonsaiMapping:0,0 HgChangeset:281,3 HgFileEnvelope:189,3 HgFileNode:0,0 HgManifest:444,3* (glob)
   Walked/s,* (glob)
 
 Check the corpus dumped to disk agrees with the walk stats
   $ for x in full/*; do size=$(find $x -type f -exec du --bytes -c {} + | tail -1 | cut -f1); if [[ -n "$size" ]]; then echo "$x $size"; fi; done
   full/AliasContentMapping 333
-  full/BonsaiChangeset 277
-  full/BonsaiFsnodeMapping 96
   full/BonsaiHgMapping 281
+  full/Changeset 277
   full/FileContent 12
   full/FileContentMetadata 351
   full/Fsnode 822
+  full/FsnodeMapping 96
   full/HgChangeset 281
   full/HgFileEnvelope 189
   full/HgManifest 444
@@ -74,28 +74,28 @@ Repeat but using the sample-offset to slice.  Offset zero will tend to be larger
 See the breakdown
   $ for x in slice/*/*; do size=$(find $x -type f -exec du --bytes -c {} + | tail -1 | cut -f1); if [[ -n "$size" ]]; then echo "$x $size"; fi; done
   slice/0/AliasContentMapping 111
-  slice/0/BonsaiChangeset 104
-  slice/0/BonsaiFsnodeMapping 32
   slice/0/BonsaiHgMapping 101
+  slice/0/Changeset 104
   slice/0/FileContent 4
   slice/0/FileContentMetadata 117
   slice/0/Fsnode 822
+  slice/0/FsnodeMapping 32
   slice/0/HgChangeset 202
   slice/0/HgFileEnvelope 63
   slice/0/HgManifest 444
   slice/1/AliasContentMapping 111
-  slice/1/BonsaiChangeset 69
-  slice/1/BonsaiFsnodeMapping 32
   slice/1/BonsaiHgMapping 79
+  slice/1/Changeset 69
   slice/1/FileContent 4
   slice/1/FileContentMetadata 117
+  slice/1/FsnodeMapping 32
   slice/1/HgFileEnvelope 63
   slice/2/AliasContentMapping 111
-  slice/2/BonsaiChangeset 104
-  slice/2/BonsaiFsnodeMapping 32
   slice/2/BonsaiHgMapping 101
+  slice/2/Changeset 104
   slice/2/FileContent 4
   slice/2/FileContentMetadata 117
+  slice/2/FsnodeMapping 32
   slice/2/HgChangeset 79
   slice/2/HgFileEnvelope 63
 
@@ -109,5 +109,5 @@ Check path regex can pick out just one path
   Walking edge types * (glob)
   Walking node types * (glob)
   Final count: * (glob)
-  * Run */s,*/s,295,6,0s; Type:Raw,Compressed AliasContentMapping:111,3 BonsaiChangeset:0,0 BonsaiFsnodeMapping:0,0 BonsaiHgMapping:0,0 Bookmark:0,0 FileContent:4,1 FileContentMetadata:117,1 Fsnode:0,0 HgBonsaiMapping:0,0 HgChangeset:0,0 HgFileEnvelope:63,1 HgFileNode:0,0 HgManifest:0,0* (glob)
+  * Run */s,*/s,295,6,0s; Type:Raw,Compressed AliasContentMapping:111,3 BonsaiHgMapping:0,0 Bookmark:0,0 Changeset:0,0 FileContent:4,1 FileContentMetadata:117,1 Fsnode:0,0 FsnodeMapping:0,0 HgBonsaiMapping:0,0 HgChangeset:0,0 HgFileEnvelope:63,1 HgFileNode:0,0 HgManifest:0,0* (glob)
   Walked/s,* (glob)
