@@ -11,6 +11,7 @@ use crate::graph::{
 use crate::validate::{add_node_to_scuba, CHECK_FAIL, CHECK_TYPE, EDGE_TYPE};
 
 use anyhow::{format_err, Context, Error};
+use auto_impl::auto_impl;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
@@ -104,12 +105,14 @@ pub enum ErrorKind {
 
 // Simpler visitor trait used inside each step to decide
 // whether to emit an edge
+#[auto_impl(Arc)]
 pub trait VisitOne {
     fn needs_visit(&self, outgoing: &OutgoingEdge) -> bool;
 }
 
 // Overall trait with support for route tracking and handling
 // partially derived types (it can see the node_data)
+#[auto_impl(Arc)]
 pub trait WalkVisitor<VOut, Route>: VisitOne {
     // Called before the step is attempted
     fn start_step(
@@ -128,43 +131,6 @@ pub trait WalkVisitor<VOut, Route>: VisitOne {
         route: Option<Route>,
         outgoing: Vec<OutgoingEdge>,
     ) -> (VOut, Route, Vec<OutgoingEdge>);
-}
-
-impl<V> VisitOne for Arc<V>
-where
-    V: VisitOne,
-{
-    fn needs_visit(&self, outgoing: &OutgoingEdge) -> bool {
-        self.as_ref().needs_visit(outgoing)
-    }
-}
-
-impl<V, VOut, Route> WalkVisitor<VOut, Route> for Arc<V>
-where
-    V: 'static + WalkVisitor<VOut, Route> + Sync + Send,
-    VOut: Send + 'static,
-    Route: Send + 'static,
-{
-    fn start_step(
-        &self,
-        ctx: CoreContext,
-        route: Option<&Route>,
-        step: &OutgoingEdge,
-    ) -> CoreContext {
-        self.as_ref().start_step(ctx, route, step)
-    }
-
-    fn visit(
-        &self,
-        ctx: &CoreContext,
-        resolved: OutgoingEdge,
-        node_data: Option<NodeData>,
-        route: Option<Route>,
-        outgoing: Vec<OutgoingEdge>,
-    ) -> (VOut, Route, Vec<OutgoingEdge>) {
-        self.as_ref()
-            .visit(ctx, resolved, node_data, route, outgoing)
-    }
 }
 
 // Data found for this node, plus next steps
