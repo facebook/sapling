@@ -7,6 +7,7 @@
 
 use ahash::RandomState;
 use anyhow::Error;
+use blame::BlameRoot;
 use bookmarks::BookmarkName;
 use changeset_info::ChangesetInfo;
 use derived_data::BonsaiDerived;
@@ -23,10 +24,11 @@ use mercurial_types::{
     FileBytes, HgChangesetId, HgFileEnvelope, HgFileNodeId, HgManifestId,
 };
 use mononoke_types::{
+    blame::Blame,
     fsnode::Fsnode,
     unode::{FileUnode, ManifestUnode},
-    BonsaiChangeset, ChangesetId, ContentId, ContentMetadata, FileUnodeId, FsnodeId, MPath,
-    MPathHash, ManifestUnodeId, MononokeId,
+    BlameId, BonsaiChangeset, ChangesetId, ContentId, ContentMetadata, FileUnodeId, FsnodeId,
+    MPath, MPathHash, ManifestUnodeId, MononokeId,
 };
 use once_cell::sync::OnceCell;
 use phases::Phase;
@@ -178,6 +180,24 @@ impl<T: fmt::Debug + Clone + PartialEq + Eq + Hash> PathKey<T> {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct AliasKey(pub Alias);
 
+/// Not all unodes should attempt to traverse to blame
+/// e.g. a unode for non-public commit is not expected to have it
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct UnodeKey<T> {
+    pub inner: T,
+    pub walk_blame: bool,
+}
+
+impl<T: MononokeId> UnodeKey<T> {
+    fn blobstore_key(&self) -> String {
+        self.inner.blobstore_key()
+    }
+
+    fn sampling_fingerprint(&self) -> u64 {
+        self.inner.sampling_fingerprint()
+    }
+}
+
 create_graph!(
     NodeType,
     Node,
@@ -203,13 +223,14 @@ create_graph!(
             FileContentMetadata,
             AliasContentMapping,
             // Derived
-            ChangesetInfoMapping,
-            FsnodeMapping,
+            Blame,
             ChangesetInfo,
+            ChangesetInfoMapping,
             Fsnode,
-            UnodeMapping,
+            FsnodeMapping,
             UnodeFile,
-            UnodeManifest
+            UnodeManifest,
+            UnodeMapping
         ]
     ),
     // Bonsai
@@ -222,10 +243,10 @@ create_graph!(
             BonsaiParent(Changeset),
             BonsaiHgMapping,
             PhaseMapping,
+            ChangesetInfo,
             ChangesetInfoMapping,
             FsnodeMapping,
-            UnodeMapping,
-            ChangesetInfo
+            UnodeMapping
         ]
     ),
     (BonsaiHgMapping, ChangesetId, [HgChangeset]),
@@ -271,7 +292,11 @@ create_graph!(
     ),
     (AliasContentMapping, AliasKey, [FileContent]),
     // Derived data
-    (FsnodeMapping, ChangesetId, [RootFsnode(Fsnode)]),
+    (
+        Blame,
+        BlameId,
+        [Changeset]
+    ),
     (
         ChangesetInfo,
         ChangesetId,
@@ -287,14 +312,15 @@ create_graph!(
         PathKey<FsnodeId>,
         [ChildFsnode(Fsnode), FileContent]
     ),
+    (FsnodeMapping, ChangesetId, [RootFsnode(Fsnode)]),
     (
         UnodeFile,
-        PathKey<FileUnodeId>,
-        [FileContent, LinkedChangeset(Changeset), UnodeFileParent(UnodeFile)]
+        PathKey<UnodeKey<FileUnodeId>>,
+        [Blame, FileContent, LinkedChangeset(Changeset), UnodeFileParent(UnodeFile)]
     ),
     (
         UnodeManifest,
-        PathKey<ManifestUnodeId>,
+        PathKey<UnodeKey<ManifestUnodeId>>,
         [UnodeFileChild(UnodeFile), UnodeManifestChild(UnodeManifest), UnodeManifestParent(UnodeManifest), LinkedChangeset(Changeset)]
     ),
     (UnodeMapping, ChangesetId, [RootUnodeManifest(UnodeManifest)]),
@@ -330,13 +356,14 @@ impl NodeType {
             NodeType::FileContentMetadata => None,
             NodeType::AliasContentMapping => None,
             // Derived data
-            NodeType::ChangesetInfoMapping => Some(ChangesetInfo::NAME),
-            NodeType::FsnodeMapping => Some(RootFsnodeId::NAME),
-            NodeType::UnodeMapping => Some(RootUnodeManifestId::NAME),
+            NodeType::Blame => Some(BlameRoot::NAME),
             NodeType::ChangesetInfo => Some(ChangesetInfo::NAME),
+            NodeType::ChangesetInfoMapping => Some(ChangesetInfo::NAME),
             NodeType::Fsnode => Some(RootFsnodeId::NAME),
+            NodeType::FsnodeMapping => Some(RootFsnodeId::NAME),
             NodeType::UnodeFile => Some(RootUnodeManifestId::NAME),
             NodeType::UnodeManifest => Some(RootUnodeManifestId::NAME),
+            NodeType::UnodeMapping => Some(RootUnodeManifestId::NAME),
         }
     }
 }
@@ -473,13 +500,14 @@ pub enum NodeData {
     FileContentMetadata(Option<ContentMetadata>),
     AliasContentMapping(ContentId),
     // Derived data
-    ChangesetInfoMapping(Option<ChangesetId>),
-    FsnodeMapping(Option<FsnodeId>),
-    UnodeMapping(Option<ManifestUnodeId>),
+    Blame(Option<Blame>),
     ChangesetInfo(Option<ChangesetInfo>),
+    ChangesetInfoMapping(Option<ChangesetId>),
     Fsnode(Fsnode),
+    FsnodeMapping(Option<FsnodeId>),
     UnodeFile(FileUnode),
     UnodeManifest(ManifestUnode),
+    UnodeMapping(Option<ManifestUnodeId>),
 }
 
 impl Node {
@@ -503,13 +531,14 @@ impl Node {
             Node::FileContentMetadata(k) => k.blobstore_key(),
             Node::AliasContentMapping(k) => k.0.blobstore_key(),
             // Derived data
-            Node::ChangesetInfoMapping(k) => k.blobstore_key(),
-            Node::FsnodeMapping(k) => k.blobstore_key(),
-            Node::UnodeMapping(k) => k.blobstore_key(),
+            Node::Blame(k) => k.blobstore_key(),
             Node::ChangesetInfo(k) => k.blobstore_key(),
+            Node::ChangesetInfoMapping(k) => k.blobstore_key(),
             Node::Fsnode(PathKey { id, path: _ }) => id.blobstore_key(),
+            Node::FsnodeMapping(k) => k.blobstore_key(),
             Node::UnodeFile(PathKey { id, path: _ }) => id.blobstore_key(),
             Node::UnodeManifest(PathKey { id, path: _ }) => id.blobstore_key(),
+            Node::UnodeMapping(k) => k.blobstore_key(),
         }
     }
 
@@ -533,13 +562,14 @@ impl Node {
             Node::FileContentMetadata(_) => None,
             Node::AliasContentMapping(_) => None,
             // Derived data
-            Node::ChangesetInfoMapping(_) => None,
-            Node::FsnodeMapping(_) => None,
-            Node::UnodeMapping(_) => None,
+            Node::Blame(_) => None,
             Node::ChangesetInfo(_) => None,
+            Node::ChangesetInfoMapping(_) => None,
             Node::Fsnode(PathKey { id: _, path }) => Some(&path),
+            Node::FsnodeMapping(_) => None,
             Node::UnodeFile(PathKey { id: _, path }) => Some(&path),
             Node::UnodeManifest(PathKey { id: _, path }) => Some(&path),
+            Node::UnodeMapping(_) => None,
         }
     }
 
@@ -564,13 +594,14 @@ impl Node {
             Node::FileContentMetadata(k) => Some(k.sampling_fingerprint()),
             Node::AliasContentMapping(k) => Some(k.0.sampling_fingerprint()),
             // Derived data
-            Node::ChangesetInfoMapping(k) => Some(k.sampling_fingerprint()),
-            Node::FsnodeMapping(k) => Some(k.sampling_fingerprint()),
-            Node::UnodeMapping(k) => Some(k.sampling_fingerprint()),
+            Node::Blame(k) => Some(k.sampling_fingerprint()),
             Node::ChangesetInfo(k) => Some(k.sampling_fingerprint()),
+            Node::ChangesetInfoMapping(k) => Some(k.sampling_fingerprint()),
             Node::Fsnode(PathKey { id, path: _ }) => Some(id.sampling_fingerprint()),
+            Node::FsnodeMapping(k) => Some(k.sampling_fingerprint()),
             Node::UnodeFile(PathKey { id, path: _ }) => Some(id.sampling_fingerprint()),
             Node::UnodeManifest(PathKey { id, path: _ }) => Some(id.sampling_fingerprint()),
+            Node::UnodeMapping(k) => Some(k.sampling_fingerprint()),
         }
     }
 }
@@ -579,13 +610,13 @@ impl Node {
 mod tests {
     use super::*;
     use blobrepo_factory::init_all_derived_data;
-    use std::{collections::HashSet, mem::size_of};
+    use std::{collections::HashSet, iter::FromIterator, mem::size_of};
     use strum::{EnumCount, IntoEnumIterator};
 
     #[test]
     fn test_node_size() {
         // Node size is important as we have lots of them, add a test to check for accidental changes
-        assert_eq!(56, size_of::<Node>());
+        assert_eq!(64, size_of::<Node>());
     }
 
     #[test]
@@ -655,13 +686,34 @@ mod tests {
             }
         }
 
-        // TODO(ahornby) implement all derived types in walker so can enable this check
-        // for t in &a {
-        //     assert!(
-        //         s.contains(t.as_str()),
-        //         "blobrepo derived data type {} is not supported by walker graph",
-        //         t
-        //     );
-        // }
+        // If you are adding a new derived data type, please add it to the walker graph rather than to this
+        // list, otherwise it won't get scrubbed and thus you would be unaware of different representation
+        // in different stores
+        let grandfathered: HashSet<&'static str> = HashSet::from_iter(
+            vec![
+                "deleted_manifest",
+                "fastlog",
+                "git_trees",
+                "skeleton_manifests",
+            ]
+            .into_iter(),
+        );
+        let mut missing = HashSet::new();
+        for t in &a {
+            if s.contains(t.as_str()) {
+                assert!(
+                    !grandfathered.contains(t.as_str()),
+                    "You've added support for {}, please remove it from the grandfathered missing set",
+                    t
+                );
+            } else if !grandfathered.contains(t.as_str()) {
+                missing.insert(t);
+            }
+        }
+        assert!(
+            missing.is_empty(),
+            "blobrepo derived data types {:?} not supported by walker graph",
+            missing,
+        );
     }
 }

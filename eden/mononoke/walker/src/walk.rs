@@ -6,13 +6,14 @@
  */
 
 use crate::graph::{
-    AliasKey, EdgeType, FileContentData, Node, NodeData, NodeType, PathKey, WrappedPath,
+    AliasKey, EdgeType, FileContentData, Node, NodeData, NodeType, PathKey, UnodeKey, WrappedPath,
 };
 use crate::validate::{add_node_to_scuba, CHECK_FAIL, CHECK_TYPE, EDGE_TYPE};
 
 use anyhow::{format_err, Context, Error};
 use async_trait::async_trait;
 use auto_impl::auto_impl;
+use blame::BlameRoot;
 use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
@@ -36,8 +37,8 @@ use manifest::{Entry, Manifest};
 use mercurial_derived_data::MappedHgChangesetId;
 use mercurial_types::{FileBytes, HgChangesetId, HgFileNodeId, HgManifestId, RepoPath};
 use mononoke_types::{
-    fsnode::FsnodeEntry, unode::UnodeEntry, ChangesetId, ContentId, FileUnodeId, FsnodeId, MPath,
-    ManifestUnodeId,
+    blame::BlameMaybeRejected, fsnode::FsnodeEntry, unode::UnodeEntry, BlameId, ChangesetId,
+    ContentId, FileUnodeId, FsnodeId, MPath, ManifestUnodeId,
 };
 use phases::{HeadsFetcher, Phase, Phases};
 use scuba_ext::ScubaSampleBuilder;
@@ -216,6 +217,33 @@ async fn bonsai_phase_step<V: VisitOne>(
         }),
         vec![],
     ))
+}
+
+async fn blame_step<V: VisitOne>(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    checker: &Checker<V>,
+    blame_id: BlameId,
+) -> Result<StepOutput, Error> {
+    let blame = blame_id.load(ctx.clone(), repo.blobstore()).await?;
+    let mut edges = vec![];
+
+    if let BlameMaybeRejected::Blame(blame) = blame {
+        for r in blame.ranges() {
+            checker.add_edge(&mut edges, EdgeType::BlameToChangeset, || {
+                Node::Changeset(r.csid)
+            });
+        }
+        Ok(StepOutput(
+            checker.step_data(NodeType::Blame, || NodeData::Blame(Some(blame))),
+            edges,
+        ))
+    } else {
+        Ok(StepOutput(
+            checker.step_data(NodeType::Blame, || NodeData::Blame(None)),
+            edges,
+        ))
+    }
 }
 
 async fn bonsai_changeset_info_mapping_step<V: VisitOne>(
@@ -811,15 +839,31 @@ async fn bonsai_to_unode_mapping_step<V: VisitOne>(
     bcs_id: ChangesetId,
     enable_derive: bool,
 ) -> Result<StepOutput, Error> {
-    let root_unode_id =
+    let mut root_unode_id =
         maybe_derived::<RootUnodeManifestId>(ctx, repo, bcs_id, enable_derive).await?;
+
+    let mut walk_blame = checker.with_blame && root_unode_id.is_some();
+
+    // If we need blame, need to make sure its derived also
+    if walk_blame && !is_derived::<BlameRoot>(ctx, repo, bcs_id, enable_derive).await? {
+        walk_blame = false;
+        // Check if we should still walk the Unode even without blame
+        if checker.is_public(ctx, &bcs_id).await? {
+            // Do not proceed with step into unodes as public commit should have blame being derived
+            // Private commits do not usually have blame, so they are ok to continue.
+            root_unode_id = None;
+        }
+    }
 
     if let Some(root_unode_id) = root_unode_id {
         let mut edges = vec![];
 
         checker.add_edge(&mut edges, EdgeType::UnodeMappingToRootUnodeManifest, || {
             Node::UnodeManifest(PathKey::new(
-                *root_unode_id.manifest_unode_id(),
+                UnodeKey {
+                    inner: *root_unode_id.manifest_unode_id(),
+                    walk_blame,
+                },
                 WrappedPath::Root,
             ))
         });
@@ -841,21 +885,35 @@ async fn unode_file_step<V: VisitOne>(
     repo: &BlobRepo,
     checker: &Checker<V>,
     path: WrappedPath,
-    unode_file_id: &FileUnodeId,
+    key: UnodeKey<FileUnodeId>,
 ) -> Result<StepOutput, Error> {
-    let unode_file = unode_file_id
-        .load(ctx.clone(), &repo.get_blobstore())
-        .await?;
-
+    let unode_file = key.inner.load(ctx.clone(), &repo.get_blobstore()).await?;
+    let linked_cs_id = *unode_file.linknode();
     let mut edges = vec![];
 
+    // Check if we stepped from unode for non-public commit to unode for public, so can enable blame if required
+    let walk_blame =
+        checker.with_blame && (key.walk_blame || checker.is_public(ctx, &linked_cs_id).await?);
+
+    if walk_blame {
+        checker.add_edge(&mut edges, EdgeType::UnodeFileToBlame, || {
+            Node::Blame(BlameId::from(key.inner))
+        });
+    }
+
     checker.add_edge(&mut edges, EdgeType::UnodeFileToLinkedChangeset, || {
-        Node::Changeset(*unode_file.linknode())
+        Node::Changeset(linked_cs_id)
     });
 
     for p in unode_file.parents() {
         checker.add_edge(&mut edges, EdgeType::UnodeFileToUnodeFileParent, || {
-            Node::UnodeFile(PathKey::new(*p, path.clone()))
+            Node::UnodeFile(PathKey::new(
+                UnodeKey {
+                    inner: *p,
+                    walk_blame,
+                },
+                path.clone(),
+            ))
         });
     }
 
@@ -877,23 +935,34 @@ async fn unode_manifest_step<V: VisitOne>(
     repo: &BlobRepo,
     checker: &Checker<V>,
     path: WrappedPath,
-    unode_manifest_id: &ManifestUnodeId,
+    key: UnodeKey<ManifestUnodeId>,
 ) -> Result<StepOutput, Error> {
-    let unode_manifest = unode_manifest_id
-        .load(ctx.clone(), &repo.get_blobstore())
-        .await?;
+    let unode_manifest = key.inner.load(ctx.clone(), &repo.get_blobstore()).await?;
+    let linked_cs_id = *unode_manifest.linknode();
 
     let mut edges = vec![];
 
     checker.add_edge(&mut edges, EdgeType::UnodeManifestToLinkedChangeset, || {
-        Node::Changeset(*unode_manifest.linknode())
+        Node::Changeset(linked_cs_id)
     });
+
+    // Check if we stepped from unode for non-public commit to unode for public, so can enable blame if required
+    let walk_blame =
+        checker.with_blame && (key.walk_blame || checker.is_public(ctx, &linked_cs_id).await?);
 
     for p in unode_manifest.parents() {
         checker.add_edge(
             &mut edges,
             EdgeType::UnodeManifestToUnodeManifestParent,
-            || Node::UnodeManifest(PathKey::new(*p, path.clone())),
+            || {
+                Node::UnodeManifest(PathKey::new(
+                    UnodeKey {
+                        inner: *p,
+                        walk_blame,
+                    },
+                    path.clone(),
+                ))
+            },
         );
     }
 
@@ -906,7 +975,15 @@ async fn unode_manifest_step<V: VisitOne>(
                 checker.add_edge(
                     &mut edges,
                     EdgeType::UnodeManifestToUnodeManifestChild,
-                    || Node::UnodeManifest(PathKey::new(*manifest_unode_id, mpath_opt)),
+                    || {
+                        Node::UnodeManifest(PathKey::new(
+                            UnodeKey {
+                                inner: *manifest_unode_id,
+                                walk_blame,
+                            },
+                            mpath_opt,
+                        ))
+                    },
                 );
             }
             UnodeEntry::File(file_unode_id) => {
@@ -915,7 +992,15 @@ async fn unode_manifest_step<V: VisitOne>(
                 checker.add_edge(
                     &mut file_edges,
                     EdgeType::UnodeManifestToUnodeFileChild,
-                    || Node::UnodeFile(PathKey::new(*file_unode_id, mpath_opt)),
+                    || {
+                        Node::UnodeFile(PathKey::new(
+                            UnodeKey {
+                                inner: *file_unode_id,
+                                walk_blame,
+                            },
+                            mpath_opt,
+                        ))
+                    },
                 );
             }
         }
@@ -964,6 +1049,7 @@ struct Checker<V: VisitOne> {
     keep_edge_paths: bool,
     visitor: V,
     phases_store: Arc<dyn Phases>,
+    with_blame: bool,
 }
 
 impl<V: VisitOne> Checker<V> {
@@ -1110,6 +1196,9 @@ where
             });
 
             let checker = Arc::new(Checker {
+                with_blame: include_edge_types
+                    .iter()
+                    .any(|e| e.outgoing_type() == NodeType::Blame),
                 include_edge_types,
                 always_emit_edge_types,
                 keep_edge_paths,
@@ -1242,24 +1331,25 @@ where
             alias_content_mapping_step(ctx.clone(), &repo, &checker, alias).await
         }
         // Derived
-        Node::ChangesetInfoMapping(bcs_id) => {
-            bonsai_changeset_info_mapping_step(&ctx, &repo, &checker, bcs_id, enable_derive).await
-        }
-        Node::FsnodeMapping(bcs_id) => {
-            bonsai_to_fsnode_mapping_step(&ctx, &repo, &checker, bcs_id, enable_derive).await
-        }
-        Node::UnodeMapping(bcs_id) => {
-            bonsai_to_unode_mapping_step(&ctx, &repo, &checker, bcs_id, enable_derive).await
-        }
+        Node::Blame(blame_id) => blame_step(&ctx, &repo, &checker, blame_id).await,
         Node::ChangesetInfo(bcs_id) => {
             changeset_info_step(&ctx, &repo, &checker, bcs_id, enable_derive).await
         }
+        Node::ChangesetInfoMapping(bcs_id) => {
+            bonsai_changeset_info_mapping_step(&ctx, &repo, &checker, bcs_id, enable_derive).await
+        }
         Node::Fsnode(PathKey { id, path }) => fsnode_step(&ctx, &repo, &checker, path, &id).await,
+        Node::FsnodeMapping(bcs_id) => {
+            bonsai_to_fsnode_mapping_step(&ctx, &repo, &checker, bcs_id, enable_derive).await
+        }
         Node::UnodeFile(PathKey { id, path }) => {
-            unode_file_step(&ctx, &repo, &checker, path, &id).await
+            unode_file_step(&ctx, &repo, &checker, path, id).await
         }
         Node::UnodeManifest(PathKey { id, path }) => {
-            unode_manifest_step(&ctx, &repo, &checker, path, &id).await
+            unode_manifest_step(&ctx, &repo, &checker, path, id).await
+        }
+        Node::UnodeMapping(bcs_id) => {
+            bonsai_to_unode_mapping_step(&ctx, &repo, &checker, bcs_id, enable_derive).await
         }
     };
 

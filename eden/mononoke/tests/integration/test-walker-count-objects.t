@@ -15,7 +15,7 @@ setup configuration
   │
   o  A [draft;rev=0;426bada5c675]
   $
-  $ blobimport repo-hg/.hg repo --derived-data-type=changeset_info --derived-data-type=fsnodes --derived-data-type=unodes
+  $ blobimport repo-hg/.hg repo --derived-data-type=blame --derived-data-type=changeset_info --derived-data-type=fsnodes --derived-data-type=unodes
 
 check blobstore numbers, walk will do some more steps for mappings
   $ BLOBPREFIX="$TESTTMP/blobstore/blobs/blob-repo0000"
@@ -27,7 +27,7 @@ check blobstore numbers, walk will do some more steps for mappings
   12
   $ BLOBCOUNT=$(ls $BLOBPREFIX.* | grep -v .alias. | wc -l)
   $ echo "$BLOBCOUNT"
-  39
+  45
 
 count-objects, bonsai core data.  total nodes is BONSAICOUNT plus one for the root bookmark step.
   $ mononoke_walker --readonly-storage scrub -q --bookmark master_bookmark -I bonsai 2>&1 | strip_glog
@@ -118,3 +118,21 @@ count-objects, deep walk across bonsai and unodes
   Final count: (13, 13)
   Bytes/s,* (glob)
   * Type:Walked,Checks,Children Bookmark:1,1,1 Changeset:3,* UnodeFile:3,* UnodeManifest:3,* UnodeMapping:3,* (glob)
+
+count-objects, shallow walk across blame
+  $ mononoke_walker --readonly-storage scrub -q --bookmark master_bookmark -I shallow -i bonsai -i derived_unodes -i derived_blame -X ChangesetToFileContent -X UnodeFileToFileContent 2>&1 | strip_glog
+  Walking roots * (glob)
+  Walking edge types [BookmarkToChangeset, ChangesetToUnodeMapping, UnodeFileToBlame, UnodeManifestToUnodeFileChild, UnodeManifestToUnodeManifestChild, UnodeMappingToRootUnodeManifest]
+  Walking node types [Blame, Bookmark, Changeset, UnodeFile, UnodeManifest, UnodeMapping]
+  Final count: (10, 10)
+  Bytes/s,* (glob)
+  * Type:Walked,Checks,Children Blame:3,* Bookmark:1,1,1 Changeset:1,* UnodeFile:3,* UnodeManifest:1,* UnodeMapping:1,* (glob)
+
+count-objects, deep walk across blame
+  $ mononoke_walker --readonly-storage scrub -q --bookmark master_bookmark -I deep -i bonsai -i derived_unodes -i derived_blame -X ChangesetToBonsaiParent -X UnodeFileToLinkedChangeset -X UnodeManifestToLinkedChangeset 2>&1 | strip_glog
+  Walking roots * (glob)
+  Walking edge types [BlameToChangeset, BookmarkToChangeset, ChangesetToUnodeMapping, UnodeFileToBlame, UnodeFileToUnodeFileParent, UnodeManifestToUnodeFileChild, UnodeManifestToUnodeManifestChild, UnodeManifestToUnodeManifestParent, UnodeMappingToRootUnodeManifest]
+  Walking node types [Blame, Bookmark, Changeset, UnodeFile, UnodeManifest, UnodeMapping]
+  Final count: (16, 16)
+  Bytes/s,* (glob)
+  * Type:Walked,Checks,Children Blame:3,* Bookmark:1,1,1 Changeset:3,* UnodeFile:3,* UnodeManifest:3,* UnodeMapping:3,* (glob)

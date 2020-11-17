@@ -113,13 +113,14 @@ fn filter_repo_path(node_type: NodeType, path: Option<&'_ WrappedPath>) -> Optio
         NodeType::FileContentMetadata => path,
         NodeType::AliasContentMapping => path,
         // Derived Data
-        NodeType::ChangesetInfoMapping => None,
-        NodeType::FsnodeMapping => None,
-        NodeType::UnodeMapping => None,
+        NodeType::Blame => None,
         NodeType::ChangesetInfo => None,
+        NodeType::ChangesetInfoMapping => None,
         NodeType::Fsnode => path,
+        NodeType::FsnodeMapping => None,
         NodeType::UnodeFile => path,
         NodeType::UnodeManifest => path,
+        NodeType::UnodeMapping => None,
     }
 }
 

@@ -167,12 +167,13 @@ const DEEP_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::FileContentMetadataToGitSha1Alias,
     EdgeType::AliasContentMappingToFileContent,
     // Derived data
+    EdgeType::BlameToChangeset,
     EdgeType::ChangesetInfoMappingToChangesetInfo,
-    EdgeType::FsnodeMappingToRootFsnode,
-    EdgeType::UnodeMappingToRootUnodeManifest,
     EdgeType::ChangesetInfoToChangesetInfoParent,
+    EdgeType::FsnodeMappingToRootFsnode,
     EdgeType::FsnodeToChildFsnode,
     EdgeType::FsnodeToFileContent,
+    EdgeType::UnodeFileToBlame,
     EdgeType::UnodeFileToFileContent,
     EdgeType::UnodeFileToLinkedChangeset,
     EdgeType::UnodeFileToUnodeFileParent,
@@ -180,6 +181,7 @@ const DEEP_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::UnodeManifestToUnodeManifestParent,
     EdgeType::UnodeManifestToUnodeFileChild,
     EdgeType::UnodeManifestToUnodeManifestChild,
+    EdgeType::UnodeMappingToRootUnodeManifest,
 ];
 
 // Does not recurse into history, edges to parents excluded
@@ -208,14 +210,15 @@ const SHALLOW_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::FileContentMetadataToGitSha1Alias,
     EdgeType::AliasContentMappingToFileContent,
     // Derived data
-    EdgeType::FsnodeMappingToRootFsnode,
     EdgeType::ChangesetInfoMappingToChangesetInfo,
-    EdgeType::UnodeMappingToRootUnodeManifest,
     EdgeType::FsnodeToChildFsnode,
     EdgeType::FsnodeToFileContent,
+    EdgeType::FsnodeMappingToRootFsnode,
+    EdgeType::UnodeFileToBlame,
     EdgeType::UnodeFileToFileContent,
     EdgeType::UnodeManifestToUnodeFileChild,
     EdgeType::UnodeManifestToUnodeManifestChild,
+    EdgeType::UnodeMappingToRootUnodeManifest,
 ];
 
 // Types that can result in loading hg data.  Useful for excludes.

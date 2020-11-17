@@ -134,6 +134,11 @@ where
 }
 
 type StateMap<T> = DashMap<T, (), RandomState>;
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+struct UnodeInterned<T> {
+    id: InternedId<T>,
+    walk_blame: bool,
+}
 
 pub struct WalkState {
     // Params
@@ -162,12 +167,16 @@ pub struct WalkState {
     visited_hg_filenode: StateMap<(InternedId<Option<MPathHash>>, InternedId<HgFileNodeId>)>,
     visited_hg_manifest: StateMap<(InternedId<Option<MPathHash>>, InternedId<HgManifestId>)>,
     // Derived
+    visited_blame: StateMap<InternedId<FileUnodeId>>,
     visited_changeset_info: StateMap<InternedId<ChangesetId>>,
     visited_changeset_info_mapping: StateMap<InternedId<ChangesetId>>,
     visited_fsnode: StateMap<(InternedId<Option<MPathHash>>, InternedId<FsnodeId>)>,
     visited_fsnode_mapping: StateMap<InternedId<ChangesetId>>,
-    visited_unode_file: StateMap<(InternedId<Option<MPathHash>>, InternedId<FileUnodeId>)>,
-    visited_unode_manifest: StateMap<(InternedId<Option<MPathHash>>, InternedId<ManifestUnodeId>)>,
+    visited_unode_file: StateMap<(InternedId<Option<MPathHash>>, UnodeInterned<FileUnodeId>)>,
+    visited_unode_manifest: StateMap<(
+        InternedId<Option<MPathHash>>,
+        UnodeInterned<ManifestUnodeId>,
+    )>,
     visited_unode_mapping: StateMap<InternedId<ChangesetId>>,
     // Count
     visit_count: [AtomicUsize; NodeType::COUNT],
@@ -207,6 +216,8 @@ impl WalkState {
             visited_hg_file_envelope: StateMap::with_hasher(fac.clone()),
             visited_hg_filenode: StateMap::with_hasher(fac.clone()),
             visited_hg_manifest: StateMap::with_hasher(fac.clone()),
+            // Derived
+            visited_blame: StateMap::with_hasher(fac.clone()),
             visited_changeset_info: StateMap::with_hasher(fac.clone()),
             visited_changeset_info_mapping: StateMap::with_hasher(fac.clone()),
             visited_fsnode: StateMap::with_hasher(fac.clone()),
@@ -214,6 +225,7 @@ impl WalkState {
             visited_unode_file: StateMap::with_hasher(fac.clone()),
             visited_unode_manifest: StateMap::with_hasher(fac.clone()),
             visited_unode_mapping: StateMap::with_hasher(fac),
+            // Count
             visit_count: array_init(|_i| AtomicUsize::new(0)),
         }
     }
@@ -386,6 +398,13 @@ impl VisitOne for WalkState {
             Node::FileContentMetadata(_) => true, // reached via expand_checked_nodes
             Node::AliasContentMapping(_) => true, // reached via expand_checked_nodes
             // Derived
+            Node::Blame(k) => self.record(
+                &self.visited_blame,
+                &self.unode_file_ids.interned(k.as_ref()),
+            ),
+            Node::ChangesetInfo(bcs_id) => {
+                self.record(&self.visited_changeset_info, &self.bcs_ids.interned(bcs_id))
+            }
             Node::ChangesetInfoMapping(bcs_id) => {
                 if let Some(id) = self.bcs_ids.get(bcs_id) {
                     !self.visited_changeset_info_mapping.contains_key(&id) // Does not insert, see record_resolved_visit
@@ -393,6 +412,10 @@ impl VisitOne for WalkState {
                     true
                 }
             }
+            Node::Fsnode(k) => self.record_with_path(
+                &self.visited_fsnode,
+                (&k.path, &self.fsnode_ids.interned(&k.id)),
+            ),
             Node::FsnodeMapping(bcs_id) => {
                 if let Some(id) = self.bcs_ids.get(bcs_id) {
                     !self.visited_fsnode_mapping.contains_key(&id) // Does not insert, see record_resolved_visit
@@ -400,6 +423,26 @@ impl VisitOne for WalkState {
                     true
                 }
             }
+            Node::UnodeFile(k) => self.record_with_path(
+                &self.visited_unode_file,
+                (
+                    &k.path,
+                    &UnodeInterned {
+                        id: self.unode_file_ids.interned(&k.id.inner),
+                        walk_blame: k.id.walk_blame,
+                    },
+                ),
+            ),
+            Node::UnodeManifest(k) => self.record_with_path(
+                &self.visited_unode_manifest,
+                (
+                    &k.path,
+                    &UnodeInterned {
+                        id: self.unode_manifest_ids.interned(&k.id.inner),
+                        walk_blame: k.id.walk_blame,
+                    },
+                ),
+            ),
             Node::UnodeMapping(bcs_id) => {
                 if let Some(id) = self.bcs_ids.get(bcs_id) {
                     !self.visited_unode_mapping.contains_key(&id) // Does not insert, see record_resolved_visit
@@ -407,21 +450,6 @@ impl VisitOne for WalkState {
                     true
                 }
             }
-            Node::ChangesetInfo(bcs_id) => {
-                self.record(&self.visited_changeset_info, &self.bcs_ids.interned(bcs_id))
-            }
-            Node::Fsnode(k) => self.record_with_path(
-                &self.visited_fsnode,
-                (&k.path, &self.fsnode_ids.interned(&k.id)),
-            ),
-            Node::UnodeFile(k) => self.record_with_path(
-                &self.visited_unode_file,
-                (&k.path, &self.unode_file_ids.interned(&k.id)),
-            ),
-            Node::UnodeManifest(k) => self.record_with_path(
-                &self.visited_unode_manifest,
-                (&k.path, &self.unode_manifest_ids.interned(&k.id)),
-            ),
         }
     }
 }

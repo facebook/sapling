@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use crate::graph::{AliasKey, AliasType, Node, NodeType, PathKey, UnitKey, WrappedPath};
+use crate::graph::{AliasKey, AliasType, Node, NodeType, PathKey, UnitKey, UnodeKey, WrappedPath};
 
 use anyhow::{format_err, Error};
 use filestore::Alias;
@@ -74,22 +74,26 @@ impl FromStr for PathKey<FsnodeId> {
     }
 }
 
-impl FromStr for PathKey<ManifestUnodeId> {
+impl FromStr for PathKey<UnodeKey<ManifestUnodeId>> {
     type Err = Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let parts: Vec<_> = s.split(NODE_SEP).collect();
-        let path = check_and_build_path(NodeType::UnodeManifest, &parts)?;
-        let id = ManifestUnodeId::from_str(parts[0])?;
+        let inner = ManifestUnodeId::from_str(parts[0])?;
+        let walk_blame = bool::from_str(parts[1])?;
+        let path = check_and_build_path(NodeType::UnodeManifest, &parts[1..])?;
+        let id = UnodeKey { inner, walk_blame };
         Ok(Self { id, path })
     }
 }
 
-impl FromStr for PathKey<FileUnodeId> {
+impl FromStr for PathKey<UnodeKey<FileUnodeId>> {
     type Err = Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let parts: Vec<_> = s.split(NODE_SEP).collect();
-        let path = check_and_build_path(NodeType::UnodeFile, &parts)?;
-        let id = FileUnodeId::from_str(parts[0])?;
+        let inner = FileUnodeId::from_str(parts[0])?;
+        let walk_blame = bool::from_str(parts[1])?;
+        let path = check_and_build_path(NodeType::UnodeFile, &parts[1..])?;
+        let id = UnodeKey { inner, walk_blame };
         Ok(Self { id, path })
     }
 }
@@ -245,6 +249,12 @@ mod tests {
                     .get_type()
                 );
             }
+            NodeType::Blame => {
+                assert_eq!(
+                    node_type,
+                    &parse_node(&format!("Blame{}{}", NODE_SEP, SAMPLE_BLAKE2))?.get_type()
+                );
+            }
             NodeType::ChangesetInfoMapping => {
                 assert_eq!(
                     node_type,
@@ -287,8 +297,8 @@ mod tests {
                 assert_eq!(
                     node_type,
                     &parse_node(&format!(
-                        "UnodeFile{}{}{}{}",
-                        NODE_SEP, SAMPLE_BLAKE2, NODE_SEP, SAMPLE_PATH
+                        "UnodeFile{}{}{}{}{}{}",
+                        NODE_SEP, SAMPLE_BLAKE2, NODE_SEP, true, NODE_SEP, SAMPLE_PATH
                     ))?
                     .get_type()
                 );
@@ -297,8 +307,8 @@ mod tests {
                 assert_eq!(
                     node_type,
                     &parse_node(&format!(
-                        "UnodeManifest{}{}{}{}",
-                        NODE_SEP, SAMPLE_BLAKE2, NODE_SEP, SAMPLE_PATH
+                        "UnodeManifest{}{}{}{}{}{}",
+                        NODE_SEP, SAMPLE_BLAKE2, NODE_SEP, true, NODE_SEP, SAMPLE_PATH
                     ))?
                     .get_type()
                 );
