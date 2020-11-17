@@ -21,7 +21,7 @@ Drain the healer queue
   $ sqlite3 "$TESTTMP/blobstore_sync_queue/sqlite_dbs" "DELETE FROM blobstore_sync_queue";
 
 Base case, check can walk fine
-  $ mononoke_walker --storage-id=blobstore --readonly-storage --cachelib-only-blobstore scrub -I deep -q --bookmark master_bookmark 2>&1 | strip_glog
+  $ mononoke_walker --readonly-storage --cachelib-only-blobstore scrub -I deep -q --bookmark master_bookmark 2>&1 | strip_glog
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
@@ -31,7 +31,7 @@ Base case, check can walk fine
 
 Check reads throttle
   $ START_SECS=$(/bin/date "+%s")
-  $ mononoke_walker --storage-id=blobstore --readonly-storage --cachelib-only-blobstore --blobstore-read-qps=5 scrub -I deep -q --bookmark master_bookmark 2>&1 | strip_glog
+  $ mononoke_walker --readonly-storage --cachelib-only-blobstore --blobstore-read-qps=5 scrub -I deep -q --bookmark master_bookmark 2>&1 | strip_glog
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
@@ -50,7 +50,7 @@ Delete all data from one side of the multiplex
 
 Check writes throttle in Repair mode
   $ START_SECS=$(/bin/date "+%s")
-  $ mononoke_walker --storage-id=blobstore --readonly-storage --cachelib-only-blobstore --blobstore-write-qps=5 scrub --scrub-blobstore-action=Repair -I deep -q --bookmark master_bookmark 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
+  $ mononoke_walker --readonly-storage --cachelib-only-blobstore --blobstore-write-qps=5 scrub --scrub-blobstore-action=Repair -I deep -q --bookmark master_bookmark 2>&1 | strip_glog | sed -re 's/^(scrub: blobstore_id BlobstoreId.0. repaired for repo0000.).*/\1/' | uniq -c | sed 's/^ *//'
   1 Walking roots * (glob)
   1 Walking edge types * (glob)
   1 Walking node types * (glob)

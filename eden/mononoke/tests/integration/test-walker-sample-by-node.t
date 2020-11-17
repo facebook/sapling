@@ -24,7 +24,7 @@ check blobstore numbers, walk will do some more steps for mappings
   27
 
 Base case, sample all in one go. Expeding WALKABLEBLOBCOUNT keys plus mappings and root.
-  $ mononoke_walker --storage-id=blobstore --readonly-storage scrub -q --bookmark master_bookmark --sample-rate 1 -I deep -x FsnodeMapping -x Fsnode 2>&1 | strip_glog
+  $ mononoke_walker --readonly-storage scrub -q --bookmark master_bookmark --sample-rate 1 -I deep -x FsnodeMapping -x Fsnode 2>&1 | strip_glog
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
@@ -33,7 +33,7 @@ Base case, sample all in one go. Expeding WALKABLEBLOBCOUNT keys plus mappings a
   Walked/s,* (glob)
 
 Three separate cycles moving offset each time, should result in scrubing same total of bytes (728+857+583=2168) and keys (10+14+6=30)
-  $ for i in {0..2}; do mononoke_walker --storage-id=blobstore --readonly-storage scrub -q --bookmark master_bookmark -I deep -x FsnodeMapping -x Fsnode --sample-rate=3 --sample-offset=$i 2>&1; done | strip_glog
+  $ for i in {0..2}; do mononoke_walker --readonly-storage scrub -q --bookmark master_bookmark -I deep -x FsnodeMapping -x Fsnode --sample-rate=3 --sample-offset=$i 2>&1; done | strip_glog
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
