@@ -194,6 +194,19 @@ where
     }
 
     fn consume(&mut self, amt: usize) {
+        if amt > 0 {
+            if let Some(ref mut full_bundle2_content) = self.maybe_full_content {
+                // The below fill_buf call should never fail because:
+                //  * fill_buf errors only when underlying read fails
+                //  * the read is performed only if the internal buffer is empty
+                //  * the "amt" should be always <= internal buffer size so the buffer is not empty here
+                let buf = self.bufread.fill_buf().unwrap();
+                full_bundle2_content
+                    .lock()
+                    .unwrap()
+                    .extend_from_slice(&buf[0..amt]);
+            }
+        }
         self.consume_chunk(amt);
         self.bufread.consume(amt);
     }
