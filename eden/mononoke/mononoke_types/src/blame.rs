@@ -19,6 +19,7 @@ use futures_old::Future as Future01;
 use std::{
     collections::{HashMap, VecDeque},
     convert::TryFrom,
+    str::FromStr,
 };
 use thiserror::Error;
 use xdiff::{diff_hunks, Hunk};
@@ -29,6 +30,16 @@ pub struct BlameId(FileUnodeId);
 impl BlameId {
     pub fn blobstore_key(&self) -> String {
         format!("blame.{}", self.0.blobstore_key())
+    }
+    pub fn sampling_fingerprint(&self) -> u64 {
+        self.0.sampling_fingerprint()
+    }
+}
+
+impl FromStr for BlameId {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(BlameId(FileUnodeId::from_str(s)?))
     }
 }
 
@@ -41,6 +52,12 @@ impl From<FileUnodeId> for BlameId {
 impl From<BlameId> for FileUnodeId {
     fn from(blame_id: BlameId) -> Self {
         blame_id.0
+    }
+}
+
+impl AsRef<FileUnodeId> for BlameId {
+    fn as_ref(&self) -> &FileUnodeId {
+        &self.0
     }
 }
 
