@@ -269,6 +269,8 @@ void GlobNode::parse(StringPiece pattern) {
       hasSpecials = true;
     } else {
       token = tokenize(pattern, &hasSpecials);
+      // Exit early for illegal glob node syntax.
+      (void)PathComponentPiece{token};
     }
 
     auto node = lookupToken(container, token);

@@ -138,6 +138,17 @@ class GlobTest(testcase.EdenRepoTest):
         self.assertIn("unterminated bracket sequence", str(ctx.exception))
         self.assertEqual(EdenErrorType.POSIX_ERROR, ctx.exception.errorType)
 
+    def test_globs_may_not_include_dotdot(self):
+        with self.assertRaises(EdenError) as ctx:
+            self.client.globFiles(
+                GlobParams(self.mount_path_bytes, ["java/../java/com/**/*.java"])
+            )
+        self.assertEqual(
+            "Invalid glob (PathComponent must not be ..): java/../java/com/**/*.java",
+            str(ctx.exception),
+        )
+        self.assertEqual(EdenErrorType.ARGUMENT_ERROR, ctx.exception.errorType)
+
     def test_glob_on_non_current_commit(self) -> None:
         self.assert_glob(["hello"], [b"hello"], commits=[bytes.fromhex(self.commit0)])
         self.assert_glob(["hola"], [b"hola"], commits=[bytes.fromhex(self.commit0)])

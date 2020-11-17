@@ -1006,7 +1006,16 @@ void EdenServiceHandler::glob(
     // Compile the list of globs into a tree
     GlobNode globRoot(/*includeDotfiles=*/true);
     for (auto& globString : *globs) {
-      globRoot.parse(globString);
+      try {
+        globRoot.parse(globString);
+      } catch (const std::domain_error& exc) {
+        throw newEdenError(
+            EdenErrorType::ARGUMENT_ERROR,
+            "Invalid glob (",
+            exc.what(),
+            "): ",
+            globString);
+      }
     }
 
     auto commitHash = edenMount->getParentCommits().parent1();
@@ -1042,7 +1051,16 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
   auto globRoot = std::make_shared<GlobNode>(*params->includeDotfiles_ref());
   try {
     for (auto& globString : *params->globs_ref()) {
-      globRoot->parse(globString);
+      try {
+        globRoot->parse(globString);
+      } catch (const std::domain_error& exc) {
+        throw newEdenError(
+            EdenErrorType::ARGUMENT_ERROR,
+            "Invalid glob (",
+            exc.what(),
+            "): ",
+            globString);
+      }
     }
   } catch (const std::system_error& exc) {
     throw newEdenError(exc);
