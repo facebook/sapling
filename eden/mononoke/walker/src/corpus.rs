@@ -170,6 +170,7 @@ fn dump_with_extension(node_type: NodeType) -> bool {
         NodeType::Blame => false,
         NodeType::ChangesetInfo => false,
         NodeType::ChangesetInfoMapping => false,
+        NodeType::DeletedManifest => false,
         NodeType::DeletedManifestMapping => false,
         NodeType::Fsnode => false,
         NodeType::FsnodeMapping => false,

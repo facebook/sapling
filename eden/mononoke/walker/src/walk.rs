@@ -39,7 +39,7 @@ use mercurial_derived_data::MappedHgChangesetId;
 use mercurial_types::{FileBytes, HgChangesetId, HgFileNodeId, HgManifestId, RepoPath};
 use mononoke_types::{
     blame::BlameMaybeRejected, fsnode::FsnodeEntry, unode::UnodeEntry, BlameId, ChangesetId,
-    ContentId, FileUnodeId, FsnodeId, MPath, ManifestUnodeId,
+    ContentId, DeletedManifestId, FileUnodeId, FsnodeId, MPath, ManifestUnodeId,
 };
 use phases::{HeadsFetcher, Phase, Phases};
 use scuba_ext::ScubaSampleBuilder;
@@ -1025,6 +1025,41 @@ async fn unode_manifest_step<V: VisitOne>(
     ))
 }
 
+async fn deleted_manifest_step<V: VisitOne>(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    checker: &Checker<V>,
+    path: WrappedPath,
+    id: &DeletedManifestId,
+) -> Result<StepOutput, Error> {
+    let deleted_manifest = id.load(ctx.clone(), &repo.get_blobstore()).await?;
+    let linked_cs_id = *deleted_manifest.linknode();
+
+    let mut edges = vec![];
+
+    if let Some(linked_cs_id) = linked_cs_id {
+        checker.add_edge(&mut edges, EdgeType::DeletedManifestToLinkedChangeset, || {
+            Node::Changeset(linked_cs_id)
+        });
+    }
+
+    for (child_path, deleted_manifest_id) in deleted_manifest.list() {
+        let mpath_opt = WrappedPath::from(MPath::join_element_opt(path.as_ref(), Some(child_path)));
+        checker.add_edge(
+            &mut edges,
+            EdgeType::DeletedManifestToDeletedManifestChild,
+            || Node::DeletedManifest(PathKey::new(*deleted_manifest_id, mpath_opt)),
+        );
+    }
+
+    Ok(StepOutput(
+        checker.step_data(NodeType::DeletedManifest, || {
+            NodeData::DeletedManifest(Some(deleted_manifest))
+        }),
+        edges,
+    ))
+}
+
 async fn deleted_manifest_mapping_step<V: VisitOne>(
     ctx: &CoreContext,
     repo: &BlobRepo,
@@ -1036,8 +1071,17 @@ async fn deleted_manifest_mapping_step<V: VisitOne>(
         maybe_derived::<RootDeletedManifestId>(ctx, repo, bcs_id, enable_derive).await?;
 
     if let Some(root_manifest_id) = root_manifest_id {
-        let edges = vec![];
-
+        let mut edges = vec![];
+        checker.add_edge(
+            &mut edges,
+            EdgeType::DeletedManifestMappingToRootDeletedManifest,
+            || {
+                Node::DeletedManifest(PathKey::new(
+                    *root_manifest_id.deleted_manifest_id(),
+                    WrappedPath::Root,
+                ))
+            },
+        );
         Ok(StepOutput(
             checker.step_data(NodeType::DeletedManifestMapping, || {
                 NodeData::DeletedManifestMapping(Some(*root_manifest_id.deleted_manifest_id()))
@@ -1374,6 +1418,9 @@ where
         }
         Node::ChangesetInfoMapping(bcs_id) => {
             bonsai_changeset_info_mapping_step(&ctx, &repo, &checker, bcs_id, enable_derive).await
+        }
+        Node::DeletedManifest(PathKey { id, path }) => {
+            deleted_manifest_step(&ctx, &repo, &checker, path, &id).await
         }
         Node::DeletedManifestMapping(bcs_id) => {
             deleted_manifest_mapping_step(&ctx, &repo, &checker, bcs_id, enable_derive).await

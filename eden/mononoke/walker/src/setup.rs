@@ -176,6 +176,9 @@ const DEEP_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::BlameToChangeset,
     EdgeType::ChangesetInfoMappingToChangesetInfo,
     EdgeType::ChangesetInfoToChangesetInfoParent,
+    EdgeType::DeletedManifestMappingToRootDeletedManifest,
+    EdgeType::DeletedManifestToDeletedManifestChild,
+    EdgeType::DeletedManifestToLinkedChangeset,
     EdgeType::FsnodeMappingToRootFsnode,
     EdgeType::FsnodeToChildFsnode,
     EdgeType::FsnodeToFileContent,
@@ -218,6 +221,8 @@ const SHALLOW_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::AliasContentMappingToFileContent,
     // Derived data
     EdgeType::ChangesetInfoMappingToChangesetInfo,
+    EdgeType::DeletedManifestMappingToRootDeletedManifest,
+    EdgeType::DeletedManifestToDeletedManifestChild,
     EdgeType::FsnodeToChildFsnode,
     EdgeType::FsnodeToFileContent,
     EdgeType::FsnodeMappingToRootFsnode,

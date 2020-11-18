@@ -26,6 +26,7 @@ use mercurial_types::{
 };
 use mononoke_types::{
     blame::Blame,
+    deleted_files_manifest::DeletedManifest,
     fsnode::Fsnode,
     unode::{FileUnode, ManifestUnode},
     BlameId, BonsaiChangeset, ChangesetId, ContentId, ContentMetadata, DeletedManifestId,
@@ -227,6 +228,7 @@ create_graph!(
             Blame,
             ChangesetInfo,
             ChangesetInfoMapping,
+            DeletedManifest,
             DeletedManifestMapping,
             Fsnode,
             FsnodeMapping,
@@ -310,7 +312,12 @@ create_graph!(
         ChangesetId,
         [ChangesetInfo]
     ),
-    (DeletedManifestMapping, ChangesetId, []),
+    (
+        DeletedManifest,
+        PathKey<DeletedManifestId>,
+        [DeletedManifestChild(UnodeManifest), LinkedChangeset(Changeset)]
+    ),
+    (DeletedManifestMapping, ChangesetId, [RootDeletedManifest(DeletedManifest)]),
     (
         Fsnode,
         PathKey<FsnodeId>,
@@ -363,6 +370,7 @@ impl NodeType {
             NodeType::Blame => Some(BlameRoot::NAME),
             NodeType::ChangesetInfo => Some(ChangesetInfo::NAME),
             NodeType::ChangesetInfoMapping => Some(ChangesetInfo::NAME),
+            NodeType::DeletedManifest => Some(RootDeletedManifestId::NAME),
             NodeType::DeletedManifestMapping => Some(RootDeletedManifestId::NAME),
             NodeType::Fsnode => Some(RootFsnodeId::NAME),
             NodeType::FsnodeMapping => Some(RootFsnodeId::NAME),
@@ -518,6 +526,7 @@ pub enum NodeData {
     Blame(Option<Blame>),
     ChangesetInfo(Option<ChangesetInfo>),
     ChangesetInfoMapping(Option<ChangesetId>),
+    DeletedManifest(Option<DeletedManifest>),
     DeletedManifestMapping(Option<DeletedManifestId>),
     Fsnode(Fsnode),
     FsnodeMapping(Option<FsnodeId>),
@@ -550,6 +559,7 @@ impl Node {
             Node::Blame(k) => k.blobstore_key(),
             Node::ChangesetInfo(k) => k.blobstore_key(),
             Node::ChangesetInfoMapping(k) => k.blobstore_key(),
+            Node::DeletedManifest(PathKey { id, path: _ }) => id.blobstore_key(),
             Node::DeletedManifestMapping(k) => k.blobstore_key(),
             Node::Fsnode(PathKey { id, path: _ }) => id.blobstore_key(),
             Node::FsnodeMapping(k) => k.blobstore_key(),
@@ -582,6 +592,7 @@ impl Node {
             Node::Blame(_) => None,
             Node::ChangesetInfo(_) => None,
             Node::ChangesetInfoMapping(_) => None,
+            Node::DeletedManifest(PathKey { id: _, path }) => Some(&path),
             Node::DeletedManifestMapping(_) => None,
             Node::Fsnode(PathKey { id: _, path }) => Some(&path),
             Node::FsnodeMapping(_) => None,
@@ -615,6 +626,7 @@ impl Node {
             Node::Blame(k) => Some(k.sampling_fingerprint()),
             Node::ChangesetInfo(k) => Some(k.sampling_fingerprint()),
             Node::ChangesetInfoMapping(k) => Some(k.sampling_fingerprint()),
+            Node::DeletedManifest(PathKey { id, path: _ }) => Some(id.sampling_fingerprint()),
             Node::DeletedManifestMapping(k) => Some(k.sampling_fingerprint()),
             Node::Fsnode(PathKey { id, path: _ }) => Some(id.sampling_fingerprint()),
             Node::FsnodeMapping(k) => Some(k.sampling_fingerprint()),
