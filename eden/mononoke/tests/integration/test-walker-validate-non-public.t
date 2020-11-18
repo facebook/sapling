@@ -77,6 +77,24 @@ Check we dont walk blame on a non-public commit.  Because blame is the only path
   Bytes/s,* (glob)
   * Type:Walked,Checks,Children Blame:0,* Changeset:1,* HgBonsaiMapping:1,* UnodeFile:1,* UnodeManifest:1,* UnodeMapping:1,* (glob)
 
+Check we can walk filenodes on a public commit. In this walk all the HgChangeset history steps come from filenodes as we exclude HgChangesetToHgParent etc
+  $ mononoke_walker --readonly-storage scrub -q --walk-root=HgChangeset:${HGCOMMITC} -I deep -x HgBonsaiMapping -i derived_filenodes -i derived_hgchangesets -X HgChangesetToHgParent 2>&1 | strip_glog
+  Walking roots * (glob)
+  Walking edge types [HgChangesetToHgManifest, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgFileNodeToLinkedHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
+  Walking node types [HgChangeset, HgFileEnvelope, HgFileNode, HgManifest]
+  Final count: (16, 16)
+  Bytes/s,* (glob)
+  * Type:Walked,Checks,Children HgChangeset:4,* HgFileEnvelope:4,* HgFileNode:4,* HgManifest:4,* (glob)
+
+Check we dont walk filenodes on a non-public commit.  Because filenodes is the only path to HgChangeset history, this results in a shallow walk
+  $ mononoke_walker --readonly-storage scrub -q --walk-root=HgChangeset:${HGCOMMITCNEW} -I deep -x HgBonsaiMapping -i derived_filenodes -i derived_hgchangesets -X HgChangesetToHgParent 2>&1 | strip_glog
+  Walking roots * (glob)
+  Walking edge types [HgChangesetToHgManifest, HgFileNodeToHgCopyfromFileNode, HgFileNodeToHgParentFileNode, HgFileNodeToLinkedHgChangeset, HgManifestToChildHgManifest, HgManifestToHgFileEnvelope, HgManifestToHgFileNode]
+  Walking node types [HgChangeset, HgFileEnvelope, HgFileNode, HgManifest]
+  Final count: (4, 4)
+  Bytes/s,* (glob)
+  * Type:Walked,Checks,Children HgChangeset:1,* HgFileEnvelope:1,* HgFileNode:1,* HgManifest:1,* (glob)
+
 validate, expect failures on phase info, and linknode as we now point to a non-public commit
   $ mononoke_walker --readonly-storage --cachelib-only-blobstore validate --scuba-log-file scuba.json -I deep -I marker -q --bookmark master_bookmark 2>&1 | strip_glog
   Walking roots * (glob)
