@@ -51,7 +51,7 @@ Make a really non-public commit by importing it and not advancing bookmarks
   $ mkcommit C
   $ HGCOMMITCNEW=$(hg log -r tip -T '{node}')
   $ cd ..
-  $ blobimport repo-hg/.hg repo --no-bookmark --derived-data-type=unodes #derive unodes but not blame for non-public commit
+  $ blobimport repo-hg/.hg repo --no-bookmark --derived-data-type=unodes --exclude-derived-data-type=filenodes
 
 Remove the phase information so we do not use a cached public value
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "DELETE FROM phases where repo_id >= 0";
@@ -77,19 +77,21 @@ Check we dont walk blame on a non-public commit.  Because blame is the only path
   Bytes/s,* (glob)
   * Type:Walked,Checks,Children Blame:0,* Changeset:1,* HgBonsaiMapping:1,* UnodeFile:1,* UnodeManifest:1,* UnodeMapping:1,* (glob)
 
-validate, expect failures on phase info, as we now point to a non-public commit
+validate, expect failures on phase info, and linknode as we now point to a non-public commit
   $ mononoke_walker --readonly-storage --cachelib-only-blobstore validate --scuba-log-file scuba.json -I deep -I marker -q --bookmark master_bookmark 2>&1 | strip_glog
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
   Performing check types [ChangesetPhaseIsPublic, HgLinkNodePopulated]
+  Validation failed: *hg_link_node_populated* (glob)
   Validation failed: *bonsai_phase_is_public* (glob)
   Final count: * (glob)
   Walked* (glob)
-  Nodes,Pass,Fail:56,7,1; EdgesChecked:15; CheckType:Pass,Fail Total:7,1 ChangesetPhaseIsPublic:3,1 HgLinkNodePopulated:4,0
+  Nodes,Pass,Fail:56,6,2; EdgesChecked:14; CheckType:Pass,Fail Total:6,2 ChangesetPhaseIsPublic:3,1 HgLinkNodePopulated:3,1
 
 Check scuba data
   $ wc -l < scuba.json
-  1
+  2
   $ jq -r '.int * .normal | [ .check_fail, .check_type, .node_key, .node_path, .node_type, .repo, .src_node_key, .src_node_path, .src_node_type, .via_node_key, .via_node_path, .via_node_type, .walk_type ] | @csv' < scuba.json | sort
   1,"bonsai_phase_is_public","changeset.blake2.2b06a8547bfe6a3ac79392aef3fa7f3f45a82f4e0beb95c4fa2b914c34b5b215",,"PhaseMapping","repo","changeset.blake2.2b06a8547bfe6a3ac79392aef3fa7f3f45a82f4e0beb95c4fa2b914c34b5b215",,"Changeset","hgchangeset.sha1.26805aba1e600a82e93661149f2313866a221a7b",,"HgChangeset","validate"
+  1,"hg_link_node_populated","hgfilenode.sha1.a57fcc2e5e0f83e36500e99f4e8d3cf03658864a","C","HgFileNode","repo","hgmanifest.sha1.40106725c7775e677bc2e84242d614a02bcbbc61","(none)","HgManifest","hgchangeset.sha1.fb2089ef1d47e570d0453428a0b5d8b5463cf9e3",,"HgChangeset","validate"

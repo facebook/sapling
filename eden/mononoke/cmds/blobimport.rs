@@ -42,6 +42,7 @@ use std::sync::Arc;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 
 const ARG_DERIVED_DATA_TYPE: &str = "derived-data-type";
+const ARG_EXCLUDE_DERIVED_DATA_TYPE: &str = "exclude-derived-data-type";
 const ARG_FIND_ALREADY_IMPORTED_REV_ONLY: &str = "find-already-imported-rev-only";
 const BACKUP_FROM_REPO_ID: &str = "backup-from-repo-id";
 
@@ -97,7 +98,16 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .multiple(true)
                 .required(false)
                 .possible_values(POSSIBLE_DERIVED_TYPES)
-                .help("Derived data type to be backfilled. Note - 'filenodes' will always be derived")
+                .help("Derived data type to be backfilled. Note - 'filenodes' will always be derived unless excluded")
+        )
+        .arg(
+            Arg::with_name(ARG_EXCLUDE_DERIVED_DATA_TYPE)
+                .long(ARG_EXCLUDE_DERIVED_DATA_TYPE)
+                .takes_value(true)
+                .multiple(true)
+                .required(false)
+                .possible_values(POSSIBLE_DERIVED_TYPES)
+                .help("Exclude derived data types explicitly")
         )
         .arg(
             Arg::with_name(ARG_FIND_ALREADY_IMPORTED_REV_ONLY)
@@ -282,10 +292,21 @@ async fn run_blobimport<'a>(
         .map(|v| v.map(|d| d.to_string()).collect())
         .unwrap_or(vec![]);
 
-    // Filenodes will be unconditionally derived, since blobimport imports public
-    // hg changesets which must have filenodes derived
+    let excluded_derived_data_types = matches
+        .values_of(ARG_EXCLUDE_DERIVED_DATA_TYPE)
+        .map_or(vec![], |v| v.map(|d| d.to_string()).collect());
+
+    for v in &excluded_derived_data_types {
+        if derived_data_types.contains(v) {
+            return Err(format_err!("Unexpected exclusion of requested {}", v));
+        }
+    }
+
+    // Make sure filenodes derived unless specifically excluded since public hg changesets must have filenodes derived
     let filenodes_derived_name = FilenodesOnlyPublic::NAME.to_string();
-    if !derived_data_types.contains(&filenodes_derived_name) {
+    if !derived_data_types.contains(&filenodes_derived_name)
+        && !excluded_derived_data_types.contains(&filenodes_derived_name)
+    {
         derived_data_types.push(filenodes_derived_name);
     }
 
