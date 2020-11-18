@@ -10,6 +10,7 @@ use anyhow::Error;
 use blame::BlameRoot;
 use bookmarks::BookmarkName;
 use changeset_info::ChangesetInfo;
+use deleted_files_manifest::RootDeletedManifestId;
 use derived_data::BonsaiDerived;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use filenodes::FilenodeInfo;
@@ -27,8 +28,8 @@ use mononoke_types::{
     blame::Blame,
     fsnode::Fsnode,
     unode::{FileUnode, ManifestUnode},
-    BlameId, BonsaiChangeset, ChangesetId, ContentId, ContentMetadata, FileUnodeId, FsnodeId,
-    MPath, MPathHash, ManifestUnodeId, MononokeId,
+    BlameId, BonsaiChangeset, ChangesetId, ContentId, ContentMetadata, DeletedManifestId,
+    FileUnodeId, FsnodeId, MPath, MPathHash, ManifestUnodeId, MononokeId,
 };
 use once_cell::sync::OnceCell;
 use phases::Phase;
@@ -226,6 +227,7 @@ create_graph!(
             Blame,
             ChangesetInfo,
             ChangesetInfoMapping,
+            DeletedManifestMapping,
             Fsnode,
             FsnodeMapping,
             UnodeFile,
@@ -245,6 +247,7 @@ create_graph!(
             PhaseMapping,
             ChangesetInfo,
             ChangesetInfoMapping,
+            DeletedManifestMapping,
             FsnodeMapping,
             UnodeMapping
         ]
@@ -307,6 +310,7 @@ create_graph!(
         ChangesetId,
         [ChangesetInfo]
     ),
+    (DeletedManifestMapping, ChangesetId, []),
     (
         Fsnode,
         PathKey<FsnodeId>,
@@ -359,6 +363,7 @@ impl NodeType {
             NodeType::Blame => Some(BlameRoot::NAME),
             NodeType::ChangesetInfo => Some(ChangesetInfo::NAME),
             NodeType::ChangesetInfoMapping => Some(ChangesetInfo::NAME),
+            NodeType::DeletedManifestMapping => Some(RootDeletedManifestId::NAME),
             NodeType::Fsnode => Some(RootFsnodeId::NAME),
             NodeType::FsnodeMapping => Some(RootFsnodeId::NAME),
             NodeType::UnodeFile => Some(RootUnodeManifestId::NAME),
@@ -513,6 +518,7 @@ pub enum NodeData {
     Blame(Option<Blame>),
     ChangesetInfo(Option<ChangesetInfo>),
     ChangesetInfoMapping(Option<ChangesetId>),
+    DeletedManifestMapping(Option<DeletedManifestId>),
     Fsnode(Fsnode),
     FsnodeMapping(Option<FsnodeId>),
     UnodeFile(FileUnode),
@@ -544,6 +550,7 @@ impl Node {
             Node::Blame(k) => k.blobstore_key(),
             Node::ChangesetInfo(k) => k.blobstore_key(),
             Node::ChangesetInfoMapping(k) => k.blobstore_key(),
+            Node::DeletedManifestMapping(k) => k.blobstore_key(),
             Node::Fsnode(PathKey { id, path: _ }) => id.blobstore_key(),
             Node::FsnodeMapping(k) => k.blobstore_key(),
             Node::UnodeFile(PathKey { id, path: _ }) => id.blobstore_key(),
@@ -575,6 +582,7 @@ impl Node {
             Node::Blame(_) => None,
             Node::ChangesetInfo(_) => None,
             Node::ChangesetInfoMapping(_) => None,
+            Node::DeletedManifestMapping(_) => None,
             Node::Fsnode(PathKey { id: _, path }) => Some(&path),
             Node::FsnodeMapping(_) => None,
             Node::UnodeFile(PathKey { id: _, path }) => Some(&path),
@@ -607,6 +615,7 @@ impl Node {
             Node::Blame(k) => Some(k.sampling_fingerprint()),
             Node::ChangesetInfo(k) => Some(k.sampling_fingerprint()),
             Node::ChangesetInfoMapping(k) => Some(k.sampling_fingerprint()),
+            Node::DeletedManifestMapping(k) => Some(k.sampling_fingerprint()),
             Node::Fsnode(PathKey { id, path: _ }) => Some(id.sampling_fingerprint()),
             Node::FsnodeMapping(k) => Some(k.sampling_fingerprint()),
             Node::UnodeFile(PathKey { id, path: _ }) => Some(id.sampling_fingerprint()),
@@ -699,15 +708,8 @@ mod tests {
         // If you are adding a new derived data type, please add it to the walker graph rather than to this
         // list, otherwise it won't get scrubbed and thus you would be unaware of different representation
         // in different stores
-        let grandfathered: HashSet<&'static str> = HashSet::from_iter(
-            vec![
-                "deleted_manifest",
-                "fastlog",
-                "git_trees",
-                "skeleton_manifests",
-            ]
-            .into_iter(),
-        );
+        let grandfathered: HashSet<&'static str> =
+            HashSet::from_iter(vec!["fastlog", "git_trees", "skeleton_manifests"].into_iter());
         let mut missing = HashSet::new();
         for t in &a {
             if s.contains(t.as_str()) {

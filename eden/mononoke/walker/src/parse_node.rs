@@ -265,6 +265,16 @@ mod tests {
                     .get_type()
                 );
             }
+            NodeType::DeletedManifestMapping => {
+                assert_eq!(
+                    node_type,
+                    &parse_node(&format!(
+                        "DeletedManifestMapping{}{}",
+                        NODE_SEP, SAMPLE_BLAKE2
+                    ))?
+                    .get_type()
+                );
+            }
             NodeType::FsnodeMapping => {
                 assert_eq!(
                     node_type,

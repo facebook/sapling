@@ -15,7 +15,7 @@ setup configuration
   │
   o  A [draft;rev=0;426bada5c675]
   $
-  $ blobimport repo-hg/.hg repo --derived-data-type=blame --derived-data-type=changeset_info --derived-data-type=fsnodes --derived-data-type=unodes
+  $ blobimport repo-hg/.hg repo --derived-data-type=blame --derived-data-type=changeset_info --derived-data-type=deleted_manifest --derived-data-type=fsnodes --derived-data-type=unodes
 
 check blobstore numbers, walk will do some more steps for mappings
   $ BLOBPREFIX="$TESTTMP/blobstore/blobs/blob-repo0000"
@@ -27,7 +27,7 @@ check blobstore numbers, walk will do some more steps for mappings
   12
   $ BLOBCOUNT=$(ls $BLOBPREFIX.* | grep -v .alias. | wc -l)
   $ echo "$BLOBCOUNT"
-  45
+  49
 
 count-objects, bonsai core data.  total nodes is BONSAICOUNT plus one for the root bookmark step.
   $ mononoke_walker --readonly-storage scrub -q --bookmark master_bookmark -I bonsai 2>&1 | strip_glog
@@ -136,3 +136,21 @@ count-objects, deep walk across blame
   Final count: (16, 16)
   Bytes/s,* (glob)
   * Type:Walked,Checks,Children Blame:3,* Bookmark:1,1,1 Changeset:3,* UnodeFile:3,* UnodeManifest:3,* UnodeMapping:3,* (glob)
+
+count-objects, shallow walk across deleted files manifest
+  $ mononoke_walker --readonly-storage scrub -q --bookmark master_bookmark -I shallow -i bonsai -i derived_deleted_manifest -X ChangesetToFileContent 2>&1 | strip_glog
+  Walking roots * (glob)
+  Walking edge types [BookmarkToChangeset, ChangesetToDeletedManifestMapping]
+  Walking node types [Bookmark, Changeset, DeletedManifestMapping]
+  Final count: (3, 3)
+  Bytes/s,* (glob)
+  * Type:Walked,Checks,Children Bookmark:1,1,1 Changeset:1,* DeletedManifestMapping:1,* (glob)
+
+count-objects, deep walk across deleted files manifest
+  $ mononoke_walker --readonly-storage scrub -q --bookmark master_bookmark -I deep -i bonsai -i derived_deleted_manifest -X ChangesetToBonsaiParent 2>&1 | strip_glog
+  Walking roots * (glob)
+  Walking edge types [BookmarkToChangeset, ChangesetToDeletedManifestMapping]
+  Walking node types [Bookmark, Changeset, DeletedManifestMapping]
+  Final count: (3, 3)
+  Bytes/s,* (glob)
+  * Type:Walked,Checks,Children Bookmark:1,1,1 Changeset:1,* DeletedManifestMapping:1,* (glob)

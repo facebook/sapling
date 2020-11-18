@@ -151,6 +151,7 @@ const DEEP_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::PublishedBookmarksToChangeset,
     EdgeType::PublishedBookmarksToBonsaiHgMapping,
     EdgeType::ChangesetToChangesetInfoMapping,
+    EdgeType::ChangesetToDeletedManifestMapping,
     EdgeType::ChangesetToFsnodeMapping,
     EdgeType::ChangesetToUnodeMapping,
     // Hg
@@ -199,6 +200,7 @@ const SHALLOW_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::PublishedBookmarksToChangeset,
     EdgeType::PublishedBookmarksToBonsaiHgMapping,
     EdgeType::ChangesetToChangesetInfoMapping,
+    EdgeType::ChangesetToDeletedManifestMapping,
     EdgeType::ChangesetToFsnodeMapping,
     EdgeType::ChangesetToUnodeMapping,
     // Hg

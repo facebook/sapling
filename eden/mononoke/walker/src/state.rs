@@ -170,6 +170,7 @@ pub struct WalkState {
     visited_blame: StateMap<InternedId<FileUnodeId>>,
     visited_changeset_info: StateMap<InternedId<ChangesetId>>,
     visited_changeset_info_mapping: StateMap<InternedId<ChangesetId>>,
+    visited_deleted_manifest_mapping: StateMap<InternedId<ChangesetId>>,
     visited_fsnode: StateMap<(InternedId<Option<MPathHash>>, InternedId<FsnodeId>)>,
     visited_fsnode_mapping: StateMap<InternedId<ChangesetId>>,
     visited_unode_file: StateMap<(InternedId<Option<MPathHash>>, UnodeInterned<FileUnodeId>)>,
@@ -220,6 +221,7 @@ impl WalkState {
             visited_blame: StateMap::with_hasher(fac.clone()),
             visited_changeset_info: StateMap::with_hasher(fac.clone()),
             visited_changeset_info_mapping: StateMap::with_hasher(fac.clone()),
+            visited_deleted_manifest_mapping: StateMap::with_hasher(fac.clone()),
             visited_fsnode: StateMap::with_hasher(fac.clone()),
             visited_fsnode_mapping: StateMap::with_hasher(fac.clone()),
             visited_unode_file: StateMap::with_hasher(fac.clone()),
@@ -278,6 +280,15 @@ impl WalkState {
             (Node::ChangesetInfoMapping(bcs_id), Some(NodeData::ChangesetInfoMapping(Some(_)))) => {
                 self.record(
                     &self.visited_changeset_info_mapping,
+                    &self.bcs_ids.interned(bcs_id),
+                );
+            }
+            (
+                Node::DeletedManifestMapping(bcs_id),
+                Some(NodeData::DeletedManifestMapping(Some(_))),
+            ) => {
+                self.record(
+                    &self.visited_deleted_manifest_mapping,
                     &self.bcs_ids.interned(bcs_id),
                 );
             }
@@ -408,6 +419,13 @@ impl VisitOne for WalkState {
             Node::ChangesetInfoMapping(bcs_id) => {
                 if let Some(id) = self.bcs_ids.get(bcs_id) {
                     !self.visited_changeset_info_mapping.contains_key(&id) // Does not insert, see record_resolved_visit
+                } else {
+                    true
+                }
+            }
+            Node::DeletedManifestMapping(bcs_id) => {
+                if let Some(id) = self.bcs_ids.get(bcs_id) {
+                    !self.visited_deleted_manifest_mapping.contains_key(&id) // Does not insert, see record_resolved_visit
                 } else {
                     true
                 }
