@@ -38,7 +38,8 @@ std::string escapeBackslashesForWindows(AbsolutePathPiece path) {
 class EdenConfigTest : public ::testing::Test {
  protected:
   // Top level directory to hold test artifacts
-  std::unique_ptr<TemporaryDirectory> rootTestDir_;
+  std::unique_ptr<TemporaryDirectory> rootTestTempDir_;
+  AbsolutePath rootTestDir_;
 
   // Default paths for when the path does not have to exist
   std::string testUser_{"bob"};
@@ -59,35 +60,33 @@ class EdenConfigTest : public ::testing::Test {
   std::string simpleOverRideTest_{"simpleOverRideTest"};
 
   void SetUp() override {
-    rootTestDir_ =
+    rootTestTempDir_ =
         std::make_unique<TemporaryDirectory>("eden_sys_user_config_test_");
+    rootTestDir_ = AbsolutePath{rootTestTempDir_->path().native()};
     setupSimpleOverRideTest();
   }
 
   void TearDown() override {
-    rootTestDir_.reset();
+    rootTestTempDir_.reset();
   }
 
   void setupSimpleOverRideTest() {
     // we need to create the config path, since our getConfig will check that
     // the config file exists before returning it.
-    auto homePath =
-        AbsolutePathPiece(rootTestDir_->path().string()) + "home"_pc;
-    folly::fs::create_directory(folly::fs::path(homePath.stringPiece()));
+    auto homePath = rootTestDir_ + "home"_pc;
+    ensureDirectoryExists(homePath);
     auto userPath = homePath + "bob"_pc;
-    folly::fs::create_directory(folly::fs::path(userPath.stringPiece()));
+    ensureDirectoryExists(userPath);
 
-    auto clientConfigPath = AbsolutePath(escapeBackslashesForWindows(
-        AbsolutePathPiece(rootTestDir_->path().string()) +
-        clientCertificatePath_));
+    auto clientConfigPath = AbsolutePath(
+        escapeBackslashesForWindows(rootTestDir_ + clientCertificatePath_));
     writeFile(clientConfigPath, folly::StringPiece{"test"}).value();
 
-    auto testCaseDir = AbsolutePathPiece(rootTestDir_->path().string()) +
-        PathComponent(simpleOverRideTest_);
-    folly::fs::create_directory(folly::fs::path(testCaseDir.stringPiece()));
+    auto testCaseDir = rootTestDir_ + PathComponent(simpleOverRideTest_);
+    ensureDirectoryExists(testCaseDir);
 
     auto userConfigDir = testCaseDir + "client"_pc;
-    folly::fs::create_directory(folly::fs::path(userConfigDir.stringPiece()));
+    ensureDirectoryExists(userConfigDir);
 
     auto userConfigPath = userConfigDir + ".edenrc"_pc;
     auto userConfigFileData = folly::StringPiece{
@@ -98,7 +97,7 @@ class EdenConfigTest : public ::testing::Test {
     writeFile(userConfigPath, userConfigFileData).value();
 
     auto systemConfigDir = testCaseDir + "etc-eden"_pc;
-    folly::fs::create_directory(folly::fs::path(systemConfigDir.stringPiece()));
+    ensureDirectoryExists(systemConfigDir);
 
     auto systemConfigPath = systemConfigDir + "edenfs.rc"_pc;
     auto systemConfigFileData = folly::to<std::string>(
@@ -163,8 +162,7 @@ TEST_F(EdenConfigTest, simpleSetGetTest) {
   AbsolutePath ignoreFile{"/home/bob/alternativeIgnore"};
   AbsolutePath systemIgnoreFile{"/etc/eden/fix/systemIgnore"};
   AbsolutePath edenDir{"/home/bob/alt/.eden"};
-  AbsolutePath clientCertificate =
-      AbsolutePathPiece(rootTestDir_->path().string()) + clientCertificatePath_;
+  AbsolutePath clientCertificate = rootTestDir_ + clientCertificatePath_;
   bool useMononoke = true;
 
   AbsolutePath updatedUserConfigPath{
@@ -209,8 +207,7 @@ TEST_F(EdenConfigTest, cloneTest) {
   AbsolutePath systemIgnoreFile{"/NON_DEFAULT_SYSTEM_IGNORE_FILE"};
   AbsolutePath edenDir{"/NON_DEFAULT_EDEN_DIR"};
   AbsolutePath clientCertificate =
-      AbsolutePathPiece(rootTestDir_->path().string()) +
-      PathComponent{"NON_DEFAULT_CLIENT_CERTIFICATE"};
+      rootTestDir_ + PathComponent{"NON_DEFAULT_CLIENT_CERTIFICATE"};
   writeFile(clientCertificate, folly::StringPiece{"test"}).value();
   bool useMononoke = true;
 
@@ -370,9 +367,8 @@ TEST_F(EdenConfigTest, loadSystemUserConfigTest) {
 
   edenConfig->loadSystemConfig();
 
-  auto rawClientConfigPath = escapeBackslashesForWindows(
-      AbsolutePathPiece(rootTestDir_->path().string()) +
-      clientCertificatePath_);
+  auto rawClientConfigPath =
+      escapeBackslashesForWindows(rootTestDir_ + clientCertificatePath_);
   auto clientConfigPath = normalizeBestEffort(rawClientConfigPath);
 
   EXPECT_EQ(edenConfig->edenDir.getValue(), defaultEdenDirPath_);
@@ -426,11 +422,10 @@ TEST_F(EdenConfigTest, nonExistingConfigFiles) {
 }
 
 TEST_F(EdenConfigTest, variablesExpandInPathOptions) {
-  auto rootTestDir = AbsolutePathPiece(rootTestDir_->path().string());
-  auto systemConfigDir = rootTestDir + "etc-eden"_pc;
-  folly::fs::create_directory(folly::fs::path(systemConfigDir.stringPiece()));
+  auto systemConfigDir = rootTestDir_ + "etc-eden"_pc;
+  ensureDirectoryExists(systemConfigDir);
 
-  auto userConfigPath = rootTestDir + "user-edenrc"_pc;
+  auto userConfigPath = rootTestDir_ + "user-edenrc"_pc;
   auto getConfig = [&]() {
     auto config = EdenConfig{"testusername"_sp,
                              uid_t{42},
@@ -485,13 +480,12 @@ TEST_F(EdenConfigTest, variablesExpandInPathOptions) {
 }
 
 TEST_F(EdenConfigTest, missing_config_files_never_change) {
-  auto rootTestDir = AbsolutePathPiece(rootTestDir_->path().string());
-  auto userConfigDir = rootTestDir + "user-home"_pc;
-  auto systemConfigDir = rootTestDir + "etc-eden"_pc;
+  auto userConfigDir = rootTestDir_ + "user-home"_pc;
+  auto systemConfigDir = rootTestDir_ + "etc-eden"_pc;
   auto userConfigPath = userConfigDir + ".edenrc"_pc;
   auto systemConfigPath = systemConfigDir + "edenrc.toml"_pc;
 
-  folly::fs::create_directory(folly::fs::path(systemConfigDir.stringPiece()));
+  ensureDirectoryExists(systemConfigDir);
 
   EdenConfig config{"username",
                     42,
@@ -511,14 +505,11 @@ TEST_F(EdenConfigTest, clientCertIsFirstAvailable) {
 
   // cert1 and cert2 are both be avialable, so they could be returned from
   // getConfig. However, cert3 is not available, so it can not be.
-  AbsolutePath clientCertificate1 =
-      AbsolutePathPiece(rootTestDir_->path().string()) + "cert1"_pc;
+  AbsolutePath clientCertificate1 = rootTestDir_ + "cert1"_pc;
   writeFile(clientCertificate1, folly::StringPiece{"test"}).value();
-  AbsolutePath clientCertificate2 =
-      AbsolutePathPiece(rootTestDir_->path().string()) + "cert2"_pc;
+  AbsolutePath clientCertificate2 = rootTestDir_ + "cert2"_pc;
   writeFile(clientCertificate2, folly::StringPiece{"test"}).value();
-  AbsolutePath clientCertificate3 =
-      AbsolutePathPiece(rootTestDir_->path().string()) + "cert3"_pc;
+  AbsolutePath clientCertificate3 = rootTestDir_ + "cert3"_pc;
 
   auto edenConfig = std::make_shared<EdenConfig>(
       testUser_,
@@ -552,18 +543,14 @@ TEST_F(EdenConfigTest, fallbackToOldSingleCertConfig) {
   AbsolutePath systemConfigDir{"/etc/eden"};
 
   // used in list cert
-  AbsolutePath clientCertificate1 =
-      AbsolutePathPiece(rootTestDir_->path().string()) + "cert1"_pc;
+  AbsolutePath clientCertificate1 = rootTestDir_ + "cert1"_pc;
   writeFile(clientCertificate1, folly::StringPiece{"test"}).value();
-  AbsolutePath clientCertificate2 =
-      AbsolutePathPiece(rootTestDir_->path().string()) + "cert2"_pc;
+  AbsolutePath clientCertificate2 = rootTestDir_ + "cert2"_pc;
   writeFile(clientCertificate2, folly::StringPiece{"test"}).value();
   // used in invalid list cert
-  AbsolutePath clientCertificate3 =
-      AbsolutePathPiece(rootTestDir_->path().string()) + "cert3"_pc;
+  AbsolutePath clientCertificate3 = rootTestDir_ + "cert3"_pc;
   // used in single cert
-  AbsolutePath clientCertificate4 =
-      AbsolutePathPiece(rootTestDir_->path().string()) + "cert4"_pc;
+  AbsolutePath clientCertificate4 = rootTestDir_ + "cert4"_pc;
 
   auto edenConfig = std::make_shared<EdenConfig>(
       testUser_,
