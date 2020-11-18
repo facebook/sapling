@@ -13,10 +13,10 @@ use crate::progress::{
 };
 use crate::sampling::{SamplingWalkVisitor, WalkSampleMapping};
 use crate::setup::{
-    parse_node_types, setup_common, DEFAULT_INCLUDE_NODE_TYPES, EXCLUDE_SAMPLE_NODE_TYPE_ARG,
-    INCLUDE_SAMPLE_NODE_TYPE_ARG, LIMIT_DATA_FETCH_ARG, PROGRESS_INTERVAL_ARG,
-    PROGRESS_SAMPLE_DURATION_S, PROGRESS_SAMPLE_RATE, PROGRESS_SAMPLE_RATE_ARG, SAMPLE_OFFSET_ARG,
-    SAMPLE_RATE_ARG, SCRUB,
+    parse_node_types, setup_common, DEFAULT_INCLUDE_NODE_TYPES, EXCLUDE_OUTPUT_NODE_TYPE_ARG,
+    EXCLUDE_SAMPLE_NODE_TYPE_ARG, INCLUDE_OUTPUT_NODE_TYPE_ARG, INCLUDE_SAMPLE_NODE_TYPE_ARG,
+    LIMIT_DATA_FETCH_ARG, PROGRESS_INTERVAL_ARG, PROGRESS_SAMPLE_DURATION_S, PROGRESS_SAMPLE_RATE,
+    PROGRESS_SAMPLE_RATE_ARG, SAMPLE_OFFSET_ARG, SAMPLE_RATE_ARG, SCRUB,
 };
 use crate::sizing::SizingSample;
 use crate::tail::{walk_exact_tail, RepoWalkRun};
@@ -38,7 +38,12 @@ use mononoke_types::BlobstoreBytes;
 use samplingblob::SamplingHandler;
 use slog::{info, Logger};
 use stats::prelude::*;
-use std::{collections::HashMap, fmt, sync::Arc, time::Duration};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt,
+    sync::Arc,
+    time::Duration,
+};
 
 define_stats! {
     prefix = "mononoke.walker";
@@ -94,6 +99,7 @@ fn loading_stream<InStream, SS>(
     scheduled_max: usize,
     s: InStream,
     sampler: Arc<WalkSampleMapping<Node, ScrubSample>>,
+    output_node_types: HashSet<NodeType>,
 ) -> impl Stream<Item = Result<(Node, Option<NodeData>, Option<ScrubStats>), Error>>
 where
     InStream: Stream<Item = Result<(Node, Option<NodeData>, Option<SS>), Error>> + 'static + Send,
@@ -118,6 +124,9 @@ where
                     .left_future()
             }
             data_opt => {
+                if output_node_types.contains(&n.get_type()) {
+                    println!("Node {:?}: NodeData: {:#?}", n, data_opt);
+                }
                 let size = data_opt
                     .as_ref()
                     .map(|_d| ScrubStats::from(sampler.complete_step(&n).as_ref()));
@@ -340,6 +349,14 @@ pub async fn scrub_objects<'a>(
         walk_params.include_node_types,
         walk_params.include_edge_types
     );
+
+    let mut output_node_types = parse_node_types(
+        sub_m,
+        INCLUDE_OUTPUT_NODE_TYPE_ARG,
+        EXCLUDE_OUTPUT_NODE_TYPE_ARG,
+        &[],
+    )?;
+
     let mut sampling_node_types = parse_node_types(
         sub_m,
         INCLUDE_SAMPLE_NODE_TYPE_ARG,
@@ -360,7 +377,7 @@ pub async fn scrub_objects<'a>(
         ));
 
     let make_sink = {
-        cloned!(scrub_sampler);
+        cloned!(scrub_sampler, output_node_types);
         move |run: RepoWalkRun| {
             cloned!(run.ctx);
             async move |walk_output| {
@@ -370,6 +387,7 @@ pub async fn scrub_objects<'a>(
                     scheduled_max,
                     walk_progress,
                     scrub_sampler,
+                    output_node_types,
                 );
                 let report_sizing = progress_stream(quiet, &sizing_progress_state.clone(), loading);
 
@@ -386,6 +404,11 @@ pub async fn scrub_objects<'a>(
         }
     };
 
+    if !limit_data_fetch {
+        output_node_types.insert(NodeType::FileContent);
+    }
+    let always_emit_types: Vec<NodeType> = output_node_types.into_iter().collect();
+
     let walk_state = Arc::new(SamplingWalkVisitor::new(
         include_node_types,
         include_edge_types,
@@ -401,7 +424,7 @@ pub async fn scrub_objects<'a>(
         logger,
         datasources,
         walk_params,
-        &[NodeType::FileContent],
+        &always_emit_types,
         None,
         walk_state,
         make_sink,

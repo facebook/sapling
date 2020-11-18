@@ -149,6 +149,7 @@ pub fn fetch_manifest_envelope_opt<B: Blobstore>(
         .from_err()
 }
 
+#[derive(Debug)]
 pub struct BlobManifest {
     node_id: HgNodeHash,
     p1: Option<HgNodeHash>,

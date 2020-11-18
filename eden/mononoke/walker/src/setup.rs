@@ -98,6 +98,8 @@ pub const INCLUDE_CHECK_TYPE_ARG: &str = "include-check-type";
 pub const SAMPLE_PATH_REGEX_ARG: &str = "sample-path-regex";
 pub const EXCLUDE_SAMPLE_NODE_TYPE_ARG: &str = "exclude-sample-node-type";
 pub const INCLUDE_SAMPLE_NODE_TYPE_ARG: &str = "include-sample-node-type";
+pub const EXCLUDE_OUTPUT_NODE_TYPE_ARG: &str = "exclude-output-node-type";
+pub const INCLUDE_OUTPUT_NODE_TYPE_ARG: &str = "include-output-node-type";
 pub const OUTPUT_DIR_ARG: &str = "output-dir";
 const SCUBA_TABLE_ARG: &str = "scuba-table";
 const SCUBA_LOG_FILE_ARG: &str = "scuba-log-file";
@@ -343,7 +345,27 @@ pub fn setup_toplevel_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
 
     let scrub_objects =
         setup_subcommand_args(SubCommand::with_name(SCRUB).about("scrub, checks data is present by reading it and counting it. Combine with --enable-scrub-blobstore to check across a multiplex"));
-    let scrub_objects = add_sampling_args(scrub_objects);
+    let scrub_objects = add_sampling_args(scrub_objects)
+        .arg(
+            Arg::with_name(EXCLUDE_OUTPUT_NODE_TYPE_ARG)
+                .long(EXCLUDE_OUTPUT_NODE_TYPE_ARG)
+                .short("O")
+                .takes_value(true)
+                .multiple(true)
+                .number_of_values(1)
+                .required(false)
+                .help("Node types not to output in debug stdout"),
+        )
+        .arg(
+            Arg::with_name(INCLUDE_OUTPUT_NODE_TYPE_ARG)
+                .long(INCLUDE_OUTPUT_NODE_TYPE_ARG)
+                .short("o")
+                .takes_value(true)
+                .multiple(true)
+                .number_of_values(1)
+                .required(false)
+                .help("Node types to output in debug stdout"),
+        );
 
     let compression_benefit = setup_subcommand_args(
         SubCommand::with_name(COMPRESSION_BENEFIT).about("estimate compression benefit"),
