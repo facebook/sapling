@@ -7,7 +7,7 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration
-
+  $ MONONOKE_DIRECT_PEER=1
   $ REPOTYPE="blob_files"
   $ setup_common_config $REPOTYPE
 

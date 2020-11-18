@@ -34,6 +34,7 @@ from . import (
     localrepo,
     lock,
     merge as mergemod,
+    mononokepeer,
     node,
     perftrace,
     phases,
@@ -124,6 +125,7 @@ schemes = {
     "file": _local,
     "http": httppeer,
     "https": httppeer,
+    "mononoke": mononokepeer,
     "ssh": sshpeer,
 }
 
