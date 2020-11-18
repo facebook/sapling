@@ -1057,8 +1057,7 @@ TEST(PathFuncs, PathComponentWide) {
       PathComponent(L""),
       std::domain_error,
       "cannot have an empty PathComponent");
-  EXPECT_THROW_RE(
-      PathComponent(L"."), std::domain_error, "must not be \\.");
+  EXPECT_THROW_RE(PathComponent(L"."), std::domain_error, "must not be \\.");
   EXPECT_THROW_RE(
       PathComponent(L".."), std::domain_error, "must not be \\.\\.");
 }
