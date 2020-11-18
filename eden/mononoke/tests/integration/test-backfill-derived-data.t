@@ -48,4 +48,4 @@ backfill derived data
   * changeset resolved as: * (glob)
   * derived fsnodes in * (glob)
   $ backfill_derived_data single c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd --all-types 2>&1 | grep derived | wc -l
-  8
+  9
