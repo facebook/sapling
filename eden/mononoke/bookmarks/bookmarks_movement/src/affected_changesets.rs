@@ -15,15 +15,17 @@ use bookmarks::BookmarkUpdateReason;
 use bookmarks_types::BookmarkName;
 use bytes::Bytes;
 use context::CoreContext;
+use derived_data::BonsaiDerived;
 use futures::compat::Stream01CompatExt;
 use futures::future;
 use futures::stream::{self, StreamExt, TryStreamExt};
 use hooks::{CrossRepoPushSource, HookManager};
-use metaconfig_types::BookmarkAttrs;
+use metaconfig_types::{BookmarkAttrs, PushrebaseParams};
 use mononoke_types::{BonsaiChangeset, ChangesetId};
 use reachabilityindex::LeastCommonAncestorsHint;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 use scuba_ext::ScubaSampleBuilderExt;
+use skeleton_manifest::RootSkeletonManifestId;
 use tunables::tunables;
 
 use crate::hook_running::run_hooks;
@@ -219,7 +221,125 @@ impl AffectedChangesets {
             .chain(self.additional_changesets.iter().flatten())
     }
 
+    /// Check all applicable restrictions on the affected changesets.
     pub(crate) async fn check_restrictions(
+        &mut self,
+        ctx: &CoreContext,
+        repo: &BlobRepo,
+        lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
+        pushrebase_params: &PushrebaseParams,
+        bookmark_attrs: &BookmarkAttrs,
+        hook_manager: &HookManager,
+        bookmark: &BookmarkName,
+        pushvars: Option<&HashMap<String, Bytes>>,
+        reason: BookmarkUpdateReason,
+        kind: BookmarkKind,
+        auth: &BookmarkMoveAuthorization<'_>,
+        additional_changesets: AdditionalChangesets,
+        cross_repo_push_source: CrossRepoPushSource,
+    ) -> Result<(), BookmarkMovementError> {
+        self.check_case_conflicts(
+            ctx,
+            repo,
+            lca_hint,
+            pushrebase_params,
+            bookmark_attrs,
+            bookmark,
+            kind,
+            additional_changesets,
+        )
+        .await?;
+
+        self.check_hooks(
+            ctx,
+            repo,
+            lca_hint,
+            bookmark_attrs,
+            hook_manager,
+            bookmark,
+            pushvars,
+            reason,
+            kind,
+            auth,
+            additional_changesets,
+            cross_repo_push_source,
+        )
+        .await?;
+
+        self.check_service_write_restrictions(
+            ctx,
+            repo,
+            lca_hint,
+            bookmark_attrs,
+            bookmark,
+            auth,
+            additional_changesets,
+        )
+        .await?;
+
+        Ok(())
+    }
+
+    /// If the push is to a public bookmark, and the casefolding check is
+    /// enabled, check that no affected changeset has case conflicts.
+    async fn check_case_conflicts(
+        &mut self,
+        ctx: &CoreContext,
+        repo: &BlobRepo,
+        lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
+        pushrebase_params: &PushrebaseParams,
+        bookmark_attrs: &BookmarkAttrs,
+        bookmark: &BookmarkName,
+        kind: BookmarkKind,
+        additional_changesets: AdditionalChangesets,
+    ) -> Result<(), BookmarkMovementError> {
+        if kind == BookmarkKind::Public
+            && pushrebase_params.flags.casefolding_check
+            && tunables().get_check_case_conflicts_on_bookmark_movement()
+        {
+            self.load_additional_changesets(
+                ctx,
+                repo,
+                lca_hint,
+                bookmark_attrs,
+                bookmark,
+                additional_changesets,
+            )
+            .await
+            .context("Failed to load additional affected changesets")?;
+
+            let sk_mf_ids = RootSkeletonManifestId::batch_derive(
+                ctx,
+                repo,
+                self.iter().map(BonsaiChangeset::get_changeset_id),
+            )
+            .await?;
+            stream::iter(sk_mf_ids.into_iter().map(Ok))
+                .try_for_each_concurrent(100, |(bcs_id, sk_mf_id)| async move {
+                    let sk_mf = sk_mf_id
+                        .into_skeleton_manifest_id()
+                        .load(ctx.clone(), repo.blobstore())
+                        .await
+                        .map_err(Error::from)?;
+                    if let Some((path1, path2)) =
+                        sk_mf.first_case_conflict(ctx, repo.blobstore()).await?
+                    {
+                        return Err(BookmarkMovementError::CaseConflict {
+                            changeset_id: bcs_id,
+                            path1,
+                            path2,
+                        });
+                    }
+                    Ok(())
+                })
+                .await?;
+        }
+        Ok(())
+    }
+
+    /// If this is a user-initiated update to a public bookmark, run the
+    /// hooks against the affected changesets.
+    async fn check_hooks(
         &mut self,
         ctx: &CoreContext,
         repo: &BlobRepo,
@@ -234,50 +354,14 @@ impl AffectedChangesets {
         additional_changesets: AdditionalChangesets,
         cross_repo_push_source: CrossRepoPushSource,
     ) -> Result<(), BookmarkMovementError> {
-        match auth {
-            BookmarkMoveAuthorization::User => {
-                if kind == BookmarkKind::Scratch {
-                    // Hooks don't run on scratch bookmarks.
-                    return Ok(());
-                }
-
-                if reason == BookmarkUpdateReason::Push
-                    && tunables().get_disable_hooks_on_plain_push()
-                {
-                    // Skip running hooks for this plain push.
-                    return Ok(());
-                }
-
-                if hook_manager.hooks_exist_for_bookmark(bookmark) {
-                    self.load_additional_changesets(
-                        ctx,
-                        repo,
-                        lca_hint,
-                        bookmark_attrs,
-                        bookmark,
-                        additional_changesets,
-                    )
-                    .await
-                    .context("Failed to load additional affected changesets")?;
-
-                    if !self.is_empty() {
-                        run_hooks(
-                            ctx,
-                            hook_manager,
-                            bookmark,
-                            self.iter(),
-                            pushvars,
-                            cross_repo_push_source,
-                        )
-                        .await?;
-                    }
-                }
+        if auth == &BookmarkMoveAuthorization::User && kind == BookmarkKind::Public {
+            if reason == BookmarkUpdateReason::Push && tunables().get_disable_hooks_on_plain_push()
+            {
+                // Skip running hooks for this plain push.
+                return Ok(());
             }
-            BookmarkMoveAuthorization::Service(service_name, scs_params) => {
-                if scs_params.service_write_all_paths_permitted(service_name) {
-                    return Ok(());
-                }
 
+            if hook_manager.hooks_exist_for_bookmark(bookmark) {
                 self.load_additional_changesets(
                     ctx,
                     repo,
@@ -289,17 +373,59 @@ impl AffectedChangesets {
                 .await
                 .context("Failed to load additional affected changesets")?;
 
-                for cs in self.iter() {
-                    if let Err(path) = scs_params.service_write_paths_permitted(service_name, cs) {
-                        return Err(BookmarkMovementError::PermissionDeniedServicePath {
-                            service_name: service_name.clone(),
-                            path: path.clone(),
-                        });
-                    }
+                if !self.is_empty() {
+                    run_hooks(
+                        ctx,
+                        hook_manager,
+                        bookmark,
+                        self.iter(),
+                        pushvars,
+                        cross_repo_push_source,
+                    )
+                    .await?;
                 }
             }
         }
+        Ok(())
+    }
 
+    /// If this is service-initiated update to a bookmark, check the update's
+    /// affected changesets satisfy the service write restrictions.
+    async fn check_service_write_restrictions(
+        &mut self,
+        ctx: &CoreContext,
+        repo: &BlobRepo,
+        lca_hint: &Arc<dyn LeastCommonAncestorsHint>,
+        bookmark_attrs: &BookmarkAttrs,
+        bookmark: &BookmarkName,
+        auth: &BookmarkMoveAuthorization<'_>,
+        additional_changesets: AdditionalChangesets,
+    ) -> Result<(), BookmarkMovementError> {
+        if let BookmarkMoveAuthorization::Service(service_name, scs_params) = auth {
+            if scs_params.service_write_all_paths_permitted(service_name) {
+                return Ok(());
+            }
+
+            self.load_additional_changesets(
+                ctx,
+                repo,
+                lca_hint,
+                bookmark_attrs,
+                bookmark,
+                additional_changesets,
+            )
+            .await
+            .context("Failed to load additional affected changesets")?;
+
+            for cs in self.iter() {
+                if let Err(path) = scs_params.service_write_paths_permitted(service_name, cs) {
+                    return Err(BookmarkMovementError::PermissionDeniedServicePath {
+                        service_name: service_name.clone(),
+                        path: path.clone(),
+                    });
+                }
+            }
+        }
         Ok(())
     }
 }

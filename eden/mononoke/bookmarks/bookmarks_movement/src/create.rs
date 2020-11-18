@@ -127,6 +127,7 @@ impl<'op> CreateBookmarkOp<'op> {
                 ctx,
                 repo,
                 lca_hint,
+                pushrebase_params,
                 bookmark_attrs,
                 hook_manager,
                 self.bookmark,

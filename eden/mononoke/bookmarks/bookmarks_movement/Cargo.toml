@@ -14,6 +14,7 @@ bonsai_git_mapping = { path = "../../bonsai_git_mapping" }
 bookmarks = { path = ".." }
 bookmarks_types = { path = "../bookmarks_types" }
 context = { path = "../../server/context" }
+derived_data = { path = "../../derived_data" }
 git_mapping_pushrebase_hook = { path = "../../bonsai_git_mapping/git_mapping_pushrebase_hook" }
 globalrev_pushrebase_hook = { path = "../../bonsai_globalrev_mapping/globalrev_pushrebase_hook" }
 hooks = { path = "../../hooks" }
@@ -25,6 +26,7 @@ reachabilityindex = { path = "../../reachabilityindex" }
 repo_read_write_status = { path = "../../repo_client/repo_read_write_status" }
 revset = { path = "../../revset" }
 scuba_ext = { path = "../../common/scuba_ext" }
+skeleton_manifest = { path = "../../derived_data/skeleton_manifest" }
 tunables = { path = "../../tunables" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

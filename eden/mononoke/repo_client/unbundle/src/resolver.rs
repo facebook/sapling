@@ -54,6 +54,7 @@ use std::collections::{HashMap, HashSet};
 use std::fmt::Display;
 use std::sync::{Arc, Mutex};
 use topo_sort::sort_topological;
+use tunables::tunables;
 use wirepack::{TreemanifestBundle2Parser, TreemanifestEntry};
 
 #[allow(non_snake_case)]
@@ -1220,7 +1221,8 @@ impl<'r> Bundle2Resolver<'r> {
                     &filelogs,
                     &manifests,
                     &content_blobs,
-                    self.pushrebase_flags.casefolding_check,
+                    self.pushrebase_flags.casefolding_check
+                        && !tunables().get_skip_case_conflict_check_on_changeset_upload(),
                 )
                 .await
                 .with_context(err_context)?;

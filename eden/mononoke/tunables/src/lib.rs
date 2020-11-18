@@ -106,6 +106,9 @@ pub struct MononokeTunables {
     // this threshold will be logged to scuba
     blobstore_read_size_logging_threshold: AtomicI64,
     hash_validation_percentage: AtomicI64,
+    // When case conflict checks are made
+    check_case_conflicts_on_bookmark_movement: AtomicBool,
+    skip_case_conflict_check_on_changeset_upload: AtomicBool,
 }
 
 fn log_tunables(tunables: &TunablesStruct) -> String {

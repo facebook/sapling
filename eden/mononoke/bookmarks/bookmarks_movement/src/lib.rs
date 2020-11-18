@@ -95,6 +95,13 @@ pub enum BookmarkMovementError {
     #[error("Repo is locked: {0}")]
     RepoLocked(String),
 
+    #[error("Case conflict found in {changeset_id}: {path1} conflicts with {path2}")]
+    CaseConflict {
+        changeset_id: ChangesetId,
+        path1: MPath,
+        path2: MPath,
+    },
+
     #[error(transparent)]
     Error(#[from] anyhow::Error),
 }
