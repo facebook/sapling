@@ -406,6 +406,12 @@ mod test {
                 ..Default::default()
             }
         );
+        assert_eq!(
+            b_skeleton
+                .first_case_conflict(&ctx, repo.blobstore())
+                .await?,
+            None,
+        );
 
         // Changeset C introduces some case conflicts
         let c_bcs = changesets["C"].load(ctx.clone(), repo.blobstore()).await?;
@@ -425,6 +431,15 @@ mod test {
                 descendant_case_conflicts: true,
                 ..Default::default()
             }
+        );
+        assert_eq!(
+            c_skeleton
+                .first_case_conflict(&ctx, repo.blobstore())
+                .await?,
+            Some((
+                MPath::new(b"dir1/subdir1/SUBSUBDIR2")?,
+                MPath::new(b"dir1/subdir1/subsubdir2")?
+            ))
         );
 
         let c_sk_dir1 = skeleton_dir(&c_skeleton, b"dir1")?
@@ -465,6 +480,15 @@ mod test {
         let d_skeleton = d_skeleton_id.load(ctx.clone(), repo.blobstore()).await?;
         assert_eq!(d_skeleton.summary().child_case_conflicts, false);
         assert_eq!(d_skeleton.summary().descendant_case_conflicts, true);
+        assert_eq!(
+            d_skeleton
+                .first_case_conflict(&ctx, repo.blobstore())
+                .await?,
+            Some((
+                MPath::new(b"dir1/subdir1/subsubdir1/FILE1")?,
+                MPath::new(b"dir1/subdir1/subsubdir1/file1")?
+            ))
+        );
 
         let d_sk_dir1 = skeleton_dir(&d_skeleton, b"dir1")?
             .id()

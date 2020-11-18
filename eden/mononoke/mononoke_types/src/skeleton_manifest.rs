@@ -9,13 +9,16 @@ use anyhow::{Context, Result};
 
 use crate::blob::{Blob, BlobstoreValue, SkeletonManifestBlob};
 use crate::errors::ErrorKind;
-use crate::path::MPathElement;
+use crate::path::{MPath, MPathElement};
 use crate::thrift;
 use crate::typed_hash::{SkeletonManifestId, SkeletonManifestIdContext};
 
+use blobstore::{Blobstore, StoreLoadable};
+use context::CoreContext;
 use fbthrift::compact_protocol;
 use sorted_vector_map::SortedVectorMap;
-use std::collections::BTreeMap;
+use std::borrow::Cow;
+use std::collections::{BTreeMap, HashMap};
 
 /// A skeleton manifest is a manifest node containing summary information about the
 /// the structure of files (their names, but not their contents) that is useful
@@ -81,6 +84,44 @@ impl SkeletonManifest {
 
     pub fn summary(&self) -> &SkeletonManifestSummary {
         &self.summary
+    }
+
+    pub async fn first_case_conflict(
+        &self,
+        ctx: &CoreContext,
+        blobstore: &(impl Blobstore + Clone),
+    ) -> Result<Option<(MPath, MPath)>> {
+        let mut sk_mf = Cow::Borrowed(self);
+        let mut path: Option<MPath> = None;
+        'outer: loop {
+            if sk_mf.summary.child_case_conflicts {
+                let mut lower_map = HashMap::new();
+                for name in sk_mf.subentries.keys() {
+                    if let Some(lower_name) = name.to_lowercase_utf8() {
+                        if let Some(other_name) = lower_map.insert(lower_name, name.clone()) {
+                            return Ok(Some((
+                                MPath::join_opt_element(path.as_ref(), &other_name),
+                                MPath::join_opt_element(path.as_ref(), name),
+                            )));
+                        }
+                    }
+                }
+            }
+            if sk_mf.summary.descendant_case_conflicts {
+                for (name, entry) in sk_mf.subentries.iter() {
+                    if let SkeletonManifestEntry::Directory(subdir) = entry {
+                        if subdir.summary.child_case_conflicts
+                            || subdir.summary.descendant_case_conflicts
+                        {
+                            path = Some(MPath::join_opt_element(path.as_ref(), name));
+                            sk_mf = Cow::Owned(subdir.id.load(ctx.clone(), blobstore).await?);
+                            continue 'outer;
+                        }
+                    }
+                }
+            }
+            return Ok(None);
+        }
     }
 
     pub(crate) fn from_thrift(t: thrift::SkeletonManifest) -> Result<SkeletonManifest> {
