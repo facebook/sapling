@@ -46,6 +46,9 @@ pub(crate) struct AffectedChangesets {
 
     /// Changesets that are being used as a source for pushrebase.
     source_changesets: HashSet<BonsaiChangeset>,
+
+    /// Additional changesets, if they have been loaded.
+    additional_changesets: Option<HashSet<BonsaiChangeset>>,
 }
 
 impl AffectedChangesets {
@@ -53,6 +56,7 @@ impl AffectedChangesets {
         Self {
             new_changesets: HashMap::new(),
             source_changesets: HashSet::new(),
+            additional_changesets: None,
         }
     }
 
@@ -60,6 +64,7 @@ impl AffectedChangesets {
         Self {
             new_changesets: HashMap::new(),
             source_changesets,
+            additional_changesets: None,
         }
     }
 
@@ -97,9 +102,16 @@ impl AffectedChangesets {
         bookmark_attrs: &BookmarkAttrs,
         bookmark: &BookmarkName,
         additional_changesets: AdditionalChangesets,
-    ) -> Result<HashSet<BonsaiChangeset>, Error> {
+    ) -> Result<(), Error> {
+        if self.additional_changesets.is_some() {
+            return Ok(());
+        }
+
         let (head, base) = match additional_changesets {
-            AdditionalChangesets::None => return Ok(HashSet::new()),
+            AdditionalChangesets::None => {
+                self.additional_changesets = Some(HashSet::new());
+                return Ok(());
+            }
             AdditionalChangesets::Ancestors(head) => (head, None),
             AdditionalChangesets::Range { head, base } => (head, Some(base)),
         };
@@ -138,7 +150,7 @@ impl AffectedChangesets {
             _ => std::usize::MAX,
         };
 
-        if tunables().get_run_hooks_on_additional_changesets() {
+        let additional_changesets = if tunables().get_run_hooks_on_additional_changesets() {
             let bonsais = range
                 .and_then({
                     let mut count = 0;
@@ -169,7 +181,7 @@ impl AffectedChangesets {
                 .add("hook_running_additional_changesets", bonsais.len())
                 .log_with_msg("Running hooks for additional changesets", None);
 
-            Ok(bonsais)
+            bonsais
         } else {
             // Logging-only mode.  Work out how many changesets we would have run
             // on, and whether the limit would have been reached.
@@ -184,18 +196,27 @@ impl AffectedChangesets {
                 scuba.add("hook_running_additional_changesets_limit_reached", true);
             }
             scuba.log_with_msg("Hook running skipping additional changesets", None);
-            Ok(HashSet::new())
-        }
+            HashSet::new()
+        };
+
+        self.additional_changesets = Some(additional_changesets);
+        Ok(())
     }
 
     fn is_empty(&self) -> bool {
-        self.new_changesets.is_empty() && self.source_changesets.is_empty()
+        self.new_changesets.is_empty()
+            && self.source_changesets.is_empty()
+            && self
+                .additional_changesets
+                .as_ref()
+                .map_or(true, HashSet::is_empty)
     }
 
     fn iter(&self) -> impl Iterator<Item = &BonsaiChangeset> + Clone {
         self.new_changesets
             .values()
             .chain(self.source_changesets.iter())
+            .chain(self.additional_changesets.iter().flatten())
     }
 
     pub(crate) async fn check_restrictions(
@@ -228,24 +249,23 @@ impl AffectedChangesets {
                 }
 
                 if hook_manager.hooks_exist_for_bookmark(bookmark) {
-                    let additional_changesets = self
-                        .load_additional_changesets(
-                            ctx,
-                            repo,
-                            lca_hint,
-                            bookmark_attrs,
-                            bookmark,
-                            additional_changesets,
-                        )
-                        .await
-                        .context("Failed to load additional affected changesets")?;
+                    self.load_additional_changesets(
+                        ctx,
+                        repo,
+                        lca_hint,
+                        bookmark_attrs,
+                        bookmark,
+                        additional_changesets,
+                    )
+                    .await
+                    .context("Failed to load additional affected changesets")?;
 
-                    if !self.is_empty() || !additional_changesets.is_empty() {
+                    if !self.is_empty() {
                         run_hooks(
                             ctx,
                             hook_manager,
                             bookmark,
-                            self.iter().chain(additional_changesets.iter()),
+                            self.iter(),
                             pushvars,
                             cross_repo_push_source,
                         )
@@ -258,19 +278,18 @@ impl AffectedChangesets {
                     return Ok(());
                 }
 
-                let additional_changesets = self
-                    .load_additional_changesets(
-                        ctx,
-                        repo,
-                        lca_hint,
-                        bookmark_attrs,
-                        bookmark,
-                        additional_changesets,
-                    )
-                    .await
-                    .context("Failed to load additional affected changesets")?;
+                self.load_additional_changesets(
+                    ctx,
+                    repo,
+                    lca_hint,
+                    bookmark_attrs,
+                    bookmark,
+                    additional_changesets,
+                )
+                .await
+                .context("Failed to load additional affected changesets")?;
 
-                for cs in self.iter().chain(additional_changesets.iter()) {
+                for cs in self.iter() {
                     if let Err(path) = scs_params.service_write_paths_permitted(service_name, cs) {
                         return Err(BookmarkMovementError::PermissionDeniedServicePath {
                             service_name: service_name.clone(),
