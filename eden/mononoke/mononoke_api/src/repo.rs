@@ -29,7 +29,6 @@ use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
 use filestore::{Alias, FetchKey};
 use futures::compat::{Future01CompatExt, Stream01CompatExt};
-use futures::future::try_join_all;
 use futures::stream::{Stream, StreamExt, TryStreamExt};
 use futures::try_join;
 use hook_manager_factory::make_hook_manager;
@@ -392,15 +391,15 @@ impl Repo {
 
     pub async fn report_monitoring_stats(&self, ctx: &CoreContext) -> Result<(), MononokeError> {
         match self.config.source_control_service_monitoring.as_ref() {
-            None => Ok(()),
+            None => {}
             Some(monitoring_config) => {
-                let reporting_futs = monitoring_config
-                    .bookmarks_to_report_age
-                    .iter()
-                    .map(move |bookmark| self.report_bookmark_age_difference(ctx, &bookmark));
-                try_join_all(reporting_futs).await.map(|_| ())
+                for bookmark in monitoring_config.bookmarks_to_report_age.iter() {
+                    self.report_bookmark_age_difference(ctx, &bookmark).await?;
+                }
             }
         }
+
+        Ok(())
     }
 
     fn report_bookmark_missing_from_cache(&self, ctx: &CoreContext, bookmark: &BookmarkName) {

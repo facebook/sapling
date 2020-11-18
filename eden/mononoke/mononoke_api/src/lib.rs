@@ -19,7 +19,6 @@ use cached_config::ConfigStore;
 use cloned::cloned;
 use fbinit::FacebookInit;
 use futures::future;
-use futures::future::try_join_all;
 use slog::{debug, info, o, Logger};
 use sql_ext::facebook::MysqlOptions;
 
@@ -163,12 +162,11 @@ impl Mononoke {
 
     /// Report configured monitoring stats
     pub async fn report_monitoring_stats(&self, ctx: &CoreContext) -> Result<(), MononokeError> {
-        let reporting_futs: Vec<_> = self
-            .repos
-            .iter()
-            .map(|(_, repo)| async move { repo.report_monitoring_stats(ctx).await })
-            .collect();
-        try_join_all(reporting_futs).await.map(|_| ())
+        for (_, repo) in self.repos.iter() {
+            repo.report_monitoring_stats(ctx).await?;
+        }
+
+        Ok(())
     }
 }
 
