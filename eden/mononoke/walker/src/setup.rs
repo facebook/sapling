@@ -41,7 +41,8 @@ use std::{
     sync::Arc,
     time::Duration,
 };
-use strum::IntoEnumIterator;
+use strum::{IntoEnumIterator, VariantNames};
+use strum_macros::{AsRefStr, EnumString, EnumVariantNames};
 
 pub struct RepoWalkDatasources {
     pub blobrepo: BlobRepo,
@@ -100,6 +101,7 @@ pub const EXCLUDE_SAMPLE_NODE_TYPE_ARG: &str = "exclude-sample-node-type";
 pub const INCLUDE_SAMPLE_NODE_TYPE_ARG: &str = "include-sample-node-type";
 pub const EXCLUDE_OUTPUT_NODE_TYPE_ARG: &str = "exclude-output-node-type";
 pub const INCLUDE_OUTPUT_NODE_TYPE_ARG: &str = "include-output-node-type";
+pub const OUTPUT_FORMAT_ARG: &str = "output-format";
 pub const OUTPUT_DIR_ARG: &str = "output-dir";
 const SCUBA_TABLE_ARG: &str = "scuba-table";
 const SCUBA_LOG_FILE_ARG: &str = "scuba-log-file";
@@ -260,6 +262,12 @@ const CONTENT_META_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::AliasContentMappingToFileContent,
 ];
 
+#[derive(Clone, Debug, PartialEq, Eq, AsRefStr, EnumVariantNames, EnumString)]
+pub enum OutputFormat {
+    Debug,
+    PrettyDebug,
+}
+
 // Things like phases and obs markers will go here
 const MARKER_EDGE_TYPES: &[EdgeType] = &[EdgeType::ChangesetToPhaseMapping];
 
@@ -365,6 +373,18 @@ pub fn setup_toplevel_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
                 .number_of_values(1)
                 .required(false)
                 .help("Node types to output in debug stdout"),
+        )
+        .arg(
+            Arg::with_name(OUTPUT_FORMAT_ARG)
+                .long(OUTPUT_FORMAT_ARG)
+                .short("F")
+                .takes_value(true)
+                .multiple(false)
+                .number_of_values(1)
+                .possible_values(OutputFormat::VARIANTS)
+                .default_value(OutputFormat::PrettyDebug.as_ref())
+                .required(false)
+                .help("Set the output format"),
         );
 
     let compression_benefit = setup_subcommand_args(

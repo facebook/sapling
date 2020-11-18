@@ -13,10 +13,11 @@ use crate::progress::{
 };
 use crate::sampling::{SamplingWalkVisitor, WalkSampleMapping};
 use crate::setup::{
-    parse_node_types, setup_common, DEFAULT_INCLUDE_NODE_TYPES, EXCLUDE_OUTPUT_NODE_TYPE_ARG,
-    EXCLUDE_SAMPLE_NODE_TYPE_ARG, INCLUDE_OUTPUT_NODE_TYPE_ARG, INCLUDE_SAMPLE_NODE_TYPE_ARG,
-    LIMIT_DATA_FETCH_ARG, PROGRESS_INTERVAL_ARG, PROGRESS_SAMPLE_DURATION_S, PROGRESS_SAMPLE_RATE,
-    PROGRESS_SAMPLE_RATE_ARG, SAMPLE_OFFSET_ARG, SAMPLE_RATE_ARG, SCRUB,
+    parse_node_types, setup_common, OutputFormat, DEFAULT_INCLUDE_NODE_TYPES,
+    EXCLUDE_OUTPUT_NODE_TYPE_ARG, EXCLUDE_SAMPLE_NODE_TYPE_ARG, INCLUDE_OUTPUT_NODE_TYPE_ARG,
+    INCLUDE_SAMPLE_NODE_TYPE_ARG, LIMIT_DATA_FETCH_ARG, OUTPUT_FORMAT_ARG, PROGRESS_INTERVAL_ARG,
+    PROGRESS_SAMPLE_DURATION_S, PROGRESS_SAMPLE_RATE, PROGRESS_SAMPLE_RATE_ARG, SAMPLE_OFFSET_ARG,
+    SAMPLE_RATE_ARG, SCRUB,
 };
 use crate::sizing::SizingSample;
 use crate::tail::{walk_exact_tail, RepoWalkRun};
@@ -41,6 +42,7 @@ use stats::prelude::*;
 use std::{
     collections::{HashMap, HashSet},
     fmt,
+    str::FromStr,
     sync::Arc,
     time::Duration,
 };
@@ -100,6 +102,7 @@ fn loading_stream<InStream, SS>(
     s: InStream,
     sampler: Arc<WalkSampleMapping<Node, ScrubSample>>,
     output_node_types: HashSet<NodeType>,
+    output_format: OutputFormat,
 ) -> impl Stream<Item = Result<(Node, Option<NodeData>, Option<ScrubStats>), Error>>
 where
     InStream: Stream<Item = Result<(Node, Option<NodeData>, Option<SS>), Error>> + 'static + Send,
@@ -125,7 +128,13 @@ where
             }
             data_opt => {
                 if output_node_types.contains(&n.get_type()) {
-                    println!("Node {:?}: NodeData: {:#?}", n, data_opt);
+                    match output_format {
+                        OutputFormat::Debug => println!("Node {:?}: NodeData: {:?}", n, data_opt),
+                        // Keep Node as non-Pretty so its on same line
+                        OutputFormat::PrettyDebug => {
+                            println!("Node {:?}: NodeData: {:#?}", n, data_opt)
+                        }
+                    }
                 }
                 let size = data_opt
                     .as_ref()
@@ -357,6 +366,10 @@ pub async fn scrub_objects<'a>(
         &[],
     )?;
 
+    let output_format = sub_m
+        .value_of(OUTPUT_FORMAT_ARG)
+        .map_or(Ok(OutputFormat::PrettyDebug), OutputFormat::from_str)?;
+
     let mut sampling_node_types = parse_node_types(
         sub_m,
         INCLUDE_SAMPLE_NODE_TYPE_ARG,
@@ -388,6 +401,7 @@ pub async fn scrub_objects<'a>(
                     walk_progress,
                     scrub_sampler,
                     output_node_types,
+                    output_format,
                 );
                 let report_sizing = progress_stream(quiet, &sizing_progress_state.clone(), loading);
 
