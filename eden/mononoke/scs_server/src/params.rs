@@ -34,7 +34,35 @@ impl AddScubaParams for BTreeSet<thrift::CommitIdentityScheme> {
 
 impl AddScubaParams for thrift::ListReposParams {}
 
-impl AddScubaParams for thrift::RepoCreateCommitParams {}
+impl AddScubaParams for thrift::RepoCreateCommitParams {
+    fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
+        scuba.add(
+            "param_parents",
+            self.parents
+                .iter()
+                .map(CommitIdExt::to_string)
+                .collect::<ScubaValue>(),
+        );
+        if let Some(date) = self.info.date.as_ref() {
+            scuba.add("param_date", date.timestamp);
+        }
+        scuba.add("param_author", self.info.author.as_str());
+        let deletes_count = self
+            .changes
+            .values()
+            .filter(|change| {
+                if let thrift::RepoCreateCommitParamsChange::deleted(_) = change {
+                    true
+                } else {
+                    false
+                }
+            })
+            .count();
+        scuba.add("param_changes_count", self.changes.len() - deletes_count);
+        scuba.add("param_deletes_count", deletes_count);
+        self.identity_schemes.add_scuba_params(scuba);
+    }
+}
 
 impl AddScubaParams for thrift::RepoCreateBookmarkParams {
     fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
