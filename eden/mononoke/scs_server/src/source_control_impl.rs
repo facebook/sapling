@@ -39,7 +39,8 @@ use tunables::tunables;
 use crate::commit_id::CommitIdExt;
 use crate::errors;
 use crate::from_request::FromRequest;
-use crate::params::AddScubaParams;
+use crate::scuba_params::AddScubaParams;
+use crate::scuba_response::AddScubaResponse;
 use crate::specifiers::SpecifierExt;
 
 const SCS_IDENTITY: &str = "scm_service_identity";
@@ -340,13 +341,19 @@ impl SourceControlServiceImpl {
     }
 }
 
-fn log_result<T>(ctx: CoreContext, stats: &FutureStats, result: &Result<T, errors::ServiceError>) {
+fn log_result<T: AddScubaResponse>(
+    ctx: CoreContext,
+    stats: &FutureStats,
+    result: &Result<T, errors::ServiceError>,
+) {
     let mut success = 0;
     let mut internal_failure = 0;
     let mut invalid_request = 0;
+    let mut scuba = ctx.scuba().clone();
 
     let (status, error) = match result {
-        Ok(_) => {
+        Ok(response) => {
+            response.add_scuba_response(&mut scuba);
             success = 1;
             ("SUCCESS", None)
         }
@@ -365,8 +372,6 @@ fn log_result<T>(ctx: CoreContext, stats: &FutureStats, result: &Result<T, error
     STATS::total_request_invalid.add_value(invalid_request);
     STATS::total_request_internal_failure_permille.add_value(internal_failure * 1000);
     STATS::total_request_invalid_permille.add_value(invalid_request * 1000);
-
-    let mut scuba = ctx.scuba().clone();
 
     ctx.perf_counters().insert_perf_counters(&mut scuba);
 

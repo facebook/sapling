@@ -41,7 +41,8 @@ mod history;
 mod into_response;
 mod methods;
 mod monitoring;
-mod params;
+mod scuba_params;
+mod scuba_response;
 mod source_control_impl;
 mod specifiers;
 
