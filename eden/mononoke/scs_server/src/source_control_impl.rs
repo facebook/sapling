@@ -126,7 +126,7 @@ impl SourceControlServiceImpl {
         params: &dyn AddScubaParams,
         identities: &MononokeIdentitySet,
     ) -> Result<ScubaSampleBuilder, errors::ServiceError> {
-        let mut scuba = self.scuba_builder.clone();
+        let mut scuba = self.scuba_builder.clone().with_seq("seq");
         scuba.add_common_server_data();
         scuba.add("type", "thrift");
         scuba.add("method", name);
