@@ -158,11 +158,11 @@ impl Sqlblob {
         let delay = try_boxfuture!(myadmin_delay::sharded(fb, shardmap.clone(), shard_num));
         let config_handle = try_boxfuture!(get_gc_config_handle(config_store));
 
-        let shard_num_us = shard_num.clone().get();
+        let shard_count = shard_num.clone().get();
         create_mysql_pool_sharded(
             fb,
             shardmap.clone(),
-            shard_num_us,
+            0..shard_count,
             read_con_type,
             PoolSizeConfig::for_mysql_sharded(),
             readonly,

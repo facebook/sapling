@@ -57,14 +57,17 @@ pub fn create_mysql_pool_unsharded(
     fb_unimplemented!()
 }
 
-pub fn create_mysql_pool_sharded(
+pub fn create_mysql_pool_sharded<S>(
     _fb: FacebookInit,
     _shardmap: String,
-    _shard_id: usize,
+    _shards: S,
     _read_con_type: ReadConnectionType,
     _pool_size_config: PoolSizeConfig,
     _readonly: bool,
-) -> Result<SqlShardedConnections, Error> {
+) -> Result<SqlShardedConnections, Error>
+where
+    S: IntoIterator<Item = usize> + Clone,
+{
     fb_unimplemented!()
 }
 
