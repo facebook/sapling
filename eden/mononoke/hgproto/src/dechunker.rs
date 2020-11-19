@@ -246,13 +246,18 @@ mod tests {
     }
 
     quickcheck! {
-        fn test_bufread_api(chunks: Chunks, remainder: Vec<u8>) -> TestResult {
+        fn test_bufread_api(chunks: Chunks, remainder: Vec<u8>, with_full_content: bool) -> TestResult {
             let chunks = &chunks;
             let remainder = remainder.as_slice();
             let concat_chunks = concat_chunks(chunks, remainder);
 
+            let mut dechunker = Dechunker::new(Cursor::new(&concat_chunks));
+            if with_full_content {
+                let full_bundle2_content = Arc::new(Mutex::new(Bytes::new()));
+                dechunker = dechunker.with_full_content(full_bundle2_content);
+            }
             match check_bufread_api(
-                Dechunker::new(Cursor::new(&concat_chunks)),
+                dechunker,
                 chunks,
                 remainder,
             ) {
@@ -261,13 +266,19 @@ mod tests {
             }
         }
 
-        fn test_read_api(chunks: Chunks, remainder: Vec<u8>) -> TestResult {
+        fn test_read_api(chunks: Chunks, remainder: Vec<u8>, with_full_content: bool) -> TestResult {
             let chunks = &chunks;
             let remainder = remainder.as_slice();
             let concat_chunks = concat_chunks(chunks, remainder);
 
+            let mut dechunker = Dechunker::new(Cursor::new(&concat_chunks));
+            if with_full_content {
+                let full_bundle2_content = Arc::new(Mutex::new(Bytes::new()));
+                dechunker = dechunker.with_full_content(full_bundle2_content);
+            }
+
             match check_read_api(
-                Dechunker::new(Cursor::new(&concat_chunks)),
+                dechunker,
                 chunks,
                 remainder,
             ) {
@@ -293,6 +304,7 @@ mod tests {
         chunks: &Chunks,
         remainder: &[u8],
     ) -> Result<()> {
+        let mut full_len = 0;
         for chunk in &chunks.0 {
             let buf_len = {
                 let buf = d.fill_buf()?;
@@ -305,6 +317,16 @@ mod tests {
                 buf.len()
             };
             d.consume(buf_len);
+            full_len += buf_len;
+        }
+        if let Some(ref mut full_bundle2_content) = d.maybe_full_content {
+            let saved_content = full_bundle2_content.lock().unwrap();
+            ensure!(
+                saved_content.len() == full_len,
+                "expected full_bundle2_content length to be {:?} found {:?}",
+                full_len,
+                saved_content.len(),
+            );
         }
 
         check_remainder(d, remainder)
@@ -337,6 +359,17 @@ mod tests {
             concat_chunks,
             buf
         );
+
+        if let Some(ref mut full_bundle2_content) = d.maybe_full_content {
+            let saved_content = full_bundle2_content.lock().unwrap();
+            ensure!(
+                saved_content.len() == buf_len,
+                "expected full_bundle2_content length to be {:?} found {:?}",
+                buf_len,
+                saved_content.len(),
+            );
+        }
+
         check_remainder(d, remainder)
     }
 
