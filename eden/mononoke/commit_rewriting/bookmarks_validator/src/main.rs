@@ -100,14 +100,26 @@ async fn loop_forever<M: SyncedCommitMapping + Clone + 'static>(
 
         if enabled {
             let res = validate(&ctx, &syncers, large_repo_name, small_repo_name).await;
-            STATS::result_counter.set_value(
-                ctx.fb,
-                res.is_ok() as i64,
-                (large_repo_name.clone(), small_repo_name.clone()),
-            );
-
             if let Err(err) = res {
-                error!(ctx.logger(), "validation failed: {:?}", err);
+                match err {
+                    ValidationError::InfraError(error) => {
+                        error!(ctx.logger(), "infra error: {:?}", error);
+                    }
+                    ValidationError::ValidationError(err_msg) => {
+                        STATS::result_counter.set_value(
+                            ctx.fb,
+                            0,
+                            (large_repo_name.clone(), small_repo_name.clone()),
+                        );
+                        error!(ctx.logger(), "validation failed: {:?}", err_msg);
+                    }
+                }
+            } else {
+                STATS::result_counter.set_value(
+                    ctx.fb,
+                    1,
+                    (large_repo_name.clone(), small_repo_name.clone()),
+                );
             }
         } else {
             info!(ctx.logger(), "push redirector is disabled");
@@ -122,12 +134,23 @@ async fn loop_forever<M: SyncedCommitMapping + Clone + 'static>(
     }
 }
 
+enum ValidationError {
+    InfraError(Error),
+    ValidationError(String),
+}
+
+impl From<Error> for ValidationError {
+    fn from(error: Error) -> Self {
+        Self::InfraError(error)
+    }
+}
+
 async fn validate<M: SyncedCommitMapping + Clone + 'static>(
     ctx: &CoreContext,
     syncers: &Syncers<M>,
     large_repo_name: &str,
     small_repo_name: &str,
-) -> Result<(), Error> {
+) -> Result<(), ValidationError> {
     let commit_syncer = &syncers.small_to_large;
     let diffs = validation::find_bookmark_diff(ctx.clone(), &commit_syncer).await?;
 
@@ -148,10 +171,10 @@ async fn validate<M: SyncedCommitMapping + Clone + 'static>(
                 source_cs_id,
             } => (target_bookmark, None, Some(source_cs_id)),
             NoSyncOutcome { target_bookmark } => {
-                return Err(format_err!(
+                return Err(ValidationError::ValidationError(format!(
                     "unexpected no sync outcome for {}",
                     target_bookmark
-                ));
+                )));
             }
         };
 
@@ -171,14 +194,11 @@ async fn validate<M: SyncedCommitMapping + Clone + 'static>(
         if in_history {
             info!(ctx.logger(), "all is well");
         } else {
-            return Err(format_err!(
+            let err_msg = format!(
                 "{} points to {:?} in {}, but points to {:?} in {}",
-                large_bookmark,
-                large_cs_id,
-                large_repo_name,
-                small_cs_id,
-                small_repo_name,
-            ));
+                large_bookmark, large_cs_id, large_repo_name, small_cs_id, small_repo_name,
+            );
+            return Err(ValidationError::ValidationError(err_msg));
         }
     }
     Ok(())
