@@ -18,6 +18,7 @@
 #include "eden/fs/store/hg/HgProxyHash.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/utils/Bug.h"
+#include "eden/fs/utils/IDGen.h"
 
 namespace facebook {
 namespace eden {
@@ -52,14 +53,14 @@ class HgImportRequest {
     std::vector<HgProxyHash> proxyHashes;
   };
 
-  static std::pair<HgImportRequest, folly::SemiFuture<std::unique_ptr<Blob>>>
+  static std::pair<HgImportRequest, folly::Future<std::unique_ptr<Blob>>>
   makeBlobImportRequest(
       Hash hash,
       HgProxyHash proxyHash,
       ImportPriority priority,
       std::unique_ptr<RequestMetricsScope> metricsScope);
 
-  static std::pair<HgImportRequest, folly::SemiFuture<std::unique_ptr<Tree>>>
+  static std::pair<HgImportRequest, folly::Future<std::unique_ptr<Tree>>>
   makeTreeImportRequest(
       Hash hash,
       HgProxyHash proxyHash,
@@ -67,7 +68,7 @@ class HgImportRequest {
       std::unique_ptr<RequestMetricsScope> metricsScope,
       bool prefetchMetadata);
 
-  static std::pair<HgImportRequest, folly::SemiFuture<folly::Unit>>
+  static std::pair<HgImportRequest, folly::Future<folly::Unit>>
   makePrefetchRequest(
       std::vector<HgProxyHash> hashes,
       ImportPriority priority,
@@ -111,6 +112,10 @@ class HgImportRequest {
     return promise;
   }
 
+  uint64_t getUnique() const {
+    return unique_;
+  }
+
  private:
   HgImportRequest(const HgImportRequest&) = delete;
   HgImportRequest& operator=(const HgImportRequest&) = delete;
@@ -124,6 +129,7 @@ class HgImportRequest {
   Request request_;
   ImportPriority priority_;
   Response promise_;
+  uint64_t unique_ = generateUniqueID();
 
   friend bool operator<(
       const HgImportRequest& lhs,

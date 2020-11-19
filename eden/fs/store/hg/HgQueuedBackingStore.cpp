@@ -31,12 +31,38 @@
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/EnumValue.h"
+#include "eden/fs/utils/IDGen.h"
 #include "eden/fs/utils/PathFuncs.h"
+#include "folly/ScopeGuard.h"
 
 namespace facebook {
 namespace eden {
 
+namespace {
+// 100,000 hg object fetches in a short term is plausible.
+constexpr size_t kTraceBusCapacity = 100000;
+static_assert(sizeof(HgImportTraceEvent) == 56);
+// TraceBus is double-buffered, so the following capacity should be doubled.
+// 10 MB overhead per backing repo is tolerable.
+static_assert(kTraceBusCapacity * sizeof(HgImportTraceEvent) == 5600000);
+} // namespace
+
 DEFINE_uint64(hg_queue_batch_size, 1, "Number of requests per Hg import batch");
+
+HgImportTraceEvent::HgImportTraceEvent(
+    uint64_t unique,
+    EventType eventType,
+    ResourceType resourceType,
+    const HgProxyHash& proxyHash)
+    : unique{unique},
+      eventType{eventType},
+      resourceType{resourceType},
+      manifestNodeId{proxyHash.revHash()} {
+  auto hgPath = proxyHash.path().stringPiece();
+  path.reset(new char[hgPath.size() + 1]);
+  memcpy(path.get(), hgPath.data(), hgPath.size());
+  path[hgPath.size()] = 0;
+}
 
 HgQueuedBackingStore::HgQueuedBackingStore(
     std::shared_ptr<LocalStore> localStore,
@@ -49,7 +75,8 @@ HgQueuedBackingStore::HgQueuedBackingStore(
       stats_(std::move(stats)),
       config_(std::move(config)),
       backingStore_(std::move(backingStore)),
-      logger_(std::move(logger)) {
+      logger_(std::move(logger)),
+      traceBus_{TraceBus<HgImportTraceEvent>::create("hg", kTraceBusCapacity)} {
   threads_.reserve(numberThreads);
   for (int i = 0; i < numberThreads; i++) {
     threads_.emplace_back(&HgQueuedBackingStore::processRequest, this);
@@ -81,6 +108,9 @@ void HgQueuedBackingStore::processBlobImportRequests(
     auto& hash = blobImport->hash;
     auto* promise = request.getPromise<HgImportRequest::BlobImport::Response>();
 
+    traceBus_->publish(HgImportTraceEvent::start(
+        request.getUnique(), HgImportTraceEvent::BLOB, blobImport->proxyHash));
+
     XLOGF(
         DBG4,
         "Processing blob request for {} ({:p})",
@@ -96,13 +126,13 @@ void HgQueuedBackingStore::processBlobImportRequests(
   {
     auto request = requests.begin();
     auto proxyHash = proxyHashes.begin();
+    auto promise = promises.begin();
     std::vector<folly::SemiFuture<folly::Unit>> futures;
     futures.reserve(requests.size());
 
     XCHECK_EQ(requests.size(), proxyHashes.size());
-    for (; request != requests.end(); request++, proxyHash++) {
-      if (request->getPromise<HgImportRequest::BlobImport::Response>()
-              ->isFulfilled()) {
+    for (; request != requests.end(); ++request, ++proxyHash, ++promise) {
+      if ((*promise)->isFulfilled()) {
         stats_->getHgBackingStoreStatsForCurrentThread()
             .hgBackingStoreGetBlob.addValue(watch.elapsed().count());
         continue;
@@ -129,12 +159,16 @@ void HgQueuedBackingStore::processBlobImportRequests(
 void HgQueuedBackingStore::processTreeImportRequests(
     std::vector<HgImportRequest>&& requests) {
   for (auto& request : requests) {
-    auto parameter = request.getRequest<HgImportRequest::TreeImport>();
+    auto treeImport = request.getRequest<HgImportRequest::TreeImport>();
+
+    traceBus_->publish(HgImportTraceEvent::start(
+        request.getUnique(), HgImportTraceEvent::TREE, treeImport->proxyHash));
+
     request.getPromise<HgImportRequest::TreeImport::Response>()->setWith(
         [store = backingStore_.get(),
-         hash = parameter->hash,
-         proxyHash = parameter->proxyHash,
-         prefetchMetadata = parameter->prefetchMetadata]() mutable {
+         hash = treeImport->hash,
+         proxyHash = treeImport->proxyHash,
+         prefetchMetadata = treeImport->prefetchMetadata]() mutable {
           return store
               ->getTree(
                   hash,
@@ -186,6 +220,7 @@ folly::SemiFuture<std::unique_ptr<Tree>> HgQueuedBackingStore::getTree(
     const Hash& id,
     ObjectFetchContext& context) {
   auto proxyHash = HgProxyHash{localStore_.get(), id, "getTree"};
+
   logBackingStoreFetch(
       context, proxyHash, ObjectFetchContext::ObjectType::Tree);
 
@@ -193,18 +228,28 @@ folly::SemiFuture<std::unique_ptr<Tree>> HgQueuedBackingStore::getTree(
       std::make_unique<RequestMetricsScope>(&pendingImportTreeWatches_);
   auto [request, future] = HgImportRequest::makeTreeImportRequest(
       id,
-      std::move(proxyHash),
+      proxyHash,
       context.getPriority(),
       std::move(importTracker),
       context.prefetchMetadata());
+  uint64_t unique = request.getUnique();
+
+  traceBus_->publish(
+      HgImportTraceEvent::queue(unique, HgImportTraceEvent::TREE, proxyHash));
+
   queue_.enqueue(std::move(request));
-  return std::move(future);
+  return std::move(future).ensure(
+      [this, unique, proxyHash = std::move(proxyHash)] {
+        traceBus_->publish(HgImportTraceEvent::finish(
+            unique, HgImportTraceEvent::TREE, proxyHash));
+      });
 }
 
 folly::SemiFuture<std::unique_ptr<Blob>> HgQueuedBackingStore::getBlob(
     const Hash& id,
     ObjectFetchContext& context) {
   auto proxyHash = HgProxyHash{localStore_.get(), id, "getBlob"};
+
   auto path = proxyHash.path();
   logBackingStoreFetch(
       context, proxyHash, ObjectFetchContext::ObjectType::Blob);
@@ -219,12 +264,17 @@ folly::SemiFuture<std::unique_ptr<Blob>> HgQueuedBackingStore::getBlob(
   auto importTracker =
       std::make_unique<RequestMetricsScope>(&pendingImportBlobWatches_);
   auto [request, future] = HgImportRequest::makeBlobImportRequest(
-      id,
-      std::move(proxyHash),
-      context.getPriority(),
-      std::move(importTracker));
+      id, proxyHash, context.getPriority(), std::move(importTracker));
+  auto unique = request.getUnique();
+  traceBus_->publish(
+      HgImportTraceEvent::queue(unique, HgImportTraceEvent::BLOB, proxyHash));
+
   queue_.enqueue(std::move(request));
-  return std::move(future);
+  return std::move(future).ensure(
+      [this, unique, proxyHash = std::move(proxyHash)] {
+        traceBus_->publish(HgImportTraceEvent::finish(
+            unique, HgImportTraceEvent::BLOB, proxyHash));
+      });
 }
 
 folly::SemiFuture<std::unique_ptr<Tree>> HgQueuedBackingStore::getTreeForCommit(

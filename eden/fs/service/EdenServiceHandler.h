@@ -131,6 +131,9 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       int64_t eventCategoryMask) override;
 #endif
 
+  apache::thrift::ServerStream<HgEvent> traceHgEvents(
+      std::unique_ptr<std::string> mountPoint) override;
+
   void getManifestEntry(
       ManifestEntry& out,
       std::unique_ptr<std::string> mountPoint,

@@ -9,6 +9,8 @@
 
 #include <algorithm>
 #include <optional>
+#include "eden/fs/store/hg/HgQueuedBackingStore.h"
+#include "eden/fs/utils/ProcessNameCache.h"
 
 #include <fb303/ServiceData.h>
 #include <folly/Conv.h>
@@ -651,6 +653,27 @@ EdenServiceHandler::subscribeStreamTemporary(
   return std::move(streamAndPublisher.first);
 }
 
+namespace {
+TraceEventTimes thriftTraceEventTimes(const TraceEventBase& event) {
+  using namespace std::chrono;
+
+  TraceEventTimes times;
+  times.timestamp_ref() =
+      duration_cast<nanoseconds>(event.systemTime.time_since_epoch()).count();
+  times.monotonic_time_ns_ref() =
+      duration_cast<nanoseconds>(event.monotonicTime.time_since_epoch())
+          .count();
+  return times;
+}
+
+RequestInfo thriftRequestInfo(pid_t pid, ProcessNameCache& processNameCache) {
+  RequestInfo info;
+  info.pid_ref() = pid;
+  info.processName_ref().from_optional(processNameCache.getProcessName(pid));
+  return info;
+}
+} // namespace
+
 #ifndef _WIN32
 
 namespace {
@@ -755,14 +778,12 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
             }
 
             FsEvent te;
-            te.timestamp_ref() =
-                std::chrono::duration_cast<std::chrono::nanoseconds>(
-                    event.systemTime.time_since_epoch())
-                    .count();
-            te.monotonic_time_ns_ref() =
-                std::chrono::duration_cast<std::chrono::nanoseconds>(
-                    event.monotonicTime.time_since_epoch())
-                    .count();
+            auto times = thriftTraceEventTimes(event);
+            te.times_ref() = times;
+
+            // Legacy timestamp fields.
+            te.timestamp_ref() = *times.timestamp_ref();
+            te.monotonic_time_ns_ref() = *times.monotonic_time_ns_ref();
 
             te.fuseRequest_ref() = populateFuseCall(
                 event.unique,
@@ -782,6 +803,9 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
               te.arguments_ref() = *event.arguments;
             }
 
+            te.requestInfo_ref() = thriftRequestInfo(
+                event.request.pid, *serverState->getProcessNameCache());
+
             owner.publisher.next(te);
           });
 
@@ -789,6 +813,92 @@ apache::thrift::ServerStream<FsEvent> EdenServiceHandler::traceFsEvents(
 }
 
 #endif // _WIN32
+
+apache::thrift::ServerStream<HgEvent> EdenServiceHandler::traceHgEvents(
+    std::unique_ptr<std::string> mountPoint) {
+  auto edenMount = server_->getMount(*mountPoint);
+  auto hgBackingStore = std::dynamic_pointer_cast<HgQueuedBackingStore>(
+      edenMount->getObjectStore()->getBackingStore());
+  if (!hgBackingStore) {
+    throw std::runtime_error("mount must use hg backing store");
+  }
+
+  struct Context {
+    TraceSubscriptionHandle<HgImportTraceEvent> subHandle;
+  };
+
+  auto context = std::make_shared<Context>();
+
+  auto [serverStream, publisher] =
+      apache::thrift::ServerStream<HgEvent>::createPublisher([context] {
+        // on disconnect, release context and the TraceSubscriptionHandle
+      });
+
+  struct PublisherOwner {
+    explicit PublisherOwner(
+        apache::thrift::ServerStreamPublisher<HgEvent> publisher)
+        : owner(true), publisher{std::move(publisher)} {}
+
+    PublisherOwner(PublisherOwner&& that) noexcept
+        : owner{std::exchange(that.owner, false)},
+          publisher{std::move(that.publisher)} {}
+
+    PublisherOwner& operator=(PublisherOwner&&) = delete;
+
+    // Destroying a publisher without calling complete() aborts the process, so
+    // ensure complete() is called when the TraceBus deletes the subscriber (as
+    // occurs during unmount).
+    ~PublisherOwner() {
+      if (owner) {
+        std::move(publisher).complete();
+      }
+    }
+
+    bool owner;
+    apache::thrift::ServerStreamPublisher<HgEvent> publisher;
+  };
+
+  context->subHandle = hgBackingStore->getTraceBus().subscribeFunction(
+      folly::to<std::string>("hgtrace-", edenMount->getPath().basename()),
+      [owner = PublisherOwner{std::move(publisher)},
+       serverState =
+           server_->getServerState()](const HgImportTraceEvent& event) {
+        HgEvent te;
+        te.times_ref() = thriftTraceEventTimes(event);
+        switch (event.eventType) {
+          case HgImportTraceEvent::QUEUE:
+            te.eventType_ref() = HgEventType::QUEUE;
+            break;
+          case HgImportTraceEvent::START:
+            te.eventType_ref() = HgEventType::START;
+            break;
+          case HgImportTraceEvent::FINISH:
+            te.eventType_ref() = HgEventType::FINISH;
+            break;
+        }
+
+        switch (event.resourceType) {
+          case HgImportTraceEvent::BLOB:
+            te.resourceType_ref() = HgResourceType::BLOB;
+            break;
+          case HgImportTraceEvent::TREE:
+            te.resourceType_ref() = HgResourceType::TREE;
+            break;
+        }
+
+        te.unique_ref() = event.unique;
+
+        te.manifestNodeId_ref() = event.manifestNodeId.toString();
+        te.path_ref() = event.getPath();
+
+        // TODO: trace requesting pid
+        // te.requestInfo_ref() = thriftRequestInfo(pid);
+
+        owner.publisher.next(te);
+      });
+
+  return std::move(serverStream);
+}
 
 void EdenServiceHandler::getFilesChangedSince(
     FileDelta& out,

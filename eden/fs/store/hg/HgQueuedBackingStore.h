@@ -9,6 +9,7 @@
 
 #include <folly/Range.h>
 #include <folly/Synchronized.h>
+#include <sys/types.h>
 #include <atomic>
 #include <memory>
 #include <vector>
@@ -19,6 +20,7 @@
 #include "eden/fs/store/hg/HgBackingStore.h"
 #include "eden/fs/store/hg/HgImportRequestQueue.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
+#include "eden/fs/telemetry/TraceBus.h"
 
 namespace facebook {
 namespace eden {
@@ -31,6 +33,61 @@ class EdenStats;
 class HgImportRequest;
 
 constexpr uint8_t kNumberHgQueueWorker = 8;
+
+struct HgImportTraceEvent : TraceEventBase {
+  enum EventType : uint8_t {
+    QUEUE,
+    START,
+    FINISH,
+  };
+
+  enum ResourceType : uint8_t {
+    BLOB,
+    TREE,
+  };
+
+  static HgImportTraceEvent queue(
+      uint64_t unique,
+      ResourceType resourceType,
+      const HgProxyHash& proxyHash) {
+    return HgImportTraceEvent{unique, QUEUE, resourceType, proxyHash};
+  }
+
+  static HgImportTraceEvent start(
+      uint64_t unique,
+      ResourceType resourceType,
+      const HgProxyHash& proxyHash) {
+    return HgImportTraceEvent{unique, START, resourceType, proxyHash};
+  }
+
+  static HgImportTraceEvent finish(
+      uint64_t unique,
+      ResourceType resourceType,
+      const HgProxyHash& proxyHash) {
+    return HgImportTraceEvent{unique, FINISH, resourceType, proxyHash};
+  }
+
+  HgImportTraceEvent(
+      uint64_t unique,
+      EventType eventType,
+      ResourceType resourceType,
+      const HgProxyHash& proxyHash);
+
+  /// Simple accessor that hides the internal memory representation of paths.
+  std::string getPath() const {
+    return path.get();
+  }
+
+  // Unique per request, but is consistent across the three stages of an import:
+  // queue, start, and finish. Used to correlate events to a request.
+  uint64_t unique;
+  EventType eventType;
+  ResourceType resourceType;
+  // The HG manifest node ID.
+  Hash manifestNodeId;
+  // Always null-terminated, and saves space in the trace event structure.
+  std::unique_ptr<char[]> path;
+};
 
 /**
  * An Hg backing store implementation that will put incoming blob/tree import
@@ -49,6 +106,10 @@ class HgQueuedBackingStore : public BackingStore {
       uint8_t numberThreads = kNumberHgQueueWorker);
 
   ~HgQueuedBackingStore() override;
+
+  TraceBus<HgImportTraceEvent>& getTraceBus() const {
+    return *traceBus_;
+  }
 
   folly::SemiFuture<std::unique_ptr<Tree>> getTree(
       const Hash& id,
@@ -182,6 +243,9 @@ class HgQueuedBackingStore : public BackingStore {
   mutable RequestMetricsScope::LockedRequestWatchList pendingImportTreeWatches_;
   mutable RequestMetricsScope::LockedRequestWatchList
       pendingImportPrefetchWatches_;
+
+  // This field should be last so any internal subscribers can capture [this].
+  std::shared_ptr<TraceBus<HgImportTraceEvent>> traceBus_;
 };
 
 } // namespace eden
