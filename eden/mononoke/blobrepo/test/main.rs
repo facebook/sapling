@@ -38,7 +38,7 @@ use mercurial_types::{
         UploadHgFileEntry, UploadHgNodeHash,
     },
     manifest, FileType, HgChangesetId, HgFileEnvelope, HgFileNodeId, HgManifestId, HgNodeHash,
-    HgParents, MPath, MPathElement, RepoPath,
+    HgParents, MPath, RepoPath,
 };
 use mercurial_types_mocks::nodehash::ONES_FNID;
 use mononoke_types::bonsai_changeset::BonsaiChangesetMut;
@@ -92,9 +92,6 @@ async fn upload_blob_no_parents(fb: FacebookInit, repo: BlobRepo) {
     assert!(path == fake_path);
     assert!(HgFileNodeId::new(entry.get_hash().into_nodehash()) == expected_hash);
     assert!(entry.get_type() == manifest::Type::File(FileType::Regular));
-    assert!(
-        entry.get_name() == Some(&MPathElement::new("file".into()).expect("valid MPathElement"))
-    );
 
     // And the blob now exists
     let bytes = get_content(ctx, &repo, expected_hash).await.unwrap();
@@ -136,9 +133,6 @@ async fn upload_blob_one_parent(fb: FacebookInit, repo: BlobRepo) {
     assert!(path == fake_path);
     assert!(HgFileNodeId::new(entry.get_hash().into_nodehash()) == expected_hash);
     assert!(entry.get_type() == manifest::Type::File(FileType::Regular));
-    assert!(
-        entry.get_name() == Some(&MPathElement::new("file".into()).expect("valid MPathElement"))
-    );
 
     // And the blob now exists
     let bytes = get_content(ctx.clone(), &repo, expected_hash)

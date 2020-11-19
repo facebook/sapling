@@ -360,11 +360,10 @@ fn make_entry(
     use self::BonsaiDiffFileChange::*;
 
     match diff_result {
-        Changed(path, ft, entry_id) | ChangedReusedId(path, ft, entry_id) => {
+        Changed(_, ft, entry_id) | ChangedReusedId(_, ft, entry_id) => {
             let blobstore = repo.get_blobstore().boxed();
-            let basename = path.basename().clone();
             let hash = entry_id.into_nodehash();
-            Some(HgBlobEntry::new(blobstore, basename, hash, Type::File(*ft)))
+            Some(HgBlobEntry::new(blobstore, hash, Type::File(*ft)))
         }
         Deleted(_path) => None,
     }

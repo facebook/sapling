@@ -77,7 +77,6 @@ fn store_file_change(
                     {
                         Some(HgBlobEntry::new(
                             store,
-                            path.basename().clone(),
                             parent.into_nodehash(),
                             Type::File(change.file_type()),
                         ))

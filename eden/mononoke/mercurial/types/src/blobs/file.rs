@@ -12,7 +12,7 @@ use super::errors::ErrorKind;
 use super::manifest::fetch_manifest_envelope;
 use crate::{
     manifest::Type, nodehash::HgEntryId, FileBytes, HgBlob, HgBlobNode, HgFileEnvelope,
-    HgFileNodeId, HgManifestId, HgNodeHash, HgParents, MPath, MPathElement,
+    HgFileNodeId, HgManifestId, HgNodeHash, HgParents, MPath,
 };
 use anyhow::{Error, Result};
 use blobstore::{Blobstore, Loadable, LoadableError};
@@ -33,17 +33,8 @@ use std::{
 #[derive(Clone)]
 pub struct HgBlobEntry {
     blobstore: Arc<dyn Blobstore>,
-    name: Option<MPathElement>,
     id: HgEntryId,
 }
-
-impl PartialEq for HgBlobEntry {
-    fn eq(&self, other: &Self) -> bool {
-        self.name == other.name && self.id == other.id
-    }
-}
-
-impl Eq for HgBlobEntry {}
 
 impl Loadable for HgFileNodeId {
     type Value = HgFileEnvelope;
@@ -68,15 +59,9 @@ impl Loadable for HgFileNodeId {
 }
 
 impl HgBlobEntry {
-    pub fn new(
-        blobstore: Arc<dyn Blobstore>,
-        name: MPathElement,
-        nodeid: HgNodeHash,
-        ty: Type,
-    ) -> Self {
+    pub fn new(blobstore: Arc<dyn Blobstore>, nodeid: HgNodeHash, ty: Type) -> Self {
         Self {
             blobstore,
-            name: Some(name),
             id: match ty {
                 Type::Tree => HgEntryId::Manifest(HgManifestId::new(nodeid)),
                 Type::File(file_type) => HgEntryId::File(file_type, HgFileNodeId::new(nodeid)),
@@ -87,7 +72,6 @@ impl HgBlobEntry {
     pub fn new_root(blobstore: Arc<dyn Blobstore>, manifestid: HgManifestId) -> Self {
         Self {
             blobstore,
-            name: None,
             id: manifestid.into(),
         }
     }
@@ -102,10 +86,6 @@ impl HgBlobEntry {
 
     pub fn get_parents(&self, ctx: CoreContext) -> BoxFuture01<HgParents, Error> {
         self.get_envelope(ctx).map(|e| e.get_parents()).boxify()
-    }
-
-    pub fn get_name(&self) -> Option<&MPathElement> {
-        self.name.as_ref()
     }
 
     pub fn get_envelope(&self, ctx: CoreContext) -> BoxFuture01<Box<dyn HgBlobEnvelope>, Error> {

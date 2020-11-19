@@ -132,13 +132,7 @@ impl UploadHgTreeEntry {
         let manifest_id = HgManifestId::new(node_id);
         let blobstore_key = manifest_id.blobstore_key();
 
-        let blob_entry = match path.mpath().and_then(|m| m.into_iter().last()) {
-            Some(m) => {
-                let entry_path = m.clone();
-                HgBlobEntry::new(blobstore.clone(), entry_path, node_id, Type::Tree)
-            }
-            None => HgBlobEntry::new_root(blobstore.clone(), manifest_id),
-        };
+        let blob_entry = HgBlobEntry::new(blobstore.clone(), node_id, Type::Tree);
 
         fn log_upload_stats(
             logger: Logger,
@@ -447,7 +441,6 @@ impl UploadHgFileEntry {
 
                 let blob_entry = HgBlobEntry::new(
                     blobstore.clone(),
-                    path.basename().clone(),
                     node_id.into_nodehash(),
                     Type::File(file_type),
                 );
