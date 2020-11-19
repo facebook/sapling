@@ -1220,6 +1220,7 @@ def _dispatch(req):
                         if not repo.local():
                             raise error.Abort(_("repository '%s' is not local") % path)
                         _initblackbox(req, repo, func.cmdtype)
+                        scmutil.setup(repo.ui)
                         repo.ui.setconfig("bundle", "mainreporoot", repo.root, "repo")
                     except error.RequirementError:
                         raise

@@ -392,6 +392,7 @@ class changectx(basectx):
 
         try:
             if isinstance(changeid, int):
+                changeid = scmutil.revf64decode(changeid)
                 self._node = repo.changelog.node(changeid)
                 return
             if sys.version_info[0] < 3 and isinstance(changeid, long):  # noqa
@@ -449,6 +450,7 @@ class changectx(basectx):
                         raise ValueError
                 if r < 0 and r != wdirrev:
                     raise ValueError
+                r = scmutil.revf64decode(r)
                 node = repo.changelog.node(r)
                 self._node = node
                 return

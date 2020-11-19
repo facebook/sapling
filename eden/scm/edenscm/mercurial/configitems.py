@@ -298,6 +298,8 @@ coreconfigitem("experimental", "mergedriver", default=None)
 coreconfigitem("experimental", "narrow-heads", default=True)
 coreconfigitem("experimental", "obsmarkers-exchange-debug", default=False)
 coreconfigitem("experimental", "remotenames", default=False)
+# Map rev to safe f64 range for Javascript consumption.
+coreconfigitem("experimental", "revf64compat", default=True)
 
 # load Rust-based HgCommits on changelog.
 coreconfigitem("experimental", "rust-commits", default=True)

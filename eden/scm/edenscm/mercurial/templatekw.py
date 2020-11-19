@@ -802,14 +802,14 @@ def mutations(repo, ctx, **args):
 def showp1rev(repo, ctx, templ, **args):
     """Integer. The repository-local revision number of the changeset's
     first parent, or -1 if the changeset has no parents."""
-    return ctx.p1().rev()
+    return scmutil.revf64encode(ctx.p1().rev())
 
 
 @templatekeyword("p2rev")
 def showp2rev(repo, ctx, templ, **args):
     """Integer. The repository-local revision number of the changeset's
     second parent, or -1 if the changeset has no second parent."""
-    return ctx.p2().rev()
+    return scmutil.revf64encode(ctx.p2().rev())
 
 
 @templatekeyword("p1node")
@@ -837,7 +837,12 @@ def showparents(**args):
     pctxs = ctx.parents()
     prevs = [p.rev() for p in pctxs]
     parents = [
-        [("rev", p.rev()), ("node", p.hex()), ("phase", p.phasestr())] for p in pctxs
+        [
+            ("rev", scmutil.revf64encode(p.rev())),
+            ("node", p.hex()),
+            ("phase", p.phasestr()),
+        ]
+        for p in pctxs
     ]
     f = _showlist("parent", parents, args)
     return _hybrid(
@@ -864,7 +869,7 @@ def showphaseidx(repo, ctx, templ, **args):
 @templatekeyword("rev")
 def showrev(repo, ctx, templ, **args):
     """Integer. The repository-local changeset revision number."""
-    return scmutil.intrev(ctx)
+    return scmutil.revf64encode(scmutil.intrev(ctx))
 
 
 def showrevslist(name, revs, **args):

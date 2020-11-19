@@ -1442,3 +1442,36 @@ def trackrevnumfortests(repo, specs):
                         "fix(%r, %s, %r, %r)\n" % (testfile, testline, spec, candidate)
                     )
                 break
+
+
+def revf64encode(rev):
+    """Convert rev to within f64 "safe" range.
+
+    This avoids issues that JSON cannot represent the revs precisely.
+    """
+    if rev is not None and rev >= 0x100000000000000:
+        rev -= 0xFF000000000000
+    return rev
+
+
+def revf64decode(rev):
+    """Convert rev encoded by revf64encode back to the original rev
+
+    >>> revs = [i + j for i in [0, 1 << 56] for j in range(2)] + [None]
+    >>> encoded = [revf64encode(i) for i in revs]
+    >>> decoded = [revf64decode(i) for i in encoded]
+    >>> revs == decoded
+    True
+    """
+    if rev is not None and 0x1000000000000 <= rev < 0x100000000000000:
+        rev += 0xFF000000000000
+    return rev
+
+
+def setup(ui):
+    if not ui.configbool("experimental", "revf64compat"):
+        # Disable f64 compatibility
+        global revf64encode
+
+        def revf64encode(rev):
+            return rev

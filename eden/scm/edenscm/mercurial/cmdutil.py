@@ -2075,7 +2075,7 @@ class jsonchangeset(changeset_printer):
         if rev is None:
             jrev = jnode = "null"
         else:
-            jrev = "%d" % rev
+            jrev = "%d" % scmutil.revf64encode(rev)
             jnode = '"%s"' % hex(ctx.node())
         j = lambda v: json.dumps(v, paranoid=False)
 
