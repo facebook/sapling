@@ -21,10 +21,11 @@ use crate::resolver::{HgHookRejection, PostResolveAction, PostResolvePushRebase}
 use crate::BundleResolverError;
 
 /// A function to remap hook rejections from Bonsai to Hg.
-pub trait HookRejectionRemapper = (Fn(HookRejection) -> BoxFuture<'static, Result<HgHookRejection, Error>>)
-    + Send
-    + Sync
-    + 'static;
+pub trait HookRejectionRemapper =
+    (Fn(HookRejection) -> BoxFuture<'static, Result<HgHookRejection, Error>>)
+        + Send
+        + Sync
+        + 'static;
 
 pub fn make_hook_rejection_remapper(
     ctx: &CoreContext,

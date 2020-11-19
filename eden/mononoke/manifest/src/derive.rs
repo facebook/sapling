@@ -303,9 +303,9 @@ where
     TreeId::Value: Manifest<TreeId = TreeId, LeafId = LeafId>,
     <TreeId as StoreLoadable<Store>>::Value: Send,
     T: Fn(
-            TreeInfo<TreeId, IntermediateLeafId, Ctx>,
-            mpsc::UnboundedSender<BoxFuture<(), Error>>,
-        ) -> TFut
+        TreeInfo<TreeId, IntermediateLeafId, Ctx>,
+        mpsc::UnboundedSender<BoxFuture<(), Error>>,
+    ) -> TFut
         + Send
         + Sync
         + 'static,
