@@ -199,35 +199,33 @@ impl UploadHgFileContents {
         blobstore: &Arc<dyn Blobstore>,
         p1: Option<HgFileNodeId>,
         p2: Option<HgFileNodeId>,
-        path: MPath,
     ) -> (
-        ContentBlobInfo,
+        ContentBlobMeta,
         // The future that does the upload and the future that computes the node ID/metadata are
         // split up to allow greater parallelism.
         impl Future<Item = (), Error = Error> + Send,
         impl Future<Item = (HgFileNodeId, Bytes, u64), Error = Error> + Send,
     ) {
-        let (cbinfo, upload_fut, compute_fut) = match self {
+        let (cbmeta, upload_fut, compute_fut) = match self {
             UploadHgFileContents::ContentUploaded(cbmeta) => {
                 let upload_fut = future::ok(());
 
                 let size = cbmeta.size;
-                let cbinfo = ContentBlobInfo { path, meta: cbmeta };
 
                 let lookup_fut = lookup_filenode_id(
                     ctx.clone(),
                     &*blobstore,
-                    FileNodeIdPointer::new(&cbinfo.meta.id, &cbinfo.meta.copy_from, &p1, &p2),
+                    FileNodeIdPointer::new(&cbmeta.id, &cbmeta.copy_from, &p1, &p2),
                 );
 
                 let metadata_fut = Self::compute_metadata(
                     ctx.clone(),
                     blobstore,
-                    cbinfo.meta.id,
-                    cbinfo.meta.copy_from.clone(),
+                    cbmeta.id,
+                    cbmeta.copy_from.clone(),
                 );
 
-                let content_id = cbinfo.meta.id;
+                let content_id = cbmeta.id;
 
                 // Attempt to lookup filenode ID by alias. Fallback to computing it if we cannot.
                 let compute_fut = (lookup_fut, metadata_fut).into_future().and_then({
@@ -247,7 +245,7 @@ impl UploadHgFileContents {
                     }
                 });
 
-                (cbinfo, upload_fut.left_future(), compute_fut.left_future())
+                (cbmeta, upload_fut.left_future(), compute_fut.left_future())
             }
             UploadHgFileContents::RawBytes(raw_content, filestore_config) => {
                 let node_id = HgFileNodeId::new(
@@ -279,13 +277,12 @@ impl UploadHgFileContents {
                 );
 
                 let upload_fut = upload_fut.boxed().compat().timed({
-                    cloned!(path);
                     let logger = ctx.logger().clone();
                     move |stats, result| {
                         if result.is_ok() {
                             UploadHgFileEntry::log_stats(
                                 logger,
-                                path,
+                                None,
                                 node_id,
                                 "content_uploaded",
                                 stats,
@@ -295,26 +292,23 @@ impl UploadHgFileContents {
                     }
                 });
 
-                let cbinfo = ContentBlobInfo {
-                    path,
-                    meta: ContentBlobMeta {
-                        id,
-                        size,
-                        copy_from,
-                    },
+                let cbmeta = ContentBlobMeta {
+                    id,
+                    size,
+                    copy_from,
                 };
 
                 let compute_fut = future::ok((node_id, metadata, size));
 
                 (
-                    cbinfo,
+                    cbmeta,
                     upload_fut.right_future(),
                     compute_fut.right_future(),
                 )
             }
         };
 
-        let key = FileNodeIdPointer::new(&cbinfo.meta.id, &cbinfo.meta.copy_from, &p1, &p2);
+        let key = FileNodeIdPointer::new(&cbmeta.id, &cbmeta.copy_from, &p1, &p2);
 
         let compute_fut = compute_fut.and_then({
             cloned!(ctx, blobstore);
@@ -324,7 +318,7 @@ impl UploadHgFileContents {
             }
         });
 
-        (cbinfo, upload_fut, compute_fut)
+        (cbmeta, upload_fut, compute_fut)
     }
 
     fn compute_metadata(
@@ -411,13 +405,14 @@ impl UploadHgFileEntry {
             path,
         } = self;
 
-        let (cbinfo, content_upload, compute_fut) =
-            contents.execute(ctx.clone(), &blobstore, p1, p2, path.clone());
-        let content_id = cbinfo.meta.id;
+        let (cbmeta, content_upload, compute_fut) =
+            contents.execute(ctx.clone(), &blobstore, p1, p2);
+        let content_id = cbmeta.id;
         let logger = ctx.logger().clone();
 
-        let envelope_upload =
-            compute_fut.and_then(move |(computed_node_id, metadata, content_size)| {
+        let envelope_upload = compute_fut.and_then({
+            cloned!(path);
+            move |(computed_node_id, metadata, content_size)| {
                 let node_id = match upload_node_id {
                     UploadHgNodeHash::Generate => computed_node_id,
                     UploadHgNodeHash::Supplied(node_id) => HgFileNodeId::new(node_id),
@@ -466,7 +461,7 @@ impl UploadHgFileEntry {
                             if result.is_ok() {
                                 Self::log_stats(
                                     logger,
-                                    path,
+                                    Some(&path),
                                     node_id,
                                     "file_envelope_uploaded",
                                     stats,
@@ -477,22 +472,23 @@ impl UploadHgFileEntry {
                     })
                     .map(move |()| (blob_entry, RepoPath::FilePath(path)))
                     .right_future()
-            });
+            }
+        });
 
         let fut = envelope_upload
             .join(content_upload)
             .map(move |(envelope_res, ())| envelope_res);
-        Ok((cbinfo, fut.boxify()))
+        Ok((ContentBlobInfo { path, meta: cbmeta }, fut.boxify()))
     }
 
     fn log_stats(
         logger: Logger,
-        path: MPath,
+        path: Option<&MPath>,
         nodeid: HgFileNodeId,
         phase: &str,
         stats: FutureStats,
     ) {
-        let path = format!("{}", path);
+        let path = path.map(|p| p.to_string()).unwrap_or_else(String::new);
         let nodeid = format!("{}", nodeid);
         trace!(logger, "Upload blob stats";
             "phase" => String::from(phase),
