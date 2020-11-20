@@ -997,6 +997,44 @@ impl<'r> Bundle2Resolver<'r> {
                         .try_collect()
                         .await?;
 
+                let changesets = if is_infinitepush
+                    && tunables().get_filter_pre_existing_commits_on_infinitepush()
+                {
+                    let hg_cs_ids = changesets.iter().map(|(id, _)| *id).collect::<Vec<_>>();
+
+                    let mapping = self
+                        .repo
+                        .get_hg_bonsai_mapping(self.ctx.clone(), hg_cs_ids)
+                        .compat()
+                        .await
+                        .with_context(|| "Failed to query for pre-existing changesets")?;
+
+                    let existing = mapping
+                        .into_iter()
+                        .map(|(hg_cs_id, _)| hg_cs_id)
+                        .collect::<HashSet<_>>();
+
+                    let orig_count = changesets.len();
+
+                    let new_changesets = changesets
+                        .into_iter()
+                        .filter(|(hg_cs_id, _)| !existing.contains(hg_cs_id))
+                        .collect::<Vec<_>>();
+
+                    if new_changesets.len() < orig_count {
+                        self.ctx
+                            .scuba()
+                            .clone()
+                            .add("original_changeset_count", orig_count)
+                            .add("new_changeset_count", new_changesets.len())
+                            .log_with_msg("Filtered out pre-existing changesets", None);
+                    }
+
+                    new_changesets
+                } else {
+                    changesets
+                };
+
                 enforce_file_changes_rate_limits(
                     &self.ctx,
                     self.repo.get_repoid(),
