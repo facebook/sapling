@@ -169,8 +169,8 @@ impl BundlePreparer {
 
         let blobstore = repo.get_blobstore();
         match log_entry.reason {
-            Pushrebase | Backsyncer | ManualMove | ApiRequest | XRepoSync => {}
-            Blobimport | Push | TestMove => {
+            Pushrebase | Backsyncer | ManualMove | ApiRequest | XRepoSync | Push => {}
+            Blobimport | TestMove => {
                 return err(UnexpectedBookmarkMove(format!("{}", log_entry.reason)).into())
                     .boxify();
             }
