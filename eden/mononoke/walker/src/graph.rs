@@ -315,7 +315,7 @@ create_graph!(
     (
         DeletedManifest,
         PathKey<DeletedManifestId>,
-        [DeletedManifestChild(UnodeManifest), LinkedChangeset(Changeset)]
+        [DeletedManifestChild(DeletedManifest), LinkedChangeset(Changeset)]
     ),
     (DeletedManifestMapping, ChangesetId, [RootDeletedManifest(DeletedManifest)]),
     (
