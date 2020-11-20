@@ -44,5 +44,3 @@ cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 lazy_static = "1.0"
 maplit = "1.0"
-tokio-compat = "0.1"
-tokio-timer = "0.2"

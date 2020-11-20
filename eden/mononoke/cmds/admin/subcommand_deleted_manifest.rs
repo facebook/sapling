@@ -18,7 +18,7 @@ use context::CoreContext;
 use deleted_files_manifest::{find_entries, list_all_entries, RootDeletedManifestId};
 use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
-use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt, TryStreamExt};
+use futures::{compat::Future01CompatExt, FutureExt, StreamExt, TryFutureExt, TryStreamExt};
 use futures_ext::FutureExt as OldFutureExt;
 use futures_old::{future::err, stream::futures_unordered, Future, IntoFuture, Stream};
 use manifest::{get_implicit_deletes, PathOrPrefix};
@@ -139,6 +139,8 @@ fn subcommand_manifest(
             mf_id,
             Some(PathOrPrefix::Prefix(prefix)),
         )
+        .boxed()
+        .compat()
         .collect()
     })
     .map(move |mut entries: Vec<_>| {
@@ -175,8 +177,9 @@ fn get_parents(
             move |parent_hg_cs_ids| {
                 cloned!(ctx, repo);
                 let parents = parent_hg_cs_ids.into_iter().map(|cs_id| {
-                    cs_id
-                        .load(ctx.clone(), repo.blobstore())
+                    cloned!(ctx, repo);
+                    async move { cs_id.load(ctx, repo.blobstore()).await }
+                        .boxed()
                         .compat()
                         .from_err()
                         .map(move |blob_changeset| blob_changeset.manifestid().clone())
@@ -192,24 +195,26 @@ fn get_file_changes(
     repo: BlobRepo,
     cs_id: ChangesetId,
 ) -> impl Future<Item = (Vec<MPath>, Vec<MPath>), Error = Error> {
-    let paths_added_fut = cs_id
-        .load(ctx.clone(), &repo.get_blobstore())
-        .compat()
-        .from_err()
-        .map(move |bonsai| {
-            bonsai
-                .into_mut()
-                .file_changes
-                .into_iter()
-                .filter_map(|(path, change)| {
-                    if let Some(_) = change {
-                        Some(path)
-                    } else {
-                        None
-                    }
-                })
-                .collect()
-        });
+    let paths_added_fut = {
+        cloned!(ctx);
+        let blobstore = repo.get_blobstore();
+        async move { cs_id.load(ctx, &blobstore).await }
+    }
+    .boxed()
+    .compat()
+    .from_err()
+    .map(move |bonsai| {
+        bonsai
+            .into_mut()
+            .file_changes
+            .into_iter()
+            .filter_map(
+                |(path, change)| {
+                    if change.is_some() { Some(path) } else { None }
+                },
+            )
+            .collect()
+    });
 
     paths_added_fut
         .join(get_parents(ctx.clone(), repo.clone(), cs_id))
@@ -244,7 +249,10 @@ fn verify_single_commit(
         cloned!(ctx, repo);
         move |root_manifest| {
             let mf_id = root_manifest.deleted_manifest_id().clone();
-            list_all_entries(ctx.clone(), repo.get_blobstore(), mf_id).collect()
+            list_all_entries(ctx.clone(), repo.get_blobstore(), mf_id)
+                .boxed()
+                .compat()
+                .collect()
         }
     })
     .map(move |entries: Vec<_>| {

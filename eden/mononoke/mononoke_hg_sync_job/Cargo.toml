@@ -39,6 +39,7 @@ scuba_ext = { path = "../common/scuba_ext" }
 skiplist = { path = "../reachabilityindex/skiplist" }
 sql_construct = { path = "../common/sql_construct" }
 sql_ext = { path = "../common/rust/sql_ext" }
+borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
@@ -46,6 +47,7 @@ futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookex
 futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
+async-stream = "0.3"
 base64 = "0.11.0"
 bytes = { version = "0.5", features = ["serde"] }
 bytes-old = { package = "bytes", version = "0.4", features = ["serde"] }

@@ -8,120 +8,59 @@
 #![deny(warnings)]
 #![type_length_limit = "1817182"]
 
-use anyhow::{format_err, Error};
+use anyhow::{anyhow, Result};
 use blobstore::Blobstore;
-use cloned::cloned;
 use context::CoreContext;
 use filestore::{exists, fetch, get_metadata, store, FetchKey, FilestoreConfig, StoreRequest};
-use futures::future::{FutureExt, TryFutureExt};
-use futures_ext::{BoxFuture, FutureExt as _};
-use futures_old::future::{err, ok, Future};
 use mononoke_types::ContentId;
 use repo_blobstore::RepoBlobstore;
 
 /// Copy a blob with a key `key` from `src_blobstore` to `dst_blobstore`
-pub fn copy_blob(
+pub async fn copy_blob(
     ctx: CoreContext,
-    src_blobstore: RepoBlobstore,
-    dst_blobstore: RepoBlobstore,
+    src_blobstore: &RepoBlobstore,
+    dst_blobstore: &RepoBlobstore,
     key: String,
-) -> impl Future<Item = (), Error = Error> {
+) -> Result<()> {
     // TODO(ikostia, T48858215): for cases when remote copy is possible, utilize it
-    src_blobstore
+    let srcdata = src_blobstore
         .get(ctx.clone(), key.clone())
-        .compat()
-        .and_then(move |maybe_blobstore_bytes| {
-            match maybe_blobstore_bytes {
-                Some(srcdata) => dst_blobstore
-                    .put(ctx, key, srcdata.into())
-                    .compat()
-                    .left_future(),
-                None => {
-                    err(format_err!("Key {} is missing in the original store", key)).right_future()
-                }
-            }
-        })
+        .await?
+        .ok_or_else(|| anyhow!("Key {} is missing in the original store", key))?;
+    dst_blobstore.put(ctx, key, srcdata.into()).await
 }
 
-pub fn copy_content(
+pub async fn copy_content(
     ctx: CoreContext,
-    src_blobstore: RepoBlobstore,
-    dst_blobstore: RepoBlobstore,
+    src_blobstore: &RepoBlobstore,
+    dst_blobstore: &RepoBlobstore,
     dst_filestore_config: FilestoreConfig,
     key: ContentId,
-) -> BoxFuture<(), Error> {
+) -> Result<()> {
     let fetch_key = FetchKey::Canonical(key.clone());
-    {
-        cloned!(dst_blobstore, ctx, fetch_key);
-        async move { exists(&dst_blobstore, ctx, &fetch_key).await }
+    if exists(dst_blobstore, ctx.clone(), &fetch_key).await? {
+        return Ok(());
     }
-    .boxed()
-    .compat()
-    .and_then(move |exists| {
-        if exists {
-            ok(()).boxify()
-        } else {
-            {
-                cloned!(src_blobstore, ctx, fetch_key);
-                async move { get_metadata(&src_blobstore, ctx, &fetch_key).await }
-            }
-            .boxed()
-            .compat()
-            .and_then({
-                cloned!(ctx, src_blobstore, fetch_key, key);
-                move |maybe_content_metadata| {
-                    let store_request = match maybe_content_metadata {
-                        Some(content_metadata) => {
-                            StoreRequest::with_canonical(content_metadata.total_size, key)
-                        }
-                        None => {
-                            return err(format_err!(
-                                "File not found for fetch key: {:?}",
-                                fetch_key
-                            ))
-                            .left_future();
-                        }
-                    };
 
-                    {
-                        cloned!(fetch_key);
-                        async move { fetch(&src_blobstore, ctx, &fetch_key).await }
-                    }
-                    .boxed()
-                    .compat()
-                    .and_then(move |maybe_byte_stream| {
-                        match maybe_byte_stream {
-                            None => {
-                                err(format_err!("File not found for fetch key: {:?}", fetch_key))
-                                    .left_future()
-                            }
-                            Some(byte_stream) => ok((store_request, byte_stream)).right_future(),
-                        }
-                    })
-                    .right_future()
-                }
-            })
-            .and_then({
-                move |(store_request, byte_stream)| {
-                    async move {
-                        store(
-                            &dst_blobstore,
-                            dst_filestore_config,
-                            ctx,
-                            &store_request,
-                            byte_stream,
-                        )
-                        .await?;
-                        Ok(())
-                    }
-                    .boxed()
-                    .compat()
-                }
-            })
-            .boxify()
-        }
-    })
-    .boxify()
+    let content_metadata = get_metadata(src_blobstore, ctx.clone(), &fetch_key)
+        .await?
+        .ok_or_else(|| anyhow!("File not found for fetch key: {:?}", fetch_key))?;
+
+    let store_request = StoreRequest::with_canonical(content_metadata.total_size, key);
+
+    let byte_stream = fetch(src_blobstore, ctx.clone(), &fetch_key)
+        .await?
+        .ok_or_else(|| anyhow!("File not found for fetch key: {:?}", fetch_key))?;
+
+    store(
+        dst_blobstore,
+        dst_filestore_config,
+        ctx,
+        &store_request,
+        byte_stream,
+    )
+    .await?;
+    Ok(())
 }
 
 #[cfg(test)]
@@ -132,8 +71,7 @@ mod test {
     use bytes::Bytes;
     use context::CoreContext;
     use fbinit::FacebookInit;
-    use futures::compat::{Future01CompatExt, Stream01CompatExt};
-    use futures_old::stream;
+    use futures::stream;
     use memblob::EagerMemblob;
     use mononoke_types::{typed_hash, BlobstoreBytes, ContentMetadata, RepositoryId};
     use redactedblobstore::RedactedBlobstore;
@@ -152,7 +90,7 @@ mod test {
         ctx.finish()
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_copy_blob(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
 
@@ -186,8 +124,7 @@ mod test {
             "failed to put things into a blobstore"
         );
         assert!(
-            copy_blob(ctx.clone(), bs1.clone(), bs2.clone(), key.clone())
-                .compat()
+            copy_blob(ctx.clone(), &bs1, &bs2, key.clone())
                 .await
                 .is_ok(),
             "failed to copy between blobstores"
@@ -199,21 +136,15 @@ mod test {
         );
 
         assert!(
-            copy_blob(
-                ctx.clone(),
-                bs1.clone(),
-                bs2.clone(),
-                "non-existing key".to_string()
-            )
-            .compat()
-            .await
-            .is_err(),
+            copy_blob(ctx.clone(), &bs1, &bs2, "non-existing key".to_string())
+                .await
+                .is_err(),
             "did not err while trying to copy a non-existing key"
         )
     }
 
-    #[fbinit::compat_test]
-    async fn test_copy_content(fb: FacebookInit) -> Result<(), Error> {
+    #[fbinit::test]
+    async fn test_copy_content(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let inner1 = Arc::new(EagerMemblob::default());
         let inner2 = Arc::new(EagerMemblob::default());
@@ -247,20 +178,18 @@ mod test {
             default_filestore_config,
             ctx.clone(),
             &req,
-            stream::once(Ok(Bytes::from(&bytes[..]))).compat(),
+            stream::once(async { Ok(Bytes::from(&bytes[..])) }),
         )
         .await?;
         copy_content(
             ctx.clone(),
-            bs1.clone(),
-            bs2.clone(),
+            &bs1,
+            &bs2,
             default_filestore_config.clone(),
             cid,
         )
-        .compat()
         .await?;
-        let maybe_copy_meta =
-            get_metadata(&bs2.clone(), ctx.clone(), &FetchKey::Canonical(cid)).await?;
+        let maybe_copy_meta = get_metadata(&bs2, ctx.clone(), &FetchKey::Canonical(cid)).await?;
 
         let copy_meta =
             maybe_copy_meta.expect("Copied file not found in the destination filestore");

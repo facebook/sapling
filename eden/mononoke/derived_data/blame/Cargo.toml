@@ -18,6 +18,7 @@ filestore = { path = "../../filestore" }
 manifest = { path = "../../manifest" }
 mononoke_types = { path = "../../mononoke_types" }
 unodes = { path = "../unodes" }
+borrowed = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_ext = { package = "futures_01_ext", git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
@@ -26,6 +27,7 @@ bytes = { version = "0.5", features = ["serde"] }
 futures = { version = "0.3.5", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }
 thiserror = "1.0"
+tokio = { version = "=0.2.13", features = ["full"] }
 
 [dev-dependencies]
 blobrepo_factory = { path = "../../blobrepo/factory" }
@@ -35,4 +37,3 @@ tests_utils = { path = "../../tests/utils" }
 async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 maplit = "1.0"
-tokio-compat = "0.1"

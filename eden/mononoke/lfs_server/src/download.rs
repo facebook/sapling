@@ -58,7 +58,7 @@ async fn fetch_by_key(
     scuba: &mut Option<&mut ScubaMiddlewareState>,
 ) -> Result<impl TryIntoResponse, HttpError> {
     // Query a stream out of the Filestore
-    let fetched = filestore::fetch_with_size(ctx.repo.blobstore(), ctx.ctx.clone(), &key)
+    let fetched = filestore::fetch_with_size(ctx.repo.get_blobstore(), ctx.ctx.clone(), &key)
         .await
         .map_err(|e| {
             if has_redaction_root_cause(&e) {

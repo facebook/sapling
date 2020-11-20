@@ -6,13 +6,11 @@
  */
 
 //! Utilities to generate reasonably looking stack of changesets
-use anyhow::Error;
+use anyhow::{Error, Result};
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobstore::Storable;
 use context::CoreContext;
-use futures::future::TryFutureExt;
-use futures_ext::FutureExt;
-use futures_old::{future, stream, Future, Stream};
+use futures::{compat::Future01CompatExt, future, stream, TryStreamExt};
 use mononoke_types::{
     BlobstoreValue, BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileContents, FileType,
     MPath, MPathElement,
@@ -90,7 +88,7 @@ impl GenManifest {
         }
     }
 
-    pub fn gen_stack(
+    pub async fn gen_stack(
         &mut self,
         ctx: CoreContext,
         repo: BlobRepo,
@@ -98,57 +96,63 @@ impl GenManifest {
         settings: &GenSettings,
         parent: Option<ChangesetId>,
         changes_count: impl IntoIterator<Item = usize>,
-    ) -> impl Future<Item = ChangesetId, Error = Error> {
+    ) -> Result<ChangesetId, Error> {
         let mut parents: Vec<_> = parent.into_iter().collect();
         let mut changesets = Vec::new();
-        let mut store_changes = stream::FuturesUnordered::new();
-        for changes_size in changes_count {
-            // generate file changes
-            let mut file_changes = BTreeMap::new();
-            while file_changes.len() < changes_size {
-                let (path, content) = self.gen_change(rng, settings, Vec::new());
-                match content {
-                    None => {
-                        file_changes.insert(path, None);
-                    }
-                    Some(content) => {
-                        let content = FileContents::new_bytes(content);
-                        let size = content.size();
-                        let blob = content.into_blob();
-                        let id = *blob.id();
-                        store_changes.push(blob.store(ctx.clone(), repo.blobstore()).compat());
-                        file_changes.insert(
-                            path,
-                            Some(FileChange::new(id, FileType::Regular, size as u64, None)),
-                        );
+        async move {
+            let blobstore = repo.blobstore();
+            let store_changes = stream::FuturesUnordered::new();
+            for changes_size in changes_count {
+                // generate file changes
+                let mut file_changes = BTreeMap::new();
+                while file_changes.len() < changes_size {
+                    let (path, content) = self.gen_change(rng, settings, Vec::new());
+                    match content {
+                        None => {
+                            file_changes.insert(path, None);
+                        }
+                        Some(content) => {
+                            let content = FileContents::new_bytes(content);
+                            let size = content.size();
+                            let blob = content.into_blob();
+                            let id = *blob.id();
+                            store_changes.push(blob.store(ctx.clone(), blobstore));
+                            file_changes.insert(
+                                path,
+                                Some(FileChange::new(id, FileType::Regular, size as u64, None)),
+                            );
+                        }
                     }
                 }
+                // generate changeset
+                let bonsai = BonsaiChangesetMut {
+                    parents: std::mem::replace(&mut parents, Vec::new()),
+                    author: "author".to_string(),
+                    author_date: DateTime::from_timestamp(0, 0).unwrap(),
+                    committer: None,
+                    committer_date: None,
+                    message: "message".to_string(),
+                    extra: BTreeMap::new(),
+                    file_changes,
+                }
+                .freeze()
+                .expect("generated bonsai failed to freeze");
+                parents.push(bonsai.get_changeset_id());
+                changesets.push(bonsai);
             }
-            // generate changeset
-            let bonsai = BonsaiChangesetMut {
-                parents: std::mem::replace(&mut parents, Vec::new()),
-                author: "author".to_string(),
-                author_date: DateTime::from_timestamp(0, 0).unwrap(),
-                committer: None,
-                committer_date: None,
-                message: "message".to_string(),
-                extra: BTreeMap::new(),
-                file_changes,
-            }
-            .freeze()
-            .expect("generated bonsai failed to freeze");
-            parents.push(bonsai.get_changeset_id());
-            changesets.push(bonsai);
-        }
 
-        match parents.into_iter().next() {
-            None => future::err(Error::msg("empty changes iterator")).left_future(),
-            Some(csid) => store_changes
-                .for_each(|_| future::ok(()))
-                .and_then(move |_| save_bonsai_changesets(changesets, ctx, repo))
-                .map(move |_| csid)
-                .right_future(),
+            match parents.into_iter().next() {
+                None => Err(Error::msg("empty changes iterator")),
+                Some(csid) => {
+                    store_changes.try_for_each(|_| future::ok(())).await?;
+                    save_bonsai_changesets(changesets, ctx, repo)
+                        .compat()
+                        .await?;
+                    Ok(csid)
+                }
+            }
         }
+        .await
     }
 
     fn gen_change(

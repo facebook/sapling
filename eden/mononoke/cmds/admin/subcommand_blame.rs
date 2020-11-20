@@ -143,8 +143,9 @@ pub async fn subcommand_blame<'a>(
                 .manifest_unode_id()
                 .list_leaf_entries(ctx.clone(), repo.get_blobstore())
                 .map_ok(|(path, file_unode_id)| {
-                    BlameId::from(file_unode_id)
-                        .load(ctx.clone(), repo.blobstore())
+                    let id = BlameId::from(file_unode_id);
+                    cloned!(ctx, repo);
+                    async move { id.load(ctx, repo.blobstore()).await }
                         .map_ok(move |blame_maybe_rejected| (path, blame_maybe_rejected))
                         .map_err(Error::from)
                 })
@@ -204,6 +205,8 @@ fn subcommand_show_blame(
     line_number: bool,
 ) -> impl Future<Item = (), Error = Error> {
     fetch_blame(ctx.clone(), repo.clone(), csid, path)
+        .boxed()
+        .compat()
         .from_err()
         .and_then(move |(content, blame)| {
             blame_hg_annotate(ctx, repo, content, blame, line_number)
@@ -258,8 +261,9 @@ fn subcommand_show_diffs(
         .and_then({
             cloned!(ctx, blobstore);
             move |file_unode_id| {
-                file_unode_id
-                    .load(ctx, &blobstore)
+                cloned!(ctx, blobstore);
+                async move { file_unode_id.load(ctx, &blobstore).await }
+                    .boxed()
                     .compat()
                     .from_err()
                     .map(move |file_unode| (file_unode_id, file_unode))
@@ -344,51 +348,55 @@ fn subcommand_compute_blame(
                         cloned!(ctx, repo, blobstore);
                         move |(file_unode_id, path)| {
                             cloned!(ctx, repo, blobstore);
-                            file_unode_id
-                                .load(ctx.clone(), &blobstore)
+                            {
+                                cloned!(ctx, blobstore);
+                                async move { file_unode_id.load(ctx, &blobstore).await }
+                            }
+                            .boxed()
+                            .compat()
+                            .from_err()
+                            .and_then(move |file_unode| {
+                                let csid = *file_unode.linknode();
+                                {
+                                    cloned!(ctx, blobstore);
+                                    async move { csid.load(ctx, &blobstore).await }
+                                }
+                                .boxed()
                                 .compat()
                                 .from_err()
-                                .and_then(move |file_unode| {
-                                    let csid = *file_unode.linknode();
-                                    csid.load(ctx.clone(), &blobstore)
-                                        .compat()
-                                        .from_err()
-                                        .and_then({
-                                            cloned!(ctx, repo, path);
-                                            move |bonsai| {
-                                                let copy_from = bonsai
-                                                    .file_changes_map()
-                                                    .get(&path)
-                                                    .and_then(|file_change| file_change.as_ref())
-                                                    .and_then(|file_change| {
-                                                        file_change.copy_from().clone()
-                                                    });
-                                                match copy_from {
-                                                    None => future::ok(None).left_future(),
-                                                    Some((r_path, r_csid)) => find_leaf(
-                                                        ctx,
-                                                        repo,
-                                                        *r_csid,
-                                                        r_path.clone(),
-                                                    )
+                                .and_then({
+                                    cloned!(ctx, repo, path);
+                                    move |bonsai| {
+                                        let copy_from = bonsai
+                                            .file_changes_map()
+                                            .get(&path)
+                                            .and_then(|file_change| file_change.as_ref())
+                                            .and_then(|file_change| {
+                                                file_change.copy_from().clone()
+                                            });
+                                        match copy_from {
+                                            None => future::ok(None).left_future(),
+                                            Some((r_path, r_csid)) => {
+                                                find_leaf(ctx, repo, *r_csid, r_path.clone())
                                                     .map({
                                                         cloned!(r_path);
                                                         move |r_unode_id| Some((r_unode_id, r_path))
                                                     })
-                                                    .right_future(),
-                                                }
+                                                    .right_future()
                                             }
-                                        })
-                                        .map(move |copy_parent| {
-                                            let parents: Vec<_> = file_unode
-                                                .parents()
-                                                .iter()
-                                                .map(|unode_id| (*unode_id, path.clone()))
-                                                .chain(copy_parent)
-                                                .collect();
-                                            ((csid, path, file_unode_id), parents)
-                                        })
+                                        }
+                                    }
                                 })
+                                .map(move |copy_parent| {
+                                    let parents: Vec<_> = file_unode
+                                        .parents()
+                                        .iter()
+                                        .map(|unode_id| (*unode_id, path.clone()))
+                                        .chain(copy_parent)
+                                        .collect();
+                                    ((csid, path, file_unode_id), parents)
+                                })
+                            })
                         }
                     },
                     {

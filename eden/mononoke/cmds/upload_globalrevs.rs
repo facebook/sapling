@@ -18,9 +18,8 @@ use cloned::cloned;
 use cmdlib::{args, helpers::block_execute};
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::compat::Future01CompatExt;
-use futures::{future::try_join, TryFutureExt};
-use futures_ext::{BoxFuture, FutureExt};
+use futures::{compat::Future01CompatExt, future::try_join, FutureExt, TryFutureExt};
+use futures_ext::{BoxFuture, FutureExt as _};
 use futures_old::future::{Future, IntoFuture};
 use futures_old::stream;
 use futures_old::stream::Stream;
@@ -55,9 +54,9 @@ pub fn upload<P: AsRef<Path>>(
                 .map({
                     cloned!(ctx, repo);
                     move |entry| {
-                        entry
-                            .cs_id
-                            .load(ctx.clone(), repo.blobstore())
+                        cloned!(ctx, repo);
+                        async move { entry.cs_id.load(ctx.clone(), repo.blobstore()).await }
+                            .boxed()
                             .compat()
                             .from_err()
                     }

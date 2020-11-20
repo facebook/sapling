@@ -18,9 +18,7 @@ use anyhow::{Error, Result};
 use blobstore::{Blobstore, Loadable, LoadableError};
 use bytes::Bytes;
 use context::CoreContext;
-use futures::future::{BoxFuture, FutureExt, TryFutureExt};
-use futures_ext::{BoxFuture as BoxFuture01, FutureExt as _};
-use futures_old::future::Future;
+use futures::future::{BoxFuture, FutureExt};
 use itertools::Itertools;
 use mononoke_types::hash::Sha256;
 use std::{
@@ -39,11 +37,11 @@ pub struct HgBlobEntry {
 impl Loadable for HgFileNodeId {
     type Value = HgFileEnvelope;
 
-    fn load<B: Blobstore + Clone>(
-        &self,
+    fn load<'a, B: Blobstore>(
+        &'a self,
         ctx: CoreContext,
-        blobstore: &B,
-    ) -> BoxFuture<'static, Result<Self::Value, LoadableError>> {
+        blobstore: &'a B,
+    ) -> BoxFuture<'a, Result<Self::Value, LoadableError>> {
         let blobstore_key = self.blobstore_key();
         let get = blobstore.get(ctx, blobstore_key.clone());
         async move {
@@ -84,23 +82,21 @@ impl HgBlobEntry {
         self.id
     }
 
-    pub fn get_parents(&self, ctx: CoreContext) -> BoxFuture01<HgParents, Error> {
-        self.get_envelope(ctx).map(|e| e.get_parents()).boxify()
+    pub async fn get_parents(&self, ctx: CoreContext) -> Result<HgParents, Error> {
+        Ok(self.get_envelope(ctx).await?.get_parents())
     }
 
-    pub fn get_envelope(&self, ctx: CoreContext) -> BoxFuture01<Box<dyn HgBlobEnvelope>, Error> {
+    pub async fn get_envelope(&self, ctx: CoreContext) -> Result<Box<dyn HgBlobEnvelope>, Error> {
         match self.id {
-            HgEntryId::Manifest(hash) => fetch_manifest_envelope(ctx, &self.blobstore, hash)
-                .map(|e| Box::new(e) as Box<dyn HgBlobEnvelope>)
-                .left_future(),
-            HgEntryId::File(_, hash) => hash
-                .load(ctx, &self.blobstore)
-                .compat()
-                .from_err()
-                .map(|e| Box::new(e) as Box<dyn HgBlobEnvelope>)
-                .right_future(),
+            HgEntryId::Manifest(hash) => {
+                let e = fetch_manifest_envelope(ctx, &self.blobstore, hash).await?;
+                Ok(Box::new(e) as Box<dyn HgBlobEnvelope>)
+            }
+            HgEntryId::File(_, hash) => {
+                let e = hash.load(ctx, &self.blobstore).await?;
+                Ok(Box::new(e) as Box<dyn HgBlobEnvelope>)
+            }
         }
-        .boxify()
     }
 }
 

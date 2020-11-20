@@ -92,7 +92,12 @@ impl ChangesetHandle {
             })
             .and_then({
                 cloned!(ctx, repo);
-                move |csid| csid.load(ctx, repo.blobstore()).compat().from_err()
+                move |csid| {
+                    async move { csid.load(ctx, repo.blobstore()).await }
+                        .boxed()
+                        .compat()
+                        .from_err()
+                }
             });
 
         let (trigger, can_be_parent) = oneshot::channel();
@@ -105,7 +110,12 @@ impl ChangesetHandle {
             .shared();
 
         let completion_future = bonsai_cs
-            .join(hg_cs.load(ctx, repo.blobstore()).compat().from_err())
+            .join(
+                async move { hg_cs.load(ctx, repo.blobstore()).await }
+                    .boxed()
+                    .compat()
+                    .from_err(),
+            )
             .map_err(Compat)
             .inspect(move |(bonsai_cs, hg_cs)| {
                 let _ = trigger.send((
@@ -166,43 +176,37 @@ impl UploadEntries {
 
     /// Parse a manifest and record the referenced blobs so that we know whether or not we have
     /// a complete changeset with all blobs, or whether there is missing data.
-    fn process_manifest(
+    async fn process_manifest(
         &self,
         ctx: CoreContext,
         entry: &HgBlobEntry,
         path: RepoPath,
-    ) -> OldBoxFuture<(), Error> {
+    ) -> Result<()> {
         if entry.get_type() != manifest::Type::Tree {
-            old_future::err(
-                ErrorKind::NotAManifest(entry.get_hash().into_nodehash(), entry.get_type()).into(),
-            )
-            .boxify()
+            Err(Error::from(ErrorKind::NotAManifest(
+                entry.get_hash().into_nodehash(),
+                entry.get_type(),
+            )))
         } else {
-            self.find_parents(ctx.clone(), entry, path.clone())
+            self.find_parents(ctx.clone(), entry, path.clone()).await
         }
     }
 
-    fn find_parents(
+    async fn find_parents(
         &self,
         ctx: CoreContext,
         entry: &HgBlobEntry,
         path: RepoPath,
-    ) -> OldBoxFuture<(), Error> {
+    ) -> Result<()> {
         let inner_mutex = self.inner.clone();
-        entry
-            .get_parents(ctx)
-            .and_then(move |parents| {
-                let mut inner = inner_mutex.lock().expect("Lock poisoned");
-                let node_keys = parents.into_iter().map(move |hash| HgNodeKey {
-                    path: path.clone(),
-                    hash,
-                });
-                inner.parents.extend(node_keys);
-
-                old_future::ok(())
-            })
-            .map(|_| ())
-            .boxify()
+        let parents = entry.get_parents(ctx).await?;
+        let mut inner = inner_mutex.lock().expect("Lock poisoned");
+        let node_keys = parents.into_iter().map(move |hash| HgNodeKey {
+            path: path.clone(),
+            hash,
+        });
+        inner.parents.extend(node_keys);
+        Ok(())
     }
 
     /// The root manifest needs special processing - unlike all other entries, it is required even
@@ -210,32 +214,29 @@ impl UploadEntries {
     /// `process_one_entry` and can be called after it.
     /// It is safe to call this multiple times, but not recommended - every manifest passed to
     /// this function is assumed required for this commit, even if it is not the root.
-    pub fn process_root_manifest(
-        &self,
-        ctx: CoreContext,
-        entry: &HgBlobEntry,
-    ) -> OldBoxFuture<(), Error> {
+    pub async fn process_root_manifest(&self, ctx: CoreContext, entry: &HgBlobEntry) -> Result<()> {
         if entry.get_type() != manifest::Type::Tree {
-            return old_future::err(
-                ErrorKind::NotAManifest(entry.get_hash().into_nodehash(), entry.get_type()).into(),
-            )
-            .boxify();
+            Err(Error::from(ErrorKind::NotAManifest(
+                entry.get_hash().into_nodehash(),
+                entry.get_type(),
+            )))
+        } else {
+            self.process_one_entry(ctx, entry, RepoPath::root()).await
         }
-        self.process_one_entry(ctx, entry, RepoPath::root())
     }
 
-    pub fn process_one_entry(
+    pub async fn process_one_entry(
         &self,
         ctx: CoreContext,
         entry: &HgBlobEntry,
         path: RepoPath,
-    ) -> OldBoxFuture<(), Error> {
+    ) -> Result<()> {
         {
             let mut inner = self.inner.lock().expect("Lock poisoned");
             inner.uploaded_entries.insert(path.clone(), entry.clone());
         }
 
-        let (err_context, fut) = if entry.get_type() == manifest::Type::Tree {
+        let (err_context, res) = if entry.get_type() == manifest::Type::Tree {
             STATS::process_tree_entry.add_value(1);
             (
                 format!(
@@ -243,7 +244,7 @@ impl UploadEntries {
                     entry.get_hash(),
                     path
                 ),
-                self.process_manifest(ctx, entry, path),
+                self.process_manifest(ctx, entry, path).await,
             )
         } else {
             STATS::process_file_entry.add_value(1);
@@ -253,11 +254,11 @@ impl UploadEntries {
                     entry.get_hash(),
                     path
                 ),
-                self.find_parents(ctx, &entry, path),
+                self.find_parents(ctx, &entry, path).await,
             )
         };
 
-        fut.context(err_context).from_err().boxify()
+        res.context(err_context)
     }
 
     // Check the blobstore to see whether a particular node is present.
@@ -419,8 +420,9 @@ pub fn process_entries(
                 Some((entry, path)) => {
                     let hash = entry.get_hash().into_nodehash();
                     if entry.get_type() == manifest::Type::Tree && path == RepoPath::RootPath {
-                        entry_processor
-                            .process_root_manifest(ctx, &entry)
+                        async move { entry_processor.process_root_manifest(ctx, &entry).await }
+                            .boxed()
+                            .compat()
                             .map(move |_| Some(hash))
                             .boxify()
                     } else {
@@ -436,7 +438,12 @@ pub fn process_entries(
         .from_err()
         .map({
             cloned!(ctx, entry_processor);
-            move |(entry, path)| entry_processor.process_one_entry(ctx.clone(), &entry, path)
+            move |(entry, path)| {
+                cloned!(ctx, entry_processor);
+                async move { entry_processor.process_one_entry(ctx, &entry, path).await }
+                    .boxed()
+                    .compat()
+            }
         })
         .buffer_unordered(100)
         .for_each(|()| old_future::ok(()));

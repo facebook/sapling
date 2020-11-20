@@ -271,7 +271,6 @@ impl ChangesetPathContext {
         })?;
 
         fetch_blame(ctx, repo, csid, mpath.clone())
-            .compat()
             .map_err(|error| match error {
                 BlameError::NoSuchPath(_)
                 | BlameError::IsDirectory(_)

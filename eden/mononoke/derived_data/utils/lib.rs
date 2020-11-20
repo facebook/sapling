@@ -254,7 +254,7 @@ where
             }
 
             // flush blobstore
-            memblobstore.persist(ctx.clone()).compat().await?;
+            memblobstore.persist(ctx.clone()).await?;
             // flush mapping
             let futs = FuturesUnordered::new();
             {

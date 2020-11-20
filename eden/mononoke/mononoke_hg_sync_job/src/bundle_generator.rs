@@ -11,15 +11,16 @@ use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateLogEntry};
+use borrowed::borrowed;
 use bytes::Bytes;
 use bytes_old::Bytes as BytesOld;
 use cloned::cloned;
 use context::CoreContext;
-use futures::future::{FutureExt as NewFutureExt, TryFutureExt};
-use futures_ext::{try_boxfuture, FutureExt, StreamExt};
+use futures::{stream, FutureExt, StreamExt, TryFutureExt, TryStreamExt};
+use futures_ext::{try_boxfuture, FutureExt as _, StreamExt as _};
 use futures_old::{
     future::{self, IntoFuture},
-    stream, Future, Stream,
+    stream as stream_old, Future, Stream,
 };
 use getbundle_response::{
     create_filenodes, create_manifest_entries_stream, get_manifests_and_filenodes,
@@ -80,7 +81,9 @@ pub fn create_bundle(
                     lfs_params,
                     filenode_verifier,
                 );
-                let timestamps = fetch_timestamps(ctx, repo, commits_to_push);
+                let timestamps = fetch_timestamps(ctx, repo, commits_to_push)
+                    .boxed()
+                    .compat();
                 bundle.join(timestamps)
             }
         })
@@ -200,12 +203,13 @@ fn create_bundle_impl(
     session_lfs_params: SessionLfsParams,
     filenode_verifier: FilenodeVerifier,
 ) -> impl Future<Item = BytesOld, Error = Error> {
-    let changelog_entries = stream::iter_ok(commits_to_push.clone())
+    let changelog_entries = stream_old::iter_ok(commits_to_push.clone())
         .map({
             cloned!(ctx, repo);
             move |hg_cs_id| {
-                hg_cs_id
-                    .load(ctx.clone(), repo.blobstore())
+                cloned!(ctx, repo);
+                async move { hg_cs_id.load(ctx, repo.blobstore()).await }
+                    .boxed()
                     .compat()
                     .from_err()
                     .map(move |cs| (hg_cs_id, cs))
@@ -307,21 +311,26 @@ fn create_bundle_impl(
         )
 }
 
-fn fetch_timestamps(
+async fn fetch_timestamps(
     ctx: CoreContext,
     repo: BlobRepo,
     hg_cs_ids: impl IntoIterator<Item = HgChangesetId>,
-) -> impl Future<Item = HashMap<HgChangesetId, Timestamp>, Error = Error> {
-    stream::iter_ok(hg_cs_ids)
-        .map(move |hg_cs_id| {
-            hg_cs_id
-                .load(ctx.clone(), repo.blobstore())
-                .compat()
-                .from_err()
-                .map(move |hg_blob_cs| (hg_cs_id, hg_blob_cs.time().clone().into()))
-        })
-        .buffered(100)
-        .collect_to()
+) -> Result<HashMap<HgChangesetId, Timestamp>, Error> {
+    async move {
+        borrowed!(ctx, repo);
+        stream::iter(hg_cs_ids.into_iter().map(Result::<_, Error>::Ok))
+            .map(move |res| async move {
+                let hg_cs_id = res?;
+                async move { hg_cs_id.load(ctx.clone(), repo.blobstore()).await }
+                    .err_into()
+                    .map_ok(move |hg_blob_cs| (hg_cs_id, hg_blob_cs.time().clone().into()))
+                    .await
+            })
+            .buffered(100)
+            .try_collect()
+            .await
+    }
+    .await
 }
 
 fn find_commits_to_push(

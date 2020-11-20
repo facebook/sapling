@@ -411,8 +411,8 @@ mod test {
             .and_then({
                 cloned!(ctx, repo);
                 move |(path, (file_type, filenode_id))| {
-                    filenode_id
-                        .load(ctx.clone(), repo.blobstore())
+                    cloned!(ctx, repo);
+                    async move { filenode_id.load(ctx, repo.blobstore()).await }
                         .map(move |env| Ok((path, (file_type, env?.content_id()))))
                 }
             })

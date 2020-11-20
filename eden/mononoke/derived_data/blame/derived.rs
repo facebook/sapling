@@ -5,28 +5,23 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{format_err, Error};
+use anyhow::{format_err, Error, Result};
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobstore::{Blobstore, BlobstoreBytes, Loadable};
+use borrowed::borrowed;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
 use filestore::{self, FetchKey};
-use futures::{
-    compat::Future01CompatExt,
-    future::{FutureExt, TryFutureExt},
-    StreamExt, TryStreamExt,
-};
-use futures_ext::{spawn_future, StreamExt as _};
-use futures_old::{future, stream, Future, IntoFuture, Stream};
+use futures::{future, stream::FuturesUnordered, StreamExt, TryFutureExt, TryStreamExt};
 use manifest::find_intersection_of_diffs;
 use mononoke_types::{
     blame::{store_blame, Blame, BlameId, BlameRejected},
     BonsaiChangeset, ChangesetId, ContentId, FileUnodeId, MPath,
 };
-use std::{collections::HashMap, iter::FromIterator, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 use thiserror::Error;
 use unodes::{find_unode_renames, RootUnodeManifestId};
 
@@ -51,61 +46,43 @@ impl BonsaiDerived for BlameRoot {
         _parents: Vec<Self>,
     ) -> Result<Self, Error> {
         let csid = bonsai.get_changeset_id();
-        let root_manifest = {
-            cloned!(ctx, repo);
-            async move {
-                let root_id = RootUnodeManifestId::derive(&ctx, &repo, csid).await?;
-                Ok(root_id.manifest_unode_id().clone())
-            }
-            .boxed()
-            .compat()
-        };
+        let root_manifest = RootUnodeManifestId::derive(&ctx, &repo, csid)
+            .map_ok(|root_id| root_id.manifest_unode_id().clone());
         let parents_manifest = bonsai
             .parents()
             .collect::<Vec<_>>() // iterator should be owned
             .into_iter()
-            .map({
-                cloned!(ctx, repo);
-                move |csid| {
-                    cloned!(ctx, repo);
-                    async move {
-                        let root_id = RootUnodeManifestId::derive(&ctx, &repo, csid).await?;
-                        Ok(root_id.manifest_unode_id().clone())
-                    }
-                    .boxed()
-                    .compat()
-                }
+            .map(|csid| {
+                RootUnodeManifestId::derive(&ctx, &repo, csid)
+                    .map_ok(|root_id| root_id.manifest_unode_id().clone())
             });
 
-        (
-            root_manifest,
-            future::join_all(parents_manifest),
+        let (root_mf, parents_mf, renames) = future::try_join3(
+            root_manifest.err_into(),
+            future::try_join_all(parents_manifest).err_into(),
             find_unode_renames(ctx.clone(), repo.clone(), &bonsai),
         )
-            .into_future()
-            .and_then(move |(root_mf, parents_mf, renames)| {
-                let renames = Arc::new(renames);
-                let blobstore = repo.get_blobstore().boxed();
-                find_intersection_of_diffs(ctx.clone(), blobstore.clone(), root_mf, parents_mf)
-                    .boxed()
-                    .compat()
-                    .filter_map(|(path, entry)| Some((path?, entry.into_leaf()?)))
-                    .map(move |(path, file)| {
-                        spawn_future(create_blame(
-                            ctx.clone(),
-                            repo.clone(),
-                            renames.clone(),
-                            csid,
-                            path,
-                            file,
-                        ))
-                    })
-                    .buffered(256)
-                    .for_each(|_| Ok(()))
-                    .map(move |_| BlameRoot(csid))
+        .await?;
+
+        let renames = Arc::new(renames);
+        let blobstore = repo.get_blobstore().boxed();
+        find_intersection_of_diffs(ctx.clone(), blobstore, root_mf, parents_mf)
+            .map_ok(|(path, entry)| Some((path?, entry.into_leaf()?)))
+            .try_filter_map(future::ok)
+            .map(move |v| {
+                cloned!(ctx, repo, renames);
+                async move {
+                    let (path, file) = v?;
+                    Result::<_>::Ok(
+                        tokio::spawn(create_blame(ctx, repo, renames, csid, path, file)).await??,
+                    )
+                }
             })
-            .compat()
-            .await
+            .buffered(256)
+            .try_for_each(|_| future::ok(()))
+            .await?;
+
+        Ok(BlameRoot(csid))
     }
 }
 
@@ -133,16 +110,18 @@ impl BonsaiDerivedMapping for BlameRootMapping {
         ctx: CoreContext,
         csids: Vec<ChangesetId>,
     ) -> Result<HashMap<ChangesetId, Self::Value>, Error> {
-        let futs = csids.into_iter().map(|csid| {
-            self.blobstore
-                .get(ctx.clone(), self.format_key(&csid))
-                .compat()
-                .map(move |val| val.map(|_| (csid.clone(), BlameRoot(csid))))
-        });
-        stream::FuturesUnordered::from_iter(futs)
-            .filter_map(|v| v)
-            .collect_to()
-            .compat()
+        csids
+            .into_iter()
+            .map(move |csid| {
+                cloned!(ctx);
+                async move {
+                    let val = self.blobstore.get(ctx, self.format_key(&csid)).await?;
+                    Ok(val.map(|_| (csid.clone(), BlameRoot(csid))))
+                }
+            })
+            .collect::<FuturesUnordered<_>>()
+            .try_filter_map(future::ok)
+            .try_collect()
             .await
     }
 
@@ -162,77 +141,52 @@ impl BonsaiDerivedMapping for BlameRootMapping {
     }
 }
 
-fn create_blame(
+async fn create_blame(
     ctx: CoreContext,
     repo: BlobRepo,
     renames: Arc<HashMap<MPath, FileUnodeId>>,
     csid: ChangesetId,
     path: MPath,
     file_unode_id: FileUnodeId,
-) -> impl Future<Item = BlameId, Error = Error> {
+) -> Result<BlameId, Error> {
     let blobstore = repo.blobstore().clone();
 
-    file_unode_id
-        .load(ctx.clone(), &blobstore)
-        .compat()
-        .from_err()
-        .and_then(move |file_unode| {
-            let parents_content_and_blame: Vec<_> = file_unode
-                .parents()
-                .iter()
-                .cloned()
-                .chain(renames.get(&path).cloned())
-                .map({
-                    cloned!(ctx, blobstore, repo);
-                    move |file_unode_id| {
-                        (
-                            {
-                                cloned!(ctx, repo);
-                                async move {
-                                    fetch_file_full_content(&ctx, &repo, file_unode_id).await
-                                }
-                            }
-                            .boxed()
-                            .compat(),
-                            BlameId::from(file_unode_id)
-                                .load(ctx.clone(), &blobstore)
-                                .compat()
-                                .from_err(),
-                        )
-                            .into_future()
-                    }
+    let file_unode = file_unode_id.load(ctx.clone(), &blobstore).await?;
+
+    let parents_content_and_blame: Vec<_> = file_unode
+        .parents()
+        .iter()
+        .cloned()
+        .chain(renames.get(&path).cloned())
+        .map(|file_unode_id| {
+            future::try_join(fetch_file_full_content(&ctx, &repo, file_unode_id), {
+                cloned!(ctx);
+                borrowed!(blobstore);
+                async move { BlameId::from(file_unode_id).load(ctx, blobstore).await }.err_into()
+            })
+        })
+        .collect();
+
+    let (content, parents_content) = future::try_join(
+        fetch_file_full_content(&ctx, &repo, file_unode_id),
+        future::try_join_all(parents_content_and_blame),
+    )
+    .await?;
+
+    let blame_maybe_rejected = match content {
+        Err(rejected) => rejected.into(),
+        Ok(content) => {
+            let parents_content = parents_content
+                .into_iter()
+                .filter_map(|(content, blame_maybe_rejected)| {
+                    Some((content.ok()?, blame_maybe_rejected.into_blame().ok()?))
                 })
                 .collect();
+            Blame::from_parents(csid, content, path, parents_content)?.into()
+        }
+    };
 
-            (
-                {
-                    cloned!(ctx, repo);
-                    async move { fetch_file_full_content(&ctx, &repo, file_unode_id).await }
-                        .boxed()
-                        .compat()
-                },
-                future::join_all(parents_content_and_blame),
-            )
-                .into_future()
-                .and_then(move |(content, parents_content)| {
-                    let blame_maybe_rejected = match content {
-                        Err(rejected) => rejected.into(),
-                        Ok(content) => {
-                            let parents_content = parents_content
-                                .into_iter()
-                                .filter_map(|(content, blame_maybe_rejected)| {
-                                    Some((content.ok()?, blame_maybe_rejected.into_blame().ok()?))
-                                })
-                                .collect();
-                            Blame::from_parents(csid, content, path, parents_content)?.into()
-                        }
-                    };
-                    Ok(blame_maybe_rejected)
-                })
-                .and_then(move |blame_maybe_rejected| {
-                    store_blame(ctx, &blobstore, file_unode_id, blame_maybe_rejected)
-                })
-        })
+    async move { store_blame(ctx, &blobstore, file_unode_id, blame_maybe_rejected).await }.await
 }
 
 pub async fn fetch_file_full_content(
@@ -277,11 +231,13 @@ async fn fetch_from_filestore(
     repo: &BlobRepo,
     content_id: ContentId,
 ) -> Result<Bytes, FetchError> {
-    let blobstore = repo.blobstore();
-    let result =
-        filestore::fetch_with_size(blobstore, ctx.clone(), &FetchKey::Canonical(content_id))
-            .map_err(FetchError::Error)
-            .await?;
+    let result = filestore::fetch_with_size(
+        repo.get_blobstore(),
+        ctx.clone(),
+        &FetchKey::Canonical(content_id),
+    )
+    .map_err(FetchError::Error)
+    .await?;
 
     match result {
         None => {

@@ -24,7 +24,7 @@ use cross_repo_sync::{
 };
 use futures::{
     compat::Future01CompatExt,
-    future::TryFutureExt,
+    future::{FutureExt, TryFutureExt},
     stream::{futures_unordered::FuturesUnordered, StreamExt, TryStreamExt},
 };
 use futures_ext::{BoxStream, StreamExt as _};
@@ -280,8 +280,7 @@ async fn generate_additional_file_changes(
             ctx.clone(),
             &large_repo,
             diff_res,
-        )
-        .compat();
+        );
         additional_file_changes.push(fc);
     }
 
@@ -358,7 +357,9 @@ async fn find_new_branch_oldest_first(
     .map({
         cloned!(ctx, small_repo);
         move |cs| {
-            cs.load(ctx.clone(), small_repo.blobstore())
+            cloned!(ctx, small_repo);
+            async move { cs.load(ctx, small_repo.blobstore()).await }
+                .boxed()
                 .compat()
                 .from_err()
         }
@@ -432,8 +433,9 @@ fn id_to_manifestid(
         .and_then({
             cloned!(ctx, repo);
             move |cs_id| {
-                cs_id
-                    .load(ctx.clone(), repo.blobstore())
+                cloned!(ctx, repo);
+                async move { cs_id.load(ctx, repo.blobstore()).await }
+                    .boxed()
                     .compat()
                     .from_err()
             }

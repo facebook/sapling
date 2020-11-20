@@ -73,7 +73,7 @@ fn log_perf<I, E: Debug>(stats: FutureStats, res: &Result<I, E>, len: u64) {
     };
 }
 
-async fn read<B: Blobstore + Clone>(
+async fn read<B: Blobstore>(
     blob: &B,
     ctx: &CoreContext,
     content_metadata: &ContentMetadata,
@@ -99,7 +99,7 @@ async fn read<B: Blobstore + Clone>(
 }
 
 async fn run_benchmark_filestore<'a>(
-    ctx: &CoreContext,
+    ctx: &'a CoreContext,
     matches: &'a ArgMatches<'a>,
     blob: Arc<dyn Blobstore>,
 ) -> Result<(), Error> {

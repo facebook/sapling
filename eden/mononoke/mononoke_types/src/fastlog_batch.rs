@@ -11,19 +11,16 @@ use crate::{
     thrift,
     typed_hash::{ChangesetId, FastlogBatchId, FastlogBatchIdContext},
 };
-use anyhow::{Context, Error, Result};
+use anyhow::{Context, Result};
 use blobstore::{Blobstore, Loadable, Storable};
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use fbthrift::compact_protocol;
-use futures::future::TryFutureExt;
-use futures_ext::{BoxFuture as BoxFuture01, FutureExt as _};
-use futures_old::{future as future01, Future as Future01};
+use futures::future::{try_join_all, BoxFuture, FutureExt};
 use itertools::Itertools;
 use std::collections::VecDeque;
 use std::iter::FromIterator;
-use std::sync::Arc;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ParentOffset(i32);
@@ -52,11 +49,11 @@ pub fn max_entries_in_fastlog_batch() -> usize {
 }
 
 impl FastlogBatch {
-    pub fn new_from_raw_list<I: IntoIterator<Item = (ChangesetId, Vec<ParentOffset>)>>(
+    pub async fn new_from_raw_list<B: Blobstore>(
         ctx: CoreContext,
-        blobstore: Arc<dyn Blobstore>,
-        raw_list: I,
-    ) -> impl Future01<Item = FastlogBatch, Error = Error> {
+        blobstore: &B,
+        raw_list: impl IntoIterator<Item = (ChangesetId, Vec<ParentOffset>)>,
+    ) -> Result<FastlogBatch> {
         let chunks = raw_list
             .into_iter()
             .take(max_entries_in_fastlog_batch())
@@ -65,78 +62,74 @@ impl FastlogBatch {
         let mut chunks = chunks.into_iter();
         let latest = chunks.next().unwrap_or(VecDeque::new());
 
-        let previous_batches = future01::join_all(chunks.map(move |chunk| {
-            FastlogBatch::new(VecDeque::from_iter(chunk), VecDeque::new())
-                .into_blob()
-                .store(ctx.clone(), &blobstore)
-                .compat()
-        }));
+        let previous_batches = VecDeque::from(
+            try_join_all(chunks.map(move |chunk| {
+                FastlogBatch::new(VecDeque::from_iter(chunk), VecDeque::new())
+                    .into_blob()
+                    .store(ctx.clone(), blobstore)
+            }))
+            .await?,
+        );
 
-        previous_batches.map(|previous_batches| FastlogBatch {
+        Ok(FastlogBatch {
             latest,
-            previous_batches: VecDeque::from(previous_batches),
+            previous_batches,
         })
     }
 
     // Prepending a child with a single parent is a special case - we only need to prepend one entry
     // with ParentOffset(1).
-    pub fn prepend_child_with_single_parent(
+    pub async fn prepend_child_with_single_parent<B: Blobstore + Clone>(
         &self,
         ctx: CoreContext,
-        blobstore: Arc<dyn Blobstore>,
+        blobstore: &B,
         cs_id: ChangesetId,
-    ) -> impl Future01<Item = FastlogBatch, Error = Error> {
+    ) -> Result<FastlogBatch> {
         let mut new_batch = self.clone();
         if new_batch.latest.len() >= MAX_LATEST_LEN {
             let previous_latest = std::mem::replace(&mut new_batch.latest, VecDeque::new());
             let new_previous_batch = FastlogBatch::new(previous_latest, VecDeque::new());
-            new_previous_batch
+            let new_batch_id = new_previous_batch
                 .into_blob()
-                .store(ctx.clone(), &blobstore)
-                .compat()
-                .map(move |new_batch_id| {
-                    if new_batch.previous_batches.len() >= MAX_BATCHES {
-                        new_batch.previous_batches.pop_back();
-                    }
-                    new_batch.latest.push_front((cs_id, vec![ParentOffset(1)]));
-                    new_batch.previous_batches.push_front(new_batch_id);
-                    new_batch
-                })
-                .left_future()
+                .store(ctx.clone(), blobstore)
+                .await?;
+            if new_batch.previous_batches.len() >= MAX_BATCHES {
+                new_batch.previous_batches.pop_back();
+            }
+            new_batch.latest.push_front((cs_id, vec![ParentOffset(1)]));
+            new_batch.previous_batches.push_front(new_batch_id);
+            Ok(new_batch)
         } else {
             new_batch.latest.push_front((cs_id, vec![ParentOffset(1)]));
-            future01::ok(new_batch).right_future()
+            Ok(new_batch)
         }
     }
 
-    pub fn fetch_raw_list(
-        &self,
+    pub fn fetch_raw_list<'a, B: Blobstore + Clone>(
+        &'a self,
         ctx: CoreContext,
-        blobstore: Arc<dyn Blobstore>,
-    ) -> BoxFuture01<Vec<(ChangesetId, Vec<ParentOffset>)>, Error> {
+        blobstore: &'a B,
+    ) -> BoxFuture<'a, Result<Vec<(ChangesetId, Vec<ParentOffset>)>>> {
         let mut v = vec![];
-        for p in self.previous_batches.iter() {
-            v.push(
-                p.load(ctx.clone(), &blobstore)
-                    .compat()
-                    .from_err()
-                    .and_then({
-                        cloned!(ctx, blobstore);
-                        move |full_batch| full_batch.fetch_raw_list(ctx, blobstore)
-                    }),
-            );
+        for p in &self.previous_batches {
+            cloned!(ctx, blobstore);
+            v.push(async move {
+                let p_load = p.load(ctx.clone(), &blobstore);
+                let full_batch = p_load.await?;
+                full_batch.fetch_raw_list(ctx, &blobstore).await
+            });
         }
 
         let mut res = vec![];
         res.extend(self.latest.clone());
-        future01::join_all(v)
-            .map(move |previous_batches| {
-                for p in previous_batches {
-                    res.extend(p);
-                }
-                res
-            })
-            .boxify()
+        async move {
+            let previous_batches = try_join_all(v).await?;
+            for p in previous_batches {
+                res.extend(p);
+            }
+            Ok(res)
+        }
+        .boxed()
     }
 
     pub fn latest(&self) -> &VecDeque<(ChangesetId, Vec<ParentOffset>)> {
@@ -252,18 +245,16 @@ mod test {
     use fbinit::FacebookInit;
     use memblob::EagerMemblob;
     use pretty_assertions::assert_eq;
-    use quickcheck::{quickcheck, TestResult};
-    use tokio_compat::runtime::Runtime;
+    use quickcheck::TestResult;
+    use std::sync::Arc;
 
     #[fbinit::test]
-    fn test_fastlog_batch_empty(fb: FacebookInit) -> Result<()> {
-        let mut rt = Runtime::new().unwrap();
+    async fn test_fastlog_batch_empty(fb: FacebookInit) -> Result<()> {
         let blobstore = Arc::new(EagerMemblob::default());
         let ctx = CoreContext::test_mock(fb);
 
         let list = VecDeque::new();
-        let f = FastlogBatch::new_from_raw_list(ctx, blobstore, list);
-        let batch = rt.block_on(f)?;
+        let batch = FastlogBatch::new_from_raw_list(ctx, &blobstore, list).await?;
         assert!(batch.latest.is_empty());
         assert!(batch.previous_batches.is_empty());
 
@@ -271,16 +262,14 @@ mod test {
     }
 
     #[fbinit::test]
-    fn test_fastlog_batch_single(fb: FacebookInit) -> Result<()> {
-        let mut rt = Runtime::new().unwrap();
+    async fn test_fastlog_batch_single(fb: FacebookInit) -> Result<()> {
         let blobstore = Arc::new(EagerMemblob::default());
         let ctx = CoreContext::test_mock(fb);
 
         let mut list = VecDeque::new();
         let csid = ChangesetId::new(Blake2::from_byte_array([1; 32]));
         list.push_back((csid, vec![]));
-        let f = FastlogBatch::new_from_raw_list(ctx, blobstore, list.clone());
-        let batch = rt.block_on(f)?;
+        let batch = FastlogBatch::new_from_raw_list(ctx, &blobstore, list.clone()).await?;
         assert_eq!(batch.latest, list);
         assert!(batch.previous_batches.is_empty());
 
@@ -288,8 +277,7 @@ mod test {
     }
 
     #[fbinit::test]
-    fn test_fastlog_batch_large(fb: FacebookInit) -> Result<()> {
-        let mut rt = Runtime::new().unwrap();
+    async fn test_fastlog_batch_large(fb: FacebookInit) -> Result<()> {
         let blobstore = Arc::new(EagerMemblob::default());
         let ctx = CoreContext::test_mock(fb);
 
@@ -299,20 +287,18 @@ mod test {
             list.push_back((csid, vec![ParentOffset(1)]));
         }
 
-        let f = FastlogBatch::new_from_raw_list(ctx.clone(), blobstore.clone(), list.clone());
-        let batch = rt.block_on(f)?;
+        let batch = FastlogBatch::new_from_raw_list(ctx.clone(), &blobstore, list.clone()).await?;
         assert_eq!(batch.latest.len(), MAX_LATEST_LEN);
         assert_eq!(batch.previous_batches.len(), MAX_BATCHES);
 
-        let fetched_list = rt.block_on(batch.fetch_raw_list(ctx, blobstore))?;
+        let fetched_list = batch.fetch_raw_list(ctx, &blobstore).await?;
 
         assert_eq!(fetched_list, Vec::from(list));
         Ok(())
     }
 
     #[fbinit::test]
-    fn test_fastlog_batch_overflow(fb: FacebookInit) -> Result<()> {
-        let mut rt = Runtime::new().unwrap();
+    async fn test_fastlog_batch_overflow(fb: FacebookInit) -> Result<()> {
         let blobstore = Arc::new(EagerMemblob::default());
         let ctx = CoreContext::test_mock(fb);
 
@@ -322,48 +308,41 @@ mod test {
             list.push_back((csid, vec![ParentOffset(1)]));
         }
 
-        let f = FastlogBatch::new_from_raw_list(ctx.clone(), blobstore.clone(), list.clone());
-        let batch = rt.block_on(f)?;
+        let batch = FastlogBatch::new_from_raw_list(ctx.clone(), &blobstore, list.clone()).await?;
         assert_eq!(batch.latest.len(), MAX_LATEST_LEN);
         assert_eq!(batch.previous_batches.len(), MAX_BATCHES);
 
-        let fetched_list = rt.block_on(batch.fetch_raw_list(ctx, blobstore))?;
+        let fetched_list = batch.fetch_raw_list(ctx, &blobstore).await?;
 
         list.pop_back();
         assert_eq!(fetched_list, Vec::from(list));
         Ok(())
     }
 
-    quickcheck! {
-        fn fastlog_roundtrip(fb: FacebookInit, hashes: Vec<(ChangesetId, i32)>) -> TestResult {
-
-            let mut rt = Runtime::new().unwrap();
+    #[quickcheck_async::tokio]
+    async fn fastlog_roundtrip(fb: FacebookInit, hashes: Vec<(ChangesetId, i32)>) -> TestResult {
         let blobstore = Arc::new(EagerMemblob::default());
-            let ctx = CoreContext::test_mock(fb);
+        let ctx = CoreContext::test_mock(fb);
 
-            let mut raw_list = VecDeque::new();
-            for (cs_id, offset) in hashes {
-                raw_list.push_back((cs_id, vec![ParentOffset(offset)]));
-            }
-
-            let f = FastlogBatch::new_from_raw_list(
-                ctx.clone(),
-                blobstore.clone(),
-                raw_list.clone(),
-            );
-            let batch = rt.block_on(f).unwrap();
-
-            if batch.latest.len() > MAX_LATEST_LEN {
-                return TestResult::from_bool(false);
-            }
-            if batch.previous_batches.len() > MAX_BATCHES {
-                return TestResult::from_bool(false);
-            }
-
-            raw_list.truncate(max_entries_in_fastlog_batch());
-            let actual = rt.block_on(batch.fetch_raw_list(ctx, blobstore)).unwrap();
-
-            TestResult::from_bool(actual == Vec::from(raw_list))
+        let mut raw_list = VecDeque::new();
+        for (cs_id, offset) in hashes {
+            raw_list.push_back((cs_id, vec![ParentOffset(offset)]));
         }
+
+        let batch = FastlogBatch::new_from_raw_list(ctx.clone(), &blobstore, raw_list.clone())
+            .await
+            .unwrap();
+
+        if batch.latest.len() > MAX_LATEST_LEN {
+            return TestResult::from_bool(false);
+        }
+        if batch.previous_batches.len() > MAX_BATCHES {
+            return TestResult::from_bool(false);
+        }
+
+        raw_list.truncate(max_entries_in_fastlog_batch());
+        let actual = batch.fetch_raw_list(ctx, &blobstore).await.unwrap();
+
+        TestResult::from_bool(actual == Vec::from(raw_list))
     }
 }

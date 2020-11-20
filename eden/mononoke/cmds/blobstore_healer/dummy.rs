@@ -24,7 +24,7 @@ pub struct DummyBlobstore<B> {
     logger: Logger,
 }
 
-impl<B: Blobstore> DummyBlobstore<B> {
+impl<'a, B: Blobstore> DummyBlobstore<B> {
     pub fn new(inner: B, logger: Logger) -> Self {
         Self { inner, logger }
     }
@@ -35,7 +35,7 @@ impl<B: Blobstore> Blobstore for DummyBlobstore<B> {
         &self,
         ctx: CoreContext,
         key: String,
-    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
+    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>, Error>> {
         self.inner.get(ctx, key)
     }
 
@@ -44,7 +44,7 @@ impl<B: Blobstore> Blobstore for DummyBlobstore<B> {
         _ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'static, Result<(), Error>> {
+    ) -> BoxFuture<'_, Result<(), Error>> {
         info!(
             self.logger,
             "I would have written blob {} of size {}",
@@ -54,7 +54,7 @@ impl<B: Blobstore> Blobstore for DummyBlobstore<B> {
         future::ok(()).boxed()
     }
 
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'_, Result<bool, Error>> {
         self.inner.is_present(ctx, key)
     }
 }

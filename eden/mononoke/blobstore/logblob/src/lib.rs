@@ -8,7 +8,7 @@
 
 use std::num::NonZeroU64;
 
-use anyhow::Error;
+use anyhow::Result;
 use futures::future::{BoxFuture, FutureExt, TryFutureExt};
 use futures_stats::TimedFutureExt;
 use scuba::ScubaSampleBuilder;
@@ -41,7 +41,7 @@ impl<B: Blobstore + BlobstorePutOps> Blobstore for LogBlob<B> {
         &self,
         mut ctx: CoreContext,
         key: String,
-    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
+    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>>> {
         let mut scuba = self.scuba.clone();
         scuba.sampled(self.scuba_sample_rate);
 
@@ -69,7 +69,7 @@ impl<B: Blobstore + BlobstorePutOps> Blobstore for LogBlob<B> {
         .boxed()
     }
 
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'_, Result<bool>> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::BlobPresenceChecks);
         self.inner.is_present(ctx, key)
@@ -80,7 +80,7 @@ impl<B: Blobstore + BlobstorePutOps> Blobstore for LogBlob<B> {
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'static, Result<(), Error>> {
+    ) -> BoxFuture<'_, Result<()>> {
         BlobstorePutOps::put_with_status(self, ctx, key, value)
             .map_ok(|_| ())
             .boxed()
@@ -94,7 +94,7 @@ impl<B: BlobstorePutOps> LogBlob<B> {
         key: String,
         value: BlobstoreBytes,
         put_behaviour: Option<PutBehaviour>,
-    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
         let mut scuba = self.scuba.clone();
         let size = value.len();
 
@@ -136,7 +136,7 @@ impl<B: BlobstorePutOps> BlobstorePutOps for LogBlob<B> {
         key: String,
         value: BlobstoreBytes,
         put_behaviour: PutBehaviour,
-    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
         self.put_impl(ctx, key, value, Some(put_behaviour))
     }
 
@@ -145,7 +145,7 @@ impl<B: BlobstorePutOps> BlobstorePutOps for LogBlob<B> {
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
         self.put_impl(ctx, key, value, None)
     }
 }

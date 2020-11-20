@@ -8,7 +8,7 @@
 mod ratelimit;
 mod shard;
 
-use anyhow::{anyhow, Context, Error};
+use anyhow::{anyhow, Context, Result};
 use blobstore::{Blobstore, BlobstoreGetData, BlobstoreMetadata};
 use bytes::{buf::ext::Chain, BufMut, Bytes, BytesMut};
 use cacheblob::CachelibBlobstoreOptions;
@@ -71,7 +71,7 @@ enum CacheData {
 }
 
 impl CacheData {
-    fn deserialize(mut val: Bytes) -> Result<Self, Error> {
+    fn deserialize(mut val: Bytes) -> Result<Self> {
         let prefix = val.split_to(1);
 
         if prefix.as_ref() == NOT_STORABLE {
@@ -106,7 +106,7 @@ impl PresenceData {
         Self::Put(hasher.finish())
     }
 
-    fn deserialize(mut val: Bytes) -> Result<Self, Error> {
+    fn deserialize(mut val: Bytes) -> Result<Self> {
         let prefix = val.split_to(1);
 
         if prefix.as_ref() == Self::GET {
@@ -150,7 +150,7 @@ struct KnownToExist;
 
 /// We allow filtering cache writes to make testing easier. This function is a default that does
 /// not filter.
-fn allow_all_filter(_: &Bytes) -> Result<(), Error> {
+fn allow_all_filter(_: &Bytes) -> Result<()> {
     Ok(())
 }
 
@@ -200,7 +200,7 @@ struct Inner<T> {
     read_shards: Shards,
     presence_pool: VolatileLruCachePool,
     blob_pool: VolatileLruCachePool,
-    cache_filter: fn(&Bytes) -> Result<(), Error>,
+    cache_filter: fn(&Bytes) -> Result<()>,
     cachelib_options: CachelibBlobstoreOptions,
 }
 
@@ -210,7 +210,7 @@ impl<T> Inner<T> {
         blob_pool: VolatileLruCachePool,
         presence_pool: VolatileLruCachePool,
         shards: NonZeroUsize,
-        cache_filter: fn(&Bytes) -> Result<(), Error>,
+        cache_filter: fn(&Bytes) -> Result<()>,
         cachelib_options: CachelibBlobstoreOptions,
     ) -> Self {
         Self {
@@ -226,7 +226,7 @@ impl<T> Inner<T> {
 }
 
 impl<T> Inner<T> {
-    fn get_from_cache(&self, key: &CacheKey) -> Result<Option<CacheData>, Error> {
+    fn get_from_cache(&self, key: &CacheKey) -> Result<Option<CacheData>> {
         let val = match self.blob_pool.get(key)? {
             Some(val) => val,
             None => return Ok(None),
@@ -236,7 +236,7 @@ impl<T> Inner<T> {
     }
 
     /// Set presence for this cache key.
-    fn set_is_present(&self, key: &CacheKey, value: PresenceData) -> Result<(), Error> {
+    fn set_is_present(&self, key: &CacheKey, value: PresenceData) -> Result<()> {
         // If it's a put, then we overwrite existing data in cache, to record the new value.
         if value.is_put() {
             self.presence_pool.set_or_replace(key, value.serialize())?;
@@ -256,7 +256,7 @@ impl<T> Inner<T> {
         key: &CacheKey,
         presence: PresenceData,
         value: BlobstoreGetData,
-    ) -> Result<(), Error> {
+    ) -> Result<()> {
         self.set_is_present(key, presence)?;
 
         let encode_limit = if self.cachelib_options.attempt_zstd {
@@ -292,7 +292,7 @@ impl<T> Inner<T> {
         &self,
         key: &CacheKey,
         request: PresenceData,
-    ) -> Result<Option<KnownToExist>, Error> {
+    ) -> Result<Option<KnownToExist>> {
         let stored = self
             .presence_pool
             .get(key)?
@@ -342,12 +342,12 @@ fn report_deduplicated_put(ctx: &CoreContext, key: &str) {
         .increment_counter(PerfCounterType::BlobPutsDeduplicated);
 }
 
-impl<T: Blobstore> Blobstore for VirtuallyShardedBlobstore<T> {
+impl<T: Blobstore + 'static> Blobstore for VirtuallyShardedBlobstore<T> {
     fn get(
         &self,
         ctx: CoreContext,
         key: String,
-    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
+    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>>> {
         cloned!(self.inner);
 
         async move {
@@ -433,7 +433,7 @@ impl<T: Blobstore> Blobstore for VirtuallyShardedBlobstore<T> {
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'static, Result<(), Error>> {
+    ) -> BoxFuture<'_, Result<()>> {
         cloned!(self.inner);
 
         async move {
@@ -483,7 +483,7 @@ impl<T: Blobstore> Blobstore for VirtuallyShardedBlobstore<T> {
         .boxed()
     }
 
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'_, Result<bool>> {
         cloned!(self.inner);
 
         async move {
@@ -522,8 +522,8 @@ mod test {
         blob: B,
         blob_pool_name: &str,
         cache_shards: NonZeroUsize,
-        cache_filter: fn(&Bytes) -> Result<(), Error>,
-    ) -> Result<VirtuallyShardedBlobstore<B>, Error> {
+        cache_filter: fn(&Bytes) -> Result<()>,
+    ) -> Result<VirtuallyShardedBlobstore<B>> {
         static INSTANCE: OnceCell<()> = OnceCell::new();
         INSTANCE.get_or_init(|| {
             let config = cachelib::LruCacheConfig::new(64 * 1024 * 1024);
@@ -547,7 +547,7 @@ mod test {
         })
     }
 
-    fn reject_all_filter(_: &Bytes) -> Result<(), Error> {
+    fn reject_all_filter(_: &Bytes) -> Result<()> {
         Err(anyhow!("Rejected!"))
     }
 
@@ -585,7 +585,7 @@ mod test {
 
         impl BlobDataHandle {
             /// Obtain the bytes for this get.
-            async fn bytes(self) -> Result<BlobstoreBytes, Error> {
+            async fn bytes(self) -> Result<BlobstoreBytes> {
                 let b = match self {
                     BlobDataHandle::Bytes(b) => b,
                     BlobDataHandle::Channel(mut r) => r.recv().await?,
@@ -621,7 +621,7 @@ mod test {
                 _ctx: CoreContext,
                 key: String,
                 value: BlobstoreBytes,
-            ) -> BoxFuture<'static, Result<(), Error>> {
+            ) -> BoxFuture<'_, Result<()>> {
                 cloned!(self.data);
 
                 async move {
@@ -638,7 +638,7 @@ mod test {
                 &self,
                 _ctx: CoreContext,
                 key: String,
-            ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
+            ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>>> {
                 cloned!(self.data);
 
                 async move {
@@ -668,7 +668,7 @@ mod test {
         }
 
         #[fbinit::test]
-        async fn test_dedupe_reads(fb: FacebookInit) -> Result<(), Error> {
+        async fn test_dedupe_reads(fb: FacebookInit) -> Result<()> {
             let ctx = CoreContext::test_mock(fb);
             let blobstore = make_blobstore(
                 fb,
@@ -718,7 +718,7 @@ mod test {
         }
 
         #[fbinit::test]
-        async fn test_cache_read(fb: FacebookInit) -> Result<(), Error> {
+        async fn test_cache_read(fb: FacebookInit) -> Result<()> {
             let ctx = CoreContext::test_mock(fb);
             let blobstore = make_blobstore(
                 fb,
@@ -753,7 +753,7 @@ mod test {
         }
 
         #[fbinit::test]
-        async fn test_read_after_write(fb: FacebookInit) -> Result<(), Error> {
+        async fn test_read_after_write(fb: FacebookInit) -> Result<()> {
             let ctx = CoreContext::test_mock(fb);
             let blobstore = make_blobstore(
                 fb,
@@ -781,7 +781,7 @@ mod test {
         }
 
         #[fbinit::test]
-        async fn test_do_not_serialize_not_storable(fb: FacebookInit) -> Result<(), Error> {
+        async fn test_do_not_serialize_not_storable(fb: FacebookInit) -> Result<()> {
             let ctx = CoreContext::test_mock(fb);
             let blobstore = make_blobstore(
                 fb,
@@ -804,9 +804,10 @@ mod test {
             }
 
             // Spawn a bunch of reads
-            let futs = tokio::spawn(futures::future::try_join_all(
-                (0..10usize).map(|_| blobstore.get(ctx.clone(), key.clone())),
-            ));
+            let futs = tokio::spawn(futures::future::try_join_all((0..10usize).map(|_| {
+                cloned!(blobstore, ctx, key);
+                async move { blobstore.get(ctx, key).await }
+            })));
 
             tokio::time::timeout(Duration::from_millis(TIMEOUT_MS), async {
                 // Wait for the first request to arrive. It'll be alone, since at this point we don't
@@ -846,9 +847,10 @@ mod test {
                 // check the cache *before* acquiring the semaphore, and won't ever try to acquire it
                 // (whereas the other ones would have acquired it, and been released by the firs task
                 // afterwards).
-                let futs = tokio::spawn(futures::future::try_join_all(
-                    (0..10usize).map(|_| blobstore.get(ctx.clone(), key.clone())),
-                ));
+                let futs = tokio::spawn(futures::future::try_join_all((0..10usize).map(|_| {
+                    cloned!(blobstore, ctx, key);
+                    async move { blobstore.get(ctx, key).await }
+                })));
 
                 // Finally, wait for those requests to arrive.
                 loop {
@@ -869,7 +871,7 @@ mod test {
                     assert_eq!(v.unwrap().as_bytes(), &val);
                 }
 
-                Result::<_, Error>::Ok(())
+                Result::<_>::Ok(())
             })
             .await??;
 
@@ -884,7 +886,7 @@ mod test {
         }
 
         #[fbinit::test]
-        async fn test_dedupe_writes(fb: FacebookInit) -> Result<(), Error> {
+        async fn test_dedupe_writes(fb: FacebookInit) -> Result<()> {
             let ctx = CoreContext::test_mock(fb);
             let blobstore = make_blobstore(
                 fb,
@@ -925,7 +927,7 @@ mod test {
         }
 
         #[fbinit::test]
-        async fn test_dedupe_writes_different_data(fb: FacebookInit) -> Result<(), Error> {
+        async fn test_dedupe_writes_different_data(fb: FacebookInit) -> Result<()> {
             let ctx = CoreContext::test_mock(fb);
             let blobstore = make_blobstore(
                 fb,
@@ -1050,7 +1052,7 @@ mod test {
                 &self,
                 _ctx: CoreContext,
                 _key: String,
-            ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
+            ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>>> {
                 async move {
                     Ok(Some(BlobstoreGetData::new(
                         BlobstoreMetadata::new(None),
@@ -1065,15 +1067,11 @@ mod test {
                 _ctx: CoreContext,
                 _key: String,
                 _value: BlobstoreBytes,
-            ) -> BoxFuture<'static, Result<(), Error>> {
+            ) -> BoxFuture<'_, Result<()>> {
                 async move { Ok(()) }.boxed()
             }
 
-            fn is_present(
-                &self,
-                _ctx: CoreContext,
-                _key: String,
-            ) -> BoxFuture<'static, Result<bool, Error>> {
+            fn is_present(&self, _ctx: CoreContext, _key: String) -> BoxFuture<'_, Result<bool>> {
                 async move { Ok(true) }.boxed()
             }
         }
@@ -1084,7 +1082,7 @@ mod test {
         }
 
         #[fbinit::test]
-        async fn test_qps(fb: FacebookInit) -> Result<(), Error> {
+        async fn test_qps(fb: FacebookInit) -> Result<()> {
             let l1 =
                 DirectRateLimiter::<LeakyBucket>::new(nonzero!(1u32), Duration::from_millis(10));
             let l1 = AsyncLimiter::new(l1).await;
@@ -1136,7 +1134,7 @@ mod test {
         }
 
         #[fbinit::test]
-        async fn test_early_cache_hits_do_not_count(fb: FacebookInit) -> Result<(), Error> {
+        async fn test_early_cache_hits_do_not_count(fb: FacebookInit) -> Result<()> {
             let l1 =
                 DirectRateLimiter::<LeakyBucket>::new(nonzero!(10u32), Duration::from_millis(100));
             let l1 = AsyncLimiter::new(l1).await;

@@ -29,8 +29,6 @@ futures-old = { package = "futures", version = "0.1" }
 slog = { version = "2.5", features = ["max_level_debug"] }
 tokio = { version = "=0.2.13", features = ["full"] }
 tokio-old = { package = "tokio", version = "0.1" }
-tokio-timer = "0.2"
 
 [dev-dependencies]
 memblob = { path = "../memblob" }
-tokio-compat = "0.1"

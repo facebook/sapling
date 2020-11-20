@@ -8,10 +8,11 @@
 use anyhow::Error;
 use blobstore::{Blobstore, BlobstoreBytes};
 use chrono::Utc;
+use cloned::cloned;
 use context::{CoreContext, SessionId};
 use fbinit::FacebookInit;
-use futures::future::TryFutureExt;
-use futures_ext::FutureExt;
+use futures::{FutureExt, TryFutureExt};
+use futures_ext::FutureExt as _;
 use futures_old::{future, Future};
 use futures_stats::{FutureStats, StreamStats};
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
@@ -241,18 +242,25 @@ fn do_wireproto_logging<'a>(
                         generate_random_string(16),
                     );
 
-                    blobstore
-                        .put(ctx.clone(), key.clone(), BlobstoreBytes::from_bytes(args))
-                        .compat()
-                        .map(move |()| {
-                            STATS::wireproto_blobstore_success.add_value(1);
-                            builder.add("remote_args", key);
-                            builder
-                        })
-                        .inspect_err(|_| {
-                            STATS::wireproto_blobstore_failure.add_value(1);
-                        })
-                        .left_future()
+                    {
+                        cloned!(ctx, blobstore, key);
+                        async move {
+                            blobstore
+                                .put(ctx, key, BlobstoreBytes::from_bytes(args))
+                                .await
+                        }
+                    }
+                    .boxed()
+                    .compat()
+                    .map(move |()| {
+                        STATS::wireproto_blobstore_success.add_value(1);
+                        builder.add("remote_args", key);
+                        builder
+                    })
+                    .inspect_err(|_| {
+                        STATS::wireproto_blobstore_failure.add_value(1);
+                    })
+                    .left_future()
                 } else {
                     builder.add("args", args);
                     future::ok(builder).right_future()

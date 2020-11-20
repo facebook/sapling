@@ -32,7 +32,7 @@ fn check_hash<T: std::fmt::Debug + PartialEq + Copy>(
     Ok(())
 }
 
-pub async fn finalize<B: Blobstore + Clone>(
+pub async fn finalize<B: Blobstore>(
     blobstore: &B,
     ctx: CoreContext,
     req: Option<&StoreRequest>,

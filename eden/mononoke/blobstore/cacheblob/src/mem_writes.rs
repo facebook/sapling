@@ -5,11 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Error;
+use anyhow::Result;
 use blobstore::{Blobstore, BlobstoreGetData};
 use context::CoreContext;
-use futures::future::{self, BoxFuture, FutureExt, TryFutureExt};
-use futures_old::{stream, Future, Stream};
+use futures::{
+    future::{self, BoxFuture, FutureExt, TryFutureExt},
+    stream::{self, StreamExt, TryStreamExt},
+};
 use lock_ext::LockExt;
 use mononoke_types::BlobstoreBytes;
 use std::{
@@ -20,7 +22,7 @@ use std::{
 
 /// A blobstore wrapper that reads from the underlying blobstore but writes to memory.
 #[derive(Clone, Debug)]
-pub struct MemWritesBlobstore<T: Blobstore + Clone> {
+pub struct MemWritesBlobstore<T> {
     inner: T,
     cache: Arc<Mutex<HashMap<String, BlobstoreBytes>>>,
 }
@@ -36,15 +38,13 @@ impl<T: Blobstore + Clone> MemWritesBlobstore<T> {
     /// Write all in-memory entries to underlying blobstore.
     ///
     /// NOTE: In case of error all pending changes will be lost.
-    pub fn persist(&self, ctx: CoreContext) -> impl Future<Item = (), Error = Error> {
+    pub async fn persist(&self, ctx: CoreContext) -> Result<()> {
         let items = self.cache.with(|cache| mem::replace(cache, HashMap::new()));
-        stream::iter_ok(items)
-            .map({
-                let inner = self.inner.clone();
-                move |(key, value)| inner.put(ctx.clone(), key, value).compat()
-            })
+        stream::iter(items)
+            .map(|(key, value)| self.inner.put(ctx.clone(), key, value))
             .buffered(4096)
-            .for_each(|_| Ok(()))
+            .try_for_each(|_| future::ready(Ok(())))
+            .await
     }
 
     pub fn get_inner(&self) -> T {
@@ -62,7 +62,7 @@ impl<T: Blobstore + Clone> Blobstore for MemWritesBlobstore<T> {
         _ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'static, Result<(), Error>> {
+    ) -> BoxFuture<'_, Result<()>> {
         self.cache.with(|cache| cache.insert(key, value));
         future::ok(()).boxed()
     }
@@ -71,7 +71,7 @@ impl<T: Blobstore + Clone> Blobstore for MemWritesBlobstore<T> {
         &self,
         ctx: CoreContext,
         key: String,
-    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
+    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>>> {
         match self.cache.with(|cache| cache.get(&key).cloned()) {
             Some(value) => future::ok(Some(value.into())).boxed(),
             None => self
@@ -88,10 +88,9 @@ mod test {
     use super::*;
     use bytes::Bytes;
     use fbinit::FacebookInit;
-    use futures::compat::Future01CompatExt;
     use memblob::EagerMemblob;
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn basic_read(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
         let inner = EagerMemblob::default();
@@ -124,7 +123,7 @@ mod test {
         );
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn redirect_writes(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
         let inner = EagerMemblob::default();
@@ -167,8 +166,8 @@ mod test {
         );
     }
 
-    #[fbinit::compat_test]
-    async fn test_persist(fb: FacebookInit) -> Result<(), Error> {
+    #[fbinit::test]
+    async fn test_persist(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
 
         let inner = EagerMemblob::default();
@@ -181,7 +180,7 @@ mod test {
 
         assert!(inner.get(ctx.clone(), key.clone()).await?.is_none());
 
-        outer.persist(ctx.clone()).compat().await?;
+        outer.persist(ctx.clone()).await?;
 
         assert_eq!(inner.get(ctx, key).await?, Some(value.into()));
 

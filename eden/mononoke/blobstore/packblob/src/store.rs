@@ -8,7 +8,7 @@
 use crate::envelope::PackEnvelope;
 use crate::pack;
 
-use anyhow::{format_err, Context, Error};
+use anyhow::{format_err, Context, Result};
 use blobstore::{
     Blobstore, BlobstoreGetData, BlobstorePutOps, BlobstoreWithLink, OverwriteStatus, PutBehaviour,
 };
@@ -49,7 +49,7 @@ impl<T> PackBlob<T> {
 }
 
 // If compressed version is smaller, use it, otherwise return raw
-fn compress_if_worthwhile(value: Bytes, zstd_level: i32) -> Result<SingleValue, Error> {
+fn compress_if_worthwhile(value: Bytes, zstd_level: i32) -> Result<SingleValue> {
     let cursor = Cursor::new(value.clone());
     let compressed = zstd::encode_all(cursor, zstd_level)?;
     if compressed.len() < value.len() {
@@ -67,7 +67,7 @@ impl<T: Blobstore + BlobstorePutOps> Blobstore for PackBlob<T> {
         &self,
         ctx: CoreContext,
         key: String,
-    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
+    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>>> {
         let inner_get_data = {
             let mut inner_key = key.clone();
             inner_key.push_str(ENVELOPE_SUFFIX);
@@ -100,11 +100,7 @@ impl<T: Blobstore + BlobstorePutOps> Blobstore for PackBlob<T> {
         .boxed()
     }
 
-    fn is_present(
-        &self,
-        ctx: CoreContext,
-        mut key: String,
-    ) -> BoxFuture<'static, Result<bool, Error>> {
+    fn is_present(&self, ctx: CoreContext, mut key: String) -> BoxFuture<'_, Result<bool>> {
         key.push_str(ENVELOPE_SUFFIX);
         self.inner.is_present(ctx, key)
     }
@@ -114,7 +110,7 @@ impl<T: Blobstore + BlobstorePutOps> Blobstore for PackBlob<T> {
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'static, Result<(), Error>> {
+    ) -> BoxFuture<'_, Result<()>> {
         BlobstorePutOps::put_with_status(self, ctx, key, value)
             .map_ok(|_| ())
             .boxed()
@@ -128,7 +124,7 @@ impl<T: BlobstorePutOps> PackBlob<T> {
         mut key: String,
         value: BlobstoreBytes,
         put_behaviour: Option<PutBehaviour>,
-    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
         key.push_str(ENVELOPE_SUFFIX);
 
         let value = value.into_bytes();
@@ -165,7 +161,7 @@ impl<B: BlobstorePutOps> BlobstorePutOps for PackBlob<B> {
         key: String,
         value: BlobstoreBytes,
         put_behaviour: PutBehaviour,
-    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
         self.put_impl(ctx, key, value, Some(put_behaviour))
     }
 
@@ -174,7 +170,7 @@ impl<B: BlobstorePutOps> BlobstorePutOps for PackBlob<B> {
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
         self.put_impl(ctx, key, value, None)
     }
 }
@@ -191,7 +187,7 @@ impl<T: Blobstore + BlobstoreWithLink> PackBlob<T> {
         ctx: CoreContext,
         entries: Vec<PackedEntry>,
         prefix: String,
-    ) -> Result<String, Error> {
+    ) -> Result<String> {
         let link_keys: Vec<String> = entries.iter().map(|entry| entry.key.clone()).collect();
 
         let pack = pack::create_packed(entries)
@@ -234,7 +230,7 @@ mod tests {
     use std::sync::Arc;
 
     #[fbinit::compat_test]
-    async fn simple_roundtrip_test(fb: FacebookInit) -> Result<(), Error> {
+    async fn simple_roundtrip_test(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let inner_blobstore = Arc::new(EagerMemblob::default());
         let packblob = PackBlob::new(inner_blobstore.clone(), PackOptions::default());
@@ -246,7 +242,7 @@ mod tests {
     }
 
     #[fbinit::compat_test]
-    async fn compressible_roundtrip_test(fb: FacebookInit) -> Result<(), Error> {
+    async fn compressible_roundtrip_test(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let innerblob = Arc::new(EagerMemblob::default());
         let packblob = PackBlob::new(innerblob.clone(), PackOptions::new(Some(0)));
@@ -265,7 +261,7 @@ mod tests {
     }
 
     #[fbinit::compat_test]
-    async fn incompressible_roundtrip_test(fb: FacebookInit) -> Result<(), Error> {
+    async fn incompressible_roundtrip_test(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let innerblob = Arc::new(EagerMemblob::default());
         let packblob = PackBlob::new(innerblob.clone(), PackOptions::new(Some(0)));
@@ -292,7 +288,7 @@ mod tests {
         packblob: &PackBlob<Arc<EagerMemblob>>,
         outer_key: String,
         value: BlobstoreBytes,
-    ) -> Result<String, Error> {
+    ) -> Result<String> {
         // Put, this will apply the thrift envelope and save to the inner store
         packblob
             .put(ctx.clone(), outer_key.clone(), value.clone())
@@ -328,7 +324,7 @@ mod tests {
     }
 
     #[fbinit::compat_test]
-    async fn simple_pack_test(fb: FacebookInit) -> Result<(), Error> {
+    async fn simple_pack_test(fb: FacebookInit) -> Result<()> {
         let mut input_entries = vec![];
         let mut input_values = vec![];
         for i in 0..3 {

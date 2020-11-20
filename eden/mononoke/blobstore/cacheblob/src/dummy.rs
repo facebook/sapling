@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::Result;
 use context::CoreContext;
-use futures_ext::{BoxFuture, FutureExt};
-use futures_old::IntoFuture;
+use futures::future::{BoxFuture, FutureExt};
 
 use blobstore::BlobstoreGetData;
 
@@ -18,18 +18,18 @@ use crate::{CacheOps, LeaseOps};
 pub struct DummyLease {}
 
 impl LeaseOps for DummyLease {
-    fn try_add_put_lease(&self, _key: &str) -> BoxFuture<bool, ()> {
-        Ok(true).into_future().boxify()
+    fn try_add_put_lease(&self, _key: &str) -> BoxFuture<'_, Result<bool>> {
+        async { Ok(true) }.boxed()
     }
 
-    fn renew_lease_until(&self, _ctx: CoreContext, _key: &str, _done: BoxFuture<(), ()>) {}
+    fn renew_lease_until(&self, _ctx: CoreContext, _key: &str, _done: BoxFuture<'static, ()>) {}
 
-    fn wait_for_other_leases(&self, _key: &str) -> BoxFuture<(), ()> {
-        Ok(()).into_future().boxify()
+    fn wait_for_other_leases(&self, _key: &str) -> BoxFuture<'_, ()> {
+        async {}.boxed()
     }
 
-    fn release_lease(&self, _key: &str) -> BoxFuture<(), ()> {
-        Ok(()).into_future().boxify()
+    fn release_lease(&self, _key: &str) -> BoxFuture<'_, ()> {
+        async {}.boxed()
     }
 }
 
@@ -38,15 +38,15 @@ impl LeaseOps for DummyLease {
 pub struct DummyCache {}
 
 impl CacheOps for DummyCache {
-    fn get(&self, _key: &str) -> BoxFuture<Option<BlobstoreGetData>, ()> {
-        Ok(None).into_future().boxify()
+    fn get(&self, _key: &str) -> BoxFuture<'_, Option<BlobstoreGetData>> {
+        async { None }.boxed()
     }
 
-    fn put(&self, _key: &str, _value: BlobstoreGetData) -> BoxFuture<(), ()> {
-        Ok(()).into_future().boxify()
+    fn put(&self, _key: &str, _value: BlobstoreGetData) -> BoxFuture<'_, ()> {
+        async {}.boxed()
     }
 
-    fn check_present(&self, _key: &str) -> BoxFuture<bool, ()> {
-        Ok(false).into_future().boxify()
+    fn check_present(&self, _key: &str) -> BoxFuture<'_, bool> {
+        async { false }.boxed()
     }
 }

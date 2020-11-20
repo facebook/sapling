@@ -248,9 +248,10 @@ async fn create_fsnode(
     prefetched_content_metadata: Arc<HashMap<ContentId, ContentMetadata>>,
     tree_info: TreeInfo<FsnodeId, (ContentId, FileType), Option<FsnodeSummary>>,
 ) -> Result<(Option<FsnodeSummary>, FsnodeId)> {
+    let blobstore = blobstore.clone();
     let entries = collect_fsnode_subentries(
         ctx,
-        blobstore,
+        &blobstore,
         prefetched_content_metadata.as_ref(),
         tree_info.parents,
         tree_info.subentries,
@@ -309,7 +310,8 @@ async fn create_fsnode(
     let blob = fsnode.into_blob();
     let fsnode_id = *blob.id();
     let key = fsnode_id.blobstore_key();
-    let f = blobstore.put(ctx.clone(), key, blob.into());
+    cloned!(ctx);
+    let f = async move { blobstore.put(ctx, key, blob.into()).await };
 
     match sender {
         Some(sender) => sender

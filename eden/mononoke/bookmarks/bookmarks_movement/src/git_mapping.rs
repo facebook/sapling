@@ -18,6 +18,7 @@ use bonsai_git_mapping::{
     extract_git_sha1_from_bonsai_extra, BonsaiGitMapping, BonsaiGitMappingEntry,
 };
 use bookmarks::BookmarkTransactionHook;
+use cloned::cloned;
 use context::CoreContext;
 use futures::future::{try_join, FutureExt, TryFutureExt};
 use futures::stream::{FuturesOrdered, StreamExt};
@@ -76,9 +77,15 @@ async fn new_mapping_entries(
                         bcs: Cow::Borrowed(bcs),
                     }))
                 } else {
-                    let bcs_fut = cs_id
-                        .load(ctx.clone(), &repo.get_blobstore())
-                        .map_err(Error::from);
+                    let bcs_fut = {
+                        cloned!(ctx, repo);
+                        async move {
+                            cs_id
+                                .load(ctx, &repo.get_blobstore())
+                                .map_err(Error::from)
+                                .await
+                        }
+                    };
 
                     let mapping_fut = repo.bonsai_git_mapping().get(ctx, cs_id.into());
 

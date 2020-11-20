@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Error;
+use anyhow::Result;
 use blobstore::{Blobstore, BlobstoreGetData, BlobstorePutOps, OverwriteStatus, PutBehaviour};
 use context::CoreContext;
 use futures::future::{self, BoxFuture, FutureExt};
@@ -31,7 +31,7 @@ impl<T: Blobstore + Clone> Blobstore for ReadOnlyBlobstore<T> {
         &self,
         ctx: CoreContext,
         key: String,
-    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
+    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>>> {
         self.blobstore.get(ctx, key)
     }
 
@@ -41,12 +41,12 @@ impl<T: Blobstore + Clone> Blobstore for ReadOnlyBlobstore<T> {
         _ctx: CoreContext,
         key: String,
         _value: BlobstoreBytes,
-    ) -> BoxFuture<'static, Result<(), Error>> {
+    ) -> BoxFuture<'_, Result<()>> {
         future::err(ErrorKind::ReadOnlyPut(key).into()).boxed()
     }
 
     #[inline]
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'_, Result<bool>> {
         self.blobstore.is_present(ctx, key)
     }
 }
@@ -58,7 +58,7 @@ impl<T: BlobstorePutOps + Clone> BlobstorePutOps for ReadOnlyBlobstore<T> {
         key: String,
         _value: BlobstoreBytes,
         _put_behaviour: PutBehaviour,
-    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
         future::err(ErrorKind::ReadOnlyPut(key).into()).boxed()
     }
 
@@ -67,7 +67,7 @@ impl<T: BlobstorePutOps + Clone> BlobstorePutOps for ReadOnlyBlobstore<T> {
         _ctx: CoreContext,
         key: String,
         _value: BlobstoreBytes,
-    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
         future::err(ErrorKind::ReadOnlyPut(key).into()).boxed()
     }
 }

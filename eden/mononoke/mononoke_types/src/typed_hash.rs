@@ -9,7 +9,7 @@ use std::fmt::{self, Display};
 use std::{result, str::FromStr};
 
 use abomonation_derive::Abomonation;
-use anyhow::{bail, Error, Result};
+use anyhow::{bail, Result};
 use ascii::{AsciiStr, AsciiString};
 use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use context::CoreContext;
@@ -267,11 +267,11 @@ macro_rules! impl_typed_hash_loadable_storable {
         {
             type Value = <$typed as MononokeId>::Value;
 
-            fn load<B: Blobstore + Clone>(
-                &self,
+            fn load<'a, B: Blobstore>(
+                &'a self,
                 ctx: CoreContext,
-                blobstore: &B,
-            ) -> BoxFuture<'static, Result<Self::Value, LoadableError>> {
+                blobstore: &'a B,
+            ) -> BoxFuture<'a, Result<Self::Value, LoadableError>> {
                 let id = *self;
                 let blobstore_key = id.blobstore_key();
                 let get = blobstore
@@ -290,11 +290,11 @@ macro_rules! impl_typed_hash_loadable_storable {
         {
             type Key = $typed;
 
-            fn store<B: Blobstore + Clone>(
+            fn store<'a, B: Blobstore>(
                 self,
                 ctx: CoreContext,
-                blobstore: &B,
-            ) -> BoxFuture<'static, Result<Self::Key, Error>> {
+                blobstore: &'a B,
+            ) -> BoxFuture<'a, Result<Self::Key>> {
                 let id = *self.id();
                 let bytes = self.into();
                 let put = blobstore.put(ctx, id.blobstore_key(), bytes);

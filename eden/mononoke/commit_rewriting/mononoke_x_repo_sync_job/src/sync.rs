@@ -22,7 +22,7 @@ use cross_repo_sync::{
 };
 use futures::{
     compat::Future01CompatExt,
-    future::{try_join_all, TryFutureExt},
+    future::{try_join_all, FutureExt, TryFutureExt},
     try_join,
 };
 use futures_old::{stream::Stream, Future};
@@ -538,7 +538,15 @@ async fn check_if_independent_branch_and_return(
     )
     .map({
         cloned!(ctx, repo);
-        move |cs| cs.load(ctx.clone(), repo.blobstore()).compat().from_err()
+        move |cs| {
+            {
+                cloned!(ctx, repo);
+                async move { cs.load(ctx, repo.blobstore()).await }
+            }
+            .boxed()
+            .compat()
+            .from_err()
+        }
     })
     .buffered(100)
     .collect()

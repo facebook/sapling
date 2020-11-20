@@ -135,11 +135,11 @@ where
 {
     type Value = Entry<T::Value, L::Value>;
 
-    fn load<B: Blobstore + Clone>(
-        &self,
+    fn load<'a, B: Blobstore>(
+        &'a self,
         ctx: CoreContext,
-        blobstore: &B,
-    ) -> BoxFuture<'static, Result<Self::Value, LoadableError>> {
+        blobstore: &'a B,
+    ) -> BoxFuture<'a, Result<Self::Value, LoadableError>> {
         match self {
             Entry::Tree(tree_id) => tree_id.load(ctx, blobstore).map_ok(Entry::Tree).boxed(),
             Entry::Leaf(leaf_id) => leaf_id.load(ctx, blobstore).map_ok(Entry::Leaf).boxed(),
@@ -154,11 +154,11 @@ where
 {
     type Key = Entry<T::Key, L::Key>;
 
-    fn store<B: Blobstore + Clone>(
+    fn store<B: Blobstore>(
         self,
         ctx: CoreContext,
         blobstore: &B,
-    ) -> BoxFuture<'static, Result<Self::Key, Error>> {
+    ) -> BoxFuture<'_, Result<Self::Key, Error>> {
         match self {
             Entry::Tree(tree) => tree.store(ctx, blobstore).map_ok(Entry::Tree).boxed(),
             Entry::Leaf(leaf) => leaf.store(ctx, blobstore).map_ok(Entry::Leaf).boxed(),
@@ -365,11 +365,11 @@ impl<I: Copy + 'static, M: Manifest> Manifest for Traced<I, M> {
 impl<I: Clone + 'static + Send, M: Loadable> Loadable for Traced<I, M> {
     type Value = Traced<I, <M as Loadable>::Value>;
 
-    fn load<B: Blobstore + Clone>(
-        &self,
+    fn load<'a, B: Blobstore>(
+        &'a self,
         ctx: CoreContext,
-        blobstore: &B,
-    ) -> BoxFuture<'static, Result<Self::Value, LoadableError>> {
+        blobstore: &'a B,
+    ) -> BoxFuture<'a, Result<Self::Value, LoadableError>> {
         let id = self.0.clone();
         let load = self.1.load(ctx, blobstore);
 

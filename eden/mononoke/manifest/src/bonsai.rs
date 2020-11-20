@@ -155,7 +155,10 @@ where
         Ok(r)
     };
 
-    let parents = try_join_all(parents.into_iter().map(|id| id.load(ctx.clone(), &store)));
+    let parents = try_join_all(parents.into_iter().map(|id| {
+        cloned!(ctx);
+        async move { id.load(ctx, &store).await }
+    }));
 
     let (node, parents) = try_join!(node, parents)?;
 

@@ -1052,11 +1052,14 @@ impl HgCommands for RepoClient {
 
                 self.wait_cs = self.wait_cs.take().or_else(|| {
                     Some(
-                        self.n
-                            .load(self.ctx.clone(), self.repo.blobrepo().blobstore())
-                            .compat()
-                            .from_err()
-                            .boxify(),
+                        {
+                            cloned!(self.n, self.ctx, self.repo);
+                            async move { n.load(ctx, repo.blobrepo().blobstore()).await }
+                        }
+                        .boxed()
+                        .compat()
+                        .from_err()
+                        .boxify(),
                     )
                 });
                 let cs = try_ready!(self.wait_cs.as_mut().unwrap().poll());
@@ -1180,8 +1183,9 @@ impl HgCommands for RepoClient {
             let futs = suggestion_cids
                 .into_iter()
                 .map(|hg_csid| {
-                    hg_csid
-                        .load(ctx.clone(), repo.blobstore())
+                    cloned!(ctx, repo);
+                    async move { hg_csid.load(ctx, repo.blobstore()).await }
+                        .boxed()
                         .compat()
                         .from_err()
                         .map(move |cs| (cs.to_string().into_bytes(), cs.time().clone()))
@@ -2023,10 +2027,17 @@ impl HgCommands for RepoClient {
                 .log_with_msg("GetCommitData Params", None);
             let s = stream::iter_ok::<_, Error>(nodes.into_iter())
                 .map({
-                    cloned!(ctx);
+                    cloned!(ctx, blobrepo);
                     move |hg_cs_id| {
-                        RevlogChangeset::load(ctx.clone(), blobrepo.blobstore(), hg_cs_id)
-                            .and_then(move |revlog_cs| serialize_getcommitdata(hg_cs_id, revlog_cs))
+                        {
+                            cloned!(ctx, blobrepo, hg_cs_id);
+                            async move {
+                                RevlogChangeset::load(ctx, blobrepo.blobstore(), hg_cs_id).await
+                            }
+                        }
+                        .boxed()
+                        .compat()
+                        .and_then(move |revlog_cs| serialize_getcommitdata(hg_cs_id, revlog_cs))
                     }
                 })
                 .buffered(100)
@@ -2227,8 +2238,12 @@ pub fn fetch_treepack_part_input(
         None => RepoPath::RootPath,
     };
 
-    let envelope_fut =
-        fetch_manifest_envelope(ctx.clone(), &repo.get_blobstore().boxed(), hg_mf_id);
+    let envelope_fut = {
+        cloned!(ctx, repo);
+        async move { fetch_manifest_envelope(ctx, repo.blobstore(), hg_mf_id).await }
+    }
+    .boxed()
+    .compat();
 
     let filenode_fut = repo
         .get_filenode_opt(

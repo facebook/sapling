@@ -7,7 +7,7 @@
 
 #![deny(warnings)]
 
-use anyhow::Error;
+use anyhow::Result;
 use blobstore::{Blobstore, BlobstoreGetData};
 use cloned::cloned;
 use context::CoreContext;
@@ -21,23 +21,13 @@ pub trait SamplingHandler: std::fmt::Debug + Send + Sync {
         ctx: CoreContext,
         key: String,
         value: Option<&BlobstoreBytes>,
-    ) -> Result<(), Error>;
+    ) -> Result<()>;
 
-    fn sample_put(
-        &self,
-        _ctx: &CoreContext,
-        _key: &str,
-        _value: &BlobstoreBytes,
-    ) -> Result<(), Error> {
+    fn sample_put(&self, _ctx: &CoreContext, _key: &str, _value: &BlobstoreBytes) -> Result<()> {
         Ok(())
     }
 
-    fn sample_is_present(
-        &self,
-        _ctx: CoreContext,
-        _key: String,
-        _value: bool,
-    ) -> Result<(), Error> {
+    fn sample_is_present(&self, _ctx: CoreContext, _key: String, _value: bool) -> Result<()> {
         Ok(())
     }
 }
@@ -45,12 +35,12 @@ pub trait SamplingHandler: std::fmt::Debug + Send + Sync {
 /// A layer over an existing blobstore that allows sampling of blobs, e.g. for
 /// corpus generation.
 #[derive(Clone, Debug)]
-pub struct SamplingBlobstore<T: Blobstore + Clone> {
+pub struct SamplingBlobstore<T> {
     inner: T,
     handler: Arc<dyn SamplingHandler>,
 }
 
-impl<T: Blobstore + Clone> SamplingBlobstore<T> {
+impl<T> SamplingBlobstore<T> {
     pub fn new(inner: T, handler: Arc<dyn SamplingHandler>) -> Self {
         Self { inner, handler }
     }
@@ -62,7 +52,7 @@ impl<T: Blobstore + Clone> Blobstore for SamplingBlobstore<T> {
         &self,
         ctx: CoreContext,
         key: String,
-    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
+    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>>> {
         cloned!(self.handler);
         let get = self.inner.get(ctx.clone(), key.clone());
         async move {
@@ -79,7 +69,7 @@ impl<T: Blobstore + Clone> Blobstore for SamplingBlobstore<T> {
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'static, Result<(), Error>> {
+    ) -> BoxFuture<'_, Result<()>> {
         let sample_res = self.handler.sample_put(&ctx, &key, &value);
         let put = self.inner.put(ctx, key, value);
         async move {
@@ -90,7 +80,7 @@ impl<T: Blobstore + Clone> Blobstore for SamplingBlobstore<T> {
     }
 
     #[inline]
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'_, Result<bool>> {
         let is_present = self.inner.is_present(ctx.clone(), key.clone());
         cloned!(self.handler);
         async move {
@@ -118,7 +108,7 @@ mod test {
         looking_for: SamplingKey,
     }
     impl TestSamplingHandler {
-        fn check_sample(&self, ctx: &CoreContext) -> Result<(), Error> {
+        fn check_sample(&self, ctx: &CoreContext) -> Result<()> {
             ctx.sampling_key().map(|sampling_key| {
                 if sampling_key == &self.looking_for {
                     self.sampled.store(true, Ordering::Relaxed);
@@ -134,23 +124,13 @@ mod test {
             ctx: CoreContext,
             _key: String,
             _value: Option<&BlobstoreBytes>,
-        ) -> Result<(), Error> {
+        ) -> Result<()> {
             self.check_sample(&ctx)
         }
-        fn sample_put(
-            &self,
-            ctx: &CoreContext,
-            _key: &str,
-            _value: &BlobstoreBytes,
-        ) -> Result<(), Error> {
+        fn sample_put(&self, ctx: &CoreContext, _key: &str, _value: &BlobstoreBytes) -> Result<()> {
             self.check_sample(ctx)
         }
-        fn sample_is_present(
-            &self,
-            ctx: CoreContext,
-            _key: String,
-            _value: bool,
-        ) -> Result<(), Error> {
+        fn sample_is_present(&self, ctx: CoreContext, _key: String, _value: bool) -> Result<()> {
             self.check_sample(&ctx)
         }
     }

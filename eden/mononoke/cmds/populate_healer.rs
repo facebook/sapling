@@ -11,7 +11,7 @@ use anyhow::{bail, format_err, Error};
 use clap::Arg;
 use cloned::cloned;
 use fbinit::FacebookInit;
-use futures::{compat::Future01CompatExt, future::TryFutureExt};
+use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt};
 use futures_old::{Future, IntoFuture};
 use serde_derive::{Deserialize, Serialize};
 use tokio_compat::runtime;
@@ -312,7 +312,11 @@ async fn put_resume_state(
                 .map(|state_json| BlobstoreBytes::from_bytes(state_json))
                 .map_err(Error::from)
                 .into_future()
-                .and_then(move |state_data| blobstore.put(ctx, state_key, state_data).compat())
+                .and_then(move |state_data| {
+                    async move { blobstore.put(ctx, state_key, state_data).await }
+                        .boxed()
+                        .compat()
+                })
                 .map(move |_| {
                     if termion::is_tty(&std::io::stderr()) {
                         let elapsed = started_at.elapsed().as_secs() as f64;

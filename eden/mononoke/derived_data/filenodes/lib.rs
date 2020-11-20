@@ -16,7 +16,8 @@ use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
 use filenodes::{FilenodeInfo, FilenodeResult, PreparedFilenode};
 use futures::{
-    compat::Future01CompatExt, future::try_join_all, stream, StreamExt, TryFutureExt, TryStreamExt,
+    compat::Future01CompatExt, future::try_join_all, pin_mut, stream, FutureExt, StreamExt,
+    TryFutureExt, TryStreamExt,
 };
 use futures_ext::FutureExt as OldFutureExt;
 use futures_old::Future;
@@ -202,45 +203,57 @@ pub async fn generate_all_filenodes(
 
     let (root_mf, parents, linknode) = try_join!(root_mf, parents, linknode)?;
     let blobstore = repo.get_blobstore().boxed();
-    find_intersection_of_diffs_and_parents(
-        ctx.clone(),
-        repo.get_blobstore(),
-        root_mf,
-        parents.clone(),
-    )
-    .try_filter_map(|(path, entry, parent_entries)| {
-        async move {
-            // file entry has file type and file node id. If file type is different but filenode is
-            // the same we don't want to create a new filenode, and this filter removes
-            // all entries where at least one parent has the same filenode id.
-            if let Entry::Leaf((_, hg_filenode_id)) = entry {
-                for parent_entry in parent_entries {
-                    if let Entry::Leaf((_, parent_filenode_id)) = parent_entry {
-                        if parent_filenode_id == hg_filenode_id {
-                            return Ok(None);
+    (async_stream::stream! {
+        let blobstore = &blobstore;
+        let s = find_intersection_of_diffs_and_parents(
+            ctx.clone(),
+            repo.get_blobstore(),
+            root_mf,
+            parents.clone(),
+        )
+        .try_filter_map(|(path, entry, parent_entries)| {
+            async move {
+                // file entry has file type and file node id. If file type is different but filenode is
+                // the same we don't want to create a new filenode, and this filter removes
+                // all entries where at least one parent has the same filenode id.
+                if let Entry::Leaf((_, hg_filenode_id)) = entry {
+                    for parent_entry in parent_entries {
+                        if let Entry::Leaf((_, parent_filenode_id)) = parent_entry {
+                            if parent_filenode_id == hg_filenode_id {
+                                return Ok(None);
+                            }
                         }
                     }
                 }
+                Ok(Some((path, entry)))
             }
-            Ok(Some((path, entry)))
+        })
+        .map_ok(move |(path, entry)| {
+            match entry {
+                Entry::Tree(hg_mf_id) => fetch_manifest_envelope(ctx.clone(), blobstore, hg_mf_id)
+                    .boxed()
+                    .compat()
+                    .map(move |envelope| create_manifest_filenode(path, envelope, linknode))
+                    .left_future()
+                    .compat(),
+                Entry::Leaf((_, hg_filenode_id)) => async move {
+                    hg_filenode_id.load(ctx.clone(), blobstore).await
+                }
+                    .boxed()
+                    .compat()
+                    .from_err()
+                    .and_then(move |envelope| create_file_filenode(path, envelope, linknode))
+                    .right_future()
+                    .compat(),
+            }
+        })
+        .try_buffer_unordered(100);
+
+        pin_mut!(s);
+        while let Some(value) = s.next().await {
+            yield value;
         }
     })
-    .map_ok(move |(path, entry)| {
-        match entry {
-            Entry::Tree(hg_mf_id) => fetch_manifest_envelope(ctx.clone(), &blobstore, hg_mf_id)
-                .map(move |envelope| create_manifest_filenode(path, envelope, linknode))
-                .left_future()
-                .compat(),
-            Entry::Leaf((_, hg_filenode_id)) => hg_filenode_id
-                .load(ctx.clone(), &blobstore)
-                .compat()
-                .from_err()
-                .and_then(move |envelope| create_file_filenode(path, envelope, linknode))
-                .right_future()
-                .compat(),
-        }
-    })
-    .try_buffer_unordered(100)
     .try_collect()
     .await
 }

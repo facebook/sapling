@@ -13,8 +13,7 @@ use bytes::Bytes;
 use crate::locking_cache::CacheOps;
 use cachelib::LruCachePool;
 use context::PerfCounterType;
-use futures_ext::{BoxFuture, FutureExt};
-use futures_old::IntoFuture;
+use futures::future::{BoxFuture, FutureExt};
 
 use blobstore::{Blobstore, BlobstoreGetData, CountedBlobstore};
 
@@ -117,16 +116,12 @@ impl CacheOps for CachelibOps {
     const MISS_COUNTER: Option<PerfCounterType> = Some(PerfCounterType::CachelibMisses);
     const CACHE_NAME: &'static str = "cachelib";
 
-    fn get(&self, key: &str) -> BoxFuture<Option<BlobstoreGetData>, ()> {
-        self.blob_pool
-            .get(key)
-            .map_err(|_| ())
-            .and_then(|opt| opt.map(BlobstoreGetData::decode).transpose())
-            .into_future()
-            .boxify()
+    fn get(&self, key: &str) -> BoxFuture<'_, Option<BlobstoreGetData>> {
+        let blob = self.blob_pool.get(key);
+        async move { blob.ok()?.map(BlobstoreGetData::decode).transpose().ok()? }.boxed()
     }
 
-    fn put(&self, key: &str, value: BlobstoreGetData) -> BoxFuture<(), ()> {
+    fn put(&self, key: &str, value: BlobstoreGetData) -> BoxFuture<'_, ()> {
         // A failure to set presence is considered fine, here.
         let _ = self.presence_pool.set(key, Bytes::from(b"P".as_ref()));
 
@@ -135,17 +130,17 @@ impl CacheOps for CachelibOps {
         } else {
             None
         };
-        value
-            .encode(encode_limit)
-            .and_then(|bytes| self.blob_pool.set(key, bytes).map(|_| ()).map_err(|_| ()))
-            .into_future()
-            .boxify()
+        if let Ok(bytes) = value.encode(encode_limit) {
+            let _ = self.blob_pool.set(key, bytes);
+        }
+
+        async {}.boxed()
     }
 
     /// Ask the cache if it knows whether the backing store has a value for this key. Returns
     /// `true` if there is definitely a value (i.e. cache entry in Present or Known state), `false`
     /// otherwise (Empty or Leased states).
-    fn check_present(&self, key: &str) -> BoxFuture<bool, ()> {
+    fn check_present(&self, key: &str) -> BoxFuture<'_, bool> {
         let presence_pool = self
             .presence_pool
             .get(key)
@@ -157,7 +152,7 @@ impl CacheOps for CachelibOps {
             .map(|opt| opt.is_some())
             .unwrap_or(false);
 
-        Ok(presence_pool || blob_pool).into_future().boxify()
+        async move { presence_pool || blob_pool }.boxed()
     }
 }
 

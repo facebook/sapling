@@ -205,8 +205,8 @@ mod tests {
         create_bonsai_changeset_with_files, linear, merge_even, merge_uneven, store_files,
         unshared_merge_even, unshared_merge_uneven,
     };
-    use futures::StreamExt;
-    use futures_ext::{BoxFuture, FutureExt};
+    use futures::{FutureExt, StreamExt};
+    use futures_ext::{BoxFuture, FutureExt as _};
     use manifest::ManifestOps;
     use maplit::btreemap;
     use mercurial_types::HgChangesetId;
@@ -369,14 +369,19 @@ mod tests {
         let mut changes_count = vec![];
         changes_count.resize(200, 10);
         let latest = rt
-            .block_on(GenManifest::new().gen_stack(
-                ctx.clone(),
-                repo.clone(),
-                &mut rng,
-                &gen_settings,
-                None,
-                changes_count,
-            ))
+            .block_on(
+                GenManifest::new()
+                    .gen_stack(
+                        ctx.clone(),
+                        repo.clone(),
+                        &mut rng,
+                        &gen_settings,
+                        None,
+                        changes_count,
+                    )
+                    .boxed()
+                    .compat(),
+            )
             .unwrap();
 
         verify_all_entries_for_commit(&mut rt, ctx, repo, latest);
@@ -858,50 +863,61 @@ mod tests {
             repo: BlobRepo,
         ) -> BoxFuture<Vec<Entry<ManifestUnodeId, FileUnodeId>>, Error> {
             match self {
-                Entry::Leaf(file_unode_id) => file_unode_id
-                    .load(ctx, repo.blobstore())
-                    .compat()
-                    .from_err()
-                    .map(|unode_mf| {
-                        unode_mf
-                            .parents()
-                            .into_iter()
-                            .cloned()
-                            .map(Entry::Leaf)
-                            .collect()
-                    })
-                    .boxify(),
-                Entry::Tree(mf_unode_id) => mf_unode_id
-                    .load(ctx, repo.blobstore())
-                    .compat()
-                    .from_err()
-                    .map(|unode_mf| {
-                        unode_mf
-                            .parents()
-                            .into_iter()
-                            .cloned()
-                            .map(Entry::Tree)
-                            .collect()
-                    })
-                    .boxify(),
+                Entry::Leaf(file_unode_id) => {
+                    cloned!(file_unode_id);
+                    async move { file_unode_id.load(ctx, repo.blobstore()).await }
+                        .boxed()
+                        .compat()
+                        .from_err()
+                        .map(|unode_mf| {
+                            unode_mf
+                                .parents()
+                                .iter()
+                                .cloned()
+                                .map(Entry::Leaf)
+                                .collect()
+                        })
+                        .boxify()
+                }
+                Entry::Tree(mf_unode_id) => {
+                    cloned!(mf_unode_id);
+                    async move { mf_unode_id.load(ctx, repo.blobstore()).await }
+                        .boxed()
+                        .compat()
+                        .from_err()
+                        .map(|unode_mf| {
+                            unode_mf
+                                .parents()
+                                .iter()
+                                .cloned()
+                                .map(Entry::Tree)
+                                .collect()
+                        })
+                        .boxify()
+                }
             }
         }
 
         fn get_linknode(&self, ctx: CoreContext, repo: BlobRepo) -> BoxFuture<ChangesetId, Error> {
             match self {
-                Entry::Leaf(file_unode_id) => file_unode_id
-                    .clone()
-                    .load(ctx, repo.blobstore())
-                    .compat()
-                    .from_err()
-                    .map(|unode_file| unode_file.linknode().clone())
-                    .boxify(),
-                Entry::Tree(mf_unode_id) => mf_unode_id
-                    .load(ctx, repo.blobstore())
-                    .compat()
-                    .from_err()
-                    .map(|unode_mf| unode_mf.linknode().clone())
-                    .boxify(),
+                Entry::Leaf(file_unode_id) => {
+                    cloned!(file_unode_id);
+                    async move { file_unode_id.load(ctx, repo.blobstore()).await }
+                }
+                .boxed()
+                .compat()
+                .from_err()
+                .map(|unode_file| unode_file.linknode().clone())
+                .boxify(),
+                Entry::Tree(mf_unode_id) => {
+                    cloned!(mf_unode_id);
+                    async move { mf_unode_id.load(ctx, repo.blobstore()).await }
+                }
+                .boxed()
+                .compat()
+                .from_err()
+                .map(|unode_mf| unode_mf.linknode().clone())
+                .boxify(),
             }
         }
     }

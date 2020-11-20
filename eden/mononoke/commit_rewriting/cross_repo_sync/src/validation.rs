@@ -6,8 +6,8 @@
  */
 
 use anyhow::{format_err, Error};
-use futures_ext::{BoxFuture, FutureExt, StreamExt};
-use futures_old::{stream, Future, Stream};
+use futures_ext::{BoxFuture, FutureExt as _, StreamExt as _};
+use futures_old::{stream as old_stream, Future, Stream};
 
 use super::{CommitSyncConfigVersion, CommitSyncOutcome, CommitSyncer};
 use crate::types::{Source, Target};
@@ -16,12 +16,11 @@ use blobrepo::BlobRepo;
 use blobrepo_hg::BlobRepoHg;
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
-use cloned::cloned;
 use context::CoreContext;
 use futures::{
     compat::Future01CompatExt,
-    future::{FutureExt as PreviewFutureExt, TryFutureExt},
-    stream::{self as new_stream, StreamExt as NewStreamExt},
+    future::{self, FutureExt, TryFutureExt},
+    stream::{self, StreamExt},
     try_join, TryStreamExt,
 };
 use manifest::{Entry, ManifestOps};
@@ -460,9 +459,8 @@ pub async fn verify_filenodes_have_same_contents<
     source_hash: &Source<ChangesetId>,
     should_be_equivalent: I,
 ) -> Result<(), Error> {
-    let fetched_content_ids = stream::iter_ok(should_be_equivalent)
+    let fetched_content_ids = old_stream::iter_ok(should_be_equivalent)
         .map({
-            cloned!(ctx, target_repo, source_repo);
             move |(path, source_filenode_id, target_filenode_id)| {
                 debug!(
                     ctx.logger(),
@@ -470,18 +468,25 @@ pub async fn verify_filenodes_have_same_contents<
                     source_filenode_id,
                     target_filenode_id,
                 );
-                let f1 = source_filenode_id
-                    .0
-                    .load(ctx.clone(), source_repo.0.blobstore())
-                    .compat()
-                    .map(|e| Source(e.content_id()));
-                let f2 = target_filenode_id
-                    .0
-                    .load(ctx.clone(), target_repo.0.blobstore())
-                    .compat()
-                    .map(|e| Target(e.content_id()));
+                let f1 = async move {
+                    source_filenode_id
+                        .0
+                        .load(ctx.clone(), source_repo.0.blobstore())
+                        .await
+                }
+                .map_ok(|e| Source(e.content_id()));
+                let f2 = async move {
+                    target_filenode_id
+                        .0
+                        .load(ctx.clone(), target_repo.0.blobstore())
+                        .await
+                }
+                .map_ok(|e| Target(e.content_id()));
 
-                f1.join(f2).map(move |(c1, c2)| (path, c1, c2))
+                future::try_join(f1, f2)
+                    .map_ok(move |(c1, c2)| (path, c1, c2))
+                    .boxed()
+                    .compat()
             }
         })
         .buffered(1000)
@@ -707,7 +712,7 @@ async fn rename_and_remap_bookmarks<M: SyncedCommitMapping + Clone + 'static>(
         }
     }
 
-    let mut s = new_stream::iter(renamed_and_remapped_bookmarks).buffer_unordered(100);
+    let mut s = stream::iter(renamed_and_remapped_bookmarks).buffer_unordered(100);
     let mut remapped_bookmarks = HashMap::new();
     let mut no_sync_outcome = HashSet::new();
 

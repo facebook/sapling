@@ -67,7 +67,7 @@ impl<T: Blobstore> Blobstore for CountedBlobstore<T> {
         &self,
         ctx: CoreContext,
         key: String,
-    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
+    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>, Error>> {
         let stats = self.stats.clone();
         stats.get.add_value(1);
         let get = self.blobstore.get(ctx, key);
@@ -87,7 +87,7 @@ impl<T: Blobstore> Blobstore for CountedBlobstore<T> {
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'static, Result<(), Error>> {
+    ) -> BoxFuture<'_, Result<(), Error>> {
         let stats = self.stats.clone();
         stats.put.add_value(1);
         let put = self.blobstore.put(ctx, key, value);
@@ -102,7 +102,7 @@ impl<T: Blobstore> Blobstore for CountedBlobstore<T> {
         .boxed()
     }
 
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'_, Result<bool, Error>> {
         let stats = self.stats.clone();
         stats.is_present.add_value(1);
         let is_present = self.blobstore.is_present(ctx, key);
@@ -125,7 +125,7 @@ impl<T: BlobstorePutOps> CountedBlobstore<T> {
         key: String,
         value: BlobstoreBytes,
         put_behaviour: Option<PutBehaviour>,
-    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+    ) -> BoxFuture<'_, Result<OverwriteStatus, Error>> {
         let stats = self.stats.clone();
         stats.put.add_value(1);
         let put = if let Some(put_behaviour) = put_behaviour {
@@ -160,7 +160,7 @@ impl<T: BlobstorePutOps> BlobstorePutOps for CountedBlobstore<T> {
         key: String,
         value: BlobstoreBytes,
         put_behaviour: PutBehaviour,
-    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+    ) -> BoxFuture<'_, Result<OverwriteStatus, Error>> {
         self.put_impl(ctx, key, value, Some(put_behaviour))
     }
 
@@ -169,7 +169,7 @@ impl<T: BlobstorePutOps> BlobstorePutOps for CountedBlobstore<T> {
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+    ) -> BoxFuture<'_, Result<OverwriteStatus, Error>> {
         self.put_impl(ctx, key, value, None)
     }
 }
@@ -180,7 +180,7 @@ impl<T: BlobstoreWithLink> BlobstoreWithLink for CountedBlobstore<T> {
         ctx: CoreContext,
         existing_key: String,
         link_key: String,
-    ) -> BoxFuture<'static, Result<(), Error>> {
+    ) -> BoxFuture<'_, Result<(), Error>> {
         let stats = self.stats.clone();
         stats.link.add_value(1);
         let res = self.blobstore.link(ctx, existing_key, link_key);

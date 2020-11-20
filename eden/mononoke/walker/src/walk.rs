@@ -29,7 +29,7 @@ use filestore::{self, Alias};
 use fsnodes::RootFsnodeId;
 use futures::{
     compat::Future01CompatExt,
-    future::{self, Future, FutureExt, TryFutureExt},
+    future::{self, FutureExt, TryFutureExt},
     stream::{BoxStream, StreamExt, TryStreamExt},
 };
 use futures_old::Future as Future01;
@@ -147,42 +147,40 @@ pub trait WalkVisitor<VOut, Route>: VisitOne {
 // Data found for this node, plus next steps
 struct StepOutput(NodeData, Vec<OutgoingEdge>);
 
-fn bookmark_step<'a, V: VisitOne>(
+async fn bookmark_step<V: VisitOne>(
     ctx: CoreContext,
-    repo: &'a BlobRepo,
-    checker: &'a Checker<V>,
+    repo: &BlobRepo,
+    checker: &Checker<V>,
     b: BookmarkName,
     published_bookmarks: Arc<HashMap<BookmarkName, ChangesetId>>,
-) -> impl Future<Output = Result<StepOutput, Error>> + 'a {
-    match published_bookmarks.get(&b) {
-        Some(csid) => future::ok(Some(csid.clone())).left_future(),
+) -> Result<StepOutput, Error> {
+    let bcs_opt = match published_bookmarks.get(&b) {
+        Some(csid) => Some(csid.clone()),
         // Just in case we have non-public bookmarks
-        None => repo.get_bonsai_bookmark(ctx, &b).compat().right_future(),
-    }
-    .and_then(move |bcs_opt| {
-        match bcs_opt {
-            Some(bcs_id) => {
-                let mut edges = vec![];
-                checker.add_edge(&mut edges, EdgeType::BookmarkToChangeset, || {
-                    Node::Changeset(bcs_id)
-                });
-                checker.add_edge(&mut edges, EdgeType::BookmarkToBonsaiHgMapping, || {
-                    Node::BonsaiHgMapping(bcs_id)
-                });
-                future::ok(StepOutput(
-                    checker.step_data(NodeType::Bookmark, || NodeData::Bookmark(bcs_id)),
-                    edges,
-                ))
-            }
-            None => future::err(format_err!("Unknown Bookmark {}", b)),
+        None => repo.get_bonsai_bookmark(ctx, &b).compat().await?,
+    };
+    match bcs_opt {
+        Some(bcs_id) => {
+            let mut edges = vec![];
+            checker.add_edge(&mut edges, EdgeType::BookmarkToChangeset, || {
+                Node::Changeset(bcs_id)
+            });
+            checker.add_edge(&mut edges, EdgeType::BookmarkToBonsaiHgMapping, || {
+                Node::BonsaiHgMapping(bcs_id)
+            });
+            Ok(StepOutput(
+                checker.step_data(NodeType::Bookmark, || NodeData::Bookmark(bcs_id)),
+                edges,
+            ))
         }
-    })
+        None => Err(format_err!("Unknown Bookmark {}", b)),
+    }
 }
 
-fn published_bookmarks_step<V: VisitOne>(
+async fn published_bookmarks_step<V: VisitOne>(
     published_bookmarks: Arc<HashMap<BookmarkName, ChangesetId>>,
     checker: &Checker<V>,
-) -> impl Future<Output = Result<StepOutput, Error>> {
+) -> Result<StepOutput, Error> {
     let mut edges = vec![];
     for (_, bcs_id) in published_bookmarks.iter() {
         checker.add_edge(&mut edges, EdgeType::PublishedBookmarksToChangeset, || {
@@ -194,7 +192,7 @@ fn published_bookmarks_step<V: VisitOne>(
             || Node::BonsaiHgMapping(bcs_id.clone()),
         );
     }
-    future::ok(StepOutput(
+    Ok(StepOutput(
         checker.step_data(NodeType::PublishedBookmarks, || {
             NodeData::PublishedBookmarks
         }),
@@ -388,65 +386,49 @@ fn file_content_step<V: VisitOne>(
     ))
 }
 
-fn file_content_metadata_step<'a, V: VisitOne>(
+async fn file_content_metadata_step<V: VisitOne>(
     ctx: CoreContext,
-    repo: &'a BlobRepo,
-    checker: &'a Checker<V>,
+    repo: &BlobRepo,
+    checker: &Checker<V>,
     id: ContentId,
     enable_derive: bool,
-) -> impl Future<Output = Result<StepOutput, Error>> + 'a {
-    let loader = {
-        cloned!(ctx, id);
-        let blobstore = repo.get_blobstore();
-        async move {
-            if enable_derive {
-                filestore::get_metadata(&blobstore, ctx, &id.into())
-                    .await
-                    .map(Some)
-            } else {
-                filestore::get_metadata_readonly(&blobstore, ctx, &id.into()).await
-            }
-        }
-        .boxed()
-        .compat()
+) -> Result<StepOutput, Error> {
+    let metadata_opt = if enable_derive {
+        filestore::get_metadata(repo.blobstore(), ctx, &id.into())
+            .await?
+            .map(Some)
+    } else {
+        filestore::get_metadata_readonly(repo.blobstore(), ctx, &id.into()).await?
     };
 
-    loader
-        .map(move |metadata_opt| {
-            match metadata_opt {
-                Some(Some(metadata)) => {
-                    let mut edges = vec![];
-                    checker.add_edge(&mut edges, EdgeType::FileContentMetadataToSha1Alias, || {
-                        Node::AliasContentMapping(AliasKey(Alias::Sha1(metadata.sha1)))
-                    });
-                    checker.add_edge(&mut edges, EdgeType::FileContentMetadataToSha256Alias, || {
-                        Node::AliasContentMapping(AliasKey(Alias::Sha256(metadata.sha256)))
-                    });
-                    checker.add_edge(
-                        &mut edges,
-                        EdgeType::FileContentMetadataToGitSha1Alias,
-                        || {
-                            Node::AliasContentMapping(AliasKey(Alias::GitSha1(
-                                metadata.git_sha1.sha1(),
-                            )))
-                        },
-                    );
-                    StepOutput(
-                        checker.step_data(NodeType::FileContentMetadata, || {
-                            NodeData::FileContentMetadata(Some(metadata))
-                        }),
-                        edges,
-                    )
-                }
-                Some(None) | None => StepOutput(
-                    checker.step_data(NodeType::FileContentMetadata, || {
-                        NodeData::FileContentMetadata(None)
-                    }),
-                    vec![],
-                ),
-            }
-        })
-        .compat()
+    match metadata_opt {
+        Some(Some(metadata)) => {
+            let mut edges = vec![];
+            checker.add_edge(&mut edges, EdgeType::FileContentMetadataToSha1Alias, || {
+                Node::AliasContentMapping(AliasKey(Alias::Sha1(metadata.sha1)))
+            });
+            checker.add_edge(&mut edges, EdgeType::FileContentMetadataToSha256Alias, || {
+                Node::AliasContentMapping(AliasKey(Alias::Sha256(metadata.sha256)))
+            });
+            checker.add_edge(
+                &mut edges,
+                EdgeType::FileContentMetadataToGitSha1Alias,
+                || Node::AliasContentMapping(AliasKey(Alias::GitSha1(metadata.git_sha1.sha1()))),
+            );
+            Ok(StepOutput(
+                checker.step_data(NodeType::FileContentMetadata, || {
+                    NodeData::FileContentMetadata(Some(metadata))
+                }),
+                edges,
+            ))
+        }
+        Some(None) | None => Ok(StepOutput(
+            checker.step_data(NodeType::FileContentMetadata, || {
+                NodeData::FileContentMetadata(None)
+            }),
+            vec![],
+        )),
+    }
 }
 
 async fn bonsai_to_hg_mapping_step<'a, V: 'a + VisitOne>(
@@ -502,235 +484,212 @@ async fn bonsai_to_hg_mapping_step<'a, V: 'a + VisitOne>(
     })
 }
 
-fn hg_to_bonsai_mapping_step<'a, V: VisitOne>(
+async fn hg_to_bonsai_mapping_step<V: VisitOne>(
     ctx: CoreContext,
-    repo: &'a BlobRepo,
-    checker: &'a Checker<V>,
+    repo: &BlobRepo,
+    checker: &Checker<V>,
     id: HgChangesetId,
-) -> impl Future<Output = Result<StepOutput, Error>> + 'a {
-    repo.get_bonsai_from_hg(ctx, id)
-        .map(move |maybe_bcs_id| {
-            match maybe_bcs_id {
-                Some(bcs_id) => {
-                    let mut edges = vec![];
-                    checker.add_edge(&mut edges, EdgeType::HgBonsaiMappingToChangeset, || {
-                        Node::Changeset(bcs_id)
-                    });
-                    StepOutput(
-                        checker.step_data(NodeType::HgBonsaiMapping, || {
-                            NodeData::HgBonsaiMapping(Some(bcs_id))
-                        }),
-                        edges,
-                    )
-                }
-                None => StepOutput(
-                    checker.step_data(NodeType::HgBonsaiMapping, || {
-                        NodeData::HgBonsaiMapping(None)
-                    }),
-                    vec![],
-                ),
-            }
-        })
-        .compat()
-}
-
-fn hg_changeset_step<'a, V: VisitOne>(
-    ctx: CoreContext,
-    repo: &'a BlobRepo,
-    checker: &'a Checker<V>,
-    id: HgChangesetId,
-) -> impl Future<Output = Result<StepOutput, Error>> + 'a {
-    id.load(ctx, repo.blobstore())
-        .map_err(Error::from)
-        .map_ok(move |hgchangeset| {
+) -> Result<StepOutput, Error> {
+    let maybe_bcs_id = repo.get_bonsai_from_hg(ctx, id).compat().await?;
+    match maybe_bcs_id {
+        Some(bcs_id) => {
             let mut edges = vec![];
-            // 1:1 but will then expand a lot, usually
-            checker.add_edge(&mut edges, EdgeType::HgChangesetToHgManifest, || {
-                Node::HgManifest(PathKey::new(hgchangeset.manifestid(), WrappedPath::Root))
+            checker.add_edge(&mut edges, EdgeType::HgBonsaiMappingToChangeset, || {
+                Node::Changeset(bcs_id)
             });
-            // Mostly 1:1, can be 1:2, with further expansion
-            for p in hgchangeset.parents().into_iter() {
-                checker.add_edge(&mut edges, EdgeType::HgChangesetToHgParent, || {
-                    Node::HgChangeset(HgChangesetId::new(p))
-                });
-            }
-            StepOutput(
-                checker.step_data(NodeType::HgChangeset, || NodeData::HgChangeset(hgchangeset)),
+            Ok(StepOutput(
+                checker.step_data(NodeType::HgBonsaiMapping, || {
+                    NodeData::HgBonsaiMapping(Some(bcs_id))
+                }),
                 edges,
-            )
-        })
+            ))
+        }
+        None => Ok(StepOutput(
+            checker.step_data(NodeType::HgBonsaiMapping, || {
+                NodeData::HgBonsaiMapping(None)
+            }),
+            vec![],
+        )),
+    }
 }
 
-fn hg_file_envelope_step<'a, V: 'a + VisitOne>(
+async fn hg_changeset_step<V: VisitOne>(
     ctx: CoreContext,
-    repo: &'a BlobRepo,
-    checker: &'a Checker<V>,
+    repo: &BlobRepo,
+    checker: &Checker<V>,
+    id: HgChangesetId,
+) -> Result<StepOutput, Error> {
+    let hgchangeset = id.load(ctx, repo.blobstore()).await?;
+    let mut edges = vec![];
+    // 1:1 but will then expand a lot, usually
+    checker.add_edge(&mut edges, EdgeType::HgChangesetToHgManifest, || {
+        Node::HgManifest(PathKey::new(hgchangeset.manifestid(), WrappedPath::Root))
+    });
+    // Mostly 1:1, can be 1:2, with further expansion
+    for p in hgchangeset.parents().into_iter() {
+        checker.add_edge(&mut edges, EdgeType::HgChangesetToHgParent, || {
+            Node::HgChangeset(HgChangesetId::new(p))
+        });
+    }
+    Ok(StepOutput(
+        checker.step_data(NodeType::HgChangeset, || NodeData::HgChangeset(hgchangeset)),
+        edges,
+    ))
+}
+
+async fn hg_file_envelope_step<V: VisitOne>(
+    ctx: CoreContext,
+    repo: &BlobRepo,
+    checker: &Checker<V>,
     hg_file_node_id: HgFileNodeId,
-    path: Option<&'a WrappedPath>,
-) -> impl Future<Output = Result<StepOutput, Error>> + 'a {
-    hg_file_node_id
-        .load(ctx, repo.blobstore())
-        .map_err(Error::from)
-        .map_ok({
-            move |envelope| {
-                let mut edges = vec![];
-                checker.add_edge_with_path(
-                    &mut edges,
-                    EdgeType::HgFileEnvelopeToFileContent,
-                    || Node::FileContent(envelope.content_id()),
-                    || path.cloned(),
-                );
-                StepOutput(
-                    checker.step_data(NodeType::HgFileEnvelope, || {
-                        NodeData::HgFileEnvelope(envelope)
-                    }),
-                    edges,
-                )
-            }
-        })
+    path: Option<&WrappedPath>,
+) -> Result<StepOutput, Error> {
+    let envelope = hg_file_node_id.load(ctx, repo.blobstore()).await?;
+    let mut edges = vec![];
+    checker.add_edge_with_path(
+        &mut edges,
+        EdgeType::HgFileEnvelopeToFileContent,
+        || Node::FileContent(envelope.content_id()),
+        || path.cloned(),
+    );
+    Ok(StepOutput(
+        checker.step_data(NodeType::HgFileEnvelope, || {
+            NodeData::HgFileEnvelope(envelope)
+        }),
+        edges,
+    ))
 }
 
-fn hg_file_node_step<'a, V: VisitOne>(
+async fn hg_file_node_step<V: VisitOne>(
     ctx: CoreContext,
-    repo: &'a BlobRepo,
-    checker: &'a Checker<V>,
+    repo: &BlobRepo,
+    checker: &Checker<V>,
     path: WrappedPath,
     hg_file_node_id: HgFileNodeId,
-) -> impl Future<Output = Result<StepOutput, Error>> + 'a {
+) -> Result<StepOutput, Error> {
     let repo_path = match &path {
         WrappedPath::Root => RepoPath::RootPath,
         WrappedPath::NonRoot(path) => RepoPath::FilePath(path.mpath().clone()),
     };
-    repo.get_filenode_opt(ctx, &repo_path, hg_file_node_id)
+    let file_node_opt = repo
+        .get_filenode_opt(ctx, &repo_path, hg_file_node_id)
         .and_then(|filenode| filenode.do_not_handle_disabled_filenodes())
-        .map(move |file_node_opt| {
-            match file_node_opt {
-                Some(file_node_info) => {
-                    let mut edges = vec![];
-                    // Validate hg link node
-                    checker.add_edge(&mut edges, EdgeType::HgFileNodeToLinkedHgChangeset, || {
-                        Node::HgChangeset(file_node_info.linknode)
-                    });
-
-                    // Following linknode bonsai increases parallelism of walk.
-                    // Linknodes will point to many commits we can then walk
-                    // in parallel
-                    checker.add_edge(
-                        &mut edges,
-                        EdgeType::HgFileNodeToLinkedHgBonsaiMapping,
-                        || Node::HgBonsaiMapping(file_node_info.linknode),
-                    );
-
-                    // Parents
-                    for parent in &[file_node_info.p1, file_node_info.p2] {
-                        if let Some(parent) = parent {
-                            checker.add_edge(
-                                &mut edges,
-                                EdgeType::HgFileNodeToHgParentFileNode,
-                                || Node::HgFileNode(PathKey::new(*parent, path.clone())),
-                            )
-                        }
-                    }
-
-                    // Copyfrom is like another parent
-                    for (repo_path, file_node_id) in &file_node_info.copyfrom {
-                        checker.add_edge(&mut edges, EdgeType::HgFileNodeToHgCopyfromFileNode, || {
-                            Node::HgFileNode(PathKey::new(
-                                *file_node_id,
-                                WrappedPath::from(repo_path.clone().into_mpath()),
-                            ))
-                        })
-                    }
-                    StepOutput(
-                        checker.step_data(NodeType::HgFileNode, || {
-                            NodeData::HgFileNode(Some(file_node_info))
-                        }),
-                        edges,
-                    )
-                }
-                None => StepOutput(
-                    checker.step_data(NodeType::HgFileNode, || NodeData::HgFileNode(None)),
-                    vec![],
-                ),
-            }
-        })
         .compat()
-}
-
-fn hg_manifest_step<'a, V: VisitOne>(
-    ctx: CoreContext,
-    repo: &'a BlobRepo,
-    checker: &'a Checker<V>,
-    path: WrappedPath,
-    hg_manifest_id: HgManifestId,
-) -> impl Future<Output = Result<StepOutput, Error>> + 'a {
-    hg_manifest_id
-        .load(ctx, repo.blobstore())
-        .map_err(Error::from)
-        .map_ok(move |hgmanifest| {
-            let (manifests, filenodes): (Vec<_>, Vec<_>) =
-                hgmanifest.list().partition_map(|(name, entry)| {
-                    let path_opt =
-                        WrappedPath::from(Some(MPath::join_opt_element(path.as_ref(), &name)));
-                    match entry {
-                        Entry::Leaf((_, filenode_id)) => Either::Right((path_opt, filenode_id)),
-                        Entry::Tree(manifest_id) => Either::Left((path_opt, manifest_id)),
-                    }
-                });
+        .await?;
+    match file_node_opt {
+        Some(file_node_info) => {
             let mut edges = vec![];
-            // Manifests expand as a tree so 1:N
-            for (full_path, hg_child_manifest_id) in manifests {
-                checker.add_edge(&mut edges, EdgeType::HgManifestToChildHgManifest, || {
-                    Node::HgManifest(PathKey::new(hg_child_manifest_id, full_path))
+            // Validate hg link node
+            checker.add_edge(&mut edges, EdgeType::HgFileNodeToLinkedHgChangeset, || {
+                Node::HgChangeset(file_node_info.linknode)
+            });
+
+            // Following linknode bonsai increases parallelism of walk.
+            // Linknodes will point to many commits we can then walk
+            // in parallel
+            checker.add_edge(
+                &mut edges,
+                EdgeType::HgFileNodeToLinkedHgBonsaiMapping,
+                || Node::HgBonsaiMapping(file_node_info.linknode),
+            );
+
+            // Parents
+            for parent in &[file_node_info.p1, file_node_info.p2] {
+                if let Some(parent) = parent {
+                    checker.add_edge(&mut edges, EdgeType::HgFileNodeToHgParentFileNode, || {
+                        Node::HgFileNode(PathKey::new(*parent, path.clone()))
+                    })
+                }
+            }
+
+            // Copyfrom is like another parent
+            for (repo_path, file_node_id) in &file_node_info.copyfrom {
+                checker.add_edge(&mut edges, EdgeType::HgFileNodeToHgCopyfromFileNode, || {
+                    Node::HgFileNode(PathKey::new(
+                        *file_node_id,
+                        WrappedPath::from(repo_path.clone().into_mpath()),
+                    ))
                 })
             }
-
-            let mut filenode_edges = vec![];
-            let mut envelope_edges = vec![];
-            for (full_path, hg_file_node_id) in filenodes {
-                checker.add_edge_with_path(
-                    &mut envelope_edges,
-                    EdgeType::HgManifestToHgFileEnvelope,
-                    || Node::HgFileEnvelope(hg_file_node_id),
-                    || Some(full_path.clone()),
-                );
-                checker.add_edge(&mut filenode_edges, EdgeType::HgManifestToHgFileNode, || {
-                    Node::HgFileNode(PathKey::new(hg_file_node_id, full_path))
-                });
-            }
-            // File nodes can expand a lot into history via linknodes
-            edges.append(&mut filenode_edges);
-            // Envelopes expand 1:1 to file content
-            edges.append(&mut envelope_edges);
-
-            StepOutput(
-                checker.step_data(NodeType::HgManifest, || NodeData::HgManifest(hgmanifest)),
-                edges,
-            )
-        })
-}
-
-fn alias_content_mapping_step<'a, V: VisitOne>(
-    ctx: CoreContext,
-    repo: &'a BlobRepo,
-    checker: &'a Checker<V>,
-    alias: Alias,
-) -> impl Future<Output = Result<StepOutput, Error>> + 'a {
-    alias
-        .load(ctx, &repo.get_blobstore())
-        .map_ok(move |content_id| {
-            let mut edges = vec![];
-            checker.add_edge(&mut edges, EdgeType::AliasContentMappingToFileContent, || {
-                Node::FileContent(content_id)
-            });
-            StepOutput(
-                checker.step_data(NodeType::AliasContentMapping, || {
-                    NodeData::AliasContentMapping(content_id)
+            Ok(StepOutput(
+                checker.step_data(NodeType::HgFileNode, || {
+                    NodeData::HgFileNode(Some(file_node_info))
                 }),
                 edges,
-            )
+            ))
+        }
+        None => Ok(StepOutput(
+            checker.step_data(NodeType::HgFileNode, || NodeData::HgFileNode(None)),
+            vec![],
+        )),
+    }
+}
+
+async fn hg_manifest_step<V: VisitOne>(
+    ctx: CoreContext,
+    repo: &BlobRepo,
+    checker: &Checker<V>,
+    path: WrappedPath,
+    hg_manifest_id: HgManifestId,
+) -> Result<StepOutput, Error> {
+    let hgmanifest = hg_manifest_id.load(ctx, repo.blobstore()).await?;
+    let (manifests, filenodes): (Vec<_>, Vec<_>) =
+        hgmanifest.list().partition_map(|(name, entry)| {
+            let path_opt = WrappedPath::from(Some(MPath::join_opt_element(path.as_ref(), &name)));
+            match entry {
+                Entry::Leaf((_, filenode_id)) => Either::Right((path_opt, filenode_id)),
+                Entry::Tree(manifest_id) => Either::Left((path_opt, manifest_id)),
+            }
+        });
+    let mut edges = vec![];
+    // Manifests expand as a tree so 1:N
+    for (full_path, hg_child_manifest_id) in manifests {
+        checker.add_edge(&mut edges, EdgeType::HgManifestToChildHgManifest, || {
+            Node::HgManifest(PathKey::new(hg_child_manifest_id, full_path))
         })
-        .map_err(Error::from)
+    }
+
+    let mut filenode_edges = vec![];
+    let mut envelope_edges = vec![];
+    for (full_path, hg_file_node_id) in filenodes {
+        checker.add_edge_with_path(
+            &mut envelope_edges,
+            EdgeType::HgManifestToHgFileEnvelope,
+            || Node::HgFileEnvelope(hg_file_node_id),
+            || Some(full_path.clone()),
+        );
+        checker.add_edge(&mut filenode_edges, EdgeType::HgManifestToHgFileNode, || {
+            Node::HgFileNode(PathKey::new(hg_file_node_id, full_path))
+        });
+    }
+    // File nodes can expand a lot into history via linknodes
+    edges.append(&mut filenode_edges);
+    // Envelopes expand 1:1 to file content
+    edges.append(&mut envelope_edges);
+
+    Ok(StepOutput(
+        checker.step_data(NodeType::HgManifest, || NodeData::HgManifest(hgmanifest)),
+        edges,
+    ))
+}
+
+async fn alias_content_mapping_step<V: VisitOne>(
+    ctx: CoreContext,
+    repo: &BlobRepo,
+    checker: &Checker<V>,
+    alias: Alias,
+) -> Result<StepOutput, Error> {
+    let content_id = alias.load(ctx, repo.blobstore()).await?;
+    let mut edges = vec![];
+    checker.add_edge(&mut edges, EdgeType::AliasContentMappingToFileContent, || {
+        Node::FileContent(content_id)
+    });
+    Ok(StepOutput(
+        checker.step_data(NodeType::AliasContentMapping, || {
+            NodeData::AliasContentMapping(content_id)
+        }),
+        edges,
+    ))
 }
 
 // Only fetch if already derived unless enable_derive is set

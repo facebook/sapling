@@ -16,7 +16,6 @@ use derived_data::BonsaiDerived;
 use fastlog::{fetch_parent_root_unodes, RootFastlog};
 use fsnodes::{prefetch_content_metadata, RootFsnodeId};
 use futures::{
-    compat::Future01CompatExt,
     future::{self, ready, try_join, try_join3, try_join4},
     stream::{self, FuturesUnordered, StreamExt, TryStreamExt},
     TryFutureExt,
@@ -45,7 +44,12 @@ pub(crate) async fn warmup(
         cloned!(ctx, chunk, repo);
         async move {
             stream::iter(chunk)
-                .map(move |cs_id| Ok(cs_id.load(ctx.clone(), repo.blobstore())))
+                .map(move |cs_id| {
+                    Ok({
+                        cloned!(ctx, repo);
+                        async move { cs_id.load(ctx, repo.blobstore()).await }
+                    })
+                })
                 .try_for_each_concurrent(100, |x| async {
                     x.await?;
                     Result::<_, Error>::Ok(())
@@ -197,7 +201,7 @@ async fn prefetch_content(
     let (root_manifest, parents_manifests, renames) = try_join3(
         root_manifest_fut,
         future::try_join_all(parents_manifest_futs),
-        find_unode_renames(ctx.clone(), repo.clone(), &bonsai).compat(),
+        find_unode_renames(ctx.clone(), repo.clone(), &bonsai),
     )
     .await?;
 

@@ -148,9 +148,9 @@ async fn resolve_internal_object(
     ctx: &RepositoryRequestContext,
     oid: Sha256,
 ) -> Result<Option<ContentId>, Error> {
-    let blobstore = ctx.repo.get_blobstore();
+    let blobstore = ctx.repo.blobstore();
 
-    let content_id = Alias::Sha256(oid).load(ctx.ctx.clone(), &blobstore).await;
+    let content_id = Alias::Sha256(oid).load(ctx.ctx.clone(), blobstore).await;
 
     let content_id = match content_id {
         Ok(content_id) => content_id,

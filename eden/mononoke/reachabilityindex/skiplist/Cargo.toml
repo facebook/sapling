@@ -8,7 +8,6 @@ include = ["src/**/*.rs"]
 
 [dependencies]
 blobstore = { path = "../../blobstore" }
-bulkops = { path = "../../bulkops" }
 changeset_fetcher = { path = "../../blobrepo/changeset_fetcher" }
 common = { path = "../common" }
 context = { path = "../../server/context" }

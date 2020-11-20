@@ -20,13 +20,12 @@
 // streaming file contents).
 
 use crate::HgFileNodeId;
-use anyhow::Error;
+use anyhow::Result;
 use ascii::AsciiString;
 use blobstore::Blobstore;
 use bytes::Bytes;
 use context::CoreContext;
-use futures::future::TryFutureExt;
-use futures_old::Future;
+use futures::Future;
 use mononoke_types::{BlobstoreBytes, ContentId, MPath};
 
 #[derive(Debug, Eq, Hash, PartialEq)]
@@ -78,22 +77,23 @@ impl FileNodeIdPointer {
     }
 }
 
-pub fn store_filenode_id<B: Blobstore>(
+pub fn store_filenode_id<'a, B: Blobstore>(
     ctx: CoreContext,
-    blobstore: &B,
+    blobstore: &'a B,
     key: FileNodeIdPointer,
     filenode_id: &HgFileNodeId,
-) -> impl Future<Item = (), Error = Error> {
+) -> impl Future<Output = Result<()>> + 'a {
     let contents = BlobstoreBytes::from_bytes(Bytes::copy_from_slice(filenode_id.as_bytes()));
-    blobstore.put(ctx, key.0, contents).compat()
+    blobstore.put(ctx, key.0, contents)
 }
 
-pub fn lookup_filenode_id<B: Blobstore>(
+pub async fn lookup_filenode_id<B: Blobstore>(
     ctx: CoreContext,
     blobstore: &B,
     key: FileNodeIdPointer,
-) -> impl Future<Item = Option<HgFileNodeId>, Error = Error> {
-    blobstore.get(ctx, key.0).compat().map(|maybe_blob| {
-        maybe_blob.and_then(|blob| HgFileNodeId::from_bytes(blob.as_raw_bytes()).ok())
-    })
+) -> Result<Option<HgFileNodeId>> {
+    Ok(blobstore
+        .get(ctx, key.0)
+        .await?
+        .and_then(|blob| HgFileNodeId::from_bytes(blob.as_raw_bytes()).ok()))
 }

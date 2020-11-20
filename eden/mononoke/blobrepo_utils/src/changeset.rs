@@ -12,7 +12,7 @@ use blobstore::Loadable;
 use chashmap::CHashMap;
 use cloned::cloned;
 use context::CoreContext;
-use futures::future::TryFutureExt;
+use futures::{FutureExt, TryFutureExt};
 use futures_ext::{send_discard, BoxFuture};
 use futures_old::{
     sync::mpsc::{self, Sender},
@@ -201,29 +201,32 @@ where
                 }
             });
 
-        let visit_fut = changeset_id
-            .load(ctx.clone(), shared.repo.blobstore())
-            .compat()
-            .from_err()
-            .and_then({
-                cloned!(ctx, shared.visitor, shared.repo);
-                move |changeset| visitor.visit(ctx, logger, repo, changeset, follow_remaining)
-            })
-            .and_then({
-                let sender = sender.clone();
-                move |item| {
-                    send_discard(
-                        sender,
-                        Ok((
-                            item,
-                            ChangesetVisitMeta {
-                                changeset_id,
-                                follow_remaining,
-                            },
-                        )),
-                    )
-                }
-            });
+        let visit_fut = {
+            cloned!(ctx, changeset_id, shared);
+            async move { changeset_id.load(ctx, shared.repo.blobstore()).await }
+        }
+        .boxed()
+        .compat()
+        .from_err()
+        .and_then({
+            cloned!(ctx, shared.visitor, shared.repo);
+            move |changeset| visitor.visit(ctx, logger, repo, changeset, follow_remaining)
+        })
+        .and_then({
+            let sender = sender.clone();
+            move |item| {
+                send_discard(
+                    sender,
+                    Ok((
+                        item,
+                        ChangesetVisitMeta {
+                            changeset_id,
+                            follow_remaining,
+                        },
+                    )),
+                )
+            }
+        });
 
         visit_fut
             .join(parents_fut)

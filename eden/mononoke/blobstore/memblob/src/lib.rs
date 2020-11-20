@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use std::fmt;
 use std::sync::{Arc, Mutex};
 
-use anyhow::{format_err, Error};
+use anyhow::{format_err, Result};
 use futures::future::{self, lazy, BoxFuture, FutureExt, TryFutureExt};
 
 use blobstore::{
@@ -58,7 +58,7 @@ impl MemState {
         }
     }
 
-    fn link(&mut self, existing_key: String, link_key: String) -> Result<(), Error> {
+    fn link(&mut self, existing_key: String, link_key: String) -> Result<()> {
         if let Some(existing_id) = self.links.get(&existing_key) {
             let existing_id = *existing_id;
             self.links.insert(link_key, existing_id);
@@ -104,7 +104,7 @@ impl EagerMemblob {
         }
     }
 
-    pub fn unlink(&self, key: String) -> BoxFuture<'static, Result<Option<()>, Error>> {
+    pub fn unlink(&self, key: String) -> BoxFuture<'static, Result<Option<()>>> {
         let mut inner = self.state.lock().expect("lock poison");
         future::ok(inner.unlink(&key)).boxed()
     }
@@ -124,7 +124,7 @@ impl LazyMemblob {
         }
     }
 
-    pub fn unlink(&self, key: String) -> BoxFuture<'static, Result<Option<()>, Error>> {
+    pub fn unlink(&self, key: String) -> BoxFuture<'static, Result<Option<()>>> {
         let state = self.state.clone();
 
         lazy(move |_| {
@@ -148,7 +148,7 @@ impl BlobstorePutOps for EagerMemblob {
         key: String,
         value: BlobstoreBytes,
         put_behaviour: PutBehaviour,
-    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
         let mut inner = self.state.lock().expect("lock poison");
 
         future::ok(inner.put(key, value, put_behaviour)).boxed()
@@ -159,7 +159,7 @@ impl BlobstorePutOps for EagerMemblob {
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
         self.put_explicit(ctx, key, value, self.put_behaviour)
     }
 }
@@ -169,7 +169,7 @@ impl Blobstore for EagerMemblob {
         &self,
         _ctx: CoreContext,
         key: String,
-    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
+    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>>> {
         let inner = self.state.lock().expect("lock poison");
         future::ok(inner.get(&key).map(|blob_ref| blob_ref.clone().into())).boxed()
     }
@@ -179,7 +179,7 @@ impl Blobstore for EagerMemblob {
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'static, Result<(), Error>> {
+    ) -> BoxFuture<'_, Result<()>> {
         BlobstorePutOps::put_with_status(self, ctx, key, value)
             .map_ok(|_| ())
             .boxed()
@@ -192,7 +192,7 @@ impl BlobstoreWithLink for EagerMemblob {
         _ctx: CoreContext,
         existing_key: String,
         link_key: String,
-    ) -> BoxFuture<'static, Result<(), Error>> {
+    ) -> BoxFuture<'_, Result<()>> {
         let mut inner = self.state.lock().expect("lock poison");
         future::ready(inner.link(existing_key, link_key)).boxed()
     }
@@ -205,7 +205,7 @@ impl BlobstorePutOps for LazyMemblob {
         key: String,
         value: BlobstoreBytes,
         put_behaviour: PutBehaviour,
-    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
         let state = self.state.clone();
 
         lazy(move |_| {
@@ -220,7 +220,7 @@ impl BlobstorePutOps for LazyMemblob {
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
         self.put_explicit(ctx, key, value, self.put_behaviour)
     }
 }
@@ -230,7 +230,7 @@ impl Blobstore for LazyMemblob {
         &self,
         _ctx: CoreContext,
         key: String,
-    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
+    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>>> {
         let state = self.state.clone();
 
         lazy(move |_| {
@@ -245,7 +245,7 @@ impl Blobstore for LazyMemblob {
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'static, Result<(), Error>> {
+    ) -> BoxFuture<'_, Result<()>> {
         BlobstorePutOps::put_with_status(self, ctx, key, value)
             .map_ok(|_| ())
             .boxed()
@@ -258,7 +258,7 @@ impl BlobstoreWithLink for LazyMemblob {
         _ctx: CoreContext,
         existing_key: String,
         link_key: String,
-    ) -> BoxFuture<'static, Result<(), Error>> {
+    ) -> BoxFuture<'_, Result<()>> {
         let state = self.state.clone();
 
         lazy(move |_| {

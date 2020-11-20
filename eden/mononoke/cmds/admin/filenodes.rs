@@ -17,8 +17,8 @@ use cmdlib::helpers;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use filenodes::FilenodeInfo;
-use futures::{compat::Future01CompatExt, TryFutureExt, TryStreamExt};
-use futures_ext::FutureExt as OldFutureExt;
+use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt, TryStreamExt};
+use futures_ext::FutureExt as _;
 use futures_old::future::{join_all, Future};
 use futures_old::{IntoFuture, Stream};
 use futures_stats::TimedFutureExt;
@@ -187,8 +187,9 @@ fn handle_filenodes_at_revision(
                                 .and_then(|filenode| filenode.do_not_handle_disabled_filenodes());
 
                             let envelope = if log_envelope {
-                                filenode_id
-                                    .load(ctx.clone(), blobrepo.blobstore())
+                                cloned!(ctx, blobrepo);
+                                async move { filenode_id.load(ctx, blobrepo.blobstore()).await }
+                                    .boxed()
                                     .compat()
                                     .from_err()
                                     .map(Some)
@@ -258,9 +259,10 @@ pub async fn subcommand_filenodes<'a>(
                     cloned!(ctx);
                     move |filenode| {
                         let envelope = if log_envelope {
-                            filenode
-                                .filenode
-                                .load(ctx, repo.blobstore())
+                            let filenode = filenode.filenode.clone();
+                            let blobstore = repo.get_blobstore();
+                            async move { filenode.load(ctx, &blobstore).await }
+                                .boxed()
                                 .compat()
                                 .from_err()
                                 .map(Some)

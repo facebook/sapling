@@ -53,7 +53,7 @@ pub fn prepare_bytes(bytes: Bytes) -> Prepared {
 
 /// Prepare a stream of bytes for upload. This will return a Prepared struct that can be used to
 /// finalize the upload. The hashes we compute may depend on the size hint.
-pub async fn prepare_chunked<B: Blobstore + Clone, S>(
+pub async fn prepare_chunked<B: Blobstore + Clone + 'static, S>(
     ctx: CoreContext,
     blobstore: B,
     expected_size: ExpectedSize,

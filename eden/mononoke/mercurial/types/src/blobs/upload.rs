@@ -11,7 +11,7 @@ use crate::{
     calculate_hg_node_id_stream, FileBytes, HgBlobNode, HgFileEnvelopeMut, HgFileNodeId,
     HgManifestEnvelopeMut, HgManifestId, HgNodeHash, HgParents, Type,
 };
-use anyhow::{bail, Error, Result};
+use anyhow::{bail, Context, Error, Result};
 use blobstore::Blobstore;
 use bytes::Bytes;
 use cloned::cloned;
@@ -20,11 +20,12 @@ use failure_ext::FutureFailureErrorExt;
 use filestore::FilestoreConfig;
 use filestore::{self, FetchKey};
 use futures::{
-    future::{FutureExt, TryFutureExt},
+    future::{self, Future, FutureExt, TryFutureExt},
+    pin_mut,
     stream::{StreamExt, TryStreamExt},
 };
 use futures_ext::{BoxFuture, FutureExt as _};
-use futures_old::{future, stream, Future, IntoFuture, Stream};
+use futures_old::{future as future_old, stream, Future as FutureOld, IntoFuture, Stream};
 use futures_stats::{FutureStats, Timed};
 use mononoke_types::{ContentId, FileType, MPath, RepoPath};
 use slog::{trace, Logger};
@@ -153,22 +154,26 @@ impl UploadHgTreeEntry {
         }
 
         // Upload the blob.
-        let upload = blobstore
-            .put(ctx, blobstore_key, envelope_blob.into())
-            .compat()
-            .map({
-                let path = path.clone();
-                move |()| (blob_entry, path)
-            })
-            .timed({
-                let logger = logger.clone();
-                move |stats, result| {
-                    if result.is_ok() {
-                        log_upload_stats(logger, path, node_id, computed_node_id, stats);
-                    }
-                    Ok(())
+        let upload = async move {
+            blobstore
+                .put(ctx, blobstore_key, envelope_blob.into())
+                .await
+        }
+        .boxed()
+        .compat()
+        .map({
+            let path = path.clone();
+            move |()| (blob_entry, path)
+        })
+        .timed({
+            let logger = logger.clone();
+            move |stats, result| {
+                if result.is_ok() {
+                    log_upload_stats(logger, path, node_id, computed_node_id, stats);
                 }
-            });
+                Ok(())
+            }
+        });
 
         Ok((node_id, upload.boxify()))
     }
@@ -197,20 +202,21 @@ impl UploadHgFileContents {
         ContentBlobMeta,
         // The future that does the upload and the future that computes the node ID/metadata are
         // split up to allow greater parallelism.
-        impl Future<Item = (), Error = Error> + Send,
-        impl Future<Item = (HgFileNodeId, Bytes, u64), Error = Error> + Send,
+        impl FutureOld<Item = (), Error = Error> + Send,
+        impl FutureOld<Item = (HgFileNodeId, Bytes, u64), Error = Error> + Send,
     ) {
         let (cbmeta, upload_fut, compute_fut) = match self {
             UploadHgFileContents::ContentUploaded(cbmeta) => {
-                let upload_fut = future::ok(());
+                let upload_fut = future_old::ok(());
 
                 let size = cbmeta.size;
 
-                let lookup_fut = lookup_filenode_id(
-                    ctx.clone(),
-                    &*blobstore,
-                    FileNodeIdPointer::new(&cbmeta.id, &cbmeta.copy_from, &p1, &p2),
-                );
+                let lookup_fut = {
+                    cloned!(ctx, blobstore);
+                    let file_node_id_ptr =
+                        FileNodeIdPointer::new(&cbmeta.id, &cbmeta.copy_from, &p1, &p2);
+                    async move { lookup_filenode_id(ctx, &blobstore, file_node_id_ptr).await }
+                };
 
                 let metadata_fut = Self::compute_metadata(
                     ctx.clone(),
@@ -222,22 +228,25 @@ impl UploadHgFileContents {
                 let content_id = cbmeta.id;
 
                 // Attempt to lookup filenode ID by alias. Fallback to computing it if we cannot.
-                let compute_fut = (lookup_fut, metadata_fut).into_future().and_then({
-                    cloned!(ctx, blobstore);
-                    move |(res, metadata)| {
-                        res.ok_or(())
-                            .into_future()
-                            .or_else({
-                                cloned!(metadata);
-                                move |_| {
-                                    Self::compute_filenode_id(
-                                        ctx, &blobstore, content_id, metadata, p1, p2,
-                                    )
-                                }
-                            })
-                            .map(move |fnid| (fnid, metadata, size))
-                    }
-                });
+                let compute_fut = future::try_join(lookup_fut, metadata_fut)
+                    .boxed()
+                    .compat()
+                    .and_then({
+                        cloned!(ctx, blobstore);
+                        move |(res, metadata)| {
+                            res.ok_or(())
+                                .into_future()
+                                .or_else({
+                                    cloned!(metadata);
+                                    move |_| {
+                                        Self::compute_filenode_id(
+                                            ctx, &blobstore, content_id, metadata, p1, p2,
+                                        )
+                                    }
+                                })
+                                .map(move |fnid| (fnid, metadata, size))
+                        }
+                    });
 
                 (cbmeta, upload_fut.left_future(), compute_fut.left_future())
             }
@@ -264,7 +273,7 @@ impl UploadHgFileContents {
 
                 STATS::upload_blob.add_value(1);
                 let ((id, size), upload_fut) = filestore::store_bytes(
-                    blobstore.clone(),
+                    &*blobstore,
                     filestore_config,
                     ctx.clone(),
                     file_bytes.into_bytes(),
@@ -292,7 +301,7 @@ impl UploadHgFileContents {
                     copy_from,
                 };
 
-                let compute_fut = future::ok((node_id, metadata, size));
+                let compute_fut = future_old::ok((node_id, metadata, size));
 
                 (
                     cbmeta,
@@ -307,8 +316,10 @@ impl UploadHgFileContents {
         let compute_fut = compute_fut.and_then({
             cloned!(ctx, blobstore);
             move |(filenode_id, metadata, size)| {
-                store_filenode_id(ctx, &blobstore, key, &filenode_id)
-                    .map(move |_| (filenode_id, metadata, size))
+                async move { store_filenode_id(ctx, &blobstore, key, &filenode_id).await }
+                    .map_ok(move |()| (filenode_id, metadata, size))
+                    .boxed()
+                    .compat()
             }
         });
 
@@ -320,23 +331,26 @@ impl UploadHgFileContents {
         blobstore: &Arc<dyn Blobstore>,
         content_id: ContentId,
         copy_from: Option<(MPath, HgFileNodeId)>,
-    ) -> impl Future<Item = Bytes, Error = Error> {
+    ) -> impl Future<Output = Result<Bytes, Error>> {
         cloned!(blobstore);
 
-        async move { filestore::peek(&blobstore, ctx, &FetchKey::Canonical(content_id), META_SZ).await }
-            .boxed()
-            .compat()
-            .and_then(move |bytes| bytes.ok_or(ErrorKind::ContentBlobMissing(content_id).into()))
-            .context("While computing metadata")
-            .from_err()
-            .map(move |bytes| {
-                let mut metadata = Vec::new();
-                File::generate_metadata(copy_from.as_ref(), &FileBytes(bytes), &mut metadata)
-                    .expect("Vec::write_all should never fail");
+        async move {
+            let bytes = async {
+                Result::<_>::Ok(
+                    filestore::peek(&blobstore, ctx, &FetchKey::Canonical(content_id), META_SZ)
+                        .await?
+                        .ok_or(ErrorKind::ContentBlobMissing(content_id))?,
+                )
+            }
+            .await
+            .context("While computing metadata")?;
+            let mut metadata = Vec::new();
+            File::generate_metadata(copy_from.as_ref(), &FileBytes(bytes), &mut metadata)
+                .expect("Vec::write_all should never fail");
 
-                // TODO: Introduce Metadata bytes?
-                Bytes::from(metadata)
-            })
+            // TODO: Introduce Metadata bytes?
+            Ok(Bytes::from(metadata))
+        }
     }
 
     fn compute_filenode_id(
@@ -346,16 +360,19 @@ impl UploadHgFileContents {
         metadata: Bytes,
         p1: Option<HgFileNodeId>,
         p2: Option<HgFileNodeId>,
-    ) -> impl Future<Item = HgFileNodeId, Error = Error> {
+    ) -> impl FutureOld<Item = HgFileNodeId, Error = Error> {
         cloned!(blobstore);
 
-        let file_bytes = async move {
+        let file_bytes = async_stream::stream! {
             let stream = filestore::fetch(&blobstore, ctx, &FetchKey::Canonical(content_id))
                 .await?
                 .ok_or(ErrorKind::ContentBlobMissing(content_id))?;
-            Result::<_, Error>::Ok(stream)
+
+            pin_mut!(stream);
+            while let Some(value) = stream.next().await {
+                yield value;
+            }
         }
-        .try_flatten_stream()
         .boxed()
         .compat();
 
@@ -413,7 +430,7 @@ impl UploadHgFileEntry {
                     UploadHgNodeHash::Checked(node_id) => {
                         let node_id = HgFileNodeId::new(node_id);
                         if node_id != computed_node_id {
-                            return future::err(
+                            return future_old::err(
                                 ErrorKind::InconsistentEntryHash(
                                     RepoPath::FilePath(path),
                                     node_id.into_nodehash(),
@@ -445,26 +462,30 @@ impl UploadHgFileEntry {
                     Type::File(file_type),
                 );
 
-                blobstore
-                    .put(ctx, blobstore_key, envelope_blob.into())
-                    .compat()
-                    .timed({
-                        let path = path.clone();
-                        move |stats, result| {
-                            if result.is_ok() {
-                                Self::log_stats(
-                                    logger,
-                                    Some(&path),
-                                    node_id,
-                                    "file_envelope_uploaded",
-                                    stats,
-                                );
-                            }
-                            Ok(())
+                async move {
+                    blobstore
+                        .put(ctx, blobstore_key, envelope_blob.into())
+                        .await
+                }
+                .boxed()
+                .compat()
+                .timed({
+                    let path = path.clone();
+                    move |stats, result| {
+                        if result.is_ok() {
+                            Self::log_stats(
+                                logger,
+                                Some(&path),
+                                node_id,
+                                "file_envelope_uploaded",
+                                stats,
+                            );
                         }
-                    })
-                    .map(move |()| (blob_entry, RepoPath::FilePath(path)))
-                    .right_future()
+                        Ok(())
+                    }
+                })
+                .map(move |()| (blob_entry, RepoPath::FilePath(path)))
+                .right_future()
             }
         });
 

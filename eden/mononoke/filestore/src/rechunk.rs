@@ -25,14 +25,14 @@ pub enum ErrorKind {
 /// Fetch a file from the blobstore and reupload it in a chunked form.
 /// NOTE: This could actually unchunk a file if the chunk size threshold
 /// is increased after the file is written.
-pub async fn force_rechunk<B: Blobstore + Clone>(
-    blobstore: B,
+pub async fn force_rechunk<B: Blobstore + Clone + 'static>(
+    blobstore: &B,
     config: FilestoreConfig,
     ctx: CoreContext,
     content_id: ContentId,
 ) -> Result<ContentMetadata, Error> {
     let file_contents: FileContents = content_id
-        .load(ctx.clone(), &blobstore)
+        .load(ctx.clone(), blobstore)
         .map_err(move |err| {
             match err {
                 LoadableError::Error(err) => err,
@@ -50,15 +50,15 @@ pub async fn force_rechunk<B: Blobstore + Clone>(
 /// this fn won't do anything.
 /// Returns a future, resolving to the `ContentMetadata` of the
 /// processed `ContentId` and whether it was *actually* rechunked
-pub async fn rechunk<B: Blobstore + Clone>(
-    blobstore: B,
+pub async fn rechunk<B: Blobstore + Clone + 'static>(
+    blobstore: &B,
     filestore_config: FilestoreConfig,
     ctx: CoreContext,
     content_id: ContentId,
 ) -> Result<(ContentMetadata, bool), Error> {
     let fetch_key = FetchKey::Canonical(content_id.clone());
     let chunk_size = filestore_config.chunk_size;
-    let metadata = get_metadata(&blobstore, ctx.clone(), &fetch_key).await?;
+    let metadata = get_metadata(blobstore, ctx.clone(), &fetch_key).await?;
     let content_metadata: ContentMetadata = match metadata {
         Some(content_metadata) => content_metadata,
         None => return Err(ErrorKind::ContentNotFound(content_id).into()),
@@ -125,8 +125,8 @@ fn uses_larger_chunks(
 /// Note: this fn expects `expected_chunk_size` and `concurrency`
 /// instead of `FilestoreConfig` to emphasize that it can only be
 /// called, if the filestore's chunk size is not `None`
-async fn rechunk_if_uses_larger_chunk_size<B: Blobstore + Clone>(
-    blobstore: B,
+async fn rechunk_if_uses_larger_chunk_size<B: Blobstore + Clone + 'static>(
+    blobstore: &B,
     expected_chunk_size: u64,
     concurrency: usize,
     ctx: CoreContext,
@@ -135,7 +135,7 @@ async fn rechunk_if_uses_larger_chunk_size<B: Blobstore + Clone>(
     let content_id = content_metadata.content_id.clone();
 
     let file_contents: FileContents = content_id
-        .load(ctx.clone(), &blobstore)
+        .load(ctx.clone(), blobstore)
         .map_err(move |err| {
             match err {
                 LoadableError::Error(err) => err,
@@ -173,20 +173,16 @@ async fn rechunk_if_uses_larger_chunk_size<B: Blobstore + Clone>(
 /// Unconditionally rechunk `file_contents` using the `filestore_config`
 /// NOTE: This could actually unchunk a file if the chunk size threshold
 /// is increased after the file is written.
-async fn do_rechunk_file_contents<B: Blobstore + Clone>(
-    blobstore: B,
+async fn do_rechunk_file_contents<B: Blobstore + Clone + 'static>(
+    blobstore: &B,
     filestore_config: FilestoreConfig,
     ctx: CoreContext,
     file_contents: FileContents,
     content_id: ContentId,
 ) -> Result<ContentMetadata, Error> {
     let req = StoreRequest::with_canonical(file_contents.size(), content_id);
-    let file_stream = fetch::stream_file_bytes(
-        blobstore.clone(),
-        ctx.clone(),
-        file_contents,
-        fetch::Range::All,
-    );
+    let file_stream =
+        fetch::stream_file_bytes(blobstore, ctx.clone(), file_contents, fetch::Range::All);
 
-    store(&blobstore, filestore_config, ctx, &req, file_stream).await
+    store(blobstore, filestore_config, ctx, &req, file_stream).await
 }

@@ -269,8 +269,9 @@ fn content_ids_for_paths(
                 let content_ids = hg_node_ids.into_iter().map({
                     cloned!(blobrepo);
                     move |hg_node_id| {
-                        hg_node_id
-                            .load(ctx.clone(), blobrepo.blobstore())
+                        cloned!(ctx, blobrepo);
+                        async move { hg_node_id.load(ctx, blobrepo.blobstore()).await }
+                            .boxed()
                             .compat()
                             .from_err()
                             .map(|env| env.content_id())
@@ -344,10 +345,13 @@ async fn redaction_list<'a>(
     redacted_blobs
         .get_all_redacted_blobs()
         .join(
-            cs_id
-                .load(ctx.clone(), blobrepo.blobstore())
-                .compat()
-                .from_err(),
+            {
+                cloned!(ctx, blobrepo);
+                async move { cs_id.load(ctx, blobrepo.blobstore()).await }
+            }
+            .boxed()
+            .compat()
+            .from_err(),
         )
         .and_then({
             cloned!(logger);

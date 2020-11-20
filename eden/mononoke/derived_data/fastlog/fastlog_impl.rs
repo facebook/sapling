@@ -9,7 +9,10 @@ use crate::{ErrorKind, FastlogParent};
 use anyhow::Error;
 use blobstore::{Blobstore, BlobstoreBytes};
 use context::CoreContext;
-use futures::{compat::Future01CompatExt, future::try_join_all};
+use futures::{
+    compat::Future01CompatExt,
+    future::{try_join_all, FutureExt, TryFutureExt},
+};
 use futures_old::Future;
 use manifest::Entry;
 use maplit::hashset;
@@ -38,16 +41,13 @@ pub(crate) async fn create_new_batch(
         match parent_batches.get(0) {
             Some(parent_batch) => {
                 parent_batch
-                    .prepend_child_with_single_parent(ctx.clone(), blobstore.clone(), linknode)
-                    .compat()
+                    .prepend_child_with_single_parent(ctx.clone(), blobstore, linknode)
                     .await
             }
             None => {
                 let mut d = VecDeque::new();
                 d.push_back((linknode, vec![]));
-                FastlogBatch::new_from_raw_list(ctx.clone(), blobstore.clone(), d)
-                    .compat()
-                    .await
+                FastlogBatch::new_from_raw_list(ctx.clone(), &*blobstore, d).await
             }
         }
     } else {
@@ -60,9 +60,7 @@ pub(crate) async fn create_new_batch(
         }))
         .await?;
         let raw_list = convert_to_raw_list(create_merged_list(linknode, parents_flattened));
-        FastlogBatch::new_from_raw_list(ctx.clone(), blobstore.clone(), raw_list)
-            .compat()
-            .await
+        FastlogBatch::new_from_raw_list(ctx.clone(), &*blobstore, raw_list).await
     }
 }
 
@@ -203,12 +201,15 @@ fn generate_fastlog_batch_key(unode_entry: Entry<ManifestUnodeId, FileUnodeId>) 
     format!("fastlogbatch.{}", key_part)
 }
 
-pub(crate) fn fetch_flattened(
-    batch: &FastlogBatch,
+pub(crate) fn fetch_flattened<'a>(
+    batch: &'a FastlogBatch,
     ctx: CoreContext,
     blobstore: Arc<dyn Blobstore>,
-) -> impl Future<Item = Vec<(ChangesetId, Vec<FastlogParent>)>, Error = Error> {
-    batch.fetch_raw_list(ctx, blobstore).map(flatten_raw_list)
+) -> impl Future<Item = Vec<(ChangesetId, Vec<FastlogParent>)>, Error = Error> + 'a {
+    async move { batch.fetch_raw_list(ctx, &blobstore).await }
+        .boxed()
+        .compat()
+        .map(flatten_raw_list)
 }
 
 fn flatten_raw_list(
@@ -253,11 +254,11 @@ mod test {
         let mut d = VecDeque::new();
         d.push_back((ONES_CSID, vec![]));
         let blobstore = Arc::new(repo.get_blobstore());
-        let batch = rt.block_on(FastlogBatch::new_from_raw_list(
-            ctx.clone(),
-            blobstore.clone(),
-            d,
-        ))?;
+        let batch = rt.block_on(
+            FastlogBatch::new_from_raw_list(ctx.clone(), &blobstore.clone(), d)
+                .boxed()
+                .compat(),
+        )?;
 
         assert_eq!(
             vec![(ONES_CSID, vec![])],
@@ -275,11 +276,11 @@ mod test {
         let mut d = VecDeque::new();
         d.push_back((ONES_CSID, vec![]));
         let blobstore = Arc::new(repo.get_blobstore());
-        let batch = rt.block_on(FastlogBatch::new_from_raw_list(
-            ctx.clone(),
-            blobstore.clone(),
-            d,
-        ))?;
+        let batch = rt.block_on(
+            FastlogBatch::new_from_raw_list(ctx.clone(), &blobstore.clone(), d)
+                .boxed()
+                .compat(),
+        )?;
 
         assert_eq!(
             vec![(ONES_CSID, vec![])],
@@ -288,11 +289,12 @@ mod test {
         );
 
         let prepended = rt
-            .block_on(batch.prepend_child_with_single_parent(
-                ctx.clone(),
-                blobstore.clone(),
-                TWOS_CSID,
-            ))
+            .block_on(
+                batch
+                    .prepend_child_with_single_parent(ctx.clone(), &blobstore.clone(), TWOS_CSID)
+                    .boxed()
+                    .compat(),
+            )
             .unwrap();
         assert_eq!(
             vec![
@@ -304,11 +306,12 @@ mod test {
         );
 
         let prepended = rt
-            .block_on(prepended.prepend_child_with_single_parent(
-                ctx.clone(),
-                blobstore.clone(),
-                THREES_CSID,
-            ))
+            .block_on(
+                prepended
+                    .prepend_child_with_single_parent(ctx.clone(), &blobstore.clone(), THREES_CSID)
+                    .boxed()
+                    .compat(),
+            )
             .unwrap();
         assert_eq!(
             vec![

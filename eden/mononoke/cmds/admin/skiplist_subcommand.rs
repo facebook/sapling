@@ -12,10 +12,10 @@ use fbinit::FacebookInit;
 use fbthrift::compact_protocol;
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
-    future::{try_join, TryFutureExt},
+    future::{try_join, FutureExt, TryFutureExt},
     stream, StreamExt, TryStreamExt,
 };
-use futures_ext::{BoxFuture, FutureExt};
+use futures_ext::{BoxFuture, FutureExt as _};
 use futures_old::future::ok;
 use futures_old::prelude::*;
 use std::collections::HashMap;
@@ -282,8 +282,10 @@ fn read_skiplist_index<S: ToString>(
     key: S,
     logger: Logger,
 ) -> BoxFuture<Option<SkiplistIndex>, Error> {
-    repo.get_blobstore()
-        .get(ctx, key.to_string())
+    let blobstore = repo.get_blobstore();
+    let key = key.to_string();
+    async move { blobstore.get(ctx, key).await }
+        .boxed()
         .compat()
         .and_then(move |maybebytes| {
             match maybebytes {

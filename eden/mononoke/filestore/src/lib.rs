@@ -11,6 +11,7 @@
 
 use anyhow::Error;
 use bytes::{Bytes, BytesMut};
+use cloned::cloned;
 use futures::{
     future::{Future, TryFutureExt},
     stream::{self, Stream, TryStreamExt},
@@ -149,7 +150,7 @@ impl StoreRequest {
 /// Fetch the metadata for the underlying content. This will return None if the content does
 /// not exist. It might recompute metadata on the fly if the content exists but the metadata does
 /// not.
-pub async fn get_metadata<B: Blobstore + Clone>(
+pub async fn get_metadata<B: Blobstore>(
     blobstore: &B,
     ctx: CoreContext,
     key: &FetchKey,
@@ -164,7 +165,7 @@ pub async fn get_metadata<B: Blobstore + Clone>(
         })?;
 
     match maybe_id {
-        Some(id) => metadata::get_metadata(blobstore.clone(), ctx, id).await,
+        Some(id) => metadata::get_metadata(blobstore, ctx, id).await,
         None => Ok(None),
     }
 }
@@ -172,7 +173,7 @@ pub async fn get_metadata<B: Blobstore + Clone>(
 /// Fetch the metadata for the underlying content. This will return None if the content does
 /// not exist, Some(None) if the metadata does not exist, and Some(Some(ContentMetadata))
 /// when metadata found. It will not recompute metadata on the fly
-pub async fn get_metadata_readonly<B: Blobstore + Clone>(
+pub async fn get_metadata_readonly<B: Blobstore>(
     blobstore: &B,
     ctx: CoreContext,
     key: &FetchKey,
@@ -196,7 +197,7 @@ pub async fn get_metadata_readonly<B: Blobstore + Clone>(
 
 /// Return true if the given key exists. A successful return means the key definitely
 /// either exists or doesn't; an error means the existence could not be determined.
-pub async fn exists<B: Blobstore + Clone>(
+pub async fn exists<B: Blobstore>(
     blobstore: &B,
     ctx: CoreContext,
     key: &FetchKey,
@@ -221,19 +222,19 @@ pub async fn exists<B: Blobstore + Clone>(
 /// be determined or if opening the file failed. File contents are returned in chunks configured by
 /// FilestoreConfig::read_chunk_size - this defines the max chunk size, but they may be shorter
 /// (not just the final chunks - any of them). Chunks are guaranteed to have non-zero size.
-pub async fn fetch_with_size<B: Blobstore + Clone>(
-    blobstore: &B,
+pub async fn fetch_with_size<'a, B: Blobstore + Clone + 'a>(
+    blobstore: B,
     ctx: CoreContext,
     key: &FetchKey,
-) -> Result<Option<(impl Stream<Item = Result<Bytes, Error>>, u64)>, Error> {
-    let content_id = key
-        .load(ctx.clone(), blobstore)
-        .await
-        .map(Some)
-        .or_else(|err| match err {
-            LoadableError::Error(err) => Err(err),
-            LoadableError::Missing(_) => Ok(None),
-        })?;
+) -> Result<Option<(impl Stream<Item = Result<Bytes, Error>> + 'a, u64)>, Error> {
+    let content_id =
+        key.load(ctx.clone(), &blobstore)
+            .await
+            .map(Some)
+            .or_else(|err| match err {
+                LoadableError::Error(err) => Err(err),
+                LoadableError::Missing(_) => Ok(None),
+            })?;
 
     match content_id {
         Some(content_id) => {
@@ -248,13 +249,13 @@ pub async fn fetch_with_size<B: Blobstore + Clone>(
 ///
 /// Requests for data beyond the end of the file will return only the part of
 /// the file that overlaps with the requested range, if any.
-pub async fn fetch_range_with_size<B: Blobstore + Clone>(
-    blobstore: &B,
+pub async fn fetch_range_with_size<'a, B: Blobstore>(
+    blobstore: &'a B,
     ctx: CoreContext,
     key: &FetchKey,
     start: u64,
     size: u64,
-) -> Result<Option<(impl Stream<Item = Result<Bytes, Error>>, u64)>, Error> {
+) -> Result<Option<(impl Stream<Item = Result<Bytes, Error>> + 'a, u64)>, Error> {
     let content_id = key
         .load(ctx.clone(), blobstore)
         .await
@@ -282,18 +283,18 @@ pub async fn fetch_range_with_size<B: Blobstore + Clone>(
 }
 
 /// This function has the same functionality as fetch_with_size, but doesn't return the file size.
-pub async fn fetch<B: Blobstore + Clone>(
-    blobstore: &B,
+pub async fn fetch<'a, B: Blobstore + Clone + 'a>(
+    blobstore: B,
     ctx: CoreContext,
     key: &FetchKey,
-) -> Result<Option<impl Stream<Item = Result<Bytes, Error>>>, Error> {
+) -> Result<Option<impl Stream<Item = Result<Bytes, Error>> + 'a>, Error> {
     let res = fetch_with_size(blobstore, ctx, key).await?;
     Ok(res.map(|(stream, _len)| stream))
 }
 
 /// Fetch the contents of a blob concatenated together. This bad for buffering, and you shouldn't
 /// add new callsites. This is only for compatibility with existin callsites.
-pub async fn fetch_concat_opt<B: Blobstore + Clone>(
+pub async fn fetch_concat_opt<B: Blobstore>(
     blobstore: &B,
     ctx: CoreContext,
     key: &FetchKey,
@@ -322,7 +323,7 @@ pub async fn fetch_concat_opt<B: Blobstore + Clone>(
 }
 
 /// Similar to `fetch_concat_opt`, but requires the blob to be present, or errors out.
-pub async fn fetch_concat<B: Blobstore + Clone>(
+pub async fn fetch_concat<B: Blobstore>(
     blobstore: &B,
     ctx: CoreContext,
     key: impl Into<FetchKey>,
@@ -336,30 +337,30 @@ pub async fn fetch_concat<B: Blobstore + Clone>(
 ///
 /// Moslty behaves as the `fetch`, except it is pushing missing content error into stream if
 /// data associated with the key was not found.
-pub fn fetch_stream<B: Blobstore + Clone>(
+pub fn fetch_stream<'a, B: Blobstore + Clone + 'a>(
     blobstore: B,
     ctx: CoreContext,
     key: impl Into<FetchKey>,
-) -> impl Stream<Item = Result<Bytes, Error>> {
+) -> impl Stream<Item = Result<Bytes, Error>> + 'a {
     let key: FetchKey = key.into();
 
     async move {
-        let stream = fetch(&blobstore, ctx, &key)
+        let stream = fetch(blobstore, ctx, &key)
             .await?
-            .ok_or_else(|| errors::ErrorKind::MissingContent(key))?;
+            .ok_or(errors::ErrorKind::MissingContent(key))?;
         Result::<_, Error>::Ok(stream)
     }
     .try_flatten_stream()
 }
 
 /// This function has the same functionality as fetch_range_with_size, but doesn't return the file size.
-pub async fn fetch_range<B: Blobstore + Clone>(
-    blobstore: &B,
+pub async fn fetch_range<'a, B: Blobstore>(
+    blobstore: &'a B,
     ctx: CoreContext,
     key: &FetchKey,
     start: u64,
     size: u64,
-) -> Result<Option<impl Stream<Item = Result<Bytes, Error>>>, Error> {
+) -> Result<Option<impl Stream<Item = Result<Bytes, Error>> + 'a>, Error> {
     let res = fetch_range_with_size(blobstore, ctx, key, start, size).await?;
     Ok(res.map(|(stream, _len)| stream))
 }
@@ -367,7 +368,7 @@ pub async fn fetch_range<B: Blobstore + Clone>(
 /// Fetch the start of a file. Returns a Future that resolves with Some(Bytes) if the file was
 /// found, and None otherwise. If Bytes are found, this function is guaranteed to return as many
 /// Bytes as requested unless the file is shorter than that.
-pub async fn peek<B: Blobstore + Clone>(
+pub async fn peek<B: Blobstore>(
     blobstore: &B,
     ctx: CoreContext,
     key: &FetchKey,
@@ -387,7 +388,7 @@ pub async fn peek<B: Blobstore + Clone>(
 /// Store a file from a stream. This is guaranteed atomic - either the store will succeed
 /// for the entire file, or it will fail and the file will logically not exist (however
 /// there's no guarantee that any partially written parts will be cleaned up).
-pub async fn store<B: Blobstore + Clone>(
+pub async fn store<B: Blobstore + Clone + 'static>(
     blobstore: &B,
     config: FilestoreConfig,
     ctx: CoreContext,
@@ -418,8 +419,8 @@ pub async fn store<B: Blobstore + Clone>(
 /// size. This function is intended as a transition function while we convert writers to streams
 /// and refactor them to not expect to be able to obtain the ContentId for the content they
 /// uploaded immediately. Do NOT add new callsites.
-pub fn store_bytes<B: Blobstore + Clone>(
-    blobstore: B,
+pub fn store_bytes<B: Blobstore + Clone + 'static>(
+    blobstore: &B,
     config: FilestoreConfig,
     ctx: CoreContext,
     bytes: Bytes,
@@ -433,6 +434,7 @@ pub fn store_bytes<B: Blobstore + Clone>(
     let content_id = FileContents::content_id_for_bytes(&bytes);
     let size: u64 = bytes.len().try_into().unwrap();
 
+    cloned!(blobstore);
     let upload = async move {
         store(
             &blobstore,

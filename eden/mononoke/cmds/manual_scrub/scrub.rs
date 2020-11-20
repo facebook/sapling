@@ -6,6 +6,7 @@
  */
 
 use anyhow::{Error, Result};
+use cloned::cloned;
 use futures::{
     channel::mpsc,
     sink::SinkExt,
@@ -15,15 +16,18 @@ use futures::{
 use blobstore::Blobstore;
 use context::CoreContext;
 
-async fn scrub_key(
-    blobstore: &dyn Blobstore,
+async fn scrub_key<B: Blobstore + Clone + 'static>(
+    blobstore: &B,
     ctx: &CoreContext,
     key: String,
     mut success: mpsc::Sender<String>,
     mut missing: mpsc::Sender<String>,
     mut error: mpsc::Sender<(String, Error)>,
 ) -> Result<()> {
-    let handle = tokio::task::spawn(blobstore.get(ctx.clone(), key.clone()));
+    let handle = {
+        cloned!(ctx, key, blobstore);
+        tokio::task::spawn(async move { blobstore.get(ctx, key).await })
+    };
     let res = handle.await?;
     match res {
         Ok(None) => {
@@ -39,8 +43,8 @@ async fn scrub_key(
     Ok(())
 }
 
-pub async fn scrub(
-    blobstore: &dyn Blobstore,
+pub async fn scrub<B: Blobstore + Clone + 'static>(
+    blobstore: &B,
     ctx: &CoreContext,
     keys: impl Stream<Item = Result<String>>,
     success: mpsc::Sender<String>,

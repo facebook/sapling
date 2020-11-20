@@ -18,9 +18,7 @@ mod in_process_lease;
 pub use in_process_lease::InProcessLease;
 
 mod locking_cache;
-pub use crate::locking_cache::{
-    CacheBlobstore, CacheBlobstoreExt, CacheOps, CacheOpsUtil, LeaseOps,
-};
+pub use crate::locking_cache::{CacheBlobstore, CacheBlobstoreExt, CacheOps, LeaseOps};
 
 mod memcache_cache_lease;
 pub use crate::memcache_cache_lease::{

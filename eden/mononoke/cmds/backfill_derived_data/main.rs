@@ -946,7 +946,7 @@ mod tests {
             ctx: CoreContext,
             key: String,
             value: BlobstoreBytes,
-        ) -> BoxFuture<'static, Result<(), Error>> {
+        ) -> BoxFuture<'_, Result<(), Error>> {
             if key.find(&self.bad_key_substring).is_some() {
                 tokio::time::delay_for(Duration::from_millis(250))
                     .map(|()| Err(format_err!("failed")))
@@ -960,7 +960,7 @@ mod tests {
             &self,
             ctx: CoreContext,
             key: String,
-        ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
+        ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>, Error>> {
             self.inner.get(ctx, key)
         }
     }
@@ -990,7 +990,7 @@ mod tests {
             ctx: CoreContext,
             key: String,
             value: BlobstoreBytes,
-        ) -> BoxFuture<'static, Result<(), Error>> {
+        ) -> BoxFuture<'_, Result<(), Error>> {
             self.count.fetch_add(1, Ordering::Relaxed);
             self.inner.put(ctx, key, value)
         }
@@ -999,7 +999,7 @@ mod tests {
             &self,
             ctx: CoreContext,
             key: String,
-        ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
+        ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>, Error>> {
             self.inner.get(ctx, key)
         }
     }

@@ -1677,12 +1677,11 @@ pub async fn upload_commits<'a>(
             |content_id| {
                 copy_content(
                     ctx.clone(),
-                    source_blobstore.clone(),
-                    target_blobstore.clone(),
+                    &source_blobstore,
+                    &target_blobstore,
                     target_filestore_config.clone(),
                     content_id,
                 )
-                .compat()
             }
         })
         .collect();

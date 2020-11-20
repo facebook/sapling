@@ -8,18 +8,14 @@
 use anyhow::{anyhow, format_err, Error};
 use blobrepo::BlobRepo;
 use blobstore::{Blobstore, Loadable};
+use bounded_traversal::bounded_traversal;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use futures::{
-    future::{self, FutureExt as NewFutureExt, TryFutureExt as NewTryFutureExt},
-    stream::TryStreamExt as NewTryStreamExt,
-};
-use futures_ext::{bounded_traversal::bounded_traversal, BoxFuture, FutureExt};
-use futures_old::{
-    future::{self as old_future, Future, IntoFuture},
-    stream::Stream,
-    sync::{mpsc, oneshot},
+    channel::{mpsc, oneshot},
+    future::{self, BoxFuture, FutureExt},
+    stream::{StreamExt, TryStreamExt},
 };
 use manifest::{Diff, ManifestOps, PathTree};
 use mononoke_types::{blob::BlobstoreValue, deleted_files_manifest::DeletedManifest};
@@ -27,10 +23,10 @@ use mononoke_types::{
     BonsaiChangeset, ChangesetId, DeletedManifestId, MPath, MPathElement, ManifestUnodeId,
     MononokeId,
 };
-use parking_lot::Mutex;
 use repo_blobstore::RepoBlobstore;
 use std::sync::Arc;
 use std::{collections::BTreeMap, collections::HashSet, iter::FromIterator};
+use tokio::sync::Mutex;
 use unodes::RootUnodeManifestId;
 
 /// Derives deleted files manifest for bonsai changeset `cs_id` given parent deleted files
@@ -69,19 +65,19 @@ use unodes::RootUnodeManifestId;
 ///    recurse to the parent subentries and the current subpaths' changes
 ///   - if there are subentries, create a live manifest or mark the existing node as live.
 ///
-pub(crate) fn derive_deleted_files_manifest(
+pub(crate) async fn derive_deleted_files_manifest(
     ctx: CoreContext,
     repo: BlobRepo,
     cs_id: ChangesetId,
     parents: Vec<DeletedManifestId>,
     changes: PathTree<Option<PathChange>>,
-) -> impl Future<Item = DeletedManifestId, Error = Error> {
-    old_future::lazy(move || {
-        let (result_sender, result_receiver) = oneshot::channel();
-        // Stream is used to batch writes to blobstore
-        let (sender, receiver) = mpsc::unbounded();
-        let created = Arc::new(Mutex::new(HashSet::new()));
-        let f = bounded_traversal(
+) -> Result<DeletedManifestId, Error> {
+    let (result_sender, result_receiver) = oneshot::channel();
+    // Stream is used to batch writes to blobstore
+    let (sender, receiver) = mpsc::unbounded();
+    let created = Arc::new(Mutex::new(HashSet::new()));
+    let f = async move {
+        let manifest_opt = bounded_traversal(
             256,
             DeletedManifestUnfoldNode {
                 path_element: None,
@@ -98,81 +94,80 @@ pub(crate) fn derive_deleted_files_manifest(
                         parents,
                     },
                 | {
-                    do_derive_unfold(ctx.clone(), repo.clone(), changes, parents)
-                        .boxed()
-                        .compat()
-                        .map(move |(mf_change, next_states)| {
-                            ((path_element, mf_change), next_states)
-                        })
+                    cloned!(ctx, repo);
+                    async move {
+                        let (mf_change, next_states) =
+                            do_derive_unfold(ctx.clone(), repo.clone(), changes, parents).await?;
+                        Ok(((path_element, mf_change), next_states))
+                    }
                 }
             },
             // fold
             {
                 cloned!(ctx, repo, sender, created);
                 move |(path, manifest_change), subentries_iter| {
-                    let mut subentries = BTreeMap::new();
-                    for entry in subentries_iter {
-                        match entry {
-                            Some((Some(path), mf_id)) => {
-                                subentries.insert(path, mf_id);
+                    cloned!(ctx, repo, cs_id, sender, created);
+                    async move {
+                        let mut subentries = BTreeMap::new();
+                        for entry in subentries_iter {
+                            match entry {
+                                Some((Some(path), mf_id)) => {
+                                    subentries.insert(path, mf_id);
+                                }
+                                Some((None, _)) => {
+                                    return Err(anyhow!(concat!(
+                                        "Failed to create deleted files manifest: ",
+                                        "subentry must have a path"
+                                    )));
+                                }
+                                _ => {}
                             }
-                            Some((None, _)) => {
-                                return old_future::err(anyhow!(concat!(
-                                    "Failed to create deleted files manifest: ",
-                                    "subentry must have a path"
-                                )))
-                                .boxify();
-                            }
-                            _ => {}
                         }
-                    }
 
-                    do_derive_create(
-                        ctx.clone(),
-                        repo.clone(),
-                        cs_id.clone(),
-                        manifest_change,
-                        subentries,
-                        sender.clone(),
-                        created.clone(),
-                    )
-                    .map(move |mf_id_opt| mf_id_opt.map(|mf_id| (path, mf_id)))
-                    .boxify()
+                        Ok(do_derive_create(
+                            ctx.clone(),
+                            repo.clone(),
+                            cs_id.clone(),
+                            manifest_change,
+                            subentries,
+                            sender.clone(),
+                            created.clone(),
+                        )
+                        .await?
+                        .map(|mf_id| (path, mf_id)))
+                    }
                 }
             },
         )
-        .and_then({
-            cloned!(ctx, repo);
-            move |manifest_opt| match manifest_opt {
-                Some((_, mf_id)) => old_future::ok(mf_id).left_future(),
-                None => {
-                    // there is no deleted files, need to create an empty root manifest
-                    create_manifest(
-                        ctx.clone(),
-                        repo.get_blobstore(),
-                        None,
-                        BTreeMap::new(),
-                        sender.clone(),
-                        created.clone(),
-                    )
-                    .right_future()
-                }
+        .await?;
+
+        let res = match manifest_opt {
+            Some((_, mf_id)) => Ok(mf_id),
+            None => {
+                // there is no deleted files, need to create an empty root manifest
+                create_manifest(
+                    ctx.clone(),
+                    repo.get_blobstore(),
+                    None,
+                    BTreeMap::new(),
+                    sender.clone(),
+                    created.clone(),
+                )
+                .await
             }
-        })
-        .then(move |res| {
-            // Error means receiver went away, just ignore it
-            let _ = result_sender.send(res);
-            Ok(())
-        });
+        };
 
-        tokio::spawn(f);
-        let blobstore_put_stream = receiver.map_err(|()| Error::msg("receiver failed"));
+        let _ = result_sender.send(res);
+        Result::<_, Error>::Ok(())
+    };
 
-        blobstore_put_stream
-            .buffered(1024)
-            .for_each(|_| Ok(()))
-            .and_then(move |()| result_receiver.from_err().and_then(|res| res).boxify())
-    })
+    tokio::spawn(f);
+
+    receiver
+        .buffered(1024)
+        .try_for_each(|_| async { Ok(()) })
+        .await?;
+    result_receiver.await?
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -301,7 +296,7 @@ async fn do_derive_unfold(
     let parent_manifests = future::try_join_all(
         parents
             .iter()
-            .map(move |mf_id| mf_id.load(ctx.clone(), repo.blobstore())),
+            .map(|mf_id| mf_id.load(ctx.clone(), repo.blobstore())),
     )
     .await?;
 
@@ -396,46 +391,44 @@ async fn do_derive_unfold(
     ))
 }
 
-fn create_manifest(
+async fn create_manifest(
     ctx: CoreContext,
     blobstore: RepoBlobstore,
     linknode: Option<ChangesetId>,
     subentries: BTreeMap<MPathElement, DeletedManifestId>,
-    sender: mpsc::UnboundedSender<BoxFuture<(), Error>>,
+    sender: mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>,
     created: Arc<Mutex<HashSet<String>>>,
-) -> BoxFuture<DeletedManifestId, Error> {
+) -> Result<DeletedManifestId, Error> {
     let manifest = DeletedManifest::new(linknode, subentries);
     let mf_id = manifest.get_manifest_id();
 
     let key = mf_id.blobstore_key();
-    let mut created = created.lock();
+    let mut created = created.lock().await;
     if created.insert(key.clone()) {
         let blob = manifest.into_blob();
-        let f = old_future::lazy(move || blobstore.put(ctx, key, blob.into()).compat()).boxify();
+        let f = async move { blobstore.put(ctx, key, blob.into()).await }.boxed();
 
         sender
             .unbounded_send(f)
-            .into_future()
             .map(move |()| mf_id)
             .map_err(|err| anyhow!("failed to send manifest future {}", err))
-            .boxify()
     } else {
-        old_future::ok(mf_id).boxify()
+        Ok(mf_id)
     }
 }
 
-fn do_derive_create(
+async fn do_derive_create(
     ctx: CoreContext,
     repo: BlobRepo,
     cs_id: ChangesetId,
     change: DeletedManifestChange,
     subentries: BTreeMap<MPathElement, DeletedManifestId>,
-    sender: mpsc::UnboundedSender<BoxFuture<(), Error>>,
+    sender: mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>,
     created: Arc<Mutex<HashSet<String>>>,
-) -> impl Future<Item = Option<DeletedManifestId>, Error = Error> {
+) -> Result<Option<DeletedManifestId>, Error> {
     let blobstore = repo.get_blobstore();
     match change {
-        DeletedManifestChange::Reuse(mb_mf_id) => old_future::ok(mb_mf_id).boxify(),
+        DeletedManifestChange::Reuse(mb_mf_id) => Ok(mb_mf_id),
         DeletedManifestChange::CreateDeleted => create_manifest(
             ctx.clone(),
             blobstore,
@@ -444,21 +437,20 @@ fn do_derive_create(
             sender,
             created,
         )
-        .map(Some)
-        .boxify(),
+        .await
+        .map(Some),
         DeletedManifestChange::RemoveOrKeepLive => {
             if subentries.is_empty() {
                 // there are no subentries, no need to create a new node
-                old_future::ok(None).left_future()
+                Ok(None)
             } else {
                 // some of the subentries were deleted, creating a new node but there is no need to
                 // mark it as deleted
                 create_manifest(ctx.clone(), blobstore, None, subentries, sender, created)
+                    .await
                     .map(Some)
-                    .right_future()
             }
         }
-        .boxify(),
     }
 }
 
@@ -468,22 +460,19 @@ mod tests {
     use crate::mapping::RootDeletedManifestId;
     use blobrepo::save_bonsai_changesets;
     use blobrepo_factory::new_memblob_empty;
+    use bounded_traversal::bounded_traversal_stream;
     use derived_data_test_utils::bonsai_changeset_from_hg;
     use fbinit::FacebookInit;
     use fixtures::{many_files_dirs, store_files};
-    use futures::compat::Stream01CompatExt;
-    use futures_ext::bounded_traversal::bounded_traversal_stream;
-    use futures_old::stream::iter_ok;
+    use futures::{compat::Future01CompatExt, pin_mut, stream::iter, Stream, TryStreamExt};
     use maplit::btreemap;
     use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, DateTime, FileChange, MPath};
     use tests_utils::CreateCommitContext;
-    use tokio_compat::runtime::Runtime;
 
     #[fbinit::test]
-    fn linear_test(fb: FacebookInit) {
+    async fn linear_test(fb: FacebookInit) {
         // Test simple separate files and whole dir deletions
         let repo = new_memblob_empty(None).unwrap();
-        let mut runtime = Runtime::new().unwrap();
         let ctx = CoreContext::test_mock(fb);
 
         // create parent deleted files manifest
@@ -496,13 +485,9 @@ mod tests {
                 "dir-2/sub/f-3" => Some("5\n"),
                 "dir-2/f-4" => Some("6\n"),
             };
-            let (bcs_id, mf_id, deleted_nodes) = create_cs_and_derive_manifest(
-                ctx.clone(),
-                repo.clone(),
-                &mut runtime,
-                file_changes,
-                vec![],
-            );
+            let (bcs_id, mf_id, deleted_nodes) =
+                create_cs_and_derive_manifest(ctx.clone(), repo.clone(), file_changes, vec![])
+                    .await;
 
             // nothing was deleted yet
             let expected_nodes = vec![(None, Status::Live)];
@@ -524,10 +509,10 @@ mod tests {
             let (bcs_id, mf_id, deleted_nodes) = create_cs_and_derive_manifest(
                 ctx.clone(),
                 repo.clone(),
-                &mut runtime,
                 file_changes,
                 vec![(bcs_id_1, mf_id_1)],
-            );
+            )
+            .await;
 
             let expected_nodes = vec![
                 (None, Status::Live),
@@ -555,10 +540,10 @@ mod tests {
             let (bcs_id, mf_id, deleted_nodes) = create_cs_and_derive_manifest(
                 ctx.clone(),
                 repo.clone(),
-                &mut runtime,
                 file_changes,
                 vec![(bcs_id_2, mf_id_2)],
-            );
+            )
+            .await;
 
             let expected_nodes = vec![
                 (None, Status::Live),
@@ -587,10 +572,10 @@ mod tests {
             let (bcs_id, mf_id, deleted_nodes) = create_cs_and_derive_manifest(
                 ctx.clone(),
                 repo.clone(),
-                &mut runtime,
                 file_changes,
                 vec![(bcs_id_3, mf_id_3)],
-            );
+            )
+            .await;
 
             let expected_nodes = vec![
                 (None, Status::Live),
@@ -620,10 +605,10 @@ mod tests {
             let (bcs_id, mf_id, deleted_nodes) = create_cs_and_derive_manifest(
                 ctx.clone(),
                 repo.clone(),
-                &mut runtime,
                 file_changes,
                 vec![(bcs_id_4, mf_id_4)],
-            );
+            )
+            .await;
 
             let expected_nodes = vec![
                 (None, Status::Live),
@@ -651,19 +636,16 @@ mod tests {
     }
 
     #[fbinit::test]
-    fn many_file_dirs_test(fb: FacebookInit) {
-        let mut runtime = Runtime::new().unwrap();
-        let repo = runtime.block_on_std(many_files_dirs::getrepo(fb));
+    async fn many_file_dirs_test(fb: FacebookInit) {
+        let repo = many_files_dirs::getrepo(fb).await;
         let ctx = CoreContext::test_mock(fb);
 
         let mf_id_1 = {
             let hg_cs = "5a28e25f924a5d209b82ce0713d8d83e68982bc8";
-            let (_, bcs) = runtime
-                .block_on_std(bonsai_changeset_from_hg(&ctx, &repo, hg_cs))
-                .unwrap();
+            let (_, bcs) = bonsai_changeset_from_hg(&ctx, &repo, hg_cs).await.unwrap();
 
             let (_, mf_id, deleted_nodes) =
-                derive_manifest(ctx.clone(), repo.clone(), &mut runtime, bcs, vec![]);
+                derive_manifest(ctx.clone(), repo.clone(), bcs, vec![]).await;
 
             // nothing was deleted yet
             let expected_nodes = vec![(None, Status::Live)];
@@ -673,12 +655,10 @@ mod tests {
 
         let mf_id_2 = {
             let hg_cs = "2f866e7e549760934e31bf0420a873f65100ad63";
-            let (_, bcs) = runtime
-                .block_on_std(bonsai_changeset_from_hg(&ctx, &repo, hg_cs))
-                .unwrap();
+            let (_, bcs) = bonsai_changeset_from_hg(&ctx, &repo, hg_cs).await.unwrap();
 
             let (_, mf_id, deleted_nodes) =
-                derive_manifest(ctx.clone(), repo.clone(), &mut runtime, bcs, vec![mf_id_1]);
+                derive_manifest(ctx.clone(), repo.clone(), bcs, vec![mf_id_1]).await;
 
             // nothing was deleted yet
             let expected_nodes = vec![(None, Status::Live)];
@@ -688,12 +668,10 @@ mod tests {
 
         let mf_id_3 = {
             let hg_cs = "d261bc7900818dea7c86935b3fb17a33b2e3a6b4";
-            let (_, bcs) = runtime
-                .block_on_std(bonsai_changeset_from_hg(&ctx, &repo, hg_cs))
-                .unwrap();
+            let (_, bcs) = bonsai_changeset_from_hg(&ctx, &repo, hg_cs).await.unwrap();
 
             let (_, mf_id, deleted_nodes) =
-                derive_manifest(ctx.clone(), repo.clone(), &mut runtime, bcs, vec![mf_id_2]);
+                derive_manifest(ctx.clone(), repo.clone(), bcs, vec![mf_id_2]).await;
 
             // nothing was deleted yet
             let expected_nodes = vec![(None, Status::Live)];
@@ -703,12 +681,10 @@ mod tests {
 
         {
             let hg_cs = "051946ed218061e925fb120dac02634f9ad40ae2";
-            let (bcs_id, bcs) = runtime
-                .block_on_std(bonsai_changeset_from_hg(&ctx, &repo, hg_cs))
-                .unwrap();
+            let (bcs_id, bcs) = bonsai_changeset_from_hg(&ctx, &repo, hg_cs).await.unwrap();
 
             let (_, mf_id, deleted_nodes) =
-                derive_manifest(ctx.clone(), repo.clone(), &mut runtime, bcs, vec![mf_id_3]);
+                derive_manifest(ctx.clone(), repo.clone(), bcs, vec![mf_id_3]).await;
 
             let expected_nodes = vec![
                 (None, Status::Live),
@@ -743,7 +719,7 @@ mod tests {
         };
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn merged_history_test(fb: FacebookInit) -> Result<(), Error> {
         //
         //  N
@@ -978,7 +954,6 @@ mod tests {
         let manifest = RootDeletedManifestId::derive(ctx, repo, bonsai).await?;
         let mut deleted_nodes =
             iterate_all_entries(ctx.clone(), repo.clone(), *manifest.deleted_manifest_id())
-                .compat()
                 .map_ok(|(path, st, ..)| (path, st))
                 .try_collect::<Vec<_>>()
                 .await?;
@@ -986,10 +961,9 @@ mod tests {
         Ok(deleted_nodes)
     }
 
-    fn create_cs_and_derive_manifest(
+    async fn create_cs_and_derive_manifest(
         ctx: CoreContext,
         repo: BlobRepo,
-        mut runtime: &mut Runtime,
         file_changes: BTreeMap<&str, Option<&str>>,
         parent_ids: Vec<(ChangesetId, DeletedManifestId)>,
     ) -> (ChangesetId, DeletedManifestId, Vec<(Option<MPath>, Status)>) {
@@ -999,24 +973,22 @@ mod tests {
             .collect::<Vec<_>>();
         let parent_mf_ids = parent_ids.into_iter().map(|(_, mf)| mf).collect::<Vec<_>>();
 
-        let files = runtime.block_on_std(store_files(ctx.clone(), file_changes, repo.clone()));
+        let files = store_files(ctx.clone(), file_changes, repo.clone()).await;
 
-        let bcs =
-            create_bonsai_changeset(ctx.fb, repo.clone(), &mut runtime, files, parent_bcs_ids);
+        let bcs = create_bonsai_changeset(ctx.fb, repo.clone(), files, parent_bcs_ids).await;
 
-        derive_manifest(ctx.clone(), repo.clone(), &mut runtime, bcs, parent_mf_ids)
+        derive_manifest(ctx.clone(), repo.clone(), bcs, parent_mf_ids).await
     }
 
-    fn derive_manifest(
+    async fn derive_manifest(
         ctx: CoreContext,
         repo: BlobRepo,
-        runtime: &mut Runtime,
         bcs: BonsaiChangeset,
         parent_mf_ids: Vec<DeletedManifestId>,
     ) -> (ChangesetId, DeletedManifestId, Vec<(Option<MPath>, Status)>) {
         let bcs_id = bcs.get_changeset_id();
 
-        let changes = runtime.block_on_std(get_changes(&ctx, &repo, bcs)).unwrap();
+        let changes = get_changes(&ctx, &repo, bcs).await.unwrap();
         let f = derive_deleted_files_manifest(
             ctx.clone(),
             repo.clone(),
@@ -1025,28 +997,23 @@ mod tests {
             changes,
         );
 
-        let dfm_id = runtime.block_on(f).unwrap();
+        let dfm_id = f.await.unwrap();
         // Make sure it's saved in the blobstore
-        runtime
-            .block_on_std(dfm_id.load(ctx.clone(), repo.blobstore()))
-            .unwrap();
+        dfm_id.load(ctx.clone(), repo.blobstore()).await.unwrap();
 
-        let mut deleted_nodes = runtime
-            .block_on(
-                iterate_all_entries(ctx.clone(), repo.clone(), dfm_id.clone())
-                    .map(|(path, st, ..)| (path, st))
-                    .collect(),
-            )
+        let mut deleted_nodes = iterate_all_entries(ctx.clone(), repo.clone(), dfm_id.clone())
+            .map_ok(|(path, st, ..)| (path, st))
+            .try_collect::<Vec<_>>()
+            .await
             .unwrap();
         deleted_nodes.sort_by_key(|(path, ..)| path.clone());
 
         (bcs_id, dfm_id, deleted_nodes)
     }
 
-    fn create_bonsai_changeset(
+    async fn create_bonsai_changeset(
         fb: FacebookInit,
         repo: BlobRepo,
-        runtime: &mut Runtime,
         file_changes: BTreeMap<MPath, Option<FileChange>>,
         parents: Vec<ChangesetId>,
     ) -> BonsaiChangeset {
@@ -1063,12 +1030,9 @@ mod tests {
         .freeze()
         .unwrap();
 
-        runtime
-            .block_on(save_bonsai_changesets(
-                vec![bcs.clone()],
-                CoreContext::test_mock(fb),
-                repo.clone(),
-            ))
+        save_bonsai_changesets(vec![bcs.clone()], CoreContext::test_mock(fb), repo.clone())
+            .compat()
+            .await
             .unwrap();
         bcs
     }
@@ -1089,13 +1053,13 @@ mod tests {
         ctx: CoreContext,
         repo: BlobRepo,
         manifest_id: DeletedManifestId,
-    ) -> impl Stream<Item = (Option<MPath>, Status, DeletedManifestId), Error = Error> {
-        let blobstore = repo.get_blobstore();
-        bounded_traversal_stream(256, Some((None, manifest_id)), move |(path, manifest_id)| {
-            manifest_id
-                .load(ctx.clone(), &blobstore)
-                .compat()
-                .map(move |manifest| {
+    ) -> impl Stream<Item = Result<(Option<MPath>, Status, DeletedManifestId), Error>> {
+        async_stream::stream! {
+            let blobstore = repo.get_blobstore();
+            let s = bounded_traversal_stream(256, Some((None, manifest_id)), move |(path, manifest_id)| {
+                cloned!(ctx, blobstore);
+                async move {
+                    let manifest = manifest_id.load(ctx, &blobstore).await?;
                     let entry = (
                         path.clone(),
                         Status::from(manifest.linknode().clone()),
@@ -1109,11 +1073,17 @@ mod tests {
                         })
                         .collect::<Vec<_>>();
 
-                    (vec![entry], recurse_subentries)
-                })
-        })
-        .map(|entries| iter_ok(entries))
-        .flatten()
+                    Result::<_, Error>::Ok((vec![entry], recurse_subentries))
+                }
+            })
+            .map_ok(|entries| iter(entries.into_iter().map(Ok)))
+            .try_flatten();
+
+            pin_mut!(s);
+            while let Some(value) = s.next().await {
+                yield value;
+            }
+        }
     }
 
     fn path(path_str: &str) -> MPath {

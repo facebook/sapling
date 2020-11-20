@@ -13,19 +13,12 @@ use blobstore::{Blobstore, BlobstoreGetData};
 use bytes::Bytes;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
-use futures::compat::Future01CompatExt;
-use futures::future::TryFutureExt;
-use futures_ext::StreamExt;
-use futures_old::{
-    stream::{self, FuturesUnordered},
-    Future, Stream,
-};
+use futures::stream::{FuturesUnordered, TryStreamExt};
 use mononoke_types::{BlobstoreBytes, BonsaiChangeset, ChangesetId, DeletedManifestId};
 use repo_blobstore::RepoBlobstore;
 use std::{
     collections::HashMap,
     convert::{TryFrom, TryInto},
-    iter::FromIterator,
 };
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -74,7 +67,7 @@ impl BonsaiDerived for RootDeletedManifestId {
     ) -> Result<Self, Error> {
         let bcs_id = bonsai.get_changeset_id();
         let changes = get_changes(&ctx, &repo, bonsai).await?;
-        derive_deleted_files_manifest(
+        let id = derive_deleted_files_manifest(
             ctx,
             repo,
             bcs_id,
@@ -84,9 +77,8 @@ impl BonsaiDerived for RootDeletedManifestId {
                 .collect(),
             changes,
         )
-        .map(RootDeletedManifestId)
-        .compat()
-        .await
+        .await?;
+        Ok(RootDeletedManifestId(id))
     }
 }
 
@@ -104,16 +96,19 @@ impl RootDeletedManifestMapping {
         format!("derived_root_deleted_manifest.{}", cs_id)
     }
 
-    fn fetch_deleted_manifest(
+    async fn fetch_deleted_manifest(
         &self,
         ctx: CoreContext,
         cs_id: ChangesetId,
-    ) -> impl Future<Item = Option<(ChangesetId, RootDeletedManifestId)>, Error = Error> {
-        self.blobstore
+    ) -> Result<Option<(ChangesetId, RootDeletedManifestId)>, Error> {
+        let maybe_bytes = self
+            .blobstore
             .get(ctx.clone(), self.format_key(cs_id))
-            .compat()
-            .and_then(|maybe_bytes| maybe_bytes.map(|bytes| bytes.try_into()).transpose())
-            .map(move |maybe_root_mf_id| maybe_root_mf_id.map(|root_mf_id| (cs_id, root_mf_id)))
+            .await?;
+        match maybe_bytes {
+            Some(bytes) => Ok(Some((cs_id, bytes.try_into()?))),
+            None => Ok(None),
+        }
     }
 }
 
@@ -126,14 +121,12 @@ impl BonsaiDerivedMapping for RootDeletedManifestMapping {
         ctx: CoreContext,
         csids: Vec<ChangesetId>,
     ) -> Result<HashMap<ChangesetId, Self::Value>, Error> {
-        let gets = csids.into_iter().map(|cs_id| {
-            self.fetch_deleted_manifest(ctx.clone(), cs_id)
-                .map(|maybe_root_mf_id| stream::iter_ok(maybe_root_mf_id.into_iter()))
-        });
-        FuturesUnordered::from_iter(gets)
-            .flatten()
-            .collect_to()
-            .compat()
+        csids
+            .into_iter()
+            .map(|cs_id| self.fetch_deleted_manifest(ctx.clone(), cs_id))
+            .collect::<FuturesUnordered<_>>()
+            .try_filter_map(|maybe_metadata| async move { Ok(maybe_metadata) })
+            .try_collect()
             .await
     }
 

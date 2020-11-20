@@ -164,7 +164,6 @@ impl HgRepoContext {
         let ctx = self.ctx().clone();
         let blobstore = self.blob_repo().blobstore();
         let revlog_cs = RevlogChangeset::load(ctx, blobstore, hg_cs_id)
-            .compat()
             .await
             .map_err(MononokeError::from)?;
         let revlog_cs = match revlog_cs {

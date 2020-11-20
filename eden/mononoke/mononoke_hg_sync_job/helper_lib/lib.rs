@@ -38,7 +38,7 @@ use tokio_io::codec::Decoder;
 
 pub const LATEST_REPLAYED_REQUEST_KEY: &str = "latest-replayed-request";
 
-pub async fn save_bundle_to_temp_file<B: Blobstore + Clone>(
+pub async fn save_bundle_to_temp_file<B: Blobstore>(
     ctx: &CoreContext,
     blobstore: &B,
     bundle2_id: RawBundle2Id,
@@ -57,7 +57,7 @@ pub async fn save_bundle_to_temp_file<B: Blobstore + Clone>(
     Ok(tempfile)
 }
 
-pub async fn save_bundle_to_file<B: Blobstore + Clone>(
+pub async fn save_bundle_to_file<B: Blobstore>(
     ctx: &CoreContext,
     blobstore: &B,
     bundle2_id: RawBundle2Id,

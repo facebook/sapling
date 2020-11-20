@@ -51,13 +51,13 @@ impl<T> Deref for AbstractRepoBlobstore<T> {
 
 impl<B> Blobstore for AbstractRepoBlobstore<B>
 where
-    B: Blobstore + Clone,
+    B: Blobstore,
 {
     fn get(
         &self,
         ctx: CoreContext,
         key: String,
-    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
+    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>, Error>> {
         self.0.get(ctx, key)
     }
     fn put(
@@ -65,10 +65,10 @@ where
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'static, Result<(), Error>> {
+    ) -> BoxFuture<'_, Result<(), Error>> {
         self.0.put(ctx, key, value)
     }
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'_, Result<bool, Error>> {
         self.0.is_present(ctx, key)
     }
 }
@@ -81,7 +81,7 @@ pub struct RepoBlobstoreArgs {
 }
 
 impl RepoBlobstoreArgs {
-    pub fn new<T: Blobstore + Clone>(
+    pub fn new<T: Blobstore + 'static>(
         blobstore: T,
         redacted_blobs: Option<HashMap<String, RedactedMetadata>>,
         repoid: RepositoryId,
@@ -97,7 +97,7 @@ impl RepoBlobstoreArgs {
         wrapper: F,
     ) -> Self
     where
-        T: Blobstore + Clone,
+        T: Blobstore + 'static,
         F: FnOnce(Arc<dyn Blobstore>) -> T,
     {
         let (blobstore, redacted_blobstore_config) = blobstore.as_parts();
@@ -114,7 +114,7 @@ impl RepoBlobstoreArgs {
         self.blobstore.clone()
     }
 
-    fn build<T: Blobstore + Clone>(
+    fn build<T: Blobstore + 'static>(
         blobstore: T,
         repoid: RepositoryId,
         redacted_blobstore_config: RedactedBlobstoreConfig,

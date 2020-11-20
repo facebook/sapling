@@ -6,19 +6,17 @@
  */
 
 use crate::{BonsaiDerived, BonsaiDerivedMapping, DeriveError, Mode};
-use anyhow::Error;
+use anyhow::{Error, Result};
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use cacheblob::LeaseOps;
 use context::CoreContext;
 use futures::{
+    channel::oneshot,
     compat::Future01CompatExt,
     future::{try_join, try_join_all, FutureExt, TryFutureExt},
     TryStreamExt,
 };
-use futures_ext::FutureExt as FutureExt01;
-use futures_old::sync::oneshot as oneshot01;
-use futures_old::Future as Future01;
 use futures_stats::{futures03::TimedFutureExt, FutureStats};
 use metaconfig_types::DerivedDataConfig;
 use mononoke_types::ChangesetId;
@@ -322,7 +320,7 @@ where
     let mut backoff_ms = 200;
 
     loop {
-        let result = lease.try_add_put_lease(&lease_key).compat().await;
+        let result = lease.try_add_put_lease(&lease_key).await;
         // In case of lease unavailability we do not want to stall
         // generation of all derived data, since lease is a soft lock
         // it is safe to assume that we successfuly acquired it
@@ -378,12 +376,8 @@ where
                         res
                     };
 
-                    let (sender, receiver) = oneshot01::channel();
-                    lease.renew_lease_until(
-                        ctx.clone(),
-                        &lease_key,
-                        receiver.map_err(|_| ()).boxify(),
-                    );
+                    let (sender, receiver) = oneshot::channel();
+                    lease.renew_lease_until(ctx.clone(), &lease_key, receiver.map(|_| ()).boxed());
 
                     let derived_data_config = repo.get_derived_data_config();
                     let mut derived_data_scuba = init_derived_data_scuba::<Derived>(
@@ -407,7 +401,7 @@ where
                     break;
                 } else {
                     let sleep = rand::random::<u64>() % backoff_ms;
-                    let _ = tokio::time::delay_for(Duration::from_millis(sleep)).await;
+                    tokio::time::delay_for(Duration::from_millis(sleep)).await;
 
                     backoff_ms *= 2;
                     if backoff_ms >= 1000 {
@@ -555,7 +549,7 @@ impl<Derived: BonsaiDerived> DeriveNode<Derived> {
 mod test {
     use super::*;
 
-    use anyhow::Error;
+    use anyhow::{anyhow, Error};
     use async_trait::async_trait;
     use blobrepo_hg::BlobRepoHg;
     use blobrepo_override::DangerousOverride;
@@ -568,10 +562,11 @@ mod test {
         branch_even, branch_uneven, branch_wide, linear, many_diamonds, many_files_dirs,
         merge_even, merge_uneven, unshared_merge_even, unshared_merge_uneven,
     };
-    use futures::compat::Future01CompatExt;
-    use futures::future::TryFutureExt;
-    use futures_ext::BoxFuture as BoxFuture01;
-    use futures_old::{future as future01, Stream as Stream01};
+    use futures::{
+        compat::Future01CompatExt,
+        future::{BoxFuture, TryFutureExt},
+    };
+    use futures_old::{Future as _, Stream as _};
     use lazy_static::lazy_static;
     use lock_ext::LockExt;
     use maplit::hashmap;
@@ -586,7 +581,6 @@ mod test {
         time::Duration,
     };
     use tests_utils::resolve_cs_id;
-    use tokio_compat::runtime::Runtime;
     use tunables::{with_tunables, MononokeTunables};
 
     lazy_static! {
@@ -675,7 +669,7 @@ mod test {
         }
     }
 
-    fn derive_for_master(runtime: &mut Runtime, ctx: CoreContext, repo: BlobRepo) {
+    async fn derive_for_master(ctx: CoreContext, repo: BlobRepo) {
         let repo = repo.dangerous_override(|mut derived_data_config: DerivedDataConfig| {
             derived_data_config
                 .derived_data_types
@@ -684,42 +678,37 @@ mod test {
         });
 
         let master_book = BookmarkName::new("master").unwrap();
-        let bcs_id = runtime
-            .block_on(repo.get_bonsai_bookmark(ctx.clone(), &master_book))
+        let bcs_id = repo
+            .get_bonsai_bookmark(ctx.clone(), &master_book)
+            .compat()
+            .await
             .unwrap()
             .unwrap();
-        let expected = runtime
-            .block_on(
-                repo.get_changeset_fetcher()
-                    .get_generation_number(ctx.clone(), bcs_id.clone()),
-            )
+        let expected = repo
+            .get_changeset_fetcher()
+            .get_generation_number(ctx.clone(), bcs_id.clone())
+            .compat()
+            .await
             .unwrap();
 
         let mapping = &TestGenNum::mapping(&ctx, &repo);
-        let actual = runtime
-            .block_on_std(TestGenNum::derive(&ctx, &repo, bcs_id))
-            .unwrap();
+        let actual = TestGenNum::derive(&ctx, &repo, bcs_id).await.unwrap();
         assert_eq!(expected.value(), actual.0);
 
         let changeset_fetcher = repo.get_changeset_fetcher();
-        runtime
-            .block_on(
-                AncestorsNodeStream::new(
-                    ctx.clone(),
-                    &repo.get_changeset_fetcher(),
-                    bcs_id.clone(),
-                )
-                .and_then(move |new_bcs_id| {
-                    let parents = changeset_fetcher.get_parents(ctx.clone(), new_bcs_id.clone());
-                    let mapping = mapping.get(ctx.clone(), vec![new_bcs_id]).boxed().compat();
+        AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), bcs_id.clone())
+            .and_then(move |new_bcs_id| {
+                let parents = changeset_fetcher.get_parents(ctx.clone(), new_bcs_id.clone());
+                let mapping = mapping.get(ctx.clone(), vec![new_bcs_id]).boxed().compat();
 
-                    parents.join(mapping).map(move |(parents, mapping)| {
-                        let gen_num = mapping.get(&new_bcs_id).unwrap();
-                        assert_eq!(parents, gen_num.2);
-                    })
+                parents.join(mapping).map(move |(parents, mapping)| {
+                    let gen_num = mapping.get(&new_bcs_id).unwrap();
+                    assert_eq!(parents, gen_num.2);
                 })
-                .collect(),
-            )
+            })
+            .collect()
+            .compat()
+            .await
             .unwrap();
     }
 
@@ -735,113 +724,105 @@ mod test {
     }
 
     #[fbinit::test]
-    fn test_incomplete_maping(fb: FacebookInit) -> Result<(), Error> {
+    async fn test_incomplete_maping(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let mut runtime = Runtime::new()?;
 
-        runtime.block_on_std(async move {
-            let repo = init_linear(fb).await;
+        let repo = init_linear(fb).await;
 
-            // This is the parent of the root commit
-            // ...
-            //  O <- 3e0e761030db6e479a7fb58b12881883f9f8c63f
-            //  |
-            //  O <- 2d7d4ba9ce0a6ffd222de7785b249ead9c51c536
-            let after_root_cs_id =
-                resolve_cs_id(&ctx, &repo, "3e0e761030db6e479a7fb58b12881883f9f8c63f").await?;
-            let root_cs_id =
-                resolve_cs_id(&ctx, &repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").await?;
+        // This is the parent of the root commit
+        // ...
+        //  O <- 3e0e761030db6e479a7fb58b12881883f9f8c63f
+        //  |
+        //  O <- 2d7d4ba9ce0a6ffd222de7785b249ead9c51c536
+        let after_root_cs_id =
+            resolve_cs_id(&ctx, &repo, "3e0e761030db6e479a7fb58b12881883f9f8c63f").await?;
+        let root_cs_id =
+            resolve_cs_id(&ctx, &repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").await?;
 
-            TestGenNum::derive(&ctx, &repo, after_root_cs_id).await?;
+        TestGenNum::derive(&ctx, &repo, after_root_cs_id).await?;
 
-            // Delete root entry, and derive descendant of after_root changeset, make sure
-            // it doesn't fail
-            TestGenNum::mapping(&ctx, &repo).remove(&root_cs_id);
-            TestGenNum::derive(&ctx, &repo, after_root_cs_id).await?;
+        // Delete root entry, and derive descendant of after_root changeset, make sure
+        // it doesn't fail
+        TestGenNum::mapping(&ctx, &repo).remove(&root_cs_id);
+        TestGenNum::derive(&ctx, &repo, after_root_cs_id).await?;
 
-            let third_cs_id =
-                resolve_cs_id(&ctx, &repo, "607314ef579bd2407752361ba1b0c1729d08b281").await?;
-            TestGenNum::derive(&ctx, &repo, third_cs_id).await?;
-
-            Ok(())
-        })
-    }
-
-    #[fbinit::test]
-    fn test_count_underived(fb: FacebookInit) -> Result<(), Error> {
-        let ctx = CoreContext::test_mock(fb);
-        let mut runtime = Runtime::new()?;
-
-        runtime.block_on_std(async move {
-            let repo = init_linear(fb).await;
-
-            // This is the parent of the root commit
-            // ...
-            //  O <- 3e0e761030db6e479a7fb58b12881883f9f8c63f
-            //  |
-            //  O <- 2d7d4ba9ce0a6ffd222de7785b249ead9c51c536
-            let after_root_cs_id =
-                resolve_cs_id(&ctx, &repo, "3e0e761030db6e479a7fb58b12881883f9f8c63f").await?;
-            let root_cs_id =
-                resolve_cs_id(&ctx, &repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").await?;
-
-            let underived =
-                TestGenNum::count_underived(&ctx, &repo, &after_root_cs_id, 100).await?;
-            assert_eq!(underived, 2);
-
-            let underived = TestGenNum::count_underived(&ctx, &repo, &root_cs_id, 100).await?;
-            assert_eq!(underived, 1);
-
-            let underived = TestGenNum::count_underived(&ctx, &repo, &after_root_cs_id, 1).await?;
-            assert_eq!(underived, 2);
-
-            let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
-            let underived = TestGenNum::count_underived(&ctx, &repo, &master_cs_id, 100).await?;
-            assert_eq!(underived, 11);
-
-            Ok(())
-        })
-    }
-
-    #[fbinit::test]
-    fn test_derive_for_fixture_repos(fb: FacebookInit) -> Result<(), Error> {
-        let ctx = CoreContext::test_mock(fb);
-        let mut runtime = Runtime::new()?;
-
-        let repo = runtime.block_on_std(branch_even::getrepo(fb));
-        derive_for_master(&mut runtime, ctx.clone(), repo.clone());
-
-        let repo = runtime.block_on_std(branch_uneven::getrepo(fb));
-        derive_for_master(&mut runtime, ctx.clone(), repo.clone());
-
-        let repo = runtime.block_on_std(branch_wide::getrepo(fb));
-        derive_for_master(&mut runtime, ctx.clone(), repo.clone());
-
-        let repo = runtime.block_on_std(linear::getrepo(fb));
-        derive_for_master(&mut runtime, ctx.clone(), repo.clone());
-
-        let repo = runtime.block_on_std(many_files_dirs::getrepo(fb));
-        derive_for_master(&mut runtime, ctx.clone(), repo.clone());
-
-        let repo = runtime.block_on_std(merge_even::getrepo(fb));
-        derive_for_master(&mut runtime, ctx.clone(), repo.clone());
-
-        let repo = runtime.block_on_std(merge_uneven::getrepo(fb));
-        derive_for_master(&mut runtime, ctx.clone(), repo.clone());
-
-        let repo = runtime.block_on_std(unshared_merge_even::getrepo(fb));
-        derive_for_master(&mut runtime, ctx.clone(), repo.clone());
-
-        let repo = runtime.block_on_std(unshared_merge_uneven::getrepo(fb));
-        derive_for_master(&mut runtime, ctx.clone(), repo.clone());
-
-        let repo = runtime.block_on_std(many_diamonds::getrepo(fb));
-        derive_for_master(&mut runtime, ctx.clone(), repo.clone());
+        let third_cs_id =
+            resolve_cs_id(&ctx, &repo, "607314ef579bd2407752361ba1b0c1729d08b281").await?;
+        TestGenNum::derive(&ctx, &repo, third_cs_id).await?;
 
         Ok(())
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
+    async fn test_count_underived(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+
+        let repo = init_linear(fb).await;
+
+        // This is the parent of the root commit
+        // ...
+        //  O <- 3e0e761030db6e479a7fb58b12881883f9f8c63f
+        //  |
+        //  O <- 2d7d4ba9ce0a6ffd222de7785b249ead9c51c536
+        let after_root_cs_id =
+            resolve_cs_id(&ctx, &repo, "3e0e761030db6e479a7fb58b12881883f9f8c63f").await?;
+        let root_cs_id =
+            resolve_cs_id(&ctx, &repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").await?;
+
+        let underived = TestGenNum::count_underived(&ctx, &repo, &after_root_cs_id, 100).await?;
+        assert_eq!(underived, 2);
+
+        let underived = TestGenNum::count_underived(&ctx, &repo, &root_cs_id, 100).await?;
+        assert_eq!(underived, 1);
+
+        let underived = TestGenNum::count_underived(&ctx, &repo, &after_root_cs_id, 1).await?;
+        assert_eq!(underived, 2);
+
+        let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
+        let underived = TestGenNum::count_underived(&ctx, &repo, &master_cs_id, 100).await?;
+        assert_eq!(underived, 11);
+
+        Ok(())
+    }
+
+    #[fbinit::test]
+    async fn test_derive_for_fixture_repos(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+
+        let repo = branch_even::getrepo(fb).await;
+        derive_for_master(ctx.clone(), repo.clone()).await;
+
+        let repo = branch_uneven::getrepo(fb).await;
+        derive_for_master(ctx.clone(), repo.clone()).await;
+
+        let repo = branch_wide::getrepo(fb).await;
+        derive_for_master(ctx.clone(), repo.clone()).await;
+
+        let repo = linear::getrepo(fb).await;
+        derive_for_master(ctx.clone(), repo.clone()).await;
+
+        let repo = many_files_dirs::getrepo(fb).await;
+        derive_for_master(ctx.clone(), repo.clone()).await;
+
+        let repo = merge_even::getrepo(fb).await;
+        derive_for_master(ctx.clone(), repo.clone()).await;
+
+        let repo = merge_uneven::getrepo(fb).await;
+        derive_for_master(ctx.clone(), repo.clone()).await;
+
+        let repo = unshared_merge_even::getrepo(fb).await;
+        derive_for_master(ctx.clone(), repo.clone()).await;
+
+        let repo = unshared_merge_uneven::getrepo(fb).await;
+        derive_for_master(ctx.clone(), repo.clone()).await;
+
+        let repo = many_diamonds::getrepo(fb).await;
+        derive_for_master(ctx.clone(), repo.clone()).await;
+
+        Ok(())
+    }
+
+    #[fbinit::test]
     async fn test_batch_derive(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let from_batch = {
@@ -885,15 +866,16 @@ mod test {
     }
 
     #[fbinit::test]
-    fn test_leases(fb: FacebookInit) -> Result<(), Error> {
+    async fn test_leases(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let mut runtime = Runtime::new()?;
-        let repo = runtime.block_on_std(init_linear(fb));
+        let repo = init_linear(fb).await;
         let mapping = TestGenNum::mapping(&ctx, &repo);
 
         let hg_csid = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
-        let csid = runtime
-            .block_on(repo.get_bonsai_from_hg(ctx.clone(), hg_csid))?
+        let csid = repo
+            .get_bonsai_from_hg(ctx.clone(), hg_csid)
+            .compat()
+            .await?
             .ok_or(Error::msg("known hg does not have bonsai csid"))?;
 
         let lease = repo.get_derived_data_lease_ops();
@@ -905,17 +887,11 @@ mod test {
         ));
 
         // take lease
-        assert_eq!(
-            runtime.block_on(lease.try_add_put_lease(&lease_key)),
-            Ok(true)
-        );
-        assert_eq!(
-            runtime.block_on(lease.try_add_put_lease(&lease_key)),
-            Ok(false)
-        );
+        assert_eq!(lease.try_add_put_lease(&lease_key).await?, true);
+        assert_eq!(lease.try_add_put_lease(&lease_key).await?, false);
 
         let output = Arc::new(Mutex::new(Vec::new()));
-        runtime.spawn_std({
+        tokio::spawn({
             cloned!(ctx, repo, output);
             async move {
                 let result = TestGenNum::derive(&ctx, &repo, csid).await;
@@ -924,40 +900,27 @@ mod test {
         });
 
         // schedule derivation
-        runtime.block_on(tokio_timer::sleep(Duration::from_millis(300)))?;
-        assert_eq!(
-            runtime.block_on_std(mapping.get(ctx.clone(), vec![csid]))?,
-            HashMap::new()
-        );
+        tokio::time::delay_for(Duration::from_millis(300)).await;
+        assert_eq!(mapping.get(ctx.clone(), vec![csid]).await?, HashMap::new());
 
         // release lease
-        runtime
-            .block_on(lease.release_lease(&lease_key))
-            .map_err(|_| Error::msg("failed to release a lease"))?;
+        lease.release_lease(&lease_key).await;
 
-        runtime.block_on(tokio_timer::sleep(Duration::from_millis(3000)))?;
+        tokio::time::delay_for(Duration::from_millis(3000)).await;
         let result = match output.with(|output| output.pop()) {
             Some(result) => result?,
             None => panic!("scheduled derivation should have been completed"),
         };
         assert_eq!(
-            runtime.block_on_std(mapping.get(ctx.clone(), vec![csid]))?,
+            mapping.get(ctx.clone(), vec![csid]).await?,
             hashmap! { csid => result.clone() }
         );
 
         // take lease
-        assert_eq!(
-            runtime.block_on(lease.try_add_put_lease(&lease_key)),
-            Ok(true),
-        );
+        assert_eq!(lease.try_add_put_lease(&lease_key).await?, true);
         // should succed as lease should not be request
-        assert_eq!(
-            runtime.block_on_std(TestGenNum::derive(&ctx, &repo, csid))?,
-            result
-        );
-        runtime
-            .block_on(lease.release_lease(&lease_key))
-            .map_err(|_| Error::msg("failed to release a lease"))?;
+        assert_eq!(TestGenNum::derive(&ctx, &repo, csid).await?, result);
+        lease.release_lease(&lease_key).await;
 
         Ok(())
     }
@@ -966,34 +929,34 @@ mod test {
     struct FailingLease;
 
     impl LeaseOps for FailingLease {
-        fn try_add_put_lease(&self, _key: &str) -> BoxFuture01<bool, ()> {
-            future01::err(()).boxify()
+        fn try_add_put_lease(&self, _key: &str) -> BoxFuture<'_, Result<bool>> {
+            async { Err(anyhow!("error")) }.boxed()
         }
 
-        fn renew_lease_until(&self, _ctx: CoreContext, _key: &str, _done: BoxFuture01<(), ()>) {}
+        fn renew_lease_until(&self, _ctx: CoreContext, _key: &str, _done: BoxFuture<'static, ()>) {}
 
-        fn wait_for_other_leases(&self, _key: &str) -> BoxFuture01<(), ()> {
-            future01::err(()).boxify()
+        fn wait_for_other_leases(&self, _key: &str) -> BoxFuture<'_, ()> {
+            async {}.boxed()
         }
 
-        fn release_lease(&self, _key: &str) -> BoxFuture01<(), ()> {
-            future01::err(()).boxify()
+        fn release_lease(&self, _key: &str) -> BoxFuture<'_, ()> {
+            async {}.boxed()
         }
     }
 
     #[fbinit::test]
-    fn test_always_failing_lease(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = Runtime::new()?;
-
+    async fn test_always_failing_lease(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = runtime
-            .block_on_std(init_linear(fb))
+        let repo = init_linear(fb)
+            .await
             .dangerous_override(|_| Arc::new(FailingLease) as Arc<dyn LeaseOps>);
         let mapping = TestGenNum::mapping(&ctx, &repo);
 
         let hg_csid = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
-        let csid = runtime
-            .block_on(repo.get_bonsai_from_hg(ctx.clone(), hg_csid))?
+        let csid = repo
+            .get_bonsai_from_hg(ctx.clone(), hg_csid)
+            .compat()
+            .await?
             .ok_or(Error::msg("known hg does not have bonsai csid"))?;
 
         let lease = repo.get_derived_data_lease_ops();
@@ -1005,15 +968,12 @@ mod test {
         ));
 
         // takig lease should fail
-        assert_eq!(
-            runtime.block_on(lease.try_add_put_lease(&lease_key)),
-            Err(())
-        );
+        assert!(lease.try_add_put_lease(&lease_key).await.is_err());
 
         // should succeed even though lease always fails
-        let result = runtime.block_on_std(TestGenNum::derive(&ctx, &repo, csid))?;
+        let result = TestGenNum::derive(&ctx, &repo, csid).await?;
         assert_eq!(
-            runtime.block_on_std(mapping.get(ctx, vec![csid]))?,
+            mapping.get(ctx, vec![csid]).await?,
             hashmap! { csid => result },
         );
 

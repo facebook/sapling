@@ -61,7 +61,6 @@ async fn run(
             None,
             std::iter::repeat(16).take(stack_size),
         )
-        .compat()
         .timed()
         .await;
     println!("stack generated: {:?} {:?}", gen.size(), stats);

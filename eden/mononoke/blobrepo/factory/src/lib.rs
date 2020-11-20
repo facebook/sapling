@@ -819,7 +819,7 @@ fn get_cache_pool(name: &str) -> Result<cachelib::LruCachePool> {
         .ok_or_else(|| Error::from(ErrorKind::MissingCachePool(name.to_string())))
 }
 
-pub fn get_cachelib_blobstore<B: Blobstore + Clone>(
+pub fn get_cachelib_blobstore<B: Blobstore + Clone + 'static>(
     blobstore: B,
     cache_shards: usize,
     options: CachelibBlobstoreOptions,

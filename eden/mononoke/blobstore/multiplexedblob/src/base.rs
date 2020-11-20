@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Error};
+use anyhow::{anyhow, Error, Result};
 use blobstore::{Blobstore, BlobstoreGetData, BlobstorePutOps, OverwriteStatus, PutBehaviour};
 use blobstore_stats::{record_get_stats, record_put_stats, OperationType};
 use blobstore_sync_queue::OperationKey;
@@ -393,7 +393,7 @@ impl Blobstore for MultiplexedBlobstoreBase {
         &self,
         ctx: CoreContext,
         key: String,
-    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
+    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>>> {
         let mut scuba = self.scuba.clone();
         let blobstores = self.blobstores.clone();
         let write_mostly_blobstores = self.write_mostly_blobstores.clone();
@@ -403,7 +403,7 @@ impl Blobstore for MultiplexedBlobstoreBase {
             .boxed()
     }
 
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'_, Result<bool>> {
         let blobstores_count = self.blobstores.len() + self.write_mostly_blobstores.len();
 
         let main_requests: FuturesUnordered<_> = self
@@ -474,7 +474,7 @@ impl Blobstore for MultiplexedBlobstoreBase {
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'static, Result<(), Error>> {
+    ) -> BoxFuture<'_, Result<()>> {
         BlobstorePutOps::put_with_status(self, ctx, key, value)
             .map_ok(|_| ())
             .boxed()
@@ -490,7 +490,7 @@ impl MultiplexedBlobstoreBase {
         key: String,
         value: BlobstoreBytes,
         put_behaviour: Option<PutBehaviour>,
-    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
         let write_order = Arc::new(AtomicUsize::new(0));
         let operation_key = OperationKey::gen();
         let mut needed_handlers: usize = self.minimum_successful_writes.into();
@@ -628,7 +628,7 @@ impl BlobstorePutOps for MultiplexedBlobstoreBase {
         key: String,
         value: BlobstoreBytes,
         put_behaviour: PutBehaviour,
-    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
         self.put_impl(ctx, key, value, Some(put_behaviour))
     }
 
@@ -637,7 +637,7 @@ impl BlobstorePutOps for MultiplexedBlobstoreBase {
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
         self.put_impl(ctx, key, value, None)
     }
 }

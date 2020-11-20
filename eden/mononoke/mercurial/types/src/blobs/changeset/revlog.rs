@@ -13,9 +13,6 @@ use anyhow::{bail, Context, Error, Result};
 use blobstore::Blobstore;
 use bytes::Bytes;
 use context::CoreContext;
-use failure_ext::FutureFailureErrorExt;
-use futures::future::TryFutureExt;
-use futures_old::future::{Either, Future, IntoFuture};
 use mononoke_types::DateTime;
 use std::{
     collections::BTreeMap,
@@ -211,44 +208,42 @@ impl RevlogChangeset {
         )
     }
 
-    pub fn load<B: Blobstore + Clone>(
+    pub async fn load<B: Blobstore>(
         ctx: CoreContext,
         blobstore: &B,
         changesetid: HgChangesetId,
-    ) -> impl Future<Item = Option<RevlogChangeset>, Error = Error> + Send + 'static {
+    ) -> Result<Option<RevlogChangeset>> {
         if changesetid == HgChangesetId::new(NULL_HASH) {
             let revlogcs = RevlogChangeset::new_null();
-            Either::A(Ok(Some(revlogcs)).into_future())
+            Ok(Some(revlogcs))
         } else {
             let key = changesetid.blobstore_key();
 
-            let fut = blobstore
-                .get(ctx, key.clone())
-                .compat()
-                .and_then(move |got| {
-                    match got {
-                        None => Ok(None),
-                        Some(bytes) => {
-                            let envelope = HgChangesetEnvelope::from_blob(bytes.into())?;
-                            if changesetid != envelope.node_id() {
-                                bail!(
-                                    "Changeset ID mismatch (requested: {}, got: {})",
-                                    changesetid,
-                                    envelope.node_id()
-                                );
-                            }
-                            let revlogcs = RevlogChangeset::from_envelope(envelope)?;
-                            Ok(Some(revlogcs))
+            async {
+                let got = blobstore.get(ctx, key.clone()).await?;
+                match got {
+                    None => Ok(None),
+                    Some(bytes) => {
+                        let envelope = HgChangesetEnvelope::from_blob(bytes.into())?;
+                        if changesetid != envelope.node_id() {
+                            bail!(
+                                "Changeset ID mismatch (requested: {}, got: {})",
+                                changesetid,
+                                envelope.node_id()
+                            );
                         }
+                        let revlogcs = RevlogChangeset::from_envelope(envelope)?;
+                        Ok(Some(revlogcs))
                     }
-                })
-                .with_context(move || {
-                    format!(
-                        "Error while deserializing changeset retrieved from key '{}'",
-                        key
-                    )
-                });
-            Either::B(fut)
+                }
+            }
+            .await
+            .with_context(move || {
+                format!(
+                    "Error while deserializing changeset retrieved from key '{}'",
+                    key
+                )
+            })
         }
     }
 

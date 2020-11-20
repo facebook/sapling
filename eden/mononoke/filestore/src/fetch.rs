@@ -11,6 +11,7 @@ use std::convert::TryInto;
 use anyhow::Error;
 use blobstore::{Blobstore, Loadable, LoadableError};
 use bytes::Bytes;
+use cloned::cloned;
 use context::CoreContext;
 use futures::{
     future,
@@ -36,12 +37,12 @@ pub enum Range {
     Span { start: u64, end: u64 },
 }
 
-pub fn stream_file_bytes<B: Blobstore + Clone>(
+pub fn stream_file_bytes<'a, B: Blobstore + Clone + 'a>(
     blobstore: B,
     ctx: CoreContext,
     file_contents: FileContents,
     range: Range,
-) -> impl Stream<Item = Result<Bytes, Error>> {
+) -> impl Stream<Item = Result<Bytes, Error>> + 'a {
     match file_contents {
         FileContents::Bytes(bytes) => {
             // File is just a single chunk of bytes. Return the correct
@@ -129,11 +130,10 @@ pub fn stream_file_bytes<B: Blobstore + Clone>(
             stream::iter(chunk_iter.map(move |(chunk_range, chunk)| {
                 // Send some (maybe all) of this chunk.
                 let chunk_id = chunk.chunk_id();
-
-                let load_op = chunk_id.load(ctx.clone(), &blobstore);
-
+                cloned!(ctx, blobstore);
                 async move {
-                    let bytes = load_op
+                    let bytes = chunk_id
+                        .load(ctx, &blobstore)
                         .await
                         .map_err(move |err| {
                             match err {
@@ -159,25 +159,26 @@ pub fn stream_file_bytes<B: Blobstore + Clone>(
     }
 }
 
-pub async fn fetch_with_size<B: Blobstore + Clone>(
-    blobstore: &B,
+pub async fn fetch_with_size<'a, B: Blobstore + Clone + 'a>(
+    blobstore: B,
     ctx: CoreContext,
     content_id: ContentId,
     range: Range,
-) -> Result<Option<(impl Stream<Item = Result<Bytes, Error>>, u64)>, Error> {
-    let maybe_file_contents = content_id
-        .load(ctx.clone(), blobstore)
-        .await
-        .map(Some)
-        .or_else(|err| match err {
-            LoadableError::Error(err) => Err(err),
-            LoadableError::Missing(_) => Ok(None),
-        })?;
+) -> Result<Option<(impl Stream<Item = Result<Bytes, Error>> + 'a, u64)>, Error> {
+    let maybe_file_contents = {
+        cloned!(ctx, blobstore);
+        async move { content_id.load(ctx, &blobstore).await }.await
+    }
+    .map(Some)
+    .or_else(|err| match err {
+        LoadableError::Error(err) => Err(err),
+        LoadableError::Missing(_) => Ok(None),
+    })?;
 
     Ok(maybe_file_contents.map(|file_contents| {
         let file_size = file_contents.size();
         (
-            stream_file_bytes(blobstore.clone(), ctx, file_contents, range),
+            stream_file_bytes(blobstore, ctx, file_contents, range),
             file_size,
         )
     }))

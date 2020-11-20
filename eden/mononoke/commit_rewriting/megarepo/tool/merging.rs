@@ -28,21 +28,23 @@ fn get_all_files_in_working_copy(
     repo: BlobRepo,
     hg_cs_id: HgChangesetId,
 ) -> impl Future<Item = Vec<MPath>, Error = Error> {
-    hg_cs_id
-        .load(ctx.clone(), repo.blobstore())
-        .compat()
-        .from_err()
-        .and_then({
-            cloned!(ctx, repo);
-            move |hg_cs| {
-                hg_cs
-                    .manifestid()
-                    .list_leaf_entries(ctx, repo.get_blobstore())
-                    .compat()
-                    .map(|(mpath, _)| mpath)
-                    .collect()
-            }
-        })
+    {
+        cloned!(ctx, repo);
+        async move { hg_cs_id.load(ctx.clone(), repo.blobstore()).await }
+    }
+    .boxed()
+    .compat()
+    .from_err()
+    .and_then({
+        move |hg_cs| {
+            hg_cs
+                .manifestid()
+                .list_leaf_entries(ctx, repo.get_blobstore())
+                .compat()
+                .map(|(mpath, _)| mpath)
+                .collect()
+        }
+    })
 }
 
 fn fail_on_path_conflicts(

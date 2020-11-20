@@ -10,7 +10,7 @@ use crate::{
     queue::MultiplexedBlobstore,
 };
 
-use anyhow::Error;
+use anyhow::Result;
 use blobstore::{
     Blobstore, BlobstoreGetData, BlobstoreMetadata, BlobstorePutOps, OverwriteStatus, PutBehaviour,
 };
@@ -147,7 +147,7 @@ async fn put_and_mark_repaired(
     key: &String,
     value: &BlobstoreGetData,
     scrub_handler: &dyn ScrubHandler,
-) -> Result<(), Error> {
+) -> Result<()> {
     let (_, res) = inner_put(
         ctx,
         scuba.clone(),
@@ -175,7 +175,7 @@ async fn blobstore_get(
     scrub_handler: &dyn ScrubHandler,
     scrub_action: ScrubAction,
     scuba: ScubaSampleBuilder,
-) -> Result<Option<BlobstoreGetData>, Error> {
+) -> Result<Option<BlobstoreGetData>> {
     match inner_blobstore.scrub_get(ctx, &key).await {
         Ok(value) => return Ok(value),
         Err(error) => match error {
@@ -259,7 +259,7 @@ impl Blobstore for ScrubBlobstore {
         &self,
         ctx: CoreContext,
         key: String,
-    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
+    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>>> {
         cloned!(
             ctx,
             self.scrub_stores,
@@ -286,7 +286,7 @@ impl Blobstore for ScrubBlobstore {
         .boxed()
     }
 
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'_, Result<bool>> {
         self.inner.is_present(ctx, key)
     }
 
@@ -295,7 +295,7 @@ impl Blobstore for ScrubBlobstore {
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'static, Result<(), Error>> {
+    ) -> BoxFuture<'_, Result<()>> {
         BlobstorePutOps::put_with_status(self, ctx, key, value)
             .map_ok(|_| ())
             .boxed()
@@ -309,7 +309,7 @@ impl BlobstorePutOps for ScrubBlobstore {
         key: String,
         value: BlobstoreBytes,
         put_behaviour: PutBehaviour,
-    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
         self.inner.put_explicit(ctx, key, value, put_behaviour)
     }
 
@@ -318,7 +318,7 @@ impl BlobstorePutOps for ScrubBlobstore {
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
         self.inner.put_with_status(ctx, key, value)
     }
 }

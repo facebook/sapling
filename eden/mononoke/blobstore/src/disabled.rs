@@ -33,7 +33,7 @@ impl Blobstore for DisabledBlob {
         &self,
         _ctx: CoreContext,
         _key: String,
-    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
+    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>, Error>> {
         err(format_err!("Blobstore disabled: {}", self.reason)).boxed()
     }
 
@@ -42,7 +42,7 @@ impl Blobstore for DisabledBlob {
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'static, Result<(), Error>> {
+    ) -> BoxFuture<'_, Result<(), Error>> {
         BlobstorePutOps::put_with_status(self, ctx, key, value)
             .map_ok(|_| ())
             .boxed()
@@ -56,7 +56,7 @@ impl BlobstorePutOps for DisabledBlob {
         _key: String,
         _value: BlobstoreBytes,
         _put_behaviour: PutBehaviour,
-    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+    ) -> BoxFuture<'_, Result<OverwriteStatus, Error>> {
         err(format_err!("Blobstore disabled: {}", self.reason)).boxed()
     }
 
@@ -65,7 +65,7 @@ impl BlobstorePutOps for DisabledBlob {
         _ctx: CoreContext,
         _key: String,
         _value: BlobstoreBytes,
-    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+    ) -> BoxFuture<'_, Result<OverwriteStatus, Error>> {
         err(format_err!("Blobstore disabled: {}", self.reason)).boxed()
     }
 }

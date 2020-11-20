@@ -61,10 +61,10 @@ use derived_data_filenodes::FilenodesOnlyPublic;
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
     future::{self, try_join, try_join_all, FutureExt, TryFutureExt},
-    stream::{StreamExt, TryStream, TryStreamExt},
+    stream::{self, StreamExt, TryStream, TryStreamExt},
 };
-use futures_ext::{BoxFuture, FutureExt as Futures01FutureExt, StreamExt as Futures01StreamExt};
-use futures_old::{stream, Future, Stream};
+use futures_ext::{BoxFuture, FutureExt as Futures01FutureExt};
+use futures_old::Future as _;
 use manifest::{bonsai_diff, BonsaiDiffFileChange, ManifestOps};
 use maplit::hashmap;
 use mercurial_bundle_replay_data::BundleReplayData;
@@ -1155,10 +1155,8 @@ async fn generate_additional_bonsai_file_changes(
             let mfid = id_to_manifestid(ctx, repo, *p).await?;
             let stale = mfid
                 .find_entries(ctx.clone(), repo.get_blobstore(), paths)
-                .compat()
-                .filter_map(|(path, _)| path)
-                .collect_to::<HashSet<_>>()
-                .compat()
+                .try_filter_map(|(path, _)| async move { Ok(path) })
+                .try_collect::<HashSet<_>>()
                 .await?;
             Result::<_, Error>::Ok(stale)
         });
@@ -1189,9 +1187,10 @@ async fn generate_additional_bonsai_file_changes(
         ));
     }
 
-    stream::futures_unordered(new_file_changes)
-        .collect()
-        .compat()
+    new_file_changes
+        .into_iter()
+        .collect::<stream::FuturesUnordered<_>>()
+        .try_collect()
         .await
 }
 

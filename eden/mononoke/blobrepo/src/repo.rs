@@ -507,8 +507,8 @@ pub fn save_bonsai_changeset_object(
     let bcs_id = bonsai_blob.id().clone();
     let blobstore_key = bcs_id.blobstore_key();
 
-    blobstore
-        .put(ctx, blobstore_key, bonsai_blob.into())
+    async move { blobstore.put(ctx, blobstore_key, bonsai_blob.into()).await }
+        .boxed()
         .compat()
         .map(|_| ())
 }

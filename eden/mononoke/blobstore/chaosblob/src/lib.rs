@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Error;
+use anyhow::Result;
 use blobstore::{Blobstore, BlobstoreGetData, BlobstorePutOps, OverwriteStatus, PutBehaviour};
 use context::CoreContext;
 use futures::future::{BoxFuture, FutureExt, TryFutureExt};
@@ -84,7 +84,7 @@ impl<T: Blobstore + BlobstorePutOps> Blobstore for ChaosBlobstore<T> {
         &self,
         ctx: CoreContext,
         key: String,
-    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
+    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>>> {
         let should_error = thread_rng().gen::<f32>() > self.sample_threshold_read;
         let get = self.blobstore.get(ctx, key.clone());
         async move {
@@ -103,12 +103,12 @@ impl<T: Blobstore + BlobstorePutOps> Blobstore for ChaosBlobstore<T> {
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'static, Result<(), Error>> {
+    ) -> BoxFuture<'_, Result<()>> {
         self.put_impl(ctx, key, value, None).map_ok(|_| ()).boxed()
     }
 
     #[inline]
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'_, Result<bool>> {
         let should_error = thread_rng().gen::<f32>() > self.sample_threshold_read;
         let is_present = self.blobstore.is_present(ctx, key.clone());
         async move {
@@ -129,7 +129,7 @@ impl<T: BlobstorePutOps> ChaosBlobstore<T> {
         key: String,
         value: BlobstoreBytes,
         put_behaviour: Option<PutBehaviour>,
-    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
         let should_error = thread_rng().gen::<f32>() > self.sample_threshold_write;
         let put = if should_error {
             None
@@ -159,7 +159,7 @@ impl<T: BlobstorePutOps> BlobstorePutOps for ChaosBlobstore<T> {
         key: String,
         value: BlobstoreBytes,
         put_behaviour: PutBehaviour,
-    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
         self.put_impl(ctx, key, value, Some(put_behaviour))
     }
 
@@ -168,7 +168,7 @@ impl<T: BlobstorePutOps> BlobstorePutOps for ChaosBlobstore<T> {
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
         self.put_impl(ctx, key, value, None)
     }
 }

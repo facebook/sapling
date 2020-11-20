@@ -35,7 +35,7 @@ impl<T> PrefixBlobstore<T> {
     }
 }
 
-impl<T: Clone> PrefixBlobstore<T> {
+impl<T> PrefixBlobstore<T> {
     pub fn new<S: Into<InlinableString>>(blobstore: T, prefix: S) -> Self {
         let prefix = prefix.into();
         Self { prefix, blobstore }
@@ -47,13 +47,13 @@ impl<T: Clone> PrefixBlobstore<T> {
     }
 }
 
-impl<T: Blobstore + Clone> Blobstore for PrefixBlobstore<T> {
+impl<T: Blobstore> Blobstore for PrefixBlobstore<T> {
     #[inline]
     fn get(
         &self,
         ctx: CoreContext,
         key: String,
-    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
+    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>, Error>> {
         self.blobstore.get(ctx, self.prepend(key))
     }
 
@@ -63,24 +63,24 @@ impl<T: Blobstore + Clone> Blobstore for PrefixBlobstore<T> {
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'static, Result<(), Error>> {
+    ) -> BoxFuture<'_, Result<(), Error>> {
         self.blobstore.put(ctx, self.prepend(key), value)
     }
 
     #[inline]
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'_, Result<bool, Error>> {
         self.blobstore.is_present(ctx, self.prepend(key))
     }
 }
 
-impl<T: BlobstorePutOps + Clone> BlobstorePutOps for PrefixBlobstore<T> {
+impl<T: BlobstorePutOps> BlobstorePutOps for PrefixBlobstore<T> {
     fn put_explicit(
         &self,
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
         put_behaviour: PutBehaviour,
-    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+    ) -> BoxFuture<'_, Result<OverwriteStatus, Error>> {
         self.blobstore
             .put_explicit(ctx, self.prepend(key), value, put_behaviour)
     }
@@ -90,7 +90,7 @@ impl<T: BlobstorePutOps + Clone> BlobstorePutOps for PrefixBlobstore<T> {
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+    ) -> BoxFuture<'_, Result<OverwriteStatus, Error>> {
         self.blobstore
             .put_with_status(ctx, self.prepend(key), value)
     }

@@ -140,7 +140,7 @@ pub async fn execute_command<'a>(
         }
         (COMMAND_FETCH, Some(matches)) => {
             let fetch_key = extract_fetch_key(matches)?;
-            let mut stream = filestore::fetch(&blobrepo.get_blobstore(), ctx.clone(), &fetch_key)
+            let mut stream = filestore::fetch(blobrepo.blobstore(), ctx.clone(), &fetch_key)
                 .await?
                 .ok_or_else(|| anyhow!("content not found"))?;
 

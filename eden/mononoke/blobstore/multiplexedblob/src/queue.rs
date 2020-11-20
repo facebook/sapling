@@ -6,7 +6,7 @@
  */
 
 use crate::base::{ErrorKind, MultiplexedBlobstoreBase, MultiplexedBlobstorePutHandler};
-use anyhow::Error;
+use anyhow::Result;
 use blobstore::{Blobstore, BlobstoreGetData, BlobstorePutOps, OverwriteStatus, PutBehaviour};
 use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry, OperationKey};
 use cloned::cloned;
@@ -73,7 +73,7 @@ impl MultiplexedBlobstorePutHandler for QueueBlobstorePutHandler {
         multiplex_id: MultiplexId,
         operation_key: &'out OperationKey,
         key: &'out str,
-    ) -> BoxFuture<'out, Result<(), Error>> {
+    ) -> BoxFuture<'out, Result<()>> {
         self.queue.add(
             ctx,
             BlobstoreSyncQueueEntry::new(
@@ -92,7 +92,7 @@ impl Blobstore for MultiplexedBlobstore {
         &self,
         ctx: CoreContext,
         key: String,
-    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
+    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>>> {
         let get = self.blobstore.get(ctx.clone(), key.clone());
         cloned!(self.queue);
 
@@ -126,11 +126,11 @@ impl Blobstore for MultiplexedBlobstore {
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'static, Result<(), Error>> {
+    ) -> BoxFuture<'_, Result<()>> {
         self.blobstore.put(ctx, key, value)
     }
 
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'_, Result<bool>> {
         cloned!(self.queue);
         let is_present = self.blobstore.is_present(ctx.clone(), key.clone());
 
@@ -162,7 +162,7 @@ impl BlobstorePutOps for MultiplexedBlobstore {
         key: String,
         value: BlobstoreBytes,
         put_behaviour: PutBehaviour,
-    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
         self.blobstore.put_explicit(ctx, key, value, put_behaviour)
     }
 
@@ -171,7 +171,7 @@ impl BlobstorePutOps for MultiplexedBlobstore {
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
         self.blobstore.put_with_status(ctx, key, value)
     }
 }

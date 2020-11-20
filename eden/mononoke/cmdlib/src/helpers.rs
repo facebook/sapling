@@ -13,7 +13,7 @@ use cloned::cloned;
 use fbinit::FacebookInit;
 use futures::{
     future::{self, Either},
-    StreamExt, TryFutureExt,
+    FutureExt, StreamExt, TryFutureExt,
 };
 use futures_ext::{BoxFuture, FutureExt as OldFutureExt};
 use futures_old::{Future as OldFuture, IntoFuture};
@@ -130,7 +130,13 @@ pub fn get_root_manifest_id(
         repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
             .and_then({
                 cloned!(ctx, repo);
-                move |cs_id| cs_id.load(ctx, repo.blobstore()).compat().from_err()
+                move |cs_id| {
+                    cloned!(ctx, repo);
+                    async move { cs_id.load(ctx, repo.blobstore()).await }
+                        .boxed()
+                        .compat()
+                        .from_err()
+                }
             })
             .map(|cs| cs.manifestid())
     })

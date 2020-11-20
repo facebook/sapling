@@ -13,13 +13,7 @@ use blobstore::{Blobstore, BlobstoreGetData};
 use bytes::Bytes;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
-use futures::compat::Future01CompatExt;
-use futures::future::TryFutureExt;
-use futures_ext::StreamExt;
-use futures_old::{
-    stream::{self, FuturesUnordered},
-    Future, Stream,
-};
+use futures::{stream::FuturesUnordered, TryFutureExt, TryStreamExt};
 use metaconfig_types::UnodeVersion;
 use mononoke_types::{
     BlobstoreBytes, BonsaiChangeset, ChangesetId, ContentId, FileType, MPath, ManifestUnodeId,
@@ -28,7 +22,6 @@ use repo_blobstore::RepoBlobstore;
 use std::{
     collections::HashMap,
     convert::{TryFrom, TryInto},
-    iter::FromIterator,
 };
 
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
@@ -91,8 +84,7 @@ impl BonsaiDerived for RootUnodeManifestId {
                 .collect(),
             get_file_changes(&bonsai),
         )
-        .map(RootUnodeManifestId)
-        .compat()
+        .map_ok(RootUnodeManifestId)
         .await
     }
 }
@@ -119,16 +111,19 @@ impl RootUnodeManifestMapping {
         }
     }
 
-    fn fetch_unode(
+    async fn fetch_unode(
         &self,
         ctx: CoreContext,
         cs_id: ChangesetId,
-    ) -> impl Future<Item = Option<(ChangesetId, RootUnodeManifestId)>, Error = Error> {
-        self.blobstore
+    ) -> Result<Option<(ChangesetId, RootUnodeManifestId)>, Error> {
+        let bytes = self
+            .blobstore
             .get(ctx.clone(), self.format_key(cs_id))
-            .compat()
-            .and_then(|maybe_bytes| maybe_bytes.map(|bytes| bytes.try_into()).transpose())
-            .map(move |maybe_root_mf_id| maybe_root_mf_id.map(|root_mf_id| (cs_id, root_mf_id)))
+            .await?;
+        match bytes {
+            Some(bytes) => Ok(Some((cs_id, bytes.try_into()?))),
+            None => Ok(None),
+        }
     }
 }
 
@@ -141,14 +136,12 @@ impl BonsaiDerivedMapping for RootUnodeManifestMapping {
         ctx: CoreContext,
         csids: Vec<ChangesetId>,
     ) -> Result<HashMap<ChangesetId, Self::Value>, Error> {
-        let gets = csids.into_iter().map(|cs_id| {
-            self.fetch_unode(ctx.clone(), cs_id)
-                .map(|maybe_root_mf_id| stream::iter_ok(maybe_root_mf_id.into_iter()))
-        });
-        FuturesUnordered::from_iter(gets)
-            .flatten()
-            .collect_to()
-            .compat()
+        csids
+            .into_iter()
+            .map(|cs_id| self.fetch_unode(ctx.clone(), cs_id))
+            .collect::<FuturesUnordered<_>>()
+            .try_filter_map(|x| async move { Ok(x) })
+            .try_collect()
             .await
     }
 
@@ -186,94 +179,63 @@ mod test {
         branch_even, branch_uneven, branch_wide, linear, many_diamonds, many_files_dirs,
         merge_even, merge_uneven, unshared_merge_even, unshared_merge_uneven,
     };
-    use futures::future::{Future as NewFuture, FutureExt, TryFutureExt};
-    use futures::stream::TryStreamExt;
+    use futures::{compat::Stream01CompatExt, future, Future, Stream, TryStreamExt};
+    use futures_old::{Future as _, Stream as _};
     use manifest::Entry;
     use mercurial_types::{HgChangesetId, HgManifestId};
     use revset::AncestorsNodeStream;
-    use tokio_compat::runtime::Runtime;
 
-    fn fetch_manifest_by_cs_id(
+    async fn fetch_manifest_by_cs_id(
         ctx: CoreContext,
         repo: BlobRepo,
         hg_cs_id: HgChangesetId,
-    ) -> impl Future<Item = HgManifestId, Error = Error> {
-        hg_cs_id
-            .load(ctx, repo.blobstore())
-            .compat()
-            .from_err()
-            .map(|hg_cs| hg_cs.manifestid())
+    ) -> Result<HgManifestId, Error> {
+        Ok(hg_cs_id.load(ctx, repo.blobstore()).await?.manifestid())
     }
 
-    fn verify_unode(
+    async fn verify_unode(
         ctx: CoreContext,
         repo: BlobRepo,
         bcs_id: ChangesetId,
         hg_cs_id: HgChangesetId,
-    ) -> impl Future<Item = (), Error = Error> {
+    ) -> Result<(), Error> {
         let unode_entries = {
             cloned!(ctx, repo);
             async move {
-                Ok(RootUnodeManifestId::derive(&ctx, &repo, bcs_id)
+                let mf_unode_id = RootUnodeManifestId::derive(&ctx, &repo, bcs_id)
                     .await?
                     .manifest_unode_id()
-                    .clone())
+                    .clone();
+                let mut paths = iterate_all_manifest_entries(&ctx, &repo, Entry::Tree(mf_unode_id))
+                    .map_ok(|(path, _)| path)
+                    .try_collect::<Vec<_>>()
+                    .await?;
+                paths.sort();
+                Ok(paths)
             }
-            .boxed()
-            .compat()
-        }
-        .and_then({
-            cloned!(ctx, repo);
-            move |mf_unode_id| {
-                async move {
-                    iterate_all_manifest_entries(&ctx, &repo, Entry::Tree(mf_unode_id))
-                        .compat()
-                        .map(|(path, _)| path)
-                        .collect()
-                        .map(|mut paths| {
-                            paths.sort();
-                            paths
-                        })
-                        .compat()
-                        .await
-                }
-                .boxed()
-                .compat()
-            }
-        });
+        };
 
-        let filenode_entries = fetch_manifest_by_cs_id(ctx.clone(), repo.clone(), hg_cs_id)
-            .and_then({
-                cloned!(ctx, repo);
-                move |root_mf_id| {
-                    async move {
-                        iterate_all_manifest_entries(&ctx, &repo, Entry::Tree(root_mf_id))
-                            .compat()
-                            .map(|(path, _)| path)
-                            .collect()
-                            .map(|mut paths| {
-                                paths.sort();
-                                paths
-                            })
-                            .compat()
-                            .await
-                    }
-                    .boxed()
-                    .compat()
-                }
-            });
+        let filenode_entries = async move {
+            let root_mf_id = fetch_manifest_by_cs_id(ctx.clone(), repo.clone(), hg_cs_id).await?;
+            let mut paths = iterate_all_manifest_entries(&ctx, &repo, Entry::Tree(root_mf_id))
+                .map_ok(|(path, _)| path)
+                .try_collect::<Vec<_>>()
+                .await?;
+            paths.sort();
+            Ok(paths)
+        };
 
-        unode_entries
-            .join(filenode_entries)
-            .map(|(unode_entries, filenode_entries)| {
+        future::try_join(unode_entries, filenode_entries)
+            .map_ok(|(unode_entries, filenode_entries)| {
                 assert_eq!(unode_entries, filenode_entries);
             })
+            .await
     }
 
     fn all_commits(
         ctx: CoreContext,
         repo: BlobRepo,
-    ) -> impl Stream<Item = (ChangesetId, HgChangesetId), Error = Error> {
+    ) -> impl Stream<Item = Result<(ChangesetId, HgChangesetId), Error>> {
         let master_book = BookmarkName::new("master").unwrap();
         repo.get_bonsai_bookmark(ctx.clone(), &master_book)
             .map(move |maybe_bcs_id| {
@@ -285,38 +247,36 @@ mod test {
                     })
             })
             .flatten_stream()
+            .compat()
     }
 
-    fn verify_repo<F>(fb: FacebookInit, repo: F, runtime: &mut Runtime)
+    async fn verify_repo<F>(fb: FacebookInit, repo: F)
     where
-        F: NewFuture<Output = BlobRepo>,
+        F: Future<Output = BlobRepo>,
     {
         let ctx = CoreContext::test_mock(fb);
-        let repo = runtime.block_on_std(repo);
+        let repo = repo.await;
 
-        runtime
-            .block_on(
-                all_commits(ctx.clone(), repo.clone())
-                    .and_then(move |(bcs_id, hg_cs_id)| {
-                        verify_unode(ctx.clone(), repo.clone(), bcs_id, hg_cs_id)
-                    })
-                    .collect(),
-            )
+        all_commits(ctx.clone(), repo.clone())
+            .and_then(move |(bcs_id, hg_cs_id)| {
+                verify_unode(ctx.clone(), repo.clone(), bcs_id, hg_cs_id)
+            })
+            .try_collect::<Vec<_>>()
+            .await
             .unwrap();
     }
 
     #[fbinit::test]
-    fn test_derive_data(fb: FacebookInit) {
-        let mut runtime = Runtime::new().unwrap();
-        verify_repo(fb, linear::getrepo(fb), &mut runtime);
-        verify_repo(fb, branch_even::getrepo(fb), &mut runtime);
-        verify_repo(fb, branch_uneven::getrepo(fb), &mut runtime);
-        verify_repo(fb, branch_wide::getrepo(fb), &mut runtime);
-        verify_repo(fb, many_diamonds::getrepo(fb), &mut runtime);
-        verify_repo(fb, many_files_dirs::getrepo(fb), &mut runtime);
-        verify_repo(fb, merge_even::getrepo(fb), &mut runtime);
-        verify_repo(fb, merge_uneven::getrepo(fb), &mut runtime);
-        verify_repo(fb, unshared_merge_even::getrepo(fb), &mut runtime);
-        verify_repo(fb, unshared_merge_uneven::getrepo(fb), &mut runtime);
+    async fn test_derive_data(fb: FacebookInit) {
+        verify_repo(fb, linear::getrepo(fb)).await;
+        verify_repo(fb, branch_even::getrepo(fb)).await;
+        verify_repo(fb, branch_uneven::getrepo(fb)).await;
+        verify_repo(fb, branch_wide::getrepo(fb)).await;
+        verify_repo(fb, many_diamonds::getrepo(fb)).await;
+        verify_repo(fb, many_files_dirs::getrepo(fb)).await;
+        verify_repo(fb, merge_even::getrepo(fb)).await;
+        verify_repo(fb, merge_uneven::getrepo(fb)).await;
+        verify_repo(fb, unshared_merge_even::getrepo(fb)).await;
+        verify_repo(fb, unshared_merge_uneven::getrepo(fb)).await;
     }
 }

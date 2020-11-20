@@ -249,22 +249,26 @@ impl CreateChangeset {
                                             .boxed()
                                             .compat();
 
-                                            blobcs
-                                                .save(ctx.clone(), blobstore)
-                                                .join(bonsai_cs_fut)
-                                                .context("While writing to blobstore")
-                                                .join(
-                                                    entry_processor
-                                                        .finalize(
-                                                            ctx,
-                                                            root_mf_id,
-                                                            parent_manifest_hashes,
-                                                        )
-                                                        .context("While finalizing processing"),
-                                                )
-                                                .from_err()
-                                                .map(move |_| (blobcs, bonsai_cs))
-                                                .boxify()
+                                            {
+                                                cloned!(ctx, blobcs);
+                                                async move { blobcs.save(ctx, blobstore).await }
+                                            }
+                                            .boxed()
+                                            .compat()
+                                            .join(bonsai_cs_fut)
+                                            .context("While writing to blobstore")
+                                            .join(
+                                                entry_processor
+                                                    .finalize(
+                                                        ctx,
+                                                        root_mf_id,
+                                                        parent_manifest_hashes,
+                                                    )
+                                                    .context("While finalizing processing"),
+                                            )
+                                            .from_err()
+                                            .map(move |_| (blobcs, bonsai_cs))
+                                            .boxify()
                                         })();
 
                                     fut.context(

@@ -83,7 +83,7 @@ impl BlobstorePutOps for Fileblob {
         key: String,
         value: BlobstoreBytes,
         put_behaviour: PutBehaviour,
-    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
         let p = self.path(&key);
         async move {
             // block_in_place on tempfile would be ideal here, but it interacts
@@ -127,7 +127,7 @@ impl BlobstorePutOps for Fileblob {
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
         self.put_explicit(ctx, key, value, self.put_behaviour)
     }
 }
@@ -137,7 +137,7 @@ impl Blobstore for Fileblob {
         &self,
         _ctx: CoreContext,
         key: String,
-    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
+    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>>> {
         let p = self.path(&key);
 
         async move {
@@ -159,11 +159,7 @@ impl Blobstore for Fileblob {
         .boxed()
     }
 
-    fn is_present(
-        &self,
-        _ctx: CoreContext,
-        key: String,
-    ) -> BoxFuture<'static, Result<bool, Error>> {
+    fn is_present(&self, _ctx: CoreContext, key: String) -> BoxFuture<'_, Result<bool>> {
         let p = self.path(&key);
 
         async move {
@@ -182,7 +178,7 @@ impl Blobstore for Fileblob {
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'static, Result<(), Error>> {
+    ) -> BoxFuture<'_, Result<()>> {
         BlobstorePutOps::put_with_status(self, ctx, key, value)
             .map_ok(|_| ())
             .boxed()
@@ -197,7 +193,7 @@ impl BlobstoreWithLink for Fileblob {
         _ctx: CoreContext,
         existing_key: String,
         link_key: String,
-    ) -> BoxFuture<'static, Result<(), Error>> {
+    ) -> BoxFuture<'_, Result<()>> {
         // from std::fs::hard_link: The dst path will be a link pointing to the src path
         let src_path = self.path(&existing_key);
         let dst_path = self.path(&link_key);
@@ -210,7 +206,7 @@ impl BlobstoreKeySource for Fileblob {
         &self,
         _ctx: CoreContext,
         range: BlobstoreKeyParam,
-    ) -> BoxFuture<'static, Result<BlobstoreEnumerationData, Error>> {
+    ) -> BoxFuture<'_, Result<BlobstoreEnumerationData>> {
         match range {
             BlobstoreKeyParam::Start(range) => {
                 let mut enum_data = BlobstoreEnumerationData {

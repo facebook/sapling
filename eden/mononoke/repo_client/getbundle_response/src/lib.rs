@@ -25,8 +25,8 @@ use futures::{
     stream::{self, Stream, StreamExt, TryStreamExt},
 };
 use futures_ext::{
-    BoxFuture as OldBoxFuture, BoxStream as OldBoxStream, BufferedParams,
-    FutureExt as OldFutureExt, StreamExt as OldStreamExt,
+    BoxFuture as OldBoxFuture, BoxStream as OldBoxStream, BufferedParams, FutureExt as _,
+    StreamExt as OldStreamExt,
 };
 use futures_old::{
     future as old_future, stream as old_stream, Future as OldFuture, Stream as OldStream,
@@ -949,19 +949,25 @@ pub fn create_manifest_entries_stream(
     old_stream::iter_ok(manifests.into_iter())
         .map({
             move |(fullpath, mf_id, linknode)| {
-                fetch_manifest_envelope(ctx.clone(), &blobstore.boxed(), mf_id)
-                    .map(move |mf_envelope| {
-                        let (p1, p2) = mf_envelope.parents();
-                        parts::TreepackPartInput {
-                            node: mf_id.into_nodehash(),
-                            p1,
-                            p2,
-                            content: BytesOld::from(mf_envelope.contents().as_ref()),
-                            fullpath,
-                            linknode: linknode.into_nodehash(),
-                        }
-                    })
-                    .boxify()
+                cloned!(ctx, blobstore);
+                async move {
+                    fetch_manifest_envelope(ctx, &blobstore.boxed(), mf_id)
+                        .map_ok(move |mf_envelope| {
+                            let (p1, p2) = mf_envelope.parents();
+                            parts::TreepackPartInput {
+                                node: mf_id.into_nodehash(),
+                                p1,
+                                p2,
+                                content: BytesOld::from(mf_envelope.contents().as_ref()),
+                                fullpath,
+                                linknode: linknode.into_nodehash(),
+                            }
+                        })
+                        .await
+                }
+                .boxed()
+                .compat()
+                .boxify()
             }
         })
         .boxify()

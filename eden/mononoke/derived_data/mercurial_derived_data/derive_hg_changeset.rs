@@ -10,6 +10,7 @@ use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobrepo_common::changed_files::compute_changed_files;
 use blobstore::Loadable;
+use borrowed::borrowed;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, DeriveError};
@@ -66,25 +67,28 @@ fn store_file_change(
     match (p1, p2) {
         (Some(parent), None) | (None, Some(parent)) => {
             let store = repo.get_blobstore().boxed();
-            cloned!(ctx, change, path);
-            parent
-                .load(ctx, &store)
-                .compat()
-                .from_err()
-                .map(move |parent_envelope| {
-                    if parent_envelope.content_id() == change.content_id()
-                        && change.copy_from().is_none()
-                    {
-                        Some(HgBlobEntry::new(
-                            store,
-                            parent.into_nodehash(),
-                            Type::File(change.file_type()),
-                        ))
-                    } else {
-                        None
-                    }
-                })
-                .right_future()
+            cloned!(change, path);
+            {
+                cloned!(ctx, store);
+                async move { parent.load(ctx, &store).await }
+            }
+            .boxed()
+            .compat()
+            .from_err()
+            .map(move |parent_envelope| {
+                if parent_envelope.content_id() == change.content_id()
+                    && change.copy_from().is_none()
+                {
+                    Some(HgBlobEntry::new(
+                        store,
+                        parent.into_nodehash(),
+                        Type::File(change.file_type()),
+                    ))
+                } else {
+                    None
+                }
+            })
+            .right_future()
         }
         _ => future::ok(None).left_future(),
     }
@@ -323,12 +327,15 @@ pub(crate) async fn derive_from_parents(
     parents: Vec<MappedHgChangesetId>,
 ) -> Result<MappedHgChangesetId, Error> {
     let bcs_id = bonsai.get_changeset_id();
-    let parents = try_join_all(
-        parents
-            .into_iter()
-            .map(|id| id.0.load(ctx.clone(), repo.blobstore())),
-    )
-    .await?;
+    let parents = {
+        borrowed!(ctx, repo);
+        try_join_all(
+            parents
+                .into_iter()
+                .map(|id| async move { id.0.load(ctx.clone(), repo.blobstore()).await }),
+        )
+        .await?
+    };
     let hg_cs_id = generate_hg_changeset(repo, ctx, bcs_id, bonsai, parents)
         .compat()
         .await?;
@@ -396,7 +403,9 @@ fn generate_hg_changeset(
                 let cs = try_boxfuture!(HgBlobChangeset::new(content));
                 let cs_id = cs.get_changeset_id();
 
-                cs.save(ctx.clone(), repo.get_blobstore())
+                async move { cs.save(ctx.clone(), repo.get_blobstore()).await }
+                    .boxed()
+                    .compat()
                     .map(move |_| cs_id)
                     .boxify()
             }

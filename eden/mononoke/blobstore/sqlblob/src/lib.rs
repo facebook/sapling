@@ -453,7 +453,7 @@ impl Sqlblob {
         }
     }
 
-    pub async fn set_generation(&self, key: &str) -> Result<(), Error> {
+    pub async fn set_generation(&self, key: &str) -> Result<()> {
         let chunked = self.data_store.get(key).await?;
         if let Some(chunked) = chunked {
             let set_chunk_generations: FuturesUnordered<_> = (0..chunked.count)
@@ -480,7 +480,7 @@ impl Blobstore for Sqlblob {
         &self,
         _ctx: CoreContext,
         key: String,
-    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
+    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>>> {
         cloned!(self.data_store, self.chunk_store);
 
         async move {
@@ -504,11 +504,7 @@ impl Blobstore for Sqlblob {
         .boxed()
     }
 
-    fn is_present(
-        &self,
-        _ctx: CoreContext,
-        key: String,
-    ) -> BoxFuture<'static, Result<bool, Error>> {
+    fn is_present(&self, _ctx: CoreContext, key: String) -> BoxFuture<'_, Result<bool>> {
         cloned!(self.data_store);
         async move { data_store.is_present(&key).await }.boxed()
     }
@@ -518,7 +514,7 @@ impl Blobstore for Sqlblob {
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'static, Result<(), Error>> {
+    ) -> BoxFuture<'_, Result<()>> {
         BlobstorePutOps::put_with_status(self, ctx, key, value)
             .map_ok(|_| ())
             .boxed()
@@ -532,7 +528,7 @@ impl BlobstorePutOps for Sqlblob {
         key: String,
         value: BlobstoreBytes,
         put_behaviour: PutBehaviour,
-    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
         if key.as_bytes().len() > MAX_KEY_SIZE {
             return future::err(format_err!(
                 "Key {} exceeded max key size {}",
@@ -614,7 +610,7 @@ impl BlobstorePutOps for Sqlblob {
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
         self.put_explicit(ctx, key, value, self.put_behaviour)
     }
 }
@@ -625,7 +621,7 @@ impl BlobstoreWithLink for Sqlblob {
         _ctx: CoreContext,
         existing_key: String,
         link_key: String,
-    ) -> BoxFuture<'static, Result<(), Error>> {
+    ) -> BoxFuture<'_, Result<()>> {
         cloned!(self.data_store);
         async move {
             let existing_data = data_store.get(&existing_key).await?.ok_or_else(|| {

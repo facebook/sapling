@@ -14,11 +14,11 @@ use failure_ext::FutureFailureExt;
 use filenodes::{FilenodeInfo, FilenodeRangeResult, FilenodeResult, Filenodes};
 use futures::{
     compat::Future01CompatExt,
-    future::TryFutureExt,
+    future::{FutureExt, TryFutureExt},
     stream,
     stream::{StreamExt, TryStreamExt},
 };
-use futures_ext::{FutureExt, StreamExt as OldStreamExt};
+use futures_ext::{FutureExt as _, StreamExt as _};
 use futures_old::{
     future::{err, ok},
     stream as old_stream, Future, Stream,
@@ -324,13 +324,14 @@ fn get_maybe_missing_filenode(
 }
 
 fn get_filenode_from_envelope(
-    blobstore: impl Blobstore + Clone,
+    blobstore: impl Blobstore + 'static,
     ctx: CoreContext,
     path: &RepoPath,
     node: HgFileNodeId,
     linknode: HgChangesetId,
 ) -> impl Future<Item = FilenodeInfo, Error = Error> {
-    node.load(ctx, &blobstore)
+    async move { node.load(ctx, &blobstore).await }
+        .boxed()
         .compat()
         .with_context({
             cloned!(path);

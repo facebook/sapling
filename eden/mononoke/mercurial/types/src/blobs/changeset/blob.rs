@@ -10,15 +10,11 @@ use crate::{
     nodehash::{HgChangesetId, HgManifestId},
     HgBlobNode, HgChangesetEnvelopeMut, HgNodeHash, HgParents, MPath,
 };
-use anyhow::{Error, Result};
+use anyhow::Result;
 use blobstore::{Blobstore, Loadable, LoadableError};
 use bytes::Bytes;
 use context::CoreContext;
-use futures::{
-    compat::Future01CompatExt,
-    future::{BoxFuture, FutureExt, TryFutureExt},
-};
-use futures_old::future::{Future, IntoFuture};
+use futures::future::{BoxFuture, FutureExt};
 use mononoke_types::DateTime;
 use std::fmt::{self, Display};
 use std::{collections::BTreeMap, io::Write};
@@ -168,47 +164,35 @@ impl HgBlobChangeset {
         self.changesetid
     }
 
-    pub fn load<B: Blobstore + Clone>(
+    pub async fn load<B: Blobstore>(
         ctx: CoreContext,
         blobstore: &B,
         changesetid: HgChangesetId,
-    ) -> impl Future<Item = Option<Self>, Error = Error> + Send + 'static {
-        RevlogChangeset::load(ctx, blobstore, changesetid).map(move |got| {
-            got.map(|revlogcs| {
-                HgBlobChangeset::new_with_id(
-                    changesetid,
-                    HgChangesetContent::from_revlogcs(revlogcs),
-                )
-            })
-        })
+    ) -> Result<Option<Self>> {
+        let got = RevlogChangeset::load(ctx, blobstore, changesetid).await?;
+        Ok(got.map(|revlogcs| {
+            HgBlobChangeset::new_with_id(changesetid, HgChangesetContent::from_revlogcs(revlogcs))
+        }))
     }
 
-    pub fn save(
-        &self,
-        ctx: CoreContext,
-        blobstore: impl Blobstore + Clone,
-    ) -> impl Future<Item = (), Error = Error> + Send + 'static {
+    pub async fn save(&self, ctx: CoreContext, blobstore: impl Blobstore) -> Result<()> {
         let key = self.changesetid.blobstore_key();
 
-        let blob = {
+        let contents = {
             let mut v = Vec::new();
 
-            self.content.generate(&mut v).map(|()| Bytes::from(v))
+            self.content.generate(&mut v).map(|()| Bytes::from(v))?
         };
 
-        blob.map_err(Error::from)
-            .and_then(|contents| {
-                let envelope = HgChangesetEnvelopeMut {
-                    node_id: self.changesetid,
-                    p1: self.content.p1().map(HgChangesetId::new),
-                    p2: self.content.p2().map(HgChangesetId::new),
-                    contents,
-                };
-                let envelope = envelope.freeze();
-                Ok(envelope.into_blob())
-            })
-            .into_future()
-            .and_then(move |blob| blobstore.put(ctx, key, blob.into()).compat())
+        let envelope = HgChangesetEnvelopeMut {
+            node_id: self.changesetid,
+            p1: self.content.p1().map(HgChangesetId::new),
+            p2: self.content.p2().map(HgChangesetId::new),
+            contents,
+        };
+        let envelope = envelope.freeze();
+        let blob = envelope.into_blob();
+        async move { blobstore.put(ctx, key, blob.into()).await }.await
     }
 
     #[inline]
@@ -268,15 +252,14 @@ impl HgBlobChangeset {
 impl Loadable for HgChangesetId {
     type Value = HgBlobChangeset;
 
-    fn load<B: Blobstore + Clone>(
-        &self,
+    fn load<'a, B: Blobstore>(
+        &'a self,
         ctx: CoreContext,
-        blobstore: &B,
-    ) -> BoxFuture<'static, Result<Self::Value, LoadableError>> {
+        blobstore: &'a B,
+    ) -> BoxFuture<'a, Result<Self::Value, LoadableError>> {
         let csid = *self;
-        let load = HgBlobChangeset::load(ctx, blobstore, csid).compat();
         async move {
-            let value = load.await?;
+            let value = HgBlobChangeset::load(ctx, blobstore, csid).await?;
             value.ok_or_else(|| LoadableError::Missing(csid.blobstore_key()))
         }
         .boxed()

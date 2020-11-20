@@ -11,7 +11,6 @@ use blobrepo_override::DangerousOverride;
 use bytes::Bytes;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::compat::Future01CompatExt;
 use maplit::{btreemap, hashmap};
 use metaconfig_types::DerivedDataConfig;
 use mononoke_types::{Blame, ChangesetId, MPath};
@@ -223,26 +222,23 @@ fn test_blame(fb: FacebookInit) -> Result<(), Error> {
             c4 => "c4",
         };
 
-        let (content, blame) = fetch_blame(ctx.clone(), repo.clone(), c4, MPath::new("f0")?)
-            .compat()
-            .await?;
+        let (content, blame) =
+            fetch_blame(ctx.clone(), repo.clone(), c4, MPath::new("f0")?).await?;
         assert_eq!(annotate(content, blame, &names)?, F0_AT_C4);
 
-        let (content, blame) = fetch_blame(ctx.clone(), repo.clone(), c4, MPath::new("f1")?)
-            .compat()
-            .await?;
+        let (content, blame) =
+            fetch_blame(ctx.clone(), repo.clone(), c4, MPath::new("f1")?).await?;
         assert_eq!(annotate(content, blame, &names)?, F1_AT_C4);
 
-        let (content, blame) = fetch_blame(ctx.clone(), repo.clone(), c4, MPath::new("f2")?)
-            .compat()
-            .await?;
+        let (content, blame) =
+            fetch_blame(ctx.clone(), repo.clone(), c4, MPath::new("f2")?).await?;
         assert_eq!(annotate(content, blame, &names)?, F2_AT_C4);
 
         Ok(())
     })
 }
 
-#[fbinit::compat_test]
+#[fbinit::test]
 async fn test_blame_file_size_limit_rejected(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let repo = blobrepo_factory::new_memblob_empty(None)?;
@@ -255,9 +251,7 @@ async fn test_blame_file_size_limit_rejected(fb: FacebookInit) -> Result<(), Err
 
     // Default file size is 10Mb, so blame should be computed
     // without problems.
-    fetch_blame(ctx.clone(), repo.clone(), c1, MPath::new(file1)?)
-        .compat()
-        .await?;
+    fetch_blame(ctx.clone(), repo.clone(), c1, MPath::new(file1)?).await?;
 
     let repo = repo.dangerous_override(|mut derived_data_config: DerivedDataConfig| {
         derived_data_config.override_blame_filesize_limit = Some(4);
@@ -271,9 +265,7 @@ async fn test_blame_file_size_limit_rejected(fb: FacebookInit) -> Result<(), Err
         .await?;
 
     // We decreased the limit, so derivation should fail now
-    let res = fetch_blame(ctx.clone(), repo.clone(), c2, MPath::new(file2)?)
-        .compat()
-        .await;
+    let res = fetch_blame(ctx.clone(), repo.clone(), c2, MPath::new(file2)?).await;
 
     match res {
         Err(BlameError::Rejected(_)) => {}

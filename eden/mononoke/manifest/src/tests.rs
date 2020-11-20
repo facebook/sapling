@@ -9,13 +9,14 @@ pub(crate) use crate::{
     bonsai::BonsaiEntry, derive_manifest, find_intersection_of_diffs, Diff, Entry, Manifest,
     ManifestOps, PathOrPrefix, PathTree, TreeInfo,
 };
-use anyhow::Error;
+use anyhow::{Error, Result};
 use blobstore::{Blobstore, Loadable, LoadableError, Storable, StoreLoadable};
 use bounded_traversal::bounded_traversal_stream;
+use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{
-    future::{self, BoxFuture, FutureExt, TryFutureExt},
+    future::{self, BoxFuture, Future, FutureExt},
     stream::TryStreamExt,
 };
 use maplit::btreemap;
@@ -39,11 +40,11 @@ struct TestLeaf(String);
 impl Loadable for TestLeafId {
     type Value = TestLeaf;
 
-    fn load<B: Blobstore + Clone>(
-        &self,
+    fn load<'a, B: Blobstore>(
+        &'a self,
         ctx: CoreContext,
-        blobstore: &B,
-    ) -> BoxFuture<'static, Result<Self::Value, LoadableError>> {
+        blobstore: &'a B,
+    ) -> BoxFuture<'a, Result<Self::Value, LoadableError>> {
         let key = self.0.to_string();
         let get = blobstore.get(ctx, key.clone());
 
@@ -60,11 +61,11 @@ impl Loadable for TestLeafId {
 impl Storable for TestLeaf {
     type Key = TestLeafId;
 
-    fn store<B: Blobstore + Clone>(
+    fn store<B: Blobstore>(
         self,
         ctx: CoreContext,
         blobstore: &B,
-    ) -> BoxFuture<'static, Result<Self::Key, Error>> {
+    ) -> BoxFuture<'_, Result<Self::Key, Error>> {
         let mut hasher = DefaultHasher::new();
         self.0.hash(&mut hasher);
         let key = TestLeafId(hasher.finish());
@@ -87,11 +88,11 @@ struct TestManifestU64(BTreeMap<MPathElement, Entry<TestManifestIdU64, TestLeafI
 impl Loadable for TestManifestIdU64 {
     type Value = TestManifestU64;
 
-    fn load<B: Blobstore + Clone>(
-        &self,
+    fn load<'a, B: Blobstore>(
+        &'a self,
         ctx: CoreContext,
-        blobstore: &B,
-    ) -> BoxFuture<'static, Result<Self::Value, LoadableError>> {
+        blobstore: &'a B,
+    ) -> BoxFuture<'a, Result<Self::Value, LoadableError>> {
         let key = self.0.to_string();
         let get = blobstore.get(ctx, key.clone());
         async move {
@@ -108,11 +109,11 @@ impl Loadable for TestManifestIdU64 {
 impl Storable for TestManifestU64 {
     type Key = TestManifestIdU64;
 
-    fn store<B: Blobstore + Clone>(
+    fn store<B: Blobstore>(
         self,
         ctx: CoreContext,
         blobstore: &B,
-    ) -> BoxFuture<'static, Result<Self::Key, Error>> {
+    ) -> BoxFuture<'_, Result<Self::Key, Error>> {
         let blobstore = blobstore.clone();
         let mut hasher = DefaultHasher::new();
         self.0.hash(&mut hasher);
@@ -142,44 +143,55 @@ impl Manifest for TestManifestU64 {
     }
 }
 
-async fn derive_test_manifest(
+fn derive_test_manifest(
     ctx: CoreContext,
     blobstore: Arc<dyn Blobstore>,
     parents: Vec<TestManifestIdU64>,
     changes_str: BTreeMap<&str, Option<&str>>,
-) -> Result<Option<TestManifestIdU64>, Error> {
-    let mut changes = Vec::new();
-    for (path, change) in changes_str {
-        let path = MPath::new(path)?;
-        changes.push((path, change.map(|leaf| TestLeaf(leaf.to_string()))));
+) -> impl Future<Output = Result<Option<TestManifestIdU64>>> {
+    let changes: Result<_> = (|| {
+        let mut changes = Vec::new();
+        for (path, change) in changes_str {
+            let path = MPath::new(path)?;
+            changes.push((path, change.map(|leaf| TestLeaf(leaf.to_string()))));
+        }
+        Ok(changes)
+    })();
+    async move {
+        derive_manifest(
+            ctx.clone(),
+            blobstore.clone(),
+            parents,
+            changes?,
+            {
+                cloned!(ctx, blobstore);
+                move |TreeInfo { subentries, .. }| {
+                    let subentries = subentries
+                        .into_iter()
+                        .map(|(path, (_, id))| (path, id))
+                        .collect();
+                    cloned!(ctx, blobstore);
+                    async move {
+                        let id = TestManifestU64(subentries).store(ctx, &blobstore).await?;
+                        Ok(((), id))
+                    }
+                }
+            },
+            move |leaf_info| {
+                cloned!(ctx, blobstore);
+                async move {
+                    match leaf_info.leaf {
+                        None => Err(Error::msg("leaf only conflict")),
+                        Some(leaf) => {
+                            let id = leaf.store(ctx.clone(), &blobstore).await?;
+                            Ok(((), id))
+                        }
+                    }
+                }
+            },
+        )
+        .await
     }
-    derive_manifest(
-        ctx.clone(),
-        blobstore.clone(),
-        parents,
-        changes,
-        {
-            let ctx = ctx.clone();
-            let blobstore = blobstore.clone();
-            move |TreeInfo { subentries, .. }| {
-                let subentries = subentries
-                    .into_iter()
-                    .map(|(path, (_, id))| (path, id))
-                    .collect();
-                TestManifestU64(subentries)
-                    .store(ctx.clone(), &blobstore)
-                    .map_ok(|id| ((), id))
-            }
-        },
-        move |leaf_info| match leaf_info.leaf {
-            None => futures::future::err(Error::msg("leaf only conflict")).left_future(),
-            Some(leaf) => leaf
-                .store(ctx.clone(), &blobstore)
-                .map_ok(|id| ((), id))
-                .right_future(),
-        },
-    )
-    .await
 }
 
 struct Files(TestManifestIdU64);
@@ -187,18 +199,20 @@ struct Files(TestManifestIdU64);
 impl Loadable for Files {
     type Value = BTreeMap<MPath, String>;
 
-    fn load<B: Blobstore + Clone>(
-        &self,
+    fn load<'a, B: Blobstore>(
+        &'a self,
         ctx: CoreContext,
-        blobstore: &B,
-    ) -> BoxFuture<'static, Result<Self::Value, LoadableError>> {
+        blobstore: &'a B,
+    ) -> BoxFuture<'a, Result<Self::Value, LoadableError>> {
         let blobstore = blobstore.clone();
         bounded_traversal_stream(
             256,
             Some((None, Entry::Tree(self.0))),
             move |(path, entry)| {
-                Loadable::load(&entry, ctx.clone(), &blobstore).map_ok(move |content| {
-                    match content {
+                cloned!(ctx);
+                async move {
+                    let content = Loadable::load(&entry, ctx, blobstore).await?;
+                    Ok(match content {
                         Entry::Leaf(leaf) => (Some((path, leaf)), Vec::new()),
                         Entry::Tree(tree) => {
                             let recurse = tree
@@ -209,8 +223,8 @@ impl Loadable for Files {
                                 .collect();
                             (None, recurse)
                         }
-                    }
-                })
+                    })
+                }
             },
         )
         .try_filter_map(|item| {
@@ -260,18 +274,26 @@ async fn test_derive_manifest(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
 
     // derive manifest
-    let derive = |parents, changes| {
-        let ctx = ctx.clone();
-        let blobstore = blobstore.clone();
-        async move {
-            derive_test_manifest(ctx, blobstore, parents, changes)
-                .await
-                .map(|mf| mf.expect("expect non empty manifest"))
+    let derive = {
+        cloned!(ctx, blobstore);
+        move |parents, changes| {
+            cloned!(ctx, blobstore);
+            async move {
+                derive_test_manifest(ctx, blobstore, parents, changes)
+                    .await
+                    .map(|mf| mf.expect("expect non empty manifest"))
+            }
         }
     };
 
     // load all files for specified manifest
-    let files = |manifest_id| Loadable::load(&Files(manifest_id), ctx.clone(), &blobstore);
+    let files = {
+        cloned!(ctx, blobstore);
+        move |manifest_id| {
+            cloned!(ctx, blobstore);
+            async move { Loadable::load(&Files(manifest_id), ctx, &blobstore).await }
+        }
+    };
 
     // clean merge of two directories
     {

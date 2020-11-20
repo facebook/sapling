@@ -55,11 +55,11 @@ macro_rules! impl_loadable_storable {
         impl Storable for $ty {
             type Key = $handle;
 
-            fn store<B: Blobstore + Clone>(
+            fn store<B: Blobstore>(
                 self,
                 ctx: CoreContext,
                 blobstore: &B,
-            ) -> BoxFuture<'static, Result<Self::Key, Error>> {
+            ) -> BoxFuture<'_, Result<Self::Key, Error>> {
                 let handle = *self.handle();
                 let key = handle.blobstore_key();
                 let put = blobstore.put(ctx, key, self.into());
@@ -74,11 +74,11 @@ macro_rules! impl_loadable_storable {
         impl Loadable for $handle {
             type Value = $ty;
 
-            fn load<B: Blobstore + Clone>(
-                &self,
+            fn load<'a, B: Blobstore>(
+                &'a self,
                 ctx: CoreContext,
-                blobstore: &B,
-            ) -> BoxFuture<'static, Result<Self::Value, LoadableError>> {
+                blobstore: &'a B,
+            ) -> BoxFuture<'a, Result<Self::Value, LoadableError>> {
                 let id = *self;
                 let get = blobstore.get(ctx, id.blobstore_key());
                 async move {

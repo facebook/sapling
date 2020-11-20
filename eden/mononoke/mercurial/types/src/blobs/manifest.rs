@@ -7,25 +7,20 @@
 
 //! Root manifest, tree nodes
 
+use anyhow::{bail, ensure, Context, Error, Result};
+use blobstore::{Blobstore, Loadable, LoadableError};
+use context::CoreContext;
+use futures::future::{BoxFuture, FutureExt};
+use manifest::{Entry, Manifest};
+use sorted_vector_map::SortedVectorMap;
+use std::str;
+
 use super::errors::ErrorKind;
 use crate::{
     nodehash::{HgNodeHash, NULL_HASH},
     FileType, HgBlob, HgEntryId, HgFileNodeId, HgManifestEnvelope, HgManifestId, HgParents,
     MPathElement, Type,
 };
-use anyhow::{bail, ensure, Context, Error, Result};
-use blobstore::{Blobstore, Loadable, LoadableError};
-use context::CoreContext;
-use failure_ext::FutureFailureErrorExt;
-use futures::{
-    compat::Future01CompatExt,
-    future::{BoxFuture, FutureExt, TryFutureExt},
-};
-use futures_ext::{BoxFuture as BoxFuture01, FutureExt as _};
-use futures_old::future::{self, Future};
-use manifest::{Entry, Manifest};
-use sorted_vector_map::SortedVectorMap;
-use std::str;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct ManifestContent {
@@ -88,65 +83,53 @@ impl ManifestContent {
     }
 }
 
-pub fn fetch_raw_manifest_bytes<B: Blobstore>(
+pub async fn fetch_raw_manifest_bytes<B: Blobstore>(
     ctx: CoreContext,
     blobstore: &B,
     manifest_id: HgManifestId,
-) -> BoxFuture01<HgBlob, Error> {
-    fetch_manifest_envelope(ctx, blobstore, manifest_id)
-        .map(move |envelope| {
-            let envelope = envelope.into_mut();
-            HgBlob::from(envelope.contents)
-        })
-        .from_err()
-        .boxify()
+) -> Result<HgBlob> {
+    let envelope = fetch_manifest_envelope(ctx, blobstore, manifest_id).await?;
+    let envelope = envelope.into_mut();
+    Ok(HgBlob::from(envelope.contents))
 }
 
-pub fn fetch_manifest_envelope<B: Blobstore>(
+pub async fn fetch_manifest_envelope<B: Blobstore>(
     ctx: CoreContext,
     blobstore: &B,
     manifest_id: HgManifestId,
-) -> impl Future<Item = HgManifestEnvelope, Error = Error> {
-    fetch_manifest_envelope_opt(ctx, blobstore, manifest_id)
-        .and_then(move |envelope| {
-            let envelope = envelope.ok_or(ErrorKind::HgContentMissing(
-                manifest_id.into_nodehash(),
-                Type::Tree,
-            ))?;
-            Ok(envelope)
-        })
-        .from_err()
+) -> Result<HgManifestEnvelope> {
+    let envelope = fetch_manifest_envelope_opt(ctx, blobstore, manifest_id).await?;
+    Ok(envelope
+        .ok_or_else(move || ErrorKind::HgContentMissing(manifest_id.into_nodehash(), Type::Tree))?)
 }
 
 /// Like `fetch_manifest_envelope`, but returns None if the manifest wasn't found.
-pub fn fetch_manifest_envelope_opt<B: Blobstore>(
+pub async fn fetch_manifest_envelope_opt<B: Blobstore>(
     ctx: CoreContext,
     blobstore: &B,
     node_id: HgManifestId,
-) -> impl Future<Item = Option<HgManifestEnvelope>, Error = Error> {
+) -> Result<Option<HgManifestEnvelope>> {
     let blobstore_key = node_id.blobstore_key();
-    blobstore
+    let bytes = blobstore
         .get(ctx, blobstore_key.clone())
-        .compat()
-        .context("While fetching manifest envelope blob")
-        .map_err(Error::from)
-        .and_then(move |bytes| {
-            let blobstore_bytes = match bytes {
-                Some(bytes) => bytes,
-                None => return Ok(None),
-            };
-            let envelope = HgManifestEnvelope::from_blob(blobstore_bytes.into())?;
-            if node_id.into_nodehash() != envelope.node_id() {
-                bail!(
-                    "Manifest ID mismatch (requested: {}, got: {})",
-                    node_id,
-                    envelope.node_id()
-                );
-            }
-            Ok(Some(envelope))
-        })
-        .context(ErrorKind::ManifestDeserializeFailed(blobstore_key))
-        .from_err()
+        .await
+        .context("While fetching manifest envelope blob")?;
+    (|| {
+        let blobstore_bytes = match bytes {
+            Some(bytes) => bytes,
+            None => return Ok(None),
+        };
+        let envelope = HgManifestEnvelope::from_blob(blobstore_bytes.into())?;
+        if node_id.into_nodehash() != envelope.node_id() {
+            bail!(
+                "Manifest ID mismatch (requested: {}, got: {})",
+                node_id,
+                envelope.node_id()
+            );
+        }
+        Ok(Some(envelope))
+    })()
+    .context(ErrorKind::ManifestDeserializeFailed(blobstore_key))
 }
 
 #[derive(Debug)]
@@ -160,34 +143,32 @@ pub struct BlobManifest {
 }
 
 impl BlobManifest {
-    pub fn load<B: Blobstore>(
+    pub async fn load<B: Blobstore>(
         ctx: CoreContext,
         blobstore: &B,
         manifestid: HgManifestId,
-    ) -> impl Future<Item = Option<Self>, Error = Error> {
+    ) -> Result<Option<Self>> {
         if manifestid.clone().into_nodehash() == NULL_HASH {
-            future::ok(Some(BlobManifest {
+            Ok(Some(BlobManifest {
                 node_id: NULL_HASH,
                 p1: None,
                 p2: None,
                 computed_node_id: NULL_HASH,
                 content: ManifestContent::new_empty(),
             }))
-            .left_future()
         } else {
-            fetch_manifest_envelope_opt(ctx, blobstore, manifestid)
-                .and_then({
-                    move |envelope| match envelope {
-                        Some(envelope) => Ok(Some(Self::parse(envelope)?)),
-                        None => Ok(None),
-                    }
-                })
-                .context(format!(
-                    "When loading manifest {} from blobstore",
-                    manifestid
-                ))
-                .from_err()
-                .right_future()
+            async {
+                let envelope = fetch_manifest_envelope_opt(ctx, blobstore, manifestid).await?;
+                match envelope {
+                    Some(envelope) => Ok(Some(Self::parse(envelope)?)),
+                    None => Result::<_>::Ok(None),
+                }
+            }
+            .await
+            .context(format!(
+                "When loading manifest {} from blobstore",
+                manifestid
+            ))
         }
     }
 
@@ -237,16 +218,14 @@ impl BlobManifest {
 impl Loadable for HgManifestId {
     type Value = BlobManifest;
 
-    fn load<B: Blobstore + Clone>(
-        &self,
+    fn load<'a, B: Blobstore>(
+        &'a self,
         ctx: CoreContext,
-        blobstore: &B,
-    ) -> BoxFuture<'static, Result<Self::Value, LoadableError>> {
+        blobstore: &'a B,
+    ) -> BoxFuture<'a, Result<Self::Value, LoadableError>> {
         let id = *self;
-        let value = BlobManifest::load(ctx, blobstore, id).compat();
-
         async move {
-            value
+            BlobManifest::load(ctx, blobstore, id)
                 .await?
                 .ok_or_else(|| LoadableError::Missing(id.blobstore_key()))
         }

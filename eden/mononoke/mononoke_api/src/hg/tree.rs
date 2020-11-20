@@ -7,7 +7,6 @@
 
 use async_trait::async_trait;
 use bytes::Bytes;
-use futures::compat::Future01CompatExt;
 
 use manifest::{Entry, Manifest};
 use mercurial_types::{
@@ -38,9 +37,7 @@ impl HgTreeContext {
     ) -> Result<Self, MononokeError> {
         let ctx = repo.ctx().clone();
         let blobstore = repo.blob_repo().blobstore();
-        let envelope = fetch_manifest_envelope(ctx, blobstore, manifest_id)
-            .compat()
-            .await?;
+        let envelope = fetch_manifest_envelope(ctx, blobstore, manifest_id).await?;
         Ok(Self { repo, envelope })
     }
 
@@ -50,9 +47,7 @@ impl HgTreeContext {
     ) -> Result<Option<Self>, MononokeError> {
         let ctx = repo.ctx().clone();
         let blobstore = repo.blob_repo().blobstore();
-        let envelope = fetch_manifest_envelope_opt(ctx, blobstore, manifest_id)
-            .compat()
-            .await?;
+        let envelope = fetch_manifest_envelope_opt(ctx, blobstore, manifest_id).await?;
         Ok(envelope.map(move |envelope| Self { repo, envelope }))
     }
 

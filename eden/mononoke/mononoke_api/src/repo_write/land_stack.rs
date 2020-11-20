@@ -11,6 +11,7 @@ use std::sync::Arc;
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use bytes::Bytes;
+use cloned::cloned;
 use futures::compat::Stream01CompatExt;
 use futures::future::{self, TryFutureExt};
 use futures::stream::TryStreamExt;
@@ -73,9 +74,13 @@ impl RepoWriteContext {
         .map_err(MononokeError::from)
         .try_filter(|cs_id| future::ready(*cs_id != base))
         .map_ok(|cs_id| {
-            cs_id
-                .load(ctx.clone(), blobstore)
-                .map_err(MononokeError::from)
+            cloned!(ctx);
+            async move {
+                cs_id
+                    .load(ctx, blobstore)
+                    .map_err(MononokeError::from)
+                    .await
+            }
         })
         .try_buffer_unordered(100)
         .try_collect()

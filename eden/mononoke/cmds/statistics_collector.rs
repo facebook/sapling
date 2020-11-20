@@ -172,9 +172,8 @@ pub async fn get_statistics_from_entry(
             let size = envelope.content_size();
             let content_id = envelope.content_id();
             let lines = if FileType::Regular == file_type && size < BIG_FILE_THRESHOLD {
-                let content =
-                    filestore::fetch_stream(repo.get_blobstore(), ctx.clone(), content_id)
-                        .map_ok(FileBytes);
+                let content = filestore::fetch_stream(repo.blobstore(), ctx.clone(), content_id)
+                    .map_ok(FileBytes);
                 number_of_lines(content).await?
             } else {
                 0
@@ -188,7 +187,7 @@ pub async fn get_statistics_from_entry(
 pub async fn get_statistics_from_changeset(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    blobstore: &(impl Blobstore + Clone),
+    blobstore: &(impl Blobstore + Clone + 'static),
     hg_cs_id: &HgChangesetId,
 ) -> Result<RepoStatistics, Error> {
     info!(

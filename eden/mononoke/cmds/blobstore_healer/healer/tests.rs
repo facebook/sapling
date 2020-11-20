@@ -52,7 +52,7 @@ impl Blobstore for PutFailingEagerMemblob {
         _ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'static, Result<(), Error>> {
+    ) -> BoxFuture<'_, Result<(), Error>> {
         let mut inner = self.hash.lock().expect("lock poison");
         let inner_flag = self.fail_puts.lock().expect("lock poison");
         let res = if *inner_flag {
@@ -68,7 +68,7 @@ impl Blobstore for PutFailingEagerMemblob {
         &self,
         _ctx: CoreContext,
         key: String,
-    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
+    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>, Error>> {
         let inner = self.hash.lock().expect("lock poison");
         let bytes = inner.get(&key).map(|bytes| bytes.clone().into());
         async move { Ok(bytes) }.boxed()

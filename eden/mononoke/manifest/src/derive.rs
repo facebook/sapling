@@ -525,11 +525,11 @@ where
     }
 
     // Fetch parent trees and merge them.
-    let manifests = future::try_join_all(
-        parent_subtrees
-            .iter()
-            .map(move |tree_id| tree_id.load(ctx.clone(), &store)),
-    )
+    let store = &store;
+    let manifests = future::try_join_all(parent_subtrees.iter().map(move |tree_id| {
+        cloned!(ctx);
+        async move { tree_id.load(ctx, store).await }
+    }))
     .await?;
 
     let mut deps: BTreeMap<MPathElement, _> = Default::default();

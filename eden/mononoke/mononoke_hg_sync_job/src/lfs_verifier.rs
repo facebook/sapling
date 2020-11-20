@@ -14,7 +14,9 @@ use cloned::cloned;
 use context::CoreContext;
 use failure_ext::FutureFailureExt;
 use filestore::{fetch_stream, FetchKey};
-use futures::{compat::Future01CompatExt, FutureExt, StreamExt, TryFutureExt, TryStreamExt};
+use futures::{
+    compat::Future01CompatExt, pin_mut, FutureExt, StreamExt, TryFutureExt, TryStreamExt,
+};
 use futures_ext::{try_boxfuture, FutureExt as OldFutureExt};
 use futures_old::{future, stream, Future, IntoFuture, Stream};
 use http::{status::StatusCode, uri::Uri};
@@ -188,11 +190,22 @@ async fn upload(
             Some(action) => {
                 let ObjectAction { href, .. } = action;
 
-                let s = fetch_stream(
-                    blobstore.clone(),
-                    ctx.clone(),
-                    FetchKey::from(Sha256::from_byte_array(resp_object.object.oid.0)),
-                )
+                let key = FetchKey::from(Sha256::from_byte_array(resp_object.object.oid.0));
+                let s = ({
+                    cloned!(ctx);
+                    async_stream::stream! {
+                        let s = fetch_stream(
+                            &blobstore,
+                            ctx.clone(),
+                            key,
+                        );
+
+                        pin_mut!(s);
+                        while let Some(value) = s.next().await {
+                            yield value;
+                        }
+                    }
+                })
                 .boxed()
                 .compat();
 

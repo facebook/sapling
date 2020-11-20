@@ -16,7 +16,7 @@ use std::{
 use crate::base::{MultiplexedBlobstoreBase, MultiplexedBlobstorePutHandler};
 use crate::queue::MultiplexedBlobstore;
 use crate::scrub::{LoggingScrubHandler, ScrubBlobstore, ScrubHandler};
-use anyhow::{bail, Error};
+use anyhow::{bail, Result};
 use blobstore::{Blobstore, BlobstoreGetData, BlobstorePutOps, OverwriteStatus, PutBehaviour};
 use blobstore_sync_queue::{
     BlobstoreSyncQueue, BlobstoreSyncQueueEntry, OperationKey, SqlBlobstoreSyncQueue,
@@ -79,7 +79,7 @@ impl<T> Tickable<T> {
 
     // Register this task on the tick queue and wait for it to progress.
 
-    pub fn on_tick(&self) -> impl Future<Output = Result<(), Error>> {
+    pub fn on_tick(&self) -> impl Future<Output = Result<()>> {
         let (send, recv) = oneshot::channel();
         let mut queue = self.queue.lock().unwrap();
         queue.push_back(send);
@@ -98,7 +98,7 @@ impl Blobstore for Tickable<BlobstoreBytes> {
         &self,
         _ctx: CoreContext,
         key: String,
-    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
+    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>>> {
         let storage = self.storage.clone();
         let on_tick = self.on_tick();
 
@@ -114,7 +114,7 @@ impl Blobstore for Tickable<BlobstoreBytes> {
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'static, Result<(), Error>> {
+    ) -> BoxFuture<'_, Result<()>> {
         BlobstorePutOps::put_with_status(self, ctx, key, value)
             .map_ok(|_| ())
             .boxed()
@@ -128,7 +128,7 @@ impl BlobstorePutOps for Tickable<BlobstoreBytes> {
         key: String,
         value: BlobstoreBytes,
         _put_behaviour: PutBehaviour,
-    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
         let storage = self.storage.clone();
         let on_tick = self.on_tick();
 
@@ -147,7 +147,7 @@ impl BlobstorePutOps for Tickable<BlobstoreBytes> {
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
         self.put_explicit(ctx, key, value, PutBehaviour::Overwrite)
     }
 }
@@ -160,7 +160,7 @@ impl MultiplexedBlobstorePutHandler for Tickable<BlobstoreId> {
         _multiplex_id: MultiplexId,
         _operation_key: &OperationKey,
         key: &str,
-    ) -> BoxFuture<Result<(), Error>> {
+    ) -> BoxFuture<Result<()>> {
         let storage = self.storage.clone();
         let key = key.to_string();
         self.on_tick()
@@ -196,7 +196,7 @@ impl MultiplexedBlobstorePutHandler for LogHandler {
         _multiplex_id: MultiplexId,
         _operation_key: &OperationKey,
         key: &str,
-    ) -> BoxFuture<Result<(), Error>> {
+    ) -> BoxFuture<Result<()>> {
         self.log
             .with(move |log| log.push((blobstore_id, key.to_string())));
         async { Ok(()) }.boxed()
@@ -228,7 +228,7 @@ impl<'a, F: Future + Unpin> Future for PollOnce<'a, F> {
 }
 
 #[fbinit::test]
-async fn scrub_blobstore_fetch_none(fb: FacebookInit) -> Result<(), Error> {
+async fn scrub_blobstore_fetch_none(fb: FacebookInit) -> Result<()> {
     let bid0 = BlobstoreId::new(0);
     let bs0 = Arc::new(Tickable::new());
     let bid1 = BlobstoreId::new(1);
@@ -496,7 +496,7 @@ async fn multiplexed(fb: FacebookInit) {
 }
 
 #[fbinit::test]
-async fn multiplexed_operation_keys(fb: FacebookInit) -> Result<(), Error> {
+async fn multiplexed_operation_keys(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory().unwrap());
 

@@ -7,7 +7,7 @@
 
 #![deny(warnings)]
 
-use anyhow::Error;
+use anyhow::{Error, Result};
 use blobstore::{Blobstore, BlobstoreGetData};
 use context::CoreContext;
 use futures::future::{BoxFuture, FutureExt};
@@ -89,23 +89,29 @@ impl<T> Deref for RedactedBlobstore<T> {
     }
 }
 
-impl<T: Blobstore + Clone> RedactedBlobstore<T> {
+impl<T: Blobstore> RedactedBlobstore<T> {
     pub fn new(blobstore: T, config: RedactedBlobstoreConfig) -> Self {
         Self {
             inner: Arc::new(RedactedBlobstoreInner::new(blobstore, config)),
         }
     }
 
-    pub fn boxed(&self) -> Arc<dyn Blobstore> {
+    pub fn boxed(&self) -> Arc<dyn Blobstore>
+    where
+        T: 'static,
+    {
         self.inner.clone()
     }
 
-    pub fn as_parts(&self) -> (T, RedactedBlobstoreConfig) {
+    pub fn as_parts(&self) -> (T, RedactedBlobstoreConfig)
+    where
+        T: Clone,
+    {
         (self.blobstore.clone(), self.config.clone())
     }
 }
 
-impl<T: Blobstore + Clone> RedactedBlobstoreInner<T> {
+impl<T: Blobstore> RedactedBlobstoreInner<T> {
     pub fn new(blobstore: T, config: RedactedBlobstoreConfig) -> Self {
         let timestamp = Arc::new(AtomicI64::new(Timestamp::now().timestamp_nanos()));
         Self {
@@ -121,7 +127,7 @@ impl<T: Blobstore + Clone> RedactedBlobstoreInner<T> {
         ctx: &CoreContext,
         key: &str,
         operation: &'static str,
-    ) -> Result<&T, Error> {
+    ) -> Result<&T> {
         match &self.config.redacted {
             Some(redacted) => redacted.get(key).map_or(Ok(&self.blobstore), |metadata| {
                 debug!(
@@ -179,12 +185,12 @@ impl<T: Blobstore + Clone> RedactedBlobstoreInner<T> {
     }
 }
 
-impl<T: Blobstore + Clone> Blobstore for RedactedBlobstoreInner<T> {
+impl<T: Blobstore> Blobstore for RedactedBlobstoreInner<T> {
     fn get(
         &self,
         ctx: CoreContext,
         key: String,
-    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
+    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>>> {
         let get = self
             .access_blobstore(&ctx, &key, config::GET_OPERATION)
             .map(move |blobstore| blobstore.get(ctx, key));
@@ -196,27 +202,27 @@ impl<T: Blobstore + Clone> Blobstore for RedactedBlobstoreInner<T> {
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'static, Result<(), Error>> {
+    ) -> BoxFuture<'_, Result<()>> {
         let put = self
             .access_blobstore(&ctx, &key, config::PUT_OPERATION)
             .map(move |blobstore| blobstore.put(ctx, key, value));
         async move { put?.await }.boxed()
     }
 
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'_, Result<bool>> {
         self.blobstore.is_present(ctx, key)
     }
 }
 
 impl<B> Blobstore for RedactedBlobstore<B>
 where
-    B: Blobstore + Clone,
+    B: Blobstore,
 {
     fn get(
         &self,
         ctx: CoreContext,
         key: String,
-    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
+    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>>> {
         self.inner.get(ctx, key)
     }
     fn put(
@@ -224,10 +230,10 @@ where
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'static, Result<(), Error>> {
+    ) -> BoxFuture<'_, Result<()>> {
         self.inner.put(ctx, key, value)
     }
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'_, Result<bool>> {
         self.inner.is_present(ctx, key)
     }
 }
@@ -308,7 +314,7 @@ mod test {
     }
 
     #[fbinit::compat_test]
-    async fn test_log_only_redacted_key(fb: FacebookInit) -> Result<(), Error> {
+    async fn test_log_only_redacted_key(fb: FacebookInit) -> Result<()> {
         let redacted_log_only_key = "bar".to_string();
         let redacted_task = "bar task".to_string();
 

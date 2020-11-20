@@ -26,8 +26,8 @@ use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use fixtures::{create_bonsai_changeset, many_files_dirs, merge_uneven};
-use futures::{compat::Future01CompatExt, future::TryFutureExt};
-use futures_ext::{BoxFuture, FutureExt};
+use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt};
+use futures_ext::{BoxFuture, FutureExt as _};
 use futures_old::Future;
 use maplit::btreemap;
 use memblob::LazyMemblob;
@@ -475,17 +475,18 @@ async fn upload_entries_finalize_success(fb: FacebookInit, repo: BlobRepo) {
 
     let entries = UploadEntries::new(repo.get_blobstore(), ScubaSampleBuilder::with_discard());
 
-    (entries.process_root_manifest(ctx.clone(), &root_mf_blob))
-        .compat()
+    entries
+        .process_root_manifest(ctx.clone(), &root_mf_blob)
         .await
         .unwrap();
 
-    (entries.process_one_entry(ctx.clone(), &file_blob, fake_file_path))
-        .compat()
+    entries
+        .process_one_entry(ctx.clone(), &file_blob, fake_file_path)
         .await
         .unwrap();
 
-    (entries.finalize(ctx.clone(), HgManifestId::new(roothash), vec![]))
+    entries
+        .finalize(ctx.clone(), HgManifestId::new(roothash), vec![])
         .compat()
         .await
         .unwrap();
@@ -509,10 +510,9 @@ async fn upload_entries_finalize_fail(fb: FacebookInit, repo: BlobRepo) {
         format!("dir\0{}t\n", dirhash),
         &RepoPath::root(),
     );
-    let (root_mf_blob, _) = (root_manifest_future).compat().await.unwrap();
+    let (root_mf_blob, _) = root_manifest_future.compat().await.unwrap();
 
     (entries.process_root_manifest(ctx.clone(), &root_mf_blob))
-        .compat()
         .await
         .unwrap();
 
@@ -637,7 +637,7 @@ fn make_file_change(
     ctx: CoreContext,
     content: impl AsRef<[u8]>,
     repo: &BlobRepo,
-) -> impl Future<Item = FileChange, Error = Error> + Send {
+) -> impl Future<Item = FileChange, Error = Error> + Send + '_ {
     let content = content.as_ref();
     let content_size = content.len() as u64;
     FileContents::new_bytes(Bytes::copy_from_slice(content))
@@ -701,7 +701,11 @@ fn test_get_manifest_from_bonsai(fb: FacebookInit) {
         let get_entries = {
             cloned!(ctx, repo);
             move |ms_hash: HgManifestId| -> BoxFuture<HashMap<String, Entry<HgManifestId, (FileType, HgFileNodeId)>>, Error> {
-                ms_hash.load(ctx.clone(), repo.blobstore())
+                cloned!(ctx, repo);
+                async move {
+                    ms_hash.load(ctx, repo.blobstore()).await
+                }
+                    .boxed()
                     .compat()
                     .from_err()
                     .map(|ms| {
@@ -1334,6 +1338,8 @@ fn save_reproducibility_under_load(fb: FacebookInit) -> Result<(), Error> {
             None,
             std::iter::repeat(16).take(50),
         )
+        .boxed()
+        .compat()
         .and_then(move |csid| repo.get_hg_from_bonsai_changeset(ctx, csid));
 
     let mut runtime = Runtime::new()?;

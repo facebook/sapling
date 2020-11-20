@@ -7,7 +7,7 @@
 
 #![deny(warnings)]
 
-use anyhow::Error;
+use anyhow::Result;
 use std::fmt;
 use std::num::NonZeroU32;
 
@@ -55,7 +55,7 @@ async fn limiter(qps: Option<NonZeroU32>) -> AsyncLimiter {
     }
 }
 
-impl<T: Clone + fmt::Debug + Send + Sync + 'static> ThrottledBlob<T> {
+impl<T: Clone + fmt::Debug + Send + Sync> ThrottledBlob<T> {
     pub async fn new(blobstore: T, options: ThrottleOptions) -> Self {
         Self {
             blobstore,
@@ -65,13 +65,14 @@ impl<T: Clone + fmt::Debug + Send + Sync + 'static> ThrottledBlob<T> {
         }
     }
 
-    fn throttled_access<ThrottledFn, Out>(
+    fn throttled_access<'a, ThrottledFn, Out>(
         &self,
         limiter: &AsyncLimiter,
         throttled_fn: ThrottledFn,
-    ) -> BoxFuture<'static, Result<Out, Error>>
+    ) -> BoxFuture<'a, Result<Out>>
     where
-        ThrottledFn: FnOnce(T) -> BoxFuture<'static, Result<Out, Error>> + Send + 'static,
+        T: 'a,
+        ThrottledFn: FnOnce(T) -> BoxFuture<'a, Result<Out>> + Send + 'a,
     {
         let access = limiter.access();
         // NOTE: Make a clone of the Blobstore first then dispatch after the
@@ -91,8 +92,10 @@ impl<T: Blobstore + Clone> Blobstore for ThrottledBlob<T> {
         &self,
         ctx: CoreContext,
         key: String,
-    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
-        self.throttled_access(&self.read_limiter, move |blobstore| blobstore.get(ctx, key))
+    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>>> {
+        self.throttled_access(&self.read_limiter, move |blobstore| {
+            async move { blobstore.get(ctx, key).await }.boxed()
+        })
     }
 
     fn put(
@@ -100,30 +103,30 @@ impl<T: Blobstore + Clone> Blobstore for ThrottledBlob<T> {
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'static, Result<(), Error>> {
+    ) -> BoxFuture<'_, Result<()>> {
         self.throttled_access(&self.write_limiter, move |blobstore| {
-            blobstore.put(ctx, key, value)
+            async move { blobstore.put(ctx, key, value).await }.boxed()
         })
     }
 
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'_, Result<bool>> {
         self.throttled_access(&self.read_limiter, move |blobstore| {
-            blobstore.is_present(ctx, key)
+            async move { blobstore.is_present(ctx, key).await }.boxed()
         })
     }
 }
 
 // All delegate to throttled_access, which ensures even eager methods are throttled
-impl<T: BlobstorePutOps + Clone + Send + Sync + 'static> BlobstorePutOps for ThrottledBlob<T> {
+impl<T: BlobstorePutOps + Clone> BlobstorePutOps for ThrottledBlob<T> {
     fn put_explicit(
         &self,
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
         put_behaviour: PutBehaviour,
-    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
         self.throttled_access(&self.write_limiter, move |blobstore| {
-            blobstore.put_explicit(ctx, key, value, put_behaviour)
+            async move { blobstore.put_explicit(ctx, key, value, put_behaviour).await }.boxed()
         })
     }
 
@@ -132,9 +135,9 @@ impl<T: BlobstorePutOps + Clone + Send + Sync + 'static> BlobstorePutOps for Thr
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'static, Result<OverwriteStatus, Error>> {
+    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
         self.throttled_access(&self.write_limiter, move |blobstore| {
-            blobstore.put_with_status(ctx, key, value)
+            async move { blobstore.put_with_status(ctx, key, value).await }.boxed()
         })
     }
 }

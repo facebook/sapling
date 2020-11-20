@@ -9,7 +9,7 @@
 
 use std::time::Duration;
 
-use anyhow::Error;
+use anyhow::Result;
 use futures::future::{BoxFuture, FutureExt};
 use rand::Rng;
 use rand_distr::Distribution;
@@ -42,7 +42,7 @@ impl<B: Blobstore> Blobstore for DelayedBlobstore<B> {
         &self,
         ctx: CoreContext,
         key: String,
-    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
+    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>>> {
         let delay = delay(self.get_dist);
         let get = self.inner.get(ctx, key);
         async move {
@@ -57,7 +57,7 @@ impl<B: Blobstore> Blobstore for DelayedBlobstore<B> {
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'static, Result<(), Error>> {
+    ) -> BoxFuture<'_, Result<()>> {
         let delay = delay(self.put_dist);
         let put = self.inner.put(ctx, key, value);
         async move {
@@ -67,7 +67,7 @@ impl<B: Blobstore> Blobstore for DelayedBlobstore<B> {
         .boxed()
     }
 
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'_, Result<bool>> {
         let delay = delay(self.get_dist);
         let is_present = self.inner.is_present(ctx, key);
         async move {

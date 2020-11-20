@@ -42,7 +42,7 @@ where
         &self,
         ctx: CoreContext,
         key: String,
-    ) -> BoxFuture<'static, Result<Option<BlobstoreGetData>, Error>> {
+    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>, Error>> {
         let mut rng = thread_rng();
         if rng.gen_bool(self.read_success_probability) {
             self.inner.get(ctx, key)
@@ -56,7 +56,7 @@ where
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'static, Result<(), Error>> {
+    ) -> BoxFuture<'_, Result<(), Error>> {
         let mut rng = thread_rng();
         if rng.gen_bool(self.write_success_probability) {
             self.inner.put(ctx, key, value)
@@ -65,7 +65,7 @@ where
         }
     }
 
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'static, Result<bool, Error>> {
+    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'_, Result<bool, Error>> {
         let mut rng = thread_rng();
         if rng.gen_bool(self.read_success_probability) {
             self.inner.is_present(ctx, key)

@@ -367,9 +367,9 @@ async fn get_cache<B: CacheBlobstoreExt>(
     mode: String,
 ) -> Result<Option<BlobstoreGetData>, Error> {
     if mode == "cache-only" {
-        blobstore.get_cache_only(ctx, key).compat().await
+        blobstore.get_cache_only(ctx, key).await
     } else if mode == "no-fill" {
-        blobstore.get_no_cache_fill(ctx, key).compat().await
+        blobstore.get_no_cache_fill(ctx, key).await
     } else {
         blobstore.get(ctx, key).await
     }

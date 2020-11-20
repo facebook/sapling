@@ -177,8 +177,9 @@ async fn create_skeleton_manifest(
     sender: Option<mpsc::UnboundedSender<BoxFuture<'static, Result<(), Error>>>>,
     tree_info: TreeInfo<SkeletonManifestId, (), Option<SkeletonManifestSummary>>,
 ) -> Result<(Option<SkeletonManifestSummary>, SkeletonManifestId)> {
+    cloned!(ctx, blobstore);
     let entries =
-        collect_skeleton_subentries(ctx, blobstore, tree_info.parents, tree_info.subentries)
+        collect_skeleton_subentries(&ctx, &blobstore, tree_info.parents, tree_info.subentries)
             .await?;
 
     // Build a summary of the entries and store it as the new skeleton
@@ -247,7 +248,7 @@ async fn create_skeleton_manifest(
     let blob = skeleton_manifest.into_blob();
     let skeleton_manifest_id = *blob.id();
     let key = skeleton_manifest_id.blobstore_key();
-    let f = blobstore.put(ctx.clone(), key, blob.into());
+    let f = async move { blobstore.put(ctx, key, blob.into()).await };
 
     match sender {
         Some(sender) => sender

@@ -11,8 +11,7 @@ use cloned::cloned;
 use context::CoreContext;
 use futures::{future, stream, Stream, StreamExt, TryFutureExt, TryStreamExt};
 use mononoke_types::{FileType, MPath};
-use std::collections::HashSet;
-use std::hash::Hash;
+use std::{collections::HashSet, hash::Hash, marker::Unpin};
 
 use crate::{Entry, Manifest, ManifestOps};
 
@@ -42,7 +41,7 @@ fn get_implicit_dir_deletes<ManifestId, FileId, Store>(
     parent: ManifestId,
 ) -> impl Stream<Item = Result<MPath, Error>>
 where
-    FileId: Hash + Eq + Send + Sync + 'static,
+    FileId: Hash + Eq + Send + Sync + Unpin + 'static,
     ManifestId: Hash + Eq + StoreLoadable<Store> + Send + Sync + ManifestOps<Store> + 'static,
     Store: Send + Sync + Clone + 'static,
     <ManifestId as StoreLoadable<Store>>::Value:
@@ -84,7 +83,7 @@ fn get_implicit_deletes_single_parent<ManifestId, FileId, Store, I>(
     parent: ManifestId,
 ) -> impl Stream<Item = Result<MPath, Error>>
 where
-    FileId: Hash + Eq + Send + Sync + 'static,
+    FileId: Hash + Eq + Send + Sync + Unpin + 'static,
     ManifestId: Hash + Eq + StoreLoadable<Store> + Send + Sync + ManifestOps<Store> + 'static,
     Store: Send + Sync + Clone + 'static,
     <ManifestId as StoreLoadable<Store>>::Value:
@@ -115,7 +114,7 @@ pub fn get_implicit_deletes<ManifestId, FileId, Store, I, M>(
     parents: M,
 ) -> impl Stream<Item = Result<MPath, Error>>
 where
-    FileId: Hash + Eq + Send + Sync + 'static,
+    FileId: Hash + Eq + Send + Sync + Unpin + 'static,
     ManifestId: Hash + Eq + StoreLoadable<Store> + Send + Sync + ManifestOps<Store> + 'static,
     Store: Send + Sync + Clone + 'static,
     <ManifestId as StoreLoadable<Store>>::Value:

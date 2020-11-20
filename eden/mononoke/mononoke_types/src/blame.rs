@@ -10,12 +10,11 @@ use crate::{
     typed_hash::{FileUnodeId, MononokeId},
     ChangesetId, MPath,
 };
-use anyhow::{bail, format_err, Error};
+use anyhow::{bail, format_err, Error, Result};
 use blobstore::{Blobstore, BlobstoreBytes, Loadable, LoadableError};
 use context::CoreContext;
 use fbthrift::compact_protocol;
-use futures::future::{BoxFuture, FutureExt, TryFutureExt};
-use futures_old::Future as Future01;
+use futures::future::{BoxFuture, FutureExt};
 use std::{
     collections::{HashMap, VecDeque},
     convert::TryFrom,
@@ -64,11 +63,11 @@ impl AsRef<FileUnodeId> for BlameId {
 impl Loadable for BlameId {
     type Value = BlameMaybeRejected;
 
-    fn load<B: Blobstore + Clone>(
-        &self,
+    fn load<'a, B: Blobstore>(
+        &'a self,
         ctx: CoreContext,
-        blobstore: &B,
-    ) -> BoxFuture<'static, Result<Self::Value, LoadableError>> {
+        blobstore: &'a B,
+    ) -> BoxFuture<'a, Result<Self::Value, LoadableError>> {
         let blobstore_key = self.blobstore_key();
         let fetch = blobstore.get(ctx, blobstore_key.clone());
 
@@ -86,20 +85,18 @@ impl Loadable for BlameId {
 ///
 /// NOTE: `Blame` is not a `Storable` object and can only be assoicated with
 ///       some file unode id.
-pub fn store_blame<B: Blobstore + Clone>(
+pub async fn store_blame<B: Blobstore>(
     ctx: CoreContext,
     blobstore: &B,
     file_unode_id: FileUnodeId,
     blame: BlameMaybeRejected,
-) -> impl Future01<Item = BlameId, Error = Error> {
+) -> Result<BlameId> {
     let blame_t = blame.into_thrift();
     let data = compact_protocol::serialize(&blame_t);
     let data = BlobstoreBytes::from_bytes(data);
     let blame_id = BlameId::from(file_unode_id);
-    blobstore
-        .put(ctx, blame_id.blobstore_key(), data)
-        .compat()
-        .map(move |_| blame_id)
+    blobstore.put(ctx, blame_id.blobstore_key(), data).await?;
+    Ok(blame_id)
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash, Error)]

@@ -311,13 +311,13 @@ async fn sync_internal_and_upstream(
 ) -> Result<(), Error> {
     let key = FetchKey::Aliased(Alias::Sha256(oid));
 
-    let res = filestore::fetch(ctx.repo.blobstore(), ctx.ctx.clone(), &key).await?;
+    let res = filestore::fetch(ctx.repo.get_blobstore(), ctx.ctx.clone(), &key).await?;
 
     match res {
         Some(stream) => {
             // We have the data, so presumably upstream does not have it.
             ScubaMiddlewareState::maybe_add(scuba, LfsScubaKey::UploadSync, "internal_to_upstream");
-            upstream_upload(ctx, oid, size, stream).await?
+            upstream_upload(ctx, oid, size, stream).await?;
         }
         None => {
             // We do not have the data. Get it from upstream.

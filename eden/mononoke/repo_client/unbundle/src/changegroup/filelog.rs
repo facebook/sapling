@@ -15,7 +15,7 @@ use context::CoreContext;
 use failure_ext::{Compat, FutureFailureErrorExt};
 use futures::{
     compat::Future01CompatExt,
-    future::TryFutureExt,
+    future::{FutureExt, TryFutureExt},
     stream::{Stream, TryStreamExt},
 };
 use futures_01_ext::{BoxFuture, FutureExt as OldFutureExt};
@@ -163,9 +163,10 @@ fn generate_lfs_meta_data(
         .get_lfs_content()
         .into_future()
         .and_then(move |lfs_content| {
+            let key = FetchKey::from(lfs_content.oid());
             (
-                FetchKey::from(lfs_content.oid())
-                    .load(ctx, repo.blobstore())
+                async move { key.load(ctx, repo.blobstore()).await }
+                    .boxed()
                     .compat()
                     .from_err(),
                 Ok(lfs_content.copy_from()),

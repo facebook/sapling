@@ -29,7 +29,7 @@ use super::failing_blobstore::FailingBlobstore;
 use super::request;
 
 /// Fetching through any alias should return the same outcome.
-async fn check_consistency<B: Blobstore + Clone>(
+async fn check_consistency<B: Blobstore>(
     blobstore: &B,
     ctx: CoreContext,
     bytes: &Bytes,
@@ -67,7 +67,7 @@ async fn check_consistency<B: Blobstore + Clone>(
     }
 }
 
-async fn check_metadata<B: Blobstore + Clone>(
+async fn check_metadata<B: Blobstore>(
     blobstore: &B,
     ctx: CoreContext,
     bytes: &Bytes,
@@ -150,7 +150,7 @@ fn test_store_bytes_consistency(fb: FacebookInit) -> Result<(), Error> {
             };
 
             let ((id1, len1), fut1) =
-                filestore::store_bytes(memblob.clone(), no_chunking, ctx.clone(), bytes.clone());
+                filestore::store_bytes(&memblob, no_chunking, ctx.clone(), bytes.clone());
             fut1.await?;
 
             assert_eq!(
@@ -159,7 +159,7 @@ fn test_store_bytes_consistency(fb: FacebookInit) -> Result<(), Error> {
             );
 
             let ((id2, len2), fut2) =
-                filestore::store_bytes(memblob.clone(), chunked, ctx.clone(), bytes.clone());
+                filestore::store_bytes(&memblob, chunked, ctx.clone(), bytes.clone());
             fut2.await?;
 
             assert_eq!(
@@ -167,12 +167,8 @@ fn test_store_bytes_consistency(fb: FacebookInit) -> Result<(), Error> {
                 filestore::fetch_concat(&memblob, ctx.clone(), id2).await?
             );
 
-            let ((id3, len3), fut3) = filestore::store_bytes(
-                memblob.clone(),
-                too_small_to_chunk,
-                ctx.clone(),
-                bytes.clone(),
-            );
+            let ((id3, len3), fut3) =
+                filestore::store_bytes(&memblob, too_small_to_chunk, ctx.clone(), bytes.clone());
             fut3.await?;
 
             assert_eq!(

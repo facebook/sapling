@@ -11,11 +11,15 @@ use cloned::cloned;
 use context::CoreContext;
 use futures::{
     future::{self, BoxFuture},
+    pin_mut,
     stream::{self, BoxStream, Stream},
     FutureExt, StreamExt, TryFutureExt, TryStreamExt,
 };
 use mononoke_types::MPath;
-use std::{collections::HashMap, marker::PhantomData};
+use std::{
+    collections::HashMap,
+    marker::{PhantomData, Unpin},
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Diff<Entry> {
@@ -45,9 +49,9 @@ impl From<Option<MPath>> for PathOrPrefix {
 pub trait ManifestOps<Store>
 where
     Store: Sync + Send + Clone + 'static,
-    Self: StoreLoadable<Store> + Clone + Send + Sync + Eq + 'static,
+    Self: StoreLoadable<Store> + Clone + Send + Sync + Eq + Unpin + 'static,
     <Self as StoreLoadable<Store>>::Value: Manifest<TreeId = Self> + Send,
-    <<Self as StoreLoadable<Store>>::Value as Manifest>::LeafId: Clone + Send + Eq,
+    <<Self as StoreLoadable<Store>>::Value as Manifest>::LeafId: Clone + Send + Eq + Unpin,
 {
     fn find_entries<I, P>(
         &self,
@@ -104,18 +108,22 @@ where
             })
             .collect();
 
-        bounded_traversal::bounded_traversal_stream(
-            256,
-            Some((self.clone(), selector, None, false)),
-            move |(manifest_id, selector, path, recursive)| {
-                let PathTree {
-                    subentries,
-                    value: select,
-                } = selector;
+        let init = Some((self.clone(), selector, None, false));
+        (async_stream::stream! {
+            let store = &store;
+            let s = bounded_traversal::bounded_traversal_stream(
+                256,
+                init,
+                move |(manifest_id, selector, path, recursive)| {
+                    let PathTree {
+                        subentries,
+                        value: select,
+                    } = selector;
 
-                manifest_id
-                    .load(ctx.clone(), &store)
-                    .map_ok(move |manifest| {
+                    cloned!(ctx);
+                    async move {
+                        let manifest = manifest_id.load(ctx, &store).await?;
+
                         let mut output = Vec::new();
                         let mut recurse = Vec::new();
 
@@ -153,12 +161,18 @@ where
                             }
                         }
 
-                        (output, recurse)
-                    })
-            },
-        )
-        .map_ok(|entries| stream::iter(entries.into_iter().map(Ok)))
-        .try_flatten()
+                        Ok::<_, Error>((output, recurse))
+                    }
+                },
+            )
+            .map_ok(|entries| stream::iter(entries.into_iter().map(Ok)))
+            .try_flatten();
+
+            pin_mut!(s);
+            while let Some(value) = s.next().await {
+                yield value;
+            }
+        })
         .boxed()
     }
 
@@ -194,7 +208,7 @@ where
             Error,
         >,
     > {
-        self.find_entries(ctx.clone(), store.clone(), vec![PathOrPrefix::Prefix(None)])
+        self.find_entries(ctx, store, vec![PathOrPrefix::Prefix(None)])
     }
 
     fn list_leaf_entries(
@@ -460,9 +474,9 @@ pub fn find_intersection_of_diffs<TreeId, LeafId, Store>(
 ) -> impl Stream<Item = Result<(Option<MPath>, Entry<TreeId, LeafId>), Error>> + 'static
 where
     Store: Sync + Send + Clone + 'static,
-    TreeId: StoreLoadable<Store> + Clone + Send + Sync + Eq + 'static,
+    TreeId: StoreLoadable<Store> + Clone + Send + Sync + Eq + Unpin + 'static,
     <TreeId as StoreLoadable<Store>>::Value: Manifest<TreeId = TreeId, LeafId = LeafId> + Send,
-    LeafId: Clone + Send + Eq + 'static,
+    LeafId: Clone + Send + Eq + Unpin + 'static,
 {
     find_intersection_of_diffs_and_parents(ctx, store, mf_id, diff_against)
         .map_ok(|(path, entry, _)| (path, entry))
@@ -487,9 +501,9 @@ pub fn find_intersection_of_diffs_and_parents<TreeId, LeafId, Store>(
 > + 'static
 where
     Store: Sync + Send + Clone + 'static,
-    TreeId: StoreLoadable<Store> + Clone + Send + Sync + Eq + 'static,
+    TreeId: StoreLoadable<Store> + Clone + Send + Sync + Eq + Unpin + 'static,
     <TreeId as StoreLoadable<Store>>::Value: Manifest<TreeId = TreeId, LeafId = LeafId> + Send,
-    LeafId: Clone + Send + Eq + 'static,
+    LeafId: Clone + Send + Eq + Unpin + 'static,
 {
     match diff_against.get(0).cloned() {
         Some(parent) => async move {
@@ -550,8 +564,8 @@ where
 impl<TreeId, Store> ManifestOps<Store> for TreeId
 where
     Store: Sync + Send + Clone + 'static,
-    Self: StoreLoadable<Store> + Clone + Send + Sync + Eq + 'static,
+    Self: StoreLoadable<Store> + Clone + Send + Sync + Eq + Unpin + 'static,
     <Self as StoreLoadable<Store>>::Value: Manifest<TreeId = Self> + Send,
-    <<Self as StoreLoadable<Store>>::Value as Manifest>::LeafId: Send + Clone + Eq,
+    <<Self as StoreLoadable<Store>>::Value as Manifest>::LeafId: Send + Clone + Eq + Unpin,
 {
 }

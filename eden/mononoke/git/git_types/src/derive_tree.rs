@@ -9,10 +9,10 @@ use anyhow::Error;
 use async_trait::async_trait;
 use cloned::cloned;
 use context::CoreContext;
-use futures::compat::Future01CompatExt;
-use futures::future::{ready, FutureExt, TryFutureExt};
-use futures_ext::{FutureExt as _, StreamExt};
-use futures_old::{stream::futures_unordered, Future, IntoFuture, Stream};
+use futures::{
+    future::ready,
+    stream::{FuturesUnordered, TryStreamExt},
+};
 use manifest::derive_manifest;
 use std::collections::HashMap;
 use std::convert::TryInto;
@@ -41,20 +41,16 @@ impl TreeMapping {
         format!("git.derived_root.{}", cs_id)
     }
 
-    fn fetch_root(
+    async fn fetch_root(
         &self,
         ctx: CoreContext,
         cs_id: ChangesetId,
-    ) -> impl Future<Item = Option<(ChangesetId, TreeHandle)>, Error = Error> {
-        self.blobstore
-            .get(ctx, self.root_key(cs_id))
-            .compat()
-            .and_then(move |bytes| {
-                match bytes {
-                    Some(bytes) => bytes.try_into().map(|handle| Some((cs_id, handle))),
-                    None => Ok(None),
-                }
-            })
+    ) -> Result<Option<(ChangesetId, TreeHandle)>, Error> {
+        let bytes = self.blobstore.get(ctx, self.root_key(cs_id)).await?;
+        match bytes {
+            Some(bytes) => bytes.try_into().map(|handle| Some((cs_id, handle))),
+            None => Ok(None),
+        }
     }
 }
 
@@ -67,14 +63,12 @@ impl BonsaiDerivedMapping for TreeMapping {
         ctx: CoreContext,
         csids: Vec<ChangesetId>,
     ) -> Result<HashMap<ChangesetId, Self::Value>, Error> {
-        let gets = csids
+        csids
             .into_iter()
-            .map(|cs_id| self.fetch_root(ctx.clone(), cs_id));
-
-        futures_unordered(gets)
-            .filter_map(|maybe_handle| maybe_handle)
-            .collect_to()
-            .compat()
+            .map(|cs_id| self.fetch_root(ctx.clone(), cs_id))
+            .collect::<FuturesUnordered<_>>()
+            .try_filter_map(|maybe_handle| async move { Ok(maybe_handle) })
+            .try_collect()
             .await
     }
 
@@ -106,20 +100,18 @@ impl BonsaiDerived for TreeHandle {
         parents: Vec<Self>,
     ) -> Result<Self, Error> {
         let blobstore = repo.get_blobstore();
-        let changes = get_file_changes(&blobstore, &ctx, bonsai).compat().await?;
-        derive_git_manifest(ctx, blobstore, parents, changes)
-            .compat()
-            .await
+        let changes = get_file_changes(&blobstore, &ctx, bonsai).await?;
+        derive_git_manifest(ctx, blobstore, parents, changes).await
     }
 }
 
-fn derive_git_manifest<B: Blobstore + Clone>(
+async fn derive_git_manifest<B: Blobstore + Clone + 'static>(
     ctx: CoreContext,
     blobstore: B,
     parents: Vec<TreeHandle>,
     changes: Vec<(MPath, Option<BlobHandle>)>,
-) -> impl Future<Item = TreeHandle, Error = Error> {
-    derive_manifest(
+) -> Result<TreeHandle, Error> {
+    let handle = derive_manifest(
         ctx.clone(),
         blobstore.clone(),
         parents,
@@ -135,8 +127,11 @@ fn derive_git_manifest<B: Blobstore + Clone>(
 
                 let tree: Tree = TreeBuilder::new(members).into();
 
-                tree.store(ctx.clone(), &blobstore)
-                    .map_ok(|handle| ((), handle))
+                cloned!(ctx, blobstore);
+                async move {
+                    let handle = tree.store(ctx.clone(), &blobstore).await?;
+                    Ok(((), handle))
+                }
             }
         },
         {
@@ -153,47 +148,44 @@ fn derive_git_manifest<B: Blobstore + Clone>(
             }
         },
     )
-    .boxed()
-    .compat()
-    .and_then(move |handle| {
-        match handle {
-            Some(handle) => Ok(handle).into_future().left_future(),
-            None => {
-                let tree: Tree = TreeBuilder::default().into();
-                tree.store(ctx.clone(), &blobstore).compat().right_future()
-            }
+    .await?;
+
+    match handle {
+        Some(handle) => Ok(handle),
+        None => {
+            let tree: Tree = TreeBuilder::default().into();
+            tree.store(ctx, &blobstore).await
         }
-    })
+    }
 }
 
-pub fn get_file_changes<B: Blobstore + Clone>(
+pub async fn get_file_changes<B: Blobstore + Clone>(
     blobstore: &B,
     ctx: &CoreContext,
     bcs: BonsaiChangeset,
-) -> impl Future<Item = Vec<(MPath, Option<BlobHandle>)>, Error = Error> {
-    let futs = bcs
-        .into_mut()
+) -> Result<Vec<(MPath, Option<BlobHandle>)>, Error> {
+    bcs.into_mut()
         .file_changes
         .into_iter()
-        .map(|(mpath, maybe_file_change)| match maybe_file_change {
-            Some(file_change) => {
-                let t = file_change.file_type();
-                let k = FetchKey::Canonical(file_change.content_id());
+        .map(|(mpath, maybe_file_change)| {
+            cloned!(ctx, blobstore);
+            async move {
+                match maybe_file_change {
+                    Some(file_change) => {
+                        let t = file_change.file_type();
+                        let k = FetchKey::Canonical(file_change.content_id());
 
-                {
-                    cloned!(blobstore, ctx, k);
-                    async move { filestore::get_metadata(&blobstore, ctx, &k).await }
+                        let r = filestore::get_metadata(&blobstore, ctx.clone(), &k).await?;
+                        let m = r.ok_or(ErrorKind::ContentMissing(k))?;
+                        Ok((mpath, Some(BlobHandle::new(m, t))))
+                    }
+                    None => Ok((mpath, None)),
                 }
-                .boxed()
-                .compat()
-                .and_then(move |r| r.ok_or_else(|| ErrorKind::ContentMissing(k).into()))
-                .map(move |m| (mpath, Some(BlobHandle::new(m, t))))
-                .left_future()
             }
-            None => Ok((mpath, None)).into_future().right_future(),
-        });
-
-    futures_unordered(futs).collect()
+        })
+        .collect::<FuturesUnordered<_>>()
+        .try_collect()
+        .await
 }
 
 #[cfg(test)]

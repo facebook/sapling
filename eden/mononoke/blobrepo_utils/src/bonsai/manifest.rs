@@ -13,8 +13,8 @@ use blobstore::{Blobstore, Loadable};
 use cacheblob::MemWritesBlobstore;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{StreamExt, TryFutureExt, TryStreamExt};
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt, StreamExt as _};
+use futures::{future::try_join, FutureExt, TryFutureExt, TryStreamExt};
+use futures_ext::{try_boxfuture, BoxFuture, FutureExt as _, StreamExt as _};
 use futures_old::{
     future::{self, Either},
     Future, Stream,
@@ -209,8 +209,10 @@ impl ChangesetVisitor for BonsaiMFVerifyVisitor {
         let parents = parents
             .into_iter()
             .map(|p| {
-                HgChangesetId::new(p)
-                    .load(ctx.clone(), repo.blobstore())
+                let id = HgChangesetId::new(p);
+                cloned!(ctx, repo);
+                async move { id.load(ctx, repo.blobstore()).await }
+                    .boxed()
                     .compat()
                     .from_err()
                     .map(|cs| cs.manifestid())
@@ -222,20 +224,23 @@ impl ChangesetVisitor for BonsaiMFVerifyVisitor {
         let bonsai_diff_fut = future::join_all(parents).and_then({
             cloned!(ctx, repo);
             move |parents| {
-                let root_mf_fut =
-                    BlobManifest::load(ctx.clone(), repo.blobstore(), changeset.manifestid());
+                let root_mf_fut = {
+                    cloned!(ctx, repo);
+                    let mf_id = changeset.manifestid();
+                    async move { BlobManifest::load(ctx, repo.blobstore(), mf_id).await }
+                };
 
-                bonsai_diff(
-                    ctx.clone(),
-                    repo.get_blobstore(),
-                    changeset.manifestid(),
-                    parents.iter().cloned().collect(),
+                try_join(
+                    bonsai_diff(
+                        ctx.clone(),
+                        repo.get_blobstore(),
+                        changeset.manifestid(),
+                        parents.iter().cloned().collect(),
+                    )
+                    .try_collect::<Vec<_>>(),
+                    root_mf_fut,
                 )
-                .boxed()
-                .compat()
-                .collect()
-                .join(root_mf_fut)
-                .and_then(move |(diff, root_mf)| {
+                .and_then(move |(diff, root_mf)| async move {
                     match root_mf {
                         Some(root_mf) => Ok((diff, root_mf, parents)),
                         None => bail!(
@@ -244,6 +249,8 @@ impl ChangesetVisitor for BonsaiMFVerifyVisitor {
                         ),
                     }
                 })
+                .boxed()
+                .compat()
             }
         });
 

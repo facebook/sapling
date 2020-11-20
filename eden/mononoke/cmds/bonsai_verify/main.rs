@@ -351,10 +351,15 @@ fn subcommmand_hg_manifest_verify(
                                 parent_hashes
                                     .into_iter()
                                     .map(|p| {
-                                        HgChangesetId::new(p)
-                                            .load(ctx.clone(), repo.blobstore())
-                                            .map_ok(|cs| cs.manifestid())
-                                            .map_err(Error::from)
+                                        cloned!(ctx, repo);
+                                        let cs_id = HgChangesetId::new(p);
+                                        async move {
+                                            cs_id
+                                                .load(ctx, repo.blobstore())
+                                                .map_ok(|cs| cs.manifestid())
+                                                .map_err(Error::from)
+                                                .await
+                                        }
                                     })
                                     .collect::<Vec<_>>(),
                             )

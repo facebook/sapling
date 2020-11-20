@@ -242,106 +242,108 @@ fn prepare_blob(
     lfs_params: SessionLfsParams,
     validate_hash: bool,
 ) -> impl Future<Item = RemotefilelogBlob, Error = Error> {
-    node.load(ctx.clone(), repo.blobstore())
-        .compat()
-        .from_err()
-        .map({
-            cloned!(repo);
-            move |envelope| {
-                let file_size = envelope.content_size();
+    {
+        cloned!(ctx, repo);
+        async move { node.load(ctx, repo.blobstore()).await }
+    }
+    .boxed()
+    .compat()
+    .from_err()
+    .map({
+        cloned!(repo);
+        move |envelope| {
+            let file_size = envelope.content_size();
 
-                let inline_file = match lfs_params.threshold {
-                    Some(lfs_threshold) => (file_size <= lfs_threshold),
-                    None => true,
+            let inline_file = match lfs_params.threshold {
+                Some(lfs_threshold) => (file_size <= lfs_threshold),
+                None => true,
+            };
+
+            // NOTE: It'd be nice if we could hoist up redaction checks to this point. Doing so
+            // would let us return a different kind based on whether the content is redacted or
+            // not, and therefore would make it more obvious which methods do redaction or not
+            // (based on their signature).
+
+            if inline_file {
+                let content_fut = {
+                    let blobstore = repo.get_blobstore();
+                    let content_id = envelope.content_id();
+                    async move { filestore::fetch_concat(&blobstore, ctx, content_id).await }
+                }
+                .map_ok(FileBytes)
+                .boxed()
+                .compat();
+
+                let blob_fut = if validate_hash {
+                    content_fut
+                        .and_then(move |file_bytes| {
+                            let HgFileEnvelopeMut {
+                                p1, p2, metadata, ..
+                            } = envelope.into_mut();
+
+                            let mut validation_bytes = BytesMut::with_capacity(
+                                metadata.len() + file_bytes.as_bytes().len(),
+                            );
+                            validation_bytes.extend_from_slice(&metadata);
+                            validation_bytes.extend_from_slice(file_bytes.as_bytes());
+
+                            let p1 = p1.map(|p| p.into_nodehash());
+                            let p2 = p2.map(|p| p.into_nodehash());
+                            let actual = HgFileNodeId::new(calculate_hg_node_id(
+                                &validation_bytes.freeze(),
+                                &HgParents::new(p1, p2),
+                            ));
+
+                            if actual != node {
+                                return Err(ErrorKind::CorruptHgFileNode {
+                                    expected: node,
+                                    actual,
+                                }
+                                .into());
+                            }
+
+                            Ok((metadata, file_bytes))
+                        })
+                        .boxify()
+                } else {
+                    content_fut
+                        .map(move |file_bytes| (envelope.into_mut().metadata, file_bytes))
+                        .boxify()
                 };
 
-                // NOTE: It'd be nice if we could hoist up redaction checks to this point. Doing so
-                // would let us return a different kind based on whether the content is redacted or
-                // not, and therefore would make it more obvious which methods do redaction or not
-                // (based on their signature).
-
-                if inline_file {
-                    let content_fut = {
+                RemotefilelogBlob {
+                    kind: RemotefilelogBlobKind::Inline(file_size),
+                    data: blob_fut,
+                }
+            } else {
+                // For LFS blobs, we'll create the LFS pointer. Note that there is no hg-style
+                // metadata encoded for LFS blobs (it's in the LFS pointer instead).
+                let key = FetchKey::from(envelope.content_id());
+                let blob_fut = (
+                    {
+                        cloned!(ctx, key);
                         let blobstore = repo.get_blobstore();
-                        let content_id = envelope.content_id();
-                        async move { filestore::fetch_concat(&blobstore, ctx, content_id).await }
+                        async move { filestore::get_metadata(&blobstore, ctx, &key).await }
                     }
-                    .map_ok(FileBytes)
                     .boxed()
-                    .compat();
+                    .compat()
+                    .and_then(move |meta| Ok(meta.ok_or(ErrorKind::MissingContent(key))?.sha256)),
+                    File::extract_copied_from(envelope.metadata()).into_future(),
+                )
+                    .into_future()
+                    .and_then(move |(oid, copy_from)| {
+                        File::generate_lfs_file(oid, file_size, copy_from)
+                    })
+                    .map(|bytes| (Bytes::new(), FileBytes(bytes)))
+                    .boxify();
 
-                    let blob_fut = if validate_hash {
-                        content_fut
-                            .and_then(move |file_bytes| {
-                                let HgFileEnvelopeMut {
-                                    p1, p2, metadata, ..
-                                } = envelope.into_mut();
-
-                                let mut validation_bytes = BytesMut::with_capacity(
-                                    metadata.len() + file_bytes.as_bytes().len(),
-                                );
-                                validation_bytes.extend_from_slice(&metadata);
-                                validation_bytes.extend_from_slice(file_bytes.as_bytes());
-
-                                let p1 = p1.map(|p| p.into_nodehash());
-                                let p2 = p2.map(|p| p.into_nodehash());
-                                let actual = HgFileNodeId::new(calculate_hg_node_id(
-                                    &validation_bytes.freeze(),
-                                    &HgParents::new(p1, p2),
-                                ));
-
-                                if actual != node {
-                                    return Err(ErrorKind::CorruptHgFileNode {
-                                        expected: node,
-                                        actual,
-                                    }
-                                    .into());
-                                }
-
-                                Ok((metadata, file_bytes))
-                            })
-                            .boxify()
-                    } else {
-                        content_fut
-                            .map(move |file_bytes| (envelope.into_mut().metadata, file_bytes))
-                            .boxify()
-                    };
-
-                    RemotefilelogBlob {
-                        kind: RemotefilelogBlobKind::Inline(file_size),
-                        data: blob_fut,
-                    }
-                } else {
-                    // For LFS blobs, we'll create the LFS pointer. Note that there is no hg-style
-                    // metadata encoded for LFS blobs (it's in the LFS pointer instead).
-                    let key = FetchKey::from(envelope.content_id());
-                    let blob_fut = (
-                        {
-                            cloned!(ctx, key);
-                            let blobstore = repo.get_blobstore();
-                            async move { filestore::get_metadata(&blobstore, ctx, &key).await }
-                        }
-                        .boxed()
-                        .compat()
-                        .and_then(move |meta| {
-                            Ok(meta.ok_or(ErrorKind::MissingContent(key))?.sha256)
-                        }),
-                        File::extract_copied_from(envelope.metadata()).into_future(),
-                    )
-                        .into_future()
-                        .and_then(move |(oid, copy_from)| {
-                            File::generate_lfs_file(oid, file_size, copy_from)
-                        })
-                        .map(|bytes| (Bytes::new(), FileBytes(bytes)))
-                        .boxify();
-
-                    RemotefilelogBlob {
-                        kind: RemotefilelogBlobKind::Lfs(file_size),
-                        data: blob_fut,
-                    }
+                RemotefilelogBlob {
+                    kind: RemotefilelogBlobKind::Lfs(file_size),
+                    data: blob_fut,
                 }
             }
-        })
+        }
+    })
 }
 
 #[cfg(test)]

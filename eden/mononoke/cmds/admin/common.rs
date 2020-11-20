@@ -12,8 +12,8 @@ use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use cloned::cloned;
 use cmdlib::helpers;
 use context::CoreContext;
-use futures::{TryFutureExt, TryStreamExt};
-use futures_ext::{FutureExt, StreamExt};
+use futures::{FutureExt, TryFutureExt, TryStreamExt};
+use futures_ext::{FutureExt as _, StreamExt};
 use futures_old::{
     future::{self, Future},
     stream::Stream,
@@ -34,7 +34,12 @@ pub fn fetch_bonsai_changeset(
 ) -> impl Future<Item = BonsaiChangeset, Error = Error> {
     helpers::csid_resolve(ctx.clone(), repo.clone(), rev.to_string()).and_then({
         cloned!(ctx, repo);
-        move |csid| csid.load(ctx, repo.blobstore()).compat().from_err()
+        move |csid| {
+            async move { csid.load(ctx, repo.blobstore()).await }
+                .boxed()
+                .compat()
+                .from_err()
+        }
     })
 }
 
@@ -101,44 +106,47 @@ pub fn get_file_nodes(
     cs_id: HgChangesetId,
     paths: Vec<MPath>,
 ) -> impl Future<Item = Vec<HgFileNodeId>, Error = Error> {
-    cs_id
-        .load(ctx.clone(), repo.blobstore())
-        .compat()
-        .from_err()
-        .map(|cs| cs.manifestid().clone())
-        .and_then({
-            cloned!(ctx, repo);
-            move |root_mf_id| {
-                root_mf_id
-                    .find_entries(ctx, repo.get_blobstore(), paths.clone())
-                    .compat()
-                    .filter_map(|(path, entry)| Some((path?, entry.into_leaf()?.1)))
-                    .collect_to::<HashMap<_, _>>()
-                    .map(move |manifest_entries| {
-                        let mut existing_hg_nodes = Vec::new();
-                        let mut non_existing_paths = Vec::new();
+    {
+        cloned!(ctx, repo);
+        async move { cs_id.load(ctx, repo.blobstore()).await }
+    }
+    .boxed()
+    .compat()
+    .from_err()
+    .map(|cs| cs.manifestid().clone())
+    .and_then({
+        cloned!(ctx, repo);
+        move |root_mf_id| {
+            root_mf_id
+                .find_entries(ctx, repo.get_blobstore(), paths.clone())
+                .compat()
+                .filter_map(|(path, entry)| Some((path?, entry.into_leaf()?.1)))
+                .collect_to::<HashMap<_, _>>()
+                .map(move |manifest_entries| {
+                    let mut existing_hg_nodes = Vec::new();
+                    let mut non_existing_paths = Vec::new();
 
-                        for path in paths.iter() {
-                            match manifest_entries.get(&path) {
-                                Some(hg_node) => existing_hg_nodes.push(*hg_node),
-                                None => non_existing_paths.push(path.clone()),
-                            };
-                        }
-                        (non_existing_paths, existing_hg_nodes)
-                    })
+                    for path in paths.iter() {
+                        match manifest_entries.get(&path) {
+                            Some(hg_node) => existing_hg_nodes.push(*hg_node),
+                            None => non_existing_paths.push(path.clone()),
+                        };
+                    }
+                    (non_existing_paths, existing_hg_nodes)
+                })
+        }
+    })
+    .and_then({
+        move |(non_existing_paths, existing_hg_nodes)| match non_existing_paths.len() {
+            0 => {
+                debug!(logger, "All the file paths are valid");
+                future::ok(existing_hg_nodes).right_future()
             }
-        })
-        .and_then({
-            move |(non_existing_paths, existing_hg_nodes)| match non_existing_paths.len() {
-                0 => {
-                    debug!(logger, "All the file paths are valid");
-                    future::ok(existing_hg_nodes).right_future()
-                }
-                _ => future::err(format_err!(
-                    "failed to identify the files associated with the file paths {:?}",
-                    non_existing_paths
-                ))
-                .left_future(),
-            }
-        })
+            _ => future::err(format_err!(
+                "failed to identify the files associated with the file paths {:?}",
+                non_existing_paths
+            ))
+            .left_future(),
+        }
+    })
 }

@@ -49,11 +49,11 @@ impl Loadable for FetchKey {
     /// Return the canonical ID for a key. It doesn't check if the corresponding content actually
     /// exists (its possible for an alias to exist before the ID if there was an interrupted store
     /// operation).
-    fn load<B: Blobstore + Clone>(
-        &self,
+    fn load<'a, B: Blobstore>(
+        &'a self,
         ctx: CoreContext,
-        blobstore: &B,
-    ) -> BoxFuture<'static, Result<Self::Value, LoadableError>> {
+        blobstore: &'a B,
+    ) -> BoxFuture<'a, Result<Self::Value, LoadableError>> {
         match self {
             FetchKey::Canonical(content_id) => future::ok(*content_id).boxed(),
             FetchKey::Aliased(alias) => alias.load(ctx, blobstore),
@@ -83,11 +83,11 @@ impl Alias {
 impl Loadable for Alias {
     type Value = ContentId;
 
-    fn load<B: Blobstore + Clone>(
-        &self,
+    fn load<'a, B: Blobstore>(
+        &'a self,
         ctx: CoreContext,
-        blobstore: &B,
-    ) -> BoxFuture<'static, Result<Self::Value, LoadableError>> {
+        blobstore: &'a B,
+    ) -> BoxFuture<'a, Result<Self::Value, LoadableError>> {
         let key = self.blobstore_key();
         let get = blobstore.get(ctx, key.clone());
         async move {
@@ -108,11 +108,11 @@ pub struct AliasBlob(pub Alias, pub ContentAlias);
 impl Storable for AliasBlob {
     type Key = ();
 
-    fn store<B: Blobstore + Clone>(
+    fn store<B: Blobstore>(
         self,
         ctx: CoreContext,
         blobstore: &B,
-    ) -> BoxFuture<'static, Result<Self::Key, Error>> {
+    ) -> BoxFuture<'_, Result<Self::Key, Error>> {
         blobstore.put(ctx, self.0.blobstore_key(), self.1.into_blob())
     }
 }

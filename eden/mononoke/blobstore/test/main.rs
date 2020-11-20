@@ -25,7 +25,7 @@ use memblob::{EagerMemblob, LazyMemblob};
 use mononoke_types::BlobstoreBytes;
 use sqlblob::{get_test_config_store, Sqlblob};
 
-async fn overwrite<B: Blobstore + BlobstorePutOps>(
+async fn overwrite<'a, B: Blobstore + BlobstorePutOps>(
     fb: FacebookInit,
     blobstore: B,
     has_ctime: bool,
@@ -94,7 +94,7 @@ async fn overwrite<B: Blobstore + BlobstorePutOps>(
     Ok(())
 }
 
-async fn roundtrip_and_link<B: BlobstoreWithLink>(
+async fn roundtrip_and_link<'a, B: BlobstoreWithLink>(
     fb: FacebookInit,
     blobstore: B,
     has_ctime: bool,
@@ -137,7 +137,7 @@ async fn roundtrip_and_link<B: BlobstoreWithLink>(
     Ok(())
 }
 
-async fn missing<B: Blobstore>(fb: FacebookInit, blobstore: B) -> Result<(), Error> {
+async fn missing<'a, B: Blobstore>(fb: FacebookInit, blobstore: B) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
 
     let key = "missing".to_string();

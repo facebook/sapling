@@ -159,7 +159,7 @@ fn main(fb: fbinit::FacebookInit) -> Result<()> {
             send
         };
         let res = scrub(
-            &*blobstore,
+            &blobstore,
             &ctx,
             stdin.lines().map_err(Error::from),
             success,
