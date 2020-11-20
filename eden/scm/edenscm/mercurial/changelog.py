@@ -525,8 +525,7 @@ class changelog(revlog.revlog):
     ):
         self._invalidaterustrevlog()
         text = hgcommittext(manifest, files, desc, user, date, extra)
-        btext = encodeutf8(text)
-        result = self.addrevision(btext, transaction, len(self), p1, p2)
+        result = self.addrevision(text, transaction, len(self), p1, p2)
 
         zstore = self.zstore
         if zstore is not None:
@@ -734,5 +733,5 @@ def hgcommittext(manifest, files, desc, user, date, extra):
         extra = encodeextra(extra)
         parseddate = "%s %s" % (parseddate, extra)
     l = [hex(manifest), user, parseddate] + sorted(files) + ["", desc]
-    text = "\n".join(l)
+    text = encodeutf8("\n".join(l), errors="surrogateescape")
     return text

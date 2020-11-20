@@ -339,12 +339,11 @@ class changelog(object):
         self, manifest, files, desc, transaction, p1, p2, user, date=None, extra=None
     ):
         text = hgcommittext(manifest, files, desc, user, date, extra)
-        btext = encodeutf8(text)
-        node = revlog.hash(btext, p1, p2)
+        node = revlog.hash(text, p1, p2)
         parents = [p for p in (p1, p2) if p != nullid]
         if node not in self.nodemap:
             self.svfs.write("tip", node)
-        self.inner.addcommits([(node, parents, btext)])
+        self.inner.addcommits([(node, parents, text)])
         nodes = transaction.changes.get("nodes")
         if nodes is not None:
             nodes.append(node)
