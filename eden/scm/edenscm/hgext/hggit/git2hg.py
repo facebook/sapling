@@ -91,8 +91,11 @@ class GitIncomingResult(object):
 
 
 def extract_hg_metadata(message, git_extra):
-    message = pycompat.decodeutf8(message)
-    split = message.split("\n--HG--\n", 1)
+    # The git message may contain non-utf8 characters, which will later be
+    # encoded into a hg extras. So let's keep the message in bytes, even as we
+    # turn the metadata into utf8 below.
+    split = message.split(b"\n--HG--\n", 1)
+
     # Renames are explicitly stored in Mercurial but inferred in Git. For
     # commits that originated in Git we'd like to optionally infer rename
     # information to store in Mercurial, but for commits that originated in
@@ -113,6 +116,7 @@ def extract_hg_metadata(message, git_extra):
     if len(split) == 2:
         renames = {}
         message, meta = split
+        meta = pycompat.decodeutf8(meta)
         lines = meta.split("\n")
         for line in lines:
             if line == "":

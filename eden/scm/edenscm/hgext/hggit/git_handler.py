@@ -160,6 +160,8 @@ class GitHandler(object):
     # FILE LOAD AND SAVE METHODS
 
     def map_set(self, gitsha, hgsha):
+        assert isinstance(gitsha, str)
+        assert isinstance(hgsha, str)
         hgnode = bin(hgsha)
         self._map.add(bin(gitsha), hgnode)
         self._map_hg_modifications.add(hgnode)
@@ -478,7 +480,8 @@ class GitHandler(object):
         if revs:
             reqrefs = {}
             for rev in revs:
-                for n in ("refs/heads/" + rev, "refs/tags/" + rev):
+                rev = pycompat.encodeutf8(rev)
+                for n in (b"refs/heads/" + rev, b"refs/tags/" + rev):
                     if n in refs:
                         reqrefs[n] = refs[n]
         else:
@@ -596,7 +599,9 @@ class GitHandler(object):
         # there is no reason to round one way or the other, so do the
         # simplest and round down.
         timezone -= timezone % 60
-        commit.author = pycompat.encodeutf8(self.get_git_author(ctx))
+        commit.author = pycompat.encodeutf8(
+            self.get_git_author(ctx), errors="surrogateescape"
+        )
         commit.author_time = int(time)
         commit.author_timezone = -timezone
 
@@ -604,7 +609,7 @@ class GitHandler(object):
             try:
                 # fixup timezone
                 (name, timestamp, timezone) = extra["committer"].rsplit(" ", 2)
-                commit.committer = name
+                commit.committer = pycompat.encodeutf8(name)
                 commit.commit_time = timestamp
 
                 # work around a timezone format change
@@ -639,8 +644,8 @@ class GitHandler(object):
         commit.message, extra = self.get_git_message_and_extra(ctx)
         commit.extra.extend(extra)
 
-        if "encoding" in extra:
-            commit.encoding = extra["encoding"]
+        if b"encoding" in extra:
+            commit.encoding = pycompat.encodeutf8(extra["encoding"])
 
         for obj, nodeid in exporter.update_changeset(ctx):
             # In theory we should check if the object exists before adding it,
@@ -657,7 +662,7 @@ class GitHandler(object):
 
         if commit.id not in self.git.object_store:
             self.git.object_store.add_object(commit)
-        self.map_set(commit.id, ctx.hex())
+        self.map_set(pycompat.decodeutf8(commit.id), ctx.hex())
 
         self.swap_out_encoding(oldenc)
         return commit.id
@@ -739,7 +744,17 @@ class GitHandler(object):
             author = self.get_valid_git_username_email(author) + " <none@none>"
 
         if "author" in ctx.extra():
-            author = "".join(apply_delta(author, ctx.extra()["author"]))
+            author = pycompat.decodeutf8(
+                b"".join(
+                    apply_delta(
+                        pycompat.encodeutf8(author),
+                        pycompat.encodeutf8(
+                            ctx.extra()["author"], errors="surrogateescape"
+                        ),
+                    )
+                ),
+                errors="surrogateescape",
+            )
 
         return author
 
@@ -766,9 +781,14 @@ class GitHandler(object):
     def get_git_message_and_extra(self, ctx):
         extra = ctx.extra()
 
-        message = ctx.description() + "\n"
+        message = pycompat.encodeutf8(ctx.description()) + b"\n"
         if "message" in extra:
-            message = "".join(apply_delta(message, extra["message"]))
+            message = b"".join(
+                apply_delta(
+                    message,
+                    pycompat.encodeutf8(extra["message"], errors="surrogateescape"),
+                )
+            )
 
         # HG EXTRA INFORMATION
 
@@ -845,7 +865,7 @@ class GitHandler(object):
                     git_extra.append((b"HG:extra", pycompat.encodeutf8(spec)))
 
         if extra_message:
-            message += "\n--HG--\n" + extra_message
+            message += pycompat.encodeutf8("\n--HG--\n" + extra_message)
 
         if (
             extra.get("hg-git-rename-source", None) != "git"
@@ -858,7 +878,7 @@ class GitHandler(object):
             # know not to detect renames.
             git_extra.append((b"HG:rename-source", b"hg"))
 
-        return pycompat.encodeutf8(message), git_extra
+        return message, git_extra
 
     def get_git_incoming(self, refs):
         return git2hg.find_incoming(self.git.object_store, self._map, refs)
@@ -905,6 +925,12 @@ class GitHandler(object):
     def import_git_commit(self, commit):
         self.ui.debug("importing: %s\n" % commit.id)
 
+        commitid = pycompat.decodeutf8(commit.id)
+        commitencoding = (
+            pycompat.decodeutf8(commit.encoding) if commit.encoding else None
+        )
+        commitcommitter = pycompat.decodeutf8(commit.committer)
+
         detect_renames = False
         (strip_message, hg_renames, hg_branch, extra) = git2hg.extract_hg_metadata(
             commit.message, commit.extra
@@ -915,7 +941,7 @@ class GitHandler(object):
         # to compute the git/hg mapping without having the entire git repo.
         # "convert_revision" was chosen to match the hgsubversion and hg convert
         # extra field.
-        extra["convert_revision"] = pycompat.decodeutf8(commit.id)
+        extra["convert_revision"] = commitid
 
         if hg_renames is None:
             detect_renames = True
@@ -941,8 +967,8 @@ class GitHandler(object):
         # If we need to skip a commit because the contents are problematic,
         # let's still write the commit, so we have something to map to from git,
         # but leave it empty.
-        if commit.id in self.ui.configlist("hggit", "skipgithashes", []):
-            self.ui.warn(_("forcing git commit %s to be empty\n") % commit.id)
+        if commitid in self.ui.configlist("hggit", "skipgithashes", []):
+            self.ui.warn(_("forcing git commit %s to be empty\n") % commitid)
             files = {}
             gitlinks = {}
             git_renames = {}
@@ -954,21 +980,25 @@ class GitHandler(object):
         text = strip_message
 
         origtext = text
-        if sys.version_info[0] < 3:
-            try:
-                text.decode("utf-8")
-            except UnicodeDecodeError:
-                text = self.decode_guess(text, commit.encoding)
+        try:
+            text.decode("utf-8")
+        except UnicodeDecodeError:
+            text = self.decode_guess(text, commitencoding)
 
-        text = "\n".join([l.rstrip() for l in text.splitlines()]).strip("\n")
-        if text + "\n" != origtext:
-            extra["message"] = create_delta(text + "\n", origtext)
+        text = b"\n".join([l.rstrip() for l in text.splitlines()]).strip(b"\n")
+        if text + b"\n" != origtext:
+            extra["message"] = pycompat.decodeutf8(
+                create_delta(text + b"\n", origtext),
+                errors="surrogateescape",
+            )
+
+        text = pycompat.decodeutf8(text)
 
         author = commit.author
 
         # convert extra data back to the end
-        if b" ext:" in commit.author:
-            m = RE_GIT_AUTHOR_EXTRA.match(commit.author)
+        if b" ext:" in author:
+            m = RE_GIT_AUTHOR_EXTRA.match(author)
             if m:
                 name = m.group(1)
                 ex = pycompat.encodeutf8(
@@ -977,8 +1007,8 @@ class GitHandler(object):
                 email = m.group(3)
                 author = name + b" <" + email + b">" + ex
 
-        if b" <none@none>" in commit.author:
-            author = commit.author[:-12]
+        if b" <none@none>" in author:
+            author = author[:-12]
 
         try:
             decodedauthor = author.decode("utf-8")
@@ -986,8 +1016,11 @@ class GitHandler(object):
                 author = decodedauthor
         except UnicodeDecodeError:
             origauthor = author
-            author = self.decode_guess(author, commit.encoding)
-            extra["author"] = create_delta(author, origauthor)
+            author = self.decode_guess(author, commitencoding)
+            extra["author"] = pycompat.decodeutf8(
+                create_delta(author, origauthor), errors="surrogateescape"
+            )
+            author = pycompat.decodeutf8(author)
 
         oldenc = self.swap_out_encoding()
 
@@ -1103,13 +1136,13 @@ class GitHandler(object):
             or commit.author_timezone != commit.commit_timezone
         ):
             extra["committer"] = "%s %d %d" % (
-                commit.committer,
+                commitcommitter,
                 commit.commit_time,
                 -commit.commit_timezone,
             )
 
-        if commit.encoding:
-            extra["encoding"] = commit.encoding
+        if commitencoding:
+            extra["encoding"] = commitencoding
 
         if octopus:
             extra["hg-git"] = "octopus-done"
@@ -1130,7 +1163,7 @@ class GitHandler(object):
 
         # save changeset to mapping file
         cs = hex(node)
-        self.map_set(commit.id, cs)
+        self.map_set(commitid, cs)
 
     # PACK UPLOADING AND FETCHING
 
@@ -1241,7 +1274,9 @@ class GitHandler(object):
                     except AttributeError:
                         # hg < 3.5
                         bookmarks.setcurrent(self.repo, "master")
-                    new_refs[b"refs/heads/master"] = self.map_git_get(tip)
+                    new_refs[b"refs/heads/master"] = pycompat.encodeutf8(
+                        self.map_git_get(tip)
+                    )
 
         # mapped nodes might be hidden
         unfiltered = self.repo

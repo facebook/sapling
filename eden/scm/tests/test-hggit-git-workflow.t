@@ -1,4 +1,3 @@
-#require py2
   $ disable treemanifest
 Load commonly used test logic
   $ . "$TESTDIR/hggit/testutil"

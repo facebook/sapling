@@ -92,6 +92,7 @@ class GitTreeDict(object):
                 raise KeyError("missing required '' root")
             base, name = os.path.split(path)
             parent = self.get(base)
+            name = pycompat.encodeutf8(name)
             if parent is None or name not in parent:
                 return default
 

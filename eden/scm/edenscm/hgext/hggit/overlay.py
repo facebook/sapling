@@ -235,7 +235,7 @@ class overlaychangectx(context.changectx):
         return "default"
 
     def user(self):
-        return self.commit.author
+        return pycompat.decodeutf8(self.commit.author)
 
     def files(self):
         return []
@@ -244,7 +244,7 @@ class overlaychangectx(context.changectx):
         return {}
 
     def description(self):
-        return self.commit.message
+        return pycompat.decodeutf8(self.commit.message)
 
     def parents(self):
         cl = self._hgrepo.changelog
@@ -261,7 +261,7 @@ class overlaychangectx(context.changectx):
 
     def hex(self):
         # type: () -> str
-        return self.commit.id
+        return pycompat.decodeutf8(self.commit.id)
 
     def tags(self):
         return []
@@ -508,7 +508,7 @@ class overlayrepo(object):
         return self.handler.map_hg_get(n)
 
     def nodebookmarks(self, n):
-        return self.refmap.get(n, [])
+        return list(pycompat.decodeutf8(r) for r in self.refmap.get(n, []))
 
     def nodetags(self, n):
         return self.tagmap.get(n, [])

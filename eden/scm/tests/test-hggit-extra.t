@@ -1,4 +1,3 @@
-#require py2
 Test that extra metadata (renames, copies, and other extra metadata) roundtrips
 across from hg to git
   $ . "$TESTDIR/hggit/testutil"
@@ -133,20 +132,20 @@ lets you do that, though.
   >>> from dulwich.porcelain import open_repo
   >>> repo = open_repo('.')
   >>> c = Commit()
-  >>> c.author = 'test <test@example.org>'
+  >>> c.author = b'test <test@example.org>'
   >>> c.author_time = 0
   >>> c.author_timezone = 0
   >>> c.committer = c.author
   >>> c.commit_time = 0
   >>> c.commit_timezone = 0
-  >>> c.parents = ['$commit_sha']
-  >>> c.tree = '$tree_sha'
-  >>> c.message = 'extra commit\n'
-  >>> c.extra.extend([('zzz:zzz', 'data:zzz'), ('aaa:aaa', 'data:aaa'),
-  ...                 ('HG:extra', 'hgaaa:dataaaa'),
-  ...                 ('HG:extra', 'hgzzz:datazzz')])
+  >>> c.parents = [b'$commit_sha']
+  >>> c.tree = b'$tree_sha'
+  >>> c.message = b'extra commit\n'
+  >>> c.extra.extend([(b'zzz:zzz', b'data:zzz'), (b'aaa:aaa', b'data:aaa'),
+  ...                 (b'HG:extra', b'hgaaa:dataaaa'),
+  ...                 (b'HG:extra', b'hgzzz:datazzz')])
   >>> repo.object_store.add_object(c)
-  >>> repo.refs.set_if_equals('refs/heads/master', None, c.id)
+  >>> repo.refs.set_if_equals(b'refs/heads/master', None, c.id)
   True
 
   $ git cat-file commit master
