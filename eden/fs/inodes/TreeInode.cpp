@@ -1301,12 +1301,12 @@ int TreeInode::tryRemoveChild(
     // Since invalidation can fail on ProjectedFS, do it while holding the
     // TreeInode write lock and before updating the contents.
     if (InvalidationRequired::Yes == invalidate) {
-      auto success = invalidateChannelDirCache(*contents);
+      auto success = invalidateChannelEntryCache(*contents, name);
       if (success.hasException()) {
         return EIO;
       }
 
-      success = invalidateChannelEntryCache(*contents, name);
+      success = invalidateChannelDirCache(*contents);
       if (success.hasException()) {
         return EIO;
       }
@@ -1636,14 +1636,15 @@ Future<Unit> TreeInode::doRename(
   // If the rename occurred outside of a FUSE request (unlikely), make sure to
   // invalidate the kernel caches.
   if (InvalidationRequired::Yes == invalidate) {
+    invalidateChannelEntryCache(locks.srcInodeState(), srcName).throwIfFailed();
+    destParent->invalidateChannelEntryCache(locks.dstInodeState(), destName)
+        .throwIfFailed();
+
     invalidateChannelDirCache(locks.srcInodeState()).throwIfFailed();
     if (destParent.get() != this) {
       destParent->invalidateChannelDirCache(locks.dstInodeState())
           .throwIfFailed();
     }
-    invalidateChannelEntryCache(locks.srcInodeState(), srcName).throwIfFailed();
-    destParent->invalidateChannelEntryCache(locks.dstInodeState(), destName)
-        .throwIfFailed();
   }
 
   // Success.
