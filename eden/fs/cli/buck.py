@@ -41,9 +41,9 @@ def is_buckd_running_for_path(path: str) -> bool:
     return proc_utils.new().is_process_alive(buckd_pid)
 
 
-def stop_buckd_for_path(path: str) -> None:
-    print(f"Stopping buck in {path}...")
-
+# Buck is sensitive to many environment variables, so we need to set them up
+# properly before calling into buck
+def run_buck_command(buck_command: List[str], path: str) -> subprocess.CompletedProcess:
     # Using BUCKVERSION=last here to avoid triggering a download of a new
     # version of buck just to kill off buck.  This is specific to Facebook's
     # deployment of buck, and has no impact on the behavior of the opensource
@@ -69,14 +69,20 @@ def stop_buckd_for_path(path: str) -> None:
         elif k.startswith("FB_PAR") or k.startswith("PYTHON"):
             del env[k]
 
-    subprocess.run(
-        ["buck", "kill"],
+    return subprocess.run(
+        buck_command,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         cwd=path,
         env=env,
         check=True,
     )
+
+
+def stop_buckd_for_path(path: str) -> None:
+    print(f"Stopping buck in {path}...")
+
+    run_buck_command(["buck", "kill"], path)
 
 
 def stop_buckd_for_repo(path: str) -> None:

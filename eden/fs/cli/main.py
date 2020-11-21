@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple, Type
 
 import thrift.transport
+from eden.fs.cli.buck import run_buck_command
 from eden.fs.cli.telemetry import TelemetrySample
 from eden.fs.cli.util import check_health_using_lockfile, wait_for_instance_healthy
 from eden.thrift.legacy import EdenClient, EdenNotRunningError
@@ -402,7 +403,8 @@ space by running:
                     redirection_repos.add(redir_full_path)
                     if clean:
                         print(f"\nReclaiming space from redirection: {redir_full_path}")
-                        subprocess.check_call(["buck", "clean"], cwd=parent)
+                        result = run_buck_command(["buck", "clean"], parent)
+                        result.check_returncode()
                         print("Space reclaimed.\n")
 
         # Deal with any legacy bind mounts that may have been made
