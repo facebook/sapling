@@ -20,6 +20,7 @@ use std::{
         Arc,
     },
     time::Duration,
+    time::Instant,
 };
 
 use anyhow::{bail, ensure, format_err, Context, Result};
@@ -1006,9 +1007,27 @@ impl LfsRemoteInner {
             let headers = reply.headers;
 
             if status.is_success() {
+                let start = Instant::now();
                 let mut body = reply.body;
                 let mut chunks: Vec<Vec<u8>> = vec![];
-                while let Some(chunk) = timeout(request_timeout, body.next()).await? {
+                while let Some(res) = timeout(request_timeout, body.next()).await.transpose() {
+                    let chunk = res.with_context(|| {
+                        let request_id = headers
+                            .get("x-request-id")
+                            .and_then(|c| std::str::from_utf8(c.as_bytes()).ok())
+                            .unwrap_or("?");
+                        let received = chunks.iter().fold(0, |acc, c| acc + c.len());
+                        format!(
+                            "Timed out after waiting {:?} for a chunk from {}, \
+                            after having received {} bytes over {}ms. \
+                            Request ID: {}",
+                            request_timeout,
+                            url,
+                            received,
+                            start.elapsed().as_millis(),
+                            request_id
+                        )
+                    })?;
                     chunks.push(chunk?);
                 }
 
