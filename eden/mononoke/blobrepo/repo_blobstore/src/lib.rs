@@ -5,10 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Error;
+use anyhow::Result;
+use async_trait::async_trait;
 use blobstore::{Blobstore, BlobstoreGetData};
 use context::CoreContext;
-use futures::future::BoxFuture;
 use mononoke_types::{BlobstoreBytes, RepositoryId};
 use prefixblob::PrefixBlobstore;
 use redactedblobstore::{RedactedBlobstore, RedactedBlobstoreConfig, RedactedMetadata};
@@ -49,27 +49,19 @@ impl<T> Deref for AbstractRepoBlobstore<T> {
     }
 }
 
+#[async_trait]
 impl<B> Blobstore for AbstractRepoBlobstore<B>
 where
     B: Blobstore,
 {
-    fn get(
-        &self,
-        ctx: CoreContext,
-        key: String,
-    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>, Error>> {
-        self.0.get(ctx, key)
+    async fn get(&self, ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
+        self.0.get(ctx, key).await
     }
-    fn put(
-        &self,
-        ctx: CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> BoxFuture<'_, Result<(), Error>> {
-        self.0.put(ctx, key, value)
+    async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
+        self.0.put(ctx, key, value).await
     }
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'_, Result<bool, Error>> {
-        self.0.is_present(ctx, key)
+    async fn is_present(&self, ctx: CoreContext, key: String) -> Result<bool> {
+        self.0.is_present(ctx, key).await
     }
 }
 

@@ -15,10 +15,10 @@ use crate::{
     HgFileNodeId, HgManifestId, HgNodeHash, HgParents, MPath,
 };
 use anyhow::{Error, Result};
+use async_trait::async_trait;
 use blobstore::{Blobstore, Loadable, LoadableError};
 use bytes::Bytes;
 use context::CoreContext;
-use futures::future::{BoxFuture, FutureExt};
 use itertools::Itertools;
 use mononoke_types::hash::Sha256;
 use std::{
@@ -34,25 +34,22 @@ pub struct HgBlobEntry {
     id: HgEntryId,
 }
 
+#[async_trait]
 impl Loadable for HgFileNodeId {
     type Value = HgFileEnvelope;
 
-    fn load<'a, B: Blobstore>(
+    async fn load<'a, B: Blobstore>(
         &'a self,
         ctx: CoreContext,
         blobstore: &'a B,
-    ) -> BoxFuture<'a, Result<Self::Value, LoadableError>> {
+    ) -> Result<Self::Value, LoadableError> {
         let blobstore_key = self.blobstore_key();
-        let get = blobstore.get(ctx, blobstore_key.clone());
-        async move {
-            let bytes = get.await?;
-            let blobstore_bytes = match bytes {
-                Some(bytes) => bytes,
-                None => return Err(LoadableError::Missing(blobstore_key)),
-            };
-            Ok(HgFileEnvelope::from_blob(blobstore_bytes.into())?)
-        }
-        .boxed()
+        let bytes = blobstore.get(ctx, blobstore_key.clone()).await?;
+        let blobstore_bytes = match bytes {
+            Some(bytes) => bytes,
+            None => return Err(LoadableError::Missing(blobstore_key)),
+        };
+        Ok(HgFileEnvelope::from_blob(blobstore_bytes.into())?)
     }
 }
 

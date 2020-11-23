@@ -5,10 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Error;
+use anyhow::Result;
+use async_trait::async_trait;
 use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use context::CoreContext;
-use futures::{future::BoxFuture, FutureExt, TryFutureExt};
 use mononoke_types::{
     fsnode::{Fsnode, FsnodeEntry, FsnodeFile},
     skeleton_manifest::{SkeletonManifest, SkeletonManifestEntry},
@@ -128,41 +128,39 @@ impl<T, L> Entry<T, L> {
     }
 }
 
+#[async_trait]
 impl<T, L> Loadable for Entry<T, L>
 where
-    T: Loadable,
-    L: Loadable,
+    T: Loadable + Sync,
+    L: Loadable + Sync,
 {
     type Value = Entry<T::Value, L::Value>;
 
-    fn load<'a, B: Blobstore>(
+    async fn load<'a, B: Blobstore>(
         &'a self,
         ctx: CoreContext,
         blobstore: &'a B,
-    ) -> BoxFuture<'a, Result<Self::Value, LoadableError>> {
-        match self {
-            Entry::Tree(tree_id) => tree_id.load(ctx, blobstore).map_ok(Entry::Tree).boxed(),
-            Entry::Leaf(leaf_id) => leaf_id.load(ctx, blobstore).map_ok(Entry::Leaf).boxed(),
-        }
+    ) -> Result<Self::Value, LoadableError> {
+        Ok(match self {
+            Entry::Tree(tree_id) => Entry::Tree(tree_id.load(ctx, blobstore).await?),
+            Entry::Leaf(leaf_id) => Entry::Leaf(leaf_id.load(ctx, blobstore).await?),
+        })
     }
 }
 
+#[async_trait]
 impl<T, L> Storable for Entry<T, L>
 where
-    T: Storable,
-    L: Storable,
+    T: Storable + Send,
+    L: Storable + Send,
 {
     type Key = Entry<T::Key, L::Key>;
 
-    fn store<B: Blobstore>(
-        self,
-        ctx: CoreContext,
-        blobstore: &B,
-    ) -> BoxFuture<'_, Result<Self::Key, Error>> {
-        match self {
-            Entry::Tree(tree) => tree.store(ctx, blobstore).map_ok(Entry::Tree).boxed(),
-            Entry::Leaf(leaf) => leaf.store(ctx, blobstore).map_ok(Entry::Leaf).boxed(),
-        }
+    async fn store<B: Blobstore>(self, ctx: CoreContext, blobstore: &B) -> Result<Self::Key> {
+        Ok(match self {
+            Entry::Tree(tree) => Entry::Tree(tree.store(ctx, blobstore).await?),
+            Entry::Leaf(leaf) => Entry::Leaf(leaf.store(ctx, blobstore).await?),
+        })
     }
 }
 
@@ -362,21 +360,17 @@ impl<I: Copy + 'static, M: Manifest> Manifest for Traced<I, M> {
     }
 }
 
-impl<I: Clone + 'static + Send, M: Loadable> Loadable for Traced<I, M> {
+#[async_trait]
+impl<I: Clone + 'static + Send + Sync, M: Loadable + Send + Sync> Loadable for Traced<I, M> {
     type Value = Traced<I, <M as Loadable>::Value>;
 
-    fn load<'a, B: Blobstore>(
+    async fn load<'a, B: Blobstore>(
         &'a self,
         ctx: CoreContext,
         blobstore: &'a B,
-    ) -> BoxFuture<'a, Result<Self::Value, LoadableError>> {
+    ) -> Result<Self::Value, LoadableError> {
         let id = self.0.clone();
-        let load = self.1.load(ctx, blobstore);
-
-        async move {
-            let v = load.await?;
-            Ok(Traced(id, v))
-        }
-        .boxed()
+        let v = self.1.load(ctx, blobstore).await?;
+        Ok(Traced(id, v))
     }
 }

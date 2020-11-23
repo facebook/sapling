@@ -5,10 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Error;
+use anyhow::Result;
+use async_trait::async_trait;
 use blobstore::{Blobstore, BlobstoreGetData};
 use context::CoreContext;
-use futures::future::{self, BoxFuture, FutureExt};
 use mononoke_types::BlobstoreBytes;
 use rand::{thread_rng, Rng};
 use thiserror::Error;
@@ -34,43 +34,29 @@ impl<B> FailingBlobstore<B> {
     }
 }
 
-impl<B> Blobstore for FailingBlobstore<B>
-where
-    B: Blobstore,
-{
-    fn get(
-        &self,
-        ctx: CoreContext,
-        key: String,
-    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>, Error>> {
-        let mut rng = thread_rng();
-        if rng.gen_bool(self.read_success_probability) {
-            self.inner.get(ctx, key)
+#[async_trait]
+impl<B: Blobstore> Blobstore for FailingBlobstore<B> {
+    async fn get(&self, ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
+        if thread_rng().gen_bool(self.read_success_probability) {
+            self.inner.get(ctx, key).await
         } else {
-            future::err(FailingBlobstoreError.into()).boxed()
+            Err(FailingBlobstoreError.into())
         }
     }
 
-    fn put(
-        &self,
-        ctx: CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> BoxFuture<'_, Result<(), Error>> {
-        let mut rng = thread_rng();
-        if rng.gen_bool(self.write_success_probability) {
-            self.inner.put(ctx, key, value)
+    async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
+        if thread_rng().gen_bool(self.write_success_probability) {
+            self.inner.put(ctx, key, value).await
         } else {
-            future::err(FailingBlobstoreError.into()).boxed()
+            Err(FailingBlobstoreError.into())
         }
     }
 
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'_, Result<bool, Error>> {
-        let mut rng = thread_rng();
-        if rng.gen_bool(self.read_success_probability) {
-            self.inner.is_present(ctx, key)
+    async fn is_present(&self, ctx: CoreContext, key: String) -> Result<bool> {
+        if thread_rng().gen_bool(self.read_success_probability) {
+            self.inner.is_present(ctx, key).await
         } else {
-            future::err(FailingBlobstoreError.into()).boxed()
+            Err(FailingBlobstoreError.into())
         }
     }
 }

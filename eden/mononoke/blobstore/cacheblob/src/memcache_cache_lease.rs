@@ -8,10 +8,17 @@
 use std::time::Duration;
 
 use anyhow::{anyhow, Result};
+use async_trait::async_trait;
 use cloned::cloned;
 use fbinit::FacebookInit;
 use fbthrift::compact_protocol;
+use futures::{
+    compat::Future01CompatExt,
+    future::{select, BoxFuture, Either},
+};
 use memcache::{KeyGen, MemcacheClient};
+use memcache_lock_thrift::LockState;
+use slog::warn;
 
 use blobstore::{Blobstore, BlobstoreGetData, CountedBlobstore};
 use context::{CoreContext, PerfCounterType};
@@ -22,12 +29,6 @@ use crate::dummy::DummyLease;
 use crate::CacheBlobstore;
 use crate::CacheOps;
 use crate::LeaseOps;
-use futures::{
-    compat::Future01CompatExt,
-    future::{select, BoxFuture, Either, FutureExt},
-};
-use memcache_lock_thrift::LockState;
-use slog::warn;
 
 define_stats! {
     prefix = "mononoke.blobstore.memcache";
@@ -194,78 +195,70 @@ where
     ))
 }
 
+#[async_trait]
 impl CacheOps for MemcacheOps {
     const HIT_COUNTER: Option<PerfCounterType> = Some(PerfCounterType::MemcacheHits);
     const MISS_COUNTER: Option<PerfCounterType> = Some(PerfCounterType::MemcacheMisses);
     const CACHE_NAME: &'static str = "memcache";
 
     // Turns errors to Ok(None)
-    fn get(&self, key: &str) -> BoxFuture<'_, Option<BlobstoreGetData>> {
+    async fn get(&self, key: &str) -> Option<BlobstoreGetData> {
         let mc_key = self.keygen.key(key);
-        async move {
-            let buf = self.memcache.get(mc_key).compat().await.ok()??;
-            Some(BlobstoreGetData::from_bytes(buf))
-        }
-        .boxed()
+        let buf = self.memcache.get(mc_key).compat().await.ok()??;
+        Some(BlobstoreGetData::from_bytes(buf))
     }
 
-    fn put(&self, key: &str, value: BlobstoreGetData) -> BoxFuture<'_, ()> {
+    async fn put(&self, key: &str, value: BlobstoreGetData) {
         let mc_key = self.keygen.key(key);
         let presence_key = self.presence_keygen.key(key);
         let orig_key = key.to_string();
 
-        mc_raw_put(self.memcache.clone(), orig_key, mc_key, value, presence_key).boxed()
+        mc_raw_put(self.memcache.clone(), orig_key, mc_key, value, presence_key).await
     }
 
-    fn check_present(&self, key: &str) -> BoxFuture<'_, bool> {
+    async fn check_present(&self, key: &str) -> bool {
         let key = key.to_string();
-        async move {
-            match self.get_lock_state(key.clone()).await {
-                // get_lock_state will delete the lock and return None if there's a bad
-                // uploaded_key
-                Some(LockState::uploaded_key(_)) => {
-                    STATS::presence_check_hit.add_value(1);
-                    true
+        match self.get_lock_state(key.clone()).await {
+            // get_lock_state will delete the lock and return None if there's a bad
+            // uploaded_key
+            Some(LockState::uploaded_key(_)) => {
+                STATS::presence_check_hit.add_value(1);
+                true
+            }
+            _ => {
+                STATS::presence_check_miss.add_value(1);
+                let mc_key = self.keygen.key(key);
+                STATS::blob_presence.add_value(1);
+                let blob_presence = self.memcache.get(mc_key).compat().await;
+                match blob_presence {
+                    Ok(Some(_)) => STATS::blob_presence_hit.add_value(1),
+                    Ok(None) => STATS::blob_presence_miss.add_value(1),
+                    Err(_) => STATS::blob_presence_err.add_value(1),
                 }
-                _ => {
-                    STATS::presence_check_miss.add_value(1);
-                    let mc_key = self.keygen.key(key);
-                    STATS::blob_presence.add_value(1);
-                    let blob_presence = self.memcache.get(mc_key).compat().await;
-                    match blob_presence {
-                        Ok(Some(_)) => STATS::blob_presence_hit.add_value(1),
-                        Ok(None) => STATS::blob_presence_miss.add_value(1),
-                        Err(_) => STATS::blob_presence_err.add_value(1),
-                    }
-                    blob_presence.unwrap_or(None).is_some()
-                }
+                blob_presence.unwrap_or(None).is_some()
             }
         }
-        .boxed()
     }
 }
 
+#[async_trait]
 impl LeaseOps for MemcacheOps {
-    fn try_add_put_lease(&self, key: &str) -> BoxFuture<'_, Result<bool>> {
+    async fn try_add_put_lease(&self, key: &str) -> Result<bool> {
         let mc_key = self.presence_keygen.key(key);
-        async move {
-            let lockstate =
-                compact_protocol::serialize(&LockState::locked_by(self.hostname.clone()));
-            let lock_ttl = Duration::from_secs(10);
-            let lease_type = self.lease_type;
-            let res = self
-                .memcache
-                .add_with_ttl(mc_key, lockstate, lock_ttl)
-                .compat()
-                .await;
-            match res {
-                Ok(true) => LEASE_STATS::claim.add_value(1, (lease_type,)),
-                Ok(false) => LEASE_STATS::conflict.add_value(1, (lease_type,)),
-                Err(_) => LEASE_STATS::claim_err.add_value(1, (lease_type,)),
-            }
-            res.map_err(|()| anyhow!("Failed talking to Memcache"))
+        let lockstate = compact_protocol::serialize(&LockState::locked_by(self.hostname.clone()));
+        let lock_ttl = Duration::from_secs(10);
+        let lease_type = self.lease_type;
+        let res = self
+            .memcache
+            .add_with_ttl(mc_key, lockstate, lock_ttl)
+            .compat()
+            .await;
+        match res {
+            Ok(true) => LEASE_STATS::claim.add_value(1, (lease_type,)),
+            Ok(false) => LEASE_STATS::conflict.add_value(1, (lease_type,)),
+            Err(_) => LEASE_STATS::claim_err.add_value(1, (lease_type,)),
         }
-        .boxed()
+        res.map_err(|()| anyhow!("Failed talking to Memcache"))
     }
 
     fn renew_lease_until(&self, ctx: CoreContext, key: &str, mut done: BoxFuture<'static, ()>) {
@@ -302,17 +295,14 @@ impl LeaseOps for MemcacheOps {
         });
     }
 
-    fn wait_for_other_leases(&self, _key: &str) -> BoxFuture<'_, ()> {
-        async move {
-            let retry_millis = 200;
-            let retry_delay = Duration::from_millis(retry_millis);
-            LEASE_STATS::wait_ms.add_value(retry_millis as i64, (self.lease_type,));
-            tokio::time::delay_for(retry_delay).await;
-        }
-        .boxed()
+    async fn wait_for_other_leases(&self, _key: &str) {
+        let retry_millis = 200;
+        let retry_delay = Duration::from_millis(retry_millis);
+        LEASE_STATS::wait_ms.add_value(retry_millis as i64, (self.lease_type,));
+        tokio::time::delay_for(retry_delay).await;
     }
 
-    fn release_lease(&self, key: &str) -> BoxFuture<'_, ()> {
+    async fn release_lease(&self, key: &str) {
         let mc_key = self.presence_keygen.key(key);
         LEASE_STATS::release.add_value(1, (self.lease_type,));
         cloned!(self.memcache, self.hostname, self.lease_type);
@@ -374,6 +364,5 @@ impl LeaseOps for MemcacheOps {
         // because leases have a timeout. So even if they haven't been released explicitly they
         // will be released after a timeout.
         tokio::spawn(f);
-        async {}.boxed()
     }
 }

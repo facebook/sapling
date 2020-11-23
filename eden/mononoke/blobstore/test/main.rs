@@ -21,7 +21,7 @@ use tempdir::TempDir;
 use blobstore::{Blobstore, BlobstorePutOps, BlobstoreWithLink, OverwriteStatus, PutBehaviour};
 use context::CoreContext;
 use fileblob::Fileblob;
-use memblob::{EagerMemblob, LazyMemblob};
+use memblob::Memblob;
 use mononoke_types::BlobstoreBytes;
 use sqlblob::{get_test_config_store, Sqlblob};
 
@@ -201,9 +201,9 @@ macro_rules! blobstore_test_impl {
 }
 
 blobstore_test_impl! {
-    eager_memblob_test => {
+    memblob_test => {
         state: (),
-        new: move |_, put_behaviour| Ok::<_,Error>(EagerMemblob::new(put_behaviour)),
+        new: move |_, put_behaviour| Ok::<_,Error>(Memblob::new(put_behaviour)),
         persistent: false,
         has_ctime: false,
     }
@@ -212,16 +212,7 @@ blobstore_test_impl! {
 blobstore_test_impl! {
     box_blobstore_test => {
         state: (),
-        new: move |_, put_behaviour| Ok::<_,Error>(Box::new(EagerMemblob::new(put_behaviour))),
-        persistent: false,
-        has_ctime: false,
-    }
-}
-
-blobstore_test_impl! {
-    lazy_memblob_test => {
-        state: (),
-        new: move |_, put_behaviour| Ok::<_,Error>(LazyMemblob::new(put_behaviour)),
+        new: move |_, put_behaviour| Ok::<_,Error>(Box::new(Memblob::new(put_behaviour))),
         persistent: false,
         has_ctime: false,
     }
@@ -280,7 +271,7 @@ async fn cache_blob_tests(fb: FacebookInit, expect_zstd: bool) -> Result<(), Err
         20 * 1024 * 1024,
     )?);
 
-    let inner = Arc::new(LazyMemblob::new(PutBehaviour::Overwrite));
+    let inner = Arc::new(Memblob::new(PutBehaviour::Overwrite));
     let cache_blob =
         cacheblob::new_cachelib_blobstore(inner.clone(), blob_pool.clone(), presence_pool, options);
 

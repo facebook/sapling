@@ -6,10 +6,10 @@
  */
 
 use anyhow::Error;
+use async_trait::async_trait;
 use blobstore::{Blobstore, BlobstoreBytes, BlobstoreGetData, Loadable, LoadableError, Storable};
 use context::CoreContext;
 use fbthrift::compact_protocol;
-use futures::future::{BoxFuture, FutureExt};
 use std::convert::TryFrom;
 use std::convert::TryInto;
 
@@ -52,43 +52,38 @@ macro_rules! impl_blobstore_conversions {
 
 macro_rules! impl_loadable_storable {
     ($handle: ident, $ty:ident) => {
+        #[async_trait]
         impl Storable for $ty {
             type Key = $handle;
 
-            fn store<B: Blobstore>(
+            async fn store<B: Blobstore>(
                 self,
                 ctx: CoreContext,
                 blobstore: &B,
-            ) -> BoxFuture<'_, Result<Self::Key, Error>> {
+            ) -> Result<Self::Key, Error> {
                 let handle = *self.handle();
                 let key = handle.blobstore_key();
-                let put = blobstore.put(ctx, key, self.into());
-                async move {
-                    put.await?;
-                    Ok(handle)
-                }
-                .boxed()
+                blobstore.put(ctx, key, self.into()).await?;
+                Ok(handle)
             }
         }
 
+        #[async_trait]
         impl Loadable for $handle {
             type Value = $ty;
 
-            fn load<'a, B: Blobstore>(
+            async fn load<'a, B: Blobstore>(
                 &'a self,
                 ctx: CoreContext,
                 blobstore: &'a B,
-            ) -> BoxFuture<'a, Result<Self::Value, LoadableError>> {
+            ) -> Result<Self::Value, LoadableError> {
                 let id = *self;
                 let get = blobstore.get(ctx, id.blobstore_key());
-                async move {
-                    let bytes = get.await?;
-                    match bytes {
-                        Some(bytes) => bytes.try_into().map_err(LoadableError::Error),
-                        None => Err(LoadableError::Missing(id.blobstore_key())),
-                    }
+                let bytes = get.await?;
+                match bytes {
+                    Some(bytes) => bytes.try_into().map_err(LoadableError::Error),
+                    None => Err(LoadableError::Missing(id.blobstore_key())),
                 }
-                .boxed()
             }
         }
 

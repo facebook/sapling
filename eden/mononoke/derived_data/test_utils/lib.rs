@@ -38,7 +38,7 @@ pub fn iterate_all_manifest_entries<'a, MfId, LId>(
     entry: Entry<MfId, LId>,
 ) -> impl Stream<Item = Result<(Option<MPath>, Entry<MfId, LId>)>> + 'a
 where
-    MfId: Loadable + Send + Clone,
+    MfId: Loadable + Send + Clone + 'a,
     LId: Send + Clone + 'static,
     <MfId as Loadable>::Value: Manifest<TreeId = MfId, LeafId = LId>,
 {

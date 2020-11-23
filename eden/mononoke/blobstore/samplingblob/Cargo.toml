@@ -12,7 +12,7 @@ context = { path = "../../server/context" }
 mononoke_types = { path = "../../mononoke_types" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
-futures = { version = "0.3.5", features = ["async-await", "compat"] }
+async-trait = "0.1.29"
 
 [dev-dependencies]
 memblob = { path = "../memblob" }

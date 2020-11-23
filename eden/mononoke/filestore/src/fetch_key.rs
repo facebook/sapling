@@ -5,10 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Context, Error};
+use anyhow::{Context, Result};
+use async_trait::async_trait;
 use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use context::CoreContext;
-use futures::future::{self, BoxFuture, FutureExt};
 use mononoke_types::{errors::ErrorKind, hash, ContentAlias, ContentId};
 
 /// Key for fetching - we can access with any of the supported key types
@@ -43,20 +43,21 @@ pub enum Alias {
     GitSha1(hash::GitSha1),
 }
 
+#[async_trait]
 impl Loadable for FetchKey {
     type Value = ContentId;
 
     /// Return the canonical ID for a key. It doesn't check if the corresponding content actually
     /// exists (its possible for an alias to exist before the ID if there was an interrupted store
     /// operation).
-    fn load<'a, B: Blobstore>(
+    async fn load<'a, B: Blobstore>(
         &'a self,
         ctx: CoreContext,
         blobstore: &'a B,
-    ) -> BoxFuture<'a, Result<Self::Value, LoadableError>> {
+    ) -> Result<Self::Value, LoadableError> {
         match self {
-            FetchKey::Canonical(content_id) => future::ok(*content_id).boxed(),
-            FetchKey::Aliased(alias) => alias.load(ctx, blobstore),
+            FetchKey::Canonical(content_id) => Ok(*content_id),
+            FetchKey::Aliased(alias) => alias.load(ctx, blobstore).await,
         }
     }
 }
@@ -80,39 +81,36 @@ impl Alias {
     }
 }
 
+#[async_trait]
 impl Loadable for Alias {
     type Value = ContentId;
 
-    fn load<'a, B: Blobstore>(
+    async fn load<'a, B: Blobstore>(
         &'a self,
         ctx: CoreContext,
         blobstore: &'a B,
-    ) -> BoxFuture<'a, Result<Self::Value, LoadableError>> {
+    ) -> Result<Self::Value, LoadableError> {
         let key = self.blobstore_key();
         let get = blobstore.get(ctx, key.clone());
-        async move {
-            let maybe_alias = get.await?;
-            let blob = maybe_alias.ok_or_else(|| LoadableError::Missing(key.clone()))?;
+        let maybe_alias = get.await?;
+        let blob = maybe_alias.ok_or_else(|| LoadableError::Missing(key.clone()))?;
 
-            ContentAlias::from_bytes(blob.into_raw_bytes())
-                .map(|alias| alias.content_id())
-                .with_context(|| ErrorKind::BlobKeyError(key.clone()))
-                .map_err(LoadableError::Error)
-        }
-        .boxed()
+        ContentAlias::from_bytes(blob.into_raw_bytes())
+            .map(|alias| alias.content_id())
+            .with_context(|| ErrorKind::BlobKeyError(key.clone()))
+            .map_err(LoadableError::Error)
     }
 }
 
 pub struct AliasBlob(pub Alias, pub ContentAlias);
 
+#[async_trait]
 impl Storable for AliasBlob {
     type Key = ();
 
-    fn store<B: Blobstore>(
-        self,
-        ctx: CoreContext,
-        blobstore: &B,
-    ) -> BoxFuture<'_, Result<Self::Key, Error>> {
-        blobstore.put(ctx, self.0.blobstore_key(), self.1.into_blob())
+    async fn store<B: Blobstore>(self, ctx: CoreContext, blobstore: &B) -> Result<Self::Key> {
+        blobstore
+            .put(ctx, self.0.blobstore_key(), self.1.into_blob())
+            .await
     }
 }

@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{format_err, Error};
+use anyhow::{anyhow, Result};
+use async_trait::async_trait;
 use context::CoreContext;
-use futures::future::{err, BoxFuture, FutureExt, TryFutureExt};
 
 use super::{
     Blobstore, BlobstoreBytes, BlobstoreGetData, BlobstorePutOps, OverwriteStatus, PutBehaviour,
@@ -27,46 +27,37 @@ impl DisabledBlob {
         }
     }
 }
-
+#[async_trait]
 impl Blobstore for DisabledBlob {
-    fn get(
-        &self,
-        _ctx: CoreContext,
-        _key: String,
-    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>, Error>> {
-        err(format_err!("Blobstore disabled: {}", self.reason)).boxed()
+    async fn get(&self, _ctx: CoreContext, _key: String) -> Result<Option<BlobstoreGetData>> {
+        Err(anyhow!("Blobstore disabled: {}", self.reason))
     }
 
-    fn put(
-        &self,
-        ctx: CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> BoxFuture<'_, Result<(), Error>> {
-        BlobstorePutOps::put_with_status(self, ctx, key, value)
-            .map_ok(|_| ())
-            .boxed()
+    async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
+        BlobstorePutOps::put_with_status(self, ctx, key, value).await?;
+        Ok(())
     }
 }
 
+#[async_trait]
 impl BlobstorePutOps for DisabledBlob {
-    fn put_explicit(
+    async fn put_explicit(
         &self,
         _ctx: CoreContext,
         _key: String,
         _value: BlobstoreBytes,
         _put_behaviour: PutBehaviour,
-    ) -> BoxFuture<'_, Result<OverwriteStatus, Error>> {
-        err(format_err!("Blobstore disabled: {}", self.reason)).boxed()
+    ) -> Result<OverwriteStatus> {
+        Err(anyhow!("Blobstore disabled: {}", self.reason))
     }
 
-    fn put_with_status(
+    async fn put_with_status(
         &self,
         _ctx: CoreContext,
         _key: String,
         _value: BlobstoreBytes,
-    ) -> BoxFuture<'_, Result<OverwriteStatus, Error>> {
-        err(format_err!("Blobstore disabled: {}", self.reason)).boxed()
+    ) -> Result<OverwriteStatus> {
+        Err(anyhow!("Blobstore disabled: {}", self.reason))
     }
 }
 

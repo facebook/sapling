@@ -7,10 +7,9 @@
 
 #![deny(warnings)]
 
-use anyhow::Error;
+use anyhow::Result;
+use async_trait::async_trait;
 use inlinable_string::InlinableString;
-
-use futures::future::BoxFuture;
 
 use context::CoreContext;
 
@@ -47,52 +46,47 @@ impl<T> PrefixBlobstore<T> {
     }
 }
 
+#[async_trait]
 impl<T: Blobstore> Blobstore for PrefixBlobstore<T> {
     #[inline]
-    fn get(
-        &self,
-        ctx: CoreContext,
-        key: String,
-    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>, Error>> {
-        self.blobstore.get(ctx, self.prepend(key))
+    async fn get(&self, ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
+        self.blobstore.get(ctx, self.prepend(key)).await
     }
 
     #[inline]
-    fn put(
-        &self,
-        ctx: CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> BoxFuture<'_, Result<(), Error>> {
-        self.blobstore.put(ctx, self.prepend(key), value)
+    async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
+        self.blobstore.put(ctx, self.prepend(key), value).await
     }
 
     #[inline]
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'_, Result<bool, Error>> {
-        self.blobstore.is_present(ctx, self.prepend(key))
+    async fn is_present(&self, ctx: CoreContext, key: String) -> Result<bool> {
+        self.blobstore.is_present(ctx, self.prepend(key)).await
     }
 }
 
+#[async_trait]
 impl<T: BlobstorePutOps> BlobstorePutOps for PrefixBlobstore<T> {
-    fn put_explicit(
+    async fn put_explicit(
         &self,
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
         put_behaviour: PutBehaviour,
-    ) -> BoxFuture<'_, Result<OverwriteStatus, Error>> {
+    ) -> Result<OverwriteStatus> {
         self.blobstore
             .put_explicit(ctx, self.prepend(key), value, put_behaviour)
+            .await
     }
 
-    fn put_with_status(
+    async fn put_with_status(
         &self,
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'_, Result<OverwriteStatus, Error>> {
+    ) -> Result<OverwriteStatus> {
         self.blobstore
             .put_with_status(ctx, self.prepend(key), value)
+            .await
     }
 }
 
@@ -103,17 +97,16 @@ mod test {
     use bytes::Bytes;
     use fbinit::FacebookInit;
 
-    use memblob::EagerMemblob;
+    use memblob::Memblob;
 
     #[fbinit::compat_test]
     async fn test_prefix(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let base = EagerMemblob::default();
+        let base = Memblob::default();
         let prefixed = PrefixBlobstore::new(base.clone(), "prefix123-");
         let unprefixed_key = "foobar".to_string();
         let prefixed_key = "prefix123-foobar".to_string();
 
-        // This is EagerMemblob (immediate future completion) so calling wait() is fine.
         prefixed
             .put(
                 ctx.clone(),

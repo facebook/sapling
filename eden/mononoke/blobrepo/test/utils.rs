@@ -19,7 +19,7 @@ use blobrepo::BlobRepo;
 use blobrepo_factory::new_memblob_empty;
 use blobrepo_hg::{ChangesetHandle, CreateChangeset};
 use context::CoreContext;
-use memblob::{EagerMemblob, LazyMemblob};
+use memblob::Memblob;
 use mercurial_types::{
     blobs::{
         ChangesetMetadata, HgBlobEntry, UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash,
@@ -30,48 +30,8 @@ use mercurial_types::{
 use mononoke_types::DateTime;
 use std::sync::Arc;
 
-pub fn get_empty_eager_repo() -> BlobRepo {
-    new_memblob_empty(Some(Arc::new(EagerMemblob::default()))).expect("cannot create empty repo")
-}
-
-pub fn get_empty_lazy_repo() -> BlobRepo {
-    new_memblob_empty(Some(Arc::new(LazyMemblob::default()))).expect("cannot create empty repo")
-}
-
-#[macro_export]
-macro_rules! test_both_repotypes {
-    ($impl_name:ident, $lazy_test:ident, $eager_test:ident) => {
-        #[fbinit::test]
-        fn $lazy_test(fb: FacebookInit) {
-            async_unit::tokio_unit_test(async move {
-                $impl_name(fb, get_empty_lazy_repo()).await;
-            })
-        }
-
-        #[fbinit::test]
-        fn $eager_test(fb: FacebookInit) {
-            async_unit::tokio_unit_test(async move {
-                $impl_name(fb, get_empty_eager_repo()).await;
-            })
-        }
-    };
-    (should_panic, $impl_name:ident, $lazy_test:ident, $eager_test:ident) => {
-        #[fbinit::test]
-        #[should_panic]
-        fn $lazy_test(fb: FacebookInit) {
-            async_unit::tokio_unit_test(async move {
-                $impl_name(fb, get_empty_lazy_repo()).await;
-            })
-        }
-
-        #[fbinit::test]
-        #[should_panic]
-        fn $eager_test(fb: FacebookInit) {
-            async_unit::tokio_unit_test(async move {
-                $impl_name(fb, get_empty_eager_repo()).await;
-            })
-        }
-    };
+pub fn get_empty_repo() -> BlobRepo {
+    new_memblob_empty(Some(Arc::new(Memblob::default()))).expect("cannot create empty repo")
 }
 
 pub fn upload_file_no_parents<B>(

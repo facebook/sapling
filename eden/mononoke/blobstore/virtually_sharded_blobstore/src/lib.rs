@@ -9,13 +9,13 @@ mod ratelimit;
 mod shard;
 
 use anyhow::{anyhow, Context, Result};
+use async_trait::async_trait;
 use blobstore::{Blobstore, BlobstoreGetData, BlobstoreMetadata};
 use bytes::{buf::ext::Chain, BufMut, Bytes, BytesMut};
 use cacheblob::CachelibBlobstoreOptions;
 use cachelib::VolatileLruCachePool;
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
-use futures::future::{BoxFuture, FutureExt};
 use mononoke_types::BlobstoreBytes;
 use scuba_ext::ScubaSampleBuilderExt;
 use stats::prelude::*;
@@ -342,169 +342,152 @@ fn report_deduplicated_put(ctx: &CoreContext, key: &str) {
         .increment_counter(PerfCounterType::BlobPutsDeduplicated);
 }
 
+#[async_trait]
 impl<T: Blobstore + 'static> Blobstore for VirtuallyShardedBlobstore<T> {
-    fn get(
-        &self,
-        ctx: CoreContext,
-        key: String,
-    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>>> {
+    async fn get(&self, ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
         cloned!(self.inner);
 
-        async move {
-            STATS::gets.add_value(1);
-            let cache_key = CacheKey::from_key(&key);
+        STATS::gets.add_value(1);
+        let cache_key = CacheKey::from_key(&key);
 
-            // First, check the cache, and acquire a permit for this key if necessary.
+        // First, check the cache, and acquire a permit for this key if necessary.
 
-            let take_lease = match inner.get_from_cache(&cache_key)? {
-                Some(CacheData::Stored(v)) => {
-                    ctx.perf_counters()
-                        .increment_counter(PerfCounterType::CachelibHits);
-                    return Ok(Some(v));
-                }
-                Some(CacheData::NotStorable) => {
-                    // We know for sure this data isn't cacheable. Don't try to acquire a permit
-                    // for it, and proceed without the semaphore.
-                    false
-                }
-                None => true,
-            };
-
-            let fut = async move {
+        let take_lease = match inner.get_from_cache(&cache_key)? {
+            Some(CacheData::Stored(v)) => {
                 ctx.perf_counters()
-                    .increment_counter(PerfCounterType::CachelibMisses);
-
-                let ticket = Ticket::new(&ctx, AccessReason::Read);
-
-                let permit = if take_lease {
-                    let acq = inner
-                        .read_shards
-                        .acquire(&ctx, &key, ticket, || inner.get_from_cache(&cache_key))
-                        .await?;
-
-                    match acq {
-                        SemaphoreAcquisition::Cancelled(CacheData::Stored(v), ticket) => {
-                            // The data is cached, that's great. Return it. We're not going to hit
-                            // the blobstore, so also return out ticket.
-                            STATS::gets_deduped.add_value(1);
-                            ctx.perf_counters()
-                                .increment_counter(PerfCounterType::BlobGetsDeduplicated);
-                            ticket.cancel();
-                            return Ok(Some(v));
-                        }
-                        SemaphoreAcquisition::Cancelled(CacheData::NotStorable, ticket) => {
-                            // The data cannot be cached. We'll have to go to the blobstore. Wait
-                            // for our ticket first.
-                            STATS::gets_not_storable.add_value(1);
-                            ticket.finish().await?;
-                            None
-                        }
-                        SemaphoreAcquisition::Acquired(permit) => Some(permit),
-                    }
-                } else {
-                    // We'll go to the blobstore, so wait for our ticket.
-                    ticket.finish().await?;
-                    None
-                };
-
-                // NOTE: This is a no-op, but it's here to ensure permit is still in scope at this
-                // point (which it should: if it doesn't, then that means we unconditionally released
-                // the semaphore before doing the get, and that's wrong).
-                scopeguard::defer! { drop(permit) };
-
-                // Now, actually go the underlying blobstore.
-                let res = inner.blobstore.get(ctx.clone(), key.clone()).await?;
-
-                // And finally, attempt to cache what we got back.
-                if let Some(ref data) = res {
-                    let _ = inner.set_in_cache(&cache_key, PresenceData::Get, data.clone());
-                }
-
-                Ok(res)
-            };
-
-            tokio::spawn(fut).await?
-        }
-        .boxed()
-    }
-
-    fn put(
-        &self,
-        ctx: CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> BoxFuture<'_, Result<()>> {
-        cloned!(self.inner);
-
-        async move {
-            STATS::puts.add_value(1);
-            let cache_key = CacheKey::from_key(&key);
-            let presence = PresenceData::from_put(&value);
-
-            if let Ok(Some(KnownToExist)) = inner.check_presence(&cache_key, presence) {
-                report_deduplicated_put(&ctx, &key);
-                return Ok(());
+                    .increment_counter(PerfCounterType::CachelibHits);
+                return Ok(Some(v));
             }
+            Some(CacheData::NotStorable) => {
+                // We know for sure this data isn't cacheable. Don't try to acquire a permit
+                // for it, and proceed without the semaphore.
+                false
+            }
+            None => true,
+        };
 
-            let fut = async move {
-                let ticket = Ticket::new(&ctx, AccessReason::Write);
+        let fut = async move {
+            ctx.perf_counters()
+                .increment_counter(PerfCounterType::CachelibMisses);
 
+            let ticket = Ticket::new(&ctx, AccessReason::Read);
+
+            let permit = if take_lease {
                 let acq = inner
-                    .write_shards
-                    .acquire(&ctx, &key, ticket, || {
-                        inner.check_presence(&cache_key, presence)
-                    })
+                    .read_shards
+                    .acquire(&ctx, &key, ticket, || inner.get_from_cache(&cache_key))
                     .await?;
 
-                let permit = match acq {
-                    SemaphoreAcquisition::Cancelled(KnownToExist, ticket) => {
-                        report_deduplicated_put(&ctx, &key);
+                match acq {
+                    SemaphoreAcquisition::Cancelled(CacheData::Stored(v), ticket) => {
+                        // The data is cached, that's great. Return it. We're not going to hit
+                        // the blobstore, so also return out ticket.
+                        STATS::gets_deduped.add_value(1);
+                        ctx.perf_counters()
+                            .increment_counter(PerfCounterType::BlobGetsDeduplicated);
                         ticket.cancel();
-                        return Ok(());
+                        return Ok(Some(v));
                     }
-                    SemaphoreAcquisition::Acquired(permit) => permit,
-                };
-
-                scopeguard::defer! { drop(permit) };
-
-                let res = inner
-                    .blobstore
-                    .put(ctx.clone(), key.clone(), value.clone())
-                    .await?;
-
-                let value = BlobstoreGetData::new(BlobstoreMetadata::new(None), value);
-                let _ = inner.set_in_cache(&cache_key, presence, value);
-
-                Ok(res)
+                    SemaphoreAcquisition::Cancelled(CacheData::NotStorable, ticket) => {
+                        // The data cannot be cached. We'll have to go to the blobstore. Wait
+                        // for our ticket first.
+                        STATS::gets_not_storable.add_value(1);
+                        ticket.finish().await?;
+                        None
+                    }
+                    SemaphoreAcquisition::Acquired(permit) => Some(permit),
+                }
+            } else {
+                // We'll go to the blobstore, so wait for our ticket.
+                ticket.finish().await?;
+                None
             };
 
-            tokio::spawn(fut).await?
-        }
-        .boxed()
+            // NOTE: This is a no-op, but it's here to ensure permit is still in scope at this
+            // point (which it should: if it doesn't, then that means we unconditionally released
+            // the semaphore before doing the get, and that's wrong).
+            scopeguard::defer! { drop(permit) };
+
+            // Now, actually go the underlying blobstore.
+            let res = inner.blobstore.get(ctx.clone(), key.clone()).await?;
+
+            // And finally, attempt to cache what we got back.
+            if let Some(ref data) = res {
+                let _ = inner.set_in_cache(&cache_key, PresenceData::Get, data.clone());
+            }
+
+            Ok(res)
+        };
+
+        tokio::spawn(fut).await?
     }
 
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'_, Result<bool>> {
+    async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
         cloned!(self.inner);
 
-        async move {
-            let cache_key = CacheKey::from_key(&key);
-            let presence = PresenceData::Get;
+        STATS::puts.add_value(1);
+        let cache_key = CacheKey::from_key(&key);
+        let presence = PresenceData::from_put(&value);
 
-            if let Ok(Some(KnownToExist)) = inner.check_presence(&cache_key, presence) {
-                return Ok(true);
-            }
-
-            Ticket::new(&ctx, AccessReason::Read).finish().await?;
-
-            let exists = inner.blobstore.is_present(ctx, key.clone()).await?;
-
-            if exists {
-                let _ = inner.set_is_present(&cache_key, presence);
-            }
-
-            Ok(exists)
+        if let Ok(Some(KnownToExist)) = inner.check_presence(&cache_key, presence) {
+            report_deduplicated_put(&ctx, &key);
+            return Ok(());
         }
-        .boxed()
+
+        let fut = async move {
+            let ticket = Ticket::new(&ctx, AccessReason::Write);
+
+            let acq = inner
+                .write_shards
+                .acquire(&ctx, &key, ticket, || {
+                    inner.check_presence(&cache_key, presence)
+                })
+                .await?;
+
+            let permit = match acq {
+                SemaphoreAcquisition::Cancelled(KnownToExist, ticket) => {
+                    report_deduplicated_put(&ctx, &key);
+                    ticket.cancel();
+                    return Ok(());
+                }
+                SemaphoreAcquisition::Acquired(permit) => permit,
+            };
+
+            scopeguard::defer! { drop(permit) };
+
+            let res = inner
+                .blobstore
+                .put(ctx.clone(), key.clone(), value.clone())
+                .await?;
+
+            let value = BlobstoreGetData::new(BlobstoreMetadata::new(None), value);
+            let _ = inner.set_in_cache(&cache_key, presence, value);
+
+            Ok(res)
+        };
+
+        tokio::spawn(fut).await?
+    }
+
+    async fn is_present(&self, ctx: CoreContext, key: String) -> Result<bool> {
+        cloned!(self.inner);
+
+        let cache_key = CacheKey::from_key(&key);
+        let presence = PresenceData::Get;
+
+        if let Ok(Some(KnownToExist)) = inner.check_presence(&cache_key, presence) {
+            return Ok(true);
+        }
+
+        Ticket::new(&ctx, AccessReason::Read).finish().await?;
+
+        let exists = inner.blobstore.is_present(ctx, key.clone()).await?;
+
+        if exists {
+            let _ = inner.set_is_present(&cache_key, presence);
+        }
+
+        Ok(exists)
     }
 }
 
@@ -615,55 +598,46 @@ mod test {
             }
         }
 
+        #[async_trait]
         impl Blobstore for TestBlobstore {
-            fn put(
+            async fn put(
                 &self,
                 _ctx: CoreContext,
                 key: String,
                 value: BlobstoreBytes,
-            ) -> BoxFuture<'_, Result<()>> {
-                cloned!(self.data);
-
-                async move {
-                    let mut data = data.lock().unwrap();
-                    let mut blob = data.entry(key).or_default();
-                    blob.puts += 1;
-                    blob.data = Some(BlobData::Bytes(value));
-                    Ok(())
-                }
-                .boxed()
+            ) -> Result<()> {
+                let mut data = self.data.lock().unwrap();
+                let mut blob = data.entry(key).or_default();
+                blob.puts += 1;
+                blob.data = Some(BlobData::Bytes(value));
+                Ok(())
             }
 
-            fn get(
+            async fn get(
                 &self,
                 _ctx: CoreContext,
                 key: String,
-            ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>>> {
-                cloned!(self.data);
+            ) -> Result<Option<BlobstoreGetData>> {
+                let handle = {
+                    let mut data = self.data.lock().unwrap();
+                    let blob = data.entry(key).or_default();
+                    blob.gets += 1;
+                    blob.data.as_ref().map(BlobData::handle)
+                };
 
-                async move {
-                    let handle = {
-                        let mut data = data.lock().unwrap();
-                        let blob = data.entry(key).or_default();
-                        blob.gets += 1;
-                        blob.data.as_ref().map(BlobData::handle)
-                    };
+                let handle = match handle {
+                    Some(handle) => handle,
+                    None => {
+                        return Ok(None);
+                    }
+                };
 
-                    let handle = match handle {
-                        Some(handle) => handle,
-                        None => {
-                            return Ok(None);
-                        }
-                    };
+                let bytes = handle.bytes().await?;
 
-                    let bytes = handle.bytes().await?;
-
-                    Ok(Some(BlobstoreGetData::new(
-                        BlobstoreMetadata::new(None),
-                        bytes,
-                    )))
-                }
-                .boxed()
+                Ok(Some(BlobstoreGetData::new(
+                    BlobstoreMetadata::new(None),
+                    bytes,
+                )))
             }
         }
 
@@ -1047,32 +1021,30 @@ mod test {
             }
         }
 
+        #[async_trait]
         impl Blobstore for DummyBlob {
-            fn get(
+            async fn get(
                 &self,
                 _ctx: CoreContext,
                 _key: String,
-            ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>>> {
-                async move {
-                    Ok(Some(BlobstoreGetData::new(
-                        BlobstoreMetadata::new(None),
-                        BlobstoreBytes::from_bytes("foo"),
-                    )))
-                }
-                .boxed()
+            ) -> Result<Option<BlobstoreGetData>> {
+                Ok(Some(BlobstoreGetData::new(
+                    BlobstoreMetadata::new(None),
+                    BlobstoreBytes::from_bytes("foo"),
+                )))
             }
 
-            fn put(
+            async fn put(
                 &self,
                 _ctx: CoreContext,
                 _key: String,
                 _value: BlobstoreBytes,
-            ) -> BoxFuture<'_, Result<()>> {
-                async move { Ok(()) }.boxed()
+            ) -> Result<()> {
+                Ok(())
             }
 
-            fn is_present(&self, _ctx: CoreContext, _key: String) -> BoxFuture<'_, Result<bool>> {
-                async move { Ok(true) }.boxed()
+            async fn is_present(&self, _ctx: CoreContext, _key: String) -> Result<bool> {
+                Ok(true)
             }
         }
 

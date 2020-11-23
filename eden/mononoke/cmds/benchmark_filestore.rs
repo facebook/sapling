@@ -198,7 +198,7 @@ async fn get_blob<'a>(
                 unimplemented!("Accessing Manifold is not implemented in non fbcode builds");
             }
         }
-        (CMD_MEMORY, Some(_)) => Arc::new(memblob::LazyMemblob::default()),
+        (CMD_MEMORY, Some(_)) => Arc::new(memblob::Memblob::default()),
         (CMD_XDB, Some(sub)) => {
             let shardmap = sub.value_of(ARG_SHARDMAP).unwrap().to_string();
             let shard_count = sub.value_of(ARG_SHARD_COUNT).unwrap().parse()?;

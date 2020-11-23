@@ -35,7 +35,7 @@ use fsnodes::RootFsnodeId;
 use futures::{compat::Future01CompatExt, future, try_join};
 use git_types::TreeHandle;
 use maplit::btreeset;
-use memblob::EagerMemblob;
+use memblob::Memblob;
 use mercurial_derived_data::MappedHgChangesetId;
 use mercurial_mutation::{HgMutationStore, SqlHgMutationStoreBuilder};
 use metaconfig_types::{
@@ -304,7 +304,7 @@ impl TestRepoBuilder {
     pub fn new() -> Self {
         Self {
             repo_id: RepositoryId::new(0),
-            blobstore: Arc::new(EagerMemblob::default()),
+            blobstore: Arc::new(Memblob::default()),
             redacted: None,
         }
     }
@@ -453,7 +453,7 @@ pub fn new_memblob_with_connection_with_id(
     repo_id: RepositoryId,
 ) -> Result<(BlobRepo, Connection)> {
     let repo_blobstore_args = RepoBlobstoreArgs::new(
-        Arc::new(EagerMemblob::default()),
+        Arc::new(Memblob::default()),
         None,
         repo_id,
         ScubaSampleBuilder::with_discard(),

@@ -8,8 +8,8 @@
 use std::ops::Deref;
 use std::sync::Arc;
 
-use anyhow::Error;
-use futures::future::{BoxFuture, FutureExt};
+use anyhow::Result;
+use async_trait::async_trait;
 use stats::prelude::*;
 
 use context::CoreContext;
@@ -62,70 +62,53 @@ impl<T> CountedBlobstore<T> {
     }
 }
 
+#[async_trait]
 impl<T: Blobstore> Blobstore for CountedBlobstore<T> {
-    fn get(
-        &self,
-        ctx: CoreContext,
-        key: String,
-    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>, Error>> {
+    async fn get(&self, ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
         let stats = self.stats.clone();
         stats.get.add_value(1);
         let get = self.blobstore.get(ctx, key);
-        async move {
-            let res = get.await;
-            match res {
-                Ok(_) => stats.get_ok.add_value(1),
-                Err(_) => stats.get_err.add_value(1),
-            }
-            res
+        let res = get.await;
+        match res {
+            Ok(_) => stats.get_ok.add_value(1),
+            Err(_) => stats.get_err.add_value(1),
         }
-        .boxed()
+        res
     }
 
-    fn put(
-        &self,
-        ctx: CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> BoxFuture<'_, Result<(), Error>> {
+    async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
         let stats = self.stats.clone();
         stats.put.add_value(1);
         let put = self.blobstore.put(ctx, key, value);
-        async move {
-            let res = put.await;
-            match res {
-                Ok(()) => stats.put_ok.add_value(1),
-                Err(_) => stats.put_err.add_value(1),
-            }
-            res
+        let res = put.await;
+        match res {
+            Ok(()) => stats.put_ok.add_value(1),
+            Err(_) => stats.put_err.add_value(1),
         }
-        .boxed()
+        res
     }
 
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'_, Result<bool, Error>> {
+    async fn is_present(&self, ctx: CoreContext, key: String) -> Result<bool> {
         let stats = self.stats.clone();
         stats.is_present.add_value(1);
         let is_present = self.blobstore.is_present(ctx, key);
-        async move {
-            let res = is_present.await;
-            match res {
-                Ok(_) => stats.is_present_ok.add_value(1),
-                Err(_) => stats.is_present_err.add_value(1),
-            }
-            res
+        let res = is_present.await;
+        match res {
+            Ok(_) => stats.is_present_ok.add_value(1),
+            Err(_) => stats.is_present_err.add_value(1),
         }
-        .boxed()
+        res
     }
 }
 
 impl<T: BlobstorePutOps> CountedBlobstore<T> {
-    fn put_impl(
+    async fn put_impl(
         &self,
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
         put_behaviour: Option<PutBehaviour>,
-    ) -> BoxFuture<'_, Result<OverwriteStatus, Error>> {
+    ) -> Result<OverwriteStatus> {
         let stats = self.stats.clone();
         stats.put.add_value(1);
         let put = if let Some(put_behaviour) = put_behaviour {
@@ -133,66 +116,57 @@ impl<T: BlobstorePutOps> CountedBlobstore<T> {
         } else {
             self.blobstore.put_with_status(ctx, key, value)
         };
-        async move {
-            let res = put.await;
-            match res {
-                Ok(status) => {
-                    stats.put_ok.add_value(1);
-                    match status {
-                        OverwriteStatus::NotChecked => stats.put_not_checked.add_value(1),
-                        OverwriteStatus::New => stats.put_new.add_value(1),
-                        OverwriteStatus::Overwrote => stats.put_overwrote.add_value(1),
-                        OverwriteStatus::Prevented => stats.put_prevented.add_value(1),
-                    };
-                }
-                Err(_) => stats.put_err.add_value(1),
+        let res = put.await;
+        match res {
+            Ok(status) => {
+                stats.put_ok.add_value(1);
+                match status {
+                    OverwriteStatus::NotChecked => stats.put_not_checked.add_value(1),
+                    OverwriteStatus::New => stats.put_new.add_value(1),
+                    OverwriteStatus::Overwrote => stats.put_overwrote.add_value(1),
+                    OverwriteStatus::Prevented => stats.put_prevented.add_value(1),
+                };
             }
-            res
+            Err(_) => stats.put_err.add_value(1),
         }
-        .boxed()
+        res
     }
 }
 
+#[async_trait]
 impl<T: BlobstorePutOps> BlobstorePutOps for CountedBlobstore<T> {
-    fn put_explicit(
+    async fn put_explicit(
         &self,
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
         put_behaviour: PutBehaviour,
-    ) -> BoxFuture<'_, Result<OverwriteStatus, Error>> {
-        self.put_impl(ctx, key, value, Some(put_behaviour))
+    ) -> Result<OverwriteStatus> {
+        self.put_impl(ctx, key, value, Some(put_behaviour)).await
     }
 
-    fn put_with_status(
+    async fn put_with_status(
         &self,
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'_, Result<OverwriteStatus, Error>> {
-        self.put_impl(ctx, key, value, None)
+    ) -> Result<OverwriteStatus> {
+        self.put_impl(ctx, key, value, None).await
     }
 }
 
+#[async_trait]
 impl<T: BlobstoreWithLink> BlobstoreWithLink for CountedBlobstore<T> {
-    fn link(
-        &self,
-        ctx: CoreContext,
-        existing_key: String,
-        link_key: String,
-    ) -> BoxFuture<'_, Result<(), Error>> {
+    async fn link(&self, ctx: CoreContext, existing_key: String, link_key: String) -> Result<()> {
         let stats = self.stats.clone();
         stats.link.add_value(1);
         let res = self.blobstore.link(ctx, existing_key, link_key);
-        async move {
-            let res = res.await;
-            match res {
-                Ok(()) => stats.link_ok.add_value(1),
-                Err(_) => stats.link_err.add_value(1),
-            }
-            res
+        let res = res.await;
+        match res {
+            Ok(()) => stats.link_ok.add_value(1),
+            Err(_) => stats.link_err.add_value(1),
         }
-        .boxed()
+        res
     }
 }
 

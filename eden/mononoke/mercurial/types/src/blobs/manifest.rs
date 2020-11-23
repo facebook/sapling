@@ -8,9 +8,9 @@
 //! Root manifest, tree nodes
 
 use anyhow::{bail, ensure, Context, Error, Result};
+use async_trait::async_trait;
 use blobstore::{Blobstore, Loadable, LoadableError};
 use context::CoreContext;
-use futures::future::{BoxFuture, FutureExt};
 use manifest::{Entry, Manifest};
 use sorted_vector_map::SortedVectorMap;
 use std::str;
@@ -215,21 +215,19 @@ impl BlobManifest {
     }
 }
 
+#[async_trait]
 impl Loadable for HgManifestId {
     type Value = BlobManifest;
 
-    fn load<'a, B: Blobstore>(
+    async fn load<'a, B: Blobstore>(
         &'a self,
         ctx: CoreContext,
         blobstore: &'a B,
-    ) -> BoxFuture<'a, Result<Self::Value, LoadableError>> {
+    ) -> Result<Self::Value, LoadableError> {
         let id = *self;
-        async move {
-            BlobManifest::load(ctx, blobstore, id)
-                .await?
-                .ok_or_else(|| LoadableError::Missing(id.blobstore_key()))
-        }
-        .boxed()
+        BlobManifest::load(ctx, blobstore, id)
+            .await?
+            .ok_or_else(|| LoadableError::Missing(id.blobstore_key()))
     }
 }
 

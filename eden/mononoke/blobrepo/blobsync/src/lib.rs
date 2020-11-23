@@ -72,7 +72,7 @@ mod test {
     use context::CoreContext;
     use fbinit::FacebookInit;
     use futures::stream;
-    use memblob::EagerMemblob;
+    use memblob::Memblob;
     use mononoke_types::{typed_hash, BlobstoreBytes, ContentMetadata, RepositoryId};
     use redactedblobstore::RedactedBlobstore;
     use repo_blobstore::RepoBlobstoreArgs;
@@ -94,8 +94,8 @@ mod test {
     async fn test_copy_blob(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
 
-        let inner1 = Arc::new(EagerMemblob::default());
-        let inner2 = Arc::new(EagerMemblob::default());
+        let inner1 = Arc::new(Memblob::default());
+        let inner2 = Arc::new(Memblob::default());
 
         let bs1 = RepoBlobstoreArgs::new(
             inner1,
@@ -146,8 +146,8 @@ mod test {
     #[fbinit::test]
     async fn test_copy_content(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
-        let inner1 = Arc::new(EagerMemblob::default());
-        let inner2 = Arc::new(EagerMemblob::default());
+        let inner1 = Arc::new(Memblob::default());
+        let inner2 = Arc::new(Memblob::default());
 
         let bs1 = RepoBlobstoreArgs::new(
             inner1,

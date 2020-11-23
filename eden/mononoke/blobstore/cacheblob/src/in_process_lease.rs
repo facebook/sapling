@@ -6,6 +6,7 @@
  */
 
 use anyhow::Result;
+use async_trait::async_trait;
 use context::CoreContext;
 use futures::{
     channel::oneshot::{channel, Receiver, Sender},
@@ -32,22 +33,20 @@ impl InProcessLease {
     }
 }
 
+#[async_trait]
 impl LeaseOps for InProcessLease {
-    fn try_add_put_lease(&self, key: &str) -> BoxFuture<'_, Result<bool>> {
+    async fn try_add_put_lease(&self, key: &str) -> Result<bool> {
         let key = key.to_string();
-        async move {
-            let mut in_flight_leases = self.leases.lock().await;
+        let mut in_flight_leases = self.leases.lock().await;
 
-            let entry = in_flight_leases.entry(key);
-            if let Entry::Occupied(_) = entry {
-                Ok(false)
-            } else {
-                let (send, recv) = channel();
-                entry.or_insert((send, recv.shared()));
-                Ok(true)
-            }
+        let entry = in_flight_leases.entry(key);
+        if let Entry::Occupied(_) = entry {
+            Ok(false)
+        } else {
+            let (send, recv) = channel();
+            entry.or_insert((send, recv.shared()));
+            Ok(true)
         }
-        .boxed()
     }
 
     fn renew_lease_until(&self, _ctx: CoreContext, key: &str, done: BoxFuture<'static, ()>) {
@@ -59,28 +58,22 @@ impl LeaseOps for InProcessLease {
         });
     }
 
-    fn wait_for_other_leases(&self, key: &str) -> BoxFuture<'_, ()> {
+    async fn wait_for_other_leases(&self, key: &str) {
         let key = key.to_string();
-        async move {
-            let in_flight_leases = self.leases.lock().await;
+        let in_flight_leases = self.leases.lock().await;
 
-            if let Some((_, fut)) = in_flight_leases.get(&key) {
-                let _ = fut.clone().await;
-            }
+        if let Some((_, fut)) = in_flight_leases.get(&key) {
+            let _ = fut.clone().await;
         }
-        .boxed()
     }
 
-    fn release_lease(&self, key: &str) -> BoxFuture<'_, ()> {
+    async fn release_lease(&self, key: &str) {
         let key = key.to_string();
-        async move {
-            let mut in_flight_leases = self.leases.lock().await;
+        let mut in_flight_leases = self.leases.lock().await;
 
-            if let Some((sender, _)) = in_flight_leases.remove(&key) {
-                // Don't care if there's no-one listening - just want to wake them up if possible.
-                let _ = sender.send(());
-            }
+        if let Some((sender, _)) = in_flight_leases.remove(&key) {
+            // Don't care if there's no-one listening - just want to wake them up if possible.
+            let _ = sender.send(());
         }
-        .boxed()
     }
 }

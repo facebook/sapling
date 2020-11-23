@@ -8,6 +8,7 @@
 #![deny(warnings)]
 
 use anyhow::Result;
+use async_trait::async_trait;
 use std::fmt;
 use std::num::NonZeroU32;
 
@@ -87,58 +88,56 @@ impl<T: Clone + fmt::Debug + Send + Sync> ThrottledBlob<T> {
 }
 
 // All delegate to throttled_access, which ensures even eager methods are throttled
+#[async_trait]
 impl<T: Blobstore + Clone> Blobstore for ThrottledBlob<T> {
-    fn get(
-        &self,
-        ctx: CoreContext,
-        key: String,
-    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>>> {
+    async fn get(&self, ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
         self.throttled_access(&self.read_limiter, move |blobstore| {
             async move { blobstore.get(ctx, key).await }.boxed()
         })
+        .await
     }
 
-    fn put(
-        &self,
-        ctx: CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> BoxFuture<'_, Result<()>> {
+    async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
         self.throttled_access(&self.write_limiter, move |blobstore| {
             async move { blobstore.put(ctx, key, value).await }.boxed()
         })
+        .await
     }
 
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'_, Result<bool>> {
+    async fn is_present(&self, ctx: CoreContext, key: String) -> Result<bool> {
         self.throttled_access(&self.read_limiter, move |blobstore| {
             async move { blobstore.is_present(ctx, key).await }.boxed()
         })
+        .await
     }
 }
 
 // All delegate to throttled_access, which ensures even eager methods are throttled
+#[async_trait]
 impl<T: BlobstorePutOps + Clone> BlobstorePutOps for ThrottledBlob<T> {
-    fn put_explicit(
+    async fn put_explicit(
         &self,
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
         put_behaviour: PutBehaviour,
-    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
+    ) -> Result<OverwriteStatus> {
         self.throttled_access(&self.write_limiter, move |blobstore| {
             async move { blobstore.put_explicit(ctx, key, value, put_behaviour).await }.boxed()
         })
+        .await
     }
 
-    fn put_with_status(
+    async fn put_with_status(
         &self,
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
+    ) -> Result<OverwriteStatus> {
         self.throttled_access(&self.write_limiter, move |blobstore| {
             async move { blobstore.put_with_status(ctx, key, value).await }.boxed()
         })
+        .await
     }
 }
 

@@ -7,11 +7,10 @@
 
 use crate::base::{ErrorKind, MultiplexedBlobstoreBase, MultiplexedBlobstorePutHandler};
 use anyhow::Result;
+use async_trait::async_trait;
 use blobstore::{Blobstore, BlobstoreGetData, BlobstorePutOps, OverwriteStatus, PutBehaviour};
 use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry, OperationKey};
-use cloned::cloned;
 use context::CoreContext;
-use futures::future::{BoxFuture, FutureExt};
 use metaconfig_types::{BlobstoreId, MultiplexId};
 use mononoke_types::{BlobstoreBytes, DateTime};
 use scuba::ScubaSampleBuilder;
@@ -65,113 +64,99 @@ struct QueueBlobstorePutHandler {
     queue: Arc<dyn BlobstoreSyncQueue>,
 }
 
+#[async_trait]
 impl MultiplexedBlobstorePutHandler for QueueBlobstorePutHandler {
-    fn on_put<'out>(
+    async fn on_put<'out>(
         &'out self,
         ctx: &'out CoreContext,
         blobstore_id: BlobstoreId,
         multiplex_id: MultiplexId,
         operation_key: &'out OperationKey,
         key: &'out str,
-    ) -> BoxFuture<'out, Result<()>> {
-        self.queue.add(
-            ctx,
-            BlobstoreSyncQueueEntry::new(
-                key.to_string(),
-                blobstore_id,
-                multiplex_id,
-                DateTime::now(),
-                operation_key.clone(),
-            ),
-        )
+    ) -> Result<()> {
+        self.queue
+            .add(
+                ctx,
+                BlobstoreSyncQueueEntry::new(
+                    key.to_string(),
+                    blobstore_id,
+                    multiplex_id,
+                    DateTime::now(),
+                    operation_key.clone(),
+                ),
+            )
+            .await
     }
 }
 
+#[async_trait]
 impl Blobstore for MultiplexedBlobstore {
-    fn get(
-        &self,
-        ctx: CoreContext,
-        key: String,
-    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>>> {
-        let get = self.blobstore.get(ctx.clone(), key.clone());
-        cloned!(self.queue);
-
-        async move {
-            let result = get.await;
-            match result {
-                Ok(value) => Ok(value),
-                Err(error) => {
-                    if let Some(ErrorKind::AllFailed(_)) = error.downcast_ref() {
-                        return Err(error);
-                    }
-                    // This means that some underlying blobstore returned error, and
-                    // other return None. To distinguish incomplete sync from true-none we
-                    // check synchronization queue. If it does not contain entries with this key
-                    // it means it is true-none otherwise, only replica containing key has
-                    // failed and we need to return error.
-                    let entries = queue.get(&ctx, &key).await?;
-                    if entries.is_empty() {
-                        Ok(None)
-                    } else {
-                        Err(error)
-                    }
+    async fn get(&self, ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
+        let result = self.blobstore.get(ctx.clone(), key.clone()).await;
+        match result {
+            Ok(value) => Ok(value),
+            Err(error) => {
+                if let Some(ErrorKind::AllFailed(_)) = error.downcast_ref() {
+                    return Err(error);
+                }
+                // This means that some underlying blobstore returned error, and
+                // other return None. To distinguish incomplete sync from true-none we
+                // check synchronization queue. If it does not contain entries with this key
+                // it means it is true-none otherwise, only replica containing key has
+                // failed and we need to return error.
+                let entries = self.queue.get(&ctx, &key).await?;
+                if entries.is_empty() {
+                    Ok(None)
+                } else {
+                    Err(error)
                 }
             }
         }
-        .boxed()
     }
 
-    fn put(
-        &self,
-        ctx: CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> BoxFuture<'_, Result<()>> {
-        self.blobstore.put(ctx, key, value)
+    async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
+        self.blobstore.put(ctx, key, value).await
     }
 
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'_, Result<bool>> {
-        cloned!(self.queue);
-        let is_present = self.blobstore.is_present(ctx.clone(), key.clone());
-
-        async move {
-            let result = is_present.await;
-            match result {
-                Ok(value) => Ok(value),
-                Err(error) => {
-                    if let Some(ErrorKind::AllFailed(_)) = error.downcast_ref() {
-                        return Err(error);
-                    }
-                    let entries = queue.get(&ctx, &key).await?;
-                    if entries.is_empty() {
-                        Ok(false)
-                    } else {
-                        Err(error)
-                    }
+    async fn is_present(&self, ctx: CoreContext, key: String) -> Result<bool> {
+        let result = self.blobstore.is_present(ctx.clone(), key.clone()).await;
+        match result {
+            Ok(value) => Ok(value),
+            Err(error) => {
+                if let Some(ErrorKind::AllFailed(_)) = error.downcast_ref() {
+                    return Err(error);
+                }
+                let entries = self.queue.get(&ctx, &key).await?;
+                if entries.is_empty() {
+                    Ok(false)
+                } else {
+                    Err(error)
                 }
             }
         }
-        .boxed()
     }
 }
 
+#[async_trait]
 impl BlobstorePutOps for MultiplexedBlobstore {
-    fn put_explicit(
+    async fn put_explicit(
         &self,
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
         put_behaviour: PutBehaviour,
-    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
-        self.blobstore.put_explicit(ctx, key, value, put_behaviour)
+    ) -> Result<OverwriteStatus> {
+        self.blobstore
+            .put_explicit(ctx, key, value, put_behaviour)
+            .await
     }
 
-    fn put_with_status(
+    async fn put_with_status(
         &self,
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
-        self.blobstore.put_with_status(ctx, key, value)
+    ) -> Result<OverwriteStatus> {
+        self.blobstore.put_with_status(ctx, key, value).await
     }
 }

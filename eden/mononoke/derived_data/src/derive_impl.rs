@@ -928,20 +928,17 @@ mod test {
     #[derive(Debug)]
     struct FailingLease;
 
+    #[async_trait]
     impl LeaseOps for FailingLease {
-        fn try_add_put_lease(&self, _key: &str) -> BoxFuture<'_, Result<bool>> {
-            async { Err(anyhow!("error")) }.boxed()
+        async fn try_add_put_lease(&self, _key: &str) -> Result<bool> {
+            Err(anyhow!("error"))
         }
 
         fn renew_lease_until(&self, _ctx: CoreContext, _key: &str, _done: BoxFuture<'static, ()>) {}
 
-        fn wait_for_other_leases(&self, _key: &str) -> BoxFuture<'_, ()> {
-            async {}.boxed()
-        }
+        async fn wait_for_other_leases(&self, _key: &str) {}
 
-        fn release_lease(&self, _key: &str) -> BoxFuture<'_, ()> {
-            async {}.boxed()
-        }
+        async fn release_lease(&self, _key: &str) {}
     }
 
     #[fbinit::test]

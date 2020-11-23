@@ -243,14 +243,14 @@ mod test {
     use crate::hash::Blake2;
     use context::CoreContext;
     use fbinit::FacebookInit;
-    use memblob::EagerMemblob;
+    use memblob::Memblob;
     use pretty_assertions::assert_eq;
     use quickcheck::TestResult;
     use std::sync::Arc;
 
     #[fbinit::test]
     async fn test_fastlog_batch_empty(fb: FacebookInit) -> Result<()> {
-        let blobstore = Arc::new(EagerMemblob::default());
+        let blobstore = Arc::new(Memblob::default());
         let ctx = CoreContext::test_mock(fb);
 
         let list = VecDeque::new();
@@ -263,7 +263,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_fastlog_batch_single(fb: FacebookInit) -> Result<()> {
-        let blobstore = Arc::new(EagerMemblob::default());
+        let blobstore = Arc::new(Memblob::default());
         let ctx = CoreContext::test_mock(fb);
 
         let mut list = VecDeque::new();
@@ -278,7 +278,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_fastlog_batch_large(fb: FacebookInit) -> Result<()> {
-        let blobstore = Arc::new(EagerMemblob::default());
+        let blobstore = Arc::new(Memblob::default());
         let ctx = CoreContext::test_mock(fb);
 
         let mut list = VecDeque::new();
@@ -299,7 +299,7 @@ mod test {
 
     #[fbinit::test]
     async fn test_fastlog_batch_overflow(fb: FacebookInit) -> Result<()> {
-        let blobstore = Arc::new(EagerMemblob::default());
+        let blobstore = Arc::new(Memblob::default());
         let ctx = CoreContext::test_mock(fb);
 
         let mut list = VecDeque::new();
@@ -321,7 +321,7 @@ mod test {
 
     #[quickcheck_async::tokio]
     async fn fastlog_roundtrip(fb: FacebookInit, hashes: Vec<(ChangesetId, i32)>) -> TestResult {
-        let blobstore = Arc::new(EagerMemblob::default());
+        let blobstore = Arc::new(Memblob::default());
         let ctx = CoreContext::test_mock(fb);
 
         let mut raw_list = VecDeque::new();

@@ -9,7 +9,7 @@
 use std::num::NonZeroU64;
 
 use anyhow::Result;
-use futures::future::{BoxFuture, FutureExt, TryFutureExt};
+use async_trait::async_trait;
 use futures_stats::TimedFutureExt;
 use scuba::ScubaSampleBuilder;
 
@@ -36,12 +36,9 @@ impl<B> LogBlob<B> {
     }
 }
 
+#[async_trait]
 impl<B: Blobstore + BlobstorePutOps> Blobstore for LogBlob<B> {
-    fn get(
-        &self,
-        mut ctx: CoreContext,
-        key: String,
-    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>>> {
+    async fn get(&self, mut ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
         let mut scuba = self.scuba.clone();
         scuba.sampled(self.scuba_sample_rate);
 
@@ -52,49 +49,40 @@ impl<B: Blobstore + BlobstorePutOps> Blobstore for LogBlob<B> {
 
         let get = self.inner.get(ctx.clone(), key.clone());
         let session_id = ctx.metadata().session_id().to_string();
-        async move {
-            let (stats, result) = get.timed().await;
-            record_get_stats(
-                &mut scuba,
-                &pc,
-                stats,
-                result.as_ref(),
-                key,
-                session_id,
-                OperationType::Get,
-                None,
-            );
-            result
-        }
-        .boxed()
+        let (stats, result) = get.timed().await;
+        record_get_stats(
+            &mut scuba,
+            &pc,
+            stats,
+            result.as_ref(),
+            key,
+            session_id,
+            OperationType::Get,
+            None,
+        );
+        result
     }
 
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'_, Result<bool>> {
+    async fn is_present(&self, ctx: CoreContext, key: String) -> Result<bool> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::BlobPresenceChecks);
-        self.inner.is_present(ctx, key)
+        self.inner.is_present(ctx, key).await
     }
 
-    fn put(
-        &self,
-        ctx: CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> BoxFuture<'_, Result<()>> {
-        BlobstorePutOps::put_with_status(self, ctx, key, value)
-            .map_ok(|_| ())
-            .boxed()
+    async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
+        BlobstorePutOps::put_with_status(self, ctx, key, value).await?;
+        Ok(())
     }
 }
 
 impl<B: BlobstorePutOps> LogBlob<B> {
-    fn put_impl(
+    async fn put_impl(
         &self,
         mut ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
         put_behaviour: Option<PutBehaviour>,
-    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
+    ) -> Result<OverwriteStatus> {
         let mut scuba = self.scuba.clone();
         let size = value.len();
 
@@ -109,43 +97,41 @@ impl<B: BlobstorePutOps> LogBlob<B> {
         } else {
             self.inner.put_with_status(ctx.clone(), key.clone(), value)
         };
-        async move {
-            let (stats, result) = put.timed().await;
-            record_put_stats(
-                &mut scuba,
-                &pc,
-                stats,
-                result.as_ref(),
-                key,
-                ctx.metadata().session_id().to_string(),
-                OperationType::Put,
-                size,
-                None,
-                None,
-            );
-            result
-        }
-        .boxed()
+        let (stats, result) = put.timed().await;
+        record_put_stats(
+            &mut scuba,
+            &pc,
+            stats,
+            result.as_ref(),
+            key,
+            ctx.metadata().session_id().to_string(),
+            OperationType::Put,
+            size,
+            None,
+            None,
+        );
+        result
     }
 }
 
+#[async_trait]
 impl<B: BlobstorePutOps> BlobstorePutOps for LogBlob<B> {
-    fn put_explicit(
+    async fn put_explicit(
         &self,
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
         put_behaviour: PutBehaviour,
-    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
-        self.put_impl(ctx, key, value, Some(put_behaviour))
+    ) -> Result<OverwriteStatus> {
+        self.put_impl(ctx, key, value, Some(put_behaviour)).await
     }
 
-    fn put_with_status(
+    async fn put_with_status(
         &self,
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
-        self.put_impl(ctx, key, value, None)
+    ) -> Result<OverwriteStatus> {
+        self.put_impl(ctx, key, value, None).await
     }
 }

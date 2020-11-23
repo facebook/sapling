@@ -8,10 +8,10 @@
 #![deny(warnings)]
 
 use anyhow::Result;
+use async_trait::async_trait;
 use blobstore::{Blobstore, BlobstoreGetData};
 use cloned::cloned;
 use context::CoreContext;
-use futures::future::{BoxFuture, FutureExt};
 use mononoke_types::BlobstoreBytes;
 use std::sync::Arc;
 
@@ -46,49 +46,32 @@ impl<T> SamplingBlobstore<T> {
     }
 }
 
+#[async_trait]
 impl<T: Blobstore + Clone> Blobstore for SamplingBlobstore<T> {
     #[inline]
-    fn get(
-        &self,
-        ctx: CoreContext,
-        key: String,
-    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>>> {
+    async fn get(&self, ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
         cloned!(self.handler);
         let get = self.inner.get(ctx.clone(), key.clone());
-        async move {
-            let opt_blob = get.await?;
-            handler.sample_get(ctx, key, opt_blob.as_ref().map(|blob| blob.as_bytes()))?;
-            Ok(opt_blob)
-        }
-        .boxed()
+        let opt_blob = get.await?;
+        handler.sample_get(ctx, key, opt_blob.as_ref().map(|blob| blob.as_bytes()))?;
+        Ok(opt_blob)
     }
 
     #[inline]
-    fn put(
-        &self,
-        ctx: CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> BoxFuture<'_, Result<()>> {
+    async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
         let sample_res = self.handler.sample_put(&ctx, &key, &value);
         let put = self.inner.put(ctx, key, value);
-        async move {
-            put.await?;
-            sample_res
-        }
-        .boxed()
+        put.await?;
+        sample_res
     }
 
     #[inline]
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'_, Result<bool>> {
+    async fn is_present(&self, ctx: CoreContext, key: String) -> Result<bool> {
         let is_present = self.inner.is_present(ctx.clone(), key.clone());
         cloned!(self.handler);
-        async move {
-            let is_present = is_present.await?;
-            handler.sample_is_present(ctx, key, is_present)?;
-            Ok(is_present)
-        }
-        .boxed()
+        let is_present = is_present.await?;
+        handler.sample_is_present(ctx, key, is_present)?;
+        Ok(is_present)
     }
 }
 
@@ -100,7 +83,7 @@ mod test {
     use std::sync::atomic::{AtomicBool, Ordering};
 
     use context::SamplingKey;
-    use memblob::EagerMemblob;
+    use memblob::Memblob;
 
     #[derive(Debug)]
     struct TestSamplingHandler {
@@ -138,7 +121,7 @@ mod test {
     #[fbinit::test]
     async fn test_sample_called(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let base = EagerMemblob::default();
+        let base = Memblob::default();
         let sample_this = SamplingKey::new();
         let handler = Arc::new(TestSamplingHandler {
             sampled: AtomicBool::new(false),
@@ -148,7 +131,6 @@ mod test {
             SamplingBlobstore::new(base.clone(), handler.clone() as Arc<dyn SamplingHandler>);
         let key = "foobar".to_string();
 
-        // We're using EagerMemblob (immediate future completion) so calling wait() is fine.
         let r = wrapper
             .put(
                 ctx.clone(),

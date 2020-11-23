@@ -10,7 +10,7 @@
 use std::time::Duration;
 
 use anyhow::Result;
-use futures::future::{BoxFuture, FutureExt};
+use async_trait::async_trait;
 use rand::Rng;
 use rand_distr::Distribution;
 
@@ -37,44 +37,21 @@ impl<B> DelayedBlobstore<B> {
     }
 }
 
+#[async_trait]
 impl<B: Blobstore> Blobstore for DelayedBlobstore<B> {
-    fn get(
-        &self,
-        ctx: CoreContext,
-        key: String,
-    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>>> {
-        let delay = delay(self.get_dist);
-        let get = self.inner.get(ctx, key);
-        async move {
-            delay.await;
-            get.await
-        }
-        .boxed()
+    async fn get(&self, ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
+        delay(self.get_dist).await;
+        self.inner.get(ctx, key).await
     }
 
-    fn put(
-        &self,
-        ctx: CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> BoxFuture<'_, Result<()>> {
-        let delay = delay(self.put_dist);
-        let put = self.inner.put(ctx, key, value);
-        async move {
-            delay.await;
-            put.await
-        }
-        .boxed()
+    async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
+        delay(self.put_dist).await;
+        self.inner.put(ctx, key, value).await
     }
 
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'_, Result<bool>> {
-        let delay = delay(self.get_dist);
-        let is_present = self.inner.is_present(ctx, key);
-        async move {
-            delay.await;
-            is_present.await
-        }
-        .boxed()
+    async fn is_present(&self, ctx: CoreContext, key: String) -> Result<bool> {
+        delay(self.get_dist).await;
+        self.inner.is_present(ctx, key).await
     }
 }
 

@@ -11,10 +11,10 @@ use crate::{
     HgBlobNode, HgChangesetEnvelopeMut, HgNodeHash, HgParents, MPath,
 };
 use anyhow::Result;
+use async_trait::async_trait;
 use blobstore::{Blobstore, Loadable, LoadableError};
 use bytes::Bytes;
 use context::CoreContext;
-use futures::future::{BoxFuture, FutureExt};
 use mononoke_types::DateTime;
 use std::fmt::{self, Display};
 use std::{collections::BTreeMap, io::Write};
@@ -249,20 +249,18 @@ impl HgBlobChangeset {
     }
 }
 
+#[async_trait]
 impl Loadable for HgChangesetId {
     type Value = HgBlobChangeset;
 
-    fn load<'a, B: Blobstore>(
+    async fn load<'a, B: Blobstore>(
         &'a self,
         ctx: CoreContext,
         blobstore: &'a B,
-    ) -> BoxFuture<'a, Result<Self::Value, LoadableError>> {
+    ) -> Result<Self::Value, LoadableError> {
         let csid = *self;
-        async move {
-            let value = HgBlobChangeset::load(ctx, blobstore, csid).await?;
-            value.ok_or_else(|| LoadableError::Missing(csid.blobstore_key()))
-        }
-        .boxed()
+        let value = HgBlobChangeset::load(ctx, blobstore, csid).await?;
+        value.ok_or_else(|| LoadableError::Missing(csid.blobstore_key()))
     }
 }
 

@@ -23,19 +23,16 @@ use crate::facebook::myadmin_delay;
 use crate::myadmin_delay_dummy as myadmin_delay;
 use crate::store::{ChunkSqlStore, ChunkingMethod, DataSqlStore};
 use anyhow::{bail, format_err, Error, Result};
+use async_trait::async_trait;
 use blobstore::{
     Blobstore, BlobstoreGetData, BlobstoreMetadata, BlobstorePutOps, BlobstoreWithLink,
     CountedBlobstore, OverwriteStatus, PutBehaviour,
 };
 use bytes::BytesMut;
 use cached_config::{ConfigHandle, ConfigStore, TestSource};
-use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::{
-    future::{self, BoxFuture, FutureExt, TryFutureExt},
-    stream::{FuturesOrdered, FuturesUnordered, Stream, TryStreamExt},
-};
+use futures::stream::{FuturesOrdered, FuturesUnordered, Stream, TryStreamExt};
 use futures_ext::{try_boxfuture, BoxFuture as BoxFuture01, FutureExt as _};
 use futures_old::future::join_all;
 use futures_old::prelude::*;
@@ -475,67 +472,53 @@ impl fmt::Debug for Sqlblob {
     }
 }
 
+#[async_trait]
 impl Blobstore for Sqlblob {
-    fn get(
-        &self,
-        _ctx: CoreContext,
-        key: String,
-    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>>> {
-        cloned!(self.data_store, self.chunk_store);
-
-        async move {
-            let chunked = data_store.get(&key).await?;
-            if let Some(chunked) = chunked {
-                let fetch_chunks: FuturesOrdered<_> = (0..chunked.count)
-                    .map(|chunk_num| {
-                        chunk_store.get(&chunked.id, chunk_num, chunked.chunking_method)
-                    })
-                    .collect();
-                let blob: BytesMut = fetch_chunks.try_concat().await?;
-                let meta = BlobstoreMetadata::new(Some(chunked.ctime));
-                Ok(Some(BlobstoreGetData::new(
-                    meta,
-                    BlobstoreBytes::from_bytes(blob.freeze()),
-                )))
-            } else {
-                Ok(None)
-            }
+    async fn get(&self, _ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
+        let chunked = self.data_store.get(&key).await?;
+        if let Some(chunked) = chunked {
+            let fetch_chunks: FuturesOrdered<_> = (0..chunked.count)
+                .map(|chunk_num| {
+                    self.chunk_store
+                        .get(&chunked.id, chunk_num, chunked.chunking_method)
+                })
+                .collect();
+            let blob: BytesMut = fetch_chunks.try_concat().await?;
+            let meta = BlobstoreMetadata::new(Some(chunked.ctime));
+            Ok(Some(BlobstoreGetData::new(
+                meta,
+                BlobstoreBytes::from_bytes(blob.freeze()),
+            )))
+        } else {
+            Ok(None)
         }
-        .boxed()
     }
 
-    fn is_present(&self, _ctx: CoreContext, key: String) -> BoxFuture<'_, Result<bool>> {
-        cloned!(self.data_store);
-        async move { data_store.is_present(&key).await }.boxed()
+    async fn is_present(&self, _ctx: CoreContext, key: String) -> Result<bool> {
+        self.data_store.is_present(&key).await
     }
 
-    fn put(
-        &self,
-        ctx: CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> BoxFuture<'_, Result<()>> {
-        BlobstorePutOps::put_with_status(self, ctx, key, value)
-            .map_ok(|_| ())
-            .boxed()
+    async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
+        BlobstorePutOps::put_with_status(self, ctx, key, value).await?;
+        Ok(())
     }
 }
 
+#[async_trait]
 impl BlobstorePutOps for Sqlblob {
-    fn put_explicit(
+    async fn put_explicit(
         &self,
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
         put_behaviour: PutBehaviour,
-    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
+    ) -> Result<OverwriteStatus> {
         if key.as_bytes().len() > MAX_KEY_SIZE {
-            return future::err(format_err!(
+            return Err(format_err!(
                 "Key {} exceeded max key size {}",
                 key,
                 MAX_KEY_SIZE
-            ))
-            .boxed();
+            ));
         }
 
         let chunking_method = ChunkingMethod::ByContentHashBlake2;
@@ -545,99 +528,85 @@ impl BlobstorePutOps for Sqlblob {
             hash_context.finish().to_hex()
         };
 
-        cloned!(self.data_store, self.chunk_store);
-        let put_fut = {
-            cloned!(key);
-            async move {
-                let chunks = value.as_bytes().chunks(CHUNK_SIZE);
-                let chunk_count = chunks.len().try_into()?;
-                for (chunk_num, value) in chunks.enumerate() {
-                    chunk_store
-                        .put(
-                            chunk_key.as_str(),
-                            chunk_num.try_into()?,
-                            chunking_method,
-                            value,
-                        )
-                        .await?;
-                }
-                let ctime = {
-                    match SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
-                        Ok(offset) => offset.as_secs().try_into(),
-                        Err(negative) => negative.duration().as_secs().try_into().map(|v: i64| -v),
-                    }
-                }?;
-                let res = data_store
+        let put_fut = async {
+            let chunks = value.as_bytes().chunks(CHUNK_SIZE);
+            let chunk_count = chunks.len().try_into()?;
+            for (chunk_num, value) in chunks.enumerate() {
+                self.chunk_store
                     .put(
-                        &key,
-                        ctime,
                         chunk_key.as_str(),
-                        chunk_count,
+                        chunk_num.try_into()?,
                         chunking_method,
+                        value,
                     )
-                    .await;
-                res.map(|()| OverwriteStatus::NotChecked)
+                    .await?;
             }
-            .boxed()
+            let ctime = {
+                match SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
+                    Ok(offset) => offset.as_secs().try_into(),
+                    Err(negative) => negative.duration().as_secs().try_into().map(|v: i64| -v),
+                }
+            }?;
+            let res = self
+                .data_store
+                .put(
+                    &key,
+                    ctime,
+                    chunk_key.as_str(),
+                    chunk_count,
+                    chunking_method,
+                )
+                .await;
+            res.map(|()| OverwriteStatus::NotChecked)
         };
 
+
         match put_behaviour {
-            PutBehaviour::Overwrite => put_fut,
+            PutBehaviour::Overwrite => put_fut.await,
             PutBehaviour::IfAbsent | PutBehaviour::OverwriteAndLog => {
-                let exists = self.is_present(ctx, key);
-                async move {
-                    if exists.await? {
-                        if put_behaviour.should_overwrite() {
-                            put_fut.await?;
-                            Ok(OverwriteStatus::Overwrote)
-                        } else {
-                            // discard the put
-                            let _ = put_fut;
-                            Ok(OverwriteStatus::Prevented)
-                        }
-                    } else {
+                if self.is_present(ctx, key.clone()).await? {
+                    if put_behaviour.should_overwrite() {
                         put_fut.await?;
-                        Ok(OverwriteStatus::New)
+                        Ok(OverwriteStatus::Overwrote)
+                    } else {
+                        // discard the put
+                        let _ = put_fut;
+                        Ok(OverwriteStatus::Prevented)
                     }
+                } else {
+                    put_fut.await?;
+                    Ok(OverwriteStatus::New)
                 }
-                .boxed()
             }
         }
     }
 
-    fn put_with_status(
+    async fn put_with_status(
         &self,
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
-        self.put_explicit(ctx, key, value, self.put_behaviour)
+    ) -> Result<OverwriteStatus> {
+        self.put_explicit(ctx, key, value, self.put_behaviour).await
     }
 }
 
+#[async_trait]
 impl BlobstoreWithLink for Sqlblob {
-    fn link(
-        &self,
-        _ctx: CoreContext,
-        existing_key: String,
-        link_key: String,
-    ) -> BoxFuture<'_, Result<()>> {
-        cloned!(self.data_store);
-        async move {
-            let existing_data = data_store.get(&existing_key).await?.ok_or_else(|| {
+    async fn link(&self, _ctx: CoreContext, existing_key: String, link_key: String) -> Result<()> {
+        let existing_data =
+            self.data_store.get(&existing_key).await?.ok_or_else(|| {
                 format_err!("Key {} does not exist in the blobstore", existing_key)
             })?;
-            data_store
-                .put(
-                    &link_key,
-                    existing_data.ctime,
-                    &existing_data.id,
-                    existing_data.count,
-                    existing_data.chunking_method,
-                )
-                .await
-        }
-        .boxed()
+        self.data_store
+            .put(
+                &link_key,
+                existing_data.ctime,
+                &existing_data.id,
+                existing_data.count,
+                existing_data.chunking_method,
+            )
+            .await
     }
 }
 

@@ -6,10 +6,11 @@
  */
 
 use anyhow::Result;
+use async_trait::async_trait;
 use blobstore::{Blobstore, BlobstoreGetData};
 use context::CoreContext;
 use futures::{
-    future::{self, BoxFuture, FutureExt, TryFutureExt},
+    future,
     stream::{self, StreamExt, TryStreamExt},
 };
 use lock_ext::LockExt;
@@ -56,29 +57,17 @@ impl<T: Blobstore + Clone> MemWritesBlobstore<T> {
     }
 }
 
+#[async_trait]
 impl<T: Blobstore + Clone> Blobstore for MemWritesBlobstore<T> {
-    fn put(
-        &self,
-        _ctx: CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> BoxFuture<'_, Result<()>> {
+    async fn put(&self, _ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
         self.cache.with(|cache| cache.insert(key, value));
-        future::ok(()).boxed()
+        Ok(())
     }
 
-    fn get(
-        &self,
-        ctx: CoreContext,
-        key: String,
-    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>>> {
+    async fn get(&self, ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
         match self.cache.with(|cache| cache.get(&key).cloned()) {
-            Some(value) => future::ok(Some(value.into())).boxed(),
-            None => self
-                .inner
-                .get(ctx, key)
-                .map_ok(|opt_blob| opt_blob.map(Into::into))
-                .boxed(),
+            Some(value) => Ok(Some(value.into())),
+            None => Ok(self.inner.get(ctx, key).await?.map(Into::into)),
         }
     }
 }
@@ -88,12 +77,12 @@ mod test {
     use super::*;
     use bytes::Bytes;
     use fbinit::FacebookInit;
-    use memblob::EagerMemblob;
+    use memblob::Memblob;
 
     #[fbinit::test]
     async fn basic_read(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let inner = EagerMemblob::default();
+        let inner = Memblob::default();
         let foo_key = "foo".to_string();
         inner
             .put(
@@ -126,7 +115,7 @@ mod test {
     #[fbinit::test]
     async fn redirect_writes(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let inner = EagerMemblob::default();
+        let inner = Memblob::default();
         let foo_key = "foo".to_string();
 
         let outer = MemWritesBlobstore::new(inner.clone());
@@ -170,7 +159,7 @@ mod test {
     async fn test_persist(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
 
-        let inner = EagerMemblob::default();
+        let inner = Memblob::default();
         let outer = MemWritesBlobstore::new(inner.clone());
 
         let key = "key".to_string();

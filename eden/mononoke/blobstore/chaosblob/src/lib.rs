@@ -6,9 +6,9 @@
  */
 
 use anyhow::Result;
+use async_trait::async_trait;
 use blobstore::{Blobstore, BlobstoreGetData, BlobstorePutOps, OverwriteStatus, PutBehaviour};
 use context::CoreContext;
-use futures::future::{BoxFuture, FutureExt, TryFutureExt};
 use mononoke_types::BlobstoreBytes;
 use rand::{thread_rng, Rng};
 use std::num::NonZeroU32;
@@ -78,58 +78,45 @@ impl<T> ChaosBlobstore<T> {
     }
 }
 
+#[async_trait]
 impl<T: Blobstore + BlobstorePutOps> Blobstore for ChaosBlobstore<T> {
     #[inline]
-    fn get(
-        &self,
-        ctx: CoreContext,
-        key: String,
-    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>>> {
+    async fn get(&self, ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
         let should_error = thread_rng().gen::<f32>() > self.sample_threshold_read;
         let get = self.blobstore.get(ctx, key.clone());
-        async move {
-            if should_error {
-                Err(ErrorKind::InjectedChaosGet(key).into())
-            } else {
-                get.await
-            }
+        if should_error {
+            Err(ErrorKind::InjectedChaosGet(key).into())
+        } else {
+            get.await
         }
-        .boxed()
     }
 
     #[inline]
-    fn put(
-        &self,
-        ctx: CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> BoxFuture<'_, Result<()>> {
-        self.put_impl(ctx, key, value, None).map_ok(|_| ()).boxed()
+    async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
+        self.put_impl(ctx, key, value, None).await?;
+        Ok(())
     }
 
     #[inline]
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'_, Result<bool>> {
+    async fn is_present(&self, ctx: CoreContext, key: String) -> Result<bool> {
         let should_error = thread_rng().gen::<f32>() > self.sample_threshold_read;
         let is_present = self.blobstore.is_present(ctx, key.clone());
-        async move {
-            if should_error {
-                Err(ErrorKind::InjectedChaosIsPresent(key).into())
-            } else {
-                is_present.await
-            }
+        if should_error {
+            Err(ErrorKind::InjectedChaosIsPresent(key).into())
+        } else {
+            is_present.await
         }
-        .boxed()
     }
 }
 
 impl<T: BlobstorePutOps> ChaosBlobstore<T> {
-    fn put_impl(
+    async fn put_impl(
         &self,
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
         put_behaviour: Option<PutBehaviour>,
-    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
+    ) -> Result<OverwriteStatus> {
         let should_error = thread_rng().gen::<f32>() > self.sample_threshold_write;
         let put = if should_error {
             None
@@ -142,34 +129,32 @@ impl<T: BlobstorePutOps> ChaosBlobstore<T> {
             };
             Some(put)
         };
-        async move {
-            match put {
-                None => Err(ErrorKind::InjectedChaosPut(key).into()),
-                Some(put) => put.await,
-            }
+        match put {
+            None => Err(ErrorKind::InjectedChaosPut(key).into()),
+            Some(put) => put.await,
         }
-        .boxed()
     }
 }
 
+#[async_trait]
 impl<T: BlobstorePutOps> BlobstorePutOps for ChaosBlobstore<T> {
-    fn put_explicit(
+    async fn put_explicit(
         &self,
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
         put_behaviour: PutBehaviour,
-    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
-        self.put_impl(ctx, key, value, Some(put_behaviour))
+    ) -> Result<OverwriteStatus> {
+        self.put_impl(ctx, key, value, Some(put_behaviour)).await
     }
 
-    fn put_with_status(
+    async fn put_with_status(
         &self,
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
-        self.put_impl(ctx, key, value, None)
+    ) -> Result<OverwriteStatus> {
+        self.put_impl(ctx, key, value, None).await
     }
 }
 
@@ -178,12 +163,12 @@ mod test {
     use super::*;
     use fbinit::FacebookInit;
 
-    use memblob::EagerMemblob;
+    use memblob::Memblob;
 
     #[fbinit::compat_test]
     async fn test_error_on_write(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let base = EagerMemblob::default();
+        let base = Memblob::default();
         let wrapper =
             ChaosBlobstore::new(base.clone(), ChaosOptions::new(None, NonZeroU32::new(1)));
         let key = "foobar".to_string();
@@ -203,7 +188,7 @@ mod test {
     #[fbinit::compat_test]
     async fn test_error_on_write_with_status(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let base = EagerMemblob::default();
+        let base = Memblob::default();
         let wrapper =
             ChaosBlobstore::new(base.clone(), ChaosOptions::new(None, NonZeroU32::new(1)));
         let key = "foobar".to_string();
@@ -223,7 +208,7 @@ mod test {
     #[fbinit::compat_test]
     async fn test_error_on_read(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let base = EagerMemblob::default();
+        let base = Memblob::default();
         let wrapper =
             ChaosBlobstore::new(base.clone(), ChaosOptions::new(NonZeroU32::new(1), None));
         let key = "foobar".to_string();

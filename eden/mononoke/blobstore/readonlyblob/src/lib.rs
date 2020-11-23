@@ -6,69 +6,62 @@
  */
 
 use anyhow::Result;
+use async_trait::async_trait;
 use blobstore::{Blobstore, BlobstoreGetData, BlobstorePutOps, OverwriteStatus, PutBehaviour};
 use context::CoreContext;
-use futures::future::{self, BoxFuture, FutureExt};
 use mononoke_types::BlobstoreBytes;
 mod errors;
 pub use crate::errors::ErrorKind;
 
 /// A layer over an existing blobstore that prevents writes.
 #[derive(Clone, Debug)]
-pub struct ReadOnlyBlobstore<T: Clone> {
+pub struct ReadOnlyBlobstore<T> {
     blobstore: T,
 }
 
-impl<T: Clone> ReadOnlyBlobstore<T> {
+impl<T> ReadOnlyBlobstore<T> {
     pub fn new(blobstore: T) -> Self {
         Self { blobstore }
     }
 }
 
-impl<T: Blobstore + Clone> Blobstore for ReadOnlyBlobstore<T> {
+#[async_trait]
+impl<T: Blobstore> Blobstore for ReadOnlyBlobstore<T> {
     #[inline]
-    fn get(
-        &self,
-        ctx: CoreContext,
-        key: String,
-    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>>> {
-        self.blobstore.get(ctx, key)
+    async fn get(&self, ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
+        self.blobstore.get(ctx, key).await
     }
 
     #[inline]
-    fn put(
-        &self,
-        _ctx: CoreContext,
-        key: String,
-        _value: BlobstoreBytes,
-    ) -> BoxFuture<'_, Result<()>> {
-        future::err(ErrorKind::ReadOnlyPut(key).into()).boxed()
+    async fn put(&self, _ctx: CoreContext, key: String, _value: BlobstoreBytes) -> Result<()> {
+        Err(ErrorKind::ReadOnlyPut(key).into())
     }
 
     #[inline]
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'_, Result<bool>> {
-        self.blobstore.is_present(ctx, key)
+    async fn is_present(&self, ctx: CoreContext, key: String) -> Result<bool> {
+        self.blobstore.is_present(ctx, key).await
     }
 }
 
-impl<T: BlobstorePutOps + Clone> BlobstorePutOps for ReadOnlyBlobstore<T> {
-    fn put_explicit(
+#[async_trait]
+impl<T: BlobstorePutOps> BlobstorePutOps for ReadOnlyBlobstore<T> {
+    async fn put_explicit(
         &self,
         _ctx: CoreContext,
         key: String,
         _value: BlobstoreBytes,
         _put_behaviour: PutBehaviour,
-    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
-        future::err(ErrorKind::ReadOnlyPut(key).into()).boxed()
+    ) -> Result<OverwriteStatus> {
+        Err(ErrorKind::ReadOnlyPut(key).into())
     }
 
-    fn put_with_status(
+    async fn put_with_status(
         &self,
         _ctx: CoreContext,
         key: String,
         _value: BlobstoreBytes,
-    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
-        future::err(ErrorKind::ReadOnlyPut(key).into()).boxed()
+    ) -> Result<OverwriteStatus> {
+        Err(ErrorKind::ReadOnlyPut(key).into())
     }
 }
 
@@ -77,16 +70,15 @@ mod test {
     use super::*;
     use fbinit::FacebookInit;
 
-    use memblob::EagerMemblob;
+    use memblob::Memblob;
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_error_on_write(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let base = EagerMemblob::default();
+        let base = Memblob::default();
         let wrapper = ReadOnlyBlobstore::new(base.clone());
         let key = "foobar".to_string();
 
-        // We're using EagerMemblob (immediate future completion) so calling wait() is fine.
         let r = wrapper
             .put(
                 ctx.clone(),
@@ -99,14 +91,13 @@ mod test {
         assert!(!base_present);
     }
 
-    #[fbinit::compat_test]
+    #[fbinit::test]
     async fn test_error_on_put_with_status(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
-        let base = EagerMemblob::default();
+        let base = Memblob::default();
         let wrapper = ReadOnlyBlobstore::new(base.clone());
         let key = "foobar".to_string();
 
-        // We're using EagerMemblob (immediate future completion) so calling wait() is fine.
         let r = wrapper
             .put_with_status(
                 ctx.clone(),

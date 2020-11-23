@@ -30,6 +30,7 @@ abomonation_derive = "0.5"
 anyhow = "1.0"
 ascii = "1.0"
 async-stream = "0.3"
+async-trait = "0.1.29"
 bitflags = "1.2"
 bytes = { version = "0.5", features = ["serde"] }
 faster-hex = "0.4"

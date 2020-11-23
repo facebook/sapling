@@ -8,9 +8,9 @@
 #![deny(warnings)]
 
 use anyhow::{Error, Result};
+use async_trait::async_trait;
 use blobstore::{Blobstore, BlobstoreGetData};
 use context::CoreContext;
-use futures::future::{BoxFuture, FutureExt};
 use mononoke_types::{BlobstoreBytes, Timestamp};
 use scuba_ext::ScubaSampleBuilder;
 use slog::debug;
@@ -185,56 +185,33 @@ impl<T: Blobstore> RedactedBlobstoreInner<T> {
     }
 }
 
+#[async_trait]
 impl<T: Blobstore> Blobstore for RedactedBlobstoreInner<T> {
-    fn get(
-        &self,
-        ctx: CoreContext,
-        key: String,
-    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>>> {
-        let get = self
-            .access_blobstore(&ctx, &key, config::GET_OPERATION)
-            .map(move |blobstore| blobstore.get(ctx, key));
-        async move { get?.await }.boxed()
+    async fn get(&self, ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
+        let blobstore = self.access_blobstore(&ctx, &key, config::GET_OPERATION)?;
+        blobstore.get(ctx, key).await
     }
 
-    fn put(
-        &self,
-        ctx: CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> BoxFuture<'_, Result<()>> {
-        let put = self
-            .access_blobstore(&ctx, &key, config::PUT_OPERATION)
-            .map(move |blobstore| blobstore.put(ctx, key, value));
-        async move { put?.await }.boxed()
+    async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
+        let blobstore = self.access_blobstore(&ctx, &key, config::PUT_OPERATION)?;
+        blobstore.put(ctx, key, value).await
     }
 
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'_, Result<bool>> {
-        self.blobstore.is_present(ctx, key)
+    async fn is_present(&self, ctx: CoreContext, key: String) -> Result<bool> {
+        self.blobstore.is_present(ctx, key).await
     }
 }
 
-impl<B> Blobstore for RedactedBlobstore<B>
-where
-    B: Blobstore,
-{
-    fn get(
-        &self,
-        ctx: CoreContext,
-        key: String,
-    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>>> {
-        self.inner.get(ctx, key)
+#[async_trait]
+impl<B: Blobstore> Blobstore for RedactedBlobstore<B> {
+    async fn get(&self, ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
+        self.inner.get(ctx, key).await
     }
-    fn put(
-        &self,
-        ctx: CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> BoxFuture<'_, Result<()>> {
-        self.inner.put(ctx, key, value)
+    async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
+        self.inner.put(ctx, key, value).await
     }
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'_, Result<bool>> {
-        self.inner.is_present(ctx, key)
+    async fn is_present(&self, ctx: CoreContext, key: String) -> Result<bool> {
+        self.inner.is_present(ctx, key).await
     }
 }
 
@@ -252,7 +229,7 @@ mod test {
     use context::CoreContext;
     use fbinit::FacebookInit;
     use maplit::hashmap;
-    use memblob::EagerMemblob;
+    use memblob::Memblob;
     use prefixblob::PrefixBlobstore;
 
     #[fbinit::compat_test]
@@ -263,7 +240,7 @@ mod test {
 
         let ctx = CoreContext::test_mock(fb);
 
-        let inner = EagerMemblob::default();
+        let inner = Memblob::default();
         let redacted_pairs = hashmap! {
             redacted_key.clone() => RedactedMetadata {
                 task: redacted_task.clone(),
@@ -320,7 +297,7 @@ mod test {
 
         let ctx = CoreContext::test_mock(fb);
 
-        let inner = EagerMemblob::default();
+        let inner = Memblob::default();
         let redacted_pairs = hashmap! {
             redacted_log_only_key.clone() => RedactedMetadata {
                 task: redacted_task.clone(),

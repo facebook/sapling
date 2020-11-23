@@ -10,7 +10,8 @@ use std::fmt;
 use std::sync::{Arc, Mutex};
 
 use anyhow::{format_err, Result};
-use futures::future::{self, lazy, BoxFuture, FutureExt, TryFutureExt};
+use async_trait::async_trait;
+use futures::future::{BoxFuture, FutureExt};
 
 use blobstore::{
     Blobstore, BlobstoreGetData, BlobstorePutOps, BlobstoreWithLink, OverwriteStatus, PutBehaviour,
@@ -84,39 +85,12 @@ impl MemState {
 ///
 /// Pure in-memory implementation for testing.
 #[derive(Clone)]
-pub struct EagerMemblob {
+pub struct Memblob {
     state: Arc<Mutex<MemState>>,
     put_behaviour: PutBehaviour,
 }
 
-/// As EagerMemblob, but methods are lazy - they wait until polled to do anything.
-#[derive(Clone)]
-pub struct LazyMemblob {
-    state: Arc<Mutex<MemState>>,
-    put_behaviour: PutBehaviour,
-}
-
-impl EagerMemblob {
-    pub fn new(put_behaviour: PutBehaviour) -> Self {
-        Self {
-            state: Arc::new(Mutex::new(MemState::default())),
-            put_behaviour,
-        }
-    }
-
-    pub fn unlink(&self, key: String) -> BoxFuture<'static, Result<Option<()>>> {
-        let mut inner = self.state.lock().expect("lock poison");
-        future::ok(inner.unlink(&key)).boxed()
-    }
-}
-
-impl Default for EagerMemblob {
-    fn default() -> Self {
-        Self::new(DEFAULT_PUT_BEHAVIOUR)
-    }
-}
-
-impl LazyMemblob {
+impl Memblob {
     pub fn new(put_behaviour: PutBehaviour) -> Self {
         Self {
             state: Arc::new(Mutex::new(MemState::default())),
@@ -127,159 +101,73 @@ impl LazyMemblob {
     pub fn unlink(&self, key: String) -> BoxFuture<'static, Result<Option<()>>> {
         let state = self.state.clone();
 
-        lazy(move |_| {
+        async move {
             let mut inner = state.lock().expect("lock poison");
             Ok(inner.unlink(&key))
-        })
+        }
         .boxed()
     }
 }
 
-impl Default for LazyMemblob {
+impl Default for Memblob {
     fn default() -> Self {
         Self::new(DEFAULT_PUT_BEHAVIOUR)
     }
 }
 
-impl BlobstorePutOps for EagerMemblob {
-    fn put_explicit(
+#[async_trait]
+impl BlobstorePutOps for Memblob {
+    async fn put_explicit(
         &self,
         _ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
         put_behaviour: PutBehaviour,
-    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
-        let mut inner = self.state.lock().expect("lock poison");
-
-        future::ok(inner.put(key, value, put_behaviour)).boxed()
-    }
-
-    fn put_with_status(
-        &self,
-        ctx: CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
-        self.put_explicit(ctx, key, value, self.put_behaviour)
-    }
-}
-
-impl Blobstore for EagerMemblob {
-    fn get(
-        &self,
-        _ctx: CoreContext,
-        key: String,
-    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>>> {
-        let inner = self.state.lock().expect("lock poison");
-        future::ok(inner.get(&key).map(|blob_ref| blob_ref.clone().into())).boxed()
-    }
-
-    fn put(
-        &self,
-        ctx: CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> BoxFuture<'_, Result<()>> {
-        BlobstorePutOps::put_with_status(self, ctx, key, value)
-            .map_ok(|_| ())
-            .boxed()
-    }
-}
-
-impl BlobstoreWithLink for EagerMemblob {
-    fn link(
-        &self,
-        _ctx: CoreContext,
-        existing_key: String,
-        link_key: String,
-    ) -> BoxFuture<'_, Result<()>> {
-        let mut inner = self.state.lock().expect("lock poison");
-        future::ready(inner.link(existing_key, link_key)).boxed()
-    }
-}
-
-impl BlobstorePutOps for LazyMemblob {
-    fn put_explicit(
-        &self,
-        _ctx: CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-        put_behaviour: PutBehaviour,
-    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
+    ) -> Result<OverwriteStatus> {
         let state = self.state.clone();
 
-        lazy(move |_| {
-            let mut inner = state.lock().expect("lock poison");
-            Ok(inner.put(key, value, put_behaviour))
-        })
-        .boxed()
+        let mut inner = state.lock().expect("lock poison");
+        Ok(inner.put(key, value, put_behaviour))
     }
 
-    fn put_with_status(
+    async fn put_with_status(
         &self,
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
-        self.put_explicit(ctx, key, value, self.put_behaviour)
+    ) -> Result<OverwriteStatus> {
+        self.put_explicit(ctx, key, value, self.put_behaviour).await
     }
 }
 
-impl Blobstore for LazyMemblob {
-    fn get(
-        &self,
-        _ctx: CoreContext,
-        key: String,
-    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>>> {
+#[async_trait]
+impl Blobstore for Memblob {
+    async fn get(&self, _ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
         let state = self.state.clone();
 
-        lazy(move |_| {
-            let inner = state.lock().expect("lock poison");
-            Ok(inner.get(&key).map(|bytes| bytes.clone().into()))
-        })
-        .boxed()
+        let inner = state.lock().expect("lock poison");
+        Ok(inner.get(&key).map(|bytes| bytes.clone().into()))
     }
 
-    fn put(
-        &self,
-        ctx: CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> BoxFuture<'_, Result<()>> {
-        BlobstorePutOps::put_with_status(self, ctx, key, value)
-            .map_ok(|_| ())
-            .boxed()
+    async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
+        BlobstorePutOps::put_with_status(self, ctx, key, value).await?;
+        Ok(())
     }
 }
 
-impl BlobstoreWithLink for LazyMemblob {
-    fn link(
-        &self,
-        _ctx: CoreContext,
-        existing_key: String,
-        link_key: String,
-    ) -> BoxFuture<'_, Result<()>> {
+#[async_trait]
+impl BlobstoreWithLink for Memblob {
+    async fn link(&self, _ctx: CoreContext, existing_key: String, link_key: String) -> Result<()> {
         let state = self.state.clone();
 
-        lazy(move |_| {
-            let mut inner = state.lock().expect("lock poison");
-            inner.link(existing_key, link_key)
-        })
-        .boxed()
+        let mut inner = state.lock().expect("lock poison");
+        inner.link(existing_key, link_key)
     }
 }
 
-impl fmt::Debug for EagerMemblob {
+impl fmt::Debug for Memblob {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("EagerMemblob")
-            .field("state", &self.state.lock().expect("lock poisoned"))
-            .finish()
-    }
-}
-
-impl fmt::Debug for LazyMemblob {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("LazyMemblob")
+        f.debug_struct("Memblob")
             .field("state", &self.state.lock().expect("lock poisoned"))
             .finish()
     }

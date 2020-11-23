@@ -5,10 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Error;
+use anyhow::Result;
+use async_trait::async_trait;
 use blobstore::{Blobstore, BlobstoreGetData};
 use context::CoreContext;
-use futures::future::BoxFuture;
 use mononoke_types::BlobstoreBytes;
 use std::sync::{Arc, Mutex};
 
@@ -32,31 +32,18 @@ impl<T> TracingBlobstore<T> {
     }
 }
 
-impl<T> Blobstore for TracingBlobstore<T>
-where
-    T: Blobstore,
-{
-    fn get(
-        &self,
-        ctx: CoreContext,
-        key: String,
-    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>, Error>> {
-        let mut gets = self.gets.lock().expect("poisoned lock");
-        gets.push(key.clone());
-
-        self.inner.get(ctx, key)
+#[async_trait]
+impl<T: Blobstore> Blobstore for TracingBlobstore<T> {
+    async fn get(&self, ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
+        self.gets.lock().expect("poisoned lock").push(key.clone());
+        self.inner.get(ctx, key).await
     }
 
-    fn put(
-        &self,
-        ctx: CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> BoxFuture<'_, Result<(), Error>> {
-        self.inner.put(ctx, key, value)
+    async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
+        self.inner.put(ctx, key, value).await
     }
 
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'_, Result<bool, Error>> {
-        self.inner.is_present(ctx, key)
+    async fn is_present(&self, ctx: CoreContext, key: String) -> Result<bool> {
+        self.inner.is_present(ctx, key).await
     }
 }

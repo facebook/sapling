@@ -10,17 +10,18 @@ pub(crate) use crate::{
     ManifestOps, PathOrPrefix, PathTree, TreeInfo,
 };
 use anyhow::{Error, Result};
+use async_trait::async_trait;
 use blobstore::{Blobstore, Loadable, LoadableError, Storable, StoreLoadable};
 use bounded_traversal::bounded_traversal_stream;
 use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{
-    future::{self, BoxFuture, Future, FutureExt},
+    future::{self, Future},
     stream::TryStreamExt,
 };
 use maplit::btreemap;
-use memblob::LazyMemblob;
+use memblob::Memblob;
 use mononoke_types::{BlobstoreBytes, FileType, MPath, MPathElement};
 use pretty_assertions::assert_eq;
 use serde_derive::{Deserialize, Serialize};
@@ -37,45 +38,37 @@ struct TestLeafId(u64);
 #[derive(Debug)]
 struct TestLeaf(String);
 
+#[async_trait]
 impl Loadable for TestLeafId {
     type Value = TestLeaf;
 
-    fn load<'a, B: Blobstore>(
+    async fn load<'a, B: Blobstore>(
         &'a self,
         ctx: CoreContext,
         blobstore: &'a B,
-    ) -> BoxFuture<'a, Result<Self::Value, LoadableError>> {
+    ) -> Result<Self::Value, LoadableError> {
         let key = self.0.to_string();
         let get = blobstore.get(ctx, key.clone());
 
-        async move {
-            let bytes = get.await?.ok_or(LoadableError::Missing(key))?;
-            let bytes = std::str::from_utf8(bytes.as_raw_bytes())
-                .map_err(|err| LoadableError::Error(Error::from(err)))?;
-            Ok(TestLeaf(bytes.to_owned()))
-        }
-        .boxed()
+        let bytes = get.await?.ok_or(LoadableError::Missing(key))?;
+        let bytes = std::str::from_utf8(bytes.as_raw_bytes())
+            .map_err(|err| LoadableError::Error(Error::from(err)))?;
+        Ok(TestLeaf(bytes.to_owned()))
     }
 }
 
+#[async_trait]
 impl Storable for TestLeaf {
     type Key = TestLeafId;
 
-    fn store<B: Blobstore>(
-        self,
-        ctx: CoreContext,
-        blobstore: &B,
-    ) -> BoxFuture<'_, Result<Self::Key, Error>> {
+    async fn store<B: Blobstore>(self, ctx: CoreContext, blobstore: &B) -> Result<Self::Key> {
         let mut hasher = DefaultHasher::new();
         self.0.hash(&mut hasher);
         let key = TestLeafId(hasher.finish());
-        let put = blobstore.put(ctx, key.0.to_string(), BlobstoreBytes::from_bytes(self.0));
-
-        async move {
-            put.await?;
-            Ok(key)
-        }
-        .boxed()
+        blobstore
+            .put(ctx, key.0.to_string(), BlobstoreBytes::from_bytes(self.0))
+            .await?;
+        Ok(key)
     }
 }
 
@@ -85,48 +78,40 @@ struct TestManifestIdU64(u64);
 #[derive(Debug, Serialize, Deserialize)]
 struct TestManifestU64(BTreeMap<MPathElement, Entry<TestManifestIdU64, TestLeafId>>);
 
+#[async_trait]
 impl Loadable for TestManifestIdU64 {
     type Value = TestManifestU64;
 
-    fn load<'a, B: Blobstore>(
+    async fn load<'a, B: Blobstore>(
         &'a self,
         ctx: CoreContext,
         blobstore: &'a B,
-    ) -> BoxFuture<'a, Result<Self::Value, LoadableError>> {
+    ) -> Result<Self::Value, LoadableError> {
         let key = self.0.to_string();
         let get = blobstore.get(ctx, key.clone());
-        async move {
-            let data = get.await?;
-            let bytes = data.ok_or(LoadableError::Missing(key))?;
-            let mf = serde_cbor::from_slice(bytes.as_raw_bytes().as_ref())
-                .map_err(|err| LoadableError::Error(Error::from(err)))?;
-            Ok(mf)
-        }
-        .boxed()
+        let data = get.await?;
+        let bytes = data.ok_or(LoadableError::Missing(key))?;
+        let mf = serde_cbor::from_slice(bytes.as_raw_bytes().as_ref())
+            .map_err(|err| LoadableError::Error(Error::from(err)))?;
+        Ok(mf)
     }
 }
 
+#[async_trait]
 impl Storable for TestManifestU64 {
     type Key = TestManifestIdU64;
 
-    fn store<B: Blobstore>(
-        self,
-        ctx: CoreContext,
-        blobstore: &B,
-    ) -> BoxFuture<'_, Result<Self::Key, Error>> {
+    async fn store<B: Blobstore>(self, ctx: CoreContext, blobstore: &B) -> Result<Self::Key> {
         let blobstore = blobstore.clone();
         let mut hasher = DefaultHasher::new();
         self.0.hash(&mut hasher);
         let key = TestManifestIdU64(hasher.finish());
 
-        async move {
-            let bytes = serde_cbor::to_vec(&self)?;
-            blobstore
-                .put(ctx, key.0.to_string(), BlobstoreBytes::from_bytes(bytes))
-                .await?;
-            Ok(key)
-        }
-        .boxed()
+        let bytes = serde_cbor::to_vec(&self)?;
+        blobstore
+            .put(ctx, key.0.to_string(), BlobstoreBytes::from_bytes(bytes))
+            .await?;
+        Ok(key)
     }
 }
 
@@ -196,14 +181,15 @@ fn derive_test_manifest(
 
 struct Files(TestManifestIdU64);
 
+#[async_trait]
 impl Loadable for Files {
     type Value = BTreeMap<MPath, String>;
 
-    fn load<'a, B: Blobstore>(
+    async fn load<'a, B: Blobstore>(
         &'a self,
         ctx: CoreContext,
         blobstore: &'a B,
-    ) -> BoxFuture<'a, Result<Self::Value, LoadableError>> {
+    ) -> Result<Self::Value, LoadableError> {
         let blobstore = blobstore.clone();
         bounded_traversal_stream(
             256,
@@ -235,11 +221,11 @@ impl Loadable for Files {
             acc.insert(path, leaf);
             future::ok::<_, LoadableError>(acc)
         })
-        .boxed()
+        .await
     }
 }
 
-fn files_reference(files: BTreeMap<&str, &str>) -> Result<BTreeMap<MPath, String>, Error> {
+fn files_reference(files: BTreeMap<&str, &str>) -> Result<BTreeMap<MPath, String>> {
     files
         .into_iter()
         .map(|(path, content)| Ok((MPath::new(path)?, content.to_string())))
@@ -247,7 +233,7 @@ fn files_reference(files: BTreeMap<&str, &str>) -> Result<BTreeMap<MPath, String
 }
 
 #[test]
-fn test_path_tree() -> Result<(), Error> {
+fn test_path_tree() -> Result<()> {
     let tree = PathTree::from_iter(vec![
         (MPath::new("/one/two/three")?, true),
         (MPath::new("/one/two/four")?, true),
@@ -269,8 +255,8 @@ fn test_path_tree() -> Result<(), Error> {
 }
 
 #[fbinit::test]
-async fn test_derive_manifest(fb: FacebookInit) -> Result<(), Error> {
-    let blobstore: Arc<dyn Blobstore> = Arc::new(LazyMemblob::default());
+async fn test_derive_manifest(fb: FacebookInit) -> Result<()> {
+    let blobstore: Arc<dyn Blobstore> = Arc::new(Memblob::default());
     let ctx = CoreContext::test_mock(fb);
 
     // derive manifest
@@ -490,7 +476,7 @@ async fn test_derive_manifest(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-fn make_paths(paths_str: &[&str]) -> Result<BTreeSet<Option<MPath>>, Error> {
+fn make_paths(paths_str: &[&str]) -> Result<BTreeSet<Option<MPath>>> {
     paths_str
         .into_iter()
         .map(|path_str| match path_str {
@@ -501,8 +487,8 @@ fn make_paths(paths_str: &[&str]) -> Result<BTreeSet<Option<MPath>>, Error> {
 }
 
 #[fbinit::test]
-async fn test_find_entries(fb: FacebookInit) -> Result<(), Error> {
-    let blobstore: Arc<dyn Blobstore> = Arc::new(LazyMemblob::default());
+async fn test_find_entries(fb: FacebookInit) -> Result<()> {
+    let blobstore: Arc<dyn Blobstore> = Arc::new(Memblob::default());
     let ctx = CoreContext::test_mock(fb);
 
     let mf0 = derive_test_manifest(
@@ -633,8 +619,8 @@ async fn test_find_entries(fb: FacebookInit) -> Result<(), Error> {
 }
 
 #[fbinit::test]
-async fn test_diff(fb: FacebookInit) -> Result<(), Error> {
-    let blobstore: Arc<dyn Blobstore> = Arc::new(LazyMemblob::default());
+async fn test_diff(fb: FacebookInit) -> Result<()> {
+    let blobstore: Arc<dyn Blobstore> = Arc::new(Memblob::default());
     let ctx = CoreContext::test_mock(fb);
 
     let mf0 = derive_test_manifest(
@@ -782,8 +768,8 @@ async fn test_diff(fb: FacebookInit) -> Result<(), Error> {
 }
 
 #[fbinit::test]
-async fn test_find_intersection_of_diffs(fb: FacebookInit) -> Result<(), Error> {
-    let blobstore: Arc<dyn Blobstore> = Arc::new(LazyMemblob::default());
+async fn test_find_intersection_of_diffs(fb: FacebookInit) -> Result<()> {
+    let blobstore: Arc<dyn Blobstore> = Arc::new(Memblob::default());
     let ctx = CoreContext::test_mock(fb);
 
     let mf0 = derive_test_manifest(
@@ -895,20 +881,20 @@ pub(crate) struct TestManifestStr(
 #[derive(Default, Debug, Clone)]
 pub(crate) struct ManifestStore(pub HashMap<TestManifestIdStr, TestManifestStr>);
 
+#[async_trait]
 impl StoreLoadable<ManifestStore> for TestManifestIdStr {
     type Value = TestManifestStr;
 
-    fn load(
-        &self,
+    async fn load<'a>(
+        &'a self,
         _ctx: CoreContext,
-        store: &ManifestStore,
-    ) -> BoxFuture<'static, Result<Self::Value, LoadableError>> {
-        let value = store
+        store: &'a ManifestStore,
+    ) -> Result<Self::Value, LoadableError> {
+        store
             .0
             .get(&self)
             .cloned()
-            .ok_or(LoadableError::Missing(format!("missing {}", self.0)));
-        async move { value }.boxed()
+            .ok_or_else(|| LoadableError::Missing(format!("missing {}", self.0)))
     }
 }
 

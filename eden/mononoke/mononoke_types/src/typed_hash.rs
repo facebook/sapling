@@ -11,10 +11,10 @@ use std::{result, str::FromStr};
 use abomonation_derive::Abomonation;
 use anyhow::{bail, Result};
 use ascii::{AsciiStr, AsciiString};
+use async_trait::async_trait;
 use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use context::CoreContext;
 use edenapi_types::{ContentId as EdenapiContentId, FsnodeId as EdenapiFsnodeId};
-use futures::future::{BoxFuture, FutureExt};
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
 use sql::mysql;
 
@@ -263,46 +263,41 @@ macro_rules! impl_typed_hash_loadable_storable {
     {
         hash_type => $typed: ident,
     } => {
+        #[async_trait]
         impl Loadable for $typed
         {
             type Value = <$typed as MononokeId>::Value;
 
-            fn load<'a, B: Blobstore>(
+            async fn load<'a, B: Blobstore>(
                 &'a self,
                 ctx: CoreContext,
                 blobstore: &'a B,
-            ) -> BoxFuture<'a, Result<Self::Value, LoadableError>> {
+            ) -> Result<Self::Value, LoadableError> {
                 let id = *self;
                 let blobstore_key = id.blobstore_key();
                 let get = blobstore
                     .get(ctx, blobstore_key.clone());
 
-                async move {
-                    let bytes = get.await?.ok_or(LoadableError::Missing(blobstore_key))?;
-                    let blob: Blob<$typed> = Blob::new(id, bytes.into_raw_bytes());
-                    <$typed as MononokeId>::Value::from_blob(blob).map_err(LoadableError::Error)
-                }
-                .boxed()
+                let bytes = get.await?.ok_or(LoadableError::Missing(blobstore_key))?;
+                let blob: Blob<$typed> = Blob::new(id, bytes.into_raw_bytes());
+                <Self::Value as BlobstoreValue>::from_blob(blob).map_err(LoadableError::Error)
             }
         }
 
+        #[async_trait]
         impl Storable for Blob<$typed>
         {
             type Key = $typed;
 
-            fn store<'a, B: Blobstore>(
+            async fn store<B: Blobstore>(
                 self,
                 ctx: CoreContext,
-                blobstore: &'a B,
-            ) -> BoxFuture<'a, Result<Self::Key>> {
+                blobstore: &B,
+            ) -> Result<Self::Key> {
                 let id = *self.id();
                 let bytes = self.into();
-                let put = blobstore.put(ctx, id.blobstore_key(), bytes);
-
-                async move {
-                    put.await?;
-                    Ok(id)
-                }.boxed()
+                blobstore.put(ctx, id.blobstore_key(), bytes).await?;
+                Ok(id)
             }
         }
     }

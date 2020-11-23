@@ -7,32 +7,27 @@
 
 #![deny(warnings)]
 
-use auto_impl::auto_impl;
-use bytes::{Buf, Bytes};
-use serde_derive::{Deserialize, Serialize};
-
-use std::collections::HashSet;
-use std::fmt;
-use std::ops::{Range, RangeFrom, RangeFull, RangeTo};
+mod counted_blobstore;
+mod disabled;
+mod errors;
 
 use abomonation_derive::Abomonation;
 use anyhow::{Error, Result};
-use futures::future::{BoxFuture, FutureExt};
-use strum_macros::{AsRefStr, Display, EnumIter, EnumString, IntoStaticStr};
-
+use async_trait::async_trait;
+use auto_impl::auto_impl;
+use bytes::{Buf, Bytes};
+use context::CoreContext;
+use serde_derive::{Deserialize, Serialize};
+use std::collections::HashSet;
+use std::fmt;
 use std::io::Cursor;
+use std::ops::{Range, RangeFrom, RangeFull, RangeTo};
+use strum_macros::{AsRefStr, Display, EnumIter, EnumString, IntoStaticStr};
 use thiserror::Error;
 
-use context::CoreContext;
-
-mod counted_blobstore;
 pub use crate::counted_blobstore::CountedBlobstore;
-
-mod errors;
-pub use crate::errors::ErrorKind;
-
-mod disabled;
 pub use crate::disabled::DisabledBlob;
+pub use crate::errors::ErrorKind;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct BlobstoreGetData {
@@ -277,27 +272,21 @@ impl From<BlobstoreBytesSerialisable> for BlobstoreBytes {
 ///
 /// Implementations of Blobstore must be `Clone` if they are to interoperate with other Mononoke
 /// uses of Blobstores
+#[async_trait]
 #[auto_impl(&, Arc, Box)]
 pub trait Blobstore: fmt::Debug + Send + Sync {
     /// Fetch the value associated with `key`, or None if no value is present
-    fn get(&self, ctx: CoreContext, key: String)
-        -> BoxFuture<'_, Result<Option<BlobstoreGetData>>>;
+    async fn get(&self, ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>>;
     /// Associate `value` with `key` for future gets; if `put` is called with different `value`s
     /// for the same key, the implementation may return any `value` it's been given in response
     /// to a `get` for that `key`.
-    fn put(
-        &self,
-        ctx: CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> BoxFuture<'_, Result<()>>;
+    async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()>;
     /// Check that `get` will return a value for a given `key`, and not None. The provided
     /// implentation just calls `get`, and discards the return value; this can be overridden to
     /// avoid transferring data. In the absence of concurrent `put` calls, this must return
     /// `false` if `get` would return `None`, and `true` if `get` would return `Some(_)`.
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'_, Result<bool>> {
-        let get = self.get(ctx, key);
-        async move { Ok(get.await?.is_some()) }.boxed()
+    async fn is_present(&self, ctx: CoreContext, key: String) -> Result<bool> {
+        Ok(self.get(ctx, key).await?.is_some())
     }
 }
 
@@ -361,49 +350,47 @@ pub enum OverwriteStatus {
 }
 
 /// Lower level blobstore put api used by blobstore implementors and admin tooling
+#[async_trait]
 #[auto_impl(Arc, Box)]
 pub trait BlobstorePutOps: Blobstore {
     /// Adds ability to specify the put behaviour explicitly so that even if per process default was
     /// IfAbsent  once could chose to OverwriteAndLog.  Expected to be used only in admin tools
-    fn put_explicit(
+    async fn put_explicit(
         &self,
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
         put_behaviour: PutBehaviour,
-    ) -> BoxFuture<'_, Result<OverwriteStatus>>;
+    ) -> Result<OverwriteStatus>;
 
     /// Similar to `Blobstore::put`, but returns the OverwriteStatus as feedback rather than unit.
     /// Its here rather so we don't reveal the OverwriteStatus to regular put users.
-    fn put_with_status(
+    async fn put_with_status(
         &self,
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'_, Result<OverwriteStatus>>;
+    ) -> Result<OverwriteStatus>;
 }
 
 /// Mixin trait for blobstores that support the `link()` operation
 /// TODO(ahornby) rename to BlobstoreLinkOps for consistency with BlobstorePutOps
+#[async_trait]
 #[auto_impl(Arc, Box)]
 pub trait BlobstoreWithLink: Blobstore {
     // TODO(ahornby) return OverwriteStatus for logging
-    fn link(
-        &self,
-        ctx: CoreContext,
-        existing_key: String,
-        link_key: String,
-    ) -> BoxFuture<'_, Result<()>>;
+    async fn link(&self, ctx: CoreContext, existing_key: String, link_key: String) -> Result<()>;
 }
 
 /// BlobstoreKeySource Interface
 /// Abstract for use with populate_healer
+#[async_trait]
 pub trait BlobstoreKeySource: Blobstore {
-    fn enumerate(
+    async fn enumerate(
         &self,
         ctx: CoreContext,
         range: BlobstoreKeyParam,
-    ) -> BoxFuture<'_, Result<BlobstoreEnumerationData>>;
+    ) -> Result<BlobstoreEnumerationData>;
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
@@ -477,49 +464,49 @@ pub enum LoadableError {
     Missing(String),
 }
 
-pub trait Loadable: Sized + 'static {
-    type Value;
+#[async_trait]
+pub trait Loadable {
+    type Value: Sized + 'static;
 
-    fn load<'a, B: Blobstore>(
+    async fn load<'a, B: Blobstore>(
         &'a self,
         ctx: CoreContext,
         blobstore: &'a B,
-    ) -> BoxFuture<'a, Result<Self::Value, LoadableError>>;
+    ) -> Result<Self::Value, LoadableError>;
 }
 
-pub trait Storable: Sized + 'static {
-    type Key;
+#[async_trait]
+pub trait Storable: Sized {
+    type Key: 'static;
 
-    fn store<B: Blobstore>(
-        self,
-        ctx: CoreContext,
-        blobstore: &B,
-    ) -> BoxFuture<'_, Result<Self::Key>>;
+    async fn store<B: Blobstore>(self, ctx: CoreContext, blobstore: &B) -> Result<Self::Key>;
 }
 
 /// StoreLoadable represents an object that be loaded asynchronously through a given store of type
 /// S. This offers a bit more flexibility over Blobstore's Loadable, which requires that the object
 /// be asynchronously load loadable from a Blobstore. This level of indirection allows for using
 /// Manifest's implementations with Manifests that are not backed by a Blobstore.
+#[async_trait]
 pub trait StoreLoadable<S> {
     type Value;
 
-    fn load<'a>(
+    async fn load<'a>(
         &'a self,
         ctx: CoreContext,
         store: &'a S,
-    ) -> BoxFuture<'a, Result<Self::Value, LoadableError>>;
+    ) -> Result<Self::Value, LoadableError>;
 }
 
 /// For convenience, all Blobstore Loadables are StoreLoadable through any Blobstore.
-impl<L: Loadable, S: Blobstore> StoreLoadable<S> for L {
+#[async_trait]
+impl<L: Loadable + Sync, S: Blobstore> StoreLoadable<S> for L {
     type Value = <L as Loadable>::Value;
 
-    fn load<'a>(
+    async fn load<'a>(
         &'a self,
         ctx: CoreContext,
         store: &'a S,
-    ) -> BoxFuture<'a, Result<Self::Value, LoadableError>> {
-        self.load(ctx, store)
+    ) -> Result<Self::Value, LoadableError> {
+        self.load(ctx, store).await
     }
 }

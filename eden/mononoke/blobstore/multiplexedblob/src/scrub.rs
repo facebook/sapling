@@ -11,6 +11,7 @@ use crate::{
 };
 
 use anyhow::Result;
+use async_trait::async_trait;
 use blobstore::{
     Blobstore, BlobstoreGetData, BlobstoreMetadata, BlobstorePutOps, OverwriteStatus, PutBehaviour,
 };
@@ -18,10 +19,7 @@ use blobstore_sync_queue::BlobstoreSyncQueue;
 use chrono::Duration as ChronoDuration;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{
-    future::{BoxFuture, FutureExt, TryFutureExt},
-    stream::{FuturesUnordered, TryStreamExt},
-};
+use futures::stream::{FuturesUnordered, TryStreamExt};
 use metaconfig_types::{BlobstoreId, MultiplexId, ScrubAction};
 use mononoke_types::{BlobstoreBytes, DateTime};
 use once_cell::sync::OnceCell;
@@ -254,12 +252,9 @@ async fn blobstore_get(
     }
 }
 
+#[async_trait]
 impl Blobstore for ScrubBlobstore {
-    fn get(
-        &self,
-        ctx: CoreContext,
-        key: String,
-    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>>> {
+    async fn get(&self, ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
         cloned!(
             ctx,
             self.scrub_stores,
@@ -270,55 +265,49 @@ impl Blobstore for ScrubBlobstore {
         );
         let inner_blobstore = self.inner.blobstore.clone();
 
-        async move {
-            blobstore_get(
-                inner_blobstore.as_ref(),
-                &ctx,
-                key,
-                queue.as_ref(),
-                scrub_stores.as_ref(),
-                scrub_handler.as_ref(),
-                scrub_action,
-                scuba,
-            )
-            .await
-        }
-        .boxed()
+        blobstore_get(
+            inner_blobstore.as_ref(),
+            &ctx,
+            key,
+            queue.as_ref(),
+            scrub_stores.as_ref(),
+            scrub_handler.as_ref(),
+            scrub_action,
+            scuba,
+        )
+        .await
     }
 
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<'_, Result<bool>> {
-        self.inner.is_present(ctx, key)
+    async fn is_present(&self, ctx: CoreContext, key: String) -> Result<bool> {
+        self.inner.is_present(ctx, key).await
     }
 
-    fn put(
-        &self,
-        ctx: CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> BoxFuture<'_, Result<()>> {
-        BlobstorePutOps::put_with_status(self, ctx, key, value)
-            .map_ok(|_| ())
-            .boxed()
+    async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
+        BlobstorePutOps::put_with_status(self, ctx, key, value).await?;
+        Ok(())
     }
 }
 
+#[async_trait]
 impl BlobstorePutOps for ScrubBlobstore {
-    fn put_explicit(
+    async fn put_explicit(
         &self,
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
         put_behaviour: PutBehaviour,
-    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
-        self.inner.put_explicit(ctx, key, value, put_behaviour)
+    ) -> Result<OverwriteStatus> {
+        self.inner
+            .put_explicit(ctx, key, value, put_behaviour)
+            .await
     }
 
-    fn put_with_status(
+    async fn put_with_status(
         &self,
         ctx: CoreContext,
         key: String,
         value: BlobstoreBytes,
-    ) -> BoxFuture<'_, Result<OverwriteStatus>> {
-        self.inner.put_with_status(ctx, key, value)
+    ) -> Result<OverwriteStatus> {
+        self.inner.put_with_status(ctx, key, value).await
     }
 }

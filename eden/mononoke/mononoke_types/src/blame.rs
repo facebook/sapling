@@ -11,10 +11,10 @@ use crate::{
     ChangesetId, MPath,
 };
 use anyhow::{bail, format_err, Error, Result};
+use async_trait::async_trait;
 use blobstore::{Blobstore, BlobstoreBytes, Loadable, LoadableError};
 use context::CoreContext;
 use fbthrift::compact_protocol;
-use futures::future::{BoxFuture, FutureExt};
 use std::{
     collections::{HashMap, VecDeque},
     convert::TryFrom,
@@ -60,24 +60,22 @@ impl AsRef<FileUnodeId> for BlameId {
     }
 }
 
+#[async_trait]
 impl Loadable for BlameId {
     type Value = BlameMaybeRejected;
 
-    fn load<'a, B: Blobstore>(
+    async fn load<'a, B: Blobstore>(
         &'a self,
         ctx: CoreContext,
         blobstore: &'a B,
-    ) -> BoxFuture<'a, Result<Self::Value, LoadableError>> {
+    ) -> Result<Self::Value, LoadableError> {
         let blobstore_key = self.blobstore_key();
         let fetch = blobstore.get(ctx, blobstore_key.clone());
 
-        async move {
-            let bytes = fetch.await?.ok_or(LoadableError::Missing(blobstore_key))?;
-            let blame_t = compact_protocol::deserialize(bytes.as_raw_bytes().as_ref())?;
-            let blame = BlameMaybeRejected::from_thrift(blame_t)?;
-            Ok(blame)
-        }
-        .boxed()
+        let bytes = fetch.await?.ok_or(LoadableError::Missing(blobstore_key))?;
+        let blame_t = compact_protocol::deserialize(bytes.as_raw_bytes().as_ref())?;
+        let blame = BlameMaybeRejected::from_thrift(blame_t)?;
+        Ok(blame)
     }
 }
 

@@ -8,7 +8,7 @@
 #![type_length_limit = "15000000"]
 #![deny(warnings)]
 
-use anyhow::{anyhow, format_err, Error};
+use anyhow::{anyhow, format_err, Result};
 use blame::BlameRoot;
 use blobrepo::BlobRepo;
 use blobrepo_override::DangerousOverride;
@@ -97,7 +97,7 @@ async fn open_repo_maybe_unredacted(
     logger: &Logger,
     matches: &ArgMatches<'_>,
     data_type: &str,
-) -> Result<BlobRepo, Error> {
+) -> Result<BlobRepo> {
     if UNREDACTED_TYPES.contains(&data_type) {
         args::open_repo_unredacted(fb, logger, matches).await
     } else {
@@ -106,7 +106,7 @@ async fn open_repo_maybe_unredacted(
 }
 
 #[fbinit::main]
-fn main(fb: FacebookInit) -> Result<(), Error> {
+fn main(fb: FacebookInit) -> Result<()> {
     let app = args::MononokeApp::new("Utility to work with bonsai derived data")
         .with_advanced_args_hidden()
         .with_fb303_args()
@@ -260,7 +260,7 @@ async fn run_subcmd<'a>(
     ctx: CoreContext,
     logger: &Logger,
     matches: &'a ArgMatches<'a>,
-) -> Result<(), Error> {
+) -> Result<()> {
     match matches.subcommand() {
         (SUBCOMMAND_BACKFILL_ALL, Some(sub_m)) => {
             let repo = args::open_repo_unredacted(fb, logger, matches).await?;
@@ -389,7 +389,7 @@ async fn run_subcmd<'a>(
                     .await?;
 
             let serialized = serialize_cs_entries(css);
-            fs::write(out_filename, serialized).map_err(Error::from)
+            Ok(fs::write(out_filename, serialized)?)
         }
         (SUBCOMMAND_SINGLE, Some(sub_m)) => {
             let hash_or_bookmark = sub_m
@@ -439,8 +439,8 @@ async fn run_subcmd<'a>(
     }
 }
 
-fn parse_serialized_commits<P: AsRef<Path>>(file: P) -> Result<Vec<ChangesetEntry>, Error> {
-    let data = fs::read(file).map_err(Error::from)?;
+fn parse_serialized_commits<P: AsRef<Path>>(file: P) -> Result<Vec<ChangesetEntry>> {
+    let data = fs::read(file)?;
     deserialize_cs_entries(&Bytes::from(data))
 }
 
@@ -448,7 +448,7 @@ async fn subcommand_backfill_all(
     ctx: &CoreContext,
     repo: &BlobRepo,
     derived_data_types: BTreeSet<String>,
-) -> Result<(), Error> {
+) -> Result<()> {
     info!(ctx.logger(), "derived data types: {:?}", derived_data_types);
     let derivers = derived_data_types
         .iter()
@@ -464,7 +464,7 @@ async fn subcommand_backfill(
     regenerate: bool,
     changesets: Vec<ChangesetId>,
     mut cleaner: Option<impl dry_run::Cleaner>,
-) -> Result<(), Error> {
+) -> Result<()> {
     let derived_utils = &derived_data_utils_unsafe(repo.clone(), derived_data_type.clone())?;
 
     info!(
@@ -493,7 +493,7 @@ async fn subcommand_backfill(
             derived_utils
                 .backfill_batch_dangerous(ctx.clone(), repo.clone(), chunk)
                 .await?;
-            Result::<_, Error>::Ok(chunk_size)
+            Result::<_>::Ok(chunk_size)
         }
         .timed()
         .await;
@@ -528,7 +528,7 @@ async fn subcommand_tail(
     unredacted_repo: BlobRepo,
     use_shared_leases: bool,
     batched: bool,
-) -> Result<(), Error> {
+) -> Result<()> {
     let unredacted_repo = if use_shared_leases {
         // "shared" leases are the default - so we don't need to do anything.
         unredacted_repo
@@ -548,7 +548,7 @@ async fn subcommand_tail(
         .clone()
         .into_iter()
         .map(|name| derived_data_utils(unredacted_repo.clone(), name))
-        .collect::<Result<_, Error>>()?;
+        .collect::<Result<_>>()?;
     slog::info!(
         ctx.logger(),
         "[{}] derived data: {:?}",
@@ -572,10 +572,7 @@ async fn subcommand_tail(
     }
 }
 
-async fn get_most_recent_heads(
-    ctx: &CoreContext,
-    repo: &BlobRepo,
-) -> Result<Vec<ChangesetId>, Error> {
+async fn get_most_recent_heads(ctx: &CoreContext, repo: &BlobRepo) -> Result<Vec<ChangesetId>> {
     repo.bookmarks()
         .list(
             ctx.clone(),
@@ -594,7 +591,7 @@ async fn tail_batch_iteration(
     ctx: &CoreContext,
     repo: &BlobRepo,
     derive_utils: &[Arc<dyn DerivedUtils>],
-) -> Result<(), Error> {
+) -> Result<()> {
     let heads = get_most_recent_heads(ctx, repo).await?;
     let derive_graph = derived_data_utils::build_derive_graph(
         ctx,
@@ -644,7 +641,7 @@ async fn tail_batch_iteration(
                             );
                         }
                     }
-                    Ok::<_, Error>(())
+                    Result::<_>::Ok(())
                 }
             },
         )
@@ -659,7 +656,7 @@ async fn tail_one_iteration(
     ctx: &CoreContext,
     repo: &BlobRepo,
     derive_utils: &[Arc<dyn DerivedUtils>],
-) -> Result<(), Error> {
+) -> Result<()> {
     let heads = get_most_recent_heads(ctx, repo).await?;
 
     // Find heads that needs derivation and find their oldest underived ancestor
@@ -680,7 +677,7 @@ async fn tail_one_iteration(
                         now.timestamp_secs() - oldest_underived.author_date().timestamp_secs()
                     });
 
-                    Result::<_, Error>::Ok((derive, pending, oldest_underived_age))
+                    Result::<_>::Ok((derive, pending, oldest_underived_age))
                 }
             }
         })
@@ -735,7 +732,7 @@ async fn subcommand_single(
     repo: &BlobRepo,
     csid: ChangesetId,
     derived_data_types: Vec<String>,
-) -> Result<(), Error> {
+) -> Result<()> {
     let repo = repo.dangerous_override(|_| Arc::new(DummyLease {}) as Arc<dyn LeaseOps>);
     let mut derived_utils = vec![];
     for ty in derived_data_types {
@@ -768,10 +765,10 @@ async fn subcommand_single(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use async_trait::async_trait;
     use blobrepo_hg::BlobRepoHg;
     use blobstore::{Blobstore, BlobstoreBytes, BlobstoreGetData};
     use fixtures::linear;
-    use futures::future::{BoxFuture, FutureExt};
     use mercurial_types::HgChangesetId;
     use std::{
         str::FromStr,
@@ -781,7 +778,7 @@ mod tests {
     use unodes::RootUnodeManifestId;
 
     #[fbinit::compat_test]
-    async fn test_tail_one_iteration(fb: FacebookInit) -> Result<(), Error> {
+    async fn test_tail_one_iteration(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let repo = linear::getrepo(fb).await;
         let derived_utils = derived_data_utils(repo.clone(), RootUnodeManifestId::NAME)?;
@@ -794,7 +791,7 @@ mod tests {
     }
 
     #[fbinit::compat_test]
-    async fn test_single(fb: FacebookInit) -> Result<(), Error> {
+    async fn test_single(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let repo = linear::getrepo(fb).await;
 
@@ -828,7 +825,7 @@ mod tests {
     }
 
     #[fbinit::compat_test]
-    async fn test_backfill_data_latest(fb: FacebookInit) -> Result<(), Error> {
+    async fn test_backfill_data_latest(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let repo = linear::getrepo(fb).await;
 
@@ -848,7 +845,7 @@ mod tests {
     }
 
     #[fbinit::compat_test]
-    async fn test_backfill_data_batch(fb: FacebookInit) -> Result<(), Error> {
+    async fn test_backfill_data_batch(fb: FacebookInit) -> Result<()> {
         let ctx = CoreContext::test_mock(fb);
         let repo = linear::getrepo(fb).await;
 
@@ -883,7 +880,7 @@ mod tests {
     }
 
     #[fbinit::compat_test]
-    async fn test_backfill_data_failing_blobstore(fb: FacebookInit) -> Result<(), Error> {
+    async fn test_backfill_data_failing_blobstore(fb: FacebookInit) -> Result<()> {
         // The test exercises that derived data mapping entries are written only after
         // all other blobstore writes were successful i.e. mapping entry shouldn't exist
         // if any of the corresponding blobs weren't successfully saved
@@ -940,28 +937,19 @@ mod tests {
         }
     }
 
+    #[async_trait]
     impl Blobstore for FailingBlobstore {
-        fn put(
-            &self,
-            ctx: CoreContext,
-            key: String,
-            value: BlobstoreBytes,
-        ) -> BoxFuture<'_, Result<(), Error>> {
+        async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
             if key.find(&self.bad_key_substring).is_some() {
-                tokio::time::delay_for(Duration::from_millis(250))
-                    .map(|()| Err(format_err!("failed")))
-                    .boxed()
+                tokio::time::delay_for(Duration::from_millis(250)).await;
+                Err(format_err!("failed"))
             } else {
-                self.inner.put(ctx, key, value)
+                self.inner.put(ctx, key, value).await
             }
         }
 
-        fn get(
-            &self,
-            ctx: CoreContext,
-            key: String,
-        ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>, Error>> {
-            self.inner.get(ctx, key)
+        async fn get(&self, ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
+            self.inner.get(ctx, key).await
         }
     }
 
@@ -984,23 +972,15 @@ mod tests {
         }
     }
 
+    #[async_trait]
     impl Blobstore for CountingBlobstore {
-        fn put(
-            &self,
-            ctx: CoreContext,
-            key: String,
-            value: BlobstoreBytes,
-        ) -> BoxFuture<'_, Result<(), Error>> {
+        async fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
             self.count.fetch_add(1, Ordering::Relaxed);
-            self.inner.put(ctx, key, value)
+            self.inner.put(ctx, key, value).await
         }
 
-        fn get(
-            &self,
-            ctx: CoreContext,
-            key: String,
-        ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>, Error>> {
-            self.inner.get(ctx, key)
+        async fn get(&self, ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
+            self.inner.get(ctx, key).await
         }
     }
 }

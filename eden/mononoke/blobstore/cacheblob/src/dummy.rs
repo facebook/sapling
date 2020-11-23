@@ -6,8 +6,9 @@
  */
 
 use anyhow::Result;
+use async_trait::async_trait;
 use context::CoreContext;
-use futures::future::{BoxFuture, FutureExt};
+use futures::future::BoxFuture;
 
 use blobstore::BlobstoreGetData;
 
@@ -17,36 +18,32 @@ use crate::{CacheOps, LeaseOps};
 #[derive(Clone, Debug)]
 pub struct DummyLease {}
 
+#[async_trait]
 impl LeaseOps for DummyLease {
-    fn try_add_put_lease(&self, _key: &str) -> BoxFuture<'_, Result<bool>> {
-        async { Ok(true) }.boxed()
+    async fn try_add_put_lease(&self, _key: &str) -> Result<bool> {
+        Ok(true)
     }
 
     fn renew_lease_until(&self, _ctx: CoreContext, _key: &str, _done: BoxFuture<'static, ()>) {}
 
-    fn wait_for_other_leases(&self, _key: &str) -> BoxFuture<'_, ()> {
-        async {}.boxed()
-    }
+    async fn wait_for_other_leases(&self, _key: &str) {}
 
-    fn release_lease(&self, _key: &str) -> BoxFuture<'_, ()> {
-        async {}.boxed()
-    }
+    async fn release_lease(&self, _key: &str) {}
 }
 
 /// A dummy implementation of CacheOps that meets the letter of the spec, but uselessly
 #[derive(Clone, Debug)]
 pub struct DummyCache {}
 
+#[async_trait]
 impl CacheOps for DummyCache {
-    fn get(&self, _key: &str) -> BoxFuture<'_, Option<BlobstoreGetData>> {
-        async { None }.boxed()
+    async fn get(&self, _key: &str) -> Option<BlobstoreGetData> {
+        None
     }
 
-    fn put(&self, _key: &str, _value: BlobstoreGetData) -> BoxFuture<'_, ()> {
-        async {}.boxed()
-    }
+    async fn put(&self, _key: &str, _value: BlobstoreGetData) {}
 
-    fn check_present(&self, _key: &str) -> BoxFuture<'_, bool> {
-        async { false }.boxed()
+    async fn check_present(&self, _key: &str) -> bool {
+        false
     }
 }

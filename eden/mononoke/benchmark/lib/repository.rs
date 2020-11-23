@@ -28,7 +28,7 @@ use filenodes::{FilenodeInfo, FilenodeRangeResult, FilenodeResult, Filenodes, Pr
 use filestore::FilestoreConfig;
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::{future, Future};
-use memblob::EagerMemblob;
+use memblob::Memblob;
 use mercurial_mutation::SqlHgMutationStoreBuilder;
 use mercurial_types::{HgChangesetIdPrefix, HgChangesetIdsResolvedFromPrefix, HgFileNodeId};
 use mononoke_types::{
@@ -67,7 +67,7 @@ impl Default for DelaySettings {
 pub fn new_benchmark_repo(fb: FacebookInit, settings: DelaySettings) -> Result<BlobRepo> {
     let blobstore: Arc<dyn Blobstore> = {
         let delayed: Arc<dyn Blobstore> = Arc::new(DelayedBlobstore::new(
-            EagerMemblob::default(),
+            Memblob::default(),
             settings.blobstore_get_dist,
             settings.blobstore_put_dist,
         ));

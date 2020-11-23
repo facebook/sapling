@@ -8,11 +8,11 @@
 use super::*;
 
 use anyhow::format_err;
+use async_trait::async_trait;
 use blobstore::BlobstoreGetData;
 use blobstore_sync_queue::SqlBlobstoreSyncQueue;
 use bytes::Bytes;
 use fbinit::FacebookInit;
-use futures::future::{BoxFuture, FutureExt};
 use sql_construct::SqlConstruct;
 use std::{iter::FromIterator, sync::Mutex};
 
@@ -20,12 +20,12 @@ use std::{iter::FromIterator, sync::Mutex};
 ///
 /// Pure in-memory implementation for testing, with put failure
 #[derive(Clone, Debug)]
-pub struct PutFailingEagerMemblob {
+pub struct PutFailingMemblob {
     hash: Arc<Mutex<HashMap<String, BlobstoreBytes>>>,
     fail_puts: Arc<Mutex<bool>>,
 }
 
-impl PutFailingEagerMemblob {
+impl PutFailingMemblob {
     pub fn new() -> Self {
         Self {
             hash: Arc::new(Mutex::new(HashMap::new())),
@@ -46,59 +46,50 @@ impl PutFailingEagerMemblob {
     }
 }
 
-impl Blobstore for PutFailingEagerMemblob {
-    fn put(
-        &self,
-        _ctx: CoreContext,
-        key: String,
-        value: BlobstoreBytes,
-    ) -> BoxFuture<'_, Result<(), Error>> {
+#[async_trait]
+impl Blobstore for PutFailingMemblob {
+    async fn put(&self, _ctx: CoreContext, key: String, value: BlobstoreBytes) -> Result<()> {
         let mut inner = self.hash.lock().expect("lock poison");
         let inner_flag = self.fail_puts.lock().expect("lock poison");
         let res = if *inner_flag {
-            Err(Error::msg("Put failed for key"))
+            Err(format_err!("Put failed for key"))
         } else {
             inner.insert(key, value);
             Ok(())
         };
-        async move { res }.boxed()
+        res
     }
 
-    fn get(
-        &self,
-        _ctx: CoreContext,
-        key: String,
-    ) -> BoxFuture<'_, Result<Option<BlobstoreGetData>, Error>> {
+    async fn get(&self, _ctx: CoreContext, key: String) -> Result<Option<BlobstoreGetData>> {
         let inner = self.hash.lock().expect("lock poison");
         let bytes = inner.get(&key).map(|bytes| bytes.clone().into());
-        async move { Ok(bytes) }.boxed()
+        Ok(bytes)
     }
 }
 
+#[async_trait]
 trait BlobstoreSyncQueueExt {
-    fn len<'out>(
+    async fn len<'out>(
         &'out self,
         ctx: &'out CoreContext,
         multiplex_id: MultiplexId,
-    ) -> BoxFuture<'out, Result<usize>>;
+    ) -> Result<usize>;
 }
 
+#[async_trait]
 impl<Q: BlobstoreSyncQueue> BlobstoreSyncQueueExt for Q {
-    fn len<'out>(
+    async fn len<'out>(
         &'out self,
         ctx: &'out CoreContext,
         multiplex_id: MultiplexId,
-    ) -> BoxFuture<'out, Result<usize>> {
+    ) -> Result<usize> {
         let zero_date = DateTime::now();
-        async move {
-            let entries = self.iter(ctx, None, multiplex_id, zero_date, 100).await?;
-            if entries.len() >= 100 {
-                Err(format_err!("too many entries"))
-            } else {
-                Ok(entries.len())
-            }
+        let entries = self.iter(ctx, None, multiplex_id, zero_date, 100).await?;
+        if entries.len() >= 100 {
+            Err(format_err!("too many entries"))
+        } else {
+            Ok(entries.len())
         }
-        .boxed()
     }
 }
 
@@ -106,7 +97,7 @@ fn make_empty_stores(
     n: usize,
 ) -> (
     Vec<BlobstoreId>,
-    HashMap<BlobstoreId, Arc<PutFailingEagerMemblob>>,
+    HashMap<BlobstoreId, Arc<PutFailingMemblob>>,
     Arc<HashMap<BlobstoreId, Arc<dyn Blobstore>>>,
 ) {
     let mut test_bids = Vec::new();
@@ -114,7 +105,7 @@ fn make_empty_stores(
     let mut underlying_stores = HashMap::new();
     for i in 0..n {
         test_bids.push(BlobstoreId::new(i as u64));
-        let u = Arc::new(PutFailingEagerMemblob::new());
+        let u = Arc::new(PutFailingMemblob::new());
         let s: Arc<dyn Blobstore> = u.clone();
         test_stores.insert(test_bids[i], s);
         underlying_stores.insert(test_bids[i], u);
@@ -128,12 +119,16 @@ fn make_value(value: &str) -> BlobstoreBytes {
     BlobstoreBytes::from_bytes(Bytes::copy_from_slice(value.as_bytes()))
 }
 
-fn put_value(ctx: &CoreContext, store: Option<&Arc<dyn Blobstore>>, key: &str, value: &str) {
-    store.map(|s| s.put(ctx.clone(), key.to_string(), make_value(value)));
+async fn put_value(ctx: &CoreContext, store: Option<&Arc<dyn Blobstore>>, key: &str, value: &str) {
+    if let Some(store) = store {
+        let _ = store
+            .put(ctx.clone(), key.to_string(), make_value(value))
+            .await;
+    }
 }
 
 #[fbinit::test]
-async fn fetch_blob_missing_all(fb: FacebookInit) -> Result<(), Error> {
+async fn fetch_blob_missing_all(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (bids, _underlying_stores, stores) = make_empty_stores(3);
     let r = fetch_blob(
@@ -152,7 +147,7 @@ async fn fetch_blob_missing_all(fb: FacebookInit) -> Result<(), Error> {
 }
 
 #[fbinit::test]
-async fn heal_blob_missing_all_stores(fb: FacebookInit) -> Result<(), Error> {
+async fn heal_blob_missing_all_stores(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (bids, underlying_stores, stores) = make_empty_stores(3);
     let healing_deadline = DateTime::from_rfc3339("2019-07-01T12:00:00.00Z")?;
@@ -205,12 +200,12 @@ async fn heal_blob_missing_all_stores(fb: FacebookInit) -> Result<(), Error> {
 }
 
 #[fbinit::test]
-async fn heal_blob_where_queue_and_stores_match_on_missing(fb: FacebookInit) -> Result<(), Error> {
+async fn heal_blob_where_queue_and_stores_match_on_missing(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (bids, underlying_stores, stores) = make_empty_stores(3);
-    put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
-    put_value(&ctx, stores.get(&bids[1]), "specialk", "specialv");
-    put_value(&ctx, stores.get(&bids[2]), "dummyk", "dummyv");
+    put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv").await;
+    put_value(&ctx, stores.get(&bids[1]), "specialk", "specialv").await;
+    put_value(&ctx, stores.get(&bids[2]), "dummyk", "dummyv").await;
     let healing_deadline = DateTime::from_rfc3339("2019-07-01T12:00:00.00Z")?;
     let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z")?;
     let mp = MultiplexId::new(1);
@@ -249,12 +244,12 @@ async fn heal_blob_where_queue_and_stores_match_on_missing(fb: FacebookInit) -> 
 }
 
 #[fbinit::test]
-async fn fetch_blob_missing_none(fb: FacebookInit) -> Result<(), Error> {
+async fn fetch_blob_missing_none(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (bids, _underlying_stores, stores) = make_empty_stores(3);
-    put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
-    put_value(&ctx, stores.get(&bids[1]), "specialk", "specialv");
-    put_value(&ctx, stores.get(&bids[2]), "specialk", "specialv");
+    put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv").await;
+    put_value(&ctx, stores.get(&bids[1]), "specialk", "specialv").await;
+    put_value(&ctx, stores.get(&bids[2]), "specialk", "specialv").await;
     let r = fetch_blob(
         &ctx,
         stores.as_ref(),
@@ -268,7 +263,7 @@ async fn fetch_blob_missing_none(fb: FacebookInit) -> Result<(), Error> {
 }
 
 #[fbinit::test]
-async fn test_heal_blob_entry_too_recent(fb: FacebookInit) -> Result<(), Error> {
+async fn test_heal_blob_entry_too_recent(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (bids, underlying_stores, stores) = make_empty_stores(3);
     let healing_deadline = DateTime::from_rfc3339("2019-07-01T12:00:00.00Z")?;
@@ -302,12 +297,12 @@ async fn test_heal_blob_entry_too_recent(fb: FacebookInit) -> Result<(), Error> 
 }
 
 #[fbinit::test]
-async fn heal_blob_missing_none(fb: FacebookInit) -> Result<(), Error> {
+async fn heal_blob_missing_none(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (bids, underlying_stores, stores) = make_empty_stores(3);
-    put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
-    put_value(&ctx, stores.get(&bids[1]), "specialk", "specialv");
-    put_value(&ctx, stores.get(&bids[2]), "specialk", "specialv");
+    put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv").await;
+    put_value(&ctx, stores.get(&bids[1]), "specialk", "specialv").await;
+    put_value(&ctx, stores.get(&bids[2]), "specialk", "specialv").await;
     let healing_deadline = DateTime::from_rfc3339("2019-07-01T12:00:00.00Z")?;
     let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z")?;
     let mp = MultiplexId::new(1);
@@ -339,11 +334,11 @@ async fn heal_blob_missing_none(fb: FacebookInit) -> Result<(), Error> {
 }
 
 #[fbinit::test]
-async fn test_heal_blob_only_unknown_queue_entry(fb: FacebookInit) -> Result<(), Error> {
+async fn test_heal_blob_only_unknown_queue_entry(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (bids, underlying_stores, stores) = make_empty_stores(2);
     let (bids_from_different_config, _, _) = make_empty_stores(5);
-    put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
+    put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv").await;
     let healing_deadline = DateTime::from_rfc3339("2019-07-01T12:00:00.00Z")?;
     let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z")?;
     let mp = MultiplexId::new(1);
@@ -383,11 +378,11 @@ async fn test_heal_blob_only_unknown_queue_entry(fb: FacebookInit) -> Result<(),
 }
 
 #[fbinit::test]
-async fn heal_blob_some_unknown_queue_entry(fb: FacebookInit) -> Result<(), Error> {
+async fn heal_blob_some_unknown_queue_entry(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (bids, underlying_stores, stores) = make_empty_stores(2);
     let (bids_from_different_config, _, _) = make_empty_stores(5);
-    put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
+    put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv").await;
     let healing_deadline = DateTime::from_rfc3339("2019-07-01T12:00:00.00Z")?;
     let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z")?;
     let mp = MultiplexId::new(1);
@@ -430,10 +425,10 @@ async fn heal_blob_some_unknown_queue_entry(fb: FacebookInit) -> Result<(), Erro
 }
 
 #[fbinit::test]
-async fn fetch_blob_missing_some(fb: FacebookInit) -> Result<(), Error> {
+async fn fetch_blob_missing_some(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (bids, _underlying_stores, stores) = make_empty_stores(3);
-    put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
+    put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv").await;
     let r = fetch_blob(
         &ctx,
         stores.as_ref(),
@@ -451,14 +446,12 @@ async fn fetch_blob_missing_some(fb: FacebookInit) -> Result<(), Error> {
 }
 
 #[fbinit::test]
-async fn heal_blob_where_queue_and_stores_mismatch_on_missing(
-    fb: FacebookInit,
-) -> Result<(), Error> {
+async fn heal_blob_where_queue_and_stores_mismatch_on_missing(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (bids, underlying_stores, stores) = make_empty_stores(3);
-    put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
-    put_value(&ctx, stores.get(&bids[1]), "specialk", "specialv");
-    put_value(&ctx, stores.get(&bids[2]), "dummyk", "dummyv");
+    put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv").await;
+    put_value(&ctx, stores.get(&bids[1]), "specialk", "specialv").await;
+    put_value(&ctx, stores.get(&bids[2]), "dummyk", "dummyv").await;
     let healing_deadline = DateTime::from_rfc3339("2019-07-01T12:00:00.00Z")?;
     let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z")?;
     let mp = MultiplexId::new(1);
@@ -501,14 +494,12 @@ async fn heal_blob_where_queue_and_stores_mismatch_on_missing(
 }
 
 #[fbinit::test]
-async fn heal_blob_where_store_and_queue_match_all_put_fails(
-    fb: FacebookInit,
-) -> Result<(), Error> {
+async fn heal_blob_where_store_and_queue_match_all_put_fails(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (bids, underlying_stores, stores) = make_empty_stores(3);
-    put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
-    put_value(&ctx, stores.get(&bids[1]), "specialk", "specialv");
-    put_value(&ctx, stores.get(&bids[2]), "dummyk", "dummyv");
+    put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv").await;
+    put_value(&ctx, stores.get(&bids[1]), "specialk", "specialv").await;
+    put_value(&ctx, stores.get(&bids[2]), "dummyk", "dummyv").await;
     let healing_deadline = DateTime::from_rfc3339("2019-07-01T12:00:00.00Z")?;
     let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z")?;
     let mp = MultiplexId::new(1);
@@ -557,14 +548,12 @@ async fn heal_blob_where_store_and_queue_match_all_put_fails(
 }
 
 #[fbinit::test]
-async fn heal_blob_where_store_and_queue_mismatch_some_put_fails(
-    fb: FacebookInit,
-) -> Result<(), Error> {
+async fn heal_blob_where_store_and_queue_mismatch_some_put_fails(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (bids, underlying_stores, stores) = make_empty_stores(3);
-    put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
-    put_value(&ctx, stores.get(&bids[1]), "dummyk", "dummyk");
-    put_value(&ctx, stores.get(&bids[2]), "dummyk", "dummyv");
+    put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv").await;
+    put_value(&ctx, stores.get(&bids[1]), "dummyk", "dummyk").await;
+    put_value(&ctx, stores.get(&bids[2]), "dummyk", "dummyv").await;
     let healing_deadline = DateTime::from_rfc3339("2019-07-01T12:00:00.00Z")?;
     let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z")?;
     let mp = MultiplexId::new(1);
@@ -613,10 +602,10 @@ async fn heal_blob_where_store_and_queue_mismatch_some_put_fails(
 }
 
 #[fbinit::test]
-async fn healer_heal_with_failing_blobstore(fb: FacebookInit) -> Result<(), Error> {
+async fn healer_heal_with_failing_blobstore(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (bids, underlying_stores, stores) = make_empty_stores(2);
-    put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
+    put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv").await;
     underlying_stores.get(&bids[1]).unwrap().fail_puts();
 
     let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z")?;
@@ -668,14 +657,14 @@ async fn healer_heal_with_failing_blobstore(fb: FacebookInit) -> Result<(), Erro
 }
 
 #[fbinit::test]
-async fn healer_heal_with_default_multiplex_id(fb: FacebookInit) -> Result<(), Error> {
+async fn healer_heal_with_default_multiplex_id(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (bids, underlying_stores, stores) = make_empty_stores(2);
     let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z")?;
     let mp = MultiplexId::new(1);
     let old_mp = MultiplexId::new(-1);
 
-    put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
+    put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv").await;
 
     let op0 = OperationKey::gen();
     let op1 = OperationKey::gen();
@@ -702,14 +691,14 @@ async fn healer_heal_with_default_multiplex_id(fb: FacebookInit) -> Result<(), E
 }
 
 #[fbinit::test]
-async fn healer_heal_complete_batch(fb: FacebookInit) -> Result<(), Error> {
+async fn healer_heal_complete_batch(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (bids, _underlying_stores, stores) = make_empty_stores(2);
     let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z")?;
     let mp = MultiplexId::new(1);
 
-    put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
-    put_value(&ctx, stores.get(&bids[1]), "specialk", "specialv");
+    put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv").await;
+    put_value(&ctx, stores.get(&bids[1]), "specialk", "specialv").await;
 
     let op0 = OperationKey::gen();
     let op1 = OperationKey::gen();
@@ -730,14 +719,14 @@ async fn healer_heal_complete_batch(fb: FacebookInit) -> Result<(), Error> {
 }
 
 #[fbinit::test]
-async fn healer_heal_incomplete_batch(fb: FacebookInit) -> Result<(), Error> {
+async fn healer_heal_incomplete_batch(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::test_mock(fb);
     let (bids, _underlying_stores, stores) = make_empty_stores(2);
     let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z")?;
     let mp = MultiplexId::new(1);
 
-    put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
-    put_value(&ctx, stores.get(&bids[1]), "specialk", "specialv");
+    put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv").await;
+    put_value(&ctx, stores.get(&bids[1]), "specialk", "specialv").await;
 
     let op0 = OperationKey::gen();
     let op1 = OperationKey::gen();

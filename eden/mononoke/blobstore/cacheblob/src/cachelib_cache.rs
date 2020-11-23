@@ -5,21 +5,18 @@
  * GNU General Public License version 2.
  */
 
-use std::fmt;
-use std::sync::Arc;
-
+use async_trait::async_trait;
+use blobstore::{Blobstore, BlobstoreGetData, CountedBlobstore};
 use bytes::Bytes;
-
-use crate::locking_cache::CacheOps;
 use cachelib::LruCachePool;
 use context::PerfCounterType;
-use futures::future::{BoxFuture, FutureExt};
-
-use blobstore::{Blobstore, BlobstoreGetData, CountedBlobstore};
+use std::fmt;
+use std::sync::Arc;
 
 use crate::dummy::DummyLease;
 use crate::in_process_lease::InProcessLease;
 use crate::locking_cache::CacheBlobstore;
+use crate::locking_cache::CacheOps;
 
 const MAX_CACHELIB_VALUE_SIZE: u64 = 4 * 1024 * 1024;
 
@@ -111,17 +108,18 @@ where
     )
 }
 
+#[async_trait]
 impl CacheOps for CachelibOps {
     const HIT_COUNTER: Option<PerfCounterType> = Some(PerfCounterType::CachelibHits);
     const MISS_COUNTER: Option<PerfCounterType> = Some(PerfCounterType::CachelibMisses);
     const CACHE_NAME: &'static str = "cachelib";
 
-    fn get(&self, key: &str) -> BoxFuture<'_, Option<BlobstoreGetData>> {
+    async fn get(&self, key: &str) -> Option<BlobstoreGetData> {
         let blob = self.blob_pool.get(key);
-        async move { blob.ok()?.map(BlobstoreGetData::decode).transpose().ok()? }.boxed()
+        blob.ok()?.map(BlobstoreGetData::decode).transpose().ok()?
     }
 
-    fn put(&self, key: &str, value: BlobstoreGetData) -> BoxFuture<'_, ()> {
+    async fn put(&self, key: &str, value: BlobstoreGetData) {
         // A failure to set presence is considered fine, here.
         let _ = self.presence_pool.set(key, Bytes::from(b"P".as_ref()));
 
@@ -133,14 +131,12 @@ impl CacheOps for CachelibOps {
         if let Ok(bytes) = value.encode(encode_limit) {
             let _ = self.blob_pool.set(key, bytes);
         }
-
-        async {}.boxed()
     }
 
     /// Ask the cache if it knows whether the backing store has a value for this key. Returns
     /// `true` if there is definitely a value (i.e. cache entry in Present or Known state), `false`
     /// otherwise (Empty or Leased states).
-    fn check_present(&self, key: &str) -> BoxFuture<'_, bool> {
+    async fn check_present(&self, key: &str) -> bool {
         let presence_pool = self
             .presence_pool
             .get(key)
@@ -152,7 +148,7 @@ impl CacheOps for CachelibOps {
             .map(|opt| opt.is_some())
             .unwrap_or(false);
 
-        async move { presence_pool || blob_pool }.boxed()
+        presence_pool || blob_pool
     }
 }
 
