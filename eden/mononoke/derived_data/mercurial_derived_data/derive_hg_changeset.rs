@@ -25,12 +25,12 @@ use futures_stats::futures01::Timed;
 use manifest::ManifestOps;
 use mercurial_types::{
     blobs::{
-        ChangesetMetadata, ContentBlobMeta, HgBlobChangeset, HgBlobEntry, HgChangesetContent,
+        ChangesetMetadata, ContentBlobMeta, HgBlobChangeset, HgChangesetContent,
         UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash,
     },
-    HgChangesetId, HgFileNodeId, HgManifestId, HgParents, Type,
+    HgChangesetId, HgEntryId, HgFileNodeId, HgManifestId, HgParents,
 };
-use mononoke_types::{BonsaiChangeset, ChangesetId, FileChange, MPath};
+use mononoke_types::{BonsaiChangeset, ChangesetId, FileChange, FileType, MPath};
 use stats::prelude::*;
 use std::collections::HashMap;
 use time_ext::DurationExt;
@@ -53,7 +53,7 @@ fn store_file_change(
     path: &MPath,
     change: &FileChange,
     copy_from: Option<(MPath, HgFileNodeId)>,
-) -> impl Future<Item = HgBlobEntry, Error = Error> + Send {
+) -> impl Future<Item = (FileType, HgFileNodeId), Error = Error> + Send {
     // If we produced a hg change that has copy info, then the Bonsai should have copy info
     // too. However, we could have Bonsai copy info without having copy info in the hg change
     // if we stripped it out to produce a hg changeset for an Octopus merge and the copy info
@@ -79,11 +79,7 @@ fn store_file_change(
                 if parent_envelope.content_id() == change.content_id()
                     && change.copy_from().is_none()
                 {
-                    Some(HgBlobEntry::new(
-                        store,
-                        parent.into_nodehash(),
-                        Type::File(change.file_type()),
-                    ))
+                    Some((change.file_type(), parent))
                 } else {
                     None
                 }
@@ -159,9 +155,18 @@ fn store_file_change(
                                 path: path.clone(),
                             };
                             match upload_entry.upload(ctx, repo.get_blobstore().boxed()) {
-                                Ok((_, upload_fut)) => {
-                                    upload_fut.map(move |(entry, _)| entry).left_future()
-                                }
+                                Ok((_, upload_fut)) => upload_fut
+                                    .and_then(move |(entry, _)| {
+                                        match entry.get_hash() {
+                                            HgEntryId::Manifest(_) => Err(Error::msg(
+                                                "UploadHgFileEntry cannot return a manifest",
+                                            )),
+                                            HgEntryId::File(file_type, filenode_id) => {
+                                                Ok((file_type, filenode_id))
+                                            }
+                                        }
+                                    })
+                                    .left_future(),
                                 Err(err) => future::err(err).right_future(),
                             }
                         }

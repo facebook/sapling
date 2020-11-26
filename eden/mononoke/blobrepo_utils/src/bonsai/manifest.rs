@@ -22,8 +22,8 @@ use futures_old::{
 use manifest::{bonsai_diff, BonsaiDiffFileChange, Diff, Entry, ManifestOps};
 use mercurial_derived_data::derive_hg_manifest;
 use mercurial_types::{
-    blobs::{BlobManifest, HgBlobChangeset, HgBlobEntry},
-    HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash, Type,
+    blobs::{BlobManifest, HgBlobChangeset},
+    HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash,
 };
 use mononoke_types::{DateTime, FileType};
 use slog::{debug, Logger};
@@ -353,7 +353,7 @@ fn apply_diff(
 ) -> impl Future<Item = HgNodeHash, Error = Error> + Send {
     let changes: Vec<_> = diff_result
         .into_iter()
-        .map(|result| (result.path().clone(), make_entry(&repo, &result)))
+        .map(|result| (result.path().clone(), make_entry(&result)))
         .collect();
     derive_hg_manifest(ctx, repo.get_blobstore().boxed(), manifestids, changes)
         .map(|manifest_id| manifest_id.into_nodehash())
@@ -361,17 +361,12 @@ fn apply_diff(
 
 // XXX should this be in a more central place?
 fn make_entry(
-    repo: &BlobRepo,
     diff_result: &BonsaiDiffFileChange<HgFileNodeId>,
-) -> Option<HgBlobEntry> {
+) -> Option<(FileType, HgFileNodeId)> {
     use self::BonsaiDiffFileChange::*;
 
     match diff_result {
-        Changed(_, ft, entry_id) | ChangedReusedId(_, ft, entry_id) => {
-            let blobstore = repo.get_blobstore().boxed();
-            let hash = entry_id.into_nodehash();
-            Some(HgBlobEntry::new(blobstore, hash, Type::File(*ft)))
-        }
+        Changed(_, ft, entry_id) | ChangedReusedId(_, ft, entry_id) => Some((*ft, *entry_id)),
         Deleted(_path) => None,
     }
 }

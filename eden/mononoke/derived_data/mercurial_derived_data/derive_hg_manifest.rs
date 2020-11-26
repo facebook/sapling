@@ -21,10 +21,10 @@ use futures_old::{future, Future, IntoFuture};
 use manifest::{derive_manifest_with_io_sender, Entry, LeafInfo, Traced, TreeInfo};
 use mercurial_types::{
     blobs::{
-        ContentBlobMeta, HgBlobEntry, UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash,
+        ContentBlobMeta, UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash,
         UploadHgTreeEntry,
     },
-    HgEntryId, HgFileNodeId, HgManifestId,
+    HgFileNodeId, HgManifestId,
 };
 use mononoke_types::{FileType, MPath, RepoPath};
 use std::{io::Write, sync::Arc};
@@ -37,7 +37,7 @@ pub fn derive_hg_manifest(
     ctx: CoreContext,
     blobstore: Arc<dyn Blobstore>,
     parents: impl IntoIterator<Item = HgManifestId>,
-    changes: impl IntoIterator<Item = (MPath, Option<HgBlobEntry>)> + 'static,
+    changes: impl IntoIterator<Item = (MPath, Option<(FileType, HgFileNodeId)>)> + 'static,
 ) -> impl Future<Item = HgManifestId, Error = Error> {
     let parents: Vec<_> = parents
         .into_iter()
@@ -162,7 +162,7 @@ fn create_hg_manifest(
 fn create_hg_file(
     ctx: CoreContext,
     blobstore: Arc<dyn Blobstore>,
-    leaf_info: LeafInfo<Traced<ParentIndex, (FileType, HgFileNodeId)>, HgBlobEntry>,
+    leaf_info: LeafInfo<Traced<ParentIndex, (FileType, HgFileNodeId)>, (FileType, HgFileNodeId)>,
 ) -> impl Future<Item = ((), Traced<ParentIndex, (FileType, HgFileNodeId)>), Error = Error> {
     let LeafInfo {
         leaf,
@@ -172,14 +172,7 @@ fn create_hg_file(
 
     // TODO: move `Blobrepo::store_file_changes` logic in here
     if let Some(leaf) = leaf {
-        return match leaf.get_hash() {
-            HgEntryId::Manifest(_) => {
-                future::err(Error::msg("changes can not contain tree entry")).left_future()
-            }
-            HgEntryId::File(file_type, filenode_id) => {
-                future::ok(((), Traced::generate((file_type, filenode_id)))).left_future()
-            }
-        };
+        return future::ok(((), Traced::generate(leaf))).left_future();
     }
 
     // Leaf was not provided, try to resolve same-content different parents leaf. Since filenode
