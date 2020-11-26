@@ -8,6 +8,7 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
+use ::manifest::Entry;
 use anyhow::{anyhow, bail, Context, Error};
 use bytes::Bytes;
 use cloned::cloned;
@@ -36,7 +37,7 @@ use lfs_import_lib::lfs_upload;
 use mercurial_revlog::{manifest, revlog::RevIdx, RevlogChangeset, RevlogEntry, RevlogRepo};
 use mercurial_types::{
     blobs::{
-        ChangesetMetadata, ContentBlobMeta, File, HgBlobChangeset, HgBlobEntry, LFSContent,
+        ChangesetMetadata, ContentBlobMeta, File, HgBlobChangeset, LFSContent,
         UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash, UploadHgTreeEntry,
     },
     HgBlob, HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash, MPath, RepoPath, Type,
@@ -173,7 +174,7 @@ fn upload_entry(
     lfs_uploader: Arc<JobProcessor<LFSContent, ContentMetadata>>,
     entry: RevlogEntry,
     path: Option<MPath>,
-) -> BoxFuture<(HgBlobEntry, RepoPath), Error> {
+) -> BoxFuture<(Entry<HgManifestId, HgFileNodeId>, RepoPath), Error> {
     let blobrepo = blobrepo.clone();
 
     let ty = entry.get_type();
@@ -210,28 +211,27 @@ fn upload_entry(
                         p2,
                         path: RepoPath::DirectoryPath(path),
                     };
-                    let (_, upload_fut) = try_boxfuture!(upload.upload(ctx, blobstore));
+                    let (_, upload_fut) = try_boxfuture!(upload.upload_as_entry(ctx, blobstore));
                     upload_fut
                 }
                 (Type::Tree, true) => Err(Error::msg("Inconsistent data: externally stored Tree"))
                     .into_future()
                     .boxify(),
-                (Type::File(ft), false) => {
+                (Type::File(..), false) => {
                     let upload = UploadHgFileEntry {
                         upload_node_id,
                         contents: UploadHgFileContents::RawBytes(
                             content.into_inner(),
                             filestore_config,
                         ),
-                        file_type: ft,
                         p1: p1.map(HgFileNodeId::new),
                         p2: p2.map(HgFileNodeId::new),
                         path,
                     };
-                    let (_, upload_fut) = try_boxfuture!(upload.upload(ctx, blobstore));
+                    let (_, upload_fut) = try_boxfuture!(upload.upload_as_entry(ctx, blobstore));
                     spawn_future(upload_fut).boxify()
                 }
-                (Type::File(ft), true) => {
+                (Type::File(..), true) => {
                     let p1 = p1.map(HgFileNodeId::new);
                     let p2 = p2.map(HgFileNodeId::new);
 
@@ -250,12 +250,12 @@ fn upload_entry(
                             let upload = UploadHgFileEntry {
                                 upload_node_id,
                                 contents: UploadHgFileContents::ContentUploaded(cbmeta),
-                                file_type: ft,
                                 p1,
                                 p2,
                                 path,
                             };
-                            let (_, upload_fut) = try_boxfuture!(upload.upload(ctx, blobstore));
+                            let (_, upload_fut) =
+                                try_boxfuture!(upload.upload_as_entry(ctx, blobstore));
                             spawn_future(upload_fut).boxify()
                         })
                         .boxify()

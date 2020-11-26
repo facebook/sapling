@@ -17,6 +17,7 @@ consts = { path = "consts" }
 context = { path = "../server/context" }
 derived_data_utils = { path = "../derived_data/utils" }
 lfs_import_lib = { path = "../lfs_import_lib" }
+manifest = { path = "../manifest" }
 mercurial_revlog = { path = "../mercurial/revlog" }
 mercurial_types = { path = "../mercurial/types" }
 mononoke_types = { path = "../mononoke_types" }

@@ -138,8 +138,8 @@ fn create_hg_manifest(
     }
     .upload(ctx, blobstore);
 
-    let (hash, upload_fut) = match uploader {
-        Ok((hash, fut)) => (hash, fut.map(|_| ())),
+    let (mfid, upload_fut) = match uploader {
+        Ok((mfid, fut)) => (mfid, fut.map(|_| ())),
         Err(e) => return Err(e).into_future().left_future(),
     };
 
@@ -153,7 +153,7 @@ fn create_hg_manifest(
     };
 
     blobstore_fut
-        .map(move |()| ((), Traced::generate(HgManifestId::new(hash))))
+        .map(move |()| ((), Traced::generate(mfid)))
         .right_future()
 }
 
@@ -230,10 +230,9 @@ async fn resolve_conflict(
         copy_from: None,
     };
 
-    let (entry, _) = UploadHgFileEntry {
+    let (filenode_id, _) = UploadHgFileEntry {
         upload_node_id: UploadHgNodeHash::Generate,
         contents: UploadHgFileContents::ContentUploaded(contents),
-        file_type,
         p1,
         p2,
         path,
@@ -243,12 +242,7 @@ async fn resolve_conflict(
     .compat()
     .await?;
 
-    let (file_type, filenode) = entry
-        .get_hash()
-        .to_filenode()
-        .expect("UploadHgFileEntry returned manifest entry");
-
-    Ok((file_type, filenode))
+    Ok((file_type, filenode_id))
 }
 
 /// Extract hg-relevant parents from a set of Traced entries. This means we ignore any parents

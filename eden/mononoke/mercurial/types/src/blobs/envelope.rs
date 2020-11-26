@@ -6,10 +6,12 @@
  */
 
 use super::file::File;
-use crate::{HgFileEnvelope, HgFileNodeId, HgManifestEnvelope, HgParents, MPath};
+use crate::{
+    blobs::BlobManifest, HgFileEnvelope, HgFileNodeId, HgManifestEnvelope, HgParents, MPath,
+};
 use anyhow::Result;
 
-pub trait HgBlobEnvelope {
+pub trait HgBlobEnvelope: Send + Sync + 'static {
     fn get_parents(&self) -> HgParents;
     fn get_copy_info(&self) -> Result<Option<(MPath, HgFileNodeId)>>;
     fn get_size(&self) -> Option<u64>;
@@ -37,6 +39,20 @@ impl HgBlobEnvelope for HgManifestEnvelope {
     fn get_parents(&self) -> HgParents {
         let (p1, p2) = self.parents();
         HgParents::new(p1, p2)
+    }
+
+    fn get_copy_info(&self) -> Result<Option<(MPath, HgFileNodeId)>> {
+        Ok(None)
+    }
+
+    fn get_size(&self) -> Option<u64> {
+        None
+    }
+}
+
+impl HgBlobEnvelope for BlobManifest {
+    fn get_parents(&self) -> HgParents {
+        self.hg_parents()
     }
 
     fn get_copy_info(&self) -> Result<Option<(MPath, HgFileNodeId)>> {

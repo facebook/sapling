@@ -7,6 +7,7 @@
 
 use crate::stats::*;
 use crate::upload_blobs::UploadableHgBlob;
+use ::manifest::Entry;
 use anyhow::{bail, Context, Error, Result};
 use blobrepo::BlobRepo;
 use blobrepo_hg::{ChangesetHandle, CreateChangeset};
@@ -25,28 +26,28 @@ use mercurial_revlog::{
     manifest::{Details, ManifestContent},
 };
 use mercurial_types::{
-    blobs::{ChangesetMetadata, ContentBlobMeta, HgBlobEntry},
-    HgChangesetId, HgManifestId, HgNodeHash, HgNodeKey, MPath, RepoPath, NULL_HASH,
+    blobs::{ChangesetMetadata, ContentBlobMeta},
+    HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash, HgNodeKey, MPath, RepoPath, NULL_HASH,
 };
 use scuba_ext::ScubaSampleBuilder;
 use std::collections::HashMap;
 use std::ops::AddAssign;
 use wirepack::TreemanifestEntry;
 
-type Filelogs = HashMap<HgNodeKey, Shared<OldBoxFuture<(HgBlobEntry, RepoPath), Compat<Error>>>>;
+type Filelogs = HashMap<HgNodeKey, Shared<OldBoxFuture<(HgFileNodeId, RepoPath), Compat<Error>>>>;
 type ContentBlobs = HashMap<HgNodeKey, ContentBlobMeta>;
 type Manifests = HashMap<HgNodeKey, <TreemanifestEntry as UploadableHgBlob>::Value>;
 type UploadedChangesets = HashMap<HgChangesetId, ChangesetHandle>;
 
-type HgBlobFuture = OldBoxFuture<(HgBlobEntry, RepoPath), Error>;
-type HgBlobStream = OldBoxStream<(HgBlobEntry, RepoPath), Error>;
+type HgBlobFuture = OldBoxFuture<(Entry<HgManifestId, HgFileNodeId>, RepoPath), Error>;
+type HgBlobStream = OldBoxStream<(Entry<HgManifestId, HgFileNodeId>, RepoPath), Error>;
 
 /// In order to generate the DAG of dependencies between Root Manifest and other Manifests and
 /// Filelogs we need to walk that DAG.
 /// This represents the manifests and file nodes introduced by a particular changeset.
 pub struct NewBlobs {
     // root_manifest can be None f.e. when commit removes all the content of the repo
-    root_manifest: OldBoxFuture<Option<(HgBlobEntry, RepoPath)>, Error>,
+    root_manifest: OldBoxFuture<Option<(HgManifestId, RepoPath)>, Error>,
     // sub_entries has both submanifest and filenode entries.
     sub_entries: HgBlobStream,
     // This is returned as a Vec rather than a Stream so that the path and metadata are
@@ -77,7 +78,6 @@ impl NewBlobs {
         manifests: &Manifests,
         filelogs: &Filelogs,
         content_blobs: &ContentBlobs,
-        repo: BlobRepo,
     ) -> Result<Self> {
         if manifest_root_id.into_nodehash() == NULL_HASH {
             // If manifest root id is NULL_HASH then there is no content in this changest
@@ -117,10 +117,7 @@ impl NewBlobs {
                 (entries, content_blobs, root_manifest)
             }
             None => {
-                let entry = (
-                    HgBlobEntry::new_root(repo.blobstore().boxed(), manifest_root_id),
-                    RepoPath::RootPath,
-                );
+                let entry = (manifest_root_id, RepoPath::RootPath);
                 (vec![], vec![], old_future::ok(Some(entry)).boxify())
             }
         };
@@ -193,7 +190,10 @@ impl NewBlobs {
                     entries.push(
                         blobfuture
                             .clone()
-                            .map(|it| (*it).clone())
+                            .map(|it| {
+                                let (id, path) = (*it).clone();
+                                (Entry::Tree(id), path)
+                            })
                             .from_err()
                             .boxify(),
                     );
@@ -221,7 +221,10 @@ impl NewBlobs {
                     entries.push(
                         blobfuture
                             .clone()
-                            .map(|it| (*it).clone())
+                            .map(|it| {
+                                let (id, path) = (*it).clone();
+                                (Entry::Leaf(id), path)
+                            })
                             .from_err()
                             .boxify(),
                     );
@@ -300,7 +303,6 @@ pub async fn upload_changeset(
         &manifests,
         &filelogs,
         &content_blobs,
-        repo.clone(),
     )?;
 
     let cs_metadata = ChangesetMetadata {

@@ -17,8 +17,8 @@ use blobrepo::BlobRepo;
 use context::CoreContext;
 use mercurial_revlog::manifest::ManifestContent;
 use mercurial_types::{
-    blobs::{HgBlobEntry, UploadHgNodeHash, UploadHgTreeEntry},
-    HgNodeHash, HgNodeKey,
+    blobs::{UploadHgNodeHash, UploadHgTreeEntry},
+    HgManifestId, HgNodeHash, HgNodeKey,
 };
 use mononoke_types::RepoPath;
 use wirepack::TreemanifestEntry;
@@ -72,7 +72,7 @@ impl UploadableHgBlob for TreemanifestEntry {
         ManifestContent,
         Option<HgNodeHash>,
         Option<HgNodeHash>,
-        Shared<BoxFuture<(HgBlobEntry, RepoPath), Compat<Error>>>,
+        Shared<BoxFuture<(HgManifestId, RepoPath), Compat<Error>>>,
     );
 
     fn upload(self, ctx: CoreContext, repo: &BlobRepo) -> Result<(HgNodeKey, Self::Value)> {

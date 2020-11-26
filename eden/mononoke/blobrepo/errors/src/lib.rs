@@ -9,8 +9,8 @@
 
 use ascii::AsciiString;
 use mercurial_types::{
-    blobs::HgBlobChangeset, HgBlob, HgChangesetId, HgFileNodeId, HgNodeHash, HgParents, MPath,
-    RepoPath, Type,
+    blobs::HgBlobChangeset, HgBlob, HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash,
+    HgParents, MPath, RepoPath, Type,
 };
 use mononoke_types::{hash::Sha256, ChangesetId, FileType};
 use std::fmt;
@@ -66,7 +66,7 @@ pub enum ErrorKind {
     #[error("Serialization of node failed {0} ({1})")]
     SerializationFailed(HgNodeHash, bincode::Error),
     #[error("Root manifest is not a manifest (type {0})")]
-    BadRootManifest(Type),
+    BadRootManifest(HgManifestId),
     #[error("Manifest type {0} does not match uploaded type {1}")]
     ManifestTypeMismatch(Type, Type),
     #[error("Node generation failed for unknown reason")]

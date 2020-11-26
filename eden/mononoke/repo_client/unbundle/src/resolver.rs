@@ -41,10 +41,7 @@ use mercurial_bundles::{
 };
 use mercurial_mutation::HgMutationEntry;
 use mercurial_revlog::changeset::RevlogChangeset;
-use mercurial_types::{
-    blobs::{ContentBlobMeta, HgBlobEntry},
-    HgChangesetId, HgNodeKey, RepoPath,
-};
+use mercurial_types::{blobs::ContentBlobMeta, HgChangesetId, HgFileNodeId, HgNodeKey, RepoPath};
 use metaconfig_types::{PushrebaseFlags, RepoReadOnly};
 use mononoke_types::{BlobstoreValue, BonsaiChangeset, ChangesetId, RawBundle2, RawBundle2Id};
 use pushrebase::HgReplayData;
@@ -76,7 +73,7 @@ mod UNBUNDLE_STATS {
 
 pub type Changesets = Vec<(HgChangesetId, RevlogChangeset)>;
 type Filelogs =
-    HashMap<HgNodeKey, Shared<OldBoxFuture<(HgBlobEntry, RepoPath), FailureCompat<Error>>>>;
+    HashMap<HgNodeKey, Shared<OldBoxFuture<(HgFileNodeId, RepoPath), FailureCompat<Error>>>>;
 type ContentBlobs = HashMap<HgNodeKey, ContentBlobMeta>;
 type Manifests = HashMap<HgNodeKey, <TreemanifestEntry as UploadableHgBlob>::Value>;
 pub type UploadedBonsais = HashSet<BonsaiChangeset>;

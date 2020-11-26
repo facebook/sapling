@@ -8,6 +8,7 @@
 use crate::bonsai_generation::{create_bonsai_changeset_object, save_bonsai_changeset_object};
 use crate::repo_commit::*;
 use crate::{BlobRepoHg, ErrorKind};
+use ::manifest::Entry;
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry};
@@ -22,8 +23,8 @@ use futures_old::sync::oneshot;
 use futures_old::IntoFuture;
 use futures_stats::Timed;
 use mercurial_types::{
-    blobs::{ChangesetMetadata, HgBlobChangeset, HgBlobEntry},
-    HgManifestId, HgNodeHash, RepoPath,
+    blobs::{ChangesetMetadata, HgBlobChangeset},
+    HgFileNodeId, HgManifestId, HgNodeHash, RepoPath,
 };
 use mononoke_types::{BlobstoreValue, BonsaiChangeset, ChangesetId, MPath};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
@@ -50,8 +51,8 @@ pub struct CreateChangeset {
     pub p1: Option<ChangesetHandle>,
     pub p2: Option<ChangesetHandle>,
     // root_manifest can be None f.e. when commit removes all the content of the repo
-    pub root_manifest: BoxFuture<Option<(HgBlobEntry, RepoPath)>, Error>,
-    pub sub_entries: BoxStream<(HgBlobEntry, RepoPath), Error>,
+    pub root_manifest: BoxFuture<Option<(HgManifestId, RepoPath)>, Error>,
+    pub sub_entries: BoxStream<(Entry<HgManifestId, HgFileNodeId>, RepoPath), Error>,
     pub cs_metadata: ChangesetMetadata,
     pub must_check_case_conflicts: bool,
     pub create_bonsai_changeset_hook: Option<

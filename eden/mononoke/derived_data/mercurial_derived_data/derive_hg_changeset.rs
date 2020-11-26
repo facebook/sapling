@@ -28,7 +28,7 @@ use mercurial_types::{
         ChangesetMetadata, ContentBlobMeta, HgBlobChangeset, HgChangesetContent,
         UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash,
     },
-    HgChangesetId, HgEntryId, HgFileNodeId, HgManifestId, HgParents,
+    HgChangesetId, HgFileNodeId, HgManifestId, HgParents,
 };
 use mononoke_types::{BonsaiChangeset, ChangesetId, FileChange, FileType, MPath};
 use stats::prelude::*;
@@ -149,23 +149,13 @@ fn store_file_change(
                                     size: change.size(),
                                     copy_from: copy_from.clone(),
                                 }),
-                                file_type: change.file_type(),
                                 p1,
                                 p2,
                                 path: path.clone(),
                             };
                             match upload_entry.upload(ctx, repo.get_blobstore().boxed()) {
                                 Ok((_, upload_fut)) => upload_fut
-                                    .and_then(move |(entry, _)| {
-                                        match entry.get_hash() {
-                                            HgEntryId::Manifest(_) => Err(Error::msg(
-                                                "UploadHgFileEntry cannot return a manifest",
-                                            )),
-                                            HgEntryId::File(file_type, filenode_id) => {
-                                                Ok((file_type, filenode_id))
-                                            }
-                                        }
-                                    })
+                                    .map(move |(filenode_id, _)| (change.file_type(), filenode_id))
                                     .left_future(),
                                 Err(err) => future::err(err).right_future(),
                             }

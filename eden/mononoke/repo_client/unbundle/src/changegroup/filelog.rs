@@ -27,12 +27,8 @@ use blobstore::Loadable;
 use filestore::FetchKey;
 use mercurial_bundles::changegroup::CgDeltaChunk;
 use mercurial_types::{
-    blobs::{
-        ContentBlobMeta, File, HgBlobEntry, UploadHgFileContents, UploadHgFileEntry,
-        UploadHgNodeHash,
-    },
-    delta, Delta, FileType, HgFileNodeId, HgNodeHash, HgNodeKey, MPath, RepoPath, RevFlags,
-    NULL_HASH,
+    blobs::{ContentBlobMeta, File, UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash},
+    delta, Delta, HgFileNodeId, HgNodeHash, HgNodeKey, MPath, RepoPath, RevFlags, NULL_HASH,
 };
 use remotefilelog::create_raw_filenode_blob;
 
@@ -69,7 +65,7 @@ impl UploadableHgBlob for Filelog {
     //   implements Error.
     type Value = (
         ContentBlobMeta,
-        Shared<BoxFuture<(HgBlobEntry, RepoPath), Compat<Error>>>,
+        Shared<BoxFuture<(HgFileNodeId, RepoPath), Compat<Error>>>,
     );
 
     fn upload(self, ctx: CoreContext, repo: &BlobRepo) -> Result<(HgNodeKey, Self::Value)> {
@@ -90,8 +86,6 @@ impl UploadableHgBlob for Filelog {
         let upload = UploadHgFileEntry {
             upload_node_id: UploadHgNodeHash::Checked(node_key.hash),
             contents,
-            // XXX should this really be Regular?
-            file_type: FileType::Regular,
             p1: self.p1.map(HgFileNodeId::new),
             p2: self.p2.map(HgFileNodeId::new),
             path,

@@ -34,8 +34,7 @@ pub use blobrepo_common::changed_files::compute_changed_files;
 use blobstore::{Blobstore, ErrorKind as BlobstoreError, Loadable};
 use context::CoreContext;
 use mercurial_types::{
-    blobs::{ChangesetMetadata, HgBlobChangeset, HgBlobEntry, HgChangesetContent},
-    manifest,
+    blobs::{ChangesetMetadata, HgBlobChangeset, HgBlobEnvelope, HgChangesetContent},
     nodehash::{HgFileNodeId, HgManifestId},
     HgChangesetId, HgNodeHash, HgNodeKey, HgParents, MPath, MPathElement, RepoPath, NULL_HASH,
 };
@@ -144,18 +143,18 @@ impl ChangesetHandle {
 /// set of blobs uploaded, and all filenodes present.
 struct UploadEntriesState {
     /// All the blobs that have been uploaded in this changeset
-    uploaded_entries: HashMap<RepoPath, HgBlobEntry>,
+    uploaded_entries: HashMap<RepoPath, Entry<HgManifestId, HgFileNodeId>>,
     /// Parent hashes (if any) of the blobs that have been uploaded in this changeset. Used for
     /// validation of this upload - all parents must either have been uploaded in this changeset,
     /// or be present in the blobstore before the changeset can complete.
     parents: HashSet<HgNodeKey>,
-    blobstore: RepoBlobstore,
 }
 
 #[derive(Clone)]
 pub struct UploadEntries {
     scuba_logger: ScubaSampleBuilder,
     inner: Arc<Mutex<UploadEntriesState>>,
+    blobstore: RepoBlobstore,
 }
 
 impl UploadEntries {
@@ -165,8 +164,8 @@ impl UploadEntries {
             inner: Arc::new(Mutex::new(UploadEntriesState {
                 uploaded_entries: HashMap::new(),
                 parents: HashSet::new(),
-                blobstore,
             })),
+            blobstore,
         }
     }
 
@@ -174,37 +173,20 @@ impl UploadEntries {
         self.scuba_logger.clone()
     }
 
-    /// Parse a manifest and record the referenced blobs so that we know whether or not we have
-    /// a complete changeset with all blobs, or whether there is missing data.
-    async fn process_manifest(
+    async fn find_parents<E: HgBlobEnvelope>(
         &self,
         ctx: CoreContext,
-        entry: &HgBlobEntry,
+        entry: impl Loadable<Value = E>,
         path: RepoPath,
     ) -> Result<()> {
-        if entry.get_type() != manifest::Type::Tree {
-            Err(Error::from(ErrorKind::NotAManifest(
-                entry.get_hash().into_nodehash(),
-                entry.get_type(),
-            )))
-        } else {
-            self.find_parents(ctx.clone(), entry, path.clone()).await
-        }
-    }
+        let entry = entry.load(ctx, &self.blobstore).await?;
 
-    async fn find_parents(
-        &self,
-        ctx: CoreContext,
-        entry: &HgBlobEntry,
-        path: RepoPath,
-    ) -> Result<()> {
-        let inner_mutex = self.inner.clone();
-        let parents = entry.get_parents(ctx).await?;
-        let mut inner = inner_mutex.lock().expect("Lock poisoned");
+        let parents = entry.get_parents();
         let node_keys = parents.into_iter().map(move |hash| HgNodeKey {
             path: path.clone(),
             hash,
         });
+        let mut inner = self.inner.lock().expect("Lock poisoned");
         inner.parents.extend(node_keys);
         Ok(())
     }
@@ -214,21 +196,15 @@ impl UploadEntries {
     /// `process_one_entry` and can be called after it.
     /// It is safe to call this multiple times, but not recommended - every manifest passed to
     /// this function is assumed required for this commit, even if it is not the root.
-    pub async fn process_root_manifest(&self, ctx: CoreContext, entry: &HgBlobEntry) -> Result<()> {
-        if entry.get_type() != manifest::Type::Tree {
-            Err(Error::from(ErrorKind::NotAManifest(
-                entry.get_hash().into_nodehash(),
-                entry.get_type(),
-            )))
-        } else {
-            self.process_one_entry(ctx, entry, RepoPath::root()).await
-        }
+    pub async fn process_root_manifest(&self, ctx: CoreContext, entry: HgManifestId) -> Result<()> {
+        self.process_one_entry(ctx, Entry::Tree(entry), RepoPath::root())
+            .await
     }
 
     pub async fn process_one_entry(
         &self,
         ctx: CoreContext,
-        entry: &HgBlobEntry,
+        entry: Entry<HgManifestId, HgFileNodeId>,
         path: RepoPath,
     ) -> Result<()> {
         {
@@ -236,26 +212,27 @@ impl UploadEntries {
             inner.uploaded_entries.insert(path.clone(), entry.clone());
         }
 
-        let (err_context, res) = if entry.get_type() == manifest::Type::Tree {
-            STATS::process_tree_entry.add_value(1);
-            (
-                format!(
-                    "While processing manifest with id {} and path {}",
-                    entry.get_hash(),
-                    path
-                ),
-                self.process_manifest(ctx, entry, path).await,
-            )
-        } else {
-            STATS::process_file_entry.add_value(1);
-            (
-                format!(
-                    "While processing file with id {} and path {}",
-                    entry.get_hash(),
-                    path
-                ),
-                self.find_parents(ctx, &entry, path).await,
-            )
+        let (err_context, res) = match entry {
+            Entry::Tree(manifest_id) => {
+                STATS::process_tree_entry.add_value(1);
+                (
+                    format!(
+                        "While processing manifest with id {} and path {}",
+                        manifest_id, path
+                    ),
+                    self.find_parents(ctx, manifest_id, path).await,
+                )
+            }
+            Entry::Leaf(filenode_id) => {
+                STATS::process_file_entry.add_value(1);
+                (
+                    format!(
+                        "While processing file with id {} and path {}",
+                        filenode_id, path
+                    ),
+                    self.find_parents(ctx, filenode_id, path).await,
+                )
+            }
         };
 
         res.context(err_context)
@@ -296,8 +273,7 @@ impl UploadEntries {
         parent_manifest_ids: Vec<HgManifestId>,
     ) -> OldBoxFuture<(), Error> {
         let required_checks = {
-            let inner = self.inner.lock().expect("Lock poisoned");
-            let blobstore = inner.blobstore.clone();
+            let blobstore = self.blobstore.clone();
             let boxed_blobstore = blobstore.boxed();
             find_intersection_of_diffs(
                 ctx.clone(),
@@ -343,13 +319,14 @@ impl UploadEntries {
 
         let parent_checks = {
             let inner = self.inner.lock().expect("Lock poisoned");
+            let blobstore = self.blobstore.clone();
             let checks: Vec<_> = inner
                 .parents
                 .iter()
                 .map(|node_key| {
                     let assert = Self::assert_in_blobstore(
                         ctx.clone(),
-                        inner.blobstore.clone(),
+                        blobstore.clone(),
                         node_key.hash,
                         node_key.path.is_tree(),
                     );
@@ -407,8 +384,8 @@ impl UploadEntries {
 pub fn process_entries(
     ctx: CoreContext,
     entry_processor: &UploadEntries,
-    root_manifest: OldBoxFuture<Option<(HgBlobEntry, RepoPath)>, Error>,
-    new_child_entries: OldBoxStream<(HgBlobEntry, RepoPath), Error>,
+    root_manifest: OldBoxFuture<Option<(HgManifestId, RepoPath)>, Error>,
+    new_child_entries: OldBoxStream<(Entry<HgManifestId, HgFileNodeId>, RepoPath), Error>,
 ) -> OldBoxFuture<HgManifestId, Error> {
     let root_manifest_fut = root_manifest
         .context("While uploading root manifest")
@@ -417,17 +394,15 @@ pub fn process_entries(
             cloned!(ctx, entry_processor);
             move |root_manifest| match root_manifest {
                 None => old_future::ok(None).boxify(),
-                Some((entry, path)) => {
-                    let hash = entry.get_hash().into_nodehash();
-                    if entry.get_type() == manifest::Type::Tree && path == RepoPath::RootPath {
-                        async move { entry_processor.process_root_manifest(ctx, &entry).await }
+                Some((mfid, path)) => {
+                    if path == RepoPath::RootPath {
+                        async move { entry_processor.process_root_manifest(ctx, mfid).await }
                             .boxed()
                             .compat()
-                            .map(move |_| Some(hash))
+                            .map(move |_| Some(mfid))
                             .boxify()
                     } else {
-                        old_future::err(Error::from(ErrorKind::BadRootManifest(entry.get_type())))
-                            .boxify()
+                        old_future::err(Error::from(ErrorKind::BadRootManifest(mfid))).boxify()
                     }
                 }
             }
@@ -440,7 +415,7 @@ pub fn process_entries(
             cloned!(ctx, entry_processor);
             move |(entry, path)| {
                 cloned!(ctx, entry_processor);
-                async move { entry_processor.process_one_entry(ctx, &entry, path).await }
+                async move { entry_processor.process_one_entry(ctx, entry, path).await }
                     .boxed()
                     .compat()
             }
@@ -454,7 +429,7 @@ pub fn process_entries(
         .and_then(move |(root_hash, ())| {
             match root_hash {
                 None => old_future::ok(HgManifestId::new(NULL_HASH)).boxify(),
-                Some(root_hash) => old_future::ok(HgManifestId::new(root_hash)).boxify(),
+                Some(root_hash) => old_future::ok(root_hash).boxify(),
             }
         })
         .timed(move |stats, result| {

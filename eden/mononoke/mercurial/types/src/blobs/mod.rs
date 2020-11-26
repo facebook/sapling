@@ -14,7 +14,7 @@ mod errors;
 pub use errors::ErrorKind;
 
 pub mod file;
-pub use file::{File, HgBlobEntry, LFSContent, META_MARKER, META_SZ};
+pub use file::{File, LFSContent, META_MARKER, META_SZ};
 
 mod manifest;
 pub use self::manifest::{

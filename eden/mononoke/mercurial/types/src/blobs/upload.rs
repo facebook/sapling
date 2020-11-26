@@ -6,11 +6,12 @@
  */
 
 use super::filenode_lookup::{lookup_filenode_id, store_filenode_id, FileNodeIdPointer};
-use super::{errors::ErrorKind, File, HgBlobEntry, META_SZ};
+use super::{errors::ErrorKind, File, META_SZ};
 use crate::{
     calculate_hg_node_id_stream, FileBytes, HgBlobNode, HgFileEnvelopeMut, HgFileNodeId,
-    HgManifestEnvelopeMut, HgManifestId, HgNodeHash, HgParents, Type,
+    HgManifestEnvelopeMut, HgManifestId, HgNodeHash, HgParents,
 };
+use ::manifest::Entry;
 use anyhow::{bail, Context, Error, Result};
 use blobstore::Blobstore;
 use bytes::Bytes;
@@ -27,7 +28,7 @@ use futures::{
 use futures_ext::{BoxFuture, FutureExt as _};
 use futures_old::{future as future_old, stream, Future as FutureOld, IntoFuture, Stream};
 use futures_stats::{FutureStats, Timed};
-use mononoke_types::{ContentId, FileType, MPath, RepoPath};
+use mononoke_types::{ContentId, MPath, RepoPath};
 use slog::{trace, Logger};
 use stats::prelude::*;
 use std::sync::Arc;
@@ -65,26 +66,25 @@ pub enum UploadHgNodeHash {
 pub struct UploadHgTreeEntry {
     pub upload_node_id: UploadHgNodeHash,
     pub contents: Bytes,
-    pub p1: Option<HgNodeHash>,
+    pub p1: Option<HgNodeHash>, // TODO: How hard is it to udpate those?
     pub p2: Option<HgNodeHash>,
     pub path: RepoPath,
 }
 
 impl UploadHgTreeEntry {
-    // Given the content of a manifest, ensure that there is a matching HgBlobEntry in the repo.
+    // Given the content of a manifest, ensure that there is a matching Entry in the repo.
     // This may not upload the entry or the data blob if the repo is aware of that data already
     // existing in the underlying store.
     //
-    // Note that the HgBlobEntry may not be consistent - parents do not have to be uploaded at this
+    // Note that the Entry may not be consistent - parents do not have to be uploaded at this
     // point, as long as you know their HgNodeHashes; this is also given to you as part of the
-    // result type, so that you can parallelise uploads. Consistency will be verified when
-    // adding the entries to a changeset.
-    // adding the entries to a changeset.
+    // result type, so that you can parallelise uploads. Consistency will be verified when adding
+    // the entries to a changeset.
     pub fn upload(
         self,
         ctx: CoreContext,
         blobstore: Arc<dyn Blobstore>,
-    ) -> Result<(HgNodeHash, BoxFuture<(HgBlobEntry, RepoPath), Error>)> {
+    ) -> Result<(HgManifestId, BoxFuture<(HgManifestId, RepoPath), Error>)> {
         STATS::upload_hg_tree_entry.add_value(1);
         let UploadHgTreeEntry {
             upload_node_id,
@@ -125,8 +125,6 @@ impl UploadHgTreeEntry {
         let manifest_id = HgManifestId::new(node_id);
         let blobstore_key = manifest_id.blobstore_key();
 
-        let blob_entry = HgBlobEntry::new(blobstore.clone(), node_id, Type::Tree);
-
         fn log_upload_stats(
             logger: Logger,
             path: RepoPath,
@@ -155,7 +153,7 @@ impl UploadHgTreeEntry {
         .compat()
         .map({
             let path = path.clone();
-            move |()| (blob_entry, path)
+            move |()| (manifest_id, path)
         })
         .timed({
             let logger = logger.clone();
@@ -167,7 +165,26 @@ impl UploadHgTreeEntry {
             }
         });
 
-        Ok((node_id, upload.boxify()))
+        Ok((manifest_id, upload.boxify()))
+    }
+
+    pub fn upload_as_entry(
+        self,
+        ctx: CoreContext,
+        blobstore: Arc<dyn Blobstore>,
+    ) -> Result<(
+        HgManifestId,
+        BoxFuture<(Entry<HgManifestId, HgFileNodeId>, RepoPath), Error>,
+    )> {
+        self.upload(ctx, blobstore.clone()).map({
+            move |(mfid, fut)| {
+                (
+                    mfid,
+                    fut.map(move |(mfid, repo_path)| (Entry::Tree(mfid), repo_path))
+                        .boxify(),
+                )
+            }
+        })
     }
 }
 
@@ -386,7 +403,6 @@ impl UploadHgFileContents {
 pub struct UploadHgFileEntry {
     pub upload_node_id: UploadHgNodeHash,
     pub contents: UploadHgFileContents,
-    pub file_type: FileType,
     pub p1: Option<HgFileNodeId>,
     pub p2: Option<HgFileNodeId>,
     pub path: MPath,
@@ -397,12 +413,11 @@ impl UploadHgFileEntry {
         self,
         ctx: CoreContext,
         blobstore: Arc<dyn Blobstore>,
-    ) -> Result<(ContentBlobMeta, BoxFuture<(HgBlobEntry, RepoPath), Error>)> {
+    ) -> Result<(ContentBlobMeta, BoxFuture<(HgFileNodeId, RepoPath), Error>)> {
         STATS::upload_hg_file_entry.add_value(1);
         let UploadHgFileEntry {
             upload_node_id,
             contents,
-            file_type,
             p1,
             p2,
             path,
@@ -448,12 +463,6 @@ impl UploadHgFileEntry {
 
                 let blobstore_key = node_id.blobstore_key();
 
-                let blob_entry = HgBlobEntry::new(
-                    blobstore.clone(),
-                    node_id.into_nodehash(),
-                    Type::File(file_type),
-                );
-
                 async move {
                     blobstore
                         .put(ctx, blobstore_key, envelope_blob.into())
@@ -476,7 +485,7 @@ impl UploadHgFileEntry {
                         Ok(())
                     }
                 })
-                .map(move |()| (blob_entry, RepoPath::FilePath(path)))
+                .map(move |()| (node_id, RepoPath::FilePath(path)))
                 .right_future()
             }
         });
@@ -486,6 +495,26 @@ impl UploadHgFileEntry {
             .map(move |(envelope_res, ())| envelope_res);
         Ok((cbmeta, fut.boxify()))
     }
+
+    pub fn upload_as_entry(
+        self,
+        ctx: CoreContext,
+        blobstore: Arc<dyn Blobstore>,
+    ) -> Result<(
+        ContentBlobMeta,
+        BoxFuture<(Entry<HgManifestId, HgFileNodeId>, RepoPath), Error>,
+    )> {
+        self.upload(ctx, blobstore.clone()).map({
+            move |(cbmeta, fut)| {
+                (
+                    cbmeta,
+                    fut.map(move |(filenode_id, repo_path)| (Entry::Leaf(filenode_id), repo_path))
+                        .boxify(),
+                )
+            }
+        })
+    }
+
 
     fn log_stats(
         logger: Logger,
