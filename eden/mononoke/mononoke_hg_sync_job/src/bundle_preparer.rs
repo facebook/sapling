@@ -13,12 +13,12 @@ use blobrepo_hg::BlobRepoHg;
 use bookmarks::{BookmarkName, BookmarkUpdateLogEntry, BookmarkUpdateReason, RawBundleReplayData};
 use cloned::cloned;
 use context::CoreContext;
-use futures::future::{try_join, FutureExt as _, TryFutureExt};
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
-use futures_old::{
-    future::{err, ok},
-    Future,
+use futures::{
+    compat::Future01CompatExt,
+    future::{try_join, FutureExt as _, TryFutureExt},
 };
+use futures_ext::{BoxFuture, FutureExt};
+use futures_old::{future::ok, Future};
 use getbundle_response::SessionLfsParams;
 use itertools::Itertools;
 use mercurial_bundle_replay_data::BundleReplayData;
@@ -121,15 +121,16 @@ impl BundlePreparer {
         retry(
             ctx.logger().clone(),
             {
-                cloned!(ctx, repo, ty, log_entry);
+                cloned!(ctx);
                 move |_| {
-                    Self::try_prepare_single_bundle(
-                        ctx.clone(),
-                        repo.clone(),
-                        log_entry.clone(),
-                        ty.clone(),
-                        overlay.get_bookmark_values(),
-                    )
+                    cloned!(ctx, repo, ty, log_entry);
+                    let book_values = overlay.get_bookmark_values();
+                    async move {
+                        Self::try_prepare_single_bundle(&ctx, &repo, log_entry, &ty, &book_values)
+                            .await
+                    }
+                    .boxed()
+                    .compat()
                 }
             },
             self.base_retry_delay_ms,
@@ -145,22 +146,22 @@ impl BundlePreparer {
         .boxify()
     }
 
-    fn try_prepare_single_bundle(
-        ctx: CoreContext,
-        repo: BlobRepo,
+    async fn try_prepare_single_bundle(
+        ctx: &CoreContext,
+        repo: &BlobRepo,
         log_entry: BookmarkUpdateLogEntry,
-        bundle_type: BundleType,
-        hg_server_heads: Vec<ChangesetId>,
-    ) -> impl Future<Item = PreparedBookmarkUpdateLogEntry, Error = Error> {
+        bundle_type: &BundleType,
+        hg_server_heads: &[ChangesetId],
+    ) -> Result<PreparedBookmarkUpdateLogEntry, Error> {
         use BookmarkUpdateReason::*;
 
         info!(ctx.logger(), "preparing log entry #{} ...", log_entry.id);
 
         enum PrepareType<'a> {
             Generate {
-                lca_hint: Arc<dyn LeastCommonAncestorsHint>,
+                lca_hint: &'a Arc<dyn LeastCommonAncestorsHint>,
                 lfs_params: SessionLfsParams,
-                filenode_verifier: FilenodeVerifier,
+                filenode_verifier: &'a FilenodeVerifier,
             },
             UseExisting {
                 bundle_replay_data: &'a RawBundleReplayData,
@@ -171,8 +172,7 @@ impl BundlePreparer {
         match log_entry.reason {
             Pushrebase | Backsyncer | ManualMove | ApiRequest | XRepoSync | Push => {}
             Blobimport | TestMove => {
-                return err(UnexpectedBookmarkMove(format!("{}", log_entry.reason)).into())
-                    .boxify();
+                return Err(UnexpectedBookmarkMove(format!("{}", log_entry.reason)).into());
             }
         }
 
@@ -187,50 +187,47 @@ impl BundlePreparer {
                 lfs_params: get_session_lfs_params(
                     &ctx,
                     &log_entry.bookmark_name,
-                    lfs_params,
+                    lfs_params.clone(),
                     &bookmark_regex_force_lfs,
                 ),
                 filenode_verifier,
             },
             BundleType::UseExisting => match &log_entry.bundle_replay_data {
                 Some(bundle_replay_data) => PrepareType::UseExisting { bundle_replay_data },
-                None => return err(ReplayDataMissing { id: log_entry.id }.into()).boxify(),
+                None => {
+                    return Err(ReplayDataMissing { id: log_entry.id }.into());
+                }
             },
         };
 
-        let bundle_and_timestamps_files = match prepare_type {
-            PrepareType::Generate {
-                lca_hint,
-                lfs_params,
-                filenode_verifier,
-            } => crate::bundle_generator::create_bundle(
-                ctx.clone(),
-                repo.clone(),
-                lca_hint.clone(),
-                log_entry.bookmark_name.clone(),
-                try_boxfuture!(BookmarkChange::new(&log_entry)),
-                hg_server_heads,
-                lfs_params,
-                filenode_verifier,
-            )
-            .and_then(|(bytes, timestamps)| {
-                async move {
+        let bundle_and_timestamps_files = async {
+            match prepare_type {
+                PrepareType::Generate {
+                    lca_hint,
+                    lfs_params,
+                    filenode_verifier,
+                } => {
+                    let (bytes, timestamps) = crate::bundle_generator::create_bundle(
+                        ctx.clone(),
+                        repo.clone(),
+                        lca_hint.clone(),
+                        log_entry.bookmark_name.clone(),
+                        BookmarkChange::new(&log_entry)?,
+                        hg_server_heads.to_vec(),
+                        lfs_params,
+                        filenode_verifier.clone(),
+                    )
+                    .compat()
+                    .await?;
+
                     try_join(
                         save_bytes_to_temp_file(&bytes),
                         save_timestamps_to_file(&timestamps),
                     )
                     .await
                 }
-                .boxed()
-                .compat()
-            })
-            .boxify(),
-            PrepareType::UseExisting { bundle_replay_data } => {
-                // TODO: We could remove this clone on bundle_replay_data if this whole
-                // function was async.
-                cloned!(ctx, bundle_replay_data);
-                async move {
-                    match BundleReplayData::try_from(&bundle_replay_data) {
+                PrepareType::UseExisting { bundle_replay_data } => {
+                    match BundleReplayData::try_from(bundle_replay_data) {
                         Ok(bundle_replay_data) => {
                             try_join(
                                 save_bundle_to_temp_file(
@@ -242,34 +239,34 @@ impl BundlePreparer {
                             )
                             .await
                         }
-                        Err(e) => Err(e.into()),
+                        Err(e) => Err(e),
                     }
                 }
-                .boxed()
-                .compat()
-                .boxify()
             }
         };
 
-        let cs_id = match log_entry.to_changeset_id {
-            Some(to_changeset_id) => repo
-                .get_hg_from_bonsai_changeset(ctx.clone(), to_changeset_id)
-                .map(move |hg_cs_id| Some((to_changeset_id, hg_cs_id)))
-                .left_future(),
-            None => ok(None).right_future(),
+        let cs_id = async {
+            match log_entry.to_changeset_id {
+                Some(to_changeset_id) => {
+                    let hg_cs_id = repo
+                        .get_hg_from_bonsai_changeset(ctx.clone(), to_changeset_id)
+                        .compat()
+                        .await?;
+                    Ok(Some((to_changeset_id, hg_cs_id)))
+                }
+                None => Ok(None),
+            }
         };
 
-        bundle_and_timestamps_files
-            .join(cs_id)
-            .map(
-                |((bundle_file, timestamps_file), cs_id)| PreparedBookmarkUpdateLogEntry {
-                    log_entry,
-                    bundle_file: Arc::new(bundle_file),
-                    timestamps_file: Arc::new(timestamps_file),
-                    cs_id,
-                },
-            )
-            .boxify()
+        let ((bundle_file, timestamps_file), cs_id) =
+            try_join(bundle_and_timestamps_files, cs_id).await?;
+
+        Ok(PreparedBookmarkUpdateLogEntry {
+            log_entry: log_entry.clone(),
+            bundle_file: Arc::new(bundle_file),
+            timestamps_file: Arc::new(timestamps_file),
+            cs_id,
+        })
     }
 }
 
