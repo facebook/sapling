@@ -323,6 +323,16 @@ mod tests {
                     .get_type()
                 );
             }
+            NodeType::SkeletonManifestMapping => {
+                assert_eq!(
+                    node_type,
+                    &parse_node(&format!(
+                        "SkeletonManifestMapping{}{}",
+                        NODE_SEP, SAMPLE_BLAKE2
+                    ))?
+                    .get_type()
+                );
+            }
             NodeType::UnodeFile => {
                 assert_eq!(
                     node_type,

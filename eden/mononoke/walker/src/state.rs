@@ -178,6 +178,7 @@ pub struct WalkState {
     visited_deleted_manifest_mapping: StateMap<InternedId<ChangesetId>>,
     visited_fsnode: StateMap<(InternedId<Option<MPathHash>>, InternedId<FsnodeId>)>,
     visited_fsnode_mapping: StateMap<InternedId<ChangesetId>>,
+    visited_skeleton_manifest_mapping: StateMap<InternedId<ChangesetId>>,
     visited_unode_file: StateMap<(InternedId<Option<MPathHash>>, UnodeInterned<FileUnodeId>)>,
     visited_unode_manifest: StateMap<(
         InternedId<Option<MPathHash>>,
@@ -231,6 +232,7 @@ impl WalkState {
             visited_deleted_manifest_mapping: StateMap::with_hasher(fac.clone()),
             visited_fsnode: StateMap::with_hasher(fac.clone()),
             visited_fsnode_mapping: StateMap::with_hasher(fac.clone()),
+            visited_skeleton_manifest_mapping: StateMap::with_hasher(fac.clone()),
             visited_unode_file: StateMap::with_hasher(fac.clone()),
             visited_unode_manifest: StateMap::with_hasher(fac.clone()),
             visited_unode_mapping: StateMap::with_hasher(fac),
@@ -301,6 +303,15 @@ impl WalkState {
             }
             (Node::FsnodeMapping(bcs_id), Some(NodeData::FsnodeMapping(Some(_)))) => {
                 self.record(&self.visited_fsnode_mapping, &self.bcs_ids.interned(bcs_id));
+            }
+            (
+                Node::SkeletonManifestMapping(bcs_id),
+                Some(NodeData::SkeletonManifestMapping(Some(_))),
+            ) => {
+                self.record(
+                    &self.visited_skeleton_manifest_mapping,
+                    &self.bcs_ids.interned(bcs_id),
+                );
             }
             (Node::UnodeMapping(bcs_id), Some(NodeData::UnodeMapping(Some(_)))) => {
                 self.record(&self.visited_unode_mapping, &self.bcs_ids.interned(bcs_id));
@@ -448,6 +459,13 @@ impl VisitOne for WalkState {
             Node::FsnodeMapping(bcs_id) => {
                 if let Some(id) = self.bcs_ids.get(bcs_id) {
                     !self.visited_fsnode_mapping.contains_key(&id) // Does not insert, see record_resolved_visit
+                } else {
+                    true
+                }
+            }
+            Node::SkeletonManifestMapping(bcs_id) => {
+                if let Some(id) = self.bcs_ids.get(bcs_id) {
+                    !self.visited_skeleton_manifest_mapping.contains_key(&id) // Does not insert, see record_resolved_visit
                 } else {
                     true
                 }

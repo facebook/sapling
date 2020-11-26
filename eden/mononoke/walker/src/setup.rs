@@ -153,6 +153,7 @@ const DEEP_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::ChangesetToChangesetInfoMapping,
     EdgeType::ChangesetToDeletedManifestMapping,
     EdgeType::ChangesetToFsnodeMapping,
+    EdgeType::ChangesetToSkeletonManifestMapping,
     EdgeType::ChangesetToUnodeMapping,
     // Hg
     EdgeType::HgBonsaiMappingToChangeset,
@@ -205,6 +206,7 @@ const SHALLOW_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::ChangesetToChangesetInfoMapping,
     EdgeType::ChangesetToDeletedManifestMapping,
     EdgeType::ChangesetToFsnodeMapping,
+    EdgeType::ChangesetToSkeletonManifestMapping,
     EdgeType::ChangesetToUnodeMapping,
     // Hg
     EdgeType::HgBonsaiMappingToChangeset,

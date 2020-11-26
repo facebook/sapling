@@ -30,10 +30,11 @@ use mononoke_types::{
     fsnode::Fsnode,
     unode::{FileUnode, ManifestUnode},
     BlameId, BonsaiChangeset, ChangesetId, ContentId, ContentMetadata, DeletedManifestId,
-    FileUnodeId, FsnodeId, MPath, MPathHash, ManifestUnodeId, MononokeId,
+    FileUnodeId, FsnodeId, MPath, MPathHash, ManifestUnodeId, MononokeId, SkeletonManifestId,
 };
 use once_cell::sync::OnceCell;
 use phases::Phase;
+use skeleton_manifest::RootSkeletonManifestId;
 use std::{
     fmt,
     hash::{Hash, Hasher},
@@ -232,6 +233,7 @@ create_graph!(
             DeletedManifestMapping,
             Fsnode,
             FsnodeMapping,
+            SkeletonManifestMapping,
             UnodeFile,
             UnodeManifest,
             UnodeMapping
@@ -251,6 +253,7 @@ create_graph!(
             ChangesetInfoMapping,
             DeletedManifestMapping,
             FsnodeMapping,
+            SkeletonManifestMapping,
             UnodeMapping
         ]
     ),
@@ -324,6 +327,7 @@ create_graph!(
         [ChildFsnode(Fsnode), FileContent]
     ),
     (FsnodeMapping, ChangesetId, [RootFsnode(Fsnode)]),
+    (SkeletonManifestMapping, ChangesetId, []),
     (
         UnodeFile,
         PathKey<UnodeKey<FileUnodeId>>,
@@ -374,6 +378,7 @@ impl NodeType {
             NodeType::DeletedManifestMapping => Some(RootDeletedManifestId::NAME),
             NodeType::Fsnode => Some(RootFsnodeId::NAME),
             NodeType::FsnodeMapping => Some(RootFsnodeId::NAME),
+            NodeType::SkeletonManifestMapping => Some(RootSkeletonManifestId::NAME),
             NodeType::UnodeFile => Some(RootUnodeManifestId::NAME),
             NodeType::UnodeManifest => Some(RootUnodeManifestId::NAME),
             NodeType::UnodeMapping => Some(RootUnodeManifestId::NAME),
@@ -530,6 +535,7 @@ pub enum NodeData {
     DeletedManifestMapping(Option<DeletedManifestId>),
     Fsnode(Fsnode),
     FsnodeMapping(Option<FsnodeId>),
+    SkeletonManifestMapping(Option<SkeletonManifestId>),
     UnodeFile(FileUnode),
     UnodeManifest(ManifestUnode),
     UnodeMapping(Option<ManifestUnodeId>),
@@ -563,6 +569,7 @@ impl Node {
             Node::DeletedManifestMapping(k) => k.blobstore_key(),
             Node::Fsnode(PathKey { id, path: _ }) => id.blobstore_key(),
             Node::FsnodeMapping(k) => k.blobstore_key(),
+            Node::SkeletonManifestMapping(k) => k.blobstore_key(),
             Node::UnodeFile(PathKey { id, path: _ }) => id.blobstore_key(),
             Node::UnodeManifest(PathKey { id, path: _ }) => id.blobstore_key(),
             Node::UnodeMapping(k) => k.blobstore_key(),
@@ -596,6 +603,7 @@ impl Node {
             Node::DeletedManifestMapping(_) => None,
             Node::Fsnode(PathKey { id: _, path }) => Some(&path),
             Node::FsnodeMapping(_) => None,
+            Node::SkeletonManifestMapping(_) => None,
             Node::UnodeFile(PathKey { id: _, path }) => Some(&path),
             Node::UnodeManifest(PathKey { id: _, path }) => Some(&path),
             Node::UnodeMapping(_) => None,
@@ -630,6 +638,7 @@ impl Node {
             Node::DeletedManifestMapping(k) => Some(k.sampling_fingerprint()),
             Node::Fsnode(PathKey { id, path: _ }) => Some(id.sampling_fingerprint()),
             Node::FsnodeMapping(k) => Some(k.sampling_fingerprint()),
+            Node::SkeletonManifestMapping(k) => Some(k.sampling_fingerprint()),
             Node::UnodeFile(PathKey { id, path: _ }) => Some(id.sampling_fingerprint()),
             Node::UnodeManifest(PathKey { id, path: _ }) => Some(id.sampling_fingerprint()),
             Node::UnodeMapping(k) => Some(k.sampling_fingerprint()),
@@ -721,7 +730,7 @@ mod tests {
         // list, otherwise it won't get scrubbed and thus you would be unaware of different representation
         // in different stores
         let grandfathered: HashSet<&'static str> =
-            HashSet::from_iter(vec!["fastlog", "git_trees", "skeleton_manifests"].into_iter());
+            HashSet::from_iter(vec!["fastlog", "git_trees"].into_iter());
         let mut missing = HashSet::new();
         for t in &a {
             if s.contains(t.as_str()) {

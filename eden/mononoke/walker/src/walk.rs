@@ -43,6 +43,7 @@ use mononoke_types::{
 };
 use phases::{HeadsFetcher, Phase, Phases};
 use scuba_ext::ScubaSampleBuilder;
+use skeleton_manifest::RootSkeletonManifestId;
 use slog::warn;
 use std::{
     collections::{HashMap, HashSet},
@@ -338,6 +339,12 @@ async fn bonsai_changeset_step<V: VisitOne>(
     checker.add_edge(&mut edges, EdgeType::ChangesetToFsnodeMapping, || {
         Node::FsnodeMapping(*bcs_id)
     });
+    // Skeleton manifest mapping is 1:1 but from their expands less than unodes
+    checker.add_edge(
+        &mut edges,
+        EdgeType::ChangesetToSkeletonManifestMapping,
+        || Node::SkeletonManifestMapping(*bcs_id),
+    );
     // Deleted manifest mapping is 1:1 but from their expands less than unodes
     checker.add_edge(
         &mut edges,
@@ -1057,6 +1064,34 @@ async fn deleted_manifest_mapping_step<V: VisitOne>(
     }
 }
 
+async fn skeleton_manifest_mapping_step<V: VisitOne>(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    checker: &Checker<V>,
+    bcs_id: ChangesetId,
+    enable_derive: bool,
+) -> Result<StepOutput, Error> {
+    let root_manifest_id =
+        maybe_derived::<RootSkeletonManifestId>(ctx, repo, bcs_id, enable_derive).await?;
+
+    if let Some(root_manifest_id) = root_manifest_id {
+        let edges = vec![];
+        Ok(StepOutput(
+            checker.step_data(NodeType::SkeletonManifestMapping, || {
+                NodeData::SkeletonManifestMapping(Some(*root_manifest_id.skeleton_manifest_id()))
+            }),
+            edges,
+        ))
+    } else {
+        Ok(StepOutput(
+            checker.step_data(NodeType::SkeletonManifestMapping, || {
+                NodeData::SkeletonManifestMapping(None)
+            }),
+            vec![],
+        ))
+    }
+}
+
 /// Expand nodes where check for a type is used as a check for other types.
 /// e.g. to make sure metadata looked up/considered for files.
 pub fn expand_checked_nodes(children: &mut Vec<OutgoingEdge>) -> () {
@@ -1387,6 +1422,9 @@ where
         Node::Fsnode(PathKey { id, path }) => fsnode_step(&ctx, &repo, &checker, path, &id).await,
         Node::FsnodeMapping(bcs_id) => {
             bonsai_to_fsnode_mapping_step(&ctx, &repo, &checker, bcs_id, enable_derive).await
+        }
+        Node::SkeletonManifestMapping(bcs_id) => {
+            skeleton_manifest_mapping_step(&ctx, &repo, &checker, bcs_id, enable_derive).await
         }
         Node::UnodeFile(PathKey { id, path }) => {
             unode_file_step(&ctx, &repo, &checker, path, id).await

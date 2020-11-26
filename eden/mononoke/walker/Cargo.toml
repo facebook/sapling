@@ -35,6 +35,7 @@ phases = { path = "../phases" }
 prefixblob = { path = "../blobstore/prefixblob" }
 samplingblob = { path = "../blobstore/samplingblob" }
 scuba_ext = { path = "../common/scuba_ext" }
+skeleton_manifest = { path = "../derived_data/skeleton_manifest" }
 sql_ext = { path = "../common/rust/sql_ext" }
 unodes = { path = "../derived_data/unodes" }
 async_compression = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
