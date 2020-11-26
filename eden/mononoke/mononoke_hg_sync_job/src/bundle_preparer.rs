@@ -117,32 +117,34 @@ impl BundlePreparer {
     ) -> BoxFuture<PreparedBookmarkUpdateLogEntry, Error> {
         cloned!(self.repo, self.ty);
 
-        let entry_id = log_entry.id;
-        retry(
-            ctx.logger().clone(),
-            {
-                cloned!(ctx);
-                move |_| {
-                    cloned!(ctx, repo, ty, log_entry);
-                    let book_values = overlay.get_bookmark_values();
-                    async move {
-                        Self::try_prepare_single_bundle(&ctx, &repo, log_entry, &ty, &book_values)
-                            .await
+        let base_retry_delay_ms = self.base_retry_delay_ms;
+        let retry_num = self.retry_num;
+        async move {
+            let entry_id = log_entry.id;
+            let book_values = &overlay.get_bookmark_values();
+            let (p, _attempts) = retry(
+                &ctx.logger(),
+                {
+                    |_| {
+                        Self::try_prepare_single_bundle(
+                            &ctx,
+                            &repo,
+                            log_entry.clone(),
+                            &ty,
+                            book_values,
+                        )
                     }
-                    .boxed()
-                    .compat()
-                }
-            },
-            self.base_retry_delay_ms,
-            self.retry_num,
-        )
-        .map({
-            cloned!(ctx);
-            move |(p, _attempts)| {
-                info!(ctx.logger(), "successful prepare of entry #{}", entry_id);
-                p
-            }
-        })
+                },
+                base_retry_delay_ms,
+                retry_num,
+            )
+            .await?;
+
+            info!(ctx.logger(), "successful prepare of entry #{}", entry_id);
+            Ok(p)
+        }
+        .boxed()
+        .compat()
         .boxify()
     }
 

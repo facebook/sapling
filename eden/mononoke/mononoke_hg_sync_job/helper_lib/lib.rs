@@ -12,14 +12,8 @@ use blobrepo::BlobRepo;
 use blobstore::{Blobstore, Loadable};
 use bookmarks::{BookmarkUpdateLog, Freshness};
 use bytes_old::{Bytes as BytesOld, BytesMut as BytesMutOld};
-use cloned::cloned;
 use context::CoreContext;
-use futures::{compat::Future01CompatExt, future::try_join_all, stream::TryStreamExt};
-use futures_ext::FutureExt;
-use futures_old::{
-    future::{loop_fn, IntoFuture, Loop},
-    Future,
-};
+use futures::{compat::Future01CompatExt, future::try_join_all, stream::TryStreamExt, Future};
 use mercurial_bundles::stream_start;
 use mononoke_types::RawBundle2Id;
 use mutable_counters::MutableCounters;
@@ -27,7 +21,7 @@ use slog::{info, Logger};
 use std::convert::TryInto;
 use std::io::{Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use tempfile::NamedTempFile;
 use tokio::{
     fs::{read as async_read_all, File as AsyncFile, OpenOptions},
@@ -267,46 +261,41 @@ pub fn read_file_contents<F: Seek + Read>(f: &mut F) -> Result<String> {
 #[derive(Copy, Clone)]
 pub struct RetryAttemptsCount(pub usize);
 
-pub fn retry<V, Fut, Func>(
-    logger: Logger,
+pub async fn retry<V, Fut, Func>(
+    logger: &Logger,
     func: Func,
     base_retry_delay_ms: u64,
     retry_num: usize,
-) -> impl Future<Item = (V, RetryAttemptsCount), Error = Error>
+) -> Result<(V, RetryAttemptsCount), Error>
 where
     V: Send + 'static,
-    Fut: Future<Item = V, Error = Error>,
-    Func: Fn(usize) -> Fut + Send + 'static,
+    Fut: Future<Output = Result<V, Error>>,
+    Func: Fn(usize) -> Fut + Send,
 {
-    use tokio_timer::Delay;
-
-    loop_fn(1, move |attempt| {
-        cloned!(logger);
-        func(attempt)
-            .and_then(move |res| Ok(Loop::Break(Ok((res, RetryAttemptsCount(attempt))))))
-            .or_else({
-                move |err| {
-                    if attempt >= retry_num {
-                        Ok(Loop::Break(Err(err))).into_future().left_future()
-                    } else {
-                        info!(
-                            logger.clone(),
-                            "retrying attempt {} of {}...",
-                            attempt + 1,
-                            retry_num
-                        );
-
-                        let delay =
-                            Duration::from_millis(base_retry_delay_ms * 2u64.pow(attempt as u32));
-                        Delay::new(Instant::now() + delay)
-                            .and_then(move |_| Ok(Loop::Continue(attempt + 1)))
-                            .map_err(|e| -> Error { e.into() })
-                            .right_future()
-                    }
+    let mut attempt = 1;
+    loop {
+        let res = func(attempt).await;
+        match res {
+            Ok(res) => {
+                return Ok((res, RetryAttemptsCount(attempt)));
+            }
+            Err(err) => {
+                if attempt >= retry_num {
+                    return Err(err);
                 }
-            })
-    })
-    .flatten()
+                info!(
+                    logger,
+                    "retrying attempt {} of {}...",
+                    attempt + 1,
+                    retry_num
+                );
+
+                let delay = Duration::from_millis(base_retry_delay_ms * 2u64.pow(attempt as u32));
+                delay_for(delay).await;
+                attempt += 1;
+            }
+        }
+    }
 }
 
 /// Wait until all of the entries in the queue have been synced to hg
@@ -372,6 +361,7 @@ mod tests {
     use super::*;
     use futures::{TryFutureExt, TryStreamExt};
     use futures_ext::FutureExt;
+    use futures_old::Future as FutureOld;
     use mercurial_bundles::bundle2::{Bundle2Stream, StreamEvent};
     use mercurial_bundles::Bundle2Item;
 

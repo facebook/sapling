@@ -468,22 +468,28 @@ fn sync_single_combined_entry(
     };
 
     sync_globalrevs.and_then(move |()| {
-        retry(
-            ctx.logger().clone(),
-            {
-                cloned!(ctx, combined_entry);
-                move |attempt| {
-                    try_sync_single_combined_entry(
-                        ctx.clone(),
-                        attempt,
-                        combined_entry.clone(),
-                        hg_repo.clone(),
-                    )
-                }
-            },
-            base_retry_delay_ms,
-            retry_num,
-        )
+        async move {
+            retry(
+                &ctx.logger(),
+                {
+                    cloned!(ctx, combined_entry);
+                    move |attempt| {
+                        try_sync_single_combined_entry(
+                            ctx.clone(),
+                            attempt,
+                            combined_entry.clone(),
+                            hg_repo.clone(),
+                        )
+                        .compat()
+                    }
+                },
+                base_retry_delay_ms,
+                retry_num,
+            )
+            .await
+        }
+        .boxed()
+        .compat()
         .map(|(_, attempts)| attempts)
     })
 }
@@ -1012,11 +1018,11 @@ async fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> Result<(), Error
             .then(build_outcome_handler(ctx.clone(), lock_via))
             .map(move |entry| {
                 let next_id = get_id_to_search_after(&entry);
-                retry(
-                    ctx.logger().clone(),
-                    {
-                        cloned!(ctx, mutable_counters);
-                        move |_| {
+                cloned!(ctx, mutable_counters);
+                async move {
+                    retry(
+                        &ctx.logger(),
+                        |_| {
                             mutable_counters
                                 .set_counter(
                                     ctx.clone(),
@@ -1033,11 +1039,15 @@ async fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> Result<(), Error
                                         bail!("failed to update counter")
                                     }
                                 })
-                        }
-                    },
-                    base_retry_delay_ms,
-                    retry_num,
-                )
+                                .compat()
+                        },
+                        base_retry_delay_ms,
+                        retry_num,
+                    )
+                    .await
+                }
+                .boxed()
+                .compat()
             })
             .for_each(|res| res.map(|_| ()))
             .compat()
