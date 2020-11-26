@@ -445,7 +445,7 @@ impl<'a> StdioRelay<'a> {
                     }
                 }
             },
-            res = stdin_future.fuse() => Ok(()),
+            _res = stdin_future.fuse() => Ok(()),
         };
 
         res
