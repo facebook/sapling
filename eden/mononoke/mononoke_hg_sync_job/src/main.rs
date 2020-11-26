@@ -37,7 +37,7 @@ use futures_old::{
     stream::Stream,
     Future,
 };
-use futures_stats::{FutureStats, Timed};
+use futures_stats::{futures03::TimedFutureExt, FutureStats, Timed};
 use http::Uri;
 use lfs_verifier::LfsVerifier;
 use mercurial_types::HgChangesetId;
@@ -844,33 +844,38 @@ async fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> Result<(), Error
             )
             .await?;
             if let Some(log_entry) = maybe_log_entry {
-                bundle_preparer
-                    .prepare_single_bundle(ctx.clone(), log_entry.clone(), overlay.clone())
-                    .and_then({
-                        cloned!(ctx);
-                        |prepared_log_entry| combine_entries(ctx, &[prepared_log_entry])
-                    })
-                    .and_then({
-                        cloned!(ctx);
-                        move |combined_entry| {
-                            sync_single_combined_entry(
-                                ctx.clone(),
-                                combined_entry,
-                                hg_repo,
-                                base_retry_delay_ms,
-                                retry_num,
-                                globalrev_syncer,
-                            )
-                        }
-                    })
-                    .then(move |r| bind_sync_result(&[log_entry], r).into_future())
-                    .collect_timing()
-                    .map_err(|(stats, e)| (Some(stats), e))
-                    .then(reporting_handler)
-                    .then(build_outcome_handler(ctx.clone(), lock_via))
-                    .map(|_| ())
+                let (stats, res) = async {
+                    let prepared_log_entry = bundle_preparer
+                        .prepare_single_bundle(ctx.clone(), log_entry.clone(), overlay.clone())
+                        .compat()
+                        .await?;
+                    let combined_entry = combine_entries(ctx.clone(), &[prepared_log_entry])
+                        .compat()
+                        .await?;
+
+                    sync_single_combined_entry(
+                        ctx.clone(),
+                        combined_entry,
+                        hg_repo,
+                        base_retry_delay_ms,
+                        retry_num,
+                        globalrev_syncer,
+                    )
                     .compat()
                     .await
+                }
+                .timed()
+                .await;
+
+                let res = bind_sync_result(&[log_entry], res);
+                let res = match res {
+                    Ok(ok) => Ok((stats, ok)),
+                    Err(err) => Err((Some(stats), err)),
+                };
+                let res = reporting_handler(res).compat().await;
+                let res = build_outcome_handler(ctx, lock_via)(res);
+                let _ = res.compat().await?;
+                Ok(())
             } else {
                 info!(ctx.logger(), "no log entries found");
                 Ok(())
