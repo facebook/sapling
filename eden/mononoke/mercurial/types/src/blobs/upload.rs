@@ -40,14 +40,6 @@ define_stats! {
     upload_blob: timeseries(Rate, Sum),
 }
 
-/// Information about a content blob associated with a push that is available in
-/// the blobstore. (This blob wasn't necessarily uploaded in this push.)
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct ContentBlobInfo {
-    pub path: MPath,
-    pub meta: ContentBlobMeta,
-}
-
 /// Metadata associated with a content blob being uploaded as part of changeset creation.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ContentBlobMeta {
@@ -405,7 +397,7 @@ impl UploadHgFileEntry {
         self,
         ctx: CoreContext,
         blobstore: Arc<dyn Blobstore>,
-    ) -> Result<(ContentBlobInfo, BoxFuture<(HgBlobEntry, RepoPath), Error>)> {
+    ) -> Result<(ContentBlobMeta, BoxFuture<(HgBlobEntry, RepoPath), Error>)> {
         STATS::upload_hg_file_entry.add_value(1);
         let UploadHgFileEntry {
             upload_node_id,
@@ -492,7 +484,7 @@ impl UploadHgFileEntry {
         let fut = envelope_upload
             .join(content_upload)
             .map(move |(envelope_res, ())| envelope_res);
-        Ok((ContentBlobInfo { path, meta: cbmeta }, fut.boxify()))
+        Ok((cbmeta, fut.boxify()))
     }
 
     fn log_stats(

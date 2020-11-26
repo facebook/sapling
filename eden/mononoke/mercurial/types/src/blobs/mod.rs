@@ -32,6 +32,5 @@ pub mod filenode_lookup;
 
 mod upload;
 pub use upload::{
-    ContentBlobInfo, ContentBlobMeta, UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash,
-    UploadHgTreeEntry,
+    ContentBlobMeta, UploadHgFileContents, UploadHgFileEntry, UploadHgNodeHash, UploadHgTreeEntry,
 };

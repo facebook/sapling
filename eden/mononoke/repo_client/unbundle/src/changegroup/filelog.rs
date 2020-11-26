@@ -28,8 +28,8 @@ use filestore::FetchKey;
 use mercurial_bundles::changegroup::CgDeltaChunk;
 use mercurial_types::{
     blobs::{
-        ContentBlobInfo, ContentBlobMeta, File, HgBlobEntry, UploadHgFileContents,
-        UploadHgFileEntry, UploadHgNodeHash,
+        ContentBlobMeta, File, HgBlobEntry, UploadHgFileContents, UploadHgFileEntry,
+        UploadHgNodeHash,
     },
     delta, Delta, FileType, HgFileNodeId, HgNodeHash, HgNodeKey, MPath, RepoPath, RevFlags,
     NULL_HASH,
@@ -68,7 +68,7 @@ impl UploadableHgBlob for Filelog {
     //   SharedError) doesn't implement Fail, and only implements Error if the wrapped type
     //   implements Error.
     type Value = (
-        ContentBlobInfo,
+        ContentBlobMeta,
         Shared<BoxFuture<(HgBlobEntry, RepoPath), Compat<Error>>>,
     );
 
@@ -97,8 +97,8 @@ impl UploadableHgBlob for Filelog {
             path,
         };
 
-        let (cbinfo, fut) = upload.upload(ctx, repo.get_blobstore().boxed())?;
-        Ok((node_key, (cbinfo, fut.map_err(Compat).boxify().shared())))
+        let (cbmeta, fut) = upload.upload(ctx, repo.get_blobstore().boxed())?;
+        Ok((node_key, (cbmeta, fut.map_err(Compat).boxify().shared())))
     }
 }
 

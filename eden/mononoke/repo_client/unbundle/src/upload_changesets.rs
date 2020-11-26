@@ -25,7 +25,7 @@ use mercurial_revlog::{
     manifest::{Details, ManifestContent},
 };
 use mercurial_types::{
-    blobs::{ChangesetMetadata, ContentBlobInfo, HgBlobEntry},
+    blobs::{ChangesetMetadata, ContentBlobMeta, HgBlobEntry},
     HgChangesetId, HgManifestId, HgNodeHash, HgNodeKey, MPath, RepoPath, NULL_HASH,
 };
 use scuba_ext::ScubaSampleBuilder;
@@ -34,7 +34,7 @@ use std::ops::AddAssign;
 use wirepack::TreemanifestEntry;
 
 type Filelogs = HashMap<HgNodeKey, Shared<OldBoxFuture<(HgBlobEntry, RepoPath), Compat<Error>>>>;
-type ContentBlobs = HashMap<HgNodeKey, ContentBlobInfo>;
+type ContentBlobs = HashMap<HgNodeKey, ContentBlobMeta>;
 type Manifests = HashMap<HgNodeKey, <TreemanifestEntry as UploadableHgBlob>::Value>;
 type UploadedChangesets = HashMap<HgChangesetId, ChangesetHandle>;
 
@@ -52,7 +52,7 @@ pub struct NewBlobs {
     // This is returned as a Vec rather than a Stream so that the path and metadata are
     // available before the content blob is uploaded. This will allow creating and uploading
     // changeset blobs without being blocked on content blob uploading being complete.
-    content_blobs: Vec<ContentBlobInfo>,
+    content_blobs: Vec<ContentBlobMeta>,
 }
 
 struct WalkHelperCounters {
@@ -148,7 +148,7 @@ impl NewBlobs {
         manifests: &Manifests,
         filelogs: &Filelogs,
         content_blobs: &ContentBlobs,
-    ) -> Result<(Vec<HgBlobFuture>, Vec<ContentBlobInfo>, WalkHelperCounters)> {
+    ) -> Result<(Vec<HgBlobFuture>, Vec<ContentBlobMeta>, WalkHelperCounters)> {
         if path_taken.len() > 4096 {
             bail!(
                 "Exceeded max manifest path during walking with path: {:?}",
@@ -157,7 +157,7 @@ impl NewBlobs {
         }
 
         let mut entries: Vec<HgBlobFuture> = Vec::new();
-        let mut cbinfos: Vec<ContentBlobInfo> = Vec::new();
+        let mut cbmetas: Vec<ContentBlobMeta> = Vec::new();
         let mut counters = WalkHelperCounters {
             manifests_count: 0,
             filelogs_count: 0,
@@ -197,7 +197,7 @@ impl NewBlobs {
                             .from_err()
                             .boxify(),
                     );
-                    let (mut walked_entries, mut walked_cbinfos, sub_counters) = Self::walk_helper(
+                    let (mut walked_entries, mut walked_cbmetas, sub_counters) = Self::walk_helper(
                         &key.path,
                         manifest_content,
                         get_manifest_parent_content(manifests, key.path.clone(), p1.clone()),
@@ -207,7 +207,7 @@ impl NewBlobs {
                         content_blobs,
                     )?;
                     entries.append(&mut walked_entries);
-                    cbinfos.append(&mut walked_cbinfos);
+                    cbmetas.append(&mut walked_cbmetas);
                     counters += sub_counters;
                 }
             } else {
@@ -226,14 +226,14 @@ impl NewBlobs {
                             .boxify(),
                     );
                     match content_blobs.get(&key) {
-                        Some(cbinfo) => cbinfos.push(cbinfo.clone()),
+                        Some(cbmeta) => cbmetas.push(cbmeta.clone()),
                         None => bail!("internal error: content blob future missing for filenode"),
                     }
                 }
             }
         }
 
-        Ok((entries, cbinfos, counters))
+        Ok((entries, cbmetas, counters))
     }
 }
 

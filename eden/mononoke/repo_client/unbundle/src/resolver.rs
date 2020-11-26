@@ -42,7 +42,7 @@ use mercurial_bundles::{
 use mercurial_mutation::HgMutationEntry;
 use mercurial_revlog::changeset::RevlogChangeset;
 use mercurial_types::{
-    blobs::{ContentBlobInfo, HgBlobEntry},
+    blobs::{ContentBlobMeta, HgBlobEntry},
     HgChangesetId, HgNodeKey, RepoPath,
 };
 use metaconfig_types::{PushrebaseFlags, RepoReadOnly};
@@ -77,7 +77,7 @@ mod UNBUNDLE_STATS {
 pub type Changesets = Vec<(HgChangesetId, RevlogChangeset)>;
 type Filelogs =
     HashMap<HgNodeKey, Shared<OldBoxFuture<(HgBlobEntry, RepoPath), FailureCompat<Error>>>>;
-type ContentBlobs = HashMap<HgNodeKey, ContentBlobInfo>;
+type ContentBlobs = HashMap<HgNodeKey, ContentBlobMeta>;
 type Manifests = HashMap<HgNodeKey, <TreemanifestEntry as UploadableHgBlob>::Value>;
 pub type UploadedBonsais = HashSet<BonsaiChangeset>;
 pub type UploadedHgChangesetIds = HashSet<HgChangesetId>;
