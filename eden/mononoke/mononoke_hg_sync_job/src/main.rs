@@ -283,46 +283,51 @@ fn get_read_write_fetcher(
     })
 }
 
-fn unlock_repo_if_locked(
-    ctx: CoreContext,
-    read_write_fetcher: RepoReadWriteFetcher,
-) -> impl Future<Item = (), Error = Error> {
-    read_write_fetcher.readonly().and_then(move |repo_state| {
-        match repo_state {
-            RepoReadOnly::ReadOnly(ref lock_msg) if lock_msg == LOCK_REASON => read_write_fetcher
+async fn unlock_repo_if_locked(
+    ctx: &CoreContext,
+    read_write_fetcher: &RepoReadWriteFetcher,
+) -> Result<(), Error> {
+    let repo_state = read_write_fetcher.readonly().compat().await?;
+
+    match repo_state {
+        RepoReadOnly::ReadOnly(ref lock_msg) if lock_msg == LOCK_REASON => {
+            let updated = read_write_fetcher
                 .set_mononoke_read_write(&UNLOCK_REASON.to_string())
-                .map(move |updated| {
-                    if updated {
-                        info!(ctx.logger(), "repo is unlocked");
-                    }
-                })
-                .left_future(),
-            RepoReadOnly::ReadOnly(..) | RepoReadOnly::ReadWrite => ok(()).right_future(),
+                .compat()
+                .await?;
+            if updated {
+                info!(ctx.logger(), "repo is unlocked");
+            }
+            Ok(())
         }
-    })
+        RepoReadOnly::ReadOnly(..) | RepoReadOnly::ReadWrite => Ok(()),
+    }
 }
 
-fn lock_repo_if_unlocked(
-    ctx: CoreContext,
-    read_write_fetcher: RepoReadWriteFetcher,
-) -> impl Future<Item = (), Error = Error> {
+async fn lock_repo_if_unlocked(
+    ctx: &CoreContext,
+    read_write_fetcher: &RepoReadWriteFetcher,
+) -> Result<(), Error> {
     info!(ctx.logger(), "locking repo...");
-    read_write_fetcher.readonly().and_then(move |repo_state| {
-        match repo_state {
-            RepoReadOnly::ReadWrite => read_write_fetcher
-                .set_read_only(&LOCK_REASON.to_string())
-                .map(move |updated| {
-                    if updated {
-                        info!(ctx.logger(), "repo is locked now");
-                    }
-                })
-                .left_future(),
+    let repo_state = read_write_fetcher.readonly().compat().await?;
 
-            RepoReadOnly::ReadOnly(ref lock_msg) => {
-                ok(info!(ctx.logger(), "repo is locked already: {}", lock_msg)).right_future()
+    match repo_state {
+        RepoReadOnly::ReadWrite => {
+            let updated = read_write_fetcher
+                .set_read_only(&LOCK_REASON.to_string())
+                .compat()
+                .await?;
+            if updated {
+                info!(ctx.logger(), "repo is locked now");
             }
+            Ok(())
         }
-    })
+
+        RepoReadOnly::ReadOnly(ref lock_msg) => {
+            info!(ctx.logger(), "repo is locked already: {}", lock_msg);
+            Ok(())
+        }
+    }
 }
 
 fn build_outcome_handler(
@@ -345,7 +350,9 @@ fn build_outcome_handler(
         Err(EntryError { cause: e, .. }) => match &lock_via {
             Some(repo_read_write_fetcher) => {
                 cloned!(ctx, repo_read_write_fetcher);
-                lock_repo_if_unlocked(ctx, repo_read_write_fetcher)
+                async move { lock_repo_if_unlocked(&ctx, &repo_read_write_fetcher).await }
+                    .boxed()
+                    .compat()
                     .then(move |_| err(e.into()))
                     .boxify()
             }
@@ -565,7 +572,15 @@ fn loop_over_log_entries(
                                         .and_then({
                                             cloned!(ctx, repo_read_write_fetcher);
                                             move |()| {
-                                                unlock_repo_if_locked(ctx, repo_read_write_fetcher)
+                                                async move {
+                                                    unlock_repo_if_locked(
+                                                        &ctx,
+                                                        &repo_read_write_fetcher,
+                                                    )
+                                                    .await
+                                                }
+                                                .boxed()
+                                                .compat()
                                             }
                                         })
                                         .map(move |()| (vec![], Some(current_id)))
