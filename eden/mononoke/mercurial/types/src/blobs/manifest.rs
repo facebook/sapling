@@ -18,13 +18,13 @@ use std::str;
 use super::errors::ErrorKind;
 use crate::{
     nodehash::{HgNodeHash, NULL_HASH},
-    FileType, HgBlob, HgEntryId, HgFileNodeId, HgManifestEnvelope, HgManifestId, HgParents,
-    MPathElement, Type,
+    FileType, HgBlob, HgFileNodeId, HgManifestEnvelope, HgManifestId, HgParents, MPathElement,
+    Type,
 };
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct ManifestContent {
-    pub files: SortedVectorMap<MPathElement, HgEntryId>,
+    pub files: SortedVectorMap<MPathElement, Entry<HgManifestId, (FileType, HgFileNodeId)>>,
 }
 
 impl ManifestContent {
@@ -42,7 +42,9 @@ impl ManifestContent {
 
     //
     // NB: filenames are sequences of non-zero bytes, not strings
-    fn parse_impl(data: &[u8]) -> Result<SortedVectorMap<MPathElement, HgEntryId>> {
+    fn parse_impl(
+        data: &[u8],
+    ) -> Result<SortedVectorMap<MPathElement, Entry<HgManifestId, (FileType, HgFileNodeId)>>> {
         let lines = data.split(|b| *b == b'\n');
         let mut files = match lines.size_hint() {
             // Split returns it count in the high size hint
@@ -236,21 +238,16 @@ impl Manifest for BlobManifest {
     type LeafId = (FileType, HgFileNodeId);
 
     fn lookup(&self, name: &MPathElement) -> Option<Entry<Self::TreeId, Self::LeafId>> {
-        self.content.files.get(name).copied().map(Entry::from)
+        self.content.files.get(name).copied()
     }
 
     fn list(&self) -> Box<dyn Iterator<Item = (MPathElement, Entry<Self::TreeId, Self::LeafId>)>> {
-        let iter = self
-            .content
-            .files
-            .clone()
-            .into_iter()
-            .map(|(name, hg_entry_id)| (name, Entry::from(hg_entry_id)));
+        let iter = self.content.files.clone().into_iter();
         Box::new(iter)
     }
 }
 
-fn parse_hg_entry(data: &[u8]) -> Result<HgEntryId> {
+fn parse_hg_entry(data: &[u8]) -> Result<Entry<HgManifestId, (FileType, HgFileNodeId)>> {
     ensure!(data.len() >= 40, "hash too small: {:?}", data);
 
     let (hash, flags) = data.split_at(40);
@@ -261,12 +258,12 @@ fn parse_hg_entry(data: &[u8]) -> Result<HgEntryId> {
     ensure!(flags.len() <= 1, "More than 1 flag: {:?}", flags);
 
     let hg_entry_id = if flags.is_empty() {
-        HgEntryId::File(FileType::Regular, HgFileNodeId::new(hash))
+        Entry::Leaf((FileType::Regular, HgFileNodeId::new(hash)))
     } else {
         match flags[0] {
-            b'l' => HgEntryId::File(FileType::Symlink, HgFileNodeId::new(hash)),
-            b'x' => HgEntryId::File(FileType::Executable, HgFileNodeId::new(hash)),
-            b't' => HgEntryId::Manifest(HgManifestId::new(hash)),
+            b'l' => Entry::Leaf((FileType::Symlink, HgFileNodeId::new(hash))),
+            b'x' => Entry::Leaf((FileType::Executable, HgFileNodeId::new(hash))),
+            b't' => Entry::Tree(HgManifestId::new(hash)),
             unk => bail!("Unknown flag {}", unk),
         }
     };
