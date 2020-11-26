@@ -57,8 +57,8 @@ impl HgTreeContext {
         self.envelope.contents().clone()
     }
 
-    pub fn into_blob_manifest(self) -> anyhow::Result<mercurial_types::blobs::BlobManifest> {
-        mercurial_types::blobs::BlobManifest::parse(self.envelope)
+    pub fn into_blob_manifest(self) -> anyhow::Result<mercurial_types::blobs::HgBlobManifest> {
+        mercurial_types::blobs::HgBlobManifest::parse(self.envelope)
     }
 
     pub fn entries(

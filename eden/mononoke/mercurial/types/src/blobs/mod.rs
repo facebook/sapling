@@ -18,7 +18,7 @@ pub use file::{File, LFSContent, META_MARKER, META_SZ};
 
 mod manifest;
 pub use self::manifest::{
-    fetch_manifest_envelope, fetch_manifest_envelope_opt, fetch_raw_manifest_bytes, BlobManifest,
+    fetch_manifest_envelope, fetch_manifest_envelope_opt, fetch_raw_manifest_bytes, HgBlobManifest,
     ManifestContent,
 };
 

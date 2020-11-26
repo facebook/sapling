@@ -394,7 +394,7 @@ mod tests {
     use futures_old::Future;
     use manifest::ManifestOps;
     use maplit::btreemap;
-    use mercurial_types::{blobs::BlobManifest, HgFileNodeId, HgManifestId};
+    use mercurial_types::{blobs::HgBlobManifest, HgFileNodeId, HgManifestId};
     use metaconfig_types::DerivedDataConfig;
     use mononoke_types::{
         BlobstoreValue, BonsaiChangeset, BonsaiChangesetMut, DateTime, FileChange, FileContents,
@@ -1103,7 +1103,7 @@ mod tests {
                 .unwrap();
             history.push(linknode);
 
-            let mf_fut = BlobManifest::load(
+            let mf_fut = HgBlobManifest::load(
                 ctx.clone(),
                 repo.blobstore(),
                 HgManifestId::new(filenode_id.into_nodehash()),

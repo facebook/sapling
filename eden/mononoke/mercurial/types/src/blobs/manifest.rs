@@ -135,7 +135,7 @@ pub async fn fetch_manifest_envelope_opt<B: Blobstore>(
 }
 
 #[derive(Debug)]
-pub struct BlobManifest {
+pub struct HgBlobManifest {
     node_id: HgNodeHash,
     p1: Option<HgNodeHash>,
     p2: Option<HgNodeHash>,
@@ -144,14 +144,14 @@ pub struct BlobManifest {
     content: ManifestContent,
 }
 
-impl BlobManifest {
+impl HgBlobManifest {
     pub async fn load<B: Blobstore>(
         ctx: CoreContext,
         blobstore: &B,
         manifestid: HgManifestId,
     ) -> Result<Option<Self>> {
         if manifestid.clone().into_nodehash() == NULL_HASH {
-            Ok(Some(BlobManifest {
+            Ok(Some(HgBlobManifest {
                 node_id: NULL_HASH,
                 p1: None,
                 p2: None,
@@ -182,7 +182,7 @@ impl BlobManifest {
                 envelope.node_id
             )
         })?;
-        Ok(BlobManifest {
+        Ok(HgBlobManifest {
             node_id: envelope.node_id,
             p1: envelope.p1,
             p2: envelope.p2,
@@ -219,7 +219,7 @@ impl BlobManifest {
 
 #[async_trait]
 impl Loadable for HgManifestId {
-    type Value = BlobManifest;
+    type Value = HgBlobManifest;
 
     async fn load<'a, B: Blobstore>(
         &'a self,
@@ -227,13 +227,13 @@ impl Loadable for HgManifestId {
         blobstore: &'a B,
     ) -> Result<Self::Value, LoadableError> {
         let id = *self;
-        BlobManifest::load(ctx, blobstore, id)
+        HgBlobManifest::load(ctx, blobstore, id)
             .await?
             .ok_or_else(|| LoadableError::Missing(id.blobstore_key()))
     }
 }
 
-impl Manifest for BlobManifest {
+impl Manifest for HgBlobManifest {
     type TreeId = HgManifestId;
     type LeafId = (FileType, HgFileNodeId);
 

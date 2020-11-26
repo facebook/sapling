@@ -7,7 +7,7 @@
 
 use super::file::File;
 use crate::{
-    blobs::BlobManifest, HgFileEnvelope, HgFileNodeId, HgManifestEnvelope, HgParents, MPath,
+    blobs::HgBlobManifest, HgFileEnvelope, HgFileNodeId, HgManifestEnvelope, HgParents, MPath,
 };
 use anyhow::Result;
 
@@ -50,7 +50,7 @@ impl HgBlobEnvelope for HgManifestEnvelope {
     }
 }
 
-impl HgBlobEnvelope for BlobManifest {
+impl HgBlobEnvelope for HgBlobManifest {
     fn get_parents(&self) -> HgParents {
         self.hg_parents()
     }

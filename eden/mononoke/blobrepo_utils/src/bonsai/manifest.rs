@@ -22,7 +22,7 @@ use futures_old::{
 use manifest::{bonsai_diff, BonsaiDiffFileChange, Diff, Entry, ManifestOps};
 use mercurial_derived_data::derive_hg_manifest;
 use mercurial_types::{
-    blobs::{BlobManifest, HgBlobChangeset},
+    blobs::{HgBlobChangeset, HgBlobManifest},
     HgChangesetId, HgFileNodeId, HgManifestId, HgNodeHash,
 };
 use mononoke_types::{DateTime, FileType};
@@ -227,7 +227,7 @@ impl ChangesetVisitor for BonsaiMFVerifyVisitor {
                 let root_mf_fut = {
                     cloned!(ctx, repo);
                     let mf_id = changeset.manifestid();
-                    async move { BlobManifest::load(ctx, repo.blobstore(), mf_id).await }
+                    async move { HgBlobManifest::load(ctx, repo.blobstore(), mf_id).await }
                 };
 
                 try_join(

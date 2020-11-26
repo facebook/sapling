@@ -21,7 +21,7 @@ use hash_memo::EagerHashMemoizer;
 use internment::ArcIntern;
 use mercurial_derived_data::MappedHgChangesetId;
 use mercurial_types::{
-    blobs::{BlobManifest, HgBlobChangeset},
+    blobs::{HgBlobChangeset, HgBlobManifest},
     FileBytes, HgChangesetId, HgFileEnvelope, HgFileNodeId, HgManifestId,
 };
 use mononoke_types::{
@@ -528,7 +528,7 @@ pub enum NodeData {
     // Hg
     HgBonsaiMapping(Option<ChangesetId>),
     HgChangeset(HgBlobChangeset),
-    HgManifest(BlobManifest),
+    HgManifest(HgBlobManifest),
     HgFileEnvelope(HgFileEnvelope),
     HgFileNode(Option<FilenodeInfo>),
     // Content

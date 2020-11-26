@@ -34,7 +34,7 @@ use memblob::Memblob;
 use mercurial_derived_data::get_manifest_from_bonsai;
 use mercurial_types::{
     blobs::{
-        BlobManifest, ContentBlobMeta, File, HgBlobChangeset, UploadHgFileContents,
+        ContentBlobMeta, File, HgBlobChangeset, HgBlobManifest, UploadHgFileContents,
         UploadHgFileEntry, UploadHgNodeHash,
     },
     FileType, HgChangesetId, HgFileEnvelope, HgFileNodeId, HgManifestId, HgNodeHash, HgParents,
@@ -1467,7 +1467,7 @@ impl TestHelper {
         Ok(hg_cs)
     }
 
-    async fn root_manifest(&self, cs_id: ChangesetId) -> Result<BlobManifest, Error> {
+    async fn root_manifest(&self, cs_id: ChangesetId) -> Result<HgBlobManifest, Error> {
         let hg_cs = self.lookup_changeset(cs_id).await?;
 
         let manifest = hg_cs
@@ -1498,7 +1498,11 @@ impl TestHelper {
         Ok(entry)
     }
 
-    async fn lookup_manifest(&self, cs_id: ChangesetId, path: &str) -> Result<BlobManifest, Error> {
+    async fn lookup_manifest(
+        &self,
+        cs_id: ChangesetId,
+        path: &str,
+    ) -> Result<HgBlobManifest, Error> {
         let id = self
             .lookup_entry(cs_id, path)
             .await?
