@@ -363,10 +363,10 @@ struct CombinedBookmarkUpdateLogEntry {
     bookmark: BookmarkName,
 }
 
-fn combine_entries(
-    ctx: CoreContext,
+async fn combine_entries(
+    ctx: &CoreContext,
     entries: &[PreparedBookmarkUpdateLogEntry],
-) -> impl Future<Item = CombinedBookmarkUpdateLogEntry, Error = Error> {
+) -> Result<CombinedBookmarkUpdateLogEntry, Error> {
     let bundle_file_paths: Vec<PathBuf> = entries
         .iter()
         .map(|prepared_entry| prepared_entry.bundle_file.path().to_path_buf())
@@ -381,36 +381,29 @@ fn combine_entries(
         .collect();
     let last_entry = match entries.iter().last() {
         None => {
-            return err(Error::msg(
+            return Err(Error::msg(
                 "cannot create a combined entry from an empty list",
-            ))
-            .left_future();
+            ));
         }
         Some(entry) => entry.clone(),
     };
 
-    async move {
-        try_join(
-            merge_bundles(&ctx, &bundle_file_paths),
-            merge_timestamp_files(&ctx, &timestamp_file_paths),
-        )
-        .await
-    }
-    .boxed()
-    .compat()
-    .map(move |(combined_bundle_file, combined_timestamps_file)| {
-        let PreparedBookmarkUpdateLogEntry {
-            cs_id, log_entry, ..
-        } = last_entry;
-        CombinedBookmarkUpdateLogEntry {
-            components,
-            bundle_file: Arc::new(combined_bundle_file),
-            timestamps_file: Arc::new(combined_timestamps_file),
-            cs_id,
-            bookmark: log_entry.bookmark_name,
-        }
+    let (combined_bundle_file, combined_timestamps_file) = try_join(
+        merge_bundles(ctx, &bundle_file_paths),
+        merge_timestamp_files(ctx, &timestamp_file_paths),
+    )
+    .await?;
+
+    let PreparedBookmarkUpdateLogEntry {
+        cs_id, log_entry, ..
+    } = last_entry;
+    Ok(CombinedBookmarkUpdateLogEntry {
+        components,
+        bundle_file: Arc::new(combined_bundle_file),
+        timestamps_file: Arc::new(combined_timestamps_file),
+        cs_id,
+        bookmark: log_entry.bookmark_name,
     })
-    .right_future()
 }
 
 /// Sends a downloaded bundle to hg
@@ -824,9 +817,7 @@ async fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> Result<(), Error
                         .prepare_single_bundle(ctx.clone(), log_entry.clone(), overlay.clone())
                         .compat()
                         .await?;
-                    let combined_entry = combine_entries(ctx.clone(), &[prepared_log_entry])
-                        .compat()
-                        .await?;
+                    let combined_entry = combine_entries(&ctx, &[prepared_log_entry]).await?;
 
                     sync_single_combined_entry(
                         &ctx,
@@ -956,15 +947,21 @@ async fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> Result<(), Error
                     join_all(futs).and_then({
                         cloned!(ctx);
                         |prepared_log_entries| {
-                            combine_entries(ctx, &prepared_log_entries).map_err(|e| {
-                                bind_sync_err(
-                                    &prepared_log_entries
-                                        .into_iter()
-                                        .map(|prepared_entry| prepared_entry.log_entry)
-                                        .collect::<Vec<_>>(),
-                                    e,
-                                )
-                            })
+                            async move {
+                                let res = combine_entries(&ctx, &prepared_log_entries).await;
+                                match res {
+                                    Ok(res) => Ok(res),
+                                    Err(err) => Err(bind_sync_err(
+                                        &prepared_log_entries
+                                            .into_iter()
+                                            .map(|prepared_entry| prepared_entry.log_entry)
+                                            .collect::<Vec<_>>(),
+                                        err,
+                                    )),
+                                }
+                            }
+                            .boxed()
+                            .compat()
                         }
                     })
                 }
