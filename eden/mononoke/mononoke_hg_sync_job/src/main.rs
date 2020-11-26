@@ -26,18 +26,18 @@ use context::CoreContext;
 use dbbookmarks::SqlBookmarksBuilder;
 use fbinit::FacebookInit;
 use futures::{
-    compat::Future01CompatExt,
+    compat::{Future01CompatExt, Stream01CompatExt},
     future::{try_join, try_join3, FutureExt as _, TryFutureExt},
-    stream::TryStreamExt,
+    stream::{StreamExt, TryStreamExt},
 };
-use futures_ext::{spawn_future, try_boxfuture, BoxFuture, FutureExt, StreamExt};
+use futures_ext::{spawn_future, try_boxfuture, BoxFuture, FutureExt, StreamExt as OldStreamExt};
 use futures_old::{
     future::{err, join_all, ok, IntoFuture},
     stream,
     stream::Stream,
     Future,
 };
-use futures_stats::{futures03::TimedFutureExt, FutureStats, Timed};
+use futures_stats::{futures03::TimedFutureExt, FutureStats};
 use http::Uri;
 use lfs_verifier::LfsVerifier;
 use mercurial_types::HgChangesetId;
@@ -930,7 +930,7 @@ async fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> Result<(), Error
             let (start_id, (bundle_preparer, mut overlay, globalrev_syncer)) =
                 try_join(counter, repo_parts).await?;
 
-            loop_over_log_entries(
+            let s = loop_over_log_entries(
                 ctx.clone(),
                 bookmarks.clone(),
                 repo_id,
@@ -995,68 +995,69 @@ async fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> Result<(), Error
                     })
                 }
             })
-            .buffered(bundle_buffer_size)
-            .take_while({
-                cloned!(can_continue);
-                move |_| ok(can_continue())
-            })
-            .then({
-                cloned!(ctx, hg_repo);
+            .buffered(bundle_buffer_size);
 
-                move |res| match res {
-                    Ok(combined_entry) => sync_single_combined_entry(
-                        ctx.clone(),
-                        combined_entry.clone(),
-                        hg_repo.clone(),
-                        base_retry_delay_ms,
-                        retry_num,
-                        globalrev_syncer.clone(),
-                    )
-                    .then(move |r| bind_sync_result(&combined_entry.components, r))
-                    .collect_timing()
-                    .map_err(|(stats, e)| (Some(stats), e))
-                    .left_future(),
-                    Err(e) => err((None, e)).right_future(),
+            let outcome_handler = build_outcome_handler(ctx.clone(), lock_via.clone());
+            let mut s = s.compat();
+            while let Some(res) = s.next().await {
+                if !can_continue() {
+                    break;
                 }
-            })
-            .then(reporting_handler)
-            .then(build_outcome_handler(ctx.clone(), lock_via))
-            .map(move |entry| {
+
+                let res = match res {
+                    Ok(combined_entry) => {
+                        let (stats, res) = sync_single_combined_entry(
+                            ctx.clone(),
+                            combined_entry.clone(),
+                            hg_repo.clone(),
+                            base_retry_delay_ms,
+                            retry_num,
+                            globalrev_syncer.clone(),
+                        )
+                        .compat()
+                        .timed()
+                        .await;
+                        let res = bind_sync_result(&combined_entry.components, res);
+
+                        match res {
+                            Ok(ok) => Ok((stats, ok)),
+                            Err(err) => Err((Some(stats), err)),
+                        }
+                    }
+                    Err(e) => Err((None, e)),
+                };
+
+                let res = reporting_handler(res).compat().await;
+                let entry = outcome_handler(res).compat().await?;
                 let next_id = get_id_to_search_after(&entry);
-                cloned!(ctx, mutable_counters);
-                async move {
-                    retry(
-                        &ctx.logger(),
-                        |_| {
-                            mutable_counters
-                                .set_counter(
-                                    ctx.clone(),
-                                    repo_id,
-                                    LATEST_REPLAYED_REQUEST_KEY,
-                                    next_id,
-                                    // TODO(stash): do we need conditional updates here?
-                                    None,
-                                )
-                                .and_then(|success| {
-                                    if success {
-                                        Ok(())
-                                    } else {
-                                        bail!("failed to update counter")
-                                    }
-                                })
-                                .compat()
-                        },
-                        base_retry_delay_ms,
-                        retry_num,
-                    )
-                    .await
-                }
-                .boxed()
-                .compat()
-            })
-            .for_each(|res| res.map(|_| ()))
-            .compat()
-            .await
+
+                retry(
+                    &ctx.logger(),
+                    |_| async {
+                        let success = mutable_counters
+                            .set_counter(
+                                ctx.clone(),
+                                repo_id,
+                                LATEST_REPLAYED_REQUEST_KEY,
+                                next_id,
+                                // TODO(stash): do we need conditional updates here?
+                                None,
+                            )
+                            .compat()
+                            .await?;
+
+                        if success {
+                            Ok(())
+                        } else {
+                            bail!("failed to update counter")
+                        }
+                    },
+                    base_retry_delay_ms,
+                    retry_num,
+                )
+                .await?;
+            }
+            Ok(())
         }
         _ => bail!("incorrect mode of operation is specified"),
     }
