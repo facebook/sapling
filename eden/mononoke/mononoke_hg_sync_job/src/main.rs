@@ -28,13 +28,14 @@ use fbinit::FacebookInit;
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
     future::{try_join, try_join3, BoxFuture, FutureExt as _, TryFutureExt},
-    stream::{StreamExt, TryStreamExt},
+    stream::{self, StreamExt, TryStreamExt},
+    Stream,
 };
 use futures_ext::{spawn_future, FutureExt, StreamExt as OldStreamExt};
 use futures_old::{
     future::{join_all, ok},
-    stream,
-    stream::Stream,
+    stream as old_stream,
+    stream::Stream as OldStream,
     Future,
 };
 use futures_stats::{futures03::TimedFutureExt, FutureStats};
@@ -60,7 +61,6 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 use tempfile::NamedTempFile;
-use tokio_timer::sleep;
 
 mod bundle_generator;
 mod bundle_preparer;
@@ -528,68 +528,58 @@ fn get_path(f: &NamedTempFile) -> Result<String> {
         .ok_or(Error::msg("non-utf8 file"))
 }
 
-fn loop_over_log_entries(
-    ctx: CoreContext,
-    bookmarks: impl BookmarkUpdateLog,
+fn loop_over_log_entries<'a, B>(
+    ctx: &'a CoreContext,
+    bookmarks: &'a B,
     repo_id: RepositoryId,
     start_id: i64,
     loop_forever: bool,
-    scuba_sample: ScubaSampleBuilder,
+    scuba_sample: &'a ScubaSampleBuilder,
     fetch_up_to_bundles: u64,
-    repo_read_write_fetcher: RepoReadWriteFetcher,
-) -> impl Stream<Item = Vec<BookmarkUpdateLogEntry>, Error = Error> {
-    stream::unfold(Some(start_id), move |maybe_id| {
-        match maybe_id {
-            Some(current_id) => Some(
-                bookmarks
-                    .read_next_bookmark_log_entries_same_bookmark_and_reason(
-                        ctx.clone(),
-                        current_id as u64,
-                        fetch_up_to_bundles,
-                    )
-                    .compat()
-                    .collect()
-                    .and_then({
-                        cloned!(ctx, repo_read_write_fetcher, mut scuba_sample);
-                        move |entries| match entries.iter().last().cloned() {
-                            None => {
-                                if loop_forever {
-                                    info!(ctx.logger(), "id: {}, no new entries found", current_id);
-                                    scuba_sample
-                                        .add("repo", repo_id.id())
-                                        .add("success", 1)
-                                        .add("delay", 0)
-                                        .log();
+    repo_read_write_fetcher: &'a RepoReadWriteFetcher,
+) -> impl Stream<Item = Result<Vec<BookmarkUpdateLogEntry>, Error>> + 'a
+where
+    B: BookmarkUpdateLog,
+{
+    stream::try_unfold(Some(start_id), move |maybe_id| {
+        async move {
+            match maybe_id {
+                Some(current_id) => {
+                    let entries = bookmarks
+                        .read_next_bookmark_log_entries_same_bookmark_and_reason(
+                            ctx.clone(),
+                            current_id as u64,
+                            fetch_up_to_bundles,
+                        )
+                        .try_collect::<Vec<_>>()
+                        .await?;
 
-                                    // First None means that no new entries will be added to the stream,
-                                    // Some(current_id) means that bookmarks will be fetched again
-                                    sleep(Duration::new(SLEEP_SECS, 0))
-                                        .from_err()
-                                        .and_then({
-                                            cloned!(ctx, repo_read_write_fetcher);
-                                            move |()| {
-                                                async move {
-                                                    unlock_repo_if_locked(
-                                                        &ctx,
-                                                        &repo_read_write_fetcher,
-                                                    )
-                                                    .await
-                                                }
-                                                .boxed()
-                                                .compat()
-                                            }
-                                        })
-                                        .map(move |()| (vec![], Some(current_id)))
-                                        .right_future()
-                                } else {
-                                    ok((vec![], None)).left_future()
-                                }
+                    match entries.iter().last().cloned() {
+                        None => {
+                            if loop_forever {
+                                info!(ctx.logger(), "id: {}, no new entries found", current_id);
+                                scuba_sample
+                                    .clone()
+                                    .add("repo", repo_id.id())
+                                    .add("success", 1)
+                                    .add("delay", 0)
+                                    .log();
+
+                                // First None means that no new entries will be added to the stream,
+                                // Some(current_id) means that bookmarks will be fetched again
+                                tokio::time::delay_for(Duration::new(SLEEP_SECS, 0)).await;
+
+                                unlock_repo_if_locked(&ctx, &repo_read_write_fetcher).await?;
+                                Ok(Some((vec![], Some(current_id))))
+                            } else {
+                                Ok(Some((vec![], None)))
                             }
-                            Some(last_entry) => ok((entries, Some(last_entry.id))).left_future(),
                         }
-                    }),
-            ),
-            None => None,
+                        Some(last_entry) => Ok(Some((entries, Some(last_entry.id)))),
+                    }
+                }
+                None => Ok(None),
+            }
         }
     })
 }
@@ -689,7 +679,7 @@ async fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> Result<(), Error
             .and_then({
                 cloned!(ctx, repo);
                 move |bookmarks| {
-                    stream::iter_ok(bookmarks.into_iter())
+                    old_stream::iter_ok(bookmarks.into_iter())
                         .map(move |(book, hg_cs_id)| {
                             repo.get_bonsai_from_hg(ctx.clone(), hg_cs_id)
                                 .map(move |maybe_bcs_id| maybe_bcs_id.map(|bcs_id| (book, bcs_id)))
@@ -901,15 +891,17 @@ async fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> Result<(), Error
                 try_join(counter, repo_parts).await?;
 
             let s = loop_over_log_entries(
-                ctx.clone(),
-                bookmarks.clone(),
+                &ctx,
+                &bookmarks,
                 repo_id,
                 start_id,
                 loop_forever,
-                scuba_sample.clone(),
+                &scuba_sample,
                 combine_bundles,
-                unlock_via.clone(),
+                &unlock_via,
             )
+            .boxed()
+            .compat()
             .take_while({
                 cloned!(can_continue);
                 move |_| ok(can_continue())
