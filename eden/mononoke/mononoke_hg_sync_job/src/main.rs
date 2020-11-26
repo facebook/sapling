@@ -30,9 +30,9 @@ use futures::{
     future::{try_join, try_join3, BoxFuture, FutureExt as _, TryFutureExt},
     stream::{StreamExt, TryStreamExt},
 };
-use futures_ext::{spawn_future, BoxFuture as OldBoxFuture, FutureExt, StreamExt as OldStreamExt};
+use futures_ext::{spawn_future, FutureExt, StreamExt as OldStreamExt};
 use futures_old::{
-    future::{err, join_all, ok},
+    future::{join_all, ok},
     stream,
     stream::Stream,
     Future,
@@ -325,34 +325,35 @@ async fn lock_repo_if_unlocked(
     }
 }
 
-fn build_outcome_handler(
-    ctx: CoreContext,
-    lock_via: Option<RepoReadWriteFetcher>,
-) -> impl Fn(Outcome) -> OldBoxFuture<Vec<BookmarkUpdateLogEntry>, Error> {
-    move |res| match res {
-        Ok(PipelineState { entries, .. }) => {
-            info!(
-                ctx.logger(),
-                "successful sync of entries {:?}",
-                entries.iter().map(|c| c.id).collect::<Vec<_>>()
-            );
-            ok(entries).boxify()
-        }
-        Err(AnonymousError { cause: e }) => {
-            info!(ctx.logger(), "error without entry");
-            err(e.into()).boxify()
-        }
-        Err(EntryError { cause: e, .. }) => match &lock_via {
-            Some(repo_read_write_fetcher) => {
-                cloned!(ctx, repo_read_write_fetcher);
-                async move { lock_repo_if_unlocked(&ctx, &repo_read_write_fetcher).await }
-                    .boxed()
-                    .compat()
-                    .then(move |_| err(e.into()))
-                    .boxify()
+fn build_outcome_handler<'a>(
+    ctx: &'a CoreContext,
+    lock_via: &'a Option<RepoReadWriteFetcher>,
+) -> impl Fn(Outcome) -> BoxFuture<'a, Result<Vec<BookmarkUpdateLogEntry>, Error>> {
+    move |res| {
+        async move {
+            match res {
+                Ok(PipelineState { entries, .. }) => {
+                    info!(
+                        ctx.logger(),
+                        "successful sync of entries {:?}",
+                        entries.iter().map(|c| c.id).collect::<Vec<_>>()
+                    );
+                    Ok(entries)
+                }
+                Err(AnonymousError { cause: e }) => {
+                    info!(ctx.logger(), "error without entry");
+                    Err(e)
+                }
+                Err(EntryError { cause: e, .. }) => match &lock_via {
+                    Some(repo_read_write_fetcher) => {
+                        let _ = lock_repo_if_unlocked(ctx, repo_read_write_fetcher).await;
+                        Err(e)
+                    }
+                    None => Err(e),
+                },
             }
-            None => err(e.into()).boxify(),
-        },
+        }
+        .boxed()
     }
 }
 
@@ -843,8 +844,7 @@ async fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> Result<(), Error
                     Err(err) => Err((Some(stats), err)),
                 };
                 let res = reporting_handler(res).await;
-                let res = build_outcome_handler(ctx.clone(), lock_via)(res);
-                let _ = res.compat().await?;
+                let _ = build_outcome_handler(&ctx, &lock_via)(res).await?;
                 Ok(())
             } else {
                 info!(ctx.logger(), "no log entries found");
@@ -973,7 +973,7 @@ async fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> Result<(), Error
             })
             .buffered(bundle_buffer_size);
 
-            let outcome_handler = build_outcome_handler(ctx.clone(), lock_via.clone());
+            let outcome_handler = build_outcome_handler(&ctx, &lock_via);
             let mut s = s.compat();
             while let Some(res) = s.next().await {
                 if !can_continue() {
@@ -1003,7 +1003,7 @@ async fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> Result<(), Error
                 };
 
                 let res = reporting_handler(res).await;
-                let entry = outcome_handler(res).compat().await?;
+                let entry = outcome_handler(res).await?;
                 let next_id = get_id_to_search_after(&entry);
 
                 retry(
