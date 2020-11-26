@@ -38,8 +38,9 @@ use manifest::{Entry, Manifest};
 use mercurial_derived_data::MappedHgChangesetId;
 use mercurial_types::{FileBytes, HgChangesetId, HgFileNodeId, HgManifestId, RepoPath};
 use mononoke_types::{
-    blame::BlameMaybeRejected, fsnode::FsnodeEntry, unode::UnodeEntry, BlameId, ChangesetId,
-    ContentId, DeletedManifestId, FileUnodeId, FsnodeId, MPath, ManifestUnodeId,
+    blame::BlameMaybeRejected, fsnode::FsnodeEntry, skeleton_manifest::SkeletonManifestEntry,
+    unode::UnodeEntry, BlameId, ChangesetId, ContentId, DeletedManifestId, FileUnodeId, FsnodeId,
+    MPath, ManifestUnodeId, SkeletonManifestId,
 };
 use phases::{HeadsFetcher, Phase, Phases};
 use scuba_ext::ScubaSampleBuilder;
@@ -1064,6 +1065,42 @@ async fn deleted_manifest_mapping_step<V: VisitOne>(
     }
 }
 
+async fn skeleton_manifest_step<V: VisitOne>(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    checker: &Checker<V>,
+    manifest_id: &SkeletonManifestId,
+    path: Option<&WrappedPath>,
+) -> Result<StepOutput, Error> {
+    let manifest = manifest_id.load(ctx.clone(), &repo.get_blobstore()).await?;
+    let mut edges = vec![];
+
+    for (child_path, entry) in manifest.list() {
+        match entry {
+            SkeletonManifestEntry::Directory(subdir) => {
+                checker.add_edge_with_path(
+                    &mut edges,
+                    EdgeType::SkeletonManifestToSkeletonManifestChild,
+                    || Node::SkeletonManifest(*subdir.id()),
+                    || {
+                        path.map(|p| {
+                            WrappedPath::from(MPath::join_element_opt(p.as_ref(), Some(child_path)))
+                        })
+                    },
+                );
+            }
+            SkeletonManifestEntry::File => {}
+        }
+    }
+
+    Ok(StepOutput(
+        checker.step_data(NodeType::SkeletonManifest, || {
+            NodeData::SkeletonManifest(Some(manifest))
+        }),
+        edges,
+    ))
+}
+
 async fn skeleton_manifest_mapping_step<V: VisitOne>(
     ctx: &CoreContext,
     repo: &BlobRepo,
@@ -1075,7 +1112,14 @@ async fn skeleton_manifest_mapping_step<V: VisitOne>(
         maybe_derived::<RootSkeletonManifestId>(ctx, repo, bcs_id, enable_derive).await?;
 
     if let Some(root_manifest_id) = root_manifest_id {
-        let edges = vec![];
+        let mut edges = vec![];
+
+        checker.add_edge_with_path(
+            &mut edges,
+            EdgeType::SkeletonManifestMappingToRootSkeletonManifest,
+            || Node::SkeletonManifest(*root_manifest_id.skeleton_manifest_id()),
+            || Some(WrappedPath::Root),
+        );
         Ok(StepOutput(
             checker.step_data(NodeType::SkeletonManifestMapping, || {
                 NodeData::SkeletonManifestMapping(Some(*root_manifest_id.skeleton_manifest_id()))
@@ -1422,6 +1466,9 @@ where
         Node::Fsnode(PathKey { id, path }) => fsnode_step(&ctx, &repo, &checker, path, &id).await,
         Node::FsnodeMapping(bcs_id) => {
             bonsai_to_fsnode_mapping_step(&ctx, &repo, &checker, bcs_id, enable_derive).await
+        }
+        Node::SkeletonManifest(id) => {
+            skeleton_manifest_step(&ctx, &repo, &checker, &id, walk_item.path.as_ref()).await
         }
         Node::SkeletonManifestMapping(bcs_id) => {
             skeleton_manifest_mapping_step(&ctx, &repo, &checker, bcs_id, enable_derive).await

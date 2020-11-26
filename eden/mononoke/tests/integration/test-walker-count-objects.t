@@ -158,17 +158,17 @@ count-objects, deep walk across deleted files manifest
 count-objects, shallow walk across skeleton manifest
   $ mononoke_walker --readonly-storage scrub -q --bookmark master_bookmark -I shallow -i bonsai -i derived_skeleton_manifests -X ChangesetToFileContent 2>&1 | strip_glog
   Walking roots * (glob)
-  Walking edge types [BookmarkToChangeset, ChangesetToSkeletonManifestMapping]
-  Walking node types [Bookmark, Changeset, SkeletonManifestMapping]
-  Final count: (3, 3)
+  Walking edge types [BookmarkToChangeset, ChangesetToSkeletonManifestMapping, SkeletonManifestMappingToRootSkeletonManifest, SkeletonManifestToSkeletonManifestChild]
+  Walking node types [Bookmark, Changeset, SkeletonManifest, SkeletonManifestMapping]
+  Final count: (4, 4)
   Bytes/s,* (glob)
-  * Type:Walked,Checks,Children Bookmark:1,1,1 Changeset:1,* SkeletonManifestMapping:1,* (glob)
+  * Type:Walked,Checks,Children Bookmark:1,1,1 Changeset:1,* SkeletonManifest:1,* SkeletonManifestMapping:1,* (glob)
 
 count-objects, deep walk across skeleton manifest
   $ mononoke_walker --readonly-storage scrub -q --bookmark master_bookmark -I deep -i bonsai -i derived_skeleton_manifests 2>&1 | strip_glog
   Walking roots * (glob)
-  Walking edge types [BookmarkToChangeset, ChangesetToBonsaiParent, ChangesetToSkeletonManifestMapping]
-  Walking node types [Bookmark, Changeset, SkeletonManifestMapping]
-  Final count: (7, 7)
+  Walking edge types [BookmarkToChangeset, ChangesetToBonsaiParent, ChangesetToSkeletonManifestMapping, SkeletonManifestMappingToRootSkeletonManifest, SkeletonManifestToSkeletonManifestChild]
+  Walking node types [Bookmark, Changeset, SkeletonManifest, SkeletonManifestMapping]
+  Final count: (10, 10)
   Bytes/s,* (glob)
-  * Type:Walked,Checks,Children Bookmark:1,1,1 Changeset:3,* SkeletonManifestMapping:3,* (glob)
+  * Type:Walked,Checks,Children Bookmark:1,1,1 Changeset:3,* SkeletonManifest:3,* SkeletonManifestMapping:3,* (glob)

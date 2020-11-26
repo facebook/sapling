@@ -120,6 +120,7 @@ fn filter_repo_path(node_type: NodeType, path: Option<&'_ WrappedPath>) -> Optio
         NodeType::DeletedManifestMapping => None,
         NodeType::Fsnode => path,
         NodeType::FsnodeMapping => None,
+        NodeType::SkeletonManifest => path,
         NodeType::SkeletonManifestMapping => None,
         NodeType::UnodeFile => path,
         NodeType::UnodeManifest => path,

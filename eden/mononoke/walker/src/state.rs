@@ -18,6 +18,7 @@ use futures::future::TryFutureExt;
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId};
 use mononoke_types::{
     ChangesetId, ContentId, DeletedManifestId, FileUnodeId, FsnodeId, MPathHash, ManifestUnodeId,
+    SkeletonManifestId,
 };
 use phases::{Phase, Phases};
 use std::{
@@ -178,6 +179,7 @@ pub struct WalkState {
     visited_deleted_manifest_mapping: StateMap<InternedId<ChangesetId>>,
     visited_fsnode: StateMap<(InternedId<Option<MPathHash>>, InternedId<FsnodeId>)>,
     visited_fsnode_mapping: StateMap<InternedId<ChangesetId>>,
+    visited_skeleton_manifest: StateMap<SkeletonManifestId>,
     visited_skeleton_manifest_mapping: StateMap<InternedId<ChangesetId>>,
     visited_unode_file: StateMap<(InternedId<Option<MPathHash>>, UnodeInterned<FileUnodeId>)>,
     visited_unode_manifest: StateMap<(
@@ -232,6 +234,7 @@ impl WalkState {
             visited_deleted_manifest_mapping: StateMap::with_hasher(fac.clone()),
             visited_fsnode: StateMap::with_hasher(fac.clone()),
             visited_fsnode_mapping: StateMap::with_hasher(fac.clone()),
+            visited_skeleton_manifest: StateMap::with_hasher(fac.clone()),
             visited_skeleton_manifest_mapping: StateMap::with_hasher(fac.clone()),
             visited_unode_file: StateMap::with_hasher(fac.clone()),
             visited_unode_manifest: StateMap::with_hasher(fac.clone()),
@@ -463,6 +466,7 @@ impl VisitOne for WalkState {
                     true
                 }
             }
+            Node::SkeletonManifest(id) => self.record(&self.visited_skeleton_manifest, &id),
             Node::SkeletonManifestMapping(bcs_id) => {
                 if let Some(id) = self.bcs_ids.get(bcs_id) {
                     !self.visited_skeleton_manifest_mapping.contains_key(&id) // Does not insert, see record_resolved_visit

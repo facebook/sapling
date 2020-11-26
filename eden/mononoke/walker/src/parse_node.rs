@@ -323,6 +323,13 @@ mod tests {
                     .get_type()
                 );
             }
+            NodeType::SkeletonManifest => {
+                assert_eq!(
+                    node_type,
+                    &parse_node(&format!("SkeletonManifest{}{}", NODE_SEP, SAMPLE_BLAKE2))?
+                        .get_type()
+                );
+            }
             NodeType::SkeletonManifestMapping => {
                 assert_eq!(
                     node_type,
