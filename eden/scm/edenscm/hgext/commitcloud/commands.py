@@ -1478,12 +1478,12 @@ def cloudcheck(ui, repo, dest=None, **opts):
     if not revs:
         revs = ["."]
 
-    remotepath = ccutil.getremotereadpath(repo, dest)
     unfi = repo
     revs = scmutil.revrange(repo, revs)
     nodestocheck = [repo[r].hex() for r in revs]
 
     if remote:
+        remotepath = ccutil.getremotereadpath(repo, dest)
         getconnection = lambda: repo.connectionpool.get(remotepath, opts)
         isbackedup = {
             nodestocheck[i]: res
@@ -1492,8 +1492,7 @@ def cloudcheck(ui, repo, dest=None, **opts):
             )
         }
     else:
-        state = backupstate.BackupState(repo, remotepath)
-        backeduprevs = unfi.revs("not public() and ::%ln", state.heads)
+        backeduprevs = unfi.revs("backedup()")
         isbackedup = {node: unfi[node].rev() in backeduprevs for node in nodestocheck}
 
     for n in nodestocheck:
