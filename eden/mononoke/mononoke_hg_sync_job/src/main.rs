@@ -27,10 +27,10 @@ use dbbookmarks::SqlBookmarksBuilder;
 use fbinit::FacebookInit;
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
-    future::{try_join, try_join3, FutureExt as _, TryFutureExt},
+    future::{try_join, try_join3, BoxFuture, FutureExt as _, TryFutureExt},
     stream::{StreamExt, TryStreamExt},
 };
-use futures_ext::{spawn_future, BoxFuture, FutureExt, StreamExt as OldStreamExt};
+use futures_ext::{spawn_future, BoxFuture as OldBoxFuture, FutureExt, StreamExt as OldStreamExt};
 use futures_old::{
     future::{err, join_all, ok},
     stream,
@@ -139,79 +139,74 @@ fn drop_outcome_stats(o: OutcomeWithStats) -> Outcome {
     o.map(|(_, r)| r).map_err(|(_, e)| e)
 }
 
-fn build_reporting_handler(
-    ctx: CoreContext,
-    scuba_sample: ScubaSampleBuilder,
+fn build_reporting_handler<'a, B>(
+    ctx: &'a CoreContext,
+    scuba_sample: &'a ScubaSampleBuilder,
     retry_num: usize,
-    bookmarks: impl BookmarkUpdateLog,
-) -> impl Fn(OutcomeWithStats) -> BoxFuture<PipelineState<RetryAttemptsCount>, PipelineError> {
+    bookmarks: &'a B,
+) -> impl Fn(OutcomeWithStats) -> BoxFuture<'a, Result<PipelineState<RetryAttemptsCount>, PipelineError>>
+where
+    B: BookmarkUpdateLog,
+{
     move |res| {
-        cloned!(ctx, scuba_sample);
+        async move {
+            let log_entries = match &res {
+                Ok((_, pipeline_state, ..)) => Some(pipeline_state.entries.clone()),
+                Err((_, EntryError { entries, .. })) => Some(entries.clone()),
+                Err((_, AnonymousError { .. })) => None,
+            };
 
-        let log_entries = match &res {
-            Ok((_, pipeline_state, ..)) => Some(pipeline_state.entries.clone()),
-            Err((_, EntryError { entries, .. })) => Some(entries.clone()),
-            Err((_, AnonymousError { .. })) => None,
-        };
+            let maybe_stats = match &res {
+                Ok((stats, _)) => Some(stats),
+                Err((stats, _)) => stats.as_ref(),
+            };
 
-        let maybe_stats = match &res {
-            Ok((stats, _)) => Some(stats),
-            Err((stats, _)) => stats.as_ref(),
-        };
+            // TODO: (torozco) T43766262 We should embed attempts in retry()'s Error type and use it
+            // here instead of receiving a plain ErrorKind and implicitly assuming retry_num attempts.
+            let attempts = match &res {
+                Ok((_, PipelineState { data: attempts, .. })) => attempts.clone(),
+                Err(..) => RetryAttemptsCount(retry_num),
+            };
 
-        // TODO: (torozco) T43766262 We should embed attempts in retry()'s Error type and use it
-        // here instead of receiving a plain ErrorKind and implicitly assuming retry_num attempts.
-        let attempts = match &res {
-            Ok((_, PipelineState { data: attempts, .. })) => attempts.clone(),
-            Err(..) => RetryAttemptsCount(retry_num),
-        };
+            let maybe_error = match &res {
+                Ok(..) => None,
+                Err((_, EntryError { cause, .. })) => Some(cause),
+                Err((_, AnonymousError { cause, .. })) => Some(cause),
+            };
 
-        let maybe_error = match &res {
-            Ok(..) => None,
-            Err((_, EntryError { cause, .. })) => Some(cause),
-            Err((_, AnonymousError { cause, .. })) => Some(cause),
-        };
-
-        let fut = match log_entries {
-            None => ok(()).right_future(),
-            Some(log_entries) => {
-                if log_entries.is_empty() {
-                    err(Error::msg("unexpected empty pipeline state")).right_future()
-                } else {
-                    let duration = maybe_stats
-                        .map(|s| s.completion_time)
-                        .unwrap_or(Duration::from_secs(0));
+            let f = async {
+                if let Some(log_entries) = log_entries {
+                    let duration =
+                        maybe_stats.map_or_else(|| Duration::from_secs(0), |s| s.completion_time);
 
                     let error = maybe_error.map(|e| format!("{:?}", e));
                     let next_id = get_id_to_search_after(&log_entries);
 
-                    bookmarks
+                    let n = bookmarks
                         .count_further_bookmark_log_entries(ctx.clone(), next_id as u64, None)
-                        .compat()
-                        .map(|n| QueueSize(n as usize))
-                        .map({
-                            cloned!(log_entries);
-                            move |queue_size| {
-                                info!(
-                                    ctx.logger(),
-                                    "queue size after processing: {}", queue_size.0
-                                );
-                                log_processed_entries_to_scuba(
-                                    &log_entries,
-                                    scuba_sample,
-                                    error,
-                                    attempts,
-                                    duration,
-                                    queue_size,
-                                );
-                            }
-                        })
-                        .left_future()
+                        .await?;
+                    let queue_size = QueueSize(n as usize);
+                    info!(
+                        ctx.logger(),
+                        "queue size after processing: {}", queue_size.0
+                    );
+                    log_processed_entries_to_scuba(
+                        &log_entries,
+                        scuba_sample.clone(),
+                        error,
+                        attempts,
+                        duration,
+                        queue_size,
+                    );
                 }
-            }
-        };
+                Result::<_, Error>::Ok(())
+            };
 
-        fut.then(|_| drop_outcome_stats(res)).boxify()
+            // Ignore result from future that did the logging
+            let _ = f.await;
+            drop_outcome_stats(res)
+        }
+        .boxed()
     }
 }
 
@@ -333,7 +328,7 @@ async fn lock_repo_if_unlocked(
 fn build_outcome_handler(
     ctx: CoreContext,
     lock_via: Option<RepoReadWriteFetcher>,
-) -> impl Fn(Outcome) -> BoxFuture<Vec<BookmarkUpdateLogEntry>, Error> {
+) -> impl Fn(Outcome) -> OldBoxFuture<Vec<BookmarkUpdateLogEntry>, Error> {
     move |res| match res {
         Ok(PipelineState { entries, .. }) => {
             info!(
@@ -792,12 +787,7 @@ async fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> Result<(), Error
 
     let (_, bookmarks) = try_join(myrouter_ready_fut, bookmarks).await?;
     let bookmarks = bookmarks.with_repo_id(repo_id);
-    let reporting_handler = build_reporting_handler(
-        ctx.clone(),
-        scuba_sample.clone(),
-        retry_num,
-        bookmarks.clone(),
-    );
+    let reporting_handler = build_reporting_handler(&ctx, &scuba_sample, retry_num, &bookmarks);
 
     let (lock_via, unlock_via) = get_read_write_fetcher(
         ctx.fb,
@@ -852,8 +842,8 @@ async fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> Result<(), Error
                     Ok(ok) => Ok((stats, ok)),
                     Err(err) => Err((Some(stats), err)),
                 };
-                let res = reporting_handler(res).compat().await;
-                let res = build_outcome_handler(ctx, lock_via)(res);
+                let res = reporting_handler(res).await;
+                let res = build_outcome_handler(ctx.clone(), lock_via)(res);
                 let _ = res.compat().await?;
                 Ok(())
             } else {
@@ -1012,7 +1002,7 @@ async fn run(ctx: CoreContext, matches: ArgMatches<'static>) -> Result<(), Error
                     Err(e) => Err((None, e)),
                 };
 
-                let res = reporting_handler(res).compat().await;
+                let res = reporting_handler(res).await;
                 let entry = outcome_handler(res).compat().await?;
                 let next_id = get_id_to_search_after(&entry);
 
